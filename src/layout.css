@@ -1,0 +1,518 @@
+/* Overlay for modal or wizard background */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* Core modal card layout */
+.modal-card {
+  background-color: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 440px;
+  width: 100%;
+  color: white;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Title styling */
+.modal-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+/* Input styling */
+.modal-input {
+  width: 100%;
+  padding: 12px 14px;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  background-color: #2c2c2c;
+  border: 1px solid #555;
+  color: white;
+  font-size: 1rem;
+  outline: none;
+}
+
+.modal-input::placeholder {
+  color: #888;
+}
+
+/* Option containers (radio) */
+.modal-options {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.modal-option {
+  display: flex;
+  align-items: center;
+  font-size: 1rem;
+  gap: 0.75rem;
+}
+
+/* Buttons */
+.modal-button {
+  width: 100%;
+  padding: 12px 0;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 1rem;
+  text-align: center;
+  transition: background-color 0.2s ease;
+  border: none;
+}
+
+/* Button states */
+.btn-primary {
+  background-color: #2563eb;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #1e40af;
+}
+
+.btn-confirm {
+  background-color: #16a34a;
+  color: white;
+}
+
+.btn-confirm:hover {
+  background-color: #15803d;
+}
+
+.btn-disabled {
+  background-color: #4b5563;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* New shared button styles for DraftPage */
+.button-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 1rem;
+}
+
+.btn {
+  font-weight: 600;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.btn-green {
+  background-color: #16a34a;
+  color: white;
+}
+
+.btn-green:hover {
+  background-color: #15803d;
+}
+
+.btn-red {
+  background-color: #b91c1c;
+  color: white;
+}
+
+.btn-red:hover {
+  background-color: #991b1b;
+}
+
+/* --- DRAFT PAGE LAYOUT STYLES --- */
+.page-container {
+  background-color: #0f172a;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.setup-card {
+  background-color: #1e1e1e;
+  color: white;
+  border-radius: 1rem;
+  border: 1px solid #333;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  width: 100%;
+  max-width: 600px;
+  padding: 2rem;
+}
+
+.setup-step-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #9ca3af;
+  text-align: center;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.05em;
+}
+
+.setup-title {
+  font-size: 1.75rem;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.setup-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.setup-buttons button {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border-radius: 1rem;
+  font-weight: 600;
+  transition: background-color 0.2s ease;
+  border: none;
+}
+
+.btn-create {
+  background-color: #16a34a;
+  color: white;
+}
+
+.btn-create:hover {
+  background-color: #15803d;
+}
+
+.btn-join {
+  background-color: #1f2937;
+  color: #6b7280;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  padding: 2rem;
+}
+
+/* --- HEADER STYLES --- */
+.header {
+  background-color: #111827;
+  color: white;
+  padding: 1rem 2rem;
+  text-align: center;
+  border-bottom: 1px solid #1f2937;
+}
+
+.header-title {
+  font-size: 2rem;
+  font-weight: bold;
+  margin: 0;
+}
+
+/* --- HEADER BAR STYLING --- */
+.header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #111827;
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid #1f2937;
+  color: white;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.header-logo {
+  width: 24px;
+  height: 24px;
+}
+
+.site-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.nav-link {
+  color: white;
+  text-decoration: none;
+  padding: 0.5rem 0;
+  position: relative;
+}
+
+.nav-link:hover {
+  color: #60a5fa;
+}
+
+.nav-link.active::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: #3b82f6;
+}
+
+.logout-button {
+  background: transparent;
+  color: white;
+  border: 1px solid white;
+  padding: 0.3rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.logout-button:hover {
+  background-color: #1e293b;
+}
+
+/* Ticker styles */
+.ticker-bar {
+  background-color: #000;
+  color: white;
+  overflow: hidden;
+  white-space: nowrap;
+  width: 100%;
+  border-bottom: 1px solid #222;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem;
+  position: relative;
+}
+
+.ticker-scroll {
+  display: inline-block;
+  animation: ticker-scroll 45s linear infinite;
+}
+
+.ticker-item {
+  display: inline-block;
+  margin-right: 3rem;
+  font-weight: 500;
+}
+
+.ticker-up {
+  color: #22c55e;
+}
+
+.ticker-down {
+  color: #ef4444;
+}
+
+@keyframes ticker-scroll {
+  0% {
+    transform: translateX(100%);
+  }
+
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+/* DRAFT PAGE GRID LAYOUT */
+.draft-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 2rem;
+  padding: 2rem;
+  background-color: #0f172a;
+  min-height: 100vh;
+  color: white;
+}
+
+.draft-left,
+.draft-center,
+.draft-right {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.draft-box {
+  background-color: #252525;
+  padding: 1rem 1.5rem;
+  border-radius: 10px;
+}
+
+.draft-box h3 {
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+h2 {
+  font-size: 1.75rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+input,
+button {
+  font-family: inherit;
+}
+.dropdown-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background-color: white;
+  color: black;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 50;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  list-style: none;
+  padding: 0;
+}
+
+.dropdown-item {
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.dropdown-item:hover {
+  background-color: #f0f0f0;
+}
+/* red button used for Reset */
+.btn-danger {
+  background-color: #b91c1c;
+  color: white;
+}
+.btn-danger:hover {
+  background-color: #991b1b;
+}
+/* Reusable scroll limiter for boxes */
+.scroll-box {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+/* Row styling inside lists */
+.list-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid #3a3a3a;
+  font-size: 14px;
+}
+
+/* Compact selector look */
+.round-select {
+  background: #2a2a2a;
+  color: #fff;
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+/* --- Leagues page layout --- */
+.leagues-page { padding-top: 18px; }
+.leagues-container {
+  max-width: 980px;          /* matches your screenshot's centered column */
+  margin: 0 auto;
+  display: grid;
+  gap: 18px;
+}
+
+/* Title + subtitle */
+.leagues-title { font-size: 22px; color: #e9eef7; margin: 0; letter-spacing: .2px; }
+.leagues-sub   { color: #9aa3af; margin: 0; }
+
+/* Top row: Create | Update  */
+.leagues-top {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+@media (max-width: 960px) { .leagues-top { grid-template-columns: 1fr; } }
+
+/* Card look to match screenshot */
+.card {
+  background: #15181e;
+  border: 1px solid #232833;
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 4px 10px rgb(0 0 0 / 15%);
+}
+.section-header { 
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.section-header h3 { 
+  margin: 0; font-weight: 600; color: #e5e7eb; font-size: 14px; letter-spacing: .3px;
+  text-transform: none; 
+}
+/* Small corner icon on headers (right side) */
+.section-icon {
+  width: 26px; height: 26px; display: grid; place-items: center;
+  border: 1px solid #2a3040; border-radius: 8px; opacity: .9;
+}
+
+/* Form controls */
+.form { display: grid; gap: 10px; }
+.form-row { display: grid; gap: 6px; }
+.form-row.inline { grid-template-columns: 1fr 1fr; gap: 12px; }
+label { color: #b7c0cd; font-size: 12px; }
+input[type="text"], input[type="number"], input[type="datetime-local"], select {
+  background: #0f1319; color: #e7ecf5;
+  border: 1px solid #2a3040; border-radius: 8px; padding: 10px 12px;
+}
+input::placeholder { color: #828b98; }
+
+/* Buttons: blue + purple like screenshot; full-width on form primary */
+.btn { 
+  display:inline-flex; align-items:center; justify-content:center;
+  height: 38px; padding: 0 14px; border-radius: 10px; cursor:pointer;
+  border: 1px solid #2a3040; background:#1a202b; color:#e7ecf5;
+}
+.btn:hover { background:#202735; }
+.btn.primary { background:#2d6dfd; border-color:#2d6dfd; color:#fff; width: 100%; }
+.btn.primary:hover { filter: brightness(1.05); }
+.btn.purple  { background:#8657ff; border-color:#8657ff; color:#fff; width: 100%; }
+.btn.ghost   { background:transparent; }
+
+/* List rows (Your Leagues) */
+.list { display: grid; gap: 12px; }
+.league-row {
+  display:grid; grid-template-columns: 1fr auto; align-items:center;
+  gap: 8px; padding: 12px; border:1px solid #2a3040; border-radius:10px;
+  background:#12161c;
+}
+.league-row h4 { margin:0; color:#eaf0ff; }
+.meta, .muted { color:#95a3b6; }
+
+/* Invite row matches screenshot wide inputs + single button */
+.invite-actions .form-row.inline > div:first-child select { width: 100%; }
+.invite-actions .btn { width: 220px; }
+@media (max-width: 720px) { .invite-actions .btn { width: 100%; } }
