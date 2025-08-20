@@ -30,3 +30,8 @@ build
 .env.local
 .supabase
 supabase/.temp
+.env
+.env.*
+*.pem
+*.key
+src/alpaca keys
