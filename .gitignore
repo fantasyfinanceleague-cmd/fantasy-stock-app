@@ -35,3 +35,4 @@ supabase/.temp
 *.pem
 *.key
 src/alpaca keys
+replacements.txt
