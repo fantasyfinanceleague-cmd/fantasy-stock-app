@@ -1,7 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase/supabaseClient';
 import { useAuthUser } from '../auth/useAuthUser';
+import HCaptcha from '@hcaptcha/react-hcaptcha';
+
+const HCAPTCHA_SITE_KEY = import.meta.env.VITE_HCAPTCHA_SITE_KEY;
 
 export default function Login() {
   const nav = useNavigate();
@@ -12,6 +15,8 @@ export default function Login() {
   const [err, setErr] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState(null);
+  const captchaRef = useRef(null);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -23,11 +28,31 @@ export default function Login() {
   async function handleSubmit(e) {
     e.preventDefault();
     setErr('');
+
+    // Validate captcha for sign up
+    if (isSignUp && !captchaToken) {
+      setErr('Please complete the captcha verification');
+      return;
+    }
+
     setBusy(true);
 
     if (isSignUp) {
-      const { error } = await supabase.auth.signUp({ email, password: pw });
+      const { error } = await supabase.auth.signUp({
+        email,
+        password: pw,
+        options: {
+          captchaToken: captchaToken
+        }
+      });
       setBusy(false);
+
+      // Reset captcha after attempt
+      if (captchaRef.current) {
+        captchaRef.current.resetCaptcha();
+        setCaptchaToken(null);
+      }
+
       if (error) {
         setErr(error.message);
       } else {
@@ -169,10 +194,27 @@ export default function Login() {
             </div>
           )}
 
+          {/* Show hCaptcha only for sign up */}
+          {isSignUp && HCAPTCHA_SITE_KEY && HCAPTCHA_SITE_KEY !== 'YOUR_SITE_KEY_HERE' && (
+            <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'center' }}>
+              <HCaptcha
+                ref={captchaRef}
+                sitekey={HCAPTCHA_SITE_KEY}
+                onVerify={(token) => setCaptchaToken(token)}
+                onExpire={() => setCaptchaToken(null)}
+                onError={() => {
+                  setErr('Captcha error. Please try again.');
+                  setCaptchaToken(null);
+                }}
+                theme="dark"
+              />
+            </div>
+          )}
+
           <button
             type="submit"
             className="modal-button btn-primary"
-            disabled={busy}
+            disabled={busy || (isSignUp && !captchaToken)}
             style={{
               width: '100%',
               padding: '14px',
@@ -190,6 +232,11 @@ export default function Login() {
               onClick={() => {
                 setIsSignUp(!isSignUp);
                 setErr('');
+                // Reset captcha when switching modes
+                if (captchaRef.current) {
+                  captchaRef.current.resetCaptcha();
+                  setCaptchaToken(null);
+                }
               }}
               style={{
                 background: 'transparent',
