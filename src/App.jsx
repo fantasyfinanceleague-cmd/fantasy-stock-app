@@ -8,25 +8,28 @@ import LeagueDetail from './pages/LeagueDetail';
 import { JoinLeague } from './pages/JoinLeague';
 import PortfolioPage from './pages/PortfolioPage';
 import Leaderboard from './pages/Leaderboard';
+import Login from './pages/Login';
+import Protected from './components/Protected';
 import './layout.css'; // custom grid and layout styles
 // import './index.css'; // remove this if you're not using Tailwind at all
 
 function App() {
   return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/draft/:leagueId" element={<DraftPage />} />
-        <Route path="/draft" element={<DraftPage />} />
-        <Route path="/leagues" element={<Leagues />} />
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/league/:leagueId" element={<LeagueDetail />} />
-        <Route path="/join/:code" element={<JoinLeague />} />
-        <Route path="/portfolio" element={<PortfolioPage />} />
-        <Route path="/leaderboard" element={<Leaderboard />} />
-      </Routes>
-    </Layout>
+    <Routes>
+      {/* Public route */}
+      <Route path="/login" element={<Login />} />
+
+      {/* Protected routes */}
+      <Route path="/" element={<Layout><Protected><Dashboard /></Protected></Layout>} />
+      <Route path="/dashboard" element={<Layout><Protected><Dashboard /></Protected></Layout>} />
+      <Route path="/draft/:leagueId" element={<Layout><Protected><DraftPage /></Protected></Layout>} />
+      <Route path="/draft" element={<Layout><Protected><DraftPage /></Protected></Layout>} />
+      <Route path="/leagues" element={<Layout><Protected><Leagues /></Protected></Layout>} />
+      <Route path="/league/:leagueId" element={<Layout><Protected><LeagueDetail /></Protected></Layout>} />
+      <Route path="/join/:code" element={<Layout><Protected><JoinLeague /></Protected></Layout>} />
+      <Route path="/portfolio" element={<Layout><Protected><PortfolioPage /></Protected></Layout>} />
+      <Route path="/leaderboard" element={<Layout><Protected><Leaderboard /></Protected></Layout>} />
+    </Routes>
   );
 }
 

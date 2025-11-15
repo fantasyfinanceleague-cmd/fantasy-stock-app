@@ -1,9 +1,22 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useState } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { supabase } from './supabase/supabaseClient';
+import { useAuthUser } from './auth/useAuthUser';
 import logo from './assets/favicon.ico';
 import './layout.css';
 
 const Header = () => {
+  const navigate = useNavigate();
+  const user = useAuthUser();
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  async function handleLogout() {
+    setLoggingOut(true);
+    await supabase.auth.signOut();
+    setLoggingOut(false);
+    navigate('/login', { replace: true });
+  }
+
   return (
     <header className="header">
       <div className="header-left">
@@ -16,7 +29,15 @@ const Header = () => {
         <NavLink to="/draft" className="nav-link">Draft</NavLink>
         <NavLink to="/portfolio" className="nav-link">Portfolio</NavLink>
         <NavLink to="/leaderboard" className="nav-link">Leaderboard</NavLink>
-        <button className="logout-button">Log Out</button>
+        {user && (
+          <button
+            className="logout-button"
+            onClick={handleLogout}
+            disabled={loggingOut}
+          >
+            {loggingOut ? 'Logging out...' : 'Log Out'}
+          </button>
+        )}
       </nav>
     </header>
   );
