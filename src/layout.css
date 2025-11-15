@@ -328,11 +328,11 @@
 
 @keyframes ticker-scroll {
   0% {
-    transform: translateX(100%);
+    transform: translateX(0%);
   }
 
   100% {
-    transform: translateX(-100%);
+    transform: translateX(-50%);
   }
 }
 
@@ -516,3 +516,36 @@ input::placeholder { color: #828b98; }
 .invite-actions .form-row.inline > div:first-child select { width: 100%; }
 .invite-actions .btn { width: 220px; }
 @media (max-width: 720px) { .invite-actions .btn { width: 100%; } }
+.table-wrap {
+  overflow-x: auto;
+}
+
+.holdings-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.holdings-table thead th {
+  font-weight: 600;
+  color: #e5e7eb;
+  background: #14181f;
+  border-bottom: 1px solid #2a2f3a;
+  padding: 12px 16px;
+  text-align: left;
+}
+
+.holdings-table tbody td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #2a2f3a;
+}
+
+.holdings-table td.numeric,
+.holdings-table th.numeric {
+  text-align: right;
+}
+
+/* Column widths: tweak to taste */
+.col-symbol { width: 90px; }
+.col-company { width: auto; }         /* flexes */
+.col-qty { width: 80px; }
+.col-entry, .col-last, .col-pl, .col-plp { width: 120px; }

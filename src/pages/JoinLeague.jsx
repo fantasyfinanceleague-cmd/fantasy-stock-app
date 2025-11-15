@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { supabase } from '../supabase/supabaseClient';
-
-const USER_ID = 'test-user'; // swap for auth later
+import { useAuthUser } from '../auth/useAuthUser';
 
 export function JoinLeague() {
   const { code } = useParams();
   const nav = useNavigate();
+  const user = useAuthUser();
+  const USER_ID = user?.id;
   const [loading, setLoading] = useState(true);
   const [error, setError]   = useState('');
   const [invite, setInvite] = useState(null);

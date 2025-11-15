@@ -1,0 +1,16 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ggshield-pre-commit
+        name: ggshield (pre-commit)
+        entry: /Users/giorgio/opt/anaconda3/envs/sec-scan/bin/ggshield secret scan pre-commit
+        language: system
+        pass_filenames: false
+        stages: [commit]
+
+      - id: ggshield-pre-push
+        name: ggshield (pre-push)
+        entry: /Users/giorgio/opt/anaconda3/envs/sec-scan/bin/ggshield secret scan pre-push
+        language: system
+        pass_filenames: false
+        stages: [push]

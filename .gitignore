@@ -36,3 +36,5 @@ supabase/.temp
 *.key
 src/alpaca keys
 replacements.txt
+supabase/.secrets
+.cache_ggshield

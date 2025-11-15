@@ -34,24 +34,35 @@ export default function Leagues() {
     updateLeague,
     inviteToLeague,
     leaveLeague,
-    deleteLeague, // <- ensure your hook exports this
+    deleteLeague,
   } = useLeagues();
 
   // Create
   const [leagueName, setLeagueName] = useState('');
   const [draftDate, setDraftDate] = useState('');
+  const [budgetMode, setBudgetMode] = useState('budget');      // NEW
   const [salaryCap, setSalaryCap] = useState('100000');
   const [participants, setParticipants] = useState(12);
+  const [stocksPerTeam, setStocksPerTeam] = useState(6);       // NEW
+  const capDisabled = budgetMode === 'no-budget';              // NEW
 
   // Update
   const [selectedLeagueForUpdate, setSelectedLeagueForUpdate] = useState('');
   const [updateDraftDate, setUpdateDraftDate] = useState('');
+  const [updateBudgetMode, setUpdateBudgetMode] = useState('budget'); // NEW
   const [updateSalaryCap, setUpdateSalaryCap] = useState('');
   const [updateParticipants, setUpdateParticipants] = useState('');
+  const [updateRounds, setUpdateRounds] = useState(6);         // NEW
+  const capUpdateDisabled = updateBudgetMode === 'no-budget';  // NEW
 
   // Invite
   const [selectedLeagueForInvite, setSelectedLeagueForInvite] = useState('');
   const [inviteIdentifier, setInviteIdentifier] = useState('');
+
+  // Helpers
+  // Helpers
+  const clampParticipants = (n) => Math.max(4, Math.min(16, Number(n) || 4));
+  const clampRounds = (n) => Math.max(1, Math.min(12, Number(n) || 1)); // <= NEW
 
   // Search/filter (polish)
   const [filter, setFilter] = useState('');
@@ -76,34 +87,53 @@ export default function Leagues() {
   useEffect(() => {
     if (selectedUpdateLeagueObj) {
       setUpdateDraftDate(toInputDateTime(selectedUpdateLeagueObj.draft_date));
+      setUpdateBudgetMode(selectedUpdateLeagueObj.budget_mode ?? 'budget');   // NEW
       setUpdateSalaryCap(selectedUpdateLeagueObj.salary_cap_limit ?? '');
       setUpdateParticipants(selectedUpdateLeagueObj.num_participants ?? '');
+      setUpdateRounds(selectedUpdateLeagueObj.num_rounds ?? 6);               // NEW
     } else {
       setUpdateDraftDate('');
+      setUpdateBudgetMode('budget');                                          // NEW
       setUpdateSalaryCap('');
       setUpdateParticipants('');
+      setUpdateRounds(6);                                                     // NEW
     }
   }, [selectedUpdateLeagueObj]);
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    if (!leagueName.trim() || participants < 2) return;
+    if (!leagueName.trim()) return;
+
     await createLeague({
       name: leagueName.trim(),
       draftDate: draftDate ? new Date(draftDate).toISOString() : null,
-      salaryCapLimit: salaryCap === '' ? null : Number(salaryCap),
-      numParticipants: Number(participants),
+      budgetMode,                                                   // NEW
+      salaryCapLimit: capDisabled ? null : Number(salaryCap || 0),  // NEW
+      numParticipants: clampParticipants(participants),             // NEW (4..16)
+      numRounds: Number(stocksPerTeam),                             // NEW
     });
-    setLeagueName(''); setDraftDate(''); setSalaryCap('100000'); setParticipants(12);
+
+    setLeagueName('');
+    setDraftDate('');
+    setBudgetMode('budget');       // NEW
+    setSalaryCap('100000');
+    setParticipants(12);
+    setStocksPerTeam(6);           // NEW
   };
 
   const handleUpdate = async (e) => {
     e.preventDefault();
     if (!selectedLeagueForUpdate) return;
+
     const patch = {
       draft_date: updateDraftDate ? new Date(updateDraftDate).toISOString() : null,
-      salary_cap_limit: updateSalaryCap === '' ? null : Number(updateSalaryCap),
-      num_participants: updateParticipants === '' ? null : Number(updateParticipants),
+      budget_mode: updateBudgetMode,                                         // NEW
+      salary_cap_limit: capUpdateDisabled
+        ? null
+        : (updateSalaryCap === '' ? null : Number(updateSalaryCap)),         // NEW
+      num_participants:
+        updateParticipants === '' ? null : clampParticipants(updateParticipants), // NEW
+      num_rounds: Number(updateRounds),                                      // NEW
     };
     await updateLeague(selectedLeagueForUpdate, patch);
   };
@@ -113,20 +143,21 @@ export default function Leagues() {
     if (!selectedLeagueForInvite || !inviteIdentifier.trim()) return;
     const code = await inviteToLeague(selectedLeagueForInvite, inviteIdentifier.trim());
     const link = `${window.location.origin}/join/${code}`;
-    await navigator.clipboard?.writeText(link).catch(() => {});
+    await navigator.clipboard?.writeText(link).catch(() => { });
     alert(`Invite created.\nLink copied:\n${link}`);
     setInviteIdentifier('');
   };
 
   const copyInviteForLeague = async (lg) => {
     const link = `${window.location.origin}/join/${lg.invite_code}`;
-    await navigator.clipboard?.writeText(link).catch(() => {});
+    await navigator.clipboard?.writeText(link).catch(() => { });
     alert(`Invite link copied:\n${link}`);
   };
 
+  // in Leagues.jsx
   const setActiveAndGoDraft = (lg) => {
-    localStorage.setItem('activeLeagueId', lg.id);
-    nav('/');
+    localStorage.setItem('activeLeagueId', lg.id);   // keep this for convenience
+    nav(`/draft/${lg.id}`);                          // ← go straight to /draft/:leagueId
   };
 
   return (
@@ -144,23 +175,82 @@ export default function Leagues() {
             <form className="form" onSubmit={handleCreate}>
               <div className="form-row">
                 <label>League Name</label>
-                <input type="text" placeholder="Enter league name" value={leagueName} onChange={(e) => setLeagueName(e.target.value)} />
+                <input
+                  type="text"
+                  placeholder="Enter league name"
+                  value={leagueName}
+                  onChange={(e) => setLeagueName(e.target.value)}
+                />
               </div>
+
               <div className="form-row">
                 <label>Draft Date</label>
-                <input type="datetime-local" value={draftDate} onChange={(e) => setDraftDate(e.target.value)} />
+                <input
+                  type="datetime-local"
+                  value={draftDate}
+                  onChange={(e) => setDraftDate(e.target.value)}
+                />
               </div>
+
               <div className="form-row inline">
                 <div>
-                  <label>Salary Cap Limit ($)</label>
-                  <input type="number" min="0" step="1" placeholder="100000" value={salaryCap} onChange={(e) => setSalaryCap(e.target.value)} />
+                  <label>Budget Mode</label>
+                  <select
+                    value={budgetMode}
+                    onChange={(e) => setBudgetMode(e.target.value)}
+                  >
+                    <option value="budget">Budget</option>
+                    <option value="no-budget">No budget</option>
+                  </select>
                 </div>
+
                 <div>
-                  <label>Number of Participants</label>
-                  <input type="number" min="2" max="20" step="1" value={participants} onChange={(e) => setParticipants(Number(e.target.value))} />
+                  <label>Salary Cap Limit ($)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    placeholder="100000"
+                    value={salaryCap}
+                    onChange={(e) => setSalaryCap(e.target.value)}
+                    disabled={capDisabled}
+                  />
+                  {capDisabled && <small className="muted">Disabled in no-budget mode</small>}
                 </div>
               </div>
-              <button className="btn primary" type="submit" disabled={loading}>{loading ? 'Creating…' : 'Create League'}</button>
+
+              <div className="form-row inline">
+                <div>
+                  <label>Number of Participants</label>
+                  <input
+                    type="number"
+                    min="4"
+                    max="16"
+                    step="1"
+                    value={participants}
+                    onChange={(e) => setParticipants(clampParticipants(e.target.value))}
+                    onBlur={(e) => setParticipants(clampParticipants(e.target.value))}
+                  />
+                </div>
+
+                <div>
+                  <label>Stocks per Team</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="12"                      // <= NEW
+                    step="1"
+                    value={stocksPerTeam}
+                    onChange={(e) => setStocksPerTeam(clampRounds(e.target.value))}   // <= NEW
+                    onBlur={(e) => setStocksPerTeam(clampRounds(e.target.value))}     // <= NEW (extra safety)
+                  />
+
+                </div>
+              </div>
+
+              <button className="btn primary" type="submit" disabled={loading}>
+                {loading ? 'Creating…' : 'Create League'}
+              </button>
             </form>
           </div>
 
@@ -170,23 +260,77 @@ export default function Leagues() {
             <form className="form" onSubmit={handleUpdate}>
               <div className="form-row">
                 <label>Select League</label>
-                <select value={selectedLeagueForUpdate} onChange={(e) => setSelectedLeagueForUpdate(e.target.value)}>
+                <select
+                  value={selectedLeagueForUpdate}
+                  onChange={(e) => setSelectedLeagueForUpdate(e.target.value)}
+                >
                   {!managedLeagues.length && <option value="">(No managed leagues)</option>}
-                  {managedLeagues.map((l) => (<option key={l.id} value={l.id}>{l.name}</option>))}
+                  {managedLeagues.map((l) => (
+                    <option key={l.id} value={l.id}>{l.name}</option>
+                  ))}
                 </select>
               </div>
+
               <div className="form-row">
                 <label>Draft Date</label>
-                <input type="datetime-local" value={updateDraftDate} onChange={(e) => setUpdateDraftDate(e.target.value)} />
+                <input
+                  type="datetime-local"
+                  value={updateDraftDate}
+                  onChange={(e) => setUpdateDraftDate(e.target.value)}
+                />
               </div>
+
+              <div className="form-row">
+                <label>Budget Mode</label>
+                <select
+                  value={updateBudgetMode}
+                  onChange={(e) => setUpdateBudgetMode(e.target.value)}
+                >
+                  <option value="budget">Budget</option>
+                  <option value="no-budget">No budget</option>
+                </select>
+              </div>
+
               <div className="form-row">
                 <label>Salary Cap Limit ($)</label>
-                <input type="number" min="0" step="1" placeholder="Type here..." value={updateSalaryCap} onChange={(e) => setUpdateSalaryCap(e.target.value)} />
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  placeholder="Type here..."
+                  value={updateSalaryCap}
+                  onChange={(e) => setUpdateSalaryCap(e.target.value)}
+                  disabled={capUpdateDisabled}
+                />
               </div>
+
               <div className="form-row">
                 <label>Number of Participants</label>
-                <input type="number" min="2" max="20" step="1" placeholder="Type here..." value={updateParticipants} onChange={(e) => setUpdateParticipants(e.target.value)} />
+                <input
+                  type="number"
+                  min="4"
+                  max="16"
+                  step="1"
+                  placeholder="Type here..."
+                  value={updateParticipants}
+                  onChange={(e) => setUpdateParticipants(clampParticipants(e.target.value))}
+                  onBlur={(e) => setUpdateParticipants(clampParticipants(e.target.value))}
+                />
               </div>
+
+              <div className="form-row">
+                <label>Stocks per Team</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="12"                      // <= NEW
+                  step="1"
+                  value={updateRounds}
+                  onChange={(e) => setUpdateRounds(clampRounds(e.target.value))}    // <= NEW
+                  onBlur={(e) => setUpdateRounds(clampRounds(e.target.value))}      // <= NEW
+                />
+              </div>
+
               <button className="btn purple" type="submit" disabled={loading}>
                 {loading ? 'Updating…' : 'Update Settings'}
               </button>
@@ -201,29 +345,45 @@ export default function Leagues() {
             <div className="form-row inline">
               <div>
                 <label>Select League</label>
-                <select value={selectedLeagueForInvite} onChange={(e) => setSelectedLeagueForInvite(e.target.value)}>
+                <select
+                  value={selectedLeagueForInvite}
+                  onChange={(e) => setSelectedLeagueForInvite(e.target.value)}
+                >
                   {!managedLeagues.length && <option value="">(No managed leagues)</option>}
                   {managedLeagues.map((l) => (<option key={l.id} value={l.id}>{l.name}</option>))}
                 </select>
               </div>
               <div>
                 <label>Email/Username</label>
-                <input type="text" placeholder="Enter email or username" value={inviteIdentifier} onChange={(e) => setInviteIdentifier(e.target.value)} />
+                <input
+                  type="text"
+                  placeholder="Enter email or username"
+                  value={inviteIdentifier}
+                  onChange={(e) => setInviteIdentifier(e.target.value)}
+                />
               </div>
             </div>
-            <button className="btn primary" type="submit" disabled={loading}>{loading ? 'Sending…' : 'Send Invitation'}</button>
+            <button className="btn primary" type="submit" disabled={loading}>
+              {loading ? 'Sending…' : 'Send Invitation'}
+            </button>
           </form>
 
           {selectedLeagueForInvite && pendingInvites[selectedLeagueForInvite]?.length ? (
             <div className="list" style={{ marginTop: 12 }}>
               {pendingInvites[selectedLeagueForInvite].map((inv) => (
                 <div key={inv.code} className="league-row">
-                  <div className="meta">Pending: {inv.invited_identifier} • {new Date(inv.created_at).toLocaleString()}</div>
+                  <div className="meta">
+                    Pending: {inv.invited_identifier} • {new Date(inv.created_at).toLocaleString()}
+                  </div>
                   <div className="actions">
-                    <button className="btn ghost" type="button" onClick={() => {
-                      const link = `${window.location.origin}/join/${inv.code}`;
-                      navigator.clipboard?.writeText(link);
-                    }}>
+                    <button
+                      className="btn ghost"
+                      type="button"
+                      onClick={() => {
+                        const link = `${window.location.origin}/join/${inv.code}`;
+                        navigator.clipboard?.writeText(link);
+                      }}
+                    >
                       Copy Link
                     </button>
                   </div>
@@ -253,22 +413,31 @@ export default function Leagues() {
           />
           <div className="list">
             {filteredLeagues.length === 0 ? (
-              <p className="muted">{myLeagues.length ? 'No leagues match your search.' : 'You’re not in any leagues yet. Create one above or join with an invite link.'}</p>
+              <p className="muted">
+                {myLeagues.length
+                  ? 'No leagues match your search.'
+                  : 'You’re not in any leagues yet. Create one above or join with an invite link.'}
+              </p>
             ) : (
               filteredLeagues.map((lg) => (
                 <div className="league-row" key={lg.id}>
                   <div>
                     <h4>{lg.name}</h4>
                     <div className="meta">
-                      Role: {lg.role} • Participants: {lg.num_participants} • Draft: {lg.draft_date ? new Date(lg.draft_date).toLocaleString() : 'TBD'}
+                      Role: {lg.role} • Participants: {lg.num_participants} • Draft:{' '}
+                      {lg.draft_date ? new Date(lg.draft_date).toLocaleString() : 'TBD'}
                     </div>
                   </div>
                   <div className="actions">
                     <Link className="btn ghost" to={`/league/${lg.id}`}>Open</Link>
-                    <button className="btn ghost" type="button" onClick={() => setActiveAndGoDraft(lg)}>Draft</button>
+                    <button className="btn ghost" type="button" onClick={() => setActiveAndGoDraft(lg)}>
+                      Draft
+                    </button>
                     {lg.role === 'commissioner' ? (
                       <>
-                        <button className="btn ghost" type="button" onClick={() => copyInviteForLeague(lg)}>Copy Invite</button>
+                        <button className="btn ghost" type="button" onClick={() => copyInviteForLeague(lg)}>
+                          Copy Invite
+                        </button>
                         <button
                           className="btn ghost"
                           type="button"
@@ -282,7 +451,9 @@ export default function Leagues() {
                         </button>
                       </>
                     ) : (
-                      <button className="btn ghost" type="button" onClick={() => leaveLeague(lg.id)}>Leave</button>
+                      <button className="btn ghost" type="button" onClick={() => leaveLeague(lg.id)}>
+                        Leave
+                      </button>
                     )}
                   </div>
                 </div>
