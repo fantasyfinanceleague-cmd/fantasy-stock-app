@@ -5,6 +5,7 @@ import { useAuthUser } from '../auth/useAuthUser';
 import HCaptcha from '@hcaptcha/react-hcaptcha';
 
 const HCAPTCHA_SITE_KEY = import.meta.env.VITE_HCAPTCHA_SITE_KEY;
+const IS_LOCALHOST = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
 export default function Login() {
   const nav = useNavigate();
@@ -29,8 +30,8 @@ export default function Login() {
     e.preventDefault();
     setErr('');
 
-    // Validate captcha for sign up
-    if (isSignUp && !captchaToken) {
+    // Validate captcha for sign up (skip on localhost)
+    if (isSignUp && !IS_LOCALHOST && !captchaToken) {
       setErr('Please complete the captcha verification');
       return;
     }
@@ -38,13 +39,19 @@ export default function Login() {
     setBusy(true);
 
     if (isSignUp) {
-      const { error } = await supabase.auth.signUp({
+      const signUpOptions = {
         email,
         password: pw,
-        options: {
+      };
+
+      // Only include captcha token if not on localhost and token exists
+      if (!IS_LOCALHOST && captchaToken) {
+        signUpOptions.options = {
           captchaToken: captchaToken
-        }
-      });
+        };
+      }
+
+      const { error } = await supabase.auth.signUp(signUpOptions);
       setBusy(false);
 
       // Reset captcha after attempt
@@ -194,8 +201,8 @@ export default function Login() {
             </div>
           )}
 
-          {/* Show hCaptcha only for sign up */}
-          {isSignUp && HCAPTCHA_SITE_KEY && HCAPTCHA_SITE_KEY !== 'YOUR_SITE_KEY_HERE' && (
+          {/* Show hCaptcha only for sign up and not on localhost */}
+          {isSignUp && !IS_LOCALHOST && HCAPTCHA_SITE_KEY && HCAPTCHA_SITE_KEY !== 'YOUR_SITE_KEY_HERE' && (
             <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'center' }}>
               <HCaptcha
                 ref={captchaRef}
@@ -211,10 +218,26 @@ export default function Login() {
             </div>
           )}
 
+          {/* Show dev notice on localhost */}
+          {isSignUp && IS_LOCALHOST && (
+            <div style={{
+              padding: '12px',
+              marginBottom: '20px',
+              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+              border: '1px solid rgba(59, 130, 246, 0.3)',
+              borderRadius: '8px',
+              color: '#60a5fa',
+              fontSize: '0.85rem',
+              textAlign: 'center'
+            }}>
+              ℹ️ Development mode: hCaptcha disabled on localhost
+            </div>
+          )}
+
           <button
             type="submit"
             className="modal-button btn-primary"
-            disabled={busy || (isSignUp && !captchaToken)}
+            disabled={busy || (isSignUp && !IS_LOCALHOST && !captchaToken)}
             style={{
               width: '100%',
               padding: '14px',
