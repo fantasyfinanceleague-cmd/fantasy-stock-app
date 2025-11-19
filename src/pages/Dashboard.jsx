@@ -5,7 +5,7 @@ import { supabase } from '../supabase/supabaseClient';
 import '../layout.css';
 import { useAuthUser } from '../auth/useAuthUser';
 import { prettyName, formatUSD } from '../utils/formatting';
-import { fetchQuote, fetchCompanyName, fetchQuotesInBatch } from '../utils/stockData';
+import { fetchCompanyName, fetchQuotesInBatch } from '../utils/stockData';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -23,12 +23,11 @@ export default function Dashboard() {
 
   // Holdings (selected league)
   const [positions, setPositions] = useState([]);   // my rows from drafts
-  const [prices, setPrices] = useState({});         // {SYM: price}
   const [symbolToName, setSymbolToName] = useState({});
 
   // Recent league activity + standings preview
   const [recentPicks, setRecentPicks] = useState([]);
-  const [standings, setStandings] = useState([]);   // [{user_id, pctGain, cost, current}]
+  const [recentTrades, setRecentTrades] = useState([]);
 
   // If user changes (sign in/out), reset data
   useEffect(() => {
@@ -36,9 +35,8 @@ export default function Dashboard() {
       setLeagues([]);
       setLeagueId('');
       setPositions([]);
-      setPrices({});
       setRecentPicks([]);
-      setStandings([]);
+      setRecentTrades([]);
       setLoading(false);
     }
   }, [USER_ID]);
@@ -98,6 +96,7 @@ export default function Dashboard() {
     if (!USER_ID || !leagueId) {
       setPositions([]);
       setRecentPicks([]);
+      setRecentTrades([]);
       setStandings([]);
       return;
     }
@@ -131,36 +130,17 @@ export default function Dashboard() {
           [...(picks || [])].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5)
         );
 
-        // standings inputs: fetch live prices for ALL symbols (limited concurrency)
-        const allSyms = [...new Set((picks || []).map(p => p.symbol?.toUpperCase()))].filter(Boolean);
-        const results = await fetchQuotesInBatch(allSyms);
-        setPrices(results);
+        // recent trades
+        const { data: trades, error: tErr } = await supabase
+          .from('trades')
+          .select('*')
+          .eq('league_id', leagueId)
+          .order('created_at', { ascending: false })
+          .limit(5);
 
-        // standings: compute % gain per user (current vs cost)
-        const byUser = new Map();
-        (picks || []).forEach(p => {
-          const u = p.user_id;
-          const cur = byUser.get(u) || { user_id: u, picks: [] };
-          cur.picks.push(p);
-          byUser.set(u, cur);
-        });
-
-        const table = Array.from(byUser.values()).map(({ user_id, picks }) => {
-          let cost = 0;
-          let current = 0;
-          picks.forEach(p => {
-            const qty = Number(p.quantity || 0) || 0;
-            const entry = Number(p.entry_price || 0) || 0;
-            const live = results[p.symbol?.toUpperCase()];
-            const px = Number.isFinite(live) ? live : entry;
-            cost += entry * qty;
-            current += px * qty;
-          });
-          const pctGain = cost > 0 ? ((current - cost) / cost) * 100 : 0;
-          return { user_id, cost, current, pctGain };
-        }).sort((a, b) => b.pctGain - a.pctGain);
-
-        setStandings(table);
+        if (!tErr) {
+          setRecentTrades(trades || []);
+        }
       } catch (e) {
         setError(e.message || String(e));
       } finally {
@@ -169,6 +149,39 @@ export default function Dashboard() {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [USER_ID, leagueId]);
+
+  // Simple state for prices (no real-time polling)
+  const [prices, setPrices] = useState({});
+
+  // ---- Recalculate standings with live prices
+  const standings = useMemo(() => {
+    if (!recentPicks.length) return [];
+
+    const byUser = new Map();
+    recentPicks.forEach(p => {
+      const u = p.user_id;
+      const cur = byUser.get(u) || { user_id: u, picks: [] };
+      cur.picks.push(p);
+      byUser.set(u, cur);
+    });
+
+    const table = Array.from(byUser.values()).map(({ user_id, picks }) => {
+      let cost = 0;
+      let current = 0;
+      picks.forEach(p => {
+        const qty = Number(p.quantity || 0) || 0;
+        const entry = Number(p.entry_price || 0) || 0;
+        const live = prices[p.symbol?.toUpperCase()];
+        const px = Number.isFinite(live) ? live : entry;
+        cost += entry * qty;
+        current += px * qty;
+      });
+      const pctGain = cost > 0 ? ((current - cost) / cost) * 100 : 0;
+      return { user_id, cost, current, pctGain };
+    }).sort((a, b) => b.pctGain - a.pctGain);
+
+    return table;
+  }, [recentPicks, prices]);
 
   // ---- My portfolio value + rank
   const myPortfolioValue = useMemo(() => {
@@ -255,7 +268,7 @@ export default function Dashboard() {
 
   return (
     <div className="page">
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
         <h2 style={{ color: '#fff', margin: 0 }}>Welcome Back to Fantasy Stock League</h2>
       </div>
 
@@ -386,29 +399,69 @@ export default function Dashboard() {
       </div>
 
       {/* Row 3 */}
-      <div className="card">
-        <h3 style={{ marginTop: 0 }}>Recent League Activity</h3>
-        {recentPicks.length === 0 ? (
-          <p className="muted" style={{ margin: 0 }}>No recent activity.</p>
-        ) : (
-          <div style={{ display: 'grid', gap: 8 }}>
-            {recentPicks.map(p => (
-              <div key={p.id} className="list-row">
-                <div>
-                  <div style={{ fontWeight: 600 }}>
-                    {p.user_id} drafted <strong>{p.symbol}</strong>
-                    {activeLeague ? ` in ${activeLeague.name}` : ''}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+        {/* Recent Draft Picks */}
+        <div className="card">
+          <h3 style={{ marginTop: 0 }}>Recent Draft Picks</h3>
+          {recentPicks.length === 0 ? (
+            <p className="muted" style={{ margin: 0 }}>No recent picks.</p>
+          ) : (
+            <div style={{ display: 'grid', gap: 8 }}>
+              {recentPicks.map(p => (
+                <div key={p.id} className="list-row">
+                  <div>
+                    <div style={{ fontWeight: 600 }}>
+                      {p.user_id === USER_ID ? 'You' : p.user_id.substring(0, 8)} drafted <strong>{p.symbol}</strong>
+                    </div>
+                    <div className="muted" style={{ fontSize: 12 }}>
+                      {new Date(p.created_at).toLocaleString()}
+                    </div>
                   </div>
-                  <div className="muted" style={{ fontSize: 12 }}>
-                    {new Date(p.created_at).toLocaleString()}
-                  </div>
+                  <div className="muted">{formatUSD(p.entry_price)}</div>
                 </div>
-                <div className="muted">{formatUSD(p.entry_price)}</div>
-              </div>
-            ))}
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Recent Trades */}
+        <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <h3 style={{ margin: 0 }}>Recent Trades</h3>
+            <Link className="btn" to="/trade-history" style={{ fontSize: 13, padding: '4px 10px' }}>View All</Link>
           </div>
-        )}
+          {recentTrades.length === 0 ? (
+            <p className="muted" style={{ margin: 0 }}>No trades yet.</p>
+          ) : (
+            <div style={{ display: 'grid', gap: 8 }}>
+              {recentTrades.map(t => {
+                const isMine = t.user_id === USER_ID;
+                const isBuy = t.action === 'buy';
+                return (
+                  <div key={t.id} className="list-row" style={{ backgroundColor: isMine ? 'rgba(59, 130, 246, 0.05)' : 'transparent' }}>
+                    <div>
+                      <div style={{ fontWeight: 600 }}>
+                        {isMine ? 'You' : t.user_id.substring(0, 8)}{' '}
+                        <span style={{ color: isBuy ? '#10b981' : '#ef4444' }}>
+                          {isBuy ? 'bought' : 'sold'}
+                        </span>{' '}
+                        <strong>{t.quantity}</strong> {t.symbol}
+                      </div>
+                      <div className="muted" style={{ fontSize: 12 }}>
+                        {new Date(t.created_at).toLocaleString()}
+                      </div>
+                    </div>
+                    <div style={{ fontWeight: 600, color: isBuy ? '#ef4444' : '#10b981' }}>
+                      {formatUSD(t.total_value)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
+
     </div>
   );
 }

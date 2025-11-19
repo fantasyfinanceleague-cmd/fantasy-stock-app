@@ -30,8 +30,8 @@ export default function Login() {
     e.preventDefault();
     setErr('');
 
-    // Validate captcha for sign up (skip on localhost)
-    if (isSignUp && !IS_LOCALHOST && !captchaToken) {
+    // Validate captcha (skip on localhost)
+    if (!IS_LOCALHOST && !captchaToken) {
       setErr('Please complete the captcha verification');
       return;
     }
@@ -68,8 +68,27 @@ export default function Login() {
         setIsSignUp(false);
       }
     } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password: pw });
+      const signInOptions = {
+        email,
+        password: pw
+      };
+
+      // Include captcha token for login if not on localhost
+      if (!IS_LOCALHOST && captchaToken) {
+        signInOptions.options = {
+          captchaToken: captchaToken
+        };
+      }
+
+      const { error } = await supabase.auth.signInWithPassword(signInOptions);
       setBusy(false);
+
+      // Reset captcha after attempt
+      if (captchaRef.current) {
+        captchaRef.current.resetCaptcha();
+        setCaptchaToken(null);
+      }
+
       if (error) {
         setErr(error.message);
       } else {
@@ -201,8 +220,8 @@ export default function Login() {
             </div>
           )}
 
-          {/* Show hCaptcha only for sign up and not on localhost */}
-          {isSignUp && !IS_LOCALHOST && HCAPTCHA_SITE_KEY && HCAPTCHA_SITE_KEY !== 'YOUR_SITE_KEY_HERE' && (
+          {/* Show hCaptcha for both sign up and login (not on localhost) */}
+          {!IS_LOCALHOST && HCAPTCHA_SITE_KEY && HCAPTCHA_SITE_KEY !== 'YOUR_SITE_KEY_HERE' && (
             <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'center' }}>
               <HCaptcha
                 ref={captchaRef}
@@ -219,7 +238,7 @@ export default function Login() {
           )}
 
           {/* Show dev notice on localhost */}
-          {isSignUp && IS_LOCALHOST && (
+          {IS_LOCALHOST && (
             <div style={{
               padding: '12px',
               marginBottom: '20px',
@@ -237,7 +256,7 @@ export default function Login() {
           <button
             type="submit"
             className="modal-button btn-primary"
-            disabled={busy || (isSignUp && !IS_LOCALHOST && !captchaToken)}
+            disabled={busy || (!IS_LOCALHOST && !captchaToken)}
             style={{
               width: '100%',
               padding: '14px',

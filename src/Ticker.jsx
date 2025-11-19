@@ -95,8 +95,12 @@ export default function Ticker() {
   };
 
   useEffect(() => {
+    // Initial fetch
     fetchQuotes();
-    const id = setInterval(fetchQuotes, 15000); // refresh every 15s
+
+    // Poll every 60 seconds
+    const id = setInterval(fetchQuotes, 60000);
+
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSymbols]);

@@ -5,7 +5,8 @@ import { supabase } from '../supabase/supabaseClient';
 import '../layout.css';
 import { useAuthUser } from '../auth/useAuthUser';
 import { prettyName } from '../utils/formatting';
-import { fetchQuote, fetchCompanyName, fetchQuotesInBatch } from '../utils/stockData';
+import { fetchCompanyName, fetchQuotesInBatch } from '../utils/stockData';
+import TradeModal from '../components/TradeModal';
 
 export default function PortfolioPage() {
   // ✅ Call hooks only inside the component
@@ -18,10 +19,14 @@ export default function PortfolioPage() {
   const [league, setLeague] = useState(null);
 
   const [positions, setPositions] = useState([]);       // your holdings from drafts
+  const [trades, setTrades] = useState([]);             // all trades for this user in this league
   const [symbolToName, setSymbolToName] = useState({}); // { AAPL: 'Apple Inc' }
-  const [prices, setPrices] = useState({});             // { AAPL: 227.32 }
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+
+  // Trade modal state
+  const [showTradeModal, setShowTradeModal] = useState(false);
+  const [tradeAction, setTradeAction] = useState('buy');
+  const [tradeSymbol, setTradeSymbol] = useState('');
 
   // Load leagues where user is a member, then hydrate meta
   useEffect(() => {
@@ -103,6 +108,21 @@ export default function PortfolioPage() {
         if (pErr) throw pErr;
         setPositions(picks || []);
 
+        // Load trades (only if authenticated - trades table requires UUID)
+        if (authUser?.id) {
+          const { data: tradesData, error: tErr } = await supabase
+            .from('trades')
+            .select('*')
+            .eq('league_id', leagueId)
+            .eq('user_id', USER_ID)
+            .order('created_at', { ascending: true });
+
+          if (tErr) throw tErr;
+          setTrades(tradesData || []);
+        } else {
+          setTrades([]);
+        }
+
         const unique = [...new Set((picks || []).map(p => p.symbol?.toUpperCase()))];
         for (const s of unique) {
           if (!s || symbolToName[s]) continue;
@@ -118,69 +138,140 @@ export default function PortfolioPage() {
     })();
   }, [leagueId, USER_ID]); // depend on both
 
-  // Refresh quotes (limited concurrency)
-  async function refreshQuotes() {
-    if (!positions.length) return;
-    setRefreshing(true);
+  // Calculate actual holdings: draft picks + buy trades - sell trades
+  const actualHoldings = useMemo(() => {
+    const holdingsMap = {}; // { AAPL: { symbol, quantity, avgEntry, totalCost } }
+
+    // Start with draft picks
+    positions.forEach(pick => {
+      const sym = pick.symbol?.toUpperCase();
+      if (!sym) return;
+
+      if (!holdingsMap[sym]) {
+        holdingsMap[sym] = {
+          symbol: sym,
+          quantity: 0,
+          totalCost: 0,
+          company_name: pick.company_name
+        };
+      }
+
+      const qty = Number(pick.quantity || 1);
+      const price = Number(pick.entry_price);
+      holdingsMap[sym].quantity += qty;
+      holdingsMap[sym].totalCost += price * qty;
+    });
+
+    // Apply trades
+    trades.forEach(trade => {
+      const sym = trade.symbol?.toUpperCase();
+      if (!sym) return;
+
+      if (!holdingsMap[sym]) {
+        holdingsMap[sym] = {
+          symbol: sym,
+          quantity: 0,
+          totalCost: 0
+        };
+      }
+
+      const qty = Number(trade.quantity);
+      const price = Number(trade.price);
+
+      if (trade.action === 'buy') {
+        holdingsMap[sym].quantity += qty;
+        holdingsMap[sym].totalCost += price * qty;
+      } else if (trade.action === 'sell') {
+        // Calculate proportional cost reduction
+        const avgCost = holdingsMap[sym].quantity > 0
+          ? holdingsMap[sym].totalCost / holdingsMap[sym].quantity
+          : price;
+
+        holdingsMap[sym].quantity -= qty;
+        holdingsMap[sym].totalCost -= avgCost * qty;
+      }
+    });
+
+    // Filter out positions with 0 or negative quantity
+    const holdings = Object.values(holdingsMap)
+      .filter(h => h.quantity > 0)
+      .map(h => ({
+        ...h,
+        entry_price: h.quantity > 0 ? h.totalCost / h.quantity : 0
+      }));
+
+    return holdings;
+  }, [positions, trades]);
+
+  // Calculate total cash spent (for budget calculation)
+  const totalCashSpent = useMemo(() => {
+    let spent = 0;
+
+    // Draft picks cost money
+    positions.forEach(pick => {
+      const qty = Number(pick.quantity || 1);
+      const price = Number(pick.entry_price);
+      spent += price * qty;
+    });
+
+    // Buy trades cost money, sell trades return money
+    trades.forEach(trade => {
+      const amount = Number(trade.total_value);
+      if (trade.action === 'buy') {
+        spent += amount;
+      } else if (trade.action === 'sell') {
+        spent -= amount;
+      }
+    });
+
+    return spent;
+  }, [positions, trades]);
+
+  // State for prices and refresh
+  const [prices, setPrices] = useState({});
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState(null);
+
+  // Manual refresh function
+  const refreshPrices = async () => {
+    const symbols = [...new Set(actualHoldings.map(h => h.symbol?.toUpperCase()))].filter(Boolean);
+    if (!symbols.length) return;
+
+    setIsRefreshing(true);
     try {
-      const syms = [...new Set(positions.map(p => p.symbol?.toUpperCase()))].filter(Boolean);
-      const results = await fetchQuotesInBatch(syms);
-      if (Object.keys(results).length) setPrices(prev => ({ ...prev, ...results }));
+      const results = await fetchQuotesInBatch(symbols);
+      setPrices(prev => ({ ...prev, ...results }));
+      setLastUpdate(new Date());
+    } catch (error) {
+      console.error('Error fetching prices:', error);
     } finally {
-      setRefreshing(false);
+      setIsRefreshing(false);
     }
-  }
+  };
 
-  // Smart polling: initial fetch + pause when tab hidden
-  useEffect(() => {
-    if (!positions.length) return;
-
-    let id = null;
-    const start = () => { if (!id) id = setInterval(refreshQuotes, 45_000); };
-    const stop = () => { if (id) { clearInterval(id); id = null; } };
-
-    // initial fetch
-    refreshQuotes();
-    if (!document.hidden) start();
-
-    const onVisibility = () => (document.hidden ? stop() : start());
-    document.addEventListener('visibilitychange', onVisibility);
-
-    return () => {
-      stop();
-      document.removeEventListener('visibilitychange', onVisibility);
-    };
-  }, [positions]);
-
-  // metrics
+  // metrics (calculated after prices are available)
   const totalCurrentValue = useMemo(() => {
-    return positions.reduce((sum, p) => {
-      const sym = p.symbol?.toUpperCase();
+    return actualHoldings.reduce((sum, h) => {
+      const sym = h.symbol?.toUpperCase();
       const live = prices[sym];
-      const px = Number.isFinite(live) ? live : Number(p.entry_price);
-      const qty = Number(p.quantity || 0) || 0;
+      const px = Number.isFinite(live) ? live : Number(h.entry_price);
+      const qty = Number(h.quantity || 0) || 0;
       return sum + px * qty;
     }, 0);
-  }, [positions, prices]);
-
-  const totalSpent = useMemo(
-    () => positions.reduce((s, p) => s + Number(p.entry_price || 0) * (Number(p.quantity || 0) || 0), 0),
-    [positions]
-  );
+  }, [actualHoldings, prices]);
 
   const budgetRemaining = useMemo(() => {
     if (!league || league.budget_mode !== 'budget') return null;
     const cap = Number(league.budget_amount || 0);
-    return Math.max(cap - totalSpent, 0);
-  }, [league, totalSpent]);
+    return Math.max(cap - totalCashSpent, 0);
+  }, [league, totalCashSpent]);
 
-  const totalHoldings = positions.length;
+  const totalHoldings = actualHoldings.length;
 
   const handleLeagueChange = (e) => {
     const id = e.target.value;
     setLeagueId(id);
     localStorage.setItem('activeLeagueId', id);
-    setPrices({});
   };
 
   // Render states (after all hooks have been called)
@@ -241,9 +332,29 @@ export default function PortfolioPage() {
             </select>
           </div>
 
-          <button className="btn" onClick={refreshQuotes} disabled={refreshing || !positions.length}>
-            {refreshing ? 'Refreshing…' : 'Refresh Prices'}
+          <button
+            className="btn primary"
+            onClick={() => {
+              setTradeAction('buy');
+              setTradeSymbol('');
+              setShowTradeModal(true);
+            }}
+            style={{ whiteSpace: 'nowrap' }}
+          >
+            Buy Stock
           </button>
+
+          <button className="btn" onClick={refreshPrices} disabled={isRefreshing || !actualHoldings.length}>
+            {isRefreshing ? 'Refreshing…' : 'Refresh Prices'}
+          </button>
+
+          {lastUpdate && (
+            <span className="muted" style={{ fontSize: 13 }}>
+              Last updated: {lastUpdate.toLocaleTimeString()}
+            </span>
+          )}
+
+          <Link className="btn" to="/trade-history">Trade History</Link>
         </div>
       </div>
 
@@ -285,6 +396,7 @@ export default function PortfolioPage() {
               <col className="col-last" />
               <col className="col-pl" />
               <col className="col-plp" />
+              <col style={{ width: '140px' }} />
             </colgroup>
 
             <thead>
@@ -292,26 +404,27 @@ export default function PortfolioPage() {
                 <th>Symbol</th>
                 <th>Company</th>
                 <th className="numeric">Qty</th>
-                <th className="numeric">Entry</th>
+                <th className="numeric">Avg Entry</th>
                 <th className="numeric">Last</th>
                 <th className="numeric">P/L $</th>
                 <th className="numeric">P/L %</th>
+                <th>Actions</th>
               </tr>
             </thead>
 
             <tbody>
-              {positions.length === 0 && (
+              {actualHoldings.length === 0 && (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', color: '#9ca3af', padding: '20px 12px' }}>
-                    No holdings yet.
+                  <td colSpan={8} style={{ textAlign: 'center', color: '#9ca3af', padding: '20px 12px' }}>
+                    No holdings yet. Click "Buy Stock" to get started!
                   </td>
                 </tr>
               )}
 
-              {positions.map((r) => {
-                const sym = r.symbol?.toUpperCase();
-                const qty = Number(r.quantity ?? 1);
-                const entry = Number(r.entry_price);
+              {actualHoldings.map((h) => {
+                const sym = h.symbol?.toUpperCase();
+                const qty = Number(h.quantity ?? 1);
+                const entry = Number(h.entry_price);
                 const last = prices[sym] ?? null;
                 const pl = (last != null && Number.isFinite(entry)) ? (last - entry) * qty : null;
                 const plp = (last != null && Number.isFinite(entry) && entry !== 0)
@@ -319,15 +432,51 @@ export default function PortfolioPage() {
                   : null;
 
                 return (
-                  <tr key={`${sym}-${r.id ?? r.pick_number ?? Math.random()}`}>
+                  <tr key={`${sym}-${Math.random()}`}>
                     <td>{sym}</td>
-                    <td>{prettyName(symbolToName[sym] || r.company_name || '—')}</td>
+                    <td>{prettyName(symbolToName[sym] || h.company_name || '—')}</td>
                     <td className="numeric">{Number.isFinite(qty) ? qty : '—'}</td>
                     <td className="numeric">{Number.isFinite(entry) ? `$${entry.toFixed(2)}` : '—'}</td>
                     <td className="numeric">{Number.isFinite(last) ? `$${last.toFixed(2)}` : '—'}</td>
                     <td className="numeric">{Number.isFinite(pl) ? `$${pl.toFixed(2)}` : '—'}</td>
                     <td className="numeric">
                       {Number.isFinite(plp) ? `${plp.toFixed(2)}%` : '—'}
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button
+                          className="btn"
+                          onClick={() => {
+                            setTradeAction('buy');
+                            setTradeSymbol(sym);
+                            setShowTradeModal(true);
+                          }}
+                          style={{
+                            fontSize: 12,
+                            padding: '4px 8px',
+                            backgroundColor: '#10b981',
+                            borderColor: '#10b981'
+                          }}
+                        >
+                          Buy
+                        </button>
+                        <button
+                          className="btn"
+                          onClick={() => {
+                            setTradeAction('sell');
+                            setTradeSymbol(sym);
+                            setShowTradeModal(true);
+                          }}
+                          style={{
+                            fontSize: 12,
+                            padding: '4px 8px',
+                            backgroundColor: '#ef4444',
+                            borderColor: '#ef4444'
+                          }}
+                        >
+                          Sell
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -336,6 +485,43 @@ export default function PortfolioPage() {
           </table>
         </div>
       </div>
+
+      {/* Trade Modal */}
+      <TradeModal
+        show={showTradeModal}
+        onClose={() => setShowTradeModal(false)}
+        onTradeComplete={async () => {
+          // Reload positions and trades
+          const { data: picks } = await supabase
+            .from('drafts')
+            .select('id, symbol, entry_price, quantity, round, pick_number, created_at')
+            .eq('league_id', leagueId)
+            .eq('user_id', USER_ID)
+            .order('pick_number', { ascending: true });
+          setPositions(picks || []);
+
+          // Only load trades if authenticated
+          if (authUser?.id) {
+            const { data: tradesData } = await supabase
+              .from('trades')
+              .select('*')
+              .eq('league_id', leagueId)
+              .eq('user_id', USER_ID)
+              .order('created_at', { ascending: true });
+            setTrades(tradesData || []);
+          }
+
+          // Refresh prices
+          refreshPrices();
+        }}
+        leagueId={leagueId}
+        userId={USER_ID}
+        currentHoldings={actualHoldings}
+        availableCash={budgetRemaining ?? 0}
+        isBudgetMode={league?.budget_mode === 'budget'}
+        initialSymbol={tradeSymbol}
+        initialAction={tradeAction}
+      />
     </div>
   );
 }
