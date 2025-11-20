@@ -1,14 +1,16 @@
 // src/hooks/useLeagues.js
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../supabase/supabaseClient';
-
-const USER_ID = 'test-user'; // swap for auth uid later
+import { useAuthUser } from '../auth/useAuthUser';
 
 function genCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase();
 }
 
 export default function useLeagues() {
+  const authUser = useAuthUser();
+  const USER_ID = authUser?.id ?? 'test-user'; // Use authenticated user ID
+
   const [myLeagues, setMyLeagues] = useState([]);
   const [managedLeagues, setManagedLeagues] = useState([]);
   const [pendingInvites, setPendingInvites] = useState({});
@@ -16,9 +18,13 @@ export default function useLeagues() {
   const [error, setError] = useState('');
 
   const refresh = useCallback(async () => {
+    if (!USER_ID) return; // Wait for auth to load
+
     setLoading(true);
     setError('');
     try {
+      console.log('🔍 Refreshing leagues for USER_ID:', USER_ID);
+
       // leagues I manage
       const { data: asComm, error: e1 } = await supabase
         .from('leagues')
@@ -26,6 +32,7 @@ export default function useLeagues() {
         .eq('commissioner_id', USER_ID)
         .order('created_at', { ascending: false });
       if (e1) throw e1;
+      console.log('📊 Leagues I manage:', asComm);
 
       // my memberships (could include my own leagues too)
       const { data: memRows, error: e2 } = await supabase
@@ -33,6 +40,7 @@ export default function useLeagues() {
         .select('league_id, role')
         .eq('user_id', USER_ID);
       if (e2) throw e2;
+      console.log('👥 My memberships:', memRows);
 
       let memberLeagues = [];
       if (memRows?.length) {
@@ -61,6 +69,7 @@ export default function useLeagues() {
 
       setManagedLeagues(managed);
       setMyLeagues(merged);
+      console.log('✅ Final merged leagues:', merged);
 
       // pending invites for leagues I manage
       if (managed.length) {
@@ -83,7 +92,7 @@ export default function useLeagues() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [USER_ID]);
 
   useEffect(() => {
     refresh();
@@ -99,6 +108,8 @@ export default function useLeagues() {
       budgetMode = 'budget',
       budgetAmount = 100,
     }) => {
+      if (!USER_ID) throw new Error('Must be logged in to create a league');
+
       setLoading(true);
       setError('');
       try {
@@ -134,7 +145,7 @@ export default function useLeagues() {
         setLoading(false);
       }
     },
-    [refresh]
+    [refresh, USER_ID]
   );
 
   const updateLeague = useCallback(
@@ -152,7 +163,7 @@ export default function useLeagues() {
         setLoading(false);
       }
     },
-    [refresh]
+    [refresh, USER_ID]
   );
 
   const inviteToLeague = useCallback(
@@ -182,7 +193,7 @@ export default function useLeagues() {
         setLoading(false);
       }
     },
-    [refresh]
+    [refresh, USER_ID]
   );
 
   const leaveLeague = useCallback(
@@ -195,7 +206,7 @@ export default function useLeagues() {
         setLoading(false);
       }
     },
-    [refresh]
+    [refresh, USER_ID]
   );
   const deleteLeague = useCallback(async (leagueId) => {
     setLoading(true);
@@ -213,7 +224,7 @@ export default function useLeagues() {
     } finally {
       setLoading(false);
     }
-  }, [refresh]);
+  }, [refresh, USER_ID]);
 
   return {
     USER_ID,

@@ -62,7 +62,6 @@ export default function Dashboard() {
           setLeagueId('');
           setPositions([]);
           setRecentPicks([]);
-          setStandings([]);
           return;
         }
 
@@ -97,7 +96,6 @@ export default function Dashboard() {
       setPositions([]);
       setRecentPicks([]);
       setRecentTrades([]);
-      setStandings([]);
       return;
     }
 

@@ -38,6 +38,12 @@ const Header = () => {
             {loggingOut ? 'Logging out...' : 'Log Out'}
           </button>
         )}
+        {user && (
+          <div className="user-badge">
+            <span className="user-icon">👤</span>
+            <span className="user-email">{user.email}</span>
+          </div>
+        )}
       </nav>
     </header>
   );
