@@ -212,11 +212,25 @@
 
 /* --- HEADER STYLES --- */
 .header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   background-color: #111827;
   color: white;
   padding: 1rem 2rem;
-  text-align: center;
   border-bottom: 1px solid #1f2937;
+}
+
+.header-nav {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
 .header-title {
@@ -300,9 +314,10 @@
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 0.5rem 1rem;
   border-radius: 20px;
-  margin-left: 0.5rem;
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+  text-decoration: none;
 }
 
 .user-badge:hover {

@@ -9,10 +9,19 @@ import { fetchCompanyName } from '../utils/stockData';
 import DraftControls from '../components/DraftControls';
 import DraftHistory from '../components/DraftHistory';
 import DraftCompleteModal from '../components/DraftCompleteModal';
+import DraftSetupModal from '../components/DraftSetupModal';
 
 // Draft access rules
 const MIN_PARTICIPANTS = 4;
 const REQUIRE_TIME_IN_PAST = false;
+
+// Popular stocks for bot auto-picks
+const BOT_STOCK_POOL = [
+  'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'BRK.B', 'JPM', 'V',
+  'UNH', 'MA', 'HD', 'PG', 'JNJ', 'MRK', 'ABBV', 'CVX', 'XOM', 'PEP',
+  'KO', 'COST', 'AVGO', 'TMO', 'MCD', 'WMT', 'CSCO', 'ACN', 'ABT', 'LLY',
+  'DHR', 'NKE', 'ORCL', 'TXN', 'NEE', 'UPS', 'PM', 'MS', 'RTX', 'HON'
+];
 
 // ---- Finnhub client-side suggestions ----
 const FINNHUB_API_KEY = import.meta.env.VITE_FINNHUB_API_KEY; // set in .env.local
@@ -86,6 +95,15 @@ export default function DraftPage() {
   // modal on completion
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [hasShownCompleteModal, setHasShownCompleteModal] = useState(false);
+
+  // auto-draft for bots
+  const [autoDraftEnabled, setAutoDraftEnabled] = useState(true);
+  const [botPickInProgress, setBotPickInProgress] = useState(false);
+  const [realUserIds, setRealUserIds] = useState(new Set()); // IDs that exist in auth.users
+
+  // draft setup modal
+  const [showSetupModal, setShowSetupModal] = useState(false);
+  const [customMinParticipants, setCustomMinParticipants] = useState(MIN_PARTICIPANTS);
 
   // UI helpers
   const [symbol, setSymbol] = useState('');
@@ -179,14 +197,24 @@ export default function DraftPage() {
         const orderedIds = commissionerId ? [commissionerId, ...rest] : [...rest];
         setMemberIds(orderedIds);
 
-        // 4) Gate
+        // 3b) Check which member IDs are real auth users (for bot detection)
+        try {
+          const { data: realIds } = await supabase.rpc('get_real_user_ids', { user_ids: orderedIds });
+          setRealUserIds(new Set(realIds || []));
+        } catch (e) {
+          // If function doesn't exist yet, assume only current user is real
+          console.warn('get_real_user_ids not available, falling back to current user only');
+          setRealUserIds(new Set([USER_ID]));
+        }
+
+        // 4) Gate - check requirements but don't early return (allow modal to show)
         const hasDraftDate = !!lg?.draft_date;
-        const enoughMembers = orderedIds.length >= MIN_PARTICIPANTS;
         const startsAt = hasDraftDate ? new Date(lg.draft_date) : null;
         const now = new Date();
         const timeOk = !REQUIRE_TIME_IN_PAST || (startsAt && now >= startsAt);
 
-        if (!(hasDraftDate && enoughMembers && timeOk)) {
+        // Note: enoughMembers check is done in render using customMinParticipants
+        if (!hasDraftDate || !timeOk) {
           setAllowed(false);
           setLoading(false);
           return;
@@ -383,6 +411,132 @@ export default function DraftPage() {
     setShowCompleteModal(false);
   }
 
+  // --- Fill league with bots to meet minimum
+  async function fillWithBots(count) {
+    if (!leagueId || count <= 0) return;
+
+    const botEntries = [];
+    for (let i = 1; i <= count; i++) {
+      // Find a unique bot name
+      let botId = `bot-${i}`;
+      let suffix = 1;
+      while (memberIds.includes(botId)) {
+        botId = `bot-${i}-${suffix++}`;
+      }
+      botEntries.push({
+        league_id: leagueId,
+        user_id: botId,
+        role: 'member'
+      });
+    }
+
+    const { error } = await supabase
+      .from('league_members')
+      .insert(botEntries);
+
+    if (error) {
+      console.error('Failed to add bots:', error);
+      alert('Could not add bots. Check console for details.');
+      return;
+    }
+
+    // Refresh the page to reload members
+    window.location.reload();
+  }
+
+  // --- Change minimum participants for this session
+  function changeMinimum(newMin) {
+    if (newMin >= 2) {
+      setCustomMinParticipants(newMin);
+      setShowSetupModal(false);
+    }
+  }
+
+  // Human count for display
+  const humanCount = memberIds.filter(id => realUserIds.has(id)).length;
+
+  // --- Bot auto-draft: pick a random stock for non-human players
+  async function botAutoPick(botUserId) {
+    if (!leagueId || botPickInProgress) return;
+    setBotPickInProgress(true);
+
+    try {
+      // Get already-picked symbols in this league to avoid duplicates
+      const pickedSymbols = new Set(portfolio.map(p => p.symbol?.toUpperCase()));
+      const availableStocks = BOT_STOCK_POOL.filter(s => !pickedSymbols.has(s));
+
+      if (availableStocks.length === 0) {
+        console.warn('Bot has no unique stocks left to pick');
+        setBotPickInProgress(false);
+        return;
+      }
+
+      // Pick a random stock
+      const randomSymbol = availableStocks[Math.floor(Math.random() * availableStocks.length)];
+
+      // Get quote for the stock
+      let price = 100; // fallback price
+      try {
+        const q = await fetchQuoteViaFunction(randomSymbol);
+        if (q?.price) price = q.price;
+      } catch {
+        // Use fallback price if quote fails
+      }
+
+      // Insert the pick
+      const newPickNumber = (portfolio?.length || 0) + 1;
+      const payload = {
+        league_id: leagueId,
+        user_id: botUserId,
+        symbol: randomSymbol,
+        entry_price: price,
+        quantity: 1,
+        round: currentRound,
+        pick_number: newPickNumber,
+        draft_date: new Date().toISOString(),
+      };
+
+      const { data: inserted, error: insErr } = await supabase
+        .from('drafts')
+        .insert(payload)
+        .select('*')
+        .single();
+
+      if (insErr) {
+        console.error('Bot pick failed:', insErr);
+        setBotPickInProgress(false);
+        return;
+      }
+
+      setPortfolio(prev => [inserted, ...(prev || [])]);
+      void ensureNameForSymbol(randomSymbol);
+    } finally {
+      setBotPickInProgress(false);
+    }
+  }
+
+  // --- Effect: Auto-pick for bots when it's their turn
+  useEffect(() => {
+    if (!autoDraftEnabled || !allowed || !currentPicker || botPickInProgress) return;
+
+    // Check if current picker is a real user (exists in auth.users)
+    const isRealUser = realUserIds.has(currentPicker);
+    if (isRealUser) return; // Real users pick for themselves
+
+    // Check if draft is complete
+    const totalRounds = Number(league?.num_rounds ?? 6);
+    const draftCap = memberIds.length * totalRounds;
+    if (portfolio.length >= draftCap) return;
+
+    // Small delay so user can see what's happening
+    const timer = setTimeout(() => {
+      botAutoPick(currentPicker);
+    }, 800);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPicker, autoDraftEnabled, allowed, botPickInProgress, portfolio.length, realUserIds]);
+
   // ----------- UI gating states -----------
   if (!leagueId) {
     return (
@@ -428,21 +582,53 @@ export default function DraftPage() {
     );
   }
 
-  if (!allowed) {
-    const needsMembers = memberCount < MIN_PARTICIPANTS;
-    const needsDate = !league?.draft_date;
-    const startsAt = league?.draft_date ? new Date(league.draft_date) : null;
-    const timeMsg =
-      REQUIRE_TIME_IN_PAST && startsAt
-        ? `Draft starts at ${startsAt.toLocaleString()}`
-        : null;
+  // Check if we need more members (using customizable minimum)
+  const needsMembers = memberCount < customMinParticipants;
+  const needsDate = !league?.draft_date;
+  const startsAt = league?.draft_date ? new Date(league.draft_date) : null;
+  const timeMsg =
+    REQUIRE_TIME_IN_PAST && startsAt
+      ? `Draft starts at ${startsAt.toLocaleString()}`
+      : null;
 
+  if (!allowed || needsMembers) {
+    // Show modal for member-related issues, static message for others
+    if (needsMembers && !needsDate) {
+      return (
+        <div className="page">
+          <div className="card">
+            <h3 style={{ color: '#e5e7eb', marginTop: 0 }}>Draft Setup Required</h3>
+            <p className="muted" style={{ marginTop: 8 }}>
+              League needs at least {customMinParticipants} members to start. Current: {memberCount}.
+            </p>
+            <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+              <button className="btn primary" onClick={() => setShowSetupModal(true)}>
+                Setup Options
+              </button>
+              <Link className="btn" to="/leagues">Back to Leagues</Link>
+            </div>
+          </div>
+
+          <DraftSetupModal
+            show={showSetupModal}
+            onClose={() => setShowSetupModal(false)}
+            leagueName={league?.name}
+            currentMemberCount={memberCount}
+            minRequired={customMinParticipants}
+            humanCount={humanCount}
+            onFillWithBots={fillWithBots}
+            onChangeMinimum={changeMinimum}
+          />
+        </div>
+      );
+    }
+
+    // Other issues (no date, time not reached)
     return (
       <div className="page">
         <div className="card">
           <h3 style={{ color: '#e5e7eb', marginTop: 0 }}>Draft not ready yet</h3>
           <ul className="muted" style={{ marginTop: 8 }}>
-            {needsMembers && (<li>League needs at least {MIN_PARTICIPANTS} members. Current: {memberCount}.</li>)}
             {needsDate && (<li>No draft time has been scheduled yet (set it on the Leagues page).</li>)}
             {timeMsg && (<li>{timeMsg}</li>)}
           </ul>
@@ -508,11 +694,23 @@ export default function DraftPage() {
             <h3 style={{ margin: 0 }}>
               {isDraftComplete
                 ? '🏁 Draft complete'
-                : (USER_ID === currentPicker ? '✅ Your Turn' : '⏳ Not your turn')}
+                : botPickInProgress
+                  ? '🤖 Bot is picking...'
+                  : currentPicker === USER_ID
+                    ? '✅ Your Turn'
+                    : realUserIds.has(currentPicker)
+                      ? '⏳ Waiting for player...'
+                      : '⏳ Waiting for bot...'}
             </h3>
+            {!isDraftComplete && currentPicker !== USER_ID && !botPickInProgress && (
+              <p style={{ marginTop: 8, color: '#9ca3af' }}>
+                Current picker: {currentPicker?.substring(0, 12)}...
+                {realUserIds.has(currentPicker) ? ' (human)' : ' (bot)'}
+              </p>
+            )}
             {!isDraftComplete && USER_ID !== currentPicker && (
-              <p style={{ marginTop: 8 }}>
-                Next turn in {
+              <p style={{ marginTop: 4 }}>
+                Your turn in {
                   (() => {
                     const totalPicks = portfolio.length;
                     const usersInOrder = memberIds.length;
@@ -532,6 +730,16 @@ export default function DraftPage() {
                   })()
                 }
               </p>
+            )}
+            {!isDraftComplete && (
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, fontSize: 13, color: '#9ca3af' }}>
+                <input
+                  type="checkbox"
+                  checked={autoDraftEnabled}
+                  onChange={(e) => setAutoDraftEnabled(e.target.checked)}
+                />
+                Auto-draft for bots
+              </label>
             )}
           </div>
 

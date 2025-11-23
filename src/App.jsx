@@ -9,6 +9,7 @@ import { JoinLeague } from './pages/JoinLeague';
 import PortfolioPage from './pages/PortfolioPage';
 import Leaderboard from './pages/Leaderboard';
 import TradeHistory from './pages/TradeHistory';
+import Profile from './pages/Profile';
 import Login from './pages/Login';
 import Protected from './components/Protected';
 import './layout.css'; // custom grid and layout styles
@@ -31,6 +32,7 @@ function App() {
       <Route path="/portfolio" element={<Layout><Protected><PortfolioPage /></Protected></Layout>} />
       <Route path="/leaderboard" element={<Layout><Protected><Leaderboard /></Protected></Layout>} />
       <Route path="/trade-history" element={<Layout><Protected><TradeHistory /></Protected></Layout>} />
+      <Route path="/profile" element={<Layout><Protected><Profile /></Protected></Layout>} />
     </Routes>
   );
 }

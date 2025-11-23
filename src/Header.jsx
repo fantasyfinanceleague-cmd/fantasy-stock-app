@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { supabase } from './supabase/supabaseClient';
 import { useAuthUser } from './auth/useAuthUser';
 import logo from './assets/favicon.ico';
@@ -23,13 +23,19 @@ const Header = () => {
         <img src={logo} alt="Logo" className="logo" />
         <span className="app-title">Fantasy Finance</span>
       </div>
-      <nav className="header-right">
+      <nav className="header-nav">
         <NavLink to="/" className="nav-link">Dashboard</NavLink>
         <NavLink to="/leagues" className="nav-link">Leagues</NavLink>
         <NavLink to="/draft" className="nav-link">Draft</NavLink>
         <NavLink to="/portfolio" className="nav-link">Portfolio</NavLink>
         <NavLink to="/leaderboard" className="nav-link">Leaderboard</NavLink>
-        {user && (
+      </nav>
+      {user && (
+        <div className="header-user">
+          <Link to="/profile" className="user-badge">
+            <span className="user-icon">👤</span>
+            <span className="user-email">{user.email}</span>
+          </Link>
           <button
             className="logout-button"
             onClick={handleLogout}
@@ -37,14 +43,8 @@ const Header = () => {
           >
             {loggingOut ? 'Logging out...' : 'Log Out'}
           </button>
-        )}
-        {user && (
-          <div className="user-badge">
-            <span className="user-icon">👤</span>
-            <span className="user-email">{user.email}</span>
-          </div>
-        )}
-      </nav>
+        </div>
+      )}
     </header>
   );
 };
