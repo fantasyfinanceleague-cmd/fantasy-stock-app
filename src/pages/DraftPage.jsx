@@ -230,6 +230,12 @@ export default function DraftPage() {
         if (memErr) throw memErr;
 
         const rawIds = (mem || []).map(r => r.user_id);
+        console.log('🔍 DraftPage membership check:', {
+          leagueId,
+          myUserId: USER_ID,
+          memberIds: rawIds,
+          isMember: rawIds.includes(USER_ID)
+        });
         const iAmMember = rawIds.includes(USER_ID);
         setIsMember(iAmMember);
         if (!iAmMember) {
