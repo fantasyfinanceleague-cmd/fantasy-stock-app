@@ -158,7 +158,8 @@ export default function DraftPage() {
 
   // Load all leagues user is a member of (for dropdown)
   useEffect(() => {
-    if (!USER_ID) return;
+    // Don't run with test-user fallback - wait for real auth
+    if (!authUser?.id) return;
     (async () => {
       try {
         const { data: mem, error: memErr } = await supabase
@@ -185,7 +186,7 @@ export default function DraftPage() {
         console.error('Failed to load leagues:', e);
       }
     })();
-  }, [USER_ID]);
+  }, [authUser?.id, USER_ID]);
 
   // Handle league change from dropdown
   const handleLeagueChange = (e) => {
@@ -197,6 +198,12 @@ export default function DraftPage() {
   // Load gating + league meta + members + picks
   useEffect(() => {
     if (!leagueId) {
+      setLoading(false);
+      return;
+    }
+
+    // Don't run with test-user fallback - wait for real auth
+    if (!authUser?.id) {
       setLoading(false);
       return;
     }
@@ -281,7 +288,7 @@ export default function DraftPage() {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [leagueId]);
+  }, [leagueId, authUser]);
 
   // Keep turn/pick in sync after any portfolio/member/rounds change
   useEffect(() => {

@@ -35,6 +35,12 @@ export default function Leaderboard() {
 
   // ----- Load my leagues
   useEffect(() => {
+    // Don't run with test-user fallback - wait for real auth
+    if (!authUser?.id) {
+      setLoading(false);
+      return;
+    }
+
     (async () => {
       try {
         setLoading(true);
@@ -79,7 +85,7 @@ export default function Leaderboard() {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [authUser]);
 
   // ----- When league changes, load picks + live quotes + names
   useEffect(() => {
