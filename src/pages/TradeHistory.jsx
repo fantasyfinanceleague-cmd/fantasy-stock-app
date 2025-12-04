@@ -19,7 +19,12 @@ export default function TradeHistory() {
 
   // Load leagues where user is a member
   useEffect(() => {
-    if (!USER_ID) return;
+    // Don't run with test-user fallback - wait for real auth
+    if (!authUser?.id) {
+      setLoading(false);
+      return;
+    }
+
     (async () => {
       try {
         setLoading(true);
@@ -63,11 +68,11 @@ export default function TradeHistory() {
         setLoading(false);
       }
     })();
-  }, [USER_ID]);
+  }, [authUser, USER_ID]);
 
   // Load trades for the selected league
   useEffect(() => {
-    if (!USER_ID || !leagueId) {
+    if (!authUser?.id || !leagueId) {
       setTrades([]);
       return;
     }
@@ -90,7 +95,7 @@ export default function TradeHistory() {
         setLoading(false);
       }
     })();
-  }, [USER_ID, leagueId]);
+  }, [authUser, USER_ID, leagueId]);
 
   // Filter trades
   const filteredTrades = trades.filter(trade => {

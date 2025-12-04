@@ -43,7 +43,11 @@ export default function Dashboard() {
 
   // ---- Load my leagues (only when signed in)
   useEffect(() => {
-    if (!USER_ID) return;
+    // Don't run with test-user fallback - wait for real auth
+    if (!authUser?.id) {
+      setLoading(false);
+      return;
+    }
 
     (async () => {
       try {
@@ -88,11 +92,11 @@ export default function Dashboard() {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [USER_ID]);
+  }, [authUser, USER_ID]);
 
   // ---- When league changes: load holdings, names, activity, standings (only when signed in)
   useEffect(() => {
-    if (!USER_ID || !leagueId) {
+    if (!authUser?.id || !leagueId) {
       setPositions([]);
       setRecentPicks([]);
       setRecentTrades([]);
@@ -146,7 +150,7 @@ export default function Dashboard() {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [USER_ID, leagueId]);
+  }, [authUser, USER_ID, leagueId]);
 
   // Simple state for prices (no real-time polling)
   const [prices, setPrices] = useState({});

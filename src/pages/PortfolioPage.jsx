@@ -30,7 +30,12 @@ export default function PortfolioPage() {
 
   // Load leagues where user is a member, then hydrate meta
   useEffect(() => {
-    if (!USER_ID) return; // wait for session
+    // Don't run with test-user fallback - wait for real auth
+    if (!authUser?.id) {
+      setLoading(false);
+      return;
+    }
+
     (async () => {
       try {
         setLoading(true);
@@ -74,11 +79,11 @@ export default function PortfolioPage() {
         setLoading(false);
       }
     })();
-  }, [USER_ID]); // re-run when auth becomes available
+  }, [authUser, USER_ID]); // re-run when auth becomes available
 
   // When league changes, load positions (draft picks) for me
   useEffect(() => {
-    if (!USER_ID || !leagueId) {
+    if (!authUser?.id || !leagueId) {
       setLeague(null);
       setPositions([]);
       return;
@@ -136,7 +141,7 @@ export default function PortfolioPage() {
         setLoading(false);
       }
     })();
-  }, [leagueId, USER_ID]); // depend on both
+  }, [authUser, leagueId, USER_ID]); // depend on both
 
   // Calculate actual holdings: draft picks + buy trades - sell trades
   const actualHoldings = useMemo(() => {
