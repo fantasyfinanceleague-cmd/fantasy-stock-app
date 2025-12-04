@@ -29,23 +29,16 @@ export default function Dashboard() {
   const [recentPicks, setRecentPicks] = useState([]);
   const [recentTrades, setRecentTrades] = useState([]);
 
-  // If user changes (sign in/out), reset data
-  useEffect(() => {
-    if (!USER_ID) {
-      setLeagues([]);
-      setLeagueId('');
-      setPositions([]);
-      setRecentPicks([]);
-      setRecentTrades([]);
-      setLoading(false);
-    }
-  }, [USER_ID]);
-
   // ---- Load my leagues (only when signed in)
   useEffect(() => {
     // Don't run with test-user fallback - wait for real auth
     if (!authUser?.id) {
       setLoading(false);
+      setLeagues([]);
+      setLeagueId('');
+      setPositions([]);
+      setRecentPicks([]);
+      setRecentTrades([]);
       return;
     }
 
