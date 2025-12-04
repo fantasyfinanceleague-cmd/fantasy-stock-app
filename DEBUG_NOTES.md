@@ -1,9 +1,14 @@
-# Debug Session Notes - League Visibility Issue
+# Debug Session Notes - League Visibility Issues
 
-## ✅ RESOLVED
+## ✅ RESOLVED - useLeagues test-user fallback
 The issue was that `useLeagues.js` was running with `USER_ID = 'test-user'` before auth loaded, then the final render showed the test-user leagues instead of the real user's leagues.
 
 **Fix:** Added early return in `refresh()` when `!authUser?.id` to skip the test-user fallback.
+
+## ✅ RESOLVED - DraftPage and Leaderboard test-user fallback
+Similar issue: DraftPage and Leaderboard were loading data with `USER_ID = 'test-user'` before auth loaded, showing wrong leagues ("Nov 19 Test" instead of user's real leagues).
+
+**Fix:** Added early return in useEffects when `!authUser?.id` and added `authUser` to dependency arrays.
 
 ---
 
