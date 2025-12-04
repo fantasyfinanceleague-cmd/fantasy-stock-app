@@ -68,7 +68,7 @@ export default function TradeHistory() {
         setLoading(false);
       }
     })();
-  }, [authUser, USER_ID]);
+  }, [USER_ID]);
 
   // Load trades for the selected league
   useEffect(() => {
@@ -95,7 +95,7 @@ export default function TradeHistory() {
         setLoading(false);
       }
     })();
-  }, [authUser, USER_ID, leagueId]);
+  }, [USER_ID, leagueId]);
 
   // Filter trades
   const filteredTrades = trades.filter(trade => {

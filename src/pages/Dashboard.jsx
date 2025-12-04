@@ -92,7 +92,7 @@ export default function Dashboard() {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authUser, USER_ID]);
+  }, [USER_ID]);
 
   // ---- When league changes: load holdings, names, activity, standings (only when signed in)
   useEffect(() => {
@@ -150,7 +150,7 @@ export default function Dashboard() {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authUser, USER_ID, leagueId]);
+  }, [USER_ID, leagueId]);
 
   // Simple state for prices (no real-time polling)
   const [prices, setPrices] = useState({});

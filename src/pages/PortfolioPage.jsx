@@ -79,7 +79,7 @@ export default function PortfolioPage() {
         setLoading(false);
       }
     })();
-  }, [authUser, USER_ID]); // re-run when auth becomes available
+  }, [USER_ID]); // re-run when auth becomes available
 
   // When league changes, load positions (draft picks) for me
   useEffect(() => {
@@ -141,7 +141,7 @@ export default function PortfolioPage() {
         setLoading(false);
       }
     })();
-  }, [authUser, leagueId, USER_ID]); // depend on both
+  }, [leagueId, USER_ID]); // depend on both
 
   // Calculate actual holdings: draft picks + buy trades - sell trades
   const actualHoldings = useMemo(() => {

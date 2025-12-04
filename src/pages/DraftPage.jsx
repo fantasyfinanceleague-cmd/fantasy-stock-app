@@ -186,7 +186,7 @@ export default function DraftPage() {
         console.error('Failed to load leagues:', e);
       }
     })();
-  }, [authUser?.id, USER_ID]);
+  }, [USER_ID]);
 
   // Handle league change from dropdown
   const handleLeagueChange = (e) => {
@@ -288,7 +288,7 @@ export default function DraftPage() {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [leagueId, authUser]);
+  }, [leagueId]);
 
   // Keep turn/pick in sync after any portfolio/member/rounds change
   useEffect(() => {

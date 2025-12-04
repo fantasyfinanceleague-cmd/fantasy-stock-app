@@ -85,7 +85,7 @@ export default function Leaderboard() {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authUser]);
+  }, [USER_ID]);
 
   // ----- When league changes, load picks + live quotes + names
   useEffect(() => {
