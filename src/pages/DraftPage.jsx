@@ -213,7 +213,16 @@ export default function DraftPage() {
       setError('');
       setAllowed(false);
       try {
-        // 1) Load members (NO created_at)
+        // 1) Load league meta FIRST so we have the name even if user isn't a member
+        const { data: lg, error: lgErr } = await supabase
+          .from('leagues')
+          .select('id, name, draft_date, num_rounds, num_participants, budget_mode, budget_amount, commissioner_id')
+          .eq('id', leagueId)
+          .single();
+        if (lgErr) throw lgErr;
+        setLeague(lg);
+
+        // 2) Load members
         const { data: mem, error: memErr } = await supabase
           .from('league_members')
           .select('user_id, role')
@@ -228,15 +237,6 @@ export default function DraftPage() {
           setLoading(false);
           return;
         }
-
-        // 2) League meta (need commissioner_id to order)
-        const { data: lg, error: lgErr } = await supabase
-          .from('leagues')
-          .select('id, name, draft_date, num_rounds, num_participants, budget_mode, budget_amount, commissioner_id')
-          .eq('id', leagueId)
-          .single();
-        if (lgErr) throw lgErr;
-        setLeague(lg);
 
         // 3) Draft order: commissioner first, others alphabetical
         const commissionerId = lg?.commissioner_id || null;
@@ -621,7 +621,32 @@ export default function DraftPage() {
     return (
       <div className="page">
         <div className="card">
-          <h3 style={{ color: '#e5e7eb', marginTop: 0 }}>You’re not in this league</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, marginBottom: 16 }}>
+            <div>
+              <h2 style={{ color: '#fff', margin: 0, marginBottom: 4 }}>{league?.name || 'League'}</h2>
+              <h3 style={{ color: '#e5e7eb', marginTop: 0, fontSize: '1.1rem' }}>You're not in this league</h3>
+            </div>
+
+            {leagues.length > 1 && (
+              <div style={{ minWidth: 220 }}>
+                <label htmlFor="leagueSelect" className="muted" style={{ display: 'block', marginBottom: 4, fontSize: 13 }}>
+                  Switch League
+                </label>
+                <select
+                  id="leagueSelect"
+                  value={leagueId || ''}
+                  onChange={handleLeagueChange}
+                  className="round-select"
+                  style={{ width: '100%' }}
+                >
+                  {leagues.map(l => (
+                    <option key={l.id} value={l.id}>{l.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
           <p className="muted">Join or create a league before you can draft.</p>
           <Link className="btn primary" to="/leagues">Go to Leagues</Link>
         </div>
