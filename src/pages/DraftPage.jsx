@@ -637,7 +637,32 @@ export default function DraftPage() {
       return (
         <div className="page">
           <div className="card">
-            <h3 style={{ color: '#e5e7eb', marginTop: 0 }}>Draft Setup Required</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, marginBottom: 16 }}>
+              <div>
+                <h2 style={{ color: '#fff', margin: 0, marginBottom: 4 }}>{league?.name || 'League'}</h2>
+                <h3 style={{ color: '#e5e7eb', marginTop: 0, fontSize: '1.1rem' }}>Draft Setup Required</h3>
+              </div>
+
+              {leagues.length > 1 && (
+                <div style={{ minWidth: 220 }}>
+                  <label htmlFor="leagueSelect" className="muted" style={{ display: 'block', marginBottom: 4, fontSize: 13 }}>
+                    Switch League
+                  </label>
+                  <select
+                    id="leagueSelect"
+                    value={leagueId || ''}
+                    onChange={handleLeagueChange}
+                    className="round-select"
+                    style={{ width: '100%' }}
+                  >
+                    {leagues.map(l => (
+                      <option key={l.id} value={l.id}>{l.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
             <p className="muted" style={{ marginTop: 8 }}>
               League needs at least {customMinParticipants} members to start. Current: {memberCount}.
             </p>
@@ -667,7 +692,32 @@ export default function DraftPage() {
     return (
       <div className="page">
         <div className="card">
-          <h3 style={{ color: '#e5e7eb', marginTop: 0 }}>Draft not ready yet</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, marginBottom: 16 }}>
+            <div>
+              <h2 style={{ color: '#fff', margin: 0, marginBottom: 4 }}>{league?.name || 'League'}</h2>
+              <h3 style={{ color: '#e5e7eb', marginTop: 0, fontSize: '1.1rem' }}>Draft not ready yet</h3>
+            </div>
+
+            {leagues.length > 1 && (
+              <div style={{ minWidth: 220 }}>
+                <label htmlFor="leagueSelect" className="muted" style={{ display: 'block', marginBottom: 4, fontSize: 13 }}>
+                  Switch League
+                </label>
+                <select
+                  id="leagueSelect"
+                  value={leagueId || ''}
+                  onChange={handleLeagueChange}
+                  className="round-select"
+                  style={{ width: '100%' }}
+                >
+                  {leagues.map(l => (
+                    <option key={l.id} value={l.id}>{l.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
           <ul className="muted" style={{ marginTop: 8 }}>
             {needsDate && (<li>No draft time has been scheduled yet (set it on the Leagues page).</li>)}
             {timeMsg && (<li>{timeMsg}</li>)}
