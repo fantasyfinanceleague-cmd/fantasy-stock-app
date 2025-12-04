@@ -1,6 +1,13 @@
 # Debug Session Notes - League Visibility Issue
 
-## Current Issue
+## ✅ RESOLVED
+The issue was that `useLeagues.js` was running with `USER_ID = 'test-user'` before auth loaded, then the final render showed the test-user leagues instead of the real user's leagues.
+
+**Fix:** Added early return in `refresh()` when `!authUser?.id` to skip the test-user fallback.
+
+---
+
+## Original Issue
 Leagues page only shows the old league with `commissioner_id = 'test-user'`, but not the new league created with the actual auth user UUID.
 
 ## What We Know
