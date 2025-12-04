@@ -135,23 +135,29 @@ export default function Profile() {
 
           <form onSubmit={handlePasswordChange} style={{ display: 'grid', gap: 12 }}>
             <div>
-              <label style={{ display: 'block', marginBottom: 4 }}>New Password</label>
+              <label htmlFor="new-password" style={{ display: 'block', marginBottom: 4 }}>New Password</label>
               <input
+                id="new-password"
+                name="new-password"
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="Enter new password"
+                autoComplete="new-password"
                 style={{ width: '100%', boxSizing: 'border-box' }}
               />
             </div>
 
             <div>
-              <label style={{ display: 'block', marginBottom: 4 }}>Confirm Password</label>
+              <label htmlFor="confirm-password" style={{ display: 'block', marginBottom: 4 }}>Confirm Password</label>
               <input
+                id="confirm-password"
+                name="confirm-password"
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Confirm new password"
+                autoComplete="new-password"
                 style={{ width: '100%', boxSizing: 'border-box' }}
               />
             </div>

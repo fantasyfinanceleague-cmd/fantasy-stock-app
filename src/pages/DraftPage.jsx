@@ -852,8 +852,10 @@ export default function DraftPage() {
               </p>
             )}
             {!isDraftComplete && (
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, fontSize: 13, color: '#9ca3af' }}>
+              <label htmlFor="auto-draft" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, fontSize: 13, color: '#9ca3af' }}>
                 <input
+                  id="auto-draft"
+                  name="auto-draft"
                   type="checkbox"
                   checked={autoDraftEnabled}
                   onChange={(e) => setAutoDraftEnabled(e.target.checked)}

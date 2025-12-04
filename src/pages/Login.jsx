@@ -128,7 +128,7 @@ export default function Login() {
 
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '20px' }}>
-            <label style={{
+            <label htmlFor="login-email" style={{
               display: 'block',
               marginBottom: '8px',
               color: '#e5e7eb',
@@ -138,17 +138,20 @@ export default function Login() {
               Email
             </label>
             <input
+              id="login-email"
+              name="email"
               className="modal-input"
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="you@example.com"
+              autoComplete="email"
               required
             />
           </div>
 
           <div style={{ marginBottom: '20px' }}>
-            <label style={{
+            <label htmlFor="login-password" style={{
               display: 'block',
               marginBottom: '8px',
               color: '#e5e7eb',
@@ -159,11 +162,14 @@ export default function Login() {
             </label>
             <div style={{ position: 'relative' }}>
               <input
+                id="login-password"
+                name="password"
                 className="modal-input"
                 type={showPassword ? 'text' : 'password'}
                 value={pw}
                 onChange={e => setPw(e.target.value)}
                 placeholder="••••••••"
+                autoComplete="current-password"
                 required
                 style={{ paddingRight: '45px' }}
               />
