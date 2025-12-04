@@ -18,7 +18,11 @@ export default function useLeagues() {
   const [error, setError] = useState('');
 
   const refresh = useCallback(async () => {
-    if (!USER_ID) return; // Wait for auth to load
+    // Don't run if user is not authenticated (skip the 'test-user' fallback)
+    if (!authUser?.id) {
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
     setError('');
@@ -92,7 +96,7 @@ export default function useLeagues() {
     } finally {
       setLoading(false);
     }
-  }, [USER_ID]);
+  }, [USER_ID, authUser]);
 
   useEffect(() => {
     refresh();
