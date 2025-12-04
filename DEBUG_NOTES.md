@@ -5,10 +5,10 @@ The issue was that `useLeagues.js` was running with `USER_ID = 'test-user'` befo
 
 **Fix:** Added early return in `refresh()` when `!authUser?.id` to skip the test-user fallback.
 
-## ✅ RESOLVED - DraftPage and Leaderboard test-user fallback
-Similar issue: DraftPage and Leaderboard were loading data with `USER_ID = 'test-user'` before auth loaded, showing wrong leagues ("Nov 19 Test" instead of user's real leagues).
+## ✅ RESOLVED - All pages test-user fallback
+Similar issue across all pages: DraftPage, Leaderboard, Dashboard, PortfolioPage, and TradeHistory were loading data with `USER_ID = 'test-user'` before auth loaded, showing wrong leagues ("Nov 19 Test" instead of user's real leagues).
 
-**Fix:** Added early return in useEffects when `!authUser?.id` and added `authUser` to dependency arrays.
+**Fix:** Added early return in all useEffects when `!authUser?.id` and added `authUser` to dependency arrays. Now all pages consistently wait for real authentication before loading user-specific data.
 
 ---
 
