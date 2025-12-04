@@ -1,6 +1,6 @@
 // src/pages/DraftPage.jsx
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase/supabaseClient';
 import '../layout.css';
 import { useAuthUser } from '../auth/useAuthUser';
@@ -72,10 +72,12 @@ async function fetchQuoteViaFunction(symbol) {
 
 export default function DraftPage() {
   const authUser = useAuthUser();
+  const navigate = useNavigate();
   // keep a fallback for now so your draft keeps working if not signed in
   const USER_ID = authUser?.id ?? 'test-user';
   const { leagueId: routeLeagueId } = useParams();
   const [leagueId, setLeagueId] = useState(null);
+  const [leagues, setLeagues] = useState([]); // All leagues user is a member of
 
   // gating/meta
   const [loading, setLoading] = useState(true);
@@ -153,6 +155,44 @@ export default function DraftPage() {
     const id = routeLeagueId || localStorage.getItem('activeLeagueId') || null;
     setLeagueId(id);
   }, [routeLeagueId]);
+
+  // Load all leagues user is a member of (for dropdown)
+  useEffect(() => {
+    if (!USER_ID) return;
+    (async () => {
+      try {
+        const { data: mem, error: memErr } = await supabase
+          .from('league_members')
+          .select('league_id')
+          .eq('user_id', USER_ID);
+        if (memErr) throw memErr;
+
+        const ids = (mem || []).map(r => r.league_id);
+        if (ids.length === 0) {
+          setLeagues([]);
+          return;
+        }
+
+        const { data: lg, error: lgErr } = await supabase
+          .from('leagues')
+          .select('id, name')
+          .in('id', ids)
+          .order('name', { ascending: true });
+        if (lgErr) throw lgErr;
+
+        setLeagues(lg || []);
+      } catch (e) {
+        console.error('Failed to load leagues:', e);
+      }
+    })();
+  }, [USER_ID]);
+
+  // Handle league change from dropdown
+  const handleLeagueChange = (e) => {
+    const id = e.target.value;
+    localStorage.setItem('activeLeagueId', id);
+    navigate(`/draft/${id}`);
+  };
 
   // Load gating + league meta + members + picks
   useEffect(() => {
@@ -644,19 +684,42 @@ export default function DraftPage() {
   return (
     <div className="page">
       <div className="card" style={{ marginBottom: 12 }}>
-        <h2 style={{ color: '#fff', margin: 0 }}>{league?.name || 'Draft'}</h2>
-        <p className="muted" style={{ marginTop: 6 }}>
-          Rounds: {totalRounds} • Members: {memberCount}
-          {league?.draft_date ? <> • Draft time: {new Date(league.draft_date).toLocaleString()}</> : null}
-          {league?.budget_mode === 'no-budget'
-            ? ' • No budget'
-            : league?.budget_mode === 'budget'
-              ? ` • Budget: $${leagueBudget}`
-              : null}
-        </p>
-        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-          <Link className="btn" to="/leagues">Back to Leagues</Link>
-          <button className="btn" onClick={resetDraftForLeague}>Reset Draft</button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
+          <div style={{ flex: 1 }}>
+            <h2 style={{ color: '#fff', margin: 0 }}>{league?.name || 'Draft'}</h2>
+            <p className="muted" style={{ marginTop: 6 }}>
+              Rounds: {totalRounds} • Members: {memberCount}
+              {league?.draft_date ? <> • Draft time: {new Date(league.draft_date).toLocaleString()}</> : null}
+              {league?.budget_mode === 'no-budget'
+                ? ' • No budget'
+                : league?.budget_mode === 'budget'
+                  ? ` • Budget: $${leagueBudget}`
+                  : null}
+            </p>
+            <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+              <Link className="btn" to="/leagues">Back to Leagues</Link>
+              <button className="btn" onClick={resetDraftForLeague}>Reset Draft</button>
+            </div>
+          </div>
+
+          {leagues.length > 1 && (
+            <div style={{ minWidth: 220 }}>
+              <label htmlFor="leagueSelect" className="muted" style={{ display: 'block', marginBottom: 4, fontSize: 13 }}>
+                Switch League
+              </label>
+              <select
+                id="leagueSelect"
+                value={leagueId || ''}
+                onChange={handleLeagueChange}
+                className="round-select"
+                style={{ width: '100%' }}
+              >
+                {leagues.map(l => (
+                  <option key={l.id} value={l.id}>{l.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       </div>
 
