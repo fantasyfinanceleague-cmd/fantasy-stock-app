@@ -10,8 +10,7 @@ import { fetchCompanyName, fetchQuotesInBatch } from '../utils/stockData';
 export default function Dashboard() {
   const navigate = useNavigate();
   const authUser = useAuthUser();
-  // keep a fallback for now so your draft keeps working if not signed in
-  const USER_ID = authUser?.id ?? 'test-user';
+  const USER_ID = authUser?.id;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

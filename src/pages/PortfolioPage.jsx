@@ -11,7 +11,7 @@ import TradeModal from '../components/TradeModal';
 export default function PortfolioPage() {
   // ✅ Call hooks only inside the component
   const authUser = useAuthUser();
-  const USER_ID = authUser?.id ?? 'test-user';
+  const USER_ID = authUser?.id;
 
   const [loading, setLoading] = useState(true);
   const [leagues, setLeagues] = useState([]);

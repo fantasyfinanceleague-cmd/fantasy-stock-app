@@ -9,8 +9,7 @@ import { fetchQuote, fetchCompanyName, fetchQuotesInBatch } from '../utils/stock
 
 export default function Leaderboard() {
   const authUser = useAuthUser();
-  // keep a fallback for now so your draft keeps working if not signed in
-  const USER_ID = authUser?.id ?? 'test-user';
+  const USER_ID = authUser?.id;
   const navigate = useNavigate();
 
   // leagues

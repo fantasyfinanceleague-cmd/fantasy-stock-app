@@ -9,7 +9,7 @@ function genCode() {
 
 export default function useLeagues() {
   const authUser = useAuthUser();
-  const USER_ID = authUser?.id ?? 'test-user'; // Use authenticated user ID
+  const USER_ID = authUser?.id;
 
   const [myLeagues, setMyLeagues] = useState([]);
   const [managedLeagues, setManagedLeagues] = useState([]);
