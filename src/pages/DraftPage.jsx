@@ -73,7 +73,8 @@ async function fetchQuoteViaFunction(symbol) {
 export default function DraftPage() {
   const authUser = useAuthUser();
   const navigate = useNavigate();
-  const USER_ID = authUser?.id;
+  // keep a fallback for now so your draft keeps working if not signed in
+  const USER_ID = authUser?.id ?? 'test-user';
   const { leagueId: routeLeagueId } = useParams();
   const [leagueId, setLeagueId] = useState(null);
   const [leagues, setLeagues] = useState([]); // All leagues user is a member of

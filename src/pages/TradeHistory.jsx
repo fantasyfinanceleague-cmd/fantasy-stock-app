@@ -7,7 +7,7 @@ import { prettyName } from '../utils/formatting';
 
 export default function TradeHistory() {
   const authUser = useAuthUser();
-  const USER_ID = authUser?.id;
+  const USER_ID = authUser?.id ?? 'test-user';
 
   const [loading, setLoading] = useState(true);
   const [leagues, setLeagues] = useState([]);
