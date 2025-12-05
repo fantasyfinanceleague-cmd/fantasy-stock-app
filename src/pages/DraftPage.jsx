@@ -199,6 +199,8 @@ export default function DraftPage() {
 
   // Load gating + league meta + members + picks
   useEffect(() => {
+    console.log('🔄 DraftPage useEffect:', { leagueId, authUser: authUser?.id, USER_ID });
+
     if (!leagueId) {
       setLoading(false);
       return;
@@ -206,7 +208,8 @@ export default function DraftPage() {
 
     // Don't run with test-user fallback - wait for real auth
     if (!authUser?.id) {
-      setLoading(false);
+      console.log('⏳ Waiting for auth to load...');
+      setLoading(true); // Keep loading while waiting for auth
       return;
     }
 
@@ -298,7 +301,7 @@ export default function DraftPage() {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [leagueId]);
+  }, [leagueId, USER_ID]);
 
   // Real-time subscription for league status changes
   useEffect(() => {
@@ -753,9 +756,22 @@ export default function DraftPage() {
               League needs at least {customMinParticipants} members to start. Current: {memberCount}.
             </p>
             <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
-              <button className="btn primary" onClick={() => setShowSetupModal(true)}>
-                Setup Options
-              </button>
+              {isCommissioner ? (
+                <button className="btn primary" onClick={() => setShowSetupModal(true)}>
+                  Setup Options
+                </button>
+              ) : (
+                <div style={{
+                  padding: '12px 16px',
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  border: '1px solid rgba(59, 130, 246, 0.3)',
+                  borderRadius: 8,
+                  color: '#60a5fa',
+                  fontSize: '0.9rem'
+                }}>
+                  ⏳ Waiting for commissioner to set up the draft...
+                </div>
+              )}
               <Link className="btn" to="/leagues">Back to Leagues</Link>
             </div>
           </div>
