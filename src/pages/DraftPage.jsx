@@ -83,9 +83,11 @@ export default function DraftPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isMember, setIsMember] = useState(false);
+  const [isCommissioner, setIsCommissioner] = useState(false);
   const [memberIds, setMemberIds] = useState([]);
   const memberCount = memberIds.length;
   const [league, setLeague] = useState(null);
+  const [draftStatus, setDraftStatus] = useState('not_started');
   const [allowed, setAllowed] = useState(false);
 
   // draft state
@@ -216,11 +218,13 @@ export default function DraftPage() {
         // 1) Load league meta FIRST so we have the name even if user isn't a member
         const { data: lg, error: lgErr } = await supabase
           .from('leagues')
-          .select('id, name, draft_date, num_rounds, num_participants, budget_mode, budget_amount, commissioner_id')
+          .select('id, name, draft_date, num_rounds, num_participants, budget_mode, budget_amount, commissioner_id, draft_status')
           .eq('id', leagueId)
           .single();
         if (lgErr) throw lgErr;
         setLeague(lg);
+        setDraftStatus(lg.draft_status || 'not_started');
+        setIsCommissioner(lg.commissioner_id === USER_ID);
 
         // 2) Load members
         const { data: mem, error: memErr } = await supabase
@@ -296,6 +300,38 @@ export default function DraftPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leagueId]);
 
+  // Real-time subscription for league status changes
+  useEffect(() => {
+    if (!leagueId) return;
+
+    const channel = supabase
+      .channel(`league-${leagueId}`)
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'leagues', filter: `id=eq.${leagueId}` },
+        (payload) => {
+          console.log('🔄 League updated:', payload.new);
+          if (payload.new.draft_status) {
+            setDraftStatus(payload.new.draft_status);
+          }
+          // Update league data if other fields changed
+          setLeague(prev => ({ ...prev, ...payload.new }));
+        }
+      )
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'drafts', filter: `league_id=eq.${leagueId}` },
+        (payload) => {
+          console.log('🎯 New pick:', payload.new);
+          // Add new pick to portfolio
+          setPortfolio(prev => [payload.new, ...prev]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [leagueId]);
+
   // Keep turn/pick in sync after any portfolio/member/rounds change
   useEffect(() => {
     if (!allowed || !memberIds.length) return;
@@ -315,8 +351,20 @@ export default function DraftPage() {
     if (isDraftComplete && !hasShownCompleteModal) {
       setShowCompleteModal(true);
       setHasShownCompleteModal(true);
+
+      // Mark draft as completed in database
+      if (draftStatus === 'in_progress') {
+        supabase
+          .from('leagues')
+          .update({ draft_status: 'completed' })
+          .eq('id', leagueId)
+          .then(({ error }) => {
+            if (error) console.error('Failed to mark draft as completed:', error);
+            else setDraftStatus('completed');
+          });
+      }
     }
-  }, [isDraftComplete, hasShownCompleteModal]);
+  }, [isDraftComplete, hasShownCompleteModal, draftStatus, leagueId]);
 
   // ---- Ensure company name for a symbol ----
   async function ensureNameForSymbol(sym) {
@@ -761,6 +809,135 @@ export default function DraftPage() {
             {timeMsg && (<li>{timeMsg}</li>)}
           </ul>
           <Link className="btn" to="/leagues">Back to Leagues</Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Check draft status - only show draft UI if draft is in progress
+  if (draftStatus === 'not_started') {
+    // Draft hasn't started yet
+    const handleStartDraft = async () => {
+      try {
+        const { error } = await supabase
+          .from('leagues')
+          .update({ draft_status: 'in_progress' })
+          .eq('id', leagueId);
+        if (error) throw error;
+        setDraftStatus('in_progress');
+        setAllowed(true);
+      } catch (err) {
+        console.error('Failed to start draft:', err);
+        alert('Failed to start draft: ' + err.message);
+      }
+    };
+
+    return (
+      <div className="page">
+        <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, marginBottom: 16 }}>
+            <div>
+              <h2 style={{ color: '#fff', margin: 0, marginBottom: 4 }}>{league?.name || 'League'}</h2>
+              <h3 style={{ color: '#e5e7eb', marginTop: 0, fontSize: '1.1rem' }}>
+                {isCommissioner ? 'Ready to Start Draft' : 'Waiting for Draft to Begin'}
+              </h3>
+            </div>
+
+            {leagues.length > 1 && (
+              <div style={{ minWidth: 220 }}>
+                <label htmlFor="leagueSelect" className="muted" style={{ display: 'block', marginBottom: 4, fontSize: 13 }}>
+                  Switch League
+                </label>
+                <select
+                  id="leagueSelect"
+                  value={leagueId || ''}
+                  onChange={handleLeagueChange}
+                  className="round-select"
+                  style={{ width: '100%' }}
+                >
+                  {leagues.map(l => (
+                    <option key={l.id} value={l.id}>{l.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
+          <p className="muted" style={{ marginTop: 8 }}>
+            {isCommissioner
+              ? `Ready to start! You have ${memberCount} members in this league.`
+              : 'The commissioner will start the draft soon. This page will automatically update when the draft begins.'}
+          </p>
+
+          <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+            {isCommissioner ? (
+              <button className="btn primary" onClick={handleStartDraft}>
+                Start Draft
+              </button>
+            ) : (
+              <div style={{
+                padding: '12px 16px',
+                background: 'rgba(59, 130, 246, 0.1)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                borderRadius: 8,
+                color: '#60a5fa',
+                fontSize: '0.9rem'
+              }}>
+                ⏳ Waiting for commissioner to start...
+              </div>
+            )}
+            <Link className="btn" to="/leagues">Back to Leagues</Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (draftStatus === 'in_progress' && !allowed) {
+    // Draft is in progress but user hasn't joined yet
+    const handleJoinDraft = () => {
+      setAllowed(true);
+    };
+
+    return (
+      <div className="page">
+        <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, marginBottom: 16 }}>
+            <div>
+              <h2 style={{ color: '#fff', margin: 0, marginBottom: 4 }}>{league?.name || 'League'}</h2>
+              <h3 style={{ color: '#e5e7eb', marginTop: 0, fontSize: '1.1rem' }}>Draft in Progress!</h3>
+            </div>
+
+            {leagues.length > 1 && (
+              <div style={{ minWidth: 220 }}>
+                <label htmlFor="leagueSelect" className="muted" style={{ display: 'block', marginBottom: 4, fontSize: 13 }}>
+                  Switch League
+                </label>
+                <select
+                  id="leagueSelect"
+                  value={leagueId || ''}
+                  onChange={handleLeagueChange}
+                  className="round-select"
+                  style={{ width: '100%' }}
+                >
+                  {leagues.map(l => (
+                    <option key={l.id} value={l.id}>{l.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
+          <p className="muted" style={{ marginTop: 8 }}>
+            The draft is currently underway. Join now to participate!
+          </p>
+
+          <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+            <button className="btn primary" onClick={handleJoinDraft}>
+              Join Live Draft
+            </button>
+            <Link className="btn" to="/leagues">Back to Leagues</Link>
+          </div>
         </div>
       </div>
     );
