@@ -102,16 +102,16 @@ export default function DraftControls({
           <ul className="dropdown-list">
             {suggestions.map((item) => (
               <li
-                key={`${item.symbol}-${item.description}`}
+                key={`${item.symbol}-${item.name}`}
                 className="dropdown-item"
                 onMouseDown={() => {
                   setSymbol(item.symbol);
                   setSuggestions([]);
-                  setSymbolToName((prev) => ({ ...prev, [item.symbol.toUpperCase()]: item.description }));
+                  setSymbolToName((prev) => ({ ...prev, [item.symbol.toUpperCase()]: item.name }));
                   setQuote(null);
                 }}
               >
-                <strong>{item.symbol}</strong> — {item.description}
+                <strong>{item.symbol}</strong> — {item.name}
               </li>
             ))}
           </ul>

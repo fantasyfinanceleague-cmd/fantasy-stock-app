@@ -303,7 +303,7 @@ export default function DraftPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leagueId, USER_ID]);
 
-  // Real-time subscription for league status changes
+  // Real-time subscription for league status changes and draft picks
   useEffect(() => {
     if (!leagueId) return;
 
@@ -323,12 +323,19 @@ export default function DraftPage() {
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'drafts', filter: `league_id=eq.${leagueId}` },
         (payload) => {
-          console.log('🎯 New pick:', payload.new);
-          // Add new pick to portfolio
-          setPortfolio(prev => [payload.new, ...prev]);
+          console.log('🎯 New pick received via realtime:', payload.new);
+          // Add new pick to portfolio (avoid duplicates from own picks)
+          setPortfolio(prev => {
+            const exists = prev.some(p => p.id === payload.new.id);
+            if (exists) return prev;
+            return [payload.new, ...prev];
+          });
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        console.log('📡 Realtime subscription status:', status);
+        if (err) console.error('Realtime subscription error:', err);
+      });
 
     return () => {
       supabase.removeChannel(channel);
@@ -575,16 +582,50 @@ export default function DraftPage() {
         return;
       }
 
-      // Pick a random stock
-      const randomSymbol = availableStocks[Math.floor(Math.random() * availableStocks.length)];
+      // Calculate bot's remaining budget if in budget mode
+      let botBudgetRemaining = null;
+      if (isBudgetMode) {
+        const botSpent = portfolio
+          .filter(p => p.user_id === botUserId)
+          .reduce((sum, p) => sum + Number(p.entry_price || 0), 0);
+        botBudgetRemaining = Math.max(leagueBudget - botSpent, 0);
+      }
 
-      // Get quote for the stock
-      let price = 100; // fallback price
-      try {
-        const q = await fetchQuoteViaFunction(randomSymbol);
-        if (q?.price) price = q.price;
-      } catch {
-        // Use fallback price if quote fails
+      // Try to find an affordable stock (with retries for budget mode)
+      let selectedSymbol = null;
+      let selectedPrice = null;
+      const maxAttempts = isBudgetMode ? Math.min(availableStocks.length, 10) : 1;
+      const shuffledStocks = [...availableStocks].sort(() => Math.random() - 0.5);
+
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        const candidateSymbol = shuffledStocks[attempt % shuffledStocks.length];
+
+        // Get quote for the stock
+        let price = 100; // fallback price
+        try {
+          const q = await fetchQuoteViaFunction(candidateSymbol);
+          if (q?.price) price = q.price;
+        } catch {
+          // Use fallback price if quote fails
+        }
+
+        // In budget mode, check if bot can afford this stock
+        if (isBudgetMode && price > botBudgetRemaining) {
+          console.log(`Bot ${botUserId} cannot afford ${candidateSymbol} ($${price}) - budget remaining: $${botBudgetRemaining}`);
+          continue; // Try another stock
+        }
+
+        // Found an affordable stock
+        selectedSymbol = candidateSymbol;
+        selectedPrice = price;
+        break;
+      }
+
+      // If no affordable stock found in budget mode, skip the pick
+      if (!selectedSymbol) {
+        console.warn(`Bot ${botUserId} cannot afford any available stocks - skipping pick`);
+        setBotPickInProgress(false);
+        return;
       }
 
       // Insert the pick
@@ -592,8 +633,8 @@ export default function DraftPage() {
       const payload = {
         league_id: leagueId,
         user_id: botUserId,
-        symbol: randomSymbol,
-        entry_price: price,
+        symbol: selectedSymbol,
+        entry_price: selectedPrice,
         quantity: 1,
         round: currentRound,
         pick_number: newPickNumber,
@@ -613,7 +654,7 @@ export default function DraftPage() {
       }
 
       setPortfolio(prev => [inserted, ...(prev || [])]);
-      void ensureNameForSymbol(randomSymbol);
+      void ensureNameForSymbol(selectedSymbol);
     } finally {
       setBotPickInProgress(false);
     }
