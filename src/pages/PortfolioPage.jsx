@@ -5,7 +5,8 @@ import { supabase } from '../supabase/supabaseClient';
 import '../layout.css';
 import { useAuthUser } from '../auth/useAuthUser';
 import { prettyName } from '../utils/formatting';
-import { fetchCompanyName, fetchQuotesInBatch } from '../utils/stockData';
+import { fetchCompanyName } from '../utils/stockData';
+import { usePrices } from '../context/PriceContext';
 import TradeModal from '../components/TradeModal';
 
 export default function PortfolioPage() {
@@ -232,27 +233,23 @@ export default function PortfolioPage() {
     return spent;
   }, [positions, trades]);
 
-  // State for prices and refresh
-  const [prices, setPrices] = useState({});
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [lastUpdate, setLastUpdate] = useState(null);
+  // Use shared price context
+  const { prices, loading: isRefreshing, lastUpdate, fetchPrices } = usePrices();
 
-  // Manual refresh function
+  // Refresh function using shared context
   const refreshPrices = async () => {
     const symbols = [...new Set(actualHoldings.map(h => h.symbol?.toUpperCase()))].filter(Boolean);
     if (!symbols.length) return;
-
-    setIsRefreshing(true);
-    try {
-      const results = await fetchQuotesInBatch(symbols);
-      setPrices(prev => ({ ...prev, ...results }));
-      setLastUpdate(new Date());
-    } catch (error) {
-      console.error('Error fetching prices:', error);
-    } finally {
-      setIsRefreshing(false);
-    }
+    await fetchPrices(symbols, true); // forceRefresh = true
   };
+
+  // Auto-fetch prices when holdings change
+  useEffect(() => {
+    const symbols = [...new Set(actualHoldings.map(h => h.symbol?.toUpperCase()))].filter(Boolean);
+    if (symbols.length > 0) {
+      fetchPrices(symbols);
+    }
+  }, [actualHoldings, fetchPrices]);
 
   // metrics (calculated after prices are available)
   const totalCurrentValue = useMemo(() => {
