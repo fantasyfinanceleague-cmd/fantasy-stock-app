@@ -112,6 +112,11 @@ export default function DraftControls({
                 }}
               >
                 <strong>{item.symbol}</strong> — {item.name}
+                {item.price != null && (
+                  <span style={{ marginLeft: 'auto', color: '#10b981', fontWeight: 600 }}>
+                    ${Number(item.price).toFixed(2)}
+                  </span>
+                )}
               </li>
             ))}
           </ul>

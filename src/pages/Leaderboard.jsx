@@ -7,6 +7,8 @@ import { useAuthUser } from '../auth/useAuthUser';
 import { prettyName, formatUSD, formatPercent } from '../utils/formatting';
 import { fetchCompanyName } from '../utils/stockData';
 import { usePrices } from '../context/PriceContext';
+import { useUserProfiles } from '../context/UserProfilesContext';
+import { PageLoader } from '../components/LoadingSpinner';
 
 export default function Leaderboard() {
   const authUser = useAuthUser();
@@ -26,6 +28,9 @@ export default function Leaderboard() {
 
   // Use shared price context
   const { prices, loading: pricesLoading, lastUpdate: lastUpdated, fetchPrices } = usePrices();
+
+  // Use shared user profiles context
+  const { fetchProfiles, getDisplayName } = useUserProfiles();
 
   // ui
   const [loading, setLoading] = useState(true);
@@ -180,6 +185,13 @@ export default function Leaderboard() {
     return Array.from(ids);
   }, [picksByUser, tradesByUser]);
 
+  // Fetch user profiles when we have user IDs
+  useEffect(() => {
+    if (allUserIds.length > 0) {
+      fetchProfiles(allUserIds);
+    }
+  }, [allUserIds, fetchProfiles]);
+
   // Calculate actual holdings for a user (drafts + buys - sells)
   function calcUserHoldings(userId) {
     const userPicks = picksByUser.get(userId) || [];
@@ -253,11 +265,11 @@ export default function Leaderboard() {
 
   const standings = useMemo(() => {
     const arr = allUserIds.map(u => {
-      const { value, pct } = calcUserStats(u);
-      return { user_id: u, value, pct };
+      const { value, gain, pct } = calcUserStats(u);
+      return { user_id: u, value, gain, pct };
     });
-    // rank by percent gain
-    arr.sort((a, b) => b.pct - a.pct);
+    // rank by total profit (gain), not percent
+    arr.sort((a, b) => b.gain - a.gain);
     return arr;
   }, [allUserIds, prices, picksByUser, tradesByUser]);
 
@@ -295,8 +307,8 @@ export default function Leaderboard() {
   };
 
   function exportCSV() {
-    const header = ['rank', 'user_id', 'value', 'pct_gain'];
-    const rows = standings.map((s, idx) => [idx + 1, s.user_id, s.value, s.pct]);
+    const header = ['rank', 'player', 'value', 'pct_gain'];
+    const rows = standings.map((s, idx) => [idx + 1, getDisplayName(s.user_id, USER_ID), s.value, s.pct]);
     const csv = [header, ...rows].map(r => r.join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -356,11 +368,7 @@ export default function Leaderboard() {
 
   // ---------- UI ----------
   if (loading) {
-    return (
-      <div className="page">
-        <div className="card"><p className="muted">Loading standings…</p></div>
-      </div>
-    );
+    return <PageLoader message="Loading standings..." />;
   }
 
   if (error) {
@@ -404,11 +412,13 @@ export default function Leaderboard() {
           <div style={{ fontWeight: 700, marginBottom: 6 }}>🏆 League Leader</div>
           {leader ? (
             <>
-              <div style={{ fontSize: 13 }} className="muted">{leader.user_id}</div>
-              <div style={{ marginTop: 6, display: 'flex', justifyContent: 'space-between' }}>
-                <div style={{ fontWeight: 700 }}>{formatUSD(leader.value)}</div>
-                <div style={{ color: leader.pct >= 0 ? '#16a34a' : '#dc2626', fontWeight: 700 }}>
-                  {formatPercent(leader.pct, true)}
+              <div style={{ fontSize: 13 }} className="muted">{getDisplayName(leader.user_id, USER_ID)}</div>
+              <div style={{ marginTop: 6 }}>
+                <div style={{ color: leader.gain >= 0 ? '#16a34a' : '#dc2626', fontWeight: 700, fontSize: 18 }}>
+                  {leader.gain >= 0 ? '+' : ''}{formatUSD(leader.gain)}
+                </div>
+                <div className="muted" style={{ fontSize: 12 }}>
+                  {formatPercent(leader.pct, true)} return
                 </div>
               </div>
             </>
@@ -418,15 +428,13 @@ export default function Leaderboard() {
         </div>
 
         <div className="card">
-          <div style={{ fontWeight: 700, marginBottom: 6 }}>🚀 Best Performer</div>
+          <div style={{ fontWeight: 700, marginBottom: 6 }}>💰 Top Profit</div>
           {leader ? (
             <>
-              <div style={{ fontSize: 13 }} className="muted">{leader.user_id}</div>
-              <div style={{ marginTop: 6, display: 'flex', justifyContent: 'space-between' }}>
-                <div style={{ fontWeight: 700 }}>{formatUSD(leader.value)}</div>
-                <div style={{ color: leader.pct >= 0 ? '#16a34a' : '#dc2626', fontWeight: 700 }}>
-                  {formatPercent(leader.pct, true)}
-                </div>
+              <div style={{ fontSize: 13 }} className="muted">{getDisplayName(leader.user_id, USER_ID)}</div>
+              <div style={{ marginTop: 6 }}>
+                <div style={{ fontWeight: 700, fontSize: 18 }}>{formatUSD(leader.value)}</div>
+                <div className="muted" style={{ fontSize: 12 }}>portfolio value</div>
               </div>
             </>
           ) : (
@@ -466,15 +474,17 @@ export default function Leaderboard() {
                       {idx + 1}
                     </div>
                     <div>
-                      <div style={{ fontWeight: 600 }}>{s.user_id}</div>
+                      <div style={{ fontWeight: 600 }}>{getDisplayName(s.user_id, USER_ID)}</div>
                       <div className="muted" style={{ fontSize: 12 }}>{activeLeague?.name || ''}</div>
                     </div>
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontWeight: 700 }}>{formatUSD(s.value)}</div>
-                      <div style={{ fontSize: 12, color: s.pct >= 0 ? '#16a34a' : '#dc2626' }}>{formatPercent(s.pct, true)}</div>
+                      <div style={{ fontWeight: 700, color: s.gain >= 0 ? '#16a34a' : '#dc2626' }}>
+                        {s.gain >= 0 ? '+' : ''}{formatUSD(s.gain)}
+                      </div>
+                      <div style={{ fontSize: 12 }} className="muted">{formatUSD(s.value)} total</div>
                     </div>
                     <button
                       className="btn"
@@ -507,7 +517,7 @@ export default function Leaderboard() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           {/* Top Gainers */}
           <div className="card" style={{ background: '#111826' }}>
-            <div className="muted" style={{ marginBottom: 8 }}>Top Gaining Stocks This Week</div>
+            <div className="muted" style={{ marginBottom: 8 }}>Top Gaining Stocks (Since Draft)</div>
             {topGainers.length === 0 ? (
               <p className="muted" style={{ margin: 0 }}>No data.</p>
             ) : (

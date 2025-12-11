@@ -36,3 +36,32 @@ export function formatPercent(n, includeSign = false) {
   const formatted = `${Number(n || 0).toFixed(2)}%`;
   return includeSign && n >= 0 ? `+${formatted}` : formatted;
 }
+
+/**
+ * Format a user ID for display
+ * Shows friendly names for bots and truncated IDs for real users
+ * @param {string} uid - The user ID
+ * @param {string} currentUserId - The current user's ID (to show "You")
+ * @returns {string} - Formatted display name
+ */
+export function formatUserId(uid, currentUserId = null) {
+  if (!uid) return 'Unknown';
+
+  // Show "You" for current user
+  if (currentUserId && uid === currentUserId) {
+    return 'You';
+  }
+
+  // Format bot names nicely
+  if (uid.startsWith('bot-')) {
+    const num = uid.replace('bot-', '');
+    return `Bot ${num}`;
+  }
+
+  // Truncate long UUIDs
+  if (uid.length > 12) {
+    return uid.substring(0, 8) + '...';
+  }
+
+  return uid;
+}

@@ -19,9 +19,12 @@ export default function Login() {
   const [captchaToken, setCaptchaToken] = useState(null);
   const captchaRef = useRef(null);
 
-  // Redirect if already logged in
+  // Redirect if already logged in (but only after auth check is complete)
   useEffect(() => {
-    if (user) {
+    // user === null means still checking, don't redirect yet
+    // user === false means signed out, stay on login
+    // user === object means signed in, redirect
+    if (user && user !== null) {
       nav('/', { replace: true });
     }
   }, [user, nav]);

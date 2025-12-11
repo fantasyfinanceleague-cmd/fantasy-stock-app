@@ -185,7 +185,7 @@ function getDisplayName(userId) {
 
 - [x] Issue 1: Update Leaderboard to include trades in calculations
 - [x] Issue 2: Implement shared price cache/context
-- [ ] Issue 3: Add auto-refresh toggle for prices
-- [ ] Issue 4: Fix "This Week" label or implement weekly tracking
-- [ ] Issue 5: Add quote fetch error handling and retry
-- [ ] Issue 6: Display friendly names instead of user IDs
+- [x] Issue 3: Add auto-refresh toggle for prices
+- [x] Issue 4: Fix "This Week" label or implement weekly tracking
+- [x] Issue 5: Add quote fetch error handling and retry
+- [x] Issue 6: Display friendly names instead of user IDs

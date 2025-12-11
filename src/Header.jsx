@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { supabase } from './supabase/supabaseClient';
 import { useAuthUser } from './auth/useAuthUser';
-import logo from './assets/favicon.ico';
+import logo from '/bear_bull.jpg';
 import './layout.css';
 
 const Header = () => {
@@ -20,16 +20,15 @@ const Header = () => {
   return (
     <header className="header">
       <div className="header-left">
-        <img src={logo} alt="Logo" className="logo" />
-        <span className="app-title">Fantasy Finance</span>
+        <img src={logo} alt="Stockpile Logo" style={{ height: 70, width: 'auto', borderRadius: 8, objectFit: 'contain' }} />
+        <nav className="header-nav">
+          <NavLink to="/" className="nav-link">Dashboard</NavLink>
+          <NavLink to="/leagues" className="nav-link">Leagues</NavLink>
+          <NavLink to="/draft" className="nav-link">Draft</NavLink>
+          <NavLink to="/portfolio" className="nav-link">Portfolio</NavLink>
+          <NavLink to="/leaderboard" className="nav-link">Leaderboard</NavLink>
+        </nav>
       </div>
-      <nav className="header-nav">
-        <NavLink to="/" className="nav-link">Dashboard</NavLink>
-        <NavLink to="/leagues" className="nav-link">Leagues</NavLink>
-        <NavLink to="/draft" className="nav-link">Draft</NavLink>
-        <NavLink to="/portfolio" className="nav-link">Portfolio</NavLink>
-        <NavLink to="/leaderboard" className="nav-link">Leaderboard</NavLink>
-      </nav>
       {user && (
         <div className="header-user">
           <Link to="/profile" className="user-badge">

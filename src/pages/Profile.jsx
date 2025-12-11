@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase/supabaseClient';
 import { useAuthUser } from '../auth/useAuthUser';
@@ -8,11 +8,92 @@ export default function Profile() {
   const navigate = useNavigate();
   const user = useAuthUser();
 
+  // Username state
+  const [username, setUsername] = useState('');
+  const [originalUsername, setOriginalUsername] = useState('');
+  const [usernameError, setUsernameError] = useState('');
+  const [usernameSuccess, setUsernameSuccess] = useState('');
+  const [updatingUsername, setUpdatingUsername] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
   const [updatingPassword, setUpdatingPassword] = useState(false);
+
+  // Load existing profile
+  useEffect(() => {
+    if (!user?.id) {
+      setLoadingProfile(false);
+      return;
+    }
+
+    async function loadProfile() {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('username')
+        .eq('id', user.id)
+        .single();
+
+      if (!error && data) {
+        setUsername(data.username || '');
+        setOriginalUsername(data.username || '');
+      }
+      setLoadingProfile(false);
+    }
+
+    loadProfile();
+  }, [user?.id]);
+
+  async function handleUsernameChange(e) {
+    e.preventDefault();
+    setUsernameError('');
+    setUsernameSuccess('');
+
+    const trimmedUsername = username.trim();
+
+    // Validate username
+    if (trimmedUsername && trimmedUsername.length < 3) {
+      setUsernameError('Username must be at least 3 characters');
+      return;
+    }
+
+    if (trimmedUsername && trimmedUsername.length > 20) {
+      setUsernameError('Username must be 20 characters or less');
+      return;
+    }
+
+    if (trimmedUsername && !/^[a-zA-Z0-9_]+$/.test(trimmedUsername)) {
+      setUsernameError('Username can only contain letters, numbers, and underscores');
+      return;
+    }
+
+    setUpdatingUsername(true);
+
+    // Upsert the profile
+    const { error } = await supabase
+      .from('user_profiles')
+      .upsert({
+        id: user.id,
+        username: trimmedUsername || null
+      }, {
+        onConflict: 'id'
+      });
+
+    setUpdatingUsername(false);
+
+    if (error) {
+      if (error.code === '23505') {
+        setUsernameError('This username is already taken');
+      } else {
+        setUsernameError(error.message);
+      }
+    } else {
+      setUsernameSuccess('Username updated successfully');
+      setOriginalUsername(trimmedUsername);
+    }
+  }
 
   async function handlePasswordChange(e) {
     e.preventDefault();
@@ -129,6 +210,52 @@ export default function Profile() {
           </div>
         </div>
 
+        {/* Display Name */}
+        <div className="card">
+          <h3 style={{ marginTop: 0, marginBottom: 16 }}>Display Name</h3>
+          <p className="muted" style={{ marginTop: 0, marginBottom: 12, fontSize: 14 }}>
+            Set a username that will be displayed on leaderboards and in leagues instead of your user ID.
+          </p>
+
+          <form onSubmit={handleUsernameChange} style={{ display: 'grid', gap: 12 }}>
+            <div>
+              <label htmlFor="username" style={{ display: 'block', marginBottom: 4 }}>Username</label>
+              <input
+                id="username"
+                name="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter a username"
+                autoComplete="username"
+                disabled={loadingProfile}
+                style={{ width: '100%', boxSizing: 'border-box' }}
+              />
+              <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                3-20 characters, letters, numbers, and underscores only
+              </div>
+            </div>
+
+            {usernameError && (
+              <div style={{ color: '#ef4444', fontSize: 14 }}>{usernameError}</div>
+            )}
+            {usernameSuccess && (
+              <div style={{ color: '#10b981', fontSize: 14 }}>{usernameSuccess}</div>
+            )}
+
+            <button
+              type="submit"
+              className="btn primary"
+              disabled={updatingUsername || loadingProfile || username === originalUsername}
+              style={{ marginTop: 8 }}
+            >
+              {updatingUsername ? 'Saving...' : 'Save Username'}
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, maxWidth: 900, marginTop: 16 }}>
         {/* Change Password */}
         <div className="card">
           <h3 style={{ marginTop: 0, marginBottom: 16 }}>Change Password</h3>

@@ -6,10 +6,13 @@ import '../layout.css';
 import { useAuthUser } from '../auth/useAuthUser';
 import { prettyName, formatUSD } from '../utils/formatting';
 import { fetchCompanyName, fetchQuotesInBatch } from '../utils/stockData';
+import { PageLoader } from '../components/LoadingSpinner';
+import { useUserProfiles } from '../context/UserProfilesContext';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const authUser = useAuthUser();
+  const { fetchProfiles, getDisplayName } = useUserProfiles();
   // keep a fallback for now so your draft keeps working if not signed in
   const USER_ID = authUser?.id ?? 'test-user';
 
@@ -26,7 +29,9 @@ export default function Dashboard() {
   const [symbolToName, setSymbolToName] = useState({});
 
   // Recent league activity + standings preview
-  const [recentPicks, setRecentPicks] = useState([]);
+  const [allPicks, setAllPicks] = useState([]);       // all picks for standings
+  const [allTrades, setAllTrades] = useState([]);     // all trades for standings
+  const [recentPicks, setRecentPicks] = useState([]); // last 5 for display
   const [recentTrades, setRecentTrades] = useState([]);
 
   // ---- Load my leagues (only when signed in)
@@ -37,6 +42,8 @@ export default function Dashboard() {
       setLeagues([]);
       setLeagueId('');
       setPositions([]);
+      setAllPicks([]);
+      setAllTrades([]);
       setRecentPicks([]);
       setRecentTrades([]);
       return;
@@ -91,6 +98,8 @@ export default function Dashboard() {
   useEffect(() => {
     if (!authUser?.id || !leagueId) {
       setPositions([]);
+      setAllPicks([]);
+      setAllTrades([]);
       setRecentPicks([]);
       setRecentTrades([]);
       return;
@@ -112,29 +121,54 @@ export default function Dashboard() {
         // mine
         setPositions((picks || []).filter(p => p.user_id === USER_ID));
 
+        // Load ALL trades for standings calculation
+        const { data: allTradesData, error: tErr } = await supabase
+          .from('trades')
+          .select('*')
+          .eq('league_id', leagueId)
+          .order('created_at', { ascending: true });
+
+        if (tErr) throw tErr;
+        setAllTrades(allTradesData || []);
+
+        // Recent trades (last 5 for display)
+        const sortedTrades = [...(allTradesData || [])].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5);
+        setRecentTrades(sortedTrades);
+
+        // Collect all unique symbols from both drafts and trades
+        const draftSymbols = (picks || []).map(p => p.symbol?.toUpperCase());
+        const tradeSymbols = (allTradesData || []).map(t => t.symbol?.toUpperCase());
+        const uniq = [...new Set([...draftSymbols, ...tradeSymbols])].filter(Boolean);
+
         // names (best-effort via Edge Function backed by your `symbols` table)
-        const uniq = [...new Set((picks || []).map(p => p.symbol?.toUpperCase()))].filter(Boolean);
         for (const s of uniq) {
           if (symbolToName[s]) continue;
           const name = await fetchCompanyName(s);
           if (name) setSymbolToName(prev => ({ ...prev, [s]: name }));
         }
 
-        // recent activity
-        setRecentPicks(
-          [...(picks || [])].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5)
-        );
+        // Store all picks for standings calculation
+        setAllPicks(picks || []);
 
-        // recent trades
-        const { data: trades, error: tErr } = await supabase
-          .from('trades')
-          .select('*')
-          .eq('league_id', leagueId)
-          .order('created_at', { ascending: false })
-          .limit(5);
+        // recent activity (last 5)
+        const sortedPicks = [...(picks || [])].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5);
+        setRecentPicks(sortedPicks);
 
-        if (!tErr) {
-          setRecentTrades(trades || []);
+        // Fetch prices for all symbols
+        if (uniq.length > 0) {
+          const priceData = await fetchQuotesInBatch(uniq);
+          setPrices(priceData);
+        }
+
+        // Fetch user profiles for all user IDs in picks and trades
+        const allUserIds = [
+          ...new Set([
+            ...(picks || []).map(p => p.user_id),
+            ...(allTradesData || []).map(t => t.user_id),
+          ].filter(Boolean))
+        ];
+        if (allUserIds.length > 0) {
+          fetchProfiles(allUserIds);
         }
       } catch (e) {
         setError(e.message || String(e));
@@ -148,35 +182,114 @@ export default function Dashboard() {
   // Simple state for prices (no real-time polling)
   const [prices, setPrices] = useState({});
 
-  // ---- Recalculate standings with live prices
-  const standings = useMemo(() => {
-    if (!recentPicks.length) return [];
-
-    const byUser = new Map();
-    recentPicks.forEach(p => {
+  // ---- Group picks and trades by user (same logic as Leaderboard)
+  const picksByUser = useMemo(() => {
+    const map = new Map();
+    for (const p of allPicks) {
       const u = p.user_id;
-      const cur = byUser.get(u) || { user_id: u, picks: [] };
-      cur.picks.push(p);
-      byUser.set(u, cur);
+      if (!map.has(u)) map.set(u, []);
+      map.get(u).push(p);
+    }
+    return map;
+  }, [allPicks]);
+
+  const tradesByUser = useMemo(() => {
+    const map = new Map();
+    for (const t of allTrades) {
+      const u = t.user_id;
+      if (!map.has(u)) map.set(u, []);
+      map.get(u).push(t);
+    }
+    return map;
+  }, [allTrades]);
+
+  // Calculate actual holdings for a user (drafts + buys - sells) - same as Leaderboard
+  function calcUserHoldings(userId) {
+    const userPicks = picksByUser.get(userId) || [];
+    const userTrades = tradesByUser.get(userId) || [];
+    const holdingsMap = {}; // { SYMBOL: { quantity, totalCost } }
+
+    // Start with draft picks
+    for (const pick of userPicks) {
+      const sym = pick.symbol?.toUpperCase();
+      if (!sym) continue;
+
+      if (!holdingsMap[sym]) {
+        holdingsMap[sym] = { symbol: sym, quantity: 0, totalCost: 0 };
+      }
+
+      const qty = Number(pick.quantity || 1);
+      const price = Number(pick.entry_price || 0);
+      holdingsMap[sym].quantity += qty;
+      holdingsMap[sym].totalCost += price * qty;
+    }
+
+    // Apply trades (buys add, sells subtract)
+    for (const trade of userTrades) {
+      const sym = trade.symbol?.toUpperCase();
+      if (!sym) continue;
+
+      if (!holdingsMap[sym]) {
+        holdingsMap[sym] = { symbol: sym, quantity: 0, totalCost: 0 };
+      }
+
+      const qty = Number(trade.quantity || 0);
+      const price = Number(trade.price || 0);
+
+      if (trade.action === 'buy') {
+        holdingsMap[sym].quantity += qty;
+        holdingsMap[sym].totalCost += price * qty;
+      } else if (trade.action === 'sell') {
+        // Calculate proportional cost reduction
+        const avgCost = holdingsMap[sym].quantity > 0
+          ? holdingsMap[sym].totalCost / holdingsMap[sym].quantity
+          : price;
+
+        holdingsMap[sym].quantity -= qty;
+        holdingsMap[sym].totalCost -= avgCost * qty;
+      }
+    }
+
+    // Return holdings with positive quantity
+    return Object.values(holdingsMap).filter(h => h.quantity > 0);
+  }
+
+  function calcUserStats(userId) {
+    const holdings = calcUserHoldings(userId);
+    let spent = 0;
+    let value = 0;
+
+    for (const h of holdings) {
+      const qty = Number(h.quantity || 0);
+      const avgEntry = h.quantity > 0 ? h.totalCost / h.quantity : 0;
+      const live = prices[h.symbol];
+      const last = Number.isFinite(live) ? live : avgEntry;
+
+      spent += avgEntry * qty;
+      value += last * qty;
+    }
+
+    const gain = value - spent;
+    const pct = spent > 0 ? (gain / spent) * 100 : 0;
+    return { spent, value, gain, pct };
+  }
+
+  // Get all unique user IDs
+  const standingsUserIds = useMemo(() => {
+    const ids = new Set([...picksByUser.keys(), ...tradesByUser.keys()]);
+    return Array.from(ids);
+  }, [picksByUser, tradesByUser]);
+
+  // ---- Recalculate standings with live prices (ranked by dollar gain like Leaderboard)
+  const standings = useMemo(() => {
+    const arr = standingsUserIds.map(u => {
+      const { value, gain, pct } = calcUserStats(u);
+      return { user_id: u, value, gain, pct };
     });
-
-    const table = Array.from(byUser.values()).map(({ user_id, picks }) => {
-      let cost = 0;
-      let current = 0;
-      picks.forEach(p => {
-        const qty = Number(p.quantity || 0) || 0;
-        const entry = Number(p.entry_price || 0) || 0;
-        const live = prices[p.symbol?.toUpperCase()];
-        const px = Number.isFinite(live) ? live : entry;
-        cost += entry * qty;
-        current += px * qty;
-      });
-      const pctGain = cost > 0 ? ((current - cost) / cost) * 100 : 0;
-      return { user_id, cost, current, pctGain };
-    }).sort((a, b) => b.pctGain - a.pctGain);
-
-    return table;
-  }, [recentPicks, prices]);
+    // rank by total profit (gain), not percent - same as Leaderboard
+    arr.sort((a, b) => b.gain - a.gain);
+    return arr;
+  }, [standingsUserIds, prices, picksByUser, tradesByUser]);
 
   // ---- My portfolio value + rank
   const myPortfolioValue = useMemo(() => {
@@ -242,11 +355,7 @@ export default function Dashboard() {
   }
 
   if (loading) {
-    return (
-      <div className="page">
-        <div className="card"><p className="muted">Loading dashboard…</p></div>
-      </div>
-    );
+    return <PageLoader message="Loading dashboard..." />;
   }
 
   if (error) {
@@ -262,11 +371,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="page">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-        <h2 style={{ color: '#fff', margin: 0 }}>Welcome Back to Fantasy Stock League</h2>
-      </div>
-
+    <div className="page" style={{ paddingTop: 24 }}>
       {/* Row 1 */}
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: 12, marginBottom: 14 }}>
         {/* My Active Leagues */}
@@ -377,11 +482,14 @@ export default function Dashboard() {
                 <div key={s.user_id} className="list-row">
                   <div>
                     <div style={{ fontWeight: 600 }}>#{idx + 1}</div>
-                    <div className="muted" style={{ fontSize: 12 }}>{s.user_id}</div>
+                    <div className="muted" style={{ fontSize: 12 }}>{getDisplayName(s.user_id, USER_ID)}</div>
                   </div>
-                  {/* Show percent gain instead of USD total */}
-                  <div style={{ fontWeight: 700 }}>
-                    {Number.isFinite(s.pctGain) ? `${s.pctGain.toFixed(2)}%` : '—'}
+                  {/* Show dollar gain like Leaderboard */}
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontWeight: 700, color: s.gain >= 0 ? '#16a34a' : '#dc2626' }}>
+                      {s.gain >= 0 ? '+' : ''}{formatUSD(s.gain)}
+                    </div>
+                    <div className="muted" style={{ fontSize: 12 }}>{formatUSD(s.value)} total</div>
                   </div>
                 </div>
               ))}
@@ -406,7 +514,7 @@ export default function Dashboard() {
                 <div key={p.id} className="list-row">
                   <div>
                     <div style={{ fontWeight: 600 }}>
-                      {p.user_id === USER_ID ? 'You' : p.user_id.substring(0, 8)} drafted <strong>{p.symbol}</strong>
+                      {getDisplayName(p.user_id, USER_ID)} drafted <strong>{p.symbol}</strong>
                     </div>
                     <div className="muted" style={{ fontSize: 12 }}>
                       {new Date(p.created_at).toLocaleString()}
@@ -436,7 +544,7 @@ export default function Dashboard() {
                   <div key={t.id} className="list-row" style={{ backgroundColor: isMine ? 'rgba(59, 130, 246, 0.05)' : 'transparent' }}>
                     <div>
                       <div style={{ fontWeight: 600 }}>
-                        {isMine ? 'You' : t.user_id.substring(0, 8)}{' '}
+                        {getDisplayName(t.user_id, USER_ID)}{' '}
                         <span style={{ color: isBuy ? '#10b981' : '#ef4444' }}>
                           {isBuy ? 'bought' : 'sold'}
                         </span>{' '}

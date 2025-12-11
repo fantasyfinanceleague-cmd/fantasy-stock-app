@@ -1,3 +1,10 @@
+/* Spinner animation */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Overlay for modal or wizard background */
 .modal-overlay {
   position: fixed;
@@ -217,7 +224,7 @@
   justify-content: space-between;
   background-color: #111827;
   color: white;
-  padding: 1rem 2rem;
+  padding: 0.75rem 2rem;
   border-bottom: 1px solid #1f2937;
 }
 
@@ -253,7 +260,7 @@
 .header-left {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 1.5rem;
 }
 
 .header-logo {
@@ -442,6 +449,9 @@ button {
 }
 
 .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 10px 14px;
   cursor: pointer;
   transition: background-color 0.2s ease;

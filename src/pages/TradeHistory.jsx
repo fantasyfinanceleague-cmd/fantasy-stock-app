@@ -4,6 +4,7 @@ import { supabase } from '../supabase/supabaseClient';
 import '../layout.css';
 import { useAuthUser } from '../auth/useAuthUser';
 import { prettyName } from '../utils/formatting';
+import { PageLoader } from '../components/LoadingSpinner';
 
 export default function TradeHistory() {
   const authUser = useAuthUser();
@@ -116,13 +117,7 @@ export default function TradeHistory() {
   }
 
   if (loading) {
-    return (
-      <div className="page">
-        <div className="card">
-          <p className="muted">Loading trade history...</p>
-        </div>
-      </div>
-    );
+    return <PageLoader message="Loading trade history..." />;
   }
 
   if (error) {

@@ -8,8 +8,9 @@ import { prettyName } from '../utils/formatting';
 import { fetchCompanyName } from '../utils/stockData';
 import DraftControls from '../components/DraftControls';
 import DraftHistory from '../components/DraftHistory';
-import DraftCompleteModal from '../components/DraftCompleteModal';
+import DraftRecap from '../components/DraftRecap';
 import DraftSetupModal from '../components/DraftSetupModal';
+import { PageLoader } from '../components/LoadingSpinner';
 
 // Draft access rules
 const MIN_PARTICIPANTS = 4;
@@ -96,9 +97,6 @@ export default function DraftPage() {
   const [currentPickNumber, setCurrentPickNumber] = useState(1);
   const [currentPicker, setCurrentPicker] = useState(null);
 
-  // modal on completion
-  const [showCompleteModal, setShowCompleteModal] = useState(false);
-  const [hasShownCompleteModal, setHasShownCompleteModal] = useState(false);
 
   // auto-draft for bots
   const [autoDraftEnabled, setAutoDraftEnabled] = useState(true);
@@ -357,24 +355,19 @@ export default function DraftPage() {
   const draftCap = (memberIds.length || 0) * totalRounds;
   const isDraftComplete = (memberIds.length > 0) && (portfolio.length >= draftCap);
 
+  // Mark draft as completed in database when all picks are made
   useEffect(() => {
-    if (isDraftComplete && !hasShownCompleteModal) {
-      setShowCompleteModal(true);
-      setHasShownCompleteModal(true);
-
-      // Mark draft as completed in database
-      if (draftStatus === 'in_progress') {
-        supabase
-          .from('leagues')
-          .update({ draft_status: 'completed' })
-          .eq('id', leagueId)
-          .then(({ error }) => {
-            if (error) console.error('Failed to mark draft as completed:', error);
-            else setDraftStatus('completed');
-          });
-      }
+    if (isDraftComplete && draftStatus === 'in_progress') {
+      supabase
+        .from('leagues')
+        .update({ draft_status: 'completed' })
+        .eq('id', leagueId)
+        .then(({ error }) => {
+          if (error) console.error('Failed to mark draft as completed:', error);
+          else setDraftStatus('completed');
+        });
     }
-  }, [isDraftComplete, hasShownCompleteModal, draftStatus, leagueId]);
+  }, [isDraftComplete, draftStatus, leagueId]);
 
   // ---- Ensure company name for a symbol ----
   async function ensureNameForSymbol(sym) {
@@ -518,8 +511,6 @@ export default function DraftPage() {
     setSymbol('');
     setQuote(null);
     setErrorMsg('');
-    setHasShownCompleteModal(false);
-    setShowCompleteModal(false);
   }
 
   // --- Fill league with bots to meet minimum
@@ -696,11 +687,7 @@ export default function DraftPage() {
   }
 
   if (loading) {
-    return (
-      <div className="page">
-        <div className="card"><p className="muted">Loading draft…</p></div>
-      </div>
-    );
+    return <PageLoader message="Loading draft..." />;
   }
 
   if (error) {
@@ -1045,78 +1032,89 @@ export default function DraftPage() {
         </div>
       </div>
 
-      <div className="grid-container px-8 py-6">
-        {/* LEFT: Pick input */}
-        <div className="p-4 bg-[#1c1c1c] rounded-xl text-white">
-          <h1 className="draft-left">Stock Draft</h1>
-          <p className="text-gray-400 mb-6">Select stocks for your fantasy portfolio during the draft.</p>
-
-          <DraftControls
-            isDraftComplete={isDraftComplete}
-            draftCap={draftCap}
+      {/* Show Draft Recap if complete, otherwise show draft interface */}
+      {isDraftComplete ? (
+        <div style={{ padding: '24px 32px', maxWidth: 1200, margin: '0 auto' }}>
+          <DraftRecap
             leagueName={league?.name}
-            symbol={symbol}
-            setSymbol={setSymbol}
-            quote={quote}
-            setQuote={setQuote}
-            errorMsg={errorMsg}
-            setErrorMsg={setErrorMsg}
-            symbolToName={symbolToName}
-            setSymbolToName={setSymbolToName}
             portfolio={portfolio}
-            currentPicker={currentPicker}
+            symbolToName={symbolToName}
             USER_ID={USER_ID}
+            memberIds={memberIds}
+            leagueBudget={leagueBudget}
             isBudgetMode={isBudgetMode}
-            budgetRemaining={budgetRemaining}
-            getQuote={getQuote}
-            draftStock={draftStock}
           />
         </div>
+      ) : (
+        <div className="grid-container px-8 py-6">
+          {/* LEFT: Pick input */}
+          <div className="p-4 bg-[#1c1c1c] rounded-xl text-white">
+            <h1 className="draft-left">Stock Draft</h1>
+            <p className="text-gray-400 mb-6">Select stocks for your fantasy portfolio during the draft.</p>
 
-        {/* MIDDLE: Status / Progress / Recent / History */}
-        <div className="draft-center">
-          <div className="draft-box">
-            <h3 style={{ margin: 0 }}>
-              {isDraftComplete
-                ? '🏁 Draft complete'
-                : botPickInProgress
+            <DraftControls
+              isDraftComplete={isDraftComplete}
+              draftCap={draftCap}
+              leagueName={league?.name}
+              symbol={symbol}
+              setSymbol={setSymbol}
+              quote={quote}
+              setQuote={setQuote}
+              errorMsg={errorMsg}
+              setErrorMsg={setErrorMsg}
+              symbolToName={symbolToName}
+              setSymbolToName={setSymbolToName}
+              portfolio={portfolio}
+              currentPicker={currentPicker}
+              USER_ID={USER_ID}
+              isBudgetMode={isBudgetMode}
+              budgetRemaining={budgetRemaining}
+              getQuote={getQuote}
+              draftStock={draftStock}
+            />
+          </div>
+
+          {/* MIDDLE: Status / Progress / Recent / History */}
+          <div className="draft-center">
+            <div className="draft-box">
+              <h3 style={{ margin: 0 }}>
+                {botPickInProgress
                   ? '🤖 Bot is picking...'
                   : currentPicker === USER_ID
                     ? '✅ Your Turn'
                     : realUserIds.has(currentPicker)
                       ? '⏳ Waiting for player...'
                       : '⏳ Waiting for bot...'}
-            </h3>
-            {!isDraftComplete && currentPicker !== USER_ID && !botPickInProgress && (
-              <p style={{ marginTop: 8, color: '#9ca3af' }}>
-                Current picker: {currentPicker?.substring(0, 12)}...
-                {realUserIds.has(currentPicker) ? ' (human)' : ' (bot)'}
-              </p>
-            )}
-            {!isDraftComplete && USER_ID !== currentPicker && (
-              <p style={{ marginTop: 4 }}>
-                Your turn in {
-                  (() => {
-                    const totalPicks = portfolio.length;
-                    const usersInOrder = memberIds.length;
+              </h3>
+              {currentPicker !== USER_ID && !botPickInProgress && (
+                <p style={{ marginTop: 8, color: '#9ca3af' }}>
+                  Current picker: {currentPicker?.substring(0, 12)}...
+                  {realUserIds.has(currentPicker) ? ' (human)' : ' (bot)'}
+                </p>
+              )}
+              {USER_ID !== currentPicker && (
+                <p style={{ marginTop: 4 }}>
+                  Your turn in {
+                    (() => {
+                      const totalPicks = portfolio.length;
+                      const usersInOrder = memberIds.length;
 
-                    for (let i = 1; i <= usersInOrder * 2; i++) {
-                      const nextPickNumber = totalPicks + i;
-                      const nextRound = Math.floor(nextPickNumber / usersInOrder) + 1;
-                      const pickIndex = nextPickNumber % usersInOrder;
-                      const isEvenRound = nextRound % 2 === 0;
-                      const pickerIndex = isEvenRound ? usersInOrder - 1 - pickIndex : pickIndex;
+                      for (let i = 1; i <= usersInOrder * 2; i++) {
+                        const nextPickNumber = totalPicks + i;
+                        const nextRound = Math.floor(nextPickNumber / usersInOrder) + 1;
+                        const pickIndex = nextPickNumber % usersInOrder;
+                        const isEvenRound = nextRound % 2 === 0;
+                        const pickerIndex = isEvenRound ? usersInOrder - 1 - pickIndex : pickIndex;
 
-                      if (memberIds[pickerIndex] === USER_ID) {
-                        return `${i} pick${i === 1 ? '' : 's'}`;
+                        if (memberIds[pickerIndex] === USER_ID) {
+                          return `${i} pick${i === 1 ? '' : 's'}`;
+                        }
                       }
-                    }
-                    return '? picks';
-                  })()
-                }
-              </p>
-            )}
-            {!isDraftComplete && (
+                      return '? picks';
+                    })()
+                  }
+                </p>
+              )}
               <label htmlFor="auto-draft" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, fontSize: 13, color: '#9ca3af' }}>
                 <input
                   id="auto-draft"
@@ -1127,79 +1125,68 @@ export default function DraftPage() {
                 />
                 Auto-draft for bots
               </label>
-            )}
+            </div>
+
+            <div className="draft-box">
+              <h3 style={{ marginTop: 0, marginBottom: 8 }}>Draft Progress</h3>
+              <p style={{ margin: 0 }}>
+                Current Pick: {`${currentRound}.${(currentPickNumber % (usersInOrder || 1)) || (usersInOrder || 1)}`}
+              </p>
+              <p style={{ margin: 0 }}>
+                Total Picks Made: {portfolio.filter(p => p.user_id === USER_ID).length} / {totalRounds}
+              </p>
+              <p style={{ margin: 0 }}>
+                Budget Remaining: {budgetRemaining == null ? '—' : `$${budgetRemaining.toFixed(2)}`}
+              </p>
+            </div>
+            <div className="draft-box">
+              <h3 style={{ marginTop: 0, marginBottom: 8 }}>Recent Pick</h3>
+              {recentPick ? (
+                <div>
+                  <strong>{recentPick.symbol}</strong>
+                  {` — ${prettyName(symbolToName[recentPick.symbol?.toUpperCase()] || recentPick.company_name || '')}`}<br />
+                  Price: ${Number(recentPick.entry_price).toFixed(2)}
+                </div>
+              ) : (
+                <p style={{ margin: 0 }}>No picks yet</p>
+              )}
+            </div>
+
+            <DraftHistory
+              selectedRound={selectedRound}
+              setSelectedRound={setSelectedRound}
+              totalRounds={totalRounds}
+              portfolio={portfolio}
+              symbolToName={symbolToName}
+            />
           </div>
 
-          <div className="draft-box">
-            <h3 style={{ marginTop: 0, marginBottom: 8 }}>Draft Progress</h3>
-            <p style={{ margin: 0 }}>
-              Current Pick: {isDraftComplete
-                ? '—'
-                : `${currentRound}.${(currentPickNumber % (usersInOrder || 1)) || (usersInOrder || 1)}`}
-            </p>
-            <p style={{ margin: 0 }}>
-              Total Picks Made: {portfolio.filter(p => p.user_id === USER_ID).length} / {totalRounds}
-            </p>
-            <p style={{ margin: 0 }}>
-              Budget Remaining: {budgetRemaining == null ? '—' : `$${budgetRemaining.toFixed(2)}`}
-            </p>
-          </div>
-          <div className="draft-box">
-            <h3 style={{ marginTop: 0, marginBottom: 8 }}>Recent Pick</h3>
-            {recentPick ? (
-              <div>
-                <strong>{recentPick.symbol}</strong>
-                {` — ${prettyName(symbolToName[recentPick.symbol?.toUpperCase()] || recentPick.company_name || '')}`}<br />
-                Price: ${Number(recentPick.entry_price).toFixed(2)}
-              </div>
+          {/* RIGHT: Your Drafted Stocks */}
+          <div className="draft-box" style={{ maxHeight: 240, overflowY: 'auto' }}>
+            <h3 className="text-lg font-semibold mb-2">Your Drafted Stocks</h3>
+            {portfolio.filter(p => p.user_id === USER_ID).length > 0 ? (
+              <ul>
+                {portfolio
+                  .filter(p => p.user_id === USER_ID)
+                  .map((stock, idx) => {
+                    const sym = stock.symbol?.toUpperCase();
+                    const rawName = symbolToName[sym] || stock.company_name || '';
+                    return (
+                      <li key={idx} className="py-1 border-b border-gray-700">
+                        <strong>{sym}</strong>
+                        {rawName ? <> — {prettyName(rawName)}</> : null}
+                        <br />
+                        Entry: ${Number(stock.entry_price).toFixed(2)}
+                      </li>
+                    );
+                  })}
+              </ul>
             ) : (
-              <p style={{ margin: 0 }}>No picks yet</p>
+              <p className="text-gray-400 text-sm">No drafted stocks yet.</p>
             )}
           </div>
-
-          <DraftHistory
-            selectedRound={selectedRound}
-            setSelectedRound={setSelectedRound}
-            totalRounds={totalRounds}
-            portfolio={portfolio}
-            symbolToName={symbolToName}
-          />
         </div>
-
-        {/* RIGHT: Your Drafted Stocks */}
-        <div className="draft-box" style={{ maxHeight: 240, overflowY: 'auto' }}>
-          <h3 className="text-lg font-semibold mb-2">Your Drafted Stocks</h3>
-          {portfolio.filter(p => p.user_id === USER_ID).length > 0 ? (
-            <ul>
-              {portfolio
-                .filter(p => p.user_id === USER_ID)
-                .map((stock, idx) => {
-                  const sym = stock.symbol?.toUpperCase();
-                  const rawName = symbolToName[sym] || stock.company_name || '';
-                  return (
-                    <li key={idx} className="py-1 border-b border-gray-700">
-                      <strong>{sym}</strong>
-                      {rawName ? <> — {prettyName(rawName)}</> : null}
-                      <br />
-                      Entry: ${Number(stock.entry_price).toFixed(2)}
-                    </li>
-                  );
-                })}
-            </ul>
-          ) : (
-            <p className="text-gray-400 text-sm">No drafted stocks yet.</p>
-          )}
-        </div>
-      </div>
-
-      <DraftCompleteModal
-        show={isDraftComplete && showCompleteModal}
-        onClose={() => setShowCompleteModal(false)}
-        leagueName={league?.name}
-        portfolio={portfolio}
-        symbolToName={symbolToName}
-        USER_ID={USER_ID}
-      />
+      )}
     </div>
   );
 }

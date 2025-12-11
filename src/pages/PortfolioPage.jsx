@@ -6,8 +6,9 @@ import '../layout.css';
 import { useAuthUser } from '../auth/useAuthUser';
 import { prettyName } from '../utils/formatting';
 import { fetchCompanyName } from '../utils/stockData';
-import { usePrices } from '../context/PriceContext';
+import { usePrices, PRICE_STATUS } from '../context/PriceContext';
 import TradeModal from '../components/TradeModal';
+import { PageLoader } from '../components/LoadingSpinner';
 
 export default function PortfolioPage() {
   // ✅ Call hooks only inside the component
@@ -115,8 +116,9 @@ export default function PortfolioPage() {
         setPositions(picks || []);
 
         // Load trades (only if authenticated - trades table requires UUID)
+        let tradesData = [];
         if (authUser?.id) {
-          const { data: tradesData, error: tErr } = await supabase
+          const { data, error: tErr } = await supabase
             .from('trades')
             .select('*')
             .eq('league_id', leagueId)
@@ -124,14 +126,18 @@ export default function PortfolioPage() {
             .order('created_at', { ascending: true });
 
           if (tErr) throw tErr;
-          setTrades(tradesData || []);
+          tradesData = data || [];
+          setTrades(tradesData);
         } else {
           setTrades([]);
         }
 
-        const unique = [...new Set((picks || []).map(p => p.symbol?.toUpperCase()))];
+        // Fetch company names for all symbols (from both picks and trades)
+        const pickSymbols = (picks || []).map(p => p.symbol?.toUpperCase());
+        const tradeSymbols = tradesData.map(t => t.symbol?.toUpperCase());
+        const unique = [...new Set([...pickSymbols, ...tradeSymbols])].filter(Boolean);
         for (const s of unique) {
-          if (!s || symbolToName[s]) continue;
+          if (symbolToName[s]) continue;
           fetchCompanyName(s).then(name => {
             if (name) setSymbolToName(prev => ({ ...prev, [s]: name }));
           });
@@ -234,7 +240,12 @@ export default function PortfolioPage() {
   }, [positions, trades]);
 
   // Use shared price context
-  const { prices, loading: isRefreshing, lastUpdate, fetchPrices } = usePrices();
+  const { prices, statuses, loading: isRefreshing, lastUpdate, fetchPrices, getFailedSymbols, retryFailed } = usePrices();
+
+  // Auto-refresh state (persisted in localStorage)
+  const [autoRefresh, setAutoRefresh] = useState(() => {
+    return localStorage.getItem('portfolio-auto-refresh') === 'true';
+  });
 
   // Refresh function using shared context
   const refreshPrices = async () => {
@@ -250,6 +261,24 @@ export default function PortfolioPage() {
       fetchPrices(symbols);
     }
   }, [actualHoldings, fetchPrices]);
+
+  // Auto-refresh interval (every 60 seconds when enabled)
+  useEffect(() => {
+    if (!autoRefresh || actualHoldings.length === 0) return;
+
+    const interval = setInterval(() => {
+      refreshPrices();
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [autoRefresh, actualHoldings.length]);
+
+  // Persist auto-refresh preference
+  const toggleAutoRefresh = () => {
+    const newValue = !autoRefresh;
+    setAutoRefresh(newValue);
+    localStorage.setItem('portfolio-auto-refresh', String(newValue));
+  };
 
   // metrics (calculated after prices are available)
   const totalCurrentValue = useMemo(() => {
@@ -286,11 +315,7 @@ export default function PortfolioPage() {
   }
 
   if (loading) {
-    return (
-      <div className="page">
-        <div className="card"><p className="muted">Loading portfolio…</p></div>
-      </div>
-    );
+    return <PageLoader message="Loading portfolio..." />;
   }
 
   if (error) {
@@ -350,9 +375,30 @@ export default function PortfolioPage() {
             {isRefreshing ? 'Refreshing…' : 'Refresh Prices'}
           </button>
 
+          {getFailedSymbols().length > 0 && (
+            <button
+              className="btn"
+              onClick={retryFailed}
+              disabled={isRefreshing}
+              style={{ backgroundColor: '#ef4444', borderColor: '#ef4444' }}
+            >
+              Retry Failed ({getFailedSymbols().length})
+            </button>
+          )}
+
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={autoRefresh}
+              onChange={toggleAutoRefresh}
+              style={{ width: 16, height: 16, cursor: 'pointer' }}
+            />
+            <span className="muted" style={{ fontSize: 13 }}>Auto-refresh</span>
+          </label>
+
           {lastUpdate && (
             <span className="muted" style={{ fontSize: 13 }}>
-              Last updated: {lastUpdate.toLocaleTimeString()}
+              {autoRefresh && <span style={{ color: '#10b981' }}>●</span>} Last updated: {lastUpdate.toLocaleTimeString()}
             </span>
           )}
 
@@ -428,21 +474,44 @@ export default function PortfolioPage() {
                 const qty = Number(h.quantity ?? 1);
                 const entry = Number(h.entry_price);
                 const last = prices[sym] ?? null;
+                const status = statuses[sym];
+                const isLoading = status === PRICE_STATUS.LOADING;
+                const isError = status === PRICE_STATUS.ERROR;
                 const pl = (last != null && Number.isFinite(entry)) ? (last - entry) * qty : null;
                 const plp = (last != null && Number.isFinite(entry) && entry !== 0)
                   ? ((last / entry) - 1) * 100
                   : null;
 
+                // Render price cell based on status
+                const renderPriceCell = () => {
+                  if (isLoading) return <span style={{ color: '#9ca3af' }}>...</span>;
+                  if (isError) return <span style={{ color: '#ef4444' }}>Failed</span>;
+                  return Number.isFinite(last) ? `$${last.toFixed(2)}` : '—';
+                };
+
+                // Render P/L cells based on status
+                const renderPlCell = () => {
+                  if (isLoading) return <span style={{ color: '#9ca3af' }}>...</span>;
+                  if (isError) return <span style={{ color: '#ef4444' }}>—</span>;
+                  return Number.isFinite(pl) ? `$${pl.toFixed(2)}` : '—';
+                };
+
+                const renderPlpCell = () => {
+                  if (isLoading) return <span style={{ color: '#9ca3af' }}>...</span>;
+                  if (isError) return <span style={{ color: '#ef4444' }}>—</span>;
+                  return Number.isFinite(plp) ? `${plp.toFixed(2)}%` : '—';
+                };
+
                 return (
-                  <tr key={`${sym}-${Math.random()}`}>
+                  <tr key={`${sym}-${Math.random()}`} style={isError ? { backgroundColor: 'rgba(239, 68, 68, 0.1)' } : {}}>
                     <td>{sym}</td>
                     <td>{prettyName(symbolToName[sym] || h.company_name || '—')}</td>
                     <td className="numeric">{Number.isFinite(qty) ? qty : '—'}</td>
                     <td className="numeric">{Number.isFinite(entry) ? `$${entry.toFixed(2)}` : '—'}</td>
-                    <td className="numeric">{Number.isFinite(last) ? `$${last.toFixed(2)}` : '—'}</td>
-                    <td className="numeric">{Number.isFinite(pl) ? `$${pl.toFixed(2)}` : '—'}</td>
+                    <td className="numeric">{renderPriceCell()}</td>
+                    <td className="numeric">{renderPlCell()}</td>
                     <td className="numeric">
-                      {Number.isFinite(plp) ? `${plp.toFixed(2)}%` : '—'}
+                      {renderPlpCell()}
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: 6 }}>

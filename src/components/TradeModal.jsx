@@ -121,17 +121,36 @@ export default function TradeModal({
     setLoading(true);
 
     try {
-      // Insert trade into database
+      const upperSymbol = symbol.toUpperCase();
+
+      // 1) Place paper order via Alpaca Edge Function
+      const { data: placeData, error: placeErr } = await supabase.functions.invoke('place-order', {
+        body: {
+          symbol: upperSymbol,
+          qty: quantity,
+          side: action, // 'buy' or 'sell'
+          type: 'market',
+          time_in_force: 'day',
+        },
+      });
+
+      if (placeErr || placeData?.error) {
+        console.error('place-order failed:', placeErr || placeData);
+        // Continue anyway to save trade locally (for fantasy tracking)
+      }
+
+      // 2) Insert trade into database
       const { error: tradeError } = await supabase
         .from('trades')
         .insert({
           league_id: leagueId,
           user_id: userId,
-          symbol: symbol.toUpperCase(),
+          symbol: upperSymbol,
           action: action,
           quantity: quantity,
           price: currentPrice,
-          total_value: totalValue
+          total_value: totalValue,
+          alpaca_order_id: placeData?.order?.id ?? null
         });
 
       if (tradeError) throw tradeError;

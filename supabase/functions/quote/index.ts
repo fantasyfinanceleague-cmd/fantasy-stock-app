@@ -89,7 +89,42 @@ Deno.serve(async (req) => {
     }
 
     if (price == null) return json({ error: 'no_price', symbol, lastErr }, 404);
-    return json({ symbol, price, source });
+
+    // 4) Fetch previous day's bar for percent change calculation
+    let prevClose: number | null = null;
+    {
+      // Get the previous trading day's bar - Alpaca returns bars nested under symbol key
+      const url = `${BASE}/stocks/${encodeURIComponent(symbol)}/bars?timeframe=1Day&limit=2${feedQS.replace('?', '&')}`;
+      const r = await alpacaGet(url, key, secret);
+      // Alpaca format: { bars: { AAPL: [{...}, {...}] } } or { bars: [{...}] } depending on endpoint
+      let barsArray: any[] = [];
+      if (r.ok && r.body?.bars) {
+        if (Array.isArray(r.body.bars)) {
+          barsArray = r.body.bars;
+        } else if (r.body.bars[symbol] && Array.isArray(r.body.bars[symbol])) {
+          barsArray = r.body.bars[symbol];
+        }
+      }
+
+      if (barsArray.length >= 2) {
+        // Use second-to-last bar (previous day's close)
+        const prevBar = barsArray[barsArray.length - 2];
+        const c = Number(prevBar?.c);
+        if (Number.isFinite(c) && c > 0) prevClose = c;
+      } else if (barsArray.length === 1) {
+        // Only one bar, use its close
+        const c = Number(barsArray[0]?.c);
+        if (Number.isFinite(c) && c > 0) prevClose = c;
+      }
+    }
+
+    // Calculate percent change if we have previous close
+    let changePercent: number | null = null;
+    if (prevClose != null && price != null) {
+      changePercent = ((price - prevClose) / prevClose) * 100;
+    }
+
+    return json({ symbol, price, source, prevClose, changePercent });
   } catch (e) {
     return json({ error: 'unhandled', message: String(e) }, 500);
   }

@@ -56,16 +56,21 @@ export default function Ticker() {
       throw new Error("No price found in function response");
     }
 
+    // Get percent change from the response
+    const changePercent = data?.changePercent ?? null;
+
     return {
       symbol: data?.symbol || sym,
       current: price,
+      changePercent,
     };
   }
 
   function fetchQuoteMock(symbol) {
-    // Simple mock: jitter around pseudo price
+    // Simple mock: jitter around pseudo price with random change
     const base = 100 + Math.random() * 300;
-    return Promise.resolve({ symbol, current: Number(base.toFixed(2)) });
+    const changePercent = (Math.random() - 0.5) * 4; // -2% to +2%
+    return Promise.resolve({ symbol, current: Number(base.toFixed(2)), changePercent });
   }
 
   const fetchQuotes = async () => {
@@ -73,12 +78,12 @@ export default function Ticker() {
       const results = await Promise.all(
         selectedSymbols.map(async (symbol) => {
           try {
-            const { current } = USE_MOCK
+            const { current, changePercent } = USE_MOCK
               ? await fetchQuoteMock(symbol)
               : await fetchQuoteViaFunction(symbol);
 
-            // Simulated change just for the visual effect
-            const change = (Math.random() - 0.5) * 4;
+            // Use real percent change from API, fallback to 0 if unavailable
+            const change = changePercent ?? 0;
             return { symbol, current, change };
           } catch (err) {
             console.error(`❌ Failed to fetch quote for ${symbol}`, err);
@@ -113,7 +118,7 @@ export default function Ticker() {
         className={`ticker-item ${s.change >= 0 ? "ticker-up" : "ticker-down"}`}
       >
         {s.symbol}: ${s.current.toFixed(2)} ({s.change >= 0 ? "+" : ""}
-        {s.change.toFixed(2)})
+        {s.change.toFixed(2)}%)
       </div>
     ));
   };
