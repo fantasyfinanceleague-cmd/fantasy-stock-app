@@ -133,7 +133,7 @@ export default function TradeHistory() {
 
   return (
     <div className="page">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+      <div className="trade-history-header">
         <h2 style={{ color: '#fff', margin: 0 }}>Trade History</h2>
 
         {/* League Selector */}
@@ -159,38 +159,34 @@ export default function TradeHistory() {
       </div>
 
       <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <div className="trade-history-header" style={{ marginBottom: 16 }}>
           <h3 style={{ margin: 0 }}>
             {league?.name || 'Trade History'}
           </h3>
 
           {/* Filter Buttons */}
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="trade-filter-buttons">
             <button
               className={`btn ${filter === 'all' ? 'primary' : ''}`}
               onClick={() => setFilter('all')}
-              style={{ fontSize: 13, padding: '6px 12px' }}
             >
               All
             </button>
             <button
               className={`btn ${filter === 'mine' ? 'primary' : ''}`}
               onClick={() => setFilter('mine')}
-              style={{ fontSize: 13, padding: '6px 12px' }}
             >
               My Trades
             </button>
             <button
               className={`btn ${filter === 'buys' ? 'primary' : ''}`}
               onClick={() => setFilter('buys')}
-              style={{ fontSize: 13, padding: '6px 12px' }}
             >
               Buys
             </button>
             <button
               className={`btn ${filter === 'sells' ? 'primary' : ''}`}
               onClick={() => setFilter('sells')}
-              style={{ fontSize: 13, padding: '6px 12px' }}
             >
               Sells
             </button>
@@ -200,8 +196,8 @@ export default function TradeHistory() {
         {filteredTrades.length === 0 ? (
           <p className="muted">No trades yet. Start trading to see your history here!</p>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="table-responsive">
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 650 }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #374151' }}>
                   <th style={{ textAlign: 'left', padding: '8px 12px', color: '#9ca3af', fontSize: 13 }}>Date</th>

@@ -322,6 +322,78 @@ export default function Dashboard() {
     return rows.sort((a, b) => b.plp - a.plp).slice(0, 5);
   }, [positions, prices, symbolToName]);
 
+  // ---- Quick stats for my portfolio
+  const quickStats = useMemo(() => {
+    const myHoldings = calcUserHoldings(USER_ID);
+    let totalValue = 0;
+    let totalCost = 0;
+    let holdingsCount = myHoldings.length;
+
+    for (const h of myHoldings) {
+      const qty = Number(h.quantity || 0);
+      const avgEntry = h.quantity > 0 ? h.totalCost / h.quantity : 0;
+      const live = prices[h.symbol];
+      const last = Number.isFinite(live) ? live : avgEntry;
+
+      totalCost += avgEntry * qty;
+      totalValue += last * qty;
+    }
+
+    const totalGain = totalValue - totalCost;
+    const totalGainPct = totalCost > 0 ? (totalGain / totalCost) * 100 : 0;
+
+    return { totalValue, totalCost, totalGain, totalGainPct, holdingsCount };
+  }, [USER_ID, picksByUser, tradesByUser, prices]);
+
+  // ---- Market status (US markets: 9:30 AM - 4:00 PM ET, Mon-Fri)
+  const marketStatus = useMemo(() => {
+    const now = new Date();
+    const etFormatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: false,
+      weekday: 'short'
+    });
+    const etParts = etFormatter.formatToParts(now);
+    const weekday = etParts.find(p => p.type === 'weekday')?.value || '';
+    const hour = parseInt(etParts.find(p => p.type === 'hour')?.value || '0', 10);
+    const minute = parseInt(etParts.find(p => p.type === 'minute')?.value || '0', 10);
+    const timeInMinutes = hour * 60 + minute;
+
+    const isWeekend = weekday === 'Sat' || weekday === 'Sun';
+    const marketOpen = 9 * 60 + 30;  // 9:30 AM
+    const marketClose = 16 * 60;      // 4:00 PM
+
+    if (isWeekend) {
+      return { isOpen: false, status: 'Closed', detail: 'Weekend' };
+    }
+
+    if (timeInMinutes < marketOpen) {
+      const minsUntilOpen = marketOpen - timeInMinutes;
+      const hrs = Math.floor(minsUntilOpen / 60);
+      const mins = minsUntilOpen % 60;
+      return {
+        isOpen: false,
+        status: 'Pre-Market',
+        detail: `Opens in ${hrs}h ${mins}m`
+      };
+    }
+
+    if (timeInMinutes >= marketClose) {
+      return { isOpen: false, status: 'After Hours', detail: 'Market closed' };
+    }
+
+    const minsUntilClose = marketClose - timeInMinutes;
+    const hrs = Math.floor(minsUntilClose / 60);
+    const mins = minsUntilClose % 60;
+    return {
+      isOpen: true,
+      status: 'Market Open',
+      detail: `Closes in ${hrs}h ${mins}m`
+    };
+  }, []);
+
   // ---- If not signed in: show centered sign-in box and nothing else
   if (!USER_ID) {
     return (
@@ -372,17 +444,95 @@ export default function Dashboard() {
 
   return (
     <div className="page" style={{ paddingTop: 24 }}>
+      {/* Quick Stats Row */}
+      <div className="metrics-row" style={{ marginBottom: 16 }}>
+        {/* Portfolio Value */}
+        <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>Total Portfolio Value</div>
+              <div style={{ fontSize: 28, fontWeight: 700, color: '#fff' }}>
+                {formatUSD(quickStats.totalValue)}
+              </div>
+            </div>
+            <div style={{
+              padding: '4px 10px',
+              borderRadius: 6,
+              fontSize: 12,
+              fontWeight: 600,
+              backgroundColor: quickStats.totalGain >= 0 ? 'rgba(22, 163, 74, 0.15)' : 'rgba(220, 38, 38, 0.15)',
+              color: quickStats.totalGain >= 0 ? '#22c55e' : '#ef4444'
+            }}>
+              {quickStats.totalGain >= 0 ? '+' : ''}{quickStats.totalGainPct.toFixed(2)}%
+            </div>
+          </div>
+          <div style={{ marginTop: 8, fontSize: 13 }}>
+            <span className="muted">P/L: </span>
+            <span style={{ color: quickStats.totalGain >= 0 ? '#22c55e' : '#ef4444', fontWeight: 600 }}>
+              {quickStats.totalGain >= 0 ? '+' : ''}{formatUSD(quickStats.totalGain)}
+            </span>
+          </div>
+        </div>
+
+        {/* Holdings & Rank */}
+        <div className="card">
+          <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>Your Position</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <div style={{ fontSize: 28, fontWeight: 700, color: '#fff' }}>
+                {myRank ? `#${myRank}` : '—'}
+              </div>
+              <div className="muted" style={{ fontSize: 12 }}>League Rank</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 28, fontWeight: 700, color: '#fff' }}>
+                {quickStats.holdingsCount}
+              </div>
+              <div className="muted" style={{ fontSize: 12 }}>Holdings</div>
+            </div>
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <Link className="btn primary" to="/leaderboard" style={{ width: '100%' }}>View Leaderboard</Link>
+          </div>
+        </div>
+
+        {/* Market Status */}
+        <div className="card">
+          <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>US Market Status</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+            <div style={{
+              width: 12,
+              height: 12,
+              borderRadius: '50%',
+              backgroundColor: marketStatus.isOpen ? '#22c55e' : '#ef4444',
+              boxShadow: marketStatus.isOpen ? '0 0 8px rgba(34, 197, 94, 0.5)' : 'none',
+              animation: marketStatus.isOpen ? 'pulse 2s infinite' : 'none'
+            }} />
+            <div style={{ fontSize: 20, fontWeight: 700, color: '#fff' }}>
+              {marketStatus.status}
+            </div>
+          </div>
+          <div className="muted" style={{ fontSize: 13 }}>{marketStatus.detail}</div>
+          <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>
+            NYSE/NASDAQ: 9:30 AM - 4:00 PM ET
+          </div>
+        </div>
+      </div>
+
       {/* Row 1 */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: 12, marginBottom: 14 }}>
+      <div className="dashboard-row-2">
         {/* My Active Leagues */}
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <h3 style={{ margin: 0 }}>My Active Leagues</h3>
-            <Link className="btn" to="/leagues">Create League</Link>
+            <Link className="btn" to="/leagues">Manage Leagues</Link>
           </div>
 
           {leagues.length === 0 ? (
-            <p className="muted">You’re not in any leagues yet.</p>
+            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+              <p className="muted" style={{ marginBottom: 12 }}>You're not in any leagues yet.</p>
+              <Link className="btn primary" to="/leagues">Create Your First League</Link>
+            </div>
           ) : (
             <div style={{ display: 'grid', gap: 8 }}>
               {leagues.map(l => (
@@ -397,7 +547,6 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button className="btn" onClick={() => navigate('/leagues')}>View Details</button>
                     <button className="btn primary" onClick={() => navigate(`/draft/${l.id}`)}>Enter Draft</button>
                   </div>
                 </div>
@@ -406,30 +555,70 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Invitations placeholder */}
+        {/* Quick Actions */}
         <div className="card">
-          <h3 style={{ marginTop: 0, marginBottom: 8 }}>League Invitations</h3>
-          <p className="muted" style={{ margin: 0 }}>No invitations.</p>
-        </div>
-
-        {/* Portfolio Performance */}
-        <div className="card">
-          <h3 style={{ marginTop: 0, marginBottom: 8 }}>Portfolio Performance</h3>
-          <div className="muted" style={{ marginBottom: 6 }}>
-            {activeLeague ? activeLeague.name : 'Select a League'}
+          <h3 style={{ marginTop: 0, marginBottom: 12 }}>Quick Actions</h3>
+          <div style={{ display: 'grid', gap: 10 }}>
+            <Link
+              to="/portfolio"
+              className="btn"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '12px 14px',
+                textDecoration: 'none',
+                justifyContent: 'flex-start'
+              }}
+            >
+              <span style={{ fontSize: 18 }}>📈</span>
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontWeight: 600 }}>Trade Stocks</div>
+                <div className="muted" style={{ fontSize: 12 }}>Buy or sell from your portfolio</div>
+              </div>
+            </Link>
+            <Link
+              to="/draft"
+              className="btn"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '12px 14px',
+                textDecoration: 'none',
+                justifyContent: 'flex-start'
+              }}
+            >
+              <span style={{ fontSize: 18 }}>🎯</span>
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontWeight: 600 }}>Join Draft</div>
+                <div className="muted" style={{ fontSize: 12 }}>Pick stocks for your league</div>
+              </div>
+            </Link>
+            <Link
+              to="/leagues"
+              className="btn"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '12px 14px',
+                textDecoration: 'none',
+                justifyContent: 'flex-start'
+              }}
+            >
+              <span style={{ fontSize: 18 }}>➕</span>
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontWeight: 600 }}>Create League</div>
+                <div className="muted" style={{ fontSize: 12 }}>Start a new competition</div>
+              </div>
+            </Link>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
-            <div className="muted">Portfolio Value</div>
-            <div style={{ textAlign: 'right', fontWeight: 700 }}>{formatUSD(myPortfolioValue)}</div>
-            <div className="muted">Rank</div>
-            <div style={{ textAlign: 'right', fontWeight: 700 }}>{myRank ? `#${myRank}` : '—'}</div>
-          </div>
-          <Link className="btn primary" to="/portfolio">View Portfolio</Link>
         </div>
       </div>
 
       {/* Row 2 */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 12, marginBottom: 14 }}>
+      <div className="dashboard-row-2">
         {/* Top Performing */}
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -502,7 +691,7 @@ export default function Dashboard() {
       </div>
 
       {/* Row 3 */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+      <div className="dashboard-row-2-equal">
         {/* Recent Draft Picks */}
         <div className="card">
           <h3 style={{ marginTop: 0 }}>Recent Draft Picks</h3>

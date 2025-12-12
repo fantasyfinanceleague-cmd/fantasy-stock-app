@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase/supabaseClient';
 import { useAuthUser } from '../auth/useAuthUser';
 import HCaptcha from '@hcaptcha/react-hcaptcha';
+import logo from '/bear_bull.jpg';
 
 const HCAPTCHA_SITE_KEY = import.meta.env.VITE_HCAPTCHA_SITE_KEY;
 const IS_LOCALHOST = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -12,6 +13,7 @@ export default function Login() {
   const user = useAuthUser();
   const [email, setEmail] = useState('');
   const [pw, setPw] = useState('');
+  const [username, setUsername] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
@@ -39,6 +41,27 @@ export default function Login() {
       return;
     }
 
+    // Validate username during sign up
+    if (isSignUp) {
+      const trimmedUsername = username.trim();
+      if (!trimmedUsername) {
+        setErr('Please enter a username');
+        return;
+      }
+      if (trimmedUsername.length < 3) {
+        setErr('Username must be at least 3 characters');
+        return;
+      }
+      if (trimmedUsername.length > 20) {
+        setErr('Username must be 20 characters or less');
+        return;
+      }
+      if (!/^[a-zA-Z0-9_]+$/.test(trimmedUsername)) {
+        setErr('Username can only contain letters, numbers, and underscores');
+        return;
+      }
+    }
+
     setBusy(true);
 
     if (isSignUp) {
@@ -54,8 +77,7 @@ export default function Login() {
         };
       }
 
-      const { error } = await supabase.auth.signUp(signUpOptions);
-      setBusy(false);
+      const { data, error } = await supabase.auth.signUp(signUpOptions);
 
       // Reset captcha after attempt
       if (captchaRef.current) {
@@ -64,12 +86,38 @@ export default function Login() {
       }
 
       if (error) {
+        setBusy(false);
         setErr(error.message);
-      } else {
-        setErr('');
-        alert('Account created! Please check your email to verify your account.');
-        setIsSignUp(false);
+        return;
       }
+
+      // If sign up successful and we have a user, create their profile with username
+      if (data?.user) {
+        const { error: profileError } = await supabase
+          .from('user_profiles')
+          .upsert({
+            id: data.user.id,
+            username: username.trim()
+          }, {
+            onConflict: 'id'
+          });
+
+        if (profileError) {
+          // If username is taken, show error
+          if (profileError.code === '23505') {
+            setBusy(false);
+            setErr('This username is already taken. Please choose another.');
+            return;
+          }
+          console.error('Failed to create profile:', profileError);
+        }
+      }
+
+      setBusy(false);
+      setErr('');
+      alert('Account created! Please check your email to verify your account.');
+      setIsSignUp(false);
+      setUsername('');
     } else {
       const signInOptions = {
         email,
@@ -116,13 +164,25 @@ export default function Login() {
         boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
       }}>
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+          <img
+            src={logo}
+            alt="Stockpile Logo"
+            style={{
+              height: 120,
+              width: 'auto',
+              borderRadius: 12,
+              objectFit: 'contain',
+              marginBottom: '16px',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
+            }}
+          />
           <h1 style={{
             fontSize: '2rem',
             fontWeight: 800,
             color: '#fff',
             marginBottom: '8px'
           }}>
-            Fantasy Finance
+            Stockpile
           </h1>
           <p style={{ color: '#9ca3af', fontSize: '0.95rem' }}>
             {isSignUp ? 'Create your account to get started' : 'Sign in to manage your portfolio'}
@@ -130,6 +190,39 @@ export default function Login() {
         </div>
 
         <form onSubmit={handleSubmit}>
+          {isSignUp && (
+            <div style={{ marginBottom: '20px' }}>
+              <label htmlFor="login-username" style={{
+                display: 'block',
+                marginBottom: '8px',
+                color: '#e5e7eb',
+                fontSize: '0.9rem',
+                fontWeight: 500
+              }}>
+                Username
+              </label>
+              <input
+                id="login-username"
+                name="username"
+                className="modal-input"
+                type="text"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                placeholder="Choose a username"
+                autoComplete="username"
+                required
+              />
+              <p style={{
+                color: '#9ca3af',
+                fontSize: '0.8rem',
+                marginTop: '6px',
+                marginBottom: 0
+              }}>
+                This will be displayed on leaderboards instead of your ID
+              </p>
+            </div>
+          )}
+
           <div style={{ marginBottom: '20px' }}>
             <label htmlFor="login-email" style={{
               display: 'block',
@@ -283,6 +376,7 @@ export default function Login() {
               onClick={() => {
                 setIsSignUp(!isSignUp);
                 setErr('');
+                setUsername('');
                 // Reset captcha when switching modes
                 if (captchaRef.current) {
                   captchaRef.current.resetCaptcha();

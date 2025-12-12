@@ -148,7 +148,7 @@ export default function Profile() {
     <div className="page">
       <h2 style={{ color: '#fff', marginBottom: 20 }}>Profile</h2>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, maxWidth: 900 }}>
+      <div className="dashboard-row-2-equal" style={{ maxWidth: 900 }}>
         {/* Account Info */}
         <div className="card">
           <h3 style={{ marginTop: 0, marginBottom: 16 }}>Account Information</h3>
@@ -255,7 +255,7 @@ export default function Profile() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, maxWidth: 900, marginTop: 16 }}>
+      <div className="dashboard-row-2-equal" style={{ maxWidth: 900, marginTop: 16 }}>
         {/* Change Password */}
         <div className="card">
           <h3 style={{ marginTop: 0, marginBottom: 16 }}>Change Password</h3>

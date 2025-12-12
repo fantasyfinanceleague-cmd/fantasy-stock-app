@@ -12,6 +12,8 @@ export default function DraftHistory({
   totalRounds,
   portfolio,
   symbolToName,
+  getDisplayName,
+  USER_ID,
 }) {
   const myPicksThisRound = portfolio.filter(p => p.round === selectedRound);
 
@@ -47,6 +49,10 @@ export default function DraftHistory({
             const company = prettyName(symbolToName[sym] || pick.company_name || '');
             const price = Number(pick.entry_price);
 
+            const pickerName = pick.user_id?.startsWith('bot-')
+              ? pick.user_id
+              : (getDisplayName ? getDisplayName(pick.user_id, USER_ID) : pick.user_id?.substring(0, 8));
+
             return (
               <div
                 key={`${pick.round}-${pick.pick_number}-${pick.symbol}-${pick.user_id}`}
@@ -55,6 +61,9 @@ export default function DraftHistory({
                 <span>
                   <strong>{pick.pick_number}</strong> — {sym}
                   {company ? ` — ${company}` : ''}
+                  <span style={{ color: '#9ca3af', fontSize: '0.85em', marginLeft: 8 }}>
+                    ({pickerName})
+                  </span>
                 </span>
                 <span>{isNaN(price) ? '—' : `$${price.toFixed(2)}`}</span>
               </div>

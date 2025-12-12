@@ -90,41 +90,74 @@ Deno.serve(async (req) => {
 
     if (price == null) return json({ error: 'no_price', symbol, lastErr }, 404);
 
-    // 4) Fetch previous day's bar for percent change calculation
+    // 4) Fetch previous day's close for percent change calculation
     let prevClose: number | null = null;
+    let todayOpen: number | null = null;
     {
-      // Get the previous trading day's bar - Alpaca returns bars nested under symbol key
-      const url = `${BASE}/stocks/${encodeURIComponent(symbol)}/bars?timeframe=1Day&limit=2${feedQS.replace('?', '&')}`;
-      const r = await alpacaGet(url, key, secret);
-      // Alpaca format: { bars: { AAPL: [{...}, {...}] } } or { bars: [{...}] } depending on endpoint
-      let barsArray: any[] = [];
-      if (r.ok && r.body?.bars) {
-        if (Array.isArray(r.body.bars)) {
-          barsArray = r.body.bars;
-        } else if (r.body.bars[symbol] && Array.isArray(r.body.bars[symbol])) {
-          barsArray = r.body.bars[symbol];
+      // Try snapshot endpoint first - it directly gives us prevDailyBar
+      const snapshotUrl = `${BASE}/stocks/${encodeURIComponent(symbol)}/snapshot${feedQS}`;
+      const snapR = await alpacaGet(snapshotUrl, key, secret);
+
+      if (snapR.ok && snapR.body) {
+        // Snapshot provides prevDailyBar with previous trading day's OHLC
+        const prevBar = snapR.body?.prevDailyBar;
+        const dailyBar = snapR.body?.dailyBar;
+
+        if (prevBar) {
+          const c = Number(prevBar?.c);
+          if (Number.isFinite(c) && c > 0) prevClose = c;
+        }
+
+        // Also get today's open for intraday change calculation
+        if (dailyBar) {
+          const o = Number(dailyBar?.o);
+          if (Number.isFinite(o) && o > 0) todayOpen = o;
         }
       }
 
-      if (barsArray.length >= 2) {
-        // Use second-to-last bar (previous day's close)
-        const prevBar = barsArray[barsArray.length - 2];
-        const c = Number(prevBar?.c);
-        if (Number.isFinite(c) && c > 0) prevClose = c;
-      } else if (barsArray.length === 1) {
-        // Only one bar, use its close
-        const c = Number(barsArray[0]?.c);
-        if (Number.isFinite(c) && c > 0) prevClose = c;
+      // Fallback: fetch last 5 daily bars if snapshot didn't give us prevClose
+      if (prevClose == null) {
+        const url = `${BASE}/stocks/${encodeURIComponent(symbol)}/bars?timeframe=1Day&limit=5${feedQS.replace('?', '&')}`;
+        const r = await alpacaGet(url, key, secret);
+
+        let barsArray: any[] = [];
+        if (r.ok && r.body?.bars) {
+          if (Array.isArray(r.body.bars)) {
+            barsArray = r.body.bars;
+          } else if (r.body.bars[symbol] && Array.isArray(r.body.bars[symbol])) {
+            barsArray = r.body.bars[symbol];
+          }
+        }
+
+        // Bars are sorted ascending by time
+        // If we have at least 2 bars, use second-to-last (previous completed day)
+        if (barsArray.length >= 2) {
+          const prevBar = barsArray[barsArray.length - 2];
+          const c = Number(prevBar?.c);
+          if (Number.isFinite(c) && c > 0) prevClose = c;
+
+          // Get today's open from the last bar
+          if (todayOpen == null) {
+            const todayBar = barsArray[barsArray.length - 1];
+            const o = Number(todayBar?.o);
+            if (Number.isFinite(o) && o > 0) todayOpen = o;
+          }
+        }
       }
     }
 
-    // Calculate percent change if we have previous close
+    // Calculate percent change
+    // Prefer: (current price - previous close) / previous close
+    // This is the standard "daily change" shown on financial sites
     let changePercent: number | null = null;
-    if (prevClose != null && price != null) {
+    if (prevClose != null && price != null && prevClose > 0) {
       changePercent = ((price - prevClose) / prevClose) * 100;
+    } else if (todayOpen != null && price != null && todayOpen > 0) {
+      // Fallback: calculate from today's open
+      changePercent = ((price - todayOpen) / todayOpen) * 100;
     }
 
-    return json({ symbol, price, source, prevClose, changePercent });
+    return json({ symbol, price, source, prevClose, todayOpen, changePercent });
   } catch (e) {
     return json({ error: 'unhandled', message: String(e) }, 500);
   }

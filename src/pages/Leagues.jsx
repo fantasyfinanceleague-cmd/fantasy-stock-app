@@ -77,6 +77,10 @@ export default function Leagues() {
     [managedLeagues, selectedLeagueForUpdate]
   );
 
+  // Check if draft has started or completed - disable editing if so
+  const isDraftLocked = selectedUpdateLeagueObj?.draft_status === 'in_progress' ||
+                        selectedUpdateLeagueObj?.draft_status === 'completed';
+
   useEffect(() => {
     if (managedLeagues.length) {
       if (!selectedLeagueForUpdate) setSelectedLeagueForUpdate(managedLeagues[0].id);
@@ -87,16 +91,17 @@ export default function Leagues() {
   useEffect(() => {
     if (selectedUpdateLeagueObj) {
       setUpdateDraftDate(toInputDateTime(selectedUpdateLeagueObj.draft_date));
-      setUpdateBudgetMode(selectedUpdateLeagueObj.budget_mode ?? 'budget');   // NEW
-      setUpdateSalaryCap(selectedUpdateLeagueObj.salary_cap_limit ?? '');
+      setUpdateBudgetMode(selectedUpdateLeagueObj.budget_mode ?? 'budget');
+      // Use budget_amount if available, otherwise fall back to salary_cap_limit
+      setUpdateSalaryCap(selectedUpdateLeagueObj.budget_amount ?? selectedUpdateLeagueObj.salary_cap_limit ?? '');
       setUpdateParticipants(selectedUpdateLeagueObj.num_participants ?? '');
-      setUpdateRounds(selectedUpdateLeagueObj.num_rounds ?? 6);               // NEW
+      setUpdateRounds(selectedUpdateLeagueObj.num_rounds ?? 6);
     } else {
       setUpdateDraftDate('');
-      setUpdateBudgetMode('budget');                                          // NEW
+      setUpdateBudgetMode('budget');
       setUpdateSalaryCap('');
       setUpdateParticipants('');
-      setUpdateRounds(6);                                                     // NEW
+      setUpdateRounds(6);
     }
   }, [selectedUpdateLeagueObj]);
 
@@ -107,33 +112,37 @@ export default function Leagues() {
     await createLeague({
       name: leagueName.trim(),
       draftDate: draftDate ? new Date(draftDate).toISOString() : null,
-      budgetMode,                                                   // NEW
-      salaryCapLimit: capDisabled ? null : Number(salaryCap || 0),  // NEW
-      numParticipants: clampParticipants(participants),             // NEW (4..16)
-      numRounds: Number(stocksPerTeam),                             // NEW
+      budgetMode,
+      salaryCapLimit: capDisabled ? null : Number(salaryCap || 0),
+      budgetAmount: capDisabled ? null : Number(salaryCap || 0), // Pass budget amount
+      numParticipants: clampParticipants(participants),
+      numRounds: Number(stocksPerTeam),
     });
 
     setLeagueName('');
     setDraftDate('');
-    setBudgetMode('budget');       // NEW
+    setBudgetMode('budget');
     setSalaryCap('100000');
     setParticipants(12);
-    setStocksPerTeam(6);           // NEW
+    setStocksPerTeam(6);
   };
 
   const handleUpdate = async (e) => {
     e.preventDefault();
     if (!selectedLeagueForUpdate) return;
 
+    const budgetAmt = capUpdateDisabled
+      ? null
+      : (updateSalaryCap === '' ? null : Number(updateSalaryCap));
+
     const patch = {
       draft_date: updateDraftDate ? new Date(updateDraftDate).toISOString() : null,
-      budget_mode: updateBudgetMode,                                         // NEW
-      salary_cap_limit: capUpdateDisabled
-        ? null
-        : (updateSalaryCap === '' ? null : Number(updateSalaryCap)),         // NEW
+      budget_mode: updateBudgetMode,
+      salary_cap_limit: budgetAmt,
+      budget_amount: budgetAmt, // Also update budget_amount
       num_participants:
-        updateParticipants === '' ? null : clampParticipants(updateParticipants), // NEW
-      num_rounds: Number(updateRounds),                                      // NEW
+        updateParticipants === '' ? null : clampParticipants(updateParticipants),
+      num_rounds: Number(updateRounds),
     };
     await updateLeague(selectedLeagueForUpdate, patch);
   };
@@ -266,10 +275,29 @@ export default function Leagues() {
                 >
                   {!managedLeagues.length && <option value="">(No managed leagues)</option>}
                   {managedLeagues.map((l) => (
-                    <option key={l.id} value={l.id}>{l.name}</option>
+                    <option key={l.id} value={l.id}>
+                      {l.name}
+                      {l.draft_status === 'completed' ? ' (Completed)' : l.draft_status === 'in_progress' ? ' (In Progress)' : ''}
+                    </option>
                   ))}
                 </select>
               </div>
+
+              {isDraftLocked && (
+                <div style={{
+                  padding: '12px 16px',
+                  background: 'rgba(245, 158, 11, 0.1)',
+                  border: '1px solid rgba(245, 158, 11, 0.3)',
+                  borderRadius: 8,
+                  color: '#f59e0b',
+                  fontSize: '0.9rem',
+                  marginBottom: 16
+                }}>
+                  {selectedUpdateLeagueObj?.draft_status === 'completed'
+                    ? '🏁 This league\'s draft has been completed. Settings cannot be changed.'
+                    : '⏳ This league\'s draft is in progress. Settings cannot be changed.'}
+                </div>
+              )}
 
               <div className="form-row">
                 <label>Draft Date</label>
@@ -277,6 +305,7 @@ export default function Leagues() {
                   type="datetime-local"
                   value={updateDraftDate}
                   onChange={(e) => setUpdateDraftDate(e.target.value)}
+                  disabled={isDraftLocked}
                 />
               </div>
 
@@ -285,6 +314,7 @@ export default function Leagues() {
                 <select
                   value={updateBudgetMode}
                   onChange={(e) => setUpdateBudgetMode(e.target.value)}
+                  disabled={isDraftLocked}
                 >
                   <option value="budget">Budget</option>
                   <option value="no-budget">No budget</option>
@@ -300,7 +330,7 @@ export default function Leagues() {
                   placeholder="Type here..."
                   value={updateSalaryCap}
                   onChange={(e) => setUpdateSalaryCap(e.target.value)}
-                  disabled={capUpdateDisabled}
+                  disabled={capUpdateDisabled || isDraftLocked}
                 />
               </div>
 
@@ -315,6 +345,7 @@ export default function Leagues() {
                   value={updateParticipants}
                   onChange={(e) => setUpdateParticipants(clampParticipants(e.target.value))}
                   onBlur={(e) => setUpdateParticipants(clampParticipants(e.target.value))}
+                  disabled={isDraftLocked}
                 />
               </div>
 
@@ -323,16 +354,17 @@ export default function Leagues() {
                 <input
                   type="number"
                   min="1"
-                  max="12"                      // <= NEW
+                  max="12"
                   step="1"
                   value={updateRounds}
-                  onChange={(e) => setUpdateRounds(clampRounds(e.target.value))}    // <= NEW
-                  onBlur={(e) => setUpdateRounds(clampRounds(e.target.value))}      // <= NEW
+                  onChange={(e) => setUpdateRounds(clampRounds(e.target.value))}
+                  onBlur={(e) => setUpdateRounds(clampRounds(e.target.value))}
+                  disabled={isDraftLocked}
                 />
               </div>
 
-              <button className="btn purple" type="submit" disabled={loading}>
-                {loading ? 'Updating…' : 'Update Settings'}
+              <button className="btn purple" type="submit" disabled={loading || isDraftLocked}>
+                {loading ? 'Updating…' : isDraftLocked ? 'Locked' : 'Update Settings'}
               </button>
             </form>
           </div>

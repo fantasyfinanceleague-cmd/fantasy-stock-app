@@ -11,18 +11,36 @@ import DraftHistory from '../components/DraftHistory';
 import DraftRecap from '../components/DraftRecap';
 import DraftSetupModal from '../components/DraftSetupModal';
 import { PageLoader } from '../components/LoadingSpinner';
+import { useUserProfiles } from '../context/UserProfilesContext';
 
 // Draft access rules
 const MIN_PARTICIPANTS = 4;
 const REQUIRE_TIME_IN_PAST = false;
 
-// Popular stocks for bot auto-picks
+// Popular stocks for bot auto-picks with approximate price tiers
+// Organized by rough price range to help bots pick within budget
+const BOT_STOCK_POOL_BY_TIER = {
+  // Under $50
+  cheap: ['F', 'T', 'CSCO', 'PFE', 'BAC', 'INTC', 'WFC', 'VZ', 'KO', 'PEP'],
+  // $50-150
+  mid: ['AAPL', 'MSFT', 'JPM', 'JNJ', 'PG', 'MRK', 'ABBV', 'CVX', 'XOM', 'WMT', 'DIS', 'NKE', 'MCD', 'HD', 'ABT', 'TXN', 'NEE', 'UPS', 'PM', 'MS', 'RTX', 'HON', 'ORCL'],
+  // $150-400
+  expensive: ['V', 'MA', 'UNH', 'DHR', 'TMO', 'ACN', 'LLY', 'COST'],
+  // $400+
+  premium: ['GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'BRK.B', 'AVGO']
+};
+
+// Flat list for backwards compatibility
 const BOT_STOCK_POOL = [
-  'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'BRK.B', 'JPM', 'V',
-  'UNH', 'MA', 'HD', 'PG', 'JNJ', 'MRK', 'ABBV', 'CVX', 'XOM', 'PEP',
-  'KO', 'COST', 'AVGO', 'TMO', 'MCD', 'WMT', 'CSCO', 'ACN', 'ABT', 'LLY',
-  'DHR', 'NKE', 'ORCL', 'TXN', 'NEE', 'UPS', 'PM', 'MS', 'RTX', 'HON'
+  ...BOT_STOCK_POOL_BY_TIER.cheap,
+  ...BOT_STOCK_POOL_BY_TIER.mid,
+  ...BOT_STOCK_POOL_BY_TIER.expensive,
+  ...BOT_STOCK_POOL_BY_TIER.premium
 ];
+
+// Cache for stock prices (to avoid repeated API calls)
+const botPriceCache = new Map(); // symbol -> { price, timestamp }
+const PRICE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 // ---- Finnhub client-side suggestions ----
 const FINNHUB_API_KEY = import.meta.env.VITE_FINNHUB_API_KEY; // set in .env.local
@@ -74,6 +92,7 @@ async function fetchQuoteViaFunction(symbol) {
 export default function DraftPage() {
   const authUser = useAuthUser();
   const navigate = useNavigate();
+  const { fetchProfiles, getDisplayName } = useUserProfiles();
   // keep a fallback for now so your draft keeps working if not signed in
   const USER_ID = authUser?.id ?? 'test-user';
   const { leagueId: routeLeagueId } = useParams();
@@ -119,7 +138,7 @@ export default function DraftPage() {
 
   // budget
   const isBudgetMode = league?.budget_mode === 'budget';
-  const leagueBudget = Number(league?.budget_amount ?? 0);
+  const leagueBudget = Number(league?.budget_amount ?? league?.salary_cap_limit ?? 0);
   const mySpent = useMemo(
     () => portfolio.filter(p => p.user_id === USER_ID).reduce((s, p) => s + Number(p.entry_price || 0), 0),
     [portfolio]
@@ -301,18 +320,37 @@ export default function DraftPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leagueId, USER_ID]);
 
+  // Track if realtime is working
+  const [realtimeConnected, setRealtimeConnected] = useState(false);
+
   // Real-time subscription for league status changes and draft picks
   useEffect(() => {
     if (!leagueId) return;
 
+    console.log('📡 Setting up realtime subscription for league:', leagueId);
+
+    const channelName = `draft-room-${leagueId}`;
+
+    // Remove any existing channel with this name first
+    const existingChannel = supabase.getChannels().find(ch => ch.topic === `realtime:${channelName}`);
+    if (existingChannel) {
+      supabase.removeChannel(existingChannel);
+    }
+
     const channel = supabase
-      .channel(`league-${leagueId}`)
+      .channel(channelName)
       .on('postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'leagues', filter: `id=eq.${leagueId}` },
         (payload) => {
-          console.log('🔄 League updated:', payload.new);
+          console.log('🔄 League updated via realtime:', payload.new);
           if (payload.new.draft_status) {
+            console.log('📊 Draft status changed to:', payload.new.draft_status);
             setDraftStatus(payload.new.draft_status);
+            // When draft starts, automatically allow user to join
+            if (payload.new.draft_status === 'in_progress') {
+              console.log('🚀 Draft started! Enabling draft UI...');
+              setAllowed(true);
+            }
           }
           // Update league data if other fields changed
           setLeague(prev => ({ ...prev, ...payload.new }));
@@ -326,23 +364,95 @@ export default function DraftPage() {
           setPortfolio(prev => {
             const exists = prev.some(p => p.id === payload.new.id);
             if (exists) return prev;
-            return [payload.new, ...prev];
+            const updated = [payload.new, ...prev];
+            return updated;
           });
+
+          // Ensure we have the name for the new symbol
+          if (payload.new?.symbol) {
+            const sym = payload.new.symbol.toUpperCase();
+            fetchCompanyName(sym).then(name => {
+              if (name) {
+                setSymbolToName(prev => ({ ...prev, [sym]: name }));
+              }
+            });
+          }
         }
       )
-      .subscribe((status, err) => {
-        console.log('📡 Realtime subscription status:', status);
-        if (err) console.error('Realtime subscription error:', err);
+      .subscribe((status) => {
+        console.log('📡 Realtime subscription status:', status, 'for league:', leagueId);
+        if (status === 'SUBSCRIBED') {
+          setRealtimeConnected(true);
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('Realtime not available, falling back to polling');
+          setRealtimeConnected(false);
+        }
       });
 
     return () => {
+      console.log('📡 Cleaning up realtime subscription for league:', leagueId);
       supabase.removeChannel(channel);
     };
   }, [leagueId]);
 
+  // Fallback polling when realtime is not connected
+  useEffect(() => {
+    if (!leagueId || realtimeConnected) return;
+
+    console.log('🔄 Starting fallback polling for draft updates...');
+
+    const pollInterval = setInterval(async () => {
+      try {
+        // Poll for league status changes
+        const { data: lg } = await supabase
+          .from('leagues')
+          .select('draft_status')
+          .eq('id', leagueId)
+          .single();
+
+        if (lg?.draft_status && lg.draft_status !== draftStatus) {
+          console.log('🔄 Polled draft status change:', lg.draft_status);
+          setDraftStatus(lg.draft_status);
+          if (lg.draft_status === 'in_progress') {
+            setAllowed(true);
+          }
+        }
+
+        // Poll for new picks
+        const { data: picks } = await supabase
+          .from('drafts')
+          .select('*')
+          .eq('league_id', leagueId)
+          .order('pick_number', { ascending: false });
+
+        if (picks && picks.length > portfolio.length) {
+          console.log('🔄 Polled new picks:', picks.length - portfolio.length, 'new');
+          setPortfolio(picks);
+          // Fetch names for any new symbols
+          const newPicks = picks.slice(0, picks.length - portfolio.length);
+          newPicks.forEach(pick => {
+            if (pick?.symbol) {
+              const sym = pick.symbol.toUpperCase();
+              fetchCompanyName(sym).then(name => {
+                if (name) {
+                  setSymbolToName(prev => ({ ...prev, [sym]: name }));
+                }
+              });
+            }
+          });
+        }
+      } catch (err) {
+        console.error('Polling error:', err);
+      }
+    }, 3000); // Poll every 3 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [leagueId, realtimeConnected, draftStatus, portfolio.length]);
+
   // Keep turn/pick in sync after any portfolio/member/rounds change
   useEffect(() => {
     if (!allowed || !memberIds.length) return;
+    console.log('🔄 Updating turn - portfolio length:', portfolio.length, 'members:', memberIds.length);
     updateTurn(
       portfolio,
       memberIds,
@@ -494,23 +604,39 @@ export default function DraftPage() {
   // --- Reset the draft for this league
   async function resetDraftForLeague() {
     if (!leagueId) return;
-    if (!confirm('Reset this draft for everyone? This will delete all picks.')) return;
+    if (!confirm('Reset this draft for everyone? This will delete all picks and reset draft status.')) return;
 
-    const { error } = await supabase
+    // Delete all picks for this league
+    const { error: deleteError } = await supabase
       .from('drafts')
       .delete()
       .eq('league_id', leagueId);
 
-    if (error) {
-      console.error('Failed to reset draft:', error);
+    if (deleteError) {
+      console.error('Failed to reset draft:', deleteError);
       alert('Could not reset draft (see console). Check RLS/policies.');
       return;
     }
 
+    // Reset draft status to not_started
+    const { error: updateError } = await supabase
+      .from('leagues')
+      .update({ draft_status: 'not_started' })
+      .eq('id', leagueId);
+
+    if (updateError) {
+      console.error('Failed to reset draft status:', updateError);
+    }
+
+    // Clear all local state
     setPortfolio([]);
     setSymbol('');
     setQuote(null);
     setErrorMsg('');
+    setDraftStatus('not_started');
+    setFailedBots(new Set()); // Clear failed bots so they can try again
+    setCurrentRound(1);
+    setCurrentPickNumber(1);
   }
 
   // --- Fill league with bots to meet minimum
@@ -557,77 +683,166 @@ export default function DraftPage() {
   // Human count for display
   const humanCount = memberIds.filter(id => realUserIds.has(id)).length;
 
+  // Fetch user profiles for display names
+  useEffect(() => {
+    if (memberIds.length > 0) {
+      // Only fetch profiles for real user IDs (not bots)
+      const realMemberIds = memberIds.filter(id => !id.startsWith('bot-'));
+      if (realMemberIds.length > 0) {
+        fetchProfiles(realMemberIds);
+      }
+    }
+  }, [memberIds, fetchProfiles]);
+
+  // Track bots that have failed to pick (to avoid infinite loops)
+  const [failedBots, setFailedBots] = useState(new Set());
+
   // --- Bot auto-draft: pick a random stock for non-human players
   async function botAutoPick(botUserId) {
     if (!leagueId || botPickInProgress) return;
+
+    // Skip if this bot has already failed
+    if (failedBots.has(botUserId)) {
+      console.log(`Bot ${botUserId} already failed, skipping...`);
+      return;
+    }
+
     setBotPickInProgress(true);
 
     try {
-      // Get already-picked symbols in this league to avoid duplicates
-      const pickedSymbols = new Set(portfolio.map(p => p.symbol?.toUpperCase()));
-      const availableStocks = BOT_STOCK_POOL.filter(s => !pickedSymbols.has(s));
+      // IMPORTANT: Fetch fresh picks from database to avoid race conditions
+      // React state may be stale if multiple bot picks happen quickly
+      const { data: freshPicks, error: picksErr } = await supabase
+        .from('drafts')
+        .select('id, symbol, user_id, entry_price, pick_number')
+        .eq('league_id', leagueId)
+        .order('pick_number', { ascending: false });
 
-      if (availableStocks.length === 0) {
-        console.warn('Bot has no unique stocks left to pick');
+      if (picksErr) {
+        console.error('Failed to fetch fresh picks:', picksErr);
         setBotPickInProgress(false);
         return;
       }
 
+      const currentPicks = freshPicks || [];
+
+      // Get already-picked symbols in this league to avoid duplicates
+      const pickedSymbols = new Set(currentPicks.map(p => p.symbol?.toUpperCase()));
+
       // Calculate bot's remaining budget if in budget mode
-      let botBudgetRemaining = null;
+      let botBudgetRemaining = Infinity;
       if (isBudgetMode) {
-        const botSpent = portfolio
+        const botSpent = currentPicks
           .filter(p => p.user_id === botUserId)
           .reduce((sum, p) => sum + Number(p.entry_price || 0), 0);
         botBudgetRemaining = Math.max(leagueBudget - botSpent, 0);
+
+        console.log(`🤖 Bot ${botUserId} budget: $${botBudgetRemaining.toFixed(2)} remaining (spent: $${botSpent.toFixed(2)} of $${leagueBudget})`);
+
+        // If bot has no budget left, mark as failed
+        if (botBudgetRemaining <= 0) {
+          console.warn(`Bot ${botUserId} has no budget remaining - marking as failed`);
+          setFailedBots(prev => new Set([...prev, botUserId]));
+          setBotPickInProgress(false);
+          return;
+        }
       }
 
-      // Try to find an affordable stock (with retries for budget mode)
-      let selectedSymbol = null;
-      let selectedPrice = null;
-      const maxAttempts = isBudgetMode ? Math.min(availableStocks.length, 10) : 1;
+      // Use fresh pick count for the new pick number
+      const currentPickCount = currentPicks.length;
+
+      // Smart stock selection based on budget
+      // First, determine which price tiers the bot can afford
+      let stocksToTry = [];
+
+      if (isBudgetMode) {
+        // Prioritize stocks based on budget remaining
+        if (botBudgetRemaining < 50) {
+          // Very low budget - only try cheap stocks
+          stocksToTry = [...BOT_STOCK_POOL_BY_TIER.cheap];
+        } else if (botBudgetRemaining < 150) {
+          // Low budget - cheap first, then mid
+          stocksToTry = [...BOT_STOCK_POOL_BY_TIER.cheap, ...BOT_STOCK_POOL_BY_TIER.mid];
+        } else if (botBudgetRemaining < 400) {
+          // Medium budget - mid first, then cheap, then expensive
+          stocksToTry = [...BOT_STOCK_POOL_BY_TIER.mid, ...BOT_STOCK_POOL_BY_TIER.cheap, ...BOT_STOCK_POOL_BY_TIER.expensive];
+        } else {
+          // High budget - can try anything, prefer variety
+          stocksToTry = [...BOT_STOCK_POOL_BY_TIER.mid, ...BOT_STOCK_POOL_BY_TIER.expensive, ...BOT_STOCK_POOL_BY_TIER.cheap, ...BOT_STOCK_POOL_BY_TIER.premium];
+        }
+      } else {
+        // No budget mode - use all stocks
+        stocksToTry = [...BOT_STOCK_POOL];
+      }
+
+      // Filter out already picked stocks
+      const availableStocks = stocksToTry.filter(s => !pickedSymbols.has(s));
+
+      if (availableStocks.length === 0) {
+        console.warn('Bot has no unique stocks left to pick - marking as failed');
+        setFailedBots(prev => new Set([...prev, botUserId]));
+        setBotPickInProgress(false);
+        return;
+      }
+
+      // Shuffle within each priority group for variety
       const shuffledStocks = [...availableStocks].sort(() => Math.random() - 0.5);
 
-      for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        const candidateSymbol = shuffledStocks[attempt % shuffledStocks.length];
+      // Try to find an affordable stock
+      let selectedSymbol = null;
+      let selectedPrice = null;
 
-        // Get quote for the stock
-        let price = 100; // fallback price
-        try {
-          const q = await fetchQuoteViaFunction(candidateSymbol);
-          if (q?.price) price = q.price;
-        } catch {
-          // Use fallback price if quote fails
+      for (const candidateSymbol of shuffledStocks) {
+        // Check cache first
+        const cached = botPriceCache.get(candidateSymbol);
+        let price;
+
+        if (cached && (Date.now() - cached.timestamp < PRICE_CACHE_TTL)) {
+          price = cached.price;
+          console.log(`🤖 Using cached price for ${candidateSymbol}: $${price}`);
+        } else {
+          // Get fresh quote
+          try {
+            const q = await fetchQuoteViaFunction(candidateSymbol);
+            price = q?.price ?? 100;
+            // Cache the price
+            botPriceCache.set(candidateSymbol, { price, timestamp: Date.now() });
+          } catch {
+            price = 100; // fallback
+          }
         }
 
         // In budget mode, check if bot can afford this stock
         if (isBudgetMode && price > botBudgetRemaining) {
-          console.log(`Bot ${botUserId} cannot afford ${candidateSymbol} ($${price}) - budget remaining: $${botBudgetRemaining}`);
-          continue; // Try another stock
+          console.log(`🤖 Bot ${botUserId} cannot afford ${candidateSymbol} ($${price.toFixed(2)}) - budget: $${botBudgetRemaining.toFixed(2)}`);
+          continue;
         }
 
-        // Found an affordable stock
+        // Found an affordable stock!
         selectedSymbol = candidateSymbol;
         selectedPrice = price;
+        console.log(`🤖 Bot ${botUserId} selected ${candidateSymbol} at $${price.toFixed(2)}`);
         break;
       }
 
-      // If no affordable stock found in budget mode, skip the pick
+      // If no affordable stock found, mark bot as failed
       if (!selectedSymbol) {
-        console.warn(`Bot ${botUserId} cannot afford any available stocks - skipping pick`);
+        console.warn(`Bot ${botUserId} cannot afford any available stocks - marking as failed`);
+        setFailedBots(prev => new Set([...prev, botUserId]));
         setBotPickInProgress(false);
         return;
       }
 
-      // Insert the pick
-      const newPickNumber = (portfolio?.length || 0) + 1;
+      // Insert the pick using fresh pick count from database
+      const newPickNumber = currentPickCount + 1;
+      const newRound = Math.floor(currentPickCount / memberIds.length) + 1;
       const payload = {
         league_id: leagueId,
         user_id: botUserId,
         symbol: selectedSymbol,
         entry_price: selectedPrice,
         quantity: 1,
-        round: currentRound,
+        round: newRound,
         pick_number: newPickNumber,
         draft_date: new Date().toISOString(),
       };
@@ -640,6 +855,8 @@ export default function DraftPage() {
 
       if (insErr) {
         console.error('Bot pick failed:', insErr);
+        // Mark bot as failed to prevent infinite retries
+        setFailedBots(prev => new Set([...prev, botUserId]));
         setBotPickInProgress(false);
         return;
       }
@@ -651,6 +868,32 @@ export default function DraftPage() {
     }
   }
 
+  // --- Helper: Skip a player's turn (used when bot can't pick)
+  async function skipTurn(userId) {
+    // Insert a "skip" pick with $0 to advance the draft
+    const newPickNumber = (portfolio?.length || 0) + 1;
+    const payload = {
+      league_id: leagueId,
+      user_id: userId,
+      symbol: 'SKIP',
+      entry_price: 0,
+      quantity: 0,
+      round: currentRound,
+      pick_number: newPickNumber,
+      draft_date: new Date().toISOString(),
+    };
+
+    const { data: inserted, error: insErr } = await supabase
+      .from('drafts')
+      .insert(payload)
+      .select('*')
+      .single();
+
+    if (!insErr && inserted) {
+      setPortfolio(prev => [inserted, ...(prev || [])]);
+    }
+  }
+
   // --- Effect: Auto-pick for bots when it's their turn
   useEffect(() => {
     if (!autoDraftEnabled || !allowed || !currentPicker || botPickInProgress) return;
@@ -658,6 +901,16 @@ export default function DraftPage() {
     // Check if current picker is a real user (exists in auth.users)
     const isRealUser = realUserIds.has(currentPicker);
     if (isRealUser) return; // Real users pick for themselves
+
+    // Skip if this bot has failed (can't afford any stocks or other error)
+    if (failedBots.has(currentPicker)) {
+      console.log(`Bot ${currentPicker} has failed, skipping their turn...`);
+      // Auto-skip the bot's turn to advance the draft
+      const timer = setTimeout(() => {
+        skipTurn(currentPicker);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
 
     // Check if draft is complete
     const totalRounds = Number(league?.num_rounds ?? 6);
@@ -670,8 +923,7 @@ export default function DraftPage() {
     }, 800);
 
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPicker, autoDraftEnabled, allowed, botPickInProgress, portfolio.length, realUserIds]);
+  }, [currentPicker, autoDraftEnabled, allowed, botPickInProgress, portfolio.length, realUserIds, failedBots, memberIds, league?.num_rounds]);
 
   // ----------- UI gating states -----------
   if (!leagueId) {
@@ -1088,8 +1340,9 @@ export default function DraftPage() {
               </h3>
               {currentPicker !== USER_ID && !botPickInProgress && (
                 <p style={{ marginTop: 8, color: '#9ca3af' }}>
-                  Current picker: {currentPicker?.substring(0, 12)}...
-                  {realUserIds.has(currentPicker) ? ' (human)' : ' (bot)'}
+                  Current picker: {currentPicker?.startsWith('bot-')
+                    ? currentPicker
+                    : getDisplayName(currentPicker, USER_ID)}
                 </p>
               )}
               {USER_ID !== currentPicker && (
@@ -1158,6 +1411,8 @@ export default function DraftPage() {
               totalRounds={totalRounds}
               portfolio={portfolio}
               symbolToName={symbolToName}
+              getDisplayName={getDisplayName}
+              USER_ID={USER_ID}
             />
           </div>
 

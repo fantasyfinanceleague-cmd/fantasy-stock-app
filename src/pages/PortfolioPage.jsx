@@ -333,15 +333,15 @@ export default function PortfolioPage() {
   return (
     <div className="page">
       {/* Header controls */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
-        <div>
+      <div className="portfolio-controls">
+        <div className="portfolio-controls-left">
           <h2 style={{ color: '#fff', margin: 0 }}>Portfolio Management</h2>
           <p className="muted" style={{ marginTop: 6 }}>
             Manage your stock holdings and execute trades within your league
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="portfolio-controls-right">
           <div>
             <label htmlFor="leagueSelect" className="muted" style={{ display: 'block', marginBottom: 4 }}>
               Select League
@@ -351,7 +351,7 @@ export default function PortfolioPage() {
               value={leagueId}
               onChange={handleLeagueChange}
               className="round-select"
-              style={{ minWidth: 220 }}
+              style={{ minWidth: 180 }}
             >
               {leagues.map(l => (
                 <option key={l.id} value={l.id}>{l.name}</option>
@@ -386,7 +386,7 @@ export default function PortfolioPage() {
             </button>
           )}
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap' }}>
             <input
               type="checkbox"
               checked={autoRefresh}
@@ -397,7 +397,7 @@ export default function PortfolioPage() {
           </label>
 
           {lastUpdate && (
-            <span className="muted" style={{ fontSize: 13 }}>
+            <span className="muted" style={{ fontSize: 13, whiteSpace: 'nowrap' }}>
               {autoRefresh && <span style={{ color: '#10b981' }}>●</span>} Last updated: {lastUpdate.toLocaleTimeString()}
             </span>
           )}
@@ -407,7 +407,7 @@ export default function PortfolioPage() {
       </div>
 
       {/* Metrics row */}
-      <div className="grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 14 }}>
+      <div className="metrics-row">
         <div className="card">
           <div className="muted">Total Portfolio Value</div>
           <div style={{ fontSize: 24, fontWeight: 700, marginTop: 6 }}>

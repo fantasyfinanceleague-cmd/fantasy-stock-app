@@ -1,5 +1,5 @@
 // src/components/DraftControls.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '../supabase/supabaseClient';
 import { prettyName } from '../utils/formatting';
 
@@ -44,6 +44,8 @@ export default function DraftControls({
   draftStock,
 }) {
   const [suggestions, setSuggestions] = useState([]);
+  const [lastQuery, setLastQuery] = useState(''); // Track last successful query
+  const inputFocusedRef = useRef(false);
 
   // Clear quote when symbol cleared
   useEffect(() => {
@@ -51,6 +53,7 @@ export default function DraftControls({
       setQuote(null);
       setErrorMsg('');
       clearSuggestionFlow(setSuggestions);
+      setLastQuery('');
     }
   }, [symbol, setQuote, setErrorMsg]);
 
@@ -61,8 +64,32 @@ export default function DraftControls({
 
   async function fetchSuggestions(q) {
     const { data, error } = await supabase.functions.invoke('symbols-search', { body: { q } });
-    if (!error && data?.items) setSuggestions(data.items);
-    else setSuggestions([]);
+    if (!error && data?.items) {
+      setSuggestions(data.items);
+      setLastQuery(q);
+    } else {
+      setSuggestions([]);
+    }
+  }
+
+  // Re-show suggestions on focus if we have a query
+  function handleFocus() {
+    inputFocusedRef.current = true;
+    const trimmed = symbol.trim();
+    if (trimmed && suggestions.length === 0) {
+      // Re-fetch suggestions if we have text but no suggestions showing
+      fetchSuggestions(trimmed);
+    }
+  }
+
+  function handleBlur() {
+    inputFocusedRef.current = false;
+    // Delay clearing so clicks on suggestions register
+    setTimeout(() => {
+      if (!inputFocusedRef.current) {
+        setSuggestions([]);
+      }
+    }, 200);
   }
 
   if (isDraftComplete) {
@@ -92,8 +119,27 @@ export default function DraftControls({
             }
             fetchSuggestions(v);
           }}
-          onKeyDown={(e) => { if (e.key === 'Escape') setSuggestions([]); }}
-          onBlur={() => { setTimeout(() => clearSuggestionFlow(setSuggestions), 120); }}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') setSuggestions([]);
+            if (e.key === 'Enter' && symbol.trim()) {
+              e.preventDefault();
+              // Only fetch quote if dropdown is not showing (user confirmed selection)
+              if (suggestions.length === 0) {
+                getQuote();
+              } else {
+                // If dropdown is showing, select the first suggestion
+                const firstSuggestion = suggestions[0];
+                if (firstSuggestion) {
+                  setSymbol(firstSuggestion.symbol);
+                  setSuggestions([]);
+                  setSymbolToName((prev) => ({ ...prev, [firstSuggestion.symbol.toUpperCase()]: firstSuggestion.name }));
+                  setQuote(null);
+                }
+              }
+            }
+          }}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           placeholder="Enter company or symbol (e.g. AAPL, Nvidia)"
           className="modal-input"
         />
