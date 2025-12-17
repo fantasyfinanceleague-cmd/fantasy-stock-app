@@ -22,6 +22,19 @@ export default function Profile() {
   const [passwordSuccess, setPasswordSuccess] = useState('');
   const [updatingPassword, setUpdatingPassword] = useState(false);
 
+  // Alpaca credentials state
+  const [alpacaKeyId, setAlpacaKeyId] = useState('');
+  const [alpacaSecret, setAlpacaSecret] = useState('');
+  const [alpacaError, setAlpacaError] = useState('');
+  const [alpacaSuccess, setAlpacaSuccess] = useState('');
+  const [savingAlpaca, setSavingAlpaca] = useState(false);
+  const [hasAlpacaLinked, setHasAlpacaLinked] = useState(false);
+  const [loadingAlpaca, setLoadingAlpaca] = useState(true);
+  const [showAlpacaForm, setShowAlpacaForm] = useState(false);
+  const [showAlpacaHelp, setShowAlpacaHelp] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState(null); // { ok: bool, message: string }
+
   // Load existing profile
   useEffect(() => {
     if (!user?.id) {
@@ -45,6 +58,170 @@ export default function Profile() {
 
     loadProfile();
   }, [user?.id]);
+
+  // Check if Alpaca account is linked
+  useEffect(() => {
+    if (!user?.id) {
+      setLoadingAlpaca(false);
+      return;
+    }
+
+    async function checkAlpacaLink() {
+      const { data, error } = await supabase
+        .from('broker_credentials')
+        .select('key_id')
+        .eq('user_id', user.id)
+        .eq('broker', 'alpaca')
+        .single();
+
+      if (!error && data) {
+        setHasAlpacaLinked(true);
+      }
+      setLoadingAlpaca(false);
+    }
+
+    checkAlpacaLink();
+  }, [user?.id]);
+
+  async function handleAlpacaSave(e) {
+    e.preventDefault();
+    setAlpacaError('');
+    setAlpacaSuccess('');
+
+    const trimmedKeyId = alpacaKeyId.trim();
+    const trimmedSecret = alpacaSecret.trim();
+
+    if (!trimmedKeyId || !trimmedSecret) {
+      setAlpacaError('Both API Key ID and Secret Key are required');
+      return;
+    }
+
+    // Basic validation for Alpaca key format
+    if (trimmedKeyId.length < 10) {
+      setAlpacaError('API Key ID appears to be invalid');
+      return;
+    }
+
+    if (trimmedSecret.length < 20) {
+      setAlpacaError('Secret Key appears to be invalid');
+      return;
+    }
+
+    setSavingAlpaca(true);
+    setAlpacaSuccess('Verifying credentials with Alpaca...');
+
+    try {
+      const { data, error } = await supabase.functions.invoke('save-broker-keys', {
+        body: {
+          key_id: trimmedKeyId,
+          secret: trimmedSecret
+        }
+      });
+
+      if (error) throw error;
+
+      // Handle validation errors from the server
+      if (data?.error === 'invalid_credentials') {
+        setAlpacaError(data.message || 'Invalid credentials. Please check your API keys.');
+        setAlpacaSuccess('');
+        return;
+      }
+
+      if (data?.error) {
+        throw new Error(data.message || data.error);
+      }
+
+      setAlpacaSuccess('Alpaca account linked and verified successfully!');
+      setHasAlpacaLinked(true);
+      setShowAlpacaForm(false);
+      setAlpacaKeyId('');
+      setAlpacaSecret('');
+    } catch (err) {
+      setAlpacaError(err.message || 'Failed to save credentials');
+      setAlpacaSuccess('');
+    } finally {
+      setSavingAlpaca(false);
+    }
+  }
+
+  async function handleAlpacaUnlink() {
+    if (!confirm('Are you sure you want to unlink your Alpaca account? You will need to re-enter your credentials to trade.')) {
+      return;
+    }
+
+    setSavingAlpaca(true);
+    setAlpacaError('');
+
+    try {
+      const { error } = await supabase
+        .from('broker_credentials')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('broker', 'alpaca');
+
+      if (error) throw error;
+
+      setHasAlpacaLinked(false);
+      setAlpacaSuccess('Alpaca account unlinked');
+      setConnectionStatus(null);
+    } catch (err) {
+      setAlpacaError(err.message || 'Failed to unlink account');
+    } finally {
+      setSavingAlpaca(false);
+    }
+  }
+
+  async function handleTestConnection() {
+    setTestingConnection(true);
+    setConnectionStatus(null);
+    setAlpacaError('');
+
+    try {
+      // Try to fetch a quote - this will test if credentials work
+      const { data, error } = await supabase.functions.invoke('quote', {
+        body: { symbol: 'AAPL' }
+      });
+
+      if (error) throw error;
+
+      if (data?.error === 'credentials_invalid') {
+        setConnectionStatus({
+          ok: false,
+          message: 'Your credentials are invalid or expired. Please update your API keys.'
+        });
+        return;
+      }
+
+      if (data?.error === 'no_credentials') {
+        setConnectionStatus({
+          ok: false,
+          message: 'No credentials found. Please link your Alpaca account.'
+        });
+        return;
+      }
+
+      if (data?.error) {
+        setConnectionStatus({
+          ok: false,
+          message: data.message || 'Connection test failed.'
+        });
+        return;
+      }
+
+      // Success - got a price back
+      setConnectionStatus({
+        ok: true,
+        message: `Connection successful! Paper trading account is active.`
+      });
+    } catch (err) {
+      setConnectionStatus({
+        ok: false,
+        message: err.message || 'Failed to test connection.'
+      });
+    } finally {
+      setTestingConnection(false);
+    }
+  }
 
   async function handleUsernameChange(e) {
     e.preventDefault();
@@ -305,6 +482,231 @@ export default function Profile() {
               {updatingPassword ? 'Updating...' : 'Update Password'}
             </button>
           </form>
+        </div>
+
+        {/* Alpaca Account */}
+        <div className="card">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <h3 style={{ margin: 0 }}>Alpaca Trading Account</h3>
+            <button
+              type="button"
+              onClick={() => setShowAlpacaHelp(!showAlpacaHelp)}
+              style={{
+                background: showAlpacaHelp ? '#3b82f6' : 'transparent',
+                border: '1px solid #3b82f6',
+                color: showAlpacaHelp ? '#fff' : '#3b82f6',
+                borderRadius: '50%',
+                width: 24,
+                height: 24,
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+              title="How to get API keys"
+            >
+              ?
+            </button>
+          </div>
+
+          {showAlpacaHelp && (
+            <div style={{
+              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+              border: '1px solid rgba(59, 130, 246, 0.3)',
+              borderRadius: 8,
+              padding: 16,
+              marginBottom: 16,
+              fontSize: 14
+            }}>
+              <h4 style={{ margin: '0 0 12px 0', color: '#3b82f6' }}>How to get your Alpaca API Keys</h4>
+              <ol style={{ margin: 0, paddingLeft: 20, lineHeight: 1.8 }}>
+                <li>
+                  Go to{' '}
+                  <a
+                    href="https://alpaca.markets"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: '#3b82f6' }}
+                  >
+                    alpaca.markets
+                  </a>{' '}
+                  and create a free account (or sign in)
+                </li>
+                <li>
+                  Switch to <strong>Paper Trading</strong> mode (toggle in top-right corner)
+                </li>
+                <li>
+                  Go to the{' '}
+                  <a
+                    href="https://app.alpaca.markets/paper/dashboard/overview"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: '#3b82f6' }}
+                  >
+                    Paper Trading Dashboard
+                  </a>
+                </li>
+                <li>
+                  Click on <strong>API Keys</strong> in the left sidebar
+                </li>
+                <li>
+                  Click <strong>Generate New Key</strong> (or use existing keys)
+                </li>
+                <li>
+                  Copy the <strong>API Key ID</strong> (starts with "PK...")
+                </li>
+                <li>
+                  Copy the <strong>Secret Key</strong> (only shown once - save it!)
+                </li>
+                <li>
+                  Paste both keys in the form below
+                </li>
+              </ol>
+              <p className="muted" style={{ margin: '12px 0 0 0', fontSize: 13 }}>
+                Note: Paper trading uses fake money - your real funds are never at risk.
+              </p>
+            </div>
+          )}
+
+          <p className="muted" style={{ marginTop: 0, marginBottom: 12, fontSize: 14 }}>
+            Link your Alpaca paper trading account to execute trades.
+          </p>
+
+          {loadingAlpaca ? (
+            <div className="muted">Loading...</div>
+          ) : hasAlpacaLinked && !showAlpacaForm ? (
+            <div>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '12px 16px',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                borderRadius: 8,
+                marginBottom: 12
+              }}>
+                <span style={{ color: '#10b981', fontSize: 18 }}>&#10003;</span>
+                <span style={{ color: '#10b981' }}>Alpaca account linked</span>
+              </div>
+
+              {/* Connection status message */}
+              {connectionStatus && (
+                <div style={{
+                  padding: '10px 14px',
+                  marginBottom: 12,
+                  backgroundColor: connectionStatus.ok ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                  border: `1px solid ${connectionStatus.ok ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                  borderRadius: 8,
+                  color: connectionStatus.ok ? '#10b981' : '#f87171',
+                  fontSize: 14
+                }}>
+                  {connectionStatus.message}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={handleTestConnection}
+                  disabled={testingConnection || savingAlpaca}
+                  style={{
+                    backgroundColor: '#3b82f6',
+                    borderColor: '#3b82f6',
+                    color: '#fff'
+                  }}
+                >
+                  {testingConnection ? 'Testing...' : 'Test Connection'}
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => setShowAlpacaForm(true)}
+                  disabled={savingAlpaca || testingConnection}
+                >
+                  Update Keys
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={handleAlpacaUnlink}
+                  disabled={savingAlpaca || testingConnection}
+                  style={{
+                    background: 'transparent',
+                    borderColor: '#ef4444',
+                    color: '#ef4444'
+                  }}
+                >
+                  {savingAlpaca ? 'Unlinking...' : 'Unlink'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleAlpacaSave} style={{ display: 'grid', gap: 12 }}>
+              <div>
+                <label htmlFor="alpaca-key" style={{ display: 'block', marginBottom: 4 }}>API Key ID</label>
+                <input
+                  id="alpaca-key"
+                  name="alpaca-key"
+                  type="text"
+                  value={alpacaKeyId}
+                  onChange={(e) => setAlpacaKeyId(e.target.value)}
+                  placeholder="PK..."
+                  autoComplete="off"
+                  style={{ width: '100%', boxSizing: 'border-box', fontFamily: 'monospace' }}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="alpaca-secret" style={{ display: 'block', marginBottom: 4 }}>Secret Key</label>
+                <input
+                  id="alpaca-secret"
+                  name="alpaca-secret"
+                  type="password"
+                  value={alpacaSecret}
+                  onChange={(e) => setAlpacaSecret(e.target.value)}
+                  placeholder="Your secret key"
+                  autoComplete="off"
+                  style={{ width: '100%', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              {alpacaError && (
+                <div style={{ color: '#ef4444', fontSize: 14 }}>{alpacaError}</div>
+              )}
+              {alpacaSuccess && (
+                <div style={{ color: '#10b981', fontSize: 14 }}>{alpacaSuccess}</div>
+              )}
+
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <button
+                  type="submit"
+                  className="btn primary"
+                  disabled={savingAlpaca}
+                >
+                  {savingAlpaca ? 'Saving...' : 'Link Account'}
+                </button>
+                {hasAlpacaLinked && (
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => {
+                      setShowAlpacaForm(false);
+                      setAlpacaKeyId('');
+                      setAlpacaSecret('');
+                      setAlpacaError('');
+                    }}
+                    disabled={savingAlpaca}
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+            </form>
+          )}
         </div>
       </div>
 

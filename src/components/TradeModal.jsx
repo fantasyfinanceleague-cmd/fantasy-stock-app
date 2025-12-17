@@ -26,6 +26,25 @@ export default function TradeModal({
   const [error, setError] = useState('');
   const [quote, setQuote] = useState(null);
   const [companyName, setCompanyName] = useState('');
+  const [hasAlpacaLinked, setHasAlpacaLinked] = useState(null); // null = loading, true/false = result
+
+  // Check if user has Alpaca account linked
+  useEffect(() => {
+    if (!show || !userId) return;
+
+    async function checkAlpacaLink() {
+      const { data, error } = await supabase
+        .from('broker_credentials')
+        .select('key_id')
+        .eq('user_id', userId)
+        .eq('broker', 'alpaca')
+        .single();
+
+      setHasAlpacaLinked(!error && !!data);
+    }
+
+    checkAlpacaLink();
+  }, [show, userId]);
 
   // Reset state when modal opens
   useEffect(() => {
@@ -134,9 +153,30 @@ export default function TradeModal({
         },
       });
 
+      // Handle Alpaca errors
       if (placeErr || placeData?.error) {
         console.error('place-order failed:', placeErr || placeData);
-        // Continue anyway to save trade locally (for fantasy tracking)
+
+        // Check for specific error types
+        if (placeData?.error === 'credentials_invalid') {
+          setError(placeData.message || 'Your Alpaca credentials are invalid or expired. Please update them in your Profile.');
+          return;
+        }
+
+        if (placeData?.error === 'insufficient_funds') {
+          setError(placeData.message || 'Insufficient buying power in your Alpaca account.');
+          return;
+        }
+
+        if (placeData?.error === 'no_credentials') {
+          setError(placeData.message || 'Please link your Alpaca account in Profile settings.');
+          return;
+        }
+
+        // For other Alpaca errors, show the message but continue to save locally
+        if (placeData?.error === 'alpaca_error') {
+          console.warn('Alpaca order failed, saving trade locally:', placeData.message);
+        }
       }
 
       // 2) Insert trade into database
@@ -215,6 +255,37 @@ export default function TradeModal({
 
         <h2 style={{ marginTop: 0 }}>Trade Stock</h2>
 
+        {/* Check if Alpaca account is linked */}
+        {hasAlpacaLinked === null ? (
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+            <div className="muted">Checking account status...</div>
+          </div>
+        ) : hasAlpacaLinked === false ? (
+          <div style={{
+            padding: 20,
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: 8,
+            textAlign: 'center'
+          }}>
+            <p style={{ margin: '0 0 12px 0', color: '#f87171' }}>
+              You need to link your Alpaca paper trading account before you can trade.
+            </p>
+            <p className="muted" style={{ margin: '0 0 16px 0', fontSize: 14 }}>
+              Go to your Profile settings to link your Alpaca API keys.
+            </p>
+            <button
+              type="button"
+              className="btn primary"
+              onClick={() => {
+                onClose();
+                window.location.href = '/profile';
+              }}
+            >
+              Go to Profile
+            </button>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit}>
           {/* Buy/Sell Toggle */}
           <div style={{ marginBottom: 16 }}>
@@ -351,6 +422,7 @@ export default function TradeModal({
             </button>
           </div>
         </form>
+        )}
       </div>
     </div>
   );

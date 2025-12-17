@@ -126,6 +126,9 @@ export default function DraftPage() {
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [customMinParticipants, setCustomMinParticipants] = useState(MIN_PARTICIPANTS);
 
+  // Alpaca account linking status
+  const [membersWithoutAlpaca, setMembersWithoutAlpaca] = useState([]); // user IDs without linked Alpaca
+
   // UI helpers
   const [symbol, setSymbol] = useState('');
   const [quote, setQuote] = useState(null);
@@ -275,13 +278,29 @@ export default function DraftPage() {
         setMemberIds(orderedIds);
 
         // 3b) Check which member IDs are real auth users (for bot detection)
+        let realIdsSet = new Set([USER_ID]);
         try {
           const { data: realIds } = await supabase.rpc('get_real_user_ids', { user_ids: orderedIds });
-          setRealUserIds(new Set(realIds || []));
+          realIdsSet = new Set(realIds || []);
+          setRealUserIds(realIdsSet);
         } catch (e) {
           // If function doesn't exist yet, assume only current user is real
           console.warn('get_real_user_ids not available, falling back to current user only');
-          setRealUserIds(new Set([USER_ID]));
+          setRealUserIds(realIdsSet);
+        }
+
+        // 3c) Check which real users have linked their Alpaca accounts
+        const realUserIdsList = Array.from(realIdsSet);
+        if (realUserIdsList.length > 0) {
+          const { data: linkedAccounts } = await supabase
+            .from('broker_credentials')
+            .select('user_id')
+            .eq('broker', 'alpaca')
+            .in('user_id', realUserIdsList);
+
+          const linkedUserIds = new Set((linkedAccounts || []).map(a => a.user_id));
+          const unlinked = realUserIdsList.filter(id => !linkedUserIds.has(id));
+          setMembersWithoutAlpaca(unlinked);
         }
 
         // 4) Gate - check requirements but don't early return (allow modal to show)
@@ -1165,9 +1184,59 @@ export default function DraftPage() {
               : 'The commissioner will start the draft soon. This page will automatically update when the draft begins.'}
           </p>
 
+          {/* Alpaca account linking warning */}
+          {membersWithoutAlpaca.length > 0 && (
+            <div style={{
+              marginTop: 16,
+              padding: 16,
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              borderRadius: 8
+            }}>
+              <div style={{ color: '#f87171', fontWeight: 600, marginBottom: 8 }}>
+                Alpaca Account Required
+              </div>
+              <p className="muted" style={{ margin: '0 0 8px 0', fontSize: 14 }}>
+                All members must link their Alpaca paper trading account before the draft can start.
+                {membersWithoutAlpaca.length === 1 && membersWithoutAlpaca[0] === USER_ID
+                  ? ' You need to link your account.'
+                  : ` ${membersWithoutAlpaca.length} member${membersWithoutAlpaca.length > 1 ? 's' : ''} still need${membersWithoutAlpaca.length === 1 ? 's' : ''} to link:`}
+              </p>
+              {!(membersWithoutAlpaca.length === 1 && membersWithoutAlpaca[0] === USER_ID) && (
+                <ul style={{ margin: '0 0 12px 0', paddingLeft: 20, color: '#9ca3af', fontSize: 14 }}>
+                  {membersWithoutAlpaca.map(uid => (
+                    <li key={uid}>
+                      {getDisplayName(uid)}
+                      {uid === USER_ID && ' (you)'}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {membersWithoutAlpaca.includes(USER_ID) && (
+                <Link
+                  to="/profile"
+                  className="btn"
+                  style={{
+                    backgroundColor: '#3b82f6',
+                    borderColor: '#3b82f6',
+                    color: '#fff',
+                    fontSize: 14
+                  }}
+                >
+                  Link Your Alpaca Account
+                </Link>
+              )}
+            </div>
+          )}
+
           <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
             {isCommissioner ? (
-              <button className="btn primary" onClick={handleStartDraft}>
+              <button
+                className="btn primary"
+                onClick={handleStartDraft}
+                disabled={membersWithoutAlpaca.length > 0}
+                title={membersWithoutAlpaca.length > 0 ? 'All members must link their Alpaca accounts first' : ''}
+              >
                 Start Draft
               </button>
             ) : (

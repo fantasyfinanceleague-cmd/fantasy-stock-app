@@ -1,4 +1,5 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
+import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -10,7 +11,64 @@ const json = (b: unknown, s = 200) =>
 
 const BASE = 'https://data.alpaca.markets/v2';
 
+// Simple in-memory cache for quotes (survives across requests in the same worker)
+const quoteCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_TTL_MS = 30 * 1000; // 30 seconds
+
+function getCachedQuote(symbol: string): any | null {
+  const cached = quoteCache.get(symbol.toUpperCase());
+  if (cached && (Date.now() - cached.timestamp) < CACHE_TTL_MS) {
+    return cached.data;
+  }
+  return null;
+}
+
+function setCachedQuote(symbol: string, data: any): void {
+  quoteCache.set(symbol.toUpperCase(), { data, timestamp: Date.now() });
+  // Clean up old entries periodically (keep cache size reasonable)
+  if (quoteCache.size > 100) {
+    const now = Date.now();
+    for (const [key, value] of quoteCache.entries()) {
+      if (now - value.timestamp > CACHE_TTL_MS) {
+        quoteCache.delete(key);
+      }
+    }
+  }
+}
+
 function env(k: string) { return Deno.env.get(k) ?? ''; }
+
+/** base64 -> Uint8Array */
+function b64d(s: string) { return Uint8Array.from(atob(s), c => c.charCodeAt(0)); }
+
+async function importAesKey(b64: string) {
+  const raw = b64d(b64);
+  return crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt', 'decrypt']);
+}
+
+async function aesDecrypt(ciphertext: string, iv: string, b64Key: string): Promise<string> {
+  const key = await importAesKey(b64Key);
+  const ctBuf = b64d(ciphertext);
+  const ivBuf = b64d(iv);
+  const ptBuf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: ivBuf }, key, ctBuf);
+  return new TextDecoder().decode(ptBuf);
+}
+
+async function getUserCredentials(userId: string, admin: any, cryptoKey: string) {
+  const { data, error } = await admin
+    .from('broker_credentials')
+    .select('key_id, secret_ciphertext, iv')
+    .eq('user_id', userId)
+    .eq('broker', 'alpaca')
+    .single();
+
+  if (error || !data) {
+    return null;
+  }
+
+  const secret = await aesDecrypt(data.secret_ciphertext, data.iv, cryptoKey);
+  return { key: data.key_id, secret };
+}
 
 async function alpacaGet(url: string, key: string, secret: string) {
   const res = await fetch(url, {
@@ -21,16 +79,40 @@ async function alpacaGet(url: string, key: string, secret: string) {
     },
   });
   const text = await res.text().catch(() => '');
-  if (!res.ok) return { ok: false as const, status: res.status, preview: text.slice(0, 400) };
+  if (!res.ok) {
+    // Check for auth errors specifically
+    const isAuthError = res.status === 401 || res.status === 403;
+    return { ok: false as const, status: res.status, preview: text.slice(0, 400), isAuthError };
+  }
   let body: any = null;
   try { body = JSON.parse(text); } catch { body = {}; }
-  return { ok: true as const, status: res.status, body };
+  return { ok: true as const, status: res.status, body, isAuthError: false };
 }
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
+  const SUPABASE_URL = env('SUPABASE_URL');
+  const ANON_KEY = env('SUPABASE_ANON_KEY');
+  const SERVICE_ROLE = env('SUPABASE_SERVICE_ROLE_KEY');
+  const CRYPTO_KEY = env('BROKER_CRYPTO_KEY');
+
+  // Authed client (to get user id from JWT)
+  const authed = createClient(SUPABASE_URL, ANON_KEY, {
+    global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } },
+  });
+
+  // Admin client for reading credentials
+  const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+
   try {
+    // Get authenticated user
+    const { data: auth } = await authed.auth.getUser();
+    const user = auth?.user;
+    if (!user) {
+      return json({ error: 'not_authenticated', message: 'Please sign in to view quotes' }, 401);
+    }
+
     // GET ?symbol= or POST {symbol}
     let symbol = '';
     if (req.method === 'GET') {
@@ -45,9 +127,27 @@ Deno.serve(async (req) => {
 
     if (!symbol) return json({ error: 'missing_symbol' }, 400);
 
-    const key = env('ALPACA_API_KEY');
-    const secret = env('ALPACA_API_SECRET');
-    if (!key || !secret) return json({ error: 'server missing API keys' }, 500);
+    // Check cache first
+    const cached = getCachedQuote(symbol);
+    if (cached) {
+      return json({ ...cached, cached: true });
+    }
+
+    // Get user's Alpaca credentials
+    if (!CRYPTO_KEY) {
+      return json({ error: 'server_config_error', message: 'Server missing encryption key' }, 500);
+    }
+
+    const creds = await getUserCredentials(user.id, admin, CRYPTO_KEY);
+    if (!creds) {
+      return json({
+        error: 'no_credentials',
+        message: 'Please link your Alpaca account in Profile settings'
+      }, 400);
+    }
+
+    const key = creds.key;
+    const secret = creds.secret;
 
     // Always request the free IEX feed
     const feedQS = `?feed=iex`;
@@ -65,7 +165,16 @@ Deno.serve(async (req) => {
         const bp = Number(r.body?.quote?.bp);
         if (Number.isFinite(ap) && ap > 0) { price = ap; source = 'quote.ap'; }
         else if (Number.isFinite(bp) && bp > 0) { price = bp; source = 'quote.bp'; }
-      } else lastErr = { step: 'quote', status: r.status, preview: r.preview };
+      } else {
+        // Check for auth errors and return immediately with clear message
+        if (r.isAuthError) {
+          return json({
+            error: 'credentials_invalid',
+            message: 'Your Alpaca credentials are invalid or expired. Please update them in your Profile settings.'
+          }, 401);
+        }
+        lastErr = { step: 'quote', status: r.status, preview: r.preview };
+      }
     }
 
     // 2) latest trade
@@ -75,7 +184,15 @@ Deno.serve(async (req) => {
       if (r.ok) {
         const p = Number(r.body?.trade?.p);
         if (Number.isFinite(p) && p > 0) { price = p; source = 'trade.p'; }
-      } else lastErr = { step: 'trade', status: r.status, preview: r.preview };
+      } else {
+        if (r.isAuthError) {
+          return json({
+            error: 'credentials_invalid',
+            message: 'Your Alpaca credentials are invalid or expired. Please update them in your Profile settings.'
+          }, 401);
+        }
+        lastErr = { step: 'trade', status: r.status, preview: r.preview };
+      }
     }
 
     // 3) latest bar close
@@ -85,7 +202,15 @@ Deno.serve(async (req) => {
       if (r.ok) {
         const c = Number(r.body?.bar?.c);
         if (Number.isFinite(c) && c > 0) { price = c; source = 'bar.c'; }
-      } else lastErr = { step: 'bar', status: r.status, preview: r.preview };
+      } else {
+        if (r.isAuthError) {
+          return json({
+            error: 'credentials_invalid',
+            message: 'Your Alpaca credentials are invalid or expired. Please update them in your Profile settings.'
+          }, 401);
+        }
+        lastErr = { step: 'bar', status: r.status, preview: r.preview };
+      }
     }
 
     if (price == null) return json({ error: 'no_price', symbol, lastErr }, 404);
@@ -157,7 +282,11 @@ Deno.serve(async (req) => {
       changePercent = ((price - todayOpen) / todayOpen) * 100;
     }
 
-    return json({ symbol, price, source, prevClose, todayOpen, changePercent });
+    // Cache the successful result
+    const result = { symbol, price, source, prevClose, todayOpen, changePercent };
+    setCachedQuote(symbol, result);
+
+    return json(result);
   } catch (e) {
     return json({ error: 'unhandled', message: String(e) }, 500);
   }
