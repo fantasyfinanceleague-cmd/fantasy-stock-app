@@ -4,9 +4,9 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 function isAllowedOrigin(origin: string): boolean {
   if (!origin) return false;
   // Allow production domain
-  if (origin === 'https://fantasy-stock-app.vercel.app') return true;
+  // Allow any vercel.app subdomain (production and previews)
   // Allow Vercel preview deployments (pattern: https://*.vercel.app)
-  if (origin.match(/^https:\/\/fantasy-stock[a-z0-9-]*\.vercel\.app$/)) return true;
+  if (origin.endsWith('.vercel.app') && origin.startsWith('https://')) return true;
   // Allow localhost for development
   if (origin.startsWith('http://localhost:')) return true;
   return false;
