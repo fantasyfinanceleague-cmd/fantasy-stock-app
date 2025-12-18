@@ -114,6 +114,9 @@ async function alpacaGet(url: string, key: string, secret: string) {
 }
 
 Deno.serve(async (req) => {
+  // Helper to return JSON with proper CORS headers for this request
+  const respond = (b: unknown, s = 200) => json(b, s, req);
+
   if (req.method === 'OPTIONS') return new Response('ok', { headers: getCorsHeaders(req) });
 
   const SUPABASE_URL = env('SUPABASE_URL');
@@ -134,7 +137,7 @@ Deno.serve(async (req) => {
     const { data: auth } = await authed.auth.getUser();
     const user = auth?.user;
     if (!user) {
-      return json({ error: 'not_authenticated', message: 'Please sign in to view quotes' }, 401);
+      return respond({ error: 'not_authenticated', message: 'Please sign in to view quotes' }, 401);
     }
 
     // GET ?symbol= or POST {symbol}
@@ -146,25 +149,25 @@ Deno.serve(async (req) => {
       const b = await req.json().catch(() => ({}));
       symbol = String(b?.symbol || '').trim().toUpperCase();
     } else {
-      return json({ error: 'method_not_allowed' }, 405);
+      return respond({ error: 'method_not_allowed' }, 405);
     }
 
-    if (!symbol) return json({ error: 'missing_symbol' }, 400);
+    if (!symbol) return respond({ error: 'missing_symbol' }, 400);
 
     // Check cache first
     const cached = getCachedQuote(symbol);
     if (cached) {
-      return json({ ...cached, cached: true });
+      return respond({ ...cached, cached: true });
     }
 
     // Get user's Alpaca credentials
     if (!CRYPTO_KEY) {
-      return json({ error: 'server_config_error', message: 'Server missing encryption key' }, 500);
+      return respond({ error: 'server_config_error', message: 'Server missing encryption key' }, 500);
     }
 
     const creds = await getUserCredentials(user.id, admin, CRYPTO_KEY);
     if (!creds) {
-      return json({
+      return respond({
         error: 'no_credentials',
         message: 'Please link your Alpaca account in Profile settings'
       }, 400);
@@ -192,7 +195,7 @@ Deno.serve(async (req) => {
       } else {
         // Check for auth errors and return immediately with clear message
         if (r.isAuthError) {
-          return json({
+          return respond({
             error: 'credentials_invalid',
             message: 'Your Alpaca credentials are invalid or expired. Please update them in your Profile settings.'
           }, 401);
@@ -210,7 +213,7 @@ Deno.serve(async (req) => {
         if (Number.isFinite(p) && p > 0) { price = p; source = 'trade.p'; }
       } else {
         if (r.isAuthError) {
-          return json({
+          return respond({
             error: 'credentials_invalid',
             message: 'Your Alpaca credentials are invalid or expired. Please update them in your Profile settings.'
           }, 401);
@@ -228,7 +231,7 @@ Deno.serve(async (req) => {
         if (Number.isFinite(c) && c > 0) { price = c; source = 'bar.c'; }
       } else {
         if (r.isAuthError) {
-          return json({
+          return respond({
             error: 'credentials_invalid',
             message: 'Your Alpaca credentials are invalid or expired. Please update them in your Profile settings.'
           }, 401);
@@ -237,7 +240,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    if (price == null) return json({ error: 'no_price', symbol, lastErr }, 404);
+    if (price == null) return respond({ error: 'no_price', symbol, lastErr }, 404);
 
     // 4) Fetch previous day's close for percent change calculation
     let prevClose: number | null = null;
@@ -310,8 +313,8 @@ Deno.serve(async (req) => {
     const result = { symbol, price, source, prevClose, todayOpen, changePercent };
     setCachedQuote(symbol, result);
 
-    return json(result);
+    return respond(result);
   } catch (e) {
-    return json({ error: 'unhandled', message: 'An unexpected error occurred. Please try again.' }, 500);
+    return respond({ error: 'unhandled', message: 'An unexpected error occurred. Please try again.' }, 500);
   }
 });
