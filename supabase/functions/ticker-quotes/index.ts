@@ -3,16 +3,18 @@
 // This is read-only market data, safe to serve without per-user auth
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 
-const ALLOWED_ORIGINS = [
-  'https://fantasy-stock-app.vercel.app',
-  'http://localhost:5173',
-  'http://localhost:3000',
-];
-
 let requestOrigin = '';
 
+function isAllowedOrigin(origin: string): boolean {
+  if (!origin) return false;
+  if (origin === 'https://fantasy-stock-app.vercel.app') return true;
+  if (origin.match(/^https:\/\/fantasy-stock[a-z0-9-]*\.vercel\.app$/)) return true;
+  if (origin.startsWith('http://localhost:')) return true;
+  return false;
+}
+
 function getCorsHeaders() {
-  const allowedOrigin = ALLOWED_ORIGINS.includes(requestOrigin) ? requestOrigin : ALLOWED_ORIGINS[0];
+  const allowedOrigin = isAllowedOrigin(requestOrigin) ? requestOrigin : 'https://fantasy-stock-app.vercel.app';
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',

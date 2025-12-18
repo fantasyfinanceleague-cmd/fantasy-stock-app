@@ -1,14 +1,16 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-const ALLOWED_ORIGINS = [
-  'https://fantasy-stock-app.vercel.app',
-  'http://localhost:5173',
-  'http://localhost:3000',
-];
+function isAllowedOrigin(origin: string): boolean {
+  if (!origin) return false;
+  if (origin === 'https://fantasy-stock-app.vercel.app') return true;
+  if (origin.match(/^https:\/\/fantasy-stock[a-z0-9-]*\.vercel\.app$/)) return true;
+  if (origin.startsWith('http://localhost:')) return true;
+  return false;
+}
 
 function getCorsHeaders(origin: string) {
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  const allowedOrigin = isAllowedOrigin(origin) ? origin : 'https://fantasy-stock-app.vercel.app';
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',

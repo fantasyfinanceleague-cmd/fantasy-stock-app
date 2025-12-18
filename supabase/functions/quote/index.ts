@@ -1,15 +1,20 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-const ALLOWED_ORIGINS = [
-  'https://fantasy-stock-app.vercel.app',
-  'http://localhost:5173',
-  'http://localhost:3000',
-];
+function isAllowedOrigin(origin: string): boolean {
+  if (!origin) return false;
+  // Allow production domain
+  if (origin === 'https://fantasy-stock-app.vercel.app') return true;
+  // Allow Vercel preview deployments (pattern: https://*.vercel.app)
+  if (origin.match(/^https:\/\/fantasy-stock[a-z0-9-]*\.vercel\.app$/)) return true;
+  // Allow localhost for development
+  if (origin.startsWith('http://localhost:')) return true;
+  return false;
+}
 
 function getCorsHeaders(req: Request) {
   const origin = req.headers.get('Origin') || '';
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  const allowedOrigin = isAllowedOrigin(origin) ? origin : 'https://fantasy-stock-app.vercel.app';
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -17,8 +22,14 @@ function getCorsHeaders(req: Request) {
   };
 }
 
+const DEFAULT_CORS = {
+  'Access-Control-Allow-Origin': 'https://fantasy-stock-app.vercel.app',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+};
+
 const json = (b: unknown, s = 200, req?: Request) => {
-  const headers = req ? getCorsHeaders(req) : { 'Access-Control-Allow-Origin': ALLOWED_ORIGINS[0], 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS' };
+  const headers = req ? getCorsHeaders(req) : DEFAULT_CORS;
   return new Response(JSON.stringify(b), { status: s, headers: { 'Content-Type': 'application/json', ...headers } });
 };
 
