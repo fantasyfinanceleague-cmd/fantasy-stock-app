@@ -24,8 +24,8 @@ export default function Ticker() {
     // normalize the symbol a bit
     const sym = String(symbol || "").trim().toUpperCase();
 
-    // call your Edge Function
-    const { data, error } = await supabase.functions.invoke("quote", {
+    // call the ticker-quotes Edge Function (uses server-side keys, no auth required)
+    const { data, error } = await supabase.functions.invoke("ticker-quotes", {
       body: { symbol: sym }, // feed defaults to IEX in the function
     });
 
