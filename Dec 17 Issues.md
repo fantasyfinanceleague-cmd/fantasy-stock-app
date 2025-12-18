@@ -44,9 +44,13 @@
 ## Low Priority
 
 ### 7. CORS restrictions
-- [ ] Restrict CORS to production domain
-- [ ] Currently allows all origins (`*`)
+- [x] Restrict CORS to production domain
+- [x] Now only allows:
+  - `https://fantasy-stock-app.vercel.app`
+  - `http://localhost:5173`
+  - `http://localhost:3000`
 
 ### 8. Error message sanitization
-- [ ] Don't return raw error messages from edge functions
-- [ ] Could leak internal details
+- [x] Don't return raw error messages from edge functions
+- [x] All `String(e)` and `error.message` replaced with generic user-friendly messages
+- [x] Internal errors logged to console but not exposed to users

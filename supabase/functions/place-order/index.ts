@@ -1,16 +1,27 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-const corsHeaders: Record<string, string> = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+const ALLOWED_ORIGINS = [
+  'https://fantasy-stock-app.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:3000',
+];
+
+function getCorsHeaders(origin: string) {
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  };
+}
+
+let requestOrigin = '';
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    headers: { 'Content-Type': 'application/json', ...getCorsHeaders(requestOrigin) },
   });
 }
 
@@ -47,8 +58,11 @@ async function getUserCredentials(userId: string, admin: any, cryptoKey: string)
 }
 
 Deno.serve(async (req: Request) => {
+  // Capture origin for CORS
+  requestOrigin = req.headers.get('Origin') || '';
+
   // CORS preflight
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: getCorsHeaders(requestOrigin) });
   if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
 
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -150,6 +164,6 @@ Deno.serve(async (req: Request) => {
 
     return json({ ok: true, order: payload }, 200);
   } catch (e) {
-    return json({ error: 'unhandled', message: String(e) }, 500);
+    return json({ error: 'unhandled', message: 'An unexpected error occurred. Please try again.' }, 500);
   }
 });

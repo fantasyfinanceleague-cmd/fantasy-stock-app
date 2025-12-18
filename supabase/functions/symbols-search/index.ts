@@ -1,13 +1,25 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-const cors = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+const ALLOWED_ORIGINS = [
+  'https://fantasy-stock-app.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:3000',
+];
+
+let requestOrigin = '';
+
+function getCorsHeaders() {
+  const allowedOrigin = ALLOWED_ORIGINS.includes(requestOrigin) ? requestOrigin : ALLOWED_ORIGINS[0];
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  };
+}
+
 const json = (b: unknown, s = 200) =>
-  new Response(JSON.stringify(b), { status: s, headers: { 'Content-Type': 'application/json', ...cors } });
+  new Response(JSON.stringify(b), { status: s, headers: { 'Content-Type': 'application/json', ...getCorsHeaders() } });
 
 function env(k: string) { return Deno.env.get(k) ?? ''; }
 
@@ -53,7 +65,9 @@ async function fetchPrices(symbols: string[]): Promise<Record<string, number | n
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
+  requestOrigin = req.headers.get('Origin') || '';
+
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: getCorsHeaders() });
 
   const { q, limit = 10, includePrices = true } = await req.json().catch(() => ({}));
   const query = String(q || '').trim().toUpperCase();

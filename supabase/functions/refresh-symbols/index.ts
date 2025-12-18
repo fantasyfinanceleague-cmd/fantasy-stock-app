@@ -2,13 +2,25 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-const cors = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+const ALLOWED_ORIGINS = [
+  'https://fantasy-stock-app.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:3000',
+];
+
+let requestOrigin = '';
+
+function getCorsHeaders() {
+  const allowedOrigin = ALLOWED_ORIGINS.includes(requestOrigin) ? requestOrigin : ALLOWED_ORIGINS[0];
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  };
+}
+
 const json = (b: unknown, s = 200) =>
-  new Response(JSON.stringify(b), { status: s, headers: { 'Content-Type': 'application/json', ...cors } });
+  new Response(JSON.stringify(b), { status: s, headers: { 'Content-Type': 'application/json', ...getCorsHeaders() } });
 
 /**
  * Parse a NASDAQ "pipe" file, returning an array of string[] rows.
@@ -37,7 +49,9 @@ const EX_MAP: Record<string, string> = {
 };
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
+  requestOrigin = req.headers.get('Origin') || '';
+
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: getCorsHeaders() });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
   const urlNasdaq = 'https://www.nasdaqtrader.com/dynamic/SymDir/nasdaqlisted.txt';
@@ -114,7 +128,7 @@ Deno.serve(async (req) => {
     const { error } = await supabase
       .from('symbols')
       .upsert(slice, { onConflict: 'symbol' });
-    if (error) return json({ error: error.message, at: 'upsert', offset: i }, 500);
+    if (error) return json({ error: 'Failed to update symbols database', at: 'upsert', offset: i }, 500);
   }
 
   return json({ ok: true, count: records.length });

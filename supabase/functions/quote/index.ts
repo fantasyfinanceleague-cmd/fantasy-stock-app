@@ -1,13 +1,26 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+const ALLOWED_ORIGINS = [
+  'https://fantasy-stock-app.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:3000',
+];
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get('Origin') || '';
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  };
+}
+
+const json = (b: unknown, s = 200, req?: Request) => {
+  const headers = req ? getCorsHeaders(req) : { 'Access-Control-Allow-Origin': ALLOWED_ORIGINS[0], 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS' };
+  return new Response(JSON.stringify(b), { status: s, headers: { 'Content-Type': 'application/json', ...headers } });
 };
-const json = (b: unknown, s = 200) =>
-  new Response(JSON.stringify(b), { status: s, headers: { 'Content-Type': 'application/json', ...CORS } });
 
 const BASE = 'https://data.alpaca.markets/v2';
 
@@ -90,7 +103,7 @@ async function alpacaGet(url: string, key: string, secret: string) {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: getCorsHeaders(req) });
 
   const SUPABASE_URL = env('SUPABASE_URL');
   const ANON_KEY = env('SUPABASE_ANON_KEY');
@@ -288,6 +301,6 @@ Deno.serve(async (req) => {
 
     return json(result);
   } catch (e) {
-    return json({ error: 'unhandled', message: String(e) }, 500);
+    return json({ error: 'unhandled', message: 'An unexpected error occurred. Please try again.' }, 500);
   }
 });
