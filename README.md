@@ -6,6 +6,15 @@ A fantasy finance platform where friends compete to build the best portfolio. Th
 
 **[Live Demo](https://fantasy-stock-app.vercel.app/)**
 
+<p align="center">
+  <img src="public/bear_bull.jpg" alt="Stockpile Logo" width="200"/>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/LogIn_Capture.jpg" alt="Login Page" width="400"/>
+  <img src="docs/screenshots/Dashboard_Capture.jpg" alt="Dashboard" width="400"/>
+</p>
+
 ---
 
 ## What is this?
@@ -59,6 +68,13 @@ src/
 supabase/
   └── functions/    # Edge functions for secure API calls
 ```
+
+## What's Next
+
+- **Refining the draft process** - Improving the stock draft experience for league competitions
+- **Live stock trading** - Alpaca integration for real money trading (for experienced investors)
+- **Portfolio performance charts** - Visual graphs showing portfolio value over time
+- **Trade history & activity feed** - Log of trades and league activity
 
 ## Roadmap
 
