@@ -42,8 +42,7 @@ const BOT_STOCK_POOL = [
 const botPriceCache = new Map(); // symbol -> { price, timestamp }
 const PRICE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-// ---- Finnhub client-side suggestions ----
-const FINNHUB_API_KEY = import.meta.env.VITE_FINNHUB_API_KEY; // set in .env.local
+// ---- Finnhub fallback via Edge Function ----
 
 // ---- Name lookup cache/throttle (new) ----
 const NAME_CACHE_KEY = 'symbolNameCache_v1';
@@ -529,12 +528,14 @@ export default function DraftPage() {
       const upper = String(symbol).trim().toUpperCase();
       let q = await fetchQuoteViaFunction(upper);
 
-      if (!q?.price && FINNHUB_API_KEY) {
+      // Fallback to Finnhub via Edge Function if Alpaca didn't return a price
+      if (!q?.price) {
         try {
-          const fr = await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(upper)}&token=${FINNHUB_API_KEY}`);
-          const fj = await fr.json();
-          if (Number.isFinite(fj?.c)) {
-            q = { symbol: upper, price: Number(fj.c) };
+          const { data: fData, error: fErr } = await supabase.functions.invoke('finnhub-quote', {
+            body: { symbol: upper }
+          });
+          if (!fErr && fData?.price) {
+            q = { symbol: upper, price: Number(fData.price) };
           }
         } catch { /* ignore */ }
       }
