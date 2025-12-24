@@ -581,7 +581,7 @@ export default function DraftPage() {
 
     if (placeErr || placeData?.error) {
       console.error('place-order failed:', placeErr || placeData);
-      alert('Paper order failed (see console). Still drafting for testing.');
+      console.error('Paper order failed');
     }
 
     // 2) Save the pick
@@ -620,43 +620,6 @@ export default function DraftPage() {
     void ensureNameForSymbol(upper);
   }
 
-  // --- Reset the draft for this league
-  async function resetDraftForLeague() {
-    if (!leagueId) return;
-    if (!confirm('Reset this draft for everyone? This will delete all picks and reset draft status.')) return;
-
-    // Delete all picks for this league
-    const { error: deleteError } = await supabase
-      .from('drafts')
-      .delete()
-      .eq('league_id', leagueId);
-
-    if (deleteError) {
-      console.error('Failed to reset draft:', deleteError);
-      alert('Could not reset draft (see console). Check RLS/policies.');
-      return;
-    }
-
-    // Reset draft status to not_started
-    const { error: updateError } = await supabase
-      .from('leagues')
-      .update({ draft_status: 'not_started' })
-      .eq('id', leagueId);
-
-    if (updateError) {
-      console.error('Failed to reset draft status:', updateError);
-    }
-
-    // Clear all local state
-    setPortfolio([]);
-    setSymbol('');
-    setQuote(null);
-    setErrorMsg('');
-    setDraftStatus('not_started');
-    setFailedBots(new Set()); // Clear failed bots so they can try again
-    setCurrentRound(1);
-    setCurrentPickNumber(1);
-  }
 
   // --- Fill league with bots to meet minimum
   async function fillWithBots(count) {
@@ -1328,7 +1291,6 @@ export default function DraftPage() {
             </p>
             <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
               <Link className="btn" to="/leagues">Back to Leagues</Link>
-              <button className="btn" onClick={resetDraftForLeague}>Reset Draft</button>
             </div>
           </div>
 
