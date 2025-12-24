@@ -12,6 +12,7 @@ import DraftRecap from '../components/DraftRecap';
 import DraftSetupModal from '../components/DraftSetupModal';
 import { PageLoader } from '../components/LoadingSpinner';
 import { useUserProfiles } from '../context/UserProfilesContext';
+import { useToast } from '../components/Toast';
 
 // Draft access rules
 const MIN_PARTICIPANTS = 4;
@@ -92,6 +93,7 @@ export default function DraftPage() {
   const authUser = useAuthUser();
   const navigate = useNavigate();
   const { fetchProfiles, getDisplayName } = useUserProfiles();
+  const toast = useToast();
   // keep a fallback for now so your draft keeps working if not signed in
   const USER_ID = authUser?.id ?? 'test-user';
   const { leagueId: routeLeagueId } = useParams();
@@ -544,7 +546,7 @@ export default function DraftPage() {
     if (!Number.isFinite(price)) return;
 
     if (isBudgetMode && price > budgetRemaining) {
-      alert('This stock is over your remaining budget.');
+      toast.warning('This stock is over your remaining budget.');
       return;
     }
 
@@ -585,8 +587,8 @@ export default function DraftPage() {
       .single();
 
     if (insErr) {
-      console.error('❌ Supabase insert error:', insErr);
-      alert('Failed to draft stock.');
+      console.error('Supabase insert error:', insErr);
+      toast.error('Failed to draft stock.');
       return;
     }
 
@@ -626,7 +628,7 @@ export default function DraftPage() {
 
     if (error) {
       console.error('Failed to add bots:', error);
-      alert('Could not add bots. Check console for details.');
+      toast.error('Could not add bots.');
       return;
     }
 
@@ -1077,7 +1079,7 @@ export default function DraftPage() {
         setAllowed(true);
       } catch (err) {
         console.error('Failed to start draft:', err);
-        alert('Failed to start draft: ' + err.message);
+        toast.error('Failed to start draft. Please try again.');
       }
     };
 

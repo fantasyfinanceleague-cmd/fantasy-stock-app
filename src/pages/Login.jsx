@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase/supabaseClient';
 import { useAuthUser } from '../auth/useAuthUser';
 import HCaptcha from '@hcaptcha/react-hcaptcha';
+import { useToast } from '../components/Toast';
 import logo from '/bear_bull.jpg';
 
 const HCAPTCHA_SITE_KEY = import.meta.env.VITE_HCAPTCHA_SITE_KEY;
@@ -11,6 +12,7 @@ const IS_LOCALHOST = window.location.hostname === 'localhost' || window.location
 export default function Login() {
   const nav = useNavigate();
   const user = useAuthUser();
+  const toast = useToast();
   const [email, setEmail] = useState('');
   const [pw, setPw] = useState('');
   const [username, setUsername] = useState('');
@@ -115,7 +117,7 @@ export default function Login() {
 
       setBusy(false);
       setErr('');
-      alert('Account created! Please check your email to verify your account.');
+      toast.success('Account created! Please check your email to verify your account.', 6000);
       setIsSignUp(false);
       setUsername('');
     } else {

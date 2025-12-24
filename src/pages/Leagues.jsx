@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import useLeagues from '../hooks/useLeagues';
+import { useToast } from '../components/Toast';
 
 function SectionHeader({ title, icon = null, right = null }) {
   return (
@@ -24,6 +25,7 @@ function toInputDateTime(value) {
 
 export default function Leagues() {
   const nav = useNavigate();
+  const toast = useToast();
   const {
     myLeagues,
     managedLeagues,
@@ -153,14 +155,14 @@ export default function Leagues() {
     const code = await inviteToLeague(selectedLeagueForInvite, inviteIdentifier.trim());
     const link = `${window.location.origin}/join/${code}`;
     await navigator.clipboard?.writeText(link).catch(() => { });
-    alert(`Invite created.\nLink copied:\n${link}`);
+    toast.success('Invite link copied to clipboard!');
     setInviteIdentifier('');
   };
 
   const copyInviteForLeague = async (lg) => {
     const link = `${window.location.origin}/join/${lg.invite_code}`;
     await navigator.clipboard?.writeText(link).catch(() => { });
-    alert(`Invite link copied:\n${link}`);
+    toast.success('Invite link copied to clipboard!');
   };
 
   // in Leagues.jsx
