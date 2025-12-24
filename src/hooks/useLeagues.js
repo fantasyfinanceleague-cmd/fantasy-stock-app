@@ -27,7 +27,6 @@ export default function useLeagues() {
     setLoading(true);
     setError('');
     try {
-      console.log('🔍 Refreshing leagues for USER_ID:', USER_ID);
 
       // leagues I manage
       const { data: asComm, error: e1 } = await supabase
@@ -36,7 +35,6 @@ export default function useLeagues() {
         .eq('commissioner_id', USER_ID)
         .order('created_at', { ascending: false });
       if (e1) throw e1;
-      console.log('📊 Leagues I manage:', asComm);
 
       // my memberships (could include my own leagues too)
       const { data: memRows, error: e2 } = await supabase
@@ -44,7 +42,6 @@ export default function useLeagues() {
         .select('league_id, role')
         .eq('user_id', USER_ID);
       if (e2) throw e2;
-      console.log('👥 My memberships:', memRows);
 
       let memberLeagues = [];
       if (memRows?.length) {
@@ -73,7 +70,6 @@ export default function useLeagues() {
 
       setManagedLeagues(managed);
       setMyLeagues(merged);
-      console.log('✅ Final merged leagues:', merged);
 
       // pending invites for leagues I manage
       if (managed.length) {

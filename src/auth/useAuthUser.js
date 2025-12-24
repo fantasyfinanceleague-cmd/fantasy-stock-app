@@ -26,7 +26,6 @@ export function useAuthUser() {
 
           if (isJwtExpired && retryCount < maxRetries) {
             retryCount++;
-            console.log(`JWT expired, attempting refresh (attempt ${retryCount}/${maxRetries})...`);
 
             // Force a session refresh
             const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
@@ -58,7 +57,6 @@ export function useAuthUser() {
 
           if (expiresAt && expiresAt - now < 300) {
             // Token expired or expiring soon (within 5 min), force refresh
-            console.log('Token expiring soon, refreshing...');
             const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
             if (!mounted) return;
 
@@ -85,7 +83,6 @@ export function useAuthUser() {
         // If it's a network error or JWT issue, try one more refresh
         if (retryCount < maxRetries) {
           retryCount++;
-          console.log(`Auth error, retrying (attempt ${retryCount}/${maxRetries})...`);
 
           // Wait a moment then retry
           await new Promise(resolve => setTimeout(resolve, 500));
@@ -114,7 +111,6 @@ export function useAuthUser() {
 
       // Handle token refresh events
       if (event === 'TOKEN_REFRESHED') {
-        console.log('Token refreshed successfully');
         setUser(session?.user ?? false);
         setIsLoading(false);
       } else if (event === 'SIGNED_OUT') {

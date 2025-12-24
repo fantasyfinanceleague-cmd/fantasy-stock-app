@@ -173,10 +173,8 @@ export default function TradeModal({
           return;
         }
 
-        // For other Alpaca errors, show the message but continue to save locally
-        if (placeData?.error === 'alpaca_error') {
-          console.warn('Alpaca order failed, saving trade locally:', placeData.message);
-        }
+        // For other Alpaca errors, continue to save locally
+        // (Alpaca paper trading may fail but we still record the trade)
       }
 
       // 2) Insert trade into database

@@ -218,7 +218,6 @@ export default function DraftPage() {
 
   // Load gating + league meta + members + picks
   useEffect(() => {
-    console.log('🔄 DraftPage useEffect:', { leagueId, authUser: authUser?.id, USER_ID });
 
     if (!leagueId) {
       setLoading(false);
@@ -227,7 +226,6 @@ export default function DraftPage() {
 
     // Don't run with test-user fallback - wait for real auth
     if (!authUser?.id) {
-      console.log('⏳ Waiting for auth to load...');
       setLoading(true); // Keep loading while waiting for auth
       return;
     }
@@ -256,12 +254,6 @@ export default function DraftPage() {
         if (memErr) throw memErr;
 
         const rawIds = (mem || []).map(r => r.user_id);
-        console.log('🔍 DraftPage membership check:', {
-          leagueId,
-          myUserId: USER_ID,
-          memberIds: rawIds,
-          isMember: rawIds.includes(USER_ID)
-        });
         const iAmMember = rawIds.includes(USER_ID);
         setIsMember(iAmMember);
         if (!iAmMember) {
@@ -284,7 +276,6 @@ export default function DraftPage() {
           setRealUserIds(realIdsSet);
         } catch (e) {
           // If function doesn't exist yet, assume only current user is real
-          console.warn('get_real_user_ids not available, falling back to current user only');
           setRealUserIds(realIdsSet);
         }
 
@@ -345,7 +336,6 @@ export default function DraftPage() {
   useEffect(() => {
     if (!leagueId) return;
 
-    console.log('📡 Setting up realtime subscription for league:', leagueId);
 
     const channelName = `draft-room-${leagueId}`;
 
@@ -360,13 +350,10 @@ export default function DraftPage() {
       .on('postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'leagues', filter: `id=eq.${leagueId}` },
         (payload) => {
-          console.log('🔄 League updated via realtime:', payload.new);
           if (payload.new.draft_status) {
-            console.log('📊 Draft status changed to:', payload.new.draft_status);
             setDraftStatus(payload.new.draft_status);
             // When draft starts, automatically allow user to join
             if (payload.new.draft_status === 'in_progress') {
-              console.log('🚀 Draft started! Enabling draft UI...');
               setAllowed(true);
             }
           }
@@ -377,7 +364,6 @@ export default function DraftPage() {
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'drafts', filter: `league_id=eq.${leagueId}` },
         (payload) => {
-          console.log('🎯 New pick received via realtime:', payload.new);
           // Add new pick to portfolio (avoid duplicates from own picks)
           setPortfolio(prev => {
             const exists = prev.some(p => p.id === payload.new.id);
@@ -398,17 +384,14 @@ export default function DraftPage() {
         }
       )
       .subscribe((status) => {
-        console.log('📡 Realtime subscription status:', status, 'for league:', leagueId);
         if (status === 'SUBSCRIBED') {
           setRealtimeConnected(true);
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.warn('Realtime not available, falling back to polling');
           setRealtimeConnected(false);
         }
       });
 
     return () => {
-      console.log('📡 Cleaning up realtime subscription for league:', leagueId);
       supabase.removeChannel(channel);
     };
   }, [leagueId]);
@@ -417,7 +400,6 @@ export default function DraftPage() {
   useEffect(() => {
     if (!leagueId || realtimeConnected) return;
 
-    console.log('🔄 Starting fallback polling for draft updates...');
 
     const pollInterval = setInterval(async () => {
       try {
@@ -429,7 +411,6 @@ export default function DraftPage() {
           .single();
 
         if (lg?.draft_status && lg.draft_status !== draftStatus) {
-          console.log('🔄 Polled draft status change:', lg.draft_status);
           setDraftStatus(lg.draft_status);
           if (lg.draft_status === 'in_progress') {
             setAllowed(true);
@@ -444,7 +425,6 @@ export default function DraftPage() {
           .order('pick_number', { ascending: false });
 
         if (picks && picks.length > portfolio.length) {
-          console.log('🔄 Polled new picks:', picks.length - portfolio.length, 'new');
           setPortfolio(picks);
           // Fetch names for any new symbols
           const newPicks = picks.slice(0, picks.length - portfolio.length);
@@ -470,7 +450,6 @@ export default function DraftPage() {
   // Keep turn/pick in sync after any portfolio/member/rounds change
   useEffect(() => {
     if (!allowed || !memberIds.length) return;
-    console.log('🔄 Updating turn - portfolio length:', portfolio.length, 'members:', memberIds.length);
     updateTurn(
       portfolio,
       memberIds,
@@ -686,7 +665,6 @@ export default function DraftPage() {
 
     // Skip if this bot has already failed
     if (failedBots.has(botUserId)) {
-      console.log(`Bot ${botUserId} already failed, skipping...`);
       return;
     }
 
@@ -720,11 +698,9 @@ export default function DraftPage() {
           .reduce((sum, p) => sum + Number(p.entry_price || 0), 0);
         botBudgetRemaining = Math.max(leagueBudget - botSpent, 0);
 
-        console.log(`🤖 Bot ${botUserId} budget: $${botBudgetRemaining.toFixed(2)} remaining (spent: $${botSpent.toFixed(2)} of $${leagueBudget})`);
 
         // If bot has no budget left, mark as failed
         if (botBudgetRemaining <= 0) {
-          console.warn(`Bot ${botUserId} has no budget remaining - marking as failed`);
           setFailedBots(prev => new Set([...prev, botUserId]));
           setBotPickInProgress(false);
           return;
@@ -762,7 +738,6 @@ export default function DraftPage() {
       const availableStocks = stocksToTry.filter(s => !pickedSymbols.has(s));
 
       if (availableStocks.length === 0) {
-        console.warn('Bot has no unique stocks left to pick - marking as failed');
         setFailedBots(prev => new Set([...prev, botUserId]));
         setBotPickInProgress(false);
         return;
@@ -782,7 +757,6 @@ export default function DraftPage() {
 
         if (cached && (Date.now() - cached.timestamp < PRICE_CACHE_TTL)) {
           price = cached.price;
-          console.log(`🤖 Using cached price for ${candidateSymbol}: $${price}`);
         } else {
           // Get fresh quote
           try {
@@ -797,20 +771,17 @@ export default function DraftPage() {
 
         // In budget mode, check if bot can afford this stock
         if (isBudgetMode && price > botBudgetRemaining) {
-          console.log(`🤖 Bot ${botUserId} cannot afford ${candidateSymbol} ($${price.toFixed(2)}) - budget: $${botBudgetRemaining.toFixed(2)}`);
           continue;
         }
 
         // Found an affordable stock!
         selectedSymbol = candidateSymbol;
         selectedPrice = price;
-        console.log(`🤖 Bot ${botUserId} selected ${candidateSymbol} at $${price.toFixed(2)}`);
         break;
       }
 
       // If no affordable stock found, mark bot as failed
       if (!selectedSymbol) {
-        console.warn(`Bot ${botUserId} cannot afford any available stocks - marking as failed`);
         setFailedBots(prev => new Set([...prev, botUserId]));
         setBotPickInProgress(false);
         return;
@@ -887,7 +858,6 @@ export default function DraftPage() {
 
     // Skip if this bot has failed (can't afford any stocks or other error)
     if (failedBots.has(currentPicker)) {
-      console.log(`Bot ${currentPicker} has failed, skipping their turn...`);
       // Auto-skip the bot's turn to advance the draft
       const timer = setTimeout(() => {
         skipTurn(currentPicker);

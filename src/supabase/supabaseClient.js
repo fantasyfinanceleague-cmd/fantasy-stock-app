@@ -28,7 +28,6 @@ const supabaseFetch = async (url, options) => {
     try {
       const body = await response.clone().text();
       if (body.includes('JWT expired') || body.includes('jwt expired')) {
-        console.log('JWT expired detected in request, refreshing session...');
 
         // Avoid multiple concurrent refresh attempts
         if (!isRefreshing) {

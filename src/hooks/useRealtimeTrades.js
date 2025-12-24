@@ -28,7 +28,6 @@ export function useRealtimeTrades(leagueId, enabled = true) {
           filter: `league_id=eq.${leagueId}`
         },
         (payload) => {
-          console.log('New trade detected:', payload);
           setNewTrade(payload.new);
 
           // Auto-clear after 5 seconds
