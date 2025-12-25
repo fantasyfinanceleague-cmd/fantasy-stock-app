@@ -9,6 +9,7 @@ import { fetchCompanyName } from '../utils/stockData';
 import { usePrices } from '../context/PriceContext';
 import { useUserProfiles } from '../context/UserProfilesContext';
 import { PageLoader } from '../components/LoadingSpinner';
+import { SkeletonLeaderboard } from '../components/Skeleton';
 
 export default function Leaderboard() {
   const authUser = useAuthUser();
@@ -368,7 +369,7 @@ export default function Leaderboard() {
 
   // ---------- UI ----------
   if (loading) {
-    return <PageLoader message="Loading standings..." />;
+    return <SkeletonLeaderboard />;
   }
 
   if (error) {

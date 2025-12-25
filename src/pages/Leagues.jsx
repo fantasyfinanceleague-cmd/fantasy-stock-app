@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import useLeagues from '../hooks/useLeagues';
 import { useToast } from '../components/Toast';
+import EmptyState from '../components/EmptyState';
 
 function SectionHeader({ title, icon = null, right = null }) {
   return (
@@ -447,11 +448,17 @@ export default function Leagues() {
           />
           <div className="list">
             {filteredLeagues.length === 0 ? (
-              <p className="muted">
-                {myLeagues.length
-                  ? 'No leagues match your search.'
-                  : 'You’re not in any leagues yet. Create one above or join with an invite link.'}
-              </p>
+              myLeagues.length ? (
+                <p className="muted" style={{ padding: '20px 0', textAlign: 'center' }}>
+                  No leagues match your search.
+                </p>
+              ) : (
+                <EmptyState
+                  icon="🏆"
+                  title="No Leagues Yet"
+                  description="Create your first league above to start competing with friends, or join an existing league with an invite link."
+                />
+              )
             ) : (
               filteredLeagues.map((lg) => (
                 <div className="league-row" key={lg.id}>

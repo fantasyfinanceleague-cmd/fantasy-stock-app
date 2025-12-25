@@ -8,6 +8,8 @@ import { prettyName, formatUSD } from '../utils/formatting';
 import { fetchCompanyName, fetchQuotesInBatch } from '../utils/stockData';
 import { PageLoader } from '../components/LoadingSpinner';
 import { useUserProfiles } from '../context/UserProfilesContext';
+import EmptyState from '../components/EmptyState';
+import { SkeletonDashboard } from '../components/Skeleton';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -427,7 +429,7 @@ export default function Dashboard() {
   }
 
   if (loading) {
-    return <PageLoader message="Loading dashboard..." />;
+    return <SkeletonDashboard />;
   }
 
   if (error) {
@@ -529,10 +531,13 @@ export default function Dashboard() {
           </div>
 
           {leagues.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '20px 0' }}>
-              <p className="muted" style={{ marginBottom: 12 }}>You're not in any leagues yet.</p>
-              <Link className="btn primary" to="/leagues">Create Your First League</Link>
-            </div>
+            <EmptyState
+              icon="🏆"
+              title="No Leagues Yet"
+              description="Create or join a league to start competing with friends."
+              actionLabel="Create a League"
+              actionTo="/leagues"
+            />
           ) : (
             <div style={{ display: 'grid', gap: 8 }}>
               {leagues.map(l => (
@@ -627,7 +632,13 @@ export default function Dashboard() {
           </div>
 
           {topPerformers.length === 0 ? (
-            <p className="muted" style={{ margin: 0 }}>No holdings yet.</p>
+            <EmptyState
+              icon="📈"
+              title="No Holdings Yet"
+              description="Draft stocks or make trades to see your top performers here."
+              actionLabel="Go to Draft"
+              actionTo="/draft"
+            />
           ) : (
             <div style={{ display: 'grid', gap: 10 }}>
               {topPerformers.map(tp => {

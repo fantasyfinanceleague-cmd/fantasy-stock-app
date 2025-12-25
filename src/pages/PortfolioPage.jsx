@@ -9,6 +9,8 @@ import { fetchCompanyName } from '../utils/stockData';
 import { usePrices, PRICE_STATUS } from '../context/PriceContext';
 import TradeModal from '../components/TradeModal';
 import { PageLoader } from '../components/LoadingSpinner';
+import EmptyState, { EmptyStateInline } from '../components/EmptyState';
+import { SkeletonPortfolio } from '../components/Skeleton';
 
 export default function PortfolioPage() {
   // ✅ Call hooks only inside the component
@@ -315,7 +317,7 @@ export default function PortfolioPage() {
   }
 
   if (loading) {
-    return <PageLoader message="Loading portfolio..." />;
+    return <SkeletonPortfolio />;
   }
 
   if (error) {
@@ -325,6 +327,25 @@ export default function PortfolioPage() {
           <h3 style={{ color: '#e5e7eb', marginTop: 0 }}>Portfolio Unavailable</h3>
           <p className="muted">Error: {error}</p>
           <Link className="btn" to="/leagues">Back to Leagues</Link>
+        </div>
+      </div>
+    );
+  }
+
+  // No leagues - show empty state
+  if (leagues.length === 0) {
+    return (
+      <div className="page">
+        <div className="card">
+          <EmptyState
+            icon="🏆"
+            title="Join a League to Start Trading"
+            description="Your portfolio tracks your holdings within a league. Create or join a league to start building your portfolio."
+            actionLabel="Browse Leagues"
+            actionTo="/leagues"
+            secondaryLabel="Create a League"
+            secondaryTo="/leagues"
+          />
         </div>
       </div>
     );
@@ -463,8 +484,17 @@ export default function PortfolioPage() {
             <tbody>
               {actualHoldings.length === 0 && (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', color: '#9ca3af', padding: '20px 12px' }}>
-                    No holdings yet. Click "Buy Stock" to get started!
+                  <td colSpan={8}>
+                    <EmptyStateInline
+                      icon="📊"
+                      message="No holdings yet. Draft stocks or buy your first share!"
+                      actionLabel="Buy Stock"
+                      onAction={() => {
+                        setTradeAction('buy');
+                        setTradeSymbol('');
+                        setShowTradeModal(true);
+                      }}
+                    />
                   </td>
                 </tr>
               )}
