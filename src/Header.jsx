@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from './supabase/supabaseClient';
 import { useAuthUser } from './auth/useAuthUser';
+import { useHelp } from './context/HelpContext';
 import logo from '/bear_bull.jpg';
 import './layout.css';
 
@@ -9,6 +10,7 @@ const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const user = useAuthUser();
+  const { openWalkthrough } = useHelp();
   const [loggingOut, setLoggingOut] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -54,6 +56,37 @@ const Header = () => {
       {/* Desktop user section */}
       {user && (
         <div className="header-user desktop-nav">
+          {/* Help button */}
+          <button
+            onClick={openWalkthrough}
+            className="help-button"
+            title="Help & Guide"
+            style={{
+              background: 'rgba(59, 130, 246, 0.15)',
+              border: '1px solid rgba(59, 130, 246, 0.3)',
+              borderRadius: '50%',
+              width: 36,
+              height: 36,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: '#60a5fa',
+              fontSize: 16,
+              fontWeight: 700,
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background = 'rgba(59, 130, 246, 0.25)';
+              e.target.style.transform = 'scale(1.05)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = 'rgba(59, 130, 246, 0.15)';
+              e.target.style.transform = 'scale(1)';
+            }}
+          >
+            ?
+          </button>
           <Link to="/profile" className="user-badge">
             <span className="user-icon">👤</span>
             <span className="user-email">{user.email}</span>
@@ -98,6 +131,22 @@ const Header = () => {
             {user && (
               <>
                 <div className="mobile-menu-divider" />
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    openWalkthrough();
+                  }}
+                  className="mobile-nav-link"
+                  style={{
+                    width: '100%',
+                    textAlign: 'left',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  ❓ Help & Guide
+                </button>
                 <Link to="/profile" className="mobile-nav-link">
                   👤 Profile ({user.email})
                 </Link>

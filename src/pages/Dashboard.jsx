@@ -10,6 +10,8 @@ import { PageLoader } from '../components/LoadingSpinner';
 import { useUserProfiles } from '../context/UserProfilesContext';
 import EmptyState from '../components/EmptyState';
 import { SkeletonDashboard } from '../components/Skeleton';
+import OnboardingModal, { hasCompletedOnboarding } from '../components/OnboardingModal';
+import ProgressChecklist, { useSetupProgress } from '../components/ProgressChecklist';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -20,6 +22,7 @@ export default function Dashboard() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Leagues
   const [leagues, setLeagues] = useState([]);
@@ -396,6 +399,26 @@ export default function Dashboard() {
     };
   }, []);
 
+  // ---- Check if onboarding should be shown (after initial load)
+  useEffect(() => {
+    if (!loading && authUser?.id) {
+      const completed = hasCompletedOnboarding(authUser.id);
+      if (!completed) {
+        setShowOnboarding(true);
+      }
+    }
+  }, [loading, authUser?.id]);
+
+  // ---- Progress checklist items
+  const setupItems = useSetupProgress({
+    hasLeagues: leagues.length > 0,
+    hasHoldings: positions.length > 0,
+    hasAlpaca: false, // TODO: Check if user has linked Alpaca
+  });
+
+  // Check if user is new (no leagues, no holdings)
+  const isNewUser = leagues.length === 0 && positions.length === 0;
+
   // ---- If not signed in: show centered sign-in box and nothing else
   if (!USER_ID) {
     return (
@@ -446,6 +469,25 @@ export default function Dashboard() {
 
   return (
     <div className="page" style={{ paddingTop: 24 }}>
+      {/* Onboarding Modal for new users */}
+      {showOnboarding && authUser?.id && (
+        <OnboardingModal
+          userId={authUser.id}
+          onComplete={() => setShowOnboarding(false)}
+        />
+      )}
+
+      {/* Progress Checklist for users who haven't completed all setup steps */}
+      {!showOnboarding && isNewUser && (
+        <div style={{ marginBottom: 16 }}>
+          <ProgressChecklist
+            title="Getting Started"
+            items={setupItems}
+            showProgress={true}
+          />
+        </div>
+      )}
+
       {/* Quick Stats Row */}
       <div className="metrics-row" style={{ marginBottom: 16 }}>
         {/* Portfolio Value */}
