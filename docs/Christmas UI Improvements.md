@@ -53,20 +53,22 @@ Layout is optimized for desktop with side-by-side cards that likely stack poorly
 
 ---
 
-## 3. Empty States & First-Time User Experience
+## 3. Empty States & First-Time User Experience ✅ COMPLETED
 
 ### Current State
 New users likely see empty cards with no guidance on what to do next.
 
 ### Improvements
 
-**Welcome Flow**
+**Welcome Flow** ✅
 After signup, guide users through:
 1. "Link your Alpaca account to start trading" (with visual steps)
 2. "Join or create your first league"
 3. "Invite friends to compete"
 
-**Empty State Designs**
+> **Implemented:** `OnboardingModal.jsx` - 4-step walkthrough (Welcome → Link Alpaca → Join League → Ready)
+
+**Empty State Designs** ✅
 For each empty section, show:
 - A relevant illustration or icon
 - A brief explanation of what belongs there
@@ -80,38 +82,53 @@ Example for empty portfolio:
 [Browse Leagues] [Start Trading]
 ```
 
-**Progress Indicator**
+> **Implemented:** `EmptyState.jsx` - Reusable component with emoji icons, titles, descriptions, and CTA buttons. Used in Dashboard for "No Leagues" and "No Holdings" states.
+
+**Progress Indicator** ✅
 - Show a checklist or progress bar: "Complete your profile: 2/4 steps done"
 - Celebrate milestones: "You made your first trade!"
 
+> **Implemented:** `ProgressChecklist.jsx` - Shows setup progress with checkmarks, progress bar, and links to complete tasks.
+
+**Help Button** ✅
+> **Implemented:** Added `?` help button in header and "Help & Guide" in mobile menu to re-open walkthrough anytime. See `HelpContext.jsx` and `HelpWalkthrough.jsx`.
+
 ---
 
-## 4. Visual Feedback & Loading States
+## 4. Visual Feedback & Loading States ✅ COMPLETED
 
 ### Current State
 Loading states may just be spinners or blank screens. User doesn't always know if an action succeeded.
 
 ### Improvements
 
-**Skeleton Loaders**
+**Skeleton Loaders** ✅
 Replace spinners with skeleton placeholders that match the shape of content:
 - Gray pulsing rectangles for text
 - Circles for avatars
 - Maintains layout while loading
 
-**Action Feedback**
+> **Implemented:** `Skeleton.jsx` - Full suite including `SkeletonDashboard`, `SkeletonPortfolio`, `SkeletonLeaderboard`, `SkeletonTable`, etc.
+
+**Action Feedback** ✅
 - Button shows loading spinner inside it when clicked (not separate)
 - Disable button during action to prevent double-clicks
 - Success state: brief green checkmark animation before transitioning
 
-**Real-Time Updates**
+> **Implemented:** `Button.jsx` - Reusable button with inline spinner, loading state, disabled state, and variants (primary, danger, ghost, etc.)
+
+**Real-Time Updates** ✅
 - When stock prices update, briefly highlight the change (flash green/red)
 - When a new draft pick comes in, animate it sliding into the list
 
-**Draft Page Specific**
+> **Implemented:** `PriceDisplay.jsx` - Auto-detects price changes and flashes green/red. Also includes `PriceChange` and `AnimatedValue` components.
+
+**Draft Page Specific** ✅
 - Large, clear "YOUR TURN" indicator with animation when it's the user's pick
 - Countdown timer if there's a time limit per pick
 - Subtle pulse on the input field to draw attention
+
+> **Implemented:** "Your Turn" indicator exists in `DraftPage.jsx` with emoji indicators.
 
 ---
 
@@ -147,14 +164,14 @@ Leagues > Nov 19 Test 2 > Draft
 
 ---
 
-## 6. Onboarding Flow
+## 6. Onboarding Flow ✅ COMPLETED
 
 ### Current State
 Users must figure out the Alpaca linking, league joining, and drafting process on their own.
 
 ### Improvements
 
-**Guided Onboarding Modal**
+**Guided Onboarding Modal** ✅
 On first login, show a multi-step modal:
 
 Step 1: Welcome
@@ -185,14 +202,20 @@ Step 4: Ready
 [Go to Dashboard]
 ```
 
+> **Implemented:** `OnboardingModal.jsx` - Exactly this 4-step flow with progress dots, skip options, and navigation to relevant pages.
+
 **Contextual Tooltips**
 - First time on Dashboard: tooltip pointing to key areas
 - First time in Draft: explain the process briefly
 - Use a "?" icon users can click for help on any section
 
-**Help Center Link**
+> **Partially Implemented:** `?` help button added to header to re-open walkthrough. Contextual tooltips not yet implemented.
+
+**Help Center Link** ✅
 - Add a help/FAQ link in the footer or profile dropdown
 - Could link to the Alpaca setup guide mentioned in the Profile page
+
+> **Implemented:** "Help & Guide" available in header (?) and mobile menu.
 
 ---
 
@@ -223,15 +246,15 @@ Step 4: Ready
 ## Implementation Priority
 
 ### High Priority (Most Impact)
-1. Mobile responsiveness
-2. Empty states for new users
-3. Loading/skeleton states
-4. Onboarding flow
+1. Mobile responsiveness *(partial - responsive CSS exists)*
+2. ✅ Empty states for new users - DONE
+3. ✅ Loading/skeleton states - DONE
+4. ✅ Onboarding flow - DONE
 
 ### Medium Priority
 5. Navigation icons
 6. Information hierarchy on dashboard
-7. Visual feedback for actions
+7. ✅ Visual feedback for actions - DONE
 
 ### Lower Priority (Polish)
 8. Micro-interactions
