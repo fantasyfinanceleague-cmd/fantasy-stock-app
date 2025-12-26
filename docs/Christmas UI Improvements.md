@@ -132,14 +132,14 @@ Replace spinners with skeleton placeholders that match the shape of content:
 
 ---
 
-## 5. Navigation Improvements
+## 5. Navigation Improvements ✅ COMPLETED
 
 ### Current State
 Text-only navigation bar that's functional but minimal.
 
 ### Improvements
 
-**Icons + Labels**
+**Icons + Labels** ✅
 Add icons alongside navigation text:
 - Dashboard: grid/home icon
 - Leagues: trophy icon
@@ -148,19 +148,27 @@ Add icons alongside navigation text:
 - Leaderboard: medal/ranking icon
 - Profile: user icon
 
-**Active State**
+> **Implemented:** SVG icons added to all nav links in `Header.jsx`. Uses `NavIcons` object with custom SVG components.
+
+**Active State** ✅
 - Highlighted background or underline for current page
 - Icon could be filled vs outlined to show active state
 
-**Breadcrumbs**
+> **Implemented:** `.nav-link-icon.active` class with blue background highlight and icon color change.
+
+**Breadcrumbs** ✅
 For nested pages (e.g., League > Draft), show breadcrumb navigation:
 ```
 Leagues > Nov 19 Test 2 > Draft
 ```
 
-**Quick Actions**
+> **Implemented:** `Breadcrumbs.jsx` component - auto-generates from URL path or accepts custom items.
+
+**Quick Actions** ✅
 - Add a "+" button in the header for quick access to common actions
 - Dropdown with: New Trade, Create League, Invite Friend
+
+> **Implemented:** Green "+" button in header with dropdown menu containing New Trade, Create League, and Invite Friend actions.
 
 ---
 
@@ -252,7 +260,7 @@ Step 4: Ready
 4. ✅ Onboarding flow - DONE
 
 ### Medium Priority
-5. Navigation icons
+5. ✅ Navigation icons - DONE
 6. Information hierarchy on dashboard
 7. ✅ Visual feedback for actions - DONE
 
