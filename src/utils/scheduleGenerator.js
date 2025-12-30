@@ -3,9 +3,10 @@
 /**
  * Generates a round-robin schedule for matchup-based leagues.
  *
- * Week timing:
+ * Week timing (aligned with US stock market hours):
  * - Monday: Trade day (lineups can be changed)
- * - Tuesday-Friday: Matchup week (performance counted)
+ * - Tuesday 9:30 AM ET: Week officially starts (market open)
+ * - Friday 4:00 PM ET: Week officially ends (market close)
  *
  * @param {string[]} userIds - Array of user IDs in the league
  * @param {number} numWeeks - Number of weeks to schedule
@@ -33,13 +34,11 @@ export function generateSchedule(userIds, numWeeks, startDate) {
     // Get the matchups for this rotation
     const weekMatchups = getRotationMatchups(teams, rotation);
 
-    // Calculate week timing
-    // Start date is typically when draft completes
-    // Week 1 starts on the next Tuesday after startDate
-    const weekStart = getNextTuesday(startDate, week);
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekEnd.getDate() + 3); // Friday (3 days after Tuesday)
-    weekEnd.setHours(23, 59, 59, 999);
+    // Calculate week timing with market hours
+    // Week starts Tuesday 9:30 AM ET (14:30 UTC)
+    // Week ends Friday 4:00 PM ET (21:00 UTC)
+    const weekStart = getWeekStartTuesday(startDate, week);
+    const weekEnd = getWeekEndFriday(weekStart);
 
     for (const [team1, team2] of weekMatchups) {
       // Skip BYE matchups
@@ -86,13 +85,13 @@ function getRotationMatchups(teams, rotation) {
 }
 
 /**
- * Gets the next Tuesday at 00:00 UTC for a given week number.
+ * Gets the next Tuesday at market open (9:30 AM ET / 14:30 UTC) for a given week number.
  *
  * @param {Date} baseDate - The base date (draft completion date)
  * @param {number} weekNumber - Which week (1-indexed)
- * @returns {Date} The Tuesday of that week
+ * @returns {Date} Tuesday market open of that week
  */
-function getNextTuesday(baseDate, weekNumber) {
+function getWeekStartTuesday(baseDate, weekNumber) {
   const date = new Date(baseDate);
 
   // Find the next Tuesday from baseDate
@@ -105,8 +104,30 @@ function getNextTuesday(baseDate, weekNumber) {
   // Add weeks for subsequent weeks
   date.setUTCDate(date.getUTCDate() + (weekNumber - 1) * 7);
 
-  // Set to midnight UTC
-  date.setUTCHours(0, 0, 0, 0);
+  // Set to market open: 9:30 AM ET = 14:30 UTC (during EST)
+  // Note: This uses 14:30 UTC which is correct for EST. During EDT it would be 13:30 UTC.
+  // For simplicity, we use 14:30 UTC year-round.
+  date.setUTCHours(14, 30, 0, 0);
+
+  return date;
+}
+
+/**
+ * Gets Friday market close (4:00 PM ET / 21:00 UTC) for the week starting on the given Tuesday.
+ *
+ * @param {Date} tuesdayStart - The Tuesday start date of the week
+ * @returns {Date} Friday market close of that week
+ */
+function getWeekEndFriday(tuesdayStart) {
+  const date = new Date(tuesdayStart);
+
+  // Friday is 3 days after Tuesday
+  date.setUTCDate(date.getUTCDate() + 3);
+
+  // Set to market close: 4:00 PM ET = 21:00 UTC (during EST)
+  // Note: This uses 21:00 UTC which is correct for EST. During EDT it would be 20:00 UTC.
+  // For simplicity, we use 21:00 UTC year-round.
+  date.setUTCHours(21, 0, 0, 0);
 
   return date;
 }
@@ -129,4 +150,38 @@ export function generateInitialStandings(leagueId, userIds) {
     points_for: 0,
     points_against: 0,
   }));
+}
+
+/**
+ * Gets the next market open time (9:30 AM ET / 14:30 UTC) after the given date.
+ * For duration leagues, this is the next day's market open after draft completion.
+ *
+ * @param {Date} draftCompleteDate - When the draft finished
+ * @returns {Date} Next day's market open
+ */
+export function getNextDayMarketOpen(draftCompleteDate) {
+  const date = new Date(draftCompleteDate);
+
+  // Move to next day
+  date.setUTCDate(date.getUTCDate() + 1);
+
+  // Set to market open: 9:30 AM ET = 14:30 UTC
+  date.setUTCHours(14, 30, 0, 0);
+
+  return date;
+}
+
+/**
+ * Gets the market close time (4:00 PM ET / 21:00 UTC) for a given end date.
+ *
+ * @param {Date} endDate - The date to set market close on
+ * @returns {Date} Market close time on that date
+ */
+export function getMarketClose(endDate) {
+  const date = new Date(endDate);
+
+  // Set to market close: 4:00 PM ET = 21:00 UTC
+  date.setUTCHours(21, 0, 0, 0);
+
+  return date;
 }

@@ -62,7 +62,7 @@ export default function PortfolioPage() {
 
         const { data: lg, error: lgErr } = await supabase
           .from('leagues')
-          .select('id, name, budget_mode, budget_amount')
+          .select('id, name, budget_mode, budget_amount, league_type')
           .in('id', ids)
           .order('name', { ascending: true });
 
@@ -100,7 +100,7 @@ export default function PortfolioPage() {
         if (!league || league?.id !== leagueId) {
           const { data: lg, error: lgErr } = await supabase
             .from('leagues')
-            .select('id, name, budget_mode, budget_amount')
+            .select('id, name, budget_mode, budget_amount, league_type')
             .eq('id', leagueId)
             .single();
           if (lgErr) throw lgErr;
@@ -620,6 +620,7 @@ export default function PortfolioPage() {
         currentHoldings={actualHoldings}
         availableCash={budgetRemaining ?? 0}
         isBudgetMode={league?.budget_mode === 'budget'}
+        leagueType={league?.league_type || 'duration'}
         initialSymbol={tradeSymbol}
         initialAction={tradeAction}
       />

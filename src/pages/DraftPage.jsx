@@ -6,7 +6,7 @@ import '../layout.css';
 import { useAuthUser } from '../auth/useAuthUser';
 import { prettyName } from '../utils/formatting';
 import { fetchCompanyName } from '../utils/stockData';
-import { generateSchedule, generateInitialStandings } from '../utils/scheduleGenerator';
+import { generateSchedule, generateInitialStandings, getNextDayMarketOpen, getMarketClose } from '../utils/scheduleGenerator';
 import DraftControls from '../components/DraftControls';
 import DraftHistory from '../components/DraftHistory';
 import DraftRecap from '../components/DraftRecap';
@@ -471,18 +471,26 @@ export default function DraftPage() {
     if (!isDraftComplete || draftStatus !== 'in_progress') return;
 
     const completeDraft = async () => {
-      const startDate = new Date();
+      const draftCompleteTime = new Date();
       const leagueType = league?.league_type || 'duration';
+      let startDate;
       let endDate;
 
       if (leagueType === 'matchup') {
-        // Matchup league: calculate end date based on num_weeks
-        // Each week is 7 days (Monday trade day + Tuesday-Friday matchup)
+        // Matchup league: first week starts the following Tuesday at market open
         const numWeeks = league?.num_weeks || (memberIds.length - 1);
-        endDate = new Date(startDate.getTime() + numWeeks * 7 * 24 * 60 * 60 * 1000);
 
-        // Generate matchup schedule
-        const schedule = generateSchedule(memberIds, numWeeks, startDate);
+        // Generate matchup schedule - this calculates proper Tuesday start dates
+        const schedule = generateSchedule(memberIds, numWeeks, draftCompleteTime);
+
+        // Use the first matchup's week start as the league start date
+        // (the schedule generator finds the next Tuesday at market open)
+        startDate = schedule.length > 0 ? schedule[0].weekStart : getNextDayMarketOpen(draftCompleteTime);
+
+        // End date is the last matchup's week end (Friday market close of final week)
+        endDate = schedule.length > 0
+          ? schedule[schedule.length - 1].weekEnd
+          : new Date(startDate.getTime() + numWeeks * 7 * 24 * 60 * 60 * 1000);
 
         // Insert matchups
         const matchupRows = schedule.map(m => ({
@@ -508,9 +516,14 @@ export default function DraftPage() {
           .insert(standingsRows);
         if (standingsErr) console.error('Failed to initialize standings:', standingsErr);
       } else {
-        // Duration league: use duration_days
+        // Duration league: starts next day at market open (9:30 AM ET)
+        // If draft completes March 3rd, league starts March 4th at market open
         const durationDays = league?.duration_days || 30;
-        endDate = new Date(startDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
+        startDate = getNextDayMarketOpen(draftCompleteTime);
+
+        // End date is duration_days later at market close (4:00 PM ET)
+        const rawEndDate = new Date(startDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
+        endDate = getMarketClose(rawEndDate);
       }
 
       // Update league with completion status and dates

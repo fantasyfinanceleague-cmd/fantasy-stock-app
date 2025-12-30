@@ -4,6 +4,18 @@ import { supabase } from '../supabase/supabaseClient';
 import { prettyName } from '../utils/formatting';
 
 /**
+ * Check if it's Monday in US Eastern Time
+ * Matchup leagues only allow trading on Mondays
+ */
+function isMondayET() {
+  // Get current time in Eastern Time
+  const now = new Date();
+  const etOptions = { timeZone: 'America/New_York', weekday: 'long' };
+  const dayName = now.toLocaleDateString('en-US', etOptions);
+  return dayName === 'Monday';
+}
+
+/**
  * TradeModal component
  * Modal for buying and selling stocks after the draft completes
  */
@@ -16,9 +28,13 @@ export default function TradeModal({
   currentHoldings, // array of {symbol, quantity, entry_price}
   availableCash, // remaining budget
   isBudgetMode,
+  leagueType = 'duration', // 'duration' or 'matchup'
   initialSymbol = '',
   initialAction = 'buy' // 'buy' or 'sell'
 }) {
+  // For matchup leagues, trading is only allowed on Mondays (trade day)
+  const isMatchupLeague = leagueType === 'matchup';
+  const isTradingDay = !isMatchupLeague || isMondayET();
   const [action, setAction] = useState(initialAction);
   const [symbol, setSymbol] = useState(initialSymbol);
   const [quantity, setQuantity] = useState(1);
@@ -282,6 +298,24 @@ export default function TradeModal({
             >
               Go to Profile
             </button>
+          </div>
+        ) : !isTradingDay ? (
+          <div style={{
+            padding: 20,
+            backgroundColor: 'rgba(251, 191, 36, 0.1)',
+            border: '1px solid rgba(251, 191, 36, 0.3)',
+            borderRadius: 8,
+            textAlign: 'center'
+          }}>
+            <p style={{ margin: '0 0 12px 0', color: '#fbbf24', fontWeight: 600 }}>
+              Trading is Locked
+            </p>
+            <p className="muted" style={{ margin: '0 0 8px 0', fontSize: 14 }}>
+              In matchup leagues, trades can only be made on <strong>Mondays</strong> (Trade Day).
+            </p>
+            <p className="muted" style={{ margin: 0, fontSize: 14 }}>
+              Your stocks are locked in for the current week (Tuesday - Friday).
+            </p>
           </div>
         ) : (
         <form onSubmit={handleSubmit}>

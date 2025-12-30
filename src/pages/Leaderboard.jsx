@@ -10,6 +10,7 @@ import { usePrices } from '../context/PriceContext';
 import { useUserProfiles } from '../context/UserProfilesContext';
 import { PageLoader } from '../components/LoadingSpinner';
 import { SkeletonLeaderboard } from '../components/Skeleton';
+import { generateSchedule, generateInitialStandings } from '../utils/scheduleGenerator';
 
 export default function Leaderboard() {
   const authUser = useAuthUser();
@@ -27,6 +28,10 @@ export default function Leaderboard() {
   const [trades, setTrades] = useState([]);        // all trades for this league (all users)
   const [symbolToName, setSymbolToName] = useState({});
 
+  // matchup league data
+  const [leagueStandings, setLeagueStandings] = useState([]);  // W-L-T records
+  const [matchups, setMatchups] = useState([]);                 // weekly matchups
+
   // Use shared price context
   const { prices, loading: pricesLoading, lastUpdate: lastUpdated, fetchPrices } = usePrices();
 
@@ -41,6 +46,10 @@ export default function Leaderboard() {
   const [peerModalOpen, setPeerModalOpen] = useState(false);
   const [peerUserId, setPeerUserId] = useState('');
   const [peerRows, setPeerRows] = useState([]); // derived rows for modal view
+
+  // schedule modal
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [schedulePlayerId, setSchedulePlayerId] = useState('');
 
   // ----- Load my leagues
   useEffect(() => {
@@ -73,7 +82,7 @@ export default function Leaderboard() {
 
         const { data: lg, error: lgErr } = await supabase
           .from('leagues')
-          .select('id, name')
+          .select('id, name, league_type, num_weeks, current_week')
           .in('id', ids)
           .order('name', { ascending: true });
 
@@ -128,6 +137,25 @@ export default function Leaderboard() {
 
         if (tErr) throw tErr;
         setTrades(tradeRows || []);
+
+        // Load matchup league data (standings and matchups)
+        const { data: standingsRows, error: sErr } = await supabase
+          .from('league_standings')
+          .select('*')
+          .eq('league_id', leagueId)
+          .order('wins', { ascending: false });
+
+        if (sErr) throw sErr;
+        setLeagueStandings(standingsRows || []);
+
+        const { data: matchupRows, error: mErr } = await supabase
+          .from('matchups')
+          .select('*')
+          .eq('league_id', leagueId)
+          .order('week_number', { ascending: true });
+
+        if (mErr) throw mErr;
+        setMatchups(matchupRows || []);
 
         // Collect all unique symbols from both drafts and trades
         const draftSymbols = (rows || []).map(p => p.symbol?.toUpperCase());
@@ -192,6 +220,72 @@ export default function Leaderboard() {
       fetchProfiles(allUserIds);
     }
   }, [allUserIds, fetchProfiles]);
+
+  // ----- Auto-generate schedule for matchup leagues if missing -----
+  useEffect(() => {
+    const autoGenerateSchedule = async () => {
+      // Only run if: matchup league, no matchups exist, and we have members
+      if (!activeLeague) return;
+      if (activeLeague.league_type !== 'matchup') return;
+      if (matchups.length > 0) return;
+      if (allUserIds.length < 2) return;
+
+      console.log('Auto-generating schedule for matchup league...');
+
+      const numWeeks = activeLeague.num_weeks || (allUserIds.length - 1);
+      const startDate = new Date();
+
+      // Generate schedule
+      const schedule = generateSchedule(allUserIds, numWeeks, startDate);
+
+      // Insert matchups
+      const matchupRows = schedule.map(m => ({
+        league_id: activeLeague.id,
+        week_number: m.week,
+        team1_user_id: m.team1,
+        team2_user_id: m.team2,
+        week_start: m.weekStart.toISOString(),
+        week_end: m.weekEnd.toISOString(),
+      }));
+
+      if (matchupRows.length > 0) {
+        const { data, error: matchupErr } = await supabase
+          .from('matchups')
+          .insert(matchupRows)
+          .select();
+
+        if (matchupErr) {
+          console.error('Failed to auto-generate matchups:', matchupErr);
+        } else {
+          console.log('Auto-generated matchups:', data);
+          setMatchups(data || matchupRows);
+        }
+      }
+
+      // Initialize standings if they don't exist in database
+      // Check database directly to avoid race condition with state
+      const { data: existingStandings } = await supabase
+        .from('league_standings')
+        .select('user_id')
+        .eq('league_id', activeLeague.id)
+        .limit(1);
+
+      if (!existingStandings || existingStandings.length === 0) {
+        const standingsRows = generateInitialStandings(activeLeague.id, allUserIds);
+        const { error: standingsErr } = await supabase
+          .from('league_standings')
+          .insert(standingsRows);  // Use insert, not upsert
+
+        if (standingsErr) {
+          console.error('Failed to initialize standings:', standingsErr);
+        } else {
+          setLeagueStandings(standingsRows);
+        }
+      }
+    };
+
+    autoGenerateSchedule();
+  }, [activeLeague, matchups.length, allUserIds, leagueStandings.length]);
 
   // Calculate actual holdings for a user (drafts + buys - sells)
   function calcUserHoldings(userId) {
@@ -274,10 +368,97 @@ export default function Leaderboard() {
     return arr;
   }, [allUserIds, prices, picksByUser, tradesByUser]);
 
+  // ----- Matchup league computed values -----
+  const isMatchupLeague = activeLeague?.league_type === 'matchup';
+  const currentWeek = activeLeague?.current_week || 1;
+
+
+  // Matchup standings sorted by win pct, then wins, then points_for
+  const matchupStandings = useMemo(() => {
+    if (!isMatchupLeague) return [];
+
+    // If we have standings entries, use them
+    if (leagueStandings.length > 0) {
+      return [...leagueStandings].sort((a, b) => {
+        // Calculate win percentage
+        const aTotal = a.wins + a.losses + a.ties;
+        const bTotal = b.wins + b.losses + b.ties;
+        const aPct = aTotal > 0 ? (a.wins + a.ties * 0.5) / aTotal : 0;
+        const bPct = bTotal > 0 ? (b.wins + b.ties * 0.5) / bTotal : 0;
+
+        if (bPct !== aPct) return bPct - aPct;
+        if (b.wins !== a.wins) return b.wins - a.wins;
+        return Number(b.points_for) - Number(a.points_for);
+      });
+    }
+
+    // No standings yet - show all users with 0-0 records
+    return allUserIds.map(userId => ({
+      user_id: userId,
+      wins: 0,
+      losses: 0,
+      ties: 0,
+      points_for: 0,
+      points_against: 0
+    }));
+  }, [isMatchupLeague, leagueStandings, allUserIds]);
+
+  // Current week matchups
+  const currentWeekMatchups = useMemo(() => {
+    return matchups.filter(m => m.week_number === currentWeek);
+  }, [matchups, currentWeek]);
+
+  // Get schedule for a specific player (all weeks)
+  const getPlayerSchedule = (playerId) => {
+    if (!playerId || matchups.length === 0) return [];
+
+    return matchups
+      .filter(m => m.team1_user_id === playerId || m.team2_user_id === playerId)
+      .map(m => {
+        const isTeam1 = m.team1_user_id === playerId;
+        const opponentId = isTeam1 ? m.team2_user_id : m.team1_user_id;
+        const myGain = isTeam1 ? m.team1_gain : m.team2_gain;
+        const oppGain = isTeam1 ? m.team2_gain : m.team1_gain;
+        const didWin = m.winner_user_id === playerId;
+        const didLose = m.winner_user_id && m.winner_user_id !== playerId;
+        const isTie = m.team1_gain !== null && m.team2_gain !== null && m.winner_user_id === null;
+        const isComplete = m.team1_gain !== null && m.team2_gain !== null;
+
+        return {
+          ...m,
+          opponentId,
+          myGain,
+          oppGain,
+          didWin,
+          didLose,
+          isTie,
+          isComplete,
+        };
+      })
+      .sort((a, b) => a.week_number - b.week_number);
+  };
+
+  // Player schedule for modal
+  const playerSchedule = useMemo(() => {
+    const playerId = schedulePlayerId || USER_ID;
+    return getPlayerSchedule(playerId);
+  }, [schedulePlayerId, USER_ID, matchups]);
+
+  // Open schedule modal
+  const openScheduleModal = (playerId = USER_ID) => {
+    setSchedulePlayerId(playerId);
+    setScheduleModalOpen(true);
+  };
+
+  const closeScheduleModal = () => {
+    setScheduleModalOpen(false);
+  };
+
   const totalPlayers = allUserIds.length;
 
   // leader & best performer (same metric here)
   const leader = standings[0] || null;
+  const matchupLeader = matchupStandings[0] || null;
 
   // top gainers across all picks (by % since entry)
   const topGainers = useMemo(() => {
@@ -411,35 +592,65 @@ export default function Leaderboard() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 14 }}>
         <div className="card">
           <div style={{ fontWeight: 700, marginBottom: 6 }}>🏆 League Leader</div>
-          {leader ? (
-            <>
-              <div style={{ fontSize: 13 }} className="muted">{getDisplayName(leader.user_id, USER_ID)}</div>
-              <div style={{ marginTop: 6 }}>
-                <div style={{ color: leader.gain >= 0 ? '#16a34a' : '#dc2626', fontWeight: 700, fontSize: 18 }}>
-                  {leader.gain >= 0 ? '+' : ''}{formatUSD(leader.gain)}
+          {isMatchupLeague ? (
+            matchupLeader ? (
+              <>
+                <div style={{ fontSize: 13 }} className="muted">{getDisplayName(matchupLeader.user_id, USER_ID)}</div>
+                <div style={{ marginTop: 6 }}>
+                  <div style={{ fontWeight: 700, fontSize: 18 }}>
+                    {matchupLeader.wins}-{matchupLeader.losses}{matchupLeader.ties > 0 ? `-${matchupLeader.ties}` : ''}
+                  </div>
+                  <div className="muted" style={{ fontSize: 12 }}>
+                    {formatUSD(matchupLeader.points_for)} total gain
+                  </div>
                 </div>
-                <div className="muted" style={{ fontSize: 12 }}>
-                  {formatPercent(leader.pct, true)} return
-                </div>
-              </div>
-            </>
+              </>
+            ) : (
+              <div className="muted">No standings yet.</div>
+            )
           ) : (
-            <div className="muted">No data yet.</div>
+            leader ? (
+              <>
+                <div style={{ fontSize: 13 }} className="muted">{getDisplayName(leader.user_id, USER_ID)}</div>
+                <div style={{ marginTop: 6 }}>
+                  <div style={{ color: leader.gain >= 0 ? '#16a34a' : '#dc2626', fontWeight: 700, fontSize: 18 }}>
+                    {leader.gain >= 0 ? '+' : ''}{formatUSD(leader.gain)}
+                  </div>
+                  <div className="muted" style={{ fontSize: 12 }}>
+                    {formatPercent(leader.pct, true)} return
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="muted">No data yet.</div>
+            )
           )}
         </div>
 
         <div className="card">
-          <div style={{ fontWeight: 700, marginBottom: 6 }}>💰 Top Profit</div>
-          {leader ? (
+          {isMatchupLeague ? (
             <>
-              <div style={{ fontSize: 13 }} className="muted">{getDisplayName(leader.user_id, USER_ID)}</div>
-              <div style={{ marginTop: 6 }}>
-                <div style={{ fontWeight: 700, fontSize: 18 }}>{formatUSD(leader.value)}</div>
-                <div className="muted" style={{ fontSize: 12 }}>portfolio value</div>
+              <div style={{ fontWeight: 700, marginBottom: 6 }}>📅 Current Week</div>
+              <div style={{ fontSize: 28, fontWeight: 800 }}>{currentWeek}</div>
+              <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+                of {activeLeague?.num_weeks || '?'} weeks
               </div>
             </>
           ) : (
-            <div className="muted">No data yet.</div>
+            <>
+              <div style={{ fontWeight: 700, marginBottom: 6 }}>💰 Top Profit</div>
+              {leader ? (
+                <>
+                  <div style={{ fontSize: 13 }} className="muted">{getDisplayName(leader.user_id, USER_ID)}</div>
+                  <div style={{ marginTop: 6 }}>
+                    <div style={{ fontWeight: 700, fontSize: 18 }}>{formatUSD(leader.value)}</div>
+                    <div className="muted" style={{ fontSize: 12 }}>portfolio value</div>
+                  </div>
+                </>
+              ) : (
+                <div className="muted">No data yet.</div>
+              )}
+            </>
           )}
         </div>
 
@@ -455,58 +666,210 @@ export default function Leaderboard() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
           <h3 style={{ marginTop: 0 }}>Current Standings</h3>
           <div className="muted" style={{ fontSize: 12 }}>
-            {lastUpdated ? `Last updated: ${lastUpdated.toLocaleTimeString()}` : null}
+            {isMatchupLeague ? `Week ${currentWeek} of ${activeLeague?.num_weeks || '?'}` : null}
+            {!isMatchupLeague && lastUpdated ? `Last updated: ${lastUpdated.toLocaleTimeString()}` : null}
           </div>
         </div>
 
-        {standings.length === 0 ? (
-          <p className="muted" style={{ margin: 0 }}>No standings yet.</p>
-        ) : (
-          <div style={{ display: 'grid', gap: 8 }}>
-            {standings.map((s, idx) => {
-              const mine = s.user_id === USER_ID;
-              return (
-                <div key={s.user_id} className="list-row" style={{ borderRadius: 10, background: mine ? '#18202c' : undefined }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{
-                      width: 28, height: 28, borderRadius: '50%', background: '#0ea5e9',
-                      color: '#0b1220', display: 'grid', placeItems: 'center', fontWeight: 800
-                    }}>
-                      {idx + 1}
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 600 }}>{getDisplayName(s.user_id, USER_ID)}</div>
-                      <div className="muted" style={{ fontSize: 12 }}>{activeLeague?.name || ''}</div>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontWeight: 700, color: s.gain >= 0 ? '#16a34a' : '#dc2626' }}>
-                        {s.gain >= 0 ? '+' : ''}{formatUSD(s.gain)}
+        {isMatchupLeague ? (
+          // Matchup League Standings (W-L-T record)
+          matchupStandings.length === 0 ? (
+            <p className="muted" style={{ margin: 0 }}>No standings yet. Complete a week to see records.</p>
+          ) : (
+            <div style={{ display: 'grid', gap: 8 }}>
+              {matchupStandings.map((s, idx) => {
+                const mine = s.user_id === USER_ID;
+                const winPct = (s.wins + s.losses + s.ties) > 0
+                  ? ((s.wins + s.ties * 0.5) / (s.wins + s.losses + s.ties) * 100).toFixed(0)
+                  : 0;
+                return (
+                  <div key={s.user_id} className="list-row" style={{ borderRadius: 10, background: mine ? '#18202c' : undefined }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{
+                        width: 28, height: 28, borderRadius: '50%', background: '#0ea5e9',
+                        color: '#0b1220', display: 'grid', placeItems: 'center', fontWeight: 800
+                      }}>
+                        {idx + 1}
                       </div>
-                      <div style={{ fontSize: 12 }} className="muted">{formatUSD(s.value)} total</div>
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{getDisplayName(s.user_id, USER_ID)}</div>
+                        <div className="muted" style={{ fontSize: 12 }}>{activeLeague?.name || ''}</div>
+                      </div>
                     </div>
-                    <button
-                      className="btn"
-                      onClick={() => {
-                        localStorage.setItem('activeLeagueId', leagueId);
-                        if (mine) {
-                          navigate('/portfolio');
-                        } else {
-                          openPeerModal(s.user_id);
-                        }
-                      }}
-                    >
-                      View Portfolio
-                    </button>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+                      <div style={{ textAlign: 'center', minWidth: 80 }}>
+                        <div style={{ fontWeight: 700, fontSize: 18 }}>
+                          {s.wins}-{s.losses}{s.ties > 0 ? `-${s.ties}` : ''}
+                        </div>
+                        <div style={{ fontSize: 12 }} className="muted">{winPct}% win rate</div>
+                      </div>
+                      <div style={{ textAlign: 'right', minWidth: 100 }}>
+                        <div style={{ fontWeight: 600, color: Number(s.points_for) >= 0 ? '#16a34a' : '#dc2626' }}>
+                          {formatUSD(s.points_for)}
+                        </div>
+                        <div style={{ fontSize: 12 }} className="muted">total gain</div>
+                      </div>
+                      <button
+                        className="btn"
+                        onClick={() => {
+                          localStorage.setItem('activeLeagueId', leagueId);
+                          if (mine) {
+                            navigate('/portfolio');
+                          } else {
+                            openPeerModal(s.user_id);
+                          }
+                        }}
+                      >
+                        View Portfolio
+                      </button>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )
+        ) : (
+          // Duration League Standings (by total gain)
+          standings.length === 0 ? (
+            <p className="muted" style={{ margin: 0 }}>No standings yet.</p>
+          ) : (
+            <div style={{ display: 'grid', gap: 8 }}>
+              {standings.map((s, idx) => {
+                const mine = s.user_id === USER_ID;
+                return (
+                  <div key={s.user_id} className="list-row" style={{ borderRadius: 10, background: mine ? '#18202c' : undefined }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{
+                        width: 28, height: 28, borderRadius: '50%', background: '#0ea5e9',
+                        color: '#0b1220', display: 'grid', placeItems: 'center', fontWeight: 800
+                      }}>
+                        {idx + 1}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{getDisplayName(s.user_id, USER_ID)}</div>
+                        <div className="muted" style={{ fontSize: 12 }}>{activeLeague?.name || ''}</div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontWeight: 700, color: s.gain >= 0 ? '#16a34a' : '#dc2626' }}>
+                          {s.gain >= 0 ? '+' : ''}{formatUSD(s.gain)}
+                        </div>
+                        <div style={{ fontSize: 12 }} className="muted">{formatUSD(s.value)} total</div>
+                      </div>
+                      <button
+                        className="btn"
+                        onClick={() => {
+                          localStorage.setItem('activeLeagueId', leagueId);
+                          if (mine) {
+                            navigate('/portfolio');
+                          } else {
+                            openPeerModal(s.user_id);
+                          }
+                        }}
+                      >
+                        View Portfolio
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )
         )}
       </div>
+
+      {/* Current Week Matchups - only for matchup leagues */}
+      {isMatchupLeague && (
+        <div className="card" style={{ marginBottom: 14 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <h3 style={{ margin: 0 }}>Week {currentWeek} Matchups</h3>
+            <button className="btn" onClick={() => openScheduleModal(USER_ID)}>
+              View Full Schedule
+            </button>
+          </div>
+          {currentWeekMatchups.length === 0 ? (
+            <p className="muted" style={{ margin: 0 }}>No matchups scheduled for this week.</p>
+          ) : (
+            <div style={{ display: 'grid', gap: 12 }}>
+              {currentWeekMatchups.map((m) => {
+                const isComplete = m.winner_user_id !== null || (m.team1_gain !== null && m.team2_gain !== null);
+                const team1Won = m.winner_user_id === m.team1_user_id;
+                const team2Won = m.winner_user_id === m.team2_user_id;
+                const isTie = isComplete && m.winner_user_id === null;
+
+                return (
+                  <div
+                    key={m.id}
+                    className="card"
+                    style={{
+                      background: '#111826',
+                      display: 'grid',
+                      gridTemplateColumns: '1fr auto 1fr',
+                      alignItems: 'center',
+                      gap: 16,
+                      padding: 16,
+                    }}
+                  >
+                    {/* Team 1 */}
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{
+                        fontWeight: 600,
+                        color: team1Won ? '#16a34a' : isTie ? '#eab308' : undefined
+                      }}>
+                        {getDisplayName(m.team1_user_id, USER_ID)}
+                        {team1Won && ' ✓'}
+                      </div>
+                      {m.team1_gain !== null && (
+                        <div style={{
+                          marginTop: 4,
+                          fontWeight: 700,
+                          fontSize: 18,
+                          color: Number(m.team1_gain) >= 0 ? '#16a34a' : '#dc2626'
+                        }}>
+                          {Number(m.team1_gain) >= 0 ? '+' : ''}{formatUSD(m.team1_gain)}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* VS */}
+                    <div style={{
+                      fontWeight: 800,
+                      color: '#6b7280',
+                      fontSize: 14
+                    }}>
+                      {isComplete ? (isTie ? 'TIE' : 'vs') : 'vs'}
+                    </div>
+
+                    {/* Team 2 */}
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{
+                        fontWeight: 600,
+                        color: team2Won ? '#16a34a' : isTie ? '#eab308' : undefined
+                      }}>
+                        {getDisplayName(m.team2_user_id, USER_ID)}
+                        {team2Won && ' ✓'}
+                      </div>
+                      {m.team2_gain !== null && (
+                        <div style={{
+                          marginTop: 4,
+                          fontWeight: 700,
+                          fontSize: 18,
+                          color: Number(m.team2_gain) >= 0 ? '#16a34a' : '#dc2626'
+                        }}>
+                          {Number(m.team2_gain) >= 0 ? '+' : ''}{formatUSD(m.team2_gain)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Performance Metrics */}
       <div className="card">
@@ -680,6 +1043,132 @@ export default function Leaderboard() {
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------- Schedule Modal ---------- */}
+      {scheduleModalOpen && (
+        <div
+          className="modal-overlay"
+          onClick={closeScheduleModal}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+        >
+          <div
+            className="modal-card"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#1f2937',
+              color: '#fff',
+              borderRadius: 12,
+              width: 'min(600px, 96vw)',
+              maxWidth: '600px',
+              maxHeight: '80vh',
+              padding: 16,
+              boxShadow: '0 20px 60px rgba(0,0,0,.6)',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: 12, marginBottom: 16 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>
+                  Full Season Schedule
+                </div>
+                <select
+                  value={schedulePlayerId || USER_ID}
+                  onChange={(e) => setSchedulePlayerId(e.target.value)}
+                  className="round-select"
+                  style={{ width: '100%', padding: '8px 12px' }}
+                >
+                  {allUserIds.map(uid => (
+                    <option key={uid} value={uid}>
+                      {getDisplayName(uid, USER_ID)}{uid === USER_ID ? ' (You)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                onClick={closeScheduleModal}
+                aria-label="Close"
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  color: '#9ca3af',
+                  fontSize: 22,
+                  cursor: 'pointer',
+                  lineHeight: 1
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Schedule List */}
+            <div style={{ overflowY: 'auto', flex: 1 }}>
+              {playerSchedule.length === 0 ? (
+                <p className="muted" style={{ textAlign: 'center', padding: 20 }}>No schedule available.</p>
+              ) : (
+                <div style={{ display: 'grid', gap: 8 }}>
+                  {playerSchedule.map((week) => {
+                    const isCurrent = week.week_number === currentWeek;
+                    return (
+                      <div
+                        key={week.id}
+                        style={{
+                          background: isCurrent ? '#1e3a5f' : '#111826',
+                          borderRadius: 8,
+                          padding: 12,
+                          border: isCurrent ? '1px solid #3b82f6' : '1px solid transparent'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div>
+                            <div style={{ fontWeight: 600, fontSize: 14 }}>
+                              Week {week.week_number}
+                              {isCurrent && <span style={{ marginLeft: 8, color: '#3b82f6', fontSize: 12 }}>CURRENT</span>}
+                            </div>
+                            <div style={{ marginTop: 4 }}>
+                              vs <span style={{ fontWeight: 600 }}>{getDisplayName(week.opponentId, USER_ID)}</span>
+                            </div>
+                          </div>
+
+                          <div style={{ textAlign: 'right' }}>
+                            {week.isComplete ? (
+                              <>
+                                <div style={{
+                                  fontWeight: 700,
+                                  color: week.didWin ? '#16a34a' : week.didLose ? '#dc2626' : '#eab308'
+                                }}>
+                                  {week.didWin ? 'WIN' : week.didLose ? 'LOSS' : 'TIE'}
+                                </div>
+                                <div className="muted" style={{ fontSize: 12 }}>
+                                  {formatUSD(week.myGain)} vs {formatUSD(week.oppGain)}
+                                </div>
+                              </>
+                            ) : (
+                              <div className="muted" style={{ fontSize: 12 }}>
+                                {week.week_number < currentWeek ? 'Not played' : 'Upcoming'}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>
