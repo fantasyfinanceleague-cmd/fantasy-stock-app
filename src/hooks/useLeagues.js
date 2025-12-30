@@ -107,6 +107,9 @@ export default function useLeagues() {
       numRounds = 6,
       budgetMode = 'budget',
       budgetAmount = 100,
+      leagueType = 'duration',
+      durationDays = 30,
+      numWeeks = null,
     }) => {
       if (!USER_ID) throw new Error('Must be logged in to create a league');
 
@@ -123,6 +126,9 @@ export default function useLeagues() {
           num_rounds: numRounds,
           budget_mode: budgetMode,
           budget_amount: budgetAmount,
+          league_type: leagueType,
+          duration_days: leagueType === 'duration' ? durationDays : null,
+          num_weeks: leagueType === 'matchup' ? numWeeks : null,
         };
         const { data: league, error: e1 } = await supabase
           .from('leagues')

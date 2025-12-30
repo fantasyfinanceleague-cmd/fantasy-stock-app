@@ -6,6 +6,7 @@ import '../layout.css';
 import { useAuthUser } from '../auth/useAuthUser';
 import { prettyName } from '../utils/formatting';
 import { fetchCompanyName } from '../utils/stockData';
+import { generateSchedule, generateInitialStandings } from '../utils/scheduleGenerator';
 import DraftControls from '../components/DraftControls';
 import DraftHistory from '../components/DraftHistory';
 import DraftRecap from '../components/DraftRecap';
@@ -240,7 +241,7 @@ export default function DraftPage() {
         // 1) Load league meta FIRST so we have the name even if user isn't a member
         const { data: lg, error: lgErr } = await supabase
           .from('leagues')
-          .select('id, name, draft_date, num_rounds, num_participants, budget_mode, budget_amount, commissioner_id, draft_status')
+          .select('id, name, draft_date, num_rounds, num_participants, budget_mode, budget_amount, commissioner_id, draft_status, duration_days, league_type, num_weeks')
           .eq('id', leagueId)
           .single();
         if (lgErr) throw lgErr;
@@ -465,18 +466,72 @@ export default function DraftPage() {
   const isDraftComplete = (memberIds.length > 0) && (portfolio.length >= draftCap);
 
   // Mark draft as completed in database when all picks are made
+  // Handle both duration-based and matchup-based leagues
   useEffect(() => {
-    if (isDraftComplete && draftStatus === 'in_progress') {
-      supabase
+    if (!isDraftComplete || draftStatus !== 'in_progress') return;
+
+    const completeDraft = async () => {
+      const startDate = new Date();
+      const leagueType = league?.league_type || 'duration';
+      let endDate;
+
+      if (leagueType === 'matchup') {
+        // Matchup league: calculate end date based on num_weeks
+        // Each week is 7 days (Monday trade day + Tuesday-Friday matchup)
+        const numWeeks = league?.num_weeks || (memberIds.length - 1);
+        endDate = new Date(startDate.getTime() + numWeeks * 7 * 24 * 60 * 60 * 1000);
+
+        // Generate matchup schedule
+        const schedule = generateSchedule(memberIds, numWeeks, startDate);
+
+        // Insert matchups
+        const matchupRows = schedule.map(m => ({
+          league_id: leagueId,
+          week_number: m.week,
+          team1_user_id: m.team1,
+          team2_user_id: m.team2,
+          week_start: m.weekStart.toISOString(),
+          week_end: m.weekEnd.toISOString(),
+        }));
+
+        if (matchupRows.length > 0) {
+          const { error: matchupErr } = await supabase
+            .from('matchups')
+            .insert(matchupRows);
+          if (matchupErr) console.error('Failed to insert matchups:', matchupErr);
+        }
+
+        // Initialize standings for all members
+        const standingsRows = generateInitialStandings(leagueId, memberIds);
+        const { error: standingsErr } = await supabase
+          .from('league_standings')
+          .insert(standingsRows);
+        if (standingsErr) console.error('Failed to initialize standings:', standingsErr);
+      } else {
+        // Duration league: use duration_days
+        const durationDays = league?.duration_days || 30;
+        endDate = new Date(startDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
+      }
+
+      // Update league with completion status and dates
+      const { error } = await supabase
         .from('leagues')
-        .update({ draft_status: 'completed' })
-        .eq('id', leagueId)
-        .then(({ error }) => {
-          if (error) console.error('Failed to mark draft as completed:', error);
-          else setDraftStatus('completed');
-        });
-    }
-  }, [isDraftComplete, draftStatus, leagueId]);
+        .update({
+          draft_status: 'completed',
+          league_start_date: startDate.toISOString(),
+          league_end_date: endDate.toISOString(),
+        })
+        .eq('id', leagueId);
+
+      if (error) {
+        console.error('Failed to mark draft as completed:', error);
+      } else {
+        setDraftStatus('completed');
+      }
+    };
+
+    completeDraft();
+  }, [isDraftComplete, draftStatus, leagueId, league?.duration_days, league?.league_type, league?.num_weeks, memberIds]);
 
   // ---- Ensure company name for a symbol ----
   async function ensureNameForSymbol(sym) {

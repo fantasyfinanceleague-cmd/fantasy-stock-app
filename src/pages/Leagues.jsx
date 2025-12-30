@@ -43,11 +43,15 @@ export default function Leagues() {
   // Create
   const [leagueName, setLeagueName] = useState('');
   const [draftDate, setDraftDate] = useState('');
-  const [budgetMode, setBudgetMode] = useState('budget');      // NEW
+  const [budgetMode, setBudgetMode] = useState('budget');
   const [salaryCap, setSalaryCap] = useState('100000');
   const [participants, setParticipants] = useState(12);
-  const [stocksPerTeam, setStocksPerTeam] = useState(6);       // NEW
-  const capDisabled = budgetMode === 'no-budget';              // NEW
+  const [stocksPerTeam, setStocksPerTeam] = useState(6);
+  const [leagueType, setLeagueType] = useState('duration');    // 'duration' or 'matchup'
+  const [durationDays, setDurationDays] = useState(30);        // For duration leagues
+  const [numWeeks, setNumWeeks] = useState(11);                // For matchup leagues (default for 12 participants)
+  const capDisabled = budgetMode === 'no-budget';
+  const minWeeks = participants - 1;                           // Min weeks for round robin
 
   // Update
   const [selectedLeagueForUpdate, setSelectedLeagueForUpdate] = useState('');
@@ -117,9 +121,12 @@ export default function Leagues() {
       draftDate: draftDate ? new Date(draftDate).toISOString() : null,
       budgetMode,
       salaryCapLimit: capDisabled ? null : Number(salaryCap || 0),
-      budgetAmount: capDisabled ? null : Number(salaryCap || 0), // Pass budget amount
+      budgetAmount: capDisabled ? null : Number(salaryCap || 0),
       numParticipants: clampParticipants(participants),
       numRounds: Number(stocksPerTeam),
+      leagueType,
+      durationDays: leagueType === 'duration' ? Number(durationDays) : null,
+      numWeeks: leagueType === 'matchup' ? Math.max(numWeeks, minWeeks) : null,
     });
 
     setLeagueName('');
@@ -128,6 +135,9 @@ export default function Leagues() {
     setSalaryCap('100000');
     setParticipants(12);
     setStocksPerTeam(6);
+    setLeagueType('duration');
+    setDurationDays(30);
+    setNumWeeks(11);
   };
 
   const handleUpdate = async (e) => {
@@ -250,15 +260,63 @@ export default function Leagues() {
                   <input
                     type="number"
                     min="1"
-                    max="12"                      // <= NEW
+                    max="12"
                     step="1"
                     value={stocksPerTeam}
-                    onChange={(e) => setStocksPerTeam(clampRounds(e.target.value))}   // <= NEW
-                    onBlur={(e) => setStocksPerTeam(clampRounds(e.target.value))}     // <= NEW (extra safety)
+                    onChange={(e) => setStocksPerTeam(clampRounds(e.target.value))}
+                    onBlur={(e) => setStocksPerTeam(clampRounds(e.target.value))}
                   />
-
                 </div>
               </div>
+
+              <div className="form-row">
+                <label>League Type</label>
+                <select
+                  value={leagueType}
+                  onChange={(e) => setLeagueType(e.target.value)}
+                >
+                  <option value="duration">Duration-based</option>
+                  <option value="matchup">Matchup-based (Fantasy Football style)</option>
+                </select>
+                <small className="muted">
+                  {leagueType === 'duration'
+                    ? 'League runs for a set time period'
+                    : 'Weekly head-to-head matchups with win/loss records'}
+                </small>
+              </div>
+
+              {leagueType === 'duration' ? (
+                <div className="form-row">
+                  <label>League Duration</label>
+                  <select
+                    value={durationDays}
+                    onChange={(e) => setDurationDays(Number(e.target.value))}
+                  >
+                    <option value={7}>1 Week</option>
+                    <option value={30}>1 Month</option>
+                    <option value={90}>3 Months</option>
+                    <option value={180}>6 Months</option>
+                    <option value={365}>1 Year</option>
+                  </select>
+                  <small className="muted">How long the league runs after draft completes</small>
+                </div>
+              ) : (
+                <div className="form-row">
+                  <label>Number of Weeks</label>
+                  <input
+                    type="number"
+                    min={minWeeks}
+                    step="1"
+                    value={numWeeks}
+                    onChange={(e) => setNumWeeks(Math.max(minWeeks, Number(e.target.value) || minWeeks))}
+                    onBlur={(e) => setNumWeeks(Math.max(minWeeks, Number(e.target.value) || minWeeks))}
+                  />
+                  <small className="muted">
+                    Minimum {minWeeks} weeks for round robin (each team plays each other once).
+                    Monday = trade day, Tuesday-Friday = matchup week.
+                  </small>
+                </div>
+              )}
 
               <button className="btn primary" type="submit" disabled={loading}>
                 {loading ? 'Creating…' : 'Create League'}
