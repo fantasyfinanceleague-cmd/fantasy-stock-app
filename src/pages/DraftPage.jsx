@@ -1407,7 +1407,7 @@ export default function DraftPage() {
           />
         </div>
       ) : (
-        <div className="grid-container px-8 py-6">
+        <div className="grid-container" style={{ padding: 'clamp(12px, 3vw, 32px)' }}>
           {/* LEFT: Pick input */}
           <div className="p-4 bg-[#1c1c1c] rounded-xl text-white">
             <h1 className="draft-left">Stock Draft</h1>
@@ -1526,7 +1526,7 @@ export default function DraftPage() {
           </div>
 
           {/* RIGHT: Your Drafted Stocks */}
-          <div className="draft-box" style={{ maxHeight: 240, overflowY: 'auto' }}>
+          <div className="draft-box" style={{ maxHeight: 'clamp(200px, 30vh, 300px)', overflowY: 'auto' }}>
             <h3 className="text-lg font-semibold mb-2">Your Drafted Stocks</h3>
             {portfolio.filter(p => p.user_id === USER_ID).length > 0 ? (
               <ul>

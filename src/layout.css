@@ -962,6 +962,49 @@ input::placeholder { color: #828b98; }
   h2 {
     font-size: 1.5rem;
   }
+
+  /* Mobile draft page improvements */
+  .grid-container {
+    padding: 0.75rem !important;
+    gap: 0.75rem;
+  }
+
+  .grid-container > div {
+    padding: 0.75rem !important;
+  }
+
+  /* Make draft input full width on mobile */
+  .draft-left input,
+  .draft-left button {
+    width: 100%;
+    min-height: 44px; /* Touch-friendly */
+  }
+
+  /* Stack draft status cards */
+  .draft-center {
+    gap: 0.75rem;
+  }
+}
+
+/* Small phones */
+@media (max-width: 480px) {
+  .grid-container {
+    padding: 0.5rem !important;
+  }
+
+  .draft-box {
+    padding: 0.75rem;
+  }
+
+  .draft-box h3 {
+    font-size: 0.9rem;
+  }
+
+  /* Reduce font sizes */
+  .draft-center p,
+  .draft-center label {
+    font-size: 0.85rem;
+  }
 }
 
 /* Dashboard responsive grids */
@@ -1182,5 +1225,201 @@ input::placeholder { color: #828b98; }
 @media (max-width: 768px) {
   .table-responsive table {
     min-width: 600px;
+  }
+}
+
+/* ====================================
+   GLOBAL MOBILE RESPONSIVENESS
+   ==================================== */
+
+/* Touch-friendly buttons and inputs */
+@media (max-width: 768px) {
+  button,
+  .btn,
+  input[type="submit"],
+  input[type="button"] {
+    min-height: 44px;
+    padding: 10px 16px;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="search"],
+  select,
+  textarea {
+    min-height: 44px;
+    font-size: 16px; /* Prevents iOS zoom on focus */
+  }
+
+  /* Page padding adjustments */
+  .page {
+    padding: 12px !important;
+  }
+
+  /* Card padding adjustments */
+  .card {
+    padding: 12px !important;
+  }
+
+  /* Reduce gaps in grids */
+  [style*="gap: 16px"],
+  [style*="gap: 20px"],
+  [style*="gap: 24px"] {
+    gap: 12px !important;
+  }
+}
+
+/* Small phones */
+@media (max-width: 480px) {
+  .page {
+    padding: 8px !important;
+  }
+
+  .card {
+    padding: 10px !important;
+    border-radius: 8px !important;
+  }
+
+  /* Smaller font sizes for headings */
+  h1 {
+    font-size: 1.5rem !important;
+  }
+
+  h2 {
+    font-size: 1.25rem !important;
+  }
+
+  h3 {
+    font-size: 1.1rem !important;
+  }
+
+  /* Reduce button font size slightly */
+  button,
+  .btn {
+    font-size: 14px;
+  }
+}
+
+/* Dashboard mobile improvements */
+@media (max-width: 768px) {
+  /* Stack all dashboard grids */
+  .page > div[style*="display: grid"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Matchup card mobile layout */
+  .card[style*="background: linear-gradient"] {
+    padding: 12px !important;
+  }
+
+  /* Activity feed scrolling */
+  .card[style*="maxHeight"] {
+    max-height: 200px !important;
+  }
+}
+
+/* Leaderboard table mobile improvements */
+@media (max-width: 768px) {
+  /* Make table scrollable */
+  .leaderboard-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -12px;
+    padding: 0 12px;
+  }
+
+  /* Compact table cells */
+  table th,
+  table td {
+    padding: 8px 6px;
+    font-size: 13px;
+  }
+
+  /* Hide less important columns on mobile */
+  table th:nth-child(n+5),
+  table td:nth-child(n+5) {
+    display: none;
+  }
+}
+
+/* Fix header on mobile */
+@media (max-width: 768px) {
+  .header {
+    padding: 8px 12px;
+  }
+
+  .header-nav {
+    gap: 4px;
+  }
+
+  .header-nav a,
+  .header-nav button {
+    padding: 8px;
+    font-size: 13px;
+  }
+}
+
+/* Landing page mobile */
+@media (max-width: 768px) {
+  /* Reduce hero padding */
+  section[style*="padding: '80px"] {
+    padding: 40px 16px !important;
+  }
+
+  /* Stack feature cards */
+  [style*="gridTemplateColumns: 'repeat(auto-fit"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Modal mobile improvements */
+@media (max-width: 600px) {
+  /* Full-width modals on small screens */
+  .modal-card,
+  [style*="maxWidth: 440px"],
+  [style*="maxWidth: 500px"],
+  [style*="maxWidth: 600px"] {
+    max-width: calc(100vw - 24px) !important;
+    width: calc(100vw - 24px) !important;
+    margin: 12px !important;
+  }
+
+  /* Modal content padding */
+  .modal-card > div,
+  [style*="padding: 24px"] {
+    padding: 16px !important;
+  }
+}
+
+/* Form layouts mobile */
+@media (max-width: 600px) {
+  /* Stack form rows */
+  [style*="display: flex"][style*="gap"] {
+    flex-wrap: wrap;
+  }
+
+  /* Full-width form inputs */
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    width: 100% !important;
+    max-width: none !important;
+  }
+}
+
+/* Prevent horizontal scroll */
+html, body {
+  overflow-x: hidden;
+}
+
+/* Safe area for notched phones */
+@supports (padding: max(0px)) {
+  .page,
+  .header,
+  footer {
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
   }
 }
