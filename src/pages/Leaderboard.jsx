@@ -186,7 +186,7 @@ export default function Leaderboard() {
 
         const { data: lg, error: lgErr } = await supabase
           .from('leagues')
-          .select('id, name, league_type, num_weeks, current_week')
+          .select('id, name, league_type, num_weeks, current_week, playoff_teams')
           .in('id', ids)
           .order('name', { ascending: true });
 
@@ -499,6 +499,141 @@ export default function Leaderboard() {
       points_against: 0
     }));
   }, [isMatchupLeague, leagueStandings, allUserIds]);
+
+  // Calculate playoff probability for each team using Monte Carlo simulation
+  const playoffProbabilities = useMemo(() => {
+    if (!isMatchupLeague || matchupStandings.length === 0) return {};
+
+    const numWeeks = activeLeague?.num_weeks || 0;
+    const playoffSpots = activeLeague?.playoff_teams || 4;
+    const gamesPlayed = currentWeek - 1;
+    const gamesRemaining = Math.max(0, numWeeks - gamesPlayed);
+    const numTeams = matchupStandings.length;
+
+    // If no playoff spots or not enough teams, everyone either in or out
+    if (playoffSpots >= numTeams) {
+      const probs = {};
+      matchupStandings.forEach(t => { probs[t.user_id] = 100; });
+      return probs;
+    }
+
+    // Get current wins for each team
+    const teamData = matchupStandings.map((t, idx) => ({
+      userId: t.user_id,
+      wins: t.wins || 0,
+      losses: t.losses || 0,
+      pointsFor: Number(t.points_for) || 0,
+      currentRank: idx,
+    }));
+
+    // Check mathematical clinch/elimination
+    const checkClinched = (teamIdx) => {
+      const team = teamData[teamIdx];
+      // Count how many teams could potentially pass this team
+      // A team is clinched if even losing all remaining games, not enough teams can pass them
+      const myWorstWins = team.wins; // If I lose out
+      let teamsThatCouldPassMe = 0;
+
+      for (let i = 0; i < numTeams; i++) {
+        if (i === teamIdx) continue;
+        const other = teamData[i];
+        const otherBestWins = other.wins + gamesRemaining;
+        // Could this team pass me?
+        if (otherBestWins > myWorstWins ||
+            (otherBestWins === myWorstWins && other.pointsFor > team.pointsFor)) {
+          teamsThatCouldPassMe++;
+        }
+      }
+
+      // If fewer teams can pass me than there are playoff spots, I'm in
+      return teamsThatCouldPassMe < playoffSpots;
+    };
+
+    const checkEliminated = (teamIdx) => {
+      const team = teamData[teamIdx];
+      const myBestWins = team.wins + gamesRemaining; // If I win out
+      let teamsThatWillBeatMe = 0;
+
+      for (let i = 0; i < numTeams; i++) {
+        if (i === teamIdx) continue;
+        const other = teamData[i];
+        const otherWorstWins = other.wins; // If they lose out
+        // Will this team definitely be ahead of me?
+        if (otherWorstWins > myBestWins ||
+            (otherWorstWins === myBestWins && other.pointsFor > team.pointsFor)) {
+          teamsThatWillBeatMe++;
+        }
+      }
+
+      // If enough teams will definitely beat me, I'm eliminated
+      return teamsThatWillBeatMe >= playoffSpots;
+    };
+
+    // If season hasn't started, equal probability
+    if (gamesPlayed === 0 || gamesRemaining === 0) {
+      const probs = {};
+      if (gamesRemaining === 0) {
+        // Season over - top N make it
+        matchupStandings.forEach((t, idx) => {
+          probs[t.user_id] = idx < playoffSpots ? 100 : 0;
+        });
+      } else {
+        // Season hasn't started - equal chance based on spots
+        const equalProb = Math.round((playoffSpots / numTeams) * 100);
+        matchupStandings.forEach(t => { probs[t.user_id] = equalProb; });
+      }
+      return probs;
+    }
+
+    // Monte Carlo simulation for probability
+    const SIMULATIONS = 1000;
+    const playoffCounts = {};
+    teamData.forEach(t => { playoffCounts[t.userId] = 0; });
+
+    for (let sim = 0; sim < SIMULATIONS; sim++) {
+      // Simulate remaining games for each team
+      const simWins = teamData.map(t => {
+        let wins = t.wins;
+        for (let g = 0; g < gamesRemaining; g++) {
+          // 50% chance to win each remaining game
+          if (Math.random() < 0.5) wins++;
+        }
+        return {
+          userId: t.userId,
+          wins,
+          pointsFor: t.pointsFor,
+        };
+      });
+
+      // Sort by wins (desc), then points for (desc) as tiebreaker
+      simWins.sort((a, b) => {
+        if (b.wins !== a.wins) return b.wins - a.wins;
+        return b.pointsFor - a.pointsFor;
+      });
+
+      // Top N make playoffs
+      for (let i = 0; i < playoffSpots; i++) {
+        playoffCounts[simWins[i].userId]++;
+      }
+    }
+
+    // Calculate probabilities and check for clinch/elimination
+    const probs = {};
+    teamData.forEach((t, idx) => {
+      if (checkClinched(idx)) {
+        probs[t.userId] = 100;
+      } else if (checkEliminated(idx)) {
+        probs[t.userId] = 0;
+      } else {
+        // Use Monte Carlo result
+        const rawProb = Math.round((playoffCounts[t.userId] / SIMULATIONS) * 100);
+        // Clamp between 1-99 since not clinched/eliminated
+        probs[t.userId] = Math.max(1, Math.min(99, rawProb));
+      }
+    });
+
+    return probs;
+  }, [isMatchupLeague, matchupStandings, activeLeague, currentWeek]);
 
   // Current week matchups
   const currentWeekMatchups = useMemo(() => {
@@ -822,14 +957,36 @@ export default function Leaderboard() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-                      <div style={{ textAlign: 'center', minWidth: 80 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                      <div style={{ textAlign: 'center', minWidth: 70 }}>
                         <div style={{ fontWeight: 700, fontSize: 18 }}>
                           {s.wins}-{s.losses}{s.ties > 0 ? `-${s.ties}` : ''}
                         </div>
                         <div style={{ fontSize: 12 }} className="muted">{winPct}% win rate</div>
                       </div>
-                      <div style={{ textAlign: 'right', minWidth: 100 }}>
+                      <div style={{ textAlign: 'center', minWidth: 70 }}>
+                        {(() => {
+                          const prob = playoffProbabilities[s.user_id] ?? 0;
+                          const playoffSpots = activeLeague?.playoff_teams || 4;
+                          const isInPlayoffSpot = idx < playoffSpots;
+                          let color = '#6b7280';
+                          if (prob >= 80) color = '#16a34a';
+                          else if (prob >= 50) color = '#eab308';
+                          else if (prob >= 20) color = '#f97316';
+                          else color = '#ef4444';
+                          return (
+                            <>
+                              <div style={{ fontWeight: 700, fontSize: 16, color }}>
+                                {prob}%
+                              </div>
+                              <div style={{ fontSize: 11 }} className="muted">
+                                {prob === 100 ? 'Clinched' : prob === 0 ? 'Eliminated' : 'Playoff %'}
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+                      <div style={{ textAlign: 'right', minWidth: 90 }}>
                         <div style={{ fontWeight: 600, color: Number(s.points_for) >= 0 ? '#16a34a' : '#dc2626' }}>
                           {formatUSD(s.points_for)}
                         </div>
