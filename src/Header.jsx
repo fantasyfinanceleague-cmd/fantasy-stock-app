@@ -86,15 +86,10 @@ const Header = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [quickActionsOpen]);
 
-  async function handleLogout() {
-    setLoggingOut(true);
-    setMobileMenuOpen(false);
-    // Sign out and immediately redirect to landing page
-    // Use { scope: 'local' } to clear local session without waiting for server
-    supabase.auth.signOut({ scope: 'local' }).catch(err => {
-      console.error('Logout error:', err);
-    });
-    // Navigate immediately to landing page
+  function handleLogout() {
+    // Navigate FIRST to prevent Protected from redirecting to /login
+    // The signOut will complete in the background or on the new page
+    sessionStorage.setItem('logout', 'true');
     window.location.href = '/';
   }
 

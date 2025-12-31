@@ -350,11 +350,10 @@ export default function Profile() {
     }
   }
 
-  async function handleSignOut() {
-    // Sign out and immediately redirect to landing page
-    supabase.auth.signOut({ scope: 'local' }).catch(err => {
-      console.error('Logout error:', err);
-    });
+  function handleSignOut() {
+    // Navigate FIRST to prevent Protected from redirecting to /login
+    // The signOut will complete on the landing page
+    sessionStorage.setItem('logout', 'true');
     window.location.href = '/';
   }
 
