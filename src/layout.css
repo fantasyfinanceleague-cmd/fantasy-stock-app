@@ -726,6 +726,15 @@ input::placeholder { color: #828b98; }
   object-fit: contain;
 }
 
+/* Mobile page title - hidden on desktop */
+.mobile-page-title {
+  display: none;
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+  margin-left: 12px;
+}
+
 /* Mobile menu button - hidden on desktop */
 .mobile-menu-btn {
   display: none;
@@ -831,7 +840,11 @@ input::placeholder { color: #828b98; }
   }
 
   .header-logo-img {
-    height: 50px;
+    height: 44px;
+  }
+
+  .mobile-page-title {
+    display: block;
   }
 
   /* Ticker adjustments */

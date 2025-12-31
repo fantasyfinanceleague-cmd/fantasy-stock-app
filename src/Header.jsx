@@ -133,12 +133,28 @@ const Header = () => {
     setTimeout(() => setCopiedId(null), 2000);
   }
 
+  // Get page title based on current path
+  const getPageTitle = () => {
+    const path = location.pathname;
+    if (path === '/' || path === '/dashboard') return 'Dashboard';
+    if (path === '/leagues') return 'Leagues';
+    if (path.startsWith('/league/')) return 'League';
+    if (path.startsWith('/draft')) return 'Draft';
+    if (path === '/portfolio') return 'Portfolio';
+    if (path === '/leaderboard') return 'Leaderboard';
+    if (path === '/trade-history') return 'Trade History';
+    if (path === '/profile') return 'Profile';
+    return '';
+  };
+
   return (
     <header className="header">
       <div className="header-left">
         <Link to="/" className="header-logo-link">
           <img src={logo} alt="Stockpile Logo" className="header-logo-img" />
         </Link>
+        {/* Mobile page title */}
+        <span className="mobile-page-title">{getPageTitle()}</span>
         <nav className="header-nav desktop-nav">
           <NavLink to="/" className={({ isActive }) => `nav-link-icon ${isActive ? 'active' : ''}`} end>
             {NavIcons.dashboard}
