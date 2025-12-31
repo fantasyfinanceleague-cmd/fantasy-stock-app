@@ -14,6 +14,7 @@ export const PRICE_STATUS = {
   LOADING: 'loading',
   SUCCESS: 'success',
   ERROR: 'error',
+  RATE_LIMITED: 'rate_limited',
 };
 
 const PriceContext = createContext(null);
@@ -81,23 +82,47 @@ export function PriceProvider({ children }) {
       .map(([sym]) => sym);
   }, [prices]);
 
+  // Get symbols that were rate limited
+  const getRateLimitedSymbols = useCallback(() => {
+    return Object.entries(prices)
+      .filter(([_, data]) => data.status === PRICE_STATUS.RATE_LIMITED)
+      .map(([sym]) => sym);
+  }, [prices]);
+
   // Fetch a single quote from the edge function
+  // Returns { price, status } object
   const fetchSingleQuote = async (symbol) => {
     const sym = String(symbol || '').trim().toUpperCase();
-    if (!sym) return null;
+    if (!sym) return { price: null, status: PRICE_STATUS.ERROR };
 
-    const { data, error } = await supabase.functions.invoke('quote', { body: { symbol: sym } });
-    if (error) return null;
+    try {
+      const { data, error } = await supabase.functions.invoke('quote', { body: { symbol: sym } });
 
-    const price = Number(
-      data?.price ??
-      data?.quote?.ap ??
-      data?.quote?.bp ??
-      data?.trade?.p ??
-      data?.bar?.c
-    );
+      // Check for rate limiting
+      if (error?.message?.includes('429') || data?.error === 'rate_limit') {
+        return { price: null, status: PRICE_STATUS.RATE_LIMITED };
+      }
 
-    return Number.isFinite(price) ? price : null;
+      if (error) return { price: null, status: PRICE_STATUS.ERROR };
+
+      const price = Number(
+        data?.price ??
+        data?.quote?.ap ??
+        data?.quote?.bp ??
+        data?.trade?.p ??
+        data?.bar?.c
+      );
+
+      return Number.isFinite(price)
+        ? { price, status: PRICE_STATUS.SUCCESS }
+        : { price: null, status: PRICE_STATUS.ERROR };
+    } catch (err) {
+      // Check for rate limiting in error
+      if (err?.message?.includes('429') || err?.status === 429) {
+        return { price: null, status: PRICE_STATUS.RATE_LIMITED };
+      }
+      return { price: null, status: PRICE_STATUS.ERROR };
+    }
   };
 
   // Fetch prices for multiple symbols with rate limiting
@@ -131,21 +156,29 @@ export function PriceProvider({ children }) {
 
     const results = {};
     let i = 0;
+    let rateLimitedCount = 0;
 
     async function runNext() {
       if (i >= toFetch.length) return;
       const s = toFetch[i++];
       try {
-        const price = await fetchSingleQuote(s);
-        if (price != null) {
-          results[s] = price;
-          // Update state immediately for each successful fetch
+        const result = await fetchSingleQuote(s);
+
+        if (result.status === PRICE_STATUS.SUCCESS) {
+          results[s] = result.price;
           setPrices(prev => ({
             ...prev,
-            [s]: { price, timestamp: Date.now(), status: PRICE_STATUS.SUCCESS }
+            [s]: { price: result.price, timestamp: Date.now(), status: PRICE_STATUS.SUCCESS }
           }));
+        } else if (result.status === PRICE_STATUS.RATE_LIMITED) {
+          rateLimitedCount++;
+          setPrices(prev => ({
+            ...prev,
+            [s]: { price: null, timestamp: Date.now(), status: PRICE_STATUS.RATE_LIMITED }
+          }));
+          // If rate limited, increase delay to back off
+          await new Promise(r => setTimeout(r, REQUEST_DELAY * 3));
         } else {
-          // Price was null - mark as error
           setPrices(prev => ({
             ...prev,
             [s]: { price: null, timestamp: Date.now(), status: PRICE_STATUS.ERROR }
@@ -153,7 +186,6 @@ export function PriceProvider({ children }) {
         }
       } catch (err) {
         console.error(`Failed to fetch price for ${s}:`, err);
-        // Mark as error
         setPrices(prev => ({
           ...prev,
           [s]: { price: null, timestamp: Date.now(), status: PRICE_STATUS.ERROR }
@@ -200,6 +232,7 @@ export function PriceProvider({ children }) {
     getCachedPrice,
     getStatus,
     getFailedSymbols,
+    getRateLimitedSymbols,
     retryFailed,
     isCacheValid,
     clearCache,

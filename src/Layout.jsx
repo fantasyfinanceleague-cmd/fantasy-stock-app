@@ -1,6 +1,7 @@
 import { useLocation } from 'react-router-dom';
 import Ticker from './Ticker';
 import Header from './Header';
+import NetworkStatus from './components/NetworkStatus';
 import './layout.css'; // Make sure this file exists
 
 function Layout({ children }) {
@@ -12,6 +13,7 @@ function Layout({ children }) {
 
   return (
     <div className={`min-h-screen ${isDarkPage ? 'bg-[#0f172a] text-white' : 'bg-gray-100 text-black'}`}>
+      <NetworkStatus />
       <Ticker />
       <Header />
       <main

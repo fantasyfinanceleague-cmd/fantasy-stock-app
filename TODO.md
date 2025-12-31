@@ -26,11 +26,11 @@
 - [ ] Touch-friendly buttons and inputs
 
 ### 4. Error Handling & Edge Cases
-- [ ] Stock API down - show cached data or graceful message
-- [ ] Better error messages throughout (user-friendly, not technical)
-- [ ] Network failure handling
-- [ ] Session expiry handling
-- [ ] Rate limiting feedback
+- [x] Stock API down - show cached data or graceful message
+- [x] Better error messages throughout (user-friendly, not technical)
+- [x] Network failure handling
+- [x] Session expiry handling
+- [x] Rate limiting feedback
 
 ---
 

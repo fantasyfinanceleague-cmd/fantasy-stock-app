@@ -14,6 +14,7 @@ import EmptyState from '../components/EmptyState';
 import { SkeletonDashboard } from '../components/Skeleton';
 import OnboardingModal, { hasCompletedOnboarding } from '../components/OnboardingModal';
 import ProgressChecklist, { useSetupProgress } from '../components/ProgressChecklist';
+import ApiStatus from '../components/ApiStatus';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -550,6 +551,9 @@ export default function Dashboard() {
           />
         </div>
       )}
+
+      {/* API Status - shows when stock prices fail to load */}
+      <ApiStatus />
 
       {/* Row 1: Matchup + Market Status */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 16 }}>

@@ -4,6 +4,7 @@ import { supabase } from '../supabase/supabaseClient';
 import { useAuthUser } from '../auth/useAuthUser';
 import HCaptcha from '@hcaptcha/react-hcaptcha';
 import { useToast } from '../components/Toast';
+import { getUserFriendlyError } from '../utils/errorMessages';
 import logo from '/bear_bull.jpg';
 
 const HCAPTCHA_SITE_KEY = import.meta.env.VITE_HCAPTCHA_SITE_KEY;
@@ -89,7 +90,7 @@ export default function Login({ initialSignUp = false }) {
 
       if (error) {
         setBusy(false);
-        setErr(error.message);
+        setErr(getUserFriendlyError(error));
         return;
       }
 
@@ -143,7 +144,7 @@ export default function Login({ initialSignUp = false }) {
       }
 
       if (error) {
-        setErr(error.message);
+        setErr(getUserFriendlyError(error));
       } else {
         nav('/dashboard', { replace: true });
       }

@@ -9,6 +9,7 @@ import { UserProfilesProvider } from './context/UserProfilesContext';
 import { ToastProvider } from './components/Toast';
 import { HelpProvider } from './context/HelpContext';
 import HelpWalkthrough from './components/HelpWalkthrough';
+import SessionMonitor from './components/SessionMonitor';
 import './layout.css'; // for your custom grid
 import './index.css';  // includes Tailwind (if you're using it at all)
 
@@ -18,6 +19,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <ErrorBoundary>
       <BrowserRouter>
         <ToastProvider>
+          <SessionMonitor />
           <UserProfilesProvider>
             <PriceProvider>
               <HelpProvider>
