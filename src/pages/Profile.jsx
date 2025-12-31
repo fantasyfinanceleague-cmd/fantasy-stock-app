@@ -351,7 +351,10 @@ export default function Profile() {
   }
 
   async function handleSignOut() {
-    await supabase.auth.signOut();
+    // Sign out and immediately redirect to landing page
+    supabase.auth.signOut({ scope: 'local' }).catch(err => {
+      console.error('Logout error:', err);
+    });
     window.location.href = '/';
   }
 

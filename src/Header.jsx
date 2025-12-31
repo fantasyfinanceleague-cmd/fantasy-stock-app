@@ -88,17 +88,13 @@ const Header = () => {
 
   async function handleLogout() {
     setLoggingOut(true);
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error('Logout error:', error);
-      }
-    } catch (err) {
-      console.error('Logout failed:', err);
-    }
-    setLoggingOut(false);
     setMobileMenuOpen(false);
-    // Force navigation to landing page
+    // Sign out and immediately redirect to landing page
+    // Use { scope: 'local' } to clear local session without waiting for server
+    supabase.auth.signOut({ scope: 'local' }).catch(err => {
+      console.error('Logout error:', err);
+    });
+    // Navigate immediately to landing page
     window.location.href = '/';
   }
 
