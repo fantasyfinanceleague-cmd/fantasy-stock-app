@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import logo from '/bear_bull.jpg';
 
 export default function LandingPage() {
   const features = [
@@ -66,12 +67,19 @@ export default function LandingPage() {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        maxWidth: 1200,
-        margin: '0 auto',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 28 }}>📊</span>
-          <span style={{ color: '#fff', fontSize: 20, fontWeight: 700 }}>Stockpile</span>
+          <img
+            src={logo}
+            alt="Stockpile"
+            style={{
+              height: 56,
+              width: 56,
+              borderRadius: 10,
+              objectFit: 'cover',
+            }}
+          />
+          <span style={{ color: '#fff', fontSize: 22, fontWeight: 700 }}>Stockpile</span>
         </div>
         <div style={{ display: 'flex', gap: 12 }}>
           <Link
