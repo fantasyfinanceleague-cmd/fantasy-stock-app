@@ -186,6 +186,39 @@ export default function Leagues() {
     return { label: 'Pending', color: '#6b7280' };
   };
 
+  // Check if league can be deleted (only before draft or after season ends)
+  const canDeleteLeague = (lg) => {
+    // Can always delete if draft hasn't started
+    if (!lg.draft_status || lg.draft_status === 'not_started') {
+      return true;
+    }
+
+    // Cannot delete during draft
+    if (lg.draft_status === 'in_progress') {
+      return false;
+    }
+
+    // Draft completed - check if season is over
+    if (lg.draft_status === 'completed') {
+      // For duration leagues, check if end_date has passed
+      if (lg.league_type === 'duration' && lg.end_date) {
+        return new Date() > new Date(lg.end_date);
+      }
+
+      // For matchup leagues, check if current_week > num_weeks (playoffs done)
+      // Adding buffer for playoff weeks (max 3 rounds: quarter, semi, finals)
+      if (lg.league_type === 'matchup' && lg.num_weeks && lg.current_week) {
+        const playoffWeeks = lg.playoff_teams === 8 ? 3 : lg.playoff_teams === 4 ? 2 : 1;
+        return lg.current_week > lg.num_weeks + playoffWeeks;
+      }
+
+      // If we can't determine, don't allow deletion mid-season
+      return false;
+    }
+
+    return false;
+  };
+
   const tabStyle = (isActive) => ({
     padding: '12px 24px',
     background: isActive ? '#3b82f6' : 'transparent',
@@ -396,17 +429,22 @@ export default function Leagues() {
                           </button>
                           <button
                             onClick={() => {
-                              if (confirm(`Delete "${lg.name}"?`)) deleteLeague?.(lg.id);
+                              if (canDeleteLeague(lg)) {
+                                if (confirm(`Delete "${lg.name}"?`)) deleteLeague?.(lg.id);
+                              }
                             }}
+                            disabled={!canDeleteLeague(lg)}
+                            title={!canDeleteLeague(lg) ? 'Cannot delete during active season' : 'Delete league'}
                             style={{
                               padding: '8px 16px',
-                              background: 'rgba(239, 68, 68, 0.15)',
+                              background: canDeleteLeague(lg) ? 'rgba(239, 68, 68, 0.15)' : 'rgba(107, 114, 128, 0.15)',
                               border: 'none',
                               borderRadius: 6,
-                              color: '#ef4444',
+                              color: canDeleteLeague(lg) ? '#ef4444' : '#6b7280',
                               fontSize: 13,
                               fontWeight: 500,
-                              cursor: 'pointer',
+                              cursor: canDeleteLeague(lg) ? 'pointer' : 'not-allowed',
+                              opacity: canDeleteLeague(lg) ? 1 : 0.6,
                             }}
                           >
                             Delete
