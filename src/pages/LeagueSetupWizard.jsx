@@ -30,16 +30,18 @@ const LeagueSetupWizard = ({ onComplete }) => {
   const minWeeks = numTeams - 1;
 
   // Calculate valid playoff team options based on league size
+  // Playoff teams must be strictly less than total teams (can't have everyone in playoffs)
   const getPlayoffOptions = () => {
-    if (numTeams <= 4) return [2]; // 4 players: finals only
-    if (numTeams <= 6) return [2, 4]; // 5-6 players: 2 or 4
-    return [2, 4, 8]; // 7+ players: 2, 4, or 8
+    const allOptions = [2, 4, 8];
+    const validOptions = allOptions.filter(o => o < numTeams);
+    // Always need at least one option - minimum 2 teams for finals
+    return validOptions.length > 0 ? validOptions : [2];
   };
 
   // Update playoffTeams when numTeams changes if current value is invalid
   const validPlayoffOptions = getPlayoffOptions();
   if (!validPlayoffOptions.includes(playoffTeams)) {
-    setPlayoffTeams(Math.max(...validPlayoffOptions.filter(o => o <= numTeams)));
+    setPlayoffTeams(validPlayoffOptions[validPlayoffOptions.length - 1] || 2);
   }
 
   const next = () => setStep((s) => s + 1);

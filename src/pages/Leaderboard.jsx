@@ -510,11 +510,9 @@ export default function Leaderboard() {
     const gamesRemaining = Math.max(0, numWeeks - gamesPlayed);
     const numTeams = matchupStandings.length;
 
-    // If no playoff spots or not enough teams, everyone either in or out
+    // If playoff spots >= teams, everyone makes playoffs - return null to indicate N/A
     if (playoffSpots >= numTeams) {
-      const probs = {};
-      matchupStandings.forEach(t => { probs[t.user_id] = 100; });
-      return probs;
+      return null; // Will show "N/A" in UI
     }
 
     // Get current wins for each team
@@ -966,9 +964,20 @@ export default function Leaderboard() {
                       </div>
                       <div style={{ textAlign: 'center', minWidth: 70 }}>
                         {(() => {
+                          // If playoffProbabilities is null, all teams make playoffs
+                          if (playoffProbabilities === null) {
+                            return (
+                              <>
+                                <div style={{ fontWeight: 700, fontSize: 14, color: '#6b7280' }}>
+                                  N/A
+                                </div>
+                                <div style={{ fontSize: 11 }} className="muted">
+                                  All qualify
+                                </div>
+                              </>
+                            );
+                          }
                           const prob = playoffProbabilities[s.user_id] ?? 0;
-                          const playoffSpots = activeLeague?.playoff_teams || 4;
-                          const isInPlayoffSpot = idx < playoffSpots;
                           let color = '#6b7280';
                           if (prob >= 80) color = '#16a34a';
                           else if (prob >= 50) color = '#eab308';
