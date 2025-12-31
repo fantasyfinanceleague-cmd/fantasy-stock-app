@@ -363,10 +363,11 @@ const Header = () => {
               background: '#1f2937',
               borderRadius: 12,
               padding: 24,
-              width: 'min(420px, 90vw)',
+              width: 'min(440px, 90vw)',
               maxHeight: '80vh',
-              overflow: 'auto',
+              overflowY: 'auto',
               boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+              boxSizing: 'border-box',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -405,54 +406,57 @@ const Header = () => {
                 </button>
               </div>
             ) : (
-              <div style={{ display: 'grid', gap: 12 }}>
-                <p style={{ color: '#9ca3af', margin: 0, fontSize: 14 }}>
+              <>
+                <p style={{ color: '#9ca3af', margin: '0 0 12px 0', fontSize: 14 }}>
                   Share an invite link to let friends join your league:
                 </p>
-                {managedLeagues.map((lg) => (
-                  <div
-                    key={lg.id}
-                    style={{
-                      background: '#111826',
-                      borderRadius: 8,
-                      padding: 12,
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      gap: 12,
-                    }}
-                  >
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 600, color: '#fff', marginBottom: 4 }}>{lg.name}</div>
-                      <div style={{
-                        fontSize: 12,
-                        color: '#6b7280',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}>
-                        {window.location.origin}/join/{lg.invite_code}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => copyInviteLink(lg)}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {managedLeagues.map((lg) => (
+                    <div
+                      key={lg.id}
                       style={{
-                        background: copiedId === lg.id ? '#16a34a' : '#3b82f6',
-                        border: 'none',
-                        borderRadius: 6,
-                        padding: '8px 16px',
-                        color: '#fff',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap',
-                        transition: 'background 0.2s',
+                        background: '#111826',
+                        borderRadius: 8,
+                        padding: '12px 14px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: 12,
                       }}
                     >
-                      {copiedId === lg.id ? '✓ Copied!' : 'Copy Link'}
-                    </button>
-                  </div>
-                ))}
-              </div>
+                      <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                        <div style={{ fontWeight: 600, color: '#fff', marginBottom: 4 }}>{lg.name}</div>
+                        <div style={{
+                          fontSize: 12,
+                          color: '#6b7280',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}>
+                          {window.location.origin}/join/{lg.invite_code}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => copyInviteLink(lg)}
+                        style={{
+                          background: copiedId === lg.id ? '#16a34a' : '#3b82f6',
+                          border: 'none',
+                          borderRadius: 6,
+                          padding: '8px 16px',
+                          color: '#fff',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                          transition: 'background 0.2s',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {copiedId === lg.id ? '✓ Copied!' : 'Copy Link'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </div>
