@@ -88,10 +88,18 @@ const Header = () => {
 
   async function handleLogout() {
     setLoggingOut(true);
-    await supabase.auth.signOut();
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Logout error:', error);
+      }
+    } catch (err) {
+      console.error('Logout failed:', err);
+    }
     setLoggingOut(false);
     setMobileMenuOpen(false);
-    navigate('/login', { replace: true });
+    // Force navigation to landing page
+    window.location.href = '/';
   }
 
   // Open invite modal and fetch managed leagues

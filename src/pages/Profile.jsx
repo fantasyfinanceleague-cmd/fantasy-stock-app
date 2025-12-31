@@ -352,7 +352,7 @@ export default function Profile() {
 
   async function handleSignOut() {
     await supabase.auth.signOut();
-    navigate('/login', { replace: true });
+    window.location.href = '/';
   }
 
   if (!user) {
