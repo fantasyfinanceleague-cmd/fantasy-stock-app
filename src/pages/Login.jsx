@@ -9,7 +9,7 @@ import logo from '/bear_bull.jpg';
 const HCAPTCHA_SITE_KEY = import.meta.env.VITE_HCAPTCHA_SITE_KEY;
 const IS_LOCALHOST = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-export default function Login() {
+export default function Login({ initialSignUp = false }) {
   const nav = useNavigate();
   const user = useAuthUser();
   const toast = useToast();
@@ -18,7 +18,7 @@ export default function Login() {
   const [username, setUsername] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(initialSignUp);
   const [showPassword, setShowPassword] = useState(false);
   const [captchaToken, setCaptchaToken] = useState(null);
   const captchaRef = useRef(null);
@@ -29,7 +29,7 @@ export default function Login() {
     // user === false means signed out, stay on login
     // user === object means signed in, redirect
     if (user && user !== null) {
-      nav('/', { replace: true });
+      nav('/dashboard', { replace: true });
     }
   }, [user, nav]);
 
@@ -145,7 +145,7 @@ export default function Login() {
       if (error) {
         setErr(error.message);
       } else {
-        nav('/', { replace: true });
+        nav('/dashboard', { replace: true });
       }
     }
   }

@@ -1,6 +1,7 @@
 // src/App.jsx
 import { Routes, Route } from "react-router-dom";
 import Layout from "./Layout";
+import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import DraftPage from "./pages/DraftPage";
 import Leagues from './pages/Leagues';
@@ -18,11 +19,12 @@ import './layout.css'; // custom grid and layout styles
 function App() {
   return (
     <Routes>
-      {/* Public route */}
+      {/* Public routes */}
+      <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Login initialSignUp />} />
 
       {/* Protected routes */}
-      <Route path="/" element={<Layout><Protected><Dashboard /></Protected></Layout>} />
       <Route path="/dashboard" element={<Layout><Protected><Dashboard /></Protected></Layout>} />
       <Route path="/draft/:leagueId" element={<Layout><Protected><DraftPage /></Protected></Layout>} />
       <Route path="/draft" element={<Layout><Protected><DraftPage /></Protected></Layout>} />

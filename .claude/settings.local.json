@@ -5,7 +5,8 @@
       "Bash(git commit:*)",
       "Bash(npm run build:*)",
       "Bash(cat:*)",
-      "Bash(npx supabase:*)"
+      "Bash(npx supabase:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": [],
     "ask": []
