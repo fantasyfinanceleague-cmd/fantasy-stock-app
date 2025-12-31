@@ -50,6 +50,12 @@ const Header = () => {
   const [quickActionsOpen, setQuickActionsOpen] = useState(false);
   const quickActionsRef = useRef(null);
 
+  // Invite modal state
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [managedLeagues, setManagedLeagues] = useState([]);
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [copiedId, setCopiedId] = useState(null);
+
   // Close mobile menu and quick actions on route change
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -86,6 +92,46 @@ const Header = () => {
     setLoggingOut(false);
     setMobileMenuOpen(false);
     navigate('/login', { replace: true });
+  }
+
+  // Open invite modal and fetch managed leagues
+  async function openInviteModal() {
+    setQuickActionsOpen(false);
+    setInviteModalOpen(true);
+    setInviteLoading(true);
+
+    try {
+      // Fetch leagues where user is commissioner
+      const { data: memberRows } = await supabase
+        .from('league_members')
+        .select('league_id, role')
+        .eq('user_id', user.id)
+        .eq('role', 'commissioner');
+
+      if (memberRows?.length) {
+        const leagueIds = memberRows.map(r => r.league_id);
+        const { data: leagues } = await supabase
+          .from('leagues')
+          .select('id, name, invite_code')
+          .in('id', leagueIds);
+
+        setManagedLeagues(leagues || []);
+      } else {
+        setManagedLeagues([]);
+      }
+    } catch (err) {
+      console.error('Failed to fetch leagues:', err);
+      setManagedLeagues([]);
+    } finally {
+      setInviteLoading(false);
+    }
+  }
+
+  async function copyInviteLink(league) {
+    const link = `${window.location.origin}/join/${league.invite_code}`;
+    await navigator.clipboard?.writeText(link).catch(() => {});
+    setCopiedId(league.id);
+    setTimeout(() => setCopiedId(null), 2000);
   }
 
   return (
@@ -171,7 +217,7 @@ const Header = () => {
                   🏆 Create League
                 </button>
                 <button
-                  onClick={() => { navigate('/leagues'); setQuickActionsOpen(false); }}
+                  onClick={openInviteModal}
                   className="quick-action-item"
                 >
                   ✉️ Invite Friend
@@ -293,6 +339,122 @@ const Header = () => {
               </>
             )}
           </nav>
+        </div>
+      )}
+
+      {/* Invite Modal */}
+      {inviteModalOpen && (
+        <div
+          className="modal-overlay"
+          onClick={() => setInviteModalOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#1f2937',
+              borderRadius: 12,
+              padding: 24,
+              width: 'min(420px, 90vw)',
+              maxHeight: '80vh',
+              overflow: 'auto',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h2 style={{ margin: 0, color: '#fff', fontSize: 20 }}>Invite Friends</h2>
+              <button
+                onClick={() => setInviteModalOpen(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#9ca3af',
+                  fontSize: 24,
+                  cursor: 'pointer',
+                  lineHeight: 1,
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {inviteLoading ? (
+              <div style={{ textAlign: 'center', padding: 20, color: '#9ca3af' }}>
+                Loading leagues...
+              </div>
+            ) : managedLeagues.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 20 }}>
+                <div style={{ fontSize: 48, marginBottom: 12 }}>🏆</div>
+                <p style={{ color: '#9ca3af', marginBottom: 16 }}>
+                  You need to create a league first to invite friends.
+                </p>
+                <button
+                  onClick={() => { setInviteModalOpen(false); navigate('/leagues'); }}
+                  className="btn primary"
+                  style={{ background: '#22c55e', border: 'none', padding: '10px 20px', borderRadius: 8, color: '#fff', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Create League
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: 12 }}>
+                <p style={{ color: '#9ca3af', margin: 0, fontSize: 14 }}>
+                  Share an invite link to let friends join your league:
+                </p>
+                {managedLeagues.map((lg) => (
+                  <div
+                    key={lg.id}
+                    style={{
+                      background: '#111826',
+                      borderRadius: 8,
+                      padding: 12,
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      gap: 12,
+                    }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, color: '#fff', marginBottom: 4 }}>{lg.name}</div>
+                      <div style={{
+                        fontSize: 12,
+                        color: '#6b7280',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {window.location.origin}/join/{lg.invite_code}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => copyInviteLink(lg)}
+                      style={{
+                        background: copiedId === lg.id ? '#16a34a' : '#3b82f6',
+                        border: 'none',
+                        borderRadius: 6,
+                        padding: '8px 16px',
+                        color: '#fff',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        transition: 'background 0.2s',
+                      }}
+                    >
+                      {copiedId === lg.id ? '✓ Copied!' : 'Copy Link'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </header>
