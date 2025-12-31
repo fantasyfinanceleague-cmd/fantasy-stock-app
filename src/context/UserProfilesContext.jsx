@@ -52,11 +52,6 @@ export function UserProfilesProvider({ children }) {
   const getDisplayName = useCallback((userId, currentUserId = null) => {
     if (!userId) return 'Unknown';
 
-    // Show "You" for current user
-    if (currentUserId && userId === currentUserId) {
-      return 'You';
-    }
-
     // Format bot names nicely
     if (userId.startsWith('bot-')) {
       const num = userId.replace('bot-', '');
@@ -65,8 +60,15 @@ export function UserProfilesProvider({ children }) {
 
     // Check if we have a profile with a username
     const profile = profiles[userId];
-    if (profile?.username) {
-      return profile.username;
+    const username = profile?.username;
+
+    // Show "Username (You)" for current user
+    if (currentUserId && userId === currentUserId) {
+      return username ? `${username} (You)` : 'You';
+    }
+
+    if (username) {
+      return username;
     }
 
     // Fallback to truncated user ID
