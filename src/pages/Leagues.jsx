@@ -6,18 +6,6 @@ import { useToast } from '../components/Toast';
 import EmptyState from '../components/EmptyState';
 import { validateLeagueName } from '../utils/contentModeration';
 
-function SectionHeader({ title, icon = null, right = null }) {
-  return (
-    <div className="section-header">
-      <h3>{title}</h3>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        {right}
-        {icon ? <div className="section-icon" aria-hidden>{icon}</div> : null}
-      </div>
-    </div>
-  );
-}
-
 function toInputDateTime(value) {
   if (!value) return '';
   const d = new Date(value);
@@ -41,48 +29,50 @@ export default function Leagues() {
     deleteLeague,
   } = useLeagues();
 
-  // Create
+  // Tab state
+  const [activeTab, setActiveTab] = useState('leagues');
+
+  // Create form state
   const [leagueName, setLeagueName] = useState('');
   const [draftDate, setDraftDate] = useState('');
   const [budgetMode, setBudgetMode] = useState('budget');
   const [salaryCap, setSalaryCap] = useState('100000');
   const [participants, setParticipants] = useState(12);
   const [stocksPerTeam, setStocksPerTeam] = useState(6);
-  const [leagueType, setLeagueType] = useState('duration');    // 'duration' or 'matchup'
-  const [durationDays, setDurationDays] = useState(30);        // For duration leagues
-  const [numWeeks, setNumWeeks] = useState(11);                // For matchup leagues (default for 12 participants)
-  const [playoffTeams, setPlayoffTeams] = useState(4);         // Number of playoff teams (2, 4, or 8)
+  const [leagueType, setLeagueType] = useState('duration');
+  const [durationDays, setDurationDays] = useState(30);
+  const [numWeeks, setNumWeeks] = useState(11);
+  const [playoffTeams, setPlayoffTeams] = useState(4);
   const capDisabled = budgetMode === 'no-budget';
-  const minWeeks = participants - 1;                           // Min weeks for round robin
+  const minWeeks = participants - 1;
 
-  // Calculate valid playoff options based on participants
+  // Calculate valid playoff options
   const getPlayoffOptions = () => {
-    if (participants <= 4) return [2];
-    if (participants <= 6) return [2, 4];
-    return [2, 4, 8];
+    const allOptions = [2, 4, 8];
+    return allOptions.filter(o => o < participants);
   };
   const validPlayoffOptions = getPlayoffOptions();
 
-  // Update
+  // Update form state
   const [selectedLeagueForUpdate, setSelectedLeagueForUpdate] = useState('');
   const [updateDraftDate, setUpdateDraftDate] = useState('');
-  const [updateBudgetMode, setUpdateBudgetMode] = useState('budget'); // NEW
+  const [updateBudgetMode, setUpdateBudgetMode] = useState('budget');
   const [updateSalaryCap, setUpdateSalaryCap] = useState('');
   const [updateParticipants, setUpdateParticipants] = useState('');
-  const [updateRounds, setUpdateRounds] = useState(6);         // NEW
-  const capUpdateDisabled = updateBudgetMode === 'no-budget';  // NEW
+  const [updateRounds, setUpdateRounds] = useState(6);
+  const capUpdateDisabled = updateBudgetMode === 'no-budget';
 
-  // Invite
+  // Invite state
   const [selectedLeagueForInvite, setSelectedLeagueForInvite] = useState('');
   const [inviteIdentifier, setInviteIdentifier] = useState('');
 
-  // Helpers
+  // Search filter
+  const [filter, setFilter] = useState('');
+
   // Helpers
   const clampParticipants = (n) => Math.max(4, Math.min(16, Number(n) || 4));
-  const clampRounds = (n) => Math.max(1, Math.min(12, Number(n) || 1)); // <= NEW
+  const clampRounds = (n) => Math.max(1, Math.min(12, Number(n) || 1));
 
-  // Search/filter (polish)
-  const [filter, setFilter] = useState('');
   const filteredLeagues = useMemo(() => {
     const q = filter.trim().toLowerCase();
     if (!q) return myLeagues;
@@ -94,7 +84,6 @@ export default function Leagues() {
     [managedLeagues, selectedLeagueForUpdate]
   );
 
-  // Check if draft has started or completed - disable editing if so
   const isDraftLocked = selectedUpdateLeagueObj?.draft_status === 'in_progress' ||
                         selectedUpdateLeagueObj?.draft_status === 'completed';
 
@@ -109,16 +98,9 @@ export default function Leagues() {
     if (selectedUpdateLeagueObj) {
       setUpdateDraftDate(toInputDateTime(selectedUpdateLeagueObj.draft_date));
       setUpdateBudgetMode(selectedUpdateLeagueObj.budget_mode ?? 'budget');
-      // Use budget_amount if available, otherwise fall back to salary_cap_limit
       setUpdateSalaryCap(selectedUpdateLeagueObj.budget_amount ?? selectedUpdateLeagueObj.salary_cap_limit ?? '');
       setUpdateParticipants(selectedUpdateLeagueObj.num_participants ?? '');
       setUpdateRounds(selectedUpdateLeagueObj.num_rounds ?? 6);
-    } else {
-      setUpdateDraftDate('');
-      setUpdateBudgetMode('budget');
-      setUpdateSalaryCap('');
-      setUpdateParticipants('');
-      setUpdateRounds(6);
     }
   }, [selectedUpdateLeagueObj]);
 
@@ -126,7 +108,6 @@ export default function Leagues() {
     e.preventDefault();
     if (!leagueName.trim()) return;
 
-    // Check for inappropriate content
     const contentCheck = validateLeagueName(leagueName.trim());
     if (!contentCheck.isValid) {
       toast.error(contentCheck.reason || 'League name is not allowed');
@@ -157,26 +138,25 @@ export default function Leagues() {
     setDurationDays(30);
     setNumWeeks(11);
     setPlayoffTeams(4);
+    setActiveTab('leagues');
+    toast.success('League created successfully!');
   };
 
   const handleUpdate = async (e) => {
     e.preventDefault();
     if (!selectedLeagueForUpdate) return;
 
-    const budgetAmt = capUpdateDisabled
-      ? null
-      : (updateSalaryCap === '' ? null : Number(updateSalaryCap));
+    const budgetAmt = capUpdateDisabled ? null : (updateSalaryCap === '' ? null : Number(updateSalaryCap));
 
-    const patch = {
+    await updateLeague(selectedLeagueForUpdate, {
       draft_date: updateDraftDate ? new Date(updateDraftDate).toISOString() : null,
       budget_mode: updateBudgetMode,
       salary_cap_limit: budgetAmt,
-      budget_amount: budgetAmt, // Also update budget_amount
-      num_participants:
-        updateParticipants === '' ? null : clampParticipants(updateParticipants),
+      budget_amount: budgetAmt,
+      num_participants: updateParticipants === '' ? null : clampParticipants(updateParticipants),
       num_rounds: Number(updateRounds),
-    };
-    await updateLeague(selectedLeagueForUpdate, patch);
+    });
+    toast.success('League updated!');
   };
 
   const handleInvite = async (e) => {
@@ -184,132 +164,383 @@ export default function Leagues() {
     if (!selectedLeagueForInvite || !inviteIdentifier.trim()) return;
     const code = await inviteToLeague(selectedLeagueForInvite, inviteIdentifier.trim());
     const link = `${window.location.origin}/join/${code}`;
-    await navigator.clipboard?.writeText(link).catch(() => { });
-    toast.success('Invite link copied to clipboard!');
+    await navigator.clipboard?.writeText(link).catch(() => {});
+    toast.success('Invite link copied!');
     setInviteIdentifier('');
   };
 
   const copyInviteForLeague = async (lg) => {
     const link = `${window.location.origin}/join/${lg.invite_code}`;
-    await navigator.clipboard?.writeText(link).catch(() => { });
-    toast.success('Invite link copied to clipboard!');
+    await navigator.clipboard?.writeText(link).catch(() => {});
+    toast.success('Invite link copied!');
   };
 
-  // in Leagues.jsx
   const setActiveAndGoDraft = (lg) => {
-    localStorage.setItem('activeLeagueId', lg.id);   // keep this for convenience
-    nav(`/draft/${lg.id}`);                          // ← go straight to /draft/:leagueId
+    localStorage.setItem('activeLeagueId', lg.id);
+    nav(`/draft/${lg.id}`);
+  };
+
+  const getLeagueStatus = (lg) => {
+    if (lg.draft_status === 'completed') return { label: 'Active', color: '#16a34a' };
+    if (lg.draft_status === 'in_progress') return { label: 'Drafting', color: '#eab308' };
+    return { label: 'Pending', color: '#6b7280' };
+  };
+
+  const tabStyle = (isActive) => ({
+    padding: '12px 24px',
+    background: isActive ? '#3b82f6' : 'transparent',
+    border: 'none',
+    borderRadius: 8,
+    color: isActive ? '#fff' : '#9ca3af',
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    fontSize: 14,
+  });
+
+  const inputStyle = {
+    width: '100%',
+    padding: '10px 14px',
+    background: '#111826',
+    border: '1px solid #374151',
+    borderRadius: 8,
+    color: '#fff',
+    fontSize: 14,
+  };
+
+  const labelStyle = {
+    display: 'block',
+    marginBottom: 6,
+    color: '#9ca3af',
+    fontSize: 13,
+    fontWeight: 500,
   };
 
   return (
-    <div className="page leagues-page">
-      <div className="leagues-container">
-        <h1 className="leagues-title">League Management</h1>
-        <p className="leagues-sub">Create and manage your fantasy stock leagues</p>
-        {error ? <p className="muted">Error: {error}</p> : null}
+    <div className="page" style={{ maxWidth: 1100, margin: '0 auto' }}>
+      {/* Header */}
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ color: '#fff', margin: '0 0 8px', fontSize: 28, fontWeight: 700 }}>Leagues</h1>
+        <p style={{ color: '#6b7280', margin: 0 }}>Manage your fantasy stock leagues</p>
+      </div>
 
-        {/* Row 1: Create | Update */}
-        <div className="leagues-top">
-          {/* Create */}
-          <div className="card">
-            <SectionHeader title="Create New League" icon="🔔" />
-            <form className="form" onSubmit={handleCreate}>
-              <div className="form-row">
-                <label>League Name</label>
+      {error && <p style={{ color: '#ef4444', marginBottom: 16 }}>Error: {error}</p>}
+
+      {/* Tabs */}
+      <div style={{
+        display: 'flex',
+        gap: 8,
+        marginBottom: 24,
+        background: '#1a1f2e',
+        padding: 6,
+        borderRadius: 12,
+        width: 'fit-content',
+      }}>
+        <button style={tabStyle(activeTab === 'leagues')} onClick={() => setActiveTab('leagues')}>
+          My Leagues
+        </button>
+        <button style={tabStyle(activeTab === 'create')} onClick={() => setActiveTab('create')}>
+          Create New
+        </button>
+        {managedLeagues.length > 0 && (
+          <button style={tabStyle(activeTab === 'manage')} onClick={() => setActiveTab('manage')}>
+            Manage
+          </button>
+        )}
+      </div>
+
+      {/* My Leagues Tab */}
+      {activeTab === 'leagues' && (
+        <div>
+          {/* Search */}
+          {myLeagues.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <input
+                type="text"
+                placeholder="Search leagues..."
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                style={{ ...inputStyle, maxWidth: 300 }}
+              />
+            </div>
+          )}
+
+          {/* League Cards */}
+          {filteredLeagues.length === 0 ? (
+            myLeagues.length ? (
+              <div style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>
+                No leagues match your search.
+              </div>
+            ) : (
+              <EmptyState
+                icon="🏆"
+                title="No Leagues Yet"
+                description="Create your first league to start competing with friends."
+                action={
+                  <button
+                    onClick={() => setActiveTab('create')}
+                    style={{
+                      background: '#3b82f6',
+                      border: 'none',
+                      borderRadius: 8,
+                      padding: '12px 24px',
+                      color: '#fff',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      marginTop: 16,
+                    }}
+                  >
+                    Create League
+                  </button>
+                }
+              />
+            )
+          ) : (
+            <div style={{ display: 'grid', gap: 12 }}>
+              {filteredLeagues.map((lg) => {
+                const status = getLeagueStatus(lg);
+                return (
+                  <div
+                    key={lg.id}
+                    style={{
+                      background: '#1a1f2e',
+                      borderRadius: 12,
+                      padding: 20,
+                      border: '1px solid #2a3040',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      gap: 16,
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <div style={{ flex: 1, minWidth: 200 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                        <h3 style={{ margin: 0, color: '#fff', fontSize: 18, fontWeight: 600 }}>{lg.name}</h3>
+                        <span style={{
+                          padding: '3px 10px',
+                          borderRadius: 12,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          background: `${status.color}20`,
+                          color: status.color,
+                        }}>
+                          {status.label}
+                        </span>
+                        {lg.role === 'commissioner' && (
+                          <span style={{
+                            padding: '3px 10px',
+                            borderRadius: 12,
+                            fontSize: 11,
+                            fontWeight: 600,
+                            background: 'rgba(168, 85, 247, 0.2)',
+                            color: '#a855f7',
+                          }}>
+                            Commissioner
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', color: '#6b7280', fontSize: 13 }}>
+                        <span>👥 {lg.num_participants} teams</span>
+                        <span>📅 {lg.draft_date ? new Date(lg.draft_date).toLocaleDateString() : 'Draft TBD'}</span>
+                        <span>{lg.league_type === 'matchup' ? '🏈 Matchup' : '📊 Duration'}</span>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <Link
+                        to={`/league/${lg.id}`}
+                        style={{
+                          padding: '8px 16px',
+                          background: '#3b82f6',
+                          borderRadius: 6,
+                          color: '#fff',
+                          textDecoration: 'none',
+                          fontSize: 13,
+                          fontWeight: 500,
+                        }}
+                      >
+                        View
+                      </Link>
+                      <button
+                        onClick={() => setActiveAndGoDraft(lg)}
+                        style={{
+                          padding: '8px 16px',
+                          background: '#374151',
+                          border: 'none',
+                          borderRadius: 6,
+                          color: '#fff',
+                          fontSize: 13,
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Draft
+                      </button>
+                      {lg.role === 'commissioner' ? (
+                        <>
+                          <button
+                            onClick={() => copyInviteForLeague(lg)}
+                            style={{
+                              padding: '8px 16px',
+                              background: '#374151',
+                              border: 'none',
+                              borderRadius: 6,
+                              color: '#fff',
+                              fontSize: 13,
+                              fontWeight: 500,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Invite
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (confirm(`Delete "${lg.name}"?`)) deleteLeague?.(lg.id);
+                            }}
+                            style={{
+                              padding: '8px 16px',
+                              background: 'rgba(239, 68, 68, 0.15)',
+                              border: 'none',
+                              borderRadius: 6,
+                              color: '#ef4444',
+                              fontSize: 13,
+                              fontWeight: 500,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => leaveLeague(lg.id)}
+                          style={{
+                            padding: '8px 16px',
+                            background: 'rgba(239, 68, 68, 0.15)',
+                            border: 'none',
+                            borderRadius: 6,
+                            color: '#ef4444',
+                            fontSize: 13,
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Leave
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Create League Tab */}
+      {activeTab === 'create' && (
+        <div style={{ maxWidth: 600 }}>
+          <div style={{
+            background: '#1a1f2e',
+            borderRadius: 12,
+            padding: 24,
+            border: '1px solid #2a3040',
+          }}>
+            <h2 style={{ margin: '0 0 20px', color: '#fff', fontSize: 20 }}>Create New League</h2>
+
+            <form onSubmit={handleCreate}>
+              <div style={{ marginBottom: 16 }}>
+                <label style={labelStyle}>League Name</label>
                 <input
                   type="text"
                   placeholder="Enter league name"
                   value={leagueName}
                   onChange={(e) => setLeagueName(e.target.value)}
+                  style={inputStyle}
                 />
               </div>
 
-              <div className="form-row">
-                <label>Draft Date</label>
+              <div style={{ marginBottom: 16 }}>
+                <label style={labelStyle}>Draft Date & Time</label>
                 <input
                   type="datetime-local"
                   value={draftDate}
                   onChange={(e) => setDraftDate(e.target.value)}
+                  style={inputStyle}
                 />
               </div>
 
-              <div className="form-row inline">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
                 <div>
-                  <label>Budget Mode</label>
-                  <select
-                    value={budgetMode}
-                    onChange={(e) => setBudgetMode(e.target.value)}
-                  >
-                    <option value="budget">Budget</option>
-                    <option value="no-budget">No budget</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label>Salary Cap Limit ($)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    placeholder="100000"
-                    value={salaryCap}
-                    onChange={(e) => setSalaryCap(e.target.value)}
-                    disabled={capDisabled}
-                  />
-                  {capDisabled && <small className="muted">Disabled in no-budget mode</small>}
-                </div>
-              </div>
-
-              <div className="form-row inline">
-                <div>
-                  <label>Number of Participants</label>
+                  <label style={labelStyle}>Teams</label>
                   <input
                     type="number"
                     min="4"
                     max="16"
-                    step="1"
                     value={participants}
                     onChange={(e) => setParticipants(clampParticipants(e.target.value))}
-                    onBlur={(e) => setParticipants(clampParticipants(e.target.value))}
+                    style={inputStyle}
                   />
                 </div>
-
                 <div>
-                  <label>Stocks per Team</label>
+                  <label style={labelStyle}>Stocks per Team</label>
                   <input
                     type="number"
                     min="1"
                     max="12"
-                    step="1"
                     value={stocksPerTeam}
                     onChange={(e) => setStocksPerTeam(clampRounds(e.target.value))}
-                    onBlur={(e) => setStocksPerTeam(clampRounds(e.target.value))}
+                    style={inputStyle}
                   />
                 </div>
               </div>
 
-              <div className="form-row">
-                <label>League Type</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                <div>
+                  <label style={labelStyle}>Budget Mode</label>
+                  <select
+                    value={budgetMode}
+                    onChange={(e) => setBudgetMode(e.target.value)}
+                    style={inputStyle}
+                  >
+                    <option value="budget">Budget</option>
+                    <option value="no-budget">No Budget</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>Salary Cap ($)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="100000"
+                    value={salaryCap}
+                    onChange={(e) => setSalaryCap(e.target.value)}
+                    disabled={capDisabled}
+                    style={{ ...inputStyle, opacity: capDisabled ? 0.5 : 1 }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <label style={labelStyle}>League Type</label>
                 <select
                   value={leagueType}
                   onChange={(e) => setLeagueType(e.target.value)}
+                  style={inputStyle}
                 >
-                  <option value="duration">Duration-based</option>
-                  <option value="matchup">Matchup-based (Fantasy Football style)</option>
+                  <option value="duration">Duration-based (best portfolio wins)</option>
+                  <option value="matchup">Matchup-based (weekly head-to-head)</option>
                 </select>
-                <small className="muted">
-                  {leagueType === 'duration'
-                    ? 'League runs for a set time period'
-                    : 'Weekly head-to-head matchups with win/loss records'}
-                </small>
               </div>
 
               {leagueType === 'duration' ? (
-                <div className="form-row">
-                  <label>League Duration</label>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={labelStyle}>League Duration</label>
                   <select
                     value={durationDays}
                     onChange={(e) => setDurationDays(Number(e.target.value))}
+                    style={inputStyle}
                   >
                     <option value={7}>1 Week</option>
                     <option value={30}>1 Month</option>
@@ -317,287 +548,279 @@ export default function Leagues() {
                     <option value={180}>6 Months</option>
                     <option value={365}>1 Year</option>
                   </select>
-                  <small className="muted">How long the league runs after draft completes</small>
                 </div>
               ) : (
-                <>
-                  <div className="form-row">
-                    <label>Number of Weeks</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                  <div>
+                    <label style={labelStyle}>Season Weeks</label>
                     <input
                       type="number"
                       min={minWeeks}
-                      step="1"
                       value={numWeeks}
                       onChange={(e) => setNumWeeks(Math.max(minWeeks, Number(e.target.value) || minWeeks))}
-                      onBlur={(e) => setNumWeeks(Math.max(minWeeks, Number(e.target.value) || minWeeks))}
+                      style={inputStyle}
                     />
-                    <small className="muted">
-                      Minimum {minWeeks} weeks for round robin (each team plays each other once).
-                      Monday = trade day, Tuesday-Friday = matchup week.
-                    </small>
+                    <small style={{ color: '#6b7280', fontSize: 11 }}>Min {minWeeks} for round robin</small>
                   </div>
-                  <div className="form-row">
-                    <label>Playoff Teams</label>
+                  <div>
+                    <label style={labelStyle}>Playoff Teams</label>
                     <select
                       value={playoffTeams}
                       onChange={(e) => setPlayoffTeams(Number(e.target.value))}
+                      style={inputStyle}
                     >
                       {validPlayoffOptions.map(opt => (
                         <option key={opt} value={opt}>
-                          {opt} Teams {opt === 2 ? '(Finals only)' : opt === 4 ? '(Semis + Finals)' : '(Quarters + Semis + Finals)'}
+                          {opt} teams
                         </option>
                       ))}
                     </select>
-                    <small className="muted">
-                      Top teams by record advance to single-elimination playoffs.
-                    </small>
                   </div>
-                </>
-              )}
-
-              <button className="btn primary" type="submit" disabled={loading}>
-                {loading ? 'Creating…' : 'Create League'}
-              </button>
-            </form>
-          </div>
-
-          {/* Update */}
-          <div className="card">
-            <SectionHeader title="Update League Settings" icon="⚙️" />
-            <form className="form" onSubmit={handleUpdate}>
-              <div className="form-row">
-                <label>Select League</label>
-                <select
-                  value={selectedLeagueForUpdate}
-                  onChange={(e) => setSelectedLeagueForUpdate(e.target.value)}
-                >
-                  {!managedLeagues.length && <option value="">(No managed leagues)</option>}
-                  {managedLeagues.map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.name}
-                      {l.draft_status === 'completed' ? ' (Completed)' : l.draft_status === 'in_progress' ? ' (In Progress)' : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {isDraftLocked && (
-                <div style={{
-                  padding: '12px 16px',
-                  background: 'rgba(245, 158, 11, 0.1)',
-                  border: '1px solid rgba(245, 158, 11, 0.3)',
-                  borderRadius: 8,
-                  color: '#f59e0b',
-                  fontSize: '0.9rem',
-                  marginBottom: 16
-                }}>
-                  {selectedUpdateLeagueObj?.draft_status === 'completed'
-                    ? '🏁 This league\'s draft has been completed. Settings cannot be changed.'
-                    : '⏳ This league\'s draft is in progress. Settings cannot be changed.'}
                 </div>
               )}
 
-              <div className="form-row">
-                <label>Draft Date</label>
+              <button
+                type="submit"
+                disabled={loading || !leagueName.trim()}
+                style={{
+                  width: '100%',
+                  padding: '12px 24px',
+                  background: loading || !leagueName.trim() ? '#374151' : '#3b82f6',
+                  border: 'none',
+                  borderRadius: 8,
+                  color: '#fff',
+                  fontWeight: 600,
+                  fontSize: 15,
+                  cursor: loading || !leagueName.trim() ? 'not-allowed' : 'pointer',
+                  marginTop: 8,
+                }}
+              >
+                {loading ? 'Creating...' : 'Create League'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Manage Tab */}
+      {activeTab === 'manage' && managedLeagues.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: 20 }}>
+          {/* Update Settings */}
+          <div style={{
+            background: '#1a1f2e',
+            borderRadius: 12,
+            padding: 24,
+            border: '1px solid #2a3040',
+          }}>
+            <h3 style={{ margin: '0 0 16px', color: '#fff', fontSize: 18 }}>⚙️ League Settings</h3>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={labelStyle}>Select League</label>
+              <select
+                value={selectedLeagueForUpdate}
+                onChange={(e) => setSelectedLeagueForUpdate(e.target.value)}
+                style={inputStyle}
+              >
+                {managedLeagues.map((l) => (
+                  <option key={l.id} value={l.id}>{l.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {isDraftLocked && (
+              <div style={{
+                padding: '12px 16px',
+                background: 'rgba(245, 158, 11, 0.1)',
+                border: '1px solid rgba(245, 158, 11, 0.3)',
+                borderRadius: 8,
+                color: '#f59e0b',
+                fontSize: 13,
+                marginBottom: 16,
+              }}>
+                {selectedUpdateLeagueObj?.draft_status === 'completed'
+                  ? '🏁 Draft completed - settings locked'
+                  : '⏳ Draft in progress - settings locked'}
+              </div>
+            )}
+
+            <form onSubmit={handleUpdate}>
+              <div style={{ marginBottom: 12 }}>
+                <label style={labelStyle}>Draft Date</label>
                 <input
                   type="datetime-local"
                   value={updateDraftDate}
                   onChange={(e) => setUpdateDraftDate(e.target.value)}
                   disabled={isDraftLocked}
+                  style={{ ...inputStyle, opacity: isDraftLocked ? 0.5 : 1 }}
                 />
               </div>
 
-              <div className="form-row">
-                <label>Budget Mode</label>
-                <select
-                  value={updateBudgetMode}
-                  onChange={(e) => setUpdateBudgetMode(e.target.value)}
-                  disabled={isDraftLocked}
-                >
-                  <option value="budget">Budget</option>
-                  <option value="no-budget">No budget</option>
-                </select>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                <div>
+                  <label style={labelStyle}>Budget Mode</label>
+                  <select
+                    value={updateBudgetMode}
+                    onChange={(e) => setUpdateBudgetMode(e.target.value)}
+                    disabled={isDraftLocked}
+                    style={{ ...inputStyle, opacity: isDraftLocked ? 0.5 : 1 }}
+                  >
+                    <option value="budget">Budget</option>
+                    <option value="no-budget">No Budget</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>Salary Cap</label>
+                  <input
+                    type="number"
+                    value={updateSalaryCap}
+                    onChange={(e) => setUpdateSalaryCap(e.target.value)}
+                    disabled={capUpdateDisabled || isDraftLocked}
+                    style={{ ...inputStyle, opacity: capUpdateDisabled || isDraftLocked ? 0.5 : 1 }}
+                  />
+                </div>
               </div>
 
-              <div className="form-row">
-                <label>Salary Cap Limit ($)</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  placeholder="Type here..."
-                  value={updateSalaryCap}
-                  onChange={(e) => setUpdateSalaryCap(e.target.value)}
-                  disabled={capUpdateDisabled || isDraftLocked}
-                />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                <div>
+                  <label style={labelStyle}>Teams</label>
+                  <input
+                    type="number"
+                    min="4"
+                    max="16"
+                    value={updateParticipants}
+                    onChange={(e) => setUpdateParticipants(clampParticipants(e.target.value))}
+                    disabled={isDraftLocked}
+                    style={{ ...inputStyle, opacity: isDraftLocked ? 0.5 : 1 }}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Stocks/Team</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="12"
+                    value={updateRounds}
+                    onChange={(e) => setUpdateRounds(clampRounds(e.target.value))}
+                    disabled={isDraftLocked}
+                    style={{ ...inputStyle, opacity: isDraftLocked ? 0.5 : 1 }}
+                  />
+                </div>
               </div>
 
-              <div className="form-row">
-                <label>Number of Participants</label>
-                <input
-                  type="number"
-                  min="4"
-                  max="16"
-                  step="1"
-                  placeholder="Type here..."
-                  value={updateParticipants}
-                  onChange={(e) => setUpdateParticipants(clampParticipants(e.target.value))}
-                  onBlur={(e) => setUpdateParticipants(clampParticipants(e.target.value))}
-                  disabled={isDraftLocked}
-                />
-              </div>
-
-              <div className="form-row">
-                <label>Stocks per Team</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="12"
-                  step="1"
-                  value={updateRounds}
-                  onChange={(e) => setUpdateRounds(clampRounds(e.target.value))}
-                  onBlur={(e) => setUpdateRounds(clampRounds(e.target.value))}
-                  disabled={isDraftLocked}
-                />
-              </div>
-
-              <button className="btn purple" type="submit" disabled={loading || isDraftLocked}>
-                {loading ? 'Updating…' : isDraftLocked ? 'Locked' : 'Update Settings'}
+              <button
+                type="submit"
+                disabled={loading || isDraftLocked}
+                style={{
+                  width: '100%',
+                  padding: '10px 20px',
+                  background: loading || isDraftLocked ? '#374151' : '#8b5cf6',
+                  border: 'none',
+                  borderRadius: 8,
+                  color: '#fff',
+                  fontWeight: 600,
+                  cursor: loading || isDraftLocked ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {loading ? 'Saving...' : 'Save Changes'}
               </button>
             </form>
           </div>
-        </div>
 
-        {/* Row 2: Invite (full width) */}
-        <div className="card invite-actions">
-          <SectionHeader title="Invite League Members" icon="👥" />
-          <form className="form" onSubmit={handleInvite}>
-            <div className="form-row inline">
-              <div>
-                <label>Select League</label>
+          {/* Invite Members */}
+          <div style={{
+            background: '#1a1f2e',
+            borderRadius: 12,
+            padding: 24,
+            border: '1px solid #2a3040',
+          }}>
+            <h3 style={{ margin: '0 0 16px', color: '#fff', fontSize: 18 }}>👥 Invite Members</h3>
+
+            <form onSubmit={handleInvite}>
+              <div style={{ marginBottom: 12 }}>
+                <label style={labelStyle}>Select League</label>
                 <select
                   value={selectedLeagueForInvite}
                   onChange={(e) => setSelectedLeagueForInvite(e.target.value)}
+                  style={inputStyle}
                 >
-                  {!managedLeagues.length && <option value="">(No managed leagues)</option>}
-                  {managedLeagues.map((l) => (<option key={l.id} value={l.id}>{l.name}</option>))}
+                  {managedLeagues.map((l) => (
+                    <option key={l.id} value={l.id}>{l.name}</option>
+                  ))}
                 </select>
               </div>
-              <div>
-                <label>Email/Username</label>
+
+              <div style={{ marginBottom: 16 }}>
+                <label style={labelStyle}>Email or Username</label>
                 <input
                   type="text"
                   placeholder="Enter email or username"
                   value={inviteIdentifier}
                   onChange={(e) => setInviteIdentifier(e.target.value)}
+                  style={inputStyle}
                 />
               </div>
-            </div>
-            <button className="btn primary" type="submit" disabled={loading}>
-              {loading ? 'Sending…' : 'Send Invitation'}
-            </button>
-          </form>
 
-          {selectedLeagueForInvite && pendingInvites[selectedLeagueForInvite]?.length ? (
-            <div className="list" style={{ marginTop: 12 }}>
-              {pendingInvites[selectedLeagueForInvite].map((inv) => (
-                <div key={inv.code} className="league-row">
-                  <div className="meta">
-                    Pending: {inv.invited_identifier} • {new Date(inv.created_at).toLocaleString()}
-                  </div>
-                  <div className="actions">
+              <button
+                type="submit"
+                disabled={loading}
+                style={{
+                  width: '100%',
+                  padding: '10px 20px',
+                  background: loading ? '#374151' : '#16a34a',
+                  border: 'none',
+                  borderRadius: 8,
+                  color: '#fff',
+                  fontWeight: 600,
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {loading ? 'Sending...' : 'Send Invite'}
+              </button>
+            </form>
+
+            {/* Pending Invites */}
+            {selectedLeagueForInvite && pendingInvites[selectedLeagueForInvite]?.length > 0 && (
+              <div style={{ marginTop: 20 }}>
+                <div style={{ color: '#9ca3af', fontSize: 13, marginBottom: 10 }}>Pending Invites</div>
+                {pendingInvites[selectedLeagueForInvite].map((inv) => (
+                  <div
+                    key={inv.code}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '10px 12px',
+                      background: '#111826',
+                      borderRadius: 8,
+                      marginBottom: 8,
+                    }}
+                  >
+                    <span style={{ color: '#e5e7eb', fontSize: 13 }}>{inv.invited_identifier}</span>
                     <button
-                      className="btn ghost"
-                      type="button"
                       onClick={() => {
                         const link = `${window.location.origin}/join/${inv.code}`;
                         navigator.clipboard?.writeText(link);
+                        toast.success('Link copied!');
+                      }}
+                      style={{
+                        padding: '4px 12px',
+                        background: '#374151',
+                        border: 'none',
+                        borderRadius: 4,
+                        color: '#fff',
+                        fontSize: 12,
+                        cursor: 'pointer',
                       }}
                     >
                       Copy Link
                     </button>
                   </div>
-                </div>
-              ))}
-            </div>
-          ) : null}
-        </div>
-
-        {/* Row 3: Your Leagues (full width) */}
-        <div className="card">
-          <SectionHeader
-            title="Your Leagues"
-            icon="🏆"
-            right={
-              <>
-                <input
-                  type="text"
-                  placeholder="Search…"
-                  value={filter}
-                  onChange={(e) => setFilter(e.target.value)}
-                  style={{ maxWidth: 220 }}
-                />
-                <div className="section-icon">🔎</div>
-              </>
-            }
-          />
-          <div className="list">
-            {filteredLeagues.length === 0 ? (
-              myLeagues.length ? (
-                <p className="muted" style={{ padding: '20px 0', textAlign: 'center' }}>
-                  No leagues match your search.
-                </p>
-              ) : (
-                <EmptyState
-                  icon="🏆"
-                  title="No Leagues Yet"
-                  description="Create your first league above to start competing with friends, or join an existing league with an invite link."
-                />
-              )
-            ) : (
-              filteredLeagues.map((lg) => (
-                <div className="league-row" key={lg.id}>
-                  <div>
-                    <h4>{lg.name}</h4>
-                    <div className="meta">
-                      Role: {lg.role} • Participants: {lg.num_participants} • Draft:{' '}
-                      {lg.draft_date ? new Date(lg.draft_date).toLocaleString() : 'TBD'}
-                    </div>
-                  </div>
-                  <div className="actions">
-                    <Link className="btn ghost" to={`/league/${lg.id}`}>Open</Link>
-                    <button className="btn ghost" type="button" onClick={() => setActiveAndGoDraft(lg)}>
-                      Draft
-                    </button>
-                    {lg.role === 'commissioner' ? (
-                      <>
-                        <button className="btn ghost" type="button" onClick={() => copyInviteForLeague(lg)}>
-                          Copy Invite
-                        </button>
-                        <button
-                          className="btn ghost"
-                          type="button"
-                          onClick={async () => {
-                            if (confirm(`Delete "${lg.name}"? Members and invites will also be removed.`)) {
-                              await deleteLeague?.(lg.id);
-                            }
-                          }}
-                        >
-                          Delete
-                        </button>
-                      </>
-                    ) : (
-                      <button className="btn ghost" type="button" onClick={() => leaveLeague(lg.id)}>
-                        Leave
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
