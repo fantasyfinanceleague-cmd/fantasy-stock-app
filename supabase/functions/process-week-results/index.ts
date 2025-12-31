@@ -212,11 +212,11 @@ Deno.serve(async (req) => {
     for (const [leagueId, leagueMatchups] of matchupsByLeague) {
       console.log(`Processing league ${leagueId} with ${leagueMatchups.length} matchups`);
 
-      // Get all user IDs for this batch
+      // Get all user IDs for this batch (skip null for bye weeks)
       const userIds = new Set<string>();
       for (const m of leagueMatchups) {
-        userIds.add(m.team1_user_id);
-        userIds.add(m.team2_user_id);
+        if (m.team1_user_id) userIds.add(m.team1_user_id);
+        if (m.team2_user_id) userIds.add(m.team2_user_id);
       }
 
       // Fetch drafts for this league
@@ -255,27 +255,48 @@ Deno.serve(async (req) => {
 
       // Process each matchup
       for (const matchup of leagueMatchups) {
+        // Check for bye week (team2_user_id is null)
+        const isByeWeek = !matchup.team2_user_id;
+
         const p1 = portfolios.get(matchup.team1_user_id);
-        const p2 = portfolios.get(matchup.team2_user_id);
-
         const team1Gain = p1?.gain ?? 0;
-        const team2Gain = p2?.gain ?? 0;
 
-        // Determine winner
+        let team2Gain = 0;
         let winnerId: string | null = null;
-        if (team1Gain > team2Gain) {
+        let isTie = false;
+        let team1Won = false;
+        let team2Won = false;
+
+        if (isByeWeek) {
+          // Bye week: team1 gets automatic win
           winnerId = matchup.team1_user_id;
-        } else if (team2Gain > team1Gain) {
-          winnerId = matchup.team2_user_id;
+          team1Won = true;
+          team2Gain = 0; // No opponent
+          console.log(`Processing bye week for user ${matchup.team1_user_id}`);
+        } else {
+          // Normal matchup
+          const p2 = portfolios.get(matchup.team2_user_id);
+          team2Gain = p2?.gain ?? 0;
+
+          // Determine winner
+          if (team1Gain > team2Gain) {
+            winnerId = matchup.team1_user_id;
+            team1Won = true;
+          } else if (team2Gain > team1Gain) {
+            winnerId = matchup.team2_user_id;
+            team2Won = true;
+          } else {
+            // Tie
+            isTie = true;
+          }
         }
-        // null = tie
 
         // Update matchup with results
         const { error: updateErr } = await supabase
           .from('matchups')
           .update({
             team1_gain: team1Gain,
-            team2_gain: team2Gain,
+            team2_gain: isByeWeek ? null : team2Gain, // null for bye weeks
             winner_user_id: winnerId,
           })
           .eq('id', matchup.id);
@@ -284,11 +305,6 @@ Deno.serve(async (req) => {
           console.error(`Failed to update matchup ${matchup.id}:`, updateErr);
           continue;
         }
-
-        // Update standings for both users
-        const isTie = winnerId === null;
-        const team1Won = winnerId === matchup.team1_user_id;
-        const team2Won = winnerId === matchup.team2_user_id;
 
         // Helper to update standings with proper increment
         async function updateUserStandings(
@@ -341,6 +357,7 @@ Deno.serve(async (req) => {
         }
 
         // Team 1 standings update
+        // For bye weeks, points_against is 0 (no opponent)
         const stand1Err = await updateUserStandings(
           leagueId,
           matchup.team1_user_id,
@@ -348,24 +365,26 @@ Deno.serve(async (req) => {
           team2Won,
           isTie,
           team1Gain,
-          team2Gain
+          isByeWeek ? 0 : team2Gain
         );
         if (stand1Err) {
           console.error(`Failed to update standings for ${matchup.team1_user_id}:`, stand1Err);
         }
 
-        // Team 2 standings update
-        const stand2Err = await updateUserStandings(
-          leagueId,
-          matchup.team2_user_id,
-          team2Won,
-          team1Won,
-          isTie,
-          team2Gain,
-          team1Gain
-        );
-        if (stand2Err) {
-          console.error(`Failed to update standings for ${matchup.team2_user_id}:`, stand2Err);
+        // Team 2 standings update (skip for bye weeks)
+        if (!isByeWeek) {
+          const stand2Err = await updateUserStandings(
+            leagueId,
+            matchup.team2_user_id,
+            team2Won,
+            team1Won,
+            isTie,
+            team2Gain,
+            team1Gain
+          );
+          if (stand2Err) {
+            console.error(`Failed to update standings for ${matchup.team2_user_id}:`, stand2Err);
+          }
         }
 
         processedCount++;
@@ -375,8 +394,9 @@ Deno.serve(async (req) => {
           team1: matchup.team1_user_id,
           team2: matchup.team2_user_id,
           team1Gain,
-          team2Gain,
+          team2Gain: isByeWeek ? null : team2Gain,
           winner: winnerId,
+          isByeWeek,
         });
       }
 

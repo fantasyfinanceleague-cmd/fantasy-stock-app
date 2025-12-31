@@ -41,16 +41,33 @@ export function generateSchedule(userIds, numWeeks, startDate) {
     const weekEnd = getWeekEndFriday(weekStart);
 
     for (const [team1, team2] of weekMatchups) {
-      // Skip BYE matchups
-      if (team1 === 'BYE' || team2 === 'BYE') continue;
-
-      matchups.push({
-        week,
-        team1,
-        team2,
-        weekStart,
-        weekEnd,
-      });
+      // Include BYE matchups so players know they have a bye week
+      // The player with the bye is always stored as team1, with team2 = null
+      if (team1 === 'BYE') {
+        matchups.push({
+          week,
+          team1: team2, // The real player
+          team2: null,  // null indicates bye week
+          weekStart,
+          weekEnd,
+        });
+      } else if (team2 === 'BYE') {
+        matchups.push({
+          week,
+          team1: team1, // The real player
+          team2: null,  // null indicates bye week
+          weekStart,
+          weekEnd,
+        });
+      } else {
+        matchups.push({
+          week,
+          team1,
+          team2,
+          weekStart,
+          weekEnd,
+        });
+      }
     }
   }
 

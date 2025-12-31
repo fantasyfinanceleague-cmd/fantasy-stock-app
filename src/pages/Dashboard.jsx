@@ -6,6 +6,7 @@ import '../layout.css';
 import { useAuthUser } from '../auth/useAuthUser';
 import { prettyName, formatUSD } from '../utils/formatting';
 import { fetchCompanyName, fetchQuotesInBatch } from '../utils/stockData';
+import { getHolidaysInRange } from '../utils/marketHolidays';
 import { PageLoader } from '../components/LoadingSpinner';
 import { useUserProfiles } from '../context/UserProfilesContext';
 import EmptyState from '../components/EmptyState';
@@ -38,6 +39,10 @@ export default function Dashboard() {
   const [allTrades, setAllTrades] = useState([]);     // all trades for standings
   const [recentPicks, setRecentPicks] = useState([]); // last 5 for display
   const [recentTrades, setRecentTrades] = useState([]);
+
+  // Current matchup state (for matchup leagues)
+  const [currentMatchup, setCurrentMatchup] = useState(null);
+  const [opponentName, setOpponentName] = useState('');
 
   // ---- Load my leagues (only when signed in)
   useEffect(() => {
@@ -76,7 +81,7 @@ export default function Dashboard() {
 
         const { data: lg, error: lgErr } = await supabase
           .from('leagues')
-          .select('id, name, draft_date, budget_mode, budget_amount')
+          .select('id, name, draft_date, budget_mode, budget_amount, league_type, current_week')
           .in('id', ids)
           .order('name', { ascending: true });
 
@@ -183,6 +188,56 @@ export default function Dashboard() {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [USER_ID, leagueId]);
+
+  // Fetch current matchup for matchup leagues
+  useEffect(() => {
+    if (!activeLeague || activeLeague.league_type !== 'matchup' || !leagueId || !USER_ID) {
+      setCurrentMatchup(null);
+      setOpponentName('');
+      return;
+    }
+
+    (async () => {
+      try {
+        const currentWeek = activeLeague.current_week || 1;
+
+        // Find the matchup where this user is either team1 or team2
+        const { data: matchup, error: matchupErr } = await supabase
+          .from('matchups')
+          .select('*')
+          .eq('league_id', leagueId)
+          .eq('week_number', currentWeek)
+          .or(`team1_user_id.eq.${USER_ID},team2_user_id.eq.${USER_ID}`)
+          .single();
+
+        if (matchupErr || !matchup) {
+          setCurrentMatchup(null);
+          setOpponentName('');
+          return;
+        }
+
+        setCurrentMatchup(matchup);
+
+        // Get opponent's user ID and fetch their profile
+        // team2_user_id is null for bye weeks
+        const opponentId = matchup.team1_user_id === USER_ID
+          ? matchup.team2_user_id
+          : matchup.team1_user_id;
+
+        // If opponentId is null, it's a bye week
+        if (opponentId) {
+          await fetchProfiles([opponentId]);
+          setOpponentName(opponentId);
+        } else {
+          setOpponentName(null); // null indicates bye week
+        }
+      } catch (e) {
+        console.error('Failed to fetch matchup:', e);
+        setCurrentMatchup(null);
+        setOpponentName('');
+      }
+    })();
+  }, [activeLeague, leagueId, USER_ID, fetchProfiles]);
 
   // Simple state for prices (no real-time polling)
   const [prices, setPrices] = useState({});
@@ -399,6 +454,15 @@ export default function Dashboard() {
     };
   }, []);
 
+  // ---- Check for holidays in current matchup week
+  const weekHolidays = useMemo(() => {
+    if (!currentMatchup?.week_start || !currentMatchup?.week_end) return [];
+    return getHolidaysInRange(
+      new Date(currentMatchup.week_start),
+      new Date(currentMatchup.week_end)
+    );
+  }, [currentMatchup]);
+
   // ---- Check if onboarding should be shown (after initial load)
   useEffect(() => {
     if (!loading && authUser?.id) {
@@ -488,8 +552,188 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Quick Stats Row */}
-      <div className="metrics-row" style={{ marginBottom: 16 }}>
+      {/* Row 1: Matchup + Market Status */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 16 }}>
+        {/* Matchup Preview (for matchup leagues) */}
+        {activeLeague?.league_type === 'matchup' && currentMatchup && (() => {
+          const isByeWeek = opponentName === null;
+          const myStats = standings.find(s => s.user_id === USER_ID);
+          const myGain = myStats?.gain ?? 0;
+
+          // Bye week display
+          if (isByeWeek) {
+            return (
+              <div className="card" style={{
+                background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(22, 163, 74, 0.1) 100%)',
+                border: '1px solid rgba(34, 197, 94, 0.2)',
+                padding: '14px 16px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#e5e7eb' }}>
+                      Week {currentMatchup.week_number}
+                    </div>
+                    {weekHolidays.length > 0 && (
+                      <span style={{
+                        fontSize: 10,
+                        padding: '2px 6px',
+                        borderRadius: 4,
+                        backgroundColor: 'rgba(251, 191, 36, 0.15)',
+                        color: '#fbbf24',
+                        fontWeight: 600
+                      }}>
+                        Short Week
+                      </span>
+                    )}
+                  </div>
+                  <div className="muted" style={{ fontSize: 11 }}>
+                    {new Date(currentMatchup.week_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    {' – '}
+                    {new Date(currentMatchup.week_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </div>
+                </div>
+
+                {weekHolidays.length > 0 && (
+                  <div style={{
+                    fontSize: 11,
+                    color: '#fbbf24',
+                    marginBottom: 10,
+                    padding: '6px 10px',
+                    backgroundColor: 'rgba(251, 191, 36, 0.1)',
+                    borderRadius: 6,
+                    textAlign: 'center'
+                  }}>
+                    Market closed: {weekHolidays.map(h => h.name).join(', ')}
+                  </div>
+                )}
+
+                <div style={{ textAlign: 'center', padding: '8px 0' }}>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: '#22c55e', marginBottom: 4 }}>
+                    Bye Week
+                  </div>
+                  <div className="muted" style={{ fontSize: 12 }}>
+                    No opponent this week — automatic win!
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 10, textAlign: 'center' }}>
+                  <span className="muted" style={{ fontSize: 12 }}>
+                    Your P/L: <span style={{ color: myGain >= 0 ? '#22c55e' : '#ef4444', fontWeight: 600 }}>
+                      {myGain >= 0 ? '+' : ''}{formatUSD(myGain)}
+                    </span>
+                  </span>
+                </div>
+              </div>
+            );
+          }
+
+          // Normal matchup display
+          const opponentStats = standings.find(s => s.user_id === opponentName);
+          const oppGain = opponentStats?.gain ?? 0;
+          const isWinning = myGain > oppGain;
+          const isTied = myGain === oppGain;
+
+          return (
+            <div className="card" style={{
+              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)',
+              border: '1px solid rgba(59, 130, 246, 0.2)',
+              padding: '14px 16px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#e5e7eb' }}>
+                    Week {currentMatchup.week_number} Matchup
+                  </div>
+                  {weekHolidays.length > 0 && (
+                    <span style={{
+                      fontSize: 10,
+                      padding: '2px 6px',
+                      borderRadius: 4,
+                      backgroundColor: 'rgba(251, 191, 36, 0.15)',
+                      color: '#fbbf24',
+                      fontWeight: 600
+                    }}>
+                      Short Week
+                    </span>
+                  )}
+                </div>
+                <div className="muted" style={{ fontSize: 11 }}>
+                  {new Date(currentMatchup.week_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  {' – '}
+                  {new Date(currentMatchup.week_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </div>
+              </div>
+
+              {weekHolidays.length > 0 && (
+                <div style={{
+                  fontSize: 11,
+                  color: '#fbbf24',
+                  marginBottom: 10,
+                  padding: '6px 10px',
+                  backgroundColor: 'rgba(251, 191, 36, 0.1)',
+                  borderRadius: 6,
+                  textAlign: 'center'
+                }}>
+                  Market closed: {weekHolidays.map(h => h.name).join(', ')}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                  <div style={{ fontSize: 12, color: '#60a5fa', fontWeight: 600, marginBottom: 2 }}>You</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: myGain >= 0 ? '#22c55e' : '#ef4444' }}>
+                    {myGain >= 0 ? '+' : ''}{formatUSD(myGain)}
+                  </div>
+                </div>
+                <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 600 }}>VS</div>
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                  <div style={{ fontSize: 12, color: '#9ca3af', fontWeight: 600, marginBottom: 2 }}>
+                    {getDisplayName(opponentName, USER_ID)}
+                  </div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: oppGain >= 0 ? '#22c55e' : '#ef4444' }}>
+                    {oppGain >= 0 ? '+' : ''}{formatUSD(oppGain)}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginTop: 10, textAlign: 'center' }}>
+                <span style={{
+                  fontSize: 11,
+                  color: isTied ? '#fbbf24' : isWinning ? '#22c55e' : '#ef4444',
+                  fontWeight: 600
+                }}>
+                  {isTied ? 'Tied' : isWinning ? 'Winning' : 'Losing'} by {formatUSD(Math.abs(myGain - oppGain))}
+                </span>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Market Status */}
+        <div className="card">
+          <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>US Market Status</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+            <div style={{
+              width: 12,
+              height: 12,
+              borderRadius: '50%',
+              backgroundColor: marketStatus.isOpen ? '#22c55e' : '#ef4444',
+              boxShadow: marketStatus.isOpen ? '0 0 8px rgba(34, 197, 94, 0.5)' : 'none',
+              animation: marketStatus.isOpen ? 'pulse 2s infinite' : 'none'
+            }} />
+            <div style={{ fontSize: 20, fontWeight: 700, color: '#fff' }}>
+              {marketStatus.status}
+            </div>
+          </div>
+          <div className="muted" style={{ fontSize: 13 }}>{marketStatus.detail}</div>
+          <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>
+            NYSE/NASDAQ: 9:30 AM - 4:00 PM ET
+          </div>
+        </div>
+      </div>
+
+      {/* Row 2: Portfolio Value + Position */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 16 }}>
         {/* Portfolio Value */}
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -535,270 +779,64 @@ export default function Dashboard() {
               <div className="muted" style={{ fontSize: 12 }}>Holdings</div>
             </div>
           </div>
-          <div style={{ marginTop: 8 }}>
-            <Link className="btn primary" to="/leaderboard" style={{ width: '100%' }}>View Leaderboard</Link>
-          </div>
-        </div>
-
-        {/* Market Status */}
-        <div className="card">
-          <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>US Market Status</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-            <div style={{
-              width: 12,
-              height: 12,
-              borderRadius: '50%',
-              backgroundColor: marketStatus.isOpen ? '#22c55e' : '#ef4444',
-              boxShadow: marketStatus.isOpen ? '0 0 8px rgba(34, 197, 94, 0.5)' : 'none',
-              animation: marketStatus.isOpen ? 'pulse 2s infinite' : 'none'
-            }} />
-            <div style={{ fontSize: 20, fontWeight: 700, color: '#fff' }}>
-              {marketStatus.status}
-            </div>
-          </div>
-          <div className="muted" style={{ fontSize: 13 }}>{marketStatus.detail}</div>
-          <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>
-            NYSE/NASDAQ: 9:30 AM - 4:00 PM ET
-          </div>
         </div>
       </div>
 
-      {/* Row 1 */}
-      <div className="dashboard-row-2">
-        {/* My Active Leagues */}
-        <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <h3 style={{ margin: 0 }}>My Active Leagues</h3>
-            <Link className="btn" to="/leagues">Manage Leagues</Link>
-          </div>
-
-          {leagues.length === 0 ? (
-            <EmptyState
-              icon="🏆"
-              title="No Leagues Yet"
-              description="Create or join a league to start competing with friends."
-              actionLabel="Create a League"
-              actionTo="/leagues"
-            />
-          ) : (
-            <div style={{ display: 'grid', gap: 8 }}>
-              {leagues.map(l => (
-                <div key={l.id} className="list-row" style={{ alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontWeight: 600 }}>{l.name}</div>
-                    <div className="muted" style={{ fontSize: 12 }}>
-                      Draft: {l.draft_date ? new Date(l.draft_date).toLocaleString() : 'TBD'}
-                      {l.budget_mode === 'budget'
-                        ? ` • Cap: $${Number(l.budget_amount || 0).toLocaleString()}`
-                        : ' • No budget'}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button className="btn primary" onClick={() => navigate(`/draft/${l.id}`)}>Enter Draft</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
+      {/* Row 3: Quick Actions + Standings */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
         {/* Quick Actions */}
         <div className="card">
-          <h3 style={{ marginTop: 0, marginBottom: 12 }}>Quick Actions</h3>
-          <div style={{ display: 'grid', gap: 10 }}>
-            <Link
-              to="/portfolio"
-              className="btn"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: '12px 14px',
-                textDecoration: 'none',
-                justifyContent: 'flex-start'
-              }}
-            >
-              <span style={{ fontSize: 18 }}>📈</span>
-              <div style={{ textAlign: 'left' }}>
-                <div style={{ fontWeight: 600 }}>Trade Stocks</div>
-                <div className="muted" style={{ fontSize: 12 }}>Buy or sell from your portfolio</div>
-              </div>
-            </Link>
-            <Link
-              to="/draft"
-              className="btn"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: '12px 14px',
-                textDecoration: 'none',
-                justifyContent: 'flex-start'
-              }}
-            >
-              <span style={{ fontSize: 18 }}>🎯</span>
-              <div style={{ textAlign: 'left' }}>
-                <div style={{ fontWeight: 600 }}>Join Draft</div>
-                <div className="muted" style={{ fontSize: 12 }}>Pick stocks for your league</div>
-              </div>
-            </Link>
-            <Link
-              to="/leagues"
-              className="btn"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: '12px 14px',
-                textDecoration: 'none',
-                justifyContent: 'flex-start'
-              }}
-            >
-              <span style={{ fontSize: 18 }}>➕</span>
-              <div style={{ textAlign: 'left' }}>
-                <div style={{ fontWeight: 600 }}>Create League</div>
-                <div className="muted" style={{ fontSize: 12 }}>Start a new competition</div>
-              </div>
-            </Link>
+          <h3 style={{ margin: '0 0 12px 0', fontSize: 15 }}>Quick Actions</h3>
+          <div style={{ display: 'grid', gap: 8 }}>
+            <Link className="btn primary" to="/portfolio" style={{ textAlign: 'center' }}>Trade Stocks</Link>
+            <Link className="btn" to="/draft" style={{ textAlign: 'center' }}>Enter Draft</Link>
+            <Link className="btn" to="/leagues" style={{ textAlign: 'center' }}>Manage Leagues</Link>
           </div>
         </div>
-      </div>
 
-      {/* Row 2 */}
-      <div className="dashboard-row-2">
-        {/* Top Performing */}
+        {/* Right Column - Standings */}
         <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ marginTop: 0 }}>Top Performing Stocks</h3>
-            <Link className="btn" to="/portfolio">View Market Data</Link>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <h3 style={{ margin: 0 }}>Standings</h3>
+            <Link to="/leaderboard" style={{ fontSize: 13, color: '#60a5fa', textDecoration: 'none' }}>
+              View All →
+            </Link>
           </div>
-
-          {topPerformers.length === 0 ? (
-            <EmptyState
-              icon="📈"
-              title="No Holdings Yet"
-              description="Draft stocks or make trades to see your top performers here."
-              actionLabel="Go to Draft"
-              actionTo="/draft"
-            />
-          ) : (
-            <div style={{ display: 'grid', gap: 10 }}>
-              {topPerformers.map(tp => {
-                const pct = Math.max(-100, Math.min(100, tp.plp));
-                const width = Math.abs(pct);
-                const isUp = pct >= 0;
-                return (
-                  <div key={tp.sym} className="card" style={{ background: '#111826', padding: 10 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <div style={{ fontWeight: 600 }}>{tp.sym}</div>
-                      <div className="muted" style={{ fontSize: 12 }}>{tp.name}</div>
-                    </div>
-                    <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-                      {isUp ? '+' : ''}{tp.plp.toFixed(2)}%
-                    </div>
-                    <div style={{ background: '#222', height: 8, borderRadius: 6, overflow: 'hidden' }}>
-                      <div
-                        style={{
-                          width: `${width}%`,
-                          height: '100%',
-                          background: isUp ? '#16a34a' : '#dc2626',
-                          transition: 'width 0.25s ease',
-                        }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Standings Preview */}
-        <div className="card">
-          <h3 style={{ marginTop: 0 }}>League Standings Preview</h3>
           {standings.length === 0 ? (
-            <p className="muted" style={{ margin: 0 }}>No data yet.</p>
+            <p className="muted" style={{ margin: 0 }}>No standings data yet.</p>
           ) : (
-            <div style={{ display: 'grid', gap: 8 }}>
-              {standings.slice(0, 3).map((s, idx) => (
-                <div key={s.user_id} className="list-row">
-                  <div>
-                    <div style={{ fontWeight: 600 }}>#{idx + 1}</div>
-                    <div className="muted" style={{ fontSize: 12 }}>{getDisplayName(s.user_id, USER_ID)}</div>
-                  </div>
-                  {/* Show dollar gain like Leaderboard */}
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontWeight: 700, color: s.gain >= 0 ? '#16a34a' : '#dc2626' }}>
-                      {s.gain >= 0 ? '+' : ''}{formatUSD(s.gain)}
-                    </div>
-                    <div className="muted" style={{ fontSize: 12 }}>{formatUSD(s.value)} total</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          <div style={{ marginTop: 10 }}>
-            <Link className="btn" to="/leaderboard">View All Standings</Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Row 3 */}
-      <div className="dashboard-row-2-equal">
-        {/* Recent Draft Picks */}
-        <div className="card">
-          <h3 style={{ marginTop: 0 }}>Recent Draft Picks</h3>
-          {recentPicks.length === 0 ? (
-            <p className="muted" style={{ margin: 0 }}>No recent picks.</p>
-          ) : (
-            <div style={{ display: 'grid', gap: 8 }}>
-              {recentPicks.map(p => (
-                <div key={p.id} className="list-row">
-                  <div>
-                    <div style={{ fontWeight: 600 }}>
-                      {getDisplayName(p.user_id, USER_ID)} drafted <strong>{p.symbol}</strong>
-                    </div>
-                    <div className="muted" style={{ fontSize: 12 }}>
-                      {new Date(p.created_at).toLocaleString()}
-                    </div>
-                  </div>
-                  <div className="muted">{formatUSD(p.entry_price)}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Recent Trades */}
-        <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <h3 style={{ margin: 0 }}>Recent Trades</h3>
-            <Link className="btn" to="/trade-history" style={{ fontSize: 13, padding: '4px 10px' }}>View All</Link>
-          </div>
-          {recentTrades.length === 0 ? (
-            <p className="muted" style={{ margin: 0 }}>No trades yet.</p>
-          ) : (
-            <div style={{ display: 'grid', gap: 8 }}>
-              {recentTrades.map(t => {
-                const isMine = t.user_id === USER_ID;
-                const isBuy = t.action === 'buy';
+            <div style={{ display: 'grid', gap: 4 }}>
+              {standings.slice(0, 5).map((s, idx) => {
+                const isMe = s.user_id === USER_ID;
                 return (
-                  <div key={t.id} className="list-row" style={{ backgroundColor: isMine ? 'rgba(59, 130, 246, 0.05)' : 'transparent' }}>
-                    <div>
-                      <div style={{ fontWeight: 600 }}>
-                        {getDisplayName(t.user_id, USER_ID)}{' '}
-                        <span style={{ color: isBuy ? '#10b981' : '#ef4444' }}>
-                          {isBuy ? 'bought' : 'sold'}
-                        </span>{' '}
-                        <strong>{t.quantity}</strong> {t.symbol}
-                      </div>
-                      <div className="muted" style={{ fontSize: 12 }}>
-                        {new Date(t.created_at).toLocaleString()}
-                      </div>
+                  <div
+                    key={s.user_id}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '6px 10px',
+                      borderRadius: 6,
+                      backgroundColor: isMe ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                      border: isMe ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid transparent'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{
+                        fontWeight: 700,
+                        fontSize: 13,
+                        color: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#cd7c32' : '#6b7280',
+                        width: 20
+                      }}>
+                        {idx + 1}
+                      </span>
+                      <span style={{ fontSize: 14, fontWeight: isMe ? 600 : 400, color: isMe ? '#60a5fa' : '#e5e7eb' }}>
+                        {getDisplayName(s.user_id, USER_ID)}
+                      </span>
                     </div>
-                    <div style={{ fontWeight: 600, color: isBuy ? '#ef4444' : '#10b981' }}>
-                      {formatUSD(t.total_value)}
-                    </div>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: s.gain >= 0 ? '#22c55e' : '#ef4444' }}>
+                      {s.gain >= 0 ? '+' : ''}{formatUSD(s.gain)}
+                    </span>
                   </div>
                 );
               })}

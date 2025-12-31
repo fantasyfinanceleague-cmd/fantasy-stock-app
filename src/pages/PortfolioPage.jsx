@@ -62,7 +62,7 @@ export default function PortfolioPage() {
 
         const { data: lg, error: lgErr } = await supabase
           .from('leagues')
-          .select('id, name, budget_mode, budget_amount, league_type')
+          .select('id, name, budget_mode, budget_amount, league_type, current_week')
           .in('id', ids)
           .order('name', { ascending: true });
 
@@ -100,7 +100,7 @@ export default function PortfolioPage() {
         if (!league || league?.id !== leagueId) {
           const { data: lg, error: lgErr } = await supabase
             .from('leagues')
-            .select('id, name, budget_mode, budget_amount, league_type')
+            .select('id, name, budget_mode, budget_amount, league_type, current_week')
             .eq('id', leagueId)
             .single();
           if (lgErr) throw lgErr;
@@ -353,33 +353,24 @@ export default function PortfolioPage() {
 
   return (
     <div className="page">
-      {/* Header controls */}
-      <div className="portfolio-controls">
-        <div className="portfolio-controls-left">
-          <h2 style={{ color: '#fff', margin: 0 }}>Portfolio Management</h2>
-          <p className="muted" style={{ marginTop: 6 }}>
-            Manage your stock holdings and execute trades within your league
-          </p>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <h2 style={{ color: '#fff', margin: 0 }}>Portfolio</h2>
+          <select
+            id="leagueSelect"
+            value={leagueId}
+            onChange={handleLeagueChange}
+            className="round-select"
+            style={{ minWidth: 160 }}
+          >
+            {leagues.map(l => (
+              <option key={l.id} value={l.id}>{l.name}</option>
+            ))}
+          </select>
         </div>
 
-        <div className="portfolio-controls-right">
-          <div>
-            <label htmlFor="leagueSelect" className="muted" style={{ display: 'block', marginBottom: 4 }}>
-              Select League
-            </label>
-            <select
-              id="leagueSelect"
-              value={leagueId}
-              onChange={handleLeagueChange}
-              className="round-select"
-              style={{ minWidth: 180 }}
-            >
-              {leagues.map(l => (
-                <option key={l.id} value={l.id}>{l.name}</option>
-              ))}
-            </select>
-          </div>
-
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <button
             className="btn primary"
             onClick={() => {
@@ -387,13 +378,12 @@ export default function PortfolioPage() {
               setTradeSymbol('');
               setShowTradeModal(true);
             }}
-            style={{ whiteSpace: 'nowrap' }}
           >
             Buy Stock
           </button>
 
           <button className="btn" onClick={refreshPrices} disabled={isRefreshing || !actualHoldings.length}>
-            {isRefreshing ? 'Refreshing…' : 'Refresh Prices'}
+            {isRefreshing ? 'Refreshing…' : 'Refresh'}
           </button>
 
           {getFailedSymbols().length > 0 && (
@@ -403,27 +393,27 @@ export default function PortfolioPage() {
               disabled={isRefreshing}
               style={{ backgroundColor: '#ef4444', borderColor: '#ef4444' }}
             >
-              Retry Failed ({getFailedSymbols().length})
+              Retry ({getFailedSymbols().length})
             </button>
           )}
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+          <Link className="btn" to="/trade-history">History</Link>
+
+          <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', marginLeft: 4 }}>
             <input
               type="checkbox"
               checked={autoRefresh}
               onChange={toggleAutoRefresh}
-              style={{ width: 16, height: 16, cursor: 'pointer' }}
+              style={{ width: 14, height: 14, cursor: 'pointer' }}
             />
-            <span className="muted" style={{ fontSize: 13 }}>Auto-refresh</span>
+            <span className="muted" style={{ fontSize: 12 }}>Auto</span>
           </label>
 
           {lastUpdate && (
-            <span className="muted" style={{ fontSize: 13, whiteSpace: 'nowrap' }}>
-              {autoRefresh && <span style={{ color: '#10b981' }}>●</span>} Last updated: {lastUpdate.toLocaleTimeString()}
+            <span className="muted" style={{ fontSize: 11 }}>
+              {autoRefresh && <span style={{ color: '#10b981' }}>●</span>} {lastUpdate.toLocaleTimeString()}
             </span>
           )}
-
-          <Link className="btn" to="/trade-history">Trade History</Link>
         </div>
       </div>
 

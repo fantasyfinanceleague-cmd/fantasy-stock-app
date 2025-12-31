@@ -184,41 +184,41 @@ export function SkeletonPortfolio() {
 export function SkeletonDashboard() {
   return (
     <div className="page" style={{ paddingTop: 24 }}>
-      {/* Metrics row */}
-      <SkeletonMetricsRow />
-
-      {/* Row 1 */}
-      <div className="dashboard-row-2">
-        <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-            <Skeleton width={140} height={20} />
-            <Skeleton width={100} height={32} borderRadius={6} />
-          </div>
-          {[1, 2, 3].map(i => (
-            <SkeletonListRow key={i} />
-          ))}
-        </div>
-        <div className="card">
-          <Skeleton width={120} height={20} style={{ marginBottom: 16 }} />
-          {[1, 2, 3].map(i => (
-            <Skeleton key={i} width="100%" height={56} borderRadius={8} style={{ marginBottom: 10 }} />
-          ))}
-        </div>
+      {/* Row 1: Matchup + Market Status */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 16 }}>
+        <SkeletonCard height={100} />
+        <SkeletonCard height={100} />
       </div>
 
-      {/* Row 2 */}
-      <div className="dashboard-row-2">
+      {/* Row 2: Portfolio Value + Position */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 16 }}>
+        <SkeletonCard />
+        <SkeletonCard />
+      </div>
+
+      {/* Row 3: Quick Actions + Standings */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
+        {/* Quick Actions */}
         <div className="card">
-          <Skeleton width={160} height={20} style={{ marginBottom: 16 }} />
-          {[1, 2, 3].map(i => (
-            <SkeletonPerformerCard key={i} />
-          ))}
+          <Skeleton width={120} height={20} style={{ marginBottom: 12 }} />
+          <div style={{ display: 'grid', gap: 8 }}>
+            {[1, 2, 3, 4].map(i => (
+              <Skeleton key={i} width="100%" height={40} borderRadius={6} />
+            ))}
+          </div>
         </div>
+
+        {/* Standings */}
         <div className="card">
-          <Skeleton width={180} height={20} style={{ marginBottom: 16 }} />
-          {[1, 2, 3].map(i => (
-            <SkeletonListRow key={i} />
-          ))}
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+            <Skeleton width={80} height={20} />
+            <Skeleton width={60} height={14} />
+          </div>
+          <div style={{ display: 'grid', gap: 4 }}>
+            {[1, 2, 3, 4, 5].map(i => (
+              <Skeleton key={i} width="100%" height={36} borderRadius={6} />
+            ))}
+          </div>
         </div>
       </div>
     </div>
