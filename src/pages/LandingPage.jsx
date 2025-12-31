@@ -63,29 +63,31 @@ export default function LandingPage() {
     <div style={{ background: '#0b1120', minHeight: '100vh' }}>
       {/* Header */}
       <header style={{
-        padding: '16px 24px',
+        padding: '12px 16px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
+        gap: 12,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
           <img
             src={logo}
             alt="Stockpile"
             style={{
-              height: 56,
-              width: 56,
-              borderRadius: 10,
+              height: 44,
+              width: 44,
+              borderRadius: 8,
               objectFit: 'cover',
+              flexShrink: 0,
             }}
           />
-          <span style={{ color: '#fff', fontSize: 22, fontWeight: 700 }}>Stockpile</span>
+          <span style={{ color: '#fff', fontSize: 18, fontWeight: 700 }}>Stockpile</span>
         </div>
-        <div style={{ display: 'flex', gap: 12 }}>
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
           <Link
             to="/login"
             style={{
-              padding: '10px 20px',
+              padding: '8px 14px',
               background: 'transparent',
               border: '1px solid #374151',
               borderRadius: 8,
@@ -93,6 +95,7 @@ export default function LandingPage() {
               textDecoration: 'none',
               fontWeight: 500,
               fontSize: 14,
+              whiteSpace: 'nowrap',
             }}
           >
             Log In
@@ -100,7 +103,7 @@ export default function LandingPage() {
           <Link
             to="/signup"
             style={{
-              padding: '10px 20px',
+              padding: '8px 14px',
               background: '#3b82f6',
               border: 'none',
               borderRadius: 8,
@@ -108,9 +111,10 @@ export default function LandingPage() {
               textDecoration: 'none',
               fontWeight: 600,
               fontSize: 14,
+              whiteSpace: 'nowrap',
             }}
           >
-            Sign Up Free
+            Sign Up
           </Link>
         </div>
       </header>
