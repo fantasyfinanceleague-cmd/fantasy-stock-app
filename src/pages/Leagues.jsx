@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import useLeagues from '../hooks/useLeagues';
 import { useToast } from '../components/Toast';
 import EmptyState from '../components/EmptyState';
+import { validateLeagueName } from '../utils/contentModeration';
 
 function SectionHeader({ title, icon = null, right = null }) {
   return (
@@ -50,8 +51,17 @@ export default function Leagues() {
   const [leagueType, setLeagueType] = useState('duration');    // 'duration' or 'matchup'
   const [durationDays, setDurationDays] = useState(30);        // For duration leagues
   const [numWeeks, setNumWeeks] = useState(11);                // For matchup leagues (default for 12 participants)
+  const [playoffTeams, setPlayoffTeams] = useState(4);         // Number of playoff teams (2, 4, or 8)
   const capDisabled = budgetMode === 'no-budget';
   const minWeeks = participants - 1;                           // Min weeks for round robin
+
+  // Calculate valid playoff options based on participants
+  const getPlayoffOptions = () => {
+    if (participants <= 4) return [2];
+    if (participants <= 6) return [2, 4];
+    return [2, 4, 8];
+  };
+  const validPlayoffOptions = getPlayoffOptions();
 
   // Update
   const [selectedLeagueForUpdate, setSelectedLeagueForUpdate] = useState('');
@@ -116,6 +126,13 @@ export default function Leagues() {
     e.preventDefault();
     if (!leagueName.trim()) return;
 
+    // Check for inappropriate content
+    const contentCheck = validateLeagueName(leagueName.trim());
+    if (!contentCheck.isValid) {
+      toast.error(contentCheck.reason || 'League name is not allowed');
+      return;
+    }
+
     await createLeague({
       name: leagueName.trim(),
       draftDate: draftDate ? new Date(draftDate).toISOString() : null,
@@ -127,6 +144,7 @@ export default function Leagues() {
       leagueType,
       durationDays: leagueType === 'duration' ? Number(durationDays) : null,
       numWeeks: leagueType === 'matchup' ? Math.max(numWeeks, minWeeks) : null,
+      playoffTeams: leagueType === 'matchup' ? playoffTeams : null,
     });
 
     setLeagueName('');
@@ -138,6 +156,7 @@ export default function Leagues() {
     setLeagueType('duration');
     setDurationDays(30);
     setNumWeeks(11);
+    setPlayoffTeams(4);
   };
 
   const handleUpdate = async (e) => {
@@ -301,21 +320,39 @@ export default function Leagues() {
                   <small className="muted">How long the league runs after draft completes</small>
                 </div>
               ) : (
-                <div className="form-row">
-                  <label>Number of Weeks</label>
-                  <input
-                    type="number"
-                    min={minWeeks}
-                    step="1"
-                    value={numWeeks}
-                    onChange={(e) => setNumWeeks(Math.max(minWeeks, Number(e.target.value) || minWeeks))}
-                    onBlur={(e) => setNumWeeks(Math.max(minWeeks, Number(e.target.value) || minWeeks))}
-                  />
-                  <small className="muted">
-                    Minimum {minWeeks} weeks for round robin (each team plays each other once).
-                    Monday = trade day, Tuesday-Friday = matchup week.
-                  </small>
-                </div>
+                <>
+                  <div className="form-row">
+                    <label>Number of Weeks</label>
+                    <input
+                      type="number"
+                      min={minWeeks}
+                      step="1"
+                      value={numWeeks}
+                      onChange={(e) => setNumWeeks(Math.max(minWeeks, Number(e.target.value) || minWeeks))}
+                      onBlur={(e) => setNumWeeks(Math.max(minWeeks, Number(e.target.value) || minWeeks))}
+                    />
+                    <small className="muted">
+                      Minimum {minWeeks} weeks for round robin (each team plays each other once).
+                      Monday = trade day, Tuesday-Friday = matchup week.
+                    </small>
+                  </div>
+                  <div className="form-row">
+                    <label>Playoff Teams</label>
+                    <select
+                      value={playoffTeams}
+                      onChange={(e) => setPlayoffTeams(Number(e.target.value))}
+                    >
+                      {validPlayoffOptions.map(opt => (
+                        <option key={opt} value={opt}>
+                          {opt} Teams {opt === 2 ? '(Finals only)' : opt === 4 ? '(Semis + Finals)' : '(Quarters + Semis + Finals)'}
+                        </option>
+                      ))}
+                    </select>
+                    <small className="muted">
+                      Top teams by record advance to single-elimination playoffs.
+                    </small>
+                  </div>
+                </>
               )}
 
               <button className="btn primary" type="submit" disabled={loading}>

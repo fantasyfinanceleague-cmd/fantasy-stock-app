@@ -2,7 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase/supabaseClient';
 import { useAuthUser } from '../auth/useAuthUser';
+import { validateUsername } from '../utils/contentModeration';
 import '../layout.css';
+
+// Available avatar options
+const AVATAR_OPTIONS = [
+  '📊', '📈', '📉', '💹', '💰', '💵', '💎', '🏆',
+  '🚀', '🌟', '⭐', '🔥', '💪', '🎯', '🎲', '🃏',
+  '🦁', '🐂', '🐻', '🦅', '🐺', '🦊', '🐲', '🦈',
+  '👤', '👨‍💼', '👩‍💼', '🧑‍💻', '👨‍🚀', '🥷', '🧙', '👑',
+];
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -15,6 +24,12 @@ export default function Profile() {
   const [usernameSuccess, setUsernameSuccess] = useState('');
   const [updatingUsername, setUpdatingUsername] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(true);
+
+  // Avatar state
+  const [avatar, setAvatar] = useState('📊');
+  const [originalAvatar, setOriginalAvatar] = useState('📊');
+  const [savingAvatar, setSavingAvatar] = useState(false);
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -45,13 +60,15 @@ export default function Profile() {
     async function loadProfile() {
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('username')
+        .select('username, avatar')
         .eq('id', user.id)
         .single();
 
       if (!error && data) {
         setUsername(data.username || '');
         setOriginalUsername(data.username || '');
+        setAvatar(data.avatar || '📊');
+        setOriginalAvatar(data.avatar || '📊');
       }
       setLoadingProfile(false);
     }
@@ -246,6 +263,13 @@ export default function Profile() {
       return;
     }
 
+    // Check for inappropriate content
+    const contentCheck = validateUsername(trimmedUsername);
+    if (!contentCheck.isValid) {
+      setUsernameError(contentCheck.reason || 'Username is not allowed');
+      return;
+    }
+
     setUpdatingUsername(true);
 
     // Upsert the profile
@@ -269,6 +293,32 @@ export default function Profile() {
     } else {
       setUsernameSuccess('Username updated successfully');
       setOriginalUsername(trimmedUsername);
+    }
+  }
+
+  async function handleAvatarSave(newAvatar) {
+    if (newAvatar === originalAvatar) {
+      setShowAvatarPicker(false);
+      return;
+    }
+
+    setSavingAvatar(true);
+    setAvatar(newAvatar);
+
+    const { error } = await supabase
+      .from('user_profiles')
+      .upsert({
+        id: user.id,
+        avatar: newAvatar
+      }, {
+        onConflict: 'id'
+      });
+
+    setSavingAvatar(false);
+    setShowAvatarPicker(false);
+
+    if (!error) {
+      setOriginalAvatar(newAvatar);
     }
   }
 
@@ -325,7 +375,7 @@ export default function Profile() {
     <div className="page">
       <h2 style={{ color: '#fff', marginBottom: 20 }}>Profile</h2>
 
-      <div className="dashboard-row-2-equal" style={{ maxWidth: 900 }}>
+      <div className="dashboard-row-2-equal">
         {/* Account Info */}
         <div className="card">
           <h3 style={{ marginTop: 0, marginBottom: 16 }}>Account Information</h3>
@@ -387,52 +437,99 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Display Name */}
+        {/* Display Name & Avatar */}
         <div className="card">
           <h3 style={{ marginTop: 0, marginBottom: 16 }}>Display Name</h3>
-          <p className="muted" style={{ marginTop: 0, marginBottom: 12, fontSize: 14 }}>
-            Set a username that will be displayed on leaderboards and in leagues instead of your user ID.
-          </p>
 
-          <form onSubmit={handleUsernameChange} style={{ display: 'grid', gap: 12 }}>
-            <div>
-              <label htmlFor="username" style={{ display: 'block', marginBottom: 4 }}>Username</label>
-              <input
-                id="username"
-                name="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter a username"
-                autoComplete="username"
-                disabled={loadingProfile}
-                style={{ width: '100%', boxSizing: 'border-box' }}
-              />
-              <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
-                3-20 characters, letters, numbers, and underscores only
-              </div>
+          {/* Avatar + Username in a row */}
+          <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+            {/* Avatar */}
+            <div style={{ textAlign: 'center' }}>
+              <button
+                type="button"
+                onClick={() => setShowAvatarPicker(true)}
+                style={{
+                  width: 80,
+                  height: 80,
+                  borderRadius: 16,
+                  backgroundColor: '#1e293b',
+                  border: '2px solid #374151',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 40,
+                  cursor: 'pointer',
+                  transition: 'border-color 0.15s ease',
+                }}
+                onMouseOver={(e) => e.currentTarget.style.borderColor = '#3b82f6'}
+                onMouseOut={(e) => e.currentTarget.style.borderColor = '#374151'}
+                title="Change avatar"
+              >
+                {avatar}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowAvatarPicker(true)}
+                className="muted"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: 12,
+                  marginTop: 6,
+                  cursor: 'pointer',
+                  color: '#60a5fa',
+                }}
+              >
+                Change
+              </button>
             </div>
 
-            {usernameError && (
-              <div style={{ color: '#ef4444', fontSize: 14 }}>{usernameError}</div>
-            )}
-            {usernameSuccess && (
-              <div style={{ color: '#10b981', fontSize: 14 }}>{usernameSuccess}</div>
-            )}
+            {/* Username Form */}
+            <div style={{ flex: 1 }}>
+              <p className="muted" style={{ marginTop: 0, marginBottom: 12, fontSize: 14 }}>
+                Set a username that will be displayed on leaderboards and in leagues.
+              </p>
 
-            <button
-              type="submit"
-              className="btn primary"
-              disabled={updatingUsername || loadingProfile || username === originalUsername}
-              style={{ marginTop: 8 }}
-            >
-              {updatingUsername ? 'Saving...' : 'Save Username'}
-            </button>
-          </form>
+              <form onSubmit={handleUsernameChange} style={{ display: 'grid', gap: 12 }}>
+                <div>
+                  <label htmlFor="username" style={{ display: 'block', marginBottom: 4 }}>Username</label>
+                  <input
+                    id="username"
+                    name="username"
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Enter a username"
+                    autoComplete="username"
+                    disabled={loadingProfile}
+                    style={{ width: '100%', boxSizing: 'border-box' }}
+                  />
+                  <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                    3-20 characters, letters, numbers, and underscores only
+                  </div>
+                </div>
+
+                {usernameError && (
+                  <div style={{ color: '#ef4444', fontSize: 14 }}>{usernameError}</div>
+                )}
+                {usernameSuccess && (
+                  <div style={{ color: '#10b981', fontSize: 14 }}>{usernameSuccess}</div>
+                )}
+
+                <button
+                  type="submit"
+                  className="btn primary"
+                  disabled={updatingUsername || loadingProfile || username === originalUsername}
+                >
+                  {updatingUsername ? 'Saving...' : 'Save Username'}
+                </button>
+              </form>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="dashboard-row-2-equal" style={{ maxWidth: 900, marginTop: 16 }}>
+      <div className="dashboard-row-2-equal" style={{ marginTop: 16 }}>
         {/* Change Password */}
         <div className="card">
           <h3 style={{ marginTop: 0, marginBottom: 16 }}>Change Password</h3>
@@ -711,7 +808,7 @@ export default function Profile() {
       </div>
 
       {/* Sign Out Section */}
-      <div className="card" style={{ maxWidth: 900, marginTop: 16 }}>
+      <div className="card" style={{ marginTop: 16 }}>
         <h3 style={{ marginTop: 0, marginBottom: 12 }}>Session</h3>
         <p className="muted" style={{ marginBottom: 12 }}>
           Sign out of your account on this device.
@@ -728,6 +825,83 @@ export default function Profile() {
           Sign Out
         </button>
       </div>
+
+      {/* Avatar Picker Modal */}
+      {showAvatarPicker && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => setShowAvatarPicker(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#1a1f2e',
+              borderRadius: 16,
+              padding: 24,
+              maxWidth: 400,
+              width: '90%',
+              border: '1px solid #374151',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h3 style={{ margin: 0, color: '#fff' }}>Choose Avatar</h3>
+              <button
+                type="button"
+                onClick={() => setShowAvatarPicker(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#9ca3af',
+                  fontSize: 24,
+                  cursor: 'pointer',
+                  padding: 0,
+                  lineHeight: 1,
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(8, 1fr)',
+              gap: 8,
+            }}>
+              {AVATAR_OPTIONS.map((opt) => (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => handleAvatarSave(opt)}
+                  disabled={savingAvatar}
+                  style={{
+                    width: '100%',
+                    aspectRatio: '1',
+                    fontSize: 22,
+                    border: avatar === opt ? '2px solid #3b82f6' : '1px solid #374151',
+                    borderRadius: 8,
+                    backgroundColor: avatar === opt ? 'rgba(59, 130, 246, 0.2)' : '#0f1319',
+                    cursor: savingAvatar ? 'wait' : 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

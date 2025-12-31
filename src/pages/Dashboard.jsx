@@ -5,8 +5,9 @@ import { supabase } from '../supabase/supabaseClient';
 import '../layout.css';
 import { useAuthUser } from '../auth/useAuthUser';
 import { prettyName, formatUSD } from '../utils/formatting';
-import { fetchCompanyName, fetchQuotesInBatch } from '../utils/stockData';
+import { fetchQuotesInBatch, fetchCompanyNamesInBatch } from '../utils/stockData';
 import { getHolidaysInRange } from '../utils/marketHolidays';
+import { getPlayoffRoundName } from '../utils/scheduleGenerator';
 import { PageLoader } from '../components/LoadingSpinner';
 import { useUserProfiles } from '../context/UserProfilesContext';
 import EmptyState from '../components/EmptyState';
@@ -17,7 +18,7 @@ import ProgressChecklist, { useSetupProgress } from '../components/ProgressCheck
 export default function Dashboard() {
   const navigate = useNavigate();
   const authUser = useAuthUser();
-  const { fetchProfiles, getDisplayName } = useUserProfiles();
+  const { fetchProfiles, getDisplayName, getAvatar } = useUserProfiles();
   // keep a fallback for now so your draft keeps working if not signed in
   const USER_ID = authUser?.id ?? 'test-user';
 
@@ -150,25 +151,12 @@ export default function Dashboard() {
         const tradeSymbols = (allTradesData || []).map(t => t.symbol?.toUpperCase());
         const uniq = [...new Set([...draftSymbols, ...tradeSymbols])].filter(Boolean);
 
-        // names (best-effort via Edge Function backed by your `symbols` table)
-        for (const s of uniq) {
-          if (symbolToName[s]) continue;
-          const name = await fetchCompanyName(s);
-          if (name) setSymbolToName(prev => ({ ...prev, [s]: name }));
-        }
-
         // Store all picks for standings calculation
         setAllPicks(picks || []);
 
         // recent activity (last 5)
         const sortedPicks = [...(picks || [])].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5);
         setRecentPicks(sortedPicks);
-
-        // Fetch prices for all symbols
-        if (uniq.length > 0) {
-          const priceData = await fetchQuotesInBatch(uniq);
-          setPrices(priceData);
-        }
 
         // Fetch user profiles for all user IDs in picks and trades
         const allUserIds = [
@@ -177,6 +165,17 @@ export default function Dashboard() {
             ...(allTradesData || []).map(t => t.user_id),
           ].filter(Boolean))
         ];
+
+        // Fetch prices, company names, and user profiles in parallel
+        if (uniq.length > 0) {
+          const [priceData, nameData] = await Promise.all([
+            fetchQuotesInBatch(uniq),
+            fetchCompanyNamesInBatch(uniq, symbolToName),
+          ]);
+          setPrices(priceData);
+          setSymbolToName(nameData);
+        }
+
         if (allUserIds.length > 0) {
           fetchProfiles(allUserIds);
         }
@@ -627,22 +626,36 @@ export default function Dashboard() {
             );
           }
 
-          // Normal matchup display
+          // Normal matchup display (regular season or playoff)
           const opponentStats = standings.find(s => s.user_id === opponentName);
           const oppGain = opponentStats?.gain ?? 0;
           const isWinning = myGain > oppGain;
           const isTied = myGain === oppGain;
+          const isPlayoff = currentMatchup.is_playoff === true;
+          const mySeed = currentMatchup.team1_user_id === USER_ID
+            ? currentMatchup.team1_seed
+            : currentMatchup.team2_seed;
+          const oppSeed = currentMatchup.team1_user_id === USER_ID
+            ? currentMatchup.team2_seed
+            : currentMatchup.team1_seed;
 
           return (
             <div className="card" style={{
-              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)',
-              border: '1px solid rgba(59, 130, 246, 0.2)',
+              background: isPlayoff
+                ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.1) 100%)'
+                : 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)',
+              border: isPlayoff
+                ? '1px solid rgba(251, 191, 36, 0.3)'
+                : '1px solid rgba(59, 130, 246, 0.2)',
               padding: '14px 16px'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#e5e7eb' }}>
-                    Week {currentMatchup.week_number} Matchup
+                  <div style={{ fontSize: 13, fontWeight: 600, color: isPlayoff ? '#fbbf24' : '#e5e7eb' }}>
+                    {isPlayoff
+                      ? `🏆 ${getPlayoffRoundName(currentMatchup.playoff_round)}`
+                      : `Week ${currentMatchup.week_number} Matchup`
+                    }
                   </div>
                   {weekHolidays.length > 0 && (
                     <span style={{
@@ -680,15 +693,19 @@ export default function Dashboard() {
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                 <div style={{ flex: 1, textAlign: 'center' }}>
-                  <div style={{ fontSize: 12, color: '#60a5fa', fontWeight: 600, marginBottom: 2 }}>You</div>
+                  <div style={{ fontSize: 28, marginBottom: 4 }}>{getAvatar(USER_ID)}</div>
+                  <div style={{ fontSize: 12, color: '#60a5fa', fontWeight: 600, marginBottom: 2 }}>
+                    {isPlayoff && mySeed ? `#${mySeed} ` : ''}You
+                  </div>
                   <div style={{ fontSize: 18, fontWeight: 700, color: myGain >= 0 ? '#22c55e' : '#ef4444' }}>
                     {myGain >= 0 ? '+' : ''}{formatUSD(myGain)}
                   </div>
                 </div>
                 <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 600 }}>VS</div>
                 <div style={{ flex: 1, textAlign: 'center' }}>
+                  <div style={{ fontSize: 28, marginBottom: 4 }}>{getAvatar(opponentName)}</div>
                   <div style={{ fontSize: 12, color: '#9ca3af', fontWeight: 600, marginBottom: 2 }}>
-                    {getDisplayName(opponentName, USER_ID)}
+                    {isPlayoff && oppSeed ? `#${oppSeed} ` : ''}{getDisplayName(opponentName, USER_ID)}
                   </div>
                   <div style={{ fontSize: 18, fontWeight: 700, color: oppGain >= 0 ? '#22c55e' : '#ef4444' }}>
                     {oppGain >= 0 ? '+' : ''}{formatUSD(oppGain)}
@@ -821,7 +838,7 @@ export default function Dashboard() {
                       border: isMe ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid transparent'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{
                         fontWeight: 700,
                         fontSize: 13,
@@ -830,6 +847,7 @@ export default function Dashboard() {
                       }}>
                         {idx + 1}
                       </span>
+                      <span style={{ fontSize: 18 }}>{getAvatar(s.user_id)}</span>
                       <span style={{ fontSize: 14, fontWeight: isMe ? 600 : 400, color: isMe ? '#60a5fa' : '#e5e7eb' }}>
                         {getDisplayName(s.user_id, USER_ID)}
                       </span>

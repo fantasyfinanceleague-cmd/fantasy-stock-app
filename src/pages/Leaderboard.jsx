@@ -5,12 +5,116 @@ import { supabase } from '../supabase/supabaseClient';
 import '../layout.css';
 import { useAuthUser } from '../auth/useAuthUser';
 import { prettyName, formatUSD, formatPercent } from '../utils/formatting';
-import { fetchCompanyName } from '../utils/stockData';
+import { fetchCompanyNamesInBatch } from '../utils/stockData';
 import { usePrices } from '../context/PriceContext';
 import { useUserProfiles } from '../context/UserProfilesContext';
 import { PageLoader } from '../components/LoadingSpinner';
 import { SkeletonLeaderboard } from '../components/Skeleton';
-import { generateSchedule, generateInitialStandings } from '../utils/scheduleGenerator';
+import { generateSchedule, generateInitialStandings, getPlayoffRoundName } from '../utils/scheduleGenerator';
+
+// Helper component for playoff bracket matchup display
+function PlayoffMatchupCard({ matchup, getDisplayName, getAvatar, userId, isCurrentRound, isFinals }) {
+  const m = matchup;
+  const isComplete = m.winner_user_id !== null;
+  const team1Won = m.winner_user_id === m.team1_user_id;
+  const team2Won = m.winner_user_id === m.team2_user_id;
+  const isTBD = !m.team1_user_id || !m.team2_user_id;
+
+  const cardStyle = {
+    background: isFinals
+      ? 'linear-gradient(135deg, #78350f 0%, #451a03 100%)'
+      : isCurrentRound
+        ? '#1e3a5f'
+        : '#111826',
+    borderRadius: 8,
+    padding: 12,
+    border: isFinals
+      ? '1px solid #fbbf24'
+      : isCurrentRound
+        ? '1px solid #3b82f6'
+        : '1px solid #374151',
+  };
+
+  const teamStyle = (isWinner, isUser) => ({
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '6px 8px',
+    borderRadius: 4,
+    background: isWinner ? 'rgba(22, 163, 74, 0.2)' : 'transparent',
+    color: isWinner ? '#16a34a' : isUser ? '#93c5fd' : '#e5e7eb',
+    fontWeight: isWinner || isUser ? 600 : 400,
+  });
+
+  return (
+    <div style={cardStyle}>
+      {/* Team 1 */}
+      <div style={teamStyle(team1Won, m.team1_user_id === userId)}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {m.team1_seed && (
+            <span style={{ fontSize: 11, color: '#9ca3af', minWidth: 16 }}>#{m.team1_seed}</span>
+          )}
+          <span style={{ fontSize: 16 }}>{m.team1_user_id ? getAvatar(m.team1_user_id) : '❓'}</span>
+          <span style={{ fontSize: 13 }}>
+            {m.team1_user_id ? getDisplayName(m.team1_user_id, userId) : 'TBD'}
+          </span>
+          {team1Won && <span style={{ marginLeft: 4 }}>✓</span>}
+        </div>
+        {m.team1_gain !== null && (
+          <span style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: Number(m.team1_gain) >= 0 ? '#16a34a' : '#dc2626'
+          }}>
+            {Number(m.team1_gain) >= 0 ? '+' : ''}{formatUSD(m.team1_gain)}
+          </span>
+        )}
+      </div>
+
+      {/* Divider */}
+      <div style={{
+        height: 1,
+        background: '#374151',
+        margin: '4px 0',
+      }} />
+
+      {/* Team 2 */}
+      <div style={teamStyle(team2Won, m.team2_user_id === userId)}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {m.team2_seed && (
+            <span style={{ fontSize: 11, color: '#9ca3af', minWidth: 16 }}>#{m.team2_seed}</span>
+          )}
+          <span style={{ fontSize: 16 }}>{m.team2_user_id ? getAvatar(m.team2_user_id) : '❓'}</span>
+          <span style={{ fontSize: 13 }}>
+            {m.team2_user_id ? getDisplayName(m.team2_user_id, userId) : 'TBD'}
+          </span>
+          {team2Won && <span style={{ marginLeft: 4 }}>✓</span>}
+        </div>
+        {m.team2_gain !== null && (
+          <span style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: Number(m.team2_gain) >= 0 ? '#16a34a' : '#dc2626'
+          }}>
+            {Number(m.team2_gain) >= 0 ? '+' : ''}{formatUSD(m.team2_gain)}
+          </span>
+        )}
+      </div>
+
+      {/* Status indicator */}
+      {isTBD && (
+        <div style={{ textAlign: 'center', fontSize: 11, color: '#6b7280', marginTop: 4 }}>
+          Awaiting previous round
+        </div>
+      )}
+      {isComplete && isFinals && (
+        <div style={{ textAlign: 'center', fontSize: 12, color: '#fbbf24', marginTop: 6, fontWeight: 700 }}>
+          🏆 CHAMPION
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Leaderboard() {
   const authUser = useAuthUser();
@@ -36,7 +140,7 @@ export default function Leaderboard() {
   const { prices, loading: pricesLoading, lastUpdate: lastUpdated, fetchPrices } = usePrices();
 
   // Use shared user profiles context
-  const { fetchProfiles, getDisplayName } = useUserProfiles();
+  const { fetchProfiles, getDisplayName, getAvatar } = useUserProfiles();
 
   // ui
   const [loading, setLoading] = useState(true);
@@ -162,20 +266,13 @@ export default function Leaderboard() {
         const tradeSymbols = (tradeRows || []).map(t => t.symbol?.toUpperCase());
         const uniq = [...new Set([...draftSymbols, ...tradeSymbols])].filter(Boolean);
 
-        // warm names
-        for (const s of uniq) {
-          if (symbolToName[s]) continue;
-          try {
-            const name = await fetchCompanyName(s);
-            if (name) {
-              setSymbolToName(prev => ({ ...prev, [s]: name }));
-            }
-          } catch { /* ignore */ }
-        }
-
-        // Fetch prices using shared context (will use cache if available)
+        // Fetch prices and company names in parallel
         if (uniq.length > 0) {
-          await fetchPrices(uniq);
+          const [, nameData] = await Promise.all([
+            fetchPrices(uniq),
+            fetchCompanyNamesInBatch(uniq, symbolToName),
+          ]);
+          setSymbolToName(nameData);
         }
       } catch (e) {
         setError(e.message || String(e));
@@ -407,6 +504,33 @@ export default function Leaderboard() {
   const currentWeekMatchups = useMemo(() => {
     return matchups.filter(m => m.week_number === currentWeek);
   }, [matchups, currentWeek]);
+
+  // Playoff matchups organized by round
+  const playoffData = useMemo(() => {
+    const playoffMatchups = matchups.filter(m => m.is_playoff);
+    if (playoffMatchups.length === 0) return null;
+
+    // Group by round
+    const quarters = playoffMatchups.filter(m => m.playoff_round === 'quarter');
+    const semis = playoffMatchups.filter(m => m.playoff_round === 'semi');
+    const finals = playoffMatchups.filter(m => m.playoff_round === 'finals');
+
+    // Check if playoffs have started (any team1_user_id is set in first round)
+    const firstRound = quarters.length > 0 ? quarters : (semis.length > 0 ? semis : finals);
+    const hasStarted = firstRound.some(m => m.team1_user_id !== null);
+
+    return {
+      hasStarted,
+      quarters,
+      semis,
+      finals,
+      currentRound: finals.some(m => m.team1_user_id && m.team2_user_id && m.winner_user_id === null) ? 'finals'
+        : semis.some(m => m.team1_user_id && m.team2_user_id && m.winner_user_id === null) ? 'semi'
+        : quarters.some(m => m.winner_user_id === null) ? 'quarter'
+        : finals.some(m => m.winner_user_id) ? 'complete' : 'upcoming',
+      champion: finals.find(m => m.winner_user_id)?.winner_user_id || null,
+    };
+  }, [matchups]);
 
   // Get schedule for a specific player (all weeks)
   const getPlayerSchedule = (playerId) => {
@@ -691,6 +815,7 @@ export default function Leaderboard() {
                       }}>
                         {idx + 1}
                       </div>
+                      <span style={{ fontSize: 24 }}>{getAvatar(s.user_id)}</span>
                       <div>
                         <div style={{ fontWeight: 600 }}>{getDisplayName(s.user_id, USER_ID)}</div>
                         <div className="muted" style={{ fontSize: 12 }}>{activeLeague?.name || ''}</div>
@@ -746,6 +871,7 @@ export default function Leaderboard() {
                       }}>
                         {idx + 1}
                       </div>
+                      <span style={{ fontSize: 24 }}>{getAvatar(s.user_id)}</span>
                       <div>
                         <div style={{ fontWeight: 600 }}>{getDisplayName(s.user_id, USER_ID)}</div>
                         <div className="muted" style={{ fontSize: 12 }}>{activeLeague?.name || ''}</div>
@@ -815,6 +941,7 @@ export default function Leaderboard() {
                   >
                     {/* Team 1 */}
                     <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: 28, marginBottom: 4 }}>{getAvatar(m.team1_user_id)}</div>
                       <div style={{
                         fontWeight: 600,
                         color: team1Won ? '#16a34a' : isTie ? '#eab308' : undefined
@@ -845,6 +972,7 @@ export default function Leaderboard() {
 
                     {/* Team 2 */}
                     <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: 28, marginBottom: 4 }}>{getAvatar(m.team2_user_id)}</div>
                       <div style={{
                         fontWeight: 600,
                         color: team2Won ? '#16a34a' : isTie ? '#eab308' : undefined
@@ -868,6 +996,107 @@ export default function Leaderboard() {
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Playoff Bracket - only for matchup leagues with playoffs */}
+      {isMatchupLeague && playoffData && playoffData.hasStarted && (
+        <div className="card" style={{ marginBottom: 14 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h3 style={{ margin: 0 }}>
+              🏆 Playoff Bracket
+              {playoffData.currentRound === 'complete' && playoffData.champion && (
+                <span style={{ marginLeft: 12, fontSize: 14, color: '#fbbf24' }}>
+                  Champion: {getDisplayName(playoffData.champion, USER_ID)}
+                </span>
+              )}
+            </h3>
+            <div className="muted" style={{ fontSize: 12 }}>
+              {playoffData.currentRound === 'complete' ? 'Playoffs Complete' :
+               playoffData.currentRound === 'quarter' ? 'Quarterfinals' :
+               playoffData.currentRound === 'semi' ? 'Semifinals' :
+               playoffData.currentRound === 'finals' ? 'Finals' : 'Upcoming'}
+            </div>
+          </div>
+
+          {/* Bracket Visualization */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: 24,
+            overflowX: 'auto',
+            padding: '16px 0'
+          }}>
+            {/* Quarterfinals Column */}
+            {playoffData.quarters.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 180 }}>
+                <div style={{ textAlign: 'center', fontWeight: 700, color: '#9ca3af', marginBottom: 8 }}>
+                  Quarterfinals
+                </div>
+                {playoffData.quarters.map((m, idx) => (
+                  <PlayoffMatchupCard
+                    key={m.id || idx}
+                    matchup={m}
+                    getDisplayName={getDisplayName}
+                    getAvatar={getAvatar}
+                    userId={USER_ID}
+                    isCurrentRound={playoffData.currentRound === 'quarter'}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Semifinals Column */}
+            {playoffData.semis.length > 0 && (
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 16,
+                minWidth: 180,
+                justifyContent: 'center'
+              }}>
+                <div style={{ textAlign: 'center', fontWeight: 700, color: '#9ca3af', marginBottom: 8 }}>
+                  Semifinals
+                </div>
+                {playoffData.semis.map((m, idx) => (
+                  <PlayoffMatchupCard
+                    key={m.id || idx}
+                    matchup={m}
+                    getDisplayName={getDisplayName}
+                    getAvatar={getAvatar}
+                    userId={USER_ID}
+                    isCurrentRound={playoffData.currentRound === 'semi'}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Finals Column */}
+            {playoffData.finals.length > 0 && (
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 16,
+                minWidth: 180,
+                justifyContent: 'center'
+              }}>
+                <div style={{ textAlign: 'center', fontWeight: 700, color: '#fbbf24', marginBottom: 8 }}>
+                  🏆 Finals
+                </div>
+                {playoffData.finals.map((m, idx) => (
+                  <PlayoffMatchupCard
+                    key={m.id || idx}
+                    matchup={m}
+                    getDisplayName={getDisplayName}
+                    getAvatar={getAvatar}
+                    userId={USER_ID}
+                    isCurrentRound={playoffData.currentRound === 'finals'}
+                    isFinals
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 

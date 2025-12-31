@@ -1,6 +1,7 @@
 // src/pages/LeagueSetupWizard.jsx
 import React, { useState } from 'react';
 import '../layout.css';
+import { validateLeagueName } from '../utils/contentModeration';
 
 const MIN_TEAMS = 4, MAX_TEAMS = 16;
 const MIN_ROUNDS = 6, MAX_ROUNDS = 12;
@@ -16,15 +17,30 @@ const DURATION_OPTIONS = [
 const LeagueSetupWizard = ({ onComplete }) => {
   const [step, setStep] = useState(1);
   const [leagueName, setLeagueName] = useState('');
+  const [nameError, setNameError] = useState('');
   const [numTeams, setNumTeams] = useState(8);
   const [numRounds, setNumRounds] = useState(8);
   const [leagueType, setLeagueType] = useState('duration');
   const [duration, setDuration] = useState(30);
   const [numWeeks, setNumWeeks] = useState(7);      // default for 8 teams
+  const [playoffTeams, setPlayoffTeams] = useState(4); // 2, 4, or 8 teams
   const [budgetMode, setBudgetMode] = useState(null);
   const [budgetAmount, setBudgetAmount] = useState('');
 
   const minWeeks = numTeams - 1;
+
+  // Calculate valid playoff team options based on league size
+  const getPlayoffOptions = () => {
+    if (numTeams <= 4) return [2]; // 4 players: finals only
+    if (numTeams <= 6) return [2, 4]; // 5-6 players: 2 or 4
+    return [2, 4, 8]; // 7+ players: 2, 4, or 8
+  };
+
+  // Update playoffTeams when numTeams changes if current value is invalid
+  const validPlayoffOptions = getPlayoffOptions();
+  if (!validPlayoffOptions.includes(playoffTeams)) {
+    setPlayoffTeams(Math.max(...validPlayoffOptions.filter(o => o <= numTeams)));
+  }
 
   const next = () => setStep((s) => s + 1);
   const back = () => setStep((s) => Math.max(1, s - 1));
@@ -39,6 +55,7 @@ const LeagueSetupWizard = ({ onComplete }) => {
       leagueType,
       duration: leagueType === 'duration' ? duration : null,
       numWeeks: leagueType === 'matchup' ? Math.max(numWeeks, minWeeks) : null,
+      playoffTeams: leagueType === 'matchup' ? playoffTeams : null,
       budgetMode,
       budgetAmount: budgetMode === 'budget' ? Number(budgetAmount) : null,
     });
@@ -54,12 +71,25 @@ const LeagueSetupWizard = ({ onComplete }) => {
             <input
               type="text"
               value={leagueName}
-              onChange={(e) => setLeagueName(e.target.value)}
+              onChange={(e) => {
+                setLeagueName(e.target.value);
+                setNameError('');
+              }}
               placeholder="Enter league name"
               className="modal-input"
             />
+            {nameError && (
+              <p style={{ color: '#ef4444', fontSize: 14, margin: '8px 0 0' }}>{nameError}</p>
+            )}
             <button
-              onClick={next}
+              onClick={() => {
+                const check = validateLeagueName(leagueName.trim());
+                if (!check.isValid) {
+                  setNameError(check.reason || 'League name is not allowed');
+                  return;
+                }
+                next();
+              }}
               disabled={leagueName.trim().length < 3}
               className={`modal-button ${leagueName.trim().length >= 3 ? 'btn-primary' : 'btn-disabled'}`}
             >
@@ -245,10 +275,55 @@ const LeagueSetupWizard = ({ onComplete }) => {
           </>
         )}
 
-        {/* STEP 6: Draft Mode / Budget */}
-        {step === 6 && (
+        {/* STEP 6: Playoff Teams (matchup leagues only) */}
+        {step === 6 && leagueType === 'matchup' && (
           <>
-            <h2 className="modal-title">Step 6: Choose Draft Mode</h2>
+            <h2 className="modal-title">Step 6: Playoff Format</h2>
+            <p className="muted" style={{ marginTop: 0, marginBottom: 16 }}>
+              How many teams make the playoffs?
+            </p>
+            <div className="modal-options">
+              {validPlayoffOptions.map((opt) => {
+                const roundsText = opt === 2 ? 'Finals only'
+                  : opt === 4 ? 'Semifinals + Finals'
+                  : 'Quarters + Semis + Finals';
+                return (
+                  <label key={opt} className="modal-option">
+                    <input
+                      type="radio"
+                      value={opt}
+                      checked={playoffTeams === opt}
+                      onChange={() => setPlayoffTeams(opt)}
+                    />
+                    <div>
+                      <strong>{opt} Teams</strong>
+                      <p className="muted" style={{ margin: '4px 0 0', fontSize: '0.85rem' }}>
+                        {roundsText}
+                      </p>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+            <p className="muted" style={{ marginTop: 12, fontSize: '0.8rem' }}>
+              Top {playoffTeams} teams by record advance to playoffs at the end of the regular season.
+              Ties broken by head-to-head record, then total points.
+            </p>
+            <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+              <button onClick={back} className="modal-button" style={{ background: '#374151', color: '#fff' }}>
+                Back
+              </button>
+              <button onClick={next} className="modal-button btn-primary">
+                Continue
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* STEP 6 (duration) / 7 (matchup): Draft Mode / Budget */}
+        {((step === 6 && leagueType === 'duration') || (step === 7 && leagueType === 'matchup')) && (
+          <>
+            <h2 className="modal-title">Step {leagueType === 'matchup' ? '7' : '6'}: Choose Draft Mode</h2>
             <div className="modal-options">
               <label className="modal-option">
                 <input

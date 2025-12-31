@@ -150,6 +150,333 @@ function calculatePortfolio(
   };
 }
 
+/**
+ * Generate playoff bracket when regular season ends
+ */
+async function generatePlayoffs(
+  supabase: any,
+  leagueId: string,
+  startWeek: number,
+  playoffTeams: number
+) {
+  console.log(`Generating playoffs for league ${leagueId} with ${playoffTeams} teams`);
+
+  try {
+    // Get standings sorted by wins (with tiebreakers)
+    const { data: standings } = await supabase
+      .from('league_standings')
+      .select('user_id, wins, losses, ties, points_for, points_against')
+      .eq('league_id', leagueId)
+      .order('wins', { ascending: false })
+      .order('points_for', { ascending: false });
+
+    if (!standings || standings.length < playoffTeams) {
+      console.error('Not enough teams for playoffs');
+      return;
+    }
+
+    // Get all regular season matchups for head-to-head tiebreaker
+    const { data: allMatchups } = await supabase
+      .from('matchups')
+      .select('team1_user_id, team2_user_id, winner_user_id, team1_gain, is_playoff')
+      .eq('league_id', leagueId)
+      .eq('is_playoff', false);
+
+    // Apply head-to-head tiebreaker for teams with same wins
+    const seededTeams = applyTiebreakers(standings.slice(0, playoffTeams), allMatchups || []);
+
+    // Get last regular season matchup to determine playoff start date
+    const { data: lastMatchup } = await supabase
+      .from('matchups')
+      .select('week_end')
+      .eq('league_id', leagueId)
+      .eq('is_playoff', false)
+      .order('week_end', { ascending: false })
+      .limit(1)
+      .single();
+
+    const playoffStartDate = lastMatchup?.week_end
+      ? new Date(lastMatchup.week_end)
+      : new Date();
+
+    // Generate bracket based on number of teams
+    const bracketMatchups = generateBracket(seededTeams, playoffStartDate, startWeek, playoffTeams);
+
+    // Insert playoff matchups
+    for (const m of bracketMatchups) {
+      const { error } = await supabase
+        .from('matchups')
+        .insert({
+          league_id: leagueId,
+          week_number: m.week,
+          team1_user_id: m.team1,
+          team2_user_id: m.team2,
+          team1_seed: m.team1_seed,
+          team2_seed: m.team2_seed,
+          week_start: m.weekStart,
+          week_end: m.weekEnd,
+          is_playoff: true,
+          playoff_round: m.playoff_round,
+        });
+
+      if (error) {
+        console.error('Failed to insert playoff matchup:', error);
+      }
+    }
+
+    console.log(`Created ${bracketMatchups.length} playoff matchups`);
+  } catch (e) {
+    console.error('Error generating playoffs:', e);
+  }
+}
+
+/**
+ * Apply head-to-head tiebreaker to standings
+ */
+function applyTiebreakers(standings: any[], matchups: any[]): any[] {
+  // Group by wins
+  const byWins = new Map<number, any[]>();
+  for (const s of standings) {
+    const wins = s.wins || 0;
+    if (!byWins.has(wins)) byWins.set(wins, []);
+    byWins.get(wins)!.push(s);
+  }
+
+  const result: any[] = [];
+  let seed = 1;
+
+  // Process each win group (sorted desc by wins)
+  const sortedWins = Array.from(byWins.keys()).sort((a, b) => b - a);
+
+  for (const wins of sortedWins) {
+    const group = byWins.get(wins)!;
+
+    if (group.length === 1) {
+      result.push({ ...group[0], seed: seed++ });
+    } else {
+      // Apply tiebreakers within group
+      group.sort((a, b) => {
+        // Head-to-head
+        const h2h = getHeadToHead(a.user_id, b.user_id, matchups);
+        if (h2h.aWins !== h2h.bWins) {
+          return h2h.bWins - h2h.aWins;
+        }
+        // Points for
+        return (b.points_for || 0) - (a.points_for || 0);
+      });
+
+      for (const s of group) {
+        result.push({ ...s, seed: seed++ });
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Get head-to-head record between two users
+ */
+function getHeadToHead(userId1: string, userId2: string, matchups: any[]) {
+  let aWins = 0;
+  let bWins = 0;
+
+  for (const m of matchups) {
+    if (m.is_playoff) continue;
+    if (m.team1_gain === null) continue;
+
+    const isMatch = (
+      (m.team1_user_id === userId1 && m.team2_user_id === userId2) ||
+      (m.team1_user_id === userId2 && m.team2_user_id === userId1)
+    );
+
+    if (isMatch) {
+      if (m.winner_user_id === userId1) aWins++;
+      else if (m.winner_user_id === userId2) bWins++;
+    }
+  }
+
+  return { aWins, bWins };
+}
+
+/**
+ * Generate bracket matchups
+ */
+function generateBracket(seededTeams: any[], startDate: Date, startWeek: number, numTeams: number) {
+  const matchups: any[] = [];
+
+  // Helper to get week timing
+  function getWeekTiming(weekOffset: number) {
+    const base = new Date(startDate);
+    // Move to next Tuesday
+    const dayOfWeek = base.getUTCDay();
+    let daysUntilTuesday = (2 - dayOfWeek + 7) % 7;
+    if (daysUntilTuesday === 0) daysUntilTuesday = 7;
+    base.setUTCDate(base.getUTCDate() + daysUntilTuesday + (weekOffset * 7));
+    base.setUTCHours(14, 30, 0, 0);
+
+    const end = new Date(base);
+    end.setUTCDate(end.getUTCDate() + 3);
+    end.setUTCHours(21, 0, 0, 0);
+
+    return { start: base, end };
+  }
+
+  if (numTeams === 2) {
+    const timing = getWeekTiming(0);
+    matchups.push({
+      week: startWeek,
+      team1: seededTeams[0].user_id,
+      team2: seededTeams[1].user_id,
+      team1_seed: 1,
+      team2_seed: 2,
+      weekStart: timing.start,
+      weekEnd: timing.end,
+      playoff_round: 'finals',
+    });
+  } else if (numTeams === 4) {
+    // Semifinals
+    const semiTiming = getWeekTiming(0);
+    matchups.push({
+      week: startWeek,
+      team1: seededTeams[0].user_id,
+      team2: seededTeams[3].user_id,
+      team1_seed: 1,
+      team2_seed: 4,
+      weekStart: semiTiming.start,
+      weekEnd: semiTiming.end,
+      playoff_round: 'semi',
+    });
+    matchups.push({
+      week: startWeek,
+      team1: seededTeams[1].user_id,
+      team2: seededTeams[2].user_id,
+      team1_seed: 2,
+      team2_seed: 3,
+      weekStart: semiTiming.start,
+      weekEnd: semiTiming.end,
+      playoff_round: 'semi',
+    });
+
+    // Finals placeholder
+    const finalsTiming = getWeekTiming(1);
+    matchups.push({
+      week: startWeek + 1,
+      team1: null,
+      team2: null,
+      team1_seed: null,
+      team2_seed: null,
+      weekStart: finalsTiming.start,
+      weekEnd: finalsTiming.end,
+      playoff_round: 'finals',
+    });
+  } else if (numTeams === 8) {
+    // Quarterfinals
+    const quarterTiming = getWeekTiming(0);
+    const quarterPairs = [[0, 7], [3, 4], [1, 6], [2, 5]];
+    for (const [i1, i2] of quarterPairs) {
+      matchups.push({
+        week: startWeek,
+        team1: seededTeams[i1].user_id,
+        team2: seededTeams[i2].user_id,
+        team1_seed: i1 + 1,
+        team2_seed: i2 + 1,
+        weekStart: quarterTiming.start,
+        weekEnd: quarterTiming.end,
+        playoff_round: 'quarter',
+      });
+    }
+
+    // Semi placeholders
+    const semiTiming = getWeekTiming(1);
+    for (let i = 0; i < 2; i++) {
+      matchups.push({
+        week: startWeek + 1,
+        team1: null,
+        team2: null,
+        team1_seed: null,
+        team2_seed: null,
+        weekStart: semiTiming.start,
+        weekEnd: semiTiming.end,
+        playoff_round: 'semi',
+      });
+    }
+
+    // Finals placeholder
+    const finalsTiming = getWeekTiming(2);
+    matchups.push({
+      week: startWeek + 2,
+      team1: null,
+      team2: null,
+      team1_seed: null,
+      team2_seed: null,
+      weekStart: finalsTiming.start,
+      weekEnd: finalsTiming.end,
+      playoff_round: 'finals',
+    });
+  }
+
+  return matchups;
+}
+
+/**
+ * Advance playoff winner to next round
+ */
+async function advancePlayoffWinner(
+  supabase: any,
+  leagueId: string,
+  matchup: any,
+  winnerId: string
+) {
+  const round = matchup.playoff_round;
+  const winnerSeed = matchup.winner_user_id === matchup.team1_user_id
+    ? matchup.team1_seed
+    : matchup.team2_seed;
+
+  console.log(`Advancing ${winnerId} (seed ${winnerSeed}) from ${round}`);
+
+  // Determine next round
+  let nextRound: string | null = null;
+  if (round === 'quarter') nextRound = 'semi';
+  else if (round === 'semi') nextRound = 'finals';
+  else return; // Finals has no next round
+
+  // Find the next round matchup to update
+  const { data: nextMatchups } = await supabase
+    .from('matchups')
+    .select('id, team1_user_id, team2_user_id, team1_seed, team2_seed')
+    .eq('league_id', leagueId)
+    .eq('is_playoff', true)
+    .eq('playoff_round', nextRound)
+    .or('team1_user_id.is.null,team2_user_id.is.null');
+
+  if (!nextMatchups || nextMatchups.length === 0) {
+    console.error('No next round matchup found');
+    return;
+  }
+
+  // Find an empty slot
+  for (const next of nextMatchups) {
+    if (!next.team1_user_id) {
+      await supabase
+        .from('matchups')
+        .update({ team1_user_id: winnerId, team1_seed: winnerSeed })
+        .eq('id', next.id);
+      console.log(`Set ${winnerId} as team1 in next round`);
+      return;
+    } else if (!next.team2_user_id) {
+      await supabase
+        .from('matchups')
+        .update({ team2_user_id: winnerId, team2_seed: winnerSeed })
+        .eq('id', next.id);
+      console.log(`Set ${winnerId} as team2 in next round`);
+      return;
+    }
+  }
+
+  console.error('No empty slot found in next round');
+}
+
 Deno.serve(async (req) => {
   // This can be triggered by cron or manually
   console.log('Processing weekly matchup results...');
@@ -177,11 +504,16 @@ Deno.serve(async (req) => {
         team1_user_id,
         team2_user_id,
         team1_gain,
+        team1_seed,
+        team2_seed,
         week_end,
-        leagues!inner(id, league_type, current_week)
+        is_playoff,
+        playoff_round,
+        leagues!inner(id, league_type, current_week, num_weeks, playoff_teams)
       `)
       .eq('leagues.league_type', 'matchup')
       .is('team1_gain', null)  // Results not yet calculated
+      .not('team1_user_id', 'is', null) // Skip placeholder matchups (waiting for winners)
       .lt('week_end', now.toISOString());
 
     if (matchupErr) {
@@ -255,8 +587,9 @@ Deno.serve(async (req) => {
 
       // Process each matchup
       for (const matchup of leagueMatchups) {
-        // Check for bye week (team2_user_id is null)
-        const isByeWeek = !matchup.team2_user_id;
+        // Check for bye week (team2_user_id is null) - only in regular season
+        const isByeWeek = !matchup.team2_user_id && !matchup.is_playoff;
+        const isPlayoff = matchup.is_playoff === true;
 
         const p1 = portfolios.get(matchup.team1_user_id);
         const team1Gain = p1?.gain ?? 0;
@@ -274,11 +607,11 @@ Deno.serve(async (req) => {
           team2Gain = 0; // No opponent
           console.log(`Processing bye week for user ${matchup.team1_user_id}`);
         } else {
-          // Normal matchup
+          // Normal matchup or playoff
           const p2 = portfolios.get(matchup.team2_user_id);
           team2Gain = p2?.gain ?? 0;
 
-          // Determine winner
+          // Determine winner (no ties in playoffs - use tiebreaker)
           if (team1Gain > team2Gain) {
             winnerId = matchup.team1_user_id;
             team1Won = true;
@@ -286,8 +619,22 @@ Deno.serve(async (req) => {
             winnerId = matchup.team2_user_id;
             team2Won = true;
           } else {
-            // Tie
-            isTie = true;
+            // Tie - in playoffs, higher seed wins
+            if (isPlayoff) {
+              // Higher seed (lower number) wins tiebreaker
+              const seed1 = matchup.team1_seed || 999;
+              const seed2 = matchup.team2_seed || 999;
+              if (seed1 < seed2) {
+                winnerId = matchup.team1_user_id;
+                team1Won = true;
+              } else {
+                winnerId = matchup.team2_user_id;
+                team2Won = true;
+              }
+              console.log(`Playoff tiebreaker: seed ${seed1} vs ${seed2}, winner: ${winnerId}`);
+            } else {
+              isTie = true;
+            }
           }
         }
 
@@ -304,6 +651,11 @@ Deno.serve(async (req) => {
         if (updateErr) {
           console.error(`Failed to update matchup ${matchup.id}:`, updateErr);
           continue;
+        }
+
+        // For playoff matchups, advance winner to next round
+        if (isPlayoff && winnerId) {
+          await advancePlayoffWinner(supabase, leagueId, matchup, winnerId);
         }
 
         // Helper to update standings with proper increment
@@ -356,34 +708,37 @@ Deno.serve(async (req) => {
           }
         }
 
-        // Team 1 standings update
-        // For bye weeks, points_against is 0 (no opponent)
-        const stand1Err = await updateUserStandings(
-          leagueId,
-          matchup.team1_user_id,
-          team1Won,
-          team2Won,
-          isTie,
-          team1Gain,
-          isByeWeek ? 0 : team2Gain
-        );
-        if (stand1Err) {
-          console.error(`Failed to update standings for ${matchup.team1_user_id}:`, stand1Err);
-        }
-
-        // Team 2 standings update (skip for bye weeks)
-        if (!isByeWeek) {
-          const stand2Err = await updateUserStandings(
+        // Only update standings for regular season matchups (not playoffs)
+        if (!isPlayoff) {
+          // Team 1 standings update
+          // For bye weeks, points_against is 0 (no opponent)
+          const stand1Err = await updateUserStandings(
             leagueId,
-            matchup.team2_user_id,
-            team2Won,
+            matchup.team1_user_id,
             team1Won,
+            team2Won,
             isTie,
-            team2Gain,
-            team1Gain
+            team1Gain,
+            isByeWeek ? 0 : team2Gain
           );
-          if (stand2Err) {
-            console.error(`Failed to update standings for ${matchup.team2_user_id}:`, stand2Err);
+          if (stand1Err) {
+            console.error(`Failed to update standings for ${matchup.team1_user_id}:`, stand1Err);
+          }
+
+          // Team 2 standings update (skip for bye weeks)
+          if (!isByeWeek) {
+            const stand2Err = await updateUserStandings(
+              leagueId,
+              matchup.team2_user_id,
+              team2Won,
+              team1Won,
+              isTie,
+              team2Gain,
+              team1Gain
+            );
+            if (stand2Err) {
+              console.error(`Failed to update standings for ${matchup.team2_user_id}:`, stand2Err);
+            }
           }
         }
 
@@ -397,11 +752,15 @@ Deno.serve(async (req) => {
           team2Gain: isByeWeek ? null : team2Gain,
           winner: winnerId,
           isByeWeek,
+          isPlayoff,
+          playoffRound: matchup.playoff_round,
         });
       }
 
       // Check if all matchups for the current week are done, advance week
       const currentWeek = leagueMatchups[0]?.leagues?.current_week || 1;
+      const numWeeks = leagueMatchups[0]?.leagues?.num_weeks || 0;
+      const playoffTeams = leagueMatchups[0]?.leagues?.playoff_teams || 4;
       const weekNumber = leagueMatchups[0]?.week_number;
 
       if (weekNumber === currentWeek) {
@@ -424,6 +783,11 @@ Deno.serve(async (req) => {
             console.error(`Failed to advance week for league ${leagueId}:`, advanceErr);
           } else {
             console.log(`Advanced league ${leagueId} to week ${currentWeek + 1}`);
+          }
+
+          // Check if regular season just ended and we need to generate playoffs
+          if (currentWeek === numWeeks && playoffTeams > 0) {
+            await generatePlayoffs(supabase, leagueId, numWeeks + 1, playoffTeams);
           }
         }
       }

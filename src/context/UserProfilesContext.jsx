@@ -5,7 +5,7 @@ import { supabase } from '../supabase/supabaseClient';
 const UserProfilesContext = createContext(null);
 
 export function UserProfilesProvider({ children }) {
-  // profiles: { [userId]: { username: string | null } }
+  // profiles: { [userId]: { username: string | null, avatar: string | null } }
   const [profiles, setProfiles] = useState({});
   const [loading, setLoading] = useState(false);
 
@@ -23,19 +23,22 @@ export function UserProfilesProvider({ children }) {
 
     const { data, error } = await supabase
       .from('user_profiles')
-      .select('id, username')
+      .select('id, username, avatar')
       .in('id', toFetch);
 
     if (!error && data) {
       const newProfiles = {};
       data.forEach(profile => {
-        newProfiles[profile.id] = { username: profile.username };
+        newProfiles[profile.id] = {
+          username: profile.username,
+          avatar: profile.avatar || '📊'
+        };
       });
 
       // Also mark fetched IDs with no profile as having null username
       toFetch.forEach(id => {
         if (!newProfiles[id]) {
-          newProfiles[id] = { username: null };
+          newProfiles[id] = { username: null, avatar: '📊' };
         }
       });
 
@@ -74,6 +77,20 @@ export function UserProfilesProvider({ children }) {
     return userId;
   }, [profiles]);
 
+  // Get avatar for a user ID
+  const getAvatar = useCallback((userId) => {
+    if (!userId) return '📊';
+
+    // Bot avatars
+    if (userId.startsWith('bot-')) {
+      return '🤖';
+    }
+
+    // Check if we have a profile with an avatar
+    const profile = profiles[userId];
+    return profile?.avatar || '📊';
+  }, [profiles]);
+
   // Subscribe to realtime updates for profiles
   useEffect(() => {
     const channel = supabase
@@ -85,7 +102,10 @@ export function UserProfilesProvider({ children }) {
           if (payload.new) {
             setProfiles(prev => ({
               ...prev,
-              [payload.new.id]: { username: payload.new.username }
+              [payload.new.id]: {
+                username: payload.new.username,
+                avatar: payload.new.avatar || '📊'
+              }
             }));
           }
         }
@@ -102,6 +122,7 @@ export function UserProfilesProvider({ children }) {
     loading,
     fetchProfiles,
     getDisplayName,
+    getAvatar,
   };
 
   return (

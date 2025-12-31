@@ -202,3 +202,189 @@ export function getMarketClose(endDate) {
 
   return date;
 }
+
+/**
+ * Generates playoff bracket matchups for single-elimination playoffs.
+ *
+ * Bracket seeding:
+ * - 2 teams: #1 vs #2 (Finals only)
+ * - 4 teams: #1 vs #4, #2 vs #3 (Semi) → Winners play Finals
+ * - 8 teams: #1 vs #8, #4 vs #5, #2 vs #7, #3 vs #6 (Quarter) → Semi → Finals
+ *
+ * @param {Array} seededTeams - Array of {user_id, seed} sorted by seed
+ * @param {Date} startDate - When playoffs start (after regular season)
+ * @param {number} startWeek - Week number for first playoff round
+ * @returns {Array} Playoff matchup objects
+ */
+export function generatePlayoffBracket(seededTeams, startDate, startWeek) {
+  const numTeams = seededTeams.length;
+  const matchups = [];
+
+  if (numTeams === 2) {
+    // Finals only
+    const weekStart = getWeekStartTuesday(startDate, 1);
+    const weekEnd = getWeekEndFriday(weekStart);
+
+    matchups.push({
+      week: startWeek,
+      team1: seededTeams[0].user_id,
+      team2: seededTeams[1].user_id,
+      team1_seed: 1,
+      team2_seed: 2,
+      weekStart,
+      weekEnd,
+      is_playoff: true,
+      playoff_round: 'finals',
+    });
+  } else if (numTeams === 4) {
+    // Semi-finals (Week 1)
+    const semiStart = getWeekStartTuesday(startDate, 1);
+    const semiEnd = getWeekEndFriday(semiStart);
+
+    // #1 vs #4
+    matchups.push({
+      week: startWeek,
+      team1: seededTeams[0].user_id,
+      team2: seededTeams[3].user_id,
+      team1_seed: 1,
+      team2_seed: 4,
+      weekStart: semiStart,
+      weekEnd: semiEnd,
+      is_playoff: true,
+      playoff_round: 'semi',
+    });
+
+    // #2 vs #3
+    matchups.push({
+      week: startWeek,
+      team1: seededTeams[1].user_id,
+      team2: seededTeams[2].user_id,
+      team1_seed: 2,
+      team2_seed: 3,
+      weekStart: semiStart,
+      weekEnd: semiEnd,
+      is_playoff: true,
+      playoff_round: 'semi',
+    });
+
+    // Finals placeholder (Week 2) - teams TBD
+    const finalsStart = getWeekStartTuesday(startDate, 2);
+    const finalsEnd = getWeekEndFriday(finalsStart);
+
+    matchups.push({
+      week: startWeek + 1,
+      team1: null, // Winner of #1 vs #4
+      team2: null, // Winner of #2 vs #3
+      team1_seed: null,
+      team2_seed: null,
+      weekStart: finalsStart,
+      weekEnd: finalsEnd,
+      is_playoff: true,
+      playoff_round: 'finals',
+    });
+  } else if (numTeams === 8) {
+    // Quarter-finals (Week 1)
+    const quarterStart = getWeekStartTuesday(startDate, 1);
+    const quarterEnd = getWeekEndFriday(quarterStart);
+
+    // Standard bracket: 1v8, 4v5, 2v7, 3v6
+    const quarterMatchups = [
+      [0, 7], // #1 vs #8
+      [3, 4], // #4 vs #5
+      [1, 6], // #2 vs #7
+      [2, 5], // #3 vs #6
+    ];
+
+    for (const [idx1, idx2] of quarterMatchups) {
+      matchups.push({
+        week: startWeek,
+        team1: seededTeams[idx1].user_id,
+        team2: seededTeams[idx2].user_id,
+        team1_seed: idx1 + 1,
+        team2_seed: idx2 + 1,
+        weekStart: quarterStart,
+        weekEnd: quarterEnd,
+        is_playoff: true,
+        playoff_round: 'quarter',
+      });
+    }
+
+    // Semi-finals placeholders (Week 2)
+    const semiStart = getWeekStartTuesday(startDate, 2);
+    const semiEnd = getWeekEndFriday(semiStart);
+
+    // Semi 1: Winner of 1v8 vs Winner of 4v5
+    matchups.push({
+      week: startWeek + 1,
+      team1: null,
+      team2: null,
+      team1_seed: null,
+      team2_seed: null,
+      weekStart: semiStart,
+      weekEnd: semiEnd,
+      is_playoff: true,
+      playoff_round: 'semi',
+    });
+
+    // Semi 2: Winner of 2v7 vs Winner of 3v6
+    matchups.push({
+      week: startWeek + 1,
+      team1: null,
+      team2: null,
+      team1_seed: null,
+      team2_seed: null,
+      weekStart: semiStart,
+      weekEnd: semiEnd,
+      is_playoff: true,
+      playoff_round: 'semi',
+    });
+
+    // Finals placeholder (Week 3)
+    const finalsStart = getWeekStartTuesday(startDate, 3);
+    const finalsEnd = getWeekEndFriday(finalsStart);
+
+    matchups.push({
+      week: startWeek + 2,
+      team1: null,
+      team2: null,
+      team1_seed: null,
+      team2_seed: null,
+      weekStart: finalsStart,
+      weekEnd: finalsEnd,
+      is_playoff: true,
+      playoff_round: 'finals',
+    });
+  }
+
+  return matchups;
+}
+
+/**
+ * Get the round name for display purposes
+ * @param {string} playoffRound - 'quarter', 'semi', or 'finals'
+ * @returns {string} Display name
+ */
+export function getPlayoffRoundName(playoffRound) {
+  switch (playoffRound) {
+    case 'quarter':
+      return 'Quarterfinals';
+    case 'semi':
+      return 'Semifinals';
+    case 'finals':
+      return 'Finals';
+    default:
+      return 'Playoff';
+  }
+}
+
+/**
+ * Calculate how many playoff weeks are needed
+ * @param {number} playoffTeams - Number of teams in playoffs (2, 4, or 8)
+ * @returns {number} Number of weeks needed
+ */
+export function getPlayoffWeeksNeeded(playoffTeams) {
+  if (playoffTeams === 2) return 1; // Finals only
+  if (playoffTeams === 4) return 2; // Semi + Finals
+  if (playoffTeams === 8) return 3; // Quarter + Semi + Finals
+  return 0;
+}

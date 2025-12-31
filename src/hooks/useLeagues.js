@@ -110,6 +110,7 @@ export default function useLeagues() {
       leagueType = 'duration',
       durationDays = 30,
       numWeeks = null,
+      playoffTeams = 4,
     }) => {
       if (!USER_ID) throw new Error('Must be logged in to create a league');
 
@@ -129,6 +130,7 @@ export default function useLeagues() {
           league_type: leagueType,
           duration_days: leagueType === 'duration' ? durationDays : null,
           num_weeks: leagueType === 'matchup' ? numWeeks : null,
+          playoff_teams: leagueType === 'matchup' ? playoffTeams : null,
         };
         const { data: league, error: e1 } = await supabase
           .from('leagues')

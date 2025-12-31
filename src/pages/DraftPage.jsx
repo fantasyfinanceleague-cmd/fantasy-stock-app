@@ -17,7 +17,7 @@ import { useToast } from '../components/Toast';
 
 // Draft access rules
 const MIN_PARTICIPANTS = 4;
-const REQUIRE_TIME_IN_PAST = false;
+const REQUIRE_DRAFT_DATE = true; // Enforce draft date before starting
 
 // Popular stocks for bot auto-picks with approximate price tiers
 // Organized by rough price range to help bots pick within budget
@@ -300,7 +300,7 @@ export default function DraftPage() {
         const hasDraftDate = !!lg?.draft_date;
         const startsAt = hasDraftDate ? new Date(lg.draft_date) : null;
         const now = new Date();
-        const timeOk = !REQUIRE_TIME_IN_PAST || (startsAt && now >= startsAt);
+        const timeOk = !REQUIRE_DRAFT_DATE || (startsAt && now >= startsAt);
 
         // Note: enoughMembers check is done in render using customMinParticipants
         if (!hasDraftDate || !timeOk) {
@@ -1018,9 +1018,10 @@ export default function DraftPage() {
   const needsMembers = memberCount < customMinParticipants;
   const needsDate = !league?.draft_date;
   const startsAt = league?.draft_date ? new Date(league.draft_date) : null;
+  const draftDateReached = !REQUIRE_DRAFT_DATE || (startsAt && new Date() >= startsAt);
   const timeMsg =
-    REQUIRE_TIME_IN_PAST && startsAt
-      ? `Draft starts at ${startsAt.toLocaleString()}`
+    REQUIRE_DRAFT_DATE && startsAt && !draftDateReached
+      ? `Draft opens at ${startsAt.toLocaleString()}`
       : null;
 
   if (!allowed || needsMembers) {
@@ -1136,7 +1137,14 @@ export default function DraftPage() {
   // Check draft status - only show draft UI if draft is in progress
   if (draftStatus === 'not_started') {
     // Draft hasn't started yet
+    const draftStartTime = league?.draft_date ? new Date(league.draft_date) : null;
+    const canStartDraft = !REQUIRE_DRAFT_DATE || (draftStartTime && new Date() >= draftStartTime);
+
     const handleStartDraft = async () => {
+      if (!canStartDraft) {
+        toast.error(`Draft cannot start until ${draftStartTime?.toLocaleString()}`);
+        return;
+      }
       try {
         const { error } = await supabase
           .from('leagues')
@@ -1158,7 +1166,9 @@ export default function DraftPage() {
             <div>
               <h2 style={{ color: '#fff', margin: 0, marginBottom: 4 }}>{league?.name || 'League'}</h2>
               <h3 style={{ color: '#e5e7eb', marginTop: 0, fontSize: '1.1rem' }}>
-                {isCommissioner ? 'Ready to Start Draft' : 'Waiting for Draft to Begin'}
+                {isCommissioner
+                  ? (canStartDraft ? 'Ready to Start Draft' : 'Draft Not Yet Available')
+                  : 'Waiting for Draft to Begin'}
               </h3>
             </div>
 
@@ -1184,9 +1194,30 @@ export default function DraftPage() {
 
           <p className="muted" style={{ marginTop: 8 }}>
             {isCommissioner
-              ? `Ready to start! You have ${memberCount} members in this league.`
+              ? (canStartDraft
+                  ? `Ready to start! You have ${memberCount} members in this league.`
+                  : `Draft scheduled for ${draftStartTime?.toLocaleString()}. You have ${memberCount} members in this league.`)
               : 'The commissioner will start the draft soon. This page will automatically update when the draft begins.'}
           </p>
+
+          {/* Draft date not reached warning */}
+          {!canStartDraft && draftStartTime && (
+            <div style={{
+              marginTop: 16,
+              padding: 16,
+              backgroundColor: 'rgba(245, 158, 11, 0.1)',
+              border: '1px solid rgba(245, 158, 11, 0.3)',
+              borderRadius: 8
+            }}>
+              <div style={{ color: '#fbbf24', fontWeight: 600, marginBottom: 4 }}>
+                ⏰ Draft Opens Soon
+              </div>
+              <p className="muted" style={{ margin: 0, fontSize: 14 }}>
+                The draft cannot be started until <strong style={{ color: '#e5e7eb' }}>{draftStartTime.toLocaleString()}</strong>.
+                This page will automatically refresh when the time is reached.
+              </p>
+            </div>
+          )}
 
           {/* Alpaca account linking warning */}
           {membersWithoutAlpaca.length > 0 && (
@@ -1238,10 +1269,16 @@ export default function DraftPage() {
               <button
                 className="btn primary"
                 onClick={handleStartDraft}
-                disabled={membersWithoutAlpaca.length > 0}
-                title={membersWithoutAlpaca.length > 0 ? 'All members must link their Alpaca accounts first' : ''}
+                disabled={membersWithoutAlpaca.length > 0 || !canStartDraft}
+                title={
+                  !canStartDraft
+                    ? `Draft cannot start until ${draftStartTime?.toLocaleString()}`
+                    : membersWithoutAlpaca.length > 0
+                      ? 'All members must link their Alpaca accounts first'
+                      : ''
+                }
               >
-                Start Draft
+                {canStartDraft ? 'Start Draft' : 'Draft Not Available Yet'}
               </button>
             ) : (
               <div style={{
