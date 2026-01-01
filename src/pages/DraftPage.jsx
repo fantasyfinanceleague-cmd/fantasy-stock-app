@@ -1350,8 +1350,6 @@ export default function DraftPage() {
   }
 
   // ---------- Draft workspace ----------
-  const usersInOrder = memberIds.length || 1;
-
   return (
     <div className="page">
       <div className="card" style={{ marginBottom: 12 }}>
@@ -1407,66 +1405,41 @@ export default function DraftPage() {
           />
         </div>
       ) : (
-        <div className="grid-container" style={{ padding: 'clamp(12px, 3vw, 32px)' }}>
-          {/* LEFT: Pick input */}
-          <div className="p-4 bg-[#1c1c1c] rounded-xl text-white">
-            <p className="text-gray-400 mb-4">Select stocks for your fantasy portfolio during the draft.</p>
-
-            <DraftControls
-              isDraftComplete={isDraftComplete}
-              draftCap={draftCap}
-              leagueName={league?.name}
-              symbol={symbol}
-              setSymbol={setSymbol}
-              quote={quote}
-              setQuote={setQuote}
-              errorMsg={errorMsg}
-              setErrorMsg={setErrorMsg}
-              symbolToName={symbolToName}
-              setSymbolToName={setSymbolToName}
-              portfolio={portfolio}
-              currentPicker={currentPicker}
-              USER_ID={USER_ID}
-              isBudgetMode={isBudgetMode}
-              budgetRemaining={budgetRemaining}
-              getQuote={getQuote}
-              draftStock={draftStock}
-            />
-          </div>
-
-          {/* MIDDLE: Status / Progress / Recent / History */}
-          <div className="draft-center">
-            <div className="draft-box">
-              <h3 style={{ margin: 0 }}>
+        <div className="draft-workspace">
+          {/* Turn Status Banner */}
+          <div className={`draft-turn-banner ${currentPicker === USER_ID ? 'your-turn' : ''}`}>
+            <div className="turn-status">
+              <span className="turn-indicator">
                 {botPickInProgress
                   ? '🤖 Bot is picking...'
                   : currentPicker === USER_ID
-                    ? '✅ Your Turn'
+                    ? '✅ Your Turn to Draft'
                     : realUserIds.has(currentPicker)
                       ? '⏳ Waiting for player...'
-                      : '⏳ Waiting for bot...'}
-              </h3>
+                      : '⏳ Bot is selecting...'}
+              </span>
               {currentPicker !== USER_ID && !botPickInProgress && (
-                <p style={{ marginTop: 8, color: '#9ca3af' }}>
-                  Current picker: {currentPicker?.startsWith('bot-')
+                <span className="current-picker">
+                  {currentPicker?.startsWith('bot-')
                     ? currentPicker
                     : getDisplayName(currentPicker, USER_ID)}
-                </p>
+                </span>
               )}
+            </div>
+            <div className="turn-meta">
+              <span>Round {currentRound} • Pick {currentPickNumber}</span>
               {USER_ID !== currentPicker && (
-                <p style={{ marginTop: 4 }}>
+                <span className="picks-until">
                   Your turn in {
                     (() => {
                       const totalPicks = portfolio.length;
-                      const usersInOrder = memberIds.length;
-
-                      for (let i = 1; i <= usersInOrder * 2; i++) {
+                      const usersInOrderCount = memberIds.length;
+                      for (let i = 1; i <= usersInOrderCount * 2; i++) {
                         const nextPickNumber = totalPicks + i;
-                        const nextRound = Math.floor(nextPickNumber / usersInOrder) + 1;
-                        const pickIndex = nextPickNumber % usersInOrder;
+                        const nextRound = Math.floor(nextPickNumber / usersInOrderCount) + 1;
+                        const pickIndex = nextPickNumber % usersInOrderCount;
                         const isEvenRound = nextRound % 2 === 0;
-                        const pickerIndex = isEvenRound ? usersInOrder - 1 - pickIndex : pickIndex;
-
+                        const pickerIndex = isEvenRound ? usersInOrderCount - 1 - pickIndex : pickIndex;
                         if (memberIds[pickerIndex] === USER_ID) {
                           return `${i} pick${i === 1 ? '' : 's'}`;
                         }
@@ -1474,79 +1447,113 @@ export default function DraftPage() {
                       return '? picks';
                     })()
                   }
-                </p>
+                </span>
               )}
-              <label htmlFor="auto-draft" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, fontSize: 13, color: '#9ca3af' }}>
+            </div>
+          </div>
+
+          <div className="draft-main">
+            {/* Search and Draft Controls */}
+            <div className="draft-search-section">
+              <DraftControls
+                isDraftComplete={isDraftComplete}
+                draftCap={draftCap}
+                leagueName={league?.name}
+                symbol={symbol}
+                setSymbol={setSymbol}
+                quote={quote}
+                setQuote={setQuote}
+                errorMsg={errorMsg}
+                setErrorMsg={setErrorMsg}
+                symbolToName={symbolToName}
+                setSymbolToName={setSymbolToName}
+                portfolio={portfolio}
+                currentPicker={currentPicker}
+                USER_ID={USER_ID}
+                isBudgetMode={isBudgetMode}
+                budgetRemaining={budgetRemaining}
+                getQuote={getQuote}
+                draftStock={draftStock}
+              />
+
+              {/* Progress Stats */}
+              <div className="draft-stats">
+                <div className="stat-item">
+                  <span className="stat-label">Your Picks</span>
+                  <span className="stat-value">{portfolio.filter(p => p.user_id === USER_ID).length} / {totalRounds}</span>
+                </div>
+                {isBudgetMode && (
+                  <div className="stat-item">
+                    <span className="stat-label">Budget Left</span>
+                    <span className="stat-value">${budgetRemaining?.toFixed(2) ?? '—'}</span>
+                  </div>
+                )}
+                <div className="stat-item">
+                  <span className="stat-label">Total Picks</span>
+                  <span className="stat-value">{portfolio.length} / {draftCap}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Sidebar: Your Stocks + Recent Pick + History */}
+            <div className="draft-sidebar">
+              {/* Your Drafted Stocks */}
+              <div className="draft-box">
+                <h3>Your Stocks</h3>
+                {portfolio.filter(p => p.user_id === USER_ID).length > 0 ? (
+                  <ul className="stock-list">
+                    {portfolio
+                      .filter(p => p.user_id === USER_ID)
+                      .map((stock, idx) => {
+                        const sym = stock.symbol?.toUpperCase();
+                        const rawName = symbolToName[sym] || stock.company_name || '';
+                        return (
+                          <li key={idx}>
+                            <strong>{sym}</strong>
+                            {rawName ? <span className="stock-name"> — {prettyName(rawName)}</span> : null}
+                            <span className="stock-price">${Number(stock.entry_price).toFixed(2)}</span>
+                          </li>
+                        );
+                      })}
+                  </ul>
+                ) : (
+                  <p className="muted">No stocks drafted yet</p>
+                )}
+              </div>
+
+              {/* Recent Pick */}
+              {recentPick && (
+                <div className="draft-box recent-pick">
+                  <h3>Latest Pick</h3>
+                  <div className="recent-pick-content">
+                    <strong>{recentPick.symbol}</strong>
+                    <span className="stock-name">{prettyName(symbolToName[recentPick.symbol?.toUpperCase()] || recentPick.company_name || '')}</span>
+                    <span className="stock-price">${Number(recentPick.entry_price).toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Draft History */}
+              <DraftHistory
+                selectedRound={selectedRound}
+                setSelectedRound={setSelectedRound}
+                totalRounds={totalRounds}
+                portfolio={portfolio}
+                symbolToName={symbolToName}
+                getDisplayName={getDisplayName}
+                USER_ID={USER_ID}
+              />
+
+              {/* Auto-draft toggle */}
+              <label className="auto-draft-toggle">
                 <input
-                  id="auto-draft"
-                  name="auto-draft"
                   type="checkbox"
                   checked={autoDraftEnabled}
                   onChange={(e) => setAutoDraftEnabled(e.target.checked)}
                 />
-                Auto-draft for bots
+                <span>Auto-draft for bots</span>
               </label>
             </div>
-
-            <div className="draft-box">
-              <h3 style={{ marginTop: 0, marginBottom: 8 }}>Draft Progress</h3>
-              <p style={{ margin: 0 }}>
-                Current Pick: {`${currentRound}.${(currentPickNumber % (usersInOrder || 1)) || (usersInOrder || 1)}`}
-              </p>
-              <p style={{ margin: 0 }}>
-                Total Picks Made: {portfolio.filter(p => p.user_id === USER_ID).length} / {totalRounds}
-              </p>
-              <p style={{ margin: 0 }}>
-                Budget Remaining: {budgetRemaining == null ? '—' : `$${budgetRemaining.toFixed(2)}`}
-              </p>
-            </div>
-            <div className="draft-box">
-              <h3 style={{ marginTop: 0, marginBottom: 8 }}>Recent Pick</h3>
-              {recentPick ? (
-                <div>
-                  <strong>{recentPick.symbol}</strong>
-                  {` — ${prettyName(symbolToName[recentPick.symbol?.toUpperCase()] || recentPick.company_name || '')}`}<br />
-                  Price: ${Number(recentPick.entry_price).toFixed(2)}
-                </div>
-              ) : (
-                <p style={{ margin: 0 }}>No picks yet</p>
-              )}
-            </div>
-
-            <DraftHistory
-              selectedRound={selectedRound}
-              setSelectedRound={setSelectedRound}
-              totalRounds={totalRounds}
-              portfolio={portfolio}
-              symbolToName={symbolToName}
-              getDisplayName={getDisplayName}
-              USER_ID={USER_ID}
-            />
-          </div>
-
-          {/* RIGHT: Your Drafted Stocks */}
-          <div className="draft-box" style={{ maxHeight: 'clamp(200px, 30vh, 300px)', overflowY: 'auto' }}>
-            <h3 className="text-lg font-semibold mb-2">Your Drafted Stocks</h3>
-            {portfolio.filter(p => p.user_id === USER_ID).length > 0 ? (
-              <ul>
-                {portfolio
-                  .filter(p => p.user_id === USER_ID)
-                  .map((stock, idx) => {
-                    const sym = stock.symbol?.toUpperCase();
-                    const rawName = symbolToName[sym] || stock.company_name || '';
-                    return (
-                      <li key={idx} className="py-1 border-b border-gray-700">
-                        <strong>{sym}</strong>
-                        {rawName ? <> — {prettyName(rawName)}</> : null}
-                        <br />
-                        Entry: ${Number(stock.entry_price).toFixed(2)}
-                      </li>
-                    );
-                  })}
-              </ul>
-            ) : (
-              <p className="text-gray-400 text-sm">No drafted stocks yet.</p>
-            )}
           </div>
         </div>
       )}
