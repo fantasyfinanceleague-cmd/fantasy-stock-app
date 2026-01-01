@@ -1161,138 +1161,95 @@ export default function DraftPage() {
 
     return (
       <div className="page">
-        <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, marginBottom: 16 }}>
-            <div>
-              <h2 style={{ color: '#fff', margin: 0, marginBottom: 4 }}>{league?.name || 'League'}</h2>
-              <h3 style={{ color: '#e5e7eb', marginTop: 0, fontSize: '1.1rem' }}>
-                {isCommissioner
-                  ? (canStartDraft ? 'Ready to Start Draft' : 'Draft Not Yet Available')
-                  : 'Waiting for Draft to Begin'}
-              </h3>
-            </div>
-
-            {leagues.length > 1 && (
-              <div style={{ minWidth: 220 }}>
-                <label htmlFor="leagueSelect" className="muted" style={{ display: 'block', marginBottom: 4, fontSize: 13 }}>
-                  Switch League
-                </label>
+        <div className="draft-pending-container">
+          {/* Minimal header */}
+          <div className="draft-header-minimal">
+            <div className="draft-header-left">
+              <Link className="btn" to="/leagues">Back to Leagues</Link>
+              {leagues.length > 1 && (
                 <select
-                  id="leagueSelect"
                   value={leagueId || ''}
                   onChange={handleLeagueChange}
                   className="round-select"
-                  style={{ width: '100%' }}
                 >
                   {leagues.map(l => (
                     <option key={l.id} value={l.id}>{l.name}</option>
                   ))}
                 </select>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
-          <p className="muted" style={{ marginTop: 8 }}>
-            {isCommissioner
-              ? (canStartDraft
-                  ? `Ready to start! You have ${memberCount} members in this league.`
-                  : `Draft scheduled for ${draftStartTime?.toLocaleString()}. You have ${memberCount} members in this league.`)
-              : 'The commissioner will start the draft soon. This page will automatically update when the draft begins.'}
-          </p>
-
-          {/* Draft date not reached warning */}
-          {!canStartDraft && draftStartTime && (
-            <div style={{
-              marginTop: 16,
-              padding: 16,
-              backgroundColor: 'rgba(245, 158, 11, 0.1)',
-              border: '1px solid rgba(245, 158, 11, 0.3)',
-              borderRadius: 8
-            }}>
-              <div style={{ color: '#fbbf24', fontWeight: 600, marginBottom: 4 }}>
-                ⏰ Draft Opens Soon
-              </div>
-              <p className="muted" style={{ margin: 0, fontSize: 14 }}>
-                The draft cannot be started until <strong style={{ color: '#e5e7eb' }}>{draftStartTime.toLocaleString()}</strong>.
-                This page will automatically refresh when the time is reached.
-              </p>
+          {/* Main content */}
+          <div className="draft-pending-content">
+            <div className="draft-pending-icon">
+              {canStartDraft ? '🚀' : '⏰'}
             </div>
-          )}
+            <h2 className="draft-pending-title">{league?.name}</h2>
+            <p className="draft-pending-subtitle">
+              {isCommissioner
+                ? (canStartDraft ? 'Ready to Start' : 'Scheduled Draft')
+                : 'Waiting for Draft'}
+            </p>
 
-          {/* Alpaca account linking warning */}
-          {membersWithoutAlpaca.length > 0 && (
-            <div style={{
-              marginTop: 16,
-              padding: 16,
-              backgroundColor: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              borderRadius: 8
-            }}>
-              <div style={{ color: '#f87171', fontWeight: 600, marginBottom: 8 }}>
-                Alpaca Account Required
+            {/* League stats */}
+            <div className="draft-pending-stats">
+              <div className="pending-stat">
+                <span className="pending-stat-value">{memberCount}</span>
+                <span className="pending-stat-label">Members</span>
               </div>
-              <p className="muted" style={{ margin: '0 0 8px 0', fontSize: 14 }}>
-                All members must link their Alpaca paper trading account before the draft can start.
-                {membersWithoutAlpaca.length === 1 && membersWithoutAlpaca[0] === USER_ID
-                  ? ' You need to link your account.'
-                  : ` ${membersWithoutAlpaca.length} member${membersWithoutAlpaca.length > 1 ? 's' : ''} still need${membersWithoutAlpaca.length === 1 ? 's' : ''} to link:`}
-              </p>
-              {!(membersWithoutAlpaca.length === 1 && membersWithoutAlpaca[0] === USER_ID) && (
-                <ul style={{ margin: '0 0 12px 0', paddingLeft: 20, color: '#9ca3af', fontSize: 14 }}>
-                  {membersWithoutAlpaca.map(uid => (
-                    <li key={uid}>
-                      {getDisplayName(uid)}
-                      {uid === USER_ID && ' (you)'}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {membersWithoutAlpaca.includes(USER_ID) && (
-                <Link
-                  to="/profile"
-                  className="btn"
-                  style={{
-                    backgroundColor: '#3b82f6',
-                    borderColor: '#3b82f6',
-                    color: '#fff',
-                    fontSize: 14
-                  }}
-                >
-                  Link Your Alpaca Account
-                </Link>
+              <div className="pending-stat">
+                <span className="pending-stat-value">{totalRounds}</span>
+                <span className="pending-stat-label">Rounds</span>
+              </div>
+              {draftStartTime && (
+                <div className="pending-stat">
+                  <span className="pending-stat-value">{draftStartTime.toLocaleDateString()}</span>
+                  <span className="pending-stat-label">{draftStartTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
               )}
             </div>
-          )}
 
-          <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
-            {isCommissioner ? (
-              <button
-                className="btn primary"
-                onClick={handleStartDraft}
-                disabled={membersWithoutAlpaca.length > 0 || !canStartDraft}
-                title={
-                  !canStartDraft
-                    ? `Draft cannot start until ${draftStartTime?.toLocaleString()}`
-                    : membersWithoutAlpaca.length > 0
-                      ? 'All members must link their Alpaca accounts first'
-                      : ''
-                }
-              >
-                {canStartDraft ? 'Start Draft' : 'Draft Not Available Yet'}
-              </button>
-            ) : (
-              <div style={{
-                padding: '12px 16px',
-                background: 'rgba(59, 130, 246, 0.1)',
-                border: '1px solid rgba(59, 130, 246, 0.3)',
-                borderRadius: 8,
-                color: '#60a5fa',
-                fontSize: '0.9rem'
-              }}>
-                ⏳ Waiting for commissioner to start...
+            {/* Status message */}
+            {!canStartDraft && draftStartTime && (
+              <div className="draft-pending-notice warning">
+                Draft opens {draftStartTime.toLocaleString()}
               </div>
             )}
-            <Link className="btn" to="/leagues">Back to Leagues</Link>
+
+            {/* Alpaca warning */}
+            {membersWithoutAlpaca.length > 0 && (
+              <div className="draft-pending-notice error">
+                <strong>Alpaca Required</strong>
+                <span>
+                  {membersWithoutAlpaca.length === 1 && membersWithoutAlpaca[0] === USER_ID
+                    ? 'Link your Alpaca account to continue'
+                    : `${membersWithoutAlpaca.length} member${membersWithoutAlpaca.length > 1 ? 's' : ''} need to link Alpaca`}
+                </span>
+                {membersWithoutAlpaca.includes(USER_ID) && (
+                  <Link to="/profile" className="btn primary" style={{ marginTop: 8 }}>
+                    Link Account
+                  </Link>
+                )}
+              </div>
+            )}
+
+            {/* Action button */}
+            <div className="draft-pending-actions">
+              {isCommissioner ? (
+                <button
+                  className="btn primary large"
+                  onClick={handleStartDraft}
+                  disabled={membersWithoutAlpaca.length > 0 || !canStartDraft}
+                >
+                  {canStartDraft ? 'Start Draft' : 'Not Available Yet'}
+                </button>
+              ) : (
+                <div className="draft-pending-waiting">
+                  Waiting for commissioner to start the draft...
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -1307,42 +1264,47 @@ export default function DraftPage() {
 
     return (
       <div className="page">
-        <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, marginBottom: 16 }}>
-            <div>
-              <h2 style={{ color: '#fff', margin: 0, marginBottom: 4 }}>{league?.name || 'League'}</h2>
-              <h3 style={{ color: '#e5e7eb', marginTop: 0, fontSize: '1.1rem' }}>Draft in Progress!</h3>
-            </div>
-
-            {leagues.length > 1 && (
-              <div style={{ minWidth: 220 }}>
-                <label htmlFor="leagueSelect" className="muted" style={{ display: 'block', marginBottom: 4, fontSize: 13 }}>
-                  Switch League
-                </label>
+        <div className="draft-pending-container">
+          {/* Minimal header */}
+          <div className="draft-header-minimal">
+            <div className="draft-header-left">
+              <Link className="btn" to="/leagues">Back to Leagues</Link>
+              {leagues.length > 1 && (
                 <select
-                  id="leagueSelect"
                   value={leagueId || ''}
                   onChange={handleLeagueChange}
                   className="round-select"
-                  style={{ width: '100%' }}
                 >
                   {leagues.map(l => (
                     <option key={l.id} value={l.id}>{l.name}</option>
                   ))}
                 </select>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
-          <p className="muted" style={{ marginTop: 8 }}>
-            The draft is currently underway. Join now to participate!
-          </p>
+          {/* Main content */}
+          <div className="draft-pending-content">
+            <div className="draft-pending-icon live">🔴</div>
+            <h2 className="draft-pending-title">{league?.name}</h2>
+            <p className="draft-pending-subtitle">Draft in Progress</p>
 
-          <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
-            <button className="btn primary" onClick={handleJoinDraft}>
-              Join Live Draft
-            </button>
-            <Link className="btn" to="/leagues">Back to Leagues</Link>
+            <div className="draft-pending-stats">
+              <div className="pending-stat">
+                <span className="pending-stat-value">{portfolio.length}</span>
+                <span className="pending-stat-label">Picks Made</span>
+              </div>
+              <div className="pending-stat">
+                <span className="pending-stat-value">{memberCount}</span>
+                <span className="pending-stat-label">Members</span>
+              </div>
+            </div>
+
+            <div className="draft-pending-actions">
+              <button className="btn primary large" onClick={handleJoinDraft}>
+                Join Live Draft
+              </button>
+            </div>
           </div>
         </div>
       </div>

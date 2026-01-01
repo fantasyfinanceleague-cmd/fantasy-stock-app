@@ -559,6 +559,140 @@
   color: #9ca3af;
 }
 
+/* Draft Pending/Waiting States */
+.draft-pending-container {
+  padding: 1rem;
+}
+
+.draft-pending-container .draft-header-minimal {
+  justify-content: flex-end;
+}
+
+.draft-pending-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 3rem 1.5rem;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.draft-pending-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.draft-pending-icon.live {
+  animation: pulse 2s infinite;
+}
+
+.draft-pending-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 0.5rem 0;
+}
+
+.draft-pending-subtitle {
+  font-size: 1.1rem;
+  color: #9ca3af;
+  margin: 0 0 2rem 0;
+}
+
+.draft-pending-stats {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.pending-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.pending-stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.pending-stat-label {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.draft-pending-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+}
+
+.draft-pending-notice.warning {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
+}
+
+.draft-pending-notice.error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+
+.draft-pending-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.draft-pending-waiting {
+  color: #60a5fa;
+  font-size: 0.95rem;
+  padding: 0.75rem 1.5rem;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 8px;
+}
+
+.btn.large {
+  padding: 0.875rem 2rem;
+  font-size: 1rem;
+}
+
+@media (max-width: 480px) {
+  .draft-pending-content {
+    padding: 2rem 1rem;
+  }
+
+  .draft-pending-icon {
+    font-size: 3rem;
+  }
+
+  .draft-pending-title {
+    font-size: 1.5rem;
+  }
+
+  .draft-pending-stats {
+    gap: 1.5rem;
+  }
+
+  .pending-stat-value {
+    font-size: 1.25rem;
+  }
+}
+
 .draft-workspace {
   padding: 1rem;
   max-width: 1200px;
