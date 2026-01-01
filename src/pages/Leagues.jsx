@@ -252,8 +252,7 @@ export default function Leagues() {
   return (
     <div className="page" style={{ maxWidth: 1100, margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ color: '#fff', margin: '0 0 8px', fontSize: 28, fontWeight: 700 }}>Leagues</h1>
+      <div style={{ marginBottom: 20 }}>
         <p style={{ color: '#6b7280', margin: 0 }}>Manage your fantasy stock leagues</p>
       </div>
 

@@ -139,6 +139,7 @@ const Header = () => {
     if (path === '/' || path === '/dashboard') return 'Dashboard';
     if (path === '/leagues') return 'Leagues';
     if (path.startsWith('/league/')) return 'League';
+    if (path.startsWith('/join/')) return 'Join League';
     if (path.startsWith('/draft')) return 'Draft';
     if (path === '/portfolio') return 'Portfolio';
     if (path === '/leaderboard') return 'Leaderboard';

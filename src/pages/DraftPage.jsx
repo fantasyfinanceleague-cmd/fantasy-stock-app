@@ -1410,8 +1410,7 @@ export default function DraftPage() {
         <div className="grid-container" style={{ padding: 'clamp(12px, 3vw, 32px)' }}>
           {/* LEFT: Pick input */}
           <div className="p-4 bg-[#1c1c1c] rounded-xl text-white">
-            <h1 className="draft-left">Stock Draft</h1>
-            <p className="text-gray-400 mb-6">Select stocks for your fantasy portfolio during the draft.</p>
+            <p className="text-gray-400 mb-4">Select stocks for your fantasy portfolio during the draft.</p>
 
             <DraftControls
               isDraftComplete={isDraftComplete}

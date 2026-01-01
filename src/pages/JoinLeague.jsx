@@ -70,7 +70,6 @@ export function JoinLeague() {
 
   return (
     <div className="page">
-      <h1 className="page-title">Join League</h1>
       {loading && <p className="muted">Loading invite…</p>}
       {error && <p className="muted">Error: {error}</p>}
       {league && !loading && (

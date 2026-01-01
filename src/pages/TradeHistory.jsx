@@ -134,8 +134,6 @@ export default function TradeHistory() {
   return (
     <div className="page">
       <div className="trade-history-header">
-        <h2 style={{ color: '#fff', margin: 0 }}>Trade History</h2>
-
         {/* League Selector */}
         {leagues.length > 1 && (
           <select

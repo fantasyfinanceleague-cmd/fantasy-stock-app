@@ -355,8 +355,8 @@ export default function PortfolioPage() {
     <div className="page">
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <h2 style={{ color: '#fff', margin: 0 }}>Portfolio</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ color: '#9ca3af', fontSize: 14 }}>League:</span>
           <select
             id="leagueSelect"
             value={leagueId}

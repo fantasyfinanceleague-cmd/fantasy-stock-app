@@ -375,8 +375,6 @@ export default function Profile() {
 
   return (
     <div className="page">
-      <h2 style={{ color: '#fff', marginBottom: 20 }}>Profile</h2>
-
       <div className="dashboard-row-2-equal">
         {/* Account Info */}
         <div className="card">
