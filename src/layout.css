@@ -525,6 +525,40 @@
 }
 
 /* NEW DRAFT WORKSPACE LAYOUT */
+.draft-recap-container {
+  padding: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.draft-header-minimal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.draft-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.draft-league-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.draft-league-meta {
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
+
 .draft-workspace {
   padding: 1rem;
   max-width: 1200px;
@@ -705,8 +739,21 @@
 }
 
 @media (max-width: 600px) {
-  .draft-workspace {
+  .draft-workspace,
+  .draft-recap-container {
     padding: 0.75rem;
+  }
+
+  .draft-header-minimal {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .draft-header-left {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
   }
 
   .draft-turn-banner {

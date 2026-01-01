@@ -1352,48 +1352,24 @@ export default function DraftPage() {
   // ---------- Draft workspace ----------
   return (
     <div className="page">
-      <div className="card" style={{ marginBottom: 12 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
-          <div style={{ flex: 1 }}>
-            <h2 style={{ color: '#fff', margin: 0 }}>{league?.name || 'Draft'}</h2>
-            <p className="muted" style={{ marginTop: 6 }}>
-              Rounds: {totalRounds} • Members: {memberCount}
-              {league?.draft_date ? <> • Draft time: {new Date(league.draft_date).toLocaleString()}</> : null}
-              {league?.budget_mode === 'no-budget'
-                ? ' • No budget'
-                : league?.budget_mode === 'budget'
-                  ? ` • Budget: $${leagueBudget}`
-                  : null}
-            </p>
-            <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-              <Link className="btn" to="/leagues">Back to Leagues</Link>
-            </div>
-          </div>
-
-          {leagues.length > 1 && (
-            <div style={{ minWidth: 220 }}>
-              <label htmlFor="leagueSelect" className="muted" style={{ display: 'block', marginBottom: 4, fontSize: 13 }}>
-                Switch League
-              </label>
+      {/* Show Draft Recap if complete, otherwise show draft interface */}
+      {isDraftComplete ? (
+        <div className="draft-recap-container">
+          {/* Minimal header for completed draft */}
+          <div className="draft-header-minimal">
+            <Link className="btn" to="/leagues">Back to Leagues</Link>
+            {leagues.length > 1 && (
               <select
-                id="leagueSelect"
                 value={leagueId || ''}
                 onChange={handleLeagueChange}
                 className="round-select"
-                style={{ width: '100%' }}
               >
                 {leagues.map(l => (
                   <option key={l.id} value={l.id}>{l.name}</option>
                 ))}
               </select>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Show Draft Recap if complete, otherwise show draft interface */}
-      {isDraftComplete ? (
-        <div style={{ padding: '24px 32px', maxWidth: 1200, margin: '0 auto' }}>
+            )}
+          </div>
           <DraftRecap
             leagueName={league?.name}
             portfolio={portfolio}
@@ -1406,6 +1382,29 @@ export default function DraftPage() {
         </div>
       ) : (
         <div className="draft-workspace">
+          {/* Minimal header for active draft */}
+          <div className="draft-header-minimal">
+            <div className="draft-header-left">
+              <Link className="btn" to="/leagues">Back to Leagues</Link>
+              <span className="draft-league-name">{league?.name}</span>
+              <span className="draft-league-meta">
+                {totalRounds} rounds • {memberCount} members
+                {isBudgetMode ? ` • $${leagueBudget} budget` : ''}
+              </span>
+            </div>
+            {leagues.length > 1 && (
+              <select
+                value={leagueId || ''}
+                onChange={handleLeagueChange}
+                className="round-select"
+              >
+                {leagues.map(l => (
+                  <option key={l.id} value={l.id}>{l.name}</option>
+                ))}
+              </select>
+            )}
+          </div>
+
           {/* Turn Status Banner */}
           <div className={`draft-turn-banner ${currentPicker === USER_ID ? 'your-turn' : ''}`}>
             <div className="turn-status">
