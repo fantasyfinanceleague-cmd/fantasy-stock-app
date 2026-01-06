@@ -33,6 +33,12 @@ interface PortfolioHolding {
   totalCost: number;
 }
 
+interface WeekSnapshot {
+  symbol: string;
+  quantity: number;
+  weekStartPrice: number;
+}
+
 interface UserPortfolio {
   userId: string;
   holdings: PortfolioHolding[];
@@ -77,7 +83,7 @@ async function fetchPrices(symbols: string[], alpacaKey: string, alpacaSecret: s
   return prices;
 }
 
-// Calculate user's portfolio from drafts and trades
+// Calculate user's portfolio from drafts and trades (fallback if no snapshots)
 function calculatePortfolio(
   userId: string,
   drafts: any[],
@@ -148,6 +154,28 @@ function calculatePortfolio(
     totalValue,
     gain: totalValue - totalCost,
   };
+}
+
+// Calculate weekly gain using week start snapshots
+function calculateWeeklyGain(
+  userId: string,
+  snapshots: WeekSnapshot[],
+  prices: Map<string, number>
+): number {
+  let totalGain = 0;
+
+  for (const snapshot of snapshots) {
+    const currentPrice = prices.get(snapshot.symbol);
+    if (currentPrice === undefined) {
+      console.warn(`No current price for ${snapshot.symbol}, skipping`);
+      continue;
+    }
+
+    const gain = (currentPrice - snapshot.weekStartPrice) * snapshot.quantity;
+    totalGain += gain;
+  }
+
+  return totalGain;
 }
 
 /**
@@ -544,6 +572,9 @@ Deno.serve(async (req) => {
     for (const [leagueId, leagueMatchups] of matchupsByLeague) {
       console.log(`Processing league ${leagueId} with ${leagueMatchups.length} matchups`);
 
+      // Get week number from matchups
+      const weekNumber = leagueMatchups[0]?.week_number;
+
       // Get all user IDs for this batch (skip null for bye weeks)
       const userIds = new Set<string>();
       for (const m of leagueMatchups) {
@@ -551,25 +582,54 @@ Deno.serve(async (req) => {
         if (m.team2_user_id) userIds.add(m.team2_user_id);
       }
 
-      // Fetch drafts for this league
+      // Fetch week snapshots for this league/week
+      const { data: snapshotData } = await supabase
+        .from('week_snapshots')
+        .select('user_id, symbol, quantity, week_start_price')
+        .eq('league_id', leagueId)
+        .eq('week_number', weekNumber);
+
+      // Build snapshots map by user
+      const userSnapshots = new Map<string, WeekSnapshot[]>();
+      const snapshotSymbols = new Set<string>();
+      if (snapshotData && snapshotData.length > 0) {
+        for (const s of snapshotData) {
+          if (!userSnapshots.has(s.user_id)) {
+            userSnapshots.set(s.user_id, []);
+          }
+          userSnapshots.get(s.user_id)!.push({
+            symbol: s.symbol,
+            quantity: Number(s.quantity),
+            weekStartPrice: Number(s.week_start_price),
+          });
+          snapshotSymbols.add(s.symbol);
+        }
+        console.log(`Found ${snapshotData.length} week snapshots for week ${weekNumber}`);
+      } else {
+        console.log(`No week snapshots found for week ${weekNumber}, using fallback calculation`);
+      }
+
+      // Fetch drafts for this league (needed for fallback if no snapshots)
       const { data: drafts } = await supabase
         .from('drafts')
         .select('user_id, symbol, entry_price, quantity')
         .eq('league_id', leagueId);
 
-      // Fetch trades for this league
+      // Fetch trades for this league (needed for fallback if no snapshots)
       const { data: trades } = await supabase
         .from('trades')
         .select('user_id, symbol, action, quantity, price')
         .eq('league_id', leagueId);
 
-      // Get all symbols
-      const symbols = new Set<string>();
-      for (const d of drafts || []) {
-        if (d.symbol) symbols.add(d.symbol.toUpperCase());
-      }
-      for (const t of trades || []) {
-        if (t.symbol) symbols.add(t.symbol.toUpperCase());
+      // Get all symbols (from snapshots or drafts/trades)
+      const symbols = new Set<string>(snapshotSymbols);
+      if (snapshotSymbols.size === 0) {
+        for (const d of drafts || []) {
+          if (d.symbol) symbols.add(d.symbol.toUpperCase());
+        }
+        for (const t of trades || []) {
+          if (t.symbol) symbols.add(t.symbol.toUpperCase());
+        }
       }
 
       // Fetch current prices
@@ -578,11 +638,19 @@ Deno.serve(async (req) => {
         prices = await fetchPrices(Array.from(symbols), ALPACA_KEY, ALPACA_SECRET);
       }
 
-      // Calculate portfolio for each user
-      const portfolios = new Map<string, UserPortfolio>();
+      // Calculate gains for each user (using snapshots if available, otherwise portfolio)
+      const userGains = new Map<string, number>();
       for (const userId of userIds) {
-        const portfolio = calculatePortfolio(userId, drafts || [], trades || [], prices);
-        portfolios.set(userId, portfolio);
+        const snapshots = userSnapshots.get(userId);
+        if (snapshots && snapshots.length > 0) {
+          // Use week snapshots for gain calculation
+          const gain = calculateWeeklyGain(userId, snapshots, prices);
+          userGains.set(userId, gain);
+        } else {
+          // Fallback to portfolio calculation (cumulative from entry price)
+          const portfolio = calculatePortfolio(userId, drafts || [], trades || [], prices);
+          userGains.set(userId, portfolio.gain);
+        }
       }
 
       // Process each matchup
@@ -591,8 +659,7 @@ Deno.serve(async (req) => {
         const isByeWeek = !matchup.team2_user_id && !matchup.is_playoff;
         const isPlayoff = matchup.is_playoff === true;
 
-        const p1 = portfolios.get(matchup.team1_user_id);
-        const team1Gain = p1?.gain ?? 0;
+        const team1Gain = userGains.get(matchup.team1_user_id) ?? 0;
 
         let team2Gain = 0;
         let winnerId: string | null = null;
@@ -608,8 +675,7 @@ Deno.serve(async (req) => {
           console.log(`Processing bye week for user ${matchup.team1_user_id}`);
         } else {
           // Normal matchup or playoff
-          const p2 = portfolios.get(matchup.team2_user_id);
-          team2Gain = p2?.gain ?? 0;
+          team2Gain = userGains.get(matchup.team2_user_id) ?? 0;
 
           // Determine winner (no ties in playoffs - use tiebreaker)
           if (team1Gain > team2Gain) {

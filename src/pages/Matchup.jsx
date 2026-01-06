@@ -28,6 +28,8 @@ export default function Matchup() {
   const [matchup, setMatchup] = useState(null);
   const [team1Holdings, setTeam1Holdings] = useState([]);
   const [team2Holdings, setTeam2Holdings] = useState([]);
+  const [weekSnapshots, setWeekSnapshots] = useState({}); // { symbol: weekStartPrice }
+  const [hasSnapshots, setHasSnapshots] = useState(false);
 
   const isMatchupLeague = league?.league_type === 'matchup';
   const currentWeek = league?.current_week || 1;
@@ -84,6 +86,8 @@ export default function Matchup() {
       setMatchup(null);
       setTeam1Holdings([]);
       setTeam2Holdings([]);
+      setWeekSnapshots({});
+      setHasSnapshots(false);
       return;
     }
 
@@ -116,6 +120,31 @@ export default function Matchup() {
         // Fetch profiles for both users
         const userIds = [matchupData.team1_user_id, matchupData.team2_user_id];
         fetchProfiles(userIds);
+
+        // Fetch week snapshots for both users
+        const { data: snapshots } = await supabase
+          .from('week_snapshots')
+          .select('user_id, symbol, quantity, week_start_price')
+          .eq('league_id', leagueId)
+          .eq('week_number', currentWeek)
+          .in('user_id', userIds.filter(Boolean));
+
+        // Build snapshot map: { `${userId}-${symbol}`: { quantity, weekStartPrice } }
+        const snapshotMap = {};
+        if (snapshots && snapshots.length > 0) {
+          for (const s of snapshots) {
+            const key = `${s.user_id}-${s.symbol}`;
+            snapshotMap[key] = {
+              quantity: Number(s.quantity),
+              weekStartPrice: Number(s.week_start_price),
+            };
+          }
+          setWeekSnapshots(snapshotMap);
+          setHasSnapshots(true);
+        } else {
+          setWeekSnapshots({});
+          setHasSnapshots(false);
+        }
 
         // Fetch holdings for both teams
         const [team1, team2] = await Promise.all([
@@ -202,24 +231,47 @@ export default function Matchup() {
     return holdingsList;
   }
 
-  // Calculate gains with current prices
+  // Calculate gains using week start prices (if available) or entry prices as fallback
   const team1WithGains = useMemo(() => {
+    const userId = matchup?.team1_user_id;
     return team1Holdings.map(h => {
       const currentPrice = prices[h.symbol] || h.totalCost / h.quantity;
-      const avgEntry = h.quantity > 0 ? h.totalCost / h.quantity : 0;
-      const gain = (currentPrice * h.quantity) - h.totalCost;
-      return { ...h, currentPrice, avgEntry, gain };
+      const snapshotKey = `${userId}-${h.symbol}`;
+      const snapshot = weekSnapshots[snapshotKey];
+
+      let gain;
+      if (hasSnapshots && snapshot) {
+        // Use week start price for gain calculation
+        gain = (currentPrice - snapshot.weekStartPrice) * snapshot.quantity;
+      } else {
+        // Fallback to entry price (week hasn't started yet or no snapshot)
+        // Before week starts, show 0 gain
+        gain = hasSnapshots ? 0 : (currentPrice * h.quantity) - h.totalCost;
+      }
+
+      return { ...h, currentPrice, gain };
     }).sort((a, b) => b.gain - a.gain);
-  }, [team1Holdings, prices]);
+  }, [team1Holdings, prices, weekSnapshots, hasSnapshots, matchup]);
 
   const team2WithGains = useMemo(() => {
+    const userId = matchup?.team2_user_id;
     return team2Holdings.map(h => {
       const currentPrice = prices[h.symbol] || h.totalCost / h.quantity;
-      const avgEntry = h.quantity > 0 ? h.totalCost / h.quantity : 0;
-      const gain = (currentPrice * h.quantity) - h.totalCost;
-      return { ...h, currentPrice, avgEntry, gain };
+      const snapshotKey = `${userId}-${h.symbol}`;
+      const snapshot = weekSnapshots[snapshotKey];
+
+      let gain;
+      if (hasSnapshots && snapshot) {
+        // Use week start price for gain calculation
+        gain = (currentPrice - snapshot.weekStartPrice) * snapshot.quantity;
+      } else {
+        // Fallback to entry price (week hasn't started yet or no snapshot)
+        gain = hasSnapshots ? 0 : (currentPrice * h.quantity) - h.totalCost;
+      }
+
+      return { ...h, currentPrice, gain };
     }).sort((a, b) => b.gain - a.gain);
-  }, [team2Holdings, prices]);
+  }, [team2Holdings, prices, weekSnapshots, hasSnapshots, matchup]);
 
   const team1Total = useMemo(() => team1WithGains.reduce((sum, h) => sum + h.gain, 0), [team1WithGains]);
   const team2Total = useMemo(() => team2WithGains.reduce((sum, h) => sum + h.gain, 0), [team2WithGains]);
