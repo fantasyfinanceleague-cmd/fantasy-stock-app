@@ -9,6 +9,7 @@ import LeagueDetail from './pages/LeagueDetail';
 import { JoinLeague } from './pages/JoinLeague';
 import PortfolioPage from './pages/PortfolioPage';
 import Leaderboard from './pages/Leaderboard';
+import Matchup from './pages/Matchup';
 import TradeHistory from './pages/TradeHistory';
 import Profile from './pages/Profile';
 import Login from './pages/Login';
@@ -32,6 +33,7 @@ function App() {
       <Route path="/league/:leagueId" element={<Layout><Protected><LeagueDetail /></Protected></Layout>} />
       <Route path="/join/:code" element={<Layout><Protected><JoinLeague /></Protected></Layout>} />
       <Route path="/portfolio" element={<Layout><Protected><PortfolioPage /></Protected></Layout>} />
+      <Route path="/matchup" element={<Layout><Protected><Matchup /></Protected></Layout>} />
       <Route path="/leaderboard" element={<Layout><Protected><Leaderboard /></Protected></Layout>} />
       <Route path="/trade-history" element={<Layout><Protected><TradeHistory /></Protected></Layout>} />
       <Route path="/profile" element={<Layout><Protected><Profile /></Protected></Layout>} />

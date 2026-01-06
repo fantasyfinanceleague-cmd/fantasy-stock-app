@@ -33,6 +33,11 @@ const NavIcons = {
       <path d="M12 8V4H8" /><rect width="4" height="12" x="8" y="8" /><rect width="4" height="8" x="14" y="12" /><rect width="4" height="16" x="2" y="4" /><path d="M22 20H2" />
     </svg>
   ),
+  matchup: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M16 3h5v5" /><path d="M8 3H3v5" /><path d="M21 3l-7 7" /><path d="M3 3l7 7" /><path d="M16 21h5v-5" /><path d="M8 21H3v-5" /><path d="M21 21l-7-7" /><path d="M3 21l7-7" />
+    </svg>
+  ),
   plus: (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 5v14" /><path d="M5 12h14" />
@@ -142,6 +147,7 @@ const Header = () => {
     if (path.startsWith('/join/')) return 'Join League';
     if (path.startsWith('/draft')) return 'Draft';
     if (path === '/portfolio') return 'Portfolio';
+    if (path === '/matchup') return 'Matchup';
     if (path === '/leaderboard') return 'Leaderboard';
     if (path === '/trade-history') return 'Trade History';
     if (path === '/profile') return 'Profile';
@@ -172,6 +178,10 @@ const Header = () => {
           <NavLink to="/portfolio" className={({ isActive }) => `nav-link-icon ${isActive ? 'active' : ''}`}>
             {NavIcons.portfolio}
             <span>Portfolio</span>
+          </NavLink>
+          <NavLink to="/matchup" className={({ isActive }) => `nav-link-icon ${isActive ? 'active' : ''}`}>
+            {NavIcons.matchup}
+            <span>Matchup</span>
           </NavLink>
           <NavLink to="/leaderboard" className={({ isActive }) => `nav-link-icon ${isActive ? 'active' : ''}`}>
             {NavIcons.leaderboard}
@@ -315,6 +325,10 @@ const Header = () => {
             <NavLink to="/portfolio" className={({ isActive }) => `mobile-nav-link-icon ${isActive ? 'active' : ''}`}>
               {NavIcons.portfolio}
               <span>Portfolio</span>
+            </NavLink>
+            <NavLink to="/matchup" className={({ isActive }) => `mobile-nav-link-icon ${isActive ? 'active' : ''}`}>
+              {NavIcons.matchup}
+              <span>Matchup</span>
             </NavLink>
             <NavLink to="/leaderboard" className={({ isActive }) => `mobile-nav-link-icon ${isActive ? 'active' : ''}`}>
               {NavIcons.leaderboard}
