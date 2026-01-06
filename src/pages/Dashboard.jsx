@@ -45,6 +45,8 @@ export default function Dashboard() {
   // Current matchup state (for matchup leagues)
   const [currentMatchup, setCurrentMatchup] = useState(null);
   const [opponentName, setOpponentName] = useState('');
+  const [weekSnapshots, setWeekSnapshots] = useState({}); // { `${userId}-${symbol}`: { quantity, weekStartPrice } }
+  const [hasWeekSnapshots, setHasWeekSnapshots] = useState(false);
 
   // ---- Load my leagues (only when signed in)
   useEffect(() => {
@@ -194,6 +196,8 @@ export default function Dashboard() {
     if (!activeLeague || activeLeague.league_type !== 'matchup' || !leagueId || !USER_ID) {
       setCurrentMatchup(null);
       setOpponentName('');
+      setWeekSnapshots({});
+      setHasWeekSnapshots(false);
       return;
     }
 
@@ -230,6 +234,31 @@ export default function Dashboard() {
           setOpponentName(opponentId);
         } else {
           setOpponentName(null); // null indicates bye week
+        }
+
+        // Fetch week snapshots for both users
+        const userIds = [USER_ID, opponentId].filter(Boolean);
+        const { data: snapshots } = await supabase
+          .from('week_snapshots')
+          .select('user_id, symbol, quantity, week_start_price')
+          .eq('league_id', leagueId)
+          .eq('week_number', currentWeek)
+          .in('user_id', userIds);
+
+        if (snapshots && snapshots.length > 0) {
+          const snapshotMap = {};
+          for (const s of snapshots) {
+            const key = `${s.user_id}-${s.symbol}`;
+            snapshotMap[key] = {
+              quantity: Number(s.quantity),
+              weekStartPrice: Number(s.week_start_price),
+            };
+          }
+          setWeekSnapshots(snapshotMap);
+          setHasWeekSnapshots(true);
+        } else {
+          setWeekSnapshots({});
+          setHasWeekSnapshots(false);
         }
       } catch (e) {
         console.error('Failed to fetch matchup:', e);
@@ -332,6 +361,31 @@ export default function Dashboard() {
     const gain = value - spent;
     const pct = spent > 0 ? (gain / spent) * 100 : 0;
     return { spent, value, gain, pct };
+  }
+
+  // Calculate weekly matchup gain using week snapshots
+  function calcWeeklyGain(userId) {
+    if (!hasWeekSnapshots) {
+      // Fallback to cumulative gain if no snapshots
+      return calcUserStats(userId).gain;
+    }
+
+    let totalGain = 0;
+    const holdings = calcUserHoldings(userId);
+
+    for (const h of holdings) {
+      const snapshotKey = `${userId}-${h.symbol}`;
+      const snapshot = weekSnapshots[snapshotKey];
+
+      if (snapshot) {
+        const currentPrice = prices[h.symbol];
+        if (Number.isFinite(currentPrice)) {
+          totalGain += (currentPrice - snapshot.weekStartPrice) * snapshot.quantity;
+        }
+      }
+    }
+
+    return totalGain;
   }
 
   // Get all unique user IDs
@@ -560,8 +614,8 @@ export default function Dashboard() {
         {/* Matchup Preview (for matchup leagues) */}
         {activeLeague?.league_type === 'matchup' && currentMatchup && (() => {
           const isByeWeek = opponentName === null;
-          const myStats = standings.find(s => s.user_id === USER_ID);
-          const myGain = myStats?.gain ?? 0;
+          // Use weekly gain from snapshots for matchup display
+          const myGain = calcWeeklyGain(USER_ID);
 
           // Bye week display
           if (isByeWeek) {
@@ -631,8 +685,8 @@ export default function Dashboard() {
           }
 
           // Normal matchup display (regular season or playoff)
-          const opponentStats = standings.find(s => s.user_id === opponentName);
-          const oppGain = opponentStats?.gain ?? 0;
+          // Use weekly gain from snapshots for matchup display
+          const oppGain = calcWeeklyGain(opponentName);
           const isWinning = myGain > oppGain;
           const isTied = myGain === oppGain;
           const isPlayoff = currentMatchup.is_playoff === true;
