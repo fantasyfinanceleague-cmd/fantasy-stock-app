@@ -108,6 +108,11 @@ export default function Leagues() {
     e.preventDefault();
     if (!leagueName.trim()) return;
 
+    if (!draftDate) {
+      toast.error('Please select a draft date and time');
+      return;
+    }
+
     const contentCheck = validateLeagueName(leagueName.trim());
     if (!contentCheck.isValid) {
       toast.error(contentCheck.reason || 'League name is not allowed');
@@ -116,14 +121,14 @@ export default function Leagues() {
 
     await createLeague({
       name: leagueName.trim(),
-      draftDate: draftDate ? new Date(draftDate).toISOString() : null,
+      draftDate: new Date(draftDate).toISOString(),
       budgetMode,
       salaryCapLimit: capDisabled ? null : Number(salaryCap || 0),
       budgetAmount: capDisabled ? null : Number(salaryCap || 0),
       numParticipants: clampParticipants(participants),
       numRounds: Number(stocksPerTeam),
       leagueType,
-      durationDays: leagueType === 'duration' ? Number(durationDays) : null,
+      durationDays: leagueType === 'duration' ? Number(durationDays) : Math.max(numWeeks, minWeeks) * 7,
       numWeeks: leagueType === 'matchup' ? Math.max(numWeeks, minWeeks) : null,
       playoffTeams: leagueType === 'matchup' ? playoffTeams : null,
     });
