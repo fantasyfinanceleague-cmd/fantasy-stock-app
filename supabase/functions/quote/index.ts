@@ -113,6 +113,113 @@ async function alpacaGet(url: string, key: string, secret: string) {
   return { ok: true as const, status: res.status, body, isAuthError: false };
 }
 
+// Fetch price for a single symbol (shared logic)
+async function fetchSinglePrice(
+  symbol: string,
+  key: string,
+  secret: string
+): Promise<{ price: number | null; source: string; error?: any }> {
+  const feedQS = `?feed=iex`;
+  let price: number | null = null;
+  let source = '';
+  let lastErr: any = null;
+
+  // 1) latest quote
+  {
+    const url = `${BASE}/stocks/${encodeURIComponent(symbol)}/quotes/latest${feedQS}`;
+    const r = await alpacaGet(url, key, secret);
+    if (r.ok) {
+      const ap = Number(r.body?.quote?.ap);
+      const bp = Number(r.body?.quote?.bp);
+      if (Number.isFinite(ap) && ap > 0) { price = ap; source = 'quote.ap'; }
+      else if (Number.isFinite(bp) && bp > 0) { price = bp; source = 'quote.bp'; }
+    } else if (!r.isAuthError) {
+      lastErr = { step: 'quote', status: r.status };
+    }
+  }
+
+  // 2) latest trade
+  if (price == null) {
+    const url = `${BASE}/stocks/${encodeURIComponent(symbol)}/trades/latest${feedQS}`;
+    const r = await alpacaGet(url, key, secret);
+    if (r.ok) {
+      const p = Number(r.body?.trade?.p);
+      if (Number.isFinite(p) && p > 0) { price = p; source = 'trade.p'; }
+    } else if (!r.isAuthError) {
+      lastErr = { step: 'trade', status: r.status };
+    }
+  }
+
+  // 3) latest bar close
+  if (price == null) {
+    const url = `${BASE}/stocks/${encodeURIComponent(symbol)}/bars/latest${feedQS}`;
+    const r = await alpacaGet(url, key, secret);
+    if (r.ok) {
+      const c = Number(r.body?.bar?.c);
+      if (Number.isFinite(c) && c > 0) { price = c; source = 'bar.c'; }
+    } else if (!r.isAuthError) {
+      lastErr = { step: 'bar', status: r.status };
+    }
+  }
+
+  return { price, source, error: lastErr };
+}
+
+// Handle request for multiple symbols - returns { prices: { SYMBOL: price, ... } }
+async function handleMultipleSymbols(
+  symbols: string[],
+  userId: string,
+  admin: any,
+  cryptoKey: string,
+  respond: (b: unknown, s?: number) => Response
+): Promise<Response> {
+  if (!cryptoKey) {
+    return respond({ error: 'server_config_error', message: 'Server missing encryption key' }, 500);
+  }
+
+  const creds = await getUserCredentials(userId, admin, cryptoKey);
+  if (!creds) {
+    return respond({
+      error: 'no_credentials',
+      message: 'Please link your Alpaca account in Profile settings'
+    }, 400);
+  }
+
+  const prices: Record<string, number> = {};
+  const errors: Record<string, any> = {};
+
+  // Check cache and fetch missing prices
+  const uncachedSymbols: string[] = [];
+  for (const sym of symbols) {
+    const cached = getCachedQuote(sym);
+    if (cached?.price != null) {
+      prices[sym] = cached.price;
+    } else {
+      uncachedSymbols.push(sym);
+    }
+  }
+
+  // Fetch uncached symbols in parallel (limit concurrency to avoid rate limits)
+  const BATCH_SIZE = 5;
+  for (let i = 0; i < uncachedSymbols.length; i += BATCH_SIZE) {
+    const batch = uncachedSymbols.slice(i, i + BATCH_SIZE);
+    const results = await Promise.all(
+      batch.map(sym => fetchSinglePrice(sym, creds.key, creds.secret).then(r => ({ sym, ...r })))
+    );
+
+    for (const { sym, price, source, error } of results) {
+      if (price != null) {
+        prices[sym] = price;
+        setCachedQuote(sym, { symbol: sym, price, source });
+      } else if (error) {
+        errors[sym] = error;
+      }
+    }
+  }
+
+  return respond({ prices, errors: Object.keys(errors).length > 0 ? errors : undefined });
+}
+
 Deno.serve(async (req) => {
   // Helper to return JSON with proper CORS headers for this request
   const respond = (b: unknown, s = 200) => json(b, s, req);
@@ -140,16 +247,27 @@ Deno.serve(async (req) => {
       return respond({ error: 'not_authenticated', message: 'Please sign in to view quotes' }, 401);
     }
 
-    // GET ?symbol= or POST {symbol}
+    // GET ?symbol= or POST {symbol} or POST {symbols: [...]}
     let symbol = '';
+    let symbols: string[] = [];
     if (req.method === 'GET') {
       const u = new URL(req.url);
       symbol = (u.searchParams.get('symbol') || '').trim().toUpperCase();
     } else if (req.method === 'POST') {
       const b = await req.json().catch(() => ({}));
-      symbol = String(b?.symbol || '').trim().toUpperCase();
+      // Support both single symbol and array of symbols
+      if (Array.isArray(b?.symbols)) {
+        symbols = b.symbols.map((s: any) => String(s).trim().toUpperCase()).filter(Boolean);
+      } else {
+        symbol = String(b?.symbol || '').trim().toUpperCase();
+      }
     } else {
       return respond({ error: 'method_not_allowed' }, 405);
+    }
+
+    // Handle multi-symbol request
+    if (symbols.length > 0) {
+      return await handleMultipleSymbols(symbols, user.id, admin, CRYPTO_KEY, respond);
     }
 
     if (!symbol) return respond({ error: 'missing_symbol' }, 400);

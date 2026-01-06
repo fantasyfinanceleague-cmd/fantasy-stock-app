@@ -1,4 +1,4 @@
-# Fantasy Stock App - Improvements Roadmap
+1# Fantasy Stock App - Improvements Roadmap
 
 ## High Priority (Should Have)
 
@@ -19,11 +19,11 @@
 - [ ] Season/playoff start notifications
 
 ### 3. Mobile Responsiveness
-- [x] Audit all pages on mobile devices
-- [x] Draft page optimization (critical - hard to draft on phone)
-- [x] Dashboard layout for small screens
-- [x] Leaderboard table scrolling/layout
-- [x] Touch-friendly buttons and inputs
+- [ ] Audit all pages on mobile devices
+- [ ] Draft page optimization (critical - hard to draft on phone)
+- [ ] Dashboard layout for small screens
+- [ ] Leaderboard table scrolling/layout
+- [ ] Touch-friendly buttons and inputs
 
 ### 4. Error Handling & Edge Cases
 - [x] Stock API down - show cached data or graceful message

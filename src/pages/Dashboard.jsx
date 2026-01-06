@@ -47,6 +47,7 @@ export default function Dashboard() {
   const [opponentName, setOpponentName] = useState('');
   const [weekSnapshots, setWeekSnapshots] = useState({}); // { `${userId}-${symbol}`: { quantity, weekStartPrice } }
   const [hasWeekSnapshots, setHasWeekSnapshots] = useState(false);
+  const [pastMatchups, setPastMatchups] = useState([]); // Completed matchups
 
   // ---- Load my leagues (only when signed in)
   useEffect(() => {
@@ -191,13 +192,14 @@ export default function Dashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [USER_ID, leagueId]);
 
-  // Fetch current matchup for matchup leagues
+  // Fetch current matchup and past matchups for matchup leagues
   useEffect(() => {
     if (!activeLeague || activeLeague.league_type !== 'matchup' || !leagueId || !USER_ID) {
       setCurrentMatchup(null);
       setOpponentName('');
       setWeekSnapshots({});
       setHasWeekSnapshots(false);
+      setPastMatchups([]);
       return;
     }
 
@@ -260,10 +262,34 @@ export default function Dashboard() {
           setWeekSnapshots({});
           setHasWeekSnapshots(false);
         }
+
+        // Fetch past matchups (completed ones)
+        const { data: pastData } = await supabase
+          .from('matchups')
+          .select('*')
+          .eq('league_id', leagueId)
+          .or(`team1_user_id.eq.${USER_ID},team2_user_id.eq.${USER_ID}`)
+          .not('team1_gain', 'is', null)
+          .order('week_number', { ascending: false })
+          .limit(5);
+
+        if (pastData && pastData.length > 0) {
+          // Fetch profiles for all opponents in past matchups
+          const opponentIds = pastData.map(m =>
+            m.team1_user_id === USER_ID ? m.team2_user_id : m.team1_user_id
+          ).filter(Boolean);
+          if (opponentIds.length > 0) {
+            fetchProfiles(opponentIds);
+          }
+          setPastMatchups(pastData);
+        } else {
+          setPastMatchups([]);
+        }
       } catch (e) {
         console.error('Failed to fetch matchup:', e);
         setCurrentMatchup(null);
         setOpponentName('');
+        setPastMatchups([]);
       }
     })();
   }, [activeLeague, leagueId, USER_ID, fetchProfiles]);
@@ -920,6 +946,82 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Past Results (for matchup leagues) */}
+      {activeLeague?.league_type === 'matchup' && pastMatchups.length > 0 && (
+        <div style={{ marginTop: 16 }}>
+          <div className="card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <h3 style={{ margin: 0 }}>Past Results</h3>
+              <Link to="/matchup" style={{ fontSize: 13, color: '#60a5fa', textDecoration: 'none' }}>
+                View Matchup →
+              </Link>
+            </div>
+            <div style={{ display: 'grid', gap: 8 }}>
+              {pastMatchups.map((m) => {
+                const isTeam1 = m.team1_user_id === USER_ID;
+                const myGain = isTeam1 ? m.team1_gain : m.team2_gain;
+                const oppGain = isTeam1 ? m.team2_gain : m.team1_gain;
+                const oppId = isTeam1 ? m.team2_user_id : m.team1_user_id;
+                const iWon = m.winner_user_id === USER_ID;
+                const isTie = m.winner_user_id === null && myGain === oppGain;
+                const isByeWeek = !oppId;
+
+                return (
+                  <div
+                    key={m.id}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '10px 12px',
+                      borderRadius: 8,
+                      backgroundColor: iWon ? 'rgba(34, 197, 94, 0.08)' : isTie ? 'rgba(251, 191, 36, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+                      border: `1px solid ${iWon ? 'rgba(34, 197, 94, 0.2)' : isTie ? 'rgba(251, 191, 36, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: '#6b7280',
+                        minWidth: 42
+                      }}>
+                        Week {m.week_number}
+                      </span>
+                      <span style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        padding: '2px 8px',
+                        borderRadius: 4,
+                        backgroundColor: iWon ? 'rgba(34, 197, 94, 0.2)' : isTie ? 'rgba(251, 191, 36, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                        color: iWon ? '#22c55e' : isTie ? '#fbbf24' : '#ef4444'
+                      }}>
+                        {isByeWeek ? 'BYE' : iWon ? 'WIN' : isTie ? 'TIE' : 'LOSS'}
+                      </span>
+                      {!isByeWeek && (
+                        <span style={{ fontSize: 13, color: '#9ca3af' }}>
+                          vs {getDisplayName(oppId, USER_ID)}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: myGain >= 0 ? '#22c55e' : '#ef4444' }}>
+                        {myGain >= 0 ? '+' : ''}{formatUSD(myGain)}
+                      </div>
+                      {!isByeWeek && (
+                        <div style={{ fontSize: 11, color: '#6b7280' }}>
+                          vs {oppGain >= 0 ? '+' : ''}{formatUSD(oppGain)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
