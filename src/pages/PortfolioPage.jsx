@@ -463,7 +463,7 @@ export default function PortfolioPage() {
                 <th>Symbol</th>
                 <th>Company</th>
                 <th className="numeric">Qty</th>
-                <th className="numeric">Avg Entry</th>
+                <th className="numeric">Cost</th>
                 <th className="numeric">Last</th>
                 <th className="numeric">P/L $</th>
                 <th className="numeric">P/L %</th>
