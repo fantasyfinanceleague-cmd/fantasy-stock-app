@@ -128,7 +128,7 @@ export default function Leagues() {
       numParticipants: clampParticipants(participants),
       numRounds: Number(stocksPerTeam),
       leagueType,
-      durationDays: leagueType === 'duration' ? Number(durationDays) : Math.max(numWeeks, minWeeks) * 7,
+      durationDays: leagueType === 'duration' ? Number(durationDays) : 30,
       numWeeks: leagueType === 'matchup' ? Math.max(numWeeks, minWeeks) : null,
       playoffTeams: leagueType === 'matchup' ? playoffTeams : null,
     });

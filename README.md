@@ -7,12 +7,12 @@ A fantasy finance platform where friends compete to build the best portfolio. Th
 **[Live Demo](https://fantasy-stock-app.vercel.app/)**
 
 <p align="center">
-  <img src="public/bear_bull.jpg" alt="Stockpile Logo" width="200"/>
+  <img src="apps/web/public/bear_bull.jpg" alt="Stockpile Logo" width="200"/>
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/LogIn_Capture.jpg" alt="Login Page" width="400"/>
-  <img src="docs/screenshots/Dashboard_Capture.jpg" alt="Dashboard" width="400"/>
+  <img src="apps/web/docs/screenshots/LogIn_Capture.jpg" alt="Login Page" width="400"/>
+  <img src="apps/web/docs/screenshots/Dashboard_Capture.jpg" alt="Dashboard" width="400"/>
 </p>
 
 ---
@@ -27,6 +27,24 @@ Stockpile makes personal investing less intimidating by turning it into a game. 
 
 The goal is to make personal finance approachable and fun, bringing the social competition of fantasy sports to investing.
 
+## Project Structure
+
+This is a monorepo containing both the web and mobile applications:
+
+```
+fantasy-stock/
+├── apps/
+│   ├── web/              # React web application
+│   └── mobile/           # React Native (Expo) mobile app
+├── packages/
+│   └── shared/           # Shared code between web and mobile
+│       ├── constants/    # Shared constants
+│       ├── types/        # TypeScript types
+│       └── utils/        # Shared utilities (content moderation, etc.)
+├── supabase/             # Supabase edge functions and migrations
+└── package.json          # Root workspace configuration
+```
+
 ## Current Features
 
 - User authentication (sign up / sign in)
@@ -34,59 +52,76 @@ The goal is to make personal finance approachable and fun, bringing the social c
 - Real-time stock quotes via Alpaca API
 - Portfolio tracking with live prices
 - Stock search and discovery
+- League creation and management
+- Snake draft system
+- Weekly matchups and standings
 
 ## Tech Stack
 
-- **Frontend:** React, Vite, Tailwind CSS
+- **Web Frontend:** React, Vite, Tailwind CSS
+- **Mobile App:** React Native, Expo, Expo Router
 - **Backend:** Supabase (Auth, Database, Edge Functions)
 - **Market Data & Trading:** Alpaca API
-- **Hosting:** Vercel
+- **Web Hosting:** Vercel
 
 ## Local Development
 
+### Prerequisites
+- Node.js 18+
+- npm 9+
+
+### Web Application
+
 ```bash
-# Install dependencies
+# From root directory
 npm install
+npm run web
 
-# Set up environment variables
-cp .env.example .env.local
-# Add your Supabase and Alpaca credentials to .env.local
-
-# Start development server
+# Or from apps/web
+cd apps/web
+npm install
 npm run dev
 ```
 
-## Project Structure
+### Mobile Application
 
+```bash
+# From root directory
+npm run mobile
+
+# Or from apps/mobile
+cd apps/mobile
+npm install
+npx expo start
 ```
-src/
-  ├── pages/        # Main application pages
-  ├── components/   # Reusable UI components
-  ├── auth/         # Authentication logic
-  └── supabase/     # Supabase client setup
 
-supabase/
-  └── functions/    # Edge functions for secure API calls
+### Environment Variables
+
+**Web (`apps/web/.env.local`):**
+```
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-## What's Next
-
-- **Refining the draft process** - Improving the stock draft experience for league competitions
-- **Live stock trading** - Alpaca integration for real money trading (for experienced investors)
-- **Portfolio performance charts** - Visual graphs showing portfolio value over time
-- **Trade history & activity feed** - Log of trades and league activity
+**Mobile (`apps/mobile/.env`):**
+```
+EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
 
 ## Roadmap
 
-- [ ] League creation and management
-- [ ] Leaderboards and rankings
+- [x] League creation and management
+- [x] Snake draft system
+- [x] Leaderboards and rankings
+- [x] Mobile app (iOS/Android)
 - [ ] Live trading integration
 - [ ] Performance analytics
-- [ ] Mobile optimization
+- [ ] Push notifications
 
 ## About
 
-Built from scratch as both a learning project and a real product idea. This project explores full-stack development with React, serverless functions, and third-party API integrations.
+Built from scratch as both a learning project and a real product idea. This project explores full-stack development with React, React Native, serverless functions, and third-party API integrations.
 
 ---
 
