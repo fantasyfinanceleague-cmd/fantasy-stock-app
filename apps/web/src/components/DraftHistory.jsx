@@ -1,10 +1,10 @@
 // src/components/DraftHistory.jsx
-import React from 'react';
+import { useEffect } from 'react';
 import { prettyName } from '../utils/formatting';
 
 /**
  * DraftHistory component
- * Shows the draft picks for a selected round
+ * Shows the draft picks for a selected round with slots for each player
  */
 export default function DraftHistory({
   selectedRound,
@@ -14,61 +14,79 @@ export default function DraftHistory({
   symbolToName,
   getDisplayName,
   USER_ID,
+  memberCount = 4,
+  currentRound = 1,
 }) {
-  const myPicksThisRound = portfolio.filter(p => p.round === selectedRound);
+  // Auto-switch to current round when it changes
+  useEffect(() => {
+    if (currentRound <= totalRounds && currentRound !== selectedRound) {
+      setSelectedRound(currentRound);
+    }
+  }, [currentRound, totalRounds, setSelectedRound]);
+
+  const picksThisRound = portfolio
+    .filter(p => p.round === selectedRound)
+    .sort((a, b) => a.pick_number - b.pick_number);
+
+  // Create array of slots for this round
+  const slots = Array.from({ length: memberCount }, (_, idx) => {
+    const pick = picksThisRound[idx];
+    return pick || null;
+  });
 
   return (
-    <div className="draft-box scroll-box">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h3 style={{ margin: 0 }}>Draft History</h3>
+    <div className="draft-board">
+      <div className="draft-board-header">
+        <h3>Round {selectedRound}</h3>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <label htmlFor="roundSelect">Round:</label>
           <select
-            id="roundSelect"
             value={selectedRound}
             onChange={(e) => setSelectedRound(Number(e.target.value))}
             className="round-select"
           >
             {Array.from({ length: totalRounds }, (_, i) => (
-              <option key={i + 1} value={i + 1}>{i + 1}</option>
+              <option key={i + 1} value={i + 1}>
+                Round {i + 1} {i + 1 === currentRound ? '(Current)' : ''}
+              </option>
             ))}
           </select>
         </div>
       </div>
 
-      <div style={{ marginTop: 12 }}>
-        {myPicksThisRound.length === 0 && (
-          <p style={{ color: '#9ca3af', margin: 0 }}>No picks yet in this round.</p>
-        )}
-
-        {portfolio
-          .filter(p => p.round === selectedRound)
-          .sort((a, b) => a.pick_number - b.pick_number)
-          .map((pick) => {
+      <div className="draft-board-grid">
+        {slots.map((pick, idx) => {
+          if (pick) {
             const sym = pick.symbol?.toUpperCase();
-            const company = prettyName(symbolToName[sym] || pick.company_name || '');
+            const name = prettyName(symbolToName?.[sym] || pick.company_name || '');
             const price = Number(pick.entry_price);
-
             const pickerName = pick.user_id?.startsWith('bot-')
               ? pick.user_id
               : (getDisplayName ? getDisplayName(pick.user_id, USER_ID) : pick.user_id?.substring(0, 8));
+            const isMyPick = pick.user_id === USER_ID;
 
             return (
               <div
-                key={`${pick.round}-${pick.pick_number}-${pick.symbol}-${pick.user_id}`}
-                className="list-row"
+                key={`${pick.round}-${pick.pick_number}-${idx}`}
+                className={`draft-board-slot filled ${isMyPick ? 'my-pick' : ''}`}
               >
-                <span>
-                  <strong>{pick.pick_number}</strong> — {sym}
-                  {company ? ` — ${company}` : ''}
-                  <span style={{ color: '#9ca3af', fontSize: '0.85em', marginLeft: 8 }}>
-                    ({pickerName})
-                  </span>
+                <span className="slot-pick">#{pick.pick_number}</span>
+                <span className="slot-stock-info">
+                  <span className="slot-symbol">{sym}</span>
+                  {name && <span className="slot-name">{name}</span>}
                 </span>
-                <span>{isNaN(price) ? '—' : `$${price.toFixed(2)}`}</span>
+                <span className="slot-picker">{pickerName}</span>
+                <span className="slot-price">${isNaN(price) ? '—' : price.toFixed(2)}</span>
               </div>
             );
-          })}
+          }
+
+          return (
+            <div key={`empty-${idx}`} className="draft-board-slot empty">
+              <span className="slot-pick">#{(selectedRound - 1) * memberCount + idx + 1}</span>
+              <span className="slot-empty">Waiting...</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

@@ -4,15 +4,15 @@
   "description": "Fantasy Stock Trading App - Web and Mobile",
   "private": true,
   "workspaces": [
-    "apps/*",
+    "apps/web",
     "packages/*"
   ],
   "scripts": {
     "web": "npm run dev --workspace=apps/web",
     "web:build": "npm run build --workspace=apps/web",
-    "mobile": "npm run start --workspace=apps/mobile",
-    "mobile:ios": "npm run ios --workspace=apps/mobile",
-    "mobile:android": "npm run android --workspace=apps/mobile"
+    "mobile": "cd apps/mobile && npx expo start",
+    "mobile:ios": "cd apps/mobile && npx expo start --ios",
+    "mobile:android": "cd apps/mobile && npx expo start --android"
   },
   "keywords": [
     "fantasy",
@@ -23,5 +23,8 @@
     "expo"
   ],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
 }

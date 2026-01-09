@@ -77,91 +77,75 @@ Deno.serve(async (req) => {
 
   const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!);
 
-  // For short queries (1-2 chars), prioritize exact symbol matches
-  // This fixes issues with single letter stocks like V, T, F
+  // Smart search with relevance-based ordering
+  // Priority: 1) Exact symbol, 2) Symbol starts-with, 3) Name starts-with, 4) Symbol/Name contains
   let items: Array<{ symbol: string; name: string; price?: number | null }> = [];
+  const maxResults = Math.min(15, Number(limit) || 10);
+  const seen = new Set<string>();
 
-  if (query.length <= 2) {
-    // First, try exact symbol match
-    const { data: exactMatch } = await supabase
-      .from('symbols')
-      .select('symbol,name')
-      .eq('symbol', query)
-      .limit(1);
-
-    if (exactMatch && exactMatch.length > 0) {
-      items.push(...exactMatch);
+  const addItems = (newItems: Array<{ symbol: string; name: string }> | null) => {
+    if (!newItems) return;
+    for (const item of newItems) {
+      if (!seen.has(item.symbol) && items.length < maxResults) {
+        seen.add(item.symbol);
+        items.push(item);
+      }
     }
+  };
 
-    // Then add symbols that START with the query
-    const { data: startsWithSymbol } = await supabase
+  // 1. Exact symbol match (highest priority)
+  const { data: exactSymbol } = await supabase
+    .from('symbols')
+    .select('symbol,name')
+    .eq('symbol', query)
+    .limit(1);
+  addItems(exactSymbol);
+
+  // 2. Symbol starts with query
+  if (items.length < maxResults) {
+    const { data: symbolStartsWith } = await supabase
       .from('symbols')
       .select('symbol,name')
       .like('symbol', `${query}%`)
-      .neq('symbol', query) // exclude exact match already added
       .order('symbol')
-      .limit(Math.min(15, Number(limit) || 10));
+      .limit(maxResults);
+    addItems(symbolStartsWith);
+  }
 
-    if (startsWithSymbol) {
-      items.push(...startsWithSymbol);
-    }
+  // 3. Name starts with query (e.g., "Intel" -> "Intel Corporation")
+  if (items.length < maxResults) {
+    const { data: nameStartsWith } = await supabase
+      .from('symbols')
+      .select('symbol,name')
+      .ilike('name', `${query}%`)
+      .order('symbol')
+      .limit(maxResults);
+    addItems(nameStartsWith);
+  }
 
-    // Finally add name matches if we need more results
-    if (items.length < (Number(limit) || 10)) {
-      const remaining = (Number(limit) || 10) - items.length;
-      const existingSymbols = items.map(i => i.symbol);
-
-      const { data: nameMatches } = await supabase
-        .from('symbols')
-        .select('symbol,name')
-        .ilike('name', `%${query}%`)
-        .not('symbol', 'in', `(${existingSymbols.map(s => `"${s}"`).join(',') || '""'})`)
-        .order('symbol')
-        .limit(remaining);
-
-      if (nameMatches) {
-        items.push(...nameMatches);
-      }
-    }
-  } else {
-    // For longer queries, use the original fuzzy search but prioritize symbol matches
-    const { data: symbolMatches } = await supabase
+  // 4. Symbol contains query
+  if (items.length < maxResults) {
+    const { data: symbolContains } = await supabase
       .from('symbols')
       .select('symbol,name')
       .ilike('symbol', `%${query}%`)
       .order('symbol')
-      .limit(Math.min(15, Number(limit) || 10));
-
-    if (symbolMatches) {
-      items.push(...symbolMatches);
-    }
-
-    // Add name matches if we need more
-    if (items.length < (Number(limit) || 10)) {
-      const remaining = (Number(limit) || 10) - items.length;
-      const existingSymbols = items.map(i => i.symbol);
-
-      const { data: nameMatches } = await supabase
-        .from('symbols')
-        .select('symbol,name')
-        .ilike('name', `%${query}%`)
-        .not('symbol', 'in', `(${existingSymbols.map(s => `"${s}"`).join(',') || '""'})`)
-        .order('symbol')
-        .limit(remaining);
-
-      if (nameMatches) {
-        items.push(...nameMatches);
-      }
-    }
+      .limit(maxResults);
+    addItems(symbolContains);
   }
 
-  // Deduplicate by symbol just in case
-  const seen = new Set<string>();
-  items = items.filter(item => {
-    if (seen.has(item.symbol)) return false;
-    seen.add(item.symbol);
-    return true;
-  });
+  // 5. Name contains query (lowest priority)
+  if (items.length < maxResults) {
+    const { data: nameContains } = await supabase
+      .from('symbols')
+      .select('symbol,name')
+      .ilike('name', `%${query}%`)
+      .order('symbol')
+      .limit(maxResults);
+    addItems(nameContains);
+  }
+
+  // Items are already deduplicated via the seen Set in addItems
 
   // Optionally fetch prices for search results
   if (includePrices && items.length > 0) {

@@ -1,5 +1,5 @@
 // src/pages/DraftPage.jsx
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase/supabaseClient';
 import '../layout.css';
@@ -23,13 +23,31 @@ const REQUIRE_DRAFT_DATE = true; // Enforce draft date before starting
 // Organized by rough price range to help bots pick within budget
 const BOT_STOCK_POOL_BY_TIER = {
   // Under $50
-  cheap: ['F', 'T', 'CSCO', 'PFE', 'BAC', 'INTC', 'WFC', 'VZ', 'KO', 'PEP'],
+  cheap: [
+    'F', 'T', 'CSCO', 'PFE', 'BAC', 'INTC', 'WFC', 'VZ', 'KO', 'PEP',
+    'GM', 'SNAP', 'AAL', 'DAL', 'UAL', 'CCL', 'NCLH', 'RCL', 'UBER', 'LYFT',
+    'PLTR', 'SOFI', 'NIO', 'RIVN', 'LCID', 'PLUG', 'FCEL', 'SPCE', 'BB', 'NOK',
+    'PARA', 'WBD', 'DISH', 'LUMN', 'PCG', 'ET', 'EPD', 'MRO', 'OXY', 'SWN'
+  ],
   // $50-150
-  mid: ['AAPL', 'MSFT', 'JPM', 'JNJ', 'PG', 'MRK', 'ABBV', 'CVX', 'XOM', 'WMT', 'DIS', 'NKE', 'MCD', 'HD', 'ABT', 'TXN', 'NEE', 'UPS', 'PM', 'MS', 'RTX', 'HON', 'ORCL'],
+  mid: [
+    'AAPL', 'MSFT', 'JPM', 'JNJ', 'PG', 'MRK', 'ABBV', 'CVX', 'XOM', 'WMT',
+    'DIS', 'NKE', 'MCD', 'HD', 'ABT', 'TXN', 'NEE', 'UPS', 'PM', 'MS',
+    'RTX', 'HON', 'ORCL', 'IBM', 'QCOM', 'AMD', 'MU', 'AMAT', 'LRCX', 'ADI',
+    'CRM', 'NOW', 'ADBE', 'PYPL', 'SQ', 'SHOP', 'SNOW', 'DDOG', 'ZS', 'CRWD',
+    'GS', 'C', 'USB', 'PNC', 'TFC', 'SCHW', 'BLK', 'AXP', 'COF', 'DFS'
+  ],
   // $150-400
-  expensive: ['V', 'MA', 'UNH', 'DHR', 'TMO', 'ACN', 'LLY', 'COST'],
+  expensive: [
+    'V', 'MA', 'UNH', 'DHR', 'TMO', 'ACN', 'LLY', 'COST',
+    'ISRG', 'REGN', 'VRTX', 'BIIB', 'GILD', 'AMGN', 'BMY', 'ZTS',
+    'SPGI', 'MCO', 'ICE', 'CME', 'MSCI', 'FIS', 'GPN', 'ADP'
+  ],
   // $400+
-  premium: ['GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'BRK.B', 'AVGO']
+  premium: [
+    'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'BRK.B', 'AVGO',
+    'NFLX', 'COP', 'EOG', 'SLB', 'PSX', 'VLO', 'MPC', 'HES'
+  ]
 };
 
 // Flat list for backwards compatibility
@@ -71,11 +89,30 @@ async function fetchQuoteViaFunction(symbol) {
   if (!sym) return null;
 
   const { data, error } = await supabase.functions.invoke('quote', { body: { symbol: sym } });
-  if (error) throw new Error('Edge Function returned a non-2xx status code');
 
+  // Handle invocation errors
+  if (error) {
+    console.error('Quote function error:', error);
+    throw new Error('Failed to fetch quote. Please try again.');
+  }
+
+  // Handle application-level errors from the edge function
   if (data?.error) {
-    const status = data?.status ?? data?.quote?.status ?? data?.trade?.status ?? data?.bar?.status;
-    throw new Error(`${data.error}${status ? ` (status: ${status})` : ''}`);
+    const errorType = data.error;
+    const message = data.message || data.error;
+
+    // Provide user-friendly error messages
+    if (errorType === 'not_authenticated') {
+      throw new Error('Please sign in to view quotes.');
+    } else if (errorType === 'no_credentials') {
+      throw new Error('Please link your Alpaca account in Profile settings.');
+    } else if (errorType === 'credentials_invalid') {
+      throw new Error('Your Alpaca credentials are invalid. Please update them in Profile settings.');
+    } else if (errorType === 'no_price') {
+      throw new Error(`No price data available for "${sym}".`);
+    }
+
+    throw new Error(message);
   }
 
   const price = Number(
@@ -122,6 +159,7 @@ export default function DraftPage() {
   // auto-draft for bots
   const [autoDraftEnabled, setAutoDraftEnabled] = useState(true);
   const [botPickInProgress, setBotPickInProgress] = useState(false);
+  const botPickLockRef = useRef(false); // Immediate lock to prevent race conditions
   const [realUserIds, setRealUserIds] = useState(new Set()); // IDs that exist in auth.users
 
   // draft setup modal
@@ -572,9 +610,10 @@ export default function DraftPage() {
   }, [portfolio]);
 
   // Quote lookup (Alpaca → Finnhub fallback)
-  async function getQuote() {
+  // Accepts optional symbolOverride for when called from dropdown selection
+  async function getQuote(symbolOverride) {
     try {
-      const upper = String(symbol).trim().toUpperCase();
+      const upper = String(symbolOverride || symbol).trim().toUpperCase();
       let q = await fetchQuoteViaFunction(upper);
 
       // Fallback to Finnhub via Edge Function if Alpaca didn't return a price
@@ -731,13 +770,16 @@ export default function DraftPage() {
 
   // --- Bot auto-draft: pick a random stock for non-human players
   async function botAutoPick(botUserId) {
-    if (!leagueId || botPickInProgress) return;
+    // Use ref for immediate lock check (state is async and can cause race conditions)
+    if (!leagueId || botPickLockRef.current) return;
 
     // Skip if this bot has already failed
     if (failedBots.has(botUserId)) {
       return;
     }
 
+    // Immediately lock using ref (synchronous, prevents race conditions)
+    botPickLockRef.current = true;
     setBotPickInProgress(true);
 
     try {
@@ -860,6 +902,21 @@ export default function DraftPage() {
       // Insert the pick using fresh pick count from database
       const newPickNumber = currentPickCount + 1;
       const newRound = Math.floor(currentPickCount / memberIds.length) + 1;
+
+      // IMPORTANT: Check if this pick_number already exists to prevent duplicates
+      const { data: existingPick } = await supabase
+        .from('drafts')
+        .select('id')
+        .eq('league_id', leagueId)
+        .eq('pick_number', newPickNumber)
+        .maybeSingle();
+
+      if (existingPick) {
+        // Pick already exists - another process beat us, just release lock and let state sync
+        console.log(`Pick ${newPickNumber} already exists, skipping duplicate`);
+        return;
+      }
+
       const payload = {
         league_id: leagueId,
         user_id: botUserId,
@@ -878,16 +935,22 @@ export default function DraftPage() {
         .single();
 
       if (insErr) {
+        // Check if error is due to duplicate pick_number (unique constraint violation)
+        if (insErr.code === '23505') {
+          console.log(`Pick ${newPickNumber} already inserted by another process`);
+          return;
+        }
         console.error('Bot pick failed:', insErr);
         // Mark bot as failed to prevent infinite retries
         setFailedBots(prev => new Set([...prev, botUserId]));
-        setBotPickInProgress(false);
         return;
       }
 
       setPortfolio(prev => [inserted, ...(prev || [])]);
       void ensureNameForSymbol(selectedSymbol);
     } finally {
+      // Release both locks
+      botPickLockRef.current = false;
       setBotPickInProgress(false);
     }
   }
@@ -920,7 +983,8 @@ export default function DraftPage() {
 
   // --- Effect: Auto-pick for bots when it's their turn
   useEffect(() => {
-    if (!autoDraftEnabled || !allowed || !currentPicker || botPickInProgress) return;
+    // Check both state and ref to prevent race conditions
+    if (!autoDraftEnabled || !allowed || !currentPicker || botPickInProgress || botPickLockRef.current) return;
 
     // Check if current picker is a real user (exists in auth.users)
     const isRealUser = realUserIds.has(currentPicker);
@@ -1413,7 +1477,7 @@ export default function DraftPage() {
             </div>
           </div>
 
-          <div className="draft-main">
+          <div className="draft-main-v2">
             {/* Search and Draft Controls */}
             <div className="draft-search-section">
               <DraftControls
@@ -1453,46 +1517,52 @@ export default function DraftPage() {
                   <span className="stat-label">Total Picks</span>
                   <span className="stat-value">{portfolio.length} / {draftCap}</span>
                 </div>
+                {/* Auto-draft toggle inline */}
+                <label className="auto-draft-toggle" style={{ marginLeft: 'auto' }}>
+                  <input
+                    type="checkbox"
+                    checked={autoDraftEnabled}
+                    onChange={(e) => setAutoDraftEnabled(e.target.checked)}
+                  />
+                  <span>Auto-draft bots</span>
+                </label>
               </div>
             </div>
 
-            {/* Sidebar: Your Stocks + Recent Pick + History */}
-            <div className="draft-sidebar">
+            {/* Your Stocks and Draft History - Side by Side */}
+            <div className="draft-boards">
               {/* Your Drafted Stocks */}
-              <div className="draft-box">
-                <h3>Your Stocks</h3>
-                {portfolio.filter(p => p.user_id === USER_ID).length > 0 ? (
-                  <ul className="stock-list">
-                    {portfolio
-                      .filter(p => p.user_id === USER_ID)
-                      .map((stock, idx) => {
-                        const sym = stock.symbol?.toUpperCase();
-                        const rawName = symbolToName[sym] || stock.company_name || '';
-                        return (
-                          <li key={idx}>
-                            <strong>{sym}</strong>
-                            {rawName ? <span className="stock-name"> — {prettyName(rawName)}</span> : null}
-                            <span className="stock-price">${Number(stock.entry_price).toFixed(2)}</span>
-                          </li>
-                        );
-                      })}
-                  </ul>
-                ) : (
-                  <p className="muted">No stocks drafted yet</p>
-                )}
-              </div>
-
-              {/* Recent Pick */}
-              {recentPick && (
-                <div className="draft-box recent-pick">
-                  <h3>Latest Pick</h3>
-                  <div className="recent-pick-content">
-                    <strong>{recentPick.symbol}</strong>
-                    <span className="stock-name">{prettyName(symbolToName[recentPick.symbol?.toUpperCase()] || recentPick.company_name || '')}</span>
-                    <span className="stock-price">${Number(recentPick.entry_price).toFixed(2)}</span>
-                  </div>
+              <div className="draft-board">
+                <div className="draft-board-header">
+                  <h3>Your Stocks</h3>
+                  <span className="draft-board-count">{portfolio.filter(p => p.user_id === USER_ID).length} / {totalRounds}</span>
                 </div>
-              )}
+                <div className="draft-board-grid">
+                  {Array.from({ length: totalRounds }, (_, roundIdx) => {
+                    const myPicks = portfolio.filter(p => p.user_id === USER_ID);
+                    const pickForRound = myPicks[roundIdx];
+                    const sym = pickForRound?.symbol?.toUpperCase();
+                    const name = pickForRound ? prettyName(symbolToName[sym] || pickForRound.company_name || '') : '';
+
+                    return (
+                      <div key={roundIdx} className={`draft-board-slot ${pickForRound ? 'filled' : 'empty'}`}>
+                        <span className="slot-round">R{roundIdx + 1}</span>
+                        {pickForRound ? (
+                          <>
+                            <span className="slot-stock-info">
+                              <span className="slot-symbol">{sym}</span>
+                              {name && <span className="slot-name">{name}</span>}
+                            </span>
+                            <span className="slot-price">${Number(pickForRound.entry_price).toFixed(2)}</span>
+                          </>
+                        ) : (
+                          <span className="slot-empty">—</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
 
               {/* Draft History */}
               <DraftHistory
@@ -1503,18 +1573,21 @@ export default function DraftPage() {
                 symbolToName={symbolToName}
                 getDisplayName={getDisplayName}
                 USER_ID={USER_ID}
+                memberCount={memberIds.length}
+                currentRound={Math.floor(portfolio.length / memberIds.length) + 1}
               />
-
-              {/* Auto-draft toggle */}
-              <label className="auto-draft-toggle">
-                <input
-                  type="checkbox"
-                  checked={autoDraftEnabled}
-                  onChange={(e) => setAutoDraftEnabled(e.target.checked)}
-                />
-                <span>Auto-draft for bots</span>
-              </label>
             </div>
+
+            {/* Recent Pick - Now at bottom */}
+            {recentPick && (
+              <div className="draft-recent-pick-bar">
+                <span className="recent-label">Latest Pick:</span>
+                <strong>{recentPick.symbol}</strong>
+                <span className="stock-name">{prettyName(symbolToName[recentPick.symbol?.toUpperCase()] || recentPick.company_name || '')}</span>
+                <span className="stock-price">${Number(recentPick.entry_price).toFixed(2)}</span>
+                <span className="recent-picker">by {recentPick.user_id?.startsWith('bot-') ? recentPick.user_id : getDisplayName(recentPick.user_id, USER_ID)}</span>
+              </div>
+            )}
           </div>
         </div>
       )}

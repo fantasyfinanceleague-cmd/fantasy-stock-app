@@ -39,6 +39,10 @@ export default function DraftScreen() {
   const [searching, setSearching] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Completed draft view state
+  const [selectedRound, setSelectedRound] = useState(1);
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+
   // Derived state
   const numRounds = activeLeague?.num_rounds || 6;
   const totalPicks = draftOrder.length * numRounds;
@@ -78,25 +82,25 @@ export default function DraftScreen() {
         .eq('league_id', activeLeagueId)
         .order('joined_at', { ascending: true });
 
-      if (memberData?.length) {
-        // Fetch profiles
-        const { data: profiles } = await supabase
-          .from('user_profiles')
-          .select('id, username')
-          .in('id', memberData.map(m => m.user_id));
+      // Fetch profiles
+      const userIds = (memberData || []).map(m => m.user_id).filter(id => !id.startsWith('bot-'));
 
-        const profileMap = new Map(profiles?.map(p => [p.id, p.username]) || []);
+      const { data: profiles } = await supabase
+        .from('user_profiles')
+        .select('id, username')
+        .in('id', userIds);
 
-        const membersWithNames = memberData.map(m => ({
-          ...m,
-          display_name: m.user_id.startsWith('bot-')
-            ? `Bot ${m.user_id.replace('bot-', '')}`
-            : profileMap.get(m.user_id) || m.user_id.substring(0, 8) + '...'
-        }));
+      const profileMap = new Map(profiles?.map(p => [p.id, p.username]) || []);
 
-        setMembers(membersWithNames);
-        setDraftOrder(memberData.map(m => m.user_id));
-      }
+      const membersWithNames = (memberData || []).map(m => ({
+        ...m,
+        display_name: m.user_id.startsWith('bot-')
+          ? `Bot ${m.user_id.replace('bot-', '')}`
+          : profileMap.get(m.user_id) || m.user_id.substring(0, 8) + '...'
+      }));
+
+      setMembers(membersWithNames);
+      setDraftOrder((memberData || []).map(m => m.user_id));
 
       // Fetch picks
       const { data: pickData } = await supabase
@@ -106,14 +110,14 @@ export default function DraftScreen() {
         .order('pick_number', { ascending: true });
 
       if (pickData) {
-        // Add display names to picks
+        // Add display names to picks using the freshly fetched members
         const picksWithNames = pickData.map(p => {
-          const member = members.find(m => m.user_id === p.user_id);
+          const member = membersWithNames.find(m => m.user_id === p.user_id);
           return {
             ...p,
             display_name: p.user_id.startsWith('bot-')
               ? `Bot ${p.user_id.replace('bot-', '')}`
-              : member?.display_name || p.user_id.substring(0, 8) + '...'
+              : member?.display_name || profileMap.get(p.user_id) || p.user_id.substring(0, 8) + '...'
           };
         });
         setPicks(picksWithNames);
@@ -123,7 +127,7 @@ export default function DraftScreen() {
     } finally {
       setLoading(false);
     }
-  }, [activeLeagueId, members]);
+  }, [activeLeagueId]);
 
   // Initial load and refresh
   useEffect(() => {
@@ -298,40 +302,170 @@ export default function DraftScreen() {
   }
 
   if (isDraftCompleted) {
+    const myPicks = picks.filter(p => p.user_id === user?.id);
+    const myTotalValue = myPicks.reduce((sum, p) => sum + p.entry_price, 0);
+
+    // Calculate team count from actual picks (number of unique users who drafted)
+    const uniqueDrafters = [...new Set(picks.map(p => p.user_id))];
+    const teamCount = uniqueDrafters.length || members.length;
+
+    // Group picks by user for team rosters
+    const teamRosters = members.map(member => ({
+      userId: member.user_id,
+      displayName: member.display_name || 'Unknown',
+      picks: picks.filter(p => p.user_id === member.user_id).sort((a, b) => a.pick_number - b.pick_number),
+      totalValue: picks.filter(p => p.user_id === member.user_id).reduce((sum, p) => sum + p.entry_price, 0)
+    })).sort((a, b) => b.totalValue - a.totalValue);
+
     return (
       <SafeAreaView style={styles.container}>
         <ScrollView
           style={styles.scrollView}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
         >
-          <View style={styles.header}>
-            <Text style={styles.title}>Draft Complete</Text>
-            <Text style={styles.subtitle}>{activeLeague.name}</Text>
+          {/* Completion Header */}
+          <View style={styles.completionHeader}>
+            <Text style={styles.completionIcon}>🏆</Text>
+            <Text style={styles.completionTitle}>Draft Complete!</Text>
+            <Text style={styles.completionLeague}>{activeLeague.name}</Text>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Your Picks</Text>
-            {picks.filter(p => p.user_id === user?.id).map((pick) => (
-              <View key={pick.id} style={styles.pickRow}>
-                <View>
-                  <Text style={styles.pickSymbol}>{pick.symbol}</Text>
-                  <Text style={styles.pickRound}>Round {pick.round}</Text>
-                </View>
-                <Text style={styles.pickPrice}>${pick.entry_price.toFixed(2)}</Text>
+          {/* Summary Stats */}
+          <View style={styles.summaryCard}>
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryValue}>{teamCount}</Text>
+                <Text style={styles.summaryLabel}>Teams</Text>
               </View>
-            ))}
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryValue}>{picks.length}</Text>
+                <Text style={styles.summaryLabel}>Total Picks</Text>
+              </View>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryValue}>{numRounds}</Text>
+                <Text style={styles.summaryLabel}>Rounds</Text>
+              </View>
+            </View>
           </View>
 
+          {/* Your Team */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>All Picks ({picks.length})</Text>
-            {[...picks].reverse().slice(0, 20).map((pick) => (
-              <View key={pick.id} style={styles.historyRow}>
-                <Text style={styles.historyPick}>#{pick.pick_number}</Text>
-                <Text style={styles.historyName}>{pick.display_name}</Text>
-                <Text style={styles.historySymbol}>{pick.symbol}</Text>
-                <Text style={styles.historyPrice}>${pick.entry_price.toFixed(2)}</Text>
+            <View style={styles.yourTeamHeader}>
+              <Text style={styles.sectionTitle}>Your Team</Text>
+              <Text style={styles.teamValue}>${myTotalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+            </View>
+            <View style={styles.yourTeamCard}>
+              {myPicks.sort((a, b) => a.pick_number - b.pick_number).map((pick, index) => {
+                const calculatedRound = Math.ceil(pick.pick_number / teamCount);
+                return (
+                  <View key={pick.id} style={[styles.yourPickRow, index < myPicks.length - 1 && styles.yourPickBorder]}>
+                    <View style={styles.pickRoundBadge}>
+                      <Text style={styles.pickRoundBadgeText}>R{calculatedRound}</Text>
+                    </View>
+                    <Text style={styles.yourPickSymbol}>{pick.symbol}</Text>
+                    <Text style={styles.yourPickPrice}>${pick.entry_price.toFixed(2)}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Draft by Round */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Draft by Round</Text>
+            <View style={styles.dropdownContainer}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dropdownScroll}>
+                {Array.from({ length: numRounds }, (_, i) => i + 1).map((round) => (
+                  <TouchableOpacity
+                    key={round}
+                    style={[styles.dropdownChip, selectedRound === round && styles.dropdownChipActive]}
+                    onPress={() => setSelectedRound(round)}
+                  >
+                    <Text style={[styles.dropdownChipText, selectedRound === round && styles.dropdownChipTextActive]}>
+                      Round {round}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+            <View style={styles.roundPicksCard}>
+              {picks
+                .filter(p => {
+                  // Calculate round from pick_number instead of using stored round
+                  const calculatedRound = Math.ceil(p.pick_number / teamCount);
+                  return calculatedRound === selectedRound;
+                })
+                .sort((a, b) => a.pick_number - b.pick_number)
+                .map((pick, index, filteredPicks) => {
+                  const pickInRound = index + 1;
+                  return (
+                    <View key={pick.id} style={[styles.roundPickRow, index < filteredPicks.length - 1 && styles.roundPickBorder]}>
+                      <Text style={styles.roundPickOrder}>{pickInRound}</Text>
+                      <View style={styles.roundPickInfo}>
+                        <Text style={styles.roundPickName}>
+                          {pick.display_name || getPickerName(pick.user_id)}
+                          {pick.user_id === user?.id && <Text style={styles.youBadge}> (You)</Text>}
+                        </Text>
+                      </View>
+                      <Text style={styles.roundPickSymbol}>{pick.symbol}</Text>
+                      <Text style={styles.roundPickPrice}>${pick.entry_price.toFixed(2)}</Text>
+                    </View>
+                  );
+                })}
+            </View>
+          </View>
+
+          {/* View Other Teams */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>View Team</Text>
+            <View style={styles.dropdownContainer}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dropdownScroll}>
+                {teamRosters.filter(t => t.userId !== user?.id).map((team) => (
+                  <TouchableOpacity
+                    key={team.userId}
+                    style={[styles.dropdownChip, selectedTeamId === team.userId && styles.dropdownChipActive]}
+                    onPress={() => setSelectedTeamId(selectedTeamId === team.userId ? null : team.userId)}
+                  >
+                    <Text style={[styles.dropdownChipText, selectedTeamId === team.userId && styles.dropdownChipTextActive]}>
+                      {team.displayName}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+            {selectedTeamId && (
+              <View style={styles.teamDetailCard}>
+                {(() => {
+                  const team = teamRosters.find(t => t.userId === selectedTeamId);
+                  if (!team) return null;
+                  return (
+                    <>
+                      <View style={styles.teamDetailHeader}>
+                        <Text style={styles.teamDetailName}>{team.displayName}</Text>
+                        <Text style={styles.teamDetailValue}>${team.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+                      </View>
+                      {team.picks.sort((a, b) => a.pick_number - b.pick_number).map((pick, index) => {
+                        const calculatedRound = Math.ceil(pick.pick_number / teamCount);
+                        return (
+                          <View key={pick.id} style={[styles.teamDetailRow, index < team.picks.length - 1 && styles.teamDetailBorder]}>
+                            <View style={styles.pickRoundBadge}>
+                              <Text style={styles.pickRoundBadgeText}>R{calculatedRound}</Text>
+                            </View>
+                            <Text style={styles.teamDetailSymbol}>{pick.symbol}</Text>
+                            <Text style={styles.teamDetailPrice}>${pick.entry_price.toFixed(2)}</Text>
+                          </View>
+                        );
+                      })}
+                    </>
+                  );
+                })()}
               </View>
-            ))}
+            )}
+            {!selectedTeamId && (
+              <View style={styles.selectTeamPrompt}>
+                <Text style={styles.selectTeamText}>Select a team above to view their picks</Text>
+              </View>
+            )}
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -751,5 +885,291 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: Colors.success,
+  },
+  // Completion screen styles
+  completionHeader: {
+    alignItems: 'center',
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+  },
+  completionIcon: {
+    fontSize: 56,
+    marginBottom: 12,
+  },
+  completionTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
+  completionLeague: {
+    fontSize: 16,
+    color: Colors.primaryLight,
+  },
+  summaryCard: {
+    marginHorizontal: 24,
+    backgroundColor: Colors.cardBg,
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: 24,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  summaryItem: {
+    alignItems: 'center',
+  },
+  summaryValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
+  summaryLabel: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  yourTeamHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  teamValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.success,
+  },
+  yourTeamCard: {
+    backgroundColor: Colors.cardBg,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    overflow: 'hidden',
+  },
+  yourPickRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+  },
+  yourPickBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  pickRoundBadge: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginRight: 12,
+  },
+  pickRoundBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+  },
+  yourPickSymbol: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  yourPickPrice: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.textMuted,
+  },
+  teamCard: {
+    backgroundColor: Colors.cardBg,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  teamHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  teamNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  teamRank: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.textMuted,
+    marginRight: 8,
+    width: 28,
+  },
+  teamName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+  },
+  youBadge: {
+    color: Colors.primaryLight,
+    fontWeight: '400',
+  },
+  teamTotal: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.success,
+  },
+  teamPicks: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  teamPickChip: {
+    backgroundColor: Colors.background,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  teamPickText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.primaryLight,
+  },
+  // Dropdown styles
+  dropdownContainer: {
+    marginBottom: 12,
+  },
+  dropdownScroll: {
+    flexGrow: 0,
+  },
+  dropdownChip: {
+    backgroundColor: Colors.cardBg,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  dropdownChipActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  dropdownChipText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: Colors.textMuted,
+  },
+  dropdownChipTextActive: {
+    color: Colors.textPrimary,
+    fontWeight: '600',
+  },
+  // Round picks styles
+  roundPicksCard: {
+    backgroundColor: Colors.cardBg,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    overflow: 'hidden',
+  },
+  roundPickRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+  },
+  roundPickBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  roundPickOrder: {
+    width: 24,
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.textMuted,
+  },
+  roundPickInfo: {
+    flex: 1,
+  },
+  roundPickName: {
+    fontSize: 14,
+    color: Colors.textPrimary,
+  },
+  roundPickSymbol: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.primaryLight,
+    marginRight: 12,
+    minWidth: 50,
+    textAlign: 'right',
+  },
+  roundPickPrice: {
+    fontSize: 14,
+    color: Colors.textMuted,
+    minWidth: 70,
+    textAlign: 'right',
+  },
+  // Team detail styles
+  teamDetailCard: {
+    backgroundColor: Colors.cardBg,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    overflow: 'hidden',
+  },
+  teamDetailHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+  },
+  teamDetailName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  teamDetailValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.success,
+  },
+  teamDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+  },
+  teamDetailBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  teamDetailSymbol: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+  },
+  teamDetailPrice: {
+    fontSize: 14,
+    color: Colors.textMuted,
+  },
+  selectTeamPrompt: {
+    backgroundColor: Colors.cardBg,
+    borderRadius: 12,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  selectTeamText: {
+    fontSize: 14,
+    color: Colors.textMuted,
   },
 });

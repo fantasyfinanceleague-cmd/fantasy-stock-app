@@ -106,10 +106,23 @@ export default function DraftControls({
     );
   }
 
+  const upper = String(symbol).toUpperCase();
+  const alreadyDrafted = quote ? portfolio.some(p => p.symbol === upper) : false;
+  const draftedByMe = quote ? portfolio.some(p => p.symbol === upper && p.user_id === USER_ID) : false;
+  const draftedByOther = alreadyDrafted && !draftedByMe;
+  const isMyTurn = USER_ID === currentPicker;
+  const overBudget = isBudgetMode && quote && Number(quote.c) > budgetRemaining;
+  const canDraft = quote && isMyTurn && !alreadyDrafted && !overBudget;
+
   return (
-    <div className="draft-controls">
-      <div className="search-row">
-        <div className="search-input-wrapper">
+    <div className="draft-controls-v2">
+      {/* Search Section */}
+      <div className="search-container">
+        <div className="search-input-wrapper-v2">
+          <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="M21 21l-4.35-4.35"/>
+          </svg>
           <input
             type="text"
             value={symbol}
@@ -135,100 +148,120 @@ export default function DraftControls({
                     setSuggestions([]);
                     setSymbolToName((prev) => ({ ...prev, [firstSuggestion.symbol.toUpperCase()]: firstSuggestion.name }));
                     setQuote(null);
+                    getQuote(firstSuggestion.symbol);
                   }
                 }
               }
             }}
             onFocus={handleFocus}
             onBlur={handleBlur}
-            placeholder="Search stocks (e.g. AAPL, Microsoft)"
-            className="draft-search-input"
+            placeholder="Search by symbol or company name..."
+            className="search-input-v2"
           />
-
-          {Array.isArray(suggestions) && suggestions.length > 0 && (
-            <ul className="dropdown-list">
-              {suggestions.map((item) => (
-                <li
-                  key={`${item.symbol}-${item.name}`}
-                  className="dropdown-item"
-                  onMouseDown={() => {
-                    setSymbol(item.symbol);
-                    setSuggestions([]);
-                    setSymbolToName((prev) => ({ ...prev, [item.symbol.toUpperCase()]: item.name }));
-                    setQuote(null);
-                  }}
-                >
-                  <strong>{item.symbol}</strong> — {item.name}
-                  {item.price != null && (
-                    <span style={{ marginLeft: 'auto', color: '#10b981', fontWeight: 600 }}>
-                      ${Number(item.price).toFixed(2)}
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
+          {symbol && (
+            <button
+              className="search-clear"
+              onClick={() => { setSymbol(''); setQuote(null); setSuggestions([]); }}
+              type="button"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 6L6 18M6 6l12 12"/>
+              </svg>
+            </button>
           )}
         </div>
-        <button onClick={getQuote} className="btn primary">
-          Get Quote
-        </button>
+
+        {/* Suggestions Dropdown */}
+        {Array.isArray(suggestions) && suggestions.length > 0 && (
+          <div className="suggestions-dropdown">
+            {suggestions.map((item) => (
+              <button
+                key={`${item.symbol}-${item.name}`}
+                className="suggestion-item"
+                onMouseDown={() => {
+                  setSymbol(item.symbol);
+                  setSuggestions([]);
+                  setSymbolToName((prev) => ({ ...prev, [item.symbol.toUpperCase()]: item.name }));
+                  setQuote(null);
+                  getQuote(item.symbol);
+                }}
+              >
+                <div className="suggestion-avatar">
+                  {item.symbol.charAt(0)}
+                </div>
+                <div className="suggestion-info">
+                  <span className="suggestion-symbol">{item.symbol}</span>
+                  <span className="suggestion-name">{item.name}</span>
+                </div>
+                {item.price != null && (
+                  <span className="suggestion-price">${Number(item.price).toFixed(2)}</span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      {errorMsg && <p className="error-message">{errorMsg}</p>}
+      {errorMsg && <p className="error-message-v2">{errorMsg}</p>}
 
+      {/* Quote Card */}
       {quote && (
-        <div className="quote-result">
-          <div className="quote-header">
-            <div className="quote-symbol">{String(symbol).toUpperCase()}</div>
-            <div className="quote-name">{prettyName(symbolToName[String(symbol).toUpperCase()] || 'Company')}</div>
-            <div className="quote-price">${Number(quote.c).toFixed(2)}</div>
+        <div className="quote-card">
+          <div className="quote-card-header">
+            <div className="quote-avatar">
+              {upper.charAt(0)}
+            </div>
+            <div className="quote-info">
+              <span className="quote-symbol-v2">{upper}</span>
+              <span className="quote-name-v2">{prettyName(symbolToName[upper] || 'Company')}</span>
+            </div>
+            <div className="quote-price-v2">
+              ${Number(quote.c).toFixed(2)}
+            </div>
           </div>
 
-          {(() => {
-            const upper = String(symbol).toUpperCase();
-            const alreadyDrafted = portfolio.some(p => p.symbol === upper);
-            const draftedByMe = portfolio.some(p => p.symbol === upper && p.user_id === USER_ID);
-            const draftedByOther = alreadyDrafted && !draftedByMe;
-
-            let statusMessage = '';
-            let statusType = '';
-            let disabled = false;
-
-            if (draftedByMe) {
-              statusMessage = 'You already drafted this stock';
-              statusType = 'info';
-              disabled = true;
-            } else if (draftedByOther) {
-              statusMessage = 'Already drafted by another player';
-              statusType = 'error';
-              disabled = true;
-            } else if (USER_ID !== currentPicker) {
-              statusMessage = 'Wait for your turn';
-              statusType = 'warning';
-              disabled = true;
-            } else if (isBudgetMode && Number(quote.c) > budgetRemaining) {
-              statusMessage = 'Over your remaining budget';
-              statusType = 'error';
-              disabled = true;
-            }
-
-            return (
-              <div className="quote-actions">
-                <button
-                  onClick={draftStock}
-                  disabled={disabled}
-                  className={`btn ${disabled ? '' : 'primary'} draft-btn`}
-                >
-                  Draft Stock
-                </button>
-                {statusMessage && (
-                  <span className={`status-message ${statusType}`}>
-                    {statusMessage}
-                  </span>
-                )}
+          <div className="quote-card-footer">
+            {draftedByMe && (
+              <div className="quote-status info">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                </svg>
+                Already on your team
               </div>
-            );
-          })()}
+            )}
+            {draftedByOther && (
+              <div className="quote-status error">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-2h2v2h-2zm0-4V7h2v6h-2z"/>
+                </svg>
+                Taken by another player
+              </div>
+            )}
+            {!isMyTurn && !alreadyDrafted && (
+              <div className="quote-status warning">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14v-2h2v2h-2zm0-4V7h2v5h-2z"/>
+                </svg>
+                Wait for your turn
+              </div>
+            )}
+            {overBudget && (
+              <div className="quote-status error">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-2h2v2h-2zm0-4V7h2v6h-2z"/>
+                </svg>
+                Over budget (${budgetRemaining?.toFixed(0)} left)
+              </div>
+            )}
+
+            <button
+              onClick={draftStock}
+              disabled={!canDraft}
+              className={`draft-button ${canDraft ? 'active' : ''}`}
+            >
+              {canDraft ? 'Draft to Team' : 'Draft Stock'}
+            </button>
+          </div>
         </div>
       )}
     </div>

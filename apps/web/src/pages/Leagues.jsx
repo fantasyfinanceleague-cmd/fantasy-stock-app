@@ -226,32 +226,83 @@ export default function Leagues() {
 
   const tabStyle = (isActive) => ({
     padding: '12px 24px',
-    background: isActive ? '#3b82f6' : 'transparent',
+    background: isActive
+      ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'
+      : 'transparent',
     border: 'none',
-    borderRadius: 8,
+    borderRadius: 10,
     color: isActive ? '#fff' : '#9ca3af',
     fontWeight: 600,
     cursor: 'pointer',
     transition: 'all 0.2s',
     fontSize: 14,
+    boxShadow: isActive ? '0 4px 14px rgba(59, 130, 246, 0.25)' : 'none',
   });
 
   const inputStyle = {
     width: '100%',
-    padding: '10px 14px',
-    background: '#111826',
-    border: '1px solid #374151',
-    borderRadius: 8,
+    padding: '12px 14px',
+    background: 'linear-gradient(135deg, rgba(15, 19, 25, 0.9) 0%, rgba(10, 13, 18, 0.95) 100%)',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    borderRadius: 10,
     color: '#fff',
     fontSize: 14,
+    transition: 'all 0.2s ease',
   };
 
   const labelStyle = {
     display: 'block',
-    marginBottom: 6,
+    marginBottom: 8,
     color: '#9ca3af',
+    fontSize: 12,
+    fontWeight: 500,
+    textTransform: 'uppercase',
+    letterSpacing: '0.03em',
+  };
+
+  const cardStyle = {
+    background: 'linear-gradient(135deg, rgba(26, 29, 36, 0.9) 0%, rgba(18, 21, 26, 0.95) 100%)',
+    borderRadius: 16,
+    padding: 24,
+    border: '1px solid rgba(255, 255, 255, 0.06)',
+    boxShadow: '0 4px 24px rgba(0, 0, 0, 0.2)',
+  };
+
+  const leagueCardStyle = {
+    background: 'linear-gradient(135deg, rgba(26, 29, 36, 0.9) 0%, rgba(18, 21, 26, 0.95) 100%)',
+    borderRadius: 16,
+    padding: 20,
+    border: '1px solid rgba(255, 255, 255, 0.06)',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 16,
+    flexWrap: 'wrap',
+    transition: 'all 0.2s ease',
+  };
+
+  const buttonPrimaryStyle = {
+    padding: '10px 18px',
+    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+    borderRadius: 8,
+    color: '#fff',
+    textDecoration: 'none',
     fontSize: 13,
     fontWeight: 500,
+    border: 'none',
+    cursor: 'pointer',
+    boxShadow: '0 4px 14px rgba(59, 130, 246, 0.25)',
+  };
+
+  const buttonSecondaryStyle = {
+    padding: '10px 18px',
+    background: 'linear-gradient(135deg, rgba(55, 65, 81, 0.9) 0%, rgba(45, 55, 72, 0.95) 100%)',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    borderRadius: 8,
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: 500,
+    cursor: 'pointer',
   };
 
   return (
@@ -268,10 +319,11 @@ export default function Leagues() {
         display: 'flex',
         gap: 8,
         marginBottom: 24,
-        background: '#1a1f2e',
+        background: 'linear-gradient(135deg, rgba(26, 31, 46, 0.9) 0%, rgba(18, 22, 32, 0.95) 100%)',
         padding: 6,
-        borderRadius: 12,
+        borderRadius: 14,
         width: 'fit-content',
+        border: '1px solid rgba(255, 255, 255, 0.06)',
       }}>
         <button style={tabStyle(activeTab === 'leagues')} onClick={() => setActiveTab('leagues')}>
           My Leagues
@@ -339,17 +391,7 @@ export default function Leagues() {
                 return (
                   <div
                     key={lg.id}
-                    style={{
-                      background: '#1a1f2e',
-                      borderRadius: 12,
-                      padding: 20,
-                      border: '1px solid #2a3040',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      gap: 16,
-                      flexWrap: 'wrap',
-                    }}
+                    style={leagueCardStyle}
                   >
                     <div style={{ flex: 1, minWidth: 200 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
@@ -387,30 +429,13 @@ export default function Leagues() {
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                       <Link
                         to={`/league/${lg.id}`}
-                        style={{
-                          padding: '8px 16px',
-                          background: '#3b82f6',
-                          borderRadius: 6,
-                          color: '#fff',
-                          textDecoration: 'none',
-                          fontSize: 13,
-                          fontWeight: 500,
-                        }}
+                        style={buttonPrimaryStyle}
                       >
                         View
                       </Link>
                       <button
                         onClick={() => setActiveAndGoDraft(lg)}
-                        style={{
-                          padding: '8px 16px',
-                          background: '#374151',
-                          border: 'none',
-                          borderRadius: 6,
-                          color: '#fff',
-                          fontSize: 13,
-                          fontWeight: 500,
-                          cursor: 'pointer',
-                        }}
+                        style={buttonSecondaryStyle}
                       >
                         Draft
                       </button>
@@ -418,16 +443,7 @@ export default function Leagues() {
                         <>
                           <button
                             onClick={() => copyInviteForLeague(lg)}
-                            style={{
-                              padding: '8px 16px',
-                              background: '#374151',
-                              border: 'none',
-                              borderRadius: 6,
-                              color: '#fff',
-                              fontSize: 13,
-                              fontWeight: 500,
-                              cursor: 'pointer',
-                            }}
+                            style={buttonSecondaryStyle}
                           >
                             Invite
                           </button>
@@ -440,10 +456,10 @@ export default function Leagues() {
                             disabled={!canDeleteLeague(lg)}
                             title={!canDeleteLeague(lg) ? 'Cannot delete during active season' : 'Delete league'}
                             style={{
-                              padding: '8px 16px',
+                              padding: '10px 18px',
                               background: canDeleteLeague(lg) ? 'rgba(239, 68, 68, 0.15)' : 'rgba(107, 114, 128, 0.15)',
-                              border: 'none',
-                              borderRadius: 6,
+                              border: '1px solid ' + (canDeleteLeague(lg) ? 'rgba(239, 68, 68, 0.3)' : 'rgba(107, 114, 128, 0.2)'),
+                              borderRadius: 8,
                               color: canDeleteLeague(lg) ? '#ef4444' : '#6b7280',
                               fontSize: 13,
                               fontWeight: 500,
@@ -458,10 +474,10 @@ export default function Leagues() {
                         <button
                           onClick={() => leaveLeague(lg.id)}
                           style={{
-                            padding: '8px 16px',
+                            padding: '10px 18px',
                             background: 'rgba(239, 68, 68, 0.15)',
-                            border: 'none',
-                            borderRadius: 6,
+                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                            borderRadius: 8,
                             color: '#ef4444',
                             fontSize: 13,
                             fontWeight: 500,
@@ -483,12 +499,7 @@ export default function Leagues() {
       {/* Create League Tab */}
       {activeTab === 'create' && (
         <div style={{ maxWidth: 600 }}>
-          <div style={{
-            background: '#1a1f2e',
-            borderRadius: 12,
-            padding: 24,
-            border: '1px solid #2a3040',
-          }}>
+          <div style={cardStyle}>
             <h2 style={{ margin: '0 0 20px', color: '#fff', fontSize: 20 }}>Create New League</h2>
 
             <form onSubmit={handleCreate}>
@@ -626,15 +637,19 @@ export default function Leagues() {
                 disabled={loading || !leagueName.trim()}
                 style={{
                   width: '100%',
-                  padding: '12px 24px',
-                  background: loading || !leagueName.trim() ? '#374151' : '#3b82f6',
+                  padding: '14px 24px',
+                  background: loading || !leagueName.trim()
+                    ? 'linear-gradient(135deg, rgba(55, 65, 81, 0.9) 0%, rgba(45, 55, 72, 0.95) 100%)'
+                    : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
                   border: 'none',
-                  borderRadius: 8,
+                  borderRadius: 10,
                   color: '#fff',
                   fontWeight: 600,
                   fontSize: 15,
                   cursor: loading || !leagueName.trim() ? 'not-allowed' : 'pointer',
                   marginTop: 8,
+                  boxShadow: loading || !leagueName.trim() ? 'none' : '0 4px 14px rgba(59, 130, 246, 0.25)',
+                  transition: 'all 0.2s ease',
                 }}
               >
                 {loading ? 'Creating...' : 'Create League'}
@@ -648,12 +663,7 @@ export default function Leagues() {
       {activeTab === 'manage' && managedLeagues.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: 20 }}>
           {/* Update Settings */}
-          <div style={{
-            background: '#1a1f2e',
-            borderRadius: 12,
-            padding: 24,
-            border: '1px solid #2a3040',
-          }}>
+          <div style={cardStyle}>
             <h3 style={{ margin: '0 0 16px', color: '#fff', fontSize: 18 }}>⚙️ League Settings</h3>
 
             <div style={{ marginBottom: 16 }}>
@@ -754,13 +764,17 @@ export default function Leagues() {
                 disabled={loading || isDraftLocked}
                 style={{
                   width: '100%',
-                  padding: '10px 20px',
-                  background: loading || isDraftLocked ? '#374151' : '#8b5cf6',
+                  padding: '12px 20px',
+                  background: loading || isDraftLocked
+                    ? 'linear-gradient(135deg, rgba(55, 65, 81, 0.9) 0%, rgba(45, 55, 72, 0.95) 100%)'
+                    : 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
                   border: 'none',
-                  borderRadius: 8,
+                  borderRadius: 10,
                   color: '#fff',
                   fontWeight: 600,
                   cursor: loading || isDraftLocked ? 'not-allowed' : 'pointer',
+                  boxShadow: loading || isDraftLocked ? 'none' : '0 4px 14px rgba(139, 92, 246, 0.25)',
+                  transition: 'all 0.2s ease',
                 }}
               >
                 {loading ? 'Saving...' : 'Save Changes'}
@@ -769,12 +783,7 @@ export default function Leagues() {
           </div>
 
           {/* Invite Members */}
-          <div style={{
-            background: '#1a1f2e',
-            borderRadius: 12,
-            padding: 24,
-            border: '1px solid #2a3040',
-          }}>
+          <div style={cardStyle}>
             <h3 style={{ margin: '0 0 16px', color: '#fff', fontSize: 18 }}>👥 Invite Members</h3>
 
             <form onSubmit={handleInvite}>
@@ -807,13 +816,17 @@ export default function Leagues() {
                 disabled={loading}
                 style={{
                   width: '100%',
-                  padding: '10px 20px',
-                  background: loading ? '#374151' : '#16a34a',
+                  padding: '12px 20px',
+                  background: loading
+                    ? 'linear-gradient(135deg, rgba(55, 65, 81, 0.9) 0%, rgba(45, 55, 72, 0.95) 100%)'
+                    : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                   border: 'none',
-                  borderRadius: 8,
+                  borderRadius: 10,
                   color: '#fff',
                   fontWeight: 600,
                   cursor: loading ? 'not-allowed' : 'pointer',
+                  boxShadow: loading ? 'none' : '0 4px 14px rgba(16, 185, 129, 0.25)',
+                  transition: 'all 0.2s ease',
                 }}
               >
                 {loading ? 'Sending...' : 'Send Invite'}
@@ -831,10 +844,11 @@ export default function Leagues() {
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
-                      padding: '10px 12px',
-                      background: '#111826',
-                      borderRadius: 8,
+                      padding: '12px 14px',
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      borderRadius: 10,
                       marginBottom: 8,
+                      border: '1px solid rgba(255, 255, 255, 0.04)',
                     }}
                   >
                     <span style={{ color: '#e5e7eb', fontSize: 13 }}>{inv.invited_identifier}</span>
