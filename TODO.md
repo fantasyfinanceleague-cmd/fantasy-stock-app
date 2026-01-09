@@ -22,6 +22,8 @@
 - [ ] Password reset flow
 - [ ] Settings/preferences screen
 - [ ] Help/documentation
+- [ ] Stock name display alongside symbols in draft boards
+- [ ] Search suggestions dropdown (like web has) instead of plain text input
 
 ### Known Issues / Bugs to Investigate
 - [x] **Bot draft race condition** - FIXED (Jan 8, 2026)
@@ -33,6 +35,32 @@
     3. Added handling for unique constraint violation errors (code 23505)
     4. Database constraint `drafts_league_pick_unique UNIQUE (league_id, pick_number)` applied
   - **Verification:** Existing duplicate picks (11, 13) manually corrected. Full constraint active.
+
+### Recently Completed (Jan 8-9, 2026)
+- [x] **Modern UI Redesign** - Sleeper/Robinhood-inspired dark theme
+  - Glassmorphism cards with gradient backgrounds and subtle borders
+  - Redesigned search input with icon and avatar-based dropdown suggestions
+  - Unified quote card design (removed grey/black split)
+  - Your Stocks and Draft History boards side-by-side below search
+  - Stock names displayed with truncation (SYMBOL - Company Name...)
+  - Round selector dropdown with auto-switch to current round
+  - Updated Leagues page with modern styling
+  - Mobile app draft completed screen improvements
+
+- [x] **Search Improvements**
+  - Relevance-based ordering: exact symbol > starts-with > name starts > contains
+  - Fixed dropdown selection bug (was using typed text instead of selected symbol)
+  - Deployed updated symbols-search edge function
+
+- [x] **Bot Auto-Pick Improvements**
+  - Expanded stock pool from ~48 to ~130 stocks across price tiers
+  - Bots now have more options to avoid skipping picks
+
+- [x] **Bug Fixes**
+  - Fixed 406 error by using `.maybeSingle()` for duplicate pick check
+  - Fixed CORS issues for localhost development
+  - Better error messages for quote failures (credentials, not found, etc.)
+  - Deployed all edge functions with proper CORS headers
 
 ---
 
