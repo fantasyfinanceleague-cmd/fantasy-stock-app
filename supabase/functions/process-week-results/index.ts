@@ -36,7 +36,22 @@ interface PortfolioHolding {
 interface WeekSnapshot {
   symbol: string;
   quantity: number;
-  weekStartPrice: number;
+  weekStartPrice: number | null;  // null for mid-week purchases
+  weekEndPrice: number | null;    // Friday close price
+}
+
+interface MidWeekTrade {
+  symbol: string;
+  action: 'buy' | 'sell';
+  quantity: number;
+  price: number;
+  createdAt: Date;
+}
+
+interface UserScore {
+  dollarGain: number;
+  percentGain: number;
+  hasPositions: boolean;
 }
 
 interface UserPortfolio {
@@ -156,8 +171,79 @@ function calculatePortfolio(
   };
 }
 
-// Calculate weekly gain using week start snapshots
-function calculateWeeklyGain(
+/**
+ * Calculate user's score for the week using snapshots and mid-week trades.
+ *
+ * Score calculation:
+ * - Stocks held all week: quantity × (week_end_price - week_start_price)
+ * - Stocks sold mid-week: quantity × (sale_price - week_start_price)
+ * - Stocks bought mid-week: quantity × (week_end_price - purchase_price)
+ *
+ * Returns dollar gain, percent gain, and whether user had any positions.
+ */
+function calculateUserScore(
+  userId: string,
+  snapshots: WeekSnapshot[],
+  midWeekTrades: MidWeekTrade[]
+): UserScore {
+  let totalGain = 0;
+  let totalStartValue = 0;
+
+  // 1. Process stocks that were held at week start (have week_start_price)
+  for (const snap of snapshots.filter(s => s.weekStartPrice !== null)) {
+    const startPrice = snap.weekStartPrice!;
+    const symbol = snap.symbol.toUpperCase();
+
+    // Check if this stock was sold mid-week
+    const sellTrade = midWeekTrades.find(t =>
+      t.symbol.toUpperCase() === symbol && t.action === 'sell'
+    );
+
+    if (sellTrade) {
+      // Stock was sold mid-week - use sell price as end price
+      const gain = snap.quantity * (sellTrade.price - startPrice);
+      totalGain += gain;
+      totalStartValue += snap.quantity * startPrice;
+      console.log(`${symbol}: Sold mid-week. Start: $${startPrice}, Sold: $${sellTrade.price}, Qty: ${snap.quantity}, Gain: $${gain.toFixed(2)}`);
+    } else if (snap.weekEndPrice !== null) {
+      // Stock held all week - use week end price
+      const gain = snap.quantity * (snap.weekEndPrice - startPrice);
+      totalGain += gain;
+      totalStartValue += snap.quantity * startPrice;
+      console.log(`${symbol}: Held all week. Start: $${startPrice}, End: $${snap.weekEndPrice}, Qty: ${snap.quantity}, Gain: $${gain.toFixed(2)}`);
+    }
+  }
+
+  // 2. Process stocks bought mid-week (only have week_end_price, not week_start_price)
+  for (const snap of snapshots.filter(s => s.weekStartPrice === null && s.weekEndPrice !== null)) {
+    const symbol = snap.symbol.toUpperCase();
+
+    // Find the buy trade for this stock
+    const buyTrade = midWeekTrades.find(t =>
+      t.symbol.toUpperCase() === symbol && t.action === 'buy'
+    );
+
+    if (buyTrade && snap.weekEndPrice) {
+      // Calculate gain from purchase price to week end
+      const gain = snap.quantity * (snap.weekEndPrice - buyTrade.price);
+      totalGain += gain;
+      totalStartValue += snap.quantity * buyTrade.price;
+      console.log(`${symbol}: Bought mid-week. Purchase: $${buyTrade.price}, End: $${snap.weekEndPrice}, Qty: ${snap.quantity}, Gain: $${gain.toFixed(2)}`);
+    }
+  }
+
+  // Calculate percentage gain
+  const percentGain = totalStartValue > 0
+    ? (totalGain / totalStartValue) * 100
+    : 0;
+
+  const hasPositions = snapshots.length > 0 || midWeekTrades.length > 0;
+
+  return { dollarGain: totalGain, percentGain, hasPositions };
+}
+
+// Legacy function for backward compatibility (when no week_end_price available)
+function calculateWeeklyGainLegacy(
   userId: string,
   snapshots: WeekSnapshot[],
   prices: Map<string, number>
@@ -165,6 +251,8 @@ function calculateWeeklyGain(
   let totalGain = 0;
 
   for (const snapshot of snapshots) {
+    if (snapshot.weekStartPrice === null) continue;
+
     const currentPrice = prices.get(snapshot.symbol);
     if (currentPrice === undefined) {
       console.warn(`No current price for ${snapshot.symbol}, skipping`);
@@ -534,6 +622,7 @@ Deno.serve(async (req) => {
         team1_gain,
         team1_seed,
         team2_seed,
+        week_start,
         week_end,
         is_playoff,
         playoff_round,
@@ -582,16 +671,18 @@ Deno.serve(async (req) => {
         if (m.team2_user_id) userIds.add(m.team2_user_id);
       }
 
-      // Fetch week snapshots for this league/week
+      // Fetch week snapshots for this league/week (including week_end_price)
       const { data: snapshotData } = await supabase
         .from('week_snapshots')
-        .select('user_id, symbol, quantity, week_start_price')
+        .select('user_id, symbol, quantity, week_start_price, week_end_price')
         .eq('league_id', leagueId)
         .eq('week_number', weekNumber);
 
       // Build snapshots map by user
       const userSnapshots = new Map<string, WeekSnapshot[]>();
       const snapshotSymbols = new Set<string>();
+      const hasWeekEndPrices = snapshotData?.some(s => s.week_end_price != null) ?? false;
+
       if (snapshotData && snapshotData.length > 0) {
         for (const s of snapshotData) {
           if (!userSnapshots.has(s.user_id)) {
@@ -600,13 +691,47 @@ Deno.serve(async (req) => {
           userSnapshots.get(s.user_id)!.push({
             symbol: s.symbol,
             quantity: Number(s.quantity),
-            weekStartPrice: Number(s.week_start_price),
+            weekStartPrice: s.week_start_price != null ? Number(s.week_start_price) : null,
+            weekEndPrice: s.week_end_price != null ? Number(s.week_end_price) : null,
           });
           snapshotSymbols.add(s.symbol);
         }
-        console.log(`Found ${snapshotData.length} week snapshots for week ${weekNumber}`);
+        console.log(`Found ${snapshotData.length} week snapshots for week ${weekNumber}, hasWeekEndPrices: ${hasWeekEndPrices}`);
       } else {
         console.log(`No week snapshots found for week ${weekNumber}, using fallback calculation`);
+      }
+
+      // Fetch mid-week trades for this league (trades made during this week)
+      // We need to get the matchup dates to filter trades
+      const weekStart = leagueMatchups[0]?.week_start;
+      const weekEnd = leagueMatchups[0]?.week_end;
+
+      let midWeekTradesData: any[] = [];
+      if (weekStart && weekEnd) {
+        const { data: tradesDuringWeek } = await supabase
+          .from('trades')
+          .select('user_id, symbol, action, quantity, price, created_at')
+          .eq('league_id', leagueId)
+          .gte('created_at', weekStart)
+          .lte('created_at', weekEnd);
+
+        midWeekTradesData = tradesDuringWeek || [];
+        console.log(`Found ${midWeekTradesData.length} mid-week trades`);
+      }
+
+      // Build mid-week trades map by user
+      const userMidWeekTrades = new Map<string, MidWeekTrade[]>();
+      for (const t of midWeekTradesData) {
+        if (!userMidWeekTrades.has(t.user_id)) {
+          userMidWeekTrades.set(t.user_id, []);
+        }
+        userMidWeekTrades.get(t.user_id)!.push({
+          symbol: t.symbol,
+          action: t.action as 'buy' | 'sell',
+          quantity: Number(t.quantity),
+          price: Number(t.price),
+          createdAt: new Date(t.created_at),
+        });
       }
 
       // Fetch drafts for this league (needed for fallback if no snapshots)
@@ -638,18 +763,29 @@ Deno.serve(async (req) => {
         prices = await fetchPrices(Array.from(symbols), ALPACA_KEY, ALPACA_SECRET);
       }
 
-      // Calculate gains for each user (using snapshots if available, otherwise portfolio)
-      const userGains = new Map<string, number>();
+      // Calculate scores for each user (using new scoring system if week_end_prices available)
+      const userScores = new Map<string, UserScore>();
       for (const userId of userIds) {
-        const snapshots = userSnapshots.get(userId);
-        if (snapshots && snapshots.length > 0) {
-          // Use week snapshots for gain calculation
-          const gain = calculateWeeklyGain(userId, snapshots, prices);
-          userGains.set(userId, gain);
+        const snapshots = userSnapshots.get(userId) || [];
+        const midWeekTrades = userMidWeekTrades.get(userId) || [];
+
+        if (snapshots.length > 0 && hasWeekEndPrices) {
+          // Use new scoring system with week_start_price, week_end_price, and mid-week trades
+          const score = calculateUserScore(userId, snapshots, midWeekTrades);
+          userScores.set(userId, score);
+          console.log(`User ${userId}: Dollar gain: $${score.dollarGain.toFixed(2)}, Percent: ${score.percentGain.toFixed(2)}%`);
+        } else if (snapshots.length > 0) {
+          // Legacy: Use week snapshots with live prices (no week_end_price stored yet)
+          const gain = calculateWeeklyGainLegacy(userId, snapshots, prices);
+          userScores.set(userId, { dollarGain: gain, percentGain: 0, hasPositions: true });
         } else {
           // Fallback to portfolio calculation (cumulative from entry price)
           const portfolio = calculatePortfolio(userId, drafts || [], trades || [], prices);
-          userGains.set(userId, portfolio.gain);
+          userScores.set(userId, {
+            dollarGain: portfolio.gain,
+            percentGain: portfolio.totalCost > 0 ? (portfolio.gain / portfolio.totalCost) * 100 : 0,
+            hasPositions: portfolio.holdings.length > 0
+          });
         }
       }
 
@@ -659,9 +795,11 @@ Deno.serve(async (req) => {
         const isByeWeek = !matchup.team2_user_id && !matchup.is_playoff;
         const isPlayoff = matchup.is_playoff === true;
 
-        const team1Gain = userGains.get(matchup.team1_user_id) ?? 0;
+        const team1Score = userScores.get(matchup.team1_user_id) ?? { dollarGain: 0, percentGain: 0, hasPositions: false };
+        const team1Gain = team1Score.dollarGain;
 
         let team2Gain = 0;
+        let team2Score: UserScore = { dollarGain: 0, percentGain: 0, hasPositions: false };
         let winnerId: string | null = null;
         let isTie = false;
         let team1Won = false;
@@ -675,31 +813,68 @@ Deno.serve(async (req) => {
           console.log(`Processing bye week for user ${matchup.team1_user_id}`);
         } else {
           // Normal matchup or playoff
-          team2Gain = userGains.get(matchup.team2_user_id) ?? 0;
+          team2Score = userScores.get(matchup.team2_user_id) ?? { dollarGain: 0, percentGain: 0, hasPositions: false };
+          team2Gain = team2Score.dollarGain;
 
-          // Determine winner (no ties in playoffs - use tiebreaker)
-          if (team1Gain > team2Gain) {
-            winnerId = matchup.team1_user_id;
-            team1Won = true;
-          } else if (team2Gain > team1Gain) {
+          // Rule: Empty portfolio = automatic loss
+          const team1Empty = !team1Score.hasPositions;
+          const team2Empty = !team2Score.hasPositions;
+
+          if (team1Empty && team2Empty) {
+            // Both empty - true tie
+            isTie = true;
+            console.log(`Both teams have empty portfolios - tie`);
+          } else if (team1Empty) {
+            // Team 1 empty = automatic loss
             winnerId = matchup.team2_user_id;
             team2Won = true;
+            console.log(`Team 1 has empty portfolio - automatic loss`);
+          } else if (team2Empty) {
+            // Team 2 empty = automatic loss
+            winnerId = matchup.team1_user_id;
+            team1Won = true;
+            console.log(`Team 2 has empty portfolio - automatic loss`);
           } else {
-            // Tie - in playoffs, higher seed wins
-            if (isPlayoff) {
-              // Higher seed (lower number) wins tiebreaker
-              const seed1 = matchup.team1_seed || 999;
-              const seed2 = matchup.team2_seed || 999;
-              if (seed1 < seed2) {
+            // Both have positions - compare dollar gains
+            if (team1Gain > team2Gain) {
+              winnerId = matchup.team1_user_id;
+              team1Won = true;
+            } else if (team2Gain > team1Gain) {
+              winnerId = matchup.team2_user_id;
+              team2Won = true;
+            } else {
+              // Dollar gains are tied - use percentage gain as tiebreaker
+              const team1Pct = team1Score.percentGain;
+              const team2Pct = team2Score.percentGain;
+
+              if (team1Pct > team2Pct) {
                 winnerId = matchup.team1_user_id;
                 team1Won = true;
-              } else {
+                console.log(`Dollar tie ($${team1Gain.toFixed(2)}), Team 1 wins on percent (${team1Pct.toFixed(2)}% vs ${team2Pct.toFixed(2)}%)`);
+              } else if (team2Pct > team1Pct) {
                 winnerId = matchup.team2_user_id;
                 team2Won = true;
+                console.log(`Dollar tie ($${team1Gain.toFixed(2)}), Team 2 wins on percent (${team2Pct.toFixed(2)}% vs ${team1Pct.toFixed(2)}%)`);
+              } else {
+                // True tie - both dollar and percent are the same
+                if (isPlayoff) {
+                  // In playoffs, higher seed (lower number) wins
+                  const seed1 = matchup.team1_seed || 999;
+                  const seed2 = matchup.team2_seed || 999;
+                  if (seed1 < seed2) {
+                    winnerId = matchup.team1_user_id;
+                    team1Won = true;
+                  } else {
+                    winnerId = matchup.team2_user_id;
+                    team2Won = true;
+                  }
+                  console.log(`Playoff double-tie, seed tiebreaker: seed ${seed1} vs ${seed2}, winner: ${winnerId}`);
+                } else {
+                  // Regular season - true tie (0.5 wins each)
+                  isTie = true;
+                  console.log(`True tie - both dollar ($${team1Gain.toFixed(2)}) and percent (${team1Pct.toFixed(2)}%) are equal`);
+                }
               }
-              console.log(`Playoff tiebreaker: seed ${seed1} vs ${seed2}, winner: ${winnerId}`);
-            } else {
-              isTie = true;
             }
           }
         }
@@ -711,6 +886,7 @@ Deno.serve(async (req) => {
             team1_gain: team1Gain,
             team2_gain: isByeWeek ? null : team2Gain, // null for bye weeks
             winner_user_id: winnerId,
+            is_tie: isTie,
           })
           .eq('id', matchup.id);
 
@@ -725,6 +901,7 @@ Deno.serve(async (req) => {
         }
 
         // Helper to update standings with proper increment
+        // Supports 0.5 wins/losses for true ties
         async function updateUserStandings(
           lgId: string,
           oderId: string,
@@ -734,6 +911,11 @@ Deno.serve(async (req) => {
           pointsFor: number,
           pointsAgainst: number
         ) {
+          // Calculate increments (ties give 0.5 win and 0.5 loss)
+          const winsIncrement = won ? 1 : (tied ? 0.5 : 0);
+          const lossesIncrement = lost ? 1 : (tied ? 0.5 : 0);
+          const tiesIncrement = tied ? 1 : 0;
+
           // First try to get existing record
           const { data: existing } = await supabase
             .from('league_standings')
@@ -747,9 +929,9 @@ Deno.serve(async (req) => {
             const { error } = await supabase
               .from('league_standings')
               .update({
-                wins: existing.wins + (won ? 1 : 0),
-                losses: existing.losses + (lost ? 1 : 0),
-                ties: existing.ties + (tied ? 1 : 0),
+                wins: Number(existing.wins) + winsIncrement,
+                losses: Number(existing.losses) + lossesIncrement,
+                ties: Number(existing.ties) + tiesIncrement,
                 points_for: Number(existing.points_for) + pointsFor,
                 points_against: Number(existing.points_against) + pointsAgainst,
                 updated_at: new Date().toISOString(),
@@ -764,9 +946,9 @@ Deno.serve(async (req) => {
               .insert({
                 league_id: lgId,
                 user_id: oderId,
-                wins: won ? 1 : 0,
-                losses: lost ? 1 : 0,
-                ties: tied ? 1 : 0,
+                wins: winsIncrement,
+                losses: lossesIncrement,
+                ties: tiesIncrement,
                 points_for: pointsFor,
                 points_against: pointsAgainst,
               });
@@ -827,7 +1009,6 @@ Deno.serve(async (req) => {
       const currentWeek = leagueMatchups[0]?.leagues?.current_week || 1;
       const numWeeks = leagueMatchups[0]?.leagues?.num_weeks || 0;
       const playoffTeams = leagueMatchups[0]?.leagues?.playoff_teams || 4;
-      const weekNumber = leagueMatchups[0]?.week_number;
 
       if (weekNumber === currentWeek) {
         // Check if all matchups for this week are processed

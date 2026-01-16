@@ -1,5 +1,5 @@
 // src/pages/Leaderboard.jsx
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase/supabaseClient';
 import '../layout.css';
@@ -11,6 +11,9 @@ import { useUserProfiles } from '../context/UserProfilesContext';
 import { PageLoader } from '../components/LoadingSpinner';
 import { SkeletonLeaderboard } from '../components/Skeleton';
 import { generateSchedule, generateInitialStandings, getPlayoffRoundName } from '../utils/scheduleGenerator';
+import { useRealtimeStandings } from '../hooks/useRealtimeStandings';
+import WeekIndicator from '../components/WeekIndicator';
+import { getWeekStatus } from '../utils/weekStatus';
 
 // Helper component for playoff bracket matchup display
 function PlayoffMatchupCard({ matchup, getDisplayName, getAvatar, userId, isCurrentRound, isFinals }) {
@@ -46,8 +49,10 @@ function PlayoffMatchupCard({ matchup, getDisplayName, getAvatar, userId, isCurr
     fontWeight: isWinner || isUser ? 600 : 400,
   });
 
+  const roundClass = isFinals ? 'finals' : m.playoff_round === 'semi' ? 'semi' : '';
+
   return (
-    <div style={cardStyle}>
+    <div className={`playoff-matchup ${roundClass}`} style={cardStyle}>
       {/* Team 1 */}
       <div style={teamStyle(team1Won, m.team1_user_id === userId)}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -154,6 +159,100 @@ export default function Leaderboard() {
   // schedule modal
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [schedulePlayerId, setSchedulePlayerId] = useState('');
+
+  // Real-time standings updates
+  const isMatchupLeague = activeLeague?.league_type === 'matchup';
+  const { standingsUpdated, matchupsUpdated, weekAdvanced } = useRealtimeStandings(leagueId, isMatchupLeague);
+
+  // Position tracking for animations
+  const previousPositionsRef = useRef({});
+  const [animatingRows, setAnimatingRows] = useState({});
+
+  // Refetch standings callback
+  const refetchStandings = useCallback(async () => {
+    if (!leagueId) return;
+
+    try {
+      const { data: standingsRows, error: sErr } = await supabase
+        .from('league_standings')
+        .select('*')
+        .eq('league_id', leagueId)
+        .order('wins', { ascending: false });
+
+      if (sErr) throw sErr;
+      setLeagueStandings(standingsRows || []);
+
+      const { data: matchupRows, error: mErr } = await supabase
+        .from('matchups')
+        .select('*')
+        .eq('league_id', leagueId)
+        .order('week_number', { ascending: true });
+
+      if (mErr) throw mErr;
+      setMatchups(matchupRows || []);
+    } catch (e) {
+      console.error('Error refetching standings:', e);
+    }
+  }, [leagueId]);
+
+  // Handle real-time standings updates
+  useEffect(() => {
+    if (!standingsUpdated) return;
+
+    // Store current positions before refetching
+    const currentPositions = {};
+    leagueStandings.forEach((s, idx) => {
+      currentPositions[s.user_id] = idx;
+    });
+    previousPositionsRef.current = currentPositions;
+
+    // Refetch data
+    refetchStandings();
+  }, [standingsUpdated]);
+
+  // Handle real-time matchup updates
+  useEffect(() => {
+    if (!matchupsUpdated) return;
+    refetchStandings();
+  }, [matchupsUpdated]);
+
+  // Handle week advancement
+  useEffect(() => {
+    if (!weekAdvanced) return;
+    // Refetch league data to get updated current_week
+    (async () => {
+      const { data: lg } = await supabase
+        .from('leagues')
+        .select('id, name, league_type, num_weeks, current_week, playoff_teams')
+        .eq('id', leagueId)
+        .single();
+      if (lg) {
+        setLeagues(prev => prev.map(l => l.id === leagueId ? lg : l));
+      }
+    })();
+  }, [weekAdvanced, leagueId]);
+
+  // Apply animation classes when standings change
+  useEffect(() => {
+    if (!leagueStandings.length || !Object.keys(previousPositionsRef.current).length) return;
+
+    const animations = {};
+    leagueStandings.forEach((s, newIdx) => {
+      const oldIdx = previousPositionsRef.current[s.user_id];
+      if (oldIdx !== undefined && oldIdx !== newIdx) {
+        animations[s.user_id] = oldIdx > newIdx ? 'moved-up' : 'moved-down';
+      }
+    });
+
+    if (Object.keys(animations).length > 0) {
+      setAnimatingRows(animations);
+      // Clear animations after they complete
+      setTimeout(() => {
+        setAnimatingRows({});
+        previousPositionsRef.current = {};
+      }, 500);
+    }
+  }, [leagueStandings]);
 
   // ----- Load my leagues
   useEffect(() => {
@@ -466,7 +565,6 @@ export default function Leaderboard() {
   }, [allUserIds, prices, picksByUser, tradesByUser]);
 
   // ----- Matchup league computed values -----
-  const isMatchupLeague = activeLeague?.league_type === 'matchup';
   const currentWeek = activeLeague?.current_week || 1;
 
 
@@ -920,12 +1018,20 @@ export default function Leaderboard() {
 
       {/* Current Standings */}
       <div className="card" style={{ marginBottom: 14 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3 style={{ marginTop: 0 }}>Current Standings</h3>
-          <div className="muted" style={{ fontSize: 12 }}>
-            {isMatchupLeague ? `Week ${currentWeek} of ${activeLeague?.num_weeks || '?'}` : null}
-            {!isMatchupLeague && lastUpdated ? `Last updated: ${lastUpdated.toLocaleTimeString()}` : null}
-          </div>
+          {isMatchupLeague ? (
+            <WeekIndicator
+              league={activeLeague}
+              matchup={matchups.find(m => m.week_number === currentWeek)}
+              showCountdown={true}
+              size="small"
+            />
+          ) : (
+            <div className="muted" style={{ fontSize: 12 }}>
+              {lastUpdated ? `Last updated: ${lastUpdated.toLocaleTimeString()}` : null}
+            </div>
+          )}
         </div>
 
         {isMatchupLeague ? (
@@ -939,8 +1045,9 @@ export default function Leaderboard() {
                 const winPct = (s.wins + s.losses + s.ties) > 0
                   ? ((s.wins + s.ties * 0.5) / (s.wins + s.losses + s.ties) * 100).toFixed(0)
                   : 0;
+                const animClass = animatingRows[s.user_id] || '';
                 return (
-                  <div key={s.user_id} className="list-row" style={{ borderRadius: 10, background: mine ? '#18202c' : undefined }}>
+                  <div key={s.user_id} className={`list-row standings-row ${animClass}`} style={{ borderRadius: 10, background: mine ? '#18202c' : undefined }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                       <div style={{
                         width: 28, height: 28, borderRadius: '50%', background: '#0ea5e9',
@@ -1076,17 +1183,21 @@ export default function Leaderboard() {
       {/* Playoff Bracket - only for matchup leagues with playoffs */}
       {isMatchupLeague && playoffData && playoffData.hasStarted && (
         <div className="card" style={{ marginBottom: 14 }}>
+          {/* Champion Banner - shown when playoffs complete */}
+          {playoffData.currentRound === 'complete' && playoffData.champion && (
+            <div className="champion-banner" style={{ marginBottom: 20 }}>
+              <span className="trophy">🏆</span>
+              <span className="champion-name">{getDisplayName(playoffData.champion, USER_ID)}</span>
+              <span className="champion-title">League Champion</span>
+            </div>
+          )}
+
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <h3 style={{ margin: 0 }}>
               🏆 Playoff Bracket
-              {playoffData.currentRound === 'complete' && playoffData.champion && (
-                <span style={{ marginLeft: 12, fontSize: 14, color: '#fbbf24' }}>
-                  Champion: {getDisplayName(playoffData.champion, USER_ID)}
-                </span>
-              )}
             </h3>
             <div className="muted" style={{ fontSize: 12 }}>
-              {playoffData.currentRound === 'complete' ? 'Playoffs Complete' :
+              {playoffData.currentRound === 'complete' ? 'Season Complete' :
                playoffData.currentRound === 'quarter' ? 'Quarterfinals' :
                playoffData.currentRound === 'semi' ? 'Semifinals' :
                playoffData.currentRound === 'finals' ? 'Finals' : 'Upcoming'}

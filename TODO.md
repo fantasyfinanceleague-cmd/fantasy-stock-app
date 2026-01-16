@@ -11,8 +11,13 @@
 - [x] Leaderboard/Standings (rankings, W-L-T records)
 - [x] Profile management (avatar selection, username editing)
 - [x] League context (switch between leagues)
-- [x] Stock price caching with rate limiting
+- [x] Stock price caching with rates limiting
 - [x] Dark theme throughout
+- [x] ESPN-style league switcher dropdown (all pages)
+- [x] Swipeable league carousel (Home page)
+- [x] Sticky headers on all main pages
+- [x] Week navigation for viewing past matchups
+- [x] Real-time subscriptions for standings/matchups
 
 ### Mobile App - Not Yet Implemented
 - [ ] Native trading (currently opens web app)
@@ -35,6 +40,56 @@
     3. Added handling for unique constraint violation errors (code 23505)
     4. Database constraint `drafts_league_pick_unique UNIQUE (league_id, pick_number)` applied
   - **Verification:** Existing duplicate picks (11, 13) manually corrected. Full constraint active.
+
+### Recently Completed (Jan 17, 2026)
+- [x] **Real-Time Standings & Matchup Updates (Web)**
+  - Created `weekStatus.js` utility for week timing and holiday detection
+  - Created `useRealtimeStandings.js` hook for Supabase subscriptions
+  - Created `useActiveWeekPolling.js` hook for 5-minute price refresh
+  - Created `WeekIndicator.jsx`, `WeekNavigator.jsx`, `StatusBadge.jsx` components
+  - Enabled realtime on `league_standings` and `matchups` tables
+
+- [x] **Mobile App Navigation Redesign (ESPN-Style)**
+  - Created `LeagueSwitcher.tsx` - sticky header with league dropdown
+  - Created `LeagueCarousel.tsx` - swipeable league cards on Home page
+  - Created `WeekNavigator.tsx`, `WeekIndicator.tsx`, `StatusBadge.tsx` for mobile
+  - Renamed "Dashboard" tab to "Home" with "Stockpile" branding
+  - Hidden "Leagues" tab (merged into dropdown)
+  - Made headers sticky on all pages (Portfolio, Matchup, Leaderboard, Draft)
+  - Moved WeekNavigator below scoreboard on Matchup page
+
+- [x] **Bot Feature Restriction**
+  - Restricted bot draft feature to `fantasyfinanceleague@gmail.com` only
+
+### Recently Completed (Jan 15, 2026)
+- [x] **Automated Weekly Matchup Processing** - Full cron job setup
+  - `snapshot-week-start`: Monday 9:35 AM ET (captures opening prices)
+  - `snapshot-week-end`: Friday 4:05 PM ET (captures closing prices)
+  - `process-weekly-matchups`: Friday 4:15 PM ET (calculates results)
+  - Holiday detection via Alpaca Calendar API (skips Monday if holiday, runs Tuesday)
+  - Retry mechanism: 3 retries, 5 minutes apart, then alert
+
+- [x] **New Scoring System Redesign**
+  - Changed from Tuesday-Friday to Monday-Friday weeks
+  - Both start AND end prices stored in `week_snapshots` table
+  - Mid-week trade tracking:
+    - Stocks held all week: `quantity × (friday_close - monday_open)`
+    - Stocks sold mid-week: `quantity × (sale_price - monday_open)`
+    - Stocks bought mid-week: `quantity × (friday_close - purchase_price)`
+  - Empty portfolio = automatic loss
+  - Tiebreaker: percentage gain first, then true tie (0.5 wins each)
+  - Support for half-wins in standings (NUMERIC columns)
+
+- [x] **Edge Function Fixes**
+  - Fixed duplicate `weekNumber` variable declaration bug in `process-week-results`
+  - Added `week_end_price` column to `week_snapshots` table
+  - Added `is_tie` column to `matchups` table
+  - Created `cron_job_status` table for retry tracking
+  - New `trigger_week_end_snapshot()` helper function
+
+- [x] **Vault Integration**
+  - Service role key stored securely in Supabase Vault
+  - Cron jobs authenticate via vault secret
 
 ### Recently Completed (Jan 8-9, 2026)
 - [x] **Modern UI Redesign** - Sleeper/Robinhood-inspired dark theme
@@ -65,6 +120,14 @@
 ---
 
 ## High Priority (Should Have)
+
+### 0. Real-Time Standings Auto-Refresh ✅ COMPLETED (Jan 17)
+- [x] Add Supabase real-time subscription to `league_standings` table (web)
+- [x] Add Supabase real-time subscription to `league_standings` table (mobile)
+- [x] Auto-refresh when `current_week` advances in `leagues` table
+- [x] Week navigation for viewing past matchups
+- [ ] Show "Last updated" timestamp on standings (optional, low priority)
+- [ ] Optional: Add 30-60 second polling fallback for connection issues
 
 ### 1. Landing/Marketing Page
 - [x] Create public-facing homepage explaining what the app is
@@ -167,6 +230,10 @@
 
 ## Recommended Starting Point
 
+**Immediate Next Step:**
+1. **Test Week 3 Processing** - Run manual snapshot + process-week-results to verify end-to-end flow
+2. **Champion Banner** - Add trophy/celebration for completed seasons
+
 **Web App Priorities:**
 1. **Landing Page Screenshots** - Only remaining item. Add app previews to complete the marketing page.
 2. **Mobile Responsiveness** - Web app still needs work for mobile browsers (native app covers mobile users for now).
@@ -174,5 +241,17 @@
 **Cross-Platform Priorities:**
 1. **Email Notifications** - Critical for draft turns and matchup results.
 2. **Password Reset Flow** - Users will forget passwords.
+
+**Recently Completed (Jan 17):**
+- ✅ Real-Time Standings Auto-Refresh (web + mobile)
+- ✅ Mobile navigation redesign (ESPN-style league switcher)
+- ✅ Week navigation for viewing past matchups
+- ✅ Swipeable league carousel on Home page
+
+**Backend (Completed Jan 15):**
+- ✅ Automated weekly matchup processing with cron jobs
+- ✅ Monday-Friday week with holiday detection
+- ✅ Dollar gain scoring with mid-week trade tracking
+- ✅ Retry mechanism for failed snapshots
 
 **Note:** The native mobile app now covers most core functionality, reducing urgency on web mobile responsiveness.

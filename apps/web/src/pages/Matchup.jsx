@@ -1,10 +1,15 @@
 // src/pages/Matchup.jsx
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../supabase/supabaseClient';
 import { useAuthUser } from '../auth/useAuthUser';
 import { useUserProfiles } from '../context/UserProfilesContext';
 import { usePrices } from '../context/PriceContext';
+import { useRealtimeStandings } from '../hooks/useRealtimeStandings';
+import { useActiveWeekPolling } from '../hooks/useActiveWeekPolling';
+import WeekNavigator from '../components/WeekNavigator';
+import WeekIndicator from '../components/WeekIndicator';
+import { isWeekActive, getWeekStatus } from '../utils/weekStatus';
 import '../layout.css';
 
 function formatUSD(value) {
@@ -33,6 +38,64 @@ export default function Matchup() {
 
   const isMatchupLeague = league?.league_type === 'matchup';
   const currentWeek = league?.current_week || 1;
+
+  // Selected week for navigation (defaults to current week)
+  const [selectedWeek, setSelectedWeek] = useState(currentWeek);
+
+  // Real-time subscription for matchup updates
+  const { matchupsUpdated } = useRealtimeStandings(leagueId, isMatchupLeague);
+
+  // Determine if the selected week is active (for polling)
+  const weekIsActive = useMemo(() => {
+    if (!matchup) return false;
+    return isWeekActive(matchup);
+  }, [matchup]);
+
+  // Get all symbols for polling
+  const allSymbols = useMemo(() => {
+    const symbols = new Set();
+    team1Holdings.forEach(h => symbols.add(h.symbol));
+    team2Holdings.forEach(h => symbols.add(h.symbol));
+    return Array.from(symbols);
+  }, [team1Holdings, team2Holdings]);
+
+  // 5-minute polling during active weeks
+  useActiveWeekPolling(leagueId, weekIsActive && selectedWeek === currentWeek, fetchPrices, allSymbols);
+
+  // Update selectedWeek when currentWeek changes
+  useEffect(() => {
+    if (currentWeek > 0) {
+      setSelectedWeek(currentWeek);
+    }
+  }, [currentWeek]);
+
+  // Refetch matchup data callback
+  const refetchMatchupData = useCallback(async () => {
+    if (!leagueId || !USER_ID || !isMatchupLeague) return;
+
+    try {
+      const { data: matchupData } = await supabase
+        .from('matchups')
+        .select('*')
+        .eq('league_id', leagueId)
+        .eq('week_number', selectedWeek)
+        .or(`team1_user_id.eq.${USER_ID},team2_user_id.eq.${USER_ID}`)
+        .single();
+
+      if (matchupData) {
+        setMatchup(matchupData);
+      }
+    } catch (e) {
+      console.error('Error refetching matchup:', e);
+    }
+  }, [leagueId, USER_ID, selectedWeek, isMatchupLeague]);
+
+  // Handle real-time matchup updates
+  useEffect(() => {
+    if (matchupsUpdated && selectedWeek === currentWeek) {
+      refetchMatchupData();
+    }
+  }, [matchupsUpdated, selectedWeek, currentWeek, refetchMatchupData]);
 
   // Load leagues
   useEffect(() => {
@@ -80,9 +143,9 @@ export default function Matchup() {
     })();
   }, [USER_ID]);
 
-  // Load matchup data when league changes
+  // Load matchup data when league or selected week changes
   useEffect(() => {
-    if (!USER_ID || !leagueId || !isMatchupLeague) {
+    if (!USER_ID || !leagueId || !isMatchupLeague || selectedWeek < 1) {
       setMatchup(null);
       setTeam1Holdings([]);
       setTeam2Holdings([]);
@@ -96,12 +159,12 @@ export default function Matchup() {
         setLoading(true);
         setError('');
 
-        // Find user's matchup for current week
+        // Find user's matchup for selected week
         const { data: matchupData, error: matchupError } = await supabase
           .from('matchups')
           .select('*')
           .eq('league_id', leagueId)
-          .eq('week_number', currentWeek)
+          .eq('week_number', selectedWeek)
           .or(`team1_user_id.eq.${USER_ID},team2_user_id.eq.${USER_ID}`)
           .single();
 
@@ -126,7 +189,7 @@ export default function Matchup() {
           .from('week_snapshots')
           .select('user_id, symbol, quantity, week_start_price')
           .eq('league_id', leagueId)
-          .eq('week_number', currentWeek)
+          .eq('week_number', selectedWeek)
           .in('user_id', userIds.filter(Boolean));
 
         // Build snapshot map: { `${userId}-${symbol}`: { quantity, weekStartPrice } }
@@ -161,7 +224,7 @@ export default function Matchup() {
         setLoading(false);
       }
     })();
-  }, [USER_ID, leagueId, currentWeek, isMatchupLeague]);
+  }, [USER_ID, leagueId, selectedWeek, isMatchupLeague]);
 
   async function fetchTeamHoldings(userId) {
     if (!leagueId) return [];
@@ -330,23 +393,41 @@ export default function Matchup() {
   return (
     <div style={{ maxWidth: 700, margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700 }}>Week {currentWeek} Matchup</h1>
-          <p className="muted" style={{ margin: '4px 0 0 0' }}>{league?.name}</p>
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div>
+            <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700 }}>Matchup</h1>
+            <p className="muted" style={{ margin: '4px 0 0 0' }}>{league?.name}</p>
+          </div>
+          {leagues.length > 1 && (
+            <select
+              value={leagueId}
+              onChange={handleLeagueChange}
+              className="select"
+              style={{ width: 'auto' }}
+            >
+              {leagues.filter(l => l.league_type === 'matchup').map(l => (
+                <option key={l.id} value={l.id}>{l.name}</option>
+              ))}
+            </select>
+          )}
         </div>
-        {leagues.length > 1 && (
-          <select
-            value={leagueId}
-            onChange={handleLeagueChange}
-            className="select"
-            style={{ width: 'auto' }}
-          >
-            {leagues.filter(l => l.league_type === 'matchup').map(l => (
-              <option key={l.id} value={l.id}>{l.name}</option>
-            ))}
-          </select>
-        )}
+
+        {/* Week Navigator */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <WeekNavigator
+            currentWeek={currentWeek}
+            selectedWeek={selectedWeek}
+            totalWeeks={league?.num_weeks}
+            onWeekChange={setSelectedWeek}
+          />
+          <WeekIndicator
+            league={league}
+            matchup={matchup}
+            showCountdown={selectedWeek === currentWeek}
+            size="small"
+          />
+        </div>
       </div>
 
       {/* Scoreboard */}

@@ -1153,6 +1153,7 @@ export default function DraftPage() {
             humanCount={humanCount}
             onFillWithBots={fillWithBots}
             onChangeMinimum={changeMinimum}
+            userEmail={authUser?.email}
           />
         </div>
       );

@@ -6,7 +6,13 @@
       "Bash(npm run build:*)",
       "Bash(cat:*)",
       "Bash(npx supabase:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(/opt/homebrew/bin/supabase functions list:*)",
+      "WebSearch",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(sort:*)",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": [],
     "ask": []

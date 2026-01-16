@@ -1,11 +1,14 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/lib/useAuth';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { router } from 'expo-router';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/Colors';
+import StatusBadge from '@/components/StatusBadge';
+import LeagueSwitcher from '@/components/LeagueSwitcher';
+import { getWeekStatus, getCountdownMessage } from '@/lib/weekStatus';
 
 interface Standing {
   user_id: string;
@@ -50,6 +53,87 @@ export default function LeaderboardScreen() {
   const isMatchupLeague = activeLeague?.league_type === 'matchup';
   const currentWeek = activeLeague?.current_week || 1;
   const numWeeks = activeLeague?.num_weeks || 0;
+
+  // Animation refs for position changes
+  const previousPositionsRef = useRef<Record<string, number>>({});
+  const [animatingRows, setAnimatingRows] = useState<Record<string, 'up' | 'down'>>({});
+
+  // Real-time subscription for standings and matchups
+  useEffect(() => {
+    if (!activeLeagueId || !isMatchupLeague) return;
+
+    const channel = supabase
+      .channel(`standings-${activeLeagueId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'league_standings',
+          filter: `league_id=eq.${activeLeagueId}`
+        },
+        () => {
+          // Store current positions before refetch
+          const positions: Record<string, number> = {};
+          sortedStandings.forEach((s, idx) => {
+            positions[s.user_id] = idx;
+          });
+          previousPositionsRef.current = positions;
+          fetchData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'matchups',
+          filter: `league_id=eq.${activeLeagueId}`
+        },
+        () => {
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeLeagueId, isMatchupLeague]);
+
+  // Apply animations when standings change
+  useEffect(() => {
+    if (!sortedStandings.length || !Object.keys(previousPositionsRef.current).length) return;
+
+    const animations: Record<string, 'up' | 'down'> = {};
+    sortedStandings.forEach((s, newIdx) => {
+      const oldIdx = previousPositionsRef.current[s.user_id];
+      if (oldIdx !== undefined && oldIdx !== newIdx) {
+        animations[s.user_id] = oldIdx > newIdx ? 'up' : 'down';
+      }
+    });
+
+    if (Object.keys(animations).length > 0) {
+      setAnimatingRows(animations);
+      setTimeout(() => {
+        setAnimatingRows({});
+        previousPositionsRef.current = {};
+      }, 500);
+    }
+  }, [sortedStandings]);
+
+  // Get week status for UI
+  const currentMatchup = useMemo(() => {
+    return matchups.find(m => m.week_number === currentWeek && !m.is_playoff);
+  }, [matchups, currentWeek]);
+
+  const weekStatus = useMemo(() => {
+    return getWeekStatus(activeLeague, currentMatchup);
+  }, [activeLeague, currentMatchup]);
+
+  const countdownMessage = useMemo(() => {
+    return getCountdownMessage(weekStatus);
+  }, [weekStatus]);
 
   useEffect(() => {
     if (activeLeagueId && user) {
@@ -207,20 +291,15 @@ export default function LeaderboardScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Sticky League Switcher Header */}
+      <LeagueSwitcher />
+
       <ScrollView
         style={styles.scrollView}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#22c55e" />
         }
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>Leaderboard</Text>
-          {activeLeague && (
-            <TouchableOpacity onPress={() => router.push('/leagues')}>
-              <Text style={styles.leagueName}>{activeLeague.name} ▾</Text>
-            </TouchableOpacity>
-          )}
-        </View>
 
         {leagues.length === 0 ? (
           <View style={styles.centered}>
@@ -260,8 +339,17 @@ export default function LeaderboardScreen() {
                 <Text style={styles.kpiLabel}>{isMatchupLeague ? 'Current Week' : 'League Type'}</Text>
                 {isMatchupLeague ? (
                   <>
-                    <Text style={styles.kpiValueLarge}>{currentWeek}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Text style={styles.kpiValueLarge}>{currentWeek}</Text>
+                      {weekStatus.status === 'final' && <StatusBadge type="final" />}
+                      {weekStatus.status === 'active' && <StatusBadge type="live" />}
+                    </View>
                     <Text style={styles.kpiSub}>of {numWeeks} weeks</Text>
+                    {countdownMessage && (
+                      <Text style={[styles.kpiSub, { color: weekStatus.isHoliday ? Colors.warning : Colors.textMuted }]}>
+                        {countdownMessage}
+                      </Text>
+                    )}
                   </>
                 ) : (
                   <Text style={styles.kpiValue}>Duration</Text>

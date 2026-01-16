@@ -55,6 +55,15 @@ fantasy-stock/
 - League creation and management
 - Snake draft system
 - Weekly matchups and standings
+- **Automated weekly scoring** - Monday-Friday matchup weeks with automatic result processing
+- **Smart scoring system** - Dollar gain with mid-week trade tracking
+- **Playoff bracket generation** - Automatic seeding and bracket creation
+- **Real-time updates** - Supabase subscriptions for live standings/matchup updates
+- **Mobile app features**:
+  - ESPN-style league switcher dropdown on all pages
+  - Swipeable league carousel on Home page
+  - Week navigation for viewing past matchups
+  - Sticky headers that follow scroll
 
 ## Tech Stack
 
@@ -115,8 +124,12 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 - [x] Snake draft system
 - [x] Leaderboards and rankings
 - [x] Mobile app (iOS/Android)
+- [x] Automated weekly matchup processing
+- [x] Holiday-aware scheduling (Alpaca calendar API)
+- [x] Real-time standings updates (auto-refresh on week end)
+- [x] Mobile app navigation redesign (ESPN-style league switcher)
 - [ ] Live trading integration
-- [ ] Performance analytics
+- [ ] Email notifications
 - [ ] Push notifications
 
 ## About

@@ -9,6 +9,7 @@ import { SkeletonCard } from '@/components/Skeleton';
 import { PortfolioChart } from '@/components/PortfolioChart';
 import { Colors } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
+import LeagueCarousel from '@/components/LeagueCarousel';
 
 function formatCurrency(value: number): string {
   return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -111,13 +112,14 @@ export default function HomeScreen() {
           />
         }
       >
-        <View style={styles.header}>
-          <Text style={styles.greeting}>Welcome back</Text>
-          {activeLeague && (
-            <TouchableOpacity onPress={() => router.push('/leagues')}>
-              <Text style={styles.leagueName}>{activeLeague.name} ▾</Text>
-            </TouchableOpacity>
-          )}
+        {/* App Header */}
+        <View style={styles.appHeader}>
+          <Text style={styles.appName}>Stockpile</Text>
+        </View>
+
+        {/* League Carousel */}
+        <View style={styles.carouselSection}>
+          <LeagueCarousel />
         </View>
 
         {leagues.length === 0 ? (
@@ -270,6 +272,22 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  appHeader: {
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 8,
+    alignItems: 'center',
+  },
+  appName: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: Colors.primary,
+    letterSpacing: -0.5,
+  },
+  carouselSection: {
+    marginTop: 24,
+    marginBottom: 8,
   },
   loadingText: {
     color: Colors.textMuted,

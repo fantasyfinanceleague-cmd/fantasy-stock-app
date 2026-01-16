@@ -5,6 +5,7 @@ import { useLeagueContext } from '@/lib/LeagueContext';
 import { useState, useEffect, useCallback } from 'react';
 import { Colors } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
+import LeagueSwitcher from '@/components/LeagueSwitcher';
 
 interface DraftPick {
   id: string;
@@ -274,9 +275,10 @@ export default function DraftScreen() {
   if (!activeLeagueId || !activeLeague) {
     return (
       <SafeAreaView style={styles.container}>
+        <LeagueSwitcher />
         <View style={styles.centered}>
           <Text style={styles.emptyTitle}>No league selected</Text>
-          <Text style={styles.emptySubtitle}>Select a league from the Leagues tab</Text>
+          <Text style={styles.emptySubtitle}>Select a league from Home</Text>
         </View>
       </SafeAreaView>
     );
@@ -285,6 +287,7 @@ export default function DraftScreen() {
   if (isDraftNotStarted) {
     return (
       <SafeAreaView style={styles.container}>
+        <LeagueSwitcher />
         <View style={styles.centered}>
           <Text style={styles.pendingIcon}>⏰</Text>
           <Text style={styles.emptyTitle}>Draft Not Started</Text>
@@ -319,6 +322,8 @@ export default function DraftScreen() {
 
     return (
       <SafeAreaView style={styles.container}>
+        <LeagueSwitcher />
+
         <ScrollView
           style={styles.scrollView}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
@@ -327,7 +332,6 @@ export default function DraftScreen() {
           <View style={styles.completionHeader}>
             <Text style={styles.completionIcon}>🏆</Text>
             <Text style={styles.completionTitle}>Draft Complete!</Text>
-            <Text style={styles.completionLeague}>{activeLeague.name}</Text>
           </View>
 
           {/* Summary Stats */}
@@ -474,14 +478,13 @@ export default function DraftScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Sticky League Switcher Header */}
+      <LeagueSwitcher />
+
       <ScrollView
         style={styles.scrollView}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>Draft</Text>
-          <Text style={styles.subtitle}>{activeLeague.name}</Text>
-        </View>
 
         {loading ? (
           <ActivityIndicator color={Colors.primary} size="large" style={{ marginTop: 40 }} />

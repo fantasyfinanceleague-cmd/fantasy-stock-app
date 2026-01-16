@@ -2,9 +2,13 @@ import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator }
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/lib/useAuth';
 import { useLeagueContext } from '@/lib/LeagueContext';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/Colors';
+import WeekNavigator from '@/components/WeekNavigator';
+import StatusBadge from '@/components/StatusBadge';
+import LeagueSwitcher from '@/components/LeagueSwitcher';
+import { getWeekStatus, isWeekActive as checkWeekActive } from '@/lib/weekStatus';
 
 interface Matchup {
   id: string;
@@ -76,13 +80,58 @@ export default function MatchupScreen() {
   const isMatchupLeague = activeLeague?.league_type === 'matchup';
   const currentWeek = activeLeague?.current_week || 1;
 
+  // Selected week for navigation
+  const [selectedWeek, setSelectedWeek] = useState(currentWeek);
+
+  // Update selectedWeek when currentWeek changes
+  useEffect(() => {
+    if (currentWeek > 0) {
+      setSelectedWeek(currentWeek);
+    }
+  }, [currentWeek]);
+
+  // Get week status for UI
+  const weekStatus = useMemo(() => {
+    return getWeekStatus(activeLeague, matchup);
+  }, [activeLeague, matchup]);
+
+  // Determine if we should poll for prices
+  const isActiveWeek = useMemo(() => {
+    return matchup ? checkWeekActive(matchup) : false;
+  }, [matchup]);
+
+  // 5-minute polling during active weeks
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    // Clear existing polling
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+
+    // Only poll if active week and viewing current week
+    if (!isActiveWeek || selectedWeek !== currentWeek) return;
+
+    // Set up 5-minute polling
+    pollingRef.current = setInterval(() => {
+      fetchCurrentPrices();
+    }, 5 * 60 * 1000);
+
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+      }
+    };
+  }, [isActiveWeek, selectedWeek, currentWeek]);
+
   useEffect(() => {
     if (activeLeagueId && user && isMatchupLeague) {
       fetchMatchupData();
     } else {
       setLoading(false);
     }
-  }, [activeLeagueId, user, isMatchupLeague, currentWeek]);
+  }, [activeLeagueId, user, isMatchupLeague, selectedWeek]);
 
   // Refresh prices every 30 seconds when matchup is active
   useEffect(() => {
@@ -102,12 +151,12 @@ export default function MatchupScreen() {
     setError('');
 
     try {
-      // Find user's matchup for current week
+      // Find user's matchup for selected week
       const { data: matchupData, error: matchupError } = await supabase
         .from('matchups')
         .select('*')
         .eq('league_id', activeLeagueId)
-        .eq('week_number', currentWeek)
+        .eq('week_number', selectedWeek)
         .or(`team1_user_id.eq.${user.id},team2_user_id.eq.${user.id}`)
         .single();
 
@@ -148,7 +197,7 @@ export default function MatchupScreen() {
         .from('week_snapshots')
         .select('user_id, symbol, quantity, week_start_price')
         .eq('league_id', activeLeagueId)
-        .eq('week_number', currentWeek)
+        .eq('week_number', selectedWeek)
         .in('user_id', allUserIds);
 
       // Build snapshot map: { `${userId}-${symbol}`: { quantity, weekStartPrice } }
@@ -369,7 +418,8 @@ export default function MatchupScreen() {
   if (!isMatchupLeague) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.centered}>
+        <LeagueSwitcher />
+        <View style={styles.centeredFlex}>
           <Text style={styles.emptyIcon}>📊</Text>
           <Text style={styles.emptyTitle}>Duration League</Text>
           <Text style={styles.emptySubtitle}>
@@ -394,11 +444,20 @@ export default function MatchupScreen() {
   if (!matchup) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.centered}>
-          <Text style={styles.emptyIcon}>🏈</Text>
+        <LeagueSwitcher />
+        <View style={styles.weekNavContainerTop}>
+          <WeekNavigator
+            currentWeek={currentWeek}
+            selectedWeek={selectedWeek}
+            totalWeeks={activeLeague?.num_weeks}
+            onWeekChange={setSelectedWeek}
+          />
+        </View>
+        <View style={styles.centeredFlex}>
+          <Text style={styles.emptyIcon}>📈</Text>
           <Text style={styles.emptyTitle}>No Matchup This Week</Text>
           <Text style={styles.emptySubtitle}>
-            You don't have a matchup scheduled for Week {currentWeek}.
+            You don't have a matchup scheduled for Week {selectedWeek}.
           </Text>
         </View>
       </SafeAreaView>
@@ -409,18 +468,15 @@ export default function MatchupScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Sticky League Switcher Header */}
+      <LeagueSwitcher />
+
       <ScrollView
         style={styles.scrollView}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#22c55e" />
         }
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Week {currentWeek} Matchup</Text>
-          <Text style={styles.leagueName}>{activeLeague?.name}</Text>
-        </View>
-
         {/* Scoreboard */}
         <View style={styles.scoreboard}>
           {/* Team 1 */}
@@ -459,6 +515,16 @@ export default function MatchupScreen() {
             </Text>
             {isTeam2Winning && <Text style={styles.winningBadge}>LEADING</Text>}
           </View>
+        </View>
+
+        {/* Week Navigator */}
+        <View style={styles.weekNavContainer}>
+          <WeekNavigator
+            currentWeek={currentWeek}
+            selectedWeek={selectedWeek}
+            totalWeeks={activeLeague?.num_weeks}
+            onWeekChange={setSelectedWeek}
+          />
         </View>
 
         {/* Side-by-side Lineups */}
@@ -590,26 +656,29 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
-  header: {
+  weekNavContainer: {
+    alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 20,
+    paddingVertical: 16,
+  },
+  weekNavContainerTop: {
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 24,
     paddingBottom: 16,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  leagueName: {
-    fontSize: 14,
-    color: '#22c55e',
-    marginTop: 4,
+  centeredFlex: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
   },
   // Scoreboard
   scoreboard: {
     flexDirection: 'row',
     marginHorizontal: 24,
-    marginBottom: 24,
+    marginTop: 16,
+    marginBottom: 16,
     backgroundColor: Colors.cardBg,
     borderRadius: 16,
     borderWidth: 1,

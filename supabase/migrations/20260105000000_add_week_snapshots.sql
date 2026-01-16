@@ -26,6 +26,7 @@ create index if not exists week_snapshots_user_idx
 
 -- Enable RLS
 alter table week_snapshots enable row level security;
+drop policy if exists "dev_all" on week_snapshots;
 create policy "dev_all" on week_snapshots for all using (true) with check (true);
 
 -- Comment explaining the table purpose

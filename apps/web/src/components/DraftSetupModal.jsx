@@ -5,6 +5,9 @@ import React, { useState } from 'react';
  * DraftSetupModal component
  * Shows options when draft doesn't have enough members
  */
+// Email allowed to use bot feature (for testing)
+const BOT_ALLOWED_EMAIL = 'fantasyfinanceleague@gmail.com';
+
 export default function DraftSetupModal({
   show,
   onClose,
@@ -14,6 +17,7 @@ export default function DraftSetupModal({
   humanCount,
   onFillWithBots,
   onChangeMinimum,
+  userEmail,
 }) {
   const [customMin, setCustomMin] = useState(minRequired);
   const [showMinInput, setShowMinInput] = useState(false);
@@ -126,8 +130,8 @@ export default function DraftSetupModal({
             </div>
           </button>
 
-          {/* Option 2: Fill with bots */}
-          {botsNeeded > 0 && (
+          {/* Option 2: Fill with bots (restricted to test account) */}
+          {botsNeeded > 0 && userEmail === BOT_ALLOWED_EMAIL && (
             <button
               className="btn primary"
               onClick={handleFillWithBots}

@@ -7,6 +7,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { SkeletonHolding } from '@/components/Skeleton';
 import { Colors } from '@/constants/Colors';
+import LeagueSwitcher from '@/components/LeagueSwitcher';
 
 function formatCurrency(value: number): string {
   return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -104,18 +105,13 @@ export default function PortfolioScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Sticky League Switcher Header */}
+      <LeagueSwitcher />
+
       <ScrollView
         style={styles.scrollView}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>Portfolio</Text>
-          {activeLeague && (
-            <TouchableOpacity onPress={() => router.push('/leagues')}>
-              <Text style={styles.leagueName}>{activeLeague.name} ▾</Text>
-            </TouchableOpacity>
-          )}
-        </View>
 
         {leagues.length === 0 ? (
           <View style={styles.centered}>

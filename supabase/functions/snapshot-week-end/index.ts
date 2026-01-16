@@ -2,18 +2,16 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 /**
- * Snapshot Week Start Prices
+ * Snapshot Week End Prices
  *
- * This function runs automatically at Monday market open (9:30 AM ET / 14:30 UTC)
- * to capture the starting prices for weekly matchup calculations.
- * Also runs Tuesday in case Monday is a market holiday.
+ * This function runs automatically at Friday market close (4:05 PM ET / 21:05 UTC)
+ * to capture the ending prices for weekly matchup calculations.
  *
  * For each active matchup league:
- * 1. Check if market is open today (skip if holiday)
- * 2. Find the current week's matchups
- * 3. Get all users' holdings (from drafts + trades)
- * 4. Fetch current prices for all symbols
- * 5. Insert snapshots into week_snapshots table
+ * 1. Find existing week snapshots (from Monday)
+ * 2. Fetch current prices for all symbols
+ * 3. Update snapshots with week_end_price
+ * 4. Create new snapshots for stocks bought mid-week (only week_end_price)
  *
  * Includes retry logic: up to 3 retries with 5-minute intervals
  */
@@ -21,7 +19,6 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 function env(k: string) { return Deno.env.get(k) ?? ''; }
 
 const ALPACA_BASE = 'https://data.alpaca.markets/v2';
-const ALPACA_TRADING_BASE = 'https://paper-api.alpaca.markets/v2';
 const MAX_RETRIES = 3;
 
 const json = (b: unknown, s = 200) =>
@@ -29,39 +26,6 @@ const json = (b: unknown, s = 200) =>
     status: s,
     headers: { 'Content-Type': 'application/json' }
   });
-
-interface Holding {
-  symbol: string;
-  quantity: number;
-}
-
-// Check if the market is open today using Alpaca Calendar API
-async function isMarketOpenToday(alpacaKey: string, alpacaSecret: string): Promise<{ open: boolean; date: string }> {
-  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-
-  try {
-    const url = `${ALPACA_TRADING_BASE}/calendar?start=${today}&end=${today}`;
-    const res = await fetch(url, {
-      headers: {
-        'APCA-API-KEY-ID': alpacaKey,
-        'APCA-API-SECRET-KEY': alpacaSecret,
-        'Accept': 'application/json',
-      },
-    });
-
-    if (res.ok) {
-      const calendar = await res.json();
-      // If today is in the calendar, market is open
-      if (Array.isArray(calendar) && calendar.length > 0) {
-        return { open: true, date: today };
-      }
-    }
-  } catch (e) {
-    console.error('Failed to check market calendar:', e);
-  }
-
-  return { open: false, date: today };
-}
 
 // Update job status for retry tracking
 async function updateJobStatus(
@@ -138,6 +102,11 @@ async function fetchPrices(symbols: string[], alpacaKey: string, alpacaSecret: s
   return prices;
 }
 
+interface Holding {
+  symbol: string;
+  quantity: number;
+}
+
 // Calculate user's current holdings from drafts and trades
 function calculateHoldings(
   userId: string,
@@ -176,8 +145,8 @@ function calculateHoldings(
 }
 
 Deno.serve(async (req) => {
-  const JOB_NAME = 'snapshot-week-start';
-  console.log('Snapshotting week start prices...');
+  const JOB_NAME = 'snapshot-week-end';
+  console.log('Snapshotting week end prices...');
 
   const SUPABASE_URL = env('SUPABASE_URL');
   const SERVICE_ROLE = env('SUPABASE_SERVICE_ROLE_KEY');
@@ -197,26 +166,6 @@ Deno.serve(async (req) => {
   await updateJobStatus(supabase, JOB_NAME, 'running', retryAttempt);
 
   try {
-    // 0. Check if market is open today (for holiday handling)
-    if (ALPACA_KEY && ALPACA_SECRET) {
-      const marketStatus = await isMarketOpenToday(ALPACA_KEY, ALPACA_SECRET);
-      const today = new Date();
-      const dayOfWeek = today.getUTCDay(); // 0 = Sunday, 1 = Monday, etc.
-
-      if (!marketStatus.open) {
-        // Market is closed today
-        if (dayOfWeek === 1) {
-          // Monday and market closed = holiday, skip (Tuesday will run)
-          console.log('Monday is a market holiday, skipping. Tuesday run will handle this week.');
-          await updateJobStatus(supabase, JOB_NAME, 'success', retryAttempt, 'Skipped - Monday holiday');
-          return json({ message: 'Market closed (holiday), skipping Monday run', date: marketStatus.date });
-        } else if (dayOfWeek === 2) {
-          // Tuesday and market closed = unusual, maybe wait?
-          console.log('Market closed on Tuesday, unusual situation');
-        }
-      }
-    }
-
     // 1. Find all active matchup leagues and their current week
     const { data: leagues, error: leaguesErr } = await supabase
       .from('leagues')
@@ -226,51 +175,54 @@ Deno.serve(async (req) => {
 
     if (leaguesErr) {
       console.error('Error fetching leagues:', leaguesErr);
-      return json({ error: 'Failed to fetch leagues' }, 500);
+      throw new Error('Failed to fetch leagues');
     }
 
     if (!leagues || leagues.length === 0) {
       console.log('No active matchup leagues found');
-      return json({ message: 'No active matchup leagues', snapshots: 0 });
+      await updateJobStatus(supabase, JOB_NAME, 'success', retryAttempt);
+      return json({ message: 'No active matchup leagues', updates: 0 });
     }
 
     console.log(`Found ${leagues.length} active matchup leagues`);
 
-    let totalSnapshots = 0;
+    let totalUpdates = 0;
+    let totalNewSnapshots = 0;
     const results: any[] = [];
 
     for (const league of leagues) {
       const leagueId = league.id;
       const currentWeek = league.current_week;
 
-      // Skip if we've already created snapshots for this week
-      const { data: existingSnapshots } = await supabase
+      // 2. Get existing week snapshots from Monday (have week_start_price but no week_end_price)
+      const { data: existingSnapshots, error: snapErr } = await supabase
         .from('week_snapshots')
-        .select('id')
+        .select('id, user_id, symbol, quantity, week_start_price, week_end_price')
         .eq('league_id', leagueId)
-        .eq('week_number', currentWeek)
-        .limit(1);
+        .eq('week_number', currentWeek);
 
-      if (existingSnapshots && existingSnapshots.length > 0) {
-        console.log(`Snapshots already exist for league ${leagueId} week ${currentWeek}, skipping`);
+      if (snapErr) {
+        console.error(`Error fetching snapshots for league ${leagueId}:`, snapErr);
         continue;
       }
 
-      // 2. Get all matchups for current week to find all users
+      // Check if week_end_price is already filled (prevent re-running)
+      const alreadyProcessed = existingSnapshots?.some(s => s.week_end_price != null);
+      if (alreadyProcessed) {
+        console.log(`Week end snapshots already exist for league ${leagueId} week ${currentWeek}, skipping`);
+        continue;
+      }
+
+      // 3. Get all matchups for current week to find all users
       const { data: matchups } = await supabase
         .from('matchups')
         .select('team1_user_id, team2_user_id')
         .eq('league_id', leagueId)
         .eq('week_number', currentWeek);
 
-      if (!matchups || matchups.length === 0) {
-        console.log(`No matchups found for league ${leagueId} week ${currentWeek}`);
-        continue;
-      }
-
-      // Collect all user IDs (excluding null for bye weeks and bots)
+      // Collect all user IDs
       const userIds = new Set<string>();
-      for (const m of matchups) {
+      for (const m of matchups || []) {
         if (m.team1_user_id && !m.team1_user_id.startsWith('bot-')) {
           userIds.add(m.team1_user_id);
         }
@@ -279,19 +231,18 @@ Deno.serve(async (req) => {
         }
       }
 
-      // 3. Fetch drafts for this league
+      // 4. Fetch current holdings for each user (to detect mid-week purchases)
       const { data: drafts } = await supabase
         .from('drafts')
         .select('user_id, symbol, quantity')
         .eq('league_id', leagueId);
 
-      // 4. Fetch trades for this league
       const { data: trades } = await supabase
         .from('trades')
         .select('user_id, symbol, action, quantity')
         .eq('league_id', leagueId);
 
-      // 5. Calculate holdings for each user and collect all symbols
+      // Calculate current holdings for each user
       const userHoldings = new Map<string, Holding[]>();
       const allSymbols = new Set<string>();
 
@@ -303,64 +254,96 @@ Deno.serve(async (req) => {
         }
       }
 
-      // 6. Fetch current prices for all symbols
+      // Also add symbols from existing snapshots
+      for (const snap of existingSnapshots || []) {
+        if (snap.symbol) allSymbols.add(snap.symbol.toUpperCase());
+      }
+
+      // 5. Fetch current prices for all symbols
       let prices = new Map<string, number>();
       if (ALPACA_KEY && ALPACA_SECRET && allSymbols.size > 0) {
         prices = await fetchPrices(Array.from(allSymbols), ALPACA_KEY, ALPACA_SECRET);
       }
 
-      // 7. Create snapshots for each user's holdings
-      const snapshots: any[] = [];
+      // 6. Update existing snapshots with week_end_price
+      let updatesForLeague = 0;
+      for (const snap of existingSnapshots || []) {
+        const price = prices.get(snap.symbol?.toUpperCase());
+        if (price) {
+          const { error: updateErr } = await supabase
+            .from('week_snapshots')
+            .update({ week_end_price: price })
+            .eq('id', snap.id);
 
+          if (updateErr) {
+            console.error(`Failed to update snapshot ${snap.id}:`, updateErr);
+          } else {
+            updatesForLeague++;
+          }
+        }
+      }
+
+      // 7. Create new snapshots for stocks bought mid-week (not in existing snapshots)
+      const existingUserSymbols = new Set(
+        (existingSnapshots || []).map(s => `${s.user_id}:${s.symbol?.toUpperCase()}`)
+      );
+
+      const newSnapshots: any[] = [];
       for (const [userId, holdings] of userHoldings) {
         for (const h of holdings) {
-          const price = prices.get(h.symbol);
-          if (!price) {
-            console.warn(`No price found for ${h.symbol}, skipping`);
-            continue;
+          const key = `${userId}:${h.symbol}`;
+          if (!existingUserSymbols.has(key)) {
+            // This is a mid-week purchase - create snapshot with only week_end_price
+            const price = prices.get(h.symbol);
+            if (price) {
+              newSnapshots.push({
+                league_id: leagueId,
+                user_id: userId,
+                week_number: currentWeek,
+                symbol: h.symbol,
+                quantity: h.quantity,
+                week_start_price: null, // No start price - bought mid-week
+                week_end_price: price,
+              });
+            }
           }
-
-          snapshots.push({
-            league_id: leagueId,
-            user_id: userId,
-            week_number: currentWeek,
-            symbol: h.symbol,
-            quantity: h.quantity,
-            week_start_price: price,
-          });
         }
       }
 
-      // 8. Insert all snapshots
-      if (snapshots.length > 0) {
+      // 8. Insert new snapshots for mid-week purchases
+      if (newSnapshots.length > 0) {
         const { error: insertErr } = await supabase
           .from('week_snapshots')
-          .insert(snapshots);
+          .insert(newSnapshots);
 
         if (insertErr) {
-          console.error(`Failed to insert snapshots for league ${leagueId}:`, insertErr);
+          console.error(`Failed to insert new snapshots for league ${leagueId}:`, insertErr);
         } else {
-          console.log(`Created ${snapshots.length} snapshots for league ${leagueId} week ${currentWeek}`);
-          totalSnapshots += snapshots.length;
+          console.log(`Created ${newSnapshots.length} new snapshots for mid-week purchases in league ${leagueId}`);
+          totalNewSnapshots += newSnapshots.length;
         }
       }
 
+      totalUpdates += updatesForLeague;
       results.push({
         leagueId,
         week: currentWeek,
-        users: userIds.size,
-        snapshots: snapshots.length,
+        updated: updatesForLeague,
+        newSnapshots: newSnapshots.length,
       });
+
+      console.log(`League ${leagueId} week ${currentWeek}: Updated ${updatesForLeague} snapshots, created ${newSnapshots.length} new`);
     }
 
-    console.log(`Total snapshots created: ${totalSnapshots}`);
+    console.log(`Total updates: ${totalUpdates}, Total new snapshots: ${totalNewSnapshots}`);
 
     // Update status to success
     await updateJobStatus(supabase, JOB_NAME, 'success', retryAttempt);
 
     return json({
-      message: 'Snapshot complete',
-      totalSnapshots,
+      message: 'Week end snapshot complete',
+      totalUpdates,
+      totalNewSnapshots,
       results,
     });
 

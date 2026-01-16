@@ -34,15 +34,14 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Dashboard',
-          tabBarIcon: ({ color }) => <TabBarIcon name="th-large" color={color} />,
+          title: 'Home',
+          tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
         }}
       />
       <Tabs.Screen
         name="leagues"
         options={{
-          title: 'Leagues',
-          tabBarIcon: ({ color }) => <TabBarIcon name="trophy" color={color} />,
+          href: null, // Hide from tab bar but keep accessible
         }}
       />
       <Tabs.Screen
