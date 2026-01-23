@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Colors } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
 import LeagueSwitcher from '@/components/LeagueSwitcher';
+import { notifyDraftTurn } from '@/lib/notifications';
 
 interface DraftPick {
   id: string;
@@ -258,6 +259,19 @@ export default function DraftScreen() {
 
         await refreshLeagues();
         Alert.alert('Draft Complete!', 'The draft has finished. Good luck!');
+      } else {
+        // Notify the next player it's their turn
+        const nextPickNumber = currentPickNumber + 1;
+        const nextRound = Math.ceil(nextPickNumber / draftOrder.length);
+        const nextPickInRound = ((nextPickNumber - 1) % draftOrder.length);
+        const isNextRoundReverse = nextRound % 2 === 0;
+        const nextOrderForRound = isNextRoundReverse ? [...draftOrder].reverse() : draftOrder;
+        const nextPicker = nextOrderForRound[nextPickInRound];
+
+        // Only notify if it's a real user (not a bot) and not the current user
+        if (nextPicker && !nextPicker.startsWith('bot-') && nextPicker !== user?.id) {
+          notifyDraftTurn(nextPicker, activeLeague?.name || 'your league');
+        }
       }
     } catch (e: any) {
       Alert.alert('Error', e.message || 'Failed to submit pick');
@@ -285,6 +299,7 @@ export default function DraftScreen() {
   }
 
   if (isDraftNotStarted) {
+    const hasDraftDate = activeLeague.draft_date != null;
     return (
       <SafeAreaView style={styles.container}>
         <LeagueSwitcher />
@@ -292,12 +307,14 @@ export default function DraftScreen() {
           <Text style={styles.pendingIcon}>⏰</Text>
           <Text style={styles.emptyTitle}>Draft Not Started</Text>
           <Text style={styles.emptySubtitle}>
-            {activeLeague.draft_date
+            {hasDraftDate
               ? `Scheduled for ${new Date(activeLeague.draft_date).toLocaleString()}`
-              : 'Waiting for commissioner to start'}
+              : 'Draft date not set yet'}
           </Text>
           <Text style={styles.hint}>
-            The commissioner can start the draft from the website
+            {hasDraftDate
+              ? 'The commissioner can start the draft from the website'
+              : 'The commissioner needs to set a draft date before the draft can begin'}
           </Text>
         </View>
       </SafeAreaView>

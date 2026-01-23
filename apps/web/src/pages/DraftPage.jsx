@@ -1282,6 +1282,18 @@ export default function DraftPage() {
               </div>
             )}
 
+            {/* TBD date message */}
+            {!draftStartTime && isCommissioner && (
+              <div className="draft-pending-notice warning">
+                Draft date not set. Set a date in league settings before starting.
+              </div>
+            )}
+            {!draftStartTime && !isCommissioner && (
+              <div className="draft-pending-notice">
+                Waiting for commissioner to set a draft date
+              </div>
+            )}
+
             {/* Alpaca warning */}
             {membersWithoutAlpaca.length > 0 && (
               <div className="draft-pending-notice error">
@@ -1307,7 +1319,7 @@ export default function DraftPage() {
                   onClick={handleStartDraft}
                   disabled={membersWithoutAlpaca.length > 0 || !canStartDraft}
                 >
-                  {canStartDraft ? 'Start Draft' : 'Not Available Yet'}
+                  {canStartDraft ? 'Start Draft' : (!draftStartTime ? 'Set Draft Date First' : 'Not Available Yet')}
                 </button>
               ) : (
                 <div className="draft-pending-waiting">

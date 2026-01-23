@@ -112,22 +112,8 @@ Deno.serve(async (req) => {
     let source = '';
     let lastErr: any = null;
 
-    // 1) latest quote
+    // 1) latest trade - most reliable source in IEX feed
     {
-      const url = `${BASE}/stocks/${encodeURIComponent(symbol)}/quotes/latest${feedQS}`;
-      const r = await alpacaGet(url, ALPACA_KEY, ALPACA_SECRET);
-      if (r.ok) {
-        const ap = Number(r.body?.quote?.ap);
-        const bp = Number(r.body?.quote?.bp);
-        if (Number.isFinite(ap) && ap > 0) { price = ap; source = 'quote.ap'; }
-        else if (Number.isFinite(bp) && bp > 0) { price = bp; source = 'quote.bp'; }
-      } else {
-        lastErr = { step: 'quote', status: r.status, preview: r.preview };
-      }
-    }
-
-    // 2) latest trade
-    if (price == null) {
       const url = `${BASE}/stocks/${encodeURIComponent(symbol)}/trades/latest${feedQS}`;
       const r = await alpacaGet(url, ALPACA_KEY, ALPACA_SECRET);
       if (r.ok) {
@@ -138,7 +124,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 3) latest bar close
+    // 2) latest bar close
     if (price == null) {
       const url = `${BASE}/stocks/${encodeURIComponent(symbol)}/bars/latest${feedQS}`;
       const r = await alpacaGet(url, ALPACA_KEY, ALPACA_SECRET);
@@ -147,6 +133,21 @@ Deno.serve(async (req) => {
         if (Number.isFinite(c) && c > 0) { price = c; source = 'bar.c'; }
       } else {
         lastErr = { step: 'bar', status: r.status, preview: r.preview };
+      }
+    }
+
+    // 3) latest quote (bid/ask) - only as fallback since IEX quotes can be stale
+    if (price == null) {
+      const url = `${BASE}/stocks/${encodeURIComponent(symbol)}/quotes/latest${feedQS}`;
+      const r = await alpacaGet(url, ALPACA_KEY, ALPACA_SECRET);
+      if (r.ok) {
+        const ap = Number(r.body?.quote?.ap);
+        const bp = Number(r.body?.quote?.bp);
+        // Use bid price as it's typically more reliable than ask in IEX
+        if (Number.isFinite(bp) && bp > 0) { price = bp; source = 'quote.bp'; }
+        else if (Number.isFinite(ap) && ap > 0) { price = ap; source = 'quote.ap'; }
+      } else {
+        lastErr = { step: 'quote', status: r.status, preview: r.preview };
       }
     }
 

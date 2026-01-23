@@ -5,6 +5,10 @@
 ### Fully Implemented ✅
 - [x] Authentication (sign up/sign in with username, content moderation)
 - [x] League management (create, view details, member list)
+- [x] Join league by invite code
+- [x] Share invite code from league cards
+- [x] League settings for commissioners (edit name, draft date, budget, teams, stocks)
+- [x] Push notifications for draft turns
 - [x] Draft functionality (full snake draft with real-time updates)
 - [x] Portfolio viewing (holdings, P/L, cost basis)
 - [x] Matchups (head-to-head view, weekly gains, past results)
@@ -22,8 +26,9 @@
 ### Mobile App - Not Yet Implemented
 - [ ] Native trading (currently opens web app)
 - [ ] Trade history (currently opens web app)
-- [ ] Join league by invite code
-- [ ] Push notifications
+- [x] Join league by invite code ✅ (Jan 22, 2026)
+- [x] Push notifications (draft turns) ✅ (Jan 22, 2026)
+- [ ] Push notifications (matchup results, invites)
 - [ ] Password reset flow
 - [ ] Settings/preferences screen
 - [ ] Help/documentation
@@ -40,6 +45,44 @@
     3. Added handling for unique constraint violation errors (code 23505)
     4. Database constraint `drafts_league_pick_unique UNIQUE (league_id, pick_number)` applied
   - **Verification:** Existing duplicate picks (11, 13) manually corrected. Full constraint active.
+
+### Recently Completed (Jan 22, 2026)
+- [x] **Join League by Invite Code (Mobile)**
+  - Created `join-league.tsx` with two-step flow (code input → league preview)
+  - Validates against both `leagues.invite_code` and `league_invites.code` tables
+  - Shows league preview with name, type, members, budget, draft status
+  - Error handling for invalid codes, full leagues, already a member
+  - Wired "Join a League" button in create-league wizard
+
+- [x] **Share Invite Code (Mobile)**
+  - Added share button to league cards in LeagueCarousel
+  - Shows invite code alert with Copy/Share options
+  - Native share sheet integration
+
+- [x] **League Settings for Commissioners (Mobile)**
+  - Created `league-settings.tsx` with full editing capabilities
+  - Editable: name, draft date, budget mode/amount, team count, stocks per team
+  - Lock mechanism when draft is in progress or completed
+  - Settings gear icon on league cards (commissioners only)
+  - Read-only section showing league type, duration, invite code
+
+- [x] **League Carousel Sync**
+  - Swiping through leagues now updates portfolio/allocation/matchups
+  - "Create or Join" prompt shown when on the last card
+  - Expanded League interface with all database fields
+
+- [x] **Push Notifications (Draft Turns)**
+  - Installed `expo-notifications` and `expo-device`
+  - Created notification service for token registration and sending
+  - Database migration for `expo_push_token` on `user_profiles`
+  - Auth integration (register on login, remove on logout)
+  - Draft screen sends notification to next player after each pick
+  - Deep linking to Draft screen when notification tapped
+
+- [x] **EAS Development Build**
+  - Configured EAS Build for real device testing
+  - Set up iOS bundle identifier and APNs key
+  - Enabled full native module support on physical device
 
 ### Recently Completed (Jan 17, 2026)
 - [x] **Real-Time Standings & Matchup Updates (Web)**
@@ -241,6 +284,14 @@
 **Cross-Platform Priorities:**
 1. **Email Notifications** - Critical for draft turns and matchup results.
 2. **Password Reset Flow** - Users will forget passwords.
+
+**Recently Completed (Jan 22):**
+- ✅ Join league by invite code (mobile)
+- ✅ Share invite code from league cards (mobile)
+- ✅ League settings for commissioners (mobile)
+- ✅ League carousel sync with Home screen data
+- ✅ Push notifications for draft turns
+- ✅ EAS development build setup
 
 **Recently Completed (Jan 17):**
 - ✅ Real-Time Standings Auto-Refresh (web + mobile)

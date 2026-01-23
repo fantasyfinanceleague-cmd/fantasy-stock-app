@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  Share,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -108,6 +110,12 @@ export default function LeagueCarousel() {
     const index = Math.round(contentOffsetX / (CARD_WIDTH + CARD_MARGIN * 2));
     if (index !== activeIndex && index >= 0 && index <= leagues.length) {
       setActiveIndex(index);
+      // Update active league when swiping, or null for "Create or Join" card
+      if (index < leagues.length) {
+        setActiveLeagueId(leagues[index].id);
+      } else {
+        setActiveLeagueId(null);
+      }
     }
   };
 
@@ -130,6 +138,35 @@ export default function LeagueCarousel() {
   const formatCurrency = (value: number) => {
     const sign = value >= 0 ? '+' : '';
     return `${sign}$${Math.abs(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  const handleShareInvite = async (league: League) => {
+    if (!league.invite_code) {
+      Alert.alert('Error', 'No invite code available for this league');
+      return;
+    }
+    try {
+      await Share.share({
+        message: `Join my Fantasy Stock league "${league.name}"! Use code: ${league.invite_code}`,
+      });
+    } catch (error) {
+      console.error('Failed to share:', error);
+    }
+  };
+
+  const handleShowInviteCode = (league: League) => {
+    if (!league.invite_code) {
+      Alert.alert('Error', 'No invite code available');
+      return;
+    }
+    Alert.alert(
+      'Invite Code',
+      `Share this code with friends to invite them to "${league.name}":\n\n${league.invite_code}`,
+      [
+        { text: 'Copy', onPress: () => handleShareInvite(league) },
+        { text: 'OK', style: 'cancel' },
+      ]
+    );
   };
 
   // Total items = leagues + 1 (for create new)
@@ -238,6 +275,20 @@ export default function LeagueCarousel() {
                 >
                   <Text style={styles.actionButtonText}>Standings</Text>
                 </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.shareButton}
+                  onPress={() => handleShowInviteCode(league)}
+                >
+                  <Ionicons name="share-outline" size={20} color={Colors.primary} />
+                </TouchableOpacity>
+                {league.commissioner_id === user?.id && (
+                  <TouchableOpacity
+                    style={styles.settingsButton}
+                    onPress={() => router.push({ pathname: '/league-settings', params: { leagueId: league.id } })}
+                  >
+                    <Ionicons name="settings-outline" size={20} color={Colors.textMuted} />
+                  </TouchableOpacity>
+                )}
               </View>
             </TouchableOpacity>
           );
@@ -246,7 +297,7 @@ export default function LeagueCarousel() {
         {/* Create New League Card */}
         <TouchableOpacity
           style={[styles.card, styles.createCard]}
-          onPress={() => router.push('/(tabs)/leagues')}
+          onPress={() => router.push('/create-league')}
           activeOpacity={0.9}
         >
           <View style={styles.createContent}>
@@ -388,6 +439,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: Colors.primary,
+  },
+  shareButton: {
+    width: 44,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  settingsButton: {
+    width: 44,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   createCard: {
     justifyContent: 'center',

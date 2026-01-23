@@ -300,7 +300,6 @@ export default function LeaderboardScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#22c55e" />
         }
       >
-
         {leagues.length === 0 ? (
           <View style={styles.centered}>
             <Text style={styles.emptyTitle}>No leagues yet</Text>
@@ -388,10 +387,22 @@ export default function LeaderboardScreen() {
                     ? ((standing.wins + standing.ties * 0.5) / (standing.wins + standing.losses + standing.ties) * 100).toFixed(0)
                     : '0';
 
+                  const handleRowPress = () => {
+                    router.push({
+                      pathname: '/player-portfolio',
+                      params: {
+                        userId: standing.user_id,
+                        username: getDisplayName(standing.user_id),
+                      },
+                    });
+                  };
+
                   return (
-                    <View
+                    <TouchableOpacity
                       key={standing.user_id}
                       style={[styles.standingRow, isMe && styles.standingRowHighlight]}
+                      onPress={handleRowPress}
+                      activeOpacity={0.7}
                     >
                       <View style={styles.rankBadge}>
                         <Text style={styles.rankText}>{idx + 1}</Text>
@@ -406,7 +417,6 @@ export default function LeaderboardScreen() {
                           {getDisplayName(standing.user_id)}
                           {isMe && ' (You)'}
                         </Text>
-                        <Text style={styles.standingLeague}>{activeLeague?.name}</Text>
                       </View>
 
                       {isMatchupLeague ? (
@@ -439,7 +449,7 @@ export default function LeaderboardScreen() {
                           <Text style={styles.pointsLabel}>total gain</Text>
                         </View>
                       )}
-                    </View>
+                    </TouchableOpacity>
                   );
                 })
               )}
@@ -490,6 +500,7 @@ const styles = StyleSheet.create({
   kpiRow: {
     flexDirection: 'row',
     paddingHorizontal: 24,
+    paddingTop: 12,
     gap: 8,
     marginBottom: 20,
   },

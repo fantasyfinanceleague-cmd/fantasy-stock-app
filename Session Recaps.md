@@ -2,6 +2,238 @@
 
 ---
 
+# January 22, 2026
+
+## What We Accomplished
+
+### 1. Join League by Invite Code (Mobile)
+Implemented the ability for users to join leagues using an invite code:
+- **New join-league screen** with two-step flow (code input → league preview)
+- **Code validation** against both `leagues.invite_code` and `league_invites.code` tables
+- **League preview** showing name, type, members, budget, draft date, and status
+- **Error handling** for invalid codes, full leagues, already a member, expired invites
+- **Seamless integration** with existing create-league wizard
+
+### 2. Share Invite Code Feature
+Added the ability to share league invite codes from the Home screen:
+- **Share button** on each league card in the carousel
+- **Alert dialog** showing the invite code with Copy/OK options
+- **Native share sheet** integration for sending via text, email, etc.
+
+### 3. League Settings for Commissioners (Mobile)
+Full settings screen for commissioners to manage their leagues:
+- **Edit league name** with content moderation
+- **Draft date** with TBD option or date/time picker
+- **Budget mode** (Salary Cap / No Limit) with amount input
+- **Number of teams** (4-16) with stepper controls
+- **Stocks per team** (1-12) with stepper controls
+- **Read-only info** section showing type, duration, invite code
+- **Lock mechanism** - all settings disabled once draft starts
+- **Settings button** (gear icon) on league cards for commissioners only
+
+### 4. League Carousel Sync with Home Screen
+Fixed the Home screen to update dynamically when swiping through leagues:
+- **Portfolio value** now updates per league
+- **Allocation chart** refreshes for each league
+- **Past matchup results** load for the visible league
+- **Create/Join prompt** shown when on the last card
+
+### 5. League Interface Expansion
+Extended the `League` TypeScript interface with all fields:
+- `commissioner_id`, `num_participants`, `num_rounds`
+- `salary_cap_limit`, `duration_days`, `num_weeks`, `playoff_teams`
+
+## Files Modified/Created
+
+### Mobile App - New Files
+| File | Purpose |
+|------|---------|
+| `apps/mobile/app/join-league.tsx` | Join league screen with code input and league preview |
+| `apps/mobile/app/league-settings.tsx` | Commissioner settings screen for editing league |
+
+### Mobile App - Modified Files
+| File | Changes |
+|------|---------|
+| `apps/mobile/app/_layout.tsx` | Added `join-league` and `league-settings` routes |
+| `apps/mobile/app/create-league.tsx` | Wired "Join a League" button to navigate to join-league screen |
+| `apps/mobile/components/LeagueCarousel.tsx` | Added share button, settings button (commissioners), swipe-to-sync active league |
+| `apps/mobile/lib/LeagueContext.tsx` | Expanded League interface with all fields |
+| `apps/mobile/app/(tabs)/index.tsx` | Added "Create or Join" prompt when on last carousel card |
+
+## Technical Notes
+
+### Join League Flow
+1. User taps "Create or Join" card → opens create-league wizard
+2. User taps "Join a League" → dismisses and opens join-league screen
+3. User enters 6-character code → taps "Look Up"
+4. Preview screen shows league details → user taps "Join League"
+5. User is added as member → redirected to home with league active
+
+### League Settings Lock
+```typescript
+// Settings locked once draft is in progress or completed
+const isLocked = league?.draft_status === 'in_progress' ||
+                 league?.draft_status === 'completed';
+```
+
+### Carousel Sync
+```typescript
+const handleScroll = (event) => {
+  const index = Math.round(contentOffsetX / (CARD_WIDTH + CARD_MARGIN * 2));
+  if (index < leagues.length) {
+    setActiveLeagueId(leagues[index].id);  // Sync portfolio/matchups
+  } else {
+    setActiveLeagueId(null);  // Show "Create or Join" prompt
+  }
+};
+```
+
+### 6. Push Notifications Setup
+Implemented push notifications for draft turn alerts:
+- **expo-notifications** and **expo-device** packages installed
+- **Database migration** adding `expo_push_token` and `notifications_enabled` to `user_profiles`
+- **Notification service** (`lib/notifications.ts`) for registering tokens and sending notifications
+- **Auth integration** - registers push token on login, removes on logout
+- **Draft turn notifications** - notifies next player when it's their turn
+- **Deep linking** - tapping notification navigates to Draft screen
+
+### 7. Development Build Setup
+Set up EAS Build for real device testing:
+- Configured `eas.json` with development profile
+- Added iOS bundle identifier (`com.stockpile.fantasystock`)
+- Registered device via EAS device registration
+- Created development build with full native module support
+- Enabled Developer Mode on iPhone for testing
+
+## Files Modified/Created
+
+### Mobile App - New Files
+| File | Purpose |
+|------|---------|
+| `apps/mobile/app/join-league.tsx` | Join league screen with code input and league preview |
+| `apps/mobile/app/league-settings.tsx` | Commissioner settings screen for editing league |
+| `apps/mobile/lib/notifications.ts` | Push notification service |
+| `apps/mobile/eas.json` | EAS Build configuration |
+
+### Mobile App - Modified Files
+| File | Changes |
+|------|---------|
+| `apps/mobile/app/_layout.tsx` | Added routes, notification listeners for deep linking |
+| `apps/mobile/app/create-league.tsx` | Wired "Join a League" button |
+| `apps/mobile/components/LeagueCarousel.tsx` | Share button, settings button, swipe-to-sync |
+| `apps/mobile/lib/LeagueContext.tsx` | Expanded League interface with all fields |
+| `apps/mobile/lib/useAuth.ts` | Push token registration on login/logout |
+| `apps/mobile/app/(tabs)/index.tsx` | "Create or Join" prompt on last carousel card |
+| `apps/mobile/app/(tabs)/draft.tsx` | Send notification to next player after pick |
+| `apps/mobile/app.json` | Added bundle ID, expo-notifications plugin |
+
+### Database
+| File | Purpose |
+|------|---------|
+| `supabase/migrations/20260122000000_add_push_tokens.sql` | Push token storage and notification log |
+
+## Next Steps
+
+### Pending
+- [ ] Native trading (currently opens web app)
+- [ ] Trade history (currently opens web app)
+- [ ] Matchup result notifications
+- [ ] League invite notifications
+
+---
+
+# January 18, 2026
+
+## What We Accomplished
+
+### 1. Sleeper-Style League Creation Wizard (Mobile)
+Redesigned the league creation flow to match the Sleeper app's UX:
+- **Multi-step wizard** with one setting per screen (8 total steps)
+- **Welcome screen** with hero graphic and call-to-action
+- **Card-based selections** for league type (matchup/duration)
+- **Grid layout** for numeric options (league size: 4-20 players)
+- **Stepper controls** for budget and draft rounds
+- **TBD option** for draft date (nullable in database)
+
+### 2. Safe Area Handling Fix
+- Replaced `SafeAreaView` with manual padding using `useSafeAreaInsets()` hook
+- Fixed header being hidden behind iPhone notch on fullScreenModal presentation
+- Ensured back button and content are properly positioned
+
+### 3. Header Centering
+- Fixed off-center title by making back button and spacer equal width (44px each)
+- Proper flexbox layout with `flex: 1` title area
+
+### 4. Color Scheme Update
+- Changed wizard accent colors from Sleeper's cyan (`#00CED1`) to app's blue (`#3b82f6`)
+- Uses existing `Colors.primary`, `Colors.primaryBg`, `Colors.primaryLight` constants
+
+### 5. TBD Draft Date Support
+- Added `draftDateTBD` boolean state with radio button selection
+- Draft date can now be `null` in database for "TBD" leagues
+- Updated both mobile and web draft pages to show appropriate messaging:
+  - "Draft date not set yet" notice
+  - Commissioner prompt to set date before starting draft
+
+## Files Modified/Created
+
+### Mobile App - New Files
+| File | Purpose |
+|------|---------|
+| `apps/mobile/app/create-league.tsx` | Multi-step league creation wizard with Sleeper-inspired UI |
+
+### Mobile App - Modified Files
+| File | Changes |
+|------|---------|
+| `apps/mobile/app/_layout.tsx` | Added `create-league` route with `fullScreenModal` presentation |
+| `apps/mobile/components/LeagueCarousel.tsx` | Updated "Create or Join" card to navigate to wizard |
+| `apps/mobile/app/(tabs)/draft.tsx` | Added TBD date handling with appropriate messaging |
+
+### Web App - Modified Files
+| File | Changes |
+|------|---------|
+| `apps/web/src/pages/DraftPage.jsx` | Added TBD draft date warning and commissioner prompt |
+
+## Technical Notes
+
+### useSafeAreaInsets() Pattern
+```typescript
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const insets = useSafeAreaInsets();
+
+return (
+  <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+    {/* content */}
+  </View>
+);
+```
+This approach works better than `SafeAreaView` with `edges` prop for `fullScreenModal` presentations.
+
+### Wizard State Interface
+```typescript
+interface WizardState {
+  name: string;
+  leagueType: 'matchup' | 'duration' | null;
+  teamCount: number;
+  startingBudget: number;
+  durationDays: number;
+  matchupWeeks: number;
+  draftRounds: number;
+  playoffTeams: number;
+  draftDate: Date | null;
+  draftDateTBD: boolean;
+}
+```
+
+## Next Steps
+
+### Pending
+- [ ] Add Join League flow (join by invite code)
+- [ ] League settings screen for commissioners
+
+---
+
 # January 17, 2026
 
 ## What We Accomplished

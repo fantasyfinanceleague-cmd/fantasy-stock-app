@@ -5,11 +5,19 @@ import { useAuth } from './useAuth';
 export interface League {
   id: string;
   name: string;
+  invite_code: string;
+  commissioner_id: string;
   draft_status: 'not_started' | 'in_progress' | 'completed';
-  draft_date: string;
+  draft_date: string | null;
   budget_mode: 'budget' | 'no-budget';
   budget_amount: number | null;
+  salary_cap_limit: number | null;
+  num_participants: number;
+  num_rounds: number;
   league_type: 'duration' | 'matchup';
+  duration_days: number | null;
+  num_weeks: number | null;
+  playoff_teams: number | null;
   current_week: number;
   created_at: string;
 }

@@ -128,10 +128,32 @@ export default function HomeScreen() {
             <Text style={styles.emptySubtitle}>Join or create a league to start trading</Text>
             <TouchableOpacity
               style={styles.button}
-              onPress={() => router.push('/(tabs)/leagues')}
+              onPress={() => router.push('/create-league')}
             >
-              <Text style={styles.buttonText}>View Leagues</Text>
+              <Text style={styles.buttonText}>Get Started</Text>
             </TouchableOpacity>
+          </View>
+        ) : !activeLeagueId ? (
+          <View style={styles.createJoinPrompt}>
+            <Text style={styles.promptEmoji}>🚀</Text>
+            <Text style={styles.promptTitle}>Ready to compete?</Text>
+            <Text style={styles.promptSubtitle}>
+              Create a new league and invite your friends, or join an existing one with an invite code.
+            </Text>
+            <View style={styles.promptButtons}>
+              <TouchableOpacity
+                style={styles.promptButtonPrimary}
+                onPress={() => router.push('/create-league')}
+              >
+                <Text style={styles.promptButtonPrimaryText}>Create League</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.promptButtonSecondary}
+                onPress={() => router.push('/join-league')}
+              >
+                <Text style={styles.promptButtonSecondaryText}>Join League</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         ) : (
           <>
@@ -527,5 +549,62 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.textMuted,
     marginTop: 2,
+  },
+  // Create/Join Prompt styles
+  createJoinPrompt: {
+    marginHorizontal: 24,
+    marginTop: 16,
+    backgroundColor: Colors.cardBg,
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  promptEmoji: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  promptTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  promptSubtitle: {
+    fontSize: 15,
+    color: Colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  promptButtons: {
+    width: '100%',
+    gap: 12,
+  },
+  promptButtonPrimary: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  promptButtonPrimaryText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.background,
+  },
+  promptButtonSecondary: {
+    backgroundColor: 'transparent',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  promptButtonSecondaryText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.primary,
   },
 });
