@@ -2,6 +2,154 @@
 
 ---
 
+# January 25, 2026 (Session 2)
+
+## What We Accomplished
+
+### 1. Native Trading in Mobile App
+Implemented in-app trading instead of opening web app:
+- **New TradeModal component** (`apps/mobile/components/TradeModal.tsx`)
+  - Buy/Sell toggle with color-coded buttons
+  - Symbol input with live quote lookup and company name
+  - Quantity stepper (+/- buttons)
+  - Real-time price display and total cost/proceeds
+  - Budget validation for salary cap leagues
+  - Market hours detection (9:30 AM - 4:00 PM ET only)
+  - Alpaca account linking check
+- **Portfolio page integration** - Buy/Sell buttons on holdings now open native modal
+
+### 2. Market Hours Detection
+Created market hours utility for both mobile and web:
+- **New file**: `apps/mobile/lib/marketHours.ts`
+- **Updated**: `apps/web/src/utils/marketHours.js`
+- Features:
+  - Detects market open/closed/pre-market/after-hours
+  - Handles weekends and market holidays (2025-2026)
+  - Uses `Intl.DateTimeFormat.formatToParts()` for reliable cross-platform timezone conversion
+  - Trading only allowed during market hours
+
+### 3. Alpaca Price Sync - Exact Parity
+Ensured our system matches Alpaca exactly with no discrepancies:
+
+**Trade Fill Prices:**
+- `place-order` now polls Alpaca for actual `filled_avg_price` after order execution
+- TradeModal stores Alpaca's fill price, not quote estimate
+- Links every trade to `alpaca_order_id` for verification
+
+**Week Snapshot Prices:**
+- `snapshot-week-start` now uses Alpaca bars API for official **open price** (`o` field)
+- `snapshot-week-end` now uses Alpaca bars API for official **close price** (`c` field)
+- Falls back to quotes only if bars unavailable
+
+**Daily Sync Cron Job:**
+- **New function**: `sync-alpaca-orders` edge function
+- Runs daily at 4:30 PM ET (Mon-Fri) after market close
+- Fetches all users' Alpaca order history
+- Compares to our trades table and corrects any discrepancies
+- Modes: `verify` (single order), `sync` (user), `sync-all` (cron)
+
+### 4. FIFO Lot Tracking
+Clarified lot tracking approach:
+- Alpaca uses FIFO (First-In-First-Out) for lot selection
+- Our system uses FIFO based on `created_at` timestamps
+- No user choice = no ambiguity between our system and Alpaca
+- Users see identical prices/gains in both systems
+
+### 5. Improved Mid-Week Trade Scoring
+Updated `process-week-results` scoring logic:
+- Week-start holdings sold: `(sale_price - Monday_open) × qty`
+- Week-start holdings kept: `(Friday_close - Monday_open) × qty`
+- Mid-week buys held: `(Friday_close - purchase_price) × qty`
+- Mid-week buys then sold: `(sale_price - purchase_price) × qty`
+- FIFO matching for partial sells
+
+### 6. Mobile App Architecture Documentation
+Created comprehensive architecture doc:
+- **New file**: `apps/mobile/ARCHITECTURE.md`
+- Documents navigation, state management, components, hooks, styling, auth, real-time features
+
+### 7. UI Fix
+- Fixed portfolio page spacing - added `marginTop: 16` to metrics row for proper gap after header
+
+## Files Modified/Created
+
+### Mobile App - New Files
+| File | Purpose |
+|------|---------|
+| `apps/mobile/components/TradeModal.tsx` | Native trading modal with market hours check |
+| `apps/mobile/lib/marketHours.ts` | Market hours detection utility |
+| `apps/mobile/ARCHITECTURE.md` | Architecture documentation |
+
+### Mobile App - Modified Files
+| File | Changes |
+|------|---------|
+| `apps/mobile/app/(tabs)/portfolio.tsx` | Integrated TradeModal, fixed spacing |
+
+### Web App - Modified Files
+| File | Changes |
+|------|---------|
+| `apps/web/src/components/TradeModal.jsx` | Use Alpaca fill price, market hours check |
+| `apps/web/src/utils/marketHours.js` | Added `getMarketStatusMessage()`, 2026 holidays |
+
+### Supabase Functions - New
+| File | Purpose |
+|------|---------|
+| `supabase/functions/sync-alpaca-orders/index.ts` | Daily sync with Alpaca order history |
+
+### Supabase Functions - Modified
+| File | Changes |
+|------|---------|
+| `supabase/functions/place-order/index.ts` | Poll for `filled_avg_price`, return fill data |
+| `supabase/functions/snapshot-week-start/index.ts` | Use bars API for official open price |
+| `supabase/functions/snapshot-week-end/index.ts` | Use bars API for official close price |
+| `supabase/functions/process-week-results/index.ts` | FIFO scoring for mid-week trades |
+
+### Database Migrations
+| File | Purpose |
+|------|---------|
+| `supabase/migrations/20260125200000_add_sync_alpaca_cron.sql` | Daily sync cron job at 4:30 PM ET |
+
+## Technical Notes
+
+### Price Sync Flow
+```
+User Places Trade
+       ↓
+place-order → Submit to Alpaca → Poll for fill → Return filled_avg_price
+       ↓
+TradeModal → Insert trade with Alpaca's actual price
+       ↓
+Daily Cron (4:30 PM ET) → sync-alpaca-orders → Verify/correct all trades
+```
+
+### Data Sources Match Alpaca
+| Our Data | Alpaca Source |
+|----------|---------------|
+| `trades.price` | `order.filled_avg_price` |
+| `trades.quantity` | `order.filled_qty` |
+| `week_snapshots.week_start_price` | Daily bar `open` price |
+| `week_snapshots.week_end_price` | Daily bar `close` price |
+
+### Market Hours Check
+```typescript
+// Trading only allowed during market hours
+if (!isMarketOpen()) {
+  // Show "Market Closed" message
+  // Display next open time
+  // Disable trade form
+}
+```
+
+## Deployed
+- ✅ `place-order` edge function
+- ✅ `sync-alpaca-orders` edge function
+- ✅ `snapshot-week-start` edge function
+- ✅ `snapshot-week-end` edge function
+- ✅ `process-week-results` edge function
+- ✅ Daily sync cron job migration
+
+---
+
 # January 25, 2026
 
 ## What We Accomplished
