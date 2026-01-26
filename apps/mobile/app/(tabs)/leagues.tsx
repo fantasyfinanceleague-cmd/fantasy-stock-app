@@ -675,10 +675,10 @@ export default function LeaguesScreen() {
                     onPress={() => {
                       setActiveLeagueId(selectedLeague.id);
                       setShowDetailModal(false);
-                      router.push('/(tabs)/leaderboard');
+                      router.push('/(tabs)/league');
                     }}
                   >
-                    <Text style={styles.detailActionText}>Leaderboard</Text>
+                    <Text style={styles.detailActionText}>League</Text>
                   </TouchableOpacity>
                   {selectedLeague.commissioner_id === user?.id && (
                     <TouchableOpacity

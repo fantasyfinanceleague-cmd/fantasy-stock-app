@@ -14,7 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Colors } from '@/constants/Colors';
-import { useLeagueContext, League } from '@/lib/LeagueContext';
+import { useLeagueContext, League, LeagueSeason } from '@/lib/LeagueContext';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 
@@ -31,21 +31,82 @@ interface LeagueRecord {
   totalGain?: number;
 }
 
+interface SeasonInfo {
+  seasonNumber: number;
+  seasonStatus: 'active' | 'completed';
+  championUserId: string | null;
+  runnerUpUserId: string | null;
+  championName: string | null;
+  runnerUpName: string | null;
+}
+
 export default function LeagueCarousel() {
   const { user } = useAuth();
   const { leagues, activeLeagueId, setActiveLeagueId } = useLeagueContext();
   const [records, setRecords] = useState<Record<string, LeagueRecord>>({});
+  const [seasonInfo, setSeasonInfo] = useState<Record<string, SeasonInfo>>({});
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  // Fetch records for all leagues
+  // Fetch records and season info for all leagues
   useEffect(() => {
     if (!user?.id || leagues.length === 0) return;
 
-    const fetchRecords = async () => {
+    const fetchRecordsAndSeasons = async () => {
       const newRecords: Record<string, LeagueRecord> = {};
+      const newSeasonInfo: Record<string, SeasonInfo> = {};
 
       for (const league of leagues) {
+        // Fetch current season info
+        if (league.current_season_id) {
+          const { data: season } = await supabase
+            .from('league_seasons')
+            .select('season_number, champion_user_id, runner_up_user_id, completed_at')
+            .eq('id', league.current_season_id)
+            .single();
+
+          if (season) {
+            // Get champion and runner-up names if season is completed
+            let championName: string | null = null;
+            let runnerUpName: string | null = null;
+
+            if (season.champion_user_id || season.runner_up_user_id) {
+              const userIds = [season.champion_user_id, season.runner_up_user_id].filter(Boolean);
+              const { data: profiles } = await supabase
+                .from('user_profiles')
+                .select('id, username')
+                .in('id', userIds);
+
+              if (profiles) {
+                const champProfile = profiles.find(p => p.id === season.champion_user_id);
+                const runnerProfile = profiles.find(p => p.id === season.runner_up_user_id);
+                championName = champProfile?.username || null;
+                runnerUpName = runnerProfile?.username || null;
+              }
+            }
+
+            newSeasonInfo[league.id] = {
+              seasonNumber: season.season_number,
+              seasonStatus: season.completed_at ? 'completed' : 'active',
+              championUserId: season.champion_user_id,
+              runnerUpUserId: season.runner_up_user_id,
+              championName,
+              runnerUpName,
+            };
+          }
+        } else {
+          // Default season info for leagues without a season record yet
+          newSeasonInfo[league.id] = {
+            seasonNumber: 1,
+            seasonStatus: league.season_status || 'active',
+            championUserId: null,
+            runnerUpUserId: null,
+            championName: null,
+            runnerUpName: null,
+          };
+        }
+
+        // Fetch standings
         if (league.league_type === 'matchup') {
           // Fetch standings for matchup league
           const { data: standings } = await supabase
@@ -91,9 +152,10 @@ export default function LeagueCarousel() {
       }
 
       setRecords(newRecords);
+      setSeasonInfo(newSeasonInfo);
     };
 
-    fetchRecords();
+    fetchRecordsAndSeasons();
   }, [user?.id, leagues]);
 
   // Find initial index based on active league
@@ -138,6 +200,34 @@ export default function LeagueCarousel() {
   const formatCurrency = (value: number) => {
     const sign = value >= 0 ? '+' : '';
     return `${sign}$${Math.abs(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  const getChampionshipStatus = (league: League): 'champion' | 'runner-up' | 'participant' | null => {
+    const info = seasonInfo[league.id];
+    if (!info || info.seasonStatus !== 'completed') return null;
+
+    if (info.championUserId === user?.id) return 'champion';
+    if (info.runnerUpUserId === user?.id) return 'runner-up';
+    return 'participant';
+  };
+
+  const getCardStyle = (league: League, isActive: boolean) => {
+    const status = getChampionshipStatus(league);
+    const baseStyles = [styles.card];
+
+    if (status === 'champion') {
+      baseStyles.push(styles.cardChampion);
+    } else if (status === 'runner-up') {
+      baseStyles.push(styles.cardRunnerUp);
+    } else if (status === 'participant') {
+      baseStyles.push(styles.cardCompleted);
+    }
+
+    if (isActive && status !== 'champion' && status !== 'runner-up') {
+      baseStyles.push(styles.cardActive);
+    }
+
+    return baseStyles;
   };
 
   const handleShareInvite = async (league: League) => {
@@ -188,15 +278,36 @@ export default function LeagueCarousel() {
         {/* League Cards */}
         {leagues.map((league, index) => {
           const record = records[league.id];
+          const info = seasonInfo[league.id];
           const isActive = league.id === activeLeagueId;
+          const championshipStatus = getChampionshipStatus(league);
 
           return (
             <TouchableOpacity
               key={league.id}
-              style={[styles.card, isActive && styles.cardActive]}
+              style={getCardStyle(league, isActive)}
               onPress={() => handleCardPress(league)}
               activeOpacity={0.9}
             >
+              {/* Championship Banner for completed seasons */}
+              {championshipStatus === 'champion' && (
+                <View style={styles.championBanner}>
+                  <Text style={styles.championBannerIcon}>🏆</Text>
+                  <Text style={styles.championBannerText}>Season {info?.seasonNumber} Champion</Text>
+                </View>
+              )}
+              {championshipStatus === 'runner-up' && (
+                <View style={styles.runnerUpBanner}>
+                  <Text style={styles.runnerUpBannerIcon}>🥈</Text>
+                  <Text style={styles.runnerUpBannerText}>Season {info?.seasonNumber} Runner-Up</Text>
+                </View>
+              )}
+              {championshipStatus === 'participant' && (
+                <View style={styles.completedBanner}>
+                  <Text style={styles.completedBannerText}>Season {info?.seasonNumber} Complete</Text>
+                </View>
+              )}
+
               {/* Header */}
               <View style={styles.cardHeader}>
                 <Text style={styles.leagueIcon}>{getLeagueIcon(league)}</Text>
@@ -204,9 +315,18 @@ export default function LeagueCarousel() {
                   <Text style={styles.leagueName} numberOfLines={1}>{league.name}</Text>
                   <Text style={styles.leagueType}>
                     {league.league_type === 'matchup' ? 'Matchup League' : 'Duration League'}
+                    {info && info.seasonStatus === 'active' && ` • Season ${info.seasonNumber}`}
                   </Text>
                 </View>
-                {record && (
+                {championshipStatus === 'champion' ? (
+                  <View style={styles.championRankBadge}>
+                    <Text style={styles.trophyIcon}>🏆</Text>
+                  </View>
+                ) : championshipStatus === 'runner-up' ? (
+                  <View style={styles.runnerUpRankBadge}>
+                    <Text style={styles.medalIcon}>🥈</Text>
+                  </View>
+                ) : record && (
                   <View style={styles.rankBadge}>
                     <Text style={styles.rankNumber}>{record.rank}</Text>
                     <Text style={styles.rankSuffix}>{getRankSuffix(record.rank)}</Text>
@@ -270,10 +390,10 @@ export default function LeagueCarousel() {
                   style={styles.actionButton}
                   onPress={() => {
                     setActiveLeagueId(league.id);
-                    router.push('/(tabs)/leaderboard');
+                    router.push('/(tabs)/league');
                   }}
                 >
-                  <Text style={styles.actionButtonText}>Standings</Text>
+                  <Text style={styles.actionButtonText}>League</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.shareButton}
@@ -344,6 +464,101 @@ const styles = StyleSheet.create({
   },
   cardActive: {
     borderColor: Colors.primary,
+  },
+  cardChampion: {
+    borderColor: Colors.gold,
+    borderWidth: 2,
+    backgroundColor: Colors.goldBg,
+  },
+  cardRunnerUp: {
+    borderColor: Colors.silver,
+    borderWidth: 2,
+    backgroundColor: Colors.silverBg,
+  },
+  cardCompleted: {
+    opacity: 0.85,
+    borderColor: Colors.textMuted,
+  },
+  championBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.gold,
+    marginHorizontal: -16,
+    marginTop: -16,
+    marginBottom: 12,
+    paddingVertical: 8,
+    borderTopLeftRadius: 14,
+    borderTopRightRadius: 14,
+  },
+  championBannerIcon: {
+    fontSize: 16,
+    marginRight: 6,
+  },
+  championBannerText: {
+    color: '#1f2937',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  runnerUpBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.silver,
+    marginHorizontal: -16,
+    marginTop: -16,
+    marginBottom: 12,
+    paddingVertical: 8,
+    borderTopLeftRadius: 14,
+    borderTopRightRadius: 14,
+  },
+  runnerUpBannerIcon: {
+    fontSize: 16,
+    marginRight: 6,
+  },
+  runnerUpBannerText: {
+    color: '#1f2937',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  completedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(107, 114, 128, 0.3)',
+    marginHorizontal: -16,
+    marginTop: -16,
+    marginBottom: 12,
+    paddingVertical: 8,
+    borderTopLeftRadius: 14,
+    borderTopRightRadius: 14,
+  },
+  completedBannerText: {
+    color: Colors.textMuted,
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  championRankBadge: {
+    backgroundColor: Colors.goldBg,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.gold,
+  },
+  runnerUpRankBadge: {
+    backgroundColor: Colors.silverBg,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.silver,
+  },
+  trophyIcon: {
+    fontSize: 24,
+  },
+  medalIcon: {
+    fontSize: 24,
   },
   cardHeader: {
     flexDirection: 'row',

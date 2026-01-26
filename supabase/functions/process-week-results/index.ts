@@ -593,6 +593,79 @@ async function advancePlayoffWinner(
   console.error('No empty slot found in next round');
 }
 
+/**
+ * Complete season when playoffs finish - champion is finals winner
+ */
+async function completeSeasonFromPlayoffs(
+  supabase: any,
+  leagueId: string,
+  championUserId: string,
+  runnerUpUserId: string
+) {
+  console.log(`Completing season for league ${leagueId} - Champion: ${championUserId}, Runner-up: ${runnerUpUserId}`);
+
+  try {
+    // Call the database function to complete the season
+    const { error } = await supabase.rpc('complete_league_season', {
+      p_league_id: leagueId,
+      p_champion_user_id: championUserId,
+      p_runner_up_user_id: runnerUpUserId,
+    });
+
+    if (error) {
+      console.error('Failed to complete season:', error);
+    } else {
+      console.log(`Season completed successfully for league ${leagueId}`);
+    }
+  } catch (e) {
+    console.error('Error completing season:', e);
+  }
+}
+
+/**
+ * Complete season for non-playoff leagues - top 2 from standings
+ */
+async function completeSeasonFromStandings(
+  supabase: any,
+  leagueId: string
+) {
+  console.log(`Completing season from standings for league ${leagueId}`);
+
+  try {
+    // Get top 2 from standings
+    const { data: standings } = await supabase
+      .from('league_standings')
+      .select('user_id, wins, points_for')
+      .eq('league_id', leagueId)
+      .order('wins', { ascending: false })
+      .order('points_for', { ascending: false })
+      .limit(2);
+
+    if (!standings || standings.length < 2) {
+      console.log('Not enough standings to determine champion');
+      return;
+    }
+
+    const championUserId = standings[0].user_id;
+    const runnerUpUserId = standings[1].user_id;
+
+    // Call the database function to complete the season
+    const { error } = await supabase.rpc('complete_league_season', {
+      p_league_id: leagueId,
+      p_champion_user_id: championUserId,
+      p_runner_up_user_id: runnerUpUserId,
+    });
+
+    if (error) {
+      console.error('Failed to complete season:', error);
+    } else {
+      console.log(`Season completed - Champion: ${championUserId}, Runner-up: ${runnerUpUserId}`);
+    }
+  } catch (e) {
+    console.error('Error completing season from standings:', e);
+  }
+}
+
 Deno.serve(async (req) => {
   // This can be triggered by cron or manually
   console.log('Processing weekly matchup results...');
@@ -901,7 +974,6 @@ Deno.serve(async (req) => {
         }
 
         // Helper to update standings with proper increment
-        // Supports 0.5 wins/losses for true ties
         async function updateUserStandings(
           lgId: string,
           oderId: string,
@@ -911,9 +983,9 @@ Deno.serve(async (req) => {
           pointsFor: number,
           pointsAgainst: number
         ) {
-          // Calculate increments (ties give 0.5 win and 0.5 loss)
-          const winsIncrement = won ? 1 : (tied ? 0.5 : 0);
-          const lossesIncrement = lost ? 1 : (tied ? 0.5 : 0);
+          // Calculate increments - ties only increment ties column, not wins/losses
+          const winsIncrement = won ? 1 : 0;
+          const lossesIncrement = lost ? 1 : 0;
           const tiesIncrement = tied ? 1 : 0;
 
           // First try to get existing record
@@ -1036,6 +1108,24 @@ Deno.serve(async (req) => {
           if (currentWeek === numWeeks && playoffTeams > 0) {
             await generatePlayoffs(supabase, leagueId, numWeeks + 1, playoffTeams);
           }
+
+          // Check if season is complete (no playoffs and regular season ended)
+          if (currentWeek >= numWeeks && playoffTeams === 0) {
+            await completeSeasonFromStandings(supabase, leagueId);
+          }
+        }
+      }
+
+      // Check if playoffs just finished (finals matchup completed)
+      const finalsMatchup = leagueMatchups.find(m => m.playoff_round === 'finals');
+      if (finalsMatchup && finalsMatchup.team1_user_id && finalsMatchup.team2_user_id) {
+        // Finals just completed - record champion
+        const winnerId = results.find(r => r.matchupId === finalsMatchup.id)?.winner;
+        if (winnerId) {
+          const loserId = finalsMatchup.team1_user_id === winnerId
+            ? finalsMatchup.team2_user_id
+            : finalsMatchup.team1_user_id;
+          await completeSeasonFromPlayoffs(supabase, leagueId, winnerId, loserId);
         }
       }
     }

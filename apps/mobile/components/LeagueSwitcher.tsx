@@ -73,34 +73,38 @@ export default function LeagueSwitcher({ title }: LeagueSwitcherProps) {
             <View style={styles.arrow} />
 
             <ScrollView style={styles.leagueList} bounces={false}>
-              {leagues.map((league) => (
-                <TouchableOpacity
-                  key={league.id}
-                  style={[
-                    styles.leagueItem,
-                    league.id === activeLeagueId && styles.leagueItemActive,
-                  ]}
-                  onPress={() => handleSelectLeague(league)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.leagueItemIcon}>{getLeagueIcon(league)}</Text>
-                  <View style={styles.leagueItemInfo}>
-                    <Text style={styles.leagueItemName} numberOfLines={1}>
-                      {league.name}
-                    </Text>
-                    <Text style={styles.leagueItemMeta}>
-                      {league.league_type === 'matchup' ? 'Matchup' : 'Duration'} League
-                    </Text>
-                  </View>
-                  {league.id === activeLeagueId && (
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={22}
-                      color={Colors.primary}
-                    />
-                  )}
-                </TouchableOpacity>
-              ))}
+              {leagues.map((league, index) => {
+                const isLast = index === leagues.length - 1;
+                return (
+                  <TouchableOpacity
+                    key={league.id}
+                    style={[
+                      styles.leagueItem,
+                      league.id === activeLeagueId && styles.leagueItemActive,
+                      isLast && styles.leagueItemLast,
+                    ]}
+                    onPress={() => handleSelectLeague(league)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.leagueItemIcon}>{getLeagueIcon(league)}</Text>
+                    <View style={styles.leagueItemInfo}>
+                      <Text style={styles.leagueItemName} numberOfLines={1}>
+                        {league.name}
+                      </Text>
+                      <Text style={styles.leagueItemMeta}>
+                        {league.league_type === 'matchup' ? 'Matchup' : 'Duration'} League
+                      </Text>
+                    </View>
+                    {league.id === activeLeagueId && (
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={22}
+                        color={Colors.primary}
+                      />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
 
               {leagues.length === 0 && (
                 <View style={styles.emptyState}>
@@ -171,7 +175,7 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.cardBg,
   },
   leagueList: {
-    paddingVertical: 8,
+    paddingTop: 8,
   },
   leagueItem: {
     flexDirection: 'row',
@@ -180,6 +184,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
+  },
+  leagueItemLast: {
+    borderBottomWidth: 0,
   },
   leagueItemActive: {
     backgroundColor: 'rgba(34, 197, 94, 0.1)',

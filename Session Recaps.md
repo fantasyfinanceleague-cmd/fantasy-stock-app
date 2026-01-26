@@ -2,6 +2,142 @@
 
 ---
 
+# January 25, 2026
+
+## What We Accomplished
+
+### 1. Multi-Season League Support (Database)
+Implemented full multi-season tracking for leagues:
+- **New `league_seasons` table** - tracks season number, champion, runner-up, final standings snapshot
+- **New columns on `leagues`** - `current_season_id`, `season_status` (active/completed)
+- **Database functions**:
+  - `complete_league_season()` - records champion/runner-up, snapshots standings
+  - `start_new_league_season()` - resets standings, creates new season record
+- **Backfill migration** - creates Season 1 for existing leagues with completed drafts
+
+### 2. Auto-Complete Season Logic
+Added automatic season completion to `process-week-results` edge function:
+- **Playoff leagues**: Detects when finals matchup completes, records winner as champion
+- **Non-playoff leagues**: Completes season when `current_week > num_weeks`, top 2 from standings
+- Calls `complete_league_season()` database function with champion/runner-up IDs
+
+### 3. Start New Season Button
+Added commissioner ability to start new seasons in `league-settings.tsx`:
+- **Only visible when `season_status = 'completed'`**
+- Gold-styled card with trophy icon explaining what happens
+- Confirmation dialog before proceeding
+- Calls `start_new_league_season()` database function
+
+### 4. League Page Redesign (Renamed from Standings)
+Major restructure of the league page with three collapsible sections:
+- **Standings Section** - existing standings with KPI cards
+- **Schedule Section** - view any player's matchup schedule
+  - Player picker chips to switch between users
+  - Shows W/L/T results, gains, "Current" badge for active week
+  - Clicking a matchup navigates to that specific matchup (not just your own)
+- **History Section** (ESPN-style) - completed seasons with your stats
+
+### 5. ESPN-Style History Section
+Redesigned to match ESPN Fantasy Football:
+- **Most recent season first** with collapsible section
+- **Your stats prominently displayed**: Place (1st/2nd/3rd), Record (W-L-T), Win% (0.XX format)
+- **Badge on the right**: 🏆 for champion, 🥈 for runner-up, #N for others
+- **Winner row below**: Shows champion (or runner-up if you won) with their record
+- **Date range** in top-right corner (e.g., "Nov 2025 - Dec 2025")
+- **"See All" link** only appears if multiple past seasons exist
+
+### 6. Championship Display in LeagueCarousel
+Updated home screen league cards for completed seasons:
+- **Champion**: Gold border, 🏆 trophy badge
+- **Runner-up**: Silver border, 🥈 medal badge
+- **Other participants**: Muted styling with final rank
+
+### 7. Bug Fixes & Improvements
+- **Fixed matchup navigation** - clicking another user's matchup in schedule now shows that matchup
+- **Fixed "Now" badge overlap** - removed badge, current week shows "Current" text instead
+- **Fixed fractional wins/losses** - ties now only increment ties column, not 0.5 wins/losses
+- **Fixed league dropdown border gap** - removed bottom border from last item
+- **Updated route references** - changed all `/leaderboard` to `/league`
+
+### 8. Colors Update
+Added new colors to `constants/Colors.ts`:
+- `silver: '#C0C0C0'`
+- `silverBg: 'rgba(192, 192, 192, 0.15)'`
+- `goldBg: 'rgba(251, 191, 36, 0.15)'`
+
+## Files Modified/Created
+
+### Database Migrations
+| File | Purpose |
+|------|---------|
+| `supabase/migrations/20260125000000_add_league_seasons.sql` | **NEW** - Multi-season support, functions |
+| `supabase/migrations/20260125100000_add_test_completed_season.sql` | **NEW** - Test data for History UI |
+| `supabase/migrations/20260125100001_add_more_test_seasons.sql` | **NEW** - Additional test seasons |
+
+### Mobile App - Modified Files
+| File | Changes |
+|------|---------|
+| `apps/mobile/app/(tabs)/league.tsx` | **RENAMED** from leaderboard.tsx - Complete redesign with 3 sections |
+| `apps/mobile/app/(tabs)/_layout.tsx` | Renamed tab to "League" with trophy icon |
+| `apps/mobile/app/(tabs)/matchup.tsx` | Accept matchupId/team params to show specific matchups |
+| `apps/mobile/app/(tabs)/leagues.tsx` | Updated route from leaderboard to league |
+| `apps/mobile/app/_layout.tsx` | Updated notification navigation to league |
+| `apps/mobile/app/league-settings.tsx` | Added "Start New Season" section for commissioners |
+| `apps/mobile/lib/LeagueContext.tsx` | Added season fields, LeagueSeason interface |
+| `apps/mobile/constants/Colors.ts` | Added silver, silverBg, goldBg colors |
+| `apps/mobile/components/LeagueCarousel.tsx` | Championship badges for completed seasons |
+| `apps/mobile/components/LeagueSwitcher.tsx` | Fixed dropdown border gap |
+
+### Supabase Functions
+| File | Changes |
+|------|---------|
+| `supabase/functions/process-week-results/index.ts` | Added auto-complete logic, fixed tie scoring |
+
+## Technical Notes
+
+### Multi-Season Architecture
+```typescript
+// League can have multiple seasons
+interface LeagueSeason {
+  id: string;
+  league_id: string;
+  season_number: number;
+  champion_user_id: string | null;
+  runner_up_user_id: string | null;
+  started_at: string;
+  completed_at: string | null;
+  final_standings: FinalStanding[] | null;  // JSON snapshot
+}
+
+// League tracks current season
+interface League {
+  // ... existing fields
+  current_season_id: string | null;
+  season_status: 'active' | 'completed';
+}
+```
+
+### Season Completion Flow
+1. `process-week-results` detects season end (playoffs finished OR regular season complete)
+2. Calls `complete_league_season(league_id, champion_id, runner_up_id)`
+3. Database function snapshots standings to `final_standings` JSONB
+4. Sets `season_status = 'completed'`
+
+### New Season Flow
+1. Commissioner sees "Start New Season" button when `season_status = 'completed'`
+2. Confirmation dialog explains what happens
+3. Calls `start_new_league_season(league_id)`
+4. Database function: creates new season record, resets standings, deletes old matchups
+
+## Next Steps
+
+### Pending
+- [ ] Generate new matchup schedule when starting new season
+- [ ] Test season completion with real playoff matchups
+- [ ] Add season selector to view historical matchups/standings
+
+---
+
 # January 22, 2026
 
 ## What We Accomplished

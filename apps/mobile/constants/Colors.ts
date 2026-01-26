@@ -42,6 +42,9 @@ export const Colors = {
 
   // Special
   gold: '#fbbf24',            // Gold for champions/special
+  goldBg: 'rgba(251, 191, 36, 0.15)',  // Gold background tint
+  silver: '#C0C0C0',          // Silver for runner-up
+  silverBg: 'rgba(192, 192, 192, 0.15)', // Silver background tint
   cyan: '#0ea5e9',            // Cyan for rank badges
 
   // Tab bar specific

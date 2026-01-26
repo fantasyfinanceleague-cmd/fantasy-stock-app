@@ -20,6 +20,31 @@ export interface League {
   playoff_teams: number | null;
   current_week: number;
   created_at: string;
+  // Season tracking
+  current_season_id: string | null;
+  season_status: 'active' | 'completed';
+}
+
+export interface LeagueSeason {
+  id: string;
+  league_id: string;
+  season_number: number;
+  champion_user_id: string | null;
+  runner_up_user_id: string | null;
+  started_at: string;
+  completed_at: string | null;
+  final_standings: FinalStanding[] | null;
+  created_at: string;
+}
+
+export interface FinalStanding {
+  user_id: string;
+  rank: number;
+  wins: number;
+  losses: number;
+  ties: number;
+  points_for: number;
+  points_against: number;
 }
 
 interface LeagueContextType {

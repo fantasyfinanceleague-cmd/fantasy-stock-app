@@ -60,8 +60,8 @@ function RootLayoutNav() {
           router.push('/(tabs)/draft');
         } else if (data?.screen === 'matchup') {
           router.push('/(tabs)/matchup');
-        } else if (data?.screen === 'leaderboard') {
-          router.push('/(tabs)/leaderboard');
+        } else if (data?.screen === 'leaderboard' || data?.screen === 'league') {
+          router.push('/(tabs)/league');
         }
       }
     );

@@ -34,6 +34,7 @@ export default function LeagueSettingsScreen() {
   const [budgetAmount, setBudgetAmount] = useState('100000');
   const [numParticipants, setNumParticipants] = useState(8);
   const [numRounds, setNumRounds] = useState(6);
+  const [startingNewSeason, setStartingNewSeason] = useState(false);
 
   // Initialize form with league data
   useEffect(() => {
@@ -105,6 +106,45 @@ export default function LeagueSettingsScreen() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleStartNewSeason = async () => {
+    if (!league || !user?.id) return;
+
+    Alert.alert(
+      'Start New Season',
+      'This will:\n\n• Reset all standings to 0-0\n• Generate a new matchup schedule\n• Keep all current league members\n\nAre you sure you want to start a new season?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Start Season',
+          style: 'default',
+          onPress: async () => {
+            setStartingNewSeason(true);
+            try {
+              const { error } = await supabase.rpc('start_new_league_season', {
+                p_league_id: league.id,
+              });
+
+              if (error) throw error;
+
+              await refresh();
+
+              Alert.alert(
+                'New Season Started!',
+                'The league has been reset for a new season. Good luck!',
+                [{ text: 'OK', onPress: () => router.dismiss() }]
+              );
+            } catch (error: any) {
+              console.error('Failed to start new season:', error);
+              Alert.alert('Error', error.message || 'Failed to start new season');
+            } finally {
+              setStartingNewSeason(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (!league) {
@@ -373,6 +413,35 @@ export default function LeagueSettingsScreen() {
               </View>
             </View>
           </View>
+
+          {/* Start New Season - Only show when season is completed */}
+          {league.season_status === 'completed' && (
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Season Complete</Text>
+              <View style={styles.seasonCompleteCard}>
+                <View style={styles.seasonCompleteHeader}>
+                  <Ionicons name="trophy" size={24} color={Colors.gold} />
+                  <Text style={styles.seasonCompleteText}>
+                    The current season has ended. Start a new season to reset standings and begin a new competition with the same members.
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.newSeasonButton, startingNewSeason && styles.newSeasonButtonDisabled]}
+                  onPress={handleStartNewSeason}
+                  disabled={startingNewSeason}
+                >
+                  {startingNewSeason ? (
+                    <ActivityIndicator color={Colors.background} />
+                  ) : (
+                    <>
+                      <Ionicons name="refresh" size={20} color={Colors.background} />
+                      <Text style={styles.newSeasonButtonText}>START NEW SEASON</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
 
           <View style={{ height: 100 }} />
         </ScrollView>
@@ -666,6 +735,45 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     fontSize: 15,
+    fontWeight: '700',
+    color: Colors.background,
+    letterSpacing: 0.5,
+  },
+
+  // New Season section
+  seasonCompleteCard: {
+    backgroundColor: Colors.goldBg,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.gold,
+  },
+  seasonCompleteHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 16,
+  },
+  seasonCompleteText: {
+    flex: 1,
+    fontSize: 14,
+    color: Colors.textSecondary,
+    lineHeight: 20,
+  },
+  newSeasonButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.gold,
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+  },
+  newSeasonButtonDisabled: {
+    opacity: 0.6,
+  },
+  newSeasonButtonText: {
+    fontSize: 14,
     fontWeight: '700',
     color: Colors.background,
     letterSpacing: 0.5,

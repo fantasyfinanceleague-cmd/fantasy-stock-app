@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/lib/useAuth';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/Colors';
 import WeekNavigator from '@/components/WeekNavigator';
@@ -66,6 +67,13 @@ function formatCurrency(value: number): string {
 export default function MatchupScreen() {
   const { user } = useAuth();
   const { activeLeagueId, activeLeague } = useLeagueContext();
+  const params = useLocalSearchParams<{
+    week?: string;
+    matchupId?: string;
+    team1?: string;
+    team2?: string;
+  }>();
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [matchup, setMatchup] = useState<Matchup | null>(null);
@@ -77,18 +85,29 @@ export default function MatchupScreen() {
   const [profiles, setProfiles] = useState<Record<string, UserProfile>>({});
   const [error, setError] = useState('');
 
+  // Track if we're viewing a specific matchup (not current user's)
+  const viewingSpecificMatchup = !!(params.matchupId || (params.team1 && params.team2));
+
   const isMatchupLeague = activeLeague?.league_type === 'matchup';
   const currentWeek = activeLeague?.current_week || 1;
 
-  // Selected week for navigation
-  const [selectedWeek, setSelectedWeek] = useState(currentWeek);
+  // Selected week for navigation - use param if provided
+  const initialWeek = params.week ? parseInt(params.week, 10) : currentWeek;
+  const [selectedWeek, setSelectedWeek] = useState(initialWeek);
 
-  // Update selectedWeek when currentWeek changes
+  // Update selectedWeek when currentWeek changes (only if not viewing a specific matchup)
   useEffect(() => {
-    if (currentWeek > 0) {
+    if (currentWeek > 0 && !viewingSpecificMatchup) {
       setSelectedWeek(currentWeek);
     }
-  }, [currentWeek]);
+  }, [currentWeek, viewingSpecificMatchup]);
+
+  // Update selectedWeek when params change
+  useEffect(() => {
+    if (params.week) {
+      setSelectedWeek(parseInt(params.week, 10));
+    }
+  }, [params.week]);
 
   // Get week status for UI
   const weekStatus = useMemo(() => {
@@ -131,7 +150,7 @@ export default function MatchupScreen() {
     } else {
       setLoading(false);
     }
-  }, [activeLeagueId, user, isMatchupLeague, selectedWeek]);
+  }, [activeLeagueId, user, isMatchupLeague, selectedWeek, params.matchupId, params.team1, params.team2]);
 
   // Refresh prices every 30 seconds when matchup is active
   useEffect(() => {
@@ -151,26 +170,72 @@ export default function MatchupScreen() {
     setError('');
 
     try {
-      // Find user's matchup for selected week
-      const { data: matchupData, error: matchupError } = await supabase
-        .from('matchups')
-        .select('*')
-        .eq('league_id', activeLeagueId)
-        .eq('week_number', selectedWeek)
-        .or(`team1_user_id.eq.${user.id},team2_user_id.eq.${user.id}`)
-        .single();
+      let matchupData: Matchup | null = null;
 
-      if (matchupError) {
-        if (matchupError.code === 'PGRST116') {
-          // No matchup found
-          setMatchup(null);
-          setLoading(false);
-          return;
+      // If viewing a specific matchup (from schedule click)
+      if (params.matchupId) {
+        const { data, error: matchupError } = await supabase
+          .from('matchups')
+          .select('*')
+          .eq('id', params.matchupId)
+          .single();
+
+        if (matchupError) {
+          if (matchupError.code === 'PGRST116') {
+            setMatchup(null);
+            setLoading(false);
+            return;
+          }
+          throw matchupError;
         }
-        throw matchupError;
+        matchupData = data;
+      } else if (params.team1 && params.team2) {
+        // Fetch by team IDs
+        const { data, error: matchupError } = await supabase
+          .from('matchups')
+          .select('*')
+          .eq('league_id', activeLeagueId)
+          .eq('week_number', selectedWeek)
+          .eq('team1_user_id', params.team1)
+          .eq('team2_user_id', params.team2)
+          .single();
+
+        if (matchupError) {
+          if (matchupError.code === 'PGRST116') {
+            setMatchup(null);
+            setLoading(false);
+            return;
+          }
+          throw matchupError;
+        }
+        matchupData = data;
+      } else {
+        // Default: Find user's matchup for selected week
+        const { data, error: matchupError } = await supabase
+          .from('matchups')
+          .select('*')
+          .eq('league_id', activeLeagueId)
+          .eq('week_number', selectedWeek)
+          .or(`team1_user_id.eq.${user.id},team2_user_id.eq.${user.id}`)
+          .single();
+
+        if (matchupError) {
+          if (matchupError.code === 'PGRST116') {
+            setMatchup(null);
+            setLoading(false);
+            return;
+          }
+          throw matchupError;
+        }
+        matchupData = data;
       }
 
       setMatchup(matchupData);
+
+      if (!matchupData) {
+        setLoading(false);
+        return;
+      }
 
       // Fetch profiles for both users
       const userIds = [matchupData.team1_user_id, matchupData.team2_user_id]
