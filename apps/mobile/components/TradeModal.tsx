@@ -10,7 +10,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  FlatList,
 } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
@@ -505,13 +504,14 @@ export default function TradeModal({
             {/* Search Results Dropdown */}
             {showSearchResults && searchResults.length > 0 && (
               <View style={styles.searchResultsContainer}>
-                <FlatList
-                  data={searchResults}
-                  keyExtractor={(item) => item.symbol}
-                  keyboardShouldPersistTaps="handled"
+                <ScrollView
                   style={styles.searchResultsList}
-                  renderItem={({ item }) => (
+                  keyboardShouldPersistTaps="handled"
+                  nestedScrollEnabled
+                >
+                  {searchResults.map((item) => (
                     <TouchableOpacity
+                      key={item.symbol}
                       style={styles.searchResultItem}
                       onPress={() => handleSelectResult(item)}
                     >
@@ -527,8 +527,8 @@ export default function TradeModal({
                         </Text>
                       ) : null}
                     </TouchableOpacity>
-                  )}
-                />
+                  ))}
+                </ScrollView>
               </View>
             )}
 
