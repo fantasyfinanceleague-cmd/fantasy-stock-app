@@ -187,14 +187,19 @@ export default function Matchup() {
         // Fetch week snapshots for both users
         const { data: snapshots } = await supabase
           .from('week_snapshots')
-          .select('user_id, symbol, quantity, week_start_price')
+          .select('user_id, symbol, quantity, week_start_price, week_end_price')
           .eq('league_id', leagueId)
           .eq('week_number', selectedWeek)
           .in('user_id', userIds.filter(Boolean));
 
         // Build snapshot map: { `${userId}-${symbol}`: { quantity, weekStartPrice } }
         const snapshotMap = {};
+        let isPastWeek = false;
+
         if (snapshots && snapshots.length > 0) {
+          // Check if this is a completed/past week (has week_end_price)
+          isPastWeek = snapshots.some(s => s.week_end_price != null);
+
           for (const s of snapshots) {
             const key = `${s.user_id}-${s.symbol}`;
             snapshotMap[key] = {
@@ -209,11 +214,42 @@ export default function Matchup() {
           setHasSnapshots(false);
         }
 
-        // Fetch holdings for both teams
-        const [team1, team2] = await Promise.all([
-          fetchTeamHoldings(matchupData.team1_user_id),
-          fetchTeamHoldings(matchupData.team2_user_id),
-        ]);
+        // For past weeks, use snapshot data for holdings; for current week, fetch current holdings
+        let team1 = [];
+        let team2 = [];
+
+        if (isPastWeek && snapshots && snapshots.length > 0) {
+          // Build holdings from snapshots for past weeks
+          const team1Snapshots = snapshots.filter(s => s.user_id === matchupData.team1_user_id);
+          const team2Snapshots = snapshots.filter(s => s.user_id === matchupData.team2_user_id);
+
+          team1 = team1Snapshots.map(s => ({
+            symbol: s.symbol,
+            quantity: Number(s.quantity),
+            totalCost: Number(s.quantity) * Number(s.week_start_price),
+          }));
+
+          team2 = team2Snapshots.map(s => ({
+            symbol: s.symbol,
+            quantity: Number(s.quantity),
+            totalCost: Number(s.quantity) * Number(s.week_start_price),
+          }));
+
+          // Set prices from week_end_price for past weeks
+          const snapshotPrices = {};
+          for (const s of snapshots) {
+            if (s.week_end_price != null) {
+              snapshotPrices[s.symbol] = Number(s.week_end_price);
+            }
+          }
+          setPrices(snapshotPrices);
+        } else {
+          // Current week - fetch current holdings
+          [team1, team2] = await Promise.all([
+            fetchTeamHoldings(matchupData.team1_user_id),
+            fetchTeamHoldings(matchupData.team2_user_id),
+          ]);
+        }
 
         setTeam1Holdings(team1);
         setTeam2Holdings(team2);

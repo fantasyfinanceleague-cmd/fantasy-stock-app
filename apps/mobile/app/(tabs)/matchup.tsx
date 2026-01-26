@@ -152,9 +152,13 @@ export default function MatchupScreen() {
     }
   }, [activeLeagueId, user, isMatchupLeague, selectedWeek, params.matchupId, params.team1, params.team2]);
 
-  // Refresh prices every 30 seconds when matchup is active
+  // Refresh prices every 30 seconds when matchup is active (not for completed weeks)
   useEffect(() => {
     if (!matchup || team1Holdings.length === 0 && team2Holdings.length === 0) return;
+
+    // Don't poll for completed/past weeks (they have final scores)
+    const isCompletedWeek = matchup.team1_gain != null || matchup.team2_gain != null;
+    if (isCompletedWeek) return;
 
     const interval = setInterval(() => {
       fetchCurrentPrices();
@@ -260,14 +264,19 @@ export default function MatchupScreen() {
       const allUserIds = [matchupData.team1_user_id, matchupData.team2_user_id].filter(Boolean);
       const { data: snapshots } = await supabase
         .from('week_snapshots')
-        .select('user_id, symbol, quantity, week_start_price')
+        .select('user_id, symbol, quantity, week_start_price, week_end_price')
         .eq('league_id', activeLeagueId)
         .eq('week_number', selectedWeek)
         .in('user_id', allUserIds);
 
       // Build snapshot map: { `${userId}-${symbol}`: { quantity, weekStartPrice } }
+      const snapshotMap: Record<string, { quantity: number; weekStartPrice: number }> = {};
+      let isPastWeek = false;
+
       if (snapshots && snapshots.length > 0) {
-        const snapshotMap: Record<string, { quantity: number; weekStartPrice: number }> = {};
+        // Check if this is a completed/past week (has week_end_price)
+        isPastWeek = snapshots.some(s => s.week_end_price != null);
+
         for (const s of snapshots) {
           const key = `${s.user_id}-${s.symbol}`;
           snapshotMap[key] = {
@@ -282,25 +291,59 @@ export default function MatchupScreen() {
         setHasSnapshots(false);
       }
 
-      // Fetch holdings for both teams
-      const [team1, team2] = await Promise.all([
-        fetchTeamHoldings(matchupData.team1_user_id),
-        fetchTeamHoldings(matchupData.team2_user_id),
-      ]);
+      // For past weeks, use snapshot data for holdings; for current week, fetch current holdings
+      let team1: HoldingBase[] = [];
+      let team2: HoldingBase[] = [];
+
+      if (isPastWeek && snapshots && snapshots.length > 0) {
+        // Build holdings from snapshots for past weeks
+        const team1Snapshots = snapshots.filter(s => s.user_id === matchupData.team1_user_id);
+        const team2Snapshots = snapshots.filter(s => s.user_id === matchupData.team2_user_id);
+
+        team1 = team1Snapshots.map(s => ({
+          symbol: s.symbol,
+          quantity: Number(s.quantity),
+          totalCost: Number(s.quantity) * Number(s.week_start_price),
+        }));
+
+        team2 = team2Snapshots.map(s => ({
+          symbol: s.symbol,
+          quantity: Number(s.quantity),
+          totalCost: Number(s.quantity) * Number(s.week_start_price),
+        }));
+      } else {
+        // Current week - fetch current holdings
+        [team1, team2] = await Promise.all([
+          fetchTeamHoldings(matchupData.team1_user_id),
+          fetchTeamHoldings(matchupData.team2_user_id),
+        ]);
+      }
 
       setTeam1Holdings(team1);
       setTeam2Holdings(team2);
 
-      // Fetch initial prices
-      const allSymbols = [...team1.map(h => h.symbol), ...team2.map(h => h.symbol)];
-      const uniqueSymbols = [...new Set(allSymbols)];
+      // For past weeks, use week_end_price from snapshots; for current week, fetch live prices
+      if (isPastWeek && snapshots && snapshots.length > 0) {
+        // Build prices from snapshot week_end_price
+        const snapshotPrices: Record<string, number> = {};
+        for (const s of snapshots) {
+          if (s.week_end_price != null) {
+            snapshotPrices[s.symbol] = Number(s.week_end_price);
+          }
+        }
+        setPrices(snapshotPrices);
+      } else {
+        // Current week - fetch live prices
+        const allSymbols = [...team1.map(h => h.symbol), ...team2.map(h => h.symbol)];
+        const uniqueSymbols = [...new Set(allSymbols)];
 
-      if (uniqueSymbols.length > 0) {
-        const { data: quoteData } = await supabase.functions.invoke('quote', {
-          body: { symbols: uniqueSymbols }
-        });
-        if (quoteData?.prices) {
-          setPrices(quoteData.prices);
+        if (uniqueSymbols.length > 0) {
+          const { data: quoteData } = await supabase.functions.invoke('quote', {
+            body: { symbols: uniqueSymbols }
+          });
+          if (quoteData?.prices) {
+            setPrices(quoteData.prices);
+          }
         }
       }
 
