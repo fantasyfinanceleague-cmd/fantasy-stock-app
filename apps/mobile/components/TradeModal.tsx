@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Keyboard,
 } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
@@ -106,6 +107,8 @@ export default function TradeModal({
       setCompanyName('');
       setSearchResults([]);
       setShowSearchResults(false);
+      setSearchLoading(false);
+      setFetchingQuote(false);
 
       // If opening with an initial symbol, fetch its quote
       if (initialSymbol) {
@@ -161,12 +164,14 @@ export default function TradeModal({
     if (!searchInput || searchInput.length < 1) {
       setSearchResults([]);
       setShowSearchResults(false);
+      setSearchLoading(false);
       return;
     }
 
     // If user has selected a symbol and input matches, don't search
     if (symbol && searchInput.toUpperCase() === symbol.toUpperCase()) {
       setSearchResults([]);
+      setSearchLoading(false);
       setShowSearchResults(false);
       return;
     }
@@ -182,7 +187,13 @@ export default function TradeModal({
 
         if (searchError) throw searchError;
 
-        setSearchResults(data?.items || []);
+        const items = data?.items || [];
+        setSearchResults(items);
+
+        // Dismiss keyboard when results appear so user can see the dropdown
+        if (items.length > 0) {
+          Keyboard.dismiss();
+        }
       } catch (err) {
         console.error('Search error:', err);
         setSearchResults([]);
@@ -194,6 +205,7 @@ export default function TradeModal({
     return () => {
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current);
+        searchTimeoutRef.current = null;
       }
     };
   }, [searchInput, symbol]);
@@ -493,7 +505,7 @@ export default function TradeModal({
                 }
               }}
             />
-            {(searchLoading || fetchingQuote) && (
+            {(searchLoading || fetchingQuote) && searchInput.length > 0 && (
               <ActivityIndicator
                 size="small"
                 color={Colors.primary}
