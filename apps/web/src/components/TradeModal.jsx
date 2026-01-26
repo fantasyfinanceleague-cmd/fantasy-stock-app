@@ -2,18 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase/supabaseClient';
 import { prettyName } from '../utils/formatting';
-
-/**
- * Check if it's Monday in US Eastern Time
- * Matchup leagues only allow trading on Mondays
- */
-function isMondayET() {
-  // Get current time in Eastern Time
-  const now = new Date();
-  const etOptions = { timeZone: 'America/New_York', weekday: 'long' };
-  const dayName = now.toLocaleDateString('en-US', etOptions);
-  return dayName === 'Monday';
-}
+import { isMarketOpen, getMarketStatusMessage } from '../utils/marketHours';
 
 /**
  * TradeModal component
@@ -32,9 +21,9 @@ export default function TradeModal({
   initialSymbol = '',
   initialAction = 'buy' // 'buy' or 'sell'
 }) {
-  // For matchup leagues, trading is only allowed on Mondays (trade day)
-  const isMatchupLeague = leagueType === 'matchup';
-  const isTradingDay = !isMatchupLeague || isMondayET();
+  // Trading is allowed during market hours (9:30 AM - 4:00 PM ET, Mon-Fri)
+  const marketOpen = isMarketOpen();
+  const marketStatusMessage = getMarketStatusMessage();
   const [action, setAction] = useState(initialAction);
   const [symbol, setSymbol] = useState(initialSymbol);
   const [quantity, setQuantity] = useState(1);
@@ -189,11 +178,17 @@ export default function TradeModal({
           return;
         }
 
-        // For other Alpaca errors, continue to save locally
-        // (Alpaca paper trading may fail but we still record the trade)
+        // For other Alpaca errors, stop - don't record a trade that didn't happen
+        setError(placeData?.message || 'Trade failed. Please try again.');
+        return;
       }
 
-      // 2) Insert trade into database
+      // Use the actual fill price from Alpaca (not our quote)
+      const fillPrice = placeData?.filled_avg_price ?? currentPrice;
+      const fillQty = placeData?.filled_qty ?? quantity;
+      const actualTotalValue = fillPrice * fillQty;
+
+      // 2) Insert trade into database with Alpaca's actual fill price
       const { error: tradeError } = await supabase
         .from('trades')
         .insert({
@@ -201,9 +196,9 @@ export default function TradeModal({
           user_id: userId,
           symbol: upperSymbol,
           action: action,
-          quantity: quantity,
-          price: currentPrice,
-          total_value: totalValue,
+          quantity: fillQty,
+          price: fillPrice,
+          total_value: actualTotalValue,
           alpaca_order_id: placeData?.order?.id ?? null
         });
 
@@ -299,7 +294,7 @@ export default function TradeModal({
               Go to Profile
             </button>
           </div>
-        ) : !isTradingDay ? (
+        ) : !marketOpen ? (
           <div style={{
             padding: 20,
             backgroundColor: 'rgba(251, 191, 36, 0.1)',
@@ -308,13 +303,13 @@ export default function TradeModal({
             textAlign: 'center'
           }}>
             <p style={{ margin: '0 0 12px 0', color: '#fbbf24', fontWeight: 600 }}>
-              Trading is Locked
+              Market Closed
             </p>
             <p className="muted" style={{ margin: '0 0 8px 0', fontSize: 14 }}>
-              In matchup leagues, trades can only be made on <strong>Mondays</strong> (Trade Day).
+              {marketStatusMessage}
             </p>
             <p className="muted" style={{ margin: 0, fontSize: 14 }}>
-              Your stocks are locked in for the current week (Tuesday - Friday).
+              Trading is available during market hours: <strong>9:30 AM - 4:00 PM ET, Monday - Friday</strong>
             </p>
           </div>
         ) : (

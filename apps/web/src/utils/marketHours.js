@@ -11,8 +11,9 @@ const MARKET_OPEN_MINUTE = 30;
 const MARKET_CLOSE_HOUR = 16;
 const MARKET_CLOSE_MINUTE = 0;
 
-// Market holidays (2025) - Add more as needed
-const MARKET_HOLIDAYS_2025 = [
+// Market holidays (2025-2026)
+const MARKET_HOLIDAYS = [
+  // 2025
   '2025-01-01', // New Year's Day
   '2025-01-20', // MLK Day
   '2025-02-17', // Presidents Day
@@ -23,6 +24,17 @@ const MARKET_HOLIDAYS_2025 = [
   '2025-09-01', // Labor Day
   '2025-11-27', // Thanksgiving
   '2025-12-25', // Christmas
+  // 2026
+  '2026-01-01', // New Year's Day
+  '2026-01-19', // MLK Day
+  '2026-02-16', // Presidents Day
+  '2026-04-03', // Good Friday
+  '2026-05-25', // Memorial Day
+  '2026-06-19', // Juneteenth
+  '2026-07-03', // Independence Day (observed)
+  '2026-09-07', // Labor Day
+  '2026-11-26', // Thanksgiving
+  '2026-12-25', // Christmas
 ];
 
 /**
@@ -38,7 +50,7 @@ function getEasternTime() {
 function isMarketHoliday(date = new Date()) {
   const etDate = getEasternTime();
   const dateStr = etDate.toISOString().split('T')[0];
-  return MARKET_HOLIDAYS_2025.includes(dateStr);
+  return MARKET_HOLIDAYS.includes(dateStr);
 }
 
 /**
@@ -107,6 +119,32 @@ export function getMarketStatus() {
   if (isPreMarket()) return 'pre-market';
   if (isAfterHours()) return 'after-hours';
   return 'closed';
+}
+
+/**
+ * Get a human-readable market status message
+ */
+export function getMarketStatusMessage() {
+  const status = getMarketStatus();
+
+  switch (status) {
+    case 'open':
+      return 'Market is open';
+    case 'pre-market':
+      return 'Pre-market (opens 9:30 AM ET)';
+    case 'after-hours':
+      return 'After-hours trading';
+    case 'closed':
+      const now = getEasternTime();
+      const day = now.getDay();
+      if (day === 0 || day === 6) {
+        return 'Market closed (weekend)';
+      }
+      if (isMarketHoliday(now)) {
+        return 'Market closed (holiday)';
+      }
+      return 'Market closed';
+  }
 }
 
 /**

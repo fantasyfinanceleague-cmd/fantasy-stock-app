@@ -174,10 +174,12 @@ function calculatePortfolio(
 /**
  * Calculate user's score for the week using snapshots and mid-week trades.
  *
- * Score calculation:
+ * Score calculation (by individual trade):
  * - Stocks held all week: quantity × (week_end_price - week_start_price)
- * - Stocks sold mid-week: quantity × (sale_price - week_start_price)
+ * - Stocks sold mid-week: sold_qty × (sale_price - week_start_price)
+ * - Partial holds: remaining_qty × (week_end_price - week_start_price)
  * - Stocks bought mid-week: quantity × (week_end_price - purchase_price)
+ * - Stocks bought then sold same week: quantity × (sale_price - purchase_price)
  *
  * Returns dollar gain, percent gain, and whether user had any positions.
  */
@@ -189,46 +191,121 @@ function calculateUserScore(
   let totalGain = 0;
   let totalStartValue = 0;
 
-  // 1. Process stocks that were held at week start (have week_start_price)
-  for (const snap of snapshots.filter(s => s.weekStartPrice !== null)) {
-    const startPrice = snap.weekStartPrice!;
-    const symbol = snap.symbol.toUpperCase();
-
-    // Check if this stock was sold mid-week
-    const sellTrade = midWeekTrades.find(t =>
-      t.symbol.toUpperCase() === symbol && t.action === 'sell'
-    );
-
-    if (sellTrade) {
-      // Stock was sold mid-week - use sell price as end price
-      const gain = snap.quantity * (sellTrade.price - startPrice);
-      totalGain += gain;
-      totalStartValue += snap.quantity * startPrice;
-      console.log(`${symbol}: Sold mid-week. Start: $${startPrice}, Sold: $${sellTrade.price}, Qty: ${snap.quantity}, Gain: $${gain.toFixed(2)}`);
-    } else if (snap.weekEndPrice !== null) {
-      // Stock held all week - use week end price
-      const gain = snap.quantity * (snap.weekEndPrice - startPrice);
-      totalGain += gain;
-      totalStartValue += snap.quantity * startPrice;
-      console.log(`${symbol}: Held all week. Start: $${startPrice}, End: $${snap.weekEndPrice}, Qty: ${snap.quantity}, Gain: $${gain.toFixed(2)}`);
+  // Build a map of week end prices by symbol (for looking up Friday close)
+  const weekEndPrices = new Map<string, number>();
+  for (const snap of snapshots) {
+    if (snap.weekEndPrice !== null) {
+      weekEndPrices.set(snap.symbol.toUpperCase(), snap.weekEndPrice);
     }
   }
 
-  // 2. Process stocks bought mid-week (only have week_end_price, not week_start_price)
-  for (const snap of snapshots.filter(s => s.weekStartPrice === null && s.weekEndPrice !== null)) {
-    const symbol = snap.symbol.toUpperCase();
+  // Build a map of week start holdings by symbol
+  // This represents what the user held at Monday open
+  const weekStartHoldings = new Map<string, { quantity: number; price: number }>();
+  for (const snap of snapshots.filter(s => s.weekStartPrice !== null)) {
+    weekStartHoldings.set(snap.symbol.toUpperCase(), {
+      quantity: snap.quantity,
+      price: snap.weekStartPrice!,
+    });
+  }
 
-    // Find the buy trade for this stock
-    const buyTrade = midWeekTrades.find(t =>
-      t.symbol.toUpperCase() === symbol && t.action === 'buy'
-    );
+  // Sort trades by time to process in order (FIFO for sells)
+  const sortedTrades = [...midWeekTrades].sort(
+    (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
+  );
 
-    if (buyTrade && snap.weekEndPrice) {
-      // Calculate gain from purchase price to week end
-      const gain = snap.quantity * (snap.weekEndPrice - buyTrade.price);
+  // Track remaining quantities for week-start holdings (for partial sells)
+  const remainingHoldings = new Map<string, number>();
+  for (const [symbol, holding] of weekStartHoldings) {
+    remainingHoldings.set(symbol, holding.quantity);
+  }
+
+  // Track mid-week buys that haven't been sold yet (for buy-then-sell same week)
+  // Each entry: { quantity, price }
+  const midWeekBuys = new Map<string, { quantity: number; price: number }[]>();
+
+  // Process each trade in order
+  for (const trade of sortedTrades) {
+    const symbol = trade.symbol.toUpperCase();
+
+    if (trade.action === 'sell') {
+      let remainingToSell = trade.quantity;
+      const salePrice = trade.price;
+
+      // First, sell from week-start holdings (Monday open → Sale price)
+      const weekStartQty = remainingHoldings.get(symbol) || 0;
+      if (weekStartQty > 0 && remainingToSell > 0) {
+        const sellFromStart = Math.min(weekStartQty, remainingToSell);
+        const startPrice = weekStartHoldings.get(symbol)!.price;
+
+        const gain = sellFromStart * (salePrice - startPrice);
+        totalGain += gain;
+        totalStartValue += sellFromStart * startPrice;
+
+        console.log(`${symbol}: Sold ${sellFromStart} from week-start holdings. Monday: $${startPrice}, Sold: $${salePrice}, Gain: $${gain.toFixed(2)}`);
+
+        remainingHoldings.set(symbol, weekStartQty - sellFromStart);
+        remainingToSell -= sellFromStart;
+      }
+
+      // Then, sell from mid-week buys (FIFO: Purchase price → Sale price)
+      if (remainingToSell > 0) {
+        const buys = midWeekBuys.get(symbol) || [];
+        while (remainingToSell > 0 && buys.length > 0) {
+          const oldestBuy = buys[0];
+          const sellFromBuy = Math.min(oldestBuy.quantity, remainingToSell);
+
+          const gain = sellFromBuy * (salePrice - oldestBuy.price);
+          totalGain += gain;
+          totalStartValue += sellFromBuy * oldestBuy.price;
+
+          console.log(`${symbol}: Sold ${sellFromBuy} from mid-week buy. Bought: $${oldestBuy.price}, Sold: $${salePrice}, Gain: $${gain.toFixed(2)}`);
+
+          oldestBuy.quantity -= sellFromBuy;
+          remainingToSell -= sellFromBuy;
+
+          if (oldestBuy.quantity <= 0) {
+            buys.shift(); // Remove exhausted buy lot
+          }
+        }
+        midWeekBuys.set(symbol, buys);
+      }
+    } else if (trade.action === 'buy') {
+      // Add to mid-week buys (will be processed at week end or if sold later)
+      const buys = midWeekBuys.get(symbol) || [];
+      buys.push({ quantity: trade.quantity, price: trade.price });
+      midWeekBuys.set(symbol, buys);
+      console.log(`${symbol}: Bought ${trade.quantity} mid-week at $${trade.price}`);
+    }
+  }
+
+  // Process remaining week-start holdings (held all week: Monday open → Friday close)
+  for (const [symbol, remaining] of remainingHoldings) {
+    if (remaining <= 0) continue;
+
+    const startPrice = weekStartHoldings.get(symbol)!.price;
+    const endPrice = weekEndPrices.get(symbol);
+
+    if (endPrice !== undefined) {
+      const gain = remaining * (endPrice - startPrice);
       totalGain += gain;
-      totalStartValue += snap.quantity * buyTrade.price;
-      console.log(`${symbol}: Bought mid-week. Purchase: $${buyTrade.price}, End: $${snap.weekEndPrice}, Qty: ${snap.quantity}, Gain: $${gain.toFixed(2)}`);
+      totalStartValue += remaining * startPrice;
+      console.log(`${symbol}: Held ${remaining} all week. Monday: $${startPrice}, Friday: $${endPrice}, Gain: $${gain.toFixed(2)}`);
+    }
+  }
+
+  // Process remaining mid-week buys (bought and held to Friday: Purchase price → Friday close)
+  for (const [symbol, buys] of midWeekBuys) {
+    const endPrice = weekEndPrices.get(symbol);
+    if (endPrice === undefined) continue;
+
+    for (const buy of buys) {
+      if (buy.quantity <= 0) continue;
+
+      const gain = buy.quantity * (endPrice - buy.price);
+      totalGain += gain;
+      totalStartValue += buy.quantity * buy.price;
+      console.log(`${symbol}: Mid-week buy held to Friday. ${buy.quantity} shares @ $${buy.price} → $${endPrice}, Gain: $${gain.toFixed(2)}`);
     }
   }
 
@@ -237,7 +314,10 @@ function calculateUserScore(
     ? (totalGain / totalStartValue) * 100
     : 0;
 
-  const hasPositions = snapshots.length > 0 || midWeekTrades.length > 0;
+  // User has positions if they had week-start holdings OR any mid-week trades
+  const hasPositions = weekStartHoldings.size > 0 || midWeekTrades.length > 0;
+
+  console.log(`User ${userId} total: Gain=$${totalGain.toFixed(2)}, StartValue=$${totalStartValue.toFixed(2)}, Percent=${percentGain.toFixed(2)}%`);
 
   return { dollarGain: totalGain, percentGain, hasPositions };
 }

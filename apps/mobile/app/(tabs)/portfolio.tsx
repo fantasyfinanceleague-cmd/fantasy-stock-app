@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { SkeletonHolding } from '@/components/Skeleton';
 import { Colors } from '@/constants/Colors';
 import LeagueSwitcher from '@/components/LeagueSwitcher';
+import TradeModal from '@/components/TradeModal';
 
 function formatCurrency(value: number): string {
   return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -68,10 +69,26 @@ export default function PortfolioScreen() {
   const { holdings, portfolioSummary, loading: portfolioLoading, refresh: refreshPortfolio } = usePortfolio(activeLeagueId);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Trade modal state
+  const [tradeModalVisible, setTradeModalVisible] = useState(false);
+  const [tradeSymbol, setTradeSymbol] = useState('');
+  const [tradeAction, setTradeAction] = useState<'buy' | 'sell'>('buy');
+
   const onRefresh = async () => {
     setRefreshing(true);
     await Promise.all([refreshLeagues(), refreshPortfolio()]);
     setRefreshing(false);
+  };
+
+  const openTradeModal = (symbol: string = '', action: 'buy' | 'sell' = 'buy') => {
+    setTradeSymbol(symbol);
+    setTradeAction(action);
+    setTradeModalVisible(true);
+  };
+
+  const handleTradeComplete = async () => {
+    // Refresh portfolio after successful trade
+    await refreshPortfolio();
   };
 
   const openWebApp = (path: string = '/portfolio') => {
@@ -155,7 +172,7 @@ export default function PortfolioScreen() {
             )}
 
             <View style={styles.actionsRow}>
-              <TouchableOpacity style={styles.primaryButton} onPress={() => openWebApp('/portfolio')}>
+              <TouchableOpacity style={styles.primaryButton} onPress={() => openTradeModal('', 'buy')}>
                 <Text style={styles.primaryButtonText}>Buy Stock</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.secondaryButton} onPress={() => openWebApp('/trade-history')}>
@@ -175,19 +192,41 @@ export default function PortfolioScreen() {
                 <View style={styles.emptyHoldings}>
                   <Text style={styles.emptyText}>No holdings yet</Text>
                   <Text style={styles.emptySubtext}>Draft stocks or buy your first share!</Text>
-                  <TouchableOpacity style={styles.button} onPress={() => openWebApp('/portfolio')}>
+                  <TouchableOpacity style={styles.button} onPress={() => openTradeModal('', 'buy')}>
                     <Text style={styles.buttonText}>Buy Stock</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
                 holdings.map((holding) => (
-                  <HoldingRow key={holding.symbol} holding={holding} onBuy={() => openWebApp('/portfolio')} onSell={() => openWebApp('/portfolio')} />
+                  <HoldingRow
+                    key={holding.symbol}
+                    holding={holding}
+                    onBuy={() => openTradeModal(holding.symbol, 'buy')}
+                    onSell={() => openTradeModal(holding.symbol, 'sell')}
+                  />
                 ))
               )}
             </View>
           </>
         )}
       </ScrollView>
+
+      {/* Trade Modal */}
+      {user && activeLeague && (
+        <TradeModal
+          visible={tradeModalVisible}
+          onClose={() => setTradeModalVisible(false)}
+          onTradeComplete={handleTradeComplete}
+          leagueId={activeLeague.id}
+          userId={user.id}
+          currentHoldings={holdings}
+          availableCash={budgetRemaining ?? 0}
+          isBudgetMode={activeLeague.budget_mode === 'budget'}
+          leagueType={activeLeague.league_type}
+          initialSymbol={tradeSymbol}
+          initialAction={tradeAction}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -200,7 +239,7 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 24, paddingTop: 20, paddingBottom: 16 },
   title: { fontSize: 28, fontWeight: 'bold', color: Colors.textPrimary },
   leagueName: { fontSize: 14, color: Colors.primaryLight, marginTop: 4 },
-  metricsRow: { flexDirection: 'row', paddingHorizontal: 24, gap: 8, marginBottom: 16 },
+  metricsRow: { flexDirection: 'row', paddingHorizontal: 24, gap: 8, marginTop: 16, marginBottom: 16 },
   metricCard: { flex: 1, backgroundColor: Colors.cardBg, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: Colors.border },
   metricLabel: { fontSize: 11, color: Colors.textMuted, marginBottom: 4 },
   metricValue: { fontSize: 16, fontWeight: 'bold', color: Colors.textPrimary },

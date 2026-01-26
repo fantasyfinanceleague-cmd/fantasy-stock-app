@@ -59,6 +59,44 @@ async function getUserCredentials(userId: string, admin: any, cryptoKey: string)
   return { key: data.key_id, secret };
 }
 
+// Poll Alpaca order status until filled or timeout
+async function waitForFill(orderId: string, creds: { key: string; secret: string }, maxAttempts = 10): Promise<any> {
+  const orderUrl = `https://paper-api.alpaca.markets/v2/orders/${orderId}`;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    // Wait before polling (except first attempt)
+    if (attempt > 0) {
+      await new Promise(resolve => setTimeout(resolve, 500)); // 500ms between polls
+    }
+
+    try {
+      const res = await fetch(orderUrl, {
+        headers: {
+          'APCA-API-KEY-ID': creds.key,
+          'APCA-API-SECRET-KEY': creds.secret,
+          'Accept': 'application/json',
+        },
+      });
+
+      if (res.ok) {
+        const order = await res.json();
+        // Check if order is filled
+        if (order.status === 'filled') {
+          return order;
+        }
+        // If order is rejected, canceled, or expired, stop polling
+        if (['rejected', 'canceled', 'expired', 'replaced'].includes(order.status)) {
+          return order;
+        }
+      }
+    } catch (e) {
+      console.error('Error polling order status:', e);
+    }
+  }
+
+  return null; // Timeout - couldn't confirm fill
+}
+
 Deno.serve(async (req: Request) => {
   // Capture origin for CORS
   requestOrigin = req.headers.get('Origin') || '';
@@ -164,7 +202,23 @@ Deno.serve(async (req: Request) => {
       }, 200);
     }
 
-    return json({ ok: true, order: payload }, 200);
+    // For market orders, poll until filled to get the actual fill price
+    let finalOrder = payload;
+    if (type === 'market' && payload?.id) {
+      const filledOrder = await waitForFill(payload.id, creds);
+      if (filledOrder) {
+        finalOrder = filledOrder;
+      }
+    }
+
+    // Return order with filled_avg_price (the actual price Alpaca executed at)
+    return json({
+      ok: true,
+      order: finalOrder,
+      // Include fill price at top level for easy access
+      filled_avg_price: finalOrder?.filled_avg_price ? Number(finalOrder.filled_avg_price) : null,
+      filled_qty: finalOrder?.filled_qty ? Number(finalOrder.filled_qty) : null,
+    }, 200);
   } catch (e) {
     return json({ error: 'unhandled', message: 'An unexpected error occurred. Please try again.' }, 500);
   }

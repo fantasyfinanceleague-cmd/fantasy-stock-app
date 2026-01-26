@@ -139,6 +139,15 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 - [ ] Email notifications
 - [ ] Matchup result notifications
 
+## Documentation
+
+For developers and AI assistants working on the codebase:
+
+| Document | Description |
+|----------|-------------|
+| [`apps/mobile/ARCHITECTURE.md`](apps/mobile/ARCHITECTURE.md) | Comprehensive mobile app architecture guide - navigation, state management, components, hooks, styling patterns |
+| [`Session Recaps.md`](Session%20Recaps.md) | Development history with detailed notes on what was built, files modified, and technical decisions |
+
 ## About
 
 Built from scratch as both a learning project and a real product idea. This project explores full-stack development with React, React Native, serverless functions, and third-party API integrations.

@@ -104,14 +104,17 @@ async function scheduleRetry(supabase: any, jobName: string, attemptNumber: numb
   }
 }
 
-// Fetch latest prices from Alpaca
-async function fetchPrices(symbols: string[], alpacaKey: string, alpacaSecret: string): Promise<Map<string, number>> {
+// Fetch official opening prices from Alpaca bars (today's open)
+async function fetchOpenPrices(symbols: string[], alpacaKey: string, alpacaSecret: string): Promise<Map<string, number>> {
   const prices = new Map<string, number>();
 
   if (symbols.length === 0) return prices;
 
+  const today = new Date().toISOString().split('T')[0];
   const symbolsParam = symbols.join(',');
-  const url = `${ALPACA_BASE}/stocks/quotes/latest?symbols=${encodeURIComponent(symbolsParam)}&feed=iex`;
+
+  // Use bars endpoint to get official OHLCV data
+  const url = `${ALPACA_BASE}/stocks/bars?symbols=${encodeURIComponent(symbolsParam)}&timeframe=1Day&start=${today}&end=${today}&feed=iex`;
 
   try {
     const res = await fetch(url, {
@@ -124,15 +127,48 @@ async function fetchPrices(symbols: string[], alpacaKey: string, alpacaSecret: s
 
     if (res.ok) {
       const data = await res.json();
-      if (data.quotes) {
-        for (const [sym, quote] of Object.entries(data.quotes as Record<string, any>)) {
-          const price = Number(quote?.ap) || Number(quote?.bp) || 0;
-          if (price > 0) prices.set(sym.toUpperCase(), price);
+      if (data.bars) {
+        for (const [sym, bars] of Object.entries(data.bars as Record<string, any[]>)) {
+          // Get the most recent bar's open price
+          const latestBar = Array.isArray(bars) && bars.length > 0 ? bars[bars.length - 1] : null;
+          const openPrice = latestBar?.o ? Number(latestBar.o) : 0;
+          if (openPrice > 0) prices.set(sym.toUpperCase(), openPrice);
         }
       }
     }
   } catch (e) {
-    console.error('Failed to fetch prices:', e);
+    console.error('Failed to fetch bar prices:', e);
+  }
+
+  // Fallback to quotes for any missing symbols
+  const missingSymbols = symbols.filter(s => !prices.has(s.toUpperCase()));
+  if (missingSymbols.length > 0) {
+    console.log(`Falling back to quotes for ${missingSymbols.length} symbols:`, missingSymbols);
+    const quotesUrl = `${ALPACA_BASE}/stocks/quotes/latest?symbols=${encodeURIComponent(missingSymbols.join(','))}&feed=iex`;
+
+    try {
+      const res = await fetch(quotesUrl, {
+        headers: {
+          'APCA-API-KEY-ID': alpacaKey,
+          'APCA-API-SECRET-KEY': alpacaSecret,
+          'Accept': 'application/json',
+        },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.quotes) {
+          for (const [sym, quote] of Object.entries(data.quotes as Record<string, any>)) {
+            const price = Number(quote?.ap) || Number(quote?.bp) || 0;
+            if (price > 0 && !prices.has(sym.toUpperCase())) {
+              prices.set(sym.toUpperCase(), price);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch fallback quotes:', e);
+    }
   }
 
   return prices;
@@ -303,10 +339,10 @@ Deno.serve(async (req) => {
         }
       }
 
-      // 6. Fetch current prices for all symbols
+      // 6. Fetch official opening prices for all symbols
       let prices = new Map<string, number>();
       if (ALPACA_KEY && ALPACA_SECRET && allSymbols.size > 0) {
-        prices = await fetchPrices(Array.from(allSymbols), ALPACA_KEY, ALPACA_SECRET);
+        prices = await fetchOpenPrices(Array.from(allSymbols), ALPACA_KEY, ALPACA_SECRET);
       }
 
       // 7. Create snapshots for each user's holdings
