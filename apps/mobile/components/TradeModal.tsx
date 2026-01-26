@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  FlatList,
 } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
@@ -35,6 +36,12 @@ interface Quote {
   price: number;
 }
 
+interface SearchResult {
+  symbol: string;
+  name: string;
+  price?: number | null;
+}
+
 export default function TradeModal({
   visible,
   onClose,
@@ -55,6 +62,7 @@ export default function TradeModal({
 
   const [action, setAction] = useState<'buy' | 'sell'>(initialAction);
   const [symbol, setSymbol] = useState(initialSymbol);
+  const [searchInput, setSearchInput] = useState(initialSymbol);
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -62,6 +70,12 @@ export default function TradeModal({
   const [companyName, setCompanyName] = useState('');
   const [fetchingQuote, setFetchingQuote] = useState(false);
   const [hasAlpacaLinked, setHasAlpacaLinked] = useState<boolean | null>(null);
+
+  // Search state
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Check if user has Alpaca account linked
   useEffect(() => {
@@ -86,66 +100,182 @@ export default function TradeModal({
     if (visible) {
       setAction(initialAction);
       setSymbol(initialSymbol);
+      setSearchInput(initialSymbol);
       setQuantity(1);
       setError('');
       setQuote(null);
       setCompanyName('');
+      setSearchResults([]);
+      setShowSearchResults(false);
+
+      // If opening with an initial symbol, fetch its quote
+      if (initialSymbol) {
+        (async () => {
+          setFetchingQuote(true);
+          try {
+            const upperSym = initialSymbol.trim().toUpperCase();
+
+            // Fetch quote
+            const { data, error: quoteError } = await supabase.functions.invoke('quote', {
+              body: { symbol: upperSym },
+            });
+
+            if (!quoteError && !data?.error) {
+              const price = Number(
+                data?.price ??
+                  data?.quote?.ap ??
+                  data?.quote?.bp ??
+                  data?.trade?.p ??
+                  data?.bar?.c
+              );
+
+              if (Number.isFinite(price) && price > 0) {
+                setQuote({ symbol: upperSym, price });
+              }
+            }
+
+            // Fetch company name
+            const { data: nameData } = await supabase.functions.invoke('symbol-name', {
+              body: { symbol: upperSym },
+            });
+            if (nameData?.name) {
+              setCompanyName(nameData.name);
+            }
+          } catch (err) {
+            console.error('Error fetching initial quote:', err);
+          } finally {
+            setFetchingQuote(false);
+          }
+        })();
+      }
     }
   }, [visible, initialAction, initialSymbol]);
 
-  // Fetch quote when symbol changes (debounced)
+  // Search for symbols as user types (debounced)
   useEffect(() => {
-    if (!symbol || symbol.length < 1) {
+    // Clear previous timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    // If no input or input matches selected symbol, don't search
+    if (!searchInput || searchInput.length < 1) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+
+    // If user has selected a symbol and input matches, don't search
+    if (symbol && searchInput.toUpperCase() === symbol.toUpperCase()) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+
+    setSearchLoading(true);
+    setShowSearchResults(true);
+
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        const { data, error: searchError } = await supabase.functions.invoke('symbols-search', {
+          body: { q: searchInput, limit: 8, includePrices: true },
+        });
+
+        if (searchError) throw searchError;
+
+        setSearchResults(data?.items || []);
+      } catch (err) {
+        console.error('Search error:', err);
+        setSearchResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchInput, symbol]);
+
+  // Fetch quote when a symbol is selected
+  const fetchQuoteForSymbol = useCallback(async (sym: string) => {
+    if (!sym) {
       setQuote(null);
       setCompanyName('');
       return;
     }
 
-    const timer = setTimeout(async () => {
-      setFetchingQuote(true);
-      try {
-        const sym = symbol.trim().toUpperCase();
+    setFetchingQuote(true);
+    try {
+      const upperSym = sym.trim().toUpperCase();
 
-        // Fetch quote from edge function
-        const { data, error: quoteError } = await supabase.functions.invoke('quote', {
-          body: { symbol: sym },
-        });
+      // Fetch quote from edge function
+      const { data, error: quoteError } = await supabase.functions.invoke('quote', {
+        body: { symbol: upperSym },
+      });
 
-        if (quoteError) throw quoteError;
-        if (data?.error) throw new Error(data.error);
+      if (quoteError) throw quoteError;
+      if (data?.error) throw new Error(data.error);
 
-        const price = Number(
-          data?.price ??
-            data?.quote?.ap ??
-            data?.quote?.bp ??
-            data?.trade?.p ??
-            data?.bar?.c
-        );
+      const price = Number(
+        data?.price ??
+          data?.quote?.ap ??
+          data?.quote?.bp ??
+          data?.trade?.p ??
+          data?.bar?.c
+      );
 
-        if (!Number.isFinite(price) || price <= 0) {
-          setQuote(null);
-          setCompanyName('');
-          return;
-        }
-
-        setQuote({ symbol: sym, price });
-
-        // Fetch company name
-        const { data: nameData } = await supabase.functions.invoke('symbol-name', {
-          body: { symbol: sym },
-        });
-        if (nameData?.name) {
-          setCompanyName(nameData.name);
-        }
-      } catch (err) {
+      if (!Number.isFinite(price) || price <= 0) {
         setQuote(null);
         setCompanyName('');
-      } finally {
-        setFetchingQuote(false);
+        return;
       }
-    }, 500);
 
-    return () => clearTimeout(timer);
+      setQuote({ symbol: upperSym, price });
+
+      // Fetch company name
+      const { data: nameData } = await supabase.functions.invoke('symbol-name', {
+        body: { symbol: upperSym },
+      });
+      if (nameData?.name) {
+        setCompanyName(nameData.name);
+      }
+    } catch (err) {
+      setQuote(null);
+      setCompanyName('');
+    } finally {
+      setFetchingQuote(false);
+    }
+  }, []);
+
+  // Handle selecting a search result
+  const handleSelectResult = useCallback((result: SearchResult) => {
+    setSymbol(result.symbol);
+    setSearchInput(result.symbol);
+    setCompanyName(result.name);
+    setShowSearchResults(false);
+    setSearchResults([]);
+
+    // Use price from search if available, otherwise fetch
+    if (result.price && Number.isFinite(result.price) && result.price > 0) {
+      setQuote({ symbol: result.symbol, price: result.price });
+    } else {
+      fetchQuoteForSymbol(result.symbol);
+    }
+  }, [fetchQuoteForSymbol]);
+
+  // Handle search input changes
+  const handleSearchInputChange = useCallback((text: string) => {
+    const upper = text.toUpperCase();
+    setSearchInput(upper);
+    // Clear selected symbol when user starts typing something different
+    if (symbol && upper !== symbol) {
+      setSymbol('');
+      setQuote(null);
+      setCompanyName('');
+    }
   }, [symbol]);
 
   // Calculate trade details
@@ -346,27 +476,76 @@ export default function TradeModal({
           </TouchableOpacity>
         </View>
 
-        {/* Symbol Input */}
+        {/* Symbol Search Input */}
         <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Stock Symbol</Text>
-          <TextInput
-            style={styles.textInput}
-            value={symbol}
-            onChangeText={(text) => setSymbol(text.toUpperCase())}
-            placeholder="AAPL"
-            placeholderTextColor={Colors.textMuted}
-            autoCapitalize="characters"
-            autoCorrect={false}
-          />
-          {fetchingQuote && (
-            <ActivityIndicator
-              size="small"
-              color={Colors.primary}
-              style={styles.inputSpinner}
+          <Text style={styles.inputLabel}>Search Stock</Text>
+          <View style={styles.searchContainer}>
+            <TextInput
+              style={styles.textInput}
+              value={searchInput}
+              onChangeText={handleSearchInputChange}
+              placeholder="Search by ticker or name..."
+              placeholderTextColor={Colors.textMuted}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              onFocus={() => {
+                if (searchInput && searchInput !== symbol) {
+                  setShowSearchResults(true);
+                }
+              }}
             />
-          )}
-          {companyName ? (
-            <Text style={styles.companyName}>{companyName}</Text>
+            {(searchLoading || fetchingQuote) && (
+              <ActivityIndicator
+                size="small"
+                color={Colors.primary}
+                style={styles.inputSpinner}
+              />
+            )}
+
+            {/* Search Results Dropdown */}
+            {showSearchResults && searchResults.length > 0 && (
+              <View style={styles.searchResultsContainer}>
+                <FlatList
+                  data={searchResults}
+                  keyExtractor={(item) => item.symbol}
+                  keyboardShouldPersistTaps="handled"
+                  style={styles.searchResultsList}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={styles.searchResultItem}
+                      onPress={() => handleSelectResult(item)}
+                    >
+                      <View style={styles.searchResultLeft}>
+                        <Text style={styles.searchResultSymbol}>{item.symbol}</Text>
+                        <Text style={styles.searchResultName} numberOfLines={1}>
+                          {item.name}
+                        </Text>
+                      </View>
+                      {item.price ? (
+                        <Text style={styles.searchResultPrice}>
+                          ${item.price.toFixed(2)}
+                        </Text>
+                      ) : null}
+                    </TouchableOpacity>
+                  )}
+                />
+              </View>
+            )}
+
+            {/* No results message */}
+            {showSearchResults && !searchLoading && searchInput.length >= 1 && searchResults.length === 0 && (
+              <View style={styles.noResultsContainer}>
+                <Text style={styles.noResultsText}>No matching stocks found</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Selected stock info */}
+          {symbol && companyName ? (
+            <View style={styles.selectedStock}>
+              <Text style={styles.selectedSymbol}>{symbol}</Text>
+              <Text style={styles.selectedName}>{companyName}</Text>
+            </View>
           ) : null}
         </View>
 
@@ -677,7 +856,100 @@ const styles = StyleSheet.create({
   inputSpinner: {
     position: 'absolute',
     right: 14,
-    top: 40,
+    top: 12,
+  },
+
+  // Search container
+  searchContainer: {
+    position: 'relative',
+    zIndex: 10,
+  },
+  searchResultsContainer: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: Colors.cardBg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderTopWidth: 0,
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
+    maxHeight: 250,
+    zIndex: 100,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  searchResultsList: {
+    maxHeight: 250,
+  },
+  searchResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  searchResultLeft: {
+    flex: 1,
+    marginRight: 12,
+  },
+  searchResultSymbol: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  searchResultName: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    marginTop: 2,
+  },
+  searchResultPrice: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+  },
+  noResultsContainer: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: Colors.cardBg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderTopWidth: 0,
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
+    padding: 16,
+    zIndex: 100,
+  },
+  noResultsText: {
+    fontSize: 14,
+    color: Colors.textMuted,
+    textAlign: 'center',
+  },
+  selectedStock: {
+    marginTop: 10,
+    padding: 12,
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.3)',
+  },
+  selectedSymbol: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.success,
+  },
+  selectedName: {
+    fontSize: 13,
+    color: Colors.textMuted,
+    marginTop: 2,
   },
   companyName: {
     fontSize: 12,
