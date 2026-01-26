@@ -59,10 +59,15 @@ fantasy-stock/
 - **Smart scoring system** - Dollar gain with mid-week trade tracking
 - **Playoff bracket generation** - Automatic seeding and bracket creation
 - **Real-time updates** - Supabase subscriptions for live standings/matchup updates
+- **Multi-season support** - Leagues can run multiple seasons with championship tracking
+- **League history** - ESPN-style history showing your finish, record, and win% for past seasons
+- **Start New Season** - Commissioners can reset standings and begin a new competition
 - **Mobile app features**:
   - ESPN-style league switcher dropdown on all pages
   - Swipeable league carousel on Home page
   - Week navigation for viewing past matchups
+  - Championship badges for completed seasons (gold for champion, silver for runner-up)
+  - League page with standings, schedule, and history sections
   - Sticky headers that follow scroll
 
 ## Tech Stack
@@ -128,9 +133,11 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 - [x] Holiday-aware scheduling (Alpaca calendar API)
 - [x] Real-time standings updates (auto-refresh on week end)
 - [x] Mobile app navigation redesign (ESPN-style league switcher)
+- [x] Multi-season support with championship tracking
+- [x] Push notifications (draft turn alerts)
 - [ ] Live trading integration
 - [ ] Email notifications
-- [ ] Push notifications
+- [ ] Matchup result notifications
 
 ## About
 
