@@ -79,6 +79,7 @@ function RootLayoutNav() {
           <Stack.Screen name="join-league" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
           <Stack.Screen name="league-settings" options={{ headerShown: false, presentation: 'modal' }} />
           <Stack.Screen name="player-portfolio" options={{ headerShown: false, presentation: 'modal' }} />
+          <Stack.Screen name="trade-history" options={{ headerShown: false, presentation: 'modal' }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
         </Stack>
       </LeagueProvider>

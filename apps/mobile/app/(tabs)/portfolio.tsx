@@ -1,14 +1,17 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/lib/useAuth';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { usePortfolio, Holding } from '@/lib/usePortfolio';
+import { useStockNames, abbreviateName } from '@/lib/useStockNames';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { SkeletonHolding } from '@/components/Skeleton';
 import { Colors } from '@/constants/Colors';
 import LeagueSwitcher from '@/components/LeagueSwitcher';
 import TradeModal from '@/components/TradeModal';
+import PLBreakdownModal from '@/components/PLBreakdownModal';
+import { Ionicons } from '@expo/vector-icons';
 
 function formatCurrency(value: number): string {
   return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -20,35 +23,41 @@ function formatPercent(value: number | null): string {
   return `${sign}${value.toFixed(2)}%`;
 }
 
-function HoldingRow({ holding, onBuy, onSell }: { holding: Holding; onBuy: () => void; onSell: () => void }) {
+function HoldingRow({ holding, companyName, onBuy, onSell }: { holding: Holding; companyName?: string; onBuy: () => void; onSell: () => void }) {
   const hasPrice = holding.currentPrice !== null;
-  const isPositive = (holding.gainLossPercent ?? 0) >= 0;
+  const dayChange = holding.dayChangePercent ?? 0;
+  const isDayPositive = dayChange >= 0;
 
   return (
     <View style={styles.holdingRow}>
-      <View style={styles.holdingInfo}>
-        <Text style={styles.holdingSymbol}>{holding.symbol}</Text>
-        <Text style={styles.holdingQty}>{holding.quantity} shares</Text>
-      </View>
+      <View style={styles.holdingMain}>
+        <View style={styles.holdingLeft}>
+          <Text style={styles.holdingSymbol}>{holding.symbol}</Text>
+          {companyName && (
+            <Text style={styles.holdingName} numberOfLines={1}>{abbreviateName(companyName, 24)}</Text>
+          )}
+          <Text style={styles.holdingQty}>{holding.quantity} shares</Text>
+        </View>
 
-      <View style={styles.holdingPrices}>
-        <Text style={styles.holdingEntry}>Cost ${holding.avgEntryPrice.toFixed(2)}</Text>
-        {hasPrice && <Text style={styles.holdingCurrent}>Now ${holding.currentPrice!.toFixed(2)}</Text>}
-      </View>
-
-      <View style={styles.holdingPL}>
-        {hasPrice ? (
-          <>
-            <Text style={[styles.plValue, isPositive ? styles.positive : styles.negative]}>
-              {isPositive ? '+' : ''}${formatCurrency(holding.gainLoss!)}
-            </Text>
-            <Text style={[styles.plPercent, isPositive ? styles.positive : styles.negative]}>
-              {formatPercent(holding.gainLossPercent)}
-            </Text>
-          </>
-        ) : (
-          <Text style={styles.plValue}>${formatCurrency(holding.totalCost)}</Text>
-        )}
+        <View style={styles.holdingRight}>
+          {hasPrice ? (
+            <>
+              <Text style={styles.holdingValue}>${formatCurrency(holding.currentValue!)}</Text>
+              <View style={[styles.dayChangeBadge, isDayPositive ? styles.positiveBg : styles.negativeBg]}>
+                <Ionicons
+                  name={isDayPositive ? 'trending-up' : 'trending-down'}
+                  size={12}
+                  color={isDayPositive ? Colors.success : Colors.error}
+                />
+                <Text style={[styles.dayChangeText, isDayPositive ? styles.positive : styles.negative]}>
+                  {isDayPositive ? '+' : ''}{dayChange.toFixed(2)}%
+                </Text>
+              </View>
+            </>
+          ) : (
+            <Text style={styles.holdingValue}>${formatCurrency(holding.totalCost)}</Text>
+          )}
+        </View>
       </View>
 
       <View style={styles.holdingActions}>
@@ -66,13 +75,26 @@ function HoldingRow({ holding, onBuy, onSell }: { holding: Holding; onBuy: () =>
 export default function PortfolioScreen() {
   const { user, loading: authLoading } = useAuth();
   const { leagues, activeLeagueId, activeLeague, refresh: refreshLeagues } = useLeagueContext();
-  const { holdings, portfolioSummary, loading: portfolioLoading, refresh: refreshPortfolio } = usePortfolio(activeLeagueId);
+  const { holdings, drafts, trades, portfolioSummary, loading: portfolioLoading, refresh: refreshPortfolio } = usePortfolio(activeLeagueId);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Get all symbols for name fetching (current holdings + closed positions)
+  const allSymbols = useMemo(() => {
+    const holdingSymbols = holdings.map(h => h.symbol);
+    const draftSymbols = drafts.map(d => d.symbol);
+    const tradeSymbols = trades.map(t => t.symbol);
+    return [...new Set([...holdingSymbols, ...draftSymbols, ...tradeSymbols])];
+  }, [holdings, drafts, trades]);
+
+  const { names: stockNames } = useStockNames(allSymbols);
 
   // Trade modal state
   const [tradeModalVisible, setTradeModalVisible] = useState(false);
   const [tradeSymbol, setTradeSymbol] = useState('');
   const [tradeAction, setTradeAction] = useState<'buy' | 'sell'>('buy');
+
+  // P/L breakdown modal state
+  const [plModalVisible, setPlModalVisible] = useState(false);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -89,10 +111,6 @@ export default function PortfolioScreen() {
   const handleTradeComplete = async () => {
     // Refresh portfolio after successful trade
     await refreshPortfolio();
-  };
-
-  const openWebApp = (path: string = '/portfolio') => {
-    Linking.openURL(`https://fantasy-stock-app.vercel.app${path}`);
   };
 
   if (authLoading) {
@@ -156,8 +174,18 @@ export default function PortfolioScreen() {
             </View>
 
             {portfolioSummary.hasLivePrices && portfolioSummary.totalCost > 0 && (
-              <View style={styles.plSummary}>
-                <Text style={styles.plSummaryLabel}>Total P/L</Text>
+              <TouchableOpacity
+                style={styles.plSummary}
+                onPress={() => setPlModalVisible(true)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.plSummaryHeader}>
+                  <Text style={styles.plSummaryLabel}>Total P/L</Text>
+                  <View style={styles.tapHint}>
+                    <Ionicons name="analytics-outline" size={14} color={Colors.textMuted} />
+                    <Text style={styles.tapHintText}>Tap for details</Text>
+                  </View>
+                </View>
                 <View style={styles.plSummaryRow}>
                   <Text style={[styles.plSummaryValue, portfolioSummary.totalGainLoss >= 0 ? styles.positive : styles.negative]}>
                     {portfolioSummary.totalGainLoss >= 0 ? '+' : ''}${formatCurrency(portfolioSummary.totalGainLoss)}
@@ -168,14 +196,14 @@ export default function PortfolioScreen() {
                     </Text>
                   </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             )}
 
             <View style={styles.actionsRow}>
               <TouchableOpacity style={styles.primaryButton} onPress={() => openTradeModal('', 'buy')}>
                 <Text style={styles.primaryButtonText}>Buy Stock</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.secondaryButton} onPress={() => openWebApp('/trade-history')}>
+              <TouchableOpacity style={styles.secondaryButton} onPress={() => router.push('/trade-history')}>
                 <Text style={styles.secondaryButtonText}>Trade History</Text>
               </TouchableOpacity>
             </View>
@@ -201,6 +229,7 @@ export default function PortfolioScreen() {
                   <HoldingRow
                     key={holding.symbol}
                     holding={holding}
+                    companyName={stockNames[holding.symbol.toUpperCase()]}
                     onBuy={() => openTradeModal(holding.symbol, 'buy')}
                     onSell={() => openTradeModal(holding.symbol, 'sell')}
                   />
@@ -227,6 +256,18 @@ export default function PortfolioScreen() {
           initialAction={tradeAction}
         />
       )}
+
+      {/* P/L Breakdown Modal */}
+      <PLBreakdownModal
+        visible={plModalVisible}
+        onClose={() => setPlModalVisible(false)}
+        holdings={holdings}
+        drafts={drafts}
+        trades={trades}
+        stockNames={stockNames}
+        totalGainLoss={portfolioSummary.totalGainLoss}
+        totalGainLossPercent={portfolioSummary.totalGainLossPercent}
+      />
     </SafeAreaView>
   );
 }
@@ -244,7 +285,10 @@ const styles = StyleSheet.create({
   metricLabel: { fontSize: 11, color: Colors.textMuted, marginBottom: 4 },
   metricValue: { fontSize: 16, fontWeight: 'bold', color: Colors.textPrimary },
   plSummary: { marginHorizontal: 24, backgroundColor: Colors.cardBg, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: Colors.border, marginBottom: 16 },
-  plSummaryLabel: { fontSize: 12, color: Colors.textMuted, marginBottom: 8 },
+  plSummaryHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  plSummaryLabel: { fontSize: 12, color: Colors.textMuted },
+  tapHint: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  tapHintText: { fontSize: 11, color: Colors.textMuted },
   plSummaryRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   plSummaryValue: { fontSize: 24, fontWeight: 'bold' },
   plBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
@@ -261,15 +305,15 @@ const styles = StyleSheet.create({
   section: { paddingHorizontal: 24, paddingBottom: 24 },
   sectionTitle: { fontSize: 18, fontWeight: '600', color: Colors.textPrimary, marginBottom: 16 },
   holdingRow: { backgroundColor: Colors.cardBg, borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: Colors.border },
-  holdingInfo: { marginBottom: 10 },
+  holdingMain: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  holdingLeft: { flex: 1 },
+  holdingRight: { alignItems: 'flex-end' },
   holdingSymbol: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
+  holdingName: { fontSize: 12, color: Colors.textSecondary, marginTop: 1 },
   holdingQty: { fontSize: 12, color: Colors.textMuted, marginTop: 2 },
-  holdingPrices: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
-  holdingEntry: { fontSize: 13, color: Colors.textMuted },
-  holdingCurrent: { fontSize: 13, color: Colors.textPrimary },
-  holdingPL: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: Colors.border },
-  plValue: { fontSize: 16, fontWeight: '600', color: Colors.textPrimary },
-  plPercent: { fontSize: 14, fontWeight: '500' },
+  holdingValue: { fontSize: 16, fontWeight: '600', color: Colors.textPrimary, marginBottom: 4 },
+  dayChangeBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  dayChangeText: { fontSize: 12, fontWeight: '600' },
   holdingActions: { flexDirection: 'row', gap: 8 },
   actionBtn: { flex: 1, paddingVertical: 10, borderRadius: 6, alignItems: 'center' },
   buyBtn: { backgroundColor: Colors.success },

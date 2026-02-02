@@ -3,7 +3,7 @@ import { supabase } from './supabase';
 import { useAuth } from './useAuth';
 import { useStockPrices, StockPrice } from './useStockPrices';
 
-interface DraftPick {
+export interface DraftPick {
   id: string;
   symbol: string;
   entry_price: number;
@@ -13,7 +13,7 @@ interface DraftPick {
   created_at: string;
 }
 
-interface Trade {
+export interface Trade {
   id: string;
   symbol: string;
   action: 'buy' | 'sell';
