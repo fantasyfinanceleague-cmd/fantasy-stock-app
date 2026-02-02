@@ -2,7 +2,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Dimensions
 import { useState, useMemo } from 'react';
 import { Colors } from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
-import { LineChart, LineChartBicolor } from 'react-native-gifted-charts';
+import { LineChart } from 'react-native-gifted-charts';
 import { Holding, DraftPick, Trade } from '@/lib/usePortfolio';
 import { abbreviateName } from '@/lib/useStockNames';
 import { useHistoricalPL, PLDataPoint } from '@/lib/useHistoricalPL';
@@ -216,7 +216,7 @@ export default function PLBreakdownModal({
   // Time period selector state - default to ALL
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('ALL');
 
-  // Filter data based on selected week
+  // Filter data based on selected week (cumulative: W3 = weeks 1-3)
   const filteredData = useMemo(() => {
     if (historicalData.length === 0 || !draftStartDate) return [];
 
@@ -224,15 +224,14 @@ export default function PLBreakdownModal({
       return historicalData;
     }
 
-    // Calculate the date range for the selected week
+    // W3 means show data from draft start through end of week 3
     const weekNumber = selectedPeriod as number;
     const msPerWeek = 7 * 24 * 60 * 60 * 1000;
-    const weekStart = new Date(draftStartDate.getTime() + (weekNumber - 1) * msPerWeek);
     const weekEnd = new Date(draftStartDate.getTime() + weekNumber * msPerWeek);
 
     return historicalData.filter(point => {
       const pointDate = new Date(point.date);
-      return pointDate >= weekStart && pointDate < weekEnd;
+      return pointDate >= draftStartDate && pointDate < weekEnd;
     });
   }, [historicalData, selectedPeriod, draftStartDate]);
 
@@ -289,6 +288,9 @@ export default function PLBreakdownModal({
 
     return { yMin, yMax, yLabels };
   }, [chartData]);
+
+  // Get the current (ending) P/L for color determination
+  const currentPL = filteredData.length > 0 ? filteredData[filteredData.length - 1].pl : 0;
 
   return (
     <Modal
@@ -384,26 +386,25 @@ export default function PLBreakdownModal({
                     {/* Chart with Y-axis values */}
                     <View style={styles.chartWrapper}>
                       <View style={styles.chartArea}>
-                        <LineChartBicolor
-                          data={chartData.map(d => ({ value: d.value }))}
+                        <LineChart
+                          data={chartData.map(d => ({ value: d.value - yMin }))}
                           width={Math.min(screenWidth - 100, 280)}
                           height={120}
                           spacing={Math.min(280, screenWidth - 100) / Math.max(chartData.length - 1, 1)}
                           initialSpacing={0}
                           endSpacing={0}
                           thickness={2}
-                          colorNegative={Colors.error}
-                          color={Colors.success}
+                          color={currentPL >= 0 ? Colors.success : Colors.error}
+                          areaChart
+                          startFillColor={currentPL >= 0 ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}
+                          endFillColor={currentPL >= 0 ? 'rgba(34, 197, 94, 0.05)' : 'rgba(239, 68, 68, 0.05)'}
                           hideDataPoints
                           hideYAxisText
+                          hideRules
                           xAxisColor={Colors.border}
                           yAxisColor={'transparent'}
-                          rulesType="solid"
-                          rulesColor={Colors.border}
-                          noOfSections={2}
-                          maxValue={yMax}
-                          mostNegativeValue={yMin}
-                          yAxisOffset={yMin}
+                          maxValue={yMax - yMin}
+                          curved
                         />
                       </View>
 
