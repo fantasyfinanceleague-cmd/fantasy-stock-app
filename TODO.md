@@ -27,11 +27,11 @@
 
 ### Mobile App - Not Yet Implemented
 - [x] Native trading ✅ (Jan 25, 2026 - TradeModal with search autocomplete Feb 1, 2026)
-- [ ] Trade history (currently opens web app)
+- [x] Trade history ✅ (opens in-app modal)
 - [x] Join league by invite code ✅ (Jan 22, 2026)
 - [x] Push notifications (draft turns) ✅ (Jan 22, 2026)
 - [ ] Push notifications (matchup results, invites)
-- [ ] Password reset flow
+- [x] Password reset flow ✅ (Feb 1, 2026)
 - [ ] Settings/preferences screen
 - [ ] Help/documentation
 - [x] Stock name display alongside symbols ✅ (Feb 1, 2026 - Portfolio and P/L Breakdown)
