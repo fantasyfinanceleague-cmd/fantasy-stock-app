@@ -18,6 +18,9 @@
       "bundleIdentifier": "com.stockpile.fantasystock",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
+      },
+      "runtimeVersion": {
+        "policy": "appVersion"
       }
     },
     "android": {
@@ -51,6 +54,9 @@
       "eas": {
         "projectId": "762da87e-578d-4041-ae85-37d8aa312187"
       }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/762da87e-578d-4041-ae85-37d8aa312187"
     }
   }
 }
