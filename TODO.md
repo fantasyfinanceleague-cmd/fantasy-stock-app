@@ -22,6 +22,8 @@
 - [x] Sticky headers on all main pages
 - [x] Week navigation for viewing past matchups
 - [x] Real-time subscriptions for standings/matchups
+- [x] Standalone preview builds (no dev server needed)
+- [x] OTA updates via EAS Update
 
 ### Mobile App - Not Yet Implemented
 - [x] Native trading ✅ (Jan 25, 2026 - TradeModal with search autocomplete Feb 1, 2026)
@@ -76,6 +78,13 @@
   - Added `updateJobStatus()` logging to `cron_job_status` table
   - Now tracks running/success/failed status like other cron functions
   - Deployed updated edge function
+
+- [x] **EAS Preview Build & OTA Updates**
+  - Configured preview build profile for standalone testing (no dev server)
+  - Set up EAS Update for over-the-air JS updates
+  - Added Supabase environment variables to eas.json
+  - Fixed app crash on launch (missing env vars in standalone builds)
+  - Workflow: `eas update --branch preview -m "changes"` to push updates
 
 ### Recently Completed (Jan 22, 2026)
 - [x] **Join League by Invite Code (Mobile)**
@@ -323,6 +332,8 @@
 - ✅ TradeModal stock search with autocomplete (mobile + web)
 - ✅ TradeModal UX bug fixes (VirtualizedLists, spinner, keyboard)
 - ✅ Cron job logging for process-week-results
+- ✅ EAS preview build for standalone testing (no dev server needed)
+- ✅ EAS Update configured for OTA updates (`eas update --branch preview`)
 
 **Recently Completed (Jan 22):**
 - ✅ Join league by invite code (mobile)

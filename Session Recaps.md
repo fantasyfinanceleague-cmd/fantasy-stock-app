@@ -31,6 +31,26 @@ Created `historical-bars` edge function for fetching historical stock data:
 - Calculates daily P/L by applying historical prices to positions
 - **Note:** The P/L over time chart was attempted but removed after user testing
 
+### 5. EAS Preview Build & OTA Updates
+Set up standalone app builds that work without a local development server:
+- **Preview build configured** - App runs standalone on device without `npx expo start`
+- **EAS Update configured** - Push JS changes over-the-air without full rebuild
+- **Supabase env vars added** - `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` in eas.json
+- **Fixed app crash** - Preview builds were crashing due to missing environment variables
+
+**Build Profiles:**
+| Profile | Purpose | Command |
+|---------|---------|---------|
+| `development` | Hot reload with dev server | `eas build --profile development` |
+| `preview` | Standalone testing | `eas build --profile preview` |
+| `production` | App Store release | `eas build --profile production` |
+
+**OTA Update Workflow:**
+```bash
+# Push changes to preview build without rebuilding
+eas update --branch preview -m "description of changes"
+```
+
 ## Files Modified/Created
 
 ### Mobile App - New Files
@@ -44,6 +64,8 @@ Created `historical-bars` edge function for fetching historical stock data:
 |------|---------|
 | `apps/mobile/app/(tabs)/portfolio.tsx` | Added company names to holdings display |
 | `apps/mobile/components/PLBreakdownModal.tsx` | Added company names, fixed badge styling |
+| `apps/mobile/eas.json` | Added env vars for preview/production, configured update channels |
+| `apps/mobile/app.json` | Configured EAS Update URL and runtime version |
 
 ### Supabase Functions - New
 | File | Purpose |
@@ -70,6 +92,8 @@ const { names, loading, getName } = useStockNames(symbols);
 
 ## Deployed
 - ✅ `historical-bars` edge function
+- ✅ iOS preview build (standalone, no dev server needed)
+- ✅ EAS Update configured for OTA updates
 
 ---
 

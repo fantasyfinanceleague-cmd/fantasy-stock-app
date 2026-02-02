@@ -138,6 +138,7 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 - [x] Mobile app navigation redesign (ESPN-style league switcher)
 - [x] Multi-season support with championship tracking
 - [x] Push notifications (draft turn alerts)
+- [x] Standalone builds with OTA updates (EAS Build + EAS Update)
 - [ ] Live trading integration
 - [ ] Email notifications
 - [ ] Matchup result notifications
