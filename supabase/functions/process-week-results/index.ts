@@ -20,6 +20,34 @@ function env(k: string) { return Deno.env.get(k) ?? ''; }
 
 const ALPACA_BASE = 'https://data.alpaca.markets/v2';
 
+// Update job status for tracking
+async function updateJobStatus(
+  supabase: any,
+  jobName: string,
+  status: 'running' | 'success' | 'failed',
+  attemptNumber: number,
+  errorMessage?: string
+) {
+  const today = new Date().toISOString().split('T')[0];
+
+  try {
+    await supabase
+      .from('cron_job_status')
+      .upsert({
+        job_name: jobName,
+        run_date: today,
+        status,
+        attempt_number: attemptNumber,
+        error_message: errorMessage || null,
+        updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'job_name,run_date'
+      });
+  } catch (e) {
+    console.error('Failed to update job status:', e);
+  }
+}
+
 // Simple response helper
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), {
@@ -747,6 +775,7 @@ async function completeSeasonFromStandings(
 }
 
 Deno.serve(async (req) => {
+  const JOB_NAME = 'process-week-results';
   // This can be triggered by cron or manually
   console.log('Processing weekly matchup results...');
 
@@ -761,6 +790,9 @@ Deno.serve(async (req) => {
 
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
   const now = new Date();
+
+  // Update status to running
+  await updateJobStatus(supabase, JOB_NAME, 'running', 1);
 
   try {
     // 1. Find matchups that need processing (week_end has passed, no results yet)
@@ -1211,6 +1243,10 @@ Deno.serve(async (req) => {
     }
 
     console.log(`Processed ${processedCount} matchups`);
+
+    // Update status to success
+    await updateJobStatus(supabase, JOB_NAME, 'success', 1);
+
     return json({
       message: 'Processing complete',
       processed: processedCount,
@@ -1219,6 +1255,10 @@ Deno.serve(async (req) => {
 
   } catch (e) {
     console.error('Unhandled error:', e);
+
+    // Update status to failed
+    await updateJobStatus(supabase, JOB_NAME, 'failed', 1, String(e));
+
     return json({ error: 'Unhandled error', message: String(e) }, 500);
   }
 });

@@ -57,6 +57,7 @@ fantasy-stock/
 - Weekly matchups and standings
 - **Automated weekly scoring** - Monday-Friday matchup weeks with automatic result processing
 - **Smart scoring system** - Dollar gain with mid-week trade tracking
+- **Stock search with autocomplete** - Search by ticker or company name with real-time prices
 - **Playoff bracket generation** - Automatic seeding and bracket creation
 - **Real-time updates** - Supabase subscriptions for live standings/matchup updates
 - **Multi-season support** - Leagues can run multiple seasons with championship tracking

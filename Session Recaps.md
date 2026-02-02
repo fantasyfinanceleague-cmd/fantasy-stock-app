@@ -2,6 +2,125 @@
 
 ---
 
+# February 1, 2026
+
+## What We Accomplished
+
+### 1. TradeModal Stock Search with Autocomplete
+Added user-friendly stock search to TradeModal (mobile and web):
+- **Search by ticker OR company name** - no longer requires exact ticker entry
+- **Autocomplete dropdown** with relevance-based results
+- **Real-time prices** displayed alongside search results
+- Uses existing `symbols-search` edge function with smart ordering:
+  1. Exact symbol match (highest priority)
+  2. Symbol starts-with
+  3. Name starts-with
+  4. Symbol/name contains (lowest priority)
+
+### 2. TradeModal UX Bug Fixes
+Fixed three issues reported during testing:
+
+**VirtualizedLists Error:**
+- **Problem:** FlatList nested inside ScrollView caused React Native warning
+- **Fix:** Replaced FlatList with ScrollView + `.map()` with `nestedScrollEnabled`
+
+**Permanent Refresh Spinner:**
+- **Problem:** Loading spinner stayed visible after clearing search input
+- **Fix:** Reset `searchLoading` when input is empty or matches selected symbol
+- Added loading state reset when modal opens
+
+**Keyboard Overlap:**
+- **Problem:** Search results hidden behind keyboard
+- **Fix:** Added `Keyboard.dismiss()` when search results appear
+
+### 3. Cron Job Logging for process-week-results
+Investigated why week 5 snapshots weren't created properly:
+- **Root cause:** `process-week-results` had no logging to `cron_job_status` table
+- **Fix:** Added `updateJobStatus()` function and calls to track job runs
+- Now logs `running`, `success`, or `failed` status with error messages
+- Matches logging pattern used by `snapshot-week-start` and `snapshot-week-end`
+
+### 4. Cron Job Timing Verification
+Confirmed cron job configuration is correct:
+| Job | Schedule (UTC) | ET Time | Day |
+|-----|----------------|---------|-----|
+| `snapshot-week-end` | 21:05 | 4:05 PM | Friday |
+| `process-weekly-matchups` | 21:15 | 4:15 PM | Friday |
+| `snapshot-week-start` | 14:35 | 9:35 AM | Mon/Tue |
+
+- Tuesday backup for `snapshot-week-start` only triggers if Monday is a market holiday
+- Function checks for existing snapshots and skips if already created
+
+## Files Modified
+
+### Mobile App
+| File | Changes |
+|------|---------|
+| `apps/mobile/components/TradeModal.tsx` | Added search with autocomplete, fixed VirtualizedLists, fixed spinner, keyboard dismiss |
+
+### Web App
+| File | Changes |
+|------|---------|
+| `apps/web/src/components/TradeModal.jsx` | Added search with autocomplete dropdown |
+
+### Supabase Functions
+| File | Changes |
+|------|---------|
+| `supabase/functions/process-week-results/index.ts` | Added `updateJobStatus()` logging to `cron_job_status` table |
+
+## Deployed
+- ✅ `process-week-results` edge function (with cron job logging)
+
+## Technical Notes
+
+### Search Implementation
+```typescript
+// Debounced search with 300ms delay
+useEffect(() => {
+  const timer = setTimeout(async () => {
+    if (!searchInput || searchInput.length < 1) {
+      setSearchResults([]);
+      setSearchLoading(false);
+      return;
+    }
+    // Call symbols-search edge function
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/symbols-search`, {
+      method: 'POST',
+      body: JSON.stringify({ q: searchInput, limit: 10, includePrices: true })
+    });
+    // Display results in dropdown
+  }, 300);
+  return () => clearTimeout(timer);
+}, [searchInput]);
+```
+
+### Cron Job Status Logging
+```typescript
+async function updateJobStatus(
+  supabase: any,
+  jobName: string,
+  status: 'running' | 'success' | 'failed',
+  attemptNumber: number,
+  errorMessage?: string
+) {
+  await supabase
+    .from('cron_job_status')
+    .upsert({
+      job_name: jobName,
+      run_date: today,
+      status,
+      attempt_number: attemptNumber,
+      error_message: errorMessage || null,
+    }, { onConflict: 'job_name,run_date' });
+}
+```
+
+## Next Steps
+- [ ] Monitor `cron_job_status` after Friday Feb 6 for `process-week-results` entry
+- [ ] Verify week 6 snapshots are created properly on Monday Feb 9
+
+---
+
 # January 25, 2026 (Session 2)
 
 ## What We Accomplished

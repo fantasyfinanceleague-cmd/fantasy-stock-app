@@ -24,7 +24,7 @@
 - [x] Real-time subscriptions for standings/matchups
 
 ### Mobile App - Not Yet Implemented
-- [ ] Native trading (currently opens web app)
+- [x] Native trading ✅ (Jan 25, 2026 - TradeModal with search autocomplete Feb 1, 2026)
 - [ ] Trade history (currently opens web app)
 - [x] Join league by invite code ✅ (Jan 22, 2026)
 - [x] Push notifications (draft turns) ✅ (Jan 22, 2026)
@@ -33,7 +33,7 @@
 - [ ] Settings/preferences screen
 - [ ] Help/documentation
 - [ ] Stock name display alongside symbols in draft boards
-- [ ] Search suggestions dropdown (like web has) instead of plain text input
+- [x] Search suggestions dropdown (like web has) instead of plain text input ✅ (Feb 1, 2026 - TradeModal)
 
 ### Known Issues / Bugs to Investigate
 - [x] **Bot draft race condition** - FIXED (Jan 8, 2026)
@@ -45,6 +45,22 @@
     3. Added handling for unique constraint violation errors (code 23505)
     4. Database constraint `drafts_league_pick_unique UNIQUE (league_id, pick_number)` applied
   - **Verification:** Existing duplicate picks (11, 13) manually corrected. Full constraint active.
+
+### Recently Completed (Feb 1, 2026)
+- [x] **TradeModal Stock Search with Autocomplete (Mobile + Web)**
+  - Search by ticker OR company name with relevance-based results
+  - Real-time prices displayed in dropdown
+  - Uses `symbols-search` edge function
+
+- [x] **TradeModal UX Bug Fixes**
+  - Fixed VirtualizedLists error (replaced FlatList with ScrollView + map)
+  - Fixed permanent refresh spinner (reset loading state properly)
+  - Fixed keyboard overlap (dismiss keyboard when results appear)
+
+- [x] **Cron Job Logging for process-week-results**
+  - Added `updateJobStatus()` logging to `cron_job_status` table
+  - Now tracks running/success/failed status like other cron functions
+  - Deployed updated edge function
 
 ### Recently Completed (Jan 22, 2026)
 - [x] **Join League by Invite Code (Mobile)**
@@ -274,7 +290,7 @@
 ## Recommended Starting Point
 
 **Immediate Next Step:**
-1. **Test Week 3 Processing** - Run manual snapshot + process-week-results to verify end-to-end flow
+1. **Monitor Cron Jobs** - Verify `process-week-results` logs to `cron_job_status` after Friday Feb 6
 2. **Champion Banner** - Add trophy/celebration for completed seasons
 
 **Web App Priorities:**
@@ -284,6 +300,11 @@
 **Cross-Platform Priorities:**
 1. **Email Notifications** - Critical for draft turns and matchup results.
 2. **Password Reset Flow** - Users will forget passwords.
+
+**Recently Completed (Feb 1):**
+- ✅ TradeModal stock search with autocomplete (mobile + web)
+- ✅ TradeModal UX bug fixes (VirtualizedLists, spinner, keyboard)
+- ✅ Cron job logging for process-week-results
 
 **Recently Completed (Jan 22):**
 - ✅ Join league by invite code (mobile)
