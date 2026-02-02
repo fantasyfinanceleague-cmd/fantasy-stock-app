@@ -7,7 +7,8 @@ import { Holding, DraftPick, Trade } from '@/lib/usePortfolio';
 import { abbreviateName } from '@/lib/useStockNames';
 import { useHistoricalPL, PLDataPoint } from '@/lib/useHistoricalPL';
 
-type TimePeriod = '1W' | '1M' | '3M' | '6M' | 'YTD' | '1Y' | 'ALL';
+// TimePeriod can be 'ALL' or a week number like 1, 2, 3, etc.
+type TimePeriod = 'ALL' | number;
 
 interface PLBreakdownModalProps {
   visible: boolean;
@@ -174,9 +175,6 @@ export default function PLBreakdownModal({
 
   const isPositive = totalGainLoss >= 0;
 
-  // Time period selector state
-  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('ALL');
-
   // Fetch historical P/L data for the chart
   const { data: historicalData, loading: historyLoading } = useHistoricalPL(
     drafts,
@@ -184,39 +182,59 @@ export default function PLBreakdownModal({
     visible // Only fetch when modal is visible
   );
 
-  // Filter data based on selected time period
-  const filteredData = useMemo(() => {
-    if (historicalData.length === 0) return [];
-
-    const now = new Date();
-    let cutoffDate: Date;
-
-    switch (selectedPeriod) {
-      case '1W':
-        cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        break;
-      case '1M':
-        cutoffDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-        break;
-      case '3M':
-        cutoffDate = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
-        break;
-      case '6M':
-        cutoffDate = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
-        break;
-      case 'YTD':
-        cutoffDate = new Date(now.getFullYear(), 0, 1);
-        break;
-      case '1Y':
-        cutoffDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-        break;
-      case 'ALL':
-      default:
-        return historicalData;
+  // Calculate draft start date and current week
+  const { draftStartDate, currentWeek, weekOptions } = useMemo(() => {
+    // Find earliest draft date
+    let earliest: Date | null = null;
+    for (const draft of drafts) {
+      const date = new Date(draft.created_at);
+      if (!earliest || date < earliest) {
+        earliest = date;
+      }
     }
 
-    return historicalData.filter(point => new Date(point.date) >= cutoffDate);
-  }, [historicalData, selectedPeriod]);
+    if (!earliest) {
+      return { draftStartDate: null, currentWeek: 0, weekOptions: [] };
+    }
+
+    // Calculate current week number (weeks since draft)
+    const now = new Date();
+    const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+    const weeksSinceDraft = Math.ceil((now.getTime() - earliest.getTime()) / msPerWeek);
+    const currentWeek = Math.max(1, weeksSinceDraft);
+
+    // Generate week options: W1, W2, W3, ... up to current week
+    const weekOptions: TimePeriod[] = [];
+    for (let i = 1; i <= currentWeek; i++) {
+      weekOptions.push(i);
+    }
+    weekOptions.push('ALL'); // Add "All" at the end
+
+    return { draftStartDate: earliest, currentWeek, weekOptions };
+  }, [drafts]);
+
+  // Time period selector state - default to ALL
+  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('ALL');
+
+  // Filter data based on selected week
+  const filteredData = useMemo(() => {
+    if (historicalData.length === 0 || !draftStartDate) return [];
+
+    if (selectedPeriod === 'ALL') {
+      return historicalData;
+    }
+
+    // Calculate the date range for the selected week
+    const weekNumber = selectedPeriod as number;
+    const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+    const weekStart = new Date(draftStartDate.getTime() + (weekNumber - 1) * msPerWeek);
+    const weekEnd = new Date(draftStartDate.getTime() + weekNumber * msPerWeek);
+
+    return historicalData.filter(point => {
+      const pointDate = new Date(point.date);
+      return pointDate >= weekStart && pointDate < weekEnd;
+    });
+  }, [historicalData, selectedPeriod, draftStartDate]);
 
   // Generate month labels for x-axis
   const { chartData, xAxisLabels } = useMemo(() => {
@@ -321,9 +339,9 @@ export default function PLBreakdownModal({
                   style={styles.periodSelector}
                   contentContainerStyle={styles.periodSelectorContent}
                 >
-                  {(['1W', '1M', '3M', '6M', 'YTD', '1Y', 'ALL'] as TimePeriod[]).map((period) => (
+                  {weekOptions.map((period) => (
                     <TouchableOpacity
-                      key={period}
+                      key={String(period)}
                       style={[
                         styles.periodButton,
                         selectedPeriod === period && styles.periodButtonActive,
@@ -336,7 +354,7 @@ export default function PLBreakdownModal({
                           selectedPeriod === period && styles.periodButtonTextActive,
                         ]}
                       >
-                        {period === 'ALL' ? 'All' : period}
+                        {period === 'ALL' ? 'All' : `W${period}`}
                       </Text>
                     </TouchableOpacity>
                   ))}
