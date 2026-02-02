@@ -371,9 +371,9 @@ export default function PLBreakdownModal({
                       <View style={styles.chartArea}>
                         <LineChart
                           data={chartData}
-                          width={screenWidth - 100}
-                          height={160}
-                          spacing={(screenWidth - 120) / Math.max(chartData.length - 1, 1)}
+                          width={Math.min(screenWidth - 100, 280)}
+                          height={120}
+                          spacing={Math.min(280, screenWidth - 100) / Math.max(chartData.length - 1, 1)}
                           initialSpacing={0}
                           endSpacing={0}
                           thickness={2}
@@ -778,10 +778,10 @@ const styles = StyleSheet.create({
   },
   yAxisLabels: {
     width: 50,
-    height: 160,
+    height: 120,
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    paddingVertical: 8,
+    paddingVertical: 4,
     paddingLeft: 8,
   },
   yAxisText: {
