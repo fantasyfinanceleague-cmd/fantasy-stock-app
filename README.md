@@ -70,6 +70,8 @@ fantasy-stock/
   - Championship badges for completed seasons (gold for champion, silver for runner-up)
   - League page with standings, schedule, and history sections
   - Sticky headers that follow scroll
+  - Company names displayed with holdings (auto-abbreviated for long names)
+  - P/L Breakdown Modal with detailed stock performance analysis
 
 ## Tech Stack
 

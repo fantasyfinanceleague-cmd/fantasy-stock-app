@@ -32,7 +32,7 @@
 - [ ] Password reset flow
 - [ ] Settings/preferences screen
 - [ ] Help/documentation
-- [ ] Stock name display alongside symbols in draft boards
+- [x] Stock name display alongside symbols ✅ (Feb 1, 2026 - Portfolio and P/L Breakdown)
 - [x] Search suggestions dropdown (like web has) instead of plain text input ✅ (Feb 1, 2026 - TradeModal)
 
 ### Known Issues / Bugs to Investigate
@@ -47,6 +47,21 @@
   - **Verification:** Existing duplicate picks (11, 13) manually corrected. Full constraint active.
 
 ### Recently Completed (Feb 1, 2026)
+- [x] **Company Names in Portfolio & P/L Breakdown**
+  - Created `useStockNames.ts` hook for fetching/caching company names
+  - Added `abbreviateName()` utility for long names (removes Inc., Corp., etc.)
+  - Portfolio page shows company name below each holding
+  - P/L Breakdown Modal shows company names for all positions
+
+- [x] **P/L Breakdown Modal Improvements**
+  - Fixed badge styling (Drafted/Bought badges no longer stretch full width)
+  - Added proper `badgeRow` container with flex layout
+
+- [x] **Historical Bars Edge Function**
+  - New `historical-bars` Supabase function for fetching Alpaca daily bars
+  - Supports multiple symbols and date range queries
+  - Created `useHistoricalPL.ts` hook for P/L history calculations
+
 - [x] **TradeModal Stock Search with Autocomplete (Mobile + Web)**
   - Search by ticker OR company name with relevance-based results
   - Real-time prices displayed in dropdown
@@ -302,6 +317,9 @@
 2. **Password Reset Flow** - Users will forget passwords.
 
 **Recently Completed (Feb 1):**
+- ✅ Company names in Portfolio and P/L Breakdown (useStockNames hook, abbreviateName utility)
+- ✅ P/L Breakdown Modal badge styling fix
+- ✅ Historical bars edge function for Alpaca daily data
 - ✅ TradeModal stock search with autocomplete (mobile + web)
 - ✅ TradeModal UX bug fixes (VirtualizedLists, spinner, keyboard)
 - ✅ Cron job logging for process-week-results

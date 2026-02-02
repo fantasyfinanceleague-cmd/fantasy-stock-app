@@ -2,6 +2,77 @@
 
 ---
 
+# February 1, 2026 (Session 2)
+
+## What We Accomplished
+
+### 1. Company Names in Portfolio & P/L Breakdown
+Added company name display throughout the app:
+- **New `useStockNames.ts` hook** - Fetches and caches company names via `symbol-name` edge function
+- **`abbreviateName()` utility** - Intelligently shortens long company names (removes Inc., Corp., etc.)
+- **Portfolio page** - Shows company name below each holding's symbol
+- **P/L Breakdown Modal** - Shows company name for current holdings and closed positions
+
+### 2. P/L Breakdown Modal Improvements
+- **Fixed badge styling** - Acquisition badges (Drafted/Bought) no longer stretch across the full width
+- **Added `badgeRow` container** - Proper flexbox layout for badges with gap spacing
+- **Company names displayed** - Each stock shows its full company name (abbreviated if needed)
+
+### 3. Historical Bars Edge Function
+Created `historical-bars` edge function for fetching historical stock data:
+- Fetches daily OHLCV bars from Alpaca API for multiple symbols
+- Supports date range queries (start/end dates)
+- Returns data in format: `{ bars: { AAPL: [{t, o, h, l, c, v}, ...], ... } }`
+- Deployed to Supabase
+
+### 4. Historical P/L Hook (Created but Chart Removed)
+- Created `useHistoricalPL.ts` hook to calculate portfolio P/L over time
+- Tracks position history based on drafts and trades
+- Calculates daily P/L by applying historical prices to positions
+- **Note:** The P/L over time chart was attempted but removed after user testing
+
+## Files Modified/Created
+
+### Mobile App - New Files
+| File | Purpose |
+|------|---------|
+| `apps/mobile/lib/useStockNames.ts` | Hook to fetch/cache company names with abbreviation utility |
+| `apps/mobile/lib/useHistoricalPL.ts` | Hook to calculate historical P/L data |
+
+### Mobile App - Modified Files
+| File | Changes |
+|------|---------|
+| `apps/mobile/app/(tabs)/portfolio.tsx` | Added company names to holdings display |
+| `apps/mobile/components/PLBreakdownModal.tsx` | Added company names, fixed badge styling |
+
+### Supabase Functions - New
+| File | Purpose |
+|------|---------|
+| `supabase/functions/historical-bars/index.ts` | Fetch historical daily bars from Alpaca |
+
+## Technical Notes
+
+### Company Name Abbreviation
+```typescript
+// Removes common suffixes to fit long names in UI
+export function abbreviateName(name: string, maxLength: number = 28): string {
+  const suffixes = [', Inc.', ' Corporation', ' Holdings', ' Technologies', ...];
+  // Removes suffixes until name fits, then truncates with ellipsis if needed
+}
+```
+
+### useStockNames Hook
+```typescript
+// Fetches names in parallel with client-side caching
+const { names, loading, getName } = useStockNames(symbols);
+// names: { AAPL: 'Apple Inc', MSFT: 'Microsoft Corporation', ... }
+```
+
+## Deployed
+- ✅ `historical-bars` edge function
+
+---
+
 # February 1, 2026
 
 ## What We Accomplished
