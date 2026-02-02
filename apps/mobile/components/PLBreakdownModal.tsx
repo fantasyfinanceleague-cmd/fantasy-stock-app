@@ -1,10 +1,13 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Dimensions, ActivityIndicator } from 'react-native';
+import { useState, useMemo } from 'react';
 import { Colors } from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import { LineChart } from 'react-native-gifted-charts';
 import { Holding, DraftPick, Trade } from '@/lib/usePortfolio';
 import { abbreviateName } from '@/lib/useStockNames';
 import { useHistoricalPL, PLDataPoint } from '@/lib/useHistoricalPL';
+
+type TimePeriod = '1W' | '1M' | '3M' | '6M' | 'YTD' | '1Y' | 'ALL';
 
 interface PLBreakdownModalProps {
   visible: boolean;
@@ -171,6 +174,9 @@ export default function PLBreakdownModal({
 
   const isPositive = totalGainLoss >= 0;
 
+  // Time period selector state
+  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('ALL');
+
   // Fetch historical P/L data for the chart
   const { data: historicalData, loading: historyLoading } = useHistoricalPL(
     drafts,
@@ -178,22 +184,78 @@ export default function PLBreakdownModal({
     visible // Only fetch when modal is visible
   );
 
-  // Format chart data - simple array of values
-  const chartData = historicalData.map((point) => ({
-    value: point.pl,
-  }));
+  // Filter data based on selected time period
+  const filteredData = useMemo(() => {
+    if (historicalData.length === 0) return [];
+
+    const now = new Date();
+    let cutoffDate: Date;
+
+    switch (selectedPeriod) {
+      case '1W':
+        cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case '1M':
+        cutoffDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+        break;
+      case '3M':
+        cutoffDate = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+        break;
+      case '6M':
+        cutoffDate = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
+        break;
+      case 'YTD':
+        cutoffDate = new Date(now.getFullYear(), 0, 1);
+        break;
+      case '1Y':
+        cutoffDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+        break;
+      case 'ALL':
+      default:
+        return historicalData;
+    }
+
+    return historicalData.filter(point => new Date(point.date) >= cutoffDate);
+  }, [historicalData, selectedPeriod]);
+
+  // Generate month labels for x-axis
+  const { chartData, xAxisLabels } = useMemo(() => {
+    if (filteredData.length === 0) return { chartData: [], xAxisLabels: [] };
+
+    // Determine how many labels to show based on data length
+    const data = filteredData.map((point, index) => ({
+      value: point.pl,
+    }));
+
+    // Find month boundaries for labels
+    const labels: { index: number; label: string }[] = [];
+    let lastMonth = -1;
+
+    filteredData.forEach((point, index) => {
+      const date = new Date(point.date);
+      const month = date.getMonth();
+      if (month !== lastMonth) {
+        labels.push({
+          index,
+          label: date.toLocaleDateString('en-US', { month: 'short' }),
+        });
+        lastMonth = month;
+      }
+    });
+
+    return { chartData: data, xAxisLabels: labels };
+  }, [filteredData]);
 
   // Calculate chart bounds
   const minPL = chartData.length > 0 ? Math.min(...chartData.map(d => d.value)) : 0;
   const maxPL = chartData.length > 0 ? Math.max(...chartData.map(d => d.value)) : 0;
+  const midPL = (minPL + maxPL) / 2;
 
-  // Get date range for display
-  const startDateStr = historicalData.length > 0
-    ? new Date(historicalData[0].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    : '';
-  const endDateStr = historicalData.length > 0
-    ? new Date(historicalData[historicalData.length - 1].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    : '';
+  // Determine if current filtered view is positive
+  const periodEndPL = filteredData.length > 0 ? filteredData[filteredData.length - 1].pl : 0;
+  const periodStartPL = filteredData.length > 0 ? filteredData[0].pl : 0;
+  const periodChange = periodEndPL - periodStartPL;
+  const isPeriodPositive = periodChange >= 0;
 
   return (
     <Modal
@@ -242,53 +304,92 @@ export default function PLBreakdownModal({
           {/* P/L Over Time Chart */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>P/L Over Time</Text>
-            <Text style={styles.sectionSubtitle}>Your portfolio performance history</Text>
 
             {historyLoading ? (
               <View style={styles.chartLoading}>
                 <ActivityIndicator size="small" color={Colors.primary} />
                 <Text style={styles.chartLoadingText}>Loading chart...</Text>
               </View>
-            ) : chartData.length < 2 ? (
+            ) : historicalData.length < 2 ? (
               <Text style={styles.emptyText}>Not enough data for chart</Text>
             ) : (
               <View style={styles.lineChartContainer}>
-                {/* Date range header */}
-                <View style={styles.chartDateRange}>
-                  <Text style={styles.chartDateText}>{startDateStr}</Text>
-                  <Text style={styles.chartDateText}>{endDateStr}</Text>
-                </View>
+                {/* Time period selector */}
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.periodSelector}
+                  contentContainerStyle={styles.periodSelectorContent}
+                >
+                  {(['1W', '1M', '3M', '6M', 'YTD', '1Y', 'ALL'] as TimePeriod[]).map((period) => (
+                    <TouchableOpacity
+                      key={period}
+                      style={[
+                        styles.periodButton,
+                        selectedPeriod === period && styles.periodButtonActive,
+                      ]}
+                      onPress={() => setSelectedPeriod(period)}
+                    >
+                      <Text
+                        style={[
+                          styles.periodButtonText,
+                          selectedPeriod === period && styles.periodButtonTextActive,
+                        ]}
+                      >
+                        {period === 'ALL' ? 'All' : period}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
 
-                <LineChart
-                  data={chartData}
-                  width={screenWidth - 90}
-                  height={120}
-                  spacing={(screenWidth - 110) / Math.max(chartData.length - 1, 1)}
-                  initialSpacing={0}
-                  endSpacing={0}
-                  thickness={2}
-                  color={isPositive ? Colors.success : Colors.error}
-                  startFillColor={isPositive ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'}
-                  endFillColor={'transparent'}
-                  areaChart
-                  hideDataPoints
-                  hideYAxisText
-                  hideAxesAndRules
-                  curved
-                  adjustToWidth
-                />
+                {chartData.length < 2 ? (
+                  <View style={styles.noDataPeriod}>
+                    <Text style={styles.noDataText}>No data for this period</Text>
+                  </View>
+                ) : (
+                  <>
+                    {/* Chart with Y-axis values */}
+                    <View style={styles.chartWrapper}>
+                      <View style={styles.chartArea}>
+                        <LineChart
+                          data={chartData}
+                          width={screenWidth - 100}
+                          height={160}
+                          spacing={(screenWidth - 120) / Math.max(chartData.length - 1, 1)}
+                          initialSpacing={0}
+                          endSpacing={0}
+                          thickness={2}
+                          color={isPeriodPositive ? Colors.success : Colors.error}
+                          startFillColor={isPeriodPositive ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)'}
+                          endFillColor={'transparent'}
+                          areaChart
+                          hideDataPoints
+                          hideYAxisText
+                          xAxisColor={Colors.border}
+                          yAxisColor={'transparent'}
+                          rulesType="solid"
+                          rulesColor={Colors.border}
+                          noOfSections={3}
+                          curved
+                        />
+                      </View>
 
-                {/* Value labels */}
-                <View style={styles.chartValueLabels}>
-                  <Text style={[styles.chartValueText, maxPL >= 0 ? styles.positive : styles.negative]}>
-                    {maxPL >= 0 ? '+' : ''}${maxPL.toFixed(0)}
-                  </Text>
-                  {minPL !== maxPL && (
-                    <Text style={[styles.chartValueText, minPL >= 0 ? styles.positive : styles.negative]}>
-                      {minPL >= 0 ? '+' : ''}${minPL.toFixed(0)}
-                    </Text>
-                  )}
-                </View>
+                      {/* Y-axis labels on the right */}
+                      <View style={styles.yAxisLabels}>
+                        <Text style={styles.yAxisText}>${maxPL.toFixed(0)}</Text>
+                        <Text style={styles.yAxisText}>${midPL.toFixed(0)}</Text>
+                        <Text style={styles.yAxisText}>${minPL.toFixed(0)}</Text>
+                      </View>
+                    </View>
+
+                    {/* X-axis month labels */}
+                    <View style={styles.xAxisLabels}>
+                      {xAxisLabels.slice(0, 5).map((item, i) => (
+                        <Text key={i} style={styles.xAxisText}>{item.label}</Text>
+                      ))}
+                    </View>
+                  </>
+                )}
               </View>
             )}
           </View>
@@ -614,27 +715,70 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: Colors.border,
+  },
+  periodSelector: {
+    marginBottom: 16,
+    marginHorizontal: -4,
+  },
+  periodSelectorContent: {
+    paddingHorizontal: 4,
+    gap: 6,
+  },
+  periodButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: Colors.background,
+  },
+  periodButtonActive: {
+    backgroundColor: Colors.textMuted,
+  },
+  periodButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.textMuted,
+  },
+  periodButtonTextActive: {
+    color: Colors.textPrimary,
+  },
+  noDataPeriod: {
+    height: 160,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noDataText: {
+    fontSize: 14,
+    color: Colors.textMuted,
+  },
+  chartWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  chartArea: {
+    flex: 1,
     overflow: 'hidden',
   },
-  chartDateRange: {
-    flexDirection: 'row',
+  yAxisLabels: {
+    width: 50,
+    height: 160,
     justifyContent: 'space-between',
-    marginBottom: 8,
+    alignItems: 'flex-end',
+    paddingVertical: 8,
+    paddingLeft: 8,
   },
-  chartDateText: {
+  yAxisText: {
     fontSize: 11,
     color: Colors.textMuted,
   },
-  chartValueLabels: {
-    position: 'absolute',
-    right: 12,
-    top: 40,
-    bottom: 40,
+  xAxisLabels: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
+    paddingTop: 8,
+    paddingRight: 50,
   },
-  chartValueText: {
+  xAxisText: {
     fontSize: 11,
-    fontWeight: '600',
+    color: Colors.textMuted,
   },
   chartLoading: {
     flexDirection: 'row',
