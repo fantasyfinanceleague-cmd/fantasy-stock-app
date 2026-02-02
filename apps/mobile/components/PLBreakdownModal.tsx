@@ -1,8 +1,10 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Dimensions, ActivityIndicator } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
+import { LineChart } from 'react-native-gifted-charts';
 import { Holding, DraftPick, Trade } from '@/lib/usePortfolio';
 import { abbreviateName } from '@/lib/useStockNames';
+import { useHistoricalPL, PLDataPoint } from '@/lib/useHistoricalPL';
 
 interface PLBreakdownModalProps {
   visible: boolean;
@@ -169,6 +171,27 @@ export default function PLBreakdownModal({
 
   const isPositive = totalGainLoss >= 0;
 
+  // Fetch historical P/L data for the chart
+  const { data: historicalData, loading: historyLoading } = useHistoricalPL(
+    drafts,
+    trades,
+    visible // Only fetch when modal is visible
+  );
+
+  // Format chart data
+  const chartData = historicalData.map((point, index) => ({
+    value: point.pl,
+    dataPointText: index === historicalData.length - 1 ? `$${point.pl >= 0 ? '+' : ''}${point.pl.toFixed(0)}` : undefined,
+    label: index === 0 || index === historicalData.length - 1 || index === Math.floor(historicalData.length / 2)
+      ? formatChartDate(point.date)
+      : '',
+  }));
+
+  function formatChartDate(dateStr: string): string {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
   return (
     <Modal
       visible={visible}
@@ -211,6 +234,57 @@ export default function PLBreakdownModal({
               <Text style={[styles.statValue, styles.negative]}>{losers.length}</Text>
               <Text style={[styles.statSubvalue, styles.negative]}>-${formatCurrency(Math.abs(totalLosses))}</Text>
             </View>
+          </View>
+
+          {/* P/L Over Time Chart */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>P/L Over Time</Text>
+            <Text style={styles.sectionSubtitle}>Your portfolio performance history</Text>
+
+            {historyLoading ? (
+              <View style={styles.chartLoading}>
+                <ActivityIndicator size="small" color={Colors.primary} />
+                <Text style={styles.chartLoadingText}>Loading chart...</Text>
+              </View>
+            ) : chartData.length < 2 ? (
+              <Text style={styles.emptyText}>Not enough data for chart</Text>
+            ) : (
+              <View style={styles.lineChartContainer}>
+                <LineChart
+                  data={chartData}
+                  width={screenWidth - 80}
+                  height={150}
+                  spacing={(screenWidth - 100) / Math.min(chartData.length, 30)}
+                  initialSpacing={10}
+                  endSpacing={10}
+                  thickness={2}
+                  color={isPositive ? Colors.success : Colors.error}
+                  startFillColor={isPositive ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}
+                  endFillColor={isPositive ? 'rgba(34, 197, 94, 0.05)' : 'rgba(239, 68, 68, 0.05)'}
+                  areaChart
+                  hideDataPoints={chartData.length > 15}
+                  dataPointsColor={isPositive ? Colors.success : Colors.error}
+                  dataPointsRadius={3}
+                  xAxisColor={Colors.border}
+                  yAxisColor={Colors.border}
+                  yAxisTextStyle={{ color: Colors.textMuted, fontSize: 10 }}
+                  xAxisLabelTextStyle={{ color: Colors.textMuted, fontSize: 9 }}
+                  hideRules
+                  yAxisOffset={Math.min(...chartData.map(d => d.value)) < 0 ? Math.min(...chartData.map(d => d.value)) : 0}
+                  rulesColor={Colors.border}
+                  showReferenceLine1
+                  referenceLine1Position={0}
+                  referenceLine1Config={{
+                    color: Colors.textMuted,
+                    dashWidth: 4,
+                    dashGap: 4,
+                  }}
+                  curved
+                  animateOnDataChange
+                  animationDuration={500}
+                />
+              </View>
+            )}
           </View>
 
           {/* Bar Chart Section */}
@@ -527,6 +601,26 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     textAlign: 'center',
     paddingVertical: 20,
+  },
+  lineChartContainer: {
+    backgroundColor: Colors.cardBg,
+    borderRadius: 12,
+    padding: 16,
+    paddingRight: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    overflow: 'hidden',
+  },
+  chartLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    gap: 10,
+  },
+  chartLoadingText: {
+    fontSize: 14,
+    color: Colors.textMuted,
   },
   chartContainer: {
     gap: 12,
