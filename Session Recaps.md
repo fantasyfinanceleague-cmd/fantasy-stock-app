@@ -31,7 +31,22 @@ Created `historical-bars` edge function for fetching historical stock data:
 - Calculates daily P/L by applying historical prices to positions
 - **Note:** The P/L over time chart was attempted but removed after user testing
 
-### 5. EAS Preview Build & OTA Updates
+### 5. Password Reset Flow
+Implemented complete password reset functionality:
+- **Forgot Password screen** (`/forgot-password`) - User enters email, sends reset link via Supabase
+- **Reset Password screen** (`/reset-password`) - User sets new password after clicking email link
+- **Deep link handling** - App listens for `fantasystockapp://reset-password` URLs
+- **Supabase integration** - Uses `resetPasswordForEmail()` and `updateUser()` APIs
+- **UX polish** - Success/confirmation states, resend option, back navigation
+
+### 6. EAS Update Fix
+Fixed static rendering issue for OTA updates:
+- **Problem:** `window is not defined` error during EAS Update export
+- **Cause:** AsyncStorage being initialized at module level during Node.js static rendering
+- **Fix:** Conditionally load AsyncStorage only in native environments
+- Modified `lib/supabase.ts` to check `Platform.OS` and `typeof window`
+
+### 7. EAS Preview Build & OTA Updates
 Set up standalone app builds that work without a local development server:
 - **Preview build configured** - App runs standalone on device without `npx expo start`
 - **EAS Update configured** - Push JS changes over-the-air without full rebuild
@@ -58,6 +73,8 @@ eas update --branch preview -m "description of changes"
 |------|---------|
 | `apps/mobile/lib/useStockNames.ts` | Hook to fetch/cache company names with abbreviation utility |
 | `apps/mobile/lib/useHistoricalPL.ts` | Hook to calculate historical P/L data |
+| `apps/mobile/app/forgot-password.tsx` | Forgot password screen for requesting reset email |
+| `apps/mobile/app/reset-password.tsx` | Reset password screen for setting new password |
 
 ### Mobile App - Modified Files
 | File | Changes |
@@ -66,6 +83,9 @@ eas update --branch preview -m "description of changes"
 | `apps/mobile/components/PLBreakdownModal.tsx` | Added company names, fixed badge styling |
 | `apps/mobile/eas.json` | Added env vars for preview/production, configured update channels |
 | `apps/mobile/app.json` | Configured EAS Update URL and runtime version |
+| `apps/mobile/app/login.tsx` | Added "Forgot Password?" link |
+| `apps/mobile/app/_layout.tsx` | Added deep link handling for password reset, new routes |
+| `apps/mobile/lib/supabase.ts` | Fixed AsyncStorage for static rendering compatibility |
 
 ### Supabase Functions - New
 | File | Purpose |

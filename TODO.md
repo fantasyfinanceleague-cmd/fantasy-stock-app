@@ -86,6 +86,13 @@
   - Fixed app crash on launch (missing env vars in standalone builds)
   - Workflow: `eas update --branch preview -m "changes"` to push updates
 
+- [x] **Password Reset Flow**
+  - Added "Forgot Password?" link on login screen
+  - Created forgot-password.tsx for requesting reset email
+  - Created reset-password.tsx for setting new password via deep link
+  - Deep link handling for `fantasystockapp://reset-password` URLs
+  - Fixed Supabase client for EAS Update static rendering compatibility
+
 ### Recently Completed (Jan 22, 2026)
 - [x] **Join League by Invite Code (Mobile)**
   - Created `join-league.tsx` with two-step flow (code input → league preview)
@@ -259,11 +266,11 @@
 - [ ] Trade receipt/summary after completion
 - [ ] Option to filter by league
 
-### 7. Password Reset Flow
-- [ ] "Forgot password" link on login
-- [ ] Email with reset link
-- [ ] Reset password page
-- [ ] Confirmation of successful reset
+### 7. Password Reset Flow ✅ COMPLETED (Feb 1)
+- [x] "Forgot password" link on login
+- [x] Email with reset link
+- [x] Reset password page
+- [x] Confirmation of successful reset
 
 ### 8. Help/FAQ Page
 - [ ] How scoring works
@@ -334,6 +341,8 @@
 - ✅ Cron job logging for process-week-results
 - ✅ EAS preview build for standalone testing (no dev server needed)
 - ✅ EAS Update configured for OTA updates (`eas update --branch preview`)
+- ✅ Password reset flow (forgot password + reset via deep link)
+- ✅ Trade history (in-app modal)
 
 **Recently Completed (Jan 22):**
 - ✅ Join league by invite code (mobile)

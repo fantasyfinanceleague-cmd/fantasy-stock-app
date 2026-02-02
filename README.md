@@ -139,6 +139,7 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 - [x] Multi-season support with championship tracking
 - [x] Push notifications (draft turn alerts)
 - [x] Standalone builds with OTA updates (EAS Build + EAS Update)
+- [x] Password reset flow (forgot password + deep link reset)
 - [ ] Live trading integration
 - [ ] Email notifications
 - [ ] Matchup result notifications
