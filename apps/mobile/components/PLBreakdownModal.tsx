@@ -178,19 +178,22 @@ export default function PLBreakdownModal({
     visible // Only fetch when modal is visible
   );
 
-  // Format chart data
-  const chartData = historicalData.map((point, index) => ({
+  // Format chart data - simple array of values
+  const chartData = historicalData.map((point) => ({
     value: point.pl,
-    dataPointText: index === historicalData.length - 1 ? `$${point.pl >= 0 ? '+' : ''}${point.pl.toFixed(0)}` : undefined,
-    label: index === 0 || index === historicalData.length - 1 || index === Math.floor(historicalData.length / 2)
-      ? formatChartDate(point.date)
-      : '',
   }));
 
-  function formatChartDate(dateStr: string): string {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  }
+  // Calculate chart bounds
+  const minPL = chartData.length > 0 ? Math.min(...chartData.map(d => d.value)) : 0;
+  const maxPL = chartData.length > 0 ? Math.max(...chartData.map(d => d.value)) : 0;
+
+  // Get date range for display
+  const startDateStr = historicalData.length > 0
+    ? new Date(historicalData[0].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    : '';
+  const endDateStr = historicalData.length > 0
+    ? new Date(historicalData[historicalData.length - 1].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    : '';
 
   return (
     <Modal
@@ -250,39 +253,42 @@ export default function PLBreakdownModal({
               <Text style={styles.emptyText}>Not enough data for chart</Text>
             ) : (
               <View style={styles.lineChartContainer}>
+                {/* Date range header */}
+                <View style={styles.chartDateRange}>
+                  <Text style={styles.chartDateText}>{startDateStr}</Text>
+                  <Text style={styles.chartDateText}>{endDateStr}</Text>
+                </View>
+
                 <LineChart
                   data={chartData}
-                  width={screenWidth - 80}
-                  height={150}
-                  spacing={(screenWidth - 100) / Math.min(chartData.length, 30)}
-                  initialSpacing={10}
-                  endSpacing={10}
+                  width={screenWidth - 90}
+                  height={120}
+                  spacing={(screenWidth - 110) / Math.max(chartData.length - 1, 1)}
+                  initialSpacing={0}
+                  endSpacing={0}
                   thickness={2}
                   color={isPositive ? Colors.success : Colors.error}
-                  startFillColor={isPositive ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}
-                  endFillColor={isPositive ? 'rgba(34, 197, 94, 0.05)' : 'rgba(239, 68, 68, 0.05)'}
+                  startFillColor={isPositive ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'}
+                  endFillColor={'transparent'}
                   areaChart
-                  hideDataPoints={chartData.length > 15}
-                  dataPointsColor={isPositive ? Colors.success : Colors.error}
-                  dataPointsRadius={3}
-                  xAxisColor={Colors.border}
-                  yAxisColor={Colors.border}
-                  yAxisTextStyle={{ color: Colors.textMuted, fontSize: 10 }}
-                  xAxisLabelTextStyle={{ color: Colors.textMuted, fontSize: 9 }}
-                  hideRules
-                  yAxisOffset={Math.min(...chartData.map(d => d.value)) < 0 ? Math.min(...chartData.map(d => d.value)) : 0}
-                  rulesColor={Colors.border}
-                  showReferenceLine1
-                  referenceLine1Position={0}
-                  referenceLine1Config={{
-                    color: Colors.textMuted,
-                    dashWidth: 4,
-                    dashGap: 4,
-                  }}
+                  hideDataPoints
+                  hideYAxisText
+                  hideAxesAndRules
                   curved
-                  animateOnDataChange
-                  animationDuration={500}
+                  adjustToWidth
                 />
+
+                {/* Value labels */}
+                <View style={styles.chartValueLabels}>
+                  <Text style={[styles.chartValueText, maxPL >= 0 ? styles.positive : styles.negative]}>
+                    {maxPL >= 0 ? '+' : ''}${maxPL.toFixed(0)}
+                  </Text>
+                  {minPL !== maxPL && (
+                    <Text style={[styles.chartValueText, minPL >= 0 ? styles.positive : styles.negative]}>
+                      {minPL >= 0 ? '+' : ''}${minPL.toFixed(0)}
+                    </Text>
+                  )}
+                </View>
               </View>
             )}
           </View>
@@ -606,10 +612,29 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.cardBg,
     borderRadius: 12,
     padding: 16,
-    paddingRight: 8,
     borderWidth: 1,
     borderColor: Colors.border,
     overflow: 'hidden',
+  },
+  chartDateRange: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  chartDateText: {
+    fontSize: 11,
+    color: Colors.textMuted,
+  },
+  chartValueLabels: {
+    position: 'absolute',
+    right: 12,
+    top: 40,
+    bottom: 40,
+    justifyContent: 'space-between',
+  },
+  chartValueText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
   chartLoading: {
     flexDirection: 'row',
