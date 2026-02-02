@@ -396,16 +396,29 @@ export default function PLBreakdownModal({
                           thickness={2}
                           color={currentPL >= 0 ? Colors.success : Colors.error}
                           areaChart
-                          startFillColor={currentPL >= 0 ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}
+                          startFillColor={currentPL >= 0 ? 'rgba(34, 197, 94, 0.35)' : 'rgba(239, 68, 68, 0.35)'}
                           endFillColor={currentPL >= 0 ? 'rgba(34, 197, 94, 0.05)' : 'rgba(239, 68, 68, 0.05)'}
                           hideDataPoints
                           hideYAxisText
                           hideRules
-                          xAxisColor={Colors.border}
+                          xAxisColor={'transparent'}
                           yAxisColor={'transparent'}
                           maxValue={yMax - yMin}
                           curved
+                          showReferenceLine1
+                          referenceLine1Position={-yMin}
+                          referenceLine1Config={{
+                            color: Colors.textMuted,
+                            dashWidth: 5,
+                            dashGap: 3,
+                            thickness: 1,
+                          }}
                         />
+
+                        {/* Zero line label */}
+                        <View style={[styles.zeroLineLabel, { top: 60 - 8 }]}>
+                          <Text style={styles.zeroLineLabelText}>$0</Text>
+                        </View>
                       </View>
 
                       {/* Y-axis labels on the right */}
@@ -793,6 +806,20 @@ const styles = StyleSheet.create({
   chartArea: {
     flex: 1,
     overflow: 'hidden',
+    position: 'relative',
+  },
+  zeroLineLabel: {
+    position: 'absolute',
+    left: 4,
+    backgroundColor: Colors.cardBg,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 2,
+  },
+  zeroLineLabelText: {
+    fontSize: 9,
+    color: Colors.textMuted,
+    fontWeight: '500',
   },
   yAxisLabels: {
     width: 50,
