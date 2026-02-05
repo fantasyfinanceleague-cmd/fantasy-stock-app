@@ -24,8 +24,13 @@ export function useAuth() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+        // Use functional updates to avoid unnecessary re-renders
+        // that can cause native-stack to reconfigure and dismiss the keyboard
+        setSession(prev => prev?.access_token === session?.access_token ? prev : session);
+        setUser(prev => {
+          const newUser = session?.user ?? null;
+          return prev?.id === newUser?.id ? prev : newUser;
+        });
         setLoading(false);
 
         // Register for push notifications on sign in

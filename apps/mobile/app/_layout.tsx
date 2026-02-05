@@ -10,6 +10,7 @@ import 'react-native-reanimated';
 import { LeagueProvider } from '@/lib/LeagueContext';
 import { addNotificationListeners } from '@/lib/notifications';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/useAuth';
 
 export {
   ErrorBoundary,
@@ -20,6 +21,13 @@ export const unstable_settings = {
 };
 
 SplashScreen.preventAutoHideAsync();
+
+// Stable references — defined outside the component so re-renders
+// don't create new objects that cause native-stack to reconfigure
+const HIDDEN_HEADER = { headerShown: false } as const;
+const HIDDEN_HEADER_MODAL = { headerShown: false, presentation: 'modal' } as const;
+const HIDDEN_HEADER_FULLSCREEN = { headerShown: false, presentation: 'fullScreenModal' } as const;
+const AUTH_SCREEN_OPTIONS = { headerShown: false } as const;
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -45,6 +53,8 @@ export default function RootLayout() {
 }
 
 function RootLayoutNav() {
+  const { user, loading } = useAuth();
+
   // Handle deep links for password reset
   useEffect(() => {
     // Handle URL when app is opened from a link
@@ -92,8 +102,10 @@ function RootLayoutNav() {
     };
   }, []);
 
-  // Set up notification listeners
+  // Set up notification listeners (only when authenticated)
   useEffect(() => {
+    if (!user) return;
+
     const cleanup = addNotificationListeners(
       // When notification is received while app is open
       (notification) => {
@@ -116,21 +128,40 @@ function RootLayoutNav() {
     );
 
     return cleanup;
-  }, []);
+  }, [user]);
 
+  // Show nothing while loading auth state to prevent flash
+  if (loading) {
+    return null;
+  }
+
+  // Not authenticated — no LeagueProvider needed, stable screenOptions
+  if (!user) {
+    return (
+      <ThemeProvider value={DarkTheme}>
+        <Stack screenOptions={AUTH_SCREEN_OPTIONS}>
+          <Stack.Screen name="login" />
+          <Stack.Screen name="forgot-password" options={HIDDEN_HEADER_MODAL} />
+          <Stack.Screen name="reset-password" options={HIDDEN_HEADER_FULLSCREEN} />
+        </Stack>
+      </ThemeProvider>
+    );
+  }
+
+  // Authenticated — full app with tabs
   return (
     <ThemeProvider value={DarkTheme}>
       <LeagueProvider>
         <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="login" options={{ headerShown: false, presentation: 'modal' }} />
-          <Stack.Screen name="forgot-password" options={{ headerShown: false, presentation: 'modal' }} />
-          <Stack.Screen name="reset-password" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
-          <Stack.Screen name="create-league" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
-          <Stack.Screen name="join-league" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
-          <Stack.Screen name="league-settings" options={{ headerShown: false, presentation: 'modal' }} />
-          <Stack.Screen name="player-portfolio" options={{ headerShown: false, presentation: 'modal' }} />
-          <Stack.Screen name="trade-history" options={{ headerShown: false, presentation: 'modal' }} />
+          <Stack.Screen name="(tabs)" options={HIDDEN_HEADER} />
+          <Stack.Screen name="login" options={HIDDEN_HEADER} />
+          <Stack.Screen name="forgot-password" options={HIDDEN_HEADER_MODAL} />
+          <Stack.Screen name="reset-password" options={HIDDEN_HEADER_FULLSCREEN} />
+          <Stack.Screen name="create-league" options={HIDDEN_HEADER_FULLSCREEN} />
+          <Stack.Screen name="join-league" options={HIDDEN_HEADER_FULLSCREEN} />
+          <Stack.Screen name="league-settings" options={HIDDEN_HEADER_MODAL} />
+          <Stack.Screen name="player-portfolio" options={HIDDEN_HEADER_MODAL} />
+          <Stack.Screen name="trade-history" options={HIDDEN_HEADER_MODAL} />
           <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
         </Stack>
       </LeagueProvider>
