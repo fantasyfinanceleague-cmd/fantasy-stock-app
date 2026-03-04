@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/lib/useAuth';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { useHomeData } from '@/lib/useHomeData';
+import { useHistoricalPL } from '@/lib/useHistoricalPL';
+import { PerformanceChart } from '@/components/PerformanceChart';
 import { router } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { SkeletonCard } from '@/components/Skeleton';
@@ -38,6 +40,11 @@ export default function HomeScreen() {
   const { user, loading: authLoading } = useAuth();
   const { leagues, setActiveLeagueId, loading: leaguesLoading } = useLeagueContext();
   const homeData = useHomeData();
+  const { data: historicalData, loading: histLoading } = useHistoricalPL(
+    homeData.allDrafts,
+    homeData.allTrades,
+    homeData.allDrafts.length > 0,
+  );
   const [username, setUsername] = useState<string | null>(null);
 
   // Fetch username
@@ -162,6 +169,13 @@ export default function HomeScreen() {
                   </Text>
                 )}
               </View>
+
+              {/* Section 2b: Performance Chart */}
+              {historicalData.length >= 2 && (
+                <View style={styles.chartSection}>
+                  <PerformanceChart data={historicalData} loading={histLoading} />
+                </View>
+              )}
 
               {/* Section 3: Your Leagues */}
               <View style={styles.section}>
@@ -432,6 +446,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.textMuted,
     marginTop: 8,
+  },
+  chartSection: {
+    paddingHorizontal: 24,
+    marginBottom: 8,
   },
   positive: {
     color: '#059669',

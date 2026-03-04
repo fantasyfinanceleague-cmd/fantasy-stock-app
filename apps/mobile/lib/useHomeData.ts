@@ -3,6 +3,7 @@ import { supabase } from './supabase';
 import { useAuth } from './useAuth';
 import { useLeagueContext, League } from './LeagueContext';
 import { useStockPrices } from './useStockPrices';
+import { DraftPick, Trade } from './usePortfolio';
 
 // --- Types ---
 
@@ -47,6 +48,9 @@ export interface HomeData {
   matchups: MatchupCard[];
   winCount: number;
   loseCount: number;
+  // Aggregate drafts/trades for historical chart
+  allDrafts: DraftPick[];
+  allTrades: Trade[];
   loading: boolean;
   refreshing: boolean;
   refresh: () => Promise<void>;
@@ -107,6 +111,8 @@ export function useHomeData(): HomeData {
   const [standings, setStandings] = useState<Record<string, { rank: number; totalPlayers: number; wins: number; losses: number; ties: number; pointsFor: number }>>({});
   const [seasonNumbers, setSeasonNumbers] = useState<Record<string, number>>({});
   const [matchupData, setMatchupData] = useState<MatchupCard[]>([]);
+  const [allDrafts, setAllDrafts] = useState<DraftPick[]>([]);
+  const [allTrades, setAllTrades] = useState<Trade[]>([]);
   const [username, setUsername] = useState<string>('You');
   const [dataLoading, setDataLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -199,23 +205,29 @@ export function useHomeData(): HomeData {
       const holdingsResults: Record<string, BaseHolding[]> = {};
       const standingsResults: Record<string, { rank: number; totalPlayers: number; wins: number; losses: number; ties: number; pointsFor: number }> = {};
       const seasonResults: Record<string, number> = {};
+      const aggregatedDrafts: DraftPick[] = [];
+      const aggregatedTrades: Trade[] = [];
 
       // Fetch all league data in parallel
       await Promise.all(leagues.map(async (league) => {
-        // 1. Portfolio holdings (drafts + trades)
+        // 1. Portfolio holdings (drafts + trades) — fetch full records for chart
         const [{ data: drafts }, { data: trades }] = await Promise.all([
           supabase
             .from('drafts')
-            .select('symbol, entry_price, quantity')
+            .select('*')
             .eq('user_id', user.id)
-            .eq('league_id', league.id),
+            .eq('league_id', league.id)
+            .order('created_at', { ascending: true }),
           supabase
             .from('trades')
-            .select('symbol, action, quantity, price')
+            .select('*')
             .eq('user_id', user.id)
-            .eq('league_id', league.id),
+            .eq('league_id', league.id)
+            .order('created_at', { ascending: true }),
         ]);
 
+        if (drafts) aggregatedDrafts.push(...drafts);
+        if (trades) aggregatedTrades.push(...trades);
         holdingsResults[league.id] = computeHoldings(drafts || [], trades || []);
 
         // 2. Season info
@@ -275,6 +287,8 @@ export function useHomeData(): HomeData {
       setHoldingsByLeague(holdingsResults);
       setStandings(standingsResults);
       setSeasonNumbers(seasonResults);
+      setAllDrafts(aggregatedDrafts);
+      setAllTrades(aggregatedTrades);
 
       // 4. Cross-league matchups (matchup-type leagues only)
       const matchupLeagues = leagues.filter(l => l.league_type === 'matchup');
@@ -390,6 +404,8 @@ export function useHomeData(): HomeData {
     matchups: matchupData,
     winCount,
     loseCount,
+    allDrafts,
+    allTrades,
     loading: leaguesLoading || dataLoading || pricesLoading,
     refreshing,
     refresh,

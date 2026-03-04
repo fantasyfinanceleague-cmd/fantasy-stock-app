@@ -1,9 +1,11 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/lib/useAuth';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { usePortfolio, Holding } from '@/lib/usePortfolio';
+import { useHistoricalPL } from '@/lib/useHistoricalPL';
 import { useStockNames, abbreviateName } from '@/lib/useStockNames';
+import { PerformanceChart } from '@/components/PerformanceChart';
 import { router } from 'expo-router';
 import { useState, useMemo } from 'react';
 import { SkeletonHolding } from '@/components/Skeleton';
@@ -23,52 +25,41 @@ function formatPercent(value: number | null): string {
   return `${sign}${value.toFixed(2)}%`;
 }
 
-function HoldingRow({ holding, companyName, onBuy, onSell }: { holding: Holding; companyName?: string; onBuy: () => void; onSell: () => void }) {
+function HoldingRow({ holding, companyName, onPress }: { holding: Holding; companyName?: string; onPress: () => void }) {
   const hasPrice = holding.currentPrice !== null;
   const dayChange = holding.dayChangePercent ?? 0;
   const isDayPositive = dayChange >= 0;
 
   return (
-    <View style={styles.holdingRow}>
-      <View style={styles.holdingMain}>
-        <View style={styles.holdingLeft}>
-          <Text style={styles.holdingSymbol}>{holding.symbol}</Text>
-          {companyName && (
-            <Text style={styles.holdingName} numberOfLines={1}>{abbreviateName(companyName, 24)}</Text>
-          )}
-          <Text style={styles.holdingQty}>{holding.quantity} shares</Text>
-        </View>
-
-        <View style={styles.holdingRight}>
-          {hasPrice ? (
-            <>
-              <Text style={styles.holdingValue}>${formatCurrency(holding.currentValue!)}</Text>
-              <View style={[styles.dayChangeBadge, isDayPositive ? styles.positiveBg : styles.negativeBg]}>
-                <Ionicons
-                  name={isDayPositive ? 'trending-up' : 'trending-down'}
-                  size={12}
-                  color={isDayPositive ? Colors.success : Colors.error}
-                />
-                <Text style={[styles.dayChangeText, isDayPositive ? styles.positive : styles.negative]}>
-                  {isDayPositive ? '+' : ''}{dayChange.toFixed(2)}%
-                </Text>
-              </View>
-            </>
-          ) : (
-            <Text style={styles.holdingValue}>${formatCurrency(holding.totalCost)}</Text>
-          )}
-        </View>
+    <TouchableOpacity style={styles.holdingRow} onPress={onPress} activeOpacity={0.7}>
+      <View style={styles.holdingLeft}>
+        <Text style={styles.holdingSymbol}>{holding.symbol}</Text>
+        {companyName && (
+          <Text style={styles.holdingName} numberOfLines={1}>{abbreviateName(companyName, 24)}</Text>
+        )}
+        <Text style={styles.holdingQty}>{holding.quantity} shares</Text>
       </View>
 
-      <View style={styles.holdingActions}>
-        <TouchableOpacity style={[styles.actionBtn, styles.buyBtn]} onPress={onBuy}>
-          <Text style={styles.actionBtnText}>Buy</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.actionBtn, styles.sellBtn]} onPress={onSell}>
-          <Text style={styles.actionBtnText}>Sell</Text>
-        </TouchableOpacity>
+      <View style={styles.holdingRight}>
+        {hasPrice ? (
+          <>
+            <Text style={styles.holdingValue}>${formatCurrency(holding.currentValue!)}</Text>
+            <View style={[styles.dayChangeBadge, isDayPositive ? styles.positiveBg : styles.negativeBg]}>
+              <Ionicons
+                name={isDayPositive ? 'trending-up' : 'trending-down'}
+                size={12}
+                color={isDayPositive ? '#059669' : '#DC2626'}
+              />
+              <Text style={[styles.dayChangeText, isDayPositive ? styles.positive : styles.negative]}>
+                {isDayPositive ? '+' : ''}{dayChange.toFixed(2)}%
+              </Text>
+            </View>
+          </>
+        ) : (
+          <Text style={styles.holdingValue}>${formatCurrency(holding.totalCost)}</Text>
+        )}
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -76,6 +67,7 @@ export default function PortfolioScreen() {
   const { user, loading: authLoading } = useAuth();
   const { leagues, activeLeagueId, activeLeague, refresh: refreshLeagues } = useLeagueContext();
   const { holdings, drafts, trades, portfolioSummary, loading: portfolioLoading, refresh: refreshPortfolio } = usePortfolio(activeLeagueId);
+  const { data: historicalData, loading: histLoading } = useHistoricalPL(drafts, trades, drafts.length > 0);
   const [refreshing, setRefreshing] = useState(false);
 
   // Get all symbols for name fetching (current holdings + closed positions)
@@ -109,7 +101,6 @@ export default function PortfolioScreen() {
   };
 
   const handleTradeComplete = async () => {
-    // Refresh portfolio after successful trade
     await refreshPortfolio();
   };
 
@@ -123,7 +114,7 @@ export default function PortfolioScreen() {
 
   if (!user) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.centered}>
           <Text style={styles.emptyTitle}>Sign in to view portfolio</Text>
           <TouchableOpacity style={styles.button} onPress={() => router.push('/login')}>
@@ -139,13 +130,12 @@ export default function PortfolioScreen() {
     : null;
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Sticky League Switcher Header */}
+    <SafeAreaView style={styles.container} edges={['top']}>
       <LeagueSwitcher />
 
       <ScrollView
         style={styles.scrollView}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0891B2" />}
       >
 
         {leagues.length === 0 ? (
@@ -158,56 +148,58 @@ export default function PortfolioScreen() {
           </View>
         ) : (
           <>
-            <View style={styles.metricsRow}>
-              <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>Portfolio Value</Text>
-                <Text style={styles.metricValue}>${formatCurrency(portfolioSummary.totalValue)}</Text>
-              </View>
-              <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>Budget Left</Text>
-                <Text style={styles.metricValue}>{budgetRemaining !== null ? `$${formatCurrency(budgetRemaining)}` : '—'}</Text>
-              </View>
-              <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>Stocks</Text>
-                <Text style={styles.metricValue}>{portfolioSummary.holdingsCount}</Text>
-              </View>
-            </View>
+            {/* Hero: Portfolio Value */}
+            <View style={styles.heroSection}>
+              <Text style={styles.heroLabel}>Portfolio Value</Text>
+              <Text style={styles.heroValue}>${formatCurrency(portfolioSummary.totalValue)}</Text>
 
-            {portfolioSummary.hasLivePrices && portfolioSummary.totalCost > 0 && (
-              <TouchableOpacity
-                style={styles.plSummary}
-                onPress={() => setPlModalVisible(true)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.plSummaryHeader}>
-                  <Text style={styles.plSummaryLabel}>Total P/L</Text>
-                  <View style={styles.tapHint}>
-                    <Ionicons name="analytics-outline" size={14} color={Colors.textMuted} />
-                    <Text style={styles.tapHintText}>Tap for details</Text>
-                  </View>
-                </View>
-                <View style={styles.plSummaryRow}>
-                  <Text style={[styles.plSummaryValue, portfolioSummary.totalGainLoss >= 0 ? styles.positive : styles.negative]}>
-                    {portfolioSummary.totalGainLoss >= 0 ? '+' : ''}${formatCurrency(portfolioSummary.totalGainLoss)}
-                  </Text>
-                  <View style={[styles.plBadge, portfolioSummary.totalGainLossPercent >= 0 ? styles.positiveBg : styles.negativeBg]}>
-                    <Text style={[styles.plBadgeText, portfolioSummary.totalGainLossPercent >= 0 ? styles.positive : styles.negative]}>
-                      {formatPercent(portfolioSummary.totalGainLossPercent)}
+              {portfolioSummary.hasLivePrices && portfolioSummary.totalCost > 0 && (
+                <TouchableOpacity
+                  style={styles.plPill}
+                  onPress={() => setPlModalVisible(true)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.plPillInner, portfolioSummary.totalGainLoss >= 0 ? styles.positiveBg : styles.negativeBg]}>
+                    <Ionicons
+                      name={portfolioSummary.totalGainLoss >= 0 ? 'trending-up' : 'trending-down'}
+                      size={14}
+                      color={portfolioSummary.totalGainLoss >= 0 ? '#059669' : '#DC2626'}
+                    />
+                    <Text style={[styles.plPillText, portfolioSummary.totalGainLoss >= 0 ? styles.positive : styles.negative]}>
+                      {portfolioSummary.totalGainLoss >= 0 ? '+' : ''}${formatCurrency(portfolioSummary.totalGainLoss)}
+                      {' '}({formatPercent(portfolioSummary.totalGainLossPercent)})
                     </Text>
                   </View>
-                </View>
-              </TouchableOpacity>
+                  <Ionicons name="chevron-forward" size={14} color="#94A3B8" style={{ marginLeft: 4 }} />
+                </TouchableOpacity>
+              )}
+
+              {budgetRemaining !== null && (
+                <Text style={styles.budgetCaption}>
+                  ${formatCurrency(budgetRemaining)} budget remaining
+                </Text>
+              )}
+            </View>
+
+            {/* Performance Chart */}
+            {historicalData.length >= 2 && (
+              <View style={styles.chartSection}>
+                <PerformanceChart data={historicalData} loading={histLoading} />
+              </View>
             )}
 
+            {/* Actions */}
             <View style={styles.actionsRow}>
               <TouchableOpacity style={styles.primaryButton} onPress={() => openTradeModal('', 'buy')}>
                 <Text style={styles.primaryButtonText}>Buy Stock</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.secondaryButton} onPress={() => router.push('/trade-history')}>
-                <Text style={styles.secondaryButtonText}>Trade History</Text>
+              <TouchableOpacity style={styles.ghostButton} onPress={() => router.push('/trade-history')}>
+                <Text style={styles.ghostButtonText}>View trade history</Text>
+                <Ionicons name="arrow-forward" size={16} color="#0891B2" />
               </TouchableOpacity>
             </View>
 
+            {/* Holdings */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Current Holdings</Text>
               {portfolioLoading ? (
@@ -218,6 +210,9 @@ export default function PortfolioScreen() {
                 </>
               ) : holdings.length === 0 ? (
                 <View style={styles.emptyHoldings}>
+                  <View style={styles.emptyIcon}>
+                    <Ionicons name="bar-chart-outline" size={32} color="#94A3B8" />
+                  </View>
                   <Text style={styles.emptyText}>No holdings yet</Text>
                   <Text style={styles.emptySubtext}>Draft stocks or buy your first share!</Text>
                   <TouchableOpacity style={styles.button} onPress={() => openTradeModal('', 'buy')}>
@@ -230,8 +225,7 @@ export default function PortfolioScreen() {
                     key={holding.symbol}
                     holding={holding}
                     companyName={stockNames[holding.symbol.toUpperCase()]}
-                    onBuy={() => openTradeModal(holding.symbol, 'buy')}
-                    onSell={() => openTradeModal(holding.symbol, 'sell')}
+                    onPress={() => openTradeModal(holding.symbol, 'buy')}
                   />
                 ))
               )}
@@ -272,58 +266,203 @@ export default function PortfolioScreen() {
   );
 }
 
+const cardShadow = Platform.select({
+  ios: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+  },
+  android: {
+    elevation: 2,
+  },
+  default: {},
+}) as object;
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
   scrollView: { flex: 1 },
-  loadingText: { color: Colors.textMuted, fontSize: 16, textAlign: 'center', marginTop: 100 },
+  loadingText: { color: '#94A3B8', fontSize: 16, textAlign: 'center', marginTop: 100 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 100, paddingHorizontal: 24 },
-  header: { paddingHorizontal: 24, paddingTop: 20, paddingBottom: 16 },
-  title: { fontSize: 28, fontWeight: 'bold', color: Colors.textPrimary },
-  leagueName: { fontSize: 14, color: Colors.primaryLight, marginTop: 4 },
-  metricsRow: { flexDirection: 'row', paddingHorizontal: 24, gap: 8, marginTop: 16, marginBottom: 16 },
-  metricCard: { flex: 1, backgroundColor: Colors.cardBg, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: Colors.border },
-  metricLabel: { fontSize: 11, color: Colors.textMuted, marginBottom: 4 },
-  metricValue: { fontSize: 16, fontWeight: 'bold', color: Colors.textPrimary },
-  plSummary: { marginHorizontal: 24, backgroundColor: Colors.cardBg, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: Colors.border, marginBottom: 16 },
-  plSummaryHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  plSummaryLabel: { fontSize: 12, color: Colors.textMuted },
-  tapHint: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  tapHintText: { fontSize: 11, color: Colors.textMuted },
-  plSummaryRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  plSummaryValue: { fontSize: 24, fontWeight: 'bold' },
-  plBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
-  plBadgeText: { fontSize: 14, fontWeight: '600' },
-  positive: { color: Colors.success },
-  negative: { color: Colors.error },
-  positiveBg: { backgroundColor: Colors.successBg },
-  negativeBg: { backgroundColor: Colors.errorBg },
-  actionsRow: { flexDirection: 'row', paddingHorizontal: 24, gap: 12, marginBottom: 24 },
-  primaryButton: { flex: 1, backgroundColor: Colors.primary, paddingVertical: 14, borderRadius: 8, alignItems: 'center' },
-  primaryButtonText: { color: Colors.textPrimary, fontSize: 16, fontWeight: '600' },
-  secondaryButton: { flex: 1, backgroundColor: Colors.cardBg, paddingVertical: 14, borderRadius: 8, alignItems: 'center', borderWidth: 1, borderColor: Colors.border },
-  secondaryButtonText: { color: Colors.textPrimary, fontSize: 16, fontWeight: '500' },
+
+  // Hero
+  heroSection: {
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 16,
+  },
+  heroLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#64748B',
+    marginBottom: 4,
+  },
+  heroValue: {
+    fontSize: 34,
+    fontWeight: '700',
+    color: '#0F172A',
+    letterSpacing: -0.5,
+  },
+  plPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginTop: 8,
+  },
+  plPillInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  plPillText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  budgetCaption: {
+    fontSize: 13,
+    color: '#94A3B8',
+    marginTop: 8,
+  },
+
+  // Chart
+  chartSection: {
+    paddingHorizontal: 24,
+    marginBottom: 8,
+  },
+
+  // Actions
+  actionsRow: {
+    paddingHorizontal: 24,
+    gap: 12,
+    marginBottom: 24,
+  },
+  primaryButton: {
+    backgroundColor: '#0891B2',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  primaryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  ghostButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 8,
+  },
+  ghostButtonText: {
+    color: '#0891B2',
+    fontSize: 15,
+    fontWeight: '500',
+  },
+
+  // Section
   section: { paddingHorizontal: 24, paddingBottom: 24 },
-  sectionTitle: { fontSize: 18, fontWeight: '600', color: Colors.textPrimary, marginBottom: 16 },
-  holdingRow: { backgroundColor: Colors.cardBg, borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: Colors.border },
-  holdingMain: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#0F172A',
+    marginBottom: 16,
+  },
+
+  // Holding rows — clean, no card wrapper
+  holdingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
   holdingLeft: { flex: 1 },
   holdingRight: { alignItems: 'flex-end' },
-  holdingSymbol: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
-  holdingName: { fontSize: 12, color: Colors.textSecondary, marginTop: 1 },
-  holdingQty: { fontSize: 12, color: Colors.textMuted, marginTop: 2 },
-  holdingValue: { fontSize: 16, fontWeight: '600', color: Colors.textPrimary, marginBottom: 4 },
-  dayChangeBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  holdingSymbol: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  holdingName: {
+    fontSize: 13,
+    color: '#64748B',
+    marginTop: 1,
+  },
+  holdingQty: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginTop: 2,
+  },
+  holdingValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0F172A',
+    marginBottom: 4,
+  },
+  dayChangeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
   dayChangeText: { fontSize: 12, fontWeight: '600' },
-  holdingActions: { flexDirection: 'row', gap: 8 },
-  actionBtn: { flex: 1, paddingVertical: 10, borderRadius: 6, alignItems: 'center' },
-  buyBtn: { backgroundColor: Colors.success },
-  sellBtn: { backgroundColor: Colors.error },
-  actionBtnText: { color: Colors.textPrimary, fontSize: 14, fontWeight: '600' },
+
+  // Status colors
+  positive: { color: '#059669' },
+  negative: { color: '#DC2626' },
+  positiveBg: { backgroundColor: '#ECFDF5' },
+  negativeBg: { backgroundColor: '#FEF2F2' },
+
+  // Empty states
   emptyHoldings: { alignItems: 'center', paddingVertical: 40 },
-  emptyText: { fontSize: 16, color: Colors.textPrimary, fontWeight: '600', marginBottom: 4 },
-  emptySubtext: { fontSize: 14, color: Colors.textMuted, marginBottom: 16 },
-  emptyTitle: { fontSize: 20, fontWeight: '600', color: Colors.textPrimary, marginBottom: 8 },
-  emptySubtitle: { fontSize: 14, color: Colors.textMuted, marginBottom: 24, textAlign: 'center' },
-  button: { backgroundColor: Colors.primary, paddingHorizontal: 32, paddingVertical: 14, borderRadius: 8 },
-  buttonText: { color: Colors.textPrimary, fontSize: 16, fontWeight: '600' },
+  emptyIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#0F172A',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#94A3B8',
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#0F172A',
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: '#94A3B8',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  button: {
+    backgroundColor: '#0891B2',
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 10,
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
