@@ -74,9 +74,23 @@ export function PerformanceChart({ data, loading, onPeriodPLChange }: Performanc
     if (filteredData.length < 2) {
       return { gainLoss: 0, gainLossPercent: 0, isPositive: true, period };
     }
+
+    const lastPoint = filteredData[filteredData.length - 1];
+
+    if (period === 'All' || period === 'Season') {
+      // Use cost-basis P/L so it matches the breakdown modal
+      // (current value - total cost, not first-data-point-to-last)
+      return {
+        gainLoss: lastPoint.pl,
+        gainLossPercent: lastPoint.plPercent,
+        isPositive: lastPoint.pl >= 0,
+        period,
+      };
+    }
+
+    // For 1W/1M: show change in portfolio value over the time window
     const startValue = filteredData[0].value;
-    const endValue = filteredData[filteredData.length - 1].value;
-    const gainLoss = endValue - startValue;
+    const gainLoss = lastPoint.value - startValue;
     const gainLossPercent = startValue > 0 ? (gainLoss / startValue) * 100 : 0;
     return { gainLoss, gainLossPercent, isPositive: gainLoss >= 0, period };
   }, [filteredData, period]);
