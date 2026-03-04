@@ -84,7 +84,7 @@ export function PerformanceChart({ data, loading, onPeriodPLChange }: Performanc
   // Notify parent of P/L changes
   useEffect(() => {
     onPeriodPLChange?.(periodPL);
-  }, [periodPL]);
+  }, [periodPL, onPeriodPLChange]);
 
   // Check which periods have enough data
   const dataSpanDays = useMemo(() => getDataSpanDays(data), [data]);
@@ -92,10 +92,6 @@ export function PerformanceChart({ data, loading, onPeriodPLChange }: Performanc
   if (loading || data.length < 2) return null;
 
   const lineColor = periodPL.isPositive ? '#0891B2' : '#DC2626';
-
-  const chartData = filteredData.map(d => ({
-    value: d.value,
-  }));
 
   // Y-axis auto-scaling: compute data range with 10% padding
   const values = filteredData.map(d => d.value);
@@ -105,6 +101,13 @@ export function PerformanceChart({ data, loading, onPeriodPLChange }: Performanc
   const padding = dataRange * 0.1;
   const yMin = Math.max(0, dataMin - padding);
   const yMax = dataMax + padding;
+  const yRange = yMax - yMin;
+
+  // Normalize data so values are relative to yMin (0 = bottom of chart)
+  // This is more reliable than relying on gifted-charts yAxisOffset for plotting
+  const chartData = filteredData.map(d => ({
+    value: d.value - yMin,
+  }));
 
   const periods: { key: Period; label: string; minDays: number }[] = [
     { key: '1W', label: '1W', minDays: 2 },
@@ -130,8 +133,7 @@ export function PerformanceChart({ data, loading, onPeriodPLChange }: Performanc
           color={lineColor}
           initialSpacing={0}
           endSpacing={0}
-          yAxisOffset={yMin}
-          maxValue={yMax - yMin}
+          maxValue={yRange}
           disableScroll
           isAnimated
           animateOnDataChange
