@@ -5,9 +5,9 @@ import { useAuth } from '@/lib/useAuth';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { useHomeData } from '@/lib/useHomeData';
 import { useHistoricalPL } from '@/lib/useHistoricalPL';
-import { PerformanceChart } from '@/components/PerformanceChart';
+import { PerformanceChart, PeriodPL } from '@/components/PerformanceChart';
 import { router } from 'expo-router';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { SkeletonCard } from '@/components/Skeleton';
 import { Colors } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
@@ -46,6 +46,8 @@ export default function HomeScreen() {
     homeData.allDrafts.length > 0,
   );
   const [username, setUsername] = useState<string | null>(null);
+  const [periodPL, setPeriodPL] = useState<PeriodPL | null>(null);
+  const handlePeriodPLChange = useCallback((pl: PeriodPL) => setPeriodPL(pl), []);
 
   // Fetch username
   useEffect(() => {
@@ -86,7 +88,11 @@ export default function HomeScreen() {
     );
   }
 
-  const isPositive = homeData.totalGainLoss >= 0;
+  // Use period-relative P/L when chart is active, otherwise all-time
+  const hasChart = historicalData.length >= 2;
+  const displayGainLoss = hasChart && periodPL ? periodPL.gainLoss : homeData.totalGainLoss;
+  const displayGainLossPercent = hasChart && periodPL ? periodPL.gainLossPercent : homeData.totalGainLossPercent;
+  const isPositive = hasChart && periodPL ? periodPL.isPositive : homeData.totalGainLoss >= 0;
 
   return (
     <View style={styles.container}>
@@ -148,7 +154,7 @@ export default function HomeScreen() {
                       styles.changeAmount,
                       isPositive ? styles.positive : styles.negative
                     ]}>
-                      {isPositive ? '+' : ''}${formatCurrency(homeData.totalGainLoss)}
+                      {isPositive ? '+' : ''}${formatCurrency(displayGainLoss)}
                     </Text>
                     <View style={[
                       styles.changePill,
@@ -158,7 +164,7 @@ export default function HomeScreen() {
                         styles.changePillText,
                         isPositive ? styles.positive : styles.negative
                       ]}>
-                        {formatPercent(homeData.totalGainLossPercent)}
+                        {formatPercent(displayGainLossPercent)}
                       </Text>
                     </View>
                   </View>
@@ -173,7 +179,11 @@ export default function HomeScreen() {
               {/* Section 2b: Performance Chart */}
               {historicalData.length >= 2 && (
                 <View style={styles.chartSection}>
-                  <PerformanceChart data={historicalData} loading={histLoading} />
+                  <PerformanceChart
+                    data={historicalData}
+                    loading={histLoading}
+                    onPeriodPLChange={handlePeriodPLChange}
+                  />
                 </View>
               )}
 

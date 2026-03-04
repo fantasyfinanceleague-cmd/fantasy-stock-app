@@ -5,9 +5,9 @@ import { useLeagueContext } from '@/lib/LeagueContext';
 import { usePortfolio, Holding } from '@/lib/usePortfolio';
 import { useHistoricalPL } from '@/lib/useHistoricalPL';
 import { useStockNames, abbreviateName } from '@/lib/useStockNames';
-import { PerformanceChart } from '@/components/PerformanceChart';
+import { PerformanceChart, PeriodPL } from '@/components/PerformanceChart';
 import { router } from 'expo-router';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { SkeletonHolding } from '@/components/Skeleton';
 import { Colors } from '@/constants/Colors';
 import LeagueSwitcher from '@/components/LeagueSwitcher';
@@ -69,6 +69,8 @@ export default function PortfolioScreen() {
   const { holdings, drafts, trades, portfolioSummary, loading: portfolioLoading, refresh: refreshPortfolio } = usePortfolio(activeLeagueId);
   const { data: historicalData, loading: histLoading } = useHistoricalPL(drafts, trades, drafts.length > 0);
   const [refreshing, setRefreshing] = useState(false);
+  const [periodPL, setPeriodPL] = useState<PeriodPL | null>(null);
+  const handlePeriodPLChange = useCallback((pl: PeriodPL) => setPeriodPL(pl), []);
 
   // Get all symbols for name fetching (current holdings + closed positions)
   const allSymbols = useMemo(() => {
@@ -153,26 +155,32 @@ export default function PortfolioScreen() {
               <Text style={styles.heroLabel}>Portfolio Value</Text>
               <Text style={styles.heroValue}>${formatCurrency(portfolioSummary.totalValue)}</Text>
 
-              {portfolioSummary.hasLivePrices && portfolioSummary.totalCost > 0 && (
-                <TouchableOpacity
-                  style={styles.plPill}
-                  onPress={() => setPlModalVisible(true)}
-                  activeOpacity={0.7}
-                >
-                  <View style={[styles.plPillInner, portfolioSummary.totalGainLoss >= 0 ? styles.positiveBg : styles.negativeBg]}>
-                    <Ionicons
-                      name={portfolioSummary.totalGainLoss >= 0 ? 'trending-up' : 'trending-down'}
-                      size={14}
-                      color={portfolioSummary.totalGainLoss >= 0 ? '#059669' : '#DC2626'}
-                    />
-                    <Text style={[styles.plPillText, portfolioSummary.totalGainLoss >= 0 ? styles.positive : styles.negative]}>
-                      {portfolioSummary.totalGainLoss >= 0 ? '+' : ''}${formatCurrency(portfolioSummary.totalGainLoss)}
-                      {' '}({formatPercent(portfolioSummary.totalGainLossPercent)})
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={14} color="#94A3B8" style={{ marginLeft: 4 }} />
-                </TouchableOpacity>
-              )}
+              {portfolioSummary.hasLivePrices && portfolioSummary.totalCost > 0 && (() => {
+                const hasChart = historicalData.length >= 2;
+                const gl = hasChart && periodPL ? periodPL.gainLoss : portfolioSummary.totalGainLoss;
+                const glPct = hasChart && periodPL ? periodPL.gainLossPercent : portfolioSummary.totalGainLossPercent;
+                const isUp = hasChart && periodPL ? periodPL.isPositive : portfolioSummary.totalGainLoss >= 0;
+                return (
+                  <TouchableOpacity
+                    style={styles.plPill}
+                    onPress={() => setPlModalVisible(true)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.plPillInner, isUp ? styles.positiveBg : styles.negativeBg]}>
+                      <Ionicons
+                        name={isUp ? 'trending-up' : 'trending-down'}
+                        size={14}
+                        color={isUp ? '#059669' : '#DC2626'}
+                      />
+                      <Text style={[styles.plPillText, isUp ? styles.positive : styles.negative]}>
+                        {isUp ? '+' : ''}${formatCurrency(gl)}
+                        {' '}({formatPercent(glPct)})
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={14} color="#94A3B8" style={{ marginLeft: 4 }} />
+                  </TouchableOpacity>
+                );
+              })()}
 
               {budgetRemaining !== null && (
                 <Text style={styles.budgetCaption}>
@@ -184,7 +192,11 @@ export default function PortfolioScreen() {
             {/* Performance Chart */}
             {historicalData.length >= 2 && (
               <View style={styles.chartSection}>
-                <PerformanceChart data={historicalData} loading={histLoading} />
+                <PerformanceChart
+                  data={historicalData}
+                  loading={histLoading}
+                  onPeriodPLChange={handlePeriodPLChange}
+                />
               </View>
             )}
 
