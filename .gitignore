@@ -24,6 +24,7 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+logs/
 
 # Testing
 coverage/
@@ -32,6 +33,9 @@ coverage/
 .cache/
 .cache_ggshield
 *.tsbuildinfo
+
+# Claude Code
+.claude/settings.local.json
 
 # Supabase
 supabase/.secrets
