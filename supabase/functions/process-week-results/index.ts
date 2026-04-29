@@ -788,6 +788,18 @@ Deno.serve(async (req) => {
     return json({ error: 'Missing Supabase configuration' }, 500);
   }
 
+  // Optional: scope processing to a single league (used by simulation tests)
+  let leagueIdFilter: string | null = null;
+  try {
+    const body = await req.json();
+    if (body?.league_id) {
+      leagueIdFilter = body.league_id;
+      console.log(`Scoped to league: ${leagueIdFilter}`);
+    }
+  } catch {
+    // No body or invalid JSON — process all leagues (normal cron behavior)
+  }
+
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
   const now = new Date();
 
@@ -796,7 +808,7 @@ Deno.serve(async (req) => {
 
   try {
     // 1. Find matchups that need processing (week_end has passed, no results yet)
-    const { data: pendingMatchups, error: matchupErr } = await supabase
+    let query = supabase
       .from('matchups')
       .select(`
         id,
@@ -817,6 +829,12 @@ Deno.serve(async (req) => {
       .is('team1_gain', null)  // Results not yet calculated
       .not('team1_user_id', 'is', null) // Skip placeholder matchups (waiting for winners)
       .lt('week_end', now.toISOString());
+
+    if (leagueIdFilter) {
+      query = query.eq('league_id', leagueIdFilter);
+    }
+
+    const { data: pendingMatchups, error: matchupErr } = await query;
 
     if (matchupErr) {
       console.error('Error fetching matchups:', matchupErr);
@@ -1189,12 +1207,24 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Check if all matchups for the current week are done, advance week
-      const currentWeek = leagueMatchups[0]?.leagues?.current_week || 1;
+      // Check if all matchups for the current week are done, advance week.
+      // Process each unique week sequentially (handles multi-week batches).
       const numWeeks = leagueMatchups[0]?.leagues?.num_weeks || 0;
       const playoffTeams = leagueMatchups[0]?.leagues?.playoff_teams || 4;
+      const processedWeeks = [...new Set(leagueMatchups.map(m => m.week_number))].sort((a, b) => a - b);
 
-      if (weekNumber === currentWeek) {
+      for (const week of processedWeeks) {
+        // Re-read current_week from DB (may have changed from prior iteration)
+        const { data: leagueData } = await supabase
+          .from('leagues')
+          .select('current_week, season_status')
+          .eq('id', leagueId)
+          .single();
+
+        const currentWeek = leagueData?.current_week || 1;
+        if (leagueData?.season_status === 'completed') break; // Season already done
+        if (week !== currentWeek) continue; // Not the current week, skip
+
         // Check if all matchups for this week are processed
         const { data: remainingMatchups } = await supabase
           .from('matchups')
@@ -1204,42 +1234,55 @@ Deno.serve(async (req) => {
           .is('team1_gain', null);
 
         if (!remainingMatchups || remainingMatchups.length === 0) {
-          // All matchups done, advance to next week
-          const { error: advanceErr } = await supabase
-            .from('leagues')
-            .update({ current_week: currentWeek + 1 })
-            .eq('id', leagueId);
+          const isPlayoffWeek = leagueMatchups.some(m => m.is_playoff && m.week_number === week);
 
-          if (advanceErr) {
-            console.error(`Failed to advance week for league ${leagueId}:`, advanceErr);
+          if (isPlayoffWeek) {
+            // Check if this was the finals round
+            const finalsMatchup = leagueMatchups.find(m => m.playoff_round === 'finals' && m.week_number === week);
+            if (finalsMatchup) {
+              // Finals completed — complete the season (do NOT advance current_week)
+              const finalsWinner = results.find(r => r.matchupId === finalsMatchup.id)?.winner;
+              if (finalsWinner) {
+                const loserId = finalsMatchup.team1_user_id === finalsWinner
+                  ? finalsMatchup.team2_user_id
+                  : finalsMatchup.team1_user_id;
+                await completeSeasonFromPlayoffs(supabase, leagueId, finalsWinner, loserId);
+                console.log(`Season completed for league ${leagueId} - Champion: ${finalsWinner}`);
+              } else {
+                console.error(`Finals processed but no winner determined for league ${leagueId}`);
+              }
+            } else {
+              // Non-finals playoff round — advance for next round
+              await supabase.from('leagues')
+                .update({ current_week: currentWeek + 1 })
+                .eq('id', leagueId);
+              console.log(`Advanced playoff week for league ${leagueId} to ${currentWeek + 1}`);
+            }
+
+          } else if (currentWeek >= numWeeks) {
+            // Last regular-season week just completed
+            if (playoffTeams > 0) {
+              await supabase.from('leagues')
+                .update({ current_week: numWeeks + 1, season_status: 'playoffs' })
+                .eq('id', leagueId);
+              console.log(`League ${leagueId} transitioning to playoffs`);
+              await generatePlayoffs(supabase, leagueId, numWeeks + 1, playoffTeams);
+            } else {
+              // No playoffs — complete season, do NOT advance past numWeeks
+              console.log(`League ${leagueId} regular season complete (no playoffs)`);
+              await completeSeasonFromStandings(supabase, leagueId);
+            }
+
           } else {
+            // Mid-season — advance normally
+            await supabase.from('leagues')
+              .update({ current_week: currentWeek + 1 })
+              .eq('id', leagueId);
             console.log(`Advanced league ${leagueId} to week ${currentWeek + 1}`);
           }
-
-          // Check if regular season just ended and we need to generate playoffs
-          if (currentWeek === numWeeks && playoffTeams > 0) {
-            await generatePlayoffs(supabase, leagueId, numWeeks + 1, playoffTeams);
-          }
-
-          // Check if season is complete (no playoffs and regular season ended)
-          if (currentWeek >= numWeeks && playoffTeams === 0) {
-            await completeSeasonFromStandings(supabase, leagueId);
-          }
         }
       }
 
-      // Check if playoffs just finished (finals matchup completed)
-      const finalsMatchup = leagueMatchups.find(m => m.playoff_round === 'finals');
-      if (finalsMatchup && finalsMatchup.team1_user_id && finalsMatchup.team2_user_id) {
-        // Finals just completed - record champion
-        const winnerId = results.find(r => r.matchupId === finalsMatchup.id)?.winner;
-        if (winnerId) {
-          const loserId = finalsMatchup.team1_user_id === winnerId
-            ? finalsMatchup.team2_user_id
-            : finalsMatchup.team1_user_id;
-          await completeSeasonFromPlayoffs(supabase, leagueId, winnerId, loserId);
-        }
-      }
     }
 
     console.log(`Processed ${processedCount} matchups`);
