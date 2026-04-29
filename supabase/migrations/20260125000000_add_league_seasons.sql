@@ -84,8 +84,9 @@ BEGIN
   END IF;
 
   -- Snapshot final standings
-  SELECT json_agg(
-    json_build_object(
+  SELECT json_agg(row_data) INTO v_standings
+  FROM (
+    SELECT json_build_object(
       'user_id', user_id,
       'rank', row_number() OVER (ORDER BY wins DESC, points_for DESC),
       'wins', wins,
@@ -93,11 +94,10 @@ BEGIN
       'ties', ties,
       'points_for', points_for,
       'points_against', points_against
-    )
-  ) INTO v_standings
-  FROM league_standings
-  WHERE league_id = p_league_id
-  ORDER BY wins DESC, points_for DESC;
+    ) AS row_data
+    FROM league_standings
+    WHERE league_id = p_league_id
+  ) ranked;
 
   -- Update season record
   UPDATE league_seasons
