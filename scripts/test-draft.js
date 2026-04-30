@@ -7,9 +7,26 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import fs from 'fs';
+import path from 'path';
 
-const SUPABASE_URL = 'https://haiaaifjcclsvmkfqgmd.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhhaWFhaWZqY2Nsc3Zta2ZxZ21kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4MjMzMDksImV4cCI6MjA2OTM5OTMwOX0.wZWwFO4gCaX2RePa-rJKG47YJ6K6ghDhKcgnvhy6RiI';
+// Load .env from repo root
+const envPath = path.resolve(new URL('.', import.meta.url).pathname, '..', '.env');
+if (fs.existsSync(envPath)) {
+  for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
+    const match = line.match(/^\s*([^#=]+?)\s*=\s*(.*?)\s*$/);
+    if (match && !process.env[match[1]]) {
+      process.env[match[1]] = match[2];
+    }
+  }
+}
+
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://haiaaifjcclsvmkfqgmd.supabase.co';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+if (!SUPABASE_ANON_KEY) {
+  console.error('ERROR: SUPABASE_ANON_KEY not set in .env or environment');
+  process.exit(1);
+}
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
