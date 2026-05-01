@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
   const query = String(q || '').trim().toUpperCase();
   if (!query) return json({ items: [] });
 
-  const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!);
+  const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SB_PUBLISHABLE_KEY')!);
 
   // Smart search with relevance-based ordering
   // Priority: 1) Exact symbol, 2) Symbol starts-with, 3) Name starts-with, 4) Symbol/Name contains
