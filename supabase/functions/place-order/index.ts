@@ -106,17 +106,17 @@ Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
 
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-  const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
-  const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const PUBLISHABLE_KEY = Deno.env.get('SB_PUBLISHABLE_KEY')!;
+  const SECRET_KEY = Deno.env.get('SB_SECRET_KEY_INTERNAL')!;
   const CRYPTO_KEY = Deno.env.get('BROKER_CRYPTO_KEY');
 
   // Authed client (to get user id from JWT)
-  const authed = createClient(SUPABASE_URL, ANON_KEY, {
+  const authed = createClient(SUPABASE_URL, PUBLISHABLE_KEY, {
     global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } },
   });
 
   // Admin client for reading credentials
-  const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+  const admin = createClient(SUPABASE_URL, SECRET_KEY);
 
   try {
     // Get authenticated user
