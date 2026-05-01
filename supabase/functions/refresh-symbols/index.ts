@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, // service key to bypass RLS for upsert
+    Deno.env.get('SB_SECRET_KEY_INTERNAL')!, // secret key to bypass RLS for upsert
   );
 
   // Upsert in chunks
