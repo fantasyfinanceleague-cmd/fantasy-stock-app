@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
   const sym = String(symbol || '').toUpperCase();
   if (!sym) return json({ error: 'symbol required' }, 400);
 
-  const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!);
+  const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SB_PUBLISHABLE_KEY')!);
   const { data, error } = await supabase.from('symbols').select('name').eq('symbol', sym).maybeSingle();
 
   if (error) return json({ error: 'Failed to lookup symbol' }, 500);

@@ -228,17 +228,17 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: getCorsHeaders(req) });
 
   const SUPABASE_URL = env('SUPABASE_URL');
-  const ANON_KEY = env('SUPABASE_ANON_KEY');
-  const SERVICE_ROLE = env('SUPABASE_SERVICE_ROLE_KEY');
+  const PUBLISHABLE_KEY = env('SB_PUBLISHABLE_KEY');
+  const SECRET_KEY = env('SB_SECRET_KEY_INTERNAL');
   const CRYPTO_KEY = env('BROKER_CRYPTO_KEY');
 
   // Authed client (to get user id from JWT)
-  const authed = createClient(SUPABASE_URL, ANON_KEY, {
+  const authed = createClient(SUPABASE_URL, PUBLISHABLE_KEY, {
     global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } },
   });
 
   // Admin client for reading credentials
-  const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+  const admin = createClient(SUPABASE_URL, SECRET_KEY);
 
   try {
     // Get authenticated user
