@@ -27,6 +27,35 @@ const json = (b: unknown, s = 200) =>
     headers: { 'Content-Type': 'application/json' }
   });
 
+// Constant-time string comparison. Avoids the early-exit timing leak of ===/!==.
+// Equal-length check first, then a full XOR-accumulate over every byte.
+function constantTimeEqual(a: string, b: string): boolean {
+  const aBytes = new TextEncoder().encode(a);
+  const bBytes = new TextEncoder().encode(b);
+  if (aBytes.length !== bBytes.length) return false;
+  let result = 0;
+  for (let i = 0; i < aBytes.length; i++) {
+    result |= aBytes[i] ^ bBytes[i];
+  }
+  return result === 0;
+}
+
+// Generic 401. No detail about why (missing vs wrong vs malformed) to avoid leakage.
+const unauthorized = () => json({ error: 'Unauthorized' }, 401);
+
+// Validate the incoming apikey header against SB_SECRET_KEY_CRON.
+// Fails closed: if the expected key is unset/empty, ALL requests are rejected.
+// This is the only guard once verify_jwt = false exposes the function publicly.
+function isAuthorized(req: Request): boolean {
+  const expectedKey = Deno.env.get('SB_SECRET_KEY_CRON');
+  if (!expectedKey || expectedKey.length === 0) {
+    console.error('SB_SECRET_KEY_CRON not configured — rejecting all requests');
+    return false;
+  }
+  const providedKey = req.headers.get('apikey') ?? '';
+  return constantTimeEqual(providedKey, expectedKey);
+}
+
 // Update job status for retry tracking
 async function updateJobStatus(
   supabase: any,
@@ -181,19 +210,27 @@ function calculateHoldings(
 }
 
 Deno.serve(async (req) => {
+  // SECURITY: apikey validation must be the first thing we do — before reading
+  // the body, before any DB connection, before any business logic. With
+  // verify_jwt = false this function is publicly invocable, so this check is
+  // the only authentication guard.
+  if (!isAuthorized(req)) {
+    return unauthorized();
+  }
+
   const JOB_NAME = 'snapshot-week-end';
   console.log('Snapshotting week end prices...');
 
   const SUPABASE_URL = env('SUPABASE_URL');
-  const SERVICE_ROLE = env('SUPABASE_SERVICE_ROLE_KEY');
+  const SECRET_KEY = env('SB_SECRET_KEY_INTERNAL');
   const ALPACA_KEY = env('ALPACA_API_KEY');
   const ALPACA_SECRET = env('ALPACA_API_SECRET');
 
-  if (!SUPABASE_URL || !SERVICE_ROLE) {
+  if (!SUPABASE_URL || !SECRET_KEY) {
     return json({ error: 'Missing Supabase configuration' }, 500);
   }
 
-  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
+  const supabase = createClient(SUPABASE_URL, SECRET_KEY);
 
   // Get retry attempt from header (set by retry mechanism)
   const retryAttempt = parseInt(req.headers.get('X-Retry-Attempt') || '1');
