@@ -14,3 +14,9 @@ entrypoint = "./functions/quote/index.ts"
 enabled = true
 verify_jwt = false  # Allow cron to call without auth
 entrypoint = "./functions/process-week-results/index.ts"
+
+# Phase 2b-1: cron auth migration. JWT verification disabled so the function is
+# reachable without a legacy JWT; the function's own apikey-header validation
+# (SB_SECRET_KEY_CRON, constant-time, fail-closed) is the authentication guard.
+[functions.snapshot-week-end]
+verify_jwt = false
