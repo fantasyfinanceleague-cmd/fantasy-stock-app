@@ -197,8 +197,8 @@ export default function CreateLeagueWizard() {
           style={styles.primaryButton}
           onPress={() => setStep('name')}
         >
-          <Ionicons name="add-circle-outline" size={20} color={Colors.background} />
-          <Text style={styles.primaryButtonText}>CREATE LEAGUE</Text>
+          <Ionicons name="add-circle-outline" size={20} color="#FFFFFF" />
+          <Text style={styles.primaryButtonText}>Create League</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -209,7 +209,7 @@ export default function CreateLeagueWizard() {
           }}
         >
           <Ionicons name="search-outline" size={20} color={ACCENT} />
-          <Text style={styles.secondaryButtonText}>JOIN A LEAGUE</Text>
+          <Text style={styles.secondaryButtonText}>Join a League</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -242,7 +242,7 @@ export default function CreateLeagueWizard() {
         onPress={goNext}
         disabled={!state.name.trim()}
       >
-        <Text style={styles.nextButtonText}>NEXT</Text>
+        <Text style={styles.nextButtonText}>Next</Text>
       </TouchableOpacity>
     </KeyboardAvoidingView>
   );
@@ -257,12 +257,12 @@ export default function CreateLeagueWizard() {
             style={[styles.typeCard, state.type === 'matchup' && styles.typeCardSelected]}
             onPress={() => setState({ ...state, type: 'matchup' })}
           >
-            {state.type === 'matchup' && <View style={styles.popularBadge}><Text style={styles.popularBadgeText}>POPULAR</Text></View>}
+            {state.type === 'matchup' && <View style={styles.popularBadge}><Text style={styles.popularBadgeText}>Popular</Text></View>}
             <View style={styles.typeCardIcon}>
               <Ionicons name="people" size={32} color={state.type === 'matchup' ? ACCENT : Colors.textMuted} />
             </View>
             <Text style={[styles.typeCardTitle, state.type === 'matchup' && styles.typeCardTitleSelected]}>
-              MATCHUP
+              Matchup
             </Text>
             {state.type === 'matchup' && (
               <Text style={styles.typeCardDesc}>Weekly head-to-head battles with playoffs at the end.</Text>
@@ -273,12 +273,12 @@ export default function CreateLeagueWizard() {
             style={[styles.typeCard, state.type === 'duration' && styles.typeCardSelected]}
             onPress={() => setState({ ...state, type: 'duration' })}
           >
-            {state.type === 'duration' && <View style={styles.popularBadge}><Text style={styles.popularBadgeText}>SIMPLE</Text></View>}
+            {state.type === 'duration' && <View style={styles.popularBadge}><Text style={styles.popularBadgeText}>Simple</Text></View>}
             <View style={styles.typeCardIcon}>
               <Ionicons name="trending-up" size={32} color={state.type === 'duration' ? ACCENT : Colors.textMuted} />
             </View>
             <Text style={[styles.typeCardTitle, state.type === 'duration' && styles.typeCardTitleSelected]}>
-              DURATION
+              Duration
             </Text>
             {state.type === 'duration' && (
               <Text style={styles.typeCardDesc}>Best portfolio gains at the end wins it all.</Text>
@@ -288,7 +288,7 @@ export default function CreateLeagueWizard() {
       </View>
 
       <TouchableOpacity style={styles.nextButton} onPress={goNext}>
-        <Text style={styles.nextButtonText}>NEXT</Text>
+        <Text style={styles.nextButtonText}>Next</Text>
       </TouchableOpacity>
     </View>
   );
@@ -319,7 +319,7 @@ export default function CreateLeagueWizard() {
         </View>
 
         <TouchableOpacity style={styles.nextButton} onPress={goNext}>
-          <Text style={styles.nextButtonText}>NEXT</Text>
+          <Text style={styles.nextButtonText}>Next</Text>
         </TouchableOpacity>
       </View>
     );
@@ -340,7 +340,7 @@ export default function CreateLeagueWizard() {
           >
             <Ionicons name="wallet" size={28} color={state.budgetMode === 'budget' ? ACCENT : Colors.textMuted} />
             <Text style={[styles.budgetCardTitle, state.budgetMode === 'budget' && styles.budgetCardTitleSelected]}>
-              SALARY CAP
+              Salary Cap
             </Text>
           </TouchableOpacity>
 
@@ -350,7 +350,7 @@ export default function CreateLeagueWizard() {
           >
             <Ionicons name="infinite" size={28} color={state.budgetMode === 'no-budget' ? ACCENT : Colors.textMuted} />
             <Text style={[styles.budgetCardTitle, state.budgetMode === 'no-budget' && styles.budgetCardTitleSelected]}>
-              NO LIMIT
+              No Limit
             </Text>
           </TouchableOpacity>
         </View>
@@ -388,7 +388,7 @@ export default function CreateLeagueWizard() {
       </ScrollView>
 
       <TouchableOpacity style={styles.nextButton} onPress={goNext}>
-        <Text style={styles.nextButtonText}>NEXT</Text>
+        <Text style={styles.nextButtonText}>Next</Text>
       </TouchableOpacity>
     </KeyboardAvoidingView>
   );
@@ -429,7 +429,7 @@ export default function CreateLeagueWizard() {
         </View>
 
         <TouchableOpacity style={styles.nextButton} onPress={goNext}>
-          <Text style={styles.nextButtonText}>NEXT</Text>
+          <Text style={styles.nextButtonText}>Next</Text>
         </TouchableOpacity>
       </View>
     );
@@ -485,7 +485,7 @@ export default function CreateLeagueWizard() {
         </ScrollView>
 
         <TouchableOpacity style={styles.nextButton} onPress={goNext}>
-          <Text style={styles.nextButtonText}>NEXT</Text>
+          <Text style={styles.nextButtonText}>Next</Text>
         </TouchableOpacity>
       </View>
     );
@@ -565,8 +565,7 @@ export default function CreateLeagueWizard() {
                 value={state.draftDate || new Date()}
                 mode="datetime"
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                themeVariant="dark"
-                textColor="#ffffff"
+                themeVariant="light"
                 onChange={(event, selectedDate) => {
                   if (Platform.OS !== 'ios') setShowDatePicker(false);
                   if (selectedDate) setState({ ...state, draftDate: selectedDate, draftDateTBD: false });
@@ -627,9 +626,9 @@ export default function CreateLeagueWizard() {
         disabled={creating}
       >
         {creating ? (
-          <ActivityIndicator color={Colors.background} />
+          <ActivityIndicator color="#FFFFFF" />
         ) : (
-          <Text style={styles.nextButtonText}>CREATE LEAGUE</Text>
+          <Text style={styles.nextButtonText}>Create League</Text>
         )}
       </TouchableOpacity>
     </View>
@@ -760,7 +759,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: 15,
     fontWeight: '700',
-    color: Colors.background,
+    color: '#FFFFFF',
     letterSpacing: 0.5,
   },
   secondaryButton: {
@@ -880,7 +879,7 @@ const styles = StyleSheet.create({
   popularBadgeText: {
     fontSize: 10,
     fontWeight: '700',
-    color: Colors.background,
+    color: '#FFFFFF',
     letterSpacing: 0.5,
   },
 
@@ -1179,7 +1178,7 @@ const styles = StyleSheet.create({
   nextButtonText: {
     fontSize: 15,
     fontWeight: '700',
-    color: Colors.background,
+    color: '#FFFFFF',
     letterSpacing: 0.5,
   },
   doneButton: {

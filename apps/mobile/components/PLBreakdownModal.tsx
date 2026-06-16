@@ -616,7 +616,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   draftedBadge: {
-    backgroundColor: 'rgba(251, 191, 36, 0.15)',
+    backgroundColor: '#FFFBEB',
   },
   boughtBadge: {
     backgroundColor: Colors.primaryBg,
@@ -638,7 +638,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 4,
-    backgroundColor: 'rgba(156, 163, 175, 0.15)',
+    backgroundColor: '#F1F5F9',
   },
   soldText: {
     fontSize: 11,

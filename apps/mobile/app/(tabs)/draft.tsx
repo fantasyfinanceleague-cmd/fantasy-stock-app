@@ -288,7 +288,7 @@ export default function DraftScreen() {
 
   if (!activeLeagueId || !activeLeague) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top']}>
         <LeagueSwitcher />
         <View style={styles.centered}>
           <Text style={styles.emptyTitle}>No league selected</Text>
@@ -301,7 +301,7 @@ export default function DraftScreen() {
   if (isDraftNotStarted) {
     const hasDraftDate = activeLeague.draft_date != null;
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top']}>
         <LeagueSwitcher />
         <View style={styles.centered}>
           <Text style={styles.pendingIcon}>⏰</Text>
@@ -338,7 +338,7 @@ export default function DraftScreen() {
     })).sort((a, b) => b.totalValue - a.totalValue);
 
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top']}>
         <LeagueSwitcher />
 
         <ScrollView
@@ -494,7 +494,7 @@ export default function DraftScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       {/* Sticky League Switcher Header */}
       <LeagueSwitcher />
 
@@ -734,7 +734,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     borderWidth: 2,
-    borderColor: Colors.success,
+    borderColor: '#0891B2',
     marginBottom: 16,
   },
   searchTitle: {
@@ -764,7 +764,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   searchBtnText: {
-    color: Colors.textPrimary,
+    color: '#FFFFFF',
     fontWeight: '600',
   },
   quoteCard: {
@@ -798,7 +798,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   draftBtnText: {
-    color: Colors.textPrimary,
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
   },
@@ -824,7 +824,7 @@ const styles = StyleSheet.create({
   },
   orderRowCurrent: {
     borderColor: Colors.primary,
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    backgroundColor: '#ECFEFF',
   },
   orderRowDone: {
     opacity: 0.5,
@@ -951,7 +951,6 @@ const styles = StyleSheet.create({
   summaryLabel: {
     fontSize: 12,
     color: Colors.textMuted,
-    textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   yourTeamHeader: {
@@ -991,7 +990,7 @@ const styles = StyleSheet.create({
   pickRoundBadgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: '#FFFFFF',
   },
   yourPickSymbol: {
     flex: 1,
@@ -1087,7 +1086,7 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
   },
   dropdownChipTextActive: {
-    color: Colors.textPrimary,
+    color: '#FFFFFF',
     fontWeight: '600',
   },
   // Round picks styles
@@ -1149,7 +1148,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    backgroundColor: '#F8FAFC',
   },
   teamDetailName: {
     fontSize: 18,

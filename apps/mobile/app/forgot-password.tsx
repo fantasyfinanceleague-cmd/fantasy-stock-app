@@ -104,7 +104,7 @@ export default function ForgotPasswordScreen() {
           <TextInput
             style={styles.input}
             placeholder="Email"
-            placeholderTextColor="#666"
+            placeholderTextColor="#94A3B8"
             value={email}
             onChangeText={setEmail}
             autoCapitalize="none"
@@ -158,13 +158,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#fff',
+    color: '#0F172A',
     textAlign: 'center',
     marginBottom: 12,
   },
   description: {
     fontSize: 15,
-    color: '#888',
+    color: '#64748B',
     textAlign: 'center',
     marginBottom: 32,
     lineHeight: 22,
@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
   },
   hint: {
     fontSize: 14,
-    color: '#666',
+    color: '#64748B',
     textAlign: 'center',
     marginBottom: 32,
     lineHeight: 20,
@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 16,
     fontSize: 16,
-    color: '#fff',
+    color: '#0F172A',
     marginBottom: 16,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   resendText: {
-    color: '#888',
+    color: '#64748B',
     fontSize: 14,
   },
 });

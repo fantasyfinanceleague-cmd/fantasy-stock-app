@@ -271,8 +271,7 @@ export default function LeagueSettingsScreen() {
                   value={draftDate || new Date()}
                   mode="datetime"
                   display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  themeVariant="dark"
-                  textColor="#ffffff"
+                  themeVariant="light"
                   onChange={(event, selectedDate) => {
                     if (Platform.OS !== 'ios') setShowDatePicker(false);
                     if (selectedDate) setDraftDate(selectedDate);
@@ -431,11 +430,11 @@ export default function LeagueSettingsScreen() {
                   disabled={startingNewSeason}
                 >
                   {startingNewSeason ? (
-                    <ActivityIndicator color={Colors.background} />
+                    <ActivityIndicator color="#FFFFFF" />
                   ) : (
                     <>
-                      <Ionicons name="refresh" size={20} color={Colors.background} />
-                      <Text style={styles.newSeasonButtonText}>START NEW SEASON</Text>
+                      <Ionicons name="refresh" size={20} color="#FFFFFF" />
+                      <Text style={styles.newSeasonButtonText}>Start New Season</Text>
                     </>
                   )}
                 </TouchableOpacity>
@@ -455,9 +454,9 @@ export default function LeagueSettingsScreen() {
               disabled={saving}
             >
               {saving ? (
-                <ActivityIndicator color={Colors.background} />
+                <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.saveButtonText}>SAVE CHANGES</Text>
+                <Text style={styles.saveButtonText}>Save Changes</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -736,7 +735,7 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 15,
     fontWeight: '700',
-    color: Colors.background,
+    color: '#FFFFFF',
     letterSpacing: 0.5,
   },
 
@@ -775,7 +774,7 @@ const styles = StyleSheet.create({
   newSeasonButtonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: Colors.background,
+    color: '#FFFFFF',
     letterSpacing: 0.5,
   },
 });

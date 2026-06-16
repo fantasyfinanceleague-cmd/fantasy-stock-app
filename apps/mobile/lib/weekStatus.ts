@@ -8,6 +8,7 @@ interface HolidayInfo {
 
 interface WeekStatus {
   status: 'active' | 'final' | 'pending_results' | 'season_complete';
+  phase: 'regular' | 'playoffs' | 'completed';
   currentWeek: number;
   numWeeks: number;
   isWeekComplete: boolean;
@@ -23,6 +24,7 @@ interface League {
   current_week?: number;
   num_weeks?: number;
   league_type?: string;
+  season_status?: string;
 }
 
 interface Matchup {
@@ -165,7 +167,15 @@ function getDayOfWeek(): number {
 export function getWeekStatus(league: League | null, matchup: Matchup | null): WeekStatus {
   const currentWeek = league?.current_week || 1;
   const numWeeks = league?.num_weeks || 0;
-  const isSeasonComplete = currentWeek > numWeeks;
+  const seasonStatus = league?.season_status || 'active';
+
+  // Derive phase from season_status (DB source of truth)
+  let phase: 'regular' | 'playoffs' | 'completed' = 'regular';
+  if (seasonStatus === 'completed') phase = 'completed';
+  else if (seasonStatus === 'playoffs') phase = 'playoffs';
+  else if (currentWeek > numWeeks && numWeeks > 0) phase = 'completed'; // fallback for legacy data
+
+  const isSeasonComplete = phase === 'completed';
 
   const isWeekComplete = matchup && (
     matchup.winner_user_id !== null ||
@@ -187,7 +197,7 @@ export function getWeekStatus(league: League | null, matchup: Matchup | null): W
     status = 'season_complete';
   } else if (isWeekComplete && isTransitionPeriod) {
     status = 'final';
-    countdown = getRelativeCountdown(currentWeek + 1, holidayInfo);
+    countdown = getRelativeCountdown(currentWeek + 1, holidayInfo, phase);
   } else if (isWeekComplete) {
     status = 'final';
   } else if (isTransitionPeriod && !isWeekComplete) {
@@ -196,6 +206,7 @@ export function getWeekStatus(league: League | null, matchup: Matchup | null): W
 
   return {
     status,
+    phase,
     currentWeek,
     numWeeks,
     isWeekComplete: !!isWeekComplete,
@@ -208,14 +219,29 @@ export function getWeekStatus(league: League | null, matchup: Matchup | null): W
   };
 }
 
-export function getRelativeCountdown(nextWeek: number, holidayInfo?: HolidayInfo | null): string {
+export function getRelativeCountdown(nextWeek: number, holidayInfo?: HolidayInfo | null, phase?: string): string {
   const info = holidayInfo || isNextMondayHoliday();
+  const day = info.isHoliday ? 'Tuesday' : 'Monday';
 
-  if (info.isHoliday) {
-    return `Week ${nextWeek} starts Tuesday`;
+  if (phase === 'completed') {
+    return 'Season Complete';
   }
 
-  return `Week ${nextWeek} starts Monday`;
+  if (phase === 'playoffs') {
+    return `Playoffs continue ${day}`;
+  }
+
+  return `Week ${nextWeek} starts ${day}`;
+}
+
+export function getPlayoffRoundLabel(round: string | null | undefined): string | null {
+  if (!round) return null;
+  const labels: Record<string, string> = {
+    quarter: 'Quarterfinals',
+    semi: 'Semifinals',
+    finals: 'Finals',
+  };
+  return labels[round] || round;
 }
 
 export function isWeekActive(matchup: Matchup | null): boolean {

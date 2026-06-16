@@ -40,7 +40,7 @@ export default function StatusBadge({ type, text, week, holidayName }: StatusBad
       case 'final':
         return {
           backgroundColor: Colors.success,
-          textColor: Colors.textPrimary,
+          textColor: '#FFFFFF',
           displayText: text || 'Final',
           showDot: false,
         };
@@ -48,7 +48,7 @@ export default function StatusBadge({ type, text, week, holidayName }: StatusBad
         return {
           backgroundColor: Colors.errorBg,
           textColor: Colors.error,
-          borderColor: 'rgba(239, 68, 68, 0.3)',
+          borderColor: '#FECACA',
           displayText: text || 'Live',
           showDot: true,
         };
@@ -56,7 +56,7 @@ export default function StatusBadge({ type, text, week, holidayName }: StatusBad
         return {
           backgroundColor: Colors.primaryBg,
           textColor: Colors.primaryLight,
-          borderColor: 'rgba(59, 130, 246, 0.2)',
+          borderColor: '#BFDBFE',
           displayText: text || 'Pending',
           showDot: false,
         };
@@ -64,7 +64,7 @@ export default function StatusBadge({ type, text, week, holidayName }: StatusBad
         return {
           backgroundColor: Colors.warningBg,
           textColor: Colors.warning,
-          borderColor: 'rgba(251, 191, 36, 0.2)',
+          borderColor: '#FDE68A',
           displayText: text || (holidayName ? `Market closed - ${holidayName}` : 'Holiday'),
           showDot: false,
         };

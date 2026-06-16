@@ -2,26 +2,42 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/Colors';
+import { getPlayoffRoundLabel } from '@/lib/weekStatus';
 
 interface WeekNavigatorProps {
   currentWeek: number;
   selectedWeek: number;
   totalWeeks?: number;
+  maxWeek?: number;
   onWeekChange: (week: number) => void;
   disabled?: boolean;
+  phase?: 'regular' | 'playoffs' | 'completed';
+  playoffRoundForWeek?: (week: number) => string | null;
 }
 
 export default function WeekNavigator({
   currentWeek,
   selectedWeek,
   totalWeeks,
+  maxWeek,
   onWeekChange,
-  disabled = false
+  disabled = false,
+  phase,
+  playoffRoundForWeek,
 }: WeekNavigatorProps) {
+  const effectiveMax = maxWeek ?? currentWeek;
   const canGoPrev = selectedWeek > 1 && !disabled;
-  const canGoNext = selectedWeek < currentWeek && !disabled;
-  const isViewingCurrent = selectedWeek === currentWeek;
-  const isViewingPast = selectedWeek < currentWeek;
+  const canGoNext = (() => {
+    if (disabled || selectedWeek >= effectiveMax) return false;
+    if (phase === 'regular' && totalWeeks && selectedWeek >= totalWeeks) return false;
+    return true;
+  })();
+  const isViewingCurrent = phase === 'completed'
+    ? selectedWeek === effectiveMax
+    : selectedWeek === currentWeek;
+  const isViewingPast = phase === 'completed'
+    ? selectedWeek < effectiveMax
+    : selectedWeek < currentWeek;
 
   const handlePrev = () => {
     if (canGoPrev) {
@@ -52,13 +68,18 @@ export default function WeekNavigator({
 
       {/* Week display */}
       <View style={styles.weekDisplay}>
-        <Text style={styles.weekText}>Week {selectedWeek}</Text>
-        {isViewingCurrent && (
+        <Text style={styles.weekText}>
+          {totalWeeks && selectedWeek > totalWeeks && playoffRoundForWeek
+            ? (getPlayoffRoundLabel(playoffRoundForWeek(selectedWeek)) || `Week ${selectedWeek}`)
+            : `Week ${selectedWeek}`
+          }
+        </Text>
+        {isViewingCurrent && phase !== 'completed' && (
           <View style={styles.badgeCurrent}>
             <Text style={styles.badgeTextCurrent}>Current</Text>
           </View>
         )}
-        {isViewingPast && (
+        {(isViewingPast || (isViewingCurrent && phase === 'completed')) && (
           <View style={styles.badgeFinal}>
             <Text style={styles.badgeTextFinal}>Final</Text>
           </View>
@@ -78,8 +99,8 @@ export default function WeekNavigator({
         />
       </TouchableOpacity>
 
-      {/* Total weeks */}
-      {totalWeeks && (
+      {/* Total weeks - hide during playoffs/completed since weeks extend beyond regular season */}
+      {totalWeeks && phase === 'regular' && (
         <Text style={styles.totalWeeks}>of {totalWeeks}</Text>
       )}
     </View>
@@ -93,7 +114,7 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    backgroundColor: 'rgba(17, 24, 39, 0.6)',
+    backgroundColor: '#F8FAFC',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -107,7 +128,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   arrowButtonDisabled: {
-    backgroundColor: 'rgba(107, 114, 128, 0.1)',
+    backgroundColor: '#F1F5F9',
     opacity: 0.5,
   },
   weekDisplay: {
@@ -128,7 +149,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: Colors.primaryBg,
     borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.3)',
+    borderColor: '#0891B2',
   },
   badgeTextCurrent: {
     fontSize: 11,
@@ -144,7 +165,7 @@ const styles = StyleSheet.create({
   badgeTextFinal: {
     fontSize: 11,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: '#FFFFFF',
   },
   totalWeeks: {
     fontSize: 12,

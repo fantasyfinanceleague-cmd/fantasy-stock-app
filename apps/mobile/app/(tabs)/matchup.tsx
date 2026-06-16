@@ -83,56 +83,51 @@ export default function MatchupScreen() {
   const [weekSnapshots, setWeekSnapshots] = useState<Record<string, { quantity: number; weekStartPrice: number }>>({});
   const [hasSnapshots, setHasSnapshots] = useState(false);
   const [profiles, setProfiles] = useState<Record<string, UserProfile>>({});
+  const [playoffRounds, setPlayoffRounds] = useState<Record<number, string>>({});
+  const [lastMatchupWeek, setLastMatchupWeek] = useState(0);
   const [error, setError] = useState('');
 
-  // Track if we're viewing a specific matchup (not current user's)
   const viewingSpecificMatchup = !!(params.matchupId || (params.team1 && params.team2));
 
   const isMatchupLeague = activeLeague?.league_type === 'matchup';
   const currentWeek = activeLeague?.current_week || 1;
 
-  // Selected week for navigation - use param if provided
   const initialWeek = params.week ? parseInt(params.week, 10) : currentWeek;
   const [selectedWeek, setSelectedWeek] = useState(initialWeek);
 
-  // Update selectedWeek when currentWeek changes (only if not viewing a specific matchup)
   useEffect(() => {
     if (currentWeek > 0 && !viewingSpecificMatchup) {
-      setSelectedWeek(currentWeek);
+      const effectiveWeek = (activeLeague?.season_status === 'completed' && lastMatchupWeek > 0)
+        ? Math.min(currentWeek, lastMatchupWeek)
+        : currentWeek;
+      setSelectedWeek(effectiveWeek);
     }
-  }, [currentWeek, viewingSpecificMatchup]);
+  }, [currentWeek, viewingSpecificMatchup, lastMatchupWeek]);
 
-  // Update selectedWeek when params change
   useEffect(() => {
     if (params.week) {
       setSelectedWeek(parseInt(params.week, 10));
     }
   }, [params.week]);
 
-  // Get week status for UI
   const weekStatus = useMemo(() => {
     return getWeekStatus(activeLeague, matchup);
   }, [activeLeague, matchup]);
 
-  // Determine if we should poll for prices
   const isActiveWeek = useMemo(() => {
     return matchup ? checkWeekActive(matchup) : false;
   }, [matchup]);
 
-  // 5-minute polling during active weeks
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // Clear existing polling
     if (pollingRef.current) {
       clearInterval(pollingRef.current);
       pollingRef.current = null;
     }
 
-    // Only poll if active week and viewing current week
     if (!isActiveWeek || selectedWeek !== currentWeek) return;
 
-    // Set up 5-minute polling
     pollingRef.current = setInterval(() => {
       fetchCurrentPrices();
     }, 5 * 60 * 1000);
@@ -152,17 +147,15 @@ export default function MatchupScreen() {
     }
   }, [activeLeagueId, user, isMatchupLeague, selectedWeek, params.matchupId, params.team1, params.team2]);
 
-  // Refresh prices every 30 seconds when matchup is active (not for completed weeks)
   useEffect(() => {
     if (!matchup || team1Holdings.length === 0 && team2Holdings.length === 0) return;
 
-    // Don't poll for completed/past weeks (they have final scores)
     const isCompletedWeek = matchup.team1_gain != null || matchup.team2_gain != null;
     if (isCompletedWeek) return;
 
     const interval = setInterval(() => {
       fetchCurrentPrices();
-    }, 30000); // 30 seconds
+    }, 30000);
 
     return () => clearInterval(interval);
   }, [matchup, team1Holdings, team2Holdings]);
@@ -174,9 +167,26 @@ export default function MatchupScreen() {
     setError('');
 
     try {
+      // Fetch playoff round mapping for WeekNavigator labels
+      const { data: playoffMatchups } = await supabase
+        .from('matchups')
+        .select('week_number, playoff_round')
+        .eq('league_id', activeLeagueId)
+        .eq('is_playoff', true);
+
+      if (playoffMatchups && playoffMatchups.length > 0) {
+        const rounds: Record<number, string> = {};
+        playoffMatchups.forEach(m => {
+          if (m.playoff_round) rounds[m.week_number] = m.playoff_round;
+        });
+        setPlayoffRounds(rounds);
+        setLastMatchupWeek(Math.max(...playoffMatchups.map(m => m.week_number)));
+      } else {
+        setLastMatchupWeek(activeLeague?.num_weeks || currentWeek);
+      }
+
       let matchupData: Matchup | null = null;
 
-      // If viewing a specific matchup (from schedule click)
       if (params.matchupId) {
         const { data, error: matchupError } = await supabase
           .from('matchups')
@@ -194,7 +204,6 @@ export default function MatchupScreen() {
         }
         matchupData = data;
       } else if (params.team1 && params.team2) {
-        // Fetch by team IDs
         const { data, error: matchupError } = await supabase
           .from('matchups')
           .select('*')
@@ -214,7 +223,6 @@ export default function MatchupScreen() {
         }
         matchupData = data;
       } else {
-        // Default: Find user's matchup for selected week
         const { data, error: matchupError } = await supabase
           .from('matchups')
           .select('*')
@@ -241,7 +249,6 @@ export default function MatchupScreen() {
         return;
       }
 
-      // Fetch profiles for both users
       const userIds = [matchupData.team1_user_id, matchupData.team2_user_id]
         .filter(id => id && !id.startsWith('bot-'));
 
@@ -260,7 +267,6 @@ export default function MatchupScreen() {
         }
       }
 
-      // Fetch week snapshots for both users
       const allUserIds = [matchupData.team1_user_id, matchupData.team2_user_id].filter(Boolean);
       const { data: snapshots } = await supabase
         .from('week_snapshots')
@@ -269,12 +275,10 @@ export default function MatchupScreen() {
         .eq('week_number', selectedWeek)
         .in('user_id', allUserIds);
 
-      // Build snapshot map: { `${userId}-${symbol}`: { quantity, weekStartPrice } }
       const snapshotMap: Record<string, { quantity: number; weekStartPrice: number }> = {};
       let isPastWeek = false;
 
       if (snapshots && snapshots.length > 0) {
-        // Check if this is a completed/past week (has week_end_price)
         isPastWeek = snapshots.some(s => s.week_end_price != null);
 
         for (const s of snapshots) {
@@ -291,12 +295,10 @@ export default function MatchupScreen() {
         setHasSnapshots(false);
       }
 
-      // For past weeks, use snapshot data for holdings; for current week, fetch current holdings
       let team1: HoldingBase[] = [];
       let team2: HoldingBase[] = [];
 
       if (isPastWeek && snapshots && snapshots.length > 0) {
-        // Build holdings from snapshots for past weeks
         const team1Snapshots = snapshots.filter(s => s.user_id === matchupData.team1_user_id);
         const team2Snapshots = snapshots.filter(s => s.user_id === matchupData.team2_user_id);
 
@@ -312,7 +314,6 @@ export default function MatchupScreen() {
           totalCost: Number(s.quantity) * Number(s.week_start_price),
         }));
       } else {
-        // Current week - fetch current holdings
         [team1, team2] = await Promise.all([
           fetchTeamHoldings(matchupData.team1_user_id),
           fetchTeamHoldings(matchupData.team2_user_id),
@@ -322,9 +323,7 @@ export default function MatchupScreen() {
       setTeam1Holdings(team1);
       setTeam2Holdings(team2);
 
-      // For past weeks, use week_end_price from snapshots; for current week, fetch live prices
       if (isPastWeek && snapshots && snapshots.length > 0) {
-        // Build prices from snapshot week_end_price
         const snapshotPrices: Record<string, number> = {};
         for (const s of snapshots) {
           if (s.week_end_price != null) {
@@ -333,7 +332,6 @@ export default function MatchupScreen() {
         }
         setPrices(snapshotPrices);
       } else {
-        // Current week - fetch live prices
         const allSymbols = [...team1.map(h => h.symbol), ...team2.map(h => h.symbol)];
         const uniqueSymbols = [...new Set(allSymbols)];
 
@@ -358,21 +356,18 @@ export default function MatchupScreen() {
   async function fetchTeamHoldings(userId: string): Promise<HoldingBase[]> {
     if (!activeLeagueId) return [];
 
-    // Fetch draft picks
     const { data: picks } = await supabase
       .from('drafts')
       .select('id, symbol, entry_price, quantity, user_id')
       .eq('league_id', activeLeagueId)
       .eq('user_id', userId);
 
-    // Fetch trades
     const { data: trades } = await supabase
       .from('trades')
       .select('id, symbol, price, quantity, action, user_id')
       .eq('league_id', activeLeagueId)
       .eq('user_id', userId);
 
-    // Calculate holdings from picks + trades
     const holdingsMap: Record<string, HoldingBase> = {};
 
     (picks || []).forEach((pick: Pick) => {
@@ -412,11 +407,9 @@ export default function MatchupScreen() {
       }
     });
 
-    // Filter out zero holdings
     return Object.values(holdingsMap).filter(h => h.quantity > 0);
   }
 
-  // Fetch prices for all symbols in both teams
   async function fetchCurrentPrices() {
     const allSymbols = [
       ...team1Holdings.map(h => h.symbol),
@@ -461,7 +454,6 @@ export default function MatchupScreen() {
     return profiles[userId]?.avatar || '📊';
   };
 
-  // Calculate holdings with current prices and gains using week start prices
   const team1WithGains = useMemo(() => {
     const userId = matchup?.team1_user_id;
     return team1Holdings.map(h => {
@@ -473,13 +465,11 @@ export default function MatchupScreen() {
       let gainPercent: number;
 
       if (hasSnapshots && snapshot) {
-        // Use week start price for gain calculation
         gain = (currentPrice - snapshot.weekStartPrice) * snapshot.quantity;
         gainPercent = snapshot.weekStartPrice > 0
           ? ((currentPrice - snapshot.weekStartPrice) / snapshot.weekStartPrice) * 100
           : 0;
       } else {
-        // Fallback: show 0 if snapshots exist but stock not found, otherwise cumulative
         gain = hasSnapshots ? 0 : (currentPrice * h.quantity) - h.totalCost;
         gainPercent = hasSnapshots ? 0 : (h.totalCost > 0 ? (gain / h.totalCost) * 100 : 0);
       }
@@ -500,13 +490,11 @@ export default function MatchupScreen() {
       let gainPercent: number;
 
       if (hasSnapshots && snapshot) {
-        // Use week start price for gain calculation
         gain = (currentPrice - snapshot.weekStartPrice) * snapshot.quantity;
         gainPercent = snapshot.weekStartPrice > 0
           ? ((currentPrice - snapshot.weekStartPrice) / snapshot.weekStartPrice) * 100
           : 0;
       } else {
-        // Fallback: show 0 if snapshots exist but stock not found, otherwise cumulative
         gain = hasSnapshots ? 0 : (currentPrice * h.quantity) - h.totalCost;
         gainPercent = hasSnapshots ? 0 : (h.totalCost > 0 ? (gain / h.totalCost) * 100 : 0);
       }
@@ -525,7 +513,7 @@ export default function MatchupScreen() {
 
   if (!isMatchupLeague) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top']}>
         <LeagueSwitcher />
         <View style={styles.centeredFlex}>
           <Text style={styles.emptyIcon}>📊</Text>
@@ -540,9 +528,9 @@ export default function MatchupScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color="#0891B2" />
           <Text style={styles.loadingText}>Loading matchup...</Text>
         </View>
       </SafeAreaView>
@@ -550,22 +538,36 @@ export default function MatchupScreen() {
   }
 
   if (!matchup) {
+    const isSeasonDone = activeLeague?.season_status === 'completed';
+    const isPlayoffs = activeLeague?.season_status === 'playoffs';
+    const numWeeks = activeLeague?.num_weeks || 0;
+    const isEliminated = isPlayoffs && selectedWeek > numWeeks;
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top']}>
         <LeagueSwitcher />
         <View style={styles.weekNavContainerTop}>
           <WeekNavigator
             currentWeek={currentWeek}
             selectedWeek={selectedWeek}
             totalWeeks={activeLeague?.num_weeks}
+            maxWeek={lastMatchupWeek > 0 ? lastMatchupWeek : undefined}
             onWeekChange={setSelectedWeek}
+            phase={weekStatus.phase}
+            playoffRoundForWeek={(week) => playoffRounds[week] || null}
           />
         </View>
         <View style={styles.centeredFlex}>
-          <Text style={styles.emptyIcon}>📈</Text>
-          <Text style={styles.emptyTitle}>No Matchup This Week</Text>
+          <Text style={styles.emptyIcon}>{isSeasonDone ? '🏁' : isEliminated ? '🏁' : '📈'}</Text>
+          <Text style={styles.emptyTitle}>
+            {isSeasonDone ? 'Season Complete' : 'No Matchup This Week'}
+          </Text>
           <Text style={styles.emptySubtitle}>
-            You don't have a matchup scheduled for Week {selectedWeek}.
+            {isSeasonDone
+              ? 'The season has ended. Check the League tab for final standings.'
+              : isEliminated
+              ? "You've been eliminated from playoff contention. Check the League tab to follow the remaining matchups."
+              : `You don't have a matchup scheduled for Week ${selectedWeek}.`
+            }
           </Text>
         </View>
       </SafeAreaView>
@@ -575,14 +577,13 @@ export default function MatchupScreen() {
   const isUserTeam1 = matchup.team1_user_id === user?.id;
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Sticky League Switcher Header */}
+    <SafeAreaView style={styles.container} edges={['top']}>
       <LeagueSwitcher />
 
       <ScrollView
         style={styles.scrollView}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#22c55e" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0891B2" />
         }
       >
         {/* Scoreboard */}
@@ -600,7 +601,7 @@ export default function MatchupScreen() {
             ]}>
               {team1Total >= 0 ? '+' : ''}${formatCurrency(team1Total)}
             </Text>
-            {isTeam1Winning && <Text style={styles.winningBadge}>LEADING</Text>}
+            {isTeam1Winning && <Text style={styles.winningBadge}>Leading</Text>}
           </View>
 
           {/* VS */}
@@ -621,7 +622,7 @@ export default function MatchupScreen() {
             ]}>
               {team2Total >= 0 ? '+' : ''}${formatCurrency(team2Total)}
             </Text>
-            {isTeam2Winning && <Text style={styles.winningBadge}>LEADING</Text>}
+            {isTeam2Winning && <Text style={styles.winningBadge}>Leading</Text>}
           </View>
         </View>
 
@@ -631,7 +632,10 @@ export default function MatchupScreen() {
             currentWeek={currentWeek}
             selectedWeek={selectedWeek}
             totalWeeks={activeLeague?.num_weeks}
+            maxWeek={lastMatchupWeek > 0 ? lastMatchupWeek : undefined}
             onWeekChange={setSelectedWeek}
+            phase={weekStatus.phase}
+            playoffRoundForWeek={(week) => playoffRounds[week] || null}
           />
         </View>
 
@@ -652,14 +656,13 @@ export default function MatchupScreen() {
             </View>
           </View>
 
-          {/* Stock rows - side by side comparison */}
+          {/* Stock rows */}
           {Array.from({ length: Math.max(team1WithGains.length, team2WithGains.length, 1) }).map((_, idx) => {
             const h1 = team1WithGains[idx];
             const h2 = team2WithGains[idx];
 
             return (
               <View key={idx} style={styles.comparisonRow}>
-                {/* Team 1 Stock */}
                 <View style={styles.stockCell}>
                   {h1 ? (
                     <>
@@ -676,12 +679,10 @@ export default function MatchupScreen() {
                   )}
                 </View>
 
-                {/* Slot number */}
                 <View style={styles.slotDivider}>
                   <Text style={styles.slotNumber}>{idx + 1}</Text>
                 </View>
 
-                {/* Team 2 Stock */}
                 <View style={styles.stockCell}>
                   {h2 ? (
                     <>
@@ -704,7 +705,7 @@ export default function MatchupScreen() {
           {/* Totals row */}
           <View style={styles.totalsRow}>
             <View style={styles.totalCell}>
-              <Text style={styles.totalLabel}>TOTAL</Text>
+              <Text style={styles.totalLabel}>Total</Text>
               <Text style={[
                 styles.totalValue,
                 team1Total >= 0 ? styles.positive : styles.negative
@@ -714,7 +715,7 @@ export default function MatchupScreen() {
             </View>
             <View style={styles.totalDivider} />
             <View style={styles.totalCell}>
-              <Text style={styles.totalLabel}>TOTAL</Text>
+              <Text style={styles.totalLabel}>Total</Text>
               <Text style={[
                 styles.totalValue,
                 team2Total >= 0 ? styles.positive : styles.negative
@@ -732,7 +733,7 @@ export default function MatchupScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#FFFFFF',
   },
   scrollView: {
     flex: 1,
@@ -744,7 +745,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   loadingText: {
-    color: '#888',
+    color: '#94A3B8',
     fontSize: 14,
     marginTop: 12,
   },
@@ -755,12 +756,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#fff',
+    color: '#0F172A',
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#888',
+    color: '#94A3B8',
     textAlign: 'center',
     lineHeight: 20,
   },
@@ -787,10 +788,10 @@ const styles = StyleSheet.create({
     marginHorizontal: 24,
     marginTop: 16,
     marginBottom: 16,
-    backgroundColor: Colors.cardBg,
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#E2E8F0',
     overflow: 'hidden',
   },
   scoreTeam: {
@@ -800,7 +801,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   scoreTeamWinning: {
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    backgroundColor: '#ECFDF5',
   },
   scoreAvatar: {
     fontSize: 40,
@@ -809,7 +810,7 @@ const styles = StyleSheet.create({
   scoreName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#fff',
+    color: '#0F172A',
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -820,12 +821,13 @@ const styles = StyleSheet.create({
   winningBadge: {
     marginTop: 8,
     fontSize: 10,
-    fontWeight: '800',
-    color: '#22c55e',
-    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    fontWeight: '700',
+    color: '#059669',
+    backgroundColor: '#ECFDF5',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
+    overflow: 'hidden',
   },
   scoreVs: {
     justifyContent: 'center',
@@ -834,45 +836,45 @@ const styles = StyleSheet.create({
   scoreVsText: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#6b7280',
+    color: '#94A3B8',
   },
   // Side-by-side Lineups
   lineupsContainer: {
     marginHorizontal: 16,
     marginBottom: 24,
-    backgroundColor: Colors.cardBg,
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#E2E8F0',
     overflow: 'hidden',
   },
   lineupHeaders: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: '#E2E8F0',
   },
   lineupHeaderBox: {
     flex: 1,
     paddingVertical: 12,
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: '#F8FAFC',
   },
   lineupHeaderWinning: {
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    backgroundColor: '#ECFDF5',
   },
   lineupHeaderText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#fff',
+    color: '#0F172A',
   },
   lineupHeaderDivider: {
     width: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: '#F8FAFC',
   },
   comparisonRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: '#F1F5F9',
   },
   stockCell: {
     flex: 1,
@@ -883,12 +885,7 @@ const styles = StyleSheet.create({
   stockSymbol: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#fff',
-  },
-  stockQty: {
-    fontSize: 11,
-    color: '#888',
-    marginTop: 2,
+    color: '#0F172A',
   },
   stockGain: {
     fontSize: 14,
@@ -897,22 +894,22 @@ const styles = StyleSheet.create({
   },
   emptySlot: {
     fontSize: 16,
-    color: '#4b5563',
+    color: '#94A3B8',
   },
   slotDivider: {
     width: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    backgroundColor: '#F8FAFC',
   },
   slotNumber: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#4b5563',
+    color: '#94A3B8',
   },
   totalsRow: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: '#F8FAFC',
   },
   totalCell: {
     flex: 1,
@@ -922,7 +919,7 @@ const styles = StyleSheet.create({
   totalLabel: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#6b7280',
+    color: '#64748B',
     letterSpacing: 1,
   },
   totalValue: {
@@ -932,12 +929,12 @@ const styles = StyleSheet.create({
   },
   totalDivider: {
     width: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    backgroundColor: '#F8FAFC',
   },
   positive: {
-    color: '#22c55e',
+    color: '#059669',
   },
   negative: {
-    color: '#ef4444',
+    color: '#DC2626',
   },
 });

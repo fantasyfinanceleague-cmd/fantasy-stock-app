@@ -84,7 +84,7 @@ export function PortfolioChart({ holdings, totalValue }: PortfolioChartProps) {
           donut
           radius={70}
           innerRadius={45}
-          innerCircleColor={Colors.cardBg}
+          innerCircleColor={Colors.cardBg} // solid color needed for donut center
           centerLabelComponent={() => (
             <View style={styles.centerLabel}>
               <Text style={styles.centerValue}>{holdings.length}</Text>
@@ -109,16 +109,17 @@ export function PortfolioChart({ holdings, totalValue }: PortfolioChartProps) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: Colors.cardBg,
-    borderRadius: 16,
+    backgroundColor: Colors.glassBg,
+    borderRadius: 20,
     padding: 20,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.glassBorder,
   },
   title: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.textPrimary,
+    fontSize: 13,
+    fontWeight: '500',
+    color: Colors.textMuted,
+    letterSpacing: 0.5,
     marginBottom: 16,
   },
   chartContainer: {

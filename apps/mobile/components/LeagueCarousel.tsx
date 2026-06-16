@@ -10,6 +10,7 @@ import {
   NativeScrollEvent,
   Share,
   Alert,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -48,7 +49,6 @@ export default function LeagueCarousel() {
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  // Fetch records and season info for all leagues
   useEffect(() => {
     if (!user?.id || leagues.length === 0) return;
 
@@ -57,7 +57,6 @@ export default function LeagueCarousel() {
       const newSeasonInfo: Record<string, SeasonInfo> = {};
 
       for (const league of leagues) {
-        // Fetch current season info
         if (league.current_season_id) {
           const { data: season } = await supabase
             .from('league_seasons')
@@ -66,7 +65,6 @@ export default function LeagueCarousel() {
             .single();
 
           if (season) {
-            // Get champion and runner-up names if season is completed
             let championName: string | null = null;
             let runnerUpName: string | null = null;
 
@@ -95,7 +93,6 @@ export default function LeagueCarousel() {
             };
           }
         } else {
-          // Default season info for leagues without a season record yet
           newSeasonInfo[league.id] = {
             seasonNumber: 1,
             seasonStatus: league.season_status || 'active',
@@ -106,9 +103,7 @@ export default function LeagueCarousel() {
           };
         }
 
-        // Fetch standings
         if (league.league_type === 'matchup') {
-          // Fetch standings for matchup league
           const { data: standings } = await supabase
             .from('league_standings')
             .select('user_id, wins, losses, ties')
@@ -128,7 +123,6 @@ export default function LeagueCarousel() {
             };
           }
         } else {
-          // Duration league - fetch portfolio gain and rank
           const { data: standings } = await supabase
             .from('league_standings')
             .select('user_id, points_for')
@@ -158,7 +152,6 @@ export default function LeagueCarousel() {
     fetchRecordsAndSeasons();
   }, [user?.id, leagues]);
 
-  // Find initial index based on active league
   useEffect(() => {
     const index = leagues.findIndex(l => l.id === activeLeagueId);
     if (index >= 0 && index !== activeIndex) {
@@ -172,7 +165,6 @@ export default function LeagueCarousel() {
     const index = Math.round(contentOffsetX / (CARD_WIDTH + CARD_MARGIN * 2));
     if (index !== activeIndex && index >= 0 && index <= leagues.length) {
       setActiveIndex(index);
-      // Update active league when swiping, or null for "Create or Join" card
       if (index < leagues.length) {
         setActiveLeagueId(leagues[index].id);
       } else {
@@ -211,23 +203,12 @@ export default function LeagueCarousel() {
     return 'participant';
   };
 
-  const getCardStyle = (league: League, isActive: boolean) => {
+  const getCardBorderStyle = (league: League, isActive: boolean) => {
     const status = getChampionshipStatus(league);
-    const baseStyles = [styles.card];
-
-    if (status === 'champion') {
-      baseStyles.push(styles.cardChampion);
-    } else if (status === 'runner-up') {
-      baseStyles.push(styles.cardRunnerUp);
-    } else if (status === 'participant') {
-      baseStyles.push(styles.cardCompleted);
-    }
-
-    if (isActive && status !== 'champion' && status !== 'runner-up') {
-      baseStyles.push(styles.cardActive);
-    }
-
-    return baseStyles;
+    if (status === 'champion') return { borderColor: '#D97706', borderWidth: 2 };
+    if (status === 'runner-up') return { borderColor: '#94A3B8', borderWidth: 2 };
+    if (isActive) return { borderColor: '#0891B2' };
+    return {};
   };
 
   const handleShareInvite = async (league: League) => {
@@ -259,7 +240,6 @@ export default function LeagueCarousel() {
     );
   };
 
-  // Total items = leagues + 1 (for create new)
   const totalItems = leagues.length + 1;
 
   return (
@@ -275,30 +255,34 @@ export default function LeagueCarousel() {
         decelerationRate="fast"
         contentContainerStyle={styles.scrollContent}
       >
-        {/* League Cards */}
         {leagues.map((league, index) => {
           const record = records[league.id];
           const info = seasonInfo[league.id];
           const isActive = league.id === activeLeagueId;
           const championshipStatus = getChampionshipStatus(league);
+          const borderOverride = getCardBorderStyle(league, isActive);
 
           return (
             <TouchableOpacity
               key={league.id}
-              style={getCardStyle(league, isActive)}
+              style={[
+                styles.card,
+                cardShadow,
+                borderOverride,
+                championshipStatus === 'participant' && styles.cardCompleted,
+              ]}
               onPress={() => handleCardPress(league)}
               activeOpacity={0.9}
             >
-              {/* Championship Banner for completed seasons */}
               {championshipStatus === 'champion' && (
                 <View style={styles.championBanner}>
-                  <Text style={styles.championBannerIcon}>🏆</Text>
+                  <Text style={styles.bannerIcon}>🏆</Text>
                   <Text style={styles.championBannerText}>Season {info?.seasonNumber} Champion</Text>
                 </View>
               )}
               {championshipStatus === 'runner-up' && (
                 <View style={styles.runnerUpBanner}>
-                  <Text style={styles.runnerUpBannerIcon}>🥈</Text>
+                  <Text style={styles.bannerIcon}>🥈</Text>
                   <Text style={styles.runnerUpBannerText}>Season {info?.seasonNumber} Runner-Up</Text>
                 </View>
               )}
@@ -308,7 +292,6 @@ export default function LeagueCarousel() {
                 </View>
               )}
 
-              {/* Header */}
               <View style={styles.cardHeader}>
                 <Text style={styles.leagueIcon}>{getLeagueIcon(league)}</Text>
                 <View style={styles.headerText}>
@@ -334,7 +317,6 @@ export default function LeagueCarousel() {
                 )}
               </View>
 
-              {/* Stats */}
               {record && (
                 <View style={styles.statsRow}>
                   {league.league_type === 'matchup' ? (
@@ -375,7 +357,6 @@ export default function LeagueCarousel() {
                 </View>
               )}
 
-              {/* Action Buttons */}
               <View style={styles.actionRow}>
                 <TouchableOpacity
                   style={styles.actionButton}
@@ -396,17 +377,17 @@ export default function LeagueCarousel() {
                   <Text style={styles.actionButtonText}>League</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={styles.shareButton}
+                  style={styles.iconButton}
                   onPress={() => handleShowInviteCode(league)}
                 >
-                  <Ionicons name="share-outline" size={20} color={Colors.primary} />
+                  <Ionicons name="share-outline" size={18} color="#0891B2" />
                 </TouchableOpacity>
                 {league.commissioner_id === user?.id && (
                   <TouchableOpacity
-                    style={styles.settingsButton}
+                    style={styles.iconButtonMuted}
                     onPress={() => router.push({ pathname: '/league-settings', params: { leagueId: league.id } })}
                   >
-                    <Ionicons name="settings-outline" size={20} color={Colors.textMuted} />
+                    <Ionicons name="settings-outline" size={18} color="#94A3B8" />
                   </TouchableOpacity>
                 )}
               </View>
@@ -416,13 +397,13 @@ export default function LeagueCarousel() {
 
         {/* Create New League Card */}
         <TouchableOpacity
-          style={[styles.card, styles.createCard]}
+          style={[styles.card, cardShadow, styles.createCard]}
           onPress={() => router.push('/create-league')}
           activeOpacity={0.9}
         >
           <View style={styles.createContent}>
             <View style={styles.createIconCircle}>
-              <Ionicons name="add" size={40} color={Colors.primary} />
+              <Ionicons name="add" size={36} color="#0891B2" />
             </View>
             <Text style={styles.createTitle}>Create or Join</Text>
             <Text style={styles.createSubtitle}>Start a new league or join an existing one</Text>
@@ -430,7 +411,6 @@ export default function LeagueCarousel() {
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Page Indicators */}
       <View style={styles.indicators}>
         {Array.from({ length: totalItems }).map((_, index) => (
           <View
@@ -446,6 +426,19 @@ export default function LeagueCarousel() {
   );
 }
 
+const cardShadow = Platform.select({
+  ios: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+  },
+  android: {
+    elevation: 2,
+  },
+  default: {},
+}) as object;
+
 const styles = StyleSheet.create({
   container: {
     marginBottom: 16,
@@ -456,103 +449,92 @@ const styles = StyleSheet.create({
   card: {
     width: CARD_WIDTH,
     marginHorizontal: CARD_MARGIN,
-    backgroundColor: Colors.cardBg,
-    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#E2E8F0',
     padding: 16,
-  },
-  cardActive: {
-    borderColor: Colors.primary,
-  },
-  cardChampion: {
-    borderColor: Colors.gold,
-    borderWidth: 2,
-    backgroundColor: Colors.goldBg,
-  },
-  cardRunnerUp: {
-    borderColor: Colors.silver,
-    borderWidth: 2,
-    backgroundColor: Colors.silverBg,
+    overflow: 'hidden',
   },
   cardCompleted: {
     opacity: 0.85,
-    borderColor: Colors.textMuted,
   },
   championBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.gold,
+    backgroundColor: '#FFFBEB',
     marginHorizontal: -16,
     marginTop: -16,
     marginBottom: 12,
     paddingVertical: 8,
-    borderTopLeftRadius: 14,
-    borderTopRightRadius: 14,
-  },
-  championBannerIcon: {
-    fontSize: 16,
-    marginRight: 6,
-  },
-  championBannerText: {
-    color: '#1f2937',
-    fontWeight: '700',
-    fontSize: 13,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: '#D97706',
   },
   runnerUpBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.silver,
+    backgroundColor: '#F1F5F9',
     marginHorizontal: -16,
     marginTop: -16,
     marginBottom: 12,
     paddingVertical: 8,
-    borderTopLeftRadius: 14,
-    borderTopRightRadius: 14,
-  },
-  runnerUpBannerIcon: {
-    fontSize: 16,
-    marginRight: 6,
-  },
-  runnerUpBannerText: {
-    color: '#1f2937',
-    fontWeight: '700',
-    fontSize: 13,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: '#94A3B8',
   },
   completedBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(107, 114, 128, 0.3)',
+    backgroundColor: '#F8FAFC',
     marginHorizontal: -16,
     marginTop: -16,
     marginBottom: 12,
     paddingVertical: 8,
-    borderTopLeftRadius: 14,
-    borderTopRightRadius: 14,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  bannerIcon: {
+    fontSize: 16,
+    marginRight: 6,
+  },
+  championBannerText: {
+    color: '#92400E',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  runnerUpBannerText: {
+    color: '#475569',
+    fontWeight: '700',
+    fontSize: 13,
   },
   completedBannerText: {
-    color: Colors.textMuted,
+    color: '#94A3B8',
     fontWeight: '600',
     fontSize: 13,
   },
   championRankBadge: {
-    backgroundColor: Colors.goldBg,
+    backgroundColor: '#FFFBEB',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: Colors.gold,
+    borderColor: '#D97706',
   },
   runnerUpRankBadge: {
-    backgroundColor: Colors.silverBg,
+    backgroundColor: '#F1F5F9',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: Colors.silver,
+    borderColor: '#94A3B8',
   },
   trophyIcon: {
     fontSize: 24,
@@ -575,30 +557,30 @@ const styles = StyleSheet.create({
   leagueName: {
     fontSize: 18,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: '#0F172A',
     marginBottom: 2,
   },
   leagueType: {
     fontSize: 13,
-    color: Colors.textMuted,
+    color: '#94A3B8',
   },
   rankBadge: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    backgroundColor: 'rgba(107, 114, 128, 0.2)',
+    backgroundColor: '#F1F5F9',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 10,
   },
   rankNumber: {
     fontSize: 24,
     fontWeight: '800',
-    color: Colors.textPrimary,
+    color: '#0F172A',
   },
   rankSuffix: {
     fontSize: 12,
     fontWeight: '600',
-    color: Colors.textMuted,
+    color: '#94A3B8',
     marginBottom: 4,
     marginLeft: 1,
   },
@@ -606,8 +588,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
-    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
     paddingVertical: 16,
     marginBottom: 16,
   },
@@ -618,58 +600,57 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 24,
     fontWeight: '800',
-    color: Colors.textPrimary,
+    color: '#0F172A',
     marginBottom: 4,
   },
   statLabel: {
-    fontSize: 12,
-    color: Colors.textMuted,
-    textTransform: 'uppercase',
+    fontSize: 11,
+    color: '#64748B',
     letterSpacing: 0.5,
   },
   statDivider: {
     width: 1,
-    height: 40,
-    backgroundColor: Colors.border,
+    height: 36,
+    backgroundColor: '#E2E8F0',
   },
   positive: {
-    color: Colors.success,
+    color: '#059669',
   },
   negative: {
-    color: Colors.error,
+    color: '#DC2626',
   },
   actionRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
   },
   actionButton: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingVertical: 11,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: Colors.primary,
+    borderColor: '#0891B2',
     alignItems: 'center',
   },
   actionButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.primary,
+    color: '#0891B2',
   },
-  shareButton: {
-    width: 44,
-    paddingVertical: 12,
-    borderRadius: 8,
+  iconButton: {
+    width: 42,
+    paddingVertical: 11,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: Colors.primary,
+    borderColor: '#0891B2',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  settingsButton: {
-    width: 44,
-    paddingVertical: 12,
-    borderRadius: 8,
+  iconButtonMuted: {
+    width: 42,
+    paddingVertical: 11,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#E2E8F0',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -682,23 +663,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   createIconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: Colors.primaryBg,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(8,145,178,0.08)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#0891B2',
   },
   createTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: '#0F172A',
     marginBottom: 4,
   },
   createSubtitle: {
     fontSize: 14,
-    color: Colors.textMuted,
+    color: '#94A3B8',
     textAlign: 'center',
   },
   indicators: {
@@ -712,10 +695,10 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: Colors.border,
+    backgroundColor: '#E2E8F0',
   },
   indicatorActive: {
-    backgroundColor: Colors.textPrimary,
+    backgroundColor: '#0891B2',
     width: 24,
   },
 });

@@ -8,15 +8,15 @@ import {
   Alert,
   Image,
   Dimensions,
+  Platform,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { validateUsername } from '@/lib/contentModeration';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 function getUserFriendlyError(error: any): string {
   const message = error?.message?.toLowerCase() || '';
@@ -71,163 +71,114 @@ export default function LoginScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      {/* Multi-layer gradient background */}
-      <LinearGradient
-        colors={['#0A0A0F', '#0D1117', '#0A0F1A', '#080B12']}
-        locations={[0, 0.3, 0.6, 1]}
-        style={StyleSheet.absoluteFill}
-        pointerEvents="none"
-      />
-
-      {/* Glow effects */}
-      <View style={styles.glowContainer} pointerEvents="none">
-        <LinearGradient
-          colors={['rgba(16, 185, 129, 0.08)', 'transparent']}
-          style={styles.glowTop}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
+    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+      {/* Logo */}
+      <View style={styles.logoContainer}>
+        <Image
+          source={require('../assets/images/stockpile-logo-light-full.png')}
+          style={styles.logo}
+          resizeMode="contain"
         />
-        <LinearGradient
-          colors={['rgba(34, 211, 238, 0.05)', 'transparent']}
-          style={styles.glowBottom}
-          start={{ x: 0.5, y: 1 }}
-          end={{ x: 0.5, y: 0 }}
-        />
+        <Text style={styles.tagline}>Fantasy Sports Meets the Stock Market</Text>
       </View>
 
-      <View style={[styles.content, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-        {/* Logo */}
-        <View style={styles.logoContainer}>
-          <Image
-            source={require('../assets/images/stockpile-logo.png')}
-            style={styles.logo}
-            resizeMode="contain"
+      {/* Card */}
+      <View style={[styles.card, cardShadow]}>
+        <Text style={styles.title}>{isSignUp ? 'Create Account' : 'Welcome back'}</Text>
+        <Text style={styles.subtitle}>{isSignUp ? 'Join the competition' : 'Sign in to your league'}</Text>
+
+        {isSignUp && (
+          <>
+            <View style={styles.inputContainer}>
+              <Ionicons name="person-outline" size={20} color="#94A3B8" style={styles.inputIcon} />
+              <TextInput
+                style={styles.inputField}
+                placeholder="Username"
+                placeholderTextColor="#94A3B8"
+                value={username}
+                onChangeText={setUsername}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+            <Text style={styles.hint}>Displayed on leaderboards</Text>
+          </>
+        )}
+
+        <View style={styles.inputContainer}>
+          <Ionicons name="mail-outline" size={20} color="#94A3B8" style={styles.inputIcon} />
+          <TextInput
+            style={styles.inputField}
+            placeholder="Email address"
+            placeholderTextColor="#94A3B8"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
           />
-          <Text style={styles.tagline}>Fantasy Sports Meets the Stock Market</Text>
         </View>
 
-        {/* Card — NO overflow hidden */}
-        <View style={styles.card}>
-          <LinearGradient
-            colors={['rgba(255, 255, 255, 0.05)', 'rgba(255, 255, 255, 0.02)']}
-            style={styles.cardGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            pointerEvents="none"
+        <View style={styles.inputContainer}>
+          <Ionicons name="lock-closed-outline" size={20} color="#94A3B8" style={styles.inputIcon} />
+          <TextInput
+            style={styles.inputField}
+            placeholder="Password"
+            placeholderTextColor="#94A3B8"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
           />
+        </View>
 
-          <Text style={styles.title}>{isSignUp ? 'Create Account' : 'Welcome back'}</Text>
-          <Text style={styles.subtitle}>{isSignUp ? 'Join the competition' : 'Sign in to your league'}</Text>
-
-          {isSignUp && (
-            <>
-              <View style={styles.inputContainer}>
-                <Ionicons name="person-outline" size={20} color="#4B5563" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.inputField}
-                  placeholder="Username"
-                  placeholderTextColor="#4B5563"
-                  value={username}
-                  onChangeText={setUsername}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-              </View>
-              <Text style={styles.hint}>Displayed on leaderboards</Text>
-            </>
-          )}
-
-          <View style={styles.inputContainer}>
-            <Ionicons name="mail-outline" size={20} color="#4B5563" style={styles.inputIcon} />
-            <TextInput
-              style={styles.inputField}
-              placeholder="Email address"
-              placeholderTextColor="#4B5563"
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Ionicons name="lock-closed-outline" size={20} color="#4B5563" style={styles.inputIcon} />
-            <TextInput
-              style={styles.inputField}
-              placeholder="Password"
-              placeholderTextColor="#4B5563"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-            />
-          </View>
-
-          {!isSignUp && (
-            <TouchableOpacity style={styles.forgotButton} onPress={() => router.push('/forgot-password')}>
-              <Text style={styles.forgotText}>Forgot password?</Text>
-            </TouchableOpacity>
-          )}
-
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleAuth}
-            disabled={loading}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={loading ? ['#1F2937', '#1F2937'] : ['#22D3EE', '#10B981']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.buttonGradient}
-            >
-              <Text style={styles.buttonText}>
-                {loading ? 'Please wait...' : isSignUp ? 'Create Account' : 'Sign In'}
-              </Text>
-            </LinearGradient>
+        {!isSignUp && (
+          <TouchableOpacity style={styles.forgotButton} onPress={() => router.push('/forgot-password')}>
+            <Text style={styles.forgotText}>Forgot password?</Text>
           </TouchableOpacity>
-        </View>
+        )}
 
-        {/* Switch auth mode */}
         <TouchableOpacity
-          style={styles.switchButton}
-          onPress={() => { setIsSignUp(!isSignUp); setUsername(''); }}
+          style={[styles.button, loading && styles.buttonDisabled]}
+          onPress={handleAuth}
+          disabled={loading}
+          activeOpacity={0.8}
         >
-          <Text style={styles.switchText}>
-            {isSignUp ? 'Already have an account? ' : "New here? "}
-            <Text style={styles.switchTextBold}>{isSignUp ? 'Sign In' : 'Create an account'}</Text>
+          <Text style={styles.buttonText}>
+            {loading ? 'Please wait...' : isSignUp ? 'Create Account' : 'Sign In'}
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Switch auth mode */}
+      <TouchableOpacity
+        style={styles.switchButton}
+        onPress={() => { setIsSignUp(!isSignUp); setUsername(''); }}
+      >
+        <Text style={styles.switchText}>
+          {isSignUp ? 'Already have an account? ' : "New here? "}
+          <Text style={styles.switchTextBold}>{isSignUp ? 'Sign In' : 'Create an account'}</Text>
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
+const cardShadow = Platform.select({
+  ios: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+  },
+  android: {
+    elevation: 4,
+  },
+  default: {},
+}) as object;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
-  },
-  glowContainer: {
-    ...StyleSheet.absoluteFillObject,
-    overflow: 'hidden',
-  },
-  glowTop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: height * 0.4,
-  },
-  glowBottom: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: height * 0.3,
-  },
-  content: {
-    flex: 1,
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     paddingHorizontal: 24,
   },
@@ -241,43 +192,38 @@ const styles = StyleSheet.create({
   },
   tagline: {
     fontSize: 15,
-    color: '#6B7280',
+    color: '#64748B',
     marginTop: 12,
     letterSpacing: 0.3,
   },
   card: {
-    backgroundColor: 'rgba(17, 24, 39, 0.7)',
+    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 28,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-    overflow: 'hidden',
-  },
-  cardGradient: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 20,
+    borderColor: '#E2E8F0',
   },
   title: {
     fontSize: 26,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#0F172A',
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 15,
-    color: '#9CA3AF',
+    color: '#64748B',
     textAlign: 'center',
     marginBottom: 28,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(17, 24, 39, 0.8)',
+    backgroundColor: '#F1F5F9',
     borderRadius: 12,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(75, 85, 99, 0.4)',
+    borderColor: '#E2E8F0',
   },
   inputIcon: {
     paddingLeft: 16,
@@ -287,11 +233,11 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 12,
     fontSize: 16,
-    color: '#FFFFFF',
+    color: '#0F172A',
   },
   hint: {
     fontSize: 12,
-    color: '#6B7280',
+    color: '#94A3B8',
     marginTop: -10,
     marginBottom: 16,
     marginLeft: 4,
@@ -299,14 +245,12 @@ const styles = StyleSheet.create({
   button: {
     marginTop: 8,
     borderRadius: 12,
-    overflow: 'hidden',
+    backgroundColor: '#0891B2',
+    paddingVertical: 16,
+    alignItems: 'center',
   },
   buttonDisabled: {
     opacity: 0.7,
-  },
-  buttonGradient: {
-    paddingVertical: 16,
-    alignItems: 'center',
   },
   buttonText: {
     color: '#FFFFFF',
@@ -318,11 +262,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   switchText: {
-    color: '#9CA3AF',
+    color: '#64748B',
     fontSize: 15,
   },
   switchTextBold: {
-    color: '#22D3EE',
+    color: '#0891B2',
     fontWeight: '600',
   },
   forgotButton: {
@@ -331,7 +275,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   forgotText: {
-    color: '#6B7280',
+    color: '#64748B',
     fontSize: 14,
   },
 });

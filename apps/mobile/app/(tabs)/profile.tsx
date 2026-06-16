@@ -336,7 +336,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView style={styles.scrollView}>
         <View style={styles.header}>
           <Text style={styles.title}>Profile</Text>
@@ -375,13 +375,6 @@ export default function ProfileScreen() {
             <View style={styles.infoRow}>
               <Text style={styles.label}>Email</Text>
               <Text style={styles.value}>{user.email}</Text>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.infoRow}>
-              <Text style={styles.label}>User ID</Text>
-              <Text style={styles.valueSmall}>{user.id}</Text>
             </View>
 
             <View style={styles.divider} />
@@ -694,7 +687,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: Colors.primary,
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
@@ -746,8 +739,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.textMuted,
     marginBottom: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   infoCard: {
     backgroundColor: Colors.cardBg,
@@ -814,7 +806,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   saveButtonText: {
-    color: Colors.textPrimary,
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -847,27 +839,27 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   alpacaErrorBox: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    backgroundColor: '#FEF2F2',
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    borderColor: '#FECACA',
     borderRadius: 8,
     padding: 12,
     marginBottom: 12,
   },
   alpacaErrorText: {
-    color: '#f87171',
+    color: '#DC2626',
     fontSize: 14,
   },
   alpacaSuccessBox: {
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    backgroundColor: '#ECFDF5',
     borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.3)',
+    borderColor: '#A7F3D0',
     borderRadius: 8,
     padding: 12,
     marginBottom: 12,
   },
   alpacaSuccessText: {
-    color: '#10b981',
+    color: '#059669',
     fontSize: 14,
   },
   alpacaButtonRow: {
@@ -983,7 +975,7 @@ const styles = StyleSheet.create({
   // Modal styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
   },

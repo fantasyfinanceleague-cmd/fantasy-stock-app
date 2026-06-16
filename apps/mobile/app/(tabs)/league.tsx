@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/lib/useAuth';
@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/Colors';
 import StatusBadge from '@/components/StatusBadge';
 import LeagueSwitcher from '@/components/LeagueSwitcher';
-import { getWeekStatus, getCountdownMessage } from '@/lib/weekStatus';
+import { getWeekStatus, getCountdownMessage, getPlayoffRoundLabel } from '@/lib/weekStatus';
 
 interface Standing {
   user_id: string;
@@ -41,6 +41,20 @@ interface UserProfile {
 
 function formatCurrency(value: number): string {
   return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function getRankBg(rank: number): string {
+  if (rank === 1) return '#FFFBEB'; // gold tint
+  if (rank === 2) return '#F1F5F9'; // silver tint
+  if (rank === 3) return '#FFF7ED'; // bronze tint
+  return '#F1F5F9';
+}
+
+function getRankColor(rank: number): string {
+  if (rank === 1) return '#D97706';
+  if (rank === 2) return '#64748B';
+  if (rank === 3) return '#EA580C';
+  return '#64748B';
 }
 
 export default function LeagueScreen() {
@@ -146,6 +160,22 @@ export default function LeagueScreen() {
     return getCountdownMessage(weekStatus);
   }, [weekStatus]);
 
+  const currentPlayoffRound = useMemo(() => {
+    if (weekStatus.phase !== 'playoffs') return null;
+    const activePlayoffMatchup = matchups.find(
+      m => m.is_playoff && m.week_number === currentWeek && m.team1_gain === null
+    );
+    if (activePlayoffMatchup) return activePlayoffMatchup.playoff_round || null;
+    const nextPlayoffMatchup = matchups.find(
+      m => m.is_playoff && m.team1_gain === null
+    );
+    return nextPlayoffMatchup?.playoff_round || null;
+  }, [matchups, currentWeek, weekStatus.phase]);
+
+  const currentPlayoffRoundLabel = useMemo(() => {
+    return getPlayoffRoundLabel(currentPlayoffRound);
+  }, [currentPlayoffRound]);
+
   // Set schedule user to current user by default
   useEffect(() => {
     if (user?.id && !scheduleUserId) {
@@ -210,7 +240,6 @@ export default function LeagueScreen() {
 
       if (seasonsData) {
         setSeasons(seasonsData);
-        // Find current season
         if (activeLeague?.current_season_id) {
           const current = seasonsData.find(s => s.id === activeLeague.current_season_id);
           setCurrentSeason(current || null);
@@ -320,7 +349,7 @@ export default function LeagueScreen() {
 
   if (!user) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.centered}>
           <Text style={styles.emptyTitle}>Sign in to view league</Text>
           <TouchableOpacity style={styles.button} onPress={() => router.push('/login')}>
@@ -332,13 +361,13 @@ export default function LeagueScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <LeagueSwitcher />
 
       <ScrollView
         style={styles.scrollView}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#22c55e" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0891B2" />
         }
       >
         {leagues.length === 0 ? (
@@ -394,7 +423,12 @@ export default function LeagueScreen() {
                   <Text style={styles.seasonLabel}>Season {currentSeason.season_number}</Text>
                   {isMatchupLeague && (
                     <View style={styles.weekBadge}>
-                      <Text style={styles.weekBadgeText}>Week {currentWeek} of {numWeeks}</Text>
+                      <Text style={styles.weekBadgeText}>
+                        {weekStatus.phase === 'playoffs'
+                          ? `Playoffs${currentPlayoffRoundLabel ? `: ${currentPlayoffRoundLabel}` : ''}`
+                          : `Week ${currentWeek} of ${numWeeks}`
+                        }
+                      </Text>
                     </View>
                   )}
                 </View>
@@ -403,12 +437,14 @@ export default function LeagueScreen() {
 
             {/* KPI Cards */}
             <View style={styles.kpiRow}>
-              <View style={styles.kpiCard}>
-                <Text style={styles.kpiIcon}>🏆</Text>
-                <Text style={styles.kpiLabel}>League Leader</Text>
+              <View style={[styles.kpiCard, cardShadow]}>
+                <View style={[styles.kpiIconCircle, { backgroundColor: '#FFFBEB' }]}>
+                  <Ionicons name="trophy" size={18} color="#D97706" />
+                </View>
+                <Text style={styles.kpiLabel}>Leader</Text>
                 {leader ? (
                   <>
-                    <Text style={styles.kpiValue}>{getDisplayName(leader.user_id)}</Text>
+                    <Text style={styles.kpiValue} numberOfLines={1}>{getDisplayName(leader.user_id)}</Text>
                     {isMatchupLeague ? (
                       <Text style={styles.kpiSub}>
                         {leader.wins}-{leader.losses}{leader.ties > 0 ? `-${leader.ties}` : ''}
@@ -424,31 +460,49 @@ export default function LeagueScreen() {
                 )}
               </View>
 
-              <View style={styles.kpiCard}>
-                <Text style={styles.kpiIcon}>📅</Text>
-                <Text style={styles.kpiLabel}>{isMatchupLeague ? 'Current Week' : 'League Type'}</Text>
+              <View style={[styles.kpiCard, cardShadow]}>
+                <View style={[styles.kpiIconCircle, { backgroundColor: '#ECFEFF' }]}>
+                  <Ionicons name="calendar" size={18} color="#0891B2" />
+                </View>
+                <Text style={styles.kpiLabel}>{isMatchupLeague ? 'Week' : 'Type'}</Text>
                 {isMatchupLeague ? (
-                  <>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <Text style={styles.kpiValueLarge}>{currentWeek}</Text>
-                      {weekStatus.status === 'final' && <StatusBadge type="final" />}
-                      {weekStatus.status === 'active' && <StatusBadge type="live" />}
-                    </View>
-                    <Text style={styles.kpiSub}>of {numWeeks} weeks</Text>
-                  </>
+                  weekStatus.phase === 'playoffs' ? (
+                    <>
+                      <Text style={styles.kpiValue}>Playoffs</Text>
+                      {currentPlayoffRoundLabel && (
+                        <Text style={styles.kpiSub}>{currentPlayoffRoundLabel}</Text>
+                      )}
+                    </>
+                  ) : weekStatus.phase === 'completed' ? (
+                    <>
+                      <Text style={styles.kpiValue}>Complete</Text>
+                      <StatusBadge type="final" />
+                    </>
+                  ) : (
+                    <>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Text style={styles.kpiValueLarge}>{currentWeek}</Text>
+                        {weekStatus.status === 'final' && <StatusBadge type="final" />}
+                        {weekStatus.status === 'active' && <StatusBadge type="live" />}
+                      </View>
+                      <Text style={styles.kpiSub}>of {numWeeks} weeks</Text>
+                    </>
+                  )
                 ) : (
                   <Text style={styles.kpiValue}>Duration</Text>
                 )}
               </View>
 
-              <View style={styles.kpiCard}>
-                <Text style={styles.kpiIcon}>👥</Text>
-                <Text style={styles.kpiLabel}>Total Players</Text>
+              <View style={[styles.kpiCard, cardShadow]}>
+                <View style={[styles.kpiIconCircle, { backgroundColor: '#EEF2FF' }]}>
+                  <Ionicons name="people" size={18} color="#6366F1" />
+                </View>
+                <Text style={styles.kpiLabel}>Players</Text>
                 <Text style={styles.kpiValueLarge}>{sortedStandings.length}</Text>
               </View>
             </View>
 
-            {/* Standings Section (Collapsible) */}
+            {/* Standings Section */}
             <View style={styles.section}>
               <TouchableOpacity
                 style={styles.sectionHeader}
@@ -458,13 +512,18 @@ export default function LeagueScreen() {
                 <View style={styles.sectionHeaderLeft}>
                   <Text style={styles.sectionTitle}>Standings</Text>
                   {isMatchupLeague && !isSeasonCompleted && (
-                    <Text style={styles.sectionSubtitle}>Week {currentWeek} of {numWeeks}</Text>
+                    <Text style={styles.sectionSubtitle}>
+                      {weekStatus.phase === 'playoffs'
+                        ? 'Regular Season Final'
+                        : `Week ${currentWeek} of ${numWeeks}`
+                      }
+                    </Text>
                   )}
                 </View>
                 <Ionicons
                   name={standingsExpanded ? 'chevron-up' : 'chevron-down'}
                   size={24}
-                  color={Colors.textMuted}
+                  color="#94A3B8"
                 />
               </TouchableOpacity>
 
@@ -482,6 +541,7 @@ export default function LeagueScreen() {
                   ) : (
                     sortedStandings.map((standing, idx) => {
                       const isMe = standing.user_id === user?.id;
+                      const rank = idx + 1;
                       const winPct = (standing.wins + standing.losses + standing.ties) > 0
                         ? ((standing.wins + standing.ties * 0.5) / (standing.wins + standing.losses + standing.ties) * 100).toFixed(0)
                         : '0';
@@ -489,15 +549,18 @@ export default function LeagueScreen() {
                       return (
                         <TouchableOpacity
                           key={standing.user_id}
-                          style={[styles.standingRow, isMe && styles.standingRowHighlight]}
+                          style={[
+                            styles.standingRow,
+                            isMe && styles.standingRowHighlight,
+                          ]}
                           onPress={() => router.push({
                             pathname: '/player-portfolio',
                             params: { userId: standing.user_id, username: getDisplayName(standing.user_id) },
                           })}
                           activeOpacity={0.7}
                         >
-                          <View style={styles.rankBadge}>
-                            <Text style={styles.rankText}>{idx + 1}</Text>
+                          <View style={[styles.rankBadge, { backgroundColor: getRankBg(rank) }]}>
+                            <Text style={[styles.rankText, { color: getRankColor(rank) }]}>{rank}</Text>
                           </View>
 
                           <View style={styles.avatarCircle}>
@@ -549,7 +612,7 @@ export default function LeagueScreen() {
               )}
             </View>
 
-            {/* Schedule Section (Collapsible) - Only for matchup leagues */}
+            {/* Schedule Section — Only for matchup leagues */}
             {isMatchupLeague && (
               <View style={styles.section}>
                 <TouchableOpacity
@@ -566,7 +629,7 @@ export default function LeagueScreen() {
                   <Ionicons
                     name={scheduleExpanded ? 'chevron-up' : 'chevron-down'}
                     size={24}
-                    color={Colors.textMuted}
+                    color="#94A3B8"
                   />
                 </TouchableOpacity>
 
@@ -629,7 +692,7 @@ export default function LeagueScreen() {
                                 styles.scheduleWeekNumber,
                                 isCurrent && styles.scheduleWeekCurrent
                               ]}>
-                                {matchup.is_playoff ? matchup.playoff_round : `Wk ${matchup.week_number}`}
+                                {matchup.is_playoff ? (getPlayoffRoundLabel(matchup.playoff_round) || matchup.playoff_round) : `Wk ${matchup.week_number}`}
                               </Text>
                             </View>
 
@@ -648,7 +711,10 @@ export default function LeagueScreen() {
                                     styles.resultBadge,
                                     iWon ? styles.resultWin : isTie ? styles.resultTie : styles.resultLoss
                                   ]}>
-                                    <Text style={styles.resultBadgeText}>
+                                    <Text style={[
+                                      styles.resultBadgeText,
+                                      iWon ? styles.positive : isTie ? { color: '#D97706' } : styles.negative
+                                    ]}>
                                       {iWon ? 'W' : isTie ? 'T' : 'L'}
                                     </Text>
                                   </View>
@@ -674,7 +740,7 @@ export default function LeagueScreen() {
               </View>
             )}
 
-            {/* History Section (ESPN-style) */}
+            {/* History Section */}
             <View style={styles.section}>
               <TouchableOpacity
                 style={styles.sectionHeader}
@@ -690,7 +756,7 @@ export default function LeagueScreen() {
                 <Ionicons
                   name={historyExpanded ? 'chevron-up' : 'chevron-down'}
                   size={24}
-                  color={Colors.textMuted}
+                  color="#94A3B8"
                 />
               </TouchableOpacity>
 
@@ -715,12 +781,10 @@ export default function LeagueScreen() {
                     const totalGames = myWins + myLosses + myTies;
                     const winPct = totalGames > 0 ? ((myWins + myTies * 0.5) / totalGames).toFixed(2) : '0.00';
 
-                    // Get winner stats (or runner-up if user is champion)
                     const showUserId = wasChampion ? season.runner_up_user_id : season.champion_user_id;
                     const showUserStats = season.final_standings?.find(s => s.user_id === showUserId);
                     const showUserRank = wasChampion ? 2 : 1;
 
-                    // Rank suffix
                     const getRankSuffix = (rank: number) => {
                       if (rank === 1) return 'st';
                       if (rank === 2) return 'nd';
@@ -728,7 +792,6 @@ export default function LeagueScreen() {
                       return 'th';
                     };
 
-                    // Format date range
                     const formatDateRange = () => {
                       const startDate = season.started_at ? new Date(season.started_at) : null;
                       const endDate = season.completed_at ? new Date(season.completed_at) : null;
@@ -738,14 +801,12 @@ export default function LeagueScreen() {
                       const startStr = formatMonth(startDate);
                       const endStr = formatMonth(endDate);
 
-                      // If same month/year, just show one
                       if (startStr === endStr) return startStr;
                       return `${startStr} - ${endStr}`;
                     };
 
                     return (
-                      <View key={season.id} style={styles.historyCard}>
-                        {/* Season Header */}
+                      <View key={season.id} style={[styles.historyCard, cardShadow]}>
                         <View style={styles.historyCardHeader}>
                           <Text style={styles.historySeasonLabel}>
                             Season {season.season_number}
@@ -755,10 +816,8 @@ export default function LeagueScreen() {
                           </Text>
                         </View>
 
-                        {/* Your Stats Row */}
                         <View style={styles.historyYourStats}>
                           <View style={styles.historyStatsLeft}>
-                            {/* Place */}
                             <View style={styles.historyStatBox}>
                               <Text style={[
                                 styles.historyStatValue,
@@ -767,25 +826,22 @@ export default function LeagueScreen() {
                               ]}>
                                 {myRank}{getRankSuffix(myRank)}
                               </Text>
-                              <Text style={styles.historyStatLabel}>PLACE</Text>
+                              <Text style={styles.historyStatLabel}>Place</Text>
                             </View>
                             <View style={styles.historyStatDivider} />
-                            {/* Record */}
                             <View style={styles.historyStatBox}>
                               <Text style={styles.historyStatValue}>
                                 {myWins}-{myLosses}-{myTies}
                               </Text>
-                              <Text style={styles.historyStatLabel}>RECORD</Text>
+                              <Text style={styles.historyStatLabel}>Record</Text>
                             </View>
                             <View style={styles.historyStatDivider} />
-                            {/* Win % */}
                             <View style={styles.historyStatBox}>
                               <Text style={styles.historyStatValue}>{winPct}</Text>
-                              <Text style={styles.historyStatLabel}>WIN%</Text>
+                              <Text style={styles.historyStatLabel}>Win%</Text>
                             </View>
                           </View>
 
-                          {/* Badge */}
                           <View style={styles.historyBadge}>
                             {wasChampion ? (
                               <Text style={styles.historyBadgeIcon}>🏆</Text>
@@ -799,7 +855,6 @@ export default function LeagueScreen() {
                           </View>
                         </View>
 
-                        {/* Winner/Runner-up Row */}
                         {showUserId && (
                           <View style={styles.historyWinnerRow}>
                             <Text style={styles.historyWinnerRank}>
@@ -826,7 +881,6 @@ export default function LeagueScreen() {
               )}
             </View>
 
-            {/* Bottom padding */}
             <View style={{ height: 40 }} />
           </>
         )}
@@ -835,16 +889,29 @@ export default function LeagueScreen() {
   );
 }
 
+const cardShadow = Platform.select({
+  ios: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+  },
+  android: {
+    elevation: 2,
+  },
+  default: {},
+}) as object;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#FFFFFF',
   },
   scrollView: {
     flex: 1,
   },
   loadingText: {
-    color: '#888',
+    color: '#94A3B8',
     fontSize: 14,
     textAlign: 'center',
     marginTop: 40,
@@ -867,19 +934,19 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   championBanner: {
-    backgroundColor: Colors.goldBg,
+    backgroundColor: '#FFFBEB',
     borderWidth: 1,
-    borderColor: Colors.gold,
+    borderColor: '#D97706',
   },
   runnerUpBanner: {
-    backgroundColor: Colors.silverBg,
+    backgroundColor: '#F1F5F9',
     borderWidth: 1,
-    borderColor: Colors.silver,
+    borderColor: '#94A3B8',
   },
   completedBanner: {
-    backgroundColor: 'rgba(107, 114, 128, 0.2)',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: Colors.textMuted,
+    borderColor: '#E2E8F0',
   },
   bannerIcon: {
     fontSize: 32,
@@ -891,11 +958,11 @@ const styles = StyleSheet.create({
   bannerTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: '#0F172A',
   },
   bannerSubtitle: {
     fontSize: 13,
-    color: Colors.textMuted,
+    color: '#64748B',
     marginTop: 2,
   },
   activeSeasonBanner: {
@@ -903,10 +970,10 @@ const styles = StyleSheet.create({
     marginTop: 12,
     marginBottom: 8,
     padding: 12,
-    backgroundColor: Colors.cardBg,
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#E2E8F0',
   },
   seasonInfoRow: {
     flexDirection: 'row',
@@ -916,10 +983,10 @@ const styles = StyleSheet.create({
   seasonLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: '#0F172A',
   },
   weekBadge: {
-    backgroundColor: Colors.primaryBg,
+    backgroundColor: 'rgba(8,145,178,0.08)',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -927,7 +994,7 @@ const styles = StyleSheet.create({
   weekBadgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: Colors.primary,
+    color: '#0891B2',
   },
   // KPI Cards
   kpiRow: {
@@ -939,37 +1006,41 @@ const styles = StyleSheet.create({
   },
   kpiCard: {
     flex: 1,
-    backgroundColor: Colors.cardBg,
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#E2E8F0',
     alignItems: 'center',
   },
-  kpiIcon: {
-    fontSize: 20,
-    marginBottom: 6,
+  kpiIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
   },
   kpiLabel: {
-    fontSize: 10,
-    color: '#888',
+    fontSize: 11,
+    color: '#64748B',
     marginBottom: 4,
     textAlign: 'center',
   },
   kpiValue: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#fff',
+    color: '#0F172A',
     textAlign: 'center',
   },
   kpiValueLarge: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#fff',
+    color: '#0F172A',
   },
   kpiSub: {
     fontSize: 12,
-    color: '#888',
+    color: '#64748B',
     marginTop: 2,
   },
   // Section styles
@@ -983,7 +1054,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: '#E2E8F0',
     marginBottom: 12,
   },
   sectionHeaderLeft: {
@@ -992,42 +1063,39 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#fff',
+    color: '#0F172A',
   },
   sectionSubtitle: {
     fontSize: 12,
-    color: '#888',
+    color: '#64748B',
     marginTop: 2,
   },
-  sectionContent: {
-    // Content area
-  },
+  sectionContent: {},
   // Standing row styles
   standingRow: {
-    backgroundColor: Colors.cardBg,
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#E2E8F0',
     flexDirection: 'row',
     alignItems: 'center',
   },
   standingRowHighlight: {
-    backgroundColor: '#18202c',
-    borderColor: '#22c55e',
+    backgroundColor: '#ECFEFF',
+    borderColor: '#0891B2',
+    borderLeftWidth: 3,
   },
   rankBadge: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#0ea5e9',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
   },
   rankText: {
-    color: '#0b1220',
     fontSize: 14,
     fontWeight: '800',
   },
@@ -1035,15 +1103,13 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: Colors.primary,
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
   },
   avatarText: {
-    color: '#fff',
     fontSize: 16,
-    fontWeight: '700',
   },
   standingInfo: {
     flex: 1,
@@ -1052,10 +1118,10 @@ const styles = StyleSheet.create({
   standingName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#fff',
+    color: '#0F172A',
   },
   standingNameHighlight: {
-    color: '#93c5fd',
+    color: '#0891B2',
   },
   standingStats: {
     alignItems: 'center',
@@ -1064,11 +1130,11 @@ const styles = StyleSheet.create({
   recordText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#fff',
+    color: '#0F172A',
   },
   winPctText: {
     fontSize: 10,
-    color: '#888',
+    color: '#64748B',
     marginTop: 2,
   },
   standingPoints: {
@@ -1084,14 +1150,14 @@ const styles = StyleSheet.create({
   },
   pointsLabel: {
     fontSize: 10,
-    color: '#888',
+    color: '#64748B',
     marginTop: 2,
   },
   positive: {
-    color: '#22c55e',
+    color: '#059669',
   },
   negative: {
-    color: '#ef4444',
+    color: '#DC2626',
   },
   emptyStandings: {
     alignItems: 'center',
@@ -1099,35 +1165,35 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#fff',
+    color: '#0F172A',
     fontWeight: '600',
     marginBottom: 4,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#888',
+    color: '#94A3B8',
     textAlign: 'center',
   },
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#fff',
+    color: '#0F172A',
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#888',
+    color: '#94A3B8',
     marginBottom: 24,
     textAlign: 'center',
   },
   button: {
-    backgroundColor: Colors.primary,
+    backgroundColor: '#0891B2',
     paddingHorizontal: 32,
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: 10,
   },
   buttonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -1139,17 +1205,17 @@ const styles = StyleSheet.create({
   playerChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.cardBg,
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#E2E8F0',
   },
   playerChipActive: {
-    backgroundColor: Colors.primaryBg,
-    borderColor: Colors.primary,
+    backgroundColor: 'rgba(8,145,178,0.08)',
+    borderColor: '#0891B2',
   },
   playerChipAvatar: {
     fontSize: 16,
@@ -1158,24 +1224,24 @@ const styles = StyleSheet.create({
   playerChipText: {
     fontSize: 13,
     fontWeight: '500',
-    color: Colors.textMuted,
+    color: '#94A3B8',
   },
   playerChipTextActive: {
-    color: Colors.primary,
+    color: '#0891B2',
   },
   scheduleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.cardBg,
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 14,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#E2E8F0',
   },
   scheduleRowCurrent: {
-    borderColor: Colors.primary,
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    borderColor: '#0891B2',
+    backgroundColor: '#ECFEFF',
   },
   scheduleWeek: {
     width: 60,
@@ -1186,10 +1252,10 @@ const styles = StyleSheet.create({
   scheduleWeekNumber: {
     fontSize: 13,
     fontWeight: '600',
-    color: Colors.textMuted,
+    color: '#94A3B8',
   },
   scheduleWeekCurrent: {
-    color: Colors.primary,
+    color: '#0891B2',
   },
   scheduleOpponent: {
     flex: 1,
@@ -1198,7 +1264,7 @@ const styles = StyleSheet.create({
   },
   scheduleVs: {
     fontSize: 12,
-    color: Colors.textMuted,
+    color: '#94A3B8',
     marginRight: 8,
   },
   scheduleOpponentAvatar: {
@@ -1208,7 +1274,7 @@ const styles = StyleSheet.create({
   scheduleOpponentName: {
     fontSize: 14,
     fontWeight: '500',
-    color: Colors.textPrimary,
+    color: '#0F172A',
     flex: 1,
   },
   scheduleResult: {
@@ -1222,18 +1288,17 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   resultWin: {
-    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    backgroundColor: '#ECFDF5',
   },
   resultLoss: {
-    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    backgroundColor: '#FEF2F2',
   },
   resultTie: {
-    backgroundColor: 'rgba(234, 179, 8, 0.2)',
+    backgroundColor: '#FFFBEB',
   },
   resultBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: Colors.textPrimary,
   },
   scheduleScore: {
     fontSize: 13,
@@ -1241,21 +1306,21 @@ const styles = StyleSheet.create({
   },
   scheduleUpcoming: {
     fontSize: 13,
-    color: Colors.textMuted,
+    color: '#94A3B8',
     fontStyle: 'italic',
   },
   scheduleCurrent: {
     fontSize: 13,
     fontWeight: '600',
-    color: Colors.primary,
+    color: '#0891B2',
   },
-  // History styles (ESPN-style)
+  // History styles
   historyCard: {
-    backgroundColor: Colors.cardBg,
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#E2E8F0',
     overflow: 'hidden',
   },
   historyCardHeader: {
@@ -1264,23 +1329,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 14,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: '#F1F5F9',
   },
   historySeasonLabel: {
     fontSize: 18,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: '#0F172A',
   },
   historyDateRange: {
     fontSize: 12,
-    color: Colors.textMuted,
+    color: '#94A3B8',
   },
   historyYourStats: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: '#F1F5F9',
   },
   historyStatsLeft: {
     flex: 1,
@@ -1293,25 +1358,25 @@ const styles = StyleSheet.create({
   historyStatValue: {
     fontSize: 22,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: '#0F172A',
   },
   historyStatChampion: {
-    color: Colors.gold,
+    color: '#D97706',
   },
   historyStatRunnerUp: {
-    color: Colors.silver,
+    color: '#94A3B8',
   },
   historyStatLabel: {
     fontSize: 10,
     fontWeight: '600',
-    color: Colors.textMuted,
+    color: '#94A3B8',
     letterSpacing: 0.5,
     marginTop: 2,
   },
   historyStatDivider: {
     width: 1,
     height: 32,
-    backgroundColor: Colors.border,
+    backgroundColor: '#E2E8F0',
     marginHorizontal: 16,
   },
   historyBadge: {
@@ -1327,14 +1392,14 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 8,
-    backgroundColor: Colors.border,
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
   },
   historyParticipantText: {
     fontSize: 18,
     fontWeight: '700',
-    color: Colors.textMuted,
+    color: '#94A3B8',
   },
   historyWinnerRow: {
     flexDirection: 'row',
@@ -1345,7 +1410,7 @@ const styles = StyleSheet.create({
   historyWinnerRank: {
     fontSize: 13,
     fontWeight: '600',
-    color: Colors.textMuted,
+    color: '#94A3B8',
     marginRight: 10,
     width: 28,
   },
@@ -1357,11 +1422,11 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontWeight: '500',
-    color: Colors.textPrimary,
+    color: '#0F172A',
   },
   historyWinnerRecord: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.textMuted,
+    color: '#94A3B8',
   },
 });

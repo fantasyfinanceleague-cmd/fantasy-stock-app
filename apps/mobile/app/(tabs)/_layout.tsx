@@ -1,6 +1,7 @@
 import React from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs, Redirect } from 'expo-router';
+import { StyleSheet } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { useAuth } from '@/lib/useAuth';
 
@@ -30,16 +31,17 @@ export default function TabLayout() {
         tabBarActiveTintColor: Colors.tabActive,
         tabBarInactiveTintColor: Colors.tabInactive,
         tabBarStyle: {
-          backgroundColor: Colors.headerBg,
-          borderTopColor: Colors.borderDark,
-          paddingTop: 4,
+          backgroundColor: '#FFFFFF',
+          borderTopColor: '#E2E8F0',
+          borderTopWidth: StyleSheet.hairlineWidth,
+          elevation: 0,
         },
         tabBarLabelStyle: {
           fontSize: 10,
           marginTop: 2,
         },
         headerStyle: {
-          backgroundColor: Colors.headerBg,
+          backgroundColor: '#FFFFFF',
         },
         headerTintColor: Colors.textPrimary,
         headerShown: false,

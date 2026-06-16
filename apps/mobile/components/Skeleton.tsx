@@ -78,23 +78,23 @@ export function SkeletonHolding() {
 
 const styles = StyleSheet.create({
   skeleton: {
-    backgroundColor: Colors.border,
+    backgroundColor: '#E2E8F0',
   },
   card: {
-    backgroundColor: Colors.cardBg,
+    backgroundColor: Colors.glassBg,
     marginHorizontal: 24,
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 24,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.glassBorder,
   },
   holdingRow: {
-    backgroundColor: Colors.cardBg,
-    borderRadius: 12,
+    backgroundColor: Colors.glassBg,
+    borderRadius: 14,
     padding: 16,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.glassBorder,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',

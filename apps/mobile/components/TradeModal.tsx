@@ -698,7 +698,7 @@ const styles = StyleSheet.create({
   },
   overlayBackground: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
   },
   modalContainer: {
     backgroundColor: Colors.cardBg,
@@ -738,9 +738,9 @@ const styles = StyleSheet.create({
 
   // Warning box (no Alpaca)
   warningBox: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    backgroundColor: '#FEF2F2',
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    borderColor: '#FECACA',
     borderRadius: 12,
     padding: 20,
     marginBottom: 20,
@@ -748,12 +748,12 @@ const styles = StyleSheet.create({
   warningTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#f87171',
+    color: '#DC2626',
     marginBottom: 8,
   },
   warningText: {
     fontSize: 14,
-    color: '#f87171',
+    color: '#DC2626',
     marginBottom: 8,
     lineHeight: 20,
   },
@@ -776,9 +776,9 @@ const styles = StyleSheet.create({
 
   // Locked box (not Monday)
   lockedBox: {
-    backgroundColor: 'rgba(251, 191, 36, 0.1)',
+    backgroundColor: '#FFFBEB',
     borderWidth: 1,
-    borderColor: 'rgba(251, 191, 36, 0.3)',
+    borderColor: '#FDE68A',
     borderRadius: 12,
     padding: 20,
     marginBottom: 20,
@@ -807,7 +807,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   lockedButtonText: {
-    color: Colors.background,
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -892,7 +892,7 @@ const styles = StyleSheet.create({
     elevation: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.15,
     shadowRadius: 8,
   },
   searchResultsList: {
@@ -948,10 +948,10 @@ const styles = StyleSheet.create({
   selectedStock: {
     marginTop: 10,
     padding: 12,
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    backgroundColor: '#ECFDF5',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(34, 197, 94, 0.3)',
+    borderColor: '#A7F3D0',
   },
   selectedSymbol: {
     fontSize: 16,
@@ -1009,9 +1009,9 @@ const styles = StyleSheet.create({
 
   // Price box
   priceBox: {
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    backgroundColor: '#EFF6FF',
     borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.3)',
+    borderColor: '#BFDBFE',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -1031,7 +1031,7 @@ const styles = StyleSheet.create({
   },
   priceDivider: {
     height: 1,
-    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+    backgroundColor: '#BFDBFE',
     marginVertical: 12,
   },
   totalLabel: {
@@ -1059,16 +1059,16 @@ const styles = StyleSheet.create({
 
   // Error
   errorBox: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    backgroundColor: '#FEF2F2',
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    borderColor: '#FECACA',
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
   },
   errorText: {
     fontSize: 14,
-    color: '#f87171',
+    color: '#DC2626',
   },
 
   // Buttons

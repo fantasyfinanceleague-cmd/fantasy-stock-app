@@ -254,7 +254,7 @@ export default function LeaguesScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
         style={styles.scrollView}
         refreshControl={
@@ -397,8 +397,7 @@ export default function LeaguesScreen() {
                   value={draftDate || new Date()}
                   mode="datetime"
                   display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  themeVariant="dark"
-                  textColor="#ffffff"
+                  themeVariant="light"
                   onChange={(event, selectedDate) => {
                     setShowDatePicker(Platform.OS === 'ios');
                     if (selectedDate) setDraftDate(selectedDate);

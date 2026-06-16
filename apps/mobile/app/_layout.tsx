@@ -1,10 +1,17 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { DarkTheme, ThemeProvider } from '@react-navigation/native';
+import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from '@expo-google-fonts/inter';
 import { Stack, router } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Linking from 'expo-linking';
 import { useEffect } from 'react';
+import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
 import { LeagueProvider } from '@/lib/LeagueContext';
@@ -33,6 +40,10 @@ export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     ...FontAwesome.font,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
   });
 
   useEffect(() => {
@@ -138,7 +149,8 @@ function RootLayoutNav() {
   // Not authenticated — no LeagueProvider needed, stable screenOptions
   if (!user) {
     return (
-      <ThemeProvider value={DarkTheme}>
+      <ThemeProvider value={DefaultTheme}>
+        <StatusBar style="dark" />
         <Stack screenOptions={AUTH_SCREEN_OPTIONS}>
           <Stack.Screen name="login" />
           <Stack.Screen name="forgot-password" options={HIDDEN_HEADER_MODAL} />
@@ -150,7 +162,8 @@ function RootLayoutNav() {
 
   // Authenticated — full app with tabs
   return (
-    <ThemeProvider value={DarkTheme}>
+    <ThemeProvider value={DefaultTheme}>
+      <StatusBar style="dark" />
       <LeagueProvider>
         <Stack>
           <Stack.Screen name="(tabs)" options={HIDDEN_HEADER} />

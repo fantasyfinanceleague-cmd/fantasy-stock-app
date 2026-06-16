@@ -22,7 +22,7 @@ export interface League {
   created_at: string;
   // Season tracking
   current_season_id: string | null;
-  season_status: 'active' | 'completed';
+  season_status: 'active' | 'playoffs' | 'completed';
 }
 
 export interface LeagueSeason {

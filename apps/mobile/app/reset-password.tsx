@@ -92,7 +92,7 @@ export default function ResetPasswordScreen() {
           <TextInput
             style={styles.input}
             placeholder="New Password"
-            placeholderTextColor="#666"
+            placeholderTextColor="#94A3B8"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -102,7 +102,7 @@ export default function ResetPasswordScreen() {
           <TextInput
             style={styles.input}
             placeholder="Confirm New Password"
-            placeholderTextColor="#666"
+            placeholderTextColor="#94A3B8"
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             secureTextEntry
@@ -150,13 +150,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#fff',
+    color: '#0F172A',
     textAlign: 'center',
     marginBottom: 12,
   },
   description: {
     fontSize: 15,
-    color: '#888',
+    color: '#64748B',
     textAlign: 'center',
     marginBottom: 32,
     lineHeight: 22,
@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 16,
     fontSize: 16,
-    color: '#fff',
+    color: '#0F172A',
     marginBottom: 16,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelText: {
-    color: '#888',
+    color: '#64748B',
     fontSize: 14,
   },
 });
