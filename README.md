@@ -36,6 +36,8 @@ fantasy-stock/
 ├── apps/
 │   ├── web/              # React web application
 │   └── mobile/           # React Native (Expo) mobile app
+├── docs/
+│   └── design/           # UI design assets and references
 ├── packages/
 │   └── shared/           # Shared code between web and mobile
 │       ├── constants/    # Shared constants
@@ -64,6 +66,7 @@ fantasy-stock/
 - **League history** - ESPN-style history showing your finish, record, and win% for past seasons
 - **Start New Season** - Commissioners can reset standings and begin a new competition
 - **Mobile app features**:
+  - Premium fintech-style login screen with glassmorphic design
   - ESPN-style league switcher dropdown on all pages
   - Swipeable league carousel on Home page
   - Week navigation for viewing past matchups
@@ -140,6 +143,8 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 - [x] Push notifications (draft turn alerts)
 - [x] Standalone builds with OTA updates (EAS Build + EAS Update)
 - [x] Password reset flow (forgot password + deep link reset)
+- [x] Premium login screen UI (fintech-style design)
+- [ ] App-wide UI overhaul (in progress)
 - [ ] Live trading integration
 - [ ] Email notifications
 - [ ] Matchup result notifications
@@ -152,6 +157,7 @@ For developers and AI assistants working on the codebase:
 |----------|-------------|
 | [`apps/mobile/ARCHITECTURE.md`](apps/mobile/ARCHITECTURE.md) | Comprehensive mobile app architecture guide - navigation, state management, components, hooks, styling patterns |
 | [`Session Recaps.md`](Session%20Recaps.md) | Development history with detailed notes on what was built, files modified, and technical decisions |
+| [`docs/design/`](docs/design/) | UI design assets, logo, example references, and design notes for the premium fintech aesthetic |
 
 ## About
 

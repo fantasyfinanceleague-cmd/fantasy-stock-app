@@ -2,6 +2,94 @@
 
 ---
 
+# February 1, 2026 (Session 3)
+
+## What We Accomplished
+
+### 1. Authentication Flow Fix
+Fixed sign-out behavior so unauthenticated users only see the login screen:
+- **Root layout auth guard** - Conditionally renders auth-only Stack when not logged in
+- **Tabs layout auth guard** - Added `Redirect` to `/login` if user not authenticated
+- **Removed cancel button** - Login screen no longer shows dismiss option (it's the only screen)
+- **Added LeagueProvider** - Wrapped unauthenticated Stack to prevent context errors
+
+### 2. Login Screen UI Redesign
+Complete redesign following fintech-style design principles (Slick, Mercury, Conceptzilla influences):
+- **Stockpile logo** - Large, prominent branding at top (90% width, 160px height)
+- **Tagline** - "Fantasy Sports Meets the Stock Market"
+- **Multi-layer gradient background** - Deep dark (#0A0A0F → #0D1117 → #0A0F1A) with subtle glow effects
+- **Glassmorphic card container** - Semi-transparent with subtle border and gradient overlay
+- **Input fields with icons** - Email, lock, person icons with cyan glow on focus
+- **Gradient CTA button** - Cyan-to-green gradient (#22D3EE → #10B981)
+- **Fade-in animation** - Smooth entrance animation on load
+- **Better typography** - "Welcome back" / "Sign in to your league" hierarchy
+
+### 3. Organized Design Assets
+Created `docs/design/` folder for UI reference materials:
+- `stockpile logo.png` - Official app logo
+- `UI.md` - Design notes and requirements
+- `ui examples notes.md` - Detailed breakdown of design influences
+- UI example screenshots (Slick, Mercury, FinBuddy, Conceptzilla)
+
+## Files Modified/Created
+
+### Mobile App - Modified Files
+| File | Changes |
+|------|---------|
+| `apps/mobile/app/_layout.tsx` | Added auth guard, conditionally render auth-only or full app Stack |
+| `apps/mobile/app/(tabs)/_layout.tsx` | Added auth check with Redirect to login |
+| `apps/mobile/app/login.tsx` | Complete UI redesign with premium fintech aesthetic |
+| `apps/mobile/assets/images/stockpile-logo.png` | Added Stockpile logo |
+
+### Documentation - New
+| File | Purpose |
+|------|---------|
+| `docs/design/` | New folder for design assets and references |
+| `docs/design/UI.md` | Login screen design requirements |
+| `docs/design/ui examples notes.md` | Detailed design influence breakdown |
+| `docs/design/stockpile logo.png` | Official logo file |
+
+## Technical Notes
+
+### Auth Guard Pattern
+```typescript
+// In (tabs)/_layout.tsx
+const { user, loading } = useAuth();
+
+if (loading) return null;
+if (!user) return <Redirect href="/login" />;
+
+return <Tabs>...</Tabs>;
+```
+
+### Login Screen Structure
+```
+LinearGradient (background)
+├── Glow effects (top green, bottom cyan)
+└── SafeAreaView
+    └── Animated.View (fade-in)
+        ├── Logo + Tagline
+        ├── Card (glassmorphic)
+        │   ├── Title + Subtitle
+        │   ├── Inputs (with focus glow)
+        │   └── Gradient Button
+        └── Switch auth mode link
+```
+
+## Design Principles Applied
+- **Slick** - Overall dark aesthetic, layered surfaces, confident typography
+- **Mercury** - Minimalism, whitespace, calm fintech feel
+- **Conceptzilla** - Dark gradients, depth through layered panels
+- **FinBuddy** - Card-based layout structure (dark theme adapted)
+
+## Next Steps
+- [ ] Apply similar UI treatment to Home screen
+- [ ] Redesign Portfolio page with card-based holdings
+- [ ] Update Matchup page styling
+- [ ] Consistent design system across all screens
+
+---
+
 # February 1, 2026 (Session 2)
 
 ## What We Accomplished

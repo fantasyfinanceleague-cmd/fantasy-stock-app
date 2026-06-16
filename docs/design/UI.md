@@ -1,4 +1,4 @@
-# Stockpile – Login Screen UI Design Notes
+# Stockpile – UI Design Notes
 
 ## Goal
 Upgrade the login screen from a generic auth page to a modern, fintech-style entry point that feels trustworthy, premium, and fun. The screen should signal that Stockpile is not a demo app, but a real product with personality.
@@ -181,3 +181,70 @@ Removed all `onFocus`/`onBlur` state tracking from input components. Inputs use 
 2. If focus-based visual effects are needed, use `Animated` with `useNativeDriver: true` driven by the TextInput's native focus event, which avoids React re-renders
 3. Always test TextInput keyboard behavior on a real iOS device after adding wrapper components or focus handlers
 4. Keep input components simple — a `View` + `Ionicons` + `TextInput` with static styles works reliably
+
+---
+
+## Home Screen Redesign
+
+### Goal
+Apply the premium fintech aesthetic established on the login screen to the Home screen, while adopting layout patterns from the ofspace reference (a fintech dashboard with personalized greeting, icon circles, activity-list rows, and varied card styling).
+
+### Design Direction
+**Dark theme + lifted gradient cards.** Combine ofspace's layout patterns with Slick's elevated card aesthetic. Each card type has a distinct color identity with bold gradients and colored shadows that make them float above the background.
+
+### Key Principles (Slick + ofspace hybrid)
+1. **Lifted cards** — Cards use rich gradient backgrounds (not flat colors) with colored shadows for depth
+2. **Color differentiation** — Each card type has a distinct hue (teal for portfolio, purple for activity, amber for pending)
+3. **Colored shadows** — Shadow color matches the card's gradient for a glowing, elevated effect
+4. **Bold contrasts** — Cards should pop, not blend into the background
+
+### What Changed
+
+#### Colors.ts (Global Palette Update)
+The entire color system was shifted darker to match the login screen:
+- `background`: `#0A0A0F` (deep black, was slate blue)
+- `headerBg`: `#0D1117` (matches login gradient mid-tone)
+- `cardBg`: `#111827` (darker, richer cards)
+- `primary`: `#22D3EE` (cyan, matches login/logo accent — was blue)
+- `border`: changed from opaque slate to `rgba(255,255,255,0.08)` (subtle white)
+- Added `glassBg`: `rgba(17,24,39,0.7)` for semi-transparent cards
+- Added `glassBorder`: `rgba(255,255,255,0.06)` for glassmorphic borders
+- Added `accent`: `#10B981` (green, for gradient CTAs)
+- Tab active color shifted to cyan
+
+#### Home Screen Layout
+- **Header**: Personalized greeting ("Good morning/afternoon/evening" + username from `user_profiles`) with Stockpile logo on the right
+- **Background**: Multi-stop `LinearGradient` matching login (`['#0A0A0F', '#0D1117', '#0A0F1A', '#080B12']`)
+- **Spacing**: Generous padding and margins throughout
+
+#### Lifted Gradient Cards
+Each card wraps in an outer View with colored shadow, containing a LinearGradient as the card background:
+
+| Card Type | Gradient Colors | Shadow Color | Border |
+|-----------|-----------------|--------------|--------|
+| Portfolio | `#0D4F5F` → `#0A3D47` → `#0B2E35` (teal) | `#22D3EE` | `rgba(34, 211, 238, 0.2)` |
+| Recent Results | `#2D1F4E` → `#1E1535` → `#171025` (purple) | `#8B5CF6` | `rgba(139, 92, 246, 0.2)` |
+| Draft Pending | `#4A3F1A` → `#352D14` → `#262010` (amber) | `#fbbf24` | `rgba(251, 191, 36, 0.2)` |
+| Draft In Progress | `#0D4F5F` → `#0A3D47` → `#0B2E35` (teal) | `#22D3EE` | `rgba(34, 211, 238, 0.2)` |
+| Prompt Card | `#1A2B3C` → `#141F2B` → `#0E161F` (slate) | `#22D3EE` | `rgba(34, 211, 238, 0.15)` |
+
+Shadow settings: `shadowOffset: { width: 0, height: 8 }`, `shadowOpacity: 0.12-0.15`, `shadowRadius: 20-24`
+
+#### Activity List Style
+- Past results rendered as activity feed rows with icon circles
+- Icon colors: green for wins (`#4ade80`), red for losses (`#f87171`), amber for ties (`#fbbf24`)
+- Icon backgrounds: `rgba(color, 0.25)` for more vibrancy
+
+#### Supporting Components
+- **LeagueCarousel**: Glassmorphic card treatment with gradient overlays, darkened stats rows
+- **PortfolioChart**: Glassmorphic container, uppercase label-style title
+- **Skeleton**: Updated to match glassmorphic card style
+
+### Pages Still To Do
+- Portfolio tab
+- Matchup tab
+- League tab
+- Leagues list tab
+- Profile tab
+- Draft screen
+- All modal/detail screens

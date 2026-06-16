@@ -1,7 +1,7 @@
-# Stockpile Login / Auth Screen – Design + Implementation Prompt
+# Stockpile – Design + Implementation Prompt
 
 ## Objective
-Build a premium, modern login screen for the Stockpile app (fantasy stock league). The screen should feel sophisticated and fintech-grade while remaining minimal and calm. It should balance seriousness and polish with approachability.
+Build premium, modern screens for the Stockpile app (fantasy stock league). Each screen should feel sophisticated and fintech-grade while remaining minimal and calm. It should balance seriousness and polish with approachability.
 
 The design should not feel like a generic auth page, a crypto app, or a playful game UI.
 
@@ -182,4 +182,105 @@ During the login screen implementation, a `FocusableInput` component was created
 - Use React Native `Animated` API with `useNativeDriver: true` to animate border/shadow changes without triggering React re-renders
 - Or use `onFocus`/`onBlur` to drive native animations via refs, not state
 - Always test on a real iOS device — this issue does not reproduce in simulators the same way
+
+---
+
+## Home Screen Redesign – ofspace Influence Addition
+
+### New Reference: ofspace (layout and structure)
+After the initial glassmorphic implementation of the Home screen, the ofspace fintech dashboard reference was introduced. ofspace is a **light-themed** fintech app, but we adopted its **layout patterns only** within our dark theme.
+
+### What We Took From ofspace
+- **Personalized greeting header**: "Good morning/afternoon/evening" + user's name, with logo on the opposite side
+- **Icon circles on cards**: Small colored circle backgrounds behind icons (e.g., wallet icon on portfolio card, trending icons on results)
+- **Activity-list style rows**: Past results rendered as an activity feed with icon, title, subtitle, and right-aligned value — not as table rows
+- **Varied card backgrounds**: Different accent tints per card type (cyan tint for portfolio, no tint for sections)
+- **"See all" links**: Section headers with subtle navigation links
+- **Generous whitespace**: More spacing between sections and within cards
+
+### What We Did NOT Take From ofspace
+- Light color palette (we stayed dark)
+- Pill toggle buttons (not applicable to our data)
+- Illustrations or avatars
+- Rounded colored card backgrounds (adapted to glassmorphic dark cards instead)
+
+### How It Combines With Existing Influences
+- **Slick** still defines the overall dark tone, typography confidence, and surface layering
+- **Mercury** still enforces restraint — no decorative noise, calm spacing
+- **Conceptzilla** still provides depth through gradients (background, card overlays)
+- **FinBuddy** card-based layout now supplemented by ofspace's activity-list and icon-circle patterns
+- **ofspace** adds the personalized, dashboard-like feel with greeting headers and structured data presentation
+
+### Applied To
+- Home screen (`app/(tabs)/index.tsx`) — full redesign with lifted gradient cards
+- LeagueCarousel — glassmorphic treatment (lifted gradients not yet applied)
+- PortfolioChart — glassmorphic container
+- Skeleton — glassmorphic loading states
+
+---
+
+## Lifted Gradient Cards — Slick Influence Addition
+
+### Problem with Initial Implementation
+The first ofspace-inspired pass used subtle glassmorphic tints on cards. While structurally correct, the result looked "too bland and lame" — cards didn't pop and everything blended together without contrast.
+
+### New Reference: Slick (lifted gradient cards)
+Slick's dark UI shows cards that feel **elevated and distinct**:
+- Rich gradient backgrounds (not flat or semi-transparent)
+- Each card type has its own color identity
+- Cards appear to float above the background with depth
+- Colored shadows matching the card gradient
+
+### What We Added From Slick
+- **Bold gradient fills**: Cards use 3-stop LinearGradients (dark → darker → darkest of a hue)
+- **Colored shadows**: Each card's shadow color matches its gradient hue for a glowing effect
+- **Color differentiation**: Portfolio = teal, Activity = purple, Status = amber — immediately distinguishable
+- **Elevated appearance**: Shadow offset of 8px with large blur radius (20-24px)
+
+### Card Color System
+| Card Type | Primary Hue | Gradient | Shadow |
+|-----------|-------------|----------|--------|
+| Portfolio Value | Teal/Cyan | `#0D4F5F` → `#0B2E35` | `#22D3EE` |
+| Recent Results | Purple/Violet | `#2D1F4E` → `#171025` | `#8B5CF6` |
+| Draft Pending | Amber/Gold | `#4A3F1A` → `#262010` | `#fbbf24` |
+| Draft In Progress | Teal/Cyan | `#0D4F5F` → `#0B2E35` | `#22D3EE` |
+
+### Implementation Pattern
+```jsx
+// Outer wrapper provides shadow
+<View style={{
+  shadowColor: '#22D3EE',
+  shadowOffset: { width: 0, height: 8 },
+  shadowOpacity: 0.15,
+  shadowRadius: 24,
+  elevation: 12,
+}}>
+  {/* LinearGradient IS the card */}
+  <LinearGradient
+    colors={['#0D4F5F', '#0A3D47', '#0B2E35']}
+    style={{
+      borderRadius: 20,
+      padding: 24,
+      borderWidth: 1,
+      borderColor: 'rgba(34, 211, 238, 0.2)',
+    }}
+  >
+    {/* Card content */}
+  </LinearGradient>
+</View>
+```
+
+---
+
+## Implementation Pattern for Remaining Pages
+When redesigning additional pages, follow this combined influence model:
+1. `LinearGradient` background matching login/home (`['#0A0A0F', '#0D1117', '#0A0F1A', '#080B12']`)
+2. **Lifted gradient cards** — outer shadow wrapper + LinearGradient as card body
+3. **Distinct card colors** — each card type should have its own hue identity
+4. Personalized/contextual headers where appropriate
+5. Icon circles for visual anchors on key data points
+6. Activity-list style for any list data (not plain rows)
+7. Cyan primary accent, green for positive/CTA, consistent with `Colors.ts`
+8. Generous spacing (24px horizontal margins, 20px+ vertical gaps between sections)
+9. Colored shadows matching card gradient for elevated appearance
 

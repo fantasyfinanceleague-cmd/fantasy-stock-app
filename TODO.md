@@ -48,7 +48,37 @@
     4. Database constraint `drafts_league_pick_unique UNIQUE (league_id, pick_number)` applied
   - **Verification:** Existing duplicate picks (11, 13) manually corrected. Full constraint active.
 
-### Recently Completed (Feb 1, 2026)
+### Recently Completed (Feb 1, 2026 - Session 3)
+- [x] **Authentication Flow Fix**
+  - Fixed sign-out to properly redirect to login screen
+  - Unauthenticated users can only see login (no tab bar visible)
+  - Added auth guard in root `_layout.tsx` and `(tabs)/_layout.tsx`
+  - Removed unnecessary "Cancel" button from login screen
+
+- [x] **Login Screen UI Redesign**
+  - Premium fintech-style design (Slick, Mercury, Conceptzilla influences)
+  - Large Stockpile logo with tagline "Fantasy Sports Meets the Stock Market"
+  - Multi-layer gradient background with subtle glow effects
+  - Glassmorphic card container with gradient overlay
+  - Input fields with icons and cyan glow focus states
+  - Cyan-to-green gradient CTA button
+  - Fade-in animation on load
+
+- [x] **Design System Setup**
+  - Created `docs/design/` folder for UI assets and references
+  - Added design notes and UI example breakdowns
+  - Established visual direction based on fintech app references
+
+### In Progress - UI Overhaul
+- [ ] **App-wide UI redesign** - Apply login screen styling to rest of app
+  - [ ] Home screen redesign
+  - [ ] Portfolio page with card-based holdings
+  - [ ] Matchup page styling
+  - [ ] League page updates
+  - [ ] Profile page polish
+  - [ ] Consistent design tokens/colors
+
+### Recently Completed (Feb 1, 2026 - Sessions 1-2)
 - [x] **Company Names in Portfolio & P/L Breakdown**
   - Created `useStockNames.ts` hook for fetching/caching company names
   - Added `abbreviateName()` utility for long names (removes Inc., Corp., etc.)

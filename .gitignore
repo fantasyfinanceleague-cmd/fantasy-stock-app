@@ -40,3 +40,5 @@ coverage/
 # Supabase
 supabase/.secrets
 supabase/.temp/
+.env.new-keys
+docs/api-keys-inventory.md
