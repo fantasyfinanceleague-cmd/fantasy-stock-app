@@ -9,7 +9,7 @@ a "coming soon" state instead of offering signup or login.
 ## ⚠️ Current design bundle URL (disposable — regenerate if the design changes)
 
 ```
-https://api.anthropic.com/v1/design/h/C34QY5_oP_LXzIcV1wtHPw
+https://api.anthropic.com/v1/design/h/sBymhvQbwaiWVQGQX1awrg
 ```
 
 > This URL points to one specific version of the design bundle. If the design

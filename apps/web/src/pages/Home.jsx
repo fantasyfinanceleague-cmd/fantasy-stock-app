@@ -29,9 +29,9 @@ export default function Home() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#0b1120',
+        background: '#FFFFFF',
       }}>
-        <div style={{ color: '#6b7280' }}>Loading...</div>
+        <div style={{ color: '#71717A' }}>Loading...</div>
       </div>
     );
   }
