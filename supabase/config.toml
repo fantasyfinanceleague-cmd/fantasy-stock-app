@@ -10,9 +10,13 @@ entrypoint = "./functions/quote/index.ts"
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/quote/*.html" ]
 
+# Phase 2b-2: cron auth migration. JWT verification disabled so the function is
+# reachable without a legacy JWT; the function's own apikey-header validation
+# (SB_SECRET_KEY_CRON, constant-time, fail-closed) is the authentication guard.
+# (Before 2b-2 this was verify_jwt=false with NO guard — publicly unauthenticated.)
 [functions.process-week-results]
 enabled = true
-verify_jwt = false  # Allow cron to call without auth
+verify_jwt = false
 entrypoint = "./functions/process-week-results/index.ts"
 
 # Phase 2b-1: cron auth migration. JWT verification disabled so the function is

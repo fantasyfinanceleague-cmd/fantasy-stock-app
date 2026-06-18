@@ -16,10 +16,23 @@ FUNCTION_URL="$SUPABASE_URL/functions/v1/process-week-results"
 REST_URL="$SUPABASE_URL/rest/v1"
 LEAGUE_ID="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 
-# Check for service role key
+# Phase 2b-2: this script uses TWO keys now.
+#   - SB_SECRET_KEY_CRON  -> the process-week-results function call (apikey header).
+#       process-week-results validates `apikey` against SB_SECRET_KEY_CRON; the
+#       legacy service_role bearer token no longer works for it.
+#   - SUPABASE_SERVICE_ROLE_KEY -> the /rest/v1 (PostgREST) data-plane calls below.
+# WARNING: the /rest/v1 calls still use the legacy service_role key. They WILL BREAK
+# once legacy keys are disabled in Phase 4, and stay broken until Phase 3 migrates
+# the data-plane callers to the new keys. Do NOT rely on this script in the window
+# between Phase 4 (legacy keys off) and Phase 3 completion.
+if [ -z "$SB_SECRET_KEY_CRON" ]; then
+  echo "ERROR: SB_SECRET_KEY_CRON not set (required for the process-week-results call)"
+  echo "Usage: export SB_SECRET_KEY_CRON=\"...\" SUPABASE_SERVICE_ROLE_KEY=\"...\" && ./scripts/simulate-season.sh"
+  exit 1
+fi
 if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
-  echo "ERROR: SUPABASE_SERVICE_ROLE_KEY not set"
-  echo "Usage: export SUPABASE_SERVICE_ROLE_KEY=\"your-key\" && ./scripts/simulate-season.sh"
+  echo "ERROR: SUPABASE_SERVICE_ROLE_KEY not set (required for the /rest/v1 verification calls)"
+  echo "Usage: export SB_SECRET_KEY_CRON=\"...\" SUPABASE_SERVICE_ROLE_KEY=\"...\" && ./scripts/simulate-season.sh"
   exit 1
 fi
 
@@ -50,7 +63,7 @@ for i in {0..4}; do
   echo "--- Run $RUN/5: ${LABELS[$i]} ---"
 
   RESPONSE=$(curl -s -X POST "$FUNCTION_URL" \
-    -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+    -H "apikey: $SB_SECRET_KEY_CRON" \
     -H "Content-Type: application/json")
 
   echo "$RESPONSE" | $JQ
