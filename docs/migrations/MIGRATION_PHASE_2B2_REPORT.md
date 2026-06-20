@@ -7,7 +7,7 @@ sub-phase. Status at last update:
 |-----------|----------|--------|
 | A | `process-week-results` | ✅ DONE & MERGED to main (`e92ce06`) |
 | B | `snapshot-week-start` | ✅ DONE — gate passed, on branch `phase-2b2bc-cron-functions`, awaiting B+C merge |
-| C | `sync-alpaca-orders` | ✅ CODE COMPLETE on branch `phase-2b2bc-cron-functions`, awaiting live gate + B+C merge |
+| C | `sync-alpaca-orders` | ✅ DONE — gate passed, on branch `phase-2b2bc-cron-functions`, awaiting B+C merge |
 
 Branch strategy: A merged on its own (closed a live public-auth hole); B and C
 share a second merge from `phase-2b2bc-cron-functions`.
@@ -70,9 +70,31 @@ Commits: `d0c112e` (code).
 - **Function (`sync-alpaca-orders/index.ts`):** 2b-1 apikey guard placed **after** the `OPTIONS`/`405` method checks (preflight carries no secret) but **before** body parse / DB / Alpaca work; admin client `SUPABASE_SERVICE_ROLE_KEY` → `SB_SECRET_KEY_INTERNAL`. No legacy `SERVICE_ROLE` refs remain.
 - **Dead code preserved (not deleted):** the user-authed `verify`/`sync` modes and their `ANON_KEY`/`authed` client remain in the file untouched, per spec. They are now **USER-UNREACHABLE** — an apikey-only (cron) call has no user JWT, so `authed.auth.getUser()` returns null and those modes fall through to `not_authenticated`. **This is a behavior change, not a refactor: `verify`/`sync` are non-functional dead code as of this phase. Phase 5 should remove them (and the now-unused `ANON_KEY`/`authed` client), not treat them as live features.**
 - **Cron migration `20260618000002`:** reschedules the `sync-alpaca-orders` job (`30 21 * * 1-5`) to send `apikey` from `cron_apikey`, **preserving the `{"mode":"sync-all"}` body** (without it, mode defaults to `sync` → `not_authenticated`).
-- **Security gate:** ⏳ pending — deploy + `db push` (user, back-to-back no gap), then 6a no-key→our 401, 6b/6d invalid→gateway 401 (Claude Code), 6c real key + `{"mode":"sync-all"}`→200 (user). Optionally confirm a real key with no/`sync` mode now returns `not_authenticated` (documents the unreachable path).
+- **Security gate:** ✅ PASSED.
+  - 6a no-key → **401** `{"error":"Unauthorized"}` (our code — fail-closed guard is the sole protection).
+  - 6b/6d invalid key → **401** `{"message":"Invalid API key"}` (gateway).
+  - 6c real cron key + `{"mode":"sync-all"}` → **200** `users_processed:1, total_updated:0` (guard accepted). *[user-run]*
 
-Commits: `<pending>` (code).
+### ⚠️ Gate catch: first deploy didn't apply the verify_jwt flip
+
+On the **first** 6a run, the body came back as the platform's
+`{"code":"UNAUTHORIZED_NO_AUTH_HEADER","message":"Missing authorization header"}` —
+NOT our `{"error":"Unauthorized"}`. That meant the **gateway was still
+JWT-verifying** and rejecting the no-credential request *before* our guard ran:
+`verify_jwt` was still TRUE on the deployed function. The config.toml flip was
+correct in the repo, but the function deploy with `--no-verify-jwt` had not taken
+effect (the migration/`db push` had been run, but the function deploy had not
+actually flipped the gateway flag).
+
+This is the inverse of A/B, where 6a returned our code immediately — the control
+that made the discrepancy obvious. Because C is a true→false flip (not an
+already-false function), the flip actually landing is load-bearing. **Fix:**
+re-ran `supabase functions deploy sync-alpaca-orders --no-verify-jwt`; 6a then
+flipped to our `{"error":"Unauthorized"}`. Lesson: for a verify_jwt true→false
+function, 6a is the proof the flip deployed — pushing the migration alone is not
+enough; the function deploy must actually disable JWT verification.
+
+Commits: `19d6160` (code).
 
 ---
 
