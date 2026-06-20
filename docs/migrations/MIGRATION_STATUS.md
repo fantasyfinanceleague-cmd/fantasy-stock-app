@@ -2,7 +2,7 @@
 
 **This is a living document. Update it at every phase boundary.** It exists so any fresh Claude Code session (or future-you) can get up to speed in 60 seconds. For detailed records, see the per-phase report files referenced below.
 
-Last updated: Phase 2b-2 Sub-phases B (`snapshot-week-start`) and C (`sync-alpaca-orders`) both done on branch `phase-2b2bc-cron-functions` — code + security gates passed, awaiting user review + B+C merge to main. Sub-phase A already merged (`e92ce06`). After the B+C merge, ALL 4 cron functions are on apikey auth and nothing depends on the legacy service_role key. See `MIGRATION_PHASE_2B2_REPORT.md`.
+Last updated: **Phase 2b-2 COMPLETE & MERGED.** Sub-phase A merged `e92ce06`; Sub-phases B+C merged `eae20ed`. ALL 4 cron functions now authenticate via apikey (`SB_SECRET_KEY_CRON`); no cron path uses the legacy `service_role` key — it is orphaned (Phase 5). Next phase: 3 (clients). See `MIGRATION_PHASE_2B2_REPORT.md`.
 
 ---
 
@@ -20,7 +20,7 @@ Migrate this project from legacy Supabase API keys (`anon` / `service_role` JWTs
 | 1 | Set up new keys alongside legacy (function secrets + local .env) | ✅ DONE — see `MIGRATION_PHASE_1_REPORT.md` |
 | 2a | Migrate 7 client-invoked edge functions to new keys | ✅ DONE & MERGED to main — see `MIGRATION_PHASE_2A_REPORT.md` |
 | 2b-1 | Proof-of-concept: migrate 1 cron function (`snapshot-week-end`) to apikey auth | ✅ DONE & MERGED to main — spec: `MIGRATION_PHASE_2B1_SNAPSHOT_WEEK_END.md`, report: `MIGRATION_PHASE_2B1_REPORT.md` |
-| 2b-2 | Migrate remaining 3 cron functions. Spec: `MIGRATION_PHASE_2B2_SPEC.md` | 🔄 IN PROGRESS — **A `process-week-results` ✅ DONE & MERGED** (`e92ce06`); B `snapshot-week-start` ⏸️; C `sync-alpaca-orders` ⏸️ |
+| 2b-2 | Migrate remaining 3 cron functions. Spec: `MIGRATION_PHASE_2B2_SPEC.md`, report: `MIGRATION_PHASE_2B2_REPORT.md` | ✅ DONE & MERGED — A `process-week-results` (`e92ce06`); B `snapshot-week-start` + C `sync-alpaca-orders` (`eae20ed`) |
 | 3 | Migrate clients (mobile, web, local scripts) to new keys | ⏸️ NOT STARTED |
 | 4 | Disable legacy keys in Supabase dashboard (one-way door) | ⏸️ NOT STARTED |
 | 5 | Cleanup (orphaned secrets, `.claude/settings.local.json`, docs, git history scrub) | ⏸️ NOT STARTED |
@@ -54,8 +54,10 @@ See `docs/api-keys-inventory.md` for the full location matrix.
 **Cron-invoked (4 total):**
 - ✅ `snapshot-week-end` — Phase 2b-1, migrated to apikey auth & merged
 - ✅ `process-week-results` — Phase 2b-2 Sub-phase A, migrated to apikey auth & merged (`e92ce06`). The publicly-unauthenticated hole is now CLOSED — it's guarded by a constant-time, fail-closed apikey check against `SB_SECRET_KEY_CRON`; the `process-weekly-matchups` cron job sends the `cron_apikey` vault secret.
-- ✅ `snapshot-week-start` — Phase 2b-2 Sub-phase B, migrated to apikey auth. Code + gate done on branch `phase-2b2bc-cron-functions` (awaiting B+C merge). `schedule_snapshot_retry()` now has BOTH branches on apikey. (See retry-path bug in gotchas — pre-existing, separate task.)
-- ✅ `sync-alpaca-orders` — Phase 2b-2 Sub-phase C, migrated to apikey auth. Code + gate done on branch `phase-2b2bc-cron-functions` (awaiting B+C merge). `verify_jwt` flipped true→false; its `verify`/`sync` user-auth modes are now USER-UNREACHABLE dead code (Phase 5 removal).
+- ✅ `snapshot-week-start` — Phase 2b-2 Sub-phase B, migrated to apikey auth & merged (`eae20ed`). `schedule_snapshot_retry()` now has BOTH branches on apikey. (See retry-path bug in gotchas — pre-existing, separate task.)
+- ✅ `sync-alpaca-orders` — Phase 2b-2 Sub-phase C, migrated to apikey auth & merged (`eae20ed`). `verify_jwt` flipped true→false; its `verify`/`sync` user-auth modes are now USER-UNREACHABLE dead code (Phase 5 removal).
+
+**All 4 cron functions are now on apikey auth.** No cron path uses the legacy `service_role` key.
 
 ---
 
@@ -98,9 +100,8 @@ Spec-driven: Claude (chat) writes a phase spec → hand to Claude Code → Claud
 
 ## Next action
 
-Sub-phases A (merged, `e92ce06`), B (`snapshot-week-start`) and C (`sync-alpaca-orders`) are all code-complete with security gates passed. B and C sit on branch `phase-2b2bc-cron-functions` (commits `d0c112e`, `0cc63f0`, `19d6160`, + doc updates). **Next: user review of the B+C results in `MIGRATION_PHASE_2B2_REPORT.md`, then the SECOND merge (`phase-2b2bc-cron-functions` → main) to complete Phase 2b-2.**
+**Phase 2b-2 is COMPLETE & MERGED** (A `e92ce06`; B+C `eae20ed`). All 4 cron functions are on apikey auth; the legacy `service_role` key is no longer used by any cron path. **Next: Phase 3 (clients).**
 
-After the B+C merge, Phase 2b-2 is DONE — all 4 cron functions on apikey auth, no cron path on the legacy service_role key. Then:
 - **Phase 3:** migrate clients (mobile, web, local scripts incl. the `simulate-season.sh` `/rest/v1` data-plane calls + harness `createClient`) to new keys.
 - **Phase 4:** disable legacy keys in the dashboard (one-way door).
 - **Phase 5 cleanup:** the now-orphaned `service_role_key` vault entry; the USER-UNREACHABLE `verify`/`sync` dead code (+ `ANON_KEY`/`authed` client) in `sync-alpaca-orders`; `.claude/settings.local.json` credentials; git-history scrub.
