@@ -2,7 +2,7 @@
 
 **This is a living document. Update it at every phase boundary.** It exists so any fresh Claude Code session (or future-you) can get up to speed in 60 seconds. For detailed records, see the per-phase report files referenced below.
 
-Last updated: Phase 2b-2 Sub-phase A merged (`process-week-results` migrated to apikey auth — public-auth hole closed — merge commit `e92ce06`). Sub-phases B (`snapshot-week-start`) and C (`sync-alpaca-orders`) not yet started.
+Last updated: Phase 2b-2 Sub-phase B done on branch `phase-2b2bc-cron-functions` (`snapshot-week-start` migrated to apikey auth, gate passed; awaiting B+C merge). Sub-phase A already merged to main (`e92ce06`). Sub-phase C (`sync-alpaca-orders`) held for user review before starting. See `MIGRATION_PHASE_2B2_REPORT.md`.
 
 ---
 
@@ -54,7 +54,8 @@ See `docs/api-keys-inventory.md` for the full location matrix.
 **Cron-invoked (4 total):**
 - ✅ `snapshot-week-end` — Phase 2b-1, migrated to apikey auth & merged
 - ✅ `process-week-results` — Phase 2b-2 Sub-phase A, migrated to apikey auth & merged (`e92ce06`). The publicly-unauthenticated hole is now CLOSED — it's guarded by a constant-time, fail-closed apikey check against `SB_SECRET_KEY_CRON`; the `process-weekly-matchups` cron job sends the `cron_apikey` vault secret.
-- ⏸️ `snapshot-week-start`, `sync-alpaca-orders` — Phase 2b-2 Sub-phases B & C (not started)
+- ✅ `snapshot-week-start` — Phase 2b-2 Sub-phase B, migrated to apikey auth. Code + gate done on branch `phase-2b2bc-cron-functions` (awaiting B+C merge). `schedule_snapshot_retry()` now has BOTH branches on apikey. (See retry-path bug in gotchas — pre-existing, separate task.)
+- ⏸️ `sync-alpaca-orders` — Phase 2b-2 Sub-phase C (held for user review after B)
 
 ---
 
@@ -73,6 +74,7 @@ Chosen approach: full migration (no dependency on legacy JWT backwards-compat), 
 ## Key learnings / gotchas discovered
 
 - ✅ **`process-week-results` public-auth hole is now CLOSED** (Phase 2b-2 Sub-phase A, merge `e92ce06`). It previously had `verify_jwt = false` with NO apikey check — anyone on the internet could invoke this money-adjacent function (a PRE-EXISTING hole, predating Phase 2b). It was fixed FIRST in 2b-2 and merged on its own. The fix was verified: 6a no-key → 401 from our code (fail-closed guard running), 6b/6d invalid → gateway 401, 6c real key → 200 (scoped to a nonexistent UUID, zero prod mutation), harness 23/23.
+- 🐛 **PRE-EXISTING BUG (separate task, NOT a key-migration issue): the snapshot retry path is non-functional.** `schedule_snapshot_retry()` calls `cron.schedule(name, retry_time::timestamptz, sql)` for one-time scheduling, but this pg_cron version doesn't support the timestamp overload (only `cron.schedule(name, cron_expression, sql)`) → `cron.schedule(text, timestamp with time zone, text) does not exist`. This is original logic from `20260116000000`; 2b-1/2b-2 only changed the auth **header** inside the scheduled command, never the `cron.schedule()` signature — the auth migration is correct (the failing call's SQL shows `apikey`/`cron_apikey`). Affects BOTH `snapshot-week-start` and `snapshot-week-end` retry paths; the main weekly cron jobs are unaffected (they use the supported cron-expression form). Needs a separate fix; explicitly out of scope for 2b-2. (Discovered spot-checking the retry path during Sub-phase B.)
 - During 2b-1: `snapshot-week-end` had THREE invocation paths on legacy auth, not one (weekly cron job + `trigger_week_end_snapshot()` + `schedule_snapshot_retry()`). Migrating only the cron job would have silently 401'd retries and manual recovery once `verify_jwt=false` went live. Lesson for 2b-2: enumerate ALL invocation paths per function (cron jobs, helper SQL functions, retry schedulers) before flipping the flag.
 - Supabase validates the `apikey` header against the project's known keys at the GATEWAY (before the function runs). So a *garbage* apikey is rejected by the platform (401 `{"message":"Invalid API key"}`), not by our code. Our custom check is only exercised by a *valid project key that isn't the expected one* — test the guard with a real-but-wrong key, not just a fake string.
 - Supabase removed the in-dashboard JWT-secret rotation; new-key migration is the only path
@@ -95,9 +97,9 @@ Spec-driven: Claude (chat) writes a phase spec → hand to Claude Code → Claud
 
 ## Next action
 
-Phase 2b-2 Sub-phase A (`process-week-results`) is done and merged (`e92ce06`); the public-auth hole is closed. **Next: Sub-phases B and C, per `MIGRATION_PHASE_2B2_SPEC.md`, on a new branch `phase-2b2bc-cron-functions` off main.**
+Sub-phases A (merged, `e92ce06`) and B (`snapshot-week-start`, done on branch `phase-2b2bc-cron-functions`, gate passed) are complete. **Next: Sub-phase C (`sync-alpaca-orders`) — HELD pending user review of B**, then C on the same `phase-2b2bc-cron-functions` branch, per `MIGRATION_PHASE_2B2_SPEC.md`.
 
-- **B — `snapshot-week-start`:** add `verify_jwt=false` to config.toml + the 2b-1 apikey guard; swap to `SB_SECRET_KEY_INTERNAL` (preserve the `X-Retry-Attempt` read). Cron migration: reschedule job `snapshot-week-start` (`35 14 * * 1,2`) to apikey, AND redefine `schedule_snapshot_retry()` carrying BOTH branches on apikey (its `snapshot-week-end` branch was already migrated in 2b-1 `20260612000000` — base the redefinition on that, migrate only the remaining `snapshot-week-start` branch, keep `X-Retry-Attempt`).
 - **C — `sync-alpaca-orders`:** cron-only (confirmed no client invokes it → dead-in-repo = dead-in-prod). Flip `verify_jwt` true→false (it's not in config.toml today), add the guard, swap internal key. Preserve the `{"mode":"sync-all"}` cron body. Its `verify`/`sync` user-auth modes become USER-UNREACHABLE — flag for Phase 5, not refactored away here.
-- Per-sub-phase: deploy + `db push` back-to-back (no gap — else the un-migrated cron 401s), then security gate (6a no-key→our 401, 6c real key→200). B and C share a SECOND merge to main.
-- After 2b-2 completes, the legacy `service_role_key` vault entry is orphaned (no cron uses it) → Phase 5 cleanup.
+- C: deploy + `db push` back-to-back (no gap — else the un-migrated cron 401s), then security gate (6a no-key→our 401, 6c real key→200). B and C then share a SECOND merge to main.
+- After Sub-phase C lands, the legacy `service_role_key` vault entry is orphaned (no cron uses it) → Phase 5 cleanup.
+- **Separate non-migration task:** fix the pre-existing `schedule_snapshot_retry()` `cron.schedule()` timestamp-overload bug (see gotchas) so the snapshot retry path can fire.
