@@ -7,7 +7,7 @@ sub-phase. Status at last update:
 |-----------|----------|--------|
 | A | `process-week-results` | ✅ DONE & MERGED to main (`e92ce06`) |
 | B | `snapshot-week-start` | ✅ DONE — gate passed, on branch `phase-2b2bc-cron-functions`, awaiting B+C merge |
-| C | `sync-alpaca-orders` | ⏸️ NOT STARTED (held for user review after B) |
+| C | `sync-alpaca-orders` | ✅ CODE COMPLETE on branch `phase-2b2bc-cron-functions`, awaiting live gate + B+C merge |
 
 Branch strategy: A merged on its own (closed a live public-auth hole); B and C
 share a second merge from `phase-2b2bc-cron-functions`.
@@ -58,18 +58,21 @@ timestamp overload (only the `cron.schedule(name, cron_expression, sql)` form).
 - **Auth is fine.** The failure is in scheduling, not auth — the error output showed the retry command's headers using `apikey`/`cron_apikey` as intended.
 - **Impact:** the snapshot **retry path is non-functional** on this pg_cron version. Affects **both** `snapshot-week-start` and `snapshot-week-end` retry paths (the main weekly cron jobs are unaffected — they use the supported cron-expression form).
 - **Out of scope for 2b-2.** Needs a separate fix (e.g. schedule a near-future cron expression, or use `pg_cron`'s supported one-off mechanism). Do NOT fix here.
-- **Stray-job check:** the failed call should not have left a scheduled retry job. User to confirm: `SELECT jobname FROM cron.job WHERE jobname LIKE '%retry%';` (expected: none). *[user-run]*
+- **Stray-job check:** ✅ confirmed clean — user ran `SELECT jobname FROM cron.job WHERE jobname LIKE '%retry%';` → no rows. The failed `cron.schedule()` call left nothing scheduled.
 
 Commits: `d0c112e` (code).
 
 ---
 
-## Sub-phase C — `sync-alpaca-orders` ⏸️ NOT STARTED
+## Sub-phase C — `sync-alpaca-orders` ✅ CODE COMPLETE (awaiting live gate)
 
-Held for user review after B. Per spec: cron-only (confirmed no client invokes it),
-flip `verify_jwt` true→false, add guard, swap internal key, preserve
-`{"mode":"sync-all"}` cron body; `verify`/`sync` modes become USER-UNREACHABLE
-(flag for Phase 5).
+- **config.toml:** added `[functions.sync-alpaca-orders] verify_jwt = false`. This is a **true→false FLIP** — the function was previously JWT-verified (cron sent a service_role JWT). Disabling `verify_jwt` EXPOSES it publicly, so the apikey guard is now its only protection.
+- **Function (`sync-alpaca-orders/index.ts`):** 2b-1 apikey guard placed **after** the `OPTIONS`/`405` method checks (preflight carries no secret) but **before** body parse / DB / Alpaca work; admin client `SUPABASE_SERVICE_ROLE_KEY` → `SB_SECRET_KEY_INTERNAL`. No legacy `SERVICE_ROLE` refs remain.
+- **Dead code preserved (not deleted):** the user-authed `verify`/`sync` modes and their `ANON_KEY`/`authed` client remain in the file untouched, per spec. They are now **USER-UNREACHABLE** — an apikey-only (cron) call has no user JWT, so `authed.auth.getUser()` returns null and those modes fall through to `not_authenticated`. **This is a behavior change, not a refactor: `verify`/`sync` are non-functional dead code as of this phase. Phase 5 should remove them (and the now-unused `ANON_KEY`/`authed` client), not treat them as live features.**
+- **Cron migration `20260618000002`:** reschedules the `sync-alpaca-orders` job (`30 21 * * 1-5`) to send `apikey` from `cron_apikey`, **preserving the `{"mode":"sync-all"}` body** (without it, mode defaults to `sync` → `not_authenticated`).
+- **Security gate:** ⏳ pending — deploy + `db push` (user, back-to-back no gap), then 6a no-key→our 401, 6b/6d invalid→gateway 401 (Claude Code), 6c real key + `{"mode":"sync-all"}`→200 (user). Optionally confirm a real key with no/`sync` mode now returns `not_authenticated` (documents the unreachable path).
+
+Commits: `<pending>` (code).
 
 ---
 

@@ -30,3 +30,12 @@ verify_jwt = false
 # validation (SB_SECRET_KEY_CRON, constant-time, fail-closed) is the auth guard.
 [functions.snapshot-week-start]
 verify_jwt = false
+
+# Phase 2b-2 (Sub-phase C): cron auth migration. This is a true->false FLIP — the
+# function was previously JWT-verified (cron sent a service_role JWT). Disabling
+# verify_jwt EXPOSES it publicly, so the function's own apikey-header validation
+# (SB_SECRET_KEY_CRON, constant-time, fail-closed) becomes its ONLY protection.
+# sync-alpaca-orders is cron-only (no client invokes it); its user-authed
+# verify/sync modes are now USER-UNREACHABLE (Phase 5 dead-code cleanup).
+[functions.sync-alpaca-orders]
+verify_jwt = false
