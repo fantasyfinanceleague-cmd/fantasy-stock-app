@@ -9,7 +9,9 @@
  * Usage:
  *   node scripts/simulation-test-runner.mjs
  *
- * Reads SUPABASE_SERVICE_ROLE_KEY from .env at repo root (or from environment).
+ * Reads two NEW keys from .env at repo root (or environment):
+ *   - SB_SECRET_KEY_LOCAL_SCRIPTS  → data-plane seed/teardown (createClient)
+ *   - SB_SECRET_KEY_CRON           → edge-function invocation (apikey header)
  * Each edge function call is scoped to the test league via the league_id
  * parameter, so real leagues are never affected.
  */
@@ -33,11 +35,11 @@ if (fs.existsSync(envPath)) {
 
 const SUPABASE_URL = 'https://haiaaifjcclsvmkfqgmd.supabase.co';
 
-// Phase 2b-2: process-week-results now authenticates via an `apikey` header
-// validated against SB_SECRET_KEY_CRON (the cron secret key), NOT the legacy
-// service_role bearer token. The harness must therefore send the CRON key for
-// the edge-function call. (The service_role key is still used for the data-plane
-// seed/teardown via createClient — that migrates in Phase 3.) Never hardcode.
+// Phase 2b-2: process-week-results authenticates via an `apikey` header validated
+// against SB_SECRET_KEY_CRON (the cron secret key), NOT a legacy service_role
+// bearer token. The harness sends the CRON key for the edge-function call only.
+// (Phase 3a: data-plane seed/teardown uses SB_SECRET_KEY_LOCAL_SCRIPTS instead —
+// see main(). The two keys are kept strictly separate.) Never hardcode.
 const CRON_KEY = process.env.SB_SECRET_KEY_CRON;
 const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/process-week-results`;
 
@@ -438,10 +440,10 @@ async function seedLeague(supabase, config, testIndex) {
 
 // ─── Edge Function ──────────────────────────────────────────────────────────
 
-// Note: the `serviceRoleKey` param is retained for call-site compatibility but is
-// no longer used for the function call's auth — process-week-results validates the
-// `apikey` header against the cron key (see CRON_KEY above).
-async function callEdgeFunction(_serviceRoleKey, leagueId) {
+// process-week-results validates the `apikey` header against the cron key (see
+// CRON_KEY above). No data-plane key is ever threaded here — the cron key and the
+// local-scripts data-plane key are kept strictly separated (Phase 3a).
+async function callEdgeFunction(leagueId) {
   const response = await fetch(FUNCTION_URL, {
     method: 'POST',
     headers: {
@@ -546,7 +548,7 @@ async function ensurePlayoffDatesInPast(supabase, lgId) {
 /**
  * Process each playoff round: inject snapshots → call edge function → verify.
  */
-async function processPlayoffs(supabase, lgId, config, serviceRoleKey, teamStocks, userRankMap, logger) {
+async function processPlayoffs(supabase, lgId, config, teamStocks, userRankMap, logger) {
   const rounds = getPlayoffRounds(config.playoffTeams);
 
   for (const round of rounds) {
@@ -579,7 +581,7 @@ async function processPlayoffs(supabase, lgId, config, serviceRoleKey, teamStock
 
     // Call edge function
     await sleep(2000);
-    const result = await callEdgeFunction(serviceRoleKey, lgId);
+    const result = await callEdgeFunction(lgId);
     const processed = result.processed || 0;
     logger.info(`${round}: edge function processed ${processed} matchup(s)`);
 
@@ -587,7 +589,7 @@ async function processPlayoffs(supabase, lgId, config, serviceRoleKey, teamStock
     if (processed === 0) {
       logger.info(`${round}: retrying after 3s...`);
       await sleep(3000);
-      const retry = await callEdgeFunction(serviceRoleKey, lgId);
+      const retry = await callEdgeFunction(lgId);
       logger.info(`${round}: retry processed ${retry.processed || 0} matchup(s)`);
     }
 
@@ -765,7 +767,7 @@ async function validate(supabase, lgId, config, userIds, expectedStandings, logg
 
 // ─── Single Test Run ────────────────────────────────────────────────────────
 
-async function runTest(supabase, config, testIndex, logger, serviceRoleKey) {
+async function runTest(supabase, config, testIndex, logger) {
   const lgId = generateLeagueId(testIndex);
 
   try {
@@ -783,7 +785,7 @@ async function runTest(supabase, config, testIndex, logger, serviceRoleKey) {
 
     // ── Regular Season ──
     logger.info('Processing regular season...');
-    const regResult = await callEdgeFunction(serviceRoleKey, lgId);
+    const regResult = await callEdgeFunction(lgId);
     await sleep(3000);
     logger.info(`Regular season: processed ${regResult.processed || 0} matchup(s)`);
 
@@ -817,7 +819,7 @@ async function runTest(supabase, config, testIndex, logger, serviceRoleKey) {
 
     // ── Playoffs ──
     logger.info('Processing playoffs...');
-    await processPlayoffs(supabase, lgId, config, serviceRoleKey, teamStocks, userRankMap, logger);
+    await processPlayoffs(supabase, lgId, config, teamStocks, userRankMap, logger);
 
     // ── Validate ──
     logger.info('Validating...');
@@ -846,7 +848,7 @@ const NEGATIVE_TEST_OFFSET = 100;
  * function one more time to verify nothing gets re-processed.
  * Validates the `team1_gain IS NULL` filter prevents re-scoring.
  */
-async function runNegativeTest_Idempotent(supabase, serviceRoleKey, logger) {
+async function runNegativeTest_Idempotent(supabase, logger) {
   const testIndex = NEGATIVE_TEST_OFFSET;
   const config = { name: 'IDEMPOTENT', numTeams: 4, numWeeks: 3, playoffTeams: 2, numRounds: 3 };
   const lgId = generateLeagueId(testIndex);
@@ -863,7 +865,7 @@ async function runNegativeTest_Idempotent(supabase, serviceRoleKey, logger) {
     }
 
     // Process regular season
-    const regResult = await callEdgeFunction(serviceRoleKey, lgId);
+    const regResult = await callEdgeFunction(lgId);
     await sleep(3000);
     logger.info(`Regular season: processed ${regResult.processed || 0} matchup(s)`);
 
@@ -872,7 +874,7 @@ async function runNegativeTest_Idempotent(supabase, serviceRoleKey, logger) {
     }
 
     // Process playoffs (full lifecycle)
-    await processPlayoffs(supabase, lgId, config, serviceRoleKey, teamStocks, userRankMap, logger);
+    await processPlayoffs(supabase, lgId, config, teamStocks, userRankMap, logger);
     await sleep(2000);
 
     // Verify season is completed
@@ -895,7 +897,7 @@ async function runNegativeTest_Idempotent(supabase, serviceRoleKey, logger) {
       .order('id');
 
     // Call edge function again — should be a complete no-op
-    const retryResult = await callEdgeFunction(serviceRoleKey, lgId);
+    const retryResult = await callEdgeFunction(lgId);
     await sleep(2000);
     const retryProcessed = retryResult.processed || 0;
     logger.info(`Retry call: processed ${retryProcessed} matchup(s)`);
@@ -943,7 +945,7 @@ async function runNegativeTest_Idempotent(supabase, serviceRoleKey, logger) {
  * FUTURE-DATES: Matchups with future week_end should not be processed.
  * Validates the `week_end < now` filter.
  */
-async function runNegativeTest_FutureDates(supabase, serviceRoleKey, logger) {
+async function runNegativeTest_FutureDates(supabase, logger) {
   const testIndex = NEGATIVE_TEST_OFFSET + 1;
   const config = { name: 'FUTURE-DATES', numTeams: 4, numWeeks: 3, playoffTeams: 2, numRounds: 3 };
   const lgId = generateLeagueId(testIndex);
@@ -964,7 +966,7 @@ async function runNegativeTest_FutureDates(supabase, serviceRoleKey, logger) {
     logger.info('Set all matchup dates to future');
 
     // Call edge function
-    const result = await callEdgeFunction(serviceRoleKey, lgId);
+    const result = await callEdgeFunction(lgId);
     const processed = result.processed || 0;
     logger.info(`Processed: ${processed} matchup(s)`);
 
@@ -1006,7 +1008,7 @@ async function runNegativeTest_FutureDates(supabase, serviceRoleKey, logger) {
  * Deletes snapshots + drafts for user 0 (the "strongest" user), proving that
  * even a top-seeded team loses when their portfolio is empty.
  */
-async function runNegativeTest_EmptyPortfolio(supabase, serviceRoleKey, logger) {
+async function runNegativeTest_EmptyPortfolio(supabase, logger) {
   const testIndex = NEGATIVE_TEST_OFFSET + 2;
   const config = { name: 'EMPTY-PORTFOLIO', numTeams: 4, numWeeks: 3, playoffTeams: 2, numRounds: 3 };
   const lgId = generateLeagueId(testIndex);
@@ -1022,7 +1024,7 @@ async function runNegativeTest_EmptyPortfolio(supabase, serviceRoleKey, logger) 
     await supabase.from('drafts').delete().eq('league_id', lgId).eq('user_id', emptyUser);
 
     // Process regular season
-    const result = await callEdgeFunction(serviceRoleKey, lgId);
+    const result = await callEdgeFunction(lgId);
     await sleep(3000);
     logger.info(`Processed: ${result.processed || 0} matchup(s)`);
 
@@ -1103,7 +1105,7 @@ async function runNegativeTest_EmptyPortfolio(supabase, serviceRoleKey, logger) 
  * TIED-GAINS: Equal gains should produce ties in regular season, and the
  * playoff seed tiebreaker should pick the higher seed when gains are identical.
  */
-async function runNegativeTest_TiedGains(supabase, serviceRoleKey, logger) {
+async function runNegativeTest_TiedGains(supabase, logger) {
   const testIndex = NEGATIVE_TEST_OFFSET + 3;
   const config = { name: 'TIED-GAINS', numTeams: 4, numWeeks: 3, playoffTeams: 2, numRounds: 3 };
   const lgId = generateLeagueId(testIndex);
@@ -1123,7 +1125,7 @@ async function runNegativeTest_TiedGains(supabase, serviceRoleKey, logger) {
     logger.info('Set all snapshots to identical gains ($30 per team)');
 
     // Process regular season
-    const result = await callEdgeFunction(serviceRoleKey, lgId);
+    const result = await callEdgeFunction(lgId);
     await sleep(3000);
     logger.info(`Processed: ${result.processed || 0} matchup(s)`);
 
@@ -1215,7 +1217,7 @@ async function runNegativeTest_TiedGains(supabase, serviceRoleKey, logger) {
 
       // Process playoffs
       await sleep(2000);
-      const playoffResult = await callEdgeFunction(serviceRoleKey, lgId);
+      const playoffResult = await callEdgeFunction(lgId);
       await sleep(3000);
       logger.info(`Playoff: processed ${playoffResult.processed || 0} matchup(s)`);
 
@@ -1278,7 +1280,7 @@ async function runNegativeTest_TiedGains(supabase, serviceRoleKey, logger) {
  * Team 2 (baseline hold):
  *   TSLA/NVDA/META — 5 shares each, $100→$108 → $40 each → $120 total
  */
-async function runNegativeTest_MidWeekTrades(supabase, serviceRoleKey, logger) {
+async function runNegativeTest_MidWeekTrades(supabase, logger) {
   const testIndex = NEGATIVE_TEST_OFFSET + 4;
   const lgId = generateLeagueId(testIndex);
   const snId = generateSeasonId(testIndex);
@@ -1416,7 +1418,7 @@ async function runNegativeTest_MidWeekTrades(supabase, serviceRoleKey, logger) {
     logger.info('Seeded league with mid-week trades');
 
     // ── Call edge function ──
-    const result = await callEdgeFunction(serviceRoleKey, lgId);
+    const result = await callEdgeFunction(lgId);
     await sleep(3000);
     logger.info(`Processed: ${result.processed || 0} matchup(s)`);
 
@@ -1491,20 +1493,22 @@ const NEGATIVE_TESTS = [
 // ─── Main ───────────────────────────────────────────────────────────────────
 
 async function main() {
-  const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!SERVICE_ROLE_KEY) {
-    console.error('ERROR: SUPABASE_SERVICE_ROLE_KEY not set (used for data-plane seed/teardown)');
-    console.error('Usage: export SUPABASE_SERVICE_ROLE_KEY="..." SB_SECRET_KEY_CRON="..." && node scripts/simulation-test-runner.mjs');
+  // Phase 3a: data-plane seed/teardown uses the dedicated local-scripts SECRET key
+  // (blast-radius isolation — NOT the edge-functions-internal key, NOT the cron key).
+  const LOCAL_SCRIPTS_KEY = process.env.SB_SECRET_KEY_LOCAL_SCRIPTS;
+  if (!LOCAL_SCRIPTS_KEY) {
+    console.error('ERROR: SB_SECRET_KEY_LOCAL_SCRIPTS not set (used for data-plane seed/teardown)');
+    console.error('Usage: export SB_SECRET_KEY_LOCAL_SCRIPTS="..." SB_SECRET_KEY_CRON="..." && node scripts/simulation-test-runner.mjs');
     process.exit(1);
   }
   // Phase 2b-2: the edge-function call needs the cron apikey (see CRON_KEY).
   if (!CRON_KEY) {
     console.error('ERROR: SB_SECRET_KEY_CRON not set (required to authenticate the process-week-results call)');
-    console.error('Usage: export SUPABASE_SERVICE_ROLE_KEY="..." SB_SECRET_KEY_CRON="..." && node scripts/simulation-test-runner.mjs');
+    console.error('Usage: export SB_SECRET_KEY_LOCAL_SCRIPTS="..." SB_SECRET_KEY_CRON="..." && node scripts/simulation-test-runner.mjs');
     process.exit(1);
   }
 
-  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+  const supabase = createClient(SUPABASE_URL, LOCAL_SCRIPTS_KEY);
   const logger = new Logger();
 
   const totalTests = TEST_CONFIGS.length + NEGATIVE_TESTS.length;
@@ -1520,7 +1524,7 @@ async function main() {
     const config = TEST_CONFIGS[i];
     logger.section(`Test ${i + 1}/${totalTests}: ${config.name}`);
 
-    const result = await runTest(supabase, config, i, logger, SERVICE_ROLE_KEY);
+    const result = await runTest(supabase, config, i, logger);
     results.push({ name: config.name, ...result });
 
     if (result.passed) {
@@ -1536,7 +1540,7 @@ async function main() {
     const testNum = TEST_CONFIGS.length + i + 1;
     logger.section(`Test ${testNum}/${totalTests}: NEG:${test.name} — ${test.description}`);
 
-    const result = await test.fn(supabase, SERVICE_ROLE_KEY, logger);
+    const result = await test.fn(supabase, logger);
     results.push({ name: `NEG:${test.name}`, ...result });
 
     if (result.passed) {
