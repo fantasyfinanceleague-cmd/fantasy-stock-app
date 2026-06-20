@@ -32,6 +32,13 @@ if (fs.existsSync(envPath)) {
 // ─── Configuration ──────────────────────────────────────────────────────────
 
 const SUPABASE_URL = 'https://haiaaifjcclsvmkfqgmd.supabase.co';
+
+// Phase 2b-2: process-week-results now authenticates via an `apikey` header
+// validated against SB_SECRET_KEY_CRON (the cron secret key), NOT the legacy
+// service_role bearer token. The harness must therefore send the CRON key for
+// the edge-function call. (The service_role key is still used for the data-plane
+// seed/teardown via createClient — that migrates in Phase 3.) Never hardcode.
+const CRON_KEY = process.env.SB_SECRET_KEY_CRON;
 const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/process-week-results`;
 
 const STOCK_POOL = [
@@ -431,11 +438,14 @@ async function seedLeague(supabase, config, testIndex) {
 
 // ─── Edge Function ──────────────────────────────────────────────────────────
 
-async function callEdgeFunction(serviceRoleKey, leagueId) {
+// Note: the `serviceRoleKey` param is retained for call-site compatibility but is
+// no longer used for the function call's auth — process-week-results validates the
+// `apikey` header against the cron key (see CRON_KEY above).
+async function callEdgeFunction(_serviceRoleKey, leagueId) {
   const response = await fetch(FUNCTION_URL, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${serviceRoleKey}`,
+      'apikey': CRON_KEY,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ league_id: leagueId }),
@@ -1483,8 +1493,14 @@ const NEGATIVE_TESTS = [
 async function main() {
   const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!SERVICE_ROLE_KEY) {
-    console.error('ERROR: SUPABASE_SERVICE_ROLE_KEY not set');
-    console.error('Usage: export SUPABASE_SERVICE_ROLE_KEY="your-key" && node scripts/simulation-test-runner.mjs');
+    console.error('ERROR: SUPABASE_SERVICE_ROLE_KEY not set (used for data-plane seed/teardown)');
+    console.error('Usage: export SUPABASE_SERVICE_ROLE_KEY="..." SB_SECRET_KEY_CRON="..." && node scripts/simulation-test-runner.mjs');
+    process.exit(1);
+  }
+  // Phase 2b-2: the edge-function call needs the cron apikey (see CRON_KEY).
+  if (!CRON_KEY) {
+    console.error('ERROR: SB_SECRET_KEY_CRON not set (required to authenticate the process-week-results call)');
+    console.error('Usage: export SUPABASE_SERVICE_ROLE_KEY="..." SB_SECRET_KEY_CRON="..." && node scripts/simulation-test-runner.mjs');
     process.exit(1);
   }
 

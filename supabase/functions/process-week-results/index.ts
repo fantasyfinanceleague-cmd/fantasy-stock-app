@@ -55,6 +55,31 @@ const json = (b: unknown, s = 200) =>
     headers: { 'Content-Type': 'application/json' }
   });
 
+// ── apikey auth (Phase 2b-2; pattern proven in 2b-1 snapshot-week-end) ────────
+// Constant-time compare to avoid leaking the expected key via timing.
+function constantTimeEqual(a: string, b: string): boolean {
+  const aBytes = new TextEncoder().encode(a);
+  const bBytes = new TextEncoder().encode(b);
+  if (aBytes.length !== bBytes.length) return false;
+  let result = 0;
+  for (let i = 0; i < aBytes.length; i++) {
+    result |= aBytes[i] ^ bBytes[i];
+  }
+  return result === 0;
+}
+
+const unauthorized = () => json({ error: 'Unauthorized' }, 401);
+
+function isAuthorized(req: Request): boolean {
+  const expectedKey = Deno.env.get('SB_SECRET_KEY_CRON');
+  if (!expectedKey || expectedKey.length === 0) {
+    console.error('SB_SECRET_KEY_CRON not configured — rejecting all requests');
+    return false;                       // fail closed
+  }
+  const providedKey = req.headers.get('apikey') ?? '';
+  return constantTimeEqual(providedKey, expectedKey);
+}
+
 interface PortfolioHolding {
   symbol: string;
   quantity: number;
@@ -775,16 +800,23 @@ async function completeSeasonFromStandings(
 }
 
 Deno.serve(async (req) => {
+  // SECURITY: validate the apikey before anything else — before body parse,
+  // DB connection, or business logic. This function runs with verify_jwt=false,
+  // so this guard is the only thing protecting it.
+  if (!isAuthorized(req)) {
+    return unauthorized();
+  }
+
   const JOB_NAME = 'process-week-results';
   // This can be triggered by cron or manually
   console.log('Processing weekly matchup results...');
 
   const SUPABASE_URL = env('SUPABASE_URL');
-  const SERVICE_ROLE = env('SUPABASE_SERVICE_ROLE_KEY');
+  const SECRET_KEY = env('SB_SECRET_KEY_INTERNAL');
   const ALPACA_KEY = env('ALPACA_API_KEY');
   const ALPACA_SECRET = env('ALPACA_API_SECRET');
 
-  if (!SUPABASE_URL || !SERVICE_ROLE) {
+  if (!SUPABASE_URL || !SECRET_KEY) {
     return json({ error: 'Missing Supabase configuration' }, 500);
   }
 
@@ -800,7 +832,7 @@ Deno.serve(async (req) => {
     // No body or invalid JSON — process all leagues (normal cron behavior)
   }
 
-  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
+  const supabase = createClient(SUPABASE_URL, SECRET_KEY);
   const now = new Date();
 
   // Update status to running
