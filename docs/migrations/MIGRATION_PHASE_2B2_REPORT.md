@@ -74,6 +74,9 @@ Commits: `d0c112e` (code).
   - 6a no-key → **401** `{"error":"Unauthorized"}` (our code — fail-closed guard is the sole protection).
   - 6b/6d invalid key → **401** `{"message":"Invalid API key"}` (gateway).
   - 6c real cron key + `{"mode":"sync-all"}` → **200** `users_processed:1, total_updated:0` (guard accepted). *[user-run]*
+  - **New-code-live check** — real **publishable** key as `apikey` → **401** `{"error":"Unauthorized"}` (gateway passes the valid project key; our guard's constant-time compare rejects it as not-the-cron-key). Confirms the new guard CODE is deployed, not just the config flip. *[user-run]*
+  - **Dead-path check** — real cron key + `{"mode":"sync"}` → **401** `not_authenticated`, confirming the `verify`/`sync` user-auth modes are now USER-UNREACHABLE on apikey (cron) calls. *[user-run]*
+  - Live `cron.job` confirmed: `apikey`/`cron_apikey`, schedule `30 21 * * 1-5`, `{"mode":"sync-all"}` body preserved.
 
 ### ⚠️ Gate catch: first deploy didn't apply the verify_jwt flip
 
