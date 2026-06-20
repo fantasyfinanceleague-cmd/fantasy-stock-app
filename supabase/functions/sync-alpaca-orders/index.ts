@@ -39,6 +39,31 @@ function json(body: unknown, status = 200) {
   });
 }
 
+// ── apikey auth (Phase 2b-2; pattern proven in 2b-1 snapshot-week-end) ────────
+// Constant-time compare to avoid leaking the expected key via timing.
+function constantTimeEqual(a: string, b: string): boolean {
+  const aBytes = new TextEncoder().encode(a);
+  const bBytes = new TextEncoder().encode(b);
+  if (aBytes.length !== bBytes.length) return false;
+  let result = 0;
+  for (let i = 0; i < aBytes.length; i++) {
+    result |= aBytes[i] ^ bBytes[i];
+  }
+  return result === 0;
+}
+
+const unauthorized = () => json({ error: 'Unauthorized' }, 401);
+
+function isAuthorized(req: Request): boolean {
+  const expectedKey = Deno.env.get('SB_SECRET_KEY_CRON');
+  if (!expectedKey || expectedKey.length === 0) {
+    console.error('SB_SECRET_KEY_CRON not configured — rejecting all requests');
+    return false;                       // fail closed
+  }
+  const providedKey = req.headers.get('apikey') ?? '';
+  return constantTimeEqual(providedKey, expectedKey);
+}
+
 /** base64 -> Uint8Array */
 function b64d(s: string) { return Uint8Array.from(atob(s), c => c.charCodeAt(0)); }
 
@@ -193,16 +218,24 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: getCorsHeaders(requestOrigin) });
   if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
 
+  // SECURITY: cron-only function. As of Phase 2b-2 it runs with verify_jwt=false,
+  // so this apikey guard is the ONLY thing protecting it. Validate before reading
+  // the body, connecting to the DB, or calling Alpaca. (Placed after the OPTIONS
+  // preflight + method check — preflight carries no secret.)
+  if (!isAuthorized(req)) {
+    return unauthorized();
+  }
+
   const SUPABASE_URL = env('SUPABASE_URL');
   const ANON_KEY = env('SUPABASE_ANON_KEY');
-  const SERVICE_ROLE = env('SUPABASE_SERVICE_ROLE_KEY');
+  const SECRET_KEY = env('SB_SECRET_KEY_INTERNAL');
   const CRYPTO_KEY = env('BROKER_CRYPTO_KEY');
 
-  if (!SUPABASE_URL || !SERVICE_ROLE) {
+  if (!SUPABASE_URL || !SECRET_KEY) {
     return json({ error: 'missing_config' }, 500);
   }
 
-  const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+  const admin = createClient(SUPABASE_URL, SECRET_KEY);
 
   // Try to get authenticated user (may be null for server-side calls)
   const authed = createClient(SUPABASE_URL, ANON_KEY, {
