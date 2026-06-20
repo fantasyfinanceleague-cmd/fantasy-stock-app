@@ -22,13 +22,14 @@ if (fs.existsSync(envPath)) {
 }
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://haiaaifjcclsvmkfqgmd.supabase.co';
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
-if (!SUPABASE_ANON_KEY) {
-  console.error('ERROR: SUPABASE_ANON_KEY not set in .env or environment');
+// Phase 3a: legacy anon key -> new publishable key (anon drop-in replacement).
+const SUPABASE_PUBLISHABLE_KEY = process.env.SB_PUBLISHABLE_KEY;
+if (!SUPABASE_PUBLISHABLE_KEY) {
+  console.error('ERROR: SB_PUBLISHABLE_KEY not set in .env or environment');
   process.exit(1);
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
 // Test configuration
 const TEST_CONFIG = {
