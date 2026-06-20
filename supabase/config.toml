@@ -24,3 +24,9 @@ entrypoint = "./functions/process-week-results/index.ts"
 # (SB_SECRET_KEY_CRON, constant-time, fail-closed) is the authentication guard.
 [functions.snapshot-week-end]
 verify_jwt = false
+
+# Phase 2b-2 (Sub-phase B): cron auth migration. JWT verification disabled so the
+# function is reachable without a legacy JWT; the function's own apikey-header
+# validation (SB_SECRET_KEY_CRON, constant-time, fail-closed) is the auth guard.
+[functions.snapshot-week-start]
+verify_jwt = false
