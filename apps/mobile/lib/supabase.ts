@@ -3,7 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
+// Phase 3a: legacy anon key -> new publishable key (anon drop-in replacement).
+const supabasePublishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 
 // Only import AsyncStorage in native environments (not during static rendering)
 let storage: any = undefined;
@@ -12,7 +13,7 @@ if (Platform.OS !== 'web' && typeof window !== 'undefined') {
   storage = require('@react-native-async-storage/async-storage').default;
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
   auth: {
     storage: storage,
     autoRefreshToken: true,
