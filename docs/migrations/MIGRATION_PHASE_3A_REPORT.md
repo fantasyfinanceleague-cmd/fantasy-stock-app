@@ -8,7 +8,7 @@ Spec: `MIGRATION_PHASE_3A_SPEC.md`. Built up surface by surface. Branch:
 | 1 | `simulation-test-runner.mjs` data-plane → `SB_SECRET_KEY_LOCAL_SCRIPTS` | 23/23 | ✅ committed `ad9590f` |
 | 2 | `simulate-season.sh` `/rest/v1` → `SB_SECRET_KEY_LOCAL_SCRIPTS` (apikey, no Bearer) | read 200 + data | ✅ committed `021efd9` |
 | 3 | `test-draft.js` anon → `SB_PUBLISHABLE_KEY` | A/B faithful | ✅ committed `654155e` |
-| 4 | mobile anon → publishable (`lib/supabase.ts`, `eas.json`, `.env`, EAS secret) | Expo Go login + draft | ⏸️ HELD for user (secret/prod parts) |
+| 4 | mobile anon → publishable (`lib/supabase.ts`, `eas.json`, `.env`, EAS secret) | Expo Go: reads ✅ / writes ⚠️ unverified | ✅ committed `581dc3d` (PARTIAL gate — see below) |
 
 Pre-flight (masked, before Gate 1): `SB_SECRET_KEY_LOCAL_SCRIPTS`,
 `SB_SECRET_KEY_CRON`, `SB_PUBLISHABLE_KEY` in root `.env` confirmed real (correct
@@ -41,21 +41,40 @@ in `MIGRATION_STATUS.md` gotchas.
 
 ---
 
-## Surface 4 — mobile ⏸️ HELD for user
+## Surface 4 — mobile ✅ committed `581dc3d` (PARTIAL gate)
 
-**Code staged by Claude Code (applied to working tree; committed only after Gate 4 passes):**
+**Code (committed):**
 - `apps/mobile/lib/supabase.ts`: env var renamed `EXPO_PUBLIC_SUPABASE_ANON_KEY` → `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (and local const `supabaseAnonKey` → `supabasePublishableKey`), read for `createClient`.
 - `apps/mobile/eas.json`: `preview` + `production` env blocks reference `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` / `@EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Valid JSON confirmed.
 - **Zero-lingering-reference check: ✅ `grep -rn EXPO_PUBLIC_SUPABASE_ANON_KEY apps/mobile/` returns ZERO**; no leftover `supabaseAnonKey` identifier.
+- `apps/mobile/.env` value + EAS secret set by user (secret/prod).
 
-**User-run (secret/prod):**
-- `apps/mobile/.env` — set `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<publishable value>`.
-- EAS secret — create the publishable secret matching `eas.json`; remove old anon secret after cutover (or Phase 5).
-- **Gate 4:** Expo Go — log in; exercise quotes, league views, trades; **AND draft in the real app** (answers the drafts-RLS (a)/(b) question above).
+**Gate 4 (Expo Go) — PARTIAL:**
+- ✅ **Reads/auth verified in the real app:** login/logout, all navigation and views, all read paths authenticate correctly under the publishable key. The publishable key is proven for **auth + RLS reads**. Mobile migration is structurally sound.
+- ⚠️ **Writes UNVERIFIED:** trades are weekend-blocked (market closed) and drafting is similarly timing-gated, so no write path (trade or draft) could be exercised today. The publishable key is **unverified for authenticated writes**.
 
 ---
 
+## 🚦 HARD GATES ON PHASE 4 (must pass before disabling legacy keys)
+
+Phase 4 (disable legacy keys) is a one-way door. Both must be confirmed first:
+
+1. **Verify a real authenticated WRITE on the publishable key** — place a trade in the real app **during market hours**. Confirms the publishable key works for authenticated writes, not just reads.
+2. **Resolve the `drafts`-RLS question** — draft in the real app **during a draft window**. Answers whether `test-draft.js`'s failure was a stale test (real drafting works → harmless) or a live bug (real drafting fails → RLS change broke the app's draft flow). See the drafts-RLS gotcha.
+
+Until BOTH are confirmed, **Phase 4 must NOT proceed.**
+
+---
+
+## Ready for Phase 4? — **NO.**
+
+Phase 3a's structural migration (local scripts + mobile) is complete and committed,
+and the publishable key is verified for auth + reads. But **two write-path
+verifications remain open** (above), both timing-gated to market/draft hours. Phase
+4 readiness is **explicitly NO** until both are done. (Phase 3b — web/Vercel — is
+also still outstanding and separate.)
+
 ## Out of scope / carried forward
 - Web app / Vercel → **Phase 3b** (`VITE_SUPABASE_ANON_KEY`, `apps/web/...`).
-- `drafts`-RLS / anonymous-insert question → resolve at Surface 4 mobile gate, before Phase 4.
+- The two write-path hard gates above (publishable-key write + real-app draft) → before Phase 4.
 - Phase 4 (disable legacy keys), Phase 5 cleanup, retry-path bug — unchanged.
