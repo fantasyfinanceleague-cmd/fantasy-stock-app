@@ -2,7 +2,7 @@
 
 **This is a living document. Update it at every phase boundary.** It exists so any fresh Claude Code session (or future-you) can get up to speed in 60 seconds. For detailed records, see the per-phase report files referenced below.
 
-Last updated: **Phase 3a structural migration done on branch `phase-3a-scripts-mobile`** (local scripts + mobile off legacy keys). Scripts gated green; mobile auth+reads gated green; mobile **writes (trade/draft) UNVERIFIED** (weekend timing) → 2 hard gates on Phase 4. Awaiting review + merge. Phase 2b-2 (cron) merged earlier (`eae20ed`). See `MIGRATION_PHASE_3A_REPORT.md`.
+Last updated: **Phase 3a MERGED to main (`fa1e221`)** — local scripts + mobile off legacy keys. Scripts gated green; mobile auth+reads gated green; mobile **writes (trade/draft) UNVERIFIED** (weekend timing) → 2 hard gates on Phase 4 (still BLOCKED). Phase 2b-2 (cron) merged earlier (`eae20ed`). Next: Phase 3b (web/Vercel). See `MIGRATION_PHASE_3A_REPORT.md`.
 
 ---
 
@@ -21,7 +21,7 @@ Migrate this project from legacy Supabase API keys (`anon` / `service_role` JWTs
 | 2a | Migrate 7 client-invoked edge functions to new keys | ✅ DONE & MERGED to main — see `MIGRATION_PHASE_2A_REPORT.md` |
 | 2b-1 | Proof-of-concept: migrate 1 cron function (`snapshot-week-end`) to apikey auth | ✅ DONE & MERGED to main — spec: `MIGRATION_PHASE_2B1_SNAPSHOT_WEEK_END.md`, report: `MIGRATION_PHASE_2B1_REPORT.md` |
 | 2b-2 | Migrate remaining 3 cron functions. Spec: `MIGRATION_PHASE_2B2_SPEC.md`, report: `MIGRATION_PHASE_2B2_REPORT.md` | ✅ DONE & MERGED — A `process-week-results` (`e92ce06`); B `snapshot-week-start` + C `sync-alpaca-orders` (`eae20ed`) |
-| 3a | Migrate LOCAL SCRIPTS + MOBILE to new keys. Spec: `MIGRATION_PHASE_3A_SPEC.md`, report: `MIGRATION_PHASE_3A_REPORT.md` | 🔄 Structural migration DONE on branch `phase-3a-scripts-mobile` (scripts gated; mobile reads gated, **writes unverified**). Awaiting review + merge. |
+| 3a | Migrate LOCAL SCRIPTS + MOBILE to new keys. Spec: `MIGRATION_PHASE_3A_SPEC.md`, report: `MIGRATION_PHASE_3A_REPORT.md` | ✅ MERGED to main (`fa1e221`) — structural migration done (scripts gated; mobile auth+reads gated, **writes unverified** → 2 Phase-4 hard gates). |
 | 3b | Migrate WEB APP / Vercel to new keys | ⏸️ NOT STARTED (separate spec/session) |
 | 4 | Disable legacy keys in Supabase dashboard (one-way door) | ⏸️ NOT STARTED — **BLOCKED by 2 write-path verifications (see gotchas)** |
 | 5 | Cleanup (orphaned secrets, `.claude/settings.local.json`, docs, git history scrub) | ⏸️ NOT STARTED |
@@ -104,7 +104,7 @@ Spec-driven: Claude (chat) writes a phase spec → hand to Claude Code → Claud
 
 ## Next action
 
-**Phase 3a structural migration is done on branch `phase-3a-scripts-mobile`** (4 surfaces committed: `simulation-test-runner.mjs`, `simulate-season.sh`, `test-draft.js`, mobile). Local scripts gated green; mobile auth+reads gated green. **Next: user review + merge of `phase-3a-scripts-mobile` → main.** Phase 3a's "ready for Phase 4?" = **NO** until the two write-path verifications pass.
+**Phase 3a is MERGED to main (`fa1e221`)** — 4 surfaces (`simulation-test-runner.mjs`, `simulate-season.sh`, `test-draft.js`, mobile) off legacy keys. Local scripts gated green; mobile auth+reads gated green; mobile writes unverified (weekend). Phase 3a's "ready for Phase 4?" = **NO** until the two write-path verifications pass. **Next migration sub-phase: Phase 3b (web/Vercel).**
 
 - **Before Phase 4 (hard gates):** (1) place a real trade in the mobile app during market hours (publishable-key write); (2) draft in the real app during a draft window (resolves the drafts-RLS question). Both timing-gated.
 - **Phase 3b (next migration sub-phase):** migrate the WEB APP / Vercel (`VITE_SUPABASE_ANON_KEY`, `apps/web/...`) — separate spec + isolated session (production-touching).
