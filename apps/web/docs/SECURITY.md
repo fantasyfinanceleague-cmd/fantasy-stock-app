@@ -141,7 +141,7 @@ Track authentication events:
 
 ### Exposed Keys (By Design)
 These keys are **meant** to be public:
-- `VITE_SUPABASE_ANON_KEY` - Public anon key
+- `VITE_SUPABASE_PUBLISHABLE_KEY` - Public publishable key (new key system; replaced the legacy anon key in Phase 3b)
 - Database security comes from Row Level Security (RLS) policies
 
 ### Protected Keys (Server-Side Only)
