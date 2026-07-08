@@ -38,3 +38,16 @@ The session model is the orchestrator; each subagent runs on the `model:` in its
 - Leave the `/config` "switch models when a message is flagged" reroute ON. For this repo the reroute is a feature, not a bug — it keeps security-adjacent requests on Opus.
 
 Rule of thumb: **Opus by default; Fable only for the big, non-security refactors, and only session-scoped.**
+
+## Operational conventions
+
+**Workspace directories (monorepo — run commands from the right place):**
+- **EAS/Expo** commands run from `apps/mobile/`, never repo root. Running from root offers to create a *duplicate* project — never accept that prompt.
+- **Vite/web** commands (`npm run dev`, etc.) run from `apps/web/`, not repo root.
+
+**Supabase / deploys (verify state, never trust the command's own output):**
+- `supabase db push --dry-run` only PREVIEWS — the real `supabase db push` must follow. After any cron/migration change, confirm with a follow-up query (e.g. `SELECT command FROM cron.job WHERE jobname = '<job>';`), not just the push output.
+- A `verify_jwt` true→false flip may not take on first deploy. Confirm it took with a no-credential request that reaches OUR code (not the gateway's generic 401), plus the dashboard Verify-JWT toggle.
+- **Merging to `main` auto-deploys the web app to Vercel production** — treat a merge as a prod deploy. Add/rename any required Vercel env vars BEFORE merging.
+
+**General:** after a dry-run or any state change, verify the ACTUAL state (grep / `git status` / a query) before building on it. Don't assume a command did what its output implied.
