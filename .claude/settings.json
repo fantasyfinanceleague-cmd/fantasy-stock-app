@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "ask": [
+      "Bash(supabase db push:*)",
+      "Bash(supabase functions deploy:*)",
+      "Bash(supabase secrets set:*)",
+      "Bash(npx supabase db push:*)",
+      "Bash(npx supabase functions deploy:*)",
+      "Bash(npx supabase secrets set:*)",
+      "Bash(vercel deploy:*)",
+      "Bash(vercel --prod:*)",
+      "Bash(npx vercel deploy:*)",
+      "Bash(npx vercel --prod:*)",
+      "Bash(git push:*)",
+      "Bash(git merge:*)"
+    ]
+  }
+}
