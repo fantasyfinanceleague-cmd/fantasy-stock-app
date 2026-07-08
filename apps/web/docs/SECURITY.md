@@ -37,7 +37,7 @@
 
 ⚠️ **Remaining Considerations:**
 - localStorage is vulnerable to XSS attacks (could migrate to httpOnly cookies)
-- Anon key is exposed in client (by design, but requires proper RLS)
+- Publishable key is exposed in client (by design, but requires proper RLS)
 - No MFA/2FA (optional enhancement)
 - No custom rate limiting beyond Supabase defaults
 
@@ -118,7 +118,7 @@ const { data, error } = await supabase.auth.mfa.enroll({
 #### 10. Switch to httpOnly Cookies
 More secure than localStorage:
 ```javascript
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
   auth: {
     storage: customCookieStorage,
     autoRefreshToken: true,
