@@ -2,7 +2,7 @@
 
 **This is a living document. Update it at every phase boundary.** It exists so any fresh Claude Code session (or future-you) can get up to speed in 60 seconds. For detailed records, see the per-phase report files referenced below.
 
-Last updated: **Phase 3b steps 1–4 COMPLETE on branch `phase-3b-web-vercel` (`c364282`)** — web code renamed to publishable key, zero-ref gate green, local-unpause proof PASSED (login + read + a real write on the publishable key), `APP_PAUSED` reverted to `true` and verified clean. **Step 5 (Vercel cutover) PENDING — deliberately a fresh-session task, NOT merged.** Phase 3a merged earlier (`fa1e221`); mobile **writes (trade/draft) still UNVERIFIED** → 2 hard gates on Phase 4 (still BLOCKED). Phase 2b-2 (cron) merged (`eae20ed`). See `MIGRATION_PHASE_3A_REPORT.md`.
+Last updated: **Phase 3b COMPLETE & MERGED to main (`42f742b`)** — web app is now on the publishable key in production. Step 5 (Vercel cutover) done & verified: `VITE_SUPABASE_PUBLISHABLE_KEY` added (all envs) → merged → deploy Ready with clean console → old `VITE_SUPABASE_ANON_KEY` removed from Vercel → clean rebuild confirmed. **ALL surfaces (cron, edge functions, scripts, mobile, web) are now off legacy keys.** Phase 4 (disable legacy keys) is **UNBLOCKED on the migration side but STILL gated on 2 mobile write-checks** (real trade + real draft, market/draft hours). Phase 3a merged (`fa1e221`); Phase 2b-2 (cron) merged (`eae20ed`). See `MIGRATION_PHASE_3A_REPORT.md`.
 
 ---
 
@@ -22,8 +22,8 @@ Migrate this project from legacy Supabase API keys (`anon` / `service_role` JWTs
 | 2b-1 | Proof-of-concept: migrate 1 cron function (`snapshot-week-end`) to apikey auth | ✅ DONE & MERGED to main — spec: `MIGRATION_PHASE_2B1_SNAPSHOT_WEEK_END.md`, report: `MIGRATION_PHASE_2B1_REPORT.md` |
 | 2b-2 | Migrate remaining 3 cron functions. Spec: `MIGRATION_PHASE_2B2_SPEC.md`, report: `MIGRATION_PHASE_2B2_REPORT.md` | ✅ DONE & MERGED — A `process-week-results` (`e92ce06`); B `snapshot-week-start` + C `sync-alpaca-orders` (`eae20ed`) |
 | 3a | Migrate LOCAL SCRIPTS + MOBILE to new keys. Spec: `MIGRATION_PHASE_3A_SPEC.md`, report: `MIGRATION_PHASE_3A_REPORT.md` | ✅ MERGED to main (`fa1e221`) — structural migration done (scripts gated; mobile auth+reads gated, **writes unverified** → 2 Phase-4 hard gates). |
-| 3b | Migrate WEB APP / Vercel to new keys. Spec: `MIGRATION_PHASE_3B_SPEC.md` | 🔄 IN PROGRESS on branch `phase-3b-web-vercel` (`c364282`) — **steps 1–4 done** (code rename + zero-ref gate green; `.env.local` renamed by user; local-unpause proof PASSED: login + read + real write on publishable key; `APP_PAUSED` reverted to `true`, diff-clean). **Step 5 (Vercel cutover, incl. the merge) PENDING** — deliberate fresh-session task, not started. |
-| 4 | Disable legacy keys in Supabase dashboard (one-way door) | ⏸️ NOT STARTED — **BLOCKED by 2 write-path verifications (see gotchas)** |
+| 3b | Migrate WEB APP / Vercel to new keys. Spec: `MIGRATION_PHASE_3B_SPEC.md` | ✅ DONE & MERGED to main (`42f742b`) — web app on the publishable key in production. Step 5 Vercel cutover verified: `VITE_SUPABASE_PUBLISHABLE_KEY` added (all envs) → merged → deploy Ready, clean console → old `VITE_SUPABASE_ANON_KEY` removed → clean rebuild confirmed. |
+| 4 | Disable legacy keys in Supabase dashboard (one-way door) | ⏸️ NOT STARTED — migration side now UNBLOCKED (all surfaces off legacy keys), but **STILL BLOCKED by 2 mobile write-path verifications (see gotchas)** |
 | 5 | Cleanup (orphaned secrets, `.claude/settings.local.json`, docs, git history scrub) | ⏸️ NOT STARTED |
 
 ---
@@ -40,7 +40,7 @@ Migrate this project from legacy Supabase API keys (`anon` / `service_role` JWTs
 
 **New keys in local `.env`:** `SB_PUBLISHABLE_KEY`, `SB_SECRET_KEY_LOCAL_SCRIPTS`
 
-**Legacy keys (still active):** `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` — still used by cron functions and clients until those phases complete. Disabled in Phase 4.
+**Legacy keys (still active, but no longer used by any surface):** `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` — **all surfaces (cron, edge functions, scripts, mobile, web) are now off legacy keys as of Phase 3b (`42f742b`).** The keys remain *enabled* in the dashboard only because disabling them is the explicit one-way door of Phase 4, still gated on the 2 mobile write-checks. Nothing of ours reads them anymore.
 
 See `docs/api-keys-inventory.md` for the full location matrix.
 
@@ -105,10 +105,9 @@ Spec-driven: Claude (chat) writes a phase spec → hand to Claude Code → Claud
 
 ## Next action
 
-**Phase 3b is IN PROGRESS on branch `phase-3b-web-vercel` (`c364282`), steps 1–4 done.** The web code is renamed to the publishable key, the local-unpause proof passed (login + read + a real write on the new key), and `APP_PAUSED` is back to `true` (diff-clean vs main; `false` was never committed). **The one remaining step is 5 (Vercel cutover) — a deliberate fresh-session task, NOT yet done. The merge to main IS the production deploy (step 5.2), so it happens as part of step 5, not before.**
+**Phase 3b is DONE & MERGED to main (`42f742b`).** The web app runs on the publishable key in production; the old `VITE_SUPABASE_ANON_KEY` has been removed from Vercel and a clean rebuild confirmed. **ALL surfaces (cron, edge functions, scripts, mobile, web) are now off legacy keys.** The migration side of Phase 4 is therefore UNBLOCKED — but Phase 4 (disabling legacy keys) is a one-way door and remains gated on 2 mobile write-verifications that could only be done during market/draft hours.
 
-- **Immediate next action: Phase 3b step 5 (Vercel cutover)** — in a fresh, focused session. Per spec `MIGRATION_PHASE_3B_SPEC.md`: (5.1) user ADDs `VITE_SUPABASE_PUBLISHABLE_KEY` in Vercel (all envs), leaving old `VITE_SUPABASE_ANON_KEY` in place; (5.2) merge branch → main (= the prod deploy); (5.3) redeploy; (5.4) verify live landing page loads; (5.5) only then remove the old Vercel var. Rollback plan in spec §6.
-- **Before Phase 4 (hard gates):** (1) place a real trade in the mobile app during market hours (publishable-key write); (2) draft in the real app during a draft window (resolves the drafts-RLS question). Both timing-gated.
-- **Phase 4:** disable legacy keys in the dashboard (one-way door).
+- **Immediate next action: clear the 2 Phase-4 hard gates (both timing-gated to market/draft hours):** (1) **publishable-key WRITE** — place a real trade in the mobile app **during market hours** (Phase 3a Gate 4 verified reads only; authenticated writes on the publishable key are still UNVERIFIED); (2) **real-app DRAFT** during a draft window — resolves the `drafts`-RLS (a)/(b) question in the gotchas. Both must PASS before Phase 4.
+- **Then Phase 4:** disable legacy keys in the dashboard (one-way door). Do NOT proceed until both gates above are green.
 - **Phase 5 cleanup:** the now-orphaned `service_role_key` vault entry; the USER-UNREACHABLE `verify`/`sync` dead code (+ `ANON_KEY`/`authed` client) in `sync-alpaca-orders`; `.claude/settings.local.json` credentials; git-history scrub.
 - **Separate non-migration task:** fix the pre-existing `schedule_snapshot_retry()` `cron.schedule()` timestamp-overload bug (see gotchas) so the snapshot retry path can fire.
