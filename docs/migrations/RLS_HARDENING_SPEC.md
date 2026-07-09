@@ -26,12 +26,13 @@ All fixes below are prod-mutating and belong to the human (Giorgio). Subagents d
 **Fix:** Replace `dev_all` with real per-user / per-member policies. A correct model already exists in the repo on `trades` and `broker_credentials` — mirror that structure (membership check via `league_members`, ownership via `auth.uid()`).
 **Verification:** As user A, attempt to read/write user B's league rows — must be denied. As a legitimate member, normal reads/writes must still pass.
 
-### B2 — [HIGH] `refresh-symbols` edge function has no auth
+### B2 — [RESOLVED / RECLASSIFIED] `refresh-symbols` auth
 **Function:** `refresh-symbols`
-**State:** Writes to the DB via the service-role key, callable by any anonymous HTTP client — no `verify_jwt`, no apikey guard.
-**Impact:** Direct anonymous write path into the database.
-**Fix:** Apply the existing cron apikey guard pattern (constant-time, fail-closed, `verify_jwt=false` + vault-backed apikey), or require `verify_jwt` if it should be user-invoked. Match whichever pattern fits how it's actually called.
-**Verification:** Anonymous call → rejected. Authorized call (with the correct guard header) → succeeds.
+**Original claim:** "callable by any anonymous HTTP client — no `verify_jwt`, direct anonymous write path."
+**Verified state (2026-07-09 prod probe):** the claim was inaccurate. An unauthenticated `POST` to the prod function returns **`401 UNAUTHORIZED_NO_AUTH_HEADER`** at the Supabase **gateway** (before function code runs) — i.e. production already enforces `verify_jwt=true` via the platform default. Anonymous callers are already blocked; no anonymous write path existed.
+**Change landed:** explicit `[functions.refresh-symbols] verify_jwt = true` block added to `config.toml` (makes the effective state reproducible / regression-proof; no in-function guard, since this is user-invoked not cron). Functionally a no-op on auth — prod was already gated. The earlier cron-apikey-guard draft was reverted (wrong pattern for a user-invoked function).
+**Residual:** the function is any-authenticated, not admin-only → see **L7** (cost-abuse, deferred). Not a data-integrity blocker (no scoping input; only triggers a canonical full refresh).
+**Verification:** anonymous call → 401 (confirmed). Authorized (valid user JWT) call would 200 + full symbols refresh — deliberately NOT run (no security value; would trigger a ~12,525-row upsert).
 
 ---
 
@@ -61,6 +62,18 @@ Cannot confirm RLS state from code alone. Confirm in the live project whether RL
 
 ### L5 — [PRODUCT DECISION] If "paused" is meant to stop signups
 That's a Supabase project-level toggle (Auth → Enable email signups), not a client constant. Decide whether the pause should actually block registration; if so, disable signups at the project level. Note this interacts with Phase 3b — confirm it doesn't block your own local unpause proof.
+
+### L6 — [DEFERRED / LOW] Weak invite-code generation
+**Where:** `apps/mobile/app/create-league.tsx:36-42` (`generateInviteCode`) and `apps/web/src/hooks/useLeagues.js:6-8` (`genCode`) — two divergent generators.
+**State:** Both produce a 6-char code from `A-Z0-9` (keyspace 36⁶ ≈ 2.18B) using **`Math.random()`** (non-cryptographic; the web variant's `toString(36).slice(2,8)` is weaker still). No rate-limiting on lookups today.
+**Why deferred, not a blocker:** The enumeration risk only matters while an invite code is the *gate* for reading a `leagues` row. Once the `preview-league` edge function (see B1 design) moves the by-code lookup server-side — behind `verify_jwt=true` + per-user/per-IP rate limiting — the code is no longer an RLS-exposed enumeration surface, so `leagues`/`league_members` can be clean members-only. That downgrades this to defense-in-depth.
+**Fix (later):** Converge on one generator, switch to `crypto.getRandomValues` (or pg `gen_random_bytes`), lengthen to ≥10–12 chars, and normalize charset. Do this **after** `preview-league` lands; the rate limit in that function is the primary control in the meantime.
+
+### L7 — [DEFERRED / LOW] `refresh-symbols` is any-authenticated (cost-abuse, not integrity)
+**Function:** `refresh-symbols`
+**State (resolved for B2):** guarded by `verify_jwt=true` (platform JWT verification; anonymous → 401). This authorizes **any** authenticated user, not just admins.
+**Why acceptable for now:** the function takes no scoping input — a caller can only trigger the canonical full symbols refresh (idempotent on-conflict upsert), not targeted corruption. The residual risk is **cost/quota abuse** (repeated NASDAQ fetches + ~12,525-row upserts), not data integrity.
+**Fix (later):** add an in-function admin-identity check (allowlist on the JWT `sub`) and/or per-user rate limiting to prevent cost abuse. Deferred — cost issue, not a data-exposure blocker. Related: L4 (unauthenticated market-data functions burn third-party quota).
 
 ---
 
