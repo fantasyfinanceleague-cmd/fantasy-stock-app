@@ -289,6 +289,14 @@
 - [ ] Show weekly results
 - [ ] Timestamps and user avatars
 - [ ] Could be on Dashboard or League Detail page
+- **NOTE (2026-07-12):** Web trade rows have NO live-update path today. Trade pages
+  (TradeHistory, Dashboard, etc.) fetch once per `leagueId` — there is no realtime
+  subscription. The old `useRealtimeTrades` hook was removed (had zero importers; dead
+  code). If we ever want live trades on web, it's a deliberate build, NOT a resurrection
+  of that file: (1) a hook that's actually consumed by a component, (2) `ALTER PUBLICATION
+  supabase_realtime ADD TABLE trades;` migration, (3) `REPLICA IDENTITY FULL` on `trades`
+  if UPDATE/DELETE events are needed under membership-scoped RLS, (4) verified end-to-end
+  (place a real trade, confirm the web UI pushes).
 
 ### 6. Trade Confirmations/History
 - [ ] Trade history page showing all trades
