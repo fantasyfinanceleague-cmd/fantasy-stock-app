@@ -1,7 +1,7 @@
 # RLS & Auth Hardening Spec
 
-**Status:** Captured, not started. Blocked behind Phase 3b (Vercel key cutover, step 5).
-**Sequencing decision:** Finish Phase 3b first, then harden. Do not interleave — hardening touches the same Supabase surfaces the migration does.
+**Status:** **B1 LANDED & VERIFIED on `rls-hardening` (2026-07-12)** — the live anon-read exposure on all six league tables is closed. B2 resolved earlier. Lower-severity L1–L5 not started; L6/L7 deferred. See "B1 — LANDED" and the **Fast-follow queue** at the bottom.
+**Sequencing decision:** Phase 3b done first; B1 then applied as **7 gated migration files** (`20260712000000`–`…06`: helpers + one file per table), pushed table-by-table through `/migration-gate` with per-table dry-run → push → anon-read + policy-catalog verify.
 **Origin:** Surfaced by the `security-reviewer` subagent while auditing whether `APP_PAUSED` provides meaningful protection. It does not — see below.
 **Guiding principle:** Built for the distance. RLS that enforces nothing is worse than no RLS, because it reads as protected in a cursory check.
 
@@ -19,12 +19,17 @@ All fixes below are prod-mutating and belong to the human (Giorgio). Subagents d
 
 ## Blockers (must clear before onboarding any real user)
 
-### B1 — [HIGH] Placeholder RLS on six league tables
+### B1 — [✅ LANDED 2026-07-12] Placeholder RLS on six league tables
 **Tables:** `leagues`, `league_members`, `league_invites`, `matchups`, `league_standings`, `week_snapshots`
-**State:** RLS enabled, but policies are `USING (true) WITH CHECK (true)` (`dev_all`). Migrations mark them `-- TEMP dev-only RLS (replace before prod)`.
-**Impact:** Any authenticated user can read/write all rows across all leagues — fabricate matchups, alter standings, modify other members' memberships.
-**Fix:** Replace `dev_all` with real per-user / per-member policies. A correct model already exists in the repo on `trades` and `broker_credentials` — mirror that structure (membership check via `league_members`, ownership via `auth.uid()`).
-**Verification:** As user A, attempt to read/write user B's league rows — must be denied. As a legitimate member, normal reads/writes must still pass.
+**Was:** RLS enabled but `USING (true) WITH CHECK (true)` (`dev_all`) — anon-readable in prod via the publishable key; any authenticated user could read/write all rows across all leagues.
+**Fix landed:** `dev_all` dropped on all six; membership-scoped model mirroring the proven `trades`/`drafts`/`league_seasons` policies.
+- **Helpers:** `is_member(uuid)` + `is_commissioner(uuid)`, both `SECURITY DEFINER` (breaks the `league_members` self-referential RLS recursion), `EXECUTE` to `authenticated` only.
+- **SELECT model:** `anon → nothing` (policies are `TO authenticated`; `auth.uid()` null); `member → all rows in leagues they belong to` (NOT owner-scoped — cross-member reads for rosters/standings/matchups/snapshots preserved).
+- **Writes:** interim owner/commissioner policies `[I1]–[I9]` (strictly tighter than `dev_all`, preserve current behavior) + the permanent commissioner invite INSERT `[P1]`. Full write-closure to edge functions is the fast-follow (see queue).
+- **Realtime fix:** `matchups REPLICA IDENTITY FULL` (its PK is `id` only, so `league_id` wasn't in the default replica image → `is_member` events would silently drop). `league_standings` needed none (PK already carries `league_id`).
+- **Notable catch:** the `leagues` UPDATE policy was split into `[I2a]` commissioner (settings/start/dates) + `[I2b]` member (`in_progress → completed` only) because draft **completion** is triggered by any member (mobile last-picker / web `completeDraft` useEffect), not the commissioner — a commissioner-only policy would have silently broken draft finalization.
+**Verification (prod, 2026-07-12):** 17 policies present, zero `dev_all`, RLS on all six, both helpers `prosecdef=t`, `matchups relreplident='f'` / `league_standings='d'`; **anon read (publishable key, no JWT) returned `[]` for all six tables** — the exposure closed from the attacker's own vector.
+**Known interim breakage (accepted):** locking the SELECT surfaces breaks the mobile by-code **join preview** (it reads `leagues`/`league_invites`/`league_members` as a non-member). Web join is unreachable (`APP_PAUSED`); no real users. Unbroken by `preview-league` (fast-follow #1).
 
 ### B2 — [RESOLVED / RECLASSIFIED] `refresh-symbols` auth
 **Function:** `refresh-symbols`
@@ -81,7 +86,7 @@ That's a Supabase project-level toggle (Auth → Enable email signups), not a cl
 
 Ordered by severity. Each is a hard-stop gate; review drafted policies/code before running.
 
-1. **B1** — Replace `dev_all` policies on the six league tables with real per-user/per-member policies. Push as a reviewed migration.
+1. ✅ **B1 DONE (2026-07-12)** — `dev_all` replaced with membership-scoped policies on all six tables via 7 gated migrations. Verified from the anon vector. See "B1 — LANDED" above and the Fast-follow queue below.
 2. **B2** — Add auth guard to `refresh-symbols`; redeploy the function.
 3. **L5** — If pausing signups: disable email signups at the Supabase project level.
 4. **L1 / L2** — Fix `notification_log` INSERT policy; split `expo_push_token` out of public-readable profile columns.
@@ -97,3 +102,32 @@ Ordered by severity. Each is a hard-stop gate; review drafted policies/code befo
 - Giorgio runs all `db push`, edge deploys, and project-level toggles. Subagents never handle real key values.
 - Verify B1 and B2 with the explicit allow/deny tests above before merge.
 - Do not start until Phase 3b step 5 (Vercel cutover) is merged and clean.
+
+---
+
+## Fast-follow queue (post-B1) — do not lose
+
+B1 closed the read exposure with interim write policies. The remaining work below is what turns "hardened + behavior-preserving" into "fully write-closed", plus deferred lower-severity items.
+
+### 1. Edge functions — the write-closure path (highest priority; also unbreaks join)
+- **`preview-league`** *(designed & approved; NOT built)* — server-side by-code lookup via `SB_SECRET_KEY_INTERNAL`, display-only fields + `{joinable, reason}`, `verify_jwt=true`, Postgres rate-limit. **Unbreaks the mobile by-code join preview** (the accepted B1 gap). Ship FIRST.
+- **`join-league`** *(designed & approved; NOT built)* — entire join server-side & atomic (`SELECT … FOR UPDATE` capacity race fix, re-validate joinable, insert member + mark invite accepted). Retires interim `[I4]` (member self-insert) + `[I7]` (invite accept UPDATE).
+- **`create-league`** *(not designed)* — atomic `leagues` + `league_members` self-insert. Retires `[I1]` + part of `[I4]`.
+- **`update-league`** *(not designed)* — commissioner settings/date edits. Retires `[I2a]`.
+- **`draft-control`** *(not designed)* — draft start/complete transitions + bot member seeding. Retires `[I2b]` + `[I6]`.
+- **`leave-league`** *(not designed)* — self-removal. Retires `[I5]`.
+- **`delete-league`** *(not designed)* — commissioner delete. Retires `[I3]`.
+- **schedule-gen (mini-project #2)** *(not started)* — move client-side matchup schedule + standings init server-side (currently any member's browser runs it). Retires `[I8]` + `[I9]`.
+
+**Interim write-policy → retirement map** (delete the policy when its function lands):
+`[I1]`→create-league · `[I2a]`→update-league · `[I2b]`→draft-control · `[I3]`→delete-league · `[I4]`→join-league+create-league · `[I5]`→leave-league · `[I6]`→draft-control · `[I7]`→join-league · `[I8]`/`[I9]`→schedule-gen. `[P1]` (commissioner invite INSERT) is **permanent**.
+
+### 2. `start_new_league_season` lockdown (privileged RPC bypass — decision #3, NOT done)
+`SECURITY DEFINER` RPC callable by **any authenticated user** ([apps/mobile/app/league-settings.tsx:125](../../apps/mobile/app/league-settings.tsx:125)); guarded only by `season_status='completed'`, **no commissioner check** → any authed user can trigger a league-wide season reset (wipes matchups, resets standings). Fix: add an internal commissioner-identity check and/or restrict `EXECUTE` to the service role. Bypasses B1's RLS entirely until fixed.
+
+### 3. Deferred / pre-launch checklist
+- **Realtime push smoke-test** — B1 confirmed `matchups relreplident='f'` structurally, but the live UPDATE→event delivery was never fired (no matchup rows existed to mutate). Verify with real matchup data before unpause: open the standings screen as a member, mutate a `matchups` row, confirm the live push arrives.
+- **Dead `trades` realtime channel** — `useRealtimeTrades.js` subscribes to `trades`, but `trades` is NOT in the `supabase_realtime` publication → dead channel. Either publish `trades` (+ likely `REPLICA IDENTITY FULL`, same as matchups) or remove the subscription. (Spun off as a background task 2026-07-12.)
+- **L6 — weak invite codes** — 6-char `Math.random()` codes; converge generators, switch to CSPRNG, lengthen ≥10–12. Lower priority once `preview-league` moves the by-code lookup behind rate-limiting.
+- **L7 — `refresh-symbols` any-authenticated** — add admin-identity check + rate-limit (cost-abuse, not integrity).
+- **L1–L5** — see checklist above (`notification_log` INSERT, `expo_push_token` split, `symbols` RLS confirm, market-data rate-limiting, signup toggle).
