@@ -39,3 +39,15 @@ verify_jwt = false
 # verify/sync modes are now USER-UNREACHABLE (Phase 5 dead-code cleanup).
 [functions.sync-alpaca-orders]
 verify_jwt = false
+
+# RLS-hardening: refresh-symbols is invoked by authenticated users from the
+# client. Platform JWT verification is the auth: any caller with a valid user
+# JWT is allowed; anonymous callers are rejected with 401 at the gateway.
+# Previously this function had NO block and NO guard — publicly callable,
+# RLS-bypassing upsert. NOTE: verify_jwt=true authorizes ALL authenticated
+# callers, not just admins; the upsert uses SB_SECRET_KEY_INTERNAL (bypasses
+# RLS), so any authenticated user who calls this can rewrite the symbols table.
+[functions.refresh-symbols]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/refresh-symbols/index.ts"

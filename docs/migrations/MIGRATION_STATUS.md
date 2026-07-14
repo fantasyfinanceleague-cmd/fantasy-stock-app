@@ -4,6 +4,8 @@
 
 Last updated: **Phase 3b COMPLETE & MERGED to main (`42f742b`)** — web app is now on the publishable key in production. Step 5 (Vercel cutover) done & verified: `VITE_SUPABASE_PUBLISHABLE_KEY` added (all envs) → merged → deploy Ready with clean console → old `VITE_SUPABASE_ANON_KEY` removed from Vercel → clean rebuild confirmed. **ALL surfaces (cron, edge functions, scripts, mobile, web) are now off legacy keys.** Phase 4 (disable legacy keys) is **UNBLOCKED on the migration side but STILL gated on 2 mobile write-checks** (real trade + real draft, market/draft hours). Phase 3a merged (`fa1e221`); Phase 2b-2 (cron) merged (`eae20ed`). See `MIGRATION_PHASE_3A_REPORT.md`.
 
+> **Parallel track — RLS hardening B1 LANDED (2026-07-12, branch `rls-hardening`):** the placeholder `dev_all` RLS on the six league tables (`leagues`, `league_members`, `league_invites`, `matchups`, `league_standings`, `week_snapshots`) — a **live anon-read data exposure** via the publishable key — is now closed with membership-scoped policies, verified from the anon vector (`[]` on all six). This is a separate effort from the API-key migration but touches the same Supabase surface. Full record + fast-follow queue (edge-function write-closure, `start_new_league_season` lockdown, deferred L6/L7): see **`RLS_HARDENING_SPEC.md`**.
+
 ---
 
 ## The goal
