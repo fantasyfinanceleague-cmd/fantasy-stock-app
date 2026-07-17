@@ -364,6 +364,21 @@ export default function LeagueScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <LeagueSwitcher />
 
+      <View style={styles.leagueActions}>
+        <TouchableOpacity
+          style={styles.leagueJoinButton}
+          onPress={() => router.push('/join-league')}
+        >
+          <Text style={styles.leagueJoinText}>Join</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.leagueCreateButton}
+          onPress={() => router.push('/create-league')}
+        >
+          <Text style={styles.leagueCreateText}>+ Create</Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         style={styles.scrollView}
         refreshControl={
@@ -1195,6 +1210,39 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#FFFFFF',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  leagueActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 24,
+    paddingTop: 10,
+    paddingBottom: 6,
+  },
+  leagueJoinButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  leagueJoinText: {
+    color: Colors.primary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  leagueCreateButton: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  leagueCreateText: {
+    color: '#FFFFFF',
+    fontSize: 14,
     fontWeight: '600',
   },
   // Schedule styles
