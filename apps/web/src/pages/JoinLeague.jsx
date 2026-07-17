@@ -1,16 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { supabase } from '../supabase/supabaseClient';
-import { useAuthUser } from '../auth/useAuthUser';
+
+const REASON_MSG = {
+  league_full: 'This league is full',
+  invite_expired: 'This invite has already been used or expired',
+  season_completed: "This league's season has ended",
+  invalid_code: 'Invite not found',
+};
 
 export function JoinLeague() {
   const { code } = useParams();
   const nav = useNavigate();
-  const user = useAuthUser();
-  const USER_ID = user?.id;
   const [loading, setLoading] = useState(true);
   const [error, setError]   = useState('');
-  const [invite, setInvite] = useState(null);
   const [league, setLeague] = useState(null);
 
   useEffect(() => {
@@ -19,22 +22,10 @@ export function JoinLeague() {
       setLoading(true);
       setError('');
       try {
-        const { data: inv, error: e1 } = await supabase
-          .from('league_invites')
-          .select('*')
-          .eq('code', code)
-          .maybeSingle();
-        if (e1) throw e1;
-        if (!inv) throw new Error('Invite not found');
-
-        const { data: lg, error: e2 } = await supabase
-          .from('leagues')
-          .select('*')
-          .eq('id', inv.league_id)
-          .single();
-        if (e2) throw e2;
-
-        if (!cancelled) { setInvite(inv); setLeague(lg); }
+        const { data, error: fnErr } = await supabase.functions.invoke('preview-league', { body: { code } });
+        if (fnErr) throw fnErr;
+        if (!data.found) throw new Error('Invite not found');
+        if (!cancelled) setLeague(data.league);
       } catch (err) {
         if (!cancelled) setError(err.message || String(err));
       } finally {
@@ -45,22 +36,18 @@ export function JoinLeague() {
   }, [code]);
 
   const handleJoin = async () => {
-    if (!invite || !league) return;
+    if (!league) return;
     setLoading(true);
     setError('');
     try {
-      // add me as a member (idempotent)
-      await supabase.from('league_members')
-        .upsert({ league_id: invite.league_id, user_id: USER_ID, role: 'member' });
-
-      // mark invite accepted (best-effort)
-      await supabase.from('league_invites')
-        .update({ status: 'accepted' })
-        .eq('code', code);
-
-      // set active league for Draft page and go to /leagues
-      localStorage.setItem('activeLeagueId', invite.league_id);
-      nav('/leagues');
+      const { data, error: fnErr } = await supabase.functions.invoke('join-league', { body: { code } });
+      // already_member = SILENT SUCCESS (preserves the old idempotent-upsert UX)
+      if (!fnErr && (data.ok || data.reason === 'already_member')) {
+        if (data.league) localStorage.setItem('activeLeagueId', data.league.id);
+        nav('/leagues');
+        return;
+      }
+      setError(REASON_MSG[data?.reason] ?? (fnErr?.message ?? 'Failed to join'));
     } catch (err) {
       setError(err.message || String(err));
     } finally {

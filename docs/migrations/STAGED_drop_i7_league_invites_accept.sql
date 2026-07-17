@@ -1,0 +1,26 @@
+-- ============================================================================
+-- STAGED — NOT YET A LIVE MIGRATION. Do NOT place this in supabase/migrations/
+-- until AFTER both clients are deployed on preview-league + join-league.
+--
+-- Why staged: `supabase db push` applies ALL pending files. If this lived in
+-- supabase/migrations/ alongside 20260716000000_preview_join_league_infra.sql,
+-- it would drop [I7] in the SAME push as the infra — before the clients stop
+-- updating league_invites directly. In that gap, client invite-accepts would
+-- silently affect 0 rows. So it ships in its OWN later push, after cutover.
+--
+-- When ready (clients live on the functions): move/rename this to
+--   supabase/migrations/<timestamp>_drop_i7_league_invites_accept.sql
+-- and run `supabase db push`.
+-- ============================================================================
+-- Retires [I7]: join-league now performs the invite accept-status update via the
+-- service role (join_league_by_code, SECURITY DEFINER), so NO client updates
+-- league_invites directly. Dropping [I7] brings league_invites to its END STATE:
+--   SELECT  -> commissioner only
+--   INSERT  -> commissioner only ([P1], permanent)
+--   UPDATE/DELETE -> none (service role only)
+--
+-- [I4] (league_members self INSERT) is intentionally NOT dropped here — it is
+-- still used by create-league's commissioner self-insert. It retires in the
+-- create-league wave.
+-- ============================================================================
+drop policy if exists "league_invites_update_accept" on league_invites;
