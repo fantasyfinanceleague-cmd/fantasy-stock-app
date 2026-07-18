@@ -110,8 +110,11 @@ Ordered by severity. Each is a hard-stop gate; review drafted policies/code befo
 B1 closed the read exposure with interim write policies. The remaining work below is what turns "hardened + behavior-preserving" into "fully write-closed", plus deferred lower-severity items.
 
 ### 1. Edge functions — the write-closure path (highest priority; also unbreaks join)
-- **`preview-league`** *(designed & approved; NOT built)* — server-side by-code lookup via `SB_SECRET_KEY_INTERNAL`, display-only fields + `{joinable, reason}`, `verify_jwt=true`, Postgres rate-limit. **Unbreaks the mobile by-code join preview** (the accepted B1 gap). Ship FIRST.
-- **`join-league`** *(designed & approved; NOT built)* — entire join server-side & atomic (`SELECT … FOR UPDATE` capacity race fix, re-validate joinable, insert member + mark invite accepted). Retires interim `[I4]` (member self-insert) + `[I7]` (invite accept UPDATE).
+
+**✅ preview/join wave COMPLETE (2026-07-17, merged to main `69bcba1`).** Both functions built, deployed (ACTIVE), and verified end-to-end in Expo Go: preview renders display-only fields (no id/commissioner_id/invite_code), join writes atomically, and the `already_member` + `invalid_code` paths were confirmed in-app. Reachable mobile entry point added on the visible **League tab** (`league.tsx`, header row) plus the hidden `leagues.tsx`. `[I7]` retired (`13820f7`, migration `20260717000000`, applied — verified via `pg_policies`).
+
+- ✅ **`preview-league`** *(BUILT + DEPLOYED)* — server-side by-code lookup via `SB_SECRET_KEY_INTERNAL`, display-only fields + `{joinable, reason}`, `verify_jwt=true`, Postgres rate-limit (`check_and_bump_rate_limit`, per-user + per-IP, fail-open). Closed the mobile by-code join-preview gap.
+- ✅ **`join-league`** *(BUILT + DEPLOYED)* — entire join server-side & atomic via `join_league_by_code` (`SECURITY DEFINER`, `SELECT … FOR UPDATE` capacity race fix, `unique_violation` guard; `EXECUTE` revoked from public, granted to `service_role` only). **Retired `[I7]`** (invite accept UPDATE now runs via the RPC on the service role). Removed join's use of `[I4]`, but `[I4]` **stays** — still used by league creation.
 - **`create-league`** *(not designed)* — atomic `leagues` + `league_members` self-insert. Retires `[I1]` + part of `[I4]`.
 - **`update-league`** *(not designed)* — commissioner settings/date edits. Retires `[I2a]`.
 - **`draft-control`** *(not designed)* — draft start/complete transitions + bot member seeding. Retires `[I2b]` + `[I6]`.
@@ -120,7 +123,7 @@ B1 closed the read exposure with interim write policies. The remaining work belo
 - **schedule-gen (mini-project #2)** *(not started)* — move client-side matchup schedule + standings init server-side (currently any member's browser runs it). Retires `[I8]` + `[I9]`.
 
 **Interim write-policy → retirement map** (delete the policy when its function lands):
-`[I1]`→create-league · `[I2a]`→update-league · `[I2b]`→draft-control · `[I3]`→delete-league · `[I4]`→join-league+create-league · `[I5]`→leave-league · `[I6]`→draft-control · `[I7]`→join-league · `[I8]`/`[I9]`→schedule-gen. `[P1]` (commissioner invite INSERT) is **permanent**.
+`[I1]`→create-league · `[I2a]`→update-league · `[I2b]`→draft-control · `[I3]`→delete-league · `[I4]`→create-league (still held) · `[I5]`→leave-league · `[I6]`→draft-control · ~~`[I7]`→join-league~~ ✅ **RETIRED 2026-07-17** · `[I8]`/`[I9]`→schedule-gen. `[P1]` (commissioner invite INSERT) is **permanent**. **`league_members` still holds `[I4]`/`[I5]`/`[I6]`** — retires with the create-league / leave-league / draft-control wave.
 
 ### 2. `start_new_league_season` lockdown (privileged RPC bypass — decision #3, NOT done)
 `SECURITY DEFINER` RPC callable by **any authenticated user** ([apps/mobile/app/league-settings.tsx:125](../../apps/mobile/app/league-settings.tsx:125)); guarded only by `season_status='completed'`, **no commissioner check** → any authed user can trigger a league-wide season reset (wipes matchups, resets standings). Fix: add an internal commissioner-identity check and/or restrict `EXECUTE` to the service role. Bypasses B1's RLS entirely until fixed.
@@ -131,3 +134,9 @@ B1 closed the read exposure with interim write policies. The remaining work belo
 - **L6 — weak invite codes** — 6-char `Math.random()` codes; converge generators, switch to CSPRNG, lengthen ≥10–12. Lower priority once `preview-league` moves the by-code lookup behind rate-limiting.
 - **L7 — `refresh-symbols` any-authenticated** — add admin-identity check + rate-limit (cost-abuse, not integrity).
 - **L1–L5** — see checklist above (`notification_log` INSERT, `expo_push_token` split, `symbols` RLS confirm, market-data rate-limiting, signup toggle).
+
+**Surfaced during the preview/join wave (2026-07-17):**
+- **Mobile has NO leave-league flow** — a user who joins a league can **never leave it on mobile** (no UI, no `league_members` delete path is invoked). The `[I5]` self-delete policy exists but nothing uses it. Needs a leave action + eventually the `leave-league` fn.
+- **No deep-link / invite-URL handler on mobile** — invited users can't tap an invite link into the app; `/join-league` takes no route params (manual code entry only). Web has `/join/:code`; mobile has no equivalent. (Background task.)
+- **`leagues.tsx` is vestigial** — `href: null` (hidden from the tab bar), reachable only from the zero-league empty states of `league.tsx`/`portfolio.tsx` ("View Leagues"). **`LeagueCarousel.tsx` is orphaned dead code** — never imported/mounted, referenced only in `ARCHITECTURE.md`. Decide: consolidate onto the League tab or delete. (Background task.)
+- **`quote` / `historical-bars` return non-2xx for every symbol in Expo Go** — **UNRESOLVED.** Ruled out `no_credentials`-alone (`historical-bars` uses the shared env Alpaca key, not per-user creds, yet also fails). Two hypotheses: **A) auth/JWT** — both fail at the auth layer (check whether `place-order`/join also fail → auth); **B) Alpaca keys invalid** — per-user creds AND shared env key both stale post-rotation (only market-data functions fail). Confirm via `error.context.json()` in-app or the dashboard invocation status.
