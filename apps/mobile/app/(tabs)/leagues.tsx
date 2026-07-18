@@ -267,12 +267,20 @@ export default function LeaguesScreen() {
       >
         <View style={styles.header}>
           <Text style={styles.title}>Leagues</Text>
-          <TouchableOpacity
-            style={styles.createButton}
-            onPress={() => setShowCreateModal(true)}
-          >
-            <Text style={styles.createButtonText}>+ Create</Text>
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={styles.joinButton}
+              onPress={() => router.push('/join-league')}
+            >
+              <Text style={styles.joinButtonText}>Join</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.createButton}
+              onPress={() => setShowCreateModal(true)}
+            >
+              <Text style={styles.createButtonText}>+ Create</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {loading ? (
@@ -281,7 +289,7 @@ export default function LeaguesScreen() {
           <View style={styles.emptyState}>
             <Text style={styles.emptyTitle}>No leagues yet</Text>
             <Text style={styles.emptySubtitle}>
-              Create or join a league on the web app to get started
+              Create a league or join one with an invite code to get started
             </Text>
           </View>
         ) : (
@@ -905,6 +913,24 @@ const styles = StyleSheet.create({
   },
   createButtonText: {
     color: Colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  joinButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  joinButtonText: {
+    color: Colors.primary,
     fontSize: 14,
     fontWeight: '600',
   },

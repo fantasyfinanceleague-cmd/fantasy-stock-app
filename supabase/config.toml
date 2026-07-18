@@ -51,3 +51,23 @@ verify_jwt = false
 enabled = true
 verify_jwt = true
 entrypoint = "./functions/refresh-symbols/index.ts"
+
+# RLS-hardening (preview/join pair): server-side by-code league PREVIEW. verify_jwt
+# ensures both clients preview post-login (web /join/:code is <Protected>; mobile
+# lookupCode requires user). The by-code lookup uses SB_SECRET_KEY_INTERNAL
+# (RLS-bypass) so leagues/league_members/league_invites stay members-only to
+# clients. Rate-limited (per-user + per-IP, fail-open) so it isn't an enumeration
+# oracle. Returns display-only fields — no id/commissioner_id/invite_code.
+[functions.preview-league]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/preview-league/index.ts"
+
+# RLS-hardening (preview/join pair): atomic server-side JOIN. verify_jwt=true. The
+# mutation runs in join_league_by_code (SECURITY DEFINER, EXECUTE granted to
+# service_role ONLY), so league_members inserts + league_invites accept-updates
+# never touch the client. Retires interim policy [I7].
+[functions.join-league]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/join-league/index.ts"

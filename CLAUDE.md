@@ -50,4 +50,7 @@ Rule of thumb: **Opus by default; Fable only for the big, non-security refactors
 - A `verify_jwt` true→false flip may not take on first deploy. Confirm it took with a no-credential request that reaches OUR code (not the gateway's generic 401), plus the dashboard Verify-JWT toggle.
 - **Merging to `main` auto-deploys the web app to Vercel production** — treat a merge as a prod deploy. Add/rename any required Vercel env vars BEFORE merging.
 
+**Git (commit hygiene):**
+- **Run `git status` before EVERY commit.** `git add <file>` does NOT scope the commit — the *index* does. Anything already staged (a rename, a file left in the index from a prior session, another agent's work) rides along even if you only `git add`ed one path. This bit us: a pre-staged `docs/ → supabase/migrations/` rename of a deliberately-held file got swept into an unrelated feature commit, landing it in the `db push` apply path. Before committing, inspect `git status` and `git diff --cached --stat`, and confirm the staged set is EXACTLY what you intend — nothing more.
+
 **General:** after a dry-run or any state change, verify the ACTUAL state (grep / `git status` / a query) before building on it. Don't assume a command did what its output implied.

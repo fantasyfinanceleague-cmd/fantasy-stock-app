@@ -14,7 +14,6 @@ const ACCENT_BG = Colors.primaryBg;
 type Step = 'code' | 'preview';
 
 interface LeaguePreview {
-  id: string;
   name: string;
   league_type: 'matchup' | 'duration';
   num_participants: number;
@@ -27,6 +26,14 @@ interface LeaguePreview {
   num_weeks: number | null;
   commissioner_name: string;
 }
+
+const REASON_MSG: Record<string, string> = {
+  already_member:   'You are already a member of this league',
+  league_full:      'This league is full',
+  invite_expired:   'This invite has already been used or expired',
+  season_completed: "This league's season has ended",
+  invalid_code:     'Invalid invite code. Please check and try again.',
+};
 
 export default function JoinLeagueScreen() {
   const insets = useSafeAreaInsets();
@@ -69,96 +76,20 @@ export default function JoinLeagueScreen() {
     setError(null);
 
     try {
-      const upperCode = code.trim().toUpperCase();
-
-      // First, try looking up by league's invite_code
-      let { data: leagueData, error: leagueError } = await supabase
-        .from('leagues')
-        .select('*')
-        .eq('invite_code', upperCode)
-        .maybeSingle();
-
-      // If not found, try league_invites table
-      if (!leagueData) {
-        const { data: inviteData, error: inviteError } = await supabase
-          .from('league_invites')
-          .select('league_id, status')
-          .eq('code', upperCode)
-          .maybeSingle();
-
-        if (inviteData) {
-          if (inviteData.status !== 'pending') {
-            setError('This invite has already been used or expired');
-            setLoading(false);
-            return;
-          }
-
-          // Fetch the league from the invite
-          const { data: inviteLeague } = await supabase
-            .from('leagues')
-            .select('*')
-            .eq('id', inviteData.league_id)
-            .single();
-
-          leagueData = inviteLeague;
-        }
-      }
-
-      if (!leagueData) {
-        setError('Invalid invite code. Please check and try again.');
-        setLoading(false);
-        return;
-      }
-
-      // Check if user is already a member
-      const { data: existingMember } = await supabase
-        .from('league_members')
-        .select('user_id')
-        .eq('league_id', leagueData.id)
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (existingMember) {
-        setError('You are already a member of this league');
-        setLoading(false);
-        return;
-      }
-
-      // Get current member count
-      const { count: memberCount } = await supabase
-        .from('league_members')
-        .select('*', { count: 'exact', head: true })
-        .eq('league_id', leagueData.id);
-
-      // Check if league is full
-      if (memberCount !== null && memberCount >= leagueData.num_participants) {
-        setError('This league is full');
-        setLoading(false);
-        return;
-      }
-
-      // Get commissioner name
-      const { data: commissionerProfile } = await supabase
-        .from('user_profiles')
-        .select('username')
-        .eq('user_id', leagueData.commissioner_id)
-        .maybeSingle();
-
-      setLeague({
-        id: leagueData.id,
-        name: leagueData.name,
-        league_type: leagueData.league_type,
-        num_participants: leagueData.num_participants,
-        current_members: memberCount || 0,
-        budget_amount: leagueData.budget_amount,
-        budget_mode: leagueData.budget_mode,
-        draft_date: leagueData.draft_date,
-        draft_status: leagueData.draft_status,
-        duration_days: leagueData.duration_days,
-        num_weeks: leagueData.num_weeks,
-        commissioner_name: commissionerProfile?.username || 'Unknown',
+      // Server-side by-code lookup (RLS-bypassing, rate-limited) — leagues/
+      // league_members/league_invites stay members-only to the client.
+      const { data, error: fnErr } = await supabase.functions.invoke('preview-league', {
+        body: { code: code.trim() },
       });
 
+      if (fnErr) { setError('Something went wrong. Please try again.'); return; }
+      if (!data.found) { setError(REASON_MSG.invalid_code); return; }
+      // Hard reasons (full / already-member / expired / season over) block at the
+      // lookup step with an inline error — matches current UX (no preview card).
+      // Draft-started stays SOFT: joinable=true, the preview shows the warning.
+      if (!data.joinable) { setError(REASON_MSG[data.reason] ?? 'You cannot join this league'); return; }
+
+      setLeague(data.league);
       setStep('preview');
     } catch (err: any) {
       console.error('Error looking up code:', err);
@@ -174,39 +105,27 @@ export default function JoinLeagueScreen() {
     setJoining(true);
 
     try {
-      // Add user as member
-      const { error: memberError } = await supabase
-        .from('league_members')
-        .insert({
-          league_id: league.id,
-          user_id: user.id,
-          role: 'member',
-        });
+      // Entire join runs server-side & atomically (join_league_by_code): row-locked
+      // capacity check, re-validation, member insert, invite accept — all via the
+      // secret key, so league_members/league_invites are never client-written.
+      const { data, error: fnErr } = await supabase.functions.invoke('join-league', {
+        body: { code: code.trim() },
+      });
 
-      if (memberError) {
-        if (memberError.code === '23505') {
-          // Unique constraint violation - already a member
-          Alert.alert('Already Joined', 'You are already a member of this league');
-        } else {
-          throw memberError;
-        }
+      if (fnErr) { Alert.alert('Error', 'Failed to join league'); return; }
+      if (!data.ok) {
+        if (data.reason === 'already_member') Alert.alert('Already Joined', 'You are already a member of this league');
+        else Alert.alert('Cannot join', REASON_MSG[data.reason] ?? 'Unable to join this league');
         return;
       }
 
-      // Update invite status if it was from league_invites
-      const upperCode = code.trim().toUpperCase();
-      await supabase
-        .from('league_invites')
-        .update({ status: 'accepted' })
-        .eq('code', upperCode);
-
-      // Refresh leagues and set active
+      // Refresh leagues and set active (id comes from the join response — member now)
       await refresh();
-      setActiveLeagueId(league.id);
+      setActiveLeagueId(data.league.id);
 
       Alert.alert(
         'Welcome!',
-        `You've joined "${league.name}"!`,
+        `You've joined "${data.league.name}"!`,
         [{ text: 'OK', onPress: () => router.replace('/(tabs)') }]
       );
     } catch (err: any) {
