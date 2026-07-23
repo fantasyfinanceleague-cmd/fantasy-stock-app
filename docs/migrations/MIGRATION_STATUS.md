@@ -97,7 +97,8 @@ Chosen approach: full migration (no dependency on legacy JWT backwards-compat), 
 - `.claude/settings.local.json` embeds credentials in bash permission strings (no env block) — deferred to Phase 5
 - Pre-commit hook is broken (`pre-commit not found`); all commits use `--no-verify`
 - `apps/web/` IS deployed on Vercel (`vercel.json` present) — affects Phase 3
-- Alpaca keys already rotated (separate from Supabase migration); dead values still in some files, harmless
+- ~~Alpaca keys already rotated (separate from Supabase migration); dead values still in some files, harmless~~ ⚠️ **CORRECTED 2026-07-17 — they were NOT harmless.** The `ALPACA_API_KEY` / `ALPACA_API_SECRET` **function secrets** still held the dead pre-rotation values, silently breaking the **6 functions that share them**: `historical-bars`, `symbols-search`, `ticker-quotes`, and the **3 cron** functions (`process-week-results`, `snapshot-week-start`, `snapshot-week-end`). Re-pointed to valid keys (confirmed 200 against Alpaca). No data corruption resulted (gaps, not bad rows — all pre-launch test data). Full writeup: **`docs/fixes/2026-07-ALPACA_KEY_ROTATION_SCORING.md`**.
+- 🕵️ **A dead Alpaca key masquerades as "market closed" — `cron_job_status` logs SUCCESS, not failure.** `isMarketOpenToday()` only returns `{open:true}` inside `if (res.ok)`; a 401 falls through to `{open:false}`, so `snapshot-week-start` early-returns `200 {message:'Market closed (holiday), skipping Monday run'}` and records **success**. **Absence of failures in `cron_job_status` is NOT evidence the pipeline worked** — verify with actual output (`week_snapshots` row gaps), not job status. Prevention shipped: `process-week-results` freshness guard (`1c0d438`, deployed) refuses to back-score a snapshot-less week that ended >72h ago.
 
 ---
 
