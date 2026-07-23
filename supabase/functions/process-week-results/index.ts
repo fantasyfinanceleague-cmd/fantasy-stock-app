@@ -20,6 +20,11 @@ function env(k: string) { return Deno.env.get(k) ?? ''; }
 
 const ALPACA_BASE = 'https://data.alpaca.markets/v2';
 
+// Max age of an ENDED week that may still be scored WITHOUT week_snapshots,
+// using current prices. Beyond this we refuse rather than fabricate results.
+// ~3 days covers a normal week_end -> cron run plus a retry.
+const FALLBACK_MAX_AGE_HOURS = 72;
+
 // Update job status for tracking
 async function updateJobStatus(
   supabase: any,
@@ -891,6 +896,7 @@ Deno.serve(async (req) => {
 
     let processedCount = 0;
     const results: any[] = [];
+    const skipped: any[] = [];
 
     // Process each league
     for (const [leagueId, leagueMatchups] of matchupsByLeague) {
@@ -940,6 +946,39 @@ Deno.serve(async (req) => {
       // We need to get the matchup dates to filter trades
       const weekStart = leagueMatchups[0]?.week_start;
       const weekEnd = leagueMatchups[0]?.week_end;
+
+      // ---- GUARD: never back-score a stale week with current prices ------------
+      // The snapshot-less path (calculatePortfolio) values holdings at TODAY's
+      // market and returns CUMULATIVE gain from draft entry — not this week's
+      // delta. That is only an acceptable proxy on the run immediately following
+      // week_end (when snapshot-week-end may not have landed yet). For a week that
+      // ended long ago (e.g. an Alpaca key outage silently skipped snapshots), it
+      // fabricates results: every such week scores the same cumulative number, so
+      // the same user "wins" every missed week and league_standings is incremented
+      // off fiction — and because standings increment, a re-run cannot undo it.
+      // Refuse: leave matchups unscored (team1_gain stays NULL) so the weeks stay
+      // visible as pending work and become scoreable once snapshots are backfilled.
+      const hasSnapshots = (snapshotData?.length ?? 0) > 0;
+      const weekAgeHours = weekEnd
+        ? (now.getTime() - new Date(weekEnd).getTime()) / 3_600_000
+        : Number.POSITIVE_INFINITY;
+
+      if (!hasSnapshots && weekAgeHours > FALLBACK_MAX_AGE_HOURS) {
+        console.error(
+          `SKIP league ${leagueId} week ${weekNumber}: no week_snapshots and week ` +
+          `ended ${weekAgeHours.toFixed(1)}h ago (> ${FALLBACK_MAX_AGE_HOURS}h) — ` +
+          `refusing to back-score with current prices.`
+        );
+        skipped.push({
+          league_id: leagueId,
+          week_number: weekNumber,
+          matchups: leagueMatchups.length,
+          week_age_hours: Math.round(weekAgeHours),
+          reason: 'stale_no_snapshots',
+        });
+        continue; // no matchup write, no standings increment
+      }
+      // -------------------------------------------------------------------------
 
       let midWeekTradesData: any[] = [];
       if (weekStart && weekEnd) {
@@ -1325,7 +1364,9 @@ Deno.serve(async (req) => {
     return json({
       message: 'Processing complete',
       processed: processedCount,
-      results
+      results,
+      skipped,
+      skipped_count: skipped.length,
     });
 
   } catch (e) {
