@@ -1,0 +1,138 @@
+-- ============================================================================
+-- LOCKDOWN gap-fill: three SECURITY DEFINER functions the inventory MISSED
+-- ============================================================================
+-- 20260718000002's header claims "a full inventory of SECURITY DEFINER
+-- functions". It was not. A re-inventory on 2026-07-24 found TWELVE such
+-- functions in supabase/migrations/, not the nine that audit worked from. The
+-- three below were never reviewed by 20260718000001 or 000002, so their EXECUTE
+-- grants were never re-asserted and they still carry Supabase's defaults.
+--
+-- WHY THEY WERE MISSED
+-- All three close with a trailing `$$ language plpgsql security definer;` on
+-- the final line. A search anchored on the CREATE FUNCTION line -- which is how
+-- the original inventory was built -- never sees the marker, because it sits
+-- dozens of lines below the declaration. The reliable inventory query greps for
+-- the security-definer marker itself, independent of the declaration, and
+-- cross-checks against pg_proc.prosecdef on the live database.
+--
+-- WHAT IS EXPOSED
+-- Per 20260718000001's header, Supabase runs
+--   ALTER DEFAULT PRIVILEGES IN SCHEMA public
+--     GRANT EXECUTE ON FUNCTIONS TO anon, authenticated, service_role;
+-- so every function in `public` is BORN with explicit anon=X / authenticated=X
+-- entries. Never having been revoked, all three are anon-callable over
+-- PostgREST today, and SECURITY DEFINER means RLS gives no cover. Two of them
+-- read a vault secret and forward it to an edge function; the third is a
+-- definer-privileged writer to league_standings. Confirm current state with the
+-- proacl query in the handoff before assuming this migration is a no-op.
+--
+-- INTENDED REACHABILITY -- established by tracing callers, not assumed. A repo
+-- grep across *.ts/*.tsx/*.js/*.sql found ZERO callers for all three: no client
+-- .rpc(), no edge-function call, no cron.schedule command text in any
+-- migration. Each is treated as owner-only, matching how 20260718000002 handled
+-- the structurally identical trigger_week_end_snapshot().
+--
+-- CAVEAT the human should close before/after applying: cron jobs created
+-- through the Supabase dashboard are NOT visible in this repo, so a grep cannot
+-- rule out a dashboard-created job invoking these. It is very likely moot --
+-- pg_cron jobs run as their owner (postgres), which owns these functions and
+-- bypasses EXECUTE grants entirely -- so revoking client roles should not break
+-- a cron path even if one exists. Verify with the cron.job query in the handoff.
+--
+-- SCOPE DISCIPLINE: this migration changes GRANTS ONLY. It alters no function
+-- body and pins no search_path -- that is the separate, parked
+-- 20260724000002_harden_definer_search_path.sql, which is gated behind this one
+-- and covers all seven unpinned definer functions including these three.
+--
+-- IDEMPOTENCY: REVOKE of an absent grant is a no-op, as is GRANT of a present
+-- one. Safe to re-run. Signatures are exact; a mismatch fails loudly rather
+-- than silently revoking nothing.
+--
+-- ACCEPTED RESIDUAL -- service_role retains its default EXECUTE on all three.
+-- The revokes below target PUBLIC / anon / authenticated, matching the
+-- precedent set for trigger_week_end_snapshot in 20260718000002. Worth stating
+-- plainly, because that migration's comment reads "grant to no one" while
+-- Supabase's default service_role=X in fact survives an untargeted revoke --
+-- service_role can still execute trigger_week_end_snapshot today, and will
+-- still be able to execute these three after this migration. That is accepted:
+-- service_role is a server-side-only trusted key, and the exposure being closed
+-- here is the anon/authenticated client boundary. Revoking service_role too
+-- would be strictly tighter but should be done uniformly across the whole
+-- definer family in its own migration, not divergently here.
+-- ============================================================================
+
+
+-- ----------------------------------------------------------------------------
+-- update_standings(uuid, text, boolean, boolean, boolean, numeric, numeric)
+-- 20251230200000. SECURITY DEFINER upsert into league_standings, incrementing
+-- wins/losses/ties/points_for/points_against.
+--
+-- Reachability: NO callers. Superseded by direct .from('league_standings')
+-- writes on the admin client in process-week-results/index.ts (:1194-1218), so
+-- it is dead code that never lost its grants. NOTE: the comment at
+-- 20260712000005:25 ("standings are updated by the SECURITY DEFINER standings
+-- function / cron") refers to this function and is now STALE -- the cron edge
+-- function writes the table directly. That stale comment is likely why this
+-- function reads as live and was never scrutinised.
+--
+-- Exposure being closed: anon-callable today = forge arbitrary W/L/T and points
+-- into ANY league's standings, with RLS bypassed by SECURITY DEFINER. The B1
+-- hardening deliberately grants clients no UPDATE policy on league_standings
+-- (20260712000005:25) -- this function is a definer-privileged hole straight
+-- through that decision. Owner-only; grant to no client role.
+--
+-- Consider DROPping it once the no-caller finding is independently confirmed --
+-- deliberately NOT dropped here, since dropping is destructive and irreversible
+-- while a revoke is not. Revoke first, drop later if desired.
+-- ----------------------------------------------------------------------------
+REVOKE ALL ON FUNCTION update_standings(uuid, text, boolean, boolean, boolean, numeric, numeric) FROM PUBLIC;
+REVOKE ALL ON FUNCTION update_standings(uuid, text, boolean, boolean, boolean, numeric, numeric) FROM anon;
+REVOKE ALL ON FUNCTION update_standings(uuid, text, boolean, boolean, boolean, numeric, numeric) FROM authenticated;
+
+-- ----------------------------------------------------------------------------
+-- trigger_week_processing()
+-- 20251230210000. MANUAL admin helper. Reads the `service_role_key` vault
+-- secret and net.http_post()s it as a Bearer token to the process-week-results
+-- edge function.
+--
+-- Reachability: NO callers -- run by a human in the SQL editor as `postgres`
+-- (owner, bypasses grants). Structurally identical to trigger_week_end_snapshot,
+-- which 20260718000002 stripped of all client roles.
+--
+-- Exposure being closed: anon-callable today = force a full week-processing run,
+-- authenticated with the service_role key, from an unauthenticated request.
+-- process-week-results settles matchups and mutates standings, so this is a
+-- destructive-integrity trigger reachable with no credential at all. Owner-only.
+--
+-- SEPARATE FOLLOW-UP (not this migration): this function carries a hardcoded
+-- legacy anon JWT as a fallback when the vault lookup returns NULL. Value not
+-- reproduced here; see 20251230210000 for the location. It is the publishable
+-- anon key rather than a secret, so severity is low, but the fallback should be
+-- removed -- a vault miss should raise, not silently downgrade auth. It also
+-- still uses legacy Bearer service_role_key auth, unmigrated to the cron_apikey
+-- scheme the snapshot functions moved to in 20260612000000/20260618000001.
+-- ----------------------------------------------------------------------------
+REVOKE ALL ON FUNCTION trigger_week_processing() FROM PUBLIC;
+REVOKE ALL ON FUNCTION trigger_week_processing() FROM anon;
+REVOKE ALL ON FUNCTION trigger_week_processing() FROM authenticated;
+
+-- ----------------------------------------------------------------------------
+-- trigger_week_snapshot()
+-- 20260105100000. MANUAL admin helper. Reads the `service_role_key` vault
+-- secret and net.http_post()s it as a Bearer token to the snapshot-week-start
+-- edge function.
+--
+-- Reachability: NO callers -- its own COMMENT (20260105100000:43) documents it
+-- as "Manually trigger week start snapshot", i.e. human-run as owner.
+--
+-- Exposure being closed: anon-callable today = force a week-start snapshot,
+-- service_role-authenticated, with no credential. Snapshots establish the
+-- baseline portfolio values that the whole week's scoring is computed against,
+-- so triggering one off-schedule corrupts scoring for that week. Owner-only.
+--
+-- Carries the same hardcoded legacy anon JWT fallback and the same unmigrated
+-- legacy Bearer auth as trigger_week_processing above -- same follow-up.
+-- ----------------------------------------------------------------------------
+REVOKE ALL ON FUNCTION trigger_week_snapshot() FROM PUBLIC;
+REVOKE ALL ON FUNCTION trigger_week_snapshot() FROM anon;
+REVOKE ALL ON FUNCTION trigger_week_snapshot() FROM authenticated;
