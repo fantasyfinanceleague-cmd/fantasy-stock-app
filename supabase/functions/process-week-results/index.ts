@@ -975,6 +975,34 @@ Deno.serve(async (req) => {
       }
       // -------------------------------------------------------------------------
 
+      // ---- GUARD: no snapshot-less scoring AFTER week 1 ------------------------
+      // Even INSIDE the freshness window above, the snapshot-less fallback
+      // (calculatePortfolio) returns CUMULATIVE gain from draft entry to the
+      // CURRENT price — a player's ALL-TIME P/L, not this week's delta
+      // (week_start_price -> week_end_price). That is only a valid proxy for
+      // week 1, where the draft entry price ~= the week-1 start price. For any
+      // week > 1 it double-counts every prior week, so whoever is up most
+      // all-time wins the week regardless of that week's actual performance —
+      // and standings increments are irreversible. Refuse: leave the week
+      // unscored (team1_gain stays NULL) pending a snapshot backfill. Distinct
+      // reason ('no_snapshots_week_gt_1') so ops can separate it from the >72h
+      // freshness skip ('stale_no_snapshots') above.
+      if (!hasSnapshots && weekNumber > 1) {
+        console.error(
+          `SKIP league ${leagueId} week ${weekNumber}: no week_snapshots and ` +
+          `week_number > 1 — refusing cumulative-from-entry fallback (it is ` +
+          `all-time P/L, not a weekly delta).`
+        );
+        skipped.push({
+          league_id: leagueId,
+          week_number: weekNumber,
+          matchups: leagueMatchups.length,
+          reason: 'no_snapshots_week_gt_1',
+        });
+        continue; // no matchup write, no standings increment
+      }
+      // -------------------------------------------------------------------------
+
       let midWeekTradesData: any[] = [];
       if (weekStart && weekEnd) {
         const { data: tradesDuringWeek } = await supabase
