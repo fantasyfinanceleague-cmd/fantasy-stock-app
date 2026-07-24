@@ -44,6 +44,7 @@ Rule of thumb: **Opus by default; Fable only for the big, non-security refactors
 **Workspace directories (monorepo — run commands from the right place):**
 - **EAS/Expo** commands run from `apps/mobile/`, never repo root. Running from root offers to create a *duplicate* project — never accept that prompt.
 - **Vite/web** commands (`npm run dev`, etc.) run from `apps/web/`, not repo root.
+- **Deno is now a LOCAL-DEV toolchain requirement, not just the Supabase edge runtime.** `supabase/functions/process-week-results/grouping.test.ts` is a hermetic unit test run with `deno test supabase/functions/process-week-results/grouping.test.ts` from repo root — contributors and CI need Deno installed to run it. It needs no DB, no secrets, and no `--allow-*` flags (first run fetches `jsr:@std/assert` into the Deno cache). `deno.lock` is committed to pin that version; it also tracks the npm workspace deps, so it can churn when `package.json` changes.
 
 **Supabase / deploys (verify state, never trust the command's own output):**
 - `supabase db push --dry-run` only PREVIEWS — the real `supabase db push` must follow. After any cron/migration change, confirm with a follow-up query (e.g. `SELECT command FROM cron.job WHERE jobname = '<job>';`), not just the push output.
