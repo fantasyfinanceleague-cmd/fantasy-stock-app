@@ -1,5 +1,6 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { groupMatchupsByLeagueWeek } from './grouping.ts';
 
 /**
  * Process Weekly Matchup Results
@@ -885,38 +886,19 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${pendingMatchups.length} matchups to process`);
 
-    // Group matchups by league AND week. Grouping by league alone was a bug: a
-    // league with unscored matchups spanning multiple weeks took its weekNumber,
-    // weekStart and weekEnd from leagueMatchups[0], then scored EVERY pending week
-    // against week[0]'s snapshots and trade window. Snapshots, the mid-week trade
-    // range, and the stale-week guard are all per-week, so the batch must be too.
-    const batches = new Map<string, { leagueId: string; weekNumber: number; matchups: any[] }>();
-    for (const m of pendingMatchups) {
-      const key = `${m.league_id}::${m.week_number}`;
-      if (!batches.has(key)) {
-        batches.set(key, { leagueId: m.league_id, weekNumber: m.week_number, matchups: [] });
-      }
-      batches.get(key)!.matchups.push(m);
-    }
-
-    // ORDER IS LOAD-BEARING: the week-advancement block below only advances when
-    // the batch's week === the league's current_week, and re-reads current_week
-    // from the DB each time. A league with weeks N and N+1 pending therefore
-    // advances one step per batch — but ONLY if N is processed before N+1. Map
-    // iteration is insertion order (i.e. PostgREST row order), so without this
-    // sort a league could score week N+1 first, skip its advancement, then
-    // advance past N — leaving current_week permanently stuck at N+1, since
-    // week N+1's matchups are no longer NULL and can never re-trigger it.
-    const orderedBatches = [...batches.values()].sort(
-      (a, b) => a.leagueId.localeCompare(b.leagueId) || a.weekNumber - b.weekNumber
-    );
+    // Group pending matchups into one batch per (league_id, week_number),
+    // ordered (leagueId, weekNumber ASC). Grouping by league alone was a bug and
+    // the ordering is load-bearing for week-advancement — both are documented and
+    // unit-tested in ./grouping.ts (see grouping.test.ts for the regression).
+    const orderedBatches = groupMatchupsByLeagueWeek(pendingMatchups);
 
     let processedCount = 0;
     const results: any[] = [];
     const skipped: any[] = [];
 
-    // Process each (league, week) batch
-    for (const { leagueId, weekNumber, matchups: leagueMatchups } of orderedBatches) {
+    // Process each (league, week) batch. weekStart / weekEnd come off the batch,
+    // not leagueMatchups[0] — every matchup in the batch shares the same window.
+    for (const { leagueId, weekNumber, weekStart, weekEnd, matchups: leagueMatchups } of orderedBatches) {
       console.log(`Processing league ${leagueId} week ${weekNumber} with ${leagueMatchups.length} matchups`);
 
       // Get all user IDs for this batch (skip null for bye weeks)
@@ -956,11 +938,9 @@ Deno.serve(async (req) => {
         console.log(`No week snapshots found for week ${weekNumber}, using fallback calculation`);
       }
 
-      // Fetch mid-week trades for this league (trades made during this week).
-      // Every matchup in the batch is the same (league, week), so they all share
-      // the same week window — [0] is representative, not arbitrary.
-      const weekStart = leagueMatchups[0]?.week_start;
-      const weekEnd = leagueMatchups[0]?.week_end;
+      // weekStart / weekEnd are destructured from the batch above (the whole batch
+      // is one (league, week), so the window is shared) and drive the mid-week
+      // trade query and the stale-week guard below.
 
       // ---- GUARD: never back-score a stale week with current prices ------------
       // The snapshot-less path (calculatePortfolio) values holdings at TODAY's
