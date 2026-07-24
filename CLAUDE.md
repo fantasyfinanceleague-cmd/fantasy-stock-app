@@ -44,6 +44,7 @@ Rule of thumb: **Opus by default; Fable only for the big, non-security refactors
 **Workspace directories (monorepo — run commands from the right place):**
 - **EAS/Expo** commands run from `apps/mobile/`, never repo root. Running from root offers to create a *duplicate* project — never accept that prompt.
 - **Vite/web** commands (`npm run dev`, etc.) run from `apps/web/`, not repo root.
+- **Deno is now a LOCAL-DEV toolchain requirement, not just the Supabase edge runtime.** `supabase/functions/process-week-results/grouping.test.ts` is a hermetic unit test run with `deno test supabase/functions/process-week-results/grouping.test.ts` from repo root — contributors and CI need Deno installed to run it. It needs no DB, no secrets, and no `--allow-*` flags (first run fetches `jsr:@std/assert` into the Deno cache). `deno.lock` is committed to pin that version; it also tracks the npm workspace deps, so it can churn when `package.json` changes.
 
 **Supabase / deploys (verify state, never trust the command's own output):**
 - `supabase db push --dry-run` only PREVIEWS — the real `supabase db push` must follow. After any cron/migration change, confirm with a follow-up query (e.g. `SELECT command FROM cron.job WHERE jobname = '<job>';`), not just the push output.
@@ -55,6 +56,7 @@ Rule of thumb: **Opus by default; Fable only for the big, non-security refactors
 
 **Git (commit hygiene):**
 - **Run `git status` before EVERY commit.** `git add <file>` does NOT scope the commit — the *index* does. Anything already staged (a rename, a file left in the index from a prior session, another agent's work) rides along even if you only `git add`ed one path. This bit us: a pre-staged `docs/ → supabase/migrations/` rename of a deliberately-held file got swept into an unrelated feature commit, landing it in the `db push` apply path. Before committing, inspect `git status` and `git diff --cached --stat`, and confirm the staged set is EXACTLY what you intend — nothing more.
+- **In worktrees, `git status` clean does NOT mean HEAD is attached to the intended branch** — a detached HEAD shows clean status, and a ref-advancing op (merge/commit/rebase) there builds on a nameless ref while the branch stays behind. Before any merge/commit/rebase in a worktree, verify attachment with `git branch --show-current` (empty = detached), not just cleanliness. These worktrees detach as a housekeeping artifact.
 
 **UI entry points (mobile):**
 - **Verify a UI entry point is both MOUNTED and REACHABLE in the state that matters — not just that the file exists.** Check: is the host visible in the tab bar, and is the element outside any `length === 0` (empty-state) branch? This bit us three times in one wave — `LeagueCarousel.tsx` orphaned (never imported/mounted), `leagues.tsx` `href: null` + only linked from zero-league empty states, and nearly again on `league.tsx`. Grep who navigates to the host screen and under what condition BEFORE adding or citing a button.

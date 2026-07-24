@@ -401,9 +401,11 @@ async function seedLeague(supabase, config, testIndex) {
   if (e7) throw new Error(`Insert matchups: ${e7.message}`);
 
   // 8. Week snapshots for ALL weeks (identical mock prices each week).
-  //    The edge function loads snapshots for leagueMatchups[0].week_number,
-  //    and without ORDER BY the first matchup could be from any week.
-  //    Creating snapshots for every week ensures deterministic scoring.
+  //    Every week of a seeded league has already ended, so a single edge-function
+  //    call scores them all; each week needs its own snapshots to be scoreable.
+  //    Prices are identical per week purely for deterministic expected standings —
+  //    which also means these scenarios CANNOT detect cross-week snapshot mixing.
+  //    The MULTI-WEEK-BACKLOG negative test covers that with per-week-distinct prices.
   const snapshots = [];
   for (let week = 1; week <= config.numWeeks; week++) {
     for (const uid of userIds) {
@@ -1482,12 +1484,168 @@ async function runNegativeTest_MidWeekTrades(supabase, logger) {
   }
 }
 
+/**
+ * MULTI-WEEK-BACKLOG: a league with several unscored ended weeks must score each
+ * week against ITS OWN week_snapshots, and advance current_week once per week.
+ *
+ * Regression test for the per-league batching bug: process-week-results used to
+ * group pending matchups by league_id alone and take weekNumber/weekStart/weekEnd
+ * from leagueMatchups[0], so every pending week of a league was scored against a
+ * single week's snapshots and trade window.
+ *
+ * The other scenarios cannot catch this: seedLeague writes IDENTICAL snapshot
+ * prices for every week (see the note at its snapshot loop), which makes scoring
+ * week 3 against week 1's snapshots indistinguishable from scoring it correctly.
+ * Here the per-week gains ROTATE between users, so cross-week contamination
+ * produces the wrong gain and the wrong winner and the assertions fail.
+ *
+ * Also covers the loop-cardinality question the fix raised: the week-advancement
+ * block now runs once per (league, week) batch rather than once per league, so
+ * this asserts a single clean walk to the playoffs — current_week advanced
+ * exactly numWeeks steps, and exactly ONE playoff bracket generated (a duplicate
+ * would mean generatePlayoffs, which blind-inserts, ran twice).
+ */
+async function runNegativeTest_MultiWeekBacklog(supabase, logger) {
+  const testIndex = NEGATIVE_TEST_OFFSET + 5;
+  const config = { name: 'MULTI-WEEK-BACKLOG', numTeams: 4, numWeeks: 3, playoffTeams: 2, numRounds: 3 };
+  const lgId = generateLeagueId(testIndex);
+  const failures = [];
+
+  // Week w, user index i → total dollar gain. Rotating so no two users tie within
+  // a week AND no user has the same gain in two different weeks. Multiples of 30
+  // divide evenly across the 3 drafted stocks (no float drift).
+  const expectedGain = (userIndex, week) => ((userIndex + week) % config.numTeams) * 30;
+
+  try {
+    const { userIds, teamStocks } = await seedLeague(supabase, config, testIndex);
+    logger.info('Seeded league (all 3 weeks ended, none scored)');
+
+    // Replace seedLeague's uniform snapshots with per-week-distinct ones.
+    const { error: delErr } = await supabase.from('week_snapshots').delete().eq('league_id', lgId);
+    if (delErr) throw new Error(`Delete snapshots: ${delErr.message}`);
+
+    const snapshots = [];
+    for (let week = 1; week <= config.numWeeks; week++) {
+      for (let i = 0; i < userIds.length; i++) {
+        const stocks = teamStocks.get(userIds[i]);
+        const gainPerStock = expectedGain(i, week) / stocks.length;
+        for (const symbol of stocks) {
+          snapshots.push({
+            league_id: lgId,
+            user_id: userIds[i],
+            week_number: week,
+            symbol,
+            quantity: 1,
+            week_start_price: 100,
+            week_end_price: 100 + gainPerStock,
+          });
+        }
+      }
+    }
+    const { error: snapErr } = await supabase.from('week_snapshots').insert(snapshots);
+    if (snapErr) throw new Error(`Insert snapshots: ${snapErr.message}`);
+    logger.info(`Inserted ${snapshots.length} per-week-distinct snapshots`);
+
+    // Single call — all 3 weeks are pending at once (the backlog case).
+    const result = await callEdgeFunction(lgId);
+    await sleep(3000);
+    logger.info(`Processed ${result.processed || 0} matchup(s), skipped ${result.skipped_count || 0}`);
+
+    if ((result.skipped_count || 0) > 0) {
+      failures.push(`Stale-week guard skipped ${result.skipped_count} batch(es) despite snapshots existing`);
+    }
+
+    // ── Each week must be scored against its OWN snapshots ──
+    const userIndexOf = new Map(userIds.map((uid, i) => [uid, i]));
+    const { data: scored } = await supabase
+      .from('matchups')
+      .select('week_number, team1_user_id, team1_gain, team2_user_id, team2_gain, winner_user_id')
+      .eq('league_id', lgId)
+      .eq('is_playoff', false)
+      .order('week_number');
+
+    if (!scored || scored.length === 0) {
+      failures.push('No regular-season matchups returned');
+    }
+
+    for (const m of scored || []) {
+      const week = m.week_number;
+      for (const side of ['team1', 'team2']) {
+        const uid = m[`${side}_user_id`];
+        const gain = m[`${side}_gain`];
+        if (!uid) continue;
+        if (gain === null) {
+          failures.push(`Week ${week}: ${side} gain is null (unscored)`);
+          continue;
+        }
+        const want = expectedGain(userIndexOf.get(uid), week);
+        if (Math.abs(Number(gain) - want) > 0.01) {
+          failures.push(
+            `Week ${week} ${side}: gain ${Number(gain).toFixed(2)}, expected ${want.toFixed(2)} ` +
+            `— week scored against another week's snapshots?`
+          );
+        }
+      }
+
+      // Winner must follow this week's gains, not another week's.
+      const g1 = expectedGain(userIndexOf.get(m.team1_user_id), week);
+      const g2 = expectedGain(userIndexOf.get(m.team2_user_id), week);
+      const wantWinner = g1 > g2 ? m.team1_user_id : m.team2_user_id;
+      if (m.winner_user_id !== wantWinner) {
+        failures.push(`Week ${week}: winner ${m.winner_user_id}, expected ${wantWinner}`);
+      }
+    }
+
+    // ── Advancement ran once per week, not once per league ──
+    const { data: league } = await supabase
+      .from('leagues')
+      .select('current_week, season_status')
+      .eq('id', lgId)
+      .single();
+    logger.info(`League state: week ${league?.current_week}, status ${league?.season_status}`);
+
+    if (league?.current_week !== config.numWeeks + 1) {
+      failures.push(`current_week ${league?.current_week}, expected ${config.numWeeks + 1} (advancement stalled or double-advanced)`);
+    }
+    if (league?.season_status !== 'playoffs') {
+      failures.push(`season_status '${league?.season_status}', expected 'playoffs'`);
+    }
+
+    // ── Exactly one bracket (generatePlayoffs is not idempotent) ──
+    const { data: playoffMatchups } = await supabase
+      .from('matchups')
+      .select('id, playoff_round')
+      .eq('league_id', lgId)
+      .eq('is_playoff', true);
+
+    const finalsCount = (playoffMatchups || []).filter(m => m.playoff_round === 'finals').length;
+    if (finalsCount !== 1) {
+      failures.push(`${finalsCount} finals matchup(s), expected 1 (duplicate bracket generation)`);
+    }
+
+    await cleanup(supabase, lgId);
+    logger.info('Cleaned up');
+
+    if (failures.length === 0) {
+      logger.success('All checks passed');
+    } else {
+      for (const f of failures) logger.fail(f);
+    }
+    return { passed: failures.length === 0, failures };
+  } catch (err) {
+    logger.error(`Exception: ${err.message}`);
+    try { await cleanup(supabase, lgId); } catch {}
+    return { passed: false, failures: [err.message] };
+  }
+}
+
 const NEGATIVE_TESTS = [
   { name: 'IDEMPOTENT',      fn: runNegativeTest_Idempotent,      description: 'Double-processing should be a no-op' },
   { name: 'FUTURE-DATES',    fn: runNegativeTest_FutureDates,     description: 'Future matchups should not be processed' },
   { name: 'EMPTY-PORTFOLIO', fn: runNegativeTest_EmptyPortfolio,  description: 'Empty portfolio should auto-lose' },
   { name: 'TIED-GAINS',      fn: runNegativeTest_TiedGains,       description: 'Equal gains → ties + seed tiebreaker' },
   { name: 'MID-WEEK-TRADES', fn: runNegativeTest_MidWeekTrades,   description: 'FIFO scoring with mid-week buys/sells' },
+  { name: 'MULTI-WEEK-BACKLOG', fn: runNegativeTest_MultiWeekBacklog, description: 'Each pending week scores against its own snapshots' },
 ];
 
 // ─── Main ───────────────────────────────────────────────────────────────────

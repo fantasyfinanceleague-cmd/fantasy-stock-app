@@ -1,5 +1,6 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { groupMatchupsByLeagueWeek } from './grouping.ts';
 
 /**
  * Process Weekly Matchup Results
@@ -885,25 +886,20 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${pendingMatchups.length} matchups to process`);
 
-    // Group matchups by league for efficient processing
-    const matchupsByLeague = new Map<string, any[]>();
-    for (const m of pendingMatchups) {
-      if (!matchupsByLeague.has(m.league_id)) {
-        matchupsByLeague.set(m.league_id, []);
-      }
-      matchupsByLeague.get(m.league_id)!.push(m);
-    }
+    // Group pending matchups into one batch per (league_id, week_number),
+    // ordered (leagueId, weekNumber ASC). Grouping by league alone was a bug and
+    // the ordering is load-bearing for week-advancement — both are documented and
+    // unit-tested in ./grouping.ts (see grouping.test.ts for the regression).
+    const orderedBatches = groupMatchupsByLeagueWeek(pendingMatchups);
 
     let processedCount = 0;
     const results: any[] = [];
     const skipped: any[] = [];
 
-    // Process each league
-    for (const [leagueId, leagueMatchups] of matchupsByLeague) {
-      console.log(`Processing league ${leagueId} with ${leagueMatchups.length} matchups`);
-
-      // Get week number from matchups
-      const weekNumber = leagueMatchups[0]?.week_number;
+    // Process each (league, week) batch. weekStart / weekEnd come off the batch,
+    // not leagueMatchups[0] — every matchup in the batch shares the same window.
+    for (const { leagueId, weekNumber, weekStart, weekEnd, matchups: leagueMatchups } of orderedBatches) {
+      console.log(`Processing league ${leagueId} week ${weekNumber} with ${leagueMatchups.length} matchups`);
 
       // Get all user IDs for this batch (skip null for bye weeks)
       const userIds = new Set<string>();
@@ -942,10 +938,9 @@ Deno.serve(async (req) => {
         console.log(`No week snapshots found for week ${weekNumber}, using fallback calculation`);
       }
 
-      // Fetch mid-week trades for this league (trades made during this week)
-      // We need to get the matchup dates to filter trades
-      const weekStart = leagueMatchups[0]?.week_start;
-      const weekEnd = leagueMatchups[0]?.week_end;
+      // weekStart / weekEnd are destructured from the batch above (the whole batch
+      // is one (league, week), so the window is shared) and drive the mid-week
+      // trade query and the stale-week guard below.
 
       // ---- GUARD: never back-score a stale week with current prices ------------
       // The snapshot-less path (calculatePortfolio) values holdings at TODAY's
@@ -1278,24 +1273,28 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Check if all matchups for the current week are done, advance week.
-      // Process each unique week sequentially (handles multi-week batches).
+      // Check if all matchups for this batch's week are done, and advance if so.
+      // One batch == one (league, week), so this runs at most once per week —
+      // the same cardinality as the previous per-league loop over unique weeks.
+      // Multi-week catch-up still works because batches are sorted week-ascending
+      // and current_week is re-read from the DB here on every batch.
       const numWeeks = leagueMatchups[0]?.leagues?.num_weeks || 0;
       const playoffTeams = leagueMatchups[0]?.leagues?.playoff_teams || 4;
-      const processedWeeks = [...new Set(leagueMatchups.map(m => m.week_number))].sort((a, b) => a - b);
 
-      for (const week of processedWeeks) {
-        // Re-read current_week from DB (may have changed from prior iteration)
-        const { data: leagueData } = await supabase
-          .from('leagues')
-          .select('current_week, season_status')
-          .eq('id', leagueId)
-          .single();
+      // Re-read current_week from DB (may have changed from a prior batch)
+      const { data: leagueData } = await supabase
+        .from('leagues')
+        .select('current_week, season_status')
+        .eq('id', leagueId)
+        .single();
 
-        const currentWeek = leagueData?.current_week || 1;
-        if (leagueData?.season_status === 'completed') break; // Season already done
-        if (week !== currentWeek) continue; // Not the current week, skip
+      const currentWeek = leagueData?.current_week || 1;
+      const seasonCompleted = leagueData?.season_status === 'completed';
 
+      // Skip advancement if the season is already done, or if this batch is not
+      // the league's current week (e.g. an earlier week was skipped by the stale
+      // guard, so the league must not advance past it).
+      if (!seasonCompleted && weekNumber === currentWeek) {
         // Check if all matchups for this week are processed
         const { data: remainingMatchups } = await supabase
           .from('matchups')
@@ -1305,11 +1304,11 @@ Deno.serve(async (req) => {
           .is('team1_gain', null);
 
         if (!remainingMatchups || remainingMatchups.length === 0) {
-          const isPlayoffWeek = leagueMatchups.some(m => m.is_playoff && m.week_number === week);
+          const isPlayoffWeek = leagueMatchups.some(m => m.is_playoff);
 
           if (isPlayoffWeek) {
             // Check if this was the finals round
-            const finalsMatchup = leagueMatchups.find(m => m.playoff_round === 'finals' && m.week_number === week);
+            const finalsMatchup = leagueMatchups.find(m => m.playoff_round === 'finals');
             if (finalsMatchup) {
               // Finals completed — complete the season (do NOT advance current_week)
               const finalsWinner = results.find(r => r.matchupId === finalsMatchup.id)?.winner;
