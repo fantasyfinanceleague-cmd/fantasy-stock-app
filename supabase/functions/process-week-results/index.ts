@@ -1037,11 +1037,22 @@ Deno.serve(async (req) => {
         .select('user_id, symbol, entry_price, quantity')
         .eq('league_id', leagueId);
 
-      // Fetch trades for this league (needed for fallback if no snapshots)
-      const { data: trades } = await supabase
+      // Fetch trades for this league (needed for fallback if no snapshots).
+      // Bound to week_end so fallback holdings reflect state AS OF week_end, not
+      // NOW. Without this, a user who held positions DURING the week but SOLD them
+      // after week_end shows empty holdings -> hasPositions=false -> auto-loss,
+      // flipping a legitimate win to a loss. (This only fixes WHICH trades count
+      // toward holdings; calculatePortfolio is still cumulative-from-entry at
+      // current prices — not a weekly delta.) weekEnd is normally truthy inside the
+      // loop; guard anyway so a null bound never corrupts the query.
+      let tradesQuery = supabase
         .from('trades')
         .select('user_id, symbol, action, quantity, price')
         .eq('league_id', leagueId);
+      if (weekEnd) {
+        tradesQuery = tradesQuery.lte('created_at', weekEnd);
+      }
+      const { data: trades } = await tradesQuery;
 
       // Get all symbols (from snapshots or drafts/trades)
       const symbols = new Set<string>(snapshotSymbols);
