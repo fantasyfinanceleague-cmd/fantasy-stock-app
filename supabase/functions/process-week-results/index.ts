@@ -1073,6 +1073,17 @@ Deno.serve(async (req) => {
 
       // Calculate scores for each user (using new scoring system if week_end_prices available)
       const userScores = new Map<string, UserScore>();
+      // ---- PER-USER GATE: the residual of the cumulative-vs-delta defect --------
+      // The two batch-level guards above (>72h freshness, week>1) both key off
+      // `hasSnapshots`, which is true if ANYONE in this league-week has a snapshot.
+      // But the scorer is chosen per-user below, so in a PARTIALLY-snapshotted week
+      // (some users snapshotted, one not — e.g. Alpaca returned no price for that
+      // user's only symbol) a snapshot-less user still reaches the `calculatePortfolio`
+      // fallback. For week > 1 that fallback is cumulative-from-entry (all-time P/L),
+      // NOT this week's delta — the exact defect the batch guards close, leaked to one
+      // user. Refuse per-user: record them as unscoreable, and skip any matchup they're
+      // in (matchup-level semantics, below) rather than fabricate an irreversible result.
+      const unscoreableUsers = new Set<string>();
       for (const userId of userIds) {
         const snapshots = userSnapshots.get(userId) || [];
         const midWeekTrades = userMidWeekTrades.get(userId) || [];
@@ -1086,8 +1097,20 @@ Deno.serve(async (req) => {
           // Legacy: Use week snapshots with live prices (no week_end_price stored yet)
           const gain = calculateWeeklyGainLegacy(userId, snapshots, prices);
           userScores.set(userId, { dollarGain: gain, percentGain: 0, hasPositions: true });
+        } else if (weekNumber > 1) {
+          // Snapshot-less user AFTER week 1: the batch guards let this league-week
+          // through (hasSnapshots is true because OTHER users have snapshots), but
+          // the cumulative-from-entry fallback is invalid for this user past week 1.
+          // Mark unscoreable — do NOT write a fabricated score.
+          unscoreableUsers.add(userId);
+          console.error(
+            `UNSCOREABLE user ${userId} in league ${leagueId} week ${weekNumber}: ` +
+            `no week_snapshot and week_number > 1 — refusing cumulative-from-entry ` +
+            `fallback (all-time P/L, not a weekly delta). Matchup will be left pending.`
+          );
         } else {
-          // Fallback to portfolio calculation (cumulative from entry price)
+          // Week 1 only: cumulative-from-entry is an acceptable proxy because the
+          // draft entry price ~= the week-1 start price. Fallback to portfolio calc.
           const portfolio = calculatePortfolio(userId, drafts || [], trades || [], prices);
           userScores.set(userId, {
             dollarGain: portfolio.gain,
@@ -1096,9 +1119,38 @@ Deno.serve(async (req) => {
           });
         }
       }
+      // -------------------------------------------------------------------------
 
       // Process each matchup
       for (const matchup of leagueMatchups) {
+        // ---- MATCHUP-LEVEL SEMANTICS for the per-user gate above ----------------
+        // If EITHER participant is unscoreable (snapshot-less past week 1), refuse
+        // the whole matchup: leave team1_gain NULL so it stays visible as pending
+        // work and becomes scoreable after a snapshot backfill + re-run. Writing a
+        // one-sided or fabricated result here would increment standings
+        // irreversibly. A re-run is safe/idempotent: once the missing snapshot is
+        // backfilled, this matchup's team1_gain is still NULL so the top-level
+        // query re-selects it, while already-scored matchups (non-NULL) drop out —
+        // no double count. Bye weeks have team2_user_id NULL, so only team1 gates.
+        const team1Unscoreable = unscoreableUsers.has(matchup.team1_user_id);
+        const team2Unscoreable =
+          matchup.team2_user_id != null && unscoreableUsers.has(matchup.team2_user_id);
+        if (team1Unscoreable || team2Unscoreable) {
+          console.error(
+            `SKIP matchup ${matchup.id} (league ${leagueId} week ${matchup.week_number}): ` +
+            `unscoreable participant (no week_snapshot, week > 1) — leaving team1_gain ` +
+            `NULL pending snapshot backfill.`
+          );
+          skipped.push({
+            league_id: leagueId,
+            week_number: matchup.week_number,
+            matchup_id: matchup.id,
+            reason: 'unscoreable_participant_no_snapshot',
+          });
+          continue; // no matchup write, no standings increment
+        }
+        // -------------------------------------------------------------------------
+
         // Check for bye week (team2_user_id is null) - only in regular season
         const isByeWeek = !matchup.team2_user_id && !matchup.is_playoff;
         const isPlayoff = matchup.is_playoff === true;
