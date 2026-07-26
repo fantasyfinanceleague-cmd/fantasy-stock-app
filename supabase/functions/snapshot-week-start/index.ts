@@ -1,5 +1,11 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import {
+  classifyCoverage,
+  selectMissingHoldings,
+  buildPricedRows,
+  type Holding,
+} from './plan.ts';
 
 /**
  * Snapshot Week Start Prices
@@ -55,10 +61,8 @@ function isAuthorized(req: Request): boolean {
   return constantTimeEqual(providedKey, expectedKey);
 }
 
-interface Holding {
-  symbol: string;
-  quantity: number;
-}
+// Holding is defined in ./plan.ts (the pure planner) and imported above so the
+// handler and the unit-tested decisions share one shape.
 
 // Check if the market is open today using Alpaca Calendar API
 async function isMarketOpenToday(alpacaKey: string, alpacaSecret: string): Promise<{ open: boolean; date: string }> {
@@ -306,23 +310,22 @@ Deno.serve(async (req) => {
 
     let totalSnapshots = 0;
     const results: any[] = [];
+    // Set when a league is ABORTED for a missing price this run (per-league
+    // all-or-nothing). Drives a single post-loop retry so the gap self-heals,
+    // without throwing (which would abort the leagues that DID snapshot).
+    let anyIncomplete = false;
 
     for (const league of leagues) {
       const leagueId = league.id;
       const currentWeek = league.current_week;
 
-      // Skip if we've already created snapshots for this week
-      const { data: existingSnapshots } = await supabase
-        .from('week_snapshots')
-        .select('id')
-        .eq('league_id', leagueId)
-        .eq('week_number', currentWeek)
-        .limit(1);
-
-      if (existingSnapshots && existingSnapshots.length > 0) {
-        console.log(`Snapshots already exist for league ${leagueId} week ${currentWeek}, skipping`);
-        continue;
-      }
+      // NOTE: the "already snapshotted?" skip moved DOWN to the coverage gate
+      // below (after holdings are known). It must test whether EVERY participant
+      // with holdings has a snapshot — not merely that ANY row exists. The old
+      // existence-only check made a partial write (a user whose only symbol lacked
+      // a price ended up with zero rows) read as "done" and become permanently
+      // unhealable: the retry skipped the league and the gap never filled. See
+      // ./plan.ts.
 
       // 2. Get all matchups for current week to find all users
       const { data: matchups } = await supabase
@@ -359,69 +362,161 @@ Deno.serve(async (req) => {
         .select('user_id, symbol, action, quantity')
         .eq('league_id', leagueId);
 
-      // 5. Calculate holdings for each user and collect all symbols
+      // 5. Calculate holdings for each user
       const userHoldings = new Map<string, Holding[]>();
-      const allSymbols = new Set<string>();
-
       for (const userId of userIds) {
-        const holdings = calculateHoldings(userId, drafts || [], trades || []);
-        userHoldings.set(userId, holdings);
-        for (const h of holdings) {
-          allSymbols.add(h.symbol);
-        }
+        userHoldings.set(userId, calculateHoldings(userId, drafts || [], trades || []));
       }
 
-      // 6. Fetch official opening prices for all symbols
+      // ── Coverage gate (replaces the old existence-only skip) ────────────────
+      // Fetch which participants already have a snapshot (and whether the week has
+      // been end-priced). Skip ONLY when the league is PROVABLY complete. A
+      // participant with zero rows reports 'incomplete' and is healed below rather
+      // than being locked out. Completeness is per-participant (see ./plan.ts) so a
+      // Monday-complete league is a no-op on Tuesday even if someone traded in
+      // between. Done BEFORE the Alpaca fetch so a complete league costs no price call.
+      const { data: existingSnapshots } = await supabase
+        .from('week_snapshots')
+        .select('user_id, week_end_price')
+        .eq('league_id', leagueId)
+        .eq('week_number', currentWeek);
+
+      const coveredUserIds = new Set<string>(
+        (existingSnapshots ?? []).map((r: any) => r.user_id)
+      );
+
+      // Guard: if ANY row already carries a Friday close, snapshot-week-end has run
+      // and this week may already be scored — re-snapshotting week-START prices now
+      // would pair a fresh start price with an old end price. Treat as complete.
+      // Mirrors snapshot-week-end's own `alreadyProcessed` guard.
+      const alreadyEndPriced = (existingSnapshots ?? []).some((r: any) => r.week_end_price != null);
+      if (alreadyEndPriced) {
+        console.log(`League ${leagueId} week ${currentWeek} already has week_end_price(s) — week is being/has been scored, skipping week-start snapshot`);
+        results.push({ leagueId, week: currentWeek, users: userIds.size, snapshots: coveredUserIds.size, skipped: 'already_end_priced' });
+        continue;
+      }
+
+      const coverage = classifyCoverage(userHoldings, coveredUserIds);
+      if (coverage === 'none_expected') {
+        console.log(`No holdings to snapshot for league ${leagueId} week ${currentWeek}, skipping`);
+        results.push({ leagueId, week: currentWeek, users: userIds.size, snapshots: 0, skipped: 'no_holdings' });
+        continue;
+      }
+      if (coverage === 'complete') {
+        console.log(`Snapshots already COMPLETE for league ${leagueId} week ${currentWeek} (${coveredUserIds.size} participants), skipping`);
+        results.push({ leagueId, week: currentWeek, users: userIds.size, snapshots: coveredUserIds.size, skipped: 'already_complete' });
+        continue;
+      }
+
+      // Heal: write ONLY the participants who have no snapshot yet, leaving any
+      // already-correct rows untouched (never rebuilt with this run's prices).
+      const usersToWrite = selectMissingHoldings(userHoldings, coveredUserIds);
+      if (coveredUserIds.size > 0) {
+        console.warn(`Incomplete prior snapshot for league ${leagueId} week ${currentWeek}: ${coveredUserIds.size} participant(s) present, ${usersToWrite.size} still missing — healing the missing only.`);
+      }
+      // ────────────────────────────────────────────────────────────────────────
+
+      // 6. Fetch official opening prices — only for the symbols we're about to
+      //    write (the missing participants). A heal run doesn't re-price the
+      //    already-covered users' symbols; a first (Monday) run writes everyone, so
+      //    this is the full set then.
+      const symbolsToPrice = new Set<string>();
+      for (const holdings of usersToWrite.values()) {
+        for (const h of holdings) symbolsToPrice.add(h.symbol);
+      }
+
       let prices = new Map<string, number>();
-      if (ALPACA_KEY && ALPACA_SECRET && allSymbols.size > 0) {
-        prices = await fetchOpenPrices(Array.from(allSymbols), ALPACA_KEY, ALPACA_SECRET);
+      if (ALPACA_KEY && ALPACA_SECRET && symbolsToPrice.size > 0) {
+        prices = await fetchOpenPrices(Array.from(symbolsToPrice), ALPACA_KEY, ALPACA_SECRET);
       }
 
-      // 7. Create snapshots for each user's holdings
-      const snapshots: any[] = [];
+      // 7. Build the snapshot rows for the missing participants — all-or-nothing
+      //    (see ./plan.ts). A per-symbol price gap must NOT produce a partial
+      //    write: that would read as "complete" to the coverage gate above AND to
+      //    the downstream process-week-results batch-level `hasSnapshots`, silently
+      //    corrupting scoring. So if ANY holding here is unpriced we write NOTHING
+      //    for this league this run and let the retry re-attempt.
+      const { rows: snapshots, missingSymbols } = buildPricedRows(
+        leagueId, currentWeek, usersToWrite, prices
+      );
 
-      for (const [userId, holdings] of userHoldings) {
-        for (const h of holdings) {
-          const price = prices.get(h.symbol);
-          if (!price) {
-            console.warn(`No price found for ${h.symbol}, skipping`);
-            continue;
-          }
-
-          snapshots.push({
-            league_id: leagueId,
-            user_id: userId,
-            week_number: currentWeek,
-            symbol: h.symbol,
-            quantity: h.quantity,
-            week_start_price: price,
-          });
-        }
+      if (missingSymbols.length > 0) {
+        // ABORT this league — write nothing; flag the run for a post-loop retry.
+        // Other leagues this run are unaffected. A permanently-unpriceable symbol
+        // (e.g. delisted) will exhaust retries and fall through to the downstream
+        // per-user gate — the required backstop; this just makes it fire rarely.
+        anyIncomplete = true;
+        console.error(
+          `ABORT league ${leagueId} week ${currentWeek}: no price for ` +
+          `${missingSymbols.length} symbol(s) [${missingSymbols.join(', ')}] — ` +
+          `refusing partial snapshot, will retry.`
+        );
+        results.push({
+          leagueId,
+          week: currentWeek,
+          users: userIds.size,
+          snapshots: 0,
+          incomplete: true,
+          missingSymbols,
+        });
+        continue;
       }
 
-      // 8. Insert all snapshots
-      if (snapshots.length > 0) {
-        const { error: insertErr } = await supabase
-          .from('week_snapshots')
-          .insert(snapshots);
+      // 8. Upsert the missing participants' rows. The unique (league_id, user_id,
+      //    week_number, symbol) constraint makes this idempotent (safe against
+      //    overlapping retries); because we only write not-yet-covered users, no
+      //    already-correct row is overwritten.
+      const { error: upsertErr } = await supabase
+        .from('week_snapshots')
+        .upsert(snapshots, { onConflict: 'league_id,user_id,week_number,symbol' });
 
-        if (insertErr) {
-          console.error(`Failed to insert snapshots for league ${leagueId}:`, insertErr);
-        } else {
-          console.log(`Created ${snapshots.length} snapshots for league ${leagueId} week ${currentWeek}`);
-          totalSnapshots += snapshots.length;
-        }
+      if (upsertErr) {
+        // A failed write leaves the league incomplete — treat like an abort so the
+        // retry re-attempts rather than reporting a false success.
+        anyIncomplete = true;
+        console.error(`Failed to upsert snapshots for league ${leagueId}:`, upsertErr);
+        results.push({ leagueId, week: currentWeek, users: userIds.size, snapshots: 0, writeError: true });
+        continue;
       }
 
-      results.push({
-        leagueId,
-        week: currentWeek,
-        users: userIds.size,
-        snapshots: snapshots.length,
-      });
+      console.log(`Snapshotted ${snapshots.length} rows for ${usersToWrite.size} participant(s) in league ${leagueId} week ${currentWeek}`);
+      totalSnapshots += snapshots.length;
+      results.push({ leagueId, week: currentWeek, users: userIds.size, snapshots: snapshots.length });
     }
 
     console.log(`Total snapshots created: ${totalSnapshots}`);
+
+    // If any league was ABORTED for a missing price, schedule a retry (self-heal)
+    // instead of reporting success. Same retry path the catch block uses, but
+    // reached WITHOUT throwing — so leagues that snapshotted this run are
+    // preserved and only the incomplete ones are re-attempted (the coverage gate
+    // skips the complete ones on the next pass).
+    if (anyIncomplete) {
+      if (retryAttempt < MAX_RETRIES) {
+        console.log(`One or more leagues incomplete (missing prices); scheduling retry ${retryAttempt + 1}`);
+        await scheduleRetry(supabase, JOB_NAME, retryAttempt + 1);
+        await updateJobStatus(supabase, JOB_NAME, 'retrying', retryAttempt, 'Incomplete: missing prices for some holdings');
+        return json({
+          message: 'Snapshot incomplete — retry scheduled',
+          totalSnapshots,
+          results,
+          retryScheduled: true,
+          attempt: retryAttempt,
+        });
+      }
+      // Retries exhausted with leagues still incomplete — almost certainly a
+      // permanently-unpriceable (e.g. delisted) symbol. Give up on those leagues;
+      // the downstream per-user gate is the backstop. Report failed for ops
+      // visibility, but do NOT throw (the leagues that snapshotted are valid).
+      console.error(`Max retries (${MAX_RETRIES}) reached; some leagues still incomplete (likely unpriceable/delisted symbols).`);
+      await updateJobStatus(supabase, JOB_NAME, 'failed', retryAttempt, 'Incomplete after max retries: unpriceable holdings');
+      return json({
+        message: 'Snapshot incomplete after max retries',
+        totalSnapshots,
+        results,
+        incomplete: true,
+      }, 500);
+    }
 
     // Update status to success
     await updateJobStatus(supabase, JOB_NAME, 'success', retryAttempt);
