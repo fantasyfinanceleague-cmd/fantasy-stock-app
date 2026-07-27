@@ -2,11 +2,11 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "c16f8e54bfd870bb85253a1477991d767a5aeb3d",
-    "commitShort": "c16f8e5",
+    "commit": "f4d7deb2582660ac2b6fa8c3ecd1e1162c53e4cd",
+    "commitShort": "f4d7deb",
     "branch": "claude/architecture-map-generator-01ec80",
     "dirty": true,
-    "timestamp": "2026-07-27T20:52:04Z",
+    "timestamp": "2026-07-27T21:06:16Z",
     "sourceHash": "sha256:508fe0f5e060567dbac199a90ad1234b",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
@@ -14,7 +14,7 @@
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-07-27T20:14:32Z",
-    "ageHours": 0.6,
+    "ageHours": 0.9,
     "ageDays": 0,
     "staleAfterDays": 14,
     "stale": false,

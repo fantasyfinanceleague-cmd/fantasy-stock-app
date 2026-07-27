@@ -89,11 +89,22 @@
 
   /* ---------- main: graph + rail, both fill the viewport ---------- */
   main { flex:1; display:flex; min-height:0; }
-  .graphwrap { flex:1; position:relative; overflow:auto; padding:18px; min-width:0; }
-  .columns { display:flex; gap:24px; min-width:min-content; position:relative; z-index:2; align-items:flex-start; }
+  /* NO top padding. A sticky header pins to the scrollport edge, which for a padded
+     scroll container is the PADDING box — so any top padding leaves a strip above the
+     pinned header where cards scroll past in full view. The header's own padding-top
+     supplies the spacing instead, so its background paints that strip. */
+  .graphwrap { flex:1; position:relative; overflow:auto; padding:0 18px 18px; min-width:0; }
+  /* align-items must STRETCH, not flex-start. A sticky header can only stick inside its
+     own parent's box, so a short column (Pure modules has 3 cards) would let its header
+     scroll away while the tall columns kept theirs pinned. Stretching makes every .col
+     as tall as the tallest, so all six headers stay pinned for the whole scroll. */
+  .columns { display:flex; gap:24px; min-width:min-content; position:relative; z-index:2; align-items:stretch; }
   .col { flex:0 0 186px; }
-  .col > h3 { margin:0 0 9px; font-size:9.5px; text-transform:uppercase; letter-spacing:.09em;
-              color:var(--muted); font-weight:700; position:sticky; top:0; background:var(--bg); padding:2px 0; z-index:3; }
+  /* margin-bottom would be a transparent band under the pinned header — cards would show
+     through it. Use padding so the background covers the whole gap, above and below. */
+  .col > h3 { margin:0; font-size:9.5px; text-transform:uppercase; letter-spacing:.09em;
+              color:var(--muted); font-weight:700; position:sticky; top:0;
+              background:var(--bg); padding:18px 0 10px; z-index:3; }
   .col[data-layer="trigger"]  > h3 { color:var(--trigger); }
   .col[data-layer="client"]   > h3 { color:var(--client); }
   .col[data-layer="edge"]     > h3 { color:var(--edge); }
@@ -128,7 +139,9 @@
   .flag.unv  { background:var(--high-bg); color:var(--high); }
   .flag.note { background:var(--accent-soft); color:var(--accent); }
 
-  svg.wires { position:absolute; top:18px; left:18px; z-index:1; pointer-events:none; overflow:visible; }
+  /* Pinned to the padding-box origin and offset purely in JS from measured rects, so
+     changing .graphwrap's padding can never desync the wires from the cards again. */
+  svg.wires { position:absolute; top:0; left:0; z-index:1; pointer-events:none; overflow:visible; }
   svg.wires path { fill:none; stroke:var(--accent); stroke-width:1.8; opacity:.8; }
   svg.wires circle { fill:var(--accent); }
   svg.wires text { fill:#fff; font:700 10px ui-sans-serif,sans-serif; text-anchor:middle; }
@@ -338,8 +351,9 @@ __ARCHITECTURE_JSON__
     svg.innerHTML = '';
     if (!currentFlow) return;
     const wrap = el('graphwrap');
-    const ox = wrap.getBoundingClientRect().left - wrap.scrollLeft + 18;
-    const oy = wrap.getBoundingClientRect().top - wrap.scrollTop + 18;
+    const wr = wrap.getBoundingClientRect();
+    const ox = wr.left - wrap.scrollLeft;
+    const oy = wr.top - wrap.scrollTop;
     const NS = 'http://www.w3.org/2000/svg';
     for (const step of currentFlow.steps) {
       const focused = activeStep === null || activeStep === step.n;
