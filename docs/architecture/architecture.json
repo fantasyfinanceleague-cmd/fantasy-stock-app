@@ -2,22 +2,13 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "2425b861ea486d0b2bf59f5d7bf19d433df2654d",
-    "commitShort": "2425b86",
+    "commit": "7966835e9faff078321f005ed7bb532854cad284",
+    "commitShort": "7966835",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "claude/architecture-map-generator-01ec80",
-    "dirty": true,
-    "dirtyPaths": [
-      {
-        "code": "M",
-        "path": "scripts/architecture-viewer.html"
-      },
-      {
-        "code": "M",
-        "path": "scripts/gen-architecture.mjs"
-      }
-    ],
-    "timestamp": "2026-07-27T21:12:38Z",
+    "dirty": false,
+    "dirtyPaths": [],
+    "timestamp": "2026-07-27T21:12:59Z",
     "sourceHash": "sha256:508fe0f5e060567dbac199a90ad1234b",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
