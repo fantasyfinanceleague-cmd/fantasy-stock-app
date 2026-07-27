@@ -96,12 +96,57 @@ function stripSqlComments(sql) {
     .join('\n');
 }
 
-function git(args, fallback = '') {
+function gitRaw(args, fallback = '') {
   try {
-    return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim();
+    return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' });
   } catch {
     return fallback;
   }
+}
+const git = (args, fallback = '') => gitRaw(args, fallback).trim();
+
+/**
+ * Uncommitted changes to files this map is DERIVED FROM, plus the generator itself.
+ *
+ * Deliberately NOT a bare `git status --porcelain`. That counts everything — an
+ * unrelated scratch file, and worse, this generator's own outputs, which are dirty by
+ * definition every time you regenerate after the last commit. A flag that is true on
+ * every ordinary run is indistinguishable from one that is broken, so it gets ignored.
+ *
+ * Scoped this way the flag answers a real question: does `generated.commit` fully
+ * identify what you are looking at, or was the map built over work in progress?
+ *
+ * Note the recorded commit is necessarily the PARENT of the commit that contains the
+ * map — writing the map changes the tree. So `commit` means "the source state this map
+ * describes", not "the commit this file lives in". Regenerating on a clean tree is what
+ * makes that description exact.
+ */
+const DIRTY_SCOPE = [
+  'supabase/functions', 'supabase/migrations', 'supabase/config.toml',
+  'apps', 'packages',
+  'docs/architecture/db-snapshot.json', 'docs/architecture/annotations.json',
+  'scripts/gen-architecture.mjs', 'scripts/architecture-viewer.html',
+];
+const GENERATED_OUTPUTS = ['docs/architecture/architecture.json', 'docs/architecture/architecture.html'];
+
+function dirtyInputs() {
+  // gitRaw, NOT git: porcelain encodes status in the first two COLUMNS, and an
+  // unstaged-only change is " M path" with a leading space. Trimming the output eats
+  // that space on the first line and shifts the path by one character.
+  const raw = gitRaw(['status', '--porcelain', '--', ...DIRTY_SCOPE]);
+  if (!raw.trim()) return [];
+  return raw.split('\n')
+    .filter((l) => l.length > 3)
+    .map((l) => {
+      const code = l.slice(0, 2).trim();
+      let path = l.slice(3);
+      // Renames are "R  old -> new"; the new path is what exists on disk.
+      const arrow = path.indexOf(' -> ');
+      if (arrow !== -1) path = path.slice(arrow + 4);
+      return { code, path: path.replace(/^"|"$/g, '') };
+    })
+    .filter((e) => e.path && !GENERATED_OUTPUTS.includes(e.path))
+    .sort((a, b) => a.path.localeCompare(b.path));
 }
 
 // ---------------------------------------------------------------------------
@@ -806,6 +851,7 @@ function build() {
     unverified.push({ scope: 'dbSnapshot', claim: 'any Postgres fact', reason: 'docs/architecture/db-snapshot.json is missing — no ACLs, RLS policies, or cron jobs are known.', resolve: 'Run docs/architecture/db-snapshot.sql against prod and save the output.' });
   }
 
+  const dirtyPaths = dirtyInputs();
   const nodeList = [...nodes.values()].sort((a, b) => a.id.localeCompare(b.id));
   const edgeList = [...edges.values()].sort((a, b) => a.id.localeCompare(b.id));
   const driftRows = nodeList.flatMap((n) => n.drift.map((d) => ({ node: n.id, label: n.label, ...d })));
@@ -819,8 +865,10 @@ function build() {
       generated: {
         commit: git(['rev-parse', 'HEAD'], 'unknown'),
         commitShort: git(['rev-parse', '--short', 'HEAD'], 'unknown'),
+        commitMeaning: 'The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.',
         branch: git(['branch', '--show-current'], '(detached)'),
-        dirty: git(['status', '--porcelain']) !== '',
+        dirty: dirtyPaths.length > 0,
+        dirtyPaths,
         timestamp: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'),
         sourceHash,
         command: 'node scripts/gen-architecture.mjs',

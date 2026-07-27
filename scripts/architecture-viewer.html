@@ -282,9 +282,22 @@ __ARCHITECTURE_JSON__
   el('m-commit').textContent = D.generated.commitShort + ' (' + D.generated.branch + ')';
   el('m-gen').textContent = D.generated.timestamp.replace('T', ' ').replace('Z', ' UTC');
   el('m-hash').textContent = D.generated.sourceHash.replace('sha256:', '').slice(0, 12);
+  // The dirty badge names the files, because "dirty tree" alone tells you nothing you
+  // can act on. It counts only sources this map is derived from (plus the generator) —
+  // never the generated output, which is dirty by definition on every regeneration.
   const dirty = el('m-dirty');
-  if (D.generated.dirty) { dirty.textContent = 'built from a dirty tree'; dirty.className = 'pill med'; }
-  else dirty.remove();
+  const dp = D.generated.dirtyPaths || [];
+  if (dp.length) {
+    dirty.textContent = dp.length + ' source' + (dp.length > 1 ? 's' : '') + ' uncommitted at build';
+    dirty.className = 'pill med btn';
+    dirty.title = 'Click for the list';
+    dirty.addEventListener('click', () => openDrawer(
+      'Uncommitted at build time',
+      'commit <code>' + esc(D.generated.commitShort) + '</code> does not fully describe this map',
+      '<p class="lede">These files the map reads had uncommitted changes when it was generated, so the commit above does not identify everything you are looking at. If they were committed afterwards, regenerate to clear this.</p>' +
+      '<ul>' + dp.map(f => '<li style="margin:5px 0"><code>' + esc(f.path) + '</code> <span class="proto">' + esc(f.code || '?') + '</span></li>').join('') + '</ul>' +
+      '<h3>Why the commit is the parent</h3><p class="lede">' + esc(D.generated.commitMeaning || '') + '</p>'));
+  } else dirty.remove();
 
   const db = D.dbSnapshot, dbPill = el('m-db');
   if (!db.present) { dbPill.textContent = 'NO DB SNAPSHOT'; dbPill.className = 'pill high'; }
