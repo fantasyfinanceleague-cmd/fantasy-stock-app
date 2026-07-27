@@ -564,7 +564,10 @@ function build() {
       if (!hasApikey && fnNode?.facts.verifyJwt === true) {
         node.drift.push({ field: 'auth', declared: `${target} requires a JWT (config.toml verify_jwt=true)`, live: 'cron job sends no Authorization or apikey header', severity: 'high',
           note: 'This job cannot be authenticating. The gateway rejects a header-less POST when verify_jwt=true, so every run 401s before reaching the function.' });
-        unverified.push({ scope: `cron.${job.jobname}`, claim: 'this job succeeds', reason: 'Job sends no auth header but its target declares verify_jwt=true, so runs should be 401ing at the gateway.', resolve: "SELECT status, return_message, start_time FROM cron.job_run_details WHERE jobid = " + job.jobid + " ORDER BY start_time DESC LIMIT 5;" });
+        // NOTE: do NOT suggest cron.job_run_details here. net.http_post is async — it
+        // enqueues and returns a request id, so the job reports 'succeeded' even when
+        // the HTTP call 401s. The response lands in net._http_response instead.
+        unverified.push({ scope: `cron.${job.jobname}`, claim: 'this job succeeds', reason: 'Job sends no auth header but its target declares verify_jwt=true, so runs should be 401ing at the gateway. cron.job_run_details will still say succeeded: net.http_post is asynchronous, so the job status reflects the enqueue, not the HTTP response.', resolve: 'SELECT id, status_code, error_msg, created FROM net._http_response ORDER BY created DESC LIMIT 30;  -- and confirm the target table has actually changed recently; net._http_response prunes on a ~6h TTL' });
       }
       if (!hasApikey && fnNode?.facts.verifyJwt === false && !fnNode?.facts.authGuard) {
         node.drift.push({ field: 'auth', declared: `${target} has verify_jwt=false and no in-code guard`, live: 'cron job sends no auth header', severity: 'high',

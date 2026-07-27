@@ -2,11 +2,11 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "7b0f4bfeb61e895f1966b5f0fa7c4b1792886a7b",
-    "commitShort": "7b0f4bf",
+    "commit": "fccd0ef88c1d10c413e6bbb9f28bcd3afe16e006",
+    "commitShort": "fccd0ef",
     "branch": "claude/architecture-map-generator-01ec80",
     "dirty": true,
-    "timestamp": "2026-07-27T20:34:18Z",
+    "timestamp": "2026-07-27T20:47:08Z",
     "sourceHash": "sha256:508fe0f5e060567dbac199a90ad1234b",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
@@ -14,7 +14,7 @@
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-07-27T20:14:32Z",
-    "ageHours": 0.3,
+    "ageHours": 0.5,
     "ageDays": 0,
     "staleAfterDays": 14,
     "stale": false,
@@ -117,7 +117,7 @@
           "note": "This job cannot be authenticating. The gateway rejects a header-less POST when verify_jwt=true, so every run 401s before reaching the function."
         }
       ],
-      "annotation": "The oldest job in the schedule (jobid 7, versus 18-21 for the cron-auth-migrated set) and the only one that sends no auth header at all. It predates the RLS-hardening pass that set verify_jwt=true on refresh-symbols, and it was never migrated because no migration in the repo schedules it — it was created out-of-band, so the Phase 2b sweep over supabase/migrations/ never saw it.",
+      "annotation": "The oldest job in the schedule (jobid 7, versus 18-21 for the cron-auth-migrated set) and the only one that sends no auth header at all. It predates the RLS-hardening pass that set verify_jwt=true on refresh-symbols, and it was never migrated because no migration in the repo schedules it — it was created out-of-band, so the Phase 2b sweep over supabase/migrations/ never saw it. Its `symbols` target table is likewise created by no migration. IMPORTANT when diagnosing this: cron.job_run_details reports 'succeeded' for every run regardless, because net.http_post is asynchronous — the job status records that the request was ENQUEUED (return_message '1 row' is the request id), not what the server answered. Checked 2026-07-27: five consecutive 'succeeded' runs, which is exactly what a job 401ing every six hours also looks like. Use net._http_response, or check whether the symbols rows actually changed.",
       "verified": true,
       "id": "cron.refresh_symbols_daily",
       "label": "refresh_symbols_daily",
@@ -6294,8 +6294,8 @@
     {
       "scope": "cron.refresh_symbols_daily",
       "claim": "this job succeeds",
-      "reason": "Job sends no auth header but its target declares verify_jwt=true, so runs should be 401ing at the gateway.",
-      "resolve": "SELECT status, return_message, start_time FROM cron.job_run_details WHERE jobid = 7 ORDER BY start_time DESC LIMIT 5;"
+      "reason": "Job sends no auth header but its target declares verify_jwt=true, so runs should be 401ing at the gateway. cron.job_run_details will still say succeeded: net.http_post is asynchronous, so the job status reflects the enqueue, not the HTTP response.",
+      "resolve": "SELECT id, status_code, error_msg, created FROM net._http_response ORDER BY created DESC LIMIT 30;  -- and confirm the target table has actually changed recently; net._http_response prunes on a ~6h TTL"
     }
   ],
   "orphanAnnotations": [],
