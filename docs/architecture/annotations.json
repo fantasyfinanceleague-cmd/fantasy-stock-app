@@ -1,0 +1,33 @@
+{
+  "_comment": "Hand-written prose keyed by node / edge / flow id. NEVER overwritten by the generator — it merges these in on every run. Put explanation HERE, not in architecture.json. Keys matching no node/edge/flow are reported as orphanAnnotations (usually a rename).",
+
+  "flow.weekly-scoring": "The most defensive path in the codebase, and the reason it is defensive is that league_standings increments are irreversible. There is no transaction around the read-then-increment and no compensating write, so a fabricated score cannot be undone by re-running. Three guards therefore refuse rather than guess. Read them in order: decideBatchScoring kills a whole snapshot-less league-week; decideUserScorer marks an individual snapshot-less user unscoreable past week 1; decideMatchupScoring refuses any matchup containing one. All three exist because the fallback scorer returns cumulative-from-draft-entry P/L, which is only a valid weekly delta in week 1.",
+
+  "flow.week-end-snapshot": "Read this against flow.week-start-snapshot — the asymmetry is the point. snapshot-week-start has an extracted, unit-tested plan.ts and was hardened in 2caf9f8 to write all-or-nothing per league-week with a completeness-based skip. snapshot-week-end has neither: no extracted module, no tests, and its write path has not been audited for the same partial-write defect. Both feed the same week_snapshots rows that weekly scoring reads, and week-end runs only ten minutes before scoring does.",
+
+  "flow.season-reset": "The only flow where a destructive operation is authorized entirely inside a function body. EXECUTE on start_new_league_season is granted to `authenticated`, so any logged-in user can call it with any league id. Nothing in the grant layer stops a non-commissioner from resetting someone else's league — the internal commissioner check is the whole control. That is deliberate (the client calls it directly, so it must be authenticated-callable), but it means the gate has to be correct, with no defence in depth if it regresses.",
+
+  "flow.place-trade": "The trade row is written by the client, not by place-order. place-order reads broker_credentials, submits to Alpaca, and returns; TradeModal then inserts into trades. The broker order and the database record are committed by two different actors with nothing linking them transactionally, so a crash, network drop, or backgrounded app between the two leaves a real position at Alpaca with no row in the DB. flow.order-reconciliation exists to close that window after the fact.",
+
+  "fn.process-week-results": "1481 lines, and the only production caller is one cron job. Runs with verify_jwt=false, so the in-code constant-time apikey check is the entire authentication boundary — note it runs before the body parse and before the DB client is constructed, which is what makes an unauthenticated request cheap to reject. The two extracted modules are the parts that have been burned by bugs and are now pinned by hermetic unit tests.",
+
+  "fn.snapshot-week-end": "The unmodernised twin of snapshot-week-start. Same cron-auth pattern, same Alpaca dependency, same table — but no extracted pure module and no test file. It is the highest-value cleanup target in the repo precisely because its failure mode is silent: bad week_end_price data does not throw, it just scores people wrong.",
+
+  "mod.process-week-results/grouping": "The batch key is (league_id, week_number), not league_id. Grouping by league alone meant a league with several unscored weeks scored every one of them against week[0]'s snapshots and trade window. The sort order is equally load-bearing: the handler advances current_week only when the batch's week equals the league's current week, so weeks must arrive ascending or a league gets permanently stuck.",
+
+  "mod.process-week-results/scoring-eligibility": "Pure decision functions — no side effects, no Deno APIs; every logging call and DB write stays in index.ts. The evaluation ORDER inside decideBatchScoring is part of the contract: freshness is checked before the week>1 rule, so a stale week>1 batch reports stale_no_snapshots (the actionable operational cause) rather than the generic reason. Swapping them would silently relabel every stale skip.",
+
+  "pg.start_new_league_season": "Destructive (deletes and recreates season state) and callable by any authenticated user. anon was revoked in 20260718000000; `authenticated` was deliberately kept because the mobile client calls it directly. Authorization is therefore entirely the internal commissioner check.",
+
+  "pg.join_league_by_code": "EXECUTE is service_role only, which is the correct shape: the client never calls it, the join-league edge function does, and that function passes the JWT-verified user id rather than anything from the request body. An earlier version was authenticated-callable with a forgeable p_user_id.",
+
+  "tbl.league_standings": "Written by read-then-increment with no transaction and no idempotency key. This is the single most important fact about the scoring path — it is why process-week-results refuses to score rather than risk a wrong number, and why a re-run is safe only because the top-level query re-selects on team1_gain IS NULL.",
+
+  "tbl.rate_limit_counters": "RLS on with zero policies is intentional — it denies every client role outright, and only service_role (which bypasses RLS) touches the table via check_and_bump_rate_limit. Flagged as low-severity drift for inventory completeness, not as a defect.",
+
+  "cron.refresh_symbols_daily": "The oldest job in the schedule (jobid 7, versus 18-21 for the cron-auth-migrated set) and the only one that sends no auth header at all. It predates the RLS-hardening pass that set verify_jwt=true on refresh-symbols, and it was never migrated because no migration in the repo schedules it — it was created out-of-band, so the Phase 2b sweep over supabase/migrations/ never saw it.",
+
+  "e.ui.league-settings->pg.start_new_league_season": "The only direct client-to-SECURITY-DEFINER call in the app. Every other definer function is reached through an edge function.",
+
+  "e.fn.process-week-results->tbl.league_standings#update": "Read, add, write back. Two concurrent runs would double-count; in practice only one cron job triggers this, but nothing in the schema enforces that."
+}

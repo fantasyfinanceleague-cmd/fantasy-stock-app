@@ -1,0 +1,468 @@
+<!doctype html>
+<!--
+  SOURCE TEMPLATE for docs/architecture/architecture.html.
+
+  Do not open this file directly — it has no data in it. The generator
+  (scripts/gen-architecture.mjs) reads this template, injects the generated JSON
+  into the placeholder inside the arch-data script block, and writes
+  docs/architecture/architecture.html.
+  Edit the viewer HERE; edits to the generated file are overwritten.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Architecture map</title>
+<style>
+  :root {
+    --bg:#f6f7f9; --panel:#fff; --ink:#12151a; --muted:#5d6470; --line:#dfe3e9;
+    --accent:#2a6df4; --accent-soft:#e8f0ff;
+    --high:#c2261b; --high-bg:#fdeceb; --med:#a35b00; --med-bg:#fdf3e3; --low:#5d6470; --low-bg:#f0f2f5;
+    --ok:#1f7a45; --ok-bg:#e8f6ee;
+    --trigger:#7a4bd0; --client:#0b7285; --edge:#2a6df4; --module:#1f7a45; --db:#a35b00; --external:#5d6470;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#0e1116; --panel:#161b22; --ink:#e6e9ef; --muted:#99a1b0; --line:#2a313c;
+      --accent:#5b8dff; --accent-soft:#17243f;
+      --high:#ff7b72; --high-bg:#3a1d1b; --med:#e3a545; --med-bg:#33270f; --low:#99a1b0; --low-bg:#1e242d;
+      --ok:#57c98a; --ok-bg:#12291d;
+      --trigger:#b18ff0; --client:#4dc4d9; --edge:#5b8dff; --module:#57c98a; --db:#e3a545; --external:#99a1b0;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg:#f6f7f9; --panel:#fff; --ink:#12151a; --muted:#5d6470; --line:#dfe3e9;
+    --accent:#2a6df4; --accent-soft:#e8f0ff;
+    --high:#c2261b; --high-bg:#fdeceb; --med:#a35b00; --med-bg:#fdf3e3; --low:#5d6470; --low-bg:#f0f2f5;
+    --ok:#1f7a45; --ok-bg:#e8f6ee;
+    --trigger:#7a4bd0; --client:#0b7285; --edge:#2a6df4; --module:#1f7a45; --db:#a35b00; --external:#5d6470;
+  }
+  :root[data-theme="dark"] {
+    --bg:#0e1116; --panel:#161b22; --ink:#e6e9ef; --muted:#99a1b0; --line:#2a313c;
+    --accent:#5b8dff; --accent-soft:#17243f;
+    --high:#ff7b72; --high-bg:#3a1d1b; --med:#e3a545; --med-bg:#33270f; --low:#99a1b0; --low-bg:#1e242d;
+    --ok:#57c98a; --ok-bg:#12291d;
+    --trigger:#b18ff0; --client:#4dc4d9; --edge:#5b8dff; --module:#57c98a; --db:#e3a545; --external:#99a1b0;
+  }
+
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+         font:14px/1.5 ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  code, .mono { font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12px; }
+  a { color:var(--accent); }
+
+  /* ---------- top bar: provenance must be impossible to miss ---------- */
+  .topbar { display:flex; flex-wrap:wrap; gap:10px 22px; align-items:center;
+            padding:14px 20px; background:var(--panel); border-bottom:1px solid var(--line); }
+  .topbar h1 { font-size:15px; margin:0 12px 0 0; font-weight:650; letter-spacing:-.01em; }
+  .meta { display:flex; flex-direction:column; gap:1px; }
+  .meta .k { font-size:10px; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); }
+  .meta .v { font-size:12px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+  .pill { padding:3px 9px; border-radius:999px; font-size:11px; font-weight:650;
+          border:1px solid transparent; white-space:nowrap; }
+  .pill.ok   { background:var(--ok-bg);   color:var(--ok);   border-color:var(--ok); }
+  .pill.med  { background:var(--med-bg);  color:var(--med);  border-color:var(--med); }
+  .pill.high { background:var(--high-bg); color:var(--high); border-color:var(--high); }
+  .spacer { flex:1; }
+  .themetoggle { background:none; border:1px solid var(--line); color:var(--muted);
+                 border-radius:6px; padding:5px 10px; cursor:pointer; font-size:12px; }
+
+  /* ---------- loud banners ---------- */
+  .banner { margin:0; padding:14px 20px; border-bottom:1px solid var(--line); }
+  .banner.stale  { background:var(--high-bg); border-left:5px solid var(--high); }
+  .banner.warn   { background:var(--med-bg);  border-left:5px solid var(--med); }
+  .banner h2 { margin:0 0 6px; font-size:13px; font-weight:700; letter-spacing:.01em; }
+  .banner.stale h2 { color:var(--high); }
+  .banner.warn h2  { color:var(--med); }
+  .banner ul { margin:6px 0 0; padding-left:20px; }
+  .banner li { margin:5px 0; font-size:12.5px; }
+  .banner .why { color:var(--muted); }
+  details > summary { cursor:pointer; user-select:none; }
+
+  /* ---------- layout ---------- */
+  main { display:grid; grid-template-columns: minmax(0,1fr) 300px; gap:0; align-items:start; }
+  @media (max-width: 940px) { main { grid-template-columns: 1fr; } }
+
+  .graphwrap { position:relative; overflow-x:auto; padding:20px; }
+  .columns { display:flex; gap:26px; min-width:min-content; position:relative; z-index:2; }
+  .col { flex:0 0 190px; }
+  .col > h3 { margin:0 0 10px; font-size:10px; text-transform:uppercase; letter-spacing:.09em;
+              color:var(--muted); font-weight:700; }
+  .col[data-layer="trigger"]  > h3 { color:var(--trigger); }
+  .col[data-layer="client"]   > h3 { color:var(--client); }
+  .col[data-layer="edge"]     > h3 { color:var(--edge); }
+  .col[data-layer="module"]   > h3 { color:var(--module); }
+  .col[data-layer="db"]       > h3 { color:var(--db); }
+  .col[data-layer="external"] > h3 { color:var(--external); }
+
+  .node { background:var(--panel); border:1px solid var(--line); border-left-width:3px;
+          border-radius:7px; padding:7px 9px; margin-bottom:7px; cursor:pointer;
+          transition:opacity .12s, border-color .12s, box-shadow .12s; }
+  .node:hover { border-color:var(--accent); }
+  .node .lbl { font-size:12px; font-weight:600; word-break:break-word; }
+  .node .sub { font-size:10.5px; color:var(--muted); margin-top:2px; word-break:break-word;
+               font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+  .node[data-layer="trigger"]  { border-left-color:var(--trigger); }
+  .node[data-layer="client"]   { border-left-color:var(--client); }
+  .node[data-layer="edge"]     { border-left-color:var(--edge); }
+  .node[data-layer="module"]   { border-left-color:var(--module); }
+  .node[data-layer="db"]       { border-left-color:var(--db); }
+  .node[data-layer="external"] { border-left-color:var(--external); }
+  .node.dim { opacity:.16; }
+  .node.on  { box-shadow:0 0 0 2px var(--accent); border-color:var(--accent); }
+  .node .flags { display:flex; gap:4px; margin-top:5px; flex-wrap:wrap; }
+  .flag { font-size:9px; padding:1px 5px; border-radius:3px; font-weight:700; letter-spacing:.02em; }
+  .flag.high { background:var(--high-bg); color:var(--high); }
+  .flag.med  { background:var(--med-bg);  color:var(--med); }
+  .flag.low  { background:var(--low-bg);  color:var(--low); }
+  .flag.unv  { background:var(--high-bg); color:var(--high); }
+  .flag.note { background:var(--accent-soft); color:var(--accent); }
+
+  svg.wires { position:absolute; inset:20px; z-index:1; pointer-events:none; overflow:visible; }
+  svg.wires path { fill:none; stroke:var(--accent); stroke-width:1.8; opacity:.85; }
+  svg.wires circle { fill:var(--accent); }
+  svg.wires text { fill:#fff; font:700 10px ui-sans-serif,sans-serif; text-anchor:middle; }
+
+  /* ---------- right rail ---------- */
+  .rail { border-left:1px solid var(--line); background:var(--panel); padding:16px;
+          position:sticky; top:0; max-height:100vh; overflow-y:auto; }
+  @media (max-width: 940px) { .rail { position:static; max-height:none; border-left:none; border-top:1px solid var(--line);} }
+  .rail h3 { margin:0 0 8px; font-size:10px; text-transform:uppercase; letter-spacing:.09em; color:var(--muted); }
+  .flow { padding:8px 10px; border-radius:6px; cursor:pointer; border:1px solid transparent; margin-bottom:3px; }
+  .flow:hover { background:var(--accent-soft); }
+  .flow.on { background:var(--accent-soft); border-color:var(--accent); }
+  .flow .t { font-size:12.5px; font-weight:600; }
+  .flow .tr { font-size:10.5px; color:var(--muted); margin-top:2px; }
+  .railbtn { width:100%; text-align:left; background:none; border:1px solid var(--line);
+             border-radius:6px; padding:8px 10px; color:var(--ink); cursor:pointer; font-size:12px; margin-top:6px; }
+  .railbtn.on { border-color:var(--accent); background:var(--accent-soft); }
+
+  /* ---------- bottom panels ---------- */
+  .panel { border-top:1px solid var(--line); background:var(--panel); padding:18px 20px; }
+  .panel h2 { margin:0 0 4px; font-size:14px; }
+  .panel .lede { color:var(--muted); font-size:12.5px; margin:0 0 14px; }
+  .anno { background:var(--accent-soft); border-left:3px solid var(--accent);
+          padding:10px 12px; border-radius:0 6px 6px 0; font-size:13px; margin:0 0 14px; }
+  ol.steps { margin:0; padding:0; list-style:none; counter-reset:s; }
+  ol.steps li { display:grid; grid-template-columns:26px 1fr; gap:11px; padding:9px 0;
+                border-top:1px solid var(--line); }
+  ol.steps li:first-child { border-top:none; }
+  .num { width:22px; height:22px; border-radius:50%; background:var(--accent); color:#fff;
+         display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; }
+  .stepbody .path { font-size:11px; color:var(--muted); font-family:ui-monospace,Menlo,monospace; margin-bottom:3px; }
+  .stepbody .det { font-size:13px; }
+  .cites { margin-top:5px; display:flex; flex-wrap:wrap; gap:5px; }
+  .cite { font-size:10.5px; font-family:ui-monospace,Menlo,monospace; background:var(--low-bg);
+          color:var(--muted); padding:2px 6px; border-radius:4px; }
+  .proto { display:inline-block; font-size:9.5px; font-weight:700; letter-spacing:.03em;
+           padding:1px 5px; border-radius:3px; background:var(--low-bg); color:var(--muted); margin-left:6px; }
+
+  table.drift { width:100%; border-collapse:collapse; font-size:12.5px; }
+  table.drift th { text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.07em;
+                   color:var(--muted); padding:6px 8px; border-bottom:1px solid var(--line); }
+  table.drift td { padding:9px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  table.drift tr[data-sev="high"] td:first-child { border-left:3px solid var(--high); }
+  table.drift tr[data-sev="medium"] td:first-child { border-left:3px solid var(--med); }
+  table.drift tr[data-sev="low"] td:first-child { border-left:3px solid var(--low); }
+  .claims { display:grid; gap:3px; }
+  .claims .says { font-family:ui-monospace,Menlo,monospace; font-size:11px; }
+  .claims .says b { font-weight:700; }
+  .hidden { display:none; }
+  .scrollx { overflow-x:auto; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <h1>Architecture map</h1>
+  <div class="meta"><span class="k">Commit</span><span class="v" id="m-commit">—</span></div>
+  <div class="meta"><span class="k">Generated</span><span class="v" id="m-gen">—</span></div>
+  <div class="meta"><span class="k">Source hash</span><span class="v" id="m-hash">—</span></div>
+  <span class="pill" id="m-db">db snapshot</span>
+  <span class="pill" id="m-dirty"></span>
+  <div class="spacer"></div>
+  <button class="themetoggle" id="themebtn">Theme</button>
+</header>
+
+<div id="banners"></div>
+
+<main>
+  <div class="graphwrap">
+    <svg class="wires" id="wires"></svg>
+    <div class="columns" id="columns"></div>
+  </div>
+  <aside class="rail">
+    <h3>Flows</h3>
+    <div id="flowlist"></div>
+    <button class="railbtn" id="clearflow">Clear selection</button>
+    <button class="railbtn" id="drifttoggle">Claim vs reality</button>
+    <button class="railbtn" id="hidetoggle">Hide off-path nodes</button>
+  </aside>
+</main>
+
+<section class="panel" id="steppanel">
+  <h2 id="step-title">Select a flow</h2>
+  <p class="lede" id="step-trigger">Pick a flow on the right to highlight its path and list its steps with file:line citations.</p>
+  <div id="step-anno"></div>
+  <ol class="steps" id="steplist"></ol>
+</section>
+
+<section class="panel hidden" id="driftpanel">
+  <h2>Claim vs reality</h2>
+  <p class="lede">Every place the repo's migrations disagree with what prod actually has. Migration text is a claim; <code>db-snapshot.json</code> is the evidence. <code>REVOKE&nbsp;…&nbsp;FROM&nbsp;PUBLIC</code> does not clear Supabase's default <code>anon</code>/<code>authenticated</code> grants, and <code>CREATE OR REPLACE FUNCTION</code> does not reset privileges — so "the migration says it's locked down" is never evidence that it is.</p>
+  <div class="scrollx"><table class="drift"><thead><tr><th>Severity</th><th>Object</th><th>Field</th><th>Migration says / Database says</th><th>Note</th></tr></thead><tbody id="drifttbody"></tbody></table></div>
+</section>
+
+<section class="panel hidden" id="nodepanel">
+  <h2 id="node-title">—</h2>
+  <p class="lede" id="node-sub"></p>
+  <div id="node-anno"></div>
+  <div id="node-body"></div>
+</section>
+
+<script type="application/json" id="arch-data">
+__ARCHITECTURE_JSON__
+</script>
+
+<script>
+(function () {
+  const D = JSON.parse(document.getElementById('arch-data').textContent);
+  const byId = new Map(D.nodes.map(n => [n.id, n]));
+  const edgeById = new Map(D.edges.map(e => [e.id, e]));
+  const el = (id) => document.getElementById(id);
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+  // ---------- provenance ----------
+  el('m-commit').textContent = D.generated.commitShort + ' (' + D.generated.branch + ')';
+  el('m-gen').textContent = D.generated.timestamp.replace('T', ' ').replace('Z', ' UTC');
+  el('m-hash').textContent = D.generated.sourceHash.replace('sha256:', '').slice(0, 12);
+  const dirty = el('m-dirty');
+  if (D.generated.dirty) { dirty.textContent = 'built from a dirty tree'; dirty.className = 'pill med'; }
+  else dirty.remove();
+
+  const db = D.dbSnapshot, dbPill = el('m-db');
+  if (!db.present) { dbPill.textContent = 'NO DB SNAPSHOT'; dbPill.className = 'pill high'; }
+  else {
+    const d = db.ageDays;
+    const age = d < 1 ? Math.max(1, Math.round(db.ageHours)) + 'h old' : d + 'd old';
+    dbPill.textContent = 'db snapshot ' + age;
+    dbPill.className = 'pill ' + (db.stale ? 'high' : d > db.staleAfterDays / 2 ? 'med' : 'ok');
+    dbPill.title = 'Captured ' + db.capturedAt + ' · goes stale after ' + db.staleAfterDays + ' days';
+  }
+
+  // ---------- loud banners ----------
+  const banners = [];
+  if (!db.present) banners.push({
+    cls: 'stale', h: 'This map does not know anything about the database.',
+    body: '<p>No <code>docs/architecture/db-snapshot.json</code>. Every function ACL, search_path pin, RLS policy and cron job below is <b>unknown</b> — not verified-absent. Run <code>docs/architecture/db-snapshot.sql</code> against prod and save the output.</p>'
+  });
+  else if (db.stale) banners.push({
+    cls: 'stale', h: 'Database snapshot is ' + db.ageDays + ' days old.',
+    body: '<p>Past the ' + db.staleAfterDays + '-day freshness limit. Grants, policies and cron schedules shown below may no longer match prod. Re-run <code>docs/architecture/db-snapshot.sql</code>.</p>'
+  });
+
+  const high = D.drift.filter(r => r.severity === 'high');
+  if (high.length) banners.push({
+    cls: 'stale',
+    h: high.length + ' high-severity claim-vs-reality mismatch' + (high.length > 1 ? 'es' : ''),
+    body: '<ul>' + high.map(r =>
+      '<li><b>' + esc(r.label) + '</b> — ' + esc(r.note) +
+      '<div class="why">migration says: <code>' + esc(r.declared) + '</code> · database says: <code>' + esc(r.live) + '</code></div></li>'
+    ).join('') + '</ul>'
+  });
+
+  if (D.unverified.length) banners.push({
+    cls: 'warn',
+    h: D.unverified.length + ' thing' + (D.unverified.length > 1 ? 's' : '') + ' this map could NOT verify',
+    body: '<details open><summary>Show what is unproven and how to resolve it</summary><ul>' +
+      D.unverified.map(u =>
+        '<li><b>' + esc(u.scope) + '</b> — ' + esc(u.claim) +
+        '<div class="why">' + esc(u.reason) + '<br>resolve: <code>' + esc(u.resolve) + '</code></div></li>'
+      ).join('') + '</ul></details>'
+  });
+
+  el('banners').innerHTML = banners.map(b =>
+    '<div class="banner ' + b.cls + '"><h2>' + esc(b.h) + '</h2>' + b.body + '</div>').join('');
+
+  // ---------- columns ----------
+  const driftByNode = new Map();
+  for (const r of D.drift) { if (!driftByNode.has(r.node)) driftByNode.set(r.node, []); driftByNode.get(r.node).push(r); }
+
+  el('columns').innerHTML = D.layers.map(L => {
+    const ns = D.nodes.filter(n => n.layer === L.id);
+    return '<div class="col" data-layer="' + L.id + '"><h3>' + esc(L.label) + ' · ' + ns.length + '</h3>' +
+      ns.map(n => {
+        const dr = driftByNode.get(n.id) || [];
+        const flags = [];
+        const worst = dr.some(d => d.severity === 'high') ? 'high' : dr.some(d => d.severity === 'medium') ? 'med' : dr.length ? 'low' : null;
+        if (worst) flags.push('<span class="flag ' + worst + '">drift ' + dr.length + '</span>');
+        if (!n.verified) flags.push('<span class="flag unv">unverified</span>');
+        if (n.annotation) flags.push('<span class="flag note">note</span>');
+        return '<div class="node" data-layer="' + L.id + '" data-id="' + esc(n.id) + '">' +
+          '<div class="lbl">' + esc(n.label) + '</div>' +
+          (n.sublabel ? '<div class="sub">' + esc(n.sublabel) + '</div>' : '') +
+          (flags.length ? '<div class="flags">' + flags.join('') + '</div>' : '') +
+          '</div>';
+      }).join('') + '</div>';
+  }).join('');
+
+  // ---------- flows ----------
+  el('flowlist').innerHTML = D.flows.map(f =>
+    '<div class="flow" data-id="' + esc(f.id) + '"><div class="t">' + esc(f.title) + '</div>' +
+    '<div class="tr">' + esc(f.trigger.kind) + ' · ' + f.steps.length + ' steps</div></div>').join('');
+
+  // ---------- drift table ----------
+  el('drifttbody').innerHTML = D.drift.map(r =>
+    '<tr data-sev="' + r.severity + '"><td><b>' + r.severity.toUpperCase() + '</b></td>' +
+    '<td class="mono">' + esc(r.label) + '</td><td class="mono">' + esc(r.field) + '</td>' +
+    '<td><div class="claims"><span class="says"><b>says:</b> ' + esc(r.declared) + '</span>' +
+    '<span class="says"><b>has:</b> ' + esc(r.live) + '</span></div></td>' +
+    '<td>' + esc(r.note) + '</td></tr>').join('');
+
+  // ---------- selection ----------
+  let currentFlow = null, hideOff = false;
+
+  function nodeEl(id) { return document.querySelector('.node[data-id="' + CSS.escape(id) + '"]'); }
+
+  function drawWires(flow) {
+    const svg = el('wires');
+    svg.innerHTML = '';
+    if (!flow) return;
+    const wrap = document.querySelector('.graphwrap').getBoundingClientRect();
+    const NS = 'http://www.w3.org/2000/svg';
+    let n = 0;
+    for (const step of flow.steps) {
+      const ids = Array.isArray(step.edge) ? step.edge : [step.edge];
+      n++;
+      for (const eid of ids) {
+        const e = edgeById.get(eid); if (!e) continue;
+        const a = nodeEl(e.from), b = nodeEl(e.to); if (!a || !b) continue;
+        const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+        const x1 = ra.right - wrap.left - 20, y1 = ra.top + ra.height / 2 - wrap.top - 20;
+        const x2 = rb.left - wrap.left - 20,  y2 = rb.top + rb.height / 2 - wrap.top - 20;
+        const mx = (x1 + x2) / 2;
+        const p = document.createElementNS(NS, 'path');
+        p.setAttribute('d', `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`);
+        svg.appendChild(p);
+        // Badges are staggered along the curve. Many steps in one flow share a source
+        // node (process-week-results fans out to eight tables), so every curve has the
+        // same midpoint x and the numbers would stack into an unreadable pile.
+        const t0 = 0.34 + ((n - 1) % 5) * 0.11;
+        const bez = (a, b, c, d, t) => {
+          const u = 1 - t;
+          return u*u*u*a + 3*u*u*t*b + 3*u*t*t*c + t*t*t*d;
+        };
+        const bx = bez(x1, mx, mx, x2, t0), by = bez(y1, y1, y2, y2, t0);
+        const c = document.createElementNS(NS, 'circle');
+        c.setAttribute('cx', bx); c.setAttribute('cy', by); c.setAttribute('r', 9);
+        svg.appendChild(c);
+        const t = document.createElementNS(NS, 'text');
+        t.setAttribute('x', bx); t.setAttribute('y', by + 3.5); t.textContent = n;
+        svg.appendChild(t);
+      }
+    }
+  }
+
+  function renderSteps(flow) {
+    if (!flow) {
+      el('step-title').textContent = 'Select a flow';
+      el('step-trigger').textContent = 'Pick a flow on the right to highlight its path and list its steps with file:line citations.';
+      el('step-anno').innerHTML = ''; el('steplist').innerHTML = '';
+      return;
+    }
+    el('step-title').textContent = flow.title;
+    el('step-trigger').innerHTML = '<b>Trigger:</b> ' + esc(flow.trigger.detail);
+    el('step-anno').innerHTML = flow.annotation ? '<div class="anno">' + esc(flow.annotation) + '</div>' : '';
+    el('steplist').innerHTML = flow.steps.map(s => {
+      const ids = Array.isArray(s.edge) ? s.edge : [s.edge];
+      const e = edgeById.get(ids[0]);
+      const path = e ? (byId.get(e.from)?.label || e.from) + ' → ' + (byId.get(e.to)?.label || e.to) : ids[0];
+      const proto = e ? '<span class="proto">' + esc(e.protocol) + '</span>' : '<span class="proto">unresolved</span>';
+      return '<li><div class="num">' + s.n + '</div><div class="stepbody">' +
+        '<div class="path">' + esc(path) + proto + '</div>' +
+        '<div class="det">' + esc(s.detail) + '</div>' +
+        (e && e.annotation ? '<div class="anno" style="margin:8px 0 0">' + esc(e.annotation) + '</div>' : '') +
+        (s.files && s.files.length ? '<div class="cites">' + s.files.map(f => '<span class="cite">' + esc(f) + '</span>').join('') + '</div>' : '') +
+        '</div></li>';
+    }).join('');
+  }
+
+  function applyFlow(flow) {
+    currentFlow = flow;
+    const inPath = new Set(flow ? flow.nodePath : []);
+    document.querySelectorAll('.node').forEach(nd => {
+      const on = flow && inPath.has(nd.dataset.id);
+      nd.classList.toggle('on', !!on);
+      nd.classList.toggle('dim', !!flow && !on && !hideOff);
+      nd.classList.toggle('hidden', !!flow && !on && hideOff);
+    });
+    document.querySelectorAll('.flow').forEach(f => f.classList.toggle('on', !!flow && f.dataset.id === flow.id));
+    renderSteps(flow);
+    requestAnimationFrame(() => drawWires(flow));
+  }
+
+  el('flowlist').addEventListener('click', ev => {
+    const f = ev.target.closest('.flow'); if (!f) return;
+    applyFlow(D.flows.find(x => x.id === f.dataset.id));
+    el('steppanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+  el('clearflow').addEventListener('click', () => applyFlow(null));
+  el('hidetoggle').addEventListener('click', ev => {
+    hideOff = !hideOff; ev.target.classList.toggle('on', hideOff);
+    ev.target.textContent = hideOff ? 'Show off-path nodes' : 'Hide off-path nodes';
+    applyFlow(currentFlow);
+  });
+  el('drifttoggle').addEventListener('click', ev => {
+    const p = el('driftpanel'); p.classList.toggle('hidden');
+    ev.target.classList.toggle('on', !p.classList.contains('hidden'));
+    if (!p.classList.contains('hidden')) p.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  // ---------- node detail ----------
+  el('columns').addEventListener('click', ev => {
+    const nd = ev.target.closest('.node'); if (!nd) return;
+    const n = byId.get(nd.dataset.id); if (!n) return;
+    el('node-title').textContent = n.label;
+    el('node-sub').innerHTML = '<code>' + esc(n.id) + '</code> · ' + esc(n.kind) +
+      (n.source ? ' · <code>' + esc(n.source.path) + ':' + n.source.line + '</code>' : '');
+    el('node-anno').innerHTML = n.annotation ? '<div class="anno">' + esc(n.annotation) + '</div>' : '';
+
+    const parts = [];
+    const dr = driftByNode.get(n.id) || [];
+    if (dr.length) parts.push('<h3 style="font-size:12px;margin:14px 0 6px">Claim vs reality</h3>' +
+      dr.map(r => '<div class="banner ' + (r.severity === 'high' ? 'stale' : 'warn') +
+        '" style="border-bottom:none;margin-bottom:8px;padding:10px 12px">' +
+        '<div class="claims"><span class="says"><b>migration says:</b> ' + esc(r.declared) + '</span>' +
+        '<span class="says"><b>database says:</b> ' + esc(r.live) + '</span></div>' +
+        '<div class="why" style="margin-top:6px">' + esc(r.note) + '</div></div>').join(''));
+
+    if (n.db) parts.push('<h3 style="font-size:12px;margin:14px 0 6px">Live database facts</h3><pre class="mono" style="background:var(--low-bg);padding:10px;border-radius:6px;overflow-x:auto">' + esc(JSON.stringify(n.db, null, 2)) + '</pre>');
+    if (n.declared) parts.push('<h3 style="font-size:12px;margin:14px 0 6px">Declared by migrations</h3><pre class="mono" style="background:var(--low-bg);padding:10px;border-radius:6px;overflow-x:auto">' + esc(JSON.stringify(n.declared, null, 2)) + '</pre>');
+    if (n.facts && Object.keys(n.facts).length) parts.push('<h3 style="font-size:12px;margin:14px 0 6px">Derived from files</h3><pre class="mono" style="background:var(--low-bg);padding:10px;border-radius:6px;overflow-x:auto">' + esc(JSON.stringify(n.facts, null, 2)) + '</pre>');
+
+    const ins = D.edges.filter(e => e.to === n.id), outs = D.edges.filter(e => e.from === n.id);
+    const list = (es, dir) => es.length ? '<h3 style="font-size:12px;margin:14px 0 6px">' + dir + ' (' + es.length + ')</h3><ul style="margin:0;padding-left:18px">' +
+      es.map(e => '<li style="margin:4px 0"><code>' + esc(dir === 'Inbound' ? e.from : e.to) + '</code><span class="proto">' + esc(e.protocol) + '</span>' +
+        '<div class="cites">' + e.callSites.map(c => '<span class="cite">' + esc(c) + '</span>').join('') + '</div></li>').join('') + '</ul>' : '';
+    parts.push(list(ins, 'Inbound') + list(outs, 'Outbound'));
+
+    el('node-body').innerHTML = parts.join('');
+    el('nodepanel').classList.remove('hidden');
+    el('nodepanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  // ---------- theme ----------
+  el('themebtn').addEventListener('click', () => {
+    const cur = document.documentElement.getAttribute('data-theme');
+    const next = cur === 'dark' ? 'light' : cur === 'light' ? null : 'dark';
+    if (next) document.documentElement.setAttribute('data-theme', next);
+    else document.documentElement.removeAttribute('data-theme');
+    if (currentFlow) requestAnimationFrame(() => drawWires(currentFlow));
+  });
+
+  addEventListener('resize', () => currentFlow && drawWires(currentFlow));
+  document.querySelector('.graphwrap').addEventListener('scroll', () => currentFlow && drawWires(currentFlow));
+})();
+</script>
+</body>
+</html>

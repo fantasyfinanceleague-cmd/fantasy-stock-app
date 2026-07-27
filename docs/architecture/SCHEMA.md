@@ -355,10 +355,12 @@ Note the name mismatch the migration itself calls out: the job is named
 
 **`unverified` for this flow (3):**
 
-1. The live `cron.job` row matches the migration — until `db-snapshot.json` is captured,
-   the schedule is *claimed by migration text only*, and this history reschedules by name
-   inside exception-swallowing `DO` blocks.
+1. ~~The live `cron.job` row matches the migration.~~ **RESOLVED** by the 2026-07-27
+   snapshot: `process-weekly-matchups`, `15 21 * * 5`, active, apikey read from vault
+   `cron_apikey`. Matches the migration exactly.
 2. `SB_SECRET_KEY_CRON` is actually set on the deployed function. Not in the repo, not in
-   the snapshot. Resolve with `supabase secrets list`.
-3. `verify_jwt=false` for this function. Asserted by the migration's prose comment, not by
-   any file in the repo — there is no `config.toml` entry for it.
+   the snapshot. Resolve with `supabase secrets list`. **Still unverified.**
+3. ~~`verify_jwt=false` is asserted only by a migration comment, with no `config.toml`
+   entry.~~ **WRONG — retracted.** `supabase/config.toml:17-19` declares
+   `[functions.process-week-results] verify_jwt = false` explicitly. This is verified from
+   the repo. The generator parses `config.toml` as a first-class input.

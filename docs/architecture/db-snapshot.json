@@ -1,0 +1,706 @@
+{
+    "tables": [
+        {
+            "name": "broker_credentials",
+            "policies": [
+                {
+                    "name": "Users can delete own credentials",
+                    "roles": [
+                        "PUBLIC"
+                    ],
+                    "command": "DELETE",
+                    "permissive": true
+                },
+                {
+                    "name": "Users can insert own credentials",
+                    "roles": [
+                        "PUBLIC"
+                    ],
+                    "command": "INSERT",
+                    "permissive": true
+                },
+                {
+                    "name": "Users can update own credentials",
+                    "roles": [
+                        "PUBLIC"
+                    ],
+                    "command": "UPDATE",
+                    "permissive": true
+                },
+                {
+                    "name": "Users can view own credentials",
+                    "roles": [
+                        "PUBLIC"
+                    ],
+                    "command": "SELECT",
+                    "permissive": true
+                }
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true
+        },
+        {
+            "name": "cron_job_status",
+            "policies": [
+                {
+                    "name": "service_role_only",
+                    "roles": [
+                        "PUBLIC"
+                    ],
+                    "command": "ALL",
+                    "permissive": true
+                }
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true
+        },
+        {
+            "name": "draft_sessions",
+            "policies": [
+                {
+                    "name": "Commissioners can manage draft sessions",
+                    "roles": [
+                        "PUBLIC"
+                    ],
+                    "command": "ALL",
+                    "permissive": true
+                },
+                {
+                    "name": "Users can view draft sessions in their leagues",
+                    "roles": [
+                        "PUBLIC"
+                    ],
+                    "command": "SELECT",
+                    "permissive": true
+                }
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true
+        },
+        {
+            "name": "draft_settings",
+            "policies": [
+                {
+                    "name": "Commissioners can manage draft settings",
+                    "roles": [
+                        "PUBLIC"
+                    ],
+                    "command": "ALL",
+                    "permissive": true
+                },
+                {
+                    "name": "Users can view draft settings in their leagues",
+                    "roles": [
+                        "PUBLIC"
+                    ],
+                    "command": "SELECT",
+                    "permissive": true
+                }
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true
+        },
+        {
+            "name": "drafts",
+            "policies": [
+                {
+                    "name": "Commissioners can delete picks",
+                    "roles": [
+                        "PUBLIC"
+                    ],
+                    "command": "DELETE",
+                    "permissive": true
+                },
+                {
+                    "name": "League members can create bot picks",
+                    "roles": [
+                        "PUBLIC"
+                    ],
+                    "command": "INSERT",
+                    "permissive": true
+                },
+                {
+                    "name": "Users can create picks in their leagues",
+                    "roles": [
+                        "PUBLIC"
+                    ],
+                    "command": "INSERT",
+                    "permissive": true
+                },
+                {
+                    "name": "Users can view picks in their leagues",
+                    "roles": [
+                        "PUBLIC"
+                    ],
+                    "command": "SELECT",
+                    "permissive": true
+                }
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true
+        },
+        {
+            "name": "league_invites",
+            "policies": [
+                {
+                    "name": "league_invites_insert_commissioner",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "command": "INSERT",
+                    "permissive": true
+                },
+                {
+                    "name": "league_invites_select_commissioner",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "command": "SELECT",
+                    "permissive": true
+                }
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true
+        },
+        {
+            "name": "league_members",
+            "policies": [
+                {
+                    "name": "league_members_delete_self",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "command": "DELETE",
+                    "permissive": true
+                },
+                {
+                    "name": "league_members_insert_bot",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "command": "INSERT",
+                    "permissive": true
+                },
+                {
+                    "name": "league_members_insert_self",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "command": "INSERT",
+                    "permissive": true
+                },
+                {
+                    "name": "league_members_select_members",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "command": "SELECT",
+                    "permissive": true
+                }
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true
+        },
+        {
+            "name": "league_seasons",
+            "policies": [
+                {
+                    "name": "Commissioners can manage league seasons",
+                    "roles": [
+                        "PUBLIC"
+                    ],
+                    "command": "ALL",
+                    "permissive": true
+                },
+                {
+                    "name": "Users can view league seasons for their leagues",
+                    "roles": [
+                        "PUBLIC"
+                    ],
+                    "command": "SELECT",
+                    "permissive": true
+                }
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true
+        },
+        {
+            "name": "league_standings",
+            "policies": [
+                {
+                    "name": "league_standings_insert_members",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "command": "INSERT",
+                    "permissive": true
+                },
+                {
+                    "name": "league_standings_select_members",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "command": "SELECT",
+                    "permissive": true
+                }
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true
+        },
+        {
+            "name": "leagues",
+            "policies": [
+                {
+                    "name": "leagues_delete_commissioner",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "command": "DELETE",
+                    "permissive": true
+                },
+                {
+                    "name": "leagues_insert_self_commissioner",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "command": "INSERT",
+                    "permissive": true
+                },
+                {
+                    "name": "leagues_select_member_or_commissioner",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "command": "SELECT",
+                    "permissive": true
+                },
+                {
+                    "name": "leagues_update_commissioner",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "command": "UPDATE",
+                    "permissive": true
+                },
+                {
+                    "name": "leagues_update_member_draft_complete",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "command": "UPDATE",
+                    "permissive": true
+                }
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true
+        },
+        {
+            "name": "matchups",
+            "policies": [
+                {
+                    "name": "matchups_insert_members",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "command": "INSERT",
+                    "permissive": true
+                },
+                {
+                    "name": "matchups_select_members",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "command": "SELECT",
+                    "permissive": true
+                }
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true
+        },
+        {
+            "name": "notification_log",
+            "policies": [
+                {
+                    "name": "Service role can insert notifications",
+                    "roles": [
+                        "PUBLIC"
+                    ],
+                    "command": "INSERT",
+                    "permissive": true
+                },
+                {
+                    "name": "Users can view own notifications",
+                    "roles": [
+                        "PUBLIC"
+                    ],
+                    "command": "SELECT",
+                    "permissive": true
+                }
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true
+        },
+        {
+            "name": "rate_limit_counters",
+            "policies": [
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true
+        },
+        {
+            "name": "symbols",
+            "policies": [
+                {
+                    "name": "read symbols",
+                    "roles": [
+                        "PUBLIC"
+                    ],
+                    "command": "SELECT",
+                    "permissive": true
+                }
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true
+        },
+        {
+            "name": "trades",
+            "policies": [
+                {
+                    "name": "Users can create trades in their leagues",
+                    "roles": [
+                        "PUBLIC"
+                    ],
+                    "command": "INSERT",
+                    "permissive": true
+                },
+                {
+                    "name": "Users can view trades in their leagues",
+                    "roles": [
+                        "PUBLIC"
+                    ],
+                    "command": "SELECT",
+                    "permissive": true
+                }
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true
+        },
+        {
+            "name": "user_profiles",
+            "policies": [
+                {
+                    "name": "Anyone can view profiles",
+                    "roles": [
+                        "PUBLIC"
+                    ],
+                    "command": "SELECT",
+                    "permissive": true
+                },
+                {
+                    "name": "Users can insert own profile",
+                    "roles": [
+                        "PUBLIC"
+                    ],
+                    "command": "INSERT",
+                    "permissive": true
+                },
+                {
+                    "name": "Users can update own profile",
+                    "roles": [
+                        "PUBLIC"
+                    ],
+                    "command": "UPDATE",
+                    "permissive": true
+                }
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true
+        },
+        {
+            "name": "week_snapshots",
+            "policies": [
+                {
+                    "name": "week_snapshots_select_members",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "command": "SELECT",
+                    "permissive": true
+                }
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true
+        }
+    ],
+    "_comment": "Hand-captured from prod. Regenerate with docs/architecture/db-snapshot.sql. Not generated by gen-architecture.mjs.",
+    "cronJobs": [
+        {
+            "jobid": 19,
+            "active": true,
+            "command": "\n  SELECT net.http_post(\n    url := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/process-week-results',\n    headers := jsonb_build_object(\n      'Content-Type', 'application/json',\n      'apikey', (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'cron_apikey' LIMIT 1)\n    ),\n    body := '{}'::jsonb\n  );\n  ",
+            "jobname": "process-weekly-matchups",
+            "database": "postgres",
+            "schedule": "15 21 * * 5",
+            "username": "postgres"
+        },
+        {
+            "jobid": 7,
+            "active": true,
+            "command": "\n  select net.http_post(\n    url     := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/refresh-symbols',\n    headers := '{\"Content-Type\":\"application/json\"}'::jsonb,\n    body    := '{}'::jsonb\n  );\n  ",
+            "jobname": "refresh_symbols_daily",
+            "database": "postgres",
+            "schedule": "0 */6 * * *",
+            "username": "postgres"
+        },
+        {
+            "jobid": 18,
+            "active": true,
+            "command": "\n  SELECT net.http_post(\n    url := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/snapshot-week-end',\n    headers := jsonb_build_object(\n      'Content-Type', 'application/json',\n      'apikey', (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'cron_apikey' LIMIT 1)\n    ),\n    body := '{}'::jsonb\n  );\n  ",
+            "jobname": "snapshot-week-end",
+            "database": "postgres",
+            "schedule": "5 21 * * 5",
+            "username": "postgres"
+        },
+        {
+            "jobid": 20,
+            "active": true,
+            "command": "\n  SELECT net.http_post(\n    url := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/snapshot-week-start',\n    headers := jsonb_build_object(\n      'Content-Type', 'application/json',\n      'apikey', (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'cron_apikey' LIMIT 1)\n    ),\n    body := '{}'::jsonb\n  );\n  ",
+            "jobname": "snapshot-week-start",
+            "database": "postgres",
+            "schedule": "35 14 * * 1,2",
+            "username": "postgres"
+        },
+        {
+            "jobid": 21,
+            "active": true,
+            "command": "\n  SELECT net.http_post(\n    url := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/sync-alpaca-orders',\n    headers := jsonb_build_object(\n      'Content-Type', 'application/json',\n      'apikey', (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'cron_apikey' LIMIT 1)\n    ),\n    body := '{\"mode\": \"sync-all\"}'::jsonb\n  );\n  ",
+            "jobname": "sync-alpaca-orders",
+            "database": "postgres",
+            "schedule": "30 21 * * 1-5",
+            "username": "postgres"
+        }
+    ],
+    "database": "postgres",
+    "functions": [
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_bucket text, p_subject text, p_limit integer, p_window_seconds integer",
+            "name": "check_and_bump_rate_limit",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public"
+            ],
+            "searchPath": "public",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_league_id uuid, p_champion_user_id text, p_runner_up_user_id text",
+            "name": "complete_league_season",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public"
+            ],
+            "searchPath": "public",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "authenticated=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "user_ids text[]",
+            "name": "get_real_user_ids",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public"
+            ],
+            "searchPath": "public",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "authenticated=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_league_id uuid",
+            "name": "is_commissioner",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public"
+            ],
+            "searchPath": "public",
+            "volatility": "stable",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "authenticated=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_league_id uuid",
+            "name": "is_member",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public"
+            ],
+            "searchPath": "public",
+            "volatility": "stable",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_code text, p_user_id text",
+            "name": "join_league_by_code",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public"
+            ],
+            "searchPath": "public",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_job_name text, p_attempt integer",
+            "name": "schedule_snapshot_retry",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public"
+            ],
+            "searchPath": "public",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "authenticated=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_league_id uuid",
+            "name": "start_new_league_season",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public"
+            ],
+            "searchPath": "public",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "",
+            "name": "trigger_week_end_snapshot",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public"
+            ],
+            "searchPath": "public",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "",
+            "name": "trigger_week_processing",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public"
+            ],
+            "searchPath": "public",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "",
+            "name": "trigger_week_snapshot",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public"
+            ],
+            "searchPath": "public",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "=X/postgres",
+                "postgres=X/postgres",
+                "anon=X/postgres",
+                "authenticated=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "",
+            "name": "update_broker_credentials_updated_at",
+            "owner": "postgres",
+            "proconfig": [
+            ],
+            "searchPath": null,
+            "volatility": "volatile",
+            "securityDefiner": false
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_league_id uuid, p_user_id text, p_won boolean, p_lost boolean, p_tied boolean, p_points_for numeric, p_points_against numeric",
+            "name": "update_standings",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public"
+            ],
+            "searchPath": "public",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "=X/postgres",
+                "postgres=X/postgres",
+                "anon=X/postgres",
+                "authenticated=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "",
+            "name": "update_user_profiles_updated_at",
+            "owner": "postgres",
+            "proconfig": [
+            ],
+            "searchPath": null,
+            "volatility": "volatile",
+            "securityDefiner": false
+        }
+    ],
+    "capturedAt": "2026-07-27T20:14:32Z",
+    "postgresVersion": "17.4"
+}
