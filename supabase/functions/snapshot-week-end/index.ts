@@ -85,15 +85,33 @@ async function updateJobStatus(
 }
 
 // Schedule a retry via the database function
-async function scheduleRetry(supabase: any, jobName: string, attemptNumber: number) {
+// Returns true only if the retry was actually scheduled.
+//
+// The try/catch below is NOT what makes a failure here visible — supabase-js
+// resolves `.rpc()` to { data, error } and does NOT throw on a Postgres error, so
+// the catch only ever sees transport failures. This function previously discarded
+// the result entirely and then logged "Scheduled retry N for X" unconditionally.
+// For the whole life of the schedule_snapshot_retry timestamptz bug that log line
+// asserted success on every single call while nothing was ever scheduled — a
+// fabricated positive, which is worse than silence. Check `error` explicitly.
+async function scheduleRetry(supabase: any, jobName: string, attemptNumber: number): Promise<boolean> {
   try {
-    await supabase.rpc('schedule_snapshot_retry', {
+    const { error } = await supabase.rpc('schedule_snapshot_retry', {
       p_job_name: jobName,
       p_attempt: attemptNumber
     });
+    if (error) {
+      console.error(
+        `FAILED to schedule retry ${attemptNumber} for ${jobName} — this run will NOT be re-attempted:`,
+        error.message ?? error
+      );
+      return false;
+    }
     console.log(`Scheduled retry ${attemptNumber} for ${jobName}`);
+    return true;
   } catch (e) {
-    console.error('Failed to schedule retry:', e);
+    console.error(`FAILED to schedule retry ${attemptNumber} for ${jobName} (transport):`, e);
+    return false;
   }
 }
 
