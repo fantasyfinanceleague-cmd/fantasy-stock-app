@@ -108,8 +108,17 @@ interface PortfolioHolding {
 interface WeekSnapshot {
   symbol: string;
   quantity: number;
-  weekStartPrice: number | null;  // null for mid-week purchases
+  weekStartPrice: number | null;  // legacy rows only; see enteredMidWeek
   weekEndPrice: number | null;    // Friday close price
+  /**
+   * True when the position was opened DURING the week. Such a row's
+   * week_start_price is a purchase entry price, NOT a Monday open — and the same
+   * buy is already carried in midWeekTrades, so treating it as a week-start
+   * holding would count it twice. This flag replaces the old convention of
+   * signalling "mid-week purchase" with a NULL week_start_price, which could
+   * never actually be stored (the column is NOT NULL).
+   */
+  enteredMidWeek: boolean;
 }
 
 interface MidWeekTrade {
@@ -273,8 +282,13 @@ function calculateUserScore(
 
   // Build a map of week start holdings by symbol
   // This represents what the user held at Monday open
+  // Excludes mid-week entries explicitly. Filtering on `weekStartPrice !== null`
+  // was the old marker, and it was never reachable — the column is NOT NULL, so
+  // those rows could not be stored at all (DEFECT 3). Now they ARE stored, with a
+  // real entry price, so the flag is what separates them; keying on the price
+  // being non-null would silently double-count every mid-week buy.
   const weekStartHoldings = new Map<string, { quantity: number; price: number }>();
-  for (const snap of snapshots.filter(s => s.weekStartPrice !== null)) {
+  for (const snap of snapshots.filter(s => !s.enteredMidWeek && s.weekStartPrice !== null)) {
     weekStartHoldings.set(snap.symbol.toUpperCase(), {
       quantity: snap.quantity,
       price: snap.weekStartPrice!,
@@ -403,6 +417,9 @@ function calculateWeeklyGainLegacy(
   let totalGain = 0;
 
   for (const snapshot of snapshots) {
+    // Same reasoning as calculateUserScore: a mid-week entry is not a week-start
+    // holding, and its week_start_price is an entry price, not a Monday open.
+    if (snapshot.enteredMidWeek) continue;
     if (snapshot.weekStartPrice === null) continue;
 
     const currentPrice = prices.get(snapshot.symbol);
@@ -697,17 +714,16 @@ async function advancePlayoffWinner(
   winnerId: string
 ) {
   const round = matchup.playoff_round as PlayoffRound | null;
-  // DEFECT 2 PRESERVED VERBATIM: winner_user_id is not in the pending-matchup
-  // select list and is only written later by the UPDATE below, so it is undefined
-  // here and this always returns team2_seed. Moved into the tested module rather
-  // than fixed — see playoff-progression.test.ts.
+  // DEFECT 2 FIXED: the winner is passed in rather than re-derived from
+  // matchup.winner_user_id, which is not in the pending-matchup select list and is
+  // written only later by the UPDATE — so it was undefined here and the seed was
+  // always team2_seed. See playoff-progression.test.ts.
   const winnerSeed = winnerSeedForAdvance({
     team1UserId: matchup.team1_user_id,
     team2UserId: matchup.team2_user_id,
     team1Seed: matchup.team1_seed,
     team2Seed: matchup.team2_seed,
-    winnerUserId: matchup.winner_user_id,
-  });
+  }, winnerId);
 
   console.log(`Advancing ${winnerId} (seed ${winnerSeed}) from ${round}`);
 
@@ -930,7 +946,7 @@ Deno.serve(async (req) => {
       // Fetch week snapshots for this league/week (including week_end_price)
       const { data: snapshotData } = await supabase
         .from('week_snapshots')
-        .select('user_id, symbol, quantity, week_start_price, week_end_price')
+        .select('user_id, symbol, quantity, week_start_price, week_end_price, entered_mid_week')
         .eq('league_id', leagueId)
         .eq('week_number', weekNumber);
 
@@ -948,6 +964,7 @@ Deno.serve(async (req) => {
             symbol: s.symbol,
             quantity: Number(s.quantity),
             weekStartPrice: s.week_start_price != null ? Number(s.week_start_price) : null,
+            enteredMidWeek: s.entered_mid_week === true,
             weekEndPrice: s.week_end_price != null ? Number(s.week_end_price) : null,
           });
           snapshotSymbols.add(s.symbol);
@@ -1189,11 +1206,10 @@ Deno.serve(async (req) => {
           : (userScores.get(matchup.team2_user_id) ?? { dollarGain: 0, percentGain: 0, hasPositions: false });
         const team2Gain = isByeWeek ? 0 : team2Score.dollarGain;
 
-        // Winner determination is decided in ./playoff-progression.ts — a pure,
-        // unit-tested transcription of the branch chain that used to live inline
-        // here. Behaviour is unchanged, INCLUDING the two defects the tests pin:
-        // a both-empty PLAYOFF matchup still yields no winner (so nothing
-        // advances), and advancePlayoffWinner still derives the wrong seed.
+        // Winner determination is decided in ./playoff-progression.ts — pure and
+        // unit-tested. Both former defects are fixed there: a both-empty PLAYOFF
+        // matchup now resolves by seed (so the finals placeholder gets filled),
+        // and the advancing seed is derived from the actual winner.
         // See playoff-progression.test.ts.
         // Casts, not conversions — erased at runtime, so behaviour is unaffected.
         // grouping.ts's MatchupRow types every column it does not itself read as
@@ -1222,6 +1238,15 @@ Deno.serve(async (req) => {
             break;
           case 'both_empty_tie':
             console.log(`Both teams have empty portfolios - tie`);
+            break;
+          case 'both_empty_playoff_seed_tiebreak':
+            console.log(
+              `Both teams have empty portfolios in a PLAYOFF - seed tiebreaker: ` +
+              `seed ${matchup.team1_seed || 999} vs ${matchup.team2_seed || 999}, winner: ${winnerId}`
+            );
+            break;
+          case 'playoff_no_opponent':
+            console.log(`Playoff matchup has no opponent (unfilled slot) - ${winnerId} advances`);
             break;
           case 'team1_empty_auto_loss':
             console.log(`Team 1 has empty portfolio - automatic loss`);

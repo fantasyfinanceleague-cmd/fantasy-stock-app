@@ -227,6 +227,33 @@ function calculateHoldings(
     .map(([symbol, quantity]) => ({ symbol, quantity }));
 }
 
+/**
+ * Weighted-average purchase price for a position opened during the week.
+ *
+ * Only called for symbols with no week-start snapshot row, i.e. the whole
+ * position was acquired this week, so every buy is a mid-week buy. Sells are
+ * ignored: they reduce quantity (already reflected in h.quantity) but do not
+ * change the average cost of what remains.
+ *
+ * Returns null when no priced buy exists, so the caller can refuse rather than
+ * invent a cost basis.
+ */
+function midWeekEntryPrice(userId: string, symbol: string, trades: any[]): number | null {
+  let qty = 0;
+  let cost = 0;
+  for (const t of trades) {
+    if (t.user_id !== userId) continue;
+    if ((t.symbol?.toUpperCase?.() ?? '') !== symbol.toUpperCase()) continue;
+    if (t.action !== 'buy') continue;
+    const q = Number(t.quantity || 0);
+    const p = Number(t.price || 0);
+    if (q <= 0 || p <= 0) continue;
+    qty += q;
+    cost += q * p;
+  }
+  return qty > 0 ? cost / qty : null;
+}
+
 Deno.serve(async (req) => {
   // SECURITY: apikey validation must be the first thing we do — before reading
   // the body, before any DB connection, before any business logic. With
@@ -328,9 +355,12 @@ Deno.serve(async (req) => {
         .select('user_id, symbol, quantity')
         .eq('league_id', leagueId);
 
+      // `price` is needed to record a real entry price for mid-week purchases
+      // (see the entered_mid_week migration). Without it we could only write a
+      // placeholder, and week_start_price is read for cost basis in the UI.
       const { data: trades } = await supabase
         .from('trades')
-        .select('user_id, symbol, action, quantity')
+        .select('user_id, symbol, action, quantity, price')
         .eq('league_id', leagueId);
 
       // Calculate current holdings for each user
@@ -384,18 +414,32 @@ Deno.serve(async (req) => {
         for (const h of holdings) {
           const key = `${userId}:${h.symbol}`;
           if (!existingUserSymbols.has(key)) {
-            // This is a mid-week purchase - create snapshot with only week_end_price
+            // Mid-week purchase: no week-start row exists for this symbol.
+            //
+            // This used to write `week_start_price: null`, which violates the
+            // column's NOT NULL constraint — so the insert failed on every run
+            // since 2026-01-15 and the position was silently dropped from scoring.
+            // We now record the real entry price and flag the row explicitly, so
+            // week_start_price stops being an overloaded NULL and the UI's
+            // quantity * week_start_price cost basis is correct rather than zero.
             const price = prices.get(h.symbol);
-            if (price) {
+            const entryPrice = midWeekEntryPrice(userId, h.symbol, trades || []);
+            if (price && entryPrice !== null) {
               newSnapshots.push({
                 league_id: leagueId,
                 user_id: userId,
                 week_number: currentWeek,
                 symbol: h.symbol,
                 quantity: h.quantity,
-                week_start_price: null, // No start price - bought mid-week
+                week_start_price: entryPrice,
+                entered_mid_week: true,
                 week_end_price: price,
               });
+            } else if (price) {
+              console.error(
+                `No entry price derivable for mid-week position ${userId}/${h.symbol} ` +
+                `in league ${leagueId} — skipping rather than writing a fabricated basis.`
+              );
             }
           }
         }
