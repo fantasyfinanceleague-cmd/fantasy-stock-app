@@ -2,8 +2,8 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "7cb159eba8c5b2f9082958ba6531bea657e97c62",
-    "commitShort": "7cb159e",
+    "commit": "a3f917f80e69c7e8f85bea5eb21d7dcc756208b8",
+    "commitShort": "a3f917f",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "claude/architecture-map-generator-01ec80",
     "dirty": true,
@@ -14,22 +14,26 @@
       },
       {
         "code": "M",
+        "path": "docs/architecture/db-snapshot.json"
+      },
+      {
+        "code": "M",
         "path": "scripts/gen-architecture.mjs"
       }
     ],
-    "timestamp": "2026-07-28T05:27:06Z",
-    "sourceHash": "sha256:d7b3a227d8f3813f1c2790f85c7ae5375b1c81efafd72741e88fd25e31a25d67",
+    "timestamp": "2026-07-28T05:54:11Z",
+    "sourceHash": "sha256:8f73db945d8e9ba1347c537bba7c58aaba3a87527cb26c9d3c3bf1668cf80a35",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
-    "capturedAt": "2026-07-27T20:14:32Z",
-    "ageHours": 9.2,
-    "ageDays": 0.4,
+    "capturedAt": "2026-07-28T05:49:17Z",
+    "ageHours": 0.1,
+    "ageDays": 0,
     "staleAfterDays": 14,
     "stale": false,
-    "hash": "sha256:8cbcc15134d04fbdef1cc8c2924632a6783bfcc3280dabf4f2d61312319213a1",
+    "hash": "sha256:1003d2a31164523e894182d57f0321335f74c985764a84c1a41896857ee6535d",
     "database": "postgres",
     "postgresVersion": "17.4",
     "counts": {
@@ -1606,7 +1610,9 @@
             "roles": [
               "PUBLIC"
             ],
+            "using": "(auth.uid() = user_id)",
             "command": "DELETE",
+            "withCheck": null,
             "permissive": true
           },
           {
@@ -1614,7 +1620,9 @@
             "roles": [
               "PUBLIC"
             ],
+            "using": null,
             "command": "INSERT",
+            "withCheck": "(auth.uid() = user_id)",
             "permissive": true
           },
           {
@@ -1622,7 +1630,9 @@
             "roles": [
               "PUBLIC"
             ],
+            "using": "(auth.uid() = user_id)",
             "command": "UPDATE",
+            "withCheck": null,
             "permissive": true
           },
           {
@@ -1630,7 +1640,9 @@
             "roles": [
               "PUBLIC"
             ],
+            "using": "(auth.uid() = user_id)",
             "command": "SELECT",
+            "withCheck": null,
             "permissive": true
           }
         ]
@@ -1644,11 +1656,11 @@
       "drift": [
         {
           "field": "policy_roles",
-          "groupKey": "public-role-policies-unknown-predicate",
+          "groupKey": "public-role-policies-gated",
           "declared": "n/a",
-          "live": "4 of 4 policies target role PUBLIC",
-          "severity": "medium",
-          "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
+          "live": "4 of 4 policies target PUBLIC, all gated on caller identity",
+          "severity": "low",
+          "note": "Targets PUBLIC (which includes anon) rather than `authenticated` like the newer rls_b1_* policies, but every predicate references auth.uid()/auth.jwt()/is_member/is_commissioner, so anon matches no rows. Cosmetic inconsistency, not an exposure — worth normalising."
         }
       ],
       "annotation": null,
@@ -1674,7 +1686,9 @@
             "roles": [
               "PUBLIC"
             ],
+            "using": "(auth.role() = 'service_role'::text)",
             "command": "ALL",
+            "withCheck": null,
             "permissive": true
           }
         ]
@@ -1688,14 +1702,14 @@
       "drift": [
         {
           "field": "policy_roles",
-          "groupKey": "public-role-policies-unknown-predicate",
+          "groupKey": "public-role-policies-gated",
           "declared": "n/a",
-          "live": "1 of 1 policies target role PUBLIC",
-          "severity": "medium",
-          "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
+          "live": "1 of 1 policies target PUBLIC, all gated on caller identity",
+          "severity": "low",
+          "note": "Targets PUBLIC (which includes anon) rather than `authenticated` like the newer rls_b1_* policies, but every predicate references auth.uid()/auth.jwt()/is_member/is_commissioner, so anon matches no rows. Cosmetic inconsistency, not an exposure — worth normalising."
         }
       ],
-      "annotation": "The ops table three cron functions write, with UNIQUE(job_name, run_date) and run_date defaulting to CURRENT_DATE — so each job gets exactly one row per day and every write is an upsert onto it.\n\nDo NOT treat this table as a reliable health signal. process-week-results writes 'running' and, on its two most likely returns (index.ts:890 and :885), never writes a terminal status — so a row reading 'running' is byte-identical whether the function hung, crashed mid-run, or completed normally with nothing to do. snapshot-week-start and snapshot-week-end DO write terminal statuses on every path, so their rows are trustworthy; process-week-results' are not. Any alerting built on this table must account for that asymmetry or it will either fire every week or never fire at all.\n\nAlso note the upsert semantics when testing by hand: calling schedule_snapshot_retry directly OVERWRITES the day's real row for that job rather than inserting a new one.",
+      "annotation": "The ops table three cron functions write, with UNIQUE(job_name, run_date) and run_date defaulting to CURRENT_DATE — so each job gets exactly one row per day and every write is an upsert onto it.\n\nDo NOT treat this table as a reliable health signal. process-week-results writes 'running' and, on its two most likely returns (index.ts:890 and :885), never writes a terminal status — so a row reading 'running' is byte-identical whether the function hung, crashed mid-run, or completed normally with nothing to do. snapshot-week-start and snapshot-week-end DO write terminal statuses on every path, so their rows are trustworthy; process-week-results' are not. Any alerting built on this table must account for that asymmetry or it will either fire every week or never fire at all.\n\nAlso note the upsert semantics when testing by hand: calling schedule_snapshot_retry directly OVERWRITES the day's real row for that job rather than inserting a new one.\n\nPolicy note: `service_role_only` is PUBLIC-role but gates on `auth.role() = 'service_role'`, which IS a real caller check — anon resolves to 'anon' and matches nothing. An earlier version of the generator graded this HIGH because its identity-check heuristic looked only for auth.uid()/auth.jwt()/is_member/is_commissioner and missed auth.role(). Fixed. If a policy here ever shows up as ungated again, check the predicate before believing it.",
       "verified": true,
       "id": "tbl.cron_job_status",
       "label": "cron_job_status",
@@ -1718,7 +1732,9 @@
             "roles": [
               "PUBLIC"
             ],
+            "using": "(EXISTS ( SELECT 1\n   FROM leagues\n  WHERE ((leagues.id = draft_sessions.league_id) AND (leagues.commissioner_id = (auth.uid())::text))))",
             "command": "ALL",
+            "withCheck": "(EXISTS ( SELECT 1\n   FROM leagues\n  WHERE ((leagues.id = draft_sessions.league_id) AND (leagues.commissioner_id = (auth.uid())::text))))",
             "permissive": true
           },
           {
@@ -1726,7 +1742,9 @@
             "roles": [
               "PUBLIC"
             ],
+            "using": "(EXISTS ( SELECT 1\n   FROM league_members\n  WHERE ((league_members.league_id = draft_sessions.league_id) AND (league_members.user_id = (auth.uid())::text))))",
             "command": "SELECT",
+            "withCheck": null,
             "permissive": true
           }
         ]
@@ -1740,11 +1758,11 @@
       "drift": [
         {
           "field": "policy_roles",
-          "groupKey": "public-role-policies-unknown-predicate",
+          "groupKey": "public-role-policies-gated",
           "declared": "n/a",
-          "live": "2 of 2 policies target role PUBLIC",
-          "severity": "medium",
-          "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
+          "live": "2 of 2 policies target PUBLIC, all gated on caller identity",
+          "severity": "low",
+          "note": "Targets PUBLIC (which includes anon) rather than `authenticated` like the newer rls_b1_* policies, but every predicate references auth.uid()/auth.jwt()/is_member/is_commissioner, so anon matches no rows. Cosmetic inconsistency, not an exposure — worth normalising."
         }
       ],
       "annotation": null,
@@ -1770,7 +1788,9 @@
             "roles": [
               "PUBLIC"
             ],
+            "using": "(EXISTS ( SELECT 1\n   FROM leagues\n  WHERE ((leagues.id = draft_settings.league_id) AND (leagues.commissioner_id = (auth.uid())::text))))",
             "command": "ALL",
+            "withCheck": "(EXISTS ( SELECT 1\n   FROM leagues\n  WHERE ((leagues.id = draft_settings.league_id) AND (leagues.commissioner_id = (auth.uid())::text))))",
             "permissive": true
           },
           {
@@ -1778,7 +1798,9 @@
             "roles": [
               "PUBLIC"
             ],
+            "using": "(EXISTS ( SELECT 1\n   FROM league_members\n  WHERE ((league_members.league_id = draft_settings.league_id) AND (league_members.user_id = (auth.uid())::text))))",
             "command": "SELECT",
+            "withCheck": null,
             "permissive": true
           }
         ]
@@ -1793,11 +1815,11 @@
       "drift": [
         {
           "field": "policy_roles",
-          "groupKey": "public-role-policies-unknown-predicate",
+          "groupKey": "public-role-policies-gated",
           "declared": "n/a",
-          "live": "2 of 2 policies target role PUBLIC",
-          "severity": "medium",
-          "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
+          "live": "2 of 2 policies target PUBLIC, all gated on caller identity",
+          "severity": "low",
+          "note": "Targets PUBLIC (which includes anon) rather than `authenticated` like the newer rls_b1_* policies, but every predicate references auth.uid()/auth.jwt()/is_member/is_commissioner, so anon matches no rows. Cosmetic inconsistency, not an exposure — worth normalising."
         }
       ],
       "annotation": null,
@@ -1823,7 +1845,9 @@
             "roles": [
               "PUBLIC"
             ],
+            "using": "(EXISTS ( SELECT 1\n   FROM leagues\n  WHERE ((leagues.id = drafts.league_id) AND (leagues.commissioner_id = (auth.uid())::text))))",
             "command": "DELETE",
+            "withCheck": null,
             "permissive": true
           },
           {
@@ -1831,7 +1855,9 @@
             "roles": [
               "PUBLIC"
             ],
+            "using": null,
             "command": "INSERT",
+            "withCheck": "((user_id ~~ 'bot-%'::text) AND (EXISTS ( SELECT 1\n   FROM league_members\n  WHERE ((league_members.league_id = drafts.league_id) AND (league_members.user_id = (auth.uid())::text)))))",
             "permissive": true
           },
           {
@@ -1839,7 +1865,9 @@
             "roles": [
               "PUBLIC"
             ],
+            "using": null,
             "command": "INSERT",
+            "withCheck": "((user_id = (auth.uid())::text) AND (EXISTS ( SELECT 1\n   FROM league_members\n  WHERE ((league_members.league_id = drafts.league_id) AND (league_members.user_id = (auth.uid())::text)))))",
             "permissive": true
           },
           {
@@ -1847,7 +1875,9 @@
             "roles": [
               "PUBLIC"
             ],
+            "using": "(EXISTS ( SELECT 1\n   FROM league_members\n  WHERE ((league_members.league_id = drafts.league_id) AND (league_members.user_id = (auth.uid())::text))))",
             "command": "SELECT",
+            "withCheck": null,
             "permissive": true
           }
         ]
@@ -1861,11 +1891,11 @@
       "drift": [
         {
           "field": "policy_roles",
-          "groupKey": "public-role-policies-unknown-predicate",
+          "groupKey": "public-role-policies-gated",
           "declared": "n/a",
-          "live": "4 of 4 policies target role PUBLIC",
-          "severity": "medium",
-          "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
+          "live": "4 of 4 policies target PUBLIC, all gated on caller identity",
+          "severity": "low",
+          "note": "Targets PUBLIC (which includes anon) rather than `authenticated` like the newer rls_b1_* policies, but every predicate references auth.uid()/auth.jwt()/is_member/is_commissioner, so anon matches no rows. Cosmetic inconsistency, not an exposure — worth normalising."
         }
       ],
       "annotation": null,
@@ -1891,7 +1921,9 @@
             "roles": [
               "authenticated"
             ],
+            "using": null,
             "command": "INSERT",
+            "withCheck": "(is_commissioner(league_id) AND (inviter_id = (auth.uid())::text))",
             "permissive": true
           },
           {
@@ -1899,7 +1931,9 @@
             "roles": [
               "authenticated"
             ],
+            "using": "is_commissioner(league_id)",
             "command": "SELECT",
+            "withCheck": null,
             "permissive": true
           }
         ]
@@ -1935,7 +1969,9 @@
             "roles": [
               "authenticated"
             ],
+            "using": "(user_id = (auth.uid())::text)",
             "command": "DELETE",
+            "withCheck": null,
             "permissive": true
           },
           {
@@ -1943,7 +1979,9 @@
             "roles": [
               "authenticated"
             ],
+            "using": null,
             "command": "INSERT",
+            "withCheck": "((user_id ~~ 'bot-%'::text) AND is_member(league_id))",
             "permissive": true
           },
           {
@@ -1951,7 +1989,9 @@
             "roles": [
               "authenticated"
             ],
+            "using": null,
             "command": "INSERT",
+            "withCheck": "(user_id = (auth.uid())::text)",
             "permissive": true
           },
           {
@@ -1959,7 +1999,9 @@
             "roles": [
               "authenticated"
             ],
+            "using": "is_member(league_id)",
             "command": "SELECT",
+            "withCheck": null,
             "permissive": true
           }
         ]
@@ -1995,7 +2037,9 @@
             "roles": [
               "PUBLIC"
             ],
+            "using": "(league_id IN ( SELECT leagues.id\n   FROM leagues\n  WHERE (leagues.commissioner_id = (auth.uid())::text)))",
             "command": "ALL",
+            "withCheck": null,
             "permissive": true
           },
           {
@@ -2003,7 +2047,9 @@
             "roles": [
               "PUBLIC"
             ],
+            "using": "(league_id IN ( SELECT league_members.league_id\n   FROM league_members\n  WHERE (league_members.user_id = (auth.uid())::text)))",
             "command": "SELECT",
+            "withCheck": null,
             "permissive": true
           }
         ]
@@ -2017,11 +2063,11 @@
       "drift": [
         {
           "field": "policy_roles",
-          "groupKey": "public-role-policies-unknown-predicate",
+          "groupKey": "public-role-policies-gated",
           "declared": "n/a",
-          "live": "2 of 2 policies target role PUBLIC",
-          "severity": "medium",
-          "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
+          "live": "2 of 2 policies target PUBLIC, all gated on caller identity",
+          "severity": "low",
+          "note": "Targets PUBLIC (which includes anon) rather than `authenticated` like the newer rls_b1_* policies, but every predicate references auth.uid()/auth.jwt()/is_member/is_commissioner, so anon matches no rows. Cosmetic inconsistency, not an exposure — worth normalising."
         }
       ],
       "annotation": null,
@@ -2047,7 +2093,9 @@
             "roles": [
               "authenticated"
             ],
+            "using": null,
             "command": "INSERT",
+            "withCheck": "is_member(league_id)",
             "permissive": true
           },
           {
@@ -2055,7 +2103,9 @@
             "roles": [
               "authenticated"
             ],
+            "using": "is_member(league_id)",
             "command": "SELECT",
+            "withCheck": null,
             "permissive": true
           }
         ]
@@ -2092,7 +2142,9 @@
             "roles": [
               "authenticated"
             ],
+            "using": "is_commissioner(id)",
             "command": "DELETE",
+            "withCheck": null,
             "permissive": true
           },
           {
@@ -2100,7 +2152,9 @@
             "roles": [
               "authenticated"
             ],
+            "using": null,
             "command": "INSERT",
+            "withCheck": "(commissioner_id = (auth.uid())::text)",
             "permissive": true
           },
           {
@@ -2108,7 +2162,9 @@
             "roles": [
               "authenticated"
             ],
+            "using": "(is_member(id) OR is_commissioner(id))",
             "command": "SELECT",
+            "withCheck": null,
             "permissive": true
           },
           {
@@ -2116,7 +2172,9 @@
             "roles": [
               "authenticated"
             ],
+            "using": "is_commissioner(id)",
             "command": "UPDATE",
+            "withCheck": "is_commissioner(id)",
             "permissive": true
           },
           {
@@ -2124,7 +2182,9 @@
             "roles": [
               "authenticated"
             ],
+            "using": "(is_member(id) AND (draft_status = 'in_progress'::text))",
             "command": "UPDATE",
+            "withCheck": "(is_member(id) AND (draft_status = 'completed'::text))",
             "permissive": true
           }
         ]
@@ -2166,7 +2226,9 @@
             "roles": [
               "authenticated"
             ],
+            "using": null,
             "command": "INSERT",
+            "withCheck": "is_member(league_id)",
             "permissive": true
           },
           {
@@ -2174,7 +2236,9 @@
             "roles": [
               "authenticated"
             ],
+            "using": "is_member(league_id)",
             "command": "SELECT",
+            "withCheck": null,
             "permissive": true
           }
         ]
@@ -2213,7 +2277,9 @@
             "roles": [
               "PUBLIC"
             ],
+            "using": null,
             "command": "INSERT",
+            "withCheck": "true",
             "permissive": true
           },
           {
@@ -2221,7 +2287,9 @@
             "roles": [
               "PUBLIC"
             ],
+            "using": "(user_id = (auth.uid())::text)",
             "command": "SELECT",
+            "withCheck": null,
             "permissive": true
           }
         ]
@@ -2235,14 +2303,14 @@
       "drift": [
         {
           "field": "policy_roles",
-          "groupKey": "public-role-policies-unknown-predicate",
+          "groupKey": "public-role-policies-ungated",
           "declared": "n/a",
-          "live": "2 of 2 policies target role PUBLIC",
-          "severity": "medium",
-          "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
+          "live": "Service role can insert notifications (INSERT, predicate: true)",
+          "severity": "high",
+          "note": "UNAUTHENTICATED WRITE. PUBLIC includes anon, and this policy grants INSERT with a predicate that never references the caller — so anyone holding the publishable key can write arbitrary rows. A policy NAME claiming a role (e.g. \"Service role can...\") enforces nothing; only the predicate and the role list do."
         }
       ],
-      "annotation": null,
+      "annotation": "HIGH — unauthenticated write. The policy is named \"Service role can insert notifications\" but its role list is PUBLIC and its WITH CHECK is literally `true`. The name enforces nothing; only the role list and the predicate do. So anyone holding the publishable (anon) key can INSERT arbitrary rows, unbounded.\n\nCompounding it: this table has ZERO edges in the map — no client, edge function, cron job or plpgsql body reads or writes it. A possibly-dead table that anyone can write to without limit is the worst combination of the two: no one would notice the rows arriving, and nothing depends on them being real.\n\nDecide whether the table is live. If it is, the policy needs a real predicate (auth.role() = 'service_role', matching cron_job_status) and the role list should be explicit. If it is not, drop the table.",
       "verified": true,
       "id": "tbl.notification_log",
       "label": "notification_log",
@@ -2299,7 +2367,9 @@
             "roles": [
               "PUBLIC"
             ],
+            "using": "true",
             "command": "SELECT",
+            "withCheck": null,
             "permissive": true
           }
         ]
@@ -2308,14 +2378,14 @@
       "drift": [
         {
           "field": "policy_roles",
-          "groupKey": "public-role-policies-unknown-predicate",
+          "groupKey": "public-role-policies-ungated",
           "declared": "n/a",
-          "live": "1 of 1 policies target role PUBLIC",
-          "severity": "medium",
-          "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
+          "live": "read symbols (SELECT, predicate: true)",
+          "severity": "high",
+          "note": "UNAUTHENTICATED READ of every row. PUBLIC includes anon and the predicate is unconditional. This may be intentional for public reference data — but it must be an explicit decision, not an assumption, and it has to be consistent with any function-level lockdown covering the same data."
         }
       ],
-      "annotation": null,
+      "annotation": "HIGH by grading, but probably correct — confirm rather than assume. \"read symbols\" is PUBLIC with USING `true`, so anon reads the entire ticker table. For public reference data (NASDAQ/NYSE listings, refreshed from a public feed) that is very likely intended, and it is SELECT-only.\n\nIt is graded HIGH anyway because the map cannot distinguish \"deliberately public\" from \"nobody thought about it\", and this table is written by an RLS-bypassing upsert in refresh-symbols. Record the decision here and it stops being a question; leave it and every future reader re-asks it.",
       "verified": true,
       "id": "tbl.symbols",
       "label": "symbols",
@@ -2335,7 +2405,9 @@
             "roles": [
               "PUBLIC"
             ],
+            "using": null,
             "command": "INSERT",
+            "withCheck": "((user_id = auth.uid()) AND (EXISTS ( SELECT 1\n   FROM league_members\n  WHERE ((league_members.league_id = trades.league_id) AND (league_members.user_id = (auth.uid())::text)))))",
             "permissive": true
           },
           {
@@ -2343,7 +2415,9 @@
             "roles": [
               "PUBLIC"
             ],
+            "using": "(EXISTS ( SELECT 1\n   FROM league_members\n  WHERE ((league_members.league_id = trades.league_id) AND (league_members.user_id = (auth.uid())::text))))",
             "command": "SELECT",
+            "withCheck": null,
             "permissive": true
           }
         ]
@@ -2358,11 +2432,11 @@
       "drift": [
         {
           "field": "policy_roles",
-          "groupKey": "public-role-policies-unknown-predicate",
+          "groupKey": "public-role-policies-gated",
           "declared": "n/a",
-          "live": "2 of 2 policies target role PUBLIC",
-          "severity": "medium",
-          "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
+          "live": "2 of 2 policies target PUBLIC, all gated on caller identity",
+          "severity": "low",
+          "note": "Targets PUBLIC (which includes anon) rather than `authenticated` like the newer rls_b1_* policies, but every predicate references auth.uid()/auth.jwt()/is_member/is_commissioner, so anon matches no rows. Cosmetic inconsistency, not an exposure — worth normalising."
         }
       ],
       "annotation": null,
@@ -2388,7 +2462,9 @@
             "roles": [
               "PUBLIC"
             ],
+            "using": "true",
             "command": "SELECT",
+            "withCheck": null,
             "permissive": true
           },
           {
@@ -2396,7 +2472,9 @@
             "roles": [
               "PUBLIC"
             ],
+            "using": null,
             "command": "INSERT",
+            "withCheck": "(auth.uid() = id)",
             "permissive": true
           },
           {
@@ -2404,7 +2482,9 @@
             "roles": [
               "PUBLIC"
             ],
+            "using": "(auth.uid() = id)",
             "command": "UPDATE",
+            "withCheck": "(auth.uid() = id)",
             "permissive": true
           }
         ]
@@ -2420,14 +2500,14 @@
       "drift": [
         {
           "field": "policy_roles",
-          "groupKey": "public-role-policies-unknown-predicate",
+          "groupKey": "public-role-policies-ungated",
           "declared": "n/a",
-          "live": "3 of 3 policies target role PUBLIC",
-          "severity": "medium",
-          "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
+          "live": "Anyone can view profiles (SELECT, predicate: true)",
+          "severity": "high",
+          "note": "UNAUTHENTICATED READ of every row. PUBLIC includes anon and the predicate is unconditional. This may be intentional for public reference data — but it must be an explicit decision, not an assumption, and it has to be consistent with any function-level lockdown covering the same data."
         }
       ],
-      "annotation": null,
+      "annotation": "HIGH — unauthenticated read of every row. \"Anyone can view profiles\" is PUBLIC with USING `true`, so anon reads the whole table. That may well be deliberate for a social feature, but it has to be an explicit decision because it contradicts a lockdown we already shipped.\n\n20260724000000 revoked anon from get_real_user_ids — a function whose whole purpose is telling you WHICH user ids are real accounts. Meanwhile the profile table those ids belong to is anon-readable in full, which gives the same answer by another route. The function lockdown is close to pointless while this policy stands.\n\nThese two need ONE decision, not two: either profiles are public (and the get_real_user_ids revoke was theatre), or they are not (and this policy must gate on auth.uid() or move to the authenticated role). Do not resolve one without the other.",
       "verified": true,
       "id": "tbl.user_profiles",
       "label": "user_profiles",
@@ -2450,7 +2530,9 @@
             "roles": [
               "authenticated"
             ],
+            "using": "is_member(league_id)",
             "command": "SELECT",
+            "withCheck": null,
             "permissive": true
           }
         ]
@@ -4383,6 +4465,91 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.tbl.league_invites->pg.is_commissioner#rls",
+      "from": "tbl.league_invites",
+      "to": "pg.is_commissioner",
+      "protocol": "rls-predicate",
+      "payload": "called by policy league_invites_insert_commissioner",
+      "derivedFrom": "db-snapshot",
+      "callSites": [
+        "db-snapshot.json · policy league_invites_insert_commissioner",
+        "db-snapshot.json · policy league_invites_select_commissioner"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.tbl.league_members->pg.is_member#rls",
+      "from": "tbl.league_members",
+      "to": "pg.is_member",
+      "protocol": "rls-predicate",
+      "payload": "called by policy league_members_insert_bot",
+      "derivedFrom": "db-snapshot",
+      "callSites": [
+        "db-snapshot.json · policy league_members_insert_bot",
+        "db-snapshot.json · policy league_members_select_members"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.tbl.league_standings->pg.is_member#rls",
+      "from": "tbl.league_standings",
+      "to": "pg.is_member",
+      "protocol": "rls-predicate",
+      "payload": "called by policy league_standings_insert_members",
+      "derivedFrom": "db-snapshot",
+      "callSites": [
+        "db-snapshot.json · policy league_standings_insert_members",
+        "db-snapshot.json · policy league_standings_select_members"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.tbl.leagues->pg.is_commissioner#rls",
+      "from": "tbl.leagues",
+      "to": "pg.is_commissioner",
+      "protocol": "rls-predicate",
+      "payload": "called by policy leagues_delete_commissioner",
+      "derivedFrom": "db-snapshot",
+      "callSites": [
+        "db-snapshot.json · policy leagues_delete_commissioner",
+        "db-snapshot.json · policy leagues_select_member_or_commissioner",
+        "db-snapshot.json · policy leagues_update_commissioner"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.tbl.leagues->pg.is_member#rls",
+      "from": "tbl.leagues",
+      "to": "pg.is_member",
+      "protocol": "rls-predicate",
+      "payload": "called by policy leagues_select_member_or_commissioner",
+      "derivedFrom": "db-snapshot",
+      "callSites": [
+        "db-snapshot.json · policy leagues_select_member_or_commissioner",
+        "db-snapshot.json · policy leagues_update_member_draft_complete"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.tbl.matchups->pg.is_member#rls",
+      "from": "tbl.matchups",
+      "to": "pg.is_member",
+      "protocol": "rls-predicate",
+      "payload": "called by policy matchups_insert_members",
+      "derivedFrom": "db-snapshot",
+      "callSites": [
+        "db-snapshot.json · policy matchups_insert_members",
+        "db-snapshot.json · policy matchups_select_members"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.tbl.user_profiles->pg.update_user_profiles_updated_at",
       "from": "tbl.user_profiles",
       "to": "pg.update_user_profiles_updated_at",
@@ -4391,6 +4558,19 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20251210100000_create_user_profiles.sql:44"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.tbl.week_snapshots->pg.is_member#rls",
+      "from": "tbl.week_snapshots",
+      "to": "pg.is_member",
+      "protocol": "rls-predicate",
+      "payload": "called by policy week_snapshots_select_members",
+      "derivedFrom": "db-snapshot",
+      "callSites": [
+        "db-snapshot.json · policy week_snapshots_select_members"
       ]
     },
     {
@@ -6927,6 +7107,36 @@
       "note": "This job cannot be authenticating. The gateway rejects a header-less POST when verify_jwt=true, so every run 401s before reaching the function."
     },
     {
+      "node": "tbl.notification_log",
+      "label": "notification_log",
+      "groupKey": "public-role-policies-ungated",
+      "field": "policy_roles",
+      "declared": "n/a",
+      "live": "Service role can insert notifications (INSERT, predicate: true)",
+      "severity": "high",
+      "note": "UNAUTHENTICATED WRITE. PUBLIC includes anon, and this policy grants INSERT with a predicate that never references the caller — so anyone holding the publishable key can write arbitrary rows. A policy NAME claiming a role (e.g. \"Service role can...\") enforces nothing; only the predicate and the role list do."
+    },
+    {
+      "node": "tbl.symbols",
+      "label": "symbols",
+      "groupKey": "public-role-policies-ungated",
+      "field": "policy_roles",
+      "declared": "n/a",
+      "live": "read symbols (SELECT, predicate: true)",
+      "severity": "high",
+      "note": "UNAUTHENTICATED READ of every row. PUBLIC includes anon and the predicate is unconditional. This may be intentional for public reference data — but it must be an explicit decision, not an assumption, and it has to be consistent with any function-level lockdown covering the same data."
+    },
+    {
+      "node": "tbl.user_profiles",
+      "label": "user_profiles",
+      "groupKey": "public-role-policies-ungated",
+      "field": "policy_roles",
+      "declared": "n/a",
+      "live": "Anyone can view profiles (SELECT, predicate: true)",
+      "severity": "high",
+      "note": "UNAUTHENTICATED READ of every row. PUBLIC includes anon and the predicate is unconditional. This may be intentional for public reference data — but it must be an explicit decision, not an assumption, and it has to be consistent with any function-level lockdown covering the same data."
+    },
+    {
       "node": "cron.refresh_symbols_daily",
       "label": "refresh_symbols_daily",
       "groupKey": "origin",
@@ -6935,106 +7145,6 @@
       "live": "active, 0 */6 * * *",
       "severity": "medium",
       "note": "This job exists in prod but no migration in supabase/migrations/ schedules it by this name. It was created out-of-band and is not reproducible from the repo."
-    },
-    {
-      "node": "tbl.broker_credentials",
-      "label": "broker_credentials",
-      "groupKey": "public-role-policies-unknown-predicate",
-      "field": "policy_roles",
-      "declared": "n/a",
-      "live": "4 of 4 policies target role PUBLIC",
-      "severity": "medium",
-      "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
-    },
-    {
-      "node": "tbl.cron_job_status",
-      "label": "cron_job_status",
-      "groupKey": "public-role-policies-unknown-predicate",
-      "field": "policy_roles",
-      "declared": "n/a",
-      "live": "1 of 1 policies target role PUBLIC",
-      "severity": "medium",
-      "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
-    },
-    {
-      "node": "tbl.draft_sessions",
-      "label": "draft_sessions",
-      "groupKey": "public-role-policies-unknown-predicate",
-      "field": "policy_roles",
-      "declared": "n/a",
-      "live": "2 of 2 policies target role PUBLIC",
-      "severity": "medium",
-      "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
-    },
-    {
-      "node": "tbl.draft_settings",
-      "label": "draft_settings",
-      "groupKey": "public-role-policies-unknown-predicate",
-      "field": "policy_roles",
-      "declared": "n/a",
-      "live": "2 of 2 policies target role PUBLIC",
-      "severity": "medium",
-      "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
-    },
-    {
-      "node": "tbl.drafts",
-      "label": "drafts",
-      "groupKey": "public-role-policies-unknown-predicate",
-      "field": "policy_roles",
-      "declared": "n/a",
-      "live": "4 of 4 policies target role PUBLIC",
-      "severity": "medium",
-      "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
-    },
-    {
-      "node": "tbl.league_seasons",
-      "label": "league_seasons",
-      "groupKey": "public-role-policies-unknown-predicate",
-      "field": "policy_roles",
-      "declared": "n/a",
-      "live": "2 of 2 policies target role PUBLIC",
-      "severity": "medium",
-      "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
-    },
-    {
-      "node": "tbl.notification_log",
-      "label": "notification_log",
-      "groupKey": "public-role-policies-unknown-predicate",
-      "field": "policy_roles",
-      "declared": "n/a",
-      "live": "2 of 2 policies target role PUBLIC",
-      "severity": "medium",
-      "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
-    },
-    {
-      "node": "tbl.symbols",
-      "label": "symbols",
-      "groupKey": "public-role-policies-unknown-predicate",
-      "field": "policy_roles",
-      "declared": "n/a",
-      "live": "1 of 1 policies target role PUBLIC",
-      "severity": "medium",
-      "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
-    },
-    {
-      "node": "tbl.trades",
-      "label": "trades",
-      "groupKey": "public-role-policies-unknown-predicate",
-      "field": "policy_roles",
-      "declared": "n/a",
-      "live": "2 of 2 policies target role PUBLIC",
-      "severity": "medium",
-      "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
-    },
-    {
-      "node": "tbl.user_profiles",
-      "label": "user_profiles",
-      "groupKey": "public-role-policies-unknown-predicate",
-      "field": "policy_roles",
-      "declared": "n/a",
-      "live": "3 of 3 policies target role PUBLIC",
-      "severity": "medium",
-      "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
     },
     {
       "node": "pg.update_broker_credentials_updated_at",
@@ -7057,6 +7167,66 @@
       "note": "SECURITY INVOKER, so it runs with the caller's own privileges and RLS applies — broad EXECUTE here is low risk. Listed for inventory completeness."
     },
     {
+      "node": "tbl.broker_credentials",
+      "label": "broker_credentials",
+      "groupKey": "public-role-policies-gated",
+      "field": "policy_roles",
+      "declared": "n/a",
+      "live": "4 of 4 policies target PUBLIC, all gated on caller identity",
+      "severity": "low",
+      "note": "Targets PUBLIC (which includes anon) rather than `authenticated` like the newer rls_b1_* policies, but every predicate references auth.uid()/auth.jwt()/is_member/is_commissioner, so anon matches no rows. Cosmetic inconsistency, not an exposure — worth normalising."
+    },
+    {
+      "node": "tbl.cron_job_status",
+      "label": "cron_job_status",
+      "groupKey": "public-role-policies-gated",
+      "field": "policy_roles",
+      "declared": "n/a",
+      "live": "1 of 1 policies target PUBLIC, all gated on caller identity",
+      "severity": "low",
+      "note": "Targets PUBLIC (which includes anon) rather than `authenticated` like the newer rls_b1_* policies, but every predicate references auth.uid()/auth.jwt()/is_member/is_commissioner, so anon matches no rows. Cosmetic inconsistency, not an exposure — worth normalising."
+    },
+    {
+      "node": "tbl.draft_sessions",
+      "label": "draft_sessions",
+      "groupKey": "public-role-policies-gated",
+      "field": "policy_roles",
+      "declared": "n/a",
+      "live": "2 of 2 policies target PUBLIC, all gated on caller identity",
+      "severity": "low",
+      "note": "Targets PUBLIC (which includes anon) rather than `authenticated` like the newer rls_b1_* policies, but every predicate references auth.uid()/auth.jwt()/is_member/is_commissioner, so anon matches no rows. Cosmetic inconsistency, not an exposure — worth normalising."
+    },
+    {
+      "node": "tbl.draft_settings",
+      "label": "draft_settings",
+      "groupKey": "public-role-policies-gated",
+      "field": "policy_roles",
+      "declared": "n/a",
+      "live": "2 of 2 policies target PUBLIC, all gated on caller identity",
+      "severity": "low",
+      "note": "Targets PUBLIC (which includes anon) rather than `authenticated` like the newer rls_b1_* policies, but every predicate references auth.uid()/auth.jwt()/is_member/is_commissioner, so anon matches no rows. Cosmetic inconsistency, not an exposure — worth normalising."
+    },
+    {
+      "node": "tbl.drafts",
+      "label": "drafts",
+      "groupKey": "public-role-policies-gated",
+      "field": "policy_roles",
+      "declared": "n/a",
+      "live": "4 of 4 policies target PUBLIC, all gated on caller identity",
+      "severity": "low",
+      "note": "Targets PUBLIC (which includes anon) rather than `authenticated` like the newer rls_b1_* policies, but every predicate references auth.uid()/auth.jwt()/is_member/is_commissioner, so anon matches no rows. Cosmetic inconsistency, not an exposure — worth normalising."
+    },
+    {
+      "node": "tbl.league_seasons",
+      "label": "league_seasons",
+      "groupKey": "public-role-policies-gated",
+      "field": "policy_roles",
+      "declared": "n/a",
+      "live": "2 of 2 policies target PUBLIC, all gated on caller identity",
+      "severity": "low",
+      "note": "Targets PUBLIC (which includes anon) rather than `authenticated` like the newer rls_b1_* policies, but every predicate references auth.uid()/auth.jwt()/is_member/is_commissioner, so anon matches no rows. Cosmetic inconsistency, not an exposure — worth normalising."
+    },
+    {
       "node": "tbl.rate_limit_counters",
       "label": "rate_limit_counters",
       "groupKey": "policies",
@@ -7065,6 +7235,16 @@
       "live": "RLS on, ZERO policies",
       "severity": "low",
       "note": "RLS with no policies denies all access except to roles that bypass RLS (service_role, table owner). This is the correct shape for a service-role-only table — confirm that is the intent."
+    },
+    {
+      "node": "tbl.trades",
+      "label": "trades",
+      "groupKey": "public-role-policies-gated",
+      "field": "policy_roles",
+      "declared": "n/a",
+      "live": "2 of 2 policies target PUBLIC, all gated on caller identity",
+      "severity": "low",
+      "note": "Targets PUBLIC (which includes anon) rather than `authenticated` like the newer rls_b1_* policies, but every predicate references auth.uid()/auth.jwt()/is_member/is_commissioner, so anon matches no rows. Cosmetic inconsistency, not an exposure — worth normalising."
     }
   ],
   "deadCode": [
@@ -7075,26 +7255,6 @@
       "source": "supabase/functions/get-broker-keys/index.ts:44",
       "outbound": [
         "tbl.broker_credentials"
-      ],
-      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
-    },
-    {
-      "node": "pg.is_commissioner",
-      "label": "is_commissioner(p_league_id uuid)",
-      "kind": "pg-function",
-      "source": "supabase/migrations/20260712000000_rls_b1_00_helpers.sql:47",
-      "outbound": [
-        "tbl.leagues"
-      ],
-      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
-    },
-    {
-      "node": "pg.is_member",
-      "label": "is_member(p_league_id uuid)",
-      "kind": "pg-function",
-      "source": "supabase/migrations/20260712000000_rls_b1_00_helpers.sql:33",
-      "outbound": [
-        "tbl.league_members"
       ],
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
@@ -7216,11 +7376,11 @@
   "orphanAnnotations": [],
   "stats": {
     "nodes": 98,
-    "edges": 221,
+    "edges": 228,
     "flows": 9,
     "drift": 15,
-    "driftHigh": 1,
-    "deadCode": 10,
+    "driftHigh": 4,
+    "deadCode": 8,
     "unverified": 9
   },
   "sourceIndex": {
@@ -7540,6 +7700,6 @@
       "snapshot-week-start=false",
       "sync-alpaca-orders=false"
     ],
-    "dbSnapshot": "sha256:8cbcc15134d04fbdef1cc8c2924632a6783bfcc3280dabf4f2d61312319213a1"
+    "dbSnapshot": "sha256:1003d2a31164523e894182d57f0321335f74c985764a84c1a41896857ee6535d"
   }
 }

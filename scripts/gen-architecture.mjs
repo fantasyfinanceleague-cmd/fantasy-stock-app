@@ -887,18 +887,41 @@ function build() {
         // cannot — and saying so is a HIGHER severity than a resolved "it gates on
         // auth.uid()", because an unknown on an anon-reachable table is the worse state.
         const havePredicates = live.policies.some((p) => p.using !== undefined || p.withCheck !== undefined);
+        // auth.role() counts as an identity check. Omitting it produced a FALSE
+        // HIGH on cron_job_status, whose `service_role_only` policy gates with
+        // `auth.role() = 'service_role'` — correctly restrictive, since anon
+        // resolves to 'anon'. A false positive in a security panel costs the same
+        // as a miss: it teaches the reader to discount the panel.
+        //
+        // This is a heuristic over predicate TEXT, not an evaluation. It answers
+        // "does this predicate consult the caller at all", not "does it consult
+        // them correctly" — `auth.role() = 'anon'` would pass and still be wrong.
+        const IDENTITY_CHECK = /auth\.uid\s*\(|auth\.jwt\s*\(|auth\.role\s*\(|is_member\s*\(|is_commissioner\s*\(/i;
         const ungated = publicRolePolicies.filter((p) => {
           const expr = [p.using, p.withCheck].filter(Boolean).join(' ');
-          return !/auth\.uid\s*\(|auth\.jwt\s*\(|is_member\s*\(|is_commissioner\s*\(/i.test(expr);
+          return !IDENTITY_CHECK.test(expr);
         });
         if (!havePredicates) {
           node.drift.push({ field: 'policy_roles', groupKey: 'public-role-policies-unknown-predicate',
             declared: 'n/a', live: `${publicRolePolicies.length} of ${live.policies.length} policies target role PUBLIC`, severity: 'medium',
             note: 'PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve.' });
         } else if (ungated.length) {
-          node.drift.push({ field: 'policy_roles', groupKey: 'public-role-policies-ungated',
-            declared: 'n/a', live: `${ungated.length} PUBLIC-role ${ungated.length === 1 ? 'policy' : 'policies'} with no auth.uid() in the predicate: ${ungated.map((p) => p.name).join(', ')}`, severity: 'high',
-            note: 'PUBLIC includes anon and the predicate does not reference the caller identity, so this may be readable or writable without authentication. Confirm intent — some tables (public reference data) are deliberately open.' });
+          // Split writes from reads. An ungated WRITE on a PUBLIC-role policy is
+          // unambiguously wrong — anyone with the publishable key can insert.
+          // An ungated READ may be deliberate (public reference data), but it is
+          // still a decision that has to be made explicitly rather than assumed,
+          // so both stay HIGH and the note says which kind you are looking at.
+          const writes = ungated.filter((p) => p.command !== 'SELECT');
+          const reads = ungated.filter((p) => p.command === 'SELECT');
+          const describe = (p) => `${p.name} (${p.command}, predicate: ${(p.using ?? p.withCheck ?? 'none').replace(/\s+/g, ' ').slice(0, 60)})`;
+          node.drift.push({
+            field: 'policy_roles', groupKey: 'public-role-policies-ungated', declared: 'n/a',
+            live: ungated.map(describe).join(' · '),
+            severity: 'high',
+            note: writes.length
+              ? `UNAUTHENTICATED WRITE. PUBLIC includes anon, and ${writes.length === 1 ? 'this policy grants' : 'these policies grant'} ${writes.map((p) => p.command).join('/')} with a predicate that never references the caller — so anyone holding the publishable key can write arbitrary rows. A policy NAME claiming a role (e.g. "Service role can...") enforces nothing; only the predicate and the role list do.`
+              : `UNAUTHENTICATED READ of every row. PUBLIC includes anon and the predicate is unconditional. This may be intentional for public reference data — but it must be an explicit decision, not an assumption, and it has to be consistent with any function-level lockdown covering the same data.`,
+          });
         } else {
           node.drift.push({ field: 'policy_roles', groupKey: 'public-role-policies-gated',
             declared: 'n/a', live: `${publicRolePolicies.length} of ${live.policies.length} policies target PUBLIC, all gated on caller identity`, severity: 'low',
