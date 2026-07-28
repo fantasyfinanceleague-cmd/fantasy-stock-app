@@ -61,4 +61,15 @@ Rule of thumb: **Opus by default; Fable only for the big, non-security refactors
 **UI entry points (mobile):**
 - **Verify a UI entry point is both MOUNTED and REACHABLE in the state that matters — not just that the file exists.** Check: is the host visible in the tab bar, and is the element outside any `length === 0` (empty-state) branch? This bit us three times in one wave — `LeagueCarousel.tsx` orphaned (never imported/mounted), `leagues.tsx` `href: null` + only linked from zero-league empty states, and nearly again on `league.tsx`. Grep who navigates to the host screen and under what condition BEFORE adding or citing a button.
 
+**Success signals in this codebase are unreliable by default — verify the EFFECT, not the status.** Five instances found so far, all the same shape, which makes it systemic rather than incidental:
+1. **`isMarketOpenToday` returns `open:false` on a 401**, so a stale Alpaca key logs "market closed" and the run exits cleanly having done nothing.
+2. **`net.http_post` is asynchronous**, so `cron.job_run_details` reports `succeeded` on *enqueue* regardless of the HTTP response. A job posting to a `verify_jwt=true` function with no auth header 401s forever and still logs success every run. Use `net._http_response` (≈6h TTL), or check whether the target data changed.
+3. **`schedule_snapshot_retry` raised before its own status `INSERT`.** The `INSERT ... 'retrying'` sat after the `PERFORM cron.schedule(...)`, and a PL/pgSQL body is atomic, so a failed retry-schedule rolled back its own evidence. `cron_job_status` had zero `retrying` rows for the function's entire life — which read as "no retries needed", not "retries never worked".
+4. **`process-week-results` reports success while returning refused batches in `skipped[]`.** A 200 with `processed: 0` is a normal-looking response for a week that scored nothing.
+5. **`supabase-js` `.rpc()` does NOT throw on a Postgres error** — it resolves to `{ data, error }`. A `try/catch` around it catches only transport failures. Both `scheduleRetry` callers discarded the result and then logged `"Scheduled retry N"` unconditionally, asserting success on every call while nothing was ever scheduled. **Always destructure and check `error`;** a wrapping `try/catch` is not a substitute.
+
+Before concluding a job worked, query the data it should have written. Absence of failures is not evidence of success — and a success *log* is not evidence either, since #5 fabricated one.
+
+**Corollary — PL/pgSQL defers name resolution to execution time.** A call to a function signature that does not exist creates cleanly and only raises when that line runs. `schedule_snapshot_retry` passed a `TIMESTAMPTZ` to `cron.schedule` (which has no such overload; implicit datetime→text casts were removed in PG 8.3) and survived three migrations looking healthy. A migration applying successfully says nothing about whether its function bodies work. Exercise the path, or check `pg_proc` overloads directly.
+
 **General:** after a dry-run or any state change, verify the ACTUAL state (grep / `git status` / a query) before building on it. Don't assume a command did what its output implied.
