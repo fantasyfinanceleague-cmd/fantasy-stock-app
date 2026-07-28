@@ -1195,13 +1195,20 @@ Deno.serve(async (req) => {
         // a both-empty PLAYOFF matchup still yields no winner (so nothing
         // advances), and advancePlayoffWinner still derives the wrong seed.
         // See playoff-progression.test.ts.
+        // Casts, not conversions — erased at runtime, so behaviour is unaffected.
+        // grouping.ts's MatchupRow types every column it does not itself read as
+        // `unknown` (an index signature), so these fields arrive untyped. The old
+        // inline code hid that by assigning them into pre-declared `let`s; the
+        // module's typed parameter surfaces it at the boundary instead. Narrowing
+        // here is the smallest honest fix — widening MatchupRow would change a
+        // tested module's contract for a purely local need.
         const progressionMatchup = {
-          team1UserId: matchup.team1_user_id,
-          team2UserId: matchup.team2_user_id,
-          team1Seed: matchup.team1_seed,
-          team2Seed: matchup.team2_seed,
+          team1UserId: matchup.team1_user_id as string,
+          team2UserId: matchup.team2_user_id as string | null,
+          team1Seed: matchup.team1_seed as number | null,
+          team2Seed: matchup.team2_seed as number | null,
           isPlayoff,
-          playoffRound: matchup.playoff_round,
+          playoffRound: matchup.playoff_round as PlayoffRound | null,
         };
         const outcome = decideMatchupOutcome(progressionMatchup, team1Score, team2Score);
         const { winnerId, isTie, team1Won, team2Won } = outcome;
