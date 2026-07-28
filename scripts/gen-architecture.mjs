@@ -66,7 +66,11 @@ function walk(dir, exts, out = []) {
 
 const rel = (p) => relative(ROOT, p).split('\\').join('/');
 const read = (p) => readFileSync(p, 'utf8');
-const sha = (s) => 'sha256:' + createHash('sha256').update(s).digest('hex').slice(0, 32);
+// Full 64-char digest. This used to emit .slice(0, 32) while still labelling itself
+// "sha256:" — a 128-bit value wearing a 256-bit name. In a tool whose whole point is
+// not making claims it cannot support, that is the wrong place to be sloppy. The
+// viewer truncates for display; the stored value is the real thing.
+const sha = (s) => 'sha256:' + createHash('sha256').update(s).digest('hex');
 
 /** Map a character offset to a 1-indexed line number. */
 function lineAt(content, index) {
@@ -189,11 +193,26 @@ const RE_ENV = /(?:Deno\.env\.get|\benv)\(\s*['"]([A-Z][A-Z0-9_]*)['"]\s*\)/;
 const RE_LOCAL_IMPORT = /from\s+['"]\.\/([\w.\-]+\.ts)['"]/;
 const RE_URL = /['"`](https:\/\/([a-z0-9.\-]+)\/[^'"`\s]*)['"`]/;
 
-/** After `.from('t')`, find the first PostgREST verb to classify the edge. */
-function verbAfterFrom(content, endIndex) {
+/**
+ * After `.from('t')`, find the PostgREST verb AND, for selects, the column list.
+ *
+ * Columns are load-bearing, not decoration. `.from('broker_credentials').select()`
+ * and `.select('key_id')` are completely different security stories — the first ships
+ * encrypted secrets to the browser, the second ships an identifier. An edge that says
+ * only "select" cannot tell you which one you have.
+ */
+function opAfterFrom(content, endIndex) {
   const tail = content.slice(endIndex, endIndex + 400);
   const m = tail.match(/\.\s*(select|insert|update|upsert|delete)\b/);
-  return m ? m[1] : 'select';
+  if (!m) return { verb: 'select', columns: null };
+  const verb = m[1];
+  if (verb !== 'select') return { verb, columns: null };
+  // `.select('a, b')` -> "a, b"; `.select()` -> "*" (PostgREST's default is all columns)
+  const rest = tail.slice(m.index);
+  const quoted = rest.match(/^\.\s*select\(\s*(['"`])([\s\S]*?)\1/);
+  if (quoted) return { verb, columns: quoted[2].replace(/\s+/g, ' ').trim() };
+  if (/^\.\s*select\(\s*\)/.test(rest)) return { verb, columns: '*' };
+  return { verb, columns: null };
 }
 
 const VENDOR_HOSTS = {
@@ -215,7 +234,8 @@ function scanCallSites(files) {
     for (const { m, line } of scan(content, RE_INVOKE)) invokes.push({ file: r, line, target: m[1] });
     for (const { m, line } of scan(content, RE_RPC)) rpcs.push({ file: r, line, target: m[1] });
     for (const { m, line } of scan(content, RE_FROM)) {
-      tableOps.push({ file: r, line, table: m[1], verb: verbAfterFrom(content, m.index + m[0].length) });
+      const op = opAfterFrom(content, m.index + m[0].length);
+      tableOps.push({ file: r, line, table: m[1], verb: op.verb, columns: op.columns });
     }
     for (const { m, line } of scan(content, RE_URL)) {
       const vendor = VENDOR_HOSTS[m[2]];
@@ -263,15 +283,64 @@ function scanEdgeFunctions() {
 // 4. Migrations
 // ---------------------------------------------------------------------------
 
+/**
+ * Table access inside plpgsql function bodies.
+ *
+ * The call-site greps only see TypeScript, so anything a SECURITY DEFINER function
+ * touches was invisible: rate_limit_counters rendered as a zero-edge orphan even though
+ * check_and_bump_rate_limit writes it on every join attempt, and start_new_league_season
+ * showed as a single RPC call with none of its four destructive writes on the graph.
+ * Absence of edges read as absence of access, which is the opposite of true.
+ *
+ * These edges are marked `derivedFrom: 'sql-body'` because a regex over SQL text is
+ * weaker evidence than a resolved call site — it cannot see dynamic SQL built with
+ * format()/EXECUTE. Matches are restricted to known table names so `FROM unnest(...)`
+ * and friends do not invent nodes.
+ */
+function scanFunctionBodies(knownTables) {
+  const dir = join(ROOT, 'supabase/migrations');
+  if (!existsSync(dir)) return [];
+  const out = [];
+  for (const f of readdirSync(dir).filter((x) => x.endsWith('.sql')).sort()) {
+    const sql = stripSqlComments(read(join(dir, f)));
+    const r = `supabase/migrations/${f}`;
+    // Walk each CREATE FUNCTION and take the dollar-quoted body that follows it.
+    for (const { m, line } of scan(sql, /create\s+(?:or\s+replace\s+)?function\s+(?:public\.)?"?([a-z_][a-z0-9_]*)"?\s*\(/i)) {
+      const fnName = m[1].toLowerCase();
+      const after = sql.slice(m.index);
+      const body = after.match(/\$([a-z_]*)\$([\s\S]*?)\$\1\$/i);
+      if (!body) continue;
+      const text = body[2];
+      const verbs = [
+        [/\binsert\s+into\s+(?:public\.)?"?([a-z_][a-z0-9_]*)"?/gi, 'insert'],
+        [/\bupdate\s+(?:only\s+)?(?:public\.)?"?([a-z_][a-z0-9_]*)"?\s+set\b/gi, 'update'],
+        [/\bdelete\s+from\s+(?:public\.)?"?([a-z_][a-z0-9_]*)"?/gi, 'delete'],
+        [/\b(?:from|join)\s+(?:public\.)?"?([a-z_][a-z0-9_]*)"?/gi, 'select'],
+      ];
+      for (const [re, verb] of verbs) {
+        let hit;
+        while ((hit = re.exec(text)) !== null) {
+          const table = hit[1].toLowerCase();
+          if (!knownTables.has(table)) continue;
+          out.push({ fn: fnName, table, verb, file: r, line: line + text.slice(0, hit.index).split('\n').length });
+        }
+      }
+    }
+  }
+  return out;
+}
+
 function scanMigrations() {
   const dir = join(ROOT, 'supabase/migrations');
-  if (!existsSync(dir)) return { files: [], tables: {}, functions: {}, policies: {}, rlsEnabled: new Set(), cron: {} };
+  if (!existsSync(dir)) return { files: [], tables: {}, functions: {}, policies: {}, rlsEnabled: new Set(), cron: {}, triggers: [], triggerFunctions: new Set() };
   const files = readdirSync(dir).filter((f) => f.endsWith('.sql')).sort();
   const tables = {};
   const functions = {};
   const policies = {};
   const rlsEnabled = new Set();
   const cron = {};
+  const triggers = [];
+  const triggerFunctions = new Set();
 
   const touch = (bag, key, file, line) => {
     (bag[key] ||= { definedIn: [], firstSeen: null }).definedIn.push({ file, line });
@@ -294,8 +363,15 @@ function scanMigrations() {
       touch(policies, `${m[2].toLowerCase()}::${m[1].trim()}`, r, line);
     for (const { m, line } of scan(sql, /cron\.schedule\(\s*'([^']+)'\s*,\s*'([^']+)'/i))
       (cron[m[1]] ||= []).push({ file: r, line, schedule: m[2] });
+    // CREATE TRIGGER <name> ... ON <table> ... EXECUTE {FUNCTION|PROCEDURE} <fn>()
+    // Without this, a trigger function looks like dead code: nothing "calls" it in any
+    // grep-visible sense, but the table fires it on every write.
+    for (const { m, line } of scan(sql, /create\s+trigger\s+[a-z_][a-z0-9_]*\s+[\s\S]{0,200}?\bon\s+(?:public\.)?"?([a-z_][a-z0-9_]*)"?[\s\S]{0,200}?execute\s+(?:function|procedure)\s+(?:public\.)?"?([a-z_][a-z0-9_]*)"?/i))
+      triggers.push({ table: m[1].toLowerCase(), fn: m[2].toLowerCase(), file: r, line });
+    for (const { m } of scan(sql, /create\s+(?:or\s+replace\s+)?function\s+(?:public\.)?"?([a-z_][a-z0-9_]*)"?\s*\([^)]*\)\s*returns\s+trigger/i))
+      triggerFunctions.add(m[1].toLowerCase());
   }
-  return { files, tables, functions, policies, rlsEnabled, cron };
+  return { files, tables, functions, policies, rlsEnabled, cron, triggers, triggerFunctions };
 }
 
 // ---------------------------------------------------------------------------
@@ -388,7 +464,9 @@ const FLOWS = [
       { edge: 'e.fn.preview-league->pg.check_and_bump_rate_limit', detail: 'Per-user and per-IP buckets. Fail-open by design — a limiter outage must not block joins.', anchors: [['supabase/functions/preview-league/index.ts', 'check_and_bump_rate_limit']] },
       { edge: 'e.ui.join-league->fn.join-league', detail: 'On confirm, the join is performed server-side. verify_jwt=true, so the caller identity is the gateway-verified JWT.', anchors: [['apps/mobile/app/join-league.tsx', "invoke('join-league'"]] },
       { edge: 'e.fn.join-league->pg.check_and_bump_rate_limit', detail: 'Same two buckets on the mutating path.', anchors: [['supabase/functions/join-league/index.ts', 'check_and_bump_rate_limit']] },
-      { edge: 'e.fn.join-league->pg.join_league_by_code', detail: 'Atomic membership insert + invite accept. p_user_id comes from the verified JWT, never the request body.', anchors: [['supabase/functions/join-league/index.ts', "rpc('join_league_by_code'"]] },
+      { edge: 'e.fn.join-league->pg.join_league_by_code', detail: 'Atomic membership insert + invite accept. p_user_id comes from the verified JWT, never the request body. EXECUTE is service_role only, so the client cannot reach this directly.', anchors: [['supabase/functions/join-league/index.ts', "rpc('join_league_by_code'"]] },
+      { edge: 'e.pg.join_league_by_code->tbl.league_members#insert', detail: 'Membership row written inside the function, so league_members stays unwritable by clients under RLS.' },
+      { edge: 'e.pg.join_league_by_code->tbl.league_invites#update', detail: 'Invite marked accepted in the same transaction as the insert — the pair is why this is an RPC rather than two client calls.' },
     ],
   },
   {
@@ -473,7 +551,12 @@ const FLOWS = [
     title: 'Season reset',
     trigger: { kind: 'user', detail: 'Commissioner taps reset in league settings' },
     steps: [
-      { edge: 'e.ui.league-settings->pg.start_new_league_season', detail: 'Called directly from the client as an authenticated user. EXECUTE is granted to `authenticated`, so the authorization is NOT the grant — it is an INTERNAL commissioner check inside the function body. That gate is the only thing standing between any league member and a destructive season reset.', anchors: [['apps/mobile/app/league-settings.tsx', "rpc('start_new_league_season'"]] },
+      { edge: 'e.ui.league-settings->pg.start_new_league_season', detail: 'Called directly from the client as an authenticated user. EXECUTE is granted to `authenticated`, so the authorization is NOT the grant — it is an INTERNAL commissioner check inside the function body. That gate is the only thing standing between any league member and the four destructive writes below.', anchors: [['apps/mobile/app/league-settings.tsx', "rpc('start_new_league_season'"]] },
+      { edge: 'e.pg.start_new_league_season->tbl.leagues', detail: 'GATE 1 — commissioner check: `commissioner_id = auth.uid()::text`. auth.uid() is NULL for anon, so it fails closed. Checked BEFORE the state guard so an unauthorized caller learns nothing about league state.', anchors: [['supabase/migrations/20260718000000_lockdown_start_new_league_season.sql', 'Only the commissioner can start a new season']] },
+      { edge: 'e.pg.start_new_league_season->tbl.league_seasons#insert', detail: 'WRITE 1 — new league_seasons row at MAX(season_number)+1. This is what preserves the old season, so it must succeed before anything is destroyed.', anchors: [['supabase/migrations/20260718000000_lockdown_start_new_league_season.sql', 'INSERT INTO league_seasons']] },
+      { edge: 'e.pg.start_new_league_season->tbl.league_standings#update', detail: 'WRITE 2 — every standings row for the league zeroed: wins, losses, ties, points_for, points_against.', anchors: [['supabase/migrations/20260718000000_lockdown_start_new_league_season.sql', 'UPDATE league_standings']] },
+      { edge: 'e.pg.start_new_league_season->tbl.matchups#delete', detail: 'WRITE 3 — DESTRUCTIVE: every matchup for the league is deleted outright. History survives only via league_seasons.final_standings, so if WRITE 1 did not capture it, it is gone.', anchors: [['supabase/migrations/20260718000000_lockdown_start_new_league_season.sql', 'DELETE FROM matchups']] },
+      { edge: 'e.pg.start_new_league_season->tbl.leagues#update', detail: 'WRITE 4 — league pointed at the new season: current_season_id, season_status=active, current_week=1. All four writes share one implicit transaction, so a failure rolls back the whole reset.', anchors: [['supabase/migrations/20260718000000_lockdown_start_new_league_season.sql', 'season_status = \'active\'']] },
     ],
   },
   {
@@ -542,7 +625,13 @@ function build() {
   const addNode = (n) => { if (!nodes.has(n.id)) nodes.set(n.id, { layer: LAYER_OF[n.kind], facts: {}, db: null, declared: null, drift: [], annotation: null, verified: true, ...n }); return nodes.get(n.id); };
   const addEdge = (e) => {
     const existing = edges.get(e.id);
-    if (existing) { existing.callSites = [...new Set([...existing.callSites, ...e.callSites])].sort(); return existing; }
+    if (existing) {
+      existing.callSites = [...new Set([...existing.callSites, ...e.callSites])].sort();
+      // Merge column sets across call sites: five screens reading one table may each
+      // select something different, and the union is what the table actually exposes.
+      if (e.columns?.length) existing.columns = [...new Set([...(existing.columns || []), ...e.columns])].sort();
+      return existing;
+    }
     edges.set(e.id, { annotation: null, verified: true, ...e });
     return edges.get(e.id);
   };
@@ -648,7 +737,9 @@ function build() {
       // scanner happened to hit first.
       const suffix = s.verb === 'select' ? '' : `#${s.verb}`;
       addEdge({ id: `e.${from}->tbl.${s.table}${suffix}`, from, to: `tbl.${s.table}`, protocol: `postgrest-${s.verb}`,
-        payload: `.from('${s.table}').${s.verb}()`, callSites: [`${s.file}:${s.line}`] });
+        payload: `.from('${s.table}').${s.verb}(${s.columns ? `'${s.columns}'` : ''})`,
+        columns: s.columns ? [s.columns] : [],
+        callSites: [`${s.file}:${s.line}`] });
     }
     for (const s of sites.vendorCalls) {
       const from = originFor(s.file);
@@ -722,6 +813,46 @@ function build() {
     }
   }
 
+  // Function-body table access. Runs after the pg-function nodes exist so the edges
+  // have a real source, and before table nodes so it can contribute to the table set.
+  const knownTables = new Set([...Object.keys(migrations.tables), ...snapTables.keys()]);
+  const bodyOps = scanFunctionBodies(knownTables);
+  for (const op of bodyOps) {
+    if (!nodes.has(`pg.${op.fn}`)) continue;
+    const suffix = op.verb === 'select' ? '' : `#${op.verb}`;
+    addEdge({
+      id: `e.pg.${op.fn}->tbl.${op.table}${suffix}`, from: `pg.${op.fn}`, to: `tbl.${op.table}`,
+      protocol: `plpgsql-${op.verb}`, payload: `${op.verb.toUpperCase()} ${op.table} (inside function body)`,
+      derivedFrom: 'sql-body', callSites: [`${op.file}:${op.line}`],
+    });
+  }
+
+  // Triggers: the table fires the function on write. Without these edges a trigger
+  // function reads as dead code, since nothing "calls" it in any grep-visible sense.
+  for (const t of migrations.triggers) {
+    if (!nodes.has(`pg.${t.fn}`)) continue;
+    addEdge({ id: `e.tbl.${t.table}->pg.${t.fn}`, from: `tbl.${t.table}`, to: `pg.${t.fn}`,
+      protocol: 'pg-trigger', payload: `trigger on ${t.table}`, derivedFrom: 'sql-body',
+      callSites: [`${t.file}:${t.line}`] });
+  }
+
+  // RLS predicates that call helper functions. is_member/is_commissioner are invoked by
+  // policy expressions, not by application code — invisible until the snapshot carries
+  // predicates, which is why they showed as unreachable.
+  for (const [tname, t] of snapTables) {
+    for (const p of t.policies || []) {
+      const expr = [p.using, p.withCheck].filter(Boolean).join(' ');
+      if (!expr) continue;
+      for (const { m } of scan(expr, /\b(is_member|is_commissioner|[a-z_][a-z0-9_]*)\s*\(/g)) {
+        const fn = m[1].toLowerCase();
+        if (!nodes.has(`pg.${fn}`)) continue;
+        addEdge({ id: `e.tbl.${tname}->pg.${fn}#rls`, from: `tbl.${tname}`, to: `pg.${fn}`,
+          protocol: 'rls-predicate', payload: `called by policy ${p.name}`, derivedFrom: 'db-snapshot',
+          callSites: [`db-snapshot.json · policy ${p.name}`] });
+      }
+    }
+  }
+
   const allTableNames = new Set([...Object.keys(migrations.tables), ...snapTables.keys(), ...[...edges.values()].filter((e) => e.to.startsWith('tbl.')).map((e) => e.to.slice(4))]);
   for (const name of allTableNames) {
     const decl = migrations.tables[name];
@@ -749,8 +880,29 @@ function build() {
       }
       const publicRolePolicies = live.policies.filter((p) => p.roles.includes('PUBLIC'));
       if (publicRolePolicies.length) {
-        node.drift.push({ field: 'policy_roles', declared: 'n/a', live: `${publicRolePolicies.length} of ${live.policies.length} policies target role PUBLIC`, severity: 'low',
-          note: 'A PUBLIC-role policy also applies to anon, so the predicate alone decides access. Predicates are not captured in the snapshot — read the migration to confirm each one gates on auth.uid(). Newer rls_b1_* policies target `authenticated` explicitly.' });
+        // Predicate-aware as of the 2026-07-27 snapshot extension. A PUBLIC-role policy
+        // also applies to anon, so the predicate is the ONLY thing deciding access. If
+        // the snapshot carries predicates we can answer that; if not, we must say we
+        // cannot — and saying so is a HIGHER severity than a resolved "it gates on
+        // auth.uid()", because an unknown on an anon-reachable table is the worse state.
+        const havePredicates = live.policies.some((p) => p.using !== undefined || p.withCheck !== undefined);
+        const ungated = publicRolePolicies.filter((p) => {
+          const expr = [p.using, p.withCheck].filter(Boolean).join(' ');
+          return !/auth\.uid\s*\(|auth\.jwt\s*\(|is_member\s*\(|is_commissioner\s*\(/i.test(expr);
+        });
+        if (!havePredicates) {
+          node.drift.push({ field: 'policy_roles', groupKey: 'public-role-policies-unknown-predicate',
+            declared: 'n/a', live: `${publicRolePolicies.length} of ${live.policies.length} policies target role PUBLIC`, severity: 'medium',
+            note: 'PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve.' });
+        } else if (ungated.length) {
+          node.drift.push({ field: 'policy_roles', groupKey: 'public-role-policies-ungated',
+            declared: 'n/a', live: `${ungated.length} PUBLIC-role ${ungated.length === 1 ? 'policy' : 'policies'} with no auth.uid() in the predicate: ${ungated.map((p) => p.name).join(', ')}`, severity: 'high',
+            note: 'PUBLIC includes anon and the predicate does not reference the caller identity, so this may be readable or writable without authentication. Confirm intent — some tables (public reference data) are deliberately open.' });
+        } else {
+          node.drift.push({ field: 'policy_roles', groupKey: 'public-role-policies-gated',
+            declared: 'n/a', live: `${publicRolePolicies.length} of ${live.policies.length} policies target PUBLIC, all gated on caller identity`, severity: 'low',
+            note: 'Targets PUBLIC (which includes anon) rather than `authenticated` like the newer rls_b1_* policies, but every predicate references auth.uid()/auth.jwt()/is_member/is_commissioner, so anon matches no rows. Cosmetic inconsistency, not an exposure — worth normalising.' });
+        }
       }
       if (node.declared?.rlsEnabled && !live.rlsEnabled) {
         node.drift.push({ field: 'rls', declared: 'enabled by migration', live: 'disabled', severity: 'high', note: 'A migration enables RLS but prod has it off.' });
@@ -854,9 +1006,31 @@ function build() {
   const dirtyPaths = dirtyInputs();
   const nodeList = [...nodes.values()].sort((a, b) => a.id.localeCompare(b.id));
   const edgeList = [...edges.values()].sort((a, b) => a.id.localeCompare(b.id));
-  const driftRows = nodeList.flatMap((n) => n.drift.map((d) => ({ node: n.id, label: n.label, ...d })));
+  // groupKey lets the viewer collapse a finding that repeats across many objects into
+  // one row. Eleven identical "policies target PUBLIC" rows in a 15-row list trained the
+  // eye to skip the panel, which defeats the panel. Default to the field name so every
+  // row is groupable without each producer having to opt in.
+  const driftRows = nodeList.flatMap((n) => n.drift.map((d) => ({ node: n.id, label: n.label, groupKey: d.field, ...d })));
   const sevRank = { high: 0, medium: 1, low: 2 };
   driftRows.sort((a, b) => sevRank[a.severity] - sevRank[b.severity] || a.node.localeCompare(b.node));
+
+  // Dead-code candidates: reachable by nothing. Triggers and client screens are excluded
+  // because they ARE entry points — inbound-edge count says nothing about them. For
+  // everything else, zero inbound means nothing in the scanned surface calls it, which
+  // is a cleanup worklist rather than a proof (see derivedFrom / grep caveats).
+  const inboundCount = new Map();
+  for (const e of edgeList) inboundCount.set(e.to, (inboundCount.get(e.to) || 0) + 1);
+  const ENTRY_LAYERS = new Set(['trigger', 'client', 'external']);
+  const deadCode = nodeList
+    .filter((n) => !ENTRY_LAYERS.has(n.layer) && !(inboundCount.get(n.id) > 0))
+    .map((n) => ({
+      node: n.id, label: n.label, kind: n.kind,
+      source: n.source ? `${n.source.path}:${n.source.line}` : null,
+      outbound: edgeList.filter((e) => e.from === n.id).map((e) => e.to),
+      caveat: n.kind === 'table'
+        ? 'No scanned caller. Tables can also be reached from plpgsql bodies (now parsed) or dynamic SQL (not parsed).'
+        : 'No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed.',
+    }));
 
   return {
     doc: {
@@ -880,11 +1054,13 @@ function build() {
       edges: edgeList,
       flows,
       drift: driftRows,
+      deadCode,
       unverified,
       orphanAnnotations,
       stats: {
         nodes: nodeList.length, edges: edgeList.length, flows: flows.length,
         drift: driftRows.length, driftHigh: driftRows.filter((d) => d.severity === 'high').length,
+        deadCode: deadCode.length,
         unverified: unverified.length,
       },
       sourceIndex,

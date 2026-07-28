@@ -2,25 +2,34 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "7966835e9faff078321f005ed7bb532854cad284",
-    "commitShort": "7966835",
+    "commit": "f7311f9d10d5ec04978fd3d5ec4c2a3e5bb976ec",
+    "commitShort": "f7311f9",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "claude/architecture-map-generator-01ec80",
-    "dirty": false,
-    "dirtyPaths": [],
-    "timestamp": "2026-07-27T21:12:59Z",
-    "sourceHash": "sha256:508fe0f5e060567dbac199a90ad1234b",
+    "dirty": true,
+    "dirtyPaths": [
+      {
+        "code": "M",
+        "path": "scripts/architecture-viewer.html"
+      },
+      {
+        "code": "M",
+        "path": "scripts/gen-architecture.mjs"
+      }
+    ],
+    "timestamp": "2026-07-28T02:27:00Z",
+    "sourceHash": "sha256:804b9b0005cfeffd8abc8b1f1038dc2bd2b3198f4430869f7eb3f3803fc5389e",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-07-27T20:14:32Z",
-    "ageHours": 1,
-    "ageDays": 0,
+    "ageHours": 6.2,
+    "ageDays": 0.3,
     "staleAfterDays": 14,
     "stale": false,
-    "hash": "sha256:8cbcc15134d04fbdef1cc8c2924632a6",
+    "hash": "sha256:8cbcc15134d04fbdef1cc8c2924632a6783bfcc3280dabf4f2d61312319213a1",
     "database": "postgres",
     "postgresVersion": "17.4",
     "counts": {
@@ -1613,10 +1622,11 @@
       "drift": [
         {
           "field": "policy_roles",
+          "groupKey": "public-role-policies-unknown-predicate",
           "declared": "n/a",
           "live": "4 of 4 policies target role PUBLIC",
-          "severity": "low",
-          "note": "A PUBLIC-role policy also applies to anon, so the predicate alone decides access. Predicates are not captured in the snapshot — read the migration to confirm each one gates on auth.uid(). Newer rls_b1_* policies target `authenticated` explicitly."
+          "severity": "medium",
+          "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
         }
       ],
       "annotation": null,
@@ -1656,10 +1666,11 @@
       "drift": [
         {
           "field": "policy_roles",
+          "groupKey": "public-role-policies-unknown-predicate",
           "declared": "n/a",
           "live": "1 of 1 policies target role PUBLIC",
-          "severity": "low",
-          "note": "A PUBLIC-role policy also applies to anon, so the predicate alone decides access. Predicates are not captured in the snapshot — read the migration to confirm each one gates on auth.uid(). Newer rls_b1_* policies target `authenticated` explicitly."
+          "severity": "medium",
+          "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
         }
       ],
       "annotation": null,
@@ -1707,10 +1718,11 @@
       "drift": [
         {
           "field": "policy_roles",
+          "groupKey": "public-role-policies-unknown-predicate",
           "declared": "n/a",
           "live": "2 of 2 policies target role PUBLIC",
-          "severity": "low",
-          "note": "A PUBLIC-role policy also applies to anon, so the predicate alone decides access. Predicates are not captured in the snapshot — read the migration to confirm each one gates on auth.uid(). Newer rls_b1_* policies target `authenticated` explicitly."
+          "severity": "medium",
+          "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
         }
       ],
       "annotation": null,
@@ -1759,10 +1771,11 @@
       "drift": [
         {
           "field": "policy_roles",
+          "groupKey": "public-role-policies-unknown-predicate",
           "declared": "n/a",
           "live": "2 of 2 policies target role PUBLIC",
-          "severity": "low",
-          "note": "A PUBLIC-role policy also applies to anon, so the predicate alone decides access. Predicates are not captured in the snapshot — read the migration to confirm each one gates on auth.uid(). Newer rls_b1_* policies target `authenticated` explicitly."
+          "severity": "medium",
+          "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
         }
       ],
       "annotation": null,
@@ -1826,10 +1839,11 @@
       "drift": [
         {
           "field": "policy_roles",
+          "groupKey": "public-role-policies-unknown-predicate",
           "declared": "n/a",
           "live": "4 of 4 policies target role PUBLIC",
-          "severity": "low",
-          "note": "A PUBLIC-role policy also applies to anon, so the predicate alone decides access. Predicates are not captured in the snapshot — read the migration to confirm each one gates on auth.uid(). Newer rls_b1_* policies target `authenticated` explicitly."
+          "severity": "medium",
+          "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
         }
       ],
       "annotation": null,
@@ -1981,10 +1995,11 @@
       "drift": [
         {
           "field": "policy_roles",
+          "groupKey": "public-role-policies-unknown-predicate",
           "declared": "n/a",
           "live": "2 of 2 policies target role PUBLIC",
-          "severity": "low",
-          "note": "A PUBLIC-role policy also applies to anon, so the predicate alone decides access. Predicates are not captured in the snapshot — read the migration to confirm each one gates on auth.uid(). Newer rls_b1_* policies target `authenticated` explicitly."
+          "severity": "medium",
+          "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
         }
       ],
       "annotation": null,
@@ -2198,10 +2213,11 @@
       "drift": [
         {
           "field": "policy_roles",
+          "groupKey": "public-role-policies-unknown-predicate",
           "declared": "n/a",
           "live": "2 of 2 policies target role PUBLIC",
-          "severity": "low",
-          "note": "A PUBLIC-role policy also applies to anon, so the predicate alone decides access. Predicates are not captured in the snapshot — read the migration to confirm each one gates on auth.uid(). Newer rls_b1_* policies target `authenticated` explicitly."
+          "severity": "medium",
+          "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
         }
       ],
       "annotation": null,
@@ -2270,10 +2286,11 @@
       "drift": [
         {
           "field": "policy_roles",
+          "groupKey": "public-role-policies-unknown-predicate",
           "declared": "n/a",
           "live": "1 of 1 policies target role PUBLIC",
-          "severity": "low",
-          "note": "A PUBLIC-role policy also applies to anon, so the predicate alone decides access. Predicates are not captured in the snapshot — read the migration to confirm each one gates on auth.uid(). Newer rls_b1_* policies target `authenticated` explicitly."
+          "severity": "medium",
+          "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
         }
       ],
       "annotation": null,
@@ -2319,10 +2336,11 @@
       "drift": [
         {
           "field": "policy_roles",
+          "groupKey": "public-role-policies-unknown-predicate",
           "declared": "n/a",
           "live": "2 of 2 policies target role PUBLIC",
-          "severity": "low",
-          "note": "A PUBLIC-role policy also applies to anon, so the predicate alone decides access. Predicates are not captured in the snapshot — read the migration to confirm each one gates on auth.uid(). Newer rls_b1_* policies target `authenticated` explicitly."
+          "severity": "medium",
+          "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
         }
       ],
       "annotation": null,
@@ -2380,10 +2398,11 @@
       "drift": [
         {
           "field": "policy_roles",
+          "groupKey": "public-role-policies-unknown-predicate",
           "declared": "n/a",
           "live": "3 of 3 policies target role PUBLIC",
-          "severity": "low",
-          "note": "A PUBLIC-role policy also applies to anon, so the predicate alone decides access. Predicates are not captured in the snapshot — read the migration to confirm each one gates on auth.uid(). Newer rls_b1_* policies target `authenticated` explicitly."
+          "severity": "medium",
+          "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
         }
       ],
       "annotation": null,
@@ -3159,7 +3178,10 @@
       "from": "fn.get-broker-keys",
       "to": "tbl.broker_credentials",
       "protocol": "postgrest-select",
-      "payload": ".from('broker_credentials').select()",
+      "payload": ".from('broker_credentials').select('key_id, secret_ciphertext, iv')",
+      "columns": [
+        "key_id, secret_ciphertext, iv"
+      ],
       "callSites": [
         "supabase/functions/get-broker-keys/index.ts:81"
       ]
@@ -3221,7 +3243,10 @@
       "from": "fn.place-order",
       "to": "tbl.broker_credentials",
       "protocol": "postgrest-select",
-      "payload": ".from('broker_credentials').select()",
+      "payload": ".from('broker_credentials').select('key_id, secret_ciphertext, iv')",
+      "columns": [
+        "key_id, secret_ciphertext, iv"
+      ],
       "callSites": [
         "supabase/functions/place-order/index.ts:48"
       ]
@@ -3246,7 +3271,10 @@
       "from": "fn.preview-league",
       "to": "tbl.league_invites",
       "protocol": "postgrest-select",
-      "payload": ".from('league_invites').select()",
+      "payload": ".from('league_invites').select('*')",
+      "columns": [
+        "*"
+      ],
       "callSites": [
         "supabase/functions/preview-league/index.ts:77"
       ]
@@ -3258,7 +3286,11 @@
       "from": "fn.preview-league",
       "to": "tbl.league_members",
       "protocol": "postgrest-select",
-      "payload": ".from('league_members').select()",
+      "payload": ".from('league_members').select('*')",
+      "columns": [
+        "*",
+        "user_id"
+      ],
       "callSites": [
         "supabase/functions/preview-league/index.ts:92",
         "supabase/functions/preview-league/index.ts:96"
@@ -3271,7 +3303,10 @@
       "from": "fn.preview-league",
       "to": "tbl.leagues",
       "protocol": "postgrest-select",
-      "payload": ".from('leagues').select()",
+      "payload": ".from('leagues').select('*')",
+      "columns": [
+        "*"
+      ],
       "callSites": [
         "supabase/functions/preview-league/index.ts:74",
         "supabase/functions/preview-league/index.ts:80"
@@ -3284,7 +3319,10 @@
       "from": "fn.preview-league",
       "to": "tbl.user_profiles",
       "protocol": "postgrest-select",
-      "payload": ".from('user_profiles').select()",
+      "payload": ".from('user_profiles').select('username')",
+      "columns": [
+        "username"
+      ],
       "callSites": [
         "supabase/functions/preview-league/index.ts:88"
       ]
@@ -3346,6 +3384,7 @@
       "to": "tbl.cron_job_status",
       "protocol": "postgrest-upsert",
       "payload": ".from('cron_job_status').upsert()",
+      "columns": [],
       "callSites": [
         "supabase/functions/process-week-results/index.ts:47"
       ]
@@ -3357,7 +3396,10 @@
       "from": "fn.process-week-results",
       "to": "tbl.drafts",
       "protocol": "postgrest-select",
-      "payload": ".from('drafts').select()",
+      "payload": ".from('drafts').select('user_id, symbol, entry_price, quantity')",
+      "columns": [
+        "user_id, symbol, entry_price, quantity"
+      ],
       "callSites": [
         "supabase/functions/process-week-results/index.ts:1042"
       ]
@@ -3369,7 +3411,12 @@
       "from": "fn.process-week-results",
       "to": "tbl.league_standings",
       "protocol": "postgrest-select",
-      "payload": ".from('league_standings').select()",
+      "payload": ".from('league_standings').select('user_id, wins, losses, ties, points_for, points_against')",
+      "columns": [
+        "*",
+        "user_id, wins, losses, ties, points_for, points_against",
+        "user_id, wins, points_for"
+      ],
       "callSites": [
         "supabase/functions/process-week-results/index.ts:1291",
         "supabase/functions/process-week-results/index.ts:428",
@@ -3384,6 +3431,7 @@
       "to": "tbl.league_standings",
       "protocol": "postgrest-insert",
       "payload": ".from('league_standings').insert()",
+      "columns": [],
       "callSites": [
         "supabase/functions/process-week-results/index.ts:1315"
       ]
@@ -3396,6 +3444,7 @@
       "to": "tbl.league_standings",
       "protocol": "postgrest-update",
       "payload": ".from('league_standings').update()",
+      "columns": [],
       "callSites": [
         "supabase/functions/process-week-results/index.ts:1300"
       ]
@@ -3407,7 +3456,10 @@
       "from": "fn.process-week-results",
       "to": "tbl.leagues",
       "protocol": "postgrest-select",
-      "payload": ".from('leagues').select()",
+      "payload": ".from('leagues').select('current_week, season_status')",
+      "columns": [
+        "current_week, season_status"
+      ],
       "callSites": [
         "supabase/functions/process-week-results/index.ts:1388"
       ]
@@ -3420,6 +3472,7 @@
       "to": "tbl.leagues",
       "protocol": "postgrest-update",
       "payload": ".from('leagues').update()",
+      "columns": [],
       "callSites": [
         "supabase/functions/process-week-results/index.ts:1428",
         "supabase/functions/process-week-results/index.ts:1437",
@@ -3433,7 +3486,14 @@
       "from": "fn.process-week-results",
       "to": "tbl.matchups",
       "protocol": "postgrest-select",
-      "payload": ".from('matchups').select()",
+      "payload": ".from('matchups').select('team1_user_id, team2_user_id, winner_user_id, team1_gain, is_playoff')",
+      "columns": [
+        "id",
+        "id, league_id, week_number, team1_user_id, team2_user_id, team1_gain, team1_seed, team2_seed, week_start, week_end, is_playoff, playoff_round, leagues!inner(id, league_type, current_week, num_weeks, playoff_teams)",
+        "id, team1_user_id, team2_user_id, team1_seed, team2_seed",
+        "team1_user_id, team2_user_id, winner_user_id, team1_gain, is_playoff",
+        "week_end"
+      ],
       "callSites": [
         "supabase/functions/process-week-results/index.ts:1402",
         "supabase/functions/process-week-results/index.ts:441",
@@ -3450,6 +3510,7 @@
       "to": "tbl.matchups",
       "protocol": "postgrest-insert",
       "payload": ".from('matchups').insert()",
+      "columns": [],
       "callSites": [
         "supabase/functions/process-week-results/index.ts:469"
       ]
@@ -3462,6 +3523,7 @@
       "to": "tbl.matchups",
       "protocol": "postgrest-update",
       "payload": ".from('matchups').update()",
+      "columns": [],
       "callSites": [
         "supabase/functions/process-week-results/index.ts:1255",
         "supabase/functions/process-week-results/index.ts:723",
@@ -3475,7 +3537,11 @@
       "from": "fn.process-week-results",
       "to": "tbl.trades",
       "protocol": "postgrest-select",
-      "payload": ".from('trades').select()",
+      "payload": ".from('trades').select('user_id, symbol, action, quantity, price, created_at')",
+      "columns": [
+        "user_id, symbol, action, quantity, price",
+        "user_id, symbol, action, quantity, price, created_at"
+      ],
       "callSites": [
         "supabase/functions/process-week-results/index.ts:1015",
         "supabase/functions/process-week-results/index.ts:1055"
@@ -3488,7 +3554,10 @@
       "from": "fn.process-week-results",
       "to": "tbl.week_snapshots",
       "protocol": "postgrest-select",
-      "payload": ".from('week_snapshots').select()",
+      "payload": ".from('week_snapshots').select('user_id, symbol, quantity, week_start_price, week_end_price')",
+      "columns": [
+        "user_id, symbol, quantity, week_start_price, week_end_price"
+      ],
       "callSites": [
         "supabase/functions/process-week-results/index.ts:919"
       ]
@@ -3512,7 +3581,10 @@
       "from": "fn.quote",
       "to": "tbl.broker_credentials",
       "protocol": "postgrest-select",
-      "payload": ".from('broker_credentials').select()",
+      "payload": ".from('broker_credentials').select('key_id, secret_ciphertext, iv')",
+      "columns": [
+        "key_id, secret_ciphertext, iv"
+      ],
       "callSites": [
         "supabase/functions/quote/index.ts:83"
       ]
@@ -3538,6 +3610,7 @@
       "to": "tbl.symbols",
       "protocol": "postgrest-upsert",
       "payload": ".from('symbols').upsert()",
+      "columns": [],
       "callSites": [
         "supabase/functions/refresh-symbols/index.ts:131"
       ]
@@ -3562,6 +3635,7 @@
       "to": "tbl.broker_credentials",
       "protocol": "postgrest-upsert",
       "payload": ".from('broker_credentials').upsert()",
+      "columns": [],
       "callSites": [
         "supabase/functions/save-broker-keys/index.ts:136"
       ]
@@ -3598,6 +3672,7 @@
       "to": "tbl.cron_job_status",
       "protocol": "postgrest-upsert",
       "payload": ".from('cron_job_status').upsert()",
+      "columns": [],
       "callSites": [
         "supabase/functions/snapshot-week-end/index.ts:71"
       ]
@@ -3609,7 +3684,10 @@
       "from": "fn.snapshot-week-end",
       "to": "tbl.drafts",
       "protocol": "postgrest-select",
-      "payload": ".from('drafts').select()",
+      "payload": ".from('drafts').select('user_id, symbol, quantity')",
+      "columns": [
+        "user_id, symbol, quantity"
+      ],
       "callSites": [
         "supabase/functions/snapshot-week-end/index.ts:309"
       ]
@@ -3621,7 +3699,10 @@
       "from": "fn.snapshot-week-end",
       "to": "tbl.leagues",
       "protocol": "postgrest-select",
-      "payload": ".from('leagues').select()",
+      "payload": ".from('leagues').select('id, current_week, num_weeks')",
+      "columns": [
+        "id, current_week, num_weeks"
+      ],
       "callSites": [
         "supabase/functions/snapshot-week-end/index.ts:244"
       ]
@@ -3633,7 +3714,10 @@
       "from": "fn.snapshot-week-end",
       "to": "tbl.matchups",
       "protocol": "postgrest-select",
-      "payload": ".from('matchups').select()",
+      "payload": ".from('matchups').select('team1_user_id, team2_user_id')",
+      "columns": [
+        "team1_user_id, team2_user_id"
+      ],
       "callSites": [
         "supabase/functions/snapshot-week-end/index.ts:291"
       ]
@@ -3645,7 +3729,10 @@
       "from": "fn.snapshot-week-end",
       "to": "tbl.trades",
       "protocol": "postgrest-select",
-      "payload": ".from('trades').select()",
+      "payload": ".from('trades').select('user_id, symbol, action, quantity')",
+      "columns": [
+        "user_id, symbol, action, quantity"
+      ],
       "callSites": [
         "supabase/functions/snapshot-week-end/index.ts:314"
       ]
@@ -3657,7 +3744,10 @@
       "from": "fn.snapshot-week-end",
       "to": "tbl.week_snapshots",
       "protocol": "postgrest-select",
-      "payload": ".from('week_snapshots').select()",
+      "payload": ".from('week_snapshots').select('id, user_id, symbol, quantity, week_start_price, week_end_price')",
+      "columns": [
+        "id, user_id, symbol, quantity, week_start_price, week_end_price"
+      ],
       "callSites": [
         "supabase/functions/snapshot-week-end/index.ts:272"
       ]
@@ -3670,6 +3760,7 @@
       "to": "tbl.week_snapshots",
       "protocol": "postgrest-insert",
       "payload": ".from('week_snapshots').insert()",
+      "columns": [],
       "callSites": [
         "supabase/functions/snapshot-week-end/index.ts:389"
       ]
@@ -3682,6 +3773,7 @@
       "to": "tbl.week_snapshots",
       "protocol": "postgrest-update",
       "payload": ".from('week_snapshots').update()",
+      "columns": [],
       "callSites": [
         "supabase/functions/snapshot-week-end/index.ts:347"
       ]
@@ -3742,6 +3834,7 @@
       "to": "tbl.cron_job_status",
       "protocol": "postgrest-upsert",
       "payload": ".from('cron_job_status').upsert()",
+      "columns": [],
       "callSites": [
         "supabase/functions/snapshot-week-start/index.ts:107"
       ]
@@ -3753,7 +3846,10 @@
       "from": "fn.snapshot-week-start",
       "to": "tbl.drafts",
       "protocol": "postgrest-select",
-      "payload": ".from('drafts').select()",
+      "payload": ".from('drafts').select('user_id, symbol, quantity')",
+      "columns": [
+        "user_id, symbol, quantity"
+      ],
       "callSites": [
         "supabase/functions/snapshot-week-start/index.ts:355"
       ]
@@ -3765,7 +3861,10 @@
       "from": "fn.snapshot-week-start",
       "to": "tbl.leagues",
       "protocol": "postgrest-select",
-      "payload": ".from('leagues').select()",
+      "payload": ".from('leagues').select('id, current_week, num_weeks')",
+      "columns": [
+        "id, current_week, num_weeks"
+      ],
       "callSites": [
         "supabase/functions/snapshot-week-start/index.ts:294"
       ]
@@ -3777,7 +3876,10 @@
       "from": "fn.snapshot-week-start",
       "to": "tbl.matchups",
       "protocol": "postgrest-select",
-      "payload": ".from('matchups').select()",
+      "payload": ".from('matchups').select('team1_user_id, team2_user_id')",
+      "columns": [
+        "team1_user_id, team2_user_id"
+      ],
       "callSites": [
         "supabase/functions/snapshot-week-start/index.ts:332"
       ]
@@ -3789,7 +3891,10 @@
       "from": "fn.snapshot-week-start",
       "to": "tbl.trades",
       "protocol": "postgrest-select",
-      "payload": ".from('trades').select()",
+      "payload": ".from('trades').select('user_id, symbol, action, quantity')",
+      "columns": [
+        "user_id, symbol, action, quantity"
+      ],
       "callSites": [
         "supabase/functions/snapshot-week-start/index.ts:361"
       ]
@@ -3801,7 +3906,10 @@
       "from": "fn.snapshot-week-start",
       "to": "tbl.week_snapshots",
       "protocol": "postgrest-select",
-      "payload": ".from('week_snapshots').select()",
+      "payload": ".from('week_snapshots').select('user_id, week_end_price')",
+      "columns": [
+        "user_id, week_end_price"
+      ],
       "callSites": [
         "supabase/functions/snapshot-week-start/index.ts:379"
       ]
@@ -3814,6 +3922,7 @@
       "to": "tbl.week_snapshots",
       "protocol": "postgrest-upsert",
       "payload": ".from('week_snapshots').upsert()",
+      "columns": [],
       "callSites": [
         "supabase/functions/snapshot-week-start/index.ts:470"
       ]
@@ -3825,7 +3934,10 @@
       "from": "fn.symbol-name",
       "to": "tbl.symbols",
       "protocol": "postgrest-select",
-      "payload": ".from('symbols').select()",
+      "payload": ".from('symbols').select('name')",
+      "columns": [
+        "name"
+      ],
       "callSites": [
         "supabase/functions/symbol-name/index.ts:36"
       ]
@@ -3849,7 +3961,10 @@
       "from": "fn.symbols-search",
       "to": "tbl.symbols",
       "protocol": "postgrest-select",
-      "payload": ".from('symbols').select()",
+      "payload": ".from('symbols').select('symbol,name')",
+      "columns": [
+        "symbol,name"
+      ],
       "callSites": [
         "supabase/functions/symbols-search/index.ts:107",
         "supabase/functions/symbols-search/index.ts:118",
@@ -3878,7 +3993,11 @@
       "from": "fn.sync-alpaca-orders",
       "to": "tbl.broker_credentials",
       "protocol": "postgrest-select",
-      "payload": ".from('broker_credentials').select()",
+      "payload": ".from('broker_credentials').select('key_id, secret_ciphertext, iv')",
+      "columns": [
+        "key_id, secret_ciphertext, iv",
+        "user_id, key_id, secret_ciphertext, iv"
+      ],
       "callSites": [
         "supabase/functions/sync-alpaca-orders/index.ts:261",
         "supabase/functions/sync-alpaca-orders/index.ts:85"
@@ -3891,7 +4010,10 @@
       "from": "fn.sync-alpaca-orders",
       "to": "tbl.trades",
       "protocol": "postgrest-select",
-      "payload": ".from('trades').select()",
+      "payload": ".from('trades').select('*')",
+      "columns": [
+        "*"
+      ],
       "callSites": [
         "supabase/functions/sync-alpaca-orders/index.ts:153",
         "supabase/functions/sync-alpaca-orders/index.ts:336"
@@ -3905,6 +4027,7 @@
       "to": "tbl.trades",
       "protocol": "postgrest-update",
       "payload": ".from('trades').update()",
+      "columns": [],
       "callSites": [
         "supabase/functions/sync-alpaca-orders/index.ts:195",
         "supabase/functions/sync-alpaca-orders/index.ts:366"
@@ -3925,11 +4048,324 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.pg.check_and_bump_rate_limit->tbl.rate_limit_counters#insert",
+      "from": "pg.check_and_bump_rate_limit",
+      "to": "tbl.rate_limit_counters",
+      "protocol": "plpgsql-insert",
+      "payload": "INSERT rate_limit_counters (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260716000000_preview_join_league_infra.sql:32"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.complete_league_season->tbl.league_seasons#update",
+      "from": "pg.complete_league_season",
+      "to": "tbl.league_seasons",
+      "protocol": "plpgsql-update",
+      "payload": "UPDATE league_seasons (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260125000000_add_league_seasons.sql:100"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.complete_league_season->tbl.league_standings",
+      "from": "pg.complete_league_season",
+      "to": "tbl.league_standings",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_standings (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260125000000_add_league_seasons.sql:95"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.complete_league_season->tbl.leagues",
+      "from": "pg.complete_league_season",
+      "to": "tbl.leagues",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT leagues (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260125000000_add_league_seasons.sql:76"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.complete_league_season->tbl.leagues#update",
+      "from": "pg.complete_league_season",
+      "to": "tbl.leagues",
+      "protocol": "plpgsql-update",
+      "payload": "UPDATE leagues (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260125000000_add_league_seasons.sql:109"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.is_commissioner->tbl.leagues",
+      "from": "pg.is_commissioner",
+      "to": "tbl.leagues",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT leagues (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260712000000_rls_b1_00_helpers.sql:50"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.is_member->tbl.league_members",
+      "from": "pg.is_member",
+      "to": "tbl.league_members",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_members (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260712000000_rls_b1_00_helpers.sql:36"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.join_league_by_code->tbl.league_invites",
+      "from": "pg.join_league_by_code",
+      "to": "tbl.league_invites",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_invites (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260716000000_preview_join_league_infra.sql:66"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.join_league_by_code->tbl.league_invites#update",
+      "from": "pg.join_league_by_code",
+      "to": "tbl.league_invites",
+      "protocol": "plpgsql-update",
+      "payload": "UPDATE league_invites (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260716000000_preview_join_league_infra.sql:105"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.join_league_by_code->tbl.league_members",
+      "from": "pg.join_league_by_code",
+      "to": "tbl.league_members",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_members (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260716000000_preview_join_league_infra.sql:90",
+        "supabase/migrations/20260716000000_preview_join_league_infra.sql:96"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.join_league_by_code->tbl.league_members#insert",
+      "from": "pg.join_league_by_code",
+      "to": "tbl.league_members",
+      "protocol": "plpgsql-insert",
+      "payload": "INSERT league_members (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260716000000_preview_join_league_infra.sql:101"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.join_league_by_code->tbl.leagues",
+      "from": "pg.join_league_by_code",
+      "to": "tbl.leagues",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT leagues (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260716000000_preview_join_league_infra.sql:64",
+        "supabase/migrations/20260716000000_preview_join_league_infra.sql:70",
+        "supabase/migrations/20260716000000_preview_join_league_infra.sql:78"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.schedule_snapshot_retry->tbl.cron_job_status#insert",
+      "from": "pg.schedule_snapshot_retry",
+      "to": "tbl.cron_job_status",
+      "protocol": "plpgsql-insert",
+      "payload": "INSERT cron_job_status (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260116000000_matchup_scoring_redesign.sql:212",
+        "supabase/migrations/20260612000000_migrate_snapshot_week_end_cron_auth.sql:151",
+        "supabase/migrations/20260618000001_migrate_snapshot_week_start_cron_auth.sql:118"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.start_new_league_season->tbl.league_seasons",
+      "from": "pg.start_new_league_season",
+      "to": "tbl.league_seasons",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_seasons (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260125000000_add_league_seasons.sql:135",
+        "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql:65"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.start_new_league_season->tbl.league_seasons#insert",
+      "from": "pg.start_new_league_season",
+      "to": "tbl.league_seasons",
+      "protocol": "plpgsql-insert",
+      "payload": "INSERT league_seasons (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260125000000_add_league_seasons.sql:139",
+        "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql:69"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.start_new_league_season->tbl.league_standings#update",
+      "from": "pg.start_new_league_season",
+      "to": "tbl.league_standings",
+      "protocol": "plpgsql-update",
+      "payload": "UPDATE league_standings (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260125000000_add_league_seasons.sql:144",
+        "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql:74"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.start_new_league_season->tbl.leagues",
+      "from": "pg.start_new_league_season",
+      "to": "tbl.leagues",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT leagues (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260125000000_add_league_seasons.sql:127",
+        "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql:48",
+        "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql:57"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.start_new_league_season->tbl.leagues#update",
+      "from": "pg.start_new_league_season",
+      "to": "tbl.leagues",
+      "protocol": "plpgsql-update",
+      "payload": "UPDATE leagues (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260125000000_add_league_seasons.sql:152",
+        "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql:82"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.start_new_league_season->tbl.matchups",
+      "from": "pg.start_new_league_season",
+      "to": "tbl.matchups",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT matchups (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260125000000_add_league_seasons.sql:149",
+        "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql:79"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.start_new_league_season->tbl.matchups#delete",
+      "from": "pg.start_new_league_season",
+      "to": "tbl.matchups",
+      "protocol": "plpgsql-delete",
+      "payload": "DELETE matchups (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260125000000_add_league_seasons.sql:149",
+        "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql:79"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.update_standings->tbl.league_standings#insert",
+      "from": "pg.update_standings",
+      "to": "tbl.league_standings",
+      "protocol": "plpgsql-insert",
+      "payload": "INSERT league_standings (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20251230200000_add_standings_update_function.sql:5"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.tbl.broker_credentials->pg.update_broker_credentials_updated_at",
+      "from": "tbl.broker_credentials",
+      "to": "pg.update_broker_credentials_updated_at",
+      "protocol": "pg-trigger",
+      "payload": "trigger on broker_credentials",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20251217000000_create_broker_credentials.sql:51"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.tbl.user_profiles->pg.update_user_profiles_updated_at",
+      "from": "tbl.user_profiles",
+      "to": "pg.update_user_profiles_updated_at",
+      "protocol": "pg-trigger",
+      "payload": "trigger on user_profiles",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20251210100000_create_user_profiles.sql:44"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.ui.create-league->tbl.league_members#insert",
       "from": "ui.create-league",
       "to": "tbl.league_members",
       "protocol": "postgrest-insert",
       "payload": ".from('league_members').insert()",
+      "columns": [],
       "callSites": [
         "apps/mobile/app/create-league.tsx:156"
       ]
@@ -3942,6 +4378,7 @@
       "to": "tbl.leagues",
       "protocol": "postgrest-insert",
       "payload": ".from('leagues').insert()",
+      "columns": [],
       "callSites": [
         "apps/mobile/app/create-league.tsx:133"
       ]
@@ -3965,7 +4402,10 @@
       "from": "ui.draft",
       "to": "tbl.drafts",
       "protocol": "postgrest-select",
-      "payload": ".from('drafts').select()",
+      "payload": ".from('drafts').select('id, user_id, symbol, entry_price, round, pick_number, created_at')",
+      "columns": [
+        "id, user_id, symbol, entry_price, round, pick_number, created_at"
+      ],
       "callSites": [
         "apps/mobile/app/(tabs)/draft.tsx:109"
       ]
@@ -3978,6 +4418,7 @@
       "to": "tbl.drafts",
       "protocol": "postgrest-insert",
       "payload": ".from('drafts').insert()",
+      "columns": [],
       "callSites": [
         "apps/mobile/app/(tabs)/draft.tsx:234"
       ]
@@ -3989,7 +4430,10 @@
       "from": "ui.draft",
       "to": "tbl.league_members",
       "protocol": "postgrest-select",
-      "payload": ".from('league_members').select()",
+      "payload": ".from('league_members').select('user_id, role')",
+      "columns": [
+        "user_id, role"
+      ],
       "callSites": [
         "apps/mobile/app/(tabs)/draft.tsx:82"
       ]
@@ -4002,6 +4446,7 @@
       "to": "tbl.leagues",
       "protocol": "postgrest-update",
       "payload": ".from('leagues').update()",
+      "columns": [],
       "callSites": [
         "apps/mobile/app/(tabs)/draft.tsx:256"
       ]
@@ -4013,7 +4458,10 @@
       "from": "ui.draft",
       "to": "tbl.user_profiles",
       "protocol": "postgrest-select",
-      "payload": ".from('user_profiles').select()",
+      "payload": ".from('user_profiles').select('id, username')",
+      "columns": [
+        "id, username"
+      ],
       "callSites": [
         "apps/mobile/app/(tabs)/draft.tsx:91"
       ]
@@ -4025,7 +4473,10 @@
       "from": "ui.index",
       "to": "tbl.user_profiles",
       "protocol": "postgrest-select",
-      "payload": ".from('user_profiles').select()",
+      "payload": ".from('user_profiles').select('username')",
+      "columns": [
+        "username"
+      ],
       "callSites": [
         "apps/mobile/app/(tabs)/index.tsx:57"
       ]
@@ -4061,7 +4512,10 @@
       "from": "ui.league",
       "to": "tbl.league_seasons",
       "protocol": "postgrest-select",
-      "payload": ".from('league_seasons').select()",
+      "payload": ".from('league_seasons').select('*')",
+      "columns": [
+        "*"
+      ],
       "callSites": [
         "apps/mobile/app/(tabs)/league.tsx:236"
       ]
@@ -4073,7 +4527,10 @@
       "from": "ui.league",
       "to": "tbl.league_standings",
       "protocol": "postgrest-select",
-      "payload": ".from('league_standings').select()",
+      "payload": ".from('league_standings').select('*')",
+      "columns": [
+        "*"
+      ],
       "callSites": [
         "apps/mobile/app/(tabs)/league.tsx:205"
       ]
@@ -4085,7 +4542,10 @@
       "from": "ui.league",
       "to": "tbl.matchups",
       "protocol": "postgrest-select",
-      "payload": ".from('matchups').select()",
+      "payload": ".from('matchups').select('*')",
+      "columns": [
+        "*"
+      ],
       "callSites": [
         "apps/mobile/app/(tabs)/league.tsx:221"
       ]
@@ -4097,7 +4557,10 @@
       "from": "ui.league",
       "to": "tbl.user_profiles",
       "protocol": "postgrest-select",
-      "payload": ".from('user_profiles').select()",
+      "payload": ".from('user_profiles').select('id, username, avatar')",
+      "columns": [
+        "id, username, avatar"
+      ],
       "callSites": [
         "apps/mobile/app/(tabs)/league.tsx:262"
       ]
@@ -4122,6 +4585,7 @@
       "to": "tbl.leagues",
       "protocol": "postgrest-update",
       "payload": ".from('leagues').update()",
+      "columns": [],
       "callSites": [
         "apps/mobile/app/league-settings.tsx:84"
       ]
@@ -4133,7 +4597,10 @@
       "from": "ui.LeagueCarousel",
       "to": "tbl.league_seasons",
       "protocol": "postgrest-select",
-      "payload": ".from('league_seasons').select()",
+      "payload": ".from('league_seasons').select('season_number, champion_user_id, runner_up_user_id, completed_at')",
+      "columns": [
+        "season_number, champion_user_id, runner_up_user_id, completed_at"
+      ],
       "callSites": [
         "apps/mobile/components/LeagueCarousel.tsx:62"
       ]
@@ -4145,7 +4612,11 @@
       "from": "ui.LeagueCarousel",
       "to": "tbl.league_standings",
       "protocol": "postgrest-select",
-      "payload": ".from('league_standings').select()",
+      "payload": ".from('league_standings').select('user_id, wins, losses, ties')",
+      "columns": [
+        "user_id, points_for",
+        "user_id, wins, losses, ties"
+      ],
       "callSites": [
         "apps/mobile/components/LeagueCarousel.tsx:108",
         "apps/mobile/components/LeagueCarousel.tsx:127"
@@ -4158,7 +4629,10 @@
       "from": "ui.LeagueCarousel",
       "to": "tbl.user_profiles",
       "protocol": "postgrest-select",
-      "payload": ".from('user_profiles').select()",
+      "payload": ".from('user_profiles').select('id, username')",
+      "columns": [
+        "id, username"
+      ],
       "callSites": [
         "apps/mobile/components/LeagueCarousel.tsx:74"
       ]
@@ -4170,7 +4644,10 @@
       "from": "ui.LeagueContext",
       "to": "tbl.league_members",
       "protocol": "postgrest-select",
-      "payload": ".from('league_members').select()",
+      "payload": ".from('league_members').select('league_id')",
+      "columns": [
+        "league_id"
+      ],
       "callSites": [
         "apps/mobile/lib/LeagueContext.tsx:84"
       ]
@@ -4182,7 +4659,10 @@
       "from": "ui.LeagueContext",
       "to": "tbl.leagues",
       "protocol": "postgrest-select",
-      "payload": ".from('leagues').select()",
+      "payload": ".from('leagues').select('*')",
+      "columns": [
+        "*"
+      ],
       "callSites": [
         "apps/mobile/lib/LeagueContext.tsx:97"
       ]
@@ -4194,7 +4674,10 @@
       "from": "ui.leagues",
       "to": "tbl.league_members",
       "protocol": "postgrest-select",
-      "payload": ".from('league_members').select()",
+      "payload": ".from('league_members').select('user_id, role, joined_at')",
+      "columns": [
+        "user_id, role, joined_at"
+      ],
       "callSites": [
         "apps/mobile/app/(tabs)/leagues.tsx:87"
       ]
@@ -4207,6 +4690,7 @@
       "to": "tbl.league_members",
       "protocol": "postgrest-insert",
       "payload": ".from('league_members').insert()",
+      "columns": [],
       "callSites": [
         "apps/mobile/app/(tabs)/leagues.tsx:223"
       ]
@@ -4219,6 +4703,7 @@
       "to": "tbl.leagues",
       "protocol": "postgrest-insert",
       "payload": ".from('leagues').insert()",
+      "columns": [],
       "callSites": [
         "apps/mobile/app/(tabs)/leagues.tsx:199"
       ]
@@ -4230,7 +4715,10 @@
       "from": "ui.leagues",
       "to": "tbl.user_profiles",
       "protocol": "postgrest-select",
-      "payload": ".from('user_profiles').select()",
+      "payload": ".from('user_profiles').select('id, username')",
+      "columns": [
+        "id, username"
+      ],
       "callSites": [
         "apps/mobile/app/(tabs)/leagues.tsx:95"
       ]
@@ -4243,6 +4731,7 @@
       "to": "tbl.user_profiles",
       "protocol": "postgrest-upsert",
       "payload": ".from('user_profiles').upsert()",
+      "columns": [],
       "callSites": [
         "apps/mobile/app/login.tsx:59"
       ]
@@ -4267,7 +4756,10 @@
       "from": "ui.matchup",
       "to": "tbl.drafts",
       "protocol": "postgrest-select",
-      "payload": ".from('drafts').select()",
+      "payload": ".from('drafts').select('id, symbol, entry_price, quantity, user_id')",
+      "columns": [
+        "id, symbol, entry_price, quantity, user_id"
+      ],
       "callSites": [
         "apps/mobile/app/(tabs)/matchup.tsx:360"
       ]
@@ -4279,7 +4771,11 @@
       "from": "ui.matchup",
       "to": "tbl.matchups",
       "protocol": "postgrest-select",
-      "payload": ".from('matchups').select()",
+      "payload": ".from('matchups').select('week_number, playoff_round')",
+      "columns": [
+        "*",
+        "week_number, playoff_round"
+      ],
       "callSites": [
         "apps/mobile/app/(tabs)/matchup.tsx:172",
         "apps/mobile/app/(tabs)/matchup.tsx:192",
@@ -4294,7 +4790,10 @@
       "from": "ui.matchup",
       "to": "tbl.trades",
       "protocol": "postgrest-select",
-      "payload": ".from('trades').select()",
+      "payload": ".from('trades').select('id, symbol, price, quantity, action, user_id')",
+      "columns": [
+        "id, symbol, price, quantity, action, user_id"
+      ],
       "callSites": [
         "apps/mobile/app/(tabs)/matchup.tsx:366"
       ]
@@ -4306,7 +4805,10 @@
       "from": "ui.matchup",
       "to": "tbl.user_profiles",
       "protocol": "postgrest-select",
-      "payload": ".from('user_profiles').select()",
+      "payload": ".from('user_profiles').select('id, username, avatar')",
+      "columns": [
+        "id, username, avatar"
+      ],
       "callSites": [
         "apps/mobile/app/(tabs)/matchup.tsx:257"
       ]
@@ -4318,7 +4820,10 @@
       "from": "ui.matchup",
       "to": "tbl.week_snapshots",
       "protocol": "postgrest-select",
-      "payload": ".from('week_snapshots').select()",
+      "payload": ".from('week_snapshots').select('user_id, symbol, quantity, week_start_price, week_end_price')",
+      "columns": [
+        "user_id, symbol, quantity, week_start_price, week_end_price"
+      ],
       "callSites": [
         "apps/mobile/app/(tabs)/matchup.tsx:272"
       ]
@@ -4330,7 +4835,10 @@
       "from": "ui.notifications",
       "to": "tbl.league_members",
       "protocol": "postgrest-select",
-      "payload": ".from('league_members').select()",
+      "payload": ".from('league_members').select('user_id')",
+      "columns": [
+        "user_id"
+      ],
       "callSites": [
         "apps/mobile/lib/notifications.ts:174"
       ]
@@ -4342,7 +4850,11 @@
       "from": "ui.notifications",
       "to": "tbl.user_profiles",
       "protocol": "postgrest-select",
-      "payload": ".from('user_profiles').select()",
+      "payload": ".from('user_profiles').select('id, expo_push_token, notifications_enabled')",
+      "columns": [
+        "expo_push_token, notifications_enabled",
+        "id, expo_push_token, notifications_enabled"
+      ],
       "callSites": [
         "apps/mobile/lib/notifications.ts:191",
         "apps/mobile/lib/notifications.ts:221"
@@ -4356,6 +4868,7 @@
       "to": "tbl.user_profiles",
       "protocol": "postgrest-update",
       "payload": ".from('user_profiles').update()",
+      "columns": [],
       "callSites": [
         "apps/mobile/lib/notifications.ts:62",
         "apps/mobile/lib/notifications.ts:85"
@@ -4368,7 +4881,10 @@
       "from": "ui.player-portfolio",
       "to": "tbl.drafts",
       "protocol": "postgrest-select",
-      "payload": ".from('drafts').select()",
+      "payload": ".from('drafts').select('symbol, quantity, entry_price')",
+      "columns": [
+        "symbol, quantity, entry_price"
+      ],
       "callSites": [
         "apps/mobile/app/player-portfolio.tsx:133"
       ]
@@ -4380,7 +4896,10 @@
       "from": "ui.player-portfolio",
       "to": "tbl.trades",
       "protocol": "postgrest-select",
-      "payload": ".from('trades').select()",
+      "payload": ".from('trades').select('symbol, action, quantity, price')",
+      "columns": [
+        "symbol, action, quantity, price"
+      ],
       "callSites": [
         "apps/mobile/app/player-portfolio.tsx:140"
       ]
@@ -4392,7 +4911,10 @@
       "from": "ui.player-portfolio",
       "to": "tbl.user_profiles",
       "protocol": "postgrest-select",
-      "payload": ".from('user_profiles').select()",
+      "payload": ".from('user_profiles').select('username, avatar')",
+      "columns": [
+        "username, avatar"
+      ],
       "callSites": [
         "apps/mobile/app/player-portfolio.tsx:121"
       ]
@@ -4428,7 +4950,10 @@
       "from": "ui.profile",
       "to": "tbl.broker_credentials",
       "protocol": "postgrest-select",
-      "payload": ".from('broker_credentials').select()",
+      "payload": ".from('broker_credentials').select('key_id')",
+      "columns": [
+        "key_id"
+      ],
       "callSites": [
         "apps/mobile/app/(tabs)/profile.tsx:78"
       ]
@@ -4441,6 +4966,7 @@
       "to": "tbl.broker_credentials",
       "protocol": "postgrest-delete",
       "payload": ".from('broker_credentials').delete()",
+      "columns": [],
       "callSites": [
         "apps/mobile/app/(tabs)/profile.tsx:165"
       ]
@@ -4452,7 +4978,10 @@
       "from": "ui.profile",
       "to": "tbl.user_profiles",
       "protocol": "postgrest-select",
-      "payload": ".from('user_profiles').select()",
+      "payload": ".from('user_profiles').select('*')",
+      "columns": [
+        "*"
+      ],
       "callSites": [
         "apps/mobile/app/(tabs)/profile.tsx:60"
       ]
@@ -4465,6 +4994,7 @@
       "to": "tbl.user_profiles",
       "protocol": "postgrest-upsert",
       "payload": ".from('user_profiles').upsert()",
+      "columns": [],
       "callSites": [
         "apps/mobile/app/(tabs)/profile.tsx:246"
       ]
@@ -4537,7 +5067,10 @@
       "from": "ui.src.components.TradeModal.jsx",
       "to": "tbl.broker_credentials",
       "protocol": "postgrest-select",
-      "payload": ".from('broker_credentials').select()",
+      "payload": ".from('broker_credentials').select('key_id')",
+      "columns": [
+        "key_id"
+      ],
       "callSites": [
         "apps/web/src/components/TradeModal.jsx:50"
       ]
@@ -4550,6 +5083,7 @@
       "to": "tbl.trades",
       "protocol": "postgrest-insert",
       "payload": ".from('trades').insert()",
+      "columns": [],
       "callSites": [
         "apps/web/src/components/TradeModal.jsx:303"
       ]
@@ -4573,7 +5107,10 @@
       "from": "ui.src.context.UserProfilesContext.jsx",
       "to": "tbl.user_profiles",
       "protocol": "postgrest-select",
-      "payload": ".from('user_profiles').select()",
+      "payload": ".from('user_profiles').select('id, username, avatar')",
+      "columns": [
+        "id, username, avatar"
+      ],
       "callSites": [
         "apps/web/src/context/UserProfilesContext.jsx:25"
       ]
@@ -4585,7 +5122,10 @@
       "from": "ui.src.Header.jsx",
       "to": "tbl.league_members",
       "protocol": "postgrest-select",
-      "payload": ".from('league_members').select()",
+      "payload": ".from('league_members').select('league_id, role')",
+      "columns": [
+        "league_id, role"
+      ],
       "callSites": [
         "apps/web/src/Header.jsx:110"
       ]
@@ -4597,7 +5137,10 @@
       "from": "ui.src.Header.jsx",
       "to": "tbl.leagues",
       "protocol": "postgrest-select",
-      "payload": ".from('leagues').select()",
+      "payload": ".from('leagues').select('id, name, invite_code')",
+      "columns": [
+        "id, name, invite_code"
+      ],
       "callSites": [
         "apps/web/src/Header.jsx:118"
       ]
@@ -4609,7 +5152,10 @@
       "from": "ui.src.pages.Dashboard.jsx",
       "to": "tbl.drafts",
       "protocol": "postgrest-select",
-      "payload": ".from('drafts').select()",
+      "payload": ".from('drafts').select('id, user_id, symbol, entry_price, quantity, round, pick_number, created_at')",
+      "columns": [
+        "id, user_id, symbol, entry_price, quantity, round, pick_number, created_at"
+      ],
       "callSites": [
         "apps/web/src/pages/Dashboard.jsx:129"
       ]
@@ -4621,7 +5167,10 @@
       "from": "ui.src.pages.Dashboard.jsx",
       "to": "tbl.league_members",
       "protocol": "postgrest-select",
-      "payload": ".from('league_members').select()",
+      "payload": ".from('league_members').select('league_id')",
+      "columns": [
+        "league_id"
+      ],
       "callSites": [
         "apps/web/src/pages/Dashboard.jsx:73"
       ]
@@ -4633,7 +5182,10 @@
       "from": "ui.src.pages.Dashboard.jsx",
       "to": "tbl.leagues",
       "protocol": "postgrest-select",
-      "payload": ".from('leagues').select()",
+      "payload": ".from('leagues').select('id, name, draft_date, budget_mode, budget_amount, league_type, current_week')",
+      "columns": [
+        "id, name, draft_date, budget_mode, budget_amount, league_type, current_week"
+      ],
       "callSites": [
         "apps/web/src/pages/Dashboard.jsx:88"
       ]
@@ -4645,7 +5197,10 @@
       "from": "ui.src.pages.Dashboard.jsx",
       "to": "tbl.matchups",
       "protocol": "postgrest-select",
-      "payload": ".from('matchups').select()",
+      "payload": ".from('matchups').select('*')",
+      "columns": [
+        "*"
+      ],
       "callSites": [
         "apps/web/src/pages/Dashboard.jsx:212",
         "apps/web/src/pages/Dashboard.jsx:268"
@@ -4658,7 +5213,10 @@
       "from": "ui.src.pages.Dashboard.jsx",
       "to": "tbl.trades",
       "protocol": "postgrest-select",
-      "payload": ".from('trades').select()",
+      "payload": ".from('trades').select('*')",
+      "columns": [
+        "*"
+      ],
       "callSites": [
         "apps/web/src/pages/Dashboard.jsx:141"
       ]
@@ -4670,7 +5228,10 @@
       "from": "ui.src.pages.Dashboard.jsx",
       "to": "tbl.week_snapshots",
       "protocol": "postgrest-select",
-      "payload": ".from('week_snapshots').select()",
+      "payload": ".from('week_snapshots').select('user_id, symbol, quantity, week_start_price')",
+      "columns": [
+        "user_id, symbol, quantity, week_start_price"
+      ],
       "callSites": [
         "apps/web/src/pages/Dashboard.jsx:244"
       ]
@@ -4730,7 +5291,10 @@
       "from": "ui.src.pages.DraftPage.jsx",
       "to": "tbl.broker_credentials",
       "protocol": "postgrest-select",
-      "payload": ".from('broker_credentials').select()",
+      "payload": ".from('broker_credentials').select('user_id')",
+      "columns": [
+        "user_id"
+      ],
       "callSites": [
         "apps/web/src/pages/DraftPage.jsx:327"
       ]
@@ -4742,7 +5306,13 @@
       "from": "ui.src.pages.DraftPage.jsx",
       "to": "tbl.drafts",
       "protocol": "postgrest-select",
-      "payload": ".from('drafts').select()",
+      "payload": ".from('drafts').select('id, league_id, user_id, symbol, entry_price, quantity, round, pick_number, created_at')",
+      "columns": [
+        "*",
+        "id",
+        "id, league_id, user_id, symbol, entry_price, quantity, round, pick_number, created_at",
+        "id, symbol, user_id, entry_price, pick_number"
+      ],
       "callSites": [
         "apps/web/src/pages/DraftPage.jsx:352",
         "apps/web/src/pages/DraftPage.jsx:463",
@@ -4758,6 +5328,7 @@
       "to": "tbl.drafts",
       "protocol": "postgrest-insert",
       "payload": ".from('drafts').insert()",
+      "columns": [],
       "callSites": [
         "apps/web/src/pages/DraftPage.jsx:691",
         "apps/web/src/pages/DraftPage.jsx:932",
@@ -4771,7 +5342,11 @@
       "from": "ui.src.pages.DraftPage.jsx",
       "to": "tbl.league_members",
       "protocol": "postgrest-select",
-      "payload": ".from('league_members').select()",
+      "payload": ".from('league_members').select('league_id')",
+      "columns": [
+        "league_id",
+        "user_id, role"
+      ],
       "callSites": [
         "apps/web/src/pages/DraftPage.jsx:228",
         "apps/web/src/pages/DraftPage.jsx:292"
@@ -4785,6 +5360,7 @@
       "to": "tbl.league_members",
       "protocol": "postgrest-insert",
       "payload": ".from('league_members').insert()",
+      "columns": [],
       "callSites": [
         "apps/web/src/pages/DraftPage.jsx:733"
       ]
@@ -4797,6 +5373,7 @@
       "to": "tbl.league_standings",
       "protocol": "postgrest-insert",
       "payload": ".from('league_standings').insert()",
+      "columns": [],
       "callSites": [
         "apps/web/src/pages/DraftPage.jsx:553"
       ]
@@ -4808,7 +5385,12 @@
       "from": "ui.src.pages.DraftPage.jsx",
       "to": "tbl.leagues",
       "protocol": "postgrest-select",
-      "payload": ".from('leagues').select()",
+      "payload": ".from('leagues').select('id, name')",
+      "columns": [
+        "draft_status",
+        "id, name",
+        "id, name, draft_date, num_rounds, num_participants, budget_mode, budget_amount, commissioner_id, draft_status, duration_days, league_type, num_weeks"
+      ],
       "callSites": [
         "apps/web/src/pages/DraftPage.jsx:240",
         "apps/web/src/pages/DraftPage.jsx:281",
@@ -4823,6 +5405,7 @@
       "to": "tbl.leagues",
       "protocol": "postgrest-update",
       "payload": ".from('leagues').update()",
+      "columns": [],
       "callSites": [
         "apps/web/src/pages/DraftPage.jsx:1215",
         "apps/web/src/pages/DraftPage.jsx:569"
@@ -4836,6 +5419,7 @@
       "to": "tbl.matchups",
       "protocol": "postgrest-insert",
       "payload": ".from('matchups').insert()",
+      "columns": [],
       "callSites": [
         "apps/web/src/pages/DraftPage.jsx:545"
       ]
@@ -4871,7 +5455,10 @@
       "from": "ui.src.pages.Leaderboard.jsx",
       "to": "tbl.drafts",
       "protocol": "postgrest-select",
-      "payload": ".from('drafts').select()",
+      "payload": ".from('drafts').select('id, user_id, symbol, entry_price, quantity, round, pick_number, created_at')",
+      "columns": [
+        "id, user_id, symbol, entry_price, quantity, round, pick_number, created_at"
+      ],
       "callSites": [
         "apps/web/src/pages/Leaderboard.jsx:326"
       ]
@@ -4883,7 +5470,10 @@
       "from": "ui.src.pages.Leaderboard.jsx",
       "to": "tbl.league_members",
       "protocol": "postgrest-select",
-      "payload": ".from('league_members').select()",
+      "payload": ".from('league_members').select('league_id')",
+      "columns": [
+        "league_id"
+      ],
       "callSites": [
         "apps/web/src/pages/Leaderboard.jsx:271"
       ]
@@ -4895,7 +5485,11 @@
       "from": "ui.src.pages.Leaderboard.jsx",
       "to": "tbl.league_standings",
       "protocol": "postgrest-select",
-      "payload": ".from('league_standings').select()",
+      "payload": ".from('league_standings').select('*')",
+      "columns": [
+        "*",
+        "user_id"
+      ],
       "callSites": [
         "apps/web/src/pages/Leaderboard.jsx:177",
         "apps/web/src/pages/Leaderboard.jsx:346",
@@ -4910,6 +5504,7 @@
       "to": "tbl.league_standings",
       "protocol": "postgrest-insert",
       "payload": ".from('league_standings').insert()",
+      "columns": [],
       "callSites": [
         "apps/web/src/pages/Leaderboard.jsx:472"
       ]
@@ -4921,7 +5516,10 @@
       "from": "ui.src.pages.Leaderboard.jsx",
       "to": "tbl.leagues",
       "protocol": "postgrest-select",
-      "payload": ".from('leagues').select()",
+      "payload": ".from('leagues').select('id, name, league_type, num_weeks, current_week, playoff_teams')",
+      "columns": [
+        "id, name, league_type, num_weeks, current_week, playoff_teams"
+      ],
       "callSites": [
         "apps/web/src/pages/Leaderboard.jsx:225",
         "apps/web/src/pages/Leaderboard.jsx:287"
@@ -4934,7 +5532,10 @@
       "from": "ui.src.pages.Leaderboard.jsx",
       "to": "tbl.matchups",
       "protocol": "postgrest-select",
-      "payload": ".from('matchups').select()",
+      "payload": ".from('matchups').select('*')",
+      "columns": [
+        "*"
+      ],
       "callSites": [
         "apps/web/src/pages/Leaderboard.jsx:186",
         "apps/web/src/pages/Leaderboard.jsx:355"
@@ -4948,6 +5549,7 @@
       "to": "tbl.matchups",
       "protocol": "postgrest-insert",
       "payload": ".from('matchups').insert()",
+      "columns": [],
       "callSites": [
         "apps/web/src/pages/Leaderboard.jsx:449"
       ]
@@ -4959,7 +5561,10 @@
       "from": "ui.src.pages.Leaderboard.jsx",
       "to": "tbl.trades",
       "protocol": "postgrest-select",
-      "payload": ".from('trades').select()",
+      "payload": ".from('trades').select('id, user_id, symbol, action, quantity, price, total_value, created_at')",
+      "columns": [
+        "id, user_id, symbol, action, quantity, price, total_value, created_at"
+      ],
       "callSites": [
         "apps/web/src/pages/Leaderboard.jsx:336"
       ]
@@ -4971,7 +5576,10 @@
       "from": "ui.src.pages.LeagueDetail.jsx",
       "to": "tbl.league_members",
       "protocol": "postgrest-select",
-      "payload": ".from('league_members').select()",
+      "payload": ".from('league_members').select('user_id, role, joined_at')",
+      "columns": [
+        "user_id, role, joined_at"
+      ],
       "callSites": [
         "apps/web/src/pages/LeagueDetail.jsx:44"
       ]
@@ -4983,7 +5591,10 @@
       "from": "ui.src.pages.LeagueDetail.jsx",
       "to": "tbl.league_standings",
       "protocol": "postgrest-select",
-      "payload": ".from('league_standings').select()",
+      "payload": ".from('league_standings').select('*')",
+      "columns": [
+        "*"
+      ],
       "callSites": [
         "apps/web/src/pages/LeagueDetail.jsx:59"
       ]
@@ -4995,7 +5606,10 @@
       "from": "ui.src.pages.LeagueDetail.jsx",
       "to": "tbl.leagues",
       "protocol": "postgrest-select",
-      "payload": ".from('leagues').select()",
+      "payload": ".from('leagues').select('*')",
+      "columns": [
+        "*"
+      ],
       "callSites": [
         "apps/web/src/pages/LeagueDetail.jsx:29"
       ]
@@ -5008,6 +5622,7 @@
       "to": "tbl.user_profiles",
       "protocol": "postgrest-upsert",
       "payload": ".from('user_profiles').upsert()",
+      "columns": [],
       "callSites": [
         "apps/web/src/pages/Login.jsx:100"
       ]
@@ -5019,7 +5634,10 @@
       "from": "ui.src.pages.Matchup.jsx",
       "to": "tbl.drafts",
       "protocol": "postgrest-select",
-      "payload": ".from('drafts').select()",
+      "payload": ".from('drafts').select('id, symbol, entry_price, quantity, user_id')",
+      "columns": [
+        "id, symbol, entry_price, quantity, user_id"
+      ],
       "callSites": [
         "apps/web/src/pages/Matchup.jsx:270"
       ]
@@ -5031,7 +5649,10 @@
       "from": "ui.src.pages.Matchup.jsx",
       "to": "tbl.league_members",
       "protocol": "postgrest-select",
-      "payload": ".from('league_members').select()",
+      "payload": ".from('league_members').select('league_id')",
+      "columns": [
+        "league_id"
+      ],
       "callSites": [
         "apps/web/src/pages/Matchup.jsx:113"
       ]
@@ -5043,7 +5664,10 @@
       "from": "ui.src.pages.Matchup.jsx",
       "to": "tbl.leagues",
       "protocol": "postgrest-select",
-      "payload": ".from('leagues').select()",
+      "payload": ".from('leagues').select('id, name, league_type, current_week, num_weeks')",
+      "columns": [
+        "id, name, league_type, current_week, num_weeks"
+      ],
       "callSites": [
         "apps/web/src/pages/Matchup.jsx:125"
       ]
@@ -5055,7 +5679,10 @@
       "from": "ui.src.pages.Matchup.jsx",
       "to": "tbl.matchups",
       "protocol": "postgrest-select",
-      "payload": ".from('matchups').select()",
+      "payload": ".from('matchups').select('*')",
+      "columns": [
+        "*"
+      ],
       "callSites": [
         "apps/web/src/pages/Matchup.jsx:164",
         "apps/web/src/pages/Matchup.jsx:78"
@@ -5068,7 +5695,10 @@
       "from": "ui.src.pages.Matchup.jsx",
       "to": "tbl.trades",
       "protocol": "postgrest-select",
-      "payload": ".from('trades').select()",
+      "payload": ".from('trades').select('id, symbol, price, quantity, action, user_id')",
+      "columns": [
+        "id, symbol, price, quantity, action, user_id"
+      ],
       "callSites": [
         "apps/web/src/pages/Matchup.jsx:277"
       ]
@@ -5080,7 +5710,10 @@
       "from": "ui.src.pages.Matchup.jsx",
       "to": "tbl.week_snapshots",
       "protocol": "postgrest-select",
-      "payload": ".from('week_snapshots').select()",
+      "payload": ".from('week_snapshots').select('user_id, symbol, quantity, week_start_price, week_end_price')",
+      "columns": [
+        "user_id, symbol, quantity, week_start_price, week_end_price"
+      ],
       "callSites": [
         "apps/web/src/pages/Matchup.jsx:189"
       ]
@@ -5092,7 +5725,10 @@
       "from": "ui.src.pages.PortfolioPage.jsx",
       "to": "tbl.drafts",
       "protocol": "postgrest-select",
-      "payload": ".from('drafts').select()",
+      "payload": ".from('drafts').select('id, symbol, entry_price, quantity, round, pick_number, created_at')",
+      "columns": [
+        "id, symbol, entry_price, quantity, round, pick_number, created_at"
+      ],
       "callSites": [
         "apps/web/src/pages/PortfolioPage.jsx:111",
         "apps/web/src/pages/PortfolioPage.jsx:587"
@@ -5105,7 +5741,10 @@
       "from": "ui.src.pages.PortfolioPage.jsx",
       "to": "tbl.league_members",
       "protocol": "postgrest-select",
-      "payload": ".from('league_members').select()",
+      "payload": ".from('league_members').select('league_id')",
+      "columns": [
+        "league_id"
+      ],
       "callSites": [
         "apps/web/src/pages/PortfolioPage.jsx:49"
       ]
@@ -5117,7 +5756,10 @@
       "from": "ui.src.pages.PortfolioPage.jsx",
       "to": "tbl.leagues",
       "protocol": "postgrest-select",
-      "payload": ".from('leagues').select()",
+      "payload": ".from('leagues').select('id, name, budget_mode, budget_amount, league_type, current_week')",
+      "columns": [
+        "id, name, budget_mode, budget_amount, league_type, current_week"
+      ],
       "callSites": [
         "apps/web/src/pages/PortfolioPage.jsx:102",
         "apps/web/src/pages/PortfolioPage.jsx:64"
@@ -5130,7 +5772,10 @@
       "from": "ui.src.pages.PortfolioPage.jsx",
       "to": "tbl.trades",
       "protocol": "postgrest-select",
-      "payload": ".from('trades').select()",
+      "payload": ".from('trades').select('*')",
+      "columns": [
+        "*"
+      ],
       "callSites": [
         "apps/web/src/pages/PortfolioPage.jsx:124",
         "apps/web/src/pages/PortfolioPage.jsx:597"
@@ -5167,7 +5812,10 @@
       "from": "ui.src.pages.Profile.jsx",
       "to": "tbl.broker_credentials",
       "protocol": "postgrest-select",
-      "payload": ".from('broker_credentials').select()",
+      "payload": ".from('broker_credentials').select('key_id')",
+      "columns": [
+        "key_id"
+      ],
       "callSites": [
         "apps/web/src/pages/Profile.jsx:88"
       ]
@@ -5180,6 +5828,7 @@
       "to": "tbl.broker_credentials",
       "protocol": "postgrest-delete",
       "payload": ".from('broker_credentials').delete()",
+      "columns": [],
       "callSites": [
         "apps/web/src/pages/Profile.jsx:174"
       ]
@@ -5191,7 +5840,10 @@
       "from": "ui.src.pages.Profile.jsx",
       "to": "tbl.user_profiles",
       "protocol": "postgrest-select",
-      "payload": ".from('user_profiles').select()",
+      "payload": ".from('user_profiles').select('username, avatar')",
+      "columns": [
+        "username, avatar"
+      ],
       "callSites": [
         "apps/web/src/pages/Profile.jsx:62"
       ]
@@ -5204,6 +5856,7 @@
       "to": "tbl.user_profiles",
       "protocol": "postgrest-upsert",
       "payload": ".from('user_profiles').upsert()",
+      "columns": [],
       "callSites": [
         "apps/web/src/pages/Profile.jsx:277",
         "apps/web/src/pages/Profile.jsx:309"
@@ -5216,7 +5869,10 @@
       "from": "ui.src.pages.TradeHistory.jsx",
       "to": "tbl.league_members",
       "protocol": "postgrest-select",
-      "payload": ".from('league_members').select()",
+      "payload": ".from('league_members').select('league_id')",
+      "columns": [
+        "league_id"
+      ],
       "callSites": [
         "apps/web/src/pages/TradeHistory.jsx:35"
       ]
@@ -5228,7 +5884,10 @@
       "from": "ui.src.pages.TradeHistory.jsx",
       "to": "tbl.leagues",
       "protocol": "postgrest-select",
-      "payload": ".from('leagues').select()",
+      "payload": ".from('leagues').select('id, name')",
+      "columns": [
+        "id, name"
+      ],
       "callSites": [
         "apps/web/src/pages/TradeHistory.jsx:50"
       ]
@@ -5240,7 +5899,10 @@
       "from": "ui.src.pages.TradeHistory.jsx",
       "to": "tbl.trades",
       "protocol": "postgrest-select",
-      "payload": ".from('trades').select()",
+      "payload": ".from('trades').select('*')",
+      "columns": [
+        "*"
+      ],
       "callSites": [
         "apps/web/src/pages/TradeHistory.jsx:86"
       ]
@@ -5264,7 +5926,10 @@
       "from": "ui.trade-history",
       "to": "tbl.trades",
       "protocol": "postgrest-select",
-      "payload": ".from('trades').select()",
+      "payload": ".from('trades').select('*')",
+      "columns": [
+        "*"
+      ],
       "callSites": [
         "apps/mobile/app/trade-history.tsx:57"
       ]
@@ -5326,7 +5991,10 @@
       "from": "ui.TradeModal",
       "to": "tbl.broker_credentials",
       "protocol": "postgrest-select",
-      "payload": ".from('broker_credentials').select()",
+      "payload": ".from('broker_credentials').select('key_id')",
+      "columns": [
+        "key_id"
+      ],
       "callSites": [
         "apps/mobile/components/TradeModal.tsx:86"
       ]
@@ -5339,6 +6007,7 @@
       "to": "tbl.trades",
       "protocol": "postgrest-insert",
       "payload": ".from('trades').insert()",
+      "columns": [],
       "callSites": [
         "apps/mobile/components/TradeModal.tsx:386"
       ]
@@ -5362,7 +6031,10 @@
       "from": "ui.useHomeData",
       "to": "tbl.drafts",
       "protocol": "postgrest-select",
-      "payload": ".from('drafts').select()",
+      "payload": ".from('drafts').select('*')",
+      "columns": [
+        "*"
+      ],
       "callSites": [
         "apps/mobile/lib/useHomeData.ts:216"
       ]
@@ -5374,7 +6046,10 @@
       "from": "ui.useHomeData",
       "to": "tbl.league_seasons",
       "protocol": "postgrest-select",
-      "payload": ".from('league_seasons').select()",
+      "payload": ".from('league_seasons').select('season_number')",
+      "columns": [
+        "season_number"
+      ],
       "callSites": [
         "apps/mobile/lib/useHomeData.ts:236"
       ]
@@ -5386,7 +6061,11 @@
       "from": "ui.useHomeData",
       "to": "tbl.league_standings",
       "protocol": "postgrest-select",
-      "payload": ".from('league_standings').select()",
+      "payload": ".from('league_standings').select('user_id, wins, losses, ties')",
+      "columns": [
+        "user_id, points_for",
+        "user_id, wins, losses, ties"
+      ],
       "callSites": [
         "apps/mobile/lib/useHomeData.ts:248",
         "apps/mobile/lib/useHomeData.ts:267"
@@ -5399,7 +6078,10 @@
       "from": "ui.useHomeData",
       "to": "tbl.matchups",
       "protocol": "postgrest-select",
-      "payload": ".from('matchups').select()",
+      "payload": ".from('matchups').select('id, week_number, team1_user_id, team2_user_id, team1_gain, team2_gain')",
+      "columns": [
+        "id, week_number, team1_user_id, team2_user_id, team1_gain, team2_gain"
+      ],
       "callSites": [
         "apps/mobile/lib/useHomeData.ts:301"
       ]
@@ -5411,7 +6093,10 @@
       "from": "ui.useHomeData",
       "to": "tbl.trades",
       "protocol": "postgrest-select",
-      "payload": ".from('trades').select()",
+      "payload": ".from('trades').select('*')",
+      "columns": [
+        "*"
+      ],
       "callSites": [
         "apps/mobile/lib/useHomeData.ts:222"
       ]
@@ -5423,7 +6108,11 @@
       "from": "ui.useHomeData",
       "to": "tbl.user_profiles",
       "protocol": "postgrest-select",
-      "payload": ".from('user_profiles').select()",
+      "payload": ".from('user_profiles').select('username')",
+      "columns": [
+        "id, username",
+        "username"
+      ],
       "callSites": [
         "apps/mobile/lib/useHomeData.ts:198",
         "apps/mobile/lib/useHomeData.ts:325"
@@ -5436,7 +6125,10 @@
       "from": "ui.useLeagues",
       "to": "tbl.league_members",
       "protocol": "postgrest-select",
-      "payload": ".from('league_members').select()",
+      "payload": ".from('league_members').select('league_id')",
+      "columns": [
+        "league_id"
+      ],
       "callSites": [
         "apps/mobile/lib/useLeagues.ts:40"
       ]
@@ -5448,7 +6140,10 @@
       "from": "ui.useLeagues",
       "to": "tbl.leagues",
       "protocol": "postgrest-select",
-      "payload": ".from('leagues').select()",
+      "payload": ".from('leagues').select('*')",
+      "columns": [
+        "*"
+      ],
       "callSites": [
         "apps/mobile/lib/useLeagues.ts:60"
       ]
@@ -5460,7 +6155,10 @@
       "from": "ui.usePortfolio",
       "to": "tbl.drafts",
       "protocol": "postgrest-select",
-      "payload": ".from('drafts').select()",
+      "payload": ".from('drafts').select('*')",
+      "columns": [
+        "*"
+      ],
       "callSites": [
         "apps/mobile/lib/usePortfolio.ts:128"
       ]
@@ -5472,7 +6170,10 @@
       "from": "ui.usePortfolio",
       "to": "tbl.trades",
       "protocol": "postgrest-select",
-      "payload": ".from('trades').select()",
+      "payload": ".from('trades').select('*')",
+      "columns": [
+        "*"
+      ],
       "callSites": [
         "apps/mobile/lib/usePortfolio.ts:140"
       ]
@@ -5515,7 +6216,9 @@
         "fn.preview-league",
         "pg.check_and_bump_rate_limit",
         "fn.join-league",
-        "pg.join_league_by_code"
+        "pg.join_league_by_code",
+        "tbl.league_members",
+        "tbl.league_invites"
       ],
       "steps": [
         {
@@ -5553,9 +6256,25 @@
         {
           "n": 5,
           "edge": "e.fn.join-league->pg.join_league_by_code",
-          "detail": "Atomic membership insert + invite accept. p_user_id comes from the verified JWT, never the request body.",
+          "detail": "Atomic membership insert + invite accept. p_user_id comes from the verified JWT, never the request body. EXECUTE is service_role only, so the client cannot reach this directly.",
           "files": [
             "supabase/functions/join-league/index.ts:76"
+          ]
+        },
+        {
+          "n": 6,
+          "edge": "e.pg.join_league_by_code->tbl.league_members#insert",
+          "detail": "Membership row written inside the function, so league_members stays unwritable by clients under RLS.",
+          "files": [
+            "supabase/migrations/20260716000000_preview_join_league_infra.sql:101"
+          ]
+        },
+        {
+          "n": 7,
+          "edge": "e.pg.join_league_by_code->tbl.league_invites#update",
+          "detail": "Invite marked accepted in the same transaction as the insert — the pair is why this is an RPC rather than two client calls.",
+          "files": [
+            "supabase/migrations/20260716000000_preview_join_league_infra.sql:105"
           ]
         }
       ],
@@ -5981,15 +6700,59 @@
       },
       "nodePath": [
         "ui.league-settings",
-        "pg.start_new_league_season"
+        "pg.start_new_league_season",
+        "tbl.leagues",
+        "tbl.league_seasons",
+        "tbl.league_standings",
+        "tbl.matchups"
       ],
       "steps": [
         {
           "n": 1,
           "edge": "e.ui.league-settings->pg.start_new_league_season",
-          "detail": "Called directly from the client as an authenticated user. EXECUTE is granted to `authenticated`, so the authorization is NOT the grant — it is an INTERNAL commissioner check inside the function body. That gate is the only thing standing between any league member and a destructive season reset.",
+          "detail": "Called directly from the client as an authenticated user. EXECUTE is granted to `authenticated`, so the authorization is NOT the grant — it is an INTERNAL commissioner check inside the function body. That gate is the only thing standing between any league member and the four destructive writes below.",
           "files": [
             "apps/mobile/app/league-settings.tsx:125"
+          ]
+        },
+        {
+          "n": 2,
+          "edge": "e.pg.start_new_league_season->tbl.leagues",
+          "detail": "GATE 1 — commissioner check: `commissioner_id = auth.uid()::text`. auth.uid() is NULL for anon, so it fails closed. Checked BEFORE the state guard so an unauthorized caller learns nothing about league state.",
+          "files": [
+            "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql:58"
+          ]
+        },
+        {
+          "n": 3,
+          "edge": "e.pg.start_new_league_season->tbl.league_seasons#insert",
+          "detail": "WRITE 1 — new league_seasons row at MAX(season_number)+1. This is what preserves the old season, so it must succeed before anything is destroyed.",
+          "files": [
+            "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql:75"
+          ]
+        },
+        {
+          "n": 4,
+          "edge": "e.pg.start_new_league_season->tbl.league_standings#update",
+          "detail": "WRITE 2 — every standings row for the league zeroed: wins, losses, ties, points_for, points_against.",
+          "files": [
+            "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql:80"
+          ]
+        },
+        {
+          "n": 5,
+          "edge": "e.pg.start_new_league_season->tbl.matchups#delete",
+          "detail": "WRITE 3 — DESTRUCTIVE: every matchup for the league is deleted outright. History survives only via league_seasons.final_standings, so if WRITE 1 did not capture it, it is gone.",
+          "files": [
+            "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql:85"
+          ]
+        },
+        {
+          "n": 6,
+          "edge": "e.pg.start_new_league_season->tbl.leagues#update",
+          "detail": "WRITE 4 — league pointed at the new season: current_season_id, season_status=active, current_week=1. All four writes share one implicit transaction, so a failure rolls back the whole reset.",
+          "files": [
+            "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql:91"
           ]
         }
       ],
@@ -6111,6 +6874,7 @@
     {
       "node": "cron.refresh_symbols_daily",
       "label": "refresh_symbols_daily",
+      "groupKey": "auth",
       "field": "auth",
       "declared": "refresh-symbols requires a JWT (config.toml verify_jwt=true)",
       "live": "cron job sends no Authorization or apikey header",
@@ -6120,6 +6884,7 @@
     {
       "node": "cron.refresh_symbols_daily",
       "label": "refresh_symbols_daily",
+      "groupKey": "origin",
       "field": "origin",
       "declared": "(not scheduled by any migration)",
       "live": "active, 0 */6 * * *",
@@ -6127,8 +6892,109 @@
       "note": "This job exists in prod but no migration in supabase/migrations/ schedules it by this name. It was created out-of-band and is not reproducible from the repo."
     },
     {
+      "node": "tbl.broker_credentials",
+      "label": "broker_credentials",
+      "groupKey": "public-role-policies-unknown-predicate",
+      "field": "policy_roles",
+      "declared": "n/a",
+      "live": "4 of 4 policies target role PUBLIC",
+      "severity": "medium",
+      "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
+    },
+    {
+      "node": "tbl.cron_job_status",
+      "label": "cron_job_status",
+      "groupKey": "public-role-policies-unknown-predicate",
+      "field": "policy_roles",
+      "declared": "n/a",
+      "live": "1 of 1 policies target role PUBLIC",
+      "severity": "medium",
+      "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
+    },
+    {
+      "node": "tbl.draft_sessions",
+      "label": "draft_sessions",
+      "groupKey": "public-role-policies-unknown-predicate",
+      "field": "policy_roles",
+      "declared": "n/a",
+      "live": "2 of 2 policies target role PUBLIC",
+      "severity": "medium",
+      "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
+    },
+    {
+      "node": "tbl.draft_settings",
+      "label": "draft_settings",
+      "groupKey": "public-role-policies-unknown-predicate",
+      "field": "policy_roles",
+      "declared": "n/a",
+      "live": "2 of 2 policies target role PUBLIC",
+      "severity": "medium",
+      "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
+    },
+    {
+      "node": "tbl.drafts",
+      "label": "drafts",
+      "groupKey": "public-role-policies-unknown-predicate",
+      "field": "policy_roles",
+      "declared": "n/a",
+      "live": "4 of 4 policies target role PUBLIC",
+      "severity": "medium",
+      "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
+    },
+    {
+      "node": "tbl.league_seasons",
+      "label": "league_seasons",
+      "groupKey": "public-role-policies-unknown-predicate",
+      "field": "policy_roles",
+      "declared": "n/a",
+      "live": "2 of 2 policies target role PUBLIC",
+      "severity": "medium",
+      "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
+    },
+    {
+      "node": "tbl.notification_log",
+      "label": "notification_log",
+      "groupKey": "public-role-policies-unknown-predicate",
+      "field": "policy_roles",
+      "declared": "n/a",
+      "live": "2 of 2 policies target role PUBLIC",
+      "severity": "medium",
+      "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
+    },
+    {
+      "node": "tbl.symbols",
+      "label": "symbols",
+      "groupKey": "public-role-policies-unknown-predicate",
+      "field": "policy_roles",
+      "declared": "n/a",
+      "live": "1 of 1 policies target role PUBLIC",
+      "severity": "medium",
+      "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
+    },
+    {
+      "node": "tbl.trades",
+      "label": "trades",
+      "groupKey": "public-role-policies-unknown-predicate",
+      "field": "policy_roles",
+      "declared": "n/a",
+      "live": "2 of 2 policies target role PUBLIC",
+      "severity": "medium",
+      "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
+    },
+    {
+      "node": "tbl.user_profiles",
+      "label": "user_profiles",
+      "groupKey": "public-role-policies-unknown-predicate",
+      "field": "policy_roles",
+      "declared": "n/a",
+      "live": "3 of 3 policies target role PUBLIC",
+      "severity": "medium",
+      "note": "PUBLIC includes anon, so the predicate alone decides access — and this snapshot predates predicate capture, so the map cannot tell you what it is. Re-run docs/architecture/db-snapshot.sql to resolve."
+    },
+    {
       "node": "pg.update_broker_credentials_updated_at",
       "label": "update_broker_credentials_updated_at()",
+      "groupKey": "grants",
       "field": "grants",
       "declared": "n/a",
       "live": "=X/postgres, postgres=X/postgres, anon=X/postgres, authenticated=X/postgres, service_role=X/postgres",
@@ -6138,6 +7004,7 @@
     {
       "node": "pg.update_user_profiles_updated_at",
       "label": "update_user_profiles_updated_at()",
+      "groupKey": "grants",
       "field": "grants",
       "declared": "n/a",
       "live": "=X/postgres, postgres=X/postgres, anon=X/postgres, authenticated=X/postgres, service_role=X/postgres",
@@ -6145,103 +7012,104 @@
       "note": "SECURITY INVOKER, so it runs with the caller's own privileges and RLS applies — broad EXECUTE here is low risk. Listed for inventory completeness."
     },
     {
-      "node": "tbl.broker_credentials",
-      "label": "broker_credentials",
-      "field": "policy_roles",
-      "declared": "n/a",
-      "live": "4 of 4 policies target role PUBLIC",
-      "severity": "low",
-      "note": "A PUBLIC-role policy also applies to anon, so the predicate alone decides access. Predicates are not captured in the snapshot — read the migration to confirm each one gates on auth.uid(). Newer rls_b1_* policies target `authenticated` explicitly."
-    },
-    {
-      "node": "tbl.cron_job_status",
-      "label": "cron_job_status",
-      "field": "policy_roles",
-      "declared": "n/a",
-      "live": "1 of 1 policies target role PUBLIC",
-      "severity": "low",
-      "note": "A PUBLIC-role policy also applies to anon, so the predicate alone decides access. Predicates are not captured in the snapshot — read the migration to confirm each one gates on auth.uid(). Newer rls_b1_* policies target `authenticated` explicitly."
-    },
-    {
-      "node": "tbl.draft_sessions",
-      "label": "draft_sessions",
-      "field": "policy_roles",
-      "declared": "n/a",
-      "live": "2 of 2 policies target role PUBLIC",
-      "severity": "low",
-      "note": "A PUBLIC-role policy also applies to anon, so the predicate alone decides access. Predicates are not captured in the snapshot — read the migration to confirm each one gates on auth.uid(). Newer rls_b1_* policies target `authenticated` explicitly."
-    },
-    {
-      "node": "tbl.draft_settings",
-      "label": "draft_settings",
-      "field": "policy_roles",
-      "declared": "n/a",
-      "live": "2 of 2 policies target role PUBLIC",
-      "severity": "low",
-      "note": "A PUBLIC-role policy also applies to anon, so the predicate alone decides access. Predicates are not captured in the snapshot — read the migration to confirm each one gates on auth.uid(). Newer rls_b1_* policies target `authenticated` explicitly."
-    },
-    {
-      "node": "tbl.drafts",
-      "label": "drafts",
-      "field": "policy_roles",
-      "declared": "n/a",
-      "live": "4 of 4 policies target role PUBLIC",
-      "severity": "low",
-      "note": "A PUBLIC-role policy also applies to anon, so the predicate alone decides access. Predicates are not captured in the snapshot — read the migration to confirm each one gates on auth.uid(). Newer rls_b1_* policies target `authenticated` explicitly."
-    },
-    {
-      "node": "tbl.league_seasons",
-      "label": "league_seasons",
-      "field": "policy_roles",
-      "declared": "n/a",
-      "live": "2 of 2 policies target role PUBLIC",
-      "severity": "low",
-      "note": "A PUBLIC-role policy also applies to anon, so the predicate alone decides access. Predicates are not captured in the snapshot — read the migration to confirm each one gates on auth.uid(). Newer rls_b1_* policies target `authenticated` explicitly."
-    },
-    {
-      "node": "tbl.notification_log",
-      "label": "notification_log",
-      "field": "policy_roles",
-      "declared": "n/a",
-      "live": "2 of 2 policies target role PUBLIC",
-      "severity": "low",
-      "note": "A PUBLIC-role policy also applies to anon, so the predicate alone decides access. Predicates are not captured in the snapshot — read the migration to confirm each one gates on auth.uid(). Newer rls_b1_* policies target `authenticated` explicitly."
-    },
-    {
       "node": "tbl.rate_limit_counters",
       "label": "rate_limit_counters",
+      "groupKey": "policies",
       "field": "policies",
       "declared": "n/a",
       "live": "RLS on, ZERO policies",
       "severity": "low",
       "note": "RLS with no policies denies all access except to roles that bypass RLS (service_role, table owner). This is the correct shape for a service-role-only table — confirm that is the intent."
+    }
+  ],
+  "deadCode": [
+    {
+      "node": "fn.get-broker-keys",
+      "label": "get-broker-keys",
+      "kind": "edge-function",
+      "source": "supabase/functions/get-broker-keys/index.ts:44",
+      "outbound": [
+        "tbl.broker_credentials"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
     {
-      "node": "tbl.symbols",
-      "label": "symbols",
-      "field": "policy_roles",
-      "declared": "n/a",
-      "live": "1 of 1 policies target role PUBLIC",
-      "severity": "low",
-      "note": "A PUBLIC-role policy also applies to anon, so the predicate alone decides access. Predicates are not captured in the snapshot — read the migration to confirm each one gates on auth.uid(). Newer rls_b1_* policies target `authenticated` explicitly."
+      "node": "pg.is_commissioner",
+      "label": "is_commissioner(p_league_id uuid)",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20260712000000_rls_b1_00_helpers.sql:47",
+      "outbound": [
+        "tbl.leagues"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
     {
-      "node": "tbl.trades",
-      "label": "trades",
-      "field": "policy_roles",
-      "declared": "n/a",
-      "live": "2 of 2 policies target role PUBLIC",
-      "severity": "low",
-      "note": "A PUBLIC-role policy also applies to anon, so the predicate alone decides access. Predicates are not captured in the snapshot — read the migration to confirm each one gates on auth.uid(). Newer rls_b1_* policies target `authenticated` explicitly."
+      "node": "pg.is_member",
+      "label": "is_member(p_league_id uuid)",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20260712000000_rls_b1_00_helpers.sql:33",
+      "outbound": [
+        "tbl.league_members"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
     {
-      "node": "tbl.user_profiles",
-      "label": "user_profiles",
-      "field": "policy_roles",
-      "declared": "n/a",
-      "live": "3 of 3 policies target role PUBLIC",
-      "severity": "low",
-      "note": "A PUBLIC-role policy also applies to anon, so the predicate alone decides access. Predicates are not captured in the snapshot — read the migration to confirm each one gates on auth.uid(). Newer rls_b1_* policies target `authenticated` explicitly."
+      "node": "pg.trigger_week_end_snapshot",
+      "label": "trigger_week_end_snapshot()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20260612000000_migrate_snapshot_week_end_cron_auth.sql:53",
+      "outbound": [],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "pg.trigger_week_processing",
+      "label": "trigger_week_processing()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20251230210000_add_weekly_results_cron.sql:18",
+      "outbound": [],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "pg.trigger_week_snapshot",
+      "label": "trigger_week_snapshot()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20260105100000_add_week_snapshot_cron.sql:11",
+      "outbound": [],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "pg.update_standings",
+      "label": "update_standings(p_league_id uuid, p_user_id text, p_won boolean, p_lost boolean, p_tied boolean, p_points_for numeric, p_points_against numeric)",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20251230200000_add_standings_update_function.sql:2",
+      "outbound": [
+        "tbl.league_standings"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "tbl.draft_sessions",
+      "label": "draft_sessions",
+      "kind": "table",
+      "source": "supabase/migrations/20251205110000_enable_drafts_rls.sql:65",
+      "outbound": [],
+      "caveat": "No scanned caller. Tables can also be reached from plpgsql bodies (now parsed) or dynamic SQL (not parsed)."
+    },
+    {
+      "node": "tbl.draft_settings",
+      "label": "draft_settings",
+      "kind": "table",
+      "source": "supabase/migrations/20250818225829_create_leagues.sql:36",
+      "outbound": [],
+      "caveat": "No scanned caller. Tables can also be reached from plpgsql bodies (now parsed) or dynamic SQL (not parsed)."
+    },
+    {
+      "node": "tbl.notification_log",
+      "label": "notification_log",
+      "kind": "table",
+      "source": "supabase/migrations/20260122000000_add_push_tokens.sql:10",
+      "outbound": [],
+      "caveat": "No scanned caller. Tables can also be reached from plpgsql bodies (now parsed) or dynamic SQL (not parsed)."
     }
   ],
   "unverified": [
@@ -6303,10 +7171,11 @@
   "orphanAnnotations": [],
   "stats": {
     "nodes": 97,
-    "edges": 197,
+    "edges": 220,
     "flows": 9,
     "drift": 15,
     "driftHigh": 1,
+    "deadCode": 10,
     "unverified": 9
   },
   "sourceIndex": {
@@ -6624,6 +7493,6 @@
       "snapshot-week-start=false",
       "sync-alpaca-orders=false"
     ],
-    "dbSnapshot": "sha256:8cbcc15134d04fbdef1cc8c2924632a6"
+    "dbSnapshot": "sha256:8cbcc15134d04fbdef1cc8c2924632a6783bfcc3280dabf4f2d61312319213a1"
   }
 }

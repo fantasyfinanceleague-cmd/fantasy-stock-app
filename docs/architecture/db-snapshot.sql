@@ -85,11 +85,15 @@ SELECT jsonb_pretty(jsonb_build_object(
   ),
 
   -- ------------------------------------------------------------------------
-  -- TABLES: RLS enabled/forced + policy names, commands, roles
+  -- TABLES: RLS enabled/forced + policy names, commands, roles, PREDICATES
   -- ------------------------------------------------------------------------
-  -- Policy EXPRESSIONS are deliberately NOT captured: they are long, they
-  -- churn, and the architecture map only claims "RLS is on and these are the
-  -- policies". Read the migration for the predicate.
+  -- Predicates (USING / WITH CHECK) ARE captured, as of 2026-07-27. They were
+  -- omitted originally on the grounds that they are long and churn -- which was
+  -- a mistake: without them the map cannot answer whether a PUBLIC-role policy
+  -- actually gates on auth.uid(), and eleven tables (including
+  -- broker_credentials) have every policy targeting PUBLIC. "Cannot tell" is
+  -- exactly the answer this map exists to eliminate. Length is the viewer's
+  -- problem, not a reason to drop the evidence.
   'tables', (
     SELECT coalesce(jsonb_agg(t ORDER BY t ->> 'name'), '[]'::jsonb)
     FROM (
@@ -114,7 +118,11 @@ SELECT jsonb_pretty(jsonb_build_object(
                                                  ELSE pg_get_userbyid(r) END
                                           ORDER BY r), '[]'::jsonb)
                                    FROM unnest(pol.polroles) AS r
-                                 )
+                                 ),
+                   -- USING (read/filter) and WITH CHECK (write validation).
+                   -- pg_get_expr renders the stored parse tree back to SQL.
+                   'using',      pg_get_expr(pol.polqual, pol.polrelid),
+                   'withCheck',  pg_get_expr(pol.polwithcheck, pol.polrelid)
                  ) ORDER BY pol.polname)
           FROM pg_policy pol
           WHERE pol.polrelid = c.oid
