@@ -156,50 +156,117 @@ COMMENT ON FUNCTION schedule_snapshot_retry IS
 -- HUMAN ACTION — Giorgio only. Nothing below is applied by this migration.
 -- ============================================================================
 --
--- 1. Preview, then apply:
+-- !! THIS IS BEHAVIOR-ADDING, NOT BEHAVIOR-SUBTRACTING !!
+-- The scoring guards shipped earlier only ever REFUSED work. This one ENABLES
+-- work that has never run in production. After the push, a failing snapshot run
+-- can re-invoke its own edge function. MAX_RETRIES = 3 in both functions, and
+-- the initial run counts as attempt 1 (X-Retry-Attempt defaults to '1'), so the
+-- ceiling is 3 total invocations = 2 extra runs per failure. Read the
+-- re-invocation notes at the end before pushing.
+--
+-- ---------------------------------------------------------------------------
+-- STEP 0 — BEFORE THE PUSH. The to_char conversion depends on this.
+-- ---------------------------------------------------------------------------
+--      SHOW cron.timezone;
+--
+--    The function formats the retry instant in whatever this returns, falling
+--    back to GMT when the GUC is absent. Run it FIRST: if it returns something
+--    other than GMT/UTC, the expression is still correct but step 2's scheduled
+--    time will read as local wall-clock, and you need to know that before you
+--    judge whether the output looks right.
+--
+-- ---------------------------------------------------------------------------
+-- STEP 1 — Apply
+-- ---------------------------------------------------------------------------
 --      supabase db push --dry-run
 --      supabase db push
 --    (--dry-run only PREVIEWS; the real push must follow. Per CLAUDE.md, verify
---     the live state afterwards rather than trusting the push output.)
+--     live state afterwards rather than trusting the push output.)
 --
--- 2. Confirm the timezone assumption on THIS database:
---      SHOW cron.timezone;
---    If it errors or returns empty, the coalesce default of GMT applies. If it
---    returns something other than GMT/UTC, the function still adapts — but sanity
---    check step 3's scheduled time against your wall clock before trusting it.
+-- ---------------------------------------------------------------------------
+-- STEP 2 — DIRECT TEST. Do not wait for a real snapshot failure.
+-- ---------------------------------------------------------------------------
+--    Run as owner in the SQL editor. The sequence is safe: the scheduled job is
+--    removed inside the 5-minute window, and even if it did fire it would be a
+--    no-op (see re-invocation notes).
 --
--- 3. Prove the fix end to end. This SCHEDULES A REAL RETRY, so do it when an
---    extra snapshot run is harmless (the snapshot functions are idempotent per
---    league-week, but pick a quiet window anyway):
+--    FIRST — capture today's status row, because the function's
+--    `ON CONFLICT (job_name, run_date) DO UPDATE` will OVERWRITE it. run_date
+--    defaults to CURRENT_DATE and there is a UNIQUE(job_name, run_date), so on a
+--    Monday or Tuesday — when snapshot-week-start has already run at 14:35 UTC —
+--    this REPLACES a real 'success' row rather than inserting a new one:
 --
+--      SELECT * FROM cron_job_status
+--       WHERE job_name = 'snapshot-week-start' AND run_date = CURRENT_DATE;
+--
+--    THEN:
 --      SELECT schedule_snapshot_retry('snapshot-week-start', 99);
---      SELECT jobname, schedule, active FROM cron.job WHERE jobname LIKE '%retry%';
---      SELECT job_name, status, attempt_number, updated_at
---        FROM cron_job_status WHERE status = 'retrying';
---
---    EXPECTED: the first SELECT returns without error (before this migration it
---    raised "function cron.schedule(text, timestamp with time zone, text) does
---    not exist"); the second shows one job named 'snapshot-week-start-retry-99'
---    with a schedule like '3 0 1 2 *' about 5 minutes from now; the third shows a
---    'retrying' row, which has NEVER existed in this database before.
---
---    Then clean up so the test retry does not actually fire:
+--      SELECT jobid, jobname, schedule FROM cron.job WHERE jobname LIKE '%-retry-%';
+--      SELECT * FROM cron_job_status WHERE status = 'retrying';
 --      SELECT cron.unschedule('snapshot-week-start-retry-99');
 --
--- 4. Confirm the grants survived CREATE OR REPLACE (they should — it does not
---    reset privileges — but CLAUDE.md says verify, never assume):
---      SELECT proname, proacl FROM pg_proc p
+--    Attempt 99, not 1: it makes the job name and the status row obviously
+--    synthetic, and avoids colliding with a real 'snapshot-week-start-retry-1'.
+--    Keep the unschedule name in sync with the attempt number you pass.
+--
+--    EXPECTED:
+--      - statement 1 returns without error. BEFORE this migration it raised
+--        "function cron.schedule(text, timestamp with time zone, text) does not
+--        exist" — that raise is the whole bug, so a clean return IS the proof.
+--      - statement 2 shows ONE job 'snapshot-week-start-retry-99' with a
+--        five-field schedule ~5 minutes ahead, e.g. '40 14 27 7 *'.
+--      - statement 3 shows a 'retrying' row. cron_job_status has never held one.
+--      - statement 4 removes the job before it can fire.
+--
+--    AFTERWARDS — restore the row you captured, so ops history is not left
+--    reading 'retrying' for a run that actually succeeded:
+--      UPDATE cron_job_status
+--         SET status = 'success', attempt_number = <captured>, error_message = NULL
+--       WHERE job_name = 'snapshot-week-start' AND run_date = CURRENT_DATE;
+--
+-- ---------------------------------------------------------------------------
+-- STEP 3 — Confirm CREATE OR REPLACE did not strip anything
+-- ---------------------------------------------------------------------------
+--      SELECT proname, proacl, proconfig FROM pg_proc p
 --        JOIN pg_namespace n ON n.oid = p.pronamespace
 --       WHERE n.nspname = 'public' AND proname = 'schedule_snapshot_retry';
---    EXPECTED: {postgres=X/postgres,service_role=X/postgres} — no anon, no
---    authenticated.
+--    EXPECTED proacl:    {postgres=X/postgres,service_role=X/postgres}
+--                        — no anon, no authenticated.
+--    EXPECTED proconfig: {search_path=public}
 --
--- 5. Confirm the search_path pin survived:
---      SELECT proname, proconfig FROM pg_proc p
---        JOIN pg_namespace n ON n.oid = p.pronamespace
---       WHERE n.nspname = 'public' AND proname = 'schedule_snapshot_retry';
---    EXPECTED: {search_path=public}
+-- ---------------------------------------------------------------------------
+-- STEP 4 — Re-capture docs/architecture/db-snapshot.json
+-- ---------------------------------------------------------------------------
+--    This changes a function definition, and step 2 touches cron.job.
 --
--- 6. Re-capture docs/architecture/db-snapshot.json afterwards — this changes a
---    function definition and (if step 3 leaves anything behind) cron.job.
+-- ============================================================================
+-- RE-INVOCATION SAFETY — what actually happens when a retry now fires
+-- ============================================================================
+--
+-- snapshot-week-start — SAFE, and genuinely useful.
+--   A retry re-processes every league, but the coverage gate added in 2caf9f8
+--   runs BEFORE any Alpaca call and skips on three conditions:
+--     - alreadyEndPriced  : any row carries a Friday close -> skip
+--     - 'none_expected'   : no holdings -> skip
+--     - 'complete'        : every participant already snapshotted -> skip
+--   Only when coverage is PARTIAL does it write, and then via
+--   selectMissingHoldings() — the missing participants ONLY. Already-correct
+--   rows are never rebuilt with the retry's prices. So a retry is a no-op for
+--   complete leagues and a targeted heal for incomplete ones. This is exactly
+--   the recovery half of the all-or-nothing design that has never run.
+--   Note it also has a DELIBERATE retry path at index.ts:515 (incomplete
+--   coverage), not just the exception path at :555 — so post-fix, an incomplete
+--   Monday run will now actually re-attempt, which is the intended behaviour.
+--
+-- snapshot-week-end — SAFE but INEFFECTIVE. Know this before pushing.
+--   Its only guard is existence-only: `alreadyProcessed = existingSnapshots
+--   ?.some(s => s.week_end_price != null)` at index.ts:301. If a run writes some
+--   participants' week_end_price and then throws, the retry sees ONE row with an
+--   end price, treats the whole league as done, skips it, and reports success.
+--   So the retry cannot heal a partial week-end write — it will no-op and leave
+--   the week half-priced. It does not corrupt anything (it skips rather than
+--   rewrites), and it only fires from the exception path at :448, so this fix
+--   does not make week-end worse. But do not expect retries to fix week-end's
+--   real failure mode. That needs the coverage-gate treatment week-start got —
+--   tracked separately as the snapshot-week-end modernisation.
 -- ============================================================================
