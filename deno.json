@@ -1,0 +1,36 @@
+{
+  // Root Deno config. Its ONE job today is nodeModulesDir.
+  //
+  // WHY: `deno check supabase/functions/**/index.ts` used to fail repo-wide with
+  //   "Could not find a matching package for 'npm:openai@^4.52.5' in the
+  //    node_modules directory"
+  // because jsr:@supabase/functions-js's edge-runtime.d.ts pulls an npm type
+  // dependency, and without a node_modules directory Deno cannot resolve it. The
+  // whole edge-function tree therefore went untypechecked — and that was taken as
+  // "typechecking is impossible here" rather than "typechecking needs one flag",
+  // which is why real type errors sat unnoticed. Setting it here makes the fix a
+  // REPO capability instead of a flag someone has to know about.
+  //
+  // With this file present, `deno check <path>` works with no extra arguments.
+  //
+  // COEXISTENCE WITH NPM: the repo is also an npm workspace (apps/web,
+  // packages/*) that uses the same root node_modules. Deno confines itself to
+  // node_modules/.deno/ plus top-level entries for its own dependencies — in
+  // practice just the openai type dep — so the two managers share the directory
+  // without clobbering each other. node_modules/ is gitignored.
+  //
+  // LOCKFILE CHURN: the first resolve adds ~1800 lines of npm entries to
+  // deno.lock. That is expected and committed alongside this file; it is the
+  // lockfile doing its job. Do not revert it as noise.
+  "nodeModulesDir": "auto",
+
+  // apps/ and packages/ are npm/React/Vite, not Deno. Excluding them keeps a bare
+  // `deno lint` or `deno test` at the repo root from wandering into code that is
+  // not Deno's to check. Explicit paths still work regardless.
+  "exclude": [
+    "apps",
+    "packages",
+    "node_modules",
+    "docs"
+  ]
+}
