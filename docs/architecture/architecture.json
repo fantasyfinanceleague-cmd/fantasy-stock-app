@@ -2,35 +2,22 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "a3f917f80e69c7e8f85bea5eb21d7dcc756208b8",
-    "commitShort": "a3f917f",
+    "commit": "c22c3ee8690f28f3bd31ba5c14140313a75d0856",
+    "commitShort": "c22c3ee",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "claude/architecture-map-generator-01ec80",
-    "dirty": true,
-    "dirtyPaths": [
-      {
-        "code": "M",
-        "path": "docs/architecture/annotations.json"
-      },
-      {
-        "code": "M",
-        "path": "docs/architecture/db-snapshot.json"
-      },
-      {
-        "code": "M",
-        "path": "scripts/gen-architecture.mjs"
-      }
-    ],
-    "timestamp": "2026-07-28T05:54:11Z",
-    "sourceHash": "sha256:8f73db945d8e9ba1347c537bba7c58aaba3a87527cb26c9d3c3bf1668cf80a35",
+    "branch": "fix-preview-league-commissioner-column",
+    "dirty": false,
+    "dirtyPaths": [],
+    "timestamp": "2026-07-28T20:31:25Z",
+    "sourceHash": "sha256:126d642ab01a0356fbaee22f341a0400c7996bde94bcb82b33e740499b73d9c8",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-07-28T05:49:17Z",
-    "ageHours": 0.1,
-    "ageDays": 0,
+    "ageHours": 14.7,
+    "ageDays": 0.6,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:1003d2a31164523e894182d57f0321335f74c985764a84c1a41896857ee6535d",
@@ -437,7 +424,7 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 130
+        "lines": 137
       },
       "db": null,
       "declared": null,
@@ -3397,8 +3384,8 @@
         "user_id"
       ],
       "callSites": [
-        "supabase/functions/preview-league/index.ts:92",
-        "supabase/functions/preview-league/index.ts:96"
+        "supabase/functions/preview-league/index.ts:103",
+        "supabase/functions/preview-league/index.ts:99"
       ]
     },
     {
@@ -3429,7 +3416,7 @@
         "username"
       ],
       "callSites": [
-        "supabase/functions/preview-league/index.ts:88"
+        "supabase/functions/preview-league/index.ts:95"
       ]
     },
     {
@@ -7578,12 +7565,12 @@
       "apps/web/src/pages/TradeHistory.jsx:86 -> trades.select",
       "supabase/functions/get-broker-keys/index.ts:81 -> broker_credentials.select",
       "supabase/functions/place-order/index.ts:48 -> broker_credentials.select",
+      "supabase/functions/preview-league/index.ts:103 -> league_members.select",
       "supabase/functions/preview-league/index.ts:74 -> leagues.select",
       "supabase/functions/preview-league/index.ts:77 -> league_invites.select",
       "supabase/functions/preview-league/index.ts:80 -> leagues.select",
-      "supabase/functions/preview-league/index.ts:88 -> user_profiles.select",
-      "supabase/functions/preview-league/index.ts:92 -> league_members.select",
-      "supabase/functions/preview-league/index.ts:96 -> league_members.select",
+      "supabase/functions/preview-league/index.ts:95 -> user_profiles.select",
+      "supabase/functions/preview-league/index.ts:99 -> league_members.select",
       "supabase/functions/process-week-results/index.ts:1045 -> trades.select",
       "supabase/functions/process-week-results/index.ts:1072 -> drafts.select",
       "supabase/functions/process-week-results/index.ts:1085 -> trades.select",
