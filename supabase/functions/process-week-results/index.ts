@@ -2,6 +2,13 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { groupMatchupsByLeagueWeek } from './grouping.ts';
 import {
+  decideMatchupOutcome,
+  willAdvanceWinner,
+  nextRoundOf,
+  winnerSeedForAdvance,
+  type PlayoffRound,
+} from './playoff-progression.ts';
+import {
   decideBatchScoring,
   decideUserScorer,
   decideMatchupScoring,
@@ -689,18 +696,24 @@ async function advancePlayoffWinner(
   matchup: any,
   winnerId: string
 ) {
-  const round = matchup.playoff_round;
-  const winnerSeed = matchup.winner_user_id === matchup.team1_user_id
-    ? matchup.team1_seed
-    : matchup.team2_seed;
+  const round = matchup.playoff_round as PlayoffRound | null;
+  // DEFECT 2 PRESERVED VERBATIM: winner_user_id is not in the pending-matchup
+  // select list and is only written later by the UPDATE below, so it is undefined
+  // here and this always returns team2_seed. Moved into the tested module rather
+  // than fixed — see playoff-progression.test.ts.
+  const winnerSeed = winnerSeedForAdvance({
+    team1UserId: matchup.team1_user_id,
+    team2UserId: matchup.team2_user_id,
+    team1Seed: matchup.team1_seed,
+    team2Seed: matchup.team2_seed,
+    winnerUserId: matchup.winner_user_id,
+  });
 
   console.log(`Advancing ${winnerId} (seed ${winnerSeed}) from ${round}`);
 
   // Determine next round
-  let nextRound: string | null = null;
-  if (round === 'quarter') nextRound = 'semi';
-  else if (round === 'semi') nextRound = 'finals';
-  else return; // Finals has no next round
+  const nextRound = nextRoundOf(round);
+  if (!nextRound) return; // Finals has no next round
 
   // Find the next round matchup to update
   const { data: nextMatchups } = await supabase
@@ -1169,87 +1182,74 @@ Deno.serve(async (req) => {
         const team1Score = userScores.get(matchup.team1_user_id) ?? { dollarGain: 0, percentGain: 0, hasPositions: false };
         const team1Gain = team1Score.dollarGain;
 
-        let team2Gain = 0;
-        let team2Score: UserScore = { dollarGain: 0, percentGain: 0, hasPositions: false };
-        let winnerId: string | null = null;
-        let isTie = false;
-        let team1Won = false;
-        let team2Won = false;
+        // On a bye there is no opponent, so team2 keeps the zero default and
+        // team2Gain stays 0 — identical to the previous `let` initialisation.
+        const team2Score: UserScore = isByeWeek
+          ? { dollarGain: 0, percentGain: 0, hasPositions: false }
+          : (userScores.get(matchup.team2_user_id) ?? { dollarGain: 0, percentGain: 0, hasPositions: false });
+        const team2Gain = isByeWeek ? 0 : team2Score.dollarGain;
 
-        if (isByeWeek) {
-          // Bye week: team1 gets automatic win
-          winnerId = matchup.team1_user_id;
-          team1Won = true;
-          team2Gain = 0; // No opponent
-          console.log(`Processing bye week for user ${matchup.team1_user_id}`);
-        } else {
-          // Normal matchup or playoff
-          team2Score = userScores.get(matchup.team2_user_id) ?? { dollarGain: 0, percentGain: 0, hasPositions: false };
-          team2Gain = team2Score.dollarGain;
+        // Winner determination is decided in ./playoff-progression.ts — a pure,
+        // unit-tested transcription of the branch chain that used to live inline
+        // here. Behaviour is unchanged, INCLUDING the two defects the tests pin:
+        // a both-empty PLAYOFF matchup still yields no winner (so nothing
+        // advances), and advancePlayoffWinner still derives the wrong seed.
+        // See playoff-progression.test.ts.
+        // Casts, not conversions — erased at runtime, so behaviour is unaffected.
+        // grouping.ts's MatchupRow types every column it does not itself read as
+        // `unknown` (an index signature), so these fields arrive untyped. The old
+        // inline code hid that by assigning them into pre-declared `let`s; the
+        // module's typed parameter surfaces it at the boundary instead. Narrowing
+        // here is the smallest honest fix — widening MatchupRow would change a
+        // tested module's contract for a purely local need.
+        const progressionMatchup = {
+          team1UserId: matchup.team1_user_id as string,
+          team2UserId: matchup.team2_user_id as string | null,
+          team1Seed: matchup.team1_seed as number | null,
+          team2Seed: matchup.team2_seed as number | null,
+          isPlayoff,
+          playoffRound: matchup.playoff_round as PlayoffRound | null,
+        };
+        const outcome = decideMatchupOutcome(progressionMatchup, team1Score, team2Score);
+        const { winnerId, isTie, team1Won, team2Won } = outcome;
 
-          // Rule: Empty portfolio = automatic loss
-          const team1Empty = !team1Score.hasPositions;
-          const team2Empty = !team2Score.hasPositions;
-
-          if (team1Empty && team2Empty) {
-            // Both empty - true tie
-            isTie = true;
+        // Logging stays here, keyed off outcome.reason, so the operational log
+        // surface is byte-identical to the inline version. The module decides;
+        // index.ts presents — same split as grouping.ts / scoring-eligibility.ts.
+        switch (outcome.reason) {
+          case 'bye':
+            console.log(`Processing bye week for user ${matchup.team1_user_id}`);
+            break;
+          case 'both_empty_tie':
             console.log(`Both teams have empty portfolios - tie`);
-          } else if (team1Empty) {
-            // Team 1 empty = automatic loss
-            winnerId = matchup.team2_user_id;
-            team2Won = true;
+            break;
+          case 'team1_empty_auto_loss':
             console.log(`Team 1 has empty portfolio - automatic loss`);
-          } else if (team2Empty) {
-            // Team 2 empty = automatic loss
-            winnerId = matchup.team1_user_id;
-            team1Won = true;
+            break;
+          case 'team2_empty_auto_loss':
             console.log(`Team 2 has empty portfolio - automatic loss`);
-          } else {
-            // Both have positions - compare dollar gains
-            if (team1Gain > team2Gain) {
-              winnerId = matchup.team1_user_id;
-              team1Won = true;
-            } else if (team2Gain > team1Gain) {
-              winnerId = matchup.team2_user_id;
-              team2Won = true;
-            } else {
-              // Dollar gains are tied - use percentage gain as tiebreaker
-              const team1Pct = team1Score.percentGain;
-              const team2Pct = team2Score.percentGain;
-
-              if (team1Pct > team2Pct) {
-                winnerId = matchup.team1_user_id;
-                team1Won = true;
-                console.log(`Dollar tie ($${team1Gain.toFixed(2)}), Team 1 wins on percent (${team1Pct.toFixed(2)}% vs ${team2Pct.toFixed(2)}%)`);
-              } else if (team2Pct > team1Pct) {
-                winnerId = matchup.team2_user_id;
-                team2Won = true;
-                console.log(`Dollar tie ($${team1Gain.toFixed(2)}), Team 2 wins on percent (${team2Pct.toFixed(2)}% vs ${team1Pct.toFixed(2)}%)`);
-              } else {
-                // True tie - both dollar and percent are the same
-                if (isPlayoff) {
-                  // In playoffs, higher seed (lower number) wins
-                  const seed1 = matchup.team1_seed || 999;
-                  const seed2 = matchup.team2_seed || 999;
-                  if (seed1 < seed2) {
-                    winnerId = matchup.team1_user_id;
-                    team1Won = true;
-                  } else {
-                    winnerId = matchup.team2_user_id;
-                    team2Won = true;
-                  }
-                  console.log(`Playoff double-tie, seed tiebreaker: seed ${seed1} vs ${seed2}, winner: ${winnerId}`);
-                } else {
-                  // Regular season - true tie (0.5 wins each)
-                  isTie = true;
-                  console.log(`True tie - both dollar ($${team1Gain.toFixed(2)}) and percent (${team1Pct.toFixed(2)}%) are equal`);
-                }
-              }
-            }
-          }
+            break;
+          case 'percent_tiebreak':
+            console.log(
+              `Dollar tie ($${team1Gain.toFixed(2)}), Team ${team1Won ? 1 : 2} wins on percent ` +
+              `(${(team1Won ? team1Score : team2Score).percentGain.toFixed(2)}% vs ` +
+              `${(team1Won ? team2Score : team1Score).percentGain.toFixed(2)}%)`
+            );
+            break;
+          case 'playoff_seed_tiebreak':
+            console.log(
+              `Playoff double-tie, seed tiebreaker: seed ${matchup.team1_seed || 999} vs ` +
+              `${matchup.team2_seed || 999}, winner: ${winnerId}`
+            );
+            break;
+          case 'regular_season_true_tie':
+            console.log(
+              `True tie - both dollar ($${team1Gain.toFixed(2)}) and percent ` +
+              `(${team1Score.percentGain.toFixed(2)}%) are equal`
+            );
+            break;
+          // 'dollar_gain' logged nothing before; it still logs nothing.
         }
-
         // Update matchup with results
         const { error: updateErr } = await supabase
           .from('matchups')
@@ -1266,9 +1266,11 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // For playoff matchups, advance winner to next round
-        if (isPlayoff && winnerId) {
-          await advancePlayoffWinner(supabase, leagueId, matchup, winnerId);
+        // For playoff matchups, advance winner to next round.
+        // willAdvanceWinner is `isPlayoff && !!winnerId` — the same gate as before,
+        // and the one DEFECT 1 trips when a playoff matchup ends both-empty.
+        if (willAdvanceWinner(progressionMatchup, outcome)) {
+          await advancePlayoffWinner(supabase, leagueId, matchup, winnerId!);
         }
 
         // Helper to update standings with proper increment
