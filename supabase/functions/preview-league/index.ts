@@ -84,8 +84,15 @@ Deno.serve(async (req: Request) => {
     if (!league) return json({ found: false, reason: 'invalid_code' }, 200);
 
     // Commissioner display name only (username) — never commissioner_id.
+    // NOTE the column is `id`, not `user_id`: user_profiles' PK is
+    // `id UUID REFERENCES auth.users(id)` (20251210100000) and no migration ever
+    // adds a `user_id` column. Filtering on `user_id` made PostgREST error, the
+    // error was discarded by this destructure, and the preview silently fell
+    // back to 'Unknown' for every league. Carried over from the pre-existing
+    // mobile lookup this function replaced (join-league.tsx), so it had been
+    // live on mobile before it was live here.
     const { data: commish } = await admin
-      .from('user_profiles').select('username').eq('user_id', league.commissioner_id).maybeSingle();
+      .from('user_profiles').select('username').eq('id', league.commissioner_id).maybeSingle();
 
     // Current member count.
     const { count: memberCount } = await admin
