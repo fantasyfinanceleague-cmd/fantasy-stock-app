@@ -6,12 +6,11 @@
  * No DB, no Alpaca, no secrets, no --allow-* flags. Same pattern as
  * grouping.test.ts and scoring-eligibility.test.ts.
  *
- * READ THIS BEFORE "FIXING" A FAILING ASSERTION.
- * The tests under "DEFECT 1" and "DEFECT 2" are CHARACTERIZATION tests: they
- * assert what the code does TODAY, not what it should do. They are the evidence
- * that the defects are real. When either defect is fixed, the matching test MUST
- * be inverted — each one says exactly how, inline. Every such test is named with
- * a `DEFECT n:` prefix so nothing here can be mistaken for endorsed behaviour.
+ * The DEFECT 1 and DEFECT 2 groups were CHARACTERIZATION tests pinning the broken
+ * behaviour so it could be proven real before anything changed. Both defects are
+ * now FIXED, and those tests have been inverted in the same commit as the fix —
+ * they now assert the correct behaviour and would fail if either defect returned.
+ * The `FIXED` prefix marks them as regression guards, not endorsements.
  */
 
 import { assertEquals } from 'jsr:@std/assert';
@@ -20,7 +19,7 @@ import {
   willAdvanceWinner,
   nextRoundOf,
   winnerSeedForAdvance,
-  correctWinnerSeed,
+  resolveBySeed,
   type PlayoffMatchup,
   type TeamScore,
 } from './playoff-progression.ts';
@@ -77,35 +76,28 @@ Deno.test('a null seed is treated as 999, so a seeded team beats an unseeded one
 // DEFECT 1 — the both-empty playoff tie. THIS is what blocks the finals.
 // ===========================================================================
 
-Deno.test('DEFECT 1: a playoff matchup where BOTH teams are empty produces no winner', () => {
-  // index.ts:1194 sets isTie without checking isPlayoff, so this is the only
-  // playoff path that leaves winnerId null.
-  //
-  // WHEN FIXED (add an isPlayoff seed tiebreak to the both-empty branch), invert to:
-  //   assertEquals(outcome.winnerId, 'alice');   // seed 1 beats seed 4
-  //   assertEquals(outcome.isTie, false);
+Deno.test('FIXED 1: a playoff matchup where BOTH teams are empty resolves by seed', () => {
+  // Was: reason 'both_empty_tie', winnerId null, isTie true — the only playoff
+  // path that left no winner. Now shares resolveBySeed with the double-tie branch.
   const m = semi();
   const outcome = decideMatchupOutcome(m, empty, empty);
 
-  assertEquals(outcome.reason, 'both_empty_tie');
-  assertEquals(outcome.winnerId, null);
-  assertEquals(outcome.isTie, true);
+  assertEquals(outcome.reason, 'both_empty_playoff_seed_tiebreak');
+  assertEquals(outcome.winnerId, 'alice'); // seed 1 beats seed 4
+  assertEquals(outcome.isTie, false);
+  assertEquals(outcome.team1Won, true);
 });
 
-Deno.test('DEFECT 1: that outcome blocks advancement, so the finals placeholder is never filled', () => {
-  // The whole impact chain in one assertion. willAdvanceWinner mirrors
-  // index.ts:1270 `if (isPlayoff && winnerId)`. False here means
-  // advancePlayoffWinner is never called, the finals row keeps team1_user_id
-  // NULL, and the pending-matchup query (index.ts:874,
-  // `.not('team1_user_id','is',null)`) can never select it again.
-  //
-  // WHEN FIXED: assertEquals(..., true).
+Deno.test('FIXED 1: that outcome now advances, so the finals placeholder gets filled', () => {
+  // The impact chain, inverted. willAdvanceWinner mirrors `isPlayoff && winnerId`.
+  // True here means advancePlayoffWinner runs, the finals row gets a team, and the
+  // pending-matchup query can select it — the season can complete.
   const m = semi();
   const outcome = decideMatchupOutcome(m, empty, empty);
-  assertEquals(willAdvanceWinner(m, outcome), false, 'the finals never gets populated');
+  assertEquals(willAdvanceWinner(m, outcome), true, 'the finals gets populated');
 });
 
-Deno.test('DEFECT 1 is specific to BOTH being empty — one empty side advances fine', () => {
+Deno.test('one empty side still auto-loses, unchanged by the fix', () => {
   const m = semi();
   const t1Only = decideMatchupOutcome(m, withPositions(10, 5), empty);
   assertEquals(t1Only.reason, 'team2_empty_auto_loss');
@@ -118,14 +110,31 @@ Deno.test('DEFECT 1 is specific to BOTH being empty — one empty side advances 
   assertEquals(willAdvanceWinner(m, t2Only), true);
 });
 
-Deno.test('DEFECT 1: an unpopulated playoff placeholder is also both-empty', () => {
-  // A finals row whose slots were never filled has team2UserId null. It is NOT a
-  // bye (index.ts:1166 requires !isPlayoff), so it falls through to the
-  // both-empty branch and cannot resolve — the failure is self-sustaining.
+Deno.test('FIXED 1: a half-populated playoff placeholder awards to the present team', () => {
+  // A finals row with only one slot filled has team2UserId null. It is NOT a bye
+  // (a bye requires !isPlayoff), so it reaches the both-empty branch. Without the
+  // null-opponent guard in resolveBySeed this would "resolve" to a null winner and
+  // recreate DEFECT 1 inside its own fix — 999 vs 999 falls to the team2 side.
   const m = semi({ playoffRound: 'finals', team2UserId: null, team2Seed: null });
   const outcome = decideMatchupOutcome(m, empty, empty);
-  assertEquals(outcome.winnerId, null);
-  assertEquals(willAdvanceWinner(m, outcome), false);
+  assertEquals(outcome.reason, 'playoff_no_opponent');
+  assertEquals(outcome.winnerId, 'alice');
+  assertEquals(willAdvanceWinner(m, outcome), true);
+});
+
+Deno.test('FIXED 1: resolveBySeed never returns a null winner', () => {
+  // Guarding the guard: the shared helper is the single point both tie branches
+  // depend on, so a null winner escaping it would resurrect the defect silently.
+  for (const t2 of [null, 'bob']) {
+    for (const [s1, s2] of [[1, 4], [4, 1], [null, null], [null, 2], [3, null]]) {
+      const out = resolveBySeed(
+        { team1UserId: 'alice', team2UserId: t2, team1Seed: s1, team2Seed: s2, isPlayoff: true },
+        'playoff_seed_tiebreak',
+      );
+      assertEquals(typeof out.winnerId, 'string');
+      assertEquals(out.isTie, false);
+    }
+  }
 });
 
 // ===========================================================================
@@ -197,43 +206,27 @@ Deno.test('rounds chain quarter -> semi -> finals, and finals terminates', () =>
 // DEFECT 2 — the advancing seed is always team2's
 // ===========================================================================
 
-Deno.test('DEFECT 2: the advancing winner always carries team2_seed, even when team1 won', () => {
-  // index.ts:689 compares matchup.winner_user_id, which is absent from the
-  // pending-matchup select list (index.ts:857-871) and is only written later by
-  // the UPDATE at index.ts:1254. So it is undefined at read time and the strict
-  // comparison never holds.
-  //
-  // WHEN FIXED (compare against the winnerId argument, or add winner_user_id to
-  // the select), invert to: assertEquals(winnerSeedForAdvance(row), 1).
+Deno.test('FIXED 2: the advancing winner carries its OWN seed', () => {
+  // Was: always team2Seed, because the comparison read winner_user_id — a column
+  // absent from the select list and written only later. The winner is now passed
+  // in explicitly, so there is no unselected field to misread.
   const row = { team1UserId: 'alice', team2UserId: 'bot-1', team1Seed: 1, team2Seed: 4 };
 
-  assertEquals(winnerSeedForAdvance(row), 4, 'wrong: alice is seed 1');
-  assertEquals(correctWinnerSeed(row, 'alice'), 1, 'what it should be');
+  assertEquals(winnerSeedForAdvance(row, 'alice'), 1);
+  assertEquals(winnerSeedForAdvance(row, 'bot-1'), 4);
 });
 
-Deno.test('DEFECT 2 is invisible when team2 happens to win', () => {
-  // Why it went unnoticed: half of all advancements are accidentally right.
-  const row = { team1UserId: 'alice', team2UserId: 'bot-1', team1Seed: 1, team2Seed: 4 };
-  assertEquals(winnerSeedForAdvance(row), correctWinnerSeed(row, 'bot-1'));
-});
-
-Deno.test('DEFECT 2 corrupts the seed tiebreaker the next round depends on', () => {
-  // Compose the two: a 1-seed advances recorded as a 4, then meets a genuine
-  // 2-seed in the finals. On a double tie the seed tiebreaker sends the WRONG
-  // team through, because the seed it reads is fabricated.
+Deno.test('FIXED 2: the seed tiebreaker the next round depends on is no longer corrupted', () => {
+  // The composed regression: a 1-seed advancing recorded as a 4, meeting a genuine
+  // 2-seed in the finals, used to hand the title to the wrong player on a tie.
   const semiRow = { team1UserId: 'alice', team2UserId: 'bot-1', team1Seed: 1, team2Seed: 4 };
-  const recordedSeed = winnerSeedForAdvance(semiRow);   // 4, should be 1
-  const trueSeed = correctWinnerSeed(semiRow, 'alice'); // 1
+  const advancedSeed = winnerSeedForAdvance(semiRow, 'alice'); // now 1, was 4
 
-  const finalsAsRecorded = decideMatchupOutcome(
-    { team1UserId: 'alice', team2UserId: 'carol', team1Seed: recordedSeed, team2Seed: 2, isPlayoff: true, playoffRound: 'finals' },
-    withPositions(7, 3), withPositions(7, 3),
-  );
-  const finalsAsShouldBe = decideMatchupOutcome(
-    { team1UserId: 'alice', team2UserId: 'carol', team1Seed: trueSeed, team2Seed: 2, isPlayoff: true, playoffRound: 'finals' },
+  const finals = decideMatchupOutcome(
+    { team1UserId: 'alice', team2UserId: 'carol', team1Seed: advancedSeed, team2Seed: 2, isPlayoff: true, playoffRound: 'finals' },
     withPositions(7, 3), withPositions(7, 3),
   );
 
-  assertEquals(finalsAsRecorded.winnerId, 'carol', 'wrong champion, from the fabricated seed');
-  assertEquals(finalsAsShouldBe.winnerId, 'alice', 'correct champion');
+  assertEquals(advancedSeed, 1);
+  assertEquals(finals.winnerId, 'alice', 'correct champion');
 });

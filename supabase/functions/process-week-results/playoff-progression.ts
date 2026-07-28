@@ -97,6 +97,8 @@ export type PlayoffRound = 'quarter' | 'semi' | 'finals';
 export type OutcomeReason =
   | 'bye'
   | 'both_empty_tie'
+  | 'both_empty_playoff_seed_tiebreak'
+  | 'playoff_no_opponent'
   | 'team1_empty_auto_loss'
   | 'team2_empty_auto_loss'
   | 'dollar_gain'
@@ -143,9 +145,16 @@ export function decideMatchupOutcome(
   const team1Empty = !team1Score.hasPositions;
   const team2Empty = !team2Score.hasPositions;
 
-  // index.ts:1194 — DEFECT 1. No isPlayoff check, so a playoff matchup can exit
-  // here with winnerId null and nothing advances.
+  // DEFECT 1 FIXED. This branch used to set isTie unconditionally, with no
+  // isPlayoff check — the only path in a playoff matchup that left winnerId null,
+  // which meant advancePlayoffWinner never ran and the finals placeholder stayed
+  // NULL forever. A playoff now resolves by seed, exactly like the double-tie
+  // branch below; the regular season keeps its true tie, which is a real outcome
+  // there (0.5 wins each). "Refuse, don't fabricate" is the wrong instinct here:
+  // refusing IS the dead end, because an unpopulated placeholder can never be
+  // re-selected past the `team1_user_id IS NOT NULL` filter.
   if (team1Empty && team2Empty) {
+    if (m.isPlayoff) return resolveBySeed(m, 'both_empty_playoff_seed_tiebreak');
     return { winnerId: null, isTie: true, team1Won: false, team2Won: false, reason: 'both_empty_tie' };
   }
 
@@ -173,17 +182,32 @@ export function decideMatchupOutcome(
     return { winnerId: m.team2UserId, isTie: false, team1Won: false, team2Won: true, reason: 'percent_tiebreak' };
   }
 
-  // index.ts:1231 — double tie. THIS branch checks isPlayoff; the both-empty one above does not.
-  if (m.isPlayoff) {
-    const seed1 = m.team1Seed || 999;
-    const seed2 = m.team2Seed || 999;
-    return seed1 < seed2
-      ? { winnerId: m.team1UserId, isTie: false, team1Won: true, team2Won: false, reason: 'playoff_seed_tiebreak' }
-      : { winnerId: m.team2UserId, isTie: false, team1Won: false, team2Won: true, reason: 'playoff_seed_tiebreak' };
-  }
+  // Double tie. Shares resolveBySeed with the both-empty branch above so the two
+  // can never drift — that drift was DEFECT 1.
+  if (m.isPlayoff) return resolveBySeed(m, 'playoff_seed_tiebreak');
 
-  // index.ts:1245 — regular season true tie.
+  // Regular season true tie.
   return { winnerId: null, isTie: true, team1Won: false, team2Won: false, reason: 'regular_season_true_tie' };
+}
+
+/**
+ * Higher seed (lower number) advances. A null seed sorts as 999, matching the
+ * original `matchup.team1_seed || 999`.
+ *
+ * The null-opponent guard is load-bearing: a playoff placeholder whose second
+ * slot was never filled has team2UserId === null, and without this it would
+ * "resolve" to a null winner — silently recreating DEFECT 1 inside its own fix.
+ * With no opponent, team1 advances.
+ */
+export function resolveBySeed(m: PlayoffMatchup, reason: OutcomeReason): Outcome {
+  if (m.team2UserId === null) {
+    return { winnerId: m.team1UserId, isTie: false, team1Won: true, team2Won: false, reason: 'playoff_no_opponent' };
+  }
+  const seed1 = m.team1Seed || 999;
+  const seed2 = m.team2Seed || 999;
+  return seed1 < seed2
+    ? { winnerId: m.team1UserId, isTie: false, team1Won: true, team2Won: false, reason }
+    : { winnerId: m.team2UserId, isTie: false, team1Won: false, team2Won: true, reason };
 }
 
 // ---------------------------------------------------------------------------
@@ -216,25 +240,20 @@ export interface AdvancingRow {
   team2UserId: string | null;
   team1Seed: number | null;
   team2Seed: number | null;
-  /**
-   * DEFECT 2: absent from the pending-matchup select list (index.ts:857-871) and
-   * only written later by the UPDATE at index.ts:1254, so at read time this is
-   * always undefined. Typed optional to make that explicit.
-   */
-  winnerUserId?: string | null;
 }
 
 /**
- * The seed written onto the next-round slot. Transcribed verbatim, undefined
- * comparison and all — so a test can pin that it returns team2Seed even when
- * team1 won.
+ * The seed written onto the next-round slot.
+ *
+ * DEFECT 2 FIXED. This used to compare `row.winnerUserId === row.team1UserId`,
+ * reading a column absent from the pending-matchup select list and only written
+ * later by the UPDATE — so it was `undefined` at read time, the comparison never
+ * held, and the seed was ALWAYS team2Seed regardless of who won. It went
+ * unnoticed because half of all advancements are accidentally correct.
+ *
+ * The winner is now passed in explicitly rather than re-derived from the row,
+ * which removes the possibility of reading a stale or unselected field at all.
  */
-export function winnerSeedForAdvance(row: AdvancingRow): number | null {
-  return row.winnerUserId === row.team1UserId ? row.team1Seed : row.team2Seed;
-}
-
-/** What the seed WOULD be if the comparison used the winner the handler computed. */
-export function correctWinnerSeed(row: AdvancingRow, winnerId: string | null): number | null {
-  if (winnerId === null) return null;
+export function winnerSeedForAdvance(row: AdvancingRow, winnerId: string): number | null {
   return winnerId === row.team1UserId ? row.team1Seed : row.team2Seed;
 }
