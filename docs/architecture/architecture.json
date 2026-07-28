@@ -2,35 +2,22 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "a3f917f80e69c7e8f85bea5eb21d7dcc756208b8",
-    "commitShort": "a3f917f",
+    "commit": "633acdd0a5513b82a4d26957d8a03b148dd0df19",
+    "commitShort": "633acdd",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "claude/architecture-map-generator-01ec80",
-    "dirty": true,
-    "dirtyPaths": [
-      {
-        "code": "M",
-        "path": "docs/architecture/annotations.json"
-      },
-      {
-        "code": "M",
-        "path": "docs/architecture/db-snapshot.json"
-      },
-      {
-        "code": "M",
-        "path": "scripts/gen-architecture.mjs"
-      }
-    ],
-    "timestamp": "2026-07-28T05:54:11Z",
-    "sourceHash": "sha256:8f73db945d8e9ba1347c537bba7c58aaba3a87527cb26c9d3c3bf1668cf80a35",
+    "branch": "item1-drop-notification-log",
+    "dirty": false,
+    "dirtyPaths": [],
+    "timestamp": "2026-07-28T20:31:24Z",
+    "sourceHash": "sha256:20a2a4b64c487faed583369dcc06aec238def9ebdf896f309e02b80d154be38a",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-07-28T05:49:17Z",
-    "ageHours": 0.1,
-    "ageDays": 0,
+    "ageHours": 14.7,
+    "ageDays": 0.6,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:1003d2a31164523e894182d57f0321335f74c985764a84c1a41896857ee6535d",
@@ -7688,7 +7675,8 @@
       "20260724000001_lockdown_missed_definer_grants.sql",
       "20260724000002_harden_definer_search_path.sql",
       "20260727000000_fix_schedule_snapshot_retry_cron_expression.sql",
-      "20260727100000_week_snapshots_entered_mid_week.sql"
+      "20260727100000_week_snapshots_entered_mid_week.sql",
+      "20260728000000_drop_notification_log.sql"
     ],
     "config": [
       "join-league=true",
