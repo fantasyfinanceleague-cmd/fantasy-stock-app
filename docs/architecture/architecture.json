@@ -2,35 +2,39 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "a3f917f80e69c7e8f85bea5eb21d7dcc756208b8",
-    "commitShort": "a3f917f",
+    "commit": "18f9dbf860af0baa1d41f82a4b446984ec688d72",
+    "commitShort": "18f9dbf",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "claude/architecture-map-generator-01ec80",
+    "branch": "main",
     "dirty": true,
     "dirtyPaths": [
       {
-        "code": "M",
+        "code": "UU",
         "path": "docs/architecture/annotations.json"
       },
       {
-        "code": "M",
-        "path": "docs/architecture/db-snapshot.json"
+        "code": "A",
+        "path": "supabase/functions/snapshot-week-end/close.test.ts"
+      },
+      {
+        "code": "A",
+        "path": "supabase/functions/snapshot-week-end/close.ts"
       },
       {
         "code": "M",
-        "path": "scripts/gen-architecture.mjs"
+        "path": "supabase/functions/snapshot-week-end/index.ts"
       }
     ],
-    "timestamp": "2026-07-28T05:54:11Z",
-    "sourceHash": "sha256:8f73db945d8e9ba1347c537bba7c58aaba3a87527cb26c9d3c3bf1668cf80a35",
+    "timestamp": "2026-07-29T19:02:09Z",
+    "sourceHash": "sha256:92509d25705f83023a5aceeb06374e63de1e2f76c7c056c92897a7a30802c6ea",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-07-28T05:49:17Z",
-    "ageHours": 0.1,
-    "ageDays": 0,
+    "ageHours": 37.2,
+    "ageDays": 1.6,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:1003d2a31164523e894182d57f0321335f74c985764a84c1a41896857ee6535d",
@@ -585,8 +589,12 @@
         "verifyJwt": false,
         "verifyJwtSource": "supabase/config.toml:25",
         "authGuard": "apikey header, constant-time, fail-closed",
-        "localModules": [],
-        "tests": [],
+        "localModules": [
+          "close.ts"
+        ],
+        "tests": [
+          "close.test.ts"
+        ],
         "envVars": [
           "ALPACA_API_KEY",
           "ALPACA_API_SECRET",
@@ -594,12 +602,12 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 503
+        "lines": 505
       },
       "db": null,
       "declared": null,
       "drift": [],
-      "annotation": "The unmodernised twin of snapshot-week-start. Same cron-auth pattern, same Alpaca dependency, same table — but no extracted pure module and no test file. It is the highest-value cleanup target in the repo precisely because its failure mode is silent: bad week_end_price data does not throw, it just scores people wrong.",
+      "annotation": "MODERNISED 2026-07-28 — the last live instance of the partial-state pattern is closed. Decision logic now lives in the pure, hermetically tested close.ts (22 tests), mirroring snapshot-week-start/plan.ts.\n\nTHE GUARD IT REPLACED: `alreadyProcessed = existingSnapshots.some(s => s.week_end_price != null)`. ANY single end-priced row marked the WHOLE league-week done, so a run that priced some participants and then threw left a partial write that the retry SKIPPED rather than healed. It also made retries into this function ineffective even after schedule_snapshot_retry was fixed in 20260727000000 — the retry fired and no-opped.\n\nWHY close.ts IS NOT SYMMETRICAL WITH plan.ts, deliberately: week-START has one write path (insert per holding); week-END has TWO, so 'missing' has two kinds. KIND 1 is an existing Monday row whose week_end_price is still NULL (resolve by UPDATE on id). KIND 2 is a mid-week buy with no row at all (resolve by INSERT carrying entered_mid_week=true and the weighted entry price as week_start_price). Completeness is the CONJUNCTION of both, per participant — checking only kind 1 would call a league complete while a mid-week buy went unrecorded.\n\nThe coverage gate runs BEFORE the Alpaca call, so a complete league costs no quota. Writes are all-or-nothing: one unpriceable symbol aborts the whole league (buildCloseWork returns empty updates AND inserts alongside missingSymbols, so a careless caller cannot write a subset). Inserts upsert on (league_id,user_id,week_number,symbol), so overlapping retries re-converge. anyIncomplete now forces terminal status 'retrying'/'failed' — a partial run can no longer report 'success'.",
       "verified": true,
       "id": "fn.snapshot-week-end",
       "label": "snapshot-week-end",
@@ -607,7 +615,7 @@
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/snapshot-week-end/index.ts",
-        "line": 257
+        "line": 234
       }
     },
     {
@@ -813,6 +821,25 @@
       "kind": "edge-module",
       "source": {
         "path": "supabase/functions/process-week-results/scoring-eligibility.ts",
+        "line": 1
+      }
+    },
+    {
+      "layer": "module",
+      "facts": {
+        "hasTests": true
+      },
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "mod.snapshot-week-end/close",
+      "label": "close.ts",
+      "sublabel": "snapshot-week-end",
+      "kind": "edge-module",
+      "source": {
+        "path": "supabase/functions/snapshot-week-end/close.ts",
         "line": 1
       }
     },
@@ -2385,7 +2412,7 @@
           "note": "UNAUTHENTICATED READ of every row. PUBLIC includes anon and the predicate is unconditional. This may be intentional for public reference data — but it must be an explicit decision, not an assumption, and it has to be consistent with any function-level lockdown covering the same data."
         }
       ],
-      "annotation": "HIGH by grading, but probably correct — confirm rather than assume. \"read symbols\" is PUBLIC with USING `true`, so anon reads the entire ticker table. For public reference data (NASDAQ/NYSE listings, refreshed from a public feed) that is very likely intended, and it is SELECT-only.\n\nIt is graded HIGH anyway because the map cannot distinguish \"deliberately public\" from \"nobody thought about it\", and this table is written by an RLS-bypassing upsert in refresh-symbols. Record the decision here and it stops being a question; leave it and every future reader re-asks it.",
+      "annotation": "DECIDED 2026-07-28 — KEEP the public SELECT policy. This is settled; do not re-derive it.\n\nThe policy is REQUIRED, not merely tolerated. That distinction is the whole point of this note, because the two readings produce the same migration today and opposite futures. symbol-name/index.ts:35 and symbols-search/index.ts:78 both construct their client with SB_PUBLISHABLE_KEY and do NOT forward the caller's Authorization header, so their queries execute as the anon role. The `USING (true)` policy is what makes symbol lookup and search return rows at all. Tighten it to `TO authenticated` — the change that looks obviously safe by analogy with every other table hardened in B1 — and both functions silently return empty: no error, no 401, just a search box that finds nothing.\n\nWHY IT GRADES HIGH ANYWAY: the map's heuristic flags any policy whose predicate contains no identity check. That is the rule working as designed, not a finding. The data is public NASDAQ/NYSE reference listings refreshed from a public feed, the policy is SELECT-only, and writes go through an RLS-bypassing upsert in refresh-symbols using the secret key. There is nothing user-specific in the table to leak.\n\nIF YOU EVER DO WANT IT LOCKED: the prerequisite is switching symbol-name and symbols-search to SB_SECRET_KEY_INTERNAL first, at which point the anon policy becomes genuinely unnecessary and can be dropped. Doing it in the other order breaks search. Judged not worth the moving parts for public ticker data.",
       "verified": true,
       "id": "tbl.symbols",
       "label": "symbols",
@@ -3766,7 +3793,19 @@
       "protocol": "vendor-https",
       "payload": "https://data.alpaca.markets/v2",
       "callSites": [
-        "supabase/functions/snapshot-week-end/index.ts:21"
+        "supabase/functions/snapshot-week-end/index.ts:22"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.snapshot-week-end->mod.snapshot-week-end/close",
+      "from": "fn.snapshot-week-end",
+      "to": "mod.snapshot-week-end/close",
+      "protocol": "esm-import",
+      "payload": "import from './close.ts'",
+      "callSites": [
+        "supabase/functions/snapshot-week-end/index.ts"
       ]
     },
     {
@@ -3778,7 +3817,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('schedule_snapshot_retry')",
       "callSites": [
-        "supabase/functions/snapshot-week-end/index.ts:99"
+        "supabase/functions/snapshot-week-end/index.ts:100"
       ]
     },
     {
@@ -3791,7 +3830,7 @@
       "payload": ".from('cron_job_status').upsert()",
       "columns": [],
       "callSites": [
-        "supabase/functions/snapshot-week-end/index.ts:71"
+        "supabase/functions/snapshot-week-end/index.ts:72"
       ]
     },
     {
@@ -3806,7 +3845,7 @@
         "user_id, symbol, quantity"
       ],
       "callSites": [
-        "supabase/functions/snapshot-week-end/index.ts:354"
+        "supabase/functions/snapshot-week-end/index.ts:336"
       ]
     },
     {
@@ -3821,7 +3860,7 @@
         "id, current_week, num_weeks"
       ],
       "callSites": [
-        "supabase/functions/snapshot-week-end/index.ts:289"
+        "supabase/functions/snapshot-week-end/index.ts:266"
       ]
     },
     {
@@ -3836,7 +3875,7 @@
         "team1_user_id, team2_user_id"
       ],
       "callSites": [
-        "supabase/functions/snapshot-week-end/index.ts:336"
+        "supabase/functions/snapshot-week-end/index.ts:318"
       ]
     },
     {
@@ -3851,7 +3890,7 @@
         "user_id, symbol, action, quantity, price"
       ],
       "callSites": [
-        "supabase/functions/snapshot-week-end/index.ts:362"
+        "supabase/functions/snapshot-week-end/index.ts:344"
       ]
     },
     {
@@ -3866,20 +3905,7 @@
         "id, user_id, symbol, quantity, week_start_price, week_end_price"
       ],
       "callSites": [
-        "supabase/functions/snapshot-week-end/index.ts:317"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.fn.snapshot-week-end->tbl.week_snapshots#insert",
-      "from": "fn.snapshot-week-end",
-      "to": "tbl.week_snapshots",
-      "protocol": "postgrest-insert",
-      "payload": ".from('week_snapshots').insert()",
-      "columns": [],
-      "callSites": [
-        "supabase/functions/snapshot-week-end/index.ts:451"
+        "supabase/functions/snapshot-week-end/index.ts:299"
       ]
     },
     {
@@ -3892,7 +3918,20 @@
       "payload": ".from('week_snapshots').update()",
       "columns": [],
       "callSites": [
-        "supabase/functions/snapshot-week-end/index.ts:395"
+        "supabase/functions/snapshot-week-end/index.ts:425"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.snapshot-week-end->tbl.week_snapshots#upsert",
+      "from": "fn.snapshot-week-end",
+      "to": "tbl.week_snapshots",
+      "protocol": "postgrest-upsert",
+      "payload": ".from('week_snapshots').upsert()",
+      "columns": [],
+      "callSites": [
+        "supabase/functions/snapshot-week-end/index.ts:440"
       ]
     },
     {
@@ -6739,7 +6778,7 @@
           "edge": "e.fn.snapshot-week-end->ext.alpaca-data",
           "detail": "Friday close prices.",
           "files": [
-            "supabase/functions/snapshot-week-end/index.ts:21"
+            "supabase/functions/snapshot-week-end/index.ts:22"
           ]
         },
         {
@@ -6747,16 +6786,15 @@
           "edge": "e.fn.snapshot-week-end->tbl.week_snapshots#update",
           "detail": "Writes week_end_price onto existing rows. NOTE: unlike snapshot-week-start this has no extracted plan module and no unit tests — see the comparison annotation.",
           "files": [
-            "supabase/functions/snapshot-week-end/index.ts:317"
+            "supabase/functions/snapshot-week-end/index.ts:299"
           ]
         },
         {
           "n": 4,
-          "edge": "e.fn.snapshot-week-end->tbl.week_snapshots#insert",
+          "edge": "e.fn.snapshot-week-end->tbl.week_snapshots",
           "detail": "Mid-week purchases: positions with no week-start row get one here, carrying a real weighted-average entry price and entered_mid_week = true. This insert had NEVER succeeded before 2026-07-27 — it wrote week_start_price: null against a NOT NULL column, so every mid-week position was silently dropped from scoring. The flag is what stops the row being double-counted as a Monday holding.",
           "files": [
-            "supabase/functions/snapshot-week-end/index.ts:435",
-            "supabase/functions/snapshot-week-end/index.ts:241"
+            "supabase/functions/snapshot-week-end/index.ts:299"
           ]
         },
         {
@@ -6764,12 +6802,15 @@
           "edge": "e.fn.snapshot-week-end->pg.schedule_snapshot_retry",
           "detail": "Shared retry path.",
           "files": [
-            "supabase/functions/snapshot-week-end/index.ts:99"
+            "supabase/functions/snapshot-week-end/index.ts:100"
           ]
         }
       ],
-      "annotation": "Read this against flow.week-start-snapshot — the asymmetry is the point. snapshot-week-start has an extracted, unit-tested plan.ts and was hardened in 2caf9f8 to write all-or-nothing per league-week with a completeness-based skip. snapshot-week-end has neither: no extracted module, no tests, and its write path has not been audited for the same partial-write defect. Both feed the same week_snapshots rows that weekly scoring reads, and week-end runs only ten minutes before scoring does.",
-      "unverified": []
+      "annotation": "Read this against flow.week-start-snapshot. The asymmetry USED to be that week-end had no extracted module, no tests and an unaudited write path; that was closed on 2026-07-28 (see fn.snapshot-week-end). Both now have a pure decision module with hermetic tests, a completeness-based coverage gate that runs before any Alpaca call, and all-or-nothing per-league writes.\n\nThe REMAINING asymmetry is intrinsic and load-bearing, not debt: week-start inserts one row per holding, while week-end must both CLOSE existing Monday rows and INSERT mid-week buys. That is why close.ts models two kinds of 'missing' where plan.ts models one. Do not refactor them into a shared module on the assumption they are the same shape — they are not.\n\nTiming still matters: week-end runs only ten minutes before scoring, so an aborted league has little room to be healed by a retry before process-week-results reads the same rows. The downstream per-user gate (decideUserScorer -> 'unscoreable') remains the required backstop.",
+      "unverified": [
+        "step 4: anchor not found — supabase/functions/snapshot-week-end/index.ts no longer contains \"entered_mid_week: true\"",
+        "step 4: anchor not found — supabase/functions/snapshot-week-end/index.ts no longer contains \"function midWeekEntryPrice\""
+      ]
     },
     {
       "id": "flow.place-trade",
@@ -7371,17 +7412,29 @@
       "claim": "this job succeeds",
       "reason": "Job sends no auth header but its target declares verify_jwt=true, so runs should be 401ing at the gateway. cron.job_run_details will still say succeeded: net.http_post is asynchronous, so the job status reflects the enqueue, not the HTTP response.",
       "resolve": "SELECT id, status_code, error_msg, created FROM net._http_response ORDER BY created DESC LIMIT 30;  -- and confirm the target table has actually changed recently; net._http_response prunes on a ~6h TTL"
+    },
+    {
+      "scope": "flow.week-end-snapshot",
+      "claim": "flow step is current",
+      "reason": "step 4: anchor not found — supabase/functions/snapshot-week-end/index.ts no longer contains \"entered_mid_week: true\"",
+      "resolve": "Update the FLOWS block in scripts/gen-architecture.mjs."
+    },
+    {
+      "scope": "flow.week-end-snapshot",
+      "claim": "flow step is current",
+      "reason": "step 4: anchor not found — supabase/functions/snapshot-week-end/index.ts no longer contains \"function midWeekEntryPrice\"",
+      "resolve": "Update the FLOWS block in scripts/gen-architecture.mjs."
     }
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 98,
-    "edges": 228,
+    "nodes": 99,
+    "edges": 229,
     "flows": 9,
     "drift": 15,
     "driftHigh": 4,
     "deadCode": 8,
-    "unverified": 9
+    "unverified": 11
   },
   "sourceIndex": {
     "edgeFunctions": [
@@ -7395,7 +7448,7 @@
       "quote[]",
       "refresh-symbols[]",
       "save-broker-keys[]",
-      "snapshot-week-end[]",
+      "snapshot-week-end[close.ts]",
       "snapshot-week-start[plan.ts]",
       "symbol-name[]",
       "symbols-search[]",
@@ -7445,7 +7498,7 @@
       "supabase/functions/preview-league/index.ts:34 -> check_and_bump_rate_limit",
       "supabase/functions/process-week-results/index.ts:783 -> complete_league_season",
       "supabase/functions/process-week-results/index.ts:827 -> complete_league_season",
-      "supabase/functions/snapshot-week-end/index.ts:99 -> schedule_snapshot_retry",
+      "supabase/functions/snapshot-week-end/index.ts:100 -> schedule_snapshot_retry",
       "supabase/functions/snapshot-week-start/index.ts:135 -> schedule_snapshot_retry"
     ],
     "tableOps": [
@@ -7610,14 +7663,14 @@
       "supabase/functions/quote/index.ts:83 -> broker_credentials.select",
       "supabase/functions/refresh-symbols/index.ts:131 -> symbols.upsert",
       "supabase/functions/save-broker-keys/index.ts:136 -> broker_credentials.upsert",
-      "supabase/functions/snapshot-week-end/index.ts:289 -> leagues.select",
-      "supabase/functions/snapshot-week-end/index.ts:317 -> week_snapshots.select",
-      "supabase/functions/snapshot-week-end/index.ts:336 -> matchups.select",
-      "supabase/functions/snapshot-week-end/index.ts:354 -> drafts.select",
-      "supabase/functions/snapshot-week-end/index.ts:362 -> trades.select",
-      "supabase/functions/snapshot-week-end/index.ts:395 -> week_snapshots.update",
-      "supabase/functions/snapshot-week-end/index.ts:451 -> week_snapshots.insert",
-      "supabase/functions/snapshot-week-end/index.ts:71 -> cron_job_status.upsert",
+      "supabase/functions/snapshot-week-end/index.ts:266 -> leagues.select",
+      "supabase/functions/snapshot-week-end/index.ts:299 -> week_snapshots.select",
+      "supabase/functions/snapshot-week-end/index.ts:318 -> matchups.select",
+      "supabase/functions/snapshot-week-end/index.ts:336 -> drafts.select",
+      "supabase/functions/snapshot-week-end/index.ts:344 -> trades.select",
+      "supabase/functions/snapshot-week-end/index.ts:425 -> week_snapshots.update",
+      "supabase/functions/snapshot-week-end/index.ts:440 -> week_snapshots.upsert",
+      "supabase/functions/snapshot-week-end/index.ts:72 -> cron_job_status.upsert",
       "supabase/functions/snapshot-week-start/index.ts:107 -> cron_job_status.upsert",
       "supabase/functions/snapshot-week-start/index.ts:312 -> leagues.select",
       "supabase/functions/snapshot-week-start/index.ts:350 -> matchups.select",

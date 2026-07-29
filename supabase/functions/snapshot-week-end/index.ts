@@ -1,5 +1,6 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { classifyCloseCoverage, buildCloseWork } from './close.ts';
 
 /**
  * Snapshot Week End Prices
@@ -226,33 +227,9 @@ function calculateHoldings(
     .filter(([_, qty]) => qty > 0)
     .map(([symbol, quantity]) => ({ symbol, quantity }));
 }
-
-/**
- * Weighted-average purchase price for a position opened during the week.
- *
- * Only called for symbols with no week-start snapshot row, i.e. the whole
- * position was acquired this week, so every buy is a mid-week buy. Sells are
- * ignored: they reduce quantity (already reflected in h.quantity) but do not
- * change the average cost of what remains.
- *
- * Returns null when no priced buy exists, so the caller can refuse rather than
- * invent a cost basis.
- */
-function midWeekEntryPrice(userId: string, symbol: string, trades: any[]): number | null {
-  let qty = 0;
-  let cost = 0;
-  for (const t of trades) {
-    if (t.user_id !== userId) continue;
-    if ((t.symbol?.toUpperCase?.() ?? '') !== symbol.toUpperCase()) continue;
-    if (t.action !== 'buy') continue;
-    const q = Number(t.quantity || 0);
-    const p = Number(t.price || 0);
-    if (q <= 0 || p <= 0) continue;
-    qty += q;
-    cost += q * p;
-  }
-  return qty > 0 ? cost / qty : null;
-}
+// midWeekEntryPrice moved to ./close.ts so it is covered by the hermetic
+// tests in close.test.ts. Keeping a second copy here would let the tested
+// and untested implementations drift.
 
 Deno.serve(async (req) => {
   // SECURITY: apikey validation must be the first thing we do — before reading
@@ -304,6 +281,11 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${leagues.length} active matchup leagues`);
 
+    // Set by any league that could not be fully closed this run (unpriceable
+    // symbol, or a failed write). Forces terminal status 'retrying' instead of
+    // 'success', so a partial run never reports clean — CLAUDE.md silent-failure.
+    let anyIncomplete = false;
+
     let totalUpdates = 0;
     let totalNewSnapshots = 0;
     const results: any[] = [];
@@ -324,12 +306,12 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Check if week_end_price is already filled (prevent re-running)
-      const alreadyProcessed = existingSnapshots?.some(s => s.week_end_price != null);
-      if (alreadyProcessed) {
-        console.log(`Week end snapshots already exist for league ${leagueId} week ${currentWeek}, skipping`);
-        continue;
-      }
+      // NOTE: the completeness gate is NOT here. It cannot run yet — coverage
+      // depends on current holdings (KIND 2, mid-week buys), which are computed
+      // below. The old existence-only check `existingSnapshots.some(s =>
+      // s.week_end_price != null)` ran at this point and skipped the league on a
+      // SINGLE priced row, which is exactly what made a partial week-end write
+      // unhealable. See close.ts for the two kinds of "missing".
 
       // 3. Get all matchups for current week to find all users
       const { data: matchups } = await supabase
@@ -380,79 +362,87 @@ Deno.serve(async (req) => {
         if (snap.symbol) allSymbols.add(snap.symbol.toUpperCase());
       }
 
-      // 5. Fetch official closing prices for all symbols
+      // 5. COVERAGE GATE — replaces the old existence-only `alreadyProcessed`.
+      //    Runs BEFORE the Alpaca call so a complete league costs no quota.
+      const coverage = classifyCloseCoverage(userHoldings, existingSnapshots || []);
+      if (coverage === 'none_expected') {
+        console.log(`League ${leagueId} week ${currentWeek}: nothing held and no rows — nothing to close`);
+        continue;
+      }
+      if (coverage === 'complete') {
+        console.log(`League ${leagueId} week ${currentWeek}: already fully closed, skipping`);
+        continue;
+      }
+      // 'incomplete' falls through — INCLUDING the partial state the old guard
+      // misread as done. Healing writes only what is missing.
+
+      // 6. Fetch official closing prices for all symbols
       let prices = new Map<string, number>();
       if (ALPACA_KEY && ALPACA_SECRET && allSymbols.size > 0) {
         prices = await fetchClosePrices(Array.from(allSymbols), ALPACA_KEY, ALPACA_SECRET);
       }
 
-      // 6. Update existing snapshots with week_end_price
-      let updatesForLeague = 0;
-      for (const snap of existingSnapshots || []) {
-        const price = prices.get(snap.symbol?.toUpperCase());
-        if (price) {
-          const { error: updateErr } = await supabase
-            .from('week_snapshots')
-            .update({ week_end_price: price })
-            .eq('id', snap.id);
-
-          if (updateErr) {
-            console.error(`Failed to update snapshot ${snap.id}:`, updateErr);
-          } else {
-            updatesForLeague++;
-          }
-        }
-      }
-
-      // 7. Create new snapshots for stocks bought mid-week (not in existing snapshots)
-      const existingUserSymbols = new Set(
-        (existingSnapshots || []).map(s => `${s.user_id}:${s.symbol?.toUpperCase()}`)
+      // 7. Build ALL the writes for this league, all-or-nothing.
+      //    entered_mid_week rows keep the basis fix from cc26857: week_start_price
+      //    carries the real weighted entry price, never a NULL or a placeholder.
+      const work = buildCloseWork(
+        leagueId,
+        currentWeek,
+        userHoldings,
+        existingSnapshots || [],
+        prices,
+        trades || [],
       );
 
-      const newSnapshots: any[] = [];
-      for (const [userId, holdings] of userHoldings) {
-        for (const h of holdings) {
-          const key = `${userId}:${h.symbol}`;
-          if (!existingUserSymbols.has(key)) {
-            // Mid-week purchase: no week-start row exists for this symbol.
-            //
-            // This used to write `week_start_price: null`, which violates the
-            // column's NOT NULL constraint — so the insert failed on every run
-            // since 2026-01-15 and the position was silently dropped from scoring.
-            // We now record the real entry price and flag the row explicitly, so
-            // week_start_price stops being an overloaded NULL and the UI's
-            // quantity * week_start_price cost basis is correct rather than zero.
-            const price = prices.get(h.symbol);
-            const entryPrice = midWeekEntryPrice(userId, h.symbol, trades || []);
-            if (price && entryPrice !== null) {
-              newSnapshots.push({
-                league_id: leagueId,
-                user_id: userId,
-                week_number: currentWeek,
-                symbol: h.symbol,
-                quantity: h.quantity,
-                week_start_price: entryPrice,
-                entered_mid_week: true,
-                week_end_price: price,
-              });
-            } else if (price) {
-              console.error(
-                `No entry price derivable for mid-week position ${userId}/${h.symbol} ` +
-                `in league ${leagueId} — skipping rather than writing a fabricated basis.`
-              );
-            }
-          }
+      // Positions priced but with no derivable entry price. NOT retryable — no
+      // amount of re-running invents a trade record — so they are reported and
+      // skipped rather than blocking the league forever.
+      for (const p of work.unbasedPositions) {
+        console.error(
+          `No entry price derivable for mid-week position ${p.userId}/${p.symbol} ` +
+          `in league ${leagueId} — skipping rather than writing a fabricated basis.`
+        );
+      }
+
+      // ABORT: any unpriceable symbol means we write NOTHING for this league this
+      // run. Writing "the ones we could" is precisely what produced the
+      // unhealable partial the old code left behind.
+      if (work.missingSymbols.length > 0) {
+        anyIncomplete = true;
+        console.error(
+          `League ${leagueId} week ${currentWeek}: no close price for ` +
+          `${work.missingSymbols.join(', ')} — refusing partial week-end write, will retry`
+        );
+        continue;
+      }
+
+      // 8. Apply the writes. Both paths are idempotent on the
+      //    (league_id, user_id, week_number, symbol) unique constraint, so an
+      //    overlapping retry re-converges instead of duplicating or failing.
+      let updatesForLeague = 0;
+      for (const u of work.updates) {
+        const { error: updateErr } = await supabase
+          .from('week_snapshots')
+          .update({ week_end_price: u.week_end_price })
+          .eq('id', u.id);
+
+        if (updateErr) {
+          console.error(`Failed to close snapshot ${u.id}:`, updateErr);
+          anyIncomplete = true;
+        } else {
+          updatesForLeague++;
         }
       }
 
-      // 8. Insert new snapshots for mid-week purchases
+      const newSnapshots = work.inserts;
       if (newSnapshots.length > 0) {
-        const { error: insertErr } = await supabase
+        const { error: upsertErr } = await supabase
           .from('week_snapshots')
-          .insert(newSnapshots);
+          .upsert(newSnapshots, { onConflict: 'league_id,user_id,week_number,symbol' });
 
-        if (insertErr) {
-          console.error(`Failed to insert new snapshots for league ${leagueId}:`, insertErr);
+        if (upsertErr) {
+          console.error(`Failed to write mid-week snapshots for league ${leagueId}:`, upsertErr);
+          anyIncomplete = true;
         } else {
           console.log(`Created ${newSnapshots.length} new snapshots for mid-week purchases in league ${leagueId}`);
           totalNewSnapshots += newSnapshots.length;
@@ -472,11 +462,23 @@ Deno.serve(async (req) => {
 
     console.log(`Total updates: ${totalUpdates}, Total new snapshots: ${totalNewSnapshots}`);
 
-    // Update status to success
-    await updateJobStatus(supabase, JOB_NAME, 'success', retryAttempt);
+    // Terminal status must reflect whether every league actually closed.
+    if (anyIncomplete) {
+      if (retryAttempt < MAX_RETRIES) {
+        await scheduleRetry(supabase, JOB_NAME, retryAttempt + 1);
+        await updateJobStatus(supabase, JOB_NAME, 'retrying', retryAttempt,
+          'One or more leagues incomplete (unpriced symbols or failed write)');
+      } else {
+        await updateJobStatus(supabase, JOB_NAME, 'failed', retryAttempt,
+          'One or more leagues still incomplete after max retries');
+      }
+    } else {
+      await updateJobStatus(supabase, JOB_NAME, 'success', retryAttempt);
+    }
 
     return json({
-      message: 'Week end snapshot complete',
+      message: anyIncomplete ? 'Week end snapshot INCOMPLETE' : 'Week end snapshot complete',
+      incomplete: anyIncomplete,
       totalUpdates,
       totalNewSnapshots,
       results,
