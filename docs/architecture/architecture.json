@@ -2,31 +2,19 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "18f9dbf860af0baa1d41f82a4b446984ec688d72",
-    "commitShort": "18f9dbf",
+    "commit": "85d3bb90216130d4fc70472f6ef530e3bcd499a3",
+    "commitShort": "85d3bb9",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "main",
     "dirty": true,
     "dirtyPaths": [
       {
-        "code": "UU",
-        "path": "docs/architecture/annotations.json"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/snapshot-week-end/close.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/snapshot-week-end/close.ts"
-      },
-      {
         "code": "M",
-        "path": "supabase/functions/snapshot-week-end/index.ts"
+        "path": "supabase/functions/preview-league/index.ts"
       }
     ],
-    "timestamp": "2026-07-29T19:02:09Z",
-    "sourceHash": "sha256:92509d25705f83023a5aceeb06374e63de1e2f76c7c056c92897a7a30802c6ea",
+    "timestamp": "2026-07-29T19:02:26Z",
+    "sourceHash": "sha256:d68caf25ad5a91c2010d0085cbe1a2e466d6b25156a35e471eec2b70070a2170",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
@@ -441,7 +429,7 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 130
+        "lines": 137
       },
       "db": null,
       "declared": null,
@@ -3424,8 +3412,8 @@
         "user_id"
       ],
       "callSites": [
-        "supabase/functions/preview-league/index.ts:92",
-        "supabase/functions/preview-league/index.ts:96"
+        "supabase/functions/preview-league/index.ts:103",
+        "supabase/functions/preview-league/index.ts:99"
       ]
     },
     {
@@ -3456,7 +3444,7 @@
         "username"
       ],
       "callSites": [
-        "supabase/functions/preview-league/index.ts:88"
+        "supabase/functions/preview-league/index.ts:95"
       ]
     },
     {
@@ -7631,12 +7619,12 @@
       "apps/web/src/pages/TradeHistory.jsx:86 -> trades.select",
       "supabase/functions/get-broker-keys/index.ts:81 -> broker_credentials.select",
       "supabase/functions/place-order/index.ts:48 -> broker_credentials.select",
+      "supabase/functions/preview-league/index.ts:103 -> league_members.select",
       "supabase/functions/preview-league/index.ts:74 -> leagues.select",
       "supabase/functions/preview-league/index.ts:77 -> league_invites.select",
       "supabase/functions/preview-league/index.ts:80 -> leagues.select",
-      "supabase/functions/preview-league/index.ts:88 -> user_profiles.select",
-      "supabase/functions/preview-league/index.ts:92 -> league_members.select",
-      "supabase/functions/preview-league/index.ts:96 -> league_members.select",
+      "supabase/functions/preview-league/index.ts:95 -> user_profiles.select",
+      "supabase/functions/preview-league/index.ts:99 -> league_members.select",
       "supabase/functions/process-week-results/index.ts:1045 -> trades.select",
       "supabase/functions/process-week-results/index.ts:1072 -> drafts.select",
       "supabase/functions/process-week-results/index.ts:1085 -> trades.select",
