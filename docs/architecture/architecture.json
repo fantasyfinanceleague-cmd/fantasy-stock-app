@@ -2,18 +2,18 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "6c36bab9c850ab9a2a34e4c8d84b0cb28342b614",
-    "commitShort": "6c36bab",
+    "commit": "938b984afa9cd5607811a04aeaf8afb0ef33138f",
+    "commitShort": "938b984",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "main",
     "dirty": true,
     "dirtyPaths": [
       {
-        "code": "A",
-        "path": "supabase/migrations/20260728000001_gate_user_profiles_to_authenticated.sql"
+        "code": "M",
+        "path": "docs/architecture/annotations.json"
       }
     ],
-    "timestamp": "2026-07-30T01:49:04Z",
+    "timestamp": "2026-07-30T01:50:11Z",
     "sourceHash": "sha256:25984985b2b0301396cc7aa60580968ba023d7210908f0414544fac841c7df8e",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
@@ -2325,7 +2325,7 @@
           "note": "UNAUTHENTICATED WRITE. PUBLIC includes anon, and this policy grants INSERT with a predicate that never references the caller — so anyone holding the publishable key can write arbitrary rows. A policy NAME claiming a role (e.g. \"Service role can...\") enforces nothing; only the predicate and the role list do."
         }
       ],
-      "annotation": "HIGH — unauthenticated write. The policy is named \"Service role can insert notifications\" but its role list is PUBLIC and its WITH CHECK is literally `true`. The name enforces nothing; only the role list and the predicate do. So anyone holding the publishable (anon) key can INSERT arbitrary rows, unbounded.\n\nCompounding it: this table has ZERO edges in the map — no client, edge function, cron job or plpgsql body reads or writes it. A possibly-dead table that anyone can write to without limit is the worst combination of the two: no one would notice the rows arriving, and nothing depends on them being real.\n\nDecide whether the table is live. If it is, the policy needs a real predicate (auth.role() = 'service_role', matching cron_job_status) and the role list should be explicit. If it is not, drop the table.",
+      "annotation": "DROPPED 2026-07-28 (migration 20260728000000). This key is retained deliberately so the decision survives; it will surface as an orphanAnnotation once db-snapshot.json is re-captured, and THAT is the signal the drop reached prod. Remove it then.\n\nWHAT IT WAS: policy \"Service role can insert notifications\" — the NAME claimed service-role-only, the role list was PUBLIC and the WITH CHECK was literally `true`. Confirmed live via pg_policy (polroles '{-}' = PUBLIC). So any holder of the publishable key, including anon, could INSERT arbitrary rows without limit. The name enforced nothing; only the role list and the predicate do.\n\nAN UNEXPLOITED HOLE, NOT A NEAR-MISS: count(*) was 0 with null min/max sent_at — the table was never written to by anyone, us or otherwise. Record it that way. There is no incident here, and no data to forensically examine; the finding is that the door was open, not that someone walked through it.\n\nWHY DROP RATHER THAN FIX THE PREDICATE: zero readers and zero writers repo-wide (clients, edge functions, plpgsql bodies, cron SQL — independently re-verified by security-reviewer). Its own creating migration (20260122000000) calls it \"optional, for debugging/history\". Repairing the policy would have left a table with no reader and no writer, so \"who inserts into this?\" would resurface at every audit. If push-notification logging is wanted later it should return WITH the code that writes it, and with a service_role-scoped policy from the start (see tbl.cron_job_status, whose auth.role() = 'service_role' predicate is the correct shape).\n\nNOT dropped: user_profiles.expo_push_token / notifications_enabled, added by the same migration. Those are LIVE (apps/mobile/lib/notifications.ts) and untouched.",
       "verified": true,
       "id": "tbl.notification_log",
       "label": "notification_log",
@@ -2522,7 +2522,7 @@
           "note": "UNAUTHENTICATED READ of every row. PUBLIC includes anon and the predicate is unconditional. This may be intentional for public reference data — but it must be an explicit decision, not an assumption, and it has to be consistent with any function-level lockdown covering the same data."
         }
       ],
-      "annotation": "HIGH — unauthenticated read of every row. \"Anyone can view profiles\" is PUBLIC with USING `true`, so anon reads the whole table. That may well be deliberate for a social feature, but it has to be an explicit decision because it contradicts a lockdown we already shipped.\n\n20260724000000 revoked anon from get_real_user_ids — a function whose whole purpose is telling you WHICH user ids are real accounts. Meanwhile the profile table those ids belong to is anon-readable in full, which gives the same answer by another route. The function lockdown is close to pointless while this policy stands.\n\nThese two need ONE decision, not two: either profiles are public (and the get_real_user_ids revoke was theatre), or they are not (and this policy must gate on auth.uid() or move to the authenticated role). Do not resolve one without the other.",
+      "annotation": "GATED to authenticated 2026-07-28 (migration 20260728000001). Decision made; do not re-derive.\n\nWAS: \"Anyone can view profiles\" FOR SELECT USING (true) with no TO clause, so PUBLIC — confirmed live via pg_policy (polroles '{-}'). anon could read every username, avatar, expo_push_token and notifications_enabled row. NOW: \"Authenticated users can view profiles\", TO authenticated, USING (true). The insert/update policies (auth.uid() = id) were correct and are untouched.\n\nRESOLVED TOGETHER WITH get_real_user_ids, as it had to be: 20260724000000 revoked anon EXECUTE on that function, whose whole output is which UUIDs are real users — an answer anon could equally obtain by selecting this table. The pair is now consistent UPWARD (both closed) rather than downward.\n\nWHY THE MECHANISM IS SUFFICIENT, and why the function lesson does NOT transfer: functions have exactly ONE gate (EXECUTE), which is why REVOKE ... FROM PUBLIC leaving Supabase's default per-role grants intact was a real hole there (see CLAUDE.md). Tables have TWO layers: the default table-level SELECT grant, and RLS policy role-scoping. With RLS enabled, anon keeps its table grant but matches NO policy, so it gets an empty row set — not an error. Same shape as the B1 league tables, whose anon-read test returned [] in prod.\n\nCONSUMER TRACE (why gating broke nothing): preview-league reads profiles via the service_role admin client, so the join-by-code preview is RLS-immune; web APP_PAUSED renders only LandingPage with every other route <Protected>; both signup paths UPSERT after a session exists; all other reads sit in authenticated mobile screens.\n\nSTILL OPEN (L2, escalated by security-reviewer 2026-07-28): expo_push_token remains readable by EVERY authenticated user, not just its owner. That is not merely a metadata leak — apps/mobile/lib/notifications.ts posts to Expo's public push API using the raw token alone, so any authenticated user who reads this table can push arbitrary notifications to any other user. Remediation: split expo_push_token / notifications_enabled into an owner-scoped table (auth.uid() = id) and leave username / avatar on the broadly-readable surface. Merging the gate did NOT close this.",
       "verified": true,
       "id": "tbl.user_profiles",
       "label": "user_profiles",
