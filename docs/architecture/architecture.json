@@ -2,27 +2,27 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "938b984afa9cd5607811a04aeaf8afb0ef33138f",
-    "commitShort": "938b984",
+    "commit": "e414b36393c24437be093fc72185cc9c278cfba3",
+    "commitShort": "e414b36",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "main",
+    "branch": "delete-get-broker-keys",
     "dirty": true,
     "dirtyPaths": [
       {
-        "code": "M",
-        "path": "docs/architecture/annotations.json"
+        "code": "D",
+        "path": "supabase/functions/get-broker-keys/index.ts"
       }
     ],
-    "timestamp": "2026-07-30T01:50:11Z",
-    "sourceHash": "sha256:25984985b2b0301396cc7aa60580968ba023d7210908f0414544fac841c7df8e",
+    "timestamp": "2026-07-30T02:50:58Z",
+    "sourceHash": "sha256:98ab275165e5548460e97e5d35e66cccbb8183b4e60024789108b4ee429ce8f8",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-07-28T05:49:17Z",
-    "ageHours": 44,
-    "ageDays": 1.8,
+    "ageHours": 45,
+    "ageDays": 1.9,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:1003d2a31164523e894182d57f0321335f74c985764a84c1a41896857ee6535d",
@@ -300,35 +300,6 @@
       "source": {
         "path": "supabase/functions/finnhub-quote/index.ts",
         "line": 53
-      }
-    },
-    {
-      "layer": "edge",
-      "facts": {
-        "verifyJwtSource": null,
-        "authGuard": null,
-        "localModules": [],
-        "tests": [],
-        "envVars": [
-          "BROKER_CRYPTO_KEY",
-          "SB_PUBLISHABLE_KEY",
-          "SB_SECRET_KEY_INTERNAL",
-          "SUPABASE_URL"
-        ],
-        "lines": 105
-      },
-      "db": null,
-      "declared": null,
-      "drift": [],
-      "annotation": null,
-      "verified": false,
-      "id": "fn.get-broker-keys",
-      "label": "get-broker-keys",
-      "sublabel": "verify_jwt unset",
-      "kind": "edge-function",
-      "source": {
-        "path": "supabase/functions/get-broker-keys/index.ts",
-        "line": 44
       }
     },
     {
@@ -3289,21 +3260,6 @@
       "payload": "https://finnhub.io/api/v1/quote",
       "callSites": [
         "supabase/functions/finnhub-quote/index.ts:87"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.fn.get-broker-keys->tbl.broker_credentials",
-      "from": "fn.get-broker-keys",
-      "to": "tbl.broker_credentials",
-      "protocol": "postgrest-select",
-      "payload": ".from('broker_credentials').select('key_id, secret_ciphertext, iv')",
-      "columns": [
-        "key_id, secret_ciphertext, iv"
-      ],
-      "callSites": [
-        "supabase/functions/get-broker-keys/index.ts:81"
       ]
     },
     {
@@ -7278,16 +7234,6 @@
   ],
   "deadCode": [
     {
-      "node": "fn.get-broker-keys",
-      "label": "get-broker-keys",
-      "kind": "edge-function",
-      "source": "supabase/functions/get-broker-keys/index.ts:44",
-      "outbound": [
-        "tbl.broker_credentials"
-      ],
-      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
-    },
-    {
       "node": "pg.trigger_week_end_snapshot",
       "label": "trigger_week_end_snapshot()",
       "kind": "pg-function",
@@ -7354,12 +7300,6 @@
       "resolve": "Check the function's Verify-JWT toggle in the Supabase dashboard."
     },
     {
-      "scope": "fn.get-broker-keys",
-      "claim": "JWT verification setting",
-      "reason": "No [functions.get-broker-keys] block in supabase/config.toml, so the platform default applies and the repo does not record it.",
-      "resolve": "Check the function's Verify-JWT toggle in the Supabase dashboard."
-    },
-    {
       "scope": "fn.historical-bars",
       "claim": "JWT verification setting",
       "reason": "No [functions.historical-bars] block in supabase/config.toml, so the platform default applies and the repo does not record it.",
@@ -7416,18 +7356,17 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 99,
-    "edges": 229,
+    "nodes": 98,
+    "edges": 228,
     "flows": 9,
     "drift": 15,
     "driftHigh": 4,
-    "deadCode": 8,
-    "unverified": 11
+    "deadCode": 7,
+    "unverified": 10
   },
   "sourceIndex": {
     "edgeFunctions": [
       "finnhub-quote[]",
-      "get-broker-keys[]",
       "historical-bars[]",
       "join-league[]",
       "place-order[]",
@@ -7617,7 +7556,6 @@
       "apps/web/src/pages/TradeHistory.jsx:35 -> league_members.select",
       "apps/web/src/pages/TradeHistory.jsx:50 -> leagues.select",
       "apps/web/src/pages/TradeHistory.jsx:86 -> trades.select",
-      "supabase/functions/get-broker-keys/index.ts:81 -> broker_credentials.select",
       "supabase/functions/place-order/index.ts:48 -> broker_credentials.select",
       "supabase/functions/preview-league/index.ts:103 -> league_members.select",
       "supabase/functions/preview-league/index.ts:74 -> leagues.select",
