@@ -2,19 +2,19 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "bcaaf901eba97b5545a781f25fe2e8381b64c7c0",
-    "commitShort": "bcaaf90",
+    "commit": "6c36bab9c850ab9a2a34e4c8d84b0cb28342b614",
+    "commitShort": "6c36bab",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "main",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "A",
-        "path": "supabase/migrations/20260728000000_drop_notification_log.sql"
+        "path": "supabase/migrations/20260728000001_gate_user_profiles_to_authenticated.sql"
       }
     ],
-    "timestamp": "2026-07-30T01:49:03Z",
-    "sourceHash": "sha256:33fe15a0c1864a4c7b879234be3ef85c19b13f21c998bb3594256728d056f9d6",
+    "timestamp": "2026-07-30T01:49:04Z",
+    "sourceHash": "sha256:25984985b2b0301396cc7aa60580968ba023d7210908f0414544fac841c7df8e",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
@@ -7730,7 +7730,8 @@
       "20260724000002_harden_definer_search_path.sql",
       "20260727000000_fix_schedule_snapshot_retry_cron_expression.sql",
       "20260727100000_week_snapshots_entered_mid_week.sql",
-      "20260728000000_drop_notification_log.sql"
+      "20260728000000_drop_notification_log.sql",
+      "20260728000001_gate_user_profiles_to_authenticated.sql"
     ],
     "config": [
       "join-league=true",
