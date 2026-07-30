@@ -2,35 +2,27 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "3938ba17dce5903f029b071f97278213fc210551",
-    "commitShort": "3938ba1",
+    "commit": "4dfbf4ebbe359b492f668fcf6ba67e363922629e",
+    "commitShort": "4dfbf4e",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "main",
+    "branch": "item5-record-verify-jwt",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "docs/architecture/annotations.json"
-      },
-      {
-        "code": "M",
-        "path": "docs/architecture/db-snapshot.json"
-      },
-      {
-        "code": "M",
-        "path": "scripts/gen-architecture.mjs"
+        "path": "supabase/config.toml"
       }
     ],
-    "timestamp": "2026-07-30T03:18:05Z",
-    "sourceHash": "sha256:ea12fe48e675d320c0caed22dbe7f1f3d83dadb492399fc6b7c6517cdd096278",
+    "timestamp": "2026-07-30T04:47:51Z",
+    "sourceHash": "sha256:964e25ceef6a84c8523713ca4b973994e386a64ef99937b1a482e75861ac3610",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-07-30T03:10:26Z",
-    "ageHours": 0.1,
-    "ageDays": 0,
+    "ageHours": 1.6,
+    "ageDays": 0.1,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:74cc797461d0f3634b1e75de6bd5e372a016f54dbc9c18131257b7bc2ec8c927",
@@ -287,7 +279,8 @@
     {
       "layer": "edge",
       "facts": {
-        "verifyJwtSource": null,
+        "verifyJwt": true,
+        "verifyJwtSource": "supabase/config.toml:136",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -300,10 +293,10 @@
       "declared": null,
       "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "fn.finnhub-quote",
       "label": "finnhub-quote",
-      "sublabel": "verify_jwt unset",
+      "sublabel": "verify_jwt=true",
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/finnhub-quote/index.ts",
@@ -313,7 +306,8 @@
     {
       "layer": "edge",
       "facts": {
-        "verifyJwtSource": null,
+        "verifyJwt": true,
+        "verifyJwtSource": "supabase/config.toml:121",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -327,10 +321,10 @@
       "declared": null,
       "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "fn.historical-bars",
       "label": "historical-bars",
-      "sublabel": "verify_jwt unset",
+      "sublabel": "verify_jwt=true",
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/historical-bars/index.ts",
@@ -369,7 +363,8 @@
     {
       "layer": "edge",
       "facts": {
-        "verifyJwtSource": null,
+        "verifyJwt": true,
+        "verifyJwtSource": "supabase/config.toml:113",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -385,10 +380,10 @@
       "declared": null,
       "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "fn.place-order",
       "label": "place-order",
-      "sublabel": "verify_jwt unset",
+      "sublabel": "verify_jwt=true",
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/place-order/index.ts",
@@ -524,7 +519,8 @@
     {
       "layer": "edge",
       "facts": {
-        "verifyJwtSource": null,
+        "verifyJwt": true,
+        "verifyJwtSource": "supabase/config.toml:106",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -540,10 +536,10 @@
       "declared": null,
       "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "fn.save-broker-keys",
       "label": "save-broker-keys",
-      "sublabel": "verify_jwt unset",
+      "sublabel": "verify_jwt=true",
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/save-broker-keys/index.ts",
@@ -623,7 +619,8 @@
     {
       "layer": "edge",
       "facts": {
-        "verifyJwtSource": null,
+        "verifyJwt": true,
+        "verifyJwtSource": "supabase/config.toml:126",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -637,10 +634,10 @@
       "declared": null,
       "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "fn.symbol-name",
       "label": "symbol-name",
-      "sublabel": "verify_jwt unset",
+      "sublabel": "verify_jwt=true",
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/symbol-name/index.ts",
@@ -650,7 +647,8 @@
     {
       "layer": "edge",
       "facts": {
-        "verifyJwtSource": null,
+        "verifyJwt": true,
+        "verifyJwtSource": "supabase/config.toml:131",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -666,10 +664,10 @@
       "declared": null,
       "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "fn.symbols-search",
       "label": "symbols-search",
-      "sublabel": "verify_jwt unset",
+      "sublabel": "verify_jwt=true",
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/symbols-search/index.ts",
@@ -710,7 +708,8 @@
     {
       "layer": "edge",
       "facts": {
-        "verifyJwtSource": null,
+        "verifyJwt": false,
+        "verifyJwtSource": "supabase/config.toml:163",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -724,10 +723,10 @@
       "declared": null,
       "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "fn.ticker-quotes",
       "label": "ticker-quotes",
-      "sublabel": "verify_jwt unset",
+      "sublabel": "verify_jwt=false",
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/ticker-quotes/index.ts",
@@ -7259,48 +7258,6 @@
   ],
   "unverified": [
     {
-      "scope": "fn.finnhub-quote",
-      "claim": "JWT verification setting",
-      "reason": "No [functions.finnhub-quote] block in supabase/config.toml, so the platform default applies and the repo does not record it.",
-      "resolve": "Check the function's Verify-JWT toggle in the Supabase dashboard."
-    },
-    {
-      "scope": "fn.historical-bars",
-      "claim": "JWT verification setting",
-      "reason": "No [functions.historical-bars] block in supabase/config.toml, so the platform default applies and the repo does not record it.",
-      "resolve": "Check the function's Verify-JWT toggle in the Supabase dashboard."
-    },
-    {
-      "scope": "fn.place-order",
-      "claim": "JWT verification setting",
-      "reason": "No [functions.place-order] block in supabase/config.toml, so the platform default applies and the repo does not record it.",
-      "resolve": "Check the function's Verify-JWT toggle in the Supabase dashboard."
-    },
-    {
-      "scope": "fn.save-broker-keys",
-      "claim": "JWT verification setting",
-      "reason": "No [functions.save-broker-keys] block in supabase/config.toml, so the platform default applies and the repo does not record it.",
-      "resolve": "Check the function's Verify-JWT toggle in the Supabase dashboard."
-    },
-    {
-      "scope": "fn.symbol-name",
-      "claim": "JWT verification setting",
-      "reason": "No [functions.symbol-name] block in supabase/config.toml, so the platform default applies and the repo does not record it.",
-      "resolve": "Check the function's Verify-JWT toggle in the Supabase dashboard."
-    },
-    {
-      "scope": "fn.symbols-search",
-      "claim": "JWT verification setting",
-      "reason": "No [functions.symbols-search] block in supabase/config.toml, so the platform default applies and the repo does not record it.",
-      "resolve": "Check the function's Verify-JWT toggle in the Supabase dashboard."
-    },
-    {
-      "scope": "fn.ticker-quotes",
-      "claim": "JWT verification setting",
-      "reason": "No [functions.ticker-quotes] block in supabase/config.toml, so the platform default applies and the repo does not record it.",
-      "resolve": "Check the function's Verify-JWT toggle in the Supabase dashboard."
-    },
-    {
       "scope": "cron.refresh_symbols_daily",
       "claim": "this job succeeds",
       "reason": "Job sends no auth header but its target declares verify_jwt=true, so runs should be 401ing at the gateway. cron.job_run_details will still say succeeded: net.http_post is asynchronous, so the job status reflects the enqueue, not the HTTP response.",
@@ -7333,7 +7290,7 @@
     "drift": 15,
     "driftHigh": 2,
     "deadCode": 7,
-    "unverified": 11
+    "unverified": 4
   },
   "sourceIndex": {
     "edgeFunctions": [
@@ -7641,14 +7598,21 @@
       "20260728000001_gate_user_profiles_to_authenticated.sql"
     ],
     "config": [
+      "finnhub-quote=true",
+      "historical-bars=true",
       "join-league=true",
+      "place-order=true",
       "preview-league=true",
       "process-week-results=false",
       "quote=true",
       "refresh-symbols=true",
+      "save-broker-keys=true",
       "snapshot-week-end=false",
       "snapshot-week-start=false",
-      "sync-alpaca-orders=false"
+      "symbol-name=true",
+      "symbols-search=true",
+      "sync-alpaca-orders=false",
+      "ticker-quotes=false"
     ],
     "dbSnapshot": "sha256:74cc797461d0f3634b1e75de6bd5e372a016f54dbc9c18131257b7bc2ec8c927"
   }

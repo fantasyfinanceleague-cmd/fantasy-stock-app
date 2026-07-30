@@ -71,3 +71,96 @@ entrypoint = "./functions/preview-league/index.ts"
 enabled = true
 verify_jwt = true
 entrypoint = "./functions/join-league/index.ts"
+
+# ============================================================================
+# verify_jwt for the remaining 7 functions — READ OFF THE DASHBOARD 2026-07-30
+# ============================================================================
+# These had NO [functions.*] block, so the repo recorded nothing and the platform
+# default applied. All 15 deployed functions are now declared here, making the
+# repo the source of truth rather than the dashboard.
+#
+# CROSS-CHECK PASSED: the 5 values this file already asserted were confirmed
+# against prod — the four cron functions OFF, quote ON. First time a config.toml
+# assertion in this repo has been *confirmed* rather than assumed.
+#
+# WHAT verify_jwt ACTUALLY CHECKS (from the dashboard toggle's own description):
+#   "Verify JWT with legacy secret — Requires a JWT signed only by the legacy
+#    secret in the Authorization header. The anon key satisfies this."
+# So it inspects the AUTHORIZATION header for a legacy-secret-signed JWT. An
+# `apikey` header cannot satisfy it, and a new-format sb_secret_/sb_publishable_
+# key cannot satisfy it even in the right header, because those are opaque
+# strings rather than JWTs. User SESSION JWTs are signed by the project's JWT
+# secret, which is why client calls to verify_jwt=true functions work. This is
+# the fact that settles the refresh-symbols cron (see
+# 20260728000002_fix_refresh_symbols_cron_auth.sql).
+#
+# THE TWO THAT MATTERED ARE SAFE: save-broker-keys (writes encrypted Alpaca
+# credentials) and place-order (executes trades) are both ON. The hole flagged as
+# possible — place-order unset while quote was ON, on the same per-user
+# credential path — DOES NOT EXIST.
+# ============================================================================
+
+# Per-user credential path. verify_jwt=true AND an in-code auth.getUser() check,
+# so the gateway and the function body both gate. Writes AES-GCM-encrypted
+# broker secrets, so this is the highest-blast-radius write endpoint.
+[functions.save-broker-keys]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/save-broker-keys/index.ts"
+
+# Per-user credential path. verify_jwt=true AND in-code auth.getUser(). Executes
+# real (paper) trades against Alpaca using the caller's decrypted credentials.
+[functions.place-order]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/place-order/index.ts"
+
+# Market data, no per-user credentials — uses the shared server-side
+# ALPACA_API_KEY. verify_jwt=true is the ONLY auth (no in-code guard), so the
+# gateway is the entire boundary for these three.
+[functions.historical-bars]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/historical-bars/index.ts"
+
+[functions.symbol-name]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/symbol-name/index.ts"
+
+[functions.symbols-search]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/symbols-search/index.ts"
+
+[functions.finnhub-quote]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/finnhub-quote/index.ts"
+
+# ⚠️ THE ODD ONE OUT — verify_jwt = FALSE, and it has NO in-code guard either, so
+# it is fully anon-callable. It is the only market-data function that is; quote,
+# historical-bars, symbol-name and symbols-search are all ON.
+#
+# DELIBERATE IN ORIGIN, not a mis-set toggle:
+#   * apps/web/src/Ticker.jsx:27 states the intent in a comment — "uses
+#     server-side keys, no auth required".
+#   * Structurally it has to be. <Ticker /> renders at Layout.jsx:17, and App.jsx
+#     nests the gate INSIDE the layout — <Layout><Protected>…</Protected></Layout>.
+#     So Layout (and Ticker) mount BEFORE Protected resolves, including during
+#     its `user === null` "Checking session…" window and for an unauthenticated
+#     visitor hitting a protected URL before the redirect lands. With verify_jwt
+#     ON, the ticker would 401 in exactly those windows.
+#
+# BUT THE CONSEQUENCE IS REAL AND ALREADY LOGGED: this is the concrete instance
+# of RLS_HARDENING_SPEC L4 — an anon-callable endpoint that burns Alpaca quota
+# with no caller identity and no rate limit. Unlike refresh-symbols (L7) it takes
+# a caller-supplied symbol, so it is a cheap unauthenticated proxy to Alpaca.
+# If L4 is ever actioned, the fix is a rate limit (check_and_bump_rate_limit,
+# keyed per-IP since there is no user), NOT flipping this flag — flipping it
+# breaks the ticker for the reason above. Do not "normalise" it to match its
+# siblings without reading this.
+[functions.ticker-quotes]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/ticker-quotes/index.ts"
