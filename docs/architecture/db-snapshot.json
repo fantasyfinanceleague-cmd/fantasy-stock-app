@@ -378,36 +378,8 @@
             "rlsEnabled": true
         },
         {
-            "name": "notification_log",
-            "policies": [
-                {
-                    "name": "Service role can insert notifications",
-                    "roles": [
-                        "PUBLIC"
-                    ],
-                    "using": null,
-                    "command": "INSERT",
-                    "withCheck": "true",
-                    "permissive": true
-                },
-                {
-                    "name": "Users can view own notifications",
-                    "roles": [
-                        "PUBLIC"
-                    ],
-                    "using": "(user_id = (auth.uid())::text)",
-                    "command": "SELECT",
-                    "withCheck": null,
-                    "permissive": true
-                }
-            ],
-            "rlsForced": false,
-            "rlsEnabled": true
-        },
-        {
             "name": "rate_limit_counters",
-            "policies": [
-            ],
+            "policies": [],
             "rlsForced": false,
             "rlsEnabled": true
         },
@@ -459,9 +431,9 @@
             "name": "user_profiles",
             "policies": [
                 {
-                    "name": "Anyone can view profiles",
+                    "name": "Authenticated users can view profiles",
                     "roles": [
-                        "PUBLIC"
+                        "authenticated"
                     ],
                     "using": "true",
                     "command": "SELECT",
@@ -740,8 +712,7 @@
             "args": "",
             "name": "update_broker_credentials_updated_at",
             "owner": "postgres",
-            "proconfig": [
-            ],
+            "proconfig": [],
             "searchPath": null,
             "volatility": "volatile",
             "securityDefiner": false
@@ -772,13 +743,12 @@
             "args": "",
             "name": "update_user_profiles_updated_at",
             "owner": "postgres",
-            "proconfig": [
-            ],
+            "proconfig": [],
             "searchPath": null,
             "volatility": "volatile",
             "securityDefiner": false
         }
     ],
-    "capturedAt": "2026-07-28T05:49:17Z",
+    "capturedAt": "2026-07-30T03:10:26Z",
     "postgresVersion": "17.4"
 }

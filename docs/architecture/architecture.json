@@ -2,35 +2,43 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "613e2a72f05d0c0e698690decfb53be289eb8072",
-    "commitShort": "613e2a7",
+    "commit": "3938ba17dce5903f029b071f97278213fc210551",
+    "commitShort": "3938ba1",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "main",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/lib/notifications.ts"
+        "path": "docs/architecture/annotations.json"
+      },
+      {
+        "code": "M",
+        "path": "docs/architecture/db-snapshot.json"
+      },
+      {
+        "code": "M",
+        "path": "scripts/gen-architecture.mjs"
       }
     ],
-    "timestamp": "2026-07-30T03:07:23Z",
-    "sourceHash": "sha256:75eb59f44cb11059c76eefdc59cb1db4318e302ffe92513e4118993b2adac494",
+    "timestamp": "2026-07-30T03:18:05Z",
+    "sourceHash": "sha256:ea12fe48e675d320c0caed22dbe7f1f3d83dadb492399fc6b7c6517cdd096278",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
-    "capturedAt": "2026-07-28T05:49:17Z",
-    "ageHours": 45.3,
-    "ageDays": 1.9,
+    "capturedAt": "2026-07-30T03:10:26Z",
+    "ageHours": 0.1,
+    "ageDays": 0,
     "staleAfterDays": 14,
     "stale": false,
-    "hash": "sha256:1003d2a31164523e894182d57f0321335f74c985764a84c1a41896857ee6535d",
+    "hash": "sha256:74cc797461d0f3634b1e75de6bd5e372a016f54dbc9c18131257b7bc2ec8c927",
     "database": "postgres",
     "postgresVersion": "17.4",
     "counts": {
       "functions": 14,
-      "tables": 17,
+      "tables": 16,
       "cronJobs": 5
     }
   },
@@ -1644,9 +1652,9 @@
           "field": "policy_roles",
           "groupKey": "public-role-policies-gated",
           "declared": "n/a",
-          "live": "4 of 4 policies target PUBLIC, all gated on caller identity",
+          "live": "4 of 4 policies target PUBLIC; those 4 are gated on caller identity",
           "severity": "low",
-          "note": "Targets PUBLIC (which includes anon) rather than `authenticated` like the newer rls_b1_* policies, but every predicate references auth.uid()/auth.jwt()/is_member/is_commissioner, so anon matches no rows. Cosmetic inconsistency, not an exposure — worth normalising."
+          "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
         }
       ],
       "annotation": null,
@@ -1690,9 +1698,9 @@
           "field": "policy_roles",
           "groupKey": "public-role-policies-gated",
           "declared": "n/a",
-          "live": "1 of 1 policies target PUBLIC, all gated on caller identity",
+          "live": "1 of 1 policies target PUBLIC; those 1 are gated on caller identity",
           "severity": "low",
-          "note": "Targets PUBLIC (which includes anon) rather than `authenticated` like the newer rls_b1_* policies, but every predicate references auth.uid()/auth.jwt()/is_member/is_commissioner, so anon matches no rows. Cosmetic inconsistency, not an exposure — worth normalising."
+          "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
         }
       ],
       "annotation": "The ops table three cron functions write, with UNIQUE(job_name, run_date) and run_date defaulting to CURRENT_DATE — so each job gets exactly one row per day and every write is an upsert onto it.\n\nDo NOT treat this table as a reliable health signal. process-week-results writes 'running' and, on its two most likely returns (index.ts:890 and :885), never writes a terminal status — so a row reading 'running' is byte-identical whether the function hung, crashed mid-run, or completed normally with nothing to do. snapshot-week-start and snapshot-week-end DO write terminal statuses on every path, so their rows are trustworthy; process-week-results' are not. Any alerting built on this table must account for that asymmetry or it will either fire every week or never fire at all.\n\nAlso note the upsert semantics when testing by hand: calling schedule_snapshot_retry directly OVERWRITES the day's real row for that job rather than inserting a new one.\n\nPolicy note: `service_role_only` is PUBLIC-role but gates on `auth.role() = 'service_role'`, which IS a real caller check — anon resolves to 'anon' and matches nothing. An earlier version of the generator graded this HIGH because its identity-check heuristic looked only for auth.uid()/auth.jwt()/is_member/is_commissioner and missed auth.role(). Fixed. If a policy here ever shows up as ungated again, check the predicate before believing it.",
@@ -1746,9 +1754,9 @@
           "field": "policy_roles",
           "groupKey": "public-role-policies-gated",
           "declared": "n/a",
-          "live": "2 of 2 policies target PUBLIC, all gated on caller identity",
+          "live": "2 of 2 policies target PUBLIC; those 2 are gated on caller identity",
           "severity": "low",
-          "note": "Targets PUBLIC (which includes anon) rather than `authenticated` like the newer rls_b1_* policies, but every predicate references auth.uid()/auth.jwt()/is_member/is_commissioner, so anon matches no rows. Cosmetic inconsistency, not an exposure — worth normalising."
+          "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
         }
       ],
       "annotation": null,
@@ -1803,9 +1811,9 @@
           "field": "policy_roles",
           "groupKey": "public-role-policies-gated",
           "declared": "n/a",
-          "live": "2 of 2 policies target PUBLIC, all gated on caller identity",
+          "live": "2 of 2 policies target PUBLIC; those 2 are gated on caller identity",
           "severity": "low",
-          "note": "Targets PUBLIC (which includes anon) rather than `authenticated` like the newer rls_b1_* policies, but every predicate references auth.uid()/auth.jwt()/is_member/is_commissioner, so anon matches no rows. Cosmetic inconsistency, not an exposure — worth normalising."
+          "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
         }
       ],
       "annotation": null,
@@ -1879,9 +1887,9 @@
           "field": "policy_roles",
           "groupKey": "public-role-policies-gated",
           "declared": "n/a",
-          "live": "4 of 4 policies target PUBLIC, all gated on caller identity",
+          "live": "4 of 4 policies target PUBLIC; those 4 are gated on caller identity",
           "severity": "low",
-          "note": "Targets PUBLIC (which includes anon) rather than `authenticated` like the newer rls_b1_* policies, but every predicate references auth.uid()/auth.jwt()/is_member/is_commissioner, so anon matches no rows. Cosmetic inconsistency, not an exposure — worth normalising."
+          "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
         }
       ],
       "annotation": null,
@@ -2051,9 +2059,9 @@
           "field": "policy_roles",
           "groupKey": "public-role-policies-gated",
           "declared": "n/a",
-          "live": "2 of 2 policies target PUBLIC, all gated on caller identity",
+          "live": "2 of 2 policies target PUBLIC; those 2 are gated on caller identity",
           "severity": "low",
-          "note": "Targets PUBLIC (which includes anon) rather than `authenticated` like the newer rls_b1_* policies, but every predicate references auth.uid()/auth.jwt()/is_member/is_commissioner, so anon matches no rows. Cosmetic inconsistency, not an exposure — worth normalising."
+          "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
         }
       ],
       "annotation": null,
@@ -2254,53 +2262,19 @@
     {
       "layer": "db",
       "facts": {},
-      "db": {
-        "rlsEnabled": true,
-        "rlsForced": false,
-        "policies": [
-          {
-            "name": "Service role can insert notifications",
-            "roles": [
-              "PUBLIC"
-            ],
-            "using": null,
-            "command": "INSERT",
-            "withCheck": "true",
-            "permissive": true
-          },
-          {
-            "name": "Users can view own notifications",
-            "roles": [
-              "PUBLIC"
-            ],
-            "using": "(user_id = (auth.uid())::text)",
-            "command": "SELECT",
-            "withCheck": null,
-            "permissive": true
-          }
-        ]
-      },
+      "db": null,
       "declared": {
         "touchedBy": [
           "supabase/migrations/20260122000000_add_push_tokens.sql"
         ],
         "rlsEnabled": true
       },
-      "drift": [
-        {
-          "field": "policy_roles",
-          "groupKey": "public-role-policies-ungated",
-          "declared": "n/a",
-          "live": "Service role can insert notifications (INSERT, predicate: true)",
-          "severity": "high",
-          "note": "UNAUTHENTICATED WRITE. PUBLIC includes anon, and this policy grants INSERT with a predicate that never references the caller — so anyone holding the publishable key can write arbitrary rows. A policy NAME claiming a role (e.g. \"Service role can...\") enforces nothing; only the predicate and the role list do."
-        }
-      ],
+      "drift": [],
       "annotation": "DROPPED 2026-07-28 (migration 20260728000000). This key is retained deliberately so the decision survives; it will surface as an orphanAnnotation once db-snapshot.json is re-captured, and THAT is the signal the drop reached prod. Remove it then.\n\nWHAT IT WAS: policy \"Service role can insert notifications\" — the NAME claimed service-role-only, the role list was PUBLIC and the WITH CHECK was literally `true`. Confirmed live via pg_policy (polroles '{-}' = PUBLIC). So any holder of the publishable key, including anon, could INSERT arbitrary rows without limit. The name enforced nothing; only the role list and the predicate do.\n\nAN UNEXPLOITED HOLE, NOT A NEAR-MISS: count(*) was 0 with null min/max sent_at — the table was never written to by anyone, us or otherwise. Record it that way. There is no incident here, and no data to forensically examine; the finding is that the door was open, not that someone walked through it.\n\nWHY DROP RATHER THAN FIX THE PREDICATE: zero readers and zero writers repo-wide (clients, edge functions, plpgsql bodies, cron SQL — independently re-verified by security-reviewer). Its own creating migration (20260122000000) calls it \"optional, for debugging/history\". Repairing the policy would have left a table with no reader and no writer, so \"who inserts into this?\" would resurface at every audit. If push-notification logging is wanted later it should return WITH the code that writes it, and with a service_role-scoped policy from the start (see tbl.cron_job_status, whose auth.role() = 'service_role' predicate is the correct shape).\n\nNOT dropped: user_profiles.expo_push_token / notifications_enabled, added by the same migration. Those are LIVE (apps/mobile/lib/notifications.ts) and untouched.",
-      "verified": true,
+      "verified": false,
       "id": "tbl.notification_log",
       "label": "notification_log",
-      "sublabel": "RLS · 2 policies",
+      "sublabel": "not in snapshot",
       "kind": "table",
       "source": {
         "path": "supabase/migrations/20260122000000_add_push_tokens.sql",
@@ -2420,9 +2394,9 @@
           "field": "policy_roles",
           "groupKey": "public-role-policies-gated",
           "declared": "n/a",
-          "live": "2 of 2 policies target PUBLIC, all gated on caller identity",
+          "live": "2 of 2 policies target PUBLIC; those 2 are gated on caller identity",
           "severity": "low",
-          "note": "Targets PUBLIC (which includes anon) rather than `authenticated` like the newer rls_b1_* policies, but every predicate references auth.uid()/auth.jwt()/is_member/is_commissioner, so anon matches no rows. Cosmetic inconsistency, not an exposure — worth normalising."
+          "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
         }
       ],
       "annotation": null,
@@ -2444,9 +2418,9 @@
         "rlsForced": false,
         "policies": [
           {
-            "name": "Anyone can view profiles",
+            "name": "Authenticated users can view profiles",
             "roles": [
-              "PUBLIC"
+              "authenticated"
             ],
             "using": "true",
             "command": "SELECT",
@@ -2486,14 +2460,22 @@
       "drift": [
         {
           "field": "policy_roles",
-          "groupKey": "public-role-policies-ungated",
+          "groupKey": "public-role-policies-gated",
           "declared": "n/a",
-          "live": "Anyone can view profiles (SELECT, predicate: true)",
-          "severity": "high",
-          "note": "UNAUTHENTICATED READ of every row. PUBLIC includes anon and the predicate is unconditional. This may be intentional for public reference data — but it must be an explicit decision, not an assumption, and it has to be consistent with any function-level lockdown covering the same data."
+          "live": "2 of 3 policies target PUBLIC; those 2 are gated on caller identity",
+          "severity": "low",
+          "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
+        },
+        {
+          "field": "policy_roles",
+          "groupKey": "authenticated-role-policies-ungated",
+          "declared": "n/a",
+          "live": "Authenticated users can view profiles (SELECT, authenticated, predicate: true)",
+          "severity": "medium",
+          "note": "ANY-AUTHENTICATED READ of every row. The predicate never references the caller, so every logged-in user reads the whole table. This is a real exposure, not a cosmetic one — it is simply narrower than the anon case. Before accepting it, check whether any COLUMN here is a capability rather than an attribute (a bearer token, a key, an invite code): an ungated read is tolerable for display attributes like a username and not tolerable for something possession of which grants an action. See this node's annotation."
         }
       ],
-      "annotation": "GATED to authenticated 2026-07-28 (migration 20260728000001). Decision made; do not re-derive.\n\nWAS: \"Anyone can view profiles\" FOR SELECT USING (true) with no TO clause, so PUBLIC — confirmed live via pg_policy (polroles '{-}'). anon could read every username, avatar, expo_push_token and notifications_enabled row. NOW: \"Authenticated users can view profiles\", TO authenticated, USING (true). The insert/update policies (auth.uid() = id) were correct and are untouched.\n\nRESOLVED TOGETHER WITH get_real_user_ids, as it had to be: 20260724000000 revoked anon EXECUTE on that function, whose whole output is which UUIDs are real users — an answer anon could equally obtain by selecting this table. The pair is now consistent UPWARD (both closed) rather than downward.\n\nWHY THE MECHANISM IS SUFFICIENT, and why the function lesson does NOT transfer: functions have exactly ONE gate (EXECUTE), which is why REVOKE ... FROM PUBLIC leaving Supabase's default per-role grants intact was a real hole there (see CLAUDE.md). Tables have TWO layers: the default table-level SELECT grant, and RLS policy role-scoping. With RLS enabled, anon keeps its table grant but matches NO policy, so it gets an empty row set — not an error. Same shape as the B1 league tables, whose anon-read test returned [] in prod.\n\nCONSUMER TRACE (why gating broke nothing): preview-league reads profiles via the service_role admin client, so the join-by-code preview is RLS-immune; web APP_PAUSED renders only LandingPage with every other route <Protected>; both signup paths UPSERT after a session exists; all other reads sit in authenticated mobile screens.\n\nSTILL OPEN (L2, escalated by security-reviewer 2026-07-28): expo_push_token remains readable by EVERY authenticated user, not just its owner. That is not merely a metadata leak — apps/mobile/lib/notifications.ts posts to Expo's public push API using the raw token alone, so any authenticated user who reads this table can push arbitrary notifications to any other user. Remediation: split expo_push_token / notifications_enabled into an owner-scoped table (auth.uid() = id) and leave username / avatar on the broadly-readable surface. Merging the gate did NOT close this.",
+      "annotation": "GATED to authenticated 2026-07-28 (migration 20260728000001). Decision made; do not re-derive.\n\nWAS: \"Anyone can view profiles\" FOR SELECT USING (true) with no TO clause, so PUBLIC — confirmed live via pg_policy (polroles '{-}'). anon could read every username, avatar, expo_push_token and notifications_enabled row. NOW: \"Authenticated users can view profiles\", TO authenticated, USING (true). The insert/update policies (auth.uid() = id) were correct and are untouched.\n\nRESOLVED TOGETHER WITH get_real_user_ids, as it had to be: 20260724000000 revoked anon EXECUTE on that function, whose whole output is which UUIDs are real users — an answer anon could equally obtain by selecting this table. The pair is now consistent UPWARD (both closed) rather than downward.\n\nWHY THE MECHANISM IS SUFFICIENT, and why the function lesson does NOT transfer: functions have exactly ONE gate (EXECUTE), which is why REVOKE ... FROM PUBLIC leaving Supabase's default per-role grants intact was a real hole there (see CLAUDE.md). Tables have TWO layers: the default table-level SELECT grant, and RLS policy role-scoping. With RLS enabled, anon keeps its table grant but matches NO policy, so it gets an empty row set — not an error. Same shape as the B1 league tables, whose anon-read test returned [] in prod.\n\nCONSUMER TRACE (why gating broke nothing): preview-league reads profiles via the service_role admin client, so the join-by-code preview is RLS-immune; web APP_PAUSED renders only LandingPage with every other route <Protected>; both signup paths UPSERT after a session exists; all other reads sit in authenticated mobile screens.\n\nHOW THE MAP GRADES THIS NOW (2026-07-30): the SELECT policy appears as a MEDIUM drift row, groupKey authenticated-role-policies-ungated, reading \"ANY-AUTHENTICATED READ of every row\". It was briefly graded LOW and described as \"not an exposure\" — the heuristic computed its ungated-predicate check only over PUBLIC-role policies, so moving the SELECT to `authenticated` in 20260728000001 took it out of scope and the all-gated branch then asserted a table-wide claim from the PUBLIC subset alone. Fixing the anon half must not silence the rest; the generator now grades on the PREDICATE first and the role second.\n\nSTILL OPEN (L2, escalated by security-reviewer 2026-07-28): expo_push_token remains readable by EVERY authenticated user, not just its owner. That is not merely a metadata leak — apps/mobile/lib/notifications.ts posts to Expo's public push API using the raw token alone, so any authenticated user who reads this table can push arbitrary notifications to any other user. Remediation: split expo_push_token / notifications_enabled into an owner-scoped table (auth.uid() = id) and leave username / avatar on the broadly-readable surface. Merging the gate did NOT close this.",
       "verified": true,
       "id": "tbl.user_profiles",
       "label": "user_profiles",
@@ -7075,32 +7057,12 @@
       "note": "This job cannot be authenticating. The gateway rejects a header-less POST when verify_jwt=true, so every run 401s before reaching the function."
     },
     {
-      "node": "tbl.notification_log",
-      "label": "notification_log",
-      "groupKey": "public-role-policies-ungated",
-      "field": "policy_roles",
-      "declared": "n/a",
-      "live": "Service role can insert notifications (INSERT, predicate: true)",
-      "severity": "high",
-      "note": "UNAUTHENTICATED WRITE. PUBLIC includes anon, and this policy grants INSERT with a predicate that never references the caller — so anyone holding the publishable key can write arbitrary rows. A policy NAME claiming a role (e.g. \"Service role can...\") enforces nothing; only the predicate and the role list do."
-    },
-    {
       "node": "tbl.symbols",
       "label": "symbols",
       "groupKey": "public-role-policies-ungated",
       "field": "policy_roles",
       "declared": "n/a",
       "live": "read symbols (SELECT, predicate: true)",
-      "severity": "high",
-      "note": "UNAUTHENTICATED READ of every row. PUBLIC includes anon and the predicate is unconditional. This may be intentional for public reference data — but it must be an explicit decision, not an assumption, and it has to be consistent with any function-level lockdown covering the same data."
-    },
-    {
-      "node": "tbl.user_profiles",
-      "label": "user_profiles",
-      "groupKey": "public-role-policies-ungated",
-      "field": "policy_roles",
-      "declared": "n/a",
-      "live": "Anyone can view profiles (SELECT, predicate: true)",
       "severity": "high",
       "note": "UNAUTHENTICATED READ of every row. PUBLIC includes anon and the predicate is unconditional. This may be intentional for public reference data — but it must be an explicit decision, not an assumption, and it has to be consistent with any function-level lockdown covering the same data."
     },
@@ -7113,6 +7075,16 @@
       "live": "active, 0 */6 * * *",
       "severity": "medium",
       "note": "This job exists in prod but no migration in supabase/migrations/ schedules it by this name. It was created out-of-band and is not reproducible from the repo."
+    },
+    {
+      "node": "tbl.user_profiles",
+      "label": "user_profiles",
+      "groupKey": "authenticated-role-policies-ungated",
+      "field": "policy_roles",
+      "declared": "n/a",
+      "live": "Authenticated users can view profiles (SELECT, authenticated, predicate: true)",
+      "severity": "medium",
+      "note": "ANY-AUTHENTICATED READ of every row. The predicate never references the caller, so every logged-in user reads the whole table. This is a real exposure, not a cosmetic one — it is simply narrower than the anon case. Before accepting it, check whether any COLUMN here is a capability rather than an attribute (a bearer token, a key, an invite code): an ungated read is tolerable for display attributes like a username and not tolerable for something possession of which grants an action. See this node's annotation."
     },
     {
       "node": "pg.update_broker_credentials_updated_at",
@@ -7140,9 +7112,9 @@
       "groupKey": "public-role-policies-gated",
       "field": "policy_roles",
       "declared": "n/a",
-      "live": "4 of 4 policies target PUBLIC, all gated on caller identity",
+      "live": "4 of 4 policies target PUBLIC; those 4 are gated on caller identity",
       "severity": "low",
-      "note": "Targets PUBLIC (which includes anon) rather than `authenticated` like the newer rls_b1_* policies, but every predicate references auth.uid()/auth.jwt()/is_member/is_commissioner, so anon matches no rows. Cosmetic inconsistency, not an exposure — worth normalising."
+      "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
     },
     {
       "node": "tbl.cron_job_status",
@@ -7150,9 +7122,9 @@
       "groupKey": "public-role-policies-gated",
       "field": "policy_roles",
       "declared": "n/a",
-      "live": "1 of 1 policies target PUBLIC, all gated on caller identity",
+      "live": "1 of 1 policies target PUBLIC; those 1 are gated on caller identity",
       "severity": "low",
-      "note": "Targets PUBLIC (which includes anon) rather than `authenticated` like the newer rls_b1_* policies, but every predicate references auth.uid()/auth.jwt()/is_member/is_commissioner, so anon matches no rows. Cosmetic inconsistency, not an exposure — worth normalising."
+      "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
     },
     {
       "node": "tbl.draft_sessions",
@@ -7160,9 +7132,9 @@
       "groupKey": "public-role-policies-gated",
       "field": "policy_roles",
       "declared": "n/a",
-      "live": "2 of 2 policies target PUBLIC, all gated on caller identity",
+      "live": "2 of 2 policies target PUBLIC; those 2 are gated on caller identity",
       "severity": "low",
-      "note": "Targets PUBLIC (which includes anon) rather than `authenticated` like the newer rls_b1_* policies, but every predicate references auth.uid()/auth.jwt()/is_member/is_commissioner, so anon matches no rows. Cosmetic inconsistency, not an exposure — worth normalising."
+      "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
     },
     {
       "node": "tbl.draft_settings",
@@ -7170,9 +7142,9 @@
       "groupKey": "public-role-policies-gated",
       "field": "policy_roles",
       "declared": "n/a",
-      "live": "2 of 2 policies target PUBLIC, all gated on caller identity",
+      "live": "2 of 2 policies target PUBLIC; those 2 are gated on caller identity",
       "severity": "low",
-      "note": "Targets PUBLIC (which includes anon) rather than `authenticated` like the newer rls_b1_* policies, but every predicate references auth.uid()/auth.jwt()/is_member/is_commissioner, so anon matches no rows. Cosmetic inconsistency, not an exposure — worth normalising."
+      "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
     },
     {
       "node": "tbl.drafts",
@@ -7180,9 +7152,9 @@
       "groupKey": "public-role-policies-gated",
       "field": "policy_roles",
       "declared": "n/a",
-      "live": "4 of 4 policies target PUBLIC, all gated on caller identity",
+      "live": "4 of 4 policies target PUBLIC; those 4 are gated on caller identity",
       "severity": "low",
-      "note": "Targets PUBLIC (which includes anon) rather than `authenticated` like the newer rls_b1_* policies, but every predicate references auth.uid()/auth.jwt()/is_member/is_commissioner, so anon matches no rows. Cosmetic inconsistency, not an exposure — worth normalising."
+      "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
     },
     {
       "node": "tbl.league_seasons",
@@ -7190,9 +7162,9 @@
       "groupKey": "public-role-policies-gated",
       "field": "policy_roles",
       "declared": "n/a",
-      "live": "2 of 2 policies target PUBLIC, all gated on caller identity",
+      "live": "2 of 2 policies target PUBLIC; those 2 are gated on caller identity",
       "severity": "low",
-      "note": "Targets PUBLIC (which includes anon) rather than `authenticated` like the newer rls_b1_* policies, but every predicate references auth.uid()/auth.jwt()/is_member/is_commissioner, so anon matches no rows. Cosmetic inconsistency, not an exposure — worth normalising."
+      "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
     },
     {
       "node": "tbl.rate_limit_counters",
@@ -7210,9 +7182,19 @@
       "groupKey": "public-role-policies-gated",
       "field": "policy_roles",
       "declared": "n/a",
-      "live": "2 of 2 policies target PUBLIC, all gated on caller identity",
+      "live": "2 of 2 policies target PUBLIC; those 2 are gated on caller identity",
       "severity": "low",
-      "note": "Targets PUBLIC (which includes anon) rather than `authenticated` like the newer rls_b1_* policies, but every predicate references auth.uid()/auth.jwt()/is_member/is_commissioner, so anon matches no rows. Cosmetic inconsistency, not an exposure — worth normalising."
+      "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
+    },
+    {
+      "node": "tbl.user_profiles",
+      "label": "user_profiles",
+      "groupKey": "public-role-policies-gated",
+      "field": "policy_roles",
+      "declared": "n/a",
+      "live": "2 of 3 policies target PUBLIC; those 2 are gated on caller identity",
+      "severity": "low",
+      "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
     }
   ],
   "deadCode": [
@@ -7325,6 +7307,12 @@
       "resolve": "SELECT id, status_code, error_msg, created FROM net._http_response ORDER BY created DESC LIMIT 30;  -- and confirm the target table has actually changed recently; net._http_response prunes on a ~6h TTL"
     },
     {
+      "scope": "tbl.notification_log",
+      "claim": "table exists in prod",
+      "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot."
+    },
+    {
       "scope": "flow.week-end-snapshot",
       "claim": "flow step is current",
       "reason": "step 4: anchor not found — supabase/functions/snapshot-week-end/index.ts no longer contains \"entered_mid_week: true\"",
@@ -7343,9 +7331,9 @@
     "edges": 227,
     "flows": 9,
     "drift": 15,
-    "driftHigh": 4,
+    "driftHigh": 2,
     "deadCode": 7,
-    "unverified": 10
+    "unverified": 11
   },
   "sourceIndex": {
     "edgeFunctions": [
@@ -7662,6 +7650,6 @@
       "snapshot-week-start=false",
       "sync-alpaca-orders=false"
     ],
-    "dbSnapshot": "sha256:1003d2a31164523e894182d57f0321335f74c985764a84c1a41896857ee6535d"
+    "dbSnapshot": "sha256:74cc797461d0f3634b1e75de6bd5e372a016f54dbc9c18131257b7bc2ec8c927"
   }
 }

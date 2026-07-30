@@ -880,7 +880,19 @@ function build() {
           note: 'RLS with no policies denies all access except to roles that bypass RLS (service_role, table owner). This is the correct shape for a service-role-only table — confirm that is the intent.' });
       }
       const publicRolePolicies = live.policies.filter((p) => p.roles.includes('PUBLIC'));
-      if (publicRolePolicies.length) {
+      // NOTE the guard is `live.policies.length`, NOT `publicRolePolicies.length`.
+      // It used to be the latter, and that was a real hole: the ungated-predicate
+      // check was computed ONLY over PUBLIC-role policies, so a policy scoped to
+      // `authenticated` was never examined for whether its predicate gates at all.
+      // A table whose policies were ALL `authenticated` and ALL `USING (true)`
+      // produced NO drift row whatsoever — it fell out of the panel entirely by
+      // being partially fixed. user_profiles hit the near-miss version of this:
+      // after 20260728000001 moved its SELECT from PUBLIC to `authenticated`, the
+      // remaining 2 PUBLIC write policies (both gated on auth.uid() = id) sent it
+      // down the all-gated branch, which then asserted "not an exposure" about a
+      // table whose SELECT is `USING (true)`. Fixing the anon half must not
+      // silence the rest. Grade on the PREDICATE first, role second.
+      if (live.policies.length) {
         // Predicate-aware as of the 2026-07-27 snapshot extension. A PUBLIC-role policy
         // also applies to anon, so the predicate is the ONLY thing deciding access. If
         // the snapshot carries predicates we can answer that; if not, we must say we
@@ -897,10 +909,19 @@ function build() {
         // "does this predicate consult the caller at all", not "does it consult
         // them correctly" — `auth.role() = 'anon'` would pass and still be wrong.
         const IDENTITY_CHECK = /auth\.uid\s*\(|auth\.jwt\s*\(|auth\.role\s*\(|is_member\s*\(|is_commissioner\s*\(/i;
-        const ungated = publicRolePolicies.filter((p) => {
+        const isUngated = (p) => {
           const expr = [p.using, p.withCheck].filter(Boolean).join(' ');
           return !IDENTITY_CHECK.test(expr);
-        });
+        };
+        // Ungated policies, partitioned by AUDIENCE rather than filtered by it.
+        // PUBLIC includes anon => unauthenticated reach. `authenticated`-scoped
+        // means every logged-in user, which is a smaller audience but still an
+        // ungated one: "any member can read every row" is not the same claim as
+        // "each member can read their own rows".
+        const ungated = publicRolePolicies.filter(isUngated);
+        const ungatedAuthedOnly = live.policies.filter(
+          (p) => !p.roles.includes('PUBLIC') && isUngated(p),
+        );
         if (!havePredicates) {
           node.drift.push({ field: 'policy_roles', groupKey: 'public-role-policies-unknown-predicate',
             declared: 'n/a', live: `${publicRolePolicies.length} of ${live.policies.length} policies target role PUBLIC`, severity: 'medium',
@@ -922,10 +943,28 @@ function build() {
               ? `UNAUTHENTICATED WRITE. PUBLIC includes anon, and ${writes.length === 1 ? 'this policy grants' : 'these policies grant'} ${writes.map((p) => p.command).join('/')} with a predicate that never references the caller — so anyone holding the publishable key can write arbitrary rows. A policy NAME claiming a role (e.g. "Service role can...") enforces nothing; only the predicate and the role list do.`
               : `UNAUTHENTICATED READ of every row. PUBLIC includes anon and the predicate is unconditional. This may be intentional for public reference data — but it must be an explicit decision, not an assumption, and it has to be consistent with any function-level lockdown covering the same data.`,
           });
-        } else {
+        } else if (publicRolePolicies.length) {
+          // Scope the claim to what was actually examined. Saying "all gated"
+          // about a TABLE while only having looked at its PUBLIC policies is how
+          // this branch previously mislabelled user_profiles.
           node.drift.push({ field: 'policy_roles', groupKey: 'public-role-policies-gated',
-            declared: 'n/a', live: `${publicRolePolicies.length} of ${live.policies.length} policies target PUBLIC, all gated on caller identity`, severity: 'low',
-            note: 'Targets PUBLIC (which includes anon) rather than `authenticated` like the newer rls_b1_* policies, but every predicate references auth.uid()/auth.jwt()/is_member/is_commissioner, so anon matches no rows. Cosmetic inconsistency, not an exposure — worth normalising.' });
+            declared: 'n/a', live: `${publicRolePolicies.length} of ${live.policies.length} policies target PUBLIC; those ${publicRolePolicies.length} are gated on caller identity`, severity: 'low',
+            note: 'These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately.' });
+        }
+
+        // Ungated but authenticated-scoped. Graded separately and deliberately
+        // NOT low: the audience is every logged-in user, not just the owner.
+        if (ungatedAuthedOnly.length) {
+          const describeA = (p) => `${p.name} (${p.command}, ${p.roles.join('/')}, predicate: ${(p.using ?? p.withCheck ?? 'none').replace(/\s+/g, ' ').slice(0, 60)})`;
+          const writesA = ungatedAuthedOnly.filter((p) => p.command !== 'SELECT');
+          node.drift.push({
+            field: 'policy_roles', groupKey: 'authenticated-role-policies-ungated', declared: 'n/a',
+            live: ungatedAuthedOnly.map(describeA).join(' · '),
+            severity: writesA.length ? 'high' : 'medium',
+            note: writesA.length
+              ? `ANY-AUTHENTICATED WRITE. The predicate never references the caller, so every logged-in user can ${writesA.map((p) => p.command).join('/')} arbitrary rows — not just their own. Anon is excluded, which is why this is not graded the same as a PUBLIC-role ungated write, but nothing scopes the row to its owner.`
+              : `ANY-AUTHENTICATED READ of every row. The predicate never references the caller, so every logged-in user reads the whole table. This is a real exposure, not a cosmetic one — it is simply narrower than the anon case. Before accepting it, check whether any COLUMN here is a capability rather than an attribute (a bearer token, a key, an invite code): an ungated read is tolerable for display attributes like a username and not tolerable for something possession of which grants an action. See this node's annotation.`,
+          });
         }
       }
       if (node.declared?.rlsEnabled && !live.rlsEnabled) {
@@ -1015,7 +1054,15 @@ function build() {
   let dbSnapshotBlock = { present: false, capturedAt: null, ageHours: null, ageDays: null, staleAfterDays: DB_SNAPSHOT_STALE_AFTER_DAYS, stale: true, hash: snapshot.hash, counts: null };
   if (snapshot.present) {
     const captured = new Date(snapshot.data.capturedAt);
-    const ageHours = (Date.now() - captured.getTime()) / 3_600_000;
+    // UTC-consistent by construction: Date.now() is epoch-ms and capturedAt
+    // carries an explicit Z, so getTime() is epoch-ms too. The subtraction is
+    // timezone-free — a capture taken at 20:10 PDT reads as 03:10Z the next day
+    // and still yields the correct age, not an off-by-one-day.
+    // Clamped at 0 so a capture timestamped slightly ahead of this machine's
+    // clock renders as "0d old" rather than a negative age that looks broken.
+    // NOTE 0d means "captured today", NOT "unknown" — absence is reported
+    // separately as MISSING via snapshot.present.
+    const ageHours = Math.max(0, (Date.now() - captured.getTime()) / 3_600_000);
     dbSnapshotBlock = {
       present: true, capturedAt: snapshot.data.capturedAt,
       ageHours: Math.round(ageHours * 10) / 10, ageDays: Math.round((ageHours / 24) * 10) / 10,
