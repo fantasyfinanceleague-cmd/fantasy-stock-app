@@ -1,0 +1,34 @@
+-- ============================================================================
+-- DROP notification_log — dead table with an unauthenticated unbounded write
+-- ============================================================================
+-- FINDING (architecture map, 2026-07-28): policy "Service role can insert
+-- notifications" is granted to PUBLIC with `WITH CHECK (true)`. The NAME claims
+-- service-role-only; the PREDICATE enforces nothing. Anyone holding the
+-- publishable key — including anon — could INSERT arbitrary rows, unbounded.
+--
+-- COMPOUNDING: the table is dead. A repo-wide grep (clients, edge functions,
+-- plpgsql bodies, cron SQL) finds ZERO readers and ZERO writers outside the
+-- migration that created it (20260122000000, where it is described as
+-- "optional, for debugging/history"). apps/mobile/lib/notifications.ts — the
+-- only notification code — touches user_profiles (expo_push_token) and never
+-- this table. So it is a table nobody reads, nobody writes, and anybody can
+-- write to: rows arriving would be noticed by no one and depended on by nothing.
+--
+-- DECISION (Giorgio, 2026-07-28): DROP rather than repair the predicate.
+-- Fixing the policy would leave a table with no reader and no writer, and the
+-- "who inserts into this?" question would resurface at every audit. If push
+-- notification logging is wanted later, it should return together with the code
+-- that writes it — and with a policy scoped to service_role from the start.
+--
+-- REVERSIBILITY: the full CREATE TABLE + indexes + policies live in
+-- 20260122000000_add_push_tokens.sql and can be reinstated verbatim.
+--
+-- NOT DROPPED HERE: user_profiles.expo_push_token / notifications_enabled and
+-- idx_user_profiles_push_token, added by the same migration. Those ARE live
+-- (apps/mobile/lib/notifications.ts reads and writes them) and are unaffected.
+-- ============================================================================
+
+-- Policies are dropped implicitly with the table; listed for the reader's benefit:
+--   "Users can view own notifications"      (SELECT, user_id = auth.uid()::text)
+--   "Service role can insert notifications" (INSERT, PUBLIC, WITH CHECK true)  <- the hole
+DROP TABLE IF EXISTS notification_log;

@@ -2,27 +2,27 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "85d3bb90216130d4fc70472f6ef530e3bcd499a3",
-    "commitShort": "85d3bb9",
+    "commit": "bcaaf901eba97b5545a781f25fe2e8381b64c7c0",
+    "commitShort": "bcaaf90",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "main",
     "dirty": true,
     "dirtyPaths": [
       {
-        "code": "M",
-        "path": "supabase/functions/preview-league/index.ts"
+        "code": "A",
+        "path": "supabase/migrations/20260728000000_drop_notification_log.sql"
       }
     ],
-    "timestamp": "2026-07-29T19:02:26Z",
-    "sourceHash": "sha256:d68caf25ad5a91c2010d0085cbe1a2e466d6b25156a35e471eec2b70070a2170",
+    "timestamp": "2026-07-30T01:49:03Z",
+    "sourceHash": "sha256:33fe15a0c1864a4c7b879234be3ef85c19b13f21c998bb3594256728d056f9d6",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-07-28T05:49:17Z",
-    "ageHours": 37.2,
-    "ageDays": 1.6,
+    "ageHours": 44,
+    "ageDays": 1.8,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:1003d2a31164523e894182d57f0321335f74c985764a84c1a41896857ee6535d",
@@ -7729,7 +7729,8 @@
       "20260724000001_lockdown_missed_definer_grants.sql",
       "20260724000002_harden_definer_search_path.sql",
       "20260727000000_fix_schedule_snapshot_retry_cron_expression.sql",
-      "20260727100000_week_snapshots_entered_mid_week.sql"
+      "20260727100000_week_snapshots_entered_mid_week.sql",
+      "20260728000000_drop_notification_log.sql"
     ],
     "config": [
       "join-league=true",
