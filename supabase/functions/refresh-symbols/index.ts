@@ -24,6 +24,39 @@ function getCorsHeaders() {
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { 'Content-Type': 'application/json', ...getCorsHeaders() } });
 
+// ── apikey auth (mirrors the cron/operator functions: snapshot-week-start,
+// snapshot-week-end, process-week-results, sync-alpaca-orders) ────────────────
+// Constant-time compare to avoid leaking the expected key via timing.
+function constantTimeEqual(a: string, b: string): boolean {
+  const aBytes = new TextEncoder().encode(a);
+  const bBytes = new TextEncoder().encode(b);
+  if (aBytes.length !== bBytes.length) return false;
+  let result = 0;
+  for (let i = 0; i < aBytes.length; i++) {
+    result |= aBytes[i] ^ bBytes[i];
+  }
+  return result === 0;
+}
+
+// Generic 401. No detail about why (missing vs wrong vs malformed) to avoid leakage.
+const unauthorized = () => json({ error: 'Unauthorized' }, 401);
+
+// Validate the incoming apikey header against SB_SECRET_KEY_CRON — the same
+// operator credential the cron/scheduled functions use. This function upserts
+// into the shared `symbols` table with SB_SECRET_KEY_INTERNAL (RLS-bypassing),
+// so it must be operator-only, not any-authenticated. With verify_jwt=false this
+// guard is the only thing protecting it. Fails closed: if the expected key is
+// unset/empty, ALL requests are rejected.
+function isAuthorized(req: Request): boolean {
+  const expectedKey = Deno.env.get('SB_SECRET_KEY_CRON');
+  if (!expectedKey || expectedKey.length === 0) {
+    console.error('SB_SECRET_KEY_CRON not configured — rejecting all requests');
+    return false;
+  }
+  const providedKey = req.headers.get('apikey') ?? '';
+  return constantTimeEqual(providedKey, expectedKey);
+}
+
 /**
  * Parse a NASDAQ "pipe" file, returning an array of string[] rows.
  * Skips header and footer lines.
@@ -55,6 +88,13 @@ Deno.serve(async (req) => {
 
   if (req.method === 'OPTIONS') return new Response('ok', { headers: getCorsHeaders() });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
+
+  // SECURITY: validate the apikey before ANY work — before the outbound
+  // nasdaqtrader.com fetches or the RLS-bypassing upsert. This function runs with
+  // verify_jwt=false, so this guard is the only thing protecting it.
+  if (!isAuthorized(req)) {
+    return unauthorized();
+  }
 
   const urlNasdaq = 'https://www.nasdaqtrader.com/dynamic/SymDir/nasdaqlisted.txt';
   const urlOther  = 'https://www.nasdaqtrader.com/dynamic/SymDir/otherlisted.txt';

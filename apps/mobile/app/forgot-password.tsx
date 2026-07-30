@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { generateRecoveryNonce, storeRecoveryNonce } from '@/lib/recoveryNonce';
 import { Colors } from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -34,8 +35,21 @@ export default function ForgotPasswordScreen() {
 
     setLoading(true);
 
+    // Bind this reset to a per-request nonce so only a link WE requested on THIS
+    // device can complete the recovery (fixes F2: deep-link session fixation).
+    // The nonce is stored single-use and echoed back via redirectTo; the genuine
+    // Supabase email redirects to fantasystockapp://reset-password?rn=<nonce>#...,
+    // and app/_layout.tsx refuses to set a session unless the inbound rn matches.
+    const nonce = generateRecoveryNonce();
+    const stored = await storeRecoveryNonce(nonce);
+    if (!stored) {
+      setLoading(false);
+      Alert.alert('Error', 'Could not start a secure password reset on this device. Please try again.');
+      return;
+    }
+
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: 'fantasystockapp://reset-password',
+      redirectTo: `fantasystockapp://reset-password?rn=${encodeURIComponent(nonce)}`,
     });
 
     setLoading(false);

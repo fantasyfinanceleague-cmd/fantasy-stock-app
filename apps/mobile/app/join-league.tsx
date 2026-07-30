@@ -160,7 +160,7 @@ export default function JoinLeagueScreen() {
 
         <Text style={styles.title}>Enter Invite Code</Text>
         <Text style={styles.subtitle}>
-          Ask your league commissioner for the 6-character invite code
+          Ask your league commissioner for the invite code
         </Text>
 
         <View style={styles.codeInputContainer}>
@@ -171,11 +171,11 @@ export default function JoinLeagueScreen() {
               setCode(text.toUpperCase());
               setError(null);
             }}
-            placeholder="ABC123"
+            placeholder="ABCDE12345"
             placeholderTextColor={Colors.textDark}
             autoCapitalize="characters"
             autoCorrect={false}
-            maxLength={6}
+            maxLength={10}
             autoFocus
           />
         </View>

@@ -9,6 +9,7 @@ import { useAuth } from '@/lib/useAuth';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { supabase } from '@/lib/supabase';
 import { validateLeagueName } from '@/lib/contentModeration';
+import { generateInviteCode } from '@/lib/inviteCode';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -31,15 +32,6 @@ interface WizardState {
   numRounds: number;
   draftDate: Date | null;
   draftDateTBD: boolean;
-}
-
-function generateInviteCode(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let code = '';
-  for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
 }
 
 export default function CreateLeagueWizard() {

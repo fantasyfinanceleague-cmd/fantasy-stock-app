@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { Colors } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
 import { validateLeagueName } from '@/lib/contentModeration';
+import { generateInviteCode } from '@/lib/inviteCode';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 interface LeagueMember {
@@ -27,15 +28,6 @@ function getStatusBadge(status: League['draft_status']) {
     default:
       return { text: 'Unknown', color: Colors.textMuted };
   }
-}
-
-function generateInviteCode(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let code = '';
-  for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
 }
 
 export default function LeaguesScreen() {

@@ -270,7 +270,7 @@ export default function ProfileScreen() {
   }
 
   async function handleChangePassword() {
-    if (!newPassword || !confirmPassword) {
+    if (!currentPassword || !newPassword || !confirmPassword) {
       Alert.alert('Error', 'Please fill in all password fields');
       return;
     }
@@ -285,9 +285,33 @@ export default function ProfileScreen() {
       return;
     }
 
+    // Re-authenticate the caller against the CURRENT password before allowing a
+    // change. Without this, anyone holding the active session (a borrowed
+    // unlocked device) could overwrite the password with no proof of ownership.
+    // `user` comes from useAuth (the session); this screen only renders for an
+    // authenticated user (see the `if (!user)` guard below), so email is present.
+    if (!user?.email) {
+      Alert.alert('Error', 'Could not verify your account. Please sign in again.');
+      return;
+    }
+
     setChangingPassword(true);
 
     try {
+      // signInWithPassword for the SAME user simply revalidates and refreshes the
+      // current session — it does not navigate or clear this screen's state. An
+      // error means the entered current password is wrong, so we abort here and
+      // never reach updateUser.
+      const { error: reauthError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword,
+      });
+
+      if (reauthError) {
+        Alert.alert('Error', 'Current password is incorrect');
+        return;
+      }
+
       const { error } = await supabase.auth.updateUser({
         password: newPassword,
       });
@@ -437,6 +461,22 @@ export default function ProfileScreen() {
           <Text style={styles.sectionTitle}>Change Password</Text>
 
           <View style={styles.infoCard}>
+            <View style={styles.inputRow}>
+              <Text style={styles.label}>Current Password</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Enter current password"
+                placeholderTextColor={Colors.textMuted}
+                value={currentPassword}
+                onChangeText={setCurrentPassword}
+                secureTextEntry
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+
+            <View style={styles.divider} />
+
             <View style={styles.inputRow}>
               <Text style={styles.label}>New Password</Text>
               <TextInput
