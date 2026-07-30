@@ -2,27 +2,27 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "938b984afa9cd5607811a04aeaf8afb0ef33138f",
-    "commitShort": "938b984",
+    "commit": "e414b36393c24437be093fc72185cc9c278cfba3",
+    "commitShort": "e414b36",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "main",
+    "branch": "l2-push-token-capability",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "docs/architecture/annotations.json"
+        "path": "apps/mobile/lib/notifications.ts"
       }
     ],
-    "timestamp": "2026-07-30T01:50:11Z",
-    "sourceHash": "sha256:25984985b2b0301396cc7aa60580968ba023d7210908f0414544fac841c7df8e",
+    "timestamp": "2026-07-30T03:02:24Z",
+    "sourceHash": "sha256:d37f34456cc14f75066c3ad19cec938c2c11d7d88f8eec25ea005671db667171",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-07-28T05:49:17Z",
-    "ageHours": 44,
-    "ageDays": 1.8,
+    "ageHours": 45.2,
+    "ageDays": 1.9,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:1003d2a31164523e894182d57f0321335f74c985764a84c1a41896857ee6535d",
@@ -5074,33 +5074,16 @@
     {
       "annotation": null,
       "verified": true,
-      "id": "e.ui.notifications->tbl.league_members",
-      "from": "ui.notifications",
-      "to": "tbl.league_members",
-      "protocol": "postgrest-select",
-      "payload": ".from('league_members').select('user_id')",
-      "columns": [
-        "user_id"
-      ],
-      "callSites": [
-        "apps/mobile/lib/notifications.ts:174"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
       "id": "e.ui.notifications->tbl.user_profiles",
       "from": "ui.notifications",
       "to": "tbl.user_profiles",
       "protocol": "postgrest-select",
-      "payload": ".from('user_profiles').select('id, expo_push_token, notifications_enabled')",
+      "payload": ".from('user_profiles').select('expo_push_token, notifications_enabled')",
       "columns": [
-        "expo_push_token, notifications_enabled",
-        "id, expo_push_token, notifications_enabled"
+        "expo_push_token, notifications_enabled"
       ],
       "callSites": [
-        "apps/mobile/lib/notifications.ts:191",
-        "apps/mobile/lib/notifications.ts:221"
+        "apps/mobile/lib/notifications.ts:185"
       ]
     },
     {
@@ -7417,7 +7400,7 @@
   "orphanAnnotations": [],
   "stats": {
     "nodes": 99,
-    "edges": 229,
+    "edges": 228,
     "flows": 9,
     "drift": 15,
     "driftHigh": 4,
@@ -7532,9 +7515,7 @@
       "apps/mobile/components/TradeModal.tsx:86 -> broker_credentials.select",
       "apps/mobile/lib/LeagueContext.tsx:84 -> league_members.select",
       "apps/mobile/lib/LeagueContext.tsx:97 -> leagues.select",
-      "apps/mobile/lib/notifications.ts:174 -> league_members.select",
-      "apps/mobile/lib/notifications.ts:191 -> user_profiles.select",
-      "apps/mobile/lib/notifications.ts:221 -> user_profiles.select",
+      "apps/mobile/lib/notifications.ts:185 -> user_profiles.select",
       "apps/mobile/lib/notifications.ts:62 -> user_profiles.update",
       "apps/mobile/lib/notifications.ts:85 -> user_profiles.update",
       "apps/mobile/lib/useHomeData.ts:198 -> user_profiles.select",

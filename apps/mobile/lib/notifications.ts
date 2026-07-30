@@ -164,49 +164,13 @@ export function addNotificationListeners(
   };
 }
 
-/**
- * Get push tokens for all members of a league
- */
-export async function getLeagueMemberTokens(leagueId: string, excludeUserId?: string): Promise<Array<{ userId: string; token: string }>> {
-  try {
-    // Get all league members
-    const { data: members, error: membersError } = await supabase
-      .from('league_members')
-      .select('user_id')
-      .eq('league_id', leagueId);
-
-    if (membersError || !members) {
-      console.error('Failed to get league members:', membersError);
-      return [];
-    }
-
-    const userIds = members
-      .map(m => m.user_id)
-      .filter(id => id !== excludeUserId);
-
-    if (userIds.length === 0) return [];
-
-    // Get push tokens for these users
-    const { data: profiles, error: profilesError } = await supabase
-      .from('user_profiles')
-      .select('id, expo_push_token, notifications_enabled')
-      .in('id', userIds)
-      .eq('notifications_enabled', true)
-      .not('expo_push_token', 'is', null);
-
-    if (profilesError || !profiles) {
-      console.error('Failed to get user profiles:', profilesError);
-      return [];
-    }
-
-    return profiles
-      .filter(p => p.expo_push_token)
-      .map(p => ({ userId: p.id, token: p.expo_push_token! }));
-  } catch (error) {
-    console.error('Error getting league member tokens:', error);
-    return [];
-  }
-}
+// getLeagueMemberTokens was REMOVED 2026-07-28. It was dead code (zero callers)
+// that read EVERY league member's expo_push_token to the device. An Expo push
+// token is a bearer capability — exp.host/--/api/v2/push/send requires nothing
+// but the token — so bulk-reading other users' tokens client-side is a
+// capability leak with no caller to justify it. See docs/architecture
+// annotations tbl.user_profiles (L2). Do not reintroduce a client-side
+// token reader; notification sending belongs behind an edge function.
 
 /**
  * Notify a user that it's their turn to draft
