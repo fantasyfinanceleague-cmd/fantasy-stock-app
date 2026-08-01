@@ -48,6 +48,12 @@ Fixes and where they live: see `docs/security/REMAINING-SECURITY-WORK.md`.
 
 ## Phase C — F12 (coordinated: client + server must move together)
 
+> **Requires an OPEN market.** The safety step (verify `place-order` records a real
+> fill server-side *before* the `db push` drops the client-insert fallback) needs a
+> genuine Alpaca fill. Paper orders placed while the market is closed queue rather than
+> fill, and `place-order` only records on `status === 'filled'`. So run Phase C during
+> market hours; do NOT drop the policy on faith.
+
 **Why this one is different:** the new `place-order` **requires `league_id`** (old
 clients that don't send it get HTTP 400) and the final migration **drops the client
 `trades` INSERT policy** (old client-side inserts then fail). So the clients and the
