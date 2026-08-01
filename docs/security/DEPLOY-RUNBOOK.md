@@ -33,14 +33,18 @@ Fixes and where they live: see `docs/security/REMAINING-SECURITY-WORK.md`.
     dashboard Verify-JWT toggle. (A verify_jwt flip may not take on the first deploy.)
   - Then reschedule the daily `refresh_symbols_daily` cron to send the `apikey` from
     `vault.decrypted_secrets` (it 401s today, so this is a fix-forward, not a break).
-- [ ] **F1 + F6 — migrations.** `supabase db push` (applies `20260730000000` and
-  `20260730000001`).
-  - Verify F1 trigger: `SELECT tgname FROM pg_trigger WHERE tgrelid='leagues'::regclass;`
-    (expect `trg_leagues_member_update_columns`).
-  - Verify F6 policy: `SELECT polname, pg_get_expr(polwithcheck, polrelid) FROM pg_policy WHERE polrelid='league_standings'::regclass;`
-    (the WITH CHECK now bounds the score columns to 0).
-  - Both are backward-compatible: old web/mobile draft-completion and standings init
-    still satisfy the tightened rules.
+> **F1 + F6 migrations are NOT pushed here.** `supabase db push` applies ALL pending
+> migrations in one shot — it cannot push just F1/F6 without also applying F12's
+> `20260730000004` (which drops the client `trades` INSERT policy). Since that drop
+> must happen inside the F12 window (after `place-order` is deployed and clients
+> updated), the **single `db push` lives in Phase C** and applies all three new
+> migrations together. F1 and F6 are backward-compatible, so landing them in that same
+> push is fine. Do NOT run `db push` in Phase B.
+>
+> Sanity-check what's pending before the push: `supabase migration list` should show
+> exactly `20260730000000`, `20260730000001`, `20260730000004` as remote-unapplied
+> (prod should already be at `20260728000001`). If older migrations are unexpectedly
+> pending, stop and investigate before pushing.
 
 ## Phase C — F12 (coordinated: client + server must move together)
 
@@ -62,9 +66,14 @@ Do these back-to-back in one window:
 4. [ ] Verify a real trade records server-side: place one paper trade, then
    `SELECT symbol, action, quantity, price, alpaca_order_id FROM trades ORDER BY created_at DESC LIMIT 1;`
    — values must come from the Alpaca fill.
-5. [ ] `supabase db push` (applies `20260730000004`, drops the client INSERT policy).
-   Verify: `SELECT polname, polcmd FROM pg_policy WHERE polrelid='trades'::regclass;`
-   — there should be **no** authenticated INSERT policy left.
+5. [ ] `supabase db push` — this applies **all three** new migrations together
+   (`20260730000000` F1, `20260730000001` F6, `20260730000004` F12). Verify each:
+   - F1 trigger: `SELECT tgname FROM pg_trigger WHERE tgrelid='leagues'::regclass;`
+     (expect `trg_leagues_member_update_columns`).
+   - F6 policy: `SELECT polname, pg_get_expr(polwithcheck, polrelid) FROM pg_policy WHERE polrelid='league_standings'::regclass;`
+     (WITH CHECK bounds score columns to 0).
+   - F12: `SELECT polname, polcmd FROM pg_policy WHERE polrelid='trades'::regclass;`
+     — there should be **no** authenticated INSERT policy left.
 > Between steps 2 and 3 there's a brief window where a new web client's trade may not
 > record (new client doesn't insert client-side; old place-order doesn't record yet).
 > Keep 2→3 tight. Trading itself is not broken in that window; only recording lags.
