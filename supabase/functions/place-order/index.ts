@@ -132,9 +132,34 @@ Deno.serve(async (req: Request) => {
     const side = String(body.side ?? 'buy');               // 'buy' | 'sell'
     const type = String(body.type ?? 'market');            // 'market' | 'limit' | ...
     const tif  = String(body.time_in_force ?? 'day');      // 'day' | 'gtc' | ...
+    const leagueId = String(body.league_id ?? '').trim();
 
     if (!symbol || !Number.isFinite(qty) || qty <= 0) {
       return json({ error: 'bad_request', message: 'symbol and positive qty required' }, 400);
+    }
+
+    // league_id is required so the server can record the resulting fill and
+    // enforce membership (replaces the dropped trades INSERT RLS WITH CHECK).
+    if (!leagueId) {
+      return json({ error: 'bad_request', message: 'league_id required' }, 400);
+    }
+
+    // Verify the caller is a member of the league they're trading in.
+    // This replicates the RLS predicate that previously gated the client-side
+    // trades INSERT: user_id = auth.uid() AND member of league_id.
+    // league_members.user_id is TEXT (holds the uuid as a string).
+    const { data: membership, error: membershipErr } = await admin
+      .from('league_members')
+      .select('user_id')
+      .eq('league_id', leagueId)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (membershipErr) {
+      return json({ error: 'server_error', message: 'Could not verify league membership.' }, 500);
+    }
+    if (!membership) {
+      return json({ error: 'not_a_member', message: 'You are not a member of this league.' }, 403);
     }
 
     // Get user's Alpaca credentials
@@ -211,13 +236,61 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    const fillPrice = finalOrder?.filled_avg_price ? Number(finalOrder.filled_avg_price) : null;
+    const fillQty = finalOrder?.filled_qty ? Number(finalOrder.filled_qty) : null;
+
+    // Record the trade server-side from Alpaca's ACTUAL fill values, never from
+    // client-supplied price/quantity. Only record a genuinely filled order with
+    // a positive, finite price and quantity. The membership check above plus the
+    // JWT-derived user.id replace the dropped client-side INSERT RLS policy.
+    let tradeRecorded = false;
+    const filled = finalOrder?.status === 'filled'
+      && fillPrice !== null && Number.isFinite(fillPrice) && fillPrice > 0
+      && fillQty !== null && Number.isFinite(fillQty) && fillQty > 0;
+
+    if (filled) {
+      // Normalise side to the lowercase 'buy'/'sell' the CHECK constraint and
+      // scoring (trade.action === 'buy'/'sell') require. Alpaca returns lowercase.
+      const action = String(finalOrder?.side ?? side).toLowerCase();
+
+      const { error: insertErr } = await admin
+        .from('trades')
+        .insert({
+          symbol,
+          action,
+          quantity: fillQty,
+          price: fillPrice,
+          total_value: fillPrice * fillQty,
+          league_id: leagueId,
+          user_id: user.id,
+          alpaca_order_id: finalOrder?.id ?? null,
+        });
+
+      if (insertErr) {
+        // The order DID fill at Alpaca but we failed to persist it. Surface this
+        // as a hard error so the client does not treat the trade as recorded.
+        console.error('Failed to record trade after fill:', insertErr);
+        return json({
+          error: 'trade_record_failed',
+          message: 'Your order filled but could not be recorded. Please contact support.',
+          order: finalOrder,
+          filled_avg_price: fillPrice,
+          filled_qty: fillQty,
+          trade_recorded: false,
+        }, 500);
+      }
+
+      tradeRecorded = true;
+    }
+
     // Return order with filled_avg_price (the actual price Alpaca executed at)
     return json({
       ok: true,
       order: finalOrder,
       // Include fill price at top level for easy access
-      filled_avg_price: finalOrder?.filled_avg_price ? Number(finalOrder.filled_avg_price) : null,
-      filled_qty: finalOrder?.filled_qty ? Number(finalOrder.filled_qty) : null,
+      filled_avg_price: fillPrice,
+      filled_qty: fillQty,
+      trade_recorded: tradeRecorded,
     }, 200);
   } catch (e) {
     return json({ error: 'unhandled', message: 'An unexpected error occurred. Please try again.' }, 500);

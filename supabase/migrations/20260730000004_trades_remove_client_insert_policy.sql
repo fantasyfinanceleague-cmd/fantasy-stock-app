@@ -1,0 +1,51 @@
+-- ============================================================================
+-- Remove the client-side trades INSERT policy (server-only trade recording)
+-- ============================================================================
+-- FINDING (F12, CWE-284): policy "Users can create trades in their leagues"
+-- (20250118000000) let any authenticated league member INSERT an arbitrary
+-- `trades` row directly from the client — arbitrary symbol/quantity/price with
+-- no real broker fill behind it. The WITH CHECK only gated user_id = auth.uid()
+-- AND league membership; it did NOT (and RLS cannot) verify that the symbol,
+-- quantity, or price correspond to a genuine Alpaca execution. Scoring
+-- (process-week-results: trade.action === 'buy'/'sell') consumes these rows at
+-- face value, so a forged row directly manipulates a member's score.
+--
+-- FIX: trades are now recorded ONLY server-side, inside the place-order edge
+-- function, from Alpaca's ACTUAL fill values (filled_avg_price / filled_qty /
+-- side / symbol) after a confirmed 'filled' order. place-order uses the
+-- service_role admin client (which BYPASSES RLS) and re-implements the dropped
+-- WITH CHECK itself: it requires league_id in the body and verifies the caller
+-- (JWT user.id) is a member of that league before recording. The two client
+-- TradeModals no longer INSERT into `trades`.
+--
+-- MECHANISM: dropping the sole authenticated INSERT policy (NOT a
+-- REVOKE-FROM-PUBLIC, which per CLAUDE.md would leave the built-in anon/
+-- authenticated grants intact) leaves RLS enabled with no INSERT policy
+-- applicable to anon or authenticated, so their inserts match zero rows and are
+-- denied. service_role bypasses RLS, so place-order continues to write. SELECT
+-- ("Users can view trades in their leagues") is deliberately untouched — reads
+-- are unchanged.
+--
+-- ============================================================================
+-- HUMAN ACTION (ordering matters — do NOT push this migration first):
+--   1. DEPLOY the updated place-order edge function FIRST:
+--        supabase functions deploy place-order
+--      If the migration lands before the new place-order is live, trades will
+--      briefly fail to record (client insert already gone, server insert not
+--      yet deployed).
+--   2. THEN push this migration:
+--        supabase db push
+--   3. VERIFY the policy is gone (do not trust the push output):
+--        SELECT polname FROM pg_policies
+--        WHERE tablename = 'trades' AND cmd = 'INSERT';
+--      -> expect zero rows.
+--   4. Smoke-test a real trade end-to-end (web TradeModal + mobile TradeModal +
+--      a draft pick on web) and confirm a `trades` / `drafts` row appears with
+--      the Alpaca fill price and an alpaca_order_id.
+--   5. Re-run  node scripts/gen-architecture.mjs  and commit the result
+--      (place-order now writes `trades`; the call graph moved).
+--   6. Re-capture docs/architecture/db-snapshot.json (RLS policy change) by
+--      running docs/architecture/db-snapshot.sql against prod.
+-- ============================================================================
+
+DROP POLICY IF EXISTS "Users can create trades in their leagues" ON trades;

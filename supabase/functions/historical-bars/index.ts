@@ -70,16 +70,31 @@ Deno.serve(async (req) => {
       return json({ error: 'missing_start', message: 'start date is required (YYYY-MM-DD)' }, 400);
     }
 
+    // Reject anything that is not a plain YYYY-MM-DD date. The legitimate client
+    // sends dates as `new Date(...).toISOString().split('T')[0]` (plain YYYY-MM-DD),
+    // so this format is exactly what valid callers already send. Strict validation
+    // stops query-metacharacters ('&', '=', '#', spaces, etc.) from being spliced
+    // into the server-credentialed Alpaca request URL as extra query params.
+    const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+    if (!DATE_RE.test(startDate)) {
+      return json({ error: 'invalid_start', message: 'start must be a date in YYYY-MM-DD format' }, 400);
+    }
+    if (endDate && !DATE_RE.test(endDate)) {
+      return json({ error: 'invalid_end', message: 'end must be a date in YYYY-MM-DD format' }, 400);
+    }
+
     // Limit symbols to prevent abuse
     const maxSymbols = 20;
     const limitedSymbols = symbols.slice(0, maxSymbols).map(s => String(s).trim().toUpperCase());
 
     // Build multi-symbol request
     const symbolsParam = limitedSymbols.join(',');
-    let url = `${BASE}/stocks/bars?symbols=${encodeURIComponent(symbolsParam)}&timeframe=1Day&start=${startDate}&feed=iex`;
+    // Encode the date values as defense in depth: even if validation were ever
+    // bypassed, encodeURIComponent prevents introducing new '&'-delimited params.
+    let url = `${BASE}/stocks/bars?symbols=${encodeURIComponent(symbolsParam)}&timeframe=1Day&start=${encodeURIComponent(startDate)}&feed=iex`;
 
     if (endDate) {
-      url += `&end=${endDate}`;
+      url += `&end=${encodeURIComponent(endDate)}`;
     }
 
     // Limit to reasonable number of bars

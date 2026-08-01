@@ -257,7 +257,9 @@ export default function TradeModal({
     try {
       const upperSymbol = symbol.toUpperCase();
 
-      // 1) Place paper order via Alpaca Edge Function
+      // 1) Place paper order via Alpaca Edge Function. The server records the
+      //    resulting trade from Alpaca's actual fill values, so league_id is
+      //    required and the client no longer inserts into `trades` directly.
       const { data: placeData, error: placeErr } = await supabase.functions.invoke('place-order', {
         body: {
           symbol: upperSymbol,
@@ -265,6 +267,7 @@ export default function TradeModal({
           side: action, // 'buy' or 'sell'
           type: 'market',
           time_in_force: 'day',
+          league_id: leagueId,
         },
       });
 
@@ -293,26 +296,13 @@ export default function TradeModal({
         return;
       }
 
-      // Use the actual fill price from Alpaca (not our quote)
-      const fillPrice = placeData?.filled_avg_price ?? currentPrice;
-      const fillQty = placeData?.filled_qty ?? quantity;
-      const actualTotalValue = fillPrice * fillQty;
-
-      // 2) Insert trade into database with Alpaca's actual fill price
-      const { error: tradeError } = await supabase
-        .from('trades')
-        .insert({
-          league_id: leagueId,
-          user_id: userId,
-          symbol: upperSymbol,
-          action: action,
-          quantity: fillQty,
-          price: fillPrice,
-          total_value: actualTotalValue,
-          alpaca_order_id: placeData?.order?.id ?? null
-        });
-
-      if (tradeError) throw tradeError;
+      // 2) The server records the trade from Alpaca's actual fill values.
+      //    If it did not record, the order did not complete as a persisted
+      //    trade — surface that as an error rather than silently succeeding.
+      if (placeData?.trade_recorded !== true) {
+        setError(placeData?.message || 'Trade could not be recorded. Please try again.');
+        return;
+      }
 
       // Call parent callback to refresh data
       if (onTradeComplete) {

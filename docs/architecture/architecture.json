@@ -2,27 +2,22 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "4dfbf4ebbe359b492f668fcf6ba67e363922629e",
-    "commitShort": "4dfbf4e",
+    "commit": "2dd699fb7a31c429038bea2cccbb245473b2695d",
+    "commitShort": "2dd699f",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "item5-record-verify-jwt",
-    "dirty": true,
-    "dirtyPaths": [
-      {
-        "code": "M",
-        "path": "supabase/config.toml"
-      }
-    ],
-    "timestamp": "2026-07-30T04:47:51Z",
-    "sourceHash": "sha256:964e25ceef6a84c8523713ca4b973994e386a64ef99937b1a482e75861ac3610",
+    "branch": "security/claude-security-fixes-20260730",
+    "dirty": false,
+    "dirtyPaths": [],
+    "timestamp": "2026-07-30T23:58:35Z",
+    "sourceHash": "sha256:f981a62c2ba08e4919799d491d478e8c91ae6098d3373d5f739d57f325a4981a",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-07-30T03:10:26Z",
-    "ageHours": 1.6,
-    "ageDays": 0.1,
+    "ageHours": 20.8,
+    "ageDays": 0.9,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:74cc797461d0f3634b1e75de6bd5e372a016f54dbc9c18131257b7bc2ec8c927",
@@ -115,13 +110,6 @@
           "live": "active, 0 */6 * * *",
           "severity": "medium",
           "note": "This job exists in prod but no migration in supabase/migrations/ schedules it by this name. It was created out-of-band and is not reproducible from the repo."
-        },
-        {
-          "field": "auth",
-          "declared": "refresh-symbols requires a JWT (config.toml verify_jwt=true)",
-          "live": "cron job sends no Authorization or apikey header",
-          "severity": "high",
-          "note": "This job cannot be authenticating. The gateway rejects a header-less POST when verify_jwt=true, so every run 401s before reaching the function."
         }
       ],
       "annotation": "The oldest job in the schedule (jobid 7, versus 18-21 for the cron-auth-migrated set) and the only one that sends no auth header at all. It predates the RLS-hardening pass that set verify_jwt=true on refresh-symbols, and it was never migrated because no migration in the repo schedules it — it was created out-of-band, so the Phase 2b sweep over supabase/migrations/ never saw it. Its `symbols` target table is likewise created by no migration. IMPORTANT when diagnosing this: cron.job_run_details reports 'succeeded' for every run regardless, because net.http_post is asynchronous — the job status records that the request was ENQUEUED (return_message '1 row' is the request id), not what the server answered. Checked 2026-07-27: five consecutive 'succeeded' runs, which is exactly what a job 401ing every six hours also looks like. Use net._http_response, or check whether the symbols rows actually changed.",
@@ -280,7 +268,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:136",
+        "verifyJwtSource": "supabase/config.toml:142",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -307,7 +295,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:121",
+        "verifyJwtSource": "supabase/config.toml:127",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -315,7 +303,7 @@
           "ALPACA_API_KEY",
           "ALPACA_API_SECRET"
         ],
-        "lines": 119
+        "lines": 134
       },
       "db": null,
       "declared": null,
@@ -335,7 +323,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:70",
+        "verifyJwtSource": "supabase/config.toml:76",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -364,7 +352,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:113",
+        "verifyJwtSource": "supabase/config.toml:119",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -374,7 +362,7 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 226
+        "lines": 299
       },
       "db": null,
       "declared": null,
@@ -394,7 +382,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:61",
+        "verifyJwtSource": "supabase/config.toml:67",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -491,16 +479,17 @@
     {
       "layer": "edge",
       "facts": {
-        "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:50",
-        "authGuard": null,
+        "verifyJwt": false,
+        "verifyJwtSource": "supabase/config.toml:56",
+        "authGuard": "apikey header, constant-time, fail-closed",
         "localModules": [],
         "tests": [],
         "envVars": [
+          "SB_SECRET_KEY_CRON",
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 138
+        "lines": 178
       },
       "db": null,
       "declared": null,
@@ -509,18 +498,18 @@
       "verified": true,
       "id": "fn.refresh-symbols",
       "label": "refresh-symbols",
-      "sublabel": "verify_jwt=true",
+      "sublabel": "verify_jwt=false · apikey guard",
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/refresh-symbols/index.ts",
-        "line": 53
+        "line": 86
       }
     },
     {
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:106",
+        "verifyJwtSource": "supabase/config.toml:112",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -620,7 +609,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:126",
+        "verifyJwtSource": "supabase/config.toml:132",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -648,7 +637,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:131",
+        "verifyJwtSource": "supabase/config.toml:137",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -709,7 +698,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": false,
-        "verifyJwtSource": "supabase/config.toml:163",
+        "verifyJwtSource": "supabase/config.toml:169",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -922,6 +911,37 @@
       "source": {
         "path": "supabase/migrations/20260125000000_add_league_seasons.sql",
         "line": 68
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20260730000000_leagues_member_draft_complete_column_guard.sql:75"
+        ],
+        "latestDefinition": "supabase/migrations/20260730000000_leagues_member_draft_complete_column_guard.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.enforce_leagues_member_update_columns",
+      "label": "enforce_leagues_member_update_columns()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20260730000000_leagues_member_draft_complete_column_guard.sql",
+        "line": 75
       }
     },
     {
@@ -3289,7 +3309,7 @@
       "protocol": "vendor-https",
       "payload": "https://paper-api.alpaca.markets/v2/orders/${orderId}",
       "callSites": [
-        "supabase/functions/place-order/index.ts:154",
+        "supabase/functions/place-order/index.ts:179",
         "supabase/functions/place-order/index.ts:64"
       ]
     },
@@ -3306,6 +3326,34 @@
       ],
       "callSites": [
         "supabase/functions/place-order/index.ts:48"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.place-order->tbl.league_members",
+      "from": "fn.place-order",
+      "to": "tbl.league_members",
+      "protocol": "postgrest-select",
+      "payload": ".from('league_members').select('user_id')",
+      "columns": [
+        "user_id"
+      ],
+      "callSites": [
+        "supabase/functions/place-order/index.ts:152"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.place-order->tbl.trades#insert",
+      "from": "fn.place-order",
+      "to": "tbl.trades",
+      "protocol": "postgrest-insert",
+      "payload": ".from('trades').insert()",
+      "columns": [],
+      "callSites": [
+        "supabase/functions/place-order/index.ts:257"
       ]
     },
     {
@@ -3667,8 +3715,8 @@
       "protocol": "vendor-https",
       "payload": "https://www.nasdaqtrader.com/dynamic/SymDir/nasdaqlisted.txt",
       "callSites": [
-        "supabase/functions/refresh-symbols/index.ts:59",
-        "supabase/functions/refresh-symbols/index.ts:60"
+        "supabase/functions/refresh-symbols/index.ts:100",
+        "supabase/functions/refresh-symbols/index.ts:99"
       ]
     },
     {
@@ -3681,7 +3729,7 @@
       "payload": ".from('symbols').upsert()",
       "columns": [],
       "callSites": [
-        "supabase/functions/refresh-symbols/index.ts:131"
+        "supabase/functions/refresh-symbols/index.ts:171"
       ]
     },
     {
@@ -4471,6 +4519,19 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.tbl.leagues->pg.enforce_leagues_member_update_columns",
+      "from": "tbl.leagues",
+      "to": "pg.enforce_leagues_member_update_columns",
+      "protocol": "pg-trigger",
+      "payload": "trigger on leagues",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260730000000_leagues_member_draft_complete_column_guard.sql:122"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.tbl.leagues->pg.is_commissioner#rls",
       "from": "tbl.leagues",
       "to": "pg.is_commissioner",
@@ -4547,7 +4608,7 @@
       "payload": ".from('league_members').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/create-league.tsx:156"
+        "apps/mobile/app/create-league.tsx:148"
       ]
     },
     {
@@ -4560,7 +4621,7 @@
       "payload": ".from('leagues').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/create-league.tsx:133"
+        "apps/mobile/app/create-league.tsx:125"
       ]
     },
     {
@@ -4859,7 +4920,7 @@
         "user_id, role, joined_at"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/leagues.tsx:87"
+        "apps/mobile/app/(tabs)/leagues.tsx:79"
       ]
     },
     {
@@ -4872,7 +4933,7 @@
       "payload": ".from('league_members').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/(tabs)/leagues.tsx:223"
+        "apps/mobile/app/(tabs)/leagues.tsx:215"
       ]
     },
     {
@@ -4885,7 +4946,7 @@
       "payload": ".from('leagues').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/(tabs)/leagues.tsx:199"
+        "apps/mobile/app/(tabs)/leagues.tsx:191"
       ]
     },
     {
@@ -4900,7 +4961,7 @@
         "id, username"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/leagues.tsx:95"
+        "apps/mobile/app/(tabs)/leagues.tsx:87"
       ]
     },
     {
@@ -5183,7 +5244,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('place-order')",
       "callSites": [
-        "apps/web/src/components/TradeModal.jsx:261"
+        "apps/web/src/components/TradeModal.jsx:263"
       ]
     },
     {
@@ -5236,19 +5297,6 @@
       ],
       "callSites": [
         "apps/web/src/components/TradeModal.jsx:50"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.src.components.TradeModal.jsx->tbl.trades#insert",
-      "from": "ui.src.components.TradeModal.jsx",
-      "to": "tbl.trades",
-      "protocol": "postgrest-insert",
-      "payload": ".from('trades').insert()",
-      "columns": [],
-      "callSites": [
-        "apps/web/src/components/TradeModal.jsx:303"
       ]
     },
     {
@@ -5420,7 +5468,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('place-order')",
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:661"
+        "apps/web/src/pages/DraftPage.jsx:663"
       ]
     },
     {
@@ -5479,8 +5527,8 @@
       "callSites": [
         "apps/web/src/pages/DraftPage.jsx:352",
         "apps/web/src/pages/DraftPage.jsx:463",
-        "apps/web/src/pages/DraftPage.jsx:789",
-        "apps/web/src/pages/DraftPage.jsx:908"
+        "apps/web/src/pages/DraftPage.jsx:792",
+        "apps/web/src/pages/DraftPage.jsx:911"
       ]
     },
     {
@@ -5493,9 +5541,9 @@
       "payload": ".from('drafts').insert()",
       "columns": [],
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:691",
-        "apps/web/src/pages/DraftPage.jsx:932",
-        "apps/web/src/pages/DraftPage.jsx:974"
+        "apps/web/src/pages/DraftPage.jsx:694",
+        "apps/web/src/pages/DraftPage.jsx:935",
+        "apps/web/src/pages/DraftPage.jsx:977"
       ]
     },
     {
@@ -5525,7 +5573,7 @@
       "payload": ".from('league_members').insert()",
       "columns": [],
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:733"
+        "apps/web/src/pages/DraftPage.jsx:736"
       ]
     },
     {
@@ -5570,7 +5618,7 @@
       "payload": ".from('leagues').update()",
       "columns": [],
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:1215",
+        "apps/web/src/pages/DraftPage.jsx:1218",
         "apps/web/src/pages/DraftPage.jsx:569"
       ]
     },
@@ -6106,7 +6154,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('place-order')",
       "callSites": [
-        "apps/mobile/components/TradeModal.tsx:332"
+        "apps/mobile/components/TradeModal.tsx:334"
       ]
     },
     {
@@ -6160,19 +6208,6 @@
       ],
       "callSites": [
         "apps/mobile/components/TradeModal.tsx:86"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.TradeModal->tbl.trades#insert",
-      "from": "ui.TradeModal",
-      "to": "tbl.trades",
-      "protocol": "postgrest-insert",
-      "payload": ".from('trades').insert()",
-      "columns": [],
-      "callSites": [
-        "apps/mobile/components/TradeModal.tsx:386"
       ]
     },
     {
@@ -6732,8 +6767,7 @@
         "fn.quote",
         "fn.place-order",
         "tbl.broker_credentials",
-        "ext.alpaca-trading",
-        "tbl.trades"
+        "ext.alpaca-trading"
       ],
       "steps": [
         {
@@ -6749,7 +6783,7 @@
           "edge": "e.ui.TradeModal->fn.place-order",
           "detail": "Order submitted server-side so broker credentials never reach the client.",
           "files": [
-            "apps/mobile/components/TradeModal.tsx:333"
+            "apps/mobile/components/TradeModal.tsx:335"
           ]
         },
         {
@@ -6772,13 +6806,15 @@
           "n": 5,
           "edge": "e.ui.TradeModal->tbl.trades#insert",
           "detail": "The trade row is written by the CLIENT after place-order returns — not server-side. So the DB record and the real Alpaca order are committed by two different actors with no transaction between them: if the app dies in this gap the order exists at the broker and not in the DB. That gap is why order reconciliation exists.",
-          "files": [
-            "apps/mobile/components/TradeModal.tsx:386"
-          ]
+          "files": [],
+          "verified": false
         }
       ],
       "annotation": "The trade row is written by the client, not by place-order. place-order reads broker_credentials, submits to Alpaca, and returns; TradeModal then inserts into trades. The broker order and the database record are committed by two different actors with nothing linking them transactionally, so a crash, network drop, or backgrounded app between the two leaves a real position at Alpaca with no row in the DB. flow.order-reconciliation exists to close that window after the fact.\n\nPARTIAL SALES READ AS A BUG BUT ARE NOT ONE. If a position is partly sold during the week, the matchup and dashboard screens show UNREALIZED P/L on the quantity still held at week end, while the scorer additionally settles the REALIZED P/L of the sold portion from midWeekTrades. So a screen and a standings number can legitimately differ after a partial sale, and the screen will read low. This is pre-existing and symmetrical: week-start holdings behave the same way, because their snapshot quantity is Monday's and the UI never consults trades. Not a defect — but it is the first thing a user will report, so recognise it rather than re-investigating.",
-      "unverified": []
+      "unverified": [
+        "step 5: anchor not found — apps/mobile/components/TradeModal.tsx no longer contains \"from('trades').insert(\"",
+        "step 5: edge 'e.ui.TradeModal->tbl.trades#insert' was not generated from any call site"
+      ]
     },
     {
       "id": "flow.order-reconciliation",
@@ -7046,14 +7082,14 @@
   ],
   "drift": [
     {
-      "node": "cron.refresh_symbols_daily",
-      "label": "refresh_symbols_daily",
-      "groupKey": "auth",
-      "field": "auth",
-      "declared": "refresh-symbols requires a JWT (config.toml verify_jwt=true)",
-      "live": "cron job sends no Authorization or apikey header",
+      "node": "pg.enforce_leagues_member_update_columns",
+      "label": "enforce_leagues_member_update_columns()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
       "severity": "high",
-      "note": "This job cannot be authenticating. The gateway rejects a header-less POST when verify_jwt=true, so every run 401s before reaching the function."
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
     },
     {
       "node": "tbl.symbols",
@@ -7258,10 +7294,10 @@
   ],
   "unverified": [
     {
-      "scope": "cron.refresh_symbols_daily",
-      "claim": "this job succeeds",
-      "reason": "Job sends no auth header but its target declares verify_jwt=true, so runs should be 401ing at the gateway. cron.job_run_details will still say succeeded: net.http_post is asynchronous, so the job status reflects the enqueue, not the HTTP response.",
-      "resolve": "SELECT id, status_code, error_msg, created FROM net._http_response ORDER BY created DESC LIMIT 30;  -- and confirm the target table has actually changed recently; net._http_response prunes on a ~6h TTL"
+      "scope": "pg.enforce_leagues_member_update_columns",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
     },
     {
       "scope": "tbl.notification_log",
@@ -7280,17 +7316,29 @@
       "claim": "flow step is current",
       "reason": "step 4: anchor not found — supabase/functions/snapshot-week-end/index.ts no longer contains \"function midWeekEntryPrice\"",
       "resolve": "Update the FLOWS block in scripts/gen-architecture.mjs."
+    },
+    {
+      "scope": "flow.place-trade",
+      "claim": "flow step is current",
+      "reason": "step 5: anchor not found — apps/mobile/components/TradeModal.tsx no longer contains \"from('trades').insert(\"",
+      "resolve": "Update the FLOWS block in scripts/gen-architecture.mjs."
+    },
+    {
+      "scope": "flow.place-trade",
+      "claim": "flow step is current",
+      "reason": "step 5: edge 'e.ui.TradeModal->tbl.trades#insert' was not generated from any call site",
+      "resolve": "Update the FLOWS block in scripts/gen-architecture.mjs."
     }
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 98,
-    "edges": 227,
+    "nodes": 99,
+    "edges": 228,
     "flows": 9,
     "drift": 15,
     "driftHigh": 2,
     "deadCode": 7,
-    "unverified": 4
+    "unverified": 6
   },
   "sourceIndex": {
     "edgeFunctions": [
@@ -7323,7 +7371,7 @@
       "apps/mobile/components/TradeModal.tsx:184 -> symbols-search",
       "apps/mobile/components/TradeModal.tsx:226 -> quote",
       "apps/mobile/components/TradeModal.tsx:250 -> symbol-name",
-      "apps/mobile/components/TradeModal.tsx:332 -> place-order",
+      "apps/mobile/components/TradeModal.tsx:334 -> place-order",
       "apps/mobile/lib/useHistoricalPL.ts:77 -> historical-bars",
       "apps/mobile/lib/useStockNames.ts:13 -> symbol-name",
       "apps/mobile/lib/useStockPrices.ts:32 -> ticker-quotes",
@@ -7332,11 +7380,11 @@
       "apps/web/src/components/TradeModal.jsx:101 -> symbol-name",
       "apps/web/src/components/TradeModal.jsx:141 -> symbols-search",
       "apps/web/src/components/TradeModal.jsx:178 -> quote",
-      "apps/web/src/components/TradeModal.jsx:261 -> place-order",
+      "apps/web/src/components/TradeModal.jsx:263 -> place-order",
       "apps/web/src/components/TradeModal.jsx:82 -> quote",
       "apps/web/src/context/PriceContext.jsx:99 -> quote",
       "apps/web/src/pages/DraftPage.jsx:622 -> finnhub-quote",
-      "apps/web/src/pages/DraftPage.jsx:661 -> place-order",
+      "apps/web/src/pages/DraftPage.jsx:663 -> place-order",
       "apps/web/src/pages/DraftPage.jsx:91 -> quote",
       "apps/web/src/pages/JoinLeague.jsx:25 -> preview-league",
       "apps/web/src/pages/JoinLeague.jsx:43 -> join-league",
@@ -7367,10 +7415,10 @@
       "apps/mobile/app/(tabs)/league.tsx:221 -> matchups.select",
       "apps/mobile/app/(tabs)/league.tsx:236 -> league_seasons.select",
       "apps/mobile/app/(tabs)/league.tsx:262 -> user_profiles.select",
-      "apps/mobile/app/(tabs)/leagues.tsx:199 -> leagues.insert",
-      "apps/mobile/app/(tabs)/leagues.tsx:223 -> league_members.insert",
-      "apps/mobile/app/(tabs)/leagues.tsx:87 -> league_members.select",
-      "apps/mobile/app/(tabs)/leagues.tsx:95 -> user_profiles.select",
+      "apps/mobile/app/(tabs)/leagues.tsx:191 -> leagues.insert",
+      "apps/mobile/app/(tabs)/leagues.tsx:215 -> league_members.insert",
+      "apps/mobile/app/(tabs)/leagues.tsx:79 -> league_members.select",
+      "apps/mobile/app/(tabs)/leagues.tsx:87 -> user_profiles.select",
       "apps/mobile/app/(tabs)/matchup.tsx:172 -> matchups.select",
       "apps/mobile/app/(tabs)/matchup.tsx:192 -> matchups.select",
       "apps/mobile/app/(tabs)/matchup.tsx:208 -> matchups.select",
@@ -7383,8 +7431,8 @@
       "apps/mobile/app/(tabs)/profile.tsx:246 -> user_profiles.upsert",
       "apps/mobile/app/(tabs)/profile.tsx:60 -> user_profiles.select",
       "apps/mobile/app/(tabs)/profile.tsx:78 -> broker_credentials.select",
-      "apps/mobile/app/create-league.tsx:133 -> leagues.insert",
-      "apps/mobile/app/create-league.tsx:156 -> league_members.insert",
+      "apps/mobile/app/create-league.tsx:125 -> leagues.insert",
+      "apps/mobile/app/create-league.tsx:148 -> league_members.insert",
       "apps/mobile/app/league-settings.tsx:84 -> leagues.update",
       "apps/mobile/app/login.tsx:59 -> user_profiles.upsert",
       "apps/mobile/app/player-portfolio.tsx:121 -> user_profiles.select",
@@ -7395,7 +7443,6 @@
       "apps/mobile/components/LeagueCarousel.tsx:127 -> league_standings.select",
       "apps/mobile/components/LeagueCarousel.tsx:62 -> league_seasons.select",
       "apps/mobile/components/LeagueCarousel.tsx:74 -> user_profiles.select",
-      "apps/mobile/components/TradeModal.tsx:386 -> trades.insert",
       "apps/mobile/components/TradeModal.tsx:86 -> broker_credentials.select",
       "apps/mobile/lib/LeagueContext.tsx:84 -> league_members.select",
       "apps/mobile/lib/LeagueContext.tsx:97 -> leagues.select",
@@ -7416,7 +7463,6 @@
       "apps/mobile/lib/usePortfolio.ts:140 -> trades.select",
       "apps/web/src/Header.jsx:110 -> league_members.select",
       "apps/web/src/Header.jsx:118 -> leagues.select",
-      "apps/web/src/components/TradeModal.jsx:303 -> trades.insert",
       "apps/web/src/components/TradeModal.jsx:50 -> broker_credentials.select",
       "apps/web/src/context/UserProfilesContext.jsx:25 -> user_profiles.select",
       "apps/web/src/pages/Dashboard.jsx:129 -> drafts.select",
@@ -7426,7 +7472,7 @@
       "apps/web/src/pages/Dashboard.jsx:268 -> matchups.select",
       "apps/web/src/pages/Dashboard.jsx:73 -> league_members.select",
       "apps/web/src/pages/Dashboard.jsx:88 -> leagues.select",
-      "apps/web/src/pages/DraftPage.jsx:1215 -> leagues.update",
+      "apps/web/src/pages/DraftPage.jsx:1218 -> leagues.update",
       "apps/web/src/pages/DraftPage.jsx:228 -> league_members.select",
       "apps/web/src/pages/DraftPage.jsx:240 -> leagues.select",
       "apps/web/src/pages/DraftPage.jsx:281 -> leagues.select",
@@ -7438,12 +7484,12 @@
       "apps/web/src/pages/DraftPage.jsx:545 -> matchups.insert",
       "apps/web/src/pages/DraftPage.jsx:553 -> league_standings.insert",
       "apps/web/src/pages/DraftPage.jsx:569 -> leagues.update",
-      "apps/web/src/pages/DraftPage.jsx:691 -> drafts.insert",
-      "apps/web/src/pages/DraftPage.jsx:733 -> league_members.insert",
-      "apps/web/src/pages/DraftPage.jsx:789 -> drafts.select",
-      "apps/web/src/pages/DraftPage.jsx:908 -> drafts.select",
-      "apps/web/src/pages/DraftPage.jsx:932 -> drafts.insert",
-      "apps/web/src/pages/DraftPage.jsx:974 -> drafts.insert",
+      "apps/web/src/pages/DraftPage.jsx:694 -> drafts.insert",
+      "apps/web/src/pages/DraftPage.jsx:736 -> league_members.insert",
+      "apps/web/src/pages/DraftPage.jsx:792 -> drafts.select",
+      "apps/web/src/pages/DraftPage.jsx:911 -> drafts.select",
+      "apps/web/src/pages/DraftPage.jsx:935 -> drafts.insert",
+      "apps/web/src/pages/DraftPage.jsx:977 -> drafts.insert",
       "apps/web/src/pages/Leaderboard.jsx:177 -> league_standings.select",
       "apps/web/src/pages/Leaderboard.jsx:186 -> matchups.select",
       "apps/web/src/pages/Leaderboard.jsx:225 -> leagues.select",
@@ -7482,6 +7528,8 @@
       "apps/web/src/pages/TradeHistory.jsx:35 -> league_members.select",
       "apps/web/src/pages/TradeHistory.jsx:50 -> leagues.select",
       "apps/web/src/pages/TradeHistory.jsx:86 -> trades.select",
+      "supabase/functions/place-order/index.ts:152 -> league_members.select",
+      "supabase/functions/place-order/index.ts:257 -> trades.insert",
       "supabase/functions/place-order/index.ts:48 -> broker_credentials.select",
       "supabase/functions/preview-league/index.ts:103 -> league_members.select",
       "supabase/functions/preview-league/index.ts:74 -> leagues.select",
@@ -7513,7 +7561,7 @@
       "supabase/functions/process-week-results/index.ts:885 -> matchups.select",
       "supabase/functions/process-week-results/index.ts:948 -> week_snapshots.select",
       "supabase/functions/quote/index.ts:83 -> broker_credentials.select",
-      "supabase/functions/refresh-symbols/index.ts:131 -> symbols.upsert",
+      "supabase/functions/refresh-symbols/index.ts:171 -> symbols.upsert",
       "supabase/functions/save-broker-keys/index.ts:136 -> broker_credentials.upsert",
       "supabase/functions/snapshot-week-end/index.ts:266 -> leagues.select",
       "supabase/functions/snapshot-week-end/index.ts:299 -> week_snapshots.select",
@@ -7595,7 +7643,10 @@
       "20260727000000_fix_schedule_snapshot_retry_cron_expression.sql",
       "20260727100000_week_snapshots_entered_mid_week.sql",
       "20260728000000_drop_notification_log.sql",
-      "20260728000001_gate_user_profiles_to_authenticated.sql"
+      "20260728000001_gate_user_profiles_to_authenticated.sql",
+      "20260730000000_leagues_member_draft_complete_column_guard.sql",
+      "20260730000001_tighten_league_standings_insert.sql",
+      "20260730000004_trades_remove_client_insert_policy.sql"
     ],
     "config": [
       "finnhub-quote=true",
@@ -7605,7 +7656,7 @@
       "preview-league=true",
       "process-week-results=false",
       "quote=true",
-      "refresh-symbols=true",
+      "refresh-symbols=false",
       "save-broker-keys=true",
       "snapshot-week-end=false",
       "snapshot-week-start=false",

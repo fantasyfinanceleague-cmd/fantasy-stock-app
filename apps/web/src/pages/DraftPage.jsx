@@ -657,7 +657,9 @@ export default function DraftPage() {
       return;
     }
 
-    // 1) Place paper order via Edge Function
+    // 1) Place paper order via Edge Function. place-order now requires
+    //    league_id and verifies the caller is a member of that league (the
+    //    drafter is). This path writes to `drafts`, not `trades`.
     const { data: placeData, error: placeErr } = await supabase.functions.invoke('place-order', {
       body: {
         symbol: upper,
@@ -665,6 +667,7 @@ export default function DraftPage() {
         side: 'buy',
         type: 'market',
         time_in_force: 'day',
+        league_id: leagueId,
       },
     });
 

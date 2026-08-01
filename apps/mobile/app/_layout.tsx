@@ -17,6 +17,7 @@ import 'react-native-reanimated';
 import { LeagueProvider } from '@/lib/LeagueContext';
 import { addNotificationListeners } from '@/lib/notifications';
 import { supabase } from '@/lib/supabase';
+import { verifyAndConsumeRecoveryNonce } from '@/lib/recoveryNonce';
 import { useAuth } from '@/lib/useAuth';
 
 export {
@@ -82,7 +83,26 @@ function RootLayoutNav() {
           const accessToken = params.get('access_token');
           const refreshToken = params.get('refresh_token');
 
+          // Parse the per-request nonce from the QUERY (strictly before the
+          // '#'), so an rn smuggled into the fragment cannot satisfy the check.
+          const queryStart = url.indexOf('?');
+          let inboundNonce: string | null = null;
+          if (queryStart !== -1 && queryStart < hashIndex) {
+            const query = url.substring(queryStart + 1, hashIndex);
+            inboundNonce = new URLSearchParams(query).get('rn');
+          }
+
           if (accessToken && refreshToken) {
+            // Fixes F2 (deep-link session fixation): only set a session from a
+            // recovery link whose nonce matches one THIS device generated for a
+            // reset it requested. Fail closed — an attacker's crafted link (or a
+            // genuine link opened on a device that never requested the reset)
+            // carries no matching nonce and is refused.
+            const nonceOk = await verifyAndConsumeRecoveryNonce(inboundNonce);
+            if (!nonceOk) {
+              return;
+            }
+
             // Set the session with the tokens from the URL
             const { error } = await supabase.auth.setSession({
               access_token: accessToken,
