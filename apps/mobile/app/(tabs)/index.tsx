@@ -365,6 +365,7 @@ const styles = StyleSheet.create({
   loadingText: {
     color: Colors.textMuted,
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     textAlign: 'center',
     marginTop: 100,
   },
@@ -378,12 +379,13 @@ const styles = StyleSheet.create({
   },
   authTitle: {
     fontSize: 32,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
     marginBottom: 8,
   },
   authSubtitle: {
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginBottom: 32,
   },
@@ -402,12 +404,13 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginBottom: 2,
   },
   headerUsername: {
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
   },
   headerLogo: {
@@ -423,13 +426,14 @@ const styles = StyleSheet.create({
   },
   portfolioLabel: {
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: 'Inter_500Medium',
     color: Colors.textSecondary,
     marginBottom: 4,
   },
   portfolioValue: {
     fontSize: 34,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
     letterSpacing: -0.5,
     marginBottom: 4,
@@ -442,7 +446,8 @@ const styles = StyleSheet.create({
   },
   changeAmount: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
   },
   changePill: {
     paddingHorizontal: 10,
@@ -451,10 +456,12 @@ const styles = StyleSheet.create({
   },
   changePillText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
   },
   portfolioCaption: {
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginTop: 8,
   },
@@ -482,7 +489,7 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: 'Inter_500Medium',
     color: Colors.textSecondary,
     marginBottom: 10,
     textTransform: 'uppercase',
@@ -524,16 +531,18 @@ const styles = StyleSheet.create({
   },
   leagueEmoji: {
     fontSize: 20,
+    fontFamily: 'Inter_400Regular',
     marginRight: 8,
   },
   leagueName: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
     flex: 1,
   },
   leagueMeta: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginLeft: 28,
   },
@@ -549,17 +558,19 @@ const styles = StyleSheet.create({
   },
   rankPillText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
   recordText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
     fontVariant: ['tabular-nums'],
   },
   leagueValue: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textSecondary,
     fontVariant: ['tabular-nums'],
   },
@@ -586,6 +597,7 @@ const styles = StyleSheet.create({
   },
   matchupLeague: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
   },
   matchupBody: {
@@ -600,29 +612,31 @@ const styles = StyleSheet.create({
   },
   matchupUsername: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
     marginBottom: 2,
   },
   matchupValue: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
     fontVariant: ['tabular-nums'],
     marginBottom: 1,
   },
   matchupGain: {
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
     fontVariant: ['tabular-nums'],
   },
   matchupVs: {
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textMuted,
     marginHorizontal: 12,
   },
   noMatchups: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
   },
 
@@ -634,16 +648,17 @@ const styles = StyleSheet.create({
   },
   winText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: '#059669',
   },
   loseText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: '#DC2626',
   },
   summaryDot: {
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
   },
 
@@ -664,12 +679,13 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 15,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginBottom: 28,
     textAlign: 'center',
@@ -686,6 +702,6 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
 });

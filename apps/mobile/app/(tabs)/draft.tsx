@@ -780,33 +780,37 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
   },
   subtitle: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.primaryLight,
     marginTop: 4,
   },
   pendingIcon: {
     fontSize: 48,
+    fontFamily: 'Inter_400Regular',
     marginBottom: 16,
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
     marginBottom: 8,
     textAlign: 'center',
   },
   emptySubtitle: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     textAlign: 'center',
     marginBottom: 16,
   },
   hint: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textDark,
     textAlign: 'center',
   },
@@ -829,12 +833,15 @@ const styles = StyleSheet.create({
   },
   statusLabel: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
     marginBottom: 4,
   },
   statusValue: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
   turnIndicator: {
@@ -845,11 +852,12 @@ const styles = StyleSheet.create({
   },
   yourTurn: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.success,
   },
   waitingTurn: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
   },
   searchCard: {
@@ -863,7 +871,7 @@ const styles = StyleSheet.create({
   },
   searchTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
     marginBottom: 12,
   },
@@ -877,6 +885,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textPrimary,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -889,7 +898,7 @@ const styles = StyleSheet.create({
   },
   searchBtnText: {
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
   quoteCard: {
     marginTop: 16,
@@ -907,12 +916,13 @@ const styles = StyleSheet.create({
   },
   quoteSymbol: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
   },
   quotePrice: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     color: Colors.success,
   },
   draftBtn: {
@@ -924,7 +934,7 @@ const styles = StyleSheet.create({
   draftBtnText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
   },
   section: {
     paddingHorizontal: 24,
@@ -932,7 +942,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
     marginBottom: 12,
   },
@@ -956,25 +966,26 @@ const styles = StyleSheet.create({
   orderNumber: {
     width: 24,
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textMuted,
   },
   orderName: {
     flex: 1,
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textPrimary,
   },
   orderNameCurrent: {
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.success,
   },
   orderCheck: {
     color: Colors.success,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
   orderArrow: {
     color: Colors.success,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
   historyRow: {
     flexDirection: 'row',
@@ -987,21 +998,26 @@ const styles = StyleSheet.create({
   historyPick: {
     width: 36,
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
   },
   historyName: {
     flex: 1,
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textPrimary,
   },
   historySymbol: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.primaryLight,
     marginRight: 12,
   },
   historyPrice: {
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
   },
   pickRow: {
@@ -1017,17 +1033,21 @@ const styles = StyleSheet.create({
   },
   pickSymbol: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
   pickRound: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
     marginTop: 2,
   },
   pickPrice: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.success,
   },
   // Completion screen styles
@@ -1038,16 +1058,18 @@ const styles = StyleSheet.create({
   },
   completionIcon: {
     fontSize: 56,
+    fontFamily: 'Inter_400Regular',
     marginBottom: 12,
   },
   completionTitle: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
     marginBottom: 4,
   },
   completionLeague: {
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     color: Colors.primaryLight,
   },
   summaryCard: {
@@ -1068,12 +1090,14 @@ const styles = StyleSheet.create({
   },
   summaryValue: {
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
     marginBottom: 4,
   },
   summaryLabel: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     letterSpacing: 0.5,
   },
@@ -1085,7 +1109,8 @@ const styles = StyleSheet.create({
   },
   teamValue: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.success,
   },
   yourTeamCard: {
@@ -1113,18 +1138,21 @@ const styles = StyleSheet.create({
   },
   pickRoundBadgeText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: '#FFFFFF',
   },
   yourPickSymbol: {
     flex: 1,
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
   yourPickPrice: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
   },
   teamCard: {
@@ -1147,23 +1175,25 @@ const styles = StyleSheet.create({
   },
   teamRank: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
     marginRight: 8,
     width: 28,
   },
   teamName: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
   },
   youBadge: {
     color: Colors.primaryLight,
-    fontWeight: '400',
+    fontFamily: 'Inter_400Regular',
   },
   teamTotal: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.success,
   },
   teamPicks: {
@@ -1181,7 +1211,8 @@ const styles = StyleSheet.create({
   },
   teamPickText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.primaryLight,
   },
   // Dropdown styles
@@ -1206,12 +1237,12 @@ const styles = StyleSheet.create({
   },
   dropdownChipText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Inter_500Medium',
     color: Colors.textMuted,
   },
   dropdownChipTextActive: {
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
   // Round picks styles
   roundPicksCard: {
@@ -1233,7 +1264,8 @@ const styles = StyleSheet.create({
   roundPickOrder: {
     width: 24,
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
   },
   roundPickInfo: {
@@ -1241,11 +1273,14 @@ const styles = StyleSheet.create({
   },
   roundPickName: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
   roundPickSymbol: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     color: Colors.primaryLight,
     marginRight: 12,
     minWidth: 50,
@@ -1253,6 +1288,8 @@ const styles = StyleSheet.create({
   },
   roundPickPrice: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
     minWidth: 70,
     textAlign: 'right',
@@ -1276,12 +1313,13 @@ const styles = StyleSheet.create({
   },
   teamDetailName: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
   },
   teamDetailValue: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.success,
   },
   teamDetailRow: {
@@ -1296,11 +1334,13 @@ const styles = StyleSheet.create({
   teamDetailSymbol: {
     flex: 1,
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
   },
   teamDetailPrice: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
   },
   selectTeamPrompt: {
@@ -1313,6 +1353,7 @@ const styles = StyleSheet.create({
   },
   selectTeamText: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
   },
   // Phase 4 draft UI

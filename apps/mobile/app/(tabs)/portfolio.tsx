@@ -295,7 +295,8 @@ const cardShadow = Platform.select({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
   scrollView: { flex: 1 },
-  loadingText: { color: '#94A3B8', fontSize: 16, textAlign: 'center', marginTop: 100 },
+  loadingText: { color: '#94A3B8', fontSize: 16,
+    fontFamily: 'Inter_400Regular', textAlign: 'center', marginTop: 100 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 100, paddingHorizontal: 24 },
 
   // Hero
@@ -306,13 +307,14 @@ const styles = StyleSheet.create({
   },
   heroLabel: {
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: 'Inter_500Medium',
     color: '#64748B',
     marginBottom: 4,
   },
   heroValue: {
     fontSize: 34,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     color: '#0F172A',
     letterSpacing: -0.5,
   },
@@ -332,10 +334,12 @@ const styles = StyleSheet.create({
   },
   plPillText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
   budgetCaption: {
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: '#94A3B8',
     marginTop: 8,
   },
@@ -361,7 +365,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
   ghostButton: {
     flexDirection: 'row',
@@ -373,14 +377,14 @@ const styles = StyleSheet.create({
   ghostButtonText: {
     color: '#0891B2',
     fontSize: 15,
-    fontWeight: '500',
+    fontFamily: 'Inter_500Medium',
   },
 
   // Section
   section: { paddingHorizontal: 24, paddingBottom: 24 },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: '#0F172A',
     marginBottom: 16,
   },
@@ -398,22 +402,25 @@ const styles = StyleSheet.create({
   holdingRight: { alignItems: 'flex-end' },
   holdingSymbol: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: '#0F172A',
   },
   holdingName: {
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
     color: '#64748B',
     marginTop: 1,
   },
   holdingQty: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: '#94A3B8',
     marginTop: 2,
   },
   holdingValue: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: '#0F172A',
     marginBottom: 4,
   },
@@ -425,7 +432,11 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 6,
   },
-  dayChangeText: { fontSize: 12, fontWeight: '600' },
+  dayChangeText: {
+    fontSize: 12,
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
+  },
 
   // Status colors
   positive: { color: '#059669' },
@@ -447,22 +458,24 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     color: '#0F172A',
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     marginBottom: 4,
   },
   emptySubtext: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: '#94A3B8',
     marginBottom: 16,
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: '#0F172A',
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: '#94A3B8',
     marginBottom: 24,
     textAlign: 'center',
@@ -476,6 +489,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
 });

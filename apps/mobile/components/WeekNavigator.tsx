@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
   },
   weekText: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
   },
   badgeCurrent: {
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
   },
   badgeTextCurrent: {
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.primaryLight,
   },
   badgeFinal: {
@@ -165,11 +165,13 @@ const styles = StyleSheet.create({
   },
   badgeTextFinal: {
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: '#FFFFFF',
   },
   totalWeeks: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
     marginLeft: 4,
   },

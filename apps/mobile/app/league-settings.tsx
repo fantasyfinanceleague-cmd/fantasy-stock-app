@@ -584,7 +584,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     fontSize: 17,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
     textAlign: 'center',
   },
@@ -607,6 +607,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     textAlign: 'center',
   },
@@ -624,6 +625,7 @@ const styles = StyleSheet.create({
   lockWarningText: {
     flex: 1,
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.warning,
   },
 
@@ -633,7 +635,7 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
     marginBottom: 12,
   },
@@ -644,6 +646,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textPrimary,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -686,6 +689,7 @@ const styles = StyleSheet.create({
   radioText: {
     flex: 1,
     fontSize: 15,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
   },
   radioTextSelected: {
@@ -699,7 +703,8 @@ const styles = StyleSheet.create({
   },
   datePickerDoneText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: ACCENT,
   },
 
@@ -724,7 +729,7 @@ const styles = StyleSheet.create({
   },
   modeCardText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textMuted,
   },
   modeCardTextSelected: {
@@ -744,14 +749,15 @@ const styles = StyleSheet.create({
   },
   currencySymbol: {
     fontSize: 20,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textMuted,
     marginRight: 4,
   },
   budgetInput: {
     flex: 1,
     fontSize: 20,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
     paddingVertical: 14,
   },
@@ -780,11 +786,14 @@ const styles = StyleSheet.create({
   },
   stepperValueText: {
     fontSize: 32,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
   stepperValueLabel: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
   },
 
@@ -803,11 +812,13 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
   },
   infoValue: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
 
@@ -829,7 +840,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: '#FFFFFF',
     letterSpacing: 0.5,
   },
@@ -851,6 +862,7 @@ const styles = StyleSheet.create({
   seasonCompleteText: {
     flex: 1,
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textSecondary,
     lineHeight: 20,
   },
@@ -868,7 +880,7 @@ const styles = StyleSheet.create({
   },
   newSeasonButtonText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: '#FFFFFF',
     letterSpacing: 0.5,
   },

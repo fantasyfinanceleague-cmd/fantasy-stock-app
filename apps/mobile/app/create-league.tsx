@@ -831,7 +831,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     fontSize: 17,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
     textAlign: 'center',
   },
@@ -852,23 +852,25 @@ const styles = StyleSheet.create({
   },
   heroIcon: {
     fontSize: 80,
+    fontFamily: 'Inter_400Regular',
     marginBottom: 16,
   },
   heroTitle: {
     fontSize: 28,
-    fontWeight: '400',
+    fontFamily: 'Inter_400Regular',
     color: Colors.textPrimary,
     letterSpacing: 2,
   },
   heroTitleBold: {
     fontSize: 36,
-    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
     letterSpacing: 1,
     marginBottom: 12,
   },
   heroSubtitle: {
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     textAlign: 'center',
   },
@@ -888,7 +890,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: '#FFFFFF',
     letterSpacing: 0.5,
   },
@@ -905,7 +907,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: ACCENT,
     letterSpacing: 0.5,
   },
@@ -922,6 +924,7 @@ const styles = StyleSheet.create({
   },
   stepSubtitle: {
     fontSize: 15,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginBottom: 24,
   },
@@ -932,12 +935,13 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: ACCENT,
     marginBottom: 8,
   },
   textInput: {
     fontSize: 18,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textPrimary,
     paddingVertical: 12,
   },
@@ -948,6 +952,7 @@ const styles = StyleSheet.create({
   },
   inputHint: {
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
   },
 
@@ -982,7 +987,7 @@ const styles = StyleSheet.create({
   },
   typeCardTitle: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textMuted,
     letterSpacing: 0.5,
   },
@@ -991,6 +996,7 @@ const styles = StyleSheet.create({
   },
   typeCardDesc: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     textAlign: 'center',
     marginTop: 8,
@@ -1008,7 +1014,7 @@ const styles = StyleSheet.create({
   },
   popularBadgeText: {
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: '#FFFFFF',
     letterSpacing: 0.5,
   },
@@ -1036,7 +1042,7 @@ const styles = StyleSheet.create({
   },
   sizeButtonText: {
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
   },
   sizeButtonTextSelected: {
@@ -1065,7 +1071,8 @@ const styles = StyleSheet.create({
   },
   budgetCardTitle: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
     letterSpacing: 0.5,
   },
@@ -1077,7 +1084,8 @@ const styles = StyleSheet.create({
   },
   amountLabel: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: ACCENT,
     marginBottom: 12,
   },
@@ -1092,14 +1100,15 @@ const styles = StyleSheet.create({
   },
   currencySymbol: {
     fontSize: 24,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textMuted,
     marginRight: 4,
   },
   amountInput: {
     flex: 1,
     fontSize: 24,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
     paddingVertical: 16,
   },
@@ -1123,7 +1132,7 @@ const styles = StyleSheet.create({
   },
   presetButtonText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textMuted,
   },
   presetButtonTextSelected: {
@@ -1150,7 +1159,7 @@ const styles = StyleSheet.create({
   },
   durationLabel: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
   },
   durationLabelSelected: {
@@ -1158,6 +1167,7 @@ const styles = StyleSheet.create({
   },
   durationDesc: {
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginTop: 2,
   },
@@ -1168,12 +1178,13 @@ const styles = StyleSheet.create({
   },
   settingLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
     marginBottom: 12,
   },
   settingHint: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginTop: 8,
     textAlign: 'center',
@@ -1201,11 +1212,14 @@ const styles = StyleSheet.create({
   },
   stepperValueText: {
     fontSize: 32,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
   stepperValueLabel: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
   },
   playoffGrid: {
@@ -1227,7 +1241,7 @@ const styles = StyleSheet.create({
   },
   playoffButtonText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textMuted,
   },
   playoffButtonTextSelected: {
@@ -1247,10 +1261,12 @@ const styles = StyleSheet.create({
   },
   dateButtonText: {
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textPrimary,
   },
   dateButtonPlaceholder: {
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textDark,
   },
   datePickerDone: {
@@ -1259,7 +1275,8 @@ const styles = StyleSheet.create({
   },
   datePickerDoneText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: ACCENT,
   },
 
@@ -1272,7 +1289,7 @@ const styles = StyleSheet.create({
   },
   summaryTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
     marginBottom: 16,
   },
@@ -1285,11 +1302,13 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
   },
   summaryValue: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
 
@@ -1307,7 +1326,7 @@ const styles = StyleSheet.create({
   },
   nextButtonText: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: '#FFFFFF',
     letterSpacing: 0.5,
   },
@@ -1349,6 +1368,7 @@ const styles = StyleSheet.create({
   tbdText: {
     flex: 1,
     fontSize: 15,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
   },
   tbdTextSelected: {
@@ -1356,6 +1376,7 @@ const styles = StyleSheet.create({
   },
   tbdWarning: {
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
     color: Colors.warning,
     marginTop: 8,
     fontStyle: 'italic',

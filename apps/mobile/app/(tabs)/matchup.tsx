@@ -748,20 +748,23 @@ const styles = StyleSheet.create({
   loadingText: {
     color: '#94A3B8',
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     marginTop: 12,
   },
   emptyIcon: {
     fontSize: 48,
+    fontFamily: 'Inter_400Regular',
     marginBottom: 16,
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: '#0F172A',
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: '#94A3B8',
     textAlign: 'center',
     lineHeight: 20,
@@ -806,23 +809,27 @@ const styles = StyleSheet.create({
   },
   scoreAvatar: {
     fontSize: 40,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     marginBottom: 8,
   },
   scoreName: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: '#0F172A',
     marginBottom: 8,
     textAlign: 'center',
   },
   scoreValue: {
     fontSize: 20,
-    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
   },
   winningBadge: {
     marginTop: 8,
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: '#059669',
     backgroundColor: '#ECFDF5',
     paddingHorizontal: 8,
@@ -836,7 +843,8 @@ const styles = StyleSheet.create({
   },
   scoreVsText: {
     fontSize: 16,
-    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     color: '#94A3B8',
   },
   // Side-by-side Lineups
@@ -865,7 +873,7 @@ const styles = StyleSheet.create({
   },
   lineupHeaderText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: '#0F172A',
   },
   lineupHeaderDivider: {
@@ -885,16 +893,18 @@ const styles = StyleSheet.create({
   },
   stockSymbol: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: '#0F172A',
   },
   stockGain: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     marginTop: 4,
   },
   emptySlot: {
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     color: '#94A3B8',
   },
   slotDivider: {
@@ -905,7 +915,7 @@ const styles = StyleSheet.create({
   },
   slotNumber: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: '#94A3B8',
   },
   totalsRow: {
@@ -919,13 +929,15 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     color: '#64748B',
     letterSpacing: 1,
   },
   totalValue: {
     fontSize: 18,
-    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     marginTop: 4,
   },
   totalDivider: {

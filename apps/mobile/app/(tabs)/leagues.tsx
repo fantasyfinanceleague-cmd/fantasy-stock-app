@@ -841,7 +841,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
   },
   section: {
@@ -850,6 +850,7 @@ const styles = StyleSheet.create({
   loadingText: {
     color: Colors.textMuted,
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     textAlign: 'center',
     marginTop: 40,
   },
@@ -861,18 +862,20 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     textAlign: 'center',
   },
   emptyText: {
     color: Colors.textMuted,
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     textAlign: 'center',
     marginTop: 100,
   },
@@ -895,7 +898,7 @@ const styles = StyleSheet.create({
   },
   leagueName: {
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
     flex: 1,
   },
@@ -906,7 +909,8 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
   },
   leagueDetails: {
     flexDirection: 'row',
@@ -915,15 +919,18 @@ const styles = StyleSheet.create({
   },
   leagueDetail: {
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
   },
   draftDate: {
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
     color: Colors.warning,
     marginTop: 8,
   },
   weekText: {
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
     color: Colors.primaryLight,
     marginTop: 8,
   },
@@ -935,6 +942,7 @@ const styles = StyleSheet.create({
   },
   activeText: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: Colors.primaryLight,
   },
   footer: {
@@ -943,6 +951,7 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textDark,
   },
   createButton: {
@@ -954,7 +963,7 @@ const styles = StyleSheet.create({
   createButtonText: {
     color: Colors.textPrimary,
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
   headerActions: {
     flexDirection: 'row',
@@ -972,7 +981,7 @@ const styles = StyleSheet.create({
   joinButtonText: {
     color: Colors.primary,
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
   // Modal styles
   modalContainer: {
@@ -990,16 +999,17 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 17,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
   },
   modalCancel: {
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
   },
   modalCreate: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.primary,
   },
   modalContent: {
@@ -1011,12 +1021,13 @@ const styles = StyleSheet.create({
   },
   formLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
     marginBottom: 8,
   },
   formHint: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginTop: 6,
   },
@@ -1025,6 +1036,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 14,
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textPrimary,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -1046,7 +1058,7 @@ const styles = StyleSheet.create({
   },
   segmentText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Inter_500Medium',
     color: Colors.textMuted,
   },
   segmentTextActive: {
@@ -1073,11 +1085,12 @@ const styles = StyleSheet.create({
   stepperButtonText: {
     fontSize: 24,
     color: Colors.textPrimary,
-    fontWeight: '500',
+    fontFamily: 'Inter_500Medium',
   },
   stepperValue: {
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
     marginHorizontal: 32,
     minWidth: 40,
@@ -1085,10 +1098,12 @@ const styles = StyleSheet.create({
   },
   inputText: {
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textPrimary,
   },
   inputPlaceholder: {
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textDark,
   },
   datePickerDone: {
@@ -1097,7 +1112,8 @@ const styles = StyleSheet.create({
   },
   datePickerDoneText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.primary,
   },
   optionList: {
@@ -1119,7 +1135,7 @@ const styles = StyleSheet.create({
   },
   optionText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Inter_500Medium',
     color: Colors.textMuted,
   },
   optionTextActive: {
@@ -1147,12 +1163,15 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 11,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
     marginBottom: 4,
   },
   statValue: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
   detailActions: {
@@ -1175,7 +1194,7 @@ const styles = StyleSheet.create({
   detailActionText: {
     color: Colors.textPrimary,
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
   detailCard: {
     backgroundColor: Colors.cardBg,
@@ -1187,7 +1206,7 @@ const styles = StyleSheet.create({
   },
   detailCardTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
     marginBottom: 12,
   },
@@ -1200,12 +1219,14 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
   },
   detailValue: {
     fontSize: 14,
     color: Colors.textPrimary,
-    fontWeight: '500',
+    fontFamily: 'Inter_500Medium',
+    fontVariant: ['tabular-nums'],
   },
   memberRow: {
     flexDirection: 'row',
@@ -1222,6 +1243,7 @@ const styles = StyleSheet.create({
   },
   memberName: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textPrimary,
     flex: 1,
   },

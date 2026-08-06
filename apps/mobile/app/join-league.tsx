@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     fontSize: 17,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
     textAlign: 'center',
   },
@@ -382,13 +382,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 15,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     textAlign: 'center',
     marginBottom: 32,
@@ -403,7 +404,7 @@ const styles = StyleSheet.create({
   },
   codeInput: {
     fontSize: 32,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
     textAlign: 'center',
     paddingVertical: 16,
@@ -418,6 +419,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.error,
   },
 
@@ -437,16 +439,18 @@ const styles = StyleSheet.create({
   },
   leagueIconText: {
     fontSize: 40,
+    fontFamily: 'Inter_400Regular',
   },
   leagueName: {
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
     textAlign: 'center',
     marginBottom: 4,
   },
   commissionerText: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
   },
   previewCard: {
@@ -468,12 +472,14 @@ const styles = StyleSheet.create({
   },
   previewLabel: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginBottom: 4,
   },
   previewValue: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
   previewValueMuted: {
@@ -493,7 +499,8 @@ const styles = StyleSheet.create({
   },
   statusBadgeText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
   warningContainer: {
@@ -508,6 +515,7 @@ const styles = StyleSheet.create({
   warningText: {
     flex: 1,
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
     color: Colors.warning,
     lineHeight: 18,
   },
@@ -529,7 +537,7 @@ const styles = StyleSheet.create({
   },
   nextButtonText: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: '#FFFFFF',
     letterSpacing: 0.5,
   },

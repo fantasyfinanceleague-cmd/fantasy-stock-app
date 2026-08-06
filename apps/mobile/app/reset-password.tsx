@@ -150,13 +150,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontFamily: 'Inter_700Bold',
     color: '#0F172A',
     textAlign: 'center',
     marginBottom: 12,
   },
   description: {
     fontSize: 15,
+    fontFamily: 'Inter_400Regular',
     color: '#64748B',
     textAlign: 'center',
     marginBottom: 32,
@@ -167,6 +168,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 16,
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     color: '#0F172A',
     marginBottom: 16,
     borderWidth: 1,
@@ -185,7 +187,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
   cancelButton: {
     marginTop: 24,
@@ -194,5 +196,6 @@ const styles = StyleSheet.create({
   cancelText: {
     color: '#64748B',
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
   },
 });

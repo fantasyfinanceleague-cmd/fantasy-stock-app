@@ -622,7 +622,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
     marginBottom: 20,
   },
@@ -640,18 +640,20 @@ const styles = StyleSheet.create({
   },
   lockedTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.gold,
     marginBottom: 8,
   },
   lockedText: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textSecondary,
     marginBottom: 8,
     lineHeight: 20,
   },
   lockedSubtext: {
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginBottom: 16,
   },
@@ -664,10 +666,10 @@ const styles = StyleSheet.create({
   lockedButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
   bold: {
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
   },
 
   // Toggle
@@ -695,7 +697,7 @@ const styles = StyleSheet.create({
   },
   toggleButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textMuted,
   },
   toggleButtonTextActive: {
@@ -708,6 +710,7 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginBottom: 8,
   },
@@ -716,6 +719,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 14,
     fontSize: 18,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textPrimary,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -768,17 +772,19 @@ const styles = StyleSheet.create({
   },
   searchResultSymbol: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
   },
   searchResultName: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginTop: 2,
   },
   searchResultPrice: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textSecondary,
   },
   noResultsContainer: {
@@ -797,6 +803,7 @@ const styles = StyleSheet.create({
   },
   noResultsText: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     textAlign: 'center',
   },
@@ -810,16 +817,18 @@ const styles = StyleSheet.create({
   },
   selectedSymbol: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.success,
   },
   selectedName: {
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginTop: 2,
   },
   companyName: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginTop: 6,
   },
@@ -843,7 +852,8 @@ const styles = StyleSheet.create({
   quantityButtonText: {
     fontSize: 24,
     color: Colors.textPrimary,
-    fontWeight: '500',
+    fontFamily: 'Inter_500Medium',
+    fontVariant: ['tabular-nums'],
   },
   quantityInput: {
     flex: 1,
@@ -851,6 +861,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 14,
     fontSize: 18,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -858,6 +870,7 @@ const styles = StyleSheet.create({
   },
   ownedText: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginTop: 8,
   },
@@ -878,10 +891,14 @@ const styles = StyleSheet.create({
   },
   priceLabel: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
   },
   priceValue: {
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
   priceDivider: {
@@ -891,12 +908,14 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
   totalValue: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
   },
   totalCost: {
     color: Colors.error,
@@ -908,6 +927,8 @@ const styles = StyleSheet.create({
   // Budget
   budgetText: {
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
     marginBottom: 16,
   },
@@ -923,6 +944,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: '#DC2626',
   },
 
@@ -950,7 +972,7 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
   cancelButton: {
     paddingVertical: 16,
@@ -964,6 +986,6 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: Colors.textPrimary,
     fontSize: 16,
-    fontWeight: '500',
+    fontFamily: 'Inter_500Medium',
   },
 });

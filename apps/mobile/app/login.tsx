@@ -219,6 +219,7 @@ const styles = StyleSheet.create({
   },
   tagline: {
     fontSize: 15,
+    fontFamily: 'Inter_400Regular',
     color: '#64748B',
     marginTop: 12,
     letterSpacing: 0.3,
@@ -232,13 +233,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 26,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: '#0F172A',
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 15,
+    fontFamily: 'Inter_400Regular',
     color: '#64748B',
     textAlign: 'center',
     marginBottom: 28,
@@ -260,10 +262,12 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 12,
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     color: '#0F172A',
   },
   hint: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: '#94A3B8',
     marginTop: -10,
     marginBottom: 16,
@@ -282,7 +286,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
   switchButton: {
     marginTop: 24,
@@ -291,10 +295,11 @@ const styles = StyleSheet.create({
   switchText: {
     color: '#64748B',
     fontSize: 15,
+    fontFamily: 'Inter_400Regular',
   },
   switchTextBold: {
     color: '#0891B2',
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
   forgotButton: {
     alignSelf: 'flex-end',
@@ -304,5 +309,6 @@ const styles = StyleSheet.create({
   forgotText: {
     color: '#64748B',
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
   },
 });

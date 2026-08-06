@@ -158,13 +158,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontFamily: 'Inter_700Bold',
     color: '#0F172A',
     textAlign: 'center',
     marginBottom: 12,
   },
   description: {
     fontSize: 15,
+    fontFamily: 'Inter_400Regular',
     color: '#64748B',
     textAlign: 'center',
     marginBottom: 32,
@@ -172,13 +173,14 @@ const styles = StyleSheet.create({
   },
   email: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.primary,
     textAlign: 'center',
     marginBottom: 16,
   },
   hint: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: '#64748B',
     textAlign: 'center',
     marginBottom: 32,
@@ -189,6 +191,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 16,
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     color: '#0F172A',
     marginBottom: 16,
     borderWidth: 1,
@@ -207,7 +210,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
   switchButton: {
     marginTop: 24,
@@ -216,6 +219,7 @@ const styles = StyleSheet.create({
   switchText: {
     color: Colors.primary,
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
   },
   resendButton: {
     marginTop: 16,
@@ -224,5 +228,6 @@ const styles = StyleSheet.create({
   resendText: {
     color: '#64748B',
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
   },
 });

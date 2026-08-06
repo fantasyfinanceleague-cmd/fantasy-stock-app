@@ -123,6 +123,6 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
 });

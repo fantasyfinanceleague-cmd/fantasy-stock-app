@@ -504,21 +504,22 @@ const styles = StyleSheet.create({
   },
   bannerIcon: {
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     marginRight: 6,
   },
   championBannerText: {
     color: '#92400E',
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     fontSize: 13,
   },
   runnerUpBannerText: {
     color: '#475569',
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     fontSize: 13,
   },
   completedBannerText: {
     color: '#94A3B8',
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 13,
   },
   championRankBadge: {
@@ -539,9 +540,11 @@ const styles = StyleSheet.create({
   },
   trophyIcon: {
     fontSize: 24,
+    fontFamily: 'Inter_400Regular',
   },
   medalIcon: {
     fontSize: 24,
+    fontFamily: 'Inter_400Regular',
   },
   cardHeader: {
     flexDirection: 'row',
@@ -550,6 +553,7 @@ const styles = StyleSheet.create({
   },
   leagueIcon: {
     fontSize: 36,
+    fontFamily: 'Inter_400Regular',
     marginRight: 12,
   },
   headerText: {
@@ -557,12 +561,13 @@ const styles = StyleSheet.create({
   },
   leagueName: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: '#0F172A',
     marginBottom: 2,
   },
   leagueType: {
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
     color: '#94A3B8',
   },
   rankBadge: {
@@ -575,12 +580,14 @@ const styles = StyleSheet.create({
   },
   rankNumber: {
     fontSize: 24,
-    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     color: '#0F172A',
   },
   rankSuffix: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: '#94A3B8',
     marginBottom: 4,
     marginLeft: 1,
@@ -600,12 +607,15 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 24,
-    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     color: '#0F172A',
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 11,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: '#64748B',
     letterSpacing: 0.5,
   },
@@ -634,7 +644,7 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: '#0891B2',
   },
   iconButton: {
@@ -676,12 +686,13 @@ const styles = StyleSheet.create({
   },
   createTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: '#0F172A',
     marginBottom: 4,
   },
   createSubtitle: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: '#94A3B8',
     textAlign: 'center',
   },

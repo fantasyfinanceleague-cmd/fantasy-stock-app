@@ -436,7 +436,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
   },
   closeButton: {
@@ -460,12 +460,15 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
     marginBottom: 8,
   },
   totalValue: {
     fontSize: 36,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     marginBottom: 8,
   },
   percentBadge: {
@@ -475,7 +478,8 @@ const styles = StyleSheet.create({
   },
   percentText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
   },
   positive: { color: Colors.success },
   negative: { color: Colors.error },
@@ -498,16 +502,20 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
     marginBottom: 4,
   },
   statValue: {
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
   },
   statSubvalue: {
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: 'Inter_500Medium',
+    fontVariant: ['tabular-nums'],
     marginTop: 2,
   },
   section: {
@@ -516,17 +524,19 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
     marginBottom: 4,
   },
   sectionSubtitle: {
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginBottom: 16,
   },
   emptyText: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     textAlign: 'center',
     paddingVertical: 20,
@@ -544,7 +554,7 @@ const styles = StyleSheet.create({
   },
   barSymbol: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
   },
   barTrack: {
@@ -567,7 +577,8 @@ const styles = StyleSheet.create({
   barValue: {
     width: 75,
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     textAlign: 'right',
   },
   detailRow: {
@@ -593,11 +604,12 @@ const styles = StyleSheet.create({
   },
   detailSymbol: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
   },
   detailName: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textSecondary,
     marginTop: 1,
     marginBottom: 2,
@@ -624,7 +636,7 @@ const styles = StyleSheet.create({
   },
   acquisitionText: {
     fontSize: 11,
-    fontWeight: '500',
+    fontFamily: 'Inter_500Medium',
   },
   draftedText: {
     color: Colors.gold,
@@ -644,19 +656,20 @@ const styles = StyleSheet.create({
   soldText: {
     fontSize: 11,
     color: Colors.textMuted,
-    fontWeight: '500',
+    fontFamily: 'Inter_500Medium',
   },
   realizedPLContainer: {
     alignItems: 'flex-end',
   },
   realizedLabel: {
     fontSize: 10,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginTop: 2,
   },
   detailPL: {
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
   detailGrid: {
     flexDirection: 'row',
@@ -672,12 +685,14 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 11,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginBottom: 2,
   },
   detailValue: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
   detailFooter: {
@@ -689,6 +704,7 @@ const styles = StyleSheet.create({
   },
   detailFooterLabel: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
   },
 });

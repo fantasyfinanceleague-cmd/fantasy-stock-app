@@ -929,6 +929,7 @@ const styles = StyleSheet.create({
   loadingText: {
     color: '#94A3B8',
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     textAlign: 'center',
     marginTop: 40,
   },
@@ -966,6 +967,7 @@ const styles = StyleSheet.create({
   },
   bannerIcon: {
     fontSize: 32,
+    fontFamily: 'Inter_400Regular',
     marginRight: 12,
   },
   bannerTextContainer: {
@@ -973,11 +975,12 @@ const styles = StyleSheet.create({
   },
   bannerTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: '#0F172A',
   },
   bannerSubtitle: {
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
     color: '#64748B',
     marginTop: 2,
   },
@@ -998,7 +1001,7 @@ const styles = StyleSheet.create({
   },
   seasonLabel: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: '#0F172A',
   },
   weekBadge: {
@@ -1009,7 +1012,7 @@ const styles = StyleSheet.create({
   },
   weekBadgeText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: '#0891B2',
   },
   // KPI Cards
@@ -1039,23 +1042,27 @@ const styles = StyleSheet.create({
   },
   kpiLabel: {
     fontSize: 11,
+    fontFamily: 'Inter_400Regular',
     color: '#64748B',
     marginBottom: 4,
     textAlign: 'center',
   },
   kpiValue: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: '#0F172A',
     textAlign: 'center',
   },
   kpiValueLarge: {
     fontSize: 24,
-    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     color: '#0F172A',
   },
   kpiSub: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: '#64748B',
     marginTop: 2,
   },
@@ -1078,11 +1085,12 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: '#0F172A',
   },
   sectionSubtitle: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: '#64748B',
     marginTop: 2,
   },
@@ -1113,7 +1121,8 @@ const styles = StyleSheet.create({
   },
   rankText: {
     fontSize: 14,
-    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
   },
   avatarCircle: {
     width: 36,
@@ -1126,6 +1135,7 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
   },
   standingInfo: {
     flex: 1,
@@ -1133,7 +1143,7 @@ const styles = StyleSheet.create({
   },
   standingName: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: '#0F172A',
   },
   standingNameHighlight: {
@@ -1145,11 +1155,14 @@ const styles = StyleSheet.create({
   },
   recordText: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     color: '#0F172A',
   },
   winPctText: {
     fontSize: 10,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: '#64748B',
     marginTop: 2,
   },
@@ -1158,14 +1171,17 @@ const styles = StyleSheet.create({
   },
   pointsValue: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
   },
   pointsValueLarge: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
   },
   pointsLabel: {
     fontSize: 10,
+    fontFamily: 'Inter_400Regular',
     color: '#64748B',
     marginTop: 2,
   },
@@ -1182,22 +1198,24 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     color: '#0F172A',
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     marginBottom: 4,
   },
   emptySubtext: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: '#94A3B8',
     textAlign: 'center',
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: '#0F172A',
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: '#94A3B8',
     marginBottom: 24,
     textAlign: 'center',
@@ -1211,7 +1229,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
   leagueActions: {
     flexDirection: 'row',
@@ -1233,7 +1251,7 @@ const styles = StyleSheet.create({
   leagueJoinText: {
     color: Colors.primary,
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
   leagueCreateButton: {
     backgroundColor: Colors.primary,
@@ -1244,7 +1262,7 @@ const styles = StyleSheet.create({
   leagueCreateText: {
     color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
   // Schedule styles
   playerSelector: {
@@ -1268,11 +1286,12 @@ const styles = StyleSheet.create({
   },
   playerChipAvatar: {
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     marginRight: 6,
   },
   playerChipText: {
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: 'Inter_500Medium',
     color: '#94A3B8',
   },
   playerChipTextActive: {
@@ -1300,7 +1319,7 @@ const styles = StyleSheet.create({
   },
   scheduleWeekNumber: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: '#94A3B8',
   },
   scheduleWeekCurrent: {
@@ -1313,16 +1332,18 @@ const styles = StyleSheet.create({
   },
   scheduleVs: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: '#94A3B8',
     marginRight: 8,
   },
   scheduleOpponentAvatar: {
     fontSize: 20,
+    fontFamily: 'Inter_400Regular',
     marginRight: 8,
   },
   scheduleOpponentName: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Inter_500Medium',
     color: '#0F172A',
     flex: 1,
   },
@@ -1347,20 +1368,22 @@ const styles = StyleSheet.create({
   },
   resultBadgeText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
   },
   scheduleScore: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
   },
   scheduleUpcoming: {
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
     color: '#94A3B8',
     fontStyle: 'italic',
   },
   scheduleCurrent: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: '#0891B2',
   },
   // History styles
@@ -1382,11 +1405,12 @@ const styles = StyleSheet.create({
   },
   historySeasonLabel: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: '#0F172A',
   },
   historyDateRange: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: '#94A3B8',
   },
   historyYourStats: {
@@ -1406,7 +1430,8 @@ const styles = StyleSheet.create({
   },
   historyStatValue: {
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     color: '#0F172A',
   },
   historyStatChampion: {
@@ -1417,7 +1442,8 @@ const styles = StyleSheet.create({
   },
   historyStatLabel: {
     fontSize: 10,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: '#94A3B8',
     letterSpacing: 0.5,
     marginTop: 2,
@@ -1436,6 +1462,7 @@ const styles = StyleSheet.create({
   },
   historyBadgeIcon: {
     fontSize: 40,
+    fontFamily: 'Inter_400Regular',
   },
   historyParticipantBadge: {
     width: 48,
@@ -1447,7 +1474,7 @@ const styles = StyleSheet.create({
   },
   historyParticipantText: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: '#94A3B8',
   },
   historyWinnerRow: {
@@ -1458,24 +1485,27 @@ const styles = StyleSheet.create({
   },
   historyWinnerRank: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: '#94A3B8',
     marginRight: 10,
     width: 28,
   },
   historyWinnerAvatar: {
     fontSize: 20,
+    fontFamily: 'Inter_400Regular',
     marginRight: 10,
   },
   historyWinnerName: {
     flex: 1,
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Inter_500Medium',
     color: '#0F172A',
   },
   historyWinnerRecord: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: '#94A3B8',
   },
 });

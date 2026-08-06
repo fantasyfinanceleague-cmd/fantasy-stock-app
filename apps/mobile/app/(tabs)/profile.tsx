@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
   },
   avatarSection: {
@@ -408,14 +408,16 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     fontSize: 40,
+    fontFamily: 'Inter_400Regular',
   },
   email: {
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
   },
   emailSmall: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginTop: 4,
   },
@@ -436,11 +438,14 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
   statLabel: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
     marginTop: 4,
   },
@@ -450,7 +455,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textMuted,
     marginBottom: 12,
     letterSpacing: 0.5,
@@ -470,17 +475,21 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginBottom: 6,
   },
   value: {
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
   valueSmall: {
     fontSize: 12,
     color: Colors.textPrimary,
     fontFamily: 'monospace',
+    fontVariant: ['tabular-nums'],
   },
   divider: {
     height: 1,
@@ -492,6 +501,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textPrimary,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -501,11 +511,13 @@ const styles = StyleSheet.create({
   },
   hint: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginTop: 6,
   },
   errorText: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.error,
     marginTop: 8,
   },
@@ -522,7 +534,7 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
   linkCard: {
     backgroundColor: Colors.cardBg,
@@ -546,15 +558,18 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textPrimary,
   },
   linkArrow: {
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
   },
   emptyText: {
     color: Colors.textMuted,
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     textAlign: 'center',
     marginTop: 100,
   },
@@ -571,12 +586,13 @@ const styles = StyleSheet.create({
   signOutText: {
     color: Colors.error,
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
   versionText: {
     textAlign: 'center',
     color: Colors.textDark,
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     marginTop: 24,
     marginBottom: 40,
   },
@@ -596,7 +612,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
     textAlign: 'center',
     marginBottom: 20,
@@ -623,5 +639,6 @@ const styles = StyleSheet.create({
   },
   emojiOptionText: {
     fontSize: 28,
+    fontFamily: 'Inter_400Regular',
   },
 });

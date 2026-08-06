@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
   },
   periodText: {
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: 'Inter_500Medium',
     color: Colors.textMuted,
   },
   periodTextActive: {
