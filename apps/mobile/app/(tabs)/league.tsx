@@ -395,6 +395,37 @@ export default function LeagueScreen() {
           </View>
         ) : (
           <>
+            {/* Draft Banner — primary entry to the draft room now that Draft left the tab bar */}
+            {activeLeague && activeLeague.draft_status !== 'completed' && (
+              <TouchableOpacity
+                style={[
+                  styles.draftBanner,
+                  activeLeague.draft_status === 'in_progress' && styles.draftBannerLive,
+                ]}
+                activeOpacity={0.8}
+                onPress={() => router.push('/(tabs)/draft')}
+                accessibilityRole="button"
+                accessibilityLabel="Open draft room"
+              >
+                <View style={styles.draftBannerIconCircle}>
+                  <Ionicons name="hammer" size={18} color={Colors.primary} />
+                </View>
+                <View style={styles.bannerTextContainer}>
+                  <Text style={styles.draftBannerTitle}>
+                    {activeLeague.draft_status === 'in_progress'
+                      ? 'Draft in progress'
+                      : 'Draft room'}
+                  </Text>
+                  <Text style={styles.draftBannerSubtitle}>
+                    {activeLeague.draft_status === 'in_progress'
+                      ? 'Your league is drafting now — jump in'
+                      : 'Make your picks when the draft begins'}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={Colors.primary} />
+              </TouchableOpacity>
+            )}
+
             {/* Season Banner */}
             {isSeasonCompleted && currentSeason && (
               <View style={[
@@ -969,6 +1000,41 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     color: Colors.textSecondary,
     marginTop: 2,
+  },
+  draftBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 24,
+    marginTop: 12,
+    marginBottom: 8,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: Colors.cyanLight,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    gap: 12,
+  },
+  draftBannerLive: {
+    borderWidth: 2,
+  },
+  draftBannerIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  draftBannerTitle: {
+    fontSize: 16,
+    fontFamily: 'Inter_700Bold',
+    color: Colors.textPrimary,
+  },
+  draftBannerSubtitle: {
+    fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textSecondary,
+    marginTop: 1,
   },
   activeSeasonBanner: {
     marginHorizontal: 24,

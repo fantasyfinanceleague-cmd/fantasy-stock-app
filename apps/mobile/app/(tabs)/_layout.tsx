@@ -64,10 +64,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="draft"
         options={{
-          title: 'Draft',
-          tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon name={focused ? 'hammer' : 'hammer-outline'} color={color} />
-          ),
+          // Hidden from the tab bar; reached from the League screen's draft
+          // banner and from draft notifications (see app/_layout.tsx).
+          href: null,
         }}
       />
       <Tabs.Screen
