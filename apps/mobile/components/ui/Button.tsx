@@ -9,6 +9,7 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { Colors } from '@/constants/Colors';
 
 export type ButtonVariant =
@@ -78,6 +79,12 @@ export function Button({
   const blocked = disabled || loading;
   const textColor = TEXT_COLOR[variant];
 
+  const handlePress = () => {
+    // Subtle selection tick on every actionable press; no-op where unsupported.
+    Haptics.selectionAsync();
+    onPress();
+  };
+
   return (
     <TouchableOpacity
       style={[
@@ -87,7 +94,7 @@ export function Button({
         blocked && styles.disabled,
         style,
       ]}
-      onPress={onPress}
+      onPress={handlePress}
       disabled={blocked}
       activeOpacity={0.8}
       hitSlop={size === 'sm' ? { top: 8, bottom: 8, left: 4, right: 4 } : undefined}

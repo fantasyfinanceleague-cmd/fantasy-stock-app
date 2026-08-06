@@ -59,6 +59,10 @@ export default function WeekNavigator({
         onPress={handlePrev}
         disabled={!canGoPrev}
         style={[styles.arrowButton, !canGoPrev && styles.arrowButtonDisabled]}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        accessibilityRole="button"
+        accessibilityLabel="Previous week"
+        accessibilityState={{ disabled: !canGoPrev }}
       >
         <Ionicons
           name="chevron-back"
@@ -92,6 +96,10 @@ export default function WeekNavigator({
         onPress={handleNext}
         disabled={!canGoNext}
         style={[styles.arrowButton, !canGoNext && styles.arrowButtonDisabled]}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        accessibilityRole="button"
+        accessibilityLabel="Next week"
+        accessibilityState={{ disabled: !canGoNext }}
       >
         <Ionicons
           name="chevron-forward"

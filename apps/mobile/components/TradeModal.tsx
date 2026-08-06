@@ -17,6 +17,7 @@ import { Colors } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
 import { Holding } from '@/lib/usePortfolio';
 import { isMarketOpen, getMarketStatus, getMarketStatusMessage } from '@/lib/marketHours';
+import * as Haptics from 'expo-haptics';
 import { Banner, Button } from '@/components/ui';
 
 interface TradeModalProps {
@@ -320,6 +321,8 @@ export default function TradeModal({
         setError(TRADE_REFUSAL_MESSAGES[data?.reason] || 'Trade was refused.');
         return;
       }
+      // Success - refresh data and close
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onTradeComplete();
       onClose();
     } catch (_e) {
@@ -471,6 +474,9 @@ export default function TradeModal({
               style={styles.quantityButton}
               onPress={() => handleQuantityChange(-1)}
               disabled={quantity <= 1}
+              accessibilityRole="button"
+              accessibilityLabel="Decrease quantity"
+              accessibilityState={{ disabled: quantity <= 1 }}
             >
               <Text style={styles.quantityButtonText}>−</Text>
             </TouchableOpacity>
@@ -487,6 +493,8 @@ export default function TradeModal({
             <TouchableOpacity
               style={styles.quantityButton}
               onPress={() => handleQuantityChange(1)}
+              accessibilityRole="button"
+              accessibilityLabel="Increase quantity"
             >
               <Text style={styles.quantityButtonText}>+</Text>
             </TouchableOpacity>

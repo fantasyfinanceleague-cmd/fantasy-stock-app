@@ -42,6 +42,9 @@ export default function LeagueSwitcher({ title }: LeagueSwitcherProps) {
           style={styles.headerTouchable}
           onPress={() => setModalVisible(true)}
           activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel={`Switch league. Current league: ${displayName}`}
         >
           {activeLeague && (
             <Text style={styles.leagueIcon}>{getLeagueIcon(activeLeague)}</Text>

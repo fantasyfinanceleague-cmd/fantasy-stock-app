@@ -170,6 +170,10 @@ export function PerformanceChart({ data, loading, onPeriodPLChange }: Performanc
               onPress={() => isAvailable && setPeriod(key)}
               activeOpacity={isAvailable ? 0.7 : 1}
               disabled={!isAvailable}
+              hitSlop={{ top: 6, bottom: 6 }}
+              accessibilityRole="button"
+              accessibilityLabel={`Show ${label} performance`}
+              accessibilityState={{ selected: isActive, disabled: !isAvailable }}
             >
               <Text style={[
                 styles.periodText,
