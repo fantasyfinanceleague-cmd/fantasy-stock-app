@@ -12,6 +12,7 @@ import StatusBadge from '@/components/StatusBadge';
 import LeagueSwitcher from '@/components/LeagueSwitcher';
 import { getWeekStatus, getCountdownMessage, getPlayoffRoundLabel } from '@/lib/weekStatus';
 import { Button, Card } from '@/components/ui';
+import { SkeletonCard, SkeletonRows } from '@/components/Skeleton';
 
 interface Standing {
   user_id: string;
@@ -343,8 +344,8 @@ export default function LeagueScreen() {
 
   if (authLoading) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.loadingText}>Loading...</Text>
+      <View style={[styles.container, { paddingTop: 60 }]}>
+        <SkeletonCard />
       </View>
     );
   }
@@ -576,7 +577,7 @@ export default function LeagueScreen() {
               {standingsExpanded && (
                 <View style={styles.sectionContent}>
                   {loading ? (
-                    <Text style={styles.loadingText}>Loading standings...</Text>
+                    <SkeletonRows count={4} />
                   ) : sortedStandings.length === 0 ? (
                     <View style={styles.emptyStandings}>
                       <Text style={styles.emptyText}>No standings yet</Text>

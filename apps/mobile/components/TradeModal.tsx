@@ -17,7 +17,7 @@ import { Colors } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
 import { Holding } from '@/lib/usePortfolio';
 import { isMarketOpen, getMarketStatus, getMarketStatusMessage } from '@/lib/marketHours';
-import { Button } from '@/components/ui';
+import { Banner, Button } from '@/components/ui';
 
 interface TradeModalProps {
   visible: boolean;
@@ -537,9 +537,7 @@ export default function TradeModal({
 
         {/* Error Message */}
         {error ? (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
+          <Banner variant="error" message={error} style={styles.errorBanner} />
         ) : null}
 
         {/* Action Buttons */}
@@ -929,18 +927,8 @@ const styles = StyleSheet.create({
   },
 
   // Error
-  errorBox: {
-    backgroundColor: Colors.errorBg,
-    borderWidth: 1,
-    borderColor: Colors.errorBorder,
-    borderRadius: 8,
-    padding: 12,
+  errorBanner: {
     marginBottom: 16,
-  },
-  errorText: {
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.error,
   },
 
   // Buttons

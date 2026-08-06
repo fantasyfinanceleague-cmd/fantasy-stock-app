@@ -2,6 +2,7 @@
 import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/ui';
+import { SkeletonCard, SkeletonRows } from '@/components/Skeleton';
 import { useAuth } from '@/lib/useAuth';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -531,9 +532,12 @@ export default function MatchupScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.loadingText}>Loading matchup...</Text>
+        <View style={{ paddingTop: 16 }}>
+          <SkeletonCard />
+          <View style={{ height: 16 }} />
+          <View style={{ paddingHorizontal: 24 }}>
+            <SkeletonRows count={5} />
+          </View>
         </View>
       </SafeAreaView>
     );

@@ -17,6 +17,7 @@ import {
 } from '@/lib/categoryData';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Button, Card, Screen } from '@/components/ui';
+import { SkeletonRows } from '@/components/Skeleton';
 
 interface LeagueMember {
   user_id: string;
@@ -294,7 +295,7 @@ export default function LeaguesScreen() {
         </View>
 
         {loading ? (
-          <Text style={styles.loadingText}>Loading leagues...</Text>
+          <SkeletonRows count={3} />
         ) : leagues.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyTitle}>No leagues yet</Text>
