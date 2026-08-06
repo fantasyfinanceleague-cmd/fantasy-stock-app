@@ -197,7 +197,7 @@ export default function JoinLeagueScreen() {
         disabled={!code.trim() || loading}
       >
         {loading ? (
-          <ActivityIndicator color="#FFFFFF" />
+          <ActivityIndicator color={Colors.white} />
         ) : (
           <Text style={styles.nextButtonText}>Look Up</Text>
         )}
@@ -300,10 +300,10 @@ export default function JoinLeagueScreen() {
           disabled={joining}
         >
           {joining ? (
-            <ActivityIndicator color="#FFFFFF" />
+            <ActivityIndicator color={Colors.white} />
           ) : (
             <>
-              <Ionicons name="enter-outline" size={20} color="#FFFFFF" />
+              <Ionicons name="enter-outline" size={20} color={Colors.white} />
               <Text style={styles.nextButtonText}>Join League</Text>
             </>
           )}
@@ -538,7 +538,7 @@ const styles = StyleSheet.create({
   nextButtonText: {
     fontSize: 15,
     fontFamily: 'Inter_700Bold',
-    color: '#FFFFFF',
+    color: Colors.white,
     letterSpacing: 0.5,
   },
   joinButton: {

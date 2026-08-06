@@ -352,7 +352,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
   },
   safeArea: {
     flex: 1,
@@ -470,16 +470,16 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   positive: {
-    color: '#059669',
+    color: Colors.success,
   },
   negative: {
-    color: '#DC2626',
+    color: Colors.error,
   },
   positiveBg: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: Colors.successBg,
   },
   negativeBg: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: Colors.errorBg,
   },
 
   // Sections
@@ -498,10 +498,10 @@ const styles = StyleSheet.create({
 
   // League rows
   leagueCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: Colors.border,
     shadowColor: '#000',
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -518,7 +518,7 @@ const styles = StyleSheet.create({
   },
   leagueRowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: Colors.borderLight,
   },
   leagueLeft: {
     flex: 1,
@@ -551,7 +551,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   rankPill: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: Colors.bgElevated,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
@@ -580,10 +580,10 @@ const styles = StyleSheet.create({
 
   // Matchup cards
   matchupCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: Colors.border,
     padding: 14,
     marginBottom: 8,
     shadowColor: '#000',
@@ -649,12 +649,12 @@ const styles = StyleSheet.create({
   winText: {
     fontSize: 13,
     fontFamily: 'Inter_600SemiBold',
-    color: '#059669',
+    color: Colors.success,
   },
   loseText: {
     fontSize: 13,
     fontFamily: 'Inter_600SemiBold',
-    color: '#DC2626',
+    color: Colors.error,
   },
   summaryDot: {
     fontSize: 13,
@@ -672,7 +672,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: Colors.bgElevated,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
@@ -694,13 +694,13 @@ const styles = StyleSheet.create({
 
   // Buttons
   primaryButton: {
-    backgroundColor: '#0891B2',
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
   },
   primaryButtonText: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: 16,
     fontFamily: 'Inter_600SemiBold',
   },

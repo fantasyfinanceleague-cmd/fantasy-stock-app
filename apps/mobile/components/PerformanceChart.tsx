@@ -106,7 +106,7 @@ export function PerformanceChart({ data, loading, onPeriodPLChange }: Performanc
 
   if (loading || data.length < 2) return null;
 
-  const lineColor = periodPL.isPositive ? '#0891B2' : '#DC2626';
+  const lineColor = periodPL.isPositive ? Colors.primary : Colors.error;
 
   // Y-axis auto-scaling: compute data range with 10% padding
   const values = filteredData.map(d => d.value);
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   periodPillActive: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: Colors.bgElevated,
   },
   periodText: {
     fontSize: 13,
@@ -219,6 +219,6 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
   periodTextDisabled: {
-    color: '#CBD5E1', // Slate-300 — clearly disabled
+    color: Colors.textDisabled, // Slate-300 — clearly disabled
   },
 });

@@ -105,7 +105,7 @@ export default function ForgotPasswordScreen() {
           <TextInput
             style={styles.input}
             placeholder="Email"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={Colors.textMuted}
             value={email}
             onChangeText={setEmail}
             autoCapitalize="none"
@@ -159,14 +159,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontFamily: 'Inter_700Bold',
-    color: '#0F172A',
+    color: Colors.textPrimary,
     textAlign: 'center',
     marginBottom: 12,
   },
   description: {
     fontSize: 15,
     fontFamily: 'Inter_400Regular',
-    color: '#64748B',
+    color: Colors.textSecondary,
     textAlign: 'center',
     marginBottom: 32,
     lineHeight: 22,
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   hint: {
     fontSize: 14,
     fontFamily: 'Inter_400Regular',
-    color: '#64748B',
+    color: Colors.textSecondary,
     textAlign: 'center',
     marginBottom: 32,
     lineHeight: 20,
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
     padding: 16,
     fontSize: 16,
     fontFamily: 'Inter_400Regular',
-    color: '#0F172A',
+    color: Colors.textPrimary,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   resendText: {
-    color: '#64748B',
+    color: Colors.textSecondary,
     fontSize: 14,
     fontFamily: 'Inter_400Regular',
   },

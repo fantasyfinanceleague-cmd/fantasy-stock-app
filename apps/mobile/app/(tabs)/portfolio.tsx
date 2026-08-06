@@ -49,7 +49,7 @@ function HoldingRow({ holding, companyName, onPress }: { holding: Holding; compa
               <Ionicons
                 name={isDayPositive ? 'trending-up' : 'trending-down'}
                 size={12}
-                color={isDayPositive ? '#059669' : '#DC2626'}
+                color={isDayPositive ? Colors.success : Colors.error}
               />
               <Text style={[styles.dayChangeText, isDayPositive ? styles.positive : styles.negative]}>
                 {isDayPositive ? '+' : ''}{dayChange.toFixed(2)}%
@@ -138,7 +138,7 @@ export default function PortfolioScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0891B2" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
       >
 
         {leagues.length === 0 ? (
@@ -171,14 +171,14 @@ export default function PortfolioScreen() {
                       <Ionicons
                         name={isUp ? 'trending-up' : 'trending-down'}
                         size={14}
-                        color={isUp ? '#059669' : '#DC2626'}
+                        color={isUp ? Colors.success : Colors.error}
                       />
                       <Text style={[styles.plPillText, isUp ? styles.positive : styles.negative]}>
                         {isUp ? '+' : ''}${formatCurrency(gl)}
                         {' '}({formatPercent(glPct)})
                       </Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={14} color="#94A3B8" style={{ marginLeft: 4 }} />
+                    <Ionicons name="chevron-forward" size={14} color={Colors.textMuted} style={{ marginLeft: 4 }} />
                   </TouchableOpacity>
                 );
               })()}
@@ -208,7 +208,7 @@ export default function PortfolioScreen() {
               </TouchableOpacity>
               <TouchableOpacity style={styles.ghostButton} onPress={() => router.push('/trade-history')}>
                 <Text style={styles.ghostButtonText}>View trade history</Text>
-                <Ionicons name="arrow-forward" size={16} color="#0891B2" />
+                <Ionicons name="arrow-forward" size={16} color={Colors.primary} />
               </TouchableOpacity>
             </View>
 
@@ -224,7 +224,7 @@ export default function PortfolioScreen() {
               ) : holdings.length === 0 ? (
                 <View style={styles.emptyHoldings}>
                   <View style={styles.emptyIcon}>
-                    <Ionicons name="bar-chart-outline" size={32} color="#94A3B8" />
+                    <Ionicons name="bar-chart-outline" size={32} color={Colors.textMuted} />
                   </View>
                   <Text style={styles.emptyText}>No holdings yet</Text>
                   <Text style={styles.emptySubtext}>Draft stocks or buy your first share!</Text>
@@ -293,9 +293,9 @@ const cardShadow = Platform.select({
 }) as object;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  container: { flex: 1, backgroundColor: Colors.white },
   scrollView: { flex: 1 },
-  loadingText: { color: '#94A3B8', fontSize: 16,
+  loadingText: { color: Colors.textMuted, fontSize: 16,
     fontFamily: 'Inter_400Regular', textAlign: 'center', marginTop: 100 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 100, paddingHorizontal: 24 },
 
@@ -308,14 +308,14 @@ const styles = StyleSheet.create({
   heroLabel: {
     fontSize: 13,
     fontFamily: 'Inter_500Medium',
-    color: '#64748B',
+    color: Colors.textSecondary,
     marginBottom: 4,
   },
   heroValue: {
     fontSize: 34,
     fontFamily: 'Inter_700Bold',
     fontVariant: ['tabular-nums'],
-    color: '#0F172A',
+    color: Colors.textPrimary,
     letterSpacing: -0.5,
   },
   plPill: {
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: 'Inter_400Regular',
     fontVariant: ['tabular-nums'],
-    color: '#94A3B8',
+    color: Colors.textMuted,
     marginTop: 8,
   },
 
@@ -357,13 +357,13 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   primaryButton: {
-    backgroundColor: '#0891B2',
+    backgroundColor: Colors.primary,
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
   },
   primaryButtonText: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: 16,
     fontFamily: 'Inter_600SemiBold',
   },
@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   ghostButtonText: {
-    color: '#0891B2',
+    color: Colors.primary,
     fontSize: 15,
     fontFamily: 'Inter_500Medium',
   },
@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontFamily: 'Inter_600SemiBold',
-    color: '#0F172A',
+    color: Colors.textPrimary,
     marginBottom: 16,
   },
 
@@ -396,32 +396,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: Colors.borderLight,
   },
   holdingLeft: { flex: 1 },
   holdingRight: { alignItems: 'flex-end' },
   holdingSymbol: {
     fontSize: 16,
     fontFamily: 'Inter_700Bold',
-    color: '#0F172A',
+    color: Colors.textPrimary,
   },
   holdingName: {
     fontSize: 13,
     fontFamily: 'Inter_400Regular',
-    color: '#64748B',
+    color: Colors.textSecondary,
     marginTop: 1,
   },
   holdingQty: {
     fontSize: 12,
     fontFamily: 'Inter_400Regular',
-    color: '#94A3B8',
+    color: Colors.textMuted,
     marginTop: 2,
   },
   holdingValue: {
     fontSize: 16,
     fontFamily: 'Inter_600SemiBold',
     fontVariant: ['tabular-nums'],
-    color: '#0F172A',
+    color: Colors.textPrimary,
     marginBottom: 4,
   },
   dayChangeBadge: {
@@ -439,10 +439,10 @@ const styles = StyleSheet.create({
   },
 
   // Status colors
-  positive: { color: '#059669' },
-  negative: { color: '#DC2626' },
-  positiveBg: { backgroundColor: '#ECFDF5' },
-  negativeBg: { backgroundColor: '#FEF2F2' },
+  positive: { color: Colors.success },
+  negative: { color: Colors.error },
+  positiveBg: { backgroundColor: Colors.successBg },
+  negativeBg: { backgroundColor: Colors.errorBg },
 
   // Empty states
   emptyHoldings: { alignItems: 'center', paddingVertical: 40 },
@@ -450,44 +450,44 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: Colors.bgElevated,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
   },
   emptyText: {
     fontSize: 16,
-    color: '#0F172A',
+    color: Colors.textPrimary,
     fontFamily: 'Inter_600SemiBold',
     marginBottom: 4,
   },
   emptySubtext: {
     fontSize: 14,
     fontFamily: 'Inter_400Regular',
-    color: '#94A3B8',
+    color: Colors.textMuted,
     marginBottom: 16,
   },
   emptyTitle: {
     fontSize: 20,
     fontFamily: 'Inter_600SemiBold',
-    color: '#0F172A',
+    color: Colors.textPrimary,
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
     fontFamily: 'Inter_400Regular',
-    color: '#94A3B8',
+    color: Colors.textMuted,
     marginBottom: 24,
     textAlign: 'center',
   },
   button: {
-    backgroundColor: '#0891B2',
+    backgroundColor: Colors.primary,
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 10,
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: 16,
     fontFamily: 'Inter_600SemiBold',
   },

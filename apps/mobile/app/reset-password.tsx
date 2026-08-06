@@ -93,7 +93,7 @@ export default function ResetPasswordScreen() {
           <TextInput
             style={styles.input}
             placeholder="New Password"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={Colors.textMuted}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -103,7 +103,7 @@ export default function ResetPasswordScreen() {
           <TextInput
             style={styles.input}
             placeholder="Confirm New Password"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={Colors.textMuted}
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             secureTextEntry
@@ -151,14 +151,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontFamily: 'Inter_700Bold',
-    color: '#0F172A',
+    color: Colors.textPrimary,
     textAlign: 'center',
     marginBottom: 12,
   },
   description: {
     fontSize: 15,
     fontFamily: 'Inter_400Regular',
-    color: '#64748B',
+    color: Colors.textSecondary,
     textAlign: 'center',
     marginBottom: 32,
     lineHeight: 22,
@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
     padding: 16,
     fontSize: 16,
     fontFamily: 'Inter_400Regular',
-    color: '#0F172A',
+    color: Colors.textPrimary,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelText: {
-    color: '#64748B',
+    color: Colors.textSecondary,
     fontSize: 14,
     fontFamily: 'Inter_400Regular',
   },

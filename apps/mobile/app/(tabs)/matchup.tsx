@@ -531,7 +531,7 @@ export default function MatchupScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#0891B2" />
+          <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loadingText}>Loading matchup...</Text>
         </View>
       </SafeAreaView>
@@ -584,7 +584,7 @@ export default function MatchupScreen() {
       <ScrollView
         style={styles.scrollView}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0891B2" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
         }
       >
         {/* Scoreboard */}
@@ -734,7 +734,7 @@ export default function MatchupScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
   },
   scrollView: {
     flex: 1,
@@ -746,7 +746,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   loadingText: {
-    color: '#94A3B8',
+    color: Colors.textMuted,
     fontSize: 14,
     fontFamily: 'Inter_400Regular',
     marginTop: 12,
@@ -759,13 +759,13 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontFamily: 'Inter_600SemiBold',
-    color: '#0F172A',
+    color: Colors.textPrimary,
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
     fontFamily: 'Inter_400Regular',
-    color: '#94A3B8',
+    color: Colors.textMuted,
     textAlign: 'center',
     lineHeight: 20,
   },
@@ -792,10 +792,10 @@ const styles = StyleSheet.create({
     marginHorizontal: 24,
     marginTop: 16,
     marginBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: Colors.border,
     overflow: 'hidden',
   },
   scoreTeam: {
@@ -805,7 +805,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   scoreTeamWinning: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: Colors.successBg,
   },
   scoreAvatar: {
     fontSize: 40,
@@ -817,7 +817,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Inter_600SemiBold',
     fontVariant: ['tabular-nums'],
-    color: '#0F172A',
+    color: Colors.textPrimary,
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -830,8 +830,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 10,
     fontFamily: 'Inter_700Bold',
-    color: '#059669',
-    backgroundColor: '#ECFDF5',
+    color: Colors.success,
+    backgroundColor: Colors.successBg,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
@@ -845,45 +845,45 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Inter_700Bold',
     fontVariant: ['tabular-nums'],
-    color: '#94A3B8',
+    color: Colors.textMuted,
   },
   // Side-by-side Lineups
   lineupsContainer: {
     marginHorizontal: 16,
     marginBottom: 24,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: Colors.border,
     overflow: 'hidden',
   },
   lineupHeaders: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: Colors.border,
   },
   lineupHeaderBox: {
     flex: 1,
     paddingVertical: 12,
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.bgSurface,
   },
   lineupHeaderWinning: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: Colors.successBg,
   },
   lineupHeaderText: {
     fontSize: 14,
     fontFamily: 'Inter_700Bold',
-    color: '#0F172A',
+    color: Colors.textPrimary,
   },
   lineupHeaderDivider: {
     width: 40,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.bgSurface,
   },
   comparisonRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: Colors.borderLight,
   },
   stockCell: {
     flex: 1,
@@ -894,7 +894,7 @@ const styles = StyleSheet.create({
   stockSymbol: {
     fontSize: 15,
     fontFamily: 'Inter_700Bold',
-    color: '#0F172A',
+    color: Colors.textPrimary,
   },
   stockGain: {
     fontSize: 14,
@@ -905,22 +905,22 @@ const styles = StyleSheet.create({
   emptySlot: {
     fontSize: 16,
     fontFamily: 'Inter_400Regular',
-    color: '#94A3B8',
+    color: Colors.textMuted,
   },
   slotDivider: {
     width: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.bgSurface,
   },
   slotNumber: {
     fontSize: 12,
     fontFamily: 'Inter_700Bold',
-    color: '#94A3B8',
+    color: Colors.textMuted,
   },
   totalsRow: {
     flexDirection: 'row',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.bgSurface,
   },
   totalCell: {
     flex: 1,
@@ -931,7 +931,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: 'Inter_700Bold',
     fontVariant: ['tabular-nums'],
-    color: '#64748B',
+    color: Colors.textSecondary,
     letterSpacing: 1,
   },
   totalValue: {
@@ -942,12 +942,12 @@ const styles = StyleSheet.create({
   },
   totalDivider: {
     width: 40,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.bgSurface,
   },
   positive: {
-    color: '#059669',
+    color: Colors.success,
   },
   negative: {
-    color: '#DC2626',
+    color: Colors.error,
   },
 });

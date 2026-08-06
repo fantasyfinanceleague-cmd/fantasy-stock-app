@@ -629,7 +629,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   draftedBadge: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: Colors.warningBg,
   },
   boughtBadge: {
     backgroundColor: Colors.primaryBg,
@@ -651,7 +651,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 4,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: Colors.bgElevated,
   },
   soldText: {
     fontSize: 11,

@@ -601,7 +601,7 @@ const styles = StyleSheet.create({
   },
   overlayBackground: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: Colors.overlay,
   },
   modalContainer: {
     backgroundColor: Colors.cardBg,
@@ -631,9 +631,9 @@ const styles = StyleSheet.create({
   },
   // Locked box (not Monday)
   lockedBox: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: Colors.warningBg,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: Colors.warningBorder,
     borderRadius: 12,
     padding: 20,
     marginBottom: 20,
@@ -664,7 +664,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   lockedButtonText: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: 16,
     fontFamily: 'Inter_600SemiBold',
   },
@@ -810,10 +810,10 @@ const styles = StyleSheet.create({
   selectedStock: {
     marginTop: 10,
     padding: 12,
-    backgroundColor: '#ECFDF5',
+    backgroundColor: Colors.successBg,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#A7F3D0',
+    borderColor: Colors.successBorder,
   },
   selectedSymbol: {
     fontSize: 16,
@@ -877,9 +877,9 @@ const styles = StyleSheet.create({
 
   // Price box
   priceBox: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: Colors.infoBg,
     borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderColor: Colors.infoBorder,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -903,7 +903,7 @@ const styles = StyleSheet.create({
   },
   priceDivider: {
     height: 1,
-    backgroundColor: '#BFDBFE',
+    backgroundColor: Colors.infoBorder,
     marginVertical: 12,
   },
   totalLabel: {
@@ -935,9 +935,9 @@ const styles = StyleSheet.create({
 
   // Error
   errorBox: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: Colors.errorBg,
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: Colors.errorBorder,
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
@@ -945,7 +945,7 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 14,
     fontFamily: 'Inter_400Regular',
-    color: '#DC2626',
+    color: Colors.error,
   },
 
   // Buttons

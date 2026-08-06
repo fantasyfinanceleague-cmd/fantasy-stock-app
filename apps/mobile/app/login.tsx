@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { validateUsername } from '@/lib/contentModeration';
 import { PASSWORD_REQUIREMENTS, failingPasswordRequirements } from '@/constants/passwordRules';
+import { Colors } from '@/constants/Colors';
 
 const { width } = Dimensions.get('window');
 
@@ -102,11 +103,11 @@ export default function LoginScreen() {
         {isSignUp && (
           <>
             <View style={styles.inputContainer}>
-              <Ionicons name="person-outline" size={20} color="#94A3B8" style={styles.inputIcon} />
+              <Ionicons name="person-outline" size={20} color={Colors.textMuted} style={styles.inputIcon} />
               <TextInput
                 style={styles.inputField}
                 placeholder="Username"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={Colors.textMuted}
                 value={username}
                 onChangeText={setUsername}
                 autoCapitalize="none"
@@ -118,11 +119,11 @@ export default function LoginScreen() {
         )}
 
         <View style={styles.inputContainer}>
-          <Ionicons name="mail-outline" size={20} color="#94A3B8" style={styles.inputIcon} />
+          <Ionicons name="mail-outline" size={20} color={Colors.textMuted} style={styles.inputIcon} />
           <TextInput
             style={styles.inputField}
             placeholder="Email address"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={Colors.textMuted}
             value={email}
             onChangeText={setEmail}
             autoCapitalize="none"
@@ -131,11 +132,11 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.inputContainer}>
-          <Ionicons name="lock-closed-outline" size={20} color="#94A3B8" style={styles.inputIcon} />
+          <Ionicons name="lock-closed-outline" size={20} color={Colors.textMuted} style={styles.inputIcon} />
           <TextInput
             style={styles.inputField}
             placeholder="Password"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={Colors.textMuted}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -205,7 +206,7 @@ const cardShadow = Platform.select({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     justifyContent: 'center',
     paddingHorizontal: 24,
   },
@@ -220,39 +221,39 @@ const styles = StyleSheet.create({
   tagline: {
     fontSize: 15,
     fontFamily: 'Inter_400Regular',
-    color: '#64748B',
+    color: Colors.textSecondary,
     marginTop: 12,
     letterSpacing: 0.3,
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 20,
     padding: 28,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: Colors.border,
   },
   title: {
     fontSize: 26,
     fontFamily: 'Inter_600SemiBold',
-    color: '#0F172A',
+    color: Colors.textPrimary,
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 15,
     fontFamily: 'Inter_400Regular',
-    color: '#64748B',
+    color: Colors.textSecondary,
     textAlign: 'center',
     marginBottom: 28,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: Colors.bgElevated,
     borderRadius: 12,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: Colors.border,
   },
   inputIcon: {
     paddingLeft: 16,
@@ -263,12 +264,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     fontSize: 16,
     fontFamily: 'Inter_400Regular',
-    color: '#0F172A',
+    color: Colors.textPrimary,
   },
   hint: {
     fontSize: 12,
     fontFamily: 'Inter_400Regular',
-    color: '#94A3B8',
+    color: Colors.textMuted,
     marginTop: -10,
     marginBottom: 16,
     marginLeft: 4,
@@ -276,7 +277,7 @@ const styles = StyleSheet.create({
   button: {
     marginTop: 8,
     borderRadius: 12,
-    backgroundColor: '#0891B2',
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     alignItems: 'center',
   },
@@ -284,7 +285,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: 16,
     fontFamily: 'Inter_600SemiBold',
   },
@@ -293,12 +294,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   switchText: {
-    color: '#64748B',
+    color: Colors.textSecondary,
     fontSize: 15,
     fontFamily: 'Inter_400Regular',
   },
   switchTextBold: {
-    color: '#0891B2',
+    color: Colors.primary,
     fontFamily: 'Inter_600SemiBold',
   },
   forgotButton: {
@@ -307,7 +308,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   forgotText: {
-    color: '#64748B',
+    color: Colors.textSecondary,
     fontSize: 14,
     fontFamily: 'Inter_400Regular',
   },

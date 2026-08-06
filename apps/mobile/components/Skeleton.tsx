@@ -79,7 +79,7 @@ export function SkeletonHolding() {
 
 const styles = StyleSheet.create({
   skeleton: {
-    backgroundColor: '#E2E8F0',
+    backgroundColor: Colors.border,
   },
   card: {
     backgroundColor: Colors.glassBg,

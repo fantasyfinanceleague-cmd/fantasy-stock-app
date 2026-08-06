@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.bgSurface,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   arrowButtonDisabled: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: Colors.bgElevated,
     opacity: 0.5,
   },
   weekDisplay: {
@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: Colors.primaryBg,
     borderWidth: 1,
-    borderColor: '#0891B2',
+    borderColor: Colors.primary,
   },
   badgeTextCurrent: {
     fontSize: 11,
@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
   badgeTextFinal: {
     fontSize: 11,
     fontFamily: 'Inter_600SemiBold',
-    color: '#FFFFFF',
+    color: Colors.white,
   },
   totalWeeks: {
     fontSize: 12,

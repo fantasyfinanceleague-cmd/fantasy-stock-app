@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
   },
   filterButtonTextActive: {
-    color: '#FFFFFF',
+    color: Colors.white,
   },
   scrollView: {
     flex: 1,

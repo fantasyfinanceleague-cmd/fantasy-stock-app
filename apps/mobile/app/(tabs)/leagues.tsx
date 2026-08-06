@@ -677,8 +677,8 @@ export default function LeaguesScreen() {
                     </Text>
                   </View>
                   {selectedLeague.commissioner_id === user?.id && (
-                    <View style={[styles.statusBadge, { backgroundColor: '#a855f720' }]}>
-                      <Text style={[styles.statusText, { color: '#a855f7' }]}>Commissioner</Text>
+                    <View style={[styles.statusBadge, { backgroundColor: Colors.commissionerBg }]}>
+                      <Text style={[styles.statusText, { color: Colors.commissioner }]}>Commissioner</Text>
                     </View>
                   )}
                 </View>
@@ -804,8 +804,8 @@ export default function LeaguesScreen() {
                           {member.user_id === user?.id && ' (You)'}
                         </Text>
                         {member.role === 'commissioner' && (
-                          <View style={[styles.statusBadge, { backgroundColor: '#a855f720' }]}>
-                            <Text style={[styles.statusText, { color: '#a855f7', fontSize: 10 }]}>
+                          <View style={[styles.statusBadge, { backgroundColor: Colors.commissionerBg }]}>
+                            <Text style={[styles.statusText, { color: Colors.commissioner, fontSize: 10 }]}>
                               Commissioner
                             </Text>
                           </View>
@@ -1239,7 +1239,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   memberRowHighlight: {
-    backgroundColor: '#1e3a5f',
+    backgroundColor: Colors.memberHighlight,
   },
   memberName: {
     fontSize: 14,

@@ -31,8 +31,8 @@ export default function TabLayout() {
         tabBarActiveTintColor: Colors.tabActive,
         tabBarInactiveTintColor: Colors.tabInactive,
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopColor: '#E2E8F0',
+          backgroundColor: Colors.white,
+          borderTopColor: Colors.border,
           borderTopWidth: StyleSheet.hairlineWidth,
           elevation: 0,
         },
@@ -41,7 +41,7 @@ export default function TabLayout() {
           marginTop: 2,
         },
         headerStyle: {
-          backgroundColor: '#FFFFFF',
+          backgroundColor: Colors.white,
         },
         headerTintColor: Colors.textPrimary,
         headerShown: false,

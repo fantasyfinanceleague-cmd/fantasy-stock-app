@@ -866,7 +866,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     borderWidth: 2,
-    borderColor: '#0891B2',
+    borderColor: Colors.primary,
     marginBottom: 16,
   },
   searchTitle: {
@@ -897,7 +897,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   searchBtnText: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontFamily: 'Inter_600SemiBold',
   },
   quoteCard: {
@@ -932,7 +932,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   draftBtnText: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: 16,
     fontFamily: 'Inter_700Bold',
   },
@@ -958,7 +958,7 @@ const styles = StyleSheet.create({
   },
   orderRowCurrent: {
     borderColor: Colors.primary,
-    backgroundColor: '#ECFEFF',
+    backgroundColor: Colors.cyanLight,
   },
   orderRowDone: {
     opacity: 0.5,
@@ -1140,7 +1140,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'Inter_600SemiBold',
     fontVariant: ['tabular-nums'],
-    color: '#FFFFFF',
+    color: Colors.white,
   },
   yourPickSymbol: {
     flex: 1,
@@ -1241,7 +1241,7 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
   },
   dropdownChipTextActive: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontFamily: 'Inter_600SemiBold',
   },
   // Round picks styles
@@ -1309,7 +1309,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.bgSurface,
   },
   teamDetailName: {
     fontSize: 18,

@@ -250,7 +250,7 @@ export default function CreateLeagueWizard() {
           style={styles.primaryButton}
           onPress={() => setStep('name')}
         >
-          <Ionicons name="add-circle-outline" size={20} color="#FFFFFF" />
+          <Ionicons name="add-circle-outline" size={20} color={Colors.white} />
           <Text style={styles.primaryButtonText}>Create League</Text>
         </TouchableOpacity>
 
@@ -754,7 +754,7 @@ export default function CreateLeagueWizard() {
         disabled={creating}
       >
         {creating ? (
-          <ActivityIndicator color="#FFFFFF" />
+          <ActivityIndicator color={Colors.white} />
         ) : (
           <Text style={styles.nextButtonText}>Create League</Text>
         )}
@@ -891,7 +891,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: 15,
     fontFamily: 'Inter_700Bold',
-    color: '#FFFFFF',
+    color: Colors.white,
     letterSpacing: 0.5,
   },
   secondaryButton: {
@@ -1015,7 +1015,7 @@ const styles = StyleSheet.create({
   popularBadgeText: {
     fontSize: 10,
     fontFamily: 'Inter_700Bold',
-    color: '#FFFFFF',
+    color: Colors.white,
     letterSpacing: 0.5,
   },
 
@@ -1327,7 +1327,7 @@ const styles = StyleSheet.create({
   nextButtonText: {
     fontSize: 15,
     fontFamily: 'Inter_700Bold',
-    color: '#FFFFFF',
+    color: Colors.white,
     letterSpacing: 0.5,
   },
   doneButton: {

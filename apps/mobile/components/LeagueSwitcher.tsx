@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: Colors.overlay,
     paddingTop: 100,
   },
   modalContent: {
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   leagueItemActive: {
-    backgroundColor: '#ECFEFF',
+    backgroundColor: Colors.cyanLight,
   },
   leagueItemIcon: {
     fontSize: 28,

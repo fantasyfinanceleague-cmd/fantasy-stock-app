@@ -525,10 +525,10 @@ export default function LeagueSettingsScreen() {
                   disabled={startingNewSeason}
                 >
                   {startingNewSeason ? (
-                    <ActivityIndicator color="#FFFFFF" />
+                    <ActivityIndicator color={Colors.white} />
                   ) : (
                     <>
-                      <Ionicons name="refresh" size={20} color="#FFFFFF" />
+                      <Ionicons name="refresh" size={20} color={Colors.white} />
                       <Text style={styles.newSeasonButtonText}>Start New Season</Text>
                     </>
                   )}
@@ -549,7 +549,7 @@ export default function LeagueSettingsScreen() {
               disabled={saving}
             >
               {saving ? (
-                <ActivityIndicator color="#FFFFFF" />
+                <ActivityIndicator color={Colors.white} />
               ) : (
                 <Text style={styles.saveButtonText}>Save Changes</Text>
               )}
@@ -841,7 +841,7 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 15,
     fontFamily: 'Inter_700Bold',
-    color: '#FFFFFF',
+    color: Colors.white,
     letterSpacing: 0.5,
   },
 
@@ -881,7 +881,7 @@ const styles = StyleSheet.create({
   newSeasonButtonText: {
     fontSize: 14,
     fontFamily: 'Inter_700Bold',
-    color: '#FFFFFF',
+    color: Colors.white,
     letterSpacing: 0.5,
   },
   // Phase 4 stake-mode UI
