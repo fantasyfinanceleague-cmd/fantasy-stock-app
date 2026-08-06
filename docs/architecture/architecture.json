@@ -2,22 +2,27 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "2dd699fb7a31c429038bea2cccbb245473b2695d",
-    "commitShort": "2dd699f",
+    "commit": "c598263995698847c55bd95a07b3849d0d59615c",
+    "commitShort": "c598263",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "security/claude-security-fixes-20260730",
-    "dirty": false,
-    "dirtyPaths": [],
-    "timestamp": "2026-07-30T23:58:35Z",
-    "sourceHash": "sha256:f981a62c2ba08e4919799d491d478e8c91ae6098d3373d5f739d57f325a4981a",
+    "dirty": true,
+    "dirtyPaths": [
+      {
+        "code": "AM",
+        "path": "supabase/migrations/20260728000002_fix_refresh_symbols_cron_auth.sql"
+      }
+    ],
+    "timestamp": "2026-08-06T05:27:18Z",
+    "sourceHash": "sha256:6535b453da85090854d31311e1212ed0645ec72f4c125ea5db9b775db0ddf369",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-07-30T03:10:26Z",
-    "ageHours": 20.8,
-    "ageDays": 0.9,
+    "ageHours": 170.3,
+    "ageDays": 7.1,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:74cc797461d0f3634b1e75de6bd5e372a016f54dbc9c18131257b7bc2ec8c927",
@@ -102,14 +107,19 @@
         "sendsApikey": false
       },
       "db": null,
-      "declared": null,
+      "declared": {
+        "schedule": "0 6 * * *",
+        "definedIn": [
+          "supabase/migrations/20260728000002_fix_refresh_symbols_cron_auth.sql:158"
+        ]
+      },
       "drift": [
         {
-          "field": "origin",
-          "declared": "(not scheduled by any migration)",
-          "live": "active, 0 */6 * * *",
-          "severity": "medium",
-          "note": "This job exists in prod but no migration in supabase/migrations/ schedules it by this name. It was created out-of-band and is not reproducible from the repo."
+          "field": "schedule",
+          "declared": "0 6 * * *",
+          "live": "0 */6 * * *",
+          "severity": "high",
+          "note": "The live cron schedule differs from the latest migration that scheduled this job."
         }
       ],
       "annotation": "The oldest job in the schedule (jobid 7, versus 18-21 for the cron-auth-migrated set) and the only one that sends no auth header at all. It predates the RLS-hardening pass that set verify_jwt=true on refresh-symbols, and it was never migrated because no migration in the repo schedules it — it was created out-of-band, so the Phase 2b sweep over supabase/migrations/ never saw it. Its `symbols` target table is likewise created by no migration. IMPORTANT when diagnosing this: cron.job_run_details reports 'succeeded' for every run regardless, because net.http_post is asynchronous — the job status records that the request was ENQUEUED (return_message '1 row' is the request id), not what the server answered. Checked 2026-07-27: five consecutive 'succeeded' runs, which is exactly what a job 401ing every six hours also looks like. Use net._http_response, or check whether the symbols rows actually changed.",
@@ -118,7 +128,10 @@
       "label": "refresh_symbols_daily",
       "sublabel": "0 */6 * * *",
       "kind": "cron-job",
-      "source": null
+      "source": {
+        "path": "supabase/migrations/20260728000002_fix_refresh_symbols_cron_auth.sql",
+        "line": 158
+      }
     },
     {
       "layer": "trigger",
@@ -3213,7 +3226,9 @@
       "to": "fn.refresh-symbols",
       "protocol": "pg-net-http",
       "payload": "net.http_post · NO auth header",
-      "callSites": []
+      "callSites": [
+        "supabase/migrations/20260728000002_fix_refresh_symbols_cron_auth.sql:158"
+      ]
     },
     {
       "annotation": null,
@@ -7082,6 +7097,16 @@
   ],
   "drift": [
     {
+      "node": "cron.refresh_symbols_daily",
+      "label": "refresh_symbols_daily",
+      "groupKey": "schedule",
+      "field": "schedule",
+      "declared": "0 6 * * *",
+      "live": "0 */6 * * *",
+      "severity": "high",
+      "note": "The live cron schedule differs from the latest migration that scheduled this job."
+    },
+    {
       "node": "pg.enforce_leagues_member_update_columns",
       "label": "enforce_leagues_member_update_columns()",
       "groupKey": "existence",
@@ -7100,16 +7125,6 @@
       "live": "read symbols (SELECT, predicate: true)",
       "severity": "high",
       "note": "UNAUTHENTICATED READ of every row. PUBLIC includes anon and the predicate is unconditional. This may be intentional for public reference data — but it must be an explicit decision, not an assumption, and it has to be consistent with any function-level lockdown covering the same data."
-    },
-    {
-      "node": "cron.refresh_symbols_daily",
-      "label": "refresh_symbols_daily",
-      "groupKey": "origin",
-      "field": "origin",
-      "declared": "(not scheduled by any migration)",
-      "live": "active, 0 */6 * * *",
-      "severity": "medium",
-      "note": "This job exists in prod but no migration in supabase/migrations/ schedules it by this name. It was created out-of-band and is not reproducible from the repo."
     },
     {
       "node": "tbl.user_profiles",
@@ -7336,7 +7351,7 @@
     "edges": 228,
     "flows": 9,
     "drift": 15,
-    "driftHigh": 2,
+    "driftHigh": 3,
     "deadCode": 7,
     "unverified": 6
   },
@@ -7644,6 +7659,7 @@
       "20260727100000_week_snapshots_entered_mid_week.sql",
       "20260728000000_drop_notification_log.sql",
       "20260728000001_gate_user_profiles_to_authenticated.sql",
+      "20260728000002_fix_refresh_symbols_cron_auth.sql",
       "20260730000000_leagues_member_draft_complete_column_guard.sql",
       "20260730000001_tighten_league_standings_insert.sql",
       "20260730000004_trades_remove_client_insert_policy.sql"
