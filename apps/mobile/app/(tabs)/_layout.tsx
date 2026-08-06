@@ -1,15 +1,15 @@
 import React from 'react';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { Ionicons } from '@expo/vector-icons';
 import { Tabs, Redirect } from 'expo-router';
 import { StyleSheet } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { useAuth } from '@/lib/useAuth';
 
 function TabBarIcon(props: {
-  name: React.ComponentProps<typeof FontAwesome>['name'];
+  name: React.ComponentProps<typeof Ionicons>['name'];
   color: string;
 }) {
-  return <FontAwesome size={22} style={{ marginBottom: -3 }} {...props} />;
+  return <Ionicons size={24} style={{ marginBottom: -3 }} {...props} />;
 }
 
 export default function TabLayout() {
@@ -50,7 +50,9 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name={focused ? 'home' : 'home-outline'} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -63,35 +65,41 @@ export default function TabLayout() {
         name="draft"
         options={{
           title: 'Draft',
-          tabBarIcon: ({ color }) => <TabBarIcon name="gavel" color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name={focused ? 'hammer' : 'hammer-outline'} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="portfolio"
         options={{
           title: 'Portfolio',
-          tabBarIcon: ({ color }) => <TabBarIcon name="line-chart" color={color} />,
+          tabBarIcon: ({ color }) => <TabBarIcon name="trending-up" color={color} />,
         }}
       />
       <Tabs.Screen
         name="matchup"
         options={{
           title: 'Matchup',
-          tabBarIcon: ({ color }) => <TabBarIcon name="exchange" color={color} />,
+          tabBarIcon: ({ color }) => <TabBarIcon name="swap-horizontal" color={color} />,
         }}
       />
       <Tabs.Screen
         name="league"
         options={{
           title: 'League',
-          tabBarIcon: ({ color }) => <TabBarIcon name="trophy" color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name={focused ? 'trophy' : 'trophy-outline'} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name={focused ? 'person' : 'person-outline'} color={color} />
+          ),
         }}
       />
     </Tabs>
