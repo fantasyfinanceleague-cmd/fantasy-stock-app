@@ -15,6 +15,7 @@ import LeagueSwitcher from '@/components/LeagueSwitcher';
 import TradeModal from '@/components/TradeModal';
 import PLBreakdownModal from '@/components/PLBreakdownModal';
 import { Ionicons } from '@expo/vector-icons';
+import { Button } from '@/components/ui';
 
 function formatCurrency(value: number): string {
   return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -120,9 +121,11 @@ export default function PortfolioScreen() {
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.centered}>
           <Text style={styles.emptyTitle}>Sign in to view portfolio</Text>
-          <TouchableOpacity style={styles.button} onPress={() => router.push('/login')}>
-            <Text style={styles.buttonText}>Sign In</Text>
-          </TouchableOpacity>
+          <Button
+            title="Sign In"
+            onPress={() => router.push('/login')}
+            variant="primary"
+          />
         </View>
       </SafeAreaView>
     );
@@ -145,9 +148,11 @@ export default function PortfolioScreen() {
           <View style={styles.centered}>
             <Text style={styles.emptyTitle}>No leagues yet</Text>
             <Text style={styles.emptySubtitle}>Join a league to start building your portfolio</Text>
-            <TouchableOpacity style={styles.button} onPress={() => router.push('/(tabs)/leagues')}>
-              <Text style={styles.buttonText}>View Leagues</Text>
-            </TouchableOpacity>
+            <Button
+              title="View Leagues"
+              onPress={() => router.push('/(tabs)/leagues')}
+              variant="primary"
+            />
           </View>
         ) : (
           <>
@@ -203,13 +208,17 @@ export default function PortfolioScreen() {
 
             {/* Actions */}
             <View style={styles.actionsRow}>
-              <TouchableOpacity style={styles.primaryButton} onPress={() => openTradeModal('', 'buy')}>
-                <Text style={styles.primaryButtonText}>Buy Stock</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.ghostButton} onPress={() => router.push('/trade-history')}>
-                <Text style={styles.ghostButtonText}>View trade history</Text>
-                <Ionicons name="arrow-forward" size={16} color={Colors.primary} />
-              </TouchableOpacity>
+              <Button
+                title="Buy Stock"
+                onPress={() => openTradeModal('', 'buy')}
+                variant="primary"
+              />
+              <Button
+                title="View trade history"
+                onPress={() => router.push('/trade-history')}
+                variant="ghost"
+                icon={<Ionicons name="arrow-forward" size={16} color={Colors.primary} />}
+              />
             </View>
 
             {/* Holdings */}
@@ -228,9 +237,11 @@ export default function PortfolioScreen() {
                   </View>
                   <Text style={styles.emptyText}>No holdings yet</Text>
                   <Text style={styles.emptySubtext}>Draft stocks or buy your first share!</Text>
-                  <TouchableOpacity style={styles.button} onPress={() => openTradeModal('', 'buy')}>
-                    <Text style={styles.buttonText}>Buy Stock</Text>
-                  </TouchableOpacity>
+                  <Button
+                    title="Buy Stock"
+                    onPress={() => openTradeModal('', 'buy')}
+                    variant="primary"
+                  />
                 </View>
               ) : (
                 holdings.map((holding) => (
@@ -278,19 +289,6 @@ export default function PortfolioScreen() {
     </SafeAreaView>
   );
 }
-
-const cardShadow = Platform.select({
-  ios: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-  },
-  android: {
-    elevation: 2,
-  },
-  default: {},
-}) as object;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.white },
@@ -355,29 +353,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     gap: 12,
     marginBottom: 24,
-  },
-  primaryButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  primaryButtonText: {
-    color: Colors.white,
-    fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
-  },
-  ghostButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    paddingVertical: 8,
-  },
-  ghostButtonText: {
-    color: Colors.primary,
-    fontSize: 15,
-    fontFamily: 'Inter_500Medium',
   },
 
   // Section
@@ -479,16 +454,5 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     marginBottom: 24,
     textAlign: 'center',
-  },
-  button: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 10,
-  },
-  buttonText: {
-    color: Colors.white,
-    fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
   },
 });

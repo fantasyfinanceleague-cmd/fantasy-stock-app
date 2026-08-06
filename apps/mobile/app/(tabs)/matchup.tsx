@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Card } from '@/components/ui';
 import { useAuth } from '@/lib/useAuth';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -588,7 +589,7 @@ export default function MatchupScreen() {
         }
       >
         {/* Scoreboard */}
-        <View style={styles.scoreboard}>
+        <Card padded={false} style={styles.scoreboard}>
           {/* Team 1 */}
           <View style={[styles.scoreTeam, isTeam1Winning && styles.scoreTeamWinning]}>
             <Text style={styles.scoreAvatar}>{getAvatar(matchup.team1_user_id)}</Text>
@@ -625,7 +626,7 @@ export default function MatchupScreen() {
             </Text>
             {isTeam2Winning && <Text style={styles.winningBadge}>Leading</Text>}
           </View>
-        </View>
+        </Card>
 
         {/* Week Navigator */}
         <View style={styles.weekNavContainer}>
@@ -641,7 +642,7 @@ export default function MatchupScreen() {
         </View>
 
         {/* Side-by-side Lineups */}
-        <View style={styles.lineupsContainer}>
+        <Card padded={false} style={styles.lineupsContainer}>
           {/* Headers */}
           <View style={styles.lineupHeaders}>
             <View style={[styles.lineupHeaderBox, isTeam1Winning && styles.lineupHeaderWinning]}>
@@ -725,7 +726,7 @@ export default function MatchupScreen() {
               </Text>
             </View>
           </View>
-        </View>
+        </Card>
       </ScrollView>
     </SafeAreaView>
   );
@@ -792,11 +793,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 24,
     marginTop: 16,
     marginBottom: 16,
-    backgroundColor: Colors.white,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    overflow: 'hidden',
   },
   scoreTeam: {
     flex: 1,
@@ -849,13 +845,8 @@ const styles = StyleSheet.create({
   },
   // Side-by-side Lineups
   lineupsContainer: {
-    marginHorizontal: 16,
+    marginHorizontal: 24,
     marginBottom: 24,
-    backgroundColor: Colors.white,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    overflow: 'hidden',
   },
   lineupHeaders: {
     flexDirection: 'row',

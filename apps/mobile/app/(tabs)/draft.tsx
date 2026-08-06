@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, RefreshControl, ActivityIndicator, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { useAuth } from '@/lib/useAuth';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { useState, useEffect, useCallback } from 'react';
@@ -13,6 +12,7 @@ import {
   fetchCategories,
   fetchSymbolCategories,
 } from '@/lib/categoryData';
+import { Button, Card, Screen } from '@/components/ui';
 
 interface DraftPick {
   id: string;
@@ -362,13 +362,13 @@ export default function DraftScreen() {
 
   if (!activeLeagueId || !activeLeague) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <Screen scroll={false}>
         <LeagueSwitcher />
         <View style={styles.centered}>
           <Text style={styles.emptyTitle}>No league selected</Text>
           <Text style={styles.emptySubtitle}>Select a league from Home</Text>
         </View>
-      </SafeAreaView>
+      </Screen>
     );
   }
 
@@ -377,7 +377,7 @@ export default function DraftScreen() {
   if (activeLeague.stake_mode == null) {
     const isCommish = activeLeague.commissioner_id === user?.id;
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <Screen scroll={false}>
         <LeagueSwitcher />
         <View style={styles.centered}>
           <Text style={styles.pendingIcon}>⚖️</Text>
@@ -391,14 +391,14 @@ export default function DraftScreen() {
               : 'Ask your commissioner to choose a stake mode in League Settings.'}
           </Text>
         </View>
-      </SafeAreaView>
+      </Screen>
     );
   }
 
   if (isDraftNotStarted) {
     const hasDraftDate = activeLeague.draft_date != null;
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <Screen scroll={false}>
         <LeagueSwitcher />
         <View style={styles.centered}>
           <Text style={styles.pendingIcon}>⏰</Text>
@@ -414,7 +414,7 @@ export default function DraftScreen() {
               : 'The commissioner needs to set a draft date before the draft can begin'}
           </Text>
         </View>
-      </SafeAreaView>
+      </Screen>
     );
   }
 
@@ -435,13 +435,9 @@ export default function DraftScreen() {
     })).sort((a, b) => b.totalValue - a.totalValue);
 
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <Screen refreshing={refreshing} onRefresh={onRefresh}>
         <LeagueSwitcher />
 
-        <ScrollView
-          style={styles.scrollView}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
-        >
           {/* Completion Header */}
           <View style={styles.completionHeader}>
             <Text style={styles.completionIcon}>🏆</Text>
@@ -449,7 +445,7 @@ export default function DraftScreen() {
           </View>
 
           {/* Summary Stats */}
-          <View style={styles.summaryCard}>
+          <Card style={styles.summaryCard}>
             <View style={styles.summaryRow}>
               <View style={styles.summaryItem}>
                 <Text style={styles.summaryValue}>{teamCount}</Text>
@@ -464,7 +460,7 @@ export default function DraftScreen() {
                 <Text style={styles.summaryLabel}>Rounds</Text>
               </View>
             </View>
-          </View>
+          </Card>
 
           {/* Your Team */}
           <View style={styles.section}>
@@ -506,7 +502,7 @@ export default function DraftScreen() {
                 ))}
               </ScrollView>
             </View>
-            <View style={styles.roundPicksCard}>
+            <Card padded={false} style={styles.roundPicksCard}>
               {picks
                 .filter(p => {
                   // Calculate round from pick_number instead of using stored round
@@ -530,7 +526,7 @@ export default function DraftScreen() {
                     </View>
                   );
                 })}
-            </View>
+            </Card>
           </View>
 
           {/* View Other Teams */}
@@ -552,7 +548,7 @@ export default function DraftScreen() {
               </ScrollView>
             </View>
             {selectedTeamId && (
-              <View style={styles.teamDetailCard}>
+              <Card padded={false} style={styles.teamDetailCard}>
                 {(() => {
                   const team = teamRosters.find(t => t.userId === selectedTeamId);
                   if (!team) return null;
@@ -577,35 +573,29 @@ export default function DraftScreen() {
                     </>
                   );
                 })()}
-              </View>
+              </Card>
             )}
             {!selectedTeamId && (
-              <View style={styles.selectTeamPrompt}>
+              <Card style={styles.selectTeamPrompt}>
                 <Text style={styles.selectTeamText}>Select a team above to view their picks</Text>
-              </View>
+              </Card>
             )}
           </View>
-        </ScrollView>
-      </SafeAreaView>
+      </Screen>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <Screen refreshing={refreshing} onRefresh={onRefresh}>
       {/* Sticky League Switcher Header */}
       <LeagueSwitcher />
-
-      <ScrollView
-        style={styles.scrollView}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
-      >
 
         {loading ? (
           <ActivityIndicator color={Colors.primary} size="large" style={{ marginTop: 40 }} />
         ) : (
           <>
             {/* Draft Status */}
-            <View style={styles.statusCard}>
+            <Card style={styles.statusCard}>
               <View style={styles.statusRow}>
                 <View style={styles.statusItem}>
                   <Text style={styles.statusLabel}>Round</Text>
@@ -648,7 +638,7 @@ export default function DraftScreen() {
                   })}
                 </View>
               )}
-            </View>
+            </Card>
 
             {/* Stock Search (only show if it's my turn) */}
             {isMyTurn && (
@@ -665,17 +655,14 @@ export default function DraftScreen() {
                     autoCorrect={false}
                     onSubmitEditing={searchStock}
                   />
-                  <TouchableOpacity
-                    style={styles.searchBtn}
+                  <Button
+                    title="Search"
                     onPress={searchStock}
-                    disabled={searching || !searchSymbol.trim()}
-                  >
-                    {searching ? (
-                      <ActivityIndicator color={Colors.textPrimary} size="small" />
-                    ) : (
-                      <Text style={styles.searchBtnText}>Search</Text>
-                    )}
-                  </TouchableOpacity>
+                    disabled={!searchSymbol.trim()}
+                    loading={searching}
+                    variant="primary"
+                    size="sm"
+                  />
                 </View>
 
                 {quote && (
@@ -695,17 +682,13 @@ export default function DraftScreen() {
                         </View>
                       )}
                     </View>
-                    <TouchableOpacity
-                      style={styles.draftBtn}
+                    <Button
+                      title={`Draft ${quote.symbol}`}
                       onPress={submitPick}
                       disabled={submitting}
-                    >
-                      {submitting ? (
-                        <ActivityIndicator color={Colors.textPrimary} size="small" />
-                      ) : (
-                        <Text style={styles.draftBtnText}>Draft {quote.symbol}</Text>
-                      )}
-                    </TouchableOpacity>
+                      loading={submitting}
+                      variant="success"
+                    />
                   </View>
                 )}
               </View>
@@ -754,19 +737,11 @@ export default function DraftScreen() {
             )}
           </>
         )}
-      </ScrollView>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
   centered: {
     flex: 1,
     alignItems: 'center',
@@ -816,11 +791,6 @@ const styles = StyleSheet.create({
   },
   statusCard: {
     marginHorizontal: 24,
-    backgroundColor: Colors.cardBg,
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: Colors.border,
     marginBottom: 16,
   },
   statusRow: {
@@ -890,16 +860,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  searchBtn: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    justifyContent: 'center',
-  },
-  searchBtnText: {
-    color: Colors.white,
-    fontFamily: 'Inter_600SemiBold',
-  },
   quoteCard: {
     marginTop: 16,
     padding: 16,
@@ -924,17 +884,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_700Bold',
     fontVariant: ['tabular-nums'],
     color: Colors.success,
-  },
-  draftBtn: {
-    backgroundColor: Colors.success,
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  draftBtnText: {
-    color: Colors.white,
-    fontSize: 16,
-    fontFamily: 'Inter_700Bold',
   },
   section: {
     paddingHorizontal: 24,
@@ -1074,11 +1023,6 @@ const styles = StyleSheet.create({
   },
   summaryCard: {
     marginHorizontal: 24,
-    backgroundColor: Colors.cardBg,
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: Colors.border,
     marginBottom: 24,
   },
   summaryRow: {
@@ -1245,13 +1189,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_600SemiBold',
   },
   // Round picks styles
-  roundPicksCard: {
-    backgroundColor: Colors.cardBg,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    overflow: 'hidden',
-  },
+  roundPicksCard: {},
   roundPickRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1295,13 +1233,7 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   // Team detail styles
-  teamDetailCard: {
-    backgroundColor: Colors.cardBg,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    overflow: 'hidden',
-  },
+  teamDetailCard: {},
   teamDetailHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1344,12 +1276,7 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
   },
   selectTeamPrompt: {
-    backgroundColor: Colors.cardBg,
-    borderRadius: 12,
-    padding: 24,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
   selectTeamText: {
     fontSize: 14,

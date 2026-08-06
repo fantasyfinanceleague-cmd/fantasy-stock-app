@@ -9,7 +9,6 @@ import {
   Alert,
   Image,
   Dimensions,
-  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -18,6 +17,7 @@ import { supabase } from '@/lib/supabase';
 import { validateUsername } from '@/lib/contentModeration';
 import { PASSWORD_REQUIREMENTS, failingPasswordRequirements } from '@/constants/passwordRules';
 import { Colors } from '@/constants/Colors';
+import { Button, Card } from '@/components/ui';
 
 const { width } = Dimensions.get('window');
 
@@ -96,7 +96,7 @@ export default function LoginScreen() {
       </View>
 
       {/* Card */}
-      <View style={[styles.card, cardShadow]}>
+      <Card padded={false} style={styles.card}>
         <Text style={styles.title}>{isSignUp ? 'Create Account' : 'Welcome back'}</Text>
         <Text style={styles.subtitle}>{isSignUp ? 'Join the competition' : 'Sign in to your league'}</Text>
 
@@ -164,17 +164,14 @@ export default function LoginScreen() {
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
+        <Button
+          title={isSignUp ? 'Create Account' : 'Sign In'}
           onPress={handleAuth}
-          disabled={loading}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.buttonText}>
-            {loading ? 'Please wait...' : isSignUp ? 'Create Account' : 'Sign In'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+          variant="primary"
+          loading={loading}
+          style={styles.authButton}
+        />
+      </Card>
 
       {/* Switch auth mode */}
       <TouchableOpacity
@@ -189,19 +186,6 @@ export default function LoginScreen() {
     </View>
   );
 }
-
-const cardShadow = Platform.select({
-  ios: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-  },
-  android: {
-    elevation: 4,
-  },
-  default: {},
-}) as object;
 
 const styles = StyleSheet.create({
   container: {
@@ -226,11 +210,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   card: {
-    backgroundColor: Colors.white,
     borderRadius: 20,
     padding: 28,
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
   title: {
     fontSize: 26,
@@ -274,20 +255,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     marginLeft: 4,
   },
-  button: {
+  authButton: {
     marginTop: 8,
-    borderRadius: 12,
-    backgroundColor: Colors.primary,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  buttonText: {
-    color: Colors.white,
-    fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
   },
   switchButton: {
     marginTop: 24,

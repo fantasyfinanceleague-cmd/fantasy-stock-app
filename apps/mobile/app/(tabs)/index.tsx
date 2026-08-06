@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/lib/useAuth';
 import { useLeagueContext } from '@/lib/LeagueContext';
@@ -12,6 +11,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { SkeletonCard } from '@/components/Skeleton';
 import { Colors } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
+import { Button, Card, Screen, SectionLabel } from '@/components/ui';
 
 function formatCurrency(value: number): string {
   return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -74,17 +74,15 @@ export default function HomeScreen() {
   if (!user) {
     return (
       <View style={styles.container}>
-        <SafeAreaView style={styles.authContainer}>
+        <View style={styles.authContainer}>
           <Text style={styles.authTitle}>Fantasy Stock</Text>
           <Text style={styles.authSubtitle}>Sign in to get started</Text>
-          <TouchableOpacity
-            style={styles.primaryButton}
+          <Button
+            title="Sign In"
             onPress={() => router.push('/login')}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.primaryButtonText}>Sign In</Text>
-          </TouchableOpacity>
-        </SafeAreaView>
+            variant="primary"
+          />
+        </View>
       </View>
     );
   }
@@ -96,256 +94,238 @@ export default function HomeScreen() {
   const isPositive = hasChart && periodPL ? periodPL.isPositive : homeData.totalGainLoss >= 0;
 
   return (
-    <View style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <ScrollView
-          style={styles.scrollView}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={homeData.refreshing}
-              onRefresh={homeData.refresh}
-              tintColor={Colors.primary}
-            />
-          }
-        >
-          {/* Header - Greeting + Logo */}
-          <View style={styles.header}>
-            <View style={styles.headerLeft}>
-              <Text style={styles.greeting}>{getGreeting()}</Text>
-              <Text style={styles.headerUsername}>{username || 'Trader'}</Text>
-            </View>
-            <Image
-              source={require('../../assets/images/stockpile-icon-only.png')}
-              style={styles.headerLogo}
-              resizeMode="contain"
-            />
+    <Screen refreshing={homeData.refreshing} onRefresh={homeData.refresh}>
+      {/* Header - Greeting + Logo */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <Text style={styles.greeting}>{getGreeting()}</Text>
+          <Text style={styles.headerUsername}>{username || 'Trader'}</Text>
+        </View>
+        <Image
+          source={require('../../assets/images/stockpile-icon-only.png')}
+          style={styles.headerLogo}
+          resizeMode="contain"
+        />
+      </View>
+
+      {leagues.length === 0 ? (
+        <View style={styles.emptyState}>
+          <View style={styles.emptyIconCircle}>
+            <Ionicons name="trophy-outline" size={32} color={Colors.primary} />
+          </View>
+          <Text style={styles.emptyTitle}>No leagues yet</Text>
+          <Text style={styles.emptySubtitle}>Join or create a league to start competing with friends</Text>
+          <Button
+            title="Get Started"
+            onPress={() => router.push('/create-league')}
+            variant="primary"
+          />
+        </View>
+      ) : homeData.loading && homeData.leagueRows.length === 0 ? (
+        <View style={styles.section}>
+          <SkeletonCard />
+        </View>
+      ) : (
+        <>
+          {/* Section 2: Total Portfolio Value (Hero) */}
+          <View style={styles.portfolioSection}>
+            <Text style={styles.portfolioLabel}>Total Portfolio Value</Text>
+            <Text style={styles.portfolioValue}>
+              ${formatCurrency(homeData.totalValue)}
+            </Text>
+            {homeData.hasLivePrices && homeData.totalCost > 0 && (
+              <View style={styles.changeRow}>
+                <Text style={[
+                  styles.changeAmount,
+                  isPositive ? styles.positive : styles.negative
+                ]}>
+                  {isPositive ? '+' : ''}${formatCurrency(displayGainLoss)}
+                </Text>
+                <View style={[
+                  styles.changePill,
+                  isPositive ? styles.positiveBg : styles.negativeBg
+                ]}>
+                  <Text style={[
+                    styles.changePillText,
+                    isPositive ? styles.positive : styles.negative
+                  ]}>
+                    {formatPercent(displayGainLossPercent)}
+                  </Text>
+                </View>
+              </View>
+            )}
+            {homeData.leagueCount > 1 && (
+              <Text style={styles.portfolioCaption}>
+                across {homeData.leagueCount} leagues
+              </Text>
+            )}
           </View>
 
-          {leagues.length === 0 ? (
-            <View style={styles.emptyState}>
-              <View style={styles.emptyIconCircle}>
-                <Ionicons name="trophy-outline" size={32} color={Colors.primary} />
-              </View>
-              <Text style={styles.emptyTitle}>No leagues yet</Text>
-              <Text style={styles.emptySubtitle}>Join or create a league to start competing with friends</Text>
-              <TouchableOpacity
-                style={styles.primaryButton}
-                onPress={() => router.push('/create-league')}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.primaryButtonText}>Get Started</Text>
-              </TouchableOpacity>
+          {/* Section 2b: Performance Chart */}
+          {historicalData.length >= 2 && (
+            <View style={styles.chartSection}>
+              <PerformanceChart
+                data={historicalData}
+                loading={histLoading}
+                onPeriodPLChange={handlePeriodPLChange}
+              />
             </View>
-          ) : homeData.loading && homeData.leagueRows.length === 0 ? (
-            <View style={styles.section}>
-              <SkeletonCard />
-            </View>
-          ) : (
-            <>
-              {/* Section 2: Total Portfolio Value (Hero) */}
-              <View style={styles.portfolioSection}>
-                <Text style={styles.portfolioLabel}>Total Portfolio Value</Text>
-                <Text style={styles.portfolioValue}>
-                  ${formatCurrency(homeData.totalValue)}
-                </Text>
-                {homeData.hasLivePrices && homeData.totalCost > 0 && (
-                  <View style={styles.changeRow}>
-                    <Text style={[
-                      styles.changeAmount,
-                      isPositive ? styles.positive : styles.negative
-                    ]}>
-                      {isPositive ? '+' : ''}${formatCurrency(displayGainLoss)}
-                    </Text>
-                    <View style={[
-                      styles.changePill,
-                      isPositive ? styles.positiveBg : styles.negativeBg
-                    ]}>
-                      <Text style={[
-                        styles.changePillText,
-                        isPositive ? styles.positive : styles.negative
-                      ]}>
-                        {formatPercent(displayGainLossPercent)}
-                      </Text>
-                    </View>
-                  </View>
-                )}
-                {homeData.leagueCount > 1 && (
-                  <Text style={styles.portfolioCaption}>
-                    across {homeData.leagueCount} leagues
-                  </Text>
-                )}
-              </View>
-
-              {/* Section 2b: Performance Chart */}
-              {historicalData.length >= 2 && (
-                <View style={styles.chartSection}>
-                  <PerformanceChart
-                    data={historicalData}
-                    loading={histLoading}
-                    onPeriodPLChange={handlePeriodPLChange}
-                  />
-                </View>
-              )}
-
-              {/* Section 3: Your Leagues */}
-              <View style={styles.section}>
-                <Text style={styles.sectionLabel}>Your Leagues</Text>
-                <View style={styles.leagueCard}>
-                  {homeData.leagueRows.map((row, index) => (
-                    <TouchableOpacity
-                      key={row.league.id}
-                      style={[
-                        styles.leagueRow,
-                        index < homeData.leagueRows.length - 1 && styles.leagueRowBorder,
-                      ]}
-                      activeOpacity={0.6}
-                      onPress={() => {
-                        setActiveLeagueId(row.league.id);
-                        router.push('/(tabs)/league');
-                      }}
-                    >
-                      <View style={styles.leagueLeft}>
-                        <View style={styles.leagueNameRow}>
-                          <Text style={styles.leagueEmoji}>
-                            {row.league.league_type === 'matchup' ? '🤑' : '📈'}
-                          </Text>
-                          <Text style={styles.leagueName} numberOfLines={1}>
-                            {row.league.name}
-                          </Text>
-                        </View>
-                        <Text style={styles.leagueMeta}>
-                          Season {row.seasonNumber} · Week {row.league.current_week}
-                        </Text>
-                      </View>
-
-                      <View style={styles.leagueRight}>
-                        {row.rank > 0 && (
-                          <View style={styles.rankPill}>
-                            <Text style={styles.rankPillText}>
-                              {row.rank}{getRankSuffix(row.rank)}
-                            </Text>
-                          </View>
-                        )}
-                        {row.record ? (
-                          <Text style={styles.recordText}>
-                            {row.record.wins}-{row.record.losses}-{row.record.ties}
-                          </Text>
-                        ) : row.totalGain !== null ? (
-                          <Text style={[
-                            styles.recordText,
-                            row.totalGain >= 0 ? styles.positive : styles.negative
-                          ]}>
-                            {row.totalGain >= 0 ? '+' : ''}${formatCurrency(row.totalGain)}
-                          </Text>
-                        ) : null}
-                        <Text style={styles.leagueValue}>
-                          ${formatCurrency(row.portfolioValue)}
-                        </Text>
-                      </View>
-
-                      <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} style={styles.chevron} />
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              {/* Section 4: This Week's Matchups */}
-              <View style={styles.section}>
-                <Text style={styles.sectionLabel}>This Week</Text>
-
-                {homeData.matchups.length > 0 ? (
-                  <>
-                    {homeData.matchups.length >= 2 && (
-                      <View style={styles.summaryLine}>
-                        {homeData.winCount > 0 && (
-                          <Text style={styles.winText}>Winning {homeData.winCount}</Text>
-                        )}
-                        {homeData.winCount > 0 && homeData.loseCount > 0 && (
-                          <Text style={styles.summaryDot}> · </Text>
-                        )}
-                        {homeData.loseCount > 0 && (
-                          <Text style={styles.loseText}>Losing {homeData.loseCount}</Text>
-                        )}
-                      </View>
-                    )}
-
-                    {homeData.matchups.map((matchup) => {
-                      const iAmWinning = matchup.myGain > matchup.opponentGain;
-
-                      return (
-                        <TouchableOpacity
-                          key={matchup.id}
-                          style={styles.matchupCard}
-                          activeOpacity={0.6}
-                          onPress={() => {
-                            setActiveLeagueId(matchup.leagueId);
-                            router.push('/(tabs)/matchup');
-                          }}
-                        >
-                          <View style={styles.matchupHeader}>
-                            <Text style={styles.matchupLeague}>
-                              {matchup.leagueEmoji} {matchup.leagueName} · Week {matchup.weekNumber}
-                            </Text>
-                          </View>
-
-                          <View style={styles.matchupBody}>
-                            <View style={styles.matchupColumn}>
-                              <Text style={styles.matchupUsername} numberOfLines={1}>
-                                {matchup.myUsername}
-                              </Text>
-                              <Text style={[
-                                styles.matchupValue,
-                                iAmWinning && styles.positive,
-                              ]}>
-                                ${formatCurrency(matchup.myValue)}
-                              </Text>
-                              <Text style={[
-                                styles.matchupGain,
-                                matchup.myGain >= 0 ? styles.positive : styles.negative,
-                              ]}>
-                                {matchup.myGain >= 0 ? '+' : ''}${formatCurrency(matchup.myGain)}
-                              </Text>
-                            </View>
-
-                            <Text style={styles.matchupVs}>VS</Text>
-
-                            <View style={[styles.matchupColumn, styles.matchupColumnRight]}>
-                              <Text style={styles.matchupUsername} numberOfLines={1}>
-                                {matchup.opponentUsername}
-                              </Text>
-                              <Text style={[
-                                styles.matchupValue,
-                                !iAmWinning && matchup.myGain !== matchup.opponentGain && styles.positive,
-                              ]}>
-                                {matchup.opponentValue > 0
-                                  ? `$${formatCurrency(matchup.opponentValue)}`
-                                  : '--'}
-                              </Text>
-                              <Text style={[
-                                styles.matchupGain,
-                                matchup.opponentGain >= 0 ? styles.positive : styles.negative,
-                              ]}>
-                                {matchup.opponentGain >= 0 ? '+' : ''}${formatCurrency(matchup.opponentGain)}
-                              </Text>
-                            </View>
-                          </View>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </>
-                ) : (
-                  <Text style={styles.noMatchups}>No matchups this week</Text>
-                )}
-              </View>
-            </>
           )}
 
-          {/* Bottom padding */}
-          <View style={{ height: 40 }} />
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+          {/* Section 3: Your Leagues */}
+          <View style={styles.section}>
+            <SectionLabel>Your Leagues</SectionLabel>
+            <Card padded={false}>
+              {homeData.leagueRows.map((row, index) => (
+                <TouchableOpacity
+                  key={row.league.id}
+                  style={[
+                    styles.leagueRow,
+                    index < homeData.leagueRows.length - 1 && styles.leagueRowBorder,
+                  ]}
+                  activeOpacity={0.6}
+                  onPress={() => {
+                    setActiveLeagueId(row.league.id);
+                    router.push('/(tabs)/league');
+                  }}
+                >
+                  <View style={styles.leagueLeft}>
+                    <View style={styles.leagueNameRow}>
+                      <Text style={styles.leagueEmoji}>
+                        {row.league.league_type === 'matchup' ? '🤑' : '📈'}
+                      </Text>
+                      <Text style={styles.leagueName} numberOfLines={1}>
+                        {row.league.name}
+                      </Text>
+                    </View>
+                    <Text style={styles.leagueMeta}>
+                      Season {row.seasonNumber} · Week {row.league.current_week}
+                    </Text>
+                  </View>
+
+                  <View style={styles.leagueRight}>
+                    {row.rank > 0 && (
+                      <View style={styles.rankPill}>
+                        <Text style={styles.rankPillText}>
+                          {row.rank}{getRankSuffix(row.rank)}
+                        </Text>
+                      </View>
+                    )}
+                    {row.record ? (
+                      <Text style={styles.recordText}>
+                        {row.record.wins}-{row.record.losses}-{row.record.ties}
+                      </Text>
+                    ) : row.totalGain !== null ? (
+                      <Text style={[
+                        styles.recordText,
+                        row.totalGain >= 0 ? styles.positive : styles.negative
+                      ]}>
+                        {row.totalGain >= 0 ? '+' : ''}${formatCurrency(row.totalGain)}
+                      </Text>
+                    ) : null}
+                    <Text style={styles.leagueValue}>
+                      ${formatCurrency(row.portfolioValue)}
+                    </Text>
+                  </View>
+
+                  <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} style={styles.chevron} />
+                </TouchableOpacity>
+              ))}
+            </Card>
+          </View>
+
+          {/* Section 4: This Week's Matchups */}
+          <View style={styles.section}>
+            <SectionLabel>This Week</SectionLabel>
+
+            {homeData.matchups.length > 0 ? (
+              <>
+                {homeData.matchups.length >= 2 && (
+                  <View style={styles.summaryLine}>
+                    {homeData.winCount > 0 && (
+                      <Text style={styles.winText}>Winning {homeData.winCount}</Text>
+                    )}
+                    {homeData.winCount > 0 && homeData.loseCount > 0 && (
+                      <Text style={styles.summaryDot}> · </Text>
+                    )}
+                    {homeData.loseCount > 0 && (
+                      <Text style={styles.loseText}>Losing {homeData.loseCount}</Text>
+                    )}
+                  </View>
+                )}
+
+                {homeData.matchups.map((matchup) => {
+                  const iAmWinning = matchup.myGain > matchup.opponentGain;
+
+                  return (
+                    <TouchableOpacity
+                      key={matchup.id}
+                      activeOpacity={0.6}
+                      onPress={() => {
+                        setActiveLeagueId(matchup.leagueId);
+                        router.push('/(tabs)/matchup');
+                      }}
+                    >
+                      <Card style={styles.matchupCard}>
+                        <View style={styles.matchupHeader}>
+                          <Text style={styles.matchupLeague}>
+                            {matchup.leagueEmoji} {matchup.leagueName} · Week {matchup.weekNumber}
+                          </Text>
+                        </View>
+
+                        <View style={styles.matchupBody}>
+                          <View style={styles.matchupColumn}>
+                            <Text style={styles.matchupUsername} numberOfLines={1}>
+                              {matchup.myUsername}
+                            </Text>
+                            <Text style={[
+                              styles.matchupValue,
+                              iAmWinning && styles.positive,
+                            ]}>
+                              ${formatCurrency(matchup.myValue)}
+                            </Text>
+                            <Text style={[
+                              styles.matchupGain,
+                              matchup.myGain >= 0 ? styles.positive : styles.negative,
+                            ]}>
+                              {matchup.myGain >= 0 ? '+' : ''}${formatCurrency(matchup.myGain)}
+                            </Text>
+                          </View>
+
+                          <Text style={styles.matchupVs}>VS</Text>
+
+                          <View style={[styles.matchupColumn, styles.matchupColumnRight]}>
+                            <Text style={styles.matchupUsername} numberOfLines={1}>
+                              {matchup.opponentUsername}
+                            </Text>
+                            <Text style={[
+                              styles.matchupValue,
+                              !iAmWinning && matchup.myGain !== matchup.opponentGain && styles.positive,
+                            ]}>
+                              {matchup.opponentValue > 0
+                                ? `$${formatCurrency(matchup.opponentValue)}`
+                                : '--'}
+                            </Text>
+                            <Text style={[
+                              styles.matchupGain,
+                              matchup.opponentGain >= 0 ? styles.positive : styles.negative,
+                            ]}>
+                              {matchup.opponentGain >= 0 ? '+' : ''}${formatCurrency(matchup.opponentGain)}
+                            </Text>
+                          </View>
+                        </View>
+                      </Card>
+                    </TouchableOpacity>
+                  );
+                })}
+              </>
+            ) : (
+              <Text style={styles.noMatchups}>No matchups this week</Text>
+            )}
+          </View>
+        </>
+      )}
+    </Screen>
   );
 }
 
@@ -353,12 +333,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.white,
-  },
-  safeArea: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
   },
 
   // Loading
@@ -487,28 +461,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     marginBottom: 24,
   },
-  sectionLabel: {
-    fontSize: 13,
-    fontFamily: 'Inter_500Medium',
-    color: Colors.textSecondary,
-    marginBottom: 10,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
 
   // League rows
-  leagueCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-    overflow: 'hidden',
-  },
   leagueRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -580,17 +534,7 @@ const styles = StyleSheet.create({
 
   // Matchup cards
   matchupCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    padding: 14,
     marginBottom: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 1,
   },
   matchupHeader: {
     marginBottom: 12,
@@ -690,18 +634,5 @@ const styles = StyleSheet.create({
     marginBottom: 28,
     textAlign: 'center',
     lineHeight: 22,
-  },
-
-  // Buttons
-  primaryButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  primaryButtonText: {
-    color: Colors.white,
-    fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
   },
 });

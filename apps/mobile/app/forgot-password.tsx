@@ -15,6 +15,7 @@ import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
+import { Button } from '@/components/ui';
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
@@ -65,12 +66,12 @@ export default function ForgotPasswordScreen() {
             Click the link in the email to reset your password. The link will expire in 24 hours.
           </Text>
 
-          <TouchableOpacity
-            style={styles.button}
+          <Button
+            title="Back to Sign In"
             onPress={() => router.replace('/login')}
-          >
-            <Text style={styles.buttonText}>Back to Sign In</Text>
-          </TouchableOpacity>
+            variant="primary"
+            style={styles.buttonSpacing}
+          />
 
           <TouchableOpacity
             style={styles.resendButton}
@@ -113,15 +114,13 @@ export default function ForgotPasswordScreen() {
             autoFocus
           />
 
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
+          <Button
+            title="Send Reset Link"
             onPress={handleResetPassword}
-            disabled={loading}
-          >
-            <Text style={styles.buttonText}>
-              {loading ? 'Sending...' : 'Send Reset Link'}
-            </Text>
-          </TouchableOpacity>
+            variant="primary"
+            loading={loading}
+            style={styles.buttonSpacing}
+          />
 
           <TouchableOpacity
             style={styles.switchButton}
@@ -197,20 +196,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  button: {
-    backgroundColor: Colors.primary,
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
+  buttonSpacing: {
     marginTop: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
   },
   switchButton: {
     marginTop: 24,

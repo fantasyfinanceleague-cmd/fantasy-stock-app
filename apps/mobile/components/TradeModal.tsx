@@ -17,6 +17,7 @@ import { Colors } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
 import { Holding } from '@/lib/usePortfolio';
 import { isMarketOpen, getMarketStatus, getMarketStatusMessage } from '@/lib/marketHours';
+import { Button } from '@/components/ui';
 
 interface TradeModalProps {
   visible: boolean;
@@ -543,26 +544,20 @@ export default function TradeModal({
 
         {/* Action Buttons */}
         <View style={styles.buttonRow}>
-          <TouchableOpacity
-            style={[
-              styles.submitButton,
-              action === 'buy' ? styles.submitButtonBuy : styles.submitButtonSell,
-              (loading || !symbol || !canAfford || !hasEnoughShares) && styles.submitButtonDisabled,
-            ]}
+          <Button
+            title={action === 'buy' ? 'Buy' : 'Sell'}
             onPress={handleSubmit}
-            disabled={loading || !symbol || !canAfford || !hasEnoughShares}
-          >
-            <Text style={styles.submitButtonText}>
-              {loading ? 'Submitting…' : action === 'buy' ? 'Buy' : 'Sell'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.cancelButton}
+            disabled={!symbol || !canAfford || !hasEnoughShares}
+            loading={loading}
+            variant={action === 'buy' ? 'success' : 'danger'}
+            style={styles.submitButton}
+          />
+          <Button
+            title="Cancel"
             onPress={onClose}
             disabled={loading}
-          >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
+            variant="secondary"
+          />
         </View>
       </ScrollView>
     );
@@ -956,36 +951,5 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     flex: 1,
-    paddingVertical: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  submitButtonBuy: {
-    backgroundColor: Colors.success,
-  },
-  submitButtonSell: {
-    backgroundColor: Colors.error,
-  },
-  submitButtonDisabled: {
-    opacity: 0.5,
-  },
-  submitButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
-  },
-  cancelButton: {
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    backgroundColor: Colors.inputBg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    color: Colors.textPrimary,
-    fontSize: 16,
-    fontFamily: 'Inter_500Medium',
   },
 });

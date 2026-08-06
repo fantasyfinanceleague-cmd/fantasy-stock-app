@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal, TextInput, Alert, ActivityIndicator, Platform, Share, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, Alert, ActivityIndicator, Platform, Share, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/lib/useAuth';
 import { useLeagueContext, League } from '@/lib/LeagueContext';
@@ -16,6 +16,7 @@ import {
   STAKE_MODE_OPTIONS,
 } from '@/lib/categoryData';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { Button, Card, Screen } from '@/components/ui';
 
 interface LeagueMember {
   user_id: string;
@@ -271,32 +272,24 @@ export default function LeaguesScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView
-        style={styles.scrollView}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={Colors.primary}
-          />
-        }
-      >
+    <Screen refreshing={refreshing} onRefresh={onRefresh}>
         <View style={styles.header}>
           <Text style={styles.title}>Leagues</Text>
           <View style={styles.headerActions}>
-            <TouchableOpacity
-              style={styles.joinButton}
+            <Button
+              title="Join"
+              variant="secondary"
+              size="sm"
               onPress={() => router.push('/join-league')}
-            >
-              <Text style={styles.joinButtonText}>Join</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.createButton}
+              style={{ borderColor: Colors.primary }}
+              textStyle={{ color: Colors.primary }}
+            />
+            <Button
+              title="+ Create"
+              variant="primary"
+              size="sm"
               onPress={() => setShowCreateModal(true)}
-            >
-              <Text style={styles.createButtonText}>+ Create</Text>
-            </TouchableOpacity>
+            />
           </View>
         </View>
 
@@ -366,9 +359,9 @@ export default function LeaguesScreen() {
             Tap + Create to start a new league
           </Text>
         </View>
-      </ScrollView>
 
       {/* Create League Modal */}
+
       <Modal
         visible={showCreateModal}
         animationType="slide"
@@ -709,38 +702,38 @@ export default function LeaguesScreen() {
 
                 {/* Action Buttons */}
                 <View style={styles.detailActions}>
-                  <TouchableOpacity
+                  <Button
+                    title="View Dashboard"
+                    variant="primary"
                     style={styles.detailActionBtn}
                     onPress={() => {
                       setActiveLeagueId(selectedLeague.id);
                       setShowDetailModal(false);
                       router.push('/(tabs)');
                     }}
-                  >
-                    <Text style={styles.detailActionText}>View Dashboard</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
+                  />
+                  <Button
+                    title="League"
+                    variant="primary"
                     style={styles.detailActionBtn}
                     onPress={() => {
                       setActiveLeagueId(selectedLeague.id);
                       setShowDetailModal(false);
                       router.push('/(tabs)/league');
                     }}
-                  >
-                    <Text style={styles.detailActionText}>League</Text>
-                  </TouchableOpacity>
+                  />
                   {selectedLeague.commissioner_id === user?.id && (
-                    <TouchableOpacity
-                      style={[styles.detailActionBtn, styles.inviteBtn]}
+                    <Button
+                      title="Share Invite"
+                      variant="success"
+                      style={styles.detailActionBtn}
                       onPress={shareInviteCode}
-                    >
-                      <Text style={styles.detailActionText}>Share Invite</Text>
-                    </TouchableOpacity>
+                    />
                   )}
                 </View>
 
                 {/* League Info */}
-                <View style={styles.detailCard}>
+                <Card style={styles.detailCardOuter}>
                   <Text style={styles.detailCardTitle}>League Info</Text>
                   <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Draft Date</Text>
@@ -781,10 +774,10 @@ export default function LeaguesScreen() {
                     <Text style={styles.detailLabel}>Invite Code</Text>
                     <Text style={styles.detailValue}>{selectedLeague.invite_code}</Text>
                   </View>
-                </View>
+                </Card>
 
                 {/* Members */}
-                <View style={styles.detailCard}>
+                <Card style={styles.detailCardOuter}>
                   <Text style={styles.detailCardTitle}>Members ({members.length})</Text>
                   {loadingMembers ? (
                     <ActivityIndicator color={Colors.primary} style={{ padding: 20 }} />
@@ -813,13 +806,13 @@ export default function LeaguesScreen() {
                       </View>
                     ))
                   )}
-                </View>
+                </Card>
               </>
             )}
           </ScrollView>
         </SafeAreaView>
       </Modal>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
@@ -827,9 +820,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
-  },
-  scrollView: {
-    flex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -954,34 +944,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     color: Colors.textDark,
   },
-  createButton: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  createButtonText: {
-    color: Colors.textPrimary,
-    fontSize: 14,
-    fontFamily: 'Inter_600SemiBold',
-  },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-  },
-  joinButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  joinButtonText: {
-    color: Colors.primary,
-    fontSize: 14,
-    fontFamily: 'Inter_600SemiBold',
   },
   // Modal styles
   modalContainer: {
@@ -1183,26 +1149,10 @@ const styles = StyleSheet.create({
   detailActionBtn: {
     flex: 1,
     minWidth: '45%',
-    backgroundColor: Colors.primary,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
   },
-  inviteBtn: {
-    backgroundColor: Colors.success,
-  },
-  detailActionText: {
-    color: Colors.textPrimary,
-    fontSize: 14,
-    fontFamily: 'Inter_600SemiBold',
-  },
-  detailCard: {
-    backgroundColor: Colors.cardBg,
-    borderRadius: 12,
-    padding: 16,
+  detailCardOuter: {
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    borderRadius: 12,
   },
   detailCardTitle: {
     fontSize: 16,

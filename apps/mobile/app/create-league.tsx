@@ -22,6 +22,7 @@ import {
   saveLeagueSlots,
   validateSlotConfig,
 } from '@/lib/categoryData';
+import { Button, Card } from '@/components/ui';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -246,24 +247,24 @@ export default function CreateLeagueWizard() {
       </View>
 
       <View style={styles.welcomeButtons}>
-        <TouchableOpacity
-          style={styles.primaryButton}
+        <Button
+          title="Create League"
           onPress={() => setStep('name')}
-        >
-          <Ionicons name="add-circle-outline" size={20} color={Colors.white} />
-          <Text style={styles.primaryButtonText}>Create League</Text>
-        </TouchableOpacity>
+          variant="primary"
+          icon={<Ionicons name="add-circle-outline" size={20} color={Colors.white} />}
+          style={styles.welcomePrimaryButton}
+        />
 
-        <TouchableOpacity
-          style={styles.secondaryButton}
+        <Button
+          title="Join a League"
           onPress={() => {
             router.dismiss();
             setTimeout(() => router.push('/join-league'), 100);
           }}
-        >
-          <Ionicons name="search-outline" size={20} color={ACCENT} />
-          <Text style={styles.secondaryButtonText}>Join a League</Text>
-        </TouchableOpacity>
+          variant="ghost"
+          icon={<Ionicons name="search-outline" size={20} color={ACCENT} />}
+          style={styles.welcomeSecondaryButton}
+        />
       </View>
     </View>
   );
@@ -290,13 +291,13 @@ export default function CreateLeagueWizard() {
         </View>
       </View>
 
-      <TouchableOpacity
-        style={[styles.nextButton, !state.name.trim() && styles.nextButtonDisabled]}
+      <Button
+        title="Next"
         onPress={goNext}
+        variant="primary"
         disabled={!state.name.trim()}
-      >
-        <Text style={styles.nextButtonText}>Next</Text>
-      </TouchableOpacity>
+        style={styles.nextButton}
+      />
     </KeyboardAvoidingView>
   );
 
@@ -340,9 +341,12 @@ export default function CreateLeagueWizard() {
         </View>
       </View>
 
-      <TouchableOpacity style={styles.nextButton} onPress={goNext}>
-        <Text style={styles.nextButtonText}>Next</Text>
-      </TouchableOpacity>
+      <Button
+        title="Next"
+        onPress={goNext}
+        variant="primary"
+        style={styles.nextButton}
+      />
     </View>
   );
 
@@ -401,9 +405,12 @@ export default function CreateLeagueWizard() {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.nextButton} onPress={goNext}>
-          <Text style={styles.nextButtonText}>Next</Text>
-        </TouchableOpacity>
+        <Button
+          title="Next"
+          onPress={goNext}
+          variant="primary"
+          style={styles.nextButton}
+        />
       </View>
     );
   };
@@ -503,9 +510,12 @@ export default function CreateLeagueWizard() {
         </View>
       </ScrollView>
 
-      <TouchableOpacity style={styles.nextButton} onPress={goNext}>
-        <Text style={styles.nextButtonText}>Next</Text>
-      </TouchableOpacity>
+      <Button
+        title="Next"
+        onPress={goNext}
+        variant="primary"
+        style={styles.nextButton}
+      />
     </KeyboardAvoidingView>
   );
 
@@ -528,13 +538,12 @@ export default function CreateLeagueWizard() {
       {(() => {
         const blocked = state.slots.length === 0 || validateSlotConfig(state.slots, state.numRounds).length > 0;
         return (
-          <TouchableOpacity
-            style={[styles.nextButton, blocked && styles.nextButtonDisabled]}
+          <Button
+            title="Next"
             onPress={goNext}
             disabled={blocked}
-          >
-            <Text style={styles.nextButtonText}>Next</Text>
-          </TouchableOpacity>
+            style={styles.nextButton}
+          />
         );
       })()}
     </View>
@@ -576,9 +585,12 @@ export default function CreateLeagueWizard() {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.nextButton} onPress={goNext}>
-          <Text style={styles.nextButtonText}>Next</Text>
-        </TouchableOpacity>
+        <Button
+          title="Next"
+          onPress={goNext}
+          variant="primary"
+          style={styles.nextButton}
+        />
       </View>
     );
   };
@@ -632,9 +644,12 @@ export default function CreateLeagueWizard() {
           </View>
         </ScrollView>
 
-        <TouchableOpacity style={styles.nextButton} onPress={goNext}>
-          <Text style={styles.nextButtonText}>Next</Text>
-        </TouchableOpacity>
+        <Button
+          title="Next"
+          onPress={goNext}
+          variant="primary"
+          style={styles.nextButton}
+        />
       </View>
     );
   };
@@ -717,7 +732,7 @@ export default function CreateLeagueWizard() {
         </View>
 
         {/* Summary */}
-        <View style={styles.summaryCard}>
+        <Card style={styles.summaryCardOuter}>
           <Text style={styles.summaryTitle}>League Summary</Text>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Name</Text>
@@ -745,20 +760,16 @@ export default function CreateLeagueWizard() {
               {state.draftDateTBD ? 'TBD' : state.draftDate?.toLocaleDateString() || 'TBD'}
             </Text>
           </View>
-        </View>
+        </Card>
       </ScrollView>
 
-      <TouchableOpacity
-        style={[styles.nextButton, styles.doneButton, creating && styles.nextButtonDisabled]}
+      <Button
+        title="Create League"
         onPress={goNext}
-        disabled={creating}
-      >
-        {creating ? (
-          <ActivityIndicator color={Colors.white} />
-        ) : (
-          <Text style={styles.nextButtonText}>Create League</Text>
-        )}
-      </TouchableOpacity>
+        variant="success"
+        loading={creating}
+        style={styles.nextButton}
+      />
     </View>
   );
 
@@ -879,37 +890,13 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     gap: 12,
   },
-  primaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: ACCENT,
-    paddingVertical: 16,
+  welcomePrimaryButton: {
     borderRadius: 30,
-    gap: 8,
   },
-  primaryButtonText: {
-    fontSize: 15,
-    fontFamily: 'Inter_700Bold',
-    color: Colors.white,
-    letterSpacing: 0.5,
-  },
-  secondaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'transparent',
-    paddingVertical: 16,
+  welcomeSecondaryButton: {
     borderRadius: 30,
     borderWidth: 2,
     borderColor: ACCENT,
-    gap: 8,
-  },
-  secondaryButtonText: {
-    fontSize: 15,
-    fontFamily: 'Inter_700Bold',
-    color: ACCENT,
-    letterSpacing: 0.5,
   },
 
   // Step container
@@ -1281,10 +1268,7 @@ const styles = StyleSheet.create({
   },
 
   // Summary
-  summaryCard: {
-    backgroundColor: Colors.cardBg,
-    borderRadius: 16,
-    padding: 20,
+  summaryCardOuter: {
     marginTop: 8,
   },
   summaryTitle: {
@@ -1314,24 +1298,9 @@ const styles = StyleSheet.create({
 
   // Next button
   nextButton: {
-    backgroundColor: ACCENT,
     marginHorizontal: 24,
     marginBottom: 24,
-    paddingVertical: 16,
     borderRadius: 30,
-    alignItems: 'center',
-  },
-  nextButtonDisabled: {
-    backgroundColor: Colors.border,
-  },
-  nextButtonText: {
-    fontSize: 15,
-    fontFamily: 'Inter_700Bold',
-    color: Colors.white,
-    letterSpacing: 0.5,
-  },
-  doneButton: {
-    backgroundColor: Colors.success,
   },
 
   // TBD options

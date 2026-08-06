@@ -15,6 +15,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
+import { Button } from '@/components/ui';
 
 export default function ResetPasswordScreen() {
   const [password, setPassword] = useState('');
@@ -64,12 +65,12 @@ export default function ResetPasswordScreen() {
             Your password has been successfully updated. You can now sign in with your new password.
           </Text>
 
-          <TouchableOpacity
-            style={styles.button}
+          <Button
+            title="Sign In"
             onPress={() => router.replace('/login')}
-          >
-            <Text style={styles.buttonText}>Sign In</Text>
-          </TouchableOpacity>
+            variant="primary"
+            style={styles.buttonSpacing}
+          />
         </View>
       </SafeAreaView>
     );
@@ -109,15 +110,13 @@ export default function ResetPasswordScreen() {
             secureTextEntry
           />
 
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
+          <Button
+            title="Update Password"
             onPress={handleUpdatePassword}
-            disabled={loading}
-          >
-            <Text style={styles.buttonText}>
-              {loading ? 'Updating...' : 'Update Password'}
-            </Text>
-          </TouchableOpacity>
+            variant="primary"
+            loading={loading}
+            style={styles.buttonSpacing}
+          />
 
           <TouchableOpacity
             style={styles.cancelButton}
@@ -174,20 +173,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  button: {
-    backgroundColor: Colors.primary,
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
+  buttonSpacing: {
     marginTop: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
   },
   cancelButton: {
     marginTop: 24,

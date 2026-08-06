@@ -23,6 +23,7 @@ import {
   saveLeagueSlots,
   validateSlotConfig,
 } from '@/lib/categoryData';
+import { Button, Card } from '@/components/ui';
 
 const ACCENT = Colors.primary;
 const ACCENT_BG = Colors.primaryBg;
@@ -478,7 +479,7 @@ export default function LeagueSettingsScreen() {
           {/* League Info (Read-only) */}
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>League Info</Text>
-            <View style={styles.infoCard}>
+            <Card style={styles.infoCardOuter}>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Type</Text>
                 <Text style={styles.infoValue}>
@@ -505,7 +506,7 @@ export default function LeagueSettingsScreen() {
                 <Text style={styles.infoLabel}>Invite Code</Text>
                 <Text style={[styles.infoValue, { color: ACCENT }]}>{league.invite_code}</Text>
               </View>
-            </View>
+            </Card>
           </View>
 
           {/* Start New Season - Only show when season is completed */}
@@ -543,17 +544,13 @@ export default function LeagueSettingsScreen() {
         {/* Save Button */}
         {!isLocked && (
           <View style={styles.footer}>
-            <TouchableOpacity
-              style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+            <Button
+              title="Save Changes"
               onPress={handleSave}
-              disabled={saving}
-            >
-              {saving ? (
-                <ActivityIndicator color={Colors.white} />
-              ) : (
-                <Text style={styles.saveButtonText}>Save Changes</Text>
-              )}
-            </TouchableOpacity>
+              variant="success"
+              loading={saving}
+              style={styles.saveButton}
+            />
           </View>
         )}
       </KeyboardAvoidingView>
@@ -798,11 +795,7 @@ const styles = StyleSheet.create({
   },
 
   // Info card
-  infoCard: {
-    backgroundColor: Colors.cardBg,
-    borderRadius: 12,
-    padding: 16,
-  },
+  infoCardOuter: {},
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -830,19 +823,7 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.border,
   },
   saveButton: {
-    backgroundColor: Colors.success,
-    paddingVertical: 16,
     borderRadius: 30,
-    alignItems: 'center',
-  },
-  saveButtonDisabled: {
-    backgroundColor: Colors.border,
-  },
-  saveButtonText: {
-    fontSize: 15,
-    fontFamily: 'Inter_700Bold',
-    color: Colors.white,
-    letterSpacing: 0.5,
   },
 
   // New Season section

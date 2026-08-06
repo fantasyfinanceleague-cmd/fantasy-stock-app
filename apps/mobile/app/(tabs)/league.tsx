@@ -11,6 +11,7 @@ import { Colors } from '@/constants/Colors';
 import StatusBadge from '@/components/StatusBadge';
 import LeagueSwitcher from '@/components/LeagueSwitcher';
 import { getWeekStatus, getCountdownMessage, getPlayoffRoundLabel } from '@/lib/weekStatus';
+import { Button, Card } from '@/components/ui';
 
 interface Standing {
   user_id: string;
@@ -353,9 +354,7 @@ export default function LeagueScreen() {
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.centered}>
           <Text style={styles.emptyTitle}>Sign in to view league</Text>
-          <TouchableOpacity style={styles.button} onPress={() => router.push('/login')}>
-            <Text style={styles.buttonText}>Sign In</Text>
-          </TouchableOpacity>
+          <Button title="Sign In" onPress={() => router.push('/login')} />
         </View>
       </SafeAreaView>
     );
@@ -366,18 +365,20 @@ export default function LeagueScreen() {
       <LeagueSwitcher />
 
       <View style={styles.leagueActions}>
-        <TouchableOpacity
-          style={styles.leagueJoinButton}
+        <Button
+          title="Join"
+          variant="secondary"
+          size="sm"
           onPress={() => router.push('/join-league')}
-        >
-          <Text style={styles.leagueJoinText}>Join</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.leagueCreateButton}
+          style={{ borderColor: Colors.primary }}
+          textStyle={{ color: Colors.primary }}
+        />
+        <Button
+          title="+ Create"
+          variant="primary"
+          size="sm"
           onPress={() => router.push('/create-league')}
-        >
-          <Text style={styles.leagueCreateText}>+ Create</Text>
-        </TouchableOpacity>
+        />
       </View>
 
       <ScrollView
@@ -390,9 +391,7 @@ export default function LeagueScreen() {
           <View style={styles.centered}>
             <Text style={styles.emptyTitle}>No leagues yet</Text>
             <Text style={styles.emptySubtitle}>Join a league to see standings</Text>
-            <TouchableOpacity style={styles.button} onPress={() => router.push('/(tabs)/leagues')}>
-              <Text style={styles.buttonText}>View Leagues</Text>
-            </TouchableOpacity>
+            <Button title="View Leagues" onPress={() => router.push('/(tabs)/leagues')} />
           </View>
         ) : (
           <>
@@ -453,7 +452,7 @@ export default function LeagueScreen() {
 
             {/* KPI Cards */}
             <View style={styles.kpiRow}>
-              <View style={[styles.kpiCard, cardShadow]}>
+              <Card style={styles.kpiCardInner}>
                 <View style={[styles.kpiIconCircle, { backgroundColor: Colors.warningBg }]}>
                   <Ionicons name="trophy" size={18} color={Colors.warning} />
                 </View>
@@ -474,9 +473,9 @@ export default function LeagueScreen() {
                 ) : (
                   <Text style={styles.kpiValue}>—</Text>
                 )}
-              </View>
+              </Card>
 
-              <View style={[styles.kpiCard, cardShadow]}>
+              <Card style={styles.kpiCardInner}>
                 <View style={[styles.kpiIconCircle, { backgroundColor: Colors.cyanLight }]}>
                   <Ionicons name="calendar" size={18} color={Colors.primary} />
                 </View>
@@ -507,15 +506,15 @@ export default function LeagueScreen() {
                 ) : (
                   <Text style={styles.kpiValue}>Duration</Text>
                 )}
-              </View>
+              </Card>
 
-              <View style={[styles.kpiCard, cardShadow]}>
+              <Card style={styles.kpiCardInner}>
                 <View style={[styles.kpiIconCircle, { backgroundColor: Colors.secondaryBg }]}>
                   <Ionicons name="people" size={18} color={Colors.secondary} />
                 </View>
                 <Text style={styles.kpiLabel}>Players</Text>
                 <Text style={styles.kpiValueLarge}>{sortedStandings.length}</Text>
-              </View>
+              </Card>
             </View>
 
             {/* Standings Section */}
@@ -822,7 +821,7 @@ export default function LeagueScreen() {
                     };
 
                     return (
-                      <View key={season.id} style={[styles.historyCard, cardShadow]}>
+                      <Card key={season.id} padded={false} style={styles.historyCardOuter}>
                         <View style={styles.historyCardHeader}>
                           <Text style={styles.historySeasonLabel}>
                             Season {season.season_number}
@@ -889,7 +888,7 @@ export default function LeagueScreen() {
                             )}
                           </View>
                         )}
-                      </View>
+                      </Card>
                     );
                   })
                 )}
@@ -904,19 +903,6 @@ export default function LeagueScreen() {
     </SafeAreaView>
   );
 }
-
-const cardShadow = Platform.select({
-  ios: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-  },
-  android: {
-    elevation: 2,
-  },
-  default: {},
-}) as object;
 
 const styles = StyleSheet.create({
   container: {
@@ -1023,14 +1009,11 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 20,
   },
-  kpiCard: {
+  kpiCardInner: {
     flex: 1,
-    backgroundColor: Colors.white,
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
     alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
   },
   kpiIconCircle: {
     width: 36,
@@ -1220,17 +1203,6 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     textAlign: 'center',
   },
-  button: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 10,
-  },
-  buttonText: {
-    color: Colors.white,
-    fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
-  },
   leagueActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -1239,30 +1211,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 10,
     paddingBottom: 6,
-  },
-  leagueJoinButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  leagueJoinText: {
-    color: Colors.primary,
-    fontSize: 14,
-    fontFamily: 'Inter_600SemiBold',
-  },
-  leagueCreateButton: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  leagueCreateText: {
-    color: Colors.white,
-    fontSize: 14,
-    fontFamily: 'Inter_600SemiBold',
   },
   // Schedule styles
   playerSelector: {
@@ -1387,13 +1335,9 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
   // History styles
-  historyCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 12,
+  historyCardOuter: {
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    overflow: 'hidden',
+    borderRadius: 12,
   },
   historyCardHeader: {
     flexDirection: 'row',

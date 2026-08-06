@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, TextInput, Alert, Modal } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, TouchableOpacity, Linking, TextInput, Alert, Modal } from 'react-native';
 import { useAuth } from '@/lib/useAuth';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/Colors';
 import { useState, useEffect } from 'react';
+import { Button, Card, Screen } from '@/components/ui';
 
 const AVATAR_EMOJIS = ['📊', '📈', '📉', '💹', '💰', '💵', '💎', '🏆', '🚀', '🌟', '⭐', '🔥', '💪', '🎯', '🎲', '🃏', '🦁', '🐂', '🐻', '🦅', '🐺', '🦊', '🐲', '🦈', '👤', '👨‍💼', '👩‍💼', '🧑‍💻', '👨‍🚀', '🥷', '🧙', '👑'];
 
@@ -177,8 +177,8 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView style={styles.scrollView}>
+    <>
+    <Screen>
         <View style={styles.header}>
           <Text style={styles.title}>Profile</Text>
         </View>
@@ -194,25 +194,25 @@ export default function ProfileScreen() {
 
         {/* Stats Row */}
         <View style={styles.statsRow}>
-          <View style={styles.statBox}>
+          <Card style={styles.statBox}>
             <Text style={styles.statValue}>{leagues.length}</Text>
             <Text style={styles.statLabel}>Leagues</Text>
-          </View>
-          <View style={styles.statBox}>
+          </Card>
+          <Card style={styles.statBox}>
             <Text style={styles.statValue}>{activeLeagues}</Text>
             <Text style={styles.statLabel}>Active</Text>
-          </View>
-          <View style={styles.statBox}>
+          </Card>
+          <Card style={styles.statBox}>
             <Text style={styles.statValue}>{pendingLeagues}</Text>
             <Text style={styles.statLabel}>Pending</Text>
-          </View>
+          </Card>
         </View>
 
         {/* Account Information */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account Information</Text>
 
-          <View style={styles.infoCard}>
+          <Card>
             <View style={styles.infoRow}>
               <Text style={styles.label}>Email</Text>
               <Text style={styles.value}>{user.email}</Text>
@@ -231,14 +231,14 @@ export default function ProfileScreen() {
               <Text style={styles.label}>Last Sign In</Text>
               <Text style={styles.value}>{formatDateTime(user.last_sign_in_at)}</Text>
             </View>
-          </View>
+          </Card>
         </View>
 
         {/* Username */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Username</Text>
 
-          <View style={styles.infoCard}>
+          <Card>
             <View style={styles.inputRow}>
               <Text style={styles.label}>Username</Text>
               <TextInput
@@ -261,23 +261,21 @@ export default function ProfileScreen() {
               <Text style={styles.errorText}>{usernameError}</Text>
             ) : null}
 
-            <TouchableOpacity
-              style={[styles.saveButton, savingProfile && styles.buttonDisabled]}
+            <Button
+              title="Save Profile"
               onPress={saveProfile}
-              disabled={savingProfile}
-            >
-              <Text style={styles.saveButtonText}>
-                {savingProfile ? 'Saving...' : 'Save Profile'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+              loading={savingProfile}
+              variant="primary"
+              style={styles.saveButtonSpacing}
+            />
+          </Card>
         </View>
 
         {/* Change Password */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Change Password</Text>
 
-          <View style={styles.infoCard}>
+          <Card>
             <View style={styles.inputRow}>
               <Text style={styles.label}>New Password</Text>
               <TextInput
@@ -304,16 +302,14 @@ export default function ProfileScreen() {
               />
             </View>
 
-            <TouchableOpacity
-              style={[styles.saveButton, changingPassword && styles.buttonDisabled]}
+            <Button
+              title="Update Password"
               onPress={handleChangePassword}
-              disabled={changingPassword}
-            >
-              <Text style={styles.saveButtonText}>
-                {changingPassword ? 'Updating...' : 'Update Password'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+              loading={changingPassword}
+              variant="primary"
+              style={styles.saveButtonSpacing}
+            />
+          </Card>
         </View>
 
         {/* App Section */}
@@ -330,12 +326,15 @@ export default function ProfileScreen() {
         </View>
 
         {/* Sign Out */}
-        <TouchableOpacity style={styles.signOutButton} onPress={signOut}>
-          <Text style={styles.signOutText}>Sign Out</Text>
-        </TouchableOpacity>
+        <Button
+          title="Sign Out"
+          onPress={signOut}
+          variant="dangerOutline"
+          style={styles.signOutButton}
+        />
 
         <Text style={styles.versionText}>Version 1.0.0</Text>
-      </ScrollView>
+    </Screen>
 
       {/* Emoji Picker Modal */}
       <Modal
@@ -371,7 +370,7 @@ export default function ProfileScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
-    </SafeAreaView>
+    </>
   );
 }
 
@@ -379,9 +378,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
-  },
-  scrollView: {
-    flex: 1,
   },
   header: {
     paddingHorizontal: 24,
@@ -428,13 +424,8 @@ const styles = StyleSheet.create({
   },
   statBox: {
     flex: 1,
-    backgroundColor: Colors.cardBg,
-    borderRadius: 12,
-    padding: 16,
     alignItems: 'center',
     marginHorizontal: 4,
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
   statValue: {
     fontSize: 24,
@@ -460,13 +451,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     letterSpacing: 0.5,
   },
-  infoCard: {
-    backgroundColor: Colors.cardBg,
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
+  infoCard: {},
   infoRow: {
     paddingVertical: 8,
   },
@@ -521,20 +506,8 @@ const styles = StyleSheet.create({
     color: Colors.error,
     marginTop: 8,
   },
-  saveButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: 8,
-    padding: 14,
-    alignItems: 'center',
+  saveButtonSpacing: {
     marginTop: 16,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  saveButtonText: {
-    color: Colors.white,
-    fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
   },
   linkCard: {
     backgroundColor: Colors.cardBg,
@@ -576,17 +549,6 @@ const styles = StyleSheet.create({
   signOutButton: {
     marginHorizontal: 24,
     marginTop: 16,
-    padding: 16,
-    alignItems: 'center',
-    backgroundColor: Colors.cardBg,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  signOutText: {
-    color: Colors.error,
-    fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
   },
   versionText: {
     textAlign: 'center',
