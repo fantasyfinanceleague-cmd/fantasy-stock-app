@@ -57,18 +57,25 @@ export async function registerForPushNotifications(): Promise<string | null> {
  * Save push token to user's profile in database
  */
 export async function savePushToken(userId: string, token: string): Promise<boolean> {
+  // Writes to the owner-scoped push_tokens table if it exists, else the legacy
+  // user_profiles column. The fallback makes this ONE client ship work both
+  // before and after the phase-2 relocation migration, so the two phases can be
+  // deployed and verified independently instead of having to land together.
+  // Remove the fallback once the migration is applied everywhere.
   try {
-    const { error } = await supabase
+    const { error: newErr } = await supabase
+      .from('push_tokens')
+      .upsert({ user_id: userId, token, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+    if (!newErr) return true;
+
+    const { error: legacyErr } = await supabase
       .from('user_profiles')
       .update({ expo_push_token: token })
       .eq('id', userId);
-
-    if (error) {
-      console.error('Failed to save push token:', error);
+    if (legacyErr) {
+      console.error('Failed to save push token (both paths):', legacyErr.message ?? legacyErr);
       return false;
     }
-
-    console.log('Push token saved successfully');
     return true;
   } catch (error) {
     console.error('Error saving push token:', error);
@@ -80,14 +87,15 @@ export async function savePushToken(userId: string, token: string): Promise<bool
  * Remove push token when user logs out
  */
 export async function removePushToken(userId: string): Promise<void> {
+  // Clear from BOTH stores — during the phase-1/phase-2 overlap a token may exist
+  // in either, and a logout that leaves one behind leaves a live capability
+  // pointing at a device the user just signed out of.
   try {
-    await supabase
-      .from('user_profiles')
-      .update({ expo_push_token: null })
-      .eq('id', userId);
-  } catch (error) {
-    console.error('Error removing push token:', error);
-  }
+    await supabase.from('push_tokens').delete().eq('user_id', userId);
+  } catch { /* table may not exist yet (pre-phase-2) */ }
+  try {
+    await supabase.from('user_profiles').update({ expo_push_token: null }).eq('id', userId);
+  } catch { /* column may be gone (post-phase-2) */ }
 }
 
 /**
@@ -173,31 +181,39 @@ export function addNotificationListeners(
 // token reader; notification sending belongs behind an edge function.
 
 /**
- * Notify a user that it's their turn to draft
+ * Notify a user that it's their turn to draft.
+ *
+ * CUT OVER 2026-07-30 to the send-notification edge function (scan F7/F8).
+ * This used to read the TARGET user's expo_push_token client-side and POST to
+ * Expo directly, which is why every authenticated user needed to be able to read
+ * every other user's token. An Expo token is a bearer capability, so that was a
+ * spam/phishing primitive. The token never reaches the client now.
+ *
+ * SIGNATURE CHANGED: leagueId, not leagueName. The league name used to be a
+ * caller-supplied string that went straight into the notification body — content
+ * the sender controlled. The server now looks it up from the id, so the body
+ * cannot be forged. Callers pass the id they already have.
+ *
+ * Still fire-and-forget and still swallows errors: a failed notification must
+ * never block a draft pick.
  */
 export async function notifyDraftTurn(
   userId: string,
-  leagueName: string
+  leagueId: string
 ): Promise<void> {
   try {
-    // Get the user's push token
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('expo_push_token, notifications_enabled')
-      .eq('id', userId)
-      .single();
-
-    if (!profile?.expo_push_token || !profile.notifications_enabled) {
-      console.log('User has no push token or notifications disabled');
+    const { data, error } = await supabase.functions.invoke('send-notification', {
+      body: { type: 'draft_turn', league_id: leagueId, target_user_id: userId },
+    });
+    if (error) {
+      console.error('notifyDraftTurn failed:', error.message ?? error);
       return;
     }
-
-    await sendPushNotification(
-      profile.expo_push_token,
-      "It's Your Turn! 🏈",
-      `Time to make your pick in ${leagueName}`,
-      { type: 'draft_turn', screen: 'draft' }
-    );
+    // `sent: false` is a normal outcome (no device, notifications off, bot target),
+    // not a failure — log it so a silent non-delivery is still visible.
+    if (data && data.sent === false) {
+      console.log('Draft-turn notification not delivered:', data.reason);
+    }
   } catch (error) {
     console.error('Error sending draft turn notification:', error);
   }

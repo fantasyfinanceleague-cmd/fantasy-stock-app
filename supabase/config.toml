@@ -170,3 +170,15 @@ entrypoint = "./functions/finnhub-quote/index.ts"
 enabled = true
 verify_jwt = false
 entrypoint = "./functions/ticker-quotes/index.ts"
+
+# F7/F8 (spec L2): server-side push dispatch. verify_jwt=true — the caller must be
+# a real logged-in user, since the function authorizes on their identity. It reads
+# push tokens with SB_SECRET_KEY_INTERNAL so no client ever needs to, which is the
+# prerequisite for relocating the token off user_profiles (a column REVOKE cannot
+# close the Realtime broadcast path; the column has to physically move).
+# Authorizes BOTH the target (caller and target share a league) and the CONTENT
+# (title/body derived server-side from a closed type map, never client strings).
+[functions.send-notification]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/send-notification/index.ts"
