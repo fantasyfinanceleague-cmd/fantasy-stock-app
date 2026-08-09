@@ -21,9 +21,9 @@ A fantasy finance platform where friends compete to build the best portfolio. Th
 
 Stockpile makes personal investing less intimidating by turning it into a game. Users can:
 
-- **Practice with paper trading** - Learn portfolio management with simulated money through Alpaca's paper trading
+- **Practice with simulated trading** - Learn portfolio management with simulated money — no brokerage account required
 - **Compete with friends** - Create leagues and see who can build the best-performing portfolio
-- **Trade real stocks** (coming soon) - For more seasoned investors, connect a live Alpaca account to compete with real investments
+- **Real-money leagues** (future, demand-gated) - Live trading through a proper broker integration (OAuth/aggregator) is a potential post-launch phase, gated on demonstrated user demand
 
 The goal is to make personal finance approachable and fun, bringing the social competition of fantasy sports to investing.
 
@@ -50,7 +50,6 @@ fantasy-stock/
 ## Current Features
 
 - User authentication (sign up / sign in)
-- Link Alpaca paper trading account
 - Real-time stock quotes via Alpaca API
 - Portfolio tracking with live prices
 - Stock search and discovery
@@ -81,7 +80,7 @@ fantasy-stock/
 - **Web Frontend:** React, Vite, Tailwind CSS
 - **Mobile App:** React Native, Expo, Expo Router
 - **Backend:** Supabase (Auth, Database, Edge Functions)
-- **Market Data & Trading:** Alpaca API
+- **Market Data:** Alpaca API (server-side, using Stockpile's own key)
 - **Web Hosting:** Vercel
 
 ## Local Development
@@ -145,7 +144,7 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 - [x] Password reset flow (forgot password + deep link reset)
 - [x] Premium login screen UI (fintech-style design)
 - [ ] App-wide UI overhaul (in progress)
-- [ ] Live trading integration
+- [ ] Real-money leagues (post-launch, demand-gated) — broker integration via OAuth/aggregator, not key copy-paste
 - [ ] Email notifications
 - [ ] Matchup result notifications
 
