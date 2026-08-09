@@ -69,31 +69,12 @@ export default function TradeModal({
   const [quote, setQuote] = useState<Quote | null>(null);
   const [companyName, setCompanyName] = useState('');
   const [fetchingQuote, setFetchingQuote] = useState(false);
-  const [hasAlpacaLinked, setHasAlpacaLinked] = useState<boolean | null>(null);
 
   // Search state
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Check if user has Alpaca account linked
-  useEffect(() => {
-    if (!visible || !userId) return;
-
-    async function checkAlpacaLink() {
-      const { data, error } = await supabase
-        .from('broker_credentials')
-        .select('key_id')
-        .eq('user_id', userId)
-        .eq('broker', 'alpaca')
-        .single();
-
-      setHasAlpacaLinked(!error && !!data);
-    }
-
-    checkAlpacaLink();
-  }, [visible, userId]);
 
   // Reset state when modal opens
   useEffect(() => {
@@ -306,135 +287,14 @@ export default function TradeModal({
   };
 
   const handleSubmit = async () => {
-    setError('');
-
-    if (!quote) {
-      setError('Please enter a valid stock symbol');
-      return;
-    }
-
-    if (!canAfford) {
-      setError(`Insufficient funds. You have $${availableCash.toFixed(2)} available.`);
-      return;
-    }
-
-    if (!hasEnoughShares) {
-      setError(`You only own ${ownedQuantity} shares of ${symbol.toUpperCase()}`);
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const upperSymbol = symbol.toUpperCase();
-
-      // 1) Place paper order via Alpaca Edge Function
-      const { data: placeData, error: placeErr } = await supabase.functions.invoke(
-        'place-order',
-        {
-          body: {
-            symbol: upperSymbol,
-            qty: quantity,
-            side: action,
-            type: 'market',
-            time_in_force: 'day',
-          },
-        }
-      );
-
-      // Handle Alpaca errors
-      if (placeErr || placeData?.error) {
-        console.error('place-order failed:', placeErr || placeData);
-
-        if (placeData?.error === 'credentials_invalid') {
-          setError(
-            placeData.message ||
-              'Your Alpaca credentials are invalid or expired. Please update them in Profile.'
-          );
-          setLoading(false);
-          return;
-        }
-
-        if (placeData?.error === 'insufficient_funds') {
-          setError(
-            placeData.message || 'Insufficient buying power in your Alpaca account.'
-          );
-          setLoading(false);
-          return;
-        }
-
-        if (placeData?.error === 'no_credentials') {
-          setError(
-            placeData.message || 'Please link your Alpaca account in Profile settings.'
-          );
-          setLoading(false);
-          return;
-        }
-
-        // For other Alpaca errors, stop - don't record a trade that didn't happen
-        setError(placeData?.message || 'Trade failed. Please try again.');
-        setLoading(false);
-        return;
-      }
-
-      // Use the actual fill price from Alpaca (not our quote)
-      const fillPrice = placeData?.filled_avg_price ?? currentPrice;
-      const fillQty = placeData?.filled_qty ?? quantity;
-      const actualTotalValue = fillPrice * fillQty;
-
-      // 2) Insert trade into database with Alpaca's actual fill price
-      const { error: tradeError } = await supabase.from('trades').insert({
-        league_id: leagueId,
-        user_id: userId,
-        symbol: upperSymbol,
-        action: action,
-        quantity: fillQty,
-        price: fillPrice,
-        total_value: actualTotalValue,
-        alpaca_order_id: placeData?.order?.id ?? null,
-      });
-
-      if (tradeError) throw tradeError;
-
-      // Success - refresh data and close
-      onTradeComplete();
-      onClose();
-    } catch (err: any) {
-      setError(err.message || 'Failed to execute trade');
-    } finally {
-      setLoading(false);
-    }
+    // Trade submission is disabled between Phase 1 (broker removal) and Phase 3
+    // (in-house simulator fills). The place-order edge function has been removed;
+    // no ledger writes happen here until Phase 3 wires the app-key fill path.
+    // See DR-001 / SIMULATOR_MIGRATION_SPEC.
+    setError('Trading is temporarily unavailable while we upgrade to the in-house simulator.');
   };
 
   const renderContent = () => {
-    // Loading Alpaca status
-    if (hasAlpacaLinked === null) {
-      return (
-        <View style={styles.centeredContent}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.loadingText}>Checking account status...</Text>
-        </View>
-      );
-    }
-
-    // No Alpaca linked
-    if (hasAlpacaLinked === false) {
-      return (
-        <View style={styles.warningBox}>
-          <Text style={styles.warningTitle}>Alpaca Account Required</Text>
-          <Text style={styles.warningText}>
-            You need to link your Alpaca paper trading account before you can trade.
-          </Text>
-          <Text style={styles.warningSubtext}>
-            Go to your Profile settings to link your Alpaca API keys.
-          </Text>
-          <TouchableOpacity style={styles.warningButton} onPress={onClose}>
-            <Text style={styles.warningButtonText}>Got it</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
     // Market is closed
     if (!marketOpen) {
       return (
@@ -625,6 +485,14 @@ export default function TradeModal({
           </Text>
         )}
 
+        {/* Trading temporarily disabled (Phase 1 → Phase 3 interim) */}
+        <View style={styles.unavailableBox}>
+          <Text style={styles.unavailableText}>
+            Trading is temporarily unavailable while we upgrade to the in-house
+            simulator.
+          </Text>
+        </View>
+
         {/* Error Message */}
         {error ? (
           <View style={styles.errorBox}>
@@ -638,20 +506,12 @@ export default function TradeModal({
             style={[
               styles.submitButton,
               action === 'buy' ? styles.submitButtonBuy : styles.submitButtonSell,
-              (loading || !quote || !canAfford || !hasEnoughShares) &&
-                styles.submitButtonDisabled,
+              styles.submitButtonDisabled,
             ]}
             onPress={handleSubmit}
-            disabled={loading || !quote || !canAfford || !hasEnoughShares}
+            disabled
           >
-            {loading ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={styles.submitButtonText}>
-                {action === 'buy' ? 'Buy' : 'Sell'} {quantity} Share
-                {quantity !== 1 ? 's' : ''}
-              </Text>
-            )}
+            <Text style={styles.submitButtonText}>Trading Unavailable</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.cancelButton}
@@ -726,52 +586,19 @@ const styles = StyleSheet.create({
   formScroll: {
     flexGrow: 0,
   },
-  centeredContent: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  loadingText: {
-    color: Colors.textMuted,
-    marginTop: 12,
-    fontSize: 14,
-  },
-
-  // Warning box (no Alpaca)
-  warningBox: {
-    backgroundColor: '#FEF2F2',
+  // Trading-unavailable notice (Phase 1 → Phase 3 interim)
+  unavailableBox: {
+    backgroundColor: '#FFFBEB',
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: '#FDE68A',
     borderRadius: 12,
-    padding: 20,
-    marginBottom: 20,
-  },
-  warningTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#DC2626',
-    marginBottom: 8,
-  },
-  warningText: {
-    fontSize: 14,
-    color: '#DC2626',
-    marginBottom: 8,
-    lineHeight: 20,
-  },
-  warningSubtext: {
-    fontSize: 13,
-    color: Colors.textMuted,
+    padding: 16,
     marginBottom: 16,
   },
-  warningButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  warningButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+  unavailableText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    lineHeight: 20,
   },
 
   // Locked box (not Monday)
