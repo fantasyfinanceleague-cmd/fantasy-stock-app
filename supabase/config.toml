@@ -31,15 +31,6 @@ verify_jwt = false
 [functions.snapshot-week-start]
 verify_jwt = false
 
-# Phase 2b-2 (Sub-phase C): cron auth migration. This is a true->false FLIP — the
-# function was previously JWT-verified (cron sent a service_role JWT). Disabling
-# verify_jwt EXPOSES it publicly, so the function's own apikey-header validation
-# (SB_SECRET_KEY_CRON, constant-time, fail-closed) becomes its ONLY protection.
-# sync-alpaca-orders is cron-only (no client invokes it); its user-authed
-# verify/sync modes are now USER-UNREACHABLE (Phase 5 dead-code cleanup).
-[functions.sync-alpaca-orders]
-verify_jwt = false
-
 # RLS-hardening: refresh-symbols is invoked by authenticated users from the
 # client. Platform JWT verification is the auth: any caller with a valid user
 # JWT is allowed; anonymous callers are rejected with 401 at the gateway.
@@ -94,26 +85,14 @@ entrypoint = "./functions/join-league/index.ts"
 # the fact that settles the refresh-symbols cron (see
 # 20260728000002_fix_refresh_symbols_cron_auth.sql).
 #
-# THE TWO THAT MATTERED ARE SAFE: save-broker-keys (writes encrypted Alpaca
-# credentials) and place-order (executes trades) are both ON. The hole flagged as
-# possible — place-order unset while quote was ON, on the same per-user
-# credential path — DOES NOT EXIST.
+# REMOVED (in-house simulator migration, DR-001): the two per-user broker-
+# credential functions — save-broker-keys (wrote AES-GCM-encrypted Alpaca creds)
+# and place-order (executed trades with the caller's decrypted creds) — plus
+# cron-only sync-alpaca-orders. User broker-credential custody is retired; Alpaca
+# remains ONLY as the shared server-side market-data vendor (quote / ticker-quotes
+# / historical-bars / symbols-search). Dropping the broker_credentials table is a
+# pending HUMAN ACTION migration authored in this branch.
 # ============================================================================
-
-# Per-user credential path. verify_jwt=true AND an in-code auth.getUser() check,
-# so the gateway and the function body both gate. Writes AES-GCM-encrypted
-# broker secrets, so this is the highest-blast-radius write endpoint.
-[functions.save-broker-keys]
-enabled = true
-verify_jwt = true
-entrypoint = "./functions/save-broker-keys/index.ts"
-
-# Per-user credential path. verify_jwt=true AND in-code auth.getUser(). Executes
-# real (paper) trades against Alpaca using the caller's decrypted credentials.
-[functions.place-order]
-enabled = true
-verify_jwt = true
-entrypoint = "./functions/place-order/index.ts"
 
 # Market data, no per-user credentials — uses the shared server-side
 # ALPACA_API_KEY. verify_jwt=true is the ONLY auth (no in-code guard), so the
