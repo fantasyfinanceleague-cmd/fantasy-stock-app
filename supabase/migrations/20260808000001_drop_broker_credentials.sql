@@ -1,0 +1,44 @@
+-- In-house simulator migration (DR-001 / SIMULATOR_MIGRATION_SPEC Phase 1):
+-- drop the broker_credentials table and its dedicated trigger function.
+--
+-- WHY: broker_credentials (created in 20251217000000) stored each user's
+-- AES-GCM-encrypted Alpaca API key/secret. DR-001 retires user broker-credential
+-- custody entirely — users no longer link a brokerage account. The edge functions
+-- that read/wrote this table (save-broker-keys, place-order, sync-alpaca-orders)
+-- and every client read of it were removed earlier in the `remove-alpaca-linking`
+-- branch. This table is the credential-custody attack surface the decision exists
+-- to eliminate.
+--
+-- ============================================================================
+-- HUMAN ACTION — DO NOT let this apply blindly. Giorgio runs it, not the agent.
+-- ============================================================================
+-- Preconditions before `supabase db push` (spec HUMAN ACTION checklist):
+--   1. Confirm NOTHING still reads broker_credentials. proacl-grade check, not
+--      absence-of-errors:
+--        - `git grep -in broker_credentials` returns only this migration + the
+--          original create migration (verified on-branch at authoring time).
+--        - The `quote` function is KEPT (Phase 3 debt) and still calls
+--          getUserCredentials() against this table. After this drop, `quote`'s
+--          user-credential path returns no_credentials for everyone — that is the
+--          expected interim state until Phase 3 rewires quote to the app-key
+--          (ticker-quotes / historical-bars) fill path. Confirm you have accepted
+--          that `quote` is degraded until Phase 3 BEFORE applying this drop.
+--   2. Separately inventory and remove any Vault rows holding user broker keys
+--      (distinct from Stockpile's own ALPACA_API_KEY, which STAYS). Not done here.
+--
+-- Effect-verify AFTER `supabase db push` (do not trust the push output):
+--   SELECT to_regclass('public.broker_credentials');            -- must be NULL
+--   SELECT proname FROM pg_proc
+--     WHERE proname = 'update_broker_credentials_updated_at';    -- zero rows
+--
+-- This drop is authored on branch `remove-alpaca-linking` and is NOT applied by
+-- the agent. `functions deploy` for the removed edge functions is also HUMAN ACTION.
+
+-- Dropping the table also drops its 4 RLS policies, its index, and the
+-- broker_credentials_updated_at trigger (all are objects ON the table). No other
+-- table has a foreign key to it (verified), so CASCADE is unnecessary.
+DROP TABLE IF EXISTS broker_credentials;
+
+-- The trigger function is dedicated to this table (verified: no other trigger
+-- references it) and is NOT removed by DROP TABLE — drop it explicitly.
+DROP FUNCTION IF EXISTS update_broker_credentials_updated_at();
