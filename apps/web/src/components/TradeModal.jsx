@@ -32,7 +32,6 @@ export default function TradeModal({
   const [error, setError] = useState('');
   const [quote, setQuote] = useState(null);
   const [companyName, setCompanyName] = useState('');
-  const [hasAlpacaLinked, setHasAlpacaLinked] = useState(null); // null = loading, true/false = result
 
   // Search state
   const [searchResults, setSearchResults] = useState([]);
@@ -40,24 +39,6 @@ export default function TradeModal({
   const [showSearchResults, setShowSearchResults] = useState(false);
   const searchTimeoutRef = useRef(null);
   const searchContainerRef = useRef(null);
-
-  // Check if user has Alpaca account linked
-  useEffect(() => {
-    if (!show || !userId) return;
-
-    async function checkAlpacaLink() {
-      const { data, error } = await supabase
-        .from('broker_credentials')
-        .select('key_id')
-        .eq('user_id', userId)
-        .eq('broker', 'alpaca')
-        .single();
-
-      setHasAlpacaLinked(!error && !!data);
-    }
-
-    checkAlpacaLink();
-  }, [show, userId]);
 
   // Reset state when modal opens
   useEffect(() => {
@@ -235,96 +216,11 @@ export default function TradeModal({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-
-    if (!quote) {
-      setError('Please enter a valid symbol');
-      return;
-    }
-
-    if (!canAfford) {
-      setError(`Insufficient funds. You have $${availableCash.toFixed(2)} available.`);
-      return;
-    }
-
-    if (!hasEnoughShares) {
-      setError(`You only own ${ownedQuantity} shares of ${symbol.toUpperCase()}`);
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const upperSymbol = symbol.toUpperCase();
-
-      // 1) Place paper order via Alpaca Edge Function
-      const { data: placeData, error: placeErr } = await supabase.functions.invoke('place-order', {
-        body: {
-          symbol: upperSymbol,
-          qty: quantity,
-          side: action, // 'buy' or 'sell'
-          type: 'market',
-          time_in_force: 'day',
-        },
-      });
-
-      // Handle Alpaca errors
-      if (placeErr || placeData?.error) {
-        console.error('place-order failed:', placeErr || placeData);
-
-        // Check for specific error types
-        if (placeData?.error === 'credentials_invalid') {
-          setError(placeData.message || 'Your Alpaca credentials are invalid or expired. Please update them in your Profile.');
-          return;
-        }
-
-        if (placeData?.error === 'insufficient_funds') {
-          setError(placeData.message || 'Insufficient buying power in your Alpaca account.');
-          return;
-        }
-
-        if (placeData?.error === 'no_credentials') {
-          setError(placeData.message || 'Please link your Alpaca account in Profile settings.');
-          return;
-        }
-
-        // For other Alpaca errors, stop - don't record a trade that didn't happen
-        setError(placeData?.message || 'Trade failed. Please try again.');
-        return;
-      }
-
-      // Use the actual fill price from Alpaca (not our quote)
-      const fillPrice = placeData?.filled_avg_price ?? currentPrice;
-      const fillQty = placeData?.filled_qty ?? quantity;
-      const actualTotalValue = fillPrice * fillQty;
-
-      // 2) Insert trade into database with Alpaca's actual fill price
-      const { error: tradeError } = await supabase
-        .from('trades')
-        .insert({
-          league_id: leagueId,
-          user_id: userId,
-          symbol: upperSymbol,
-          action: action,
-          quantity: fillQty,
-          price: fillPrice,
-          total_value: actualTotalValue,
-          alpaca_order_id: placeData?.order?.id ?? null
-        });
-
-      if (tradeError) throw tradeError;
-
-      // Call parent callback to refresh data
-      if (onTradeComplete) {
-        await onTradeComplete();
-      }
-
-      onClose();
-    } catch (err) {
-      setError(err.message || 'Failed to execute trade');
-    } finally {
-      setLoading(false);
-    }
+    // Trade submission is disabled between Phase 1 (broker removal) and Phase 3
+    // (in-house simulator fills). The place-order edge function has been removed;
+    // no ledger writes happen here until Phase 3 wires the app-key fill path.
+    // See DR-001 / SIMULATOR_MIGRATION_SPEC.
+    setError('Trading is temporarily unavailable while we upgrade to the in-house simulator.');
   };
 
   if (!show) return null;
@@ -374,37 +270,7 @@ export default function TradeModal({
 
         <h2 style={{ marginTop: 0 }}>Trade Stock</h2>
 
-        {/* Check if Alpaca account is linked */}
-        {hasAlpacaLinked === null ? (
-          <div style={{ textAlign: 'center', padding: '20px 0' }}>
-            <div className="muted">Checking account status...</div>
-          </div>
-        ) : hasAlpacaLinked === false ? (
-          <div style={{
-            padding: 20,
-            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-            border: '1px solid rgba(239, 68, 68, 0.3)',
-            borderRadius: 8,
-            textAlign: 'center'
-          }}>
-            <p style={{ margin: '0 0 12px 0', color: '#f87171' }}>
-              You need to link your Alpaca paper trading account before you can trade.
-            </p>
-            <p className="muted" style={{ margin: '0 0 16px 0', fontSize: 14 }}>
-              Go to your Profile settings to link your Alpaca API keys.
-            </p>
-            <button
-              type="button"
-              className="btn primary"
-              onClick={() => {
-                onClose();
-                window.location.href = '/profile';
-              }}
-            >
-              Go to Profile
-            </button>
-          </div>
-        ) : !marketOpen ? (
+        {!marketOpen ? (
           <div style={{
             padding: 20,
             backgroundColor: 'rgba(251, 191, 36, 0.1)',
@@ -622,6 +488,19 @@ export default function TradeModal({
             </div>
           )}
 
+          {/* Trading temporarily disabled (Phase 1 → Phase 3 interim) */}
+          <div style={{
+            padding: 12,
+            marginBottom: 16,
+            backgroundColor: 'rgba(251, 191, 36, 0.1)',
+            border: '1px solid rgba(251, 191, 36, 0.3)',
+            borderRadius: 8,
+            color: '#fbbf24',
+            fontSize: 14
+          }}>
+            Trading is temporarily unavailable while we upgrade to the in-house simulator.
+          </div>
+
           {/* Error Message */}
           {error && (
             <div style={{
@@ -642,10 +521,10 @@ export default function TradeModal({
             <button
               type="submit"
               className="btn primary"
-              disabled={loading || !quote || !canAfford || !hasEnoughShares}
+              disabled
               style={{ flex: 1 }}
             >
-              {loading ? 'Processing...' : `${action === 'buy' ? 'Buy' : 'Sell'} ${quantity} Share${quantity !== 1 ? 's' : ''}`}
+              Trading Unavailable
             </button>
             <button
               type="button"

@@ -28,8 +28,6 @@ const ERROR_MAP = {
   'not_authenticated': 'Please log in to continue.',
 
   // Stock API errors
-  'credentials_invalid': 'Your Alpaca credentials are invalid. Please update them in Profile settings.',
-  'no_credentials': 'Please set up your Alpaca credentials in Profile settings to trade.',
   'insufficient_funds': 'Insufficient buying power for this trade.',
   'no_price': 'Unable to get current stock price. Please try again.',
   'market_closed': 'The market is currently closed. Orders will execute when it opens.',

@@ -208,18 +208,12 @@ function ChecklistItem({ label, completed, link, compact }) {
 /**
  * Hook to determine checklist items based on user state
  */
-export function useSetupProgress({ hasLeagues, hasHoldings, hasAlpaca }) {
+export function useSetupProgress({ hasLeagues, hasHoldings }) {
   const items = [
     {
       id: 'account',
       label: 'Create your account',
       completed: true, // If they're seeing this, they've signed up
-    },
-    {
-      id: 'alpaca',
-      label: 'Connect Alpaca for trading',
-      completed: !!hasAlpaca,
-      link: '/profile',
     },
     {
       id: 'league',

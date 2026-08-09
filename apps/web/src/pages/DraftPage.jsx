@@ -104,10 +104,8 @@ async function fetchQuoteViaFunction(symbol) {
     // Provide user-friendly error messages
     if (errorType === 'not_authenticated') {
       throw new Error('Please sign in to view quotes.');
-    } else if (errorType === 'no_credentials') {
-      throw new Error('Please link your Alpaca account in Profile settings.');
-    } else if (errorType === 'credentials_invalid') {
-      throw new Error('Your Alpaca credentials are invalid. Please update them in Profile settings.');
+    } else if (errorType === 'no_credentials' || errorType === 'credentials_invalid') {
+      throw new Error('Unable to fetch a live quote right now. Please try again.');
     } else if (errorType === 'no_price') {
       throw new Error(`No price data available for "${sym}".`);
     }
@@ -165,9 +163,6 @@ export default function DraftPage() {
   // draft setup modal
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [customMinParticipants, setCustomMinParticipants] = useState(MIN_PARTICIPANTS);
-
-  // Alpaca account linking status
-  const [membersWithoutAlpaca, setMembersWithoutAlpaca] = useState([]); // user IDs without linked Alpaca
 
   // UI helpers
   const [symbol, setSymbol] = useState('');
@@ -318,20 +313,6 @@ export default function DraftPage() {
         } catch (e) {
           // If function doesn't exist yet, assume only current user is real
           setRealUserIds(realIdsSet);
-        }
-
-        // 3c) Check which real users have linked their Alpaca accounts
-        const realUserIdsList = Array.from(realIdsSet);
-        if (realUserIdsList.length > 0) {
-          const { data: linkedAccounts } = await supabase
-            .from('broker_credentials')
-            .select('user_id')
-            .eq('broker', 'alpaca')
-            .in('user_id', realUserIdsList);
-
-          const linkedUserIds = new Set((linkedAccounts || []).map(a => a.user_id));
-          const unlinked = realUserIdsList.filter(id => !linkedUserIds.has(id));
-          setMembersWithoutAlpaca(unlinked);
         }
 
         // 4) Gate - check requirements but don't early return (allow modal to show)
@@ -657,23 +638,8 @@ export default function DraftPage() {
       return;
     }
 
-    // 1) Place paper order via Edge Function
-    const { data: placeData, error: placeErr } = await supabase.functions.invoke('place-order', {
-      body: {
-        symbol: upper,
-        qty: 1,
-        side: 'buy',
-        type: 'market',
-        time_in_force: 'day',
-      },
-    });
-
-    if (placeErr || placeData?.error) {
-      console.error('place-order failed:', placeErr || placeData);
-      console.error('Paper order failed');
-    }
-
-    // 2) Save the pick
+    // Save the pick to the in-house ledger (drafts). No broker order is placed;
+    // in-house simulator fills are wired in Phase 3 (see DR-001).
     const newPickNumber = (portfolio?.length || 0) + 1;
     const payload = {
       league_id: leagueId,
@@ -684,7 +650,6 @@ export default function DraftPage() {
       round: currentRound,
       pick_number: newPickNumber,
       draft_date: new Date().toISOString(),
-      alpaca_order_id: placeData?.order?.id ?? null,
     };
 
     const { data: inserted, error: insErr } = await supabase
@@ -1294,30 +1259,13 @@ export default function DraftPage() {
               </div>
             )}
 
-            {/* Alpaca warning */}
-            {membersWithoutAlpaca.length > 0 && (
-              <div className="draft-pending-notice error">
-                <strong>Alpaca Required</strong>
-                <span>
-                  {membersWithoutAlpaca.length === 1 && membersWithoutAlpaca[0] === USER_ID
-                    ? 'Link your Alpaca account to continue'
-                    : `${membersWithoutAlpaca.length} member${membersWithoutAlpaca.length > 1 ? 's' : ''} need to link Alpaca`}
-                </span>
-                {membersWithoutAlpaca.includes(USER_ID) && (
-                  <Link to="/profile" className="btn primary" style={{ marginTop: 8 }}>
-                    Link Account
-                  </Link>
-                )}
-              </div>
-            )}
-
             {/* Action button */}
             <div className="draft-pending-actions">
               {isCommissioner ? (
                 <button
                   className="btn primary large"
                   onClick={handleStartDraft}
-                  disabled={membersWithoutAlpaca.length > 0 || !canStartDraft}
+                  disabled={!canStartDraft}
                 >
                   {canStartDraft ? 'Start Draft' : (!draftStartTime ? 'Set Draft Date First' : 'Not Available Yet')}
                 </button>
