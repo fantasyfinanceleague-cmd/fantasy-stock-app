@@ -1,0 +1,35 @@
+-- In-house simulator (DR-001 / SIMULATOR_MIGRATION_SPEC Phase 4, UI branch)
+-- Drops leagues.salary_cap_limit — the retired duplicate of budget_amount.
+--
+-- PRIOR USAGE (documented per the retirement checklist):
+--   * Written as a mirror of budget_amount by every league create/update path
+--     since the original 20250818225829 schema: web useLeagues.createLeague +
+--     Leagues.handleUpdate, mobile create-league / leagues-tab quick-create /
+--     league-settings. The two columns never intentionally diverged.
+--   * Read in exactly ONE place: DraftPage.jsx's league-budget fallback
+--     (budget_amount ?? salary_cap_limit) — Phase 0.5 recon flagged it
+--     "likely legacy; verify usage and deprecate if dead".
+--   * As of the phase4-ui branch, ALL writes and the fallback read are
+--     removed (grep-verified: zero live references in apps/, comments only).
+--     budget_amount is the single authoritative budget field; stake_mode
+--     decides whether it means anything.
+--
+-- HUMAN ACTION: supabase db push, only AFTER the phase4-ui clients are
+--   deployed (web merge + mobile release). In-flight OLD mobile builds still
+--   write salary_cap_limit on create/update; dropping the column makes those
+--   writes FAIL (PostgREST rejects unknown columns), which breaks league
+--   creation on stale builds — a louder failure than the trades/drafts
+--   policy drops. Hold this migration for the mobile release cycle.
+--
+-- Pre-push check (prod SQL editor — expect zero rows; an out-of-band
+-- function referencing the column would break on drop):
+--   SELECT proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+--    WHERE n.nspname = 'public' AND prosrc ILIKE '%salary_cap_limit%';
+--
+-- Effect-verify AFTER push:
+--   SELECT column_name FROM information_schema.columns
+--    WHERE table_name = 'leagues' AND column_name = 'salary_cap_limit';
+--   -- must return zero rows; then create a league via a switched client and
+--   -- confirm budget_amount lands per stake mode.
+
+alter table leagues drop column if exists salary_cap_limit;
