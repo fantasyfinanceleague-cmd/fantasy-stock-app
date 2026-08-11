@@ -8,14 +8,21 @@
 --    updated_at, which means "any column changed" (see 2).
 --
 -- 2) updated_at bump trigger. The refresh-symbols upsert never touched
---    updated_at (root cause of the May staleness mystery — the column stayed
---    frozen even while the cron worked). Fixing it in the DB covers BOTH
---    writers (refresh-symbols and enrich-symbols) and fires only when the row
---    actually changed, so max(updated_at) is a truthful cron-liveness signal
---    rather than bumping on every no-op upsert. refresh-symbols itself needs
---    NO code change: its upsert only SETs the columns it provides, so
---    enrichment columns are never clobbered, and this trigger supplies the
---    updated_at bump it was missing.
+--    updated_at (root cause of the May staleness mystery). Fixing it in the
+--    DB covers BOTH writers; refresh-symbols needs NO code change (its upsert
+--    only SETs the columns it provides, so enrichment columns are never
+--    clobbered).
+--
+--    The WHEN clause compares SUBSTANTIVE columns explicitly rather than
+--    old.* — enriched_at is cursor BOOKKEEPING written on every enrichment
+--    pass, and including it would bump updated_at on every run even when no
+--    data changed (found in Phase 4 review). What each signal now honestly
+--    means:
+--      updated_at  = listing or enrichment DATA changed (either writer)
+--      enriched_at = enrich-symbols cron liveness (advances every pass)
+--      refresh-symbols liveness = cron.job_run_details + net._http_response +
+--        listing-change counts — updated_at was NEVER a reliable refresh
+--        liveness signal (a healthy run on a quiet day changes nothing).
 --
 -- HUMAN ACTION: supabase db push. Effect-verify AFTER push:
 --   -- trigger exists:
@@ -47,5 +54,15 @@ drop trigger if exists symbols_touch_updated_at on symbols;
 create trigger symbols_touch_updated_at
   before update on symbols
   for each row
-  when (old.* is distinct from new.*)
+  when (
+    old.name          is distinct from new.name or
+    old.exchange      is distinct from new.exchange or
+    old.is_etf        is distinct from new.is_etf or
+    old.active        is distinct from new.active or
+    old.gics_sector   is distinct from new.gics_sector or
+    old.gics_industry is distinct from new.gics_industry or
+    old.is_draftable  is distinct from new.is_draftable or
+    old.last_price    is distinct from new.last_price or
+    old.market_cap    is distinct from new.market_cap
+  )
   execute function public.symbols_touch_updated_at();

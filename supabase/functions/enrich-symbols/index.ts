@@ -32,7 +32,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { computeIsDraftable } from '../_shared/symbol-eligibility.ts';
 
 const DEFAULT_BATCH = 50;
-const MAX_BATCH = 120;
+const MAX_BATCH = 80; // 80 * 1100ms = 88s Finnhub time — headroom under the 150s edge wall clock
 const FINNHUB_SPACING_MS = 1100; // stay under 60 calls/min
 
 function constantTimeEqual(a: string, b: string): boolean {

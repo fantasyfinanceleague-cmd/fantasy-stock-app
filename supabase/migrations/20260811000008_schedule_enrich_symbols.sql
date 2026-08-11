@@ -9,7 +9,10 @@
 -- the vault's cron_apikey secret; the function validates it constant-time,
 -- fail-closed (verify_jwt=false at the gateway).
 --
--- HUMAN ACTION: deploy enrich-symbols FIRST, then supabase db push.
+-- HUMAN ACTION (in order): 1) confirm SB_SECRET_KEY_CRON exists in Functions
+-- secrets; 2) `supabase secrets set FINNHUB_API_KEY=...` (NEW for this
+-- function — only finnhub-quote used it before, verify it is set as a
+-- function secret, not just assumed); 3) deploy enrich-symbols; 4) db push.
 --
 -- Effect-verify AFTER push (per CLAUDE.md: pg_net enqueue always
 -- "succeeds", so check the cron row, the HTTP responses, and — the real
