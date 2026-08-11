@@ -7,6 +7,11 @@ import { Colors } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
 import LeagueSwitcher from '@/components/LeagueSwitcher';
 import { notifyDraftTurn } from '@/lib/notifications';
+import {
+  type Category,
+  fetchCategories,
+  fetchSymbolCategories,
+} from '@/lib/categoryData';
 
 interface DraftPick {
   id: string;
@@ -15,8 +20,18 @@ interface DraftPick {
   entry_price: number;
   round: number;
   pick_number: number;
+  slot_id?: string | null;
   created_at: string;
   display_name?: string;
+}
+
+interface LeagueSlot {
+  id: string;
+  slot_index: number;
+  slot_count: number;
+  price_min: number | null;
+  price_max: number | null;
+  category_id: string | null;
 }
 
 interface LeagueMember {
@@ -51,6 +66,9 @@ export default function DraftScreen() {
   // Stock search
   const [searchSymbol, setSearchSymbol] = useState('');
   const [quote, setQuote] = useState<{ symbol: string; price: number } | null>(null);
+  const [quoteCats, setQuoteCats] = useState<{ categories: Category[]; classified: boolean } | null>(null);
+  const [leagueSlots, setLeagueSlots] = useState<LeagueSlot[]>([]);
+  const [categoryList, setCategoryList] = useState<Category[]>([]);
   const [searching, setSearching] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -135,7 +153,7 @@ export default function DraftScreen() {
       // Fetch picks
       const { data: pickData } = await supabase
         .from('drafts')
-        .select('id, user_id, symbol, entry_price, round, pick_number, created_at')
+        .select('id, user_id, symbol, entry_price, round, pick_number, slot_id, created_at')
         .eq('league_id', activeLeagueId)
         .order('pick_number', { ascending: true });
 
@@ -163,6 +181,40 @@ export default function DraftScreen() {
   useEffect(() => {
     fetchDraftData();
   }, [fetchDraftData]);
+
+  // Phase 4: category names + league slot definitions (display; the server
+  // validator is authoritative).
+  useEffect(() => { fetchCategories().then(setCategoryList); }, []);
+  useEffect(() => {
+    if (!activeLeagueId) return;
+    supabase
+      .from('league_draft_slots')
+      .select('id, slot_index, slot_count, price_min, price_max, category_id')
+      .eq('league_id', activeLeagueId)
+      .order('slot_index', { ascending: true })
+      .then(({ data }) => setLeagueSlots((data as LeagueSlot[]) || []));
+  }, [activeLeagueId]);
+  useEffect(() => {
+    let stale = false;
+    if (quote?.symbol) {
+      fetchSymbolCategories(quote.symbol).then((r) => { if (!stale) setQuoteCats(r); });
+    } else {
+      setQuoteCats(null);
+    }
+    return () => { stale = true; };
+  }, [quote?.symbol]);
+
+  const categoryNameById = (id: string) => categoryList.find((c) => c.id === id)?.name ?? 'Category';
+  const slotLabel = (sl: LeagueSlot) => {
+    const parts: string[] = [];
+    if (sl.price_min != null || sl.price_max != null) {
+      parts.push(`$${sl.price_min ?? 0}–${sl.price_max != null ? `$${sl.price_max}` : '∞'}`);
+    }
+    if (sl.category_id) parts.push(categoryNameById(sl.category_id));
+    return parts.length ? parts.join(' • ') : 'Flex';
+  };
+  const mySlotFill = (slotId: string) =>
+    picks.filter((pk) => pk.user_id === user?.id && pk.slot_id === slotId && pk.symbol !== 'SKIP').length;
 
   // Real-time subscription for picks
   useEffect(() => {
@@ -313,6 +365,29 @@ export default function DraftScreen() {
         <View style={styles.centered}>
           <Text style={styles.emptyTitle}>No league selected</Text>
           <Text style={styles.emptySubtitle}>Select a league from Home</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Phase 4: legacy leagues with stake_mode NULL are blocked from drafting
+  // until the commissioner chooses a mode in League Settings.
+  if (activeLeague.stake_mode == null) {
+    const isCommish = activeLeague.commissioner_id === user?.id;
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <LeagueSwitcher />
+        <View style={styles.centered}>
+          <Text style={styles.pendingIcon}>⚖️</Text>
+          <Text style={styles.emptyTitle}>Choose a Stake Mode</Text>
+          <Text style={styles.emptySubtitle}>
+            This league has no stake mode yet, so drafting is paused.
+          </Text>
+          <Text style={styles.hint}>
+            {isCommish
+              ? 'Open League Settings and pick Equal stakes, Price tiers, or Budget cap.'
+              : 'Ask your commissioner to choose a stake mode in League Settings.'}
+          </Text>
         </View>
       </SafeAreaView>
     );
@@ -555,6 +630,22 @@ export default function DraftScreen() {
                   </Text>
                 )}
               </View>
+
+              {/* Your roster slots (which are filled / open) */}
+              {leagueSlots.length > 0 && (
+                <View style={styles.slotPanel}>
+                  {leagueSlots.map((sl) => {
+                    const filled = mySlotFill(sl.id);
+                    const done = filled >= sl.slot_count;
+                    return (
+                      <View key={sl.id} style={[styles.slotRow, done && styles.slotRowDone]}>
+                        <Text style={[styles.slotRowText, done && styles.slotRowTextDone]}>{slotLabel(sl)}</Text>
+                        <Text style={[styles.slotRowText, done && styles.slotRowTextDone]}>{filled}/{sl.slot_count}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
             </View>
 
             {/* Stock Search (only show if it's my turn) */}
@@ -590,6 +681,17 @@ export default function DraftScreen() {
                     <View style={styles.quoteInfo}>
                       <Text style={styles.quoteSymbol}>{quote.symbol}</Text>
                       <Text style={styles.quotePrice}>${quote.price.toFixed(2)}</Text>
+                      {quoteCats && (
+                        <View style={styles.badgeRow}>
+                          {quoteCats.categories.length > 0 ? (
+                            quoteCats.categories.map((c) => (
+                              <Text key={c.id} style={styles.categoryBadge}>{c.name}</Text>
+                            ))
+                          ) : (
+                            <Text style={styles.flexBadge}>Unclassified — flex only</Text>
+                          )}
+                        </View>
+                      )}
                     </View>
                     <TouchableOpacity
                       style={styles.draftBtn}
@@ -1211,4 +1313,36 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textMuted,
   },
+  // Phase 4 draft UI
+  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 6 },
+  categoryBadge: {
+    fontSize: 10,
+    color: Colors.primary,
+    backgroundColor: Colors.primaryBg,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    overflow: 'hidden',
+  },
+  flexBadge: {
+    fontSize: 10,
+    color: Colors.textMuted,
+    backgroundColor: Colors.cardBgAlt,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    overflow: 'hidden',
+  },
+  slotPanel: { marginTop: 10, gap: 4 },
+  slotRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: Colors.primaryBg,
+  },
+  slotRowDone: { backgroundColor: Colors.successBg },
+  slotRowText: { fontSize: 12, color: Colors.primary },
+  slotRowTextDone: { color: Colors.success },
 });

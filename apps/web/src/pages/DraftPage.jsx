@@ -14,6 +14,7 @@ import DraftSetupModal from '../components/DraftSetupModal';
 import { PageLoader } from '../components/LoadingSpinner';
 import { useUserProfiles } from '../context/UserProfilesContext';
 import { useToast } from '../components/Toast';
+import { fetchSymbolCategories, fetchCategories } from '../utils/categoryData';
 
 // Draft access rules
 const MIN_PARTICIPANTS = 4;
@@ -182,12 +183,55 @@ export default function DraftPage() {
   // checks are UX mirrors — validate-and-record-pick is the legality gate.
   const isBudgetMode =
     (league?.stake_mode ?? (league?.budget_mode === 'budget' ? 'budget_cap' : null)) === 'budget_cap';
-  const leagueBudget = Number(league?.budget_amount ?? league?.salary_cap_limit ?? 0);
+  // budget_amount is authoritative; the salary_cap_limit fallback read was
+  // removed with the column's retirement (drop migration on this branch).
+  const leagueBudget = Number(league?.budget_amount ?? 0);
   const mySpent = useMemo(
     () => portfolio.filter(p => p.user_id === USER_ID).reduce((s, p) => s + Number(p.entry_price || 0), 0),
     [portfolio]
   );
   const budgetRemaining = isBudgetMode ? Math.max(leagueBudget - mySpent, 0) : null;
+
+  // Phase 4: legacy leagues with stake_mode NULL are blocked from drafting
+  // until the commissioner chooses a mode in Manage → League Settings.
+  const stakeModeMissing = !!league && league.stake_mode == null;
+
+  // Phase 4: league slot definitions + category names (display; the server
+  // validator is authoritative).
+  const [leagueSlots, setLeagueSlots] = useState([]);
+  const [categoryList, setCategoryList] = useState([]);
+  const [quoteCats, setQuoteCats] = useState(null); // null = not looked up
+  useEffect(() => { fetchCategories().then(setCategoryList); }, []);
+  useEffect(() => {
+    if (!leagueId) return;
+    supabase
+      .from('league_draft_slots')
+      .select('id, slot_index, slot_count, price_min, price_max, category_id')
+      .eq('league_id', leagueId)
+      .order('slot_index', { ascending: true })
+      .then(({ data }) => setLeagueSlots(data || []));
+  }, [leagueId]);
+  useEffect(() => {
+    let stale = false;
+    if (quote && symbol) {
+      fetchSymbolCategories(symbol).then((r) => { if (!stale) setQuoteCats(r); });
+    } else {
+      setQuoteCats(null);
+    }
+    return () => { stale = true; };
+  }, [quote, symbol]);
+
+  const categoryNameById = (id) => categoryList.find((c) => c.id === id)?.name ?? 'Category';
+  const slotLabel = (sl) => {
+    const parts = [];
+    if (sl.price_min != null || sl.price_max != null) {
+      parts.push(`$${sl.price_min ?? '0'}–${sl.price_max != null ? `$${sl.price_max}` : '∞'}`);
+    }
+    if (sl.category_id) parts.push(categoryNameById(sl.category_id));
+    return parts.length ? parts.join(' • ') : 'Flex';
+  };
+  const mySlotFill = (slotId) =>
+    portfolio.filter((pk) => pk.user_id === USER_ID && pk.slot_id === slotId && pk.symbol !== 'SKIP').length;
 
   // --- turn helper (keeps the "whose turn" math in one place)
   function updateTurn(picks, members, totalRounds) {
@@ -337,7 +381,7 @@ export default function DraftPage() {
         // 5) League picks
         const { data: picks, error: pErr } = await supabase
           .from('drafts')
-          .select('id, league_id, user_id, symbol, entry_price, quantity, round, pick_number, created_at')
+          .select('id, league_id, user_id, symbol, entry_price, quantity, round, pick_number, slot_id, created_at')
           .eq('league_id', leagueId)
           .order('pick_number', { ascending: false });
         if (pErr) throw pErr;
@@ -907,6 +951,7 @@ export default function DraftPage() {
   useEffect(() => {
     // Check both state and ref to prevent race conditions
     if (!autoDraftEnabled || !allowed || !currentPicker || botPickInProgress || botPickLockRef.current) return;
+    if (stakeModeMissing) return; // drafting blocked until a stake mode is chosen
 
     // Check if current picker is a real user (exists in auth.users)
     const isRealUser = realUserIds.has(currentPicker);
@@ -1398,7 +1443,20 @@ export default function DraftPage() {
           <div className="draft-main-v2">
             {/* Search and Draft Controls */}
             <div className="draft-search-section">
-              <DraftControls
+              {stakeModeMissing && (
+                <div style={{
+                  padding: '14px 16px', marginBottom: 12,
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: 10, color: '#f87171', fontSize: 14,
+                }}>
+                  Drafting is paused: this league has no stake mode yet.
+                  {isCommissioner
+                    ? ' Choose one in Leagues → Manage → League Settings.'
+                    : ' Ask your commissioner to choose one in League Settings.'}
+                </div>
+              )}
+              {!stakeModeMissing && <DraftControls
                 isDraftComplete={isDraftComplete}
                 draftCap={draftCap}
                 leagueName={league?.name}
@@ -1417,7 +1475,32 @@ export default function DraftPage() {
                 budgetRemaining={budgetRemaining}
                 getQuote={getQuote}
                 draftStock={draftStock}
-              />
+              />}
+
+              {/* Category eligibility badges for the searched symbol */}
+              {!stakeModeMissing && quote && quoteCats && (
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '8px 0 4px' }}>
+                  {quoteCats.categories.length > 0 ? (
+                    quoteCats.categories.map((c) => (
+                      <span key={c.id} style={{
+                        fontSize: 11, padding: '3px 10px', borderRadius: 999,
+                        background: 'rgba(59, 130, 246, 0.12)', color: '#93c5fd',
+                        border: '1px solid rgba(59, 130, 246, 0.3)',
+                      }}>
+                        {c.name}
+                      </span>
+                    ))
+                  ) : (
+                    <span style={{
+                      fontSize: 11, padding: '3px 10px', borderRadius: 999,
+                      background: 'rgba(107, 114, 128, 0.12)', color: '#9ca3af',
+                      border: '1px solid rgba(107, 114, 128, 0.3)',
+                    }}>
+                      Unclassified — fits flex slots only
+                    </span>
+                  )}
+                </div>
+              )}
 
               {/* Progress Stats */}
               <div className="draft-stats">
@@ -1445,6 +1528,28 @@ export default function DraftPage() {
                   <span>Auto-draft bots</span>
                 </label>
               </div>
+
+              {/* Your roster slots (which are filled / open) */}
+              {leagueSlots.length > 0 && (
+                <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {leagueSlots.map((sl) => {
+                    const filled = mySlotFill(sl.id);
+                    const done = filled >= sl.slot_count;
+                    return (
+                      <div key={sl.id} style={{
+                        display: 'flex', justifyContent: 'space-between',
+                        fontSize: 12, padding: '6px 10px', borderRadius: 8,
+                        background: done ? 'rgba(16, 185, 129, 0.08)' : 'rgba(59, 130, 246, 0.06)',
+                        border: `1px solid ${done ? 'rgba(16, 185, 129, 0.25)' : 'rgba(59, 130, 246, 0.2)'}`,
+                        color: done ? '#6ee7b7' : '#93c5fd',
+                      }}>
+                        <span>{slotLabel(sl)}</span>
+                        <span>{filled}/{sl.slot_count} filled</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Your Stocks and Draft History - Side by Side */}
