@@ -2,31 +2,22 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "1fb78be910a5d29c00d61b10bca09099d357db04",
-    "commitShort": "1fb78be",
+    "commit": "f62bebd2a5c8edd61e2abe818997713bad6b071b",
+    "commitShort": "f62bebd",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "simulator-core",
-    "dirty": true,
-    "dirtyPaths": [
-      {
-        "code": "M",
-        "path": "supabase/migrations/20260811000002_trades_drop_direct_client_insert.sql"
-      },
-      {
-        "code": "??",
-        "path": "supabase/migrations/20260811000003_drafts_drop_direct_client_insert.sql"
-      }
-    ],
-    "timestamp": "2026-08-11T16:17:29Z",
-    "sourceHash": "sha256:082a26e2e1ac2603fd103ce2fe29aa4991fc416352890f18815ff9e8e4d6e03f",
+    "branch": "phase4-categories",
+    "dirty": false,
+    "dirtyPaths": [],
+    "timestamp": "2026-08-11T19:15:01Z",
+    "sourceHash": "sha256:6913b097d9b89b3e35a0e21d7cd303cf52301ff31f48e036467f410e70bbe71d",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-07-30T03:10:26Z",
-    "ageHours": 301.1,
-    "ageDays": 12.5,
+    "ageHours": 304.1,
+    "ageDays": 12.7,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:74cc797461d0f3634b1e75de6bd5e372a016f54dbc9c18131257b7bc2ec8c927",
@@ -284,8 +275,40 @@
     {
       "layer": "edge",
       "facts": {
+        "verifyJwt": false,
+        "verifyJwtSource": "supabase/config.toml:71",
+        "authGuard": "apikey header, constant-time, fail-closed",
+        "localModules": [],
+        "tests": [],
+        "envVars": [
+          "ALPACA_API_KEY",
+          "ALPACA_API_SECRET",
+          "FINNHUB_API_KEY",
+          "SB_SECRET_KEY_CRON",
+          "SB_SECRET_KEY_INTERNAL",
+          "SUPABASE_URL"
+        ],
+        "lines": 225
+      },
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "fn.enrich-symbols",
+      "label": "enrich-symbols",
+      "sublabel": "verify_jwt=false · apikey guard",
+      "kind": "edge-function",
+      "source": {
+        "path": "supabase/functions/enrich-symbols/index.ts",
+        "line": 119
+      }
+    },
+    {
+      "layer": "edge",
+      "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:134",
+        "verifyJwtSource": "supabase/config.toml:144",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -312,7 +335,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:119",
+        "verifyJwtSource": "supabase/config.toml:129",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -465,7 +488,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:80",
+        "verifyJwtSource": "supabase/config.toml:90",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -476,7 +499,7 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 243
+        "lines": 249
       },
       "db": null,
       "declared": null,
@@ -594,7 +617,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:124",
+        "verifyJwtSource": "supabase/config.toml:134",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -622,7 +645,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:129",
+        "verifyJwtSource": "supabase/config.toml:139",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -652,7 +675,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": false,
-        "verifyJwtSource": "supabase/config.toml:161",
+        "verifyJwtSource": "supabase/config.toml:171",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -680,7 +703,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:71",
+        "verifyJwtSource": "supabase/config.toml:81",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -691,7 +714,7 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 300
+        "lines": 307
       },
       "db": null,
       "declared": null,
@@ -1277,6 +1300,37 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql",
+        "line": 35
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20260811000007_symbols_enrichment_support.sql:35"
+        ],
+        "latestDefinition": "supabase/migrations/20260811000007_symbols_enrichment_support.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.symbols_touch_updated_at",
+      "label": "symbols_touch_updated_at()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20260811000007_symbols_enrichment_support.sql",
         "line": 35
       }
     },
@@ -2484,7 +2538,8 @@
       },
       "declared": {
         "touchedBy": [
-          "supabase/migrations/20260810000001_symbols_add_enrichment_columns.sql"
+          "supabase/migrations/20260810000001_symbols_add_enrichment_columns.sql",
+          "supabase/migrations/20260811000007_symbols_enrichment_support.sql"
         ],
         "rlsEnabled": false
       },
@@ -3394,6 +3449,61 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.fn.enrich-symbols->ext.finnhub",
+      "from": "fn.enrich-symbols",
+      "to": "ext.finnhub",
+      "protocol": "vendor-https",
+      "payload": "https://finnhub.io/api/v1/stock/profile2",
+      "callSites": [
+        "supabase/functions/enrich-symbols/index.ts:70"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.enrich-symbols->tbl.category_rules",
+      "from": "fn.enrich-symbols",
+      "to": "tbl.category_rules",
+      "protocol": "postgrest-select",
+      "payload": ".from('category_rules').select('gics_industry')",
+      "columns": [
+        "gics_industry"
+      ],
+      "callSites": [
+        "supabase/functions/enrich-symbols/index.ts:147"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.enrich-symbols->tbl.symbols",
+      "from": "fn.enrich-symbols",
+      "to": "tbl.symbols",
+      "protocol": "postgrest-select",
+      "payload": ".from('symbols').select('symbol, exchange, is_etf, active, gics_industry, last_price, market_cap')",
+      "columns": [
+        "symbol, exchange, is_etf, active, gics_industry, last_price, market_cap"
+      ],
+      "callSites": [
+        "supabase/functions/enrich-symbols/index.ts:137"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.enrich-symbols->tbl.symbols#update",
+      "from": "fn.enrich-symbols",
+      "to": "tbl.symbols",
+      "protocol": "postgrest-update",
+      "payload": ".from('symbols').update()",
+      "columns": [],
+      "callSites": [
+        "supabase/functions/enrich-symbols/index.ts:197"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.fn.finnhub-quote->ext.finnhub",
       "from": "fn.finnhub-quote",
       "to": "ext.finnhub",
@@ -3873,7 +3983,7 @@
       "payload": ".from('trades').insert()",
       "columns": [],
       "callSites": [
-        "supabase/functions/record-trade/index.ts:224"
+        "supabase/functions/record-trade/index.ts:230"
       ]
     },
     {
@@ -4298,7 +4408,7 @@
       "columns": [],
       "callSites": [
         "supabase/functions/validate-and-record-pick/index.ts:178",
-        "supabase/functions/validate-and-record-pick/index.ts:249",
+        "supabase/functions/validate-and-record-pick/index.ts:256",
         "supabase/functions/validate-and-record-pick/index.ts:6"
       ]
     },
@@ -4357,7 +4467,7 @@
       "payload": ".from('leagues').update()",
       "columns": [],
       "callSites": [
-        "supabase/functions/validate-and-record-pick/index.ts:295"
+        "supabase/functions/validate-and-record-pick/index.ts:302"
       ]
     },
     {
@@ -4797,6 +4907,19 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20260810000003_create_categories_tables.sql:92"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.tbl.symbols->pg.symbols_touch_updated_at",
+      "from": "tbl.symbols",
+      "to": "pg.symbols_touch_updated_at",
+      "protocol": "pg-trigger",
+      "payload": "trigger on symbols",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260811000007_symbols_enrichment_support.sql:47"
       ]
     },
     {
@@ -7156,6 +7279,16 @@
       "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
     },
     {
+      "node": "pg.symbols_touch_updated_at",
+      "label": "symbols_touch_updated_at()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
       "node": "tbl.symbols",
       "label": "symbols",
       "groupKey": "public-role-policies-ungated",
@@ -7288,6 +7421,19 @@
   ],
   "deadCode": [
     {
+      "node": "fn.enrich-symbols",
+      "label": "enrich-symbols",
+      "kind": "edge-function",
+      "source": "supabase/functions/enrich-symbols/index.ts:119",
+      "outbound": [
+        "ext.finnhub",
+        "tbl.category_rules",
+        "tbl.symbols",
+        "tbl.symbols"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
       "node": "pg.trigger_week_end_snapshot",
       "label": "trigger_week_end_snapshot()",
       "kind": "pg-function",
@@ -7340,14 +7486,6 @@
       "caveat": "No scanned caller. Tables can also be reached from plpgsql bodies (now parsed) or dynamic SQL (not parsed)."
     },
     {
-      "node": "tbl.category_rules",
-      "label": "category_rules",
-      "kind": "table",
-      "source": "supabase/migrations/20260810000003_create_categories_tables.sql:35",
-      "outbound": [],
-      "caveat": "No scanned caller. Tables can also be reached from plpgsql bodies (now parsed) or dynamic SQL (not parsed)."
-    },
-    {
       "node": "tbl.draft_sessions",
       "label": "draft_sessions",
       "kind": "table",
@@ -7395,6 +7533,12 @@
     },
     {
       "scope": "pg.mirror_budget_mode_to_stake_mode",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.symbols_touch_updated_at",
       "claim": "function exists in prod",
       "reason": "Present in migrations, absent from db-snapshot.json.",
       "resolve": "Re-capture the snapshot, or confirm the migration was applied."
@@ -7534,16 +7678,17 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 104,
-    "edges": 221,
+    "nodes": 106,
+    "edges": 226,
     "flows": 9,
-    "drift": 16,
-    "driftHigh": 4,
+    "drift": 17,
+    "driftHigh": 5,
     "deadCode": 11,
-    "unverified": 25
+    "unverified": 26
   },
   "sourceIndex": {
     "edgeFunctions": [
+      "enrich-symbols[]",
       "finnhub-quote[]",
       "historical-bars[]",
       "join-league[]",
@@ -7719,6 +7864,12 @@
       "apps/web/src/pages/TradeHistory.jsx:35 -> league_members.select",
       "apps/web/src/pages/TradeHistory.jsx:50 -> leagues.select",
       "apps/web/src/pages/TradeHistory.jsx:86 -> trades.select",
+      "supabase/functions/_shared/category-eligibility.ts:15 -> symbol_category_overrides.select",
+      "supabase/functions/_shared/category-eligibility.ts:24 -> symbols.select",
+      "supabase/functions/_shared/category-eligibility.ts:33 -> category_rules.select",
+      "supabase/functions/enrich-symbols/index.ts:137 -> symbols.select",
+      "supabase/functions/enrich-symbols/index.ts:147 -> category_rules.select",
+      "supabase/functions/enrich-symbols/index.ts:197 -> symbols.update",
       "supabase/functions/preview-league/index.ts:103 -> league_members.select",
       "supabase/functions/preview-league/index.ts:74 -> leagues.select",
       "supabase/functions/preview-league/index.ts:77 -> league_invites.select",
@@ -7753,7 +7904,7 @@
       "supabase/functions/record-trade/index.ts:138 -> drafts.select",
       "supabase/functions/record-trade/index.ts:145 -> trades.select",
       "supabase/functions/record-trade/index.ts:178 -> league_draft_slots.select",
-      "supabase/functions/record-trade/index.ts:224 -> trades.insert",
+      "supabase/functions/record-trade/index.ts:230 -> trades.insert",
       "supabase/functions/refresh-symbols/index.ts:131 -> symbols.upsert",
       "supabase/functions/snapshot-week-end/index.ts:266 -> leagues.select",
       "supabase/functions/snapshot-week-end/index.ts:299 -> week_snapshots.select",
@@ -7782,8 +7933,8 @@
       "supabase/functions/validate-and-record-pick/index.ts:165 -> trades.select",
       "supabase/functions/validate-and-record-pick/index.ts:178 -> drafts.insert",
       "supabase/functions/validate-and-record-pick/index.ts:215 -> league_draft_slots.select",
-      "supabase/functions/validate-and-record-pick/index.ts:249 -> drafts.insert",
-      "supabase/functions/validate-and-record-pick/index.ts:295 -> leagues.update",
+      "supabase/functions/validate-and-record-pick/index.ts:256 -> drafts.insert",
+      "supabase/functions/validate-and-record-pick/index.ts:302 -> leagues.update",
       "supabase/functions/validate-and-record-pick/index.ts:6 -> drafts.insert"
     ],
     "migrations": [
@@ -7852,9 +8003,15 @@
       "20260811000000_fix_refresh_symbols_cron_auth.sql",
       "20260811000001_drop_leagues_budget_mode_mirror_trigger.sql",
       "20260811000002_trades_drop_direct_client_insert.sql",
-      "20260811000003_drafts_drop_direct_client_insert.sql"
+      "20260811000003_drafts_drop_direct_client_insert.sql",
+      "20260811000004_leagues_select_visible_to_creator.sql",
+      "20260811000005_league_members_select_visible_to_self.sql",
+      "20260811000006_seed_categories.sql",
+      "20260811000007_symbols_enrichment_support.sql",
+      "20260811000008_schedule_enrich_symbols.sql"
     ],
     "config": [
+      "enrich-symbols=false",
       "finnhub-quote=true",
       "historical-bars=true",
       "join-league=true",
