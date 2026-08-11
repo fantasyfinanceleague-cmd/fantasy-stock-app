@@ -47,12 +47,15 @@ function getCorsHeaders(origin: string) {
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
   };
 }
-let requestOrigin = '';
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json', ...getCorsHeaders(requestOrigin) },
-  });
+// Origin is threaded per-request (NOT module state): edge isolates interleave
+// concurrent requests at await points, so module-level origin state could leak
+// one request's allowed-origin CORS header onto another's response.
+function jsonFor(origin: string) {
+  return (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { 'Content-Type': 'application/json', ...getCorsHeaders(origin) },
+    });
 }
 
 // Fail-open rate limit (join-league pattern).
@@ -73,8 +76,9 @@ async function rateLimitOk(admin: any, userId: string, ip: string): Promise<bool
 }
 
 Deno.serve(async (req: Request) => {
-  requestOrigin = req.headers.get('Origin') || '';
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: getCorsHeaders(requestOrigin) });
+  const origin = req.headers.get('Origin') || '';
+  const json = jsonFor(origin);
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: getCorsHeaders(origin) });
   if (req.method !== 'POST') return json({ ok: false, reason: 'method_not_allowed' }, 405);
 
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -146,14 +150,28 @@ Deno.serve(async (req: Request) => {
     // drafts' TEXT user_id is string-vs-string (the documented cast footgun).
     const trades = (tradeData ?? []).map((t) => ({ ...t, user_id: String(t.user_id) })) as TradeRow[];
 
-    // ---- Price (app-key quote path; last available quote off-hours) --------
     if (!ALPACA_KEY || !ALPACA_SECRET) return json({ ok: false, reason: 'server_config_error' }, 500);
-    const fill = await fetchFillPrice(symbol, ALPACA_KEY, ALPACA_SECRET);
-    if (fill.price == null) {
-      return json({ ok: false, reason: 'no_price', symbol, detail: fill.error }); // 200: game-flow refusal
+
+    // Sells validate ownership BEFORE the vendor call — an illegal drop must
+    // not spend an Alpaca request. Buys need the price for bracket/budget
+    // validation, so their order is fetch-then-validate.
+    let dropQuantity: number | null = null;
+    if (action === 'sell') {
+      const decision = validateTradeDrop(user.id, symbol, picks, trades);
+      if (!decision.legal) return json({ ok: false, reason: decision.reason }); // 200: game-flow refusal
+      dropQuantity = decision.quantity;
     }
 
-    // ---- Validate ----------------------------------------------------------
+    // ---- Price (app-key quote path; last available quote off-hours) --------
+    const fill = await fetchFillPrice(symbol, ALPACA_KEY, ALPACA_SECRET);
+    if (fill.price == null) {
+      // Vendor error detail (step/HTTP status) is logged, never returned — it
+      // would leak app-key auth/quota state to any authenticated caller.
+      console.error('no_price', symbol, JSON.stringify(fill.error));
+      return json({ ok: false, reason: 'no_price', symbol }); // 200: game-flow refusal
+    }
+
+    // ---- Validate buy ------------------------------------------------------
     let quantity: number;
     if (action === 'buy') {
       const { data: slotData, error: sErr } = await admin
@@ -190,12 +208,18 @@ Deno.serve(async (req: Request) => {
       if (!decision.legal) return json({ ok: false, reason: decision.reason }); // 200: game-flow refusal
       quantity = decision.quantity;
     } else {
-      const decision = validateTradeDrop(user.id, symbol, picks, trades);
-      if (!decision.legal) return json({ ok: false, reason: decision.reason }); // 200: game-flow refusal
-      quantity = decision.quantity;
+      quantity = dropQuantity!; // validated above, before the vendor call
     }
 
     // ---- Record ------------------------------------------------------------
+    // KNOWN RACE (accepted for launch, flagged for follow-up): two concurrent
+    // buys of the same symbol both pass the in-memory ownership check before
+    // either row lands — trades has no uniqueness backstop analogous to the
+    // drafts (league_id, pick_number) index, and a partial unique index can't
+    // express "one OWNER at a time" over a buy/sell ledger. The correct fix is
+    // an atomic SECURITY DEFINER RPC (join_league_by_code pattern) that
+    // validates and inserts in one transaction. Window is sub-second and the
+    // failure mode (two owners of one symbol) is heal-able with a drop.
     const { data: inserted, error: insErr } = await admin
       .from('trades')
       .insert({

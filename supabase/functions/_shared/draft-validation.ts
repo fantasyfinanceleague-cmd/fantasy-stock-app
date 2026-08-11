@@ -439,5 +439,10 @@ export function validateTradeDrop(
 ): TradeDecision {
   const held = userNetHoldings(userId, picks, trades).get(symbol.toUpperCase());
   if (!held) return { legal: false, reason: 'not_owned' };
-  return { legal: true, quantity: held };
+  // Round to the 6-dp precision actually written (trades / week_snapshots
+  // numeric(12,6)); a float residual below 5e-7 rounds to 0 and is not a
+  // droppable position — refusing here beats a DB CHECK (quantity > 0) 500.
+  const quantity = Math.round(held * 1e6) / 1e6;
+  if (!(quantity > 0)) return { legal: false, reason: 'not_owned' };
+  return { legal: true, quantity };
 }

@@ -2,21 +2,42 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "fb15172fc57b6437f269ade0ae54cd677c276731",
-    "commitShort": "fb15172",
+    "commit": "0b169b9ab1c29abf921454b7b6a3ebb31c5ed591",
+    "commitShort": "0b169b9",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "simulator-core",
-    "dirty": false,
-    "dirtyPaths": [],
-    "timestamp": "2026-08-11T16:00:37Z",
-    "sourceHash": "sha256:823b08b647d6f2f331f85228bb8c4d84478710eaed4f6ba62b3a07a360f43199",
+    "dirty": true,
+    "dirtyPaths": [
+      {
+        "code": "M",
+        "path": "supabase/functions/_shared/draft-validation.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/_shared/draft-validation.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/record-trade/index.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/validate-and-record-pick/index.ts"
+      },
+      {
+        "code": "??",
+        "path": "supabase/migrations/20260811000002_trades_drop_direct_client_insert.sql"
+      }
+    ],
+    "timestamp": "2026-08-11T16:07:28Z",
+    "sourceHash": "sha256:78f3942042335834a1b1472369e7aea3e0a1cc4e6ca4bb9f9dc272444c9c2c7f",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-07-30T03:10:26Z",
-    "ageHours": 300.8,
+    "ageHours": 301,
     "ageDays": 12.5,
     "staleAfterDays": 14,
     "stale": false,
@@ -467,7 +488,7 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 219
+        "lines": 243
       },
       "db": null,
       "declared": null,
@@ -480,7 +501,7 @@
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/record-trade/index.ts",
-        "line": 75
+        "line": 78
       }
     },
     {
@@ -682,7 +703,7 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 294
+        "lines": 300
       },
       "db": null,
       "declared": null,
@@ -695,7 +716,7 @@
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/validate-and-record-pick/index.ts",
-        "line": 84
+        "line": 87
       }
     },
     {
@@ -3775,8 +3796,8 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('check_and_bump_rate_limit')",
       "callSites": [
-        "supabase/functions/record-trade/index.ts:63",
-        "supabase/functions/record-trade/index.ts:66"
+        "supabase/functions/record-trade/index.ts:66",
+        "supabase/functions/record-trade/index.ts:69"
       ]
     },
     {
@@ -3791,7 +3812,7 @@
         "user_id, symbol, entry_price, quantity, pick_number, slot_id"
       ],
       "callSites": [
-        "supabase/functions/record-trade/index.ts:134"
+        "supabase/functions/record-trade/index.ts:138"
       ]
     },
     {
@@ -3806,7 +3827,7 @@
         "id, slot_index, slot_count, price_min, price_max, category_id"
       ],
       "callSites": [
-        "supabase/functions/record-trade/index.ts:160"
+        "supabase/functions/record-trade/index.ts:178"
       ]
     },
     {
@@ -3821,7 +3842,7 @@
         "user_id"
       ],
       "callSites": [
-        "supabase/functions/record-trade/index.ts:124"
+        "supabase/functions/record-trade/index.ts:128"
       ]
     },
     {
@@ -3836,7 +3857,7 @@
         "id, num_rounds, draft_status, stake_mode, budget_amount, notional_per_slot"
       ],
       "callSites": [
-        "supabase/functions/record-trade/index.ts:111"
+        "supabase/functions/record-trade/index.ts:115"
       ]
     },
     {
@@ -3851,7 +3872,7 @@
         "user_id, symbol, action, quantity, price"
       ],
       "callSites": [
-        "supabase/functions/record-trade/index.ts:141"
+        "supabase/functions/record-trade/index.ts:145"
       ]
     },
     {
@@ -3864,7 +3885,7 @@
       "payload": ".from('trades').insert()",
       "columns": [],
       "callSites": [
-        "supabase/functions/record-trade/index.ts:200"
+        "supabase/functions/record-trade/index.ts:224"
       ]
     },
     {
@@ -4259,8 +4280,8 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('check_and_bump_rate_limit')",
       "callSites": [
-        "supabase/functions/validate-and-record-pick/index.ts:72",
-        "supabase/functions/validate-and-record-pick/index.ts:75"
+        "supabase/functions/validate-and-record-pick/index.ts:75",
+        "supabase/functions/validate-and-record-pick/index.ts:78"
       ]
     },
     {
@@ -4275,7 +4296,7 @@
         "user_id, symbol, entry_price, quantity, pick_number, slot_id"
       ],
       "callSites": [
-        "supabase/functions/validate-and-record-pick/index.ts:151"
+        "supabase/functions/validate-and-record-pick/index.ts:155"
       ]
     },
     {
@@ -4288,8 +4309,8 @@
       "payload": ".from('drafts').insert()",
       "columns": [],
       "callSites": [
-        "supabase/functions/validate-and-record-pick/index.ts:177",
-        "supabase/functions/validate-and-record-pick/index.ts:243",
+        "supabase/functions/validate-and-record-pick/index.ts:178",
+        "supabase/functions/validate-and-record-pick/index.ts:249",
         "supabase/functions/validate-and-record-pick/index.ts:6"
       ]
     },
@@ -4305,7 +4326,7 @@
         "id, slot_index, slot_count, price_min, price_max, category_id"
       ],
       "callSites": [
-        "supabase/functions/validate-and-record-pick/index.ts:209"
+        "supabase/functions/validate-and-record-pick/index.ts:215"
       ]
     },
     {
@@ -4320,7 +4341,7 @@
         "user_id"
       ],
       "callSites": [
-        "supabase/functions/validate-and-record-pick/index.ts:137"
+        "supabase/functions/validate-and-record-pick/index.ts:141"
       ]
     },
     {
@@ -4335,7 +4356,7 @@
         "id, commissioner_id, num_rounds, draft_status, stake_mode, budget_amount, notional_per_slot"
       ],
       "callSites": [
-        "supabase/functions/validate-and-record-pick/index.ts:126"
+        "supabase/functions/validate-and-record-pick/index.ts:130"
       ]
     },
     {
@@ -4348,7 +4369,7 @@
       "payload": ".from('leagues').update()",
       "columns": [],
       "callSites": [
-        "supabase/functions/validate-and-record-pick/index.ts:289"
+        "supabase/functions/validate-and-record-pick/index.ts:295"
       ]
     },
     {
@@ -4363,7 +4384,7 @@
         "user_id, symbol, action, quantity, price"
       ],
       "callSites": [
-        "supabase/functions/validate-and-record-pick/index.ts:161"
+        "supabase/functions/validate-and-record-pick/index.ts:165"
       ]
     },
     {
@@ -7592,12 +7613,12 @@
       "supabase/functions/preview-league/index.ts:34 -> check_and_bump_rate_limit",
       "supabase/functions/process-week-results/index.ts:783 -> complete_league_season",
       "supabase/functions/process-week-results/index.ts:827 -> complete_league_season",
-      "supabase/functions/record-trade/index.ts:63 -> check_and_bump_rate_limit",
       "supabase/functions/record-trade/index.ts:66 -> check_and_bump_rate_limit",
+      "supabase/functions/record-trade/index.ts:69 -> check_and_bump_rate_limit",
       "supabase/functions/snapshot-week-end/index.ts:100 -> schedule_snapshot_retry",
       "supabase/functions/snapshot-week-start/index.ts:135 -> schedule_snapshot_retry",
-      "supabase/functions/validate-and-record-pick/index.ts:72 -> check_and_bump_rate_limit",
-      "supabase/functions/validate-and-record-pick/index.ts:75 -> check_and_bump_rate_limit"
+      "supabase/functions/validate-and-record-pick/index.ts:75 -> check_and_bump_rate_limit",
+      "supabase/functions/validate-and-record-pick/index.ts:78 -> check_and_bump_rate_limit"
     ],
     "tableOps": [
       "apps/mobile/app/(tabs)/draft.tsx:107 -> user_profiles.select",
@@ -7739,12 +7760,12 @@
       "supabase/functions/process-week-results/index.ts:811 -> league_standings.select",
       "supabase/functions/process-week-results/index.ts:885 -> matchups.select",
       "supabase/functions/process-week-results/index.ts:948 -> week_snapshots.select",
-      "supabase/functions/record-trade/index.ts:111 -> leagues.select",
-      "supabase/functions/record-trade/index.ts:124 -> league_members.select",
-      "supabase/functions/record-trade/index.ts:134 -> drafts.select",
-      "supabase/functions/record-trade/index.ts:141 -> trades.select",
-      "supabase/functions/record-trade/index.ts:160 -> league_draft_slots.select",
-      "supabase/functions/record-trade/index.ts:200 -> trades.insert",
+      "supabase/functions/record-trade/index.ts:115 -> leagues.select",
+      "supabase/functions/record-trade/index.ts:128 -> league_members.select",
+      "supabase/functions/record-trade/index.ts:138 -> drafts.select",
+      "supabase/functions/record-trade/index.ts:145 -> trades.select",
+      "supabase/functions/record-trade/index.ts:178 -> league_draft_slots.select",
+      "supabase/functions/record-trade/index.ts:224 -> trades.insert",
       "supabase/functions/refresh-symbols/index.ts:131 -> symbols.upsert",
       "supabase/functions/snapshot-week-end/index.ts:266 -> leagues.select",
       "supabase/functions/snapshot-week-end/index.ts:299 -> week_snapshots.select",
@@ -7767,14 +7788,14 @@
       "supabase/functions/symbols-search/index.ts:129 -> symbols.select",
       "supabase/functions/symbols-search/index.ts:140 -> symbols.select",
       "supabase/functions/symbols-search/index.ts:98 -> symbols.select",
-      "supabase/functions/validate-and-record-pick/index.ts:126 -> leagues.select",
-      "supabase/functions/validate-and-record-pick/index.ts:137 -> league_members.select",
-      "supabase/functions/validate-and-record-pick/index.ts:151 -> drafts.select",
-      "supabase/functions/validate-and-record-pick/index.ts:161 -> trades.select",
-      "supabase/functions/validate-and-record-pick/index.ts:177 -> drafts.insert",
-      "supabase/functions/validate-and-record-pick/index.ts:209 -> league_draft_slots.select",
-      "supabase/functions/validate-and-record-pick/index.ts:243 -> drafts.insert",
-      "supabase/functions/validate-and-record-pick/index.ts:289 -> leagues.update",
+      "supabase/functions/validate-and-record-pick/index.ts:130 -> leagues.select",
+      "supabase/functions/validate-and-record-pick/index.ts:141 -> league_members.select",
+      "supabase/functions/validate-and-record-pick/index.ts:155 -> drafts.select",
+      "supabase/functions/validate-and-record-pick/index.ts:165 -> trades.select",
+      "supabase/functions/validate-and-record-pick/index.ts:178 -> drafts.insert",
+      "supabase/functions/validate-and-record-pick/index.ts:215 -> league_draft_slots.select",
+      "supabase/functions/validate-and-record-pick/index.ts:249 -> drafts.insert",
+      "supabase/functions/validate-and-record-pick/index.ts:295 -> leagues.update",
       "supabase/functions/validate-and-record-pick/index.ts:6 -> drafts.insert"
     ],
     "migrations": [
@@ -7841,7 +7862,8 @@
       "20260810000006_create_splits.sql",
       "20260810000008_leagues_mirror_budget_mode_to_stake_mode.sql",
       "20260811000000_fix_refresh_symbols_cron_auth.sql",
-      "20260811000001_drop_leagues_budget_mode_mirror_trigger.sql"
+      "20260811000001_drop_leagues_budget_mode_mirror_trigger.sql",
+      "20260811000002_trades_drop_direct_client_insert.sql"
     ],
     "config": [
       "finnhub-quote=true",

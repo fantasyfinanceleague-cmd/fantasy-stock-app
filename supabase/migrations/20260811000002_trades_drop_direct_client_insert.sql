@@ -1,0 +1,36 @@
+-- In-house simulator (DR-001 / SIMULATOR_MIGRATION_SPEC Phase 3) — hardening
+-- flagged by the Phase 3 supabase review (F15).
+--
+-- WHY: record-trade (service-role writes, server-side legality) is now the
+--   ONLY intended write path into `trades`. The 20250118000000 INSERT policy
+--   ("Users can create trades in their leagues") still lets any authenticated
+--   league member insert arbitrary rows — any symbol, quantity, price —
+--   bypassing every legality check the new function enforces (ownership,
+--   budget, roster capacity, brackets). Pre-existing gap, but Phase 3 makes
+--   it material: the legality gate is worthless while this side door is open.
+--   Verified before authoring: NO client code inserts into trades (grep over
+--   apps/ — the old place-order path was removed in Phase 1), so nothing
+--   breaks. The SELECT policy (members read their league's trades) stays —
+--   that's the read path for portfolio/matchup screens.
+--
+-- NOTE the asymmetry with `drafts`: its INSERT policies deliberately REMAIN
+--   as the membership backstop per the Phase 3 spec ("RLS remains the
+--   membership gate; the function is the legality gate"). trades differs
+--   because no legacy client write path needs the transition window: trade
+--   submission was fully disabled in Phase 1, so there are no in-flight
+--   builds that write trades directly.
+--
+-- HUMAN ACTION: supabase db push, ideally in the same push as
+--   20260811000001. Deploy record-trade BEFORE or WITH this push — after it,
+--   direct client trade writes are impossible, so the function must exist.
+--
+-- Effect-verify AFTER push (policy list, not push output):
+--   SELECT policyname, cmd FROM pg_policies
+--    WHERE schemaname = 'public' AND tablename = 'trades';
+--   -- must show NO INSERT policy; the members SELECT policy must remain.
+--   Then, as an authenticated league member (anon-key client), attempt:
+--     INSERT INTO trades (league_id, user_id, symbol, action, quantity, price, total_value)
+--     VALUES ('<my league>', auth.uid(), 'TEST', 'buy', 1, 1, 1);
+--   -- must be REFUSED by RLS.
+
+drop policy if exists "Users can create trades in their leagues" on trades;

@@ -54,12 +54,15 @@ function getCorsHeaders(origin: string) {
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
   };
 }
-let requestOrigin = '';
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json', ...getCorsHeaders(requestOrigin) },
-  });
+// Origin is threaded per-request (NOT module state): edge isolates interleave
+// concurrent requests at await points, so module-level origin state could leak
+// one request's allowed-origin CORS header onto another's response.
+function jsonFor(origin: string) {
+  return (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { 'Content-Type': 'application/json', ...getCorsHeaders(origin) },
+    });
 }
 
 // Fail-open rate limit (join-league pattern). Draft picks are bursty — a full
@@ -82,8 +85,9 @@ async function rateLimitOk(admin: any, userId: string, ip: string): Promise<bool
 }
 
 Deno.serve(async (req: Request) => {
-  requestOrigin = req.headers.get('Origin') || '';
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: getCorsHeaders(requestOrigin) });
+  const origin = req.headers.get('Origin') || '';
+  const json = jsonFor(origin);
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: getCorsHeaders(origin) });
   if (req.method !== 'POST') return json({ ok: false, reason: 'method_not_allowed' }, 405);
 
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -166,10 +170,7 @@ Deno.serve(async (req: Request) => {
 
     // ---- Skip: forfeit the current turn (stuck-bot escape hatch) ----------
     if (action === 'skip') {
-      // Humans may only skip THEMSELVES; members may skip a bot's turn.
-      if (targetId !== user.id && !targetId.startsWith('bot-')) {
-        return json({ ok: false, reason: 'forbidden_target' }, 403);
-      }
+      // Target already constrained above: self (voluntary forfeit) or a bot.
       const decision = validateSkip(targetId, order, picks.length, numRounds);
       if (!decision.legal) return json({ ok: false, reason: decision.reason }); // 200: game-flow refusal (join-league pattern)
 
@@ -183,7 +184,9 @@ Deno.serve(async (req: Request) => {
           quantity: 0,
           round: decision.round,
           pick_number: decision.pickNumber,
-          draft_date: new Date().toISOString(),
+          // draft_date omitted: column is timestamp WITHOUT time zone with
+          // DEFAULT now() — an ISO string's Z suffix would be silently
+          // stripped, so the server default is the correct writer.
         })
         .select('*')
         .single();
@@ -202,7 +205,10 @@ Deno.serve(async (req: Request) => {
     if (!ALPACA_KEY || !ALPACA_SECRET) return json({ ok: false, reason: 'server_config_error' }, 500);
     const fill = await fetchFillPrice(symbol, ALPACA_KEY, ALPACA_SECRET);
     if (fill.price == null) {
-      return json({ ok: false, reason: 'no_price', symbol, detail: fill.error }); // 200: game-flow refusal
+      // Vendor error detail (step/HTTP status) is logged, never returned — it
+      // would leak app-key auth/quota state to any authenticated caller.
+      console.error('no_price', symbol, JSON.stringify(fill.error));
+      return json({ ok: false, reason: 'no_price', symbol }); // 200: game-flow refusal
     }
 
     const { data: slotData, error: sErr } = await admin
@@ -249,7 +255,7 @@ Deno.serve(async (req: Request) => {
         quantity: decision.quantity,
         round: decision.round,
         pick_number: decision.pickNumber,
-        draft_date: new Date().toISOString(),
+        // draft_date omitted — see the SKIP insert note (DEFAULT now()).
         slot_id: decision.slotId,
       })
       .select('*')

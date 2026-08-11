@@ -421,6 +421,16 @@ Deno.test('validateTradeDrop: whole position, refused when not owned', () => {
   assertEquals(validateTradeDrop('b', 'AAPL', picks, trades), { legal: false, reason: 'not_owned' });
 });
 
+Deno.test('validateTradeDrop: sub-rounding float residual is not a droppable position', () => {
+  freshPicks();
+  // Net position is a float residual below 5e-7: rounds to 0 at the 6-dp
+  // precision actually written, so the drop must refuse rather than hand the
+  // DB a quantity that violates CHECK (quantity > 0).
+  const picks = [pick('a', 'AAPL', 100, { quantity: 1.0000001 })];
+  const trades = [trade('a', 'AAPL', 'sell', 1, 100)];
+  assertEquals(validateTradeDrop('a', 'AAPL', picks, trades), { legal: false, reason: 'not_owned' });
+});
+
 Deno.test('userNetHoldings: fractional quantities net exactly', () => {
   freshPicks();
   const picks = [pick('a', 'VOO', 400, { quantity: 2.5 })];
