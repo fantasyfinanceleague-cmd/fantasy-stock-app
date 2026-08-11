@@ -63,6 +63,16 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/join-league/index.ts"
 
+# In-house simulator (DR-001 Phase 4): symbols enrichment cron. Cron-only —
+# JWT verification disabled so the function is reachable without a legacy JWT;
+# the function's own apikey-header validation (SB_SECRET_KEY_CRON,
+# constant-time, fail-closed) is the authentication guard, same pattern as the
+# snapshot crons. Scheduled by 20260811000008 (every 10 min, vault apikey).
+[functions.enrich-symbols]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/enrich-symbols/index.ts"
+
 # In-house simulator (DR-001 Phase 3): server-side draft legality gate. RLS on
 # drafts remains the membership backstop; this function is the single legality
 # gate + write path the clients use. verify_jwt=true + in-code getUser() +
