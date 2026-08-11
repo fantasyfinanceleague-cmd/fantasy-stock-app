@@ -75,9 +75,6 @@ export default function Leagues() {
   const [updateSlots, setUpdateSlots] = useState([]);
   const [updateParticipants, setUpdateParticipants] = useState('');
   const [updateRounds, setUpdateRounds] = useState(6);
-  // Legacy 'no-budget' leagues carry stake_mode NULL ("commissioner re-choice
-  // pending") — drafting is blocked until a mode is chosen here.
-  const stakeModeMissing = selectedUpdateLeagueObj && selectedUpdateLeagueObj.stake_mode == null && updateStakeMode === '';
 
   // Invite state
   const [selectedLeagueForInvite, setSelectedLeagueForInvite] = useState('');
@@ -103,6 +100,13 @@ export default function Leagues() {
 
   const isDraftLocked = selectedUpdateLeagueObj?.draft_status === 'in_progress' ||
                         selectedUpdateLeagueObj?.draft_status === 'completed';
+
+  // Legacy 'no-budget' leagues carry stake_mode NULL ("commissioner re-choice
+  // pending") — drafting is blocked until a mode is chosen here. MUST sit
+  // below the selectedUpdateLeagueObj useMemo: a plain const referencing it
+  // earlier is a temporal-dead-zone crash on first render (the bug this
+  // placement fixes), which no build step catches.
+  const stakeModeMissing = selectedUpdateLeagueObj && selectedUpdateLeagueObj.stake_mode == null && updateStakeMode === '';
 
   useEffect(() => {
     if (managedLeagues.length) {
