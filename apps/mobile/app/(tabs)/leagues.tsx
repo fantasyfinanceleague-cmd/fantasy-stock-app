@@ -68,7 +68,7 @@ export default function LeaguesScreen() {
   // Derived values
   const minWeeks = numTeams - 1;
   const getPlayoffOptions = () => {
-    const allOptions = [2, 4, 8];
+    const allOptions = [2, 4, 8]; // DB CHECK: playoff_teams NULL or in (2,4,8)
     return allOptions.filter(o => o < numTeams);
   };
   const validPlayoffOptions = getPlayoffOptions();
@@ -441,6 +441,7 @@ export default function LeaguesScreen() {
               <View style={styles.stepper}>
                 <TouchableOpacity
                   style={styles.stepperButton}
+                  // bounds = DB CHECK leagues_num_participants_range (4-16)
                   onPress={() => setNumTeams(Math.max(4, numTeams - 1))}
                 >
                   <Text style={styles.stepperButtonText}>−</Text>

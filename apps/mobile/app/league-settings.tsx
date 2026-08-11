@@ -413,6 +413,7 @@ export default function LeagueSettingsScreen() {
             <View style={styles.stepper}>
               <TouchableOpacity
                 style={[styles.stepperBtn, isLocked && styles.inputDisabled]}
+                // bounds = DB CHECK leagues_num_participants_range (4-16)
                 onPress={() => !isLocked && setNumParticipants(Math.max(4, numParticipants - 1))}
                 disabled={isLocked}
               >

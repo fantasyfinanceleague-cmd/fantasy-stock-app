@@ -86,7 +86,7 @@ export default function CreateLeagueWizard() {
 
   const minWeeks = state.size - 1;
   const getPlayoffOptions = () => {
-    const allOptions = [2, 4, 8];
+    const allOptions = [2, 4, 8]; // DB CHECK: playoff_teams NULL or in (2,4,8)
     return allOptions.filter(o => o < state.size);
   };
 
@@ -343,9 +343,13 @@ export default function CreateLeagueWizard() {
   );
 
   const renderSize = () => {
+    // DB CHECK leagues_num_participants_range (20250819185319): 4-16.
+    // The old duration list offered 2, which the insert could never satisfy
+    // (BUG 4). Small groups reach the minimum with bots (DraftPage
+    // fillWithBots), so 4 is the floor for both league types.
     const sizes = state.type === 'matchup'
       ? [4, 6, 8, 10, 12, 14, 16]  // Even numbers for matchups
-      : [2, 4, 6, 8, 10, 12, 14, 16];
+      : [4, 6, 8, 10, 12, 14, 16];
 
     return (
       <View style={styles.stepContainer}>
@@ -519,6 +523,7 @@ export default function CreateLeagueWizard() {
   );
 
   const renderDuration = () => {
+    // values = DB CHECK leagues_duration_days_check in (7,30,90,180,365)
     const durations = [
       { value: 7, label: '1 Week', desc: 'Quick game' },
       { value: 30, label: '1 Month', desc: 'Standard' },

@@ -134,7 +134,10 @@ export default function useLeagues() {
             ? { budget_amount: Number(budgetAmount) }
             : {}),
           league_type: leagueType,
-          duration_days: leagueType === 'duration' ? durationDays : null,
+          // duration_days is NOT NULL + CHECK in (7,30,90,180,365)
+          // (20251230000000): an explicit null is rejected, so matchup
+          // leagues omit the key and take the DB default (30).
+          ...(leagueType === 'duration' ? { duration_days: durationDays } : {}),
           num_weeks: leagueType === 'matchup' ? numWeeks : null,
           playoff_teams: leagueType === 'matchup' ? playoffTeams : null,
         };

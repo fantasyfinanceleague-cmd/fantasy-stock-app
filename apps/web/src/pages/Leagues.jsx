@@ -62,7 +62,7 @@ export default function Leagues() {
 
   // Calculate valid playoff options
   const getPlayoffOptions = () => {
-    const allOptions = [2, 4, 8];
+    const allOptions = [2, 4, 8]; // DB CHECK: playoff_teams NULL or in (2,4,8)
     return allOptions.filter(o => o < participants);
   };
   const validPlayoffOptions = getPlayoffOptions();
@@ -85,6 +85,7 @@ export default function Leagues() {
   const [filter, setFilter] = useState('');
 
   // Helpers
+  // 4-16 = DB CHECK leagues_num_participants_range (20250819185319)
   const clampParticipants = (n) => Math.max(4, Math.min(16, Number(n) || 4));
   const clampRounds = (n) => Math.max(1, Math.min(12, Number(n) || 1));
 
