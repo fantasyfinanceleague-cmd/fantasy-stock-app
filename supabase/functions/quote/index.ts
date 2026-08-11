@@ -1,11 +1,13 @@
+// supabase/functions/quote/index.ts
+// Normalized latest-price endpoint for in-app quotes (single or batch).
+// Uses Stockpile's own server-side Alpaca keys (ALPACA_API_KEY / ALPACA_API_SECRET) —
+// the same app-wide data-vendor path as ticker-quotes. No per-user broker credentials.
+// Gateway verify_jwt=true (config.toml) restricts this to authenticated callers.
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
-import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 function isAllowedOrigin(origin: string): boolean {
   if (!origin) return false;
-  // Allow production domain
   // Allow any vercel.app subdomain (production and previews)
-  // Allow Vercel preview deployments (pattern: https://*.vercel.app)
   if (origin.endsWith('.vercel.app') && origin.startsWith('https://')) return true;
   // Allow localhost for development
   if (origin.startsWith('http://localhost:')) return true;
@@ -62,38 +64,6 @@ function setCachedQuote(symbol: string, data: any): void {
 
 function env(k: string) { return Deno.env.get(k) ?? ''; }
 
-/** base64 -> Uint8Array */
-function b64d(s: string) { return Uint8Array.from(atob(s), c => c.charCodeAt(0)); }
-
-async function importAesKey(b64: string) {
-  const raw = b64d(b64);
-  return crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt', 'decrypt']);
-}
-
-async function aesDecrypt(ciphertext: string, iv: string, b64Key: string): Promise<string> {
-  const key = await importAesKey(b64Key);
-  const ctBuf = b64d(ciphertext);
-  const ivBuf = b64d(iv);
-  const ptBuf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: ivBuf }, key, ctBuf);
-  return new TextDecoder().decode(ptBuf);
-}
-
-async function getUserCredentials(userId: string, admin: any, cryptoKey: string) {
-  const { data, error } = await admin
-    .from('broker_credentials')
-    .select('key_id, secret_ciphertext, iv')
-    .eq('user_id', userId)
-    .eq('broker', 'alpaca')
-    .single();
-
-  if (error || !data) {
-    return null;
-  }
-
-  const secret = await aesDecrypt(data.secret_ciphertext, data.iv, cryptoKey);
-  return { key: data.key_id, secret };
-}
-
 async function alpacaGet(url: string, key: string, secret: string) {
   const res = await fetch(url, {
     headers: {
@@ -104,13 +74,11 @@ async function alpacaGet(url: string, key: string, secret: string) {
   });
   const text = await res.text().catch(() => '');
   if (!res.ok) {
-    // Check for auth errors specifically
-    const isAuthError = res.status === 401 || res.status === 403;
-    return { ok: false as const, status: res.status, preview: text.slice(0, 400), isAuthError };
+    return { ok: false as const, status: res.status, preview: text.slice(0, 400) };
   }
   let body: any = null;
   try { body = JSON.parse(text); } catch { body = {}; }
-  return { ok: true as const, status: res.status, body, isAuthError: false };
+  return { ok: true as const, status: res.status, body };
 }
 
 // Fetch price for a single symbol (shared logic)
@@ -131,7 +99,7 @@ async function fetchSinglePrice(
     if (r.ok) {
       const p = Number(r.body?.trade?.p);
       if (Number.isFinite(p) && p > 0) { price = p; source = 'trade.p'; }
-    } else if (!r.isAuthError) {
+    } else {
       lastErr = { step: 'trade', status: r.status };
     }
   }
@@ -143,7 +111,7 @@ async function fetchSinglePrice(
     if (r.ok) {
       const c = Number(r.body?.bar?.c);
       if (Number.isFinite(c) && c > 0) { price = c; source = 'bar.c'; }
-    } else if (!r.isAuthError) {
+    } else {
       lastErr = { step: 'bar', status: r.status };
     }
   }
@@ -158,7 +126,7 @@ async function fetchSinglePrice(
       // Use bid price as it's typically more reliable than ask in IEX
       if (Number.isFinite(bp) && bp > 0) { price = bp; source = 'quote.bp'; }
       else if (Number.isFinite(ap) && ap > 0) { price = ap; source = 'quote.ap'; }
-    } else if (!r.isAuthError) {
+    } else {
       lastErr = { step: 'quote', status: r.status };
     }
   }
@@ -169,23 +137,10 @@ async function fetchSinglePrice(
 // Handle request for multiple symbols - returns { prices: { SYMBOL: price, ... } }
 async function handleMultipleSymbols(
   symbols: string[],
-  userId: string,
-  admin: any,
-  cryptoKey: string,
+  key: string,
+  secret: string,
   respond: (b: unknown, s?: number) => Response
 ): Promise<Response> {
-  if (!cryptoKey) {
-    return respond({ error: 'server_config_error', message: 'Server missing encryption key' }, 500);
-  }
-
-  const creds = await getUserCredentials(userId, admin, cryptoKey);
-  if (!creds) {
-    return respond({
-      error: 'no_credentials',
-      message: 'Please link your Alpaca account in Profile settings'
-    }, 400);
-  }
-
   const prices: Record<string, number> = {};
   const errors: Record<string, any> = {};
 
@@ -205,7 +160,7 @@ async function handleMultipleSymbols(
   for (let i = 0; i < uncachedSymbols.length; i += BATCH_SIZE) {
     const batch = uncachedSymbols.slice(i, i + BATCH_SIZE);
     const results = await Promise.all(
-      batch.map(sym => fetchSinglePrice(sym, creds.key, creds.secret).then(r => ({ sym, ...r })))
+      batch.map(sym => fetchSinglePrice(sym, key, secret).then(r => ({ sym, ...r })))
     );
 
     for (const { sym, price, source, error } of results) {
@@ -227,27 +182,15 @@ Deno.serve(async (req) => {
 
   if (req.method === 'OPTIONS') return new Response('ok', { headers: getCorsHeaders(req) });
 
-  const SUPABASE_URL = env('SUPABASE_URL');
-  const PUBLISHABLE_KEY = env('SB_PUBLISHABLE_KEY');
-  const SECRET_KEY = env('SB_SECRET_KEY_INTERNAL');
-  const CRYPTO_KEY = env('BROKER_CRYPTO_KEY');
+  // Server-side Alpaca keys (app-wide read-only market data — no per-user credentials)
+  const ALPACA_KEY = env('ALPACA_API_KEY');
+  const ALPACA_SECRET = env('ALPACA_API_SECRET');
 
-  // Authed client (to get user id from JWT)
-  const authed = createClient(SUPABASE_URL, PUBLISHABLE_KEY, {
-    global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } },
-  });
-
-  // Admin client for reading credentials
-  const admin = createClient(SUPABASE_URL, SECRET_KEY);
+  if (!ALPACA_KEY || !ALPACA_SECRET) {
+    return respond({ error: 'server_config_error', message: 'Server missing Alpaca keys' }, 500);
+  }
 
   try {
-    // Get authenticated user
-    const { data: auth } = await authed.auth.getUser();
-    const user = auth?.user;
-    if (!user) {
-      return respond({ error: 'not_authenticated', message: 'Please sign in to view quotes' }, 401);
-    }
-
     // GET ?symbol= or POST {symbol} or POST {symbols: [...]}
     let symbol = '';
     let symbols: string[] = [];
@@ -268,7 +211,7 @@ Deno.serve(async (req) => {
 
     // Handle multi-symbol request
     if (symbols.length > 0) {
-      return await handleMultipleSymbols(symbols, user.id, admin, CRYPTO_KEY, respond);
+      return await handleMultipleSymbols(symbols, ALPACA_KEY, ALPACA_SECRET, respond);
     }
 
     if (!symbol) return respond({ error: 'missing_symbol' }, 400);
@@ -279,21 +222,8 @@ Deno.serve(async (req) => {
       return respond({ ...cached, cached: true });
     }
 
-    // Get user's Alpaca credentials
-    if (!CRYPTO_KEY) {
-      return respond({ error: 'server_config_error', message: 'Server missing encryption key' }, 500);
-    }
-
-    const creds = await getUserCredentials(user.id, admin, CRYPTO_KEY);
-    if (!creds) {
-      return respond({
-        error: 'no_credentials',
-        message: 'Please link your Alpaca account in Profile settings'
-      }, 400);
-    }
-
-    const key = creds.key;
-    const secret = creds.secret;
+    const key = ALPACA_KEY;
+    const secret = ALPACA_SECRET;
 
     // Always request the free IEX feed
     const feedQS = `?feed=iex`;
@@ -310,13 +240,6 @@ Deno.serve(async (req) => {
         const p = Number(r.body?.trade?.p);
         if (Number.isFinite(p) && p > 0) { price = p; source = 'trade.p'; }
       } else {
-        // Check for auth errors and return immediately with clear message
-        if (r.isAuthError) {
-          return respond({
-            error: 'credentials_invalid',
-            message: 'Your Alpaca credentials are invalid or expired. Please update them in your Profile settings.'
-          }, 401);
-        }
         lastErr = { step: 'trade', status: r.status, preview: r.preview };
       }
     }
@@ -329,12 +252,6 @@ Deno.serve(async (req) => {
         const c = Number(r.body?.bar?.c);
         if (Number.isFinite(c) && c > 0) { price = c; source = 'bar.c'; }
       } else {
-        if (r.isAuthError) {
-          return respond({
-            error: 'credentials_invalid',
-            message: 'Your Alpaca credentials are invalid or expired. Please update them in your Profile settings.'
-          }, 401);
-        }
         lastErr = { step: 'bar', status: r.status, preview: r.preview };
       }
     }
@@ -350,12 +267,6 @@ Deno.serve(async (req) => {
         if (Number.isFinite(bp) && bp > 0) { price = bp; source = 'quote.bp'; }
         else if (Number.isFinite(ap) && ap > 0) { price = ap; source = 'quote.ap'; }
       } else {
-        if (r.isAuthError) {
-          return respond({
-            error: 'credentials_invalid',
-            message: 'Your Alpaca credentials are invalid or expired. Please update them in your Profile settings.'
-          }, 401);
-        }
         lastErr = { step: 'quote', status: r.status, preview: r.preview };
       }
     }
