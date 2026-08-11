@@ -82,24 +82,15 @@ export default function OnboardingModal({ userId, onComplete, isHelpMode = false
       primaryAction: { label: 'Get Started', onClick: () => setStep(1) },
       secondaryAction: null,
     },
-    // Step 1: Link Broker
-    {
-      icon: '🔗',
-      title: 'Connect Your Broker',
-      description: 'We use Alpaca for paper trading — no real money required. Link your account to enable trading features.',
-      primaryAction: { label: 'Link Alpaca Account', onClick: () => handleComplete('/profile') },
-      secondaryAction: { label: 'Skip for now', onClick: () => setStep(2) },
-      note: 'You can always connect later from your Profile page.',
-    },
-    // Step 2: Join League
+    // Step 1: Join League
     {
       icon: '🏆',
       title: 'Join a League',
       description: 'Leagues are where the competition happens. Create your own or join an existing one with an invite code.',
       primaryAction: { label: 'Browse Leagues', onClick: () => handleComplete('/leagues') },
-      secondaryAction: { label: 'I\'ll do this later', onClick: () => setStep(3) },
+      secondaryAction: { label: 'I\'ll do this later', onClick: () => setStep(2) },
     },
-    // Step 3: Ready
+    // Step 2: Ready
     {
       icon: '✅',
       title: 'You\'re All Set!',

@@ -557,7 +557,6 @@ export default function Dashboard() {
   const setupItems = useSetupProgress({
     hasLeagues: leagues.length > 0,
     hasHoldings: positions.length > 0,
-    hasAlpaca: false, // TODO: Check if user has linked Alpaca
   });
 
   // Check if user is new (no leagues, no holdings)
