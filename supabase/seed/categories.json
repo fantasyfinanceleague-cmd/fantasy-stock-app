@@ -1,1 +1,13 @@
-[]
+[
+  { "slug": "tech", "name": "Technology", "display_order": 1, "is_misc": false },
+  { "slug": "finance", "name": "Financials", "display_order": 2, "is_misc": false },
+  { "slug": "health", "name": "Healthcare", "display_order": 3, "is_misc": false },
+  { "slug": "energy", "name": "Energy & Utilities", "display_order": 4, "is_misc": false },
+  { "slug": "transport", "name": "Autos & Transport", "display_order": 5, "is_misc": false },
+  { "slug": "retail", "name": "Retail & Consumer Goods", "display_order": 6, "is_misc": false },
+  { "slug": "food", "name": "Food & Beverage", "display_order": 7, "is_misc": false },
+  { "slug": "media", "name": "Entertainment & Media", "display_order": 8, "is_misc": false },
+  { "slug": "industrials", "name": "Industrials & Materials", "display_order": 9, "is_misc": false },
+  { "slug": "realestate", "name": "Real Estate & Construction", "display_order": 10, "is_misc": false },
+  { "slug": "misc", "name": "Misc", "display_order": 99, "is_misc": true }
+]

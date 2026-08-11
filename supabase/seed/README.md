@@ -1,4 +1,4 @@
-# Simulator seed data — STUBS (full content is Phase 4)
+# Simulator seed data (Phase 4 content — REVIEW REQUIRED before merge)
 
 These files carry the Stockpile-curated category data that layers over vendor
 GICS taxonomy (DR-001). The **schema** for their target tables ships in Phase 2
@@ -23,3 +23,34 @@ stable slugs; they are intentionally near-empty until Phase 4.
 
 The category `slug` values are the stable join key between these seeds and code;
 do not renumber or rename slugs once seeded.
+
+
+---
+
+## Phase 4 status (2026-08-11)
+
+The three files now carry the full Phase 4 content: 11 categories (10 curated +
+`misc` fallback), 80 industry rules, 91 overrides across 55 symbols (max 3 per
+symbol, generator-validated before the DB trigger ever sees them).
+
+**Deviation from the spec's "~160 rules", and why:** the spec's count assumed a
+GICS sub-industry taxonomy (163 values). Vendor reality: neither the NASDAQ
+Trader universe feed (refresh-symbols' actual source) nor Alpaca's market-data
+API exposes sector/industry at all, so enrichment uses **Finnhub `profile2`'s
+`finnhubIndustry`** (the FINNHUB_API_KEY already in the stack). That vocabulary
+is coarser (~50 labels, derived from GICS *industry* names). The rules file
+covers that operative vocabulary completely, plus common naming variants —
+"total coverage of the vendor taxonomy" per the spec's intent, at the vendor's
+actual granularity. Any label that slips through falls to Misc **by design**
+(flex-only, never an error) and is logged by `enrich-symbols` as
+`unmatched_industries` for curation here.
+
+**Override semantics reminder:** overrides REPLACE rule eligibility (they are
+not additive), so every multi-category entry restates its primary category.
+Several single-row overrides exist purely to correct a coarse rule mapping
+(hotels/cruises/casinos land in Food via the "Hotels Restaurants & Leisure"
+label; games land in Retail via "Leisure Products").
+
+**Apply path:** `node scripts/gen-category-seed-migration.mjs` regenerates
+`supabase/migrations/20260811000006_seed_categories.sql` (idempotent, additive
+only — see the generator header). Never edit the .sql by hand.
