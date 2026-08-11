@@ -143,3 +143,34 @@ export async function countSlotMatches({ priceMin, priceMax, categoryId }) {
 
   return ruleCount + ovrCount;
 }
+
+/**
+ * HARD slot-config errors (block create/save — distinct from soft feasibility
+ * warnings). Mirror of the mobile validator: once a league has ANY slots the
+ * server requires every pick to land in an unfilled slot, so total slot count
+ * must equal stocks-per-team exactly; inverted brackets would fail the DB
+ * CHECK at save time.
+ */
+export function validateSlotConfig(slots, numRounds) {
+  const errors = [];
+  if (slots.length === 0) return errors;
+  let total = 0;
+  slots.forEach((s, i) => {
+    const count = Number(s.slotCount);
+    if (!(count > 0)) errors.push(`Slot ${i + 1}: count must be at least 1.`);
+    else total += count;
+    const min = s.priceMin === '' || s.priceMin == null ? null : Number(s.priceMin);
+    const max = s.priceMax === '' || s.priceMax == null ? null : Number(s.priceMax);
+    if (min != null && max != null && min > max) {
+      errors.push(`Slot ${i + 1}: min price is above max price.`);
+    }
+  });
+  if (total !== numRounds) {
+    errors.push(
+      total > numRounds
+        ? `Slots cover ${total} picks but each team drafts only ${numRounds} (stocks per team) — remove ${total - numRounds}.`
+        : `Slots cover only ${total} of ${numRounds} picks — once slots exist, every pick needs an open slot, so the draft would jam after ${total}. Add ${numRounds - total} more.`,
+    );
+  }
+  return errors;
+}

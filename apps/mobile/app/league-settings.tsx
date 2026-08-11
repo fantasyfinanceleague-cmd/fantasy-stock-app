@@ -20,6 +20,7 @@ import {
   fetchCategories,
   loadLeagueSlots,
   saveLeagueSlots,
+  validateSlotConfig,
 } from '@/lib/categoryData';
 
 const ACCENT = Colors.primary;
@@ -100,6 +101,12 @@ export default function LeagueSettingsScreen() {
     try {
       if (stakeMode === 'price_tiers' && slots.length === 0) {
         Alert.alert('Add a slot', 'Price tiers need at least one slot with a price bracket.');
+        setSaving(false);
+        return;
+      }
+      const slotErrors = validateSlotConfig(slots, numRounds);
+      if (slotErrors.length > 0) {
+        Alert.alert('Fix roster slots', slotErrors[0]);
         setSaving(false);
         return;
       }

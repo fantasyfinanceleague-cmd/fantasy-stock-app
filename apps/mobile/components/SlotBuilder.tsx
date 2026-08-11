@@ -11,6 +11,7 @@ import {
   type SlotDraft,
   countSlotMatches,
   fetchEnrichmentProgress,
+  validateSlotConfig,
 } from '@/lib/categoryData';
 
 interface SlotBuilderProps {
@@ -34,8 +35,9 @@ export default function SlotBuilder({ slots, onChange, categories, leagueSize, n
   const addSlot = () => onChange([...slots, { slotCount: 1, priceMin: '', priceMax: '', categoryId: '' }]);
   const removeSlot = (i: number) => onChange(slots.filter((_, idx) => idx !== i));
 
-  const totalCapacity = slots.reduce((s, r) => s + (Number(r.slotCount) || 0), 0);
-  const capacityShort = slots.length > 0 && totalCapacity < numRounds;
+  // HARD errors (count/capacity/bracket) — parents use the same validator to
+  // disable Next/save; this component shows the reasons.
+  const hardErrors = validateSlotConfig(slots, numRounds);
 
   const categoryName = (id: string) =>
     id ? categories.find((c) => c.id === id)?.name ?? 'Unknown' : 'Any (flex)';
@@ -46,6 +48,16 @@ export default function SlotBuilder({ slots, onChange, categories, leagueSize, n
     try {
       const progress = await fetchEnrichmentProgress();
       setPartialNote(progress.partial);
+      // Per-slot availability counts query is_draftable / last_price /
+      // gics_industry — ALL populated only by the enrichment cron. Below
+      // coverage the counts are near-zero noise (not "lower bounds"), so
+      // they are SUPPRESSED entirely; the hard capacity math above is local
+      // and stays enforced.
+      if (progress.partial) {
+        setWarnings([]);
+        setChecking(false);
+        return;
+      }
       for (let i = 0; i < slots.length; i++) {
         const s = slots[i];
         const matches = await countSlotMatches({
@@ -56,8 +68,7 @@ export default function SlotBuilder({ slots, onChange, categories, leagueSize, n
         const needed = leagueSize * (Number(s.slotCount) || 1);
         if (matches < needed) {
           found.push(
-            `Slot ${i + 1}: only ${matches} draftable stock${matches === 1 ? '' : 's'} match — the league needs at least ${needed} (${leagueSize} teams × ${s.slotCount}).` +
-            (progress.partial ? ' Counts are lower bounds while stock data is still loading.' : ''),
+            `Slot ${i + 1}: only ${matches} draftable stock${matches === 1 ? '' : 's'} match — the league needs at least ${needed} (${leagueSize} teams × ${s.slotCount}).`,
           );
         }
       }
@@ -151,17 +162,17 @@ export default function SlotBuilder({ slots, onChange, categories, leagueSize, n
         </View>
       ))}
 
-      {capacityShort && (
-        <Text style={styles.warning}>
-          Slots cover {totalCapacity} pick{totalCapacity === 1 ? '' : 's'} per team but the draft has {numRounds} rounds —
-          picks beyond slot capacity will be refused.
-        </Text>
-      )}
+      {hardErrors.map((e, i) => (
+        <Text key={`h${i}`} style={styles.hardError}>{e}</Text>
+      ))}
       {warnings.map((w, i) => (
         <Text key={i} style={styles.warning}>{w}</Text>
       ))}
-      {partialNote && warnings.length === 0 && slots.length > 0 && (
-        <Text style={styles.note}>Stock classification is still loading — availability counts are lower bounds.</Text>
+      {partialNote && slots.length > 0 && (
+        <Text style={styles.note}>
+          Stock data is still loading (takes ~2 days after launch) — per-slot availability
+          checks are paused until it completes. Slot count math is still enforced.
+        </Text>
       )}
 
       <View style={styles.actionRow}>
@@ -243,4 +254,13 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   actionBtnText: { color: Colors.textPrimary, fontSize: 13 },
+  hardError: {
+    color: Colors.error,
+    fontSize: 12,
+    backgroundColor: Colors.errorBg,
+    borderRadius: 8,
+    padding: 8,
+    marginBottom: 6,
+    lineHeight: 16,
+  },
 });

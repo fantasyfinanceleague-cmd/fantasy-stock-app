@@ -155,6 +155,39 @@ export async function countSlotMatches(
   return ruleCount + ovrCount;
 }
 
+/**
+ * HARD slot-config errors (block Next/save — distinct from soft feasibility
+ * warnings). Once a league has ANY slots, the server validator requires every
+ * pick to land in an unfilled slot, so total slot count must equal
+ * stocks-per-team exactly: fewer wedges the draft mid-round (every further
+ * pick refused with no_eligible_slot); more is dead config the roster can
+ * never fill. Inverted brackets would be rejected by the DB CHECK at save
+ * time with an opaque error, so they are caught here instead.
+ */
+export function validateSlotConfig(slots: SlotDraft[], numRounds: number): string[] {
+  const errors: string[] = [];
+  if (slots.length === 0) return errors;
+  let total = 0;
+  slots.forEach((s, i) => {
+    const count = Number(s.slotCount);
+    if (!(count > 0)) errors.push(`Slot ${i + 1}: count must be at least 1.`);
+    else total += count;
+    const min = s.priceMin === '' ? null : Number(s.priceMin);
+    const max = s.priceMax === '' ? null : Number(s.priceMax);
+    if (min != null && max != null && min > max) {
+      errors.push(`Slot ${i + 1}: min price is above max price.`);
+    }
+  });
+  if (total !== numRounds) {
+    errors.push(
+      total > numRounds
+        ? `Slots cover ${total} picks but each team drafts only ${numRounds} (stocks per team) — remove ${total - numRounds}.`
+        : `Slots cover only ${total} of ${numRounds} picks — once slots exist, every pick needs an open slot, so the draft would jam after ${total}. Add ${numRounds - total} more.`,
+    );
+  }
+  return errors;
+}
+
 /** Replace a league's slot definitions (commissioner-only via RLS; callers
  * gate on draft_status). */
 export async function saveLeagueSlots(leagueId: string, slots: SlotDraft[]): Promise<void> {

@@ -19,6 +19,7 @@ import {
   STAKE_MODE_OPTIONS,
   fetchCategories,
   saveLeagueSlots,
+  validateSlotConfig,
 } from '@/lib/categoryData';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -133,13 +134,19 @@ export default function CreateLeagueWizard() {
         // league settings.
         setStep(state.stakeMode === 'price_tiers' ? 'slots' : (state.type === 'duration' ? 'duration' : 'matchup'));
         break;
-      case 'slots':
+      case 'slots': {
         if (state.slots.length === 0) {
           Alert.alert('Add a slot', 'Price tiers need at least one slot with a price bracket.');
           break;
         }
+        const slotErrors = validateSlotConfig(state.slots, state.numRounds);
+        if (slotErrors.length > 0) {
+          Alert.alert('Fix roster slots', slotErrors[0]);
+          break;
+        }
         setStep(state.type === 'duration' ? 'duration' : 'matchup');
         break;
+      }
       case 'duration': setStep('draft'); break;
       case 'matchup': setStep('draft'); break;
       case 'draft': handleCreate(); break;
@@ -358,6 +365,32 @@ export default function CreateLeagueWizard() {
               </TouchableOpacity>
             ))}
           </View>
+
+          {/* Stocks per team lives HERE (not the final step) so the slots
+              step that follows can validate capacity against the real value —
+              it used to sit in renderDraft, after slots, so the builder
+              compared against the default 6 (BUG 2a). */}
+          <View style={styles.settingSection}>
+            <Text style={styles.settingLabel}>Stocks Per Team</Text>
+            <View style={styles.stepper}>
+              <TouchableOpacity
+                style={styles.stepperBtn}
+                onPress={() => setState({ ...state, numRounds: Math.max(3, state.numRounds - 1) })}
+              >
+                <Ionicons name="remove" size={24} color={Colors.textPrimary} />
+              </TouchableOpacity>
+              <View style={styles.stepperValue}>
+                <Text style={styles.stepperValueText}>{state.numRounds}</Text>
+                <Text style={styles.stepperValueLabel}>stocks</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.stepperBtn}
+                onPress={() => setState({ ...state, numRounds: Math.min(12, state.numRounds + 1) })}
+              >
+                <Ionicons name="add" size={24} color={Colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
 
         <TouchableOpacity style={styles.nextButton} onPress={goNext}>
@@ -470,9 +503,18 @@ export default function CreateLeagueWizard() {
         />
       </ScrollView>
 
-      <TouchableOpacity style={styles.nextButton} onPress={goNext}>
-        <Text style={styles.nextButtonText}>Next</Text>
-      </TouchableOpacity>
+      {(() => {
+        const blocked = state.slots.length === 0 || validateSlotConfig(state.slots, state.numRounds).length > 0;
+        return (
+          <TouchableOpacity
+            style={[styles.nextButton, blocked && styles.nextButtonDisabled]}
+            onPress={goNext}
+            disabled={blocked}
+          >
+            <Text style={styles.nextButtonText}>Next</Text>
+          </TouchableOpacity>
+        );
+      })()}
     </View>
   );
 
@@ -578,28 +620,6 @@ export default function CreateLeagueWizard() {
     <View style={styles.stepContainer}>
       <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
         <Text style={styles.stepSubtitle}>Final step - set up your draft</Text>
-
-        <View style={styles.settingSection}>
-          <Text style={styles.settingLabel}>Stocks Per Team</Text>
-          <View style={styles.stepper}>
-            <TouchableOpacity
-              style={styles.stepperBtn}
-              onPress={() => setState({ ...state, numRounds: Math.max(3, state.numRounds - 1) })}
-            >
-              <Ionicons name="remove" size={24} color={Colors.textPrimary} />
-            </TouchableOpacity>
-            <View style={styles.stepperValue}>
-              <Text style={styles.stepperValueText}>{state.numRounds}</Text>
-              <Text style={styles.stepperValueLabel}>stocks</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.stepperBtn}
-              onPress={() => setState({ ...state, numRounds: Math.min(12, state.numRounds + 1) })}
-            >
-              <Ionicons name="add" size={24} color={Colors.textPrimary} />
-            </TouchableOpacity>
-          </View>
-        </View>
 
         <View style={styles.settingSection}>
           <Text style={styles.settingLabel}>Draft Date & Time</Text>

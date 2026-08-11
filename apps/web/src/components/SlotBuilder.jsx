@@ -7,7 +7,7 @@
 // (is_draftable + last_price) which the enrichment cron populates over ~2
 // days — partial coverage shows a "lower bound" caveat instead of blocking.
 import React, { useEffect, useState } from 'react';
-import { countSlotMatches, fetchEnrichmentProgress } from '../utils/categoryData';
+import { countSlotMatches, fetchEnrichmentProgress, validateSlotConfig } from '../utils/categoryData';
 
 const rowStyle = { display: 'grid', gridTemplateColumns: '70px 1fr 1fr 1fr 32px', gap: 8, marginBottom: 8, alignItems: 'center' };
 const smallInput = {
@@ -32,9 +32,9 @@ export default function SlotBuilder({ slots, onChange, categories, leagueSize, n
   const addSlot = () => onChange([...slots, { slotCount: 1, priceMin: '', priceMax: '', categoryId: '' }]);
   const removeSlot = (i) => onChange(slots.filter((_, idx) => idx !== i));
 
-  // Capacity mismatch is computed locally (no query needed).
-  const totalCapacity = slots.reduce((s, r) => s + (Number(r.slotCount) || 0), 0);
-  const capacityShort = slots.length > 0 && totalCapacity < numRounds;
+  // HARD errors (count/capacity/bracket) — parents use the same validator to
+  // disable submit; this component shows the reasons.
+  const hardErrors = validateSlotConfig(slots, numRounds);
 
   const checkFeasibility = async () => {
     setChecking(true);
@@ -42,6 +42,15 @@ export default function SlotBuilder({ slots, onChange, categories, leagueSize, n
     try {
       const progress = await fetchEnrichmentProgress();
       setPartialNote(progress.partial);
+      // Per-slot availability counts query is_draftable / last_price /
+      // gics_industry — ALL populated only by the enrichment cron. Below
+      // coverage the counts are near-zero noise (not "lower bounds"), so they
+      // are SUPPRESSED; the hard capacity math is local and stays enforced.
+      if (progress.partial) {
+        setWarnings([]);
+        setChecking(false);
+        return;
+      }
       for (let i = 0; i < slots.length; i++) {
         const s = slots[i];
         const matches = await countSlotMatches({
@@ -53,8 +62,7 @@ export default function SlotBuilder({ slots, onChange, categories, leagueSize, n
         if (matches < needed) {
           found.push(
             `Slot ${i + 1}: only ${matches} draftable stock${matches === 1 ? '' : 's'} match — ` +
-            `the league needs at least ${needed} (${leagueSize} teams × ${s.slotCount}).` +
-            (progress.partial ? ' Counts are lower bounds while stock data is still loading.' : ''),
+            `the league needs at least ${needed} (${leagueSize} teams × ${s.slotCount}).`,
           );
         }
       }
@@ -114,16 +122,16 @@ export default function SlotBuilder({ slots, onChange, categories, leagueSize, n
         </div>
       ))}
 
-      {capacityShort && (
-        <div style={warnStyle}>
-          Slots cover {totalCapacity} pick{totalCapacity === 1 ? '' : 's'} per team but the draft has {numRounds} rounds —
-          picks beyond slot capacity will be refused. Add slots or reduce rounds.
+      {hardErrors.map((e, i) => (
+        <div key={`h${i}`} style={{ ...warnStyle, color: '#f87171', borderColor: 'rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.1)' }}>
+          {e}
         </div>
-      )}
+      ))}
       {warnings.map((w, i) => <div key={i} style={warnStyle}>{w}</div>)}
-      {partialNote && warnings.length === 0 && slots.length > 0 && (
+      {partialNote && slots.length > 0 && (
         <div style={{ ...warnStyle, color: '#9ca3af', borderColor: 'rgba(107,114,128,0.3)', background: 'rgba(107,114,128,0.08)' }}>
-          Stock classification is still loading — availability counts are lower bounds.
+          Stock data is still loading (takes ~2 days after launch) — per-slot availability
+          checks are paused until it completes. Slot count math is still enforced.
         </div>
       )}
 

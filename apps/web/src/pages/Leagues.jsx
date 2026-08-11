@@ -11,6 +11,7 @@ import {
   DEFAULT_NOTIONAL_PER_SLOT,
   DEFAULT_BUDGET_CAP,
   fetchCategories,
+  validateSlotConfig,
 } from '../utils/categoryData';
 import { supabase } from '../supabase/supabaseClient';
 
@@ -161,6 +162,11 @@ export default function Leagues() {
       toast.error('Price tiers need at least one slot with a price bracket — add slots below.');
       return;
     }
+    const slotErrors = validateSlotConfig(slots, Number(stocksPerTeam));
+    if (slotErrors.length > 0) {
+      toast.error(slotErrors[0]);
+      return;
+    }
 
     const league = await createLeague({
       name: leagueName.trim(),
@@ -207,6 +213,11 @@ export default function Leagues() {
 
     if (updateStakeMode === 'price_tiers' && updateSlots.length === 0) {
       toast.error('Price tiers need at least one slot with a price bracket.');
+      return;
+    }
+    const updateSlotErrors = validateSlotConfig(updateSlots, Number(updateRounds) || 6);
+    if (updateSlotErrors.length > 0) {
+      toast.error(updateSlotErrors[0]);
       return;
     }
 
