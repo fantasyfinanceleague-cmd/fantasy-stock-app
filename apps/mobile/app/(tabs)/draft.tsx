@@ -25,6 +25,19 @@ interface LeagueMember {
   display_name?: string;
 }
 
+// Refusal reasons from validate-and-record-pick, mapped to user-facing copy.
+const PICK_REFUSAL_MESSAGES: Record<string, string> = {
+  not_your_turn: "It's not your turn to pick",
+  draft_complete: 'The draft is already complete',
+  draft_not_in_progress: 'The draft is not in progress',
+  symbol_owned: 'That stock is already owned in this league',
+  no_eligible_slot: 'No open roster slot accepts a stock at this price',
+  over_budget: 'That stock is over your remaining budget',
+  no_price: 'No recent price available for that stock',
+  pick_conflict: 'Someone picked at the same moment — refresh and try again',
+  rate_limited: 'Too many picks too quickly — wait a moment and try again',
+};
+
 export default function DraftScreen() {
   const { user } = useAuth();
   const { activeLeagueId, activeLeague, refresh: refreshLeagues } = useLeagueContext();
@@ -64,8 +77,12 @@ export default function DraftScreen() {
   const isDraftNotStarted = activeLeague?.draft_status === 'not_started';
   const isDraftCompleted = activeLeague?.draft_status === 'completed';
 
-  // Budget tracking
-  const isBudgetMode = activeLeague?.budget_mode === 'budget';
+  // Budget tracking. stake_mode is authoritative (budget_cap = capped);
+  // budget_mode fallback covers the pre-migration transition window only.
+  // These client checks are UX mirrors — validate-and-record-pick is the
+  // authoritative legality gate.
+  const isBudgetMode =
+    (activeLeague?.stake_mode ?? (activeLeague?.budget_mode === 'budget' ? 'budget_cap' : null)) === 'budget_cap';
   const leagueBudget = activeLeague?.budget_amount || 100000;
   const mySpent = picks
     .filter(p => p.user_id === user?.id)
@@ -81,8 +98,7 @@ export default function DraftScreen() {
       const { data: memberData } = await supabase
         .from('league_members')
         .select('user_id, role')
-        .eq('league_id', activeLeagueId)
-        .order('joined_at', { ascending: true });
+        .eq('league_id', activeLeagueId);
 
       // Fetch profiles
       const userIds = (memberData || []).map(m => m.user_id).filter(id => !id.startsWith('bot-'));
@@ -102,7 +118,19 @@ export default function DraftScreen() {
       }));
 
       setMembers(membersWithNames);
-      setDraftOrder((memberData || []).map(m => m.user_id));
+
+      // Canonical draft order (must match validate-and-record-pick and web):
+      // commissioner first, remaining member ids sorted ascending. Mobile
+      // previously ordered by joined_at, which could disagree with web about
+      // whose turn it was in a cross-platform league.
+      const memberIdList = (memberData || []).map(m => m.user_id);
+      const commissionerId = activeLeague?.commissioner_id ?? null;
+      const nonCommissioners = memberIdList.filter(id => id !== commissionerId).sort();
+      setDraftOrder(
+        commissionerId && memberIdList.includes(commissionerId)
+          ? [commissionerId, ...nonCommissioners]
+          : nonCommissioners
+      );
 
       // Fetch picks
       const { data: pickData } = await supabase
@@ -129,7 +157,7 @@ export default function DraftScreen() {
     } finally {
       setLoading(false);
     }
-  }, [activeLeagueId]);
+  }, [activeLeagueId, activeLeague?.commissioner_id]);
 
   // Initial load and refresh
   useEffect(() => {
@@ -230,33 +258,25 @@ export default function DraftScreen() {
     setSubmitting(true);
 
     try {
-      const { error } = await supabase
-        .from('drafts')
-        .insert({
-          league_id: activeLeagueId,
-          user_id: user.id,
-          symbol: quote.symbol,
-          entry_price: quote.price,
-          quantity: 1,
-          round: currentRound,
-          pick_number: currentPickNumber,
-          draft_date: new Date().toISOString(),
-        });
+      // Phase 3 (DR-001): picks go through the server-side legality gate.
+      // The function re-prices the fill from the app-key quote path and
+      // computes quantity per stake mode — the quote shown here is display.
+      const { data, error } = await supabase.functions.invoke('validate-and-record-pick', {
+        body: { league_id: activeLeagueId, symbol: quote.symbol },
+      });
 
       if (error) throw error;
+      if (!data?.ok) {
+        Alert.alert('Error', PICK_REFUSAL_MESSAGES[data?.reason] || 'Pick was refused');
+        return;
+      }
 
       // Clear search
       setSearchSymbol('');
       setQuote(null);
 
-      // Check if draft is complete
-      if (currentPickNumber >= totalPicks) {
-        // Update league draft status
-        await supabase
-          .from('leagues')
-          .update({ draft_status: 'completed' })
-          .eq('id', activeLeagueId);
-
+      // Draft-completed status is written server-side by the function.
+      if (data.draft_complete) {
         await refreshLeagues();
         Alert.alert('Draft Complete!', 'The draft has finished. Good luck!');
       } else {

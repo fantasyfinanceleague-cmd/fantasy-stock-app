@@ -9,7 +9,8 @@ export interface League {
   commissioner_id: string;
   draft_status: 'not_started' | 'in_progress' | 'completed';
   draft_date: string | null;
-  budget_mode: 'budget' | 'no-budget';
+  budget_mode: 'budget' | 'no-budget'; // deprecated — stake_mode is authoritative
+  stake_mode: 'fixed_notional' | 'price_tiers' | 'budget_cap' | null;
   budget_amount: number | null;
   salary_cap_limit: number | null;
   num_participants: number;

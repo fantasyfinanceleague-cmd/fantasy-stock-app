@@ -83,6 +83,19 @@ const STATIC_NAMES = {
   KO: 'COCA-COLA CO',
 };
 
+// Refusal reasons from validate-and-record-pick, mapped to user-facing copy.
+const PICK_REFUSAL_MESSAGES = {
+  not_your_turn: "It's not your turn to pick.",
+  draft_complete: 'The draft is already complete.',
+  draft_not_in_progress: 'The draft is not in progress.',
+  symbol_owned: 'That stock is already owned in this league.',
+  no_eligible_slot: 'No open roster slot accepts a stock at this price.',
+  over_budget: 'That stock is over your remaining budget.',
+  no_price: 'No recent price available for that stock.',
+  pick_conflict: 'Someone picked at the same moment — try again.',
+  rate_limited: 'Too many picks too quickly — wait a moment and try again.',
+};
+
 /** Call your Edge Function for a normalized latest price */
 async function fetchQuoteViaFunction(symbol) {
   const sym = String(symbol || '').trim().toUpperCase();
@@ -164,8 +177,11 @@ export default function DraftPage() {
   const [symbolToName, setSymbolToName] = useState({}); // { AAPL: 'Apple Inc.' }
   const recentPick = portfolio[0];
 
-  // budget
-  const isBudgetMode = league?.budget_mode === 'budget';
+  // budget. stake_mode is authoritative (budget_cap = capped); budget_mode
+  // fallback covers the pre-migration transition window only. These client
+  // checks are UX mirrors — validate-and-record-pick is the legality gate.
+  const isBudgetMode =
+    (league?.stake_mode ?? (league?.budget_mode === 'budget' ? 'budget_cap' : null)) === 'budget_cap';
   const leagueBudget = Number(league?.budget_amount ?? league?.salary_cap_limit ?? 0);
   const mySpent = useMemo(
     () => portfolio.filter(p => p.user_id === USER_ID).reduce((s, p) => s + Number(p.entry_price || 0), 0),
@@ -628,37 +644,25 @@ export default function DraftPage() {
       return;
     }
 
-    // Save the pick to the in-house ledger (drafts). No broker order is placed;
-    // in-house simulator fills are wired in Phase 3 (see DR-001).
-    const newPickNumber = (portfolio?.length || 0) + 1;
-    const payload = {
-      league_id: leagueId,
-      user_id: USER_ID,
-      symbol: upper,
-      entry_price: price,
-      quantity: 1,
-      round: currentRound,
-      pick_number: newPickNumber,
-      draft_date: new Date().toISOString(),
-    };
+    // Phase 3 (DR-001): picks go through the server-side legality gate.
+    // The function re-prices the fill from the app-key quote path and computes
+    // quantity per stake mode — the quote above is display/UX only.
+    const { data, error: fnErr } = await supabase.functions.invoke('validate-and-record-pick', {
+      body: { league_id: leagueId, symbol: upper },
+    });
 
-    const { data: inserted, error: insErr } = await supabase
-      .from('drafts')
-      .insert(payload)
-      .select('*')
-      .single();
-
-    if (insErr) {
-      console.error('Supabase insert error:', insErr);
-      toast.error('Failed to draft stock.');
+    if (fnErr || !data?.ok) {
+      console.error('Pick refused:', fnErr || data);
+      toast.error(PICK_REFUSAL_MESSAGES[data?.reason] || 'Failed to draft stock.');
       return;
     }
 
+    const inserted = data.pick;
     setPortfolio(prev => [inserted, ...(prev || [])]);
     setQuote(null);
     setSymbol('');
     setErrorMsg('');
-    setCurrentPickNumber(newPickNumber + 1);
+    setCurrentPickNumber(inserted.pick_number + 1);
 
     // ensure name is cached for lists
     void ensureNameForSymbol(upper);
@@ -854,54 +858,29 @@ export default function DraftPage() {
         return;
       }
 
-      // Insert the pick using fresh pick count from database
-      const newPickNumber = currentPickCount + 1;
-      const newRound = Math.floor(currentPickCount / memberIds.length) + 1;
+      // Phase 3 (DR-001): bot picks go through the server-side legality gate
+      // too (for_user_id = the bot; allowed for league members, mirroring the
+      // bot-picks RLS policy). The server re-prices the fill and re-derives
+      // turn/round/pick_number — selectedPrice above was only used to choose
+      // an affordable candidate. Races surface as reason 'pick_conflict' /
+      // 'not_your_turn' and simply release the lock to let state sync.
+      const { data, error: fnErr } = await supabase.functions.invoke('validate-and-record-pick', {
+        body: { league_id: leagueId, symbol: selectedSymbol, for_user_id: botUserId },
+      });
 
-      // IMPORTANT: Check if this pick_number already exists to prevent duplicates
-      const { data: existingPick } = await supabase
-        .from('drafts')
-        .select('id')
-        .eq('league_id', leagueId)
-        .eq('pick_number', newPickNumber)
-        .maybeSingle();
-
-      if (existingPick) {
-        // Pick already exists - another process beat us, just release lock and let state sync
-        console.log(`Pick ${newPickNumber} already exists, skipping duplicate`);
-        return;
-      }
-
-      const payload = {
-        league_id: leagueId,
-        user_id: botUserId,
-        symbol: selectedSymbol,
-        entry_price: selectedPrice,
-        quantity: 1,
-        round: newRound,
-        pick_number: newPickNumber,
-        draft_date: new Date().toISOString(),
-      };
-
-      const { data: inserted, error: insErr } = await supabase
-        .from('drafts')
-        .insert(payload)
-        .select('*')
-        .single();
-
-      if (insErr) {
-        // Check if error is due to duplicate pick_number (unique constraint violation)
-        if (insErr.code === '23505') {
-          console.log(`Pick ${newPickNumber} already inserted by another process`);
+      if (fnErr || !data?.ok) {
+        const reason = data?.reason;
+        if (reason === 'pick_conflict' || reason === 'not_your_turn') {
+          console.log(`Bot pick raced (${reason}), letting state sync`);
           return;
         }
-        console.error('Bot pick failed:', insErr);
+        console.error('Bot pick failed:', fnErr || data);
         // Mark bot as failed to prevent infinite retries
         setFailedBots(prev => new Set([...prev, botUserId]));
         return;
       }
 
-      setPortfolio(prev => [inserted, ...(prev || [])]);
+      setPortfolio(prev => [data.pick, ...(prev || [])]);
       void ensureNameForSymbol(selectedSymbol);
     } finally {
       // Release both locks
@@ -912,27 +891,15 @@ export default function DraftPage() {
 
   // --- Helper: Skip a player's turn (used when bot can't pick)
   async function skipTurn(userId) {
-    // Insert a "skip" pick with $0 to advance the draft
-    const newPickNumber = (portfolio?.length || 0) + 1;
-    const payload = {
-      league_id: leagueId,
-      user_id: userId,
-      symbol: 'SKIP',
-      entry_price: 0,
-      quantity: 0,
-      round: currentRound,
-      pick_number: newPickNumber,
-      draft_date: new Date().toISOString(),
-    };
+    // Phase 3 (DR-001): the server records the SKIP sentinel row (symbol
+    // 'SKIP', $0, qty 0) after verifying it is actually that user's turn.
+    // Members may only skip bots (or themselves) — the server enforces it.
+    const { data, error: fnErr } = await supabase.functions.invoke('validate-and-record-pick', {
+      body: { league_id: leagueId, for_user_id: userId, action: 'skip' },
+    });
 
-    const { data: inserted, error: insErr } = await supabase
-      .from('drafts')
-      .insert(payload)
-      .select('*')
-      .single();
-
-    if (!insErr && inserted) {
-      setPortfolio(prev => [inserted, ...(prev || [])]);
+    if (!fnErr && data?.ok && data.pick) {
+      setPortfolio(prev => [data.pick, ...(prev || [])]);
     }
   }
 
