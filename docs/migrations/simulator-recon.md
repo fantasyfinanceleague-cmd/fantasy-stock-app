@@ -212,6 +212,26 @@ Read-only queries run by Giorgio in the Supabase SQL editor. **This section is t
 7. **`symbols` needs more than gics columns**: `is_draftable` computation (market-cap floor, price ≥ $1, exchange) requires price/market-cap data the table doesn't hold. Phase 4 must either add `last_price`/`market_cap` columns fed by the refresh job, or compute eligibility from the quotes path at refresh time. Also `exchange` is nullable — the exchange-based eligibility test needs null handling.
 8. **user_id type map (final):** `drafts` TEXT, `week_snapshots` TEXT, `trades` UUID, `leagues.commissioner_id` TEXT. The UUID island is `trades`. All cross-table joins cast explicitly; no type unification in Phase 2.
 
+### Gap 2 — `quote` is the app's primary live-price path (added 2026-08-10)
+
+The Gap 2 grep (`git grep "invoke('quote'" -- apps/` on `remove-alpaca-linking`) found **`quote` is the primary live-price path**, not a residual linking artifact. The `quote` edge function reads `broker_credentials` via `getUserCredentials()` and has **no `ALPACA_API_KEY` fallback** (`supabase/functions/quote/index.ts:81–83, 181–184, 287–290`), so dropping `broker_credentials` makes it return `no_credentials`/error for **every** user. **10 client call sites** depend on it, none with an effective app-key fallback:
+
+| # | Call site | What it does | Post-drop |
+|---|---|---|---|
+| 1 | `web/src/context/PriceContext.jsx:99` | **Global** live-price provider (portfolio, holdings, leaderboard) | `status: ERROR`, price `null`, no fallback → app-wide price display breaks |
+| 2 | `web/src/utils/stockData.js:14` | `fetchQuote` util (feeds `fetchQuotesInBatch` + components) | returns `null`, no fallback |
+| 3 | `web/src/pages/DraftPage.jsx:91` | `fetchQuoteViaFunction` — draft pick pricing | **throws** on error → the `finnhub-quote` fallback at `:598–609` is bypassed by the throw → draft pricing breaks |
+| 4–5 | `web/src/components/TradeModal.jsx:63, 159` | Trade-modal price (initial + selected symbol) | no price shown (submit already disabled in Phase 1) |
+| 6 | `mobile/app/(tabs)/draft.tsx:191` | Mobile draft pick pricing | breaks |
+| 7–8 | `mobile/app/(tabs)/matchup.tsx:339, 423` | Matchup live prices for both teams' holdings | `quoteData` undefined → prices not set → matchup prices break |
+| 9–10 | `mobile/components/TradeModal.tsx:102, 207` | Mobile trade-modal price display | breaks |
+
+Only `ticker-quotes` (the scrolling ticker — `web/src/Ticker.jsx:28`, `mobile/lib/useStockPrices.ts:32`) survives on the app key; the lone `finnhub-quote` fallback (`DraftPage.jsx:603`) is unreachable post-drop because `quote` throws rather than returning null.
+
+**New, sharper finding:** post-Phase-1, the linking UI is gone, so **new accounts have no `broker_credentials` row at all** — meaning `quote` already returns `no_credentials` for every fresh signup, and **per-symbol live prices are broken for new accounts even before the table is dropped.** The drop only universalizes an outage that already hits new users today.
+
+**Consequence for sequencing:** this **elevates the `quote` → app-key rewire to a standalone pre-Phase-3 workstream** (repoint `quote`, or the 10 call sites, onto `ticker-quotes` / `historical-bars` / `finnhub-quote`). It gates the deferred `broker_credentials` drop (now held in `supabase/migrations/deferred/`), but it **does not depend on Phase 2 schema work and can run in parallel with it.**
+
 ---
 
 ## Phase 0 checklist status
