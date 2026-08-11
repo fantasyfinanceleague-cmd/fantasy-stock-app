@@ -9,6 +9,18 @@ import { useAuth } from '@/lib/useAuth';
 import { useLeagueContext, League } from '@/lib/LeagueContext';
 import { supabase } from '@/lib/supabase';
 import { validateLeagueName } from '@/lib/contentModeration';
+import SlotBuilder from '@/components/SlotBuilder';
+import {
+  type Category,
+  type SlotDraft,
+  type StakeMode,
+  DEFAULT_BUDGET_CAP,
+  DEFAULT_NOTIONAL_PER_SLOT,
+  STAKE_MODE_OPTIONS,
+  fetchCategories,
+  loadLeagueSlots,
+  saveLeagueSlots,
+} from '@/lib/categoryData';
 
 const ACCENT = Colors.primary;
 const ACCENT_BG = Colors.primaryBg;
@@ -30,8 +42,14 @@ export default function LeagueSettingsScreen() {
   const [name, setName] = useState('');
   const [draftDate, setDraftDate] = useState<Date | null>(null);
   const [draftDateTBD, setDraftDateTBD] = useState(true);
-  const [budgetMode, setBudgetMode] = useState<'budget' | 'no-budget'>('budget');
-  const [budgetAmount, setBudgetAmount] = useState('100000');
+  // '' = no stake mode chosen yet (legacy NULL league) — drafting is blocked
+  // until the commissioner picks one here.
+  const [stakeMode, setStakeMode] = useState<'' | StakeMode>('');
+  const [notionalPerSlot, setNotionalPerSlot] = useState(String(DEFAULT_NOTIONAL_PER_SLOT));
+  const [budgetCap, setBudgetCap] = useState(String(DEFAULT_BUDGET_CAP));
+  const [slots, setSlots] = useState<SlotDraft[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  useEffect(() => { fetchCategories().then(setCategories); }, []);
   const [numParticipants, setNumParticipants] = useState(8);
   const [numRounds, setNumRounds] = useState(6);
   const [startingNewSeason, setStartingNewSeason] = useState(false);
@@ -42,8 +60,10 @@ export default function LeagueSettingsScreen() {
       setName(league.name);
       setDraftDateTBD(!league.draft_date);
       setDraftDate(league.draft_date ? new Date(league.draft_date) : null);
-      setBudgetMode(league.budget_mode);
-      setBudgetAmount(String(league.budget_amount || 100000));
+      setStakeMode((league.stake_mode ?? '') as '' | StakeMode);
+      setNotionalPerSlot(String(league.notional_per_slot ?? DEFAULT_NOTIONAL_PER_SLOT));
+      setBudgetCap(String(league.budget_amount ?? DEFAULT_BUDGET_CAP));
+      loadLeagueSlots(league.id).then(setSlots);
       setNumParticipants(league.num_participants);
       setNumRounds(league.num_rounds);
     }
@@ -78,25 +98,39 @@ export default function LeagueSettingsScreen() {
     setSaving(true);
 
     try {
-      const budgetAmt = budgetMode === 'no-budget' ? null : parseInt(budgetAmount) || 100000;
+      if (stakeMode === 'price_tiers' && slots.length === 0) {
+        Alert.alert('Add a slot', 'Price tiers need at least one slot with a price bracket.');
+        setSaving(false);
+        return;
+      }
+
+      // stake_mode written only when chosen — '' (legacy NULL league) leaves
+      // the column untouched rather than writing a default the commissioner
+      // didn't pick. budget_mode / salary_cap_limit: retired, never written.
+      const patch: Record<string, unknown> = {
+        name: trimmedName,
+        draft_date: draftDateTBD ? null : draftDate?.toISOString(),
+        num_participants: numParticipants,
+        num_rounds: numRounds,
+      };
+      if (stakeMode) {
+        patch.stake_mode = stakeMode;
+        patch.notional_per_slot = parseInt(notionalPerSlot) || DEFAULT_NOTIONAL_PER_SLOT;
+        if (stakeMode === 'budget_cap') {
+          patch.budget_amount = parseInt(budgetCap) || DEFAULT_BUDGET_CAP;
+        }
+      }
 
       const { error } = await supabase
         .from('leagues')
-        .update({
-          name: trimmedName,
-          draft_date: draftDateTBD ? null : draftDate?.toISOString(),
-          budget_mode: budgetMode, // deprecated — kept during transition
-          // stake_mode is authoritative (Phase 3 client switch; the 000008
-          // mirror trigger is dropped). Same mapping the trigger applied.
-          stake_mode: budgetMode === 'budget' ? 'budget_cap' : null,
-          budget_amount: budgetAmt || 100000,
-          salary_cap_limit: budgetAmt,
-          num_participants: numParticipants,
-          num_rounds: numRounds,
-        })
+        .update(patch)
         .eq('id', league.id);
 
       if (error) throw error;
+
+      if (!isLocked) {
+        await saveLeagueSlots(league.id, slots);
+      }
 
       await refresh();
 
@@ -290,47 +324,80 @@ export default function LeagueSettingsScreen() {
             )}
           </View>
 
-          {/* Budget Mode */}
+          {/* Stake Mode (Phase 4) */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Budget Mode</Text>
-            <View style={styles.cardRow}>
+            <Text style={styles.sectionLabel}>Stake Mode</Text>
+
+            {stakeMode === '' && (
+              <Text style={styles.stakeMissingBanner}>
+                This league has no stake mode yet — drafting is blocked until you choose one.
+              </Text>
+            )}
+
+            {STAKE_MODE_OPTIONS.map((opt) => (
               <TouchableOpacity
-                style={[styles.modeCard, budgetMode === 'budget' && styles.modeCardSelected, isLocked && styles.inputDisabled]}
-                onPress={() => !isLocked && setBudgetMode('budget')}
+                key={opt.value}
+                style={[styles.modeCard, styles.stakeModeCard, stakeMode === opt.value && styles.modeCardSelected, isLocked && styles.inputDisabled]}
+                onPress={() => !isLocked && setStakeMode(opt.value)}
                 disabled={isLocked}
               >
-                <Ionicons name="wallet" size={24} color={budgetMode === 'budget' ? ACCENT : Colors.textMuted} />
-                <Text style={[styles.modeCardText, budgetMode === 'budget' && styles.modeCardTextSelected]}>
-                  Salary Cap
-                </Text>
+                <Ionicons
+                  name={opt.icon as keyof typeof Ionicons.glyphMap}
+                  size={22}
+                  color={stakeMode === opt.value ? ACCENT : Colors.textMuted}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.modeCardText, stakeMode === opt.value && styles.modeCardTextSelected]}>
+                    {opt.label}
+                  </Text>
+                  <Text style={styles.stakeHelpText}>{opt.help}</Text>
+                </View>
               </TouchableOpacity>
+            ))}
 
-              <TouchableOpacity
-                style={[styles.modeCard, budgetMode === 'no-budget' && styles.modeCardSelected, isLocked && styles.inputDisabled]}
-                onPress={() => !isLocked && setBudgetMode('no-budget')}
-                disabled={isLocked}
-              >
-                <Ionicons name="infinite" size={24} color={budgetMode === 'no-budget' ? ACCENT : Colors.textMuted} />
-                <Text style={[styles.modeCardText, budgetMode === 'no-budget' && styles.modeCardTextSelected]}>
-                  No Limit
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {budgetMode === 'budget' && (
+            {stakeMode === 'fixed_notional' && (
               <View style={styles.budgetInputContainer}>
                 <Text style={styles.currencySymbol}>$</Text>
                 <TextInput
                   style={[styles.budgetInput, isLocked && styles.inputDisabled]}
-                  value={budgetAmount}
-                  onChangeText={(text) => setBudgetAmount(text.replace(/[^0-9]/g, ''))}
+                  value={notionalPerSlot}
+                  onChangeText={(text) => setNotionalPerSlot(text.replace(/[^0-9]/g, ''))}
                   keyboardType="numeric"
-                  placeholder="100000"
+                  placeholder={String(DEFAULT_NOTIONAL_PER_SLOT)}
                   placeholderTextColor={Colors.textDark}
                   editable={!isLocked}
                 />
               </View>
             )}
+            {stakeMode === 'budget_cap' && (
+              <View style={styles.budgetInputContainer}>
+                <Text style={styles.currencySymbol}>$</Text>
+                <TextInput
+                  style={[styles.budgetInput, isLocked && styles.inputDisabled]}
+                  value={budgetCap}
+                  onChangeText={(text) => setBudgetCap(text.replace(/[^0-9]/g, ''))}
+                  keyboardType="numeric"
+                  placeholder={String(DEFAULT_BUDGET_CAP)}
+                  placeholderTextColor={Colors.textDark}
+                  editable={!isLocked}
+                />
+              </View>
+            )}
+          </View>
+
+          {/* Roster Slots (Phase 4) */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>
+              Roster Slots{stakeMode === 'price_tiers' ? ' (required — price brackets)' : ' (optional — category slots)'}
+            </Text>
+            <SlotBuilder
+              slots={slots}
+              onChange={setSlots}
+              categories={categories}
+              leagueSize={numParticipants}
+              numRounds={numRounds}
+              disabled={isLocked}
+            />
           </View>
 
           {/* Number of Teams */}
@@ -779,5 +846,28 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
     letterSpacing: 0.5,
+  },
+  // Phase 4 stake-mode UI
+  stakeModeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    width: '100%',
+    marginBottom: 8,
+  },
+  stakeHelpText: {
+    fontSize: 11,
+    color: Colors.textMuted,
+    marginTop: 2,
+    lineHeight: 15,
+  },
+  stakeMissingBanner: {
+    color: Colors.error,
+    fontSize: 13,
+    backgroundColor: Colors.errorBg,
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 10,
+    lineHeight: 18,
   },
 });
