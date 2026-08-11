@@ -1,110 +1,372 @@
 [
-  { "symbol": "AMZN", "category_slug": "retail", "justification": "Core business: e-commerce marketplace and retail (majority of revenue)." },
-  { "symbol": "AMZN", "category_slug": "tech", "justification": "AWS is a distinct reporting segment supplying the majority of operating income; famous-for-it cloud provider." },
-  { "symbol": "AMZN", "category_slug": "media", "justification": "Prime Video / Studios / Twitch — famous-for-it streaming platform." },
-
-  { "symbol": "MSFT", "category_slug": "tech", "justification": "Core business: software and cloud (primary category restated — overrides replace rules)." },
-  { "symbol": "MSFT", "category_slug": "media", "justification": "Xbox + Activision Blizzard — famous-for-it gaming platform after the largest gaming acquisition ever." },
-
-  { "symbol": "GOOGL", "category_slug": "tech", "justification": "Core business: search, ads, cloud (primary restated)." },
-  { "symbol": "GOOGL", "category_slug": "media", "justification": "YouTube — famous-for-it video/streaming platform with distinct ad+subscription revenue." },
-  { "symbol": "GOOG", "category_slug": "tech", "justification": "Same issuer as GOOGL (class C); primary restated." },
-  { "symbol": "GOOG", "category_slug": "media", "justification": "Same issuer as GOOGL (class C); YouTube famous-for-it." },
-
-  { "symbol": "META", "category_slug": "tech", "justification": "Core business: platform engineering and ads infrastructure (primary restated)." },
-  { "symbol": "META", "category_slug": "media", "justification": "Facebook/Instagram content platforms — famous-for-it social media." },
-
-  { "symbol": "TSLA", "category_slug": "transport", "justification": "Core business: automobiles (primary restated)." },
-  { "symbol": "TSLA", "category_slug": "tech", "justification": "Famous-for-it software/AI-defined vehicles and autonomy program." },
-  { "symbol": "TSLA", "category_slug": "energy", "justification": "Energy generation & storage is a distinct named reporting segment (Powerwall/Megapack); famous-for-it." },
-
-  { "symbol": "V", "category_slug": "finance", "justification": "Core business: payments network (primary restated)." },
-  { "symbol": "V", "category_slug": "tech", "justification": "Famous-for-it payment-rails technology company; transaction processing is a software business." },
-  { "symbol": "MA", "category_slug": "finance", "justification": "Core business: payments network (primary restated)." },
-  { "symbol": "MA", "category_slug": "tech", "justification": "Famous-for-it payment-rails technology company; transaction processing is a software business." },
-  { "symbol": "PYPL", "category_slug": "finance", "justification": "Core business: payments/wallets (primary restated)." },
-  { "symbol": "PYPL", "category_slug": "tech", "justification": "Famous-for-it fintech platform; product is software." },
-
-  { "symbol": "COIN", "category_slug": "finance", "justification": "Core business: exchange/brokerage revenue (primary restated)." },
-  { "symbol": "COIN", "category_slug": "tech", "justification": "Famous-for-it crypto technology platform; product is software infrastructure." },
-  { "symbol": "HOOD", "category_slug": "finance", "justification": "Core business: brokerage (primary restated)." },
-  { "symbol": "HOOD", "category_slug": "tech", "justification": "Famous-for-it trading app; product is consumer software." },
-
-  { "symbol": "UNH", "category_slug": "health", "justification": "Core business: health benefits and care delivery (primary restated)." },
-  { "symbol": "UNH", "category_slug": "finance", "justification": "UnitedHealthcare underwriting is an insurance business model — segment well over 1/3 of revenue." },
-
-  { "symbol": "CVS", "category_slug": "health", "justification": "Core business: pharmacy services + Aetna insurance (primary restated)." },
-  { "symbol": "CVS", "category_slug": "retail", "justification": "Famous-for-it drugstore chain; retail storefronts are a distinct segment." },
-  { "symbol": "WBA", "category_slug": "health", "justification": "Core business: pharmacy (primary restated)." },
-  { "symbol": "WBA", "category_slug": "retail", "justification": "Famous-for-it drugstore chain; retail storefronts are the revenue majority." },
-
-  { "symbol": "COST", "category_slug": "retail", "justification": "Core business: warehouse retail (primary restated)." },
-  { "symbol": "COST", "category_slug": "food", "justification": "Grocery/food is well over 1/3 of warehouse sales." },
-  { "symbol": "WMT", "category_slug": "retail", "justification": "Core business: general retail (primary restated)." },
-  { "symbol": "WMT", "category_slug": "food", "justification": "Grocery is the majority of US sales — segment over 1/3 of revenue." },
-  { "symbol": "KR", "category_slug": "food", "justification": "Core business: supermarkets — food retail (primary)." },
-  { "symbol": "KR", "category_slug": "retail", "justification": "Famous-for-it grocery retail chain; storefront retail operation." },
-
-  { "symbol": "CMCSA", "category_slug": "media", "justification": "Core business: NBCUniversal/Peacock content (primary restated)." },
-  { "symbol": "CMCSA", "category_slug": "tech", "justification": "Broadband connectivity is a distinct segment over 1/3 of revenue." },
-
-  { "symbol": "UBER", "category_slug": "transport", "justification": "Core business: mobility and delivery logistics (primary)." },
-  { "symbol": "UBER", "category_slug": "tech", "justification": "Famous-for-it app platform; product is a software marketplace." },
-  { "symbol": "LYFT", "category_slug": "transport", "justification": "Core business: rideshare mobility (primary)." },
-  { "symbol": "LYFT", "category_slug": "tech", "justification": "Famous-for-it app platform; product is a software marketplace." },
-  { "symbol": "DASH", "category_slug": "food", "justification": "Famous-for-it restaurant delivery — food demand is the core marketplace." },
-  { "symbol": "DASH", "category_slug": "tech", "justification": "Product is a logistics software platform." },
-
-  { "symbol": "ABNB", "category_slug": "tech", "justification": "Product is a software marketplace platform (primary)." },
-  { "symbol": "ABNB", "category_slug": "media", "justification": "Travel & leisure demand — entertainment/leisure bucket per category charter." },
-  { "symbol": "BKNG", "category_slug": "tech", "justification": "Product is a software marketplace platform (primary)." },
-  { "symbol": "BKNG", "category_slug": "media", "justification": "Travel & leisure demand — entertainment/leisure bucket per category charter." },
-  { "symbol": "MAR", "category_slug": "media", "justification": "Hotels are travel & leisure — entertainment bucket; rule-table label would land it in Food via 'Hotels Restaurants & Leisure'." },
-  { "symbol": "HLT", "category_slug": "media", "justification": "Hotels are travel & leisure — entertainment bucket; rule-table label would land it in Food." },
-  { "symbol": "RCL", "category_slug": "media", "justification": "Cruise lines are leisure/entertainment; rule-table label would land it in Food." },
-  { "symbol": "CCL", "category_slug": "media", "justification": "Cruise lines are leisure/entertainment; rule-table label would land it in Food." },
-  { "symbol": "NCLH", "category_slug": "media", "justification": "Cruise lines are leisure/entertainment; rule-table label would land it in Food." },
-  { "symbol": "LVS", "category_slug": "media", "justification": "Casino resorts are gaming/entertainment; rule-table label would land it in Food." },
-  { "symbol": "MGM", "category_slug": "media", "justification": "Casino resorts are gaming/entertainment; rule-table label would land it in Food." },
-  { "symbol": "WYNN", "category_slug": "media", "justification": "Casino resorts are gaming/entertainment; rule-table label would land it in Food." },
-  { "symbol": "DKNG", "category_slug": "media", "justification": "Sports betting is gaming/entertainment (primary)." },
-  { "symbol": "DKNG", "category_slug": "tech", "justification": "Product is a consumer betting app/platform." },
-
-  { "symbol": "EA", "category_slug": "media", "justification": "Video games are entertainment; rule-table 'Leisure Products' label would land it in Retail." },
-  { "symbol": "TTWO", "category_slug": "media", "justification": "Video games are entertainment; rule-table 'Leisure Products' label would land it in Retail." },
-  { "symbol": "RBLX", "category_slug": "media", "justification": "Gaming/UGC entertainment platform (primary)." },
-  { "symbol": "RBLX", "category_slug": "tech", "justification": "Famous-for-it platform/engine; product is software infrastructure." },
-  { "symbol": "SPOT", "category_slug": "media", "justification": "Core business: audio streaming (primary restated)." },
-  { "symbol": "SPOT", "category_slug": "tech", "justification": "Famous-for-it consumer software platform." },
-  { "symbol": "NFLX", "category_slug": "media", "justification": "Core business: streaming entertainment (primary restated)." },
-  { "symbol": "NFLX", "category_slug": "tech", "justification": "Famous-for-it streaming technology platform." },
-
-  { "symbol": "SHOP", "category_slug": "tech", "justification": "Core business: commerce software platform (primary)." },
-  { "symbol": "SHOP", "category_slug": "retail", "justification": "Famous-for-it e-commerce enabler; merchant solutions revenue tied to retail GMV." },
-  { "symbol": "MELI", "category_slug": "retail", "justification": "Core business: Latin American e-commerce marketplace (primary)." },
-  { "symbol": "MELI", "category_slug": "tech", "justification": "Famous-for-it platform company; product is software." },
-  { "symbol": "MELI", "category_slug": "finance", "justification": "Mercado Pago fintech is a distinct segment around half of revenue." },
-  { "symbol": "BABA", "category_slug": "retail", "justification": "Core business: e-commerce marketplaces (primary)." },
-  { "symbol": "BABA", "category_slug": "tech", "justification": "Alibaba Cloud is a distinct named segment; famous-for-it platform company." },
-
-  { "symbol": "ORLY", "category_slug": "retail", "justification": "Core business: specialty retail (primary restated)." },
-  { "symbol": "ORLY", "category_slug": "transport", "justification": "Famous-for-it auto-parts chain — product line is entirely automotive." },
-  { "symbol": "AZO", "category_slug": "retail", "justification": "Core business: specialty retail (primary restated)." },
-  { "symbol": "AZO", "category_slug": "transport", "justification": "Famous-for-it auto-parts chain — product line is entirely automotive." },
-
-  { "symbol": "AMT", "category_slug": "realestate", "justification": "Core business: REIT (primary restated)." },
-  { "symbol": "AMT", "category_slug": "tech", "justification": "Famous-for-it wireless tower infrastructure — telecom-tech asset base." },
-
-  { "symbol": "QQQ", "category_slug": "tech", "justification": "ETF: Nasdaq-100 tracker, famous-for-it tech-heavy index exposure." },
-  { "symbol": "SMH", "category_slug": "tech", "justification": "ETF: semiconductor index exposure." },
-  { "symbol": "XLK", "category_slug": "tech", "justification": "ETF: S&P 500 technology sector exposure." },
-  { "symbol": "XLF", "category_slug": "finance", "justification": "ETF: S&P 500 financials sector exposure." },
-  { "symbol": "XLE", "category_slug": "energy", "justification": "ETF: S&P 500 energy sector exposure." },
-  { "symbol": "XLV", "category_slug": "health", "justification": "ETF: S&P 500 health care sector exposure." },
-  { "symbol": "XLY", "category_slug": "retail", "justification": "ETF: S&P 500 consumer discretionary sector exposure." },
-  { "symbol": "XLP", "category_slug": "food", "justification": "ETF: S&P 500 consumer staples sector exposure (food/beverage-heavy)." },
-  { "symbol": "XLU", "category_slug": "energy", "justification": "ETF: S&P 500 utilities sector exposure." },
-  { "symbol": "XLRE", "category_slug": "realestate", "justification": "ETF: S&P 500 real estate sector exposure." },
-  { "symbol": "XLI", "category_slug": "industrials", "justification": "ETF: S&P 500 industrials sector exposure." },
-  { "symbol": "XLC", "category_slug": "media", "justification": "ETF: S&P 500 communication services sector exposure (media/platform-heavy)." }
+  {
+    "symbol": "AMZN",
+    "category_slug": "retail",
+    "justification": "Core business: e-commerce marketplace and retail (majority of revenue)."
+  },
+  {
+    "symbol": "AMZN",
+    "category_slug": "tech",
+    "justification": "AWS is a distinct reporting segment supplying the majority of operating income; famous-for-it cloud provider."
+  },
+  {
+    "symbol": "AMZN",
+    "category_slug": "media",
+    "justification": "Prime Video / Studios / Twitch \u2014 famous-for-it streaming platform."
+  },
+  {
+    "symbol": "MSFT",
+    "category_slug": "tech",
+    "justification": "Core business: software and cloud (primary category restated \u2014 overrides replace rules)."
+  },
+  {
+    "symbol": "MSFT",
+    "category_slug": "media",
+    "justification": "Xbox + Activision Blizzard \u2014 famous-for-it gaming platform after the largest gaming acquisition ever."
+  },
+  {
+    "symbol": "GOOGL",
+    "category_slug": "tech",
+    "justification": "Core business: search, ads, cloud (primary restated)."
+  },
+  {
+    "symbol": "GOOGL",
+    "category_slug": "media",
+    "justification": "YouTube \u2014 famous-for-it video/streaming platform with distinct ad+subscription revenue."
+  },
+  {
+    "symbol": "GOOG",
+    "category_slug": "tech",
+    "justification": "Same issuer as GOOGL (class C); primary restated."
+  },
+  {
+    "symbol": "GOOG",
+    "category_slug": "media",
+    "justification": "Same issuer as GOOGL (class C); YouTube famous-for-it."
+  },
+  {
+    "symbol": "META",
+    "category_slug": "tech",
+    "justification": "The apps themselves are the product \u2014 consumer software platforms with no licensed-content model; the software is the business, not its delivery mechanism."
+  },
+  {
+    "symbol": "META",
+    "category_slug": "media",
+    "justification": "Facebook/Instagram content platforms \u2014 famous-for-it social media."
+  },
+  {
+    "symbol": "TSLA",
+    "category_slug": "transport",
+    "justification": "Core business: automobiles (primary restated)."
+  },
+  {
+    "symbol": "TSLA",
+    "category_slug": "energy",
+    "justification": "Energy generation & storage is a distinct named reporting segment (Powerwall/Megapack); famous-for-it."
+  },
+  {
+    "symbol": "V",
+    "category_slug": "finance",
+    "justification": "Core business: payments network (primary restated)."
+  },
+  {
+    "symbol": "MA",
+    "category_slug": "finance",
+    "justification": "Core business: payments network (primary restated)."
+  },
+  {
+    "symbol": "PYPL",
+    "category_slug": "finance",
+    "justification": "Core business: payments/wallets (primary restated)."
+  },
+  {
+    "symbol": "COIN",
+    "category_slug": "finance",
+    "justification": "Core business: exchange/brokerage revenue (primary restated)."
+  },
+  {
+    "symbol": "HOOD",
+    "category_slug": "finance",
+    "justification": "Core business: brokerage (primary restated)."
+  },
+  {
+    "symbol": "UNH",
+    "category_slug": "health",
+    "justification": "Core business: health benefits and care delivery (primary restated)."
+  },
+  {
+    "symbol": "UNH",
+    "category_slug": "finance",
+    "justification": "UnitedHealthcare underwriting is an insurance business model \u2014 segment well over 1/3 of revenue."
+  },
+  {
+    "symbol": "CVS",
+    "category_slug": "health",
+    "justification": "Core business: pharmacy services + Aetna insurance (primary restated)."
+  },
+  {
+    "symbol": "CVS",
+    "category_slug": "retail",
+    "justification": "Famous-for-it drugstore chain; retail storefronts are a distinct segment."
+  },
+  {
+    "symbol": "WBA",
+    "category_slug": "health",
+    "justification": "Core business: pharmacy (primary restated)."
+  },
+  {
+    "symbol": "WBA",
+    "category_slug": "retail",
+    "justification": "Famous-for-it drugstore chain; retail storefronts are the revenue majority."
+  },
+  {
+    "symbol": "COST",
+    "category_slug": "retail",
+    "justification": "Core business: warehouse retail (primary restated)."
+  },
+  {
+    "symbol": "COST",
+    "category_slug": "food",
+    "justification": "Grocery/food is well over 1/3 of warehouse sales."
+  },
+  {
+    "symbol": "WMT",
+    "category_slug": "retail",
+    "justification": "Core business: general retail (primary restated)."
+  },
+  {
+    "symbol": "WMT",
+    "category_slug": "food",
+    "justification": "Grocery is the majority of US sales \u2014 segment over 1/3 of revenue."
+  },
+  {
+    "symbol": "KR",
+    "category_slug": "food",
+    "justification": "Core business: supermarkets \u2014 food retail (primary)."
+  },
+  {
+    "symbol": "KR",
+    "category_slug": "retail",
+    "justification": "Famous-for-it grocery retail chain; storefront retail operation."
+  },
+  {
+    "symbol": "CMCSA",
+    "category_slug": "media",
+    "justification": "Core business: NBCUniversal/Peacock content (primary restated)."
+  },
+  {
+    "symbol": "CMCSA",
+    "category_slug": "tech",
+    "justification": "Broadband connectivity is a distinct segment over 1/3 of revenue."
+  },
+  {
+    "symbol": "UBER",
+    "category_slug": "transport",
+    "justification": "Core business: mobility and delivery logistics (primary)."
+  },
+  {
+    "symbol": "LYFT",
+    "category_slug": "transport",
+    "justification": "Core business: rideshare mobility (primary)."
+  },
+  {
+    "symbol": "DASH",
+    "category_slug": "food",
+    "justification": "Famous-for-it restaurant delivery \u2014 food demand is the core marketplace."
+  },
+  {
+    "symbol": "ABNB",
+    "category_slug": "media",
+    "justification": "Travel & leisure demand \u2014 entertainment/leisure bucket per category charter."
+  },
+  {
+    "symbol": "BKNG",
+    "category_slug": "media",
+    "justification": "Travel & leisure demand \u2014 entertainment/leisure bucket per category charter."
+  },
+  {
+    "symbol": "MAR",
+    "category_slug": "media",
+    "justification": "Hotels are travel & leisure \u2014 entertainment bucket; rule-table label would land it in Food via 'Hotels Restaurants & Leisure'."
+  },
+  {
+    "symbol": "HLT",
+    "category_slug": "media",
+    "justification": "Hotels are travel & leisure \u2014 entertainment bucket; rule-table label would land it in Food."
+  },
+  {
+    "symbol": "RCL",
+    "category_slug": "media",
+    "justification": "Cruise lines are leisure/entertainment; rule-table label would land it in Food."
+  },
+  {
+    "symbol": "CCL",
+    "category_slug": "media",
+    "justification": "Cruise lines are leisure/entertainment; rule-table label would land it in Food."
+  },
+  {
+    "symbol": "NCLH",
+    "category_slug": "media",
+    "justification": "Cruise lines are leisure/entertainment; rule-table label would land it in Food."
+  },
+  {
+    "symbol": "LVS",
+    "category_slug": "media",
+    "justification": "Casino resorts are gaming/entertainment; rule-table label would land it in Food."
+  },
+  {
+    "symbol": "MGM",
+    "category_slug": "media",
+    "justification": "Casino resorts are gaming/entertainment; rule-table label would land it in Food."
+  },
+  {
+    "symbol": "WYNN",
+    "category_slug": "media",
+    "justification": "Casino resorts are gaming/entertainment; rule-table label would land it in Food."
+  },
+  {
+    "symbol": "DKNG",
+    "category_slug": "media",
+    "justification": "Sports betting is gaming/entertainment (primary)."
+  },
+  {
+    "symbol": "EA",
+    "category_slug": "media",
+    "justification": "Video games are entertainment; rule-table 'Leisure Products' label would land it in Retail."
+  },
+  {
+    "symbol": "TTWO",
+    "category_slug": "media",
+    "justification": "Video games are entertainment; rule-table 'Leisure Products' label would land it in Retail."
+  },
+  {
+    "symbol": "RBLX",
+    "category_slug": "media",
+    "justification": "Gaming/UGC entertainment platform (primary)."
+  },
+  {
+    "symbol": "SPOT",
+    "category_slug": "media",
+    "justification": "Core business: audio streaming (primary restated)."
+  },
+  {
+    "symbol": "NFLX",
+    "category_slug": "media",
+    "justification": "Core business: streaming entertainment (primary restated)."
+  },
+  {
+    "symbol": "SHOP",
+    "category_slug": "tech",
+    "justification": "Core business: commerce software platform (primary)."
+  },
+  {
+    "symbol": "SHOP",
+    "category_slug": "retail",
+    "justification": "Famous-for-it e-commerce enabler; merchant solutions revenue tied to retail GMV."
+  },
+  {
+    "symbol": "MELI",
+    "category_slug": "retail",
+    "justification": "Core business: Latin American e-commerce marketplace (primary)."
+  },
+  {
+    "symbol": "MELI",
+    "category_slug": "finance",
+    "justification": "Mercado Pago fintech is a distinct segment around half of revenue."
+  },
+  {
+    "symbol": "BABA",
+    "category_slug": "retail",
+    "justification": "Core business: e-commerce marketplaces (primary)."
+  },
+  {
+    "symbol": "BABA",
+    "category_slug": "tech",
+    "justification": "Alibaba Cloud is a distinct named segment; famous-for-it platform company."
+  },
+  {
+    "symbol": "ORLY",
+    "category_slug": "retail",
+    "justification": "Core business: specialty retail (primary restated)."
+  },
+  {
+    "symbol": "ORLY",
+    "category_slug": "transport",
+    "justification": "Famous-for-it auto-parts chain \u2014 product line is entirely automotive."
+  },
+  {
+    "symbol": "AZO",
+    "category_slug": "retail",
+    "justification": "Core business: specialty retail (primary restated)."
+  },
+  {
+    "symbol": "AZO",
+    "category_slug": "transport",
+    "justification": "Famous-for-it auto-parts chain \u2014 product line is entirely automotive."
+  },
+  {
+    "symbol": "AMT",
+    "category_slug": "realestate",
+    "justification": "Core business: REIT (primary restated)."
+  },
+  {
+    "symbol": "QQQ",
+    "category_slug": "tech",
+    "justification": "ETF: Nasdaq-100 tracker, famous-for-it tech-heavy index exposure."
+  },
+  {
+    "symbol": "SMH",
+    "category_slug": "tech",
+    "justification": "ETF: semiconductor index exposure."
+  },
+  {
+    "symbol": "XLK",
+    "category_slug": "tech",
+    "justification": "ETF: S&P 500 technology sector exposure."
+  },
+  {
+    "symbol": "XLF",
+    "category_slug": "finance",
+    "justification": "ETF: S&P 500 financials sector exposure."
+  },
+  {
+    "symbol": "XLE",
+    "category_slug": "energy",
+    "justification": "ETF: S&P 500 energy sector exposure."
+  },
+  {
+    "symbol": "XLV",
+    "category_slug": "health",
+    "justification": "ETF: S&P 500 health care sector exposure."
+  },
+  {
+    "symbol": "XLY",
+    "category_slug": "retail",
+    "justification": "ETF: S&P 500 consumer discretionary sector exposure."
+  },
+  {
+    "symbol": "XLP",
+    "category_slug": "food",
+    "justification": "ETF: S&P 500 consumer staples sector exposure (food/beverage-heavy)."
+  },
+  {
+    "symbol": "XLU",
+    "category_slug": "energy",
+    "justification": "ETF: S&P 500 utilities sector exposure."
+  },
+  {
+    "symbol": "XLRE",
+    "category_slug": "realestate",
+    "justification": "ETF: S&P 500 real estate sector exposure."
+  },
+  {
+    "symbol": "XLI",
+    "category_slug": "industrials",
+    "justification": "ETF: S&P 500 industrials sector exposure."
+  },
+  {
+    "symbol": "XLC",
+    "category_slug": "media",
+    "justification": "ETF: S&P 500 communication services sector exposure (media/platform-heavy)."
+  }
 ]

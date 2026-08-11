@@ -184,6 +184,8 @@ Read-only queries run by Giorgio in the Supabase SQL editor. **This section is t
 
 **`symbols` — only 6 columns:** `symbol` text NOT NULL, `name` text NOT NULL, `exchange` text NULL, `is_etf` bool NULL default false, `active` bool NULL default true, `updated_at` timestamptz NULL default now(). **No price, no market cap, no sector/industry, no is_draftable.**
 
+> **Phase 4 note (2026-08-11): `gics_sector` stays NULL by design.** The enrichment vendor (Finnhub `profile2`) has no sector field; the category system keys off industry labels (`gics_industry`) + the overrides table. Do not "fix" the NULL column — it is reserved for a future GICS-grade source.
+
 **`trades` — 10 columns:** `id` uuid, `league_id` uuid NOT NULL, `user_id` **uuid** NOT NULL, `symbol` text NOT NULL, `action` text NOT NULL, `quantity` **integer** NOT NULL, `price` numeric NOT NULL, `total_value` numeric NOT NULL, `alpaca_order_id` text NULL, `created_at` timestamptz NULL default now().
 
 **`week_snapshots` — 10 columns:** `id` uuid, `league_id` uuid NOT NULL, `user_id` **text** NOT NULL, `week_number` int NOT NULL, `symbol` text NOT NULL, `quantity` **numeric** NOT NULL, `week_start_price` numeric NOT NULL, `week_end_price` numeric NULL, `entered_mid_week` bool NOT NULL default false, `created_at` timestamptz NOT NULL. Matches Item 3 / spec assumptions exactly.
