@@ -130,7 +130,7 @@ Deno.serve(async (req: Request) => {
     if (lgErr) return json({ ok: false, reason: 'unhandled' }, 500);
     if (!league) return json({ ok: false, reason: 'league_not_found' }, 404);
     if (league.draft_status !== 'in_progress') {
-      return json({ ok: false, reason: 'draft_not_in_progress' }, 409);
+      return json({ ok: false, reason: 'draft_not_in_progress' }); // 200: game-flow refusal
     }
 
     const { data: members, error: memErr } = await admin
@@ -171,7 +171,7 @@ Deno.serve(async (req: Request) => {
         return json({ ok: false, reason: 'forbidden_target' }, 403);
       }
       const decision = validateSkip(targetId, order, picks.length, numRounds);
-      if (!decision.legal) return json({ ok: false, reason: decision.reason }, 409);
+      if (!decision.legal) return json({ ok: false, reason: decision.reason }); // 200: game-flow refusal (join-league pattern)
 
       const { data: inserted, error: insErr } = await admin
         .from('drafts')
@@ -189,7 +189,7 @@ Deno.serve(async (req: Request) => {
         .single();
       if (insErr) {
         if ((insErr as { code?: string }).code === '23505') {
-          return json({ ok: false, reason: 'pick_conflict' }, 409);
+          return json({ ok: false, reason: 'pick_conflict' }); // 200: race lost, client refetches + retries
         }
         return json({ ok: false, reason: 'unhandled' }, 500);
       }
@@ -202,7 +202,7 @@ Deno.serve(async (req: Request) => {
     if (!ALPACA_KEY || !ALPACA_SECRET) return json({ ok: false, reason: 'server_config_error' }, 500);
     const fill = await fetchFillPrice(symbol, ALPACA_KEY, ALPACA_SECRET);
     if (fill.price == null) {
-      return json({ ok: false, reason: 'no_price', symbol, detail: fill.error }, 404);
+      return json({ ok: false, reason: 'no_price', symbol, detail: fill.error }); // 200: game-flow refusal
     }
 
     const { data: slotData, error: sErr } = await admin
@@ -237,7 +237,7 @@ Deno.serve(async (req: Request) => {
       symbol,
       price: fill.price,
     });
-    if (!decision.legal) return json({ ok: false, reason: decision.reason }, 409);
+    if (!decision.legal) return json({ ok: false, reason: decision.reason }); // 200: game-flow refusal (join-league pattern)
 
     const { data: inserted, error: insErr } = await admin
       .from('drafts')
@@ -259,7 +259,7 @@ Deno.serve(async (req: Request) => {
       // concurrent pick got this number first. The client refetches and
       // retries — legality is re-derived from the new state, never reused.
       if ((insErr as { code?: string }).code === '23505') {
-        return json({ ok: false, reason: 'pick_conflict' }, 409);
+        return json({ ok: false, reason: 'pick_conflict' }); // 200: race lost, client refetches + retries
       }
       return json({ ok: false, reason: 'unhandled' }, 500);
     }

@@ -117,7 +117,7 @@ Deno.serve(async (req: Request) => {
     // Trading opens once the draft is done; before that the draft IS the
     // acquisition path.
     if (league.draft_status !== 'completed') {
-      return json({ ok: false, reason: 'draft_not_completed' }, 409);
+      return json({ ok: false, reason: 'draft_not_completed' }); // 200: game-flow refusal (join-league pattern)
     }
 
     const { data: member, error: memErr } = await admin
@@ -150,7 +150,7 @@ Deno.serve(async (req: Request) => {
     if (!ALPACA_KEY || !ALPACA_SECRET) return json({ ok: false, reason: 'server_config_error' }, 500);
     const fill = await fetchFillPrice(symbol, ALPACA_KEY, ALPACA_SECRET);
     if (fill.price == null) {
-      return json({ ok: false, reason: 'no_price', symbol, detail: fill.error }, 404);
+      return json({ ok: false, reason: 'no_price', symbol, detail: fill.error }); // 200: game-flow refusal
     }
 
     // ---- Validate ----------------------------------------------------------
@@ -187,11 +187,11 @@ Deno.serve(async (req: Request) => {
         symbol,
         price: fill.price,
       });
-      if (!decision.legal) return json({ ok: false, reason: decision.reason }, 409);
+      if (!decision.legal) return json({ ok: false, reason: decision.reason }); // 200: game-flow refusal
       quantity = decision.quantity;
     } else {
       const decision = validateTradeDrop(user.id, symbol, picks, trades);
-      if (!decision.legal) return json({ ok: false, reason: decision.reason }, 409);
+      if (!decision.legal) return json({ ok: false, reason: decision.reason }); // 200: game-flow refusal
       quantity = decision.quantity;
     }
 
