@@ -16,13 +16,13 @@
 --   1. Confirm NOTHING still reads broker_credentials. proacl-grade check, not
 --      absence-of-errors:
 --        - `git grep -in broker_credentials` returns only this migration + the
---          original create migration (verified on-branch at authoring time).
---        - The `quote` function is KEPT (Phase 3 debt) and still calls
---          getUserCredentials() against this table. After this drop, `quote`'s
---          user-credential path returns no_credentials for everyone — that is the
---          expected interim state until Phase 3 rewires quote to the app-key
---          (ticker-quotes / historical-bars) fill path. Confirm you have accepted
---          that `quote` is degraded until Phase 3 BEFORE applying this drop.
+--          original create migration (verified on the `quote-rewire` branch).
+--        - The `quote` function has been REWIRED on the `quote-rewire` branch: it
+--          no longer calls getUserCredentials() or reads this table, and now uses
+--          Stockpile's app-wide ALPACA_API_KEY/ALPACA_API_SECRET (the same path as
+--          ticker-quotes). The precondition this drop was deferred on is therefore
+--          met — dropping the table no longer degrades live prices. Deploy the
+--          rewired `quote` function BEFORE applying this drop.
 --   2. Separately inventory and remove any Vault rows holding user broker keys
 --      (distinct from Stockpile's own ALPACA_API_KEY, which STAYS). Not done here.
 --
