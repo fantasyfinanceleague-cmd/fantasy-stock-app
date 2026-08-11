@@ -2,42 +2,30 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "0b169b9ab1c29abf921454b7b6a3ebb31c5ed591",
-    "commitShort": "0b169b9",
+    "commit": "1fb78be910a5d29c00d61b10bca09099d357db04",
+    "commitShort": "1fb78be",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "simulator-core",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "supabase/functions/_shared/draft-validation.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/_shared/draft-validation.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/record-trade/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/validate-and-record-pick/index.ts"
+        "path": "supabase/migrations/20260811000002_trades_drop_direct_client_insert.sql"
       },
       {
         "code": "??",
-        "path": "supabase/migrations/20260811000002_trades_drop_direct_client_insert.sql"
+        "path": "supabase/migrations/20260811000003_drafts_drop_direct_client_insert.sql"
       }
     ],
-    "timestamp": "2026-08-11T16:07:28Z",
-    "sourceHash": "sha256:78f3942042335834a1b1472369e7aea3e0a1cc4e6ca4bb9f9dc272444c9c2c7f",
+    "timestamp": "2026-08-11T16:17:29Z",
+    "sourceHash": "sha256:082a26e2e1ac2603fd103ce2fe29aa4991fc416352890f18815ff9e8e4d6e03f",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-07-30T03:10:26Z",
-    "ageHours": 301,
+    "ageHours": 301.1,
     "ageDays": 12.5,
     "staleAfterDays": 14,
     "stale": false,
@@ -7863,7 +7851,8 @@
       "20260810000008_leagues_mirror_budget_mode_to_stake_mode.sql",
       "20260811000000_fix_refresh_symbols_cron_auth.sql",
       "20260811000001_drop_leagues_budget_mode_mirror_trigger.sql",
-      "20260811000002_trades_drop_direct_client_insert.sql"
+      "20260811000002_trades_drop_direct_client_insert.sql",
+      "20260811000003_drafts_drop_direct_client_insert.sql"
     ],
     "config": [
       "finnhub-quote=true",

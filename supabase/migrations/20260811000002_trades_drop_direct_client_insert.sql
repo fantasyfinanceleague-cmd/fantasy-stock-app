@@ -13,12 +13,12 @@
 --   breaks. The SELECT policy (members read their league's trades) stays —
 --   that's the read path for portfolio/matchup screens.
 --
--- NOTE the asymmetry with `drafts`: its INSERT policies deliberately REMAIN
---   as the membership backstop per the Phase 3 spec ("RLS remains the
---   membership gate; the function is the legality gate"). trades differs
---   because no legacy client write path needs the transition window: trade
---   submission was fully disabled in Phase 1, so there are no in-flight
---   builds that write trades directly.
+-- NOTE: the drafts equivalent is 20260811000003 (companion migration). The
+--   difference between the two is only the rollout caveat: trade submission
+--   was fully disabled in Phase 1, so no shipped build writes trades
+--   directly and this file has no transition window to mind; shipped mobile
+--   builds DO still write drafts directly — see 000003's header before
+--   deciding when to push it.
 --
 -- HUMAN ACTION: supabase db push, ideally in the same push as
 --   20260811000001. Deploy record-trade BEFORE or WITH this push — after it,
