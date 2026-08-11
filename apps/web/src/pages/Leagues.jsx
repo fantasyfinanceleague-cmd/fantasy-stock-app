@@ -5,6 +5,14 @@ import useLeagues from '../hooks/useLeagues';
 import { useToast } from '../components/Toast';
 import EmptyState from '../components/EmptyState';
 import { validateLeagueName } from '../utils/contentModeration';
+import SlotBuilder from '../components/SlotBuilder';
+import {
+  STAKE_MODE_OPTIONS,
+  DEFAULT_NOTIONAL_PER_SLOT,
+  DEFAULT_BUDGET_CAP,
+  fetchCategories,
+} from '../utils/categoryData';
+import { supabase } from '../supabase/supabaseClient';
 
 function toInputDateTime(value) {
   if (!value) return '';
@@ -24,6 +32,7 @@ export default function Leagues() {
     error,
     createLeague,
     updateLeague,
+    saveLeagueSlots,
     inviteToLeague,
     leaveLeague,
     deleteLeague,
@@ -35,16 +44,20 @@ export default function Leagues() {
   // Create form state
   const [leagueName, setLeagueName] = useState('');
   const [draftDate, setDraftDate] = useState('');
-  const [budgetMode, setBudgetMode] = useState('budget');
-  const [salaryCap, setSalaryCap] = useState('100000');
+  const [stakeMode, setStakeMode] = useState('fixed_notional');
+  const [notionalPerSlot, setNotionalPerSlot] = useState(String(DEFAULT_NOTIONAL_PER_SLOT));
+  const [budgetCap, setBudgetCap] = useState(String(DEFAULT_BUDGET_CAP));
+  const [slots, setSlots] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [participants, setParticipants] = useState(12);
   const [stocksPerTeam, setStocksPerTeam] = useState(6);
   const [leagueType, setLeagueType] = useState('duration');
   const [durationDays, setDurationDays] = useState(30);
   const [numWeeks, setNumWeeks] = useState(11);
   const [playoffTeams, setPlayoffTeams] = useState(4);
-  const capDisabled = budgetMode === 'no-budget';
   const minWeeks = participants - 1;
+
+  useEffect(() => { fetchCategories().then(setCategories); }, []);
 
   // Calculate valid playoff options
   const getPlayoffOptions = () => {
@@ -56,11 +69,15 @@ export default function Leagues() {
   // Update form state
   const [selectedLeagueForUpdate, setSelectedLeagueForUpdate] = useState('');
   const [updateDraftDate, setUpdateDraftDate] = useState('');
-  const [updateBudgetMode, setUpdateBudgetMode] = useState('budget');
-  const [updateSalaryCap, setUpdateSalaryCap] = useState('');
+  const [updateStakeMode, setUpdateStakeMode] = useState('');
+  const [updateNotional, setUpdateNotional] = useState(String(DEFAULT_NOTIONAL_PER_SLOT));
+  const [updateBudgetCap, setUpdateBudgetCap] = useState(String(DEFAULT_BUDGET_CAP));
+  const [updateSlots, setUpdateSlots] = useState([]);
   const [updateParticipants, setUpdateParticipants] = useState('');
   const [updateRounds, setUpdateRounds] = useState(6);
-  const capUpdateDisabled = updateBudgetMode === 'no-budget';
+  // Legacy 'no-budget' leagues carry stake_mode NULL ("commissioner re-choice
+  // pending") — drafting is blocked until a mode is chosen here.
+  const stakeModeMissing = selectedUpdateLeagueObj && selectedUpdateLeagueObj.stake_mode == null && updateStakeMode === '';
 
   // Invite state
   const [selectedLeagueForInvite, setSelectedLeagueForInvite] = useState('');
@@ -97,10 +114,27 @@ export default function Leagues() {
   useEffect(() => {
     if (selectedUpdateLeagueObj) {
       setUpdateDraftDate(toInputDateTime(selectedUpdateLeagueObj.draft_date));
-      setUpdateBudgetMode(selectedUpdateLeagueObj.budget_mode ?? 'budget');
-      setUpdateSalaryCap(selectedUpdateLeagueObj.budget_amount ?? selectedUpdateLeagueObj.salary_cap_limit ?? '');
+      // stake_mode NULL (legacy 'no-budget' league) intentionally maps to ''
+      // so the picker shows "Choose a mode…" instead of silently defaulting.
+      setUpdateStakeMode(selectedUpdateLeagueObj.stake_mode ?? '');
+      setUpdateNotional(String(selectedUpdateLeagueObj.notional_per_slot ?? DEFAULT_NOTIONAL_PER_SLOT));
+      setUpdateBudgetCap(String(selectedUpdateLeagueObj.budget_amount ?? DEFAULT_BUDGET_CAP));
       setUpdateParticipants(selectedUpdateLeagueObj.num_participants ?? '');
       setUpdateRounds(selectedUpdateLeagueObj.num_rounds ?? 6);
+      // Existing slot definitions for the builder
+      supabase
+        .from('league_draft_slots')
+        .select('slot_index, slot_count, price_min, price_max, category_id')
+        .eq('league_id', selectedUpdateLeagueObj.id)
+        .order('slot_index', { ascending: true })
+        .then(({ data }) => {
+          setUpdateSlots((data || []).map((r) => ({
+            slotCount: r.slot_count,
+            priceMin: r.price_min ?? '',
+            priceMax: r.price_max ?? '',
+            categoryId: r.category_id ?? '',
+          })));
+        });
     }
   }, [selectedUpdateLeagueObj]);
 
@@ -119,12 +153,17 @@ export default function Leagues() {
       return;
     }
 
-    await createLeague({
+    if (stakeMode === 'price_tiers' && slots.length === 0) {
+      toast.error('Price tiers need at least one slot with a price bracket — add slots below.');
+      return;
+    }
+
+    const league = await createLeague({
       name: leagueName.trim(),
       draftDate: new Date(draftDate).toISOString(),
-      budgetMode,
-      salaryCapLimit: capDisabled ? null : Number(salaryCap || 0),
-      budgetAmount: capDisabled ? null : Number(salaryCap || 0),
+      stakeMode,
+      notionalPerSlot: Number(notionalPerSlot) || DEFAULT_NOTIONAL_PER_SLOT,
+      budgetAmount: stakeMode === 'budget_cap' ? Number(budgetCap) || DEFAULT_BUDGET_CAP : null,
       numParticipants: clampParticipants(participants),
       numRounds: Number(stocksPerTeam),
       leagueType,
@@ -133,10 +172,21 @@ export default function Leagues() {
       playoffTeams: leagueType === 'matchup' ? playoffTeams : null,
     });
 
+    if (league?.id && slots.length > 0) {
+      try {
+        await saveLeagueSlots(league.id, slots);
+      } catch (err) {
+        console.error('Slot save failed:', err);
+        toast.error('League created, but saving roster slots failed — edit them in Manage.');
+      }
+    }
+
     setLeagueName('');
     setDraftDate('');
-    setBudgetMode('budget');
-    setSalaryCap('100000');
+    setStakeMode('fixed_notional');
+    setNotionalPerSlot(String(DEFAULT_NOTIONAL_PER_SLOT));
+    setBudgetCap(String(DEFAULT_BUDGET_CAP));
+    setSlots([]);
     setParticipants(12);
     setStocksPerTeam(6);
     setLeagueType('duration');
@@ -151,19 +201,36 @@ export default function Leagues() {
     e.preventDefault();
     if (!selectedLeagueForUpdate) return;
 
-    const budgetAmt = capUpdateDisabled ? null : (updateSalaryCap === '' ? null : Number(updateSalaryCap));
+    if (updateStakeMode === 'price_tiers' && updateSlots.length === 0) {
+      toast.error('Price tiers need at least one slot with a price bracket.');
+      return;
+    }
 
-    await updateLeague(selectedLeagueForUpdate, {
+    const patch = {
       draft_date: updateDraftDate ? new Date(updateDraftDate).toISOString() : null,
-      budget_mode: updateBudgetMode, // deprecated — kept during transition
-      // stake_mode is authoritative (Phase 3 client switch; the 000008
-      // mirror trigger is dropped). Same mapping the trigger applied.
-      stake_mode: updateBudgetMode === 'budget' ? 'budget_cap' : null,
-      salary_cap_limit: budgetAmt,
-      budget_amount: budgetAmt,
       num_participants: updateParticipants === '' ? null : clampParticipants(updateParticipants),
       num_rounds: Number(updateRounds),
-    });
+    };
+    // stake_mode only when chosen — '' (legacy NULL league, no choice yet)
+    // leaves the column untouched rather than writing a default the
+    // commissioner didn't pick. budget_mode / salary_cap_limit: retired,
+    // never written here.
+    if (updateStakeMode) {
+      patch.stake_mode = updateStakeMode;
+      patch.notional_per_slot = Number(updateNotional) || DEFAULT_NOTIONAL_PER_SLOT;
+      if (updateStakeMode === 'budget_cap') {
+        patch.budget_amount = Number(updateBudgetCap) || DEFAULT_BUDGET_CAP;
+      }
+    }
+
+    await updateLeague(selectedLeagueForUpdate, patch);
+    try {
+      await saveLeagueSlots(selectedLeagueForUpdate, updateSlots);
+    } catch (err) {
+      console.error('Slot save failed:', err);
+      toast.error('Settings saved, but roster slots failed to save.');
+      return;
+    }
     toast.success('League updated!');
   };
 
@@ -552,30 +619,64 @@ export default function Leagues() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-                <div>
-                  <label style={labelStyle}>Budget Mode</label>
-                  <select
-                    value={budgetMode}
-                    onChange={(e) => setBudgetMode(e.target.value)}
-                    style={inputStyle}
-                  >
-                    <option value="budget">Budget</option>
-                    <option value="no-budget">No Budget</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={labelStyle}>Salary Cap ($)</label>
+              <div style={{ marginBottom: 16 }}>
+                <label style={labelStyle}>Stake Mode</label>
+                <select
+                  value={stakeMode}
+                  onChange={(e) => setStakeMode(e.target.value)}
+                  style={inputStyle}
+                >
+                  {STAKE_MODE_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+                <small style={{ color: '#6b7280', fontSize: 11, display: 'block', marginTop: 4 }}>
+                  {STAKE_MODE_OPTIONS.find((o) => o.value === stakeMode)?.help}
+                </small>
+              </div>
+
+              {stakeMode === 'fixed_notional' && (
+                <div style={{ marginBottom: 16 }}>
+                  <label style={labelStyle}>Stake per Slot ($)</label>
                   <input
-                    type="number"
-                    min="0"
-                    placeholder="100000"
-                    value={salaryCap}
-                    onChange={(e) => setSalaryCap(e.target.value)}
-                    disabled={capDisabled}
-                    style={{ ...inputStyle, opacity: capDisabled ? 0.5 : 1 }}
+                    type="number" min="1" placeholder={String(DEFAULT_NOTIONAL_PER_SLOT)}
+                    value={notionalPerSlot}
+                    onChange={(e) => setNotionalPerSlot(e.target.value)}
+                    style={inputStyle}
                   />
+                  <small style={{ color: '#6b7280', fontSize: 11 }}>
+                    Each pick simulates this dollar amount (fractional shares).
+                  </small>
                 </div>
+              )}
+              {stakeMode === 'budget_cap' && (
+                <div style={{ marginBottom: 16 }}>
+                  <label style={labelStyle}>Budget Cap ($)</label>
+                  <input
+                    type="number" min="1" placeholder={String(DEFAULT_BUDGET_CAP)}
+                    value={budgetCap}
+                    onChange={(e) => setBudgetCap(e.target.value)}
+                    style={inputStyle}
+                  />
+                  <small style={{ color: '#6b7280', fontSize: 11 }}>
+                    One share per pick; the sum of your roster's share prices must fit under the cap.
+                    Keep it tight — a loose cap never shapes the draft.
+                  </small>
+                </div>
+              )}
+
+              <div style={{ marginBottom: 16 }}>
+                <label style={labelStyle}>
+                  Roster Slots {stakeMode === 'price_tiers' ? '(required — price brackets)' : '(optional — category slots)'}
+                </label>
+                <SlotBuilder
+                  slots={slots}
+                  onChange={setSlots}
+                  categories={categories}
+                  leagueSize={clampParticipants(participants)}
+                  numRounds={Number(stocksPerTeam)}
+                  disabled={false}
+                />
               </div>
 
               <div style={{ marginBottom: 16 }}>
@@ -710,29 +811,78 @@ export default function Leagues() {
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-                <div>
-                  <label style={labelStyle}>Budget Mode</label>
-                  <select
-                    value={updateBudgetMode}
-                    onChange={(e) => setUpdateBudgetMode(e.target.value)}
+              {stakeModeMissing && (
+                <div style={{
+                  padding: '12px 16px',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: 8,
+                  color: '#f87171',
+                  fontSize: 13,
+                  marginBottom: 12,
+                }}>
+                  This league has no stake mode yet — drafting is blocked until you choose one below.
+                </div>
+              )}
+
+              <div style={{ marginBottom: 12 }}>
+                <label style={labelStyle}>Stake Mode</label>
+                <select
+                  value={updateStakeMode}
+                  onChange={(e) => setUpdateStakeMode(e.target.value)}
+                  disabled={isDraftLocked}
+                  style={{ ...inputStyle, opacity: isDraftLocked ? 0.5 : 1 }}
+                >
+                  <option value="" disabled>Choose a mode…</option>
+                  {STAKE_MODE_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+                {updateStakeMode && (
+                  <small style={{ color: '#6b7280', fontSize: 11, display: 'block', marginTop: 4 }}>
+                    {STAKE_MODE_OPTIONS.find((o) => o.value === updateStakeMode)?.help}
+                  </small>
+                )}
+              </div>
+
+              {updateStakeMode === 'fixed_notional' && (
+                <div style={{ marginBottom: 12 }}>
+                  <label style={labelStyle}>Stake per Slot ($)</label>
+                  <input
+                    type="number" min="1"
+                    value={updateNotional}
+                    onChange={(e) => setUpdateNotional(e.target.value)}
                     disabled={isDraftLocked}
                     style={{ ...inputStyle, opacity: isDraftLocked ? 0.5 : 1 }}
-                  >
-                    <option value="budget">Budget</option>
-                    <option value="no-budget">No Budget</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={labelStyle}>Salary Cap</label>
-                  <input
-                    type="number"
-                    value={updateSalaryCap}
-                    onChange={(e) => setUpdateSalaryCap(e.target.value)}
-                    disabled={capUpdateDisabled || isDraftLocked}
-                    style={{ ...inputStyle, opacity: capUpdateDisabled || isDraftLocked ? 0.5 : 1 }}
                   />
                 </div>
+              )}
+              {updateStakeMode === 'budget_cap' && (
+                <div style={{ marginBottom: 12 }}>
+                  <label style={labelStyle}>Budget Cap ($)</label>
+                  <input
+                    type="number" min="1"
+                    value={updateBudgetCap}
+                    onChange={(e) => setUpdateBudgetCap(e.target.value)}
+                    disabled={isDraftLocked}
+                    style={{ ...inputStyle, opacity: isDraftLocked ? 0.5 : 1 }}
+                  />
+                  <small style={{ color: '#6b7280', fontSize: 11 }}>
+                    One share per pick; roster share prices must total under the cap.
+                  </small>
+                </div>
+              )}
+
+              <div style={{ marginBottom: 12 }}>
+                <label style={labelStyle}>Roster Slots</label>
+                <SlotBuilder
+                  slots={updateSlots}
+                  onChange={setUpdateSlots}
+                  categories={categories}
+                  leagueSize={Number(updateParticipants) || selectedUpdateLeagueObj?.num_participants || 8}
+                  numRounds={Number(updateRounds) || 6}
+                  disabled={isDraftLocked}
+                />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
