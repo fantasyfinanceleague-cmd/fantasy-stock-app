@@ -42,7 +42,10 @@ export interface Category {
 }
 
 export interface SlotDraft {
-  slotCount: number;
+  /** Held as a STRING so the field can be empty mid-edit (a number here made
+   * the input unclearable — BUG 3). '' fails validateSlotConfig (count >= 1),
+   * so Next/save stay blocked rather than silently defaulting. */
+  slotCount: string;
   priceMin: string; // '' = no floor
   priceMax: string; // '' = no ceiling
   categoryId: string; // '' = flex
@@ -217,7 +220,7 @@ export async function loadLeagueSlots(leagueId: string): Promise<SlotDraft[]> {
     .eq('league_id', leagueId)
     .order('slot_index', { ascending: true });
   return (data || []).map((r) => ({
-    slotCount: r.slot_count as number,
+    slotCount: String(r.slot_count),
     priceMin: r.price_min == null ? '' : String(r.price_min),
     priceMax: r.price_max == null ? '' : String(r.price_max),
     categoryId: (r.category_id as string) ?? '',

@@ -134,7 +134,7 @@ export default function Leagues() {
         .order('slot_index', { ascending: true })
         .then(({ data }) => {
           setUpdateSlots((data || []).map((r) => ({
-            slotCount: r.slot_count,
+            slotCount: String(r.slot_count),
             priceMin: r.price_min ?? '',
             priceMax: r.price_max ?? '',
             categoryId: r.category_id ?? '',
@@ -617,7 +617,8 @@ export default function Leagues() {
                     min="4"
                     max="16"
                     value={participants}
-                    onChange={(e) => setParticipants(clampParticipants(e.target.value))}
+                    onChange={(e) => setParticipants(e.target.value)}
+                    onBlur={() => setParticipants(clampParticipants(participants))}
                     style={inputStyle}
                   />
                 </div>
@@ -628,7 +629,8 @@ export default function Leagues() {
                     min="1"
                     max="12"
                     value={stocksPerTeam}
-                    onChange={(e) => setStocksPerTeam(clampRounds(e.target.value))}
+                    onChange={(e) => setStocksPerTeam(e.target.value)}
+                    onBlur={() => setStocksPerTeam(clampRounds(stocksPerTeam))}
                     style={inputStyle}
                   />
                 </div>
@@ -908,7 +910,8 @@ export default function Leagues() {
                     min="4"
                     max="16"
                     value={updateParticipants}
-                    onChange={(e) => setUpdateParticipants(clampParticipants(e.target.value))}
+                    onChange={(e) => setUpdateParticipants(e.target.value)}
+                    onBlur={() => setUpdateParticipants(clampParticipants(updateParticipants))}
                     disabled={isDraftLocked}
                     style={{ ...inputStyle, opacity: isDraftLocked ? 0.5 : 1 }}
                   />
@@ -920,7 +923,8 @@ export default function Leagues() {
                     min="1"
                     max="12"
                     value={updateRounds}
-                    onChange={(e) => setUpdateRounds(clampRounds(e.target.value))}
+                    onChange={(e) => setUpdateRounds(e.target.value)}
+                    onBlur={() => setUpdateRounds(clampRounds(updateRounds))}
                     disabled={isDraftLocked}
                     style={{ ...inputStyle, opacity: isDraftLocked ? 0.5 : 1 }}
                   />

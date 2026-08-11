@@ -32,7 +32,7 @@ export default function SlotBuilder({ slots, onChange, categories, leagueSize, n
   const setSlot = (i: number, patch: Partial<SlotDraft>) => {
     onChange(slots.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
   };
-  const addSlot = () => onChange([...slots, { slotCount: 1, priceMin: '', priceMax: '', categoryId: '' }]);
+  const addSlot = () => onChange([...slots, { slotCount: '1', priceMin: '', priceMax: '', categoryId: '' }]);
   const removeSlot = (i: number) => onChange(slots.filter((_, idx) => idx !== i));
 
   // HARD errors (count/capacity/bracket) — parents use the same validator to
@@ -92,10 +92,12 @@ export default function SlotBuilder({ slots, onChange, categories, leagueSize, n
               <Text style={styles.fieldLabel}>Count</Text>
               <TextInput
                 style={styles.input}
-                value={String(s.slotCount)}
+                value={s.slotCount}
                 editable={!disabled}
                 keyboardType="numeric"
-                onChangeText={(t) => setSlot(i, { slotCount: Math.max(1, parseInt(t) || 1) })}
+                placeholder="1"
+                placeholderTextColor={Colors.textDark}
+                onChangeText={(t) => setSlot(i, { slotCount: t.replace(/[^0-9]/g, '') })}
               />
             </View>
             <View style={styles.field}>
