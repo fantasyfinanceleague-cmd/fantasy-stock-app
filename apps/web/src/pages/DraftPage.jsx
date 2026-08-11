@@ -90,27 +90,17 @@ async function fetchQuoteViaFunction(symbol) {
 
   const { data, error } = await supabase.functions.invoke('quote', { body: { symbol: sym } });
 
-  // Handle invocation errors
+  // Return null (rather than throw) on any failure so callers can fall back
+  // to another source (e.g. Finnhub) instead of aborting.
   if (error) {
     console.error('Quote function error:', error);
-    throw new Error('Failed to fetch quote. Please try again.');
+    return null;
   }
 
-  // Handle application-level errors from the edge function
+  // Application-level error from the edge function (e.g. no_price) — return null to allow fallback.
   if (data?.error) {
-    const errorType = data.error;
-    const message = data.message || data.error;
-
-    // Provide user-friendly error messages
-    if (errorType === 'not_authenticated') {
-      throw new Error('Please sign in to view quotes.');
-    } else if (errorType === 'no_credentials' || errorType === 'credentials_invalid') {
-      throw new Error('Unable to fetch a live quote right now. Please try again.');
-    } else if (errorType === 'no_price') {
-      throw new Error(`No price data available for "${sym}".`);
-    }
-
-    throw new Error(message);
+    console.warn('Quote function returned error:', data.error);
+    return null;
   }
 
   const price = Number(
