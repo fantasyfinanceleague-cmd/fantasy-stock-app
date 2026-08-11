@@ -286,12 +286,43 @@ export default function TradeModal({
     setQuantity((prev) => Math.max(1, prev + delta));
   };
 
+  // Refusal reasons from record-trade, mapped to user-facing copy.
+  const TRADE_REFUSAL_MESSAGES: Record<string, string> = {
+    draft_not_completed: 'Trading opens after the draft completes.',
+    symbol_owned: 'That stock is already owned in this league.',
+    roster_full: 'Your roster is full — drop a stock first.',
+    no_eligible_slot: 'No open roster slot accepts a stock at this price.',
+    over_budget: 'That stock is over your remaining budget.',
+    not_owned: "You don't own that stock.",
+    no_price: 'No recent price available for that stock.',
+    rate_limited: 'Too many trades too quickly — wait a moment and try again.',
+  };
+
   const handleSubmit = async () => {
-    // Trade submission is disabled between Phase 1 (broker removal) and Phase 3
-    // (in-house simulator fills). The place-order edge function has been removed;
-    // no ledger writes happen here until Phase 3 wires the app-key fill path.
-    // See DR-001 / SIMULATOR_MIGRATION_SPEC.
-    setError('Trading is temporarily unavailable while we upgrade to the in-house simulator.');
+    // Phase 3 (DR-001): trades go through the record-trade edge function —
+    // the in-house simulator fill path (app-key quote, server-side legality).
+    // The server computes quantity per stake mode and a sell always drops the
+    // ENTIRE position (freeing the symbol league-wide); the local quantity
+    // stepper is a display-only estimate until the Phase 4 UI pass.
+    if (!symbol) return;
+    setLoading(true);
+    setError('');
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke('record-trade', {
+        body: { league_id: leagueId, symbol: symbol.trim().toUpperCase(), action },
+      });
+      if (fnError) throw fnError;
+      if (!data?.ok) {
+        setError(TRADE_REFUSAL_MESSAGES[data?.reason] || 'Trade was refused.');
+        return;
+      }
+      onTradeComplete();
+      onClose();
+    } catch (_e) {
+      setError('Failed to submit trade. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const renderContent = () => {
@@ -485,13 +516,13 @@ export default function TradeModal({
           </Text>
         )}
 
-        {/* Trading temporarily disabled (Phase 1 → Phase 3 interim) */}
-        <View style={styles.unavailableBox}>
-          <Text style={styles.unavailableText}>
-            Trading is temporarily unavailable while we upgrade to the in-house
-            simulator.
+        {/* Sells drop the entire position (frees the symbol league-wide) */}
+        {action === 'sell' && ownedQuantity > 0 && (
+          <Text style={styles.budgetText}>
+            Selling drops your entire position ({ownedQuantity}{' '}
+            {ownedQuantity === 1 ? 'share' : 'shares'}).
           </Text>
-        </View>
+        )}
 
         {/* Error Message */}
         {error ? (
@@ -506,12 +537,14 @@ export default function TradeModal({
             style={[
               styles.submitButton,
               action === 'buy' ? styles.submitButtonBuy : styles.submitButtonSell,
-              styles.submitButtonDisabled,
+              (loading || !symbol || !canAfford || !hasEnoughShares) && styles.submitButtonDisabled,
             ]}
             onPress={handleSubmit}
-            disabled
+            disabled={loading || !symbol || !canAfford || !hasEnoughShares}
           >
-            <Text style={styles.submitButtonText}>Trading Unavailable</Text>
+            <Text style={styles.submitButtonText}>
+              {loading ? 'Submitting…' : action === 'buy' ? 'Buy' : 'Sell'}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.cancelButton}
@@ -586,21 +619,6 @@ const styles = StyleSheet.create({
   formScroll: {
     flexGrow: 0,
   },
-  // Trading-unavailable notice (Phase 1 → Phase 3 interim)
-  unavailableBox: {
-    backgroundColor: '#FFFBEB',
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-  },
-  unavailableText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    lineHeight: 20,
-  },
-
   // Locked box (not Monday)
   lockedBox: {
     backgroundColor: '#FFFBEB',
