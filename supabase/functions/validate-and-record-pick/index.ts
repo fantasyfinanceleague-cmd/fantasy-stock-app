@@ -9,10 +9,9 @@
 // A pick is legal iff (validate via ../_shared/draft-validation.ts):
 //   * it is the target's turn in the canonical snake order
 //   * the symbol is not already owned in the league (net of drops)
-//   * the price fits an unfilled slot bracket (price_tiers leagues)
-//     — category eligibility is NOT checked until Phase 4 seeds the
-//       categories tables; slots are treated as flex (see PHASE4-CATEGORIES
-//       markers in the shared module)
+//   * the price fits an unfilled slot bracket AND the symbol's category
+//     eligibility intersects the slot's filter (Phase 4: category checks are
+//     LIVE — overrides else rule-table else unclassified/flex-only)
 //   * the fill fits the remaining budget (budget_cap leagues)
 //
 // Fill-at-draft: entry_price comes from the app-key Alpaca path
@@ -29,6 +28,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { fetchFillPrice } from '../_shared/alpaca-price.ts';
+import { fetchEligibleCategoryIds } from '../_shared/category-eligibility.ts';
 import {
   computeDraftOrder,
   type LeagueRules,
@@ -233,6 +233,12 @@ Deno.serve(async (req: Request) => {
       numRounds,
     };
 
+    // Category eligibility is only consulted when this league defines
+    // category-filtered slots — skip the three reads otherwise.
+    const eligibleCategories = slots.some((s) => s.categoryId != null)
+      ? await fetchEligibleCategoryIds(admin, symbol)
+      : new Set<string>();
+
     const decision = validatePick({
       rules,
       slots,
@@ -242,6 +248,7 @@ Deno.serve(async (req: Request) => {
       pickerId: targetId,
       symbol,
       price: fill.price,
+      eligibleCategories,
     });
     if (!decision.legal) return json({ ok: false, reason: decision.reason }); // 200: game-flow refusal (join-league pattern)
 

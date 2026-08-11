@@ -30,14 +30,16 @@
  * which rows count for what.
  *
  * ---------------------------------------------------------------------------
- * CATEGORIES ARE UNSEEDED UNTIL PHASE 4
+ * CATEGORY ELIGIBILITY (live as of Phase 4)
  *
- * league_draft_slots.category_id exists (Phase 2 schema) but the categories /
- * category_rules tables have no rows until Phase 4 enrichment. Per the spec,
- * category eligibility is therefore NOT evaluated here yet: a slot with a
- * category filter is treated as flex (bracket-only). When Phase 4 seeds the
- * tables, slotAcceptsPrice grows a category argument — grep for
- * PHASE4-CATEGORIES to find every deliberate flex-fallback.
+ * A slot with a category filter accepts a symbol only when the symbol's
+ * effective eligibility (DR-001 three layers: curated overrides if any exist
+ * for the symbol, else the rule-table category for its vendor industry
+ * label) contains that category id. An UNCLASSIFIED symbol — no override, no
+ * industry, or an unmatched label — has EMPTY eligibility and therefore fits
+ * only flex slots (category_id NULL), per DR-001's "unclassified new
+ * listings are flex-slot-only". Callers compute the eligibility set
+ * (effectiveCategoryIds) and pass it in; this module stays pure.
  */
 
 export type StakeMode = 'fixed_notional' | 'price_tiers' | 'budget_cap' | null;
@@ -59,7 +61,7 @@ export interface Slot {
   slotCount: number;
   priceMin: number | null; // NULL = no floor
   priceMax: number | null; // NULL = no ceiling
-  categoryId: string | null; // PHASE4-CATEGORIES: ignored until seeded
+  categoryId: string | null; // NULL = flex (no category filter)
 }
 
 /** A drafts row (only the fields legality needs). user_id is TEXT in the DB
@@ -213,13 +215,26 @@ export function userCashSpent(
   return spent;
 }
 
-/** Bracket test, boundaries INCLUSIVE on both ends (price exactly at
- * price_min or price_max is legal — locked by tests). */
-export function slotAcceptsPrice(slot: Slot, price: number): boolean {
+/**
+ * DR-001 layer resolution: overrides REPLACE the rule category when any
+ * exist; otherwise the single rule category; otherwise empty (unclassified,
+ * flex-only). Pure so it is hermetically testable alongside the slot logic.
+ */
+export function effectiveCategoryIds(
+  overrideCategoryIds: string[],
+  ruleCategoryId: string | null,
+): Set<string> {
+  if (overrideCategoryIds.length > 0) return new Set(overrideCategoryIds);
+  return ruleCategoryId ? new Set([ruleCategoryId]) : new Set();
+}
+
+/** Bracket + category test. Brackets are INCLUSIVE on both ends (price
+ * exactly at price_min or price_max is legal — locked by tests). A category
+ * slot requires the symbol's eligibility to contain its category id. */
+export function slotAccepts(slot: Slot, price: number, eligibility: Set<string>): boolean {
   if (slot.priceMin != null && price < slot.priceMin) return false;
   if (slot.priceMax != null && price > slot.priceMax) return false;
-  // PHASE4-CATEGORIES: categoryId deliberately not consulted — slot is flex
-  // until the categories tables are seeded (Phase 4).
+  if (slot.categoryId != null && !eligibility.has(slot.categoryId)) return false;
   return true;
 }
 
@@ -234,6 +249,7 @@ export function assignSlot(
   slots: Slot[],
   occupiedSlotIds: Array<string | null | undefined>,
   price: number,
+  eligibility: Set<string>,
 ): Slot | null {
   const occupancy = new Map<string, number>();
   for (const id of occupiedSlotIds) {
@@ -242,7 +258,7 @@ export function assignSlot(
   const ordered = [...slots].sort((a, b) => a.slotIndex - b.slotIndex);
   for (const slot of ordered) {
     if ((occupancy.get(slot.id) ?? 0) >= slot.slotCount) continue;
-    if (slotAcceptsPrice(slot, price)) return slot;
+    if (slotAccepts(slot, price, eligibility)) return slot;
   }
   return null;
 }
@@ -286,6 +302,8 @@ export interface PickInputs {
   pickerId: string; // who this pick is FOR (caller or a bot)
   symbol: string;
   price: number;
+  /** effectiveCategoryIds(...) for the symbol; empty = unclassified, flex-only */
+  eligibleCategories: Set<string>;
 }
 
 /**
@@ -318,7 +336,7 @@ export function validatePick(i: PickInputs): PickDecision {
     const mine = i.picks.filter((p) =>
       String(p.user_id) === i.pickerId && !isSkip(p)
     );
-    const slot = assignSlot(i.slots, mine.map((p) => p.slot_id), price);
+    const slot = assignSlot(i.slots, mine.map((p) => p.slot_id), price, i.eligibleCategories);
     if (!slot) return { legal: false, reason: 'no_eligible_slot' };
     slotId = slot.id;
   }
@@ -375,6 +393,8 @@ export interface TradeAddInputs {
   userId: string;
   symbol: string;
   price: number;
+  /** effectiveCategoryIds(...) for the symbol; empty = unclassified, flex-only */
+  eligibleCategories: Set<string>;
 }
 
 /**
@@ -409,7 +429,7 @@ export function validateTradeAdd(i: TradeAddInputs): TradeDecision {
         holdings.has(p.symbol.toUpperCase())
       )
       .map((p) => p.slot_id);
-    const slot = assignSlot(i.slots, activeSlotIds, price);
+    const slot = assignSlot(i.slots, activeSlotIds, price, i.eligibleCategories);
     if (!slot) return { legal: false, reason: 'no_eligible_slot' };
   }
 

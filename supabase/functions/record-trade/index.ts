@@ -3,9 +3,8 @@
 // place-order broker path; TradeModal (mobile + web) submits here.
 //
 // ADD ('buy'): validates like a draft pick minus the turn check — symbol not
-//   owned anywhere in the league, price fits an unfilled slot bracket
-//   (price_tiers; categories are flex until Phase 4 — see PHASE4-CATEGORIES
-//   in ../_shared/draft-validation.ts), fill fits remaining budget
+//   owned anywhere in the league, price + category eligibility fit an
+//   unfilled slot (Phase 4: category checks LIVE), fill fits remaining budget
 //   (budget_cap), roster not full — then fills at the current app-key quote.
 //   Quantity is server-computed per stake mode (fractional for
 //   fixed_notional); the client's quantity input is NOT trusted.
@@ -24,6 +23,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { fetchFillPrice } from '../_shared/alpaca-price.ts';
+import { fetchEligibleCategoryIds } from '../_shared/category-eligibility.ts';
 import {
   type LeagueRules,
   type PickRow,
@@ -196,6 +196,11 @@ Deno.serve(async (req: Request) => {
         numRounds: Number(league.num_rounds) || 6,
       };
 
+      // Category eligibility only when this league has category slots.
+      const eligibleCategories = slots.some((s) => s.categoryId != null)
+        ? await fetchEligibleCategoryIds(admin, symbol)
+        : new Set<string>();
+
       const decision = validateTradeAdd({
         rules,
         slots,
@@ -204,6 +209,7 @@ Deno.serve(async (req: Request) => {
         userId: user.id,
         symbol,
         price: fill.price,
+        eligibleCategories,
       });
       if (!decision.legal) return json({ ok: false, reason: decision.reason }); // 200: game-flow refusal
       quantity = decision.quantity;

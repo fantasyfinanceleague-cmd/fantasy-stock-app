@@ -17,6 +17,7 @@
 import { assert, assertEquals } from 'jsr:@std/assert';
 import {
   assignSlot,
+  effectiveCategoryIds,
   computeDraftOrder,
   currentTurn,
   fillQuantity,
@@ -71,6 +72,9 @@ function slot(id: string, slotIndex: number, over: Partial<Slot> = {}): Slot {
   return { id, slotIndex, slotCount: 1, priceMin: null, priceMax: null, categoryId: null, ...over };
 }
 
+/** No category eligibility — the right value for bracket-only/slot-less tests. */
+const NO_CATS = new Set<string>();
+
 // Reset the pick counter per test so pick_numbers are deterministic.
 function freshPicks(): void {
   pickCounter = 0;
@@ -119,6 +123,7 @@ Deno.test('validatePick: refuses when it is not the picker\'s turn', () => {
     pickerId: 'b', // pick 1 belongs to 'a'
     symbol: 'AAPL',
     price: 100,
+    eligibleCategories: NO_CATS,
   });
   assertEquals(d, { legal: false, reason: 'not_your_turn' });
 });
@@ -135,6 +140,7 @@ Deno.test('validatePick: refuses when the draft is complete', () => {
     pickerId: 'a',
     symbol: 'TSLA',
     price: 100,
+    eligibleCategories: NO_CATS,
   });
   assertEquals(d, { legal: false, reason: 'draft_complete' });
 });
@@ -171,6 +177,7 @@ Deno.test('validatePick: rejects a symbol already drafted by ANYONE in the leagu
     pickerId: 'b',
     symbol: 'aapl', // case-insensitive
     price: 100,
+    eligibleCategories: NO_CATS,
   });
   assertEquals(d, { legal: false, reason: 'symbol_owned' });
 });
@@ -235,6 +242,7 @@ Deno.test('validatePick: fixed_notional pick carries the fractional quantity', (
     pickerId: 'a',
     symbol: 'BRK.A',
     price: 4000,
+    eligibleCategories: NO_CATS,
   });
   assert(d.legal);
   assertEquals(d.quantity, 0.25);
@@ -252,28 +260,88 @@ const TIER_SLOTS: Slot[] = [
 
 Deno.test('assignSlot: price exactly at a bracket boundary is LEGAL (inclusive)', () => {
   // 50 fits s-low's ceiling (first fit by slot_index) AND s-mid's floor.
-  assertEquals(assignSlot(TIER_SLOTS, [], 50)?.id, 's-low');
+  assertEquals(assignSlot(TIER_SLOTS, [], 50, NO_CATS)?.id, 's-low');
   // With s-low occupied, 50 falls through to s-mid via its inclusive floor.
-  assertEquals(assignSlot(TIER_SLOTS, ['s-low'], 50)?.id, 's-mid');
+  assertEquals(assignSlot(TIER_SLOTS, ['s-low'], 50, NO_CATS)?.id, 's-mid');
   // 200 at s-mid's inclusive ceiling.
-  assertEquals(assignSlot(TIER_SLOTS, ['s-low'], 200)?.id, 's-mid');
+  assertEquals(assignSlot(TIER_SLOTS, ['s-low'], 200, NO_CATS)?.id, 's-mid');
 });
 
 Deno.test('assignSlot: price outside every unfilled bracket is refused', () => {
   // 30 only fits s-low; with s-low full there is no eligible slot.
-  assertEquals(assignSlot(TIER_SLOTS, ['s-low'], 30), null);
+  assertEquals(assignSlot(TIER_SLOTS, ['s-low'], 30, NO_CATS), null);
 });
 
 Deno.test('assignSlot: slotCount capacity is respected', () => {
   const slots = [slot('s2', 0, { slotCount: 2, priceMax: 100 })];
-  assertEquals(assignSlot(slots, ['s2'], 50)?.id, 's2', 'one of two filled');
-  assertEquals(assignSlot(slots, ['s2', 's2'], 50), null, 'both filled');
+  assertEquals(assignSlot(slots, ['s2'], 50, NO_CATS)?.id, 's2', 'one of two filled');
+  assertEquals(assignSlot(slots, ['s2', 's2'], 50, NO_CATS), null, 'both filled');
 });
 
-Deno.test('assignSlot: category-filtered slot is flex until Phase 4 (PHASE4-CATEGORIES)', () => {
+Deno.test('assignSlot: category slot requires eligibility (live as of Phase 4)', () => {
   const slots = [slot('s-cat', 0, { categoryId: 'cat-tech', priceMax: 100 })];
-  // Category ignored while categories are unseeded — bracket is the only filter.
-  assertEquals(assignSlot(slots, [], 50)?.id, 's-cat');
+  // Eligible symbol fits; ineligible or unclassified (empty set) does not.
+  assertEquals(assignSlot(slots, [], 50, new Set(['cat-tech']))?.id, 's-cat');
+  assertEquals(assignSlot(slots, [], 50, new Set(['cat-food'])), null);
+  assertEquals(assignSlot(slots, [], 50, NO_CATS), null);
+});
+
+Deno.test('assignSlot: unclassified symbol is flex-only; flex slot accepts anything', () => {
+  const slots = [
+    slot('s-cat', 0, { categoryId: 'cat-tech' }),
+    slot('s-flex', 1), // no filter
+  ];
+  // Unclassified: skips the category slot, lands in flex.
+  assertEquals(assignSlot(slots, [], 50, NO_CATS)?.id, 's-flex');
+  // Eligible: prefers the earlier (category) slot by slot_index first-fit.
+  assertEquals(assignSlot(slots, [], 50, new Set(['cat-tech']))?.id, 's-cat');
+});
+
+Deno.test('assignSlot: category + bracket are a conjunction', () => {
+  const slots = [slot('s-cat', 0, { categoryId: 'cat-tech', priceMin: 100 })];
+  assertEquals(assignSlot(slots, [], 50, new Set(['cat-tech'])), null, 'right category, wrong bracket');
+  assertEquals(assignSlot(slots, [], 150, new Set(['cat-tech']))?.id, 's-cat');
+});
+
+Deno.test('effectiveCategoryIds: overrides REPLACE the rule; rule is the fallback; else empty', () => {
+  assertEquals(effectiveCategoryIds(['a', 'b'], 'c'), new Set(['a', 'b']), 'overrides win outright');
+  assertEquals(effectiveCategoryIds([], 'c'), new Set(['c']), 'rule fallback');
+  assertEquals(effectiveCategoryIds([], null), new Set(), 'unclassified -> empty (flex-only)');
+});
+
+Deno.test('validatePick: multi-eligibility (override set) fits a category slot', () => {
+  freshPicks();
+  const slots = [slot('s-media', 0, { categoryId: 'cat-media' })];
+  const d = validatePick({
+    rules: rules({ stakeMode: 'price_tiers', numRounds: 1 }),
+    slots,
+    order: ['a'],
+    picks: [],
+    trades: [],
+    pickerId: 'a',
+    symbol: 'AMZN',
+    price: 200,
+    eligibleCategories: effectiveCategoryIds(['cat-retail', 'cat-tech', 'cat-media'], null),
+  });
+  assert(d.legal);
+  assertEquals(d.slotId, 's-media');
+});
+
+Deno.test('validatePick: unclassified symbol refused when only category slots remain', () => {
+  freshPicks();
+  const slots = [slot('s-tech', 0, { categoryId: 'cat-tech' })];
+  const d = validatePick({
+    rules: rules({ stakeMode: 'price_tiers', numRounds: 1 }),
+    slots,
+    order: ['a'],
+    picks: [],
+    trades: [],
+    pickerId: 'a',
+    symbol: 'NEWIPO',
+    price: 20,
+    eligibleCategories: effectiveCategoryIds([], null),
+  });
+  assertEquals(d, { legal: false, reason: 'no_eligible_slot' });
 });
 
 Deno.test('validatePick: tiers league refuses a price no unfilled slot accepts', () => {
@@ -288,6 +356,7 @@ Deno.test('validatePick: tiers league refuses a price no unfilled slot accepts',
     pickerId: 'a',
     symbol: 'PENNY',
     price: 30, // only fits s-low, already occupied
+    eligibleCategories: NO_CATS,
   });
   assertEquals(d, { legal: false, reason: 'no_eligible_slot' });
 });
@@ -302,7 +371,7 @@ Deno.test('budget_cap: remaining budget enforced across a full draft sequence', 
   const order = ['a', 'b'];
   const picks: PickRow[] = [];
   const draftFor = (who: string, sym: string, price: number) =>
-    validatePick({ rules: r, slots: [], order, picks, trades: [], pickerId: who, symbol: sym, price });
+    validatePick({ rules: r, slots: [], order, picks, trades: [], pickerId: who, symbol: sym, price, eligibleCategories: NO_CATS });
 
   // Round 1: a spends 150, b spends 100 (snake: a, b | b, a | a, b)
   let d = draftFor('a', 'AAA', 150);
@@ -354,6 +423,7 @@ Deno.test('validateTradeAdd: refuses a symbol owned anywhere in the league', () 
     userId: 'a',
     symbol: 'AAPL',
     price: 100,
+    eligibleCategories: NO_CATS,
   });
   assertEquals(d, { legal: false, reason: 'symbol_owned' });
 });
@@ -370,6 +440,7 @@ Deno.test('validateTradeAdd: legal after a league-wide drop freed the symbol', (
     userId: 'a',
     symbol: 'AAPL',
     price: 100,
+    eligibleCategories: NO_CATS,
   });
   assert(d.legal);
 });
@@ -378,10 +449,10 @@ Deno.test('validateTradeAdd: roster_full until a drop frees a spot', () => {
   freshPicks();
   const r = rules({ numRounds: 2 });
   const picks = [pick('a', 'AAA', 10), pick('a', 'BBB', 10)];
-  let d = validateTradeAdd({ rules: r, slots: [], picks, trades: [], userId: 'a', symbol: 'CCC', price: 10 });
+  let d = validateTradeAdd({ rules: r, slots: [], picks, trades: [], userId: 'a', symbol: 'CCC', price: 10, eligibleCategories: NO_CATS });
   assertEquals(d, { legal: false, reason: 'roster_full' });
   const trades = [trade('a', 'BBB', 'sell', 1, 12)];
-  d = validateTradeAdd({ rules: r, slots: [], picks, trades, userId: 'a', symbol: 'CCC', price: 10 });
+  d = validateTradeAdd({ rules: r, slots: [], picks, trades, userId: 'a', symbol: 'CCC', price: 10, eligibleCategories: NO_CATS });
   assert(d.legal);
 });
 
@@ -390,11 +461,11 @@ Deno.test('validateTradeAdd: budget_cap counts sells as refunds', () => {
   const r = rules({ stakeMode: 'budget_cap', budgetAmount: 100, numRounds: 3 });
   const picks = [pick('a', 'AAA', 90)];
   // 90 spent, 10 left: a 20 add is over budget...
-  let d = validateTradeAdd({ rules: r, slots: [], picks, trades: [], userId: 'a', symbol: 'BBB', price: 20 });
+  let d = validateTradeAdd({ rules: r, slots: [], picks, trades: [], userId: 'a', symbol: 'BBB', price: 20, eligibleCategories: NO_CATS });
   assertEquals(d, { legal: false, reason: 'over_budget' });
   // ...until dropping AAA at 85 refunds: 100 - 90 + 85 = 95 available.
   const trades = [trade('a', 'AAA', 'sell', 1, 85)];
-  d = validateTradeAdd({ rules: r, slots: [], picks, trades, userId: 'a', symbol: 'BBB', price: 20 });
+  d = validateTradeAdd({ rules: r, slots: [], picks, trades, userId: 'a', symbol: 'BBB', price: 20, eligibleCategories: NO_CATS });
   assert(d.legal);
 });
 
@@ -403,11 +474,11 @@ Deno.test('validateTradeAdd: dropped pick frees its tier slot for the add', () =
   const r = rules({ stakeMode: 'price_tiers', numRounds: 3 });
   const picks = [pick('a', 'CHEAP', 20, { slot_id: 's-low' })];
   // Slot occupied while CHEAP is held:
-  let d = validateTradeAdd({ rules: r, slots: TIER_SLOTS, picks, trades: [], userId: 'a', symbol: 'PENNY', price: 30 });
+  let d = validateTradeAdd({ rules: r, slots: TIER_SLOTS, picks, trades: [], userId: 'a', symbol: 'PENNY', price: 30, eligibleCategories: NO_CATS });
   assertEquals(d, { legal: false, reason: 'no_eligible_slot' });
   // Dropping CHEAP frees s-low, so the 30 add fits:
   const trades = [trade('a', 'CHEAP', 'sell', 1, 21)];
-  d = validateTradeAdd({ rules: r, slots: TIER_SLOTS, picks, trades, userId: 'a', symbol: 'PENNY', price: 30 });
+  d = validateTradeAdd({ rules: r, slots: TIER_SLOTS, picks, trades, userId: 'a', symbol: 'PENNY', price: 30, eligibleCategories: NO_CATS });
   assert(d.legal);
 });
 
