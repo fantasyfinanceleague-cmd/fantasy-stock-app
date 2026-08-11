@@ -63,6 +63,25 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/join-league/index.ts"
 
+# In-house simulator (DR-001 Phase 3): server-side draft legality gate. RLS on
+# drafts remains the membership backstop; this function is the single legality
+# gate + write path the clients use. verify_jwt=true + in-code getUser() +
+# in-code membership check (writes use SB_SECRET_KEY_INTERNAL, which bypasses
+# RLS). Fill prices come from the shared app-key Alpaca path (_shared/).
+[functions.validate-and-record-pick]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/validate-and-record-pick/index.ts"
+
+# In-house simulator (DR-001 Phase 3): post-draft add/drop. Same auth shape as
+# validate-and-record-pick. Replaces the removed place-order broker path;
+# TradeModal submits here. Quantity is server-computed per stake mode — the
+# client's quantity input is not trusted.
+[functions.record-trade]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/record-trade/index.ts"
+
 # ============================================================================
 # verify_jwt for the remaining 7 functions — READ OFF THE DASHBOARD 2026-07-30
 # ============================================================================
