@@ -155,7 +155,10 @@ export default function Leagues() {
 
     await updateLeague(selectedLeagueForUpdate, {
       draft_date: updateDraftDate ? new Date(updateDraftDate).toISOString() : null,
-      budget_mode: updateBudgetMode,
+      budget_mode: updateBudgetMode, // deprecated — kept during transition
+      // stake_mode is authoritative (Phase 3 client switch; the 000008
+      // mirror trigger is dropped). Same mapping the trigger applied.
+      stake_mode: updateBudgetMode === 'budget' ? 'budget_cap' : null,
       salary_cap_limit: budgetAmt,
       budget_amount: budgetAmt,
       num_participants: updateParticipants === '' ? null : clampParticipants(updateParticipants),

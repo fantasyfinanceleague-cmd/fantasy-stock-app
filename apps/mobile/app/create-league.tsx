@@ -137,7 +137,10 @@ export default function CreateLeagueWizard() {
           invite_code: generateInviteCode(),
           num_participants: state.size,
           num_rounds: state.numRounds,
-          budget_mode: state.budgetMode,
+          budget_mode: state.budgetMode, // deprecated — kept during transition
+          // stake_mode is authoritative (Phase 3 client switch; the 000008
+          // mirror trigger is dropped). Same mapping the trigger applied.
+          stake_mode: state.budgetMode === 'budget' ? 'budget_cap' : null,
           budget_amount: budget || 100000,
           salary_cap_limit: budget,
           league_type: state.type,

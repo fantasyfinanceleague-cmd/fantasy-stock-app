@@ -203,7 +203,10 @@ export default function LeaguesScreen() {
           invite_code: generateInviteCode(),
           num_participants: numTeams,
           num_rounds: numRounds,
-          budget_mode: budgetMode,
+          budget_mode: budgetMode, // deprecated — kept during transition
+          // stake_mode is authoritative (Phase 3 client switch; the 000008
+          // mirror trigger is dropped). Same mapping the trigger applied.
+          stake_mode: budgetMode === 'budget' ? 'budget_cap' : null,
           budget_amount: budget || 100000,
           salary_cap_limit: budget,
           league_type: leagueType,

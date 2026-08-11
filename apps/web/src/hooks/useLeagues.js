@@ -125,7 +125,10 @@ export default function useLeagues() {
           salary_cap_limit: salaryCapLimit ?? null,
           num_participants: numParticipants,
           num_rounds: numRounds,
-          budget_mode: budgetMode,
+          budget_mode: budgetMode, // deprecated — kept during transition
+          // stake_mode is authoritative (Phase 3 client switch; the 000008
+          // mirror trigger is dropped). Same mapping the trigger applied.
+          stake_mode: budgetMode === 'budget' ? 'budget_cap' : null,
           budget_amount: budgetAmount,
           league_type: leagueType,
           duration_days: leagueType === 'duration' ? durationDays : null,
