@@ -30,3 +30,24 @@ the app-key price path (`ticker-quotes` / `historical-bars` / `finnhub-quote`).
 Once live prices no longer depend on `broker_credentials`, `git mv` this file back
 to `supabase/migrations/` and apply it as HUMAN ACTION, then effect-verify with
 `SELECT to_regclass('public.broker_credentials');` (must be NULL).
+
+## `20260810000007_drafts_league_id_set_not_null.sql`
+
+**Do not apply until `drafts` has zero NULL `league_id` rows.** (Phase 2, binding
+consequence #3.)
+
+Makes `drafts.league_id` NOT NULL. `league_id` is currently NULLABLE (Phase 0.5),
+which lets orphan picks exist that no league RLS predicate or server validator can
+reason about. The migration carries a self-contained gate: a `DO` block that
+**raises and aborts** if any NULL `league_id` row remains, so `SET NOT NULL` can
+never run against dirty data. It is held here because that abort would fail the
+whole `db push` batch if it ran while orphans exist.
+
+**Precondition to apply:** zero rows from
+`SELECT count(*) FROM drafts WHERE league_id IS NULL;`. There is no in-repo
+derivation for `league_id`, so backfilling orphans is a human judgement call
+(recover from draft session / same-window trades, or delete junk) — the file
+leaves a commented backfill placeholder rather than guessing. Once the count is
+zero, `git mv` this file back to `supabase/migrations/`, apply as HUMAN ACTION,
+then effect-verify `is_nullable = 'NO'` for `drafts.league_id` via
+`information_schema.columns`.
