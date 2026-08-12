@@ -28,6 +28,11 @@ export const STAKE_MODE_OPTIONS: Array<{ value: StakeMode; label: string; icon: 
   },
 ];
 
+/** Plain-language label for a league's stake_mode; 'Not set' for NULL/legacy leagues. */
+export function stakeModeLabel(stakeMode: StakeMode | null | undefined): string {
+  return STAKE_MODE_OPTIONS.find((o) => o.value === stakeMode)?.label ?? 'Not set';
+}
+
 export const DEFAULT_NOTIONAL_PER_SLOT = 1000;
 // A one-share cap must BIND: at the old $100k default a full roster of the
 // priciest shares never touched it. ~$2,500 for a 6-slot roster forces real

@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { Colors } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
 import { validateLeagueName } from '@/lib/contentModeration';
+import { stakeModeLabel } from '@/lib/categoryData';
 import {
   type StakeMode,
   DEFAULT_BUDGET_CAP,
@@ -331,9 +332,7 @@ export default function LeaguesScreen() {
                     </Text>
                     <Text style={styles.leagueDetail}>•</Text>
                     <Text style={styles.leagueDetail}>
-                      {league.budget_mode === 'budget'
-                        ? `$${league.budget_amount?.toLocaleString()} budget`
-                        : 'No budget'}
+                      {stakeModeLabel(league.stake_mode)}
                     </Text>
                   </View>
 
@@ -754,11 +753,9 @@ export default function LeaguesScreen() {
                     </View>
                   )}
                   <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Budget Mode</Text>
+                    <Text style={styles.detailLabel}>Stake Mode</Text>
                     <Text style={styles.detailValue}>
-                      {selectedLeague.budget_mode === 'budget'
-                        ? `$${(selectedLeague.budget_amount || 100000).toLocaleString()}`
-                        : 'No Budget'}
+                      {stakeModeLabel(selectedLeague.stake_mode)}
                     </Text>
                   </View>
                   <View style={styles.detailRow}>
