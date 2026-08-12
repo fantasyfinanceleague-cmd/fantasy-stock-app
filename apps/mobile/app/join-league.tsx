@@ -7,6 +7,7 @@ import { Colors } from '@/constants/Colors';
 import { useAuth } from '@/lib/useAuth';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { supabase } from '@/lib/supabase';
+import { stakeModeLabel } from '@/lib/categoryData';
 
 const ACCENT = Colors.primary;
 const ACCENT_BG = Colors.primaryBg;
@@ -20,6 +21,7 @@ interface LeaguePreview {
   current_members: number;
   budget_amount: number | null;
   budget_mode: string;
+  stake_mode: 'fixed_notional' | 'price_tiers' | 'budget_cap' | null;
   draft_date: string | null;
   draft_status: string;
   duration_days: number | null;
@@ -240,11 +242,9 @@ export default function JoinLeagueScreen() {
 
             <View style={styles.previewRow}>
               <View style={styles.previewItem}>
-                <Text style={styles.previewLabel}>Budget</Text>
+                <Text style={styles.previewLabel}>Stake Mode</Text>
                 <Text style={styles.previewValue}>
-                  {league.budget_mode === 'no-budget'
-                    ? 'No Limit'
-                    : `$${(league.budget_amount || 0).toLocaleString()}`}
+                  {stakeModeLabel(league.stake_mode)}
                 </Text>
               </View>
               <View style={styles.previewItem}>
