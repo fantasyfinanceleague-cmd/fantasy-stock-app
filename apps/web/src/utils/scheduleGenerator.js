@@ -1,80 +1,6 @@
 // src/utils/scheduleGenerator.js
 
 /**
- * Generates a round-robin schedule for matchup-based leagues.
- *
- * Week timing (aligned with US stock market hours):
- * - Monday: Trade day (lineups can be changed)
- * - Tuesday 9:30 AM ET: Week officially starts (market open)
- * - Friday 4:00 PM ET: Week officially ends (market close)
- *
- * @param {string[]} userIds - Array of user IDs in the league
- * @param {number} numWeeks - Number of weeks to schedule
- * @param {Date} startDate - Date when the league starts (after draft completes)
- * @returns {Array<{week: number, team1: string, team2: string, weekStart: Date, weekEnd: Date}>}
- */
-export function generateSchedule(userIds, numWeeks, startDate) {
-  const teams = [...userIds];
-  const matchups = [];
-
-  // If odd number of teams, add a "BYE" placeholder
-  const hasBye = teams.length % 2 !== 0;
-  if (hasBye) {
-    teams.push('BYE');
-  }
-
-  const n = teams.length;
-  const roundsNeeded = n - 1; // Full round-robin requires n-1 rounds
-
-  // Generate round-robin matchups
-  for (let week = 1; week <= numWeeks; week++) {
-    // Which rotation are we on? (0-indexed within round-robin cycle)
-    const rotation = (week - 1) % roundsNeeded;
-
-    // Get the matchups for this rotation
-    const weekMatchups = getRotationMatchups(teams, rotation);
-
-    // Calculate week timing with market hours
-    // Week starts Tuesday 9:30 AM ET (14:30 UTC)
-    // Week ends Friday 4:00 PM ET (21:00 UTC)
-    const weekStart = getWeekStartTuesday(startDate, week);
-    const weekEnd = getWeekEndFriday(weekStart);
-
-    for (const [team1, team2] of weekMatchups) {
-      // Include BYE matchups so players know they have a bye week
-      // The player with the bye is always stored as team1, with team2 = null
-      if (team1 === 'BYE') {
-        matchups.push({
-          week,
-          team1: team2, // The real player
-          team2: null,  // null indicates bye week
-          weekStart,
-          weekEnd,
-        });
-      } else if (team2 === 'BYE') {
-        matchups.push({
-          week,
-          team1: team1, // The real player
-          team2: null,  // null indicates bye week
-          weekStart,
-          weekEnd,
-        });
-      } else {
-        matchups.push({
-          week,
-          team1,
-          team2,
-          weekStart,
-          weekEnd,
-        });
-      }
-    }
-  }
-
-  return matchups;
-}
-
-/**
  * Gets matchups for a specific rotation in round-robin.
  * Uses the "circle method" where one team stays fixed and others rotate.
  *
@@ -147,6 +73,80 @@ function getWeekEndFriday(tuesdayStart) {
   date.setUTCHours(21, 0, 0, 0);
 
   return date;
+}
+
+/**
+ * Generates a round-robin schedule for matchup-based leagues.
+ *
+ * Week timing (aligned with US stock market hours):
+ * - Monday: Trade day (lineups can be changed)
+ * - Tuesday 9:30 AM ET: Week officially starts (market open)
+ * - Friday 4:00 PM ET: Week officially ends (market close)
+ *
+ * @param {string[]} userIds - Array of user IDs in the league
+ * @param {number} numWeeks - Number of weeks to schedule
+ * @param {Date} startDate - Date when the league starts (after draft completes)
+ * @returns {Array<{week: number, team1: string, team2: string, weekStart: Date, weekEnd: Date}>}
+ */
+export function generateSchedule(userIds, numWeeks, startDate) {
+  const teams = [...userIds];
+  const matchups = [];
+
+  // If odd number of teams, add a "BYE" placeholder
+  const hasBye = teams.length % 2 !== 0;
+  if (hasBye) {
+    teams.push('BYE');
+  }
+
+  const n = teams.length;
+  const roundsNeeded = n - 1; // Full round-robin requires n-1 rounds
+
+  // Generate round-robin matchups
+  for (let week = 1; week <= numWeeks; week++) {
+    // Which rotation are we on? (0-indexed within round-robin cycle)
+    const rotation = (week - 1) % roundsNeeded;
+
+    // Get the matchups for this rotation
+    const weekMatchups = getRotationMatchups(teams, rotation);
+
+    // Calculate week timing with market hours
+    // Week starts Tuesday 9:30 AM ET (14:30 UTC)
+    // Week ends Friday 4:00 PM ET (21:00 UTC)
+    const weekStart = getWeekStartTuesday(startDate, week);
+    const weekEnd = getWeekEndFriday(weekStart);
+
+    for (const [team1, team2] of weekMatchups) {
+      // Include BYE matchups so players know they have a bye week
+      // The player with the bye is always stored as team1, with team2 = null
+      if (team1 === 'BYE') {
+        matchups.push({
+          week,
+          team1: team2, // The real player
+          team2: null,  // null indicates bye week
+          weekStart,
+          weekEnd,
+        });
+      } else if (team2 === 'BYE') {
+        matchups.push({
+          week,
+          team1: team1, // The real player
+          team2: null,  // null indicates bye week
+          weekStart,
+          weekEnd,
+        });
+      } else {
+        matchups.push({
+          week,
+          team1,
+          team2,
+          weekStart,
+          weekEnd,
+        });
+      }
+    }
+  }
+
+  return matchups;
 }
 
 /**

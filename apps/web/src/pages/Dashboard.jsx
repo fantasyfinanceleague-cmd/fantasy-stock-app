@@ -49,6 +49,9 @@ export default function Dashboard() {
   const [hasWeekSnapshots, setHasWeekSnapshots] = useState(false);
   const [pastMatchups, setPastMatchups] = useState([]); // Completed matchups
 
+  // Simple state for prices (no real-time polling)
+  const [prices, setPrices] = useState({});
+
   // ---- Load my leagues (only when signed in)
   useEffect(() => {
     // Don't run with test-user fallback - wait for real auth
@@ -293,9 +296,6 @@ export default function Dashboard() {
       }
     })();
   }, [activeLeague, leagueId, USER_ID, fetchProfiles]);
-
-  // Simple state for prices (no real-time polling)
-  const [prices, setPrices] = useState({});
 
   // ---- Group picks and trades by user (same logic as Leaderboard)
   const picksByUser = useMemo(() => {
