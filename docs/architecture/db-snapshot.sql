@@ -101,6 +101,20 @@ SELECT jsonb_pretty(jsonb_build_object(
         'name',       c.relname,
         'rlsEnabled', c.relrowsecurity,
         'rlsForced',  c.relforcerowsecurity,
+        -- CHECK constraints (added 2026-08-11): the BUG-4 audit had to grep
+        -- migrations because the snapshot didn't record them — and migrations
+        -- can lie by omission (a constraint added out-of-band, or dropped ad
+        -- hoc, is invisible there). pg_get_constraintdef renders the live
+        -- truth. Includes NOT VALID state implicitly via the rendered text.
+        'checkConstraints', coalesce((
+          SELECT jsonb_agg(jsonb_build_object(
+                   'name',       con.conname,
+                   'definition', pg_get_constraintdef(con.oid)
+                 ) ORDER BY con.conname)
+          FROM pg_constraint con
+          WHERE con.conrelid = c.oid
+            AND con.contype = 'c'
+        ), '[]'::jsonb),
         'policies',   coalesce((
           SELECT jsonb_agg(jsonb_build_object(
                    'name',       pol.polname,
