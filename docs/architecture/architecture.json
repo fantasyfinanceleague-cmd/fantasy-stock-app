@@ -2,27 +2,39 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "5a9283875d48da166c0c11477fdee92b41a3e1bd",
-    "commitShort": "5a92838",
+    "commit": "9f2f129e60912fa9969693a6357c979616a5d96d",
+    "commitShort": "9f2f129",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "polish/label-and-drift",
+    "branch": "backend-signup-gate",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "scripts/gen-architecture.mjs"
+        "path": "apps/mobile/app/login.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/web/src/App.jsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/web/src/utils/errorMessages.js"
+      },
+      {
+        "code": "??",
+        "path": "supabase/migrations/20260815000000_signup_gate.sql"
       }
     ],
-    "timestamp": "2026-08-12T06:06:21Z",
-    "sourceHash": "sha256:e12bbddb911f290c0b2e5b9860807f4fe777098c0c971173fe5964cc1d86d90a",
+    "timestamp": "2026-08-16T01:55:54Z",
+    "sourceHash": "sha256:c1b11717a14827a38401c912946e635226176d2bdb9cfb0bea54ac180c7f472b",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1.2,
-    "ageDays": 0.1,
+    "ageHours": 93.1,
+    "ageDays": 3.9,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:3c923bcd46e36dfa365d24852d7b8fb6ead9ff99a06c3b26dc0853c648e07ded",
@@ -1210,6 +1222,37 @@
     {
       "layer": "db",
       "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20260815000000_signup_gate.sql:82"
+        ],
+        "latestDefinition": "supabase/migrations/20260815000000_signup_gate.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.restrict_new_signups",
+      "label": "restrict_new_signups()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20260815000000_signup_gate.sql",
+        "line": 82
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
       "db": {
         "securityDefiner": true,
         "searchPath": "public",
@@ -1659,6 +1702,28 @@
       "source": {
         "path": "supabase/migrations/20251210100000_create_user_profiles.sql",
         "line": 34
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "touchedBy": [
+          "supabase/migrations/20260815000000_signup_gate.sql"
+        ],
+        "rlsEnabled": true
+      },
+      "drift": [],
+      "annotation": null,
+      "verified": false,
+      "id": "tbl.app_config",
+      "label": "app_config",
+      "sublabel": "not in snapshot",
+      "kind": "table",
+      "source": {
+        "path": "supabase/migrations/20260815000000_signup_gate.sql",
+        "line": 41
       }
     },
     {
@@ -2490,6 +2555,28 @@
       "source": {
         "path": "supabase/migrations/20260716000000_preview_join_league_infra.sql",
         "line": 17
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "touchedBy": [
+          "supabase/migrations/20260815000000_signup_gate.sql"
+        ],
+        "rlsEnabled": true
+      },
+      "drift": [],
+      "annotation": null,
+      "verified": false,
+      "id": "tbl.signup_allowlist",
+      "label": "signup_allowlist",
+      "sublabel": "not in snapshot",
+      "kind": "table",
+      "source": {
+        "path": "supabase/migrations/20260815000000_signup_gate.sql",
+        "line": 57
       }
     },
     {
@@ -4751,6 +4838,32 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.pg.restrict_new_signups->tbl.app_config",
+      "from": "pg.restrict_new_signups",
+      "to": "tbl.app_config",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT app_config (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260815000000_signup_gate.sql:88"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.restrict_new_signups->tbl.signup_allowlist",
+      "from": "pg.restrict_new_signups",
+      "to": "tbl.signup_allowlist",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT signup_allowlist (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260815000000_signup_gate.sql:103"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.pg.schedule_snapshot_retry->tbl.cron_job_status#insert",
       "from": "pg.schedule_snapshot_retry",
       "to": "tbl.cron_job_status",
@@ -5514,7 +5627,7 @@
       "payload": ".from('user_profiles').upsert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/login.tsx:59"
+        "apps/mobile/app/login.tsx:61"
       ]
     },
     {
@@ -7480,6 +7593,16 @@
   ],
   "drift": [
     {
+      "node": "pg.restrict_new_signups",
+      "label": "restrict_new_signups()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
       "node": "tbl.symbols",
       "label": "symbols",
       "groupKey": "public-role-policies-ungated",
@@ -7672,6 +7795,17 @@
   ],
   "deadCode": [
     {
+      "node": "pg.restrict_new_signups",
+      "label": "restrict_new_signups()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20260815000000_signup_gate.sql:82",
+      "outbound": [
+        "tbl.app_config",
+        "tbl.signup_allowlist"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
       "node": "pg.symbols_touch_updated_at",
       "label": "symbols_touch_updated_at()",
       "kind": "pg-function",
@@ -7756,6 +7890,12 @@
   ],
   "unverified": [
     {
+      "scope": "pg.restrict_new_signups",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
       "scope": "tbl.broker_credentials",
       "claim": "table exists in prod",
       "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
@@ -7763,6 +7903,18 @@
     },
     {
       "scope": "tbl.notification_log",
+      "claim": "table exists in prod",
+      "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot."
+    },
+    {
+      "scope": "tbl.app_config",
+      "claim": "table exists in prod",
+      "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot."
+    },
+    {
+      "scope": "tbl.signup_allowlist",
       "claim": "table exists in prod",
       "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
       "resolve": "Re-capture the snapshot."
@@ -7872,13 +8024,13 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 106,
-    "edges": 235,
+    "nodes": 109,
+    "edges": 237,
     "flows": 9,
-    "drift": 19,
-    "driftHigh": 1,
-    "deadCode": 10,
-    "unverified": 19
+    "drift": 20,
+    "driftHigh": 2,
+    "deadCode": 11,
+    "unverified": 22
   },
   "sourceIndex": {
     "edgeFunctions": [
@@ -7974,7 +8126,7 @@
       "apps/mobile/app/create-league.tsx:171 -> leagues.insert",
       "apps/mobile/app/create-league.tsx:196 -> league_members.insert",
       "apps/mobile/app/league-settings.tsx:132 -> leagues.update",
-      "apps/mobile/app/login.tsx:59 -> user_profiles.upsert",
+      "apps/mobile/app/login.tsx:61 -> user_profiles.upsert",
       "apps/mobile/app/player-portfolio.tsx:121 -> user_profiles.select",
       "apps/mobile/app/player-portfolio.tsx:133 -> drafts.select",
       "apps/mobile/app/player-portfolio.tsx:140 -> trades.select",
@@ -8219,7 +8371,8 @@
       "20260811000006_seed_categories.sql",
       "20260811000007_symbols_enrichment_support.sql",
       "20260811000008_schedule_enrich_symbols.sql",
-      "20260811000009_drop_leagues_salary_cap_limit.sql"
+      "20260811000009_drop_leagues_salary_cap_limit.sql",
+      "20260815000000_signup_gate.sql"
     ],
     "config": [
       "enrich-symbols=false",
