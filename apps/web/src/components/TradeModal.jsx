@@ -417,7 +417,14 @@ export default function TradeModal({
                       onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                     >
                       <div>
-                        <div style={{ fontWeight: 700, fontSize: 15 }}>{result.symbol}</div>
+                        <div style={{ fontWeight: 700, fontSize: 15, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {result.symbol}
+                          {result.is_draftable === false && (
+                            <span title="Not in the default draftable universe" style={{ fontSize: 10, fontWeight: 600, color: '#f59e0b', border: '1px solid #f59e0b', borderRadius: 4, padding: '0 4px' }}>
+                              NOT DRAFTABLE
+                            </span>
+                          )}
+                        </div>
                         <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>
                           {prettyName(result.name)}
                         </div>

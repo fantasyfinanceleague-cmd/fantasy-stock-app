@@ -79,11 +79,11 @@ Deno.serve(async (req) => {
 
   // Smart search with relevance-based ordering
   // Priority: 1) Exact symbol, 2) Symbol starts-with, 3) Name starts-with, 4) Symbol/Name contains
-  let items: Array<{ symbol: string; name: string; price?: number | null }> = [];
+  let items: Array<{ symbol: string; name: string; price?: number | null; is_draftable?: boolean }> = [];
   const maxResults = Math.min(15, Number(limit) || 10);
   const seen = new Set<string>();
 
-  const addItems = (newItems: Array<{ symbol: string; name: string }> | null) => {
+  const addItems = (newItems: Array<{ symbol: string; name: string; is_draftable?: boolean }> | null) => {
     if (!newItems) return;
     for (const item of newItems) {
       if (!seen.has(item.symbol) && items.length < maxResults) {
@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
   // 1. Exact symbol match (highest priority)
   const { data: exactSymbol } = await supabase
     .from('symbols')
-    .select('symbol,name')
+    .select('symbol,name,is_draftable')
     .eq('symbol', query)
     .limit(1);
   addItems(exactSymbol);
@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
   if (items.length < maxResults) {
     const { data: symbolStartsWith } = await supabase
       .from('symbols')
-      .select('symbol,name')
+      .select('symbol,name,is_draftable')
       .like('symbol', `${query}%`)
       .order('symbol')
       .limit(maxResults);
@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
   if (items.length < maxResults) {
     const { data: nameStartsWith } = await supabase
       .from('symbols')
-      .select('symbol,name')
+      .select('symbol,name,is_draftable')
       .ilike('name', `${query}%`)
       .order('symbol')
       .limit(maxResults);
@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
   if (items.length < maxResults) {
     const { data: symbolContains } = await supabase
       .from('symbols')
-      .select('symbol,name')
+      .select('symbol,name,is_draftable')
       .ilike('symbol', `%${query}%`)
       .order('symbol')
       .limit(maxResults);
@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
   if (items.length < maxResults) {
     const { data: nameContains } = await supabase
       .from('symbols')
-      .select('symbol,name')
+      .select('symbol,name,is_draftable')
       .ilike('name', `%${query}%`)
       .order('symbol')
       .limit(maxResults);
