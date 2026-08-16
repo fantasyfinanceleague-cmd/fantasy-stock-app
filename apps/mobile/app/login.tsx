@@ -15,6 +15,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { validateUsername } from '@/lib/contentModeration';
+import { PASSWORD_REQUIREMENTS, failingPasswordRequirements } from '@/constants/passwordRules';
 
 const { width } = Dimensions.get('window');
 
@@ -23,8 +24,9 @@ function getUserFriendlyError(error: any): string {
   if (message.includes('invalid login credentials')) return 'Invalid email or password. Please try again.';
   if (message.includes('email not confirmed')) return 'Please verify your email before signing in.';
   if (message.includes('user already registered')) return 'An account with this email already exists.';
-  if (message.includes('password should be at least')) return 'Password must be at least 6 characters long.';
-  if (message.includes('invalid email')) return 'Please enter a valid email address.';
+  if (message.includes('password should be at least') || message.includes('weak_password')) return 'Password must be at least 8 characters and include an uppercase letter, a lowercase letter, a number, and a symbol.';
+  if (message.includes('invalid email') || message.includes('unable to validate email')) return 'Please enter a valid email address.';
+  if (message.includes('rate limit') || message.includes('for security purposes')) return 'Too many attempts — please wait a minute and try again.';
   // Server-side signup gate (Before User Created hook).
   if (message.includes('not open for new signups')) return 'Stockpile isn\'t open for new signups yet — check back soon. Existing accounts can still sign in.';
   return error?.message || 'An error occurred. Please try again.';
@@ -55,6 +57,13 @@ export default function LoginScreen() {
 
     setLoading(true);
     if (isSignUp) {
+      // Enforce the password policy before hitting the server, naming what's missing.
+      const failing = failingPasswordRequirements(password);
+      if (failing.length > 0) {
+        Alert.alert('Weak password', `Your password needs: ${failing.map((r) => r.label.toLowerCase()).join(', ')}.`);
+        setLoading(false);
+        return;
+      }
       const { data, error } = await supabase.auth.signUp({ email, password });
       if (error) { Alert.alert('Error', getUserFriendlyError(error)); setLoading(false); return; }
       if (data?.user) {
@@ -131,6 +140,21 @@ export default function LoginScreen() {
             secureTextEntry
           />
         </View>
+
+        {isSignUp && (
+          <View style={{ marginTop: -4, marginBottom: 16, paddingHorizontal: 4 }}>
+            <Text style={{ fontSize: 13, color: '#64748B', marginBottom: 6 }}>Password must include:</Text>
+            {PASSWORD_REQUIREMENTS.map((r) => {
+              const ok = r.test(password);
+              return (
+                <View key={r.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                  <Text style={{ width: 16, textAlign: 'center', color: ok ? '#22c55e' : '#94A3B8' }}>{ok ? '✓' : '○'}</Text>
+                  <Text style={{ fontSize: 13, color: ok ? '#22c55e' : '#94A3B8' }}>{r.label}</Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
 
         {!isSignUp && (
           <TouchableOpacity style={styles.forgotButton} onPress={() => router.push('/forgot-password')}>
