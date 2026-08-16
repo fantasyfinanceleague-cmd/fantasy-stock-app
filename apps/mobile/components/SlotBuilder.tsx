@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 // SlotBuilder (mobile) — commissioner roster-slot editor (Phase 4 item 4,
 // DR-001 draft constraint system). RN mirror of the web SlotBuilder: a slot =
 // {count, price bracket?, category?}; no filters = flex. Feasibility is a

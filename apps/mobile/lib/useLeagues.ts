@@ -22,16 +22,6 @@ export function useLeagues() {
   const [loading, setLoading] = useState(true);
   const [activeLeagueId, setActiveLeagueId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!user) {
-      setLeagues([]);
-      setLoading(false);
-      return;
-    }
-
-    fetchLeagues();
-  }, [user]);
-
   async function fetchLeagues() {
     if (!user) return;
 
@@ -79,6 +69,16 @@ export function useLeagues() {
 
     setLoading(false);
   }
+
+  useEffect(() => {
+    if (!user) {
+      setLeagues([]);
+      setLoading(false);
+      return;
+    }
+
+    fetchLeagues();
+  }, [user]);
 
   const activeLeague = leagues.find((l) => l.id === activeLeagueId) || null;
 

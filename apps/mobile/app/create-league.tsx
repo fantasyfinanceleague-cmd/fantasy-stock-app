@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator, Platform, Dimensions, KeyboardAvoidingView, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useEffect, useState } from 'react';
@@ -111,48 +112,6 @@ export default function CreateLeagueWizard() {
     router.dismiss();
   };
 
-  const goNext = () => {
-    switch (step) {
-      case 'welcome': setStep('name'); break;
-      case 'name':
-        if (!state.name.trim()) {
-          Alert.alert('Required', 'Please enter a league name');
-          return;
-        }
-        const contentCheck = validateLeagueName(state.name.trim());
-        if (!contentCheck.isValid) {
-          Alert.alert('Error', contentCheck.reason || 'League name is not allowed');
-          return;
-        }
-        setStep('type');
-        break;
-      case 'type': setStep('size'); break;
-      case 'size': setStep('stake'); break;
-      case 'stake':
-        // Price tiers NEED slot brackets (they are the anti-skew mechanism);
-        // other modes go straight on — category slots stay optional via
-        // league settings.
-        setStep(state.stakeMode === 'price_tiers' ? 'slots' : (state.type === 'duration' ? 'duration' : 'matchup'));
-        break;
-      case 'slots': {
-        if (state.slots.length === 0) {
-          Alert.alert('Add a slot', 'Price tiers need at least one slot with a price bracket.');
-          break;
-        }
-        const slotErrors = validateSlotConfig(state.slots, state.numRounds);
-        if (slotErrors.length > 0) {
-          Alert.alert('Fix roster slots', slotErrors[0]);
-          break;
-        }
-        setStep(state.type === 'duration' ? 'duration' : 'matchup');
-        break;
-      }
-      case 'duration': setStep('draft'); break;
-      case 'matchup': setStep('draft'); break;
-      case 'draft': handleCreate(); break;
-    }
-  };
-
   const handleCreate = async () => {
     if (!user?.id) {
       Alert.alert('Error', 'You must be logged in to create a league');
@@ -228,6 +187,48 @@ export default function CreateLeagueWizard() {
       Alert.alert('Error', error.message || 'Failed to create league');
     } finally {
       setCreating(false);
+    }
+  };
+
+  const goNext = () => {
+    switch (step) {
+      case 'welcome': setStep('name'); break;
+      case 'name':
+        if (!state.name.trim()) {
+          Alert.alert('Required', 'Please enter a league name');
+          return;
+        }
+        const contentCheck = validateLeagueName(state.name.trim());
+        if (!contentCheck.isValid) {
+          Alert.alert('Error', contentCheck.reason || 'League name is not allowed');
+          return;
+        }
+        setStep('type');
+        break;
+      case 'type': setStep('size'); break;
+      case 'size': setStep('stake'); break;
+      case 'stake':
+        // Price tiers NEED slot brackets (they are the anti-skew mechanism);
+        // other modes go straight on — category slots stay optional via
+        // league settings.
+        setStep(state.stakeMode === 'price_tiers' ? 'slots' : (state.type === 'duration' ? 'duration' : 'matchup'));
+        break;
+      case 'slots': {
+        if (state.slots.length === 0) {
+          Alert.alert('Add a slot', 'Price tiers need at least one slot with a price bracket.');
+          break;
+        }
+        const slotErrors = validateSlotConfig(state.slots, state.numRounds);
+        if (slotErrors.length > 0) {
+          Alert.alert('Fix roster slots', slotErrors[0]);
+          break;
+        }
+        setStep(state.type === 'duration' ? 'duration' : 'matchup');
+        break;
+      }
+      case 'duration': setStep('draft'); break;
+      case 'matchup': setStep('draft'); break;
+      case 'draft': handleCreate(); break;
     }
   };
 

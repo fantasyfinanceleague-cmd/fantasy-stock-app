@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/lib/useAuth';
@@ -120,45 +121,84 @@ export default function MatchupScreen() {
 
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    if (pollingRef.current) {
-      clearInterval(pollingRef.current);
-      pollingRef.current = null;
-    }
+  async function fetchCurrentPrices() {
+    const allSymbols = [
+      ...team1Holdings.map(h => h.symbol),
+      ...team2Holdings.map(h => h.symbol),
+    ];
+    const uniqueSymbols = [...new Set(allSymbols)];
 
-    if (!isActiveWeek || selectedWeek !== currentWeek) return;
+    if (uniqueSymbols.length === 0) return;
 
-    pollingRef.current = setInterval(() => {
-      fetchCurrentPrices();
-    }, 5 * 60 * 1000);
+    try {
+      const { data: quoteData } = await supabase.functions.invoke('quote', {
+        body: { symbols: uniqueSymbols }
+      });
 
-    return () => {
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
+      if (quoteData?.prices) {
+        setPrices(quoteData.prices);
       }
-    };
-  }, [isActiveWeek, selectedWeek, currentWeek]);
-
-  useEffect(() => {
-    if (activeLeagueId && user && isMatchupLeague) {
-      fetchMatchupData();
-    } else {
-      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching prices:', err);
     }
-  }, [activeLeagueId, user, isMatchupLeague, selectedWeek, params.matchupId, params.team1, params.team2]);
+  }
 
-  useEffect(() => {
-    if (!matchup || team1Holdings.length === 0 && team2Holdings.length === 0) return;
+  async function fetchTeamHoldings(userId: string): Promise<HoldingBase[]> {
+    if (!activeLeagueId) return [];
 
-    const isCompletedWeek = matchup.team1_gain != null || matchup.team2_gain != null;
-    if (isCompletedWeek) return;
+    const { data: picks } = await supabase
+      .from('drafts')
+      .select('id, symbol, entry_price, quantity, user_id')
+      .eq('league_id', activeLeagueId)
+      .eq('user_id', userId);
 
-    const interval = setInterval(() => {
-      fetchCurrentPrices();
-    }, 30000);
+    const { data: trades } = await supabase
+      .from('trades')
+      .select('id, symbol, price, quantity, action, user_id')
+      .eq('league_id', activeLeagueId)
+      .eq('user_id', userId);
 
-    return () => clearInterval(interval);
-  }, [matchup, team1Holdings, team2Holdings]);
+    const holdingsMap: Record<string, HoldingBase> = {};
+
+    (picks || []).forEach((pick: Pick) => {
+      const sym = pick.symbol?.toUpperCase();
+      if (!sym) return;
+
+      if (!holdingsMap[sym]) {
+        holdingsMap[sym] = { symbol: sym, quantity: 0, totalCost: 0 };
+      }
+
+      const qty = Number(pick.quantity || 1);
+      const price = Number(pick.entry_price);
+      holdingsMap[sym].quantity += qty;
+      holdingsMap[sym].totalCost += price * qty;
+    });
+
+    (trades || []).forEach((trade: Trade) => {
+      const sym = trade.symbol?.toUpperCase();
+      if (!sym) return;
+
+      if (!holdingsMap[sym]) {
+        holdingsMap[sym] = { symbol: sym, quantity: 0, totalCost: 0 };
+      }
+
+      const qty = Number(trade.quantity);
+      const price = Number(trade.price);
+
+      if (trade.action === 'buy') {
+        holdingsMap[sym].quantity += qty;
+        holdingsMap[sym].totalCost += price * qty;
+      } else if (trade.action === 'sell') {
+        const avgEntry = holdingsMap[sym].quantity > 0
+          ? holdingsMap[sym].totalCost / holdingsMap[sym].quantity
+          : price;
+        holdingsMap[sym].quantity -= qty;
+        holdingsMap[sym].totalCost = avgEntry * holdingsMap[sym].quantity;
+      }
+    });
+
+    return Object.values(holdingsMap).filter(h => h.quantity > 0);
+  }
 
   async function fetchMatchupData() {
     if (!activeLeagueId || !user) return;
@@ -353,84 +393,45 @@ export default function MatchupScreen() {
     }
   }
 
-  async function fetchTeamHoldings(userId: string): Promise<HoldingBase[]> {
-    if (!activeLeagueId) return [];
-
-    const { data: picks } = await supabase
-      .from('drafts')
-      .select('id, symbol, entry_price, quantity, user_id')
-      .eq('league_id', activeLeagueId)
-      .eq('user_id', userId);
-
-    const { data: trades } = await supabase
-      .from('trades')
-      .select('id, symbol, price, quantity, action, user_id')
-      .eq('league_id', activeLeagueId)
-      .eq('user_id', userId);
-
-    const holdingsMap: Record<string, HoldingBase> = {};
-
-    (picks || []).forEach((pick: Pick) => {
-      const sym = pick.symbol?.toUpperCase();
-      if (!sym) return;
-
-      if (!holdingsMap[sym]) {
-        holdingsMap[sym] = { symbol: sym, quantity: 0, totalCost: 0 };
-      }
-
-      const qty = Number(pick.quantity || 1);
-      const price = Number(pick.entry_price);
-      holdingsMap[sym].quantity += qty;
-      holdingsMap[sym].totalCost += price * qty;
-    });
-
-    (trades || []).forEach((trade: Trade) => {
-      const sym = trade.symbol?.toUpperCase();
-      if (!sym) return;
-
-      if (!holdingsMap[sym]) {
-        holdingsMap[sym] = { symbol: sym, quantity: 0, totalCost: 0 };
-      }
-
-      const qty = Number(trade.quantity);
-      const price = Number(trade.price);
-
-      if (trade.action === 'buy') {
-        holdingsMap[sym].quantity += qty;
-        holdingsMap[sym].totalCost += price * qty;
-      } else if (trade.action === 'sell') {
-        const avgEntry = holdingsMap[sym].quantity > 0
-          ? holdingsMap[sym].totalCost / holdingsMap[sym].quantity
-          : price;
-        holdingsMap[sym].quantity -= qty;
-        holdingsMap[sym].totalCost = avgEntry * holdingsMap[sym].quantity;
-      }
-    });
-
-    return Object.values(holdingsMap).filter(h => h.quantity > 0);
-  }
-
-  async function fetchCurrentPrices() {
-    const allSymbols = [
-      ...team1Holdings.map(h => h.symbol),
-      ...team2Holdings.map(h => h.symbol),
-    ];
-    const uniqueSymbols = [...new Set(allSymbols)];
-
-    if (uniqueSymbols.length === 0) return;
-
-    try {
-      const { data: quoteData } = await supabase.functions.invoke('quote', {
-        body: { symbols: uniqueSymbols }
-      });
-
-      if (quoteData?.prices) {
-        setPrices(quoteData.prices);
-      }
-    } catch (err) {
-      console.error('Error fetching prices:', err);
+  useEffect(() => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
     }
-  }
+
+    if (!isActiveWeek || selectedWeek !== currentWeek) return;
+
+    pollingRef.current = setInterval(() => {
+      fetchCurrentPrices();
+    }, 5 * 60 * 1000);
+
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+      }
+    };
+  }, [isActiveWeek, selectedWeek, currentWeek]);
+
+  useEffect(() => {
+    if (activeLeagueId && user && isMatchupLeague) {
+      fetchMatchupData();
+    } else {
+      setLoading(false);
+    }
+  }, [activeLeagueId, user, isMatchupLeague, selectedWeek, params.matchupId, params.team1, params.team2]);
+
+  useEffect(() => {
+    if (!matchup || team1Holdings.length === 0 && team2Holdings.length === 0) return;
+
+    const isCompletedWeek = matchup.team1_gain != null || matchup.team2_gain != null;
+    if (isCompletedWeek) return;
+
+    const interval = setInterval(() => {
+      fetchCurrentPrices();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [matchup, team1Holdings, team2Holdings]);
 
   const onRefresh = async () => {
     setRefreshing(true);

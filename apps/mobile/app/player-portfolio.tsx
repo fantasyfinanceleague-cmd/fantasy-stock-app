@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useState, useEffect, useMemo } from 'react';
@@ -103,12 +104,6 @@ export default function PlayerPortfolioScreen() {
   const displayName = username || (isBot ? `Bot ${userId?.replace('bot-', '')}` : 'Player');
   const avatar = isBot ? '🤖' : (profile?.avatar || '📊');
 
-  useEffect(() => {
-    if (userId && activeLeagueId) {
-      fetchPortfolio();
-    }
-  }, [userId, activeLeagueId]);
-
   async function fetchPortfolio() {
     if (!userId || !activeLeagueId) return;
 
@@ -195,6 +190,12 @@ export default function PlayerPortfolioScreen() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (userId && activeLeagueId) {
+      fetchPortfolio();
+    }
+  }, [userId, activeLeagueId]);
 
   return (
     <View style={styles.container}>
