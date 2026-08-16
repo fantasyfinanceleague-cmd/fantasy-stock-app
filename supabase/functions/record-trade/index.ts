@@ -113,7 +113,7 @@ Deno.serve(async (req: Request) => {
     // ---- League + membership ----------------------------------------------
     const { data: league, error: lgErr } = await admin
       .from('leagues')
-      .select('id, num_rounds, draft_status, stake_mode, budget_amount, notional_per_slot')
+      .select('id, num_rounds, draft_status, stake_mode, budget_amount, notional_per_slot, allow_undraftable')
       .eq('id', leagueId)
       .maybeSingle();
     if (lgErr) return json({ ok: false, reason: 'unhandled' }, 500);
@@ -194,7 +194,14 @@ Deno.serve(async (req: Request) => {
         budgetAmount: league.budget_amount == null ? null : Number(league.budget_amount),
         notionalPerSlot: league.notional_per_slot == null ? null : Number(league.notional_per_slot),
         numRounds: Number(league.num_rounds) || 6,
+        allowUndraftable: league.allow_undraftable === true,
       };
+
+      // is_draftable gate (DR-001): a non-draftable BUY is refused unless the
+      // commissioner set allow_undraftable. Missing symbols row => not draftable.
+      const { data: symRow } = await admin
+        .from('symbols').select('is_draftable').eq('symbol', symbol).maybeSingle();
+      const isDraftable = symRow?.is_draftable === true;
 
       // Category eligibility only when this league has category slots.
       const eligibleCategories = slots.some((s) => s.categoryId != null)
@@ -210,6 +217,7 @@ Deno.serve(async (req: Request) => {
         symbol,
         price: fill.price,
         eligibleCategories,
+        isDraftable,
       });
       if (!decision.legal) return json({ ok: false, reason: decision.reason }); // 200: game-flow refusal
       quantity = decision.quantity;

@@ -218,6 +218,7 @@ export default function TradeModal({
   const TRADE_REFUSAL_MESSAGES = {
     draft_not_completed: 'Trading opens after the draft completes.',
     symbol_owned: 'That stock is already owned in this league.',
+    not_draftable: "That stock isn't in this league's draftable universe.",
     roster_full: 'Your roster is full — drop a stock first.',
     no_eligible_slot: 'No open roster slot accepts a stock at this price.',
     over_budget: 'That stock is over your remaining budget.',

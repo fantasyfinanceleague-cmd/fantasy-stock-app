@@ -128,7 +128,7 @@ Deno.serve(async (req: Request) => {
     // ---- Load league + membership (service role; membership checked here) --
     const { data: league, error: lgErr } = await admin
       .from('leagues')
-      .select('id, commissioner_id, num_rounds, draft_status, stake_mode, budget_amount, notional_per_slot')
+      .select('id, commissioner_id, num_rounds, draft_status, stake_mode, budget_amount, notional_per_slot, allow_undraftable')
       .eq('id', leagueId)
       .maybeSingle();
     if (lgErr) return json({ ok: false, reason: 'unhandled' }, 500);
@@ -226,11 +226,18 @@ Deno.serve(async (req: Request) => {
       categoryId: s.category_id == null ? null : String(s.category_id),
     }));
 
+    // is_draftable gate (DR-001): a non-draftable symbol is refused unless the
+    // commissioner set allow_undraftable. A missing symbols row => not draftable.
+    const { data: symRow } = await admin
+      .from('symbols').select('is_draftable').eq('symbol', symbol).maybeSingle();
+    const isDraftable = symRow?.is_draftable === true;
+
     const rules: LeagueRules = {
       stakeMode: (league.stake_mode ?? null) as LeagueRules['stakeMode'],
       budgetAmount: league.budget_amount == null ? null : Number(league.budget_amount),
       notionalPerSlot: league.notional_per_slot == null ? null : Number(league.notional_per_slot),
       numRounds,
+      allowUndraftable: league.allow_undraftable === true,
     };
 
     // Category eligibility is only consulted when this league defines
@@ -249,6 +256,7 @@ Deno.serve(async (req: Request) => {
       symbol,
       price: fill.price,
       eligibleCategories,
+      isDraftable,
     });
     if (!decision.legal) return json({ ok: false, reason: decision.reason }); // 200: game-flow refusal (join-league pattern)
 

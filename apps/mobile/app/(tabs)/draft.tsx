@@ -47,6 +47,7 @@ const PICK_REFUSAL_MESSAGES: Record<string, string> = {
   draft_complete: 'The draft is already complete',
   draft_not_in_progress: 'The draft is not in progress',
   symbol_owned: 'That stock is already owned in this league',
+  not_draftable: "That stock isn't in this league's draftable universe",
   no_eligible_slot: 'No open roster slot accepts a stock at this price',
   over_budget: 'That stock is over your remaining budget',
   no_price: 'No recent price available for that stock',

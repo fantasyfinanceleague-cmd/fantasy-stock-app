@@ -53,6 +53,10 @@ export interface LeagueRules {
   budgetAmount: number | null; // the cap in budget_cap mode
   notionalPerSlot: number | null; // per-slot stake in fixed_notional mode
   numRounds: number; // roster size per user == rounds in the snake draft
+  /** DR-001 commissioner override (leagues.allow_undraftable, default false):
+   * when true the league opts into the FULL symbol universe, so the is_draftable
+   * gate is bypassed. Optional/undefined = false (gate enforced). */
+  allowUndraftable?: boolean;
 }
 
 export interface Slot {
@@ -279,6 +283,7 @@ export type PickRefusal =
   | 'draft_complete'
   | 'not_your_turn'
   | 'invalid_price'
+  | 'not_draftable'
   | 'symbol_owned'
   | 'no_eligible_slot'
   | 'over_budget';
@@ -304,6 +309,10 @@ export interface PickInputs {
   price: number;
   /** effectiveCategoryIds(...) for the symbol; empty = unclassified, flex-only */
   eligibleCategories: Set<string>;
+  /** symbols.is_draftable for this symbol (false when the row is missing).
+   * Only an explicit `false` triggers the not_draftable refusal — undefined is
+   * treated as draftable so rule tests that don't exercise this stay green. */
+  isDraftable?: boolean;
 }
 
 /**
@@ -325,6 +334,13 @@ export function validatePick(i: PickInputs): PickDecision {
 
   const sym = i.symbol.toUpperCase();
   if (sym === SKIP_SYMBOL) return { legal: false, reason: 'invalid_price' };
+
+  // is_draftable gate (DR-001 draftable-universe filter): a non-draftable symbol
+  // is refused unless the commissioner opted the league into the full universe.
+  if (i.isDraftable === false && !i.rules.allowUndraftable) {
+    return { legal: false, reason: 'not_draftable' };
+  }
+
   if (leagueOwnedSymbols(i.picks, i.trades).has(sym)) {
     return { legal: false, reason: 'symbol_owned' };
   }
@@ -375,6 +391,7 @@ export function validateSkip(
 
 export type TradeRefusal =
   | 'invalid_price'
+  | 'not_draftable'
   | 'symbol_owned'
   | 'roster_full'
   | 'no_eligible_slot'
@@ -395,6 +412,9 @@ export interface TradeAddInputs {
   price: number;
   /** effectiveCategoryIds(...) for the symbol; empty = unclassified, flex-only */
   eligibleCategories: Set<string>;
+  /** symbols.is_draftable (false when the row is missing). Only explicit `false`
+   * refuses; undefined = draftable (keeps rule tests green). */
+  isDraftable?: boolean;
 }
 
 /**
@@ -410,6 +430,14 @@ export function validateTradeAdd(i: TradeAddInputs): TradeDecision {
 
   const sym = i.symbol.toUpperCase();
   if (sym === SKIP_SYMBOL) return { legal: false, reason: 'invalid_price' };
+
+  // is_draftable gate (DR-001): same as the draft path — a post-draft BUY of a
+  // non-draftable symbol is refused unless the league allows the full universe.
+  // (A SELL/drop never checks this — you can always exit a position.)
+  if (i.isDraftable === false && !i.rules.allowUndraftable) {
+    return { legal: false, reason: 'not_draftable' };
+  }
+
   if (leagueOwnedSymbols(i.picks, i.trades).has(sym)) {
     return { legal: false, reason: 'symbol_owned' };
   }
