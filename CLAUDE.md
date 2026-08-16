@@ -58,6 +58,17 @@ Rule of thumb: **Opus by default; Fable only for the big, non-security refactors
 - **Run `git status` before EVERY commit.** `git add <file>` does NOT scope the commit — the *index* does. Anything already staged (a rename, a file left in the index from a prior session, another agent's work) rides along even if you only `git add`ed one path. This bit us: a pre-staged `docs/ → supabase/migrations/` rename of a deliberately-held file got swept into an unrelated feature commit, landing it in the `db push` apply path. Before committing, inspect `git status` and `git diff --cached --stat`, and confirm the staged set is EXACTLY what you intend — nothing more.
 - **In worktrees, `git status` clean does NOT mean HEAD is attached to the intended branch** — a detached HEAD shows clean status, and a ref-advancing op (merge/commit/rebase) there builds on a nameless ref while the branch stays behind. Before any merge/commit/rebase in a worktree, verify attachment with `git branch --show-current` (empty = detached), not just cleanliness. These worktrees detach as a housekeeping artifact.
 
+**Secret scanning (pre-commit):**
+- **A gitleaks pre-commit hook scans STAGED changes and blocks commits that contain secrets.** Config: `.gitleaks.toml` (gitleaks default ruleset via `[extend] useDefault = true`, plus an `[allowlist]`). Hook: `.githooks/pre-commit`, which runs `gitleaks protect --staged`. It is wired through a *tracked* hooks directory (not a native `.git/hooks` file) so it lives in the repo. gitleaks was chosen over detect-secrets: single self-contained binary (no Python venv), a strong default ruleset, and a native `protect --staged` mode built for exactly this.
+- **One-time setup per clone** (the hooksPath is local git config, not committed):
+  ```
+  brew install gitleaks            # macOS; else see github.com/gitleaks/gitleaks
+  git config core.hooksPath .githooks
+  ```
+  Without the binary the hook **fails closed** (blocks the commit) with an install message.
+- **Bypass (emergency only):** `git commit --no-verify` skips all pre-commit hooks. Use sparingly — a real secret that reaches history must be **rotated**, not just un-committed (see **Secret handling** above).
+- **Allowlist** (`.gitleaks.toml [allowlist]`) covers only known-safe matches: the **publishable Supabase anon key** (it ships in the client bundle; RLS is the real boundary) by its exact value, plus template/example/doc paths (`.env.example`, `apps/mobile/eas.json`, `scripts/test-draft.js`, `docs/**.md`, `.claude/`). **Never allowlist a service-role key.** A full-history scan (`gitleaks detect --config .gitleaks.toml`) is clean — every pre-existing match was an anon key or a doc example, none service-role.
+
 **UI entry points (mobile):**
 - **Verify a UI entry point is both MOUNTED and REACHABLE in the state that matters — not just that the file exists.** Check: is the host visible in the tab bar, and is the element outside any `length === 0` (empty-state) branch? This bit us three times in one wave — `LeagueCarousel.tsx` orphaned (never imported/mounted), `leagues.tsx` `href: null` + only linked from zero-league empty states, and nearly again on `league.tsx`. Grep who navigates to the host screen and under what condition BEFORE adding or citing a button.
 
