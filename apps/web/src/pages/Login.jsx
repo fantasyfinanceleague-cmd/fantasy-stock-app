@@ -5,6 +5,7 @@ import { useAuthUser } from '../auth/useAuthUser';
 import HCaptcha from '@hcaptcha/react-hcaptcha';
 import { useToast } from '../components/Toast';
 import { getUserFriendlyError } from '../utils/errorMessages';
+import { PASSWORD_REQUIREMENTS, failingPasswordRequirements } from '@fantasy-stock/shared';
 import logo from '/bear_bull.jpg';
 
 const HCAPTCHA_SITE_KEY = import.meta.env.VITE_HCAPTCHA_SITE_KEY;
@@ -68,6 +69,15 @@ export default function Login({ initialSignUp = false }) {
     setBusy(true);
 
     if (isSignUp) {
+      // Enforce the password policy before hitting the server, naming exactly
+      // what's missing. Same shared rules drive the checklist below.
+      const failing = failingPasswordRequirements(pw);
+      if (failing.length > 0) {
+        setBusy(false);
+        setErr(`Your password needs: ${failing.map((r) => r.label.toLowerCase()).join(', ')}.`);
+        return;
+      }
+
       const signUpOptions = {
         email,
         password: pw,
@@ -310,6 +320,28 @@ export default function Login({ initialSignUp = false }) {
               </button>
             </div>
           </div>
+
+          {isSignUp && (
+            <div style={{ marginBottom: '20px', marginTop: '-8px' }}>
+              <div style={{ fontSize: '0.8rem', color: '#9ca3af', marginBottom: '6px' }}>
+                Password must include:
+              </div>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: '4px' }}>
+                {PASSWORD_REQUIREMENTS.map((r) => {
+                  const ok = r.test(pw);
+                  return (
+                    <li
+                      key={r.id}
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: ok ? '#22c55e' : '#9ca3af' }}
+                    >
+                      <span aria-hidden="true" style={{ width: '16px', display: 'inline-block', textAlign: 'center' }}>{ok ? '✓' : '○'}</span>
+                      <span>{r.label}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
 
           {err && (
             <div style={{

@@ -6,7 +6,19 @@ const ERROR_MAP = {
   'Invalid login credentials': 'Incorrect email or password. Please try again.',
   'Email not confirmed': 'Please check your email and click the verification link.',
   'User already registered': 'An account with this email already exists. Try logging in instead.',
-  'Password should be at least 6 characters': 'Password must be at least 6 characters long.',
+  'user_already_exists': 'An account with this email already exists. Try logging in instead.',
+  // Password policy (min 8 + lower/upper/digit/symbol). Partial-matched so it catches
+  // both the weak_password message ("Password should be at least 8 …") and the code.
+  'Password should be at least': 'Password must be at least 8 characters and include an uppercase letter, a lowercase letter, a number, and a symbol.',
+  'weak_password': 'Password must be at least 8 characters and include an uppercase letter, a lowercase letter, a number, and a symbol.',
+  // Invalid email format (code + GoTrue's validation message).
+  'email_address_invalid': 'Please enter a valid email address.',
+  'unable to validate email': 'Please enter a valid email address.',
+  // Auth rate limiting (codes + messages).
+  'over_email_send_rate_limit': 'Too many attempts — please wait a minute and try again.',
+  'over_request_rate_limit': 'Too many attempts — please wait a minute and try again.',
+  'rate limit': 'Too many attempts — please wait a minute and try again.',
+  'for security purposes': 'Please wait a moment before trying that again.',
   'JWT expired': 'Your session has expired. Please log in again.',
   'invalid_grant': 'Your session has expired. Please log in again.',
   'refresh_token_not_found': 'Your session has expired. Please log in again.',
