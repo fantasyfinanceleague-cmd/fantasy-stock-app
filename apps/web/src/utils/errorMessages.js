@@ -10,6 +10,9 @@ const ERROR_MAP = {
   'JWT expired': 'Your session has expired. Please log in again.',
   'invalid_grant': 'Your session has expired. Please log in again.',
   'refresh_token_not_found': 'Your session has expired. Please log in again.',
+  // Server-side signup gate (Before User Created hook). Partial-matched so it
+  // survives any GoTrue wrapping of the hook's message.
+  'not open for new signups': 'Stockpile isn\'t open for new signups yet — check back soon. Existing accounts can still sign in.',
 
   // Network errors
   'Failed to fetch': 'Unable to connect to the server. Please check your internet connection.',

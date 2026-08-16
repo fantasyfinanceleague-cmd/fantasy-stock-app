@@ -25,6 +25,8 @@ function getUserFriendlyError(error: any): string {
   if (message.includes('user already registered')) return 'An account with this email already exists.';
   if (message.includes('password should be at least')) return 'Password must be at least 6 characters long.';
   if (message.includes('invalid email')) return 'Please enter a valid email address.';
+  // Server-side signup gate (Before User Created hook).
+  if (message.includes('not open for new signups')) return 'Stockpile isn\'t open for new signups yet — check back soon. Existing accounts can still sign in.';
   return error?.message || 'An error occurred. Please try again.';
 }
 
