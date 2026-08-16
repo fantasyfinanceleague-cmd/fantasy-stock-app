@@ -35,6 +35,10 @@ import {
   validateTradeDrop,
 } from './draft-validation.ts';
 import { buildCloseWork, type Holding } from '../snapshot-week-end/close.ts';
+// Feasibility-coverage predicate — the SAME pure function the web client imports
+// from @fantasy-stock/shared. Imported here by its repo-relative path so this
+// hermetic suite exercises the real thing, not a copy.
+import { coverageIsPartial, ENRICHMENT_COVERAGE_THRESHOLD } from '../../../packages/shared/constants/index.ts';
 
 // ---------------------------------------------------------------------------
 // Builders
@@ -561,4 +565,127 @@ Deno.test('mid-week add: multiple buys weight the entry price (record-trade shap
   const work = buildCloseWork('lg', 3, userHoldings, [], prices, tradesRows);
   assertEquals(work.inserts.length, 1);
   assertEquals(work.inserts[0].week_start_price, (400 * 1 + 460 * 2) / 3);
+});
+
+// ---------------------------------------------------------------------------
+// is_draftable enforcement (DR-001 draftable universe + allow_undraftable
+// commissioner override). The gate lives in the pure validator so it is tested
+// here; the edge functions pass an EXPLICIT boolean read from symbols.
+// ---------------------------------------------------------------------------
+
+Deno.test('validatePick: a non-draftable symbol is refused by default', () => {
+  freshPicks();
+  const d = validatePick({
+    rules: rules({ numRounds: 3 }), // allowUndraftable undefined -> false
+    slots: [],
+    order: ['a'],
+    picks: [],
+    trades: [],
+    pickerId: 'a',
+    symbol: 'PENNYX', // fresh + unowned: the not_draftable gate is what refuses
+    price: 5,
+    eligibleCategories: NO_CATS,
+    isDraftable: false,
+  });
+  assertEquals(d, { legal: false, reason: 'not_draftable' });
+});
+
+Deno.test('validatePick: allow_undraftable override permits a non-draftable pick', () => {
+  freshPicks();
+  const d = validatePick({
+    rules: rules({ numRounds: 3, allowUndraftable: true }),
+    slots: [],
+    order: ['a'],
+    picks: [],
+    trades: [],
+    pickerId: 'a',
+    symbol: 'PENNYX',
+    price: 5,
+    eligibleCategories: NO_CATS,
+    isDraftable: false,
+  });
+  assert(d.legal);
+});
+
+Deno.test('validatePick: draftability is backward-compatible (undefined stays legal)', () => {
+  freshPicks();
+  // Edge functions always pass an explicit boolean; an OMITTED flag must never
+  // refuse, so every pre-DR-001 test and call site keeps working.
+  const d = validatePick({
+    rules: rules({ numRounds: 3 }),
+    slots: [],
+    order: ['a'],
+    picks: [],
+    trades: [],
+    pickerId: 'a',
+    symbol: 'AAPL',
+    price: 100,
+    eligibleCategories: NO_CATS,
+    // isDraftable omitted
+  });
+  assert(d.legal);
+});
+
+Deno.test('validateTradeAdd: a non-draftable buy is refused by default', () => {
+  freshPicks();
+  const d = validateTradeAdd({
+    rules: rules({ numRounds: 3 }),
+    slots: [],
+    picks: [],
+    trades: [],
+    userId: 'a',
+    symbol: 'PENNYX',
+    price: 5,
+    eligibleCategories: NO_CATS,
+    isDraftable: false,
+  });
+  assertEquals(d, { legal: false, reason: 'not_draftable' });
+});
+
+Deno.test('validateTradeAdd: allow_undraftable override permits a non-draftable buy', () => {
+  freshPicks();
+  const d = validateTradeAdd({
+    rules: rules({ numRounds: 3, allowUndraftable: true }),
+    slots: [],
+    picks: [],
+    trades: [],
+    userId: 'a',
+    symbol: 'PENNYX',
+    price: 5,
+    eligibleCategories: NO_CATS,
+    isDraftable: false,
+  });
+  assert(d.legal);
+});
+
+// ---------------------------------------------------------------------------
+// Slot-feasibility coverage gate — the SAME predicate the clients use to decide
+// whether per-slot counts are trustworthy. Proves counts DISPLAY at full
+// coverage (partial=false) and are suppressed only while coverage is genuinely
+// partial or unknown. Threshold is a named constant, not a magic number.
+// ---------------------------------------------------------------------------
+
+Deno.test('coverageIsPartial: full coverage is NOT partial (counts display)', () => {
+  // ~100% coverage, the current production state (14,453 enriched of 14,453).
+  assertEquals(coverageIsPartial(14453, 14453), false);
+  // Just above the threshold also displays.
+  assertEquals(coverageIsPartial(9100, 10000), false);
+  // Exactly AT the threshold is not partial (strict < in the predicate).
+  assertEquals(coverageIsPartial(9000, 10000), false);
+});
+
+Deno.test('coverageIsPartial: below-threshold or unknown coverage IS partial (suppressed)', () => {
+  // Below 90% coverage -> lower-bound noise, suppress.
+  assertEquals(coverageIsPartial(8999, 10000), true);
+  assertEquals(coverageIsPartial(0, 10000), true);
+  // total 0 (no universe loaded yet) is partial, never a divide-by-zero.
+  assertEquals(coverageIsPartial(0, 0), true);
+});
+
+Deno.test('coverageIsPartial: honors the named threshold constant', () => {
+  assertEquals(ENRICHMENT_COVERAGE_THRESHOLD, 0.9);
+  const total = 1000;
+  const atThreshold = total * ENRICHMENT_COVERAGE_THRESHOLD; // 900
+  assertEquals(coverageIsPartial(atThreshold, total), false, 'exactly at threshold displays');
+  assertEquals(coverageIsPartial(atThreshold - 1, total), true, 'one below threshold suppresses');
 });
