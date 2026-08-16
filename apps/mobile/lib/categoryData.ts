@@ -113,6 +113,9 @@ export async function fetchEnrichmentProgress(): Promise<{ enriched: number; tot
   ]);
   const t = total || 0;
   const e = enriched || 0;
+  // Coverage gate: mirrors @fantasy-stock/shared coverageIsPartial (Metro can't
+  // import the workspace package). enriched/total are the LIVE symbol counts
+  // queried just above; below 90% coverage the per-slot counts are suppressed.
   return { enriched: e, total: t, partial: t === 0 || e < t * 0.9 };
 }
 

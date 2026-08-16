@@ -8,6 +8,7 @@
 // (supabase/functions/_shared/draft-validation.ts). Overrides REPLACE the rule
 // category; unclassified symbols are flex-only.
 import { supabase } from '../supabase/supabaseClient';
+import { coverageIsPartial } from '@fantasy-stock/shared';
 
 export const STAKE_MODE_OPTIONS = [
   {
@@ -97,7 +98,8 @@ export async function fetchEnrichmentProgress() {
   ]);
   const t = total || 0;
   const e = enriched || 0;
-  return { enriched: e, total: t, partial: t === 0 || e < t * 0.9 };
+  // partial reads LIVE coverage (e/t queried above) against the shared threshold.
+  return { enriched: e, total: t, partial: coverageIsPartial(e, t) };
 }
 
 /**

@@ -37,6 +37,18 @@ export const USERNAME_RULES = {
   patternDescription: 'letters, numbers, and underscores',
 };
 
+// Enrichment-coverage feasibility gate. The slot-feasibility per-slot counts read
+// is_draftable / last_price / gics_industry — all populated only by the enrichment
+// cron. Below this fraction of LIVE coverage (enriched / total, both queried live
+// against the symbols table) the counts are near-zero noise, so the client
+// SUPPRESSES them rather than showing misleading lower bounds. Pure so it is
+// hermetically testable; the threshold is a named constant, not a magic number.
+export const ENRICHMENT_COVERAGE_THRESHOLD = 0.9;
+
+export function coverageIsPartial(enriched: number, total: number): boolean {
+  return total === 0 || enriched < total * ENRICHMENT_COVERAGE_THRESHOLD;
+}
+
 // Password validation rules — the SINGLE SOURCE OF TRUTH for both the signup
 // requirements checklist and client-side validation, so the list is never
 // written twice. This MUST match the Supabase Auth password policy
