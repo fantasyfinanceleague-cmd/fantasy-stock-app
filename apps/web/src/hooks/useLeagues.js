@@ -111,6 +111,7 @@ export default function useLeagues() {
       durationDays = 30,
       numWeeks = null,
       playoffTeams = 4,
+      allowUndraftable = false,
     }) => {
       if (!USER_ID) throw new Error('Must be logged in to create a league');
 
@@ -128,6 +129,7 @@ export default function useLeagues() {
           draft_date: draftDate || null,
           num_participants: numParticipants,
           num_rounds: numRounds,
+          allow_undraftable: !!allowUndraftable,
           stake_mode: stakeMode,
           notional_per_slot: Number(notionalPerSlot) || 1000,
           ...(stakeMode === 'budget_cap' && budgetAmount != null

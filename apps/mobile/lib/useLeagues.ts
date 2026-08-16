@@ -10,6 +10,7 @@ export interface League {
   budget_mode: 'budget' | 'no-budget'; // deprecated — stake_mode is authoritative
   stake_mode: 'fixed_notional' | 'price_tiers' | 'budget_cap' | null;
   notional_per_slot: number | null;
+  allow_undraftable: boolean;
   budget_amount: number | null;
   league_type: 'duration' | 'matchup';
   current_week: number;

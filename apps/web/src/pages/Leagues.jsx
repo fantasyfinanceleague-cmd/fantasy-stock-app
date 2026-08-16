@@ -48,6 +48,7 @@ export default function Leagues() {
   const [stakeMode, setStakeMode] = useState('fixed_notional');
   const [notionalPerSlot, setNotionalPerSlot] = useState(String(DEFAULT_NOTIONAL_PER_SLOT));
   const [budgetCap, setBudgetCap] = useState(String(DEFAULT_BUDGET_CAP));
+  const [allowUndraftable, setAllowUndraftable] = useState(false);
   const [slots, setSlots] = useState([]);
   const [categories, setCategories] = useState([]);
   const [participants, setParticipants] = useState(12);
@@ -73,6 +74,7 @@ export default function Leagues() {
   const [updateStakeMode, setUpdateStakeMode] = useState('');
   const [updateNotional, setUpdateNotional] = useState(String(DEFAULT_NOTIONAL_PER_SLOT));
   const [updateBudgetCap, setUpdateBudgetCap] = useState(String(DEFAULT_BUDGET_CAP));
+  const [updateAllowUndraftable, setUpdateAllowUndraftable] = useState(false);
   const [updateSlots, setUpdateSlots] = useState([]);
   const [updateParticipants, setUpdateParticipants] = useState('');
   const [updateRounds, setUpdateRounds] = useState(6);
@@ -127,6 +129,7 @@ export default function Leagues() {
       setUpdateBudgetCap(String(selectedUpdateLeagueObj.budget_amount ?? DEFAULT_BUDGET_CAP));
       setUpdateParticipants(selectedUpdateLeagueObj.num_participants ?? '');
       setUpdateRounds(selectedUpdateLeagueObj.num_rounds ?? 6);
+      setUpdateAllowUndraftable(!!selectedUpdateLeagueObj.allow_undraftable);
       // Existing slot definitions for the builder
       supabase
         .from('league_draft_slots')
@@ -181,6 +184,7 @@ export default function Leagues() {
       durationDays: leagueType === 'duration' ? Number(durationDays) : 30,
       numWeeks: leagueType === 'matchup' ? Math.max(numWeeks, minWeeks) : null,
       playoffTeams: leagueType === 'matchup' ? playoffTeams : null,
+      allowUndraftable,
     });
 
     if (league?.id && slots.length > 0) {
@@ -204,6 +208,7 @@ export default function Leagues() {
     setDurationDays(30);
     setNumWeeks(11);
     setPlayoffTeams(4);
+    setAllowUndraftable(false);
     setActiveTab('leagues');
     toast.success('League created successfully!');
   };
@@ -226,6 +231,7 @@ export default function Leagues() {
       draft_date: updateDraftDate ? new Date(updateDraftDate).toISOString() : null,
       num_participants: updateParticipants === '' ? null : clampParticipants(updateParticipants),
       num_rounds: Number(updateRounds),
+      allow_undraftable: !!updateAllowUndraftable,
     };
     // stake_mode only when chosen — '' (legacy NULL league, no choice yet)
     // leaves the column untouched rather than writing a default the
@@ -653,6 +659,16 @@ export default function Leagues() {
                 </small>
               </div>
 
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#e5e7eb', fontSize: '0.9rem', fontWeight: 500, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={allowUndraftable} onChange={(e) => setAllowUndraftable(e.target.checked)} />
+                  Allow non-draftable stocks (full universe)
+                </label>
+                <small style={{ color: '#6b7280', fontSize: 11, display: 'block', marginTop: 4 }}>
+                  Off (default): only vetted draftable stocks (market-cap / price / exchange floor). On: the entire universe, including penny stocks and micro-caps.
+                </small>
+              </div>
+
               {stakeMode === 'fixed_notional' && (
                 <div style={{ marginBottom: 16 }}>
                   <label style={labelStyle}>Stake per Slot ($)</label>
@@ -890,6 +906,13 @@ export default function Leagues() {
                   </small>
                 </div>
               )}
+
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#e5e7eb', fontSize: '0.9rem', fontWeight: 500, cursor: isDraftLocked ? 'default' : 'pointer', opacity: isDraftLocked ? 0.5 : 1 }}>
+                  <input type="checkbox" checked={updateAllowUndraftable} onChange={(e) => setUpdateAllowUndraftable(e.target.checked)} disabled={isDraftLocked} />
+                  Allow non-draftable stocks (full universe)
+                </label>
+              </div>
 
               <div style={{ marginBottom: 12 }}>
                 <label style={labelStyle}>Roster Slots</label>

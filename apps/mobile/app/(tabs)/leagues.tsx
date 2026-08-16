@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal, TextInput, Alert, ActivityIndicator, Platform, Share } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal, TextInput, Alert, ActivityIndicator, Platform, Share, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/lib/useAuth';
 import { useLeagueContext, League } from '@/lib/LeagueContext';
@@ -61,6 +61,7 @@ export default function LeaguesScreen() {
   const [stakeMode, setStakeMode] = useState<StakeMode>('fixed_notional');
   const [notionalPerSlot, setNotionalPerSlot] = useState(String(DEFAULT_NOTIONAL_PER_SLOT));
   const [budgetCap, setBudgetCap] = useState(String(DEFAULT_BUDGET_CAP));
+  const [allowUndraftable, setAllowUndraftable] = useState(false);
   const [numWeeks, setNumWeeks] = useState(11);
   const [durationDays, setDurationDays] = useState(30);
   const [playoffTeams, setPlayoffTeams] = useState(4);
@@ -171,6 +172,7 @@ export default function LeaguesScreen() {
     setStakeMode('fixed_notional');
     setNotionalPerSlot(String(DEFAULT_NOTIONAL_PER_SLOT));
     setBudgetCap(String(DEFAULT_BUDGET_CAP));
+    setAllowUndraftable(false);
     setNumWeeks(11);
     setDurationDays(30);
     setPlayoffTeams(4);
@@ -217,6 +219,7 @@ export default function LeaguesScreen() {
           // creation (this is the quick-create path).
           stake_mode: stakeMode,
           notional_per_slot: parseInt(notionalPerSlot) || DEFAULT_NOTIONAL_PER_SLOT,
+          allow_undraftable: allowUndraftable,
           ...(stakeMode === 'budget_cap'
             ? { budget_amount: parseInt(budgetCap) || DEFAULT_BUDGET_CAP }
             : {}),
@@ -524,6 +527,21 @@ export default function LeaguesScreen() {
                 />
               </View>
             )}
+
+            {/* Allow non-draftable stocks */}
+            <View style={styles.formGroup}>
+              <View style={styles.undraftableRow}>
+                <Text style={styles.undraftableLabel}>Allow non-draftable stocks (full universe)</Text>
+                <Switch
+                  value={allowUndraftable}
+                  onValueChange={setAllowUndraftable}
+                  trackColor={{ false: Colors.border, true: Colors.primary }}
+                />
+              </View>
+              <Text style={styles.stakeHelp}>
+                Off (default): only vetted draftable stocks. On: the entire universe, including penny stocks and micro-caps.
+              </Text>
+            </View>
 
             {/* League Type */}
             <View style={styles.formGroup}>
@@ -1217,5 +1235,17 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     marginTop: 6,
     lineHeight: 15,
+  },
+  undraftableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  undraftableLabel: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.textPrimary,
   },
 });

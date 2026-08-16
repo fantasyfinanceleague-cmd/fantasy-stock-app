@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator, Platform, ScrollView, KeyboardAvoidingView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator, Platform, ScrollView, KeyboardAvoidingView, Switch } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -49,6 +49,7 @@ export default function LeagueSettingsScreen() {
   const [stakeMode, setStakeMode] = useState<'' | StakeMode>('');
   const [notionalPerSlot, setNotionalPerSlot] = useState(String(DEFAULT_NOTIONAL_PER_SLOT));
   const [budgetCap, setBudgetCap] = useState(String(DEFAULT_BUDGET_CAP));
+  const [allowUndraftable, setAllowUndraftable] = useState(false);
   const [slots, setSlots] = useState<SlotDraft[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   useEffect(() => { fetchCategories().then(setCategories); }, []);
@@ -65,6 +66,7 @@ export default function LeagueSettingsScreen() {
       setStakeMode((league.stake_mode ?? '') as '' | StakeMode);
       setNotionalPerSlot(String(league.notional_per_slot ?? DEFAULT_NOTIONAL_PER_SLOT));
       setBudgetCap(String(league.budget_amount ?? DEFAULT_BUDGET_CAP));
+      setAllowUndraftable(!!league.allow_undraftable);
       loadLeagueSlots(league.id).then(setSlots);
       setNumParticipants(league.num_participants);
       setNumRounds(league.num_rounds);
@@ -120,6 +122,7 @@ export default function LeagueSettingsScreen() {
         draft_date: draftDateTBD ? null : draftDate?.toISOString(),
         num_participants: numParticipants,
         num_rounds: numRounds,
+        allow_undraftable: allowUndraftable,
       };
       if (stakeMode) {
         patch.stake_mode = stakeMode;
@@ -391,6 +394,19 @@ export default function LeagueSettingsScreen() {
                 />
               </View>
             )}
+
+            <View style={styles.undraftableRow}>
+              <Text style={styles.undraftableLabel}>Allow non-draftable stocks (full universe)</Text>
+              <Switch
+                value={allowUndraftable}
+                onValueChange={setAllowUndraftable}
+                disabled={isLocked}
+                trackColor={{ false: Colors.border, true: ACCENT }}
+              />
+            </View>
+            <Text style={styles.stakeHelpText}>
+              Off (default): only vetted draftable stocks. On: the entire universe, including penny stocks and micro-caps.
+            </Text>
           </View>
 
           {/* Roster Slots (Phase 4) */}
@@ -878,5 +894,18 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 10,
     lineHeight: 18,
+  },
+  undraftableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginTop: 12,
+  },
+  undraftableLabel: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.textPrimary,
   },
 });

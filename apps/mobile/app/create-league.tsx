@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator, Platform, Dimensions, KeyboardAvoidingView, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator, Platform, Dimensions, KeyboardAvoidingView, ScrollView, Switch } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
@@ -39,6 +39,7 @@ interface WizardState {
   stakeMode: StakeMode;
   notionalPerSlot: string;
   budgetCap: string;
+  allowUndraftable: boolean;
   slots: SlotDraft[];
   durationDays: number;
   numWeeks: number;
@@ -76,6 +77,7 @@ export default function CreateLeagueWizard() {
     stakeMode: 'fixed_notional',
     notionalPerSlot: String(DEFAULT_NOTIONAL_PER_SLOT),
     budgetCap: String(DEFAULT_BUDGET_CAP),
+    allowUndraftable: false,
     slots: [],
     durationDays: 30,
     numWeeks: 11,
@@ -136,6 +138,7 @@ export default function CreateLeagueWizard() {
           num_rounds: state.numRounds,
           stake_mode: state.stakeMode,
           notional_per_slot: parseInt(state.notionalPerSlot) || DEFAULT_NOTIONAL_PER_SLOT,
+          allow_undraftable: state.allowUndraftable,
           ...(state.stakeMode === 'budget_cap'
             ? { budget_amount: parseInt(state.budgetCap) || DEFAULT_BUDGET_CAP }
             : {}),
@@ -484,6 +487,20 @@ export default function CreateLeagueWizard() {
             </Text>
           </View>
         )}
+
+        <View style={styles.undraftableSection}>
+          <View style={styles.undraftableRow}>
+            <Text style={styles.undraftableLabel}>Allow non-draftable stocks (full universe)</Text>
+            <Switch
+              value={state.allowUndraftable}
+              onValueChange={(value) => setState({ ...state, allowUndraftable: value })}
+              trackColor={{ false: Colors.border, true: ACCENT }}
+            />
+          </View>
+          <Text style={styles.stakeCardHelp}>
+            Off (default): only vetted draftable stocks. On: the entire universe, including penny stocks and micro-caps.
+          </Text>
+        </View>
       </ScrollView>
 
       <TouchableOpacity style={styles.nextButton} onPress={goNext}>
@@ -1357,5 +1374,21 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     marginTop: 4,
     lineHeight: 16,
+  },
+  undraftableSection: {
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  undraftableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  undraftableLabel: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.textPrimary,
   },
 });
