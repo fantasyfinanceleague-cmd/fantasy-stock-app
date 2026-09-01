@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fantasy-stock/shared": "*",
     "@hcaptcha/react-hcaptcha": "^1.14.0",
     "@supabase/supabase-js": "^2.53.0",
     "react": "^19.1.0",
