@@ -164,6 +164,21 @@ function getDayOfWeek(): number {
   return new Date().getDay();
 }
 
+export function getRelativeCountdown(nextWeek: number, holidayInfo?: HolidayInfo | null, phase?: string): string {
+  const info = holidayInfo || isNextMondayHoliday();
+  const day = info.isHoliday ? 'Tuesday' : 'Monday';
+
+  if (phase === 'completed') {
+    return 'Season Complete';
+  }
+
+  if (phase === 'playoffs') {
+    return `Playoffs continue ${day}`;
+  }
+
+  return `Week ${nextWeek} starts ${day}`;
+}
+
 export function getWeekStatus(league: League | null, matchup: Matchup | null): WeekStatus {
   const currentWeek = league?.current_week || 1;
   const numWeeks = league?.num_weeks || 0;
@@ -217,21 +232,6 @@ export function getWeekStatus(league: League | null, matchup: Matchup | null): W
     holidayName: holidayInfo.holidayName,
     nextTradingDay: holidayInfo.nextTradingDay
   };
-}
-
-export function getRelativeCountdown(nextWeek: number, holidayInfo?: HolidayInfo | null, phase?: string): string {
-  const info = holidayInfo || isNextMondayHoliday();
-  const day = info.isHoliday ? 'Tuesday' : 'Monday';
-
-  if (phase === 'completed') {
-    return 'Season Complete';
-  }
-
-  if (phase === 'playoffs') {
-    return `Playoffs continue ${day}`;
-  }
-
-  return `Week ${nextWeek} starts ${day}`;
 }
 
 export function getPlayoffRoundLabel(round: string | null | undefined): string | null {

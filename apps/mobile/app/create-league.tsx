@@ -1,6 +1,7 @@
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator, Platform, Dimensions, KeyboardAvoidingView, ScrollView } from 'react-native';
+/* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator, Platform, Dimensions, KeyboardAvoidingView, ScrollView, Switch } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -10,6 +11,18 @@ import { useLeagueContext } from '@/lib/LeagueContext';
 import { supabase } from '@/lib/supabase';
 import { validateLeagueName } from '@/lib/contentModeration';
 import { generateInviteCode } from '@/lib/inviteCode';
+import SlotBuilder from '@/components/SlotBuilder';
+import {
+  type Category,
+  type SlotDraft,
+  type StakeMode,
+  DEFAULT_BUDGET_CAP,
+  DEFAULT_NOTIONAL_PER_SLOT,
+  STAKE_MODE_OPTIONS,
+  fetchCategories,
+  saveLeagueSlots,
+  validateSlotConfig,
+} from '@/lib/categoryData';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -18,14 +31,17 @@ const ACCENT = Colors.primary; // #3b82f6 - Blue
 const ACCENT_BG = Colors.primaryBg; // rgba(59, 130, 246, 0.2)
 const ACCENT_LIGHT = Colors.primaryLight; // #60a5fa
 
-type Step = 'welcome' | 'name' | 'type' | 'size' | 'budget' | 'duration' | 'matchup' | 'draft';
+type Step = 'welcome' | 'name' | 'type' | 'size' | 'stake' | 'slots' | 'duration' | 'matchup' | 'draft';
 
 interface WizardState {
   name: string;
   type: 'matchup' | 'duration';
   size: number;
-  budgetMode: 'budget' | 'no-budget';
-  budgetAmount: string;
+  stakeMode: StakeMode;
+  notionalPerSlot: string;
+  budgetCap: string;
+  allowUndraftable: boolean;
+  slots: SlotDraft[];
   durationDays: number;
   numWeeks: number;
   playoffTeams: number;
@@ -43,12 +59,18 @@ export default function CreateLeagueWizard() {
   const [creating, setCreating] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
+  const [categories, setCategories] = useState<Category[]>([]);
+  useEffect(() => { fetchCategories().then(setCategories); }, []);
+
   const [state, setState] = useState<WizardState>({
     name: '',
     type: 'matchup',
     size: 8,
-    budgetMode: 'budget',
-    budgetAmount: '100000',
+    stakeMode: 'fixed_notional',
+    notionalPerSlot: String(DEFAULT_NOTIONAL_PER_SLOT),
+    budgetCap: String(DEFAULT_BUDGET_CAP),
+    allowUndraftable: false,
+    slots: [],
     durationDays: 30,
     numWeeks: 11,
     playoffTeams: 4,
@@ -59,7 +81,7 @@ export default function CreateLeagueWizard() {
 
   const minWeeks = state.size - 1;
   const getPlayoffOptions = () => {
-    const allOptions = [2, 4, 8];
+    const allOptions = [2, 4, 8]; // DB CHECK: playoff_teams NULL or in (2,4,8)
     return allOptions.filter(o => o < state.size);
   };
 
@@ -72,41 +94,16 @@ export default function CreateLeagueWizard() {
       case 'name': setStep('welcome'); break;
       case 'type': setStep('name'); break;
       case 'size': setStep('type'); break;
-      case 'budget': setStep('size'); break;
-      case 'duration': setStep('budget'); break;
-      case 'matchup': setStep('budget'); break;
+      case 'stake': setStep('size'); break;
+      case 'slots': setStep('stake'); break;
+      case 'duration': setStep(state.stakeMode === 'price_tiers' ? 'slots' : 'stake'); break;
+      case 'matchup': setStep(state.stakeMode === 'price_tiers' ? 'slots' : 'stake'); break;
       case 'draft': setStep(state.type === 'duration' ? 'duration' : 'matchup'); break;
     }
   };
 
   const handleClose = () => {
     router.dismiss();
-  };
-
-  const goNext = () => {
-    switch (step) {
-      case 'welcome': setStep('name'); break;
-      case 'name':
-        if (!state.name.trim()) {
-          Alert.alert('Required', 'Please enter a league name');
-          return;
-        }
-        const contentCheck = validateLeagueName(state.name.trim());
-        if (!contentCheck.isValid) {
-          Alert.alert('Error', contentCheck.reason || 'League name is not allowed');
-          return;
-        }
-        setStep('type');
-        break;
-      case 'type': setStep('size'); break;
-      case 'size': setStep('budget'); break;
-      case 'budget':
-        setStep(state.type === 'duration' ? 'duration' : 'matchup');
-        break;
-      case 'duration': setStep('draft'); break;
-      case 'matchup': setStep('draft'); break;
-      case 'draft': handleCreate(); break;
-    }
   };
 
   const handleCreate = async () => {
@@ -117,10 +114,12 @@ export default function CreateLeagueWizard() {
 
     setCreating(true);
     try {
-      const capDisabled = state.budgetMode === 'no-budget';
-      const budget = capDisabled ? null : (parseInt(state.budgetAmount) || 100000);
       const effectiveWeeks = state.type === 'matchup' ? Math.max(state.numWeeks, minWeeks) : null;
 
+      // stake_mode is authoritative. budget_mode is deprecated and no longer
+      // written (DB default applies); salary_cap_limit is retired — drop
+      // migration authored on this branch. budget_amount only means anything
+      // in budget_cap mode.
       const { data: league, error: leagueError } = await supabase
         .from('leagues')
         .insert({
@@ -129,9 +128,12 @@ export default function CreateLeagueWizard() {
           invite_code: generateInviteCode(),
           num_participants: state.size,
           num_rounds: state.numRounds,
-          budget_mode: state.budgetMode,
-          budget_amount: budget || 100000,
-          salary_cap_limit: budget,
+          stake_mode: state.stakeMode,
+          notional_per_slot: parseInt(state.notionalPerSlot) || DEFAULT_NOTIONAL_PER_SLOT,
+          allow_undraftable: state.allowUndraftable,
+          ...(state.stakeMode === 'budget_cap'
+            ? { budget_amount: parseInt(state.budgetCap) || DEFAULT_BUDGET_CAP }
+            : {}),
           league_type: state.type,
           duration_days: state.type === 'duration' ? state.durationDays : 30,
           num_weeks: effectiveWeeks,
@@ -154,6 +156,15 @@ export default function CreateLeagueWizard() {
 
       if (memberError) throw memberError;
 
+      if (state.slots.length > 0) {
+        try {
+          await saveLeagueSlots(league.id, state.slots);
+        } catch (slotErr) {
+          console.error('Slot save failed:', slotErr);
+          Alert.alert('Heads up', 'League created, but roster slots failed to save — edit them in League Settings.');
+        }
+      }
+
       await refresh();
       setActiveLeagueId(league.id);
 
@@ -171,6 +182,48 @@ export default function CreateLeagueWizard() {
       Alert.alert('Error', error.message || 'Failed to create league');
     } finally {
       setCreating(false);
+    }
+  };
+
+  const goNext = () => {
+    switch (step) {
+      case 'welcome': setStep('name'); break;
+      case 'name':
+        if (!state.name.trim()) {
+          Alert.alert('Required', 'Please enter a league name');
+          return;
+        }
+        const contentCheck = validateLeagueName(state.name.trim());
+        if (!contentCheck.isValid) {
+          Alert.alert('Error', contentCheck.reason || 'League name is not allowed');
+          return;
+        }
+        setStep('type');
+        break;
+      case 'type': setStep('size'); break;
+      case 'size': setStep('stake'); break;
+      case 'stake':
+        // Price tiers NEED slot brackets (they are the anti-skew mechanism);
+        // other modes go straight on — category slots stay optional via
+        // league settings.
+        setStep(state.stakeMode === 'price_tiers' ? 'slots' : (state.type === 'duration' ? 'duration' : 'matchup'));
+        break;
+      case 'slots': {
+        if (state.slots.length === 0) {
+          Alert.alert('Add a slot', 'Price tiers need at least one slot with a price bracket.');
+          break;
+        }
+        const slotErrors = validateSlotConfig(state.slots, state.numRounds);
+        if (slotErrors.length > 0) {
+          Alert.alert('Fix roster slots', slotErrors[0]);
+          break;
+        }
+        setStep(state.type === 'duration' ? 'duration' : 'matchup');
+        break;
+      }
+      case 'duration': setStep('draft'); break;
+      case 'matchup': setStep('draft'); break;
+      case 'draft': handleCreate(); break;
     }
   };
 
@@ -286,9 +339,13 @@ export default function CreateLeagueWizard() {
   );
 
   const renderSize = () => {
+    // DB CHECK leagues_num_participants_range (20250819185319): 4-16.
+    // The old duration list offered 2, which the insert could never satisfy
+    // (BUG 4). Small groups reach the minimum with bots (DraftPage
+    // fillWithBots), so 4 is the floor for both league types.
     const sizes = state.type === 'matchup'
       ? [4, 6, 8, 10, 12, 14, 16]  // Even numbers for matchups
-      : [2, 4, 6, 8, 10, 12, 14, 16];
+      : [4, 6, 8, 10, 12, 14, 16];
 
     return (
       <View style={styles.stepContainer}>
@@ -308,6 +365,32 @@ export default function CreateLeagueWizard() {
               </TouchableOpacity>
             ))}
           </View>
+
+          {/* Stocks per team lives HERE (not the final step) so the slots
+              step that follows can validate capacity against the real value —
+              it used to sit in renderDraft, after slots, so the builder
+              compared against the default 6 (BUG 2a). */}
+          <View style={styles.settingSection}>
+            <Text style={styles.settingLabel}>Stocks Per Team</Text>
+            <View style={styles.stepper}>
+              <TouchableOpacity
+                style={styles.stepperBtn}
+                onPress={() => setState({ ...state, numRounds: Math.max(3, state.numRounds - 1) })}
+              >
+                <Ionicons name="remove" size={24} color={Colors.textPrimary} />
+              </TouchableOpacity>
+              <View style={styles.stepperValue}>
+                <Text style={styles.stepperValueText}>{state.numRounds}</Text>
+                <Text style={styles.stepperValueLabel}>stocks</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.stepperBtn}
+                onPress={() => setState({ ...state, numRounds: Math.min(12, state.numRounds + 1) })}
+              >
+                <Ionicons name="add" size={24} color={Colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
 
         <TouchableOpacity style={styles.nextButton} onPress={goNext}>
@@ -317,66 +400,99 @@ export default function CreateLeagueWizard() {
     );
   };
 
-  const renderBudget = () => (
+  const renderStake = () => (
     <KeyboardAvoidingView
       style={styles.stepContainer}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
-        <Text style={styles.stepSubtitle}>How much can each team spend?</Text>
+        <Text style={styles.stepSubtitle}>How do teams stake their picks?</Text>
 
-        <View style={styles.cardRow}>
+        {STAKE_MODE_OPTIONS.map((opt) => (
           <TouchableOpacity
-            style={[styles.budgetCard, state.budgetMode === 'budget' && styles.budgetCardSelected]}
-            onPress={() => setState({ ...state, budgetMode: 'budget' })}
+            key={opt.value}
+            style={[styles.budgetCard, styles.stakeCard, state.stakeMode === opt.value && styles.budgetCardSelected]}
+            onPress={() => setState({ ...state, stakeMode: opt.value })}
           >
-            <Ionicons name="wallet" size={28} color={state.budgetMode === 'budget' ? ACCENT : Colors.textMuted} />
-            <Text style={[styles.budgetCardTitle, state.budgetMode === 'budget' && styles.budgetCardTitleSelected]}>
-              Salary Cap
-            </Text>
+            <Ionicons
+              name={opt.icon as keyof typeof Ionicons.glyphMap}
+              size={24}
+              color={state.stakeMode === opt.value ? ACCENT : Colors.textMuted}
+            />
+            <View style={styles.stakeCardBody}>
+              <Text style={[styles.budgetCardTitle, state.stakeMode === opt.value && styles.budgetCardTitleSelected]}>
+                {opt.label}
+              </Text>
+              <Text style={styles.stakeCardHelp}>{opt.help}</Text>
+            </View>
           </TouchableOpacity>
+        ))}
 
-          <TouchableOpacity
-            style={[styles.budgetCard, state.budgetMode === 'no-budget' && styles.budgetCardSelected]}
-            onPress={() => setState({ ...state, budgetMode: 'no-budget' })}
-          >
-            <Ionicons name="infinite" size={28} color={state.budgetMode === 'no-budget' ? ACCENT : Colors.textMuted} />
-            <Text style={[styles.budgetCardTitle, state.budgetMode === 'no-budget' && styles.budgetCardTitleSelected]}>
-              No Limit
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {state.budgetMode === 'budget' && (
+        {state.stakeMode === 'fixed_notional' && (
           <View style={styles.amountSection}>
-            <Text style={styles.amountLabel}>Budget Amount</Text>
+            <Text style={styles.amountLabel}>Stake per Slot</Text>
             <View style={styles.amountInputContainer}>
               <Text style={styles.currencySymbol}>$</Text>
               <TextInput
                 style={styles.amountInput}
-                value={state.budgetAmount}
-                onChangeText={(text) => setState({ ...state, budgetAmount: text.replace(/[^0-9]/g, '') })}
+                value={state.notionalPerSlot}
+                onChangeText={(text) => setState({ ...state, notionalPerSlot: text.replace(/[^0-9]/g, '') })}
                 keyboardType="numeric"
-                placeholder="100000"
+                placeholder={String(DEFAULT_NOTIONAL_PER_SLOT)}
                 placeholderTextColor={Colors.textDark}
               />
             </View>
+            <Text style={styles.stakeCardHelp}>Each pick simulates this dollar amount (fractional shares).</Text>
+          </View>
+        )}
 
+        {state.stakeMode === 'budget_cap' && (
+          <View style={styles.amountSection}>
+            <Text style={styles.amountLabel}>Budget Cap</Text>
+            <View style={styles.amountInputContainer}>
+              <Text style={styles.currencySymbol}>$</Text>
+              <TextInput
+                style={styles.amountInput}
+                value={state.budgetCap}
+                onChangeText={(text) => setState({ ...state, budgetCap: text.replace(/[^0-9]/g, '') })}
+                keyboardType="numeric"
+                placeholder={String(DEFAULT_BUDGET_CAP)}
+                placeholderTextColor={Colors.textDark}
+              />
+            </View>
             <View style={styles.presetRow}>
-              {['50000', '100000', '250000', '500000'].map((amount) => (
+              {['1000', '2500', '5000', '10000'].map((amount) => (
                 <TouchableOpacity
                   key={amount}
-                  style={[styles.presetButton, state.budgetAmount === amount && styles.presetButtonSelected]}
-                  onPress={() => setState({ ...state, budgetAmount: amount })}
+                  style={[styles.presetButton, state.budgetCap === amount && styles.presetButtonSelected]}
+                  onPress={() => setState({ ...state, budgetCap: amount })}
                 >
-                  <Text style={[styles.presetButtonText, state.budgetAmount === amount && styles.presetButtonTextSelected]}>
+                  <Text style={[styles.presetButtonText, state.budgetCap === amount && styles.presetButtonTextSelected]}>
                     ${parseInt(amount).toLocaleString()}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
+            <Text style={styles.stakeCardHelp}>
+              One share per pick; the sum of your roster's share prices must fit under the cap.
+              Keep it tight — a loose cap never shapes the draft.
+            </Text>
           </View>
         )}
+
+        <View style={styles.undraftableSection}>
+          <View style={styles.undraftableRow}>
+            <Text style={styles.undraftableLabel}>Allow non-draftable stocks (full universe)</Text>
+            <Switch
+              value={state.allowUndraftable}
+              onValueChange={(value) => setState({ ...state, allowUndraftable: value })}
+              trackColor={{ false: Colors.border, true: ACCENT }}
+            />
+          </View>
+          <Text style={styles.stakeCardHelp}>
+            Off (default): only vetted draftable stocks. On: the entire universe, including penny stocks and micro-caps.
+          </Text>
+        </View>
       </ScrollView>
 
       <TouchableOpacity style={styles.nextButton} onPress={goNext}>
@@ -385,7 +501,39 @@ export default function CreateLeagueWizard() {
     </KeyboardAvoidingView>
   );
 
+  const renderSlots = () => (
+    <View style={styles.stepContainer}>
+      <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
+        <Text style={styles.stepSubtitle}>
+          Define your price tiers. Each slot is a price bracket (and optionally a category);
+          a slot with no filters is flex.
+        </Text>
+        <SlotBuilder
+          slots={state.slots}
+          onChange={(slots) => setState({ ...state, slots })}
+          categories={categories}
+          leagueSize={state.size}
+          numRounds={state.numRounds}
+        />
+      </ScrollView>
+
+      {(() => {
+        const blocked = state.slots.length === 0 || validateSlotConfig(state.slots, state.numRounds).length > 0;
+        return (
+          <TouchableOpacity
+            style={[styles.nextButton, blocked && styles.nextButtonDisabled]}
+            onPress={goNext}
+            disabled={blocked}
+          >
+            <Text style={styles.nextButtonText}>Next</Text>
+          </TouchableOpacity>
+        );
+      })()}
+    </View>
+  );
+
   const renderDuration = () => {
+    // values = DB CHECK leagues_duration_days_check in (7,30,90,180,365)
     const durations = [
       { value: 7, label: '1 Week', desc: 'Quick game' },
       { value: 30, label: '1 Month', desc: 'Standard' },
@@ -489,28 +637,6 @@ export default function CreateLeagueWizard() {
         <Text style={styles.stepSubtitle}>Final step - set up your draft</Text>
 
         <View style={styles.settingSection}>
-          <Text style={styles.settingLabel}>Stocks Per Team</Text>
-          <View style={styles.stepper}>
-            <TouchableOpacity
-              style={styles.stepperBtn}
-              onPress={() => setState({ ...state, numRounds: Math.max(3, state.numRounds - 1) })}
-            >
-              <Ionicons name="remove" size={24} color={Colors.textPrimary} />
-            </TouchableOpacity>
-            <View style={styles.stepperValue}>
-              <Text style={styles.stepperValueText}>{state.numRounds}</Text>
-              <Text style={styles.stepperValueLabel}>stocks</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.stepperBtn}
-              onPress={() => setState({ ...state, numRounds: Math.min(12, state.numRounds + 1) })}
-            >
-              <Ionicons name="add" size={24} color={Colors.textPrimary} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={styles.settingSection}>
           <Text style={styles.settingLabel}>Draft Date & Time</Text>
 
           {/* TBD Option */}
@@ -598,9 +724,11 @@ export default function CreateLeagueWizard() {
             <Text style={styles.summaryValue}>{state.size}</Text>
           </View>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Budget</Text>
+            <Text style={styles.summaryLabel}>Stakes</Text>
             <Text style={styles.summaryValue}>
-              {state.budgetMode === 'budget' ? `$${parseInt(state.budgetAmount).toLocaleString()}` : 'No limit'}
+              {state.stakeMode === 'fixed_notional' && `Equal • $${(parseInt(state.notionalPerSlot) || DEFAULT_NOTIONAL_PER_SLOT).toLocaleString()}/slot`}
+              {state.stakeMode === 'price_tiers' && `Price tiers • ${state.slots.length} slot${state.slots.length === 1 ? '' : 's'}`}
+              {state.stakeMode === 'budget_cap' && `Cap • $${(parseInt(state.budgetCap) || DEFAULT_BUDGET_CAP).toLocaleString()}`}
             </Text>
           </View>
           <View style={[styles.summaryRow, { borderBottomWidth: 0 }]}>
@@ -632,7 +760,8 @@ export default function CreateLeagueWizard() {
       case 'name': return renderName();
       case 'type': return renderType();
       case 'size': return renderSize();
-      case 'budget': return renderBudget();
+      case 'stake': return renderStake();
+      case 'slots': return renderSlots();
       case 'duration': return renderDuration();
       case 'matchup': return renderMatchup();
       case 'draft': return renderDraft();
@@ -656,7 +785,8 @@ export default function CreateLeagueWizard() {
             {step === 'name' && 'Name your league'}
             {step === 'type' && 'League Type'}
             {step === 'size' && 'League Size'}
-            {step === 'budget' && 'Budget'}
+            {step === 'stake' && 'Stakes'}
+            {step === 'slots' && 'Roster Slots'}
             {step === 'duration' && 'Duration'}
             {step === 'matchup' && 'Season Settings'}
             {step === 'draft' && 'Draft Settings'}
@@ -1221,5 +1351,36 @@ const styles = StyleSheet.create({
     color: Colors.warning,
     marginTop: 8,
     fontStyle: 'italic',
+  },
+  // Phase 4 stake-mode cards
+  stakeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    width: '100%',
+    marginBottom: 10,
+  },
+  stakeCardBody: { flex: 1 },
+  stakeCardHelp: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    marginTop: 4,
+    lineHeight: 16,
+  },
+  undraftableSection: {
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  undraftableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  undraftableLabel: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.textPrimary,
   },
 });

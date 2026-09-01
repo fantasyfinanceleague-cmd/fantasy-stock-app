@@ -74,6 +74,22 @@ function getDayOfWeek() {
 }
 
 /**
+ * Get relative countdown text for the next week
+ * @param {number} nextWeek - The upcoming week number
+ * @param {Object} holidayInfo - Holiday information from isNextMondayHoliday()
+ * @returns {string}
+ */
+export function getRelativeCountdown(nextWeek, holidayInfo = null) {
+  const info = holidayInfo || isNextMondayHoliday();
+
+  if (info.isHoliday) {
+    return `Week ${nextWeek} starts Tuesday`;
+  }
+
+  return `Week ${nextWeek} starts Monday`;
+}
+
+/**
  * Determine the week status for a matchup league
  * @param {Object} league - League object with current_week, num_weeks
  * @param {Object} matchup - Current matchup object with winner_user_id, team1_gain, team2_gain
@@ -129,22 +145,6 @@ export function getWeekStatus(league, matchup) {
     holidayName: holidayInfo.holidayName,
     nextTradingDay: holidayInfo.nextTradingDay
   };
-}
-
-/**
- * Get relative countdown text for the next week
- * @param {number} nextWeek - The upcoming week number
- * @param {Object} holidayInfo - Holiday information from isNextMondayHoliday()
- * @returns {string}
- */
-export function getRelativeCountdown(nextWeek, holidayInfo = null) {
-  const info = holidayInfo || isNextMondayHoliday();
-
-  if (info.isHoliday) {
-    return `Week ${nextWeek} starts Tuesday`;
-  }
-
-  return `Week ${nextWeek} starts Monday`;
 }
 
 /**

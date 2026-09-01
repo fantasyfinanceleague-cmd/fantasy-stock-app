@@ -124,6 +124,7 @@ Deno.serve(async (req: Request) => {
         current_members: current,
         budget_mode: league.budget_mode,
         budget_amount: league.budget_amount,
+        stake_mode: league.stake_mode,
         duration_days: league.duration_days,
         num_weeks: league.num_weeks,
         draft_date: league.draft_date,

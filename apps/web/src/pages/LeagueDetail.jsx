@@ -4,6 +4,7 @@ import { supabase } from '../supabase/supabaseClient';
 import { useAuthUser } from '../auth/useAuthUser';
 import { useUserProfiles } from '../context/UserProfilesContext';
 import { useToast } from '../components/Toast';
+import { stakeModeLabel } from '../utils/categoryData';
 
 export default function LeagueDetail() {
   const { leagueId } = useParams();
@@ -211,9 +212,9 @@ export default function LeagueDetail() {
             <div style={{ color: '#fff', fontWeight: 600 }}>{league.current_week || 1} / {league.num_weeks || '-'}</div>
           </div>
         )}
-        {league.budget_mode === 'budget' && (
+        {league.stake_mode === 'budget_cap' && (
           <div style={statBoxStyle}>
-            <div style={{ color: '#6b7280', fontSize: 12, marginBottom: 4 }}>Budget</div>
+            <div style={{ color: '#6b7280', fontSize: 12, marginBottom: 4 }}>Budget Cap</div>
             <div style={{ color: '#fff', fontWeight: 600 }}>${(league.budget_amount || 100000).toLocaleString()}</div>
           </div>
         )}
@@ -301,8 +302,8 @@ export default function LeagueDetail() {
               </>
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#6b7280' }}>Budget Mode</span>
-              <span style={{ color: '#fff' }}>{league.budget_mode === 'budget' ? 'Budget' : 'No Budget'}</span>
+              <span style={{ color: '#6b7280' }}>Stake Mode</span>
+              <span style={{ color: '#fff' }}>{stakeModeLabel(league.stake_mode)}</span>
             </div>
           </div>
         </div>

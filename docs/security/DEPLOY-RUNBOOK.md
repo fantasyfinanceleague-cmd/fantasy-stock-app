@@ -1,3 +1,5 @@
+> ⚠️ **PARTLY SUPERSEDED — merge of main, 2026-09-01.** Phase C (F12 / `place-order`) is OBSOLETE: main deleted `place-order` (DR-001 in-house simulator) and already applied the trades policy drop (`20260811000002`). The only pending migrations from this branch are now `20260730000000` (F1) and `20260730000001` (F6); `20260730000004` and `20260728000002` were dropped as duplicates of applied main migrations. F5's cron reschedule is likewise already applied (`20260811000000`) — deploying `refresh-symbols` (flag off + guard) is what makes it work. Read the rest with that in mind.
+
 # Deploy runbook — security fixes (branch `security/claude-security-fixes-20260730`)
 
 Turnkey, ordered checklist to ship the 10 in-code fixes from the 2026-07-30 Claude

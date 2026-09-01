@@ -18,14 +18,14 @@ Fixes landed on branch `security/claude-security-fixes-20260730` (commit 2dd699f
 | F2 | HIGH | ✅ fixed in code | `apps/mobile/lib/recoveryNonce.ts` + `_layout.tsx` + `forgot-password.tsx` — needs redirect-allowlist config (see Deploy) |
 | F3 | MED | ✅ fixed in code | `apps/web/src/utils/inviteCode.js`, `apps/mobile/lib/inviteCode.ts` |
 | F4 | MED | ✅ fixed in code | (closed by F3 — shared CSPRNG helpers) |
-| F5 | MED | ✅ fixed in code | `refresh-symbols/index.ts` + `config.toml` (apikey gate, verify_jwt=false) |
+| F5 | MED | ✅ fixed in code | `refresh-symbols/index.ts` + `config.toml` (apikey gate, verify_jwt=false). **Merge 2026-09-01:** main's `20260811000000` (applied) already sends the cron apikey but left verify_jwt=true with no guard, so it still 401s — this branch's flip + guard completes it. This branch's duplicate cron migration `20260728000002` was dropped. |
 | F6 | MED | ✅ fixed in code | migration `20260730000001` (league_standings INSERT bounded to zero) |
 | **F7** | MED | ❌ **TODO** | push-token send authorization — see below |
 | **F8** | MED | ❌ **TODO** | push-token relocation — see below (same work as F7) |
 | F9 | MED | ✅ fixed in code | `historical-bars/index.ts` (date validation + encoding) |
 | **F10** | MED | ❌ **TODO** | matchup schedule forgery — see below |
 | F11 | MED | ✅ fixed in code | (closed by F1 — same policy trigger) |
-| F12 | LOW | ✅ fixed in code | `place-order/index.ts` + migration `20260730000004` + both TradeModals + DraftPage |
+| F12 | LOW | ✅ **superseded by main** | `place-order` was deleted on main (DR-001 in-house simulator; trades now go through `record-trade` / `validate-and-record-pick`), and main's applied `20260811000002` drops the same client `trades` INSERT policy. This branch's `20260730000004` and its client edits were dropped in the 2026-09-01 merge. |
 | F13 | LOW | ✅ fixed in code | `apps/mobile/app/(tabs)/profile.tsx` (re-auth gate) |
 
 ---
@@ -128,9 +128,9 @@ interim policy can be retired.
 
 These are code-only until deployed (per the repo's prod/secret handoff model):
 
-1. **F12:** deploy `place-order` **before** `supabase db push` of `20260730000004`
+1. ~~**F12:** deploy `place-order` **before** `supabase db push` of `20260730000004`~~ **OBSOLETE (2026-09-01): `place-order` no longer exists and the policy drop is already applied on main. Nothing to deploy.**
    (else trades briefly fail to record in the gap).
-2. **F5:** deploy `refresh-symbols`; confirm the `verify_jwt` true→false flip took (a
+2. **F5:** deploy `refresh-symbols`; confirm the `verify_jwt` true→false flip took (a — **the cron reschedule is already applied by main's `20260811000000`; this deploy is the missing half that lets its apikey through** — a
    no-credential request must hit OUR 401 JSON, not the gateway's generic 401); then
    reschedule the daily `refresh_symbols_daily` cron to send the `apikey` from
    `vault.decrypted_secrets`.

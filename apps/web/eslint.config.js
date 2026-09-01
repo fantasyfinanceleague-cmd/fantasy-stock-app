@@ -24,6 +24,9 @@ export default defineConfig([
     },
     rules: {
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // TDZ guard: flag use-before-define of let/const/class (variables:true),
+      // per the 2026-08-11 Leagues.jsx `selectedUpdateLeagueObj` crash.
+      'no-use-before-define': ['error', { variables: true }],
     },
   },
 ])

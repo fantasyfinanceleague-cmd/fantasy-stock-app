@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Stockpile pre-commit secret scan (gitleaks). Scans ONLY staged changes.
+# Setup + bypass are documented in CLAUDE.md ("Secret scanning").
+set -euo pipefail
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "✖ gitleaks is not installed — the secret scanner cannot run."
+  echo "  Install it (macOS):  brew install gitleaks"
+  echo "  Then this hook will scan staged changes on every commit."
+  echo "  (Emergency bypass, use sparingly:  git commit --no-verify)"
+  exit 1
+fi
+
+if ! gitleaks protect --staged --redact --no-banner --config .gitleaks.toml; then
+  echo ""
+  echo "✖ gitleaks found a potential secret in your STAGED changes (blocked)."
+  echo "  • False positive / known-safe? add it to .gitleaks.toml [allowlist]."
+  echo "  • Real secret? remove it, and ROTATE it if it was ever committed."
+  echo "  • Emergency bypass (use sparingly):  git commit --no-verify"
+  exit 1
+fi

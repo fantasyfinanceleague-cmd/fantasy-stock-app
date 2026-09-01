@@ -32,7 +32,6 @@ export default function TradeModal({
   const [error, setError] = useState('');
   const [quote, setQuote] = useState(null);
   const [companyName, setCompanyName] = useState('');
-  const [hasAlpacaLinked, setHasAlpacaLinked] = useState(null); // null = loading, true/false = result
 
   // Search state
   const [searchResults, setSearchResults] = useState([]);
@@ -40,24 +39,6 @@ export default function TradeModal({
   const [showSearchResults, setShowSearchResults] = useState(false);
   const searchTimeoutRef = useRef(null);
   const searchContainerRef = useRef(null);
-
-  // Check if user has Alpaca account linked
-  useEffect(() => {
-    if (!show || !userId) return;
-
-    async function checkAlpacaLink() {
-      const { data, error } = await supabase
-        .from('broker_credentials')
-        .select('key_id')
-        .eq('user_id', userId)
-        .eq('broker', 'alpaca')
-        .single();
-
-      setHasAlpacaLinked(!error && !!data);
-    }
-
-    checkAlpacaLink();
-  }, [show, userId]);
 
   // Reset state when modal opens
   useEffect(() => {
@@ -233,85 +214,42 @@ export default function TradeModal({
   const canAfford = !isBudgetMode || (action === 'sell' || totalValue <= availableCash);
   const hasEnoughShares = action === 'buy' || ownedQuantity >= quantity;
 
+  // Refusal reasons from record-trade, mapped to user-facing copy.
+  const TRADE_REFUSAL_MESSAGES = {
+    draft_not_completed: 'Trading opens after the draft completes.',
+    symbol_owned: 'That stock is already owned in this league.',
+    not_draftable: "That stock isn't in this league's draftable universe.",
+    roster_full: 'Your roster is full — drop a stock first.',
+    no_eligible_slot: 'No open roster slot accepts a stock at this price.',
+    over_budget: 'That stock is over your remaining budget.',
+    not_owned: "You don't own that stock.",
+    no_price: 'No recent price available for that stock.',
+    rate_limited: 'Too many trades too quickly — wait a moment and try again.',
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-
-    if (!quote) {
-      setError('Please enter a valid symbol');
-      return;
-    }
-
-    if (!canAfford) {
-      setError(`Insufficient funds. You have $${availableCash.toFixed(2)} available.`);
-      return;
-    }
-
-    if (!hasEnoughShares) {
-      setError(`You only own ${ownedQuantity} shares of ${symbol.toUpperCase()}`);
-      return;
-    }
-
+    // Phase 3 (DR-001): trades go through the record-trade edge function —
+    // the in-house simulator fill path (app-key quote, server-side legality).
+    // The server computes quantity per stake mode and a sell always drops the
+    // ENTIRE position (freeing the symbol league-wide); the local quantity
+    // input is a display-only estimate until the Phase 4 UI pass.
+    if (!symbol) return;
     setLoading(true);
-
+    setError('');
     try {
-      const upperSymbol = symbol.toUpperCase();
-
-      // 1) Place paper order via Alpaca Edge Function. The server records the
-      //    resulting trade from Alpaca's actual fill values, so league_id is
-      //    required and the client no longer inserts into `trades` directly.
-      const { data: placeData, error: placeErr } = await supabase.functions.invoke('place-order', {
-        body: {
-          symbol: upperSymbol,
-          qty: quantity,
-          side: action, // 'buy' or 'sell'
-          type: 'market',
-          time_in_force: 'day',
-          league_id: leagueId,
-        },
+      const { data, error: fnError } = await supabase.functions.invoke('record-trade', {
+        body: { league_id: leagueId, symbol: symbol.trim().toUpperCase(), action },
       });
-
-      // Handle Alpaca errors
-      if (placeErr || placeData?.error) {
-        console.error('place-order failed:', placeErr || placeData);
-
-        // Check for specific error types
-        if (placeData?.error === 'credentials_invalid') {
-          setError(placeData.message || 'Your Alpaca credentials are invalid or expired. Please update them in your Profile.');
-          return;
-        }
-
-        if (placeData?.error === 'insufficient_funds') {
-          setError(placeData.message || 'Insufficient buying power in your Alpaca account.');
-          return;
-        }
-
-        if (placeData?.error === 'no_credentials') {
-          setError(placeData.message || 'Please link your Alpaca account in Profile settings.');
-          return;
-        }
-
-        // For other Alpaca errors, stop - don't record a trade that didn't happen
-        setError(placeData?.message || 'Trade failed. Please try again.');
+      if (fnError) throw fnError;
+      if (!data?.ok) {
+        setError(TRADE_REFUSAL_MESSAGES[data?.reason] || 'Trade was refused.');
         return;
       }
-
-      // 2) The server records the trade from Alpaca's actual fill values.
-      //    If it did not record, the order did not complete as a persisted
-      //    trade — surface that as an error rather than silently succeeding.
-      if (placeData?.trade_recorded !== true) {
-        setError(placeData?.message || 'Trade could not be recorded. Please try again.');
-        return;
-      }
-
-      // Call parent callback to refresh data
-      if (onTradeComplete) {
-        await onTradeComplete();
-      }
-
+      onTradeComplete();
       onClose();
-    } catch (err) {
-      setError(err.message || 'Failed to execute trade');
+    } catch (_e) {
+      setError('Failed to submit trade. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -364,37 +302,7 @@ export default function TradeModal({
 
         <h2 style={{ marginTop: 0 }}>Trade Stock</h2>
 
-        {/* Check if Alpaca account is linked */}
-        {hasAlpacaLinked === null ? (
-          <div style={{ textAlign: 'center', padding: '20px 0' }}>
-            <div className="muted">Checking account status...</div>
-          </div>
-        ) : hasAlpacaLinked === false ? (
-          <div style={{
-            padding: 20,
-            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-            border: '1px solid rgba(239, 68, 68, 0.3)',
-            borderRadius: 8,
-            textAlign: 'center'
-          }}>
-            <p style={{ margin: '0 0 12px 0', color: '#f87171' }}>
-              You need to link your Alpaca paper trading account before you can trade.
-            </p>
-            <p className="muted" style={{ margin: '0 0 16px 0', fontSize: 14 }}>
-              Go to your Profile settings to link your Alpaca API keys.
-            </p>
-            <button
-              type="button"
-              className="btn primary"
-              onClick={() => {
-                onClose();
-                window.location.href = '/profile';
-              }}
-            >
-              Go to Profile
-            </button>
-          </div>
-        ) : !marketOpen ? (
+        {!marketOpen ? (
           <div style={{
             padding: 20,
             backgroundColor: 'rgba(251, 191, 36, 0.1)',
@@ -509,7 +417,14 @@ export default function TradeModal({
                       onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                     >
                       <div>
-                        <div style={{ fontWeight: 700, fontSize: 15 }}>{result.symbol}</div>
+                        <div style={{ fontWeight: 700, fontSize: 15, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {result.symbol}
+                          {result.is_draftable === false && (
+                            <span title="Not in the default draftable universe" style={{ fontSize: 10, fontWeight: 600, color: '#f59e0b', border: '1px solid #f59e0b', borderRadius: 4, padding: '0 4px' }}>
+                              NOT DRAFTABLE
+                            </span>
+                          )}
+                        </div>
                         <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>
                           {prettyName(result.name)}
                         </div>
@@ -612,6 +527,14 @@ export default function TradeModal({
             </div>
           )}
 
+          {/* Sells drop the entire position (frees the symbol league-wide) */}
+          {action === 'sell' && ownedQuantity > 0 && (
+            <div className="muted" style={{ marginBottom: 16, fontSize: 13 }}>
+              Selling drops your entire position ({ownedQuantity}{' '}
+              {ownedQuantity === 1 ? 'share' : 'shares'}).
+            </div>
+          )}
+
           {/* Error Message */}
           {error && (
             <div style={{
@@ -632,10 +555,10 @@ export default function TradeModal({
             <button
               type="submit"
               className="btn primary"
-              disabled={loading || !quote || !canAfford || !hasEnoughShares}
+              disabled={loading || !symbol || !canAfford || !hasEnoughShares}
               style={{ flex: 1 }}
             >
-              {loading ? 'Processing...' : `${action === 'buy' ? 'Buy' : 'Sell'} ${quantity} Share${quantity !== 1 ? 's' : ''}`}
+              {loading ? 'Submitting…' : action === 'buy' ? 'Buy' : 'Sell'}
             </button>
             <button
               type="button"

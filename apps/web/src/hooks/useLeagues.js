@@ -99,33 +99,44 @@ export default function useLeagues() {
     async ({
       name,
       draftDate,
-      salaryCapLimit,
       numParticipants,
       numRounds = 6,
-      budgetMode = 'budget',
-      budgetAmount = 100,
+      stakeMode = 'fixed_notional',
+      notionalPerSlot = 1000,
+      budgetAmount = null, // budget_cap mode only
       leagueType = 'duration',
       durationDays = 30,
       numWeeks = null,
       playoffTeams = 4,
+      allowUndraftable = false,
     }) => {
       if (!USER_ID) throw new Error('Must be logged in to create a league');
 
       setLoading(true);
       setError('');
       try {
+        // stake_mode is the authoritative field (Phase 4 UI). budget_mode is
+        // deprecated and no longer written (DB default applies; nothing reads
+        // it on new paths); salary_cap_limit is retired — drop migration
+        // authored on this branch.
         const toInsert = {
           name,
           commissioner_id: USER_ID,
           invite_code: genCode(),
           draft_date: draftDate || null,
-          salary_cap_limit: salaryCapLimit ?? null,
           num_participants: numParticipants,
           num_rounds: numRounds,
-          budget_mode: budgetMode,
-          budget_amount: budgetAmount,
+          allow_undraftable: !!allowUndraftable,
+          stake_mode: stakeMode,
+          notional_per_slot: Number(notionalPerSlot) || 1000,
+          ...(stakeMode === 'budget_cap' && budgetAmount != null
+            ? { budget_amount: Number(budgetAmount) }
+            : {}),
           league_type: leagueType,
-          duration_days: leagueType === 'duration' ? durationDays : null,
+          // duration_days is NOT NULL + CHECK in (7,30,90,180,365)
+          // (20251230000000): an explicit null is rejected, so matchup
+          // leagues omit the key and take the DB default (30).
+          ...(leagueType === 'duration' ? { duration_days: durationDays } : {}),
           num_weeks: leagueType === 'matchup' ? numWeeks : null,
           playoff_teams: leagueType === 'matchup' ? playoffTeams : null,
         };
@@ -169,6 +180,31 @@ export default function useLeagues() {
       }
     },
     [refresh, USER_ID]
+  );
+
+  /** Replace a league's roster-slot definitions (commissioner-only via RLS).
+   * Full replace: delete existing rows, insert the new set. Only callable
+   * pre-draft (callers gate on draft_status). */
+  const saveLeagueSlots = useCallback(
+    async (leagueId, slots) => {
+      const { error: delErr } = await supabase
+        .from('league_draft_slots')
+        .delete()
+        .eq('league_id', leagueId);
+      if (delErr) throw delErr;
+      if (!slots || slots.length === 0) return;
+      const rows = slots.map((s, i) => ({
+        league_id: leagueId,
+        slot_index: i,
+        slot_count: Math.max(1, Number(s.slotCount) || 1),
+        price_min: s.priceMin === '' || s.priceMin == null ? null : Number(s.priceMin),
+        price_max: s.priceMax === '' || s.priceMax == null ? null : Number(s.priceMax),
+        category_id: s.categoryId || null,
+      }));
+      const { error: insErr } = await supabase.from('league_draft_slots').insert(rows);
+      if (insErr) throw insErr;
+    },
+    []
   );
 
   const inviteToLeague = useCallback(
@@ -241,6 +277,7 @@ export default function useLeagues() {
     refresh,
     createLeague,
     updateLeague,
+    saveLeagueSlots,
     inviteToLeague,
     leaveLeague,
     deleteLeague

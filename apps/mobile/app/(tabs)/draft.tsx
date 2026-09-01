@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, RefreshControl, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/lib/useAuth';
@@ -7,6 +8,11 @@ import { Colors } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
 import LeagueSwitcher from '@/components/LeagueSwitcher';
 import { notifyDraftTurn } from '@/lib/notifications';
+import {
+  type Category,
+  fetchCategories,
+  fetchSymbolCategories,
+} from '@/lib/categoryData';
 
 interface DraftPick {
   id: string;
@@ -15,8 +21,18 @@ interface DraftPick {
   entry_price: number;
   round: number;
   pick_number: number;
+  slot_id?: string | null;
   created_at: string;
   display_name?: string;
+}
+
+interface LeagueSlot {
+  id: string;
+  slot_index: number;
+  slot_count: number;
+  price_min: number | null;
+  price_max: number | null;
+  category_id: string | null;
 }
 
 interface LeagueMember {
@@ -24,6 +40,20 @@ interface LeagueMember {
   role: string;
   display_name?: string;
 }
+
+// Refusal reasons from validate-and-record-pick, mapped to user-facing copy.
+const PICK_REFUSAL_MESSAGES: Record<string, string> = {
+  not_your_turn: "It's not your turn to pick",
+  draft_complete: 'The draft is already complete',
+  draft_not_in_progress: 'The draft is not in progress',
+  symbol_owned: 'That stock is already owned in this league',
+  not_draftable: "That stock isn't in this league's draftable universe",
+  no_eligible_slot: 'No open roster slot accepts a stock at this price',
+  over_budget: 'That stock is over your remaining budget',
+  no_price: 'No recent price available for that stock',
+  pick_conflict: 'Someone picked at the same moment — refresh and try again',
+  rate_limited: 'Too many picks too quickly — wait a moment and try again',
+};
 
 export default function DraftScreen() {
   const { user } = useAuth();
@@ -38,6 +68,9 @@ export default function DraftScreen() {
   // Stock search
   const [searchSymbol, setSearchSymbol] = useState('');
   const [quote, setQuote] = useState<{ symbol: string; price: number } | null>(null);
+  const [quoteCats, setQuoteCats] = useState<{ categories: Category[]; classified: boolean } | null>(null);
+  const [leagueSlots, setLeagueSlots] = useState<LeagueSlot[]>([]);
+  const [categoryList, setCategoryList] = useState<Category[]>([]);
   const [searching, setSearching] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -64,8 +97,12 @@ export default function DraftScreen() {
   const isDraftNotStarted = activeLeague?.draft_status === 'not_started';
   const isDraftCompleted = activeLeague?.draft_status === 'completed';
 
-  // Budget tracking
-  const isBudgetMode = activeLeague?.budget_mode === 'budget';
+  // Budget tracking. stake_mode is authoritative (budget_cap = capped);
+  // budget_mode fallback covers the pre-migration transition window only.
+  // These client checks are UX mirrors — validate-and-record-pick is the
+  // authoritative legality gate.
+  const isBudgetMode =
+    (activeLeague?.stake_mode ?? (activeLeague?.budget_mode === 'budget' ? 'budget_cap' : null)) === 'budget_cap';
   const leagueBudget = activeLeague?.budget_amount || 100000;
   const mySpent = picks
     .filter(p => p.user_id === user?.id)
@@ -81,8 +118,7 @@ export default function DraftScreen() {
       const { data: memberData } = await supabase
         .from('league_members')
         .select('user_id, role')
-        .eq('league_id', activeLeagueId)
-        .order('joined_at', { ascending: true });
+        .eq('league_id', activeLeagueId);
 
       // Fetch profiles
       const userIds = (memberData || []).map(m => m.user_id).filter(id => !id.startsWith('bot-'));
@@ -102,12 +138,24 @@ export default function DraftScreen() {
       }));
 
       setMembers(membersWithNames);
-      setDraftOrder((memberData || []).map(m => m.user_id));
+
+      // Canonical draft order (must match validate-and-record-pick and web):
+      // commissioner first, remaining member ids sorted ascending. Mobile
+      // previously ordered by joined_at, which could disagree with web about
+      // whose turn it was in a cross-platform league.
+      const memberIdList = (memberData || []).map(m => m.user_id);
+      const commissionerId = activeLeague?.commissioner_id ?? null;
+      const nonCommissioners = memberIdList.filter(id => id !== commissionerId).sort();
+      setDraftOrder(
+        commissionerId && memberIdList.includes(commissionerId)
+          ? [commissionerId, ...nonCommissioners]
+          : nonCommissioners
+      );
 
       // Fetch picks
       const { data: pickData } = await supabase
         .from('drafts')
-        .select('id, user_id, symbol, entry_price, round, pick_number, created_at')
+        .select('id, user_id, symbol, entry_price, round, pick_number, slot_id, created_at')
         .eq('league_id', activeLeagueId)
         .order('pick_number', { ascending: true });
 
@@ -129,12 +177,46 @@ export default function DraftScreen() {
     } finally {
       setLoading(false);
     }
-  }, [activeLeagueId]);
+  }, [activeLeagueId, activeLeague?.commissioner_id]);
 
   // Initial load and refresh
   useEffect(() => {
     fetchDraftData();
   }, [fetchDraftData]);
+
+  // Phase 4: category names + league slot definitions (display; the server
+  // validator is authoritative).
+  useEffect(() => { fetchCategories().then(setCategoryList); }, []);
+  useEffect(() => {
+    if (!activeLeagueId) return;
+    supabase
+      .from('league_draft_slots')
+      .select('id, slot_index, slot_count, price_min, price_max, category_id')
+      .eq('league_id', activeLeagueId)
+      .order('slot_index', { ascending: true })
+      .then(({ data }) => setLeagueSlots((data as LeagueSlot[]) || []));
+  }, [activeLeagueId]);
+  useEffect(() => {
+    let stale = false;
+    if (quote?.symbol) {
+      fetchSymbolCategories(quote.symbol).then((r) => { if (!stale) setQuoteCats(r); });
+    } else {
+      setQuoteCats(null);
+    }
+    return () => { stale = true; };
+  }, [quote?.symbol]);
+
+  const categoryNameById = (id: string) => categoryList.find((c) => c.id === id)?.name ?? 'Category';
+  const slotLabel = (sl: LeagueSlot) => {
+    const parts: string[] = [];
+    if (sl.price_min != null || sl.price_max != null) {
+      parts.push(`$${sl.price_min ?? 0}–${sl.price_max != null ? `$${sl.price_max}` : '∞'}`);
+    }
+    if (sl.category_id) parts.push(categoryNameById(sl.category_id));
+    return parts.length ? parts.join(' • ') : 'Flex';
+  };
+  const mySlotFill = (slotId: string) =>
+    picks.filter((pk) => pk.user_id === user?.id && pk.slot_id === slotId && pk.symbol !== 'SKIP').length;
 
   // Real-time subscription for picks
   useEffect(() => {
@@ -230,33 +312,25 @@ export default function DraftScreen() {
     setSubmitting(true);
 
     try {
-      const { error } = await supabase
-        .from('drafts')
-        .insert({
-          league_id: activeLeagueId,
-          user_id: user.id,
-          symbol: quote.symbol,
-          entry_price: quote.price,
-          quantity: 1,
-          round: currentRound,
-          pick_number: currentPickNumber,
-          draft_date: new Date().toISOString(),
-        });
+      // Phase 3 (DR-001): picks go through the server-side legality gate.
+      // The function re-prices the fill from the app-key quote path and
+      // computes quantity per stake mode — the quote shown here is display.
+      const { data, error } = await supabase.functions.invoke('validate-and-record-pick', {
+        body: { league_id: activeLeagueId, symbol: quote.symbol },
+      });
 
       if (error) throw error;
+      if (!data?.ok) {
+        Alert.alert('Error', PICK_REFUSAL_MESSAGES[data?.reason] || 'Pick was refused');
+        return;
+      }
 
       // Clear search
       setSearchSymbol('');
       setQuote(null);
 
-      // Check if draft is complete
-      if (currentPickNumber >= totalPicks) {
-        // Update league draft status
-        await supabase
-          .from('leagues')
-          .update({ draft_status: 'completed' })
-          .eq('id', activeLeagueId);
-
+      // Draft-completed status is written server-side by the function.
+      if (data.draft_complete) {
         await refreshLeagues();
         Alert.alert('Draft Complete!', 'The draft has finished. Good luck!');
       } else {
@@ -293,6 +367,29 @@ export default function DraftScreen() {
         <View style={styles.centered}>
           <Text style={styles.emptyTitle}>No league selected</Text>
           <Text style={styles.emptySubtitle}>Select a league from Home</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Phase 4: legacy leagues with stake_mode NULL are blocked from drafting
+  // until the commissioner chooses a mode in League Settings.
+  if (activeLeague.stake_mode == null) {
+    const isCommish = activeLeague.commissioner_id === user?.id;
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <LeagueSwitcher />
+        <View style={styles.centered}>
+          <Text style={styles.pendingIcon}>⚖️</Text>
+          <Text style={styles.emptyTitle}>Choose a Stake Mode</Text>
+          <Text style={styles.emptySubtitle}>
+            This league has no stake mode yet, so drafting is paused.
+          </Text>
+          <Text style={styles.hint}>
+            {isCommish
+              ? 'Open League Settings and pick Equal stakes, Price tiers, or Budget cap.'
+              : 'Ask your commissioner to choose a stake mode in League Settings.'}
+          </Text>
         </View>
       </SafeAreaView>
     );
@@ -535,6 +632,22 @@ export default function DraftScreen() {
                   </Text>
                 )}
               </View>
+
+              {/* Your roster slots (which are filled / open) */}
+              {leagueSlots.length > 0 && (
+                <View style={styles.slotPanel}>
+                  {leagueSlots.map((sl) => {
+                    const filled = mySlotFill(sl.id);
+                    const done = filled >= sl.slot_count;
+                    return (
+                      <View key={sl.id} style={[styles.slotRow, done && styles.slotRowDone]}>
+                        <Text style={[styles.slotRowText, done && styles.slotRowTextDone]}>{slotLabel(sl)}</Text>
+                        <Text style={[styles.slotRowText, done && styles.slotRowTextDone]}>{filled}/{sl.slot_count}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
             </View>
 
             {/* Stock Search (only show if it's my turn) */}
@@ -570,6 +683,17 @@ export default function DraftScreen() {
                     <View style={styles.quoteInfo}>
                       <Text style={styles.quoteSymbol}>{quote.symbol}</Text>
                       <Text style={styles.quotePrice}>${quote.price.toFixed(2)}</Text>
+                      {quoteCats && (
+                        <View style={styles.badgeRow}>
+                          {quoteCats.categories.length > 0 ? (
+                            quoteCats.categories.map((c) => (
+                              <Text key={c.id} style={styles.categoryBadge}>{c.name}</Text>
+                            ))
+                          ) : (
+                            <Text style={styles.flexBadge}>Unclassified — flex only</Text>
+                          )}
+                        </View>
+                      )}
                     </View>
                     <TouchableOpacity
                       style={styles.draftBtn}
@@ -1191,4 +1315,36 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textMuted,
   },
+  // Phase 4 draft UI
+  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 6 },
+  categoryBadge: {
+    fontSize: 10,
+    color: Colors.primary,
+    backgroundColor: Colors.primaryBg,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    overflow: 'hidden',
+  },
+  flexBadge: {
+    fontSize: 10,
+    color: Colors.textMuted,
+    backgroundColor: Colors.cardBgAlt,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    overflow: 'hidden',
+  },
+  slotPanel: { marginTop: 10, gap: 4 },
+  slotRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: Colors.primaryBg,
+  },
+  slotRowDone: { backgroundColor: Colors.successBg },
+  slotRowText: { fontSize: 12, color: Colors.primary },
+  slotRowTextDone: { color: Colors.success },
 });

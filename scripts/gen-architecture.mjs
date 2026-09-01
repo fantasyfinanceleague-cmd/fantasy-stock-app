@@ -336,10 +336,12 @@ function scanMigrations() {
   const files = readdirSync(dir).filter((f) => f.endsWith('.sql')).sort();
   const tables = {};
   const functions = {};
+  const functionDrops = {};
   const policies = {};
   const rlsEnabled = new Set();
   const cron = {};
   const triggers = [];
+  const triggerDrops = [];
   const triggerFunctions = new Set();
 
   const touch = (bag, key, file, line) => {
@@ -366,12 +368,38 @@ function scanMigrations() {
     // CREATE TRIGGER <name> ... ON <table> ... EXECUTE {FUNCTION|PROCEDURE} <fn>()
     // Without this, a trigger function looks like dead code: nothing "calls" it in any
     // grep-visible sense, but the table fires it on every write.
-    for (const { m, line } of scan(sql, /create\s+trigger\s+[a-z_][a-z0-9_]*\s+[\s\S]{0,200}?\bon\s+(?:public\.)?"?([a-z_][a-z0-9_]*)"?[\s\S]{0,200}?execute\s+(?:function|procedure)\s+(?:public\.)?"?([a-z_][a-z0-9_]*)"?/i))
-      triggers.push({ table: m[1].toLowerCase(), fn: m[2].toLowerCase(), file: r, line });
+    for (const { m, line } of scan(sql, /create\s+trigger\s+([a-z_][a-z0-9_]*)\s+[\s\S]{0,200}?\bon\s+(?:public\.)?"?([a-z_][a-z0-9_]*)"?[\s\S]{0,200}?execute\s+(?:function|procedure)\s+(?:public\.)?"?([a-z_][a-z0-9_]*)"?/i))
+      triggers.push({ name: m[1].toLowerCase(), table: m[2].toLowerCase(), fn: m[3].toLowerCase(), file: r, line });
     for (const { m } of scan(sql, /create\s+(?:or\s+replace\s+)?function\s+(?:public\.)?"?([a-z_][a-z0-9_]*)"?\s*\([^)]*\)\s*returns\s+trigger/i))
       triggerFunctions.add(m[1].toLowerCase());
+    // DROP FUNCTION / DROP TRIGGER — so a deliberately-removed object is not flagged as
+    // "created by migration, ABSENT live" drift. A drop-then-recreate later on stays live;
+    // final create/drop state is resolved after the loop by source position.
+    for (const { m, line } of scan(sql, /drop\s+function\s+(?:if\s+exists\s+)?(?:public\.)?"?([a-z_][a-z0-9_]*)"?/i))
+      touch(functionDrops, m[1].toLowerCase(), r, line);
+    for (const { m, line } of scan(sql, /drop\s+trigger\s+(?:if\s+exists\s+)?([a-z_][a-z0-9_]*)\s+on\s+(?:public\.)?"?([a-z_][a-z0-9_]*)"?/i))
+      triggerDrops.push({ name: m[1].toLowerCase(), table: m[2].toLowerCase(), file: r, line });
   }
-  return { files, tables, functions, policies, rlsEnabled, cron, triggers, triggerFunctions };
+
+  // Resolve final state. Migration files are timestamp-sorted, so (file, line) is a total
+  // order over statements; an object is "gone" iff its last DROP follows its last CREATE.
+  const posCmp = (a, b) => (a.file !== b.file ? (a.file < b.file ? -1 : 1) : a.line - b.line);
+  const droppedFunctions = new Set();
+  for (const name of new Set([...Object.keys(functions), ...Object.keys(functionDrops)])) {
+    const lastCreate = functions[name]?.definedIn.at(-1) ?? null;
+    const lastDrop = functionDrops[name]?.definedIn.at(-1) ?? null;
+    if (lastDrop && (!lastCreate || posCmp(lastDrop, lastCreate) > 0)) droppedFunctions.add(name);
+  }
+  // Keep a trigger only if its latest matching DROP (if any) precedes its CREATE — i.e. an
+  // idempotent `drop trigger if exists` before the create stays live; a later drop removes it.
+  const liveTriggers = triggers.filter((t) => {
+    const drops = triggerDrops.filter((d) => d.name === t.name && d.table === t.table);
+    if (!drops.length) return true;
+    const lastDrop = drops.reduce((x, y) => (posCmp(y, x) > 0 ? y : x));
+    return posCmp(lastDrop, { file: t.file, line: t.line }) < 0;
+  });
+
+  return { files, tables, functions, functionDrops, droppedFunctions, policies, rlsEnabled, cron, triggers: liveTriggers, triggerFunctions };
 }
 
 // ---------------------------------------------------------------------------
@@ -775,6 +803,9 @@ function build() {
   for (const name of allFnNames) {
     const decl = migrations.functions[name];
     const live = snapFns.get(name);
+    // Deliberately dropped by a migration (DROP FUNCTION after its last CREATE) and absent
+    // from prod: correct, not drift — skip the node and its existence-drift row entirely.
+    if (!live && migrations.droppedFunctions.has(name)) continue;
     const id = `pg.${name}`;
     const grants = live?.acl ? live.acl.map(parseAcl).filter(Boolean).filter((g) => g.privileges.length) : null;
     const anonCallable = grants ? grants.some((g) => g.role === 'anon' || g.role === 'PUBLIC') : null;

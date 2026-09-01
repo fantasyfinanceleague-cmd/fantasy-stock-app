@@ -2,47 +2,455 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "3e0b1006d98c07f93ffbb4aa6b539cc770e710c7",
-    "commitShort": "3e0b100",
+    "commit": "64dce925875f3a6d0a75c8b868feb7d21d67d2e6",
+    "commitShort": "64dce92",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "ui/design-system-pass",
+    "branch": "security/claude-security-fixes-20260730",
     "dirty": true,
     "dirtyPaths": [
+      {
+        "code": "M",
+        "path": "apps/mobile/app/_layout.tsx"
+      },
       {
         "code": "M",
         "path": "apps/mobile/app/(tabs)/draft.tsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/lib/notifications.ts"
+        "path": "apps/mobile/app/(tabs)/index.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/app/(tabs)/league.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/app/(tabs)/leagues.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/app/(tabs)/matchup.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/app/(tabs)/portfolio.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/app/(tabs)/profile.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/app/+html.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/app/+not-found.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/app/create-league.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/app/forgot-password.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/app/join-league.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/app/league-settings.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/app/login.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/app/modal.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/app/player-portfolio.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/app/reset-password.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/app/trade-history.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/EditScreenInfo.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/LeagueCarousel.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/LeagueSwitcher.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/PerformanceChart.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/PLBreakdownModal.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/PortfolioChart.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/Skeleton.tsx"
+      },
+      {
+        "code": "A",
+        "path": "apps/mobile/components/SlotBuilder.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/StatusBadge.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/TradeModal.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/WeekNavigator.tsx"
+      },
+      {
+        "code": "A",
+        "path": "apps/mobile/constants/passwordRules.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/mobile/eslint.config.mjs"
+      },
+      {
+        "code": "A",
+        "path": "apps/mobile/lib/categoryData.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/LeagueContext.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/useLeagues.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/usePortfolio.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/weekStatus.ts"
+      },
+      {
+        "code": "??",
+        "path": "apps/mobile/node_modules"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/package-lock.json"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/package.json"
+      },
+      {
+        "code": "M",
+        "path": "apps/web/eslint.config.js"
+      },
+      {
+        "code": "M",
+        "path": "apps/web/index.html"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/public/stockpile-icon.png"
+      },
+      {
+        "code": "M",
+        "path": "apps/web/src/App.jsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/web/src/components/DraftControls.jsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/web/src/components/OnboardingModal.jsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/web/src/components/ProgressChecklist.jsx"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/components/SlotBuilder.jsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/web/src/components/TradeModal.jsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/web/src/hooks/useLeagues.js"
+      },
+      {
+        "code": "M",
+        "path": "apps/web/src/pages/Dashboard.jsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/web/src/pages/DraftPage.jsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/web/src/pages/LeagueDetail.jsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/web/src/pages/Leagues.jsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/web/src/pages/Login.jsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/web/src/pages/Matchup.jsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/web/src/pages/Profile.jsx"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/utils/categoryData.js"
+      },
+      {
+        "code": "M",
+        "path": "apps/web/src/utils/errorMessages.js"
+      },
+      {
+        "code": "M",
+        "path": "apps/web/src/utils/scheduleGenerator.js"
+      },
+      {
+        "code": "M",
+        "path": "apps/web/src/utils/weekStatus.js"
+      },
+      {
+        "code": "M",
+        "path": "docs/architecture/db-snapshot.json"
+      },
+      {
+        "code": "M",
+        "path": "packages/shared/constants/index.ts"
+      },
+      {
+        "code": "M",
+        "path": "scripts/gen-architecture.mjs"
       },
       {
         "code": "M",
         "path": "supabase/config.toml"
       },
       {
-        "code": "??",
-        "path": "supabase/functions/send-notification/"
+        "code": "A",
+        "path": "supabase/functions/_shared/alpaca-price.ts"
+      },
+      {
+        "code": "A",
+        "path": "supabase/functions/_shared/category-eligibility.ts"
+      },
+      {
+        "code": "A",
+        "path": "supabase/functions/_shared/draft-validation.test.ts"
+      },
+      {
+        "code": "A",
+        "path": "supabase/functions/_shared/draft-validation.ts"
+      },
+      {
+        "code": "A",
+        "path": "supabase/functions/_shared/symbol-eligibility.test.ts"
+      },
+      {
+        "code": "A",
+        "path": "supabase/functions/_shared/symbol-eligibility.ts"
+      },
+      {
+        "code": "A",
+        "path": "supabase/functions/enrich-symbols/index.ts"
+      },
+      {
+        "code": "D",
+        "path": "supabase/functions/place-order/index.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/preview-league/index.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/quote/index.ts"
+      },
+      {
+        "code": "A",
+        "path": "supabase/functions/record-trade/index.ts"
+      },
+      {
+        "code": "D",
+        "path": "supabase/functions/save-broker-keys/index.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/symbols-search/index.ts"
+      },
+      {
+        "code": "D",
+        "path": "supabase/functions/sync-alpaca-orders/index.ts"
+      },
+      {
+        "code": "A",
+        "path": "supabase/functions/validate-and-record-pick/index.ts"
+      },
+      {
+        "code": "D",
+        "path": "supabase/migrations/20260728000002_fix_refresh_symbols_cron_auth.sql"
+      },
+      {
+        "code": "D",
+        "path": "supabase/migrations/20260730000004_trades_remove_client_insert_policy.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20260808000000_unschedule_sync_alpaca_orders_cron.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20260808000001_drop_broker_credentials.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20260810000000_widen_draft_trade_quantity_numeric.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20260810000001_symbols_add_enrichment_columns.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20260810000002_leagues_add_stake_mode.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20260810000003_create_categories_tables.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20260810000004_create_league_draft_slots.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20260810000005_drafts_add_slot_id.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20260810000006_create_splits.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20260810000007_drafts_league_id_set_not_null.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20260810000008_leagues_mirror_budget_mode_to_stake_mode.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20260811000000_fix_refresh_symbols_cron_auth.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20260811000001_drop_leagues_budget_mode_mirror_trigger.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20260811000002_trades_drop_direct_client_insert.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20260811000003_drafts_drop_direct_client_insert.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20260811000004_leagues_select_visible_to_creator.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20260811000005_league_members_select_visible_to_self.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20260811000006_seed_categories.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20260811000007_symbols_enrichment_support.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20260811000008_schedule_enrich_symbols.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20260811000009_drop_leagues_salary_cap_limit.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20260815000000_signup_gate.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20260816000000_leagues_allow_undraftable.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/deferred/README.md"
       }
     ],
-    "timestamp": "2026-08-07T00:04:56Z",
-    "sourceHash": "sha256:2a82335c2c5ed35283e859ab18fa65d7e71a8f922d49e89cf8d1361784a0a7fb",
+    "timestamp": "2026-09-01T19:14:23Z",
+    "sourceHash": "sha256:19069e9f29459c6adb812bcc8e9e18a8438e4e189ea9e43afaeac231cfbc019d",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
-    "capturedAt": "2026-07-30T03:10:26Z",
-    "ageHours": 188.9,
-    "ageDays": 7.9,
+    "capturedAt": "2026-08-12T04:52:52Z",
+    "ageHours": 494.4,
+    "ageDays": 20.6,
     "staleAfterDays": 14,
-    "stale": false,
-    "hash": "sha256:74cc797461d0f3634b1e75de6bd5e372a016f54dbc9c18131257b7bc2ec8c927",
+    "stale": true,
+    "hash": "sha256:3c923bcd46e36dfa365d24852d7b8fb6ead9ff99a06c3b26dc0853c648e07ded",
     "database": "postgres",
     "postgresVersion": "17.4",
     "counts": {
-      "functions": 14,
-      "tables": 16,
+      "functions": 15,
+      "tables": 20,
       "cronJobs": 5
     }
   },
@@ -82,6 +490,34 @@
     {
       "layer": "trigger",
       "facts": {
+        "schedule": "*/10 * * * *",
+        "active": true,
+        "username": "postgres",
+        "target": "enrich-symbols",
+        "sendsApikey": true
+      },
+      "db": null,
+      "declared": {
+        "schedule": "*/10 * * * *",
+        "definedIn": [
+          "supabase/migrations/20260811000008_schedule_enrich_symbols.sql:29"
+        ]
+      },
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "cron.enrich_symbols_10min",
+      "label": "enrich_symbols_10min",
+      "sublabel": "*/10 * * * *",
+      "kind": "cron-job",
+      "source": {
+        "path": "supabase/migrations/20260811000008_schedule_enrich_symbols.sql",
+        "line": 29
+      }
+    },
+    {
+      "layer": "trigger",
+      "facts": {
         "schedule": "15 21 * * 5",
         "active": true,
         "username": "postgres",
@@ -116,24 +552,16 @@
         "active": true,
         "username": "postgres",
         "target": "refresh-symbols",
-        "sendsApikey": false
+        "sendsApikey": true
       },
       "db": null,
       "declared": {
-        "schedule": "0 6 * * *",
+        "schedule": "0 */6 * * *",
         "definedIn": [
-          "supabase/migrations/20260728000002_fix_refresh_symbols_cron_auth.sql:158"
+          "supabase/migrations/20260811000000_fix_refresh_symbols_cron_auth.sql:19"
         ]
       },
-      "drift": [
-        {
-          "field": "schedule",
-          "declared": "0 6 * * *",
-          "live": "0 */6 * * *",
-          "severity": "high",
-          "note": "The live cron schedule differs from the latest migration that scheduled this job."
-        }
-      ],
+      "drift": [],
       "annotation": "The oldest job in the schedule (jobid 7, versus 18-21 for the cron-auth-migrated set) and the only one that sends no auth header at all. It predates the RLS-hardening pass that set verify_jwt=true on refresh-symbols, and it was never migrated because no migration in the repo schedules it — it was created out-of-band, so the Phase 2b sweep over supabase/migrations/ never saw it. Its `symbols` target table is likewise created by no migration. IMPORTANT when diagnosing this: cron.job_run_details reports 'succeeded' for every run regardless, because net.http_post is asynchronous — the job status records that the request was ENQUEUED (return_message '1 row' is the request id), not what the server answered. Checked 2026-07-27: five consecutive 'succeeded' runs, which is exactly what a job 401ing every six hours also looks like. Use net._http_response, or check whether the symbols rows actually changed.",
       "verified": true,
       "id": "cron.refresh_symbols_daily",
@@ -141,8 +569,8 @@
       "sublabel": "0 */6 * * *",
       "kind": "cron-job",
       "source": {
-        "path": "supabase/migrations/20260728000002_fix_refresh_symbols_cron_auth.sql",
-        "line": 158
+        "path": "supabase/migrations/20260811000000_fix_refresh_symbols_cron_auth.sql",
+        "line": 19
       }
     },
     {
@@ -205,35 +633,6 @@
       }
     },
     {
-      "layer": "trigger",
-      "facts": {
-        "schedule": "30 21 * * 1-5",
-        "active": true,
-        "username": "postgres",
-        "target": "sync-alpaca-orders",
-        "sendsApikey": true
-      },
-      "db": null,
-      "declared": {
-        "schedule": "30 21 * * 1-5",
-        "definedIn": [
-          "supabase/migrations/20260125200000_add_sync_alpaca_cron.sql:13",
-          "supabase/migrations/20260618000002_migrate_sync_alpaca_orders_cron_auth.sql:34"
-        ]
-      },
-      "drift": [],
-      "annotation": null,
-      "verified": true,
-      "id": "cron.sync-alpaca-orders",
-      "label": "sync-alpaca-orders",
-      "sublabel": "30 21 * * 1-5",
-      "kind": "cron-job",
-      "source": {
-        "path": "supabase/migrations/20260618000002_migrate_sync_alpaca_orders_cron_auth.sql",
-        "line": 34
-      }
-    },
-    {
       "layer": "external",
       "facts": {},
       "db": null,
@@ -292,8 +691,40 @@
     {
       "layer": "edge",
       "facts": {
+        "verifyJwt": false,
+        "verifyJwtSource": "supabase/config.toml:80",
+        "authGuard": "apikey header, constant-time, fail-closed",
+        "localModules": [],
+        "tests": [],
+        "envVars": [
+          "ALPACA_API_KEY",
+          "ALPACA_API_SECRET",
+          "FINNHUB_API_KEY",
+          "SB_SECRET_KEY_CRON",
+          "SB_SECRET_KEY_INTERNAL",
+          "SUPABASE_URL"
+        ],
+        "lines": 225
+      },
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "fn.enrich-symbols",
+      "label": "enrich-symbols",
+      "sublabel": "verify_jwt=false · apikey guard",
+      "kind": "edge-function",
+      "source": {
+        "path": "supabase/functions/enrich-symbols/index.ts",
+        "line": 119
+      }
+    },
+    {
+      "layer": "edge",
+      "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:142",
+        "verifyJwtSource": "supabase/config.toml:153",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -320,7 +751,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:127",
+        "verifyJwtSource": "supabase/config.toml:138",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -348,7 +779,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:76",
+        "verifyJwtSource": "supabase/config.toml:70",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -377,37 +808,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:119",
-        "authGuard": null,
-        "localModules": [],
-        "tests": [],
-        "envVars": [
-          "BROKER_CRYPTO_KEY",
-          "SB_PUBLISHABLE_KEY",
-          "SB_SECRET_KEY_INTERNAL",
-          "SUPABASE_URL"
-        ],
-        "lines": 299
-      },
-      "db": null,
-      "declared": null,
-      "drift": [],
-      "annotation": null,
-      "verified": true,
-      "id": "fn.place-order",
-      "label": "place-order",
-      "sublabel": "verify_jwt=true",
-      "kind": "edge-function",
-      "source": {
-        "path": "supabase/functions/place-order/index.ts",
-        "line": 100
-      }
-    },
-    {
-      "layer": "edge",
-      "facts": {
-        "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:67",
+        "verifyJwtSource": "supabase/config.toml:61",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -416,7 +817,7 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 137
+        "lines": 138
       },
       "db": null,
       "declared": null,
@@ -480,12 +881,10 @@
         "localModules": [],
         "tests": [],
         "envVars": [
-          "BROKER_CRYPTO_KEY",
-          "SB_PUBLISHABLE_KEY",
-          "SB_SECRET_KEY_INTERNAL",
-          "SUPABASE_URL"
+          "ALPACA_API_KEY",
+          "ALPACA_API_SECRET"
         ],
-        "lines": 441
+        "lines": 352
       },
       "db": null,
       "declared": null,
@@ -498,14 +897,45 @@
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/quote/index.ts",
-        "line": 224
+        "line": 179
+      }
+    },
+    {
+      "layer": "edge",
+      "facts": {
+        "verifyJwt": true,
+        "verifyJwtSource": "supabase/config.toml:99",
+        "authGuard": null,
+        "localModules": [],
+        "tests": [],
+        "envVars": [
+          "ALPACA_API_KEY",
+          "ALPACA_API_SECRET",
+          "SB_PUBLISHABLE_KEY",
+          "SB_SECRET_KEY_INTERNAL",
+          "SUPABASE_URL"
+        ],
+        "lines": 257
+      },
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "fn.record-trade",
+      "label": "record-trade",
+      "sublabel": "verify_jwt=true",
+      "kind": "edge-function",
+      "source": {
+        "path": "supabase/functions/record-trade/index.ts",
+        "line": 78
       }
     },
     {
       "layer": "edge",
       "facts": {
         "verifyJwt": false,
-        "verifyJwtSource": "supabase/config.toml:56",
+        "verifyJwtSource": "supabase/config.toml:50",
         "authGuard": "apikey header, constant-time, fail-closed",
         "localModules": [],
         "tests": [],
@@ -534,37 +964,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:112",
-        "authGuard": null,
-        "localModules": [],
-        "tests": [],
-        "envVars": [
-          "BROKER_CRYPTO_KEY",
-          "SB_PUBLISHABLE_KEY",
-          "SB_SECRET_KEY_INTERNAL",
-          "SUPABASE_URL"
-        ],
-        "lines": 151
-      },
-      "db": null,
-      "declared": null,
-      "drift": [],
-      "annotation": null,
-      "verified": true,
-      "id": "fn.save-broker-keys",
-      "label": "save-broker-keys",
-      "sublabel": "verify_jwt=true",
-      "kind": "edge-function",
-      "source": {
-        "path": "supabase/functions/save-broker-keys/index.ts",
-        "line": 89
-      }
-    },
-    {
-      "layer": "edge",
-      "facts": {
-        "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:181",
+        "verifyJwtSource": "supabase/config.toml:192",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -663,7 +1063,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:132",
+        "verifyJwtSource": "supabase/config.toml:143",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -691,7 +1091,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:137",
+        "verifyJwtSource": "supabase/config.toml:148",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -721,38 +1121,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": false,
-        "verifyJwtSource": "supabase/config.toml:40",
-        "authGuard": "apikey header, constant-time, fail-closed",
-        "localModules": [],
-        "tests": [],
-        "envVars": [
-          "BROKER_CRYPTO_KEY",
-          "SB_SECRET_KEY_CRON",
-          "SB_SECRET_KEY_INTERNAL",
-          "SUPABASE_ANON_KEY",
-          "SUPABASE_URL"
-        ],
-        "lines": 396
-      },
-      "db": null,
-      "declared": null,
-      "drift": [],
-      "annotation": null,
-      "verified": true,
-      "id": "fn.sync-alpaca-orders",
-      "label": "sync-alpaca-orders",
-      "sublabel": "verify_jwt=false · apikey guard",
-      "kind": "edge-function",
-      "source": {
-        "path": "supabase/functions/sync-alpaca-orders/index.ts",
-        "line": 215
-      }
-    },
-    {
-      "layer": "edge",
-      "facts": {
-        "verifyJwt": false,
-        "verifyJwtSource": "supabase/config.toml:169",
+        "verifyJwtSource": "supabase/config.toml:180",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -774,6 +1143,37 @@
       "source": {
         "path": "supabase/functions/ticker-quotes/index.ts",
         "line": 74
+      }
+    },
+    {
+      "layer": "edge",
+      "facts": {
+        "verifyJwt": true,
+        "verifyJwtSource": "supabase/config.toml:90",
+        "authGuard": null,
+        "localModules": [],
+        "tests": [],
+        "envVars": [
+          "ALPACA_API_KEY",
+          "ALPACA_API_SECRET",
+          "SB_PUBLISHABLE_KEY",
+          "SB_SECRET_KEY_INTERNAL",
+          "SUPABASE_URL"
+        ],
+        "lines": 315
+      },
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "fn.validate-and-record-pick",
+      "label": "validate-and-record-pick",
+      "sublabel": "verify_jwt=true",
+      "kind": "edge-function",
+      "source": {
+        "path": "supabase/functions/validate-and-record-pick/index.ts",
+        "line": 87
       }
     },
     {
@@ -1002,6 +1402,83 @@
       "layer": "db",
       "facts": {},
       "db": {
+        "securityDefiner": false,
+        "searchPath": "public",
+        "grants": [
+          {
+            "role": "PUBLIC",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "anon",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "authenticated",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "=X/postgres",
+          "postgres=X/postgres",
+          "anon=X/postgres",
+          "authenticated=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": true,
+        "authenticatedCallable": true,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20260810000003_create_categories_tables.sql:70"
+        ],
+        "latestDefinition": "supabase/migrations/20260810000003_create_categories_tables.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "grants",
+          "declared": "n/a",
+          "live": "=X/postgres, postgres=X/postgres, anon=X/postgres, authenticated=X/postgres, service_role=X/postgres",
+          "severity": "low",
+          "note": "SECURITY INVOKER, so it runs with the caller's own privileges and RLS applies — broad EXECUTE here is low risk. Listed for inventory completeness."
+        }
+      ],
+      "annotation": null,
+      "verified": true,
+      "id": "pg.enforce_symbol_category_cap",
+      "label": "enforce_symbol_category_cap()",
+      "sublabel": "PUBLIC, anon, authenticated, service_role",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20260810000003_create_categories_tables.sql",
+        "line": 70
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": {
         "securityDefiner": true,
         "searchPath": "public",
         "grants": [
@@ -1214,6 +1691,37 @@
     {
       "layer": "db",
       "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20260815000000_signup_gate.sql:82"
+        ],
+        "latestDefinition": "supabase/migrations/20260815000000_signup_gate.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.restrict_new_signups",
+      "label": "restrict_new_signups()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20260815000000_signup_gate.sql",
+        "line": 82
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
       "db": {
         "securityDefiner": true,
         "searchPath": "public",
@@ -1316,6 +1824,83 @@
       "source": {
         "path": "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql",
         "line": 35
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": {
+        "securityDefiner": false,
+        "searchPath": "public",
+        "grants": [
+          {
+            "role": "PUBLIC",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "anon",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "authenticated",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "=X/postgres",
+          "postgres=X/postgres",
+          "anon=X/postgres",
+          "authenticated=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": true,
+        "authenticatedCallable": true,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20260811000007_symbols_enrichment_support.sql:42"
+        ],
+        "latestDefinition": "supabase/migrations/20260811000007_symbols_enrichment_support.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "grants",
+          "declared": "n/a",
+          "live": "=X/postgres, postgres=X/postgres, anon=X/postgres, authenticated=X/postgres, service_role=X/postgres",
+          "severity": "low",
+          "note": "SECURITY INVOKER, so it runs with the caller's own privileges and RLS applies — broad EXECUTE here is low risk. Listed for inventory completeness."
+        }
+      ],
+      "annotation": null,
+      "verified": true,
+      "id": "pg.symbols_touch_updated_at",
+      "label": "symbols_touch_updated_at()",
+      "sublabel": "PUBLIC, anon, authenticated, service_role",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20260811000007_symbols_enrichment_support.sql",
+        "line": 42
       }
     },
     {
@@ -1467,83 +2052,6 @@
       "layer": "db",
       "facts": {},
       "db": {
-        "securityDefiner": false,
-        "searchPath": null,
-        "grants": [
-          {
-            "role": "PUBLIC",
-            "privileges": [
-              "EXECUTE"
-            ]
-          },
-          {
-            "role": "postgres",
-            "privileges": [
-              "EXECUTE"
-            ]
-          },
-          {
-            "role": "anon",
-            "privileges": [
-              "EXECUTE"
-            ]
-          },
-          {
-            "role": "authenticated",
-            "privileges": [
-              "EXECUTE"
-            ]
-          },
-          {
-            "role": "service_role",
-            "privileges": [
-              "EXECUTE"
-            ]
-          }
-        ],
-        "grantsRaw": [
-          "=X/postgres",
-          "postgres=X/postgres",
-          "anon=X/postgres",
-          "authenticated=X/postgres",
-          "service_role=X/postgres"
-        ],
-        "anonCallable": true,
-        "authenticatedCallable": true,
-        "owner": "postgres",
-        "volatility": "volatile"
-      },
-      "declared": {
-        "definedIn": [
-          "supabase/migrations/20251217000000_create_broker_credentials.sql:43"
-        ],
-        "latestDefinition": "supabase/migrations/20251217000000_create_broker_credentials.sql",
-        "redefinitions": 1
-      },
-      "drift": [
-        {
-          "field": "grants",
-          "declared": "n/a",
-          "live": "=X/postgres, postgres=X/postgres, anon=X/postgres, authenticated=X/postgres, service_role=X/postgres",
-          "severity": "low",
-          "note": "SECURITY INVOKER, so it runs with the caller's own privileges and RLS applies — broad EXECUTE here is low risk. Listed for inventory completeness."
-        }
-      ],
-      "annotation": null,
-      "verified": true,
-      "id": "pg.update_broker_credentials_updated_at",
-      "label": "update_broker_credentials_updated_at()",
-      "sublabel": "PUBLIC, anon, authenticated, service_role",
-      "kind": "pg-function",
-      "source": {
-        "path": "supabase/migrations/20251217000000_create_broker_credentials.sql",
-        "line": 43
-      }
-    },
-    {
-      "layer": "db",
-      "facts": {},
-      "db": {
         "securityDefiner": true,
         "searchPath": "public",
         "grants": [
@@ -1668,46 +2176,60 @@
     {
       "layer": "db",
       "facts": {},
+      "db": null,
+      "declared": {
+        "touchedBy": [
+          "supabase/migrations/20260815000000_signup_gate.sql"
+        ],
+        "rlsEnabled": true
+      },
+      "drift": [],
+      "annotation": null,
+      "verified": false,
+      "id": "tbl.app_config",
+      "label": "app_config",
+      "sublabel": "not in snapshot",
+      "kind": "table",
+      "source": {
+        "path": "supabase/migrations/20260815000000_signup_gate.sql",
+        "line": 41
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "touchedBy": [
+          "supabase/migrations/20251217000000_create_broker_credentials.sql"
+        ],
+        "rlsEnabled": true
+      },
+      "drift": [],
+      "annotation": null,
+      "verified": false,
+      "id": "tbl.broker_credentials",
+      "label": "broker_credentials",
+      "sublabel": "not in snapshot",
+      "kind": "table",
+      "source": {
+        "path": "supabase/migrations/20251217000000_create_broker_credentials.sql",
+        "line": 2
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
       "db": {
         "rlsEnabled": true,
         "rlsForced": false,
         "policies": [
           {
-            "name": "Users can delete own credentials",
+            "name": "categories_select_authenticated",
             "roles": [
-              "PUBLIC"
+              "authenticated"
             ],
-            "using": "(auth.uid() = user_id)",
-            "command": "DELETE",
-            "withCheck": null,
-            "permissive": true
-          },
-          {
-            "name": "Users can insert own credentials",
-            "roles": [
-              "PUBLIC"
-            ],
-            "using": null,
-            "command": "INSERT",
-            "withCheck": "(auth.uid() = user_id)",
-            "permissive": true
-          },
-          {
-            "name": "Users can update own credentials",
-            "roles": [
-              "PUBLIC"
-            ],
-            "using": "(auth.uid() = user_id)",
-            "command": "UPDATE",
-            "withCheck": null,
-            "permissive": true
-          },
-          {
-            "name": "Users can view own credentials",
-            "roles": [
-              "PUBLIC"
-            ],
-            "using": "(auth.uid() = user_id)",
+            "using": "true",
             "command": "SELECT",
             "withCheck": null,
             "permissive": true
@@ -1716,29 +2238,75 @@
       },
       "declared": {
         "touchedBy": [
-          "supabase/migrations/20251217000000_create_broker_credentials.sql"
+          "supabase/migrations/20260810000003_create_categories_tables.sql"
         ],
         "rlsEnabled": true
       },
       "drift": [
         {
           "field": "policy_roles",
-          "groupKey": "public-role-policies-gated",
+          "groupKey": "authenticated-role-policies-ungated",
           "declared": "n/a",
-          "live": "4 of 4 policies target PUBLIC; those 4 are gated on caller identity",
-          "severity": "low",
-          "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
+          "live": "categories_select_authenticated (SELECT, authenticated, predicate: true)",
+          "severity": "medium",
+          "note": "ANY-AUTHENTICATED READ of every row. The predicate never references the caller, so every logged-in user reads the whole table. This is a real exposure, not a cosmetic one — it is simply narrower than the anon case. Before accepting it, check whether any COLUMN here is a capability rather than an attribute (a bearer token, a key, an invite code): an ungated read is tolerable for display attributes like a username and not tolerable for something possession of which grants an action. See this node's annotation."
         }
       ],
       "annotation": null,
       "verified": true,
-      "id": "tbl.broker_credentials",
-      "label": "broker_credentials",
-      "sublabel": "RLS · 4 policies",
+      "id": "tbl.categories",
+      "label": "categories",
+      "sublabel": "RLS · 1 policy",
       "kind": "table",
       "source": {
-        "path": "supabase/migrations/20251217000000_create_broker_credentials.sql",
-        "line": 2
+        "path": "supabase/migrations/20260810000003_create_categories_tables.sql",
+        "line": 21
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": {
+        "rlsEnabled": true,
+        "rlsForced": false,
+        "policies": [
+          {
+            "name": "category_rules_select_authenticated",
+            "roles": [
+              "authenticated"
+            ],
+            "using": "true",
+            "command": "SELECT",
+            "withCheck": null,
+            "permissive": true
+          }
+        ]
+      },
+      "declared": {
+        "touchedBy": [
+          "supabase/migrations/20260810000003_create_categories_tables.sql"
+        ],
+        "rlsEnabled": true
+      },
+      "drift": [
+        {
+          "field": "policy_roles",
+          "groupKey": "authenticated-role-policies-ungated",
+          "declared": "n/a",
+          "live": "category_rules_select_authenticated (SELECT, authenticated, predicate: true)",
+          "severity": "medium",
+          "note": "ANY-AUTHENTICATED READ of every row. The predicate never references the caller, so every logged-in user reads the whole table. This is a real exposure, not a cosmetic one — it is simply narrower than the anon case. Before accepting it, check whether any COLUMN here is a capability rather than an attribute (a bearer token, a key, an invite code): an ungated read is tolerable for display attributes like a username and not tolerable for something possession of which grants an action. See this node's annotation."
+        }
+      ],
+      "annotation": null,
+      "verified": true,
+      "id": "tbl.category_rules",
+      "label": "category_rules",
+      "sublabel": "RLS · 1 policy",
+      "kind": "table",
+      "source": {
+        "path": "supabase/migrations/20260810000003_create_categories_tables.sql",
+        "line": 35
       }
     },
     {
@@ -1918,26 +2486,6 @@
             "permissive": true
           },
           {
-            "name": "League members can create bot picks",
-            "roles": [
-              "PUBLIC"
-            ],
-            "using": null,
-            "command": "INSERT",
-            "withCheck": "((user_id ~~ 'bot-%'::text) AND (EXISTS ( SELECT 1\n   FROM league_members\n  WHERE ((league_members.league_id = drafts.league_id) AND (league_members.user_id = (auth.uid())::text)))))",
-            "permissive": true
-          },
-          {
-            "name": "Users can create picks in their leagues",
-            "roles": [
-              "PUBLIC"
-            ],
-            "using": null,
-            "command": "INSERT",
-            "withCheck": "((user_id = (auth.uid())::text) AND (EXISTS ( SELECT 1\n   FROM league_members\n  WHERE ((league_members.league_id = drafts.league_id) AND (league_members.user_id = (auth.uid())::text)))))",
-            "permissive": true
-          },
-          {
             "name": "Users can view picks in their leagues",
             "roles": [
               "PUBLIC"
@@ -1951,7 +2499,10 @@
       },
       "declared": {
         "touchedBy": [
-          "supabase/migrations/20251205110000_enable_drafts_rls.sql"
+          "supabase/migrations/20251205110000_enable_drafts_rls.sql",
+          "supabase/migrations/20260810000000_widen_draft_trade_quantity_numeric.sql",
+          "supabase/migrations/20260810000005_drafts_add_slot_id.sql",
+          "supabase/migrations/20260810000007_drafts_league_id_set_not_null.sql"
         ],
         "rlsEnabled": true
       },
@@ -1960,7 +2511,7 @@
           "field": "policy_roles",
           "groupKey": "public-role-policies-gated",
           "declared": "n/a",
-          "live": "4 of 4 policies target PUBLIC; those 4 are gated on caller identity",
+          "live": "2 of 2 policies target PUBLIC; those 2 are gated on caller identity",
           "severity": "low",
           "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
         }
@@ -1969,11 +2520,78 @@
       "verified": true,
       "id": "tbl.drafts",
       "label": "drafts",
-      "sublabel": "RLS · 4 policies",
+      "sublabel": "RLS · 2 policies",
       "kind": "table",
       "source": {
         "path": "supabase/migrations/20251205110000_enable_drafts_rls.sql",
         "line": 8
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": {
+        "rlsEnabled": true,
+        "rlsForced": false,
+        "policies": [
+          {
+            "name": "league_draft_slots_delete_commissioner",
+            "roles": [
+              "authenticated"
+            ],
+            "using": "is_commissioner(league_id)",
+            "command": "DELETE",
+            "withCheck": null,
+            "permissive": true
+          },
+          {
+            "name": "league_draft_slots_insert_commissioner",
+            "roles": [
+              "authenticated"
+            ],
+            "using": null,
+            "command": "INSERT",
+            "withCheck": "is_commissioner(league_id)",
+            "permissive": true
+          },
+          {
+            "name": "league_draft_slots_select_members",
+            "roles": [
+              "authenticated"
+            ],
+            "using": "is_member(league_id)",
+            "command": "SELECT",
+            "withCheck": null,
+            "permissive": true
+          },
+          {
+            "name": "league_draft_slots_update_commissioner",
+            "roles": [
+              "authenticated"
+            ],
+            "using": "is_commissioner(league_id)",
+            "command": "UPDATE",
+            "withCheck": "is_commissioner(league_id)",
+            "permissive": true
+          }
+        ]
+      },
+      "declared": {
+        "touchedBy": [
+          "supabase/migrations/20260810000004_create_league_draft_slots.sql"
+        ],
+        "rlsEnabled": true
+      },
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "tbl.league_draft_slots",
+      "label": "league_draft_slots",
+      "sublabel": "RLS · 4 policies",
+      "kind": "table",
+      "source": {
+        "path": "supabase/migrations/20260810000004_create_league_draft_slots.sql",
+        "line": 23
       }
     },
     {
@@ -2064,9 +2682,9 @@
           {
             "name": "league_members_select_members",
             "roles": [
-              "authenticated"
+              "PUBLIC"
             ],
-            "using": "is_member(league_id)",
+            "using": "(is_member(league_id) OR (user_id = (auth.uid())::text))",
             "command": "SELECT",
             "withCheck": null,
             "permissive": true
@@ -2080,7 +2698,16 @@
         ],
         "rlsEnabled": true
       },
-      "drift": [],
+      "drift": [
+        {
+          "field": "policy_roles",
+          "groupKey": "public-role-policies-gated",
+          "declared": "n/a",
+          "live": "1 of 4 policies target PUBLIC; those 1 are gated on caller identity",
+          "severity": "low",
+          "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
+        }
+      ],
       "annotation": null,
       "verified": true,
       "id": "tbl.league_members",
@@ -2227,9 +2854,9 @@
           {
             "name": "leagues_select_member_or_commissioner",
             "roles": [
-              "authenticated"
+              "PUBLIC"
             ],
-            "using": "(is_member(id) OR is_commissioner(id))",
+            "using": "(is_member(id) OR is_commissioner(id) OR (commissioner_id = (auth.uid())::text))",
             "command": "SELECT",
             "withCheck": null,
             "permissive": true
@@ -2265,11 +2892,23 @@
           "supabase/migrations/20251230220000_add_playoff_columns.sql",
           "supabase/migrations/20260125000000_add_league_seasons.sql",
           "supabase/migrations/20260305000000_add_playoffs_season_status.sql",
-          "supabase/migrations/20260712000001_rls_b1_01_leagues.sql"
+          "supabase/migrations/20260712000001_rls_b1_01_leagues.sql",
+          "supabase/migrations/20260810000002_leagues_add_stake_mode.sql",
+          "supabase/migrations/20260811000009_drop_leagues_salary_cap_limit.sql",
+          "supabase/migrations/20260816000000_leagues_allow_undraftable.sql"
         ],
         "rlsEnabled": true
       },
-      "drift": [],
+      "drift": [
+        {
+          "field": "policy_roles",
+          "groupKey": "public-role-policies-gated",
+          "declared": "n/a",
+          "live": "1 of 5 policies target PUBLIC; those 1 are gated on caller identity",
+          "severity": "low",
+          "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
+        }
+      ],
       "annotation": null,
       "verified": true,
       "id": "tbl.leagues",
@@ -2405,6 +3044,120 @@
     {
       "layer": "db",
       "facts": {},
+      "db": null,
+      "declared": {
+        "touchedBy": [
+          "supabase/migrations/20260815000000_signup_gate.sql"
+        ],
+        "rlsEnabled": true
+      },
+      "drift": [],
+      "annotation": null,
+      "verified": false,
+      "id": "tbl.signup_allowlist",
+      "label": "signup_allowlist",
+      "sublabel": "not in snapshot",
+      "kind": "table",
+      "source": {
+        "path": "supabase/migrations/20260815000000_signup_gate.sql",
+        "line": 57
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": {
+        "rlsEnabled": true,
+        "rlsForced": false,
+        "policies": [
+          {
+            "name": "splits_select_authenticated",
+            "roles": [
+              "authenticated"
+            ],
+            "using": "true",
+            "command": "SELECT",
+            "withCheck": null,
+            "permissive": true
+          }
+        ]
+      },
+      "declared": {
+        "touchedBy": [
+          "supabase/migrations/20260810000006_create_splits.sql"
+        ],
+        "rlsEnabled": true
+      },
+      "drift": [
+        {
+          "field": "policy_roles",
+          "groupKey": "authenticated-role-policies-ungated",
+          "declared": "n/a",
+          "live": "splits_select_authenticated (SELECT, authenticated, predicate: true)",
+          "severity": "medium",
+          "note": "ANY-AUTHENTICATED READ of every row. The predicate never references the caller, so every logged-in user reads the whole table. This is a real exposure, not a cosmetic one — it is simply narrower than the anon case. Before accepting it, check whether any COLUMN here is a capability rather than an attribute (a bearer token, a key, an invite code): an ungated read is tolerable for display attributes like a username and not tolerable for something possession of which grants an action. See this node's annotation."
+        }
+      ],
+      "annotation": null,
+      "verified": true,
+      "id": "tbl.splits",
+      "label": "splits",
+      "sublabel": "RLS · 1 policy",
+      "kind": "table",
+      "source": {
+        "path": "supabase/migrations/20260810000006_create_splits.sql",
+        "line": 24
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": {
+        "rlsEnabled": true,
+        "rlsForced": false,
+        "policies": [
+          {
+            "name": "symbol_category_overrides_select_authenticated",
+            "roles": [
+              "authenticated"
+            ],
+            "using": "true",
+            "command": "SELECT",
+            "withCheck": null,
+            "permissive": true
+          }
+        ]
+      },
+      "declared": {
+        "touchedBy": [
+          "supabase/migrations/20260810000003_create_categories_tables.sql"
+        ],
+        "rlsEnabled": true
+      },
+      "drift": [
+        {
+          "field": "policy_roles",
+          "groupKey": "authenticated-role-policies-ungated",
+          "declared": "n/a",
+          "live": "symbol_category_overrides_select_authenticated (SELECT, authenticated, predicate: true)",
+          "severity": "medium",
+          "note": "ANY-AUTHENTICATED READ of every row. The predicate never references the caller, so every logged-in user reads the whole table. This is a real exposure, not a cosmetic one — it is simply narrower than the anon case. Before accepting it, check whether any COLUMN here is a capability rather than an attribute (a bearer token, a key, an invite code): an ungated read is tolerable for display attributes like a username and not tolerable for something possession of which grants an action. See this node's annotation."
+        }
+      ],
+      "annotation": null,
+      "verified": true,
+      "id": "tbl.symbol_category_overrides",
+      "label": "symbol_category_overrides",
+      "sublabel": "RLS · 1 policy",
+      "kind": "table",
+      "source": {
+        "path": "supabase/migrations/20260810000003_create_categories_tables.sql",
+        "line": 49
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
       "db": {
         "rlsEnabled": true,
         "rlsForced": false,
@@ -2421,7 +3174,13 @@
           }
         ]
       },
-      "declared": null,
+      "declared": {
+        "touchedBy": [
+          "supabase/migrations/20260810000001_symbols_add_enrichment_columns.sql",
+          "supabase/migrations/20260811000007_symbols_enrichment_support.sql"
+        ],
+        "rlsEnabled": false
+      },
       "drift": [
         {
           "field": "policy_roles",
@@ -2438,7 +3197,10 @@
       "label": "symbols",
       "sublabel": "RLS · 1 policy",
       "kind": "table",
-      "source": null
+      "source": {
+        "path": "supabase/migrations/20260810000001_symbols_add_enrichment_columns.sql",
+        "line": 32
+      }
     },
     {
       "layer": "db",
@@ -2447,16 +3209,6 @@
         "rlsEnabled": true,
         "rlsForced": false,
         "policies": [
-          {
-            "name": "Users can create trades in their leagues",
-            "roles": [
-              "PUBLIC"
-            ],
-            "using": null,
-            "command": "INSERT",
-            "withCheck": "((user_id = auth.uid()) AND (EXISTS ( SELECT 1\n   FROM league_members\n  WHERE ((league_members.league_id = trades.league_id) AND (league_members.user_id = (auth.uid())::text)))))",
-            "permissive": true
-          },
           {
             "name": "Users can view trades in their leagues",
             "roles": [
@@ -2472,7 +3224,8 @@
       "declared": {
         "touchedBy": [
           "supabase/migrations/20250118000000_create_trades.sql",
-          "supabase/migrations/20251210000000_add_alpaca_order_id_to_trades.sql"
+          "supabase/migrations/20251210000000_add_alpaca_order_id_to_trades.sql",
+          "supabase/migrations/20260810000000_widen_draft_trade_quantity_numeric.sql"
         ],
         "rlsEnabled": true
       },
@@ -2481,7 +3234,7 @@
           "field": "policy_roles",
           "groupKey": "public-role-policies-gated",
           "declared": "n/a",
-          "live": "2 of 2 policies target PUBLIC; those 2 are gated on caller identity",
+          "live": "1 of 1 policies target PUBLIC; those 1 are gated on caller identity",
           "severity": "low",
           "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
         }
@@ -2490,7 +3243,7 @@
       "verified": true,
       "id": "tbl.trades",
       "label": "trades",
-      "sublabel": "RLS · 2 policies",
+      "sublabel": "RLS · 1 policy",
       "kind": "table",
       "source": {
         "path": "supabase/migrations/20250118000000_create_trades.sql",
@@ -2611,6 +3364,23 @@
       "source": {
         "path": "supabase/migrations/20260105000000_add_week_snapshots.sql",
         "line": 7
+      }
+    },
+    {
+      "layer": "client",
+      "facts": {},
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "ui.categoryData",
+      "label": "categoryData.ts",
+      "sublabel": "mobile/lib/categoryData.ts",
+      "kind": "client-screen",
+      "source": {
+        "path": "apps/mobile/lib/categoryData.ts",
+        "line": 1
       }
     },
     {
@@ -3029,6 +3799,23 @@
       "drift": [],
       "annotation": null,
       "verified": true,
+      "id": "ui.src.pages.Leagues.jsx",
+      "label": "Leagues.jsx",
+      "sublabel": "web/src/pages/Leagues.jsx",
+      "kind": "client-screen",
+      "source": {
+        "path": "apps/web/src/pages/Leagues.jsx",
+        "line": 1
+      }
+    },
+    {
+      "layer": "client",
+      "facts": {},
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
       "id": "ui.src.pages.Login.jsx",
       "label": "Login.jsx",
       "sublabel": "web/src/pages/Login.jsx",
@@ -3264,6 +4051,18 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.cron.enrich_symbols_10min->fn.enrich-symbols",
+      "from": "cron.enrich_symbols_10min",
+      "to": "fn.enrich-symbols",
+      "protocol": "pg-net-http",
+      "payload": "net.http_post · apikey from vault cron_apikey",
+      "callSites": [
+        "supabase/migrations/20260811000008_schedule_enrich_symbols.sql:29"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.cron.process-weekly-matchups->fn.process-week-results",
       "from": "cron.process-weekly-matchups",
       "to": "fn.process-week-results",
@@ -3280,9 +4079,9 @@
       "from": "cron.refresh_symbols_daily",
       "to": "fn.refresh-symbols",
       "protocol": "pg-net-http",
-      "payload": "net.http_post · NO auth header",
+      "payload": "net.http_post · apikey from vault cron_apikey",
       "callSites": [
-        "supabase/migrations/20260728000002_fix_refresh_symbols_cron_auth.sql:158"
+        "supabase/migrations/20260811000000_fix_refresh_symbols_cron_auth.sql:19"
       ]
     },
     {
@@ -3312,13 +4111,56 @@
     {
       "annotation": null,
       "verified": true,
-      "id": "e.cron.sync-alpaca-orders->fn.sync-alpaca-orders",
-      "from": "cron.sync-alpaca-orders",
-      "to": "fn.sync-alpaca-orders",
-      "protocol": "pg-net-http",
-      "payload": "net.http_post · apikey from vault cron_apikey",
+      "id": "e.fn.enrich-symbols->ext.finnhub",
+      "from": "fn.enrich-symbols",
+      "to": "ext.finnhub",
+      "protocol": "vendor-https",
+      "payload": "https://finnhub.io/api/v1/stock/profile2",
       "callSites": [
-        "supabase/migrations/20260618000002_migrate_sync_alpaca_orders_cron_auth.sql:34"
+        "supabase/functions/enrich-symbols/index.ts:70"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.enrich-symbols->tbl.category_rules",
+      "from": "fn.enrich-symbols",
+      "to": "tbl.category_rules",
+      "protocol": "postgrest-select",
+      "payload": ".from('category_rules').select('gics_industry')",
+      "columns": [
+        "gics_industry"
+      ],
+      "callSites": [
+        "supabase/functions/enrich-symbols/index.ts:147"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.enrich-symbols->tbl.symbols",
+      "from": "fn.enrich-symbols",
+      "to": "tbl.symbols",
+      "protocol": "postgrest-select",
+      "payload": ".from('symbols').select('symbol, exchange, is_etf, active, gics_industry, last_price, market_cap')",
+      "columns": [
+        "symbol, exchange, is_etf, active, gics_industry, last_price, market_cap"
+      ],
+      "callSites": [
+        "supabase/functions/enrich-symbols/index.ts:137"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.enrich-symbols->tbl.symbols#update",
+      "from": "fn.enrich-symbols",
+      "to": "tbl.symbols",
+      "protocol": "postgrest-update",
+      "payload": ".from('symbols').update()",
+      "columns": [],
+      "callSites": [
+        "supabase/functions/enrich-symbols/index.ts:197"
       ]
     },
     {
@@ -3368,62 +4210,6 @@
       "payload": "rpc('join_league_by_code')",
       "callSites": [
         "supabase/functions/join-league/index.ts:76"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.fn.place-order->ext.alpaca-trading",
-      "from": "fn.place-order",
-      "to": "ext.alpaca-trading",
-      "protocol": "vendor-https",
-      "payload": "https://paper-api.alpaca.markets/v2/orders/${orderId}",
-      "callSites": [
-        "supabase/functions/place-order/index.ts:179",
-        "supabase/functions/place-order/index.ts:64"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.fn.place-order->tbl.broker_credentials",
-      "from": "fn.place-order",
-      "to": "tbl.broker_credentials",
-      "protocol": "postgrest-select",
-      "payload": ".from('broker_credentials').select('key_id, secret_ciphertext, iv')",
-      "columns": [
-        "key_id, secret_ciphertext, iv"
-      ],
-      "callSites": [
-        "supabase/functions/place-order/index.ts:48"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.fn.place-order->tbl.league_members",
-      "from": "fn.place-order",
-      "to": "tbl.league_members",
-      "protocol": "postgrest-select",
-      "payload": ".from('league_members').select('user_id')",
-      "columns": [
-        "user_id"
-      ],
-      "callSites": [
-        "supabase/functions/place-order/index.ts:152"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.fn.place-order->tbl.trades#insert",
-      "from": "fn.place-order",
-      "to": "tbl.trades",
-      "protocol": "postgrest-insert",
-      "payload": ".from('trades').insert()",
-      "columns": [],
-      "callSites": [
-        "supabase/functions/place-order/index.ts:257"
       ]
     },
     {
@@ -3758,22 +4544,123 @@
       "protocol": "vendor-https",
       "payload": "https://data.alpaca.markets/v2",
       "callSites": [
-        "supabase/functions/quote/index.ts:36"
+        "supabase/functions/quote/index.ts:38"
       ]
     },
     {
       "annotation": null,
       "verified": true,
-      "id": "e.fn.quote->tbl.broker_credentials",
-      "from": "fn.quote",
-      "to": "tbl.broker_credentials",
+      "id": "e.fn.record-trade->pg.check_and_bump_rate_limit",
+      "from": "fn.record-trade",
+      "to": "pg.check_and_bump_rate_limit",
+      "protocol": "postgrest-rpc",
+      "payload": "rpc('check_and_bump_rate_limit')",
+      "callSites": [
+        "supabase/functions/record-trade/index.ts:66",
+        "supabase/functions/record-trade/index.ts:69"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.record-trade->tbl.drafts",
+      "from": "fn.record-trade",
+      "to": "tbl.drafts",
       "protocol": "postgrest-select",
-      "payload": ".from('broker_credentials').select('key_id, secret_ciphertext, iv')",
+      "payload": ".from('drafts').select('user_id, symbol, entry_price, quantity, pick_number, slot_id')",
       "columns": [
-        "key_id, secret_ciphertext, iv"
+        "user_id, symbol, entry_price, quantity, pick_number, slot_id"
       ],
       "callSites": [
-        "supabase/functions/quote/index.ts:83"
+        "supabase/functions/record-trade/index.ts:138"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.record-trade->tbl.league_draft_slots",
+      "from": "fn.record-trade",
+      "to": "tbl.league_draft_slots",
+      "protocol": "postgrest-select",
+      "payload": ".from('league_draft_slots').select('id, slot_index, slot_count, price_min, price_max, category_id')",
+      "columns": [
+        "id, slot_index, slot_count, price_min, price_max, category_id"
+      ],
+      "callSites": [
+        "supabase/functions/record-trade/index.ts:178"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.record-trade->tbl.league_members",
+      "from": "fn.record-trade",
+      "to": "tbl.league_members",
+      "protocol": "postgrest-select",
+      "payload": ".from('league_members').select('user_id')",
+      "columns": [
+        "user_id"
+      ],
+      "callSites": [
+        "supabase/functions/record-trade/index.ts:128"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.record-trade->tbl.leagues",
+      "from": "fn.record-trade",
+      "to": "tbl.leagues",
+      "protocol": "postgrest-select",
+      "payload": ".from('leagues').select('id, num_rounds, draft_status, stake_mode, budget_amount, notional_per_slot, allow_undraftable')",
+      "columns": [
+        "id, num_rounds, draft_status, stake_mode, budget_amount, notional_per_slot, allow_undraftable"
+      ],
+      "callSites": [
+        "supabase/functions/record-trade/index.ts:115"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.record-trade->tbl.symbols",
+      "from": "fn.record-trade",
+      "to": "tbl.symbols",
+      "protocol": "postgrest-select",
+      "payload": ".from('symbols').select('is_draftable')",
+      "columns": [
+        "is_draftable"
+      ],
+      "callSites": [
+        "supabase/functions/record-trade/index.ts:203"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.record-trade->tbl.trades",
+      "from": "fn.record-trade",
+      "to": "tbl.trades",
+      "protocol": "postgrest-select",
+      "payload": ".from('trades').select('user_id, symbol, action, quantity, price')",
+      "columns": [
+        "user_id, symbol, action, quantity, price"
+      ],
+      "callSites": [
+        "supabase/functions/record-trade/index.ts:145"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.record-trade->tbl.trades#insert",
+      "from": "fn.record-trade",
+      "to": "tbl.trades",
+      "protocol": "postgrest-insert",
+      "payload": ".from('trades').insert()",
+      "columns": [],
+      "callSites": [
+        "supabase/functions/record-trade/index.ts:238"
       ]
     },
     {
@@ -3800,31 +4687,6 @@
       "columns": [],
       "callSites": [
         "supabase/functions/refresh-symbols/index.ts:171"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.fn.save-broker-keys->ext.alpaca-trading",
-      "from": "fn.save-broker-keys",
-      "to": "ext.alpaca-trading",
-      "protocol": "vendor-https",
-      "payload": "https://paper-api.alpaca.markets/v2/account",
-      "callSites": [
-        "supabase/functions/save-broker-keys/index.ts:50"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.fn.save-broker-keys->tbl.broker_credentials#upsert",
-      "from": "fn.save-broker-keys",
-      "to": "tbl.broker_credentials",
-      "protocol": "postgrest-upsert",
-      "payload": ".from('broker_credentials').upsert()",
-      "columns": [],
-      "callSites": [
-        "supabase/functions/save-broker-keys/index.ts:136"
       ]
     },
     {
@@ -4234,9 +5096,9 @@
       "from": "fn.symbols-search",
       "to": "tbl.symbols",
       "protocol": "postgrest-select",
-      "payload": ".from('symbols').select('symbol,name')",
+      "payload": ".from('symbols').select('symbol,name,is_draftable')",
       "columns": [
-        "symbol,name"
+        "symbol,name,is_draftable"
       ],
       "callSites": [
         "supabase/functions/symbols-search/index.ts:107",
@@ -4249,66 +5111,6 @@
     {
       "annotation": null,
       "verified": true,
-      "id": "e.fn.sync-alpaca-orders->ext.alpaca-trading",
-      "from": "fn.sync-alpaca-orders",
-      "to": "ext.alpaca-trading",
-      "protocol": "vendor-https",
-      "payload": "https://paper-api.alpaca.markets/v2/orders/${orderId}",
-      "callSites": [
-        "supabase/functions/sync-alpaca-orders/index.ts:121",
-        "supabase/functions/sync-alpaca-orders/index.ts:99"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.fn.sync-alpaca-orders->tbl.broker_credentials",
-      "from": "fn.sync-alpaca-orders",
-      "to": "tbl.broker_credentials",
-      "protocol": "postgrest-select",
-      "payload": ".from('broker_credentials').select('key_id, secret_ciphertext, iv')",
-      "columns": [
-        "key_id, secret_ciphertext, iv",
-        "user_id, key_id, secret_ciphertext, iv"
-      ],
-      "callSites": [
-        "supabase/functions/sync-alpaca-orders/index.ts:261",
-        "supabase/functions/sync-alpaca-orders/index.ts:85"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.fn.sync-alpaca-orders->tbl.trades",
-      "from": "fn.sync-alpaca-orders",
-      "to": "tbl.trades",
-      "protocol": "postgrest-select",
-      "payload": ".from('trades').select('*')",
-      "columns": [
-        "*"
-      ],
-      "callSites": [
-        "supabase/functions/sync-alpaca-orders/index.ts:153",
-        "supabase/functions/sync-alpaca-orders/index.ts:336"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.fn.sync-alpaca-orders->tbl.trades#update",
-      "from": "fn.sync-alpaca-orders",
-      "to": "tbl.trades",
-      "protocol": "postgrest-update",
-      "payload": ".from('trades').update()",
-      "columns": [],
-      "callSites": [
-        "supabase/functions/sync-alpaca-orders/index.ts:195",
-        "supabase/functions/sync-alpaca-orders/index.ts:366"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
       "id": "e.fn.ticker-quotes->ext.alpaca-data",
       "from": "fn.ticker-quotes",
       "to": "ext.alpaca-data",
@@ -4316,6 +5118,137 @@
       "payload": "https://data.alpaca.markets/v2",
       "callSites": [
         "supabase/functions/ticker-quotes/index.ts:30"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.validate-and-record-pick->pg.check_and_bump_rate_limit",
+      "from": "fn.validate-and-record-pick",
+      "to": "pg.check_and_bump_rate_limit",
+      "protocol": "postgrest-rpc",
+      "payload": "rpc('check_and_bump_rate_limit')",
+      "callSites": [
+        "supabase/functions/validate-and-record-pick/index.ts:75",
+        "supabase/functions/validate-and-record-pick/index.ts:78"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.validate-and-record-pick->tbl.drafts",
+      "from": "fn.validate-and-record-pick",
+      "to": "tbl.drafts",
+      "protocol": "postgrest-select",
+      "payload": ".from('drafts').select('user_id, symbol, entry_price, quantity, pick_number, slot_id')",
+      "columns": [
+        "user_id, symbol, entry_price, quantity, pick_number, slot_id"
+      ],
+      "callSites": [
+        "supabase/functions/validate-and-record-pick/index.ts:155"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.validate-and-record-pick->tbl.drafts#insert",
+      "from": "fn.validate-and-record-pick",
+      "to": "tbl.drafts",
+      "protocol": "postgrest-insert",
+      "payload": ".from('drafts').insert()",
+      "columns": [],
+      "callSites": [
+        "supabase/functions/validate-and-record-pick/index.ts:178",
+        "supabase/functions/validate-and-record-pick/index.ts:264",
+        "supabase/functions/validate-and-record-pick/index.ts:6"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.validate-and-record-pick->tbl.league_draft_slots",
+      "from": "fn.validate-and-record-pick",
+      "to": "tbl.league_draft_slots",
+      "protocol": "postgrest-select",
+      "payload": ".from('league_draft_slots').select('id, slot_index, slot_count, price_min, price_max, category_id')",
+      "columns": [
+        "id, slot_index, slot_count, price_min, price_max, category_id"
+      ],
+      "callSites": [
+        "supabase/functions/validate-and-record-pick/index.ts:215"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.validate-and-record-pick->tbl.league_members",
+      "from": "fn.validate-and-record-pick",
+      "to": "tbl.league_members",
+      "protocol": "postgrest-select",
+      "payload": ".from('league_members').select('user_id')",
+      "columns": [
+        "user_id"
+      ],
+      "callSites": [
+        "supabase/functions/validate-and-record-pick/index.ts:141"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.validate-and-record-pick->tbl.leagues",
+      "from": "fn.validate-and-record-pick",
+      "to": "tbl.leagues",
+      "protocol": "postgrest-select",
+      "payload": ".from('leagues').select('id, commissioner_id, num_rounds, draft_status, stake_mode, budget_amount, notional_per_slot, allow_undraftable')",
+      "columns": [
+        "id, commissioner_id, num_rounds, draft_status, stake_mode, budget_amount, notional_per_slot, allow_undraftable"
+      ],
+      "callSites": [
+        "supabase/functions/validate-and-record-pick/index.ts:130"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.validate-and-record-pick->tbl.leagues#update",
+      "from": "fn.validate-and-record-pick",
+      "to": "tbl.leagues",
+      "protocol": "postgrest-update",
+      "payload": ".from('leagues').update()",
+      "columns": [],
+      "callSites": [
+        "supabase/functions/validate-and-record-pick/index.ts:310"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.validate-and-record-pick->tbl.symbols",
+      "from": "fn.validate-and-record-pick",
+      "to": "tbl.symbols",
+      "protocol": "postgrest-select",
+      "payload": ".from('symbols').select('is_draftable')",
+      "columns": [
+        "is_draftable"
+      ],
+      "callSites": [
+        "supabase/functions/validate-and-record-pick/index.ts:232"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.validate-and-record-pick->tbl.trades",
+      "from": "fn.validate-and-record-pick",
+      "to": "tbl.trades",
+      "protocol": "postgrest-select",
+      "payload": ".from('trades').select('user_id, symbol, action, quantity, price')",
+      "columns": [
+        "user_id, symbol, action, quantity, price"
+      ],
+      "callSites": [
+        "supabase/functions/validate-and-record-pick/index.ts:165"
       ]
     },
     {
@@ -4381,6 +5314,19 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20260125000000_add_league_seasons.sql:109"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.enforce_symbol_category_cap->tbl.symbol_category_overrides",
+      "from": "pg.enforce_symbol_category_cap",
+      "to": "tbl.symbol_category_overrides",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT symbol_category_overrides (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260810000003_create_categories_tables.sql:78"
       ]
     },
     {
@@ -4475,6 +5421,32 @@
         "supabase/migrations/20260716000000_preview_join_league_infra.sql:64",
         "supabase/migrations/20260716000000_preview_join_league_infra.sql:70",
         "supabase/migrations/20260716000000_preview_join_league_infra.sql:78"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.restrict_new_signups->tbl.app_config",
+      "from": "pg.restrict_new_signups",
+      "to": "tbl.app_config",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT app_config (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260815000000_signup_gate.sql:88"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.restrict_new_signups->tbl.signup_allowlist",
+      "from": "pg.restrict_new_signups",
+      "to": "tbl.signup_allowlist",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT signup_allowlist (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260815000000_signup_gate.sql:103"
       ]
     },
     {
@@ -4608,14 +5580,29 @@
     {
       "annotation": null,
       "verified": true,
-      "id": "e.tbl.broker_credentials->pg.update_broker_credentials_updated_at",
-      "from": "tbl.broker_credentials",
-      "to": "pg.update_broker_credentials_updated_at",
-      "protocol": "pg-trigger",
-      "payload": "trigger on broker_credentials",
-      "derivedFrom": "sql-body",
+      "id": "e.tbl.league_draft_slots->pg.is_commissioner#rls",
+      "from": "tbl.league_draft_slots",
+      "to": "pg.is_commissioner",
+      "protocol": "rls-predicate",
+      "payload": "called by policy league_draft_slots_delete_commissioner",
+      "derivedFrom": "db-snapshot",
       "callSites": [
-        "supabase/migrations/20251217000000_create_broker_credentials.sql:51"
+        "db-snapshot.json · policy league_draft_slots_delete_commissioner",
+        "db-snapshot.json · policy league_draft_slots_insert_commissioner",
+        "db-snapshot.json · policy league_draft_slots_update_commissioner"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.tbl.league_draft_slots->pg.is_member#rls",
+      "from": "tbl.league_draft_slots",
+      "to": "pg.is_member",
+      "protocol": "rls-predicate",
+      "payload": "called by policy league_draft_slots_select_members",
+      "derivedFrom": "db-snapshot",
+      "callSites": [
+        "db-snapshot.json · policy league_draft_slots_select_members"
       ]
     },
     {
@@ -4719,6 +5706,19 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.tbl.symbol_category_overrides->pg.enforce_symbol_category_cap",
+      "from": "tbl.symbol_category_overrides",
+      "to": "pg.enforce_symbol_category_cap",
+      "protocol": "pg-trigger",
+      "payload": "trigger on symbol_category_overrides",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260810000003_create_categories_tables.sql:92"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.tbl.user_profiles->pg.update_user_profiles_updated_at",
       "from": "tbl.user_profiles",
       "to": "pg.update_user_profiles_updated_at",
@@ -4745,6 +5745,115 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.ui.categoryData->tbl.categories",
+      "from": "ui.categoryData",
+      "to": "tbl.categories",
+      "protocol": "postgrest-select",
+      "payload": ".from('categories').select('id, slug, name, is_misc')",
+      "columns": [
+        "id, slug, name, is_misc"
+      ],
+      "callSites": [
+        "apps/mobile/lib/categoryData.ts:64"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.categoryData->tbl.category_rules",
+      "from": "ui.categoryData",
+      "to": "tbl.category_rules",
+      "protocol": "postgrest-select",
+      "payload": ".from('category_rules').select('category_id')",
+      "columns": [
+        "category_id",
+        "gics_industry"
+      ],
+      "callSites": [
+        "apps/mobile/lib/categoryData.ts:101",
+        "apps/mobile/lib/categoryData.ts:143"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.categoryData->tbl.league_draft_slots",
+      "from": "ui.categoryData",
+      "to": "tbl.league_draft_slots",
+      "protocol": "postgrest-select",
+      "payload": ".from('league_draft_slots').select('slot_index, slot_count, price_min, price_max, category_id')",
+      "columns": [
+        "slot_index, slot_count, price_min, price_max, category_id"
+      ],
+      "callSites": [
+        "apps/mobile/lib/categoryData.ts:226"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.categoryData->tbl.league_draft_slots#delete",
+      "from": "ui.categoryData",
+      "to": "tbl.league_draft_slots",
+      "protocol": "postgrest-delete",
+      "payload": ".from('league_draft_slots').delete()",
+      "columns": [],
+      "callSites": [
+        "apps/mobile/lib/categoryData.ts:206"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.categoryData->tbl.league_draft_slots#insert",
+      "from": "ui.categoryData",
+      "to": "tbl.league_draft_slots",
+      "protocol": "postgrest-insert",
+      "payload": ".from('league_draft_slots').insert()",
+      "columns": [],
+      "callSites": [
+        "apps/mobile/lib/categoryData.ts:219"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.categoryData->tbl.symbol_category_overrides",
+      "from": "ui.categoryData",
+      "to": "tbl.symbol_category_overrides",
+      "protocol": "postgrest-select",
+      "payload": ".from('symbol_category_overrides').select('category_id')",
+      "columns": [
+        "category_id",
+        "symbol, category_id"
+      ],
+      "callSites": [
+        "apps/mobile/lib/categoryData.ts:144",
+        "apps/mobile/lib/categoryData.ts:83"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.categoryData->tbl.symbols",
+      "from": "ui.categoryData",
+      "to": "tbl.symbols",
+      "protocol": "postgrest-select",
+      "payload": ".from('symbols').select('gics_industry')",
+      "columns": [
+        "gics_industry",
+        "symbol"
+      ],
+      "callSites": [
+        "apps/mobile/lib/categoryData.ts:111",
+        "apps/mobile/lib/categoryData.ts:112",
+        "apps/mobile/lib/categoryData.ts:129",
+        "apps/mobile/lib/categoryData.ts:94"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.ui.create-league->tbl.league_members#insert",
       "from": "ui.create-league",
       "to": "tbl.league_members",
@@ -4752,7 +5861,7 @@
       "payload": ".from('league_members').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/create-league.tsx:149"
+        "apps/mobile/app/create-league.tsx:150"
       ]
     },
     {
@@ -4765,7 +5874,7 @@
       "payload": ".from('leagues').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/create-league.tsx:126"
+        "apps/mobile/app/create-league.tsx:124"
       ]
     },
     {
@@ -4777,7 +5886,19 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('quote')",
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:191"
+        "apps/mobile/app/(tabs)/draft.tsx:273"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.draft->fn.validate-and-record-pick",
+      "from": "ui.draft",
+      "to": "fn.validate-and-record-pick",
+      "protocol": "https-invoke",
+      "payload": "functions.invoke('validate-and-record-pick')",
+      "callSites": [
+        "apps/mobile/app/(tabs)/draft.tsx:318"
       ]
     },
     {
@@ -4787,25 +5908,27 @@
       "from": "ui.draft",
       "to": "tbl.drafts",
       "protocol": "postgrest-select",
-      "payload": ".from('drafts').select('id, user_id, symbol, entry_price, round, pick_number, created_at')",
+      "payload": ".from('drafts').select('id, user_id, symbol, entry_price, round, pick_number, slot_id, created_at')",
       "columns": [
-        "id, user_id, symbol, entry_price, round, pick_number, created_at"
+        "id, user_id, symbol, entry_price, round, pick_number, slot_id, created_at"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:109"
+        "apps/mobile/app/(tabs)/draft.tsx:157"
       ]
     },
     {
       "annotation": null,
       "verified": true,
-      "id": "e.ui.draft->tbl.drafts#insert",
+      "id": "e.ui.draft->tbl.league_draft_slots",
       "from": "ui.draft",
-      "to": "tbl.drafts",
-      "protocol": "postgrest-insert",
-      "payload": ".from('drafts').insert()",
-      "columns": [],
+      "to": "tbl.league_draft_slots",
+      "protocol": "postgrest-select",
+      "payload": ".from('league_draft_slots').select('id, slot_index, slot_count, price_min, price_max, category_id')",
+      "columns": [
+        "id, slot_index, slot_count, price_min, price_max, category_id"
+      ],
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:234"
+        "apps/mobile/app/(tabs)/draft.tsx:193"
       ]
     },
     {
@@ -4820,20 +5943,7 @@
         "user_id, role"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:82"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.draft->tbl.leagues#update",
-      "from": "ui.draft",
-      "to": "tbl.leagues",
-      "protocol": "postgrest-update",
-      "payload": ".from('leagues').update()",
-      "columns": [],
-      "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:256"
+        "apps/mobile/app/(tabs)/draft.tsx:119"
       ]
     },
     {
@@ -4848,7 +5958,7 @@
         "id, username"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:91"
+        "apps/mobile/app/(tabs)/draft.tsx:127"
       ]
     },
     {
@@ -4863,7 +5973,7 @@
         "username"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/index.tsx:57"
+        "apps/mobile/app/(tabs)/index.tsx:58"
       ]
     },
     {
@@ -4875,7 +5985,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('join-league')",
       "callSites": [
-        "apps/mobile/app/join-league.tsx:112"
+        "apps/mobile/app/join-league.tsx:114"
       ]
     },
     {
@@ -4887,7 +5997,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('preview-league')",
       "callSites": [
-        "apps/mobile/app/join-league.tsx:82"
+        "apps/mobile/app/join-league.tsx:84"
       ]
     },
     {
@@ -4902,7 +6012,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/league.tsx:238"
+        "apps/mobile/app/(tabs)/league.tsx:140"
       ]
     },
     {
@@ -4917,7 +6027,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/league.tsx:207"
+        "apps/mobile/app/(tabs)/league.tsx:109"
       ]
     },
     {
@@ -4932,7 +6042,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/league.tsx:223"
+        "apps/mobile/app/(tabs)/league.tsx:125"
       ]
     },
     {
@@ -4947,7 +6057,7 @@
         "id, username, avatar"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/league.tsx:264"
+        "apps/mobile/app/(tabs)/league.tsx:166"
       ]
     },
     {
@@ -4959,7 +6069,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('start_new_league_season')",
       "callSites": [
-        "apps/mobile/app/league-settings.tsx:126"
+        "apps/mobile/app/league-settings.tsx:173"
       ]
     },
     {
@@ -4972,7 +6082,7 @@
       "payload": ".from('leagues').update()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/league-settings.tsx:85"
+        "apps/mobile/app/league-settings.tsx:136"
       ]
     },
     {
@@ -4987,7 +6097,7 @@
         "season_number, champion_user_id, runner_up_user_id, completed_at"
       ],
       "callSites": [
-        "apps/mobile/components/LeagueCarousel.tsx:62"
+        "apps/mobile/components/LeagueCarousel.tsx:63"
       ]
     },
     {
@@ -5003,8 +6113,8 @@
         "user_id, wins, losses, ties"
       ],
       "callSites": [
-        "apps/mobile/components/LeagueCarousel.tsx:108",
-        "apps/mobile/components/LeagueCarousel.tsx:127"
+        "apps/mobile/components/LeagueCarousel.tsx:109",
+        "apps/mobile/components/LeagueCarousel.tsx:128"
       ]
     },
     {
@@ -5019,7 +6129,7 @@
         "id, username"
       ],
       "callSites": [
-        "apps/mobile/components/LeagueCarousel.tsx:74"
+        "apps/mobile/components/LeagueCarousel.tsx:75"
       ]
     },
     {
@@ -5034,7 +6144,7 @@
         "league_id"
       ],
       "callSites": [
-        "apps/mobile/lib/LeagueContext.tsx:84"
+        "apps/mobile/lib/LeagueContext.tsx:76"
       ]
     },
     {
@@ -5049,7 +6159,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/lib/LeagueContext.tsx:97"
+        "apps/mobile/lib/LeagueContext.tsx:89"
       ]
     },
     {
@@ -5064,7 +6174,7 @@
         "user_id, role, joined_at"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/leagues.tsx:81"
+        "apps/mobile/app/(tabs)/leagues.tsx:89"
       ]
     },
     {
@@ -5077,7 +6187,7 @@
       "payload": ".from('league_members').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/(tabs)/leagues.tsx:217"
+        "apps/mobile/app/(tabs)/leagues.tsx:232"
       ]
     },
     {
@@ -5090,7 +6200,7 @@
       "payload": ".from('leagues').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/(tabs)/leagues.tsx:193"
+        "apps/mobile/app/(tabs)/leagues.tsx:201"
       ]
     },
     {
@@ -5105,7 +6215,7 @@
         "id, username"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/leagues.tsx:89"
+        "apps/mobile/app/(tabs)/leagues.tsx:97"
       ]
     },
     {
@@ -5118,7 +6228,7 @@
       "payload": ".from('user_profiles').upsert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/login.tsx:60"
+        "apps/mobile/app/login.tsx:71"
       ]
     },
     {
@@ -5130,8 +6240,8 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('quote')",
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:341",
-        "apps/mobile/app/(tabs)/matchup.tsx:425"
+        "apps/mobile/app/(tabs)/matchup.tsx:134",
+        "apps/mobile/app/(tabs)/matchup.tsx:379"
       ]
     },
     {
@@ -5146,7 +6256,7 @@
         "id, symbol, entry_price, quantity, user_id"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:362"
+        "apps/mobile/app/(tabs)/matchup.tsx:150"
       ]
     },
     {
@@ -5162,10 +6272,10 @@
         "week_number, playoff_round"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:174",
-        "apps/mobile/app/(tabs)/matchup.tsx:194",
-        "apps/mobile/app/(tabs)/matchup.tsx:210",
-        "apps/mobile/app/(tabs)/matchup.tsx:229"
+        "apps/mobile/app/(tabs)/matchup.tsx:212",
+        "apps/mobile/app/(tabs)/matchup.tsx:232",
+        "apps/mobile/app/(tabs)/matchup.tsx:248",
+        "apps/mobile/app/(tabs)/matchup.tsx:267"
       ]
     },
     {
@@ -5180,7 +6290,7 @@
         "id, symbol, price, quantity, action, user_id"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:368"
+        "apps/mobile/app/(tabs)/matchup.tsx:156"
       ]
     },
     {
@@ -5195,7 +6305,7 @@
         "id, username, avatar"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:259"
+        "apps/mobile/app/(tabs)/matchup.tsx:297"
       ]
     },
     {
@@ -5210,7 +6320,7 @@
         "user_id, symbol, quantity, week_start_price, week_end_price"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:274"
+        "apps/mobile/app/(tabs)/matchup.tsx:312"
       ]
     },
     {
@@ -5277,7 +6387,7 @@
         "symbol, quantity, entry_price"
       ],
       "callSites": [
-        "apps/mobile/app/player-portfolio.tsx:133"
+        "apps/mobile/app/player-portfolio.tsx:128"
       ]
     },
     {
@@ -5292,7 +6402,7 @@
         "symbol, action, quantity, price"
       ],
       "callSites": [
-        "apps/mobile/app/player-portfolio.tsx:140"
+        "apps/mobile/app/player-portfolio.tsx:135"
       ]
     },
     {
@@ -5307,59 +6417,7 @@
         "username, avatar"
       ],
       "callSites": [
-        "apps/mobile/app/player-portfolio.tsx:121"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.profile->fn.quote",
-      "from": "ui.profile",
-      "to": "fn.quote",
-      "protocol": "https-invoke",
-      "payload": "functions.invoke('quote')",
-      "callSites": [
-        "apps/mobile/app/(tabs)/profile.tsx:191"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.profile->fn.save-broker-keys",
-      "from": "ui.profile",
-      "to": "fn.save-broker-keys",
-      "protocol": "https-invoke",
-      "payload": "functions.invoke('save-broker-keys')",
-      "callSites": [
-        "apps/mobile/app/(tabs)/profile.tsx:118"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.profile->tbl.broker_credentials",
-      "from": "ui.profile",
-      "to": "tbl.broker_credentials",
-      "protocol": "postgrest-select",
-      "payload": ".from('broker_credentials').select('key_id')",
-      "columns": [
-        "key_id"
-      ],
-      "callSites": [
-        "apps/mobile/app/(tabs)/profile.tsx:78"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.profile->tbl.broker_credentials#delete",
-      "from": "ui.profile",
-      "to": "tbl.broker_credentials",
-      "protocol": "postgrest-delete",
-      "payload": ".from('broker_credentials').delete()",
-      "columns": [],
-      "callSites": [
-        "apps/mobile/app/(tabs)/profile.tsx:165"
+        "apps/mobile/app/player-portfolio.tsx:116"
       ]
     },
     {
@@ -5374,7 +6432,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/profile.tsx:60"
+        "apps/mobile/app/(tabs)/profile.tsx:43"
       ]
     },
     {
@@ -5387,7 +6445,7 @@
       "payload": ".from('user_profiles').upsert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/(tabs)/profile.tsx:246"
+        "apps/mobile/app/(tabs)/profile.tsx:87"
       ]
     },
     {
@@ -5405,26 +6463,26 @@
     {
       "annotation": null,
       "verified": true,
-      "id": "e.ui.src.components.TradeModal.jsx->fn.place-order",
-      "from": "ui.src.components.TradeModal.jsx",
-      "to": "fn.place-order",
-      "protocol": "https-invoke",
-      "payload": "functions.invoke('place-order')",
-      "callSites": [
-        "apps/web/src/components/TradeModal.jsx:263"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
       "id": "e.ui.src.components.TradeModal.jsx->fn.quote",
       "from": "ui.src.components.TradeModal.jsx",
       "to": "fn.quote",
       "protocol": "https-invoke",
       "payload": "functions.invoke('quote')",
       "callSites": [
-        "apps/web/src/components/TradeModal.jsx:178",
-        "apps/web/src/components/TradeModal.jsx:82"
+        "apps/web/src/components/TradeModal.jsx:159",
+        "apps/web/src/components/TradeModal.jsx:63"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.src.components.TradeModal.jsx->fn.record-trade",
+      "from": "ui.src.components.TradeModal.jsx",
+      "to": "fn.record-trade",
+      "protocol": "https-invoke",
+      "payload": "functions.invoke('record-trade')",
+      "callSites": [
+        "apps/web/src/components/TradeModal.jsx:241"
       ]
     },
     {
@@ -5436,7 +6494,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('symbol-name')",
       "callSites": [
-        "apps/web/src/components/TradeModal.jsx:101"
+        "apps/web/src/components/TradeModal.jsx:82"
       ]
     },
     {
@@ -5448,22 +6506,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('symbols-search')",
       "callSites": [
-        "apps/web/src/components/TradeModal.jsx:141"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.src.components.TradeModal.jsx->tbl.broker_credentials",
-      "from": "ui.src.components.TradeModal.jsx",
-      "to": "tbl.broker_credentials",
-      "protocol": "postgrest-select",
-      "payload": ".from('broker_credentials').select('key_id')",
-      "columns": [
-        "key_id"
-      ],
-      "callSites": [
-        "apps/web/src/components/TradeModal.jsx:50"
+        "apps/web/src/components/TradeModal.jsx:122"
       ]
     },
     {
@@ -5535,7 +6578,7 @@
         "id, user_id, symbol, entry_price, quantity, round, pick_number, created_at"
       ],
       "callSites": [
-        "apps/web/src/pages/Dashboard.jsx:129"
+        "apps/web/src/pages/Dashboard.jsx:132"
       ]
     },
     {
@@ -5550,7 +6593,7 @@
         "league_id"
       ],
       "callSites": [
-        "apps/web/src/pages/Dashboard.jsx:73"
+        "apps/web/src/pages/Dashboard.jsx:76"
       ]
     },
     {
@@ -5565,7 +6608,7 @@
         "id, name, draft_date, budget_mode, budget_amount, league_type, current_week"
       ],
       "callSites": [
-        "apps/web/src/pages/Dashboard.jsx:88"
+        "apps/web/src/pages/Dashboard.jsx:91"
       ]
     },
     {
@@ -5580,8 +6623,8 @@
         "*"
       ],
       "callSites": [
-        "apps/web/src/pages/Dashboard.jsx:212",
-        "apps/web/src/pages/Dashboard.jsx:268"
+        "apps/web/src/pages/Dashboard.jsx:215",
+        "apps/web/src/pages/Dashboard.jsx:271"
       ]
     },
     {
@@ -5596,7 +6639,7 @@
         "*"
       ],
       "callSites": [
-        "apps/web/src/pages/Dashboard.jsx:141"
+        "apps/web/src/pages/Dashboard.jsx:144"
       ]
     },
     {
@@ -5611,7 +6654,7 @@
         "user_id, symbol, quantity, week_start_price"
       ],
       "callSites": [
-        "apps/web/src/pages/Dashboard.jsx:244"
+        "apps/web/src/pages/Dashboard.jsx:247"
       ]
     },
     {
@@ -5623,19 +6666,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('finnhub-quote')",
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:622"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.src.pages.DraftPage.jsx->fn.place-order",
-      "from": "ui.src.pages.DraftPage.jsx",
-      "to": "fn.place-order",
-      "protocol": "https-invoke",
-      "payload": "functions.invoke('place-order')",
-      "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:663"
+        "apps/web/src/pages/DraftPage.jsx:654"
       ]
     },
     {
@@ -5647,7 +6678,21 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('quote')",
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:91"
+        "apps/web/src/pages/DraftPage.jsx:106"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.src.pages.DraftPage.jsx->fn.validate-and-record-pick",
+      "from": "ui.src.pages.DraftPage.jsx",
+      "to": "fn.validate-and-record-pick",
+      "protocol": "https-invoke",
+      "payload": "functions.invoke('validate-and-record-pick')",
+      "callSites": [
+        "apps/web/src/pages/DraftPage.jsx:695",
+        "apps/web/src/pages/DraftPage.jsx:912",
+        "apps/web/src/pages/DraftPage.jsx:942"
       ]
     },
     {
@@ -5659,22 +6704,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_real_user_ids')",
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:315"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.src.pages.DraftPage.jsx->tbl.broker_credentials",
-      "from": "ui.src.pages.DraftPage.jsx",
-      "to": "tbl.broker_credentials",
-      "protocol": "postgrest-select",
-      "payload": ".from('broker_credentials').select('user_id')",
-      "columns": [
-        "user_id"
-      ],
-      "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:327"
+        "apps/web/src/pages/DraftPage.jsx:361"
       ]
     },
     {
@@ -5684,33 +6714,31 @@
       "from": "ui.src.pages.DraftPage.jsx",
       "to": "tbl.drafts",
       "protocol": "postgrest-select",
-      "payload": ".from('drafts').select('id, league_id, user_id, symbol, entry_price, quantity, round, pick_number, created_at')",
+      "payload": ".from('drafts').select('id, league_id, user_id, symbol, entry_price, quantity, round, pick_number, slot_id, created_at')",
       "columns": [
         "*",
-        "id",
-        "id, league_id, user_id, symbol, entry_price, quantity, round, pick_number, created_at",
+        "id, league_id, user_id, symbol, entry_price, quantity, round, pick_number, slot_id, created_at",
         "id, symbol, user_id, entry_price, pick_number"
       ],
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:352",
-        "apps/web/src/pages/DraftPage.jsx:463",
-        "apps/web/src/pages/DraftPage.jsx:792",
-        "apps/web/src/pages/DraftPage.jsx:911"
+        "apps/web/src/pages/DraftPage.jsx:384",
+        "apps/web/src/pages/DraftPage.jsx:495",
+        "apps/web/src/pages/DraftPage.jsx:793"
       ]
     },
     {
       "annotation": null,
       "verified": true,
-      "id": "e.ui.src.pages.DraftPage.jsx->tbl.drafts#insert",
+      "id": "e.ui.src.pages.DraftPage.jsx->tbl.league_draft_slots",
       "from": "ui.src.pages.DraftPage.jsx",
-      "to": "tbl.drafts",
-      "protocol": "postgrest-insert",
-      "payload": ".from('drafts').insert()",
-      "columns": [],
+      "to": "tbl.league_draft_slots",
+      "protocol": "postgrest-select",
+      "payload": ".from('league_draft_slots').select('id, slot_index, slot_count, price_min, price_max, category_id')",
+      "columns": [
+        "id, slot_index, slot_count, price_min, price_max, category_id"
+      ],
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:694",
-        "apps/web/src/pages/DraftPage.jsx:935",
-        "apps/web/src/pages/DraftPage.jsx:977"
+        "apps/web/src/pages/DraftPage.jsx:209"
       ]
     },
     {
@@ -5726,8 +6754,8 @@
         "user_id, role"
       ],
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:228",
-        "apps/web/src/pages/DraftPage.jsx:292"
+        "apps/web/src/pages/DraftPage.jsx:274",
+        "apps/web/src/pages/DraftPage.jsx:338"
       ]
     },
     {
@@ -5740,7 +6768,7 @@
       "payload": ".from('league_members').insert()",
       "columns": [],
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:736"
+        "apps/web/src/pages/DraftPage.jsx:737"
       ]
     },
     {
@@ -5753,7 +6781,7 @@
       "payload": ".from('league_standings').insert()",
       "columns": [],
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:553"
+        "apps/web/src/pages/DraftPage.jsx:585"
       ]
     },
     {
@@ -5770,9 +6798,9 @@
         "id, name, draft_date, num_rounds, num_participants, budget_mode, budget_amount, commissioner_id, draft_status, duration_days, league_type, num_weeks"
       ],
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:240",
-        "apps/web/src/pages/DraftPage.jsx:281",
-        "apps/web/src/pages/DraftPage.jsx:449"
+        "apps/web/src/pages/DraftPage.jsx:286",
+        "apps/web/src/pages/DraftPage.jsx:327",
+        "apps/web/src/pages/DraftPage.jsx:481"
       ]
     },
     {
@@ -5785,8 +6813,8 @@
       "payload": ".from('leagues').update()",
       "columns": [],
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:1218",
-        "apps/web/src/pages/DraftPage.jsx:569"
+        "apps/web/src/pages/DraftPage.jsx:1183",
+        "apps/web/src/pages/DraftPage.jsx:601"
       ]
     },
     {
@@ -5799,7 +6827,7 @@
       "payload": ".from('matchups').insert()",
       "columns": [],
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:545"
+        "apps/web/src/pages/DraftPage.jsx:577"
       ]
     },
     {
@@ -5959,7 +6987,7 @@
         "user_id, role, joined_at"
       ],
       "callSites": [
-        "apps/web/src/pages/LeagueDetail.jsx:44"
+        "apps/web/src/pages/LeagueDetail.jsx:45"
       ]
     },
     {
@@ -5974,7 +7002,7 @@
         "*"
       ],
       "callSites": [
-        "apps/web/src/pages/LeagueDetail.jsx:59"
+        "apps/web/src/pages/LeagueDetail.jsx:60"
       ]
     },
     {
@@ -5989,7 +7017,22 @@
         "*"
       ],
       "callSites": [
-        "apps/web/src/pages/LeagueDetail.jsx:29"
+        "apps/web/src/pages/LeagueDetail.jsx:30"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.src.pages.Leagues.jsx->tbl.league_draft_slots",
+      "from": "ui.src.pages.Leagues.jsx",
+      "to": "tbl.league_draft_slots",
+      "protocol": "postgrest-select",
+      "payload": ".from('league_draft_slots').select('slot_index, slot_count, price_min, price_max, category_id')",
+      "columns": [
+        "slot_index, slot_count, price_min, price_max, category_id"
+      ],
+      "callSites": [
+        "apps/web/src/pages/Leagues.jsx:135"
       ]
     },
     {
@@ -6002,7 +7045,7 @@
       "payload": ".from('user_profiles').upsert()",
       "columns": [],
       "callSites": [
-        "apps/web/src/pages/Login.jsx:100"
+        "apps/web/src/pages/Login.jsx:110"
       ]
     },
     {
@@ -6017,7 +7060,7 @@
         "id, symbol, entry_price, quantity, user_id"
       ],
       "callSites": [
-        "apps/web/src/pages/Matchup.jsx:270"
+        "apps/web/src/pages/Matchup.jsx:151"
       ]
     },
     {
@@ -6062,7 +7105,7 @@
         "*"
       ],
       "callSites": [
-        "apps/web/src/pages/Matchup.jsx:164",
+        "apps/web/src/pages/Matchup.jsx:232",
         "apps/web/src/pages/Matchup.jsx:78"
       ]
     },
@@ -6078,7 +7121,7 @@
         "id, symbol, price, quantity, action, user_id"
       ],
       "callSites": [
-        "apps/web/src/pages/Matchup.jsx:277"
+        "apps/web/src/pages/Matchup.jsx:158"
       ]
     },
     {
@@ -6093,7 +7136,7 @@
         "user_id, symbol, quantity, week_start_price, week_end_price"
       ],
       "callSites": [
-        "apps/web/src/pages/Matchup.jsx:189"
+        "apps/web/src/pages/Matchup.jsx:257"
       ]
     },
     {
@@ -6162,58 +7205,6 @@
     {
       "annotation": null,
       "verified": true,
-      "id": "e.ui.src.pages.Profile.jsx->fn.quote",
-      "from": "ui.src.pages.Profile.jsx",
-      "to": "fn.quote",
-      "protocol": "https-invoke",
-      "payload": "functions.invoke('quote')",
-      "callSites": [
-        "apps/web/src/pages/Profile.jsx:198"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.src.pages.Profile.jsx->fn.save-broker-keys",
-      "from": "ui.src.pages.Profile.jsx",
-      "to": "fn.save-broker-keys",
-      "protocol": "https-invoke",
-      "payload": "functions.invoke('save-broker-keys')",
-      "callSites": [
-        "apps/web/src/pages/Profile.jsx:131"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.src.pages.Profile.jsx->tbl.broker_credentials",
-      "from": "ui.src.pages.Profile.jsx",
-      "to": "tbl.broker_credentials",
-      "protocol": "postgrest-select",
-      "payload": ".from('broker_credentials').select('key_id')",
-      "columns": [
-        "key_id"
-      ],
-      "callSites": [
-        "apps/web/src/pages/Profile.jsx:88"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.src.pages.Profile.jsx->tbl.broker_credentials#delete",
-      "from": "ui.src.pages.Profile.jsx",
-      "to": "tbl.broker_credentials",
-      "protocol": "postgrest-delete",
-      "payload": ".from('broker_credentials').delete()",
-      "columns": [],
-      "callSites": [
-        "apps/web/src/pages/Profile.jsx:174"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
       "id": "e.ui.src.pages.Profile.jsx->tbl.user_profiles",
       "from": "ui.src.pages.Profile.jsx",
       "to": "tbl.user_profiles",
@@ -6223,7 +7214,7 @@
         "username, avatar"
       ],
       "callSites": [
-        "apps/web/src/pages/Profile.jsx:62"
+        "apps/web/src/pages/Profile.jsx:49"
       ]
     },
     {
@@ -6236,8 +7227,8 @@
       "payload": ".from('user_profiles').upsert()",
       "columns": [],
       "callSites": [
-        "apps/web/src/pages/Profile.jsx:277",
-        "apps/web/src/pages/Profile.jsx:309"
+        "apps/web/src/pages/Profile.jsx:100",
+        "apps/web/src/pages/Profile.jsx:132"
       ]
     },
     {
@@ -6309,19 +7300,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/app/trade-history.tsx:57"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.TradeModal->fn.place-order",
-      "from": "ui.TradeModal",
-      "to": "fn.place-order",
-      "protocol": "https-invoke",
-      "payload": "functions.invoke('place-order')",
-      "callSites": [
-        "apps/mobile/components/TradeModal.tsx:336"
+        "apps/mobile/app/trade-history.tsx:58"
       ]
     },
     {
@@ -6333,8 +7312,20 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('quote')",
       "callSites": [
-        "apps/mobile/components/TradeModal.tsx:123",
-        "apps/mobile/components/TradeModal.tsx:228"
+        "apps/mobile/components/TradeModal.tsx:104",
+        "apps/mobile/components/TradeModal.tsx:209"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.TradeModal->fn.record-trade",
+      "from": "ui.TradeModal",
+      "to": "fn.record-trade",
+      "protocol": "https-invoke",
+      "payload": "functions.invoke('record-trade')",
+      "callSites": [
+        "apps/mobile/components/TradeModal.tsx:314"
       ]
     },
     {
@@ -6346,8 +7337,8 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('symbol-name')",
       "callSites": [
-        "apps/mobile/components/TradeModal.tsx:142",
-        "apps/mobile/components/TradeModal.tsx:252"
+        "apps/mobile/components/TradeModal.tsx:123",
+        "apps/mobile/components/TradeModal.tsx:233"
       ]
     },
     {
@@ -6359,22 +7350,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('symbols-search')",
       "callSites": [
-        "apps/mobile/components/TradeModal.tsx:186"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.TradeModal->tbl.broker_credentials",
-      "from": "ui.TradeModal",
-      "to": "tbl.broker_credentials",
-      "protocol": "postgrest-select",
-      "payload": ".from('broker_credentials').select('key_id')",
-      "columns": [
-        "key_id"
-      ],
-      "callSites": [
-        "apps/mobile/components/TradeModal.tsx:88"
+        "apps/mobile/components/TradeModal.tsx:167"
       ]
     },
     {
@@ -6495,7 +7471,7 @@
         "league_id"
       ],
       "callSites": [
-        "apps/mobile/lib/useLeagues.ts:40"
+        "apps/mobile/lib/useLeagues.ts:33"
       ]
     },
     {
@@ -6510,7 +7486,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/lib/useLeagues.ts:60"
+        "apps/mobile/lib/useLeagues.ts:53"
       ]
     },
     {
@@ -6525,7 +7501,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/lib/usePortfolio.ts:128"
+        "apps/mobile/lib/usePortfolio.ts:116"
       ]
     },
     {
@@ -6540,7 +7516,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/lib/usePortfolio.ts:140"
+        "apps/mobile/lib/usePortfolio.ts:128"
       ]
     },
     {
@@ -6591,7 +7567,7 @@
           "edge": "e.ui.join-league->fn.preview-league",
           "detail": "Screen posts the code for a display-only preview. Rate-limited per-user and per-IP.",
           "files": [
-            "apps/mobile/app/join-league.tsx:82"
+            "apps/mobile/app/join-league.tsx:84"
           ]
         },
         {
@@ -6607,7 +7583,7 @@
           "edge": "e.ui.join-league->fn.join-league",
           "detail": "On confirm, the join is performed server-side. verify_jwt=true, so the caller identity is the gateway-verified JWT.",
           "files": [
-            "apps/mobile/app/join-league.tsx:112"
+            "apps/mobile/app/join-league.tsx:114"
           ]
         },
         {
@@ -6931,10 +7907,7 @@
       },
       "nodePath": [
         "ui.TradeModal",
-        "fn.quote",
-        "fn.place-order",
-        "tbl.broker_credentials",
-        "ext.alpaca-trading"
+        "fn.quote"
       ],
       "steps": [
         {
@@ -6942,32 +7915,29 @@
           "edge": "e.ui.TradeModal->fn.quote",
           "detail": "Live quote for the symbol before confirming.",
           "files": [
-            "apps/mobile/components/TradeModal.tsx:123"
+            "apps/mobile/components/TradeModal.tsx:104"
           ]
         },
         {
           "n": 2,
           "edge": "e.ui.TradeModal->fn.place-order",
           "detail": "Order submitted server-side so broker credentials never reach the client.",
-          "files": [
-            "apps/mobile/components/TradeModal.tsx:337"
-          ]
+          "files": [],
+          "verified": false
         },
         {
           "n": 3,
           "edge": "e.fn.place-order->tbl.broker_credentials",
           "detail": "Per-user Alpaca keys read server-side.",
-          "files": [
-            "supabase/functions/place-order/index.ts:48"
-          ]
+          "files": [],
+          "verified": false
         },
         {
           "n": 4,
           "edge": "e.fn.place-order->ext.alpaca-trading",
           "detail": "Order placed against the user's own Alpaca account. place-order does NOT touch the trades table — it returns the Alpaca order to the client.",
-          "files": [
-            "supabase/functions/place-order/index.ts:51"
-          ]
+          "files": [],
+          "verified": false
         },
         {
           "n": 5,
@@ -6979,6 +7949,12 @@
       ],
       "annotation": "The trade row is written by the client, not by place-order. place-order reads broker_credentials, submits to Alpaca, and returns; TradeModal then inserts into trades. The broker order and the database record are committed by two different actors with nothing linking them transactionally, so a crash, network drop, or backgrounded app between the two leaves a real position at Alpaca with no row in the DB. flow.order-reconciliation exists to close that window after the fact.\n\nPARTIAL SALES READ AS A BUG BUT ARE NOT ONE. If a position is partly sold during the week, the matchup and dashboard screens show UNREALIZED P/L on the quantity still held at week end, while the scorer additionally settles the REALIZED P/L of the sold portion from midWeekTrades. So a screen and a standings number can legitimately differ after a partial sale, and the screen will read low. This is pre-existing and symmetrical: week-start holdings behave the same way, because their snapshot quantity is Monday's and the UI never consults trades. Not a defect — but it is the first thing a user will report, so recognise it rather than re-investigating.",
       "unverified": [
+        "step 2: anchor not found — apps/mobile/components/TradeModal.tsx no longer contains \"place-order\"",
+        "step 2: edge 'e.ui.TradeModal->fn.place-order' was not generated from any call site",
+        "step 3: anchor not found — supabase/functions/place-order/index.ts no longer contains \"from('broker_credentials')\"",
+        "step 3: edge 'e.fn.place-order->tbl.broker_credentials' was not generated from any call site",
+        "step 4: anchor not found — supabase/functions/place-order/index.ts no longer contains \"alpaca\"",
+        "step 4: edge 'e.fn.place-order->ext.alpaca-trading' was not generated from any call site",
         "step 5: anchor not found — apps/mobile/components/TradeModal.tsx no longer contains \"from('trades').insert(\"",
         "step 5: edge 'e.ui.TradeModal->tbl.trades#insert' was not generated from any call site"
       ]
@@ -6991,49 +7967,47 @@
         "detail": "pg_cron `sync-alpaca-orders` — weekdays 21:30 UTC",
         "cronJob": "sync-alpaca-orders"
       },
-      "nodePath": [
-        "cron.sync-alpaca-orders",
-        "fn.sync-alpaca-orders",
-        "tbl.broker_credentials",
-        "ext.alpaca-trading",
-        "tbl.trades"
-      ],
+      "nodePath": [],
       "steps": [
         {
           "n": 1,
           "edge": "e.cron.sync-alpaca-orders->fn.sync-alpaca-orders",
           "detail": "net.http_post with apikey from vault, body {\"mode\":\"sync-all\"}. This function was a verify_jwt true->false FLIP — its in-code apikey guard is now its ONLY protection.",
-          "files": [
-            "supabase/migrations/20260618000002_migrate_sync_alpaca_orders_cron_auth.sql:34"
-          ]
+          "files": [],
+          "verified": false
         },
         {
           "n": 2,
           "edge": "e.fn.sync-alpaca-orders->tbl.broker_credentials",
           "detail": "Per-user keys to query each account.",
-          "files": [
-            "supabase/functions/sync-alpaca-orders/index.ts:85"
-          ]
+          "files": [],
+          "verified": false
         },
         {
           "n": 3,
           "edge": "e.fn.sync-alpaca-orders->ext.alpaca-trading",
           "detail": "Fetch fills and order status.",
-          "files": [
-            "supabase/functions/sync-alpaca-orders/index.ts:88"
-          ]
+          "files": [],
+          "verified": false
         },
         {
           "n": 4,
           "edge": "e.fn.sync-alpaca-orders->tbl.trades#update",
           "detail": "Reconcile recorded trades against actual fills — closes the loop on Place a trade.",
-          "files": [
-            "supabase/functions/sync-alpaca-orders/index.ts:153"
-          ]
+          "files": [],
+          "verified": false
         }
       ],
       "annotation": null,
-      "unverified": []
+      "unverified": [
+        "step 1: edge 'e.cron.sync-alpaca-orders->fn.sync-alpaca-orders' was not generated from any call site",
+        "step 2: anchor not found — supabase/functions/sync-alpaca-orders/index.ts no longer contains \"from('broker_credentials')\"",
+        "step 2: edge 'e.fn.sync-alpaca-orders->tbl.broker_credentials' was not generated from any call site",
+        "step 3: anchor not found — supabase/functions/sync-alpaca-orders/index.ts no longer contains \"alpaca\"",
+        "step 3: edge 'e.fn.sync-alpaca-orders->ext.alpaca-trading' was not generated from any call site",
+        "step 4: anchor not found — supabase/functions/sync-alpaca-orders/index.ts no longer contains \"from('trades')\"",
+        "step 4: edge 'e.fn.sync-alpaca-orders->tbl.trades#update' was not generated from any call site"
+      ]
     },
     {
       "id": "flow.draft-stock",
@@ -7053,15 +8027,15 @@
           "edge": "e.ui.draft->fn.quote",
           "detail": "Price lookup for the pick.",
           "files": [
-            "apps/mobile/app/(tabs)/draft.tsx:191"
+            "apps/mobile/app/(tabs)/draft.tsx:273"
           ]
         },
         {
           "n": 2,
-          "edge": "e.ui.draft->tbl.drafts#insert",
+          "edge": "e.ui.draft->tbl.drafts",
           "detail": "Pick written directly from the client under RLS — no edge function in this path.",
           "files": [
-            "apps/mobile/app/(tabs)/draft.tsx:109"
+            "apps/mobile/app/(tabs)/draft.tsx:157"
           ]
         }
       ],
@@ -7089,7 +8063,7 @@
           "edge": "e.ui.league-settings->pg.start_new_league_season",
           "detail": "Called directly from the client as an authenticated user. EXECUTE is granted to `authenticated`, so the authorization is NOT the grant — it is an INTERNAL commissioner check inside the function body. That gate is the only thing standing between any league member and the four destructive writes below.",
           "files": [
-            "apps/mobile/app/league-settings.tsx:126"
+            "apps/mobile/app/league-settings.tsx:173"
           ]
         },
         {
@@ -7147,12 +8121,10 @@
         "ui.draft",
         "fn.quote",
         "ui.matchup",
-        "ui.profile",
         "ui.TradeModal",
         "ui.src.components.TradeModal.jsx",
         "ui.src.context.PriceContext.jsx",
         "ui.src.pages.DraftPage.jsx",
-        "ui.src.pages.Profile.jsx",
         "ui.useStockPrices",
         "fn.ticker-quotes",
         "ui.src.Ticker.jsx",
@@ -7169,26 +8141,22 @@
           "edge": [
             "e.ui.draft->fn.quote",
             "e.ui.matchup->fn.quote",
-            "e.ui.profile->fn.quote",
             "e.ui.TradeModal->fn.quote",
             "e.ui.src.components.TradeModal.jsx->fn.quote",
             "e.ui.src.context.PriceContext.jsx->fn.quote",
-            "e.ui.src.pages.DraftPage.jsx->fn.quote",
-            "e.ui.src.pages.Profile.jsx->fn.quote"
+            "e.ui.src.pages.DraftPage.jsx->fn.quote"
           ],
           "detail": "quote — single-symbol live price. The most-invoked function in the app.",
           "files": [
-            "apps/mobile/app/(tabs)/draft.tsx:191",
-            "apps/mobile/app/(tabs)/matchup.tsx:341",
-            "apps/mobile/app/(tabs)/matchup.tsx:425",
-            "apps/mobile/app/(tabs)/profile.tsx:191",
-            "apps/mobile/components/TradeModal.tsx:123",
-            "apps/mobile/components/TradeModal.tsx:228",
-            "apps/web/src/components/TradeModal.jsx:178",
-            "apps/web/src/components/TradeModal.jsx:82",
+            "apps/mobile/app/(tabs)/draft.tsx:273",
+            "apps/mobile/app/(tabs)/matchup.tsx:134",
+            "apps/mobile/app/(tabs)/matchup.tsx:379",
+            "apps/mobile/components/TradeModal.tsx:104",
+            "apps/mobile/components/TradeModal.tsx:209",
+            "apps/web/src/components/TradeModal.jsx:159",
+            "apps/web/src/components/TradeModal.jsx:63",
             "apps/web/src/context/PriceContext.jsx:99",
-            "apps/web/src/pages/DraftPage.jsx:91",
-            "apps/web/src/pages/Profile.jsx:198"
+            "apps/web/src/pages/DraftPage.jsx:106"
           ]
         },
         {
@@ -7212,10 +8180,10 @@
           ],
           "detail": "symbol-name — display name resolution.",
           "files": [
-            "apps/mobile/components/TradeModal.tsx:142",
-            "apps/mobile/components/TradeModal.tsx:252",
+            "apps/mobile/components/TradeModal.tsx:123",
+            "apps/mobile/components/TradeModal.tsx:233",
             "apps/mobile/lib/useStockNames.ts:13",
-            "apps/web/src/components/TradeModal.jsx:101"
+            "apps/web/src/components/TradeModal.jsx:82"
           ]
         },
         {
@@ -7227,9 +8195,9 @@
           ],
           "detail": "symbols-search — typeahead over the symbols table.",
           "files": [
-            "apps/mobile/components/TradeModal.tsx:186",
+            "apps/mobile/components/TradeModal.tsx:167",
             "apps/web/src/components/DraftControls.jsx:66",
-            "apps/web/src/components/TradeModal.jsx:141"
+            "apps/web/src/components/TradeModal.jsx:122"
           ]
         },
         {
@@ -7249,18 +8217,18 @@
   ],
   "drift": [
     {
-      "node": "cron.refresh_symbols_daily",
-      "label": "refresh_symbols_daily",
-      "groupKey": "schedule",
-      "field": "schedule",
-      "declared": "0 6 * * *",
-      "live": "0 */6 * * *",
-      "severity": "high",
-      "note": "The live cron schedule differs from the latest migration that scheduled this job."
-    },
-    {
       "node": "pg.enforce_leagues_member_update_columns",
       "label": "enforce_leagues_member_update_columns()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.restrict_new_signups",
+      "label": "restrict_new_signups()",
       "groupKey": "existence",
       "field": "existence",
       "declared": "created by migration",
@@ -7279,6 +8247,46 @@
       "note": "UNAUTHENTICATED READ of every row. PUBLIC includes anon and the predicate is unconditional. This may be intentional for public reference data — but it must be an explicit decision, not an assumption, and it has to be consistent with any function-level lockdown covering the same data."
     },
     {
+      "node": "tbl.categories",
+      "label": "categories",
+      "groupKey": "authenticated-role-policies-ungated",
+      "field": "policy_roles",
+      "declared": "n/a",
+      "live": "categories_select_authenticated (SELECT, authenticated, predicate: true)",
+      "severity": "medium",
+      "note": "ANY-AUTHENTICATED READ of every row. The predicate never references the caller, so every logged-in user reads the whole table. This is a real exposure, not a cosmetic one — it is simply narrower than the anon case. Before accepting it, check whether any COLUMN here is a capability rather than an attribute (a bearer token, a key, an invite code): an ungated read is tolerable for display attributes like a username and not tolerable for something possession of which grants an action. See this node's annotation."
+    },
+    {
+      "node": "tbl.category_rules",
+      "label": "category_rules",
+      "groupKey": "authenticated-role-policies-ungated",
+      "field": "policy_roles",
+      "declared": "n/a",
+      "live": "category_rules_select_authenticated (SELECT, authenticated, predicate: true)",
+      "severity": "medium",
+      "note": "ANY-AUTHENTICATED READ of every row. The predicate never references the caller, so every logged-in user reads the whole table. This is a real exposure, not a cosmetic one — it is simply narrower than the anon case. Before accepting it, check whether any COLUMN here is a capability rather than an attribute (a bearer token, a key, an invite code): an ungated read is tolerable for display attributes like a username and not tolerable for something possession of which grants an action. See this node's annotation."
+    },
+    {
+      "node": "tbl.splits",
+      "label": "splits",
+      "groupKey": "authenticated-role-policies-ungated",
+      "field": "policy_roles",
+      "declared": "n/a",
+      "live": "splits_select_authenticated (SELECT, authenticated, predicate: true)",
+      "severity": "medium",
+      "note": "ANY-AUTHENTICATED READ of every row. The predicate never references the caller, so every logged-in user reads the whole table. This is a real exposure, not a cosmetic one — it is simply narrower than the anon case. Before accepting it, check whether any COLUMN here is a capability rather than an attribute (a bearer token, a key, an invite code): an ungated read is tolerable for display attributes like a username and not tolerable for something possession of which grants an action. See this node's annotation."
+    },
+    {
+      "node": "tbl.symbol_category_overrides",
+      "label": "symbol_category_overrides",
+      "groupKey": "authenticated-role-policies-ungated",
+      "field": "policy_roles",
+      "declared": "n/a",
+      "live": "symbol_category_overrides_select_authenticated (SELECT, authenticated, predicate: true)",
+      "severity": "medium",
+      "note": "ANY-AUTHENTICATED READ of every row. The predicate never references the caller, so every logged-in user reads the whole table. This is a real exposure, not a cosmetic one — it is simply narrower than the anon case. Before accepting it, check whether any COLUMN here is a capability rather than an attribute (a bearer token, a key, an invite code): an ungated read is tolerable for display attributes like a username and not tolerable for something possession of which grants an action. See this node's annotation."
+    },
+    {
       "node": "tbl.user_profiles",
       "label": "user_profiles",
       "groupKey": "authenticated-role-policies-ungated",
@@ -7289,8 +8297,18 @@
       "note": "ANY-AUTHENTICATED READ of every row. The predicate never references the caller, so every logged-in user reads the whole table. This is a real exposure, not a cosmetic one — it is simply narrower than the anon case. Before accepting it, check whether any COLUMN here is a capability rather than an attribute (a bearer token, a key, an invite code): an ungated read is tolerable for display attributes like a username and not tolerable for something possession of which grants an action. See this node's annotation."
     },
     {
-      "node": "pg.update_broker_credentials_updated_at",
-      "label": "update_broker_credentials_updated_at()",
+      "node": "pg.enforce_symbol_category_cap",
+      "label": "enforce_symbol_category_cap()",
+      "groupKey": "grants",
+      "field": "grants",
+      "declared": "n/a",
+      "live": "=X/postgres, postgres=X/postgres, anon=X/postgres, authenticated=X/postgres, service_role=X/postgres",
+      "severity": "low",
+      "note": "SECURITY INVOKER, so it runs with the caller's own privileges and RLS applies — broad EXECUTE here is low risk. Listed for inventory completeness."
+    },
+    {
+      "node": "pg.symbols_touch_updated_at",
+      "label": "symbols_touch_updated_at()",
       "groupKey": "grants",
       "field": "grants",
       "declared": "n/a",
@@ -7307,16 +8325,6 @@
       "live": "=X/postgres, postgres=X/postgres, anon=X/postgres, authenticated=X/postgres, service_role=X/postgres",
       "severity": "low",
       "note": "SECURITY INVOKER, so it runs with the caller's own privileges and RLS applies — broad EXECUTE here is low risk. Listed for inventory completeness."
-    },
-    {
-      "node": "tbl.broker_credentials",
-      "label": "broker_credentials",
-      "groupKey": "public-role-policies-gated",
-      "field": "policy_roles",
-      "declared": "n/a",
-      "live": "4 of 4 policies target PUBLIC; those 4 are gated on caller identity",
-      "severity": "low",
-      "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
     },
     {
       "node": "tbl.cron_job_status",
@@ -7354,7 +8362,17 @@
       "groupKey": "public-role-policies-gated",
       "field": "policy_roles",
       "declared": "n/a",
-      "live": "4 of 4 policies target PUBLIC; those 4 are gated on caller identity",
+      "live": "2 of 2 policies target PUBLIC; those 2 are gated on caller identity",
+      "severity": "low",
+      "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
+    },
+    {
+      "node": "tbl.league_members",
+      "label": "league_members",
+      "groupKey": "public-role-policies-gated",
+      "field": "policy_roles",
+      "declared": "n/a",
+      "live": "1 of 4 policies target PUBLIC; those 1 are gated on caller identity",
       "severity": "low",
       "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
     },
@@ -7365,6 +8383,16 @@
       "field": "policy_roles",
       "declared": "n/a",
       "live": "2 of 2 policies target PUBLIC; those 2 are gated on caller identity",
+      "severity": "low",
+      "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
+    },
+    {
+      "node": "tbl.leagues",
+      "label": "leagues",
+      "groupKey": "public-role-policies-gated",
+      "field": "policy_roles",
+      "declared": "n/a",
+      "live": "1 of 5 policies target PUBLIC; those 1 are gated on caller identity",
       "severity": "low",
       "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
     },
@@ -7384,7 +8412,7 @@
       "groupKey": "public-role-policies-gated",
       "field": "policy_roles",
       "declared": "n/a",
-      "live": "2 of 2 policies target PUBLIC; those 2 are gated on caller identity",
+      "live": "1 of 1 policies target PUBLIC; those 1 are gated on caller identity",
       "severity": "low",
       "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
     },
@@ -7400,6 +8428,25 @@
     }
   ],
   "deadCode": [
+    {
+      "node": "pg.restrict_new_signups",
+      "label": "restrict_new_signups()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20260815000000_signup_gate.sql:82",
+      "outbound": [
+        "tbl.app_config",
+        "tbl.signup_allowlist"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "pg.symbols_touch_updated_at",
+      "label": "symbols_touch_updated_at()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20260811000007_symbols_enrichment_support.sql:42",
+      "outbound": [],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
     {
       "node": "pg.trigger_week_end_snapshot",
       "label": "trigger_week_end_snapshot()",
@@ -7435,6 +8482,14 @@
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
     {
+      "node": "tbl.broker_credentials",
+      "label": "broker_credentials",
+      "kind": "table",
+      "source": "supabase/migrations/20251217000000_create_broker_credentials.sql:2",
+      "outbound": [],
+      "caveat": "No scanned caller. Tables can also be reached from plpgsql bodies (now parsed) or dynamic SQL (not parsed)."
+    },
+    {
       "node": "tbl.draft_sessions",
       "label": "draft_sessions",
       "kind": "table",
@@ -7457,6 +8512,14 @@
       "source": "supabase/migrations/20260122000000_add_push_tokens.sql:10",
       "outbound": [],
       "caveat": "No scanned caller. Tables can also be reached from plpgsql bodies (now parsed) or dynamic SQL (not parsed)."
+    },
+    {
+      "node": "tbl.splits",
+      "label": "splits",
+      "kind": "table",
+      "source": "supabase/migrations/20260810000006_create_splits.sql:24",
+      "outbound": [],
+      "caveat": "No scanned caller. Tables can also be reached from plpgsql bodies (now parsed) or dynamic SQL (not parsed)."
     }
   ],
   "unverified": [
@@ -7467,7 +8530,31 @@
       "resolve": "Re-capture the snapshot, or confirm the migration was applied."
     },
     {
+      "scope": "pg.restrict_new_signups",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "tbl.broker_credentials",
+      "claim": "table exists in prod",
+      "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot."
+    },
+    {
       "scope": "tbl.notification_log",
+      "claim": "table exists in prod",
+      "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot."
+    },
+    {
+      "scope": "tbl.app_config",
+      "claim": "table exists in prod",
+      "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot."
+    },
+    {
+      "scope": "tbl.signup_allowlist",
       "claim": "table exists in prod",
       "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
       "resolve": "Re-capture the snapshot."
@@ -7493,6 +8580,42 @@
     {
       "scope": "flow.place-trade",
       "claim": "flow step is current",
+      "reason": "step 2: anchor not found — apps/mobile/components/TradeModal.tsx no longer contains \"place-order\"",
+      "resolve": "Update the FLOWS block in scripts/gen-architecture.mjs."
+    },
+    {
+      "scope": "flow.place-trade",
+      "claim": "flow step is current",
+      "reason": "step 2: edge 'e.ui.TradeModal->fn.place-order' was not generated from any call site",
+      "resolve": "Update the FLOWS block in scripts/gen-architecture.mjs."
+    },
+    {
+      "scope": "flow.place-trade",
+      "claim": "flow step is current",
+      "reason": "step 3: anchor not found — supabase/functions/place-order/index.ts no longer contains \"from('broker_credentials')\"",
+      "resolve": "Update the FLOWS block in scripts/gen-architecture.mjs."
+    },
+    {
+      "scope": "flow.place-trade",
+      "claim": "flow step is current",
+      "reason": "step 3: edge 'e.fn.place-order->tbl.broker_credentials' was not generated from any call site",
+      "resolve": "Update the FLOWS block in scripts/gen-architecture.mjs."
+    },
+    {
+      "scope": "flow.place-trade",
+      "claim": "flow step is current",
+      "reason": "step 4: anchor not found — supabase/functions/place-order/index.ts no longer contains \"alpaca\"",
+      "resolve": "Update the FLOWS block in scripts/gen-architecture.mjs."
+    },
+    {
+      "scope": "flow.place-trade",
+      "claim": "flow step is current",
+      "reason": "step 4: edge 'e.fn.place-order->ext.alpaca-trading' was not generated from any call site",
+      "resolve": "Update the FLOWS block in scripts/gen-architecture.mjs."
+    },
+    {
+      "scope": "flow.place-trade",
+      "claim": "flow step is current",
       "reason": "step 5: anchor not found — apps/mobile/components/TradeModal.tsx no longer contains \"from('trades').insert(\"",
       "resolve": "Update the FLOWS block in scripts/gen-architecture.mjs."
     },
@@ -7501,74 +8624,115 @@
       "claim": "flow step is current",
       "reason": "step 5: edge 'e.ui.TradeModal->tbl.trades#insert' was not generated from any call site",
       "resolve": "Update the FLOWS block in scripts/gen-architecture.mjs."
+    },
+    {
+      "scope": "flow.order-reconciliation",
+      "claim": "flow step is current",
+      "reason": "step 1: edge 'e.cron.sync-alpaca-orders->fn.sync-alpaca-orders' was not generated from any call site",
+      "resolve": "Update the FLOWS block in scripts/gen-architecture.mjs."
+    },
+    {
+      "scope": "flow.order-reconciliation",
+      "claim": "flow step is current",
+      "reason": "step 2: anchor not found — supabase/functions/sync-alpaca-orders/index.ts no longer contains \"from('broker_credentials')\"",
+      "resolve": "Update the FLOWS block in scripts/gen-architecture.mjs."
+    },
+    {
+      "scope": "flow.order-reconciliation",
+      "claim": "flow step is current",
+      "reason": "step 2: edge 'e.fn.sync-alpaca-orders->tbl.broker_credentials' was not generated from any call site",
+      "resolve": "Update the FLOWS block in scripts/gen-architecture.mjs."
+    },
+    {
+      "scope": "flow.order-reconciliation",
+      "claim": "flow step is current",
+      "reason": "step 3: anchor not found — supabase/functions/sync-alpaca-orders/index.ts no longer contains \"alpaca\"",
+      "resolve": "Update the FLOWS block in scripts/gen-architecture.mjs."
+    },
+    {
+      "scope": "flow.order-reconciliation",
+      "claim": "flow step is current",
+      "reason": "step 3: edge 'e.fn.sync-alpaca-orders->ext.alpaca-trading' was not generated from any call site",
+      "resolve": "Update the FLOWS block in scripts/gen-architecture.mjs."
+    },
+    {
+      "scope": "flow.order-reconciliation",
+      "claim": "flow step is current",
+      "reason": "step 4: anchor not found — supabase/functions/sync-alpaca-orders/index.ts no longer contains \"from('trades')\"",
+      "resolve": "Update the FLOWS block in scripts/gen-architecture.mjs."
+    },
+    {
+      "scope": "flow.order-reconciliation",
+      "claim": "flow step is current",
+      "reason": "step 4: edge 'e.fn.sync-alpaca-orders->tbl.trades#update' was not generated from any call site",
+      "resolve": "Update the FLOWS block in scripts/gen-architecture.mjs."
     }
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 101,
-    "edges": 235,
+    "nodes": 112,
+    "edges": 247,
     "flows": 9,
-    "drift": 15,
+    "drift": 21,
     "driftHigh": 3,
-    "deadCode": 7,
-    "unverified": 7
+    "deadCode": 11,
+    "unverified": 24
   },
   "sourceIndex": {
     "edgeFunctions": [
+      "enrich-symbols[]",
       "finnhub-quote[]",
       "historical-bars[]",
       "join-league[]",
-      "place-order[]",
       "preview-league[]",
       "process-week-results[grouping.ts,playoff-progression.ts,scoring-eligibility.ts]",
       "quote[]",
+      "record-trade[]",
       "refresh-symbols[]",
-      "save-broker-keys[]",
       "send-notification[]",
       "snapshot-week-end[close.ts]",
       "snapshot-week-start[plan.ts]",
       "symbol-name[]",
       "symbols-search[]",
-      "sync-alpaca-orders[]",
-      "ticker-quotes[]"
+      "ticker-quotes[]",
+      "validate-and-record-pick[]"
     ],
     "invokes": [
-      "apps/mobile/app/(tabs)/draft.tsx:191 -> quote",
-      "apps/mobile/app/(tabs)/matchup.tsx:341 -> quote",
-      "apps/mobile/app/(tabs)/matchup.tsx:425 -> quote",
-      "apps/mobile/app/(tabs)/profile.tsx:118 -> save-broker-keys",
-      "apps/mobile/app/(tabs)/profile.tsx:191 -> quote",
-      "apps/mobile/app/join-league.tsx:112 -> join-league",
-      "apps/mobile/app/join-league.tsx:82 -> preview-league",
-      "apps/mobile/components/TradeModal.tsx:123 -> quote",
-      "apps/mobile/components/TradeModal.tsx:142 -> symbol-name",
-      "apps/mobile/components/TradeModal.tsx:186 -> symbols-search",
-      "apps/mobile/components/TradeModal.tsx:228 -> quote",
-      "apps/mobile/components/TradeModal.tsx:252 -> symbol-name",
-      "apps/mobile/components/TradeModal.tsx:336 -> place-order",
+      "apps/mobile/app/(tabs)/draft.tsx:273 -> quote",
+      "apps/mobile/app/(tabs)/draft.tsx:318 -> validate-and-record-pick",
+      "apps/mobile/app/(tabs)/matchup.tsx:134 -> quote",
+      "apps/mobile/app/(tabs)/matchup.tsx:379 -> quote",
+      "apps/mobile/app/join-league.tsx:114 -> join-league",
+      "apps/mobile/app/join-league.tsx:84 -> preview-league",
+      "apps/mobile/components/TradeModal.tsx:104 -> quote",
+      "apps/mobile/components/TradeModal.tsx:123 -> symbol-name",
+      "apps/mobile/components/TradeModal.tsx:167 -> symbols-search",
+      "apps/mobile/components/TradeModal.tsx:209 -> quote",
+      "apps/mobile/components/TradeModal.tsx:233 -> symbol-name",
+      "apps/mobile/components/TradeModal.tsx:314 -> record-trade",
       "apps/mobile/lib/notifications.ts:205 -> send-notification",
       "apps/mobile/lib/useHistoricalPL.ts:77 -> historical-bars",
       "apps/mobile/lib/useStockNames.ts:13 -> symbol-name",
       "apps/mobile/lib/useStockPrices.ts:32 -> ticker-quotes",
       "apps/web/src/Ticker.jsx:28 -> ticker-quotes",
       "apps/web/src/components/DraftControls.jsx:66 -> symbols-search",
-      "apps/web/src/components/TradeModal.jsx:101 -> symbol-name",
-      "apps/web/src/components/TradeModal.jsx:141 -> symbols-search",
-      "apps/web/src/components/TradeModal.jsx:178 -> quote",
-      "apps/web/src/components/TradeModal.jsx:263 -> place-order",
-      "apps/web/src/components/TradeModal.jsx:82 -> quote",
+      "apps/web/src/components/TradeModal.jsx:122 -> symbols-search",
+      "apps/web/src/components/TradeModal.jsx:159 -> quote",
+      "apps/web/src/components/TradeModal.jsx:241 -> record-trade",
+      "apps/web/src/components/TradeModal.jsx:63 -> quote",
+      "apps/web/src/components/TradeModal.jsx:82 -> symbol-name",
       "apps/web/src/context/PriceContext.jsx:99 -> quote",
-      "apps/web/src/pages/DraftPage.jsx:622 -> finnhub-quote",
-      "apps/web/src/pages/DraftPage.jsx:663 -> place-order",
-      "apps/web/src/pages/DraftPage.jsx:91 -> quote",
+      "apps/web/src/pages/DraftPage.jsx:106 -> quote",
+      "apps/web/src/pages/DraftPage.jsx:654 -> finnhub-quote",
+      "apps/web/src/pages/DraftPage.jsx:695 -> validate-and-record-pick",
+      "apps/web/src/pages/DraftPage.jsx:912 -> validate-and-record-pick",
+      "apps/web/src/pages/DraftPage.jsx:942 -> validate-and-record-pick",
       "apps/web/src/pages/JoinLeague.jsx:25 -> preview-league",
-      "apps/web/src/pages/JoinLeague.jsx:43 -> join-league",
-      "apps/web/src/pages/Profile.jsx:131 -> save-broker-keys",
-      "apps/web/src/pages/Profile.jsx:198 -> quote"
+      "apps/web/src/pages/JoinLeague.jsx:43 -> join-league"
     ],
     "rpcs": [
-      "apps/mobile/app/league-settings.tsx:126 -> start_new_league_season",
-      "apps/web/src/pages/DraftPage.jsx:315 -> get_real_user_ids",
+      "apps/mobile/app/league-settings.tsx:173 -> start_new_league_season",
+      "apps/web/src/pages/DraftPage.jsx:361 -> get_real_user_ids",
       "supabase/functions/join-league/index.ts:31 -> check_and_bump_rate_limit",
       "supabase/functions/join-league/index.ts:34 -> check_and_bump_rate_limit",
       "supabase/functions/join-league/index.ts:76 -> join_league_by_code",
@@ -7576,53 +8740,65 @@
       "supabase/functions/preview-league/index.ts:34 -> check_and_bump_rate_limit",
       "supabase/functions/process-week-results/index.ts:783 -> complete_league_season",
       "supabase/functions/process-week-results/index.ts:827 -> complete_league_season",
+      "supabase/functions/record-trade/index.ts:66 -> check_and_bump_rate_limit",
+      "supabase/functions/record-trade/index.ts:69 -> check_and_bump_rate_limit",
       "supabase/functions/send-notification/index.ts:110 -> check_and_bump_rate_limit",
       "supabase/functions/send-notification/index.ts:113 -> check_and_bump_rate_limit",
       "supabase/functions/snapshot-week-end/index.ts:100 -> schedule_snapshot_retry",
-      "supabase/functions/snapshot-week-start/index.ts:135 -> schedule_snapshot_retry"
+      "supabase/functions/snapshot-week-start/index.ts:135 -> schedule_snapshot_retry",
+      "supabase/functions/validate-and-record-pick/index.ts:75 -> check_and_bump_rate_limit",
+      "supabase/functions/validate-and-record-pick/index.ts:78 -> check_and_bump_rate_limit"
     ],
     "tableOps": [
-      "apps/mobile/app/(tabs)/draft.tsx:109 -> drafts.select",
-      "apps/mobile/app/(tabs)/draft.tsx:234 -> drafts.insert",
-      "apps/mobile/app/(tabs)/draft.tsx:256 -> leagues.update",
-      "apps/mobile/app/(tabs)/draft.tsx:82 -> league_members.select",
-      "apps/mobile/app/(tabs)/draft.tsx:91 -> user_profiles.select",
-      "apps/mobile/app/(tabs)/index.tsx:57 -> user_profiles.select",
-      "apps/mobile/app/(tabs)/league.tsx:207 -> league_standings.select",
-      "apps/mobile/app/(tabs)/league.tsx:223 -> matchups.select",
-      "apps/mobile/app/(tabs)/league.tsx:238 -> league_seasons.select",
-      "apps/mobile/app/(tabs)/league.tsx:264 -> user_profiles.select",
-      "apps/mobile/app/(tabs)/leagues.tsx:193 -> leagues.insert",
-      "apps/mobile/app/(tabs)/leagues.tsx:217 -> league_members.insert",
-      "apps/mobile/app/(tabs)/leagues.tsx:81 -> league_members.select",
-      "apps/mobile/app/(tabs)/leagues.tsx:89 -> user_profiles.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:174 -> matchups.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:194 -> matchups.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:210 -> matchups.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:229 -> matchups.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:259 -> user_profiles.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:274 -> week_snapshots.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:362 -> drafts.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:368 -> trades.select",
-      "apps/mobile/app/(tabs)/profile.tsx:165 -> broker_credentials.delete",
-      "apps/mobile/app/(tabs)/profile.tsx:246 -> user_profiles.upsert",
-      "apps/mobile/app/(tabs)/profile.tsx:60 -> user_profiles.select",
-      "apps/mobile/app/(tabs)/profile.tsx:78 -> broker_credentials.select",
-      "apps/mobile/app/create-league.tsx:126 -> leagues.insert",
-      "apps/mobile/app/create-league.tsx:149 -> league_members.insert",
-      "apps/mobile/app/league-settings.tsx:85 -> leagues.update",
-      "apps/mobile/app/login.tsx:60 -> user_profiles.upsert",
-      "apps/mobile/app/player-portfolio.tsx:121 -> user_profiles.select",
-      "apps/mobile/app/player-portfolio.tsx:133 -> drafts.select",
-      "apps/mobile/app/player-portfolio.tsx:140 -> trades.select",
-      "apps/mobile/app/trade-history.tsx:57 -> trades.select",
-      "apps/mobile/components/LeagueCarousel.tsx:108 -> league_standings.select",
-      "apps/mobile/components/LeagueCarousel.tsx:127 -> league_standings.select",
-      "apps/mobile/components/LeagueCarousel.tsx:62 -> league_seasons.select",
-      "apps/mobile/components/LeagueCarousel.tsx:74 -> user_profiles.select",
-      "apps/mobile/components/TradeModal.tsx:88 -> broker_credentials.select",
-      "apps/mobile/lib/LeagueContext.tsx:84 -> league_members.select",
-      "apps/mobile/lib/LeagueContext.tsx:97 -> leagues.select",
+      "apps/mobile/app/(tabs)/draft.tsx:119 -> league_members.select",
+      "apps/mobile/app/(tabs)/draft.tsx:127 -> user_profiles.select",
+      "apps/mobile/app/(tabs)/draft.tsx:157 -> drafts.select",
+      "apps/mobile/app/(tabs)/draft.tsx:193 -> league_draft_slots.select",
+      "apps/mobile/app/(tabs)/index.tsx:58 -> user_profiles.select",
+      "apps/mobile/app/(tabs)/league.tsx:109 -> league_standings.select",
+      "apps/mobile/app/(tabs)/league.tsx:125 -> matchups.select",
+      "apps/mobile/app/(tabs)/league.tsx:140 -> league_seasons.select",
+      "apps/mobile/app/(tabs)/league.tsx:166 -> user_profiles.select",
+      "apps/mobile/app/(tabs)/leagues.tsx:201 -> leagues.insert",
+      "apps/mobile/app/(tabs)/leagues.tsx:232 -> league_members.insert",
+      "apps/mobile/app/(tabs)/leagues.tsx:89 -> league_members.select",
+      "apps/mobile/app/(tabs)/leagues.tsx:97 -> user_profiles.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:150 -> drafts.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:156 -> trades.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:212 -> matchups.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:232 -> matchups.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:248 -> matchups.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:267 -> matchups.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:297 -> user_profiles.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:312 -> week_snapshots.select",
+      "apps/mobile/app/(tabs)/profile.tsx:43 -> user_profiles.select",
+      "apps/mobile/app/(tabs)/profile.tsx:87 -> user_profiles.upsert",
+      "apps/mobile/app/create-league.tsx:124 -> leagues.insert",
+      "apps/mobile/app/create-league.tsx:150 -> league_members.insert",
+      "apps/mobile/app/league-settings.tsx:136 -> leagues.update",
+      "apps/mobile/app/login.tsx:71 -> user_profiles.upsert",
+      "apps/mobile/app/player-portfolio.tsx:116 -> user_profiles.select",
+      "apps/mobile/app/player-portfolio.tsx:128 -> drafts.select",
+      "apps/mobile/app/player-portfolio.tsx:135 -> trades.select",
+      "apps/mobile/app/trade-history.tsx:58 -> trades.select",
+      "apps/mobile/components/LeagueCarousel.tsx:109 -> league_standings.select",
+      "apps/mobile/components/LeagueCarousel.tsx:128 -> league_standings.select",
+      "apps/mobile/components/LeagueCarousel.tsx:63 -> league_seasons.select",
+      "apps/mobile/components/LeagueCarousel.tsx:75 -> user_profiles.select",
+      "apps/mobile/lib/LeagueContext.tsx:76 -> league_members.select",
+      "apps/mobile/lib/LeagueContext.tsx:89 -> leagues.select",
+      "apps/mobile/lib/categoryData.ts:101 -> category_rules.select",
+      "apps/mobile/lib/categoryData.ts:111 -> symbols.select",
+      "apps/mobile/lib/categoryData.ts:112 -> symbols.select",
+      "apps/mobile/lib/categoryData.ts:129 -> symbols.select",
+      "apps/mobile/lib/categoryData.ts:143 -> category_rules.select",
+      "apps/mobile/lib/categoryData.ts:144 -> symbol_category_overrides.select",
+      "apps/mobile/lib/categoryData.ts:206 -> league_draft_slots.delete",
+      "apps/mobile/lib/categoryData.ts:219 -> league_draft_slots.insert",
+      "apps/mobile/lib/categoryData.ts:226 -> league_draft_slots.select",
+      "apps/mobile/lib/categoryData.ts:64 -> categories.select",
+      "apps/mobile/lib/categoryData.ts:83 -> symbol_category_overrides.select",
+      "apps/mobile/lib/categoryData.ts:94 -> symbols.select",
       "apps/mobile/lib/notifications.ts:67 -> push_tokens.upsert",
       "apps/mobile/lib/notifications.ts:72 -> user_profiles.update",
       "apps/mobile/lib/notifications.ts:94 -> push_tokens.delete",
@@ -7635,39 +8811,34 @@
       "apps/mobile/lib/useHomeData.ts:267 -> league_standings.select",
       "apps/mobile/lib/useHomeData.ts:301 -> matchups.select",
       "apps/mobile/lib/useHomeData.ts:325 -> user_profiles.select",
-      "apps/mobile/lib/useLeagues.ts:40 -> league_members.select",
-      "apps/mobile/lib/useLeagues.ts:60 -> leagues.select",
-      "apps/mobile/lib/usePortfolio.ts:128 -> drafts.select",
-      "apps/mobile/lib/usePortfolio.ts:140 -> trades.select",
+      "apps/mobile/lib/useLeagues.ts:33 -> league_members.select",
+      "apps/mobile/lib/useLeagues.ts:53 -> leagues.select",
+      "apps/mobile/lib/usePortfolio.ts:116 -> drafts.select",
+      "apps/mobile/lib/usePortfolio.ts:128 -> trades.select",
       "apps/web/src/Header.jsx:110 -> league_members.select",
       "apps/web/src/Header.jsx:118 -> leagues.select",
-      "apps/web/src/components/TradeModal.jsx:50 -> broker_credentials.select",
       "apps/web/src/context/UserProfilesContext.jsx:25 -> user_profiles.select",
-      "apps/web/src/pages/Dashboard.jsx:129 -> drafts.select",
-      "apps/web/src/pages/Dashboard.jsx:141 -> trades.select",
-      "apps/web/src/pages/Dashboard.jsx:212 -> matchups.select",
-      "apps/web/src/pages/Dashboard.jsx:244 -> week_snapshots.select",
-      "apps/web/src/pages/Dashboard.jsx:268 -> matchups.select",
-      "apps/web/src/pages/Dashboard.jsx:73 -> league_members.select",
-      "apps/web/src/pages/Dashboard.jsx:88 -> leagues.select",
-      "apps/web/src/pages/DraftPage.jsx:1218 -> leagues.update",
-      "apps/web/src/pages/DraftPage.jsx:228 -> league_members.select",
-      "apps/web/src/pages/DraftPage.jsx:240 -> leagues.select",
-      "apps/web/src/pages/DraftPage.jsx:281 -> leagues.select",
-      "apps/web/src/pages/DraftPage.jsx:292 -> league_members.select",
-      "apps/web/src/pages/DraftPage.jsx:327 -> broker_credentials.select",
-      "apps/web/src/pages/DraftPage.jsx:352 -> drafts.select",
-      "apps/web/src/pages/DraftPage.jsx:449 -> leagues.select",
-      "apps/web/src/pages/DraftPage.jsx:463 -> drafts.select",
-      "apps/web/src/pages/DraftPage.jsx:545 -> matchups.insert",
-      "apps/web/src/pages/DraftPage.jsx:553 -> league_standings.insert",
-      "apps/web/src/pages/DraftPage.jsx:569 -> leagues.update",
-      "apps/web/src/pages/DraftPage.jsx:694 -> drafts.insert",
-      "apps/web/src/pages/DraftPage.jsx:736 -> league_members.insert",
-      "apps/web/src/pages/DraftPage.jsx:792 -> drafts.select",
-      "apps/web/src/pages/DraftPage.jsx:911 -> drafts.select",
-      "apps/web/src/pages/DraftPage.jsx:935 -> drafts.insert",
-      "apps/web/src/pages/DraftPage.jsx:977 -> drafts.insert",
+      "apps/web/src/pages/Dashboard.jsx:132 -> drafts.select",
+      "apps/web/src/pages/Dashboard.jsx:144 -> trades.select",
+      "apps/web/src/pages/Dashboard.jsx:215 -> matchups.select",
+      "apps/web/src/pages/Dashboard.jsx:247 -> week_snapshots.select",
+      "apps/web/src/pages/Dashboard.jsx:271 -> matchups.select",
+      "apps/web/src/pages/Dashboard.jsx:76 -> league_members.select",
+      "apps/web/src/pages/Dashboard.jsx:91 -> leagues.select",
+      "apps/web/src/pages/DraftPage.jsx:1183 -> leagues.update",
+      "apps/web/src/pages/DraftPage.jsx:209 -> league_draft_slots.select",
+      "apps/web/src/pages/DraftPage.jsx:274 -> league_members.select",
+      "apps/web/src/pages/DraftPage.jsx:286 -> leagues.select",
+      "apps/web/src/pages/DraftPage.jsx:327 -> leagues.select",
+      "apps/web/src/pages/DraftPage.jsx:338 -> league_members.select",
+      "apps/web/src/pages/DraftPage.jsx:384 -> drafts.select",
+      "apps/web/src/pages/DraftPage.jsx:481 -> leagues.select",
+      "apps/web/src/pages/DraftPage.jsx:495 -> drafts.select",
+      "apps/web/src/pages/DraftPage.jsx:577 -> matchups.insert",
+      "apps/web/src/pages/DraftPage.jsx:585 -> league_standings.insert",
+      "apps/web/src/pages/DraftPage.jsx:601 -> leagues.update",
+      "apps/web/src/pages/DraftPage.jsx:737 -> league_members.insert",
+      "apps/web/src/pages/DraftPage.jsx:793 -> drafts.select",
       "apps/web/src/pages/Leaderboard.jsx:177 -> league_standings.select",
       "apps/web/src/pages/Leaderboard.jsx:186 -> matchups.select",
       "apps/web/src/pages/Leaderboard.jsx:225 -> leagues.select",
@@ -7680,16 +8851,17 @@
       "apps/web/src/pages/Leaderboard.jsx:449 -> matchups.insert",
       "apps/web/src/pages/Leaderboard.jsx:464 -> league_standings.select",
       "apps/web/src/pages/Leaderboard.jsx:472 -> league_standings.insert",
-      "apps/web/src/pages/LeagueDetail.jsx:29 -> leagues.select",
-      "apps/web/src/pages/LeagueDetail.jsx:44 -> league_members.select",
-      "apps/web/src/pages/LeagueDetail.jsx:59 -> league_standings.select",
-      "apps/web/src/pages/Login.jsx:100 -> user_profiles.upsert",
+      "apps/web/src/pages/LeagueDetail.jsx:30 -> leagues.select",
+      "apps/web/src/pages/LeagueDetail.jsx:45 -> league_members.select",
+      "apps/web/src/pages/LeagueDetail.jsx:60 -> league_standings.select",
+      "apps/web/src/pages/Leagues.jsx:135 -> league_draft_slots.select",
+      "apps/web/src/pages/Login.jsx:110 -> user_profiles.upsert",
       "apps/web/src/pages/Matchup.jsx:113 -> league_members.select",
       "apps/web/src/pages/Matchup.jsx:125 -> leagues.select",
-      "apps/web/src/pages/Matchup.jsx:164 -> matchups.select",
-      "apps/web/src/pages/Matchup.jsx:189 -> week_snapshots.select",
-      "apps/web/src/pages/Matchup.jsx:270 -> drafts.select",
-      "apps/web/src/pages/Matchup.jsx:277 -> trades.select",
+      "apps/web/src/pages/Matchup.jsx:151 -> drafts.select",
+      "apps/web/src/pages/Matchup.jsx:158 -> trades.select",
+      "apps/web/src/pages/Matchup.jsx:232 -> matchups.select",
+      "apps/web/src/pages/Matchup.jsx:257 -> week_snapshots.select",
       "apps/web/src/pages/Matchup.jsx:78 -> matchups.select",
       "apps/web/src/pages/PortfolioPage.jsx:102 -> leagues.select",
       "apps/web/src/pages/PortfolioPage.jsx:111 -> drafts.select",
@@ -7698,17 +8870,18 @@
       "apps/web/src/pages/PortfolioPage.jsx:587 -> drafts.select",
       "apps/web/src/pages/PortfolioPage.jsx:597 -> trades.select",
       "apps/web/src/pages/PortfolioPage.jsx:64 -> leagues.select",
-      "apps/web/src/pages/Profile.jsx:174 -> broker_credentials.delete",
-      "apps/web/src/pages/Profile.jsx:277 -> user_profiles.upsert",
-      "apps/web/src/pages/Profile.jsx:309 -> user_profiles.upsert",
-      "apps/web/src/pages/Profile.jsx:62 -> user_profiles.select",
-      "apps/web/src/pages/Profile.jsx:88 -> broker_credentials.select",
+      "apps/web/src/pages/Profile.jsx:100 -> user_profiles.upsert",
+      "apps/web/src/pages/Profile.jsx:132 -> user_profiles.upsert",
+      "apps/web/src/pages/Profile.jsx:49 -> user_profiles.select",
       "apps/web/src/pages/TradeHistory.jsx:35 -> league_members.select",
       "apps/web/src/pages/TradeHistory.jsx:50 -> leagues.select",
       "apps/web/src/pages/TradeHistory.jsx:86 -> trades.select",
-      "supabase/functions/place-order/index.ts:152 -> league_members.select",
-      "supabase/functions/place-order/index.ts:257 -> trades.insert",
-      "supabase/functions/place-order/index.ts:48 -> broker_credentials.select",
+      "supabase/functions/_shared/category-eligibility.ts:15 -> symbol_category_overrides.select",
+      "supabase/functions/_shared/category-eligibility.ts:24 -> symbols.select",
+      "supabase/functions/_shared/category-eligibility.ts:33 -> category_rules.select",
+      "supabase/functions/enrich-symbols/index.ts:137 -> symbols.select",
+      "supabase/functions/enrich-symbols/index.ts:147 -> category_rules.select",
+      "supabase/functions/enrich-symbols/index.ts:197 -> symbols.update",
       "supabase/functions/preview-league/index.ts:103 -> league_members.select",
       "supabase/functions/preview-league/index.ts:74 -> leagues.select",
       "supabase/functions/preview-league/index.ts:77 -> league_invites.select",
@@ -7738,9 +8911,14 @@
       "supabase/functions/process-week-results/index.ts:811 -> league_standings.select",
       "supabase/functions/process-week-results/index.ts:885 -> matchups.select",
       "supabase/functions/process-week-results/index.ts:948 -> week_snapshots.select",
-      "supabase/functions/quote/index.ts:83 -> broker_credentials.select",
+      "supabase/functions/record-trade/index.ts:115 -> leagues.select",
+      "supabase/functions/record-trade/index.ts:128 -> league_members.select",
+      "supabase/functions/record-trade/index.ts:138 -> drafts.select",
+      "supabase/functions/record-trade/index.ts:145 -> trades.select",
+      "supabase/functions/record-trade/index.ts:178 -> league_draft_slots.select",
+      "supabase/functions/record-trade/index.ts:203 -> symbols.select",
+      "supabase/functions/record-trade/index.ts:238 -> trades.insert",
       "supabase/functions/refresh-symbols/index.ts:171 -> symbols.upsert",
-      "supabase/functions/save-broker-keys/index.ts:136 -> broker_credentials.upsert",
       "supabase/functions/send-notification/index.ts:136 -> push_tokens.select",
       "supabase/functions/send-notification/index.ts:141 -> user_profiles.select",
       "supabase/functions/send-notification/index.ts:194 -> league_members.select",
@@ -7767,12 +8945,16 @@
       "supabase/functions/symbols-search/index.ts:129 -> symbols.select",
       "supabase/functions/symbols-search/index.ts:140 -> symbols.select",
       "supabase/functions/symbols-search/index.ts:98 -> symbols.select",
-      "supabase/functions/sync-alpaca-orders/index.ts:153 -> trades.select",
-      "supabase/functions/sync-alpaca-orders/index.ts:195 -> trades.update",
-      "supabase/functions/sync-alpaca-orders/index.ts:261 -> broker_credentials.select",
-      "supabase/functions/sync-alpaca-orders/index.ts:336 -> trades.select",
-      "supabase/functions/sync-alpaca-orders/index.ts:366 -> trades.update",
-      "supabase/functions/sync-alpaca-orders/index.ts:85 -> broker_credentials.select"
+      "supabase/functions/validate-and-record-pick/index.ts:130 -> leagues.select",
+      "supabase/functions/validate-and-record-pick/index.ts:141 -> league_members.select",
+      "supabase/functions/validate-and-record-pick/index.ts:155 -> drafts.select",
+      "supabase/functions/validate-and-record-pick/index.ts:165 -> trades.select",
+      "supabase/functions/validate-and-record-pick/index.ts:178 -> drafts.insert",
+      "supabase/functions/validate-and-record-pick/index.ts:215 -> league_draft_slots.select",
+      "supabase/functions/validate-and-record-pick/index.ts:232 -> symbols.select",
+      "supabase/functions/validate-and-record-pick/index.ts:264 -> drafts.insert",
+      "supabase/functions/validate-and-record-pick/index.ts:310 -> leagues.update",
+      "supabase/functions/validate-and-record-pick/index.ts:6 -> drafts.insert"
     ],
     "migrations": [
       "20250118000000_create_trades.sql",
@@ -7827,29 +9009,50 @@
       "20260727100000_week_snapshots_entered_mid_week.sql",
       "20260728000000_drop_notification_log.sql",
       "20260728000001_gate_user_profiles_to_authenticated.sql",
-      "20260728000002_fix_refresh_symbols_cron_auth.sql",
       "20260730000000_leagues_member_draft_complete_column_guard.sql",
       "20260730000001_tighten_league_standings_insert.sql",
-      "20260730000004_trades_remove_client_insert_policy.sql"
+      "20260808000000_unschedule_sync_alpaca_orders_cron.sql",
+      "20260808000001_drop_broker_credentials.sql",
+      "20260810000000_widen_draft_trade_quantity_numeric.sql",
+      "20260810000001_symbols_add_enrichment_columns.sql",
+      "20260810000002_leagues_add_stake_mode.sql",
+      "20260810000003_create_categories_tables.sql",
+      "20260810000004_create_league_draft_slots.sql",
+      "20260810000005_drafts_add_slot_id.sql",
+      "20260810000006_create_splits.sql",
+      "20260810000007_drafts_league_id_set_not_null.sql",
+      "20260810000008_leagues_mirror_budget_mode_to_stake_mode.sql",
+      "20260811000000_fix_refresh_symbols_cron_auth.sql",
+      "20260811000001_drop_leagues_budget_mode_mirror_trigger.sql",
+      "20260811000002_trades_drop_direct_client_insert.sql",
+      "20260811000003_drafts_drop_direct_client_insert.sql",
+      "20260811000004_leagues_select_visible_to_creator.sql",
+      "20260811000005_league_members_select_visible_to_self.sql",
+      "20260811000006_seed_categories.sql",
+      "20260811000007_symbols_enrichment_support.sql",
+      "20260811000008_schedule_enrich_symbols.sql",
+      "20260811000009_drop_leagues_salary_cap_limit.sql",
+      "20260815000000_signup_gate.sql",
+      "20260816000000_leagues_allow_undraftable.sql"
     ],
     "config": [
+      "enrich-symbols=false",
       "finnhub-quote=true",
       "historical-bars=true",
       "join-league=true",
-      "place-order=true",
       "preview-league=true",
       "process-week-results=false",
       "quote=true",
+      "record-trade=true",
       "refresh-symbols=false",
-      "save-broker-keys=true",
       "send-notification=true",
       "snapshot-week-end=false",
       "snapshot-week-start=false",
       "symbol-name=true",
       "symbols-search=true",
-      "sync-alpaca-orders=false",
-      "ticker-quotes=false"
+      "ticker-quotes=false",
+      "validate-and-record-pick=true"
     ],
-    "dbSnapshot": "sha256:74cc797461d0f3634b1e75de6bd5e372a016f54dbc9c18131257b7bc2ec8c927"
+    "dbSnapshot": "sha256:3c923bcd46e36dfa365d24852d7b8fb6ead9ff99a06c3b26dc0853c648e07ded"
   }
 }

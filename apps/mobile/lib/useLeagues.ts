@@ -7,7 +7,10 @@ export interface League {
   name: string;
   draft_status: 'not_started' | 'in_progress' | 'completed';
   draft_date: string;
-  budget_mode: 'budget' | 'no-budget';
+  budget_mode: 'budget' | 'no-budget'; // deprecated — stake_mode is authoritative
+  stake_mode: 'fixed_notional' | 'price_tiers' | 'budget_cap' | null;
+  notional_per_slot: number | null;
+  allow_undraftable: boolean;
   budget_amount: number | null;
   league_type: 'duration' | 'matchup';
   current_week: number;
@@ -19,16 +22,6 @@ export function useLeagues() {
   const [leagues, setLeagues] = useState<League[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeLeagueId, setActiveLeagueId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!user) {
-      setLeagues([]);
-      setLoading(false);
-      return;
-    }
-
-    fetchLeagues();
-  }, [user]);
 
   async function fetchLeagues() {
     if (!user) return;
@@ -77,6 +70,16 @@ export function useLeagues() {
 
     setLoading(false);
   }
+
+  useEffect(() => {
+    if (!user) {
+      setLeagues([]);
+      setLoading(false);
+      return;
+    }
+
+    fetchLeagues();
+  }, [user]);
 
   const activeLeague = leagues.find((l) => l.id === activeLeagueId) || null;
 

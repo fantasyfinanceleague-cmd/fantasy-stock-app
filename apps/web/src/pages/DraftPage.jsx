@@ -14,6 +14,7 @@ import DraftSetupModal from '../components/DraftSetupModal';
 import { PageLoader } from '../components/LoadingSpinner';
 import { useUserProfiles } from '../context/UserProfilesContext';
 import { useToast } from '../components/Toast';
+import { fetchSymbolCategories, fetchCategories } from '../utils/categoryData';
 
 // Draft access rules
 const MIN_PARTICIPANTS = 4;
@@ -83,6 +84,20 @@ const STATIC_NAMES = {
   KO: 'COCA-COLA CO',
 };
 
+// Refusal reasons from validate-and-record-pick, mapped to user-facing copy.
+const PICK_REFUSAL_MESSAGES = {
+  not_your_turn: "It's not your turn to pick.",
+  draft_complete: 'The draft is already complete.',
+  draft_not_in_progress: 'The draft is not in progress.',
+  symbol_owned: 'That stock is already owned in this league.',
+  not_draftable: "That stock isn't in this league's draftable universe.",
+  no_eligible_slot: 'No open roster slot accepts a stock at this price.',
+  over_budget: 'That stock is over your remaining budget.',
+  no_price: 'No recent price available for that stock.',
+  pick_conflict: 'Someone picked at the same moment — try again.',
+  rate_limited: 'Too many picks too quickly — wait a moment and try again.',
+};
+
 /** Call your Edge Function for a normalized latest price */
 async function fetchQuoteViaFunction(symbol) {
   const sym = String(symbol || '').trim().toUpperCase();
@@ -90,29 +105,17 @@ async function fetchQuoteViaFunction(symbol) {
 
   const { data, error } = await supabase.functions.invoke('quote', { body: { symbol: sym } });
 
-  // Handle invocation errors
+  // Return null (rather than throw) on any failure so callers can fall back
+  // to another source (e.g. Finnhub) instead of aborting.
   if (error) {
     console.error('Quote function error:', error);
-    throw new Error('Failed to fetch quote. Please try again.');
+    return null;
   }
 
-  // Handle application-level errors from the edge function
+  // Application-level error from the edge function (e.g. no_price) — return null to allow fallback.
   if (data?.error) {
-    const errorType = data.error;
-    const message = data.message || data.error;
-
-    // Provide user-friendly error messages
-    if (errorType === 'not_authenticated') {
-      throw new Error('Please sign in to view quotes.');
-    } else if (errorType === 'no_credentials') {
-      throw new Error('Please link your Alpaca account in Profile settings.');
-    } else if (errorType === 'credentials_invalid') {
-      throw new Error('Your Alpaca credentials are invalid. Please update them in Profile settings.');
-    } else if (errorType === 'no_price') {
-      throw new Error(`No price data available for "${sym}".`);
-    }
-
-    throw new Error(message);
+    console.warn('Quote function returned error:', data.error);
+    return null;
   }
 
   const price = Number(
@@ -166,9 +169,6 @@ export default function DraftPage() {
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [customMinParticipants, setCustomMinParticipants] = useState(MIN_PARTICIPANTS);
 
-  // Alpaca account linking status
-  const [membersWithoutAlpaca, setMembersWithoutAlpaca] = useState([]); // user IDs without linked Alpaca
-
   // UI helpers
   const [symbol, setSymbol] = useState('');
   const [quote, setQuote] = useState(null);
@@ -179,14 +179,60 @@ export default function DraftPage() {
   const [symbolToName, setSymbolToName] = useState({}); // { AAPL: 'Apple Inc.' }
   const recentPick = portfolio[0];
 
-  // budget
-  const isBudgetMode = league?.budget_mode === 'budget';
-  const leagueBudget = Number(league?.budget_amount ?? league?.salary_cap_limit ?? 0);
+  // budget. stake_mode is authoritative (budget_cap = capped); budget_mode
+  // fallback covers the pre-migration transition window only. These client
+  // checks are UX mirrors — validate-and-record-pick is the legality gate.
+  const isBudgetMode =
+    (league?.stake_mode ?? (league?.budget_mode === 'budget' ? 'budget_cap' : null)) === 'budget_cap';
+  // budget_amount is authoritative; the salary_cap_limit fallback read was
+  // removed with the column's retirement (drop migration on this branch).
+  const leagueBudget = Number(league?.budget_amount ?? 0);
   const mySpent = useMemo(
     () => portfolio.filter(p => p.user_id === USER_ID).reduce((s, p) => s + Number(p.entry_price || 0), 0),
     [portfolio]
   );
   const budgetRemaining = isBudgetMode ? Math.max(leagueBudget - mySpent, 0) : null;
+
+  // Phase 4: legacy leagues with stake_mode NULL are blocked from drafting
+  // until the commissioner chooses a mode in Manage → League Settings.
+  const stakeModeMissing = !!league && league.stake_mode == null;
+
+  // Phase 4: league slot definitions + category names (display; the server
+  // validator is authoritative).
+  const [leagueSlots, setLeagueSlots] = useState([]);
+  const [categoryList, setCategoryList] = useState([]);
+  const [quoteCats, setQuoteCats] = useState(null); // null = not looked up
+  useEffect(() => { fetchCategories().then(setCategoryList); }, []);
+  useEffect(() => {
+    if (!leagueId) return;
+    supabase
+      .from('league_draft_slots')
+      .select('id, slot_index, slot_count, price_min, price_max, category_id')
+      .eq('league_id', leagueId)
+      .order('slot_index', { ascending: true })
+      .then(({ data }) => setLeagueSlots(data || []));
+  }, [leagueId]);
+  useEffect(() => {
+    let stale = false;
+    if (quote && symbol) {
+      fetchSymbolCategories(symbol).then((r) => { if (!stale) setQuoteCats(r); });
+    } else {
+      setQuoteCats(null);
+    }
+    return () => { stale = true; };
+  }, [quote, symbol]);
+
+  const categoryNameById = (id) => categoryList.find((c) => c.id === id)?.name ?? 'Category';
+  const slotLabel = (sl) => {
+    const parts = [];
+    if (sl.price_min != null || sl.price_max != null) {
+      parts.push(`$${sl.price_min ?? '0'}–${sl.price_max != null ? `$${sl.price_max}` : '∞'}`);
+    }
+    if (sl.category_id) parts.push(categoryNameById(sl.category_id));
+    return parts.length ? parts.join(' • ') : 'Flex';
+  };
+  const mySlotFill = (slotId) =>
+    portfolio.filter((pk) => pk.user_id === USER_ID && pk.slot_id === slotId && pk.symbol !== 'SKIP').length;
 
   // --- turn helper (keeps the "whose turn" math in one place)
   function updateTurn(picks, members, totalRounds) {
@@ -320,20 +366,6 @@ export default function DraftPage() {
           setRealUserIds(realIdsSet);
         }
 
-        // 3c) Check which real users have linked their Alpaca accounts
-        const realUserIdsList = Array.from(realIdsSet);
-        if (realUserIdsList.length > 0) {
-          const { data: linkedAccounts } = await supabase
-            .from('broker_credentials')
-            .select('user_id')
-            .eq('broker', 'alpaca')
-            .in('user_id', realUserIdsList);
-
-          const linkedUserIds = new Set((linkedAccounts || []).map(a => a.user_id));
-          const unlinked = realUserIdsList.filter(id => !linkedUserIds.has(id));
-          setMembersWithoutAlpaca(unlinked);
-        }
-
         // 4) Gate - check requirements but don't early return (allow modal to show)
         const hasDraftDate = !!lg?.draft_date;
         const startsAt = hasDraftDate ? new Date(lg.draft_date) : null;
@@ -350,7 +382,7 @@ export default function DraftPage() {
         // 5) League picks
         const { data: picks, error: pErr } = await supabase
           .from('drafts')
-          .select('id, league_id, user_id, symbol, entry_price, quantity, round, pick_number, created_at')
+          .select('id, league_id, user_id, symbol, entry_price, quantity, round, pick_number, slot_id, created_at')
           .eq('league_id', leagueId)
           .order('pick_number', { ascending: false });
         if (pErr) throw pErr;
@@ -657,56 +689,25 @@ export default function DraftPage() {
       return;
     }
 
-    // 1) Place paper order via Edge Function. place-order now requires
-    //    league_id and verifies the caller is a member of that league (the
-    //    drafter is). This path writes to `drafts`, not `trades`.
-    const { data: placeData, error: placeErr } = await supabase.functions.invoke('place-order', {
-      body: {
-        symbol: upper,
-        qty: 1,
-        side: 'buy',
-        type: 'market',
-        time_in_force: 'day',
-        league_id: leagueId,
-      },
+    // Phase 3 (DR-001): picks go through the server-side legality gate.
+    // The function re-prices the fill from the app-key quote path and computes
+    // quantity per stake mode — the quote above is display/UX only.
+    const { data, error: fnErr } = await supabase.functions.invoke('validate-and-record-pick', {
+      body: { league_id: leagueId, symbol: upper },
     });
 
-    if (placeErr || placeData?.error) {
-      console.error('place-order failed:', placeErr || placeData);
-      console.error('Paper order failed');
-    }
-
-    // 2) Save the pick
-    const newPickNumber = (portfolio?.length || 0) + 1;
-    const payload = {
-      league_id: leagueId,
-      user_id: USER_ID,
-      symbol: upper,
-      entry_price: price,
-      quantity: 1,
-      round: currentRound,
-      pick_number: newPickNumber,
-      draft_date: new Date().toISOString(),
-      alpaca_order_id: placeData?.order?.id ?? null,
-    };
-
-    const { data: inserted, error: insErr } = await supabase
-      .from('drafts')
-      .insert(payload)
-      .select('*')
-      .single();
-
-    if (insErr) {
-      console.error('Supabase insert error:', insErr);
-      toast.error('Failed to draft stock.');
+    if (fnErr || !data?.ok) {
+      console.error('Pick refused:', fnErr || data);
+      toast.error(PICK_REFUSAL_MESSAGES[data?.reason] || 'Failed to draft stock.');
       return;
     }
 
+    const inserted = data.pick;
     setPortfolio(prev => [inserted, ...(prev || [])]);
     setQuote(null);
     setSymbol('');
     setErrorMsg('');
-    setCurrentPickNumber(newPickNumber + 1);
+    setCurrentPickNumber(inserted.pick_number + 1);
 
     // ensure name is cached for lists
     void ensureNameForSymbol(upper);
@@ -902,54 +903,29 @@ export default function DraftPage() {
         return;
       }
 
-      // Insert the pick using fresh pick count from database
-      const newPickNumber = currentPickCount + 1;
-      const newRound = Math.floor(currentPickCount / memberIds.length) + 1;
+      // Phase 3 (DR-001): bot picks go through the server-side legality gate
+      // too (for_user_id = the bot; allowed for league members, mirroring the
+      // bot-picks RLS policy). The server re-prices the fill and re-derives
+      // turn/round/pick_number — selectedPrice above was only used to choose
+      // an affordable candidate. Races surface as reason 'pick_conflict' /
+      // 'not_your_turn' and simply release the lock to let state sync.
+      const { data, error: fnErr } = await supabase.functions.invoke('validate-and-record-pick', {
+        body: { league_id: leagueId, symbol: selectedSymbol, for_user_id: botUserId },
+      });
 
-      // IMPORTANT: Check if this pick_number already exists to prevent duplicates
-      const { data: existingPick } = await supabase
-        .from('drafts')
-        .select('id')
-        .eq('league_id', leagueId)
-        .eq('pick_number', newPickNumber)
-        .maybeSingle();
-
-      if (existingPick) {
-        // Pick already exists - another process beat us, just release lock and let state sync
-        console.log(`Pick ${newPickNumber} already exists, skipping duplicate`);
-        return;
-      }
-
-      const payload = {
-        league_id: leagueId,
-        user_id: botUserId,
-        symbol: selectedSymbol,
-        entry_price: selectedPrice,
-        quantity: 1,
-        round: newRound,
-        pick_number: newPickNumber,
-        draft_date: new Date().toISOString(),
-      };
-
-      const { data: inserted, error: insErr } = await supabase
-        .from('drafts')
-        .insert(payload)
-        .select('*')
-        .single();
-
-      if (insErr) {
-        // Check if error is due to duplicate pick_number (unique constraint violation)
-        if (insErr.code === '23505') {
-          console.log(`Pick ${newPickNumber} already inserted by another process`);
+      if (fnErr || !data?.ok) {
+        const reason = data?.reason;
+        if (reason === 'pick_conflict' || reason === 'not_your_turn') {
+          console.log(`Bot pick raced (${reason}), letting state sync`);
           return;
         }
-        console.error('Bot pick failed:', insErr);
+        console.error('Bot pick failed:', fnErr || data);
         // Mark bot as failed to prevent infinite retries
         setFailedBots(prev => new Set([...prev, botUserId]));
         return;
       }
 
-      setPortfolio(prev => [inserted, ...(prev || [])]);
+      setPortfolio(prev => [data.pick, ...(prev || [])]);
       void ensureNameForSymbol(selectedSymbol);
     } finally {
       // Release both locks
@@ -960,27 +936,15 @@ export default function DraftPage() {
 
   // --- Helper: Skip a player's turn (used when bot can't pick)
   async function skipTurn(userId) {
-    // Insert a "skip" pick with $0 to advance the draft
-    const newPickNumber = (portfolio?.length || 0) + 1;
-    const payload = {
-      league_id: leagueId,
-      user_id: userId,
-      symbol: 'SKIP',
-      entry_price: 0,
-      quantity: 0,
-      round: currentRound,
-      pick_number: newPickNumber,
-      draft_date: new Date().toISOString(),
-    };
+    // Phase 3 (DR-001): the server records the SKIP sentinel row (symbol
+    // 'SKIP', $0, qty 0) after verifying it is actually that user's turn.
+    // Members may only skip bots (or themselves) — the server enforces it.
+    const { data, error: fnErr } = await supabase.functions.invoke('validate-and-record-pick', {
+      body: { league_id: leagueId, for_user_id: userId, action: 'skip' },
+    });
 
-    const { data: inserted, error: insErr } = await supabase
-      .from('drafts')
-      .insert(payload)
-      .select('*')
-      .single();
-
-    if (!insErr && inserted) {
-      setPortfolio(prev => [inserted, ...(prev || [])]);
+    if (!fnErr && data?.ok && data.pick) {
+      setPortfolio(prev => [data.pick, ...(prev || [])]);
     }
   }
 
@@ -988,6 +952,7 @@ export default function DraftPage() {
   useEffect(() => {
     // Check both state and ref to prevent race conditions
     if (!autoDraftEnabled || !allowed || !currentPicker || botPickInProgress || botPickLockRef.current) return;
+    if (stakeModeMissing) return; // drafting blocked until a stake mode is chosen
 
     // Check if current picker is a real user (exists in auth.users)
     const isRealUser = realUserIds.has(currentPicker);
@@ -1297,30 +1262,13 @@ export default function DraftPage() {
               </div>
             )}
 
-            {/* Alpaca warning */}
-            {membersWithoutAlpaca.length > 0 && (
-              <div className="draft-pending-notice error">
-                <strong>Alpaca Required</strong>
-                <span>
-                  {membersWithoutAlpaca.length === 1 && membersWithoutAlpaca[0] === USER_ID
-                    ? 'Link your Alpaca account to continue'
-                    : `${membersWithoutAlpaca.length} member${membersWithoutAlpaca.length > 1 ? 's' : ''} need to link Alpaca`}
-                </span>
-                {membersWithoutAlpaca.includes(USER_ID) && (
-                  <Link to="/profile" className="btn primary" style={{ marginTop: 8 }}>
-                    Link Account
-                  </Link>
-                )}
-              </div>
-            )}
-
             {/* Action button */}
             <div className="draft-pending-actions">
               {isCommissioner ? (
                 <button
                   className="btn primary large"
                   onClick={handleStartDraft}
-                  disabled={membersWithoutAlpaca.length > 0 || !canStartDraft}
+                  disabled={!canStartDraft}
                 >
                   {canStartDraft ? 'Start Draft' : (!draftStartTime ? 'Set Draft Date First' : 'Not Available Yet')}
                 </button>
@@ -1496,7 +1444,20 @@ export default function DraftPage() {
           <div className="draft-main-v2">
             {/* Search and Draft Controls */}
             <div className="draft-search-section">
-              <DraftControls
+              {stakeModeMissing && (
+                <div style={{
+                  padding: '14px 16px', marginBottom: 12,
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: 10, color: '#f87171', fontSize: 14,
+                }}>
+                  Drafting is paused: this league has no stake mode yet.
+                  {isCommissioner
+                    ? ' Choose one in Leagues → Manage → League Settings.'
+                    : ' Ask your commissioner to choose one in League Settings.'}
+                </div>
+              )}
+              {!stakeModeMissing && <DraftControls
                 isDraftComplete={isDraftComplete}
                 draftCap={draftCap}
                 leagueName={league?.name}
@@ -1515,7 +1476,32 @@ export default function DraftPage() {
                 budgetRemaining={budgetRemaining}
                 getQuote={getQuote}
                 draftStock={draftStock}
-              />
+              />}
+
+              {/* Category eligibility badges for the searched symbol */}
+              {!stakeModeMissing && quote && quoteCats && (
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '8px 0 4px' }}>
+                  {quoteCats.categories.length > 0 ? (
+                    quoteCats.categories.map((c) => (
+                      <span key={c.id} style={{
+                        fontSize: 11, padding: '3px 10px', borderRadius: 999,
+                        background: 'rgba(59, 130, 246, 0.12)', color: '#93c5fd',
+                        border: '1px solid rgba(59, 130, 246, 0.3)',
+                      }}>
+                        {c.name}
+                      </span>
+                    ))
+                  ) : (
+                    <span style={{
+                      fontSize: 11, padding: '3px 10px', borderRadius: 999,
+                      background: 'rgba(107, 114, 128, 0.12)', color: '#9ca3af',
+                      border: '1px solid rgba(107, 114, 128, 0.3)',
+                    }}>
+                      Unclassified — fits flex slots only
+                    </span>
+                  )}
+                </div>
+              )}
 
               {/* Progress Stats */}
               <div className="draft-stats">
@@ -1543,6 +1529,28 @@ export default function DraftPage() {
                   <span>Auto-draft bots</span>
                 </label>
               </div>
+
+              {/* Your roster slots (which are filled / open) */}
+              {leagueSlots.length > 0 && (
+                <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {leagueSlots.map((sl) => {
+                    const filled = mySlotFill(sl.id);
+                    const done = filled >= sl.slot_count;
+                    return (
+                      <div key={sl.id} style={{
+                        display: 'flex', justifyContent: 'space-between',
+                        fontSize: 12, padding: '6px 10px', borderRadius: 8,
+                        background: done ? 'rgba(16, 185, 129, 0.08)' : 'rgba(59, 130, 246, 0.06)',
+                        border: `1px solid ${done ? 'rgba(16, 185, 129, 0.25)' : 'rgba(59, 130, 246, 0.2)'}`,
+                        color: done ? '#6ee7b7' : '#93c5fd',
+                      }}>
+                        <span>{slotLabel(sl)}</span>
+                        <span>{filled}/{sl.slot_count} filled</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Your Stocks and Draft History - Side by Side */}

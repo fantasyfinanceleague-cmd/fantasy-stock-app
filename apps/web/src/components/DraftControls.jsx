@@ -190,7 +190,14 @@ export default function DraftControls({
                   {item.symbol.charAt(0)}
                 </div>
                 <div className="suggestion-info">
-                  <span className="suggestion-symbol">{item.symbol}</span>
+                  <span className="suggestion-symbol">
+                    {item.symbol}
+                    {item.is_draftable === false && (
+                      <span title="Not in the default draftable universe" style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, color: '#f59e0b', border: '1px solid #f59e0b', borderRadius: 4, padding: '0 4px' }}>
+                        NOT DRAFTABLE
+                      </span>
+                    )}
+                  </span>
                   <span className="suggestion-name">{item.name}</span>
                 </div>
                 {item.price != null && (

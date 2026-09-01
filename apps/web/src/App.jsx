@@ -18,15 +18,22 @@ import Protected from './components/Protected';
 import './layout.css'; // custom grid and layout styles
 // import './index.css'; // remove this if you're not using Tailwind at all
 
-// ── App pause switch ────────────────────────────────────────────────────────
+// ── App pause switch (landing-page UX ONLY — NOT the security boundary) ───────
 // While APP_PAUSED is true, the marketing landing page is the ONLY reachable
-// page. Every other path — /login, /signup, /dashboard, and all authenticated
-// app routes — redirects to the landing page, so nothing in the app can be
-// reached by typing a URL directly. The full app (all routes/components below)
-// is preserved, just gated behind this flag.
+// page: /login, /signup, /dashboard and all app routes redirect to it. The full
+// app (all routes/components below) is preserved, just hidden behind this flag.
 //
-// TO UN-PAUSE AND RESTORE THE FULL APP: set APP_PAUSED = false.
-// (No other change needed — the complete route table is kept intact below.)
+// THIS FLAG IS UX ONLY. The real signup gate is server-side: the Before User
+// Created auth hook (public.restrict_new_signups reading app_config.signups_paused,
+// see supabase/migrations/20260815000000_signup_gate.sql) makes GoTrue itself
+// refuse new account creation — so editing this bundle cannot create an account.
+// Sign-in is unaffected by that hook, so existing users keep full access.
+//
+// APP_PAUSED (UI) and signups_paused (server) are INDEPENDENT: APP_PAUSED=false
+// with signups_paused=true opens the app to existing users while still refusing
+// new signups. Opening signups is a separate DB flip, not a code change.
+//
+// TO UN-PAUSE THE UI: set APP_PAUSED = false.
 const APP_PAUSED = true;
 
 function App() {

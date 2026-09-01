@@ -1,51 +1,42 @@
 {
     "tables": [
         {
-            "name": "broker_credentials",
+            "name": "categories",
             "policies": [
                 {
-                    "name": "Users can delete own credentials",
+                    "name": "categories_select_authenticated",
                     "roles": [
-                        "PUBLIC"
+                        "authenticated"
                     ],
-                    "using": "(auth.uid() = user_id)",
-                    "command": "DELETE",
-                    "withCheck": null,
-                    "permissive": true
-                },
-                {
-                    "name": "Users can insert own credentials",
-                    "roles": [
-                        "PUBLIC"
-                    ],
-                    "using": null,
-                    "command": "INSERT",
-                    "withCheck": "(auth.uid() = user_id)",
-                    "permissive": true
-                },
-                {
-                    "name": "Users can update own credentials",
-                    "roles": [
-                        "PUBLIC"
-                    ],
-                    "using": "(auth.uid() = user_id)",
-                    "command": "UPDATE",
-                    "withCheck": null,
-                    "permissive": true
-                },
-                {
-                    "name": "Users can view own credentials",
-                    "roles": [
-                        "PUBLIC"
-                    ],
-                    "using": "(auth.uid() = user_id)",
+                    "using": "true",
                     "command": "SELECT",
                     "withCheck": null,
                     "permissive": true
                 }
             ],
             "rlsForced": false,
-            "rlsEnabled": true
+            "rlsEnabled": true,
+            "checkConstraints": [
+            ]
+        },
+        {
+            "name": "category_rules",
+            "policies": [
+                {
+                    "name": "category_rules_select_authenticated",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "using": "true",
+                    "command": "SELECT",
+                    "withCheck": null,
+                    "permissive": true
+                }
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true,
+            "checkConstraints": [
+            ]
         },
         {
             "name": "cron_job_status",
@@ -62,7 +53,13 @@
                 }
             ],
             "rlsForced": false,
-            "rlsEnabled": true
+            "rlsEnabled": true,
+            "checkConstraints": [
+                {
+                    "name": "cron_job_status_status_check",
+                    "definition": "CHECK ((status = ANY (ARRAY['running'::text, 'success'::text, 'failed'::text, 'retrying'::text])))"
+                }
+            ]
         },
         {
             "name": "draft_sessions",
@@ -89,7 +86,13 @@
                 }
             ],
             "rlsForced": false,
-            "rlsEnabled": true
+            "rlsEnabled": true,
+            "checkConstraints": [
+                {
+                    "name": "draft_sessions_status_check",
+                    "definition": "CHECK ((status = ANY (ARRAY['active'::text, 'completed'::text])))"
+                }
+            ]
         },
         {
             "name": "draft_settings",
@@ -116,7 +119,9 @@
                 }
             ],
             "rlsForced": false,
-            "rlsEnabled": true
+            "rlsEnabled": true,
+            "checkConstraints": [
+            ]
         },
         {
             "name": "drafts",
@@ -132,26 +137,6 @@
                     "permissive": true
                 },
                 {
-                    "name": "League members can create bot picks",
-                    "roles": [
-                        "PUBLIC"
-                    ],
-                    "using": null,
-                    "command": "INSERT",
-                    "withCheck": "((user_id ~~ 'bot-%'::text) AND (EXISTS ( SELECT 1\n   FROM league_members\n  WHERE ((league_members.league_id = drafts.league_id) AND (league_members.user_id = (auth.uid())::text)))))",
-                    "permissive": true
-                },
-                {
-                    "name": "Users can create picks in their leagues",
-                    "roles": [
-                        "PUBLIC"
-                    ],
-                    "using": null,
-                    "command": "INSERT",
-                    "withCheck": "((user_id = (auth.uid())::text) AND (EXISTS ( SELECT 1\n   FROM league_members\n  WHERE ((league_members.league_id = drafts.league_id) AND (league_members.user_id = (auth.uid())::text)))))",
-                    "permissive": true
-                },
-                {
                     "name": "Users can view picks in their leagues",
                     "roles": [
                         "PUBLIC"
@@ -163,7 +148,70 @@
                 }
             ],
             "rlsForced": false,
-            "rlsEnabled": true
+            "rlsEnabled": true,
+            "checkConstraints": [
+                {
+                    "name": "drafts_status_check",
+                    "definition": "CHECK ((status = ANY (ARRAY['pending'::text, 'active'::text, 'completed'::text])))"
+                }
+            ]
+        },
+        {
+            "name": "league_draft_slots",
+            "policies": [
+                {
+                    "name": "league_draft_slots_delete_commissioner",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "using": "is_commissioner(league_id)",
+                    "command": "DELETE",
+                    "withCheck": null,
+                    "permissive": true
+                },
+                {
+                    "name": "league_draft_slots_insert_commissioner",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "using": null,
+                    "command": "INSERT",
+                    "withCheck": "is_commissioner(league_id)",
+                    "permissive": true
+                },
+                {
+                    "name": "league_draft_slots_select_members",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "using": "is_member(league_id)",
+                    "command": "SELECT",
+                    "withCheck": null,
+                    "permissive": true
+                },
+                {
+                    "name": "league_draft_slots_update_commissioner",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "using": "is_commissioner(league_id)",
+                    "command": "UPDATE",
+                    "withCheck": "is_commissioner(league_id)",
+                    "permissive": true
+                }
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true,
+            "checkConstraints": [
+                {
+                    "name": "league_draft_slots_check",
+                    "definition": "CHECK (((price_min IS NULL) OR (price_max IS NULL) OR (price_min <= price_max)))"
+                },
+                {
+                    "name": "league_draft_slots_slot_count_check",
+                    "definition": "CHECK ((slot_count > 0))"
+                }
+            ]
         },
         {
             "name": "league_invites",
@@ -190,7 +238,13 @@
                 }
             ],
             "rlsForced": false,
-            "rlsEnabled": true
+            "rlsEnabled": true,
+            "checkConstraints": [
+                {
+                    "name": "league_invites_status_check",
+                    "definition": "CHECK ((status = ANY (ARRAY['pending'::text, 'accepted'::text, 'declined'::text, 'expired'::text])))"
+                }
+            ]
         },
         {
             "name": "league_members",
@@ -228,16 +282,22 @@
                 {
                     "name": "league_members_select_members",
                     "roles": [
-                        "authenticated"
+                        "PUBLIC"
                     ],
-                    "using": "is_member(league_id)",
+                    "using": "(is_member(league_id) OR (user_id = (auth.uid())::text))",
                     "command": "SELECT",
                     "withCheck": null,
                     "permissive": true
                 }
             ],
             "rlsForced": false,
-            "rlsEnabled": true
+            "rlsEnabled": true,
+            "checkConstraints": [
+                {
+                    "name": "league_members_role_check",
+                    "definition": "CHECK ((role = ANY (ARRAY['commissioner'::text, 'member'::text])))"
+                }
+            ]
         },
         {
             "name": "league_seasons",
@@ -264,7 +324,9 @@
                 }
             ],
             "rlsForced": false,
-            "rlsEnabled": true
+            "rlsEnabled": true,
+            "checkConstraints": [
+            ]
         },
         {
             "name": "league_standings",
@@ -291,7 +353,9 @@
                 }
             ],
             "rlsForced": false,
-            "rlsEnabled": true
+            "rlsEnabled": true,
+            "checkConstraints": [
+            ]
         },
         {
             "name": "leagues",
@@ -319,9 +383,9 @@
                 {
                     "name": "leagues_select_member_or_commissioner",
                     "roles": [
-                        "authenticated"
+                        "PUBLIC"
                     ],
-                    "using": "(is_member(id) OR is_commissioner(id))",
+                    "using": "(is_member(id) OR is_commissioner(id) OR (commissioner_id = (auth.uid())::text))",
                     "command": "SELECT",
                     "withCheck": null,
                     "permissive": true
@@ -348,7 +412,41 @@
                 }
             ],
             "rlsForced": false,
-            "rlsEnabled": true
+            "rlsEnabled": true,
+            "checkConstraints": [
+                {
+                    "name": "leagues_budget_mode_check",
+                    "definition": "CHECK ((budget_mode = ANY (ARRAY['budget'::text, 'no-budget'::text])))"
+                },
+                {
+                    "name": "leagues_draft_status_check",
+                    "definition": "CHECK ((draft_status = ANY (ARRAY['not_started'::text, 'in_progress'::text, 'completed'::text])))"
+                },
+                {
+                    "name": "leagues_duration_days_check",
+                    "definition": "CHECK ((duration_days = ANY (ARRAY[7, 30, 90, 180, 365])))"
+                },
+                {
+                    "name": "leagues_league_type_check",
+                    "definition": "CHECK ((league_type = ANY (ARRAY['duration'::text, 'matchup'::text])))"
+                },
+                {
+                    "name": "leagues_num_participants_range",
+                    "definition": "CHECK (((num_participants >= 4) AND (num_participants <= 16)))"
+                },
+                {
+                    "name": "leagues_season_status_check",
+                    "definition": "CHECK ((season_status = ANY (ARRAY['active'::text, 'playoffs'::text, 'completed'::text])))"
+                },
+                {
+                    "name": "leagues_stake_mode_check",
+                    "definition": "CHECK (((stake_mode IS NULL) OR (stake_mode = ANY (ARRAY['fixed_notional'::text, 'price_tiers'::text, 'budget_cap'::text]))))"
+                },
+                {
+                    "name": "valid_playoff_teams",
+                    "definition": "CHECK (((playoff_teams IS NULL) OR (playoff_teams = ANY (ARRAY[2, 4, 8]))))"
+                }
+            ]
         },
         {
             "name": "matchups",
@@ -375,13 +473,64 @@
                 }
             ],
             "rlsForced": false,
-            "rlsEnabled": true
+            "rlsEnabled": true,
+            "checkConstraints": [
+                {
+                    "name": "valid_playoff_round",
+                    "definition": "CHECK (((playoff_round IS NULL) OR (playoff_round = ANY (ARRAY['quarter'::text, 'semi'::text, 'finals'::text]))))"
+                }
+            ]
         },
         {
             "name": "rate_limit_counters",
-            "policies": [],
+            "policies": [
+            ],
             "rlsForced": false,
-            "rlsEnabled": true
+            "rlsEnabled": true,
+            "checkConstraints": [
+            ]
+        },
+        {
+            "name": "splits",
+            "policies": [
+                {
+                    "name": "splits_select_authenticated",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "using": "true",
+                    "command": "SELECT",
+                    "withCheck": null,
+                    "permissive": true
+                }
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true,
+            "checkConstraints": [
+                {
+                    "name": "splits_ratio_check",
+                    "definition": "CHECK ((ratio > (0)::numeric))"
+                }
+            ]
+        },
+        {
+            "name": "symbol_category_overrides",
+            "policies": [
+                {
+                    "name": "symbol_category_overrides_select_authenticated",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "using": "true",
+                    "command": "SELECT",
+                    "withCheck": null,
+                    "permissive": true
+                }
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true,
+            "checkConstraints": [
+            ]
         },
         {
             "name": "symbols",
@@ -398,21 +547,13 @@
                 }
             ],
             "rlsForced": false,
-            "rlsEnabled": true
+            "rlsEnabled": true,
+            "checkConstraints": [
+            ]
         },
         {
             "name": "trades",
             "policies": [
-                {
-                    "name": "Users can create trades in their leagues",
-                    "roles": [
-                        "PUBLIC"
-                    ],
-                    "using": null,
-                    "command": "INSERT",
-                    "withCheck": "((user_id = auth.uid()) AND (EXISTS ( SELECT 1\n   FROM league_members\n  WHERE ((league_members.league_id = trades.league_id) AND (league_members.user_id = (auth.uid())::text)))))",
-                    "permissive": true
-                },
                 {
                     "name": "Users can view trades in their leagues",
                     "roles": [
@@ -425,7 +566,21 @@
                 }
             ],
             "rlsForced": false,
-            "rlsEnabled": true
+            "rlsEnabled": true,
+            "checkConstraints": [
+                {
+                    "name": "trades_action_check",
+                    "definition": "CHECK ((action = ANY (ARRAY['buy'::text, 'sell'::text])))"
+                },
+                {
+                    "name": "trades_price_check",
+                    "definition": "CHECK ((price > (0)::numeric))"
+                },
+                {
+                    "name": "trades_quantity_check",
+                    "definition": "CHECK ((quantity > (0)::numeric))"
+                }
+            ]
         },
         {
             "name": "user_profiles",
@@ -462,7 +617,9 @@
                 }
             ],
             "rlsForced": false,
-            "rlsEnabled": true
+            "rlsEnabled": true,
+            "checkConstraints": [
+            ]
         },
         {
             "name": "week_snapshots",
@@ -479,11 +636,22 @@
                 }
             ],
             "rlsForced": false,
-            "rlsEnabled": true
+            "rlsEnabled": true,
+            "checkConstraints": [
+            ]
         }
     ],
     "_comment": "Hand-captured from prod. Regenerate with docs/architecture/db-snapshot.sql. Not generated by gen-architecture.mjs.",
     "cronJobs": [
+        {
+            "jobid": 25,
+            "active": true,
+            "command": "\n  select net.http_post(\n    url     := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/enrich-symbols',\n    headers := jsonb_build_object(\n      'Content-Type', 'application/json',\n      'apikey', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_apikey' limit 1)\n    ),\n    body    := '{}'::jsonb\n  );\n  ",
+            "jobname": "enrich_symbols_10min",
+            "database": "postgres",
+            "schedule": "*/10 * * * *",
+            "username": "postgres"
+        },
         {
             "jobid": 19,
             "active": true,
@@ -494,9 +662,9 @@
             "username": "postgres"
         },
         {
-            "jobid": 7,
+            "jobid": 24,
             "active": true,
-            "command": "\n  select net.http_post(\n    url     := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/refresh-symbols',\n    headers := '{\"Content-Type\":\"application/json\"}'::jsonb,\n    body    := '{}'::jsonb\n  );\n  ",
+            "command": "\n  select net.http_post(\n    url     := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/refresh-symbols',\n    headers := jsonb_build_object(\n      'Content-Type', 'application/json',\n      'apikey', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_apikey' limit 1)\n    ),\n    body    := '{}'::jsonb\n  );\n  ",
             "jobname": "refresh_symbols_daily",
             "database": "postgres",
             "schedule": "0 */6 * * *",
@@ -518,15 +686,6 @@
             "jobname": "snapshot-week-start",
             "database": "postgres",
             "schedule": "35 14 * * 1,2",
-            "username": "postgres"
-        },
-        {
-            "jobid": 21,
-            "active": true,
-            "command": "\n  SELECT net.http_post(\n    url := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/sync-alpaca-orders',\n    headers := jsonb_build_object(\n      'Content-Type', 'application/json',\n      'apikey', (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'cron_apikey' LIMIT 1)\n    ),\n    body := '{\"mode\": \"sync-all\"}'::jsonb\n  );\n  ",
-            "jobname": "sync-alpaca-orders",
-            "database": "postgres",
-            "schedule": "30 21 * * 1-5",
             "username": "postgres"
         }
     ],
@@ -561,6 +720,24 @@
             "searchPath": "public",
             "volatility": "volatile",
             "securityDefiner": true
+        },
+        {
+            "acl": [
+                "=X/postgres",
+                "postgres=X/postgres",
+                "anon=X/postgres",
+                "authenticated=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "",
+            "name": "enforce_symbol_category_cap",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public"
+            ],
+            "searchPath": "public",
+            "volatility": "volatile",
+            "securityDefiner": false
         },
         {
             "acl": [
@@ -658,6 +835,24 @@
         },
         {
             "acl": [
+                "=X/postgres",
+                "postgres=X/postgres",
+                "anon=X/postgres",
+                "authenticated=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "",
+            "name": "symbols_touch_updated_at",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public"
+            ],
+            "searchPath": "public",
+            "volatility": "volatile",
+            "securityDefiner": false
+        },
+        {
+            "acl": [
                 "postgres=X/postgres",
                 "service_role=X/postgres"
             ],
@@ -703,22 +898,6 @@
         },
         {
             "acl": [
-                "=X/postgres",
-                "postgres=X/postgres",
-                "anon=X/postgres",
-                "authenticated=X/postgres",
-                "service_role=X/postgres"
-            ],
-            "args": "",
-            "name": "update_broker_credentials_updated_at",
-            "owner": "postgres",
-            "proconfig": [],
-            "searchPath": null,
-            "volatility": "volatile",
-            "securityDefiner": false
-        },
-        {
-            "acl": [
                 "postgres=X/postgres",
                 "service_role=X/postgres"
             ],
@@ -743,12 +922,13 @@
             "args": "",
             "name": "update_user_profiles_updated_at",
             "owner": "postgres",
-            "proconfig": [],
+            "proconfig": [
+            ],
             "searchPath": null,
             "volatility": "volatile",
             "securityDefiner": false
         }
     ],
-    "capturedAt": "2026-07-30T03:10:26Z",
+    "capturedAt": "2026-08-12T04:52:52Z",
     "postgresVersion": "17.4"
 }

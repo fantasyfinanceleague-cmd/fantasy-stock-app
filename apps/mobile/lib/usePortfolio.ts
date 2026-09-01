@@ -106,18 +106,6 @@ export function usePortfolio(leagueId: string | null) {
     };
   }, [holdings]);
 
-  useEffect(() => {
-    if (!user || !leagueId) {
-      setDrafts([]);
-      setTrades([]);
-      setBaseHoldings([]);
-      setLoading(false);
-      return;
-    }
-
-    fetchPortfolio();
-  }, [user, leagueId]);
-
   async function fetchPortfolio() {
     if (!user || !leagueId) return;
 
@@ -199,6 +187,18 @@ export function usePortfolio(leagueId: string | null) {
     setBaseHoldings(holdingsArray);
     setLoading(false);
   }
+
+  useEffect(() => {
+    if (!user || !leagueId) {
+      setDrafts([]);
+      setTrades([]);
+      setBaseHoldings([]);
+      setLoading(false);
+      return;
+    }
+
+    fetchPortfolio();
+  }, [user, leagueId]);
 
   async function refresh() {
     await fetchPortfolio();

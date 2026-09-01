@@ -143,6 +143,74 @@ export default function Matchup() {
     })();
   }, [USER_ID]);
 
+  async function fetchTeamHoldings(userId) {
+    if (!leagueId) return [];
+
+    // Fetch draft picks
+    const { data: picks } = await supabase
+      .from('drafts')
+      .select('id, symbol, entry_price, quantity, user_id')
+      .eq('league_id', leagueId)
+      .eq('user_id', userId);
+
+    // Fetch trades
+    const { data: trades } = await supabase
+      .from('trades')
+      .select('id, symbol, price, quantity, action, user_id')
+      .eq('league_id', leagueId)
+      .eq('user_id', userId);
+
+    // Calculate holdings
+    const holdingsMap = {};
+
+    (picks || []).forEach(pick => {
+      const sym = pick.symbol?.toUpperCase();
+      if (!sym) return;
+
+      if (!holdingsMap[sym]) {
+        holdingsMap[sym] = { symbol: sym, quantity: 0, totalCost: 0 };
+      }
+
+      const qty = Number(pick.quantity || 1);
+      const price = Number(pick.entry_price);
+      holdingsMap[sym].quantity += qty;
+      holdingsMap[sym].totalCost += price * qty;
+    });
+
+    (trades || []).forEach(trade => {
+      const sym = trade.symbol?.toUpperCase();
+      if (!sym) return;
+
+      if (!holdingsMap[sym]) {
+        holdingsMap[sym] = { symbol: sym, quantity: 0, totalCost: 0 };
+      }
+
+      const qty = Number(trade.quantity);
+      const price = Number(trade.price);
+
+      if (trade.action === 'buy') {
+        holdingsMap[sym].quantity += qty;
+        holdingsMap[sym].totalCost += price * qty;
+      } else if (trade.action === 'sell') {
+        const avgEntry = holdingsMap[sym].quantity > 0
+          ? holdingsMap[sym].totalCost / holdingsMap[sym].quantity
+          : price;
+        holdingsMap[sym].quantity -= qty;
+        holdingsMap[sym].totalCost = avgEntry * holdingsMap[sym].quantity;
+      }
+    });
+
+    // Filter and fetch prices
+    const holdingsList = Object.values(holdingsMap).filter(h => h.quantity > 0);
+    const symbols = holdingsList.map(h => h.symbol);
+
+    if (symbols.length > 0) {
+      await fetchPrices(symbols);
+    }
+
+    return holdingsList;
+  }
+
   // Load matchup data when league or selected week changes
   useEffect(() => {
     if (!USER_ID || !leagueId || !isMatchupLeague || selectedWeek < 1) {
@@ -261,74 +329,6 @@ export default function Matchup() {
       }
     })();
   }, [USER_ID, leagueId, selectedWeek, isMatchupLeague]);
-
-  async function fetchTeamHoldings(userId) {
-    if (!leagueId) return [];
-
-    // Fetch draft picks
-    const { data: picks } = await supabase
-      .from('drafts')
-      .select('id, symbol, entry_price, quantity, user_id')
-      .eq('league_id', leagueId)
-      .eq('user_id', userId);
-
-    // Fetch trades
-    const { data: trades } = await supabase
-      .from('trades')
-      .select('id, symbol, price, quantity, action, user_id')
-      .eq('league_id', leagueId)
-      .eq('user_id', userId);
-
-    // Calculate holdings
-    const holdingsMap = {};
-
-    (picks || []).forEach(pick => {
-      const sym = pick.symbol?.toUpperCase();
-      if (!sym) return;
-
-      if (!holdingsMap[sym]) {
-        holdingsMap[sym] = { symbol: sym, quantity: 0, totalCost: 0 };
-      }
-
-      const qty = Number(pick.quantity || 1);
-      const price = Number(pick.entry_price);
-      holdingsMap[sym].quantity += qty;
-      holdingsMap[sym].totalCost += price * qty;
-    });
-
-    (trades || []).forEach(trade => {
-      const sym = trade.symbol?.toUpperCase();
-      if (!sym) return;
-
-      if (!holdingsMap[sym]) {
-        holdingsMap[sym] = { symbol: sym, quantity: 0, totalCost: 0 };
-      }
-
-      const qty = Number(trade.quantity);
-      const price = Number(trade.price);
-
-      if (trade.action === 'buy') {
-        holdingsMap[sym].quantity += qty;
-        holdingsMap[sym].totalCost += price * qty;
-      } else if (trade.action === 'sell') {
-        const avgEntry = holdingsMap[sym].quantity > 0
-          ? holdingsMap[sym].totalCost / holdingsMap[sym].quantity
-          : price;
-        holdingsMap[sym].quantity -= qty;
-        holdingsMap[sym].totalCost = avgEntry * holdingsMap[sym].quantity;
-      }
-    });
-
-    // Filter and fetch prices
-    const holdingsList = Object.values(holdingsMap).filter(h => h.quantity > 0);
-    const symbols = holdingsList.map(h => h.symbol);
-
-    if (symbols.length > 0) {
-      await fetchPrices(symbols);
-    }
-
-    return holdingsList;
-  }
 
   // Calculate gains using week start prices (if available) or entry prices as fallback
   const team1WithGains = useMemo(() => {

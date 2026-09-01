@@ -1,0 +1,44 @@
+-- In-house simulator (DR-001 / SIMULATOR_MIGRATION_SPEC Phase 3)
+-- Drops the INTERIM budget_mode -> stake_mode mirror added by
+-- 20260810000008_leagues_mirror_budget_mode_to_stake_mode.sql.
+--
+-- WHY NOW: 000008's own header couples its removal to the client switch —
+--   "DROP this trigger + function in the SAME migration that lands the client
+--   switch." That switch is this branch (simulator-core): all five league
+--   write sites (mobile create-league / leagues-tab create / league-settings,
+--   web useLeagues.createLeague / Leagues.handleUpdate) now write `stake_mode`
+--   explicitly. The trigger fires BEFORE INSERT unconditionally, so once any
+--   client can send a stake_mode value that differs from the budget_mode
+--   mapping (the Phase 4 mode picker will: fixed_notional / price_tiers),
+--   the trigger would silently clobber the explicit value. Load-bearing
+--   before the switch; a landmine after it.
+--
+-- TRANSITION SAFETY (why deploy order is forgiving): the switched clients
+--   write BOTH fields with the SAME mapping the trigger applies
+--   ('budget' -> 'budget_cap', 'no-budget' -> NULL). So:
+--     * trigger still present + new clients  -> trigger recomputes the same
+--       value the client sent; harmless.
+--     * trigger dropped + OLD clients        -> a legacy write leaves
+--       stake_mode NULL for 'no-budget' (already the intended pending state)
+--       or stale for 'budget' — the one divergence, which is why this should
+--       be pushed WITH or promptly after the client deploy, not weeks early.
+--   Recommended order: push this migration, then deploy web (Vercel merge)
+--   and ship mobile. In-flight old mobile builds are the residual risk; the
+--   window is acceptable because every existing 'budget' league already has
+--   stake_mode='budget_cap' from 000002's one-time UPDATE.
+--
+-- HUMAN ACTION: supabase db push. Do NOT trust push output (CLAUDE.md).
+--
+-- Effect-verify AFTER push:
+--   SELECT tgname FROM pg_trigger
+--    WHERE tgrelid = 'public.leagues'::regclass AND NOT tgisinternal;
+--   -- leagues_mirror_budget_mode must be ABSENT.
+--   SELECT proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+--    WHERE n.nspname = 'public' AND proname = 'mirror_budget_mode_to_stake_mode';
+--   -- must return zero rows.
+--   Then INSERT a league via a switched client with budget toggle ON and
+--   confirm: budget_mode='budget' AND stake_mode='budget_cap' (client-written,
+--   not trigger-written).
+
+drop trigger if exists leagues_mirror_budget_mode on leagues;
+drop function if exists public.mirror_budget_mode_to_stake_mode();

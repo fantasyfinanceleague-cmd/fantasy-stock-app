@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal, TextInput, Alert, ActivityIndicator, Platform, Share } from 'react-native';
+/* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal, TextInput, Alert, ActivityIndicator, Platform, Share, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/lib/useAuth';
 import { useLeagueContext, League } from '@/lib/LeagueContext';
@@ -8,6 +9,13 @@ import { Colors } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
 import { validateLeagueName } from '@/lib/contentModeration';
 import { generateInviteCode } from '@/lib/inviteCode';
+import { stakeModeLabel } from '@/lib/categoryData';
+import {
+  type StakeMode,
+  DEFAULT_BUDGET_CAP,
+  DEFAULT_NOTIONAL_PER_SLOT,
+  STAKE_MODE_OPTIONS,
+} from '@/lib/categoryData';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 interface LeagueMember {
@@ -42,8 +50,10 @@ export default function LeaguesScreen() {
   const [leagueType, setLeagueType] = useState<'matchup' | 'duration'>('duration');
   const [numTeams, setNumTeams] = useState(12);
   const [numRounds, setNumRounds] = useState(6);
-  const [budgetMode, setBudgetMode] = useState<'budget' | 'no-budget'>('budget');
-  const [budgetAmount, setBudgetAmount] = useState('100000');
+  const [stakeMode, setStakeMode] = useState<StakeMode>('fixed_notional');
+  const [notionalPerSlot, setNotionalPerSlot] = useState(String(DEFAULT_NOTIONAL_PER_SLOT));
+  const [budgetCap, setBudgetCap] = useState(String(DEFAULT_BUDGET_CAP));
+  const [allowUndraftable, setAllowUndraftable] = useState(false);
   const [numWeeks, setNumWeeks] = useState(11);
   const [durationDays, setDurationDays] = useState(30);
   const [playoffTeams, setPlayoffTeams] = useState(4);
@@ -53,7 +63,7 @@ export default function LeaguesScreen() {
   // Derived values
   const minWeeks = numTeams - 1;
   const getPlayoffOptions = () => {
-    const allOptions = [2, 4, 8];
+    const allOptions = [2, 4, 8]; // DB CHECK: playoff_teams NULL or in (2,4,8)
     return allOptions.filter(o => o < numTeams);
   };
   const validPlayoffOptions = getPlayoffOptions();
@@ -151,8 +161,10 @@ export default function LeaguesScreen() {
     setLeagueType('duration');
     setNumTeams(12);
     setNumRounds(6);
-    setBudgetMode('budget');
-    setBudgetAmount('100000');
+    setStakeMode('fixed_notional');
+    setNotionalPerSlot(String(DEFAULT_NOTIONAL_PER_SLOT));
+    setBudgetCap(String(DEFAULT_BUDGET_CAP));
+    setAllowUndraftable(false);
     setNumWeeks(11);
     setDurationDays(30);
     setPlayoffTeams(4);
@@ -182,8 +194,6 @@ export default function LeaguesScreen() {
 
     setCreating(true);
     try {
-      const capDisabled = budgetMode === 'no-budget';
-      const budget = capDisabled ? null : (parseInt(budgetAmount) || 100000);
       const effectiveWeeks = leagueType === 'matchup' ? Math.max(numWeeks, minWeeks) : null;
 
       // Create the league
@@ -195,9 +205,16 @@ export default function LeaguesScreen() {
           invite_code: generateInviteCode(),
           num_participants: numTeams,
           num_rounds: numRounds,
-          budget_mode: budgetMode,
-          budget_amount: budget || 100000,
-          salary_cap_limit: budget,
+          // stake_mode is authoritative; budget_mode deprecated (DB default
+          // applies) and salary_cap_limit retired — drop migration on this
+          // branch. Price-tier slots are configured in League Settings after
+          // creation (this is the quick-create path).
+          stake_mode: stakeMode,
+          notional_per_slot: parseInt(notionalPerSlot) || DEFAULT_NOTIONAL_PER_SLOT,
+          allow_undraftable: allowUndraftable,
+          ...(stakeMode === 'budget_cap'
+            ? { budget_amount: parseInt(budgetCap) || DEFAULT_BUDGET_CAP }
+            : {}),
           league_type: leagueType,
           duration_days: leagueType === 'duration' ? durationDays : 30,
           num_weeks: effectiveWeeks,
@@ -311,9 +328,7 @@ export default function LeaguesScreen() {
                     </Text>
                     <Text style={styles.leagueDetail}>•</Text>
                     <Text style={styles.leagueDetail}>
-                      {league.budget_mode === 'budget'
-                        ? `$${league.budget_amount?.toLocaleString()} budget`
-                        : 'No budget'}
+                      {stakeModeLabel(league.stake_mode)}
                     </Text>
                   </View>
 
@@ -421,6 +436,7 @@ export default function LeaguesScreen() {
               <View style={styles.stepper}>
                 <TouchableOpacity
                   style={styles.stepperButton}
+                  // bounds = DB CHECK leagues_num_participants_range (4-16)
                   onPress={() => setNumTeams(Math.max(4, numTeams - 1))}
                 >
                   <Text style={styles.stepperButtonText}>−</Text>
@@ -455,43 +471,69 @@ export default function LeaguesScreen() {
               </View>
             </View>
 
-            {/* Budget Mode */}
+            {/* Stake Mode (Phase 4) */}
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Budget Mode</Text>
+              <Text style={styles.formLabel}>Stake Mode</Text>
               <View style={styles.segmentedControl}>
-                <TouchableOpacity
-                  style={[styles.segment, budgetMode === 'budget' && styles.segmentActive]}
-                  onPress={() => setBudgetMode('budget')}
-                >
-                  <Text style={[styles.segmentText, budgetMode === 'budget' && styles.segmentTextActive]}>
-                    Salary Cap
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.segment, budgetMode === 'no-budget' && styles.segmentActive]}
-                  onPress={() => setBudgetMode('no-budget')}
-                >
-                  <Text style={[styles.segmentText, budgetMode === 'no-budget' && styles.segmentTextActive]}>
-                    No Budget
-                  </Text>
-                </TouchableOpacity>
+                {STAKE_MODE_OPTIONS.map((opt) => (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[styles.segment, stakeMode === opt.value && styles.segmentActive]}
+                    onPress={() => setStakeMode(opt.value)}
+                  >
+                    <Text style={[styles.segmentText, stakeMode === opt.value && styles.segmentTextActive]}>
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
               </View>
+              <Text style={styles.stakeHelp}>
+                {STAKE_MODE_OPTIONS.find((o) => o.value === stakeMode)?.help}
+                {stakeMode === 'price_tiers' ? ' Configure the tier slots in League Settings after creating.' : ''}
+              </Text>
             </View>
 
-            {/* Budget Amount */}
-            {budgetMode === 'budget' && (
+            {stakeMode === 'fixed_notional' && (
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Salary Cap ($)</Text>
+                <Text style={styles.formLabel}>Stake per Slot ($)</Text>
                 <TextInput
                   style={styles.input}
-                  value={budgetAmount}
-                  onChangeText={setBudgetAmount}
-                  placeholder="100000"
+                  value={notionalPerSlot}
+                  onChangeText={(t) => setNotionalPerSlot(t.replace(/[^0-9]/g, ''))}
+                  placeholder={String(DEFAULT_NOTIONAL_PER_SLOT)}
                   placeholderTextColor={Colors.textDark}
                   keyboardType="numeric"
                 />
               </View>
             )}
+            {stakeMode === 'budget_cap' && (
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Budget Cap ($)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={budgetCap}
+                  onChangeText={(t) => setBudgetCap(t.replace(/[^0-9]/g, ''))}
+                  placeholder={String(DEFAULT_BUDGET_CAP)}
+                  placeholderTextColor={Colors.textDark}
+                  keyboardType="numeric"
+                />
+              </View>
+            )}
+
+            {/* Allow non-draftable stocks */}
+            <View style={styles.formGroup}>
+              <View style={styles.undraftableRow}>
+                <Text style={styles.undraftableLabel}>Allow non-draftable stocks (full universe)</Text>
+                <Switch
+                  value={allowUndraftable}
+                  onValueChange={setAllowUndraftable}
+                  trackColor={{ false: Colors.border, true: Colors.primary }}
+                />
+              </View>
+              <Text style={styles.stakeHelp}>
+                Off (default): only vetted draftable stocks. On: the entire universe, including penny stocks and micro-caps.
+              </Text>
+            </View>
 
             {/* League Type */}
             <View style={styles.formGroup}>
@@ -722,11 +764,9 @@ export default function LeaguesScreen() {
                     </View>
                   )}
                   <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Budget Mode</Text>
+                    <Text style={styles.detailLabel}>Stake Mode</Text>
                     <Text style={styles.detailValue}>
-                      {selectedLeague.budget_mode === 'budget'
-                        ? `$${(selectedLeague.budget_amount || 100000).toLocaleString()}`
-                        : 'No Budget'}
+                      {stakeModeLabel(selectedLeague.stake_mode)}
                     </Text>
                   </View>
                   <View style={styles.detailRow}>
@@ -1181,5 +1221,23 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     textAlign: 'center',
     paddingVertical: 20,
+  },
+  stakeHelp: {
+    fontSize: 11,
+    color: Colors.textMuted,
+    marginTop: 6,
+    lineHeight: 15,
+  },
+  undraftableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  undraftableLabel: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.textPrimary,
   },
 });

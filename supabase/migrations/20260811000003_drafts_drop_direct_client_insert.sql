@@ -1,0 +1,57 @@
+-- In-house simulator (DR-001 / SIMULATOR_MIGRATION_SPEC Phase 3) — companion
+-- to 20260811000002 (trades). Closes the drafts side of the same door.
+--
+-- WHY: validate-and-record-pick (service-role writes, server-side legality)
+--   is now the ONLY intended write path into `drafts` — human picks, bot
+--   picks, and SKIP turn-forfeits all go through it. The two INSERT policies
+--   from 20251205110000 let any league member insert arbitrary pick rows
+--   (any symbol, any entry_price, any pick_number within the unique index)
+--   past every legality check: turn order, duplicate ownership, tier
+--   brackets, cap budget. With the legality gate live, the open policies are
+--   the same defeat 000002 closed for trades.
+--
+-- DEPENDENCIES CHECKED before authoring (none block this):
+--   * Clients: zero drafts writes remain in apps/ (insert/update/upsert/
+--     delete all removed on simulator-core — grep-verified).
+--   * Bot picks: went through the "League members can create bot picks"
+--     policy; now written by the edge function's service-role client, which
+--     bypasses RLS. Policy unused.
+--   * Realtime: both draft screens subscribe to INSERT events on drafts, but
+--     realtime authorizes DELIVERY via the SELECT policy (read access), not
+--     INSERT policies. The members SELECT policy remains — delivery is
+--     unaffected.
+--   * RPCs: no function in supabase/migrations/ or db-snapshot.json inserts
+--     into drafts. Because drafts itself was created out-of-band, ALSO run
+--     the pre-push query below against prod to rule out a prod-only
+--     SECURITY INVOKER function the repo cannot see.
+--
+-- KEPT: the members SELECT policy (read path + realtime delivery) and the
+--   commissioner DELETE policy (unchanged, out of scope here).
+--
+-- ROLLOUT CAVEAT (the one real cost): every mobile build shipped BEFORE the
+--   Phase 3 client switch still direct-inserts picks. After this push, a
+--   draft attempt from such a build fails LOUDLY (RLS refusal -> "Failed to
+--   submit pick" alert) rather than corrupting state. Web deploys atomically
+--   with the merge. Push this WITH 000001/000002 only if breaking drafts on
+--   stale mobile builds is acceptable; otherwise hold it for the mobile
+--   release. Deploy validate-and-record-pick BEFORE this push regardless.
+--
+-- PRE-PUSH check (HUMAN ACTION, prod SQL editor — expect zero rows):
+--   SELECT proname FROM pg_proc p
+--     JOIN pg_namespace n ON n.oid = p.pronamespace
+--    WHERE n.nspname = 'public'
+--      AND prosecdef = false
+--      AND prosrc ILIKE '%drafts%' AND prosrc ILIKE '%insert%';
+--
+-- HUMAN ACTION: supabase db push (with 000001 + 000002, per the caveat).
+--
+-- Effect-verify AFTER push (policy list, not push output):
+--   SELECT policyname, cmd FROM pg_policies
+--    WHERE schemaname = 'public' AND tablename = 'drafts';
+--   -- must show NO INSERT policies; SELECT + DELETE policies must remain.
+--   Then, as an authenticated league member (anon-key client), attempt a
+--   direct pick INSERT for your own user_id — must be REFUSED by RLS —
+--   and confirm a pick via the app (validate-and-record-pick) still lands.
+
+drop policy if exists "Users can create picks in their leagues" on drafts;
+drop policy if exists "League members can create bot picks" on drafts;

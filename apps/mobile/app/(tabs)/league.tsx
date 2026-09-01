@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -83,6 +84,107 @@ export default function LeagueScreen() {
   // Animation refs for position changes
   const previousPositionsRef = useRef<Record<string, number>>({});
   const [animatingRows, setAnimatingRows] = useState<Record<string, 'up' | 'down'>>({});
+
+  // Sort standings
+  const sortedStandings = useMemo(() => {
+    return [...standings].sort((a, b) => {
+      const aTotal = a.wins + a.losses + a.ties;
+      const bTotal = b.wins + b.losses + b.ties;
+      const aPct = aTotal > 0 ? (a.wins + a.ties * 0.5) / aTotal : 0;
+      const bPct = bTotal > 0 ? (b.wins + b.ties * 0.5) / bTotal : 0;
+
+      if (bPct !== aPct) return bPct - aPct;
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      return Number(b.points_for) - Number(a.points_for);
+    });
+  }, [standings]);
+
+  async function fetchData() {
+    if (!activeLeagueId) return;
+
+    setLoading(true);
+    try {
+      // Fetch standings
+      const { data: standingsData, error: standingsError } = await supabase
+        .from('league_standings')
+        .select('*')
+        .eq('league_id', activeLeagueId)
+        .order('wins', { ascending: false });
+
+      if (standingsError) {
+        console.error('Error fetching standings:', standingsError);
+      }
+
+      const fetchedStandings = standingsData || [];
+      setStandings(fetchedStandings);
+
+      // Fetch matchups for matchup leagues
+      let matchupsData: Matchup[] = [];
+      if (isMatchupLeague) {
+        const { data, error: matchupsError } = await supabase
+          .from('matchups')
+          .select('*')
+          .eq('league_id', activeLeagueId)
+          .order('week_number', { ascending: true });
+
+        if (matchupsError) {
+          console.error('Error fetching matchups:', matchupsError);
+        }
+
+        matchupsData = data || [];
+        setMatchups(matchupsData);
+      }
+
+      // Fetch seasons
+      const { data: seasonsData } = await supabase
+        .from('league_seasons')
+        .select('*')
+        .eq('league_id', activeLeagueId)
+        .order('season_number', { ascending: false });
+
+      if (seasonsData) {
+        setSeasons(seasonsData);
+        if (activeLeague?.current_season_id) {
+          const current = seasonsData.find(s => s.id === activeLeague.current_season_id);
+          setCurrentSeason(current || null);
+        }
+      }
+
+      // Collect all user IDs
+      const standingUserIds = fetchedStandings.map(s => s.user_id);
+      const matchupUserIds = isMatchupLeague ?
+        matchupsData.flatMap(m => [m.team1_user_id, m.team2_user_id]) : [];
+      const seasonUserIds = (seasonsData || []).flatMap(s =>
+        [s.champion_user_id, s.runner_up_user_id].filter(Boolean)
+      ) as string[];
+
+      const allUserIds = [...new Set([...standingUserIds, ...matchupUserIds, ...seasonUserIds])]
+        .filter(id => id && !id.startsWith('bot-'));
+
+      if (allUserIds.length > 0) {
+        const { data: profileData, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('id, username, avatar')
+          .in('id', allUserIds);
+
+        if (profileError) {
+          console.error('Error fetching profiles:', profileError);
+        }
+
+        if (profileData && profileData.length > 0) {
+          const profileMap: Record<string, UserProfile> = {};
+          profileData.forEach(p => {
+            profileMap[p.id] = p;
+          });
+          setProfiles(profileMap);
+        }
+      }
+    } catch (err) {
+      console.error('Error in fetchData:', err);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   // Real-time subscription for standings and matchups
   useEffect(() => {
@@ -195,93 +297,6 @@ export default function LeagueScreen() {
     }
   }, [activeLeagueId, user]);
 
-  async function fetchData() {
-    if (!activeLeagueId) return;
-
-    setLoading(true);
-    try {
-      // Fetch standings
-      const { data: standingsData, error: standingsError } = await supabase
-        .from('league_standings')
-        .select('*')
-        .eq('league_id', activeLeagueId)
-        .order('wins', { ascending: false });
-
-      if (standingsError) {
-        console.error('Error fetching standings:', standingsError);
-      }
-
-      const fetchedStandings = standingsData || [];
-      setStandings(fetchedStandings);
-
-      // Fetch matchups for matchup leagues
-      let matchupsData: Matchup[] = [];
-      if (isMatchupLeague) {
-        const { data, error: matchupsError } = await supabase
-          .from('matchups')
-          .select('*')
-          .eq('league_id', activeLeagueId)
-          .order('week_number', { ascending: true });
-
-        if (matchupsError) {
-          console.error('Error fetching matchups:', matchupsError);
-        }
-
-        matchupsData = data || [];
-        setMatchups(matchupsData);
-      }
-
-      // Fetch seasons
-      const { data: seasonsData } = await supabase
-        .from('league_seasons')
-        .select('*')
-        .eq('league_id', activeLeagueId)
-        .order('season_number', { ascending: false });
-
-      if (seasonsData) {
-        setSeasons(seasonsData);
-        if (activeLeague?.current_season_id) {
-          const current = seasonsData.find(s => s.id === activeLeague.current_season_id);
-          setCurrentSeason(current || null);
-        }
-      }
-
-      // Collect all user IDs
-      const standingUserIds = fetchedStandings.map(s => s.user_id);
-      const matchupUserIds = isMatchupLeague ?
-        matchupsData.flatMap(m => [m.team1_user_id, m.team2_user_id]) : [];
-      const seasonUserIds = (seasonsData || []).flatMap(s =>
-        [s.champion_user_id, s.runner_up_user_id].filter(Boolean)
-      ) as string[];
-
-      const allUserIds = [...new Set([...standingUserIds, ...matchupUserIds, ...seasonUserIds])]
-        .filter(id => id && !id.startsWith('bot-'));
-
-      if (allUserIds.length > 0) {
-        const { data: profileData, error: profileError } = await supabase
-          .from('user_profiles')
-          .select('id, username, avatar')
-          .in('id', allUserIds);
-
-        if (profileError) {
-          console.error('Error fetching profiles:', profileError);
-        }
-
-        if (profileData && profileData.length > 0) {
-          const profileMap: Record<string, UserProfile> = {};
-          profileData.forEach(p => {
-            profileMap[p.id] = p;
-          });
-          setProfiles(profileMap);
-        }
-      }
-    } catch (err) {
-      console.error('Error in fetchData:', err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   const onRefresh = async () => {
     setRefreshing(true);
     await Promise.all([refreshLeagues(), fetchData()]);
@@ -306,20 +321,6 @@ export default function LeagueScreen() {
     if (profile?.avatar) return profile.avatar;
     return '📊';
   };
-
-  // Sort standings
-  const sortedStandings = useMemo(() => {
-    return [...standings].sort((a, b) => {
-      const aTotal = a.wins + a.losses + a.ties;
-      const bTotal = b.wins + b.losses + b.ties;
-      const aPct = aTotal > 0 ? (a.wins + a.ties * 0.5) / aTotal : 0;
-      const bPct = bTotal > 0 ? (b.wins + b.ties * 0.5) / bTotal : 0;
-
-      if (bPct !== aPct) return bPct - aPct;
-      if (b.wins !== a.wins) return b.wins - a.wins;
-      return Number(b.points_for) - Number(a.points_for);
-    });
-  }, [standings]);
 
   // Get user's schedule (matchups where they participate)
   const userSchedule = useMemo(() => {

@@ -1,0 +1,33 @@
+title = "Stockpile gitleaks config"
+
+# Use gitleaks' full default ruleset, then allowlist known-safe matches below.
+[extend]
+useDefault = true
+
+[allowlist]
+description = """
+Known-safe matches only. The Supabase ANON key is a PUBLISHABLE client key — it
+ships in the web bundle and is designed to be public (RLS is the real boundary),
+so its appearance in templates, EAS build config, a test script, and the legacy
+cron migrations is not a leak. SERVICE-ROLE keys are NOT allowlisted here and must
+never be committed.
+"""
+
+# Template / example / documentation / config files that legitimately contain the
+# publishable key or illustrative curl examples.
+paths = [
+  '''(^|/)\.env\.example$''',
+  '''(^|/)\.env\.sample$''',
+  '''^apps/mobile/eas\.json$''',
+  '''^scripts/test-draft\.js$''',
+  '''^docs/.*\.md$''',
+  '''^CLAUDE\.md$''',
+  '''^\.gitleaks\.toml$''',
+  '''^\.claude/''',
+]
+
+# The exact publishable anon key value, so it is allowlisted wherever it appears
+# (e.g. the two legacy cron migrations) WITHOUT allowlisting those whole files.
+regexes = [
+  '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhhaWFhaWZqY2Nsc3Zta2ZxZ21kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjM2NzM4ODMsImV4cCI6MjAzOTI0OTg4M30.OmPOPSgDyF4mRAYOFof8OKHKk0SvpLLHPEVBSKBAXL4''',
+]

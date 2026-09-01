@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
@@ -40,6 +41,7 @@ interface SearchResult {
   symbol: string;
   name: string;
   price?: number | null;
+  is_draftable?: boolean;
 }
 
 export default function TradeModal({
@@ -69,31 +71,12 @@ export default function TradeModal({
   const [quote, setQuote] = useState<Quote | null>(null);
   const [companyName, setCompanyName] = useState('');
   const [fetchingQuote, setFetchingQuote] = useState(false);
-  const [hasAlpacaLinked, setHasAlpacaLinked] = useState<boolean | null>(null);
 
   // Search state
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Check if user has Alpaca account linked
-  useEffect(() => {
-    if (!visible || !userId) return;
-
-    async function checkAlpacaLink() {
-      const { data, error } = await supabase
-        .from('broker_credentials')
-        .select('key_id')
-        .eq('user_id', userId)
-        .eq('broker', 'alpaca')
-        .single();
-
-      setHasAlpacaLinked(!error && !!data);
-    }
-
-    checkAlpacaLink();
-  }, [visible, userId]);
 
   // Reset state when modal opens
   useEffect(() => {
@@ -305,129 +288,47 @@ export default function TradeModal({
     setQuantity((prev) => Math.max(1, prev + delta));
   };
 
+  // Refusal reasons from record-trade, mapped to user-facing copy.
+  const TRADE_REFUSAL_MESSAGES: Record<string, string> = {
+    draft_not_completed: 'Trading opens after the draft completes.',
+    symbol_owned: 'That stock is already owned in this league.',
+    not_draftable: "That stock isn't in this league's draftable universe.",
+    roster_full: 'Your roster is full — drop a stock first.',
+    no_eligible_slot: 'No open roster slot accepts a stock at this price.',
+    over_budget: 'That stock is over your remaining budget.',
+    not_owned: "You don't own that stock.",
+    no_price: 'No recent price available for that stock.',
+    rate_limited: 'Too many trades too quickly — wait a moment and try again.',
+  };
+
   const handleSubmit = async () => {
-    setError('');
-
-    if (!quote) {
-      setError('Please enter a valid stock symbol');
-      return;
-    }
-
-    if (!canAfford) {
-      setError(`Insufficient funds. You have $${availableCash.toFixed(2)} available.`);
-      return;
-    }
-
-    if (!hasEnoughShares) {
-      setError(`You only own ${ownedQuantity} shares of ${symbol.toUpperCase()}`);
-      return;
-    }
-
+    // Phase 3 (DR-001): trades go through the record-trade edge function —
+    // the in-house simulator fill path (app-key quote, server-side legality).
+    // The server computes quantity per stake mode and a sell always drops the
+    // ENTIRE position (freeing the symbol league-wide); the local quantity
+    // stepper is a display-only estimate until the Phase 4 UI pass.
+    if (!symbol) return;
     setLoading(true);
-
+    setError('');
     try {
-      const upperSymbol = symbol.toUpperCase();
-
-      // 1) Place paper order via Alpaca Edge Function. The server records the
-      //    resulting trade from Alpaca's actual fill values, so league_id is
-      //    required and the client no longer inserts into `trades` directly.
-      const { data: placeData, error: placeErr } = await supabase.functions.invoke(
-        'place-order',
-        {
-          body: {
-            symbol: upperSymbol,
-            qty: quantity,
-            side: action,
-            type: 'market',
-            time_in_force: 'day',
-            league_id: leagueId,
-          },
-        }
-      );
-
-      // Handle Alpaca errors
-      if (placeErr || placeData?.error) {
-        console.error('place-order failed:', placeErr || placeData);
-
-        if (placeData?.error === 'credentials_invalid') {
-          setError(
-            placeData.message ||
-              'Your Alpaca credentials are invalid or expired. Please update them in Profile.'
-          );
-          setLoading(false);
-          return;
-        }
-
-        if (placeData?.error === 'insufficient_funds') {
-          setError(
-            placeData.message || 'Insufficient buying power in your Alpaca account.'
-          );
-          setLoading(false);
-          return;
-        }
-
-        if (placeData?.error === 'no_credentials') {
-          setError(
-            placeData.message || 'Please link your Alpaca account in Profile settings.'
-          );
-          setLoading(false);
-          return;
-        }
-
-        // For other Alpaca errors, stop - don't record a trade that didn't happen
-        setError(placeData?.message || 'Trade failed. Please try again.');
-        setLoading(false);
+      const { data, error: fnError } = await supabase.functions.invoke('record-trade', {
+        body: { league_id: leagueId, symbol: symbol.trim().toUpperCase(), action },
+      });
+      if (fnError) throw fnError;
+      if (!data?.ok) {
+        setError(TRADE_REFUSAL_MESSAGES[data?.reason] || 'Trade was refused.');
         return;
       }
-
-      // 2) The server records the trade from Alpaca's actual fill values.
-      //    If it did not record, the order did not complete as a persisted
-      //    trade — surface that as an error rather than silently succeeding.
-      if (placeData?.trade_recorded !== true) {
-        setError(placeData?.message || 'Trade could not be recorded. Please try again.');
-        setLoading(false);
-        return;
-      }
-
-      // Success - refresh data and close
       onTradeComplete();
       onClose();
-    } catch (err: any) {
-      setError(err.message || 'Failed to execute trade');
+    } catch (_e) {
+      setError('Failed to submit trade. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   const renderContent = () => {
-    // Loading Alpaca status
-    if (hasAlpacaLinked === null) {
-      return (
-        <View style={styles.centeredContent}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.loadingText}>Checking account status...</Text>
-        </View>
-      );
-    }
-
-    // No Alpaca linked
-    if (hasAlpacaLinked === false) {
-      return (
-        <View style={styles.warningBox}>
-          <Text style={styles.warningTitle}>Alpaca Account Required</Text>
-          <Text style={styles.warningText}>
-            You need to link your Alpaca paper trading account before you can trade.
-          </Text>
-          <Text style={styles.warningSubtext}>
-            Go to your Profile settings to link your Alpaca API keys.
-          </Text>
-          <TouchableOpacity style={styles.warningButton} onPress={onClose}>
-            <Text style={styles.warningButtonText}>Got it</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
     // Market is closed
     if (!marketOpen) {
       return (
@@ -521,7 +422,14 @@ export default function TradeModal({
                       onPress={() => handleSelectResult(item)}
                     >
                       <View style={styles.searchResultLeft}>
-                        <Text style={styles.searchResultSymbol}>{item.symbol}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Text style={styles.searchResultSymbol}>{item.symbol}</Text>
+                          {item.is_draftable === false && (
+                            <Text style={{ fontSize: 9, fontWeight: '700', color: '#f59e0b', borderWidth: 1, borderColor: '#f59e0b', borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1 }}>
+                              NOT DRAFTABLE
+                            </Text>
+                          )}
+                        </View>
                         <Text style={styles.searchResultName} numberOfLines={1}>
                           {item.name}
                         </Text>
@@ -618,6 +526,14 @@ export default function TradeModal({
           </Text>
         )}
 
+        {/* Sells drop the entire position (frees the symbol league-wide) */}
+        {action === 'sell' && ownedQuantity > 0 && (
+          <Text style={styles.budgetText}>
+            Selling drops your entire position ({ownedQuantity}{' '}
+            {ownedQuantity === 1 ? 'share' : 'shares'}).
+          </Text>
+        )}
+
         {/* Error Message */}
         {error ? (
           <View style={styles.errorBox}>
@@ -631,20 +547,14 @@ export default function TradeModal({
             style={[
               styles.submitButton,
               action === 'buy' ? styles.submitButtonBuy : styles.submitButtonSell,
-              (loading || !quote || !canAfford || !hasEnoughShares) &&
-                styles.submitButtonDisabled,
+              (loading || !symbol || !canAfford || !hasEnoughShares) && styles.submitButtonDisabled,
             ]}
             onPress={handleSubmit}
-            disabled={loading || !quote || !canAfford || !hasEnoughShares}
+            disabled={loading || !symbol || !canAfford || !hasEnoughShares}
           >
-            {loading ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={styles.submitButtonText}>
-                {action === 'buy' ? 'Buy' : 'Sell'} {quantity} Share
-                {quantity !== 1 ? 's' : ''}
-              </Text>
-            )}
+            <Text style={styles.submitButtonText}>
+              {loading ? 'Submitting…' : action === 'buy' ? 'Buy' : 'Sell'}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.cancelButton}
@@ -719,54 +629,6 @@ const styles = StyleSheet.create({
   formScroll: {
     flexGrow: 0,
   },
-  centeredContent: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  loadingText: {
-    color: Colors.textMuted,
-    marginTop: 12,
-    fontSize: 14,
-  },
-
-  // Warning box (no Alpaca)
-  warningBox: {
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: '#FECACA',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 20,
-  },
-  warningTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#DC2626',
-    marginBottom: 8,
-  },
-  warningText: {
-    fontSize: 14,
-    color: '#DC2626',
-    marginBottom: 8,
-    lineHeight: 20,
-  },
-  warningSubtext: {
-    fontSize: 13,
-    color: Colors.textMuted,
-    marginBottom: 16,
-  },
-  warningButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  warningButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-
   // Locked box (not Monday)
   lockedBox: {
     backgroundColor: '#FFFBEB',
