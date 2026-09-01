@@ -1361,6 +1361,7 @@ const styles = StyleSheet.create({
   stakeCardBody: { flex: 1 },
   stakeCardHelp: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginTop: 4,
     lineHeight: 16,
@@ -1378,7 +1379,7 @@ const styles = StyleSheet.create({
   undraftableLabel: {
     flex: 1,
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
   },
 });

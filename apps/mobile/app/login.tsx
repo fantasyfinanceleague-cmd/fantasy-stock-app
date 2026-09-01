@@ -145,13 +145,13 @@ export default function LoginScreen() {
 
         {isSignUp && (
           <View style={{ marginTop: -4, marginBottom: 16, paddingHorizontal: 4 }}>
-            <Text style={{ fontSize: 13, color: '#64748B', marginBottom: 6 }}>Password must include:</Text>
+            <Text style={{ fontSize: 13, fontFamily: 'Inter_400Regular', color: Colors.textSecondary, marginBottom: 6 }}>Password must include:</Text>
             {PASSWORD_REQUIREMENTS.map((r) => {
               const ok = r.test(password);
               return (
                 <View key={r.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                  <Text style={{ width: 16, textAlign: 'center', color: ok ? '#22c55e' : '#94A3B8' }}>{ok ? '✓' : '○'}</Text>
-                  <Text style={{ fontSize: 13, color: ok ? '#22c55e' : '#94A3B8' }}>{r.label}</Text>
+                  <Text style={{ width: 16, textAlign: 'center', color: ok ? Colors.success : Colors.textMuted }}>{ok ? '✓' : '○'}</Text>
+                  <Text style={{ fontSize: 13, fontFamily: 'Inter_400Regular', color: ok ? Colors.success : Colors.textMuted }}>{r.label}</Text>
                 </View>
               );
             })}

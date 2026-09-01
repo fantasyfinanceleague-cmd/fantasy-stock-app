@@ -429,7 +429,7 @@ export default function TradeModal({
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                           <Text style={styles.searchResultSymbol}>{item.symbol}</Text>
                           {item.is_draftable === false && (
-                            <Text style={{ fontSize: 9, fontWeight: '700', color: '#f59e0b', borderWidth: 1, borderColor: '#f59e0b', borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1 }}>
+                            <Text style={{ fontSize: 9, fontFamily: 'Inter_700Bold', color: Colors.warning, borderWidth: 1, borderColor: Colors.warning, borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1 }}>
                               NOT DRAFTABLE
                             </Text>
                           )}
@@ -702,7 +702,7 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
   },
   toggleButtonTextActive: {
-    color: '#fff',
+    color: Colors.white,
   },
 
   // Input groups

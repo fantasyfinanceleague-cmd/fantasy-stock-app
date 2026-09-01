@@ -799,7 +799,7 @@ export default function LeaguesScreen() {
                         </Text>
                         {member.role === 'commissioner' && (
                           <View style={[styles.statusBadge, { backgroundColor: Colors.commissionerBg }]}>
-                            <Text style={[styles.statusText, { color: Colors.commissioner, fontSize: 10 }]}>
+                            <Text style={[styles.statusText, { color: Colors.commissioner, fontSize: 10, fontFamily: 'Inter_400Regular' }]}>
                               Commissioner
                             </Text>
                           </View>
@@ -1205,6 +1205,7 @@ const styles = StyleSheet.create({
   },
   stakeHelp: {
     fontSize: 11,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginTop: 6,
     lineHeight: 15,
@@ -1218,7 +1219,7 @@ const styles = StyleSheet.create({
   undraftableLabel: {
     flex: 1,
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
   },
 });

@@ -875,6 +875,7 @@ const styles = StyleSheet.create({
   },
   stakeHelpText: {
     fontSize: 11,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginTop: 2,
     lineHeight: 15,
@@ -882,6 +883,7 @@ const styles = StyleSheet.create({
   stakeMissingBanner: {
     color: Colors.error,
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
     backgroundColor: Colors.errorBg,
     borderRadius: 8,
     padding: 10,
@@ -898,7 +900,7 @@ const styles = StyleSheet.create({
   undraftableLabel: {
     flex: 1,
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
   },
 });

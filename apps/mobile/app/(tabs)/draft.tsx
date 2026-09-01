@@ -1287,6 +1287,7 @@ const styles = StyleSheet.create({
   badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 6 },
   categoryBadge: {
     fontSize: 10,
+    fontFamily: 'Inter_400Regular',
     color: Colors.primary,
     backgroundColor: Colors.primaryBg,
     borderRadius: 999,
@@ -1296,6 +1297,7 @@ const styles = StyleSheet.create({
   },
   flexBadge: {
     fontSize: 10,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     backgroundColor: Colors.cardBgAlt,
     borderRadius: 999,
@@ -1313,6 +1315,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primaryBg,
   },
   slotRowDone: { backgroundColor: Colors.successBg },
-  slotRowText: { fontSize: 12, color: Colors.primary },
+  slotRowText: { fontSize: 12, fontFamily: 'Inter_400Regular', color: Colors.primary },
   slotRowTextDone: { color: Colors.success },
 });
