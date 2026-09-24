@@ -33,8 +33,9 @@ do not renumber or rename slugs once seeded.
 ## Phase 4 status (2026-08-11)
 
 The three files now carry the full Phase 4 content: 11 categories (10 curated +
-`misc` fallback), 80 industry rules, 91 overrides across 55 symbols (max 3 per
-symbol, generator-validated before the DB trigger ever sees them).
+`misc` fallback), 80 industry rules, 74 overrides across 55 symbols (91 before
+the b8041f7 review removed 17 delivery-mechanism tech overrides; max 3
+per symbol, generator-validated before the DB trigger ever sees them).
 
 **Deviation from the spec's "~160 rules", and why:** the spec's count assumed a
 GICS sub-industry taxonomy (163 values). Vendor reality: neither the NASDAQ
