@@ -2,6 +2,30 @@
 
 Comprehensive testing plan beyond the season simulation test runner.
 
+## What exists today (2026-09-24)
+
+Hermetic Deno unit tests over the pure decision modules extracted from the edge
+functions — no DB, no secrets. Run from the repo root with `deno test supabase/functions/`
+(128 passing as of 2026-09-24):
+
+| Module | Covers |
+|---|---|
+| `process-week-results/grouping.ts` | Matchup batching per league-week |
+| `process-week-results/scoring-eligibility.ts` | Per-user scorer selection (snapshot vs fallback, partial-snapshot refusal) |
+| `process-week-results/playoff-progression.ts` | Playoff advancement |
+| `snapshot-week-start/plan.ts` | Per-participant completeness + all-or-nothing write plan |
+| `snapshot-week-end/close.ts` | Week-end coverage gate (close existing rows + mid-week-buy inserts) |
+| `_shared/draft-validation.ts` | Pick/trade legality: turn, uniqueness, slots, price brackets, stake budget, draftable universe |
+| `_shared/symbol-eligibility.ts` | `is_draftable` computation |
+
+Plus the live season simulation (`SEASON_SIMULATION_TEST.md`). There are **no
+client-side tests**: `apps/mobile/components/__tests__/StyledText-test.js` is the Expo
+template's placeholder and no test runner is configured in either app.
+
+**Biggest gap:** nothing exercises draft completion → schedule generation → first
+snapshot end-to-end (see `../STATUS.md` §4 defect 1). The simulation seeds matchups
+directly, so it cannot catch a missing schedule.
+
 ## Status
 
 | # | Test Suite | Priority | Status |

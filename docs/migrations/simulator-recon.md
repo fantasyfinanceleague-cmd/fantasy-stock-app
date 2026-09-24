@@ -1,5 +1,10 @@
 # Phase 0 recon — in-house simulator + Alpaca account-linking removal
 
+> **Point-in-time record (2026-08-09).** Every phase this recon informed has since
+> shipped and been applied — see the status banner in
+> [`SIMULATOR_MIGRATION_SPEC.md`](SIMULATOR_MIGRATION_SPEC.md) and
+> [`../STATUS.md`](../STATUS.md). Facts below describe the schema *before* Phases 1–4.
+
 **Companion to:** `docs/decisions/DR-001-in-house-simulated-trading.md`, `docs/migrations/SIMULATOR_MIGRATION_SPEC.md`
 **Status:** Phase 0 (read-only recon) complete; reviewed. **Phase 0.5 (prod introspection) COMPLETE 2026-08-09 — results in the Phase 0.5 section below. Phase 2 authoring is unblocked and must be authored against that section, not the earlier inferred mappings.**
 **Session git state:** branch `security/claude-security-fixes-20260730`; working tree clean except untracked `docs/decisions/` and `docs/migrations/SIMULATOR_MIGRATION_SPEC.md` (+ this file).

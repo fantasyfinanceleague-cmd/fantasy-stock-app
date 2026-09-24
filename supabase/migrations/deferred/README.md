@@ -6,48 +6,25 @@ Supabase CLI applies only the timestamped `.sql` files directly in
 Do **not** move a file back to the parent directory until its stated precondition
 is met.
 
-## `20260808000001_drop_broker_credentials.sql`
+**Currently empty** (2026-09-24). This README keeps the directory and the convention.
 
-**Do not apply until the `quote` → app-key rewire lands (Phase 3).**
+## How to use it
 
-This migration drops the `broker_credentials` table (and its
-`update_broker_credentials_updated_at` trigger function). It is correct and
-safe *in itself*, but applying it now would break live prices app-wide, per the
-**Gap 2** findings in `docs/migrations/simulator-recon.md`:
+1. Put a migration here when it is correct but its precondition is not yet met
+   (a client release, a data cleanup, a deploy it depends on).
+2. Add a section below naming the file, the precondition, the query that proves the
+   precondition, and the effect-verification query to run after applying.
+3. When the precondition is met, `git mv` it into `supabase/migrations/`, apply as a
+   HUMAN ACTION, effect-verify, and move its section to *History*.
 
-- The `quote` edge function reads `broker_credentials` via `getUserCredentials()`
-  and has **no `ALPACA_API_KEY` fallback** (`supabase/functions/quote/index.ts`).
-  Dropping the table makes `quote` return `no_credentials`/error for **every**
-  user.
-- `quote` is the app's **primary live-price path** — **10 client call sites**
-  depend on it, including the global `PriceContext`, matchup live prices, and
-  draft pricing — and none has an effective app-key fallback (the one
-  `finnhub-quote` fallback in `DraftPage` is bypassed because `quote` *throws*
-  rather than returning null).
+## History
 
-**Precondition to apply:** Phase 3 repoints `quote` (or those 10 call sites) onto
-the app-key price path (`ticker-quotes` / `historical-bars` / `finnhub-quote`).
-Once live prices no longer depend on `broker_credentials`, `git mv` this file back
-to `supabase/migrations/` and apply it as HUMAN ACTION, then effect-verify with
-`SELECT to_regclass('public.broker_credentials');` (must be NULL).
+| File | Held for | Resolution |
+|---|---|---|
+| `20260808000001_drop_broker_credentials.sql` | `quote` still read `broker_credentials`; dropping it would have broken live prices app-wide | `quote` rewired onto the app key (Workstream A); promoted and applied 2026-08-10 |
+| `20260810000007_drafts_league_id_set_not_null.sql` | Orphan `drafts` rows with NULL `league_id` would abort the push | Zero NULL rows verified in prod; promoted in `4b3eba2` and applied |
 
-## `20260810000007_drafts_league_id_set_not_null.sql`
-
-**Do not apply until `drafts` has zero NULL `league_id` rows.** (Phase 2, binding
-consequence #3.)
-
-Makes `drafts.league_id` NOT NULL. `league_id` is currently NULLABLE (Phase 0.5),
-which lets orphan picks exist that no league RLS predicate or server validator can
-reason about. The migration carries a self-contained gate: a `DO` block that
-**raises and aborts** if any NULL `league_id` row remains, so `SET NOT NULL` can
-never run against dirty data. It is held here because that abort would fail the
-whole `db push` batch if it ran while orphans exist.
-
-**Precondition to apply:** zero rows from
-`SELECT count(*) FROM drafts WHERE league_id IS NULL;`. There is no in-repo
-derivation for `league_id`, so backfilling orphans is a human judgement call
-(recover from draft session / same-window trades, or delete junk) — the file
-leaves a commented backfill placeholder rather than guessing. Once the count is
-zero, `git mv` this file back to `supabase/migrations/`, apply as HUMAN ACTION,
-then effect-verify `is_nullable = 'NO'` for `drafts.league_id` via
-`information_schema.columns`.
+Note that "held for the mobile release" migrations were not always parked here:
+`20260811000009_drop_leagues_salary_cap_limit.sql` sat in the apply path with a
+"hold" header and was applied by a later `db push`. **A header comment does not hold
+a migration — only this directory does.**

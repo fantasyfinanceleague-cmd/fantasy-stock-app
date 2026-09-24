@@ -1,5 +1,17 @@
 # RLS & Auth Hardening Spec
 
+> **Re-synced 2026-09-24:** B1, the preview/join wave, and the function-grant
+> lockdowns (`20260718000000`–`20260724000002`, incl. the `start_new_league_season`
+> commissioner gate) are applied. Also since: `notification_log` dropped
+> (`20260728000000`), `user_profiles` SELECT moved to `authenticated`
+> (`20260728000001`), direct client INSERT on `trades`/`drafts` dropped
+> (`20260811000002`/`03`), and the INSERT..RETURNING visibility fixes on
+> `leagues`/`league_members` (`20260811000004`/`05`). **Still open from the queue
+> below:** the create-league / draft-control / leave-league / delete-league /
+> schedule-gen edge functions that retire `[I1]–[I6]`, `[I8]`, `[I9]`; the mobile
+> leave-league flow. Schedule-gen is now the top launch blocker — see
+> [`../STATUS.md`](../STATUS.md) §4.
+
 **Status:** **B1 LANDED & VERIFIED on `rls-hardening` (2026-07-12)** — the live anon-read exposure on all six league tables is closed. B2 resolved earlier. Lower-severity L1–L5 not started; L6/L7 deferred. See "B1 — LANDED" and the **Fast-follow queue** at the bottom.
 **Sequencing decision:** Phase 3b done first; B1 then applied as **7 gated migration files** (`20260712000000`–`…06`: helpers + one file per table), pushed table-by-table through `/migration-gate` with per-table dry-run → push → anon-read + policy-catalog verify.
 **Origin:** Surfaced by the `security-reviewer` subagent while auditing whether `APP_PAUSED` provides meaningful protection. It does not — see below.
