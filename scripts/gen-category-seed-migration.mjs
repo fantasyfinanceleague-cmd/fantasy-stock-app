@@ -15,16 +15,70 @@
 // destructive sync inside a seed migration is how data disappears). Removing
 // a category/rule/override is a manual curation action.
 //
-// Usage: node scripts/gen-category-seed-migration.mjs
-//        (writes supabase/migrations/20260811000006_seed_categories.sql)
+// Output is ALWAYS a new migration. `supabase db push` tracks applied
+// VERSIONS, not file content, so rewriting an already-applied migration (e.g.
+// the original 20260811000006_seed_categories.sql) is silently skipped — the
+// push reports "up to date" and none of the curation reaches prod. Each run
+// therefore writes a fresh timestamped file, and the script refuses to write
+// over any existing path unless --force is given. Re-applying the full seed is
+// safe: every statement is an upsert, so the new migration converges.
+//
+// Usage: node scripts/gen-category-seed-migration.mjs [--out <path>] [--force]
+//   (default)     writes supabase/migrations/<UTC YYYYMMDDHHMMSS>_reseed_categories.sql
+//   --out <path>  write somewhere else instead (relative to the cwd); e.g.
+//                 --out /tmp/reseed-check.sql for a dry comparison outside the repo
+//   --force       allow overwriting an existing file. Never point this at an
+//                 applied migration — see above.
 
-import { readFileSync, writeFileSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { resolve, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const seedDir = resolve(root, 'supabase/seed');
-const OUT = resolve(root, 'supabase/migrations/20260811000006_seed_categories.sql');
+
+// ---------------------------------------------------------------------------
+// Args + output path — resolved and checked before any work is done.
+// ---------------------------------------------------------------------------
+const USAGE = 'Usage: node scripts/gen-category-seed-migration.mjs [--out <path>] [--force]';
+let outArg = null;
+let force = false;
+const argv = process.argv.slice(2);
+for (let i = 0; i < argv.length; i++) {
+  const a = argv[i];
+  if (a === '--force') force = true;
+  else if (a === '--out') {
+    outArg = argv[++i];
+    if (!outArg || outArg.startsWith('--')) {
+      console.error(`--out requires a path.\n${USAGE}`);
+      process.exit(2);
+    }
+  } else if (a.startsWith('--out=')) outArg = a.slice('--out='.length);
+  else if (a === '--help' || a === '-h') {
+    console.log(USAGE);
+    process.exit(0);
+  } else {
+    console.error(`Unknown argument: ${a}\n${USAGE}`);
+    process.exit(2);
+  }
+}
+
+const utcStamp = new Date().toISOString().replace(/\D/g, '').slice(0, 14); // YYYYMMDDHHMMSS
+const OUT = outArg
+  ? resolve(process.cwd(), outArg)
+  : resolve(root, `supabase/migrations/${utcStamp}_reseed_categories.sql`);
+
+const overwriting = existsSync(OUT);
+if (overwriting && !force) {
+  const shown = relative(process.cwd(), OUT);
+  console.error(`Refusing to overwrite existing file: ${shown.startsWith('..') ? OUT : shown}`);
+  console.error(`  supabase db push tracks migration VERSIONS, not content. If this file is an`);
+  console.error(`  already-applied migration, rewriting it is silently skipped: the push reports`);
+  console.error(`  "up to date" and none of your curation reaches prod.`);
+  console.error(`  Run without --out to get a new timestamped *_reseed_categories.sql, or pass`);
+  console.error(`  --force only if you are sure the target has never been applied anywhere.`);
+  process.exit(1);
+}
 
 const categories = JSON.parse(readFileSync(resolve(seedDir, 'categories.json'), 'utf8'));
 const rules = JSON.parse(readFileSync(resolve(seedDir, 'category_rules.json'), 'utf8'));
@@ -121,5 +175,5 @@ for (const o of overrides) {
 lines.push(``);
 
 writeFileSync(OUT, lines.join('\n'));
-console.log(`Wrote ${OUT}`);
+console.log(`Wrote ${OUT}${overwriting ? ' (overwrote existing file: --force)' : ''}`);
 console.log(`  ${categories.length} categories, ${rules.length} rules, ${overrides.length} overrides across ${perSymbol.size} symbols`);
