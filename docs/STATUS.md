@@ -196,6 +196,47 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
    `ALPACA_KEY_ID`/`ALPACA_SECRET_KEY` (no readers) and in local `.env.local`;
    `.gitleaks.toml` allowlists all of `^\.claude/` by directory (hid that leak once) —
    narrow it to specific files.
+12. **Web drafting was broken for every league since `2a3cd21` (2026-08-11).**
+   Found 2026-09-25 by a live test draft. `DraftPage.jsx`'s `leagues` select used
+   an explicit column list that omitted `stake_mode`, so the Phase 4 gate
+   `stakeModeMissing = !!league && league.stake_mode == null` always fired —
+   `undefined == null` is `true` — showing "Drafting is paused: this league has
+   no stake mode yet" and silently skipping bot auto-pick, for every league
+   regardless of its real stake mode. Masked since August because the web app is
+   `APP_PAUSED`, and the Phase 4 notes recorded web flows as "not clicked
+   through". A related bug in `PortfolioPage.jsx` used the deprecated
+   `budget_mode` column (defaults to `'budget'`, unwritten since the
+   `stake_mode` migration) to decide budget-mode display, so every
+   `fixed_notional`/`price_tiers` league showed a bogus ~$100 "available cash"
+   and client-side-blocked buys (the server's `record-trade` was never affected —
+   this was a display/UX bug only).
+   **FIXED on `fix/web-draft-stake-mode-load`:** `DraftPage.jsx` and
+   `PortfolioPage.jsx` now select `stake_mode` (`DraftPage.jsx` also selects
+   `notional_per_slot`, `allow_undraftable`); both derive budget mode from
+   `stake_mode`, falling back to `budget_mode` only on a genuine `NULL`
+   (matching `apps/mobile/app/(tabs)/draft.tsx`'s rule). Added a
+   `stakeModeColumnMissing` guard in `DraftPage.jsx` that distinguishes
+   `undefined` (column not loaded — a query bug) from a genuine `NULL` (a real
+   pre-Phase-4 league): on `undefined` it fails closed with a distinct banner
+   message and logs a loud `console.error`, so this class of bug can't silently
+   reappear behind the same "no stake mode yet" copy.
+   Audited every other `leagues` read in `apps/web` and `apps/mobile` for the
+   same class (explicit column list missing a field a consumer reads) — no
+   other hits; all mobile `leagues` reads use `select('*')`.
+   **Not fixed (out of scope for this branch):** no shared column-list
+   constant or blanket `select('*')` for web `leagues` queries — recommended
+   as a follow-up so a narrowed select can't silently reintroduce this bug
+   elsewhere; low urgency while `APP_PAUSED` keeps these pages unreachable.
+   Verified: `apps/web` build with `APP_PAUSED` flipped to `false` locally only
+   (`npx vite build`, main bundle 719.56 kB / gzip 200.90 kB — confirms
+   `DraftPage`/`PortfolioPage` were actually compiled, not tree-shaken away) and
+   `npm run lint` (same 13 pre-existing problems as `origin/main` on these two
+   files, zero new); `APP_PAUSED` restored to `true` before commit
+   (`git diff -- apps/web/src/App.jsx` empty). `gen-architecture.mjs`
+   regenerated (line-number-only drift from the edits, no call sites moved).
+   HUMAN ACTION: merge only (no migration, no deploy) — merging is a Vercel
+   prod deploy per this file's conventions, but `APP_PAUSED` stays `true` so
+   users see no change until the web app is un-paused.
 
 ---
 
