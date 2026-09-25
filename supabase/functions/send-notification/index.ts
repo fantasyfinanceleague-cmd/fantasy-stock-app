@@ -72,8 +72,13 @@ function json(body: unknown, status = 200) {
  *   matchup_result  — DESIGNED, NOT BUILT. Named in the notification_log schema
  *                     comment (migration 20260122000000) but never implemented.
  *   league_invite   — DESIGNED, NOT BUILT. Same.
- * The latter two are defined here so the shape is settled, but nothing calls them
- * yet; they are inert until a caller exists.
+ * The latter two are deliberately NOT in the map (removed 2026-09-24, security
+ * review): an entry is callable by ANY authenticated leaguemate the moment it
+ * exists — "no caller yet" in our code is not "inert" — so an unbuilt type is
+ * just a free spam template. Add each one together with its real caller, and
+ * decide then who may trigger it (matchup_result is naturally a server/cron
+ * event; league_invite cannot work here at all, since the target must already
+ * be a league member).
  */
 const NOTIFICATION_TYPES: Record<
   string,
@@ -85,20 +90,6 @@ const NOTIFICATION_TYPES: Record<
       title: "It's Your Turn! 🏈",
       body: `Time to make your pick in ${leagueName}`,
       data: { type: 'draft_turn', screen: 'draft' },
-    }),
-  },
-  matchup_result: {
-    build: ({ leagueName }) => ({
-      title: 'Matchup Results Are In',
-      body: `See how you did this week in ${leagueName}`,
-      data: { type: 'matchup_result', screen: 'matchup' },
-    }),
-  },
-  league_invite: {
-    build: ({ leagueName }) => ({
-      title: 'League Invite',
-      body: `You've been invited to join ${leagueName}`,
-      data: { type: 'league_invite', screen: 'leagues' },
     }),
   },
 };
@@ -128,22 +119,47 @@ async function rateLimitOk(admin: any, userId: string, ip: string): Promise<bool
  * cutover) must ship and be verified BEFORE the column moves, or the app loses
  * notifications in the gap. Delete the fallback once the migration has landed.
  */
+// Each schema state makes ONE of the two token sources absent, and that absence
+// is expected, not a failure:
+//   * before phase 2: push_tokens does not exist -> PGRST205 / 42P01
+//   * after phase 2:  user_profiles.expo_push_token is dropped -> PGRST204 / 42703
+// Any other error is a real lookup failure.
+// deno-lint-ignore no-explicit-any
+const isMissingRelation = (e: any) => e?.code === 'PGRST205' || e?.code === '42P01';
+// deno-lint-ignore no-explicit-any
+const isMissingColumn = (e: any) => e?.code === 'PGRST204' || e?.code === '42703';
+
+// Destructure-and-check per CLAUDE.md: a supabase-js query resolving is NOT
+// success. A real error is reported as `lookupFailed`, distinct from the
+// legitimate "target has no token" outcome, so it can never masquerade as it.
 async function getTargetToken(
   admin: any,
   targetUserId: string,
-): Promise<{ token: string | null; enabled: boolean }> {
-  const { data: row } = await admin
-    .from('push_tokens').select('token').eq('user_id', targetUserId).maybeSingle();
-
-  // notifications_enabled stays on user_profiles — it is a preference flag, not a
-  // capability, and the profile screen renders it.
-  const { data: prof } = await admin
-    .from('user_profiles').select('expo_push_token, notifications_enabled').eq('id', targetUserId).maybeSingle();
-
-  return {
-    token: row?.token ?? prof?.expo_push_token ?? null,
-    enabled: prof?.notifications_enabled !== false,
+): Promise<{ token: string | null; enabled: boolean; lookupFailed: boolean }> {
+  // deno-lint-ignore no-explicit-any
+  const failed = (what: string, e: any) => {
+    console.error(`${what} lookup failed:`, e?.code, e?.message);
+    return { token: null, enabled: false, lookupFailed: true };
   };
+
+  // notifications_enabled stays on user_profiles in both schema states — it is a
+  // preference flag, not a capability, and the profile screen renders it.
+  const { data: prefs, error: prefsErr } = await admin
+    .from('user_profiles').select('notifications_enabled').eq('id', targetUserId).maybeSingle();
+  if (prefsErr) return failed('user_profiles', prefsErr);
+  const enabled = prefs?.notifications_enabled !== false;
+
+  const { data: row, error: rowErr } = await admin
+    .from('push_tokens').select('token').eq('user_id', targetUserId).maybeSingle();
+  if (rowErr && !isMissingRelation(rowErr)) return failed('push_tokens', rowErr);
+  if (row?.token) return { token: row.token, enabled, lookupFailed: false };
+
+  // Legacy fallback (pre-phase-2). Delete once the relocation migration has landed.
+  const { data: legacy, error: legacyErr } = await admin
+    .from('user_profiles').select('expo_push_token').eq('id', targetUserId).maybeSingle();
+  if (legacyErr && !isMissingColumn(legacyErr)) return failed('user_profiles.expo_push_token', legacyErr);
+
+  return { token: legacy?.expo_push_token ?? null, enabled, lookupFailed: false };
 }
 
 Deno.serve(async (req: Request) => {
@@ -190,27 +206,35 @@ Deno.serve(async (req: Request) => {
     // ---- AUTHORIZE THE TARGET -------------------------------------------------
     // Both caller and target must belong to the league. Two separate reads rather
     // than one `.in()` so a caller cannot satisfy the check by being counted twice.
-    const { data: callerMember } = await admin
+    // A query ERROR is a 500, not a 403/400: "we could not check" must not read as
+    // "you are not a member" / "no such league".
+    const lookupFailed = () => json({ error: 'lookup_failed', message: 'Failed to send notification.' }, 500);
+
+    const { data: callerMember, error: cmErr } = await admin
       .from('league_members').select('user_id')
       .eq('league_id', leagueId).eq('user_id', caller.id).maybeSingle();
+    if (cmErr) return lookupFailed();
     if (!callerMember) return json({ error: 'forbidden', message: 'not a member of this league' }, 403);
 
-    const { data: targetMember } = await admin
+    const { data: targetMember, error: tmErr } = await admin
       .from('league_members').select('user_id')
       .eq('league_id', leagueId).eq('user_id', targetUserId).maybeSingle();
+    if (tmErr) return lookupFailed();
     if (!targetMember) return json({ error: 'forbidden', message: 'target is not a member of this league' }, 403);
 
     // ---- DERIVE THE CONTENT ---------------------------------------------------
     // League name comes from the DB, never from the request. This is what stops a
     // caller smuggling arbitrary text into the body via a forged league name.
-    const { data: league } = await admin
+    const { data: league, error: lgErr } = await admin
       .from('leagues').select('name').eq('id', leagueId).maybeSingle();
+    if (lgErr) return lookupFailed();
     if (!league) return json({ error: 'bad_request', message: 'league not found' }, 400);
 
     const { title, body: msgBody, data } = spec.build({ leagueName: league.name });
 
     // ---- SEND -----------------------------------------------------------------
-    const { token, enabled } = await getTargetToken(admin, targetUserId);
+    const { token, enabled, lookupFailed: tokenLookupFailed } = await getTargetToken(admin, targetUserId);
+    if (tokenLookupFailed) return lookupFailed();
     // Not an error: the target may simply have no device or have opted out. Report
     // it truthfully rather than as success-with-no-effect.
     if (!token || !enabled) return json({ ok: true, sent: false, reason: 'no_token_or_disabled' }, 200);
@@ -220,9 +244,23 @@ Deno.serve(async (req: Request) => {
       headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
       body: JSON.stringify({ to: token, sound: 'default', title, body: msgBody, data }),
     });
+    const resText = await res.text().catch(() => '');
     if (!res.ok) {
-      console.error('Expo push failed:', res.status, (await res.text().catch(() => '')).slice(0, 200));
+      console.error('Expo push failed: HTTP', res.status); // body omitted: may echo the token
       return json({ ok: false, sent: false, reason: 'expo_error' }, 200);
+    }
+    // HTTP 200 is NOT acceptance: Expo reports per-message failures (e.g.
+    // DeviceNotRegistered) as 200 with a ticket { status: 'error' }. Only a ticket
+    // with status 'ok' counts as sent.
+    // deno-lint-ignore no-explicit-any
+    let ticket: any = null;
+    try { ticket = JSON.parse(resText)?.data; } catch { /* treated as not-ok below */ }
+    if (Array.isArray(ticket)) ticket = ticket[0];
+    if (ticket?.status !== 'ok') {
+      // Log only the error CODE: Expo's `message` echoes the push token (a bearer
+      // capability), which must not land in function logs.
+      console.error('Expo push ticket not ok:', ticket?.details?.error ?? (ticket ? 'unknown' : 'unparseable'));
+      return json({ ok: false, sent: false, reason: 'expo_ticket_error' }, 200);
     }
 
     return json({ ok: true, sent: true, type }, 200);

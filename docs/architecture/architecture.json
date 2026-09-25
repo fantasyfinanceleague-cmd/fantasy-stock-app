@@ -2,38 +2,34 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "e1dcb042fb1ece62c05cf6a23d5d0260a4344375",
-    "commitShort": "e1dcb04",
+    "commit": "1bc95149e2c58217d1e24d6bb7ac29acd091856f",
+    "commitShort": "1bc9514",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "security/claude-security-fixes-20260730",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "supabase/config.toml"
+        "path": "apps/mobile/app.json"
       },
       {
         "code": "M",
-        "path": "supabase/functions/refresh-symbols/index.ts"
+        "path": "supabase/functions/send-notification/index.ts"
       },
       {
-        "code": "RM",
+        "code": "M",
         "path": "supabase/migrations/20260925000000_leagues_member_draft_complete_column_guard.sql"
-      },
-      {
-        "code": "RM",
-        "path": "supabase/migrations/20260925000001_tighten_league_standings_insert.sql"
       }
     ],
-    "timestamp": "2026-09-25T00:02:29Z",
-    "sourceHash": "sha256:f05daf58ec4f263db06549d95ee6216b39158118e74d1bff447065e6f492768b",
+    "timestamp": "2026-09-25T00:16:35Z",
+    "sourceHash": "sha256:b70994d29bda2d8da54f8e0d0c40d1f29988b6be6284e3a7fe7edf4f8177a8cd",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1051.2,
+    "ageHours": 1051.4,
     "ageDays": 43.8,
     "staleAfterDays": 14,
     "stale": true,
@@ -565,7 +561,7 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 233
+        "lines": 271
       },
       "db": null,
       "declared": null,
@@ -578,7 +574,7 @@
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/send-notification/index.ts",
-        "line": 149
+        "line": 165
       }
     },
     {
@@ -4290,8 +4286,8 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('check_and_bump_rate_limit')",
       "callSites": [
-        "supabase/functions/send-notification/index.ts:110",
-        "supabase/functions/send-notification/index.ts:113"
+        "supabase/functions/send-notification/index.ts:101",
+        "supabase/functions/send-notification/index.ts:104"
       ]
     },
     {
@@ -4306,8 +4302,8 @@
         "user_id"
       ],
       "callSites": [
-        "supabase/functions/send-notification/index.ts:194",
-        "supabase/functions/send-notification/index.ts:199"
+        "supabase/functions/send-notification/index.ts:214",
+        "supabase/functions/send-notification/index.ts:220"
       ]
     },
     {
@@ -4322,7 +4318,7 @@
         "name"
       ],
       "callSites": [
-        "supabase/functions/send-notification/index.ts:207"
+        "supabase/functions/send-notification/index.ts:229"
       ]
     },
     {
@@ -4337,7 +4333,7 @@
         "token"
       ],
       "callSites": [
-        "supabase/functions/send-notification/index.ts:136"
+        "supabase/functions/send-notification/index.ts:153"
       ]
     },
     {
@@ -4347,12 +4343,14 @@
       "from": "fn.send-notification",
       "to": "tbl.user_profiles",
       "protocol": "postgrest-select",
-      "payload": ".from('user_profiles').select('expo_push_token, notifications_enabled')",
+      "payload": ".from('user_profiles').select('notifications_enabled')",
       "columns": [
-        "expo_push_token, notifications_enabled"
+        "expo_push_token",
+        "notifications_enabled"
       ],
       "callSites": [
-        "supabase/functions/send-notification/index.ts:141"
+        "supabase/functions/send-notification/index.ts:148",
+        "supabase/functions/send-notification/index.ts:159"
       ]
     },
     {
@@ -5249,7 +5247,7 @@
       "payload": "trigger on leagues",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20260925000000_leagues_member_draft_complete_column_guard.sql:155"
+        "supabase/migrations/20260925000000_leagues_member_draft_complete_column_guard.sql:161"
       ]
     },
     {
@@ -8225,8 +8223,8 @@
       "supabase/functions/process-week-results/index.ts:827 -> complete_league_season",
       "supabase/functions/record-trade/index.ts:66 -> check_and_bump_rate_limit",
       "supabase/functions/record-trade/index.ts:69 -> check_and_bump_rate_limit",
-      "supabase/functions/send-notification/index.ts:110 -> check_and_bump_rate_limit",
-      "supabase/functions/send-notification/index.ts:113 -> check_and_bump_rate_limit",
+      "supabase/functions/send-notification/index.ts:101 -> check_and_bump_rate_limit",
+      "supabase/functions/send-notification/index.ts:104 -> check_and_bump_rate_limit",
       "supabase/functions/snapshot-week-end/index.ts:100 -> schedule_snapshot_retry",
       "supabase/functions/snapshot-week-start/index.ts:135 -> schedule_snapshot_retry",
       "supabase/functions/validate-and-record-pick/index.ts:75 -> check_and_bump_rate_limit",
@@ -8402,11 +8400,12 @@
       "supabase/functions/record-trade/index.ts:203 -> symbols.select",
       "supabase/functions/record-trade/index.ts:238 -> trades.insert",
       "supabase/functions/refresh-symbols/index.ts:171 -> symbols.upsert",
-      "supabase/functions/send-notification/index.ts:136 -> push_tokens.select",
-      "supabase/functions/send-notification/index.ts:141 -> user_profiles.select",
-      "supabase/functions/send-notification/index.ts:194 -> league_members.select",
-      "supabase/functions/send-notification/index.ts:199 -> league_members.select",
-      "supabase/functions/send-notification/index.ts:207 -> leagues.select",
+      "supabase/functions/send-notification/index.ts:148 -> user_profiles.select",
+      "supabase/functions/send-notification/index.ts:153 -> push_tokens.select",
+      "supabase/functions/send-notification/index.ts:159 -> user_profiles.select",
+      "supabase/functions/send-notification/index.ts:214 -> league_members.select",
+      "supabase/functions/send-notification/index.ts:220 -> league_members.select",
+      "supabase/functions/send-notification/index.ts:229 -> leagues.select",
       "supabase/functions/snapshot-week-end/index.ts:266 -> leagues.select",
       "supabase/functions/snapshot-week-end/index.ts:299 -> week_snapshots.select",
       "supabase/functions/snapshot-week-end/index.ts:318 -> matchups.select",
