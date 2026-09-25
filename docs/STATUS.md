@@ -95,22 +95,28 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
 
 ## 4. Open defects (ordered by launch impact)
 
-1. **CRITICAL — mobile-drafted leagues never get a season.** `matchups`, initial
-   `league_standings`, and `league_start_date`/`league_end_date` are written only by
-   the web client (`apps/web/src/pages/DraftPage.jsx` `completeDraft`, and the
-   `Leaderboard.jsx` "auto-generate if missing" effect). Mobile writes none of them;
-   the server's `markDraftComplete` in `validate-and-record-pick` only flips
-   `draft_status`. Every weekly job selects from `matchups`, so such a league is never
-   snapshotted or scored. The web path is also racy: the server now marks the draft
-   complete, and a realtime update can set the local status to `completed` before
-   `completeDraft` runs, which then skips schedule generation.
-   **Fix:** a server-side `generate_league_schedule` (SECURITY DEFINER RPC, idempotent,
-   pinned `search_path`) called from `markDraftComplete`; covers playoffs + standings
-   init; then drop `matchups_insert_members`. This is the same work as **F10** /
-   RLS `[I8]`/`[I9]`. Needs one product decision: canonical roster ordering
-   (recommended: `DraftPage`'s commissioner-first + sorted, matching the server's
-   draft order).
-2. **F10 — any league member can insert arbitrary matchups.** Closed by the fix above.
+1. **CRITICAL — mobile-drafted leagues never get a season.** FIX AUTHORED on
+   `feat/server-schedule-generation`, **NOT applied or deployed**. Until then, prod
+   behaves as described here. `matchups`, initial `league_standings`, and
+   `league_start_date`/`league_end_date` were written only by the web client
+   (`DraftPage` `completeDraft` and the `Leaderboard` auto-generate effect). The
+   server's `markDraftComplete` only flipped `draft_status`, so a mobile-drafted league
+   was never snapshotted or scored.
+   **Fix (on the branch):** the planning lives in `supabase/functions/_shared/schedule.ts`
+   (pure, golden-tested against the web generator; roster order = `computeDraftOrder`).
+   Writing is done by `finalize_league_draft` (migration `20260926000000`: SECURITY
+   DEFINER, `service_role`-only, validates the payload). In one transaction it writes
+   matchups, standings, dates, `num_weeks`, season 1 and the `draft_status` flip.
+   `validate-and-record-pick` calls it on the final pick. On failure the draft stays
+   `in_progress`, and any later pick, skip or `action:'finalize'` retries (detector:
+   §7). The web writers are removed. Playoffs were already server-side
+   (`process-week-results` `generatePlayoffs`); nothing moved there.
+   **Apply order:** migration → deploy `validate-and-record-pick` → effect-verify with a
+   test league → only then the deferred `[I8]`/`[I9]` drop
+   (`supabase/migrations/deferred/README.md`).
+2. **F10 — any league member can insert arbitrary matchups.** Closed by the deferred
+   `20260926000001` policy drop. It is held until defect 1's fix is deployed and
+   effect-verified.
 3. **`process-week-results` strands `cron_job_status` at `running`** on its two
    early returns (`index.ts:914` query error, `:919` no pending matchups). Small fix;
    until then the job's health signal cannot distinguish healthy from broken.
@@ -124,7 +130,20 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
 6. **`record-trade` concurrent-buy race** — documented in code (`index.ts:229`);
    needs an atomic SECURITY DEFINER RPC (the `join_league_by_code` pattern).
 7. **No leave-league flow on mobile** (web has one).
-8. **Hygiene:** revoked Alpaca pair still stored as Supabase secrets
+8. **Season 2+ never gets a schedule.** `start_new_league_season` deletes matchups,
+   and nothing regenerates them. Mobile calls it from `league-settings.tsx`; the only
+   regenerator was the web Leaderboard effect, now removed (it was paused anyway).
+   Follow-up: route "start new season" through an edge function that reuses
+   `_shared/schedule.ts` and `finalize_league_draft`. The RPC already handles the
+   post-reset state: zero regular-season matchups gives a fresh schedule and new
+   dates.
+9. **No `league_seasons` row for any league created after 2026-01-25.** Only the
+   one-off backfill and `start_new_league_season` insert seasons, so
+   `complete_league_season` raises 'League has no active season' at the end of every
+   newer league's season. `process-week-results` only logs it, and the league sticks
+   in `playoffs`. Fixed by the same migration `20260926000000`: `finalize_league_draft`
+   creates season 1, plus a one-time backfill for completed leagues. NOT yet applied.
+10. **Hygiene:** revoked Alpaca pair still stored as Supabase secrets
    `ALPACA_KEY_ID`/`ALPACA_SECRET_KEY` (no readers) and in local `.env.local`;
    `.gitleaks.toml` allowlists all of `^\.claude/` by directory (hid that leak once) —
    narrow it to specific files.
@@ -136,7 +155,9 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
 1. Confirm the signup-gate dashboard hook (§2).
 2. Confirm which mobile build testers are on; anything pre-Phase-4 must update
    (salary-cap column drop, §2).
-3. **Server-side schedule generation** (§4 defect 1) — the top engineering item.
+3. **Server-side schedule generation** (§4 defect 1). Authored on
+   `feat/server-schedule-generation`; it needs merge, migration, deploy, and a
+   test-league effect check.
 4. Merge PR #9; `db push` its migrations; deploy `refresh-symbols` and
    `send-notification`; effect-verify.
 5. Fix the stranded `running` status (§4 defect 3).
@@ -155,6 +176,7 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
 |---|---|
 | `main` | Deployed to Vercel prod. |
 | `security/claude-security-fixes-20260730` | PR #9, unmerged, 0 behind `main`. GitGuardian check fails on the known anon-key false positive. |
+| `feat/server-schedule-generation` | §4 defects 1, 2 (deferred drop), 9: schedule module, `finalize_league_draft` migration, pick-function wiring, web writers removed. Unmerged; migration unapplied, function undeployed. |
 | `ui/design-system-pass-v2` | Unmerged, awaiting visual check. Checked out in the main checkout. |
 | `ui/design-system-pass`, `item4-fix-refresh-symbols-cron` | Superseded (backup / folded into `main` + PR #9). Safe to delete once confirmed. |
 | ~20 others (`simulator-core`, `phase4-*`, `item*`, `signup-ux-password`, …) | Fully merged into `main` (0 commits ahead) — safe to delete with `git branch -d`. |
@@ -175,6 +197,25 @@ SELECT version FROM supabase_migrations.schema_migrations ORDER BY version DESC 
 SELECT l.id, l.name, l.league_start_date,
        (SELECT count(*) FROM matchups m WHERE m.league_id = l.id) AS n_matchups
 FROM leagues l WHERE l.league_type = 'matchup' AND l.draft_status = 'completed';
+```
+```sql
+-- Stuck draft finalization (every pick made, still in_progress) — should be empty.
+-- Non-empty = finalize_league_draft failed/refused and nobody retried; read the
+-- validate-and-record-pick logs ('finalize: attempt') for the refusal reason.
+SELECT l.id, l.name, l.league_type,
+       (SELECT count(*) FROM drafts d WHERE d.league_id = l.id)         AS picks,
+       (SELECT count(*) FROM league_members m WHERE m.league_id = l.id) AS members,
+       l.num_rounds
+FROM leagues l
+WHERE l.draft_status = 'in_progress'
+  AND (SELECT count(*) FROM drafts d WHERE d.league_id = l.id) > 0
+  AND (SELECT count(*) FROM drafts d WHERE d.league_id = l.id)
+      >= (SELECT count(*) FROM league_members m WHERE m.league_id = l.id) * l.num_rounds;
+```
+```sql
+-- finalize_league_draft grants — expect service_role (+ postgres) only
+SELECT proname, proacl FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname = 'public' AND proname = 'finalize_league_draft';
 ```
 ```sql
 -- Live cron jobs
