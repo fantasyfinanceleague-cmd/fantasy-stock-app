@@ -194,7 +194,7 @@ export type FinalizeOutcome =
   | { ok: true; status: 'finalized' | 'already_finalized' }
   | { ok: false; retryable: boolean; error: string };
 
-/** Interpret a supabase-js `.rpc('finalize_league_draft')` result. `.rpc()` does
+/** Interpret the supabase-js result of the finalize_league_draft RPC. `.rpc()` does
  * NOT throw on a Postgres error — it resolves to { data, error } — so both the
  * transport/SQL `error` AND the function's own `status` must be checked.
  *  - error set            -> retryable (the RPC is idempotent, so a retry after
