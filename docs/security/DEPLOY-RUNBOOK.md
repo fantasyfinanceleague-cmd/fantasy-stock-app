@@ -9,6 +9,17 @@ Every step below is **prod-mutating and Giorgio's to run.** The golden rule appl
 throughout: **verify the EFFECT, not the command's output.** A clean `db push`, a
 `succeeded` cron row, or an HTTP 200 is not evidence.
 
+> **Correction, 2026-09-25 (step 0, read-only): prod already runs F5 and F9.** The deployed
+> `refresh-symbols` and `historical-bars` are this branch's original security commit
+> `2dd699f`, deployed on an unknown date after 2026-07-30 (`supabase functions download`
+> comparison). `verify_jwt` is already **off** for `refresh-symbols` in prod: a
+> credential-free GET reaches **our** code (`405 {"error":"Method not allowed"}`). And
+> `refresh_symbols_daily` returns `200 {"ok":true,"count":13246}`. **`main` was the stale
+> side**, not prod. So step 5.1/5.2 are *reconciliation* deploys, functionally no-ops that
+> make prod provably equal the merge commit. `send-notification` (5.3) is the only real
+> new server code in this PR. Earlier drafts of this runbook said refresh-symbols
+> "401s today"; that was wrong.
+
 ## Where every deploy runs from
 
 **Never deploy from `/Users/giorgio/fantasy-stock`.** That checkout sits on whatever branch
@@ -40,8 +51,11 @@ before the merge:
 - The web delta (CSPRNG invite codes) doesn't call anything new.
 
 Every server step can therefore run from a single folder at a single commit. The gap
-between merge and deploy changes nothing live: `refresh-symbols` keeps 401-ing exactly
-as today, and the old functions and policies stay in place until steps 5–6.
+between merge and deploy changes nothing live. Prod already runs this PR's
+`refresh-symbols` and `historical-bars`, and the policies stay in place until step 6. The
+merge actually **removes** a hazard: before it, any `refresh-symbols` or `historical-bars`
+deploy from `main` (including a bare `supabase functions deploy`, which deploys EVERY
+function) would silently revert F5/F9 in prod.
 
 ## What ships, and when each fix goes live
 
@@ -49,8 +63,8 @@ as today, and the old functions and policies stay in place until steps 5–6.
 |---|---|---|---|
 | F1 + F11 — leagues column guard trigger | migration `20260925000000` | step 6 (`db push`) | no — **server-side** |
 | F6 — `league_standings` INSERT bounded to zero | migration `20260925000001` | step 6 (`db push`) | no — **server-side** |
-| F5 — `refresh-symbols` apikey guard, `verify_jwt=false` | edge function + `config.toml` | step 5 | no — **server-side** |
-| F9 — `historical-bars` date validation | edge function | step 5 | no — **server-side** |
+| F5 — `refresh-symbols` apikey guard, `verify_jwt=false` | edge function + `config.toml` | **already live** (from `2dd699f`); step 5.2 reconciles | no — **server-side** |
+| F9 — `historical-bars` date validation | edge function | **already live** (from `2dd699f`); step 5.1 reconciles | no — **server-side** |
 | F7 — server half: `send-notification` | new edge function | step 5 (live but unused) | — |
 | F7 — client half: draft-turn push via the function | mobile client | step 7 | **yes** |
 | F3/F4 — CSPRNG invite codes (web) | web client | step 3 (merge → Vercel) | no |
@@ -84,31 +98,41 @@ the header).
 ## Step 0 — Pre-flight SQL (read-only)
 
 Run each query **separately** in the SQL editor, which shows only the last result.
-`net._http_response` has **no `url` column**, so responses are identified by body shape.
 
-**0.1 — The cron key pair matches, proven by a sibling that uses it.** `enrich_symbols_10min`
-authenticates with the same pair `refresh-symbols` will use (vault `cron_apikey` →
-`SB_SECRET_KEY_CRON`). Its 200s prove the two values are equal:
+**`net._http_response` is a weak signal here. Verify by data, not by that table.** It has
+no `url` column (responses can only be matched by body shape), and **no cron migration sets
+`timeout_milliseconds`**. So pg_net's **5 s default** applies: any target that runs
+longer than 5 s shows up as a client timeout (`Timeout of 5000 ms reached`, no status)
+even when it succeeds. `enrich-symbols` does exactly that on every run. The table can
+confirm a fast answer (a 401, a quick 200); it can never confirm the outcome of a slow run.
+
+**0.1 — The cron key pair works, proven by effect.** `enrich_symbols_10min` authenticates with
+the same pair as `refresh-symbols` (vault `cron_apikey` → `SB_SECRET_KEY_CRON`). Its HTTP
+responses time out (see above), so check the data it writes instead:
+```sql
+SELECT max(enriched_at) AS latest,
+       count(*) FILTER (WHERE enriched_at > now() - interval '1 hour') AS last_hour,
+       count(*) FILTER (WHERE enriched_at IS NULL) AS never_enriched
+FROM symbols;
+```
+Observed 2026-09-25: about 50 rows per run (≈300/h), `latest` within the last 10 minutes.
+A broken pair would 401 fast (and show in `net._http_response`), and `enriched_at` would
+stop advancing.
+
+**0.2 — Baseline: refresh-symbols ALREADY works in prod** (observed 2026-09-25):
 ```sql
 SELECT created, status_code, left(content::text, 120) AS body
 FROM net._http_response
-WHERE content::text LIKE '%"batch":%'           -- enrich-symbols success shape
-ORDER BY created DESC LIMIT 5;
+WHERE content::text LIKE '%"count":%'           -- refresh-symbols success shape
+ORDER BY created DESC LIMIT 3;
 ```
-Expect recent rows with `status_code = 200`. If they're all 401 `{"error":"unauthorized"}`,
-the pair is already broken: fix that first. F5 cannot work either.
-
-**0.2 — Baseline: refresh-symbols is failing today.**
-```sql
-SELECT created, status_code, left(content::text, 120) AS body
-FROM net._http_response
-WHERE status_code = 401
-  AND (content::text ILIKE '%authorization header%' OR content::text ILIKE '%invalid jwt%')
-ORDER BY created DESC LIMIT 5;
+Expect `200 {"ok":true,"count":<~13k>}` at `:00` of 00/06/12/18 UTC. This run finishes
+inside 5 s, so the row is real. And:
+```bash
+curl -s -i https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/refresh-symbols
 ```
-Expect 401s carrying the **gateway's** generic body, not our JSON, at `:00` of
-00/06/12/18 UTC. `refresh-symbols` is the only cron target still behind `verify_jwt`, so
-these rows are its runs.
+Expect `405 {"error":"Method not allowed"}`, which is **our** code, so `verify_jwt` is
+already off. Both results must hold **before and after** step 5.2.
 
 ## Step 1 — Push the branch  *(HUMAN / Orchestrator)*
 
@@ -182,7 +206,11 @@ local-only rows, `20260925000000` and `20260925000001`, with remote at
 
 ## Step 5 — Edge functions  *(from `/Users/giorgio/fantasy-stock-deploy` @ `<MERGE>`)*
 
-All three are backward-compatible with 1.0.0 clients; any order.
+All three are backward-compatible with 1.0.0 clients; any order. **5.1 and 5.2 are
+reconciliation:** prod already runs this code (from `2dd699f`, which differs from the merge
+commit's `refresh-symbols` only by one comment word). Redeploying makes prod provably
+equal the merge commit. Success means the downloaded code matches `<MERGE>` and
+behaviour is unchanged, not a behaviour change. **5.3 is the only new server code.**
 
 **5.1 — F9**
 No function in this PR imports `supabase/functions/_shared/` or any other local file.
@@ -195,9 +223,16 @@ supabase functions deploy historical-bars --project-ref haiaaifjcclsvmkfqgmd
 ```
 Expect **Uploading asset (historical-bars): supabase/functions/historical-bars/index.ts**
 and nothing else.
-Verify: a bad date such as `"start":"2020-01-01&feed=sip"` returns **our** HTTP 400
-`invalid_start`, and a normal `YYYY-MM-DD` request still returns bars (the mobile chart
-still renders).
+Verify (unchanged before and after): a bad date such as `"start":"2020-01-01&feed=sip"`
+returns **our** HTTP 400 `invalid_start`, and a normal `YYYY-MM-DD` request still returns
+bars. Then prove prod equals the merge commit:
+```bash
+cd /Users/giorgio/fantasy-stock-deploy
+supabase functions download historical-bars --project-ref haiaaifjcclsvmkfqgmd   # writes into supabase/functions/historical-bars/
+git status --porcelain -- supabase/functions/historical-bars/   # must print NOTHING (modified or extra file = mismatch)
+git checkout -- supabase/functions/   # restore tracked files either way; delete any extra file it listed
+```
+
 
 **5.2 — F5**
 ```bash
@@ -206,24 +241,26 @@ supabase functions deploy refresh-symbols --project-ref haiaaifjcclsvmkfqgmd
 ```
 Expect **Uploading asset (refresh-symbols): supabase/functions/refresh-symbols/index.ts**
 and nothing else.
-This deploy carries `verify_jwt = false` from `config.toml`. A true→false flip may not take
-on the first deploy, so verify that it did:
+`config.toml` now also says `verify_jwt = false`, matching prod (it was the repo that
+said `true`). Verify **unchanged** behaviour:
 ```bash
+curl -s -i https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/refresh-symbols
 curl -s -i -X POST https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/refresh-symbols
 ```
-Expect `401` with body exactly `{"error":"Unauthorized"}` (**our** handler). The gateway's
-`Missing authorization header` means the flip didn't take: redeploy, and check the
-dashboard's Verify-JWT toggle for the function.
-Then check the effect after the next scheduled run (`0 */6 * * *` UTC):
-```sql
-SELECT created, status_code, left(content::text, 120) AS body
-FROM net._http_response
-WHERE content::text LIKE '%"count":%'           -- refresh-symbols success shape
-ORDER BY created DESC LIMIT 3;
+Expect `405 {"error":"Method not allowed"}`, then `401 {"error":"Unauthorized"}`, both from
+**our** code. Any gateway body (`Missing authorization header` / `Invalid JWT`) means the
+deploy **re-enabled** `verify_jwt`. That is a regression: the cron would start failing.
+Redeploy, and fix the dashboard's Verify-JWT toggle. Then prove prod equals the merge
+commit:
+```bash
+cd /Users/giorgio/fantasy-stock-deploy
+supabase functions download refresh-symbols --project-ref haiaaifjcclsvmkfqgmd   # writes into supabase/functions/refresh-symbols/
+git status --porcelain -- supabase/functions/refresh-symbols/   # must print NOTHING (modified or extra file = mismatch)
+git checkout -- supabase/functions/   # restore tracked files either way; delete any extra file it listed
 ```
-Expect `200 {"ok":true,"count":<several thousand>}`. Don't use `cron.job_run_details`:
-it reports `succeeded` on enqueue. Optional: `SELECT count(*) FROM symbols;` before and
-after.
+
+After the next `0 */6 * * *` run, step 0.2's `"count":` query must still show a fresh `200`.
+Don't use `cron.job_run_details`: it reports `succeeded` on enqueue.
 
 **5.3 — F7 (server half)**
 ```bash
@@ -231,8 +268,15 @@ git -C /Users/giorgio/fantasy-stock-deploy rev-parse --short HEAD   # must print
 supabase functions deploy send-notification --project-ref haiaaifjcclsvmkfqgmd
 ```
 Expect **Uploading asset (send-notification): supabase/functions/send-notification/index.ts**
-and nothing else. This is a **new** function, so also confirm it appears in the
-dashboard's function list with Verify JWT **on**.
+and nothing else. This is a **new** function (a `download` before this step fails),
+so also confirm it appears in the dashboard's function list with Verify JWT **on**, and:
+```bash
+cd /Users/giorgio/fantasy-stock-deploy
+supabase functions download send-notification --project-ref haiaaifjcclsvmkfqgmd   # writes into supabase/functions/send-notification/
+git status --porcelain -- supabase/functions/send-notification/   # must print NOTHING (modified or extra file = mismatch)
+git checkout -- supabase/functions/   # restore tracked files either way; delete any extra file it listed
+```
+
 It uses `SB_PUBLISHABLE_KEY` and `SB_SECRET_KEY_INTERNAL`, which are already set as
 project secrets and used by `validate-and-record-pick`, so no `secrets set` is needed.
 Verify:
@@ -333,7 +377,7 @@ Smoke checks on the new build:
 
 Update `docs/STATUS.md` §2 (ledger: migrations through `20260925000001`, deployed
 functions with the folder and commit each came from, the `refresh_symbols_daily` 200
-evidence) and §4 (remove defect 4, the refresh-symbols 401).
+evidence) and §4 (close defect 4 once prod provably equals `<MERGE>`).
 
 ---
 
@@ -350,8 +394,10 @@ fallback can be deleted once phase 2 lands.
 - **Migrations:** never edit an applied file. Mitigate with a new migration, e.g.
   `DROP TRIGGER trg_leagues_member_update_columns ON public.leagues;`, or recreate the
   prior `league_standings_insert_members` (`WITH CHECK (is_member(league_id))`).
-- **Edge functions:** redeploy the previous version from the deploy checkout detached at
-  the pre-merge `main` commit (`a324395`), with `--project-ref haiaaifjcclsvmkfqgmd`.
-  For `refresh-symbols`, a rollback reinstates the 401s and nothing else.
+- **Edge functions:** `send-notification` rollback = delete it on the dashboard (nothing
+  calls it before step 7).
+  **Never roll `refresh-symbols` or `historical-bars` back to `a324395`**: that is
+  pre-PR-#9 `main`, which lacks F5/F9 and has `verify_jwt = true`. It would reintroduce
+  the refresh cron's 401s and drop F9. Their last-known-good is `2dd699f` or `<MERGE>`.
 - **Mobile:** 1.0.0 binaries keep working throughout. Nothing in steps 1–6 requires them
   to update.

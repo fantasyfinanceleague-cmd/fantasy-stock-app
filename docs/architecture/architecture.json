@@ -2,8 +2,8 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "c9d988a4e0e173a25fec435fa149157734fdac52",
-    "commitShort": "c9d988a",
+    "commit": "ca175352f072b64f39bcbab083748ca362e9eec4",
+    "commitShort": "ca17535",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "security/claude-security-fixes-20260730",
     "dirty": true,
@@ -11,21 +11,9 @@
       {
         "code": "M",
         "path": "docs/architecture/annotations.json"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/process-week-results/index.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/process-week-results/job-status.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/process-week-results/job-status.ts"
       }
     ],
-    "timestamp": "2026-09-25T04:43:17Z",
+    "timestamp": "2026-09-25T05:59:43Z",
     "sourceHash": "sha256:5bfef80ff26ed8f08a8cc0a33d035403ecc619f874fb5775c0b7b852c01f120a",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
@@ -33,7 +21,7 @@
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1055.8,
+    "ageHours": 1057.1,
     "ageDays": 44,
     "staleAfterDays": 14,
     "stale": true,
@@ -154,7 +142,7 @@
         ]
       },
       "drift": [],
-      "annotation": "UPDATE 2026-09-24: migration 20260811000000 (applied) now reschedules this job in-repo and sends the vault cron apikey, so it is no longer out-of-band. It STILL 401s: refresh-symbols is verify_jwt=true with no in-code apikey guard, so the gateway rejects the apikey-only request. The other half (verify_jwt=false + constant-time guard, finding F5) is on the unmerged PR #9 branch. Until that lands, nothing adds new listings to (or retires delistings from) the symbols universe — no client calls refresh-symbols. enrich-symbols still updates EXISTING rows (profiles, prices, is_draftable).\n\nHISTORY: The oldest job in the schedule (jobid 7, versus 18-21 for the cron-auth-migrated set) and the only one that sends no auth header at all. It predates the RLS-hardening pass that set verify_jwt=true on refresh-symbols, and it was never migrated because no migration in the repo schedules it — it was created out-of-band, so the Phase 2b sweep over supabase/migrations/ never saw it. Its `symbols` target table is likewise created by no migration. IMPORTANT when diagnosing this: cron.job_run_details reports 'succeeded' for every run regardless, because net.http_post is asynchronous — the job status records that the request was ENQUEUED (return_message '1 row' is the request id), not what the server answered. Checked 2026-07-27: five consecutive 'succeeded' runs, which is exactly what a job 401ing every six hours also looks like. Use net._http_response, or check whether the symbols rows actually changed.",
+      "annotation": "UPDATE 2026-09-25 (observed, read-only; supersedes the 2026-09-24 note, which wrongly said this job STILL 401s): the job WORKS. net._http_response at 2026-09-25 00:00:01 shows 200 {\"ok\":true,\"count\":13246}, with no 401s in the window. A credential-free GET to refresh-symbols reaches OUR code (405), so verify_jwt is OFF in prod, and `supabase functions download` shows the deployed function is PR #9's original security commit 2dd699f (F5: constant-time apikey guard against SB_SECRET_KEY_CRON). Migration 20260811000000 (applied) supplies the vault cron apikey header, so the two halves of F5 are both live. The REPO is the stale side: main's refresh-symbols has no guard and config.toml says verify_jwt=true, so deploying this function from pre-PR#9 main (including a bare `supabase functions deploy`) would REGRESS it into genuine 401s. Merging PR #9 removes that hazard. CAVEAT for verifying any cron target here: no cron migration sets timeout_milliseconds, so pg_net's 5 s default applies and a target that runs longer shows as a client timeout in net._http_response even on success (enrich-symbols does, every run). This job finishes inside 5 s, so its 200 row is real; for slower targets verify by the data they write.\n\nHISTORY: The oldest job in the schedule (jobid 7, versus 18-21 for the cron-auth-migrated set) and the only one that sends no auth header at all. It predates the RLS-hardening pass that set verify_jwt=true on refresh-symbols, and it was never migrated because no migration in the repo schedules it — it was created out-of-band, so the Phase 2b sweep over supabase/migrations/ never saw it. Its `symbols` target table is likewise created by no migration. IMPORTANT when diagnosing this: cron.job_run_details reports 'succeeded' for every run regardless, because net.http_post is asynchronous — the job status records that the request was ENQUEUED (return_message '1 row' is the request id), not what the server answered. Checked 2026-07-27: five consecutive 'succeeded' runs, which is exactly what a job 401ing every six hours also looks like. Use net._http_response, or check whether the symbols rows actually changed.",
       "verified": true,
       "id": "cron.refresh_symbols_daily",
       "label": "refresh_symbols_daily",

@@ -24,11 +24,11 @@ Fixes landed on branch `security/claude-security-fixes-20260730` (commit 2dd699f
 | F2 | HIGH | ✅ fixed in code | `apps/mobile/lib/recoveryNonce.ts` + `_layout.tsx` + `forgot-password.tsx` — needs redirect-allowlist config (see Deploy) |
 | F3 | MED | ✅ fixed in code | `apps/web/src/utils/inviteCode.js`, `apps/mobile/lib/inviteCode.ts` |
 | F4 | MED | ✅ fixed in code | (closed by F3 — shared CSPRNG helpers) |
-| F5 | MED | ✅ fixed in code | `refresh-symbols/index.ts` + `config.toml` (apikey gate, verify_jwt=false). **Merge 2026-09-01:** main's `20260811000000` (applied) already sends the cron apikey but left verify_jwt=true with no guard, so it still 401s — this branch's flip + guard completes it. This branch's duplicate cron migration `20260728000002` was dropped. |
+| F5 | MED | ✅ **deployed** (from `2dd699f`; observed 2026-09-25) — reconciled on merge | `refresh-symbols/index.ts` + `config.toml` (apikey gate, verify_jwt=false). Prod has run this since an unknown date after 2026-07-30: `refresh_symbols_daily` returns `200 {"ok":true,"count":13246}` and a credential-free GET reaches our code (405). `main`'s code/config were the stale side (the earlier "still 401s" note here was wrong). Hazard until merge: deploying it from `main` reverts F5. Main's `20260811000000` cron reschedule + this function = the whole fix. This branch's duplicate cron migration `20260728000002` was dropped. |
 | F6 | MED | ✅ fixed in code | migration `20260925000001` (league_standings INSERT bounded to zero; authored as `20260730000001`) |
 | F7 | MED | ✅ fixed in code | new `send-notification` edge function (shared-league check, closed type map) + `apps/mobile/lib/notifications.ts` cut-over. Client half ships with the 1.1.0 EAS build. Hardened 2026-09-24 (error checks, Expo ticket status, unbuilt types removed). |
 | **F8** | MED | ❌ **TODO** | push-token relocation (phase 2, staged). Precondition: F7 deployed **and** 1.0.0 mobile binaries drained — see below |
-| F9 | MED | ✅ fixed in code | `historical-bars/index.ts` (date validation + encoding) |
+| F9 | MED | ✅ **deployed** (from `2dd699f`; deployed code identical to the branch tip) — reconciled on merge | `historical-bars/index.ts` (date validation + encoding). Hazard until merge: deploying it from `main` reverts F9. |
 | **F10** | MED | ❌ **TODO** | matchup schedule forgery — see below |
 | F11 | MED | ✅ fixed in code | (closed by F1 — same policy trigger) |
 | F12 | LOW | ✅ **superseded by main** | `place-order` was deleted on main (DR-001 in-house simulator; trades now go through `record-trade` / `validate-and-record-pick`), and main's applied `20260811000002` drops the same client `trades` INSERT policy. This branch's `20260730000004` and its client edits were dropped in the 2026-09-01 merge. |
