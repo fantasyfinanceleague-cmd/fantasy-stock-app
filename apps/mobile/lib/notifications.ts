@@ -109,44 +109,6 @@ export async function setupPushNotifications(userId: string): Promise<void> {
 }
 
 /**
- * Send a push notification via Expo's push service
- * This can be called from the app or from a Supabase Edge Function
- */
-export async function sendPushNotification(
-  expoPushToken: string,
-  title: string,
-  body: string,
-  data?: Record<string, unknown>
-): Promise<boolean> {
-  const message = {
-    to: expoPushToken,
-    sound: 'default',
-    title,
-    body,
-    data: data || {},
-  };
-
-  try {
-    const response = await fetch('https://exp.host/--/api/v2/push/send', {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Accept-encoding': 'gzip, deflate',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(message),
-    });
-
-    const result = await response.json();
-    console.log('Push notification sent:', result);
-    return true;
-  } catch (error) {
-    console.error('Failed to send push notification:', error);
-    return false;
-  }
-}
-
-/**
  * Add listeners for notification events
  */
 export function addNotificationListeners(
