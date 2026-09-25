@@ -326,23 +326,45 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
    **Verify:** `docs/security/join-mid-draft-effect-test.sql` (self-contained
    fixture, rolls back via RAISE) plus the proacl/proconfig/prosrc queries in
    the migration file.
-15. **`league_members_insert_self` (RLS, still-interim `[I4]`) lets any
+15. **`league_members_insert_self` (RLS, still-interim `[I4]`) let any
    authenticated user insert themselves into ANY `league_members` row they
    name, bypassing `join_league_by_code` entirely** — no invite code, no
-   capacity check, no the new `draft_started` gate above, and a forge-able
+   capacity check, no the defect 14 `draft_started` gate, and a forge-able
    `role='commissioner'` (harmless for privilege — `is_commissioner()` reads
    `leagues.commissioner_id`, not `league_members.role`; only a web `Header`
-   label reads the role column — but still a membership bypass).
-   `league_members_insert_bot` similarly lets any existing member add bots
-   mid-draft, which reshuffles `computeDraftOrder` the same way defect 14
-   fixes for the honest path. Severity: **medium** — `leagues.id` is a UUID
-   and `leagues` SELECT is members-only, which limits discovery, but the
-   bypass is real for anyone who already knows/guesses a `league_id`.
-   Found/routed 2026-09-25 while fixing defect 14; NOT fixed here (separate
-   task — the real close is moving `create-league`'s commissioner self-insert
-   server-side and dropping `[I4]`, or at minimum narrowing it to
-   `role='commissioner' AND draft_status='not_started'` on a league the
-   caller commissions).
+   label and the mobile commissioner badge
+   (`apps/mobile/app/(tabs)/leagues.tsx:792`) read the role column — but
+   still a membership bypass). `league_members_insert_bot` ([I6]) similarly
+   lets any existing member add bots mid-draft, which reshuffles
+   `computeDraftOrder` the same way defect 14 fixes for the honest join
+   path. Severity: **medium** — `leagues.id` is a UUID and `leagues` SELECT
+   is members-only, which limits discovery, but the bypass is real for
+   anyone who already knows/guesses a `league_id`. Found/routed 2026-09-25
+   while fixing defect 14.
+   **FIXED ON BRANCH `fix/narrow-league-members-self-insert` (not yet merged
+   or deployed — prod is still exploitable until this ships):** migration
+   `20261001000000` narrows `[I4]`'s `WITH CHECK` to exactly the one
+   legitimate remaining caller — a league's own creator, self-inserting as
+   `'commissioner'`, into a league they commission whose `draft_status =
+   'not_started'` (join and bots have their own paths, unaffected). Full
+   insert-path inventory, the INSERT..RETURNING visibility analysis
+   (58518d4/9a2518b precedent — safe, since every admitted row still
+   satisfies the SELECT policy's direct `user_id = auth.uid()` clause), and
+   the effect-test cases are documented in the migration header and
+   `docs/security/league-members-insert-effect-test.sql`.
+   `[I6]` (bot insert, any member, any time) is **deliberately left alone** —
+   it retires with the mobile-draft worker's deferred
+   `20260929000000_drop_I6_I2b.sql` once draft-control ships server-side bot
+   seeding, so the mid-draft-reshuffle-via-bots vector survives this fix.
+   Full `[I4]` retirement still requires a server-side `create-league`
+   (`docs/migrations/RLS_HARDENING_SPEC.md` §1).
+   **Apply order:** merge this branch's PR into `main` on GitHub first (no
+   local merge/cherry-pick into the deploy checkout) — then
+   `git -C /Users/giorgio/fantasy-stock-deploy fetch origin && git -C
+   /Users/giorgio/fantasy-stock-deploy checkout --detach origin/main` and
+   `supabase db push` from there only. No function deploy.
+   **Verify:** the `pg_policies` query in §7 plus
+   `docs/security/league-members-insert-effect-test.sql`.
 
 ---
 
@@ -386,6 +408,7 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
 | `feat/server-schedule-generation` | §4 defects 1, 2 (deferred drop), 9: schedule module, `finalize_league_draft` migration, pick-function wiring, web writers removed. Includes `main` @ `5e3b5d1`. Unmerged; migration unapplied, function undeployed. |
 | `ui/design-system-pass-v2` | Unmerged, awaiting visual check. Checked out in the main checkout. |
 | `fix/refuse-join-mid-draft` | §4 defect 14: `join_league_by_code` draft_status guard, `preview-league` hard-block, both join screens' copy, web preview-bug fix. Unmerged; migration unapplied, `preview-league` undeployed. |
+| `fix/narrow-league-members-self-insert` | §4 defect 15: narrows `[I4]` `league_members` self-insert to creator-only. Migration `20261001000000`. Unmerged; migration unapplied. |
 | `ui/design-system-pass`, `item4-fix-refresh-symbols-cron` | Superseded (backup / folded into `main` + PR #9). Safe to delete once confirmed. |
 | ~20 others (`simulator-core`, `phase4-*`, `item*`, `signup-ux-password`, …) | Fully merged into `main` (0 commits ahead) — safe to delete with `git branch -d`. |
 
@@ -424,6 +447,13 @@ WHERE l.draft_status = 'in_progress'
 -- finalize_league_draft grants — expect service_role (+ postgres) only
 SELECT proname, proacl FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
 WHERE n.nspname = 'public' AND proname = 'finalize_league_draft';
+```
+```sql
+-- league_members INSERT policies (defect 15) — league_members_insert_self's
+-- with_check should reference role/leagues.commissioner_id/draft_status, not
+-- just user_id = auth.uid()
+SELECT policyname, cmd, roles, qual, with_check FROM pg_policies
+WHERE schemaname = 'public' AND tablename = 'league_members' ORDER BY policyname;
 ```
 ```sql
 -- Live cron jobs

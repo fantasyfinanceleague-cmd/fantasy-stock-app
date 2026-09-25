@@ -2,30 +2,54 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "69037be384b2b79ccae21d0ba7622308ddd09aae",
-    "commitShort": "69037be",
+    "commit": "d1cab458ad041d4cfd3e9f889bb8a9363278118a",
+    "commitShort": "d1cab45",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "fix/refuse-join-mid-draft",
+    "branch": "fix/narrow-league-members-self-insert",
     "dirty": true,
     "dirtyPaths": [
+      {
+        "code": "M",
+        "path": "apps/mobile/app/join-league.tsx"
+      },
       {
         "code": "M",
         "path": "apps/web/src/pages/DraftPage.jsx"
       },
       {
         "code": "M",
+        "path": "apps/web/src/pages/JoinLeague.jsx"
+      },
+      {
+        "code": "M",
         "path": "apps/web/src/pages/PortfolioPage.jsx"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/preview-league/index.ts"
+      },
+      {
+        "code": "A",
+        "path": "supabase/functions/preview-league/reason.test.ts"
+      },
+      {
+        "code": "A",
+        "path": "supabase/functions/preview-league/reason.ts"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql"
       }
     ],
-    "timestamp": "2026-09-25T22:18:28Z",
-    "sourceHash": "sha256:87d6f0dc3e8c5ba53f6bdff4a011e3d245f7908708085b7dc6825a48cd8b41b6",
+    "timestamp": "2026-09-25T22:48:21Z",
+    "sourceHash": "sha256:2b653a649b5263ad7a477f434c63667bb8a17c1da27dadc0a3c74a1d18cf44c7",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1073.4,
+    "ageHours": 1073.9,
     "ageDays": 44.7,
     "staleAfterDays": 14,
     "stale": true,
@@ -8727,7 +8751,8 @@
       "20260925000001_tighten_league_standings_insert.sql",
       "20260926000000_finalize_league_draft_rpc.sql",
       "20260928000000_symbols_price_unsupported_column.sql",
-      "20260930000000_join_league_refuse_mid_draft.sql"
+      "20260930000000_join_league_refuse_mid_draft.sql",
+      "20261001000000_narrow_league_members_insert_self.sql"
     ],
     "config": [
       "enrich-symbols=false",
