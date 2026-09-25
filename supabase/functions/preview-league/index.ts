@@ -1,5 +1,6 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { previewJoinReason } from './reason.ts';
 
 // ---- CORS / response helpers (same pattern as place-order) -----------------
 function isAllowedOrigin(origin: string): boolean {
@@ -102,19 +103,23 @@ Deno.serve(async (req: Request) => {
     const { data: existing } = await admin
       .from('league_members').select('user_id').eq('league_id', league.id).eq('user_id', user.id).maybeSingle();
 
-    // joinable + reason. Draft-started is SOFT (not a block) — the UI warns via draft_status.
+    // joinable + reason. draft_started is now a HARD block (matches
+    // join_league_by_code's refusal in 20260930000000) — a user should never
+    // be shown a Join button the RPC will then refuse.
     const current = memberCount ?? 0;
-    let reason: string | null = null;
-    if (existing) reason = 'already_member';
-    else if (league.season_status === 'completed') reason = 'season_completed';
-    else if (invite && (invite.status !== 'pending'
-             || (invite.expires_at && new Date(invite.expires_at) < new Date()))) reason = 'invite_expired';
-    else if (current >= league.num_participants) reason = 'league_full';
+    const { joinable, reason } = previewJoinReason({
+      isExistingMember: !!existing,
+      seasonStatus: league.season_status,
+      draftStatus: league.draft_status,
+      invite: invite ? { status: invite.status, expiresAt: invite.expires_at } : null,
+      currentMembers: current,
+      numParticipants: league.num_participants,
+    });
 
     // Return ONLY the displayed fields — no id / commissioner_id / invite_code.
     return json({
       found: true,
-      joinable: reason === null,
+      joinable,
       reason,
       league: {
         name: league.name,
