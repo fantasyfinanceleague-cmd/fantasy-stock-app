@@ -2,34 +2,21 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "1bc95149e2c58217d1e24d6bb7ac29acd091856f",
-    "commitShort": "1bc9514",
+    "commit": "6922c710af4a3522ff35b009a6e4c5dc85bffad7",
+    "commitShort": "6922c71",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "security/claude-security-fixes-20260730",
-    "dirty": true,
-    "dirtyPaths": [
-      {
-        "code": "M",
-        "path": "apps/mobile/app.json"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/send-notification/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/migrations/20260925000000_leagues_member_draft_complete_column_guard.sql"
-      }
-    ],
-    "timestamp": "2026-09-25T00:16:35Z",
-    "sourceHash": "sha256:b70994d29bda2d8da54f8e0d0c40d1f29988b6be6284e3a7fe7edf4f8177a8cd",
+    "dirty": false,
+    "dirtyPaths": [],
+    "timestamp": "2026-09-25T00:21:22Z",
+    "sourceHash": "sha256:57714a1957d5668b2ae601cf4a7b16f48504748c7767dcce59603b1806ed4084",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1051.4,
+    "ageHours": 1051.5,
     "ageDays": 43.8,
     "staleAfterDays": 14,
     "stale": true,
@@ -5922,7 +5909,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('send-notification')",
       "callSites": [
-        "apps/mobile/lib/notifications.ts:205"
+        "apps/mobile/lib/notifications.ts:167"
       ]
     },
     {
@@ -8191,7 +8178,7 @@
       "apps/mobile/components/TradeModal.tsx:209 -> quote",
       "apps/mobile/components/TradeModal.tsx:233 -> symbol-name",
       "apps/mobile/components/TradeModal.tsx:314 -> record-trade",
-      "apps/mobile/lib/notifications.ts:205 -> send-notification",
+      "apps/mobile/lib/notifications.ts:167 -> send-notification",
       "apps/mobile/lib/useHistoricalPL.ts:77 -> historical-bars",
       "apps/mobile/lib/useStockNames.ts:13 -> symbol-name",
       "apps/mobile/lib/useStockPrices.ts:32 -> ticker-quotes",
