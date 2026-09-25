@@ -15,6 +15,7 @@ import LeagueSwitcher from '@/components/LeagueSwitcher';
 import TradeModal from '@/components/TradeModal';
 import PLBreakdownModal from '@/components/PLBreakdownModal';
 import { Ionicons } from '@expo/vector-icons';
+import { Button } from '@/components/ui';
 
 function formatCurrency(value: number): string {
   return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -49,7 +50,7 @@ function HoldingRow({ holding, companyName, onPress }: { holding: Holding; compa
               <Ionicons
                 name={isDayPositive ? 'trending-up' : 'trending-down'}
                 size={12}
-                color={isDayPositive ? '#059669' : '#DC2626'}
+                color={isDayPositive ? Colors.success : Colors.error}
               />
               <Text style={[styles.dayChangeText, isDayPositive ? styles.positive : styles.negative]}>
                 {isDayPositive ? '+' : ''}{dayChange.toFixed(2)}%
@@ -120,9 +121,11 @@ export default function PortfolioScreen() {
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.centered}>
           <Text style={styles.emptyTitle}>Sign in to view portfolio</Text>
-          <TouchableOpacity style={styles.button} onPress={() => router.push('/login')}>
-            <Text style={styles.buttonText}>Sign In</Text>
-          </TouchableOpacity>
+          <Button
+            title="Sign In"
+            onPress={() => router.push('/login')}
+            variant="primary"
+          />
         </View>
       </SafeAreaView>
     );
@@ -138,16 +141,18 @@ export default function PortfolioScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0891B2" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
       >
 
         {leagues.length === 0 ? (
           <View style={styles.centered}>
             <Text style={styles.emptyTitle}>No leagues yet</Text>
             <Text style={styles.emptySubtitle}>Join a league to start building your portfolio</Text>
-            <TouchableOpacity style={styles.button} onPress={() => router.push('/(tabs)/leagues')}>
-              <Text style={styles.buttonText}>View Leagues</Text>
-            </TouchableOpacity>
+            <Button
+              title="View Leagues"
+              onPress={() => router.push('/(tabs)/leagues')}
+              variant="primary"
+            />
           </View>
         ) : (
           <>
@@ -171,14 +176,14 @@ export default function PortfolioScreen() {
                       <Ionicons
                         name={isUp ? 'trending-up' : 'trending-down'}
                         size={14}
-                        color={isUp ? '#059669' : '#DC2626'}
+                        color={isUp ? Colors.success : Colors.error}
                       />
                       <Text style={[styles.plPillText, isUp ? styles.positive : styles.negative]}>
                         {isUp ? '+' : ''}${formatCurrency(gl)}
                         {' '}({formatPercent(glPct)})
                       </Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={14} color="#94A3B8" style={{ marginLeft: 4 }} />
+                    <Ionicons name="chevron-forward" size={14} color={Colors.textMuted} style={{ marginLeft: 4 }} />
                   </TouchableOpacity>
                 );
               })()}
@@ -203,13 +208,17 @@ export default function PortfolioScreen() {
 
             {/* Actions */}
             <View style={styles.actionsRow}>
-              <TouchableOpacity style={styles.primaryButton} onPress={() => openTradeModal('', 'buy')}>
-                <Text style={styles.primaryButtonText}>Buy Stock</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.ghostButton} onPress={() => router.push('/trade-history')}>
-                <Text style={styles.ghostButtonText}>View trade history</Text>
-                <Ionicons name="arrow-forward" size={16} color="#0891B2" />
-              </TouchableOpacity>
+              <Button
+                title="Buy Stock"
+                onPress={() => openTradeModal('', 'buy')}
+                variant="primary"
+              />
+              <Button
+                title="View trade history"
+                onPress={() => router.push('/trade-history')}
+                variant="ghost"
+                icon={<Ionicons name="arrow-forward" size={16} color={Colors.primary} />}
+              />
             </View>
 
             {/* Holdings */}
@@ -224,13 +233,15 @@ export default function PortfolioScreen() {
               ) : holdings.length === 0 ? (
                 <View style={styles.emptyHoldings}>
                   <View style={styles.emptyIcon}>
-                    <Ionicons name="bar-chart-outline" size={32} color="#94A3B8" />
+                    <Ionicons name="bar-chart-outline" size={32} color={Colors.textMuted} />
                   </View>
                   <Text style={styles.emptyText}>No holdings yet</Text>
                   <Text style={styles.emptySubtext}>Draft stocks or buy your first share!</Text>
-                  <TouchableOpacity style={styles.button} onPress={() => openTradeModal('', 'buy')}>
-                    <Text style={styles.buttonText}>Buy Stock</Text>
-                  </TouchableOpacity>
+                  <Button
+                    title="Buy Stock"
+                    onPress={() => openTradeModal('', 'buy')}
+                    variant="primary"
+                  />
                 </View>
               ) : (
                 holdings.map((holding) => (
@@ -279,23 +290,11 @@ export default function PortfolioScreen() {
   );
 }
 
-const cardShadow = Platform.select({
-  ios: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-  },
-  android: {
-    elevation: 2,
-  },
-  default: {},
-}) as object;
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  container: { flex: 1, backgroundColor: Colors.white },
   scrollView: { flex: 1 },
-  loadingText: { color: '#94A3B8', fontSize: 16, textAlign: 'center', marginTop: 100 },
+  loadingText: { color: Colors.textMuted, fontSize: 16,
+    fontFamily: 'Inter_400Regular', textAlign: 'center', marginTop: 100 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 100, paddingHorizontal: 24 },
 
   // Hero
@@ -306,14 +305,15 @@ const styles = StyleSheet.create({
   },
   heroLabel: {
     fontSize: 13,
-    fontWeight: '500',
-    color: '#64748B',
+    fontFamily: 'Inter_500Medium',
+    color: Colors.textSecondary,
     marginBottom: 4,
   },
   heroValue: {
     fontSize: 34,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
+    color: Colors.textPrimary,
     letterSpacing: -0.5,
   },
   plPill: {
@@ -332,11 +332,13 @@ const styles = StyleSheet.create({
   },
   plPillText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
   budgetCaption: {
     fontSize: 13,
-    color: '#94A3B8',
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
+    color: Colors.textMuted,
     marginTop: 8,
   },
 
@@ -352,36 +354,13 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 24,
   },
-  primaryButton: {
-    backgroundColor: '#0891B2',
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  ghostButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    paddingVertical: 8,
-  },
-  ghostButtonText: {
-    color: '#0891B2',
-    fontSize: 15,
-    fontWeight: '500',
-  },
 
   // Section
   section: { paddingHorizontal: 24, paddingBottom: 24 },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#0F172A',
+    fontFamily: 'Inter_600SemiBold',
+    color: Colors.textPrimary,
     marginBottom: 16,
   },
 
@@ -392,29 +371,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: Colors.borderLight,
   },
   holdingLeft: { flex: 1 },
   holdingRight: { alignItems: 'flex-end' },
   holdingSymbol: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontFamily: 'Inter_700Bold',
+    color: Colors.textPrimary,
   },
   holdingName: {
     fontSize: 13,
-    color: '#64748B',
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textSecondary,
     marginTop: 1,
   },
   holdingQty: {
     fontSize: 12,
-    color: '#94A3B8',
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textMuted,
     marginTop: 2,
   },
   holdingValue: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#0F172A',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
+    color: Colors.textPrimary,
     marginBottom: 4,
   },
   dayChangeBadge: {
@@ -425,13 +407,17 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 6,
   },
-  dayChangeText: { fontSize: 12, fontWeight: '600' },
+  dayChangeText: {
+    fontSize: 12,
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
+  },
 
   // Status colors
-  positive: { color: '#059669' },
-  negative: { color: '#DC2626' },
-  positiveBg: { backgroundColor: '#ECFDF5' },
-  negativeBg: { backgroundColor: '#FEF2F2' },
+  positive: { color: Colors.success },
+  negative: { color: Colors.error },
+  positiveBg: { backgroundColor: Colors.successBg },
+  negativeBg: { backgroundColor: Colors.errorBg },
 
   // Empty states
   emptyHoldings: { alignItems: 'center', paddingVertical: 40 },
@@ -439,43 +425,34 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: Colors.bgElevated,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
   },
   emptyText: {
     fontSize: 16,
-    color: '#0F172A',
-    fontWeight: '600',
+    color: Colors.textPrimary,
+    fontFamily: 'Inter_600SemiBold',
     marginBottom: 4,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#94A3B8',
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textMuted,
     marginBottom: 16,
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '600',
-    color: '#0F172A',
+    fontFamily: 'Inter_600SemiBold',
+    color: Colors.textPrimary,
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#94A3B8',
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textMuted,
     marginBottom: 24,
     textAlign: 'center',
-  },
-  button: {
-    backgroundColor: '#0891B2',
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 10,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });

@@ -9,6 +9,7 @@ import { useAuth } from '@/lib/useAuth';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { supabase } from '@/lib/supabase';
 import { stakeModeLabel } from '@/lib/categoryData';
+import { Button, Card } from '@/components/ui';
 
 const ACCENT = Colors.primary;
 const ACCENT_BG = Colors.primaryBg;
@@ -191,17 +192,14 @@ export default function JoinLeagueScreen() {
         )}
       </View>
 
-      <TouchableOpacity
-        style={[styles.nextButton, (!code.trim() || loading) && styles.nextButtonDisabled]}
+      <Button
+        title="Look Up"
         onPress={lookupCode}
-        disabled={!code.trim() || loading}
-      >
-        {loading ? (
-          <ActivityIndicator color="#FFFFFF" />
-        ) : (
-          <Text style={styles.nextButtonText}>Look Up</Text>
-        )}
-      </TouchableOpacity>
+        variant="primary"
+        disabled={!code.trim()}
+        loading={loading}
+        style={styles.nextButton}
+      />
     </KeyboardAvoidingView>
   );
 
@@ -225,7 +223,7 @@ export default function JoinLeagueScreen() {
             </Text>
           </View>
 
-          <View style={styles.previewCard}>
+          <Card style={styles.previewCardOuter}>
             <View style={styles.previewRow}>
               <View style={styles.previewItem}>
                 <Text style={styles.previewLabel}>Type</Text>
@@ -282,7 +280,7 @@ export default function JoinLeagueScreen() {
                 </View>
               </View>
             </View>
-          </View>
+          </Card>
 
           {draftStarted && (
             <View style={styles.warningContainer}>
@@ -294,20 +292,14 @@ export default function JoinLeagueScreen() {
           )}
         </View>
 
-        <TouchableOpacity
-          style={[styles.nextButton, styles.joinButton, joining && styles.nextButtonDisabled]}
+        <Button
+          title="Join League"
           onPress={handleJoin}
-          disabled={joining}
-        >
-          {joining ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <>
-              <Ionicons name="enter-outline" size={20} color="#FFFFFF" />
-              <Text style={styles.nextButtonText}>Join League</Text>
-            </>
-          )}
-        </TouchableOpacity>
+          variant="success"
+          loading={joining}
+          icon={<Ionicons name="enter-outline" size={20} color={Colors.white} />}
+          style={styles.nextButton}
+        />
       </View>
     );
   };
@@ -356,7 +348,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     fontSize: 17,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
     textAlign: 'center',
   },
@@ -382,13 +374,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 15,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     textAlign: 'center',
     marginBottom: 32,
@@ -403,7 +396,7 @@ const styles = StyleSheet.create({
   },
   codeInput: {
     fontSize: 32,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
     textAlign: 'center',
     paddingVertical: 16,
@@ -418,6 +411,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.error,
   },
 
@@ -437,23 +431,21 @@ const styles = StyleSheet.create({
   },
   leagueIconText: {
     fontSize: 40,
+    fontFamily: 'Inter_400Regular',
   },
   leagueName: {
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
     textAlign: 'center',
     marginBottom: 4,
   },
   commissionerText: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
   },
-  previewCard: {
-    backgroundColor: Colors.cardBg,
-    borderRadius: 16,
-    padding: 20,
-  },
+  previewCardOuter: {},
   previewRow: {
     flexDirection: 'row',
     paddingVertical: 12,
@@ -468,12 +460,14 @@ const styles = StyleSheet.create({
   },
   previewLabel: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginBottom: 4,
   },
   previewValue: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
   previewValueMuted: {
@@ -493,7 +487,8 @@ const styles = StyleSheet.create({
   },
   statusBadgeText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
   warningContainer: {
@@ -508,32 +503,15 @@ const styles = StyleSheet.create({
   warningText: {
     flex: 1,
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
     color: Colors.warning,
     lineHeight: 18,
   },
 
   // Buttons
   nextButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: ACCENT,
     marginHorizontal: 24,
     marginBottom: 24,
-    paddingVertical: 16,
     borderRadius: 30,
-    gap: 8,
-  },
-  nextButtonDisabled: {
-    backgroundColor: Colors.border,
-  },
-  nextButtonText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
-  },
-  joinButton: {
-    backgroundColor: Colors.success,
   },
 });

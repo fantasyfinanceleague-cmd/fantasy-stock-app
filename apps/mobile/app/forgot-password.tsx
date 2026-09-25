@@ -16,6 +16,7 @@ import { supabase } from '@/lib/supabase';
 import { generateRecoveryNonce, storeRecoveryNonce } from '@/lib/recoveryNonce';
 import { Colors } from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
+import { Button } from '@/components/ui';
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
@@ -79,12 +80,12 @@ export default function ForgotPasswordScreen() {
             Click the link in the email to reset your password. The link will expire in 24 hours.
           </Text>
 
-          <TouchableOpacity
-            style={styles.button}
+          <Button
+            title="Back to Sign In"
             onPress={() => router.replace('/login')}
-          >
-            <Text style={styles.buttonText}>Back to Sign In</Text>
-          </TouchableOpacity>
+            variant="primary"
+            style={styles.buttonSpacing}
+          />
 
           <TouchableOpacity
             style={styles.resendButton}
@@ -119,7 +120,7 @@ export default function ForgotPasswordScreen() {
           <TextInput
             style={styles.input}
             placeholder="Email"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={Colors.textMuted}
             value={email}
             onChangeText={setEmail}
             autoCapitalize="none"
@@ -127,15 +128,13 @@ export default function ForgotPasswordScreen() {
             autoFocus
           />
 
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
+          <Button
+            title="Send Reset Link"
             onPress={handleResetPassword}
-            disabled={loading}
-          >
-            <Text style={styles.buttonText}>
-              {loading ? 'Sending...' : 'Send Reset Link'}
-            </Text>
-          </TouchableOpacity>
+            variant="primary"
+            loading={loading}
+            style={styles.buttonSpacing}
+          />
 
           <TouchableOpacity
             style={styles.switchButton}
@@ -172,28 +171,30 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#0F172A',
+    fontFamily: 'Inter_700Bold',
+    color: Colors.textPrimary,
     textAlign: 'center',
     marginBottom: 12,
   },
   description: {
     fontSize: 15,
-    color: '#64748B',
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textSecondary,
     textAlign: 'center',
     marginBottom: 32,
     lineHeight: 22,
   },
   email: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.primary,
     textAlign: 'center',
     marginBottom: 16,
   },
   hint: {
     fontSize: 14,
-    color: '#64748B',
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textSecondary,
     textAlign: 'center',
     marginBottom: 32,
     lineHeight: 20,
@@ -203,25 +204,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 16,
     fontSize: 16,
-    color: '#0F172A',
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textPrimary,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  button: {
-    backgroundColor: Colors.primary,
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
+  buttonSpacing: {
     marginTop: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
   },
   switchButton: {
     marginTop: 24,
@@ -230,13 +220,15 @@ const styles = StyleSheet.create({
   switchText: {
     color: Colors.primary,
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
   },
   resendButton: {
     marginTop: 16,
     alignItems: 'center',
   },
   resendText: {
-    color: '#64748B',
+    color: Colors.textSecondary,
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
   },
 });

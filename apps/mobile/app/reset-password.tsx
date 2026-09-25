@@ -15,6 +15,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
+import { Button } from '@/components/ui';
 
 export default function ResetPasswordScreen() {
   const [password, setPassword] = useState('');
@@ -64,12 +65,12 @@ export default function ResetPasswordScreen() {
             Your password has been successfully updated. You can now sign in with your new password.
           </Text>
 
-          <TouchableOpacity
-            style={styles.button}
+          <Button
+            title="Sign In"
             onPress={() => router.replace('/login')}
-          >
-            <Text style={styles.buttonText}>Sign In</Text>
-          </TouchableOpacity>
+            variant="primary"
+            style={styles.buttonSpacing}
+          />
         </View>
       </SafeAreaView>
     );
@@ -93,7 +94,7 @@ export default function ResetPasswordScreen() {
           <TextInput
             style={styles.input}
             placeholder="New Password"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={Colors.textMuted}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -103,21 +104,19 @@ export default function ResetPasswordScreen() {
           <TextInput
             style={styles.input}
             placeholder="Confirm New Password"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={Colors.textMuted}
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             secureTextEntry
           />
 
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
+          <Button
+            title="Update Password"
             onPress={handleUpdatePassword}
-            disabled={loading}
-          >
-            <Text style={styles.buttonText}>
-              {loading ? 'Updating...' : 'Update Password'}
-            </Text>
-          </TouchableOpacity>
+            variant="primary"
+            loading={loading}
+            style={styles.buttonSpacing}
+          />
 
           <TouchableOpacity
             style={styles.cancelButton}
@@ -150,14 +149,15 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#0F172A',
+    fontFamily: 'Inter_700Bold',
+    color: Colors.textPrimary,
     textAlign: 'center',
     marginBottom: 12,
   },
   description: {
     fontSize: 15,
-    color: '#64748B',
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textSecondary,
     textAlign: 'center',
     marginBottom: 32,
     lineHeight: 22,
@@ -167,32 +167,22 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 16,
     fontSize: 16,
-    color: '#0F172A',
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textPrimary,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  button: {
-    backgroundColor: Colors.primary,
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
+  buttonSpacing: {
     marginTop: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
   },
   cancelButton: {
     marginTop: 24,
     alignItems: 'center',
   },
   cancelText: {
-    color: '#64748B',
+    color: Colors.textSecondary,
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
   },
 });

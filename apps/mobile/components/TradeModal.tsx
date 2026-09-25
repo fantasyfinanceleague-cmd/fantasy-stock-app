@@ -17,6 +17,8 @@ import { Colors } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
 import { Holding } from '@/lib/usePortfolio';
 import { isMarketOpen, getMarketStatus, getMarketStatusMessage } from '@/lib/marketHours';
+import * as Haptics from 'expo-haptics';
+import { Banner, Button } from '@/components/ui';
 
 interface TradeModalProps {
   visible: boolean;
@@ -319,6 +321,8 @@ export default function TradeModal({
         setError(TRADE_REFUSAL_MESSAGES[data?.reason] || 'Trade was refused.');
         return;
       }
+      // Success - refresh data and close
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onTradeComplete();
       onClose();
     } catch (_e) {
@@ -425,7 +429,7 @@ export default function TradeModal({
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                           <Text style={styles.searchResultSymbol}>{item.symbol}</Text>
                           {item.is_draftable === false && (
-                            <Text style={{ fontSize: 9, fontWeight: '700', color: '#f59e0b', borderWidth: 1, borderColor: '#f59e0b', borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1 }}>
+                            <Text style={{ fontSize: 9, fontFamily: 'Inter_700Bold', color: Colors.warning, borderWidth: 1, borderColor: Colors.warning, borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1 }}>
                               NOT DRAFTABLE
                             </Text>
                           )}
@@ -470,6 +474,9 @@ export default function TradeModal({
               style={styles.quantityButton}
               onPress={() => handleQuantityChange(-1)}
               disabled={quantity <= 1}
+              accessibilityRole="button"
+              accessibilityLabel="Decrease quantity"
+              accessibilityState={{ disabled: quantity <= 1 }}
             >
               <Text style={styles.quantityButtonText}>−</Text>
             </TouchableOpacity>
@@ -486,6 +493,8 @@ export default function TradeModal({
             <TouchableOpacity
               style={styles.quantityButton}
               onPress={() => handleQuantityChange(1)}
+              accessibilityRole="button"
+              accessibilityLabel="Increase quantity"
             >
               <Text style={styles.quantityButtonText}>+</Text>
             </TouchableOpacity>
@@ -536,33 +545,25 @@ export default function TradeModal({
 
         {/* Error Message */}
         {error ? (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
+          <Banner variant="error" message={error} style={styles.errorBanner} />
         ) : null}
 
         {/* Action Buttons */}
         <View style={styles.buttonRow}>
-          <TouchableOpacity
-            style={[
-              styles.submitButton,
-              action === 'buy' ? styles.submitButtonBuy : styles.submitButtonSell,
-              (loading || !symbol || !canAfford || !hasEnoughShares) && styles.submitButtonDisabled,
-            ]}
+          <Button
+            title={action === 'buy' ? 'Buy' : 'Sell'}
             onPress={handleSubmit}
-            disabled={loading || !symbol || !canAfford || !hasEnoughShares}
-          >
-            <Text style={styles.submitButtonText}>
-              {loading ? 'Submitting…' : action === 'buy' ? 'Buy' : 'Sell'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.cancelButton}
+            disabled={!symbol || !canAfford || !hasEnoughShares}
+            loading={loading}
+            variant={action === 'buy' ? 'success' : 'danger'}
+            style={styles.submitButton}
+          />
+          <Button
+            title="Cancel"
             onPress={onClose}
             disabled={loading}
-          >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
+            variant="secondary"
+          />
         </View>
       </ScrollView>
     );
@@ -601,7 +602,7 @@ const styles = StyleSheet.create({
   },
   overlayBackground: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: Colors.overlay,
   },
   modalContainer: {
     backgroundColor: Colors.cardBg,
@@ -622,7 +623,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
     marginBottom: 20,
   },
@@ -631,27 +632,29 @@ const styles = StyleSheet.create({
   },
   // Locked box (not Monday)
   lockedBox: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: Colors.warningBg,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: Colors.warningBorder,
     borderRadius: 12,
     padding: 20,
     marginBottom: 20,
   },
   lockedTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.gold,
     marginBottom: 8,
   },
   lockedText: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textSecondary,
     marginBottom: 8,
     lineHeight: 20,
   },
   lockedSubtext: {
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginBottom: 16,
   },
@@ -662,12 +665,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   lockedButtonText: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
   bold: {
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
   },
 
   // Toggle
@@ -695,11 +698,11 @@ const styles = StyleSheet.create({
   },
   toggleButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textMuted,
   },
   toggleButtonTextActive: {
-    color: '#fff',
+    color: Colors.white,
   },
 
   // Input groups
@@ -708,6 +711,7 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginBottom: 8,
   },
@@ -716,6 +720,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 14,
     fontSize: 18,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textPrimary,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -768,17 +773,19 @@ const styles = StyleSheet.create({
   },
   searchResultSymbol: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
   },
   searchResultName: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginTop: 2,
   },
   searchResultPrice: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textSecondary,
   },
   noResultsContainer: {
@@ -797,29 +804,32 @@ const styles = StyleSheet.create({
   },
   noResultsText: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     textAlign: 'center',
   },
   selectedStock: {
     marginTop: 10,
     padding: 12,
-    backgroundColor: '#ECFDF5',
+    backgroundColor: Colors.successBg,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#A7F3D0',
+    borderColor: Colors.successBorder,
   },
   selectedSymbol: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.success,
   },
   selectedName: {
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginTop: 2,
   },
   companyName: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginTop: 6,
   },
@@ -843,7 +853,8 @@ const styles = StyleSheet.create({
   quantityButtonText: {
     fontSize: 24,
     color: Colors.textPrimary,
-    fontWeight: '500',
+    fontFamily: 'Inter_500Medium',
+    fontVariant: ['tabular-nums'],
   },
   quantityInput: {
     flex: 1,
@@ -851,6 +862,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 14,
     fontSize: 18,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -858,15 +871,16 @@ const styles = StyleSheet.create({
   },
   ownedText: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginTop: 8,
   },
 
   // Price box
   priceBox: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: Colors.infoBg,
     borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderColor: Colors.infoBorder,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -878,25 +892,31 @@ const styles = StyleSheet.create({
   },
   priceLabel: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
   },
   priceValue: {
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
   priceDivider: {
     height: 1,
-    backgroundColor: '#BFDBFE',
+    backgroundColor: Colors.infoBorder,
     marginVertical: 12,
   },
   totalLabel: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
   totalValue: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
   },
   totalCost: {
     color: Colors.error,
@@ -908,22 +928,15 @@ const styles = StyleSheet.create({
   // Budget
   budgetText: {
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
     marginBottom: 16,
   },
 
   // Error
-  errorBox: {
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: '#FECACA',
-    borderRadius: 8,
-    padding: 12,
+  errorBanner: {
     marginBottom: 16,
-  },
-  errorText: {
-    fontSize: 14,
-    color: '#DC2626',
   },
 
   // Buttons
@@ -934,36 +947,5 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     flex: 1,
-    paddingVertical: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  submitButtonBuy: {
-    backgroundColor: Colors.success,
-  },
-  submitButtonSell: {
-    backgroundColor: Colors.error,
-  },
-  submitButtonDisabled: {
-    opacity: 0.5,
-  },
-  submitButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  cancelButton: {
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    backgroundColor: Colors.inputBg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    color: Colors.textPrimary,
-    fontSize: 16,
-    fontWeight: '500',
   },
 });

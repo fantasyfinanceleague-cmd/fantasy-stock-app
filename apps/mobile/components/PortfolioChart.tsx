@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: 'Inter_500Medium',
     color: Colors.textMuted,
     letterSpacing: 0.5,
     marginBottom: 16,
@@ -132,11 +132,13 @@ const styles = StyleSheet.create({
   },
   centerValue: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
   centerText: {
     fontSize: 11,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
   },
   legend: {
@@ -158,10 +160,12 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     color: Colors.textPrimary,
-    fontWeight: '500',
+    fontFamily: 'Inter_500Medium',
   },
   legendPercent: {
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
   },
 });

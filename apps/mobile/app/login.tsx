@@ -9,7 +9,6 @@ import {
   Alert,
   Image,
   Dimensions,
-  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -17,6 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { validateUsername } from '@/lib/contentModeration';
 import { PASSWORD_REQUIREMENTS, failingPasswordRequirements } from '@/constants/passwordRules';
+import { Colors } from '@/constants/Colors';
+import { Button, Card } from '@/components/ui';
 
 const { width } = Dimensions.get('window');
 
@@ -95,18 +96,18 @@ export default function LoginScreen() {
       </View>
 
       {/* Card */}
-      <View style={[styles.card, cardShadow]}>
+      <Card padded={false} style={styles.card}>
         <Text style={styles.title}>{isSignUp ? 'Create Account' : 'Welcome back'}</Text>
         <Text style={styles.subtitle}>{isSignUp ? 'Join the competition' : 'Sign in to your league'}</Text>
 
         {isSignUp && (
           <>
             <View style={styles.inputContainer}>
-              <Ionicons name="person-outline" size={20} color="#94A3B8" style={styles.inputIcon} />
+              <Ionicons name="person-outline" size={20} color={Colors.textMuted} style={styles.inputIcon} />
               <TextInput
                 style={styles.inputField}
                 placeholder="Username"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={Colors.textMuted}
                 value={username}
                 onChangeText={setUsername}
                 autoCapitalize="none"
@@ -118,11 +119,11 @@ export default function LoginScreen() {
         )}
 
         <View style={styles.inputContainer}>
-          <Ionicons name="mail-outline" size={20} color="#94A3B8" style={styles.inputIcon} />
+          <Ionicons name="mail-outline" size={20} color={Colors.textMuted} style={styles.inputIcon} />
           <TextInput
             style={styles.inputField}
             placeholder="Email address"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={Colors.textMuted}
             value={email}
             onChangeText={setEmail}
             autoCapitalize="none"
@@ -131,11 +132,11 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.inputContainer}>
-          <Ionicons name="lock-closed-outline" size={20} color="#94A3B8" style={styles.inputIcon} />
+          <Ionicons name="lock-closed-outline" size={20} color={Colors.textMuted} style={styles.inputIcon} />
           <TextInput
             style={styles.inputField}
             placeholder="Password"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={Colors.textMuted}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -144,13 +145,13 @@ export default function LoginScreen() {
 
         {isSignUp && (
           <View style={{ marginTop: -4, marginBottom: 16, paddingHorizontal: 4 }}>
-            <Text style={{ fontSize: 13, color: '#64748B', marginBottom: 6 }}>Password must include:</Text>
+            <Text style={{ fontSize: 13, fontFamily: 'Inter_400Regular', color: Colors.textSecondary, marginBottom: 6 }}>Password must include:</Text>
             {PASSWORD_REQUIREMENTS.map((r) => {
               const ok = r.test(password);
               return (
                 <View key={r.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                  <Text style={{ width: 16, textAlign: 'center', color: ok ? '#22c55e' : '#94A3B8' }}>{ok ? '✓' : '○'}</Text>
-                  <Text style={{ fontSize: 13, color: ok ? '#22c55e' : '#94A3B8' }}>{r.label}</Text>
+                  <Text style={{ width: 16, textAlign: 'center', color: ok ? Colors.success : Colors.textMuted }}>{ok ? '✓' : '○'}</Text>
+                  <Text style={{ fontSize: 13, fontFamily: 'Inter_400Regular', color: ok ? Colors.success : Colors.textMuted }}>{r.label}</Text>
                 </View>
               );
             })}
@@ -163,17 +164,14 @@ export default function LoginScreen() {
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
+        <Button
+          title={isSignUp ? 'Create Account' : 'Sign In'}
           onPress={handleAuth}
-          disabled={loading}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.buttonText}>
-            {loading ? 'Please wait...' : isSignUp ? 'Create Account' : 'Sign In'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+          variant="primary"
+          loading={loading}
+          style={styles.authButton}
+        />
+      </Card>
 
       {/* Switch auth mode */}
       <TouchableOpacity
@@ -189,23 +187,10 @@ export default function LoginScreen() {
   );
 }
 
-const cardShadow = Platform.select({
-  ios: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-  },
-  android: {
-    elevation: 4,
-  },
-  default: {},
-}) as object;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     justifyContent: 'center',
     paddingHorizontal: 24,
   },
@@ -219,38 +204,37 @@ const styles = StyleSheet.create({
   },
   tagline: {
     fontSize: 15,
-    color: '#64748B',
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textSecondary,
     marginTop: 12,
     letterSpacing: 0.3,
   },
   card: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 28,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
   title: {
     fontSize: 26,
-    fontWeight: '600',
-    color: '#0F172A',
+    fontFamily: 'Inter_600SemiBold',
+    color: Colors.textPrimary,
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 15,
-    color: '#64748B',
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textSecondary,
     textAlign: 'center',
     marginBottom: 28,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: Colors.bgElevated,
     borderRadius: 12,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: Colors.border,
   },
   inputIcon: {
     paddingLeft: 16,
@@ -260,41 +244,32 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 12,
     fontSize: 16,
-    color: '#0F172A',
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textPrimary,
   },
   hint: {
     fontSize: 12,
-    color: '#94A3B8',
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textMuted,
     marginTop: -10,
     marginBottom: 16,
     marginLeft: 4,
   },
-  button: {
+  authButton: {
     marginTop: 8,
-    borderRadius: 12,
-    backgroundColor: '#0891B2',
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
   },
   switchButton: {
     marginTop: 24,
     alignItems: 'center',
   },
   switchText: {
-    color: '#64748B',
+    color: Colors.textSecondary,
     fontSize: 15,
+    fontFamily: 'Inter_400Regular',
   },
   switchTextBold: {
-    color: '#0891B2',
-    fontWeight: '600',
+    color: Colors.primary,
+    fontFamily: 'Inter_600SemiBold',
   },
   forgotButton: {
     alignSelf: 'flex-end',
@@ -302,7 +277,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   forgotText: {
-    color: '#64748B',
+    color: Colors.textSecondary,
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
   },
 });

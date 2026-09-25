@@ -59,6 +59,10 @@ export default function WeekNavigator({
         onPress={handlePrev}
         disabled={!canGoPrev}
         style={[styles.arrowButton, !canGoPrev && styles.arrowButtonDisabled]}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        accessibilityRole="button"
+        accessibilityLabel="Previous week"
+        accessibilityState={{ disabled: !canGoPrev }}
       >
         <Ionicons
           name="chevron-back"
@@ -92,6 +96,10 @@ export default function WeekNavigator({
         onPress={handleNext}
         disabled={!canGoNext}
         style={[styles.arrowButton, !canGoNext && styles.arrowButtonDisabled]}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        accessibilityRole="button"
+        accessibilityLabel="Next week"
+        accessibilityState={{ disabled: !canGoNext }}
       >
         <Ionicons
           name="chevron-forward"
@@ -115,7 +123,7 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.bgSurface,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -129,7 +137,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   arrowButtonDisabled: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: Colors.bgElevated,
     opacity: 0.5,
   },
   weekDisplay: {
@@ -141,7 +149,7 @@ const styles = StyleSheet.create({
   },
   weekText: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
   },
   badgeCurrent: {
@@ -150,11 +158,11 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: Colors.primaryBg,
     borderWidth: 1,
-    borderColor: '#0891B2',
+    borderColor: Colors.primary,
   },
   badgeTextCurrent: {
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.primaryLight,
   },
   badgeFinal: {
@@ -165,11 +173,13 @@ const styles = StyleSheet.create({
   },
   badgeTextFinal: {
     fontSize: 11,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontFamily: 'Inter_600SemiBold',
+    color: Colors.white,
   },
   totalWeeks: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
     marginLeft: 4,
   },

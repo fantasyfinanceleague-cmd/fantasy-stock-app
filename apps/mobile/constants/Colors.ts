@@ -1,79 +1,107 @@
-// Fantasy Stock App — Light Theme (backwards-compatible shim)
-// Maps legacy Colors.xxx keys to new light palette values.
+// Fantasy Stock App — legacy `Colors` surface.
+// PURE ALIAS LAYER over constants/theme/colors.ts — no color VALUE may be
+// defined here. Add new tokens in theme/colors.ts and alias them if the
+// legacy name differs.
+
+import { colors } from './theme/colors';
 
 export const Colors = {
   // Backgrounds
-  background: '#FFFFFF',
-  headerBg: '#FFFFFF',
-  cardBg: '#FFFFFF',
-  cardBgAlt: '#F8FAFC',
-  inputBg: '#F1F5F9',
+  background: colors.bgBase,
+  headerBg: colors.bgBase,
+  cardBg: colors.bgBase,
+  cardBgAlt: colors.bgSurface,
+  bgSurface: colors.bgSurface,
+  bgElevated: colors.bgElevated,
+  inputBg: colors.bgElevated,
+  white: colors.white,
 
   // Glassmorphic → light equivalents
-  glassBg: '#FFFFFF',
-  glassBorder: '#E2E8F0',
+  glassBg: colors.bgBase,
+  glassBorder: colors.border,
 
   // Borders
-  border: '#E2E8F0',
-  borderLight: '#F1F5F9',
-  borderDark: '#E2E8F0',
+  border: colors.border,
+  borderLight: colors.borderLight,
+  borderDark: colors.border,
+
+  // Overlays
+  overlay: colors.overlay,
 
   // Text
-  textPrimary: '#0F172A',
-  textSecondary: '#64748B',
-  textMuted: '#94A3B8',
-  textDark: '#94A3B8',
+  textPrimary: colors.textPrimary,
+  textSecondary: colors.textSecondary,
+  textMuted: colors.textTertiary,
+  textDark: colors.textTertiary,
+  textDisabled: colors.textDisabled,
 
   // Accent Colors
-  primary: '#0891B2',
-  primaryHover: '#0E7490',
-  primaryLight: '#0891B2',
-  primaryBg: 'rgba(8,145,178,0.08)',
+  primary: colors.cyan,
+  primaryHover: colors.cyanDark,
+  primaryLight: colors.cyan,
+  primaryBg: colors.cyanMuted,
+  cyanLight: colors.cyanLight,
 
-  accent: '#059669',
-  accentBg: '#ECFDF5',
+  accent: colors.positive,
+  accentBg: colors.positiveMuted,
 
-  secondary: '#6366F1',
-  secondaryBg: 'rgba(99,102,241,0.08)',
+  secondary: colors.secondary,
+  secondaryBg: colors.secondaryMuted,
 
   // Status Colors
-  success: '#059669',
-  successLight: '#059669',
-  successBg: '#ECFDF5',
+  success: colors.positive,
+  successLight: colors.positive,
+  successBg: colors.positiveMuted,
+  successBorder: colors.positiveBorder,
 
-  error: '#DC2626',
-  errorDark: '#B91C1C',
-  errorBg: '#FEF2F2',
+  error: colors.negative,
+  errorDark: colors.negativeDark,
+  errorBg: colors.negativeMuted,
+  errorBorder: colors.negativeBorder,
 
-  warning: '#D97706',
-  warningBg: '#FFFBEB',
+  warning: colors.warning,
+  warningBg: colors.warningMuted,
+  warningBorder: colors.warningBorder,
+
+  info: colors.info,
+  infoBg: colors.infoMuted,
+  infoBorder: colors.infoBorder,
+
+  // Roles
+  commissioner: colors.commissioner,
+  commissionerBg: colors.commissionerMuted,
+  memberHighlight: colors.memberHighlight,
 
   // Special
-  gold: '#D97706',
-  goldBg: '#FFFBEB',
-  silver: '#94A3B8',
-  silverBg: '#F1F5F9',
-  cyan: '#0891B2',
+  gold: colors.gold,
+  goldBg: colors.goldBg,
+  goldText: colors.goldText,
+  silver: colors.silver,
+  silverBg: colors.silverBg,
+  bronze: colors.bronze,
+  bronzeBg: colors.bronzeBg,
+  championText: colors.championText,
+  cyan: colors.cyan,
 
   // Tab bar specific
-  tabActive: '#0891B2',
-  tabInactive: '#94A3B8',
+  tabActive: colors.tabActive,
+  tabInactive: colors.tabInactive,
 };
 
-// Legacy export for backwards compatibility
+// Legacy export for backwards compatibility (Expo template Themed.tsx)
 export default {
   light: {
-    text: '#0F172A',
-    background: '#FFFFFF',
-    tint: '#0891B2',
-    tabIconDefault: '#94A3B8',
-    tabIconSelected: '#0891B2',
+    text: colors.textPrimary,
+    background: colors.bgBase,
+    tint: colors.cyan,
+    tabIconDefault: colors.tabInactive,
+    tabIconSelected: colors.tabActive,
   },
   dark: {
-    text: '#0F172A',
-    background: '#FFFFFF',
-    tint: '#0891B2',
-    tabIconDefault: '#94A3B8',
-    tabIconSelected: '#0891B2',
+    text: colors.textPrimary,
+    background: colors.bgBase,
+    tint: colors.cyan,
+    tabIconDefault: colors.tabInactive,
+    tabIconSelected: colors.tabActive,
   },
 };
