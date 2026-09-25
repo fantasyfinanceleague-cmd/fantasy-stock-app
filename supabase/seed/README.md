@@ -33,8 +33,9 @@ do not renumber or rename slugs once seeded.
 ## Phase 4 status (2026-08-11)
 
 The three files now carry the full Phase 4 content: 11 categories (10 curated +
-`misc` fallback), 80 industry rules, 91 overrides across 55 symbols (max 3 per
-symbol, generator-validated before the DB trigger ever sees them).
+`misc` fallback), 80 industry rules, 74 overrides across 55 symbols (91 before
+the b8041f7 review removed 17 delivery-mechanism tech overrides; max 3
+per symbol, generator-validated before the DB trigger ever sees them).
 
 **Deviation from the spec's "~160 rules", and why:** the spec's count assumed a
 GICS sub-industry taxonomy (163 values). Vendor reality: neither the NASDAQ
@@ -54,15 +55,22 @@ Several single-row overrides exist purely to correct a coarse rule mapping
 (hotels/cruises/casinos land in Food via the "Hotels Restaurants & Leisure"
 label; games land in Retail via "Leisure Products").
 
-**Apply path:** `node scripts/gen-category-seed-migration.mjs` regenerates
-`supabase/migrations/20260811000006_seed_categories.sql` (idempotent, additive
-only — see the generator header). Never edit the .sql by hand.
+**Apply path:** edit the JSONs, then run `node scripts/gen-category-seed-migration.mjs`.
+It validates the seed and writes a **new** migration,
+`supabase/migrations/<UTC YYYYMMDDHHMMSS>_reseed_categories.sql` (idempotent,
+additive only — see the generator header). Review it, commit it, then `supabase db push`. Never
+edit the generated .sql by hand, and never touch the original
+`20260811000006_seed_categories.sql`.
 
-> ⚠️ **`20260811000006` is already applied, and `supabase db push` never re-runs an
-> applied version.** Re-running the generator after editing the JSONs rewrites that
-> file, and `db push` then reports "up to date" while **none of your curation reaches
-> prod**. Until the generator takes an output path, ship curation changes as a NEW
-> timestamped migration: run the generator, `git mv` its output to a fresh
-> `supabase/migrations/<timestamp>_reseed_categories.sql`, restore the original
-> `20260811000006` from git, then push. The statements are upserts, so re-applying
-> the full seed converges. Effect-verify with row counts, not the push output.
+> ⚠️ **Why every run makes a new file:** `20260811000006` is already applied, and
+> `supabase db push` tracks migration *versions*, not content — it never re-runs an
+> applied version. Rewriting that file would make `db push` report "up to date"
+> while **none of your curation reaches prod**. So the generator always emits a
+> fresh timestamp, and it **refuses to overwrite any existing path** (exit 1)
+> unless `--force` is passed. Re-applying the full seed is safe: every statement
+> is an upsert, so the new migration converges. Effect-verify with row counts
+> (the queries are in the generated header), not the push output.
+
+Options: `--out <path>` writes somewhere else (e.g. `--out /tmp/reseed-check.sql`
+to preview or diff without touching the repo); `--force` permits overwriting an
+existing file — only for a draft that has never been applied anywhere.
