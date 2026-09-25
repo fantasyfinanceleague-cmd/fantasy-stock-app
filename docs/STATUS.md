@@ -120,7 +120,7 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
 3. **`process-week-results` strands `cron_job_status` at `running`** on its two
    early returns (`index.ts:914` query error, `:919` no pending matchups). Until
    fixed in prod, the job's health signal cannot distinguish healthy from broken.
-   **FIXED ON BRANCH `fix/process-week-results-terminal-status` (unmerged, undeployed):**
+   **FIXED ON `main` (PR #12, merged `a324395`; NOT deployed):**
    the query-error return now writes `failed` with the error; the no-pending return
    writes `success` with message `processed 0 matchups: no pending matchups` (the
    CHECK allows only `running|success|failed|retrying`, so the message — stored in
@@ -154,7 +154,14 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
    newer league's season. `process-week-results` only logs it, and the league sticks
    in `playoffs`. Fixed by the same migration `20260926000000`: `finalize_league_draft`
    creates season 1, plus a one-time backfill for completed leagues. NOT yet applied.
-10. **Hygiene:** revoked Alpaca pair still stored as Supabase secrets
+10. **Mobile draft screen needs a finalize/heal trigger** (mobile release scope). If
+   the draft is fully picked but `draft_status` is still `in_progress`, call
+   `validate-and-record-pick` with `{ league_id, action: 'finalize' }`. Surface
+   `status_update_error` instead of showing "Draft Complete!". Today nobody has a
+   turn once every pick is made, so the screen has no control that reaches the
+   server's heal path. The pick response also still says `draft_complete: true`
+   when finalize failed.
+11. **Hygiene:** revoked Alpaca pair still stored as Supabase secrets
    `ALPACA_KEY_ID`/`ALPACA_SECRET_KEY` (no readers) and in local `.env.local`;
    `.gitleaks.toml` allowlists all of `^\.claude/` by directory (hid that leak once) —
    narrow it to specific files.
@@ -171,7 +178,8 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
    test-league effect check.
 4. Merge PR #9; `db push` its migrations; deploy `refresh-symbols` and
    `send-notification`; effect-verify.
-5. Fix the stranded `running` status (§4 defect 3) — fixed on branch; merge, deploy, effect-check.
+5. Fix the stranded `running` status (§4 defect 3). Merged to `main` in PR #12;
+   deploy `process-week-results`, then effect-check.
 6. **One end-to-end test league in prod**: create → mobile draft → Monday snapshot →
    Friday scoring → week 2. This also clears both API-key Phase 4 gates.
 7. Mobile release (EAS production build), merged with the design-system branch if it
