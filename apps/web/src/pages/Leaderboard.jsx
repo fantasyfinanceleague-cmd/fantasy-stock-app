@@ -10,7 +10,7 @@ import { usePrices } from '../context/PriceContext';
 import { useUserProfiles } from '../context/UserProfilesContext';
 import { PageLoader } from '../components/LoadingSpinner';
 import { SkeletonLeaderboard } from '../components/Skeleton';
-import { generateSchedule, generateInitialStandings, getPlayoffRoundName } from '../utils/scheduleGenerator';
+import { getPlayoffRoundName } from '../utils/scheduleGenerator';
 import { useRealtimeStandings } from '../hooks/useRealtimeStandings';
 import WeekIndicator from '../components/WeekIndicator';
 import { getWeekStatus } from '../utils/weekStatus';
@@ -417,71 +417,9 @@ export default function Leaderboard() {
     }
   }, [allUserIds, fetchProfiles]);
 
-  // ----- Auto-generate schedule for matchup leagues if missing -----
-  useEffect(() => {
-    const autoGenerateSchedule = async () => {
-      // Only run if: matchup league, no matchups exist, and we have members
-      if (!activeLeague) return;
-      if (activeLeague.league_type !== 'matchup') return;
-      if (matchups.length > 0) return;
-      if (allUserIds.length < 2) return;
-
-      console.log('Auto-generating schedule for matchup league...');
-
-      const numWeeks = activeLeague.num_weeks || (allUserIds.length - 1);
-      const startDate = new Date();
-
-      // Generate schedule
-      const schedule = generateSchedule(allUserIds, numWeeks, startDate);
-
-      // Insert matchups
-      const matchupRows = schedule.map(m => ({
-        league_id: activeLeague.id,
-        week_number: m.week,
-        team1_user_id: m.team1,
-        team2_user_id: m.team2,
-        week_start: m.weekStart.toISOString(),
-        week_end: m.weekEnd.toISOString(),
-      }));
-
-      if (matchupRows.length > 0) {
-        const { data, error: matchupErr } = await supabase
-          .from('matchups')
-          .insert(matchupRows)
-          .select();
-
-        if (matchupErr) {
-          console.error('Failed to auto-generate matchups:', matchupErr);
-        } else {
-          console.log('Auto-generated matchups:', data);
-          setMatchups(data || matchupRows);
-        }
-      }
-
-      // Initialize standings if they don't exist in database
-      // Check database directly to avoid race condition with state
-      const { data: existingStandings } = await supabase
-        .from('league_standings')
-        .select('user_id')
-        .eq('league_id', activeLeague.id)
-        .limit(1);
-
-      if (!existingStandings || existingStandings.length === 0) {
-        const standingsRows = generateInitialStandings(activeLeague.id, allUserIds);
-        const { error: standingsErr } = await supabase
-          .from('league_standings')
-          .insert(standingsRows);  // Use insert, not upsert
-
-        if (standingsErr) {
-          console.error('Failed to initialize standings:', standingsErr);
-        } else {
-          setLeagueStandings(standingsRows);
-        }
-      }
-    };
-
-    autoGenerateSchedule();
-  }, [activeLeague, matchups.length, allUserIds, leagueStandings.length]);
+  // Schedule + standings are written server-side at draft completion
+  // (validate-and-record-pick -> finalize_league_draft). This page is read-only
+  // for matchups/league_standings; a league with no matchups renders empty.
 
   // Calculate actual holdings for a user (drafts + buys - sells)
   function calcUserHoldings(userId) {

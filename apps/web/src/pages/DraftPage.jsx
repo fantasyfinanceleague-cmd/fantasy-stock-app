@@ -6,7 +6,6 @@ import '../layout.css';
 import { useAuthUser } from '../auth/useAuthUser';
 import { prettyName } from '../utils/formatting';
 import { fetchCompanyName } from '../utils/stockData';
-import { generateSchedule, generateInitialStandings, getNextDayMarketOpen, getMarketClose } from '../utils/scheduleGenerator';
 import DraftControls from '../components/DraftControls';
 import DraftHistory from '../components/DraftHistory';
 import DraftRecap from '../components/DraftRecap';
@@ -535,86 +534,10 @@ export default function DraftPage() {
   const draftCap = (memberIds.length || 0) * totalRounds;
   const isDraftComplete = (memberIds.length > 0) && (portfolio.length >= draftCap);
 
-  // Mark draft as completed in database when all picks are made
-  // Handle both duration-based and matchup-based leagues
-  useEffect(() => {
-    if (!isDraftComplete || draftStatus !== 'in_progress') return;
-
-    const completeDraft = async () => {
-      const draftCompleteTime = new Date();
-      const leagueType = league?.league_type || 'duration';
-      let startDate;
-      let endDate;
-
-      if (leagueType === 'matchup') {
-        // Matchup league: first week starts the following Tuesday at market open
-        const numWeeks = league?.num_weeks || (memberIds.length - 1);
-
-        // Generate matchup schedule - this calculates proper Tuesday start dates
-        const schedule = generateSchedule(memberIds, numWeeks, draftCompleteTime);
-
-        // Use the first matchup's week start as the league start date
-        // (the schedule generator finds the next Tuesday at market open)
-        startDate = schedule.length > 0 ? schedule[0].weekStart : getNextDayMarketOpen(draftCompleteTime);
-
-        // End date is the last matchup's week end (Friday market close of final week)
-        endDate = schedule.length > 0
-          ? schedule[schedule.length - 1].weekEnd
-          : new Date(startDate.getTime() + numWeeks * 7 * 24 * 60 * 60 * 1000);
-
-        // Insert matchups
-        const matchupRows = schedule.map(m => ({
-          league_id: leagueId,
-          week_number: m.week,
-          team1_user_id: m.team1,
-          team2_user_id: m.team2,
-          week_start: m.weekStart.toISOString(),
-          week_end: m.weekEnd.toISOString(),
-        }));
-
-        if (matchupRows.length > 0) {
-          const { error: matchupErr } = await supabase
-            .from('matchups')
-            .insert(matchupRows);
-          if (matchupErr) console.error('Failed to insert matchups:', matchupErr);
-        }
-
-        // Initialize standings for all members
-        const standingsRows = generateInitialStandings(leagueId, memberIds);
-        const { error: standingsErr } = await supabase
-          .from('league_standings')
-          .insert(standingsRows);
-        if (standingsErr) console.error('Failed to initialize standings:', standingsErr);
-      } else {
-        // Duration league: starts next day at market open (9:30 AM ET)
-        // If draft completes March 3rd, league starts March 4th at market open
-        const durationDays = league?.duration_days || 30;
-        startDate = getNextDayMarketOpen(draftCompleteTime);
-
-        // End date is duration_days later at market close (4:00 PM ET)
-        const rawEndDate = new Date(startDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
-        endDate = getMarketClose(rawEndDate);
-      }
-
-      // Update league with completion status and dates
-      const { error } = await supabase
-        .from('leagues')
-        .update({
-          draft_status: 'completed',
-          league_start_date: startDate.toISOString(),
-          league_end_date: endDate.toISOString(),
-        })
-        .eq('id', leagueId);
-
-      if (error) {
-        console.error('Failed to mark draft as completed:', error);
-      } else {
-        setDraftStatus('completed');
-      }
-    };
-
-    completeDraft();
-  }, [isDraftComplete, draftStatus, leagueId, league?.duration_days, league?.league_type, league?.num_weeks, memberIds]);
+  // Draft completion is server-side: validate-and-record-pick finalizes the
+  // league on the final pick (draft_status + season schedule + standings +
+  // league dates, atomically via the finalize_league_draft RPC). This page only
+  // observes the status flip through the leagues realtime subscription above.
 
   // ---- Ensure company name for a symbol ----
   async function ensureNameForSymbol(sym) {

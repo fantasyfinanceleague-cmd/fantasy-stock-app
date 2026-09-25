@@ -2,27 +2,111 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "ca175352f072b64f39bcbab083748ca362e9eec4",
-    "commitShort": "ca17535",
+    "commit": "106e22f85c1f07dffaa66b39efd14ae8048e2a95",
+    "commitShort": "106e22f",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "security/claude-security-fixes-20260730",
+    "branch": "feat/server-schedule-generation",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
+        "path": "apps/mobile/app.json"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/app/_layout.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/app/(tabs)/draft.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/app/(tabs)/leagues.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/app/(tabs)/profile.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/app/create-league.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/app/forgot-password.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/app/join-league.tsx"
+      },
+      {
+        "code": "A",
+        "path": "apps/mobile/lib/inviteCode.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/notifications.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/mobile/lib/recoveryNonce.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/package-lock.json"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/package.json"
+      },
+      {
+        "code": "M",
+        "path": "apps/web/src/hooks/useLeagues.js"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/utils/inviteCode.js"
+      },
+      {
+        "code": "M",
         "path": "docs/architecture/annotations.json"
+      },
+      {
+        "code": "M",
+        "path": "supabase/config.toml"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/historical-bars/index.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/refresh-symbols/index.ts"
+      },
+      {
+        "code": "A",
+        "path": "supabase/functions/send-notification/index.ts"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20260925000000_leagues_member_draft_complete_column_guard.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20260925000001_tighten_league_standings_insert.sql"
       }
     ],
-    "timestamp": "2026-09-25T05:59:43Z",
-    "sourceHash": "sha256:5bfef80ff26ed8f08a8cc0a33d035403ecc619f874fb5775c0b7b852c01f120a",
+    "timestamp": "2026-09-25T07:24:35Z",
+    "sourceHash": "sha256:679074c6faf0717fe8f4a68843e4ca4ccf4e9d087e0afeaa371f279c72017fba",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1057.1,
-    "ageDays": 44,
+    "ageHours": 1058.5,
+    "ageDays": 44.1,
     "staleAfterDays": 14,
     "stale": true,
     "hash": "sha256:3c923bcd46e36dfa365d24852d7b8fb6ead9ff99a06c3b26dc0853c648e07ded",
@@ -742,7 +826,7 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 315
+        "lines": 372
       },
       "db": null,
       "declared": null,
@@ -755,7 +839,7 @@
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/validate-and-record-pick/index.ts",
-        "line": 87
+        "line": 98
       }
     },
     {
@@ -1074,6 +1158,37 @@
       "source": {
         "path": "supabase/migrations/20260810000003_create_categories_tables.sql",
         "line": 70
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20260926000000_finalize_league_draft_rpc.sql:91"
+        ],
+        "latestDefinition": "supabase/migrations/20260926000000_finalize_league_draft_rpc.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.finalize_league_draft",
+      "label": "finalize_league_draft()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20260926000000_finalize_league_draft_rpc.sql",
+        "line": 91
       }
     },
     {
@@ -4744,8 +4859,20 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('check_and_bump_rate_limit')",
       "callSites": [
-        "supabase/functions/validate-and-record-pick/index.ts:75",
-        "supabase/functions/validate-and-record-pick/index.ts:78"
+        "supabase/functions/validate-and-record-pick/index.ts:86",
+        "supabase/functions/validate-and-record-pick/index.ts:89"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.validate-and-record-pick->pg.finalize_league_draft",
+      "from": "fn.validate-and-record-pick",
+      "to": "pg.finalize_league_draft",
+      "protocol": "postgrest-rpc",
+      "payload": "rpc('finalize_league_draft')",
+      "callSites": [
+        "supabase/functions/validate-and-record-pick/index.ts:361"
       ]
     },
     {
@@ -4760,7 +4887,7 @@
         "user_id, symbol, entry_price, quantity, pick_number, slot_id"
       ],
       "callSites": [
-        "supabase/functions/validate-and-record-pick/index.ts:155"
+        "supabase/functions/validate-and-record-pick/index.ts:166"
       ]
     },
     {
@@ -4773,8 +4900,8 @@
       "payload": ".from('drafts').insert()",
       "columns": [],
       "callSites": [
-        "supabase/functions/validate-and-record-pick/index.ts:178",
-        "supabase/functions/validate-and-record-pick/index.ts:264",
+        "supabase/functions/validate-and-record-pick/index.ts:202",
+        "supabase/functions/validate-and-record-pick/index.ts:288",
         "supabase/functions/validate-and-record-pick/index.ts:6"
       ]
     },
@@ -4790,7 +4917,7 @@
         "id, slot_index, slot_count, price_min, price_max, category_id"
       ],
       "callSites": [
-        "supabase/functions/validate-and-record-pick/index.ts:215"
+        "supabase/functions/validate-and-record-pick/index.ts:239"
       ]
     },
     {
@@ -4805,7 +4932,7 @@
         "user_id"
       ],
       "callSites": [
-        "supabase/functions/validate-and-record-pick/index.ts:141"
+        "supabase/functions/validate-and-record-pick/index.ts:152"
       ]
     },
     {
@@ -4815,25 +4942,12 @@
       "from": "fn.validate-and-record-pick",
       "to": "tbl.leagues",
       "protocol": "postgrest-select",
-      "payload": ".from('leagues').select('id, commissioner_id, num_rounds, draft_status, stake_mode, budget_amount, notional_per_slot, allow_undraftable')",
+      "payload": ".from('leagues').select('id, commissioner_id, num_rounds, draft_status, stake_mode, budget_amount, notional_per_slot, allow_undraftable, league_type, num_weeks, duration_days')",
       "columns": [
-        "id, commissioner_id, num_rounds, draft_status, stake_mode, budget_amount, notional_per_slot, allow_undraftable"
+        "id, commissioner_id, num_rounds, draft_status, stake_mode, budget_amount, notional_per_slot, allow_undraftable, league_type, num_weeks, duration_days"
       ],
       "callSites": [
-        "supabase/functions/validate-and-record-pick/index.ts:130"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.fn.validate-and-record-pick->tbl.leagues#update",
-      "from": "fn.validate-and-record-pick",
-      "to": "tbl.leagues",
-      "protocol": "postgrest-update",
-      "payload": ".from('leagues').update()",
-      "columns": [],
-      "callSites": [
-        "supabase/functions/validate-and-record-pick/index.ts:310"
+        "supabase/functions/validate-and-record-pick/index.ts:141"
       ]
     },
     {
@@ -4848,7 +4962,7 @@
         "is_draftable"
       ],
       "callSites": [
-        "supabase/functions/validate-and-record-pick/index.ts:232"
+        "supabase/functions/validate-and-record-pick/index.ts:256"
       ]
     },
     {
@@ -4863,7 +4977,7 @@
         "user_id, symbol, action, quantity, price"
       ],
       "callSites": [
-        "supabase/functions/validate-and-record-pick/index.ts:165"
+        "supabase/functions/validate-and-record-pick/index.ts:189"
       ]
     },
     {
@@ -4942,6 +5056,111 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20260810000003_create_categories_tables.sql:78"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.finalize_league_draft->tbl.league_members",
+      "from": "pg.finalize_league_draft",
+      "to": "tbl.league_members",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_members (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260926000000_finalize_league_draft_rpc.sql:127",
+        "supabase/migrations/20260926000000_finalize_league_draft_rpc.sql:131"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.finalize_league_draft->tbl.league_seasons",
+      "from": "pg.finalize_league_draft",
+      "to": "tbl.league_seasons",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_seasons (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260926000000_finalize_league_draft_rpc.sql:241"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.finalize_league_draft->tbl.league_seasons#insert",
+      "from": "pg.finalize_league_draft",
+      "to": "tbl.league_seasons",
+      "protocol": "plpgsql-insert",
+      "payload": "INSERT league_seasons (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260926000000_finalize_league_draft_rpc.sql:237"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.finalize_league_draft->tbl.league_standings#insert",
+      "from": "pg.finalize_league_draft",
+      "to": "tbl.league_standings",
+      "protocol": "plpgsql-insert",
+      "payload": "INSERT league_standings (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260926000000_finalize_league_draft_rpc.sql:229"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.finalize_league_draft->tbl.leagues",
+      "from": "pg.finalize_league_draft",
+      "to": "tbl.leagues",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT leagues (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260926000000_finalize_league_draft_rpc.sql:108"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.finalize_league_draft->tbl.leagues#update",
+      "from": "pg.finalize_league_draft",
+      "to": "tbl.leagues",
+      "protocol": "plpgsql-update",
+      "payload": "UPDATE leagues (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260926000000_finalize_league_draft_rpc.sql:245"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.finalize_league_draft->tbl.matchups",
+      "from": "pg.finalize_league_draft",
+      "to": "tbl.matchups",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT matchups (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260926000000_finalize_league_draft_rpc.sql:207"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.finalize_league_draft->tbl.matchups#insert",
+      "from": "pg.finalize_league_draft",
+      "to": "tbl.matchups",
+      "protocol": "plpgsql-insert",
+      "payload": "INSERT matchups (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260926000000_finalize_league_draft_rpc.sql:220"
       ]
     },
     {
@@ -6281,7 +6500,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('finnhub-quote')",
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:654"
+        "apps/web/src/pages/DraftPage.jsx:577"
       ]
     },
     {
@@ -6293,7 +6512,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('quote')",
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:106"
+        "apps/web/src/pages/DraftPage.jsx:105"
       ]
     },
     {
@@ -6305,9 +6524,9 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('validate-and-record-pick')",
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:695",
-        "apps/web/src/pages/DraftPage.jsx:912",
-        "apps/web/src/pages/DraftPage.jsx:942"
+        "apps/web/src/pages/DraftPage.jsx:618",
+        "apps/web/src/pages/DraftPage.jsx:835",
+        "apps/web/src/pages/DraftPage.jsx:865"
       ]
     },
     {
@@ -6319,7 +6538,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_real_user_ids')",
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:361"
+        "apps/web/src/pages/DraftPage.jsx:360"
       ]
     },
     {
@@ -6336,9 +6555,9 @@
         "id, symbol, user_id, entry_price, pick_number"
       ],
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:384",
-        "apps/web/src/pages/DraftPage.jsx:495",
-        "apps/web/src/pages/DraftPage.jsx:793"
+        "apps/web/src/pages/DraftPage.jsx:383",
+        "apps/web/src/pages/DraftPage.jsx:494",
+        "apps/web/src/pages/DraftPage.jsx:716"
       ]
     },
     {
@@ -6353,7 +6572,7 @@
         "id, slot_index, slot_count, price_min, price_max, category_id"
       ],
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:209"
+        "apps/web/src/pages/DraftPage.jsx:208"
       ]
     },
     {
@@ -6369,8 +6588,8 @@
         "user_id, role"
       ],
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:274",
-        "apps/web/src/pages/DraftPage.jsx:338"
+        "apps/web/src/pages/DraftPage.jsx:273",
+        "apps/web/src/pages/DraftPage.jsx:337"
       ]
     },
     {
@@ -6383,20 +6602,7 @@
       "payload": ".from('league_members').insert()",
       "columns": [],
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:737"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.src.pages.DraftPage.jsx->tbl.league_standings#insert",
-      "from": "ui.src.pages.DraftPage.jsx",
-      "to": "tbl.league_standings",
-      "protocol": "postgrest-insert",
-      "payload": ".from('league_standings').insert()",
-      "columns": [],
-      "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:585"
+        "apps/web/src/pages/DraftPage.jsx:660"
       ]
     },
     {
@@ -6413,9 +6619,9 @@
         "id, name, draft_date, num_rounds, num_participants, budget_mode, budget_amount, commissioner_id, draft_status, duration_days, league_type, num_weeks"
       ],
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:286",
-        "apps/web/src/pages/DraftPage.jsx:327",
-        "apps/web/src/pages/DraftPage.jsx:481"
+        "apps/web/src/pages/DraftPage.jsx:285",
+        "apps/web/src/pages/DraftPage.jsx:326",
+        "apps/web/src/pages/DraftPage.jsx:480"
       ]
     },
     {
@@ -6428,21 +6634,7 @@
       "payload": ".from('leagues').update()",
       "columns": [],
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:1183",
-        "apps/web/src/pages/DraftPage.jsx:601"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.src.pages.DraftPage.jsx->tbl.matchups#insert",
-      "from": "ui.src.pages.DraftPage.jsx",
-      "to": "tbl.matchups",
-      "protocol": "postgrest-insert",
-      "payload": ".from('matchups').insert()",
-      "columns": [],
-      "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:577"
+        "apps/web/src/pages/DraftPage.jsx:1106"
       ]
     },
     {
@@ -6508,26 +6700,11 @@
       "protocol": "postgrest-select",
       "payload": ".from('league_standings').select('*')",
       "columns": [
-        "*",
-        "user_id"
+        "*"
       ],
       "callSites": [
         "apps/web/src/pages/Leaderboard.jsx:177",
-        "apps/web/src/pages/Leaderboard.jsx:346",
-        "apps/web/src/pages/Leaderboard.jsx:464"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.src.pages.Leaderboard.jsx->tbl.league_standings#insert",
-      "from": "ui.src.pages.Leaderboard.jsx",
-      "to": "tbl.league_standings",
-      "protocol": "postgrest-insert",
-      "payload": ".from('league_standings').insert()",
-      "columns": [],
-      "callSites": [
-        "apps/web/src/pages/Leaderboard.jsx:472"
+        "apps/web/src/pages/Leaderboard.jsx:346"
       ]
     },
     {
@@ -6560,19 +6737,6 @@
       "callSites": [
         "apps/web/src/pages/Leaderboard.jsx:186",
         "apps/web/src/pages/Leaderboard.jsx:355"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.src.pages.Leaderboard.jsx->tbl.matchups#insert",
-      "from": "ui.src.pages.Leaderboard.jsx",
-      "to": "tbl.matchups",
-      "protocol": "postgrest-insert",
-      "payload": ".from('matchups').insert()",
-      "columns": [],
-      "callSites": [
-        "apps/web/src/pages/Leaderboard.jsx:449"
       ]
     },
     {
@@ -7627,7 +7791,7 @@
           "edge": "e.fn.validate-and-record-pick->tbl.leagues",
           "detail": "League rules: draft status, rounds, stake mode, budget, allow_undraftable.",
           "files": [
-            "supabase/functions/validate-and-record-pick/index.ts:240"
+            "supabase/functions/validate-and-record-pick/index.ts:264"
           ]
         },
         {
@@ -7635,20 +7799,22 @@
           "edge": "e.fn.validate-and-record-pick->tbl.drafts#insert",
           "detail": "Legality (turn, uniqueness, draftable universe, slot category/price bracket, stake budget) decided by the shared pure module; a 23505 on pick_number is a lost race and the client refetches.",
           "files": [
-            "supabase/functions/validate-and-record-pick/index.ts:195"
+            "supabase/functions/validate-and-record-pick/index.ts:219"
           ]
         },
         {
           "n": 5,
-          "edge": "e.fn.validate-and-record-pick->tbl.leagues#update",
+          "edge": "e.fn.validate-and-record-pick->tbl.leagues",
           "detail": "On the final pick, markDraftComplete sets draft_status=completed — and NOTHING ELSE. No matchups, no initial standings, no league start/end dates: those are generated only by the paused web client, so a league drafted on mobile never enters a season. Top launch blocker; see docs/STATUS.md §4.",
           "files": [
-            "supabase/functions/validate-and-record-pick/index.ts:311"
+            "supabase/functions/validate-and-record-pick/index.ts:141"
           ]
         }
       ],
       "annotation": null,
-      "unverified": []
+      "unverified": [
+        "step 5: anchor not found — supabase/functions/validate-and-record-pick/index.ts no longer contains \"update({ draft_status: 'completed' })\""
+      ]
     },
     {
       "id": "flow.season-reset",
@@ -7764,7 +7930,7 @@
             "apps/web/src/components/TradeModal.jsx:159",
             "apps/web/src/components/TradeModal.jsx:63",
             "apps/web/src/context/PriceContext.jsx:99",
-            "apps/web/src/pages/DraftPage.jsx:106"
+            "apps/web/src/pages/DraftPage.jsx:105"
           ]
         },
         {
@@ -7827,6 +7993,16 @@
     {
       "node": "pg.enforce_leagues_member_update_columns",
       "label": "enforce_leagues_member_update_columns()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.finalize_league_draft",
+      "label": "finalize_league_draft()",
       "groupKey": "existence",
       "field": "existence",
       "declared": "created by migration",
@@ -8144,6 +8320,12 @@
       "resolve": "Re-capture the snapshot, or confirm the migration was applied."
     },
     {
+      "scope": "pg.finalize_league_draft",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
       "scope": "tbl.broker_credentials",
       "claim": "table exists in prod",
       "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
@@ -8172,17 +8354,23 @@
       "claim": "table exists in prod",
       "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
       "resolve": "Re-capture the snapshot."
+    },
+    {
+      "scope": "flow.draft-stock",
+      "claim": "flow step is current",
+      "reason": "step 5: anchor not found — supabase/functions/validate-and-record-pick/index.ts no longer contains \"update({ draft_status: 'completed' })\"",
+      "resolve": "Update the FLOWS block in scripts/gen-architecture.mjs."
     }
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 113,
-    "edges": 248,
+    "nodes": 114,
+    "edges": 252,
     "flows": 8,
-    "drift": 21,
-    "driftHigh": 3,
+    "drift": 22,
+    "driftHigh": 4,
     "deadCode": 11,
-    "unverified": 7
+    "unverified": 9
   },
   "sourceIndex": {
     "edgeFunctions": [
@@ -8228,17 +8416,17 @@
       "apps/web/src/components/TradeModal.jsx:63 -> quote",
       "apps/web/src/components/TradeModal.jsx:82 -> symbol-name",
       "apps/web/src/context/PriceContext.jsx:99 -> quote",
-      "apps/web/src/pages/DraftPage.jsx:106 -> quote",
-      "apps/web/src/pages/DraftPage.jsx:654 -> finnhub-quote",
-      "apps/web/src/pages/DraftPage.jsx:695 -> validate-and-record-pick",
-      "apps/web/src/pages/DraftPage.jsx:912 -> validate-and-record-pick",
-      "apps/web/src/pages/DraftPage.jsx:942 -> validate-and-record-pick",
+      "apps/web/src/pages/DraftPage.jsx:105 -> quote",
+      "apps/web/src/pages/DraftPage.jsx:577 -> finnhub-quote",
+      "apps/web/src/pages/DraftPage.jsx:618 -> validate-and-record-pick",
+      "apps/web/src/pages/DraftPage.jsx:835 -> validate-and-record-pick",
+      "apps/web/src/pages/DraftPage.jsx:865 -> validate-and-record-pick",
       "apps/web/src/pages/JoinLeague.jsx:25 -> preview-league",
       "apps/web/src/pages/JoinLeague.jsx:43 -> join-league"
     ],
     "rpcs": [
       "apps/mobile/app/league-settings.tsx:173 -> start_new_league_season",
-      "apps/web/src/pages/DraftPage.jsx:361 -> get_real_user_ids",
+      "apps/web/src/pages/DraftPage.jsx:360 -> get_real_user_ids",
       "supabase/functions/join-league/index.ts:31 -> check_and_bump_rate_limit",
       "supabase/functions/join-league/index.ts:34 -> check_and_bump_rate_limit",
       "supabase/functions/join-league/index.ts:76 -> join_league_by_code",
@@ -8252,8 +8440,9 @@
       "supabase/functions/send-notification/index.ts:104 -> check_and_bump_rate_limit",
       "supabase/functions/snapshot-week-end/index.ts:100 -> schedule_snapshot_retry",
       "supabase/functions/snapshot-week-start/index.ts:135 -> schedule_snapshot_retry",
-      "supabase/functions/validate-and-record-pick/index.ts:75 -> check_and_bump_rate_limit",
-      "supabase/functions/validate-and-record-pick/index.ts:78 -> check_and_bump_rate_limit"
+      "supabase/functions/validate-and-record-pick/index.ts:361 -> finalize_league_draft",
+      "supabase/functions/validate-and-record-pick/index.ts:86 -> check_and_bump_rate_limit",
+      "supabase/functions/validate-and-record-pick/index.ts:89 -> check_and_bump_rate_limit"
     ],
     "tableOps": [
       "apps/mobile/app/(tabs)/draft.tsx:119 -> league_members.select",
@@ -8331,20 +8520,17 @@
       "apps/web/src/pages/Dashboard.jsx:271 -> matchups.select",
       "apps/web/src/pages/Dashboard.jsx:76 -> league_members.select",
       "apps/web/src/pages/Dashboard.jsx:91 -> leagues.select",
-      "apps/web/src/pages/DraftPage.jsx:1183 -> leagues.update",
-      "apps/web/src/pages/DraftPage.jsx:209 -> league_draft_slots.select",
-      "apps/web/src/pages/DraftPage.jsx:274 -> league_members.select",
-      "apps/web/src/pages/DraftPage.jsx:286 -> leagues.select",
-      "apps/web/src/pages/DraftPage.jsx:327 -> leagues.select",
-      "apps/web/src/pages/DraftPage.jsx:338 -> league_members.select",
-      "apps/web/src/pages/DraftPage.jsx:384 -> drafts.select",
-      "apps/web/src/pages/DraftPage.jsx:481 -> leagues.select",
-      "apps/web/src/pages/DraftPage.jsx:495 -> drafts.select",
-      "apps/web/src/pages/DraftPage.jsx:577 -> matchups.insert",
-      "apps/web/src/pages/DraftPage.jsx:585 -> league_standings.insert",
-      "apps/web/src/pages/DraftPage.jsx:601 -> leagues.update",
-      "apps/web/src/pages/DraftPage.jsx:737 -> league_members.insert",
-      "apps/web/src/pages/DraftPage.jsx:793 -> drafts.select",
+      "apps/web/src/pages/DraftPage.jsx:1106 -> leagues.update",
+      "apps/web/src/pages/DraftPage.jsx:208 -> league_draft_slots.select",
+      "apps/web/src/pages/DraftPage.jsx:273 -> league_members.select",
+      "apps/web/src/pages/DraftPage.jsx:285 -> leagues.select",
+      "apps/web/src/pages/DraftPage.jsx:326 -> leagues.select",
+      "apps/web/src/pages/DraftPage.jsx:337 -> league_members.select",
+      "apps/web/src/pages/DraftPage.jsx:383 -> drafts.select",
+      "apps/web/src/pages/DraftPage.jsx:480 -> leagues.select",
+      "apps/web/src/pages/DraftPage.jsx:494 -> drafts.select",
+      "apps/web/src/pages/DraftPage.jsx:660 -> league_members.insert",
+      "apps/web/src/pages/DraftPage.jsx:716 -> drafts.select",
       "apps/web/src/pages/Leaderboard.jsx:177 -> league_standings.select",
       "apps/web/src/pages/Leaderboard.jsx:186 -> matchups.select",
       "apps/web/src/pages/Leaderboard.jsx:225 -> leagues.select",
@@ -8354,9 +8540,6 @@
       "apps/web/src/pages/Leaderboard.jsx:336 -> trades.select",
       "apps/web/src/pages/Leaderboard.jsx:346 -> league_standings.select",
       "apps/web/src/pages/Leaderboard.jsx:355 -> matchups.select",
-      "apps/web/src/pages/Leaderboard.jsx:449 -> matchups.insert",
-      "apps/web/src/pages/Leaderboard.jsx:464 -> league_standings.select",
-      "apps/web/src/pages/Leaderboard.jsx:472 -> league_standings.insert",
       "apps/web/src/pages/LeagueDetail.jsx:30 -> leagues.select",
       "apps/web/src/pages/LeagueDetail.jsx:45 -> league_members.select",
       "apps/web/src/pages/LeagueDetail.jsx:60 -> league_standings.select",
@@ -8452,15 +8635,14 @@
       "supabase/functions/symbols-search/index.ts:129 -> symbols.select",
       "supabase/functions/symbols-search/index.ts:140 -> symbols.select",
       "supabase/functions/symbols-search/index.ts:98 -> symbols.select",
-      "supabase/functions/validate-and-record-pick/index.ts:130 -> leagues.select",
-      "supabase/functions/validate-and-record-pick/index.ts:141 -> league_members.select",
-      "supabase/functions/validate-and-record-pick/index.ts:155 -> drafts.select",
-      "supabase/functions/validate-and-record-pick/index.ts:165 -> trades.select",
-      "supabase/functions/validate-and-record-pick/index.ts:178 -> drafts.insert",
-      "supabase/functions/validate-and-record-pick/index.ts:215 -> league_draft_slots.select",
-      "supabase/functions/validate-and-record-pick/index.ts:232 -> symbols.select",
-      "supabase/functions/validate-and-record-pick/index.ts:264 -> drafts.insert",
-      "supabase/functions/validate-and-record-pick/index.ts:310 -> leagues.update",
+      "supabase/functions/validate-and-record-pick/index.ts:141 -> leagues.select",
+      "supabase/functions/validate-and-record-pick/index.ts:152 -> league_members.select",
+      "supabase/functions/validate-and-record-pick/index.ts:166 -> drafts.select",
+      "supabase/functions/validate-and-record-pick/index.ts:189 -> trades.select",
+      "supabase/functions/validate-and-record-pick/index.ts:202 -> drafts.insert",
+      "supabase/functions/validate-and-record-pick/index.ts:239 -> league_draft_slots.select",
+      "supabase/functions/validate-and-record-pick/index.ts:256 -> symbols.select",
+      "supabase/functions/validate-and-record-pick/index.ts:288 -> drafts.insert",
       "supabase/functions/validate-and-record-pick/index.ts:6 -> drafts.insert"
     ],
     "migrations": [
@@ -8540,7 +8722,8 @@
       "20260815000000_signup_gate.sql",
       "20260816000000_leagues_allow_undraftable.sql",
       "20260925000000_leagues_member_draft_complete_column_guard.sql",
-      "20260925000001_tighten_league_standings_insert.sql"
+      "20260925000001_tighten_league_standings_insert.sql",
+      "20260926000000_finalize_league_draft_rpc.sql"
     ],
     "config": [
       "enrich-symbols=false",

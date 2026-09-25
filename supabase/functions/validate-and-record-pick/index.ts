@@ -21,7 +21,17 @@
 // Callers: the picker themself, OR any league member on behalf of a bot
 // ('bot-*' target — mirrors the "League members can create bot picks" RLS
 // policy), OR any league member skipping the CURRENT picker's turn when that
-// picker is a bot (action:'skip', the stuck-bot escape hatch).
+// picker is a bot (action:'skip', the stuck-bot escape hatch), OR any league
+// member re-running draft finalization (action:'finalize', see below).
+//
+// Draft completion: the final pick/skip FINALIZES the league — draft_status,
+// the season schedule (matchups), initial standings, league dates, num_weeks and
+// season 1 — atomically via the finalize_league_draft RPC, planned by
+// ../_shared/schedule.ts. Because the status flip is inside that transaction, a
+// failed finalize leaves the draft 'in_progress' with every pick made (never
+// 'completed' with no schedule, which nothing could repair). That state heals
+// on ANY later call for the league — pick, skip, or action:'finalize' — since
+// each re-runs the idempotent finalize before refusing with draft_complete.
 //
 // Auth: gateway verify_jwt=true + in-code getUser() (join-league pattern).
 // Writes use the service-role client, so membership is checked in-code.
@@ -29,6 +39,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { fetchFillPrice } from '../_shared/alpaca-price.ts';
 import { fetchEligibleCategoryIds } from '../_shared/category-eligibility.ts';
+import { buildFinalizeArgs, planSeason, readFinalizeResult } from '../_shared/schedule.ts';
 import {
   computeDraftOrder,
   type LeagueRules,
@@ -113,7 +124,7 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json().catch(() => ({}));
     const leagueId = String(body.league_id ?? '').trim();
-    const action = body.action === 'skip' ? 'skip' : 'pick';
+    const action = body.action === 'skip' ? 'skip' : body.action === 'finalize' ? 'finalize' : 'pick';
     const symbol = String(body.symbol ?? '').trim().toUpperCase();
     const targetId = String(body.for_user_id ?? user.id).trim();
 
@@ -128,7 +139,7 @@ Deno.serve(async (req: Request) => {
     // ---- Load league + membership (service role; membership checked here) --
     const { data: league, error: lgErr } = await admin
       .from('leagues')
-      .select('id, commissioner_id, num_rounds, draft_status, stake_mode, budget_amount, notional_per_slot, allow_undraftable')
+      .select('id, commissioner_id, num_rounds, draft_status, stake_mode, budget_amount, notional_per_slot, allow_undraftable, league_type, num_weeks, duration_days')
       .eq('id', leagueId)
       .maybeSingle();
     if (lgErr) return json({ ok: false, reason: 'unhandled' }, 500);
@@ -158,6 +169,19 @@ Deno.serve(async (req: Request) => {
       .order('pick_number', { ascending: true });
     if (pErr) return json({ ok: false, reason: 'unhandled' }, 500);
     const picks = (pickData ?? []) as PickRow[];
+
+    // ---- Every pick made but still in_progress: (re-)finalize -------------
+    // Normally unreachable (the final pick finalizes). Reached only when that
+    // finalize failed — then any call for the league retries it. Checked before
+    // pricing so a retry never spends an Alpaca call on a finished draft.
+    if (order.length > 0 && picks.length >= order.length * numRounds) {
+      const finalizeError = await finalizeDraft(admin, league, memberIds);
+      if (action === 'finalize') {
+        return json({ ok: finalizeError === null, draft_complete: true, status_update_error: finalizeError });
+      }
+      return json({ ok: false, reason: 'draft_complete', status_update_error: finalizeError }); // 200: game-flow refusal
+    }
+    if (action === 'finalize') return json({ ok: false, reason: 'draft_not_complete' }); // 200: game-flow refusal
 
     // Trades should not exist mid-draft, but the ownership check must not
     // assume that — a re-drafting league could carry ledger history.
@@ -197,7 +221,7 @@ Deno.serve(async (req: Request) => {
         return json({ ok: false, reason: 'unhandled' }, 500);
       }
       const complete = decision.pickNumber >= order.length * numRounds;
-      const statusError = complete ? await markDraftComplete(admin, leagueId) : null;
+      const statusError = complete ? await finalizeDraft(admin, league, memberIds) : null;
       return json({ ok: true, pick: inserted, draft_complete: complete, status_update_error: statusError });
     }
 
@@ -286,7 +310,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const complete = decision.pickNumber >= order.length * numRounds;
-    const statusError = complete ? await markDraftComplete(admin, leagueId) : null;
+    const statusError = complete ? await finalizeDraft(admin, league, memberIds) : null;
     return json({
       ok: true,
       pick: inserted,
@@ -299,16 +323,49 @@ Deno.serve(async (req: Request) => {
   }
 });
 
-// Destructure-and-check per CLAUDE.md: .update() resolving is NOT success.
-// Returns an error string (surfaced to the caller) or null.
-async function markDraftComplete(
+const FINALIZE_ATTEMPTS = 3;
+
+// Plan the season and write it (plus the draft_status flip) in one RPC
+// transaction. Returns an error string (surfaced to the caller as
+// status_update_error) or null on success.
+//
+// Destructure-and-check per CLAUDE.md: .rpc() does NOT throw on a Postgres
+// error, and a resolved call can still be a refusal — readFinalizeResult checks
+// both. Transport/SQL errors are retried in-request (the RPC is idempotent, so
+// a retry after a lost response reads 'already_finalized'); refusals are not,
+// since the same inputs would be refused again — they need a human, and the
+// stuck-draft detector in docs/STATUS.md §7 surfaces them.
+async function finalizeDraft(
   // deno-lint-ignore no-explicit-any
   admin: any,
-  leagueId: string,
+  // deno-lint-ignore no-explicit-any
+  league: any,
+  memberIds: string[],
 ): Promise<string | null> {
-  const { error } = await admin
-    .from('leagues')
-    .update({ draft_status: 'completed' })
-    .eq('id', leagueId);
-  return error ? 'draft_status_update_failed' : null;
+  const plan = planSeason({
+    leagueType: String(league.league_type ?? 'duration'),
+    commissionerId: league.commissioner_id == null ? null : String(league.commissioner_id),
+    memberIds,
+    numWeeks: league.num_weeks == null ? null : Number(league.num_weeks),
+    durationDays: league.duration_days == null ? null : Number(league.duration_days),
+    now: new Date(),
+  });
+  if (!plan.ok) {
+    console.error('finalize: plan refused', league.id, plan.reason);
+    return `schedule_plan_refused:${plan.reason}`;
+  }
+
+  const args = buildFinalizeArgs(String(league.id), plan);
+  let lastError = 'finalize_rpc_error';
+  for (let attempt = 1; attempt <= FINALIZE_ATTEMPTS; attempt++) {
+    const { data, error } = await admin.rpc('finalize_league_draft', args);
+    const outcome = readFinalizeResult({ data, error });
+    if (outcome.ok) return null;
+    // Log the SQL error server-side only; the client gets the stable code.
+    console.error('finalize: attempt', attempt, league.id, outcome.error, error ? JSON.stringify(error) : '');
+    lastError = outcome.error;
+    if (!outcome.retryable) break;
+    if (attempt < FINALIZE_ATTEMPTS) await new Promise((r) => setTimeout(r, 250 * attempt));
+  }
+  return lastError;
 }

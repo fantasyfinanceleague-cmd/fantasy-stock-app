@@ -19,7 +19,8 @@ snapshot → scoring pipeline, RLS hardening and the API-key migration are all o
 `main`, and **every migration on `main` is applied in prod**. The web app is deployed
 but paused to a landing page; mobile is the real product surface. **The top blocker
 is that a league drafted on mobile never gets a season schedule** (§4, defect 1) — the
-schedule is generated only by the paused web client. No league has completed a draft
+schedule is generated only by the paused web client (fix authored on
+`feat/server-schedule-generation`, unmerged). No league has completed a draft
 in prod since the Phase 3 server-side draft path shipped, so that path has never run
 end-to-end in prod.
 
@@ -63,7 +64,7 @@ end-to-end in prod.
 | `quote`, `ticker-quotes`, `historical-bars`, `finnhub-quote` | JWT (`ticker-quotes`: none — see `config.toml`) | Market data on Stockpile's own Alpaca/Finnhub keys |
 | `symbols-search`, `symbol-name` | JWT | Symbol lookup (run as anon — `symbols` SELECT policy is deliberately public) |
 | `preview-league`, `join-league` | JWT | Join-by-code, atomic via `join_league_by_code` |
-| `refresh-symbols` | cron apikey, `verify_jwt` off. **Prod runs PR #9's `2dd699f`**; `main` still says JWT (§4 defect 4) | Symbol universe refresh |
+| `refresh-symbols` | cron apikey, `verify_jwt` off. **Prod runs PR #9's `2dd699f`**; `main` matches since `5e3b5d1` (reconciliation redeploy pending, §4 defect 4) | Symbol universe refresh |
 | `enrich-symbols` | cron apikey | Sector/industry + draftable flag |
 | `snapshot-week-start`, `snapshot-week-end`, `process-week-results` | cron apikey (constant-time, fail-closed) | Weekly pipeline |
 
@@ -86,7 +87,7 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
 | Supabase API-key migration | Phases 0–3b done. Phase 4 (disable legacy keys — one-way door) **not started**, gated on a real mobile trade + real mobile draft. Phase 5 cleanup open. | `docs/migrations/MIGRATION_STATUS.md` |
 | RLS hardening | B1 + preview/join wave done. Interim write policies `[I1]–[I6]`, `[I8]`, `[I9]` remain until create-league / draft-control / leave-league / delete-league / schedule-gen move server-side. | `docs/migrations/RLS_HARDENING_SPEC.md` |
 | In-house simulator (DR-001) | Phases 0–4 **done, merged, applied**: schema, server-side pick/trade validation, stake modes, slots, categories + seed, enrichment cron, `is_draftable` enforcement + commissioner override, league-setup and draft UI. | `docs/decisions/DR-001-in-house-simulated-trading.md`, `docs/migrations/SIMULATOR_MIGRATION_SPEC.md` |
-| Security scan 2026-07-30 (13 findings) | PR #9 (`security/claude-security-fixes-20260730`) — **unmerged, deploy-ready in code**; re-merged with `main` @ `2be4638` on 2026-09-24, reviewer passes clean (no CRITICAL/HIGH). Fixes F1–F3, F5, F6, F7, F9, F11, F13. **F5 + F9 are already LIVE in prod** (deployed from `2dd699f`; `main` is the stale side, see §4 defect 4). Migrations re-timed to `20260925000000`/`…01` (the July timestamps were older than prod's latest and `db push` would refuse them). Needs: push → merge → deploy 3 functions + `db push` from `/Users/giorgio/fantasy-stock-deploy` @ the merge commit → **EAS build 1.1.0** (new native module `expo-crypto`; **not OTA-able** to 1.0.0). Open: **F8** (push tokens; now also waits for 1.0.0 binaries to drain), **F10** (schedule forgery, being closed by server-side schedule gen). F12 superseded by `main`. | `docs/security/DEPLOY-RUNBOOK.md` (ordered), `docs/security/REMAINING-SECURITY-WORK.md` on the PR branch |
+| Security scan 2026-07-30 (13 findings) | PR #9 (`security/claude-security-fixes-20260730`) — **merged as `5e3b5d1` (2026-09-25); deploy in progress** per the runbook. Reviewer passes were clean (no CRITICAL/HIGH). Fixes F1–F3, F5, F6, F7, F9, F11, F13. **F5 + F9 are already LIVE in prod** (deployed from `2dd699f`; `main` matches since the merge, see §4 defect 4). Migrations re-timed to `20260925000000`/`…01` (the July timestamps were older than prod's latest and `db push` would refuse them). Remaining: deploy 3 functions + `db push` from `/Users/giorgio/fantasy-stock-deploy` @ `5e3b5d1` → **EAS build 1.1.0** (new native module `expo-crypto`; **not OTA-able** to 1.0.0). Open: **F8** (push tokens; now also waits for 1.0.0 binaries to drain), **F10** (schedule forgery; closed by `feat/server-schedule-generation` + its deferred policy drop, §4 defects 1–2). F12 superseded by `main`. | `docs/security/DEPLOY-RUNBOOK.md` (ordered), `docs/security/REMAINING-SECURITY-WORK.md` |
 | Mobile design-system pass | Branch `ui/design-system-pass-v2` (9 commits, 2 behind `main`) — **unmerged**, awaiting an Expo Go visual check. | memory / branch log |
 | Signup gate | Applied; hook toggle unverified (§2). Opening signups = one `UPDATE app_config`. | `supabase/migrations/20260815000000_signup_gate.sql` |
 | Architecture map | Generator + viewer live. Regenerate after any backend/call-site change. | `docs/architecture/`, `CLAUDE.md` |
@@ -95,22 +96,42 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
 
 ## 4. Open defects (ordered by launch impact)
 
-1. **CRITICAL — mobile-drafted leagues never get a season.** `matchups`, initial
-   `league_standings`, and `league_start_date`/`league_end_date` are written only by
-   the web client (`apps/web/src/pages/DraftPage.jsx` `completeDraft`, and the
-   `Leaderboard.jsx` "auto-generate if missing" effect). Mobile writes none of them;
-   the server's `markDraftComplete` in `validate-and-record-pick` only flips
-   `draft_status`. Every weekly job selects from `matchups`, so such a league is never
-   snapshotted or scored. The web path is also racy: the server now marks the draft
-   complete, and a realtime update can set the local status to `completed` before
-   `completeDraft` runs, which then skips schedule generation.
-   **Fix:** a server-side `generate_league_schedule` (SECURITY DEFINER RPC, idempotent,
-   pinned `search_path`) called from `markDraftComplete`; covers playoffs + standings
-   init; then drop `matchups_insert_members`. This is the same work as **F10** /
-   RLS `[I8]`/`[I9]`. Needs one product decision: canonical roster ordering
-   (recommended: `DraftPage`'s commissioner-first + sorted, matching the server's
-   draft order).
-2. **F10 — any league member can insert arbitrary matchups.** Closed by the fix above.
+1. **CRITICAL — mobile-drafted leagues never get a season.** FIX AUTHORED on
+   `feat/server-schedule-generation`, **NOT applied or deployed**. Until then, prod
+   behaves as described here. `matchups`, initial `league_standings`, and
+   `league_start_date`/`league_end_date` were written only by the web client
+   (`DraftPage` `completeDraft` and the `Leaderboard` auto-generate effect). The
+   server's `markDraftComplete` only flipped `draft_status`, so a mobile-drafted league
+   was never snapshotted or scored.
+   **Fix (on the branch):** the planning lives in `supabase/functions/_shared/schedule.ts`
+   (pure, golden-tested against the web generator; roster order = `computeDraftOrder`).
+   Writing is done by `finalize_league_draft` (migration `20260926000000`: SECURITY
+   DEFINER, `service_role`-only, validates the payload). In one transaction it writes
+   matchups, standings, dates, `num_weeks`, season 1 and the `draft_status` flip.
+   `validate-and-record-pick` calls it on the final pick. On failure the draft stays
+   `in_progress`, and any later pick, skip or `action:'finalize'` retries (detector:
+   §7). The web writers are removed. Playoffs were already server-side
+   (`process-week-results` `generatePlayoffs`); nothing moved there.
+   **Apply order:** migration → deploy `validate-and-record-pick` → effect-verify with a
+   test league → only then the deferred `[I8]`/`[I9]` drop
+   (`supabase/migrations/deferred/README.md`).
+   **Where to run (after the merge to `main`):** only from the deploy checkout
+   `/Users/giorgio/fantasy-stock-deploy`, never from `/Users/giorgio/fantasy-stock`.
+   - *Prerequisite:* the checkout is linked (PR #9 runbook step 4, one-time
+     `supabase link`). `cat supabase/.temp/project-ref` must print
+     `haiaaifjcclsvmkfqgmd`. `db push` has no `--project-ref` flag and pushes to the
+     linked project.
+   - Refresh:
+     `git -C /Users/giorgio/fantasy-stock-deploy fetch origin && git -C /Users/giorgio/fantasy-stock-deploy checkout --detach origin/main`.
+   - `supabase db push --dry-run`, then `supabase db push`.
+   - Content check before deploying. A single-file function looks the same in the
+     upload list whether it is stale or fresh, so check the file itself:
+     `grep -c finalize_league_draft supabase/functions/validate-and-record-pick/index.ts`
+     must be ≥ 1.
+   - `supabase functions deploy validate-and-record-pick --project-ref haiaaifjcclsvmkfqgmd`.
+2. **F10 — any league member can insert arbitrary matchups.** Closed by the deferred
+   `20260926000001` policy drop. It is held until defect 1's fix is deployed and
+   effect-verified.
 3. **`process-week-results` strands `cron_job_status` at `running`** on its two
    early returns (`index.ts:914` query error, `:919` no pending matchups), so the job's
    health signal could not distinguish healthy from broken.
@@ -136,13 +157,11 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
    - `supabase functions download` shows both functions deployed from PR #9's original
      commit `2dd699f` (F5 guard, F9 date validation) on an unknown date after 2026-07-30.
 
-   So **F5 and F9 are LIVE**. `main`'s code and `config.toml` (`verify_jwt = true`, no
-   guard) are the stale side. **Regression hazard until PR #9 merges:** deploying either
-   function from `main` would drop F5/F9 and re-enable `verify_jwt`, making the refresh
-   cron 401 for real. That includes a bare `supabase functions deploy`, which deploys
-   every function. Merging PR #9 removes the hazard; runbook step 5 then redeploys both
-   as a reconciliation and proves prod == the merge commit by download. Close this entry
-   when that proof passes.
+   So **F5 and F9 are LIVE**. **PR #9 merged as `5e3b5d1` (2026-09-25),** so `main` now
+   carries F5/F9 and its `config.toml`. Deploying these functions from a checkout at or
+   after `5e3b5d1` is no longer a regression; deploying from an older checkout still
+   would be. Runbook step 5 redeploys both as a reconciliation and proves prod equals
+   the merge commit by download. Close this entry when that proof passes.
 5. **F8 — Expo push tokens are readable by every authenticated user** (and broadcast
    over Realtime) via `user_profiles.expo_push_token`. Staged fix:
    `docs/migrations/STAGED_L2_push_token_capability.sql`. Apply only after PR #9's
@@ -153,7 +172,27 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
 6. **`record-trade` concurrent-buy race** — documented in code (`index.ts:229`);
    needs an atomic SECURITY DEFINER RPC (the `join_league_by_code` pattern).
 7. **No leave-league flow on mobile** (web has one).
-8. **Hygiene:** revoked Alpaca pair still stored as Supabase secrets
+8. **Season 2+ never gets a schedule.** `start_new_league_season` deletes matchups,
+   and nothing regenerates them. Mobile calls it from `league-settings.tsx`; the only
+   regenerator was the web Leaderboard effect, now removed (it was paused anyway).
+   Follow-up: route "start new season" through an edge function that reuses
+   `_shared/schedule.ts` and `finalize_league_draft`. The RPC already handles the
+   post-reset state: zero regular-season matchups gives a fresh schedule and new
+   dates.
+9. **No `league_seasons` row for any league created after 2026-01-25.** Only the
+   one-off backfill and `start_new_league_season` insert seasons, so
+   `complete_league_season` raises 'League has no active season' at the end of every
+   newer league's season. `process-week-results` only logs it, and the league sticks
+   in `playoffs`. Fixed by the same migration `20260926000000`: `finalize_league_draft`
+   creates season 1, plus a one-time backfill for completed leagues. NOT yet applied.
+10. **Mobile draft screen needs a finalize/heal trigger** (mobile release scope). If
+   the draft is fully picked but `draft_status` is still `in_progress`, call
+   `validate-and-record-pick` with `{ league_id, action: 'finalize' }`. Surface
+   `status_update_error` instead of showing "Draft Complete!". Today nobody has a
+   turn once every pick is made, so the screen has no control that reaches the
+   server's heal path. The pick response also still says `draft_complete: true`
+   when finalize failed.
+11. **Hygiene:** revoked Alpaca pair still stored as Supabase secrets
    `ALPACA_KEY_ID`/`ALPACA_SECRET_KEY` (no readers) and in local `.env.local`;
    `.gitleaks.toml` allowlists all of `^\.claude/` by directory (hid that leak once) —
    narrow it to specific files.
@@ -165,14 +204,23 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
 1. Confirm the signup-gate dashboard hook (§2).
 2. Confirm which mobile build testers are on; anything pre-Phase-4 must update
    (salary-cap column drop, §2).
-3. **Server-side schedule generation** (§4 defect 1) — the top engineering item.
-4. Ship PR #9 per `docs/security/DEPLOY-RUNBOOK.md`: merge; then, from
-   `/Users/giorgio/fantasy-stock-deploy` at the merge commit, deploy `historical-bars` +
-   `refresh-symbols` (reconciliation, already live) and `send-notification` (new), and `db push` (`20260925000000`/`…01`);
-   effect-verify. Its mobile half rides the step-7 EAS build (1.1.0).
-5. Stranded `running` status (§4 defect 3) — PR #12 merged; `process-week-results` deployed
-   2026-09-25 from `/Users/giorgio/fantasy-stock-deploy` @ `a324395`. Only the effect check
-   is pending: `cron_job_status` must show a terminal status after Friday's 21:15 UTC run.
+3. **Server-side schedule generation** (§4 defect 1). Authored on
+   `feat/server-schedule-generation` (includes `main` @ `5e3b5d1`); it needs merge,
+   migration, deploy, and a test-league effect check.
+4. Ship PR #9 per `docs/security/DEPLOY-RUNBOOK.md`. **Merged as `5e3b5d1`; the deploy
+   steps are in progress** (the runbook records which have run). From
+   `/Users/giorgio/fantasy-stock-deploy` at the merge commit:
+   - deploy `historical-bars` + `refresh-symbols` (a reconciliation; they are already
+     live)
+   - deploy `send-notification` (new)
+   - `db push` (`20260925000000`/`…01`)
+   - effect-verify.
+
+   Its mobile half rides the step-7 EAS build (1.1.0).
+5. Stranded `running` status (§4 defect 3). PR #12 merged; `process-week-results`
+   deployed 2026-09-25 from `/Users/giorgio/fantasy-stock-deploy` @ `a324395`. Only the
+   effect check is pending: `cron_job_status` must show a terminal status after
+   Friday's 21:15 UTC run.
 6. **One end-to-end test league in prod**: create → mobile draft → Monday snapshot →
    Friday scoring → week 2. This also clears both API-key Phase 4 gates.
 7. Mobile release (EAS production build), merged with the design-system branch if it
@@ -187,7 +235,8 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
 | Branch | State |
 |---|---|
 | `main` | Deployed to Vercel prod. |
-| `security/claude-security-fixes-20260730` | PR #9, unmerged, 0 behind `main` @ `2be4638` (local merge 2026-09-24; **push pending**). GitGuardian check fails on the known anon-key false positive. |
+| `security/claude-security-fixes-20260730` | PR #9, **merged as `5e3b5d1`** (2026-09-25). Deploy per `docs/security/DEPLOY-RUNBOOK.md` in progress. |
+| `feat/server-schedule-generation` | §4 defects 1, 2 (deferred drop), 9: schedule module, `finalize_league_draft` migration, pick-function wiring, web writers removed. Includes `main` @ `5e3b5d1`. Unmerged; migration unapplied, function undeployed. |
 | `ui/design-system-pass-v2` | Unmerged, awaiting visual check. Checked out in the main checkout. |
 | `ui/design-system-pass`, `item4-fix-refresh-symbols-cron` | Superseded (backup / folded into `main` + PR #9). Safe to delete once confirmed. |
 | ~20 others (`simulator-core`, `phase4-*`, `item*`, `signup-ux-password`, …) | Fully merged into `main` (0 commits ahead) — safe to delete with `git branch -d`. |
@@ -208,6 +257,25 @@ SELECT version FROM supabase_migrations.schema_migrations ORDER BY version DESC 
 SELECT l.id, l.name, l.league_start_date,
        (SELECT count(*) FROM matchups m WHERE m.league_id = l.id) AS n_matchups
 FROM leagues l WHERE l.league_type = 'matchup' AND l.draft_status = 'completed';
+```
+```sql
+-- Stuck draft finalization (every pick made, still in_progress) — should be empty.
+-- Non-empty = finalize_league_draft failed/refused and nobody retried; read the
+-- validate-and-record-pick logs ('finalize: attempt') for the refusal reason.
+SELECT l.id, l.name, l.league_type,
+       (SELECT count(*) FROM drafts d WHERE d.league_id = l.id)         AS picks,
+       (SELECT count(*) FROM league_members m WHERE m.league_id = l.id) AS members,
+       l.num_rounds
+FROM leagues l
+WHERE l.draft_status = 'in_progress'
+  AND (SELECT count(*) FROM drafts d WHERE d.league_id = l.id) > 0
+  AND (SELECT count(*) FROM drafts d WHERE d.league_id = l.id)
+      >= (SELECT count(*) FROM league_members m WHERE m.league_id = l.id) * l.num_rounds;
+```
+```sql
+-- finalize_league_draft grants — expect service_role (+ postgres) only
+SELECT proname, proacl FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname = 'public' AND proname = 'finalize_league_draft';
 ```
 ```sql
 -- Live cron jobs

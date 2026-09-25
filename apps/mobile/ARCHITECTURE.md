@@ -117,7 +117,7 @@ in Phase 3. All game-state writes that need validation go through edge functions
 
 | Action | Path |
 |---|---|
-| Draft pick | `validate-and-record-pick` (turn, uniqueness, draftable universe, slot category/price, stake budget; marks the draft complete on the final pick) |
+| Draft pick | `validate-and-record-pick` (turn, uniqueness, draftable universe, slot category/price, stake budget; on the final pick **finalizes the league** — status, season schedule, standings, dates, season 1 — via the `finalize_league_draft` RPC) |
 | Buy / sell | `record-trade` via `TradeModal` |
 | Join league | `preview-league` → `join-league` |
 | Prices / search / names / history | `quote`, `ticker-quotes`, `symbols-search`, `symbol-name`, `historical-bars` |
@@ -127,9 +127,20 @@ Direct table writes that remain: league create/update and slot definitions
 (`leagues`, `league_draft_slots`), profile fields (`user_profiles`), and push-token
 registration.
 
-> **Known gap:** mobile never generates the season schedule (`matchups`,
-> initial `league_standings`, league start/end dates) when a draft completes — only
-> the web client does. See `docs/STATUS.md` §4 defect 1.
+> **Season schedule is server-side** (branch `feat/server-schedule-generation`; live
+> only once its migration is applied and `validate-and-record-pick` deployed — check
+> `docs/STATUS.md` §4). The final pick writes `matchups`, initial `league_standings`,
+> league start/end dates, `num_weeks` and season 1 atomically. Mobile writes none of
+> these and must not start to: the client INSERT policies are scheduled for removal
+> (F10).
+>
+> **Known gaps:**
+> - **Heal hook.** If finalization fails, the draft stays `in_progress` with every
+>   pick made. No one has a turn then, so `draft.tsx` shows no control that retries.
+>   Follow-up: when `draft_status === 'in_progress'` and every pick is made, call
+>   `validate-and-record-pick` with `{ league_id, action: 'finalize' }`.
+> - **Season 2+.** `start_new_league_season` deletes the matchups, and nothing
+>   regenerates them (`docs/STATUS.md` §4).
 
 ### Realtime
 - `draft.tsx` subscribes to `drafts:<leagueId>` for live picks.

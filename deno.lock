@@ -5,6 +5,7 @@
     "jsr:@std/internal@^1.0.12": "1.0.14",
     "jsr:@supabase/functions-js@*": "2.111.0",
     "jsr:@supabase/supabase-js@2": "2.111.0",
+    "npm:@electric-sql/pglite@0.2": "0.2.17",
     "npm:@eslint/js@^9.30.1": "9.39.5",
     "npm:@hcaptcha/react-hcaptcha@^1.14.0": "1.17.4_react@19.2.8_react-dom@19.2.8__react@19.2.8",
     "npm:@supabase/auth-js@2.111.0": "2.111.0",
@@ -202,6 +203,9 @@
         "@babel/helper-string-parser",
         "@babel/helper-validator-identifier"
       ]
+    },
+    "@electric-sql/pglite@0.2.17": {
+      "integrity": "sha512-qEpKRT2oUaWDH6tjRxLHjdzMqRUGYDnGZlKrnL4dJ77JVMcP2Hpo3NYnOSPKdZdeec57B6QPprCUFg0picx5Pw=="
     },
     "@esbuild/aix-ppc64@0.28.1": {
       "integrity": "sha512-Svl7tq8k/08+p6CXPpRjQ1fKX+1odH/BQbb48fV6fj3CWHhsoIOoY87w1oHXm0qEpkIK3ZfVgp0hed3XBXzXMQ==",

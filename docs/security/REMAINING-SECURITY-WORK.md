@@ -125,6 +125,25 @@ forwarded user JWT is unconstrained. A SECURITY DEFINER RPC invoked with a membe
 may change only `draft_status` plus a NULL→value date stamp (use
 `COALESCE(col, computed)`); any other column raises 42501.
 
+**As built on `feat/server-schedule-generation`.** This supersedes the build spec
+below where they differ; the spec is kept for history.
+- *Canonical roster (spec 1):* commissioner first, then the rest sorted ascending
+  (`computeDraftOrder`, the server's draft order). Both web generators are removed.
+- *Server path (spec 2):* planning lives in `supabase/functions/_shared/schedule.ts`.
+  Writing is done by `finalize_league_draft` (migration `20260926000000`), called by
+  `validate-and-record-pick` on the final pick.
+  - The RPC is **granted to `service_role` ONLY, not `authenticated`.** It also
+    writes `current_season_id` and `num_weeks`, which the F1 trigger rejects under a
+    member JWT (42501). The PGlite test in `supabase/tests/` proves both sides.
+  - The RPC validates the payload: members only, contiguous weeks, and every member
+    exactly once per week.
+- *Standings (spec 3):* standings init is in the same transaction. The playoff
+  bracket needed no move: `process-week-results` `generatePlayoffs` was already
+  server-side, and the web `generatePlayoffBracket` was dead code.
+- *Policy drop (spec 4):* `supabase/migrations/deferred/20260926000001` drops
+  `matchups_insert_members` and `league_standings_insert_members` (which retires F6's
+  interim policy). It is held until the function is deployed and effect-verified.
+
 **Build spec (architectural):**
 1. Pick a **single canonical roster + ordering** and collapse the two client generators
    (`DraftPage.jsx` and `Leaderboard.jsx`) onto it. *(Product decision — which behavior
