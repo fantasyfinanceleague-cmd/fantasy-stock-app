@@ -2,6 +2,39 @@
 -- COLUMN-SCOPE the member draft-completion UPDATE path on `leagues`
 -- Closes F1 (HIGH) + F11 (MEDIUM)
 -- ============================================================================
+-- RE-TIMED 2026-09-24: authored as 20260730000000. Renamed (body unchanged)
+-- because prod's latest applied migration is 20260816000000 and `db push`
+-- refuses a pending local migration older than the remote's latest.
+--
+-- RE-VALIDATED 2026-09-24 against main @ 2be4638 (supersedes the line refs
+-- in the original notes below where they conflict):
+--   * Columns added since July (stake_mode, notional_per_slot — 20260810000002;
+--     allow_undraftable — 20260816000000; salary_cap_limit DROPPED —
+--     20260811000009) need no change: the guard compares the WHOLE row, so a
+--     non-commissioner member cannot touch any of them.
+--   * No other trigger exists on leagues (the budget_mode mirror trigger was
+--     dropped in 20260811000001) and there is no updated_at column, so no
+--     BEFORE-trigger ordering interaction.
+--   * Mobile no longer writes draft_status at all. The authoritative completion
+--     is now validate-and-record-pick's markDraftComplete, which uses an admin
+--     client built from the secret key with NO forwarded user Authorization, so
+--     auth.uid() IS NULL there and this guard is a no-op (branch 1 below).
+--   * The web DraftPage.jsx completeDraft three-column UPDATE is still the
+--     carve-out case (draft_status + first-time date stamp).
+--   * start_new_league_season (definer, commissioner-gated in-function since
+--     20260718000000) hits branch 2 (commissioner) and keeps full rights.
+--   * CONTRACT for server-side schedule generation / any future writer:
+--       - service-role client (no forwarded user JWT): unconstrained.
+--       - SECURITY DEFINER RPC invoked with a MEMBER's JWT: auth.uid() is the
+--         caller (definer does not change it), so it is constrained exactly
+--         like a direct member UPDATE — only draft_status plus a NULL->value
+--         stamp of league_start_date / league_end_date. Write dates as
+--         COALESCE(col, computed) to stay idempotent; touching any other
+--         column raises 42501 and aborts the whole RPC.
+--       - A future BEFORE UPDATE trigger that sets a column (e.g. updated_at)
+--         must sort AFTER "trg_leagues_member_update_columns" or this guard
+--         will see its change and reject every member update.
+-- ============================================================================
 -- ROOT CAUSE (both findings, one policy):
 --   RLS policy "leagues_update_member_draft_complete" (20260712000001) lets ANY
 --   member run the in_progress -> completed UPDATE:

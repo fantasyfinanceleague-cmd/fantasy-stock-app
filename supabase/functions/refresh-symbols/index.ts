@@ -25,7 +25,7 @@ const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { 'Content-Type': 'application/json', ...getCorsHeaders() } });
 
 // ── apikey auth (mirrors the cron/operator functions: snapshot-week-start,
-// snapshot-week-end, process-week-results, sync-alpaca-orders) ────────────────
+// snapshot-week-end, process-week-results, enrich-symbols) ────────────────
 // Constant-time compare to avoid leaking the expected key via timing.
 function constantTimeEqual(a: string, b: string): boolean {
   const aBytes = new TextEncoder().encode(a);

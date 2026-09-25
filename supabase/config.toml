@@ -38,7 +38,7 @@ verify_jwt = false
 # user to rewrite the global catalog and hammer outbound nasdaqtrader.com fetches.
 # Flipped to verify_jwt=false and gated in-code on the SB_SECRET_KEY_CRON apikey
 # header (constant-time, fail-closed) — the same operator credential the cron
-# functions use (snapshot-week-start/-end, process-week-results, sync-alpaca-orders).
+# functions use (snapshot-week-start/-end, process-week-results, enrich-symbols).
 # No client invokes this function (confirmed: zero call sites in apps/web|mobile).
 # MERGE NOTE (2026-09-01): main's 20260811000000 (APPLIED in prod) already
 # rescheduled refresh_symbols_daily to send the vault cron_apikey header — but it

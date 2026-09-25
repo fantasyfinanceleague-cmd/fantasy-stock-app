@@ -2,74 +2,38 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "b13b4f94f10f1dababf4460d6756d9dd798eb2a0",
-    "commitShort": "b13b4f9",
+    "commit": "e1dcb042fb1ece62c05cf6a23d5d0260a4344375",
+    "commitShort": "e1dcb04",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "security/claude-security-fixes-20260730",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/ARCHITECTURE.md"
-      },
-      {
-        "code": "D",
-        "path": "apps/web/.pre-commit-config.yaml"
-      },
-      {
-        "code": "D",
-        "path": "apps/web/docs/Christmas UI Improvements.md"
-      },
-      {
-        "code": "D",
-        "path": "apps/web/docs/FEATURE_ROADMAP.md"
-      },
-      {
-        "code": "D",
-        "path": "apps/web/docs/github issues 12-25.md"
-      },
-      {
-        "code": "D",
-        "path": "apps/web/docs/League Duration Implementation.md"
-      },
-      {
-        "code": "D",
-        "path": "apps/web/docs/screenshots/Dashboard_Capture.jpg"
-      },
-      {
-        "code": "D",
-        "path": "apps/web/docs/screenshots/LogIn_Capture.jpg"
-      },
-      {
-        "code": "D",
-        "path": "apps/web/docs/SECURITY.md"
-      },
-      {
-        "code": "D",
-        "path": "apps/web/main"
+        "path": "supabase/config.toml"
       },
       {
         "code": "M",
-        "path": "docs/architecture/annotations.json"
+        "path": "supabase/functions/refresh-symbols/index.ts"
       },
       {
-        "code": "M",
-        "path": "scripts/gen-architecture.mjs"
+        "code": "RM",
+        "path": "supabase/migrations/20260925000000_leagues_member_draft_complete_column_guard.sql"
       },
       {
-        "code": "M",
-        "path": "supabase/migrations/deferred/README.md"
+        "code": "RM",
+        "path": "supabase/migrations/20260925000001_tighten_league_standings_insert.sql"
       }
     ],
-    "timestamp": "2026-09-24T23:59:54Z",
-    "sourceHash": "sha256:19069e9f29459c6adb812bcc8e9e18a8438e4e189ea9e43afaeac231cfbc019d",
+    "timestamp": "2026-09-25T00:02:29Z",
+    "sourceHash": "sha256:f05daf58ec4f263db06549d95ee6216b39158118e74d1bff447065e6f492768b",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1051.1,
+    "ageHours": 1051.2,
     "ageDays": 43.8,
     "staleAfterDays": 14,
     "stale": true,
@@ -1001,9 +965,9 @@
       "db": null,
       "declared": {
         "definedIn": [
-          "supabase/migrations/20260730000000_leagues_member_draft_complete_column_guard.sql:75"
+          "supabase/migrations/20260925000000_leagues_member_draft_complete_column_guard.sql:108"
         ],
-        "latestDefinition": "supabase/migrations/20260730000000_leagues_member_draft_complete_column_guard.sql",
+        "latestDefinition": "supabase/migrations/20260925000000_leagues_member_draft_complete_column_guard.sql",
         "redefinitions": 1
       },
       "drift": [
@@ -1022,8 +986,8 @@
       "sublabel": "not in snapshot",
       "kind": "pg-function",
       "source": {
-        "path": "supabase/migrations/20260730000000_leagues_member_draft_complete_column_guard.sql",
-        "line": 75
+        "path": "supabase/migrations/20260925000000_leagues_member_draft_complete_column_guard.sql",
+        "line": 108
       }
     },
     {
@@ -5285,7 +5249,7 @@
       "payload": "trigger on leagues",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20260730000000_leagues_member_draft_complete_column_guard.sql:122"
+        "supabase/migrations/20260925000000_leagues_member_draft_complete_column_guard.sql:155"
       ]
     },
     {
@@ -8145,13 +8109,13 @@
   ],
   "unverified": [
     {
-      "scope": "pg.enforce_leagues_member_update_columns",
+      "scope": "pg.restrict_new_signups",
       "claim": "function exists in prod",
       "reason": "Present in migrations, absent from db-snapshot.json.",
       "resolve": "Re-capture the snapshot, or confirm the migration was applied."
     },
     {
-      "scope": "pg.restrict_new_signups",
+      "scope": "pg.enforce_leagues_member_update_columns",
       "claim": "function exists in prod",
       "reason": "Present in migrations, absent from db-snapshot.json.",
       "resolve": "Re-capture the snapshot, or confirm the migration was applied."
@@ -8528,8 +8492,6 @@
       "20260727100000_week_snapshots_entered_mid_week.sql",
       "20260728000000_drop_notification_log.sql",
       "20260728000001_gate_user_profiles_to_authenticated.sql",
-      "20260730000000_leagues_member_draft_complete_column_guard.sql",
-      "20260730000001_tighten_league_standings_insert.sql",
       "20260808000000_unschedule_sync_alpaca_orders_cron.sql",
       "20260808000001_drop_broker_credentials.sql",
       "20260810000000_widen_draft_trade_quantity_numeric.sql",
@@ -8552,7 +8514,9 @@
       "20260811000008_schedule_enrich_symbols.sql",
       "20260811000009_drop_leagues_salary_cap_limit.sql",
       "20260815000000_signup_gate.sql",
-      "20260816000000_leagues_allow_undraftable.sql"
+      "20260816000000_leagues_allow_undraftable.sql",
+      "20260925000000_leagues_member_draft_complete_column_guard.sql",
+      "20260925000001_tighten_league_standings_insert.sql"
     ],
     "config": [
       "enrich-symbols=false",

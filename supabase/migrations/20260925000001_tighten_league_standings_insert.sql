@@ -2,6 +2,14 @@
 -- SECURITY FIX (F6, MEDIUM): bound the interim league_standings INSERT policy
 -- to INITIAL (zero) score values.
 -- ============================================================================
+-- RE-TIMED 2026-09-24: authored as 20260730000001; renamed (body unchanged)
+-- because `db push` refuses a pending migration older than prod's latest
+-- applied (20260816000000). Re-validated against main @ 2be4638: no
+-- league_standings schema or policy change since 20260712000005; the only
+-- client INSERT is still apps/web generateInitialStandings (all-zero rows;
+-- mobile never inserts standings). A service-role schedule generator bypasses
+-- RLS and is unaffected by this policy.
+-- ============================================================================
 -- FINDING
 -- The interim [I9] INSERT policy `league_standings_insert_members` (created in
 -- 20260712000005_rls_b1_05_league_standings.sql) has only:
