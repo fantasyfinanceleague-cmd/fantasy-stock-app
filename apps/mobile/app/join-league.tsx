@@ -36,6 +36,7 @@ const REASON_MSG: Record<string, string> = {
   league_full:      'This league is full',
   invite_expired:   'This invite has already been used or expired',
   season_completed: "This league's season has ended",
+  draft_started:    "This league's draft has already started",
   invalid_code:     'Invalid invite code. Please check and try again.',
 };
 
@@ -206,7 +207,9 @@ export default function JoinLeagueScreen() {
   const renderPreview = () => {
     if (!league) return null;
 
-    const draftStarted = league.draft_status !== 'not_started';
+    // draft_started is now a HARD block at lookupCode() (server-side, matches
+    // join_league_by_code) — the preview only ever renders for a league whose
+    // draft_status is 'not_started', so the status here is always "pending".
 
     return (
       <View style={styles.stepContainer}>
@@ -270,26 +273,12 @@ export default function JoinLeagueScreen() {
               </View>
               <View style={styles.previewItem}>
                 <Text style={styles.previewLabel}>Status</Text>
-                <View style={[
-                  styles.statusBadge,
-                  draftStarted ? styles.statusBadgeActive : styles.statusBadgePending
-                ]}>
-                  <Text style={styles.statusBadgeText}>
-                    {draftStarted ? 'In Progress' : 'Draft Pending'}
-                  </Text>
+                <View style={[styles.statusBadge, styles.statusBadgePending]}>
+                  <Text style={styles.statusBadgeText}>Draft Pending</Text>
                 </View>
               </View>
             </View>
           </Card>
-
-          {draftStarted && (
-            <View style={styles.warningContainer}>
-              <Ionicons name="information-circle" size={18} color={Colors.warning} />
-              <Text style={styles.warningText}>
-                The draft has already started. You may need to wait for the next season.
-              </Text>
-            </View>
-          )}
         </View>
 
         <Button
@@ -482,30 +471,11 @@ const styles = StyleSheet.create({
   statusBadgePending: {
     backgroundColor: Colors.warning + '30',
   },
-  statusBadgeActive: {
-    backgroundColor: Colors.success + '30',
-  },
   statusBadgeText: {
     fontSize: 12,
     fontFamily: 'Inter_600SemiBold',
     fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
-  },
-  warningContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: Colors.warning + '20',
-    borderRadius: 12,
-    padding: 12,
-    marginTop: 16,
-    gap: 8,
-  },
-  warningText: {
-    flex: 1,
-    fontSize: 13,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.warning,
-    lineHeight: 18,
   },
 
   // Buttons
