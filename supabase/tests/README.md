@@ -48,20 +48,19 @@ offline. No DB, no Docker, no secrets.
 The "PR #9 trigger" step loads `enforce_leagues_member_update_columns` /
 `trg_leagues_member_update_columns` **verbatim**. It looks in two places:
 
-1. `supabase/migrations/*_leagues_member_draft_complete_column_guard.sql`. The step
-   picks this up automatically once PR #9 is merged.
-2. The file named by `PR9_TRIGGER_SQL`, for use until then. Nothing is vendored:
+1. `supabase/migrations/*_leagues_member_draft_complete_column_guard.sql`.
+   PR #9 merged (`5e3b5d1`) with this file at `20260925000000`, so on `main` the
+   step picks it up automatically and **runs**. Expect 25 steps passed and 0
+   ignored.
+2. The file named by `PR9_TRIGGER_SQL`, for older branches that predate the merge.
+   Nothing is vendored:
 
    ```bash
-   git show origin/security/claude-security-fixes-20260730:supabase/migrations/20260730000000_leagues_member_draft_complete_column_guard.sql > /tmp/pr9_trigger.sql
+   git show origin/main:supabase/migrations/20260925000000_leagues_member_draft_complete_column_guard.sql > /tmp/pr9_trigger.sql
    ```
    ```bash
    PR9_TRIGGER_SQL=/tmp/pr9_trigger.sql deno test --allow-read --allow-env supabase/tests/
    ```
-
-   (PR #9's worker is re-timing that migration to `20260925000000`. If the path above
-   is gone from the branch, list the branch's migrations with
-   `git ls-tree -r --name-only origin/security/claude-security-fixes-20260730 supabase/migrations`.)
 
 If neither is found, the step reports **ignored**, never passed. So an unrun trigger
 check stays visible in the summary.

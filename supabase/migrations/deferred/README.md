@@ -27,16 +27,33 @@ matchups) and retires `[I8]`/`[I9]`.
 
 **Where to run every step below:** after the branch is merged to `main`, and only
 from the deploy checkout `/Users/giorgio/fantasy-stock-deploy`, never from
-`/Users/giorgio/fantasy-stock`. Refresh it first:
+`/Users/giorgio/fantasy-stock`.
+
+**Prerequisite:** the checkout is linked. See `docs/security/DEPLOY-RUNBOOK.md` step 4
+for the one-time `supabase link`. `db push` has no `--project-ref` flag; it pushes to
+the *linked* project. The link lives in the gitignored `supabase/.temp/`, so it
+survives later checkouts. Confirm it every time:
+```bash
+cat supabase/.temp/project-ref
+```
+This must print `haiaaifjcclsvmkfqgmd`.
+
+Refresh the checkout:
 ```bash
 git -C /Users/giorgio/fantasy-stock-deploy fetch origin && git -C /Users/giorgio/fantasy-stock-deploy checkout --detach origin/main
 ```
-Then (from `/Users/giorgio/fantasy-stock-deploy`):
+Then, from `/Users/giorgio/fantasy-stock-deploy`:
 ```bash
 supabase db push --dry-run
 ```
 ```bash
 supabase db push
+```
+Before deploying, check the file content. A single-file function looks identical in
+the upload list whether it is stale or fresh, so the list proves nothing. This must
+print a count ≥ 1:
+```bash
+grep -c finalize_league_draft supabase/functions/validate-and-record-pick/index.ts
 ```
 ```bash
 supabase functions deploy validate-and-record-pick --project-ref haiaaifjcclsvmkfqgmd
