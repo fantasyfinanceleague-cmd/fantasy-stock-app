@@ -2,111 +2,39 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "106e22f85c1f07dffaa66b39efd14ae8048e2a95",
-    "commitShort": "106e22f",
+    "commit": "2062384aa3f42be2c771d892cca0759437f2e1f3",
+    "commitShort": "2062384",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "feat/server-schedule-generation",
+    "branch": "fix/enrich-symbols-batch-pricing",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/app.json"
+        "path": "supabase/functions/enrich-symbols/index.ts"
       },
       {
-        "code": "M",
-        "path": "apps/mobile/app/_layout.tsx"
+        "code": "??",
+        "path": "supabase/functions/enrich-symbols/price-batch.test.ts"
       },
       {
-        "code": "M",
-        "path": "apps/mobile/app/(tabs)/draft.tsx"
+        "code": "??",
+        "path": "supabase/functions/enrich-symbols/price-batch.ts"
       },
       {
-        "code": "M",
-        "path": "apps/mobile/app/(tabs)/leagues.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/(tabs)/profile.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/create-league.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/forgot-password.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/join-league.tsx"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/lib/inviteCode.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/notifications.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/lib/recoveryNonce.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/package-lock.json"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/package.json"
-      },
-      {
-        "code": "M",
-        "path": "apps/web/src/hooks/useLeagues.js"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/utils/inviteCode.js"
-      },
-      {
-        "code": "M",
-        "path": "docs/architecture/annotations.json"
-      },
-      {
-        "code": "M",
-        "path": "supabase/config.toml"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/historical-bars/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/refresh-symbols/index.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/send-notification/index.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/20260925000000_leagues_member_draft_complete_column_guard.sql"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/20260925000001_tighten_league_standings_insert.sql"
+        "code": "??",
+        "path": "supabase/migrations/20260928000000_symbols_price_unsupported_column.sql"
       }
     ],
-    "timestamp": "2026-09-25T07:24:35Z",
-    "sourceHash": "sha256:679074c6faf0717fe8f4a68843e4ca4ccf4e9d087e0afeaa371f279c72017fba",
+    "timestamp": "2026-09-25T20:53:25Z",
+    "sourceHash": "sha256:dc21badfed74c76b41d74c2f491f683c90bf41afa4717a16e1e3345e41ff90db",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1058.5,
-    "ageDays": 44.1,
+    "ageHours": 1072,
+    "ageDays": 44.7,
     "staleAfterDays": 14,
     "stale": true,
     "hash": "sha256:3c923bcd46e36dfa365d24852d7b8fb6ead9ff99a06c3b26dc0853c648e07ded",
@@ -358,8 +286,12 @@
         "verifyJwt": false,
         "verifyJwtSource": "supabase/config.toml:80",
         "authGuard": "apikey header, constant-time, fail-closed",
-        "localModules": [],
-        "tests": [],
+        "localModules": [
+          "price-batch.ts"
+        ],
+        "tests": [
+          "price-batch.test.ts"
+        ],
         "envVars": [
           "ALPACA_API_KEY",
           "ALPACA_API_SECRET",
@@ -368,7 +300,7 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 225
+        "lines": 327
       },
       "db": null,
       "declared": null,
@@ -381,7 +313,7 @@
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/enrich-symbols/index.ts",
-        "line": 119
+        "line": 158
       }
     },
     {
@@ -840,6 +772,25 @@
       "source": {
         "path": "supabase/functions/validate-and-record-pick/index.ts",
         "line": 98
+      }
+    },
+    {
+      "layer": "module",
+      "facts": {
+        "hasTests": true
+      },
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "mod.enrich-symbols/price-batch",
+      "label": "price-batch.ts",
+      "sublabel": "enrich-symbols",
+      "kind": "edge-module",
+      "source": {
+        "path": "supabase/functions/enrich-symbols/price-batch.ts",
+        "line": 1
       }
     },
     {
@@ -2893,7 +2844,8 @@
       "declared": {
         "touchedBy": [
           "supabase/migrations/20260810000001_symbols_add_enrichment_columns.sql",
-          "supabase/migrations/20260811000007_symbols_enrichment_support.sql"
+          "supabase/migrations/20260811000007_symbols_enrichment_support.sql",
+          "supabase/migrations/20260928000000_symbols_price_unsupported_column.sql"
         ],
         "rlsEnabled": false
       },
@@ -3833,7 +3785,19 @@
       "protocol": "vendor-https",
       "payload": "https://finnhub.io/api/v1/stock/profile2",
       "callSites": [
-        "supabase/functions/enrich-symbols/index.ts:70"
+        "supabase/functions/enrich-symbols/index.ts:108"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.enrich-symbols->mod.enrich-symbols/price-batch",
+      "from": "fn.enrich-symbols",
+      "to": "mod.enrich-symbols/price-batch",
+      "protocol": "esm-import",
+      "payload": "import from './price-batch.ts'",
+      "callSites": [
+        "supabase/functions/enrich-symbols/index.ts"
       ]
     },
     {
@@ -3848,7 +3812,7 @@
         "gics_industry"
       ],
       "callSites": [
-        "supabase/functions/enrich-symbols/index.ts:147"
+        "supabase/functions/enrich-symbols/index.ts:211"
       ]
     },
     {
@@ -3858,12 +3822,11 @@
       "from": "fn.enrich-symbols",
       "to": "tbl.symbols",
       "protocol": "postgrest-select",
-      "payload": ".from('symbols').select('symbol, exchange, is_etf, active, gics_industry, last_price, market_cap')",
-      "columns": [
-        "symbol, exchange, is_etf, active, gics_industry, last_price, market_cap"
-      ],
+      "payload": ".from('symbols').select()",
+      "columns": [],
       "callSites": [
-        "supabase/functions/enrich-symbols/index.ts:137"
+        "supabase/functions/enrich-symbols/index.ts:183",
+        "supabase/functions/enrich-symbols/index.ts:196"
       ]
     },
     {
@@ -3876,7 +3839,7 @@
       "payload": ".from('symbols').update()",
       "columns": [],
       "callSites": [
-        "supabase/functions/enrich-symbols/index.ts:197"
+        "supabase/functions/enrich-symbols/index.ts:285"
       ]
     },
     {
@@ -8364,8 +8327,8 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 114,
-    "edges": 252,
+    "nodes": 115,
+    "edges": 253,
     "flows": 8,
     "drift": 22,
     "driftHigh": 4,
@@ -8374,7 +8337,7 @@
   },
   "sourceIndex": {
     "edgeFunctions": [
-      "enrich-symbols[]",
+      "enrich-symbols[price-batch.ts]",
       "finnhub-quote[]",
       "historical-bars[]",
       "join-league[]",
@@ -8568,9 +8531,10 @@
       "supabase/functions/_shared/category-eligibility.ts:15 -> symbol_category_overrides.select",
       "supabase/functions/_shared/category-eligibility.ts:24 -> symbols.select",
       "supabase/functions/_shared/category-eligibility.ts:33 -> category_rules.select",
-      "supabase/functions/enrich-symbols/index.ts:137 -> symbols.select",
-      "supabase/functions/enrich-symbols/index.ts:147 -> category_rules.select",
-      "supabase/functions/enrich-symbols/index.ts:197 -> symbols.update",
+      "supabase/functions/enrich-symbols/index.ts:183 -> symbols.select",
+      "supabase/functions/enrich-symbols/index.ts:196 -> symbols.select",
+      "supabase/functions/enrich-symbols/index.ts:211 -> category_rules.select",
+      "supabase/functions/enrich-symbols/index.ts:285 -> symbols.update",
       "supabase/functions/preview-league/index.ts:103 -> league_members.select",
       "supabase/functions/preview-league/index.ts:74 -> leagues.select",
       "supabase/functions/preview-league/index.ts:77 -> league_invites.select",
@@ -8723,7 +8687,8 @@
       "20260816000000_leagues_allow_undraftable.sql",
       "20260925000000_leagues_member_draft_complete_column_guard.sql",
       "20260925000001_tighten_league_standings_insert.sql",
-      "20260926000000_finalize_league_draft_rpc.sql"
+      "20260926000000_finalize_league_draft_rpc.sql",
+      "20260928000000_symbols_price_unsupported_column.sql"
     ],
     "config": [
       "enrich-symbols=false",
