@@ -275,7 +275,11 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
    bot seeding, so the mid-draft-reshuffle-via-bots vector survives this
    fix. Full `[I4]` retirement still requires a server-side `create-league`
    (`docs/migrations/RLS_HARDENING_SPEC.md` §1).
-   **Apply order:** `supabase db push` only — no function deploy. Verify
+   **Apply order:** merge this branch's PR into `main` on GitHub first (no
+   local merge/cherry-pick into the deploy checkout) — then
+   `git -C /Users/giorgio/fantasy-stock-deploy fetch origin && git -C
+   /Users/giorgio/fantasy-stock-deploy checkout --detach origin/main` and
+   `supabase db push` from there only. No function deploy. Verify
    with the `pg_policies` query and effect test in
    `docs/security/league-members-insert-effect-test.sql`.
 
