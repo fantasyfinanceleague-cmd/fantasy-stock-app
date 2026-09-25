@@ -9,7 +9,7 @@
 -- The LOCATION is the control; the ⛔ comment is only documentation.
 --
 -- PRECONDITIONS TO PROMOTE THIS FILE (added 2026-09-24):
---   1. send-notification deployed and effect-verified (DEPLOY-RUNBOOK step 3.3).
+--   1. send-notification deployed and effect-verified (DEPLOY-RUNBOOK step 5.3).
 --   2. Every tester on the >= 1.1.0 mobile build. 1.0.0 binaries write their own
 --      token to user_profiles.expo_push_token and read leaguemates' tokens from
 --      it, so dropping the column breaks registration and draft-turn pushes there.

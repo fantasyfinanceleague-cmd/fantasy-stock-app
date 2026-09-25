@@ -1,6 +1,6 @@
 # Deploy runbook — PR #9 (`security/claude-security-fixes-20260730`)
 
-**Rewritten 2026-09-24** after merging `main` @ `2be4638` (PR #10 + PR #11) into the
+**Rewritten 2026-09-25** after merging `main` @ `a324395` (PR #10, #11, #12) into the
 branch. This replaces the July/September runbook in full: the old Phase C (F12 /
 `place-order`) is gone because `main` deleted `place-order` (DR-001), and it already
 applied both the `trades` policy drop and the `refresh_symbols_daily` cron reschedule.
@@ -9,23 +9,57 @@ Every step below is **prod-mutating and Giorgio's to run.** The golden rule appl
 throughout: **verify the EFFECT, not the command's output.** A clean `db push`, a
 `succeeded` cron row, or an HTTP 200 is not evidence.
 
-## What ships
+## Where every deploy runs from
 
-| Fix | Kind | Lands via | Waits for mobile release? |
+**Never deploy from `/Users/giorgio/fantasy-stock`.** That checkout sits on whatever branch
+is being worked on (currently `ui/design-system-pass-v2`), and it has already shipped
+stale function code once. Every deploy runs from a folder whose files are exactly
+the code meant to ship:
+
+- **After the merge (this runbook):** `/Users/giorgio/fantasy-stock-deploy`, refreshed to
+  `origin/main` and **detached at the merge commit**.
+- **Before a merge** (not needed here; see below): the PR branch's own worktree at the
+  reviewed commit, with an explicit `--project-ref haiaaifjcclsvmkfqgmd`.
+
+**Why this PR merges first and deploys second.** None of its server steps must be live
+before the merge:
+- F1/F6 migrations don't depend on any function.
+- `send-notification`'s only caller is the 1.1.0 mobile build (step 7), which comes later.
+- The web delta (CSPRNG invite codes) doesn't call anything new.
+
+Every server step can therefore run from a single folder at a single commit. The gap
+between merge and deploy changes nothing live: `refresh-symbols` keeps 401-ing exactly
+as today, and the old functions and policies stay in place until steps 5–6.
+
+## What ships, and when each fix goes live
+
+| Fix | Kind | Goes live at | Needs the mobile build? |
 |---|---|---|---|
-| F1 + F11 — leagues column guard trigger | migration `20260925000000` | `db push` | no |
-| F6 — `league_standings` INSERT bounded to zero | migration `20260925000001` | `db push` | no |
-| F5 — `refresh-symbols` apikey guard, `verify_jwt=false` | edge function + `config.toml` | functions deploy | no |
-| F9 — `historical-bars` date validation | edge function | functions deploy | no |
-| F7 — server-side `send-notification` | new edge function | functions deploy | **client half: yes** |
-| F3/F4 — CSPRNG invite codes (web) | web client | merge → Vercel | no |
-| F3/F4 — CSPRNG invite codes (mobile) | mobile client | EAS build | **yes** |
-| F2 — password-reset recovery nonce | mobile client + Auth redirect allowlist | dashboard + EAS build | **yes** |
-| F13 — re-auth before password change | mobile client | EAS build | **yes** |
+| F1 + F11 — leagues column guard trigger | migration `20260925000000` | step 6 (`db push`) | no — **server-side** |
+| F6 — `league_standings` INSERT bounded to zero | migration `20260925000001` | step 6 (`db push`) | no — **server-side** |
+| F5 — `refresh-symbols` apikey guard, `verify_jwt=false` | edge function + `config.toml` | step 5 | no — **server-side** |
+| F9 — `historical-bars` date validation | edge function | step 5 | no — **server-side** |
+| F7 — server half: `send-notification` | new edge function | step 5 (live but unused) | — |
+| F7 — client half: draft-turn push via the function | mobile client | step 7 | **yes** |
+| F3/F4 — CSPRNG invite codes (web) | web client | step 3 (merge → Vercel) | no |
+| F3/F4 — CSPRNG invite codes (mobile) | mobile client | step 7 | **yes** |
+| F2 — password-reset recovery nonce | mobile client + Auth redirect allowlist | step 7 (allowlist: step 2) | **yes** |
+| F13 — re-auth before password change | mobile client | step 7 | **yes** |
+
+**The mobile half cannot ship over the air.** This branch adds `expo-crypto`, a **new
+native module** that `_layout.tsx` imports at load time (via `lib/recoveryNonce.ts`;
+`lib/inviteCode.ts` uses it too). `apps/mobile/app.json` sets `runtimeVersion` with
+`policy: "appVersion"`, and the branch bumps `expo.version` from `1.0.0` to `1.1.0`. So
+this JS belongs to a new runtime that **no installed binary has**. An `eas update` cannot
+deliver F2, F3-mobile, F7-client or F13 to anyone. They arrive only with a new EAS build
+(step 7). The bump is deliberate protection: without it, an OTA from `main` would reach
+1.0.0 binaries and crash them at startup (`Cannot find native module 'ExpoCrypto'`).
+**Don't revert the bump to force an OTA.** One consequence: after this merge, no OTA
+from `main` reaches current 1.0.0 testers until they install 1.1.0.
 
 **Not in this PR:** F8 (push-token relocation, staged in
-`docs/migrations/STAGED_L2_push_token_capability.sql`) and F10 (matchup forgery, which is
-closed by server-side schedule generation). F12 was superseded by `main`.
+`docs/migrations/STAGED_L2_push_token_capability.sql`) and F10 (matchup forgery, closed by
+server-side schedule generation). F12 was superseded by `main`.
 
 **Why the migrations were renamed.** They were authored as `20260730000000/01`, but prod's
 latest applied version is `20260816000000`, and `db push` refuses pending local migrations
@@ -35,21 +69,14 @@ the header).
 
 ---
 
-## Step 0 — Pre-flight (read-only)
+## Step 0 — Pre-flight SQL (read-only)
 
 Run each query **separately** in the SQL editor, which shows only the last result.
+`net._http_response` has **no `url` column**, so responses are identified by body shape.
 
-**0.1 — Nothing else is pending.** From the repo root, with the branch checked out:
-```bash
-supabase migration list
-```
-Expect exactly **two** local-only rows, `20260925000000` and `20260925000001`, and remote
-at `20260816000000`. **Anything else pending → stop.** `db push` applies EVERY pending file.
-
-**0.2 — The cron key pair matches, proven by a sibling that uses it.** `enrich_symbols_10min`
+**0.1 — The cron key pair matches, proven by a sibling that uses it.** `enrich_symbols_10min`
 authenticates with the same pair `refresh-symbols` will use (vault `cron_apikey` →
-`SB_SECRET_KEY_CRON`). Its 200s prove the two values are equal. Note that
-`net._http_response` has no `url` column, so responses are identified by body shape:
+`SB_SECRET_KEY_CRON`). Its 200s prove the two values are equal:
 ```sql
 SELECT created, status_code, left(content::text, 120) AS body
 FROM net._http_response
@@ -59,7 +86,7 @@ ORDER BY created DESC LIMIT 5;
 Expect recent rows with `status_code = 200`. If they're all 401 `{"error":"unauthorized"}`,
 the pair is already broken: fix that first. F5 cannot work either.
 
-**0.3 — Baseline: refresh-symbols is failing today.**
+**0.2 — Baseline: refresh-symbols is failing today.**
 ```sql
 SELECT created, status_code, left(content::text, 120) AS body
 FROM net._http_response
@@ -69,12 +96,9 @@ ORDER BY created DESC LIMIT 5;
 ```
 Expect 401s carrying the **gateway's** generic body, not our JSON, at `:00` of
 00/06/12/18 UTC. `refresh-symbols` is the only cron target still behind `verify_jwt`, so
-these rows are its runs. This is what step 3.2 should
-change.
+these rows are its runs.
 
----
-
-## Step 1 — Push the branch  *(HUMAN)*
+## Step 1 — Push the branch  *(HUMAN / Orchestrator)*
 
 ```bash
 git push origin security/claude-security-fixes-20260730
@@ -88,27 +112,75 @@ Dashboard → Authentication → URL Configuration → Redirect URLs: add
 `fantasystockapp://**` (or the narrower `fantasystockapp://reset-password?**`).
 The new client sends `redirectTo: fantasystockapp://reset-password?rn=<nonce>`. Without a
 pattern that preserves the query string, the fail-closed nonce check rejects **every**
-legitimate reset. Existing entries still match old clients, so adding this breaks nothing.
-**It must be in place before the step-6 mobile build reaches anyone.**
+legitimate reset. Existing entries still match 1.0.0 clients, so adding this breaks
+nothing. **It must be in place before the step-7 build reaches anyone.**
 
-## Step 3 — Edge functions (all backward-compatible; any order among 3.1–3.3)
+## Step 3 — Merge PR #9  *(= Vercel prod deploy)*
 
-From the repo root on the branch:
+Merge on GitHub. The PR adds no new Vercel env vars. The web delta is the CSPRNG
+invite-code helper (`apps/web/src/utils/inviteCode.js`, `useLeagues.js`). With
+`APP_PAUSED = true` only the landing page is live, so a green `npm run build` proves
+nothing (see CLAUDE.md). The evidence is the Vercel deployment of the merge commit going
+**Ready**. Record the merge commit SHA as `<MERGE>` for steps 4–7.
 
-**3.1 — F9**
+## Step 4 — Prepare the deploy checkout
+
 ```bash
-supabase functions deploy historical-bars
+git -C /Users/giorgio/fantasy-stock-deploy fetch origin
+git -C /Users/giorgio/fantasy-stock-deploy checkout --detach origin/main
+git -C /Users/giorgio/fantasy-stock-deploy log --oneline -1
 ```
+The last line must show `<MERGE>`. If `main` moved again, stop and decide whether to ship
+the newer commit too.
+
+**Content sanity.** Each function in this PR is a single `index.ts`, so the deploy's
+"Uploading asset" list looks the same whether the code is fresh or stale. Check the
+content before deploying. Each count must be **≥ 1**. All four are 0 on the pre-merge
+`main` (`a324395`), so a 0 here means the checkout is stale:
+```bash
+cd /Users/giorgio/fantasy-stock-deploy
+grep -c "SB_SECRET_KEY_CRON" supabase/functions/refresh-symbols/index.ts
+grep -c "invalid_start" supabase/functions/historical-bars/index.ts
+grep -c "expo_ticket_error" supabase/functions/send-notification/index.ts
+grep -A2 "^\[functions.refresh-symbols\]" supabase/config.toml | grep -c "verify_jwt = false"
+ls supabase/migrations/20260925000000_leagues_member_draft_complete_column_guard.sql supabase/migrations/20260925000001_tighten_league_standings_insert.sql
+```
+
+**Link the checkout** (local config only; writes `supabase/.temp/project-ref`). This checkout
+isn't linked yet, and `db push` pushes to the *linked* project, so linking is required:
+```bash
+cd /Users/giorgio/fantasy-stock-deploy
+supabase link --project-ref haiaaifjcclsvmkfqgmd
+cat supabase/.temp/project-ref
+supabase migration list
+```
+`project-ref` must read `haiaaifjcclsvmkfqgmd`. `migration list` must show exactly **two**
+local-only rows, `20260925000000` and `20260925000001`, with remote at
+`20260816000000`. **Anything else pending → stop.** `db push` applies EVERY pending file.
+
+## Step 5 — Edge functions  *(from `/Users/giorgio/fantasy-stock-deploy` @ `<MERGE>`)*
+
+All three are backward-compatible with 1.0.0 clients; any order.
+
+**5.1 — F9**
+```bash
+cd /Users/giorgio/fantasy-stock-deploy
+supabase functions deploy historical-bars --project-ref haiaaifjcclsvmkfqgmd
+```
+Expect **Uploading asset (historical-bars): supabase/functions/historical-bars/index.ts**
+and nothing else.
 Verify: a bad date such as `"start":"2020-01-01&feed=sip"` returns **our** HTTP 400
 `invalid_start`, and a normal `YYYY-MM-DD` request still returns bars (the mobile chart
 still renders).
 
-**3.2 — F5**
+**5.2 — F5**
 ```bash
-supabase functions deploy refresh-symbols
+supabase functions deploy refresh-symbols --project-ref haiaaifjcclsvmkfqgmd
 ```
-This deploy carries `verify_jwt = false`. A true→false flip may not take on the first
-deploy, so verify that it did:
+Expect **Uploading asset (refresh-symbols): supabase/functions/refresh-symbols/index.ts**
+and nothing else.
+This deploy carries `verify_jwt = false` from `config.toml`. A true→false flip may not take
+on the first deploy, so verify that it did:
 ```bash
 curl -s -i -X POST https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/refresh-symbols
 ```
@@ -122,13 +194,17 @@ FROM net._http_response
 WHERE content::text LIKE '%"count":%'           -- refresh-symbols success shape
 ORDER BY created DESC LIMIT 3;
 ```
-Expect `200 {"ok":true,"count":<several thousand>}`. Don't use `cron.job_run_details`: it reports
-`succeeded` on enqueue. Optional: `SELECT count(*) FROM symbols;` before and after.
+Expect `200 {"ok":true,"count":<several thousand>}`. Don't use `cron.job_run_details`:
+it reports `succeeded` on enqueue. Optional: `SELECT count(*) FROM symbols;` before and
+after.
 
-**3.3 — F7**
+**5.3 — F7 (server half)**
 ```bash
-supabase functions deploy send-notification
+supabase functions deploy send-notification --project-ref haiaaifjcclsvmkfqgmd
 ```
+Expect **Uploading asset (send-notification): supabase/functions/send-notification/index.ts**
+and nothing else. This is a **new** function, so also confirm it appears in the
+dashboard's function list with Verify JWT **on**.
 It uses `SB_PUBLISHABLE_KEY` and `SB_SECRET_KEY_INTERNAL`, which are already set as
 project secrets and used by `validate-and-record-pick`, so no `secrets set` is needed.
 Verify:
@@ -139,16 +215,17 @@ Verify:
   target → `200` with `sent:true`, or `sent:false` with a truthful `reason`
   (`no_token_or_disabled`, `expo_ticket_error`). **`500 lookup_failed` is a real failure.**
 
-Nothing calls this function until step 6. Live mobile builds still send directly to
-`exp.host` (that is F8's exposure, unchanged by this step).
+Nothing calls this function until step 7. 1.0.0 builds still send directly to `exp.host`
+(that is F8's exposure, unchanged here).
 
-## Step 4 — Migrations (F1, F6)
+## Step 6 — Migrations (F1, F6)  *(from `/Users/giorgio/fantasy-stock-deploy` @ `<MERGE>`, linked in step 4)*
 
 ```bash
+cd /Users/giorgio/fantasy-stock-deploy
 supabase db push --dry-run
 supabase db push
 ```
-The dry run must list exactly the two files from 0.1. **Old clients are unaffected:**
+The dry run must list exactly the two files from step 4. **1.0.0 clients are unaffected:**
 mobile no longer writes `leagues.draft_status`. The server's `markDraftComplete` uses an
 admin client with no user JWT, so `auth.uid()` is NULL and the guard is a no-op. Web
 `DraftPage` completion is exactly the trigger's allowed carve-out.
@@ -187,31 +264,19 @@ stop and report it. *(This script has not been run yet; no local Postgres was av
 when it was written. If it errors before printing results, e.g. on a fixture insert,
 that is a bug in the script, not the trigger. Report it.)*
 
-## Step 5 — Merge PR #9  *(= Vercel prod deploy)*
+## Step 7 — Mobile release  *(EAS **build** from `/Users/giorgio/fantasy-stock-deploy/apps/mobile` @ `<MERGE>`; NOT `eas update`)*
 
-The PR adds no new Vercel env vars. The web delta is the CSPRNG invite-code helper
-(`apps/web/src/utils/inviteCode.js`, `useLeagues.js`). With `APP_PAUSED = true` only the
-landing page is live, so a successful `npm run build` proves nothing (see CLAUDE.md). The
-evidence is the Vercel deployment of the merge commit going **Ready**. If `main` has moved
-since this branch was last merged, re-merge and re-run `node scripts/gen-architecture.mjs
---check` before merging.
-
-## Step 6 — Mobile release  *(EAS **build**, NOT an OTA update)*
-
-**Why not OTA:** this branch adds `expo-crypto`, a **native** module imported at load time
-by `_layout.tsx` (via `lib/recoveryNonce.ts`). `runtimeVersion` uses `policy: appVersion`,
-and the branch bumps `expo.version` from `1.0.0` to `1.1.0`, so this JS belongs to a **new
-runtime**. An `eas update` from `main` now reaches no existing binary, which is the point:
-on a 1.0.0 binary it would crash at startup (`Cannot find native module 'ExpoCrypto'`).
-**Do not revert the version bump to force an OTA.**
-
-Preconditions: step 2 (redirect allowlist) and step 3.3 (`send-notification` live).
+Preconditions: step 2 (redirect allowlist) and step 5.3 (`send-notification` live).
 ```bash
-cd apps/mobile && eas build --profile production --platform all
+cd /Users/giorgio/fantasy-stock-deploy/apps/mobile
+eas build --profile production --platform all
 ```
 Run it from `apps/mobile/`, never from the repo root, which offers to create a duplicate
-project (decline that). Consider bundling with `ui/design-system-pass-v2` if its visual
-check passes (STATUS §5).
+project (decline that). If EAS can't evaluate the app config for lack of `node_modules`,
+run `npm ci` at the deploy checkout's root first. The build must report runtime
+**1.1.0**. Consider bundling with `ui/design-system-pass-v2` if its visual check passes
+(STATUS §5); if you do, build from a checkout at that combined commit, not from the
+main checkout.
 
 Smoke checks on the new build:
 - **F2:** request a reset, open the emailed link, and reach reset-password to set a new
@@ -221,20 +286,20 @@ Smoke checks on the new build:
 - **F7:** in a two-human draft, the next picker receives "It's Your Turn!".
   `send-notification` logs show `sent:true`.
 
-## Step 7 — Refresh the map
+## Step 8 — Refresh the map
 
 1. Re-capture `docs/architecture/db-snapshot.json`: run `docs/architecture/db-snapshot.sql`
    against prod and save the single output cell. The current snapshot is from 2026-08-12.
-2. `node scripts/gen-architecture.mjs`, then commit.
+2. `node scripts/gen-architecture.mjs`, then commit on a branch.
 3. Drift panel: the HIGH row `enforce_leagues_member_update_columns() — ABSENT from prod
-   snapshot` must clear. If it doesn't, the push didn't land, whatever step 4's output
+   snapshot` must clear. If it doesn't, the push didn't land, whatever step 6's output
    said.
 
-## Step 8 — Record it
+## Step 9 — Record it
 
 Update `docs/STATUS.md` §2 (ledger: migrations through `20260925000001`, deployed
-functions, the `refresh_symbols_daily` 200 evidence) and §4 (remove defect 4, the
-refresh-symbols 401).
+functions with the folder and commit each came from, the `refresh_symbols_daily` 200
+evidence) and §4 (remove defect 4, the refresh-symbols 401).
 
 ---
 
@@ -251,7 +316,8 @@ fallback can be deleted once phase 2 lands.
 - **Migrations:** never edit an applied file. Mitigate with a new migration, e.g.
   `DROP TRIGGER trg_leagues_member_update_columns ON public.leagues;`, or recreate the
   prior `league_standings_insert_members` (`WITH CHECK (is_member(league_id))`).
-- **Edge functions:** redeploy the previous version. For `refresh-symbols`, a rollback
-  reinstates the 401s and nothing else.
-- **Mobile:** 1.0.0 binaries keep working throughout. Nothing in steps 1–5 requires them
+- **Edge functions:** redeploy the previous version from the deploy checkout detached at
+  the pre-merge `main` commit (`a324395`), with `--project-ref haiaaifjcclsvmkfqgmd`.
+  For `refresh-symbols`, a rollback reinstates the 401s and nothing else.
+- **Mobile:** 1.0.0 binaries keep working throughout. Nothing in steps 1–6 requires them
   to update.
