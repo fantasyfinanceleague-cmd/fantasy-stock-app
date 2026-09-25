@@ -2,27 +2,39 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "fe532372765982cfff9feb89e6b9cceefc1c50fa",
-    "commitShort": "fe53237",
+    "commit": "40bf94bd970a694a62d7f8c85c277d326bb72cde",
+    "commitShort": "40bf94b",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "feat/server-schedule-generation",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "supabase/functions/_shared/schedule.ts"
+        "path": "docs/architecture/annotations.json"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/process-week-results/index.ts"
+      },
+      {
+        "code": "A",
+        "path": "supabase/functions/process-week-results/job-status.test.ts"
+      },
+      {
+        "code": "A",
+        "path": "supabase/functions/process-week-results/job-status.ts"
       }
     ],
-    "timestamp": "2026-09-25T00:11:01Z",
-    "sourceHash": "sha256:f2cd0a51f4bc3ababa9e2c4a9bad5c4ba24e59e901395fc088e306c4f6b6baec",
+    "timestamp": "2026-09-25T04:42:59Z",
+    "sourceHash": "sha256:18ff35a4b0d70ce56df8fde88f275de90308d8574cd828be3cd1fd1be3529af0",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1051.3,
-    "ageDays": 43.8,
+    "ageHours": 1055.8,
+    "ageDays": 44,
     "staleAfterDays": 14,
     "stale": true,
     "hash": "sha256:3c923bcd46e36dfa365d24852d7b8fb6ead9ff99a06c3b26dc0853c648e07ded",
@@ -421,11 +433,13 @@
         "authGuard": "apikey header, constant-time, fail-closed",
         "localModules": [
           "grouping.ts",
+          "job-status.ts",
           "playoff-progression.ts",
           "scoring-eligibility.ts"
         ],
         "tests": [
           "grouping.test.ts",
+          "job-status.test.ts",
           "playoff-progression.test.ts",
           "scoring-eligibility.test.ts"
         ],
@@ -436,12 +450,12 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 1509
+        "lines": 1501
       },
       "db": null,
       "declared": null,
       "drift": [],
-      "annotation": "1508 lines, and the only production caller is one cron job. Runs with verify_jwt=false, so the in-code constant-time apikey check is the entire authentication boundary — note it runs before the body parse and before the DB client is constructed, which is what makes an unauthenticated request cheap to reject. The two extracted modules are the parts that have been burned by bugs and are now pinned by hermetic unit tests.\n\nSTRANDED STATUS ROWS (traced 2026-07-27; line numbers re-synced 2026-09-24, still unfixed). It writes 'running' to cron_job_status at index.ts:880, but terminal statuses exist at only two places: 'success' at :1490 and 'failed' at :1504. Two returns sit between them and write NEITHER, leaving the row permanently at 'running':\n  - :919 — no pending matchups. Returns HTTP 200, logs 'No pending matchups to process'. This is the common path.\n  - :914 — the matchup query itself failed. Returns HTTP 500, logs 'Error fetching matchups:'.\nDiscriminate the two by status code or by that log line. The returns before :880 (:848 apikey rejected, :861 missing config) write no row at all, which is a different and less confusing state. :1338 and :1352 are returns inside the nested updateUserStandings helper, not handler returns.\n\nNOT A SCORING OUTAGE. Five consecutive Fridays (2026-06-26 through 07-24) sat at 'running'. `unscored` was confirmed 0 across every league — no matchups with team1_gain IS NULL and week_end < now() — so :919 firing weekly is the function correctly reporting there is nothing to score. Re-confirmed 2026-09-24: the only completed leagues in prod are three old test leagues whose seasons are over. The stranded row is the entire finding. Do not read those five rows as five missed scoring runs.\n\nSee CLAUDE.md silent-failure #6 for why this shape is worse than a merely wrong signal.",
+      "annotation": "~1500 lines, and the only production caller is one cron job. Runs with verify_jwt=false, so the in-code constant-time apikey check is the entire authentication boundary — note it runs before the body parse and before the DB client is constructed, which is what makes an unauthenticated request cheap to reject. The extracted modules (grouping, scoring-eligibility, playoff-progression, job-status) are the parts that have been burned by bugs and are now pinned by hermetic unit tests.\n\nSTRANDED STATUS ROWS — FIXED ON BRANCH fix/process-week-results-terminal-status (not yet merged or deployed; prod behaves as described below until it ships). The query-error return now writes 'failed' with the error; the no-pending return writes 'success' with message 'processed 0 matchups: no pending matchups'. The writer lives in job-status.ts (hermetic tests in job-status.test.ts), checks the upsert's resolved { error }, and never throws, so a failed status write cannot change the HTTP response. The CHECK constraint allows only running|success|failed|retrying, so 'nothing to do' vs 'scored something' is carried by the message text, which BOTH success paths always write. A comment at the 'running' write states the invariant: every later handler return writes a terminal status first.\n\nPre-fix behaviour (traced 2026-07-27; line numbers as of main @ 2be4638): It writes 'running' to cron_job_status at index.ts:880, but terminal statuses exist at only two places: 'success' at :1490 and 'failed' at :1504. Two returns sit between them and write NEITHER, leaving the row permanently at 'running':\n  - :919 — no pending matchups. Returns HTTP 200, logs 'No pending matchups to process'. This is the common path.\n  - :914 — the matchup query itself failed. Returns HTTP 500, logs 'Error fetching matchups:'.\nDiscriminate the two by status code or by that log line. The returns before :880 (:848 apikey rejected, :861 missing config) write no row at all, which is a different and less confusing state. :1338 and :1352 are returns inside the nested updateUserStandings helper, not handler returns.\n\nNOT A SCORING OUTAGE. Five consecutive Fridays (2026-06-26 through 07-24) sat at 'running'. `unscored` was confirmed 0 across every league — no matchups with team1_gain IS NULL and week_end < now() — so :919 firing weekly is the function correctly reporting there is nothing to score. Re-confirmed 2026-09-24: the only completed leagues in prod are three old test leagues whose seasons are over. The stranded row is the entire finding. Do not read those five rows as five missed scoring runs.\n\nSee CLAUDE.md silent-failure #6 for why this shape is worse than a merely wrong signal.",
       "verified": true,
       "id": "fn.process-week-results",
       "label": "process-week-results",
@@ -449,7 +463,7 @@
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/process-week-results/index.ts",
-        "line": 843
+        "line": 816
       }
     },
     {
@@ -742,6 +756,25 @@
       "kind": "edge-module",
       "source": {
         "path": "supabase/functions/process-week-results/grouping.ts",
+        "line": 1
+      }
+    },
+    {
+      "layer": "module",
+      "facts": {
+        "hasTests": true
+      },
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": "The cron_job_status writer, extracted so its failure handling is pinned by hermetic tests. Two contracts: (1) it destructures the upsert's resolved { error } — supabase-js does not throw on a Postgres error, and the previous inline writer discarded the result, so a rejected status write was invisible; (2) it NEVER throws and returns a boolean, so a failed telemetry write cannot turn the handler's 200 into a 500.\n\nBoth success summaries (noPendingMessage / scoredMessage) are always non-empty. That is deliberate: the no-pending and scored paths both write 'success', so if only one wrote a message, error_message's NULL-ness would become a discriminator — the overloaded-NULL shape CLAUDE.md warns about. The text carries the distinction; its presence never does.",
+      "verified": true,
+      "id": "mod.process-week-results/job-status",
+      "label": "job-status.ts",
+      "sublabel": "process-week-results",
+      "kind": "edge-module",
+      "source": {
+        "path": "supabase/functions/process-week-results/job-status.ts",
         "line": 1
       }
     },
@@ -1894,7 +1927,7 @@
           "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
         }
       ],
-      "annotation": "The ops table three cron functions write, with UNIQUE(job_name, run_date) and run_date defaulting to CURRENT_DATE — so each job gets exactly one row per day and every write is an upsert onto it.\n\nDo NOT treat this table as a reliable health signal. process-week-results writes 'running' and, on its two most likely returns (index.ts:890 and :885), never writes a terminal status — so a row reading 'running' is byte-identical whether the function hung, crashed mid-run, or completed normally with nothing to do. snapshot-week-start and snapshot-week-end DO write terminal statuses on every path, so their rows are trustworthy; process-week-results' are not. Any alerting built on this table must account for that asymmetry or it will either fire every week or never fire at all.\n\nAlso note the upsert semantics when testing by hand: calling schedule_snapshot_retry directly OVERWRITES the day's real row for that job rather than inserting a new one.\n\nPolicy note: `service_role_only` is PUBLIC-role but gates on `auth.role() = 'service_role'`, which IS a real caller check — anon resolves to 'anon' and matches nothing. An earlier version of the generator graded this HIGH because its identity-check heuristic looked only for auth.uid()/auth.jwt()/is_member/is_commissioner and missed auth.role(). Fixed. If a policy here ever shows up as ungated again, check the predicate before believing it.",
+      "annotation": "The ops table three cron functions write, with UNIQUE(job_name, run_date) and run_date defaulting to CURRENT_DATE — so each job gets exactly one row per day and every write is an upsert onto it.\n\nDo NOT treat this table as a reliable health signal until the process-week-results fix is DEPLOYED. In prod today, process-week-results writes 'running' and, on its two most likely returns (the matchup-query error and the no-pending-matchups return), never writes a terminal status — so a row reading 'running' is byte-identical whether the function hung, crashed mid-run, or completed normally with nothing to do. Branch fix/process-week-results-terminal-status makes both returns write a terminal status ('failed' / 'success' + 'processed 0 matchups: no pending matchups') and checks each write's resolved { error }. Until that ships, snapshot-week-start and snapshot-week-end are the only jobs whose rows reach a terminal status on every path; note their writers still discard the upsert's { error }, so a REJECTED status write there is still silent. Any alerting built on this table must account for that asymmetry or it will either fire every week or never fire at all.\n\nerror_message is the table's only free-text column. On process-week-results 'success' rows it holds a run summary, not an error — read status for the outcome.\n\nAlso note the upsert semantics when testing by hand: calling schedule_snapshot_retry directly OVERWRITES the day's real row for that job rather than inserting a new one.\n\nPolicy note: `service_role_only` is PUBLIC-role but gates on `auth.role() = 'service_role'`, which IS a real caller check — anon resolves to 'anon' and matches nothing. An earlier version of the generator graded this HIGH because its identity-check heuristic looked only for auth.uid()/auth.jwt()/is_member/is_commissioner and missed auth.role(). Fixed. If a policy here ever shows up as ungated again, check the predicate before believing it.",
       "verified": true,
       "id": "tbl.cron_job_status",
       "label": "cron_job_status",
@@ -3833,7 +3866,7 @@
       "protocol": "vendor-https",
       "payload": "https://data.alpaca.markets/v2",
       "callSites": [
-        "supabase/functions/process-week-results/index.ts:35"
+        "supabase/functions/process-week-results/index.ts:36"
       ]
     },
     {
@@ -3844,6 +3877,18 @@
       "to": "mod.process-week-results/grouping",
       "protocol": "esm-import",
       "payload": "import from './grouping.ts'",
+      "callSites": [
+        "supabase/functions/process-week-results/index.ts"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.process-week-results->mod.process-week-results/job-status",
+      "from": "fn.process-week-results",
+      "to": "mod.process-week-results/job-status",
+      "protocol": "esm-import",
+      "payload": "import from './job-status.ts'",
       "callSites": [
         "supabase/functions/process-week-results/index.ts"
       ]
@@ -3881,8 +3926,8 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('complete_league_season')",
       "callSites": [
-        "supabase/functions/process-week-results/index.ts:783",
-        "supabase/functions/process-week-results/index.ts:827"
+        "supabase/functions/process-week-results/index.ts:756",
+        "supabase/functions/process-week-results/index.ts:800"
       ]
     },
     {
@@ -3895,7 +3940,7 @@
       "payload": ".from('cron_job_status').upsert()",
       "columns": [],
       "callSites": [
-        "supabase/functions/process-week-results/index.ts:54"
+        "supabase/functions/process-week-results/job-status.ts:61"
       ]
     },
     {
@@ -3910,7 +3955,7 @@
         "user_id, symbol, entry_price, quantity"
       ],
       "callSites": [
-        "supabase/functions/process-week-results/index.ts:1072"
+        "supabase/functions/process-week-results/index.ts:1060"
       ]
     },
     {
@@ -3927,9 +3972,9 @@
         "user_id, wins, points_for"
       ],
       "callSites": [
-        "supabase/functions/process-week-results/index.ts:1318",
-        "supabase/functions/process-week-results/index.ts:452",
-        "supabase/functions/process-week-results/index.ts:811"
+        "supabase/functions/process-week-results/index.ts:1306",
+        "supabase/functions/process-week-results/index.ts:425",
+        "supabase/functions/process-week-results/index.ts:784"
       ]
     },
     {
@@ -3942,7 +3987,7 @@
       "payload": ".from('league_standings').insert()",
       "columns": [],
       "callSites": [
-        "supabase/functions/process-week-results/index.ts:1342"
+        "supabase/functions/process-week-results/index.ts:1330"
       ]
     },
     {
@@ -3955,7 +4000,7 @@
       "payload": ".from('league_standings').update()",
       "columns": [],
       "callSites": [
-        "supabase/functions/process-week-results/index.ts:1327"
+        "supabase/functions/process-week-results/index.ts:1315"
       ]
     },
     {
@@ -3970,7 +4015,7 @@
         "current_week, season_status"
       ],
       "callSites": [
-        "supabase/functions/process-week-results/index.ts:1415"
+        "supabase/functions/process-week-results/index.ts:1403"
       ]
     },
     {
@@ -3983,9 +4028,9 @@
       "payload": ".from('leagues').update()",
       "columns": [],
       "callSites": [
-        "supabase/functions/process-week-results/index.ts:1455",
-        "supabase/functions/process-week-results/index.ts:1464",
-        "supabase/functions/process-week-results/index.ts:1477"
+        "supabase/functions/process-week-results/index.ts:1443",
+        "supabase/functions/process-week-results/index.ts:1452",
+        "supabase/functions/process-week-results/index.ts:1465"
       ]
     },
     {
@@ -4004,11 +4049,11 @@
         "week_end"
       ],
       "callSites": [
-        "supabase/functions/process-week-results/index.ts:1429",
-        "supabase/functions/process-week-results/index.ts:465",
-        "supabase/functions/process-week-results/index.ts:475",
-        "supabase/functions/process-week-results/index.ts:736",
-        "supabase/functions/process-week-results/index.ts:885"
+        "supabase/functions/process-week-results/index.ts:1417",
+        "supabase/functions/process-week-results/index.ts:438",
+        "supabase/functions/process-week-results/index.ts:448",
+        "supabase/functions/process-week-results/index.ts:709",
+        "supabase/functions/process-week-results/index.ts:866"
       ]
     },
     {
@@ -4021,7 +4066,7 @@
       "payload": ".from('matchups').insert()",
       "columns": [],
       "callSites": [
-        "supabase/functions/process-week-results/index.ts:493"
+        "supabase/functions/process-week-results/index.ts:466"
       ]
     },
     {
@@ -4034,9 +4079,9 @@
       "payload": ".from('matchups').update()",
       "columns": [],
       "callSites": [
-        "supabase/functions/process-week-results/index.ts:1280",
-        "supabase/functions/process-week-results/index.ts:752",
-        "supabase/functions/process-week-results/index.ts:759"
+        "supabase/functions/process-week-results/index.ts:1268",
+        "supabase/functions/process-week-results/index.ts:725",
+        "supabase/functions/process-week-results/index.ts:732"
       ]
     },
     {
@@ -4052,8 +4097,8 @@
         "user_id, symbol, action, quantity, price, created_at"
       ],
       "callSites": [
-        "supabase/functions/process-week-results/index.ts:1045",
-        "supabase/functions/process-week-results/index.ts:1085"
+        "supabase/functions/process-week-results/index.ts:1033",
+        "supabase/functions/process-week-results/index.ts:1073"
       ]
     },
     {
@@ -4068,7 +4113,7 @@
         "user_id, symbol, quantity, week_start_price, week_end_price, entered_mid_week"
       ],
       "callSites": [
-        "supabase/functions/process-week-results/index.ts:948"
+        "supabase/functions/process-week-results/index.ts:936"
       ]
     },
     {
@@ -7134,7 +7179,7 @@
           "edge": "e.fn.process-week-results->tbl.cron_job_status#upsert",
           "detail": "Job marked running before any work.",
           "files": [
-            "supabase/functions/process-week-results/index.ts:880"
+            "supabase/functions/process-week-results/index.ts:861"
           ]
         },
         {
@@ -7142,7 +7187,7 @@
           "edge": "e.fn.process-week-results->tbl.matchups",
           "detail": "Pending matchups: team1_gain IS NULL, week_end in the past, league_type=matchup. The NULL filter is what makes a re-run idempotent.",
           "files": [
-            "supabase/functions/process-week-results/index.ts:902"
+            "supabase/functions/process-week-results/index.ts:883"
           ]
         },
         {
@@ -7150,7 +7195,7 @@
           "edge": "e.fn.process-week-results->mod.process-week-results/grouping",
           "detail": "One batch per (league_id, week_number), sorted week-ascending. Grouping by league alone was the original bug; the sort is load-bearing for week advancement.",
           "files": [
-            "supabase/functions/process-week-results/index.ts:928",
+            "supabase/functions/process-week-results/index.ts:916",
             "supabase/functions/process-week-results/grouping.ts:49"
           ]
         },
@@ -7159,7 +7204,7 @@
           "edge": "e.fn.process-week-results->tbl.week_snapshots",
           "detail": "Per batch. Presence of any row sets hasSnapshots; any week_end_price sets hasWeekEndPrices.",
           "files": [
-            "supabase/functions/process-week-results/index.ts:949"
+            "supabase/functions/process-week-results/index.ts:937"
           ]
         },
         {
@@ -7167,7 +7212,7 @@
           "edge": "e.fn.process-week-results->mod.process-week-results/scoring-eligibility",
           "detail": "GUARDS 1 & 2 — decideBatchScoring. A snapshot-less batch is skipped whole: stale_no_snapshots (>72h) or no_snapshots_week_gt_1. Freshness is checked first, and that order is load-bearing for ops labelling.",
           "files": [
-            "supabase/functions/process-week-results/index.ts:1002",
+            "supabase/functions/process-week-results/index.ts:990",
             "supabase/functions/process-week-results/scoring-eligibility.ts:108"
           ]
         },
@@ -7176,7 +7221,7 @@
           "edge": "e.fn.process-week-results->tbl.trades",
           "detail": "Mid-week trades inside [weekStart, weekEnd], then a second read bounded to week_end so a post-week sale cannot empty holdings and flip a win to an auto-loss.",
           "files": [
-            "supabase/functions/process-week-results/index.ts:1048"
+            "supabase/functions/process-week-results/index.ts:1036"
           ]
         },
         {
@@ -7184,7 +7229,7 @@
           "edge": "e.fn.process-week-results->tbl.drafts",
           "detail": "Fallback scorer input — only reachable at week 1.",
           "files": [
-            "supabase/functions/process-week-results/index.ts:1072"
+            "supabase/functions/process-week-results/index.ts:1060"
           ]
         },
         {
@@ -7192,7 +7237,7 @@
           "edge": "e.fn.process-week-results->ext.alpaca-data",
           "detail": "Latest quotes, IEX feed. Failures are swallowed into an empty price map rather than throwing.",
           "files": [
-            "supabase/functions/process-week-results/index.ts:154"
+            "supabase/functions/process-week-results/index.ts:127"
           ]
         },
         {
@@ -7200,7 +7245,7 @@
           "edge": "e.fn.process-week-results->mod.process-week-results/scoring-eligibility",
           "detail": "GUARD 3a — decideUserScorer picks full | legacy | fallback | unscoreable per user. A snapshot-less user past week 1 is unscoreable: cumulative-from-entry is all-time P/L, not a weekly delta.",
           "files": [
-            "supabase/functions/process-week-results/index.ts:1125",
+            "supabase/functions/process-week-results/index.ts:1113",
             "supabase/functions/process-week-results/scoring-eligibility.ts:146"
           ]
         },
@@ -7209,7 +7254,7 @@
           "edge": "e.fn.process-week-results->mod.process-week-results/scoring-eligibility",
           "detail": "GUARD 3b — decideMatchupScoring refuses any matchup containing an unscoreable participant. Byes gate on team1 only. Refused matchups keep team1_gain NULL and stay pending.",
           "files": [
-            "supabase/functions/process-week-results/index.ts:1174",
+            "supabase/functions/process-week-results/index.ts:1162",
             "supabase/functions/process-week-results/scoring-eligibility.ts:171"
           ]
         },
@@ -7218,7 +7263,7 @@
           "edge": "e.fn.process-week-results->tbl.matchups#update",
           "detail": "Winner written: bye = auto-win, empty portfolio = auto-loss, else dollar gain, tiebreak percent then playoff seed.",
           "files": [
-            "supabase/functions/process-week-results/index.ts:1284"
+            "supabase/functions/process-week-results/index.ts:1272"
           ]
         },
         {
@@ -7226,7 +7271,7 @@
           "edge": "e.fn.process-week-results->tbl.league_standings#update",
           "detail": "Read-then-increment, not transactional and NOT reversible. This irreversibility is the entire reason guards 1-3 refuse rather than fabricate.",
           "files": [
-            "supabase/functions/process-week-results/index.ts:1329"
+            "supabase/functions/process-week-results/index.ts:1317"
           ]
         },
         {
@@ -7234,7 +7279,7 @@
           "edge": "e.fn.process-week-results->tbl.leagues#update",
           "detail": "current_week re-read per batch and advanced only when the batch IS the current week — so a guard-skipped week blocks advancement instead of being stepped over.",
           "files": [
-            "supabase/functions/process-week-results/index.ts:1426"
+            "supabase/functions/process-week-results/index.ts:1414"
           ]
         },
         {
@@ -7242,7 +7287,7 @@
           "edge": "e.fn.process-week-results->pg.complete_league_season",
           "detail": "Season end, from playoffs finals or from standings when playoff_teams = 0.",
           "files": [
-            "supabase/functions/process-week-results/index.ts:783"
+            "supabase/functions/process-week-results/index.ts:756"
           ]
         }
       ],
@@ -8038,8 +8083,8 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 110,
-    "edges": 243,
+    "nodes": 111,
+    "edges": 244,
     "flows": 8,
     "drift": 21,
     "driftHigh": 3,
@@ -8053,7 +8098,7 @@
       "historical-bars[]",
       "join-league[]",
       "preview-league[]",
-      "process-week-results[grouping.ts,playoff-progression.ts,scoring-eligibility.ts]",
+      "process-week-results[grouping.ts,job-status.ts,playoff-progression.ts,scoring-eligibility.ts]",
       "quote[]",
       "record-trade[]",
       "refresh-symbols[]",
@@ -8104,8 +8149,8 @@
       "supabase/functions/join-league/index.ts:76 -> join_league_by_code",
       "supabase/functions/preview-league/index.ts:31 -> check_and_bump_rate_limit",
       "supabase/functions/preview-league/index.ts:34 -> check_and_bump_rate_limit",
-      "supabase/functions/process-week-results/index.ts:783 -> complete_league_season",
-      "supabase/functions/process-week-results/index.ts:827 -> complete_league_season",
+      "supabase/functions/process-week-results/index.ts:756 -> complete_league_season",
+      "supabase/functions/process-week-results/index.ts:800 -> complete_league_season",
       "supabase/functions/record-trade/index.ts:66 -> check_and_bump_rate_limit",
       "supabase/functions/record-trade/index.ts:69 -> check_and_bump_rate_limit",
       "supabase/functions/snapshot-week-end/index.ts:100 -> schedule_snapshot_retry",
@@ -8246,29 +8291,29 @@
       "supabase/functions/preview-league/index.ts:80 -> leagues.select",
       "supabase/functions/preview-league/index.ts:95 -> user_profiles.select",
       "supabase/functions/preview-league/index.ts:99 -> league_members.select",
-      "supabase/functions/process-week-results/index.ts:1045 -> trades.select",
-      "supabase/functions/process-week-results/index.ts:1072 -> drafts.select",
-      "supabase/functions/process-week-results/index.ts:1085 -> trades.select",
-      "supabase/functions/process-week-results/index.ts:1280 -> matchups.update",
-      "supabase/functions/process-week-results/index.ts:1318 -> league_standings.select",
-      "supabase/functions/process-week-results/index.ts:1327 -> league_standings.update",
-      "supabase/functions/process-week-results/index.ts:1342 -> league_standings.insert",
-      "supabase/functions/process-week-results/index.ts:1415 -> leagues.select",
-      "supabase/functions/process-week-results/index.ts:1429 -> matchups.select",
-      "supabase/functions/process-week-results/index.ts:1455 -> leagues.update",
-      "supabase/functions/process-week-results/index.ts:1464 -> leagues.update",
-      "supabase/functions/process-week-results/index.ts:1477 -> leagues.update",
-      "supabase/functions/process-week-results/index.ts:452 -> league_standings.select",
-      "supabase/functions/process-week-results/index.ts:465 -> matchups.select",
-      "supabase/functions/process-week-results/index.ts:475 -> matchups.select",
-      "supabase/functions/process-week-results/index.ts:493 -> matchups.insert",
-      "supabase/functions/process-week-results/index.ts:54 -> cron_job_status.upsert",
-      "supabase/functions/process-week-results/index.ts:736 -> matchups.select",
-      "supabase/functions/process-week-results/index.ts:752 -> matchups.update",
-      "supabase/functions/process-week-results/index.ts:759 -> matchups.update",
-      "supabase/functions/process-week-results/index.ts:811 -> league_standings.select",
-      "supabase/functions/process-week-results/index.ts:885 -> matchups.select",
-      "supabase/functions/process-week-results/index.ts:948 -> week_snapshots.select",
+      "supabase/functions/process-week-results/index.ts:1033 -> trades.select",
+      "supabase/functions/process-week-results/index.ts:1060 -> drafts.select",
+      "supabase/functions/process-week-results/index.ts:1073 -> trades.select",
+      "supabase/functions/process-week-results/index.ts:1268 -> matchups.update",
+      "supabase/functions/process-week-results/index.ts:1306 -> league_standings.select",
+      "supabase/functions/process-week-results/index.ts:1315 -> league_standings.update",
+      "supabase/functions/process-week-results/index.ts:1330 -> league_standings.insert",
+      "supabase/functions/process-week-results/index.ts:1403 -> leagues.select",
+      "supabase/functions/process-week-results/index.ts:1417 -> matchups.select",
+      "supabase/functions/process-week-results/index.ts:1443 -> leagues.update",
+      "supabase/functions/process-week-results/index.ts:1452 -> leagues.update",
+      "supabase/functions/process-week-results/index.ts:1465 -> leagues.update",
+      "supabase/functions/process-week-results/index.ts:425 -> league_standings.select",
+      "supabase/functions/process-week-results/index.ts:438 -> matchups.select",
+      "supabase/functions/process-week-results/index.ts:448 -> matchups.select",
+      "supabase/functions/process-week-results/index.ts:466 -> matchups.insert",
+      "supabase/functions/process-week-results/index.ts:709 -> matchups.select",
+      "supabase/functions/process-week-results/index.ts:725 -> matchups.update",
+      "supabase/functions/process-week-results/index.ts:732 -> matchups.update",
+      "supabase/functions/process-week-results/index.ts:784 -> league_standings.select",
+      "supabase/functions/process-week-results/index.ts:866 -> matchups.select",
+      "supabase/functions/process-week-results/index.ts:936 -> week_snapshots.select",
+      "supabase/functions/process-week-results/job-status.ts:61 -> cron_job_status.upsert",
       "supabase/functions/record-trade/index.ts:115 -> leagues.select",
       "supabase/functions/record-trade/index.ts:128 -> league_members.select",
       "supabase/functions/record-trade/index.ts:138 -> drafts.select",
