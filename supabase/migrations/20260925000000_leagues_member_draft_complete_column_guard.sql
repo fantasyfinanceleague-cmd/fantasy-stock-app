@@ -150,6 +150,12 @@ end;
 $$;
 
 revoke all on function public.enforce_leagues_member_update_columns() from public;
+-- Supabase's default privileges also grant EXECUTE to anon/authenticated
+-- explicitly, and REVOKE FROM PUBLIC does not clear those (CLAUDE.md). Not
+-- exploitable here — a `returns trigger` function cannot be called directly,
+-- and firing a trigger does not check EXECUTE — but revoke them so proacl
+-- reads as the lockdown it is and no future audit cites a false exposure.
+revoke all on function public.enforce_leagues_member_update_columns() from anon, authenticated;
 
 drop trigger if exists trg_leagues_member_update_columns on public.leagues;
 create trigger trg_leagues_member_update_columns
