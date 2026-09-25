@@ -248,7 +248,48 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
    trending down/up over the hours after deploy, plus
    `SELECT symbol, last_price, is_draftable FROM symbols WHERE symbol IN ('BAC','F');`
    becoming priced and draftable.
-13. **`join_league_by_code` never checked `draft_status` — a user could join a
+13. **Web drafting was broken for every league since `2a3cd21` (2026-08-11).**
+   Found 2026-09-25 by a live test draft. `DraftPage.jsx`'s `leagues` select used
+   an explicit column list that omitted `stake_mode`, so the Phase 4 gate
+   `stakeModeMissing = !!league && league.stake_mode == null` always fired —
+   `undefined == null` is `true` — showing "Drafting is paused: this league has
+   no stake mode yet" and silently skipping bot auto-pick, for every league
+   regardless of its real stake mode. Masked since August because the web app is
+   `APP_PAUSED`, and the Phase 4 notes recorded web flows as "not clicked
+   through". A related bug in `PortfolioPage.jsx` used the deprecated
+   `budget_mode` column (defaults to `'budget'`, unwritten since the
+   `stake_mode` migration) to decide budget-mode display, so every
+   `fixed_notional`/`price_tiers` league showed a bogus ~$100 "available cash"
+   and client-side-blocked buys (the server's `record-trade` was never affected —
+   this was a display/UX bug only).
+   **FIXED on `fix/web-draft-stake-mode-load`:** `DraftPage.jsx` and
+   `PortfolioPage.jsx` now select `stake_mode` (`DraftPage.jsx` also selects
+   `notional_per_slot`, `allow_undraftable`); both derive budget mode from
+   `stake_mode`, falling back to `budget_mode` only on a genuine `NULL`
+   (matching `apps/mobile/app/(tabs)/draft.tsx`'s rule). Added a
+   `stakeModeColumnMissing` guard in `DraftPage.jsx` that distinguishes
+   `undefined` (column not loaded — a query bug) from a genuine `NULL` (a real
+   pre-Phase-4 league): on `undefined` it fails closed with a distinct banner
+   message and logs a loud `console.error`, so this class of bug can't silently
+   reappear behind the same "no stake mode yet" copy.
+   Audited every other `leagues` read in `apps/web` and `apps/mobile` for the
+   same class (explicit column list missing a field a consumer reads) — no
+   other hits; all mobile `leagues` reads use `select('*')`.
+   **Not fixed (out of scope for this branch):** no shared column-list
+   constant or blanket `select('*')` for web `leagues` queries — recommended
+   as a follow-up so a narrowed select can't silently reintroduce this bug
+   elsewhere; low urgency while `APP_PAUSED` keeps these pages unreachable.
+   Verified: `apps/web` build with `APP_PAUSED` flipped to `false` locally only
+   (`npx vite build`, main bundle 719.56 kB / gzip 200.90 kB — confirms
+   `DraftPage`/`PortfolioPage` were actually compiled, not tree-shaken away) and
+   `npm run lint` (same 13 pre-existing problems as `origin/main` on these two
+   files, zero new); `APP_PAUSED` restored to `true` before commit
+   (`git diff -- apps/web/src/App.jsx` empty). `gen-architecture.mjs`
+   regenerated (line-number-only drift from the edits, no call sites moved).
+   HUMAN ACTION: merge only (no migration, no deploy) — merging is a Vercel
+   prod deploy per this file's conventions, but `APP_PAUSED` stays `true` so
+   users see no change until the web app is un-paused.
+14. **`join_league_by_code` never checked `draft_status` — a user could join a
    league by invite code mid-draft (or after it).** Found 2026-09-25 by the
    mobile-draft worker. Impact: (a) reshuffles the canonical draft order
    (`computeDraftOrder` = commissioner first, then member ids sorted) for
@@ -277,10 +318,15 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
    **Apply order:** `db push` (the guard) FIRST, then `functions deploy
    preview-league` (UX only — `join-league` needs no redeploy, it passes RPC
    output straight through and every reason's copy already lives client-side).
+   **Where to run (after the PR merges to `main` on GitHub):** only from the
+   deploy checkout `/Users/giorgio/fantasy-stock-deploy` — refresh with
+   `git -C /Users/giorgio/fantasy-stock-deploy fetch origin && git -C /Users/giorgio/fantasy-stock-deploy checkout --detach origin/main`,
+   then `supabase db push --dry-run` → `supabase db push` →
+   `supabase functions deploy preview-league --project-ref haiaaifjcclsvmkfqgmd`.
    **Verify:** `docs/security/join-mid-draft-effect-test.sql` (self-contained
    fixture, rolls back via RAISE) plus the proacl/proconfig/prosrc queries in
    the migration file.
-14. **`league_members_insert_self` (RLS, still-interim `[I4]`) lets any
+15. **`league_members_insert_self` (RLS, still-interim `[I4]`) lets any
    authenticated user insert themselves into ANY `league_members` row they
    name, bypassing `join_league_by_code` entirely** — no invite code, no
    capacity check, no the new `draft_started` gate above, and a forge-able
@@ -288,11 +334,11 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
    `leagues.commissioner_id`, not `league_members.role`; only a web `Header`
    label reads the role column — but still a membership bypass).
    `league_members_insert_bot` similarly lets any existing member add bots
-   mid-draft, which reshuffles `computeDraftOrder` the same way defect 13
+   mid-draft, which reshuffles `computeDraftOrder` the same way defect 14
    fixes for the honest path. Severity: **medium** — `leagues.id` is a UUID
    and `leagues` SELECT is members-only, which limits discovery, but the
    bypass is real for anyone who already knows/guesses a `league_id`.
-   Found/routed 2026-09-25 while fixing defect 13; NOT fixed here (separate
+   Found/routed 2026-09-25 while fixing defect 14; NOT fixed here (separate
    task — the real close is moving `create-league`'s commissioner self-insert
    server-side and dropping `[I4]`, or at minimum narrowing it to
    `role='commissioner' AND draft_status='not_started'` on a league the
@@ -339,7 +385,7 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
 | `security/claude-security-fixes-20260730` | PR #9, **merged as `5e3b5d1`** (2026-09-25). Deploy per `docs/security/DEPLOY-RUNBOOK.md` in progress. |
 | `feat/server-schedule-generation` | §4 defects 1, 2 (deferred drop), 9: schedule module, `finalize_league_draft` migration, pick-function wiring, web writers removed. Includes `main` @ `5e3b5d1`. Unmerged; migration unapplied, function undeployed. |
 | `ui/design-system-pass-v2` | Unmerged, awaiting visual check. Checked out in the main checkout. |
-| `fix/refuse-join-mid-draft` | §4 defect 13: `join_league_by_code` draft_status guard, `preview-league` hard-block, both join screens' copy, web preview-bug fix. Unmerged; migration unapplied, `preview-league` undeployed. |
+| `fix/refuse-join-mid-draft` | §4 defect 14: `join_league_by_code` draft_status guard, `preview-league` hard-block, both join screens' copy, web preview-bug fix. Unmerged; migration unapplied, `preview-league` undeployed. |
 | `ui/design-system-pass`, `item4-fix-refresh-symbols-cron` | Superseded (backup / folded into `main` + PR #9). Safe to delete once confirmed. |
 | ~20 others (`simulator-core`, `phase4-*`, `item*`, `signup-ux-password`, …) | Fully merged into `main` (0 commits ahead) — safe to delete with `git branch -d`. |
 

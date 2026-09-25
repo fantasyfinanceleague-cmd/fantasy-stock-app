@@ -181,6 +181,13 @@ export default function DraftPage() {
   // budget. stake_mode is authoritative (budget_cap = capped); budget_mode
   // fallback covers the pre-migration transition window only. These client
   // checks are UX mirrors — validate-and-record-pick is the legality gate.
+  // The `??` here only falls back to the deprecated budget_mode when
+  // stake_mode is a genuine NULL (a pre-Phase-4 league that hasn't been
+  // migrated) — matching apps/mobile/app/(tabs)/draft.tsx's rule. That
+  // depends on stake_mode actually being in the `leagues` select below; if
+  // it were left out again, `undefined ?? fallback` would silently take the
+  // same path as a genuine NULL. The `stakeModeColumnMissing` check right
+  // below exists to catch exactly that class of bug loudly instead.
   const isBudgetMode =
     (league?.stake_mode ?? (league?.budget_mode === 'budget' ? 'budget_cap' : null)) === 'budget_cap';
   // budget_amount is authoritative; the salary_cap_limit fallback read was
@@ -191,6 +198,23 @@ export default function DraftPage() {
     [portfolio]
   );
   const budgetRemaining = isBudgetMode ? Math.max(leagueBudget - mySpent, 0) : null;
+
+  // A NULL stake_mode is a discriminator (a real pre-Phase-4 league state);
+  // `undefined` means the column wasn't requested in the `leagues` select
+  // below — a query bug, not a legacy league. Once the select loads
+  // stake_mode, `league.stake_mode` is either a real value or a genuine
+  // NULL, never undefined — but if a future edit narrows the select again,
+  // this tells the two apart and fails loudly instead of silently
+  // re-blocking every league's drafting the way the missing column did here
+  // (found by a live test draft 2026-09-25; see docs/STATUS.md §4).
+  const stakeModeColumnMissing = !!league && league.stake_mode === undefined;
+  useEffect(() => {
+    if (!stakeModeColumnMissing) return;
+    console.error(
+      '[DraftPage] league.stake_mode is undefined — the `leagues` select is missing the stake_mode column. ' +
+      'This is a query bug, not a legacy league; drafting stays blocked until the select is fixed.'
+    );
+  }, [stakeModeColumnMissing]);
 
   // Phase 4: legacy leagues with stake_mode NULL are blocked from drafting
   // until the commissioner chooses a mode in Manage → League Settings.
@@ -324,7 +348,7 @@ export default function DraftPage() {
         // 1) Load league meta FIRST so we have the name even if user isn't a member
         const { data: lg, error: lgErr } = await supabase
           .from('leagues')
-          .select('id, name, draft_date, num_rounds, num_participants, budget_mode, budget_amount, commissioner_id, draft_status, duration_days, league_type, num_weeks')
+          .select('id, name, draft_date, num_rounds, num_participants, budget_mode, budget_amount, stake_mode, notional_per_slot, allow_undraftable, commissioner_id, draft_status, duration_days, league_type, num_weeks')
           .eq('id', leagueId)
           .single();
         if (lgErr) throw lgErr;
@@ -1374,10 +1398,16 @@ export default function DraftPage() {
                   border: '1px solid rgba(239, 68, 68, 0.3)',
                   borderRadius: 10, color: '#f87171', fontSize: 14,
                 }}>
-                  Drafting is paused: this league has no stake mode yet.
-                  {isCommissioner
-                    ? ' Choose one in Leagues → Manage → League Settings.'
-                    : ' Ask your commissioner to choose one in League Settings.'}
+                  {stakeModeColumnMissing ? (
+                    "Drafting is paused: couldn't load this league's stake mode. This looks like a bug, not a legacy league — try reloading; if it persists, contact support."
+                  ) : (
+                    <>
+                      Drafting is paused: this league has no stake mode yet.
+                      {isCommissioner
+                        ? ' Choose one in Leagues → Manage → League Settings.'
+                        : ' Ask your commissioner to choose one in League Settings.'}
+                    </>
+                  )}
                 </div>
               )}
               {!stakeModeMissing && <DraftControls
