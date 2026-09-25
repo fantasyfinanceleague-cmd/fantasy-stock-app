@@ -248,39 +248,122 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
    trending down/up over the hours after deploy, plus
    `SELECT symbol, last_price, is_draftable FROM symbols WHERE symbol IN ('BAC','F');`
    becoming priced and draftable.
-13. **[I4] — any authenticated user could self-insert into ANY league via
-   PostgREST, knowing only its UUID.** Found 2026-09-25 (mid-draft-join
-   worker; orchestrator-assessed MEDIUM). `league_members_insert_self`
-   (`20260712000002`) was `with check (user_id = auth.uid()::text)` only —
-   no league-ownership or capacity/draft-status gate, so a caller bypassed
-   `join_league_by_code`'s invite code, capacity check, and the mid-draft
-   join refusal, with any `role` value (display-only — `is_commissioner()`
-   reads `leagues.commissioner_id`, not this column, so no commissioner
-   POWERS were grantable this way). The damage was membership itself:
-   member-level reads, adding bots via `[I6]`, and reshuffling
-   `computeDraftOrder` mid-draft.
-   **FIXED ON BRANCH `fix/narrow-league-members-self-insert`
-   (not yet merged or deployed — prod is still exploitable until this
-   ships):** migration `20261001000000` narrows the policy to exactly the
-   one legitimate remaining caller (join and bots have their own paths) —
-   a league's own creator, self-inserting as `'commissioner'`, into a
-   league whose `draft_status = 'not_started'`. Full insert-path inventory,
-   the RETURNING/upsert visibility analysis (58518d4/9a2518b precedent —
-   safe, since every admitted row still satisfies the SELECT policy's
-   direct `user_id = auth.uid()` clause), and effect-test cases are in the
-   migration header and `docs/security/league-members-insert-effect-test.sql`.
-   `[I6]` (bot insert, any member, any time) is deliberately left alone —
+13. **Web drafting was broken for every league since `2a3cd21` (2026-08-11).**
+   Found 2026-09-25 by a live test draft. `DraftPage.jsx`'s `leagues` select used
+   an explicit column list that omitted `stake_mode`, so the Phase 4 gate
+   `stakeModeMissing = !!league && league.stake_mode == null` always fired —
+   `undefined == null` is `true` — showing "Drafting is paused: this league has
+   no stake mode yet" and silently skipping bot auto-pick, for every league
+   regardless of its real stake mode. Masked since August because the web app is
+   `APP_PAUSED`, and the Phase 4 notes recorded web flows as "not clicked
+   through". A related bug in `PortfolioPage.jsx` used the deprecated
+   `budget_mode` column (defaults to `'budget'`, unwritten since the
+   `stake_mode` migration) to decide budget-mode display, so every
+   `fixed_notional`/`price_tiers` league showed a bogus ~$100 "available cash"
+   and client-side-blocked buys (the server's `record-trade` was never affected —
+   this was a display/UX bug only).
+   **FIXED on `fix/web-draft-stake-mode-load`:** `DraftPage.jsx` and
+   `PortfolioPage.jsx` now select `stake_mode` (`DraftPage.jsx` also selects
+   `notional_per_slot`, `allow_undraftable`); both derive budget mode from
+   `stake_mode`, falling back to `budget_mode` only on a genuine `NULL`
+   (matching `apps/mobile/app/(tabs)/draft.tsx`'s rule). Added a
+   `stakeModeColumnMissing` guard in `DraftPage.jsx` that distinguishes
+   `undefined` (column not loaded — a query bug) from a genuine `NULL` (a real
+   pre-Phase-4 league): on `undefined` it fails closed with a distinct banner
+   message and logs a loud `console.error`, so this class of bug can't silently
+   reappear behind the same "no stake mode yet" copy.
+   Audited every other `leagues` read in `apps/web` and `apps/mobile` for the
+   same class (explicit column list missing a field a consumer reads) — no
+   other hits; all mobile `leagues` reads use `select('*')`.
+   **Not fixed (out of scope for this branch):** no shared column-list
+   constant or blanket `select('*')` for web `leagues` queries — recommended
+   as a follow-up so a narrowed select can't silently reintroduce this bug
+   elsewhere; low urgency while `APP_PAUSED` keeps these pages unreachable.
+   Verified: `apps/web` build with `APP_PAUSED` flipped to `false` locally only
+   (`npx vite build`, main bundle 719.56 kB / gzip 200.90 kB — confirms
+   `DraftPage`/`PortfolioPage` were actually compiled, not tree-shaken away) and
+   `npm run lint` (same 13 pre-existing problems as `origin/main` on these two
+   files, zero new); `APP_PAUSED` restored to `true` before commit
+   (`git diff -- apps/web/src/App.jsx` empty). `gen-architecture.mjs`
+   regenerated (line-number-only drift from the edits, no call sites moved).
+   HUMAN ACTION: merge only (no migration, no deploy) — merging is a Vercel
+   prod deploy per this file's conventions, but `APP_PAUSED` stays `true` so
+   users see no change until the web app is un-paused.
+14. **`join_league_by_code` never checked `draft_status` — a user could join a
+   league by invite code mid-draft (or after it).** Found 2026-09-25 by the
+   mobile-draft worker. Impact: (a) reshuffles the canonical draft order
+   (`computeDraftOrder` = commissioner first, then member ids sorted) for
+   every client mid-draft, and (b) raises `finalize_league_draft`'s
+   (`20260926000000`) completion threshold (members × num_rounds), so it
+   waits on picks the new member never gets a turn to make, or refuses as
+   `roster_mismatch`. `preview-league` treated "draft started" as soft/
+   display-only on purpose, so the UI actively offered the broken join.
+   **FIXED ON BRANCH `fix/refuse-join-mid-draft` (not yet merged or deployed
+   — prod still allows mid-draft joins until this ships):** migration
+   `20260930000000` adds a `draft_status <> 'not_started'` refusal (reason
+   `draft_started`) positioned after the row lock (serializes against a
+   concurrent draft-start) and after `already_member` (so a re-submitting
+   existing member still gets the idempotent-success path); a refusal does
+   not consume the invite code. `draft_status = 'completed'` is refused too
+   — `start_new_league_season` does not reset it, so a new member joining a
+   past-draft league would have no roster either. `preview-league`'s
+   joinable/reason logic moved to a pure, hermetically-tested
+   `preview-league/reason.ts` and made `draft_started` a HARD block (was
+   soft) so the client never offers a Join button the RPC will refuse. Both
+   join screens (mobile `join-league.tsx`, web `JoinLeague.jsx`) map the new
+   reason to "This league's draft has already started." Along the way, found
+   and fixed a pre-existing bug: web's `JoinLeague.jsx` ignored
+   `joinable`/`reason` entirely and showed the Join button even for full or
+   expired leagues.
+   **Apply order:** `db push` (the guard) FIRST, then `functions deploy
+   preview-league` (UX only — `join-league` needs no redeploy, it passes RPC
+   output straight through and every reason's copy already lives client-side).
+   **Where to run (after the PR merges to `main` on GitHub):** only from the
+   deploy checkout `/Users/giorgio/fantasy-stock-deploy` — refresh with
+   `git -C /Users/giorgio/fantasy-stock-deploy fetch origin && git -C /Users/giorgio/fantasy-stock-deploy checkout --detach origin/main`,
+   then `supabase db push --dry-run` → `supabase db push` →
+   `supabase functions deploy preview-league --project-ref haiaaifjcclsvmkfqgmd`.
+   **Verify:** `docs/security/join-mid-draft-effect-test.sql` (self-contained
+   fixture, rolls back via RAISE) plus the proacl/proconfig/prosrc queries in
+   the migration file.
+15. **`league_members_insert_self` (RLS, still-interim `[I4]`) let any
+   authenticated user insert themselves into ANY `league_members` row they
+   name, bypassing `join_league_by_code` entirely** — no invite code, no
+   capacity check, no the defect 14 `draft_started` gate, and a forge-able
+   `role='commissioner'` (harmless for privilege — `is_commissioner()` reads
+   `leagues.commissioner_id`, not `league_members.role`; only a web `Header`
+   label and the mobile commissioner badge
+   (`apps/mobile/app/(tabs)/leagues.tsx:792`) read the role column — but
+   still a membership bypass). `league_members_insert_bot` ([I6]) similarly
+   lets any existing member add bots mid-draft, which reshuffles
+   `computeDraftOrder` the same way defect 14 fixes for the honest join
+   path. Severity: **medium** — `leagues.id` is a UUID and `leagues` SELECT
+   is members-only, which limits discovery, but the bypass is real for
+   anyone who already knows/guesses a `league_id`. Found/routed 2026-09-25
+   while fixing defect 14.
+   **FIXED ON BRANCH `fix/narrow-league-members-self-insert` (not yet merged
+   or deployed — prod is still exploitable until this ships):** migration
+   `20261001000000` narrows `[I4]`'s `WITH CHECK` to exactly the one
+   legitimate remaining caller — a league's own creator, self-inserting as
+   `'commissioner'`, into a league they commission whose `draft_status =
+   'not_started'` (join and bots have their own paths, unaffected). Full
+   insert-path inventory, the INSERT..RETURNING visibility analysis
+   (58518d4/9a2518b precedent — safe, since every admitted row still
+   satisfies the SELECT policy's direct `user_id = auth.uid()` clause), and
+   the effect-test cases are documented in the migration header and
+   `docs/security/league-members-insert-effect-test.sql`.
+   `[I6]` (bot insert, any member, any time) is **deliberately left alone** —
    it retires with the mobile-draft worker's deferred
-   `20260929000000_drop_I6_I2b.sql` once draft-control ships server-side
-   bot seeding, so the mid-draft-reshuffle-via-bots vector survives this
-   fix. Full `[I4]` retirement still requires a server-side `create-league`
+   `20260929000000_drop_I6_I2b.sql` once draft-control ships server-side bot
+   seeding, so the mid-draft-reshuffle-via-bots vector survives this fix.
+   Full `[I4]` retirement still requires a server-side `create-league`
    (`docs/migrations/RLS_HARDENING_SPEC.md` §1).
    **Apply order:** merge this branch's PR into `main` on GitHub first (no
    local merge/cherry-pick into the deploy checkout) — then
    `git -C /Users/giorgio/fantasy-stock-deploy fetch origin && git -C
    /Users/giorgio/fantasy-stock-deploy checkout --detach origin/main` and
-   `supabase db push` from there only. No function deploy. Verify
-   with the `pg_policies` query and effect test in
+   `supabase db push` from there only. No function deploy.
+   **Verify:** the `pg_policies` query in §7 plus
    `docs/security/league-members-insert-effect-test.sql`.
 
 ---
@@ -324,7 +407,8 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
 | `security/claude-security-fixes-20260730` | PR #9, **merged as `5e3b5d1`** (2026-09-25). Deploy per `docs/security/DEPLOY-RUNBOOK.md` in progress. |
 | `feat/server-schedule-generation` | §4 defects 1, 2 (deferred drop), 9: schedule module, `finalize_league_draft` migration, pick-function wiring, web writers removed. Includes `main` @ `5e3b5d1`. Unmerged; migration unapplied, function undeployed. |
 | `ui/design-system-pass-v2` | Unmerged, awaiting visual check. Checked out in the main checkout. |
-| `fix/narrow-league-members-self-insert` | §4 defect 13: narrows `[I4]` `league_members` self-insert to creator-only. Migration `20261001000000`. Unmerged; migration unapplied. |
+| `fix/refuse-join-mid-draft` | §4 defect 14: `join_league_by_code` draft_status guard, `preview-league` hard-block, both join screens' copy, web preview-bug fix. Unmerged; migration unapplied, `preview-league` undeployed. |
+| `fix/narrow-league-members-self-insert` | §4 defect 15: narrows `[I4]` `league_members` self-insert to creator-only. Migration `20261001000000`. Unmerged; migration unapplied. |
 | `ui/design-system-pass`, `item4-fix-refresh-symbols-cron` | Superseded (backup / folded into `main` + PR #9). Safe to delete once confirmed. |
 | ~20 others (`simulator-core`, `phase4-*`, `item*`, `signup-ux-password`, …) | Fully merged into `main` (0 commits ahead) — safe to delete with `git branch -d`. |
 
@@ -365,7 +449,7 @@ SELECT proname, proacl FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamesp
 WHERE n.nspname = 'public' AND proname = 'finalize_league_draft';
 ```
 ```sql
--- league_members INSERT policies (defect 13) — league_members_insert_self's
+-- league_members INSERT policies (defect 15) — league_members_insert_self's
 -- with_check should reference role/leagues.commissioner_id/draft_status, not
 -- just user_id = auth.uid()
 SELECT policyname, cmd, roles, qual, with_check FROM pg_policies

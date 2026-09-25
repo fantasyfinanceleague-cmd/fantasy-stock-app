@@ -62,7 +62,7 @@ export default function PortfolioPage() {
 
         const { data: lg, error: lgErr } = await supabase
           .from('leagues')
-          .select('id, name, budget_mode, budget_amount, league_type, current_week')
+          .select('id, name, budget_mode, budget_amount, stake_mode, league_type, current_week')
           .in('id', ids)
           .order('name', { ascending: true });
 
@@ -100,7 +100,7 @@ export default function PortfolioPage() {
         if (!league || league?.id !== leagueId) {
           const { data: lg, error: lgErr } = await supabase
             .from('leagues')
-            .select('id, name, budget_mode, budget_amount, league_type, current_week')
+            .select('id, name, budget_mode, budget_amount, stake_mode, league_type, current_week')
             .eq('id', leagueId)
             .single();
           if (lgErr) throw lgErr;
@@ -293,11 +293,19 @@ export default function PortfolioPage() {
     }, 0);
   }, [actualHoldings, prices]);
 
+  // stake_mode is authoritative (budget_cap = capped); budget_mode is
+  // deprecated (defaults to 'budget' and is no longer written by any
+  // create/edit path — see supabase/migrations/20260810000002) so it must
+  // only be consulted when stake_mode is a genuine NULL (pre-Phase-4 league),
+  // matching DraftPage.jsx and apps/mobile/app/(tabs)/draft.tsx's rule.
+  const isBudgetMode =
+    (league?.stake_mode ?? (league?.budget_mode === 'budget' ? 'budget_cap' : null)) === 'budget_cap';
+
   const budgetRemaining = useMemo(() => {
-    if (!league || league.budget_mode !== 'budget') return null;
+    if (!league || !isBudgetMode) return null;
     const cap = Number(league.budget_amount || 0);
     return Math.max(cap - totalCashSpent, 0);
-  }, [league, totalCashSpent]);
+  }, [league, isBudgetMode, totalCashSpent]);
 
   const totalHoldings = actualHoldings.length;
 
@@ -609,7 +617,7 @@ export default function PortfolioPage() {
         userId={USER_ID}
         currentHoldings={actualHoldings}
         availableCash={budgetRemaining ?? 0}
-        isBudgetMode={league?.budget_mode === 'budget'}
+        isBudgetMode={isBudgetMode}
         leagueType={league?.league_type || 'duration'}
         initialSymbol={tradeSymbol}
         initialAction={tradeAction}

@@ -3,9 +3,11 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import { supabase } from '../supabase/supabaseClient';
 
 const REASON_MSG = {
+  already_member: 'You are already a member of this league',
   league_full: 'This league is full',
   invite_expired: 'This invite has already been used or expired',
   season_completed: "This league's season has ended",
+  draft_started: "This league's draft has already started",
   invalid_code: 'Invite not found',
 };
 
@@ -25,6 +27,10 @@ export function JoinLeague() {
         const { data, error: fnErr } = await supabase.functions.invoke('preview-league', { body: { code } });
         if (fnErr) throw fnErr;
         if (!data.found) throw new Error('Invite not found');
+        // Hard reasons (full / already-member / expired / season over / draft
+        // started) block here with an inline error — no preview card, no Join
+        // button offered for a join the server will refuse anyway.
+        if (!data.joinable) throw new Error(REASON_MSG[data.reason] ?? 'You cannot join this league');
         if (!cancelled) setLeague(data.league);
       } catch (err) {
         if (!cancelled) setError(err.message || String(err));
