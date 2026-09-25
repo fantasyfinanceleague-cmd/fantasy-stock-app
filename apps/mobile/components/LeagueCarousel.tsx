@@ -206,9 +206,9 @@ export default function LeagueCarousel() {
 
   const getCardBorderStyle = (league: League, isActive: boolean) => {
     const status = getChampionshipStatus(league);
-    if (status === 'champion') return { borderColor: '#D97706', borderWidth: 2 };
-    if (status === 'runner-up') return { borderColor: '#94A3B8', borderWidth: 2 };
-    if (isActive) return { borderColor: '#0891B2' };
+    if (status === 'champion') return { borderColor: Colors.warning, borderWidth: 2 };
+    if (status === 'runner-up') return { borderColor: Colors.textMuted, borderWidth: 2 };
+    if (isActive) return { borderColor: Colors.primary };
     return {};
   };
 
@@ -381,14 +381,14 @@ export default function LeagueCarousel() {
                   style={styles.iconButton}
                   onPress={() => handleShowInviteCode(league)}
                 >
-                  <Ionicons name="share-outline" size={18} color="#0891B2" />
+                  <Ionicons name="share-outline" size={18} color={Colors.primary} />
                 </TouchableOpacity>
                 {league.commissioner_id === user?.id && (
                   <TouchableOpacity
                     style={styles.iconButtonMuted}
                     onPress={() => router.push({ pathname: '/league-settings', params: { leagueId: league.id } })}
                   >
-                    <Ionicons name="settings-outline" size={18} color="#94A3B8" />
+                    <Ionicons name="settings-outline" size={18} color={Colors.textMuted} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -404,7 +404,7 @@ export default function LeagueCarousel() {
         >
           <View style={styles.createContent}>
             <View style={styles.createIconCircle}>
-              <Ionicons name="add" size={36} color="#0891B2" />
+              <Ionicons name="add" size={36} color={Colors.primary} />
             </View>
             <Text style={styles.createTitle}>Create or Join</Text>
             <Text style={styles.createSubtitle}>Start a new league or join an existing one</Text>
@@ -450,10 +450,10 @@ const styles = StyleSheet.create({
   card: {
     width: CARD_WIDTH,
     marginHorizontal: CARD_MARGIN,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: Colors.border,
     padding: 16,
     overflow: 'hidden',
   },
@@ -464,7 +464,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFBEB',
+    backgroundColor: Colors.warningBg,
     marginHorizontal: -16,
     marginTop: -16,
     marginBottom: 12,
@@ -472,13 +472,13 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     borderBottomWidth: 1,
-    borderBottomColor: '#D97706',
+    borderBottomColor: Colors.warning,
   },
   runnerUpBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: Colors.bgElevated,
     marginHorizontal: -16,
     marginTop: -16,
     marginBottom: 12,
@@ -486,13 +486,13 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     borderBottomWidth: 1,
-    borderBottomColor: '#94A3B8',
+    borderBottomColor: Colors.textMuted,
   },
   completedBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.bgSurface,
     marginHorizontal: -16,
     marginTop: -16,
     marginBottom: 12,
@@ -500,48 +500,51 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: Colors.border,
   },
   bannerIcon: {
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     marginRight: 6,
   },
   championBannerText: {
-    color: '#92400E',
-    fontWeight: '700',
+    color: Colors.goldText,
+    fontFamily: 'Inter_700Bold',
     fontSize: 13,
   },
   runnerUpBannerText: {
-    color: '#475569',
-    fontWeight: '700',
+    color: Colors.textSecondary,
+    fontFamily: 'Inter_700Bold',
     fontSize: 13,
   },
   completedBannerText: {
-    color: '#94A3B8',
-    fontWeight: '600',
+    color: Colors.textMuted,
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 13,
   },
   championRankBadge: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: Colors.warningBg,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#D97706',
+    borderColor: Colors.warning,
   },
   runnerUpRankBadge: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: Colors.bgElevated,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#94A3B8',
+    borderColor: Colors.textMuted,
   },
   trophyIcon: {
     fontSize: 24,
+    fontFamily: 'Inter_400Regular',
   },
   medalIcon: {
     fontSize: 24,
+    fontFamily: 'Inter_400Regular',
   },
   cardHeader: {
     flexDirection: 'row',
@@ -550,6 +553,7 @@ const styles = StyleSheet.create({
   },
   leagueIcon: {
     fontSize: 36,
+    fontFamily: 'Inter_400Regular',
     marginRight: 12,
   },
   headerText: {
@@ -557,31 +561,34 @@ const styles = StyleSheet.create({
   },
   leagueName: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontFamily: 'Inter_700Bold',
+    color: Colors.textPrimary,
     marginBottom: 2,
   },
   leagueType: {
     fontSize: 13,
-    color: '#94A3B8',
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textMuted,
   },
   rankBadge: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: Colors.bgElevated,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
   },
   rankNumber: {
     fontSize: 24,
-    fontWeight: '800',
-    color: '#0F172A',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
+    color: Colors.textPrimary,
   },
   rankSuffix: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#94A3B8',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
+    color: Colors.textMuted,
     marginBottom: 4,
     marginLeft: 1,
   },
@@ -589,7 +596,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.bgSurface,
     borderRadius: 14,
     paddingVertical: 16,
     marginBottom: 16,
@@ -600,25 +607,28 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 24,
-    fontWeight: '800',
-    color: '#0F172A',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
+    color: Colors.textPrimary,
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 11,
-    color: '#64748B',
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
+    color: Colors.textSecondary,
     letterSpacing: 0.5,
   },
   statDivider: {
     width: 1,
     height: 36,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: Colors.border,
   },
   positive: {
-    color: '#059669',
+    color: Colors.success,
   },
   negative: {
-    color: '#DC2626',
+    color: Colors.error,
   },
   actionRow: {
     flexDirection: 'row',
@@ -629,20 +639,20 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#0891B2',
+    borderColor: Colors.primary,
     alignItems: 'center',
   },
   actionButtonText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#0891B2',
+    fontFamily: 'Inter_600SemiBold',
+    color: Colors.primary,
   },
   iconButton: {
     width: 42,
     paddingVertical: 11,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#0891B2',
+    borderColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -651,7 +661,7 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -667,22 +677,23 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: 'rgba(8,145,178,0.08)',
+    backgroundColor: Colors.primaryBg,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#0891B2',
+    borderColor: Colors.primary,
   },
   createTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontFamily: 'Inter_700Bold',
+    color: Colors.textPrimary,
     marginBottom: 4,
   },
   createSubtitle: {
     fontSize: 14,
-    color: '#94A3B8',
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textMuted,
     textAlign: 'center',
   },
   indicators: {
@@ -696,10 +707,10 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: Colors.border,
   },
   indicatorActive: {
-    backgroundColor: '#0891B2',
+    backgroundColor: Colors.primary,
     width: 24,
   },
 });

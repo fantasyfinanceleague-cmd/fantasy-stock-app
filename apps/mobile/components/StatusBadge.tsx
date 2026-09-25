@@ -41,7 +41,7 @@ export default function StatusBadge({ type, text, week, holidayName }: StatusBad
       case 'final':
         return {
           backgroundColor: Colors.success,
-          textColor: '#FFFFFF',
+          textColor: Colors.white,
           displayText: text || 'Final',
           showDot: false,
         };
@@ -49,7 +49,7 @@ export default function StatusBadge({ type, text, week, holidayName }: StatusBad
         return {
           backgroundColor: Colors.errorBg,
           textColor: Colors.error,
-          borderColor: '#FECACA',
+          borderColor: Colors.errorBorder,
           displayText: text || 'Live',
           showDot: true,
         };
@@ -57,7 +57,7 @@ export default function StatusBadge({ type, text, week, holidayName }: StatusBad
         return {
           backgroundColor: Colors.primaryBg,
           textColor: Colors.primaryLight,
-          borderColor: '#BFDBFE',
+          borderColor: Colors.infoBorder,
           displayText: text || 'Pending',
           showDot: false,
         };
@@ -65,14 +65,14 @@ export default function StatusBadge({ type, text, week, holidayName }: StatusBad
         return {
           backgroundColor: Colors.warningBg,
           textColor: Colors.warning,
-          borderColor: '#FDE68A',
+          borderColor: Colors.warningBorder,
           displayText: text || (holidayName ? `Market closed - ${holidayName}` : 'Holiday'),
           showDot: false,
         };
       case 'champion':
         return {
           backgroundColor: Colors.gold,
-          textColor: '#451a03',
+          textColor: Colors.championText,
           displayText: text || 'Champion',
           showDot: false,
         };
@@ -123,6 +123,6 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
 });

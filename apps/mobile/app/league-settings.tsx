@@ -23,6 +23,7 @@ import {
   saveLeagueSlots,
   validateSlotConfig,
 } from '@/lib/categoryData';
+import { Button, Card } from '@/components/ui';
 
 const ACCENT = Colors.primary;
 const ACCENT_BG = Colors.primaryBg;
@@ -478,7 +479,7 @@ export default function LeagueSettingsScreen() {
           {/* League Info (Read-only) */}
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>League Info</Text>
-            <View style={styles.infoCard}>
+            <Card style={styles.infoCardOuter}>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Type</Text>
                 <Text style={styles.infoValue}>
@@ -505,7 +506,7 @@ export default function LeagueSettingsScreen() {
                 <Text style={styles.infoLabel}>Invite Code</Text>
                 <Text style={[styles.infoValue, { color: ACCENT }]}>{league.invite_code}</Text>
               </View>
-            </View>
+            </Card>
           </View>
 
           {/* Start New Season - Only show when season is completed */}
@@ -525,10 +526,10 @@ export default function LeagueSettingsScreen() {
                   disabled={startingNewSeason}
                 >
                   {startingNewSeason ? (
-                    <ActivityIndicator color="#FFFFFF" />
+                    <ActivityIndicator color={Colors.white} />
                   ) : (
                     <>
-                      <Ionicons name="refresh" size={20} color="#FFFFFF" />
+                      <Ionicons name="refresh" size={20} color={Colors.white} />
                       <Text style={styles.newSeasonButtonText}>Start New Season</Text>
                     </>
                   )}
@@ -543,17 +544,13 @@ export default function LeagueSettingsScreen() {
         {/* Save Button */}
         {!isLocked && (
           <View style={styles.footer}>
-            <TouchableOpacity
-              style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+            <Button
+              title="Save Changes"
               onPress={handleSave}
-              disabled={saving}
-            >
-              {saving ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.saveButtonText}>Save Changes</Text>
-              )}
-            </TouchableOpacity>
+              variant="success"
+              loading={saving}
+              style={styles.saveButton}
+            />
           </View>
         )}
       </KeyboardAvoidingView>
@@ -584,7 +581,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     fontSize: 17,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
     textAlign: 'center',
   },
@@ -607,6 +604,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     textAlign: 'center',
   },
@@ -624,6 +622,7 @@ const styles = StyleSheet.create({
   lockWarningText: {
     flex: 1,
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.warning,
   },
 
@@ -633,7 +632,7 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
     marginBottom: 12,
   },
@@ -644,6 +643,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textPrimary,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -686,6 +686,7 @@ const styles = StyleSheet.create({
   radioText: {
     flex: 1,
     fontSize: 15,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
   },
   radioTextSelected: {
@@ -699,7 +700,8 @@ const styles = StyleSheet.create({
   },
   datePickerDoneText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: ACCENT,
   },
 
@@ -724,7 +726,7 @@ const styles = StyleSheet.create({
   },
   modeCardText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textMuted,
   },
   modeCardTextSelected: {
@@ -744,14 +746,15 @@ const styles = StyleSheet.create({
   },
   currencySymbol: {
     fontSize: 20,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textMuted,
     marginRight: 4,
   },
   budgetInput: {
     flex: 1,
     fontSize: 20,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
     paddingVertical: 14,
   },
@@ -780,20 +783,19 @@ const styles = StyleSheet.create({
   },
   stepperValueText: {
     fontSize: 32,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
   stepperValueLabel: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
   },
 
   // Info card
-  infoCard: {
-    backgroundColor: Colors.cardBg,
-    borderRadius: 12,
-    padding: 16,
-  },
+  infoCardOuter: {},
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -803,11 +805,13 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
   },
   infoValue: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
 
@@ -819,19 +823,7 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.border,
   },
   saveButton: {
-    backgroundColor: Colors.success,
-    paddingVertical: 16,
     borderRadius: 30,
-    alignItems: 'center',
-  },
-  saveButtonDisabled: {
-    backgroundColor: Colors.border,
-  },
-  saveButtonText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
   },
 
   // New Season section
@@ -851,6 +843,7 @@ const styles = StyleSheet.create({
   seasonCompleteText: {
     flex: 1,
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textSecondary,
     lineHeight: 20,
   },
@@ -868,8 +861,8 @@ const styles = StyleSheet.create({
   },
   newSeasonButtonText: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontFamily: 'Inter_700Bold',
+    color: Colors.white,
     letterSpacing: 0.5,
   },
   // Phase 4 stake-mode UI
@@ -882,6 +875,7 @@ const styles = StyleSheet.create({
   },
   stakeHelpText: {
     fontSize: 11,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginTop: 2,
     lineHeight: 15,
@@ -889,6 +883,7 @@ const styles = StyleSheet.create({
   stakeMissingBanner: {
     color: Colors.error,
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
     backgroundColor: Colors.errorBg,
     borderRadius: 8,
     padding: 10,
@@ -905,7 +900,7 @@ const styles = StyleSheet.create({
   undraftableLabel: {
     flex: 1,
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
   },
 });

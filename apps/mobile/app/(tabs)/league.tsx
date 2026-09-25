@@ -11,6 +11,8 @@ import { Colors } from '@/constants/Colors';
 import StatusBadge from '@/components/StatusBadge';
 import LeagueSwitcher from '@/components/LeagueSwitcher';
 import { getWeekStatus, getCountdownMessage, getPlayoffRoundLabel } from '@/lib/weekStatus';
+import { Button, Card } from '@/components/ui';
+import { SkeletonCard, SkeletonRows } from '@/components/Skeleton';
 
 interface Standing {
   user_id: string;
@@ -45,17 +47,17 @@ function formatCurrency(value: number): string {
 }
 
 function getRankBg(rank: number): string {
-  if (rank === 1) return '#FFFBEB'; // gold tint
-  if (rank === 2) return '#F1F5F9'; // silver tint
-  if (rank === 3) return '#FFF7ED'; // bronze tint
-  return '#F1F5F9';
+  if (rank === 1) return Colors.warningBg; // gold tint
+  if (rank === 2) return Colors.bgElevated; // silver tint
+  if (rank === 3) return Colors.bronzeBg; // bronze tint
+  return Colors.bgElevated;
 }
 
 function getRankColor(rank: number): string {
-  if (rank === 1) return '#D97706';
-  if (rank === 2) return '#64748B';
-  if (rank === 3) return '#EA580C';
-  return '#64748B';
+  if (rank === 1) return Colors.warning;
+  if (rank === 2) return Colors.textSecondary;
+  if (rank === 3) return Colors.bronze;
+  return Colors.textSecondary;
 }
 
 export default function LeagueScreen() {
@@ -342,8 +344,8 @@ export default function LeagueScreen() {
 
   if (authLoading) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.loadingText}>Loading...</Text>
+      <View style={[styles.container, { paddingTop: 60 }]}>
+        <SkeletonCard />
       </View>
     );
   }
@@ -353,9 +355,7 @@ export default function LeagueScreen() {
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.centered}>
           <Text style={styles.emptyTitle}>Sign in to view league</Text>
-          <TouchableOpacity style={styles.button} onPress={() => router.push('/login')}>
-            <Text style={styles.buttonText}>Sign In</Text>
-          </TouchableOpacity>
+          <Button title="Sign In" onPress={() => router.push('/login')} />
         </View>
       </SafeAreaView>
     );
@@ -366,36 +366,67 @@ export default function LeagueScreen() {
       <LeagueSwitcher />
 
       <View style={styles.leagueActions}>
-        <TouchableOpacity
-          style={styles.leagueJoinButton}
+        <Button
+          title="Join"
+          variant="secondary"
+          size="sm"
           onPress={() => router.push('/join-league')}
-        >
-          <Text style={styles.leagueJoinText}>Join</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.leagueCreateButton}
+          style={{ borderColor: Colors.primary }}
+          textStyle={{ color: Colors.primary }}
+        />
+        <Button
+          title="+ Create"
+          variant="primary"
+          size="sm"
           onPress={() => router.push('/create-league')}
-        >
-          <Text style={styles.leagueCreateText}>+ Create</Text>
-        </TouchableOpacity>
+        />
       </View>
 
       <ScrollView
         style={styles.scrollView}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0891B2" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
         }
       >
         {leagues.length === 0 ? (
           <View style={styles.centered}>
             <Text style={styles.emptyTitle}>No leagues yet</Text>
             <Text style={styles.emptySubtitle}>Join a league to see standings</Text>
-            <TouchableOpacity style={styles.button} onPress={() => router.push('/(tabs)/leagues')}>
-              <Text style={styles.buttonText}>View Leagues</Text>
-            </TouchableOpacity>
+            <Button title="View Leagues" onPress={() => router.push('/(tabs)/leagues')} />
           </View>
         ) : (
           <>
+            {/* Draft Banner — primary entry to the draft room now that Draft left the tab bar */}
+            {activeLeague && activeLeague.draft_status !== 'completed' && (
+              <TouchableOpacity
+                style={[
+                  styles.draftBanner,
+                  activeLeague.draft_status === 'in_progress' && styles.draftBannerLive,
+                ]}
+                activeOpacity={0.8}
+                onPress={() => router.push('/(tabs)/draft')}
+                accessibilityRole="button"
+                accessibilityLabel="Open draft room"
+              >
+                <View style={styles.draftBannerIconCircle}>
+                  <Ionicons name="hammer" size={18} color={Colors.primary} />
+                </View>
+                <View style={styles.bannerTextContainer}>
+                  <Text style={styles.draftBannerTitle}>
+                    {activeLeague.draft_status === 'in_progress'
+                      ? 'Draft in progress'
+                      : 'Draft room'}
+                  </Text>
+                  <Text style={styles.draftBannerSubtitle}>
+                    {activeLeague.draft_status === 'in_progress'
+                      ? 'Your league is drafting now — jump in'
+                      : 'Make your picks when the draft begins'}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={Colors.primary} />
+              </TouchableOpacity>
+            )}
+
             {/* Season Banner */}
             {isSeasonCompleted && currentSeason && (
               <View style={[
@@ -453,9 +484,9 @@ export default function LeagueScreen() {
 
             {/* KPI Cards */}
             <View style={styles.kpiRow}>
-              <View style={[styles.kpiCard, cardShadow]}>
-                <View style={[styles.kpiIconCircle, { backgroundColor: '#FFFBEB' }]}>
-                  <Ionicons name="trophy" size={18} color="#D97706" />
+              <Card style={styles.kpiCardInner}>
+                <View style={[styles.kpiIconCircle, { backgroundColor: Colors.warningBg }]}>
+                  <Ionicons name="trophy" size={18} color={Colors.warning} />
                 </View>
                 <Text style={styles.kpiLabel}>Leader</Text>
                 {leader ? (
@@ -474,11 +505,11 @@ export default function LeagueScreen() {
                 ) : (
                   <Text style={styles.kpiValue}>—</Text>
                 )}
-              </View>
+              </Card>
 
-              <View style={[styles.kpiCard, cardShadow]}>
-                <View style={[styles.kpiIconCircle, { backgroundColor: '#ECFEFF' }]}>
-                  <Ionicons name="calendar" size={18} color="#0891B2" />
+              <Card style={styles.kpiCardInner}>
+                <View style={[styles.kpiIconCircle, { backgroundColor: Colors.cyanLight }]}>
+                  <Ionicons name="calendar" size={18} color={Colors.primary} />
                 </View>
                 <Text style={styles.kpiLabel}>{isMatchupLeague ? 'Week' : 'Type'}</Text>
                 {isMatchupLeague ? (
@@ -507,15 +538,15 @@ export default function LeagueScreen() {
                 ) : (
                   <Text style={styles.kpiValue}>Duration</Text>
                 )}
-              </View>
+              </Card>
 
-              <View style={[styles.kpiCard, cardShadow]}>
-                <View style={[styles.kpiIconCircle, { backgroundColor: '#EEF2FF' }]}>
-                  <Ionicons name="people" size={18} color="#6366F1" />
+              <Card style={styles.kpiCardInner}>
+                <View style={[styles.kpiIconCircle, { backgroundColor: Colors.secondaryBg }]}>
+                  <Ionicons name="people" size={18} color={Colors.secondary} />
                 </View>
                 <Text style={styles.kpiLabel}>Players</Text>
                 <Text style={styles.kpiValueLarge}>{sortedStandings.length}</Text>
-              </View>
+              </Card>
             </View>
 
             {/* Standings Section */}
@@ -539,14 +570,14 @@ export default function LeagueScreen() {
                 <Ionicons
                   name={standingsExpanded ? 'chevron-up' : 'chevron-down'}
                   size={24}
-                  color="#94A3B8"
+                  color={Colors.textMuted}
                 />
               </TouchableOpacity>
 
               {standingsExpanded && (
                 <View style={styles.sectionContent}>
                   {loading ? (
-                    <Text style={styles.loadingText}>Loading standings...</Text>
+                    <SkeletonRows count={4} />
                   ) : sortedStandings.length === 0 ? (
                     <View style={styles.emptyStandings}>
                       <Text style={styles.emptyText}>No standings yet</Text>
@@ -645,7 +676,7 @@ export default function LeagueScreen() {
                   <Ionicons
                     name={scheduleExpanded ? 'chevron-up' : 'chevron-down'}
                     size={24}
-                    color="#94A3B8"
+                    color={Colors.textMuted}
                   />
                 </TouchableOpacity>
 
@@ -729,7 +760,7 @@ export default function LeagueScreen() {
                                   ]}>
                                     <Text style={[
                                       styles.resultBadgeText,
-                                      iWon ? styles.positive : isTie ? { color: '#D97706' } : styles.negative
+                                      iWon ? styles.positive : isTie ? { color: Colors.warning } : styles.negative
                                     ]}>
                                       {iWon ? 'W' : isTie ? 'T' : 'L'}
                                     </Text>
@@ -772,7 +803,7 @@ export default function LeagueScreen() {
                 <Ionicons
                   name={historyExpanded ? 'chevron-up' : 'chevron-down'}
                   size={24}
-                  color="#94A3B8"
+                  color={Colors.textMuted}
                 />
               </TouchableOpacity>
 
@@ -822,7 +853,7 @@ export default function LeagueScreen() {
                     };
 
                     return (
-                      <View key={season.id} style={[styles.historyCard, cardShadow]}>
+                      <Card key={season.id} padded={false} style={styles.historyCardOuter}>
                         <View style={styles.historyCardHeader}>
                           <Text style={styles.historySeasonLabel}>
                             Season {season.season_number}
@@ -889,7 +920,7 @@ export default function LeagueScreen() {
                             )}
                           </View>
                         )}
-                      </View>
+                      </Card>
                     );
                   })
                 )}
@@ -905,30 +936,18 @@ export default function LeagueScreen() {
   );
 }
 
-const cardShadow = Platform.select({
-  ios: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-  },
-  android: {
-    elevation: 2,
-  },
-  default: {},
-}) as object;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
   },
   scrollView: {
     flex: 1,
   },
   loadingText: {
-    color: '#94A3B8',
+    color: Colors.textMuted,
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     textAlign: 'center',
     marginTop: 40,
   },
@@ -950,22 +969,23 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   championBanner: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: Colors.warningBg,
     borderWidth: 1,
-    borderColor: '#D97706',
+    borderColor: Colors.warning,
   },
   runnerUpBanner: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: Colors.bgElevated,
     borderWidth: 1,
-    borderColor: '#94A3B8',
+    borderColor: Colors.textMuted,
   },
   completedBanner: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.bgSurface,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: Colors.border,
   },
   bannerIcon: {
     fontSize: 32,
+    fontFamily: 'Inter_400Regular',
     marginRight: 12,
   },
   bannerTextContainer: {
@@ -973,23 +993,59 @@ const styles = StyleSheet.create({
   },
   bannerTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontFamily: 'Inter_700Bold',
+    color: Colors.textPrimary,
   },
   bannerSubtitle: {
     fontSize: 13,
-    color: '#64748B',
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textSecondary,
     marginTop: 2,
+  },
+  draftBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 24,
+    marginTop: 12,
+    marginBottom: 8,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: Colors.cyanLight,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    gap: 12,
+  },
+  draftBannerLive: {
+    borderWidth: 2,
+  },
+  draftBannerIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  draftBannerTitle: {
+    fontSize: 16,
+    fontFamily: 'Inter_700Bold',
+    color: Colors.textPrimary,
+  },
+  draftBannerSubtitle: {
+    fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textSecondary,
+    marginTop: 1,
   },
   activeSeasonBanner: {
     marginHorizontal: 24,
     marginTop: 12,
     marginBottom: 8,
     padding: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: Colors.border,
   },
   seasonInfoRow: {
     flexDirection: 'row',
@@ -998,19 +1054,19 @@ const styles = StyleSheet.create({
   },
   seasonLabel: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#0F172A',
+    fontFamily: 'Inter_600SemiBold',
+    color: Colors.textPrimary,
   },
   weekBadge: {
-    backgroundColor: 'rgba(8,145,178,0.08)',
+    backgroundColor: Colors.primaryBg,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
   },
   weekBadgeText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#0891B2',
+    fontFamily: 'Inter_600SemiBold',
+    color: Colors.primary,
   },
   // KPI Cards
   kpiRow: {
@@ -1020,14 +1076,11 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 20,
   },
-  kpiCard: {
+  kpiCardInner: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
     alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
   },
   kpiIconCircle: {
     width: 36,
@@ -1039,24 +1092,28 @@ const styles = StyleSheet.create({
   },
   kpiLabel: {
     fontSize: 11,
-    color: '#64748B',
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textSecondary,
     marginBottom: 4,
     textAlign: 'center',
   },
   kpiValue: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#0F172A',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
+    color: Colors.textPrimary,
     textAlign: 'center',
   },
   kpiValueLarge: {
     fontSize: 24,
-    fontWeight: '800',
-    color: '#0F172A',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
+    color: Colors.textPrimary,
   },
   kpiSub: {
     fontSize: 12,
-    color: '#64748B',
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textSecondary,
     marginTop: 2,
   },
   // Section styles
@@ -1070,7 +1127,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: Colors.border,
     marginBottom: 12,
   },
   sectionHeaderLeft: {
@@ -1078,29 +1135,30 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#0F172A',
+    fontFamily: 'Inter_600SemiBold',
+    color: Colors.textPrimary,
   },
   sectionSubtitle: {
     fontSize: 12,
-    color: '#64748B',
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textSecondary,
     marginTop: 2,
   },
   sectionContent: {},
   // Standing row styles
   standingRow: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: Colors.border,
     flexDirection: 'row',
     alignItems: 'center',
   },
   standingRowHighlight: {
-    backgroundColor: '#ECFEFF',
-    borderColor: '#0891B2',
+    backgroundColor: Colors.cyanLight,
+    borderColor: Colors.primary,
     borderLeftWidth: 3,
   },
   rankBadge: {
@@ -1113,19 +1171,21 @@ const styles = StyleSheet.create({
   },
   rankText: {
     fontSize: 14,
-    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
   },
   avatarCircle: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: Colors.bgElevated,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
   },
   avatarText: {
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
   },
   standingInfo: {
     flex: 1,
@@ -1133,11 +1193,11 @@ const styles = StyleSheet.create({
   },
   standingName: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#0F172A',
+    fontFamily: 'Inter_600SemiBold',
+    color: Colors.textPrimary,
   },
   standingNameHighlight: {
-    color: '#0891B2',
+    color: Colors.primary,
   },
   standingStats: {
     alignItems: 'center',
@@ -1145,12 +1205,15 @@ const styles = StyleSheet.create({
   },
   recordText: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
+    color: Colors.textPrimary,
   },
   winPctText: {
     fontSize: 10,
-    color: '#64748B',
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
+    color: Colors.textSecondary,
     marginTop: 2,
   },
   standingPoints: {
@@ -1158,22 +1221,25 @@ const styles = StyleSheet.create({
   },
   pointsValue: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
   },
   pointsValueLarge: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
   },
   pointsLabel: {
     fontSize: 10,
-    color: '#64748B',
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textSecondary,
     marginTop: 2,
   },
   positive: {
-    color: '#059669',
+    color: Colors.success,
   },
   negative: {
-    color: '#DC2626',
+    color: Colors.error,
   },
   emptyStandings: {
     alignItems: 'center',
@@ -1181,37 +1247,28 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#0F172A',
-    fontWeight: '600',
+    color: Colors.textPrimary,
+    fontFamily: 'Inter_600SemiBold',
     marginBottom: 4,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#94A3B8',
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textMuted,
     textAlign: 'center',
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '600',
-    color: '#0F172A',
+    fontFamily: 'Inter_600SemiBold',
+    color: Colors.textPrimary,
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#94A3B8',
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textMuted,
     marginBottom: 24,
     textAlign: 'center',
-  },
-  button: {
-    backgroundColor: '#0891B2',
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 10,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
   },
   leagueActions: {
     flexDirection: 'row',
@@ -1222,30 +1279,6 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 6,
   },
-  leagueJoinButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  leagueJoinText: {
-    color: Colors.primary,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  leagueCreateButton: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  leagueCreateText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
   // Schedule styles
   playerSelector: {
     flexDirection: 'row',
@@ -1254,43 +1287,44 @@ const styles = StyleSheet.create({
   playerChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: Colors.border,
   },
   playerChipActive: {
-    backgroundColor: 'rgba(8,145,178,0.08)',
-    borderColor: '#0891B2',
+    backgroundColor: Colors.primaryBg,
+    borderColor: Colors.primary,
   },
   playerChipAvatar: {
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     marginRight: 6,
   },
   playerChipText: {
     fontSize: 13,
-    fontWeight: '500',
-    color: '#94A3B8',
+    fontFamily: 'Inter_500Medium',
+    color: Colors.textMuted,
   },
   playerChipTextActive: {
-    color: '#0891B2',
+    color: Colors.primary,
   },
   scheduleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 12,
     padding: 14,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: Colors.border,
   },
   scheduleRowCurrent: {
-    borderColor: '#0891B2',
-    backgroundColor: '#ECFEFF',
+    borderColor: Colors.primary,
+    backgroundColor: Colors.cyanLight,
   },
   scheduleWeek: {
     width: 60,
@@ -1300,11 +1334,11 @@ const styles = StyleSheet.create({
   },
   scheduleWeekNumber: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#94A3B8',
+    fontFamily: 'Inter_600SemiBold',
+    color: Colors.textMuted,
   },
   scheduleWeekCurrent: {
-    color: '#0891B2',
+    color: Colors.primary,
   },
   scheduleOpponent: {
     flex: 1,
@@ -1313,17 +1347,19 @@ const styles = StyleSheet.create({
   },
   scheduleVs: {
     fontSize: 12,
-    color: '#94A3B8',
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textMuted,
     marginRight: 8,
   },
   scheduleOpponentAvatar: {
     fontSize: 20,
+    fontFamily: 'Inter_400Regular',
     marginRight: 8,
   },
   scheduleOpponentName: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#0F172A',
+    fontFamily: 'Inter_500Medium',
+    color: Colors.textPrimary,
     flex: 1,
   },
   scheduleResult: {
@@ -1337,40 +1373,38 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   resultWin: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: Colors.successBg,
   },
   resultLoss: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: Colors.errorBg,
   },
   resultTie: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: Colors.warningBg,
   },
   resultBadgeText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
   },
   scheduleScore: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
   },
   scheduleUpcoming: {
     fontSize: 13,
-    color: '#94A3B8',
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textMuted,
     fontStyle: 'italic',
   },
   scheduleCurrent: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#0891B2',
+    fontFamily: 'Inter_600SemiBold',
+    color: Colors.primary,
   },
   // History styles
-  historyCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+  historyCardOuter: {
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    overflow: 'hidden',
+    borderRadius: 12,
   },
   historyCardHeader: {
     flexDirection: 'row',
@@ -1378,23 +1412,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: Colors.borderLight,
   },
   historySeasonLabel: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontFamily: 'Inter_700Bold',
+    color: Colors.textPrimary,
   },
   historyDateRange: {
     fontSize: 12,
-    color: '#94A3B8',
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textMuted,
   },
   historyYourStats: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: Colors.borderLight,
   },
   historyStatsLeft: {
     flex: 1,
@@ -1406,26 +1441,28 @@ const styles = StyleSheet.create({
   },
   historyStatValue: {
     fontSize: 22,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
+    color: Colors.textPrimary,
   },
   historyStatChampion: {
-    color: '#D97706',
+    color: Colors.warning,
   },
   historyStatRunnerUp: {
-    color: '#94A3B8',
+    color: Colors.textMuted,
   },
   historyStatLabel: {
     fontSize: 10,
-    fontWeight: '600',
-    color: '#94A3B8',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
+    color: Colors.textMuted,
     letterSpacing: 0.5,
     marginTop: 2,
   },
   historyStatDivider: {
     width: 1,
     height: 32,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: Colors.border,
     marginHorizontal: 16,
   },
   historyBadge: {
@@ -1436,19 +1473,20 @@ const styles = StyleSheet.create({
   },
   historyBadgeIcon: {
     fontSize: 40,
+    fontFamily: 'Inter_400Regular',
   },
   historyParticipantBadge: {
     width: 48,
     height: 48,
     borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: Colors.bgElevated,
     alignItems: 'center',
     justifyContent: 'center',
   },
   historyParticipantText: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#94A3B8',
+    fontFamily: 'Inter_700Bold',
+    color: Colors.textMuted,
   },
   historyWinnerRow: {
     flexDirection: 'row',
@@ -1458,24 +1496,27 @@ const styles = StyleSheet.create({
   },
   historyWinnerRank: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#94A3B8',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
+    color: Colors.textMuted,
     marginRight: 10,
     width: 28,
   },
   historyWinnerAvatar: {
     fontSize: 20,
+    fontFamily: 'Inter_400Regular',
     marginRight: 10,
   },
   historyWinnerName: {
     flex: 1,
     fontSize: 14,
-    fontWeight: '500',
-    color: '#0F172A',
+    fontFamily: 'Inter_500Medium',
+    color: Colors.textPrimary,
   },
   historyWinnerRecord: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#94A3B8',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
+    color: Colors.textMuted,
   },
 });

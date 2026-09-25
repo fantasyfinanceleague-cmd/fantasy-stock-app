@@ -106,7 +106,7 @@ export function PerformanceChart({ data, loading, onPeriodPLChange }: Performanc
 
   if (loading || data.length < 2) return null;
 
-  const lineColor = periodPL.isPositive ? '#0891B2' : '#DC2626';
+  const lineColor = periodPL.isPositive ? Colors.primary : Colors.error;
 
   // Y-axis auto-scaling: compute data range with 10% padding
   const values = filteredData.map(d => d.value);
@@ -170,6 +170,10 @@ export function PerformanceChart({ data, loading, onPeriodPLChange }: Performanc
               onPress={() => isAvailable && setPeriod(key)}
               activeOpacity={isAvailable ? 0.7 : 1}
               disabled={!isAvailable}
+              hitSlop={{ top: 6, bottom: 6 }}
+              accessibilityRole="button"
+              accessibilityLabel={`Show ${label} performance`}
+              accessibilityState={{ selected: isActive, disabled: !isAvailable }}
             >
               <Text style={[
                 styles.periodText,
@@ -208,17 +212,17 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   periodPillActive: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: Colors.bgElevated,
   },
   periodText: {
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: 'Inter_500Medium',
     color: Colors.textMuted,
   },
   periodTextActive: {
     color: Colors.textPrimary,
   },
   periodTextDisabled: {
-    color: '#CBD5E1', // Slate-300 — clearly disabled
+    color: Colors.textDisabled, // Slate-300 — clearly disabled
   },
 });

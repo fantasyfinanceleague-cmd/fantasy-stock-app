@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Card } from '@/components/ui';
+import { SkeletonCard, SkeletonRows } from '@/components/Skeleton';
 import { useAuth } from '@/lib/useAuth';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -530,9 +532,12 @@ export default function MatchupScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#0891B2" />
-          <Text style={styles.loadingText}>Loading matchup...</Text>
+        <View style={{ paddingTop: 16 }}>
+          <SkeletonCard />
+          <View style={{ height: 16 }} />
+          <View style={{ paddingHorizontal: 24 }}>
+            <SkeletonRows count={5} />
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -584,11 +589,11 @@ export default function MatchupScreen() {
       <ScrollView
         style={styles.scrollView}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0891B2" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
         }
       >
         {/* Scoreboard */}
-        <View style={styles.scoreboard}>
+        <Card padded={false} style={styles.scoreboard}>
           {/* Team 1 */}
           <View style={[styles.scoreTeam, isTeam1Winning && styles.scoreTeamWinning]}>
             <Text style={styles.scoreAvatar}>{getAvatar(matchup.team1_user_id)}</Text>
@@ -625,7 +630,7 @@ export default function MatchupScreen() {
             </Text>
             {isTeam2Winning && <Text style={styles.winningBadge}>Leading</Text>}
           </View>
-        </View>
+        </Card>
 
         {/* Week Navigator */}
         <View style={styles.weekNavContainer}>
@@ -641,7 +646,7 @@ export default function MatchupScreen() {
         </View>
 
         {/* Side-by-side Lineups */}
-        <View style={styles.lineupsContainer}>
+        <Card padded={false} style={styles.lineupsContainer}>
           {/* Headers */}
           <View style={styles.lineupHeaders}>
             <View style={[styles.lineupHeaderBox, isTeam1Winning && styles.lineupHeaderWinning]}>
@@ -725,7 +730,7 @@ export default function MatchupScreen() {
               </Text>
             </View>
           </View>
-        </View>
+        </Card>
       </ScrollView>
     </SafeAreaView>
   );
@@ -734,7 +739,7 @@ export default function MatchupScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
   },
   scrollView: {
     flex: 1,
@@ -746,23 +751,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   loadingText: {
-    color: '#94A3B8',
+    color: Colors.textMuted,
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     marginTop: 12,
   },
   emptyIcon: {
     fontSize: 48,
+    fontFamily: 'Inter_400Regular',
     marginBottom: 16,
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '600',
-    color: '#0F172A',
+    fontFamily: 'Inter_600SemiBold',
+    color: Colors.textPrimary,
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#94A3B8',
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textMuted,
     textAlign: 'center',
     lineHeight: 20,
   },
@@ -789,11 +797,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 24,
     marginTop: 16,
     marginBottom: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    overflow: 'hidden',
   },
   scoreTeam: {
     flex: 1,
@@ -802,29 +805,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   scoreTeamWinning: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: Colors.successBg,
   },
   scoreAvatar: {
     fontSize: 40,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     marginBottom: 8,
   },
   scoreName: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#0F172A',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
+    color: Colors.textPrimary,
     marginBottom: 8,
     textAlign: 'center',
   },
   scoreValue: {
     fontSize: 20,
-    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
   },
   winningBadge: {
     marginTop: 8,
     fontSize: 10,
-    fontWeight: '700',
-    color: '#059669',
-    backgroundColor: '#ECFDF5',
+    fontFamily: 'Inter_700Bold',
+    color: Colors.success,
+    backgroundColor: Colors.successBg,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
@@ -836,46 +843,42 @@ const styles = StyleSheet.create({
   },
   scoreVsText: {
     fontSize: 16,
-    fontWeight: '800',
-    color: '#94A3B8',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
+    color: Colors.textMuted,
   },
   // Side-by-side Lineups
   lineupsContainer: {
-    marginHorizontal: 16,
+    marginHorizontal: 24,
     marginBottom: 24,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    overflow: 'hidden',
   },
   lineupHeaders: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: Colors.border,
   },
   lineupHeaderBox: {
     flex: 1,
     paddingVertical: 12,
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.bgSurface,
   },
   lineupHeaderWinning: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: Colors.successBg,
   },
   lineupHeaderText: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontFamily: 'Inter_700Bold',
+    color: Colors.textPrimary,
   },
   lineupHeaderDivider: {
     width: 40,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.bgSurface,
   },
   comparisonRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: Colors.borderLight,
   },
   stockCell: {
     flex: 1,
@@ -885,32 +888,34 @@ const styles = StyleSheet.create({
   },
   stockSymbol: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontFamily: 'Inter_700Bold',
+    color: Colors.textPrimary,
   },
   stockGain: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     marginTop: 4,
   },
   emptySlot: {
     fontSize: 16,
-    color: '#94A3B8',
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textMuted,
   },
   slotDivider: {
     width: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.bgSurface,
   },
   slotNumber: {
     fontSize: 12,
-    fontWeight: '700',
-    color: '#94A3B8',
+    fontFamily: 'Inter_700Bold',
+    color: Colors.textMuted,
   },
   totalsRow: {
     flexDirection: 'row',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.bgSurface,
   },
   totalCell: {
     flex: 1,
@@ -919,23 +924,25 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 10,
-    fontWeight: '700',
-    color: '#64748B',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
+    color: Colors.textSecondary,
     letterSpacing: 1,
   },
   totalValue: {
     fontSize: 18,
-    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     marginTop: 4,
   },
   totalDivider: {
     width: 40,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.bgSurface,
   },
   positive: {
-    color: '#059669',
+    color: Colors.success,
   },
   negative: {
-    color: '#DC2626',
+    color: Colors.error,
   },
 });

@@ -77,9 +77,20 @@ export function SkeletonHolding() {
   );
 }
 
+/** N placeholder list rows — standings, league cards, lineups. */
+export function SkeletonRows({ count = 3 }: { count?: number }) {
+  return (
+    <View>
+      {Array.from({ length: count }, (_, i) => (
+        <SkeletonHolding key={i} />
+      ))}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   skeleton: {
-    backgroundColor: '#E2E8F0',
+    backgroundColor: Colors.border,
   },
   card: {
     backgroundColor: Colors.glassBg,

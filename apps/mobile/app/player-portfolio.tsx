@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
     textAlign: 'center',
   },
@@ -373,17 +373,19 @@ const styles = StyleSheet.create({
   },
   playerAvatarText: {
     fontSize: 28,
+    fontFamily: 'Inter_400Regular',
   },
   playerInfo: {
     flex: 1,
   },
   playerName: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
   },
   leagueName: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginTop: 4,
   },
@@ -405,12 +407,14 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginBottom: 4,
   },
   summaryValue: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
   section: {
@@ -420,7 +424,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
     marginBottom: 12,
   },
@@ -430,6 +434,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
   },
   emptyContainer: {
@@ -442,16 +447,18 @@ const styles = StyleSheet.create({
   },
   emptyIcon: {
     fontSize: 48,
+    fontFamily: 'Inter_400Regular',
     marginBottom: 12,
   },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
     marginBottom: 4,
   },
   emptySubtitle: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     textAlign: 'center',
     paddingHorizontal: 24,
@@ -471,11 +478,12 @@ const styles = StyleSheet.create({
   },
   holdingSymbol: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
   },
   holdingQty: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginTop: 2,
   },
@@ -485,12 +493,14 @@ const styles = StyleSheet.create({
   },
   holdingLabel: {
     fontSize: 10,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
   },
   holdingCost: {
     fontSize: 14,
     color: Colors.textSecondary,
-    fontWeight: '500',
+    fontFamily: 'Inter_500Medium',
+    fontVariant: ['tabular-nums'],
   },
   holdingRight: {
     alignItems: 'flex-end',
@@ -498,11 +508,14 @@ const styles = StyleSheet.create({
   },
   holdingValue: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
   holdingPercent: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     marginTop: 2,
   },
   positive: {

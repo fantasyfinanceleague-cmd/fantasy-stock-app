@@ -23,6 +23,7 @@ import {
   saveLeagueSlots,
   validateSlotConfig,
 } from '@/lib/categoryData';
+import { Button, Card } from '@/components/ui';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -238,24 +239,24 @@ export default function CreateLeagueWizard() {
       </View>
 
       <View style={styles.welcomeButtons}>
-        <TouchableOpacity
-          style={styles.primaryButton}
+        <Button
+          title="Create League"
           onPress={() => setStep('name')}
-        >
-          <Ionicons name="add-circle-outline" size={20} color="#FFFFFF" />
-          <Text style={styles.primaryButtonText}>Create League</Text>
-        </TouchableOpacity>
+          variant="primary"
+          icon={<Ionicons name="add-circle-outline" size={20} color={Colors.white} />}
+          style={styles.welcomePrimaryButton}
+        />
 
-        <TouchableOpacity
-          style={styles.secondaryButton}
+        <Button
+          title="Join a League"
           onPress={() => {
             router.dismiss();
             setTimeout(() => router.push('/join-league'), 100);
           }}
-        >
-          <Ionicons name="search-outline" size={20} color={ACCENT} />
-          <Text style={styles.secondaryButtonText}>Join a League</Text>
-        </TouchableOpacity>
+          variant="ghost"
+          icon={<Ionicons name="search-outline" size={20} color={ACCENT} />}
+          style={styles.welcomeSecondaryButton}
+        />
       </View>
     </View>
   );
@@ -282,13 +283,13 @@ export default function CreateLeagueWizard() {
         </View>
       </View>
 
-      <TouchableOpacity
-        style={[styles.nextButton, !state.name.trim() && styles.nextButtonDisabled]}
+      <Button
+        title="Next"
         onPress={goNext}
+        variant="primary"
         disabled={!state.name.trim()}
-      >
-        <Text style={styles.nextButtonText}>Next</Text>
-      </TouchableOpacity>
+        style={styles.nextButton}
+      />
     </KeyboardAvoidingView>
   );
 
@@ -332,9 +333,12 @@ export default function CreateLeagueWizard() {
         </View>
       </View>
 
-      <TouchableOpacity style={styles.nextButton} onPress={goNext}>
-        <Text style={styles.nextButtonText}>Next</Text>
-      </TouchableOpacity>
+      <Button
+        title="Next"
+        onPress={goNext}
+        variant="primary"
+        style={styles.nextButton}
+      />
     </View>
   );
 
@@ -393,9 +397,12 @@ export default function CreateLeagueWizard() {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.nextButton} onPress={goNext}>
-          <Text style={styles.nextButtonText}>Next</Text>
-        </TouchableOpacity>
+        <Button
+          title="Next"
+          onPress={goNext}
+          variant="primary"
+          style={styles.nextButton}
+        />
       </View>
     );
   };
@@ -495,9 +502,12 @@ export default function CreateLeagueWizard() {
         </View>
       </ScrollView>
 
-      <TouchableOpacity style={styles.nextButton} onPress={goNext}>
-        <Text style={styles.nextButtonText}>Next</Text>
-      </TouchableOpacity>
+      <Button
+        title="Next"
+        onPress={goNext}
+        variant="primary"
+        style={styles.nextButton}
+      />
     </KeyboardAvoidingView>
   );
 
@@ -520,13 +530,12 @@ export default function CreateLeagueWizard() {
       {(() => {
         const blocked = state.slots.length === 0 || validateSlotConfig(state.slots, state.numRounds).length > 0;
         return (
-          <TouchableOpacity
-            style={[styles.nextButton, blocked && styles.nextButtonDisabled]}
+          <Button
+            title="Next"
             onPress={goNext}
             disabled={blocked}
-          >
-            <Text style={styles.nextButtonText}>Next</Text>
-          </TouchableOpacity>
+            style={styles.nextButton}
+          />
         );
       })()}
     </View>
@@ -568,9 +577,12 @@ export default function CreateLeagueWizard() {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.nextButton} onPress={goNext}>
-          <Text style={styles.nextButtonText}>Next</Text>
-        </TouchableOpacity>
+        <Button
+          title="Next"
+          onPress={goNext}
+          variant="primary"
+          style={styles.nextButton}
+        />
       </View>
     );
   };
@@ -624,9 +636,12 @@ export default function CreateLeagueWizard() {
           </View>
         </ScrollView>
 
-        <TouchableOpacity style={styles.nextButton} onPress={goNext}>
-          <Text style={styles.nextButtonText}>Next</Text>
-        </TouchableOpacity>
+        <Button
+          title="Next"
+          onPress={goNext}
+          variant="primary"
+          style={styles.nextButton}
+        />
       </View>
     );
   };
@@ -709,7 +724,7 @@ export default function CreateLeagueWizard() {
         </View>
 
         {/* Summary */}
-        <View style={styles.summaryCard}>
+        <Card style={styles.summaryCardOuter}>
           <Text style={styles.summaryTitle}>League Summary</Text>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Name</Text>
@@ -737,20 +752,16 @@ export default function CreateLeagueWizard() {
               {state.draftDateTBD ? 'TBD' : state.draftDate?.toLocaleDateString() || 'TBD'}
             </Text>
           </View>
-        </View>
+        </Card>
       </ScrollView>
 
-      <TouchableOpacity
-        style={[styles.nextButton, styles.doneButton, creating && styles.nextButtonDisabled]}
+      <Button
+        title="Create League"
         onPress={goNext}
-        disabled={creating}
-      >
-        {creating ? (
-          <ActivityIndicator color="#FFFFFF" />
-        ) : (
-          <Text style={styles.nextButtonText}>Create League</Text>
-        )}
-      </TouchableOpacity>
+        variant="success"
+        loading={creating}
+        style={styles.nextButton}
+      />
     </View>
   );
 
@@ -823,7 +834,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     fontSize: 17,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
     textAlign: 'center',
   },
@@ -844,23 +855,25 @@ const styles = StyleSheet.create({
   },
   heroIcon: {
     fontSize: 80,
+    fontFamily: 'Inter_400Regular',
     marginBottom: 16,
   },
   heroTitle: {
     fontSize: 28,
-    fontWeight: '400',
+    fontFamily: 'Inter_400Regular',
     color: Colors.textPrimary,
     letterSpacing: 2,
   },
   heroTitleBold: {
     fontSize: 36,
-    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
     letterSpacing: 1,
     marginBottom: 12,
   },
   heroSubtitle: {
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     textAlign: 'center',
   },
@@ -869,37 +882,13 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     gap: 12,
   },
-  primaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: ACCENT,
-    paddingVertical: 16,
+  welcomePrimaryButton: {
     borderRadius: 30,
-    gap: 8,
   },
-  primaryButtonText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
-  },
-  secondaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'transparent',
-    paddingVertical: 16,
+  welcomeSecondaryButton: {
     borderRadius: 30,
     borderWidth: 2,
     borderColor: ACCENT,
-    gap: 8,
-  },
-  secondaryButtonText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: ACCENT,
-    letterSpacing: 0.5,
   },
 
   // Step container
@@ -914,6 +903,7 @@ const styles = StyleSheet.create({
   },
   stepSubtitle: {
     fontSize: 15,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginBottom: 24,
   },
@@ -924,12 +914,13 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: ACCENT,
     marginBottom: 8,
   },
   textInput: {
     fontSize: 18,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textPrimary,
     paddingVertical: 12,
   },
@@ -940,6 +931,7 @@ const styles = StyleSheet.create({
   },
   inputHint: {
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
   },
 
@@ -974,7 +966,7 @@ const styles = StyleSheet.create({
   },
   typeCardTitle: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textMuted,
     letterSpacing: 0.5,
   },
@@ -983,6 +975,7 @@ const styles = StyleSheet.create({
   },
   typeCardDesc: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     textAlign: 'center',
     marginTop: 8,
@@ -1000,8 +993,8 @@ const styles = StyleSheet.create({
   },
   popularBadgeText: {
     fontSize: 10,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontFamily: 'Inter_700Bold',
+    color: Colors.white,
     letterSpacing: 0.5,
   },
 
@@ -1028,7 +1021,7 @@ const styles = StyleSheet.create({
   },
   sizeButtonText: {
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
   },
   sizeButtonTextSelected: {
@@ -1057,7 +1050,8 @@ const styles = StyleSheet.create({
   },
   budgetCardTitle: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
     letterSpacing: 0.5,
   },
@@ -1069,7 +1063,8 @@ const styles = StyleSheet.create({
   },
   amountLabel: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: ACCENT,
     marginBottom: 12,
   },
@@ -1084,14 +1079,15 @@ const styles = StyleSheet.create({
   },
   currencySymbol: {
     fontSize: 24,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textMuted,
     marginRight: 4,
   },
   amountInput: {
     flex: 1,
     fontSize: 24,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
     paddingVertical: 16,
   },
@@ -1115,7 +1111,7 @@ const styles = StyleSheet.create({
   },
   presetButtonText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textMuted,
   },
   presetButtonTextSelected: {
@@ -1142,7 +1138,7 @@ const styles = StyleSheet.create({
   },
   durationLabel: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
   },
   durationLabelSelected: {
@@ -1150,6 +1146,7 @@ const styles = StyleSheet.create({
   },
   durationDesc: {
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginTop: 2,
   },
@@ -1160,12 +1157,13 @@ const styles = StyleSheet.create({
   },
   settingLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
     marginBottom: 12,
   },
   settingHint: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginTop: 8,
     textAlign: 'center',
@@ -1193,11 +1191,14 @@ const styles = StyleSheet.create({
   },
   stepperValueText: {
     fontSize: 32,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
   stepperValueLabel: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
   },
   playoffGrid: {
@@ -1219,7 +1220,7 @@ const styles = StyleSheet.create({
   },
   playoffButtonText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textMuted,
   },
   playoffButtonTextSelected: {
@@ -1239,10 +1240,12 @@ const styles = StyleSheet.create({
   },
   dateButtonText: {
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textPrimary,
   },
   dateButtonPlaceholder: {
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textDark,
   },
   datePickerDone: {
@@ -1251,20 +1254,18 @@ const styles = StyleSheet.create({
   },
   datePickerDoneText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: ACCENT,
   },
 
   // Summary
-  summaryCard: {
-    backgroundColor: Colors.cardBg,
-    borderRadius: 16,
-    padding: 20,
+  summaryCardOuter: {
     marginTop: 8,
   },
   summaryTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
     marginBottom: 16,
   },
@@ -1277,34 +1278,21 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
   },
   summaryValue: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
 
   // Next button
   nextButton: {
-    backgroundColor: ACCENT,
     marginHorizontal: 24,
     marginBottom: 24,
-    paddingVertical: 16,
     borderRadius: 30,
-    alignItems: 'center',
-  },
-  nextButtonDisabled: {
-    backgroundColor: Colors.border,
-  },
-  nextButtonText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
-  },
-  doneButton: {
-    backgroundColor: Colors.success,
   },
 
   // TBD options
@@ -1341,6 +1329,7 @@ const styles = StyleSheet.create({
   tbdText: {
     flex: 1,
     fontSize: 15,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
   },
   tbdTextSelected: {
@@ -1348,6 +1337,7 @@ const styles = StyleSheet.create({
   },
   tbdWarning: {
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
     color: Colors.warning,
     marginTop: 8,
     fontStyle: 'italic',
@@ -1363,6 +1353,7 @@ const styles = StyleSheet.create({
   stakeCardBody: { flex: 1 },
   stakeCardHelp: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginTop: 4,
     lineHeight: 16,
@@ -1380,7 +1371,7 @@ const styles = StyleSheet.create({
   undraftableLabel: {
     flex: 1,
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
   },
 });

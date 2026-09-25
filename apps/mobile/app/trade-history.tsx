@@ -205,11 +205,12 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
   },
   leagueName: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.primaryLight,
     textAlign: 'center',
     paddingVertical: 8,
@@ -234,11 +235,11 @@ const styles = StyleSheet.create({
   },
   filterButtonText: {
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: 'Inter_500Medium',
     color: Colors.textMuted,
   },
   filterButtonTextActive: {
-    color: '#FFFFFF',
+    color: Colors.white,
   },
   scrollView: {
     flex: 1,
@@ -255,15 +256,17 @@ const styles = StyleSheet.create({
   loadingText: {
     color: Colors.textMuted,
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
   },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     textAlign: 'center',
   },
@@ -293,7 +296,7 @@ const styles = StyleSheet.create({
   },
   tradeSymbol: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
   },
   actionBadge: {
@@ -309,7 +312,7 @@ const styles = StyleSheet.create({
   },
   actionText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
   },
   buyText: {
     color: Colors.success,
@@ -319,11 +322,13 @@ const styles = StyleSheet.create({
   },
   tradeDetails: {
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     marginBottom: 4,
   },
   tradeDate: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
   },
   youLabel: {
@@ -334,7 +339,8 @@ const styles = StyleSheet.create({
   },
   tradeTotal: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
   },
   positive: {
     color: Colors.success,

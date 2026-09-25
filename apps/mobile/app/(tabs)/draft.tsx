@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, RefreshControl, ActivityIndicator, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { useAuth } from '@/lib/useAuth';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { useState, useEffect, useCallback } from 'react';
@@ -13,6 +12,7 @@ import {
   fetchCategories,
   fetchSymbolCategories,
 } from '@/lib/categoryData';
+import { Button, Card, Screen } from '@/components/ui';
 
 interface DraftPick {
   id: string;
@@ -362,13 +362,13 @@ export default function DraftScreen() {
 
   if (!activeLeagueId || !activeLeague) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <Screen scroll={false}>
         <LeagueSwitcher />
         <View style={styles.centered}>
           <Text style={styles.emptyTitle}>No league selected</Text>
           <Text style={styles.emptySubtitle}>Select a league from Home</Text>
         </View>
-      </SafeAreaView>
+      </Screen>
     );
   }
 
@@ -377,7 +377,7 @@ export default function DraftScreen() {
   if (activeLeague.stake_mode == null) {
     const isCommish = activeLeague.commissioner_id === user?.id;
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <Screen scroll={false}>
         <LeagueSwitcher />
         <View style={styles.centered}>
           <Text style={styles.pendingIcon}>⚖️</Text>
@@ -391,14 +391,14 @@ export default function DraftScreen() {
               : 'Ask your commissioner to choose a stake mode in League Settings.'}
           </Text>
         </View>
-      </SafeAreaView>
+      </Screen>
     );
   }
 
   if (isDraftNotStarted) {
     const hasDraftDate = activeLeague.draft_date != null;
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <Screen scroll={false}>
         <LeagueSwitcher />
         <View style={styles.centered}>
           <Text style={styles.pendingIcon}>⏰</Text>
@@ -414,7 +414,7 @@ export default function DraftScreen() {
               : 'The commissioner needs to set a draft date before the draft can begin'}
           </Text>
         </View>
-      </SafeAreaView>
+      </Screen>
     );
   }
 
@@ -435,13 +435,9 @@ export default function DraftScreen() {
     })).sort((a, b) => b.totalValue - a.totalValue);
 
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <Screen refreshing={refreshing} onRefresh={onRefresh}>
         <LeagueSwitcher />
 
-        <ScrollView
-          style={styles.scrollView}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
-        >
           {/* Completion Header */}
           <View style={styles.completionHeader}>
             <Text style={styles.completionIcon}>🏆</Text>
@@ -449,7 +445,7 @@ export default function DraftScreen() {
           </View>
 
           {/* Summary Stats */}
-          <View style={styles.summaryCard}>
+          <Card style={styles.summaryCard}>
             <View style={styles.summaryRow}>
               <View style={styles.summaryItem}>
                 <Text style={styles.summaryValue}>{teamCount}</Text>
@@ -464,7 +460,7 @@ export default function DraftScreen() {
                 <Text style={styles.summaryLabel}>Rounds</Text>
               </View>
             </View>
-          </View>
+          </Card>
 
           {/* Your Team */}
           <View style={styles.section}>
@@ -506,7 +502,7 @@ export default function DraftScreen() {
                 ))}
               </ScrollView>
             </View>
-            <View style={styles.roundPicksCard}>
+            <Card padded={false} style={styles.roundPicksCard}>
               {picks
                 .filter(p => {
                   // Calculate round from pick_number instead of using stored round
@@ -530,7 +526,7 @@ export default function DraftScreen() {
                     </View>
                   );
                 })}
-            </View>
+            </Card>
           </View>
 
           {/* View Other Teams */}
@@ -552,7 +548,7 @@ export default function DraftScreen() {
               </ScrollView>
             </View>
             {selectedTeamId && (
-              <View style={styles.teamDetailCard}>
+              <Card padded={false} style={styles.teamDetailCard}>
                 {(() => {
                   const team = teamRosters.find(t => t.userId === selectedTeamId);
                   if (!team) return null;
@@ -577,35 +573,29 @@ export default function DraftScreen() {
                     </>
                   );
                 })()}
-              </View>
+              </Card>
             )}
             {!selectedTeamId && (
-              <View style={styles.selectTeamPrompt}>
+              <Card style={styles.selectTeamPrompt}>
                 <Text style={styles.selectTeamText}>Select a team above to view their picks</Text>
-              </View>
+              </Card>
             )}
           </View>
-        </ScrollView>
-      </SafeAreaView>
+      </Screen>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <Screen refreshing={refreshing} onRefresh={onRefresh}>
       {/* Sticky League Switcher Header */}
       <LeagueSwitcher />
-
-      <ScrollView
-        style={styles.scrollView}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
-      >
 
         {loading ? (
           <ActivityIndicator color={Colors.primary} size="large" style={{ marginTop: 40 }} />
         ) : (
           <>
             {/* Draft Status */}
-            <View style={styles.statusCard}>
+            <Card style={styles.statusCard}>
               <View style={styles.statusRow}>
                 <View style={styles.statusItem}>
                   <Text style={styles.statusLabel}>Round</Text>
@@ -648,7 +638,7 @@ export default function DraftScreen() {
                   })}
                 </View>
               )}
-            </View>
+            </Card>
 
             {/* Stock Search (only show if it's my turn) */}
             {isMyTurn && (
@@ -665,17 +655,14 @@ export default function DraftScreen() {
                     autoCorrect={false}
                     onSubmitEditing={searchStock}
                   />
-                  <TouchableOpacity
-                    style={styles.searchBtn}
+                  <Button
+                    title="Search"
                     onPress={searchStock}
-                    disabled={searching || !searchSymbol.trim()}
-                  >
-                    {searching ? (
-                      <ActivityIndicator color={Colors.textPrimary} size="small" />
-                    ) : (
-                      <Text style={styles.searchBtnText}>Search</Text>
-                    )}
-                  </TouchableOpacity>
+                    disabled={!searchSymbol.trim()}
+                    loading={searching}
+                    variant="primary"
+                    size="sm"
+                  />
                 </View>
 
                 {quote && (
@@ -695,17 +682,13 @@ export default function DraftScreen() {
                         </View>
                       )}
                     </View>
-                    <TouchableOpacity
-                      style={styles.draftBtn}
+                    <Button
+                      title={`Draft ${quote.symbol}`}
                       onPress={submitPick}
                       disabled={submitting}
-                    >
-                      {submitting ? (
-                        <ActivityIndicator color={Colors.textPrimary} size="small" />
-                      ) : (
-                        <Text style={styles.draftBtnText}>Draft {quote.symbol}</Text>
-                      )}
-                    </TouchableOpacity>
+                      loading={submitting}
+                      variant="success"
+                    />
                   </View>
                 )}
               </View>
@@ -754,19 +737,11 @@ export default function DraftScreen() {
             )}
           </>
         )}
-      </ScrollView>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
   centered: {
     flex: 1,
     alignItems: 'center',
@@ -780,43 +755,42 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
   },
   subtitle: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.primaryLight,
     marginTop: 4,
   },
   pendingIcon: {
     fontSize: 48,
+    fontFamily: 'Inter_400Regular',
     marginBottom: 16,
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
     marginBottom: 8,
     textAlign: 'center',
   },
   emptySubtitle: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     textAlign: 'center',
     marginBottom: 16,
   },
   hint: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textDark,
     textAlign: 'center',
   },
   statusCard: {
     marginHorizontal: 24,
-    backgroundColor: Colors.cardBg,
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: Colors.border,
     marginBottom: 16,
   },
   statusRow: {
@@ -829,12 +803,15 @@ const styles = StyleSheet.create({
   },
   statusLabel: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
     marginBottom: 4,
   },
   statusValue: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
   turnIndicator: {
@@ -845,11 +822,12 @@ const styles = StyleSheet.create({
   },
   yourTurn: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.success,
   },
   waitingTurn: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
   },
   searchCard: {
@@ -858,12 +836,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     borderWidth: 2,
-    borderColor: '#0891B2',
+    borderColor: Colors.primary,
     marginBottom: 16,
   },
   searchTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
     marginBottom: 12,
   },
@@ -877,19 +855,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textPrimary,
     borderWidth: 1,
     borderColor: Colors.border,
-  },
-  searchBtn: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    justifyContent: 'center',
-  },
-  searchBtnText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
   },
   quoteCard: {
     marginTop: 16,
@@ -907,24 +876,14 @@ const styles = StyleSheet.create({
   },
   quoteSymbol: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
   },
   quotePrice: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     color: Colors.success,
-  },
-  draftBtn: {
-    backgroundColor: Colors.success,
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  draftBtnText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
   },
   section: {
     paddingHorizontal: 24,
@@ -932,7 +891,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
     marginBottom: 12,
   },
@@ -948,7 +907,7 @@ const styles = StyleSheet.create({
   },
   orderRowCurrent: {
     borderColor: Colors.primary,
-    backgroundColor: '#ECFEFF',
+    backgroundColor: Colors.cyanLight,
   },
   orderRowDone: {
     opacity: 0.5,
@@ -956,25 +915,26 @@ const styles = StyleSheet.create({
   orderNumber: {
     width: 24,
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textMuted,
   },
   orderName: {
     flex: 1,
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textPrimary,
   },
   orderNameCurrent: {
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.success,
   },
   orderCheck: {
     color: Colors.success,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
   orderArrow: {
     color: Colors.success,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
   historyRow: {
     flexDirection: 'row',
@@ -987,21 +947,26 @@ const styles = StyleSheet.create({
   historyPick: {
     width: 36,
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
   },
   historyName: {
     flex: 1,
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textPrimary,
   },
   historySymbol: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.primaryLight,
     marginRight: 12,
   },
   historyPrice: {
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
   },
   pickRow: {
@@ -1017,17 +982,21 @@ const styles = StyleSheet.create({
   },
   pickSymbol: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
   pickRound: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
     marginTop: 2,
   },
   pickPrice: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.success,
   },
   // Completion screen styles
@@ -1038,25 +1007,22 @@ const styles = StyleSheet.create({
   },
   completionIcon: {
     fontSize: 56,
+    fontFamily: 'Inter_400Regular',
     marginBottom: 12,
   },
   completionTitle: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
     marginBottom: 4,
   },
   completionLeague: {
     fontSize: 16,
+    fontFamily: 'Inter_400Regular',
     color: Colors.primaryLight,
   },
   summaryCard: {
     marginHorizontal: 24,
-    backgroundColor: Colors.cardBg,
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: Colors.border,
     marginBottom: 24,
   },
   summaryRow: {
@@ -1068,12 +1034,14 @@ const styles = StyleSheet.create({
   },
   summaryValue: {
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
     marginBottom: 4,
   },
   summaryLabel: {
     fontSize: 12,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     letterSpacing: 0.5,
   },
@@ -1085,7 +1053,8 @@ const styles = StyleSheet.create({
   },
   teamValue: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.success,
   },
   yourTeamCard: {
@@ -1113,18 +1082,21 @@ const styles = StyleSheet.create({
   },
   pickRoundBadgeText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
+    color: Colors.white,
   },
   yourPickSymbol: {
     flex: 1,
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
   yourPickPrice: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
   },
   teamCard: {
@@ -1147,23 +1119,25 @@ const styles = StyleSheet.create({
   },
   teamRank: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
     marginRight: 8,
     width: 28,
   },
   teamName: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
   },
   youBadge: {
     color: Colors.primaryLight,
-    fontWeight: '400',
+    fontFamily: 'Inter_400Regular',
   },
   teamTotal: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.success,
   },
   teamPicks: {
@@ -1181,7 +1155,8 @@ const styles = StyleSheet.create({
   },
   teamPickText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.primaryLight,
   },
   // Dropdown styles
@@ -1206,21 +1181,15 @@ const styles = StyleSheet.create({
   },
   dropdownChipText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Inter_500Medium',
     color: Colors.textMuted,
   },
   dropdownChipTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '600',
+    color: Colors.white,
+    fontFamily: 'Inter_600SemiBold',
   },
   // Round picks styles
-  roundPicksCard: {
-    backgroundColor: Colors.cardBg,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    overflow: 'hidden',
-  },
+  roundPicksCard: {},
   roundPickRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1233,7 +1202,8 @@ const styles = StyleSheet.create({
   roundPickOrder: {
     width: 24,
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
   },
   roundPickInfo: {
@@ -1241,11 +1211,14 @@ const styles = StyleSheet.create({
   },
   roundPickName: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
   roundPickSymbol: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    fontVariant: ['tabular-nums'],
     color: Colors.primaryLight,
     marginRight: 12,
     minWidth: 50,
@@ -1253,18 +1226,14 @@ const styles = StyleSheet.create({
   },
   roundPickPrice: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
     minWidth: 70,
     textAlign: 'right',
   },
   // Team detail styles
-  teamDetailCard: {
-    backgroundColor: Colors.cardBg,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    overflow: 'hidden',
-  },
+  teamDetailCard: {},
   teamDetailHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1272,16 +1241,17 @@ const styles = StyleSheet.create({
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.bgSurface,
   },
   teamDetailName: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
     color: Colors.textPrimary,
   },
   teamDetailValue: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['tabular-nums'],
     color: Colors.success,
   },
   teamDetailRow: {
@@ -1296,29 +1266,28 @@ const styles = StyleSheet.create({
   teamDetailSymbol: {
     flex: 1,
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
   },
   teamDetailPrice: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+    fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
   },
   selectTeamPrompt: {
-    backgroundColor: Colors.cardBg,
-    borderRadius: 12,
-    padding: 24,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
   selectTeamText: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
   },
   // Phase 4 draft UI
   badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 6 },
   categoryBadge: {
     fontSize: 10,
+    fontFamily: 'Inter_400Regular',
     color: Colors.primary,
     backgroundColor: Colors.primaryBg,
     borderRadius: 999,
@@ -1328,6 +1297,7 @@ const styles = StyleSheet.create({
   },
   flexBadge: {
     fontSize: 10,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
     backgroundColor: Colors.cardBgAlt,
     borderRadius: 999,
@@ -1345,6 +1315,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primaryBg,
   },
   slotRowDone: { backgroundColor: Colors.successBg },
-  slotRowText: { fontSize: 12, color: Colors.primary },
+  slotRowText: { fontSize: 12, fontFamily: 'Inter_400Regular', color: Colors.primary },
   slotRowTextDone: { color: Colors.success },
 });

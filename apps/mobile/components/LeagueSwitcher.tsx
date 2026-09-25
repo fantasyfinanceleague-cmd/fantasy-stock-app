@@ -42,6 +42,9 @@ export default function LeagueSwitcher({ title }: LeagueSwitcherProps) {
           style={styles.headerTouchable}
           onPress={() => setModalVisible(true)}
           activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel={`Switch league. Current league: ${displayName}`}
         >
           {activeLeague && (
             <Text style={styles.leagueIcon}>{getLeagueIcon(activeLeague)}</Text>
@@ -136,11 +139,12 @@ const styles = StyleSheet.create({
   },
   leagueIcon: {
     fontSize: 22,
+    fontFamily: 'Inter_400Regular',
     marginRight: 10,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
     maxWidth: 240,
   },
@@ -150,7 +154,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: Colors.overlay,
     paddingTop: 100,
   },
   modalContent: {
@@ -190,10 +194,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   leagueItemActive: {
-    backgroundColor: '#ECFEFF',
+    backgroundColor: Colors.cyanLight,
   },
   leagueItemIcon: {
     fontSize: 28,
+    fontFamily: 'Inter_400Regular',
     marginRight: 12,
   },
   leagueItemInfo: {
@@ -201,12 +206,13 @@ const styles = StyleSheet.create({
   },
   leagueItemName: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
     marginBottom: 2,
   },
   leagueItemMeta: {
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
   },
   emptyState: {
@@ -215,6 +221,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
+    fontFamily: 'Inter_400Regular',
     color: Colors.textMuted,
   },
 });
