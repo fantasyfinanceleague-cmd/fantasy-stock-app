@@ -160,7 +160,9 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
    `/Users/giorgio/fantasy-stock-deploy` at the merge commit, deploy `historical-bars`,
    `refresh-symbols`, `send-notification` and `db push` (`20260925000000`/`…01`);
    effect-verify. Its mobile half rides the step-7 EAS build (1.1.0).
-5. Stranded `running` status (§4 defect 3) — merged and deployed 2026-09-25; effect-check after Friday's 21:15 UTC run.
+5. Stranded `running` status (§4 defect 3) — PR #12 merged; `process-week-results` deployed
+   2026-09-25 from `/Users/giorgio/fantasy-stock-deploy` @ `a324395`. Only the effect check
+   is pending: `cron_job_status` must show a terminal status after Friday's 21:15 UTC run.
 6. **One end-to-end test league in prod**: create → mobile draft → Monday snapshot →
    Friday scoring → week 2. This also clears both API-key Phase 4 gates.
 7. Mobile release (EAS production build), merged with the design-system branch if it

@@ -21,6 +21,18 @@ the code meant to ship:
 - **Before a merge** (not needed here; see below): the PR branch's own worktree at the
   reviewed commit, with an explicit `--project-ref haiaaifjcclsvmkfqgmd`.
 
+The wrong folder fails **silently**, which is why this matters. `supabase functions deploy`
+uploads whatever `index.ts` the folder holds. `supabase db push` reads migrations from the
+folder it runs in. The main checkout lacks `20260925000000/01`, so it would report
+*nothing to push* while F1/F6 sit unapplied: a clean-looking no-op. Every command below
+is preceded by `git -C <folder> rev-parse --short HEAD`, which must print the expected
+commit.
+
+This PR does not deploy from its own worktree pre-merge for two reasons. Nothing requires
+it (next paragraph), and a worktree's HEAD is a moving target: it advances as follow-up
+commits land, and concurrent sessions prune worktrees. A detached checkout of
+`origin/main` at the merge commit is fixed and reviewable.
+
 **Why this PR merges first and deploys second.** None of its server steps must be live
 before the merge:
 - F1/F6 migrations don't depend on any function.
@@ -146,10 +158,20 @@ grep -A2 "^\[functions.refresh-symbols\]" supabase/config.toml | grep -c "verify
 ls supabase/migrations/20260925000000_leagues_member_draft_complete_column_guard.sql supabase/migrations/20260925000001_tighten_league_standings_insert.sql
 ```
 
-**Link the checkout** (local config only; writes `supabase/.temp/project-ref`). This checkout
-isn't linked yet, and `db push` pushes to the *linked* project, so linking is required:
+**Link the checkout** (local config only; writes `supabase/.temp/project-ref`, which is
+gitignored). This checkout isn't linked yet. On CLI v2.67.1 `db push` has no
+`--project-ref`: it pushes to the *linked* project (`--linked`, the default) or to
+`--db-url`. So linking is required.
+**Keep the DB password out of shell history.** Never pass `-p/--password`, and never use
+`--db-url` (the password sits in the URL). Either answer the CLI's hidden-input prompt, or
+load the password into the environment without echoing it:
+```bash
+read -rs SUPABASE_DB_PASSWORD && export SUPABASE_DB_PASSWORD   # value not echoed, not in history
+```
+Then:
 ```bash
 cd /Users/giorgio/fantasy-stock-deploy
+git -C /Users/giorgio/fantasy-stock-deploy rev-parse --short HEAD   # must print <MERGE>
 supabase link --project-ref haiaaifjcclsvmkfqgmd
 cat supabase/.temp/project-ref
 supabase migration list
@@ -163,8 +185,12 @@ local-only rows, `20260925000000` and `20260925000001`, with remote at
 All three are backward-compatible with 1.0.0 clients; any order.
 
 **5.1 — F9**
+No function in this PR imports `supabase/functions/_shared/` or any other local file.
+All imports are `jsr:` packages, so each deploy's asset list is exactly one `index.ts`.
+Any additional or missing local asset means the wrong code: stop.
 ```bash
 cd /Users/giorgio/fantasy-stock-deploy
+git -C /Users/giorgio/fantasy-stock-deploy rev-parse --short HEAD   # must print <MERGE>
 supabase functions deploy historical-bars --project-ref haiaaifjcclsvmkfqgmd
 ```
 Expect **Uploading asset (historical-bars): supabase/functions/historical-bars/index.ts**
@@ -175,6 +201,7 @@ still renders).
 
 **5.2 — F5**
 ```bash
+git -C /Users/giorgio/fantasy-stock-deploy rev-parse --short HEAD   # must print <MERGE>
 supabase functions deploy refresh-symbols --project-ref haiaaifjcclsvmkfqgmd
 ```
 Expect **Uploading asset (refresh-symbols): supabase/functions/refresh-symbols/index.ts**
@@ -200,6 +227,7 @@ after.
 
 **5.3 — F7 (server half)**
 ```bash
+git -C /Users/giorgio/fantasy-stock-deploy rev-parse --short HEAD   # must print <MERGE>
 supabase functions deploy send-notification --project-ref haiaaifjcclsvmkfqgmd
 ```
 Expect **Uploading asset (send-notification): supabase/functions/send-notification/index.ts**
@@ -222,10 +250,15 @@ Nothing calls this function until step 7. 1.0.0 builds still send directly to `e
 
 ```bash
 cd /Users/giorgio/fantasy-stock-deploy
+git -C /Users/giorgio/fantasy-stock-deploy rev-parse --short HEAD   # must print <MERGE>
+cat supabase/.temp/project-ref                                     # must print haiaaifjcclsvmkfqgmd
 supabase db push --dry-run
 supabase db push
 ```
-The dry run must list exactly the two files from step 4. **1.0.0 clients are unaffected:**
+The dry run must list **exactly** `20260925000000_leagues_member_draft_complete_column_guard.sql`
+and `20260925000001_tighten_league_standings_insert.sql`. "Remote database is up to date"
+here means the wrong folder or a stale checkout, **not** success. The password comes
+from the prompt or `SUPABASE_DB_PASSWORD` (step 4), never from `-p`. **1.0.0 clients are unaffected:**
 mobile no longer writes `leagues.draft_status`. The server's `markDraftComplete` uses an
 admin client with no user JWT, so `auth.uid()` is NULL and the guard is a no-op. Web
 `DraftPage` completion is exactly the trigger's allowed carve-out.
@@ -269,6 +302,7 @@ that is a bug in the script, not the trigger. Report it.)*
 Preconditions: step 2 (redirect allowlist) and step 5.3 (`send-notification` live).
 ```bash
 cd /Users/giorgio/fantasy-stock-deploy/apps/mobile
+git -C /Users/giorgio/fantasy-stock-deploy rev-parse --short HEAD   # must print <MERGE>
 eas build --profile production --platform all
 ```
 Run it from `apps/mobile/`, never from the repo root, which offers to create a duplicate
