@@ -114,23 +114,32 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
    **Apply order:** migration → deploy `validate-and-record-pick` → effect-verify with a
    test league → only then the deferred `[I8]`/`[I9]` drop
    (`supabase/migrations/deferred/README.md`).
+   **Where to run (after the merge to `main`):** only from the deploy checkout
+   `/Users/giorgio/fantasy-stock-deploy`, never from `/Users/giorgio/fantasy-stock`.
+   Refresh it first:
+   `git -C /Users/giorgio/fantasy-stock-deploy fetch origin && git -C /Users/giorgio/fantasy-stock-deploy checkout --detach origin/main`.
+   Then run `supabase db push` (preview with `--dry-run` first) and
+   `supabase functions deploy validate-and-record-pick --project-ref haiaaifjcclsvmkfqgmd`.
 2. **F10 — any league member can insert arbitrary matchups.** Closed by the deferred
    `20260926000001` policy drop. It is held until defect 1's fix is deployed and
    effect-verified.
 3. **`process-week-results` strands `cron_job_status` at `running`** on its two
    early returns (`index.ts:914` query error, `:919` no pending matchups). Until
    fixed in prod, the job's health signal cannot distinguish healthy from broken.
-   **FIXED ON `main` (PR #12, merged `a324395`; NOT deployed):**
+   **FIXED:** merged in PR #12 (`a324395`) and deployed 2026-09-25; the Friday
+   `cron_job_status` effect check is pending.
+   What changed:
    the query-error return now writes `failed` with the error; the no-pending return
    writes `success` with message `processed 0 matchups: no pending matchups` (the
    CHECK allows only `running|success|failed|retrying`, so the message — stored in
    `error_message`, the table's only text column — carries the distinction; the
    scored path always writes a `processed N …; M refused …` summary, so the column is
    never a NULL-vs-text discriminator). The writer moved to `job-status.ts`, now
-   checks the upsert's resolved `{ error }`, and never throws. **Prod stays broken
-   until the function is deployed**; effect-check after the next Friday run
+   checks the upsert's resolved `{ error }`, and never throws. **Pending:** the
+   effect check after the next Friday run
    (`SELECT * FROM cron_job_status WHERE job_name = 'process-week-results';` must
-   show a terminal status, not `running`).
+   show a terminal status, not `running`). Until it passes, treat the fix as deployed
+   but unverified.
 4. **`refresh_symbols_daily` still 401s.** `20260811000000` (applied) makes the job
    send the cron apikey, but `refresh-symbols` is still `verify_jwt = true` with no
    apikey guard. PR #9 carries the other half (F5).
@@ -178,8 +187,8 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
    test-league effect check.
 4. Merge PR #9; `db push` its migrations; deploy `refresh-symbols` and
    `send-notification`; effect-verify.
-5. Fix the stranded `running` status (§4 defect 3). Merged to `main` in PR #12;
-   deploy `process-week-results`, then effect-check.
+5. Fix the stranded `running` status (§4 defect 3). Merged in PR #12 (`a324395`)
+   and deployed 2026-09-25; the Friday `cron_job_status` effect check is pending.
 6. **One end-to-end test league in prod**: create → mobile draft → Monday snapshot →
    Friday scoring → week 2. This also clears both API-key Phase 4 gates.
 7. Mobile release (EAS production build), merged with the design-system branch if it

@@ -25,6 +25,26 @@ Drops the interim client INSERT policies `[I8]` `matchups_insert_members` and `[
 `league_standings_insert_members`. This closes **F10** (any member could forge
 matchups) and retires `[I8]`/`[I9]`.
 
+**Where to run every step below:** after the branch is merged to `main`, and only
+from the deploy checkout `/Users/giorgio/fantasy-stock-deploy`, never from
+`/Users/giorgio/fantasy-stock`. Refresh it first:
+```bash
+git -C /Users/giorgio/fantasy-stock-deploy fetch origin && git -C /Users/giorgio/fantasy-stock-deploy checkout --detach origin/main
+```
+Then (from `/Users/giorgio/fantasy-stock-deploy`):
+```bash
+supabase db push --dry-run
+```
+```bash
+supabase db push
+```
+```bash
+supabase functions deploy validate-and-record-pick --project-ref haiaaifjcclsvmkfqgmd
+```
+Promoting this file (the `git mv` into `supabase/migrations/`) is a normal commit
+on a branch. It lands on `main` through a merge and is then pushed from the refreshed
+deploy checkout, the same way.
+
 **Precondition: ALL of the following, in order.**
 1. `20260926000000_finalize_league_draft_rpc.sql` is applied (check
    `schema_migrations`) and `finalize_league_draft`'s `proacl` shows `service_role`
