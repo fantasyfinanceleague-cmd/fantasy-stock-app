@@ -196,6 +196,58 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
    `ALPACA_KEY_ID`/`ALPACA_SECRET_KEY` (no readers) and in local `.env.local`;
    `.gitleaks.toml` allowlists all of `^\.claude/` by directory (hid that leak once) —
    narrow it to specific files.
+12. **`enrich-symbols` loses prices for whole batches on one bad symbol.** Found
+   2026-09-25 by the live test draft: of 14,754 active symbols, **4,749 active
+   symbols have `last_price IS NULL`**, so `computeIsDraftable`'s price >= $1
+   floor excludes them from the draftable universe — including large caps like
+   BAC (NYSE, $392B) and F. Root cause: Alpaca's `/v2/stocks/snapshots`
+   multi-symbol endpoint is all-or-nothing (Alpaca staff: "returns either an
+   error... or the requested data... never both"), so ONE Alpaca-unsupported
+   symbol anywhere in a 50-symbol batch 400s the entire request and drops all
+   49 good prices with it, while the job still reported `ok:true, priced:0` —
+   see CLAUDE.md "success signals are unreliable" #7. Of 668 active symbols
+   with non-`[A-Z]` characters, 606 are unpriced (preferred/warrant/unit/
+   rights/when-issued forms from the NASDAQ Trader feed, e.g. `$ - = ^`/digit
+   suffixes, that Alpaca's `us_equity` universe does not list at all) and 62
+   ARE priced (inferred to be dot-form class shares like BRK.B, which Alpaca
+   accepts as-is); the other 4,143 unpriced symbols are plain `[A-Z]+`
+   tickers that were simply batch-poisoned by a neighbor.
+   **FIXED ON BRANCH `fix/enrich-symbols-batch-pricing` (not yet merged or
+   deployed — prod still loses whole batches until this ships):** a pure
+   pre-filter (`ALPACA_TICKER_RE` in `price-batch.ts`) keeps unsupported
+   formats out of the request entirely; anything that still 400s is bisected
+   down to single symbols so one bad symbol costs only itself (worst case 13
+   Alpaca requests to isolate 1 bad symbol in a 50-batch, capped at 30
+   requests/invocation — well under Alpaca's 200 req/min Basic-plan budget,
+   shared with `quote`/`ticker-quotes`/`historical-bars`). A new
+   `symbols.price_unsupported` column (migration `20260928000000`, seeded for
+   the already-known ~606) is the explicit discriminator that keeps those
+   symbols out of the price-priority queue permanently, instead of
+   overloading `last_price IS NULL` (CLAUDE.md "Overloaded NULLs are type
+   tags") — `enriched_at`'s existing meaning (profile-pass cursor, read by
+   `apps/web`/`apps/mobile` `categoryData` as an enrichment-coverage signal)
+   is untouched. Batch selection now draws up to half of every batch from the
+   unpriced-and-supported priority tier (capped to prevent chronic
+   single-symbol failures from starving the normal stalest-first sweep of the
+   other ~14k symbols) so the backlog should clear within hours, not the
+   ~2-day full cycle. The response gains `price_status` (`complete` /
+   `partial` / `failed` / `none_attempted`), `price_errors`,
+   `price_error_symbols`, and `price_unsupported_in_batch` so a whole-batch
+   failure can no longer read as `ok:true`. 20 hermetic Deno tests in
+   `price-batch.test.ts`.
+   **Apply order:** `supabase db push` (the migration) FIRST, then deploy
+   `enrich-symbols` — the function writes the new column on its next run, so
+   it must exist first.
+   **Effect-verify** (by data, not status — `net._http_response`'s ~6h TTL
+   and 5s `pg_net` timeout can't show this job's outcome):
+   ```sql
+   SELECT count(*) FILTER (WHERE active AND last_price IS NULL),
+          count(*) FILTER (WHERE is_draftable)
+   FROM symbols;
+   ```
+   trending down/up over the hours after deploy, plus
+   `SELECT symbol, last_price, is_draftable FROM symbols WHERE symbol IN ('BAC','F');`
+   becoming priced and draftable.
 
 ---
 
