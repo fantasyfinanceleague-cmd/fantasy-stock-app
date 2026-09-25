@@ -2,10 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../supabase/supabaseClient';
 import { useAuthUser } from '../auth/useAuthUser';
-
-function genCode() {
-  return Math.random().toString(36).slice(2, 8).toUpperCase();
-}
+import { generateInviteCode as genCode } from '../utils/inviteCode';
 
 export default function useLeagues() {
   const authUser = useAuthUser();

@@ -344,7 +344,7 @@ export default function DraftScreen() {
 
         // Only notify if it's a real user (not a bot) and not the current user
         if (nextPicker && !nextPicker.startsWith('bot-') && nextPicker !== user?.id) {
-          notifyDraftTurn(nextPicker, activeLeague?.name || 'your league');
+          notifyDraftTurn(nextPicker, activeLeagueId);
         }
       }
     } catch (e: any) {

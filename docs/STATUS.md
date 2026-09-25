@@ -19,7 +19,8 @@ snapshot → scoring pipeline, RLS hardening and the API-key migration are all o
 `main`, and **every migration on `main` is applied in prod**. The web app is deployed
 but paused to a landing page; mobile is the real product surface. **The top blocker
 is that a league drafted on mobile never gets a season schedule** (§4, defect 1) — the
-schedule is generated only by the paused web client. No league has completed a draft
+schedule is generated only by the paused web client (fix authored on
+`feat/server-schedule-generation`, unmerged). No league has completed a draft
 in prod since the Phase 3 server-side draft path shipped, so that path has never run
 end-to-end in prod.
 
@@ -52,7 +53,7 @@ end-to-end in prod.
 | `snapshot-week-end` | `5 21 * * 5` | `snapshot-week-end` | Fri close |
 | `process-weekly-matchups` | `15 21 * * 5` | `process-week-results` | Scores matchups, advances weeks/playoffs |
 | `enrich_symbols_10min` | `*/10 * * * *` | `enrich-symbols` | Finnhub profiles + `is_draftable` |
-| `refresh_symbols_daily` | `0 */6 * * *` | `refresh-symbols` | **Still 401s** — see §4 defect 4 |
+| `refresh_symbols_daily` | `0 */6 * * *` | `refresh-symbols` | Works: `200 {"ok":true,"count":13246}` observed 2026-09-25. Prod code is ahead of `main`, see §4 defect 4 |
 
 ### Edge functions (on `main`; deployed versions UNVERIFIED)
 
@@ -63,7 +64,7 @@ end-to-end in prod.
 | `quote`, `ticker-quotes`, `historical-bars`, `finnhub-quote` | JWT (`ticker-quotes`: none — see `config.toml`) | Market data on Stockpile's own Alpaca/Finnhub keys |
 | `symbols-search`, `symbol-name` | JWT | Symbol lookup (run as anon — `symbols` SELECT policy is deliberately public) |
 | `preview-league`, `join-league` | JWT | Join-by-code, atomic via `join_league_by_code` |
-| `refresh-symbols` | JWT (cron needs apikey — PR #9) | Symbol universe refresh |
+| `refresh-symbols` | cron apikey, `verify_jwt` off. **Prod runs PR #9's `2dd699f`**; `main` matches since `5e3b5d1` (reconciliation redeploy pending, §4 defect 4) | Symbol universe refresh |
 | `enrich-symbols` | cron apikey | Sector/industry + draftable flag |
 | `snapshot-week-start`, `snapshot-week-end`, `process-week-results` | cron apikey (constant-time, fail-closed) | Weekly pipeline |
 
@@ -86,7 +87,7 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
 | Supabase API-key migration | Phases 0–3b done. Phase 4 (disable legacy keys — one-way door) **not started**, gated on a real mobile trade + real mobile draft. Phase 5 cleanup open. | `docs/migrations/MIGRATION_STATUS.md` |
 | RLS hardening | B1 + preview/join wave done. Interim write policies `[I1]–[I6]`, `[I8]`, `[I9]` remain until create-league / draft-control / leave-league / delete-league / schedule-gen move server-side. | `docs/migrations/RLS_HARDENING_SPEC.md` |
 | In-house simulator (DR-001) | Phases 0–4 **done, merged, applied**: schema, server-side pick/trade validation, stake modes, slots, categories + seed, enrichment cron, `is_draftable` enforcement + commissioner override, league-setup and draft UI. | `docs/decisions/DR-001-in-house-simulated-trading.md`, `docs/migrations/SIMULATOR_MIGRATION_SPEC.md` |
-| Security scan 2026-07-30 (13 findings) | PR #9 (`security/claude-security-fixes-20260730`, 11 commits, 0 behind `main`) — **unmerged**. Fixes F1–F3, F5, F6, F9, F11, F13, F7. Open: **F8** (push tokens), **F10** (schedule forgery). F12 superseded by `main`. | `docs/security/` on the PR branch |
+| Security scan 2026-07-30 (13 findings) | PR #9 (`security/claude-security-fixes-20260730`) — **merged as `5e3b5d1` (2026-09-25); deploy in progress** per the runbook. Reviewer passes were clean (no CRITICAL/HIGH). Fixes F1–F3, F5, F6, F7, F9, F11, F13. **F5 + F9 are already LIVE in prod** (deployed from `2dd699f`; `main` matches since the merge, see §4 defect 4). Migrations re-timed to `20260925000000`/`…01` (the July timestamps were older than prod's latest and `db push` would refuse them). Remaining: deploy 3 functions + `db push` from `/Users/giorgio/fantasy-stock-deploy` @ `5e3b5d1` → **EAS build 1.1.0** (new native module `expo-crypto`; **not OTA-able** to 1.0.0). Open: **F8** (push tokens; now also waits for 1.0.0 binaries to drain), **F10** (schedule forgery; closed by `feat/server-schedule-generation` + its deferred policy drop, §4 defects 1–2). F12 superseded by `main`. | `docs/security/DEPLOY-RUNBOOK.md` (ordered), `docs/security/REMAINING-SECURITY-WORK.md` |
 | Mobile design-system pass | Branch `ui/design-system-pass-v2` (9 commits, 2 behind `main`) — **unmerged**, awaiting an Expo Go visual check. | memory / branch log |
 | Signup gate | Applied; hook toggle unverified (§2). Opening signups = one `UPDATE app_config`. | `supabase/migrations/20260815000000_signup_gate.sql` |
 | Architecture map | Generator + viewer live. Regenerate after any backend/call-site change. | `docs/architecture/`, `CLAUDE.md` |
@@ -116,37 +117,58 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
    (`supabase/migrations/deferred/README.md`).
    **Where to run (after the merge to `main`):** only from the deploy checkout
    `/Users/giorgio/fantasy-stock-deploy`, never from `/Users/giorgio/fantasy-stock`.
-   Refresh it first:
-   `git -C /Users/giorgio/fantasy-stock-deploy fetch origin && git -C /Users/giorgio/fantasy-stock-deploy checkout --detach origin/main`.
-   Then run `supabase db push` (preview with `--dry-run` first) and
-   `supabase functions deploy validate-and-record-pick --project-ref haiaaifjcclsvmkfqgmd`.
+   - *Prerequisite:* the checkout is linked (PR #9 runbook step 4, one-time
+     `supabase link`). `cat supabase/.temp/project-ref` must print
+     `haiaaifjcclsvmkfqgmd`. `db push` has no `--project-ref` flag and pushes to the
+     linked project.
+   - Refresh:
+     `git -C /Users/giorgio/fantasy-stock-deploy fetch origin && git -C /Users/giorgio/fantasy-stock-deploy checkout --detach origin/main`.
+   - `supabase db push --dry-run`, then `supabase db push`.
+   - Content check before deploying. A single-file function looks the same in the
+     upload list whether it is stale or fresh, so check the file itself:
+     `grep -c finalize_league_draft supabase/functions/validate-and-record-pick/index.ts`
+     must be ≥ 1.
+   - `supabase functions deploy validate-and-record-pick --project-ref haiaaifjcclsvmkfqgmd`.
 2. **F10 — any league member can insert arbitrary matchups.** Closed by the deferred
    `20260926000001` policy drop. It is held until defect 1's fix is deployed and
    effect-verified.
 3. **`process-week-results` strands `cron_job_status` at `running`** on its two
-   early returns (`index.ts:914` query error, `:919` no pending matchups). Until
-   fixed in prod, the job's health signal cannot distinguish healthy from broken.
-   **FIXED:** merged in PR #12 (`a324395`) and deployed 2026-09-25; the Friday
-   `cron_job_status` effect check is pending.
-   What changed:
+   early returns (`index.ts:914` query error, `:919` no pending matchups), so the job's
+   health signal could not distinguish healthy from broken.
+   **FIXED — merged (PR #12, `a324395`) and DEPLOYED 2026-09-25** from
+   `/Users/giorgio/fantasy-stock-deploy` @ `a324395` (`job-status.ts` confirmed in the
+   deploy's "Uploading asset" list). An earlier deploy that day came from the wrong
+   checkout and shipped stale code. **Only the effect check is pending.** The fix:
    the query-error return now writes `failed` with the error; the no-pending return
    writes `success` with message `processed 0 matchups: no pending matchups` (the
    CHECK allows only `running|success|failed|retrying`, so the message — stored in
    `error_message`, the table's only text column — carries the distinction; the
    scored path always writes a `processed N …; M refused …` summary, so the column is
    never a NULL-vs-text discriminator). The writer moved to `job-status.ts`, now
-   checks the upsert's resolved `{ error }`, and never throws. **Pending:** the
-   effect check after the next Friday run
+   checks the upsert's resolved `{ error }`, and never throws. Effect-check after the
+   next Friday run (21:15 UTC)
    (`SELECT * FROM cron_job_status WHERE job_name = 'process-week-results';` must
-   show a terminal status, not `running`). Until it passes, treat the fix as deployed
-   but unverified.
-4. **`refresh_symbols_daily` still 401s.** `20260811000000` (applied) makes the job
-   send the cron apikey, but `refresh-symbols` is still `verify_jwt = true` with no
-   apikey guard. PR #9 carries the other half (F5).
+   show a terminal status, not `running`).
+4. **Repo/prod drift on `refresh-symbols` + `historical-bars`: prod is AHEAD of `main`.**
+   *(Corrects the earlier "still 401s" entry, which was wrong.)* Observed 2026-09-25,
+   read-only:
+   - `refresh_symbols_daily` returns `200 {"ok":true,"count":13246}`, with no 401s.
+   - A credential-free GET reaches our code (`405`), so `verify_jwt` is **off** in prod.
+   - `supabase functions download` shows both functions deployed from PR #9's original
+     commit `2dd699f` (F5 guard, F9 date validation) on an unknown date after 2026-07-30.
+
+   So **F5 and F9 are LIVE**. **PR #9 merged as `5e3b5d1` (2026-09-25),** so `main` now
+   carries F5/F9 and its `config.toml`. Deploying these functions from a checkout at or
+   after `5e3b5d1` is no longer a regression; deploying from an older checkout still
+   would be. Runbook step 5 redeploys both as a reconciliation and proves prod equals
+   the merge commit by download. Close this entry when that proof passes.
 5. **F8 — Expo push tokens are readable by every authenticated user** (and broadcast
    over Realtime) via `user_profiles.expo_push_token`. Staged fix:
-   `docs/migrations/STAGED_L2_push_token_capability.sql`; apply only after PR #9's
-   `send-notification` is deployed and verified.
+   `docs/migrations/STAGED_L2_push_token_capability.sql`. Apply only after PR #9's
+   `send-notification` is deployed and verified **and** testers are all on the ≥ 1.1.0
+   build. 1.0.0 binaries read and write that column directly, so dropping it breaks them.
+   Until then, F7's server-side send closes the *app's* cross-user token reads, but not
+   an attacker's direct PostgREST/Realtime read.
 6. **`record-trade` concurrent-buy race** — documented in code (`index.ts:229`);
    needs an atomic SECURITY DEFINER RPC (the `join_league_by_code` pattern).
 7. **No leave-league flow on mobile** (web has one).
@@ -183,12 +205,22 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
 2. Confirm which mobile build testers are on; anything pre-Phase-4 must update
    (salary-cap column drop, §2).
 3. **Server-side schedule generation** (§4 defect 1). Authored on
-   `feat/server-schedule-generation`; it needs merge, migration, deploy, and a
-   test-league effect check.
-4. Merge PR #9; `db push` its migrations; deploy `refresh-symbols` and
-   `send-notification`; effect-verify.
-5. Fix the stranded `running` status (§4 defect 3). Merged in PR #12 (`a324395`)
-   and deployed 2026-09-25; the Friday `cron_job_status` effect check is pending.
+   `feat/server-schedule-generation` (includes `main` @ `5e3b5d1`); it needs merge,
+   migration, deploy, and a test-league effect check.
+4. Ship PR #9 per `docs/security/DEPLOY-RUNBOOK.md`. **Merged as `5e3b5d1`; the deploy
+   steps are in progress** (the runbook records which have run). From
+   `/Users/giorgio/fantasy-stock-deploy` at the merge commit:
+   - deploy `historical-bars` + `refresh-symbols` (a reconciliation; they are already
+     live)
+   - deploy `send-notification` (new)
+   - `db push` (`20260925000000`/`…01`)
+   - effect-verify.
+
+   Its mobile half rides the step-7 EAS build (1.1.0).
+5. Stranded `running` status (§4 defect 3). PR #12 merged; `process-week-results`
+   deployed 2026-09-25 from `/Users/giorgio/fantasy-stock-deploy` @ `a324395`. Only the
+   effect check is pending: `cron_job_status` must show a terminal status after
+   Friday's 21:15 UTC run.
 6. **One end-to-end test league in prod**: create → mobile draft → Monday snapshot →
    Friday scoring → week 2. This also clears both API-key Phase 4 gates.
 7. Mobile release (EAS production build), merged with the design-system branch if it
@@ -203,8 +235,8 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
 | Branch | State |
 |---|---|
 | `main` | Deployed to Vercel prod. |
-| `security/claude-security-fixes-20260730` | PR #9, unmerged, 0 behind `main`. GitGuardian check fails on the known anon-key false positive. |
-| `feat/server-schedule-generation` | §4 defects 1, 2 (deferred drop), 9: schedule module, `finalize_league_draft` migration, pick-function wiring, web writers removed. Unmerged; migration unapplied, function undeployed. |
+| `security/claude-security-fixes-20260730` | PR #9, **merged as `5e3b5d1`** (2026-09-25). Deploy per `docs/security/DEPLOY-RUNBOOK.md` in progress. |
+| `feat/server-schedule-generation` | §4 defects 1, 2 (deferred drop), 9: schedule module, `finalize_league_draft` migration, pick-function wiring, web writers removed. Includes `main` @ `5e3b5d1`. Unmerged; migration unapplied, function undeployed. |
 | `ui/design-system-pass-v2` | Unmerged, awaiting visual check. Checked out in the main checkout. |
 | `ui/design-system-pass`, `item4-fix-refresh-symbols-cron` | Superseded (backup / folded into `main` + PR #9). Safe to delete once confirmed. |
 | ~20 others (`simulator-core`, `phase4-*`, `item*`, `signup-ux-password`, …) | Fully merged into `main` (0 commits ahead) — safe to delete with `git branch -d`. |
