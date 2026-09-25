@@ -14,6 +14,7 @@ import {
   decideMatchupScoring,
   BATCH_SKIP_REASON,
 } from './scoring-eligibility.ts';
+import { updateJobStatus, noPendingMessage, scoredMessage } from './job-status.ts';
 
 /**
  * Process Weekly Matchup Results
@@ -38,34 +39,6 @@ const ALPACA_BASE = 'https://data.alpaca.markets/v2';
 // using current prices. Beyond this we refuse rather than fabricate results.
 // ~3 days covers a normal week_end -> cron run plus a retry.
 const FALLBACK_MAX_AGE_HOURS = 72;
-
-// Update job status for tracking
-async function updateJobStatus(
-  supabase: any,
-  jobName: string,
-  status: 'running' | 'success' | 'failed',
-  attemptNumber: number,
-  errorMessage?: string
-) {
-  const today = new Date().toISOString().split('T')[0];
-
-  try {
-    await supabase
-      .from('cron_job_status')
-      .upsert({
-        job_name: jobName,
-        run_date: today,
-        status,
-        attempt_number: attemptNumber,
-        error_message: errorMessage || null,
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: 'job_name,run_date'
-      });
-  } catch (e) {
-    console.error('Failed to update job status:', e);
-  }
-}
 
 // Simple response helper
 const json = (b: unknown, s = 200) =>
@@ -876,7 +849,15 @@ Deno.serve(async (req) => {
   const supabase = createClient(SUPABASE_URL, SECRET_KEY);
   const now = new Date();
 
-  // Update status to running
+  // Update status to running.
+  //
+  // INVARIANT: every handler return from here on must first write a terminal
+  // status ('success' | 'failed'). A return that skips it strands today's row
+  // at 'running' forever, and a stranded row is byte-identical whether the run
+  // hung, crashed, or finished with nothing to do (CLAUDE.md "Success signals"
+  // #6). updateJobStatus never throws, so writing it cannot change the HTTP
+  // response. (The `return error` statements further down belong to the nested
+  // updateUserStandings helper, not the handler.)
   await updateJobStatus(supabase, JOB_NAME, 'running', 1);
 
   try {
@@ -911,11 +892,18 @@ Deno.serve(async (req) => {
 
     if (matchupErr) {
       console.error('Error fetching matchups:', matchupErr);
+      await updateJobStatus(
+        supabase, JOB_NAME, 'failed', 1,
+        `Failed to fetch matchups: ${matchupErr.message ?? JSON.stringify(matchupErr)}`,
+      );
       return json({ error: 'Failed to fetch matchups', details: matchupErr }, 500);
     }
 
     if (!pendingMatchups || pendingMatchups.length === 0) {
       console.log('No pending matchups to process');
+      // Terminal success: the common weekly path. The schema has no distinct
+      // "nothing to do" status, so the message carries it.
+      await updateJobStatus(supabase, JOB_NAME, 'success', 1, noPendingMessage());
       return json({ message: 'No pending matchups', processed: 0 });
     }
 
@@ -1486,8 +1474,12 @@ Deno.serve(async (req) => {
 
     console.log(`Processed ${processedCount} matchups`);
 
-    // Update status to success
-    await updateJobStatus(supabase, JOB_NAME, 'success', 1);
+    // Update status to success. Always with a summary — never NULL — so the
+    // message column is never a scored-vs-nothing-to-do discriminator.
+    await updateJobStatus(
+      supabase, JOB_NAME, 'success', 1,
+      scoredMessage(processedCount, skipped.length),
+    );
 
     return json({
       message: 'Processing complete',
