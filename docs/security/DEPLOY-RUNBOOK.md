@@ -1,133 +1,257 @@
-> ⚠️ **PARTLY SUPERSEDED — merge of main, 2026-09-01.** Phase C (F12 / `place-order`) is OBSOLETE: main deleted `place-order` (DR-001 in-house simulator) and already applied the trades policy drop (`20260811000002`). The only pending migrations from this branch are now `20260730000000` (F1) and `20260730000001` (F6); `20260730000004` and `20260728000002` were dropped as duplicates of applied main migrations. F5's cron reschedule is likewise already applied (`20260811000000`) — deploying `refresh-symbols` (flag off + guard) is what makes it work. Read the rest with that in mind.
+# Deploy runbook — PR #9 (`security/claude-security-fixes-20260730`)
 
-# Deploy runbook — security fixes (branch `security/claude-security-fixes-20260730`)
+**Rewritten 2026-09-24** after merging `main` @ `2be4638` (PR #10 + PR #11) into the
+branch. This replaces the July/September runbook in full: the old Phase C (F12 /
+`place-order`) is gone because `main` deleted `place-order` (DR-001), and it already
+applied both the `trades` policy drop and the `refresh_symbols_daily` cron reschedule.
 
-Turnkey, ordered checklist to ship the 10 in-code fixes from the 2026-07-30 Claude
-Security scan. Every step here is **prod-mutating and yours to run** (the repo's
-handoff model keeps deploys/`db push`/dashboard config off automation). Golden rule
-throughout: **verify the EFFECT, not the command's output** — a clean `db push` or a
-`succeeded` cron log is not evidence the change landed.
+Every step below is **prod-mutating and Giorgio's to run.** The golden rule applies
+throughout: **verify the EFFECT, not the command's output.** A clean `db push`, a
+`succeeded` cron row, or an HTTP 200 is not evidence.
 
-Ordering principle: land the **backward-compatible** changes first (they don't break
-currently-live clients), do the **coordinated** one (F12) deliberately, and merge to
-`main` LAST (merging = the web Vercel prod deploy).
+## What ships
 
-Fixes and where they live: see `docs/security/REMAINING-SECURITY-WORK.md`.
+| Fix | Kind | Lands via | Waits for mobile release? |
+|---|---|---|---|
+| F1 + F11 — leagues column guard trigger | migration `20260925000000` | `db push` | no |
+| F6 — `league_standings` INSERT bounded to zero | migration `20260925000001` | `db push` | no |
+| F5 — `refresh-symbols` apikey guard, `verify_jwt=false` | edge function + `config.toml` | functions deploy | no |
+| F9 — `historical-bars` date validation | edge function | functions deploy | no |
+| F7 — server-side `send-notification` | new edge function | functions deploy | **client half: yes** |
+| F3/F4 — CSPRNG invite codes (web) | web client | merge → Vercel | no |
+| F3/F4 — CSPRNG invite codes (mobile) | mobile client | EAS build | **yes** |
+| F2 — password-reset recovery nonce | mobile client + Auth redirect allowlist | dashboard + EAS build | **yes** |
+| F13 — re-auth before password change | mobile client | EAS build | **yes** |
+
+**Not in this PR:** F8 (push-token relocation, staged in
+`docs/migrations/STAGED_L2_push_token_capability.sql`) and F10 (matchup forgery, which is
+closed by server-side schedule generation). F12 was superseded by `main`.
+
+**Why the migrations were renamed.** They were authored as `20260730000000/01`, but prod's
+latest applied version is `20260816000000`, and `db push` refuses pending local migrations
+older than the remote's latest. The bodies are unchanged apart from header notes and one
+extra `REVOKE ... FROM anon, authenticated` on the trigger function (hygiene only; see
+the header).
 
 ---
 
-## Phase A — Supabase dashboard config (additive, zero risk)
+## Step 0 — Pre-flight (read-only)
 
-- [ ] **F2 redirect allowlist.** Supabase → Auth → URL Configuration → add a redirect
-  URL that preserves the query param: `fantasystockapp://reset-password?**` (or the
-  broader `fantasystockapp://**`). Additive — the old plain `redirectTo` still matches,
-  so nothing breaks by adding it.
+Run each query **separately** in the SQL editor, which shows only the last result.
 
-## Phase B — Backward-compatible backend (safe with old clients live; any order)
+**0.1 — Nothing else is pending.** From the repo root, with the branch checked out:
+```bash
+supabase migration list
+```
+Expect exactly **two** local-only rows, `20260925000000` and `20260925000001`, and remote
+at `20260816000000`. **Anything else pending → stop.** `db push` applies EVERY pending file.
 
-- [ ] **F9 — historical-bars.** `supabase functions deploy historical-bars`
-  - Verify: a request with a bad date (`"start":"2020-01-01&feed=sip"`) returns **our**
-    HTTP 400 `invalid_start`, and a normal `YYYY-MM-DD` request still returns bars.
-- [ ] **F5 — refresh-symbols.** `supabase functions deploy refresh-symbols` (carries
-  `verify_jwt=false` from `config.toml`).
-  - Verify the flip took: a **no-credential** POST must hit OUR handler 401
-    (`{"error":"Unauthorized"}`), NOT the gateway's generic 401. Also check the
-    dashboard Verify-JWT toggle. (A verify_jwt flip may not take on the first deploy.)
-  - Then reschedule the daily `refresh_symbols_daily` cron to send the `apikey` from
-    `vault.decrypted_secrets` (it 401s today, so this is a fix-forward, not a break).
-> **F1 + F6 migrations are NOT pushed here.** `supabase db push` applies ALL pending
-> migrations in one shot — it cannot push just F1/F6 without also applying F12's
-> `20260730000004` (which drops the client `trades` INSERT policy). Since that drop
-> must happen inside the F12 window (after `place-order` is deployed and clients
-> updated), the **single `db push` lives in Phase C** and applies all three new
-> migrations together. F1 and F6 are backward-compatible, so landing them in that same
-> push is fine. Do NOT run `db push` in Phase B.
->
-> Sanity-check what's pending before the push: `supabase migration list` should show
-> exactly `20260730000000`, `20260730000001`, `20260730000004` as remote-unapplied
-> (prod should already be at `20260728000001`). If older migrations are unexpectedly
-> pending, stop and investigate before pushing.
+**0.2 — The cron key pair matches, proven by a sibling that uses it.** `enrich_symbols_10min`
+authenticates with the same pair `refresh-symbols` will use (vault `cron_apikey` →
+`SB_SECRET_KEY_CRON`). Its 200s prove the two values are equal. Note that
+`net._http_response` has no `url` column, so responses are identified by body shape:
+```sql
+SELECT created, status_code, left(content::text, 120) AS body
+FROM net._http_response
+WHERE content::text LIKE '%"batch":%'           -- enrich-symbols success shape
+ORDER BY created DESC LIMIT 5;
+```
+Expect recent rows with `status_code = 200`. If they're all 401 `{"error":"unauthorized"}`,
+the pair is already broken: fix that first. F5 cannot work either.
 
-## Phase C — F12 (coordinated: client + server must move together)
+**0.3 — Baseline: refresh-symbols is failing today.**
+```sql
+SELECT created, status_code, left(content::text, 120) AS body
+FROM net._http_response
+WHERE status_code = 401
+  AND (content::text ILIKE '%authorization header%' OR content::text ILIKE '%invalid jwt%')
+ORDER BY created DESC LIMIT 5;
+```
+Expect 401s carrying the **gateway's** generic body, not our JSON, at `:00` of
+00/06/12/18 UTC. `refresh-symbols` is the only cron target still behind `verify_jwt`, so
+these rows are its runs. This is what step 3.2 should
+change.
 
-> **Requires an OPEN market.** The safety step (verify `place-order` records a real
-> fill server-side *before* the `db push` drops the client-insert fallback) needs a
-> genuine Alpaca fill. Paper orders placed while the market is closed queue rather than
-> fill, and `place-order` only records on `status === 'filled'`. So run Phase C during
-> market hours; do NOT drop the policy on faith.
+---
 
-**Why this one is different:** the new `place-order` **requires `league_id`** (old
-clients that don't send it get HTTP 400) and the final migration **drops the client
-`trades` INSERT policy** (old client-side inserts then fail). So the clients and the
-server must update together. Web is automatic (merge = deploy); **mobile is the risk**
-because old app-store versions linger.
+## Step 1 — Push the branch  *(HUMAN)*
 
-**Pick a path:**
+```bash
+git push origin security/claude-security-fixes-20260730
+```
+This updates PR #9. The GitGuardian check fails on the allowlisted anon key, a known
+false positive: dismiss it on the dashboard.
 
-### Path 1 — coordinated window (RECOMMENDED for a small/pre-launch mobile base, or if you can force-update)
-Do these back-to-back in one window:
-1. [ ] Ship the mobile update (EAS build/submit + OTA from `apps/mobile/`) so devices send
-   `league_id` and stop inserting trades client-side. Force-update if you can.
-2. [ ] Merge the PR to `main` (deploys the new **web** client to Vercel — this is also
-   your web prod deploy; only do it once you're ready for prod).
-3. [ ] `supabase functions deploy place-order`.
-4. [ ] Verify a real trade records server-side: place one paper trade, then
-   `SELECT symbol, action, quantity, price, alpaca_order_id FROM trades ORDER BY created_at DESC LIMIT 1;`
-   — values must come from the Alpaca fill.
-5. [ ] `supabase db push` — this applies **all three** new migrations together
-   (`20260730000000` F1, `20260730000001` F6, `20260730000004` F12). Verify each:
-   - F1 trigger: `SELECT tgname FROM pg_trigger WHERE tgrelid='leagues'::regclass;`
-     (expect `trg_leagues_member_update_columns`).
-   - F6 policy: `SELECT polname, pg_get_expr(polwithcheck, polrelid) FROM pg_policy WHERE polrelid='league_standings'::regclass;`
-     (WITH CHECK bounds score columns to 0).
-   - F12: `SELECT polname, polcmd FROM pg_policy WHERE polrelid='trades'::regclass;`
-     — there should be **no** authenticated INSERT policy left.
-> Between steps 2 and 3 there's a brief window where a new web client's trade may not
-> record (new client doesn't insert client-side; old place-order doesn't record yet).
-> Keep 2→3 tight. Trading itself is not broken in that window; only recording lags.
+## Step 2 — Supabase Auth redirect allowlist (F2; additive, zero risk)
 
-### Path 2 — transitional shim (only if you CANNOT force-update mobile)
-If old mobile versions must keep working during a long rollout, do NOT deploy the strict
-`place-order` or drop the policy yet. Instead:
-1. Deploy a transitional `place-order` that treats `league_id` as **optional**: when
-   present (new clients) it does the membership check + server-side record; when absent
-   (old clients) it places the order and returns as before, letting the old client insert
-   client-side (the INSERT policy still exists, so that keeps working). This preserves
-   the *pre-existing* behaviour for old clients — F12 stays open for them, but there is
-   no regression.
-2. Roll out the new web + mobile clients.
-3. Once old clients are drained, deploy the strict `place-order` (require `league_id`)
-   and `db push` `20260730000004` to drop the policy — fully closing F12.
-> I can draft the transitional `place-order` on request; it's not in the branch because
-> Path 1 is expected for this app's scale.
+Dashboard → Authentication → URL Configuration → Redirect URLs: add
+`fantasystockapp://**` (or the narrower `fantasystockapp://reset-password?**`).
+The new client sends `redirectTo: fantasystockapp://reset-password?rn=<nonce>`. Without a
+pattern that preserves the query string, the fail-closed nonce check rejects **every**
+legitimate reset. Existing entries still match old clients, so adding this breaks nothing.
+**It must be in place before the step-6 mobile build reaches anyone.**
 
-## Phase D — Verify & refresh the map (after all Supabase changes)
+## Step 3 — Edge functions (all backward-compatible; any order among 3.1–3.3)
 
-- [ ] Re-capture the DB snapshot: run `docs/architecture/db-snapshot.sql` against prod and
-  save the single output cell into `docs/architecture/db-snapshot.json`.
-- [ ] `node scripts/gen-architecture.mjs`, commit the result.
-- [ ] Open the map's **"claim vs reality" drift panel** and confirm the new policies/
-  trigger and the `refresh-symbols` auth edge now show as matched — this is the check
-  that a lockdown migration actually landed (a migration applying is not proof).
+From the repo root on the branch:
 
-## Post-deploy smoke checks (the effect, per finding)
+**3.1 — F9**
+```bash
+supabase functions deploy historical-bars
+```
+Verify: a bad date such as `"start":"2020-01-01&feed=sip"` returns **our** HTTP 400
+`invalid_start`, and a normal `YYYY-MM-DD` request still returns bars (the mobile chart
+still renders).
 
-- [ ] **F2:** on a device, request a password reset, open the emailed link, confirm you
-  reach reset-password and can set a new password (the `?rn=` nonce must survive the
-  redirect — if reset fails here, the Phase A allowlist entry is wrong).
-- [ ] **F1:** as a non-commissioner member, an attempt to `UPDATE leagues SET commissioner_id=...`
-  during a draft is rejected; a normal draft completion still works.
-- [ ] **F5:** `refresh-symbols` with a valid user JWT but no apikey → 401.
-- [ ] **F12:** a direct forged `INSERT INTO trades ...` from an authenticated client is
-  denied by RLS; a real trade still records via `place-order`.
-- [ ] **F13:** mobile password change with a wrong current password is blocked.
+**3.2 — F5**
+```bash
+supabase functions deploy refresh-symbols
+```
+This deploy carries `verify_jwt = false`. A true→false flip may not take on the first
+deploy, so verify that it did:
+```bash
+curl -s -i -X POST https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/refresh-symbols
+```
+Expect `401` with body exactly `{"error":"Unauthorized"}` (**our** handler). The gateway's
+`Missing authorization header` means the flip didn't take: redeploy, and check the
+dashboard's Verify-JWT toggle for the function.
+Then check the effect after the next scheduled run (`0 */6 * * *` UTC):
+```sql
+SELECT created, status_code, left(content::text, 120) AS body
+FROM net._http_response
+WHERE content::text LIKE '%"count":%'           -- refresh-symbols success shape
+ORDER BY created DESC LIMIT 3;
+```
+Expect `200 {"ok":true,"count":<several thousand>}`. Don't use `cron.job_run_details`: it reports
+`succeeded` on enqueue. Optional: `SELECT count(*) FROM symbols;` before and after.
 
-## Notes / rollback
-- Migrations here only ADD a trigger / TIGHTEN policies / DROP one policy. If a problem
-  surfaces, the fastest mitigation is a follow-up migration re-adding the prior policy
-  (do NOT edit an applied migration). The F1 trigger can be disabled with
-  `DROP TRIGGER trg_leagues_member_update_columns ON leagues;` in a new migration.
-- Edge-function deploys can be rolled back by redeploying the previous version.
-- **F2 is the one change that skipped the independent verifier panel** (design was
-  panel-verified; the expo-crypto RNG swap was implemented directly) — give it the extra
-  end-to-end reset test above before trusting it.
+**3.3 — F7**
+```bash
+supabase functions deploy send-notification
+```
+It uses `SB_PUBLISHABLE_KEY` and `SB_SECRET_KEY_INTERNAL`, which are already set as
+project secrets and used by `validate-and-record-pick`, so no `secrets set` is needed.
+Verify:
+- No `Authorization` header → the gateway's 401 (this function is `verify_jwt = true`).
+- A real user JWT with `{"type":"nope","league_id":"x","target_user_id":"y"}` → **our**
+  `400 unknown notification type`.
+- A real user JWT with `type: "draft_turn"`, a league you're in, and a leaguemate as the
+  target → `200` with `sent:true`, or `sent:false` with a truthful `reason`
+  (`no_token_or_disabled`, `expo_ticket_error`). **`500 lookup_failed` is a real failure.**
+
+Nothing calls this function until step 6. Live mobile builds still send directly to
+`exp.host` (that is F8's exposure, unchanged by this step).
+
+## Step 4 — Migrations (F1, F6)
+
+```bash
+supabase db push --dry-run
+supabase db push
+```
+The dry run must list exactly the two files from 0.1. **Old clients are unaffected:**
+mobile no longer writes `leagues.draft_status`. The server's `markDraftComplete` uses an
+admin client with no user JWT, so `auth.uid()` is NULL and the guard is a no-op. Web
+`DraftPage` completion is exactly the trigger's allowed carve-out.
+
+Effect verification (each query separately):
+```sql
+SELECT version FROM supabase_migrations.schema_migrations
+WHERE version >= '20260816000000' ORDER BY version;
+-- expect 20260816000000, 20260925000000, 20260925000001
+```
+```sql
+SELECT tgname, tgenabled FROM pg_trigger
+WHERE tgrelid = 'public.leagues'::regclass AND NOT tgisinternal;
+-- expect exactly: trg_leagues_member_update_columns | O
+```
+```sql
+SELECT proname, prosecdef, proconfig, proacl::text
+FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname = 'public' AND proname = 'enforce_leagues_member_update_columns';
+-- expect prosecdef = true, proconfig = {"search_path=public, pg_temp"},
+-- proacl WITHOUT anon= or authenticated= entries
+```
+```sql
+SELECT policyname, cmd, roles::text, with_check
+FROM pg_policies WHERE schemaname = 'public' AND tablename = 'league_standings'
+ORDER BY policyname;
+-- expect ONLY league_standings_insert_members (INSERT, with_check has
+-- wins = 0 AND losses = 0 AND ties = 0 AND points_for = 0 AND points_against = 0)
+-- and league_standings_select_members (SELECT). No UPDATE/DELETE policy.
+```
+**Trigger behaviour:** paste all of `docs/security/f1-f6-effect-test.sql` into the SQL editor
+and run it. It builds its own fixture leagues, switches role and JWT claims the way
+PostgREST does, runs 8 cases, then **raises on purpose** so everything rolls back and
+the results appear in the error panel. Expect 8 × `PASS`. Any `FAIL` is a real finding:
+stop and report it. *(This script has not been run yet; no local Postgres was available
+when it was written. If it errors before printing results, e.g. on a fixture insert,
+that is a bug in the script, not the trigger. Report it.)*
+
+## Step 5 — Merge PR #9  *(= Vercel prod deploy)*
+
+The PR adds no new Vercel env vars. The web delta is the CSPRNG invite-code helper
+(`apps/web/src/utils/inviteCode.js`, `useLeagues.js`). With `APP_PAUSED = true` only the
+landing page is live, so a successful `npm run build` proves nothing (see CLAUDE.md). The
+evidence is the Vercel deployment of the merge commit going **Ready**. If `main` has moved
+since this branch was last merged, re-merge and re-run `node scripts/gen-architecture.mjs
+--check` before merging.
+
+## Step 6 — Mobile release  *(EAS **build**, NOT an OTA update)*
+
+**Why not OTA:** this branch adds `expo-crypto`, a **native** module imported at load time
+by `_layout.tsx` (via `lib/recoveryNonce.ts`). `runtimeVersion` uses `policy: appVersion`,
+and the branch bumps `expo.version` from `1.0.0` to `1.1.0`, so this JS belongs to a **new
+runtime**. An `eas update` from `main` now reaches no existing binary, which is the point:
+on a 1.0.0 binary it would crash at startup (`Cannot find native module 'ExpoCrypto'`).
+**Do not revert the version bump to force an OTA.**
+
+Preconditions: step 2 (redirect allowlist) and step 3.3 (`send-notification` live).
+```bash
+cd apps/mobile && eas build --profile production --platform all
+```
+Run it from `apps/mobile/`, never from the repo root, which offers to create a duplicate
+project (decline that). Consider bundling with `ui/design-system-pass-v2` if its visual
+check passes (STATUS §5).
+
+Smoke checks on the new build:
+- **F2:** request a reset, open the emailed link, and reach reset-password to set a new
+  password. If the reset is rejected, the step-2 allowlist entry is wrong.
+- **F13:** a password change with a wrong current password is refused.
+- **F3:** a new league's invite code is 10 characters from the unambiguous alphabet.
+- **F7:** in a two-human draft, the next picker receives "It's Your Turn!".
+  `send-notification` logs show `sent:true`.
+
+## Step 7 — Refresh the map
+
+1. Re-capture `docs/architecture/db-snapshot.json`: run `docs/architecture/db-snapshot.sql`
+   against prod and save the single output cell. The current snapshot is from 2026-08-12.
+2. `node scripts/gen-architecture.mjs`, then commit.
+3. Drift panel: the HIGH row `enforce_leagues_member_update_columns() — ABSENT from prod
+   snapshot` must clear. If it doesn't, the push didn't land, whatever step 4's output
+   said.
+
+## Step 8 — Record it
+
+Update `docs/STATUS.md` §2 (ledger: migrations through `20260925000001`, deployed
+functions, the `refresh_symbols_daily` 200 evidence) and §4 (remove defect 4, the
+refresh-symbols 401).
+
+---
+
+## After this ships: F8 phase 2 has a new precondition
+
+`STAGED_L2_push_token_capability.sql` drops `user_profiles.expo_push_token`. Every
+**1.0.0** mobile binary still writes its own token to that column and reads leaguemates'
+tokens from it. Apply phase 2 only after 1.0.0 binaries are drained, i.e. testers are all
+on ≥ 1.1.0. `send-notification` already handles both schema states, and its legacy
+fallback can be deleted once phase 2 lands.
+
+## Rollback
+
+- **Migrations:** never edit an applied file. Mitigate with a new migration, e.g.
+  `DROP TRIGGER trg_leagues_member_update_columns ON public.leagues;`, or recreate the
+  prior `league_standings_insert_members` (`WITH CHECK (is_member(league_id))`).
+- **Edge functions:** redeploy the previous version. For `refresh-symbols`, a rollback
+  reinstates the 401s and nothing else.
+- **Mobile:** 1.0.0 binaries keep working throughout. Nothing in steps 1–5 requires them
+  to update.

@@ -8,20 +8,26 @@ the fixes that ARE in the branch but need prod steps.
 
 Fixes landed on branch `security/claude-security-fixes-20260730` (commit 2dd699f).
 
+> **2026-09-24:** branch re-merged with `main` @ `2be4638`. F1/F6 migrations re-timed
+> `20260730000000/01` → `20260925000000/01` (prod's latest applied is `20260816000000`,
+> and `db push` refuses older pending files). F7 is done in code. The **deploy order now
+> lives only in `docs/security/DEPLOY-RUNBOOK.md`**. The checklist that used to close this
+> file has been removed so the two can't drift apart.
+
 ---
 
 ## Status of all 13 findings
 
 | ID | Sev | Status | Where |
 |----|-----|--------|-------|
-| F1 | HIGH | ✅ fixed in code | migration `20260730000000` (leagues UPDATE column-guard trigger) |
+| F1 | HIGH | ✅ fixed in code | migration `20260925000000` (leagues UPDATE column-guard trigger; authored as `20260730000000`) |
 | F2 | HIGH | ✅ fixed in code | `apps/mobile/lib/recoveryNonce.ts` + `_layout.tsx` + `forgot-password.tsx` — needs redirect-allowlist config (see Deploy) |
 | F3 | MED | ✅ fixed in code | `apps/web/src/utils/inviteCode.js`, `apps/mobile/lib/inviteCode.ts` |
 | F4 | MED | ✅ fixed in code | (closed by F3 — shared CSPRNG helpers) |
 | F5 | MED | ✅ fixed in code | `refresh-symbols/index.ts` + `config.toml` (apikey gate, verify_jwt=false). **Merge 2026-09-01:** main's `20260811000000` (applied) already sends the cron apikey but left verify_jwt=true with no guard, so it still 401s — this branch's flip + guard completes it. This branch's duplicate cron migration `20260728000002` was dropped. |
-| F6 | MED | ✅ fixed in code | migration `20260730000001` (league_standings INSERT bounded to zero) |
-| **F7** | MED | ❌ **TODO** | push-token send authorization — see below |
-| **F8** | MED | ❌ **TODO** | push-token relocation — see below (same work as F7) |
+| F6 | MED | ✅ fixed in code | migration `20260925000001` (league_standings INSERT bounded to zero; authored as `20260730000001`) |
+| F7 | MED | ✅ fixed in code | new `send-notification` edge function (shared-league check, closed type map) + `apps/mobile/lib/notifications.ts` cut-over. Client half ships with the 1.1.0 EAS build. Hardened 2026-09-24 (error checks, Expo ticket status, unbuilt types removed). |
+| **F8** | MED | ❌ **TODO** | push-token relocation (phase 2, staged). Precondition: F7 deployed **and** 1.0.0 mobile binaries drained — see below |
 | F9 | MED | ✅ fixed in code | `historical-bars/index.ts` (date validation + encoding) |
 | **F10** | MED | ❌ **TODO** | matchup schedule forgery — see below |
 | F11 | MED | ✅ fixed in code | (closed by F1 — same policy trigger) |
@@ -56,9 +62,17 @@ function can derive title/body from a closed `notification_type` enum instead of
 accepting client-supplied strings. Do NOT skip this — accepting client content on the
 server would re-open a spam/phishing vector.
 
+**Progress (2026-09-24):** steps 2 and 3 are **done** on this branch (`send-notification`
+and the client cut-over). Steps 1, 4 and 5 are phase 2, staged in
+`docs/migrations/STAGED_L2_push_token_capability.sql`. Apply it only after
+`send-notification` is deployed and verified **and** every tester is on the ≥ 1.1.0
+build: 1.0.0 binaries write their own token to `user_profiles.expo_push_token` and read
+leaguemates' tokens from it, so dropping the column breaks them. Give the phase-2
+migration a fresh timestamp later than prod's latest applied, not the `~20260730…` below.
+
 **Build spec (ordered):**
 
-1. **New migration** (`~20260730000005_*.sql`) — mirrors the already-drafted
+1. **New migration** (`~20260730000005_*.sql` — re-time, see above) — mirrors the already-drafted
    `docs/migrations/STAGED_L2_push_token_capability.sql`:
    - `CREATE TABLE push_tokens (user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE, token text NOT NULL, updated_at timestamptz NOT NULL DEFAULT now())`.
    - Enable RLS; owner-only policies (`auth.uid() = user_id`) for select/insert/update/delete.
@@ -104,6 +118,13 @@ produce different pairings; plus a separate seeded playoff-bracket generator wri
 the same policy, and week dates derive from client wall-clock. This is exactly the
 roadmap's **mini-project #2** (`[I8]`/`[I9]`, named in migration `20260712000000`).
 
+**In progress (2026-09-24)** on `feat/server-schedule-generation` (STATUS §4 defect 1).
+Whatever path writes `draft_status` / `league_start_date` / `league_end_date` must follow
+the F1 trigger contract in the header of `20260925000000`. A service-role client with no
+forwarded user JWT is unconstrained. A SECURITY DEFINER RPC invoked with a member's JWT
+may change only `draft_status` plus a NULL→value date stamp (use
+`COALESCE(col, computed)`); any other column raises 42501.
+
 **Build spec (architectural):**
 1. Pick a **single canonical roster + ordering** and collapse the two client generators
    (`DraftPage.jsx` and `Leaderboard.jsx`) onto it. *(Product decision — which behavior
@@ -118,29 +139,14 @@ roadmap's **mini-project #2** (`[I8]`/`[I9]`, named in migration `20260712000000
    every client call site.
 5. Re-run `gen-architecture.mjs`; check the drift panel.
 
-Note: the F6 patch (`20260730000001`) is the interim `league_standings` hardening; when
+Note: the F6 patch (`20260925000001`) is the interim `league_standings` hardening; when
 this server-side work lands, the standings init should move server-side too and F6's
 interim policy can be retired.
 
 ---
 
-## Deploy checklist for the fixes ALREADY in this branch
+## Deploy
 
-These are code-only until deployed (per the repo's prod/secret handoff model):
-
-1. ~~**F12:** deploy `place-order` **before** `supabase db push` of `20260730000004`~~ **OBSOLETE (2026-09-01): `place-order` no longer exists and the policy drop is already applied on main. Nothing to deploy.**
-   (else trades briefly fail to record in the gap).
-2. **F5:** deploy `refresh-symbols`; confirm the `verify_jwt` true→false flip took (a — **the cron reschedule is already applied by main's `20260811000000`; this deploy is the missing half that lets its apikey through** — a
-   no-credential request must hit OUR 401 JSON, not the gateway's generic 401); then
-   reschedule the daily `refresh_symbols_daily` cron to send the `apikey` from
-   `vault.decrypted_secrets`.
-3. **F1, F6:** `supabase db push`, then verify the live policy/trigger via `pg_policies`
-   / `pg_trigger` — a clean push is not evidence the change landed.
-4. **F2:** ensure the Supabase Auth **redirect-URL allowlist preserves the `?rn=` query
-   param** (e.g. allow `fantasystockapp://reset-password?**` or `fantasystockapp://**`)
-   and **test the password-reset flow end-to-end** — otherwise the fail-closed nonce
-   check will reject legitimate resets. F2 is also the one change not run through the
-   independent agent-verifier panel (design was verified; the expo-crypto RNG swap was
-   implemented directly), so give it an extra manual look.
-5. After all Supabase changes: re-run `node scripts/gen-architecture.mjs` and re-capture
-   `docs/architecture/db-snapshot.json` (the drift panel stays red until then).
+See `docs/security/DEPLOY-RUNBOOK.md`. It is the single ordered sequence and
+covers the pre-flight, functions, `db push`, effect-verification queries, the merge, and
+the mobile EAS build.

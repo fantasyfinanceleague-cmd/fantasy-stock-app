@@ -8,6 +8,17 @@
 -- and this repo has the precedent (STAGED_drop_i7_league_invites_accept.sql).
 -- The LOCATION is the control; the ⛔ comment is only documentation.
 --
+-- PRECONDITIONS TO PROMOTE THIS FILE (added 2026-09-24):
+--   1. send-notification deployed and effect-verified (DEPLOY-RUNBOOK step 3.3).
+--   2. Every tester on the >= 1.1.0 mobile build. 1.0.0 binaries write their own
+--      token to user_profiles.expo_push_token and read leaguemates' tokens from
+--      it, so dropping the column breaks registration and draft-turn pushes there.
+--   3. Give it a timestamp LATER than prod's latest applied migration when it
+--      moves into supabase/migrations/ (db push refuses older pending files).
+--   (The sendPushNotification() helper cited below was deleted 2026-09-24 as
+--   dead code; the finding it illustrates is unchanged, since anyone can POST
+--   to exp.host with a stolen token.)
+--
 -- ---------------------------------------------------------------------------
 -- THE FINDING: the token is a CAPABILITY, not an identifier.
 --
