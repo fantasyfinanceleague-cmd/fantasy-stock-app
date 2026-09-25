@@ -2,38 +2,46 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "2062384aa3f42be2c771d892cca0759437f2e1f3",
-    "commitShort": "2062384",
+    "commit": "8015e957d877ed712f4ef3919f51acc1f39d4cfa",
+    "commitShort": "8015e95",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "fix/enrich-symbols-batch-pricing",
+    "branch": "fix/refuse-join-mid-draft",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "supabase/functions/enrich-symbols/index.ts"
+        "path": "apps/mobile/app/join-league.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/web/src/pages/JoinLeague.jsx"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/preview-league/index.ts"
       },
       {
         "code": "??",
-        "path": "supabase/functions/enrich-symbols/price-batch.test.ts"
+        "path": "supabase/functions/preview-league/reason.test.ts"
       },
       {
         "code": "??",
-        "path": "supabase/functions/enrich-symbols/price-batch.ts"
+        "path": "supabase/functions/preview-league/reason.ts"
       },
       {
         "code": "??",
-        "path": "supabase/migrations/20260928000000_symbols_price_unsupported_column.sql"
+        "path": "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql"
       }
     ],
-    "timestamp": "2026-09-25T20:53:25Z",
-    "sourceHash": "sha256:dc21badfed74c76b41d74c2f491f683c90bf41afa4717a16e1e3345e41ff90db",
+    "timestamp": "2026-09-25T22:09:27Z",
+    "sourceHash": "sha256:3b7e87963b2d628f6c02cdc94a89e79d4222260fb5e9f3f47a325f4a70f339ca",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1072,
+    "ageHours": 1073.3,
     "ageDays": 44.7,
     "staleAfterDays": 14,
     "stale": true,
@@ -406,14 +414,18 @@
         "verifyJwt": true,
         "verifyJwtSource": "supabase/config.toml:61",
         "authGuard": null,
-        "localModules": [],
-        "tests": [],
+        "localModules": [
+          "reason.ts"
+        ],
+        "tests": [
+          "reason.test.ts"
+        ],
         "envVars": [
           "SB_PUBLISHABLE_KEY",
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 138
+        "lines": 143
       },
       "db": null,
       "declared": null,
@@ -426,7 +438,7 @@
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/preview-league/index.ts",
-        "line": 43
+        "line": 44
       }
     },
     {
@@ -790,6 +802,25 @@
       "kind": "edge-module",
       "source": {
         "path": "supabase/functions/enrich-symbols/price-batch.ts",
+        "line": 1
+      }
+    },
+    {
+      "layer": "module",
+      "facts": {
+        "hasTests": true
+      },
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "mod.preview-league/reason",
+      "label": "reason.ts",
+      "sublabel": "preview-league",
+      "kind": "edge-module",
+      "source": {
+        "path": "supabase/functions/preview-league/reason.ts",
         "line": 1
       }
     },
@@ -1338,10 +1369,11 @@
       },
       "declared": {
         "definedIn": [
-          "supabase/migrations/20260716000000_preview_join_league_infra.sql:55"
+          "supabase/migrations/20260716000000_preview_join_league_infra.sql:55",
+          "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql:33"
         ],
-        "latestDefinition": "supabase/migrations/20260716000000_preview_join_league_infra.sql",
-        "redefinitions": 1
+        "latestDefinition": "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql",
+        "redefinitions": 2
       },
       "drift": [],
       "annotation": "EXECUTE is service_role only, which is the correct shape: the client never calls it, the join-league edge function does, and that function passes the JWT-verified user id rather than anything from the request body. An earlier version was authenticated-callable with a forgeable p_user_id.",
@@ -1351,8 +1383,8 @@
       "sublabel": "SECURITY DEFINER · service_role",
       "kind": "pg-function",
       "source": {
-        "path": "supabase/migrations/20260716000000_preview_join_league_infra.sql",
-        "line": 55
+        "path": "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql",
+        "line": 33
       }
     },
     {
@@ -3894,14 +3926,26 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.fn.preview-league->mod.preview-league/reason",
+      "from": "fn.preview-league",
+      "to": "mod.preview-league/reason",
+      "protocol": "esm-import",
+      "payload": "import from './reason.ts'",
+      "callSites": [
+        "supabase/functions/preview-league/index.ts"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.fn.preview-league->pg.check_and_bump_rate_limit",
       "from": "fn.preview-league",
       "to": "pg.check_and_bump_rate_limit",
       "protocol": "postgrest-rpc",
       "payload": "rpc('check_and_bump_rate_limit')",
       "callSites": [
-        "supabase/functions/preview-league/index.ts:31",
-        "supabase/functions/preview-league/index.ts:34"
+        "supabase/functions/preview-league/index.ts:32",
+        "supabase/functions/preview-league/index.ts:35"
       ]
     },
     {
@@ -3916,7 +3960,7 @@
         "*"
       ],
       "callSites": [
-        "supabase/functions/preview-league/index.ts:77"
+        "supabase/functions/preview-league/index.ts:78"
       ]
     },
     {
@@ -3932,8 +3976,8 @@
         "user_id"
       ],
       "callSites": [
-        "supabase/functions/preview-league/index.ts:103",
-        "supabase/functions/preview-league/index.ts:99"
+        "supabase/functions/preview-league/index.ts:100",
+        "supabase/functions/preview-league/index.ts:104"
       ]
     },
     {
@@ -3948,8 +3992,8 @@
         "*"
       ],
       "callSites": [
-        "supabase/functions/preview-league/index.ts:74",
-        "supabase/functions/preview-league/index.ts:80"
+        "supabase/functions/preview-league/index.ts:75",
+        "supabase/functions/preview-league/index.ts:81"
       ]
     },
     {
@@ -3964,7 +4008,7 @@
         "username"
       ],
       "callSites": [
-        "supabase/functions/preview-league/index.ts:95"
+        "supabase/functions/preview-league/index.ts:96"
       ]
     },
     {
@@ -5162,7 +5206,8 @@
       "payload": "SELECT league_invites (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20260716000000_preview_join_league_infra.sql:66"
+        "supabase/migrations/20260716000000_preview_join_league_infra.sql:66",
+        "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql:44"
       ]
     },
     {
@@ -5175,7 +5220,8 @@
       "payload": "UPDATE league_invites (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20260716000000_preview_join_league_infra.sql:105"
+        "supabase/migrations/20260716000000_preview_join_league_infra.sql:105",
+        "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql:93"
       ]
     },
     {
@@ -5189,7 +5235,9 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20260716000000_preview_join_league_infra.sql:90",
-        "supabase/migrations/20260716000000_preview_join_league_infra.sql:96"
+        "supabase/migrations/20260716000000_preview_join_league_infra.sql:96",
+        "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql:69",
+        "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql:84"
       ]
     },
     {
@@ -5202,7 +5250,8 @@
       "payload": "INSERT league_members (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20260716000000_preview_join_league_infra.sql:101"
+        "supabase/migrations/20260716000000_preview_join_league_infra.sql:101",
+        "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql:89"
       ]
     },
     {
@@ -5217,7 +5266,10 @@
       "callSites": [
         "supabase/migrations/20260716000000_preview_join_league_infra.sql:64",
         "supabase/migrations/20260716000000_preview_join_league_infra.sql:70",
-        "supabase/migrations/20260716000000_preview_join_league_infra.sql:78"
+        "supabase/migrations/20260716000000_preview_join_league_infra.sql:78",
+        "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql:42",
+        "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql:48",
+        "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql:57"
       ]
     },
     {
@@ -5658,7 +5710,7 @@
       "payload": ".from('league_members').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/create-league.tsx:150"
+        "apps/mobile/app/create-league.tsx:151"
       ]
     },
     {
@@ -5671,7 +5723,7 @@
       "payload": ".from('leagues').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/create-league.tsx:124"
+        "apps/mobile/app/create-league.tsx:125"
       ]
     },
     {
@@ -5782,7 +5834,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('join-league')",
       "callSites": [
-        "apps/mobile/app/join-league.tsx:114"
+        "apps/mobile/app/join-league.tsx:116"
       ]
     },
     {
@@ -5794,7 +5846,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('preview-league')",
       "callSites": [
-        "apps/mobile/app/join-league.tsx:84"
+        "apps/mobile/app/join-league.tsx:86"
       ]
     },
     {
@@ -5809,7 +5861,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/league.tsx:140"
+        "apps/mobile/app/(tabs)/league.tsx:142"
       ]
     },
     {
@@ -5824,7 +5876,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/league.tsx:109"
+        "apps/mobile/app/(tabs)/league.tsx:111"
       ]
     },
     {
@@ -5839,7 +5891,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/league.tsx:125"
+        "apps/mobile/app/(tabs)/league.tsx:127"
       ]
     },
     {
@@ -5854,7 +5906,7 @@
         "id, username, avatar"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/league.tsx:166"
+        "apps/mobile/app/(tabs)/league.tsx:168"
       ]
     },
     {
@@ -5866,7 +5918,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('start_new_league_season')",
       "callSites": [
-        "apps/mobile/app/league-settings.tsx:173"
+        "apps/mobile/app/league-settings.tsx:174"
       ]
     },
     {
@@ -5879,7 +5931,7 @@
       "payload": ".from('leagues').update()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/league-settings.tsx:136"
+        "apps/mobile/app/league-settings.tsx:137"
       ]
     },
     {
@@ -5971,7 +6023,7 @@
         "user_id, role, joined_at"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/leagues.tsx:89"
+        "apps/mobile/app/(tabs)/leagues.tsx:91"
       ]
     },
     {
@@ -5984,7 +6036,7 @@
       "payload": ".from('league_members').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/(tabs)/leagues.tsx:232"
+        "apps/mobile/app/(tabs)/leagues.tsx:234"
       ]
     },
     {
@@ -5997,7 +6049,7 @@
       "payload": ".from('leagues').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/(tabs)/leagues.tsx:201"
+        "apps/mobile/app/(tabs)/leagues.tsx:203"
       ]
     },
     {
@@ -6012,7 +6064,7 @@
         "id, username"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/leagues.tsx:97"
+        "apps/mobile/app/(tabs)/leagues.tsx:99"
       ]
     },
     {
@@ -6025,7 +6077,7 @@
       "payload": ".from('user_profiles').upsert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/login.tsx:71"
+        "apps/mobile/app/login.tsx:72"
       ]
     },
     {
@@ -6037,8 +6089,8 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('quote')",
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:134",
-        "apps/mobile/app/(tabs)/matchup.tsx:379"
+        "apps/mobile/app/(tabs)/matchup.tsx:136",
+        "apps/mobile/app/(tabs)/matchup.tsx:381"
       ]
     },
     {
@@ -6053,7 +6105,7 @@
         "id, symbol, entry_price, quantity, user_id"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:150"
+        "apps/mobile/app/(tabs)/matchup.tsx:152"
       ]
     },
     {
@@ -6069,10 +6121,10 @@
         "week_number, playoff_round"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:212",
-        "apps/mobile/app/(tabs)/matchup.tsx:232",
-        "apps/mobile/app/(tabs)/matchup.tsx:248",
-        "apps/mobile/app/(tabs)/matchup.tsx:267"
+        "apps/mobile/app/(tabs)/matchup.tsx:214",
+        "apps/mobile/app/(tabs)/matchup.tsx:234",
+        "apps/mobile/app/(tabs)/matchup.tsx:250",
+        "apps/mobile/app/(tabs)/matchup.tsx:269"
       ]
     },
     {
@@ -6087,7 +6139,7 @@
         "id, symbol, price, quantity, action, user_id"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:156"
+        "apps/mobile/app/(tabs)/matchup.tsx:158"
       ]
     },
     {
@@ -6102,7 +6154,7 @@
         "id, username, avatar"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:297"
+        "apps/mobile/app/(tabs)/matchup.tsx:299"
       ]
     },
     {
@@ -6117,7 +6169,7 @@
         "user_id, symbol, quantity, week_start_price, week_end_price"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:312"
+        "apps/mobile/app/(tabs)/matchup.tsx:314"
       ]
     },
     {
@@ -6609,7 +6661,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('join-league')",
       "callSites": [
-        "apps/web/src/pages/JoinLeague.jsx:43"
+        "apps/web/src/pages/JoinLeague.jsx:49"
       ]
     },
     {
@@ -6621,7 +6673,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('preview-league')",
       "callSites": [
-        "apps/web/src/pages/JoinLeague.jsx:25"
+        "apps/web/src/pages/JoinLeague.jsx:27"
       ]
     },
     {
@@ -7054,8 +7106,8 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('quote')",
       "callSites": [
-        "apps/mobile/components/TradeModal.tsx:104",
-        "apps/mobile/components/TradeModal.tsx:209"
+        "apps/mobile/components/TradeModal.tsx:106",
+        "apps/mobile/components/TradeModal.tsx:211"
       ]
     },
     {
@@ -7067,7 +7119,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('record-trade')",
       "callSites": [
-        "apps/mobile/components/TradeModal.tsx:314"
+        "apps/mobile/components/TradeModal.tsx:316"
       ]
     },
     {
@@ -7079,8 +7131,8 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('symbol-name')",
       "callSites": [
-        "apps/mobile/components/TradeModal.tsx:123",
-        "apps/mobile/components/TradeModal.tsx:233"
+        "apps/mobile/components/TradeModal.tsx:125",
+        "apps/mobile/components/TradeModal.tsx:235"
       ]
     },
     {
@@ -7092,7 +7144,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('symbols-search')",
       "callSites": [
-        "apps/mobile/components/TradeModal.tsx:167"
+        "apps/mobile/components/TradeModal.tsx:169"
       ]
     },
     {
@@ -7309,7 +7361,7 @@
           "edge": "e.ui.join-league->fn.preview-league",
           "detail": "Screen posts the code for a display-only preview. Rate-limited per-user and per-IP.",
           "files": [
-            "apps/mobile/app/join-league.tsx:84"
+            "apps/mobile/app/join-league.tsx:86"
           ]
         },
         {
@@ -7317,7 +7369,7 @@
           "edge": "e.fn.preview-league->pg.check_and_bump_rate_limit",
           "detail": "Per-user and per-IP buckets. Fail-open by design — a limiter outage must not block joins.",
           "files": [
-            "supabase/functions/preview-league/index.ts:31"
+            "supabase/functions/preview-league/index.ts:32"
           ]
         },
         {
@@ -7325,7 +7377,7 @@
           "edge": "e.ui.join-league->fn.join-league",
           "detail": "On confirm, the join is performed server-side. verify_jwt=true, so the caller identity is the gateway-verified JWT.",
           "files": [
-            "apps/mobile/app/join-league.tsx:114"
+            "apps/mobile/app/join-league.tsx:116"
           ]
         },
         {
@@ -7349,7 +7401,8 @@
           "edge": "e.pg.join_league_by_code->tbl.league_members#insert",
           "detail": "Membership row written inside the function, so league_members stays unwritable by clients under RLS.",
           "files": [
-            "supabase/migrations/20260716000000_preview_join_league_infra.sql:101"
+            "supabase/migrations/20260716000000_preview_join_league_infra.sql:101",
+            "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql:89"
           ]
         },
         {
@@ -7357,7 +7410,8 @@
           "edge": "e.pg.join_league_by_code->tbl.league_invites#update",
           "detail": "Invite marked accepted in the same transaction as the insert — the pair is why this is an RPC rather than two client calls.",
           "files": [
-            "supabase/migrations/20260716000000_preview_join_league_infra.sql:105"
+            "supabase/migrations/20260716000000_preview_join_league_infra.sql:105",
+            "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql:93"
           ]
         }
       ],
@@ -7671,7 +7725,7 @@
           "edge": "e.ui.TradeModal->fn.quote",
           "detail": "Live quote for display before confirming. Advisory only — the fill price is re-derived server-side.",
           "files": [
-            "apps/mobile/components/TradeModal.tsx:104"
+            "apps/mobile/components/TradeModal.tsx:106"
           ]
         },
         {
@@ -7679,7 +7733,7 @@
           "edge": "e.ui.TradeModal->fn.record-trade",
           "detail": "The ONLY trade write path since DR-001 Phase 3: the client-INSERT policy on trades was dropped (20260811000002). verify_jwt=true + in-code getUser().",
           "files": [
-            "apps/mobile/components/TradeModal.tsx:314"
+            "apps/mobile/components/TradeModal.tsx:316"
           ]
         },
         {
@@ -7800,7 +7854,7 @@
           "edge": "e.ui.league-settings->pg.start_new_league_season",
           "detail": "Called directly from the client as an authenticated user. EXECUTE is granted to `authenticated`, so the authorization is NOT the grant — it is an INTERNAL commissioner check inside the function body. That gate is the only thing standing between any league member and the four destructive writes below.",
           "files": [
-            "apps/mobile/app/league-settings.tsx:173"
+            "apps/mobile/app/league-settings.tsx:174"
           ]
         },
         {
@@ -7886,10 +7940,10 @@
           "detail": "quote — single-symbol live price. The most-invoked function in the app.",
           "files": [
             "apps/mobile/app/(tabs)/draft.tsx:273",
-            "apps/mobile/app/(tabs)/matchup.tsx:134",
-            "apps/mobile/app/(tabs)/matchup.tsx:379",
-            "apps/mobile/components/TradeModal.tsx:104",
-            "apps/mobile/components/TradeModal.tsx:209",
+            "apps/mobile/app/(tabs)/matchup.tsx:136",
+            "apps/mobile/app/(tabs)/matchup.tsx:381",
+            "apps/mobile/components/TradeModal.tsx:106",
+            "apps/mobile/components/TradeModal.tsx:211",
             "apps/web/src/components/TradeModal.jsx:159",
             "apps/web/src/components/TradeModal.jsx:63",
             "apps/web/src/context/PriceContext.jsx:99",
@@ -7917,8 +7971,8 @@
           ],
           "detail": "symbol-name — display name resolution.",
           "files": [
-            "apps/mobile/components/TradeModal.tsx:123",
-            "apps/mobile/components/TradeModal.tsx:233",
+            "apps/mobile/components/TradeModal.tsx:125",
+            "apps/mobile/components/TradeModal.tsx:235",
             "apps/mobile/lib/useStockNames.ts:13",
             "apps/web/src/components/TradeModal.jsx:82"
           ]
@@ -7932,7 +7986,7 @@
           ],
           "detail": "symbols-search — typeahead over the symbols table.",
           "files": [
-            "apps/mobile/components/TradeModal.tsx:167",
+            "apps/mobile/components/TradeModal.tsx:169",
             "apps/web/src/components/DraftControls.jsx:66",
             "apps/web/src/components/TradeModal.jsx:122"
           ]
@@ -8327,8 +8381,8 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 115,
-    "edges": 253,
+    "nodes": 116,
+    "edges": 254,
     "flows": 8,
     "drift": 22,
     "driftHigh": 4,
@@ -8341,7 +8395,7 @@
       "finnhub-quote[]",
       "historical-bars[]",
       "join-league[]",
-      "preview-league[]",
+      "preview-league[reason.ts]",
       "process-week-results[grouping.ts,job-status.ts,playoff-progression.ts,scoring-eligibility.ts]",
       "quote[]",
       "record-trade[]",
@@ -8357,16 +8411,16 @@
     "invokes": [
       "apps/mobile/app/(tabs)/draft.tsx:273 -> quote",
       "apps/mobile/app/(tabs)/draft.tsx:318 -> validate-and-record-pick",
-      "apps/mobile/app/(tabs)/matchup.tsx:134 -> quote",
-      "apps/mobile/app/(tabs)/matchup.tsx:379 -> quote",
-      "apps/mobile/app/join-league.tsx:114 -> join-league",
-      "apps/mobile/app/join-league.tsx:84 -> preview-league",
-      "apps/mobile/components/TradeModal.tsx:104 -> quote",
-      "apps/mobile/components/TradeModal.tsx:123 -> symbol-name",
-      "apps/mobile/components/TradeModal.tsx:167 -> symbols-search",
-      "apps/mobile/components/TradeModal.tsx:209 -> quote",
-      "apps/mobile/components/TradeModal.tsx:233 -> symbol-name",
-      "apps/mobile/components/TradeModal.tsx:314 -> record-trade",
+      "apps/mobile/app/(tabs)/matchup.tsx:136 -> quote",
+      "apps/mobile/app/(tabs)/matchup.tsx:381 -> quote",
+      "apps/mobile/app/join-league.tsx:116 -> join-league",
+      "apps/mobile/app/join-league.tsx:86 -> preview-league",
+      "apps/mobile/components/TradeModal.tsx:106 -> quote",
+      "apps/mobile/components/TradeModal.tsx:125 -> symbol-name",
+      "apps/mobile/components/TradeModal.tsx:169 -> symbols-search",
+      "apps/mobile/components/TradeModal.tsx:211 -> quote",
+      "apps/mobile/components/TradeModal.tsx:235 -> symbol-name",
+      "apps/mobile/components/TradeModal.tsx:316 -> record-trade",
       "apps/mobile/lib/notifications.ts:167 -> send-notification",
       "apps/mobile/lib/useHistoricalPL.ts:77 -> historical-bars",
       "apps/mobile/lib/useStockNames.ts:13 -> symbol-name",
@@ -8384,17 +8438,17 @@
       "apps/web/src/pages/DraftPage.jsx:618 -> validate-and-record-pick",
       "apps/web/src/pages/DraftPage.jsx:835 -> validate-and-record-pick",
       "apps/web/src/pages/DraftPage.jsx:865 -> validate-and-record-pick",
-      "apps/web/src/pages/JoinLeague.jsx:25 -> preview-league",
-      "apps/web/src/pages/JoinLeague.jsx:43 -> join-league"
+      "apps/web/src/pages/JoinLeague.jsx:27 -> preview-league",
+      "apps/web/src/pages/JoinLeague.jsx:49 -> join-league"
     ],
     "rpcs": [
-      "apps/mobile/app/league-settings.tsx:173 -> start_new_league_season",
+      "apps/mobile/app/league-settings.tsx:174 -> start_new_league_season",
       "apps/web/src/pages/DraftPage.jsx:360 -> get_real_user_ids",
       "supabase/functions/join-league/index.ts:31 -> check_and_bump_rate_limit",
       "supabase/functions/join-league/index.ts:34 -> check_and_bump_rate_limit",
       "supabase/functions/join-league/index.ts:76 -> join_league_by_code",
-      "supabase/functions/preview-league/index.ts:31 -> check_and_bump_rate_limit",
-      "supabase/functions/preview-league/index.ts:34 -> check_and_bump_rate_limit",
+      "supabase/functions/preview-league/index.ts:32 -> check_and_bump_rate_limit",
+      "supabase/functions/preview-league/index.ts:35 -> check_and_bump_rate_limit",
       "supabase/functions/process-week-results/index.ts:756 -> complete_league_season",
       "supabase/functions/process-week-results/index.ts:800 -> complete_league_season",
       "supabase/functions/record-trade/index.ts:66 -> check_and_bump_rate_limit",
@@ -8413,28 +8467,28 @@
       "apps/mobile/app/(tabs)/draft.tsx:157 -> drafts.select",
       "apps/mobile/app/(tabs)/draft.tsx:193 -> league_draft_slots.select",
       "apps/mobile/app/(tabs)/index.tsx:58 -> user_profiles.select",
-      "apps/mobile/app/(tabs)/league.tsx:109 -> league_standings.select",
-      "apps/mobile/app/(tabs)/league.tsx:125 -> matchups.select",
-      "apps/mobile/app/(tabs)/league.tsx:140 -> league_seasons.select",
-      "apps/mobile/app/(tabs)/league.tsx:166 -> user_profiles.select",
-      "apps/mobile/app/(tabs)/leagues.tsx:201 -> leagues.insert",
-      "apps/mobile/app/(tabs)/leagues.tsx:232 -> league_members.insert",
-      "apps/mobile/app/(tabs)/leagues.tsx:89 -> league_members.select",
-      "apps/mobile/app/(tabs)/leagues.tsx:97 -> user_profiles.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:150 -> drafts.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:156 -> trades.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:212 -> matchups.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:232 -> matchups.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:248 -> matchups.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:267 -> matchups.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:297 -> user_profiles.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:312 -> week_snapshots.select",
+      "apps/mobile/app/(tabs)/league.tsx:111 -> league_standings.select",
+      "apps/mobile/app/(tabs)/league.tsx:127 -> matchups.select",
+      "apps/mobile/app/(tabs)/league.tsx:142 -> league_seasons.select",
+      "apps/mobile/app/(tabs)/league.tsx:168 -> user_profiles.select",
+      "apps/mobile/app/(tabs)/leagues.tsx:203 -> leagues.insert",
+      "apps/mobile/app/(tabs)/leagues.tsx:234 -> league_members.insert",
+      "apps/mobile/app/(tabs)/leagues.tsx:91 -> league_members.select",
+      "apps/mobile/app/(tabs)/leagues.tsx:99 -> user_profiles.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:152 -> drafts.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:158 -> trades.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:214 -> matchups.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:234 -> matchups.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:250 -> matchups.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:269 -> matchups.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:299 -> user_profiles.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:314 -> week_snapshots.select",
       "apps/mobile/app/(tabs)/profile.tsx:43 -> user_profiles.select",
       "apps/mobile/app/(tabs)/profile.tsx:87 -> user_profiles.upsert",
-      "apps/mobile/app/create-league.tsx:124 -> leagues.insert",
-      "apps/mobile/app/create-league.tsx:150 -> league_members.insert",
-      "apps/mobile/app/league-settings.tsx:136 -> leagues.update",
-      "apps/mobile/app/login.tsx:71 -> user_profiles.upsert",
+      "apps/mobile/app/create-league.tsx:125 -> leagues.insert",
+      "apps/mobile/app/create-league.tsx:151 -> league_members.insert",
+      "apps/mobile/app/league-settings.tsx:137 -> leagues.update",
+      "apps/mobile/app/login.tsx:72 -> user_profiles.upsert",
       "apps/mobile/app/player-portfolio.tsx:116 -> user_profiles.select",
       "apps/mobile/app/player-portfolio.tsx:128 -> drafts.select",
       "apps/mobile/app/player-portfolio.tsx:135 -> trades.select",
@@ -8535,12 +8589,12 @@
       "supabase/functions/enrich-symbols/index.ts:196 -> symbols.select",
       "supabase/functions/enrich-symbols/index.ts:211 -> category_rules.select",
       "supabase/functions/enrich-symbols/index.ts:285 -> symbols.update",
-      "supabase/functions/preview-league/index.ts:103 -> league_members.select",
-      "supabase/functions/preview-league/index.ts:74 -> leagues.select",
-      "supabase/functions/preview-league/index.ts:77 -> league_invites.select",
-      "supabase/functions/preview-league/index.ts:80 -> leagues.select",
-      "supabase/functions/preview-league/index.ts:95 -> user_profiles.select",
-      "supabase/functions/preview-league/index.ts:99 -> league_members.select",
+      "supabase/functions/preview-league/index.ts:100 -> league_members.select",
+      "supabase/functions/preview-league/index.ts:104 -> league_members.select",
+      "supabase/functions/preview-league/index.ts:75 -> leagues.select",
+      "supabase/functions/preview-league/index.ts:78 -> league_invites.select",
+      "supabase/functions/preview-league/index.ts:81 -> leagues.select",
+      "supabase/functions/preview-league/index.ts:96 -> user_profiles.select",
       "supabase/functions/process-week-results/index.ts:1033 -> trades.select",
       "supabase/functions/process-week-results/index.ts:1060 -> drafts.select",
       "supabase/functions/process-week-results/index.ts:1073 -> trades.select",
@@ -8688,7 +8742,8 @@
       "20260925000000_leagues_member_draft_complete_column_guard.sql",
       "20260925000001_tighten_league_standings_insert.sql",
       "20260926000000_finalize_league_draft_rpc.sql",
-      "20260928000000_symbols_price_unsupported_column.sql"
+      "20260928000000_symbols_price_unsupported_column.sql",
+      "20260930000000_join_league_refuse_mid_draft.sql"
     ],
     "config": [
       "enrich-symbols=false",
