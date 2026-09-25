@@ -248,6 +248,36 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
    trending down/up over the hours after deploy, plus
    `SELECT symbol, last_price, is_draftable FROM symbols WHERE symbol IN ('BAC','F');`
    becoming priced and draftable.
+13. **[I4] — any authenticated user could self-insert into ANY league via
+   PostgREST, knowing only its UUID.** Found 2026-09-25 (mid-draft-join
+   worker; orchestrator-assessed MEDIUM). `league_members_insert_self`
+   (`20260712000002`) was `with check (user_id = auth.uid()::text)` only —
+   no league-ownership or capacity/draft-status gate, so a caller bypassed
+   `join_league_by_code`'s invite code, capacity check, and the mid-draft
+   join refusal, with any `role` value (display-only — `is_commissioner()`
+   reads `leagues.commissioner_id`, not this column, so no commissioner
+   POWERS were grantable this way). The damage was membership itself:
+   member-level reads, adding bots via `[I6]`, and reshuffling
+   `computeDraftOrder` mid-draft.
+   **FIXED ON BRANCH `fix/narrow-league-members-self-insert`
+   (not yet merged or deployed — prod is still exploitable until this
+   ships):** migration `20261001000000` narrows the policy to exactly the
+   one legitimate remaining caller (join and bots have their own paths) —
+   a league's own creator, self-inserting as `'commissioner'`, into a
+   league whose `draft_status = 'not_started'`. Full insert-path inventory,
+   the RETURNING/upsert visibility analysis (58518d4/9a2518b precedent —
+   safe, since every admitted row still satisfies the SELECT policy's
+   direct `user_id = auth.uid()` clause), and effect-test cases are in the
+   migration header and `docs/security/league-members-insert-effect-test.sql`.
+   `[I6]` (bot insert, any member, any time) is deliberately left alone —
+   it retires with the mobile-draft worker's deferred
+   `20260929000000_drop_I6_I2b.sql` once draft-control ships server-side
+   bot seeding, so the mid-draft-reshuffle-via-bots vector survives this
+   fix. Full `[I4]` retirement still requires a server-side `create-league`
+   (`docs/migrations/RLS_HARDENING_SPEC.md` §1).
+   **Apply order:** `supabase db push` only — no function deploy. Verify
+   with the `pg_policies` query and effect test in
+   `docs/security/league-members-insert-effect-test.sql`.
 
 ---
 
@@ -290,6 +320,7 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
 | `security/claude-security-fixes-20260730` | PR #9, **merged as `5e3b5d1`** (2026-09-25). Deploy per `docs/security/DEPLOY-RUNBOOK.md` in progress. |
 | `feat/server-schedule-generation` | §4 defects 1, 2 (deferred drop), 9: schedule module, `finalize_league_draft` migration, pick-function wiring, web writers removed. Includes `main` @ `5e3b5d1`. Unmerged; migration unapplied, function undeployed. |
 | `ui/design-system-pass-v2` | Unmerged, awaiting visual check. Checked out in the main checkout. |
+| `fix/narrow-league-members-self-insert` | §4 defect 13: narrows `[I4]` `league_members` self-insert to creator-only. Migration `20261001000000`. Unmerged; migration unapplied. |
 | `ui/design-system-pass`, `item4-fix-refresh-symbols-cron` | Superseded (backup / folded into `main` + PR #9). Safe to delete once confirmed. |
 | ~20 others (`simulator-core`, `phase4-*`, `item*`, `signup-ux-password`, …) | Fully merged into `main` (0 commits ahead) — safe to delete with `git branch -d`. |
 
@@ -328,6 +359,13 @@ WHERE l.draft_status = 'in_progress'
 -- finalize_league_draft grants — expect service_role (+ postgres) only
 SELECT proname, proacl FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
 WHERE n.nspname = 'public' AND proname = 'finalize_league_draft';
+```
+```sql
+-- league_members INSERT policies (defect 13) — league_members_insert_self's
+-- with_check should reference role/leagues.commissioner_id/draft_status, not
+-- just user_id = auth.uid()
+SELECT policyname, cmd, roles, qual, with_check FROM pg_policies
+WHERE schemaname = 'public' AND tablename = 'league_members' ORDER BY policyname;
 ```
 ```sql
 -- Live cron jobs
