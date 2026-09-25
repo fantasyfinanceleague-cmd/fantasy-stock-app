@@ -17,10 +17,13 @@
  */
 
 import { assert, assertEquals } from 'jsr:@std/assert';
+import { computeDraftOrder } from './draft-validation.ts';
 import {
+  buildFinalizeArgs,
   marketCloseOn,
   nextDayMarketOpen,
   planSeason,
+  readFinalizeResult,
   roundRobinPairings,
   type SeasonInput,
   weekWindow,
@@ -290,4 +293,49 @@ Deno.test('payload shape: integer weeks, ISO-8601 UTC strings, exactly the match
     assert(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.000Z$/.test(m.week_start));
     assert(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.000Z$/.test(m.week_end));
   }
+});
+
+// ---------------------------------------------------------------------------
+// RPC glue: id-string identity (cross-table type footgun) + result reading
+// ---------------------------------------------------------------------------
+
+Deno.test('payload ids are exactly computeDraftOrder strings (uuids, bots, mixed case)', () => {
+  const members = [
+    'f3a1c2d4-0000-4000-8000-00000000000b',
+    'bot-2',
+    'F3A1C2D4-0000-4000-8000-00000000000A', // case is preserved, never normalised
+    'bot-10',
+    'a0000000-0000-4000-8000-000000000001',
+  ];
+  const commissioner = 'a0000000-0000-4000-8000-000000000001';
+  const p = plan(matchup({ commissionerId: commissioner, memberIds: members, numWeeks: 5 }));
+  assertEquals(p.roster, computeDraftOrder(commissioner, members));
+  const args = buildFinalizeArgs('L', p);
+  assertEquals(args.p_member_ids, computeDraftOrder(commissioner, members));
+  for (const m of args.p_matchups) {
+    assert(args.p_member_ids.includes(m.team1_user_id), `team1 ${m.team1_user_id}`);
+    assert(m.team2_user_id === null || args.p_member_ids.includes(m.team2_user_id), `team2 ${m.team2_user_id}`);
+  }
+});
+
+Deno.test('buildFinalizeArgs keys match the SQL signature', () => {
+  const args = buildFinalizeArgs('L', plan(matchup()));
+  assertEquals(Object.keys(args).sort(), ['p_league_end', 'p_league_id', 'p_league_start', 'p_matchups', 'p_member_ids']);
+});
+
+Deno.test('readFinalizeResult: success statuses, refusals, rpc errors, junk', () => {
+  assertEquals(readFinalizeResult({ data: { status: 'finalized' }, error: null }), { ok: true, status: 'finalized' });
+  assertEquals(readFinalizeResult({ data: { status: 'already_finalized' }, error: null }), { ok: true, status: 'already_finalized' });
+  assertEquals(
+    readFinalizeResult({ data: { status: 'refused', reason: 'invalid_payload', detail: 'week_coverage' }, error: null }),
+    { ok: false, retryable: false, error: 'finalize_refused:invalid_payload:week_coverage' },
+  );
+  assertEquals(
+    readFinalizeResult({ data: { status: 'refused', reason: 'roster_mismatch' }, error: null }),
+    { ok: false, retryable: false, error: 'finalize_refused:roster_mismatch' },
+  );
+  // .rpc() resolves (does not throw) with error set — must NOT read as success.
+  assertEquals(readFinalizeResult({ data: null, error: { message: 'boom' } }), { ok: false, retryable: true, error: 'finalize_rpc_error' });
+  assertEquals(readFinalizeResult({ data: { status: 'finalized' }, error: { message: 'x' } }).ok, false);
+  assertEquals(readFinalizeResult({ data: null, error: null }), { ok: false, retryable: false, error: 'finalize_unexpected_response' });
 });

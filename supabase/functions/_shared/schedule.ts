@@ -169,3 +169,45 @@ export function planSeason(input: SeasonInput): SeasonPlan {
     matchups,
   };
 }
+
+// ---------------------------------------------------------------------------
+// finalize_league_draft RPC glue (pure, so the contract is unit-tested)
+// ---------------------------------------------------------------------------
+
+/** Named args for public.finalize_league_draft — keys MUST match the SQL
+ * parameter names in 20260926000000_finalize_league_draft_rpc.sql. The member
+ * ids are the plan's canonical roster, the very strings the matchup rows use. */
+export function buildFinalizeArgs(
+  leagueId: string,
+  plan: Extract<SeasonPlan, { ok: true }>,
+) {
+  return {
+    p_league_id: leagueId,
+    p_member_ids: plan.roster,
+    p_league_start: plan.leagueStart,
+    p_league_end: plan.leagueEnd,
+    p_matchups: plan.matchups,
+  };
+}
+
+export type FinalizeOutcome =
+  | { ok: true; status: 'finalized' | 'already_finalized' }
+  | { ok: false; retryable: boolean; error: string };
+
+/** Interpret a supabase-js `.rpc('finalize_league_draft')` result. `.rpc()` does
+ * NOT throw on a Postgres error — it resolves to { data, error } — so both the
+ * transport/SQL `error` AND the function's own `status` must be checked.
+ *  - error set            -> retryable (the RPC is idempotent, so a retry after
+ *                            an ambiguous failure is safe and reads as done)
+ *  - status 'refused'     -> NOT retryable: the same inputs will be refused again
+ *  - anything unexpected  -> NOT retryable, surfaced verbatim for a human */
+export function readFinalizeResult(res: { data: unknown; error: unknown }): FinalizeOutcome {
+  if (res.error) return { ok: false, retryable: true, error: 'finalize_rpc_error' };
+  const d = res.data as { status?: unknown; reason?: unknown; detail?: unknown } | null;
+  if (d?.status === 'finalized' || d?.status === 'already_finalized') return { ok: true, status: d.status };
+  if (d?.status === 'refused') {
+    const tail = d.detail ? `:${String(d.detail)}` : '';
+    return { ok: false, retryable: false, error: `finalize_refused:${String(d.reason)}${tail}` };
+  }
+  return { ok: false, retryable: false, error: 'finalize_unexpected_response' };
+}
