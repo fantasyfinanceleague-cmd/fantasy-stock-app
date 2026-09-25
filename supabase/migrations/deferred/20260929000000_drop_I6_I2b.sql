@@ -1,0 +1,53 @@
+-- ============================================================================
+-- DROP the interim [I6] bot-insert and [I2b] member draft-complete policies
+-- Retired by: supabase/functions/draft-control (mobile launch blocker)
+-- ============================================================================
+-- HELD, NOT APPLIED — see supabase/migrations/deferred/README.md for why this
+-- directory (not a header comment) is what actually holds a migration out of
+-- `supabase db push`.
+--
+-- WHAT THIS DROPS AND WHY IT IS SAFE ONCE THE PRECONDITION IS MET:
+--
+--   [I6] "league_members_insert_bot" (20260712000002_rls_b1_02_league_members.sql)
+--     for insert to authenticated with check (user_id like 'bot-%' and is_member(league_id))
+--   Lets ANY league member insert a 'bot-*' row, at ANY time (including
+--   mid-draft, which reshuffles computeDraftOrder for every already-picking
+--   member — this policy has no draft_status gate at all). draft-control's
+--   add_bots action replaces it: commissioner-only, allowlist-gated
+--   (DRAFT_BOTS_ALLOWED_EMAILS), draft_status='not_started' only, and capped
+--   at MIN_DRAFT_MEMBERS (never past the league's own num_participants).
+--
+--   [I2b] "leagues_update_member_draft_complete" (20260712000001_rls_b1_01_leagues.sql)
+--     using (is_member(id) and draft_status = 'in_progress')
+--     with check (is_member(id) and draft_status = 'completed')
+--   Was scoped to exactly the in_progress->completed transition because, at
+--   the time it was authored, EVERY client flipped that column itself
+--   (mobile's last-picker, web's completeDraft useEffect). That client write
+--   no longer exists: PR #14 (merged to main as `2062384`,
+--   20260926000000_finalize_league_draft_rpc.sql) made
+--   validate-and-record-pick's finalizeDraft() the ONLY writer, via the
+--   finalize_league_draft RPC on the SERVICE-ROLE admin client — no forwarded
+--   user JWT, so it runs as auth.uid() IS NULL and never touches this policy
+--   at all (RLS does not gate service_role). Mobile draft.tsx does not (and,
+--   after this branch, still does not) issue a direct
+--   `.from('leagues').update({draft_status})` — see the leagues member-column-
+--   guard trigger's own header comment (20260925000000), which independently
+--   confirms this. Web's completeDraft effect is unreachable (APP_PAUSED).
+--   So [I2b] currently authorizes a transition nothing legitimate performs —
+--   it is a live, unused attack surface: a member could still fire this
+--   UPDATE directly over PostgREST and flip draft_status to 'completed'
+--   WITHOUT a schedule, standings, or dates (finalize_league_draft's job),
+--   landing a league in exactly the unrecoverable state defect 1 existed to
+--   prevent.
+--
+-- PRECONDITION — see supabase/migrations/deferred/README.md's entry for this
+-- file for the full checklist and verification queries. Summary: draft-control
+-- deployed and effect-verified, validate-and-record-pick's bot_pick action
+-- deployed, 20260926000000 applied with finalize_league_draft proacl =
+-- service_role-only, and a REAL mobile test league drafted end-to-end
+-- (including at least one bot_pick) confirmed at draft_status='completed'
+-- with its schedule written.
+-- ============================================================================
+
+drop policy if exists "league_members_insert_bot" on league_members;
+drop policy if exists "leagues_update_member_draft_complete" on leagues;

@@ -2,38 +2,94 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "2062384aa3f42be2c771d892cca0759437f2e1f3",
-    "commitShort": "2062384",
+    "commit": "8015e957d877ed712f4ef3919f51acc1f39d4cfa",
+    "commitShort": "8015e95",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "fix/enrich-symbols-batch-pricing",
+    "branch": "feat/mobile-draft-start-search-finalize",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "supabase/functions/enrich-symbols/index.ts"
+        "path": "apps/mobile/app/(tabs)/draft.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/app/(tabs)/league.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/ARCHITECTURE.md"
       },
       {
         "code": "??",
-        "path": "supabase/functions/enrich-symbols/price-batch.test.ts"
+        "path": "apps/mobile/components/SymbolSearchField.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/TradeModal.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/eslint.config.mjs"
       },
       {
         "code": "??",
-        "path": "supabase/functions/enrich-symbols/price-batch.ts"
+        "path": "apps/mobile/lib/draftState.ts"
       },
       {
         "code": "??",
-        "path": "supabase/migrations/20260928000000_symbols_price_unsupported_column.sql"
+        "path": "apps/mobile/lib/symbolSearch.ts"
+      },
+      {
+        "code": "??",
+        "path": "apps/mobile/lib/useSymbolSearch.ts"
+      },
+      {
+        "code": "??",
+        "path": "apps/mobile/tests-deno/"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/tsconfig.json"
+      },
+      {
+        "code": "M",
+        "path": "supabase/config.toml"
+      },
+      {
+        "code": "??",
+        "path": "supabase/functions/_shared/bot-pick.test.ts"
+      },
+      {
+        "code": "??",
+        "path": "supabase/functions/_shared/bot-pick.ts"
+      },
+      {
+        "code": "??",
+        "path": "supabase/functions/draft-control/"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/validate-and-record-pick/index.ts"
+      },
+      {
+        "code": "??",
+        "path": "supabase/migrations/deferred/20260929000000_drop_I6_I2b.sql"
+      },
+      {
+        "code": "M",
+        "path": "supabase/migrations/deferred/README.md"
       }
     ],
-    "timestamp": "2026-09-25T20:53:25Z",
-    "sourceHash": "sha256:dc21badfed74c76b41d74c2f491f683c90bf41afa4717a16e1e3345e41ff90db",
+    "timestamp": "2026-09-25T22:40:05Z",
+    "sourceHash": "sha256:e888dd244294e7e1a1a1a13ed0a61efd49cfb863443f4c1e5d104cb0b75b9527",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1072,
+    "ageHours": 1073.8,
     "ageDays": 44.7,
     "staleAfterDays": 14,
     "stale": true,
@@ -283,8 +339,42 @@
     {
       "layer": "edge",
       "facts": {
+        "verifyJwt": true,
+        "verifyJwtSource": "supabase/config.toml:81",
+        "authGuard": null,
+        "localModules": [
+          "rules.ts"
+        ],
+        "tests": [
+          "rules.test.ts"
+        ],
+        "envVars": [
+          "DRAFT_BOTS_ALLOWED_EMAILS",
+          "SB_PUBLISHABLE_KEY",
+          "SB_SECRET_KEY_INTERNAL",
+          "SUPABASE_URL"
+        ],
+        "lines": 254
+      },
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "fn.draft-control",
+      "label": "draft-control",
+      "sublabel": "verify_jwt=true",
+      "kind": "edge-function",
+      "source": {
+        "path": "supabase/functions/draft-control/index.ts",
+        "line": 107
+      }
+    },
+    {
+      "layer": "edge",
+      "facts": {
         "verifyJwt": false,
-        "verifyJwtSource": "supabase/config.toml:80",
+        "verifyJwtSource": "supabase/config.toml:91",
         "authGuard": "apikey header, constant-time, fail-closed",
         "localModules": [
           "price-batch.ts"
@@ -320,7 +410,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:153",
+        "verifyJwtSource": "supabase/config.toml:164",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -347,7 +437,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:138",
+        "verifyJwtSource": "supabase/config.toml:149",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -502,7 +592,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:99",
+        "verifyJwtSource": "supabase/config.toml:110",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -562,7 +652,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:192",
+        "verifyJwtSource": "supabase/config.toml:203",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -661,7 +751,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:143",
+        "verifyJwtSource": "supabase/config.toml:154",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -689,7 +779,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:148",
+        "verifyJwtSource": "supabase/config.toml:159",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -719,7 +809,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": false,
-        "verifyJwtSource": "supabase/config.toml:180",
+        "verifyJwtSource": "supabase/config.toml:191",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -747,7 +837,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:90",
+        "verifyJwtSource": "supabase/config.toml:101",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -758,7 +848,7 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 372
+        "lines": 571
       },
       "db": null,
       "declared": null,
@@ -771,7 +861,26 @@
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/validate-and-record-pick/index.ts",
-        "line": 98
+        "line": 115
+      }
+    },
+    {
+      "layer": "module",
+      "facts": {
+        "hasTests": true
+      },
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "mod.draft-control/rules",
+      "label": "rules.ts",
+      "sublabel": "draft-control",
+      "kind": "edge-module",
+      "source": {
+        "path": "supabase/functions/draft-control/rules.ts",
+        "line": 1
       }
     },
     {
@@ -3713,6 +3822,23 @@
         "path": "apps/mobile/lib/useStockPrices.ts",
         "line": 1
       }
+    },
+    {
+      "layer": "client",
+      "facts": {},
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "ui.useSymbolSearch",
+      "label": "useSymbolSearch.ts",
+      "sublabel": "mobile/lib/useSymbolSearch.ts",
+      "kind": "client-hook",
+      "source": {
+        "path": "apps/mobile/lib/useSymbolSearch.ts",
+        "line": 1
+      }
     }
   ],
   "edges": [
@@ -3774,6 +3900,89 @@
       "payload": "net.http_post · apikey from vault cron_apikey",
       "callSites": [
         "supabase/migrations/20260618000001_migrate_snapshot_week_start_cron_auth.sql:35"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.draft-control->mod.draft-control/rules",
+      "from": "fn.draft-control",
+      "to": "mod.draft-control/rules",
+      "protocol": "esm-import",
+      "payload": "import from './rules.ts'",
+      "callSites": [
+        "supabase/functions/draft-control/index.ts"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.draft-control->pg.check_and_bump_rate_limit",
+      "from": "fn.draft-control",
+      "to": "pg.check_and_bump_rate_limit",
+      "protocol": "postgrest-rpc",
+      "payload": "rpc('check_and_bump_rate_limit')",
+      "callSites": [
+        "supabase/functions/draft-control/index.ts:95",
+        "supabase/functions/draft-control/index.ts:98"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.draft-control->tbl.league_members",
+      "from": "fn.draft-control",
+      "to": "tbl.league_members",
+      "protocol": "postgrest-select",
+      "payload": ".from('league_members').select('user_id')",
+      "columns": [
+        "user_id"
+      ],
+      "callSites": [
+        "supabase/functions/draft-control/index.ts:147"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.draft-control->tbl.league_members#insert",
+      "from": "fn.draft-control",
+      "to": "tbl.league_members",
+      "protocol": "postgrest-insert",
+      "payload": ".from('league_members').insert()",
+      "columns": [],
+      "callSites": [
+        "supabase/functions/draft-control/index.ts:196"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.draft-control->tbl.leagues",
+      "from": "fn.draft-control",
+      "to": "tbl.leagues",
+      "protocol": "postgrest-select",
+      "payload": ".from('leagues').select('id, commissioner_id, draft_status, stake_mode, draft_date, num_participants')",
+      "columns": [
+        "draft_status",
+        "id, commissioner_id, draft_status, stake_mode, draft_date, num_participants"
+      ],
+      "callSites": [
+        "supabase/functions/draft-control/index.ts:139",
+        "supabase/functions/draft-control/index.ts:239"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.draft-control->tbl.leagues#update",
+      "from": "fn.draft-control",
+      "to": "tbl.leagues",
+      "protocol": "postgrest-update",
+      "payload": ".from('leagues').update()",
+      "columns": [],
+      "callSites": [
+        "supabase/functions/draft-control/index.ts:226"
       ]
     },
     {
@@ -4822,8 +5031,8 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('check_and_bump_rate_limit')",
       "callSites": [
-        "supabase/functions/validate-and-record-pick/index.ts:86",
-        "supabase/functions/validate-and-record-pick/index.ts:89"
+        "supabase/functions/validate-and-record-pick/index.ts:103",
+        "supabase/functions/validate-and-record-pick/index.ts:106"
       ]
     },
     {
@@ -4835,7 +5044,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('finalize_league_draft')",
       "callSites": [
-        "supabase/functions/validate-and-record-pick/index.ts:361"
+        "supabase/functions/validate-and-record-pick/index.ts:560"
       ]
     },
     {
@@ -4850,7 +5059,7 @@
         "user_id, symbol, entry_price, quantity, pick_number, slot_id"
       ],
       "callSites": [
-        "supabase/functions/validate-and-record-pick/index.ts:166"
+        "supabase/functions/validate-and-record-pick/index.ts:196"
       ]
     },
     {
@@ -4863,8 +5072,9 @@
       "payload": ".from('drafts').insert()",
       "columns": [],
       "callSites": [
-        "supabase/functions/validate-and-record-pick/index.ts:202",
-        "supabase/functions/validate-and-record-pick/index.ts:288",
+        "supabase/functions/validate-and-record-pick/index.ts:312",
+        "supabase/functions/validate-and-record-pick/index.ts:413",
+        "supabase/functions/validate-and-record-pick/index.ts:499",
         "supabase/functions/validate-and-record-pick/index.ts:6"
       ]
     },
@@ -4880,7 +5090,7 @@
         "id, slot_index, slot_count, price_min, price_max, category_id"
       ],
       "callSites": [
-        "supabase/functions/validate-and-record-pick/index.ts:239"
+        "supabase/functions/validate-and-record-pick/index.ts:459"
       ]
     },
     {
@@ -4895,7 +5105,7 @@
         "user_id"
       ],
       "callSites": [
-        "supabase/functions/validate-and-record-pick/index.ts:152"
+        "supabase/functions/validate-and-record-pick/index.ts:182"
       ]
     },
     {
@@ -4910,7 +5120,7 @@
         "id, commissioner_id, num_rounds, draft_status, stake_mode, budget_amount, notional_per_slot, allow_undraftable, league_type, num_weeks, duration_days"
       ],
       "callSites": [
-        "supabase/functions/validate-and-record-pick/index.ts:141"
+        "supabase/functions/validate-and-record-pick/index.ts:171"
       ]
     },
     {
@@ -4920,12 +5130,14 @@
       "from": "fn.validate-and-record-pick",
       "to": "tbl.symbols",
       "protocol": "postgrest-select",
-      "payload": ".from('symbols').select('is_draftable')",
+      "payload": ".from('symbols').select('symbol, last_price, is_draftable, market_cap')",
       "columns": [
-        "is_draftable"
+        "is_draftable",
+        "symbol, last_price, is_draftable, market_cap"
       ],
       "callSites": [
-        "supabase/functions/validate-and-record-pick/index.ts:256"
+        "supabase/functions/validate-and-record-pick/index.ts:266",
+        "supabase/functions/validate-and-record-pick/index.ts:381"
       ]
     },
     {
@@ -4940,7 +5152,7 @@
         "user_id, symbol, action, quantity, price"
       ],
       "callSites": [
-        "supabase/functions/validate-and-record-pick/index.ts:189"
+        "supabase/functions/validate-and-record-pick/index.ts:219"
       ]
     },
     {
@@ -5658,7 +5870,7 @@
       "payload": ".from('league_members').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/create-league.tsx:150"
+        "apps/mobile/app/create-league.tsx:151"
       ]
     },
     {
@@ -5671,7 +5883,21 @@
       "payload": ".from('leagues').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/create-league.tsx:124"
+        "apps/mobile/app/create-league.tsx:125"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.draft->fn.draft-control",
+      "from": "ui.draft",
+      "to": "fn.draft-control",
+      "protocol": "https-invoke",
+      "payload": "functions.invoke('draft-control')",
+      "callSites": [
+        "apps/mobile/app/(tabs)/draft.tsx:327",
+        "apps/mobile/app/(tabs)/draft.tsx:348",
+        "apps/mobile/app/(tabs)/draft.tsx:369"
       ]
     },
     {
@@ -5683,7 +5909,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('quote')",
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:273"
+        "apps/mobile/app/(tabs)/draft.tsx:456"
       ]
     },
     {
@@ -5695,7 +5921,9 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('validate-and-record-pick')",
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:318"
+        "apps/mobile/app/(tabs)/draft.tsx:392",
+        "apps/mobile/app/(tabs)/draft.tsx:435",
+        "apps/mobile/app/(tabs)/draft.tsx:505"
       ]
     },
     {
@@ -5710,7 +5938,7 @@
         "id, user_id, symbol, entry_price, round, pick_number, slot_id, created_at"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:157"
+        "apps/mobile/app/(tabs)/draft.tsx:219"
       ]
     },
     {
@@ -5725,7 +5953,7 @@
         "id, slot_index, slot_count, price_min, price_max, category_id"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:193"
+        "apps/mobile/app/(tabs)/draft.tsx:255"
       ]
     },
     {
@@ -5740,7 +5968,7 @@
         "user_id, role"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:119"
+        "apps/mobile/app/(tabs)/draft.tsx:181"
       ]
     },
     {
@@ -5755,7 +5983,7 @@
         "id, username"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:127"
+        "apps/mobile/app/(tabs)/draft.tsx:189"
       ]
     },
     {
@@ -5782,7 +6010,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('join-league')",
       "callSites": [
-        "apps/mobile/app/join-league.tsx:114"
+        "apps/mobile/app/join-league.tsx:115"
       ]
     },
     {
@@ -5794,7 +6022,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('preview-league')",
       "callSites": [
-        "apps/mobile/app/join-league.tsx:84"
+        "apps/mobile/app/join-league.tsx:85"
       ]
     },
     {
@@ -5809,7 +6037,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/league.tsx:140"
+        "apps/mobile/app/(tabs)/league.tsx:142"
       ]
     },
     {
@@ -5824,7 +6052,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/league.tsx:109"
+        "apps/mobile/app/(tabs)/league.tsx:111"
       ]
     },
     {
@@ -5839,7 +6067,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/league.tsx:125"
+        "apps/mobile/app/(tabs)/league.tsx:127"
       ]
     },
     {
@@ -5854,7 +6082,7 @@
         "id, username, avatar"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/league.tsx:166"
+        "apps/mobile/app/(tabs)/league.tsx:168"
       ]
     },
     {
@@ -5866,7 +6094,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('start_new_league_season')",
       "callSites": [
-        "apps/mobile/app/league-settings.tsx:173"
+        "apps/mobile/app/league-settings.tsx:174"
       ]
     },
     {
@@ -5879,7 +6107,7 @@
       "payload": ".from('leagues').update()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/league-settings.tsx:136"
+        "apps/mobile/app/league-settings.tsx:137"
       ]
     },
     {
@@ -5971,7 +6199,7 @@
         "user_id, role, joined_at"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/leagues.tsx:89"
+        "apps/mobile/app/(tabs)/leagues.tsx:91"
       ]
     },
     {
@@ -5984,7 +6212,7 @@
       "payload": ".from('league_members').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/(tabs)/leagues.tsx:232"
+        "apps/mobile/app/(tabs)/leagues.tsx:234"
       ]
     },
     {
@@ -5997,7 +6225,7 @@
       "payload": ".from('leagues').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/(tabs)/leagues.tsx:201"
+        "apps/mobile/app/(tabs)/leagues.tsx:203"
       ]
     },
     {
@@ -6012,7 +6240,7 @@
         "id, username"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/leagues.tsx:97"
+        "apps/mobile/app/(tabs)/leagues.tsx:99"
       ]
     },
     {
@@ -6025,7 +6253,7 @@
       "payload": ".from('user_profiles').upsert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/login.tsx:71"
+        "apps/mobile/app/login.tsx:72"
       ]
     },
     {
@@ -6037,8 +6265,8 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('quote')",
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:134",
-        "apps/mobile/app/(tabs)/matchup.tsx:379"
+        "apps/mobile/app/(tabs)/matchup.tsx:136",
+        "apps/mobile/app/(tabs)/matchup.tsx:381"
       ]
     },
     {
@@ -6053,7 +6281,7 @@
         "id, symbol, entry_price, quantity, user_id"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:150"
+        "apps/mobile/app/(tabs)/matchup.tsx:152"
       ]
     },
     {
@@ -6069,10 +6297,10 @@
         "week_number, playoff_round"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:212",
-        "apps/mobile/app/(tabs)/matchup.tsx:232",
-        "apps/mobile/app/(tabs)/matchup.tsx:248",
-        "apps/mobile/app/(tabs)/matchup.tsx:267"
+        "apps/mobile/app/(tabs)/matchup.tsx:214",
+        "apps/mobile/app/(tabs)/matchup.tsx:234",
+        "apps/mobile/app/(tabs)/matchup.tsx:250",
+        "apps/mobile/app/(tabs)/matchup.tsx:269"
       ]
     },
     {
@@ -6087,7 +6315,7 @@
         "id, symbol, price, quantity, action, user_id"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:156"
+        "apps/mobile/app/(tabs)/matchup.tsx:158"
       ]
     },
     {
@@ -6102,7 +6330,7 @@
         "id, username, avatar"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:297"
+        "apps/mobile/app/(tabs)/matchup.tsx:299"
       ]
     },
     {
@@ -6117,7 +6345,7 @@
         "user_id, symbol, quantity, week_start_price, week_end_price"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:312"
+        "apps/mobile/app/(tabs)/matchup.tsx:314"
       ]
     },
     {
@@ -7054,8 +7282,8 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('quote')",
       "callSites": [
-        "apps/mobile/components/TradeModal.tsx:104",
-        "apps/mobile/components/TradeModal.tsx:209"
+        "apps/mobile/components/TradeModal.tsx:134",
+        "apps/mobile/components/TradeModal.tsx:90"
       ]
     },
     {
@@ -7067,7 +7295,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('record-trade')",
       "callSites": [
-        "apps/mobile/components/TradeModal.tsx:314"
+        "apps/mobile/components/TradeModal.tsx:230"
       ]
     },
     {
@@ -7079,20 +7307,8 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('symbol-name')",
       "callSites": [
-        "apps/mobile/components/TradeModal.tsx:123",
-        "apps/mobile/components/TradeModal.tsx:233"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.TradeModal->fn.symbols-search",
-      "from": "ui.TradeModal",
-      "to": "fn.symbols-search",
-      "protocol": "https-invoke",
-      "payload": "functions.invoke('symbols-search')",
-      "callSites": [
-        "apps/mobile/components/TradeModal.tsx:167"
+        "apps/mobile/components/TradeModal.tsx:102",
+        "apps/mobile/components/TradeModal.tsx:151"
       ]
     },
     {
@@ -7284,6 +7500,18 @@
       "callSites": [
         "apps/mobile/lib/useStockPrices.ts:32"
       ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.useSymbolSearch->fn.symbols-search",
+      "from": "ui.useSymbolSearch",
+      "to": "fn.symbols-search",
+      "protocol": "https-invoke",
+      "payload": "functions.invoke('symbols-search')",
+      "callSites": [
+        "apps/mobile/lib/useSymbolSearch.ts:68"
+      ]
     }
   ],
   "flows": [
@@ -7309,7 +7537,7 @@
           "edge": "e.ui.join-league->fn.preview-league",
           "detail": "Screen posts the code for a display-only preview. Rate-limited per-user and per-IP.",
           "files": [
-            "apps/mobile/app/join-league.tsx:84"
+            "apps/mobile/app/join-league.tsx:85"
           ]
         },
         {
@@ -7325,7 +7553,7 @@
           "edge": "e.ui.join-league->fn.join-league",
           "detail": "On confirm, the join is performed server-side. verify_jwt=true, so the caller identity is the gateway-verified JWT.",
           "files": [
-            "apps/mobile/app/join-league.tsx:114"
+            "apps/mobile/app/join-league.tsx:115"
           ]
         },
         {
@@ -7671,7 +7899,7 @@
           "edge": "e.ui.TradeModal->fn.quote",
           "detail": "Live quote for display before confirming. Advisory only — the fill price is re-derived server-side.",
           "files": [
-            "apps/mobile/components/TradeModal.tsx:104"
+            "apps/mobile/components/TradeModal.tsx:90"
           ]
         },
         {
@@ -7679,7 +7907,7 @@
           "edge": "e.ui.TradeModal->fn.record-trade",
           "detail": "The ONLY trade write path since DR-001 Phase 3: the client-INSERT policy on trades was dropped (20260811000002). verify_jwt=true + in-code getUser().",
           "files": [
-            "apps/mobile/components/TradeModal.tsx:314"
+            "apps/mobile/components/TradeModal.tsx:230"
           ]
         },
         {
@@ -7738,7 +7966,7 @@
           "edge": "e.ui.draft->fn.quote",
           "detail": "Price display for candidate picks. Advisory only.",
           "files": [
-            "apps/mobile/app/(tabs)/draft.tsx:273"
+            "apps/mobile/app/(tabs)/draft.tsx:456"
           ]
         },
         {
@@ -7746,7 +7974,7 @@
           "edge": "e.ui.draft->fn.validate-and-record-pick",
           "detail": "The ONLY pick write path since DR-001 Phase 3: the client-INSERT policies on drafts were dropped (20260811000003).",
           "files": [
-            "apps/mobile/app/(tabs)/draft.tsx:318"
+            "apps/mobile/app/(tabs)/draft.tsx:392"
           ]
         },
         {
@@ -7754,7 +7982,7 @@
           "edge": "e.fn.validate-and-record-pick->tbl.leagues",
           "detail": "League rules: draft status, rounds, stake mode, budget, allow_undraftable.",
           "files": [
-            "supabase/functions/validate-and-record-pick/index.ts:264"
+            "supabase/functions/validate-and-record-pick/index.ts:259"
           ]
         },
         {
@@ -7762,7 +7990,7 @@
           "edge": "e.fn.validate-and-record-pick->tbl.drafts#insert",
           "detail": "Legality (turn, uniqueness, draftable universe, slot category/price bracket, stake budget) decided by the shared pure module; a 23505 on pick_number is a lost race and the client refetches.",
           "files": [
-            "supabase/functions/validate-and-record-pick/index.ts:219"
+            "supabase/functions/validate-and-record-pick/index.ts:330"
           ]
         },
         {
@@ -7770,7 +7998,7 @@
           "edge": "e.fn.validate-and-record-pick->tbl.leagues",
           "detail": "On the final pick, markDraftComplete sets draft_status=completed — and NOTHING ELSE. No matchups, no initial standings, no league start/end dates: those are generated only by the paused web client, so a league drafted on mobile never enters a season. Top launch blocker; see docs/STATUS.md §4.",
           "files": [
-            "supabase/functions/validate-and-record-pick/index.ts:141"
+            "supabase/functions/validate-and-record-pick/index.ts:171"
           ]
         }
       ],
@@ -7800,7 +8028,7 @@
           "edge": "e.ui.league-settings->pg.start_new_league_season",
           "detail": "Called directly from the client as an authenticated user. EXECUTE is granted to `authenticated`, so the authorization is NOT the grant — it is an INTERNAL commissioner check inside the function body. That gate is the only thing standing between any league member and the four destructive writes below.",
           "files": [
-            "apps/mobile/app/league-settings.tsx:173"
+            "apps/mobile/app/league-settings.tsx:174"
           ]
         },
         {
@@ -7867,6 +8095,7 @@
         "ui.src.Ticker.jsx",
         "fn.symbol-name",
         "ui.useStockNames",
+        "ui.useSymbolSearch",
         "fn.symbols-search",
         "ui.src.components.DraftControls.jsx",
         "ui.useHistoricalPL",
@@ -7885,11 +8114,11 @@
           ],
           "detail": "quote — single-symbol live price. The most-invoked function in the app.",
           "files": [
-            "apps/mobile/app/(tabs)/draft.tsx:273",
-            "apps/mobile/app/(tabs)/matchup.tsx:134",
-            "apps/mobile/app/(tabs)/matchup.tsx:379",
-            "apps/mobile/components/TradeModal.tsx:104",
-            "apps/mobile/components/TradeModal.tsx:209",
+            "apps/mobile/app/(tabs)/draft.tsx:456",
+            "apps/mobile/app/(tabs)/matchup.tsx:136",
+            "apps/mobile/app/(tabs)/matchup.tsx:381",
+            "apps/mobile/components/TradeModal.tsx:134",
+            "apps/mobile/components/TradeModal.tsx:90",
             "apps/web/src/components/TradeModal.jsx:159",
             "apps/web/src/components/TradeModal.jsx:63",
             "apps/web/src/context/PriceContext.jsx:99",
@@ -7917,8 +8146,8 @@
           ],
           "detail": "symbol-name — display name resolution.",
           "files": [
-            "apps/mobile/components/TradeModal.tsx:123",
-            "apps/mobile/components/TradeModal.tsx:233",
+            "apps/mobile/components/TradeModal.tsx:102",
+            "apps/mobile/components/TradeModal.tsx:151",
             "apps/mobile/lib/useStockNames.ts:13",
             "apps/web/src/components/TradeModal.jsx:82"
           ]
@@ -7926,13 +8155,13 @@
         {
           "n": 4,
           "edge": [
-            "e.ui.TradeModal->fn.symbols-search",
+            "e.ui.useSymbolSearch->fn.symbols-search",
             "e.ui.src.components.DraftControls.jsx->fn.symbols-search",
             "e.ui.src.components.TradeModal.jsx->fn.symbols-search"
           ],
           "detail": "symbols-search — typeahead over the symbols table.",
           "files": [
-            "apps/mobile/components/TradeModal.tsx:167",
+            "apps/mobile/lib/useSymbolSearch.ts:68",
             "apps/web/src/components/DraftControls.jsx:66",
             "apps/web/src/components/TradeModal.jsx:122"
           ]
@@ -8327,8 +8556,8 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 115,
-    "edges": 253,
+    "nodes": 118,
+    "edges": 260,
     "flows": 8,
     "drift": 22,
     "driftHigh": 4,
@@ -8337,6 +8566,7 @@
   },
   "sourceIndex": {
     "edgeFunctions": [
+      "draft-control[rules.ts]",
       "enrich-symbols[price-batch.ts]",
       "finnhub-quote[]",
       "historical-bars[]",
@@ -8355,22 +8585,27 @@
       "validate-and-record-pick[]"
     ],
     "invokes": [
-      "apps/mobile/app/(tabs)/draft.tsx:273 -> quote",
-      "apps/mobile/app/(tabs)/draft.tsx:318 -> validate-and-record-pick",
-      "apps/mobile/app/(tabs)/matchup.tsx:134 -> quote",
-      "apps/mobile/app/(tabs)/matchup.tsx:379 -> quote",
-      "apps/mobile/app/join-league.tsx:114 -> join-league",
-      "apps/mobile/app/join-league.tsx:84 -> preview-league",
-      "apps/mobile/components/TradeModal.tsx:104 -> quote",
-      "apps/mobile/components/TradeModal.tsx:123 -> symbol-name",
-      "apps/mobile/components/TradeModal.tsx:167 -> symbols-search",
-      "apps/mobile/components/TradeModal.tsx:209 -> quote",
-      "apps/mobile/components/TradeModal.tsx:233 -> symbol-name",
-      "apps/mobile/components/TradeModal.tsx:314 -> record-trade",
+      "apps/mobile/app/(tabs)/draft.tsx:327 -> draft-control",
+      "apps/mobile/app/(tabs)/draft.tsx:348 -> draft-control",
+      "apps/mobile/app/(tabs)/draft.tsx:369 -> draft-control",
+      "apps/mobile/app/(tabs)/draft.tsx:392 -> validate-and-record-pick",
+      "apps/mobile/app/(tabs)/draft.tsx:435 -> validate-and-record-pick",
+      "apps/mobile/app/(tabs)/draft.tsx:456 -> quote",
+      "apps/mobile/app/(tabs)/draft.tsx:505 -> validate-and-record-pick",
+      "apps/mobile/app/(tabs)/matchup.tsx:136 -> quote",
+      "apps/mobile/app/(tabs)/matchup.tsx:381 -> quote",
+      "apps/mobile/app/join-league.tsx:115 -> join-league",
+      "apps/mobile/app/join-league.tsx:85 -> preview-league",
+      "apps/mobile/components/TradeModal.tsx:102 -> symbol-name",
+      "apps/mobile/components/TradeModal.tsx:134 -> quote",
+      "apps/mobile/components/TradeModal.tsx:151 -> symbol-name",
+      "apps/mobile/components/TradeModal.tsx:230 -> record-trade",
+      "apps/mobile/components/TradeModal.tsx:90 -> quote",
       "apps/mobile/lib/notifications.ts:167 -> send-notification",
       "apps/mobile/lib/useHistoricalPL.ts:77 -> historical-bars",
       "apps/mobile/lib/useStockNames.ts:13 -> symbol-name",
       "apps/mobile/lib/useStockPrices.ts:32 -> ticker-quotes",
+      "apps/mobile/lib/useSymbolSearch.ts:68 -> symbols-search",
       "apps/web/src/Ticker.jsx:28 -> ticker-quotes",
       "apps/web/src/components/DraftControls.jsx:66 -> symbols-search",
       "apps/web/src/components/TradeModal.jsx:122 -> symbols-search",
@@ -8388,8 +8623,10 @@
       "apps/web/src/pages/JoinLeague.jsx:43 -> join-league"
     ],
     "rpcs": [
-      "apps/mobile/app/league-settings.tsx:173 -> start_new_league_season",
+      "apps/mobile/app/league-settings.tsx:174 -> start_new_league_season",
       "apps/web/src/pages/DraftPage.jsx:360 -> get_real_user_ids",
+      "supabase/functions/draft-control/index.ts:95 -> check_and_bump_rate_limit",
+      "supabase/functions/draft-control/index.ts:98 -> check_and_bump_rate_limit",
       "supabase/functions/join-league/index.ts:31 -> check_and_bump_rate_limit",
       "supabase/functions/join-league/index.ts:34 -> check_and_bump_rate_limit",
       "supabase/functions/join-league/index.ts:76 -> join_league_by_code",
@@ -8403,38 +8640,38 @@
       "supabase/functions/send-notification/index.ts:104 -> check_and_bump_rate_limit",
       "supabase/functions/snapshot-week-end/index.ts:100 -> schedule_snapshot_retry",
       "supabase/functions/snapshot-week-start/index.ts:135 -> schedule_snapshot_retry",
-      "supabase/functions/validate-and-record-pick/index.ts:361 -> finalize_league_draft",
-      "supabase/functions/validate-and-record-pick/index.ts:86 -> check_and_bump_rate_limit",
-      "supabase/functions/validate-and-record-pick/index.ts:89 -> check_and_bump_rate_limit"
+      "supabase/functions/validate-and-record-pick/index.ts:103 -> check_and_bump_rate_limit",
+      "supabase/functions/validate-and-record-pick/index.ts:106 -> check_and_bump_rate_limit",
+      "supabase/functions/validate-and-record-pick/index.ts:560 -> finalize_league_draft"
     ],
     "tableOps": [
-      "apps/mobile/app/(tabs)/draft.tsx:119 -> league_members.select",
-      "apps/mobile/app/(tabs)/draft.tsx:127 -> user_profiles.select",
-      "apps/mobile/app/(tabs)/draft.tsx:157 -> drafts.select",
-      "apps/mobile/app/(tabs)/draft.tsx:193 -> league_draft_slots.select",
+      "apps/mobile/app/(tabs)/draft.tsx:181 -> league_members.select",
+      "apps/mobile/app/(tabs)/draft.tsx:189 -> user_profiles.select",
+      "apps/mobile/app/(tabs)/draft.tsx:219 -> drafts.select",
+      "apps/mobile/app/(tabs)/draft.tsx:255 -> league_draft_slots.select",
       "apps/mobile/app/(tabs)/index.tsx:58 -> user_profiles.select",
-      "apps/mobile/app/(tabs)/league.tsx:109 -> league_standings.select",
-      "apps/mobile/app/(tabs)/league.tsx:125 -> matchups.select",
-      "apps/mobile/app/(tabs)/league.tsx:140 -> league_seasons.select",
-      "apps/mobile/app/(tabs)/league.tsx:166 -> user_profiles.select",
-      "apps/mobile/app/(tabs)/leagues.tsx:201 -> leagues.insert",
-      "apps/mobile/app/(tabs)/leagues.tsx:232 -> league_members.insert",
-      "apps/mobile/app/(tabs)/leagues.tsx:89 -> league_members.select",
-      "apps/mobile/app/(tabs)/leagues.tsx:97 -> user_profiles.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:150 -> drafts.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:156 -> trades.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:212 -> matchups.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:232 -> matchups.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:248 -> matchups.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:267 -> matchups.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:297 -> user_profiles.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:312 -> week_snapshots.select",
+      "apps/mobile/app/(tabs)/league.tsx:111 -> league_standings.select",
+      "apps/mobile/app/(tabs)/league.tsx:127 -> matchups.select",
+      "apps/mobile/app/(tabs)/league.tsx:142 -> league_seasons.select",
+      "apps/mobile/app/(tabs)/league.tsx:168 -> user_profiles.select",
+      "apps/mobile/app/(tabs)/leagues.tsx:203 -> leagues.insert",
+      "apps/mobile/app/(tabs)/leagues.tsx:234 -> league_members.insert",
+      "apps/mobile/app/(tabs)/leagues.tsx:91 -> league_members.select",
+      "apps/mobile/app/(tabs)/leagues.tsx:99 -> user_profiles.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:152 -> drafts.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:158 -> trades.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:214 -> matchups.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:234 -> matchups.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:250 -> matchups.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:269 -> matchups.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:299 -> user_profiles.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:314 -> week_snapshots.select",
       "apps/mobile/app/(tabs)/profile.tsx:43 -> user_profiles.select",
       "apps/mobile/app/(tabs)/profile.tsx:87 -> user_profiles.upsert",
-      "apps/mobile/app/create-league.tsx:124 -> leagues.insert",
-      "apps/mobile/app/create-league.tsx:150 -> league_members.insert",
-      "apps/mobile/app/league-settings.tsx:136 -> leagues.update",
-      "apps/mobile/app/login.tsx:71 -> user_profiles.upsert",
+      "apps/mobile/app/create-league.tsx:125 -> leagues.insert",
+      "apps/mobile/app/create-league.tsx:151 -> league_members.insert",
+      "apps/mobile/app/league-settings.tsx:137 -> leagues.update",
+      "apps/mobile/app/login.tsx:72 -> user_profiles.upsert",
       "apps/mobile/app/player-portfolio.tsx:116 -> user_profiles.select",
       "apps/mobile/app/player-portfolio.tsx:128 -> drafts.select",
       "apps/mobile/app/player-portfolio.tsx:135 -> trades.select",
@@ -8531,6 +8768,11 @@
       "supabase/functions/_shared/category-eligibility.ts:15 -> symbol_category_overrides.select",
       "supabase/functions/_shared/category-eligibility.ts:24 -> symbols.select",
       "supabase/functions/_shared/category-eligibility.ts:33 -> category_rules.select",
+      "supabase/functions/draft-control/index.ts:139 -> leagues.select",
+      "supabase/functions/draft-control/index.ts:147 -> league_members.select",
+      "supabase/functions/draft-control/index.ts:196 -> league_members.insert",
+      "supabase/functions/draft-control/index.ts:226 -> leagues.update",
+      "supabase/functions/draft-control/index.ts:239 -> leagues.select",
       "supabase/functions/enrich-symbols/index.ts:183 -> symbols.select",
       "supabase/functions/enrich-symbols/index.ts:196 -> symbols.select",
       "supabase/functions/enrich-symbols/index.ts:211 -> category_rules.select",
@@ -8599,14 +8841,16 @@
       "supabase/functions/symbols-search/index.ts:129 -> symbols.select",
       "supabase/functions/symbols-search/index.ts:140 -> symbols.select",
       "supabase/functions/symbols-search/index.ts:98 -> symbols.select",
-      "supabase/functions/validate-and-record-pick/index.ts:141 -> leagues.select",
-      "supabase/functions/validate-and-record-pick/index.ts:152 -> league_members.select",
-      "supabase/functions/validate-and-record-pick/index.ts:166 -> drafts.select",
-      "supabase/functions/validate-and-record-pick/index.ts:189 -> trades.select",
-      "supabase/functions/validate-and-record-pick/index.ts:202 -> drafts.insert",
-      "supabase/functions/validate-and-record-pick/index.ts:239 -> league_draft_slots.select",
-      "supabase/functions/validate-and-record-pick/index.ts:256 -> symbols.select",
-      "supabase/functions/validate-and-record-pick/index.ts:288 -> drafts.insert",
+      "supabase/functions/validate-and-record-pick/index.ts:171 -> leagues.select",
+      "supabase/functions/validate-and-record-pick/index.ts:182 -> league_members.select",
+      "supabase/functions/validate-and-record-pick/index.ts:196 -> drafts.select",
+      "supabase/functions/validate-and-record-pick/index.ts:219 -> trades.select",
+      "supabase/functions/validate-and-record-pick/index.ts:266 -> symbols.select",
+      "supabase/functions/validate-and-record-pick/index.ts:312 -> drafts.insert",
+      "supabase/functions/validate-and-record-pick/index.ts:381 -> symbols.select",
+      "supabase/functions/validate-and-record-pick/index.ts:413 -> drafts.insert",
+      "supabase/functions/validate-and-record-pick/index.ts:459 -> league_draft_slots.select",
+      "supabase/functions/validate-and-record-pick/index.ts:499 -> drafts.insert",
       "supabase/functions/validate-and-record-pick/index.ts:6 -> drafts.insert"
     ],
     "migrations": [
@@ -8691,6 +8935,7 @@
       "20260928000000_symbols_price_unsupported_column.sql"
     ],
     "config": [
+      "draft-control=true",
       "enrich-symbols=false",
       "finnhub-quote=true",
       "historical-bars=true",

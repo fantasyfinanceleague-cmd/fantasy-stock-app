@@ -4,10 +4,6 @@ Overview of the mobile app for developers and AI assistants. Mobile is Stockpile
 primary product surface. For project-wide status see [`docs/STATUS.md`](../../docs/STATUS.md);
 for backend flows, open the generated map at `docs/architecture/architecture.html`.
 
-> **Pending branch:** `ui/design-system-pass-v2` (unmerged) adds `components/ui/`
-> primitives (`Button`, `Card`, `Screen`, `SectionLabel`, `Banner`) and converts most
-> screens to them. Once it merges, update the *Styling* section below.
-
 ---
 
 ## Tech stack
@@ -49,9 +45,14 @@ apps/mobile/
 │   └── modal.tsx                # Expo template modal
 ├── components/                  # TradeModal, SlotBuilder, LeagueSwitcher, WeekNavigator,
 │                                # PerformanceChart, PortfolioChart, PLBreakdownModal,
-│                                # StatusBadge, Skeleton, … (__tests__/ is the Expo
-│                                # template placeholder; no test runner is configured)
+│                                # StatusBadge, Skeleton, SymbolSearchField (shared
+│                                # typeahead, draft screen + TradeModal), …
+│                                # (__tests__/ is the Expo template placeholder; no
+│                                # test runner is configured — pure logic has its own
+│                                # Deno tests instead, see lib/ and tests-deno/)
 ├── lib/                         # Context, hooks, data helpers (see below)
+├── tests-deno/                  # Hermetic Deno tests for RN-free lib/ pure logic —
+│                                # `cd apps/mobile/tests-deno && deno test .`
 ├── constants/
 │   ├── theme/                   # Design tokens: colors, typography, spacing, shadows
 │   ├── Colors.ts                # Back-compat alias layer over theme/colors (light theme)
@@ -109,6 +110,9 @@ tracks `activeLeagueId`, exposes `activeLeague`, `leagues`, and a refresh. Every
 | `notifications.ts` | Push registration and draft-turn notification |
 | `contentModeration.ts` | Username / league-name validation |
 | `supabase.ts` | Client on the **publishable** key (`EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) |
+| `draftState.ts` | Pure: `computeDraftPhase` (adds a `'finalizing'` phase between drafting and completed), `describeStartBlocker` (draft-control status copy). No RN imports — Deno-testable, see `tests-deno/` |
+| `symbolSearch.ts` | Pure: `parseQuotePrice` (the `quote` fallback chain) + `shapeSearchResults` (selectable/badge shaping), shared by `TradeModal` and the draft screen. No RN imports — Deno-testable |
+| `useSymbolSearch.ts` | Debounced `symbols-search` hook built on `symbolSearch.ts`, used by `components/SymbolSearchField.tsx` |
 
 ### Where writes go
 
@@ -117,7 +121,8 @@ in Phase 3. All game-state writes that need validation go through edge functions
 
 | Action | Path |
 |---|---|
-| Draft pick | `validate-and-record-pick` (turn, uniqueness, draftable universe, slot category/price, stake budget; on the final pick **finalizes the league** — status, season schedule, standings, dates, season 1 — via the `finalize_league_draft` RPC) |
+| Start draft / add bots | `draft-control` (commissioner-only, server-enforced preconditions: stake mode set, draft date reached, ≥4 members; bot seeding is additionally allowlist-gated — test-account-only at launch, `DRAFT_BOTS_ALLOWED_EMAILS`) |
+| Draft pick | `validate-and-record-pick` (turn, uniqueness, draftable universe, slot category/price, stake budget; on the final pick **finalizes the league** — status, season schedule, standings, dates, season 1 — via the `finalize_league_draft` RPC). Also handles `action:'bot_pick'` (server chooses the candidate — see `_shared/bot-pick.ts` — mobile has no client-side bot stock pool) and `action:'finalize'` (the heal retry) |
 | Buy / sell | `record-trade` via `TradeModal` |
 | Join league | `preview-league` → `join-league` |
 | Prices / search / names / history | `quote`, `ticker-quotes`, `symbols-search`, `symbol-name`, `historical-bars` |
@@ -125,7 +130,10 @@ in Phase 3. All game-state writes that need validation go through edge functions
 
 Direct table writes that remain: league create/update and slot definitions
 (`leagues`, `league_draft_slots`), profile fields (`user_profiles`), and push-token
-registration.
+registration. **Not** `leagues.draft_status` or a `bot-*` `league_members` row on the
+member path any more — those go through `draft-control` now (the interim RLS
+policies `[I2b]`/`[I6]` that used to allow them directly are deferred for removal,
+`supabase/migrations/deferred/20260929000000_drop_I6_I2b.sql`).
 
 > **Season schedule is server-side** (branch `feat/server-schedule-generation`; live
 > only once its migration is applied and `validate-and-record-pick` deployed — check
@@ -135,10 +143,14 @@ registration.
 > (F10).
 >
 > **Known gaps:**
-> - **Heal hook.** If finalization fails, the draft stays `in_progress` with every
->   pick made. No one has a turn then, so `draft.tsx` shows no control that retries.
->   Follow-up: when `draft_status === 'in_progress'` and every pick is made, call
->   `validate-and-record-pick` with `{ league_id, action: 'finalize' }`.
+> - **Heal hook — FIXED** on branch `feat/mobile-draft-start-search-finalize` (not
+>   yet merged/deployed). `draft.tsx` now detects the `'finalizing'` phase
+>   (`lib/draftState.ts`) and auto-retries `action:'finalize'` once, with a manual
+>   Retry button on failure.
+> - **Bot picks are client-triggered**, same branch: any member's open app fires
+>   `action:'bot_pick'` ~800ms after a bot's turn starts (mirrors web's old
+>   `botAutoPick`). If nobody has the app open on a bot's turn the draft waits — it
+>   resumes the moment anyone reopens it. Follow-up: a server-scheduled trigger.
 > - **Season 2+.** `start_new_league_season` deletes the matchups, and nothing
 >   regenerates them (`docs/STATUS.md` §4).
 
@@ -154,7 +166,12 @@ registration.
   chart with period-relative P/L (`PerformanceChart` + `useHistoricalPL`).
 - **Draft** — snake order (commissioner first, then sorted — matches the server),
   category badges, league slot panel, stake-mode budget display; blocks drafting when
-  a league has no `stake_mode`.
+  a league has no `stake_mode`. Symbol search is typeahead (`SymbolSearchField`,
+  shared with `TradeModal`) with company names and already-drafted/not-draftable
+  badges. Pre-draft, the commissioner sees a working Start Draft / Fill with Bots UI
+  (`draft-control`) instead of "start it from the website"; a distinct
+  "Finalizing the season…" state (with retry) covers the window between the last
+  pick and the server's schedule-generation completing.
 - **Portfolio** — holdings, cost basis, P/L; buy/sell in-app through `TradeModal`
   (symbol search autocomplete; server-validated).
 - **Matchup** — weekly head-to-head with week navigation and live/final status.
@@ -207,4 +224,4 @@ eas update --channel production                  # OTA update
 
 ---
 
-*Last updated: 2026-09-24*
+*Last updated: 2026-09-25*

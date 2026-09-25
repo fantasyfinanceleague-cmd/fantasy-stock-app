@@ -1,0 +1,21 @@
+{
+  // Scoped override of the root deno.json's "exclude": ["apps", ...]. That
+  // exclude is deliberate (a bare `deno test`/`deno lint` at repo root should
+  // not wander into apps/ or packages/, which are npm/React/Vite, not Deno) —
+  // but Deno's exclude also blocks explicit paths under an excluded directory
+  // (contrary to the root file's own comment; verified empirically:
+  // `deno test apps/mobile/tests-deno/` from the REPO ROOT reports "No test
+  // modules found" without this file).
+  //
+  // Deno resolves the nearest deno.json starting from the PROCESS'S CWD, not
+  // from the target path argument — so this override only takes effect when
+  // Deno is actually invoked from inside this directory:
+  //
+  //   cd apps/mobile/tests-deno && deno test .
+  //
+  // Running `deno test apps/mobile/tests-deno/` from the repo root still hits
+  // the root config's exclude and reports no test modules, even with this
+  // file present. This file's job is just to make `deno test .` work with no
+  // extra flags once you're standing in this directory; it does not change
+  // discovery from elsewhere.
+}

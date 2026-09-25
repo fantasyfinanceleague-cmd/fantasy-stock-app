@@ -192,6 +192,35 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
    turn once every pick is made, so the screen has no control that reaches the
    server's heal path. The pick response also still says `draft_complete: true`
    when finalize failed.
+   **FIX AUTHORED on branch `feat/mobile-draft-start-search-finalize` (not yet
+   merged or deployed).** `lib/draftState.ts`'s `computeDraftPhase` adds a
+   `'finalizing'` phase (every pick made, `draft_status` still `in_progress`) distinct
+   from both `'drafting'` and `'completed'`; the draft screen auto-fires
+   `action:'finalize'` once on entering it, shows a Retry button on failure, and
+   only renders the completed view when `draft_status` is actually `'completed'`.
+   The SAME branch also closes the launch blocker this defect assumed was already
+   solved — that nobody could START a mobile draft at all (the only client-side
+   `draft_status` writer and bot-seeding UI was web's paused `DraftPage.jsx` /
+   `DraftSetupModal`): a new `draft-control` edge function (commissioner-only,
+   server-enforced preconditions — stake mode, draft date reached, ≥4 members) plus
+   a `bot_pick` action on `validate-and-record-pick` (server-chosen candidate,
+   test-account-only bot seeding per product decision 2026-09-25). See
+   `docs/migrations/RLS_HARDENING_SPEC.md`'s `[I2b]`/`[I6]` retirement, deferred at
+   `supabase/migrations/deferred/20260929000000_drop_I6_I2b.sql` pending effect
+   verification. Same branch also added a shared symbol-search component
+   (`components/SymbolSearchField.tsx`) so the draft screen gets typeahead +
+   company names + non-draftable/already-drafted badges (previously exact-ticker
+   only), and fixed a League Settings reachability gap: the only route to
+   `league-settings.tsx` was via the orphaned `LeagueCarousel.tsx` (never mounted —
+   see `apps/mobile/ARCHITECTURE.md`), so a commissioner had no working path to set
+   a draft date. `league.tsx` now shows a League Settings entry point while
+   `draft_status='not_started'`.
+   **Known limit, acceptable for launch:** `bot_pick` is CLIENT-TRIGGERED — any
+   member's open app fires it ~800ms after a bot's turn starts, same as web's old
+   `botAutoPick`. If every member closes the app on a bot's turn, the draft waits
+   (it resumes the moment anyone reopens it — nothing is lost). Follow-up:
+   server-scheduled bot picks (a cron sweep, or triggering from `validate-and-
+   record-pick`'s own response) so a draft can finish with no client open.
 11. **Hygiene:** revoked Alpaca pair still stored as Supabase secrets
    `ALPACA_KEY_ID`/`ALPACA_SECRET_KEY` (no readers) and in local `.env.local`;
    `.gitleaks.toml` allowlists all of `^\.claude/` by directory (hid that leak once) —
@@ -290,6 +319,7 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
 | `security/claude-security-fixes-20260730` | PR #9, **merged as `5e3b5d1`** (2026-09-25). Deploy per `docs/security/DEPLOY-RUNBOOK.md` in progress. |
 | `feat/server-schedule-generation` | §4 defects 1, 2 (deferred drop), 9: schedule module, `finalize_league_draft` migration, pick-function wiring, web writers removed. Includes `main` @ `5e3b5d1`. Unmerged; migration unapplied, function undeployed. |
 | `ui/design-system-pass-v2` | Unmerged, awaiting visual check. Checked out in the main checkout. |
+| `feat/mobile-draft-start-search-finalize` | §4 defect 10 + the mobile draft-start launch blocker: `draft-control` edge function (start + bot seeding), `bot_pick` action, shared `SymbolSearchField`, finalize-heal UI, League Settings reachability fix. Off `main` @ `8015e95` (includes PR #14/#15/#16). Unmerged; new function undeployed, deferred RLS-drop migration authored but not applied. |
 | `ui/design-system-pass`, `item4-fix-refresh-symbols-cron` | Superseded (backup / folded into `main` + PR #9). Safe to delete once confirmed. |
 | ~20 others (`simulator-core`, `phase4-*`, `item*`, `signup-ux-password`, …) | Fully merged into `main` (0 commits ahead) — safe to delete with `git branch -d`. |
 
