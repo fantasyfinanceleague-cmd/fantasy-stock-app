@@ -8,6 +8,17 @@
 -- and this repo has the precedent (STAGED_drop_i7_league_invites_accept.sql).
 -- The LOCATION is the control; the ⛔ comment is only documentation.
 --
+-- PRECONDITIONS TO PROMOTE THIS FILE (added 2026-09-24):
+--   1. send-notification deployed and effect-verified (DEPLOY-RUNBOOK step 5.3).
+--   2. Every tester on the >= 1.1.0 mobile build. 1.0.0 binaries write their own
+--      token to user_profiles.expo_push_token and read leaguemates' tokens from
+--      it, so dropping the column breaks registration and draft-turn pushes there.
+--   3. Give it a timestamp LATER than prod's latest applied migration when it
+--      moves into supabase/migrations/ (db push refuses older pending files).
+--   (The sendPushNotification() helper cited below was deleted 2026-09-24 as
+--   dead code; the finding it illustrates is unchanged, since anyone can POST
+--   to exp.host with a stolen token.)
+--
 -- ---------------------------------------------------------------------------
 -- THE FINDING: the token is a CAPABILITY, not an identifier.
 --
@@ -70,7 +81,15 @@
 -- mitigations. It also removes the profile.tsx:61 `select('*')` blocker
 -- entirely, since the column is no longer on a table that call site reads.
 --
--- PHASE 1 — must ship FIRST (no SQL; edge function + client):
+-- PHASE 1 — ✅ BUILT 2026-07-30 (branch security/claude-security-fixes-20260730).
+--   supabase/functions/send-notification/index.ts + config.toml block, and the
+--   mobile client cut over. VERIFIED: zero client READS of expo_push_token remain
+--   anywhere in apps/ (grep) — only the two device-registration WRITES, and those
+--   now try push_tokens first and fall back to user_profiles, so they work either
+--   side of this migration. That is what makes phase 2 safe to apply on its own.
+--   Deploy + verify phase 1 BEFORE pushing this. Original spec kept below.
+--
+-- PHASE 1 (as specified — now implemented):
 --   A `send-notification` edge function, verify_jwt = true, that:
 --     (a) resolves the caller from the JWT;
 --     (b) AUTHORIZES TARGET — caller and target share a league. This check does

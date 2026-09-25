@@ -2,10 +2,10 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "6d08a8e0414e6fbbb904fbbbd90d462368f478ac",
-    "commitShort": "6d08a8e",
+    "commit": "ca175352f072b64f39bcbab083748ca362e9eec4",
+    "commitShort": "ca17535",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "fix/process-week-results-terminal-status",
+    "branch": "security/claude-security-fixes-20260730",
     "dirty": true,
     "dirtyPaths": [
       {
@@ -13,16 +13,16 @@
         "path": "docs/architecture/annotations.json"
       }
     ],
-    "timestamp": "2026-09-25T00:01:00Z",
-    "sourceHash": "sha256:81f158ceca97bf2f204059035d769b011c92e727251164faba785bd5b6839d8c",
+    "timestamp": "2026-09-25T05:59:43Z",
+    "sourceHash": "sha256:5bfef80ff26ed8f08a8cc0a33d035403ecc619f874fb5775c0b7b852c01f120a",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1051.1,
-    "ageDays": 43.8,
+    "ageHours": 1057.1,
+    "ageDays": 44,
     "staleAfterDays": 14,
     "stale": true,
     "hash": "sha256:3c923bcd46e36dfa365d24852d7b8fb6ead9ff99a06c3b26dc0853c648e07ded",
@@ -142,7 +142,7 @@
         ]
       },
       "drift": [],
-      "annotation": "UPDATE 2026-09-24: migration 20260811000000 (applied) now reschedules this job in-repo and sends the vault cron apikey, so it is no longer out-of-band. It STILL 401s: refresh-symbols is verify_jwt=true with no in-code apikey guard, so the gateway rejects the apikey-only request. The other half (verify_jwt=false + constant-time guard, finding F5) is on the unmerged PR #9 branch. Until that lands, nothing adds new listings to (or retires delistings from) the symbols universe — no client calls refresh-symbols. enrich-symbols still updates EXISTING rows (profiles, prices, is_draftable).\n\nHISTORY: The oldest job in the schedule (jobid 7, versus 18-21 for the cron-auth-migrated set) and the only one that sends no auth header at all. It predates the RLS-hardening pass that set verify_jwt=true on refresh-symbols, and it was never migrated because no migration in the repo schedules it — it was created out-of-band, so the Phase 2b sweep over supabase/migrations/ never saw it. Its `symbols` target table is likewise created by no migration. IMPORTANT when diagnosing this: cron.job_run_details reports 'succeeded' for every run regardless, because net.http_post is asynchronous — the job status records that the request was ENQUEUED (return_message '1 row' is the request id), not what the server answered. Checked 2026-07-27: five consecutive 'succeeded' runs, which is exactly what a job 401ing every six hours also looks like. Use net._http_response, or check whether the symbols rows actually changed.",
+      "annotation": "UPDATE 2026-09-25 (observed, read-only; supersedes the 2026-09-24 note, which wrongly said this job STILL 401s): the job WORKS. net._http_response at 2026-09-25 00:00:01 shows 200 {\"ok\":true,\"count\":13246}, with no 401s in the window. A credential-free GET to refresh-symbols reaches OUR code (405), so verify_jwt is OFF in prod, and `supabase functions download` shows the deployed function is PR #9's original security commit 2dd699f (F5: constant-time apikey guard against SB_SECRET_KEY_CRON). Migration 20260811000000 (applied) supplies the vault cron apikey header, so the two halves of F5 are both live. The REPO is the stale side: main's refresh-symbols has no guard and config.toml says verify_jwt=true, so deploying this function from pre-PR#9 main (including a bare `supabase functions deploy`) would REGRESS it into genuine 401s. Merging PR #9 removes that hazard. CAVEAT for verifying any cron target here: no cron migration sets timeout_milliseconds, so pg_net's 5 s default applies and a target that runs longer shows as a client timeout in net._http_response even on success (enrich-symbols does, every run). This job finishes inside 5 s, so its 200 row is real; for slower targets verify by the data they write.\n\nHISTORY: The oldest job in the schedule (jobid 7, versus 18-21 for the cron-auth-migrated set) and the only one that sends no auth header at all. It predates the RLS-hardening pass that set verify_jwt=true on refresh-symbols, and it was never migrated because no migration in the repo schedules it — it was created out-of-band, so the Phase 2b sweep over supabase/migrations/ never saw it. Its `symbols` target table is likewise created by no migration. IMPORTANT when diagnosing this: cron.job_run_details reports 'succeeded' for every run regardless, because net.http_post is asynchronous — the job status records that the request was ENQUEUED (return_message '1 row' is the request id), not what the server answered. Checked 2026-07-27: five consecutive 'succeeded' runs, which is exactly what a job 401ing every six hours also looks like. Use net._http_response, or check whether the symbols rows actually changed.",
       "verified": true,
       "id": "cron.refresh_symbols_daily",
       "label": "refresh_symbols_daily",
@@ -272,7 +272,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": false,
-        "verifyJwtSource": "supabase/config.toml:71",
+        "verifyJwtSource": "supabase/config.toml:80",
         "authGuard": "apikey header, constant-time, fail-closed",
         "localModules": [],
         "tests": [],
@@ -304,7 +304,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:144",
+        "verifyJwtSource": "supabase/config.toml:153",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -331,7 +331,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:129",
+        "verifyJwtSource": "supabase/config.toml:138",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -339,7 +339,7 @@
           "ALPACA_API_KEY",
           "ALPACA_API_SECRET"
         ],
-        "lines": 119
+        "lines": 134
       },
       "db": null,
       "declared": null,
@@ -359,7 +359,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:61",
+        "verifyJwtSource": "supabase/config.toml:70",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -388,7 +388,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:52",
+        "verifyJwtSource": "supabase/config.toml:61",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -486,7 +486,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:90",
+        "verifyJwtSource": "supabase/config.toml:99",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -516,16 +516,17 @@
     {
       "layer": "edge",
       "facts": {
-        "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:41",
-        "authGuard": null,
+        "verifyJwt": false,
+        "verifyJwtSource": "supabase/config.toml:50",
+        "authGuard": "apikey header, constant-time, fail-closed",
         "localModules": [],
         "tests": [],
         "envVars": [
+          "SB_SECRET_KEY_CRON",
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 138
+        "lines": 178
       },
       "db": null,
       "declared": null,
@@ -534,11 +535,40 @@
       "verified": true,
       "id": "fn.refresh-symbols",
       "label": "refresh-symbols",
-      "sublabel": "verify_jwt=true",
+      "sublabel": "verify_jwt=false · apikey guard",
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/refresh-symbols/index.ts",
-        "line": 53
+        "line": 86
+      }
+    },
+    {
+      "layer": "edge",
+      "facts": {
+        "verifyJwt": true,
+        "verifyJwtSource": "supabase/config.toml:192",
+        "authGuard": null,
+        "localModules": [],
+        "tests": [],
+        "envVars": [
+          "SB_PUBLISHABLE_KEY",
+          "SB_SECRET_KEY_INTERNAL",
+          "SUPABASE_URL"
+        ],
+        "lines": 271
+      },
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "fn.send-notification",
+      "label": "send-notification",
+      "sublabel": "verify_jwt=true",
+      "kind": "edge-function",
+      "source": {
+        "path": "supabase/functions/send-notification/index.ts",
+        "line": 165
       }
     },
     {
@@ -615,7 +645,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:134",
+        "verifyJwtSource": "supabase/config.toml:143",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -643,7 +673,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:139",
+        "verifyJwtSource": "supabase/config.toml:148",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -673,7 +703,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": false,
-        "verifyJwtSource": "supabase/config.toml:171",
+        "verifyJwtSource": "supabase/config.toml:180",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -701,7 +731,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:81",
+        "verifyJwtSource": "supabase/config.toml:90",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -936,6 +966,37 @@
       "source": {
         "path": "supabase/migrations/20260125000000_add_league_seasons.sql",
         "line": 68
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20260925000000_leagues_member_draft_complete_column_guard.sql:108"
+        ],
+        "latestDefinition": "supabase/migrations/20260925000000_leagues_member_draft_complete_column_guard.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.enforce_leagues_member_update_columns",
+      "label": "enforce_leagues_member_update_columns()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20260925000000_leagues_member_draft_complete_column_guard.sql",
+        "line": 108
       }
     },
     {
@@ -2532,6 +2593,20 @@
         "path": "supabase/migrations/20260122000000_add_push_tokens.sql",
         "line": 10
       }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": false,
+      "id": "tbl.push_tokens",
+      "label": "push_tokens",
+      "sublabel": "not in snapshot",
+      "kind": "table",
+      "source": null
     },
     {
       "layer": "db",
@@ -4210,8 +4285,8 @@
       "protocol": "vendor-https",
       "payload": "https://www.nasdaqtrader.com/dynamic/SymDir/nasdaqlisted.txt",
       "callSites": [
-        "supabase/functions/refresh-symbols/index.ts:59",
-        "supabase/functions/refresh-symbols/index.ts:60"
+        "supabase/functions/refresh-symbols/index.ts:100",
+        "supabase/functions/refresh-symbols/index.ts:99"
       ]
     },
     {
@@ -4224,7 +4299,83 @@
       "payload": ".from('symbols').upsert()",
       "columns": [],
       "callSites": [
-        "supabase/functions/refresh-symbols/index.ts:131"
+        "supabase/functions/refresh-symbols/index.ts:171"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.send-notification->pg.check_and_bump_rate_limit",
+      "from": "fn.send-notification",
+      "to": "pg.check_and_bump_rate_limit",
+      "protocol": "postgrest-rpc",
+      "payload": "rpc('check_and_bump_rate_limit')",
+      "callSites": [
+        "supabase/functions/send-notification/index.ts:101",
+        "supabase/functions/send-notification/index.ts:104"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.send-notification->tbl.league_members",
+      "from": "fn.send-notification",
+      "to": "tbl.league_members",
+      "protocol": "postgrest-select",
+      "payload": ".from('league_members').select('user_id')",
+      "columns": [
+        "user_id"
+      ],
+      "callSites": [
+        "supabase/functions/send-notification/index.ts:214",
+        "supabase/functions/send-notification/index.ts:220"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.send-notification->tbl.leagues",
+      "from": "fn.send-notification",
+      "to": "tbl.leagues",
+      "protocol": "postgrest-select",
+      "payload": ".from('leagues').select('name')",
+      "columns": [
+        "name"
+      ],
+      "callSites": [
+        "supabase/functions/send-notification/index.ts:229"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.send-notification->tbl.push_tokens",
+      "from": "fn.send-notification",
+      "to": "tbl.push_tokens",
+      "protocol": "postgrest-select",
+      "payload": ".from('push_tokens').select('token')",
+      "columns": [
+        "token"
+      ],
+      "callSites": [
+        "supabase/functions/send-notification/index.ts:153"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.send-notification->tbl.user_profiles",
+      "from": "fn.send-notification",
+      "to": "tbl.user_profiles",
+      "protocol": "postgrest-select",
+      "payload": ".from('user_profiles').select('notifications_enabled')",
+      "columns": [
+        "expo_push_token",
+        "notifications_enabled"
+      ],
+      "callSites": [
+        "supabase/functions/send-notification/index.ts:148",
+        "supabase/functions/send-notification/index.ts:159"
       ]
     },
     {
@@ -5114,6 +5265,19 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.tbl.leagues->pg.enforce_leagues_member_update_columns",
+      "from": "tbl.leagues",
+      "to": "pg.enforce_leagues_member_update_columns",
+      "protocol": "pg-trigger",
+      "payload": "trigger on leagues",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20260925000000_leagues_member_draft_complete_column_guard.sql:161"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.tbl.leagues->pg.is_commissioner#rls",
       "from": "tbl.leagues",
       "to": "pg.is_commissioner",
@@ -5312,7 +5476,7 @@
       "payload": ".from('league_members').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/create-league.tsx:158"
+        "apps/mobile/app/create-league.tsx:150"
       ]
     },
     {
@@ -5325,7 +5489,7 @@
       "payload": ".from('leagues').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/create-league.tsx:132"
+        "apps/mobile/app/create-league.tsx:124"
       ]
     },
     {
@@ -5625,7 +5789,7 @@
         "user_id, role, joined_at"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/leagues.tsx:97"
+        "apps/mobile/app/(tabs)/leagues.tsx:89"
       ]
     },
     {
@@ -5638,7 +5802,7 @@
       "payload": ".from('league_members').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/(tabs)/leagues.tsx:240"
+        "apps/mobile/app/(tabs)/leagues.tsx:232"
       ]
     },
     {
@@ -5651,7 +5815,7 @@
       "payload": ".from('leagues').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/(tabs)/leagues.tsx:209"
+        "apps/mobile/app/(tabs)/leagues.tsx:201"
       ]
     },
     {
@@ -5666,7 +5830,7 @@
         "id, username"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/leagues.tsx:105"
+        "apps/mobile/app/(tabs)/leagues.tsx:97"
       ]
     },
     {
@@ -5777,16 +5941,39 @@
     {
       "annotation": null,
       "verified": true,
-      "id": "e.ui.notifications->tbl.user_profiles",
+      "id": "e.ui.notifications->fn.send-notification",
       "from": "ui.notifications",
-      "to": "tbl.user_profiles",
-      "protocol": "postgrest-select",
-      "payload": ".from('user_profiles').select('expo_push_token, notifications_enabled')",
-      "columns": [
-        "expo_push_token, notifications_enabled"
-      ],
+      "to": "fn.send-notification",
+      "protocol": "https-invoke",
+      "payload": "functions.invoke('send-notification')",
       "callSites": [
-        "apps/mobile/lib/notifications.ts:185"
+        "apps/mobile/lib/notifications.ts:167"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.notifications->tbl.push_tokens#delete",
+      "from": "ui.notifications",
+      "to": "tbl.push_tokens",
+      "protocol": "postgrest-delete",
+      "payload": ".from('push_tokens').delete()",
+      "columns": [],
+      "callSites": [
+        "apps/mobile/lib/notifications.ts:94"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.notifications->tbl.push_tokens#upsert",
+      "from": "ui.notifications",
+      "to": "tbl.push_tokens",
+      "protocol": "postgrest-upsert",
+      "payload": ".from('push_tokens').upsert()",
+      "columns": [],
+      "callSites": [
+        "apps/mobile/lib/notifications.ts:67"
       ]
     },
     {
@@ -5799,8 +5986,8 @@
       "payload": ".from('user_profiles').update()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/notifications.ts:62",
-        "apps/mobile/lib/notifications.ts:85"
+        "apps/mobile/lib/notifications.ts:72",
+        "apps/mobile/lib/notifications.ts:97"
       ]
     },
     {
@@ -7638,6 +7825,16 @@
   ],
   "drift": [
     {
+      "node": "pg.enforce_leagues_member_update_columns",
+      "label": "enforce_leagues_member_update_columns()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
       "node": "pg.restrict_new_signups",
       "label": "restrict_new_signups()",
       "groupKey": "existence",
@@ -7941,6 +8138,12 @@
       "resolve": "Re-capture the snapshot, or confirm the migration was applied."
     },
     {
+      "scope": "pg.enforce_leagues_member_update_columns",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
       "scope": "tbl.broker_credentials",
       "claim": "table exists in prod",
       "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
@@ -7963,17 +8166,23 @@
       "claim": "table exists in prod",
       "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
       "resolve": "Re-capture the snapshot."
+    },
+    {
+      "scope": "tbl.push_tokens",
+      "claim": "table exists in prod",
+      "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot."
     }
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 110,
-    "edges": 240,
+    "nodes": 113,
+    "edges": 248,
     "flows": 8,
-    "drift": 20,
-    "driftHigh": 2,
+    "drift": 21,
+    "driftHigh": 3,
     "deadCode": 11,
-    "unverified": 5
+    "unverified": 7
   },
   "sourceIndex": {
     "edgeFunctions": [
@@ -7986,6 +8195,7 @@
       "quote[]",
       "record-trade[]",
       "refresh-symbols[]",
+      "send-notification[]",
       "snapshot-week-end[close.ts]",
       "snapshot-week-start[plan.ts]",
       "symbol-name[]",
@@ -8006,6 +8216,7 @@
       "apps/mobile/components/TradeModal.tsx:209 -> quote",
       "apps/mobile/components/TradeModal.tsx:233 -> symbol-name",
       "apps/mobile/components/TradeModal.tsx:314 -> record-trade",
+      "apps/mobile/lib/notifications.ts:167 -> send-notification",
       "apps/mobile/lib/useHistoricalPL.ts:77 -> historical-bars",
       "apps/mobile/lib/useStockNames.ts:13 -> symbol-name",
       "apps/mobile/lib/useStockPrices.ts:32 -> ticker-quotes",
@@ -8037,6 +8248,8 @@
       "supabase/functions/process-week-results/index.ts:800 -> complete_league_season",
       "supabase/functions/record-trade/index.ts:66 -> check_and_bump_rate_limit",
       "supabase/functions/record-trade/index.ts:69 -> check_and_bump_rate_limit",
+      "supabase/functions/send-notification/index.ts:101 -> check_and_bump_rate_limit",
+      "supabase/functions/send-notification/index.ts:104 -> check_and_bump_rate_limit",
       "supabase/functions/snapshot-week-end/index.ts:100 -> schedule_snapshot_retry",
       "supabase/functions/snapshot-week-start/index.ts:135 -> schedule_snapshot_retry",
       "supabase/functions/validate-and-record-pick/index.ts:75 -> check_and_bump_rate_limit",
@@ -8052,10 +8265,10 @@
       "apps/mobile/app/(tabs)/league.tsx:125 -> matchups.select",
       "apps/mobile/app/(tabs)/league.tsx:140 -> league_seasons.select",
       "apps/mobile/app/(tabs)/league.tsx:166 -> user_profiles.select",
-      "apps/mobile/app/(tabs)/leagues.tsx:105 -> user_profiles.select",
-      "apps/mobile/app/(tabs)/leagues.tsx:209 -> leagues.insert",
-      "apps/mobile/app/(tabs)/leagues.tsx:240 -> league_members.insert",
-      "apps/mobile/app/(tabs)/leagues.tsx:97 -> league_members.select",
+      "apps/mobile/app/(tabs)/leagues.tsx:201 -> leagues.insert",
+      "apps/mobile/app/(tabs)/leagues.tsx:232 -> league_members.insert",
+      "apps/mobile/app/(tabs)/leagues.tsx:89 -> league_members.select",
+      "apps/mobile/app/(tabs)/leagues.tsx:97 -> user_profiles.select",
       "apps/mobile/app/(tabs)/matchup.tsx:150 -> drafts.select",
       "apps/mobile/app/(tabs)/matchup.tsx:156 -> trades.select",
       "apps/mobile/app/(tabs)/matchup.tsx:212 -> matchups.select",
@@ -8066,8 +8279,8 @@
       "apps/mobile/app/(tabs)/matchup.tsx:312 -> week_snapshots.select",
       "apps/mobile/app/(tabs)/profile.tsx:43 -> user_profiles.select",
       "apps/mobile/app/(tabs)/profile.tsx:87 -> user_profiles.upsert",
-      "apps/mobile/app/create-league.tsx:132 -> leagues.insert",
-      "apps/mobile/app/create-league.tsx:158 -> league_members.insert",
+      "apps/mobile/app/create-league.tsx:124 -> leagues.insert",
+      "apps/mobile/app/create-league.tsx:150 -> league_members.insert",
       "apps/mobile/app/league-settings.tsx:136 -> leagues.update",
       "apps/mobile/app/login.tsx:71 -> user_profiles.upsert",
       "apps/mobile/app/player-portfolio.tsx:116 -> user_profiles.select",
@@ -8092,9 +8305,10 @@
       "apps/mobile/lib/categoryData.ts:64 -> categories.select",
       "apps/mobile/lib/categoryData.ts:83 -> symbol_category_overrides.select",
       "apps/mobile/lib/categoryData.ts:94 -> symbols.select",
-      "apps/mobile/lib/notifications.ts:185 -> user_profiles.select",
-      "apps/mobile/lib/notifications.ts:62 -> user_profiles.update",
-      "apps/mobile/lib/notifications.ts:85 -> user_profiles.update",
+      "apps/mobile/lib/notifications.ts:67 -> push_tokens.upsert",
+      "apps/mobile/lib/notifications.ts:72 -> user_profiles.update",
+      "apps/mobile/lib/notifications.ts:94 -> push_tokens.delete",
+      "apps/mobile/lib/notifications.ts:97 -> user_profiles.update",
       "apps/mobile/lib/useHomeData.ts:198 -> user_profiles.select",
       "apps/mobile/lib/useHomeData.ts:216 -> drafts.select",
       "apps/mobile/lib/useHomeData.ts:222 -> trades.select",
@@ -8210,7 +8424,13 @@
       "supabase/functions/record-trade/index.ts:178 -> league_draft_slots.select",
       "supabase/functions/record-trade/index.ts:203 -> symbols.select",
       "supabase/functions/record-trade/index.ts:238 -> trades.insert",
-      "supabase/functions/refresh-symbols/index.ts:131 -> symbols.upsert",
+      "supabase/functions/refresh-symbols/index.ts:171 -> symbols.upsert",
+      "supabase/functions/send-notification/index.ts:148 -> user_profiles.select",
+      "supabase/functions/send-notification/index.ts:153 -> push_tokens.select",
+      "supabase/functions/send-notification/index.ts:159 -> user_profiles.select",
+      "supabase/functions/send-notification/index.ts:214 -> league_members.select",
+      "supabase/functions/send-notification/index.ts:220 -> league_members.select",
+      "supabase/functions/send-notification/index.ts:229 -> leagues.select",
       "supabase/functions/snapshot-week-end/index.ts:266 -> leagues.select",
       "supabase/functions/snapshot-week-end/index.ts:299 -> week_snapshots.select",
       "supabase/functions/snapshot-week-end/index.ts:318 -> matchups.select",
@@ -8318,7 +8538,9 @@
       "20260811000008_schedule_enrich_symbols.sql",
       "20260811000009_drop_leagues_salary_cap_limit.sql",
       "20260815000000_signup_gate.sql",
-      "20260816000000_leagues_allow_undraftable.sql"
+      "20260816000000_leagues_allow_undraftable.sql",
+      "20260925000000_leagues_member_draft_complete_column_guard.sql",
+      "20260925000001_tighten_league_standings_insert.sql"
     ],
     "config": [
       "enrich-symbols=false",
@@ -8329,7 +8551,8 @@
       "process-week-results=false",
       "quote=true",
       "record-trade=true",
-      "refresh-symbols=true",
+      "refresh-symbols=false",
+      "send-notification=true",
       "snapshot-week-end=false",
       "snapshot-week-start=false",
       "symbol-name=true",

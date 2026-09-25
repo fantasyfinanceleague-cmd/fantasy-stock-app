@@ -1,0 +1,24 @@
+# GitGuardian scan config. Mirrors the .gitleaks.toml allowlist rationale for the
+# ONE known-safe value both scanners see: the Supabase PUBLISHABLE ANON KEY.
+#
+# WHY THIS IS SAFE (verified, not assumed): the JWT's payload decodes to
+# role=anon, iss=supabase, ref=haiaaifjcclsvmkfqgmd. The anon key ships in the
+# client bundle by design; RLS is the real security boundary. It is NOT a
+# service-role key. If a future match here decodes to role=service_role, that is
+# a real incident — remove this ignore and rotate.
+#
+# It lives in .gitleaks.toml's [allowlist] regexes so gitleaks ignores the same
+# key where it legitimately appears (the two legacy cron migrations) WITHOUT
+# allowlisting those whole files. GitGuardian does not read gitleaks config, so
+# it flags the literal; this file tells GitGuardian the same thing.
+#
+# NOTE: the GitGuardian GitHub App resolves incidents from its dashboard; if the
+# check does not clear from this file alone, dismiss incident 23994355 there as a
+# known false positive. Do NOT rotate and do NOT rewrite history.
+version: 2
+secret:
+  ignored-matches:
+    - name: "Supabase publishable anon key (public by design; RLS is the boundary; stored in .gitleaks.toml allowlist)"
+      match: 22be091eb1515c4742fb8af5d9628e841d913040dd8879e762889df142789aaa
+  ignored-paths:
+    - ".gitleaks.toml"
