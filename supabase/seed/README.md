@@ -1,13 +1,16 @@
-# Simulator seed data (Phase 4 content — REVIEW REQUIRED before merge)
+# Simulator seed data (curated categories)
+
+**Status: reviewed, merged, and applied in prod** (seed migration
+`20260811000006_seed_categories.sql`, confirmed in `schema_migrations` 2026-09-24).
+To change categories, edit the JSON here and regenerate the migration (see *Apply
+path* below) — never edit the generated `.sql` by hand.
 
 These files carry the Stockpile-curated category data that layers over vendor
-GICS taxonomy (DR-001). The **schema** for their target tables ships in Phase 2
+industry taxonomy (DR-001). The **schema** for their target tables shipped in Phase 2
 (`supabase/migrations/20260810000003_create_categories_tables.sql`); the **data**
-below is authored and reviewed in **Phase 4** (SIMULATOR_MIGRATION_SPEC lines
-89–94). The stub files exist now so the shape is fixed and code can reference
-stable slugs; they are intentionally near-empty until Phase 4.
+was authored and reviewed in Phase 4.
 
-| Stub file | Target table | Phase 4 content |
+| File | Target table | Content |
 |---|---|---|
 | `categories.json` | `categories` | ~10 curated, player-intuitive categories (incl. the `is_misc` fallback). |
 | `category_rules.json` | `category_rules` | ~160 GICS-industry → category rows; total coverage of the vendor taxonomy. |
@@ -54,3 +57,12 @@ label; games land in Retail via "Leisure Products").
 **Apply path:** `node scripts/gen-category-seed-migration.mjs` regenerates
 `supabase/migrations/20260811000006_seed_categories.sql` (idempotent, additive
 only — see the generator header). Never edit the .sql by hand.
+
+> ⚠️ **`20260811000006` is already applied, and `supabase db push` never re-runs an
+> applied version.** Re-running the generator after editing the JSONs rewrites that
+> file, and `db push` then reports "up to date" while **none of your curation reaches
+> prod**. Until the generator takes an output path, ship curation changes as a NEW
+> timestamped migration: run the generator, `git mv` its output to a fresh
+> `supabase/migrations/<timestamp>_reseed_categories.sql`, restore the original
+> `20260811000006` from git, then push. The statements are upserts, so re-applying
+> the full seed converges. Effect-verify with row counts, not the push output.

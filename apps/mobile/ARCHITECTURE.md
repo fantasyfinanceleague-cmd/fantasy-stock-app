@@ -1,730 +1,199 @@
-# Stockpile Mobile App - Architecture Guide
+# Stockpile Mobile App — Architecture Guide
 
-This document provides a comprehensive overview of the mobile app architecture for developers and AI assistants working on the codebase.
+Overview of the mobile app for developers and AI assistants. Mobile is Stockpile's
+primary product surface. For project-wide status see [`docs/STATUS.md`](../../docs/STATUS.md);
+for backend flows, open the generated map at `docs/architecture/architecture.html`.
 
----
-
-## Table of Contents
-
-1. [Tech Stack](#tech-stack)
-2. [Project Structure](#project-structure)
-3. [Navigation & Routing](#navigation--routing)
-4. [State Management](#state-management)
-5. [Screens](#screens)
-6. [Components](#components)
-7. [Data Layer & Hooks](#data-layer--hooks)
-8. [Styling & Theme](#styling--theme)
-9. [Authentication](#authentication)
-10. [Real-Time Features](#real-time-features)
-11. [Push Notifications](#push-notifications)
-12. [Key Patterns](#key-patterns)
-13. [Database Schema Reference](#database-schema-reference)
+> **Pending branch:** `ui/design-system-pass-v2` (unmerged) adds `components/ui/`
+> primitives (`Button`, `Card`, `Screen`, `SectionLabel`, `Banner`) and converts most
+> screens to them. Once it merges, update the *Styling* section below.
 
 ---
 
-## Tech Stack
+## Tech stack
 
 | Technology | Purpose |
-|------------|---------|
-| React Native | Cross-platform mobile framework |
-| Expo | Development platform & build tools |
-| Expo Router | File-based navigation |
-| Supabase | Auth, Database, Real-time, Edge Functions |
-| TypeScript | Type safety |
-| AsyncStorage | Session persistence |
+|---|---|
+| React Native 0.81 / React 19 | Cross-platform UI |
+| Expo SDK 54 + Expo Router | Tooling, file-based navigation |
+| TypeScript 5.9 | Types |
+| Supabase JS | Auth (AsyncStorage session), Postgres via RLS, Realtime, Edge Functions |
+| EAS Build + EAS Update | Builds and OTA updates (`eas.json`: `development`, `preview`, `production` channels) |
+| ESLint (flat config) | `npm run lint` — see the lint conventions in the root `CLAUDE.md` |
 
 ---
 
-## Project Structure
+## Project structure
 
 ```
 apps/mobile/
-├── app/                          # Expo Router pages (file-based routing)
-│   ├── _layout.tsx              # Root layout with LeagueProvider and DarkTheme
-│   ├── login.tsx                # Authentication screen
-│   ├── (tabs)/                  # Tabbed navigation group
-│   │   ├── _layout.tsx          # Tab bar configuration
-│   │   ├── index.tsx            # Home - league carousel, past matchups
-│   │   ├── portfolio.tsx        # Holdings, P&L, trading
-│   │   ├── matchup.tsx          # Weekly matchup comparison
-│   │   ├── draft.tsx            # Snake draft interface
-│   │   ├── league.tsx           # Standings, schedule, history
-│   │   ├── leagues.tsx          # League browser (hidden from tabs)
-│   │   └── profile.tsx          # User settings, Alpaca credentials
-│   ├── create-league.tsx        # Multi-step league creation wizard
-│   ├── join-league.tsx          # Join league by invite code
-│   ├── league-settings.tsx      # Commissioner settings
-│   ├── player-portfolio.tsx     # View another player's portfolio
-│   └── modal.tsx                # Generic modal template
-│
-├── components/                   # Reusable UI components
-│   ├── LeagueSwitcher.tsx       # League dropdown header
-│   ├── LeagueCarousel.tsx       # Swipeable league cards
-│   ├── WeekNavigator.tsx        # Week navigation arrows
-│   ├── WeekIndicator.tsx        # Week number + status
-│   ├── StatusBadge.tsx          # Final/Live/Holiday badges
-│   ├── PortfolioChart.tsx       # Chart visualization
-│   ├── Skeleton.tsx             # Loading placeholders
-│   └── ...
-│
-├── lib/                          # Business logic and hooks
-│   ├── LeagueContext.tsx        # Global league state management
-│   ├── useAuth.ts               # Auth state and sign in/out
-│   ├── useLeagues.ts            # Fetch user's leagues
-│   ├── usePortfolio.ts          # Holdings and P&L calculations
-│   ├── useStockPrices.ts        # Price fetching with caching
-│   ├── supabase.ts              # Supabase client initialization
-│   ├── notifications.ts         # Push notification service
-│   ├── weekStatus.ts            # Week/season status logic
-│   └── contentModeration.ts     # Username/league name validation
-│
+├── app/                         # Expo Router routes
+│   ├── _layout.tsx              # Root: auth gate, LeagueProvider, notification deep links
+│   ├── login.tsx                # Sign in / sign up (shared password policy)
+│   ├── forgot-password.tsx      # Request reset email
+│   ├── reset-password.tsx       # Deep-link target for the reset email
+│   ├── (tabs)/
+│   │   ├── _layout.tsx          # Tab bar (redirects to /login when signed out)
+│   │   ├── index.tsx            # Home — cross-league overview + performance chart
+│   │   ├── draft.tsx            # Snake draft
+│   │   ├── portfolio.tsx        # Holdings, P/L, buy/sell (TradeModal)
+│   │   ├── matchup.tsx          # Weekly head-to-head
+│   │   ├── league.tsx           # Standings, schedule, history, join-by-code entry
+│   │   ├── profile.tsx          # Avatar, username, password, sign out
+│   │   └── leagues.tsx          # League browser (hidden from tab bar: href: null)
+│   ├── create-league.tsx        # Multi-step wizard incl. stake mode + slot builder
+│   ├── join-league.tsx          # Preview + join by invite code
+│   ├── league-settings.tsx      # Commissioner settings, start new season
+│   ├── player-portfolio.tsx     # Another member's holdings
+│   ├── trade-history.tsx        # User's trades
+│   └── modal.tsx                # Expo template modal
+├── components/                  # TradeModal, SlotBuilder, LeagueSwitcher, WeekNavigator,
+│                                # PerformanceChart, PortfolioChart, PLBreakdownModal,
+│                                # StatusBadge, Skeleton, … (__tests__/ is the Expo
+│                                # template placeholder; no test runner is configured)
+├── lib/                         # Context, hooks, data helpers (see below)
 ├── constants/
-│   └── Colors.ts                # Theme colors (dark mode)
-│
-├── app.json                     # Expo configuration
-├── eas.json                     # EAS Build configuration
-└── package.json
+│   ├── theme/                   # Design tokens: colors, typography, spacing, shadows
+│   ├── Colors.ts                # Back-compat alias layer over theme/colors (light theme)
+│   └── passwordRules.ts         # MANUAL mirror of packages/shared PASSWORD_REQUIREMENTS
+│                                # (Metro can't resolve the workspace package) — keep in sync
+├── app.json / eas.json
+└── eslint.config.mjs
 ```
+
+`components/LeagueCarousel.tsx` is **not mounted anywhere** (orphaned by the Home
+rebuild). It is left in place because the unmerged design-system branch still edits
+it; delete it after that branch lands.
 
 ---
 
-## Navigation & Routing
+## Navigation
 
-### Expo Router (File-Based)
+- **Auth gate:** `app/_layout.tsx` renders only the auth stack (`login`,
+  `forgot-password`, `reset-password`) when signed out; `(tabs)/_layout.tsx` also
+  redirects to `/login`.
+- **Tabs (visible):** Home, Draft, Portfolio, Matchup, League, Profile.
+  `leagues.tsx` is routable but hidden (`href: null`).
+- **Modals / full-screen stacks:** `create-league`, `join-league`, `league-settings`,
+  `player-portfolio`, `trade-history`.
+- **Deep links:** scheme `fantasystockapp://`; notification taps route by
+  `data.screen` to Draft, Matchup, or (default) League; password-reset links land on
+  `reset-password`.
 
-Routes are defined by file structure in `app/` directory.
-
-### Root Layout (`app/_layout.tsx`)
-
-Wraps the entire app with:
-- `LeagueProvider` - global league state
-- `DarkTheme` - dark mode styling
-- Notification listeners for push notifications
-
-```typescript
-// Stack routes defined in root layout
-<Stack>
-  <Stack.Screen name="(tabs)" />           // Main tab interface
-  <Stack.Screen name="login" />            // Auth modal
-  <Stack.Screen name="create-league" />    // Full-screen modal
-  <Stack.Screen name="join-league" />      // Full-screen modal
-  <Stack.Screen name="league-settings" />  // Modal
-  <Stack.Screen name="player-portfolio" /> // Modal
-</Stack>
-```
-
-### Tab Navigation (`app/(tabs)/_layout.tsx`)
-
-6 tabs configured (1 hidden):
-
-| Tab | File | Icon | Description |
-|-----|------|------|-------------|
-| Home | `index.tsx` | `home` | Dashboard with league carousel |
-| Draft | `draft.tsx` | `gavel` | Snake draft interface |
-| Portfolio | `portfolio.tsx` | `pie-chart` | Holdings & P&L |
-| Matchup | `matchup.tsx` | `git-compare` | Weekly head-to-head |
-| League | `league.tsx` | `trophy` | Standings & history |
-| Profile | `profile.tsx` | `user` | Settings |
-| *(hidden)* Leagues | `leagues.tsx` | - | League browser |
-
-### Navigation Patterns
-
-```typescript
-// Navigate to tab
-router.push('/(tabs)/matchup')
-
-// Navigate with params
-router.push({ pathname: '/(tabs)/matchup', params: { matchupId, visibleWeek } })
-
-// Open modal
-router.push('/create-league')
-
-// Deep link from notification
-router.push('/(tabs)/draft')
-```
+> **Reachability rule** (from `CLAUDE.md`): before adding or citing a button, confirm
+> its host screen is mounted *and* reachable in the state that matters — not just that
+> the file exists.
 
 ---
 
-## State Management
+## State and data
 
-### LeagueContext (`lib/LeagueContext.tsx`)
+### `LeagueContext` (`lib/LeagueContext.tsx`)
+Global league state: loads the user's memberships (`league_members` → `leagues`),
+tracks `activeLeagueId`, exposes `activeLeague`, `leagues`, and a refresh. Every tab's
+`LeagueSwitcher` reads and writes it.
 
-Central state for league selection across the app.
+### Hooks and helpers (`lib/`)
 
-```typescript
-interface LeagueContextType {
-  leagues: League[]              // All leagues user belongs to
-  activeLeagueId: string | null  // Currently selected league ID
-  activeLeague: League | null    // Computed from activeLeagueId
-  loading: boolean
-  setActiveLeagueId: (id: string | null) => void
-  refresh: () => Promise<void>
-}
-```
+| File | Responsibility |
+|---|---|
+| `useAuth.ts` | Session state, sign in/out |
+| `useLeagues.ts` | User's leagues (used by the hidden browser) |
+| `useHomeData.ts` | Cross-league Home aggregation: profiles, picks + trades, seasons, standings, matchups |
+| `usePortfolio.ts` | Holdings computed from `drafts` + `trades` (never stored) |
+| `useStockPrices.ts` | Batched prices via `ticker-quotes`, cached |
+| `useHistoricalPL.ts` | Period P/L series via `historical-bars` |
+| `useStockNames.ts` | Company names via `symbol-name`, abbreviated for display |
+| `categoryData.ts` | Stake modes, categories, slot load/save/validation, enrichment progress (mirror of `apps/web/src/utils/categoryData.js`) |
+| `weekStatus.ts`, `marketHours.ts` | Week/season phase and US market-hours logic |
+| `notifications.ts` | Push registration and draft-turn notification |
+| `contentModeration.ts` | Username / league-name validation |
+| `supabase.ts` | Client on the **publishable** key (`EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) |
 
-**Usage:**
-```typescript
-const { activeLeague, setActiveLeagueId, refresh } = useLeagueContext()
-```
+### Where writes go
 
-**Data Flow:**
-1. On mount, fetches user's league memberships from `league_members`
-2. Loads full league details from `leagues` table
-3. Auto-selects first league if none active
-4. Refreshes on auth state changes
+The app does **not** insert picks or trades directly — those RLS policies were dropped
+in Phase 3. All game-state writes that need validation go through edge functions:
 
-### League Interface
+| Action | Path |
+|---|---|
+| Draft pick | `validate-and-record-pick` (turn, uniqueness, draftable universe, slot category/price, stake budget; marks the draft complete on the final pick) |
+| Buy / sell | `record-trade` via `TradeModal` |
+| Join league | `preview-league` → `join-league` |
+| Prices / search / names / history | `quote`, `ticker-quotes`, `symbols-search`, `symbol-name`, `historical-bars` |
+| Start new season | `start_new_league_season` RPC (commissioner-gated server-side) |
 
-```typescript
-interface League {
-  id: string
-  name: string
-  invite_code: string
-  commissioner_id: string
-  draft_status: 'not_started' | 'in_progress' | 'completed'
-  draft_date: string | null
-  budget_mode: 'budget' | 'no-budget'
-  budget_amount: number | null
-  league_type: 'duration' | 'matchup'
-  current_week: number
-  num_weeks?: number
-  num_rounds: number
-  num_participants: number
-  salary_cap_limit: number | null
-  duration_days: number
-  playoff_teams: number
-  current_season_id: string | null
-  season_status: 'active' | 'completed'
-}
+Direct table writes that remain: league create/update and slot definitions
+(`leagues`, `league_draft_slots`), profile fields (`user_profiles`), and push-token
+registration.
 
-interface LeagueSeason {
-  id: string
-  league_id: string
-  season_number: number
-  champion_user_id: string | null
-  runner_up_user_id: string | null
-  started_at: string
-  completed_at: string | null
-  final_standings: FinalStanding[] | null
-}
-```
+> **Known gap:** mobile never generates the season schedule (`matchups`,
+> initial `league_standings`, league start/end dates) when a draft completes — only
+> the web client does. See `docs/STATUS.md` §4 defect 1.
+
+### Realtime
+- `draft.tsx` subscribes to `drafts:<leagueId>` for live picks.
+- `league.tsx` subscribes to `standings-<leagueId>` for rank changes.
 
 ---
 
-## Screens
+## Screens (current behaviour)
 
-### Home (`app/(tabs)/index.tsx`)
-
-**Purpose:** Dashboard and league overview
-
-**Features:**
-- League carousel (swipeable cards)
-- Portfolio summary for active league
-- Past 5 matchup results
-- "Create or Join" prompt on last card
-
-**Data Fetched:**
-- Matchups for current user
-- League seasons for champion info
-- User profiles for display names
-
-### Portfolio (`app/(tabs)/portfolio.tsx`)
-
-**Purpose:** View holdings and performance
-
-**Features:**
-- LeagueSwitcher header
-- Portfolio metrics (total value, budget remaining)
-- P&L summary with gain/loss
-- Holdings list with:
-  - Symbol, quantity, cost basis, current price
-  - Per-holding gain/loss (color coded)
-  - Buy/Sell buttons (opens web app)
-
-**Data Flow:**
-```
-drafts + trades → usePortfolio → holdings → + prices → P&L display
-```
-
-### Matchup (`app/(tabs)/matchup.tsx`)
-
-**Purpose:** Weekly head-to-head comparison
-
-**Features:**
-- Week navigator (browse past weeks)
-- Team comparison scoreboard
-- Holdings comparison by symbol
-- Status badge (Live/Final)
-- Accepts `matchupId` param to show specific matchup
-
-**Params:**
-```typescript
-// View specific matchup
-router.push({ pathname: '/(tabs)/matchup', params: { matchupId: '...', visibleWeek: 3 } })
-```
-
-### Draft (`app/(tabs)/draft.tsx`)
-
-**Purpose:** Snake draft interface
-
-**Features:**
-- Stock symbol search
-- Current turn indicator
-- Round/pick display
-- Pick history by round
-- Budget tracking
-- Real-time updates via subscription
-
-**Snake Draft Logic:**
-- Odd rounds: forward order (1→N)
-- Even rounds: reverse order (N→1)
-- Total picks: `numTeams × numRounds`
-
-### League (`app/(tabs)/league.tsx`)
-
-**Purpose:** Standings, schedule, and history
-
-**Sections (collapsible):**
-1. **Standings** - Current rankings with W-L-T, KPI cards
-2. **Schedule** - Player picker, view any user's matchup schedule
-3. **History** - ESPN-style past seasons with your finish
-
-**Real-Time:**
-- Subscribes to `league_standings` changes
-- Animated rank changes
-
-### Profile (`app/(tabs)/profile.tsx`)
-
-**Purpose:** User settings
-
-**Features:**
-- Avatar emoji picker (32 options)
-- Username editing
-- Password change
-- Alpaca broker credentials
-- Sign out
+- **Home** — cross-league overview built from `useHomeData`, portfolio performance
+  chart with period-relative P/L (`PerformanceChart` + `useHistoricalPL`).
+- **Draft** — snake order (commissioner first, then sorted — matches the server),
+  category badges, league slot panel, stake-mode budget display; blocks drafting when
+  a league has no `stake_mode`.
+- **Portfolio** — holdings, cost basis, P/L; buy/sell in-app through `TradeModal`
+  (symbol search autocomplete; server-validated).
+- **Matchup** — weekly head-to-head with week navigation and live/final status.
+- **League** — standings (realtime), schedule by player, season history, join-by-code
+  entry point.
+- **Profile** — avatar emoji, username, password change, sign out. (A re-auth gate on
+  password change — finding F13 — is on the unmerged PR #9 branch.)
+- **Create league / settings** — stake mode picker (fixed notional / price tiers /
+  budget cap), `SlotBuilder` with feasibility warnings, draftable-universe override
+  (`allow_undraftable`).
 
 ---
 
-## Components
+## Push notifications
 
-### LeagueSwitcher (`components/LeagueSwitcher.tsx`)
-
-Dropdown header for quick league switching.
-
-```typescript
-<LeagueSwitcher />
-```
-
-**Used in:** Portfolio, Matchup, Draft, League screens
-
-**Features:**
-- Shows league name + icon emoji
-- Dropdown modal with all leagues
-- Active league highlighted
-- Sticky positioning
-
-### LeagueCarousel (`components/LeagueCarousel.tsx`)
-
-Swipeable league cards for Home screen.
-
-```typescript
-<LeagueCarousel onCreatePress={() => router.push('/create-league')} />
-```
-
-**Features:**
-- League icon, name, season info
-- Current record display
-- Champion/runner-up badges
-- Share button, settings button (commissioner)
-- "Create or Join" card at end
-- Page indicators
-
-### WeekNavigator (`components/WeekNavigator.tsx`)
-
-Navigate between matchup weeks.
-
-```typescript
-<WeekNavigator
-  currentWeek={3}
-  totalWeeks={12}
-  visibleWeek={visibleWeek}
-  onWeekChange={setVisibleWeek}
-/>
-```
-
-### StatusBadge (`components/StatusBadge.tsx`)
-
-Visual status indicators.
-
-```typescript
-<StatusBadge type="live" />   // Red, animated pulse
-<StatusBadge type="final" />  // Green
-<StatusBadge type="holiday" /> // Amber
-<StatusBadge type="champion" /> // Gold
-```
-
-### Skeleton (`components/Skeleton.tsx`)
-
-Loading placeholders with shimmer animation.
-
-```typescript
-<Skeleton width={100} height={20} />
-<SkeletonCard />
-<SkeletonHolding />
-```
+- Expo push; EAS project ID `762da87e-578d-4041-ae85-37d8aa312187`.
+- Tokens are stored in `user_profiles.expo_push_token`, and the draft-turn notification
+  is sent **client-side** to the next picker's token. This is security finding **F8**
+  (tokens readable by any authenticated user); the fix moves tokens to an owner-only
+  `push_tokens` table and sending to the `send-notification` edge function (PR #9 +
+  `docs/migrations/STAGED_L2_push_token_capability.sql`).
 
 ---
 
-## Data Layer & Hooks
+## Styling
 
-### useAuth (`lib/useAuth.ts`)
-
-```typescript
-const { session, user, loading, signOut } = useAuth()
-```
-
-**Responsibilities:**
-- Initialize session from AsyncStorage
-- Listen to auth state changes
-- Register/remove push tokens
-- Handle sign out cleanup
-
-### usePortfolio (`lib/usePortfolio.ts`)
-
-```typescript
-const { holdings, portfolioSummary, loading, refresh } = usePortfolio(leagueId)
-```
-
-**Returns:**
-```typescript
-interface Holding {
-  symbol: string
-  quantity: number
-  avgEntryPrice: number
-  totalCost: number
-  currentPrice: number | null
-  currentValue: number | null
-  gainLoss: number | null
-  gainLossPercent: number | null
-}
-
-interface PortfolioSummary {
-  totalCost: number
-  totalValue: number
-  totalGainLoss: number
-  totalGainLossPercent: number
-  holdingsCount: number
-}
-```
-
-**Logic:**
-- Fetches draft picks and trades
-- Aggregates by symbol
-- Calculates cost basis (handles partial sells)
-- Merges with live prices
-
-### useStockPrices (`lib/useStockPrices.ts`)
-
-```typescript
-const { prices, loading, getPrice, refresh } = useStockPrices(symbols)
-```
-
-**Features:**
-- 2-minute client-side cache
-- Rate limiting (100ms between requests)
-- Max 3 concurrent requests
-- Calls `ticker-quotes` edge function
-
-**Returns:**
-```typescript
-interface StockPrice {
-  symbol: string
-  price: number
-  prevClose: number | null
-  changePercent: number | null
-  fetchedAt: number
-}
-```
-
-### weekStatus (`lib/weekStatus.ts`)
-
-Week and market status calculations.
-
-```typescript
-const status = getWeekStatus(leagueStartDate, currentWeek)
-// Returns: 'active' | 'final' | 'pending_results' | 'season_complete'
-```
-
-**Features:**
-- US market holiday detection
-- Week timing calculations
-- Countdown to next week
+- Light theme. Tokens live in `constants/theme/`; `constants/Colors.ts` maps legacy
+  `Colors.xxx` keys onto them.
+- Conventions enforced in review (see the design-system branch): no raw hex outside
+  `constants/theme/colors.ts`; `fontFamily` (Inter weights) rather than `fontWeight`;
+  `fontVariant: ['tabular-nums']` for money.
+- RN `StyleSheet.create` stays at the bottom of each file with the file-top
+  `no-use-before-define` disable comment — see `CLAUDE.md` → ESLint.
 
 ---
 
-## Styling & Theme
+## Development commands
 
-### Colors (`constants/Colors.ts`)
-
-Dark theme palette:
-
-```typescript
-const Colors = {
-  // Backgrounds
-  background: '#0f172a',      // Main page
-  headerBg: '#111827',        // Headers, tab bar
-  cardBg: '#1e293b',          // Cards
-  inputBg: '#1e293b',         // Form inputs
-
-  // Text
-  textPrimary: '#ffffff',
-  textSecondary: '#e5e7eb',
-  textMuted: '#9ca3af',
-
-  // Accents
-  primary: '#3b82f6',         // Blue
-  primaryBg: 'rgba(59, 130, 246, 0.15)',
-  success: '#16a34a',         // Green (gains)
-  error: '#ef4444',           // Red (losses)
-  warning: '#f59e0b',         // Amber
-
-  // Special
-  gold: '#fbbf24',            // Champion
-  goldBg: 'rgba(251, 191, 36, 0.15)',
-  silver: '#C0C0C0',          // Runner-up
-  silverBg: 'rgba(192, 192, 192, 0.15)',
-
-  // Borders
-  border: '#374151',
-  borderLight: '#4b5563',
-}
-```
-
-### Styling Patterns
-
-```typescript
-// Component-scoped styles
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  card: {
-    backgroundColor: Colors.cardBg,
-    borderRadius: 12,
-    padding: 16,
-  },
-})
-
-// Dynamic inline styles
-<Text style={{ color: gainLoss >= 0 ? Colors.success : Colors.error }}>
-  {gainLoss}
-</Text>
-```
-
-### Typography
-
-- System fonts + SpaceMono for code
-- Sizes: 11 (labels), 12-14 (body), 16-18 (headings), 28+ (titles)
-- Weights: 400, 500, 600, 700
-
----
-
-## Authentication
-
-### Login Flow (`app/login.tsx`)
-
-1. User enters email/password (or creates account)
-2. Supabase auth creates session
-3. Session stored in AsyncStorage
-4. Push token registered
-5. Navigate to Home
-
-### Session Persistence
-
-```typescript
-// Supabase client config (lib/supabase.ts)
-const supabase = createClient(url, key, {
-  auth: {
-    storage: AsyncStorage,
-    autoRefreshToken: true,
-    persistSession: true,
-    storageKey: 'fantasy-finance-auth',
-  }
-})
-```
-
-### Signup Validation
-
-- Username: 3-20 chars, alphanumeric + underscore
-- Password: 6+ characters
-- Content moderation on username
-- Creates `user_profiles` record
-
----
-
-## Real-Time Features
-
-### Supabase Subscriptions
-
-```typescript
-// Subscribe to standings changes
-const channel = supabase
-  .channel('standings-changes')
-  .on(
-    'postgres_changes',
-    { event: '*', schema: 'public', table: 'league_standings', filter: `league_id=eq.${leagueId}` },
-    (payload) => {
-      // Handle update
-    }
-  )
-  .subscribe()
-
-// Cleanup
-return () => supabase.removeChannel(channel)
-```
-
-**Tables with real-time enabled:**
-- `league_standings` - rank changes
-- `matchups` - score updates
-- `drafts` - draft picks
-
----
-
-## Push Notifications
-
-### Setup (`lib/notifications.ts`)
-
-```typescript
-// Register on login
-await setupPushNotifications(userId)
-
-// Remove on logout
-await removePushToken(userId)
-```
-
-### Notification Types
-
-| Event | Destination | Message |
-|-------|-------------|---------|
-| Draft turn | `/(tabs)/draft` | "It's your turn to pick!" |
-| Matchup result | `/(tabs)/matchup` | "Week X results are in" |
-
-### Configuration
-
-- Uses Expo Push Notifications
-- EAS Project ID: `762da87e-578d-4041-ae85-37d8aa312187`
-- Tokens stored in `user_profiles.expo_push_token`
-
----
-
-## Key Patterns
-
-### 1. Context + Hooks Pattern
-```typescript
-// Provider wraps app
-<LeagueProvider>
-  <App />
-</LeagueProvider>
-
-// Components consume via hook
-const { activeLeague } = useLeagueContext()
-```
-
-### 2. Computed Data Pattern
-Holdings are computed, not stored:
-```typescript
-drafts + trades → aggregation → holdings → + prices → P&L
-```
-
-### 3. Intelligent Caching
-```typescript
-// Check cache before fetching
-if (cache[symbol] && Date.now() - cache[symbol].fetchedAt < TTL) {
-  return cache[symbol]
-}
-```
-
-### 4. Safe Area Handling
-```typescript
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
-
-const insets = useSafeAreaInsets()
-<View style={{ paddingTop: insets.top }}>
-```
-
-### 5. Pull-to-Refresh
-```typescript
-<ScrollView
-  refreshControl={
-    <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-  }
->
-```
-
----
-
-## Database Schema Reference
-
-### Core Tables
-
-| Table | Purpose |
-|-------|---------|
-| `leagues` | League configuration |
-| `league_members` | User memberships |
-| `league_standings` | Win/loss records |
-| `league_seasons` | Multi-season tracking |
-| `matchups` | Weekly matchup results |
-| `drafts` | Draft picks |
-| `trades` | Buy/sell transactions |
-| `user_profiles` | User data, push tokens |
-| `week_snapshots` | Monday/Friday price snapshots |
-
-### Key Relationships
-
-```
-user_profiles
-  └── league_members (user_id)
-        └── leagues (league_id)
-              ├── league_standings
-              ├── league_seasons
-              ├── matchups
-              └── drafts
-                    └── trades
-```
-
-### Edge Functions
-
-| Function | Purpose |
-|----------|---------|
-| `ticker-quotes` | Fetch stock prices |
-| `snapshot-week-start` | Monday price snapshot |
-| `snapshot-week-end` | Friday price snapshot |
-| `process-week-results` | Calculate matchup winners |
-
----
-
-## Development Commands
+Run everything from `apps/mobile/` — running Expo/EAS from the repo root offers to
+create a duplicate project.
 
 ```bash
-# Start development server
-cd apps/mobile
-npx expo start
-
-# Run on iOS simulator
-npx expo run:ios
-
-# Run on Android emulator
-npx expo run:android
-
-# Build development client
-eas build --profile development --platform ios
-
-# Build production
-eas build --profile production --platform all
+npx expo start                                   # dev server (Expo Go / dev client)
+npm run lint                                     # ESLint
+npx tsc --noEmit                                 # type check
+eas build --profile development --platform ios   # dev client
+eas build --profile production --platform all    # store build
+eas update --channel production                  # OTA update
 ```
 
 ---
 
-*Last updated: January 25, 2026*
+*Last updated: 2026-09-24*

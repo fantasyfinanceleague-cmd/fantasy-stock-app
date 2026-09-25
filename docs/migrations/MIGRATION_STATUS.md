@@ -1,5 +1,19 @@
 # Supabase API Key Migration — STATUS
 
+> **Current state (re-synced 2026-09-24):** Phases 0–3b complete. **Phase 4 (disable
+> legacy keys) not started** — its two hard gates (a real mobile trade on the
+> publishable key, and a real mobile draft) are still open; no league has completed a
+> draft in prod since the Phase 3 server-side draft path shipped. Since this file was
+> last updated, the simulator work (DR-001) changed the surface described below:
+> `place-order`, `save-broker-keys`, `get-broker-keys` and `sync-alpaca-orders` are
+> **deleted**, `broker_credentials` is **dropped**, and client draft/trade writes now
+> go through `validate-and-record-pick` / `record-trade` (the direct-insert RLS
+> policies are dropped). The `schedule_snapshot_retry` bug is **fixed**
+> (`20260727000000`), and the `drafts`-RLS (a)/(b) question is **moot** — no client
+> inserts into `drafts` directly any more, and `scripts/test-draft.js` was deleted.
+> Project-wide status: [`../STATUS.md`](../STATUS.md). The body below is the phase
+> record as of Phase 3b.
+
 **This is a living document. Update it at every phase boundary.** It exists so any fresh Claude Code session (or future-you) can get up to speed in 60 seconds. For detailed records, see the per-phase report files referenced below.
 
 Last updated: **Phase 3b COMPLETE & MERGED to main (`42f742b`)** — web app is now on the publishable key in production. Step 5 (Vercel cutover) done & verified: `VITE_SUPABASE_PUBLISHABLE_KEY` added (all envs) → merged → deploy Ready with clean console → old `VITE_SUPABASE_ANON_KEY` removed from Vercel → clean rebuild confirmed. **ALL surfaces (cron, edge functions, scripts, mobile, web) are now off legacy keys.** Phase 4 (disable legacy keys) is **UNBLOCKED on the migration side but STILL gated on 2 mobile write-checks** (real trade + real draft, market/draft hours). Phase 3a merged (`fa1e221`); Phase 2b-2 (cron) merged (`eae20ed`). See `MIGRATION_PHASE_3A_REPORT.md`.
@@ -51,6 +65,12 @@ See `docs/api-keys-inventory.md` for the full location matrix.
 ---
 
 ## Edge functions: migration status
+
+> **2026-09-24:** the lists below are the Phase 3b-era inventory. The current function
+> set and auth model are in [`../STATUS.md`](../STATUS.md) §2 and `supabase/config.toml`.
+> Of the names below, `place-order`, `save-broker-keys`, `get-broker-keys` and
+> `sync-alpaca-orders` no longer exist; `enrich-symbols`, `validate-and-record-pick`,
+> `record-trade`, `preview-league` and `join-league` were added later, all on the new keys.
 
 **Client-invoked (10 total):**
 - ✅ Migrated to new keys: `quote`, `place-order`, `save-broker-keys`, `get-broker-keys`, `refresh-symbols`, `symbols-search`, `symbol-name`
@@ -115,4 +135,5 @@ Spec-driven: Claude (chat) writes a phase spec → hand to Claude Code → Claud
 - **Immediate next action: clear the 2 Phase-4 hard gates (both timing-gated to market/draft hours):** (1) **publishable-key WRITE** — place a real trade in the mobile app **during market hours** (Phase 3a Gate 4 verified reads only; authenticated writes on the publishable key are still UNVERIFIED); (2) **real-app DRAFT** during a draft window — resolves the `drafts`-RLS (a)/(b) question in the gotchas. Both must PASS before Phase 4.
 - **Then Phase 4:** disable legacy keys in the dashboard (one-way door). Do NOT proceed until both gates above are green.
 - **Phase 5 cleanup:** the now-orphaned `service_role_key` vault entry; the USER-UNREACHABLE `verify`/`sync` dead code (+ `ANON_KEY`/`authed` client) in `sync-alpaca-orders`; `.claude/settings.local.json` credentials; git-history scrub.
-- **Separate non-migration task:** fix the pre-existing `schedule_snapshot_retry()` `cron.schedule()` timestamp-overload bug (see gotchas) so the snapshot retry path can fire.
+- ~~**Separate non-migration task:** fix the pre-existing `schedule_snapshot_retry()` `cron.schedule()` timestamp-overload bug~~ — **DONE** (`20260727000000_fix_schedule_snapshot_retry_cron_expression.sql`).
+- **Phase 5 status note (2026-09-24):** `sync-alpaca-orders` (and its dead `verify`/`sync` modes) was deleted outright under DR-001 and its cron unscheduled (`20260808000000`), so that cleanup item is done. Still open: orphaned `service_role_key` vault entry, `.claude/settings.local.json` credentials, the revoked Alpaca pair still stored as `ALPACA_KEY_ID`/`ALPACA_SECRET_KEY` secrets, git-history scrub decision.

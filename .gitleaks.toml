@@ -8,8 +8,8 @@ useDefault = true
 description = """
 Known-safe matches only. The Supabase ANON key is a PUBLISHABLE client key — it
 ships in the web bundle and is designed to be public (RLS is the real boundary),
-so its appearance in templates, EAS build config, a test script, and the legacy
-cron migrations is not a leak. SERVICE-ROLE keys are NOT allowlisted here and must
+so its appearance in templates, EAS build config, and the legacy cron migrations
+is not a leak. SERVICE-ROLE keys are NOT allowlisted here and must
 never be committed.
 """
 
@@ -19,7 +19,6 @@ paths = [
   '''(^|/)\.env\.example$''',
   '''(^|/)\.env\.sample$''',
   '''^apps/mobile/eas\.json$''',
-  '''^scripts/test-draft\.js$''',
   '''^docs/.*\.md$''',
   '''^CLAUDE\.md$''',
   '''^\.gitleaks\.toml$''',

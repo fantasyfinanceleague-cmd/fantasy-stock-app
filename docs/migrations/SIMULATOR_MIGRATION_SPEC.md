@@ -1,5 +1,15 @@
 # Migration spec: in-house simulator + Alpaca account-linking removal
 
+> **Status (re-synced 2026-09-24): Phases 0–4 COMPLETE — merged to `main` and applied
+> in prod** (all migrations through `20260816000000` confirmed in
+> `schema_migrations`). Delivered beyond the original spec: `is_draftable`
+> enforcement in both validators plus the `allow_undraftable` commissioner override,
+> and the `salary_cap_limit` column drop. **Not delivered / still open:** a
+> split-application job for the `splits` table, the `record-trade` concurrent-buy
+> race, and server-side season-schedule generation (see
+> [`../STATUS.md`](../STATUS.md) §4). The checklists below are the original plan and
+> are left as written.
+
 **Companion to:** `docs/decisions/DR-001-in-house-simulated-trading.md`
 **Executor:** Claude Code, branch-per-workstream. No prod-mutating commands — all `supabase db push`, `functions deploy`, `git push`, `secrets set`, and dashboard toggles are HUMAN ACTION.
 **Conventions:** Run `git branch --show-current` and `git status --short` before starting or resuming. State main-vs-branch explicitly on every commit report. Verify effects, not status signals.

@@ -5,9 +5,15 @@ Automated testing of the complete league season lifecycle: draft → regular sea
 ## Quick Start
 
 ```bash
-export SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
+export SB_SECRET_KEY_LOCAL_SCRIPTS="..."   # data-plane seed/teardown (PostgREST)
+export SB_SECRET_KEY_CRON="..."            # apikey for the process-week-results call
 npm run test:simulation
 ```
+
+The two keys are deliberately separate (blast-radius isolation — see
+`docs/migrations/MIGRATION_PHASE_3A_REPORT.md`). The legacy `SUPABASE_SERVICE_ROLE_KEY`
+is no longer read. The runner targets the **production** project URL; test leagues are
+scoped by `league_id` and cleaned up afterwards.
 
 Or directly:
 
@@ -150,7 +156,7 @@ Example summary:
 
 - Node.js 18+ (uses native `fetch`)
 - `@supabase/supabase-js` (installed as devDependency)
-- `SUPABASE_SERVICE_ROLE_KEY` environment variable
+- `SB_SECRET_KEY_LOCAL_SCRIPTS` and `SB_SECRET_KEY_CRON` environment variables
 - The `process-week-results` edge function deployed
 
 ## Important Notes
