@@ -2827,22 +2827,24 @@ textarea::placeholder {
     border-radius: 8px !important;
   }
 
-  /* Smaller font sizes for headings */
-  h1 {
+  /* Smaller font sizes for headings. Scoped away from the landing page
+     (.sp-landing), which sizes its own type with clamp(); these !important
+     app-wide rules collapsed its hero headline to 24px on phones. */
+  h1:not(.sp-landing *) {
     font-size: 1.5rem !important;
   }
 
-  h2 {
+  h2:not(.sp-landing *) {
     font-size: 1.25rem !important;
   }
 
-  h3 {
+  h3:not(.sp-landing *) {
     font-size: 1.1rem !important;
   }
 
   /* Reduce button font size slightly */
-  button,
-  .btn {
+  button:not(.sp-landing *),
+  .btn:not(.sp-landing *) {
     font-size: 14px;
   }
 }
