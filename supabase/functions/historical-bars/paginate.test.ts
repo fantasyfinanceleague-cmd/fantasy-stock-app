@@ -75,9 +75,14 @@ Deno.test('buildBarsUrl: page_token is present and URL-encoded (base64 can conta
     symbols: ['AAPL'],
     start: '2026-01-01',
     limit: 10000,
-    pageToken: 'abc+def/ghi==',
+    // Deliberately short, obviously-fake value: a realistic base64 token here
+    // trips secret scanners (GitGuardian flagged the previous fixture).
+    pageToken: 'a+b/c=',
   });
-  assertEquals(url.includes('page_token=abc%2Bdef%2Fghi%3D%3D'), true);
+  // Encoded on the wire (a raw '+' would decode as a space)...
+  assertEquals(url.includes('%2B') && url.includes('%2F') && url.includes('%3D'), true);
+  // ...and round-trips to the exact token.
+  assertEquals(new URL(url).searchParams.get('page_token'), 'a+b/c=');
 });
 
 Deno.test('buildBarsUrl: omits page_token when absent', () => {
