@@ -1,6 +1,16 @@
 // supabase/functions/historical-bars/index.ts
-// Fetches historical daily bars for multiple symbols
+// Fetches historical daily bars for multiple symbols.
+//
+// Pagination/merge/symbol-cap decisions live in ./paginate.ts (pure, unit
+// tested in paginate.test.ts) — this file is just wiring: parse+validate the
+// request, drive Alpaca with a per-page timeout, shape the response.
+//
+// RISK: see the header comment in paginate.ts — a call here can now make up
+// to MAX_PAGES Alpaca requests (was always exactly 1), on an endpoint with
+// no rate limit, sharing Alpaca's request budget with quote/ticker-quotes/
+// enrich-symbols.
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
+import { buildBarsUrl, capSymbols, fetchAllBars, type PageResult } from './paginate.ts';
 
 let requestOrigin = '';
 
@@ -27,21 +37,41 @@ function env(k: string) { return Deno.env.get(k) ?? ''; }
 
 const BASE = 'https://data.alpaca.markets/v2';
 
-async function alpacaGet(url: string, key: string, secret: string) {
-  const res = await fetch(url, {
-    headers: {
-      'APCA-API-KEY-ID': key,
-      'APCA-API-SECRET-KEY': secret,
-      'Accept': 'application/json',
-    },
-  });
+// Alpaca's per-page max for /v2/stocks/bars.
+const PAGE_LIMIT = 10000;
+// Hard cap on pages per call. No rate limit exists on this function (see
+// risk note above), so this bounds the worst case at 5 Alpaca requests.
+const MAX_PAGES = 5;
+// Per-page network timeout.
+const PAGE_TIMEOUT_MS = 10000;
+// Total budget across all pages of one call.
+const TOTAL_DEADLINE_MS = 20000;
+// Symbol cap, raised from the old 20 (which silently dropped overflow with
+// no signal to the caller) to 50, now WITH an explicit truncatedSymbols
+// field reporting anything still dropped.
+const MAX_SYMBOLS = 50;
+
+async function alpacaGet(url: string, key: string, secret: string, timeoutMs: number): Promise<PageResult> {
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      headers: {
+        'APCA-API-KEY-ID': key,
+        'APCA-API-SECRET-KEY': secret,
+        'Accept': 'application/json',
+      },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch (e) {
+    return { ok: false, status: 599, preview: e instanceof Error ? e.message : 'fetch failed' };
+  }
   const text = await res.text().catch(() => '');
   if (!res.ok) {
-    return { ok: false as const, status: res.status, preview: text.slice(0, 400) };
+    return { ok: false, status: res.status, preview: text.slice(0, 400) };
   }
   let body: any = null;
   try { body = JSON.parse(text); } catch { body = {}; }
-  return { ok: true as const, status: res.status, body };
+  return { ok: true, status: res.status, bars: body?.bars ?? {}, nextPageToken: body?.next_page_token ?? null };
 }
 
 Deno.serve(async (req) => {
@@ -83,49 +113,64 @@ Deno.serve(async (req) => {
       return json({ error: 'invalid_end', message: 'end must be a date in YYYY-MM-DD format' }, 400);
     }
 
-    // Limit symbols to prevent abuse
-    const maxSymbols = 20;
-    const limitedSymbols = symbols.slice(0, maxSymbols).map(s => String(s).trim().toUpperCase());
+    // Limit symbols to prevent abuse. Overflow is reported (truncatedSymbols)
+    // instead of silently dropped.
+    const { requested: limitedSymbols, truncated: truncatedSymbols } = capSymbols(symbols, MAX_SYMBOLS);
 
-    // Build multi-symbol request
-    const symbolsParam = limitedSymbols.join(',');
-    // Encode the date values as defense in depth: even if validation were ever
-    // bypassed, encodeURIComponent prevents introducing new '&'-delimited params.
-    let url = `${BASE}/stocks/bars?symbols=${encodeURIComponent(symbolsParam)}&timeframe=1Day&start=${encodeURIComponent(startDate)}&feed=iex`;
+    const deadlineAt = Date.now() + TOTAL_DEADLINE_MS;
 
-    if (endDate) {
-      url += `&end=${encodeURIComponent(endDate)}`;
-    }
-
-    // Limit to reasonable number of bars
-    url += '&limit=1000';
-
-    const result = await alpacaGet(url, ALPACA_KEY, ALPACA_SECRET);
+    const result = await fetchAllBars({
+      requestedSymbols: limitedSymbols,
+      maxPages: MAX_PAGES,
+      deadlineAt,
+      now: () => Date.now(),
+      fetchPage: (pageToken) => {
+        // Encode the date values as defense in depth: even if validation were ever
+        // bypassed, encodeURIComponent prevents introducing new '&'-delimited params.
+        const url = buildBarsUrl(BASE, {
+          symbols: limitedSymbols,
+          start: startDate,
+          end: endDate || undefined,
+          limit: PAGE_LIMIT,
+          pageToken,
+        });
+        return alpacaGet(url, ALPACA_KEY, ALPACA_SECRET, PAGE_TIMEOUT_MS);
+      },
+    });
 
     if (!result.ok) {
+      console.error(JSON.stringify({
+        fn: 'historical-bars', level: 'error', status: result.status, preview: result.preview,
+        symbols: limitedSymbols,
+      }));
       return json({ error: 'alpaca_error', status: result.status, preview: result.preview }, 500);
     }
 
-    // Result format: { bars: { AAPL: [{t, o, h, l, c, v}, ...], MSFT: [...] } }
-    const bars: Record<string, Array<{ t: string; o: number; h: number; l: number; c: number; v: number }>> = {};
+    const complete = result.stopReason === 'exhausted' && truncatedSymbols.length === 0;
 
-    if (result.body?.bars) {
-      for (const symbol of limitedSymbols) {
-        const symbolBars = result.body.bars[symbol];
-        if (Array.isArray(symbolBars)) {
-          bars[symbol] = symbolBars.map((bar: any) => ({
-            t: bar.t, // timestamp
-            o: Number(bar.o), // open
-            h: Number(bar.h), // high
-            l: Number(bar.l), // low
-            c: Number(bar.c), // close
-            v: Number(bar.v), // volume
-          }));
-        }
-      }
-    }
+    // Structured log line per call — never logs tokens or keys, only
+    // symbols and outcome shape — so a page_cap/deadline hit is visible in
+    // function logs even when the caller doesn't inspect the new fields.
+    console.log(JSON.stringify({
+      fn: 'historical-bars',
+      pages: result.pages,
+      stopReason: result.stopReason,
+      complete,
+      symbolsRequested: limitedSymbols.length,
+      barCount: Object.values(result.bars).reduce((n, arr) => n + arr.length, 0),
+      truncatedSymbolsCount: truncatedSymbols.length,
+      incompleteSymbolsCount: result.incompleteSymbols.length,
+      symbols: limitedSymbols,
+    }));
 
-    return json({ bars });
+    return json({
+      bars: result.bars,
+      complete,
+      truncatedSymbols,
+      incompleteSymbols: result.incompleteSymbols,
+      pages: result.pages,
+      stopReason: result.stopReason,
+    });
   } catch (e) {
     console.error('historical-bars error:', e);
     return json({ error: 'unhandled', message: 'An unexpected error occurred.' }, 500);

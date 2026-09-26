@@ -2,31 +2,35 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "c74eb7d50ca0c85cdf0e757be907faaddacf6907",
-    "commitShort": "c74eb7d",
+    "commit": "4af2b2e3d3acd25b56a11a3bcca11f389544e970",
+    "commitShort": "4af2b2e",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "fix/mobile-draft-status-labels",
+    "branch": "fix/historical-bars-pagination",
     "dirty": true,
     "dirtyPaths": [
       {
-        "code": "R",
-        "path": "supabase/migrations/20261002000000_drop_client_schedule_insert_policies.sql"
+        "code": "M",
+        "path": "supabase/functions/historical-bars/index.ts"
       },
       {
-        "code": "M",
-        "path": "supabase/migrations/deferred/README.md"
+        "code": "??",
+        "path": "supabase/functions/historical-bars/paginate.test.ts"
+      },
+      {
+        "code": "??",
+        "path": "supabase/functions/historical-bars/paginate.ts"
       }
     ],
-    "timestamp": "2026-09-26T02:00:14Z",
-    "sourceHash": "sha256:b4d070e8b7f753a26f96fe6de8727b117100e6ff26804bfdab8e9b3fa6cd7013",
+    "timestamp": "2026-09-26T22:07:53Z",
+    "sourceHash": "sha256:1b42168665ddf8d32a96e09e33fe7ed127fc9cd8fb61c254c96f102529b7be84",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1077.1,
-    "ageDays": 44.9,
+    "ageHours": 1097.3,
+    "ageDays": 45.7,
     "staleAfterDays": 14,
     "stale": true,
     "hash": "sha256:3c923bcd46e36dfa365d24852d7b8fb6ead9ff99a06c3b26dc0853c648e07ded",
@@ -375,13 +379,17 @@
         "verifyJwt": true,
         "verifyJwtSource": "supabase/config.toml:149",
         "authGuard": null,
-        "localModules": [],
-        "tests": [],
+        "localModules": [
+          "paginate.ts"
+        ],
+        "tests": [
+          "paginate.test.ts"
+        ],
         "envVars": [
           "ALPACA_API_KEY",
           "ALPACA_API_SECRET"
         ],
-        "lines": 134
+        "lines": 179
       },
       "db": null,
       "declared": null,
@@ -394,7 +402,7 @@
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/historical-bars/index.ts",
-        "line": 47
+        "line": 77
       }
     },
     {
@@ -839,6 +847,25 @@
       "kind": "edge-module",
       "source": {
         "path": "supabase/functions/enrich-symbols/price-batch.ts",
+        "line": 1
+      }
+    },
+    {
+      "layer": "module",
+      "facts": {
+        "hasTests": true
+      },
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "mod.historical-bars/paginate",
+      "label": "paginate.ts",
+      "sublabel": "historical-bars",
+      "kind": "edge-module",
+      "source": {
+        "path": "supabase/functions/historical-bars/paginate.ts",
         "line": 1
       }
     },
@@ -4032,7 +4059,19 @@
       "protocol": "vendor-https",
       "payload": "https://data.alpaca.markets/v2",
       "callSites": [
-        "supabase/functions/historical-bars/index.ts:28"
+        "supabase/functions/historical-bars/index.ts:38"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.historical-bars->mod.historical-bars/paginate",
+      "from": "fn.historical-bars",
+      "to": "mod.historical-bars/paginate",
+      "protocol": "esm-import",
+      "payload": "import from './paginate.ts'",
+      "callSites": [
+        "supabase/functions/historical-bars/index.ts"
       ]
     },
     {
@@ -6260,8 +6299,8 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('quote')",
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:136",
-        "apps/mobile/app/(tabs)/matchup.tsx:381"
+        "apps/mobile/app/(tabs)/matchup.tsx:144",
+        "apps/mobile/app/(tabs)/matchup.tsx:389"
       ]
     },
     {
@@ -6276,7 +6315,7 @@
         "id, symbol, entry_price, quantity, user_id"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:152"
+        "apps/mobile/app/(tabs)/matchup.tsx:160"
       ]
     },
     {
@@ -6292,10 +6331,10 @@
         "week_number, playoff_round"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:214",
-        "apps/mobile/app/(tabs)/matchup.tsx:234",
-        "apps/mobile/app/(tabs)/matchup.tsx:250",
-        "apps/mobile/app/(tabs)/matchup.tsx:269"
+        "apps/mobile/app/(tabs)/matchup.tsx:222",
+        "apps/mobile/app/(tabs)/matchup.tsx:242",
+        "apps/mobile/app/(tabs)/matchup.tsx:258",
+        "apps/mobile/app/(tabs)/matchup.tsx:277"
       ]
     },
     {
@@ -6310,7 +6349,7 @@
         "id, symbol, price, quantity, action, user_id"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:158"
+        "apps/mobile/app/(tabs)/matchup.tsx:166"
       ]
     },
     {
@@ -6325,7 +6364,7 @@
         "id, username, avatar"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:299"
+        "apps/mobile/app/(tabs)/matchup.tsx:307"
       ]
     },
     {
@@ -6340,7 +6379,7 @@
         "user_id, symbol, quantity, week_start_price, week_end_price"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:314"
+        "apps/mobile/app/(tabs)/matchup.tsx:322"
       ]
     },
     {
@@ -8112,8 +8151,8 @@
           "detail": "quote — single-symbol live price. The most-invoked function in the app.",
           "files": [
             "apps/mobile/app/(tabs)/draft.tsx:491",
-            "apps/mobile/app/(tabs)/matchup.tsx:136",
-            "apps/mobile/app/(tabs)/matchup.tsx:381",
+            "apps/mobile/app/(tabs)/matchup.tsx:144",
+            "apps/mobile/app/(tabs)/matchup.tsx:389",
             "apps/mobile/components/TradeModal.tsx:134",
             "apps/mobile/components/TradeModal.tsx:90",
             "apps/web/src/components/TradeModal.jsx:159",
@@ -8553,8 +8592,8 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 119,
-    "edges": 262,
+    "nodes": 120,
+    "edges": 263,
     "flows": 8,
     "drift": 22,
     "driftHigh": 4,
@@ -8566,7 +8605,7 @@
       "draft-control[rules.ts]",
       "enrich-symbols[price-batch.ts]",
       "finnhub-quote[]",
-      "historical-bars[]",
+      "historical-bars[paginate.ts]",
       "join-league[]",
       "preview-league[reason.ts]",
       "process-week-results[grouping.ts,job-status.ts,playoff-progression.ts,scoring-eligibility.ts]",
@@ -8589,8 +8628,8 @@
       "apps/mobile/app/(tabs)/draft.tsx:470 -> validate-and-record-pick",
       "apps/mobile/app/(tabs)/draft.tsx:491 -> quote",
       "apps/mobile/app/(tabs)/draft.tsx:541 -> validate-and-record-pick",
-      "apps/mobile/app/(tabs)/matchup.tsx:136 -> quote",
-      "apps/mobile/app/(tabs)/matchup.tsx:381 -> quote",
+      "apps/mobile/app/(tabs)/matchup.tsx:144 -> quote",
+      "apps/mobile/app/(tabs)/matchup.tsx:389 -> quote",
       "apps/mobile/app/join-league.tsx:116 -> join-league",
       "apps/mobile/app/join-league.tsx:86 -> preview-league",
       "apps/mobile/components/TradeModal.tsx:102 -> symbol-name",
@@ -8656,14 +8695,14 @@
       "apps/mobile/app/(tabs)/leagues.tsx:234 -> league_members.insert",
       "apps/mobile/app/(tabs)/leagues.tsx:91 -> league_members.select",
       "apps/mobile/app/(tabs)/leagues.tsx:99 -> user_profiles.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:152 -> drafts.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:158 -> trades.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:214 -> matchups.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:234 -> matchups.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:250 -> matchups.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:269 -> matchups.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:299 -> user_profiles.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:314 -> week_snapshots.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:160 -> drafts.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:166 -> trades.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:222 -> matchups.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:242 -> matchups.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:258 -> matchups.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:277 -> matchups.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:307 -> user_profiles.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:322 -> week_snapshots.select",
       "apps/mobile/app/(tabs)/profile.tsx:43 -> user_profiles.select",
       "apps/mobile/app/(tabs)/profile.tsx:87 -> user_profiles.upsert",
       "apps/mobile/app/create-league.tsx:125 -> leagues.insert",
