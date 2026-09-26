@@ -2,14 +2,14 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "8ced474a7145568d3c5ed15526192f718d31b562",
-    "commitShort": "8ced474",
+    "commit": "c74eb7d50ca0c85cdf0e757be907faaddacf6907",
+    "commitShort": "c74eb7d",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "fix/promote-f10-policy-drop",
+    "branch": "fix/mobile-draft-status-labels",
     "dirty": true,
     "dirtyPaths": [
       {
-        "code": "RM",
+        "code": "R",
         "path": "supabase/migrations/20261002000000_drop_client_schedule_insert_policies.sql"
       },
       {
@@ -17,16 +17,16 @@
         "path": "supabase/migrations/deferred/README.md"
       }
     ],
-    "timestamp": "2026-09-26T01:12:19Z",
-    "sourceHash": "sha256:b5f2e9eb2dd9fc3da64abb3da8685d843b6cf8533ca124df77fa380f17041f02",
+    "timestamp": "2026-09-26T02:00:14Z",
+    "sourceHash": "sha256:b4d070e8b7f753a26f96fe6de8727b117100e6ff26804bfdab8e9b3fa6cd7013",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1076.3,
-    "ageDays": 44.8,
+    "ageHours": 1077.1,
+    "ageDays": 44.9,
     "staleAfterDays": 14,
     "stale": true,
     "hash": "sha256:3c923bcd46e36dfa365d24852d7b8fb6ead9ff99a06c3b26dc0853c648e07ded",
@@ -5875,9 +5875,9 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('draft-control')",
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:327",
-        "apps/mobile/app/(tabs)/draft.tsx:348",
-        "apps/mobile/app/(tabs)/draft.tsx:369"
+        "apps/mobile/app/(tabs)/draft.tsx:324",
+        "apps/mobile/app/(tabs)/draft.tsx:383",
+        "apps/mobile/app/(tabs)/draft.tsx:404"
       ]
     },
     {
@@ -5889,7 +5889,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('quote')",
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:456"
+        "apps/mobile/app/(tabs)/draft.tsx:491"
       ]
     },
     {
@@ -5901,9 +5901,9 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('validate-and-record-pick')",
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:392",
-        "apps/mobile/app/(tabs)/draft.tsx:435",
-        "apps/mobile/app/(tabs)/draft.tsx:506"
+        "apps/mobile/app/(tabs)/draft.tsx:427",
+        "apps/mobile/app/(tabs)/draft.tsx:470",
+        "apps/mobile/app/(tabs)/draft.tsx:541"
       ]
     },
     {
@@ -5918,7 +5918,7 @@
         "id, user_id, symbol, entry_price, round, pick_number, slot_id, created_at"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:219"
+        "apps/mobile/app/(tabs)/draft.tsx:222"
       ]
     },
     {
@@ -5933,7 +5933,7 @@
         "id, slot_index, slot_count, price_min, price_max, category_id"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:255"
+        "apps/mobile/app/(tabs)/draft.tsx:258"
       ]
     },
     {
@@ -5948,7 +5948,7 @@
         "user_id, role"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:181"
+        "apps/mobile/app/(tabs)/draft.tsx:184"
       ]
     },
     {
@@ -5963,7 +5963,7 @@
         "id, username"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:189"
+        "apps/mobile/app/(tabs)/draft.tsx:192"
       ]
     },
     {
@@ -5978,7 +5978,7 @@
         "username"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/index.tsx:58"
+        "apps/mobile/app/(tabs)/index.tsx:59"
       ]
     },
     {
@@ -6008,6 +6008,21 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.ui.league->tbl.league_members",
+      "from": "ui.league",
+      "to": "tbl.league_members",
+      "protocol": "postgrest-select",
+      "payload": ".from('league_members').select('user_id')",
+      "columns": [
+        "user_id"
+      ],
+      "callSites": [
+        "apps/mobile/app/(tabs)/league.tsx:148"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.ui.league->tbl.league_seasons",
       "from": "ui.league",
       "to": "tbl.league_seasons",
@@ -6017,7 +6032,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/league.tsx:142"
+        "apps/mobile/app/(tabs)/league.tsx:161"
       ]
     },
     {
@@ -6032,7 +6047,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/league.tsx:111"
+        "apps/mobile/app/(tabs)/league.tsx:115"
       ]
     },
     {
@@ -6047,7 +6062,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/league.tsx:127"
+        "apps/mobile/app/(tabs)/league.tsx:131"
       ]
     },
     {
@@ -6062,7 +6077,7 @@
         "id, username, avatar"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/league.tsx:168"
+        "apps/mobile/app/(tabs)/league.tsx:187"
       ]
     },
     {
@@ -6149,7 +6164,7 @@
         "league_id"
       ],
       "callSites": [
-        "apps/mobile/lib/LeagueContext.tsx:76"
+        "apps/mobile/lib/LeagueContext.tsx:80"
       ]
     },
     {
@@ -6164,7 +6179,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/lib/LeagueContext.tsx:89"
+        "apps/mobile/lib/LeagueContext.tsx:93"
       ]
     },
     {
@@ -7948,7 +7963,7 @@
           "edge": "e.ui.draft->fn.quote",
           "detail": "Price display for candidate picks. Advisory only.",
           "files": [
-            "apps/mobile/app/(tabs)/draft.tsx:456"
+            "apps/mobile/app/(tabs)/draft.tsx:491"
           ]
         },
         {
@@ -7956,7 +7971,7 @@
           "edge": "e.ui.draft->fn.validate-and-record-pick",
           "detail": "The ONLY pick write path since DR-001 Phase 3: the client-INSERT policies on drafts were dropped (20260811000003).",
           "files": [
-            "apps/mobile/app/(tabs)/draft.tsx:392"
+            "apps/mobile/app/(tabs)/draft.tsx:427"
           ]
         },
         {
@@ -8096,7 +8111,7 @@
           ],
           "detail": "quote — single-symbol live price. The most-invoked function in the app.",
           "files": [
-            "apps/mobile/app/(tabs)/draft.tsx:456",
+            "apps/mobile/app/(tabs)/draft.tsx:491",
             "apps/mobile/app/(tabs)/matchup.tsx:136",
             "apps/mobile/app/(tabs)/matchup.tsx:381",
             "apps/mobile/components/TradeModal.tsx:134",
@@ -8539,7 +8554,7 @@
   "orphanAnnotations": [],
   "stats": {
     "nodes": 119,
-    "edges": 261,
+    "edges": 262,
     "flows": 8,
     "drift": 22,
     "driftHigh": 4,
@@ -8567,13 +8582,13 @@
       "validate-and-record-pick[]"
     ],
     "invokes": [
-      "apps/mobile/app/(tabs)/draft.tsx:327 -> draft-control",
-      "apps/mobile/app/(tabs)/draft.tsx:348 -> draft-control",
-      "apps/mobile/app/(tabs)/draft.tsx:369 -> draft-control",
-      "apps/mobile/app/(tabs)/draft.tsx:392 -> validate-and-record-pick",
-      "apps/mobile/app/(tabs)/draft.tsx:435 -> validate-and-record-pick",
-      "apps/mobile/app/(tabs)/draft.tsx:456 -> quote",
-      "apps/mobile/app/(tabs)/draft.tsx:506 -> validate-and-record-pick",
+      "apps/mobile/app/(tabs)/draft.tsx:324 -> draft-control",
+      "apps/mobile/app/(tabs)/draft.tsx:383 -> draft-control",
+      "apps/mobile/app/(tabs)/draft.tsx:404 -> draft-control",
+      "apps/mobile/app/(tabs)/draft.tsx:427 -> validate-and-record-pick",
+      "apps/mobile/app/(tabs)/draft.tsx:470 -> validate-and-record-pick",
+      "apps/mobile/app/(tabs)/draft.tsx:491 -> quote",
+      "apps/mobile/app/(tabs)/draft.tsx:541 -> validate-and-record-pick",
       "apps/mobile/app/(tabs)/matchup.tsx:136 -> quote",
       "apps/mobile/app/(tabs)/matchup.tsx:381 -> quote",
       "apps/mobile/app/join-league.tsx:116 -> join-league",
@@ -8627,15 +8642,16 @@
       "supabase/functions/validate-and-record-pick/index.ts:560 -> finalize_league_draft"
     ],
     "tableOps": [
-      "apps/mobile/app/(tabs)/draft.tsx:181 -> league_members.select",
-      "apps/mobile/app/(tabs)/draft.tsx:189 -> user_profiles.select",
-      "apps/mobile/app/(tabs)/draft.tsx:219 -> drafts.select",
-      "apps/mobile/app/(tabs)/draft.tsx:255 -> league_draft_slots.select",
-      "apps/mobile/app/(tabs)/index.tsx:58 -> user_profiles.select",
-      "apps/mobile/app/(tabs)/league.tsx:111 -> league_standings.select",
-      "apps/mobile/app/(tabs)/league.tsx:127 -> matchups.select",
-      "apps/mobile/app/(tabs)/league.tsx:142 -> league_seasons.select",
-      "apps/mobile/app/(tabs)/league.tsx:168 -> user_profiles.select",
+      "apps/mobile/app/(tabs)/draft.tsx:184 -> league_members.select",
+      "apps/mobile/app/(tabs)/draft.tsx:192 -> user_profiles.select",
+      "apps/mobile/app/(tabs)/draft.tsx:222 -> drafts.select",
+      "apps/mobile/app/(tabs)/draft.tsx:258 -> league_draft_slots.select",
+      "apps/mobile/app/(tabs)/index.tsx:59 -> user_profiles.select",
+      "apps/mobile/app/(tabs)/league.tsx:115 -> league_standings.select",
+      "apps/mobile/app/(tabs)/league.tsx:131 -> matchups.select",
+      "apps/mobile/app/(tabs)/league.tsx:148 -> league_members.select",
+      "apps/mobile/app/(tabs)/league.tsx:161 -> league_seasons.select",
+      "apps/mobile/app/(tabs)/league.tsx:187 -> user_profiles.select",
       "apps/mobile/app/(tabs)/leagues.tsx:203 -> leagues.insert",
       "apps/mobile/app/(tabs)/leagues.tsx:234 -> league_members.insert",
       "apps/mobile/app/(tabs)/leagues.tsx:91 -> league_members.select",
@@ -8662,8 +8678,8 @@
       "apps/mobile/components/LeagueCarousel.tsx:128 -> league_standings.select",
       "apps/mobile/components/LeagueCarousel.tsx:63 -> league_seasons.select",
       "apps/mobile/components/LeagueCarousel.tsx:75 -> user_profiles.select",
-      "apps/mobile/lib/LeagueContext.tsx:76 -> league_members.select",
-      "apps/mobile/lib/LeagueContext.tsx:89 -> leagues.select",
+      "apps/mobile/lib/LeagueContext.tsx:80 -> league_members.select",
+      "apps/mobile/lib/LeagueContext.tsx:93 -> leagues.select",
       "apps/mobile/lib/categoryData.ts:101 -> category_rules.select",
       "apps/mobile/lib/categoryData.ts:111 -> symbols.select",
       "apps/mobile/lib/categoryData.ts:112 -> symbols.select",

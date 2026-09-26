@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useAuth } from '@/lib/useAuth';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -19,8 +19,11 @@ import { parseQuotePrice, type ShapedSearchResult } from '@/lib/symbolSearch';
 import {
   computeDraftPhase,
   describeStartBlocker,
+  msUntilStartRecheck,
+  computeDraftHeaderState,
   type StartBlocker,
 } from '@/lib/draftState';
+import { formatShortDateTime } from '@/lib/weekStatus';
 
 interface DraftPick {
   id: string;
@@ -311,12 +314,6 @@ export default function DraftScreen() {
     };
   }, [activeLeagueId, members]);
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await Promise.all([fetchDraftData(), refreshLeagues()]);
-    setRefreshing(false);
-  };
-
   // draft-control 'status' — fetched while the draft hasn't started, so the
   // not-started screen can show why (and, for the commissioner, a working
   // Start Draft / Fill with bots UI). Any member may call this.
@@ -337,9 +334,47 @@ export default function DraftScreen() {
     }
   }, [activeLeagueId, isDraftNotStarted]);
 
+  // Re-fetch on focus, not just on mount — the draft screen is an href:null
+  // tab route so it stays mounted across tab switches, and this callback's
+  // identity changes with activeLeagueId, so switching leagues while the
+  // screen stays focused re-fetches too. (Fixes: a draft_date_not_reached
+  // blocker fetched before the scheduled time used to stick until the
+  // active league changed, keeping Start Draft disabled past its own
+  // deadline — see the task's bug #1.)
+  useFocusEffect(
+    useCallback(() => {
+      fetchStartStatus();
+    }, [fetchStartStatus])
+  );
+
+  // Clear stale status immediately on league change so the previous
+  // league's blockers can't flash while the new league's fetch is in
+  // flight.
   useEffect(() => {
-    fetchStartStatus();
-  }, [fetchStartStatus]);
+    setStartStatus(null);
+  }, [activeLeagueId]);
+
+  // Schedule exactly one re-check just after the draft's scheduled time, so
+  // the button flips from disabled to enabled without a manual refresh or a
+  // tab switch. Display-only — draft-control re-validates the real time on
+  // every Start call regardless of what this timer does. Re-runs (and its
+  // cleanup re-clears the previous timeout) whenever startStatus changes or
+  // fetchStartStatus's identity changes (i.e. the active league changes),
+  // so a stale timer can never fire against a different league.
+  useEffect(() => {
+    const delay = msUntilStartRecheck(startStatus?.blockers ?? []);
+    if (delay === null) return;
+    const timer = setTimeout(() => {
+      fetchStartStatus();
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [startStatus, fetchStartStatus]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([fetchDraftData(), fetchStartStatus(), refreshLeagues()]);
+    setRefreshing(false);
+  };
 
   const handleStartDraft = async () => {
     if (!activeLeagueId) return;
@@ -598,17 +633,29 @@ export default function DraftScreen() {
     const blockers = startStatus?.blockers ?? [];
     const canStart = startStatus?.can_start ?? false;
     const botsNeeded = startStatus?.bots_needed ?? 0;
+    // Decided from the server response alone (never re-checked against the
+    // current time here) — see computeDraftHeaderState's docstring. Fixes:
+    // once the scheduled-time timer above flipped Start Draft to enabled,
+    // this screen kept reading "Draft Not Started / Scheduled for <a time
+    // now in the past>" — the headline text had no state of its own and
+    // never noticed the blocker it was describing was gone.
+    const headerState = computeDraftHeaderState(hasDraftDate, canStart, blockers);
+    const scheduledText = hasDraftDate ? formatShortDateTime(activeLeague.draft_date as string) : null;
 
     return (
       <Screen scroll={false}>
         <LeagueSwitcher />
         <ScrollView style={styles.notStartedScroll} contentContainerStyle={styles.centered}>
-          <Text style={styles.pendingIcon}>⏰</Text>
-          <Text style={styles.emptyTitle}>Draft Not Started</Text>
+          <Text style={styles.pendingIcon}>{headerState === 'ready' ? '✅' : '⏰'}</Text>
+          <Text style={styles.emptyTitle}>
+            {headerState === 'ready' ? 'Ready to draft' : 'Draft Not Started'}
+          </Text>
           <Text style={styles.emptySubtitle}>
-            {hasDraftDate
-              ? `Scheduled for ${new Date(activeLeague.draft_date as string).toLocaleString()}`
-              : 'Draft date not set yet'}
+            {!scheduledText
+              ? 'Draft date not set yet'
+              : headerState === 'ready'
+              ? `Scheduled for ${scheduledText} — start whenever you're ready`
+              : `Scheduled for ${scheduledText}`}
           </Text>
 
           {startStatusLoading && !startStatus ? (

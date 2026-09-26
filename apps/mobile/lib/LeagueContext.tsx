@@ -9,6 +9,10 @@ export interface League {
   commissioner_id: string;
   draft_status: 'not_started' | 'in_progress' | 'completed';
   draft_date: string | null;
+  // Written by finalize_league_draft at draft completion, alongside the
+  // generated schedule — null until then. See CLAUDE.md's note on
+  // schedule.ts/finalize_league_draft_rpc.sql (STATUS §4 defect 1).
+  league_start_date: string | null;
   budget_mode: 'budget' | 'no-budget'; // deprecated — stake_mode is authoritative
   stake_mode: 'fixed_notional' | 'price_tiers' | 'budget_cap' | null;
   notional_per_slot: number | null;
