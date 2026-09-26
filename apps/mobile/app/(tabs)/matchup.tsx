@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { Card } from '@/components/ui';
 import { SkeletonCard, SkeletonRows } from '@/components/Skeleton';
 import { useAuth } from '@/lib/useAuth';
@@ -573,7 +574,15 @@ export default function MatchupScreen() {
       <SafeAreaView style={styles.container} edges={['top']}>
         <LeagueSwitcher />
         <View style={styles.centeredFlex}>
-          <Text style={styles.emptyIcon}>{isDraftPending ? '🗓️' : '📅'}</Text>
+          {/* Ionicons hourglass, not the 🗓️/📅 emoji: on iOS the calendar
+              emoji renders as a page showing today's real date ("JUL 17"),
+              which read as a wrong/confusing date sitting right above the
+              actual "Week 1 starts Tue, Sep 29" copy. Same treatment as
+              Portfolio's draft-pending panel (portfolio.tsx) for both
+              sub-phases, so pre_draft/drafting and pre_season match. */}
+          <View style={styles.emptyIconCircle}>
+            <Ionicons name="hourglass-outline" size={28} color={Colors.textMuted} />
+          </View>
           <Text style={styles.emptyTitle}>{title}</Text>
           <Text style={styles.emptySubtitle}>{subtitle}</Text>
         </View>
@@ -797,6 +806,20 @@ const styles = StyleSheet.create({
   emptyIcon: {
     fontSize: 48,
     fontFamily: 'Inter_400Regular',
+    marginBottom: 16,
+  },
+  // Icon-in-circle treatment for the pre-season empty state — same shape as
+  // Portfolio's draft-pending panel (see app/(tabs)/portfolio.tsx's
+  // `emptyIcon` style), kept as its own name here because this file's
+  // `emptyIcon` above is already a Text (emoji) style used by the other
+  // empty states (Duration League, season-complete/eliminated).
+  emptyIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.bgElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 16,
   },
   emptyTitle: {
