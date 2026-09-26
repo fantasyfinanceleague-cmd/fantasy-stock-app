@@ -460,7 +460,7 @@ workers test these):
 - **Rounding:** `cents = Math.round(Math.abs(v) * 100)`, with the sign reapplied
   after rounding (so a value that rounds to zero is unsigned). Plain JS float
   behaviour, no `Intl` rounding and no half-even: `1.005 → $1.00`,
-  `2.675 → $2.67`. Grouping and currency are formatted from the integer cents.
+  `2.675 → $2.68` (2.675 × 100 is exactly 267.5, which rounds up; `toFixed` would give $2.67, which is why it is excluded). Grouping and currency are formatted from the integer cents.
 - **Tug ratio:** `p = 0.5 + 0.5 · (you − opp) / max(|you| + |opp|, 1)`,
   clamped to `[0.08, 0.92]` so the trailing colour is always visible; both
   zero → `0.5`. (Board example: $56.80 vs $39.40 → 0.59.)
