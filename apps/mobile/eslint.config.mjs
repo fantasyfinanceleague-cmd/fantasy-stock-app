@@ -29,4 +29,26 @@ export default tseslint.config(
       'react-hooks/exhaustive-deps': 'warn',
     },
   },
+  {
+    // Phase 2 foundation (docs/design/DESIGN_DIRECTION.md §2 enforcement):
+    // "bypassing tokens harder than using them." Scoped to the NEW primitive
+    // layer only — components/sp/** — not app-wide yet (screens migrate in
+    // Phase 3). constants/tokens/** itself is NOT in this glob: those files
+    // ARE the source of every hex value and font size this rule exists to
+    // keep out of their CONSUMERS.
+    files: ['components/sp/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "Literal[value=/^#([0-9a-fA-F]{3}){1,2}$/]",
+          message: 'No raw hex colour literals in components/sp/** — use a `color.*` token from constants/tokens.',
+        },
+        {
+          selector: "Property[key.name='fontSize'] > Literal",
+          message: 'No raw numeric fontSize in components/sp/** — use a `type.*` token from constants/tokens.',
+        },
+      ],
+    },
+  },
 );
