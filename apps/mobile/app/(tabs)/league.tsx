@@ -520,7 +520,9 @@ export default function LeagueScreen() {
                   {isMatchupLeague && (
                     <View style={styles.weekBadge}>
                       <Text style={styles.weekBadgeText}>
-                        {weekStatus.phase === 'playoffs'
+                        {isPreSeasonPhase(weekStatus.seasonPhase)
+                          ? getSeasonLabel(weekStatus.seasonPhase, activeLeague)
+                          : weekStatus.phase === 'playoffs'
                           ? `Playoffs${currentPlayoffRoundLabel ? `: ${currentPlayoffRoundLabel}` : ''}`
                           : `Week ${currentWeek} of ${numWeeks}`
                         }
