@@ -107,6 +107,7 @@ export function useHistoricalPL(
           symbol: trade.symbol.toUpperCase(),
           quantity: isBuy ? trade.quantity : -trade.quantity,
           cost: isBuy ? trade.price * trade.quantity : 0, // For sells, we'll adjust cost proportionally
+          proceeds: isBuy ? undefined : trade.price * trade.quantity,
         });
       }
 

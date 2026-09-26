@@ -84,15 +84,19 @@ export interface PositionEvent {
   symbol: string;
   quantity: number; // positive for buy/draft, negative for sell
   cost: number; // total cost for a buy; ignored for a sell
+  /** Sells: sale proceeds (price × quantity). Missing = sold at basis (no realized P/L). */
+  proceeds?: number;
 }
 
 export interface PLDataPoint {
   date: string; // YYYY-MM-DD
   value: number; // portfolio value (unpriced holdings at cost)
   cost: number; // cost basis of every open holding
-  pl: number;
+  pl: number; // unrealized: value − cost
   plPercent: number;
   unpricedCount: number; // open holdings with no bar within MAX_PRICE_CARRY_DAYS
+  realized: number; // cumulative realized P/L from sells: proceeds − basis removed
+  invested: number; // cumulative cost added by drafts/buys
 }
 
 function daysBetween(from: string, to: string): number {
@@ -120,6 +124,8 @@ export function buildPLSeries(
   const positions: Record<string, { quantity: number; costBasis: number }> = {};
   const lastPrice: Record<string, { price: number; date: string }> = {};
   const series: PLDataPoint[] = [];
+  let realized = 0;
+  let invested = 0;
   let eventIndex = 0;
 
   for (const date of dates) {
@@ -131,11 +137,19 @@ export function buildPLSeries(
       if (event.quantity > 0) {
         pos.quantity += event.quantity;
         pos.costBasis += event.cost;
+        invested += event.cost;
       } else if (pos.quantity > 0) {
-        // Sell: reduce position at average cost
+        // Sell: reduce position at average cost; realize proceeds − basis.
+        // An oversell is clamped to the shares held (proceeds pro rata).
+        const sellQty = Math.min(Math.abs(event.quantity), pos.quantity);
         const avgCost = pos.costBasis / pos.quantity;
-        pos.quantity -= Math.abs(event.quantity);
-        pos.costBasis = avgCost * pos.quantity;
+        const basisRemoved = avgCost * sellQty;
+        const proceeds = event.proceeds === undefined
+          ? basisRemoved
+          : event.proceeds * (sellQty / Math.abs(event.quantity));
+        realized += proceeds - basisRemoved;
+        pos.quantity -= sellQty;
+        pos.costBasis -= basisRemoved;
       }
 
       if (pos.quantity <= 0) {
@@ -166,11 +180,33 @@ export function buildPLSeries(
 
     if (cost > 0) {
       const pl = value - cost;
-      series.push({ date, value, cost, pl, plPercent: (pl / cost) * 100, unpricedCount });
+      series.push({ date, value, cost, pl, plPercent: (pl / cost) * 100, unpricedCount, realized, invested });
     }
   }
 
   return series;
+}
+
+/**
+ * Cash-flow-adjusted P/L between two series points (the 1W/1M delta).
+ *
+ * Total P/L at a point = unrealized + realized = value − cost + realized.
+ * The window gain is the change in that total, which expands to
+ *
+ *   gain = (endValue − startValue) − (cost added by buys) + (sale proceeds)
+ *
+ * because Δcost = buys − basisRemoved and Δrealized = proceeds − basisRemoved.
+ * So a draft or buy inside the window is capital in, not gain (drafting
+ * $3,000 today is not a +$3,000 week), and a sale counts only the move since
+ * the window opened, not the proceeds and not the vanished position.
+ *
+ * Percent is over capital at work: startValue + cost added in the window.
+ */
+export function windowPL(start: PLDataPoint, end: PLDataPoint): { gainLoss: number; gainLossPercent: number } {
+  const totalPL = (p: PLDataPoint) => p.value - p.cost + p.realized;
+  const gainLoss = totalPL(end) - totalPL(start);
+  const capital = start.value + (end.invested - start.invested);
+  return { gainLoss, gainLossPercent: capital > 0 ? (gainLoss / capital) * 100 : 0 };
 }
 
 // ---------------------------------------------------------------------------

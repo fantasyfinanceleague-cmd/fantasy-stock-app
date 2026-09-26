@@ -3,7 +3,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { LineChart } from 'react-native-gifted-charts';
 import { PLDataPoint } from '@/lib/useHistoricalPL';
-import { Period, PeriodPL } from '@/lib/plCoverage';
+import { Period, PeriodPL, windowPL } from '@/lib/plCoverage';
 import { Colors } from '@/constants/Colors';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -88,10 +88,9 @@ export function PerformanceChart({ data, loading, onPeriodPLChange }: Performanc
       };
     }
 
-    // For 1W/1M: show change in portfolio value over the time window
-    const startValue = filteredData[0].value;
-    const gainLoss = lastPoint.value - startValue;
-    const gainLossPercent = startValue > 0 ? (gainLoss / startValue) * 100 : 0;
+    // For 1W/1M: cash-flow-adjusted change over the window — buys/drafts in
+    // the window are capital in, not gain (see windowPL)
+    const { gainLoss, gainLossPercent } = windowPL(filteredData[0], lastPoint);
     return { gainLoss, gainLossPercent, isPositive: gainLoss >= 0, period, complete };
   }, [filteredData, period]);
 

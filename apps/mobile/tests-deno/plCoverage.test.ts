@@ -19,6 +19,7 @@ import {
   buildPLSeries,
   decideHeroPL,
   unpricedNote,
+  windowPL,
   MAX_PRICE_CARRY_DAYS,
   type HoldingsSummary,
   type PeriodPL,
@@ -270,4 +271,89 @@ Deno.test('decideHeroPL: unpriced holdings add the at-cost note (singular and pl
   assertEquals(decideHeroPL(summary({ unpricedCount: 1 }), null).notes, ['1 holding counted at cost (no live price yet)']);
   assertEquals(unpricedNote(3), '3 holdings counted at cost (no live price yet)');
   assertEquals(unpricedNote(0), null);
+});
+
+// ---------------------------------------------------------------------------
+// windowPL — cash-flow-adjusted 1W/1M delta
+// ---------------------------------------------------------------------------
+
+const sellFor = (date: string, symbol: string, quantity: number, proceeds: number): PositionEvent =>
+  ({ date, symbol, quantity: -quantity, cost: 0, proceeds });
+
+function windowOf(series: ReturnType<typeof buildPLSeries>, from: string, to: string) {
+  const start = series.find(p => p.date === from)!;
+  const end = series.find(p => p.date === to)!;
+  return windowPL(start, end);
+}
+
+Deno.test('windowPL: a buy mid-window at a flat price is 0 gain, not +cost', () => {
+  const series = buildPLSeries(
+    [buy('2026-09-21', 'A', 1, 100), buy('2026-09-23', 'B', 30, 3000)],
+    {
+      '2026-09-21': { A: 100 },
+      '2026-09-22': { A: 100 },
+      '2026-09-23': { A: 100, B: 100 },
+      '2026-09-24': { A: 100, B: 100 },
+    },
+  );
+  const w = windowOf(series, '2026-09-21', '2026-09-24');
+  assertAlmostEquals(w.gainLoss, 0, 1e-9);
+  assertAlmostEquals(w.gainLossPercent, 0, 1e-9);
+});
+
+Deno.test('windowPL: a sell mid-window counts the in-window move, not the proceeds', () => {
+  // A bought at 100 long before the window; worth 150 at window start, sold
+  // at 160 mid-window. The window earned +10 (150 → 160). Raw ΔValue reads
+  // −150 (the position vanished); "+ proceeds" would read +160.
+  const series = buildPLSeries(
+    [buy('2026-08-01', 'A', 1, 100), buy('2026-08-01', 'B', 1, 50), sellFor('2026-09-22', 'A', 1, 160)],
+    {
+      '2026-08-01': { A: 100, B: 50 },
+      '2026-09-21': { A: 150, B: 50 },
+      '2026-09-22': { A: 160, B: 50 },
+      '2026-09-23': { B: 50 },
+    },
+  );
+  const w = windowOf(series, '2026-09-21', '2026-09-23');
+  assertAlmostEquals(w.gainLoss, 10, 1e-9);
+  // Realized since purchase is carried on the series for the identity.
+  assertAlmostEquals(series.find(p => p.date === '2026-09-23')!.realized, 60, 1e-9);
+});
+
+Deno.test('windowPL: regression — $3,000 drafted today is not a +$3,000 1W gain', () => {
+  // Populated account shape: an existing holding moves, then three $1,000
+  // drafts land today at today's price.
+  const series = buildPLSeries(
+    [
+      buy('2026-03-19', 'AAPL', 1, 150),
+      buy('2026-09-26', 'BAC', 17.646021, 1000),
+      buy('2026-09-26', 'NVTS', 82.034454, 1000),
+      buy('2026-09-26', 'LOW', 5.284854, 1000),
+    ],
+    {
+      '2026-09-19': { AAPL: 330 },
+      '2026-09-25': { AAPL: 341.02, BAC: 1000 / 17.646021, NVTS: 1000 / 82.034454, LOW: 1000 / 5.284854 },
+    },
+  );
+  const w = windowOf(series, '2026-09-19', '2026-09-26');
+  assertAlmostEquals(w.gainLoss, 11.02, 1e-6); // AAPL's move only
+  // Capital at work = start value + cost added in the window.
+  assertAlmostEquals(w.gainLossPercent, (11.02 / (330 + 3000)) * 100, 1e-6);
+});
+
+Deno.test('windowPL: a lot bought mid-window earns only its post-buy move', () => {
+  const series = buildPLSeries(
+    [buy('2026-09-21', 'A', 1, 100), buy('2026-09-22', 'A', 1, 110)],
+    { '2026-09-21': { A: 100 }, '2026-09-22': { A: 110 }, '2026-09-23': { A: 120 } },
+  );
+  // Lot 1: 100 → 120 (+20). Lot 2: 110 → 120 (+10).
+  assertAlmostEquals(windowOf(series, '2026-09-21', '2026-09-23').gainLoss, 30, 1e-9);
+});
+
+Deno.test('windowPL: a sell without recorded proceeds realizes nothing (proceeds = basis)', () => {
+  const series = buildPLSeries(
+    [buy('2026-09-21', 'A', 2, 200), buy('2026-09-21', 'B', 1, 10), sell('2026-09-22', 'A', 1)],
+    { '2026-09-21': { A: 100, B: 10 }, '2026-09-22': { A: 100, B: 10 } },
+  );
+  assertEquals(series.find(p => p.date === '2026-09-22')!.realized, 0);
 });
