@@ -185,11 +185,38 @@ export default function RootLayout() {
     Inter_700Bold,
   });
 
+  // Archivo (Phase 2 foundation, constants/tokens/type.ts): loaded in its OWN
+  // useFonts call, deliberately NOT gating the splash screen or throwing on
+  // failure like the core fonts above. Per the Orchestrator (2026-09-26): "If
+  // Archivo fails to load, the app must still render (fall back; don't hang
+  // on the splash)." A missing/corrupt Archivo file falls back to the system
+  // font wherever `constants/tokens/type.ts`'s fontFamily isn't registered —
+  // RN does this automatically — rather than taking down the whole app the
+  // way a core-font failure still does.
+  const [archivoLoaded, archivoError] = useFonts({
+    'Archivo-Condensed-Black': require('../assets/fonts/archivo/Archivo-Condensed-Black.ttf'),
+    'Archivo-Expanded-ExtraBold': require('../assets/fonts/archivo/Archivo-Expanded-ExtraBold.ttf'),
+    'Archivo-Regular': require('../assets/fonts/archivo/Archivo-Regular.ttf'),
+    'Archivo-Medium': require('../assets/fonts/archivo/Archivo-Medium.ttf'),
+    'Archivo-SemiBold': require('../assets/fonts/archivo/Archivo-SemiBold.ttf'),
+    'Archivo-Bold': require('../assets/fonts/archivo/Archivo-Bold.ttf'),
+    'Archivo-ExtraBold': require('../assets/fonts/archivo/Archivo-ExtraBold.ttf'),
+  });
+
   useEffect(() => {
     if (error) throw error;
   }, [error]);
 
   useEffect(() => {
+    if (archivoError) {
+      console.warn('[fonts] Archivo failed to load — sp.* text falls back to the system font.', archivoError);
+    }
+  }, [archivoError]);
+
+  useEffect(() => {
+    // Splash hides once the CORE fonts are ready. Archivo is intentionally
+    // excluded from this gate (see above) so a slow or failed Archivo load
+    // never keeps the app on the splash screen.
     if (loaded) {
       SplashScreen.hideAsync();
     }
@@ -198,6 +225,11 @@ export default function RootLayout() {
   if (!loaded) {
     return null;
   }
+
+  // `archivoLoaded` isn't read anywhere: it exists only so useFonts' return
+  // tuple is fully destructured for clarity at the call site above; nothing
+  // needs to branch on it, because a failure already falls back gracefully.
+  void archivoLoaded;
 
   return <RootLayoutNav />;
 }
