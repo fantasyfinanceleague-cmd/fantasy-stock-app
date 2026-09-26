@@ -253,7 +253,25 @@ Deno.test('formatSignedCurrency: exact zero has no sign at all', () => {
 });
 
 Deno.test('formatSignedCurrency: rounds to two decimal places', () => {
-  assertEquals(formatSignedCurrency(-0.005), '-$0.01');
+  assertEquals(formatSignedCurrency(1.2399), '+$1.24');
+});
+
+Deno.test('formatSignedCurrency: a value that rounds to zero gets no sign, not "-$0.00"/"+$0.00"', () => {
+  // The bug this guards: branching on the raw (unrounded) value's sign put a
+  // "-" in front of a number that displays as "0.00" once formatted — e.g.
+  // -0.004 is genuinely negative but rounds to "0.00", so the old
+  // `value < 0` check printed "-$0.00". Branching on the value rounded to
+  // whole cents instead means the sign always matches what's displayed.
+  assertEquals(formatSignedCurrency(0.004), '$0.00');
+  assertEquals(formatSignedCurrency(-0.004), '$0.00');
+});
+
+Deno.test('formatSignedCurrency: -0.005 rounds to exactly zero cents (JS ties-to-+Infinity), not -$0.01', () => {
+  // -0.005 is not exactly representable as a double; it's actually
+  // -0.4999999999999999... once multiplied by 100, and Math.round ties
+  // toward +Infinity, so Math.round(-0.5) is -0, not -1. Documented here
+  // rather than assumed, per the "assert what it actually does" review note.
+  assertEquals(formatSignedCurrency(-0.005), '$0.00');
 });
 
 // ---------------------------------------------------------------------------

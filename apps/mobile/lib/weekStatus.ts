@@ -147,14 +147,24 @@ export function formatSeasonStartShort(league: League | null): string {
  * negative number, so a loss rendered as "$-3,000.00" — the minus landed
  * after the `$` instead of before it (Home "THIS WEEK" pre-season cards).
  * An exact zero renders with no sign ("$0.00"), not "+$0.00": zero is
- * neither a gain nor a loss, and a bare `+` in front of it reads as one. */
+ * neither a gain nor a loss, and a bare `+` in front of it reads as one.
+ *
+ * Branches on the value rounded to whole cents, not the raw float: a value
+ * like -0.004 is a real negative number but displays as "$0.00" once
+ * rounded to two decimals, and branching on the unrounded sign would print
+ * "-$0.00" — a minus sign in front of a number that reads as zero. Rounding
+ * first means the sign shown always matches the two decimals shown next to
+ * it. Math.round ties round toward +Infinity (JS's own rule), so a value
+ * that rounds to exactly zero (e.g. -0.005, which is -0.4999...994 once
+ * doubles round it) comes out as an unsigned "$0.00", not "-$0.01". */
 export function formatSignedCurrency(value: number): string {
-  const magnitude = Math.abs(value).toLocaleString('en-US', {
+  const cents = Math.round(value * 100);
+  const magnitude = (Math.abs(cents) / 100).toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
-  if (value > 0) return `+$${magnitude}`;
-  if (value < 0) return `-$${magnitude}`;
+  if (cents > 0) return `+$${magnitude}`;
+  if (cents < 0) return `-$${magnitude}`;
   return `$${magnitude}`;
 }
 
