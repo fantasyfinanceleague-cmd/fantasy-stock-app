@@ -4,6 +4,7 @@ import { useAuth } from './useAuth';
 import { useLeagueContext, League } from './LeagueContext';
 import { useStockPrices } from './useStockPrices';
 import { DraftPick, Trade } from './usePortfolio';
+import { getSeasonPhase, isPreSeasonPhase, getUpcomingMatchupLabel, SeasonPhase } from './weekStatus';
 
 // --- Types ---
 
@@ -35,6 +36,13 @@ export interface MatchupCard {
   opponentValue: number;
   myGain: number;
   opponentGain: number;
+  seasonPhase: SeasonPhase;
+  /** "Week 1 starts Tue, Sep 29" when seasonPhase is 'pre_season' — the
+   * league has a real schedule (drafted) but the week hasn't started, so
+   * myGain/opponentGain are not real scores yet (see the card's own
+   * rendering in app/(tabs)/index.tsx for why those get hidden). null for
+   * every other phase, where the ordinary Week-N value/gain display applies. */
+  upcomingLabel: string | null;
 }
 
 export interface HomeData {
@@ -176,8 +184,17 @@ export function useHomeData(): HomeData {
   const hasLivePrices = allSymbols.length > 0 && Object.keys(prices).length > 0;
 
   // Matchup win/lose counts
-  const winCount = useMemo(() => matchupData.filter(m => m.myValue > m.opponentValue).length, [matchupData]);
-  const loseCount = useMemo(() => matchupData.filter(m => m.myValue < m.opponentValue).length, [matchupData]);
+  // Pre-season cards have no real score yet (see MatchupCard.upcomingLabel),
+  // so they're excluded here rather than counted as a "win" whenever
+  // myValue happens to be above the opponentValue placeholder of 0.
+  const winCount = useMemo(
+    () => matchupData.filter(m => !isPreSeasonPhase(m.seasonPhase) && m.myValue > m.opponentValue).length,
+    [matchupData],
+  );
+  const loseCount = useMemo(
+    () => matchupData.filter(m => !isPreSeasonPhase(m.seasonPhase) && m.myValue < m.opponentValue).length,
+    [matchupData],
+  );
 
   // --- Data fetching ---
   const fetchAllData = useCallback(async () => {
@@ -334,6 +351,13 @@ export function useHomeData(): HomeData {
 
         // Build matchup cards
         for (const { league, matchups } of matchupResults) {
+          // Draft-pending/drafting leagues have no matchups rows at all yet
+          // (finalize_league_draft is what creates the schedule), so this
+          // never fires in practice today — kept as a defensive guard rather
+          // than assuming that pipeline detail can't change.
+          const seasonPhase = getSeasonPhase(league);
+          if (seasonPhase === 'pre_draft' || seasonPhase === 'drafting') continue;
+
           for (const m of matchups) {
             const isTeam1 = m.team1_user_id === user.id;
             const opponentId = isTeam1 ? m.team2_user_id : m.team1_user_id;
@@ -368,6 +392,8 @@ export function useHomeData(): HomeData {
               opponentValue: 0, // Opponent portfolio not accessible client-side
               myGain,
               opponentGain,
+              seasonPhase,
+              upcomingLabel: seasonPhase === 'pre_season' ? getUpcomingMatchupLabel(league) : null,
             });
           }
         }

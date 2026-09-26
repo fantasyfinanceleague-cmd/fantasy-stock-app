@@ -12,7 +12,7 @@ import { Colors } from '@/constants/Colors';
 import WeekNavigator from '@/components/WeekNavigator';
 import StatusBadge from '@/components/StatusBadge';
 import LeagueSwitcher from '@/components/LeagueSwitcher';
-import { getWeekStatus, isWeekActive as checkWeekActive } from '@/lib/weekStatus';
+import { getWeekStatus, isWeekActive as checkWeekActive, isPreSeasonPhase, getSeasonLabel, getUpcomingMatchupLabel, formatSignedCurrency } from '@/lib/weekStatus';
 
 interface Matchup {
   id: string;
@@ -543,6 +543,40 @@ export default function MatchupScreen() {
     );
   }
 
+  // Pre-season (pre_draft/drafting/pre_season): draft_status/current_week
+  // default to values that read as an ordinary live week (see
+  // getSeasonPhase's docstring), so this must be checked before the
+  // scoreboard/lineups render — that render has no notion of "this score
+  // isn't real yet" (it computes gain as currentValue - cost with no
+  // snapshot, which is exactly the "Bot 3 — Leading +$0.16" bug: a
+  // meaningless number labeled as a lead before the week has even started).
+  // Checked ahead of `!matchup` too, since pre_season leagues already have a
+  // scheduled matchup row (finalize_league_draft creates it) — only
+  // pre_draft/drafting actually hit the `!matchup` branch below.
+  if (isPreSeasonPhase(weekStatus.seasonPhase)) {
+    const seasonPhase = weekStatus.seasonPhase;
+    const isDraftPending = seasonPhase === 'pre_draft' || seasonPhase === 'drafting';
+    const opponentName = matchup
+      ? getDisplayName(matchup.team1_user_id === user?.id ? matchup.team2_user_id : matchup.team1_user_id)
+      : null;
+    const title = isDraftPending ? getSeasonLabel(seasonPhase, activeLeague) : getUpcomingMatchupLabel(activeLeague);
+    const subtitle = isDraftPending
+      ? 'Matchups are set once the draft finishes.'
+      : opponentName
+      ? `vs ${opponentName}`
+      : 'Your matchup will appear here once the season starts.';
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <LeagueSwitcher />
+        <View style={styles.centeredFlex}>
+          <Text style={styles.emptyIcon}>{isDraftPending ? '🗓️' : '📅'}</Text>
+          <Text style={styles.emptyTitle}>{title}</Text>
+          <Text style={styles.emptySubtitle}>{subtitle}</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   if (!matchup) {
     const isSeasonDone = activeLeague?.season_status === 'completed';
     const isPlayoffs = activeLeague?.season_status === 'playoffs';
@@ -605,7 +639,7 @@ export default function MatchupScreen() {
               styles.scoreValue,
               team1Total >= 0 ? styles.positive : styles.negative
             ]}>
-              {team1Total >= 0 ? '+' : ''}${formatCurrency(team1Total)}
+              {formatSignedCurrency(team1Total)}
             </Text>
             {isTeam1Winning && <Text style={styles.winningBadge}>Leading</Text>}
           </View>
@@ -626,7 +660,7 @@ export default function MatchupScreen() {
               styles.scoreValue,
               team2Total >= 0 ? styles.positive : styles.negative
             ]}>
-              {team2Total >= 0 ? '+' : ''}${formatCurrency(team2Total)}
+              {formatSignedCurrency(team2Total)}
             </Text>
             {isTeam2Winning && <Text style={styles.winningBadge}>Leading</Text>}
           </View>
@@ -677,7 +711,7 @@ export default function MatchupScreen() {
                         styles.stockGain,
                         h1.gain >= 0 ? styles.positive : styles.negative
                       ]}>
-                        {h1.gain >= 0 ? '+' : ''}${formatCurrency(h1.gain)}
+                        {formatSignedCurrency(h1.gain)}
                       </Text>
                     </>
                   ) : (
@@ -697,7 +731,7 @@ export default function MatchupScreen() {
                         styles.stockGain,
                         h2.gain >= 0 ? styles.positive : styles.negative
                       ]}>
-                        {h2.gain >= 0 ? '+' : ''}${formatCurrency(h2.gain)}
+                        {formatSignedCurrency(h2.gain)}
                       </Text>
                     </>
                   ) : (
@@ -716,7 +750,7 @@ export default function MatchupScreen() {
                 styles.totalValue,
                 team1Total >= 0 ? styles.positive : styles.negative
               ]}>
-                {team1Total >= 0 ? '+' : ''}${formatCurrency(team1Total)}
+                {formatSignedCurrency(team1Total)}
               </Text>
             </View>
             <View style={styles.totalDivider} />
@@ -726,7 +760,7 @@ export default function MatchupScreen() {
                 styles.totalValue,
                 team2Total >= 0 ? styles.positive : styles.negative
               ]}>
-                {team2Total >= 0 ? '+' : ''}${formatCurrency(team2Total)}
+                {formatSignedCurrency(team2Total)}
               </Text>
             </View>
           </View>

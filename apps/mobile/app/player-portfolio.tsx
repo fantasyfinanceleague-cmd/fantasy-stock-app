@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { useStockPrices } from '@/lib/useStockPrices';
 import { Colors } from '@/constants/Colors';
+import { formatSignedCurrency } from '@/lib/weekStatus';
 
 interface DraftPick {
   symbol: string;
@@ -236,7 +237,7 @@ export default function PlayerPortfolioScreen() {
                   styles.summaryValue,
                   portfolioSummary.totalGainLoss >= 0 ? styles.positive : styles.negative
                 ]}>
-                  {portfolioSummary.totalGainLoss >= 0 ? '+' : ''}${formatCurrency(portfolioSummary.totalGainLoss)}
+                  {formatSignedCurrency(portfolioSummary.totalGainLoss)}
                 </Text>
               </View>
               <View style={styles.summaryItem}>
@@ -294,7 +295,7 @@ export default function PlayerPortfolioScreen() {
                     {hasPrice ? (
                       <>
                         <Text style={[styles.holdingValue, isPositive ? styles.positive : styles.negative]}>
-                          {isPositive ? '+' : ''}${formatCurrency(holding.gainLoss!)}
+                          {formatSignedCurrency(holding.gainLoss!)}
                         </Text>
                         <Text style={[styles.holdingPercent, isPositive ? styles.positive : styles.negative]}>
                           {formatPercent(holding.gainLossPercent)}

@@ -24,6 +24,9 @@ import {
   formatShortMonthDay,
   formatShortDateTime,
   formatSeasonStartShort,
+  formatSignedCurrency,
+  canTradeInPhase,
+  getUpcomingMatchupLabel,
 } from '../lib/weekStatus.ts';
 
 // ---------------------------------------------------------------------------
@@ -228,4 +231,61 @@ Deno.test('getWeekStatus: a completed-draft, season-started league is unaffected
   assertEquals(status.status, 'active');
   assertEquals(status.phase, 'regular');
   assertEquals(status.seasonPhase, 'regular');
+});
+
+// ---------------------------------------------------------------------------
+// formatSignedCurrency
+// ---------------------------------------------------------------------------
+
+Deno.test('formatSignedCurrency: positive value gets a leading "+" before the "$"', () => {
+  assertEquals(formatSignedCurrency(1.2345), '+$1.23');
+});
+
+Deno.test('formatSignedCurrency: negative value puts "-" before the "$", not after it', () => {
+  // The bug this guards: `{x >= 0 ? '+' : ''}${formatCurrency(x)}` rendered
+  // "$-3,000.00" because formatCurrency's own toLocaleString already prints
+  // the minus sign, landing it after the literal "$".
+  assertEquals(formatSignedCurrency(-3000), '-$3,000.00');
+});
+
+Deno.test('formatSignedCurrency: exact zero has no sign at all', () => {
+  assertEquals(formatSignedCurrency(0), '$0.00');
+});
+
+Deno.test('formatSignedCurrency: rounds to two decimal places', () => {
+  assertEquals(formatSignedCurrency(-0.005), '-$0.01');
+});
+
+// ---------------------------------------------------------------------------
+// canTradeInPhase
+// ---------------------------------------------------------------------------
+
+Deno.test('canTradeInPhase: mirrors record-trade\'s draft_status gate across all six phases', () => {
+  assertEquals(canTradeInPhase('pre_draft'), false);
+  assertEquals(canTradeInPhase('drafting'), false);
+  // pre_season: draft_status is already 'completed' server-side, so
+  // record-trade accepts trades even though the league hasn't started yet.
+  assertEquals(canTradeInPhase('pre_season'), true);
+  assertEquals(canTradeInPhase('regular'), true);
+  assertEquals(canTradeInPhase('playoffs'), true);
+  assertEquals(canTradeInPhase('completed'), true);
+});
+
+// ---------------------------------------------------------------------------
+// getUpcomingMatchupLabel
+// ---------------------------------------------------------------------------
+
+Deno.test('getUpcomingMatchupLabel: names the real week number and start date', () => {
+  const league = { current_week: 1, league_start_date: '2026-09-29T13:30:00Z' };
+  assertEquals(getUpcomingMatchupLabel(league), 'Week 1 starts Tue, Sep 29');
+});
+
+Deno.test('getUpcomingMatchupLabel: defaults to week 1 when current_week is missing', () => {
+  const league = { league_start_date: '2026-09-29T13:30:00Z' };
+  assertStringIncludes(getUpcomingMatchupLabel(league), 'Week 1 starts');
+});
+
+Deno.test('getUpcomingMatchupLabel: falls back to "soon" for a missing/invalid start date', () => {
+  assertEquals(getUpcomingMatchupLabel(null), 'Week 1 starts soon');
+  assertEquals(getUpcomingMatchupLabel({ current_week: 1, league_start_date: null }), 'Week 1 starts soon');
 });

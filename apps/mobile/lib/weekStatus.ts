@@ -140,6 +140,53 @@ export function formatSeasonStartShort(league: League | null): string {
   return start ? formatShortMonthDay(start) : 'Soon';
 }
 
+/** "+$1.23" / "-$3,000.00" / "$0.00" — the one signed-money formatter for
+ * every gain/loss figure in the app. Before this, each screen built the sign
+ * and the `$` separately (`{x >= 0 ? '+' : ''}${formatCurrency(x)}`), and
+ * `formatCurrency`'s own `toLocaleString` already prints a leading `-` for a
+ * negative number, so a loss rendered as "$-3,000.00" — the minus landed
+ * after the `$` instead of before it (Home "THIS WEEK" pre-season cards).
+ * An exact zero renders with no sign ("$0.00"), not "+$0.00": zero is
+ * neither a gain nor a loss, and a bare `+` in front of it reads as one. */
+export function formatSignedCurrency(value: number): string {
+  const magnitude = Math.abs(value).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  if (value > 0) return `+$${magnitude}`;
+  if (value < 0) return `-$${magnitude}`;
+  return `$${magnitude}`;
+}
+
+/** Whether the server would accept a trade for a league in this phase.
+ * Mirrors supabase/functions/record-trade/index.ts's own gate exactly — it
+ * refuses every buy/sell with `draft_not_completed` unless
+ * `league.draft_status === 'completed'` (the only write path for trades;
+ * the client-side INSERT policy on `trades` was dropped in
+ * 20260811000002_trades_drop_direct_client_insert.sql). 'pre_season' is
+ * `completed` with a future `league_start_date`, so trading is allowed
+ * there — the draft itself is done, the server has no separate "season
+ * hasn't started yet" check, and pre-season roster changes are a real,
+ * currently-supported use case. Keep this in sync with that function if its
+ * gate ever changes. */
+export function canTradeInPhase(phase: SeasonPhase): boolean {
+  return phase !== 'pre_draft' && phase !== 'drafting';
+}
+
+/** "Week 1 starts Tue, Sep 29" — the pre_season Matchup tab's headline for
+ * an already-scheduled-but-not-yet-live matchup (the schedule exists once
+ * the draft finalizes, so `current_week`/`league_start_date` are real by
+ * this phase, unlike pre_draft/drafting where getSeasonLabel's generic copy
+ * is used instead). Falls back to getSeasonLabel's "Starts soon" wording
+ * for a missing/invalid start date, same as every other pre-season date
+ * site in this file. */
+export function getUpcomingMatchupLabel(league: League | null): string {
+  const week = league?.current_week || 1;
+  const start = parseLeagueStartDate(league);
+  const startLabel = start ? formatShortWeekdayDate(start) : 'soon';
+  return `Week ${week} starts ${startLabel}`;
+}
+
 interface Matchup {
   winner_user_id?: string | null;
   is_tie?: boolean;
