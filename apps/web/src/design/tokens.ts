@@ -57,12 +57,19 @@ export const color = {
       onGame: { bg: '#FFFFFF', fg: '#0D1B2E' },
     },
     secondary: {
-      // Money-surface secondary is styled directly in Button.css (a
-      // border.control outline on a money.base fill) — no separate token
-      // needed there. Game only needs its own outline/fg pair.
+      // DESIGN_DIRECTION §9 (amended 1c131fe): named explicitly for parity
+      // with .onGame, even though the values already matched what
+      // Button.css rendered directly (surface.money.base / border.control /
+      // text.primary) before this token existed.
+      bg: '#FFFFFF',
+      border: '#76828F',
+      fg: '#0D1B2E',
       onGame: { border: '#8DA0BD', fg: '#FFFFFF' },
     },
     ghost: {
+      // Same note as secondary.bg above — matches text.primary, named for
+      // parity with .onGame.
+      fg: '#0D1B2E',
       onGame: { fg: '#FFFFFF' },
     },
   },
