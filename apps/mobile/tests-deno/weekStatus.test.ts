@@ -233,6 +233,43 @@ Deno.test('getWeekStatus: a completed-draft, season-started league is unaffected
   assertEquals(status.seasonPhase, 'regular');
 });
 
+// The three tests above (and the one below) depend on `now`'s weekend/
+// after-close reading, not on the day this suite actually runs — that's
+// the point of injecting `now` at all. Before the fix these three all read
+// `new Date()` internally instead of the injected `now`, so the test above
+// passed or failed depending on the REAL calendar day the suite happened to
+// run on (it started failing the first time this suite ran on a weekend).
+// Dates are chosen assuming a UTC-behind local timezone (this repo's
+// dev/CI machines run America/Los_Angeles) so the UTC and local calendar
+// dates agree — see isAfterFridayClose's own mix of `now.getDay()` (local)
+// and `now.getUTCHours()` (UTC), which is a separate, pre-existing quirk
+// this fix does not change.
+
+Deno.test('getWeekStatus: an injected weekend `now` gives pending_results, regardless of the real day', () => {
+  const saturday = new Date('2026-09-26T12:00:00Z'); // local day 6 (Sat)
+  const status = getWeekStatus(
+    { draft_status: 'completed', league_start_date: '2026-09-01T13:30:00Z', current_week: 2, num_weeks: 10, season_status: 'active' },
+    null,
+    saturday,
+  );
+  assertEquals(status.isTransitionPeriod, true);
+  assertEquals(status.status, 'pending_results');
+});
+
+Deno.test('getWeekStatus: an injected Friday-after-close `now` marks a completed matchup final with a countdown, regardless of the real day', () => {
+  const fridayAfterClose = new Date('2026-09-25T22:00:00Z'); // local day 5 (Fri), etHours 17 >= 16
+  const completedMatchup = { winner_user_id: 'u1', is_tie: false, team1_gain: 12, team2_gain: -3 };
+  const status = getWeekStatus(
+    { draft_status: 'completed', league_start_date: '2026-09-01T13:30:00Z', current_week: 2, num_weeks: 10, season_status: 'active' },
+    completedMatchup,
+    fridayAfterClose,
+  );
+  assertEquals(status.isTransitionPeriod, true);
+  assertEquals(status.isWeekComplete, true);
+  assertEquals(status.status, 'final');
+  assertStringIncludes(status.countdown ?? '', 'Week 3');
+});
+
 // ---------------------------------------------------------------------------
 // formatSignedCurrency
 // ---------------------------------------------------------------------------

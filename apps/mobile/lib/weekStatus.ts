@@ -292,8 +292,8 @@ function getNextMonday(date: Date = new Date()): Date {
   return d;
 }
 
-export function isNextMondayHoliday(): HolidayInfo {
-  const nextMonday = getNextMonday();
+export function isNextMondayHoliday(now: Date = new Date()): HolidayInfo {
+  const nextMonday = getNextMonday(now);
   const { isHoliday, name } = isMarketHoliday(nextMonday);
 
   if (isHoliday) {
@@ -316,8 +316,7 @@ export function isWeekend(): boolean {
   return day === 0 || day === 6;
 }
 
-export function isAfterFridayClose(): boolean {
-  const now = new Date();
+export function isAfterFridayClose(now: Date = new Date()): boolean {
   const day = now.getDay();
 
   if (day !== 5) return false;
@@ -330,8 +329,8 @@ export function isAfterFridayClose(): boolean {
   return etHours >= 16;
 }
 
-function getDayOfWeek(): number {
-  return new Date().getDay();
+function getDayOfWeek(now: Date = new Date()): number {
+  return now.getDay();
 }
 
 export function getRelativeCountdown(nextWeek: number, holidayInfo?: HolidayInfo | null, phase?: string): string {
@@ -374,12 +373,16 @@ export function getWeekStatus(league: League | null, matchup: Matchup | null, no
     (matchup.team1_gain !== null && matchup.team2_gain !== null)
   );
 
-  const dayOfWeek = getDayOfWeek();
+  // Threaded from getWeekStatus's own `now` param rather than reading
+  // `new Date()` again here — these all used to ignore an injected `now`,
+  // which made getWeekStatus's weekend/after-close branches untestable
+  // (and, worse, dependent on the real day a test happened to run on).
+  const dayOfWeek = getDayOfWeek(now);
   const isInWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-  const isAfterClose = isAfterFridayClose();
+  const isAfterClose = isAfterFridayClose(now);
   const isTransitionPeriod = isInWeekend || isAfterClose;
 
-  const holidayInfo = isNextMondayHoliday();
+  const holidayInfo = isNextMondayHoliday(now);
 
   let status: WeekStatus['status'] = 'active';
   let countdown: string | null = null;
