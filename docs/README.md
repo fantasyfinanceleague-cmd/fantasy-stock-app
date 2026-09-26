@@ -11,7 +11,7 @@ Repo conventions and hard-won operational rules are in the root [`CLAUDE.md`](..
 | [`migrations/`](migrations/) | Specs + reports for the Supabase API-key migration (`MIGRATION_PHASE_*`, `MIGRATION_STATUS.md`), RLS hardening (`RLS_HARDENING_SPEC.md`), the simulator migration (`SIMULATOR_MIGRATION_SPEC.md`, `simulator-recon.md`), and staged-not-applied SQL (`STAGED_*.sql`) | Status files yes; phase specs/reports are point-in-time records. Paths are referenced from migration comments — don't rename |
 | [`design/`](design/) | UI/UX program charter (`UI-UX-PROGRAM.md` — roles, phases, UI worker contract), mobile UI overhaul spec (`STOCKPILE_UI_OVERHAUL.md`), landing-page spec, brand assets | Yes |
 | [`fixes/`](fixes/) | Post-mortems of production incidents | Append-only |
-| [`testing/`](testing/) | Season simulation harness guide + testing roadmap | Yes |
+| [`testing/`](testing/) | Season simulation harness guide, testing roadmap, and running the mobile app in the iOS Simulator (`MOBILE_SIMULATOR.md`) | Yes |
 | [`assets/`](assets/) | Screenshots used by the root README | — |
 | [`history/`](history/) | Superseded plans, old session logs, completed handoffs | **No — archive, read for context only** |
 
@@ -22,5 +22,6 @@ Repo conventions and hard-won operational rules are in the root [`CLAUDE.md`](..
 | Edge-function pure modules (Deno, hermetic — no DB, no secrets) | `deno test supabase/functions/` |
 | Architecture map freshness | `node scripts/gen-architecture.mjs --check` |
 | Season simulation against a real project | `npm run test:simulation` — see [`testing/SEASON_SIMULATION_TEST.md`](testing/SEASON_SIMULATION_TEST.md) |
+| Mobile app on the iOS Simulator (Expo Go SDK 54) | see [`testing/MOBILE_SIMULATOR.md`](testing/MOBILE_SIMULATOR.md) |
 | Mobile lint / types | `cd apps/mobile && npm run lint && npx tsc --noEmit` |
 | Web lint | `cd apps/web && npm run lint` |
