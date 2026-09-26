@@ -29,7 +29,7 @@ Fixes landed on branch `security/claude-security-fixes-20260730` (commit 2dd699f
 | F7 | MED | ✅ fixed in code | new `send-notification` edge function (shared-league check, closed type map) + `apps/mobile/lib/notifications.ts` cut-over. Client half ships with the 1.1.0 EAS build. Hardened 2026-09-24 (error checks, Expo ticket status, unbuilt types removed). |
 | **F8** | MED | ❌ **TODO** | push-token relocation (phase 2, staged). Precondition: F7 deployed **and** 1.0.0 mobile binaries drained — see below |
 | F9 | MED | ✅ **deployed** (from `2dd699f`; deployed code identical to the branch tip) — reconciled on merge | `historical-bars/index.ts` (date validation + encoding). Hazard until merge: deploying it from `main` reverts F9. |
-| **F10** | MED | ❌ **TODO** | matchup schedule forgery — see below |
+| **F10** | MED | ✅ **CLOSED 2026-09-25** | matchup schedule forgery: server finalize (PR #14) + client INSERT policy drop (PR #22); effect test A/B/C PASS |
 | F11 | MED | ✅ fixed in code | (closed by F1 — same policy trigger) |
 | F12 | LOW | ✅ **superseded by main** | `place-order` was deleted on main (DR-001 in-house simulator; trades now go through `record-trade` / `validate-and-record-pick`), and main's applied `20260811000002` drops the same client `trades` INSERT policy. This branch's `20260730000004` and its client edits were dropped in the 2026-09-01 merge. |
 | F13 | LOW | ✅ fixed in code | `apps/mobile/app/(tabs)/profile.tsx` (re-auth gate) |
@@ -97,6 +97,8 @@ migration a fresh timestamp later than prod's latest applied, not the `~20260730
 ---
 
 ## TODO 2 — F10: Any league member can insert arbitrary matchup pairings that drive everyone's standings
+
+> **CLOSED 2026-09-25.** Schedules are now written only by the service-role `finalize_league_draft` RPC (PR #14), and the client INSERT policies `matchups_insert_members` / `league_standings_insert_members` were dropped by `20261002000000` (PR #22). Proof: `docs/security/f10-policy-drop-effect-test.sql` returned A/B/C PASS against prod. The text below is the original finding, kept for history.
 
 **The problem.** RLS policy `matchups_insert_members` (migration `20260712000004`) gates
 INSERT only on `is_member(league_id)` — no restriction on `team1_user_id`/
