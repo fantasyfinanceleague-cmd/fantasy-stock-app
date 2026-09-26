@@ -191,7 +191,8 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
    `status_update_error` instead of showing "Draft Complete!". Today nobody has a
    turn once every pick is made, so the screen has no control that reaches the
    server's heal path. The pick response also still says `draft_complete: true`
-   when finalize failed.
+   when finalize failed. **See defect 16** — fixed on the same branch that also
+   closes the mobile draft-start launch blocker.
 11. **Hygiene:** revoked Alpaca pair still stored as Supabase secrets
    `ALPACA_KEY_ID`/`ALPACA_SECRET_KEY` (no readers) and in local `.env.local`;
    `.gitleaks.toml` allowlists all of `^\.claude/` by directory (hid that leak once) —
@@ -365,6 +366,78 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
    `supabase db push` from there only. No function deploy.
    **Verify:** the `pg_policies` query in §7 plus
    `docs/security/league-members-insert-effect-test.sql`.
+16. **Mobile could not start a draft, add bots, or trust a finalized draft — three
+   launch blockers found by the 2026-09-25 live prod test draft, and defect 10's
+   finalize/heal gap (above).** The only code path that ever set
+   `leagues.draft_status = 'in_progress'` or inserted `'bot-*'` `league_members`
+   rows was web's `DraftPage.jsx`/`DraftSetupModal`, and the web app is paused —
+   so nobody could start a mobile-drafted league at all. Draft search required an
+   exact ticker with no company name or dropdown. And once every pick was made,
+   nobody had "a turn" to trigger the server's finalize-heal path (defect 10), so
+   a failed finalize left the draft stuck `in_progress` forever with the client
+   still alerting "Draft Complete!".
+   **FIXED ON BRANCH `feat/mobile-draft-start-search-finalize` (not yet merged or
+   deployed):**
+   - **Start + bots:** new `draft-control` edge function — commissioner-only,
+     identity read from the verified JWT against `leagues.commissioner_id` (never
+     the request body), with server-enforced preconditions (stake mode set, draft
+     date reached, ≥4 members). Bot-seeding is additionally gated behind an env
+     allowlist (`DRAFT_BOTS_ALLOWED_EMAILS`) — test-account-only per product
+     decision 2026-09-25, so it can be widened later with a `secrets set`, no
+     redeploy. `league_members_insert_bot` ([I6]) and
+     `leagues_update_member_draft_complete` ([I2b]) still allow the equivalent
+     writes directly over PostgREST — retiring both is the deferred migration
+     `supabase/migrations/deferred/20260929000000_drop_I6_I2b.sql`, held on
+     draft-control shipping and effect-verifying first (its own README entry has
+     the full precondition checklist).
+   - **Bots also need a picker on mobile** (web made bot picks client-side from a
+     hard-coded stock pool): added a `bot_pick` action to
+     `validate-and-record-pick`. The server ranks live candidates from the
+     `symbols` catalog (`_shared/bot-pick.ts`, coarse pre-filter on cached
+     `last_price`; owned/budget/bracket-aware) and tries each through the SAME
+     live-price + `validatePick` gate a human pick uses, falling back to a SKIP
+     when none are legal. **Known limit, acceptable for launch:** bot picks are
+     CLIENT-TRIGGERED — any member's open app fires `bot_pick` ~800ms after a
+     bot's turn starts, same as web's old `botAutoPick`. If every member closes
+     the app on a bot's turn, the draft waits (resumes the moment anyone reopens
+     it — nothing is lost). Follow-up: a server-scheduled trigger.
+   - **Finalize/heal (defect 10):** `lib/draftState.ts`'s `computeDraftPhase` adds
+     a `'finalizing'` phase (every pick made, `draft_status` still `in_progress`)
+     distinct from both `'drafting'` and `'completed'`. The draft screen
+     auto-fires `action:'finalize'` once on entering it, shows
+     `status_update_error` with a manual Retry on failure, and only renders the
+     completed view when `draft_status` is actually `'completed'` — the old code
+     alerted "Draft Complete!" unconditionally.
+   - **Search:** extracted TradeModal's search/quote logic into shared
+     `lib/symbolSearch.ts` (pure) + `lib/useSymbolSearch.ts` (hook) +
+     `components/SymbolSearchField.tsx`, used by both TradeModal and the draft
+     screen instead of copy-pasting it. Draft search now does typeahead by name,
+     shows company names, and badges not-draftable/already-drafted symbols.
+   - **League Settings reachability gap (found verifying the draft-date-edit
+     path, not pre-planned):** the only route to `league-settings.tsx` was via
+     `components/LeagueCarousel.tsx`, which `apps/mobile/ARCHITECTURE.md` already
+     documented as orphaned (never mounted since the Home rebuild). So a
+     commissioner had **no way to set a draft date on mobile at all** — confirmed
+     by grep, not assumed. `league.tsx` now shows a League Settings entry point
+     while `draft_status='not_started'`. A follow-up task
+     (`task_4c052359`) deletes the now-fully-redundant `LeagueCarousel.tsx`.
+   - **Security-reviewed** (security-reviewer subagent) before landing: fixed a
+     MEDIUM (`bot_pick`'s turn check now runs before the candidate loop, so an
+     out-of-turn call can't force wasted Alpaca requests) and a LOW (`add_bots`'
+     `(league_id,user_id)` unique-constraint race now returns a clean
+     `bot_id_conflict` refusal instead of a generic 500).
+   **Apply order (after merge to `main`):** from the deploy checkout —
+   1. `supabase secrets set DRAFT_BOTS_ALLOWED_EMAILS=fantasyfinanceleague@gmail.com`
+   2. `supabase functions deploy draft-control --project-ref haiaaifjcclsvmkfqgmd`
+   3. `supabase functions deploy validate-and-record-pick --project-ref haiaaifjcclsvmkfqgmd`
+      (requires defect 1's `finalize_league_draft` RPC already applied).
+   4. Effect check: a no-credential POST to `draft-control` must 401 from our code,
+      not the gateway; then a real test league end-to-end (create → commissioner
+      sets a draft date via the new League Settings entry point → Start Draft /
+      Fill with Bots → draft, including at least one `bot_pick` → "Finalizing…"
+      resolves to a real completed view with a schedule).
+   5. Only then: promote the deferred `20260929000000_drop_I6_I2b.sql` per its
+      README checklist.
 
 ---
 
@@ -409,6 +482,7 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
 | `ui/design-system-pass-v2` | Unmerged, awaiting visual check. Checked out in the main checkout. |
 | `fix/refuse-join-mid-draft` | §4 defect 14: `join_league_by_code` draft_status guard, `preview-league` hard-block, both join screens' copy, web preview-bug fix. Unmerged; migration unapplied, `preview-league` undeployed. |
 | `fix/narrow-league-members-self-insert` | §4 defect 15: narrows `[I4]` `league_members` self-insert to creator-only. Migration `20261001000000`. Unmerged; migration unapplied. |
+| `feat/mobile-draft-start-search-finalize` | §4 defect 16 (see there) + defect 10: `draft-control` edge function (start + bot seeding), `bot_pick` action, shared `SymbolSearchField`, finalize-heal UI, League Settings reachability fix. Caught up to `main` @ `f9ffb23` (includes PR #14–#19). Unmerged; new function undeployed, deferred RLS-drop migration authored but not applied. |
 | `ui/design-system-pass`, `item4-fix-refresh-symbols-cron` | Superseded (backup / folded into `main` + PR #9). Safe to delete once confirmed. |
 | ~20 others (`simulator-core`, `phase4-*`, `item*`, `signup-ux-password`, …) | Fully merged into `main` (0 commits ahead) — safe to delete with `git branch -d`. |
 

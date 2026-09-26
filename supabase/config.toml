@@ -72,6 +72,17 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/join-league/index.ts"
 
+# Mobile draft launch-blocker (docs/STATUS.md §4/§5): server-side draft start +
+# bot seeding. verify_jwt=true + in-code getUser() + in-code commissioner check
+# (from the leagues row, never the request body) — same auth shape as
+# join-league/validate-and-record-pick. Writes use SB_SECRET_KEY_INTERNAL
+# (bypasses RLS); [I2a]/[I6] remain as the PostgREST fallback until the
+# deferred migration retires them (supabase/migrations/deferred/README.md).
+[functions.draft-control]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/draft-control/index.ts"
+
 # In-house simulator (DR-001 Phase 4): symbols enrichment cron. Cron-only —
 # JWT verification disabled so the function is reachable without a legacy JWT;
 # the function's own apikey-header validation (SB_SECRET_KEY_CRON,

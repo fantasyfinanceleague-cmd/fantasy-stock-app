@@ -427,6 +427,36 @@ export default function LeagueScreen() {
               </TouchableOpacity>
             )}
 
+            {/* Commissioner settings entry point — reachability fix: the only
+                other route to League Settings was via components/LeagueCarousel,
+                which is not mounted anywhere (see apps/mobile/ARCHITECTURE.md).
+                Settings are only editable pre-draft (league-settings.tsx locks
+                everything once draft_status leaves 'not_started'), so this is
+                shown only in that window — a commissioner who needs to set or
+                change the draft date always has a working path here. */}
+            {activeLeague &&
+              activeLeague.commissioner_id === user?.id &&
+              activeLeague.draft_status === 'not_started' && (
+                <TouchableOpacity
+                  style={styles.settingsBanner}
+                  activeOpacity={0.8}
+                  onPress={() => router.push({ pathname: '/league-settings', params: { leagueId: activeLeague.id } })}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open league settings"
+                >
+                  <View style={styles.settingsBannerIconCircle}>
+                    <Ionicons name="settings-outline" size={18} color={Colors.secondary} />
+                  </View>
+                  <View style={styles.bannerTextContainer}>
+                    <Text style={styles.draftBannerTitle}>League Settings</Text>
+                    <Text style={styles.draftBannerSubtitle}>
+                      Set the draft date, stake mode, and roster slots
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={Colors.secondary} />
+                </TouchableOpacity>
+              )}
+
             {/* Season Banner */}
             {isSeasonCompleted && currentSeason && (
               <View style={[
@@ -1036,6 +1066,26 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     color: Colors.textSecondary,
     marginTop: 1,
+  },
+  settingsBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 24,
+    marginBottom: 8,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: Colors.secondaryBg,
+    borderWidth: 1,
+    borderColor: Colors.secondary,
+    gap: 12,
+  },
+  settingsBannerIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   activeSeasonBanner: {
     marginHorizontal: 24,

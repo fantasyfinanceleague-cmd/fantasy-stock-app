@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,18 +7,18 @@ import {
   Modal,
   TouchableOpacity,
   TextInput,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Keyboard,
 } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
 import { Holding } from '@/lib/usePortfolio';
 import { isMarketOpen, getMarketStatus, getMarketStatusMessage } from '@/lib/marketHours';
+import { parseQuotePrice, type ShapedSearchResult } from '@/lib/symbolSearch';
 import * as Haptics from 'expo-haptics';
 import { Banner, Button } from '@/components/ui';
+import SymbolSearchField from '@/components/SymbolSearchField';
 
 interface TradeModalProps {
   visible: boolean;
@@ -37,13 +37,6 @@ interface TradeModalProps {
 interface Quote {
   symbol: string;
   price: number;
-}
-
-interface SearchResult {
-  symbol: string;
-  name: string;
-  price?: number | null;
-  is_draftable?: boolean;
 }
 
 export default function TradeModal({
@@ -74,12 +67,6 @@ export default function TradeModal({
   const [companyName, setCompanyName] = useState('');
   const [fetchingQuote, setFetchingQuote] = useState(false);
 
-  // Search state
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [showSearchResults, setShowSearchResults] = useState(false);
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
   // Reset state when modal opens
   useEffect(() => {
     if (visible) {
@@ -90,9 +77,6 @@ export default function TradeModal({
       setError('');
       setQuote(null);
       setCompanyName('');
-      setSearchResults([]);
-      setShowSearchResults(false);
-      setSearchLoading(false);
       setFetchingQuote(false);
 
       // If opening with an initial symbol, fetch its quote
@@ -108,15 +92,8 @@ export default function TradeModal({
             });
 
             if (!quoteError && !data?.error) {
-              const price = Number(
-                data?.price ??
-                  data?.quote?.ap ??
-                  data?.quote?.bp ??
-                  data?.trade?.p ??
-                  data?.bar?.c
-              );
-
-              if (Number.isFinite(price) && price > 0) {
+              const price = parseQuotePrice(data);
+              if (price != null) {
                 setQuote({ symbol: upperSym, price });
               }
             }
@@ -138,62 +115,8 @@ export default function TradeModal({
     }
   }, [visible, initialAction, initialSymbol]);
 
-  // Search for symbols as user types (debounced)
-  useEffect(() => {
-    // Clear previous timeout
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-
-    // If no input or input matches selected symbol, don't search
-    if (!searchInput || searchInput.length < 1) {
-      setSearchResults([]);
-      setShowSearchResults(false);
-      setSearchLoading(false);
-      return;
-    }
-
-    // If user has selected a symbol and input matches, don't search
-    if (symbol && searchInput.toUpperCase() === symbol.toUpperCase()) {
-      setSearchResults([]);
-      setSearchLoading(false);
-      setShowSearchResults(false);
-      return;
-    }
-
-    setSearchLoading(true);
-    setShowSearchResults(true);
-
-    searchTimeoutRef.current = setTimeout(async () => {
-      try {
-        const { data, error: searchError } = await supabase.functions.invoke('symbols-search', {
-          body: { q: searchInput, limit: 8, includePrices: true },
-        });
-
-        if (searchError) throw searchError;
-
-        const items = data?.items || [];
-        setSearchResults(items);
-
-        // Dismiss keyboard when results appear so user can see the dropdown
-        if (items.length > 0) {
-          Keyboard.dismiss();
-        }
-      } catch (err) {
-        console.error('Search error:', err);
-        setSearchResults([]);
-      } finally {
-        setSearchLoading(false);
-      }
-    }, 300);
-
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-        searchTimeoutRef.current = null;
-      }
-    };
-  }, [searchInput, symbol]);
+  // Search-by-ticker-or-name typeahead now lives in SymbolSearchField (shared
+  // with the draft screen — see lib/useSymbolSearch.ts / lib/symbolSearch.ts).
 
   // Fetch quote when a symbol is selected
   const fetchQuoteForSymbol = useCallback(async (sym: string) => {
@@ -215,15 +138,8 @@ export default function TradeModal({
       if (quoteError) throw quoteError;
       if (data?.error) throw new Error(data.error);
 
-      const price = Number(
-        data?.price ??
-          data?.quote?.ap ??
-          data?.quote?.bp ??
-          data?.trade?.p ??
-          data?.bar?.c
-      );
-
-      if (!Number.isFinite(price) || price <= 0) {
+      const price = parseQuotePrice(data);
+      if (price == null) {
         setQuote(null);
         setCompanyName('');
         return;
@@ -247,12 +163,10 @@ export default function TradeModal({
   }, []);
 
   // Handle selecting a search result
-  const handleSelectResult = useCallback((result: SearchResult) => {
+  const handleSelectResult = useCallback((result: ShapedSearchResult) => {
     setSymbol(result.symbol);
     setSearchInput(result.symbol);
     setCompanyName(result.name);
-    setShowSearchResults(false);
-    setSearchResults([]);
 
     // Use price from search if available, otherwise fetch
     if (result.price && Number.isFinite(result.price) && result.price > 0) {
@@ -388,74 +302,13 @@ export default function TradeModal({
         {/* Symbol Search Input */}
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>Search Stock</Text>
-          <View style={styles.searchContainer}>
-            <TextInput
-              style={styles.textInput}
-              value={searchInput}
-              onChangeText={handleSearchInputChange}
-              placeholder="Search by ticker or name..."
-              placeholderTextColor={Colors.textMuted}
-              autoCapitalize="characters"
-              autoCorrect={false}
-              onFocus={() => {
-                if (searchInput && searchInput !== symbol) {
-                  setShowSearchResults(true);
-                }
-              }}
-            />
-            {(searchLoading || fetchingQuote) && searchInput.length > 0 && (
-              <ActivityIndicator
-                size="small"
-                color={Colors.primary}
-                style={styles.inputSpinner}
-              />
-            )}
-
-            {/* Search Results Dropdown */}
-            {showSearchResults && searchResults.length > 0 && (
-              <View style={styles.searchResultsContainer}>
-                <ScrollView
-                  style={styles.searchResultsList}
-                  keyboardShouldPersistTaps="handled"
-                  nestedScrollEnabled
-                >
-                  {searchResults.map((item) => (
-                    <TouchableOpacity
-                      key={item.symbol}
-                      style={styles.searchResultItem}
-                      onPress={() => handleSelectResult(item)}
-                    >
-                      <View style={styles.searchResultLeft}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <Text style={styles.searchResultSymbol}>{item.symbol}</Text>
-                          {item.is_draftable === false && (
-                            <Text style={{ fontSize: 9, fontFamily: 'Inter_700Bold', color: Colors.warning, borderWidth: 1, borderColor: Colors.warning, borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1 }}>
-                              NOT DRAFTABLE
-                            </Text>
-                          )}
-                        </View>
-                        <Text style={styles.searchResultName} numberOfLines={1}>
-                          {item.name}
-                        </Text>
-                      </View>
-                      {item.price ? (
-                        <Text style={styles.searchResultPrice}>
-                          ${item.price.toFixed(2)}
-                        </Text>
-                      ) : null}
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-
-            {/* No results message */}
-            {showSearchResults && !searchLoading && searchInput.length >= 1 && searchResults.length === 0 && (
-              <View style={styles.noResultsContainer}>
-                <Text style={styles.noResultsText}>No matching stocks found</Text>
-              </View>
-            )}
-          </View>
+          <SymbolSearchField
+            value={searchInput}
+            onChangeText={handleSearchInputChange}
+            onSelect={handleSelectResult}
+            selectedSymbol={symbol}
+            extraLoading={fetchingQuote}
+          />
 
           {/* Selected stock info */}
           {symbol && companyName ? (
@@ -715,99 +568,8 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     marginBottom: 8,
   },
-  textInput: {
-    backgroundColor: Colors.inputBg,
-    borderRadius: 8,
-    padding: 14,
-    fontSize: 18,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textPrimary,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  inputSpinner: {
-    position: 'absolute',
-    right: 14,
-    top: 12,
-  },
-
-  // Search container
-  searchContainer: {
-    position: 'relative',
-    zIndex: 10,
-  },
-  searchResultsContainer: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    backgroundColor: Colors.cardBg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderTopWidth: 0,
-    borderBottomLeftRadius: 8,
-    borderBottomRightRadius: 8,
-    maxHeight: 250,
-    zIndex: 100,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-  },
-  searchResultsList: {
-    maxHeight: 250,
-  },
-  searchResultItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  searchResultLeft: {
-    flex: 1,
-    marginRight: 12,
-  },
-  searchResultSymbol: {
-    fontSize: 16,
-    fontFamily: 'Inter_700Bold',
-    color: Colors.textPrimary,
-  },
-  searchResultName: {
-    fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textMuted,
-    marginTop: 2,
-  },
-  searchResultPrice: {
-    fontSize: 14,
-    fontFamily: 'Inter_600SemiBold',
-    fontVariant: ['tabular-nums'],
-    color: Colors.textSecondary,
-  },
-  noResultsContainer: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    backgroundColor: Colors.cardBg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderTopWidth: 0,
-    borderBottomLeftRadius: 8,
-    borderBottomRightRadius: 8,
-    padding: 16,
-    zIndex: 100,
-  },
-  noResultsText: {
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textMuted,
-    textAlign: 'center',
-  },
+  // Search input/dropdown now lives in components/SymbolSearchField.tsx
+  // (shared with the draft screen).
   selectedStock: {
     marginTop: 10,
     padding: 12,

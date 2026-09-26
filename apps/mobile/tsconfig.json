@@ -13,5 +13,11 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
+  ],
+  // tests-deno/ holds hermetic pure-logic tests run with `deno test`, not
+  // tsc — they use `jsr:` specifiers tsc cannot resolve. See
+  // tests-deno/deno.json for the exact test command.
+  "exclude": [
+    "tests-deno"
   ]
 }

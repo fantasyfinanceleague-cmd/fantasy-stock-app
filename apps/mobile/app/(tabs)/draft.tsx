@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { router } from 'expo-router';
 import { useAuth } from '@/lib/useAuth';
 import { useLeagueContext } from '@/lib/LeagueContext';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Colors } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
 import LeagueSwitcher from '@/components/LeagueSwitcher';
@@ -13,6 +14,13 @@ import {
   fetchSymbolCategories,
 } from '@/lib/categoryData';
 import { Button, Card, Screen } from '@/components/ui';
+import SymbolSearchField from '@/components/SymbolSearchField';
+import { parseQuotePrice, type ShapedSearchResult } from '@/lib/symbolSearch';
+import {
+  computeDraftPhase,
+  describeStartBlocker,
+  type StartBlocker,
+} from '@/lib/draftState';
 
 interface DraftPick {
   id: string;
@@ -53,6 +61,18 @@ const PICK_REFUSAL_MESSAGES: Record<string, string> = {
   no_price: 'No recent price available for that stock',
   pick_conflict: 'Someone picked at the same moment — refresh and try again',
   rate_limited: 'Too many picks too quickly — wait a moment and try again',
+  draft_not_complete: 'The draft is not finished yet',
+  forbidden_target: "You can't pick on that player's behalf",
+  not_a_member: "You're not a member of this league",
+};
+
+// Refusal reasons from draft-control, mapped to user-facing copy.
+const START_REFUSAL_MESSAGES: Record<string, string> = {
+  not_commissioner: 'Only the commissioner can start the draft',
+  bots_not_allowed: "This league can't add bots yet",
+  no_bots_needed: 'This league already has enough members',
+  not_started_state: 'The draft has already started',
+  bot_id_conflict: 'That just ran on another device — try again',
 };
 
 export default function DraftScreen() {
@@ -66,13 +86,35 @@ export default function DraftScreen() {
   const [draftOrder, setDraftOrder] = useState<string[]>([]);
 
   // Stock search
-  const [searchSymbol, setSearchSymbol] = useState('');
+  const [searchInputText, setSearchInputText] = useState('');
   const [quote, setQuote] = useState<{ symbol: string; price: number } | null>(null);
   const [quoteCats, setQuoteCats] = useState<{ categories: Category[]; classified: boolean } | null>(null);
   const [leagueSlots, setLeagueSlots] = useState<LeagueSlot[]>([]);
   const [categoryList, setCategoryList] = useState<Category[]>([]);
-  const [searching, setSearching] = useState(false);
+  const [quoteLoading, setQuoteLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Commissioner start-draft / add-bots (draft-control) state
+  const [startStatus, setStartStatus] = useState<{
+    can_start: boolean;
+    blockers: StartBlocker[];
+    is_commissioner: boolean;
+    bots_allowed: boolean;
+    bots_needed: number;
+  } | null>(null);
+  const [startStatusLoading, setStartStatusLoading] = useState(false);
+  const [starting, setStarting] = useState(false);
+  const [addingBots, setAddingBots] = useState(false);
+
+  // Finalize-heal state (every pick made, server hasn't flipped draft_status)
+  const [finalizeError, setFinalizeError] = useState<string | null>(null);
+  const [retryingFinalize, setRetryingFinalize] = useState(false);
+  const finalizeAttemptedRef = useRef(false);
+
+  // Bot auto-pick: any member's open app fires the next bot's turn — see
+  // KNOWN LIMIT in validate-and-record-pick's header comment.
+  const [botPickInFlight, setBotPickInFlight] = useState(false);
+  const botPickAttemptedForRef = useRef<string | null>(null);
 
   // Completed draft view state
   const [selectedRound, setSelectedRound] = useState(1);
@@ -93,9 +135,29 @@ export default function DraftScreen() {
 
   const isMyTurn = currentPicker === user?.id;
   const isDraftComplete = picks.length >= totalPicks;
-  const isDraftStarted = activeLeague?.draft_status === 'in_progress';
   const isDraftNotStarted = activeLeague?.draft_status === 'not_started';
   const isDraftCompleted = activeLeague?.draft_status === 'completed';
+  const isCommissioner = activeLeague?.commissioner_id === user?.id;
+
+  // What should this screen show right now? See lib/draftState.ts — this is
+  // the fix for docs/STATUS.md §4 defect 10: 'finalizing' is a phase distinct
+  // from both 'drafting' (someone still has a turn) and 'completed' (the
+  // server actually flipped draft_status), so the screen never claims
+  // completion the server hasn't recorded.
+  const draftPhase = computeDraftPhase({
+    draftStatus: (activeLeague?.draft_status as 'not_started' | 'in_progress' | 'completed' | undefined) ?? null,
+    stakeMode: activeLeague?.stake_mode ?? null,
+    memberCount: draftOrder.length,
+    numRounds,
+    pickCount: picks.length,
+  });
+  // Symbols already drafted in this league (SKIP rows excluded — they never
+  // occupied a symbol) — dims + badges them in the search dropdown instead of
+  // letting the user pick a duplicate and find out only after submitting.
+  const ownedSymbols = useMemo(
+    () => new Set(picks.filter((p) => p.symbol !== 'SKIP').map((p) => p.symbol.toUpperCase())),
+    [picks],
+  );
 
   // Budget tracking. stake_mode is authoritative (budget_cap = capped);
   // budget_mode fallback covers the pre-migration transition window only.
@@ -255,49 +317,175 @@ export default function DraftScreen() {
     setRefreshing(false);
   };
 
-  // Search for stock quote
-  const searchStock = async () => {
-    const sym = searchSymbol.trim().toUpperCase();
-    if (!sym) return;
-
-    // Check if already picked
-    if (picks.some(p => p.symbol.toUpperCase() === sym)) {
-      Alert.alert('Error', `${sym} has already been drafted`);
-      return;
-    }
-
-    setSearching(true);
-    setQuote(null);
-
+  // draft-control 'status' — fetched while the draft hasn't started, so the
+  // not-started screen can show why (and, for the commissioner, a working
+  // Start Draft / Fill with bots UI). Any member may call this.
+  const fetchStartStatus = useCallback(async () => {
+    if (!activeLeagueId || !isDraftNotStarted) return;
+    setStartStatusLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('quote', {
-        body: { symbol: sym }
+      const { data, error } = await supabase.functions.invoke('draft-control', {
+        body: { league_id: activeLeagueId, action: 'status' },
       });
-
-      if (error || data?.error) {
-        Alert.alert('Error', data?.error || 'Failed to fetch quote');
-        return;
+      if (!error && data?.ok) {
+        setStartStatus(data);
       }
-
-      const price = Number(data?.price);
-      if (!Number.isFinite(price)) {
-        Alert.alert('Error', 'Invalid price returned');
-        return;
-      }
-
-      // Check budget
-      if (isBudgetMode && price > budgetRemaining) {
-        Alert.alert('Error', `Not enough budget. ${sym} costs $${price.toFixed(2)} but you only have $${budgetRemaining.toFixed(2)} remaining.`);
-        return;
-      }
-
-      setQuote({ symbol: data?.symbol || sym, price });
     } catch (e) {
-      Alert.alert('Error', 'Failed to fetch quote');
+      console.error('Failed to fetch draft-control status:', e);
     } finally {
-      setSearching(false);
+      setStartStatusLoading(false);
+    }
+  }, [activeLeagueId, isDraftNotStarted]);
+
+  useEffect(() => {
+    fetchStartStatus();
+  }, [fetchStartStatus]);
+
+  const handleStartDraft = async () => {
+    if (!activeLeagueId) return;
+    setStarting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('draft-control', {
+        body: { league_id: activeLeagueId, action: 'start' },
+      });
+      if (error) throw error;
+      if (!data?.ok) {
+        Alert.alert('Error', START_REFUSAL_MESSAGES[data?.reason] || 'Could not start the draft');
+        await fetchStartStatus();
+        return;
+      }
+      await refreshLeagues();
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Failed to start the draft');
+    } finally {
+      setStarting(false);
     }
   };
+
+  const handleAddBots = async () => {
+    if (!activeLeagueId) return;
+    setAddingBots(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('draft-control', {
+        body: { league_id: activeLeagueId, action: 'add_bots' },
+      });
+      if (error) throw error;
+      if (!data?.ok) {
+        Alert.alert('Error', START_REFUSAL_MESSAGES[data?.reason] || 'Could not add bots');
+        return;
+      }
+      await Promise.all([fetchDraftData(), fetchStartStatus()]);
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Failed to add bots');
+    } finally {
+      setAddingBots(false);
+    }
+  };
+
+  // Finalize-heal: every pick is made but draft_status is still 'in_progress'
+  // (the final pick's server-side finalize failed, or was never retried).
+  // Any member may retry — the RPC is idempotent (docs/STATUS.md §4 defect 1).
+  const triggerFinalize = useCallback(async () => {
+    if (!activeLeagueId) return;
+    setRetryingFinalize(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('validate-and-record-pick', {
+        body: { league_id: activeLeagueId, action: 'finalize' },
+      });
+      if (error) throw error;
+      if (data?.status_update_error) {
+        setFinalizeError(data.status_update_error);
+      } else {
+        setFinalizeError(null);
+      }
+      await refreshLeagues();
+    } catch (e: any) {
+      setFinalizeError(e.message || 'unhandled');
+    } finally {
+      setRetryingFinalize(false);
+    }
+  }, [activeLeagueId, refreshLeagues]);
+
+  // Auto-fire the heal ONCE per entry into 'finalizing' — a manual Retry
+  // button covers the case where the auto-attempt also fails.
+  useEffect(() => {
+    if (draftPhase === 'finalizing' && !finalizeAttemptedRef.current) {
+      finalizeAttemptedRef.current = true;
+      triggerFinalize();
+    }
+    if (draftPhase !== 'finalizing') {
+      finalizeAttemptedRef.current = false;
+    }
+  }, [draftPhase, triggerFinalize]);
+
+  // Bot auto-pick: fires from ANY member's open app when it's a bot's turn.
+  // KNOWN LIMIT (see validate-and-record-pick's header comment): if nobody's
+  // app is open on this screen when a bot is up, the draft waits — there is
+  // no server-scheduled trigger yet (docs/STATUS.md follow-up).
+  useEffect(() => {
+    if (draftPhase !== 'drafting' || !currentPicker?.startsWith('bot-') || botPickInFlight) return;
+    const attemptKey = `${currentPicker}:${currentPickNumber}`;
+    if (botPickAttemptedForRef.current === attemptKey) return;
+
+    const timer = setTimeout(async () => {
+      if (!activeLeagueId) return;
+      botPickAttemptedForRef.current = attemptKey;
+      setBotPickInFlight(true);
+      try {
+        await supabase.functions.invoke('validate-and-record-pick', {
+          body: { league_id: activeLeagueId, for_user_id: currentPicker, action: 'bot_pick' },
+        });
+        // The realtime subscription below picks up the new row; a failed
+        // call just leaves attemptKey set until picks.length changes, at
+        // which point a fresh key is computed and it can be retried by
+        // whichever app is open then.
+      } catch (e) {
+        console.error('Bot pick failed:', e);
+      } finally {
+        setBotPickInFlight(false);
+      }
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [draftPhase, currentPicker, currentPickNumber, botPickInFlight, activeLeagueId]);
+
+  // Live quote fallback when a search result carries no price (mirrors
+  // TradeModal's fetchQuoteForSymbol).
+  const fetchLiveQuote = useCallback(async (sym: string): Promise<number | null> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('quote', { body: { symbol: sym } });
+      if (error || data?.error) return null;
+      return parseQuotePrice(data);
+    } catch {
+      return null;
+    }
+  }, []);
+
+  // Handle picking a stock from the search dropdown (replaces the old
+  // exact-ticker TextInput — see components/SymbolSearchField.tsx).
+  const handleSelectStock = useCallback(async (result: ShapedSearchResult) => {
+    setSearchInputText(result.symbol);
+    const applyPrice = (price: number) => {
+      if (isBudgetMode && price > budgetRemaining) {
+        Alert.alert('Error', `Not enough budget. ${result.symbol} costs $${price.toFixed(2)} but you only have $${budgetRemaining.toFixed(2)} remaining.`);
+        return;
+      }
+      setQuote({ symbol: result.symbol, price });
+    };
+
+    if (result.price && Number.isFinite(result.price) && result.price > 0) {
+      applyPrice(result.price);
+      return;
+    }
+    setQuoteLoading(true);
+    const price = await fetchLiveQuote(result.symbol);
+    setQuoteLoading(false);
+    if (price == null) {
+      Alert.alert('Error', 'Failed to fetch quote');
+      return;
+    }
+    applyPrice(price);
+  }, [isBudgetMode, budgetRemaining, fetchLiveQuote]);
 
   // Submit pick
   const submitPick = async () => {
@@ -322,17 +510,27 @@ export default function DraftScreen() {
       if (error) throw error;
       if (!data?.ok) {
         Alert.alert('Error', PICK_REFUSAL_MESSAGES[data?.reason] || 'Pick was refused');
+        if (data?.status_update_error) setFinalizeError(data.status_update_error);
         return;
       }
 
       // Clear search
-      setSearchSymbol('');
+      setSearchInputText('');
       setQuote(null);
 
-      // Draft-completed status is written server-side by the function.
+      // Draft-completed status is written server-side by the function. A
+      // draft_complete response with a status_update_error means finalize
+      // FAILED — draft_status is still 'in_progress', so the render below
+      // (via computeDraftPhase) shows the honest "Finalizing…" state instead
+      // of a completion alert nothing actually recorded (docs/STATUS.md §4
+      // defect 10 — the old code alerted "Draft Complete!" unconditionally).
       if (data.draft_complete) {
+        if (data.status_update_error) {
+          setFinalizeError(data.status_update_error);
+        } else {
+          Alert.alert('Draft Complete!', 'The draft has finished. Good luck!');
+        }
         await refreshLeagues();
-        Alert.alert('Draft Complete!', 'The draft has finished. Good luck!');
       } else {
         // Notify the next player it's their turn
         const nextPickNumber = currentPickNumber + 1;
@@ -397,23 +595,64 @@ export default function DraftScreen() {
 
   if (isDraftNotStarted) {
     const hasDraftDate = activeLeague.draft_date != null;
+    const blockers = startStatus?.blockers ?? [];
+    const canStart = startStatus?.can_start ?? false;
+    const botsNeeded = startStatus?.bots_needed ?? 0;
+
     return (
       <Screen scroll={false}>
         <LeagueSwitcher />
-        <View style={styles.centered}>
+        <ScrollView style={styles.notStartedScroll} contentContainerStyle={styles.centered}>
           <Text style={styles.pendingIcon}>⏰</Text>
           <Text style={styles.emptyTitle}>Draft Not Started</Text>
           <Text style={styles.emptySubtitle}>
             {hasDraftDate
-              ? `Scheduled for ${new Date(activeLeague.draft_date).toLocaleString()}`
+              ? `Scheduled for ${new Date(activeLeague.draft_date as string).toLocaleString()}`
               : 'Draft date not set yet'}
           </Text>
-          <Text style={styles.hint}>
-            {hasDraftDate
-              ? 'The commissioner can start the draft from the website'
-              : 'The commissioner needs to set a draft date before the draft can begin'}
-          </Text>
-        </View>
+
+          {startStatusLoading && !startStatus ? (
+            <ActivityIndicator color={Colors.primary} style={{ marginTop: 12 }} />
+          ) : (
+            blockers.length > 0 && (
+              <View style={styles.blockerList}>
+                {blockers.map((b, i) => (
+                  <Text key={i} style={styles.blockerText}>• {describeStartBlocker(b)}</Text>
+                ))}
+              </View>
+            )
+          )}
+
+          {isCommissioner ? (
+            <View style={styles.commishActions}>
+              <Button
+                title="Edit Draft Date & Settings"
+                variant="secondary"
+                onPress={() => router.push({ pathname: '/league-settings', params: { leagueId: activeLeagueId } })}
+              />
+              {startStatus?.bots_allowed && botsNeeded > 0 && (
+                <Button
+                  title={`Fill with ${botsNeeded} Bot${botsNeeded === 1 ? '' : 's'}`}
+                  variant="secondary"
+                  onPress={handleAddBots}
+                  loading={addingBots}
+                  disabled={addingBots}
+                />
+              )}
+              <Button
+                title="Start Draft"
+                variant="success"
+                onPress={handleStartDraft}
+                loading={starting}
+                disabled={starting || !canStart}
+              />
+            </View>
+          ) : (
+            <Text style={styles.hint}>
+              Ask your commissioner to start the draft from the app.
+            </Text>
+          )}
+        </ScrollView>
       </Screen>
     );
   }
@@ -585,6 +824,44 @@ export default function DraftScreen() {
     );
   }
 
+  // Every pick is made but the server hasn't flipped draft_status to
+  // 'completed' yet — see lib/draftState.ts and the finalize-heal effect
+  // above. Nobody has "a turn" in this state, so this is the only screen that
+  // can trigger the retry (docs/STATUS.md §4 defect 10).
+  if (draftPhase === 'finalizing') {
+    return (
+      <Screen scroll={false}>
+        <LeagueSwitcher />
+        <View style={styles.centered}>
+          {retryingFinalize ? (
+            <ActivityIndicator color={Colors.primary} size="large" />
+          ) : (
+            <Text style={styles.pendingIcon}>⏳</Text>
+          )}
+          <Text style={styles.emptyTitle}>Finalizing the Season…</Text>
+          <Text style={styles.emptySubtitle}>
+            Every pick is in — Stockpile is generating your matchup schedule.
+          </Text>
+          {finalizeError && (
+            <>
+              <Text style={styles.hint}>
+                That took longer than expected ({finalizeError}). Try again below.
+              </Text>
+              <Button
+                title="Retry"
+                variant="secondary"
+                onPress={triggerFinalize}
+                loading={retryingFinalize}
+                disabled={retryingFinalize}
+                style={{ marginTop: 16 }}
+              />
+            </>
+          )}
+        </View>
+      </Screen>
+    );
+  }
+
   return (
     <Screen refreshing={refreshing} onRefresh={onRefresh}>
       {/* Sticky League Switcher Header */}
@@ -644,26 +921,17 @@ export default function DraftScreen() {
             {isMyTurn && (
               <View style={styles.searchCard}>
                 <Text style={styles.searchTitle}>Search Stock</Text>
-                <View style={styles.searchRow}>
-                  <TextInput
-                    style={styles.searchInput}
-                    value={searchSymbol}
-                    onChangeText={setSearchSymbol}
-                    placeholder="Enter symbol (e.g. AAPL)"
-                    placeholderTextColor={Colors.textDark}
-                    autoCapitalize="characters"
-                    autoCorrect={false}
-                    onSubmitEditing={searchStock}
-                  />
-                  <Button
-                    title="Search"
-                    onPress={searchStock}
-                    disabled={!searchSymbol.trim()}
-                    loading={searching}
-                    variant="primary"
-                    size="sm"
-                  />
-                </View>
+                <SymbolSearchField
+                  value={searchInputText}
+                  onChangeText={setSearchInputText}
+                  onSelect={handleSelectStock}
+                  selectedSymbol={quote?.symbol ?? ''}
+                  placeholder="Search by ticker or name..."
+                  ownedSymbols={ownedSymbols}
+                  allowUndraftable={activeLeague.allow_undraftable === true}
+                  ownedBadgeLabel="ALREADY DRAFTED"
+                  extraLoading={quoteLoading}
+                />
 
                 {quote && (
                   <View style={styles.quoteCard}>
@@ -788,6 +1056,27 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     color: Colors.textDark,
     textAlign: 'center',
+    marginTop: 8,
+  },
+  notStartedScroll: {
+    flex: 1,
+  },
+  blockerList: {
+    alignSelf: 'stretch',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  blockerText: {
+    fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textSecondary,
+    textAlign: 'left',
+    marginBottom: 6,
+  },
+  commishActions: {
+    alignSelf: 'stretch',
+    gap: 10,
+    marginTop: 16,
   },
   statusCard: {
     marginHorizontal: 24,
@@ -844,21 +1133,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_600SemiBold',
     color: Colors.textPrimary,
     marginBottom: 12,
-  },
-  searchRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  searchInput: {
-    flex: 1,
-    backgroundColor: Colors.background,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textPrimary,
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
   quoteCard: {
     marginTop: 16,

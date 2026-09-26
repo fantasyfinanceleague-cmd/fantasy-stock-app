@@ -20,9 +20,24 @@
 //
 // Callers: the picker themself, OR any league member on behalf of a bot
 // ('bot-*' target — mirrors the "League members can create bot picks" RLS
-// policy), OR any league member skipping the CURRENT picker's turn when that
-// picker is a bot (action:'skip', the stuck-bot escape hatch), OR any league
-// member re-running draft finalization (action:'finalize', see below).
+// policy) — either with an explicit symbol (action:'pick', for_user_id=bot,
+// the web-era shape) or letting the SERVER choose one (action:'bot_pick', see
+// below — mobile has no client-side bot stock pool) — OR any league member
+// skipping the CURRENT picker's turn when that picker is a bot (action:'skip',
+// the stuck-bot escape hatch), OR any league member re-running draft
+// finalization (action:'finalize', see below).
+//
+// action:'bot_pick': mobile's bot auto-picker. Any member's client may fire
+// this when it's a bot's turn (mirrors web's client-driven botAutoPick, but
+// the SERVER — not the client — chooses the symbol: rankBotCandidates
+// (../_shared/bot-pick.ts) coarsely filters the symbols catalog on cached
+// last_price, then this function tries up to BOT_PICK_MAX_ATTEMPTS candidates
+// through the SAME live-price + validatePick gate a human pick uses, in order,
+// until one is legal or the attempts are exhausted (falls back to a SKIP —
+// same sentinel and same finalize-on-completion path as a human skip). KNOWN
+// LIMIT (launch-acceptable, tracked in docs/STATUS.md): a bot's turn only
+// advances while some member's app is open on the draft screen to fire the
+// request — there is no server-scheduled trigger.
 //
 // Draft completion: the final pick/skip FINALIZES the league — draft_status,
 // the season schedule (matchups), initial standings, league dates, num_weeks and
@@ -40,8 +55,10 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { fetchFillPrice } from '../_shared/alpaca-price.ts';
 import { fetchEligibleCategoryIds } from '../_shared/category-eligibility.ts';
 import { buildFinalizeArgs, planSeason, readFinalizeResult } from '../_shared/schedule.ts';
+import { BOT_PICK_MAX_ATTEMPTS, type BotSymbolCandidate, rankBotCandidates } from '../_shared/bot-pick.ts';
 import {
   computeDraftOrder,
+  currentTurn,
   type LeagueRules,
   type PickRow,
   SKIP_SYMBOL,
@@ -124,7 +141,13 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json().catch(() => ({}));
     const leagueId = String(body.league_id ?? '').trim();
-    const action = body.action === 'skip' ? 'skip' : body.action === 'finalize' ? 'finalize' : 'pick';
+    const action = body.action === 'skip'
+      ? 'skip'
+      : body.action === 'finalize'
+      ? 'finalize'
+      : body.action === 'bot_pick'
+      ? 'bot_pick'
+      : 'pick';
     const symbol = String(body.symbol ?? '').trim().toUpperCase();
     const targetId = String(body.for_user_id ?? user.id).trim();
 
@@ -133,6 +156,13 @@ Deno.serve(async (req: Request) => {
 
     // Picking for someone else is only allowed for bots (both actions).
     if (targetId !== user.id && !targetId.startsWith('bot-')) {
+      return json({ ok: false, reason: 'forbidden_target' }, 403);
+    }
+    // bot_pick is bot-only by definition — a real user calling it "for
+    // themself" (targetId === user.id) would otherwise slip past the check
+    // above. Checked from the VERIFIED for_user_id string, never trusted as
+    // an identity claim beyond "does it look like a bot id".
+    if (action === 'bot_pick' && !targetId.startsWith('bot-')) {
       return json({ ok: false, reason: 'forbidden_target' }, 403);
     }
 
@@ -195,34 +225,141 @@ Deno.serve(async (req: Request) => {
     // ---- Skip: forfeit the current turn (stuck-bot escape hatch) ----------
     if (action === 'skip') {
       // Target already constrained above: self (voluntary forfeit) or a bot.
-      const decision = validateSkip(targetId, order, picks.length, numRounds);
-      if (!decision.legal) return json({ ok: false, reason: decision.reason }); // 200: game-flow refusal (join-league pattern)
+      const result = await insertSkip(admin, leagueId, targetId, order, picks, numRounds, league, memberIds);
+      if (!result.ok) return json({ ok: false, reason: result.reason }); // 200: game-flow refusal (join-league pattern)
+      return json({ ok: true, pick: result.pick, draft_complete: result.complete, status_update_error: result.statusError });
+    }
 
-      const { data: inserted, error: insErr } = await admin
-        .from('drafts')
-        .insert({
-          league_id: leagueId,
-          user_id: targetId,
-          symbol: SKIP_SYMBOL,
-          entry_price: 0,
-          quantity: 0,
-          round: decision.round,
-          pick_number: decision.pickNumber,
-          // draft_date omitted: column is timestamp WITHOUT time zone with
-          // DEFAULT now() — an ISO string's Z suffix would be silently
-          // stripped, so the server default is the correct writer.
-        })
-        .select('*')
-        .single();
-      if (insErr) {
-        if ((insErr as { code?: string }).code === '23505') {
-          return json({ ok: false, reason: 'pick_conflict' }); // 200: race lost, client refetches + retries
+    // ---- Bot pick: server chooses the symbol (mobile has no client-side bot
+    // stock pool — see the header comment). Tries ranked candidates through
+    // the SAME live-price + validatePick gate a human pick uses; falls back
+    // to a SKIP if none are legal. --------------------------------------
+    if (action === 'bot_pick') {
+      // Cheapest check first (same ordering validatePick itself documents):
+      // refuse an out-of-turn bot_pick before spending anything on it. Without
+      // this, any member could name an existing-but-not-current bot id (every
+      // roster is visible to every member) and force up to
+      // BOT_PICK_MAX_ATTEMPTS live Alpaca calls per call purely to be told
+      // not_your_turn — validatePick would catch it too, but only AFTER the
+      // candidate loop below already spent those calls.
+      const turn = currentTurn(picks.length, order, numRounds);
+      if (!turn) return json({ ok: false, reason: 'draft_complete' }); // unreachable in practice — the every-pick-made branch above returns first
+      if (turn.pickerId !== targetId) return json({ ok: false, reason: 'not_your_turn' });
+
+      if (!ALPACA_KEY || !ALPACA_SECRET) return json({ ok: false, reason: 'server_config_error' }, 500);
+
+      const { slots, error: slotsErrored } = await loadSlots(admin, leagueId);
+      if (slotsErrored) return json({ ok: false, reason: 'unhandled' }, 500);
+
+      const rules: LeagueRules = {
+        stakeMode: (league.stake_mode ?? null) as LeagueRules['stakeMode'],
+        budgetAmount: league.budget_amount == null ? null : Number(league.budget_amount),
+        notionalPerSlot: league.notional_per_slot == null ? null : Number(league.notional_per_slot),
+        numRounds,
+        allowUndraftable: league.allow_undraftable === true,
+      };
+
+      // Cheap pre-filter pool on the enrichment cron's cached last_price —
+      // rankBotCandidates does the real filtering (owned/budget/bracket); this
+      // query just bounds how many candidates we consider.
+      let symbolQuery = admin
+        .from('symbols')
+        .select('symbol, last_price, is_draftable, market_cap')
+        .not('last_price', 'is', null)
+        .order('market_cap', { ascending: false, nullsFirst: false })
+        .limit(150);
+      if (!rules.allowUndraftable) symbolQuery = symbolQuery.eq('is_draftable', true);
+      const { data: symbolRows, error: symErr } = await symbolQuery;
+      if (symErr) return json({ ok: false, reason: 'unhandled' }, 500);
+
+      const candidates: BotSymbolCandidate[] = (symbolRows ?? []).map((s) => ({
+        symbol: String(s.symbol),
+        lastPrice: s.last_price == null ? null : Number(s.last_price),
+        isDraftable: s.is_draftable === true,
+        marketCap: s.market_cap == null ? null : Number(s.market_cap),
+      }));
+      const isDraftableBySymbol = new Map(candidates.map((c) => [c.symbol, c.isDraftable]));
+
+      const ranked = rankBotCandidates({ rules, slots, picks, trades, botId: targetId, candidates });
+
+      let insertedPick: Record<string, unknown> | null = null;
+      let insertedComplete = false;
+      let priceSource: string | null = null;
+
+      for (const candidateSymbol of ranked.slice(0, BOT_PICK_MAX_ATTEMPTS)) {
+        const fill = await fetchFillPrice(candidateSymbol, ALPACA_KEY, ALPACA_SECRET);
+        if (fill.price == null) continue; // vendor error logged inside fetchFillPrice's caller convention elsewhere; try the next candidate
+
+        const eligibleCategories = slots.some((s) => s.categoryId != null)
+          ? await fetchEligibleCategoryIds(admin, candidateSymbol)
+          : new Set<string>();
+
+        const decision = validatePick({
+          rules,
+          slots,
+          order,
+          picks,
+          trades,
+          pickerId: targetId,
+          symbol: candidateSymbol,
+          price: fill.price,
+          eligibleCategories,
+          isDraftable: isDraftableBySymbol.get(candidateSymbol),
+        });
+        if (!decision.legal) continue;
+
+        const { data: row, error: insErr } = await admin
+          .from('drafts')
+          .insert({
+            league_id: leagueId,
+            user_id: targetId,
+            symbol: candidateSymbol,
+            entry_price: fill.price,
+            quantity: decision.quantity,
+            round: decision.round,
+            pick_number: decision.pickNumber,
+            slot_id: decision.slotId,
+          })
+          .select('*')
+          .single();
+        if (insErr) {
+          // Race backstop, same as the human pick path below: someone else's
+          // write took this pick number first. Stop trying candidates — the
+          // caller's next bot_pick call re-derives legality from fresh state.
+          if ((insErr as { code?: string }).code === '23505') {
+            return json({ ok: false, reason: 'pick_conflict' }); // 200: race lost, client retries
+          }
+          return json({ ok: false, reason: 'unhandled' }, 500);
         }
-        return json({ ok: false, reason: 'unhandled' }, 500);
+        insertedPick = row;
+        insertedComplete = decision.pickNumber >= order.length * numRounds;
+        priceSource = fill.source;
+        break;
       }
-      const complete = decision.pickNumber >= order.length * numRounds;
-      const statusError = complete ? await finalizeDraft(admin, league, memberIds) : null;
-      return json({ ok: true, pick: inserted, draft_complete: complete, status_update_error: statusError });
+
+      if (!insertedPick) {
+        // No candidate was legal (or none had a live price) — forfeit the
+        // bot's turn exactly like the human-triggered skip escape hatch, so
+        // the draft still advances instead of stalling on this bot forever.
+        const result = await insertSkip(admin, leagueId, targetId, order, picks, numRounds, league, memberIds);
+        if (!result.ok) return json({ ok: false, reason: result.reason });
+        return json({
+          ok: true,
+          pick: result.pick,
+          draft_complete: result.complete,
+          status_update_error: result.statusError,
+          bot_skipped: true,
+        });
+      }
+
+      const statusError = insertedComplete ? await finalizeDraft(admin, league, memberIds) : null;
+      return json({
+        ok: true,
+        pick: insertedPick,
+        price_source: priceSource,
+        draft_complete: insertedComplete,
+        status_update_error: statusError,
+      });
     }
 
     // ---- Pick: price server-side, validate, record ------------------------
@@ -235,20 +372,8 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, reason: 'no_price', symbol }); // 200: game-flow refusal
     }
 
-    const { data: slotData, error: sErr } = await admin
-      .from('league_draft_slots')
-      .select('id, slot_index, slot_count, price_min, price_max, category_id')
-      .eq('league_id', leagueId)
-      .order('slot_index', { ascending: true });
-    if (sErr) return json({ ok: false, reason: 'unhandled' }, 500);
-    const slots: Slot[] = (slotData ?? []).map((s) => ({
-      id: String(s.id),
-      slotIndex: Number(s.slot_index),
-      slotCount: Number(s.slot_count),
-      priceMin: s.price_min == null ? null : Number(s.price_min),
-      priceMax: s.price_max == null ? null : Number(s.price_max),
-      categoryId: s.category_id == null ? null : String(s.category_id),
-    }));
+    const { slots, error: slotsErrored } = await loadSlots(admin, leagueId);
+    if (slotsErrored) return json({ ok: false, reason: 'unhandled' }, 500);
 
     // is_draftable gate (DR-001): a non-draftable symbol is refused unless the
     // commissioner set allow_undraftable. A missing symbols row => not draftable.
@@ -322,6 +447,80 @@ Deno.serve(async (req: Request) => {
     return json({ ok: false, reason: 'unhandled' }, 500);
   }
 });
+
+// Shared slot load + shape, used by both the human 'pick' path and 'bot_pick'
+// (previously duplicated between them).
+async function loadSlots(
+  // deno-lint-ignore no-explicit-any
+  admin: any,
+  leagueId: string,
+): Promise<{ slots: Slot[]; error: boolean }> {
+  const { data: slotData, error: sErr } = await admin
+    .from('league_draft_slots')
+    .select('id, slot_index, slot_count, price_min, price_max, category_id')
+    .eq('league_id', leagueId)
+    .order('slot_index', { ascending: true });
+  if (sErr) return { slots: [], error: true };
+  const slots: Slot[] = (slotData ?? []).map((s: Record<string, unknown>) => ({
+    id: String(s.id),
+    slotIndex: Number(s.slot_index),
+    slotCount: Number(s.slot_count),
+    priceMin: s.price_min == null ? null : Number(s.price_min),
+    priceMax: s.price_max == null ? null : Number(s.price_max),
+    categoryId: s.category_id == null ? null : String(s.category_id),
+  }));
+  return { slots, error: false };
+}
+
+type SkipResult =
+  // deno-lint-ignore no-explicit-any
+  | { ok: true; pick: any; complete: boolean; statusError: string | null }
+  | { ok: false; reason: string };
+
+// Shared SKIP-row insert + finalize-on-completion, used by both the
+// human-triggered 'skip' action and bot_pick's no-legal-candidate fallback
+// (previously only the 'skip' branch had this logic).
+async function insertSkip(
+  // deno-lint-ignore no-explicit-any
+  admin: any,
+  leagueId: string,
+  targetId: string,
+  order: string[],
+  picks: PickRow[],
+  numRounds: number,
+  // deno-lint-ignore no-explicit-any
+  league: any,
+  memberIds: string[],
+): Promise<SkipResult> {
+  const decision = validateSkip(targetId, order, picks.length, numRounds);
+  if (!decision.legal) return { ok: false, reason: decision.reason };
+
+  const { data: inserted, error: insErr } = await admin
+    .from('drafts')
+    .insert({
+      league_id: leagueId,
+      user_id: targetId,
+      symbol: SKIP_SYMBOL,
+      entry_price: 0,
+      quantity: 0,
+      round: decision.round,
+      pick_number: decision.pickNumber,
+      // draft_date omitted: column is timestamp WITHOUT time zone with
+      // DEFAULT now() — an ISO string's Z suffix would be silently stripped,
+      // so the server default is the correct writer.
+    })
+    .select('*')
+    .single();
+  if (insErr) {
+    if ((insErr as { code?: string }).code === '23505') {
+      return { ok: false, reason: 'pick_conflict' }; // race lost, client refetches + retries
+    }
+    return { ok: false, reason: 'unhandled' };
+  }
+  const complete = decision.pickNumber >= order.length * numRounds;
+  const statusError = complete ? await finalizeDraft(admin, league, memberIds) : null;
+  return { ok: true, pick: inserted, complete, statusError };
+}
 
 const FINALIZE_ATTEMPTS = 3;
 

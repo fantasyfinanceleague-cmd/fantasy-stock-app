@@ -7,7 +7,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 
 export default tseslint.config(
   {
-    ignores: ['node_modules/**', '.expo/**', 'dist/**', 'babel.config.js', 'metro.config.js', '**/__tests__/**', '**/*.test.*'],
+    ignores: ['node_modules/**', '.expo/**', 'dist/**', 'babel.config.js', 'metro.config.js', '**/__tests__/**', '**/*.test.*', 'tests-deno/**'],
   },
   {
     files: ['**/*.{ts,tsx}'],
