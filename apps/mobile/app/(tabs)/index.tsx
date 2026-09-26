@@ -6,6 +6,7 @@ import { useLeagueContext } from '@/lib/LeagueContext';
 import { useHomeData } from '@/lib/useHomeData';
 import { useHistoricalPL } from '@/lib/useHistoricalPL';
 import { PerformanceChart, PeriodPL } from '@/components/PerformanceChart';
+import { decideHeroPL } from '@/lib/plCoverage';
 import { router } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
 import { SkeletonCard } from '@/components/Skeleton';
@@ -88,11 +89,13 @@ export default function HomeScreen() {
     );
   }
 
-  // Use period-relative P/L when chart is active, otherwise all-time
+  // Gain row shares the hero value's scope (every holding, live prices); the
+  // chart only supplies a 1W/1M delta when that window is fully priced.
   const hasChart = historicalData.length >= 2;
-  const displayGainLoss = hasChart && periodPL ? periodPL.gainLoss : homeData.totalGainLoss;
-  const displayGainLossPercent = hasChart && periodPL ? periodPL.gainLossPercent : homeData.totalGainLossPercent;
-  const isPositive = hasChart && periodPL ? periodPL.isPositive : homeData.totalGainLoss >= 0;
+  const heroPL = decideHeroPL(homeData.portfolio, hasChart ? periodPL : null);
+  const displayGainLoss = heroPL.gainLoss;
+  const displayGainLossPercent = heroPL.gainLossPercent;
+  const isPositive = heroPL.isPositive;
 
   return (
     <Screen refreshing={homeData.refreshing} onRefresh={homeData.refresh}>
@@ -135,6 +138,7 @@ export default function HomeScreen() {
               ${formatCurrency(homeData.totalValue)}
             </Text>
             {homeData.hasLivePrices && homeData.totalCost > 0 && (
+              <>
               <View style={styles.changeRow}>
                 <Text style={[
                   styles.changeAmount,
@@ -154,6 +158,10 @@ export default function HomeScreen() {
                   </Text>
                 </View>
               </View>
+              {heroPL.notes.map(note => (
+                <Text key={note} style={styles.portfolioCaption}>{note}</Text>
+              ))}
+              </>
             )}
             {homeData.leagueCount > 1 && (
               <Text style={styles.portfolioCaption}>

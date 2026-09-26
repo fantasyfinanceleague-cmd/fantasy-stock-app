@@ -7,6 +7,7 @@ import { usePortfolio, Holding } from '@/lib/usePortfolio';
 import { useHistoricalPL } from '@/lib/useHistoricalPL';
 import { useStockNames, abbreviateName } from '@/lib/useStockNames';
 import { PerformanceChart, PeriodPL } from '@/components/PerformanceChart';
+import { decideHeroPL } from '@/lib/plCoverage';
 import { router } from 'expo-router';
 import { useState, useMemo, useCallback } from 'react';
 import { SkeletonHolding } from '@/components/Skeleton';
@@ -162,11 +163,15 @@ export default function PortfolioScreen() {
               <Text style={styles.heroValue}>${formatCurrency(portfolioSummary.totalValue)}</Text>
 
               {portfolioSummary.hasLivePrices && portfolioSummary.totalCost > 0 && (() => {
+                // Same scope as the value above and the breakdown modal; the
+                // chart only supplies a fully-priced 1W/1M delta.
                 const hasChart = historicalData.length >= 2;
-                const gl = hasChart && periodPL ? periodPL.gainLoss : portfolioSummary.totalGainLoss;
-                const glPct = hasChart && periodPL ? periodPL.gainLossPercent : portfolioSummary.totalGainLossPercent;
-                const isUp = hasChart && periodPL ? periodPL.isPositive : portfolioSummary.totalGainLoss >= 0;
+                const heroPL = decideHeroPL(portfolioSummary.summary, hasChart ? periodPL : null);
+                const gl = heroPL.gainLoss;
+                const glPct = heroPL.gainLossPercent;
+                const isUp = heroPL.isPositive;
                 return (
+                  <>
                   <TouchableOpacity
                     style={styles.plPill}
                     onPress={() => setPlModalVisible(true)}
@@ -185,6 +190,10 @@ export default function PortfolioScreen() {
                     </View>
                     <Ionicons name="chevron-forward" size={14} color={Colors.textMuted} style={{ marginLeft: 4 }} />
                   </TouchableOpacity>
+                  {heroPL.notes.map(note => (
+                    <Text key={note} style={styles.budgetCaption}>{note}</Text>
+                  ))}
+                  </>
                 );
               })()}
 

@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { supabase } from './supabase';
 import { useAuth } from './useAuth';
 import { useStockPrices, StockPrice } from './useStockPrices';
+import { summarizeHoldings } from './plCoverage';
 
 export interface DraftPick {
   id: string;
@@ -88,23 +89,22 @@ export function usePortfolio(leagueId: string | null) {
     });
   }, [baseHoldings, prices]);
 
-  // Calculate portfolio totals
+  // Calculate portfolio totals. Unpriced holdings count at cost and are
+  // counted (unpricedCount) — the shared rule in lib/plCoverage.ts.
   const portfolioSummary = useMemo(() => {
-    const totalCost = holdings.reduce((sum, h) => sum + h.totalCost, 0);
-    const totalValue = holdings.reduce((sum, h) => sum + (h.currentValue ?? h.totalCost), 0);
-    const totalGainLoss = totalValue - totalCost;
-    const totalGainLossPercent = totalCost > 0 ? (totalGainLoss / totalCost) * 100 : 0;
+    const summary = summarizeHoldings(holdings, symbol => prices[symbol]?.price ?? null);
     const hasLivePrices = holdings.some(h => h.currentPrice !== null);
 
     return {
-      totalCost,
-      totalValue,
-      totalGainLoss,
-      totalGainLossPercent,
+      totalCost: summary.cost,
+      totalValue: summary.value,
+      totalGainLoss: summary.gainLoss,
+      totalGainLossPercent: summary.gainLossPercent,
       hasLivePrices,
       holdingsCount: holdings.length,
+      summary,
     };
-  }, [holdings]);
+  }, [holdings, prices]);
 
   async function fetchPortfolio() {
     if (!user || !leagueId) return;

@@ -4,6 +4,7 @@ import { useAuth } from './useAuth';
 import { useLeagueContext, League } from './LeagueContext';
 import { useStockPrices } from './useStockPrices';
 import { DraftPick, Trade } from './usePortfolio';
+import { summarizeHoldings, HoldingsSummary } from './plCoverage';
 
 // --- Types ---
 
@@ -42,6 +43,8 @@ export interface HomeData {
   totalCost: number;
   totalGainLoss: number;
   totalGainLossPercent: number;
+  /** Whole-portfolio summary the totals above come from (unpriced at cost). */
+  portfolio: HoldingsSummary;
   leagueCount: number;
   hasLivePrices: boolean;
   leagueRows: LeagueRow[];
@@ -128,22 +131,17 @@ export function useHomeData(): HomeData {
 
   const { prices, loading: pricesLoading, refresh: refreshPrices } = useStockPrices(allSymbols);
 
-  // Compute per-league portfolio values using live prices
+  // Compute per-league portfolio values using live prices. An unpriced holding
+  // (quote missing or not loaded yet) counts at cost, not $0 — see
+  // lib/plCoverage.ts.
+  const priceOf = useCallback((symbol: string) => prices[symbol]?.price ?? null, [prices]);
   const leaguePortfolioValues = useMemo(() => {
-    const values: Record<string, { value: number; cost: number }> = {};
+    const values: Record<string, HoldingsSummary> = {};
     for (const [leagueId, holdings] of Object.entries(holdingsByLeague)) {
-      let totalValue = 0;
-      let totalCost = 0;
-      for (const h of holdings) {
-        const priceData = prices[h.symbol.toUpperCase()];
-        const currentPrice = priceData?.price ?? 0;
-        totalValue += currentPrice * h.quantity;
-        totalCost += h.totalCost;
-      }
-      values[leagueId] = { value: totalValue, cost: totalCost };
+      values[leagueId] = summarizeHoldings(holdings, priceOf);
     }
     return values;
-  }, [holdingsByLeague, prices]);
+  }, [holdingsByLeague, priceOf]);
 
   // Build league rows
   const leagueRows: LeagueRow[] = useMemo(() => {
@@ -166,13 +164,13 @@ export function useHomeData(): HomeData {
     });
   }, [leagues, standings, seasonNumbers, leaguePortfolioValues]);
 
-  // Aggregate portfolio
-  const totalValue = useMemo(() => leagueRows.reduce((sum, r) => sum + r.portfolioValue, 0), [leagueRows]);
-  const totalCost = useMemo(() => {
-    return Object.values(leaguePortfolioValues).reduce((sum, pv) => sum + pv.cost, 0);
-  }, [leaguePortfolioValues]);
-  const totalGainLoss = totalValue - totalCost;
-  const totalGainLossPercent = totalCost > 0 ? (totalGainLoss / totalCost) * 100 : 0;
+  // Aggregate portfolio — one summary over every league's holdings, so value,
+  // gain and percent always share one scope and unpricedCount says what was
+  // assumed.
+  const portfolio = useMemo(
+    () => summarizeHoldings(Object.values(holdingsByLeague).flat(), priceOf),
+    [holdingsByLeague, priceOf],
+  );
   const hasLivePrices = allSymbols.length > 0 && Object.keys(prices).length > 0;
 
   // Matchup win/lose counts
@@ -394,10 +392,11 @@ export function useHomeData(): HomeData {
   }, [refreshLeagues, fetchAllData, refreshPrices]);
 
   return {
-    totalValue,
-    totalCost,
-    totalGainLoss,
-    totalGainLossPercent,
+    totalValue: portfolio.value,
+    totalCost: portfolio.cost,
+    totalGainLoss: portfolio.gainLoss,
+    totalGainLossPercent: portfolio.gainLossPercent,
+    portfolio,
     leagueCount: leagues.length,
     hasLivePrices,
     leagueRows,

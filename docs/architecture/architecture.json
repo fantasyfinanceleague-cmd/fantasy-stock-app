@@ -2,31 +2,55 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "c74eb7d50ca0c85cdf0e757be907faaddacf6907",
-    "commitShort": "c74eb7d",
+    "commit": "49ba6e0e04e51c3732db95e2faf5751636d40218",
+    "commitShort": "49ba6e0",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "fix/mobile-draft-status-labels",
+    "branch": "fix/mobile-home-pl-partial-basis",
     "dirty": true,
     "dirtyPaths": [
       {
-        "code": "R",
-        "path": "supabase/migrations/20261002000000_drop_client_schedule_insert_policies.sql"
+        "code": "M",
+        "path": "apps/mobile/app/(tabs)/index.tsx"
       },
       {
         "code": "M",
-        "path": "supabase/migrations/deferred/README.md"
+        "path": "apps/mobile/app/(tabs)/portfolio.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/PerformanceChart.tsx"
+      },
+      {
+        "code": "A",
+        "path": "apps/mobile/lib/plCoverage.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/useHistoricalPL.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/useHomeData.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/usePortfolio.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/mobile/tests-deno/plCoverage.test.ts"
       }
     ],
-    "timestamp": "2026-09-26T02:00:14Z",
-    "sourceHash": "sha256:b4d070e8b7f753a26f96fe6de8727b117100e6ff26804bfdab8e9b3fa6cd7013",
+    "timestamp": "2026-09-26T22:10:17Z",
+    "sourceHash": "sha256:7ba03003689965adde92b402accf0ab04ae637356aed6472f6350eb6653847af",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1077.1,
-    "ageDays": 44.9,
+    "ageHours": 1097.3,
+    "ageDays": 45.7,
     "staleAfterDays": 14,
     "stale": true,
     "hash": "sha256:3c923bcd46e36dfa365d24852d7b8fb6ead9ff99a06c3b26dc0853c648e07ded",
@@ -5978,7 +6002,7 @@
         "username"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/index.tsx:59"
+        "apps/mobile/app/(tabs)/index.tsx:60"
       ]
     },
     {
@@ -7315,7 +7339,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('historical-bars')",
       "callSites": [
-        "apps/mobile/lib/useHistoricalPL.ts:77"
+        "apps/mobile/lib/useHistoricalPL.ts:65"
       ]
     },
     {
@@ -7330,7 +7354,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/lib/useHomeData.ts:216"
+        "apps/mobile/lib/useHomeData.ts:214"
       ]
     },
     {
@@ -7345,7 +7369,7 @@
         "season_number"
       ],
       "callSites": [
-        "apps/mobile/lib/useHomeData.ts:236"
+        "apps/mobile/lib/useHomeData.ts:234"
       ]
     },
     {
@@ -7361,8 +7385,8 @@
         "user_id, wins, losses, ties"
       ],
       "callSites": [
-        "apps/mobile/lib/useHomeData.ts:248",
-        "apps/mobile/lib/useHomeData.ts:267"
+        "apps/mobile/lib/useHomeData.ts:246",
+        "apps/mobile/lib/useHomeData.ts:265"
       ]
     },
     {
@@ -7377,7 +7401,7 @@
         "id, week_number, team1_user_id, team2_user_id, team1_gain, team2_gain"
       ],
       "callSites": [
-        "apps/mobile/lib/useHomeData.ts:301"
+        "apps/mobile/lib/useHomeData.ts:299"
       ]
     },
     {
@@ -7392,7 +7416,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/lib/useHomeData.ts:222"
+        "apps/mobile/lib/useHomeData.ts:220"
       ]
     },
     {
@@ -7408,8 +7432,8 @@
         "username"
       ],
       "callSites": [
-        "apps/mobile/lib/useHomeData.ts:198",
-        "apps/mobile/lib/useHomeData.ts:325"
+        "apps/mobile/lib/useHomeData.ts:196",
+        "apps/mobile/lib/useHomeData.ts:323"
       ]
     },
     {
@@ -8170,7 +8194,7 @@
           ],
           "detail": "historical-bars — chart series for portfolio P/L.",
           "files": [
-            "apps/mobile/lib/useHistoricalPL.ts:77"
+            "apps/mobile/lib/useHistoricalPL.ts:65"
           ]
         }
       ],
@@ -8599,7 +8623,7 @@
       "apps/mobile/components/TradeModal.tsx:230 -> record-trade",
       "apps/mobile/components/TradeModal.tsx:90 -> quote",
       "apps/mobile/lib/notifications.ts:167 -> send-notification",
-      "apps/mobile/lib/useHistoricalPL.ts:77 -> historical-bars",
+      "apps/mobile/lib/useHistoricalPL.ts:65 -> historical-bars",
       "apps/mobile/lib/useStockNames.ts:13 -> symbol-name",
       "apps/mobile/lib/useStockPrices.ts:32 -> ticker-quotes",
       "apps/mobile/lib/useSymbolSearch.ts:68 -> symbols-search",
@@ -8646,7 +8670,7 @@
       "apps/mobile/app/(tabs)/draft.tsx:192 -> user_profiles.select",
       "apps/mobile/app/(tabs)/draft.tsx:222 -> drafts.select",
       "apps/mobile/app/(tabs)/draft.tsx:258 -> league_draft_slots.select",
-      "apps/mobile/app/(tabs)/index.tsx:59 -> user_profiles.select",
+      "apps/mobile/app/(tabs)/index.tsx:60 -> user_profiles.select",
       "apps/mobile/app/(tabs)/league.tsx:115 -> league_standings.select",
       "apps/mobile/app/(tabs)/league.tsx:131 -> matchups.select",
       "apps/mobile/app/(tabs)/league.tsx:148 -> league_members.select",
@@ -8696,14 +8720,14 @@
       "apps/mobile/lib/notifications.ts:72 -> user_profiles.update",
       "apps/mobile/lib/notifications.ts:94 -> push_tokens.delete",
       "apps/mobile/lib/notifications.ts:97 -> user_profiles.update",
-      "apps/mobile/lib/useHomeData.ts:198 -> user_profiles.select",
-      "apps/mobile/lib/useHomeData.ts:216 -> drafts.select",
-      "apps/mobile/lib/useHomeData.ts:222 -> trades.select",
-      "apps/mobile/lib/useHomeData.ts:236 -> league_seasons.select",
-      "apps/mobile/lib/useHomeData.ts:248 -> league_standings.select",
-      "apps/mobile/lib/useHomeData.ts:267 -> league_standings.select",
-      "apps/mobile/lib/useHomeData.ts:301 -> matchups.select",
-      "apps/mobile/lib/useHomeData.ts:325 -> user_profiles.select",
+      "apps/mobile/lib/useHomeData.ts:196 -> user_profiles.select",
+      "apps/mobile/lib/useHomeData.ts:214 -> drafts.select",
+      "apps/mobile/lib/useHomeData.ts:220 -> trades.select",
+      "apps/mobile/lib/useHomeData.ts:234 -> league_seasons.select",
+      "apps/mobile/lib/useHomeData.ts:246 -> league_standings.select",
+      "apps/mobile/lib/useHomeData.ts:265 -> league_standings.select",
+      "apps/mobile/lib/useHomeData.ts:299 -> matchups.select",
+      "apps/mobile/lib/useHomeData.ts:323 -> user_profiles.select",
       "apps/mobile/lib/useLeagues.ts:33 -> league_members.select",
       "apps/mobile/lib/useLeagues.ts:53 -> leagues.select",
       "apps/mobile/lib/usePortfolio.ts:116 -> drafts.select",

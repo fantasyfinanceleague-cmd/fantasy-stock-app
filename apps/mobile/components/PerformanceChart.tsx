@@ -3,19 +3,13 @@ import { useState, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { LineChart } from 'react-native-gifted-charts';
 import { PLDataPoint } from '@/lib/useHistoricalPL';
+import { Period, PeriodPL } from '@/lib/plCoverage';
 import { Colors } from '@/constants/Colors';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CHART_HEIGHT = 120;
 
-type Period = '1W' | '1M' | 'Season' | 'All';
-
-export interface PeriodPL {
-  gainLoss: number;
-  gainLossPercent: number;
-  isPositive: boolean;
-  period: Period;
-}
+export type { PeriodPL };
 
 interface PerformanceChartProps {
   data: PLDataPoint[];
@@ -73,19 +67,24 @@ export function PerformanceChart({ data, loading, onPeriodPLChange }: Performanc
   // Compute period-relative P/L
   const periodPL = useMemo((): PeriodPL => {
     if (filteredData.length < 2) {
-      return { gainLoss: 0, gainLossPercent: 0, isPositive: true, period };
+      return { gainLoss: 0, gainLossPercent: 0, isPositive: true, period, complete: false };
     }
 
     const lastPoint = filteredData[filteredData.length - 1];
+    // Both endpoints priced every open holding; otherwise a window delta would
+    // mix real moves with at-cost placeholders (lib/plCoverage.ts).
+    const complete = filteredData[0].unpricedCount === 0 && lastPoint.unpricedCount === 0;
 
     if (period === 'All' || period === 'Season') {
-      // Use cost-basis P/L so it matches the breakdown modal
-      // (current value - total cost, not first-data-point-to-last)
+      // Cost-basis P/L from the chart's last close. Heroes don't show this:
+      // decideHeroPL reads the live whole-portfolio summary for All/Season
+      // instead, which is what the P/L breakdown modal uses.
       return {
         gainLoss: lastPoint.pl,
         gainLossPercent: lastPoint.plPercent,
         isPositive: lastPoint.pl >= 0,
         period,
+        complete,
       };
     }
 
@@ -93,7 +92,7 @@ export function PerformanceChart({ data, loading, onPeriodPLChange }: Performanc
     const startValue = filteredData[0].value;
     const gainLoss = lastPoint.value - startValue;
     const gainLossPercent = startValue > 0 ? (gainLoss / startValue) * 100 : 0;
-    return { gainLoss, gainLossPercent, isPositive: gainLoss >= 0, period };
+    return { gainLoss, gainLossPercent, isPositive: gainLoss >= 0, period, complete };
   }, [filteredData, period]);
 
   // Notify parent of P/L changes
