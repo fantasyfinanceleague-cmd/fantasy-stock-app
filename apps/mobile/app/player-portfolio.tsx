@@ -8,6 +8,7 @@ import { useLeagueContext } from '@/lib/LeagueContext';
 import { useStockPrices } from '@/lib/useStockPrices';
 import { Colors } from '@/constants/Colors';
 import { formatSignedCurrency } from '@/lib/weekStatus';
+import { isUuid } from '@/lib/uuid';
 
 interface DraftPick {
   symbol: string;
@@ -111,8 +112,13 @@ export default function PlayerPortfolioScreen() {
     setLoading(true);
 
     try {
-      // Fetch user profile if not a bot
-      if (!isBot) {
+      // Fetch user profile only when userId is UUID-shaped. `!isBot`
+      // (`!userId.startsWith('bot-')`) isn't sufficient here: a synthetic
+      // test participant id like "test-user-2" is neither bot-prefixed nor
+      // a UUID, so it would still reach this query and 22P02 against
+      // user_profiles.id (uuid). The "Bot N" display path below is
+      // unaffected — it's keyed on `isBot`, not on this fetch. See lib/uuid.ts.
+      if (isUuid(userId)) {
         const { data: profileData } = await supabase
           .from('user_profiles')
           .select('username, avatar')

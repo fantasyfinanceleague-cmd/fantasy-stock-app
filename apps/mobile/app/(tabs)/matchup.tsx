@@ -13,6 +13,7 @@ import WeekNavigator from '@/components/WeekNavigator';
 import StatusBadge from '@/components/StatusBadge';
 import LeagueSwitcher from '@/components/LeagueSwitcher';
 import { getWeekStatus, isWeekActive as checkWeekActive, isPreSeasonPhase, getSeasonLabel, getUpcomingMatchupLabel, formatSignedCurrency } from '@/lib/weekStatus';
+import { isUuid } from '@/lib/uuid';
 
 interface Matchup {
   id: string;
@@ -291,8 +292,11 @@ export default function MatchupScreen() {
         return;
       }
 
+      // isUuid, not `!id.startsWith('bot-')` — see lib/uuid.ts: a synthetic
+      // test participant id is neither bot-prefixed nor a UUID, and would
+      // otherwise 22P02 the whole .in() query below.
       const userIds = [matchupData.team1_user_id, matchupData.team2_user_id]
-        .filter(id => id && !id.startsWith('bot-'));
+        .filter(isUuid);
 
       if (userIds.length > 0) {
         const { data: profileData } = await supabase

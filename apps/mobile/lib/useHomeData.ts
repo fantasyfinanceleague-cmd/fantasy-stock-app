@@ -5,6 +5,7 @@ import { useLeagueContext, League } from './LeagueContext';
 import { useStockPrices } from './useStockPrices';
 import { DraftPick, Trade } from './usePortfolio';
 import { getSeasonPhase, isPreSeasonPhase, getUpcomingMatchupLabel, SeasonPhase } from './weekStatus';
+import { isUuid } from './uuid';
 
 // --- Types ---
 
@@ -335,13 +336,22 @@ export function useHomeData(): HomeData {
           }
         }
 
-        // Batch fetch opponent usernames
+        // Batch fetch opponent usernames. isUuid, not left unfiltered — a
+        // bot or synthetic test-participant id (neither a real UUID) would
+        // otherwise 22P02 the whole .in() query, failing username lookup for
+        // every OTHER real opponent in this batch too. See lib/uuid.ts. This
+        // does not add a "Bot N" synthesized name for bot opponents (unlike
+        // league.tsx/matchup.tsx's getDisplayName) — a bot has no
+        // user_profiles row to fetch regardless, so it still falls back to
+        // the generic 'Opponent' label below; that gap is separate from this
+        // fix.
         const opponentNames: Record<string, string> = {};
-        if (opponentIds.size > 0) {
+        const opponentIdsToFetch = Array.from(opponentIds).filter(isUuid);
+        if (opponentIdsToFetch.length > 0) {
           const { data: profiles } = await supabase
             .from('user_profiles')
             .select('id, username')
-            .in('id', Array.from(opponentIds));
+            .in('id', opponentIdsToFetch);
           if (profiles) {
             for (const p of profiles) {
               opponentNames[p.id] = p.username;

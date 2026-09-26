@@ -11,6 +11,7 @@ import { Colors } from '@/constants/Colors';
 import StatusBadge from '@/components/StatusBadge';
 import LeagueSwitcher from '@/components/LeagueSwitcher';
 import { getWeekStatus, getCountdownMessage, getPlayoffRoundLabel, getSeasonLabel, isPreSeasonPhase, formatSeasonStartShort, formatSignedCurrency } from '@/lib/weekStatus';
+import { isUuid } from '@/lib/uuid';
 import { Button, Card } from '@/components/ui';
 import { SkeletonCard, SkeletonRows } from '@/components/Skeleton';
 
@@ -179,8 +180,13 @@ export default function LeagueScreen() {
         [s.champion_user_id, s.runner_up_user_id].filter(Boolean)
       ) as string[];
 
+      // isUuid, not `!id.startsWith('bot-')`: a synthetic test participant
+      // like "test-user-2" is neither bot-prefixed nor a UUID, and one such
+      // id in this array 22P02's the WHOLE .in() query below — failing the
+      // profile lookup for every real user in the same batch too. See
+      // lib/uuid.ts.
       const allUserIds = [...new Set([...standingUserIds, ...matchupUserIds, ...seasonUserIds])]
-        .filter(id => id && !id.startsWith('bot-'));
+        .filter(isUuid);
 
       if (allUserIds.length > 0) {
         const { data: profileData, error: profileError } = await supabase

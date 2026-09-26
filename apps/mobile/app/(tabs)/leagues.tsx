@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { validateLeagueName } from '@/lib/contentModeration';
 import { generateInviteCode } from '@/lib/inviteCode';
 import { stakeModeLabel } from '@/lib/categoryData';
+import { isUuid } from '@/lib/uuid';
 import {
   type StakeMode,
   DEFAULT_BUDGET_CAP,
@@ -94,11 +95,15 @@ export default function LeaguesScreen() {
           .order('joined_at', { ascending: true });
 
         if (memberData?.length) {
-          // Fetch profiles for members from user_profiles table
+          // Fetch profiles for members from user_profiles table. isUuid
+          // filters out bot ids AND non-UUID synthetic test ids (e.g.
+          // "test-user-2") — this query previously sent every member id
+          // unfiltered, so any bot or test participant 22P02'd the whole
+          // batch. See lib/uuid.ts.
           const { data: profiles } = await supabase
             .from('user_profiles')
             .select('id, username')
-            .in('id', memberData.map(m => m.user_id));
+            .in('id', memberData.map(m => m.user_id).filter(isUuid));
 
           const profileMap = new Map(profiles?.map(p => [p.id, p.username]) || []);
 
