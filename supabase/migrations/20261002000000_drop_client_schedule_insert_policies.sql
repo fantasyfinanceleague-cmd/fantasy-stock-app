@@ -1,6 +1,11 @@
 -- ============================================================================
--- DEFERRED — do NOT move into supabase/migrations/ until the precondition in
--- supabase/migrations/deferred/README.md is met and verified.
+-- PROMOTED from supabase/migrations/deferred/ on 2026-09-25 (was
+-- deferred/20260926000001; re-timed so it sorts after the latest applied
+-- migration, 20261001000000). Precondition met and verified in prod: the
+-- server-side finalize path (PR #14) produced full schedules for two real test
+-- drafts (test_0925 via web picks + mobile; test_09_25_v2 fully on mobile with
+-- server-chosen bot picks, PR #20), and no client code writes matchups or
+-- league_standings (grep of apps/, 2026-09-25).
 -- ============================================================================
 -- Retire the interim client INSERT policies on the schedule tables:
 --   [I8] matchups_insert_members          (20260712000004) — closes F10: any league
@@ -20,10 +25,9 @@
 --   SELECT tablename, policyname, cmd, roles FROM pg_policies
 --   WHERE schemaname = 'public' AND tablename IN ('matchups', 'league_standings')
 --   ORDER BY tablename, policyname;
---   -- negative test (as a real member session, via the client / PostgREST — NOT
---   -- the SQL editor, which runs as postgres and bypasses RLS): an INSERT into
---   -- matchups or league_standings must fail with 42501 / "violates row-level
---   -- security policy".
+--   -- negative test: run docs/security/f10-policy-drop-effect-test.sql in the
+--   -- SQL editor (switches to a member's role + JWT claims the way PostgREST
+--   -- does, then rolls back). Expect A and B = 42501 PASS, C = PASS.
 -- ============================================================================
 
 drop policy if exists "matchups_insert_members" on public.matchups;

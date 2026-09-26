@@ -2,58 +2,30 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "e300e3c5386b269f871adff703fe8ba0f3ec7410",
-    "commitShort": "e300e3c",
+    "commit": "8ced474a7145568d3c5ed15526192f718d31b562",
+    "commitShort": "8ced474",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "feat/mobile-draft-start-search-finalize",
+    "branch": "fix/promote-f10-policy-drop",
     "dirty": true,
     "dirtyPaths": [
       {
-        "code": "M",
-        "path": "apps/mobile/app/join-league.tsx"
+        "code": "RM",
+        "path": "supabase/migrations/20261002000000_drop_client_schedule_insert_policies.sql"
       },
       {
         "code": "M",
-        "path": "apps/web/src/pages/DraftPage.jsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/web/src/pages/JoinLeague.jsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/web/src/pages/PortfolioPage.jsx"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/preview-league/index.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/preview-league/reason.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/preview-league/reason.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/20261001000000_narrow_league_members_insert_self.sql"
+        "path": "supabase/migrations/deferred/README.md"
       }
     ],
-    "timestamp": "2026-09-25T23:39:44Z",
-    "sourceHash": "sha256:f710014518c04e55ec72f86d5a430a363b38233eb730d59026b4a0745fad0050",
+    "timestamp": "2026-09-26T01:12:19Z",
+    "sourceHash": "sha256:b5f2e9eb2dd9fc3da64abb3da8685d843b6cf8533ca124df77fa380f17041f02",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1074.8,
+    "ageHours": 1076.3,
     "ageDays": 44.8,
     "staleAfterDays": 14,
     "stale": true,
@@ -8944,7 +8916,8 @@
       "20260926000000_finalize_league_draft_rpc.sql",
       "20260928000000_symbols_price_unsupported_column.sql",
       "20260930000000_join_league_refuse_mid_draft.sql",
-      "20261001000000_narrow_league_members_insert_self.sql"
+      "20261001000000_narrow_league_members_insert_self.sql",
+      "20261002000000_drop_client_schedule_insert_policies.sql"
     ],
     "config": [
       "draft-control=true",
