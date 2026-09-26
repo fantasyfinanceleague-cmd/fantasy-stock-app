@@ -8,7 +8,7 @@
  * excludes tests-deno/**) since `jsr:` specifiers are Deno-only.
  */
 import { assertEquals, assertStringIncludes } from 'jsr:@std/assert';
-import { computeDraftPhase, describeStartBlocker } from '../lib/draftState.ts';
+import { computeDraftPhase, describeStartBlocker, msUntilStartRecheck } from '../lib/draftState.ts';
 
 Deno.test('computeDraftPhase: no stake mode wins regardless of draft_status', () => {
   assertEquals(
@@ -85,4 +85,81 @@ Deno.test('describeStartBlocker: draft_date_not_reached includes the date', () =
 Deno.test('describeStartBlocker: no_draft_date and no_stake_mode point at League Settings', () => {
   assertStringIncludes(describeStartBlocker({ code: 'no_draft_date' }), 'League Settings');
   assertStringIncludes(describeStartBlocker({ code: 'no_stake_mode' }), 'League Settings');
+});
+
+// ---------------------------------------------------------------------------
+// msUntilStartRecheck — the draft screen's single-timer re-fetch schedule
+// (bug #1: Start Draft stayed disabled past its own scheduled time because
+// nothing re-asked the server after the initial fetch).
+// ---------------------------------------------------------------------------
+
+Deno.test('msUntilStartRecheck: no draft_date_not_reached blocker -> nothing to wait for', () => {
+  assertEquals(msUntilStartRecheck([]), null);
+  assertEquals(msUntilStartRecheck([{ code: 'no_stake_mode' }]), null);
+  assertEquals(msUntilStartRecheck([{ code: 'not_enough_members', have: 2, need: 4 }]), null);
+});
+
+Deno.test('msUntilStartRecheck: schedules just after the draft time, with a grace period', () => {
+  const now = new Date('2026-09-25T12:00:00Z');
+  const draftDate = '2026-09-25T12:05:00Z'; // 5 minutes out
+  const delay = msUntilStartRecheck(
+    [{ code: 'draft_date_not_reached', draftDate }],
+    now,
+  );
+  // 5 minutes + the 1.5s grace period baked into the function.
+  assertEquals(delay, 5 * 60_000 + 1_500);
+});
+
+Deno.test('msUntilStartRecheck: clock skew (local clock already past the draft time) floors at 15s, never negative or zero', () => {
+  const now = new Date('2026-09-25T12:05:00Z');
+  const draftDate = '2026-09-25T12:00:00Z'; // 5 minutes in the past per the local clock
+  const delay = msUntilStartRecheck(
+    [{ code: 'draft_date_not_reached', draftDate }],
+    now,
+  );
+  assertEquals(delay, 15_000);
+});
+
+Deno.test('msUntilStartRecheck: a delay right at the floor boundary is not floored', () => {
+  // draftTime - now + 1500 === 15000 exactly -> should pass through unchanged,
+  // not get floored (floor only kicks in for values BELOW it).
+  const now = new Date('2026-09-25T12:00:00.000Z');
+  const draftDate = '2026-09-25T12:00:13.500Z'; // 13.5s out + 1.5s grace = 15000ms
+  assertEquals(
+    msUntilStartRecheck([{ code: 'draft_date_not_reached', draftDate }], now),
+    15_000,
+  );
+});
+
+Deno.test('msUntilStartRecheck: a delay beyond setTimeout\'s max signed 32-bit ms is not schedulable (returns null)', () => {
+  const now = new Date('2026-09-25T12:00:00Z');
+  const farFuture = new Date(now.getTime() + 2 ** 31).toISOString(); // just over the limit
+  assertEquals(
+    msUntilStartRecheck([{ code: 'draft_date_not_reached', draftDate: farFuture }], now),
+    null,
+  );
+});
+
+Deno.test('msUntilStartRecheck: an unparseable draftDate is treated as nothing to wait for', () => {
+  assertEquals(
+    msUntilStartRecheck([{ code: 'draft_date_not_reached', draftDate: 'not-a-date' }]),
+    null,
+  );
+});
+
+Deno.test('msUntilStartRecheck: draft_date_not_reached without a draftDate is treated as nothing to wait for', () => {
+  assertEquals(msUntilStartRecheck([{ code: 'draft_date_not_reached' }]), null);
+});
+
+Deno.test('msUntilStartRecheck: picks the draft_date_not_reached blocker out of a mixed list', () => {
+  const now = new Date('2026-09-25T12:00:00Z');
+  const draftDate = '2026-09-25T12:10:00Z';
+  const delay = msUntilStartRecheck(
+    [
+      { code: 'not_enough_members', have: 2, need: 4 },
+      { code: 'draft_date_not_reached', draftDate },
+    ],
+    now,
+  );
+  assertEquals(delay, 10 * 60_000 + 1_500);
 });

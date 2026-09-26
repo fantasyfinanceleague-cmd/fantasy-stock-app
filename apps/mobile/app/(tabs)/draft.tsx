@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useAuth } from '@/lib/useAuth';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -19,6 +19,7 @@ import { parseQuotePrice, type ShapedSearchResult } from '@/lib/symbolSearch';
 import {
   computeDraftPhase,
   describeStartBlocker,
+  msUntilStartRecheck,
   type StartBlocker,
 } from '@/lib/draftState';
 
@@ -311,12 +312,6 @@ export default function DraftScreen() {
     };
   }, [activeLeagueId, members]);
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await Promise.all([fetchDraftData(), refreshLeagues()]);
-    setRefreshing(false);
-  };
-
   // draft-control 'status' — fetched while the draft hasn't started, so the
   // not-started screen can show why (and, for the commissioner, a working
   // Start Draft / Fill with bots UI). Any member may call this.
@@ -337,9 +332,47 @@ export default function DraftScreen() {
     }
   }, [activeLeagueId, isDraftNotStarted]);
 
+  // Re-fetch on focus, not just on mount — the draft screen is an href:null
+  // tab route so it stays mounted across tab switches, and this callback's
+  // identity changes with activeLeagueId, so switching leagues while the
+  // screen stays focused re-fetches too. (Fixes: a draft_date_not_reached
+  // blocker fetched before the scheduled time used to stick until the
+  // active league changed, keeping Start Draft disabled past its own
+  // deadline — see the task's bug #1.)
+  useFocusEffect(
+    useCallback(() => {
+      fetchStartStatus();
+    }, [fetchStartStatus])
+  );
+
+  // Clear stale status immediately on league change so the previous
+  // league's blockers can't flash while the new league's fetch is in
+  // flight.
   useEffect(() => {
-    fetchStartStatus();
-  }, [fetchStartStatus]);
+    setStartStatus(null);
+  }, [activeLeagueId]);
+
+  // Schedule exactly one re-check just after the draft's scheduled time, so
+  // the button flips from disabled to enabled without a manual refresh or a
+  // tab switch. Display-only — draft-control re-validates the real time on
+  // every Start call regardless of what this timer does. Re-runs (and its
+  // cleanup re-clears the previous timeout) whenever startStatus changes or
+  // fetchStartStatus's identity changes (i.e. the active league changes),
+  // so a stale timer can never fire against a different league.
+  useEffect(() => {
+    const delay = msUntilStartRecheck(startStatus?.blockers ?? []);
+    if (delay === null) return;
+    const timer = setTimeout(() => {
+      fetchStartStatus();
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [startStatus, fetchStartStatus]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([fetchDraftData(), fetchStartStatus(), refreshLeagues()]);
+    setRefreshing(false);
+  };
 
   const handleStartDraft = async () => {
     if (!activeLeagueId) return;

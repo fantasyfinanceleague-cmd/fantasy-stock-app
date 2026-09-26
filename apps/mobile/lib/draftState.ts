@@ -109,3 +109,42 @@ export function describeStartBlocker(b: StartBlocker): string {
       return 'The draft cannot start yet.';
   }
 }
+
+// Longest delay setTimeout accepts before overflowing its signed 32-bit ms
+// argument; browsers/RN clamp anything longer to fire almost immediately.
+const MAX_TIMEOUT_MS = 2 ** 31 - 1;
+
+// Floor for a recheck scheduled because the LOCAL clock already thinks the
+// draft time has passed while the server still says otherwise (clock skew).
+// Without a floor, a client clock a few seconds fast would recheck on a tight
+// loop until the two clocks agreed.
+const CLOCK_SKEW_RECHECK_FLOOR_MS = 15_000;
+
+/**
+ * How long to wait before re-asking draft-control 'status', given the
+ * blockers from its last response. Display-only: the server re-checks the
+ * real time on every Start call regardless, so getting this wrong only
+ * affects when the button visually re-enables, never whether a premature
+ * Start succeeds.
+ *
+ * Returns null when there is nothing to wait for (no `draft_date_not_reached`
+ * blocker present) or when the wait would exceed what setTimeout can express
+ * (screen-focus refetches cover that case instead).
+ */
+export function msUntilStartRecheck(blockers: StartBlocker[], now: Date = new Date()): number | null {
+  const dateBlocker = blockers.find((b): b is StartBlocker & { draftDate: string } =>
+    b.code === 'draft_date_not_reached' && !!b.draftDate
+  );
+  if (!dateBlocker) return null;
+
+  const draftTime = new Date(dateBlocker.draftDate).getTime();
+  if (Number.isNaN(draftTime)) return null;
+
+  // Small grace period so the recheck lands just after the scheduled time
+  // rather than racing it.
+  const delay = draftTime - now.getTime() + 1_500;
+
+  if (delay > MAX_TIMEOUT_MS) return null;
+  if (delay < CLOCK_SKEW_RECHECK_FLOOR_MS) return CLOCK_SKEW_RECHECK_FLOOR_MS;
+  return delay;
+}

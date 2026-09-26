@@ -7,8 +7,9 @@ interface HolidayInfo {
 }
 
 interface WeekStatus {
-  status: 'active' | 'final' | 'pending_results' | 'season_complete';
+  status: 'upcoming' | 'active' | 'final' | 'pending_results' | 'season_complete';
   phase: 'regular' | 'playoffs' | 'completed';
+  seasonPhase: SeasonPhase;
   currentWeek: number;
   numWeeks: number;
   isWeekComplete: boolean;
@@ -22,9 +23,78 @@ interface WeekStatus {
 
 interface League {
   current_week?: number;
-  num_weeks?: number;
+  // LeagueContext.League types this `number | null` — widened here (was
+  // `number`) so passing the real League type through doesn't need a cast.
+  num_weeks?: number | null;
   league_type?: string;
   season_status?: string;
+  draft_status?: string;
+  league_start_date?: string | null;
+}
+
+/**
+ * Where a league sits before it reaches its ordinary regular/playoffs/
+ * completed season lifecycle. Read draft_status FIRST, before any
+ * season_status/current_week fallback — those fields default to
+ * 'active'/1 for a league whose draft hasn't even started, which is why
+ * getWeekStatus used to fall through to an 'active' ("Live") status for a
+ * league still waiting on its draft (League tab + Home "Season N · Week 1"
+ * bug, see CLAUDE.md's "Guards keyed on ALL-OR-NOTHING state" note: current_week
+ * defaulting to 1 was read as "week 1 is live" rather than "no week yet").
+ */
+export type SeasonPhase = 'pre_draft' | 'drafting' | 'pre_season' | 'regular' | 'playoffs' | 'completed';
+
+export function getSeasonPhase(league: League | null, now: Date = new Date()): SeasonPhase {
+  if (!league) return 'pre_draft';
+  if (league.draft_status === 'not_started') return 'pre_draft';
+  if (league.draft_status === 'in_progress') return 'drafting';
+
+  // draft_status is 'completed' (or a legacy/unrecognized value — treated the
+  // same as the rest of this file treats an unrecognized draft_status).
+  if (league.league_start_date) {
+    const start = new Date(league.league_start_date);
+    if (!Number.isNaN(start.getTime()) && start.getTime() > now.getTime()) {
+      return 'pre_season';
+    }
+  }
+
+  const currentWeek = league.current_week || 1;
+  const numWeeks = league.num_weeks || 0;
+  if (league.season_status === 'completed') return 'completed';
+  if (league.season_status === 'playoffs') return 'playoffs';
+  if (currentWeek > numWeeks && numWeeks > 0) return 'completed'; // fallback for legacy data
+  return 'regular';
+}
+
+/** True for any phase that precedes the ordinary regular/playoffs/completed
+ * season lifecycle — shared by getWeekStatus (to force status='upcoming')
+ * and by screens that need to branch their own rendering on the same
+ * condition, so the two checks can't drift apart. */
+export function isPreSeasonPhase(phase: SeasonPhase): boolean {
+  return phase === 'pre_draft' || phase === 'drafting' || phase === 'pre_season';
+}
+
+/** Short copy for a phase that precedes the ordinary season lifecycle. Empty
+ * string for 'regular'/'playoffs'/'completed' — callers already have their
+ * own copy for those and should keep using it. Shared by the League tab and
+ * Home so both show the same words for the same phase (see CLAUDE.md's "UI
+ * entry points" note on the Week-1-Live bug appearing in two places). */
+export function getSeasonLabel(phase: SeasonPhase, league: League | null): string {
+  switch (phase) {
+    case 'pre_draft':
+      return 'Draft pending';
+    case 'drafting':
+      return 'Drafting';
+    case 'pre_season': {
+      const raw = league?.league_start_date;
+      const start = raw ? new Date(raw) : null;
+      if (!start || Number.isNaN(start.getTime())) return 'Starts soon';
+      const formatted = start.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+      return `Starts ${formatted}`;
+    }
+    default:
+      return '';
+  }
 }
 
 interface Matchup {
@@ -179,7 +249,7 @@ export function getRelativeCountdown(nextWeek: number, holidayInfo?: HolidayInfo
   return `Week ${nextWeek} starts ${day}`;
 }
 
-export function getWeekStatus(league: League | null, matchup: Matchup | null): WeekStatus {
+export function getWeekStatus(league: League | null, matchup: Matchup | null, now: Date = new Date()): WeekStatus {
   const currentWeek = league?.current_week || 1;
   const numWeeks = league?.num_weeks || 0;
   const seasonStatus = league?.season_status || 'active';
@@ -191,6 +261,12 @@ export function getWeekStatus(league: League | null, matchup: Matchup | null): W
   else if (currentWeek > numWeeks && numWeeks > 0) phase = 'completed'; // fallback for legacy data
 
   const isSeasonComplete = phase === 'completed';
+
+  const seasonPhase = getSeasonPhase(league, now);
+  // Draft-status-derived phases take priority over season_status/current_week
+  // fallbacks below: those default to 'active'/1 for a league that hasn't
+  // even drafted, which is exactly the "Week 1 · Live" bug this guards.
+  const isPreSeason = isPreSeasonPhase(seasonPhase);
 
   const isWeekComplete = matchup && (
     matchup.winner_user_id !== null ||
@@ -208,7 +284,9 @@ export function getWeekStatus(league: League | null, matchup: Matchup | null): W
   let status: WeekStatus['status'] = 'active';
   let countdown: string | null = null;
 
-  if (isSeasonComplete) {
+  if (isPreSeason) {
+    status = 'upcoming';
+  } else if (isSeasonComplete) {
     status = 'season_complete';
   } else if (isWeekComplete && isTransitionPeriod) {
     status = 'final';
@@ -222,6 +300,7 @@ export function getWeekStatus(league: League | null, matchup: Matchup | null): W
   return {
     status,
     phase,
+    seasonPhase,
     currentWeek,
     numWeeks,
     isWeekComplete: !!isWeekComplete,
