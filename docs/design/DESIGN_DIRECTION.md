@@ -163,7 +163,7 @@ them harder than using them.**
 | Layer | Mobile | Web |
 |---|---|---|
 | Source | `apps/mobile/constants/theme/*` (colors, type, space, radius, elevation, **motion**) | `apps/web/src/styles/tokens.css` (CSS custom properties on `:root`, **not** scoped to `.sp-landing`) + `tokens.ts` mirror for JS/motion |
-| Names | `color.surface.money.base`, `color.surface.game.base`, `color.text.primary`, `color.data.gain`, `type.score`, `type.body`, `motion.duration.base`, `motion.ease.settle` … identical strings on both platforms |
+| Names | `color.surface.money.base`, `color.surface.game.base`, `color.text.primary`, `color.data.gain.base`, `type.score`, `type.body`, `motion.duration.base`, `motion.ease.settle` … identical strings on both platforms |
 | Enforcement | `<Text variant="…">`, `<Money value=… />`, `<Surface kind="money\|game">`, `Pressable` with built-in press motion; ESLint `no-restricted-syntax` on raw `fontSize` / hex in `app/` + `components/` (warning first, error after Phase 3) | Same primitives in React; a lint rule against raw hex outside `tokens.css` |
 
 Non-negotiables carried from the audit: every text/background pair ≥ 4.5:1
@@ -383,6 +383,10 @@ Remotion's licence is confirmed before anything is published.
 
 Names are identical on both platforms (dot paths in TS; `--sp-` kebab custom
 properties on web, e.g. `color.surface.game.base` → `--sp-color-surface-game-base`).
+Web names are all lowercase kebab, with camelCase split: `color.data.gain.onGame`
+→ `--sp-color-data-gain-on-game`. **A token is never both a leaf and a parent**:
+where a variant exists, the default lives at `.base` (amended 2026-09-26 at
+ui/foundation-mobile's request).
 Every text pair below is measured; "on" means the background it may sit on.
 
 ### Colour
@@ -403,12 +407,12 @@ Every text pair below is measured; "on" means the background it may sit on.
 | `color.text.onGame.primary` | `#FFFFFF` | 17:1 on stadium |
 | `color.text.onGame.secondary` | `#8DA0BD` | 6.5 on base, 5.7 on raised |
 | `color.brand` | `#2860F0` | Mark accent bar, focus ring. 5.2 on white |
-| `color.team.you` | `#2860F0` | **Fills/bars only** on light; as text on game use `team.you.onGame` |
+| `color.team.you.base` | `#2860F0` | **Fills/bars only** on light; as text on game use `team.you.onGame` |
 | `color.team.you.onGame` | `#6E9BFF` | 6.4 on stadium |
 | `color.team.opponent` | `#FF6A3D` | **Fills/bars only** (2.9 on white fails as text; 6.1 on stadium ok) |
 | `color.live` | `#FFC53D` | Live dot/tag, on game only (11:1) |
-| `color.data.gain` / `.loss` | `#12803F` / `#C8303A` | On money: 5.0 / 5.3 |
-| `color.data.gain.onGame` / `.loss.onGame` | `#4ADE8B` / `#FF7A7A` | 10.0 / 6.9 |
+| `color.data.gain.base` / `color.data.loss.base` | `#12803F` / `#C8303A` | On money: 5.0 / 5.3 |
+| `color.data.gain.onGame` / `color.data.loss.onGame` | `#4ADE8B` / `#FF7A7A` | 10.0 / 6.9 |
 | `color.data.zero` | = `text.secondary` | Zero is never green |
 | `color.status.warning` | `#B45309` | 5.0 on white |
 | `color.status.danger` | `#B42318` | 6.6 on white (destructive buttons, errors) |
@@ -432,7 +436,24 @@ never swap. Opponent orange never appears as text on light.
 | `type.callout` | 100% / 500 | 13 / 18 | Secondary lines |
 | `type.caption` | 100% / 500 | 12 / 16 | **Smallest informational size** |
 
-Money always uses `tabular-nums`. **Mobile font delivery:** React Native
+Money always uses `tabular-nums`.
+
+**Money formatting** (both platforms, amended 2026-09-26):
+- `sign: 'negative'` (default): no "+", negatives show U+2212 before the currency.
+- `sign: 'always'`: "+" or "−" on any value that is non-zero *after rounding*
+  (−0.004 → `$0.00`).
+- `alignSign`: puts a U+2007 figure space in an empty sign slot so signed
+  columns align. **Zero is never signed.**
+- `compact`: ≥ 1,000 → two decimals plus K/M/B/T, with rollover (999,999.99 →
+  `$1.00M`); below 1,000 in full; negatives as `−$1.23M`.
+
+| input | options | output |
+|---|---|---|
+| 56.8 | `sign: 'always'` | `+$56.80` |
+| −3000 | `sign: 'always'` | `−$3,000.00` |
+| 0 | either | `$0.00` |
+| 1234567.891 | `compact` (default sign) | `$1.23M` |
+| −0.004 | `sign: 'always'` | `$0.00` | **Mobile font delivery:** React Native
 can't drive a variable font's width axis, so Phase 2 bundles **static
 instances** cut from Archivo's variable TTF (OFL): `Archivo-Condensed-Black`
 (wdth 62, wght 900), `Archivo-Expanded-ExtraBold` (125/800), and Archivo
