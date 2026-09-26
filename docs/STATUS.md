@@ -38,11 +38,11 @@ refused by RLS when they draft (confirmed on Giorgio's phone). The fix is the
 
 | Fact | State | Evidence |
 |---|---|---|
-| Migrations applied | Everything in `supabase/migrations/` **through `20261001000000`** | `db push` dry-runs + `schema_migrations`, 2026-09-25 |
-| Pending on an open PR | `20261002000000_drop_client_schedule_insert_policies` (PR #22, closes F10) | — |
+| Migrations applied | Everything in `supabase/migrations/` **through `20261002000000`** | `db push` + `schema_migrations`, 2026-09-25 |
+| F10 client schedule-insert policies ([I8]/[I9]) | Dropped (PR #22); only SELECT policies remain on `matchups`/`league_standings`; effect test A/B/C PASS | 2026-09-25 |
 | Held in `deferred/` | `20260929000000_drop_I6_I2b.sql`, which waits for the 1.1.0 build to ship (see `supabase/migrations/deferred/README.md`) | — |
 | Signup gate | `app_config.signups_paused = true`; `restrict_new_signups` ACL correct | 2026-09-24 |
-| Signup gate dashboard hook ("Before User Created") | **UNVERIFIED** | Effect test: a non-allowlisted signup must be refused |
+| Signup gate dashboard hook ("Before User Created") | Live: a non-allowlisted mobile signup was refused with the hook's message | Effect-verified 2026-09-25 |
 | `finalize_league_draft` | Applied; ACL `{postgres, service_role}`; `search_path=public, pg_temp`; season-1 backfill ran (2 → 0 leagues missing a season) | 2026-09-25 |
 | `join_league_by_code` draft guard | Applied; ACL `{postgres, service_role}`; effect test 8/8 PASS | 2026-09-25 |
 | `leagues` F1 column-guard trigger + F6 standings rule | Applied; effect test 8/8 PASS | 2026-09-25 |
@@ -107,8 +107,8 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
 |---|---|---|
 | Server-side season generation (PR #14) | ✅ Live and proven by two prod drafts | `supabase/migrations/20260926000000_finalize_league_draft_rpc.sql` |
 | Mobile draft flow (PR #20) | ✅ Live (server); mobile client ships with 1.1.0 | `supabase/functions/draft-control/` |
-| Security scan 2026-07-30 (PR #9) | ✅ Server side live and verified. F10 closes with PR #22. **Open: F8** (push tokens; needs 1.1.0 installed first). F12 superseded. | `docs/security/DEPLOY-RUNBOOK.md`, `docs/security/REMAINING-SECURITY-WORK.md` |
-| RLS hardening | [I4] narrowed (PR #19); [I7] retired. [I8]/[I9] drop in PR #22. [I6]/[I2b] drop held for 1.1.0. Remaining interim: [I1], [I2a], [I3], [I5] (create/update/delete/leave-league still client-side). | `docs/migrations/RLS_HARDENING_SPEC.md` |
+| Security scan 2026-07-30 (PR #9) | ✅ Server side live and verified; **F10 closed** (PR #22, effect test 3/3). **Open: F8** (push tokens; needs 1.1.0 installed first). F12 superseded. | `docs/security/DEPLOY-RUNBOOK.md`, `docs/security/REMAINING-SECURITY-WORK.md` |
+| RLS hardening | [I4] narrowed (PR #19); [I7] retired. [I8]/[I9] dropped (PR #22). [I6]/[I2b] drop held for 1.1.0. Remaining interim: [I1], [I2a], [I3], [I5] (create/update/delete/leave-league still client-side). | `docs/migrations/RLS_HARDENING_SPEC.md` |
 | Supabase API-key migration | Phases 0–3b done. **Phase 4** (disable legacy keys, a one-way door) is gated on (1) a real publishable-key **trade** from current mobile code (still untested) and (2) a real mobile draft (**done 2026-09-25**). | `docs/migrations/MIGRATION_STATUS.md` |
 | In-house simulator (DR-001) | ✅ Phases 0–4 done and applied | `docs/decisions/DR-001-in-house-simulated-trading.md` |
 | UI/UX program (full web + mobile overhaul) | **Phase 0 audit in progress** (Design Lead). Phase 1 = 2–3 directions for Giorgio to pick. | `docs/design/UI-UX-PROGRAM.md` |
@@ -124,15 +124,14 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
    After install, verify a real **trade** on the publishable key (API-key Phase 4
    gate 1) and the F2 password-reset flow (needs the `fantasystockapp://**` redirect
    URL, added 2026-09-25).
-2. **F10: merge PR #22**, then `db push` `20261002000000`, the pg_policies check, and
-   `docs/security/f10-policy-drop-effect-test.sql` (A, B, C PASS).
+2. ✅ **F10: closed 2026-09-25** (see §5). Number kept so references stay stable.
 3. **First scored week, Fri 2026-10-02.** Check `week_snapshots` rows for
    test_0925/test_09_25_v2 after Tue 09-29 14:35 UTC, then `matchups.team1_gain` set
    and `cron_job_status` `success` after Fri 21:15 UTC. This is the last unproven link.
-4. **Mobile draft-screen bugs** (worker `fix/mobile-draft-status-labels`): the
-   start-draft status doesn't re-fetch when the draft time passes (workaround:
-   switch leagues and back); "Week 1 · Live" is shown before the draft; "Players 0"
-   counts standings, not members.
+4. **Mobile draft-screen bugs**: fixed on `fix/mobile-draft-status-labels` (verified,
+   DESIGN-APPROVED, PR pending). Covers the start-draft status not re-fetching when the draft time passes, "Week 1 · Live"
+   before the season, "Players 0" counting standings rather than members, and a
+   "Ready to draft" header once Start Draft is enabled. Ships with 1.1.0.
 5. **Bot picks are client-triggered.** A bot's turn fires only while some member has
    the draft screen open, and otherwise the draft waits (nothing is lost). Follow-up:
    a server-scheduled trigger.
@@ -176,6 +175,8 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
 | Mobile-drafted leagues never got a season (schedule/standings/dates only written by the paused web) | PR #14: `finalize_league_draft` RPC + server finalize/heal | Two real drafts produced full seasons |
 | No season row for leagues created after 2026-01-25 | PR #14: RPC creates season 1 + backfill | Backfill 2 → 0 |
 | `process-week-results` stranded status at `running` | PR #12 | Fri 09-25 row = `success` |
+| F10: members could forge matchups/standings via client INSERT policies [I8]/[I9] | PR #14 (server finalize) + PR #22 (policy drop, `20261002000000`) | `f10-policy-drop-effect-test.sql` A/B/C PASS; `pg_policies` shows SELECT only |
+| Landing hero headline collapsed to 24px on phones (app-wide 480px `!important` rules) | PR #24 (open) | Verified at 320/375/414 locally |
 | Prod ran unmerged-branch `refresh-symbols`/`historical-bars` | PR #9 merge + reconciliation redeploy | Downloads byte-identical to `5e3b5d1` |
 | F1/F11 member column rewrite; F6 standings; F5; F9; F7 server half | PR #9 | Effect test 8/8 |
 | `enrich-symbols`: one bad symbol wiped a 50-symbol price batch (~4,749 unpriced) | PR #16 | 421 = 421 seed check; backlog draining |
@@ -193,11 +194,11 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
 | Branch | State |
 |---|---|
 | `main` | Deployed to Vercel prod (landing only). |
-| `fix/promote-f10-policy-drop` | PR #22, open. |
 | `docs/design-audit` | Design Lead's Phase 0 audit (UI/UX program). |
-| `fix/mobile-draft-status-labels` | Mobile bug-fix worker (§4 item 4), implementing (plan approved 2026-09-25). |
-| `docs/status-sync-2026-09-25` | This sync. |
-| Merged, safe to delete with `git branch -d` | `security/claude-security-fixes-20260730`, `feat/server-schedule-generation`, `feat/mobile-draft-start-search-finalize`, `fix/*` from PRs #12/#13/#16–#19, `ui/design-system-pass-v2`, `docs/ui-ux-program`, `claude/platform-project-analysis-34b47a`, plus ~20 older (`simulator-core`, `phase4-*`, `item*`, …) |
+| `fix/mobile-draft-status-labels` | §4 item 4. Verified and DESIGN-APPROVED; PR pending (catch-up merge in progress). |
+| `fix/landing-mobile-heading-override` | PR #24, open. Merging deploys the live landing page. |
+| `docs/status-f10-closed` | This update. |
+| Merged, safe to delete with `git branch -d` | `security/claude-security-fixes-20260730`, `feat/server-schedule-generation`, `feat/mobile-draft-start-search-finalize`, `fix/*` from PRs #12/#13/#16–#19/#22, `docs/status-sync-2026-09-25`, `ui/design-system-pass-v2`, `docs/ui-ux-program`, `claude/platform-project-analysis-34b47a`, plus ~20 older (`simulator-core`, `phase4-*`, `item*`, …) |
 | Superseded backups | `ui/design-system-pass`, `item4-fix-refresh-symbols-cron`, `backup/pre-filter-2025-08-20` |
 
 ---

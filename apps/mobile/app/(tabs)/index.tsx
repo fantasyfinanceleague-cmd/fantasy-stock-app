@@ -12,6 +12,7 @@ import { SkeletonCard } from '@/components/Skeleton';
 import { Colors } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
 import { Button, Card, Screen, SectionLabel } from '@/components/ui';
+import { getSeasonPhase, getSeasonLabel, isPreSeasonPhase } from '@/lib/weekStatus';
 
 function formatCurrency(value: number): string {
   return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -176,7 +177,12 @@ export default function HomeScreen() {
           <View style={styles.section}>
             <SectionLabel>Your Leagues</SectionLabel>
             <Card padded={false}>
-              {homeData.leagueRows.map((row, index) => (
+              {homeData.leagueRows.map((row, index) => {
+                const seasonPhase = getSeasonPhase(row.league);
+                const weekMeta = isPreSeasonPhase(seasonPhase)
+                  ? getSeasonLabel(seasonPhase, row.league)
+                  : `Week ${row.league.current_week}`;
+                return (
                 <TouchableOpacity
                   key={row.league.id}
                   style={[
@@ -199,7 +205,7 @@ export default function HomeScreen() {
                       </Text>
                     </View>
                     <Text style={styles.leagueMeta}>
-                      Season {row.seasonNumber} · Week {row.league.current_week}
+                      Season {row.seasonNumber} · {weekMeta}
                     </Text>
                   </View>
 
@@ -230,7 +236,8 @@ export default function HomeScreen() {
 
                   <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} style={styles.chevron} />
                 </TouchableOpacity>
-              ))}
+                );
+              })}
             </Card>
           </View>
 

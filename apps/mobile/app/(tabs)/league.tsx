@@ -10,7 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/Colors';
 import StatusBadge from '@/components/StatusBadge';
 import LeagueSwitcher from '@/components/LeagueSwitcher';
-import { getWeekStatus, getCountdownMessage, getPlayoffRoundLabel } from '@/lib/weekStatus';
+import { getWeekStatus, getCountdownMessage, getPlayoffRoundLabel, getSeasonLabel, isPreSeasonPhase, formatSeasonStartShort } from '@/lib/weekStatus';
 import { Button, Card } from '@/components/ui';
 import { SkeletonCard, SkeletonRows } from '@/components/Skeleton';
 
@@ -70,6 +70,10 @@ export default function LeagueScreen() {
   const [seasons, setSeasons] = useState<LeagueSeason[]>([]);
   const [currentSeason, setCurrentSeason] = useState<LeagueSeason | null>(null);
   const [loading, setLoading] = useState(true);
+  // Players KPI: league_members (not league_standings — those rows don't
+  // exist until the draft finalizes, so pre-draft they read as 0 players).
+  const [memberCount, setMemberCount] = useState(0);
+  const [botMemberCount, setBotMemberCount] = useState(0);
 
   // Collapsible section states
   const [standingsExpanded, setStandingsExpanded] = useState(true);
@@ -136,6 +140,21 @@ export default function LeagueScreen() {
         matchupsData = data || [];
         setMatchups(matchupsData);
       }
+
+      // Fetch members for the Players KPI — league_members exists from league
+      // creation, unlike league_standings (finalize-only), so this counts
+      // players correctly before, during, and after the draft.
+      const { data: memberRows, error: memberError } = await supabase
+        .from('league_members')
+        .select('user_id')
+        .eq('league_id', activeLeagueId);
+
+      if (memberError) {
+        console.error('Error fetching league members:', memberError);
+      }
+      const fetchedMembers = memberRows || [];
+      setMemberCount(fetchedMembers.length);
+      setBotMemberCount(fetchedMembers.filter(m => m.user_id.startsWith('bot-')).length);
 
       // Fetch seasons
       const { data: seasonsData } = await supabase
@@ -257,7 +276,7 @@ export default function LeagueScreen() {
   }, [matchups, currentWeek]);
 
   const weekStatus = useMemo(() => {
-    return getWeekStatus(activeLeague, currentMatchup);
+    return getWeekStatus(activeLeague, currentMatchup ?? null);
   }, [activeLeague, currentMatchup]);
 
   const countdownMessage = useMemo(() => {
@@ -501,7 +520,9 @@ export default function LeagueScreen() {
                   {isMatchupLeague && (
                     <View style={styles.weekBadge}>
                       <Text style={styles.weekBadgeText}>
-                        {weekStatus.phase === 'playoffs'
+                        {isPreSeasonPhase(weekStatus.seasonPhase)
+                          ? getSeasonLabel(weekStatus.seasonPhase, activeLeague)
+                          : weekStatus.phase === 'playoffs'
                           ? `Playoffs${currentPlayoffRoundLabel ? `: ${currentPlayoffRoundLabel}` : ''}`
                           : `Week ${currentWeek} of ${numWeeks}`
                         }
@@ -543,7 +564,23 @@ export default function LeagueScreen() {
                 </View>
                 <Text style={styles.kpiLabel}>{isMatchupLeague ? 'Week' : 'Type'}</Text>
                 {isMatchupLeague ? (
-                  weekStatus.phase === 'playoffs' ? (
+                  weekStatus.seasonPhase === 'pre_season' ? (
+                    // Short "Sep 29" value, no weekday — the full
+                    // "Starts Tue, Sep 29" (used below for pre_draft/
+                    // drafting, and still by the banner pill above) wrapped
+                    // to two lines in this card's narrower value slot.
+                    <>
+                      <Text style={styles.kpiValue}>{formatSeasonStartShort(activeLeague)}</Text>
+                      <Text style={styles.kpiSub}>starts · {numWeeks} week{numWeeks === 1 ? '' : 's'}</Text>
+                    </>
+                  ) : isPreSeasonPhase(weekStatus.seasonPhase) ? (
+                    <>
+                      <Text style={styles.kpiValue}>{getSeasonLabel(weekStatus.seasonPhase, activeLeague)}</Text>
+                      <Text style={styles.kpiSub}>
+                        {weekStatus.seasonPhase === 'pre_draft' ? 'Starts after draft' : 'Season starts after'}
+                      </Text>
+                    </>
+                  ) : weekStatus.phase === 'playoffs' ? (
                     <>
                       <Text style={styles.kpiValue}>Playoffs</Text>
                       {currentPlayoffRoundLabel && (
@@ -575,7 +612,12 @@ export default function LeagueScreen() {
                   <Ionicons name="people" size={18} color={Colors.secondary} />
                 </View>
                 <Text style={styles.kpiLabel}>Players</Text>
-                <Text style={styles.kpiValueLarge}>{sortedStandings.length}</Text>
+                <Text style={styles.kpiValueLarge}>{memberCount}</Text>
+                {botMemberCount > 0 ? (
+                  <Text style={styles.kpiSub}>incl. {botMemberCount} bot{botMemberCount === 1 ? '' : 's'}</Text>
+                ) : activeLeague?.num_participants && memberCount < activeLeague.num_participants ? (
+                  <Text style={styles.kpiSub}>of {activeLeague.num_participants}</Text>
+                ) : null}
               </Card>
             </View>
 
@@ -590,7 +632,14 @@ export default function LeagueScreen() {
                   <Text style={styles.sectionTitle}>Standings</Text>
                   {isMatchupLeague && !isSeasonCompleted && (
                     <Text style={styles.sectionSubtitle}>
-                      {weekStatus.phase === 'playoffs'
+                      {weekStatus.seasonPhase === 'pre_season'
+                        // The date already appears in the banner pill above
+                        // and the Week KPI's short form — a team count here
+                        // instead of a third copy of the same date.
+                        ? `${memberCount} team${memberCount === 1 ? '' : 's'}`
+                        : isPreSeasonPhase(weekStatus.seasonPhase)
+                        ? getSeasonLabel(weekStatus.seasonPhase, activeLeague)
+                        : weekStatus.phase === 'playoffs'
                         ? 'Regular Season Final'
                         : `Week ${currentWeek} of ${numWeeks}`
                       }

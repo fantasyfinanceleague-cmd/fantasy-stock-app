@@ -109,3 +109,82 @@ export function describeStartBlocker(b: StartBlocker): string {
       return 'The draft cannot start yet.';
   }
 }
+
+// ---------------------------------------------------------------------------
+// Not-started screen header/subline state. Split out from the timer work
+// above because the Design Lead caught a real instance of the same bug this
+// whole task was fixing: after the timer flipped Start Draft to enabled, the
+// screen still read "Draft Not Started / Scheduled for <a time now in the
+// past>" — display-state fell behind the same server response that had
+// already turned the button on.
+// ---------------------------------------------------------------------------
+
+export type DraftHeaderState = 'ready' | 'date_pending' | 'blocked_no_date' | 'blocked_with_date';
+
+/**
+ * Which headline/subline the draft screen's not-started view should show.
+ * Decided ENTIRELY from the draft-control 'status' response (canStart +
+ * blockers) — never from re-checking the current time client-side, since
+ * the server is the source of truth for whether the scheduled time has
+ * passed (see msUntilStartRecheck's docstring: this screen is display-only).
+ *
+ * - 'ready': nothing is blocking — show "Ready to draft".
+ * - 'date_pending': the ONLY thing shown before is the scheduled time not
+ *   having arrived yet — keep the original "Draft Not Started / Scheduled
+ *   for <time>" copy (the case this bug was about).
+ * - 'blocked_with_date' / 'blocked_no_date': something else still blocks
+ *   (not enough members, no stake mode, ...), with or without a date set.
+ *   Not explicitly specified by the design review; kept as its own state
+ *   rather than folded into 'ready' or 'date_pending' so the caller can
+ *   render "Draft Not Started" without implying either "starts soon" or
+ *   "start whenever you're ready" — neither is true yet.
+ */
+export function computeDraftHeaderState(
+  hasDraftDate: boolean,
+  canStart: boolean,
+  blockers: StartBlocker[],
+): DraftHeaderState {
+  if (canStart && blockers.length === 0) return 'ready';
+  if (!hasDraftDate) return 'blocked_no_date';
+  const hasDateBlocker = blockers.some(b => b.code === 'draft_date_not_reached');
+  return hasDateBlocker ? 'date_pending' : 'blocked_with_date';
+}
+
+// Longest delay setTimeout accepts before overflowing its signed 32-bit ms
+// argument; browsers/RN clamp anything longer to fire almost immediately.
+const MAX_TIMEOUT_MS = 2 ** 31 - 1;
+
+// Floor for a recheck scheduled because the LOCAL clock already thinks the
+// draft time has passed while the server still says otherwise (clock skew).
+// Without a floor, a client clock a few seconds fast would recheck on a tight
+// loop until the two clocks agreed.
+const CLOCK_SKEW_RECHECK_FLOOR_MS = 15_000;
+
+/**
+ * How long to wait before re-asking draft-control 'status', given the
+ * blockers from its last response. Display-only: the server re-checks the
+ * real time on every Start call regardless, so getting this wrong only
+ * affects when the button visually re-enables, never whether a premature
+ * Start succeeds.
+ *
+ * Returns null when there is nothing to wait for (no `draft_date_not_reached`
+ * blocker present) or when the wait would exceed what setTimeout can express
+ * (screen-focus refetches cover that case instead).
+ */
+export function msUntilStartRecheck(blockers: StartBlocker[], now: Date = new Date()): number | null {
+  const dateBlocker = blockers.find((b): b is StartBlocker & { draftDate: string } =>
+    b.code === 'draft_date_not_reached' && !!b.draftDate
+  );
+  if (!dateBlocker) return null;
+
+  const draftTime = new Date(dateBlocker.draftDate).getTime();
+  if (Number.isNaN(draftTime)) return null;
+
+  // Small grace period so the recheck lands just after the scheduled time
+  // rather than racing it.
+  const delay = draftTime - now.getTime() + 1_500;
+
+  if (delay > MAX_TIMEOUT_MS) return null;
+  if (delay < CLOCK_SKEW_RECHECK_FLOOR_MS) return CLOCK_SKEW_RECHECK_FLOOR_MS;
+  return delay;
+}
