@@ -302,3 +302,193 @@ Collisions cited: [Bullpen](https://bullpen.fi/) · [Bullpen Capital](https://bu
 [Pennant Chase](https://apps.apple.com/us/app/pennant-chase/id314722454) ·
 [Pennant app](https://apps.apple.com/us/app/pennant/id622463230) ·
 [PennantPark (PNNT)](https://robinhood.com/us/en/stocks/PNNT/)
+
+---
+
+# Round 2 (2026-09-26)
+
+> Giorgio rejected all six round-1 names ("none came close"). His steer, in
+> his own answers:
+> - **Feel:** sporty/competitive **and** sleek fintech at once: DraftKings /
+>   Sleeper energy with Robinhood / Public polish.
+> - **Word style:** a real word with a new meaning (like Sleeper, Public), a
+>   pronounceable, ownable coined word, or short + a "League"/"Club" qualifier.
+> - **Theme:** "it should be clear it's stock related but not making it seem
+>   like it's a brokerage or trading app."
+>
+> So: no trading-desk words (trade, broker, invest, capital, securities,
+> exchange, fund). Stock-ness comes from the market's texture (the bell, the
+> tape, tickers, the close, bulls), and the competitive frame (league,
+> season, rivalry) makes "game" obvious. Same caveat as round 1: **informal
+> screen, not legal clearance.**
+
+## R2.1 Longlist (25)
+
+| # | Name | Style | Idea | Verdict |
+|---|---|---|---|---|
+| 1 | **Bell League** | short + qualifier | The market bell, and a league | **Shortlist** |
+| 2 | **Pinstripe League** | real word + qualifier | Wall Street suit **and** baseball uniform: sleek and sporty in one word | **Shortlist** |
+| 3 | **Flier** | real word, new meaning | Fantasy "take a flier" + a speculative stock | **Shortlist** |
+| 4 | **Bull Season** | coined phrase | Bull market + sports season | **Shortlist** |
+| 5 | **Tape League** | real word + qualifier | Ticker tape + game tape | **Shortlist** |
+| 6 | **Ticker Club** | short + qualifier | Tickers, and your group of friends | **Shortlist** |
+| 7 | Opener | real word | Season opener + opening bell | Reserve: generic, weak stock signal |
+| 8 | Bellringer | real word | A big hit + ringing the bell | Reserve: generic (bell-sound apps, a security firm) |
+| 9 | Bull League | short + qualifier | — | Reserve: exact name clean, but the "Bull" field is crowded (BullBear Fantasy Finance League, Rally Bulls, BullRush) |
+| 10 | Bullring | real word | A bull arena | Weak: the UK Bullring shopping centre is a registered brand; "Bull" crowding |
+| 11 | Pinstripe (alone) | real word | — | Folded into #2 ("League" removes the wealth-manager reading) |
+| 12 | Tape (alone) | real word | — | Folded into #5 (tape.com and tape.app are taken) |
+| 13 | Stockey | coined | Stock + hockey | Out: Stockey paper-trading app (stockey.com.au, @Stockey_App) |
+| 14 | Stoxo | coined | — | Out: Stoxo stock-AI platform |
+| 15 | Ticker League | short + qualifier | — | Out: tickerleague.com (market prediction games) |
+| 16 | Stocks League | short + qualifier | — | Out: "Stocks League: Investing Game" on Play |
+| 17 | Keeper | real word | Keeper league + holding a stock | Out: "Keeper – Draft Fantasy AFL" app |
+| 18 | Breakout | real word | Fantasy breakout + chart breakout | Out: Breakout Trading (prop firm) and Breakout Trade apps; Atari's *Breakout* |
+| 19 | Tipoff | real word | Tip-off + stock tip | Out: reads as insider tips or advice, which fails the brief |
+| 20 | Stock Car | real word | Racing + stocks | Out: StockCar stock-news app (stockcar.app) |
+| 21 | Bell Lap | real word | Last-lap bell | Out: Bell Lap Capital and Bell Lap Advisors (finance) |
+| 22 | Underdog | real word | — | Out: Underdog Fantasy, a major daily-fantasy brand |
+| 23 | Tickerup | coined | — | Weak coinage; not pursued |
+| 24 | Tape Club | short + qualifier | — | Variant of #5 |
+| 25 | Close Club | short + qualifier | — | Weak: "close" alone doesn't read as market |
+
+## R2.2 Shortlist with screen and brokerage check
+
+Domains checked 2026-09-26 (`.com` via Verisign whois, `.app` via Google
+Registry RDAP; play-/get- prefixes included). Handles: none indexed for any
+shortlist name; verify @name on X, Instagram and TikTok by hand.
+
+### Bell League
+- **Why:** it says both halves plainly. The bell is the most universal market
+  symbol (opening and closing bell), and "League" makes it a game. It's short
+  and easy to say.
+- **Would someone think it's a brokerage?** **No.** "League" frames it as a
+  competition, and nobody names a brokerage a league.
+- **Screen:** no same-category product or app by that name. Domains:
+  bellleague.com **not registered** (but a triple-L spelling), thebellleague.com
+  and playbellleague.com **not registered**, **bellleague.app not registered**.
+- **Flags:** no collision found. The bell mark risks reading as a
+  notifications icon at small sizes (see R2.3).
+
+### Pinstripe League
+- **Why:** the one word that is literally both worlds: the Wall Street suit and
+  the baseball uniform. It's sleek and sporty at once, exactly the steer, and it
+  can go one-word ("Pinstripe") in the icon and store while "League" carries
+  the meaning.
+- **Would someone think it's a brokerage?** **"Pinstripe" alone: somewhat**
+  (a wealth manager could be called that). **"Pinstripe League": no.**
+- **Screen:** Pinstripes, Inc. (bistro and bowling chain, publicly listed);
+  *Pinstripe* (indie video game on Steam); store apps "Pinstripe Shop"
+  (official **Yankees** merchandise) and "Pinstripes Nation" (Yankees fan
+  site). **The Yankees hold a registered mark on their pinstripe uniform
+  design** for baseball entertainment services (since 1992), and
+  **"PINSTRIPE BOWL"** is registered. Domains: pinstripe.com (1994) and
+  pinstripe.app registered; **pinstripeleague.com, playpinstripe.com and
+  getpinstripe.com not registered**.
+- **Flags:** **Yankees**: name "pinstripe(s)", category sports entertainment
+  (class 41 adjacent), mark = pinstripe uniform design. A fantasy-sports
+  product named Pinstripe must avoid uniform imagery (no white-on-navy
+  jersey pattern, no NY), and needs an attorney's view before launch.
+
+### Flier
+- **Why:** a real word with a double meaning both audiences know. In fantasy
+  you "take a flier" on a sleeper; in markets a flier is a speculative stock.
+  One word, Sleeper-style.
+- **Would someone think it's a brokerage?** **No**, but it can read as
+  *speculation or betting*, which is the opposite risk.
+- **Screen:** no same-category product. flier.com (2001) and flier.app
+  registered; **playflier.com, getflier.com and fliergame.com not
+  registered**.
+- **Flags:** people will type "flyer" (spelling split); the paper-dart mark
+  resembles Telegram's glyph.
+
+### Bull Season
+- **Why:** it's playful and clear. "Bull market" plus a sports season means
+  "it's on", and it can't be mistaken for a financial institution.
+- **Would someone think it's a brokerage?** **No.**
+- **Screen:** no product by that name (only bull-riding games). Domains:
+  bullseason.com **registered 2023**; **bullseason.app and
+  playbullseason.com not registered**.
+- **Flags:** the "Bull" namespace in this category is crowded (BullBear
+  Fantasy Finance League, Rally Bulls, BullRush, Bull Market app), so it's
+  hard to stand out and there's some confusion risk.
+
+### Tape League
+- **Why:** "tape" is both the ticker tape and game tape ("watch the tape").
+- **Would someone think it's a brokerage?** **No**, though "reading the
+  tape" is trader jargon that casual users may not know.
+- **Screen:** no same-category product. tape.com, tape.app and playtape.com
+  taken; **tapeleague.com not registered**.
+- **Flags:** "tape" is generic and weak as a mark; stock-ness is subtle.
+
+### Ticker Club
+- **Why:** tickers plus your group of friends; warm and simple.
+- **Would someone think it's a brokerage?** **Somewhat:** "stock club" /
+  "investment club" is a real-money concept.
+- **Screen:** no product by that name; **tickerclub.com registered
+  2026-04-08** (recent, unknown owner); **tickerclub.app and
+  playtickerclub.com not registered**. "Ticker League" (tickerleague.com) is
+  a near-name in category.
+- **Flags:** a recent .com registration, and the investment-club connotation.
+
+### USPTO queries for Giorgio (tmsearch.uspto.gov)
+
+Filter **Live + Dead**, classes **009, 036, 041**, then repeat unfiltered.
+
+| Name | Queries |
+|---|---|
+| Bell League | `bell league` · `bellleague` · `bell` combined with `league` |
+| Pinstripe League | `pinstripe` · `pinstripes` · `pinstripe league` (**read the Yankees and Pinstripes, Inc. records closely**) |
+| Flier | `flier` · `flyer` (in classes 009/041 especially) |
+| Bull Season | `bull season` · `bullseason` · `bull*` combined with `season` |
+| Tape League | `tape league` · `tapeleague` |
+| Ticker Club | `ticker club` · `tickerclub` · `ticker league` |
+
+## R2.3 Marks for the top three
+
+Files in `docs/design/naming/marks/` (`preview-round2.html` shows them together).
+
+| Name | Mark | File | Collision check |
+|---|---|---|---|
+| Bell League | A bell with a rising tick across it; amber clapper | `r2-bell-league.svg` | A bell glyph is the universal notifications icon; the tick and amber clapper help, but at 40px it can still read as "alerts". A worker would refine it |
+| Pinstripe League | **The refined bars redrawn as pinstripes** (thin rising stripes, the tallest in brand blue, amber tip) | `r2-pinstripe-league.svg` | Continuous with the chosen refined-bars mark. **Deliberately not a uniform pattern**: rising lengths read as a chart, not fabric, which keeps it clear of the Yankees' uniform trade dress |
+| Flier | A paper dart climbing a dotted rising trail | `r2-flier.svg` | A paper plane is Telegram's glyph; ours uses a navy square, no circle, and an amber trail, but the family resemblance is real |
+
+## R2.4 Recommendation (Giorgio decides)
+
+**Pinstripe League**, with **Bell League** as the clean fallback.
+
+- *Pinstripe League* is the only name that is **both halves at once**, as
+  the steer asks: sleek (Wall Street) and sporty (baseball) in one word. Its
+  mark grows straight out of the refined bars already chosen, and the league
+  and play/get domains are free. The price is real homework: the Yankees'
+  pinstripe marks and Pinstripes, Inc. The attorney question is whether a
+  fantasy stock game called Pinstripe League is confusingly similar to
+  either; I'd keep all uniform imagery out regardless.
+- *Bell League* passes all three of Giorgio's tests (clearly stock-related,
+  clearly a game, clearly not a brokerage), had **no collisions** in this
+  screen, and its .app is free. It's the lower-risk, lower-personality choice.
+- *Flier* is the best single-word option if he prefers the Sleeper/Public
+  style, but the flyer/flier spelling split and its "betting" reading hold it back.
+
+### Round 2 sources (2026-09-26)
+
+[Stockey paper trading](https://www.stockey.com.au/) ·
+[Ticker League](https://tickerleague.com/) ·
+[Stocks League (Play)](https://play.google.com/store/apps/details?id=com.stockleague.app&hl=en_US) ·
+[Keeper – Draft Fantasy AFL](https://apps.apple.com/app/id6736832397) ·
+[Breakout Trading](https://apps.apple.com/us/app/breakout-trading/id6471410471) ·
+[StockCar](https://www.stockcar.app/) ·
+[Bell Lap Capital](https://www.belllapcapital.com/) ·
+[Bell Lap Advisors](https://www.bell-lap-advisors.com/) ·
+[Stoxo](https://tracxn.com/d/companies/stoxo/__xcsp5r_6pj15u9Rz9-r0vTBqaeFdEoksZH90Vbujmvo) ·
+[BullBear Fantasy Finance League](https://www.thegreatapps.com/apps/bullbear-fantasy-finance-league) ·
+[Rally Bulls](https://apps.apple.com/in/app/rally-bulls-learn-to-trade/id6484273826) ·
+[Stonkd](https://apps.apple.com/us/app/stonkd-daily-fantasy-stocks/id6744602969) ·
+[Pinstripes, Inc.](https://investor.pinstripes.com/overview/default.aspx) ·
+[Pinstripe (Steam)](https://store.steampowered.com/app/331480/Pinstripe/) ·
+[Pinstripe Shop](https://play.google.com/store/apps/details?id=com.pinstripe.store) ·
+[Yankees pinstripe trademark](https://www.thatsatrademark.com/blog/yankees) ·
+[PINSTRIPE BOWL mark](https://trademark.justia.com/778/38/pinstripe-77838818.html) ·
+[PINSTRIPES mark](https://trademarks.justia.com/766/33/pinstripes-76633435.html) ·
+[Bell Ringer app](https://apps.apple.com/us/app/bell-ringer/id342059802)
