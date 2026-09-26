@@ -19,9 +19,20 @@ describe('Money', () => {
     expect(screen.getByText('−$56.80')).toHaveStyle({ color: 'var(--sp-color-data-loss-base)' });
   });
 
-  it('zero is never green or red — it uses color.data.zero', () => {
+  it('zero is never green or red — it uses color.data.zero.base on a money surface', () => {
     render(<Money value={0} />);
-    expect(screen.getByText('$0.00')).toHaveStyle({ color: 'var(--sp-color-data-zero)' });
+    expect(screen.getByText('$0.00')).toHaveStyle({ color: 'var(--sp-color-data-zero-base)' });
+  });
+
+  it('zero on a game surface uses the light-on-dark grey, not the money one', () => {
+    // DESIGN_DIRECTION §9 (amended fb0bc9d): the money-surface grey reads
+    // ~3:1 on stadium navy — too low — so game gets its own leaf.
+    render(
+      <Surface kind="game">
+        <Money value={0} />
+      </Surface>
+    );
+    expect(screen.getByText('$0.00')).toHaveStyle({ color: 'var(--sp-color-data-zero-on-game)' });
   });
 
   it('picks the onGame variant inside a game Surface', () => {

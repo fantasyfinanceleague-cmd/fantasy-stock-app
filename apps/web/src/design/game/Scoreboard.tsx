@@ -37,7 +37,9 @@ export function Scoreboard({
   onChyronDismiss,
   className,
 }: ScoreboardProps) {
-  const leading = you.gain === opponent.gain ? null : you.gain > opponent.gain ? you.name : opponent.name;
+  const leading: 'you' | 'opponent' | null =
+    you.gain === opponent.gain ? null : you.gain > opponent.gain ? 'you' : 'opponent';
+  const margin = Math.abs(you.gain - opponent.gain);
 
   return (
     <Surface kind="game" className={['sp-scoreboard', className].filter(Boolean).join(' ')}>
@@ -67,7 +69,7 @@ export function Scoreboard({
 
       {leading && (
         <Text variant="caption" tone="secondary" as="p" className="sp-scoreboard__lead-line">
-          {leading} leads
+          {leading === 'you' ? 'You lead' : `${opponent.name} leads`} by {formatMoney(margin)}
         </Text>
       )}
 

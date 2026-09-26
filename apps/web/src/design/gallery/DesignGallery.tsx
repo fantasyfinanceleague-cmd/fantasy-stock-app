@@ -160,10 +160,28 @@ function SheetSpecimen() {
   );
 }
 
+// A real vector icon (not an emoji — Design Lead review, 2026-09-26: emoji
+// render differently per OS, and EmptyState sets the pattern every empty
+// state follows). No icon library decision has been made in Phase 2, so
+// this is a minimal inline placeholder, sized/coloured via currentColor
+// so it inherits EmptyState's icon-slot colour on either surface.
+function TrophyIcon() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M8 4h8v4a4 4 0 0 1-8 0V4Z" />
+      <path d="M8 5H5a2 2 0 0 0 2 2.5" />
+      <path d="M16 5h3a2 2 0 0 1-2 2.5" />
+      <path d="M12 12v3" />
+      <path d="M9 19h6" />
+      <path d="M10 15h4l1 4H9l1-4Z" />
+    </svg>
+  );
+}
+
 function EmptyStateSpecimen() {
   return (
     <EmptyState
-      icon="🏆"
+      icon={<TrophyIcon />}
       title="No leagues yet"
       line="Create one, or join with a code from a friend."
       action={{ label: 'Create a league', onClick: () => {} }}

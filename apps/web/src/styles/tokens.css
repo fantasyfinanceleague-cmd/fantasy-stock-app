@@ -35,11 +35,17 @@
   --sp-color-data-gain-on-game: #4ADE8B;
   --sp-color-data-loss-base: #C8303A;
   --sp-color-data-loss-on-game: #FF7A7A;
-  --sp-color-data-zero: #5B6678;
+  --sp-color-data-zero-base: #5B6678;
+  --sp-color-data-zero-on-game: #8DA0BD;
   --sp-color-status-warning: #B45309;
   --sp-color-status-danger: #B42318;
   --sp-color-action-primary-bg: #0D1B2E;
   --sp-color-action-primary-fg: #FFFFFF;
+  --sp-color-action-primary-on-game-bg: #FFFFFF;
+  --sp-color-action-primary-on-game-fg: #0D1B2E;
+  --sp-color-action-secondary-on-game-border: #8DA0BD;
+  --sp-color-action-secondary-on-game-fg: #FFFFFF;
+  --sp-color-action-ghost-on-game-fg: #FFFFFF;
   --sp-type-family: 'Archivo', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --sp-type-score-xl-size: 56px;
   --sp-type-score-xl-line: 52px;

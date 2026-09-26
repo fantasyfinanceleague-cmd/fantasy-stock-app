@@ -38,13 +38,34 @@ export const color = {
   data: {
     gain: { base: '#12803F', onGame: '#4ADE8B' },
     loss: { base: '#C8303A', onGame: '#FF7A7A' },
-    // Zero is never green: same value as text.secondary, duplicated here
-    // (not a var() reference) so this file and tokens.css can be diffed leaf
-    // by leaf without resolving CSS custom-property indirection.
-    zero: '#5B6678',
+    // Zero is never green: same values as text.secondary / text.onGame.secondary,
+    // duplicated here (not a var() reference) so this file and tokens.css can
+    // be diffed leaf by leaf without resolving CSS custom-property
+    // indirection. DESIGN_DIRECTION §9 (amended fb0bc9d): the light-surface
+    // grey reads ~3:1 on stadium navy — too low — so game gets its own leaf.
+    zero: { base: '#5B6678', onGame: '#8DA0BD' },
   },
   status: { warning: '#B45309', danger: '#B42318' },
-  action: { primary: { bg: '#0D1B2E', fg: '#FFFFFF' } },
+  action: {
+    primary: {
+      bg: '#0D1B2E',
+      fg: '#FFFFFF',
+      // DESIGN_DIRECTION §9 (amended fb0bc9d, "Raised by ui/foundation-web
+      // [finding] the primary button invisible on stadium navy"): navy on
+      // navy is invisible, so the primary INVERTS on a game surface — a
+      // white "broadcast chip" (17:1), not a bordered navy-on-navy button.
+      onGame: { bg: '#FFFFFF', fg: '#0D1B2E' },
+    },
+    secondary: {
+      // Money-surface secondary is styled directly in Button.css (a
+      // border.control outline on a money.base fill) — no separate token
+      // needed there. Game only needs its own outline/fg pair.
+      onGame: { border: '#8DA0BD', fg: '#FFFFFF' },
+    },
+    ghost: {
+      onGame: { fg: '#FFFFFF' },
+    },
+  },
 };
 
 export const type = {

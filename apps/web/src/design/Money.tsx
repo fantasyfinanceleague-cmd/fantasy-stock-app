@@ -41,7 +41,7 @@ export function Money({
   let colorOverride: string | undefined;
   if (colorBySign) {
     if (isZero) {
-      colorOverride = 'var(--sp-color-data-zero)';
+      colorOverride = onGame ? 'var(--sp-color-data-zero-on-game)' : 'var(--sp-color-data-zero-base)';
     } else if (value < 0) {
       colorOverride = onGame ? 'var(--sp-color-data-loss-on-game)' : 'var(--sp-color-data-loss-base)';
     } else {

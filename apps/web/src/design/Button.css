@@ -45,16 +45,10 @@
 
 .sp-button--primary {
   /* Stadium navy — neutral, deliberately NOT a team colour
-     (DESIGN_DIRECTION §9). FLAG for Design Lead review: §9 gives
-     color.action.primary.bg and color.surface.game.base the SAME value
-     (#0D1B2E), so an unbordered primary button is invisible on a game
-     surface (found in the gallery, screenshotted in the DONE report).
-     This border is a defensive stop-gap, not the design fix — the real
-     fix (a distinct game-surface button treatment, or a different token
-     value) is a decision for the Design Lead, not this worker. */
+     (DESIGN_DIRECTION §9). Overridden below on a game surface. */
   background-color: var(--sp-color-action-primary-bg);
   color: var(--sp-color-action-primary-fg);
-  border: 1px solid var(--sp-color-border-control);
+  border: none;
 }
 
 .sp-button--secondary {
@@ -69,8 +63,33 @@
 }
 
 .sp-button--destructive {
+  /* Same status.danger red on both surfaces, deliberately: a strong
+     universal warning colour, not one of the tokens that collided. */
   background-color: var(--sp-color-status-danger);
   /* No dedicated "destructive fg" token in §9 — reuses action.primary.fg
      (white), the same value a dark filled button needs regardless of hue. */
   color: var(--sp-color-action-primary-fg);
+}
+
+/* DESIGN_DIRECTION §9 (amended fb0bc9d, "Raised by ui/foundation-web
+   [finding] the primary button invisible on stadium navy"): §9 gives
+   color.action.primary.bg and color.surface.game.base the same value
+   (#0D1B2E), so on a game surface the primary INVERTS to a white
+   "broadcast chip" instead of growing a border. secondary/ghost get their
+   own game-surface tokens too, per the same amendment. destructive is
+   unaffected (see above) — `Button.tsx` doesn't even apply this class for
+   that variant. */
+.sp-button--primary.sp-button--on-game {
+  background-color: var(--sp-color-action-primary-on-game-bg);
+  color: var(--sp-color-action-primary-on-game-fg);
+}
+
+.sp-button--secondary.sp-button--on-game {
+  background-color: transparent;
+  color: var(--sp-color-action-secondary-on-game-fg);
+  border: 1px solid var(--sp-color-action-secondary-on-game-border);
+}
+
+.sp-button--ghost.sp-button--on-game {
+  color: var(--sp-color-action-ghost-on-game-fg);
 }

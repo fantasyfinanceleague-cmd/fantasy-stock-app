@@ -116,7 +116,7 @@ describe('Chyron', () => {
 });
 
 describe('Scoreboard', () => {
-  it('renders both teams and a lead line for the team ahead', () => {
+  it('renders both teams and a lead line naming the margin when you lead', () => {
     render(
       <Scoreboard
         leagueName="The League"
@@ -127,7 +127,20 @@ describe('Scoreboard', () => {
     );
     expect(screen.getByText('Giorgio')).toBeInTheDocument();
     expect(screen.getByText('Priya')).toBeInTheDocument();
-    expect(screen.getByText('Giorgio leads')).toBeInTheDocument();
+    // "You lead" (not "leads") — first person; the margin is the gain gap.
+    expect(screen.getByText('You lead by $80.50')).toBeInTheDocument();
+  });
+
+  it('names the opponent with "leads" (third person) when they lead', () => {
+    render(
+      <Scoreboard
+        leagueName="The League"
+        week={3}
+        you={{ name: 'Giorgio', gain: 40 }}
+        opponent={{ name: 'Priya', gain: 120.5 }}
+      />
+    );
+    expect(screen.getByText('Priya leads by $80.50')).toBeInTheDocument();
   });
 
   it('shows no lead line on a tie', () => {
@@ -139,7 +152,7 @@ describe('Scoreboard', () => {
         opponent={{ name: 'Priya', gain: 0 }}
       />
     );
-    expect(screen.queryByText(/leads$/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/leads? by/)).not.toBeInTheDocument();
   });
 
   it('shows the live dot only when live', () => {
