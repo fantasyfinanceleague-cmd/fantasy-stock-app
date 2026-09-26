@@ -453,7 +453,19 @@ Money always uses `tabular-nums`.
 | −3000 | `sign: 'always'` | `−$3,000.00` |
 | 0 | either | `$0.00` |
 | 1234567.891 | `compact` (default sign) | `$1.23M` |
-| −0.004 | `sign: 'always'` | `$0.00` | **Mobile font delivery:** React Native
+| −0.004 | `sign: 'always'` | `$0.00` |
+
+**Pinned for byte-identical platforms** (Orchestrator, 2026-09-26; both
+workers test these):
+- **Rounding:** `cents = Math.round(Math.abs(v) * 100)`, with the sign reapplied
+  after rounding (so a value that rounds to zero is unsigned). Plain JS float
+  behaviour, no `Intl` rounding and no half-even: `1.005 → $1.00`,
+  `2.675 → $2.67`. Grouping and currency are formatted from the integer cents.
+- **Tug ratio:** `p = 0.5 + 0.5 · (you − opp) / max(|you| + |opp|, 1)`,
+  clamped to `[0.08, 0.92]` so the trailing colour is always visible; both
+  zero → `0.5`. (Board example: $56.80 vs $39.40 → 0.59.)
+- **Digit diff:** right-aligned character diff (units align, so `$999.99 →
+  $1,000.00` rolls from the right). **Mobile font delivery:** React Native
 can't drive a variable font's width axis, so Phase 2 bundles **static
 instances** cut from Archivo's variable TTF (OFL): `Archivo-Condensed-Black`
 (wdth 62, wght 900), `Archivo-Expanded-ExtraBold` (125/800), and Archivo
