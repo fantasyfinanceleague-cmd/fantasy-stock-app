@@ -37,8 +37,29 @@ function collectCodeFiles(dir: string): string[] {
 // Matches a bare numeric millisecond literal used as a duration, e.g.
 // `240` or `380ms` in a motion-shaped call, and a raw cubic-bezier(...).
 // Deliberately narrow (not "any number") so token pixel/size values like
-// `size={24}` don't false-positive.
-const INLINE_DURATION = /\bduration:\s*\d+\b|\b\d+ms\b|cubic-bezier\(/;
+// `size={24}` don't false-positive — and `duration: 0` (explicitly "skip
+// the animation", the reduced-motion escape hatch) is exempt: it isn't a
+// made-up timing value, it's the absence of one.
+const INLINE_DURATION = /\bduration:\s*[1-9]\d*\b|\b\d+ms\b|cubic-bezier\(/;
+
+describe('the INLINE_DURATION pattern itself', () => {
+  it('flags a made-up literal duration', () => {
+    expect('transition={{ duration: 350 }}').toMatch(INLINE_DURATION);
+  });
+
+  it('flags a raw ms literal and a raw cubic-bezier()', () => {
+    expect('animation: pulse 380ms;').toMatch(INLINE_DURATION);
+    expect("ease: cubic-bezier(0.2, 0, 1, 1)").toMatch(INLINE_DURATION);
+  });
+
+  it('does NOT flag duration: 0 (the reduced-motion "skip it" escape hatch)', () => {
+    expect('{ duration: 0 }').not.toMatch(INLINE_DURATION);
+  });
+
+  it('does NOT flag an unrelated size prop', () => {
+    expect('size={24}').not.toMatch(INLINE_DURATION);
+  });
+});
 
 describe('no inline motion durations/easings outside the token files', () => {
   const files = collectCodeFiles(designDir);

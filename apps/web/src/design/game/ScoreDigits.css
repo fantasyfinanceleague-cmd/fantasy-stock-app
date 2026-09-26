@@ -1,0 +1,21 @@
+.sp-score-digits {
+  display: inline-flex;
+  font-family: var(--sp-type-family);
+  font-size: var(--sp-type-score-xl-size);
+  line-height: var(--sp-type-score-xl-line);
+  font-weight: var(--sp-type-score-xl-weight);
+  font-stretch: var(--sp-type-score-xl-stretch);
+  font-variant-numeric: tabular-nums;
+  color: var(--sp-color-text-on-game-primary);
+  white-space: nowrap;
+}
+
+.sp-score-digits__char {
+  display: inline-block;
+}
+
+.sp-score-digits__char--roll-wrap {
+  position: relative;
+  overflow: hidden;
+  height: var(--sp-type-score-xl-line);
+}

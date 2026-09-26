@@ -51,6 +51,20 @@ export type { MoneyOptions } from './lib/money';
 export { digitDiff } from './lib/digitDiff';
 export { tugRatio } from './lib/tugRatio';
 
+// Game surfaces only (DESIGN_DIRECTION §9) — spring.lively is deliberately
+// NOT re-exported here; import it from design/game/motion directly if a
+// game component needs it.
+export { ScoreDigits } from './game/ScoreDigits';
+export type { ScoreDigitsProps } from './game/ScoreDigits';
+export { TugBar } from './game/TugBar';
+export type { TugBarProps } from './game/TugBar';
+export { LiveDot } from './game/LiveDot';
+export type { LiveDotProps } from './game/LiveDot';
+export { Chyron } from './game/Chyron';
+export type { ChyronProps } from './game/Chyron';
+export { Scoreboard } from './game/Scoreboard';
+export type { ScoreboardProps, ScoreboardTeam } from './game/Scoreboard';
+
 /** `brand.mark` per DESIGN_DIRECTION.md §9 — the swappable name/wordmark
  * (src/brand.ts) combined with the name-agnostic mark component. */
 export const brand = { ...brandBase, mark: BrandMark };

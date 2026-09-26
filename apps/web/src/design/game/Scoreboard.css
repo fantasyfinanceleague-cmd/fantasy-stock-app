@@ -1,0 +1,36 @@
+.sp-scoreboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-space-5);
+  padding: var(--sp-space-6);
+  border-radius: var(--sp-radius-lg);
+}
+
+.sp-scoreboard__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-space-3);
+}
+
+.sp-scoreboard__teams {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-space-5);
+}
+
+.sp-scoreboard__team {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-space-2);
+}
+
+.sp-scoreboard__team--opponent {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.sp-scoreboard__lead-line {
+  margin: 0;
+}
