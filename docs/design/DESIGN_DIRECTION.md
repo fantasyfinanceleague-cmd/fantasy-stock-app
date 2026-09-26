@@ -417,6 +417,8 @@ Every text pair below is measured; "on" means the background it may sit on.
 | `color.status.warning` | `#B45309` | 5.0 on white |
 | `color.status.danger` | `#B42318` | 6.6 on white (destructive buttons, errors) |
 | `color.action.primary.bg` / `.fg` | `#0D1B2E` / `#FFFFFF` | Primary buttons are stadium navy: neutral, and not a team colour |
+| `color.action.secondary.bg` / `.border` / `.fg` | `#FFFFFF` / = `border.control` / = `text.primary` | Money-surface secondary, explicit for parity with `.onGame` |
+| `color.action.ghost.fg` | = `text.primary` | Money-surface ghost |
 | `color.action.primary.onGame.bg` / `.fg` | `#FFFFFF` / `#0D1B2E` | **On game surfaces the primary inverts** to a white "broadcast chip" (17:1). Navy-on-navy would be invisible |
 | `color.action.secondary.onGame.border` / `.fg` | `#8DA0BD` / `#FFFFFF` | Transparent fill, light outline (6.5:1 against stadium) |
 | `color.action.ghost.onGame.fg` | `#FFFFFF` | Text-only action on game surfaces |
