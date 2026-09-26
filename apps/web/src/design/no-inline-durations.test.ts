@@ -14,7 +14,11 @@ import path from 'node:path';
 // under src/design must reach for the tokens instead.
 
 const designDir = fileURLToPath(new URL('.', import.meta.url));
-const EXEMPT_BASENAMES = new Set(['tokens.ts', 'motion.ts']);
+// tokens.ts / motion.ts: the token source itself, allowed to hold raw
+// values. useMotion.ts: parses those token strings (e.g. extracts the
+// numbers out of a `cubic-bezier(...)` token value) — infrastructure, not a
+// component reaching for an inline value instead of the tokens.
+const EXEMPT_BASENAMES = new Set(['tokens.ts', 'motion.ts', 'useMotion.ts']);
 
 function collectCodeFiles(dir: string): string[] {
   const out: string[] = [];

@@ -49,10 +49,18 @@ function compactHundredths(cents: number, tierIndex: number): { hundredths: numb
   return { hundredths, suffix: tier.suffix };
 }
 
+/** The one place the rounding rule lives: `Math.round(Math.abs(v) * 100)`.
+ * Exported so callers that need "is this effectively zero?" (e.g. Money's
+ * sign-based colour) use the exact same rule formatMoney does, rather than
+ * re-deriving it and risking drift. */
+export function roundToCents(value: number): number {
+  return Math.round(Math.abs(value) * 100);
+}
+
 export function formatMoney(value: number, options: MoneyOptions = {}): string {
   const { sign = 'negative', alignSign = false, compact = false } = options;
 
-  const cents = Math.round(Math.abs(value) * 100);
+  const cents = roundToCents(value);
   const isZero = cents === 0;
   const isNegative = !isZero && value < 0;
 

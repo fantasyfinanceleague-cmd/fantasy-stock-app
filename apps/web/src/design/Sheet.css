@@ -1,0 +1,42 @@
+.sp-sheet-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+}
+
+.sp-sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background-color: var(--sp-color-surface-game-base);
+  opacity: 0.4; /* overridden per-frame by motion; this is the static fallback */
+}
+
+.sp-sheet-panel {
+  position: relative;
+  margin-top: auto;
+  width: 100%;
+  max-height: 85vh;
+  background-color: var(--sp-color-surface-money-base);
+  border-radius: var(--sp-radius-xl) var(--sp-radius-xl) 0 0;
+  box-shadow: var(--sp-elevation-sheet);
+  padding: var(--sp-space-8);
+  overflow-y: auto;
+}
+
+.sp-sheet-panel:focus {
+  outline: none;
+}
+
+/* Side panel at >= 768px (DESIGN_DIRECTION §2 Sheet spec); bottom sheet
+   below that width. */
+@media (min-width: 768px) {
+  .sp-sheet-panel {
+    margin-top: 0;
+    margin-left: auto;
+    width: min(420px, 100%);
+    max-height: 100vh;
+    height: 100%;
+    border-radius: var(--sp-radius-xl) 0 0 var(--sp-radius-xl);
+  }
+}
