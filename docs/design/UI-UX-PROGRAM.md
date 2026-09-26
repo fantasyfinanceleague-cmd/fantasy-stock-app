@@ -99,6 +99,11 @@ project", navigation and flow friction, accessibility failures.
 4. **Reduced motion** — every animation has a `prefers-reduced-motion` (web) /
    `AccessibilityInfo.isReduceMotionEnabled` (mobile) fallback. Non-negotiable.
 5. **Landing page concept** — section-by-section, with the motion for each.
+   Richer motion is allowed per Giorgio (2026-09-25): the "Avoid" list in
+   `landing-page-spec.md` § Motion direction (parallax, count-ups, pinned
+   sections, etc.) is lifted, not binding. Propose freely; Giorgio judges at
+   the checkpoint. Reduced-motion fallbacks and "never gate content behind an
+   animation" still apply.
 6. **Promo video treatment** — 30–60s storyboard, beat by beat.
 
 **Checkpoint:** Design Lead sends the direction to the Orchestrator, which
