@@ -8,9 +8,20 @@
 ## Goal
 
 Make Stockpile look and feel like a real, modern fintech product: sleek,
-consistent, with deliberate transitions and animation — the landing page
-first, because while `APP_PAUSED = true` it is the **only** live web surface.
-Then the mobile app. Then a promo video that shows the vision.
+consistent, with deliberate transitions and animation, and navigation that is
+easy and intuitive. The landing page comes first, because while
+`APP_PAUSED = true` it is the **only** live web surface. Then the full mobile
+app and the full web app. Then a promo video that shows the vision.
+
+**Mandate (Giorgio, 2026-09-25): complete overhaul is on the table.** What
+exists today is judged "really basic". The current visual identity, light
+theme, palette, typography, specs (`STOCKPILE_UI_OVERHAUL.md`,
+`landing-page-spec.md`) and navigation structure are **inputs, not
+constraints**. A new identity, a new theme (dark, light or both) and a new
+information architecture on both platforms are all allowed. What stays fixed
+are the *engineering* rules (the UI worker contract below), the product facts
+(e.g. web is pre-launch, so the landing page is "coming soon" with no signup)
+unless Giorgio changes them, and the Phase 1 approval checkpoint.
 
 ## Roles
 
@@ -44,8 +55,9 @@ when a superpowers skill suggests otherwise.
 
 ### Phase 0 — Audit (Design Lead, read-only)
 
-Screenshot the current state, then examine it against the existing specs —
-don't start from zero:
+Screenshot the current state and examine it. The existing specs are useful
+context about past decisions, but the audit judges the product against "modern,
+sleek, intuitive", not against those specs:
 
 - Web landing: `apps/web/src/pages/LandingPage.jsx` + `.css` (rebuilt from the
   Claude Design bundle; spec in `docs/design/landing-page-spec.md`).
@@ -53,27 +65,41 @@ don't start from zero:
   already on `main`; the spec is `docs/design/STOCKPILE_UI_OVERHAUL.md` —
   its §8 "Animations & Transitions" is only four bullet points; that gap is
   Phase 1's main job.
+- Web app: every page behind `APP_PAUSED` (Dashboard, Leagues, LeagueDetail,
+  Draft, Matchup, Portfolio, Leaderboard, TradeHistory, Profile, Login, the
+  league setup wizard). Flip `APP_PAUSED` to `false` locally only.
+- Navigation and flows on both platforms, not just individual screens: how
+  many taps to the core jobs (see my matchup, make a trade, draft, check
+  standings), and where users get lost.
 - Run `design:design-critique`, `design:accessibility-review`,
   `design:design-system` over the screenshots.
 
 **Output:** `docs/design/AUDIT-2026-09.md` — what's good, what reads as "side
-project", accessibility failures, where the spec and the shipped app disagree.
+project", navigation and flow friction, accessibility failures.
 
 ### Phase 1 — Direction (Design Lead → **Giorgio approves**)
 
 `superpowers:brainstorming` + `frontend-design`, producing
 `docs/design/DESIGN_DIRECTION.md`:
 
-1. **Visual tone** — within the existing light theme and tokens unless the
-   audit argues otherwise (and says so explicitly).
-2. **Motion language** — the part that makes it feel "sleek": 3–4 named
-   durations, 2–3 named easing curves, and a table of *what* animates (page /
-   route enters, card press, number count-up, list stagger, matchup reveal,
-   landing hero + scroll-driven sections) and what never animates.
-3. **Reduced motion** — every animation has a `prefers-reduced-motion` (web) /
+1. **Visual identity** — unconstrained by the current one: palette, theme
+   (dark / light / both), typography, iconography, depth and surface style.
+   Offer Giorgio **2–3 distinct directions** (a mood description plus one
+   hero screen each, e.g. Home and the landing hero) and let him pick, rather
+   than presenting a single option.
+2. **Information architecture and navigation** for mobile and web: tab /
+   nav structure, the path to each core job, and how league context works
+   across screens. Any new data or backend change the IA needs goes in a
+   "Backend asks" list for the Orchestrator. UI workers never add migrations.
+3. **Motion language** — the part that makes it feel "sleek": 3–4 named
+   durations, 2–3 named easing curves, and a table of *what* animates (route /
+   screen transitions, shared-element-style transitions where they help, card
+   press, number count-up, list stagger, matchup reveal, landing hero +
+   scroll-driven sections) and what never animates.
+4. **Reduced motion** — every animation has a `prefers-reduced-motion` (web) /
    `AccessibilityInfo.isReduceMotionEnabled` (mobile) fallback. Non-negotiable.
-4. **Landing page concept** — section-by-section, with the motion for each.
-5. **Promo video treatment** — 30–60s storyboard, beat by beat.
+5. **Landing page concept** — section-by-section, with the motion for each.
+6. **Promo video treatment** — 30–60s storyboard, beat by beat.
 
 **Checkpoint:** Design Lead sends the direction to the Orchestrator, which
 relays it to Giorgio. Nothing in Phase 2+ starts until Giorgio approves — every
@@ -85,6 +111,13 @@ Turn the direction into shared code before any screen work fans out (UI
 workers otherwise collide on `constants/theme/*` and `components/ui/*`, and
 each invents its own timings).
 
+- **Tokens:** replace the token values with the approved identity (palette,
+  type, spacing, radii, elevation) in each platform's single token source —
+  `apps/mobile/constants/theme/*` and a web equivalent. If the new identity
+  changes fonts, load them here.
+- **Navigation shell:** if the approved IA changes tabs / routes, the shell
+  (mobile tab layout, web router + layout) is rebuilt here so screen workers
+  build into it.
 - **Mobile:** motion tokens (`constants/theme/motion.ts`) + primitives on
   `react-native-reanimated` 4.1 (already installed): pressable-scale,
   fade/slide enter, count-up number, stagger list.
@@ -98,11 +131,14 @@ each invents its own timings).
 
 - **3a. Web landing page** — highest leverage. Hero animation, scroll-driven
   section reveals, product mock with live-feeling numbers.
-- **3b. Mobile Home rebuild** — the architectural rebuild in
-  `STOCKPILE_UI_OVERHAUL.md`. The one job CLAUDE.md says may justify Fable
-  (session-scoped, not security-adjacent).
-- **3c. Mobile reskin** — remaining screens, after 3b lands (3b introduces the
-  league context those headers use).
+- **3b. Mobile Home** — rebuilt per the approved direction (the old
+  `STOCKPILE_UI_OVERHAUL.md` Home concept is one input). The one job CLAUDE.md
+  says may justify Fable (session-scoped, not security-adjacent).
+- **3c. Mobile screens** — full redesign of the remaining screens, after 3b
+  lands (3b sets the league-context pattern the others use). The Design Lead
+  may split this into several workers by screen group.
+- **3d. Web app** — full redesign of the pages behind `APP_PAUSED`. They stay
+  paused in prod; this makes them ready for launch. May also be split.
 
 ### Phase 4 — Promo video (after 3a is approved)
 
@@ -154,7 +190,8 @@ the carve-out: **merging `origin/main` INTO your own branch locally is allowed
 | 2 Foundation | UI worker | `ui/motion-foundation` | not started |
 | 3a Landing | UI worker | `ui/landing-motion` | not started |
 | 3b Mobile Home | UI worker | `ui/mobile-home-rebuild` | not started |
-| 3c Mobile reskin | UI worker | `ui/mobile-reskin` | not started |
+| 3c Mobile screens | UI worker(s) | `ui/mobile-screens*` | not started |
+| 3d Web app | UI worker(s) | `ui/web-app*` | not started |
 | 4 Promo video | UI worker | `promo/remotion-video` | not started |
 
 ## Appendix A — Design Lead spawn prompt
