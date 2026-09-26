@@ -1,7 +1,7 @@
 # Stockpile Design Direction (Phase 1)
 
-> Author: Design Lead. Date: 2026-09-26. Status: **AWAITING GIORGIO'S PICK.**
-> Nothing in Phase 2+ starts until this is approved (charter checkpoint).
+> Author: Design Lead. Date: 2026-09-26. Status: **APPROVED: Direction B
+> "Game Day"** (Giorgio, 2026-09-26, relayed by Orchestrator). Phase 2 may start.
 >
 > Inputs: [`AUDIT-2026-09.md`](AUDIT-2026-09.md) (Phase 0), Giorgio's mandate
 > of 2026-09-25 (complete overhaul; richer landing motion allowed), and his
@@ -16,7 +16,30 @@
 
 ---
 
-## Decisions needed from Giorgio
+## Decisions — 2026-09-26 (Giorgio)
+
+| # | Question | Decision |
+|---|---|---|
+| 1 | Direction | **B · Game Day.** A and C below are kept for the record only; workers build B. |
+| 2 | Mark | **1 · Bars, refined.** Giorgio chose the S-curve monogram *if it wasn't already another company's logo*. It collides: an existing US investing app is already called **Stockpile** (stockpile.com, a family investing app since 2010, "stockpile™"), and its logo is an **orange S-shaped mark** beside the wordmark. An S-monogram for a stock app named Stockpile would sit on top of it. The refined bars are name-agnostic. |
+| 3 | Rename Portfolio → Team | **No.** The tab stays **Portfolio**. |
+| 4 | Profile out of the tab bar | **Yes.** Four tabs plus an avatar button on Home. |
+
+**Name caveat (open, Giorgio deciding separately).** The *name* "Stockpile"
+itself collides with that same existing ™ in the same category. Until he
+decides:
+- The product name and wordmark are **one swappable token**:
+  `brand.name` / `brand.wordmark` in `apps/mobile/constants/brand.ts` and
+  `apps/web/src/brand.ts`. No new asset, screen or copy string hard-codes
+  "Stockpile".
+- **On hold:** the promo storyboard's closing card (§8, 0:41–0:45) and any
+  wordmark-heavy landing work (a large wordmark lockup, name-driven hero copy).
+  The landing hero copy in §6 doesn't depend on the name.
+- The refined-bars mark (icon only) is safe to build now.
+
+---
+
+## Decisions that were needed (answered above)
 
 1. **Direction:** A Ledger, B Game Day (recommended), C After Hours, or a named
    blend ("B, but with C's dark scoreboard", etc.).
@@ -59,7 +82,7 @@ meets "cool animations" with restraint.
 
 ### B. Game Day (light base + broadcast scoreboards) — **recommended**
 
-Calm by default, loud on game day. Money screens (Team/portfolio, stock
+Calm by default, loud on game day. Money screens (Portfolio, stock
 detail, trade) are light and calm. **Competitive screens** (matchup,
 standings, draft, weekly results, Home's "this week" strip) switch into a
 broadcast scoreboard: stadium navy, condensed numerals, your team colour against
@@ -159,8 +182,8 @@ by the new landing, and are deleted when Phase 3d replaces the app pages.
 ### Mobile
 
 ```
-Tab bar (4):   Home      Matchup      League      Team
-Header:        [league pill ▾]  on Matchup / League / Team      [avatar] on Home
+Tab bar (4):   Home      Matchup      League      Portfolio
+Header:        [league pill ▾]  on Matchup / League / Portfolio      [avatar] on Home
 ```
 
 - **Home**: cross-league overview (the planned 3b rebuild). Total value,
@@ -172,7 +195,7 @@ Header:        [league pill ▾]  on Matchup / League / Team      [avatar] on Ho
   While the league is pre-draft or drafting, the tab **becomes the draft room
   entry** (a phase takeover, not a banner). After the draft, **Draft recap**
   lives under History.
-- **Team** (renamed from Portfolio): your holdings in the active league,
+- **Portfolio** (name kept, per decision 3): your holdings in the active league,
   budget, trade history (which **includes draft picks**).
 - **Stock detail (new)**: every ticker row anywhere opens a stock sheet with
   price chart, your position, who in your league owns it, and **Buy / Sell,
@@ -323,9 +346,9 @@ chart as the hero, and section 3 scrubs the two lines across the week.
 |---|---|---|---|
 | 1 | **Home summary RPC**: per league → phase, rank, record, this week's matchup (opponent display name, both dollar gains) in one call | Home rebuild (3b), the "This week" strip | All |
 | 2 | **Opponent display names** on matchup reads (today: "Opponent --") | Home, Matchup | All |
-| 3 | **Daily portfolio value series** per user per league (week snapshots are weekly only) | Honest Home/Team performance chart | All (without it the chart shows weekly points) |
+| 3 | **Daily portfolio value series** per user per league (week snapshots are weekly only) | Honest Home/Portfolio performance chart | All (without it the chart shows weekly points) |
 | 4 | **Intraday value samples** per matchup participant (e.g. every 15 min during market hours) | C's racing lines; B's optional "momentum" sparkline | **C required**, B optional |
-| 5 | Trade history view that **unions draft picks with trades** (text/uuid + numeric casts per CLAUDE.md) | Team → history | All |
+| 5 | Trade history view that **unions draft picks with trades** (text/uuid + numeric casts per CLAUDE.md) | Portfolio → history | All |
 | 6 | Username captured at signup is persisted (Home greeted "Trader") | Home, Profile | All; verify first, may be client-only |
 | 7 | Market-session status beyond open/closed (next open time) | `live_closed` phase copy | All |
 | 8 | Drop "win probability" from the landing mock unless a model is built | Landing honesty | All |
@@ -342,25 +365,105 @@ with a 9:16 cut. Music: one driving track with a clear drop at 0:20.
 
 | Time | Beat | Picture | Type / audio |
 |---|---|---|---|
-| 0:00–0:04 | Cold open | Black → the S-curve mark draws its arrow | Single hit |
+| 0:00–0:04 | Cold open | Black → the refined bars rise one by one | Single hit |
 | 0:04–0:09 | The premise | Split screen: two phones, two friends' names | "Your portfolio." / "Their portfolio." |
 | 0:09–0:15 | The draft | Draft room: five picks snap into a team, tickers flying in | "Draft real stocks." |
 | 0:15–0:20 | Monday open | Scoreboard wipes in at 0.00 vs 0.00; the bell | "Every week is a matchup." |
 | 0:20–0:30 | The week (drop) | Tug-of-war swinging across days, chyrons: "NVDA +4.1% puts you ahead", "TSLA drags Priya" | Beat-synced cuts |
 | 0:30–0:36 | Friday close | Clock hits 4:00 PM ET; scores lock; the Friday reveal | Silence, then the win beat |
 | 0:36–0:41 | The league | Standings re-sort; you move up to 2nd | "Climb the league." |
-| 0:41–0:45 | Close | Mark + "Stockpile. Launching soon." Disclaimer line | Tail |
+| 0:41–0:45 | Close | **ON HOLD (name caveat).** Mark + `brand.name` + "Launching soon". Disclaimer line | Tail |
 
 Real simulator footage can replace the 0:09–0:15 and 0:36–0:41 beats.
 Remotion's licence is confirmed before anything is published.
 
 ---
 
-## 9. What happens after approval
+## 9. Game Day token spec (approved; Phase 2 implements exactly this)
 
-1. I update this document to the chosen direction only: the full token table,
-   the component list, and anything Giorgio changed.
-2. I draft the **Phase 2 Foundation** worker prompt (tokens + primitives +
-   motion hook + lint rules + `.claude/launch.json` web entry) for the
-   Orchestrator to spawn.
-3. Phases 3a–3d and 4 prompts follow in order after Phase 2 merges.
+Names are identical on both platforms (dot paths in TS; `--sp-` kebab custom
+properties on web, e.g. `color.surface.game.base` → `--sp-color-surface-game-base`).
+Every text pair below is measured; "on" means the background it may sit on.
+
+### Colour
+
+| Token | Value | Notes / contrast |
+|---|---|---|
+| `color.bg.app` | `#F3F5F8` | Snow, the app background |
+| `color.surface.money.base` | `#FFFFFF` | Cards on money screens |
+| `color.surface.money.sunken` | `#EBEFF4` | Inputs, segmented tracks |
+| `color.surface.game.base` | `#0D1B2E` | Stadium: scoreboards, standings header, draft board |
+| `color.surface.game.raised` | `#16263D` | Cards inside game surfaces |
+| `color.surface.game.line` | `#22334D` | Dividers on game |
+| `color.border.default` | `#DDE3EA` | Decorative hairlines only |
+| `color.border.control` | `#76828F` | Input/control outlines: 3.9 on white, 3.6 on snow (≥3:1, 1.4.11) |
+| `color.text.primary` | `#0D1B2E` | 17:1 |
+| `color.text.secondary` | `#5B6678` | 5.8 on white, 5.3 on snow. **The lowest informational level** |
+| `color.text.disabled` | `#A3ACBA` | Disabled only; never information |
+| `color.text.onGame.primary` | `#FFFFFF` | 17:1 on stadium |
+| `color.text.onGame.secondary` | `#8DA0BD` | 6.5 on base, 5.7 on raised |
+| `color.brand` | `#2860F0` | Mark accent bar, focus ring. 5.2 on white |
+| `color.team.you` | `#2860F0` | **Fills/bars only** on light; as text on game use `team.you.onGame` |
+| `color.team.you.onGame` | `#6E9BFF` | 6.4 on stadium |
+| `color.team.opponent` | `#FF6A3D` | **Fills/bars only** (2.9 on white fails as text; 6.1 on stadium ok) |
+| `color.live` | `#FFC53D` | Live dot/tag, on game only (11:1) |
+| `color.data.gain` / `.loss` | `#12803F` / `#C8303A` | On money: 5.0 / 5.3 |
+| `color.data.gain.onGame` / `.loss.onGame` | `#4ADE8B` / `#FF7A7A` | 10.0 / 6.9 |
+| `color.data.zero` | = `text.secondary` | Zero is never green |
+| `color.status.warning` | `#B45309` | 5.0 on white |
+| `color.status.danger` | `#B42318` | 6.6 on white (destructive buttons, errors) |
+| `color.action.primary.bg` / `.fg` | `#0D1B2E` / `#FFFFFF` | Primary buttons are stadium navy: neutral, and not a team colour |
+
+Rules: team colours mark **people**, data colours mark **money**, and they
+never swap. Opponent orange never appears as text on light.
+
+### Type (Archivo)
+
+| Token | Width / weight | Size / line | Use |
+|---|---|---|---|
+| `type.score.xl` | 62% / 900 | 56 / 52 | Matchup scoreboard |
+| `type.score.lg` | 62% / 900 | 40 / 38 | Standings, Home "this week" |
+| `type.score.md` | 62% / 900 | 28 / 28 | Compact scores |
+| `type.tag` | 125% / 800 | 11 / 14, +0.04em, uppercase | Broadcast tags (LIVE, FINAL, WEEK 3). **The only uppercase in the app**, game surfaces only |
+| `type.display` | 100% / 800 | 32 / 36, −0.5 | Screen hero numbers on money screens |
+| `type.title` | 100% / 700 | 22 / 28 | Screen titles |
+| `type.headline` | 100% / 600 | 17 / 22 | Section heads, tickers |
+| `type.body` | 100% / 400 | 15 / 22 | Running text |
+| `type.callout` | 100% / 500 | 13 / 18 | Secondary lines |
+| `type.caption` | 100% / 500 | 12 / 16 | **Smallest informational size** |
+
+Money always uses `tabular-nums`. **Mobile font delivery:** React Native
+can't drive a variable font's width axis, so Phase 2 bundles **static
+instances** cut from Archivo's variable TTF (OFL): `Archivo-Condensed-Black`
+(wdth 62, wght 900), `Archivo-Expanded-ExtraBold` (125/800), and Archivo
+400/500/600/700/800 at wdth 100, loaded with `expo-font`. Web loads the
+variable font from Google Fonts and uses `font-stretch`.
+
+### Space, radius, elevation
+
+- `space`: 2, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64 (`space.1`…`space.11`).
+  Screen gutter 20, card padding 16, section gap 32.
+- `radius`: `sm` 6 (chips), `md` 10 (inputs, buttons), `lg` 14 (cards), `xl` 20
+  (sheets), `pill` 999. Scoreboard bands on mobile run edge to edge (radius 0).
+- `elevation.money.card`: 1px `border.default` + shadow y2 blur8 at 4%.
+  Game surfaces are flat, with no shadow. Sheets: y8 blur24 at 12%.
+
+### Motion
+
+As §4, as tokens `motion.duration.{instant,quick,base,slow,feature}` and
+`motion.ease.{settle,exit}`, `motion.spring.{snappy,lively}`. `lively` is
+importable only from game components.
+
+### Brand
+
+`brand.name`, `brand.wordmark` (swappable, see the name caveat) and
+`brand.mark` (refined bars as an SVG component with an `accent` prop).
+
+---
+
+## 10. What happens next
+
+1. **Phase 2 Foundation** worker prompts (mobile + web) are drafted and sent
+   to the Orchestrator. No backend asks block Phase 2.
+2. Phases 3a–3d and 4 prompts follow after Phase 2 merges; 3b/3d depend on
+   backend asks 1–2 and 5 (§7).
