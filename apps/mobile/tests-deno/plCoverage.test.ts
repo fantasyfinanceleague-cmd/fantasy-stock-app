@@ -13,7 +13,7 @@
  * COST and COUNTED, so value − cost = gain always reconciles and the count
  * says exactly what was assumed.
  */
-import { assert, assertAlmostEquals, assertEquals } from 'jsr:@std/assert';
+import { assertAlmostEquals, assertEquals } from 'jsr:@std/assert';
 import {
   summarizeHoldings,
   buildPLSeries,
@@ -259,7 +259,7 @@ Deno.test('decideHeroPL: 1M with a partial endpoint falls back to all-time and s
   const hero = decideHeroPL(summary(), period({ period: '1M', gainLoss: 5, gainLossPercent: 40, complete: false }));
   assertEquals(hero.gainLoss, 612.13);
   assertEquals(hero.notes.length, 1);
-  assert(hero.notes[0].includes('all-time'));
+  assertEquals(hero.notes, ['Not enough 1M price history yet, showing all time']);
 });
 
 Deno.test('decideHeroPL: no chart yet → summary', () => {
@@ -267,7 +267,7 @@ Deno.test('decideHeroPL: no chart yet → summary', () => {
 });
 
 Deno.test('decideHeroPL: unpriced holdings add the at-cost note (singular and plural)', () => {
-  assertEquals(decideHeroPL(summary({ unpricedCount: 1 }), null).notes, ['1 holding not yet priced · counted at cost']);
-  assertEquals(unpricedNote(3), '3 holdings not yet priced · counted at cost');
+  assertEquals(decideHeroPL(summary({ unpricedCount: 1 }), null).notes, ['1 holding counted at cost (no live price yet)']);
+  assertEquals(unpricedNote(3), '3 holdings counted at cost (no live price yet)');
   assertEquals(unpricedNote(0), null);
 });

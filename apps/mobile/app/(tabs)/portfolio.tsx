@@ -191,7 +191,7 @@ export default function PortfolioScreen() {
                     <Ionicons name="chevron-forward" size={14} color={Colors.textMuted} style={{ marginLeft: 4 }} />
                   </TouchableOpacity>
                   {heroPL.notes.map(note => (
-                    <Text key={note} style={styles.budgetCaption}>{note}</Text>
+                    <Text key={note} style={styles.plNote}>{note}</Text>
                   ))}
                   </>
                 );
@@ -348,6 +348,12 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
+    marginTop: 8,
+  },
+  plNote: {
+    fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textSecondary, // 4.76:1 — discloses what the P/L pill assumed
     marginTop: 8,
   },
 

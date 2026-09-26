@@ -138,7 +138,6 @@ export default function HomeScreen() {
               ${formatCurrency(homeData.totalValue)}
             </Text>
             {homeData.hasLivePrices && homeData.totalCost > 0 && (
-              <>
               <View style={styles.changeRow}>
                 <Text style={[
                   styles.changeAmount,
@@ -158,16 +157,16 @@ export default function HomeScreen() {
                   </Text>
                 </View>
               </View>
-              {heroPL.notes.map(note => (
-                <Text key={note} style={styles.portfolioCaption}>{note}</Text>
-              ))}
-              </>
             )}
             {homeData.leagueCount > 1 && (
               <Text style={styles.portfolioCaption}>
                 across {homeData.leagueCount} leagues
               </Text>
             )}
+            {/* Scope line first, then what the gain row assumed */}
+            {homeData.hasLivePrices && homeData.totalCost > 0 && heroPL.notes.map(note => (
+              <Text key={note} style={styles.portfolioCaption}>{note}</Text>
+            ))}
           </View>
 
           {/* Section 2b: Performance Chart */}
@@ -451,7 +450,7 @@ const styles = StyleSheet.create({
   portfolioCaption: {
     fontSize: 13,
     fontFamily: 'Inter_400Regular',
-    color: Colors.textMuted,
+    color: Colors.textSecondary, // 4.76:1 — these lines carry the hero's scope and assumptions
     marginTop: 8,
   },
   chartSection: {

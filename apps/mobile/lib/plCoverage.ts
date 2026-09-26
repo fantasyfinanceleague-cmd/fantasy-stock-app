@@ -198,7 +198,7 @@ export interface HeroPL {
 
 export function unpricedNote(unpricedCount: number): string | null {
   if (unpricedCount <= 0) return null;
-  return `${unpricedCount} ${unpricedCount === 1 ? 'holding' : 'holdings'} not yet priced · counted at cost`;
+  return `${unpricedCount} ${unpricedCount === 1 ? 'holding' : 'holdings'} counted at cost (no live price yet)`;
 }
 
 /**
@@ -216,7 +216,7 @@ export function decideHeroPL(summary: HoldingsSummary, periodPL: PeriodPL | null
     result = { gainLoss: periodPL.gainLoss, gainLossPercent: periodPL.gainLossPercent, isPositive: periodPL.isPositive };
   } else {
     result = { gainLoss: summary.gainLoss, gainLossPercent: summary.gainLossPercent, isPositive: summary.gainLoss >= 0 };
-    if (shortWindow) notes.push(`${periodPL.period} price history incomplete · showing all-time`);
+    if (shortWindow) notes.push(`Not enough ${periodPL.period} price history yet, showing all time`);
   }
 
   const note = unpricedNote(summary.unpricedCount);
