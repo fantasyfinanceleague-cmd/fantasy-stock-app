@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="128" height="128" role="img" aria-label="Refined bars mark (name-agnostic)">
+  <rect x="10" y="34" width="11" height="20" rx="2.5" fill="#0D1B2E"/>
+  <rect x="26.5" y="22" width="11" height="32" rx="2.5" fill="#0D1B2E"/>
+  <rect x="43" y="10" width="11" height="44" rx="2.5" fill="#2860F0"/>
+</svg>
