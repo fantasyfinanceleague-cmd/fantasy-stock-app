@@ -1,10 +1,18 @@
-import { useReducedMotion } from 'motion/react';
+import { useReducedMotionConfig } from 'motion/react';
 import { motion as motionTokens } from './tokens';
 
 // DESIGN_DIRECTION.md §5 (binding): "one useMotion() hook returns the token
-// set already reduced" when reduced motion is requested. `motion/react`'s
-// useReducedMotion() reads prefers-reduced-motion and (via MotionConfig) a
-// gallery override, so components never touch the media query directly.
+// set already reduced" when reduced motion is requested.
+//
+// Deliberately `useReducedMotionConfig()`, NOT the plain `useReducedMotion()`:
+// the plain hook only ever reads the OS's prefers-reduced-motion media query
+// (once, at mount — it doesn't even react to a later system-level change),
+// and ignores the ambient `<MotionConfig reducedMotion="always">` override
+// entirely. `useReducedMotionConfig()` composes both — 'never'/'always' from
+// context short-circuits the OS preference, otherwise it falls through to
+// it — which is what actually lets the gallery's toggle force reduced
+// motion for its screenshot/recording proof without the tester's OS needing
+// to be in that state.
 //
 // This hook supplies the shared numbers; several §5 rows (digit roll ->
 // instant swap, tug overshoot -> no overshoot, stagger -> appear together)
@@ -47,7 +55,7 @@ export interface UseMotionResult {
 }
 
 export function useMotion(): UseMotionResult {
-  const reduced = useReducedMotion() ?? false;
+  const reduced = useReducedMotionConfig() ?? false;
   return {
     reduced,
     duration: DURATION_SECONDS,

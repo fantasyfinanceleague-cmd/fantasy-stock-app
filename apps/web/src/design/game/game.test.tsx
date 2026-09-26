@@ -69,6 +69,50 @@ describe('Chyron', () => {
     expect(onDismiss).toHaveBeenCalledTimes(1);
     vi.useRealTimers();
   });
+
+  it('regression: a parent re-render with a fresh inline onDismiss does not reset the dismiss timer', () => {
+    // Found live in the gallery: an inline `() => setMessage(null)` is a
+    // new function reference every render. When the effect scheduling the
+    // dismiss timer depended on `onDismiss` directly, ANY parent re-render
+    // (not just a message change) cleared and restarted the timer, so a
+    // message could sit far longer than autoDismissMs, or dismiss at an
+    // unpredictable time relative to when it was actually set.
+    vi.useFakeTimers();
+    const onDismiss = vi.fn();
+    const { rerender } = render(<Chyron message="Hello" onDismiss={onDismiss} autoDismissMs={1000} />);
+
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    // Re-render with the SAME message but a brand-new onDismiss reference —
+    // this must NOT push the dismissal out further.
+    rerender(<Chyron message="Hello" onDismiss={() => onDismiss()} autoDismissMs={1000} />);
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  it('regression: a new message mounts as a distinct element (keyed by message), not just changed text', () => {
+    // Found live in the gallery: without `key={message}`, a message change
+    // updated the SAME DOM node's text in place, so AnimatePresence had no
+    // signal to treat it as a new element — `initial`/`animate` never
+    // re-fired for the second message, and it just inherited whatever
+    // animation state the first one was already in.
+    //
+    // jsdom never fires a real animation-complete event, so AnimatePresence
+    // can't remove the old ("First") element once it starts exiting — both
+    // coexist here, which is a jsdom/test-environment artifact, not a bug.
+    // The behavior under test is that "Second" mounts as its OWN new node
+    // rather than the "First" node's text simply changing to "Second".
+    const { container, rerender } = render(<Chyron message="First" onDismiss={() => {}} />);
+    expect(container.querySelectorAll('.sp-chyron')).toHaveLength(1);
+
+    rerender(<Chyron message="Second" onDismiss={() => {}} />);
+    const nodes = [...container.querySelectorAll('.sp-chyron')];
+    expect(nodes.map((n) => n.textContent)).toEqual(['First', 'Second']);
+  });
 });
 
 describe('Scoreboard', () => {

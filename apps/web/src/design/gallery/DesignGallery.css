@@ -1,0 +1,75 @@
+.sp-gallery {
+  min-height: 100vh;
+  background-color: var(--sp-color-bg-app);
+  font-family: var(--sp-type-family);
+  padding-bottom: var(--sp-space-11);
+}
+
+.sp-gallery__toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-space-5);
+  padding: var(--sp-space-5) var(--sp-space-6);
+  background-color: var(--sp-color-surface-money-base);
+  border-bottom: 1px solid var(--sp-color-border-default);
+}
+
+.sp-gallery__toolbar-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-space-3);
+}
+
+.sp-gallery__toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-space-2);
+  /* Defensive override, not a design choice: the legacy global stylesheet
+     (layout.css/index.css, loaded unconditionally by main.jsx — out of
+     Phase 2's scope to edit) applies text-transform: uppercase to a bare
+     `label` selector, which visibly widens this one and overflows the
+     toolbar at narrow widths. This is the audit's "any generic selector in
+     3,000+ lines of legacy CSS can leak into the only public page" finding
+     recurring on THIS page too; input for 3a/3d, not fixed at the source. */
+  text-transform: none;
+}
+
+.sp-gallery__section {
+  padding: var(--sp-space-7) var(--sp-space-6);
+  border-bottom: 1px solid var(--sp-color-border-default);
+}
+
+.sp-gallery__section--game {
+  background-color: var(--sp-color-surface-game-base);
+  border-bottom: none;
+}
+
+.sp-gallery__section-title {
+  margin: 0 0 var(--sp-space-5) 0;
+}
+
+.sp-gallery__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-space-5);
+  margin-bottom: var(--sp-space-4);
+}
+
+.sp-gallery__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--sp-space-4);
+  align-items: center;
+}
+
+.sp-gallery__swatch {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-space-2);
+}

@@ -34,3 +34,20 @@
 .sp-scoreboard__lead-line {
   margin: 0;
 }
+
+/* Two side-by-side type.score.xl values (56px, tabular, often 6+ digits
+   each with the sign/currency/decimals) don't fit next to each other under
+   ~420px — found via the gallery at 375px. Stack instead of shrinking the
+   type scale, since the size is a shared token value, not something this
+   one usage should override. */
+@media (max-width: 420px) {
+  .sp-scoreboard__teams {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sp-scoreboard__team--opponent {
+    align-items: flex-start;
+    text-align: left;
+  }
+}

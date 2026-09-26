@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useMotion } from '../useMotion';
 import './Chyron.css';
@@ -22,17 +22,31 @@ export interface ChyronProps {
 export function Chyron({ message, onDismiss, autoDismissMs = 4000, className }: ChyronProps) {
   const { reduced, enterTransition } = useMotion();
 
+  // Callers routinely pass an inline `() => ...}` (a fresh function every
+  // render — see the gallery's ScoreboardSpecimen). Depending the dismiss
+  // timer's effect on `onDismiss` directly would reset the timer on every
+  // unrelated re-render, not just when `message` actually changes; a ref
+  // sidesteps that without asking every caller to useCallback it.
+  const onDismissRef = useRef(onDismiss);
+  onDismissRef.current = onDismiss;
+
   useEffect(() => {
-    if (!message || !onDismiss) return;
-    const timer = setTimeout(onDismiss, autoDismissMs);
+    if (!message) return;
+    const timer = setTimeout(() => onDismissRef.current?.(), autoDismissMs);
     return () => clearTimeout(timer);
-  }, [message, onDismiss, autoDismissMs]);
+  }, [message, autoDismissMs]);
 
   return (
     <div className={['sp-chyron-region', className].filter(Boolean).join(' ')} aria-live="polite" role="status">
       <AnimatePresence>
         {message && (
           <motion.div
+            // Keyed by the message itself: a new message must mount as a
+            // NEW element (and the old one exit) for AnimatePresence to
+            // replay the enter/exit transition. Without a key, a message
+            // change just mutates the same element in place, so
+            // initial/animate never re-fires for the new text.
+            key={message}
             className="sp-chyron"
             initial={reduced ? { opacity: 0 } : { opacity: 0, x: 24 }}
             animate={reduced ? { opacity: 1 } : { opacity: 1, x: 0 }}

@@ -45,9 +45,16 @@
 
 .sp-button--primary {
   /* Stadium navy — neutral, deliberately NOT a team colour
-     (DESIGN_DIRECTION §9). */
+     (DESIGN_DIRECTION §9). FLAG for Design Lead review: §9 gives
+     color.action.primary.bg and color.surface.game.base the SAME value
+     (#0D1B2E), so an unbordered primary button is invisible on a game
+     surface (found in the gallery, screenshotted in the DONE report).
+     This border is a defensive stop-gap, not the design fix — the real
+     fix (a distinct game-surface button treatment, or a different token
+     value) is a decision for the Design Lead, not this worker. */
   background-color: var(--sp-color-action-primary-bg);
   color: var(--sp-color-action-primary-fg);
+  border: 1px solid var(--sp-color-border-control);
 }
 
 .sp-button--secondary {
