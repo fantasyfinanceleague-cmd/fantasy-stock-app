@@ -10,7 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/Colors';
 import StatusBadge from '@/components/StatusBadge';
 import LeagueSwitcher from '@/components/LeagueSwitcher';
-import { getWeekStatus, getCountdownMessage, getPlayoffRoundLabel, getSeasonLabel, isPreSeasonPhase } from '@/lib/weekStatus';
+import { getWeekStatus, getCountdownMessage, getPlayoffRoundLabel, getSeasonLabel, isPreSeasonPhase, formatSeasonStartShort } from '@/lib/weekStatus';
 import { Button, Card } from '@/components/ui';
 import { SkeletonCard, SkeletonRows } from '@/components/Skeleton';
 
@@ -564,15 +564,20 @@ export default function LeagueScreen() {
                 </View>
                 <Text style={styles.kpiLabel}>{isMatchupLeague ? 'Week' : 'Type'}</Text>
                 {isMatchupLeague ? (
-                  isPreSeasonPhase(weekStatus.seasonPhase) ? (
+                  weekStatus.seasonPhase === 'pre_season' ? (
+                    // Short "Sep 29" value, no weekday — the full
+                    // "Starts Tue, Sep 29" (used below for pre_draft/
+                    // drafting, and still by the banner pill above) wrapped
+                    // to two lines in this card's narrower value slot.
+                    <>
+                      <Text style={styles.kpiValue}>{formatSeasonStartShort(activeLeague)}</Text>
+                      <Text style={styles.kpiSub}>starts · {numWeeks} week{numWeeks === 1 ? '' : 's'}</Text>
+                    </>
+                  ) : isPreSeasonPhase(weekStatus.seasonPhase) ? (
                     <>
                       <Text style={styles.kpiValue}>{getSeasonLabel(weekStatus.seasonPhase, activeLeague)}</Text>
                       <Text style={styles.kpiSub}>
-                        {weekStatus.seasonPhase === 'pre_draft'
-                          ? 'Starts after draft'
-                          : weekStatus.seasonPhase === 'drafting'
-                          ? 'Season starts after'
-                          : `${numWeeks} week${numWeeks === 1 ? '' : 's'}`}
+                        {weekStatus.seasonPhase === 'pre_draft' ? 'Starts after draft' : 'Season starts after'}
                       </Text>
                     </>
                   ) : weekStatus.phase === 'playoffs' ? (
@@ -627,7 +632,12 @@ export default function LeagueScreen() {
                   <Text style={styles.sectionTitle}>Standings</Text>
                   {isMatchupLeague && !isSeasonCompleted && (
                     <Text style={styles.sectionSubtitle}>
-                      {isPreSeasonPhase(weekStatus.seasonPhase)
+                      {weekStatus.seasonPhase === 'pre_season'
+                        // The date already appears in the banner pill above
+                        // and the Week KPI's short form — a team count here
+                        // instead of a third copy of the same date.
+                        ? `${memberCount} team${memberCount === 1 ? '' : 's'}`
+                        : isPreSeasonPhase(weekStatus.seasonPhase)
                         ? getSeasonLabel(weekStatus.seasonPhase, activeLeague)
                         : weekStatus.phase === 'playoffs'
                         ? 'Regular Season Final'

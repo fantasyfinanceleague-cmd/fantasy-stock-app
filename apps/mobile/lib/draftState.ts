@@ -110,6 +110,46 @@ export function describeStartBlocker(b: StartBlocker): string {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Not-started screen header/subline state. Split out from the timer work
+// above because the Design Lead caught a real instance of the same bug this
+// whole task was fixing: after the timer flipped Start Draft to enabled, the
+// screen still read "Draft Not Started / Scheduled for <a time now in the
+// past>" — display-state fell behind the same server response that had
+// already turned the button on.
+// ---------------------------------------------------------------------------
+
+export type DraftHeaderState = 'ready' | 'date_pending' | 'blocked_no_date' | 'blocked_with_date';
+
+/**
+ * Which headline/subline the draft screen's not-started view should show.
+ * Decided ENTIRELY from the draft-control 'status' response (canStart +
+ * blockers) — never from re-checking the current time client-side, since
+ * the server is the source of truth for whether the scheduled time has
+ * passed (see msUntilStartRecheck's docstring: this screen is display-only).
+ *
+ * - 'ready': nothing is blocking — show "Ready to draft".
+ * - 'date_pending': the ONLY thing shown before is the scheduled time not
+ *   having arrived yet — keep the original "Draft Not Started / Scheduled
+ *   for <time>" copy (the case this bug was about).
+ * - 'blocked_with_date' / 'blocked_no_date': something else still blocks
+ *   (not enough members, no stake mode, ...), with or without a date set.
+ *   Not explicitly specified by the design review; kept as its own state
+ *   rather than folded into 'ready' or 'date_pending' so the caller can
+ *   render "Draft Not Started" without implying either "starts soon" or
+ *   "start whenever you're ready" — neither is true yet.
+ */
+export function computeDraftHeaderState(
+  hasDraftDate: boolean,
+  canStart: boolean,
+  blockers: StartBlocker[],
+): DraftHeaderState {
+  if (canStart && blockers.length === 0) return 'ready';
+  if (!hasDraftDate) return 'blocked_no_date';
+  const hasDateBlocker = blockers.some(b => b.code === 'draft_date_not_reached');
+  return hasDateBlocker ? 'date_pending' : 'blocked_with_date';
+}
+
 // Longest delay setTimeout accepts before overflowing its signed 32-bit ms
 // argument; browsers/RN clamp anything longer to fire almost immediately.
 const MAX_TIMEOUT_MS = 2 ** 31 - 1;

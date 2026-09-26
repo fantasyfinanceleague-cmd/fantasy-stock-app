@@ -15,7 +15,16 @@
  * status takes priority over every other branch for exactly that reason.
  */
 import { assertEquals, assertStringIncludes } from 'jsr:@std/assert';
-import { getSeasonPhase, getSeasonLabel, isPreSeasonPhase, getWeekStatus } from '../lib/weekStatus.ts';
+import {
+  getSeasonPhase,
+  getSeasonLabel,
+  isPreSeasonPhase,
+  getWeekStatus,
+  formatShortWeekdayDate,
+  formatShortMonthDay,
+  formatShortDateTime,
+  formatSeasonStartShort,
+} from '../lib/weekStatus.ts';
 
 // ---------------------------------------------------------------------------
 // getSeasonPhase
@@ -149,6 +158,64 @@ Deno.test('getWeekStatus: drafted league with a future start date is upcoming, n
   );
   assertEquals(status.status, 'upcoming');
   assertEquals(status.seasonPhase, 'pre_season');
+});
+
+// ---------------------------------------------------------------------------
+// Short date/time formatters — the design review's "reuse the weekday
+// formatter, no seconds" request for the Draft screen's timestamps, and the
+// Week KPI card's "Sep 29" (no weekday) value.
+// ---------------------------------------------------------------------------
+
+Deno.test('formatShortWeekdayDate: includes a short weekday and month, no year', () => {
+  const s = formatShortWeekdayDate(new Date('2026-09-29T13:30:00Z'));
+  assertStringIncludes(s, 'Sep');
+  assertStringIncludes(s, '29');
+  // No four-digit year in a "weekday, month day" format.
+  assertEquals(/\b2026\b/.test(s), false);
+});
+
+Deno.test('formatShortMonthDay: month + day only, no weekday name', () => {
+  const s = formatShortMonthDay(new Date('2026-09-29T13:30:00Z'));
+  assertStringIncludes(s, 'Sep');
+  assertStringIncludes(s, '29');
+  // None of the weekday names should appear (this is the whole point of
+  // the "short" variant vs formatShortWeekdayDate).
+  for (const day of ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']) {
+    assertEquals(s.includes(day), false);
+  }
+});
+
+Deno.test('formatShortDateTime: no seconds, no four-digit year', () => {
+  const s = formatShortDateTime('2026-09-25T18:43:59-07:00');
+  assertEquals(s.includes('59'), false); // the seconds component specifically (minute is 43)
+  assertEquals(/\b2026\b/.test(s), false);
+  assertStringIncludes(s, 'Sep');
+});
+
+Deno.test('formatShortDateTime: accepts a Date as well as a string', () => {
+  const fromString = formatShortDateTime('2026-09-25T18:43:00-07:00');
+  const fromDate = formatShortDateTime(new Date('2026-09-25T18:43:00-07:00'));
+  assertEquals(fromString, fromDate);
+});
+
+Deno.test('formatShortDateTime: an unparseable input does not throw or return "Invalid Date"', () => {
+  const s = formatShortDateTime('not-a-date');
+  assertEquals(s, 'Invalid date');
+});
+
+Deno.test('formatSeasonStartShort: matches getSeasonLabel\'s date, without the weekday or "Starts" prefix', () => {
+  const league = { league_start_date: '2026-09-29T13:30:00Z' };
+  const short = formatSeasonStartShort(league);
+  const long = getSeasonLabel('pre_season', league);
+  assertStringIncludes(long, short); // "Starts Tue, Sep 29" contains "Sep 29"
+  assertStringIncludes(short, 'Sep');
+  assertStringIncludes(short, '29');
+});
+
+Deno.test('formatSeasonStartShort: falls back to "Soon" for a missing/invalid date, matching getSeasonLabel\'s fallback', () => {
+  assertEquals(formatSeasonStartShort(null), 'Soon');
+  assertEquals(formatSeasonStartShort({ league_start_date: null }), 'Soon');
+  assertEquals(formatSeasonStartShort({ league_start_date: 'not-a-date' }), 'Soon');
 });
 
 Deno.test('getWeekStatus: a completed-draft, season-started league is unaffected (regression guard)', () => {

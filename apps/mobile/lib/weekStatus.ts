@@ -74,6 +74,41 @@ export function isPreSeasonPhase(phase: SeasonPhase): boolean {
   return phase === 'pre_draft' || phase === 'drafting' || phase === 'pre_season';
 }
 
+/** "Tue, Sep 29" — weekday + month + day, no year, no time. The single date
+ * format shared by every pre-season surface (banner pill, getSeasonLabel,
+ * and the Draft screen's timestamps via formatShortDateTime) so the app
+ * never shows two different date formats for the same moment. */
+export function formatShortWeekdayDate(date: Date): string {
+  return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+/** "Sep 29" — month + day only, no weekday. For tight spaces (the Week KPI
+ * card) where formatShortWeekdayDate's weekday made a two-line date wrap
+ * inside a value slot sized for one short line. */
+export function formatShortMonthDay(date: Date): string {
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+/** "Tue, Sep 29 · 6:43 PM" — date (see formatShortWeekdayDate) plus time,
+ * deliberately without seconds: the Draft screen's timestamps used to go
+ * through Date#toLocaleString(), which includes seconds and the year
+ * ("9/25/2026, 6:43:59 PM") — more precision than a schedule needs and a
+ * different format than every other date on the app. Accepts an ISO string
+ * or a Date so callers don't all repeat `new Date(x)`. */
+export function formatShortDateTime(input: string | Date): string {
+  const d = typeof input === 'string' ? new Date(input) : input;
+  if (Number.isNaN(d.getTime())) return 'Invalid date';
+  const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return `${formatShortWeekdayDate(d)} · ${time}`;
+}
+
+function parseLeagueStartDate(league: League | null): Date | null {
+  const raw = league?.league_start_date;
+  if (!raw) return null;
+  const start = new Date(raw);
+  return Number.isNaN(start.getTime()) ? null : start;
+}
+
 /** Short copy for a phase that precedes the ordinary season lifecycle. Empty
  * string for 'regular'/'playoffs'/'completed' — callers already have their
  * own copy for those and should keep using it. Shared by the League tab and
@@ -86,15 +121,23 @@ export function getSeasonLabel(phase: SeasonPhase, league: League | null): strin
     case 'drafting':
       return 'Drafting';
     case 'pre_season': {
-      const raw = league?.league_start_date;
-      const start = raw ? new Date(raw) : null;
-      if (!start || Number.isNaN(start.getTime())) return 'Starts soon';
-      const formatted = start.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
-      return `Starts ${formatted}`;
+      const start = parseLeagueStartDate(league);
+      if (!start) return 'Starts soon';
+      return `Starts ${formatShortWeekdayDate(start)}`;
     }
     default:
       return '';
   }
+}
+
+/** "Sep 29" for the Week KPI card's pre_season value — same source date as
+ * getSeasonLabel's "Starts Tue, Sep 29", just without the weekday or the
+ * "Starts" prefix (the KPI's own label already reads "Week", and its sub
+ * line carries "starts · N weeks"). 'Soon' mirrors getSeasonLabel's
+ * 'Starts soon' fallback for a missing/invalid date. */
+export function formatSeasonStartShort(league: League | null): string {
+  const start = parseLeagueStartDate(league);
+  return start ? formatShortMonthDay(start) : 'Soon';
 }
 
 interface Matchup {

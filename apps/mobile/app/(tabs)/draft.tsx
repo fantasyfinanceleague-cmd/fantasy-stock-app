@@ -20,8 +20,10 @@ import {
   computeDraftPhase,
   describeStartBlocker,
   msUntilStartRecheck,
+  computeDraftHeaderState,
   type StartBlocker,
 } from '@/lib/draftState';
+import { formatShortDateTime } from '@/lib/weekStatus';
 
 interface DraftPick {
   id: string;
@@ -631,17 +633,29 @@ export default function DraftScreen() {
     const blockers = startStatus?.blockers ?? [];
     const canStart = startStatus?.can_start ?? false;
     const botsNeeded = startStatus?.bots_needed ?? 0;
+    // Decided from the server response alone (never re-checked against the
+    // current time here) — see computeDraftHeaderState's docstring. Fixes:
+    // once the scheduled-time timer above flipped Start Draft to enabled,
+    // this screen kept reading "Draft Not Started / Scheduled for <a time
+    // now in the past>" — the headline text had no state of its own and
+    // never noticed the blocker it was describing was gone.
+    const headerState = computeDraftHeaderState(hasDraftDate, canStart, blockers);
+    const scheduledText = hasDraftDate ? formatShortDateTime(activeLeague.draft_date as string) : null;
 
     return (
       <Screen scroll={false}>
         <LeagueSwitcher />
         <ScrollView style={styles.notStartedScroll} contentContainerStyle={styles.centered}>
-          <Text style={styles.pendingIcon}>⏰</Text>
-          <Text style={styles.emptyTitle}>Draft Not Started</Text>
+          <Text style={styles.pendingIcon}>{headerState === 'ready' ? '✅' : '⏰'}</Text>
+          <Text style={styles.emptyTitle}>
+            {headerState === 'ready' ? 'Ready to draft' : 'Draft Not Started'}
+          </Text>
           <Text style={styles.emptySubtitle}>
-            {hasDraftDate
-              ? `Scheduled for ${new Date(activeLeague.draft_date as string).toLocaleString()}`
-              : 'Draft date not set yet'}
+            {!scheduledText
+              ? 'Draft date not set yet'
+              : headerState === 'ready'
+              ? `Scheduled for ${scheduledText} — start whenever you're ready`
+              : `Scheduled for ${scheduledText}`}
           </Text>
 
           {startStatusLoading && !startStatus ? (

@@ -8,7 +8,7 @@
  * excludes tests-deno/**) since `jsr:` specifiers are Deno-only.
  */
 import { assertEquals, assertStringIncludes } from 'jsr:@std/assert';
-import { computeDraftPhase, describeStartBlocker, msUntilStartRecheck } from '../lib/draftState.ts';
+import { computeDraftPhase, describeStartBlocker, msUntilStartRecheck, computeDraftHeaderState } from '../lib/draftState.ts';
 
 Deno.test('computeDraftPhase: no stake mode wins regardless of draft_status', () => {
   assertEquals(
@@ -162,4 +162,54 @@ Deno.test('msUntilStartRecheck: picks the draft_date_not_reached blocker out of 
     now,
   );
   assertEquals(delay, 10 * 60_000 + 1_500);
+});
+
+// ---------------------------------------------------------------------------
+// computeDraftHeaderState — the not-started screen's headline/subline state
+// (design review: after the timer above flips Start Draft to enabled, the
+// screen must stop reading "Draft Not Started / Scheduled for <past time>").
+// ---------------------------------------------------------------------------
+
+Deno.test('computeDraftHeaderState: no blockers at all -> ready, regardless of hasDraftDate', () => {
+  assertEquals(computeDraftHeaderState(true, true, []), 'ready');
+});
+
+Deno.test('computeDraftHeaderState: draft_date_not_reached is the ONLY blocker -> date_pending', () => {
+  assertEquals(
+    computeDraftHeaderState(true, false, [{ code: 'draft_date_not_reached', draftDate: '2026-10-05T18:00:00Z' }]),
+    'date_pending',
+  );
+});
+
+Deno.test('computeDraftHeaderState: canStart false with an empty blockers list still reads as blocked, not ready', () => {
+  // Defensive: canStart and blockers.length are two different signals from
+  // the same response; a not-yet-loaded/inconsistent state should never
+  // read as 'ready' just because the blockers array happens to be empty.
+  // hasDraftDate still decides which flavor of "blocked" this is.
+  assertEquals(computeDraftHeaderState(true, false, []), 'blocked_with_date');
+  assertEquals(computeDraftHeaderState(false, false, []), 'blocked_no_date');
+});
+
+Deno.test('computeDraftHeaderState: other blockers with a date set -> blocked_with_date, not date_pending', () => {
+  assertEquals(
+    computeDraftHeaderState(true, false, [{ code: 'not_enough_members', have: 1, need: 4 }]),
+    'blocked_with_date',
+  );
+});
+
+Deno.test('computeDraftHeaderState: other blockers with no date set -> blocked_no_date', () => {
+  assertEquals(
+    computeDraftHeaderState(false, false, [{ code: 'no_stake_mode' }]),
+    'blocked_no_date',
+  );
+});
+
+Deno.test('computeDraftHeaderState: date blocker takes priority in the returned state even alongside other blockers', () => {
+  assertEquals(
+    computeDraftHeaderState(true, false, [
+      { code: 'not_enough_members', have: 1, need: 4 },
+      { code: 'draft_date_not_reached', draftDate: '2026-10-05T18:00:00Z' },
+    ]),
+    'date_pending',
+  );
 });
