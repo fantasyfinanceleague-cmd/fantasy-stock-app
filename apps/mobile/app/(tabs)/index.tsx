@@ -6,6 +6,7 @@ import { useLeagueContext } from '@/lib/LeagueContext';
 import { useHomeData } from '@/lib/useHomeData';
 import { useHistoricalPL } from '@/lib/useHistoricalPL';
 import { PerformanceChart, PeriodPL } from '@/components/PerformanceChart';
+import { decideHeroPL } from '@/lib/plCoverage';
 import { router } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
 import { SkeletonCard } from '@/components/Skeleton';
@@ -88,11 +89,13 @@ export default function HomeScreen() {
     );
   }
 
-  // Use period-relative P/L when chart is active, otherwise all-time
+  // Gain row shares the hero value's scope (every holding, live prices); the
+  // chart only supplies a 1W/1M delta when that window is fully priced.
   const hasChart = historicalData.length >= 2;
-  const displayGainLoss = hasChart && periodPL ? periodPL.gainLoss : homeData.totalGainLoss;
-  const displayGainLossPercent = hasChart && periodPL ? periodPL.gainLossPercent : homeData.totalGainLossPercent;
-  const isPositive = hasChart && periodPL ? periodPL.isPositive : homeData.totalGainLoss >= 0;
+  const heroPL = decideHeroPL(homeData.portfolio, hasChart ? periodPL : null);
+  const displayGainLoss = heroPL.gainLoss;
+  const displayGainLossPercent = heroPL.gainLossPercent;
+  const isPositive = heroPL.isPositive;
 
   return (
     <Screen refreshing={homeData.refreshing} onRefresh={homeData.refresh}>
@@ -160,6 +163,10 @@ export default function HomeScreen() {
                 across {homeData.leagueCount} leagues
               </Text>
             )}
+            {/* Scope line first, then what the gain row assumed */}
+            {homeData.hasLivePrices && homeData.totalCost > 0 && heroPL.notes.map(note => (
+              <Text key={note} style={styles.portfolioCaption}>{note}</Text>
+            ))}
           </View>
 
           {/* Section 2b: Performance Chart */}
@@ -458,7 +465,7 @@ const styles = StyleSheet.create({
   portfolioCaption: {
     fontSize: 13,
     fontFamily: 'Inter_400Regular',
-    color: Colors.textMuted,
+    color: Colors.textSecondary, // 4.76:1 — these lines carry the hero's scope and assumptions
     marginTop: 8,
   },
   chartSection: {
