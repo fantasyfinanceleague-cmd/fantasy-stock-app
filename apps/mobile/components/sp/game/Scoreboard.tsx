@@ -23,6 +23,30 @@ import { Chyron } from '@/components/sp/game/Chyron';
 // its team colour, never a gain/loss colour. The one line that mixes
 // registers on purpose is the "lead line", which states the dollar gap in
 // words and colours it by gain/loss/zero, since that IS a money figure.
+//
+// Teams stack in their own full-width rows (name left, score right) rather
+// than sitting side by side — amended 2026-09-26: ui/foundation-web found two
+// score.xl values didn't fit side by side under ~420pt, and needed to stack
+// for the same reason. `TeamRow` is declared BEFORE `Scoreboard` (an ordinary
+// forward reference), not covered by the file's own styles-at-bottom
+// eslint-disable above, which is scoped to `styles` only.
+
+interface TeamRowProps {
+  name: string;
+  gain: number;
+  teamColor: string;
+}
+
+function TeamRow({ name, gain, teamColor }: TeamRowProps) {
+  return (
+    <View style={styles.teamRow}>
+      <Text variant="headline" numberOfLines={1} style={styles.teamName}>
+        {name}
+      </Text>
+      <ScoreDigits text={formatMoney(gain, { sign: 'always' })} variant="score.lg" color={teamColor} />
+    </View>
+  );
+}
 
 export interface ScoreboardTeam {
   name: string;
@@ -43,6 +67,20 @@ export function Scoreboard({ leagueName, week, you, opponent, live = false, chyr
   const leader = leaderOf(you.gain, opponent.gain);
   const gap = Math.abs(you.gain - opponent.gain);
 
+  // Verb agreement (§9, amended 2026-09-26): "you" is grammatically second
+  // person ("You lead by..."), the opponent's real name is third person
+  // ("Priya leads by..."). This is independent of whichever display name the
+  // caller passes for `you.name` (shown in the team row above) — the lead
+  // line always addresses the caller directly as "You".
+  let leadLineText: string;
+  if (leader === 'tie') {
+    leadLineText = 'Dead even';
+  } else if (leader === 'you') {
+    leadLineText = `You lead by ${formatMoney(gap)}`;
+  } else {
+    leadLineText = `${opponent.name} leads by ${formatMoney(gap)}`;
+  }
+
   return (
     <Surface kind="game" style={styles.surface}>
       <View style={styles.header}>
@@ -53,21 +91,8 @@ export function Scoreboard({ leagueName, week, you, opponent, live = false, chyr
       </View>
 
       <View style={styles.teams}>
-        <View style={styles.team}>
-          <Text variant="headline" numberOfLines={1}>
-            {you.name}
-          </Text>
-          <ScoreDigits text={formatMoney(you.gain, { sign: 'always' })} variant="score.lg" color={color.team.you.onGame} />
-        </View>
-        <Text variant="title" tone="secondary">
-          vs
-        </Text>
-        <View style={[styles.team, styles.teamRight]}>
-          <Text variant="headline" numberOfLines={1}>
-            {opponent.name}
-          </Text>
-          <ScoreDigits text={formatMoney(opponent.gain, { sign: 'always' })} variant="score.lg" color={color.team.opponent} />
-        </View>
+        <TeamRow name={you.name} gain={you.gain} teamColor={color.team.you.onGame} />
+        <TeamRow name={opponent.name} gain={opponent.gain} teamColor={color.team.opponent} />
       </View>
 
       <View style={styles.tugWrap}>
@@ -75,15 +100,9 @@ export function Scoreboard({ leagueName, week, you, opponent, live = false, chyr
       </View>
 
       <View style={styles.leadLine}>
-        {leader === 'tie' ? (
-          <Text variant="callout" tone="secondary">
-            Dead even
-          </Text>
-        ) : (
-          <Text variant="callout" tone="secondary">
-            {`${leader === 'you' ? you.name : opponent.name} leads by ${formatMoney(gap)}`}
-          </Text>
-        )}
+        <Text variant="callout" tone="secondary">
+          {leadLineText}
+        </Text>
       </View>
 
       {chyronMessage ? (
@@ -107,16 +126,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   teams: {
+    gap: space[3],
+  },
+  teamRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: space[4],
   },
-  team: {
-    flex: 1,
-    gap: space[2],
-  },
-  teamRight: {
-    alignItems: 'flex-end',
+  teamName: {
+    flexShrink: 1,
   },
   tugWrap: {
     width: '100%',

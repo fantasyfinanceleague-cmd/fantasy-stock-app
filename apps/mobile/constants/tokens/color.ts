@@ -8,13 +8,22 @@
 // variant (`color.team.you`, `color.data.gain`, `color.data.loss`), which a
 // TS object can't express. Resolved with the Design Lead (2026-09-26):
 // nest under `.base` / `.onGame`, mirroring `surface.money.base`. Web mirrors
-// this as `--sp-color-data-gain-base` / `--sp-color-data-gain-on-game`.
+// this as `--sp-color-data-gain-base` / `--sp-color-data-gain-on-game`. §9 was
+// amended the same day to state this as a general rule ("a token is never
+// both a leaf and a parent — where a variant exists, the default lives at
+// `.base`"), which also moved `color.data.zero` to `.base`/`.onGame` (below).
 // `color.team.opponent` has no `.onGame` variant in the spec (fills/bars
 // only, on either surface) so it stays a plain leaf.
 //
 // Rule (§9, non-negotiable): team colours mark PEOPLE, data colours mark
 // MONEY — they never swap roles. `color.team.opponent` fails contrast as
 // text on white (2.9:1) and must only be used for fills/bars, never text.
+//
+// `color.action.*`: amended 2026-09-26 after ui/foundation-web found the
+// primary button invisible on stadium navy (`action.primary.bg` equals
+// `surface.game.base`). Every action colour now resolves per surface through
+// <Surface> — never per call site — and the game-surface variants live under
+// each action's own `.onGame`, matching the `.base`/`.onGame` shape above.
 
 export const color = {
   bg: {
@@ -64,8 +73,12 @@ export const color = {
       base: '#C8303A',
       onGame: '#FF7A7A',
     },
-    // Zero is never green/red — it's neutral, same as secondary text.
-    zero: '#5B6678',
+    // Zero is never green/red — it's neutral. On game it must use the
+    // light-on-dark grey (6.5:1), not the light-surface one (~3:1 on stadium).
+    zero: {
+      base: '#5B6678',
+      onGame: '#8DA0BD',
+    },
   },
   status: {
     warning: '#B45309',
@@ -76,6 +89,28 @@ export const color = {
       // Stadium navy — neutral, deliberately not a team colour.
       bg: '#0D1B2E',
       fg: '#FFFFFF',
+      onGame: {
+        // Inverted: navy-on-navy (surface.game.base) would be invisible.
+        // Reads as a white "broadcast chip" (17:1) instead.
+        bg: '#FFFFFF',
+        fg: '#0D1B2E',
+      },
+    },
+    secondary: {
+      bg: '#FFFFFF',
+      border: '#76828F', // = border.control
+      fg: '#0D1B2E', // = text.primary
+      onGame: {
+        // Transparent fill, light outline (6.5:1 against stadium).
+        border: '#8DA0BD',
+        fg: '#FFFFFF',
+      },
+    },
+    ghost: {
+      fg: '#0D1B2E', // = text.primary
+      onGame: {
+        fg: '#FFFFFF',
+      },
     },
   },
 } as const;

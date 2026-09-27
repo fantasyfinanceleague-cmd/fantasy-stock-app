@@ -7,11 +7,14 @@ import { Text } from '@/components/sp/Text';
 import { useSurface } from '@/components/sp/Surface';
 
 // Stockpile — <Button> (Phase 2 foundation). SOURCE OF TRUTH: §9.
-// Primary is stadium navy on EITHER surface — §9: "Primary buttons are
-// stadium navy: neutral, and not a team colour" — so it stays fixed rather
-// than reading from <Surface>. Secondary/ghost/destructive adapt their
-// border/text to the ambient surface so they don't go invisible on a
-// stadium background.
+// Amended 2026-09-26 after ui/foundation-web found the primary button
+// invisible on stadium navy (`action.primary.bg` equals
+// `color.surface.game.base`): every action colour now resolves per surface
+// through <Surface>, not per call site. On a game surface, primary INVERTS
+// to a white "broadcast chip"; secondary becomes a transparent fill with a
+// light outline; ghost becomes white text. Destructive is unchanged on
+// either surface — `color.status.danger` has no `.onGame` variant in §9,
+// and red-on-navy already contrasts fine.
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'destructive';
 export type ButtonSize = 'md' | 'sm';
@@ -30,31 +33,31 @@ export function Button({ label, variant = 'primary', size = 'md', disabled, ...r
   const { kind } = useSurface();
   const onGame = kind === 'game';
 
-  const borderColor = onGame ? color.surface.game.line : color.border.control;
-  const onSurfaceTextColor = onGame ? color.text.onGame.primary : color.text.primary;
-
   let backgroundColor: string | undefined;
   let textColor: string;
+  let borderColor: string | undefined;
   let borderWidth = 0;
 
   switch (variant) {
     case 'primary':
-      backgroundColor = color.action.primary.bg;
-      textColor = color.action.primary.fg;
+      backgroundColor = onGame ? color.action.primary.onGame.bg : color.action.primary.bg;
+      textColor = onGame ? color.action.primary.onGame.fg : color.action.primary.fg;
       break;
     case 'destructive':
+      // No `.onGame` variant in §9 — red-on-navy already contrasts fine.
       backgroundColor = color.status.danger;
       textColor = color.action.primary.fg;
       break;
     case 'secondary':
-      backgroundColor = undefined;
-      textColor = onSurfaceTextColor;
+      backgroundColor = onGame ? undefined : color.action.secondary.bg;
+      borderColor = onGame ? color.action.secondary.onGame.border : color.action.secondary.border;
+      textColor = onGame ? color.action.secondary.onGame.fg : color.action.secondary.fg;
       borderWidth = 1;
       break;
     case 'ghost':
     default:
       backgroundColor = undefined;
-      textColor = onSurfaceTextColor;
+      textColor = onGame ? color.action.ghost.onGame.fg : color.action.ghost.fg;
       break;
   }
 

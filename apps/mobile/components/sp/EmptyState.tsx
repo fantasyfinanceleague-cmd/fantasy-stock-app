@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
+import { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 
-import { color, space } from '@/constants/tokens';
+import { color, radius, space } from '@/constants/tokens';
 import { Button } from '@/components/sp/Button';
 import { Text } from '@/components/sp/Text';
 import { useSurface } from '@/components/sp/Surface';
@@ -12,23 +12,42 @@ import { useSurface } from '@/components/sp/Surface';
 // one action." Every empty state in the app (no leagues, no matchup this
 // week, no trades yet) renders through this component rather than each
 // screen inventing its own layout, so the pattern actually stays singular.
+//
+// Amended 2026-09-26 (Design Lead, "the JUL 17 lesson"): the icon sits in a
+// soft circular backdrop, and it's a RENDER PROP — `icon` is a component
+// that receives its resolved size/colour — never an emoji string. Emoji
+// render per-OS (that's the "JUL 17" incident this rule exists to prevent),
+// while an icon FONT glyph (Ionicons, or any vector icon) renders the same
+// everywhere.
+
+const ICON_SIZE = 28;
+const CIRCLE_SIZE = 64;
+
+export interface EmptyStateIconProps {
+  size: number;
+  color: string;
+}
 
 export interface EmptyStateProps {
-  icon: keyof typeof Ionicons.glyphMap;
+  /** A component, not a string — e.g. `(p) => <Ionicons name="trophy-outline" {...p} />`. Never an emoji. */
+  icon: (props: EmptyStateIconProps) => ReactNode;
   title: string;
   message: string;
   actionLabel?: string;
   onAction?: () => void;
 }
 
-export function EmptyState({ icon, title, message, actionLabel, onAction }: EmptyStateProps) {
+export function EmptyState({ icon: Icon, title, message, actionLabel, onAction }: EmptyStateProps) {
   const { kind } = useSurface();
   const onGame = kind === 'game';
   const iconColor = onGame ? color.text.onGame.secondary : color.text.secondary;
+  const circleColor = onGame ? color.surface.game.raised : color.surface.money.sunken;
 
   return (
     <View style={styles.container}>
-      <Ionicons name={icon} size={40} color={iconColor} />
+      <View style={[styles.iconCircle, { backgroundColor: circleColor }]}>
+        <Icon size={ICON_SIZE} color={iconColor} />
+      </View>
       <Text variant="title" style={styles.title}>
         {title}
       </Text>
@@ -50,6 +69,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: space[8],
     gap: space[3],
+  },
+  iconCircle: {
+    width: CIRCLE_SIZE,
+    height: CIRCLE_SIZE,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
     textAlign: 'center',

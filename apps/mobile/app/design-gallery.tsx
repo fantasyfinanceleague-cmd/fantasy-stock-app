@@ -2,6 +2,7 @@
 import { ReactNode, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Redirect } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 import { color, radius, space } from '@/constants/tokens';
 import { Surface } from '@/components/sp/Surface';
@@ -203,7 +204,7 @@ export default function DesignGalleryScreen() {
       <Section title="EmptyState">
         <Surface kind="money" style={styles.moneySurface}>
           <EmptyState
-            icon="trophy-outline"
+            icon={(p) => <Ionicons name="trophy-outline" {...p} />}
             title="No leagues yet"
             message="Create or join a league to get started."
             actionLabel="Create a league"

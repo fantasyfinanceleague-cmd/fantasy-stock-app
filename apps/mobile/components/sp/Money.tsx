@@ -54,8 +54,9 @@ export function Money({
   } else if (value < 0) {
     textColor = onGame ? color.data.loss.onGame : color.data.loss.base;
   } else {
-    // Zero is neutral — never green, never red (§9 color.data.zero).
-    textColor = color.data.zero;
+    // Zero is neutral — never green, never red (§9 color.data.zero). On
+    // game it must use the light-on-dark grey, not the light-surface one.
+    textColor = onGame ? color.data.zero.onGame : color.data.zero.base;
   }
 
   return (
