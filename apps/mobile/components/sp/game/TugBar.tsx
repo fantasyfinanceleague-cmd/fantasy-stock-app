@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
 import { color, radius } from '@/constants/tokens';
-import { tugRatio, hasLeadChanged } from '@/components/sp/logic/tug';
+import { tugRatio, hasLeadChanged, tugAccessibilityLabel } from '@/components/sp/logic/tug';
 import { useMotion } from '@/components/sp/motion';
 import { useLeadChangeSpring } from '@/components/sp/game/motion';
 
@@ -12,14 +12,22 @@ import { useLeadChangeSpring } from '@/components/sp/game/motion';
 // opponent ratio, clamps, overshoots with `lively` on a lead change."
 // Game surface only — team colours are used here strictly as FILLS, never
 // as text (§9's non-swap rule), which is exactly what this component does.
+//
+// Accessibility (Design Lead, 2026-09-26): the label is dollars only, never a
+// percentage — the visual ratio is a clamped layout fraction, not a
+// probability, and reading it aloud as one would read as a win probability
+// (ruled out product-wide). `opponentName` is required so the label can be
+// worded correctly ("You lead by $X" / "{name} leads by $X" / "Tied") — see
+// components/sp/logic/tug.ts's tugAccessibilityLabel.
 
 export interface TugBarProps {
   you: number;
   opponent: number;
+  opponentName: string;
   height?: number;
 }
 
-export function TugBar({ you, opponent, height = 8 }: TugBarProps) {
+export function TugBar({ you, opponent, opponentName, height = 8 }: TugBarProps) {
   const ratio = tugRatio(you, opponent);
   const prevRef = useRef({ you, opponent });
   const leadChanged = hasLeadChanged(prevRef.current.you, prevRef.current.opponent, you, opponent);
@@ -46,7 +54,12 @@ export function TugBar({ you, opponent, height = 8 }: TugBarProps) {
   const opponentFillStyle = useAnimatedStyle(() => ({ width: `${100 - widthPercent.value}%` }));
 
   return (
-    <View style={[styles.track, { height, borderRadius: height / 2 }]} accessibilityRole="progressbar">
+    <View
+      style={[styles.track, { height, borderRadius: height / 2 }]}
+      accessible
+      accessibilityRole="progressbar"
+      accessibilityLabel={tugAccessibilityLabel(you, opponent, opponentName)}
+    >
       <Animated.View style={[styles.fill, styles.youFill, youFillStyle]} />
       <Animated.View style={[styles.fill, styles.opponentFill, opponentFillStyle]} />
     </View>

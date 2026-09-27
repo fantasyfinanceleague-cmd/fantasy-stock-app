@@ -96,7 +96,7 @@ export function Scoreboard({ leagueName, week, you, opponent, live = false, chyr
       </View>
 
       <View style={styles.tugWrap}>
-        <TugBar you={you.gain} opponent={opponent.gain} />
+        <TugBar you={you.gain} opponent={opponent.gain} opponentName={opponent.name} />
       </View>
 
       <View style={styles.leadLine}>

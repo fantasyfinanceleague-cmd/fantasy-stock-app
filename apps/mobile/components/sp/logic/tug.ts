@@ -8,6 +8,8 @@
 // when both dollar gains are near zero and a $0.01 gain would otherwise swing
 // the bar almost the full width.
 
+import { formatMoney } from './money';
+
 const MIN_RATIO = 0.08;
 const MAX_RATIO = 0.92;
 const DENOM_FLOOR = 1;
@@ -41,4 +43,21 @@ export function hasLeadChanged(
   nextOpponent: number
 ): boolean {
   return leaderOf(prevYou, prevOpponent) !== leaderOf(nextYou, nextOpponent);
+}
+
+/**
+ * `<TugBar>`'s accessibility label. Dollars only, NEVER a percentage — the
+ * bar's own ratio is a layout fraction (clamped to [0.08, 0.92] for visual
+ * legibility), not a probability, and reading it out as one would imply a win
+ * probability, which is ruled out product-wide (Design Lead, 2026-09-26; see
+ * also §7 ask 8 — "drop win probability from the landing mock unless a model
+ * is built"). Mirrors <Scoreboard>'s lead-line verb agreement: "you" is
+ * always second person ("You lead by..."), the opponent's real name is third
+ * person ("{name} leads by...").
+ */
+export function tugAccessibilityLabel(you: number, opponent: number, opponentName: string): string {
+  const leader = leaderOf(you, opponent);
+  if (leader === 'tie') return 'Tied';
+  const gap = formatMoney(Math.abs(you - opponent));
+  return leader === 'you' ? `You lead by ${gap}` : `${opponentName} leads by ${gap}`;
 }
