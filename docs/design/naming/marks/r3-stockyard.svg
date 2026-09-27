@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="128" height="128" role="img" aria-label="Stockyard mark: the refined bars gathered behind two fence rails">
+  <rect x="13" y="32" width="10" height="22" rx="2.5" fill="#0D1B2E"/>
+  <rect x="27" y="22" width="10" height="32" rx="2.5" fill="#0D1B2E"/>
+  <rect x="41" y="10" width="10" height="44" rx="2.5" fill="#2860F0"/>
+  <rect x="6" y="38" width="52" height="4" rx="2" fill="#FFC53D"/>
+  <rect x="6" y="47" width="52" height="4" rx="2" fill="#FFC53D"/>
+</svg>
