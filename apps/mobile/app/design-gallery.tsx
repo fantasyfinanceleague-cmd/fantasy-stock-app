@@ -5,6 +5,7 @@ import { Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { color, radius, space } from '@/constants/tokens';
+import { brand } from '@/constants/brand';
 import { Surface } from '@/components/sp/Surface';
 import { Text } from '@/components/sp/Text';
 import { Money } from '@/components/sp/Money';
@@ -74,7 +75,7 @@ export default function DesignGalleryScreen() {
       <Section title="Brand">
         <View style={styles.row}>
           <BrandMark size={32} tone="onLight" />
-          <Text variant="title">Stockpile</Text>
+          <Text variant="title">{brand.wordmark}</Text>
         </View>
       </Section>
 

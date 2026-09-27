@@ -1,15 +1,16 @@
-// Stockpile — brand tokens (Phase 2 foundation).
+// Stockade — brand tokens (Phase 2 foundation).
 //
-// NAME CAVEAT (docs/design/DESIGN_DIRECTION.md, "Decisions — 2026-09-26"):
-// the name "Stockpile" collides with an existing US investing app
-// (stockpile.com, "stockpile™") and is under review by Giorgio separately
-// from the visual direction. `brand.name` / `brand.wordmark` are the ONE
-// swappable token for the product name — no new screen, component or copy
-// string may hard-code "Stockpile"; import it from here instead.
+// NAME DECIDED 2026-09-26 (Orchestrator, relaying Giorgio): "Stockpile"
+// collided with an existing US investing app (stockpile.com, "stockpile™")
+// and has been replaced with "Stockade". `brand.name` / `brand.wordmark`
+// stay the ONE token for the product name — no new screen, component or
+// copy string hard-codes it; import it from here instead. This is exactly
+// why that rule existed: the rename touches one file, not a grep-and-replace
+// across the app.
 
 export const brand = {
-  name: 'Stockpile',
-  wordmark: 'Stockpile',
+  name: 'Stockade',
+  wordmark: 'Stockade',
 } as const;
 
 export { BrandMark } from '@/components/sp/BrandMark';
