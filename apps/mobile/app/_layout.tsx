@@ -18,6 +18,7 @@ import { LeagueProvider } from '@/lib/LeagueContext';
 import { addNotificationListeners } from '@/lib/notifications';
 import { supabase } from '@/lib/supabase';
 import { verifyAndConsumeRecoveryNonce } from '@/lib/recoveryNonce';
+import { parseRecoveryLink } from '@/lib/recoveryLink';
 import { useAuth } from '@/lib/useAuth';
 
 export {
@@ -44,51 +45,45 @@ function RootLayoutNav() {
   useEffect(() => {
     // Handle URL when app is opened from a link
     const handleDeepLink = async (event: { url: string }) => {
-      const url = event.url;
+      const parsed = parseRecoveryLink(event.url);
 
-      // Check if this is a password reset link
-      if (url.includes('reset-password') || url.includes('type=recovery')) {
-        // Extract the hash fragment (contains access_token, refresh_token, etc.)
-        const hashIndex = url.indexOf('#');
-        if (hashIndex !== -1) {
-          const hash = url.substring(hashIndex + 1);
-          const params = new URLSearchParams(hash);
-          const accessToken = params.get('access_token');
-          const refreshToken = params.get('refresh_token');
-
-          // Parse the per-request nonce from the QUERY (strictly before the
-          // '#'), so an rn smuggled into the fragment cannot satisfy the check.
-          const queryStart = url.indexOf('?');
-          let inboundNonce: string | null = null;
-          if (queryStart !== -1 && queryStart < hashIndex) {
-            const query = url.substring(queryStart + 1, hashIndex);
-            inboundNonce = new URLSearchParams(query).get('rn');
-          }
-
-          if (accessToken && refreshToken) {
-            // Fixes F2 (deep-link session fixation): only set a session from a
-            // recovery link whose nonce matches one THIS device generated for a
-            // reset it requested. Fail closed — an attacker's crafted link (or a
-            // genuine link opened on a device that never requested the reset)
-            // carries no matching nonce and is refused.
-            const nonceOk = await verifyAndConsumeRecoveryNonce(inboundNonce);
-            if (!nonceOk) {
-              return;
-            }
-
-            // Set the session with the tokens from the URL
-            const { error } = await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken,
-            });
-
-            if (!error) {
-              // Navigate to reset password screen
-              router.replace('/reset-password');
-            }
-          }
-        }
+      if (parsed.kind === 'none') {
+        return;
       }
+
+      if (parsed.kind === 'error') {
+        // Expired, already-used, or otherwise malformed link — Supabase
+        // redirected here with an error instead of tokens. Route to the
+        // invalid state rather than leaving reset-password with no session.
+        router.replace('/reset-password?status=invalid');
+        return;
+      }
+
+      // Fixes F2 (deep-link session fixation): only set a session from a
+      // recovery link whose nonce matches one THIS device generated for a
+      // reset it requested. Fail closed — an attacker's crafted link (or a
+      // genuine link opened on a device that never requested the reset, or
+      // an older link superseded by a newer request) carries no matching
+      // nonce and is refused.
+      const nonceOk = await verifyAndConsumeRecoveryNonce(parsed.nonce);
+      if (!nonceOk) {
+        router.replace('/reset-password?status=invalid');
+        return;
+      }
+
+      // Set the session with the tokens from the URL
+      const { error } = await supabase.auth.setSession({
+        access_token: parsed.accessToken,
+        refresh_token: parsed.refreshToken,
+      });
+
+      if (error) {
+        router.replace('/reset-password?status=invalid');
+        return;
+      }
+
+      // Navigate to reset password screen
+      router.replace('/reset-password');
     };
 
     // Get the initial URL if app was opened from a link

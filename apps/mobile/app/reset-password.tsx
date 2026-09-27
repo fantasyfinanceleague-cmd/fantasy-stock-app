@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -9,19 +9,50 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/useAuth';
 import { Colors } from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui';
 
+// This screen is reached only from the password-recovery deep link
+// (app/_layout.tsx's handleDeepLink). It has three states, driven by the
+// `status` param that handler sets and by whether a recovery session has
+// been established yet:
+//
+//   - verifying: no `status=invalid` param yet, and no session yet either.
+//     Covers the brief window on cold start where this route is showing
+//     (expo-router restored it from the link before anything else rendered)
+//     but the async nonce-check + setSession in _layout.tsx hasn't resolved.
+//     Normally resolves to one of the other two states within moments.
+//   - invalid: the link was rejected (bad/replayed/mismatched nonce), was
+//     already used, or has expired — no session was set. There's nothing to
+//     recover from here; the user needs to request a new email.
+//   - form: a session exists, so this is a real recovery in progress.
+type ScreenState = 'verifying' | 'invalid' | 'form';
+
 export default function ResetPasswordScreen() {
+  const { status } = useLocalSearchParams<{ status?: string }>();
+  const { user, signOut } = useAuth();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  const screenState: ScreenState =
+    status === 'invalid' ? 'invalid' : user ? 'form' : 'verifying';
+
+  async function handleCancel() {
+    // A recovery link fully signs the device in (that's how the form gets
+    // its session), so leaving via Cancel should not leave the user signed
+    // in to an account they never meant to open here.
+    await signOut();
+    router.replace('/login');
+  }
 
   async function handleUpdatePassword() {
     if (!password) {
@@ -62,15 +93,59 @@ export default function ResetPasswordScreen() {
           </View>
           <Text style={styles.title}>Password Reset!</Text>
           <Text style={styles.description}>
-            Your password has been successfully updated. You can now sign in with your new password.
+            Your password has been successfully updated.
           </Text>
 
           <Button
-            title="Sign In"
-            onPress={() => router.replace('/login')}
+            title="Continue"
+            onPress={() => router.replace('/')}
             variant="primary"
             style={styles.buttonSpacing}
           />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (screenState === 'verifying') {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.content}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={[styles.description, styles.verifyingText]}>
+            Verifying your reset link…
+          </Text>
+          <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
+            <Text style={styles.cancelText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (screenState === 'invalid') {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.content}>
+          <View style={styles.iconContainer}>
+            <Ionicons name="alert-circle-outline" size={64} color={Colors.error} />
+          </View>
+          <Text style={styles.title}>Link No Longer Valid</Text>
+          <Text style={styles.description}>
+            This password reset link has expired, was already used, or doesn't
+            match this device. Request a new one to continue.
+          </Text>
+
+          <Button
+            title="Request a New Link"
+            onPress={() => router.replace('/forgot-password')}
+            variant="primary"
+            style={styles.buttonSpacing}
+          />
+
+          <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
+            <Text style={styles.cancelText}>Back to Login</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -120,7 +195,7 @@ export default function ResetPasswordScreen() {
 
           <TouchableOpacity
             style={styles.cancelButton}
-            onPress={() => router.replace('/login')}
+            onPress={handleCancel}
           >
             <Text style={styles.cancelText}>Cancel</Text>
           </TouchableOpacity>
@@ -184,5 +259,9 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontSize: 14,
     fontFamily: 'Inter_400Regular',
+  },
+  verifyingText: {
+    marginTop: 20,
+    marginBottom: 0,
   },
 });
