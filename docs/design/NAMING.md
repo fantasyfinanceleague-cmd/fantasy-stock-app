@@ -677,3 +677,38 @@ the lockups, the app icon at 60/40/29 and the favicon at actual 16px.
 [Stockade board game (BGG)](https://boardgamegeek.com/boardgame/308424/stockade) ·
 [Stockade fencing (Lowe's)](https://www.lowes.com/pl/fencing-gates/wood-fencing/stockade/2410226966401-4294402306) ·
 [USPTO Design Search Code Manual](https://tmdesigncodes.uspto.gov/)
+
+---
+
+# Decision: Stockade — CONFIRMED (2026-09-26)
+
+**Giorgio confirmed "Stockade."** Primary mark: **A · Palisade** (D.4).
+Production assets: `docs/design/brand/stockade/` (see its README for usage).
+
+> Still an **informal record, not legal clearance.** The searches below were
+> run by the Orchestrator in the browser at tmsearch.uspto.gov on 2026-09-26
+> and are transcribed here as reported. An attorney's clearance opinion
+> remains the real answer before any filing or launch.
+
+## USPTO: STOCKADE (all 65 results)
+
+**No live registration in classes 009, 036 or 041.**
+
+| Mark / owner | Status | Classes | Relevance |
+|---|---|---|---|
+| Stockade Companies / Sirloin Stockade / Stockade Kitchen | Live | 042 / 043 (restaurants) | Unrelated services |
+| Illinois Tool Works | Live | 006 / 007 (staples) | Unrelated goods |
+| Ridley USA | Live | 005 / 018 / 020 / 021 / 031 (animal supplements) | Unrelated goods |
+| Stockade Association of Schenectady | Live | 035 | Unrelated |
+| ARMS STOCKADE | **Pending** | 035 (retail) | Unrelated |
+| Hasbro, STOCKADE | **Dead / cancelled** | 028 (toys) | No longer a live claim |
+| **STOCKAID** (eLynx), sound-alike | Live | 009 (livestock-tracking software) | **Low–medium**: same class, different field; worth an attorney's glance |
+| WRS Systems' "Stockade" POS software | **Not on the US register** | — | Resolves D.1's medium flag for the US |
+
+## USPTO: STOCKPILE (for the record)
+
+Reg. **4593157**, owner **Stockpile, Inc.**, **LIVE**, classes **035 / 036**,
+renewed **2025-06-02**, no assignment recorded. The company closed on
+**2026-04-17**. The mark is in principle buyable via its attorney of record;
+**Giorgio decided not to pursue it.** This confirms that the original name
+couldn't have been used without acquiring that registration.
