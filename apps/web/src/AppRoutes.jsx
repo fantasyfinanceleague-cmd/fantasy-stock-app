@@ -1,0 +1,43 @@
+// src/AppRoutes.jsx
+// The unpaused app's route table (moved verbatim out of App.jsx). Only
+// AppShell.jsx imports this.
+import { Routes, Route } from "react-router-dom";
+import Layout from "./Layout";
+import Home from "./pages/Home";
+import Dashboard from "./pages/Dashboard";
+import DraftPage from "./pages/DraftPage";
+import Leagues from './pages/Leagues';
+import LeagueDetail from './pages/LeagueDetail';
+import { JoinLeague } from './pages/JoinLeague';
+import PortfolioPage from './pages/PortfolioPage';
+import Leaderboard from './pages/Leaderboard';
+import Matchup from './pages/Matchup';
+import TradeHistory from './pages/TradeHistory';
+import Profile from './pages/Profile';
+import Login from './pages/Login';
+import Protected from './components/Protected';
+import './layout.css'; // custom grid and layout styles
+
+export default function AppRoutes() {
+  return (
+    <Routes>
+      {/* Public routes */}
+      <Route path="/" element={<Home />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Login initialSignUp />} />
+
+      {/* Protected routes */}
+      <Route path="/dashboard" element={<Layout><Protected><Dashboard /></Protected></Layout>} />
+      <Route path="/draft/:leagueId" element={<Layout><Protected><DraftPage /></Protected></Layout>} />
+      <Route path="/draft" element={<Layout><Protected><DraftPage /></Protected></Layout>} />
+      <Route path="/leagues" element={<Layout><Protected><Leagues /></Protected></Layout>} />
+      <Route path="/league/:leagueId" element={<Layout><Protected><LeagueDetail /></Protected></Layout>} />
+      <Route path="/join/:code" element={<Layout><Protected><JoinLeague /></Protected></Layout>} />
+      <Route path="/portfolio" element={<Layout><Protected><PortfolioPage /></Protected></Layout>} />
+      <Route path="/matchup" element={<Layout><Protected><Matchup /></Protected></Layout>} />
+      <Route path="/leaderboard" element={<Layout><Protected><Leaderboard /></Protected></Layout>} />
+      <Route path="/trade-history" element={<Layout><Protected><TradeHistory /></Protected></Layout>} />
+      <Route path="/profile" element={<Layout><Protected><Profile /></Protected></Layout>} />
+    </Routes>
+  );
+}

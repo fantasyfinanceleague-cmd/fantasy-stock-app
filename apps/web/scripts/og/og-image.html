@@ -1,0 +1,51 @@
+<!doctype html>
+<!-- Source for public/og-image.png (1200×630), the landing's social preview.
+     Designed separately from the page (Design Lead, 2026-09-26): it shows
+     the sample matchup's FINAL state, not the prerendered "Monday open",
+     and carries no product name (naming is deferred). Regenerate by
+     screenshotting this file at 1200×630, device scale 1, after fonts load. -->
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=block">
+<link rel="stylesheet" href="../../src/styles/tokens.css">
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 1200px; height: 630px; overflow: hidden; }
+  body { background: var(--sp-color-bg-app); font-family: 'Archivo', sans-serif; color: var(--sp-color-text-primary); display: grid; grid-template-rows: auto 1fr; }
+  .top { padding: 56px 64px 40px; display: flex; align-items: flex-end; justify-content: space-between; gap: 40px; }
+  h1 { font-size: 88px; line-height: 0.92; font-weight: 900; font-stretch: 62%; letter-spacing: -0.01em; }
+  .mark { align-self: flex-start; }
+  .band { background: var(--sp-color-surface-game-base); color: var(--sp-color-text-on-game-primary); padding: 32px 64px 36px; display: grid; gap: 16px; }
+  .tag { font-size: 14px; line-height: 18px; font-weight: 800; font-stretch: 125%; letter-spacing: 0.04em; text-transform: uppercase; color: var(--sp-color-text-on-game-secondary); }
+  .row { display: grid; grid-template-columns: auto 1fr auto; align-items: end; column-gap: 36px; }
+  .team { display: grid; gap: 4px; }
+  .team.opp { justify-items: end; }
+  .name { font-size: 20px; font-weight: 600; display: inline-flex; gap: 10px; align-items: center; }
+  .name::before { content: ''; width: 5px; height: 18px; border-radius: 99px; background: var(--sp-color-team-you-base); }
+  .opp .name { flex-direction: row-reverse; }
+  .opp .name::before { background: var(--sp-color-team-opponent); }
+  .score { font-size: 84px; line-height: 78px; font-weight: 900; font-stretch: 62%; font-variant-numeric: tabular-nums; }
+  .tug { height: 14px; border-radius: 99px; overflow: hidden; display: flex; margin-bottom: 32px; background: var(--sp-color-surface-game-line); }
+  .tug .y { width: 52.6%; background: var(--sp-color-team-you-base); }
+  .tug .o { flex: 1; background: var(--sp-color-team-opponent); }
+  .lead { text-align: center; font-size: 18px; color: var(--sp-color-text-on-game-secondary); }
+  .lead b { color: var(--sp-color-text-on-game-primary); font-weight: 600; }
+</style></head>
+<body>
+  <div class="top">
+    <h1>Your portfolio<br>vs. your friends.<br>Every week.</h1>
+    <svg class="mark" width="56" height="56" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M3 21 L3 14.5 Q3 13 4.5 13 L6 13 Q7.5 13 7.5 14.5 L7.5 21 Z" fill="var(--sp-color-text-secondary)"/>
+      <path d="M9.75 21 L9.75 10.5 Q9.75 9 11.25 9 L12.75 9 Q14.25 9 14.25 10.5 L14.25 21 Z" fill="var(--sp-color-text-secondary)"/>
+      <path d="M16.5 21 L16.5 6.5 Q16.5 5 18 5 L19.5 5 Q21 5 21 6.5 L21 21 Z" fill="var(--sp-color-brand)"/>
+    </svg>
+  </div>
+  <div class="band">
+    <div class="tag">Final · Week 3 · Sample matchup</div>
+    <div class="row">
+      <div class="team"><span class="name">You</span><span class="score">+$71.25</span></div>
+      <div class="tug"><span class="y"></span><span class="o"></span></div>
+      <div class="team opp"><span class="name">Priya</span><span class="score">+$64.10</span></div>
+    </div>
+    <div class="lead">Final: you win by <b>$7.15</b>. Biggest dollar gain at Friday’s close wins.</div>
+  </div>
+</body></html>

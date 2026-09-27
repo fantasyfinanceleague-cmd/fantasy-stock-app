@@ -1,0 +1,1209 @@
+/* ============================================================
+   Landing page (Phase 3a, Game Day). Every colour, duration and easing is
+   a --sp-* token (styles/tokens.css). Everything is scoped under .lp, with
+   no bare element selectors, so this sheet can't leak into app pages (the
+   unpaused app bundles it alongside its own CSS).
+   ============================================================ */
+
+/* ── Fonts ───────────────────────────────────────────────────────────────
+   Archivo arrives asynchronously (head.ts). Until it does, text renders in
+   a local face whose metrics are tuned to Archivo's, so the swap doesn't
+   move anything: one fallback for reading text (wdth 100) and one for the
+   condensed display type (wdth 62). Widths measured against Archivo in
+   Chrome (canvas/DOM, 100px samples); ascent/descent = Archivo's 88/21
+   divided by size-adjust. Android has no Arial Narrow and falls through to
+   the wide fallback; the fixed line breaks keep that case shift-free in
+   height, just not in width. */
+@font-face {
+  font-family: 'Archivo Fallback';
+  src: local('Arial'), local('ArialMT'), local('Helvetica'), local('Roboto');
+  /* Archivo 400 vs Arial, 100px sample sentence: 5732.8 / 5851.8 px. */
+  size-adjust: 98%;
+  ascent-override: 89.8%;
+  descent-override: 21.4%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: 'Archivo Condensed Fallback';
+  src: local('Arial Narrow Bold'), local('ArialNarrow-Bold'), local('Arial Narrow'), local('ArialNarrow'),
+    local('Roboto Condensed Bold'), local('RobotoCondensed-Bold');
+  font-weight: 900;
+  /* Archivo wdth 62 / 900 vs Arial Narrow Bold: 2740.6 / 3075.4 px. */
+  size-adjust: 89.1%;
+  ascent-override: 98.8%;
+  descent-override: 23.6%;
+  line-gap-override: 0%;
+}
+
+/* The page background behind the root (overscroll, short pages). Scoped
+   with :has() so it only applies while the landing is mounted. */
+body:has(> #root > .lp) {
+  margin: 0;
+  background-color: var(--sp-color-bg-app);
+}
+
+.lp {
+  --lp-font: 'Archivo', 'Archivo Fallback', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica,
+    Arial, sans-serif;
+  --lp-font-condensed: 'Archivo', 'Archivo Condensed Fallback', 'Archivo Fallback', ui-sans-serif, system-ui,
+    sans-serif;
+  /* Primitives read --sp-type-family; give them the tuned fallback too. */
+  --sp-type-family: var(--lp-font);
+  --lp-gutter: var(--sp-space-6);
+  --lp-section-gap: calc(var(--sp-space-11) + var(--sp-space-5));
+
+  min-height: 100vh;
+  background-color: var(--sp-color-bg-app);
+  color: var(--sp-color-text-primary);
+  font-family: var(--lp-font);
+  font-size: var(--sp-type-body-size);
+  line-height: var(--sp-type-body-line);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  /* clip, not hidden: hidden would create a scroll container and break the
+     pinned section's position: sticky. */
+  overflow-x: clip;
+}
+
+@media (min-width: 768px) {
+  .lp {
+    --lp-gutter: var(--sp-space-9);
+    --lp-section-gap: calc(var(--sp-space-11) * 2);
+  }
+}
+
+.lp *,
+.lp *::before,
+.lp *::after {
+  box-sizing: border-box;
+}
+
+.lp :where(h1, h2, h3, p, ol, ul, dl, dd) {
+  margin: 0;
+  padding: 0;
+}
+
+.lp :where(ol, ul) {
+  list-style: none;
+}
+
+.lp :where(a) {
+  color: inherit;
+}
+
+.lp :focus-visible {
+  outline: 2px solid var(--sp-color-brand);
+  outline-offset: 3px;
+  border-radius: var(--sp-radius-sm);
+}
+
+.lp :where(main):focus {
+  outline: none;
+}
+
+.lp-num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.lp-wrap {
+  width: 100%;
+  max-width: calc(1200px + var(--lp-gutter) * 2);
+  margin-inline: auto;
+  padding-inline: var(--lp-gutter);
+}
+
+.lp-skip {
+  position: absolute;
+  left: var(--sp-space-5);
+  top: var(--sp-space-5);
+  z-index: 10;
+  padding: var(--sp-space-3) var(--sp-space-5);
+  border-radius: var(--sp-radius-md);
+  background-color: var(--sp-color-action-primary-bg);
+  color: var(--sp-color-action-primary-fg);
+  font-weight: var(--sp-type-headline-weight);
+  text-decoration: none;
+  transform: translateY(-200%);
+}
+
+.lp-skip:focus-visible {
+  transform: none;
+}
+
+/* Press feedback for the page's few controls (ticker toggle, FAQ). */
+.lp-press {
+  transition: transform var(--sp-motion-duration-instant) var(--sp-motion-ease-settle);
+}
+
+.lp-press:active {
+  transform: scale(0.98);
+}
+
+/* ── Nav ─────────────────────────────────────────────────────────────── */
+.lp-nav__inner {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-space-7);
+  min-height: 72px;
+}
+
+.lp-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-space-3);
+  color: var(--sp-color-text-primary);
+  text-decoration: none;
+  font-size: var(--sp-type-headline-size);
+  line-height: var(--sp-type-headline-line);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.lp-brand__mark {
+  flex: none;
+}
+
+.lp-nav__links {
+  display: none;
+  margin-left: auto;
+  gap: var(--sp-space-8);
+}
+
+.lp-nav__links a {
+  position: relative;
+  padding-block: var(--sp-space-3);
+  font-size: var(--sp-type-body-size);
+  line-height: var(--sp-type-body-line);
+  font-weight: 500;
+  text-decoration: none;
+  color: var(--sp-color-text-primary);
+}
+
+.lp-nav__links a::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: var(--sp-space-1);
+  height: 2px;
+  border-radius: var(--sp-radius-pill);
+  background-color: var(--sp-color-brand);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--sp-motion-duration-quick) var(--sp-motion-ease-settle);
+}
+
+.lp-nav__links a:hover::after,
+.lp-nav__links a:focus-visible::after {
+  transform: scaleX(1);
+}
+
+/* A status, not a control: no border, no hover, no pointer, no press. */
+.lp-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-space-3);
+  margin-left: auto;
+  padding: var(--sp-space-2) var(--sp-space-4);
+  border-radius: var(--sp-radius-pill);
+  background-color: var(--sp-color-surface-money-sunken);
+  color: var(--sp-color-text-secondary);
+  font-size: var(--sp-type-callout-size);
+  line-height: var(--sp-type-callout-line);
+  font-weight: var(--sp-type-callout-weight);
+  white-space: nowrap;
+  cursor: default;
+  user-select: none;
+}
+
+.lp-status__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--sp-radius-pill);
+  background-color: var(--sp-color-brand);
+}
+
+@media (min-width: 768px) {
+  .lp-nav__links {
+    display: flex;
+  }
+
+  .lp-status {
+    margin-left: 0;
+  }
+}
+
+/* ── Hero ────────────────────────────────────────────────────────────── */
+.lp-hero__copy {
+  display: grid;
+  gap: var(--sp-space-7);
+  padding-block: var(--sp-space-9) var(--sp-space-9);
+}
+
+.lp-hero__title {
+  font-family: var(--lp-font-condensed);
+  font-size: var(--sp-type-hero-size);
+  line-height: var(--sp-type-hero-line);
+  font-weight: var(--sp-type-hero-weight);
+  font-stretch: var(--sp-type-hero-stretch);
+  letter-spacing: var(--sp-type-hero-tracking);
+  color: var(--sp-color-text-primary);
+}
+
+/* Fixed line breaks: the headline has the same number of lines in Archivo
+   and in the fallback at every width, so the font swap can't change its
+   height (CLS). */
+.lp-line {
+  display: block;
+  white-space: nowrap;
+}
+
+/* Under 360px "vs. your friends." doesn't fit at the token's 56px floor:
+   break it into its own fixed line instead (4 lines, still fixed). */
+@media (max-width: 359px) {
+  .lp-line-split {
+    display: block;
+  }
+}
+
+.lp-hero__lede {
+  max-width: 34ch;
+  font-size: var(--sp-type-headline-size);
+  line-height: 26px;
+  color: var(--sp-color-text-secondary);
+}
+
+@media (min-width: 1024px) {
+  .lp-hero__copy {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 360px);
+    align-items: end;
+    column-gap: var(--sp-space-10);
+    padding-block: var(--sp-space-11) var(--sp-space-10);
+  }
+
+  .lp-hero__lede {
+    font-size: var(--sp-type-title-size);
+    line-height: 30px;
+    padding-bottom: var(--sp-space-3);
+  }
+}
+
+/* The stadium band: the hero's first beat. It wipes in from the left at
+   first paint — CSS, so it plays before the JS has hydrated — and it is
+   the ONLY element clipped; the headline never waits on it. */
+.lp-band {
+  padding-block: var(--sp-space-8) var(--sp-space-7);
+}
+
+@media (min-width: 768px) {
+  .lp-band {
+    padding-block: var(--sp-space-9) var(--sp-space-8);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lp-band {
+    animation: lp-band-wipe var(--sp-motion-duration-slow) var(--sp-motion-ease-settle) both;
+  }
+}
+
+@keyframes lp-band-wipe {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* ── Match board (hero, scrub, panels) ───────────────────────────────── */
+.lp-board {
+  --lp-score-size: var(--sp-type-score-lg-size);
+  --lp-score-line: var(--sp-type-score-lg-line);
+  display: grid;
+  gap: var(--sp-space-5);
+  color: var(--sp-color-text-on-game-primary);
+}
+
+@media (min-width: 400px) {
+  .lp-board {
+    --lp-score-size: var(--sp-type-score-xl-size);
+    --lp-score-line: var(--sp-type-score-xl-line);
+  }
+}
+
+@media (min-width: 1024px) {
+  .lp-hero .lp-board {
+    --lp-score-size: calc(var(--sp-type-score-xl-size) * 1.5);
+    --lp-score-line: calc(var(--sp-type-score-xl-line) * 1.5);
+    gap: var(--sp-space-6);
+  }
+}
+
+.lp-board__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-space-2) var(--sp-space-5);
+}
+
+.lp-board__score-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas:
+    'you opp'
+    'tug tug';
+  align-items: end;
+  gap: var(--sp-space-5) var(--sp-space-5);
+}
+
+.lp-board__team {
+  grid-area: you;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-space-2);
+  min-width: 0;
+}
+
+.lp-board__team--opp {
+  grid-area: opp;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.lp-board__tug {
+  grid-area: tug;
+}
+
+.lp-board__name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-space-3);
+  font-size: var(--sp-type-headline-size);
+  line-height: var(--sp-type-headline-line);
+  font-weight: var(--sp-type-headline-weight);
+  color: var(--sp-color-text-on-game-primary);
+}
+
+/* Team colours mark people (never money): a swatch beside each name. */
+.lp-board__name::before {
+  content: '';
+  width: 4px;
+  height: 16px;
+  border-radius: var(--sp-radius-pill);
+}
+
+.lp-board__name--you::before {
+  background-color: var(--sp-color-team-you-base);
+}
+
+.lp-board__name--opp {
+  flex-direction: row-reverse;
+}
+
+.lp-board__name--opp::before {
+  background-color: var(--sp-color-team-opponent);
+}
+
+.lp .lp-board__score {
+  font-family: var(--lp-font-condensed);
+  font-size: var(--lp-score-size);
+  line-height: var(--lp-score-line);
+  font-weight: var(--sp-type-score-xl-weight);
+  font-stretch: var(--sp-type-score-xl-stretch);
+  font-variant-numeric: tabular-nums;
+  color: var(--sp-color-text-on-game-primary);
+  white-space: nowrap;
+}
+
+.lp .lp-board__score .sp-score-digits__char--roll-wrap {
+  height: var(--lp-score-line);
+}
+
+.lp-board__lead {
+  min-height: var(--sp-type-body-line);
+  font-size: var(--sp-type-callout-size);
+  line-height: var(--sp-type-body-line);
+  color: var(--sp-color-text-on-game-secondary);
+}
+
+.lp-board__lead .lp-num {
+  color: var(--sp-color-text-on-game-primary);
+  font-weight: var(--sp-type-headline-weight);
+}
+
+/* The chyron's slot keeps its height whether or not a call is showing, and
+   an outgoing call overlaps the incoming one instead of stacking. */
+.lp .sp-chyron-region {
+  position: relative;
+  min-height: 38px;
+}
+
+.lp .sp-chyron {
+  position: absolute;
+  top: 0;
+  left: 0;
+  max-width: 100%;
+}
+
+@media (min-width: 768px) {
+  .lp-board__score-row {
+    grid-template-columns: auto minmax(96px, 1fr) auto;
+    grid-template-areas: 'you tug opp';
+    column-gap: var(--sp-space-8);
+  }
+
+  /* Centre the bar on the scores, not on the name + score stack. */
+  .lp-board__tug {
+    align-self: end;
+    padding-bottom: calc((var(--lp-score-line) - var(--sp-space-4)) / 2);
+  }
+
+  .lp-hero .lp-board__lead {
+    text-align: center;
+  }
+
+  .lp-hero .sp-chyron {
+    right: 0;
+    margin-inline: auto;
+    width: fit-content;
+  }
+}
+
+/* CountUp: the final string reserves the width from the first paint. */
+.lp-count {
+  display: inline-grid;
+}
+
+.lp-count > [aria-hidden='true'] {
+  grid-area: 1 / 1;
+}
+
+.lp-count__sizer {
+  visibility: hidden;
+}
+
+.lp-count--end .lp-count__live {
+  justify-self: end;
+}
+
+/* ── Ticker ──────────────────────────────────────────────────────────── */
+.lp-ticker {
+  border-top: 1px solid var(--sp-color-surface-game-line);
+}
+
+.lp-ticker__inner {
+  display: flex;
+  align-items: stretch;
+  min-height: 48px;
+}
+
+.lp-ticker__toggle {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-right: 1px solid var(--sp-color-surface-game-line);
+  background-color: transparent;
+  color: var(--sp-color-text-on-game-primary);
+  cursor: pointer;
+}
+
+.lp-ticker__toggle:hover {
+  background-color: var(--sp-color-surface-game-raised);
+}
+
+.lp-ticker__toggle:focus-visible {
+  outline-offset: -3px;
+}
+
+.lp-ticker__viewport {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.lp-ticker__viewport::-webkit-scrollbar {
+  display: none;
+}
+
+.lp-ticker__viewport:focus-visible {
+  outline-offset: -3px;
+}
+
+.lp-ticker__track {
+  display: flex;
+  width: max-content;
+  /* Content pacing (reading speed), not a motion token: ~40px/s. */
+  animation: lp-ticker-loop 64s linear infinite;
+}
+
+.lp-ticker__list {
+  display: flex;
+  gap: var(--sp-space-9);
+  padding-inline: var(--sp-space-6) calc(var(--sp-space-9) - var(--sp-space-6));
+}
+
+.lp-ticker__viewport:hover .lp-ticker__track,
+.lp-ticker__viewport:focus-within .lp-ticker__track,
+.lp-ticker__track[data-state='paused'] {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-ticker__track[data-state='auto'] {
+    animation-play-state: paused;
+  }
+}
+
+@keyframes lp-ticker-loop {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.lp-tk {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-space-3);
+  white-space: nowrap;
+  font-size: var(--sp-type-callout-size);
+  line-height: var(--sp-type-callout-line);
+}
+
+.lp-tk__name {
+  color: var(--sp-color-text-on-game-secondary);
+  font-weight: var(--sp-type-callout-weight);
+}
+
+.lp-tk__name--lead {
+  color: var(--sp-color-text-on-game-primary);
+  font-weight: var(--sp-type-headline-weight);
+}
+
+.lp-tk__vs {
+  color: var(--sp-color-text-on-game-secondary);
+}
+
+/* ── Sections ────────────────────────────────────────────────────────── */
+.lp-section {
+  padding-block: var(--lp-section-gap);
+}
+
+.lp-h2 {
+  font-family: var(--lp-font-condensed);
+  font-size: clamp(var(--sp-type-score-lg-size), 5.2vw, calc(var(--sp-type-score-xl-size) * 1.25));
+  line-height: var(--sp-type-hero-line);
+  font-weight: var(--sp-type-hero-weight);
+  font-stretch: var(--sp-type-hero-stretch);
+  letter-spacing: var(--sp-type-hero-tracking);
+  color: var(--sp-color-text-primary);
+}
+
+.lp-section-lede {
+  max-width: 46ch;
+  margin-top: var(--sp-space-5);
+  font-size: var(--sp-type-headline-size);
+  line-height: 26px;
+  color: var(--sp-color-text-secondary);
+}
+
+.lp-note {
+  margin-top: var(--sp-space-5);
+  font-size: var(--sp-type-caption-size);
+  line-height: var(--sp-type-caption-line);
+  font-weight: var(--sp-type-caption-weight);
+  color: var(--sp-color-text-secondary);
+}
+
+/* ── How a week works ────────────────────────────────────────────────── */
+.lp-week {
+  padding-bottom: calc(var(--lp-section-gap) / 2);
+}
+
+.lp-week__grid {
+  display: grid;
+  gap: var(--sp-space-8);
+  margin-top: var(--sp-space-9);
+}
+
+.lp-steps {
+  display: grid;
+  gap: var(--sp-space-6);
+}
+
+.lp-step {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  column-gap: var(--sp-space-5);
+  align-items: start;
+}
+
+.lp-step__num {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1.5px solid var(--sp-color-border-control);
+  border-radius: var(--sp-radius-pill);
+  color: var(--sp-color-text-secondary);
+  font-size: var(--sp-type-headline-size);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  transition:
+    background-color var(--sp-motion-duration-quick) var(--sp-motion-ease-settle),
+    color var(--sp-motion-duration-quick) var(--sp-motion-ease-settle),
+    border-color var(--sp-motion-duration-quick) var(--sp-motion-ease-settle);
+}
+
+.lp-step--active .lp-step__num {
+  border-color: var(--sp-color-text-primary);
+  background-color: var(--sp-color-text-primary);
+  color: var(--sp-color-text-on-game-primary);
+}
+
+.lp-step__title {
+  padding-top: var(--sp-space-1);
+  font-size: var(--sp-type-title-size);
+  line-height: var(--sp-type-title-line);
+  font-weight: var(--sp-type-title-weight);
+  color: var(--sp-color-text-primary);
+}
+
+.lp-step__body {
+  max-width: 44ch;
+  margin-top: var(--sp-space-2);
+  color: var(--sp-color-text-secondary);
+}
+
+/* Pinned scrub: 280vh of track under a 100vh stage = 180vh pinned. */
+.lp-scrub {
+  position: relative;
+  height: 280vh;
+  margin-top: var(--sp-space-8);
+}
+
+.lp-scrub__stage {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  height: 100vh;
+  height: 100svh;
+}
+
+.lp-scrub .lp-week__grid {
+  margin-top: 0;
+  gap: var(--sp-space-7);
+}
+
+/* Phones: the board sits above the steps, and the steps tighten so all
+   four stay on screen with it. */
+.lp-scrub .lp-week__visual {
+  order: -1;
+}
+
+@media (max-width: 1023px) {
+  .lp-scrub .lp-steps {
+    gap: var(--sp-space-4);
+  }
+
+  .lp-scrub .lp-step__title {
+    font-size: var(--sp-type-headline-size);
+    line-height: var(--sp-type-headline-line);
+  }
+
+  .lp-scrub .lp-step__num {
+    width: 26px;
+    height: 26px;
+    font-size: var(--sp-type-callout-size);
+  }
+
+  .lp-scrub .lp-step {
+    grid-template-columns: 26px minmax(0, 1fr);
+    column-gap: var(--sp-space-4);
+  }
+
+  .lp-scrub .lp-step__body {
+    font-size: var(--sp-type-callout-size);
+    line-height: var(--sp-type-callout-line);
+  }
+}
+
+.lp-week__surface,
+.lp-panel__surface,
+.lp-panel__final {
+  border-radius: var(--sp-radius-lg);
+  padding: var(--sp-space-6);
+}
+
+@media (min-width: 768px) {
+  .lp-week__surface {
+    padding: var(--sp-space-8);
+  }
+}
+
+.lp-rail {
+  margin-top: var(--sp-space-5);
+}
+
+.lp-rail__track {
+  height: 4px;
+  overflow: hidden;
+  border-radius: var(--sp-radius-pill);
+  background-color: var(--sp-color-surface-game-line);
+}
+
+.lp-rail__fill {
+  height: 100%;
+  background-color: var(--sp-color-text-on-game-primary);
+  transform-origin: left center;
+}
+
+.lp-rail__days {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--sp-space-3);
+  color: var(--sp-color-text-on-game-secondary);
+  font-size: var(--sp-type-caption-size);
+  line-height: var(--sp-type-caption-line);
+  font-weight: var(--sp-type-caption-weight);
+}
+
+.lp-panels {
+  display: grid;
+  gap: var(--sp-space-8) var(--sp-space-7);
+}
+
+.lp-panel__title {
+  margin-bottom: var(--sp-space-4);
+}
+
+.lp-panel .sp-chyron-region {
+  display: none;
+}
+
+.lp-panel__final {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-space-3);
+}
+
+.lp-panel__final-line {
+  font-family: var(--lp-font-condensed);
+  font-size: var(--sp-type-score-lg-size);
+  line-height: var(--sp-type-score-lg-line);
+  font-weight: var(--sp-type-score-lg-weight);
+  font-stretch: var(--sp-type-score-lg-stretch);
+  color: var(--sp-color-text-on-game-primary);
+}
+
+.lp-panel__note {
+  margin-top: var(--sp-space-4);
+  color: var(--sp-color-text-secondary);
+}
+
+@media (min-width: 768px) {
+  .lp-week__grid--static .lp-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--sp-space-8);
+  }
+
+  .lp-panels {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .lp-week__grid--static {
+    gap: var(--sp-space-10);
+  }
+
+  .lp-week__grid--static .lp-steps {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .lp-scrub .lp-week__grid {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    align-items: center;
+    column-gap: var(--sp-space-11);
+  }
+
+  .lp-scrub .lp-week__visual {
+    order: 0;
+  }
+
+  .lp-scrub {
+    margin-top: 0;
+  }
+
+  .lp-scrub .lp-steps {
+    margin-top: var(--sp-space-9);
+  }
+}
+
+/* ── Leagues in action ───────────────────────────────────────────────── */
+.lp-leagues__grid {
+  display: grid;
+  gap: var(--sp-space-9);
+}
+
+@media (min-width: 1024px) {
+  .lp-leagues__grid {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    align-items: center;
+    column-gap: var(--sp-space-11);
+  }
+}
+
+.lp-standings {
+  border-radius: var(--sp-radius-lg);
+  padding: var(--sp-space-6) var(--sp-space-5) var(--sp-space-5);
+}
+
+@media (min-width: 768px) {
+  .lp-standings {
+    padding: var(--sp-space-7);
+  }
+}
+
+.lp-standings__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-space-2) var(--sp-space-5);
+  padding-inline: var(--sp-space-4);
+  padding-bottom: var(--sp-space-4);
+}
+
+.lp-standings__rows {
+  display: grid;
+  border-radius: var(--sp-radius-md);
+}
+
+.lp-standings__rows:focus-visible {
+  outline-offset: 2px;
+}
+
+.lp-row {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto auto;
+  align-items: center;
+  column-gap: var(--sp-space-5);
+  min-height: 52px;
+  padding-inline: var(--sp-space-4);
+  border: 1px solid transparent;
+  border-top-color: var(--sp-color-surface-game-line);
+  border-radius: var(--sp-radius-sm);
+  transition: border-color var(--sp-motion-duration-quick) var(--sp-motion-ease-settle);
+}
+
+.lp-row:hover {
+  border-color: var(--sp-color-text-on-game-secondary);
+}
+
+.lp-row--you {
+  background-color: var(--sp-color-surface-game-raised);
+  box-shadow: inset 3px 0 0 var(--sp-color-team-you-base);
+}
+
+.lp-row__rank {
+  font-family: var(--lp-font-condensed);
+  font-size: var(--sp-type-title-size);
+  line-height: var(--sp-type-title-line);
+  font-weight: var(--sp-type-score-md-weight);
+  font-stretch: var(--sp-type-score-md-stretch);
+  font-variant-numeric: tabular-nums;
+  color: var(--sp-color-text-on-game-secondary);
+}
+
+.lp-row__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--sp-type-headline-size);
+  line-height: var(--sp-type-headline-line);
+  font-weight: var(--sp-type-headline-weight);
+  color: var(--sp-color-text-on-game-primary);
+}
+
+.lp-row__record {
+  font-size: var(--sp-type-caption-size);
+  line-height: var(--sp-type-caption-line);
+  font-weight: var(--sp-type-caption-weight);
+  font-variant-numeric: tabular-nums;
+  color: var(--sp-color-text-on-game-secondary);
+}
+
+.lp-row__gain {
+  min-width: 88px;
+  text-align: right;
+}
+
+.lp-standings__chyron {
+  margin-top: var(--sp-space-5);
+  margin-inline: var(--sp-space-4);
+}
+
+/* ── The money side ──────────────────────────────────────────────────── */
+.lp-money__grid {
+  display: grid;
+  gap: var(--sp-space-9);
+}
+
+@media (min-width: 1024px) {
+  .lp-money__grid {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    align-items: center;
+    column-gap: var(--sp-space-11);
+  }
+}
+
+.lp-facts {
+  display: grid;
+  gap: var(--sp-space-6);
+  margin-top: var(--sp-space-8);
+}
+
+.lp-facts dt {
+  font-size: var(--sp-type-headline-size);
+  line-height: var(--sp-type-headline-line);
+  font-weight: var(--sp-type-headline-weight);
+}
+
+.lp-facts dd {
+  max-width: 44ch;
+  margin-top: var(--sp-space-2);
+  color: var(--sp-color-text-secondary);
+}
+
+.lp-card {
+  border-radius: var(--sp-radius-lg);
+  padding: var(--sp-space-6);
+}
+
+@media (min-width: 768px) {
+  .lp-card {
+    padding: var(--sp-space-8);
+  }
+}
+
+.lp-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--sp-space-4) var(--sp-space-7);
+}
+
+.lp-card__week {
+  text-align: right;
+}
+
+.lp-card__chart-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-space-5);
+  margin-top: var(--sp-space-7);
+  padding-top: var(--sp-space-6);
+  border-top: 1px solid var(--sp-color-border-default);
+}
+
+.lp-chart {
+  margin-top: var(--sp-space-5);
+}
+
+.lp-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.lp-chart__zero {
+  stroke: var(--sp-color-border-control);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+
+.lp-chart__line {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.lp-chart__line--gain {
+  stroke: var(--sp-color-data-gain-base);
+}
+
+.lp-chart__line--loss {
+  stroke: var(--sp-color-data-loss-base);
+}
+
+.lp-chart__end {
+  fill: var(--sp-color-data-gain-base);
+}
+
+.lp-chart__axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--sp-space-3);
+  color: var(--sp-color-text-secondary);
+  font-size: var(--sp-type-caption-size);
+  line-height: var(--sp-type-caption-line);
+  font-weight: var(--sp-type-caption-weight);
+}
+
+.lp-card__note {
+  margin-top: var(--sp-space-6);
+}
+
+/* ── FAQ ─────────────────────────────────────────────────────────────── */
+.lp-faq__grid {
+  display: grid;
+  gap: var(--sp-space-8);
+}
+
+@media (min-width: 1024px) {
+  .lp-faq__grid {
+    grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+    column-gap: var(--sp-space-11);
+    align-items: start;
+  }
+}
+
+.lp-faq__list {
+  border-top: 1px solid var(--sp-color-border-default);
+}
+
+.lp-faq__item {
+  /* AnimatePresence popLayout positions an outgoing answer absolutely
+     against this box while the questions below slide up. */
+  position: relative;
+  border-bottom: 1px solid var(--sp-color-border-default);
+}
+
+.lp-faq__q {
+  font: inherit;
+}
+
+.lp-faq__button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-space-5);
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: var(--sp-space-6) 0;
+  border: 0;
+  background: none;
+  color: var(--sp-color-text-primary);
+  font-family: var(--lp-font);
+  font-size: var(--sp-type-headline-size);
+  line-height: var(--sp-type-headline-line);
+  font-weight: var(--sp-type-headline-weight);
+  text-align: left;
+  cursor: pointer;
+}
+
+.lp-faq__chevron {
+  flex: none;
+  color: var(--sp-color-text-secondary);
+  transition: transform var(--sp-motion-duration-base) var(--sp-motion-ease-settle);
+}
+
+.lp-faq__button[aria-expanded='true'] .lp-faq__chevron {
+  transform: rotate(180deg);
+}
+
+.lp-faq__panel p {
+  max-width: 62ch;
+  padding-bottom: var(--sp-space-6);
+  color: var(--sp-color-text-secondary);
+}
+
+/* ── Launch band & footer ────────────────────────────────────────────── */
+.lp-launch__band {
+  padding-block: calc(var(--sp-space-11) + var(--sp-space-5));
+}
+
+.lp-launch__inner {
+  display: grid;
+  gap: var(--sp-space-5);
+}
+
+.lp-launch__title {
+  font-family: var(--lp-font-condensed);
+  font-size: clamp(var(--sp-type-score-xl-size), 6.4vw, calc(var(--sp-type-score-xl-size) * 1.6));
+  line-height: var(--sp-type-hero-line);
+  font-weight: var(--sp-type-hero-weight);
+  font-stretch: var(--sp-type-hero-stretch);
+  letter-spacing: var(--sp-type-hero-tracking);
+  color: var(--sp-color-text-on-game-primary);
+}
+
+.lp-launch__promise {
+  max-width: 40ch;
+  font-size: var(--sp-type-headline-size);
+  line-height: 26px;
+  color: var(--sp-color-text-on-game-secondary);
+}
+
+.lp-footer {
+  padding-block: var(--sp-space-9);
+}
+
+.lp-footer__inner {
+  display: grid;
+  gap: var(--sp-space-4);
+}
+
+.lp-brand--static {
+  font-size: var(--sp-type-body-size);
+}
+
+.lp-footer__disclaimer,
+.lp-footer__copy {
+  font-size: var(--sp-type-caption-size);
+  line-height: var(--sp-type-caption-line);
+  font-weight: var(--sp-type-caption-weight);
+  color: var(--sp-color-text-secondary);
+}
+
+@media (min-width: 1024px) {
+  .lp-footer__inner {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: var(--sp-space-8);
+  }
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .lp-press,
+  .lp-nav__links a::after,
+  .lp-step__num,
+  .lp-row,
+  .lp-faq__chevron {
+    transition: none;
+  }
+
+  .lp-press:active {
+    transform: none;
+  }
+}
