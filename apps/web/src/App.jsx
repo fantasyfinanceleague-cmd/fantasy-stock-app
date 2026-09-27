@@ -33,7 +33,9 @@ const AppShell = APP_PAUSED ? null : lazy(() => import("./AppShell"));
 const DesignGallery = import.meta.env.DEV ? lazy(() => import("./design/gallery/DesignGallery")) : null;
 
 function App() {
-  if (DesignGallery && window.location.pathname === "/design") {
+  // typeof guard: this runs during the build-time prerender too (renderToString
+  // in Node, no window). Only a development SSR build ever reaches it.
+  if (DesignGallery && typeof window !== "undefined" && window.location.pathname === "/design") {
     return (
       <Suspense fallback={null}>
         <DesignGallery />
