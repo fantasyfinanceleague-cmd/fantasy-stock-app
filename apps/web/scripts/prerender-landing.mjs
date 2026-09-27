@@ -37,19 +37,30 @@ if (!ssr.APP_PAUSED) {
   if (!/<meta\s+name="description"[\s\S]*?\/>/.test(shell)) fail('no meta description in dist/index.html');
 
   // Paint first, hydrate after. The entry is a module script, so it never
-  // blocks HTML parsing, but if it arrives before the first frame (warm
-  // cache, fast network) its execution still delays that frame. The page is
-  // fully readable without it, so request it from a tiny loader after the
-  // first paint instead: the prerendered text paints on its own, then React
-  // hydrates. One entry script is expected; anything else fails the build.
+  // blocks HTML parsing, but if it runs before the first contentful paint
+  // its execution still delays that paint. The page is fully readable
+  // without it, so request it only once the browser reports
+  // first-contentful-paint (not merely the first frame: with the display
+  // face on font-display: block, early frames can paint before any text
+  // does). Where paint timing isn't reported (unsupported, or a tab that
+  // was hidden during load), a 3-second safety net loads it anyway. One
+  // entry script is expected; anything else fails the build.
   const ENTRY = /<script type="module" crossorigin src="([^"]+)"><\/script>\s*/g;
   const entries = [...shell.matchAll(ENTRY)];
   if (entries.length !== 1) fail(`expected exactly one entry module script, found ${entries.length}`);
   const entrySrc = entries[0][1];
   const loader =
-    '<script>requestAnimationFrame(function () { setTimeout(function () {' +
-    ' var s = document.createElement("script"); s.type = "module"; s.crossOrigin = "";' +
-    ` s.src = ${JSON.stringify(entrySrc)}; document.body.appendChild(s); }, 0); });</script>`;
+    '<script>(function () {' +
+    ' var done = false;' +
+    ' function go() { if (done) return; done = true; var s = document.createElement("script");' +
+    ` s.type = "module"; s.crossOrigin = ""; s.src = ${JSON.stringify(entrySrc)}; document.body.appendChild(s); }` +
+    ' function soon() { requestAnimationFrame(function () { setTimeout(go, 0); }); }' +
+    ' var types = (window.PerformanceObserver && PerformanceObserver.supportedEntryTypes) || [];' +
+    ' if (types.indexOf("paint") === -1) { soon(); return; }' +
+    ' new PerformanceObserver(function (list) { if (list.getEntriesByName("first-contentful-paint").length) soon(); })' +
+    '.observe({ type: "paint", buffered: true });' +
+    ' setTimeout(go, 3000);' +
+    ' })();</script>';
 
   const markup = ssr.render();
   if (!markup || markup.length < 1000) fail(`render() returned ${markup ? markup.length : 0} chars`);
