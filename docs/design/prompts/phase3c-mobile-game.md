@@ -102,5 +102,6 @@ All on `Surface kind="game"` unless noted.
 4. The Friday reveal plays once per matchup-week and never blocks input.
 5. Team colours mark people, gain/loss colours mark money, and nothing swaps.
 6. Motion from tokens, `lively` only here; every reduced-motion row evidenced.
+7. **Bots never pass as real friends:** wherever a bot's display name renders (scoreboards, standings, lineups, This-week cards), show a visible **"Bot" badge / bot avatar treatment**, driven by the `is_bot` flag from ask #2, not by parsing ids. Bot names come from the curated list (≤ 12 chars).
 
 Report your PLAN first and wait for "go".

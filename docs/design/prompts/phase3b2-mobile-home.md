@@ -91,5 +91,6 @@ original intent.
 4. First paint shows no animated numbers; rolls only on change.
 5. Motion from tokens; every reduced-motion row evidenced.
 6. One call on load (ask #1), not N+1 (state the request count in the report).
+7. **Bots never pass as real friends:** wherever a bot's display name renders (scoreboards, standings, lineups, This-week cards), show a visible **"Bot" badge / bot avatar treatment**, driven by the `is_bot` flag from ask #2, not by parsing ids. Bot names come from the curated list (≤ 12 chars).
 
 Report your PLAN first and wait for "go".
