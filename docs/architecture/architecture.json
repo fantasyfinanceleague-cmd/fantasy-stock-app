@@ -2,34 +2,66 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "1ee8a274c2afec27fb0b9b20e956d9560c22b5a6",
-    "commitShort": "1ee8a27",
+    "commit": "c2a44130f8d62f3faadc67c21b3f1216e301799e",
+    "commitShort": "c2a4413",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "fix/mobile-home-pl-partial-basis",
+    "branch": "feat/game-data-asks",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/lib/plCoverage.ts"
+        "path": "apps/mobile/app/login.tsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/lib/useHomeData.ts"
+        "path": "apps/web/src/pages/Login.jsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/tests-deno/plCoverage.test.ts"
+        "path": "supabase/config.toml"
+      },
+      {
+        "code": "A",
+        "path": "supabase/functions/refresh-market-calendar/index.ts"
+      },
+      {
+        "code": "AM",
+        "path": "supabase/functions/refresh-market-calendar/plan.test.ts"
+      },
+      {
+        "code": "AM",
+        "path": "supabase/functions/refresh-market-calendar/plan.ts"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20261005000000_league_activity_view.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20261005000001_signup_username_trigger.sql"
+      },
+      {
+        "code": "AM",
+        "path": "supabase/migrations/20261005000002_market_calendar.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/deferred/20261005000003_schedule_refresh_market_calendar.sql"
+      },
+      {
+        "code": "M",
+        "path": "supabase/migrations/deferred/README.md"
       }
     ],
-    "timestamp": "2026-09-27T04:53:06Z",
-    "sourceHash": "sha256:af11cb5838cce379f0a28e6d475fdfa348e277738763bf758cb51080bc2c02e1",
+    "timestamp": "2026-09-27T05:48:51Z",
+    "sourceHash": "sha256:bc1a4ff4336d2ce33a58312b49360b30f5fd9ecfa4877bb33d3f7ab06cec731c",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1104,
+    "ageHours": 1104.9,
     "ageDays": 46,
     "staleAfterDays": 14,
     "stale": true,
@@ -350,7 +382,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:164",
+        "verifyJwtSource": "supabase/config.toml:176",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -377,7 +409,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:149",
+        "verifyJwtSource": "supabase/config.toml:161",
         "authGuard": null,
         "localModules": [
           "paginate.ts"
@@ -540,7 +572,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:110",
+        "verifyJwtSource": "supabase/config.toml:122",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -565,6 +597,41 @@
       "source": {
         "path": "supabase/functions/record-trade/index.ts",
         "line": 78
+      }
+    },
+    {
+      "layer": "edge",
+      "facts": {
+        "verifyJwt": false,
+        "verifyJwtSource": "supabase/config.toml:103",
+        "authGuard": "apikey header, constant-time, fail-closed",
+        "localModules": [
+          "plan.ts"
+        ],
+        "tests": [
+          "plan.test.ts"
+        ],
+        "envVars": [
+          "ALPACA_API_KEY",
+          "ALPACA_API_SECRET",
+          "SB_SECRET_KEY_CRON",
+          "SB_SECRET_KEY_INTERNAL",
+          "SUPABASE_URL"
+        ],
+        "lines": 160
+      },
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "fn.refresh-market-calendar",
+      "label": "refresh-market-calendar",
+      "sublabel": "verify_jwt=false · apikey guard",
+      "kind": "edge-function",
+      "source": {
+        "path": "supabase/functions/refresh-market-calendar/index.ts",
+        "line": 80
       }
     },
     {
@@ -600,7 +667,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:203",
+        "verifyJwtSource": "supabase/config.toml:215",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -699,7 +766,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:154",
+        "verifyJwtSource": "supabase/config.toml:166",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -727,7 +794,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:159",
+        "verifyJwtSource": "supabase/config.toml:171",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -757,7 +824,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": false,
-        "verifyJwtSource": "supabase/config.toml:191",
+        "verifyJwtSource": "supabase/config.toml:203",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -785,7 +852,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:101",
+        "verifyJwtSource": "supabase/config.toml:113",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -974,6 +1041,25 @@
       "drift": [],
       "annotation": null,
       "verified": true,
+      "id": "mod.refresh-market-calendar/plan",
+      "label": "plan.ts",
+      "sublabel": "refresh-market-calendar",
+      "kind": "edge-module",
+      "source": {
+        "path": "supabase/functions/refresh-market-calendar/plan.ts",
+        "line": 1
+      }
+    },
+    {
+      "layer": "module",
+      "facts": {
+        "hasTests": true
+      },
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
       "id": "mod.snapshot-week-end/close",
       "label": "close.ts",
       "sublabel": "snapshot-week-end",
@@ -1000,6 +1086,37 @@
       "source": {
         "path": "supabase/functions/snapshot-week-start/plan.ts",
         "line": 1
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261005000002_market_calendar.sql:96"
+        ],
+        "latestDefinition": "supabase/migrations/20261005000002_market_calendar.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.apply_market_calendar",
+      "label": "apply_market_calendar()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261005000002_market_calendar.sql",
+        "line": 96
       }
     },
     {
@@ -1295,6 +1412,37 @@
     {
       "layer": "db",
       "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261005000001_signup_username_trigger.sql:46"
+        ],
+        "latestDefinition": "supabase/migrations/20261005000001_signup_username_trigger.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.handle_new_user_profile",
+      "label": "handle_new_user_profile()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261005000001_signup_username_trigger.sql",
+        "line": 46
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
       "db": {
         "securityDefiner": true,
         "searchPath": "public",
@@ -1449,6 +1597,37 @@
       "source": {
         "path": "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql",
         "line": 33
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261005000002_market_calendar.sql:160"
+        ],
+        "latestDefinition": "supabase/migrations/20261005000002_market_calendar.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.market_session_status",
+      "label": "market_session_status()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261005000002_market_calendar.sql",
+        "line": 160
       }
     },
     {
@@ -2681,6 +2860,50 @@
       "source": {
         "path": "supabase/migrations/20250818225829_create_leagues.sql",
         "line": 3
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "touchedBy": [
+          "supabase/migrations/20261005000002_market_calendar.sql"
+        ],
+        "rlsEnabled": true
+      },
+      "drift": [],
+      "annotation": null,
+      "verified": false,
+      "id": "tbl.market_calendar",
+      "label": "market_calendar",
+      "sublabel": "not in snapshot",
+      "kind": "table",
+      "source": {
+        "path": "supabase/migrations/20261005000002_market_calendar.sql",
+        "line": 29
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "touchedBy": [
+          "supabase/migrations/20261005000002_market_calendar.sql"
+        ],
+        "rlsEnabled": true
+      },
+      "drift": [],
+      "annotation": null,
+      "verified": false,
+      "id": "tbl.market_calendar_coverage",
+      "label": "market_calendar_coverage",
+      "sublabel": "not in snapshot",
+      "kind": "table",
+      "source": {
+        "path": "supabase/migrations/20261005000002_market_calendar.sql",
+        "line": 42
       }
     },
     {
@@ -4577,6 +4800,42 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.fn.refresh-market-calendar->ext.alpaca-trading",
+      "from": "fn.refresh-market-calendar",
+      "to": "ext.alpaca-trading",
+      "protocol": "vendor-https",
+      "payload": "https://paper-api.alpaca.markets/v2",
+      "callSites": [
+        "supabase/functions/refresh-market-calendar/index.ts:64"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.refresh-market-calendar->mod.refresh-market-calendar/plan",
+      "from": "fn.refresh-market-calendar",
+      "to": "mod.refresh-market-calendar/plan",
+      "protocol": "esm-import",
+      "payload": "import from './plan.ts'",
+      "callSites": [
+        "supabase/functions/refresh-market-calendar/index.ts"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.refresh-market-calendar->pg.apply_market_calendar",
+      "from": "fn.refresh-market-calendar",
+      "to": "pg.apply_market_calendar",
+      "protocol": "postgrest-rpc",
+      "payload": "rpc('apply_market_calendar')",
+      "callSites": [
+        "supabase/functions/refresh-market-calendar/index.ts:148"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.fn.refresh-symbols->ext.nasdaqtrader",
       "from": "fn.refresh-symbols",
       "to": "ext.nasdaqtrader",
@@ -5169,6 +5428,58 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.pg.apply_market_calendar->tbl.market_calendar",
+      "from": "pg.apply_market_calendar",
+      "to": "tbl.market_calendar",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT market_calendar (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261005000002_market_calendar.sql:118"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.apply_market_calendar->tbl.market_calendar_coverage#insert",
+      "from": "pg.apply_market_calendar",
+      "to": "tbl.market_calendar_coverage",
+      "protocol": "plpgsql-insert",
+      "payload": "INSERT market_calendar_coverage (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261005000002_market_calendar.sql:128"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.apply_market_calendar->tbl.market_calendar#delete",
+      "from": "pg.apply_market_calendar",
+      "to": "tbl.market_calendar",
+      "protocol": "plpgsql-delete",
+      "payload": "DELETE market_calendar (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261005000002_market_calendar.sql:118"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.apply_market_calendar->tbl.market_calendar#insert",
+      "from": "pg.apply_market_calendar",
+      "to": "tbl.market_calendar",
+      "protocol": "plpgsql-insert",
+      "payload": "INSERT market_calendar (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261005000002_market_calendar.sql:121"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.pg.check_and_bump_rate_limit->tbl.rate_limit_counters#insert",
       "from": "pg.check_and_bump_rate_limit",
       "to": "tbl.rate_limit_counters",
@@ -5352,6 +5663,20 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.pg.handle_new_user_profile->tbl.user_profiles#insert",
+      "from": "pg.handle_new_user_profile",
+      "to": "tbl.user_profiles",
+      "protocol": "plpgsql-insert",
+      "payload": "INSERT user_profiles (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261005000001_signup_username_trigger.sql:60",
+        "supabase/migrations/20261005000001_signup_username_trigger.sql:69"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.pg.is_commissioner->tbl.leagues",
       "from": "pg.is_commissioner",
       "to": "tbl.leagues",
@@ -5449,6 +5774,33 @@
         "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql:42",
         "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql:48",
         "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql:57"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.market_session_status->tbl.market_calendar",
+      "from": "pg.market_session_status",
+      "to": "tbl.market_calendar",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT market_calendar (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261005000002_market_calendar.sql:191",
+        "supabase/migrations/20261005000002_market_calendar.sql:217"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.market_session_status->tbl.market_calendar_coverage",
+      "from": "pg.market_session_status",
+      "to": "tbl.market_calendar_coverage",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT market_calendar_coverage (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261005000002_market_calendar.sql:174"
       ]
     },
     {
@@ -5603,6 +5955,19 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20251230200000_add_standings_update_function.sql:5"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.tbl.auth->pg.handle_new_user_profile",
+      "from": "tbl.auth",
+      "to": "pg.handle_new_user_profile",
+      "protocol": "pg-trigger",
+      "payload": "trigger on auth",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261005000001_signup_username_trigger.sql:88"
       ]
     },
     {
@@ -6287,7 +6652,7 @@
       "payload": ".from('user_profiles').upsert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/login.tsx:72"
+        "apps/mobile/app/login.tsx:85"
       ]
     },
     {
@@ -7049,7 +7414,7 @@
       "payload": ".from('user_profiles').upsert()",
       "columns": [],
       "callSites": [
-        "apps/web/src/pages/Login.jsx:110"
+        "apps/web/src/pages/Login.jsx:120"
       ]
     },
     {
@@ -8219,6 +8584,16 @@
   ],
   "drift": [
     {
+      "node": "pg.apply_market_calendar",
+      "label": "apply_market_calendar()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
       "node": "pg.enforce_leagues_member_update_columns",
       "label": "enforce_leagues_member_update_columns()",
       "groupKey": "existence",
@@ -8231,6 +8606,26 @@
     {
       "node": "pg.finalize_league_draft",
       "label": "finalize_league_draft()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.handle_new_user_profile",
+      "label": "handle_new_user_profile()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.market_session_status",
+      "label": "market_session_status()",
       "groupKey": "existence",
       "field": "existence",
       "declared": "created by migration",
@@ -8441,6 +8836,29 @@
   ],
   "deadCode": [
     {
+      "node": "fn.refresh-market-calendar",
+      "label": "refresh-market-calendar",
+      "kind": "edge-function",
+      "source": "supabase/functions/refresh-market-calendar/index.ts:80",
+      "outbound": [
+        "ext.alpaca-trading",
+        "mod.refresh-market-calendar/plan",
+        "pg.apply_market_calendar"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "pg.market_session_status",
+      "label": "market_session_status()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261005000002_market_calendar.sql:160",
+      "outbound": [
+        "tbl.market_calendar",
+        "tbl.market_calendar_coverage"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
       "node": "pg.restrict_new_signups",
       "label": "restrict_new_signups()",
       "kind": "pg-function",
@@ -8554,6 +8972,24 @@
       "resolve": "Re-capture the snapshot, or confirm the migration was applied."
     },
     {
+      "scope": "pg.handle_new_user_profile",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.apply_market_calendar",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.market_session_status",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
       "scope": "tbl.broker_credentials",
       "claim": "table exists in prod",
       "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
@@ -8578,6 +9014,18 @@
       "resolve": "Re-capture the snapshot."
     },
     {
+      "scope": "tbl.market_calendar",
+      "claim": "table exists in prod",
+      "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot."
+    },
+    {
+      "scope": "tbl.market_calendar_coverage",
+      "claim": "table exists in prod",
+      "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot."
+    },
+    {
       "scope": "tbl.push_tokens",
       "claim": "table exists in prod",
       "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
@@ -8592,13 +9040,13 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 120,
-    "edges": 263,
+    "nodes": 127,
+    "edges": 274,
     "flows": 8,
-    "drift": 22,
-    "driftHigh": 4,
-    "deadCode": 11,
-    "unverified": 9
+    "drift": 25,
+    "driftHigh": 7,
+    "deadCode": 13,
+    "unverified": 14
   },
   "sourceIndex": {
     "edgeFunctions": [
@@ -8611,6 +9059,7 @@
       "process-week-results[grouping.ts,job-status.ts,playoff-progression.ts,scoring-eligibility.ts]",
       "quote[]",
       "record-trade[]",
+      "refresh-market-calendar[plan.ts]",
       "refresh-symbols[]",
       "send-notification[]",
       "snapshot-week-end[close.ts]",
@@ -8672,6 +9121,7 @@
       "supabase/functions/process-week-results/index.ts:800 -> complete_league_season",
       "supabase/functions/record-trade/index.ts:66 -> check_and_bump_rate_limit",
       "supabase/functions/record-trade/index.ts:69 -> check_and_bump_rate_limit",
+      "supabase/functions/refresh-market-calendar/index.ts:148 -> apply_market_calendar",
       "supabase/functions/send-notification/index.ts:101 -> check_and_bump_rate_limit",
       "supabase/functions/send-notification/index.ts:104 -> check_and_bump_rate_limit",
       "supabase/functions/snapshot-week-end/index.ts:100 -> schedule_snapshot_retry",
@@ -8708,7 +9158,7 @@
       "apps/mobile/app/create-league.tsx:125 -> leagues.insert",
       "apps/mobile/app/create-league.tsx:151 -> league_members.insert",
       "apps/mobile/app/league-settings.tsx:137 -> leagues.update",
-      "apps/mobile/app/login.tsx:72 -> user_profiles.upsert",
+      "apps/mobile/app/login.tsx:85 -> user_profiles.upsert",
       "apps/mobile/app/player-portfolio.tsx:123 -> user_profiles.select",
       "apps/mobile/app/player-portfolio.tsx:135 -> drafts.select",
       "apps/mobile/app/player-portfolio.tsx:142 -> trades.select",
@@ -8781,7 +9231,7 @@
       "apps/web/src/pages/LeagueDetail.jsx:45 -> league_members.select",
       "apps/web/src/pages/LeagueDetail.jsx:60 -> league_standings.select",
       "apps/web/src/pages/Leagues.jsx:135 -> league_draft_slots.select",
-      "apps/web/src/pages/Login.jsx:110 -> user_profiles.upsert",
+      "apps/web/src/pages/Login.jsx:120 -> user_profiles.upsert",
       "apps/web/src/pages/Matchup.jsx:113 -> league_members.select",
       "apps/web/src/pages/Matchup.jsx:125 -> leagues.select",
       "apps/web/src/pages/Matchup.jsx:151 -> drafts.select",
@@ -8972,7 +9422,10 @@
       "20260928000000_symbols_price_unsupported_column.sql",
       "20260930000000_join_league_refuse_mid_draft.sql",
       "20261001000000_narrow_league_members_insert_self.sql",
-      "20261002000000_drop_client_schedule_insert_policies.sql"
+      "20261002000000_drop_client_schedule_insert_policies.sql",
+      "20261005000000_league_activity_view.sql",
+      "20261005000001_signup_username_trigger.sql",
+      "20261005000002_market_calendar.sql"
     ],
     "config": [
       "draft-control=true",
@@ -8984,6 +9437,7 @@
       "process-week-results=false",
       "quote=true",
       "record-trade=true",
+      "refresh-market-calendar=false",
       "refresh-symbols=false",
       "send-notification=true",
       "snapshot-week-end=false",
