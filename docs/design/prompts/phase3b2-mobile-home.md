@@ -1,8 +1,9 @@
 # Phase 3b-2 worker prompt — Mobile Home dashboard (`ui/mobile-home`)
 
 > Drafted by Design Lead, 2026-09-26. Starts after **3b-1 merges** **and**
-> backend asks **#1** (Home summary RPC), **#2** (display names) and **#3**
-> (daily value + per-day cost basis + realized series) have landed. This is
+> backend asks **#1** (Home summary RPC) and **#2** (display names) have
+> landed. Ask **#3 is already met on the client** (`buildPLSeries` /
+> `windowPL`, PR #37). This is
 > the "architectural rebuild" from `STOCKPILE_UI_OVERHAUL.md`; CLAUDE.md
 > notes it's the one job that may justify Fable (session-scoped, not
 > security-adjacent). Otherwise plan on Opus, build on Sonnet.
@@ -39,8 +40,13 @@ original intent.
    "joined <league>". Window control: `SegmentedControl` 1W · 1M · Season · All.
    Scrub-to-inspect (press and drag shows the date and gain; light haptic at data
    points). Draws once on first view (`feature`); window changes morph (`base`).
-   Data from ask #3. **If #3 isn't ready, STOP and report BLOCKED. Do not
-   ship a value line as a stopgap.**
+   **Data:** `buildPLSeries` in `apps/mobile/lib/plCoverage.ts` (PR #37) already
+   yields per-day `value`, `cost`, `pl` (value − cost), `realized` and `invested`.
+   Plot **`pl + realized`**, rebased to 0 at the window start, and take the
+   hero's window gain from **`windowPL(start, end)`**, the function the current
+   `PerformanceChart` uses, so the chart and the hero share one source. Extend
+   these helpers rather than re-deriving the numbers; add deno tests for anything new.
+   **Never plot `value`.**
 4. **"This week" strip:** a horizontal row of **game-surface** mini
    scoreboards, one per league in `live_open` / `live_closed` / `week_final`
    (from ask #1): league name + week, **both display names** (ask #2), both dollar
@@ -65,8 +71,9 @@ original intent.
 
 ## Verify, then report DONE
 
-- tsc / lint / deno tests (+ tests for the cumulative-gain transform: a deposit
-  produces no jump; a realized gain persists after a sell).
+- tsc / lint / deno tests (+ tests for the cumulative-gain transform built on
+  `buildPLSeries`: a deposit (draft/buy) produces **no jump**; a realized gain
+  persists after a sell; the window's final point equals `windowPL`).
 - **Device capture** in the populated account (Giorgio signs in): Home on each
   window; the strip with ≥ 2 live leagues and 1 pre-season league; chart
   scrub mid-drag; an empty account; XL Dynamic Type; **iPhone 17e**.

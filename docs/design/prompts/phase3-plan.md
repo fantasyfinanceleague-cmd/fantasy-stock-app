@@ -12,7 +12,7 @@
 The Orchestrator's suggested order stands, with **two adjustments**:
 
 1. **3b is split** into **3b-1 Shell + first run** (no backend blockers) and
-   **3b-2 Home dashboard** (blocked by asks #1–#3). 3b-1 can start the moment
+   **3b-2 Home dashboard** (blocked by asks #1–#2). 3b-1 can start the moment
    the mobile foundation merges, instead of waiting on the backend.
 2. **A new 3e, Money screens** (Portfolio, stock-detail sheet, trade flow,
    history). The Portfolio and trade surfaces had no owner in the list, and
@@ -22,7 +22,7 @@ The Orchestrator's suggested order stands, with **two adjustments**:
 |---|---|---|---|---|
 | 1 | **3a** | Web landing: the showpiece, **live on merge** | **Now** (web foundation merged, PR #35) | `phase3a-landing.md` |
 | 2 | **3b-1** | Mobile shell + first run: nav, league pill/sheet, auth, onboarding, empty states, profile | When `ui/foundation-mobile` merges | `phase3b1-mobile-shell.md` |
-| 3 | **3b-2** | Mobile Home dashboard | After 3b-1, **and** asks #1, #2, #3 | `phase3b2-mobile-home.md` |
+| 3 | **3b-2** | Mobile Home dashboard | After 3b-1, **and** asks #1, #2 (#3 already met on the client, PR #37) | `phase3b2-mobile-home.md` |
 | 4 | **3c** | Mobile competitive screens: Matchup, Friday reveal, League/standings, Draft room | After 3b-1; ask #2 blocks, #7 blocks one state | `phase3c-mobile-game.md` |
 | 5 | **3e** | Mobile money screens: Portfolio, stock sheet, trade, history | After 3b-1; ask #5 blocks history only | `phase3e-mobile-money.md` |
 | 6 | **3d** | Web app pages (still paused) | After 3c/3e settle the patterns | `phase3d-web-app.md` |
@@ -40,7 +40,7 @@ DESIGN_DIRECTION §7, with #9–#11 added here.
 |---|---|---|---|---|
 | **1** | **Home summary RPC**: one call returning, per league, the phase, rank, record, and this week's matchup (both display names, both dollar gains) | **3b-2** | 3d (web dashboard) | Removes N+1 reads on Home |
 | **2** | **Opponent display names** on matchup/standings reads (today "Opponent --", bots as truncated ids) | **3b-2, 3c** | 3d | Includes a display name for bots |
-| **3** | **Daily value + per-day cost basis (+ realized P/L) series** per user per league | **3b-2** (cumulative-gain chart, PR #38) | 3e (position chart), 3d | Without it the chart can't be honest; 3b-2 must not ship a value line as a stopgap |
+| 3 | Daily value + per-day cost basis (+ realized P/L) series | **✅ MET on the client**: `buildPLSeries` + `windowPL` in `apps/mobile/lib/plCoverage.ts` (PR #37, merged), fed by paginated historical bars (PR #29, deployed). Cumulative gain = `pl + realized` (= value − cost + realized) | 3e (position chart), 3d (port the same logic) | No backend work needed |
 | 4 | Intraday value samples per matchup participant | — | 3c (a "momentum" sparkline) | Direction B needs current values only |
 | **5** | Trade-history view that **unions draft picks with trades** (text/uuid + numeric casts per CLAUDE.md) | **3e** (history screen) | 3d | |
 | **6** | Username captured at signup is persisted (Home greeted "Trader") | **3b-1** (first-run greeting, profile) | — | Verify first; may be a client-only fix |
@@ -50,7 +50,7 @@ DESIGN_DIRECTION §7, with #9–#11 added here.
 | 10 | Weekly **scoring status** per league-week (scoring / final) readable by members | — | 3c (Friday reveal "Scoring…" state) | Could derive from `team1_gain` being non-null; a status row is cleaner |
 | 11 | Season result per member (champion / runner-up / final rank) | — | 3c (`season_complete` state; fixes the unexplained "Runner-Up" banner) | |
 
-**Start first:** #2 and #3 (they block the most), then #1, #7, #9, #5, #6.
+**Start first:** #2 and #1 (they block 3b-2 and 3c), then #7, #9, #5, #6. #3 is already met (PR #37).
 
 ## Shared rules for every Phase 3 worker
 
