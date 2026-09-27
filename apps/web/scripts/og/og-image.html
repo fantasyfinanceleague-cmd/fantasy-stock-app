@@ -6,13 +6,15 @@
      screenshotting this file at 1200×630, device scale 1, after fonts load. -->
 <html><head><meta charset="utf-8">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=block">
+<style>@font-face { font-family: "Archivo Display"; src: url("../../public/fonts/archivo/archivo-condensed-black-latin.woff2") format("woff2"); font-weight: 900; font-stretch: 62%; }</style>
 <link rel="stylesheet" href="../../src/styles/tokens.css">
 <style>
   * { box-sizing: border-box; margin: 0; }
   html, body { width: 1200px; height: 630px; overflow: hidden; }
   body { background: var(--sp-color-bg-app); font-family: 'Archivo', sans-serif; color: var(--sp-color-text-primary); display: grid; grid-template-rows: auto 1fr; }
   .top { padding: 56px 64px 40px; display: flex; align-items: flex-end; justify-content: space-between; gap: 40px; }
-  h1 { font-size: 88px; line-height: 0.92; font-weight: 900; font-stretch: 62%; letter-spacing: -0.01em; }
+  h1, .score { font-family: 'Archivo Display', 'Archivo', sans-serif; }
+  h1 { font-size: 88px; line-height: var(--sp-type-hero-line); font-weight: 900; font-stretch: 62%; letter-spacing: var(--sp-type-hero-tracking); word-spacing: var(--sp-type-hero-word-spacing); }
   .mark { align-self: flex-start; }
   .band { background: var(--sp-color-surface-game-base); color: var(--sp-color-text-on-game-primary); padding: 32px 64px 36px; display: grid; gap: 16px; }
   .tag { font-size: 14px; line-height: 18px; font-weight: 800; font-stretch: 125%; letter-spacing: 0.04em; text-transform: uppercase; color: var(--sp-color-text-on-game-secondary); }
@@ -27,6 +29,7 @@
   .tug { height: 14px; border-radius: 99px; overflow: hidden; display: flex; margin-bottom: 32px; background: var(--sp-color-surface-game-line); }
   .tug .y { width: 52.6%; background: var(--sp-color-team-you-base); }
   .tug .o { flex: 1; background: var(--sp-color-team-opponent); }
+  .band .score { word-spacing: var(--sp-type-hero-word-spacing); }
   .lead { text-align: center; font-size: 18px; color: var(--sp-color-text-on-game-secondary); }
   .lead b { color: var(--sp-color-text-on-game-primary); font-weight: 600; }
 </style></head>

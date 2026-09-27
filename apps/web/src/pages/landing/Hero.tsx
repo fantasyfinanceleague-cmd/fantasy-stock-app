@@ -6,8 +6,13 @@ import { MatchBoard } from './MatchBoard';
 import { Ticker } from './Ticker';
 import { useLandingMotion } from './hooks';
 import { HERO } from './sampleData';
+import { displayFontReady } from './head';
 
 type Phase = 'kickoff' | 'counting' | 'settled';
+
+/** Longest the sequence waits for the display face before running anyway
+ * (Design Lead, phase 3a review). A load-gating cap, not an animation. */
+const FONT_WAIT_MS = 600;
 
 /** Milliseconds left on the CSS band wipe (landing.css `lp-band-wipe`,
  * `slow`), read from the running animation itself. The wipe starts at
@@ -48,18 +53,29 @@ function HeroScoreboard() {
       return;
     }
     const ms = (s: number) => s * 1000;
-    const start = msUntilWipeEnds(document.querySelector('.lp-band'));
-    const timers = [
-      window.setTimeout(() => setPhase('counting'), start),
-      // The bar follows the count's opening beat; spring.lively settles
-      // in ~0.6s, inside the count's `feature` window.
-      window.setTimeout(() => setTugLive(true), start + ms(duration.quick)),
-      window.setTimeout(() => setPhase('settled'), start + ms(duration.feature)),
-      // The chyron starts sliding as the count lands, so the whole
-      // sequence is wipe + feature + base − quick ≈ 1.16s after first paint.
-      window.setTimeout(() => setChyron(HERO.chyron), start + ms(duration.feature - duration.quick)),
-    ];
+    // The count renders in the display face, so it waits for that face as
+    // well as for the band wipe: whichever finishes later. The font wait is
+    // capped (FONT_WAIT_MS) so a slow font never holds the sequence back.
+    const wipeLeft = msUntilWipeEnds(document.querySelector('.lp-band'));
+    const t0 = performance.now();
+    let cancelled = false;
+    let timers: number[] = [];
+    displayFontReady(FONT_WAIT_MS).then(() => {
+      if (cancelled) return;
+      const start = Math.max(0, wipeLeft - (performance.now() - t0));
+      timers = [
+        window.setTimeout(() => setPhase('counting'), start),
+        // The bar follows the count's opening beat; spring.lively settles
+        // in ~0.6s, inside the count's `feature` window.
+        window.setTimeout(() => setTugLive(true), start + ms(duration.quick)),
+        window.setTimeout(() => setPhase('settled'), start + ms(duration.feature)),
+        // The chyron starts sliding as the count lands, so the whole
+        // sequence is wipe + feature + base − quick ≈ 1.16s after first paint.
+        window.setTimeout(() => setChyron(HERO.chyron), start + ms(duration.feature - duration.quick)),
+      ];
+    });
     return () => {
+      cancelled = true;
       timers.forEach(window.clearTimeout);
       startedRef.current = false;
     };
@@ -79,7 +95,14 @@ function HeroScoreboard() {
       oppName={HERO.opponent.name}
       youScore={<CountUp from={0} to={HERO.you.gain} run={running} instant={reduced} className="lp-board__score" />}
       oppScore={
-        <CountUp from={0} to={HERO.opponent.gain} run={running} instant={reduced} align="end" className="lp-board__score" />
+        <CountUp
+          from={0}
+          to={HERO.opponent.gain}
+          run={running}
+          instant={reduced}
+          align="end"
+          className="lp-board__score"
+        />
       }
       tugYou={you}
       tugOpp={opp}

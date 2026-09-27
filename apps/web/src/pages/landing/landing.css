@@ -36,6 +36,25 @@
   line-gap-override: 0%;
 }
 
+/* The display face: Archivo at wdth 62 / wght 900, self-hosted as an
+   11.6 KB Latin subset (public/fonts/archivo/README.md) and preloaded from
+   the prerendered HTML. Everything in the condensed family (headline,
+   section titles, scores) uses only this cut. `block` rather than `swap`:
+   with the preload it arrives alongside the CSS, so the first VISIBLE frame
+   of the headline is already condensed and the hero count-up never swaps
+   faces mid-sequence (Design Lead, phase 3a review). The browser caps the
+   block period at ~3s, after which the tuned fallback below shows. */
+@font-face {
+  font-family: 'Archivo Display';
+  src: url('/fonts/archivo/archivo-condensed-black-latin.woff2') format('woff2');
+  font-weight: 900;
+  font-stretch: 62%;
+  font-style: normal;
+  font-display: block;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 /* The page background behind the root (overscroll, short pages). Scoped
    with :has() so it only applies while the landing is mounted. */
 body:has(> #root > .lp) {
@@ -46,12 +65,19 @@ body:has(> #root > .lp) {
 .lp {
   --lp-font: 'Archivo', 'Archivo Fallback', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica,
     Arial, sans-serif;
-  --lp-font-condensed: 'Archivo', 'Archivo Condensed Fallback', 'Archivo Fallback', ui-sans-serif, system-ui,
-    sans-serif;
+  --lp-font-condensed: 'Archivo Display', 'Archivo', 'Archivo Condensed Fallback', 'Archivo Fallback', ui-sans-serif,
+    system-ui, sans-serif;
   /* Primitives read --sp-type-family; give them the tuned fallback too. */
   --sp-type-family: var(--lp-font);
   --lp-gutter: var(--sp-space-6);
   --lp-section-gap: calc(var(--sp-space-11) + var(--sp-space-5));
+  /* Display sizes for the hero family below the headline, derived from the
+     score tokens (Design Lead-approved landing calls, phase 3a). */
+  --lp-h2-size: clamp(var(--sp-type-score-lg-size), 5.2vw, calc(var(--sp-type-score-xl-size) * 1.25));
+  --lp-launch-title-size: clamp(var(--sp-type-score-xl-size), 6.4vw, calc(var(--sp-type-score-xl-size) * 1.6));
+  /* Ticker loop length: content pacing (a reading speed of ~40px/s across
+     the doubled list), not an animation duration, so not a motion token. */
+  --lp-ticker-loop: 64s;
 
   min-height: 100vh;
   background-color: var(--sp-color-bg-app);
@@ -250,6 +276,7 @@ body:has(> #root > .lp) {
   font-weight: var(--sp-type-hero-weight);
   font-stretch: var(--sp-type-hero-stretch);
   letter-spacing: var(--sp-type-hero-tracking);
+  word-spacing: var(--sp-type-hero-word-spacing);
   color: var(--sp-color-text-primary);
 }
 
@@ -544,6 +571,10 @@ body:has(> #root > .lp) {
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
+  /* Items fade out at the edges instead of leaving a clipped fragment
+     beside the pause control. A mask is alpha only — no colour. */
+  -webkit-mask-image: linear-gradient(to right, transparent, black var(--sp-space-8), black calc(100% - var(--sp-space-8)), transparent);
+  mask-image: linear-gradient(to right, transparent, black var(--sp-space-8), black calc(100% - var(--sp-space-8)), transparent);
 }
 
 .lp-ticker__viewport::-webkit-scrollbar {
@@ -557,8 +588,7 @@ body:has(> #root > .lp) {
 .lp-ticker__track {
   display: flex;
   width: max-content;
-  /* Content pacing (reading speed), not a motion token: ~40px/s. */
-  animation: lp-ticker-loop 64s linear infinite;
+  animation: lp-ticker-loop var(--lp-ticker-loop) linear infinite;
 }
 
 .lp-ticker__list {
@@ -615,11 +645,12 @@ body:has(> #root > .lp) {
 
 .lp-h2 {
   font-family: var(--lp-font-condensed);
-  font-size: clamp(var(--sp-type-score-lg-size), 5.2vw, calc(var(--sp-type-score-xl-size) * 1.25));
+  font-size: var(--lp-h2-size);
   line-height: var(--sp-type-hero-line);
   font-weight: var(--sp-type-hero-weight);
   font-stretch: var(--sp-type-hero-stretch);
   letter-spacing: var(--sp-type-hero-tracking);
+  word-spacing: var(--sp-type-hero-word-spacing);
   color: var(--sp-color-text-primary);
 }
 
@@ -814,6 +845,7 @@ body:has(> #root > .lp) {
 
 .lp-panel__final-line {
   font-family: var(--lp-font-condensed);
+  word-spacing: var(--sp-type-hero-word-spacing);
   font-size: var(--sp-type-score-lg-size);
   line-height: var(--sp-type-score-lg-line);
   font-weight: var(--sp-type-score-lg-weight);
@@ -1161,11 +1193,12 @@ body:has(> #root > .lp) {
 
 .lp-launch__title {
   font-family: var(--lp-font-condensed);
-  font-size: clamp(var(--sp-type-score-xl-size), 6.4vw, calc(var(--sp-type-score-xl-size) * 1.6));
+  font-size: var(--lp-launch-title-size);
   line-height: var(--sp-type-hero-line);
   font-weight: var(--sp-type-hero-weight);
   font-stretch: var(--sp-type-hero-stretch);
   letter-spacing: var(--sp-type-hero-tracking);
+  word-spacing: var(--sp-type-hero-word-spacing);
   color: var(--sp-color-text-on-game-primary);
 }
 

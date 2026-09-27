@@ -11,6 +11,12 @@ import { color } from '../../design/tokens';
  * URL; update this with the domain if it changes. */
 export const SITE_ORIGIN = 'https://fantasy-stock-app.vercel.app';
 
+/** The self-hosted display face (wdth 62 / wght 900 Latin subset, see
+ * public/fonts/archivo/README.md). landing.css declares it as
+ * 'Archivo Display'; the prerendered HTML preloads it (`preload` below). */
+export const DISPLAY_FONT_URL = '/fonts/archivo/archivo-condensed-black-latin.woff2';
+export const DISPLAY_FONT_FAMILY = 'Archivo Display';
+
 export const ARCHIVO_STYLESHEET =
   'https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap';
 
@@ -18,6 +24,9 @@ export const ARCHIVO_STYLESHEET =
  * (paused builds only). Title and description derive from `brand.name`,
  * so the product name stays one swappable token. */
 export const landingHead = {
+  /** Goes first in <head>, so the display face is requested alongside the
+   * page CSS rather than after it. */
+  preload: `<link rel="preload" href="${DISPLAY_FONT_URL}" as="font" type="font/woff2" crossorigin />`,
   title: `${brand.name}: fantasy leagues for the stock market`,
   description: `${brand.name} is a fantasy league for the stock market. Draft real stocks, face one friend each week, and win on dollar gain at Friday's close. Launching soon.`,
   tags: [
@@ -39,6 +48,20 @@ export const landingHead = {
     '<meta name="twitter:card" content="summary_large_image" />',
   ],
 };
+
+/** Resolves when the display face is ready, or after `timeoutMs` —
+ * whichever comes first. The hero sequence waits on this so its count-up
+ * never swaps faces mid-count, but never waits longer than the timeout
+ * (Design Lead: wait about 600 milliseconds, then run the sequence anyway). */
+export function displayFontReady(timeoutMs: number): Promise<void> {
+  if (typeof document === 'undefined' || !document.fonts?.load) return Promise.resolve();
+  const loaded = document.fonts.load(`900 56px "${DISPLAY_FONT_FAMILY}"`).then(
+    () => undefined,
+    () => undefined,
+  );
+  const timeout = new Promise<void>((resolve) => window.setTimeout(resolve, timeoutMs));
+  return Promise.race([loaded, timeout]);
+}
 
 /** Client-side fallback for when the page wasn't prerendered (vite dev, or
  * the unpaused app's Home route rendering the landing): add the same

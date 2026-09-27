@@ -56,7 +56,10 @@ if (!ssr.APP_PAUSED) {
 
   const head = ssr.landingHead;
   const escapeAttr = (s) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  const VIEWPORT = /<meta name="viewport"[^>]*>/;
+  if (!VIEWPORT.test(shell)) fail('no viewport meta in dist/index.html');
   const html = shell
+    .replace(VIEWPORT, (m) => `${m}\n    ${head.preload}`)
     .replace(/<title>[^<]*<\/title>/, `<title>${escapeAttr(head.title)}</title>`)
     .replace(
       /<meta\s+name="description"[\s\S]*?\/>/,
