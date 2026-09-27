@@ -148,6 +148,12 @@ function RootLayoutNav() {
           <Stack.Screen name="login" />
           <Stack.Screen name="forgot-password" options={HIDDEN_HEADER_MODAL} />
           <Stack.Screen name="reset-password" options={HIDDEN_HEADER_FULLSCREEN} />
+          {/* DEV-ONLY (Phase 2 foundation): this Stack is otherwise limited to
+              auth screens, so design-gallery.tsx (which needs no sign-in) is
+              unreachable while signed out unless explicitly registered here.
+              design-gallery.tsx's own !__DEV__ redirect is the belt to this
+              suspenders — either one alone keeps it out of a release build. */}
+          {__DEV__ && <Stack.Screen name="design-gallery" options={HIDDEN_HEADER} />}
         </Stack>
       </ThemeProvider>
     );
@@ -158,6 +164,10 @@ function RootLayoutNav() {
     <ThemeProvider value={DefaultTheme}>
       <StatusBar style="dark" />
       <LeagueProvider>
+        {/* design-gallery.tsx (Phase 2 foundation, dev-only) is NOT listed
+            here: expo-router auto-appends unlisted file routes to whatever
+            Stack mounts, so it's already implicitly reachable in this
+            authenticated tree. It redirects itself when !__DEV__. */}
         <Stack>
           <Stack.Screen name="(tabs)" options={HIDDEN_HEADER} />
           <Stack.Screen name="login" options={HIDDEN_HEADER} />
