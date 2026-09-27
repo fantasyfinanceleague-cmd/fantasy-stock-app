@@ -680,10 +680,14 @@ the lockups, the app icon at 60/40/29 and the favicon at actual 16px.
 
 ---
 
-# Decision: Stockade — CONFIRMED (2026-09-26)
+# Stockade: front-runner (on hold) (2026-09-26)
 
-**Giorgio confirmed "Stockade."** Primary mark: **A · Palisade** (D.4).
-Production assets: `docs/design/brand/stockade/` (see its README for usage).
+**Status: front-runner and benchmark, NOT final.** Giorgio briefly confirmed
+"Stockade" and then **paused** the confirmation to see one more round (Round 4:
+names without "stock"). If Stockade wins, the primary mark is **A · Palisade**
+(D.4). Production assets were drafted in `docs/design/brand/stockade/` just
+before the hold; they are **on hold and must not be wired in** until the name
+is final.
 
 > Still an **informal record, not legal clearance.** The searches below were
 > run by the Orchestrator in the browser at tmsearch.uspto.gov on 2026-09-26
