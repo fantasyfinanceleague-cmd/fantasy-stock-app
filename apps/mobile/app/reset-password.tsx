@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -15,25 +15,29 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
+import { resetScreenState, RESET_VERIFY_TIMEOUT_MS } from '@/lib/recoveryLink';
 import { Colors } from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui';
 
 // This screen is reached only from the password-recovery deep link
-// (app/_layout.tsx's handleDeepLink). It has three states, driven by the
-// `status` param that handler sets and by whether a recovery session has
-// been established yet:
+// (app/_layout.tsx's handleDeepLink). Its state is decided by the pure
+// resetScreenState() (lib/recoveryLink.ts):
 //
 //   - verifying: no `status=invalid` param yet, and no session yet either.
 //     Covers the brief window on cold start where this route is showing
 //     (expo-router restored it from the link before anything else rendered)
-//     but the async nonce-check + setSession in _layout.tsx hasn't resolved.
-//     Normally resolves to one of the other two states within moments.
+//     but the async nonce-check + setSession in _layout.tsx hasn't resolved
+//     — and also a URL that routes here by PATH but that _layout.tsx's
+//     parser doesn't recognize as a recovery link at all (a bare `?rn=`
+//     with no fragment, a truncated link, a future PKCE `?code=` redirect):
+//     _layout.tsx never sets a status OR a session for those, so nothing
+//     but RESET_VERIFY_TIMEOUT_MS moves this screen off "verifying".
 //   - invalid: the link was rejected (bad/replayed/mismatched nonce), was
-//     already used, or has expired — no session was set. There's nothing to
-//     recover from here; the user needs to request a new email.
+//     already used, has expired, or verifying simply timed out — no
+//     session was set. There's nothing to recover from here; the user
+//     needs to request a new email.
 //   - form: a session exists, so this is a real recovery in progress.
-type ScreenState = 'verifying' | 'invalid' | 'form';
 
 export default function ResetPasswordScreen() {
   const { status } = useLocalSearchParams<{ status?: string }>();
@@ -42,9 +46,23 @@ export default function ResetPasswordScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [verifyTimedOut, setVerifyTimedOut] = useState(false);
 
-  const screenState: ScreenState =
-    status === 'invalid' ? 'invalid' : user ? 'form' : 'verifying';
+  // Bounded wait: if neither a session nor an explicit status ever arrives
+  // (see the "verifying" case above), stop spinning and show "invalid".
+  useEffect(() => {
+    if (user || status === 'invalid') {
+      return;
+    }
+    const timer = setTimeout(() => setVerifyTimedOut(true), RESET_VERIFY_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [user, status]);
+
+  const screenState = resetScreenState({
+    status,
+    hasSession: !!user,
+    elapsedMs: verifyTimedOut ? RESET_VERIFY_TIMEOUT_MS : 0,
+  });
 
   async function handleCancel() {
     // A recovery link fully signs the device in (that's how the form gets

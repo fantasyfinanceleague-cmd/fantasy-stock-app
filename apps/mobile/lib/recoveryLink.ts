@@ -62,3 +62,55 @@ export function parseRecoveryLink(url: string): RecoveryLinkResult {
 
   return { kind: 'none' };
 }
+
+// ---------------------------------------------------------------------------
+// reset-password.tsx's screen-state decision
+// ---------------------------------------------------------------------------
+
+export type ResetScreenState = 'verifying' | 'invalid' | 'form';
+
+/**
+ * How long reset-password waits with no session and no explicit status
+ * before giving up and showing "invalid" rather than spinning forever.
+ *
+ * This covers URLs that route to reset-password by PATH but that
+ * parseRecoveryLink treats as 'none' — a bare `.../reset-password?rn=N`
+ * with no fragment at all, a mail client that truncates the link, or a
+ * future PKCE `?code=` redirect this parser doesn't yet recognize. In all
+ * of those cases app/_layout.tsx never calls router.replace with a
+ * `status`, so nothing but a timeout moves the screen off "verifying".
+ */
+export const RESET_VERIFY_TIMEOUT_MS = 8000;
+
+/**
+ * Pure decision for which of reset-password's three states to show.
+ * `status` is the `status` search param (only 'invalid' is meaningful);
+ * `hasSession` is whether useAuth() currently reports a user; `elapsedMs`
+ * is how long the screen has been mounted without either one settling.
+ *
+ * Precedence, in order: an explicit invalid status always wins (even over
+ * a session — e.g. a stale link tapped after the reset already completed
+ * elsewhere); a session, once present, wins over an elapsed timeout (so a
+ * setSession that resolves right at the timeout boundary still reaches
+ * the form); only then does the timeout apply.
+ */
+export function resetScreenState({
+  status,
+  hasSession,
+  elapsedMs,
+}: {
+  status: string | null | undefined;
+  hasSession: boolean;
+  elapsedMs: number;
+}): ResetScreenState {
+  if (status === 'invalid') {
+    return 'invalid';
+  }
+  if (hasSession) {
+    return 'form';
+  }
+  if (elapsedMs >= RESET_VERIFY_TIMEOUT_MS) {
+    return 'invalid';
+  }
+  return 'verifying';
+}

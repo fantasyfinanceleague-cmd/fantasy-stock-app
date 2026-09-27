@@ -13,7 +13,7 @@
  * or an attacker could smuggle a matching `rn` into the fragment itself.
  */
 import { assertEquals } from 'jsr:@std/assert';
-import { parseRecoveryLink } from '../lib/recoveryLink.ts';
+import { parseRecoveryLink, resetScreenState, RESET_VERIFY_TIMEOUT_MS } from '../lib/recoveryLink.ts';
 
 const NONCE = 'a'.repeat(64);
 
@@ -100,4 +100,69 @@ Deno.test('parseRecoveryLink: missing rn param (no query at all) still returns t
   if (result.kind === 'tokens') {
     assertEquals(result.nonce, null);
   }
+});
+
+// ---------------------------------------------------------------------------
+// resetScreenState
+// ---------------------------------------------------------------------------
+// Covers the "verifying spins forever" gap: a URL that routes to
+// reset-password by path but that parseRecoveryLink calls 'none' (a bare
+// `?rn=` with no fragment, a truncated link, a future PKCE `?code=` link)
+// never gets a `status` param and never gets a session, so only the
+// elapsed-time fallback moves it off "verifying".
+
+Deno.test('resetScreenState: status=invalid wins even with a session and zero elapsed time', () => {
+  assertEquals(
+    resetScreenState({ status: 'invalid', hasSession: true, elapsedMs: 0 }),
+    'invalid'
+  );
+});
+
+Deno.test('resetScreenState: status=invalid wins even past the timeout', () => {
+  assertEquals(
+    resetScreenState({ status: 'invalid', hasSession: false, elapsedMs: RESET_VERIFY_TIMEOUT_MS * 10 }),
+    'invalid'
+  );
+});
+
+Deno.test('resetScreenState: a session (no invalid status) is form, regardless of elapsed time', () => {
+  assertEquals(
+    resetScreenState({ status: undefined, hasSession: true, elapsedMs: 0 }),
+    'form'
+  );
+  assertEquals(
+    resetScreenState({ status: null, hasSession: true, elapsedMs: RESET_VERIFY_TIMEOUT_MS * 10 }),
+    'form'
+  );
+});
+
+Deno.test('resetScreenState: no session, no status, under the timeout is verifying', () => {
+  assertEquals(
+    resetScreenState({ status: undefined, hasSession: false, elapsedMs: 0 }),
+    'verifying'
+  );
+  assertEquals(
+    resetScreenState({ status: undefined, hasSession: false, elapsedMs: RESET_VERIFY_TIMEOUT_MS - 1 }),
+    'verifying'
+  );
+});
+
+Deno.test('resetScreenState: no session, no status, at or past the timeout is invalid', () => {
+  assertEquals(
+    resetScreenState({ status: undefined, hasSession: false, elapsedMs: RESET_VERIFY_TIMEOUT_MS }),
+    'invalid'
+  );
+  assertEquals(
+    resetScreenState({ status: null, hasSession: false, elapsedMs: RESET_VERIFY_TIMEOUT_MS + 5000 }),
+    'invalid'
+  );
+});
+
+Deno.test('resetScreenState: a session that arrives exactly at the timeout boundary still reaches form', () => {
+  // hasSession is checked before the elapsed-time fallback, so a setSession
+  // that resolves right as the timer fires does not lose to it.
+  assertEquals(
+    resetScreenState({ status: undefined, hasSession: true, elapsedMs: RESET_VERIFY_TIMEOUT_MS }),
+    'form'
+  );
 });
