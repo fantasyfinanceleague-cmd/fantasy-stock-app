@@ -87,6 +87,10 @@ export const type = {
     weight: '900',
     stretch: '62%',
     tracking: '-0.01em',
+    // At 62% width with negative tracking the word gaps collapse
+    // ("Yourportfolio"); this opens them back up to read as clearly as the
+    // letter counters (Design Lead, phase 3a review 2026-09-27).
+    wordSpacing: '0.12em',
   },
   score: {
     xl: { size: '56px', line: '52px', weight: '900', stretch: '62%' },
