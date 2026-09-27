@@ -680,14 +680,14 @@ the lockups, the app icon at 60/40/29 and the favicon at actual 16px.
 
 ---
 
-# Stockade: front-runner (on hold) (2026-09-26)
+# Decision: Stockade — FINAL (2026-09-26)
 
-**Status: front-runner and benchmark, NOT final.** Giorgio briefly confirmed
-"Stockade" and then **paused** the confirmation to see one more round (Round 4:
-names without "stock"). If Stockade wins, the primary mark is **A · Palisade**
-(D.4). Production assets were drafted in `docs/design/brand/stockade/` just
-before the hold; they are **on hold and must not be wired in** until the name
-is final.
+**FINAL: Giorgio confirmed "Stockade" on 2026-09-26**, after pausing once to
+see Round 4 and after the Orchestrator's USPTO checks (below and in "Round 4 —
+USPTO results"). Primary mark: **A · Palisade** (D.4). Production assets:
+`docs/design/brand/stockade/` (see its README for usage rules). **Of every
+name screened across four rounds, Stockade and Odd Lot were the only two with
+no live 009/036/041 conflicts; he chose Stockade.**
 
 > Still an **informal record, not legal clearance.** The searches below were
 > run by the Orchestrator in the browser at tmsearch.uspto.gov on 2026-09-26
@@ -866,3 +866,21 @@ rounds, it is the cleanest on the register (no live 009/036/041 marks).
 [Odd Lots podcast](https://podcasts.apple.com/us/podcast/odd-lots/id1056200096) ·
 [CNBC Bell Ringer](https://www.cnbc.com/bell-ringer/) ·
 [Bell Ringer (Steam)](https://store.steampowered.com/app/424830/)
+
+
+---
+
+## Round 4 — USPTO results (run by the Orchestrator, 2026-09-26)
+
+Transcribed as reported; informal, not legal clearance.
+
+| Name | Result |
+|---|---|
+| **ODD LOT / ODDLOT** | **Clean**: no live 009 / 028 / 036 / 041 |
+| SYCAMORE | Crowded in 009 / 036 |
+| BELLRINGER | Light & Wonder slot machines (028), and more |
+| BUTTONWOOD | 036 wealth management |
+| BLUE CHIP(S) | **Out.** Crowded: Boyd Gaming (041 casino/entertainment), Blue Chip Sports (041), Blue Chip IP (009 apps), TXSE "SEQ BLUE CHIP" (035/036), CCH (009); descriptive in finance anyway |
+
+**Outcome:** Stockade and Odd Lot were the two clean names. **Giorgio chose
+Stockade (FINAL, 2026-09-26).**
