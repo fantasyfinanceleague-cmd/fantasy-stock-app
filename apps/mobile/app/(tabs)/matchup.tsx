@@ -2,12 +2,12 @@
 import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Card } from '@/components/ui';
+import { Card, Button } from '@/components/ui';
 import { SkeletonCard, SkeletonRows } from '@/components/Skeleton';
 import { useAuth } from '@/lib/useAuth';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/Colors';
 import WeekNavigator from '@/components/WeekNavigator';
@@ -15,6 +15,7 @@ import StatusBadge from '@/components/StatusBadge';
 import LeagueSwitcher from '@/components/LeagueSwitcher';
 import { getWeekStatus, isWeekActive as checkWeekActive, isPreSeasonPhase, getSeasonLabel, getUpcomingMatchupLabel, formatSignedCurrency } from '@/lib/weekStatus';
 import { isUuid } from '@/lib/uuid';
+import { getMatchupScreenState } from '@/lib/matchupScreenState';
 
 interface Matchup {
   id: string;
@@ -71,7 +72,8 @@ function formatCurrency(value: number): string {
 
 export default function MatchupScreen() {
   const { user } = useAuth();
-  const { activeLeagueId, activeLeague } = useLeagueContext();
+  const { activeLeagueId, activeLeague, leagues, loading: leaguesLoading } = useLeagueContext();
+  const router = useRouter();
   const params = useLocalSearchParams<{
     week?: string;
     matchupId?: string;
@@ -94,7 +96,12 @@ export default function MatchupScreen() {
 
   const viewingSpecificMatchup = !!(params.matchupId || (params.team1 && params.team2));
 
-  const isMatchupLeague = activeLeague?.league_type === 'matchup';
+  const screenState = getMatchupScreenState({
+    leaguesLoading,
+    leagueCount: leagues.length,
+    activeLeague,
+  });
+  const isMatchupLeague = screenState === 'matchup';
   const currentWeek = activeLeague?.current_week || 1;
 
   const initialWeek = params.week ? parseInt(params.week, 10) : currentWeek;
@@ -519,7 +526,38 @@ export default function MatchupScreen() {
   const isTeam2Winning = team2Total > team1Total;
   const isTied = team1Total === team2Total;
 
-  if (!isMatchupLeague) {
+  if (screenState === 'leagues-loading') {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={{ paddingTop: 16 }}>
+          <SkeletonCard />
+          <View style={{ height: 16 }} />
+          <View style={{ paddingHorizontal: 24 }}>
+            <SkeletonRows count={5} />
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (screenState === 'no-league') {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <LeagueSwitcher />
+        <View style={styles.centeredFlex}>
+          <Text style={styles.emptyIcon}>🏆</Text>
+          <Text style={styles.emptyTitle}>No league yet</Text>
+          <Text style={styles.emptySubtitle}>
+            Join or create a league to see your weekly matchup.
+          </Text>
+          <View style={{ height: 16 }} />
+          <Button title="Get Started" onPress={() => router.push('/create-league')} variant="primary" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (screenState === 'duration') {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <LeagueSwitcher />
@@ -527,7 +565,7 @@ export default function MatchupScreen() {
           <Text style={styles.emptyIcon}>📊</Text>
           <Text style={styles.emptyTitle}>Duration League</Text>
           <Text style={styles.emptySubtitle}>
-            This league doesn't have weekly matchups.{'\n'}Check the Leaderboard for standings.
+            This league doesn't have weekly matchups.{'\n'}Check the League tab for standings.
           </Text>
         </View>
       </SafeAreaView>

@@ -1,0 +1,547 @@
+<title>Stockpile Directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Schibsted+Grotesk:wght@400;500;600;700&family=Archivo:wdth,wght@62..125,400..900&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* ── Board chrome tokens (light first) ───────────────────────────── */
+:root{
+  --bg:#F5F6F8; --panel:#FFFFFF; --ink:#16191F; --muted:#5A6170; --rule:#DCDFE5;
+  --chip:#E9ECF1; --focus:#2860F0;
+  --chrome:"Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ color-scheme:dark;
+    --bg:#121419; --panel:#1A1D24; --ink:#ECEEF2; --muted:#A1A7B3; --rule:#2C313B; --chip:#252A33; --focus:#7FA2FF; }
+}
+:root[data-theme="dark"]{ color-scheme:dark;
+  --bg:#121419; --panel:#1A1D24; --ink:#ECEEF2; --muted:#A1A7B3; --rule:#2C313B; --chip:#252A33; --focus:#7FA2FF; }
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--chrome);padding-inline:clamp(16px,4vw,48px);padding-block:32px 64px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;gap:56px}
+h1,h2,h3{text-wrap:balance;margin:0}
+p{margin:0}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:3px;border-radius:4px}
+
+.intro{display:grid;gap:14px;max-width:70ch}
+.intro h1{font-size:clamp(28px,4vw,40px);line-height:1.1;letter-spacing:-.02em;font-weight:700}
+.intro p{color:var(--muted)}
+.jump{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.jump a{background:var(--chip);padding:6px 12px;border-radius:999px;text-decoration:none;font-weight:600;font-size:14px}
+
+.dir{display:grid;gap:24px;padding-top:8px;border-top:1px solid var(--rule)}
+.dir-head{display:grid;gap:8px;max-width:72ch;padding-top:24px}
+.dir-head .tag{font-weight:600;color:var(--muted);font-size:14px}
+.dir-head h2{font-size:clamp(26px,3.4vw,34px);letter-spacing:-.02em;line-height:1.15}
+.dir-head p{color:var(--muted)}
+.rec{display:inline-block;background:var(--ink);color:var(--bg);font-size:13px;font-weight:700;padding:3px 10px;border-radius:999px;margin-left:8px;vertical-align:middle}
+
+.specs{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.panel{background:var(--panel);border:1px solid var(--rule);border-radius:14px;padding:18px;display:grid;gap:12px;align-content:start}
+.panel h3{font-size:15px;font-weight:700}
+.swatches{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.sw{display:grid;gap:4px;font-size:12px;color:var(--muted)}
+.sw i{display:block;height:44px;border-radius:8px;border:1px solid var(--rule)}
+.sw b{color:var(--ink);font-weight:600}
+.type-spec{display:grid;gap:6px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14px}
+.kv dt{color:var(--muted)} .kv dd{margin:0}
+ul.plain{margin:0;padding-left:18px;display:grid;gap:6px}
+
+.stage{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:860px){.stage{grid-template-columns:1fr;justify-items:center}}
+.replay{justify-self:start;font:600 14px var(--chrome);background:var(--panel);color:var(--ink);border:1px solid var(--rule);border-radius:999px;padding:8px 16px;cursor:pointer}
+.caption{font-size:13px;color:var(--muted)}
+
+/* ── Phone frame shared ─────────────────────────────────────────── */
+.phone{width:300px;max-width:100%;aspect-ratio:300/630;border-radius:40px;padding:10px;background:#0B0D12;box-shadow:0 20px 40px -18px rgba(10,14,24,.45)}
+.screen{position:relative;height:100%;border-radius:31px;overflow:hidden;display:flex;flex-direction:column}
+.status{display:flex;justify-content:space-between;padding:12px 22px 4px;font:600 12px var(--chrome)}
+.tabbar{margin-top:auto;display:flex;justify-content:space-around;padding:10px 8px 18px;font-size:10px}
+.tabbar span{display:grid;justify-items:center;gap:3px}
+.tabbar i{width:18px;height:18px;border-radius:5px;display:block}
+.web{border-radius:14px;overflow:hidden;border:1px solid var(--rule);min-height:360px;display:flex;flex-direction:column}
+.webbar{display:flex;gap:6px;padding:10px 12px;background:rgba(127,127,127,.12)}
+.webbar i{width:9px;height:9px;border-radius:50%;background:rgba(127,127,127,.45);display:block}
+
+/* ══ A · LEDGER ═══════════════════════════════════════════════════ */
+.A{--paper:#F7F9FA;--ink:#12161B;--graphite:#56606B;--hair:#E1E5E9;--harbor:#0B6477;--gain:#16794A;--loss:#B4231B;--card:#FFFFFF;
+  --serif:"Source Serif 4", Georgia, "Times New Roman", serif; --sans:"Schibsted Grotesk", system-ui, sans-serif}
+.A .screen,.A .web{background:var(--paper);color:var(--ink);font-family:var(--sans)}
+.A .status{color:var(--ink)}
+.A .m-head{padding:10px 20px 0;display:flex;justify-content:space-between;align-items:baseline}
+.A .m-league{font-weight:600;font-size:13px}
+.A .m-week{font-size:12px;color:var(--graphite)}
+.A .result{padding:22px 20px 10px;display:grid;gap:14px}
+.A .row{display:grid;grid-template-columns:1fr auto;align-items:baseline}
+.A .who{font-size:14px;color:var(--graphite)} .A .who b{color:var(--ink);font-weight:600}
+.A .amt{font-family:var(--serif);font-weight:600;font-size:34px;letter-spacing:-.01em;font-variant-numeric:tabular-nums lining-nums}
+.A .amt.small{font-size:26px;color:var(--graphite)}
+.A .pct{font-size:12px;color:var(--gain);text-align:right;font-variant-numeric:tabular-nums}
+.A .bar{height:3px;background:var(--hair);border-radius:3px;overflow:hidden}
+.A .bar i{display:block;height:100%;width:59%;background:var(--harbor);transform-origin:left}
+.A .clock{font-size:12px;color:var(--graphite)}
+.A .lineup{margin:6px 20px 0;background:var(--card);border:1px solid var(--hair);border-radius:12px;padding:4px 14px}
+.A .li{display:grid;grid-template-columns:1fr auto;padding:9px 0;border-bottom:1px solid var(--hair);font-size:13px}
+.A .li:last-child{border-bottom:0}
+.A .li b{font-weight:600} .A .li span{font-variant-numeric:tabular-nums}
+.A .g{color:var(--gain)} .A .l{color:var(--loss)}
+.A .tabbar{color:var(--graphite);border-top:1px solid var(--hair);background:var(--card)}
+.A .tabbar i{background:var(--hair)} .A .tabbar .on{color:var(--harbor)} .A .tabbar .on i{background:var(--harbor)}
+.A .hero{padding:40px clamp(20px,4vw,48px);display:grid;grid-template-columns:1.2fr 1fr;gap:32px;align-items:center;flex:1}
+@media (max-width:700px){.A .hero{grid-template-columns:1fr}}
+.A .hero h3{font-family:var(--serif);font-weight:600;font-size:clamp(30px,4vw,46px);line-height:1.05;letter-spacing:-.015em}
+.A .hero p{color:var(--graphite);margin-top:14px;max-width:40ch}
+.A .soon{margin-top:18px;display:inline-flex;gap:8px;align-items:center;font-size:14px;font-weight:600;color:var(--harbor)}
+.A .soon::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--harbor)}
+.A .stockline{background:var(--card);border:1px solid var(--hair);border-radius:14px;padding:18px;display:grid;gap:10px;font-size:13px}
+.A .stockline .amt{font-size:28px}
+
+/* ══ B · GAME DAY ═════════════════════════════════════════════════ */
+.B{--snow:#F3F5F8;--stadium:#0D1B2E;--chalk:#FFFFFF;--you:#2860F0;--opp:#FF6A3D;--signal:#FFC53D;--gainL:#12803F;--lossL:#C8303A;--gainD:#4ADE8B;--lossD:#FF7A7A;--line:#DDE3EA;--slate:#5B6678;
+  --arch:"Archivo", system-ui, sans-serif}
+.B .screen,.B .web{background:var(--snow);color:var(--stadium);font-family:var(--arch)}
+.B .status{color:var(--chalk);background:var(--stadium)}
+.B .board{background:var(--stadium);color:var(--chalk);padding:8px 16px 16px;display:grid;gap:12px}
+.B .bline{display:flex;justify-content:space-between;align-items:center;font-size:12px}
+.B .live{display:inline-flex;gap:6px;align-items:center;font-weight:800;font-stretch:115%;color:var(--signal);letter-spacing:.04em}
+.B .live::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--signal)}
+.B .teams{display:grid;grid-template-columns:1fr auto 1fr;align-items:end;gap:8px}
+.B .team{display:grid;gap:2px}
+.B .team.r{text-align:right}
+.B .tname{font-weight:700;font-size:13px;font-stretch:100%}
+.B .score{font-weight:900;font-stretch:62%;font-size:54px;line-height:.9;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.B .team.you .score{color:var(--chalk)} .B .team.opp .score{color:#C9D3E3}
+.B .tpct{font-size:12px;color:var(--gainD);font-variant-numeric:tabular-nums}
+.B .vs{font-weight:800;font-stretch:125%;font-size:11px;color:#8DA0BD;padding-bottom:10px}
+.B .tug{height:10px;border-radius:5px;background:var(--opp);overflow:hidden;position:relative}
+.B .tug i{position:absolute;inset:0 auto 0 0;width:59%;background:var(--you);border-right:2px solid var(--chalk)}
+.B .chyron{margin:12px 14px 0;background:var(--chalk);border-left:4px solid var(--you);border-radius:6px;padding:9px 12px;font-size:12px;font-weight:600;box-shadow:0 6px 14px -10px rgba(13,27,46,.5)}
+.B .chyron b{font-weight:800}
+.B .lineup{margin:12px 14px 0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.B .col{background:var(--chalk);border:1px solid var(--line);border-radius:10px;padding:6px 10px}
+.B .col h4{margin:0 0 4px;font-size:11px;font-weight:800;font-stretch:115%;color:var(--slate);letter-spacing:.03em}
+.B .li{display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-top:1px solid var(--line)}
+.B .li:first-of-type{border-top:0}
+.B .li b{font-weight:700} .B .g{color:var(--gainL);font-variant-numeric:tabular-nums} .B .l{color:var(--lossL);font-variant-numeric:tabular-nums}
+.B .tabbar{background:var(--chalk);border-top:1px solid var(--line);color:var(--slate)}
+.B .tabbar i{background:var(--line)} .B .tabbar .on{color:var(--you);font-weight:700} .B .tabbar .on i{background:var(--you)}
+.B .web .webbar{background:#0A1524} .B .web .webbar i{background:#2A3A52}
+.B .whero{background:var(--stadium);color:var(--chalk);padding:36px clamp(20px,4vw,48px);display:grid;gap:22px;flex:1;align-content:center}
+.B .whero h3{font-weight:900;font-stretch:62%;font-size:clamp(44px,7vw,84px);line-height:.88;letter-spacing:-.005em;text-transform:uppercase}
+.B .whero p{color:#B8C4D6;max-width:46ch}
+.B .ticker{display:flex;gap:18px;overflow:hidden;white-space:nowrap;font-size:13px;border-top:1px solid #22334D;padding-top:12px;color:#C9D3E3}
+.B .ticker b{color:var(--chalk)}
+.B .wsoon{display:inline-flex;gap:8px;align-items:center;font-weight:800;font-stretch:115%;color:var(--signal)}
+
+/* ══ C · AFTER HOURS ═════════════════════════════════════════════ */
+.C{--deep:#0E1220;--surface:#151A2B;--raised:#1C2236;--line:#283049;--text:#E6EAF2;--muted:#8A93A8;--iris:#9B8CFF;--gain:#43D48F;--loss:#FF6E6E;
+  --geist:"Geist", system-ui, sans-serif; --mono:"Geist Mono", ui-monospace, "SF Mono", monospace}
+.C .screen,.C .web{background:var(--deep);color:var(--text);font-family:var(--geist)}
+.C .status{color:var(--text)}
+.C .m-head{padding:10px 18px 0;display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+.C .m-head b{color:var(--text);font-weight:600}
+.C .race{margin:14px 14px 0;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;display:grid;gap:10px}
+.C .pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.C .who{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.C .who i{width:8px;height:8px;border-radius:50%;display:block}
+.C .num{font-family:var(--mono);font-size:24px;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.C .num.opp{color:var(--muted)}
+.C .sub{font-family:var(--mono);font-size:11px;color:var(--gain)}
+.C svg.spark{width:100%;height:110px;display:block}
+.C .foot{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
+.C .lineup{margin:12px 14px 0;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:2px 12px}
+.C .li{display:grid;grid-template-columns:1fr auto auto;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:12px;align-items:center}
+.C .li:last-child{border-bottom:0}
+.C .li b{font-family:var(--mono);font-weight:500} .C .li span{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.C .g{color:var(--gain)} .C .l{color:var(--loss)}
+.C .tabbar{background:rgba(21,26,43,.92);border-top:1px solid var(--line);color:var(--muted)}
+.C .tabbar i{background:var(--line)} .C .tabbar .on{color:var(--text)} .C .tabbar .on i{background:var(--iris)}
+.C .web .webbar{background:#0A0D18} .C .web .webbar i{background:#283049}
+.C .whero{padding:40px clamp(20px,4vw,48px);display:grid;grid-template-columns:1fr 1.1fr;gap:28px;align-items:center;flex:1;background:radial-gradient(120% 90% at 85% 10%,#1B2140 0%,var(--deep) 60%)}
+@media (max-width:700px){.C .whero{grid-template-columns:1fr}}
+.C .whero h3{font-weight:600;font-size:clamp(30px,4vw,48px);line-height:1.05;letter-spacing:-.03em}
+.C .whero p{color:var(--muted);margin-top:14px;max-width:40ch}
+.C .kbd{margin-top:18px;display:inline-flex;gap:10px;align-items:center;font-size:13px;color:var(--muted)}
+.C .kbd span{border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:8px;padding:4px 10px;font-weight:600}
+
+/* ── Signature motion (each direction has ONE moment) ─────────────── */
+@media (prefers-reduced-motion: no-preference){
+  .play .A .bar i{animation:a-fill 700ms cubic-bezier(.2,.7,.2,1) both}
+  .play .A .amt.you{animation:a-settle 520ms cubic-bezier(.2,.7,.2,1) both}
+  .play .B .tug i{animation:b-tug 1100ms cubic-bezier(.34,1.3,.5,1) both}
+  .play .B .team.you .score{animation:b-slam 520ms cubic-bezier(.34,1.56,.64,1) 300ms both}
+  .play .B .chyron{animation:b-chyron 460ms cubic-bezier(.2,.8,.2,1) 700ms both}
+  .play .C .spark .you-line{stroke-dasharray:420;animation:c-draw 1200ms cubic-bezier(.3,.7,.1,1) both}
+  .play .C .spark .opp-line{stroke-dasharray:420;animation:c-draw 1200ms cubic-bezier(.3,.7,.1,1) 120ms both}
+  .play .C .spark .tip{animation:c-tip 400ms ease-out 1100ms both}
+}
+@keyframes a-fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes a-settle{from{opacity:.2;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes b-tug{0%{width:50%}55%{width:64%}100%{width:59%}}
+@keyframes b-slam{from{transform:scale(1.18);opacity:.3}to{transform:scale(1);opacity:1}}
+@keyframes b-chyron{from{transform:translateX(-24px);opacity:0}to{transform:none;opacity:1}}
+@keyframes c-draw{from{stroke-dashoffset:420}to{stroke-dashoffset:0}}
+@keyframes c-tip{from{opacity:0;r:0}to{opacity:1;r:4}}
+
+/* ── Marks ──────────────────────────────────────────────────────── */
+.marks{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.mark{background:var(--panel);border:1px solid var(--rule);border-radius:14px;overflow:hidden;display:grid}
+.mark .tiles{display:grid;grid-template-columns:1fr 1fr}
+.mark .tile{height:120px;display:grid;place-items:center}
+.mark .tile.l{background:#F7F9FA} .mark .tile.d{background:#0E1220}
+.mark .txt{padding:14px 16px;display:grid;gap:4px}
+.mark .txt b{font-size:15px} .mark .txt span{font-size:13px;color:var(--muted)}
+
+.compare{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:14px;background:var(--panel);border:1px solid var(--rule);border-radius:14px;overflow:hidden}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-weight:700;background:var(--chip)}
+tr:last-child td{border-bottom:0}
+</style>
+
+<div class="wrap">
+
+<header class="intro">
+  <h1>Three directions for Stockpile</h1>
+  <p style="color:var(--ink);background:var(--chip);border-radius:10px;padding:10px 14px"><strong>Decided 2026-09-26:</strong> Direction B, Game Day, with logo option 1 (bars, refined). The S-curve monogram was dropped because it would sit too close to an existing investing app's orange S mark. The tab stays "Portfolio", and Profile moves to an avatar button. The product name is still under review.</p>
+  <p>Each direction is a complete identity for web and mobile: palette, type, a logo treatment, and one signature motion moment. Every one is shown on the same two screens: the <strong>weekly matchup</strong> (the product's core moment) and the <strong>landing hero</strong>. The data is illustrative, and matchups are won on dollar gain, as they are in the real scorer.</p>
+  <p>Pick one direction, or tell me what to borrow from another. Whichever you choose, these stay fixed: one token source per platform, WCAG AA contrast on every data colour, a reduced-motion fallback for every animation, and the navigation plan in DESIGN_DIRECTION.md.</p>
+  <nav class="jump" aria-label="Jump to a direction">
+    <a href="#ledger">A. Ledger</a><a href="#gameday">B. Game Day</a><a href="#afterhours">C. After Hours</a><a href="#marks">Logo options</a><a href="#compare">Side by side</a>
+  </nav>
+</header>
+
+<!-- ═════════════ A ═════════════ -->
+<section class="dir" id="ledger" aria-labelledby="a-title">
+  <div class="dir-head">
+    <span class="tag">Direction A · light · calm fintech</span>
+    <h2 id="a-title">Ledger</h2>
+    <p>Stockpile as a well-made financial paper. Numbers are typeset in a serif the way a stock page would print them, and everything else stays quiet: cool white, one deep harbor-teal accent, hairlines instead of shadows. Motion only happens when a number changes. It feels like Public and the Financial Times more than a game.</p>
+  </div>
+
+  <div class="specs">
+    <div class="panel"><h3>Palette</h3>
+      <div class="swatches">
+        <div class="sw"><i style="background:#F7F9FA"></i><b>Paper</b>#F7F9FA</div>
+        <div class="sw"><i style="background:#12161B"></i><b>Ink</b>#12161B</div>
+        <div class="sw"><i style="background:#56606B"></i><b>Graphite</b>#56606B · 6.1:1</div>
+        <div class="sw"><i style="background:#0B6477"></i><b>Harbor</b>#0B6477 · 6.4:1</div>
+        <div class="sw"><i style="background:#16794A"></i><b>Gain</b>#16794A · 5.4:1</div>
+        <div class="sw"><i style="background:#B4231B"></i><b>Loss</b>#B4231B · 6.6:1</div>
+      </div>
+    </div>
+    <div class="panel A"><h3 style="font-family:var(--chrome)">Type</h3>
+      <div class="type-spec">
+        <div style="font-family:var(--serif);font-size:34px;font-weight:600;font-variant-numeric:tabular-nums">$2,056.80</div>
+        <div style="font-family:var(--sans);font-size:15px">Schibsted Grotesk for interface text, labels and tickers.</div>
+      </div>
+      <dl class="kv"><dt>Numbers, headlines</dt><dd>Source Serif 4, tabular lining figures</dd><dt>Interface</dt><dd>Schibsted Grotesk</dd></dl>
+    </div>
+    <div class="panel"><h3>Motion character: settle</h3>
+      <ul class="plain">
+        <li>Changed numbers roll digit by digit (280ms) and settle; nothing loops.</li>
+        <li>Screens cross-fade with an 8px lift (220ms).</li>
+        <li>The matchup bar fills once when you open the screen.</li>
+        <li>Charts draw once, then stay still.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="phone A" aria-label="Ledger matchup screen mockup">
+      <div class="screen">
+        <div class="status"><span>9:41</span><span>5G</span></div>
+        <div class="m-head"><span class="m-league">Friday Night Stocks</span><span class="m-week">Week 3 of 10</span></div>
+        <div class="result">
+          <div class="row"><span class="who"><b>You</b></span><span class="pct">+2.84%</span></div>
+          <div class="amt you">+$56.80</div>
+          <div class="bar" aria-hidden="true"><i></i></div>
+          <div class="row"><span class="who"><b>Priya</b> is behind by $17.40</span><span class="pct">+1.97%</span></div>
+          <div class="amt small">+$39.40</div>
+          <div class="clock">Closes Friday at 4:00 PM ET, 2 days 5 hours left</div>
+        </div>
+        <div class="lineup">
+          <div class="li"><b>NVDA</b><span class="g">+$31.20</span></div>
+          <div class="li"><b>AMZN</b><span class="g">+$14.90</span></div>
+          <div class="li"><b>JPM</b><span class="g">+$10.70</span></div>
+        </div>
+        <div class="tabbar"><span><i></i>Home</span><span class="on"><i></i>Matchup</span><span><i></i>League</span><span><i></i>Team</span></div>
+      </div>
+    </div>
+    <div style="display:grid;gap:12px">
+      <div class="web A" aria-label="Ledger landing hero mockup">
+        <div class="webbar"><i></i><i></i><i></i></div>
+        <div class="hero">
+          <div>
+            <h3>Draft real stocks. Play your friends every week.</h3>
+            <p>Build a portfolio from the real market, face one friend each week, and the bigger dollar gain by Friday's close wins.</p>
+            <span class="soon">Launching soon</span>
+          </div>
+          <div class="stockline">
+            <span style="color:var(--graphite)">Week 3 result</span>
+            <div class="row"><span>You</span><span class="amt">+$56.80</span></div>
+            <div class="bar"><i></i></div>
+            <div class="row"><span>Priya</span><span class="amt" style="color:var(--graphite)">+$39.40</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="caption">What it's good at: credibility with recruiters and investors, long-term calm, the easiest to keep consistent. The risk: it can feel reserved on a competitive night, and the "cool animations" ask is met with restraint rather than spectacle.</p>
+      <button class="replay" type="button" data-replay="ledger">Replay the Ledger moment</button>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════════ B ═════════════ -->
+<section class="dir" id="gameday" aria-labelledby="b-title">
+  <div class="dir-head">
+    <span class="tag">Direction B · light base with broadcast scoreboards · calm by default, loud on game day <span class="rec">Recommended</span></span>
+    <h2 id="b-title">Game Day</h2>
+    <p>Your portfolio screens stay calm and light, like a fintech app. The competitive surfaces (matchup, standings, draft, results) switch into a broadcast scoreboard: stadium navy, condensed numerals, your team colour against your opponent's, a live tug-of-war, and chyrons that call the play ("NVDA just put you ahead"). The investing side stays credible, and the game side gets the energy and animation you asked for.</p>
+  </div>
+
+  <div class="specs">
+    <div class="panel"><h3>Palette</h3>
+      <div class="swatches">
+        <div class="sw"><i style="background:#F3F5F8"></i><b>Snow</b>#F3F5F8</div>
+        <div class="sw"><i style="background:#0D1B2E"></i><b>Stadium</b>#0D1B2E</div>
+        <div class="sw"><i style="background:#2860F0"></i><b>You</b>#2860F0 · 5.2:1</div>
+        <div class="sw"><i style="background:#FF6A3D"></i><b>Opponent</b>#FF6A3D</div>
+        <div class="sw"><i style="background:#FFC53D"></i><b>Live signal</b>#FFC53D</div>
+        <div class="sw"><i style="background:linear-gradient(90deg,#12803F 50%,#C8303A 50%)"></i><b>Gain / loss</b>#12803F · #C8303A</div>
+      </div>
+      <p class="caption">Team colours mark people; green and red mark money only. On navy, gain and loss brighten to #4ADE8B / #FF7A7A (10.0:1 and 6.9:1).</p>
+    </div>
+    <div class="panel B"><h3 style="font-family:var(--chrome)">Type</h3>
+      <div class="type-spec">
+        <div style="font-family:var(--arch);font-weight:900;font-stretch:62%;font-size:48px;line-height:.9">56.80</div>
+        <div style="font-family:var(--arch);font-weight:800;font-stretch:125%;font-size:13px;letter-spacing:.03em">WEEK 3 · FINAL</div>
+        <div style="font-family:var(--arch);font-size:15px">Archivo at normal width for everything you read.</div>
+      </div>
+      <dl class="kv"><dt>Scores</dt><dd>Archivo, 62% width, weight 900</dd><dt>Broadcast tags</dt><dd>Archivo, 125% width, weight 800</dd><dt>Interface</dt><dd>Archivo, 100%</dd></dl>
+      <p class="caption">One family with a width axis gives three voices and one font file.</p>
+    </div>
+    <div class="panel"><h3>Motion character: broadcast</h3>
+      <ul class="plain">
+        <li>Opening a matchup wipes in like a scoreboard graphic (360ms).</li>
+        <li>The tug-of-war bar moves with live prices and overshoots slightly on a lead change.</li>
+        <li>A lead change slams the score and slides in a chyron.</li>
+        <li>Standings rows stagger in and re-sort with movement you can follow.</li>
+        <li>Friday's final gets a reveal; a win gets one celebratory beat.</li>
+        <li>Portfolio and money screens use the calm Ledger-style motion.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="phone B" aria-label="Game Day matchup screen mockup">
+      <div class="screen">
+        <div class="status"><span>9:41</span><span>5G</span></div>
+        <div class="board">
+          <div class="bline"><span>Friday Night Stocks · Week 3</span><span class="live">LIVE</span></div>
+          <div class="teams">
+            <div class="team you"><span class="tname">You</span><span class="score">56.80</span><span class="tpct">+2.84%</span></div>
+            <span class="vs">VS</span>
+            <div class="team opp r"><span class="tname">Priya</span><span class="score">39.40</span><span class="tpct">+1.97%</span></div>
+          </div>
+          <div class="tug" aria-hidden="true"><i></i></div>
+          <div class="bline" style="color:#8DA0BD"><span>You lead by $17.40</span><span>2d 5h to Friday close</span></div>
+        </div>
+        <div class="chyron"><b>NVDA +4.1%</b> just put you ahead</div>
+        <div class="lineup">
+          <div class="col"><h4>YOUR TEAM</h4>
+            <div class="li"><b>NVDA</b><span class="g">+31.20</span></div>
+            <div class="li"><b>AMZN</b><span class="g">+14.90</span></div>
+            <div class="li"><b>JPM</b><span class="g">+10.70</span></div>
+          </div>
+          <div class="col"><h4>PRIYA</h4>
+            <div class="li"><b>META</b><span class="g">+25.60</span></div>
+            <div class="li"><b>AAPL</b><span class="g">+22.10</span></div>
+            <div class="li"><b>TSLA</b><span class="l">−8.30</span></div>
+          </div>
+        </div>
+        <div class="tabbar"><span><i></i>Home</span><span class="on"><i></i>Matchup</span><span><i></i>League</span><span><i></i>Team</span></div>
+      </div>
+    </div>
+    <div style="display:grid;gap:12px">
+      <div class="web B" aria-label="Game Day landing hero mockup">
+        <div class="webbar"><i></i><i></i><i></i></div>
+        <div class="whero">
+          <span class="wsoon">LAUNCHING SOON</span>
+          <h3>Your portfolio vs. your friends. Every week.</h3>
+          <p>Draft real stocks, go head to head, and win the week on real returns. Free to play, no real money.</p>
+          <div class="ticker" aria-label="Sample scores"><span><b>You 56.80</b> Priya 39.40</span><span><b>Marcus 71.25</b> Dev 12.05</span><span><b>Ana 44.10</b> Sam 43.90</span><span>NVDA +4.1%</span><span>TSLA −1.2%</span></div>
+        </div>
+      </div>
+      <p class="caption">What it's good at: makes the competition feel like an event, gives motion a job (explaining who's winning and why), and keeps money screens trustworthy. The risk: it's two registers to keep in harmony, so the token system has to be strict about which screens are "game" and which are "money".</p>
+      <button class="replay" type="button" data-replay="gameday">Replay the Game Day moment</button>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════════ C ═════════════ -->
+<section class="dir" id="afterhours" aria-labelledby="c-title">
+  <div class="dir-head">
+    <span class="tag">Direction C · dark · premium terminal</span>
+    <h2 id="c-title">After Hours</h2>
+    <p>A dark, precise, pro-tool feel: deep blue-slate surfaces layered by elevation, hairline borders, prices in a monospace, and one iris accent for interaction. The matchup is two lines racing on one chart, with the leader's line lit. Motion is fast and physical: springs, shared-element transitions from a row into its detail, and a quiet glow where data is live. It feels like Linear or a modern trading terminal.</p>
+  </div>
+
+  <div class="specs">
+    <div class="panel"><h3>Palette</h3>
+      <div class="swatches">
+        <div class="sw"><i style="background:#0E1220"></i><b>Deep</b>#0E1220</div>
+        <div class="sw"><i style="background:#1C2236"></i><b>Raised</b>#1C2236</div>
+        <div class="sw"><i style="background:#E6EAF2"></i><b>Text</b>#E6EAF2</div>
+        <div class="sw"><i style="background:#9B8CFF"></i><b>Iris</b>#9B8CFF · 6.7:1</div>
+        <div class="sw"><i style="background:#43D48F"></i><b>Gain</b>#43D48F · 9.8:1</div>
+        <div class="sw"><i style="background:#FF6E6E"></i><b>Loss</b>#FF6E6E · 6.8:1</div>
+      </div>
+      <p class="caption">Iris is for interaction only; green and red stay reserved for money.</p>
+    </div>
+    <div class="panel C" style="background:var(--panel)"><h3 style="font-family:var(--chrome)">Type</h3>
+      <div class="type-spec">
+        <div style="font-family:var(--mono);font-size:30px;font-weight:500;letter-spacing:-.02em;font-variant-numeric:tabular-nums">+$56.80</div>
+        <div style="font-family:var(--geist);font-size:15px">Geist for interface text; Geist Mono only for prices and tickers.</div>
+      </div>
+      <dl class="kv"><dt>Interface</dt><dd>Geist</dd><dt>Prices, tickers</dt><dd>Geist Mono</dd></dl>
+    </div>
+    <div class="panel"><h3>Motion character: precision</h3>
+      <ul class="plain">
+        <li>Stiff springs with no bounce; everything tracks your finger.</li>
+        <li>A stock row expands into its detail screen (shared element).</li>
+        <li>The leading line glows faintly while the market is open.</li>
+        <li>Press states scale to 0.98 with a light haptic.</li>
+        <li>On web, a command bar (⌘K) jumps to any league, stock or player.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="phone C" aria-label="After Hours matchup screen mockup">
+      <div class="screen">
+        <div class="status"><span>9:41</span><span>5G</span></div>
+        <div class="m-head"><span><b>Friday Night Stocks</b></span><span>Week 3 of 10</span></div>
+        <div class="race">
+          <div class="pair">
+            <div><span class="who"><i style="background:var(--iris)"></i>You</span><div class="num">+$56.80</div><div class="sub">+2.84%</div></div>
+            <div><span class="who"><i style="background:#56607A"></i>Priya</span><div class="num opp">+$39.40</div><div class="sub">+1.97%</div></div>
+          </div>
+          <svg class="spark" viewBox="0 0 260 110" aria-hidden="true">
+            <defs><linearGradient id="cglow" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#9B8CFF" stop-opacity=".28"/><stop offset="1" stop-color="#9B8CFF" stop-opacity="0"/></linearGradient></defs>
+            <line x1="0" y1="98" x2="260" y2="98" stroke="#283049" stroke-width="1"/>
+            <path d="M0 96 L30 90 L60 84 L90 88 L120 70 L150 62 L180 58 L210 40 L240 30 L252 26 L252 98 L0 98 Z" fill="url(#cglow)"/>
+            <polyline class="opp-line" points="0,96 30,92 60,80 90,74 120,76 150,66 180,62 210,56 240,50 252,48" fill="none" stroke="#56607A" stroke-width="2" stroke-linejoin="round"/>
+            <polyline class="you-line" points="0,96 30,90 60,84 90,88 120,70 150,62 180,58 210,40 240,30 252,26" fill="none" stroke="#9B8CFF" stroke-width="2.5" stroke-linejoin="round"/>
+            <circle class="tip" cx="252" cy="26" r="4" fill="#9B8CFF"/>
+          </svg>
+          <div class="foot"><span>Mon open</span><span>You lead by $17.40</span><span>Fri close</span></div>
+        </div>
+        <div class="lineup">
+          <div class="li"><b>NVDA</b><span class="g">+4.1%</span><span class="g">+$31.20</span></div>
+          <div class="li"><b>AMZN</b><span class="g">+1.5%</span><span class="g">+$14.90</span></div>
+          <div class="li"><b>JPM</b><span class="g">+1.1%</span><span class="g">+$10.70</span></div>
+        </div>
+        <div class="tabbar"><span><i></i>Home</span><span class="on"><i></i>Matchup</span><span><i></i>League</span><span><i></i>Team</span></div>
+      </div>
+    </div>
+    <div style="display:grid;gap:12px">
+      <div class="web C" aria-label="After Hours landing hero mockup">
+        <div class="webbar"><i></i><i></i><i></i></div>
+        <div class="whero">
+          <div>
+            <h3>The market is the scoreboard.</h3>
+            <p>Draft real stocks into a team and race a friend every week. The bigger dollar gain at Friday's close takes it.</p>
+            <span class="kbd"><span>Launching soon</span>Free to play, no real money</span>
+          </div>
+          <svg viewBox="0 0 320 170" style="width:100%;height:auto" aria-hidden="true">
+            <line x1="0" y1="150" x2="320" y2="150" stroke="#283049"/>
+            <polyline points="0,148 40,140 80,128 120,134 160,104 200,92 240,86 280,56 312,40" fill="none" stroke="#9B8CFF" stroke-width="3" stroke-linejoin="round"/>
+            <polyline points="0,148 40,142 80,122 120,112 160,114 200,100 240,94 280,84 312,80" fill="none" stroke="#56607A" stroke-width="2.5" stroke-linejoin="round"/>
+            <circle cx="312" cy="40" r="5" fill="#9B8CFF"/>
+            <text x="312" y="28" fill="#E6EAF2" font-family="Geist Mono, monospace" font-size="12" text-anchor="end">You +$56.80</text>
+            <text x="312" y="100" fill="#8A93A8" font-family="Geist Mono, monospace" font-size="12" text-anchor="end">Priya +$39.40</text>
+          </svg>
+        </div>
+      </div>
+      <p class="caption">What it's good at: instantly looks "cool" and expensive, and motion and glow read beautifully on dark. The risk: dark finance can read as crypto or day-trading, the opposite of "friendly league"; the whitespace argument for light is lost; and it's the biggest departure from what's live today.</p>
+      <button class="replay" type="button" data-replay="afterhours">Replay the After Hours moment</button>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════════ MARKS ═════════════ -->
+<section class="dir" id="marks" aria-labelledby="m-title">
+  <div class="dir-head">
+    <span class="tag">Logo options · refine or replace</span>
+    <h2 id="m-title">Four marks</h2>
+    <p>The first refines today's bar-chart icon; the other three are new. Any of them works with any direction. The bull-and-bear crest on the web login retires in every case.</p>
+  </div>
+  <div class="marks">
+    <figure class="mark" style="margin:0">
+      <div class="tiles">
+        <div class="tile l"><svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true"><rect x="10" y="34" width="11" height="20" rx="2.5" fill="#12161B"/><rect x="26.5" y="22" width="11" height="32" rx="2.5" fill="#12161B"/><rect x="43" y="10" width="11" height="44" rx="2.5" fill="#0B6477"/></svg></div>
+        <div class="tile d"><svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true"><rect x="10" y="34" width="11" height="20" rx="2.5" fill="#E6EAF2"/><rect x="26.5" y="22" width="11" height="32" rx="2.5" fill="#E6EAF2"/><rect x="43" y="10" width="11" height="44" rx="2.5" fill="#9B8CFF"/></svg></div>
+      </div>
+      <figcaption class="txt"><b>1. Bars, refined</b><span>Today's icon with equal widths, a shared baseline and one accent bar. The safest option; it keeps the equity already on the landing page.</span></figcaption>
+    </figure>
+    <figure class="mark" style="margin:0">
+      <div class="tiles">
+        <div class="tile l"><svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="42" width="48" height="10" rx="5" fill="#12161B"/><rect x="14" y="29" width="40" height="10" rx="5" fill="#12161B"/><rect x="20" y="16" width="32" height="10" rx="5" fill="#2860F0"/></svg></div>
+        <div class="tile d"><svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="42" width="48" height="10" rx="5" fill="#E6EAF2"/><rect x="14" y="29" width="40" height="10" rx="5" fill="#E6EAF2"/><rect x="20" y="16" width="32" height="10" rx="5" fill="#2860F0"/></svg></div>
+      </div>
+      <figcaption class="txt"><b>2. The pile</b><span>Three stacked slabs: a stockpile, and chips on a table. The most literal name match; it reads as a game token as much as a chart.</span></figcaption>
+    </figure>
+    <figure class="mark" style="margin:0">
+      <div class="tiles">
+        <div class="tile l"><svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true"><rect x="6" y="6" width="52" height="52" rx="14" fill="#12161B"/><path d="M42 20 H26 a6 6 0 0 0 0 12 h12 a6 6 0 0 1 0 12 H22" fill="none" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M40 14 l6 6 -6 6" fill="none" stroke="#FFC53D" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="tile d"><svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true"><rect x="6" y="6" width="52" height="52" rx="14" fill="#1C2236"/><path d="M42 20 H26 a6 6 0 0 0 0 12 h12 a6 6 0 0 1 0 12 H22" fill="none" stroke="#E6EAF2" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M40 14 l6 6 -6 6" fill="none" stroke="#FFC53D" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      </div>
+      <figcaption class="txt"><b>3. S-curve monogram</b><span>An S drawn as a path that ends in an up-arrow, set in an app-icon tile. The strongest app-store icon of the four, and it scales down to a favicon.</span></figcaption>
+    </figure>
+    <figure class="mark" style="margin:0">
+      <div class="tiles">
+        <div class="tile l"><svg width="150" height="40" viewBox="0 0 150 40" aria-hidden="true"><text x="4" y="29" font-family="Archivo, sans-serif" font-weight="800" font-size="26" fill="#12161B" style="font-stretch:88%">stockpile</text><path d="M104 7 l5 -6 5 6 z" fill="#0B6477"/></svg></div>
+        <div class="tile d"><svg width="150" height="40" viewBox="0 0 150 40" aria-hidden="true"><text x="4" y="29" font-family="Archivo, sans-serif" font-weight="800" font-size="26" fill="#E6EAF2" style="font-stretch:88%">stockpile</text><path d="M104 7 l5 -6 5 6 z" fill="#9B8CFF"/></svg></div>
+      </div>
+      <figcaption class="txt"><b>4. Wordmark with a tick</b><span>Lowercase wordmark whose "i" dot becomes an up-tick. No separate icon; best for the landing and promo, and weaker as an app icon on its own.</span></figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ═════════════ COMPARE ═════════════ -->
+<section class="dir" id="compare" aria-labelledby="c-cmp">
+  <div class="dir-head"><h2 id="c-cmp">Side by side</h2></div>
+  <div class="compare">
+    <table>
+      <thead><tr><th scope="col"></th><th scope="col">A. Ledger</th><th scope="col">B. Game Day</th><th scope="col">C. After Hours</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Theme</th><td>Light</td><td>Light, with navy scoreboard modules</td><td>Dark</td></tr>
+        <tr><th scope="row">Feel</th><td>Calm fintech</td><td>Calm fintech, plus live sports broadcast</td><td>Premium dark terminal</td></tr>
+        <tr><th scope="row">Amount of motion</th><td>Low: numbers and charts only</td><td>High on competitive screens, low on money screens</td><td>Medium: springs, shared elements, live glow</td></tr>
+        <tr><th scope="row">Matchup moment</th><td>Typeset result line with a fill bar</td><td>Scoreboard, tug-of-war, chyrons, Friday reveal</td><td>Two lines racing on one chart</td></tr>
+        <tr><th scope="row">Distance from today</th><td>Closest to the landing page</td><td>Medium</td><td>Largest</td></tr>
+        <tr><th scope="row">Main risk</th><td>Too reserved for game night</td><td>Two registers to keep disciplined</td><td>Reads as crypto or day-trading</td></tr>
+        <tr><th scope="row">Fonts</th><td>Source Serif 4, Schibsted Grotesk</td><td>Archivo (one variable family)</td><td>Geist, Geist Mono</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+</div>
+
+<script>
+(function(){
+  // Replay: toggling .play on the direction section restarts its one signature animation.
+  function play(section){
+    section.classList.remove('play');
+    void section.offsetWidth;
+    section.classList.add('play');
+  }
+  document.querySelectorAll('.dir[id]').forEach(function(s){ if(s.id!=='marks'&&s.id!=='compare') play(s); });
+  document.querySelectorAll('[data-replay]').forEach(function(btn){
+    btn.addEventListener('click', function(){ play(document.getElementById(btn.getAttribute('data-replay'))); });
+  });
+})();
+</script>
