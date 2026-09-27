@@ -71,3 +71,12 @@ no lift or tilt. **Reduced motion:** the same rows as mobile, plus
 5. Keyboard and screen reader pass; motion from tokens; every reduced-motion row evidenced.
 
 Report your PLAN first and wait for "go".
+
+## Ambition bar (added 2026-09-27, after Giorgio called the first landing "still very basic")
+
+**The bar is "would this impress on first use next to Apple, Stripe or Linear product pages and web apps?"**, not "is it correct". Performance, honesty, tokens and reduced motion are **table stakes, not the goal**. The Design Lead will push back on timid work. **Copy:** keep Giorgio's existing copy **verbatim** unless this prompt explicitly changes it; propose wording changes, don't make them.
+
+**Signature moments this phase must include** (each with its reduced-motion row and a recording):
+- **Page transitions** between app routes (View Transitions API, with a crossfade fallback).
+- **A sticky header that condenses on scroll**; a league pill → panel shared element.
+- Every mobile signature moment from 3b-2 / 3c / 3e, adapted to web (hover previews on standings rows and tickers).

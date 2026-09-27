@@ -138,3 +138,15 @@ restyled piecemeal.
 9. Signed-out deep links never render a context-dependent screen; the intended target resumes after sign-in.
 
 Report your PLAN first and wait for "go".
+
+## Ambition bar (added 2026-09-27, after Giorgio called the first landing "still very basic")
+
+**The bar is "would this impress on first use next to Robinhood, Sleeper, Revolut or Arc?"**, not "is it correct". Performance, honesty, tokens and reduced motion are **table stakes, not the goal**. The Design Lead will push back on timid work. **Copy:** keep Giorgio's existing copy **verbatim** unless this prompt explicitly changes it; propose wording changes, don't make them.
+
+**Signature moments this phase must include** (each with its reduced-motion row and a recording):
+- **Onboarding with live vignettes:** each card shows the product working (a mini scoreboard counting up, a tug bar swinging on a lead change, a standings row climbing), not static text. Parallax layers between cards.
+- **Tab bar with a sliding active indicator** that springs between tabs, plus a small icon micro-animation on select.
+- **League sheet → pill shared element:** picking a league flies its name into the header pill as the sheet closes; the rows spring in, staggered.
+- **An animated brand moment on auth:** the refined bars rise on the login screen; signing in transitions into the app (crossfade + scale-in), not a hard cut.
+- **Custom pull-to-refresh** (bars rising) instead of the default spinner.
+- **The username availability check** animates its state (checking → available ✓ / taken ✗).
