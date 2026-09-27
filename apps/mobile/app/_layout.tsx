@@ -24,6 +24,30 @@ export {
   ErrorBoundary,
 } from 'expo-router';
 
+// DEV-ONLY, TWICE OVER (Phase 2 foundation): normal runs never set
+// EXPO_PUBLIC_DEV_START_ROUTE, so this is `false` and behavior is identical
+// to today. It exists because a real OS deep link (`simctl openurl` /
+// Universal Link) into the signed-out Stack lands on login instead of the
+// requested screen regardless of target — reproduced with forgot-password,
+// an unrelated, always-registered screen, so it's a pre-existing race
+// between Linking's initial-URL handling and RootLayoutNav's async auth
+// check (its own task now, not fixed here). This gives dev verification a
+// deterministic way in that doesn't touch that race: start Metro with
+// `EXPO_PUBLIC_DEV_START_ROUTE=design-gallery npx expo start --go --port 8085 --clear`.
+const DEV_START_ON_GALLERY = __DEV__ && process.env.EXPO_PUBLIC_DEV_START_ROUTE === 'design-gallery';
+
+// Neither an `initialRouteName` prop on the `<Stack>` JSX element NOR setting
+// it here in `unstable_settings` actually changes which screen opens first —
+// both verified inert (the Stack still opened on its first declared
+// `<Stack.Screen>` child regardless, even after a full simulator reboot ruled
+// out stale navigation state). `unstable_settings.initialRouteName` governs
+// back-history synthesis for a deep-linked route GROUP, not which screen a
+// Stack opens on with no navigation state — '(tabs)' below is the default
+// simply because it's the first-listed screen in the authenticated Stack,
+// not because of this export. Left as '(tabs)' (its original, unconditional
+// value) since it isn't the mechanism DEV_START_ON_GALLERY needs — see the
+// signed-out Stack below, where that screen's position in the JSX list is
+// the actual lever.
 export const unstable_settings = {
   initialRouteName: '(tabs)',
 };
@@ -145,15 +169,23 @@ function RootLayoutNav() {
       <ThemeProvider value={DefaultTheme}>
         <StatusBar style="dark" />
         <Stack screenOptions={AUTH_SCREEN_OPTIONS}>
-          <Stack.Screen name="login" />
-          <Stack.Screen name="forgot-password" options={HIDDEN_HEADER_MODAL} />
-          <Stack.Screen name="reset-password" options={HIDDEN_HEADER_FULLSCREEN} />
           {/* DEV-ONLY (Phase 2 foundation): this Stack is otherwise limited to
               auth screens, so design-gallery.tsx (which needs no sign-in) is
               unreachable while signed out unless explicitly registered here.
               design-gallery.tsx's own !__DEV__ redirect is the belt to this
-              suspenders — either one alone keeps it out of a release build. */}
-          {__DEV__ && <Stack.Screen name="design-gallery" options={HIDDEN_HEADER} />}
+              suspenders — either one alone keeps it out of a release build.
+              A Stack Navigator's opening screen (with no navigation state)
+              is simply its first-declared child — neither an `initialRouteName`
+              prop nor `unstable_settings` changed it here (both verified
+              inert) — so DEV_START_ON_GALLERY controls this by conditionally
+              registering design-gallery FIRST instead of after reset-password;
+              it must still appear exactly once, so the two branches are
+              mutually exclusive. */}
+          {DEV_START_ON_GALLERY && <Stack.Screen name="design-gallery" options={HIDDEN_HEADER} />}
+          <Stack.Screen name="login" />
+          <Stack.Screen name="forgot-password" options={HIDDEN_HEADER_MODAL} />
+          <Stack.Screen name="reset-password" options={HIDDEN_HEADER_FULLSCREEN} />
+          {__DEV__ && !DEV_START_ON_GALLERY && <Stack.Screen name="design-gallery" options={HIDDEN_HEADER} />}
         </Stack>
       </ThemeProvider>
     );
