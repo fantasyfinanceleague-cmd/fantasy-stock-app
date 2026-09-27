@@ -189,6 +189,19 @@ Header:        [league pill ▾]  on Matchup / League / Portfolio      [avatar] 
 - **Home**: cross-league overview (the planned 3b rebuild). Total value,
   an honest performance chart (§7 ask 3), "This week" matchup strip (one card
   per live league), your leagues grouped by phase. Avatar → Profile & settings.
+  - **Chart decision (2026-09-26): plot cumulative gain, not value.** The
+    line is `value − cost basis + realized P/L` for the selected window,
+    with a **zero baseline**. It sits in the gain colour above zero and the
+    loss colour below (§9 data tokens). Reason: the game is scored on dollar
+    gain, and the header already shows cash-flow-adjusted gain. A value line
+    turns every draft, buy or league join into a fake rally (seen by the P/L
+    worker: +$5,000 of in-window drafts made the line climb while the header
+    correctly read +$25.14, and flagged as the "staircase chart" in the
+    audit). Deposits (drafts, league joins) therefore produce **no jump**. An
+    optional small marker on the axis may note "joined Friday Night Stocks";
+    it's never a step in the line. **Portfolio value** stays the big number
+    in the header, not the chart. Data: this needs the daily series in §7
+    ask 3, with per-day cost basis.
 - **Matchup**: your matchup in the active league, with a segmented control
   for **All matchups this week** in that league.
 - **League**: standings, schedule, history, league settings (commissioner).
