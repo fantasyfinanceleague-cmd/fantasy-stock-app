@@ -1,8 +1,10 @@
 # Phase 3b-1 worker prompt — Mobile shell + first run (`ui/mobile-shell`)
 
 > Drafted by Design Lead, 2026-09-26. Starts when **`ui/foundation-mobile` is
-> merged**. Backend asks: **#6** (username persisted at signup; verify first,
-> it may be client-only). Everything else is client-side. Suggested model:
+> merged**. Backend asks: **#6**. Backend B found usernames were **never
+> persisted** (the client upsert ran as anon under email confirmation); the
+> fix is a DB trigger, and taken names fall back to NULL. So this phase owns the
+> **username prompt** below. Everything else is client-side. Suggested model:
 > plan on Opus, build on Sonnet.
 
 ---
@@ -58,7 +60,22 @@ design gallery.
    (editable, from ask #6), email **once**, and "Change password" as **its own
    screen**, not an always-open form. Sign out. Version = the real app
    version. "Open web app" is removed while the web is paused.
-8. **Route transitions:** stack pushes use the platform default; **tab
+8. **Pick a username (first run, and every existing account):** whenever the
+   signed-in user's `username` **IS NULL**, show a one-screen prompt **before**
+   the tabs: title "Pick a username", helper "Shown to your league on standings
+   and matchups", the validation rules inline (3–20 characters, letters, numbers and
+   underscores), a live availability check, and **one primary action**. Taken
+   names get a clear inline error plus 2–3 suggestions. It can't be skipped (a
+   username is required to play), but it never blocks sign-out. It also covers
+   accounts where the trigger fell back to NULL because the name was taken.
+9. **Signed-out routing (G3, from the deep-link review):** move to a **single
+   `Stack` with `Stack.Protected guard={!!user}`** around every
+   context-dependent screen: `create-league`, `join-league`, `league-settings`,
+   `player-portfolio`, `trade-history`, the tabs. A signed-out deep link lands
+   on auth, then continues to the intended screen after sign-in (preserve the
+   target). Auth screens and the `reset-password` link stay outside the guard.
+   Verify the password-reset flow still works end-to-end from an email link.
+10. **Route transitions:** stack pushes use the platform default; **tab
    switches crossfade** (`quick`); sheets use `spring.snappy`.
 
 **Out of scope:** Home's dashboard content (3b-2), Matchup/League/Draft
@@ -98,6 +115,12 @@ restyled piecemeal.
   **iPhone 17e** (smallest width).
 - Recordings: tab switch, sheet open/close, onboarding. **Reduce Motion on
   and off** each.
+- **Username prompt:** capture it in an account with `username IS NULL` (ask
+  Giorgio/the Orchestrator for one; never type credentials): empty, invalid,
+  taken + suggestions, success.
+- **Guard proof:** with the app signed out, open deep links to `create-league`,
+  `join-league` and `trade-history` (`xcrun simctl openurl`), and show each lands
+  on auth and then continues to the target after sign-in.
 - **Reachability proof** (the CLAUDE.md lesson): for the league sheet,
   Create, Join and Profile, list who navigates to each and under what
   condition. Nothing may be reachable only from an empty state.
@@ -111,5 +134,7 @@ restyled piecemeal.
 5. Nothing clips or wraps badly at XL Dynamic Type; tab labels scale.
 6. Motion from tokens; every reduced-motion row evidenced.
 7. No regressions on the untouched tabs (they show honest placeholders).
+8. No signed-in surface renders with `username IS NULL`; the prompt appears first.
+9. Signed-out deep links never render a context-dependent screen; the intended target resumes after sign-in.
 
 Report your PLAN first and wait for "go".
