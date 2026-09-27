@@ -492,3 +492,81 @@ Files in `docs/design/naming/marks/` (`preview-round2.html` shows them together)
 [PINSTRIPE BOWL mark](https://trademark.justia.com/778/38/pinstripe-77838818.html) ·
 [PINSTRIPES mark](https://trademarks.justia.com/766/33/pinstripes-76633435.html) ·
 [Bell Ringer app](https://apps.apple.com/us/app/bell-ringer/id342059802)
+
+---
+
+# Round 3 (2026-09-26): the Stockpile pattern
+
+> Giorgio rejected round 2 ("even worse"): *"Stockpile is a good name so it
+> needs to be something like that."* So the target is the pattern:
+> **one real, everyday English word** (not coined, no suffix) that **secretly
+> says "stock"**, **suggests building a collection** (like drafting a roster),
+> and is **playful, never brokerage-y**. Informal screen, not legal clearance.
+
+## R3.1 The names (read these first)
+
+| Name | Why it's like Stockpile |
+|---|---|
+| **Stockyard** | The closest sibling: "stock" plus the place where it gathers. And stockyards are where the **bulls** are kept. |
+| **Livestock** | Hides "**live stock**" (the market, live), and bulls and bears are literally livestock. Playful and instantly understood. |
+| **Stockade** | An everyday word with "stock" inside; a stockade is something you **build and defend**, like a roster. |
+| **Stockroom** | Where stock is kept, the pure "collection" meaning. The plainest of the six. |
+| **Warchest** | The same "piling up for a fight" idea, and very competitive, but **no hidden "stock"**. |
+| **Bloodstock** | A real word from thoroughbred racing (sporty) with "stock" inside, but "blood" and the betting-horse association work against it. |
+
+**Anything that keeps "Stockpile" in it** ("Stockpile League", "Stockpiler",
+"Stockpile Fantasy") **still collides with stockpile.com** in the same
+category and class. It doesn't escape the original problem.
+
+## R3.2 Screen
+
+Domains checked 2026-09-26 (`.com` Verisign, `.app` RDAP). **All six `.com`s
+and `.app`s are registered**, as expected for common English words, so the
+realistic domains are prefixes. Handles: none indexed for any of these as a
+product; verify by hand.
+
+| Name | Same-category / store | Domains free | Brokerage? | Feels like Stockpile? |
+|---|---|---|---|---|
+| **Stockyard** | No stock or fantasy product. Stores: *Stockyard Mobile* (AU livestock-saleyard system), *Fort Worth Stockyards* (tourism) | **playstockyard.com**. getstockyard.com **registered 2026-03-18** (recent) | **No** | **Yes, most of all**: real word, "stock" plus a place things pile up, bulls |
+| **Livestock** | No stock or fantasy product. *LivestockMarket* (agri marketplace), *Stocks Live* (stock tracker, a reversed-word near-name) | **playlivestock.com** | **No** | **Yes**, and the wittiest. But it's so common that owning it as a mark and ranking in search (farming dominates) will be hard |
+| **Stockade** | None in category. Stockade Companies (restaurants) | **playstockade.com, getstockade.com** | **No** | **Mostly**: real word with hidden "stock", but "defend" rather than "collect", and a slightly military tone |
+| **Stockroom** | None in category, **but the App Store is crowded with inventory apps** (Stockroom Inventory, inFlow Stockroom, a Shopify app) | **playstockroom.com**. getstockroom.com registered 2026-06 | **No** | **Yes in meaning**, but reads as retail back-office, not playful |
+| **Warchest** | No app; "war chest" is common **financial-planning** vocabulary | **playwarchest.com**. getwarchest.com registered 2025-10 | **Somewhat** (cash reserves, wealth planning) | **Half**: collection and competition, but no hidden "stock" |
+| **Bloodstock** | None in category | not checked (ranked sixth) | **No**, but it reads as horse-racing and betting | **Partly**: real word and hidden "stock", but not playful |
+
+Screened out: **Stack** (Stack Wealth, Stackwell, Stack by me: investing
+apps), **Trove** (Trove investing app), **Stockpot** (one letter from
+*Stockspot*, an Australian investing app), **Stash** (the Stash investing app),
+**Restock** (an App Store app named RESTOCK plus a crowd of restock-alert
+apps; playrestock.com registered 2026-09-05), **Hoard** (negative), **Haul**
+(no "stock"), **Rootstock** (an existing crypto project), and **Stockist**,
+**Headstock** (no game meaning).
+
+**USPTO (tmsearch.uspto.gov; Live + Dead; classes 009, 036, 041, then
+unfiltered):** `stockyard` · `stockyards` · `livestock` (expect agriculture
+results; look for 009/041 owners) · `stockade` · `stockroom` · `war chest` ·
+`warchest` · `bloodstock`.
+
+## R3.3 Marks for the top two (both built on the refined bars)
+
+`docs/design/naming/marks/r3-stockyard.svg`, `r3-livestock.svg`;
+`preview-round3.html` shows them together.
+
+- **Stockyard:** the refined bars gathered behind two amber fence rails,
+  so "a yard of stock". It keeps the chosen mark intact. At 40px the rails
+  make it busier; a worker would thin them.
+- **Livestock:** the refined bars with **bull horns** on the tallest (blue)
+  bar: literally a bull market. It's the more memorable of the two. Keep the
+  horns abstract and amber: no bull head, no red, nothing near the Chicago
+  Bulls or Red Bull marks.
+
+## R3.4 Recommendation (Giorgio decides)
+
+**Stockyard**, with **Livestock** as the alternative.
+
+- *Stockyard* follows the Stockpile pattern most exactly (stock + where it
+  gathers, two syllables, a real word) and adds the bull connection. Use
+  **playstockyard.com**; the bare .com dates from 1996.
+- *Livestock* is the wittier, more playful name, and its mark (bars with
+  horns) is the strongest of the three rounds. Its cost is ownership: a
+  very common word, dominated by farming in search, is hard to protect.
