@@ -680,11 +680,14 @@ the lockups, the app icon at 60/40/29 and the favicon at actual 16px.
 
 ---
 
-# Decision: Stockade — FINAL (2026-09-26)
+# Stockade: front-runner; final decision deferred to pre-launch (2026-09-26)
 
-**FINAL: Giorgio confirmed "Stockade" on 2026-09-26**, after pausing once to
-see Round 4 and after the Orchestrator's USPTO checks (below and in "Round 4 —
-USPTO results"). Primary mark: **A · Palisade** (D.4). Production assets:
+**Front-runner; the final decision is deferred to pre-launch** (Giorgio,
+2026-09-26). He confirmed "Stockade" once, then deferred naming to the very end
+of the program. **No domains are being bought yet.** Until then the product
+stays **name-agnostic**: the `brand.name` token keeps the placeholder
+"Stockpile", and the rename branch is parked. Stockade leads after the
+Orchestrator's USPTO checks (below and in "Round 4 — USPTO results"). Primary mark: **A · Palisade** (D.4). Production assets:
 `docs/design/brand/stockade/` (see its README for usage rules). **Of every
 name screened across four rounds, Stockade and Odd Lot were the only two with
 no live 009/036/041 conflicts; he chose Stockade.**
@@ -882,5 +885,5 @@ Transcribed as reported; informal, not legal clearance.
 | BUTTONWOOD | 036 wealth management |
 | BLUE CHIP(S) | **Out.** Crowded: Boyd Gaming (041 casino/entertainment), Blue Chip Sports (041), Blue Chip IP (009 apps), TXSE "SEQ BLUE CHIP" (035/036), CCH (009); descriptive in finance anyway |
 
-**Outcome:** Stockade and Odd Lot were the two clean names. **Giorgio chose
-Stockade (FINAL, 2026-09-26).**
+**Outcome:** Stockade and Odd Lot were the two clean names. Giorgio favours
+**Stockade**; the **final decision is deferred to pre-launch** (2026-09-26).

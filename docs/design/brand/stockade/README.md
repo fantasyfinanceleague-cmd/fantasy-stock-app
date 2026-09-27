@@ -1,10 +1,12 @@
 # Stockade brand kit
 
-> **PRODUCTION (2026-09-26).** Stockade is final: see `docs/design/NAMING.md`,
-> "Decision: Stockade — FINAL". The rename worker wires these in.
+> **Front-runner kit: do not wire in until the name is final.** Naming is
+> deferred to pre-launch (see `docs/design/NAMING.md`, "Stockade: front-runner;
+> final decision deferred to pre-launch"). The product stays on `brand.name`
+> (placeholder "Stockpile") until then.
 
 Primary mark: **A · Palisade**. The refined bars recut as three pointed
-stakes rising in height, with the tallest in brand blue. Final, confirmed by Giorgio on 2026-09-26 (see `docs/design/NAMING.md`). Colours are the Game Day tokens (`docs/design/DESIGN_DIRECTION.md`
+stakes rising in height, with the tallest in brand blue. Front-runner; final decision deferred to pre-launch (see `docs/design/NAMING.md`). Colours are the Game Day tokens (`docs/design/DESIGN_DIRECTION.md`
 §9): stadium `#0D1B2E`, brand `#2860F0`, white `#FFFFFF`.
 
 ## Files
