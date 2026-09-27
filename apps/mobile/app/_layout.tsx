@@ -17,7 +17,7 @@ import 'react-native-reanimated';
 import { LeagueProvider } from '@/lib/LeagueContext';
 import { addNotificationListeners } from '@/lib/notifications';
 import { supabase } from '@/lib/supabase';
-import { verifyAndConsumeRecoveryNonce } from '@/lib/recoveryNonce';
+import { verifyAndConsumeRecoveryNonce, setRecoverySession } from '@/lib/recoveryNonce';
 import { parseRecoveryLink } from '@/lib/recoveryLink';
 import { useAuth } from '@/lib/useAuth';
 
@@ -55,6 +55,7 @@ function RootLayoutNav() {
         // Expired, already-used, or otherwise malformed link — Supabase
         // redirected here with an error instead of tokens. Route to the
         // invalid state rather than leaving reset-password with no session.
+        setRecoverySession(false);
         router.replace('/reset-password?status=invalid');
         return;
       }
@@ -67,6 +68,7 @@ function RootLayoutNav() {
       // nonce and is refused.
       const nonceOk = await verifyAndConsumeRecoveryNonce(parsed.nonce);
       if (!nonceOk) {
+        setRecoverySession(false);
         router.replace('/reset-password?status=invalid');
         return;
       }
@@ -78,9 +80,16 @@ function RootLayoutNav() {
       });
 
       if (error) {
+        setRecoverySession(false);
         router.replace('/reset-password?status=invalid');
         return;
       }
+
+      // Mark this session as a recovery session — reset-password.tsx's form
+      // state keys off this flag, not "is there any session at all", so a
+      // user who lands there some other way while signed in for an
+      // unrelated reason doesn't see the form. Cleared on Cancel or success.
+      setRecoverySession(true);
 
       // Navigate to reset password screen
       router.replace('/reset-password');

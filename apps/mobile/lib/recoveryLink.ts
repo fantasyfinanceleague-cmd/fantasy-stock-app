@@ -85,28 +85,33 @@ export const RESET_VERIFY_TIMEOUT_MS = 8000;
 /**
  * Pure decision for which of reset-password's three states to show.
  * `status` is the `status` search param (only 'invalid' is meaningful);
- * `hasSession` is whether useAuth() currently reports a user; `elapsedMs`
- * is how long the screen has been mounted without either one settling.
+ * `isRecovery` is lib/recoveryNonce.ts's recovery-session flag, NOT "does
+ * useAuth() report any user" — a signed-in user who reaches this screen
+ * some other way, without a valid recovery link, must not see the form
+ * just because they happen to have an unrelated session. `elapsedMs` is
+ * how long the screen has been mounted without either one settling.
  *
  * Precedence, in order: an explicit invalid status always wins (even over
- * a session — e.g. a stale link tapped after the reset already completed
- * elsewhere); a session, once present, wins over an elapsed timeout (so a
- * setSession that resolves right at the timeout boundary still reaches
- * the form); only then does the timeout apply.
+ * a recovery session — e.g. a stale link tapped after the reset already
+ * completed elsewhere); the recovery flag, once set, wins over an elapsed
+ * timeout (so a setSession that resolves right at the timeout boundary
+ * still reaches the form); only then does the timeout apply. A user who
+ * is signed in WITHOUT a valid recovery link (isRecovery false) falls all
+ * the way through to the timeout, same as someone with no session at all.
  */
 export function resetScreenState({
   status,
-  hasSession,
+  isRecovery,
   elapsedMs,
 }: {
   status: string | null | undefined;
-  hasSession: boolean;
+  isRecovery: boolean;
   elapsedMs: number;
 }): ResetScreenState {
   if (status === 'invalid') {
     return 'invalid';
   }
-  if (hasSession) {
+  if (isRecovery) {
     return 'form';
   }
   if (elapsedMs >= RESET_VERIFY_TIMEOUT_MS) {

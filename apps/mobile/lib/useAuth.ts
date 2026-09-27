@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { setupPushNotifications, removePushToken } from './notifications';
+import { setRecoverySession } from './recoveryNonce';
 
 export function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
@@ -42,6 +43,11 @@ export function useAuth() {
         // Reset flag on sign out
         if (event === 'SIGNED_OUT') {
           notificationsSetup.current = false;
+          // Defensive: a recovery session ending any other way than
+          // reset-password.tsx's own Cancel/success handlers (e.g. a
+          // sign-out elsewhere in the app) must not leave the flag
+          // stuck true for whatever session comes next.
+          setRecoverySession(false);
         }
       }
     );

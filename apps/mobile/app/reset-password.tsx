@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import {
   View,
   Text,
@@ -15,76 +15,93 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
+import { isRecoverySession, setRecoverySession, subscribeRecoverySession } from '@/lib/recoveryNonce';
 import { resetScreenState, RESET_VERIFY_TIMEOUT_MS } from '@/lib/recoveryLink';
+import { getAuthErrorMessage } from '@/lib/authErrors';
+import { checkPassword, PASSWORD_RULE_SENTENCE } from '@/constants/passwordRules';
 import { Colors } from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui';
+
+const ALERT_TITLE = "Couldn't update password";
 
 // This screen is reached only from the password-recovery deep link
 // (app/_layout.tsx's handleDeepLink). Its state is decided by the pure
 // resetScreenState() (lib/recoveryLink.ts):
 //
-//   - verifying: no `status=invalid` param yet, and no session yet either.
-//     Covers the brief window on cold start where this route is showing
-//     (expo-router restored it from the link before anything else rendered)
-//     but the async nonce-check + setSession in _layout.tsx hasn't resolved
-//     — and also a URL that routes here by PATH but that _layout.tsx's
-//     parser doesn't recognize as a recovery link at all (a bare `?rn=`
-//     with no fragment, a truncated link, a future PKCE `?code=` redirect):
-//     _layout.tsx never sets a status OR a session for those, so nothing
+//   - verifying: no `status=invalid` param yet, and the recovery-session
+//     flag (lib/recoveryNonce.ts) isn't set yet either. Covers the brief
+//     window on cold start where this route is showing (expo-router
+//     restored it from the link before anything else rendered) but the
+//     async nonce-check + setSession in _layout.tsx hasn't resolved — and
+//     also a URL that routes here by PATH but that _layout.tsx's parser
+//     doesn't recognize as a recovery link at all (a bare `?rn=` with no
+//     fragment, a truncated link, a future PKCE `?code=` redirect):
+//     _layout.tsx never sets a status OR the flag for those, so nothing
 //     but RESET_VERIFY_TIMEOUT_MS moves this screen off "verifying".
 //   - invalid: the link was rejected (bad/replayed/mismatched nonce), was
 //     already used, has expired, or verifying simply timed out — no
-//     session was set. There's nothing to recover from here; the user
-//     needs to request a new email.
-//   - form: a session exists, so this is a real recovery in progress.
+//     recovery session was set. There's nothing to recover from here; the
+//     user needs to request a new email.
+//   - form: the recovery flag is set, so this is a real recovery in
+//     progress. Deliberately NOT "is there any session" — a user already
+//     signed in for an unrelated reason who lands here some other way
+//     must not see the form; they fall through to verifying -> timeout ->
+//     invalid instead, same as someone with no session at all.
 
 export default function ResetPasswordScreen() {
   const { status } = useLocalSearchParams<{ status?: string }>();
-  const { user, signOut } = useAuth();
+  const { signOut } = useAuth();
+  const isRecovery = useSyncExternalStore(subscribeRecoverySession, isRecoverySession, isRecoverySession);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [verifyTimedOut, setVerifyTimedOut] = useState(false);
 
-  // Bounded wait: if neither a session nor an explicit status ever arrives
-  // (see the "verifying" case above), stop spinning and show "invalid".
+  // Bounded wait: if neither the recovery flag nor an explicit status ever
+  // arrives (see the "verifying" case above), stop spinning and show "invalid".
   useEffect(() => {
-    if (user || status === 'invalid') {
+    if (isRecovery || status === 'invalid') {
       return;
     }
     const timer = setTimeout(() => setVerifyTimedOut(true), RESET_VERIFY_TIMEOUT_MS);
     return () => clearTimeout(timer);
-  }, [user, status]);
+  }, [isRecovery, status]);
 
   const screenState = resetScreenState({
     status,
-    hasSession: !!user,
+    isRecovery,
     elapsedMs: verifyTimedOut ? RESET_VERIFY_TIMEOUT_MS : 0,
   });
 
   async function handleCancel() {
-    // A recovery link fully signs the device in (that's how the form gets
-    // its session), so leaving via Cancel should not leave the user signed
-    // in to an account they never meant to open here.
-    await signOut();
-    router.replace('/login');
+    // Only end a session THIS screen created. A recovery link signs the
+    // device in as a side effect of recovering it, so leaving via Cancel
+    // should undo that — but a user who reached this screen some other
+    // way while already signed in for an unrelated reason keeps their
+    // real session; Cancel just takes them home.
+    if (isRecoverySession()) {
+      setRecoverySession(false);
+      await signOut();
+    }
+    router.replace('/');
   }
 
   async function handleUpdatePassword() {
     if (!password) {
-      Alert.alert('Error', 'Please enter a new password');
+      Alert.alert(ALERT_TITLE, 'Please enter a new password.');
       return;
     }
 
-    if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+    const { failing } = checkPassword(password);
+    if (failing.length > 0) {
+      Alert.alert(ALERT_TITLE, `Your password needs: ${failing.map((r) => r.label.toLowerCase()).join(', ')}.`);
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      Alert.alert(ALERT_TITLE, "Passwords don't match.");
       return;
     }
 
@@ -95,10 +112,11 @@ export default function ResetPasswordScreen() {
     setLoading(false);
 
     if (error) {
-      Alert.alert('Error', error.message);
+      Alert.alert(ALERT_TITLE, getAuthErrorMessage(error, PASSWORD_RULE_SENTENCE));
       return;
     }
 
+    setRecoverySession(false);
     setSuccess(true);
   }
 
@@ -109,9 +127,9 @@ export default function ResetPasswordScreen() {
           <View style={styles.iconContainer}>
             <Ionicons name="checkmark-circle" size={64} color={Colors.success} />
           </View>
-          <Text style={styles.title}>Password Reset!</Text>
+          <Text style={styles.title}>Password updated</Text>
           <Text style={styles.description}>
-            Your password has been successfully updated.
+            You're signed in with your new password.
           </Text>
 
           <Button
@@ -131,7 +149,7 @@ export default function ResetPasswordScreen() {
         <View style={styles.content}>
           <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={[styles.description, styles.verifyingText]}>
-            Verifying your reset link…
+            Checking your reset link…
           </Text>
           <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
             <Text style={styles.cancelText}>Cancel</Text>
@@ -148,21 +166,22 @@ export default function ResetPasswordScreen() {
           <View style={styles.iconContainer}>
             <Ionicons name="alert-circle-outline" size={64} color={Colors.error} />
           </View>
-          <Text style={styles.title}>Link No Longer Valid</Text>
+          <Text style={styles.title}>This link didn't work</Text>
           <Text style={styles.description}>
-            This password reset link has expired, was already used, or doesn't
-            match this device. Request a new one to continue.
+            It may have expired, been used already, or been opened on a
+            different device than the one that asked for it. Request a new
+            link to continue.
           </Text>
 
           <Button
-            title="Request a New Link"
+            title="Request a new link"
             onPress={() => router.replace('/forgot-password')}
             variant="primary"
             style={styles.buttonSpacing}
           />
 
           <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
-            <Text style={styles.cancelText}>Back to Login</Text>
+            <Text style={styles.cancelText}>Back to sign in</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -179,14 +198,14 @@ export default function ResetPasswordScreen() {
           <View style={styles.iconContainer}>
             <Ionicons name="lock-closed-outline" size={64} color={Colors.primary} />
           </View>
-          <Text style={styles.title}>Set New Password</Text>
+          <Text style={styles.title}>Set a new password</Text>
           <Text style={styles.description}>
-            Enter your new password below. Make sure it's at least 6 characters long.
+            {PASSWORD_RULE_SENTENCE}
           </Text>
 
           <TextInput
             style={styles.input}
-            placeholder="New Password"
+            placeholder="New password"
             placeholderTextColor={Colors.textMuted}
             value={password}
             onChangeText={setPassword}
@@ -196,7 +215,7 @@ export default function ResetPasswordScreen() {
 
           <TextInput
             style={styles.input}
-            placeholder="Confirm New Password"
+            placeholder="Confirm new password"
             placeholderTextColor={Colors.textMuted}
             value={confirmPassword}
             onChangeText={setConfirmPassword}
@@ -204,7 +223,7 @@ export default function ResetPasswordScreen() {
           />
 
           <Button
-            title="Update Password"
+            title="Update password"
             onPress={handleUpdatePassword}
             variant="primary"
             loading={loading}
