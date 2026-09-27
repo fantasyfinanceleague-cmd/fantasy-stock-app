@@ -40,7 +40,14 @@ mirrors their structure and states.
    whatever stylesheet bundles it) to an async `<link>` with preconnect and
    metric-tuned fallbacks, matching what the 3a landing does locally. Prove there's
    no layout shift on font swap (CLS ≤ 0.05) and that the landing is still byte-identical.
-5. **Keyboard and screen reader:** everything operable by keyboard; landmarks;
+5. **Motion root:** wrap the app shell in the foundation's `<MotionRoot>`
+   (`MotionConfig reducedMotion="user"`, added in 3a), so `motion.*` components
+   honour the OS setting; `useMotion()` already ORs in the OS preference.
+6. **Lint baseline:** `npm run lint` in `apps/web` fails on `main` today (~55
+   pre-existing errors, e.g. `Header.jsx:53` unused `setLoggingOut`). Most sit
+   in the legacy files you delete; fix the rest, and report **before/after
+   error counts**. Lint must pass at DONE.
+7. **Keyboard and screen reader:** everything operable by keyboard; landmarks;
    the Scoreboard's live region; focus management in panels.
 
 ## Motion
