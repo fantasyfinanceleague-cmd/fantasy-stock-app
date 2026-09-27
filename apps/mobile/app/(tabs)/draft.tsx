@@ -24,6 +24,7 @@ import {
   type StartBlocker,
 } from '@/lib/draftState';
 import { formatShortDateTime } from '@/lib/weekStatus';
+import { isUuid } from '@/lib/uuid';
 
 interface DraftPick {
   id: string;
@@ -185,8 +186,10 @@ export default function DraftScreen() {
         .select('user_id, role')
         .eq('league_id', activeLeagueId);
 
-      // Fetch profiles
-      const userIds = (memberData || []).map(m => m.user_id).filter(id => !id.startsWith('bot-'));
+      // Fetch profiles. isUuid, not `!id.startsWith('bot-')` — see lib/uuid.ts:
+      // a non-UUID, non-bot-prefixed test id (e.g. "test-user-2") would
+      // otherwise 22P02 the whole .in() query below.
+      const userIds = (memberData || []).map(m => m.user_id).filter(isUuid);
 
       const { data: profiles } = await supabase
         .from('user_profiles')

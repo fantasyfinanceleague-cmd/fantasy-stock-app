@@ -140,6 +140,63 @@ export function formatSeasonStartShort(league: League | null): string {
   return start ? formatShortMonthDay(start) : 'Soon';
 }
 
+/** "+$1.23" / "-$3,000.00" / "$0.00" — the one signed-money formatter for
+ * every gain/loss figure in the app. Before this, each screen built the sign
+ * and the `$` separately (`{x >= 0 ? '+' : ''}${formatCurrency(x)}`), and
+ * `formatCurrency`'s own `toLocaleString` already prints a leading `-` for a
+ * negative number, so a loss rendered as "$-3,000.00" — the minus landed
+ * after the `$` instead of before it (Home "THIS WEEK" pre-season cards).
+ * An exact zero renders with no sign ("$0.00"), not "+$0.00": zero is
+ * neither a gain nor a loss, and a bare `+` in front of it reads as one.
+ *
+ * Branches on the value rounded to whole cents, not the raw float: a value
+ * like -0.004 is a real negative number but displays as "$0.00" once
+ * rounded to two decimals, and branching on the unrounded sign would print
+ * "-$0.00" — a minus sign in front of a number that reads as zero. Rounding
+ * first means the sign shown always matches the two decimals shown next to
+ * it. Math.round ties round toward +Infinity (JS's own rule), so a value
+ * that rounds to exactly zero (e.g. -0.005, which is -0.4999...994 once
+ * doubles round it) comes out as an unsigned "$0.00", not "-$0.01". */
+export function formatSignedCurrency(value: number): string {
+  const cents = Math.round(value * 100);
+  const magnitude = (Math.abs(cents) / 100).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  if (cents > 0) return `+$${magnitude}`;
+  if (cents < 0) return `-$${magnitude}`;
+  return `$${magnitude}`;
+}
+
+/** Whether the server would accept a trade for a league in this phase.
+ * Mirrors supabase/functions/record-trade/index.ts's own gate exactly — it
+ * refuses every buy/sell with `draft_not_completed` unless
+ * `league.draft_status === 'completed'` (the only write path for trades;
+ * the client-side INSERT policy on `trades` was dropped in
+ * 20260811000002_trades_drop_direct_client_insert.sql). 'pre_season' is
+ * `completed` with a future `league_start_date`, so trading is allowed
+ * there — the draft itself is done, the server has no separate "season
+ * hasn't started yet" check, and pre-season roster changes are a real,
+ * currently-supported use case. Keep this in sync with that function if its
+ * gate ever changes. */
+export function canTradeInPhase(phase: SeasonPhase): boolean {
+  return phase !== 'pre_draft' && phase !== 'drafting';
+}
+
+/** "Week 1 starts Tue, Sep 29" — the pre_season Matchup tab's headline for
+ * an already-scheduled-but-not-yet-live matchup (the schedule exists once
+ * the draft finalizes, so `current_week`/`league_start_date` are real by
+ * this phase, unlike pre_draft/drafting where getSeasonLabel's generic copy
+ * is used instead). Falls back to getSeasonLabel's "Starts soon" wording
+ * for a missing/invalid start date, same as every other pre-season date
+ * site in this file. */
+export function getUpcomingMatchupLabel(league: League | null): string {
+  const week = league?.current_week || 1;
+  const start = parseLeagueStartDate(league);
+  const startLabel = start ? formatShortWeekdayDate(start) : 'soon';
+  return `Week ${week} starts ${startLabel}`;
+}
+
 interface Matchup {
   winner_user_id?: string | null;
   is_tie?: boolean;
@@ -235,8 +292,8 @@ function getNextMonday(date: Date = new Date()): Date {
   return d;
 }
 
-export function isNextMondayHoliday(): HolidayInfo {
-  const nextMonday = getNextMonday();
+export function isNextMondayHoliday(now: Date = new Date()): HolidayInfo {
+  const nextMonday = getNextMonday(now);
   const { isHoliday, name } = isMarketHoliday(nextMonday);
 
   if (isHoliday) {
@@ -259,8 +316,7 @@ export function isWeekend(): boolean {
   return day === 0 || day === 6;
 }
 
-export function isAfterFridayClose(): boolean {
-  const now = new Date();
+export function isAfterFridayClose(now: Date = new Date()): boolean {
   const day = now.getDay();
 
   if (day !== 5) return false;
@@ -273,8 +329,8 @@ export function isAfterFridayClose(): boolean {
   return etHours >= 16;
 }
 
-function getDayOfWeek(): number {
-  return new Date().getDay();
+function getDayOfWeek(now: Date = new Date()): number {
+  return now.getDay();
 }
 
 export function getRelativeCountdown(nextWeek: number, holidayInfo?: HolidayInfo | null, phase?: string): string {
@@ -317,12 +373,16 @@ export function getWeekStatus(league: League | null, matchup: Matchup | null, no
     (matchup.team1_gain !== null && matchup.team2_gain !== null)
   );
 
-  const dayOfWeek = getDayOfWeek();
+  // Threaded from getWeekStatus's own `now` param rather than reading
+  // `new Date()` again here — these all used to ignore an injected `now`,
+  // which made getWeekStatus's weekend/after-close branches untestable
+  // (and, worse, dependent on the real day a test happened to run on).
+  const dayOfWeek = getDayOfWeek(now);
   const isInWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-  const isAfterClose = isAfterFridayClose();
+  const isAfterClose = isAfterFridayClose(now);
   const isTransitionPeriod = isInWeekend || isAfterClose;
 
-  const holidayInfo = isNextMondayHoliday();
+  const holidayInfo = isNextMondayHoliday(now);
 
   let status: WeekStatus['status'] = 'active';
   let countdown: string | null = null;

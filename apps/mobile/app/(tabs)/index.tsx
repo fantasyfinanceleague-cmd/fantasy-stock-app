@@ -12,7 +12,7 @@ import { SkeletonCard } from '@/components/Skeleton';
 import { Colors } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
 import { Button, Card, Screen, SectionLabel } from '@/components/ui';
-import { getSeasonPhase, getSeasonLabel, isPreSeasonPhase } from '@/lib/weekStatus';
+import { getSeasonPhase, getSeasonLabel, isPreSeasonPhase, formatSignedCurrency } from '@/lib/weekStatus';
 
 function formatCurrency(value: number): string {
   return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -140,7 +140,7 @@ export default function HomeScreen() {
                   styles.changeAmount,
                   isPositive ? styles.positive : styles.negative
                 ]}>
-                  {isPositive ? '+' : ''}${formatCurrency(displayGainLoss)}
+                  {formatSignedCurrency(displayGainLoss)}
                 </Text>
                 <View style={[
                   styles.changePill,
@@ -226,7 +226,7 @@ export default function HomeScreen() {
                         styles.recordText,
                         row.totalGain >= 0 ? styles.positive : styles.negative
                       ]}>
-                        {row.totalGain >= 0 ? '+' : ''}${formatCurrency(row.totalGain)}
+                        {formatSignedCurrency(row.totalGain)}
                       </Text>
                     ) : null}
                     <Text style={styles.leagueValue}>
@@ -262,7 +262,14 @@ export default function HomeScreen() {
                 )}
 
                 {homeData.matchups.map((matchup) => {
-                  const iAmWinning = matchup.myGain > matchup.opponentGain;
+                  // Pre-season: the schedule exists but the week hasn't
+                  // started, so myGain/opponentGain aren't real scores yet
+                  // (myGain falls back to current value minus cost, and
+                  // opponentValue is always the 0 placeholder — see
+                  // useHomeData's MatchupCard). Show the pairing as
+                  // upcoming instead of a score nobody has actually posted.
+                  const isPreSeason = isPreSeasonPhase(matchup.seasonPhase);
+                  const iAmWinning = !isPreSeason && matchup.myGain > matchup.opponentGain;
 
                   return (
                     <TouchableOpacity
@@ -276,7 +283,7 @@ export default function HomeScreen() {
                       <Card style={styles.matchupCard}>
                         <View style={styles.matchupHeader}>
                           <Text style={styles.matchupLeague}>
-                            {matchup.leagueEmoji} {matchup.leagueName} · Week {matchup.weekNumber}
+                            {matchup.leagueEmoji} {matchup.leagueName} · {isPreSeason && matchup.upcomingLabel ? matchup.upcomingLabel : `Week ${matchup.weekNumber}`}
                           </Text>
                         </View>
 
@@ -285,18 +292,22 @@ export default function HomeScreen() {
                             <Text style={styles.matchupUsername} numberOfLines={1}>
                               {matchup.myUsername}
                             </Text>
-                            <Text style={[
-                              styles.matchupValue,
-                              iAmWinning && styles.positive,
-                            ]}>
-                              ${formatCurrency(matchup.myValue)}
-                            </Text>
-                            <Text style={[
-                              styles.matchupGain,
-                              matchup.myGain >= 0 ? styles.positive : styles.negative,
-                            ]}>
-                              {matchup.myGain >= 0 ? '+' : ''}${formatCurrency(matchup.myGain)}
-                            </Text>
+                            {!isPreSeason && (
+                              <>
+                                <Text style={[
+                                  styles.matchupValue,
+                                  iAmWinning && styles.positive,
+                                ]}>
+                                  ${formatCurrency(matchup.myValue)}
+                                </Text>
+                                <Text style={[
+                                  styles.matchupGain,
+                                  matchup.myGain >= 0 ? styles.positive : styles.negative,
+                                ]}>
+                                  {formatSignedCurrency(matchup.myGain)}
+                                </Text>
+                              </>
+                            )}
                           </View>
 
                           <Text style={styles.matchupVs}>VS</Text>
@@ -305,20 +316,24 @@ export default function HomeScreen() {
                             <Text style={styles.matchupUsername} numberOfLines={1}>
                               {matchup.opponentUsername}
                             </Text>
-                            <Text style={[
-                              styles.matchupValue,
-                              !iAmWinning && matchup.myGain !== matchup.opponentGain && styles.positive,
-                            ]}>
-                              {matchup.opponentValue > 0
-                                ? `$${formatCurrency(matchup.opponentValue)}`
-                                : '--'}
-                            </Text>
-                            <Text style={[
-                              styles.matchupGain,
-                              matchup.opponentGain >= 0 ? styles.positive : styles.negative,
-                            ]}>
-                              {matchup.opponentGain >= 0 ? '+' : ''}${formatCurrency(matchup.opponentGain)}
-                            </Text>
+                            {!isPreSeason && (
+                              <>
+                                <Text style={[
+                                  styles.matchupValue,
+                                  !iAmWinning && matchup.myGain !== matchup.opponentGain && styles.positive,
+                                ]}>
+                                  {matchup.opponentValue > 0
+                                    ? `$${formatCurrency(matchup.opponentValue)}`
+                                    : '--'}
+                                </Text>
+                                <Text style={[
+                                  styles.matchupGain,
+                                  matchup.opponentGain >= 0 ? styles.positive : styles.negative,
+                                ]}>
+                                  {formatSignedCurrency(matchup.opponentGain)}
+                                </Text>
+                              </>
+                            )}
                           </View>
                         </View>
                       </Card>
