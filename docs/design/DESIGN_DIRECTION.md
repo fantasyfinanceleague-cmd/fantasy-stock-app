@@ -413,13 +413,22 @@ Every text pair below is measured; "on" means the background it may sit on.
 | `color.live` | `#FFC53D` | Live dot/tag, on game only (11:1) |
 | `color.data.gain.base` / `color.data.loss.base` | `#12803F` / `#C8303A` | On money: 5.0 / 5.3 |
 | `color.data.gain.onGame` / `color.data.loss.onGame` | `#4ADE8B` / `#FF7A7A` | 10.0 / 6.9 |
-| `color.data.zero` | = `text.secondary` | Zero is never green |
+| `color.data.zero.base` / `color.data.zero.onGame` | = `text.secondary` / = `text.onGame.secondary` | Zero is never green; on game it must use the light-on-dark grey (6.5:1), not the light-surface one (~3:1) |
 | `color.status.warning` | `#B45309` | 5.0 on white |
 | `color.status.danger` | `#B42318` | 6.6 on white (destructive buttons, errors) |
 | `color.action.primary.bg` / `.fg` | `#0D1B2E` / `#FFFFFF` | Primary buttons are stadium navy: neutral, and not a team colour |
+| `color.action.secondary.bg` / `.border` / `.fg` | `#FFFFFF` / = `border.control` / = `text.primary` | Money-surface secondary, explicit for parity with `.onGame` |
+| `color.action.ghost.fg` | = `text.primary` | Money-surface ghost |
+| `color.action.primary.onGame.bg` / `.fg` | `#FFFFFF` / `#0D1B2E` | **On game surfaces the primary inverts** to a white "broadcast chip" (17:1). Navy-on-navy would be invisible |
+| `color.action.secondary.onGame.border` / `.fg` | `#8DA0BD` / `#FFFFFF` | Transparent fill, light outline (6.5:1 against stadium) |
+| `color.action.ghost.onGame.fg` | `#FFFFFF` | Text-only action on game surfaces |
 
 Rules: team colours mark **people**, data colours mark **money**, and they
-never swap. Opponent orange never appears as text on light.
+never swap. **Every colour a component uses must resolve per surface**: a
+component on a `game` surface takes its `.onGame` token automatically through
+the `Surface` context (amended 2026-09-26 after ui/foundation-web found the
+primary button invisible on stadium navy). The hierarchy holds on both
+surfaces: primary is the most prominent, then secondary, then ghost. Opponent orange never appears as text on light.
 
 ### Type (Archivo)
 
