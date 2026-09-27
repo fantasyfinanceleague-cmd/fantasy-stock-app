@@ -5,11 +5,11 @@
    by design/tokens.parity.test.ts). Do not hand-edit a value here without
    also updating tokens.ts — the parity test fails the build if they drift.
 
-   On :root (NOT scoped to a class) — but this file is imported only by
-   design/index.ts, which nothing in main.jsx / App.jsx / the landing
-   imports, so these custom properties never reach the production landing
-   bundle. Leave src/styles/stockpile-tokens.css (the landing's own scoped
-   token set) alone; Phase 3a retires it separately.
+   On :root (NOT scoped to a class). Imported by design/index.ts (the
+   design gallery) and directly by the Phase 3a landing
+   (pages/landing/LandingPage.tsx); never by the legacy app CSS or the app
+   pages. The landing's old scoped token set (stockpile-tokens.css) was
+   retired in Phase 3a.
    ============================================================ */
 
 :root {
@@ -51,6 +51,11 @@
   --sp-color-action-ghost-fg: #0D1B2E;
   --sp-color-action-ghost-on-game-fg: #FFFFFF;
   --sp-type-family: 'Archivo', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --sp-type-hero-size: clamp(56px, 7.6vw, 112px);
+  --sp-type-hero-line: 0.92;
+  --sp-type-hero-weight: 900;
+  --sp-type-hero-stretch: 62%;
+  --sp-type-hero-tracking: -0.01em;
   --sp-type-score-xl-size: 56px;
   --sp-type-score-xl-line: 52px;
   --sp-type-score-xl-weight: 900;

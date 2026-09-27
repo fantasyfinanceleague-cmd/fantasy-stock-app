@@ -78,6 +78,16 @@ export const color = {
 export const type = {
   family:
     "'Archivo', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+  // Landing headline only (DESIGN_DIRECTION §9 amendment cf3e9c7): the
+  // score family's condensed black, fluid between 56px and 112px. Web-only
+  // leaf — `clamp()` has no React Native equivalent.
+  hero: {
+    size: 'clamp(56px, 7.6vw, 112px)',
+    line: '0.92',
+    weight: '900',
+    stretch: '62%',
+    tracking: '-0.01em',
+  },
   score: {
     xl: { size: '56px', line: '52px', weight: '900', stretch: '62%' },
     lg: { size: '40px', line: '38px', weight: '900', stretch: '62%' },
