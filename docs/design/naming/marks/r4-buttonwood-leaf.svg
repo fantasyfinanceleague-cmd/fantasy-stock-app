@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="128" height="128" role="img" aria-label="Buttonwood mark: a sycamore leaf whose veins are the rising refined bars">
+  <path d="M32 4 C44 12 54 22 54 36 C54 48 44 56 32 56 C20 56 10 48 10 36 C10 22 20 12 32 4 Z" fill="#0D1B2E"/>
+  <rect x="31" y="54" width="2" height="7" rx="1" fill="#0D1B2E"/>
+  <rect x="19" y="36" width="6" height="12" rx="1.5" fill="#FFFFFF"/>
+  <rect x="29" y="28" width="6" height="20" rx="1.5" fill="#FFFFFF"/>
+  <rect x="39" y="20" width="6" height="28" rx="1.5" fill="#2860F0"/>
+</svg>

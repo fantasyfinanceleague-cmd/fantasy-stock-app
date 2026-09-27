@@ -716,3 +716,153 @@ renewed **2025-06-02**, no assignment recorded. The company closed on
 **2026-04-17**. The mark is in principle buyable via its attorney of record;
 **Giorgio decided not to pursue it.** This confirms that the original name
 couldn't have been used without acquiring that registration.
+
+---
+
+# Round 4 (2026-09-26): no "stock", in the Robinhood / Sleeper mould
+
+> Brief (Giorgio via Orchestrator): a real word (two at most) that is an
+> **homage or insider term** from market culture, ideally with a **second
+> sports/game life** (like *Sleeper*, a fantasy pick nobody else reads as
+> fantasy) or a **story** (like *Robinhood*, the people's brokerage). **No
+> "stock"** in the name. Avoid fictional IP, gambling reads and advice reads.
+> **Stockade stays the front-runner and benchmark.** Informal screen, not
+> legal clearance.
+
+## R4.1 The shortlist, with the story behind each name
+
+| Name | Mould | The story (one line) |
+|---|---|---|
+| **Odd Lot** | Sleeper | On Wall Street an *odd lot* is an order under 100 shares: **the little guy's trade**. In life, an odd lot is **a motley crew**. That's your league. |
+| **Buttonwood** | Robinhood | In 1792, 24 brokers signed an agreement **under a buttonwood tree** on Wall Street, and the NYSE was born. **Friends under a tree, picking stocks**: the same thing, back where it started. |
+| **Sycamore** | Robinhood, one step removed | The buttonwood **was a sycamore**. The same founding story, without the finance-firm crowding that surrounds "Buttonwood" today. |
+| **Bellringer** | Sleeper | Every trading day opens and closes with a **bell ringer** on the NYSE podium; in football a *bell-ringer* is a hit you feel. **Win the week, ring the bell.** |
+| **Buy Low** | Sleeper (two words) | The oldest line in **both** worlds: fantasy managers "buy low" on a slumping star; investors buy low on a dip. |
+
+## R4.2 Longlist (20) and verdicts
+
+| Name | Verdict |
+|---|---|
+| Odd Lot · Buttonwood · Sycamore · Bellringer · Buy Low | **Shortlist** |
+| Tenbagger (Peter Lynch's 10× stock + baseball "-bagger") | Out: a **Tenbagger** stock-finding app exists, and the term reads as stock-picking advice |
+| Squeeze (short squeeze / squeeze play) | Out: short-squeeze tracker apps; `squeeze.com/.app`, play-/get- **all taken**; a 2021 meme-hype read |
+| Rally | Out: Rally, the collectibles-investing app |
+| Moonshot | Out: the **Moonshot** memecoin / tokenized-stock trading app |
+| Clutch | Out: Clutch Picks (cash-prize prediction game), Clutch iT (betting assistant); a gambling read |
+| Big Board | Out: an NYSE-owned mark (round 1) |
+| Blue Chip | Out: the BlueChip college-fantasy app; poker-chip read (round 1) |
+| Bellwether | Out: Bellwether wealth app (round 1) |
+| Curb (the Curb Exchange's street traders) | Weak: good story, no sports meaning, and "Curb" is a taxi app |
+| Tontine (the NYSE's first home, the Tontine Coffee House) | Out: a tontine is a survivor-takes-all scheme |
+| Floor / Pit / Tape / Runner / Streak | Weak: generic, and floor/pit read as trading desks |
+| Wire (waiver wire / news wire) | Out: the Wire messenger app |
+| Stonks-style meme terms | Out: they date quickly and read as hype |
+| Upside | Not pursued: an established consumer brand name |
+| Sleeper | The benchmark, and taken |
+
+## R4.3 Screen
+
+Domains checked 2026-09-26 (Verisign whois, Google RDAP). Every bare `.com`
+and `.app` is taken (common words); prefixed domains are the realistic path.
+
+| Name | Same-category / nearest hits | Domains free | Brokerage? |
+|---|---|---|---|
+| **Odd Lot** | No app or game. **Bloomberg's *Odd Lots*** podcast (finance media, strong brand); **OddLot Entertainment** (film studio, folded 2015; possible old class-041 marks) | **playoddlot.com, getoddlot.com** | **No.** An insider term, not a service |
+| **Buttonwood** | No app or game. **Crowded in finance:** Buttonwood Financial Advisors, Buttonwood Financial Group / Wealth Mgmt (app), Buttonwood Capital Management, Buttonwood Group Advisors (pre-IPO funds), **button.finance** ("Buttonwood" DeFi on Robinhood Chain) | **playbuttonwood.com, getbuttonwood.com** | **Yes, somewhat.** Every existing Buttonwood is a wealth or advisory firm |
+| **Sycamore** | No app or game in category (Sycamore Partners, a private-equity firm, is well known) | **playsycamore.com** (getsycamore.com registered 2024) | **No** |
+| **Bellringer** | **CNBC "Bell Ringer"** (market-video section); **Bell Ringer** (Steam PvP brawler, games class); bell-sound apps | **playbellringer.com, getbellringer.com** | **No** |
+| **Buy Low** | No app | **playbuylow.com, getbuylow.com** | **Advice read**: it's literally an instruction to buy. Medium |
+
+Handles: none indexed as a product for any of the five; verify @playoddlot,
+@playbuttonwood, etc. by hand.
+
+**USPTO word-mark queries for the Orchestrator to run** (tmsearch.uspto.gov;
+Live + Dead; classes 009, 036, 041; then unfiltered):
+`odd lot` · `oddlot` · `odd lots` · `buttonwood` · `sycamore` · `bellringer` ·
+`bell ringer` · `buy low`.
+Reading them: a live 041 hit (games/entertainment) is the serious one; 009
+depends on the software type; 036 (finance) matters most for Buttonwood,
+where it also confirms the brokerage read.
+
+## R4.4 Recognition: how a non-descriptive name tells people what it is
+
+*Sleeper* and *Robinhood* don't say "fantasy football" or "brokerage"; the
+**system around the name** does. For us:
+
+1. **Descriptor lockup.** The name never appears alone in marketing: the
+   wordmark carries a fixed descriptor underneath, "**Fantasy Stock League**",
+   in `type.tag` (the broadcast tag style). It's part of the logo lockup until
+   the name is known.
+2. **App Store name + subtitle** (30 + 30 characters): the *name* field
+   carries the category, as Sleeper does ("Sleeper: Fantasy Football & Chat").
+3. **Landing headline** says the job in plain words. The name is the brand;
+   the headline is the explanation ("Draft real stocks. Play your friends every week.").
+4. **Icon** carries the market: every mark is built on the rising bars, so
+   the icon says "stocks" even when the name doesn't.
+5. **Onboarding line** (the first screen): "**Fantasy football, but with
+   stocks.**" Five words that anyone understands.
+6. **ASO keywords** (the iOS 100-character field; don't repeat words already
+   in the name or subtitle): `fantasy,stocks,league,draft,matchup,friends,market,portfolio,weekly,game,simulator`.
+7. **Trademark upside** (a general principle, not legal advice): marks run
+   from *generic* → *descriptive* → *suggestive* → *arbitrary* → *fanciful*,
+   and get stronger along that line. "Fantasy Stocks" is **descriptive**,
+   which is why a dozen competitors can share it and none can own it. A
+   name like *Odd Lot* or *Sycamore* **for a game** is **suggestive or
+   arbitrary**, so it is easier to register and defend.
+
+**Worked lockups**, one per shortlisted name (App Store name ≤30 / subtitle ≤30):
+
+| Name | App Store name | Subtitle | Lockup descriptor |
+|---|---|---|---|
+| Odd Lot | `Odd Lot: Fantasy Stock League` (29) | `Draft stocks. Play friends.` (27) | ODD LOT / FANTASY STOCK LEAGUE |
+| Buttonwood | `Buttonwood: Fantasy Stocks` (26) | `Your league. Real stocks.` (25) | BUTTONWOOD / FANTASY STOCK LEAGUE |
+| Sycamore | `Sycamore: Fantasy Stock League` (30) | `Win the week on real stocks` (27) | SYCAMORE / FANTASY STOCK LEAGUE |
+| Bellringer | `Bellringer: Fantasy Stocks` (26) | `Fantasy football, but stocks` (28) | BELLRINGER / FANTASY STOCK LEAGUE |
+| Buy Low | `Buy Low: Fantasy Stock League` (29) | `Draft stocks. Play friends.` (27) | BUY LOW / FANTASY STOCK LEAGUE |
+| *(benchmark)* Stockade | `Stockade: Fantasy Stock League` (30) | `Draft stocks. Play friends.` (27) | STOCKADE / FANTASY STOCK LEAGUE |
+
+## R4.5 Marks for the top two
+
+`docs/design/naming/marks/r4-buttonwood-leaf.svg`, `r4-oddlot.svg`;
+`preview-round4.html` shows them with the descriptor lockup.
+
+- **Odd Lot:** the refined bars **plus one short amber bar**, the odd lot
+  beside the round lots. The simplest possible extension of the chosen mark,
+  and it tells the story at a glance.
+- **Buttonwood** (also usable for Sycamore): a stylised leaf in stadium navy
+  whose veins are the **rising bars**. It reads as a tree first and a chart
+  second, which suits a founding-story name. The leaf is stylised, not a
+  botanical sycamore leaf, so a worker would refine it.
+
+## R4.6 Recommendation (Giorgio decides)
+
+**Odd Lot**, the round-4 name most like *Sleeper*: an insider market term
+with a warm everyday second meaning (your crew), no brokerage read, free
+play-/get- domains, and a mark that's a one-bar extension of the refined
+bars. The question for the USPTO search: Bloomberg's *Odd Lots* sits in
+finance media (not games), and OddLot Entertainment's marks may be dead.
+
+If he wants the **Robinhood-style story**, take **Sycamore** rather than
+Buttonwood: it's the same founding tree without Buttonwood's finance-firm
+crowding and brokerage read.
+
+**Stockade remains the benchmark.** Of everything screened across four
+rounds, it is the cleanest on the register (no live 009/036/041 marks).
+
+### Round 4 sources (2026-09-26)
+
+[Buttonwood Financial Advisors](https://www.linkedin.com/company/buttonwoodfa) ·
+[Buttonwood Wealth Mgmt (Play)](https://play.google.com/store/apps/details?id=com.advisorlynx.mobileadvisor.buttonwoodFG) ·
+[Buttonwood Capital Management](http://www.buttonwoodcapitalmgmt.com/about/) ·
+[Buttonwood Group Advisors](https://www.linkedin.com/company/buttonwoodfunds) ·
+[button.finance](https://button.finance/) ·
+[Tenbagger app](https://play.google.com/store/apps/details?id=app.tenbagger.android&hl=fi&gl=US) ·
+[Short Squeeze Stocks Tracker](https://apps.apple.com/us/app/short-squeeze-stocks-tracker/id6761538921) ·
+[Moonshot](https://moonshot.com/) ·
+[Clutch Picks](https://apps.apple.com/us/app/clutch-picks-win-prizes/id6761736166) ·
+[Clutch iT](https://clutchitapp.com/) ·
+[Curb trading](https://en.wikipedia.org/wiki/Curb_trading) ·
+[OddLot Entertainment](https://en.wikipedia.org/wiki/OddLot_Entertainment) ·
+[Odd Lots podcast](https://podcasts.apple.com/us/podcast/odd-lots/id1056200096) ·
+[CNBC Bell Ringer](https://www.cnbc.com/bell-ringer/) ·
+[Bell Ringer (Steam)](https://store.steampowered.com/app/424830/)
