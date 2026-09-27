@@ -20,6 +20,7 @@ import {
   decideHeroPL,
   unpricedNote,
   windowPL,
+  matchupCardPL,
   MAX_PRICE_CARRY_DAYS,
   type HoldingsSummary,
   type PeriodPL,
@@ -356,4 +357,43 @@ Deno.test('windowPL: a sell without recorded proceeds realizes nothing (proceeds
     { '2026-09-21': { A: 100, B: 10 }, '2026-09-22': { A: 100, B: 10 } },
   );
   assertEquals(series.find(p => p.date === '2026-09-22')!.realized, 0);
+});
+
+// ---------------------------------------------------------------------------
+// matchupCardPL — Home "This Week" card values
+// ---------------------------------------------------------------------------
+
+const leagueHoldings = [
+  { symbol: 'BAC', quantity: 17.646021, totalCost: 1000 },
+  { symbol: 'LOW', quantity: 5.284854, totalCost: 1000 },
+];
+const unscored = { team1_gain: null, team2_gain: null };
+
+Deno.test('matchupCardPL: cold load (no prices yet) reads cost and 0 gain, NOT $0 / −$cost', () => {
+  // The card used to read `prices` captured when fetchAllData ran — {} on a
+  // cold load — so myValue was $0 and myGain was −$2,000.
+  const card = matchupCardPL(summarizeHoldings(leagueHoldings, () => null), unscored, true);
+  assertEquals(card.myValue, 2000);
+  assertEquals(card.myGain, 0);
+  assertEquals(card.opponentGain, 0);
+});
+
+Deno.test('matchupCardPL: unscored week follows live prices', () => {
+  const card = matchupCardPL(summarizeHoldings(leagueHoldings, priceMap({ BAC: 60, LOW: 200 })), unscored, true);
+  assertAlmostEquals(card.myValue, 17.646021 * 60 + 5.284854 * 200, 1e-9);
+  assertAlmostEquals(card.myGain, card.myValue - 2000, 1e-9);
+});
+
+Deno.test('matchupCardPL: a scored week uses the server gains, never the live estimate', () => {
+  const summary = summarizeHoldings(leagueHoldings, priceMap({ BAC: 60, LOW: 200 }));
+  assertEquals(matchupCardPL(summary, { team1_gain: 12.5, team2_gain: -3 }, true).myGain, 12.5);
+  const asTeam2 = matchupCardPL(summary, { team1_gain: 12.5, team2_gain: -3 }, false);
+  assertEquals(asTeam2.myGain, -3);
+  assertEquals(asTeam2.opponentGain, 12.5);
+  // team1_gain set with team2_gain NULL (as the old inline code handled)
+  assertEquals(matchupCardPL(summary, { team1_gain: 4, team2_gain: null }, false).myGain, 0);
+});
+
+Deno.test('matchupCardPL: no holdings in the league → zeros', () => {
+  assertEquals(matchupCardPL(undefined, unscored, true), { myValue: 0, myGain: 0, opponentGain: 0 });
 });

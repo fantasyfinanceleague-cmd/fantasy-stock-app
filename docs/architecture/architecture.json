@@ -2,314 +2,34 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "7c79d35dd27c860f1497137d2cbd6d5b8678cfd5",
-    "commitShort": "7c79d35",
+    "commit": "1ee8a274c2afec27fb0b9b20e956d9560c22b5a6",
+    "commitShort": "1ee8a27",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "fix/mobile-home-pl-partial-basis",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/app/(tabs)/draft.tsx"
+        "path": "apps/mobile/lib/plCoverage.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/app/(tabs)/index.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/(tabs)/league.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/(tabs)/leagues.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/(tabs)/matchup.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/(tabs)/portfolio.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/player-portfolio.tsx"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/lib/matchupScreenState.ts"
-      },
-      {
-        "code": "UU",
         "path": "apps/mobile/lib/useHomeData.ts"
       },
       {
-        "code": "A",
-        "path": "apps/mobile/lib/uuid.ts"
-      },
-      {
         "code": "M",
-        "path": "apps/mobile/lib/weekStatus.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/tests-deno/matchupScreenState.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/tests-deno/uuid.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/weekStatus.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/web/eslint.config.js"
-      },
-      {
-        "code": "M",
-        "path": "apps/web/package.json"
-      },
-      {
-        "code": "M",
-        "path": "apps/web/src/App.jsx"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/brand.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/brand.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/BrandMark.tsx"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/build-isolation.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/Button.css"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/Button.tsx"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/Chip.css"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/Chip.tsx"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/EmptyState.css"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/EmptyState.tsx"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/fonts.css"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/gallery/DesignGallery.css"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/gallery/DesignGallery.tsx"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/game/a11y.css"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/game/Chyron.css"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/game/Chyron.tsx"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/game/game.test.tsx"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/game/LiveDot.css"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/game/LiveDot.tsx"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/game/motion.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/game/Scoreboard.css"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/game/Scoreboard.tsx"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/game/ScoreDigits.css"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/game/ScoreDigits.tsx"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/game/TugBar.css"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/game/TugBar.tsx"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/index.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/lib/digitDiff.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/lib/digitDiff.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/lib/money.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/lib/money.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/lib/tugRatio.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/lib/tugRatio.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/Money.test.tsx"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/Money.tsx"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/no-inline-durations.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/PhaseChip.test.tsx"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/PhaseChip.tsx"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/SegmentedControl.css"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/SegmentedControl.test.tsx"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/SegmentedControl.tsx"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/Sheet.css"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/Sheet.test.tsx"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/Sheet.tsx"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/Surface.tsx"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/Text.tsx"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/tokens.parity.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/tokens.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/useMotion.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/design/vitest.setup.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/src/styles/tokens.css"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/tsconfig.design.json"
-      },
-      {
-        "code": "A",
-        "path": "apps/web/vitest.config.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/historical-bars/index.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/historical-bars/paginate.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/historical-bars/paginate.ts"
+        "path": "apps/mobile/tests-deno/plCoverage.test.ts"
       }
     ],
-    "timestamp": "2026-09-27T04:44:33Z",
-    "sourceHash": "sha256:05b14552a700c65285915a88a9d96ccdbd1d10acad564d23d488f1eea667fec0",
+    "timestamp": "2026-09-27T04:53:06Z",
+    "sourceHash": "sha256:af11cb5838cce379f0a28e6d475fdfa348e277738763bf758cb51080bc2c02e1",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1103.9,
+    "ageHours": 1104,
     "ageDays": 46,
     "staleAfterDays": 14,
     "stale": true,
@@ -7649,7 +7369,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/lib/useHomeData.ts:232"
+        "apps/mobile/lib/useHomeData.ts:251"
       ]
     },
     {
@@ -7664,7 +7384,7 @@
         "season_number"
       ],
       "callSites": [
-        "apps/mobile/lib/useHomeData.ts:252"
+        "apps/mobile/lib/useHomeData.ts:271"
       ]
     },
     {
@@ -7680,8 +7400,8 @@
         "user_id, wins, losses, ties"
       ],
       "callSites": [
-        "apps/mobile/lib/useHomeData.ts:264",
-        "apps/mobile/lib/useHomeData.ts:283"
+        "apps/mobile/lib/useHomeData.ts:283",
+        "apps/mobile/lib/useHomeData.ts:302"
       ]
     },
     {
@@ -7696,7 +7416,7 @@
         "id, week_number, team1_user_id, team2_user_id, team1_gain, team2_gain"
       ],
       "callSites": [
-        "apps/mobile/lib/useHomeData.ts:317"
+        "apps/mobile/lib/useHomeData.ts:336"
       ]
     },
     {
@@ -7711,7 +7431,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/lib/useHomeData.ts:238"
+        "apps/mobile/lib/useHomeData.ts:257"
       ]
     },
     {
@@ -7727,8 +7447,8 @@
         "username"
       ],
       "callSites": [
-        "apps/mobile/lib/useHomeData.ts:214",
-        "apps/mobile/lib/useHomeData.ts:350"
+        "apps/mobile/lib/useHomeData.ts:233",
+        "apps/mobile/lib/useHomeData.ts:369"
       ]
     },
     {
@@ -9015,14 +8735,14 @@
       "apps/mobile/lib/notifications.ts:72 -> user_profiles.update",
       "apps/mobile/lib/notifications.ts:94 -> push_tokens.delete",
       "apps/mobile/lib/notifications.ts:97 -> user_profiles.update",
-      "apps/mobile/lib/useHomeData.ts:214 -> user_profiles.select",
-      "apps/mobile/lib/useHomeData.ts:232 -> drafts.select",
-      "apps/mobile/lib/useHomeData.ts:238 -> trades.select",
-      "apps/mobile/lib/useHomeData.ts:252 -> league_seasons.select",
-      "apps/mobile/lib/useHomeData.ts:264 -> league_standings.select",
+      "apps/mobile/lib/useHomeData.ts:233 -> user_profiles.select",
+      "apps/mobile/lib/useHomeData.ts:251 -> drafts.select",
+      "apps/mobile/lib/useHomeData.ts:257 -> trades.select",
+      "apps/mobile/lib/useHomeData.ts:271 -> league_seasons.select",
       "apps/mobile/lib/useHomeData.ts:283 -> league_standings.select",
-      "apps/mobile/lib/useHomeData.ts:317 -> matchups.select",
-      "apps/mobile/lib/useHomeData.ts:350 -> user_profiles.select",
+      "apps/mobile/lib/useHomeData.ts:302 -> league_standings.select",
+      "apps/mobile/lib/useHomeData.ts:336 -> matchups.select",
+      "apps/mobile/lib/useHomeData.ts:369 -> user_profiles.select",
       "apps/mobile/lib/useLeagues.ts:33 -> league_members.select",
       "apps/mobile/lib/useLeagues.ts:53 -> leagues.select",
       "apps/mobile/lib/usePortfolio.ts:116 -> drafts.select",

@@ -210,6 +210,33 @@ export function windowPL(start: PLDataPoint, end: PLDataPoint): { gainLoss: numb
 }
 
 // ---------------------------------------------------------------------------
+// Matchup card
+// ---------------------------------------------------------------------------
+
+/**
+ * Values for a Home "This Week" card. `team1_gain` NULL is the discriminator
+ * for "week not scored yet" (a type tag, not a missing value — see CLAUDE.md
+ * "Overloaded NULLs"): scored weeks show the server's gains; unscored weeks
+ * show the live whole-league summary, unpriced holdings at cost, so a cold
+ * load reads cost / +$0 instead of $0 / −$cost.
+ */
+export function matchupCardPL(
+  summary: HoldingsSummary | undefined,
+  scored: { team1_gain: number | null; team2_gain: number | null },
+  isTeam1: boolean,
+): { myValue: number; myGain: number; opponentGain: number } {
+  const myValue = summary?.value ?? 0;
+  if (scored.team1_gain === null) {
+    return { myValue, myGain: summary?.gainLoss ?? 0, opponentGain: 0 };
+  }
+  return {
+    myValue,
+    myGain: isTeam1 ? scored.team1_gain : (scored.team2_gain ?? 0),
+    opponentGain: isTeam1 ? (scored.team2_gain ?? 0) : scored.team1_gain,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Hero decision
 // ---------------------------------------------------------------------------
 

@@ -4,7 +4,7 @@ import { useAuth } from './useAuth';
 import { useLeagueContext, League } from './LeagueContext';
 import { useStockPrices } from './useStockPrices';
 import { DraftPick, Trade } from './usePortfolio';
-import { summarizeHoldings, HoldingsSummary } from './plCoverage';
+import { summarizeHoldings, HoldingsSummary, matchupCardPL } from './plCoverage';
 import { getSeasonPhase, isPreSeasonPhase, getUpcomingMatchupLabel, SeasonPhase } from './weekStatus';
 import { isUuid } from './uuid';
 
@@ -46,6 +46,14 @@ export interface MatchupCard {
    * every other phase, where the ordinary Week-N value/gain display applies. */
   upcomingLabel: string | null;
 }
+
+// A card as fetched: the server's scored gains (NULL = week not scored yet)
+// without any price-derived value — those are derived from live prices below.
+type FetchedMatchupCard = Omit<MatchupCard, 'myValue' | 'myGain' | 'opponentGain'> & {
+  isTeam1: boolean;
+  team1_gain: number | null;
+  team2_gain: number | null;
+};
 
 export interface HomeData {
   totalValue: number;
@@ -122,7 +130,7 @@ export function useHomeData(): HomeData {
   const [holdingsByLeague, setHoldingsByLeague] = useState<Record<string, BaseHolding[]>>({});
   const [standings, setStandings] = useState<Record<string, { rank: number; totalPlayers: number; wins: number; losses: number; ties: number; pointsFor: number }>>({});
   const [seasonNumbers, setSeasonNumbers] = useState<Record<string, number>>({});
-  const [matchupData, setMatchupData] = useState<MatchupCard[]>([]);
+  const [matchupData, setMatchupData] = useState<FetchedMatchupCard[]>([]);
   const [allDrafts, setAllDrafts] = useState<DraftPick[]>([]);
   const [allTrades, setAllTrades] = useState<Trade[]>([]);
   const [username, setUsername] = useState<string>('You');
@@ -182,17 +190,28 @@ export function useHomeData(): HomeData {
   );
   const hasLivePrices = allSymbols.length > 0 && Object.keys(prices).length > 0;
 
+  // Card values from LIVE prices. fetchAllData used to compute them from the
+  // `prices` captured when it ran — {} on a cold load — so a card read $0 and
+  // a gain of −$cost until the next refetch.
+  const matchups: MatchupCard[] = useMemo(
+    () => matchupData.map(({ isTeam1, team1_gain, team2_gain, ...card }) => ({
+      ...card,
+      ...matchupCardPL(leaguePortfolioValues[card.leagueId], { team1_gain, team2_gain }, isTeam1),
+    })),
+    [matchupData, leaguePortfolioValues],
+  );
+
   // Matchup win/lose counts
   // Pre-season cards have no real score yet (see MatchupCard.upcomingLabel),
   // so they're excluded here rather than counted as a "win" whenever
   // myValue happens to be above the opponentValue placeholder of 0.
   const winCount = useMemo(
-    () => matchupData.filter(m => !isPreSeasonPhase(m.seasonPhase) && m.myValue > m.opponentValue).length,
-    [matchupData],
+    () => matchups.filter(m => !isPreSeasonPhase(m.seasonPhase) && m.myValue > m.opponentValue).length,
+    [matchups],
   );
   const loseCount = useMemo(
-    () => matchupData.filter(m => !isPreSeasonPhase(m.seasonPhase) && m.myValue < m.opponentValue).length,
-    [matchupData],
+    () => matchups.filter(m => !isPreSeasonPhase(m.seasonPhase) && m.myValue < m.opponentValue).length,
+    [matchups],
   );
 
   // --- Data fetching ---
@@ -308,7 +327,7 @@ export function useHomeData(): HomeData {
 
       // 4. Cross-league matchups (matchup-type leagues only)
       const matchupLeagues = leagues.filter(l => l.league_type === 'matchup');
-      const matchupCards: MatchupCard[] = [];
+      const matchupCards: FetchedMatchupCard[] = [];
 
       if (matchupLeagues.length > 0) {
         // Fetch current-week matchups for all matchup leagues
@@ -370,24 +389,6 @@ export function useHomeData(): HomeData {
             const isTeam1 = m.team1_user_id === user.id;
             const opponentId = isTeam1 ? m.team2_user_id : m.team1_user_id;
 
-            // Get portfolio values for this matchup from league holdings
-            const myHoldings = holdingsResults[league.id] || [];
-            let myValue = 0;
-            let myCost = 0;
-            for (const h of myHoldings) {
-              const priceData = prices[h.symbol.toUpperCase()];
-              myValue += (priceData?.price ?? 0) * h.quantity;
-              myCost += h.totalCost;
-            }
-
-            // Use gain from matchup data if available, otherwise compute from portfolio
-            const myGain = m.team1_gain !== null
-              ? (isTeam1 ? m.team1_gain : (m.team2_gain ?? 0))
-              : myValue - myCost;
-            const opponentGain = m.team1_gain !== null
-              ? (isTeam1 ? (m.team2_gain ?? 0) : m.team1_gain)
-              : 0;
-
             matchupCards.push({
               id: m.id,
               leagueName: league.name,
@@ -396,10 +397,12 @@ export function useHomeData(): HomeData {
               leagueId: league.id,
               myUsername: profile?.username || 'You',
               opponentUsername: opponentId ? (opponentNames[opponentId] || 'Opponent') : 'BYE',
-              myValue,
               opponentValue: 0, // Opponent portfolio not accessible client-side
-              myGain,
-              opponentGain,
+              // Scored gains (NULL = not scored yet); value/gain come from
+              // live prices in the `matchups` memo via matchupCardPL.
+              isTeam1,
+              team1_gain: m.team1_gain,
+              team2_gain: m.team2_gain,
               seasonPhase,
               upcomingLabel: seasonPhase === 'pre_season' ? getUpcomingMatchupLabel(league) : null,
             });
@@ -436,7 +439,7 @@ export function useHomeData(): HomeData {
     leagueCount: leagues.length,
     hasLivePrices,
     leagueRows,
-    matchups: matchupData,
+    matchups,
     winCount,
     loseCount,
     allDrafts,
