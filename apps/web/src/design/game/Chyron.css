@@ -1,0 +1,17 @@
+.sp-chyron-region {
+  position: relative;
+  min-height: 0;
+}
+
+.sp-chyron {
+  background-color: var(--sp-color-surface-game-raised);
+  color: var(--sp-color-text-on-game-primary);
+  padding-block: var(--sp-space-3);
+  padding-inline: var(--sp-space-5);
+  border-radius: var(--sp-radius-md);
+  font-family: var(--sp-type-family);
+  font-size: var(--sp-type-callout-size);
+  line-height: var(--sp-type-callout-line);
+  font-weight: var(--sp-type-callout-weight);
+  width: fit-content;
+}

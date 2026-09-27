@@ -1,0 +1,32 @@
+.sp-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--sp-space-4);
+  padding: var(--sp-space-9);
+}
+
+/* Icon-in-soft-circle slot (Design Lead review, 2026-09-26): NOT an emoji
+   glyph — those render differently per OS, and this primitive sets the
+   pattern every other empty state follows. `icon` is a real vector node
+   (an inline SVG), sized and coloured via currentColor so it inherits
+   this slot's colour regardless of what's actually passed in. */
+.sp-empty-state__icon-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--sp-radius-pill);
+}
+
+.sp-empty-state__icon-slot--money {
+  background-color: var(--sp-color-surface-money-sunken);
+  color: var(--sp-color-text-secondary);
+}
+
+.sp-empty-state__icon-slot--game {
+  background-color: var(--sp-color-surface-game-raised);
+  color: var(--sp-color-text-on-game-secondary);
+}
