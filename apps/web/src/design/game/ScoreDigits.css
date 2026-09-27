@@ -1,0 +1,32 @@
+.sp-score-digits {
+  display: inline-flex;
+  font-family: var(--sp-type-family);
+  font-size: var(--sp-type-score-xl-size);
+  line-height: var(--sp-type-score-xl-line);
+  font-weight: var(--sp-type-score-xl-weight);
+  font-stretch: var(--sp-type-score-xl-stretch);
+  font-variant-numeric: tabular-nums;
+  color: var(--sp-color-text-on-game-primary);
+  white-space: nowrap;
+}
+
+.sp-score-digits__char {
+  display: inline-block;
+}
+
+/* Found via the gallery's lead-change demo: per the CSS spec, an
+   inline-block element whose `overflow` is anything but `visible` uses its
+   bottom MARGIN EDGE as its baseline, instead of its content's actual text
+   baseline — so this wrapper (needed for overflow:hidden, to clip the
+   sliding digit) renders visibly lower than the plain, unwrapped sibling
+   characters next to it, even at rest, regardless of vertical-align:
+   baseline. `text-bottom` sidesteps that broken baseline calculation by
+   aligning the wrapper's own bottom edge to the surrounding text's
+   text-bottom instead, which matches digit glyphs (no descenders) closely
+   enough to line up with the plain spans. */
+.sp-score-digits__char--roll-wrap {
+  position: relative;
+  overflow: hidden;
+  height: var(--sp-type-score-xl-line);
+  vertical-align: text-bottom;
+}

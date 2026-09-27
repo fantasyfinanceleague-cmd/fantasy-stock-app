@@ -1,0 +1,31 @@
+.sp-live-dot {
+  display: inline-flex;
+  align-items: center;
+}
+
+.sp-live-dot__mark {
+  width: var(--sp-space-3);
+  height: var(--sp-space-3);
+  border-radius: var(--sp-radius-pill);
+  background-color: var(--sp-color-live);
+  display: inline-block;
+}
+
+/* The one thing that loops (DESIGN_DIRECTION §4: "Anything looping, except
+   the live dot while the market is open"). None of the five named
+   durations (90/160/240/380/700ms) suit a slow ambient pulse — this is a
+   deliberate, disclosed exception, not a component reaching around the
+   tokens; see the worker's DONE report. */
+.sp-live-dot--pulsing .sp-live-dot__mark {
+  animation: sp-live-dot-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes sp-live-dot-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}

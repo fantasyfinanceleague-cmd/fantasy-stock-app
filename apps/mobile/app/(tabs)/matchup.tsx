@@ -1,18 +1,21 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Card } from '@/components/ui';
+import { Ionicons } from '@expo/vector-icons';
+import { Card, Button } from '@/components/ui';
 import { SkeletonCard, SkeletonRows } from '@/components/Skeleton';
 import { useAuth } from '@/lib/useAuth';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/Colors';
 import WeekNavigator from '@/components/WeekNavigator';
 import StatusBadge from '@/components/StatusBadge';
 import LeagueSwitcher from '@/components/LeagueSwitcher';
-import { getWeekStatus, isWeekActive as checkWeekActive } from '@/lib/weekStatus';
+import { getWeekStatus, isWeekActive as checkWeekActive, isPreSeasonPhase, getSeasonLabel, getUpcomingMatchupLabel, formatSignedCurrency } from '@/lib/weekStatus';
+import { isUuid } from '@/lib/uuid';
+import { getMatchupScreenState } from '@/lib/matchupScreenState';
 
 interface Matchup {
   id: string;
@@ -69,7 +72,8 @@ function formatCurrency(value: number): string {
 
 export default function MatchupScreen() {
   const { user } = useAuth();
-  const { activeLeagueId, activeLeague } = useLeagueContext();
+  const { activeLeagueId, activeLeague, leagues, loading: leaguesLoading } = useLeagueContext();
+  const router = useRouter();
   const params = useLocalSearchParams<{
     week?: string;
     matchupId?: string;
@@ -92,7 +96,12 @@ export default function MatchupScreen() {
 
   const viewingSpecificMatchup = !!(params.matchupId || (params.team1 && params.team2));
 
-  const isMatchupLeague = activeLeague?.league_type === 'matchup';
+  const screenState = getMatchupScreenState({
+    leaguesLoading,
+    leagueCount: leagues.length,
+    activeLeague,
+  });
+  const isMatchupLeague = screenState === 'matchup';
   const currentWeek = activeLeague?.current_week || 1;
 
   const initialWeek = params.week ? parseInt(params.week, 10) : currentWeek;
@@ -291,8 +300,11 @@ export default function MatchupScreen() {
         return;
       }
 
+      // isUuid, not `!id.startsWith('bot-')` — see lib/uuid.ts: a synthetic
+      // test participant id is neither bot-prefixed nor a UUID, and would
+      // otherwise 22P02 the whole .in() query below.
       const userIds = [matchupData.team1_user_id, matchupData.team2_user_id]
-        .filter(id => id && !id.startsWith('bot-'));
+        .filter(isUuid);
 
       if (userIds.length > 0) {
         const { data: profileData } = await supabase
@@ -514,7 +526,38 @@ export default function MatchupScreen() {
   const isTeam2Winning = team2Total > team1Total;
   const isTied = team1Total === team2Total;
 
-  if (!isMatchupLeague) {
+  if (screenState === 'leagues-loading') {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={{ paddingTop: 16 }}>
+          <SkeletonCard />
+          <View style={{ height: 16 }} />
+          <View style={{ paddingHorizontal: 24 }}>
+            <SkeletonRows count={5} />
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (screenState === 'no-league') {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <LeagueSwitcher />
+        <View style={styles.centeredFlex}>
+          <Text style={styles.emptyIcon}>🏆</Text>
+          <Text style={styles.emptyTitle}>No league yet</Text>
+          <Text style={styles.emptySubtitle}>
+            Join or create a league to see your weekly matchup.
+          </Text>
+          <View style={{ height: 16 }} />
+          <Button title="Get Started" onPress={() => router.push('/create-league')} variant="primary" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (screenState === 'duration') {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <LeagueSwitcher />
@@ -522,7 +565,7 @@ export default function MatchupScreen() {
           <Text style={styles.emptyIcon}>📊</Text>
           <Text style={styles.emptyTitle}>Duration League</Text>
           <Text style={styles.emptySubtitle}>
-            This league doesn't have weekly matchups.{'\n'}Check the Leaderboard for standings.
+            This league doesn't have weekly matchups.{'\n'}Check the League tab for standings.
           </Text>
         </View>
       </SafeAreaView>
@@ -538,6 +581,48 @@ export default function MatchupScreen() {
           <View style={{ paddingHorizontal: 24 }}>
             <SkeletonRows count={5} />
           </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Pre-season (pre_draft/drafting/pre_season): draft_status/current_week
+  // default to values that read as an ordinary live week (see
+  // getSeasonPhase's docstring), so this must be checked before the
+  // scoreboard/lineups render — that render has no notion of "this score
+  // isn't real yet" (it computes gain as currentValue - cost with no
+  // snapshot, which is exactly the "Bot 3 — Leading +$0.16" bug: a
+  // meaningless number labeled as a lead before the week has even started).
+  // Checked ahead of `!matchup` too, since pre_season leagues already have a
+  // scheduled matchup row (finalize_league_draft creates it) — only
+  // pre_draft/drafting actually hit the `!matchup` branch below.
+  if (isPreSeasonPhase(weekStatus.seasonPhase)) {
+    const seasonPhase = weekStatus.seasonPhase;
+    const isDraftPending = seasonPhase === 'pre_draft' || seasonPhase === 'drafting';
+    const opponentName = matchup
+      ? getDisplayName(matchup.team1_user_id === user?.id ? matchup.team2_user_id : matchup.team1_user_id)
+      : null;
+    const title = isDraftPending ? getSeasonLabel(seasonPhase, activeLeague) : getUpcomingMatchupLabel(activeLeague);
+    const subtitle = isDraftPending
+      ? 'Matchups are set once the draft finishes.'
+      : opponentName
+      ? `vs ${opponentName}`
+      : 'Your matchup will appear here once the season starts.';
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <LeagueSwitcher />
+        <View style={styles.centeredFlex}>
+          {/* Ionicons hourglass, not the 🗓️/📅 emoji: on iOS the calendar
+              emoji renders as a page showing today's real date ("JUL 17"),
+              which read as a wrong/confusing date sitting right above the
+              actual "Week 1 starts Tue, Sep 29" copy. Same treatment as
+              Portfolio's draft-pending panel (portfolio.tsx) for both
+              sub-phases, so pre_draft/drafting and pre_season match. */}
+          <View style={styles.emptyIconCircle}>
+            <Ionicons name="hourglass-outline" size={28} color={Colors.textMuted} />
+          </View>
+          <Text style={styles.emptyTitle}>{title}</Text>
+          <Text style={styles.emptySubtitle}>{subtitle}</Text>
         </View>
       </SafeAreaView>
     );
@@ -605,7 +690,7 @@ export default function MatchupScreen() {
               styles.scoreValue,
               team1Total >= 0 ? styles.positive : styles.negative
             ]}>
-              {team1Total >= 0 ? '+' : ''}${formatCurrency(team1Total)}
+              {formatSignedCurrency(team1Total)}
             </Text>
             {isTeam1Winning && <Text style={styles.winningBadge}>Leading</Text>}
           </View>
@@ -626,7 +711,7 @@ export default function MatchupScreen() {
               styles.scoreValue,
               team2Total >= 0 ? styles.positive : styles.negative
             ]}>
-              {team2Total >= 0 ? '+' : ''}${formatCurrency(team2Total)}
+              {formatSignedCurrency(team2Total)}
             </Text>
             {isTeam2Winning && <Text style={styles.winningBadge}>Leading</Text>}
           </View>
@@ -677,7 +762,7 @@ export default function MatchupScreen() {
                         styles.stockGain,
                         h1.gain >= 0 ? styles.positive : styles.negative
                       ]}>
-                        {h1.gain >= 0 ? '+' : ''}${formatCurrency(h1.gain)}
+                        {formatSignedCurrency(h1.gain)}
                       </Text>
                     </>
                   ) : (
@@ -697,7 +782,7 @@ export default function MatchupScreen() {
                         styles.stockGain,
                         h2.gain >= 0 ? styles.positive : styles.negative
                       ]}>
-                        {h2.gain >= 0 ? '+' : ''}${formatCurrency(h2.gain)}
+                        {formatSignedCurrency(h2.gain)}
                       </Text>
                     </>
                   ) : (
@@ -716,7 +801,7 @@ export default function MatchupScreen() {
                 styles.totalValue,
                 team1Total >= 0 ? styles.positive : styles.negative
               ]}>
-                {team1Total >= 0 ? '+' : ''}${formatCurrency(team1Total)}
+                {formatSignedCurrency(team1Total)}
               </Text>
             </View>
             <View style={styles.totalDivider} />
@@ -726,7 +811,7 @@ export default function MatchupScreen() {
                 styles.totalValue,
                 team2Total >= 0 ? styles.positive : styles.negative
               ]}>
-                {team2Total >= 0 ? '+' : ''}${formatCurrency(team2Total)}
+                {formatSignedCurrency(team2Total)}
               </Text>
             </View>
           </View>
@@ -759,6 +844,20 @@ const styles = StyleSheet.create({
   emptyIcon: {
     fontSize: 48,
     fontFamily: 'Inter_400Regular',
+    marginBottom: 16,
+  },
+  // Icon-in-circle treatment for the pre-season empty state — same shape as
+  // Portfolio's draft-pending panel (see app/(tabs)/portfolio.tsx's
+  // `emptyIcon` style), kept as its own name here because this file's
+  // `emptyIcon` above is already a Text (emoji) style used by the other
+  // empty states (Duration League, season-complete/eliminated).
+  emptyIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.bgElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 16,
   },
   emptyTitle: {

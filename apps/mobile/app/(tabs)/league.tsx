@@ -10,7 +10,8 @@ import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/Colors';
 import StatusBadge from '@/components/StatusBadge';
 import LeagueSwitcher from '@/components/LeagueSwitcher';
-import { getWeekStatus, getCountdownMessage, getPlayoffRoundLabel, getSeasonLabel, isPreSeasonPhase, formatSeasonStartShort } from '@/lib/weekStatus';
+import { getWeekStatus, getCountdownMessage, getPlayoffRoundLabel, getSeasonLabel, isPreSeasonPhase, formatSeasonStartShort, formatSignedCurrency } from '@/lib/weekStatus';
+import { isUuid } from '@/lib/uuid';
 import { Button, Card } from '@/components/ui';
 import { SkeletonCard, SkeletonRows } from '@/components/Skeleton';
 
@@ -179,8 +180,13 @@ export default function LeagueScreen() {
         [s.champion_user_id, s.runner_up_user_id].filter(Boolean)
       ) as string[];
 
+      // isUuid, not `!id.startsWith('bot-')`: a synthetic test participant
+      // like "test-user-2" is neither bot-prefixed nor a UUID, and one such
+      // id in this array 22P02's the WHOLE .in() query below — failing the
+      // profile lookup for every real user in the same batch too. See
+      // lib/uuid.ts.
       const allUserIds = [...new Set([...standingUserIds, ...matchupUserIds, ...seasonUserIds])]
-        .filter(id => id && !id.startsWith('bot-'));
+        .filter(isUuid);
 
       if (allUserIds.length > 0) {
         const { data: profileData, error: profileError } = await supabase
@@ -540,7 +546,12 @@ export default function LeagueScreen() {
                   <Ionicons name="trophy" size={18} color={Colors.warning} />
                 </View>
                 <Text style={styles.kpiLabel}>Leader</Text>
-                {leader ? (
+                {/* Standings rows exist (all 0-0) from the moment the draft
+                    finalizes, before any week has been played — so `leader`
+                    is truthy pre-season and would show a name with a 0-0
+                    record that reads as an actual result ("stockpile 0-0").
+                    No one leads a season that hasn't started. */}
+                {leader && !isPreSeasonPhase(weekStatus.seasonPhase) ? (
                   <>
                     <Text style={styles.kpiValue} numberOfLines={1}>{getDisplayName(leader.user_id)}</Text>
                     {isMatchupLeague ? (
@@ -714,7 +725,7 @@ export default function LeagueScreen() {
                                   styles.pointsValue,
                                   Number(standing.points_for) >= 0 ? styles.positive : styles.negative
                                 ]}>
-                                  ${formatCurrency(Number(standing.points_for) || 0)}
+                                  {formatSignedCurrency(Number(standing.points_for) || 0)}
                                 </Text>
                                 <Text style={styles.pointsLabel}>total gain</Text>
                               </View>
@@ -725,7 +736,7 @@ export default function LeagueScreen() {
                                 styles.pointsValueLarge,
                                 Number(standing.points_for) >= 0 ? styles.positive : styles.negative
                               ]}>
-                                {Number(standing.points_for) >= 0 ? '+' : ''}${formatCurrency(Number(standing.points_for) || 0)}
+                                {formatSignedCurrency(Number(standing.points_for) || 0)}
                               </Text>
                               <Text style={styles.pointsLabel}>total gain</Text>
                             </View>
@@ -848,7 +859,7 @@ export default function LeagueScreen() {
                                     styles.scheduleScore,
                                     (myGain || 0) >= 0 ? styles.positive : styles.negative
                                   ]}>
-                                    {(myGain || 0) >= 0 ? '+' : ''}${formatCurrency(myGain || 0)}
+                                    {formatSignedCurrency(myGain || 0)}
                                   </Text>
                                 </>
                               ) : isCurrent ? (

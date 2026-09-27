@@ -2,15 +2,31 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "49ba6e0e04e51c3732db95e2faf5751636d40218",
-    "commitShort": "49ba6e0",
+    "commit": "7c79d35dd27c860f1497137d2cbd6d5b8678cfd5",
+    "commitShort": "7c79d35",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "fix/mobile-home-pl-partial-basis",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
+        "path": "apps/mobile/app/(tabs)/draft.tsx"
+      },
+      {
+        "code": "M",
         "path": "apps/mobile/app/(tabs)/index.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/app/(tabs)/league.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/app/(tabs)/leagues.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/app/(tabs)/matchup.tsx"
       },
       {
         "code": "M",
@@ -18,39 +34,283 @@
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/PerformanceChart.tsx"
+        "path": "apps/mobile/app/player-portfolio.tsx"
       },
       {
         "code": "A",
-        "path": "apps/mobile/lib/plCoverage.ts"
+        "path": "apps/mobile/lib/matchupScreenState.ts"
       },
       {
-        "code": "M",
-        "path": "apps/mobile/lib/useHistoricalPL.ts"
-      },
-      {
-        "code": "M",
+        "code": "UU",
         "path": "apps/mobile/lib/useHomeData.ts"
       },
       {
+        "code": "A",
+        "path": "apps/mobile/lib/uuid.ts"
+      },
+      {
         "code": "M",
-        "path": "apps/mobile/lib/usePortfolio.ts"
+        "path": "apps/mobile/lib/weekStatus.ts"
       },
       {
         "code": "A",
-        "path": "apps/mobile/tests-deno/plCoverage.test.ts"
+        "path": "apps/mobile/tests-deno/matchupScreenState.test.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/mobile/tests-deno/uuid.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/weekStatus.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/web/eslint.config.js"
+      },
+      {
+        "code": "M",
+        "path": "apps/web/package.json"
+      },
+      {
+        "code": "M",
+        "path": "apps/web/src/App.jsx"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/brand.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/brand.test.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/BrandMark.tsx"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/build-isolation.test.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/Button.css"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/Button.tsx"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/Chip.css"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/Chip.tsx"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/EmptyState.css"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/EmptyState.tsx"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/fonts.css"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/gallery/DesignGallery.css"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/gallery/DesignGallery.tsx"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/game/a11y.css"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/game/Chyron.css"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/game/Chyron.tsx"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/game/game.test.tsx"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/game/LiveDot.css"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/game/LiveDot.tsx"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/game/motion.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/game/Scoreboard.css"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/game/Scoreboard.tsx"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/game/ScoreDigits.css"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/game/ScoreDigits.tsx"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/game/TugBar.css"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/game/TugBar.tsx"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/index.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/lib/digitDiff.test.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/lib/digitDiff.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/lib/money.test.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/lib/money.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/lib/tugRatio.test.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/lib/tugRatio.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/Money.test.tsx"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/Money.tsx"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/no-inline-durations.test.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/PhaseChip.test.tsx"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/PhaseChip.tsx"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/SegmentedControl.css"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/SegmentedControl.test.tsx"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/SegmentedControl.tsx"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/Sheet.css"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/Sheet.test.tsx"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/Sheet.tsx"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/Surface.tsx"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/Text.tsx"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/tokens.parity.test.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/tokens.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/useMotion.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/design/vitest.setup.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/src/styles/tokens.css"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/tsconfig.design.json"
+      },
+      {
+        "code": "A",
+        "path": "apps/web/vitest.config.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/historical-bars/index.ts"
+      },
+      {
+        "code": "A",
+        "path": "supabase/functions/historical-bars/paginate.test.ts"
+      },
+      {
+        "code": "A",
+        "path": "supabase/functions/historical-bars/paginate.ts"
       }
     ],
-    "timestamp": "2026-09-26T22:10:17Z",
-    "sourceHash": "sha256:7ba03003689965adde92b402accf0ab04ae637356aed6472f6350eb6653847af",
+    "timestamp": "2026-09-27T04:44:33Z",
+    "sourceHash": "sha256:05b14552a700c65285915a88a9d96ccdbd1d10acad564d23d488f1eea667fec0",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1097.3,
-    "ageDays": 45.7,
+    "ageHours": 1103.9,
+    "ageDays": 46,
     "staleAfterDays": 14,
     "stale": true,
     "hash": "sha256:3c923bcd46e36dfa365d24852d7b8fb6ead9ff99a06c3b26dc0853c648e07ded",
@@ -399,13 +659,17 @@
         "verifyJwt": true,
         "verifyJwtSource": "supabase/config.toml:149",
         "authGuard": null,
-        "localModules": [],
-        "tests": [],
+        "localModules": [
+          "paginate.ts"
+        ],
+        "tests": [
+          "paginate.test.ts"
+        ],
         "envVars": [
           "ALPACA_API_KEY",
           "ALPACA_API_SECRET"
         ],
-        "lines": 134
+        "lines": 179
       },
       "db": null,
       "declared": null,
@@ -418,7 +682,7 @@
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/historical-bars/index.ts",
-        "line": 47
+        "line": 77
       }
     },
     {
@@ -863,6 +1127,25 @@
       "kind": "edge-module",
       "source": {
         "path": "supabase/functions/enrich-symbols/price-batch.ts",
+        "line": 1
+      }
+    },
+    {
+      "layer": "module",
+      "facts": {
+        "hasTests": true
+      },
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "mod.historical-bars/paginate",
+      "label": "paginate.ts",
+      "sublabel": "historical-bars",
+      "kind": "edge-module",
+      "source": {
+        "path": "supabase/functions/historical-bars/paginate.ts",
         "line": 1
       }
     },
@@ -4056,7 +4339,19 @@
       "protocol": "vendor-https",
       "payload": "https://data.alpaca.markets/v2",
       "callSites": [
-        "supabase/functions/historical-bars/index.ts:28"
+        "supabase/functions/historical-bars/index.ts:38"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.historical-bars->mod.historical-bars/paginate",
+      "from": "fn.historical-bars",
+      "to": "mod.historical-bars/paginate",
+      "protocol": "esm-import",
+      "payload": "import from './paginate.ts'",
+      "callSites": [
+        "supabase/functions/historical-bars/index.ts"
       ]
     },
     {
@@ -5899,9 +6194,9 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('draft-control')",
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:324",
-        "apps/mobile/app/(tabs)/draft.tsx:383",
-        "apps/mobile/app/(tabs)/draft.tsx:404"
+        "apps/mobile/app/(tabs)/draft.tsx:327",
+        "apps/mobile/app/(tabs)/draft.tsx:386",
+        "apps/mobile/app/(tabs)/draft.tsx:407"
       ]
     },
     {
@@ -5913,7 +6208,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('quote')",
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:491"
+        "apps/mobile/app/(tabs)/draft.tsx:494"
       ]
     },
     {
@@ -5925,9 +6220,9 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('validate-and-record-pick')",
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:427",
-        "apps/mobile/app/(tabs)/draft.tsx:470",
-        "apps/mobile/app/(tabs)/draft.tsx:541"
+        "apps/mobile/app/(tabs)/draft.tsx:430",
+        "apps/mobile/app/(tabs)/draft.tsx:473",
+        "apps/mobile/app/(tabs)/draft.tsx:544"
       ]
     },
     {
@@ -5942,7 +6237,7 @@
         "id, user_id, symbol, entry_price, round, pick_number, slot_id, created_at"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:222"
+        "apps/mobile/app/(tabs)/draft.tsx:225"
       ]
     },
     {
@@ -5957,7 +6252,7 @@
         "id, slot_index, slot_count, price_min, price_max, category_id"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:258"
+        "apps/mobile/app/(tabs)/draft.tsx:261"
       ]
     },
     {
@@ -5972,7 +6267,7 @@
         "user_id, role"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:184"
+        "apps/mobile/app/(tabs)/draft.tsx:185"
       ]
     },
     {
@@ -5987,7 +6282,7 @@
         "id, username"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:192"
+        "apps/mobile/app/(tabs)/draft.tsx:195"
       ]
     },
     {
@@ -6041,7 +6336,7 @@
         "user_id"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/league.tsx:148"
+        "apps/mobile/app/(tabs)/league.tsx:149"
       ]
     },
     {
@@ -6056,7 +6351,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/league.tsx:161"
+        "apps/mobile/app/(tabs)/league.tsx:162"
       ]
     },
     {
@@ -6071,7 +6366,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/league.tsx:115"
+        "apps/mobile/app/(tabs)/league.tsx:116"
       ]
     },
     {
@@ -6086,7 +6381,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/league.tsx:131"
+        "apps/mobile/app/(tabs)/league.tsx:132"
       ]
     },
     {
@@ -6101,7 +6396,7 @@
         "id, username, avatar"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/league.tsx:187"
+        "apps/mobile/app/(tabs)/league.tsx:193"
       ]
     },
     {
@@ -6218,7 +6513,7 @@
         "user_id, role, joined_at"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/leagues.tsx:91"
+        "apps/mobile/app/(tabs)/leagues.tsx:92"
       ]
     },
     {
@@ -6231,7 +6526,7 @@
       "payload": ".from('league_members').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/(tabs)/leagues.tsx:234"
+        "apps/mobile/app/(tabs)/leagues.tsx:239"
       ]
     },
     {
@@ -6244,7 +6539,7 @@
       "payload": ".from('leagues').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/(tabs)/leagues.tsx:203"
+        "apps/mobile/app/(tabs)/leagues.tsx:208"
       ]
     },
     {
@@ -6259,7 +6554,7 @@
         "id, username"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/leagues.tsx:99"
+        "apps/mobile/app/(tabs)/leagues.tsx:104"
       ]
     },
     {
@@ -6284,8 +6579,8 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('quote')",
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:136",
-        "apps/mobile/app/(tabs)/matchup.tsx:381"
+        "apps/mobile/app/(tabs)/matchup.tsx:145",
+        "apps/mobile/app/(tabs)/matchup.tsx:393"
       ]
     },
     {
@@ -6300,7 +6595,7 @@
         "id, symbol, entry_price, quantity, user_id"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:152"
+        "apps/mobile/app/(tabs)/matchup.tsx:161"
       ]
     },
     {
@@ -6316,10 +6611,10 @@
         "week_number, playoff_round"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:214",
-        "apps/mobile/app/(tabs)/matchup.tsx:234",
-        "apps/mobile/app/(tabs)/matchup.tsx:250",
-        "apps/mobile/app/(tabs)/matchup.tsx:269"
+        "apps/mobile/app/(tabs)/matchup.tsx:223",
+        "apps/mobile/app/(tabs)/matchup.tsx:243",
+        "apps/mobile/app/(tabs)/matchup.tsx:259",
+        "apps/mobile/app/(tabs)/matchup.tsx:278"
       ]
     },
     {
@@ -6334,7 +6629,7 @@
         "id, symbol, price, quantity, action, user_id"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:158"
+        "apps/mobile/app/(tabs)/matchup.tsx:167"
       ]
     },
     {
@@ -6349,7 +6644,7 @@
         "id, username, avatar"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:299"
+        "apps/mobile/app/(tabs)/matchup.tsx:311"
       ]
     },
     {
@@ -6364,7 +6659,7 @@
         "user_id, symbol, quantity, week_start_price, week_end_price"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:314"
+        "apps/mobile/app/(tabs)/matchup.tsx:326"
       ]
     },
     {
@@ -6431,7 +6726,7 @@
         "symbol, quantity, entry_price"
       ],
       "callSites": [
-        "apps/mobile/app/player-portfolio.tsx:128"
+        "apps/mobile/app/player-portfolio.tsx:135"
       ]
     },
     {
@@ -6446,7 +6741,7 @@
         "symbol, action, quantity, price"
       ],
       "callSites": [
-        "apps/mobile/app/player-portfolio.tsx:135"
+        "apps/mobile/app/player-portfolio.tsx:142"
       ]
     },
     {
@@ -6461,7 +6756,7 @@
         "username, avatar"
       ],
       "callSites": [
-        "apps/mobile/app/player-portfolio.tsx:116"
+        "apps/mobile/app/player-portfolio.tsx:123"
       ]
     },
     {
@@ -7354,7 +7649,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/lib/useHomeData.ts:214"
+        "apps/mobile/lib/useHomeData.ts:232"
       ]
     },
     {
@@ -7369,7 +7664,7 @@
         "season_number"
       ],
       "callSites": [
-        "apps/mobile/lib/useHomeData.ts:234"
+        "apps/mobile/lib/useHomeData.ts:252"
       ]
     },
     {
@@ -7385,8 +7680,8 @@
         "user_id, wins, losses, ties"
       ],
       "callSites": [
-        "apps/mobile/lib/useHomeData.ts:246",
-        "apps/mobile/lib/useHomeData.ts:265"
+        "apps/mobile/lib/useHomeData.ts:264",
+        "apps/mobile/lib/useHomeData.ts:283"
       ]
     },
     {
@@ -7401,7 +7696,7 @@
         "id, week_number, team1_user_id, team2_user_id, team1_gain, team2_gain"
       ],
       "callSites": [
-        "apps/mobile/lib/useHomeData.ts:299"
+        "apps/mobile/lib/useHomeData.ts:317"
       ]
     },
     {
@@ -7416,7 +7711,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/lib/useHomeData.ts:220"
+        "apps/mobile/lib/useHomeData.ts:238"
       ]
     },
     {
@@ -7432,8 +7727,8 @@
         "username"
       ],
       "callSites": [
-        "apps/mobile/lib/useHomeData.ts:196",
-        "apps/mobile/lib/useHomeData.ts:323"
+        "apps/mobile/lib/useHomeData.ts:214",
+        "apps/mobile/lib/useHomeData.ts:350"
       ]
     },
     {
@@ -7987,7 +8282,7 @@
           "edge": "e.ui.draft->fn.quote",
           "detail": "Price display for candidate picks. Advisory only.",
           "files": [
-            "apps/mobile/app/(tabs)/draft.tsx:491"
+            "apps/mobile/app/(tabs)/draft.tsx:494"
           ]
         },
         {
@@ -7995,7 +8290,7 @@
           "edge": "e.ui.draft->fn.validate-and-record-pick",
           "detail": "The ONLY pick write path since DR-001 Phase 3: the client-INSERT policies on drafts were dropped (20260811000003).",
           "files": [
-            "apps/mobile/app/(tabs)/draft.tsx:427"
+            "apps/mobile/app/(tabs)/draft.tsx:430"
           ]
         },
         {
@@ -8135,9 +8430,9 @@
           ],
           "detail": "quote — single-symbol live price. The most-invoked function in the app.",
           "files": [
-            "apps/mobile/app/(tabs)/draft.tsx:491",
-            "apps/mobile/app/(tabs)/matchup.tsx:136",
-            "apps/mobile/app/(tabs)/matchup.tsx:381",
+            "apps/mobile/app/(tabs)/draft.tsx:494",
+            "apps/mobile/app/(tabs)/matchup.tsx:145",
+            "apps/mobile/app/(tabs)/matchup.tsx:393",
             "apps/mobile/components/TradeModal.tsx:134",
             "apps/mobile/components/TradeModal.tsx:90",
             "apps/web/src/components/TradeModal.jsx:159",
@@ -8577,8 +8872,8 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 119,
-    "edges": 262,
+    "nodes": 120,
+    "edges": 263,
     "flows": 8,
     "drift": 22,
     "driftHigh": 4,
@@ -8590,7 +8885,7 @@
       "draft-control[rules.ts]",
       "enrich-symbols[price-batch.ts]",
       "finnhub-quote[]",
-      "historical-bars[]",
+      "historical-bars[paginate.ts]",
       "join-league[]",
       "preview-league[reason.ts]",
       "process-week-results[grouping.ts,job-status.ts,playoff-progression.ts,scoring-eligibility.ts]",
@@ -8606,15 +8901,15 @@
       "validate-and-record-pick[]"
     ],
     "invokes": [
-      "apps/mobile/app/(tabs)/draft.tsx:324 -> draft-control",
-      "apps/mobile/app/(tabs)/draft.tsx:383 -> draft-control",
-      "apps/mobile/app/(tabs)/draft.tsx:404 -> draft-control",
-      "apps/mobile/app/(tabs)/draft.tsx:427 -> validate-and-record-pick",
-      "apps/mobile/app/(tabs)/draft.tsx:470 -> validate-and-record-pick",
-      "apps/mobile/app/(tabs)/draft.tsx:491 -> quote",
-      "apps/mobile/app/(tabs)/draft.tsx:541 -> validate-and-record-pick",
-      "apps/mobile/app/(tabs)/matchup.tsx:136 -> quote",
-      "apps/mobile/app/(tabs)/matchup.tsx:381 -> quote",
+      "apps/mobile/app/(tabs)/draft.tsx:327 -> draft-control",
+      "apps/mobile/app/(tabs)/draft.tsx:386 -> draft-control",
+      "apps/mobile/app/(tabs)/draft.tsx:407 -> draft-control",
+      "apps/mobile/app/(tabs)/draft.tsx:430 -> validate-and-record-pick",
+      "apps/mobile/app/(tabs)/draft.tsx:473 -> validate-and-record-pick",
+      "apps/mobile/app/(tabs)/draft.tsx:494 -> quote",
+      "apps/mobile/app/(tabs)/draft.tsx:544 -> validate-and-record-pick",
+      "apps/mobile/app/(tabs)/matchup.tsx:145 -> quote",
+      "apps/mobile/app/(tabs)/matchup.tsx:393 -> quote",
       "apps/mobile/app/join-league.tsx:116 -> join-league",
       "apps/mobile/app/join-league.tsx:86 -> preview-league",
       "apps/mobile/components/TradeModal.tsx:102 -> symbol-name",
@@ -8666,37 +8961,37 @@
       "supabase/functions/validate-and-record-pick/index.ts:560 -> finalize_league_draft"
     ],
     "tableOps": [
-      "apps/mobile/app/(tabs)/draft.tsx:184 -> league_members.select",
-      "apps/mobile/app/(tabs)/draft.tsx:192 -> user_profiles.select",
-      "apps/mobile/app/(tabs)/draft.tsx:222 -> drafts.select",
-      "apps/mobile/app/(tabs)/draft.tsx:258 -> league_draft_slots.select",
+      "apps/mobile/app/(tabs)/draft.tsx:185 -> league_members.select",
+      "apps/mobile/app/(tabs)/draft.tsx:195 -> user_profiles.select",
+      "apps/mobile/app/(tabs)/draft.tsx:225 -> drafts.select",
+      "apps/mobile/app/(tabs)/draft.tsx:261 -> league_draft_slots.select",
       "apps/mobile/app/(tabs)/index.tsx:60 -> user_profiles.select",
-      "apps/mobile/app/(tabs)/league.tsx:115 -> league_standings.select",
-      "apps/mobile/app/(tabs)/league.tsx:131 -> matchups.select",
-      "apps/mobile/app/(tabs)/league.tsx:148 -> league_members.select",
-      "apps/mobile/app/(tabs)/league.tsx:161 -> league_seasons.select",
-      "apps/mobile/app/(tabs)/league.tsx:187 -> user_profiles.select",
-      "apps/mobile/app/(tabs)/leagues.tsx:203 -> leagues.insert",
-      "apps/mobile/app/(tabs)/leagues.tsx:234 -> league_members.insert",
-      "apps/mobile/app/(tabs)/leagues.tsx:91 -> league_members.select",
-      "apps/mobile/app/(tabs)/leagues.tsx:99 -> user_profiles.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:152 -> drafts.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:158 -> trades.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:214 -> matchups.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:234 -> matchups.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:250 -> matchups.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:269 -> matchups.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:299 -> user_profiles.select",
-      "apps/mobile/app/(tabs)/matchup.tsx:314 -> week_snapshots.select",
+      "apps/mobile/app/(tabs)/league.tsx:116 -> league_standings.select",
+      "apps/mobile/app/(tabs)/league.tsx:132 -> matchups.select",
+      "apps/mobile/app/(tabs)/league.tsx:149 -> league_members.select",
+      "apps/mobile/app/(tabs)/league.tsx:162 -> league_seasons.select",
+      "apps/mobile/app/(tabs)/league.tsx:193 -> user_profiles.select",
+      "apps/mobile/app/(tabs)/leagues.tsx:104 -> user_profiles.select",
+      "apps/mobile/app/(tabs)/leagues.tsx:208 -> leagues.insert",
+      "apps/mobile/app/(tabs)/leagues.tsx:239 -> league_members.insert",
+      "apps/mobile/app/(tabs)/leagues.tsx:92 -> league_members.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:161 -> drafts.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:167 -> trades.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:223 -> matchups.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:243 -> matchups.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:259 -> matchups.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:278 -> matchups.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:311 -> user_profiles.select",
+      "apps/mobile/app/(tabs)/matchup.tsx:326 -> week_snapshots.select",
       "apps/mobile/app/(tabs)/profile.tsx:43 -> user_profiles.select",
       "apps/mobile/app/(tabs)/profile.tsx:87 -> user_profiles.upsert",
       "apps/mobile/app/create-league.tsx:125 -> leagues.insert",
       "apps/mobile/app/create-league.tsx:151 -> league_members.insert",
       "apps/mobile/app/league-settings.tsx:137 -> leagues.update",
       "apps/mobile/app/login.tsx:72 -> user_profiles.upsert",
-      "apps/mobile/app/player-portfolio.tsx:116 -> user_profiles.select",
-      "apps/mobile/app/player-portfolio.tsx:128 -> drafts.select",
-      "apps/mobile/app/player-portfolio.tsx:135 -> trades.select",
+      "apps/mobile/app/player-portfolio.tsx:123 -> user_profiles.select",
+      "apps/mobile/app/player-portfolio.tsx:135 -> drafts.select",
+      "apps/mobile/app/player-portfolio.tsx:142 -> trades.select",
       "apps/mobile/app/trade-history.tsx:58 -> trades.select",
       "apps/mobile/components/LeagueCarousel.tsx:109 -> league_standings.select",
       "apps/mobile/components/LeagueCarousel.tsx:128 -> league_standings.select",
@@ -8720,14 +9015,14 @@
       "apps/mobile/lib/notifications.ts:72 -> user_profiles.update",
       "apps/mobile/lib/notifications.ts:94 -> push_tokens.delete",
       "apps/mobile/lib/notifications.ts:97 -> user_profiles.update",
-      "apps/mobile/lib/useHomeData.ts:196 -> user_profiles.select",
-      "apps/mobile/lib/useHomeData.ts:214 -> drafts.select",
-      "apps/mobile/lib/useHomeData.ts:220 -> trades.select",
-      "apps/mobile/lib/useHomeData.ts:234 -> league_seasons.select",
-      "apps/mobile/lib/useHomeData.ts:246 -> league_standings.select",
-      "apps/mobile/lib/useHomeData.ts:265 -> league_standings.select",
-      "apps/mobile/lib/useHomeData.ts:299 -> matchups.select",
-      "apps/mobile/lib/useHomeData.ts:323 -> user_profiles.select",
+      "apps/mobile/lib/useHomeData.ts:214 -> user_profiles.select",
+      "apps/mobile/lib/useHomeData.ts:232 -> drafts.select",
+      "apps/mobile/lib/useHomeData.ts:238 -> trades.select",
+      "apps/mobile/lib/useHomeData.ts:252 -> league_seasons.select",
+      "apps/mobile/lib/useHomeData.ts:264 -> league_standings.select",
+      "apps/mobile/lib/useHomeData.ts:283 -> league_standings.select",
+      "apps/mobile/lib/useHomeData.ts:317 -> matchups.select",
+      "apps/mobile/lib/useHomeData.ts:350 -> user_profiles.select",
       "apps/mobile/lib/useLeagues.ts:33 -> league_members.select",
       "apps/mobile/lib/useLeagues.ts:53 -> leagues.select",
       "apps/mobile/lib/usePortfolio.ts:116 -> drafts.select",

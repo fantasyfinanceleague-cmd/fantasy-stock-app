@@ -1,0 +1,18 @@
+.sp-tug-bar {
+  display: flex;
+  width: 100%;
+  height: var(--sp-space-4);
+  border-radius: var(--sp-radius-pill);
+  overflow: hidden;
+  background-color: var(--sp-color-surface-game-line);
+}
+
+.sp-tug-bar__you {
+  /* Fills/bars only — the same value on both surfaces (DESIGN_DIRECTION
+     §9's team.you.onGame is for TEXT on a game surface, not fills). */
+  background-color: var(--sp-color-team-you-base);
+}
+
+.sp-tug-bar__opponent {
+  background-color: var(--sp-color-team-opponent);
+}
