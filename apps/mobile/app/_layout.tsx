@@ -148,24 +148,6 @@ function RootLayoutNav() {
           <Stack.Screen name="login" />
           <Stack.Screen name="forgot-password" options={HIDDEN_HEADER_MODAL} />
           <Stack.Screen name="reset-password" options={HIDDEN_HEADER_FULLSCREEN} />
-          {/* DEV-ONLY (Phase 2 foundation): per expo-router 6.0.21's
-              useScreens, every file route is appended to whatever Stack
-              mounts, so design-gallery is already an implicit child of this
-              Stack even without this line — redundant, not load-bearing, but
-              harmless and documents the route's dev-only intent explicitly.
-              design-gallery.tsx's own !__DEV__ redirect is the belt to this
-              suspenders.
-              Making design-gallery the OPENING screen (so it's reachable
-              signed-out without deep-linking, which is separately broken —
-              tracked as its own task) was attempted three ways and
-              abandoned:
-              a Stack `initialRouteName` prop and this file's own
-              `unstable_settings` export were both inert; an imperative
-              `router.replace('/design-gallery')` in a useEffect reliably
-              crashed with "Maximum update depth exceeded", reproduced in
-              isolation. Verifying the gallery currently needs a one-time
-              manual sign-in on the test simulator. */}
-          {__DEV__ && <Stack.Screen name="design-gallery" options={HIDDEN_HEADER} />}
         </Stack>
       </ThemeProvider>
     );
@@ -176,10 +158,6 @@ function RootLayoutNav() {
     <ThemeProvider value={DefaultTheme}>
       <StatusBar style="dark" />
       <LeagueProvider>
-        {/* design-gallery.tsx (Phase 2 foundation, dev-only) is NOT listed
-            here: expo-router auto-appends unlisted file routes to whatever
-            Stack mounts, so it's already implicitly reachable in this
-            authenticated tree. It redirects itself when !__DEV__. */}
         <Stack>
           <Stack.Screen name="(tabs)" options={HIDDEN_HEADER} />
           <Stack.Screen name="login" options={HIDDEN_HEADER} />

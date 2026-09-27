@@ -56,3 +56,12 @@ A second person or worker can run in parallel on another device, with Metro on
 - **Credentials.** Sign in yourself. Automated sessions never type passwords.
 - **Package warnings.** `expo start` lists patch-version mismatches ("should be
   updated for best compatibility"). They're warnings; bump them in a proper branch.
+- **`EXPO_PUBLIC_*` vars come from `.env` files, not the shell.** A var set via
+  `EXPO_PUBLIC_FOO=bar npx expo start` never reaches the device on this SDK.
+  `process.env.EXPO_PUBLIC_*` compiles to `_expoVirtualEnv.env.EXPO_PUBLIC_*`
+  (`node_modules/expo/virtual/env.js`), which is built from PARSED `.env`,
+  `.env.local`, etc. file contents baked into the bundle at build time — not
+  from the live process environment `expo start` was invoked with. To pass a
+  one-off value to a dev build, put it in `apps/mobile/.env.local` (gitignored
+  via `.env*.local`), not a shell export. Verified 2026-09-26 by reading the
+  served bundle directly (`curl` the entry bundle, grep for the var).
