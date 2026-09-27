@@ -447,7 +447,7 @@ surfaces: primary is the most prominent, then secondary, then ghost. Opponent or
 
 | Token | Width / weight | Size / line | Use |
 |---|---|---|---|
-| `type.hero` | 62% / 900 | web: `clamp(56px, 7.6vw, 112px)` / 0.92; mobile: 56 / 52 | **Landing hero headline only** (added 2026-09-26 for Phase 3a); −0.01em tracking |
+| `type.hero` | 62% / 900 | web: `clamp(56px, 7.6vw, 112px)` / 0.92; mobile: 56 / 52 | **Landing display family**: the hero headline, plus the landing's section heads and launch title at sizes derived from it (Phase 3a). Tracking −0.01em; **`type.hero.wordSpacing` = 0.12em** (added 2026-09-27; at 62% width the word gaps otherwise collapse, e.g. "Yourportfolio"). Web: `--sp-type-hero-word-spacing` |
 | `type.score.xl` | 62% / 900 | 56 / 52 | Matchup scoreboard |
 | `type.score.lg` | 62% / 900 | 40 / 38 | Standings, Home "this week" |
 | `type.score.md` | 62% / 900 | 28 / 28 | Compact scores |
