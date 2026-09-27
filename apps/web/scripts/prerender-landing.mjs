@@ -36,6 +36,21 @@ if (!ssr.APP_PAUSED) {
   if (!/<title>[^<]*<\/title>/.test(shell)) fail('no <title> in dist/index.html');
   if (!/<meta\s+name="description"[\s\S]*?\/>/.test(shell)) fail('no meta description in dist/index.html');
 
+  // Paint first, hydrate after. The entry is a module script, so it never
+  // blocks HTML parsing, but if it arrives before the first frame (warm
+  // cache, fast network) its execution still delays that frame. The page is
+  // fully readable without it, so request it from a tiny loader after the
+  // first paint instead: the prerendered text paints on its own, then React
+  // hydrates. One entry script is expected; anything else fails the build.
+  const ENTRY = /<script type="module" crossorigin src="([^"]+)"><\/script>\s*/g;
+  const entries = [...shell.matchAll(ENTRY)];
+  if (entries.length !== 1) fail(`expected exactly one entry module script, found ${entries.length}`);
+  const entrySrc = entries[0][1];
+  const loader =
+    '<script>requestAnimationFrame(function () { setTimeout(function () {' +
+    ' var s = document.createElement("script"); s.type = "module"; s.crossOrigin = "";' +
+    ` s.src = ${JSON.stringify(entrySrc)}; document.body.appendChild(s); }, 0); });</script>`;
+
   const markup = ssr.render();
   if (!markup || markup.length < 1000) fail(`render() returned ${markup ? markup.length : 0} chars`);
 
@@ -48,7 +63,10 @@ if (!ssr.APP_PAUSED) {
       `<meta name="description" content="${escapeAttr(head.description)}" />`
     )
     .replace('</head>', `    ${head.tags.join('\n    ')}\n  </head>`)
-    .replace(ROOT, `<div id="root">${markup}</div>`);
+    .replace(ENTRY, '')
+    .replace(ROOT, `<div id="root">${markup}</div>`)
+    .replace('</body>', `  ${loader}\n  </body>`);
+  if (!html.includes(loader) || html.includes(`src="${entrySrc}"></script>`)) fail('entry script rewrite failed');
 
   await writeFile(distIndex, html);
   console.log(`prerender-landing: wrote ${markup.length} chars of landing markup into dist/index.html`);

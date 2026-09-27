@@ -262,7 +262,13 @@ body:has(> #root > .lp) {
 }
 
 /* Under 360px "vs. your friends." doesn't fit at the token's 56px floor:
-   break it into its own fixed line instead (4 lines, still fixed). */
+   break it into its own fixed line instead (4 lines, still fixed). Above
+   that the span generates no box at all (display: contents), so the font
+   swap can't register it as a shifted element. */
+.lp-line-split {
+  display: contents;
+}
+
 @media (max-width: 359px) {
   .lp-line-split {
     display: block;
@@ -487,8 +493,14 @@ body:has(> #root > .lp) {
   visibility: hidden;
 }
 
+.lp-count__live {
+  /* Full cell width, aligned by text-align: the box itself never moves
+     while the digits change. */
+  width: 100%;
+}
+
 .lp-count--end .lp-count__live {
-  justify-self: end;
+  text-align: right;
 }
 
 /* ── Ticker ──────────────────────────────────────────────────────────── */
