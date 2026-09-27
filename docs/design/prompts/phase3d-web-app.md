@@ -35,7 +35,12 @@ mirrors their structure and states.
    `layout.css` / `App.css` / `index.css` rule once nothing uses it; remove
    inline `style={{}}` from rebuilt pages; no raw hex. **Report the before/after
    counts** (inline styles, distinct hex values, CSS lines).
-4. **Keyboard and screen reader:** everything operable by keyboard; landmarks;
+4. **Fonts off `@import`** (approved proposal from 3a): move
+   `apps/web/src/design/fonts.css` from a CSS `@import` (render-blocking inside
+   whatever stylesheet bundles it) to an async `<link>` with preconnect and
+   metric-tuned fallbacks, matching what the 3a landing does locally. Prove there's
+   no layout shift on font swap (CLS ≤ 0.05) and that the landing is still byte-identical.
+5. **Keyboard and screen reader:** everything operable by keyboard; landmarks;
    the Scoreboard's live region; focus management in panels.
 
 ## Motion
