@@ -570,3 +570,110 @@ results; look for 009/041 owners) · `stockade` · `stockroom` · `war chest` ·
 - *Livestock* is the wittier, more playful name, and its mark (bars with
   horns) is the strongest of the three rounds. Its cost is ownership: a
   very common word, dominated by farming in search, is hard to protect.
+
+---
+
+# Decision: Stockade (2026-09-26)
+
+> Giorgio picked **Stockade** ("I like Stockade the most"). This section is
+> the working dossier. **It is not legal advice, and nothing here is
+> clearance.** Code changes for the rename wait until Giorgio has run the
+> USPTO searches in D.2 himself (ideally with an attorney's opinion).
+
+## D.1 Collision screen (deeper pass, 2026-09-26)
+
+| Hit | What it is | Class (likely) | Risk to us |
+|---|---|---|---|
+| **Stockade Companies, LLC** (Round Rock, TX): **Sirloin Stockade**, Montana Mike's, WingMe | Steakhouse / buffet chain (since 1966); a franchisee group bought the trademarks in 1984; 8 Sirloin Stockade locations as of May 2026 | 043 (restaurant services) | **Low–medium.** Different goods and services. The marks mostly appear as "SIRLOIN STOCKADE". Worth confirming no stand-alone STOCKADE registration covers entertainment or software |
+| **Stockade by WRS Systems** (UK) | Cloud **back-office POS software** for hospitality (stock control, reporting, menus) | 009 / 042 (software) | **Medium.** Same *class* (software) but a different field and market (UK hospitality stock control). Check whether it's registered in the US |
+| **Kingston Stockade FC** (Kingston, NY) | Amateur/semi-pro soccer club | 041 (sports entertainment), if registered | **Low–medium.** Sports, not games or finance; relevant only if it holds a class-041 registration |
+| **"Stockade"** (vintage board game, BoardGameGeek) | Undated cowboys-and-Indians board game | 028 (games) | **Low.** Vintage, apparently inactive |
+| Stockade fencing | "Stockade fence" is a **generic product type** (Lowe's, many fence installers) | 019 / 037 | **Low for the word** (descriptive for fences only). **Visual:** fencing logos use pickets **with horizontal rails**, equal heights, wood tones; our marks deliberately avoid all three |
+| App Store / Google Play | **No app named "Stockade."** Near-names: Stocked, Stockd, Stokado, Stocate (inventory/storage) | 009 | **Low**; App Store Connect name availability must still be confirmed by Giorgio |
+| Fantasy / finance / crypto products | **None found** named Stockade | 009 / 036 / 041 | **None found** |
+| Social handles | No indexed accounts for @stockade, @playstockade, @stockadeapp | — | Verify by hand; `@stockade` is likely taken or dormant on the big platforms |
+
+## D.2 USPTO queries for Giorgio (tmsearch.uspto.gov)
+
+**Not legal advice.** Run these yourself; an attorney's clearance opinion is
+the real answer.
+
+1. Word mark `stockade`, status **Live and Dead**, then filter by class:
+   - **041** (entertainment; online games; organising fantasy leagues). **A live registration here is the most serious result**: same services. Stop and get advice.
+   - **009** (downloadable software, mobile game apps). A live registration for *game* or *entertainment* software is serious. One for unrelated software (e.g. WRS's POS software, if it's registered in the US) is a closer call that turns on relatedness; get advice.
+   - **036** (financial services). A live registration suggests a finance product using the name, which creates both a confusion risk and the brokerage read we're avoiding.
+   - Then run it **unfiltered** and note 043 (restaurants: Stockade Companies). Usually not a conflict for a game, unless a mark is shown to be famous.
+2. Also search `stockades`, `sirloin stockade`, and `stock ade` (spacing variants).
+3. **Design codes (if the logo uses stakes/palisade):** in the Trademark Design
+   Search Code Manual (tmdesigncodes.uspto.gov), look up the codes for
+   *fences / palisades* (structural works category) and for *bars / graphs*
+   (geometric figures category), then search those codes in classes 009/041
+   for similar logos. Use the manual's exact codes; I haven't listed numbers
+   here because the manual can't be read from this environment.
+
+## D.3 Domains and handles
+
+Checked 2026-09-26 (Verisign whois, Google RDAP):
+
+| Domain | Status |
+|---|---|
+| **playstockade.com** | **not registered** |
+| **getstockade.com** | **not registered** |
+| **playstockade.app** | **not registered** |
+| stockadeapp.com, stockadegame.com, stockadeleague.com, stockadehq.com | not registered |
+| stockade.com (1998), stockade.app, joinstockade.com (2012) | registered |
+
+**Grab first, in this order (register promptly):**
+1. **playstockade.com**: the primary site (matches the "play" framing, which says it's a game, not a brokerage).
+2. **playstockade.app**: the same name on the app TLD (HTTPS-only by default).
+3. **getstockade.com**: defensive; point it at #1.
+4. Handles: **@playstockade** on X, Instagram, TikTok and Threads (same string everywhere). Fallback: **@stockadeapp**. Try `@stockade` on each platform in case it's free or dormant.
+
+## D.4 Marks (built on the refined bars)
+
+Files: `docs/design/naming/marks/stockade-a-palisade.svg`, `stockade-b-tile.svg`,
+`stockade-c-tick.svg`, `stockade-favicon-16.svg`; `preview-stockade.html` shows
+the lockups, the app icon at 60/40/29 and the favicon at actual 16px.
+
+- **A · Palisade (recommended primary mark).** The refined bars recut as
+  three pointed stakes rising in height; the tallest in `color.brand` blue.
+  It reads as a stockade **and** a rising bar chart. The pointed tops also
+  read as "up".
+- **B · App tile (recommended app icon).** A on a stadium-navy tile with
+  white stakes and the blue tallest stake. An earlier amber tip was **removed**
+  because it made the tall stake read as a pencil.
+- **C · Palisade + tick.** Adds an amber rising line through the tips. It's
+  more "stock", but busier; keep it for marketing, not the icon.
+- **Favicon (16px):** three stakes on a navy square; it holds at actual size.
+- **Fencing-logo check:** fence-company logos are picket rows **with
+  horizontal rails**, **equal heights**, often wood-brown or green, often with
+  a house. These marks have no rails, rising heights, and the Game Day
+  palette, so they read as a chart first.
+
+## D.5 Rename plan (by cost), and who carries each item
+
+| When | Item | Owner |
+|---|---|---|
+| **Now** (after the USPTO check) | `brand.name` / `brand.wordmark` token values → "Stockade" on both platforms (the tokens exist from Phase 2) | A one-line commit on the Phase 2 foundation branches if they're unmerged; otherwise the 3a (web) and 3b (mobile) workers |
+| **Now** | The signup-refusal message inside `restrict_new_signups` (`supabase/migrations/20260815000000_signup_gate.sql:115`) → a new migration, `CREATE OR REPLACE` with the new text only | **`supabase-migration-writer`** drafts it; **Giorgio runs `db push`**; verify `proacl` is unchanged afterwards (CLAUDE.md: `CREATE OR REPLACE` keeps grants, but check anyway) |
+| **Now** | Register domains and handles (D.3) | **Giorgio** |
+| **Now** | Choose the **Android package** before the first Android build. Recommendation: **name-neutral**, tied to a domain you control (e.g. reverse of a studio domain), not "stockade" and not "stockpile". It can never change after Play publication | **Giorgio** decides; then a config commit by the worker preparing the next EAS build |
+| **Phase 3a** | Landing copy and wordmark (**hold lifted**), `index.html` title, favicon, OG image, footer | 3a landing worker |
+| **Phases 3b / 3c / 3d** | The remaining hard-coded "Stockpile" strings (47 in 20 files), plus the retired assets `stockpile-*.png`, `Stockpile_Logo.png` → new mark exports (icon, adaptive icon, splash, favicons) | The mobile (3b/3c) and web app (3d) workers; icon exports can be part of Phase 2/3b |
+| **Promo (Phase 4)** | The closing card (**hold lifted**) | Promo worker |
+| **With binary 1.1.0** | `app.json` `expo.name` "fantasy-stock-app" → **"Stockade"** (the home-screen name). Needs a new binary, **not OTA-able** | The worker/Orchestrator preparing the 1.1.0 EAS build |
+| **With binary 1.1.0** | App Store Connect app name → "Stockade" (subtitle e.g. "Fantasy league for stocks"); confirm name availability | **Giorgio** (App Store Connect) |
+| **Check** | Supabase Auth email templates and sender name (password reset, confirmations) | **Giorgio** (dashboard; UNVERIFIED whether they say "Stockpile") |
+| **KEEP** | iOS `bundleIdentifier` `com.stockpile.fantasystock`, `slug` `fantasy-stock-app`, `scheme` `fantasystockapp`, EAS project id | Nobody; invisible to users, and changing them breaks installs, the EAS link, and deep/auth links |
+| **Keep (cosmetic)** | GitHub org/repo, Supabase and Vercel project names | Nobody, for now |
+
+### D sources (2026-09-26)
+
+[Stockade Companies (Wikipedia)](https://en.wikipedia.org/wiki/Stockade_Companies) ·
+[Stockade Companies brands](https://stockadecompanies.com/our-brands/) ·
+[Sirloin Stockade](https://en.wikipedia.org/wiki/Sirloin_Stockade) ·
+[Stockade by WRS](https://www.wrssystems.co.uk/products/back-office-pos-software/) ·
+[Kingston Stockade FC](https://en.wikipedia.org/wiki/Kingston_Stockade_FC) ·
+[Stockade board game (BGG)](https://boardgamegeek.com/boardgame/308424/stockade) ·
+[Stockade fencing (Lowe's)](https://www.lowes.com/pl/fencing-gates/wood-fencing/stockade/2410226966401-4294402306) ·
+[USPTO Design Search Code Manual](https://tmdesigncodes.uspto.gov/)
