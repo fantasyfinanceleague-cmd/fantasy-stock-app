@@ -19,18 +19,21 @@ import {
 } from './sampleData';
 
 // The /01 chapter's phone: three full Game Day app screens (Design Lead,
-// round 3 review) — a status bar, the league header, the screen, and a tab
-// bar whose active tab is the step being shown. Everything here is an
+// round 3 review) — a status bar, the league header, the screen, and the
+// app's tab bar with the step's tab active (Draft → League, Compete →
+// Matchup, Climb → League). Everything here is an
 // illustration (aria-hidden by the Phone frame); the step text beside it
 // carries the meaning.
 
-export type PhoneTab = 'home' | 'draft' | 'matchup' | 'league';
+// The app's real IA (DESIGN_DIRECTION §3): Home · Matchup · League ·
+// Portfolio. The draft is reached from League, so the Draft step shows League.
+export type PhoneTab = 'home' | 'matchup' | 'league' | 'portfolio';
 
 const TABS: ReadonlyArray<{ id: PhoneTab; label: string; d: string }> = [
   { id: 'home', label: 'Home', d: 'M4 11 12 4l8 7v8a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z' },
-  { id: 'draft', label: 'Draft', d: 'M5 5h14v4H5zM5 11h6v8H5zM13 11h6v8h-6z' },
   { id: 'matchup', label: 'Matchup', d: 'M4 17 9 11l4 4 7-8M15 7h5v5' },
   { id: 'league', label: 'League', d: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3' },
+  { id: 'portfolio', label: 'Portfolio', d: 'M4 20V10M10 20V4M16 20v-8M22 20H2' },
 ];
 
 function StatusBar() {
@@ -95,7 +98,7 @@ export function DraftScreen({ picks, clock }: { picks: number; clock: number }) 
   const seconds = Math.max(0, Math.round(60 * (1 - clock)));
   const clockText = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
   return (
-    <PhoneShell tab="draft" tag={done ? 'Round 3 next' : `Round ${picks < 6 ? 1 : 2}`}>
+    <PhoneShell tab="league" tag={done ? 'Round 3 next' : `Round ${picks < 6 ? 1 : 2}`}>
       <div className="lp-clock">
         <svg className="lp-clock__ring" viewBox="0 0 44 44" aria-hidden="true">
           <circle className="lp-clock__track" cx="22" cy="22" r="19" />
