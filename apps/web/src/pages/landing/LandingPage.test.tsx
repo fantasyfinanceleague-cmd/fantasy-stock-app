@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
+import { act, render } from '@testing-library/react';
 import { renderToString } from 'react-dom/server';
 import { hydrateRoot } from 'react-dom/client';
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import LandingPage from './LandingPage';
 import { brand } from '../../brand';
-import { STEPS } from './sampleData';
+import { how } from './copy';
 
 // jsdom has no matchMedia / IntersectionObserver. Every query "matches"
-// (so the scrub's min-height gate passes) unless a test says otherwise.
+// (a big, fine-pointer, full-motion screen) unless a test says otherwise.
 function installMatchMedia(matches: (q: string) => boolean) {
   window.matchMedia = ((query: string) => ({
     matches: matches(query),
@@ -24,7 +24,7 @@ function installMatchMedia(matches: (q: string) => boolean) {
 }
 
 beforeEach(() => {
-  installMatchMedia((q) => !q.includes('prefers-reduced-motion: reduce'));
+  installMatchMedia((q) => !q.includes('prefers-reduced-motion'));
 });
 
 afterEach(() => {
@@ -34,32 +34,42 @@ afterEach(() => {
 describe('server render (what the prerendered / JS-off page shows)', () => {
   const html = renderToString(<LandingPage />);
   const doc = new DOMParser().parseFromString(html, 'text/html');
+  const text = (sel: string) => [...doc.querySelectorAll(sel)].map((e) => e.textContent?.replace(/\s+/g, ' ').trim());
 
   it('is deterministic (two renders are byte-identical)', () => {
     expect(renderToString(<LandingPage />)).toBe(html);
   });
 
-  it('has the headline and every section heading', () => {
-    expect(doc.querySelector('h1')?.textContent).toBe('Your portfolio vs. your friends. Every week.');
-    const h2s = [...doc.querySelectorAll('h2')].map((h) => h.textContent);
-    expect(h2s).toEqual(['How a week works', 'Leagues in action', 'Real prices. No real money.', 'Questions', 'Launching soon']);
+  it('has the live page’s headline and section headings, in order', () => {
+    expect(doc.querySelector('h1')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      'Draft stocks. Beat your friends. Win the league.'
+    );
+    expect(text('h2')).toEqual([
+      'Draft a team. Compete weekly.Climb the league.',
+      'A scoreboard for your portfolio.',
+      'The rigor of investing,the rhythm of fantasy.',
+      'Questions, answered.',
+      'Launching soon.',
+    ]);
+    expect(text('.lp-kicker')).toEqual(['/ 01 — How it works', '/ 02 — Leagues in action', `/ 03 — Why ${brand.name}`, '/ 04 — FAQ']);
   });
 
-  it('has all four step texts, and the static four panels (no scrub without JS)', () => {
-    for (const step of STEPS) expect(html).toContain(step.body.replace(/’/g, '&#x27;').slice(0, 20).replace(/&#x27;.*/, ''));
-    expect(doc.querySelectorAll('.lp-steps > li')).toHaveLength(4);
-    expect(doc.querySelectorAll('.lp-panel')).toHaveLength(4);
-    expect(doc.querySelector('.lp-scrub')).toBeNull();
-  });
-
-  it('shows the hero at "Monday open", both scores $0.00 (labelled, not a mystery 0–0)', () => {
-    expect(doc.querySelector('.lp-board__header')?.textContent).toContain('Monday open');
-    const visible = [...doc.querySelectorAll('.lp-hero .lp-count__live')].map((e) => e.textContent);
-    expect(visible).toEqual(['$0.00', '$0.00']);
+  it('is the static version: nothing pinned, all three steps each with its screen', () => {
+    expect(doc.querySelector('.lp-chapter')).toBeNull();
+    expect(doc.querySelector('.lp-opening--pinned')).toBeNull();
+    expect(doc.querySelectorAll('.lp-steps--static > li')).toHaveLength(3);
+    for (const step of how.steps) expect(html).toContain(step.num);
+    expect(doc.querySelectorAll('.lp-steps--static .lp-phone')).toHaveLength(3);
+    expect(doc.querySelector('.lp-stamp')?.textContent).toBe('Final');
   });
 
   it('has every FAQ answer open (readable with JS off)', () => {
-    expect(doc.querySelectorAll('.lp-faq__panel')).toHaveLength(6);
+    expect(doc.querySelectorAll('.lp-faq__panel')).toHaveLength(5);
+  });
+
+  it('shows the mock at its first frame (the live page’s numbers)', () => {
+    expect(html).toContain('$12,430.55');
+    expect(text('.lp-srow__name')[0]).toBe('Paolo M.');
   });
 
   it('has no dead links, and every in-page anchor has a target', () => {
@@ -71,24 +81,20 @@ describe('server render (what the prerendered / JS-off page shows)', () => {
     }
   });
 
-  it('never puts "Launching soon" inside a link or button', () => {
+  it('never puts "Launching soon" / "Coming soon" inside a link or button', () => {
     const statuses = [...doc.querySelectorAll('*')].filter(
-      (e) => e.children.length === 0 && e.textContent?.includes('Launching soon')
+      (e) => e.children.length <= 1 && /Launching soon|Coming soon/.test(e.textContent ?? '') && (e.textContent ?? '').length < 30
     );
-    expect(statuses.length).toBeGreaterThan(0);
+    expect(statuses.length).toBeGreaterThanOrEqual(4);
     for (const e of statuses) expect(e.closest('a, button')).toBeNull();
   });
 
-  it('has no signup, login, email capture or win probability', () => {
+  it('has no signup, login, email capture, win probability or attribution placeholder', () => {
     expect(doc.querySelector('form, input, textarea')).toBeNull();
-    // The FAQ may SAY there's no signup; no control may OFFER one.
     const controls = [...doc.querySelectorAll('a, button')].map((e) => e.textContent?.toLowerCase() ?? '');
-    for (const text of controls) expect(text).not.toMatch(/sign ?up|log ?in|join|get started|notify|waitlist/);
-    expect(html.toLowerCase()).not.toMatch(/probabilit|chance to win|win %|odds/);
-  });
-
-  it('spells the product name only through brand.name', () => {
-    expect(html).toContain(brand.name);
+    for (const t of controls) expect(t).not.toMatch(/sign ?up|log ?in|join|get started|notify|waitlist/);
+    expect(html.toLowerCase()).not.toMatch(/probabilit|win prob|chance to win|odds/);
+    expect(html).not.toContain('PLACEHOLDER');
   });
 });
 
@@ -108,20 +114,36 @@ describe('hydration', () => {
 });
 
 describe('full motion (client)', () => {
-  it('swaps the static panels for the pinned scrub after hydration', async () => {
+  it('switches in the pinned opening and the phone chapter after hydration', async () => {
     const { container } = render(<LandingPage />);
     await act(async () => {});
-    expect(container.querySelector('.lp-scrub')).not.toBeNull();
-    // The four step texts stay in the DOM while scrubbing.
-    for (const step of STEPS) expect(screen.getByText(step.title)).toBeInTheDocument();
+    expect(container.querySelector('.lp-opening--pinned')).not.toBeNull();
+    expect(container.querySelector('.lp-chapter')).not.toBeNull();
+    // The three step texts stay in the DOM while pinned.
+    expect(container.querySelectorAll('.lp-chapter .lp-step')).toHaveLength(3);
   });
 
-  it('keeps the static panels on a short viewport', async () => {
-    installMatchMedia((q) => !q.includes('min-height') && !q.includes('prefers-reduced-motion: reduce'));
+  it('keeps the static versions on a small, short screen', async () => {
+    installMatchMedia((q) => !q.includes('min-height') && !q.includes('min-width') && !q.includes('prefers-reduced-motion'));
     const { container } = render(<LandingPage />);
     await act(async () => {});
-    expect(container.querySelector('.lp-scrub')).toBeNull();
-    expect(container.querySelectorAll('.lp-panel')).toHaveLength(4);
+    expect(container.querySelector('.lp-opening--pinned')).toBeNull();
+    expect(container.querySelector('.lp-chapter')).toBeNull();
+    expect(container.querySelectorAll('.lp-steps--static > li')).toHaveLength(3);
+  });
+
+  it('re-sorts the Scudetto board while it is on screen', async () => {
+    vi.useFakeTimers();
+    const { container } = render(<LandingPage />);
+    await act(async () => {});
+    const names = () => [...container.querySelectorAll('.lp-srow__name')].map((e) => e.firstChild?.textContent);
+    expect(names().slice(0, 3)).toEqual(['Paolo M.', 'Roberto B.', 'Alessandro D.']);
+    await act(async () => {
+      vi.advanceTimersByTime(4300);
+    });
+    expect(names().slice(0, 3)).toEqual(['Paolo M.', 'Alessandro D.', 'Roberto B.']);
+    expect(container.querySelector('.lp-badge--up')?.textContent).toBe('▲ 1');
+    vi.useRealTimers();
   });
 });
 
@@ -149,5 +171,14 @@ describe('source guards', () => {
   it.each(sources.map(([f]) => f))('%s imports no legacy app CSS, providers or Supabase', (file) => {
     const text = sources.find(([f]) => f === file)![1];
     expect(text).not.toMatch(/layout\.css|index\.css|App\.css|stockpile-tokens|\/context\/|supabase|components\/Toast/);
+  });
+
+  it('animates only transform / opacity / clip-path in CSS transitions and keyframes', () => {
+    const css = sources.find(([f]) => f === 'landing.css')![1];
+    const transitioned = [...css.matchAll(/transition:\s*([^;]+);/g)].flatMap((m) =>
+      m[1].split(',').map((part) => part.trim().split(/\s+/)[0])
+    );
+    const allowed = new Set(['transform', 'opacity', 'clip-path', 'none', 'color', 'background-color', 'border-color']);
+    for (const prop of transitioned) expect(allowed.has(prop)).toBe(true);
   });
 });

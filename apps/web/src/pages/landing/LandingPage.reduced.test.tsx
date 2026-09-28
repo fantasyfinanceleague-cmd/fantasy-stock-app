@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
+import { act, render } from '@testing-library/react';
 import { renderToString } from 'react-dom/server';
 import { hydrateRoot } from 'react-dom/client';
 import LandingPage from './LandingPage';
@@ -21,7 +21,7 @@ window.matchMedia = ((query: string) => ({
 })) as unknown as typeof window.matchMedia;
 
 describe('reduced motion (OS preference)', () => {
-  it('hydrates the full-motion server markup with no mismatch', async () => {
+  it('hydrates the server markup with no mismatch', async () => {
     const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
     const container = document.createElement('div');
     container.innerHTML = renderToString(<LandingPage />);
@@ -35,25 +35,22 @@ describe('reduced motion (OS preference)', () => {
     errors.mockRestore();
   });
 
-  it('shows the hero’s final state at once, the static panels, a paused ticker, and never re-sorts', async () => {
+  it('keeps every section static: nothing pinned, no live loops, a paused tape', async () => {
     vi.useFakeTimers();
     const { container } = render(<LandingPage />);
     await act(async () => {});
-    const visible = [...container.querySelectorAll('.lp-hero .lp-count__live')].map((e) => e.textContent);
-    expect(visible).toEqual(['+$56.80', '+$39.40']);
-    expect(container.querySelector('.lp-board__header')?.textContent).toContain('Wednesday');
-    expect(screen.getByText('NVDA +4.1% puts you ahead')).toBeInTheDocument();
-    expect(container.querySelector('.lp-scrub')).toBeNull();
-    expect(container.querySelectorAll('.lp-panel')).toHaveLength(4);
+    expect(container.querySelector('.lp-opening--pinned')).toBeNull();
+    expect(container.querySelector('.lp-chapter')).toBeNull();
+    expect(container.querySelectorAll('.lp-steps--static > li')).toHaveLength(3);
     expect(container.querySelector('.lp-ticker__track')?.getAttribute('data-state')).toBe('paused');
-    expect(screen.getByRole('button', { name: 'Play the matchup ticker' })).toBeInTheDocument();
 
-    const namesBefore = [...container.querySelectorAll('.lp-row__name')].map((e) => e.textContent);
+    const board = () => [...container.querySelectorAll('.lp-srow__name')].map((e) => e.firstChild?.textContent);
+    const value = () => container.querySelector('.lp-card--portfolio .sp-visually-hidden')?.textContent;
+    const before = [board(), value()];
     await act(async () => {
-      vi.advanceTimersByTime(20_000);
+      vi.advanceTimersByTime(30_000);
     });
-    const namesAfter = [...container.querySelectorAll('.lp-row__name')].map((e) => e.textContent);
-    expect(namesAfter).toEqual(namesBefore);
+    expect([board(), value()]).toEqual(before);
     vi.useRealTimers();
   });
 });

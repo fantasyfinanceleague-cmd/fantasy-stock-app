@@ -168,12 +168,45 @@ body:has(> #root > .lp) {
   transform: scale(0.98);
 }
 
-/* ── Nav ─────────────────────────────────────────────────────────────── */
+/* ── Page chrome sizes ───────────────────────────────────────────────── */
+.lp {
+  --lp-tape-h: 48px;
+  --lp-nav-h: 64px;
+  --lp-progress-h: 26px;
+  /* Everything that pins sits below the sticky nav + progress bar. */
+  --lp-top: calc(var(--lp-nav-h) + var(--lp-progress-h));
+  /* The largest side inset a navy panel starts from — always smaller than
+     the content gutter, so text never sits outside the solid navy. */
+  --lp-panel-inset: clamp(8px, 2.4vw, 32px);
+  /* How much of the "look inside" stage peeks above the fold. */
+  --lp-peek: 12svh;
+}
+
+.lp section[id],
+.lp main {
+  scroll-margin-top: calc(var(--lp-top) + var(--sp-space-5));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html:has(> body > #root > .lp) {
+    scroll-behavior: smooth;
+  }
+}
+
+/* ── Nav + chapter progress ──────────────────────────────────────────── */
+.lp-nav {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background-color: var(--sp-color-bg-app);
+  border-bottom: 1px solid var(--sp-color-border-default);
+}
+
 .lp-nav__inner {
   display: flex;
   align-items: center;
   gap: var(--sp-space-7);
-  min-height: 72px;
+  height: var(--lp-nav-h);
 }
 
 .lp-brand {
@@ -205,6 +238,12 @@ body:has(> #root > .lp) {
   line-height: var(--sp-type-body-line);
   font-weight: 500;
   text-decoration: none;
+  color: var(--sp-color-text-secondary);
+  transition: color var(--sp-motion-duration-quick) var(--sp-motion-ease-settle);
+}
+
+.lp-nav__links a[aria-current],
+.lp-nav__links a:hover {
   color: var(--sp-color-text-primary);
 }
 
@@ -223,11 +262,11 @@ body:has(> #root > .lp) {
 }
 
 .lp-nav__links a:hover::after,
-.lp-nav__links a:focus-visible::after {
+.lp-nav__links a:focus-visible::after,
+.lp-nav__links a[aria-current]::after {
   transform: scaleX(1);
 }
 
-/* A status, not a control: no border, no hover, no pointer, no press. */
 .lp-status {
   display: inline-flex;
   align-items: center;
@@ -245,11 +284,70 @@ body:has(> #root > .lp) {
   user-select: none;
 }
 
+.lp-status--onGame {
+  margin-left: 0;
+  background-color: var(--sp-color-surface-game-raised);
+  color: var(--sp-color-text-on-game-primary);
+}
+
 .lp-status__dot {
   width: 6px;
   height: 6px;
   border-radius: var(--sp-radius-pill);
   background-color: var(--sp-color-brand);
+}
+
+.lp-status--onGame .lp-status__dot {
+  background-color: var(--sp-color-team-you-on-game);
+}
+
+.lp-progress {
+  height: var(--lp-progress-h);
+}
+
+.lp-progress__inner {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--sp-space-4);
+  align-items: center;
+  height: 100%;
+}
+
+.lp-progress__seg {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-space-3);
+  min-width: 0;
+}
+
+.lp-progress__num {
+  display: none;
+  font-size: var(--sp-type-caption-size);
+  line-height: var(--sp-type-caption-line);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--sp-color-text-secondary);
+}
+
+.lp-progress__seg--on .lp-progress__num {
+  color: var(--sp-color-text-primary);
+}
+
+.lp-progress__track {
+  position: relative;
+  flex: 1;
+  height: 3px;
+  overflow: hidden;
+  border-radius: var(--sp-radius-pill);
+  background-color: var(--sp-color-border-default);
+}
+
+.lp-progress__fill {
+  position: absolute;
+  inset: 0;
+  background-color: var(--sp-color-brand);
+  transform: scaleX(0);
+  transform-origin: left center;
 }
 
 @media (min-width: 768px) {
@@ -260,13 +358,118 @@ body:has(> #root > .lp) {
   .lp-status {
     margin-left: 0;
   }
+
+  .lp-progress__num {
+    display: inline;
+  }
+}
+
+/* ── Shared type ─────────────────────────────────────────────────────── */
+.lp em {
+  font-style: normal;
+  color: var(--sp-color-brand);
+}
+
+.sp-surface--game.lp em,
+.lp .sp-surface--game em,
+.lp .lp-dark em {
+  color: var(--sp-color-team-you-on-game);
+}
+
+.lp-kicker {
+  margin-bottom: var(--sp-space-5);
+  font-size: var(--sp-type-callout-size);
+  line-height: var(--sp-type-callout-line);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--sp-color-text-secondary);
+}
+
+.lp-dark .lp-kicker {
+  color: var(--sp-color-text-on-game-secondary);
+}
+
+.lp-h2 {
+  font-family: var(--lp-font-condensed);
+  font-size: var(--lp-h2-size);
+  line-height: var(--sp-type-hero-line);
+  font-weight: var(--sp-type-hero-weight);
+  font-stretch: var(--sp-type-hero-stretch);
+  letter-spacing: var(--sp-type-hero-tracking);
+  word-spacing: var(--sp-type-hero-word-spacing);
+  color: var(--sp-color-text-primary);
+}
+
+.lp-dark .lp-h2 {
+  color: var(--sp-color-text-on-game-primary);
+}
+
+.lp-section-lede {
+  max-width: 52ch;
+  margin-top: var(--sp-space-6);
+  font-size: var(--sp-type-headline-size);
+  line-height: 26px;
+  color: var(--sp-color-text-secondary);
+}
+
+.lp-dark .lp-section-lede {
+  color: var(--sp-color-text-on-game-secondary);
+}
+
+.lp-head--center {
+  max-width: 820px;
+  margin-inline: auto;
+  text-align: center;
+}
+
+.lp-head--center .lp-section-lede {
+  margin-inline: auto;
+}
+
+.lp-section {
+  padding-block: var(--lp-section-gap);
 }
 
 /* ── Hero ────────────────────────────────────────────────────────────── */
-.lp-hero__copy {
-  display: grid;
-  gap: var(--sp-space-7);
-  padding-block: var(--sp-space-9) var(--sp-space-9);
+.lp-hero {
+  position: relative;
+  z-index: 0;
+  display: flex;
+  align-items: center;
+  min-height: calc(100svh - var(--lp-tape-h) - var(--lp-top) - var(--lp-peek));
+  padding-block: var(--sp-space-10);
+  background-color: var(--sp-color-bg-app);
+  transform-origin: 50% 0;
+}
+
+.lp-hero__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transform-origin: 50% 30%;
+}
+
+.lp-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-space-3);
+  margin-bottom: var(--sp-space-7);
+  padding: var(--sp-space-2) var(--sp-space-4);
+  border-radius: var(--sp-radius-pill);
+  border: 1px solid var(--sp-color-border-default);
+  background-color: var(--sp-color-surface-money-base);
+  font-size: var(--sp-type-callout-size);
+  line-height: var(--sp-type-callout-line);
+  font-weight: 500;
+  color: var(--sp-color-text-secondary);
+}
+
+.lp-eyebrow__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--sp-radius-pill);
+  background-color: var(--sp-color-brand);
 }
 
 .lp-hero__title {
@@ -280,254 +483,1419 @@ body:has(> #root > .lp) {
   color: var(--sp-color-text-primary);
 }
 
-/* Fixed line breaks: the headline has the same number of lines in Archivo
-   and in the fallback at every width, so the font swap can't change its
-   height (CLS). */
+/* Fixed lines (font swap can't change the line count). Each line is its
+   own mask for the load rise: padding makes room for descenders inside the
+   clip, and the negative margin gives it back. */
 .lp-line {
   display: block;
+  overflow: hidden;
+  padding-bottom: 0.14em;
+  margin-bottom: -0.14em;
   white-space: nowrap;
 }
 
-/* Under 360px "vs. your friends." doesn't fit at the token's 56px floor:
-   break it into its own fixed line instead (4 lines, still fixed). Above
-   that the span generates no box at all (display: contents), so the font
-   swap can't register it as a shifted element. */
-.lp-line-split {
-  display: contents;
+.lp-line__in {
+  display: inline-block;
 }
 
 @media (max-width: 359px) {
-  .lp-line-split {
-    display: block;
+  .lp-line {
+    white-space: normal;
   }
 }
 
 .lp-hero__lede {
-  max-width: 34ch;
+  max-width: 44ch;
+  margin-top: var(--sp-space-8);
   font-size: var(--sp-type-headline-size);
-  line-height: 26px;
+  line-height: 27px;
   color: var(--sp-color-text-secondary);
 }
 
-@media (min-width: 1024px) {
-  .lp-hero__copy {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 360px);
-    align-items: end;
-    column-gap: var(--sp-space-10);
-    padding-block: var(--sp-space-11) var(--sp-space-10);
-  }
-
-  .lp-hero__lede {
-    font-size: var(--sp-type-title-size);
-    line-height: 30px;
-    padding-bottom: var(--sp-space-3);
-  }
-}
-
-/* The stadium band: the hero's first beat. It wipes in from the left at
-   first paint — CSS, so it plays before the JS has hydrated — and it is
-   the ONLY element clipped; the headline never waits on it. */
-.lp-band {
-  padding-block: var(--sp-space-8) var(--sp-space-7);
-}
-
-@media (min-width: 768px) {
-  .lp-band {
-    padding-block: var(--sp-space-9) var(--sp-space-8);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .lp-band {
-    animation: lp-band-wipe var(--sp-motion-duration-slow) var(--sp-motion-ease-settle) both;
-  }
-}
-
-@keyframes lp-band-wipe {
-  from {
-    clip-path: inset(0 100% 0 0);
-  }
-  to {
-    clip-path: inset(0 0 0 0);
-  }
-}
-
-/* ── Match board (hero, scrub, panels) ───────────────────────────────── */
-.lp-board {
-  --lp-score-size: var(--sp-type-score-lg-size);
-  --lp-score-line: var(--sp-type-score-lg-line);
-  display: grid;
-  gap: var(--sp-space-5);
-  color: var(--sp-color-text-on-game-primary);
-}
-
-@media (min-width: 400px) {
-  .lp-board {
-    --lp-score-size: var(--sp-type-score-xl-size);
-    --lp-score-line: var(--sp-type-score-xl-line);
-  }
-}
-
-@media (min-width: 1024px) {
-  .lp-hero .lp-board {
-    --lp-score-size: calc(var(--sp-type-score-xl-size) * 1.5);
-    --lp-score-line: calc(var(--sp-type-score-xl-line) * 1.5);
-    gap: var(--sp-space-6);
-  }
-}
-
-.lp-board__header {
+.lp-hero__cta {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--sp-space-2) var(--sp-space-5);
+  justify-content: center;
+  gap: var(--sp-space-4);
+  margin-top: var(--sp-space-8);
 }
 
-.lp-board__score-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  grid-template-areas:
-    'you opp'
-    'tug tug';
-  align-items: end;
-  gap: var(--sp-space-5) var(--sp-space-5);
+.lp-hero__cta .lp-status {
+  margin-left: 0;
+  padding: var(--sp-space-4) var(--sp-space-6);
+  font-size: var(--sp-type-body-size);
+  line-height: var(--sp-type-body-line);
 }
 
-.lp-board__team {
-  grid-area: you;
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-space-2);
-  min-width: 0;
-}
-
-.lp-board__team--opp {
-  grid-area: opp;
-  align-items: flex-end;
-  text-align: right;
-}
-
-.lp-board__tug {
-  grid-area: tug;
-}
-
-.lp-board__name {
+.lp-link {
   display: inline-flex;
   align-items: center;
-  gap: var(--sp-space-3);
-  font-size: var(--sp-type-headline-size);
-  line-height: var(--sp-type-headline-line);
-  font-weight: var(--sp-type-headline-weight);
-  color: var(--sp-color-text-on-game-primary);
-}
-
-/* Team colours mark people (never money): a swatch beside each name. */
-.lp-board__name::before {
-  content: '';
-  width: 4px;
-  height: 16px;
+  padding: var(--sp-space-4) var(--sp-space-6);
   border-radius: var(--sp-radius-pill);
-}
-
-.lp-board__name--you::before {
-  background-color: var(--sp-color-team-you-base);
-}
-
-.lp-board__name--opp {
-  flex-direction: row-reverse;
-}
-
-.lp-board__name--opp::before {
-  background-color: var(--sp-color-team-opponent);
-}
-
-.lp .lp-board__score {
-  font-family: var(--lp-font-condensed);
-  font-size: var(--lp-score-size);
-  line-height: var(--lp-score-line);
-  font-weight: var(--sp-type-score-xl-weight);
-  font-stretch: var(--sp-type-score-xl-stretch);
-  font-variant-numeric: tabular-nums;
-  color: var(--sp-color-text-on-game-primary);
-  white-space: nowrap;
-}
-
-.lp .lp-board__score .sp-score-digits__char--roll-wrap {
-  height: var(--lp-score-line);
-}
-
-.lp-board__lead {
-  min-height: var(--sp-type-body-line);
-  font-size: var(--sp-type-callout-size);
+  border: 1px solid var(--sp-color-border-control);
+  background-color: var(--sp-color-surface-money-base);
+  color: var(--sp-color-text-primary);
+  font-size: var(--sp-type-body-size);
   line-height: var(--sp-type-body-line);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.lp-link:hover {
+  border-color: var(--sp-color-text-primary);
+}
+
+/* Magnetic pull (fine pointers, full motion; hooks.ts useMagnet). */
+.lp-magnet {
+  transform: translate(var(--lp-mx, 0px), var(--lp-my, 0px));
+  transition:
+    transform var(--sp-motion-duration-quick) var(--sp-motion-ease-settle),
+    border-color var(--sp-motion-duration-quick) var(--sp-motion-ease-settle);
+}
+
+.lp-magnet:active {
+  transform: translate(var(--lp-mx, 0px), var(--lp-my, 0px)) scale(0.98);
+}
+
+.lp-hero__meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--sp-space-2) var(--sp-space-4);
+  margin-top: var(--sp-space-7);
+  font-size: var(--sp-type-callout-size);
+  line-height: var(--sp-type-callout-line);
+  color: var(--sp-color-text-secondary);
+}
+
+.lp-hero__meta b {
+  font-weight: 600;
+  color: var(--sp-color-text-primary);
+}
+
+.lp-hero__sep {
+  margin-right: var(--sp-space-4);
+}
+
+@media (min-width: 1024px) {
+  .lp-hero__lede {
+    font-size: var(--sp-type-title-size);
+    line-height: 32px;
+  }
+}
+
+/* The one load sequence (Design Lead, round 3): the three headline lines
+   rise through their masks one after another, then the eyebrow, the CTA
+   row and the meta fade up — under 900 milliseconds in all, CSS so it plays at first
+   paint before hydration. The lede never moves (it is the mobile LCP).
+   Reduced motion: none of it; the page paints in its final state. */
+@media (prefers-reduced-motion: no-preference) {
+  .lp-line__in {
+    animation: lp-line-rise var(--sp-motion-duration-slow) var(--sp-motion-ease-settle) both;
+    animation-delay: calc(var(--lp-i, 0) * var(--sp-motion-duration-quick) * 0.75);
+  }
+
+  .lp-hero__eyebrow,
+  .lp-hero__cta,
+  .lp-hero__meta {
+    animation: lp-fade-up var(--sp-motion-duration-base) var(--sp-motion-ease-settle) both;
+    animation-delay: calc(var(--sp-motion-duration-slow) + var(--sp-motion-duration-quick));
+  }
+}
+
+@keyframes lp-line-rise {
+  from {
+    transform: translateY(108%);
+  }
+}
+
+@keyframes lp-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(var(--sp-space-3));
+  }
+}
+
+/* ── Navy panels (the light ↔ navy transition) ───────────────────────── */
+.lp-dark {
+  position: relative;
+  isolation: isolate;
+}
+
+.lp-dark__bg {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-color: var(--sp-color-surface-game-base);
+}
+
+.lp-dark__content {
+  position: relative;
+}
+
+/* Pointer-follow glow on a navy stage (opacity only; hooks.ts). */
+.lp-glow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    560px circle at var(--lp-gx, 50%) var(--lp-gy, 50%),
+    color-mix(in srgb, var(--sp-color-team-you-base) 16%, transparent),
+    transparent 70%
+  );
+  transition: opacity var(--sp-motion-duration-slow) var(--sp-motion-ease-settle);
+}
+
+[data-glow='true'] > .lp-glow {
+  opacity: 1;
+}
+
+/* ── "A look inside" (the opening shot) ──────────────────────────────── */
+.lp-inside {
+  position: relative;
+  z-index: 1;
+}
+
+.lp-inside__stage {
+  position: relative;
+  isolation: isolate;
+  padding-block: var(--sp-space-10) var(--sp-space-11);
+}
+
+.lp-inside__content {
+  position: relative;
+  z-index: 1;
+}
+
+.lp-opening--pinned .lp-hero {
+  position: sticky;
+  top: var(--lp-top);
+}
+
+.lp-opening--pinned .lp-inside {
+  height: 210svh;
+}
+
+.lp-opening--pinned .lp-inside__stage {
+  position: sticky;
+  top: var(--lp-top);
+  display: flex;
+  align-items: center;
+  height: calc(100svh - var(--lp-top));
+  padding-block: 0;
+  overflow: hidden;
+}
+
+.lp-inside__label {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-space-5);
+  margin-bottom: var(--sp-space-8);
+  font-size: var(--sp-type-callout-size);
+  line-height: var(--sp-type-callout-line);
+  font-weight: 600;
+  letter-spacing: 0.02em;
   color: var(--sp-color-text-on-game-secondary);
 }
 
-.lp-board__lead .lp-num {
-  color: var(--sp-color-text-on-game-primary);
-  font-weight: var(--sp-type-headline-weight);
+.lp-inside__dash {
+  flex: 1;
+  height: 1px;
+  background-color: var(--sp-color-surface-game-line);
 }
 
-/* The chyron's slot keeps its height whether or not a call is showing, and
-   an outgoing call overlaps the incoming one instead of stacking. */
-.lp .sp-chyron-region {
+.lp-inside__cards {
+  display: grid;
+  gap: var(--sp-space-6);
+}
+
+.lp-inside__col {
+  display: grid;
+  gap: var(--sp-space-6);
+  align-content: start;
+}
+
+@media (min-width: 1024px) {
+  .lp-inside__cards {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    align-items: start;
+    gap: var(--sp-space-8);
+  }
+
+  .lp-opening--pinned .lp-inside__label {
+    margin-bottom: var(--sp-space-7);
+  }
+}
+
+/* ── Mock cards ──────────────────────────────────────────────────────── */
+.lp-tilt {
   position: relative;
-  min-height: 38px;
+  border-radius: var(--sp-radius-lg);
+  transform: perspective(1000px) rotateX(var(--lp-rx, 0deg)) rotateY(var(--lp-ry, 0deg));
+  transition: transform var(--sp-motion-duration-slow) var(--sp-motion-ease-settle);
 }
 
-.lp .sp-chyron {
+.lp-tilt__light {
   position: absolute;
-  top: 0;
-  left: 0;
-  max-width: 100%;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    380px circle at var(--lp-lx, 50%) var(--lp-ly, 50%),
+    color-mix(in srgb, var(--sp-color-text-on-game-primary) 6%, transparent),
+    transparent 70%
+  );
+  transition: opacity var(--sp-motion-duration-quick) var(--sp-motion-ease-settle);
+}
+
+.lp-tilt[data-lit='true'] > .lp-tilt__light {
+  opacity: 1;
+}
+
+.lp-card {
+  border-radius: var(--sp-radius-lg);
+  padding: var(--sp-space-6);
+}
+
+.lp-card.sp-surface--game {
+  border: 1px solid var(--sp-color-surface-game-line);
 }
 
 @media (min-width: 768px) {
-  .lp-board__score-row {
-    grid-template-columns: auto minmax(96px, 1fr) auto;
-    grid-template-areas: 'you tug opp';
-    column-gap: var(--sp-space-8);
-  }
-
-  /* Centre the bar on the scores, not on the name + score stack. */
-  .lp-board__tug {
-    align-self: end;
-    padding-bottom: calc((var(--lp-score-line) - var(--sp-space-4)) / 2);
-  }
-
-  .lp-hero .lp-board__lead {
-    text-align: center;
-  }
-
-  .lp-hero .sp-chyron {
-    right: 0;
-    margin-inline: auto;
-    width: fit-content;
+  .lp-card--portfolio {
+    padding: var(--sp-space-8);
   }
 }
 
-/* CountUp: the final string reserves the width from the first paint. */
-.lp-count {
-  display: inline-grid;
+.lp-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-space-5);
+  margin-bottom: var(--sp-space-5);
 }
 
-.lp-count > [aria-hidden='true'] {
-  grid-area: 1 / 1;
+.lp-card__lbl {
+  font-size: var(--sp-type-caption-size);
+  line-height: var(--sp-type-caption-line);
+  font-weight: 600;
+  color: var(--sp-color-text-secondary);
 }
 
-.lp-count__sizer {
-  visibility: hidden;
+.sp-surface--game .lp-card__lbl {
+  color: var(--sp-color-text-on-game-secondary);
 }
 
-.lp-count__live {
-  /* Full cell width, aligned by text-align: the box itself never moves
-     while the digits change. */
+.lp-card__title {
+  margin-top: var(--sp-space-1);
+  font-size: var(--sp-type-headline-size);
+  line-height: var(--sp-type-headline-line);
+  font-weight: 700;
+  color: var(--sp-color-text-primary);
+}
+
+.lp-card__muted {
+  color: var(--sp-color-text-secondary);
+}
+
+.lp-card__delta {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-space-3);
+  margin-top: var(--sp-space-2);
+  font-size: var(--sp-type-callout-size);
+  line-height: var(--sp-type-callout-line);
+}
+
+.lp-card__foot {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-space-5);
+  margin-top: var(--sp-space-5);
+  padding-top: var(--sp-space-4);
+  border-top: 1px solid var(--sp-color-surface-game-line);
+  font-size: var(--sp-type-caption-size);
+  line-height: var(--sp-type-caption-line);
+  font-weight: 500;
+  color: var(--sp-color-text-on-game-secondary);
+}
+
+.lp-card__foot .lp-num {
+  color: var(--sp-color-text-on-game-primary);
+  font-weight: 600;
+}
+
+.lp-live {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-space-2);
+  padding: var(--sp-space-1) var(--sp-space-3);
+  border-radius: var(--sp-radius-pill);
+  background-color: var(--sp-color-surface-money-sunken);
+  font-size: var(--sp-type-caption-size);
+  line-height: var(--sp-type-caption-line);
+  font-weight: 600;
+  color: var(--sp-color-text-primary);
+  white-space: nowrap;
+}
+
+.sp-surface--game .lp-live,
+.lp-board-card .lp-live {
+  background-color: var(--sp-color-surface-game-base);
+  color: var(--sp-color-text-on-game-primary);
+}
+
+.lp-live__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--sp-radius-pill);
+  background-color: var(--sp-color-data-gain-base);
+}
+
+.sp-surface--game .lp-live__dot,
+.lp-board-card .lp-live__dot {
+  background-color: var(--sp-color-live);
+}
+
+.lp-live--final .lp-live__dot {
+  background-color: var(--sp-color-text-on-game-primary);
+}
+
+/* Rolling numbers (the foundation ScoreDigits, resized per use). */
+.lp .lp-roll {
+  --lp-roll-size: var(--sp-type-body-size);
+  --lp-roll-line: var(--sp-type-body-line);
+  font-family: var(--lp-font);
+  font-size: var(--lp-roll-size);
+  line-height: var(--lp-roll-line);
+  font-weight: 600;
+  font-stretch: 100%;
+  font-variant-numeric: tabular-nums;
+  color: inherit;
+}
+
+.lp .lp-roll .sp-score-digits__char--roll-wrap {
+  height: var(--lp-roll-line);
+}
+
+.lp .lp-roll--xl {
+  --lp-roll-size: calc(var(--sp-type-display-size) * 1.25);
+  --lp-roll-line: calc(var(--sp-type-display-line) * 1.25);
+  font-weight: var(--sp-type-display-weight);
+  letter-spacing: var(--sp-type-display-tracking);
+  color: var(--sp-color-text-primary);
+}
+
+.lp .lp-roll--md {
+  --lp-roll-size: var(--sp-type-score-lg-size);
+  --lp-roll-line: var(--sp-type-score-lg-line);
+  font-family: var(--lp-font-condensed);
+  font-weight: var(--sp-type-score-lg-weight);
+  font-stretch: var(--sp-type-score-lg-stretch);
+  color: var(--sp-color-text-on-game-primary);
+}
+
+.lp .lp-roll--sm {
+  color: var(--sp-color-text-primary);
+}
+
+.lp .lp-roll--pct {
+  --lp-roll-size: var(--sp-type-callout-size);
+  --lp-roll-line: var(--sp-type-callout-line);
+}
+
+.lp .lp-roll--gain {
+  color: var(--sp-color-data-gain-on-game);
+}
+
+.lp .lp-roll--loss {
+  color: var(--sp-color-data-loss-on-game);
+}
+
+.lp-delta {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.lp-delta--gain {
+  color: var(--sp-color-data-gain-base);
+}
+
+.lp-delta--loss {
+  color: var(--sp-color-data-loss-base);
+}
+
+.sp-surface--game .lp-delta--gain {
+  color: var(--sp-color-data-gain-on-game);
+}
+
+.sp-surface--game .lp-delta--loss {
+  color: var(--sp-color-data-loss-on-game);
+}
+
+.lp-sd {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: var(--sp-radius-pill);
+}
+
+.lp-sd--gain {
+  background-color: var(--sp-color-data-gain-base);
+}
+
+.lp-sd--loss {
+  background-color: var(--sp-color-data-loss-base);
+}
+
+.lp-spark {
+  display: block;
   width: 100%;
+  height: auto;
+  margin-block: var(--sp-space-6) var(--sp-space-5);
+  overflow: visible;
 }
 
-.lp-count--end .lp-count__live {
+.lp-spark__line {
+  fill: none;
+  stroke: var(--sp-color-data-gain-base);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.lp-spark__end {
+  fill: var(--sp-color-data-gain-base);
+  stroke: var(--sp-color-surface-money-base);
+  stroke-width: 2;
+}
+
+.lp-ranges {
+  display: flex;
+  gap: var(--sp-space-2);
+  margin-bottom: var(--sp-space-5);
+}
+
+.lp-range {
+  padding: var(--sp-space-2) var(--sp-space-4);
+  border-radius: var(--sp-radius-sm);
+  font-size: var(--sp-type-caption-size);
+  line-height: var(--sp-type-caption-line);
+  font-weight: 600;
+  color: var(--sp-color-text-secondary);
+}
+
+.lp-range--on {
+  background-color: var(--sp-color-surface-money-sunken);
+  color: var(--sp-color-text-primary);
+}
+
+.lp-holdings {
+  display: grid;
+  border-top: 1px solid var(--sp-color-border-default);
+}
+
+.lp-holding {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--sp-space-5);
+  padding-block: var(--sp-space-4);
+  border-bottom: 1px solid var(--sp-color-border-default);
+  font-size: var(--sp-type-callout-size);
+  line-height: var(--sp-type-callout-line);
+}
+
+.lp-holding__name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.lp-holding__t {
+  font-weight: 700;
+  color: var(--sp-color-text-primary);
+}
+
+.lp-holding__co {
+  font-size: var(--sp-type-caption-size);
+  line-height: var(--sp-type-caption-line);
+  color: var(--sp-color-text-secondary);
+}
+
+.lp-holding .lp-delta {
+  min-width: 56px;
   text-align: right;
+}
+
+.lp-mrow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--sp-space-4);
+}
+
+.lp-mrow--opp {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  text-align: right;
+}
+
+.lp-mrow__who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.lp-mrow__name {
+  font-weight: 600;
+  color: var(--sp-color-text-on-game-primary);
+}
+
+.lp-mrow__sub {
+  font-size: var(--sp-type-caption-size);
+  line-height: var(--sp-type-caption-line);
+  color: var(--sp-color-text-on-game-secondary);
+}
+
+.lp-mbar {
+  margin-block: var(--sp-space-5);
+}
+
+.lp-avatar {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: var(--sp-radius-pill);
+  background-color: var(--sp-color-surface-game-line);
+  color: var(--sp-color-text-on-game-primary);
+  font-size: var(--sp-type-caption-size);
+  font-weight: 700;
+}
+
+.lp-avatar--you {
+  background-color: var(--sp-color-team-you-base);
+  color: var(--sp-color-text-on-game-primary);
+}
+
+.lp-avatar--opp {
+  background-color: var(--sp-color-team-opponent);
+  color: var(--sp-color-text-primary);
+}
+
+.lp-movers {
+  display: grid;
+}
+
+.lp-mover {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--sp-space-4);
+  padding-block: var(--sp-space-3);
+  border-top: 1px solid var(--sp-color-surface-game-line);
+  font-size: var(--sp-type-callout-size);
+  line-height: var(--sp-type-callout-line);
+}
+
+.lp-mover__t {
+  font-weight: 700;
+  color: var(--sp-color-text-on-game-primary);
+}
+
+.lp-mover__co {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--sp-color-text-on-game-secondary);
+}
+
+.lp-num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ── /01 How it works: the phone chapter ─────────────────────────────── */
+.lp-how {
+  padding-bottom: calc(var(--lp-section-gap) / 2);
+}
+
+.lp-chapter {
+  position: relative;
+  height: 320svh;
+  margin-top: var(--sp-space-9);
+}
+
+.lp-chapter__stage {
+  position: sticky;
+  top: var(--lp-top);
+  display: flex;
+  align-items: center;
+  height: calc(100svh - var(--lp-top));
+}
+
+.lp-chapter__grid {
+  display: grid;
+  gap: var(--sp-space-7);
+  align-items: center;
+}
+
+.lp-chapter .lp-phone {
+  order: -1;
+  justify-self: center;
+}
+
+.lp-steps {
+  display: grid;
+  gap: var(--sp-space-6);
+}
+
+.lp-step {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  column-gap: var(--sp-space-5);
+  align-items: start;
+  transition: opacity var(--sp-motion-duration-quick) var(--sp-motion-ease-settle);
+}
+
+.lp-step__num {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1.5px solid var(--sp-color-border-control);
+  border-radius: var(--sp-radius-pill);
+  font-size: var(--sp-type-callout-size);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--sp-color-text-secondary);
+  transition:
+    background-color var(--sp-motion-duration-quick) var(--sp-motion-ease-settle),
+    color var(--sp-motion-duration-quick) var(--sp-motion-ease-settle),
+    border-color var(--sp-motion-duration-quick) var(--sp-motion-ease-settle);
+}
+
+.lp-step--active .lp-step__num {
+  border-color: var(--sp-color-text-primary);
+  background-color: var(--sp-color-text-primary);
+  color: var(--sp-color-text-on-game-primary);
+}
+
+.lp-step__title {
+  padding-top: var(--sp-space-2);
+  font-size: var(--sp-type-title-size);
+  line-height: var(--sp-type-title-line);
+  font-weight: var(--sp-type-title-weight);
+  color: var(--sp-color-text-primary);
+}
+
+.lp-step__body {
+  max-width: 46ch;
+  margin-top: var(--sp-space-2);
+  color: var(--sp-color-text-secondary);
+}
+
+@media (max-width: 1023px) {
+  .lp-chapter .lp-steps {
+    gap: var(--sp-space-4);
+  }
+
+  .lp-chapter .lp-step:not(.lp-step--active) .lp-step__body {
+    display: none;
+  }
+
+  .lp-chapter .lp-step__title {
+    font-size: var(--sp-type-headline-size);
+    line-height: var(--sp-type-headline-line);
+  }
+
+  .lp-chapter .lp-step__num {
+    width: 32px;
+    height: 32px;
+  }
+
+  .lp-chapter .lp-step {
+    grid-template-columns: 32px minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .lp-chapter__grid {
+    grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+    column-gap: var(--sp-space-11);
+  }
+
+  .lp-chapter .lp-phone {
+    order: 0;
+  }
+}
+
+/* Static steps: each beside its screen's final state. */
+.lp-steps--static {
+  gap: var(--sp-space-10);
+  margin-top: var(--sp-space-10);
+}
+
+.lp-step--static {
+  grid-template-columns: 1fr;
+  row-gap: var(--sp-space-6);
+  justify-items: center;
+  text-align: center;
+}
+
+.lp-step__text {
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-space-2);
+}
+
+@media (min-width: 1024px) {
+  .lp-steps--static {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--sp-space-8);
+  }
+}
+
+/* The phone. */
+.lp-phone {
+  --lp-phone-w: 300px;
+  position: relative;
+  width: var(--lp-phone-w);
+  aspect-ratio: 300 / 600;
+  padding: 10px;
+  border-radius: 44px;
+  background-color: var(--sp-color-text-primary);
+  box-shadow: var(--sp-elevation-sheet);
+}
+
+.lp-phone__notch {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  z-index: 2;
+  width: 84px;
+  height: 22px;
+  border-radius: var(--sp-radius-pill);
+  background-color: var(--sp-color-text-primary);
+  transform: translateX(-50%);
+}
+
+.lp-phone__screen {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 34px;
+}
+
+.lp-phone__layer {
+  position: absolute;
+  inset: 0;
+}
+
+/* Phones: the screens are designed at 300px, so the device scales down
+   as a whole (transform) instead of reflowing; a negative margin gives back
+   the layout height the transform frees. */
+@media (max-width: 1023px) {
+  .lp-chapter .lp-phone {
+    --lp-phone-scale: 0.6;
+    transform: scale(var(--lp-phone-scale));
+    transform-origin: 50% 0;
+    margin-bottom: calc(-600px * (1 - var(--lp-phone-scale)));
+  }
+}
+
+@media (max-width: 1023px) and (min-height: 800px) {
+  .lp-chapter .lp-phone {
+    --lp-phone-scale: 0.68;
+  }
+}
+
+.lp-screen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-space-5);
+  height: 100%;
+  padding: 52px var(--sp-space-5) var(--sp-space-5);
+  color: var(--sp-color-text-on-game-primary);
+}
+
+.lp-screen__bar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-space-3);
+}
+
+.lp-screen__tag {
+  font-size: var(--sp-type-tag-size);
+  line-height: var(--sp-type-tag-line);
+  font-weight: var(--sp-type-tag-weight);
+  font-stretch: var(--sp-type-tag-stretch);
+  letter-spacing: var(--sp-type-tag-tracking);
+  text-transform: var(--sp-type-tag-transform);
+  color: var(--sp-color-text-on-game-secondary);
+}
+
+.lp-screen__muted {
+  font-size: var(--sp-type-caption-size);
+  line-height: var(--sp-type-caption-line);
+  color: var(--sp-color-text-on-game-secondary);
+}
+
+.lp-draft {
+  display: grid;
+  gap: var(--sp-space-3);
+}
+
+.lp-draft__row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sp-space-2);
+}
+
+.lp-pick {
+  display: grid;
+  gap: var(--sp-space-1);
+  padding: var(--sp-space-3);
+  border-radius: var(--sp-radius-sm);
+  background-color: var(--sp-color-surface-game-raised);
+  border: 1px solid var(--sp-color-surface-game-line);
+}
+
+.lp-pick__n {
+  font-size: var(--sp-type-caption-size);
+  line-height: var(--sp-type-caption-line);
+  color: var(--sp-color-text-on-game-secondary);
+}
+
+.lp-pick__t {
+  font-size: var(--sp-type-callout-size);
+  line-height: var(--sp-type-callout-line);
+  font-weight: 700;
+  color: var(--sp-color-text-on-game-secondary);
+}
+
+.lp-pick--taken .lp-pick__t {
+  color: var(--sp-color-text-on-game-primary);
+}
+
+.lp-pick--you {
+  border-color: var(--sp-color-team-you-base);
+}
+
+.lp-pick--you .lp-pick__n {
+  color: var(--sp-color-team-you-on-game);
+}
+
+.lp-roster {
+  display: grid;
+  gap: var(--sp-space-3);
+  margin-top: auto;
+}
+
+.lp-roster__slots {
+  display: flex;
+  gap: var(--sp-space-3);
+}
+
+.lp-roster__chip {
+  display: grid;
+  place-items: center;
+  flex: 1;
+  height: 44px;
+  border-radius: var(--sp-radius-md);
+  background-color: var(--sp-color-team-you-base);
+  color: var(--sp-color-text-on-game-primary);
+  font-size: var(--sp-type-body-size);
+  font-weight: 800;
+}
+
+.lp-roster__chip--empty {
+  background-color: transparent;
+  border: 1px dashed var(--sp-color-surface-game-line);
+  color: var(--sp-color-text-on-game-secondary);
+}
+
+.lp-compete__names,
+.lp-compete__scores {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-space-3);
+}
+
+.lp-compete__name {
+  font-size: var(--sp-type-callout-size);
+  line-height: var(--sp-type-callout-line);
+  font-weight: 600;
+}
+
+.lp-compete__lead {
+  font-size: var(--sp-type-callout-size);
+  line-height: var(--sp-type-callout-line);
+  color: var(--sp-color-text-on-game-secondary);
+}
+
+.lp-compete__lead .lp-num {
+  color: var(--sp-color-text-on-game-primary);
+  font-weight: 600;
+}
+
+.lp-days {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--sp-space-2);
+  margin-top: auto;
+}
+
+.lp-days__d {
+  padding-top: var(--sp-space-3);
+  border-top: 3px solid var(--sp-color-surface-game-line);
+  font-size: var(--sp-type-caption-size);
+  line-height: var(--sp-type-caption-line);
+  text-align: center;
+  color: var(--sp-color-text-on-game-secondary);
+  transition:
+    border-color var(--sp-motion-duration-quick) var(--sp-motion-ease-settle),
+    color var(--sp-motion-duration-quick) var(--sp-motion-ease-settle);
+}
+
+.lp-days__d--on {
+  border-top-color: var(--sp-color-text-on-game-primary);
+  color: var(--sp-color-text-on-game-primary);
+}
+
+.lp-stamp {
+  position: absolute;
+  top: 44%;
+  left: 50%;
+  margin: -34px 0 0 -84px;
+  width: 168px;
+  padding: var(--sp-space-3) 0;
+  border: 3px solid var(--sp-color-live);
+  border-radius: var(--sp-radius-md);
+  color: var(--sp-color-live);
+  background-color: var(--sp-color-surface-game-base);
+  text-align: center;
+  font-family: var(--lp-font-condensed);
+  font-size: var(--sp-type-score-lg-size);
+  line-height: var(--sp-type-score-lg-line);
+  font-weight: 900;
+  font-stretch: 62%;
+  letter-spacing: var(--sp-type-tag-tracking);
+  text-transform: var(--sp-type-tag-transform);
+  transform: rotate(-8deg);
+}
+
+.lp-climb {
+  display: grid;
+  gap: var(--sp-space-3);
+}
+
+.lp-climb__row {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--sp-space-3);
+  padding: var(--sp-space-4);
+  border-radius: var(--sp-radius-md);
+  background-color: var(--sp-color-surface-game-raised);
+  font-size: var(--sp-type-callout-size);
+  line-height: var(--sp-type-callout-line);
+}
+
+.lp-climb__row--you {
+  box-shadow: inset 3px 0 0 var(--sp-color-team-you-base);
+}
+
+.lp-climb__rank {
+  font-weight: 800;
+  color: var(--sp-color-text-on-game-secondary);
+}
+
+.lp-climb__name {
+  font-weight: 600;
+}
+
+.lp-climb__rec {
+  color: var(--sp-color-text-on-game-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.lp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-space-1);
+  padding: 0 var(--sp-space-3);
+  border-radius: var(--sp-radius-pill);
+  font-size: var(--sp-type-caption-size);
+  line-height: 20px;
+  font-weight: 700;
+  white-space: nowrap;
+  background-color: var(--sp-color-surface-game-base);
+}
+
+.lp-badge--up {
+  color: var(--sp-color-data-gain-on-game);
+}
+
+.lp-badge--down {
+  color: var(--sp-color-data-loss-on-game);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lp-badge {
+    animation: lp-fade-up var(--sp-motion-duration-base) var(--sp-motion-ease-settle) both;
+  }
+}
+
+/* ── /02 Leagues in action ───────────────────────────────────────────── */
+.lp-leagues .lp-dark__content {
+  padding-block: var(--lp-section-gap);
+}
+
+.lp-leagues__grid {
+  display: grid;
+  gap: var(--sp-space-10);
+}
+
+@media (min-width: 1024px) {
+  .lp-leagues__grid {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    align-items: center;
+    column-gap: var(--sp-space-11);
+  }
+}
+
+.lp-bullets {
+  display: grid;
+  gap: var(--sp-space-4);
+  margin-top: var(--sp-space-8);
+  color: var(--sp-color-text-on-game-primary);
+}
+
+.lp-bullets__arr {
+  color: var(--sp-color-team-you-on-game);
+}
+
+.lp-board-card {
+  padding: var(--sp-space-6) var(--sp-space-5) var(--sp-space-5);
+  border-radius: var(--sp-radius-lg);
+  background-color: var(--sp-color-surface-game-raised);
+  border: 1px solid var(--sp-color-surface-game-line);
+}
+
+@media (min-width: 768px) {
+  .lp-board-card {
+    padding: var(--sp-space-7);
+  }
+}
+
+.lp-board-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-space-5);
+  padding-inline: var(--sp-space-4);
+  padding-bottom: var(--sp-space-5);
+}
+
+.lp-board-card__ttl {
+  font-size: var(--sp-type-title-size);
+  line-height: var(--sp-type-title-line);
+  font-weight: 700;
+  color: var(--sp-color-text-on-game-primary);
+}
+
+.lp-board-card__meta {
+  font-size: var(--sp-type-caption-size);
+  line-height: var(--sp-type-caption-line);
+  color: var(--sp-color-text-on-game-secondary);
+}
+
+.lp-srows {
+  display: grid;
+  border-radius: var(--sp-radius-md);
+}
+
+.lp-srow {
+  position: relative;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  column-gap: var(--sp-space-4);
+  min-height: 54px;
+  padding-inline: var(--sp-space-4);
+  border: 1px solid transparent;
+  border-top-color: var(--sp-color-surface-game-line);
+  border-radius: var(--sp-radius-sm);
+  transition: border-color var(--sp-motion-duration-quick) var(--sp-motion-ease-settle);
+}
+
+.lp-srow:hover {
+  border-color: var(--sp-color-text-on-game-secondary);
+}
+
+.lp-srow--you {
+  background-color: var(--sp-color-surface-game-base);
+  box-shadow: inset 3px 0 0 var(--sp-color-team-you-base);
+}
+
+/* The mover's highlight flash (opacity only). */
+.lp-srow__flash {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background-color: color-mix(in srgb, var(--sp-color-live) 14%, transparent);
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lp-srow__flash {
+    animation: lp-flash var(--sp-motion-duration-feature) var(--sp-motion-ease-settle) both;
+    animation-delay: var(--sp-motion-duration-quick);
+  }
+}
+
+@keyframes lp-flash {
+  30% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.lp-srow__rank {
+  font-family: var(--lp-font-condensed);
+  font-size: var(--sp-type-title-size);
+  line-height: var(--sp-type-title-line);
+  font-weight: 900;
+  font-stretch: 62%;
+  font-variant-numeric: tabular-nums;
+  color: var(--sp-color-text-on-game-secondary);
+}
+
+.lp-srow__rank--1,
+.lp-srow__rank--2,
+.lp-srow__rank--3 {
+  color: var(--sp-color-text-on-game-primary);
+}
+
+.lp-srow__player {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-space-4);
+  min-width: 0;
+}
+
+.lp-srow__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--sp-color-text-on-game-primary);
+}
+
+.lp-srow__you {
+  font-weight: 500;
+  color: var(--sp-color-text-on-game-secondary);
+}
+
+.lp-srow__badge {
+  min-width: 44px;
+  text-align: right;
+}
+
+.lp-srow__rec {
+  font-size: var(--sp-type-caption-size);
+  line-height: var(--sp-type-caption-line);
+  font-variant-numeric: tabular-nums;
+  color: var(--sp-color-text-on-game-secondary);
+}
+
+.lp-srow .lp-roll {
+  min-width: 64px;
+  text-align: right;
+  justify-content: flex-end;
+}
+
+.lp-board-card__chyron {
+  margin-top: var(--sp-space-5);
+  margin-inline: var(--sp-space-4);
+}
+
+@media (max-width: 479px) {
+  .lp-srow {
+    grid-template-columns: 20px minmax(0, 1fr) auto auto;
+  }
+
+  .lp-srow__rec {
+    display: none;
+  }
+
+  .lp-srow .lp-avatar {
+    display: none;
+  }
+}
+
+/* ── /03 Why ─────────────────────────────────────────────────────────── */
+.lp-bento {
+  display: grid;
+  gap: var(--sp-space-6);
+  margin-top: var(--sp-space-10);
+}
+
+@media (min-width: 1024px) {
+  .lp-bento {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    grid-template-rows: auto auto;
+  }
+
+  .lp-bento__cell--tall {
+    grid-row: 1 / span 2;
+  }
+}
+
+.lp-bento__cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-space-4);
+  padding: var(--sp-space-8);
+  border-radius: var(--sp-radius-lg);
+  border: 1px solid var(--sp-color-border-default);
+  background-color: var(--sp-color-surface-money-base);
+  box-shadow: var(--sp-elevation-money-card);
+}
+
+.lp-bento__icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--sp-radius-md);
+  background-color: var(--sp-color-surface-money-sunken);
+  color: var(--sp-color-brand);
+}
+
+.lp-bento__title {
+  font-family: var(--lp-font-condensed);
+  font-size: var(--sp-type-score-lg-size);
+  line-height: var(--sp-type-hero-line);
+  font-weight: 900;
+  font-stretch: 62%;
+  letter-spacing: var(--sp-type-hero-tracking);
+  word-spacing: var(--sp-type-hero-word-spacing);
+  color: var(--sp-color-text-primary);
+}
+
+.lp-bento__body {
+  max-width: 52ch;
+  color: var(--sp-color-text-secondary);
+}
+
+.lp-dbars-wrap {
+  margin-top: auto;
+  padding-top: var(--sp-space-7);
+}
+
+.lp-dbars {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--sp-space-4);
+}
+
+.lp-dbar {
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-space-3);
+}
+
+.lp-dbar__v {
+  font-size: var(--sp-type-caption-size);
+  line-height: var(--sp-type-caption-line);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.lp-dbar__v--gain {
+  color: var(--sp-color-data-gain-base);
+}
+
+.lp-dbar__v--loss {
+  color: var(--sp-color-data-loss-base);
+}
+
+.lp-dbar__track {
+  position: relative;
+  width: 100%;
+  max-width: 56px;
+  height: 140px;
+  /* The zero line. */
+  background-image: linear-gradient(
+    to top,
+    transparent calc(var(--lp-zero) * 100% - 0.5px),
+    var(--sp-color-border-control) calc(var(--lp-zero) * 100% - 0.5px),
+    var(--sp-color-border-control) calc(var(--lp-zero) * 100% + 0.5px),
+    transparent calc(var(--lp-zero) * 100% + 0.5px)
+  );
+}
+
+.lp-dbar__fill {
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  height: calc(var(--lp-h) * 100%);
+  border-radius: var(--sp-radius-sm);
+}
+
+.lp-dbar__fill--gain {
+  bottom: calc(var(--lp-zero) * 100%);
+  background-color: var(--sp-color-data-gain-base);
+  transform-origin: 50% 100%;
+}
+
+.lp-dbar__fill--loss {
+  top: calc((1 - var(--lp-zero)) * 100%);
+  background-color: var(--sp-color-data-loss-base);
+  transform-origin: 50% 0;
+}
+
+@media (max-width: 479px) {
+  .lp-dbars {
+    gap: var(--sp-space-2);
+  }
+
+  .lp-dbar__v {
+    font-size: var(--sp-type-tag-size);
+    letter-spacing: -0.01em;
+  }
+}
+
+.lp-dbar__l {
+  font-size: var(--sp-type-caption-size);
+  line-height: var(--sp-type-caption-line);
+  font-weight: 600;
+  color: var(--sp-color-text-secondary);
+}
+
+.lp-dbars__cap {
+  margin-top: var(--sp-space-5);
+  font-size: var(--sp-type-caption-size);
+  line-height: var(--sp-type-caption-line);
+  color: var(--sp-color-text-secondary);
+}
+
+.lp-dbars__cap .lp-num {
+  color: var(--sp-color-data-gain-base);
+  font-weight: 600;
 }
 
 /* ── Ticker ──────────────────────────────────────────────────────────── */
@@ -538,7 +1906,7 @@ body:has(> #root > .lp) {
 .lp-ticker__inner {
   display: flex;
   align-items: stretch;
-  min-height: 48px;
+  height: var(--lp-tape-h);
 }
 
 .lp-ticker__toggle {
@@ -617,503 +1985,41 @@ body:has(> #root > .lp) {
 
 .lp-tk {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--sp-space-3);
   white-space: nowrap;
   font-size: var(--sp-type-callout-size);
   line-height: var(--sp-type-callout-line);
 }
 
-.lp-tk__name {
-  color: var(--sp-color-text-on-game-secondary);
-  font-weight: var(--sp-type-callout-weight);
-}
-
-.lp-tk__name--lead {
-  color: var(--sp-color-text-on-game-primary);
-  font-weight: var(--sp-type-headline-weight);
-}
-
-.lp-tk__vs {
-  color: var(--sp-color-text-on-game-secondary);
-}
-
-/* ── Sections ────────────────────────────────────────────────────────── */
-.lp-section {
-  padding-block: var(--lp-section-gap);
-}
-
-.lp-h2 {
-  font-family: var(--lp-font-condensed);
-  font-size: var(--lp-h2-size);
-  line-height: var(--sp-type-hero-line);
-  font-weight: var(--sp-type-hero-weight);
-  font-stretch: var(--sp-type-hero-stretch);
-  letter-spacing: var(--sp-type-hero-tracking);
-  word-spacing: var(--sp-type-hero-word-spacing);
-  color: var(--sp-color-text-primary);
-}
-
-.lp-section-lede {
-  max-width: 46ch;
-  margin-top: var(--sp-space-5);
-  font-size: var(--sp-type-headline-size);
-  line-height: 26px;
-  color: var(--sp-color-text-secondary);
-}
-
-.lp-note {
-  margin-top: var(--sp-space-5);
-  font-size: var(--sp-type-caption-size);
-  line-height: var(--sp-type-caption-line);
-  font-weight: var(--sp-type-caption-weight);
-  color: var(--sp-color-text-secondary);
-}
-
-/* ── How a week works ────────────────────────────────────────────────── */
-.lp-week {
-  padding-bottom: calc(var(--lp-section-gap) / 2);
-}
-
-.lp-week__grid {
-  display: grid;
-  gap: var(--sp-space-8);
-  margin-top: var(--sp-space-9);
-}
-
-.lp-steps {
-  display: grid;
-  gap: var(--sp-space-6);
-}
-
-.lp-step {
-  display: grid;
-  grid-template-columns: 32px minmax(0, 1fr);
-  column-gap: var(--sp-space-5);
-  align-items: start;
-}
-
-.lp-step__num {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border: 1.5px solid var(--sp-color-border-control);
+.lp-tk__dot {
+  width: 5px;
+  height: 5px;
   border-radius: var(--sp-radius-pill);
-  color: var(--sp-color-text-secondary);
-  font-size: var(--sp-type-headline-size);
+  background-color: var(--sp-color-live);
+}
+
+.lp-tk__sym {
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  transition:
-    background-color var(--sp-motion-duration-quick) var(--sp-motion-ease-settle),
-    color var(--sp-motion-duration-quick) var(--sp-motion-ease-settle),
-    border-color var(--sp-motion-duration-quick) var(--sp-motion-ease-settle);
-}
-
-.lp-step--active .lp-step__num {
-  border-color: var(--sp-color-text-primary);
-  background-color: var(--sp-color-text-primary);
   color: var(--sp-color-text-on-game-primary);
 }
 
-.lp-step__title {
-  padding-top: var(--sp-space-1);
-  font-size: var(--sp-type-title-size);
-  line-height: var(--sp-type-title-line);
-  font-weight: var(--sp-type-title-weight);
-  color: var(--sp-color-text-primary);
-}
-
-.lp-step__body {
-  max-width: 44ch;
-  margin-top: var(--sp-space-2);
-  color: var(--sp-color-text-secondary);
-}
-
-/* Pinned scrub: 280vh of track under a 100vh stage = 180vh pinned. */
-.lp-scrub {
-  position: relative;
-  height: 280vh;
-  margin-top: var(--sp-space-8);
-}
-
-.lp-scrub__stage {
-  position: sticky;
-  top: 0;
-  display: flex;
-  align-items: center;
-  height: 100vh;
-  height: 100svh;
-}
-
-.lp-scrub .lp-week__grid {
-  margin-top: 0;
-  gap: var(--sp-space-7);
-}
-
-/* Phones: the board sits above the steps, and the steps tighten so all
-   four stay on screen with it. */
-.lp-scrub .lp-week__visual {
-  order: -1;
-}
-
-@media (max-width: 1023px) {
-  .lp-scrub .lp-steps {
-    gap: var(--sp-space-4);
-  }
-
-  .lp-scrub .lp-step__title {
-    font-size: var(--sp-type-headline-size);
-    line-height: var(--sp-type-headline-line);
-  }
-
-  .lp-scrub .lp-step__num {
-    width: 26px;
-    height: 26px;
-    font-size: var(--sp-type-callout-size);
-  }
-
-  .lp-scrub .lp-step {
-    grid-template-columns: 26px minmax(0, 1fr);
-    column-gap: var(--sp-space-4);
-  }
-
-  .lp-scrub .lp-step__body {
-    font-size: var(--sp-type-callout-size);
-    line-height: var(--sp-type-callout-line);
-  }
-}
-
-.lp-week__surface,
-.lp-panel__surface,
-.lp-panel__final {
-  border-radius: var(--sp-radius-lg);
-  padding: var(--sp-space-6);
-}
-
-@media (min-width: 768px) {
-  .lp-week__surface {
-    padding: var(--sp-space-8);
-  }
-}
-
-.lp-rail {
-  margin-top: var(--sp-space-5);
-}
-
-.lp-rail__track {
-  height: 4px;
-  overflow: hidden;
-  border-radius: var(--sp-radius-pill);
-  background-color: var(--sp-color-surface-game-line);
-}
-
-.lp-rail__fill {
-  height: 100%;
-  background-color: var(--sp-color-text-on-game-primary);
-  transform-origin: left center;
-}
-
-.lp-rail__days {
-  display: flex;
-  justify-content: space-between;
-  margin-top: var(--sp-space-3);
-  color: var(--sp-color-text-on-game-secondary);
-  font-size: var(--sp-type-caption-size);
-  line-height: var(--sp-type-caption-line);
-  font-weight: var(--sp-type-caption-weight);
-}
-
-.lp-panels {
-  display: grid;
-  gap: var(--sp-space-8) var(--sp-space-7);
-}
-
-.lp-panel__title {
-  margin-bottom: var(--sp-space-4);
-}
-
-.lp-panel .sp-chyron-region {
-  display: none;
-}
-
-.lp-panel__final {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-space-3);
-}
-
-.lp-panel__final-line {
-  font-family: var(--lp-font-condensed);
-  word-spacing: var(--sp-type-hero-word-spacing);
-  font-size: var(--sp-type-score-lg-size);
-  line-height: var(--sp-type-score-lg-line);
-  font-weight: var(--sp-type-score-lg-weight);
-  font-stretch: var(--sp-type-score-lg-stretch);
-  color: var(--sp-color-text-on-game-primary);
-}
-
-.lp-panel__note {
-  margin-top: var(--sp-space-4);
-  color: var(--sp-color-text-secondary);
-}
-
-@media (min-width: 768px) {
-  .lp-week__grid--static .lp-steps {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--sp-space-8);
-  }
-
-  .lp-panels {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 1024px) {
-  .lp-week__grid--static {
-    gap: var(--sp-space-10);
-  }
-
-  .lp-week__grid--static .lp-steps {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
-  .lp-scrub .lp-week__grid {
-    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-    align-items: center;
-    column-gap: var(--sp-space-11);
-  }
-
-  .lp-scrub .lp-week__visual {
-    order: 0;
-  }
-
-  .lp-scrub {
-    margin-top: 0;
-  }
-
-  .lp-scrub .lp-steps {
-    margin-top: var(--sp-space-9);
-  }
-}
-
-/* ── Leagues in action ───────────────────────────────────────────────── */
-.lp-leagues__grid {
-  display: grid;
-  gap: var(--sp-space-9);
-}
-
-@media (min-width: 1024px) {
-  .lp-leagues__grid {
-    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-    align-items: center;
-    column-gap: var(--sp-space-11);
-  }
-}
-
-.lp-standings {
-  border-radius: var(--sp-radius-lg);
-  padding: var(--sp-space-6) var(--sp-space-5) var(--sp-space-5);
-}
-
-@media (min-width: 768px) {
-  .lp-standings {
-    padding: var(--sp-space-7);
-  }
-}
-
-.lp-standings__header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--sp-space-2) var(--sp-space-5);
-  padding-inline: var(--sp-space-4);
-  padding-bottom: var(--sp-space-4);
-}
-
-.lp-standings__rows {
-  display: grid;
-  border-radius: var(--sp-radius-md);
-}
-
-.lp-standings__rows:focus-visible {
-  outline-offset: 2px;
-}
-
-.lp-row {
-  display: grid;
-  grid-template-columns: 24px minmax(0, 1fr) auto auto;
-  align-items: center;
-  column-gap: var(--sp-space-5);
-  min-height: 52px;
-  padding-inline: var(--sp-space-4);
-  border: 1px solid transparent;
-  border-top-color: var(--sp-color-surface-game-line);
-  border-radius: var(--sp-radius-sm);
-  transition: border-color var(--sp-motion-duration-quick) var(--sp-motion-ease-settle);
-}
-
-.lp-row:hover {
-  border-color: var(--sp-color-text-on-game-secondary);
-}
-
-.lp-row--you {
-  background-color: var(--sp-color-surface-game-raised);
-  box-shadow: inset 3px 0 0 var(--sp-color-team-you-base);
-}
-
-.lp-row__rank {
-  font-family: var(--lp-font-condensed);
-  font-size: var(--sp-type-title-size);
-  line-height: var(--sp-type-title-line);
-  font-weight: var(--sp-type-score-md-weight);
-  font-stretch: var(--sp-type-score-md-stretch);
+.lp-tk__px {
   font-variant-numeric: tabular-nums;
   color: var(--sp-color-text-on-game-secondary);
 }
 
-.lp-row__name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: var(--sp-type-headline-size);
-  line-height: var(--sp-type-headline-line);
-  font-weight: var(--sp-type-headline-weight);
-  color: var(--sp-color-text-on-game-primary);
-}
-
-.lp-row__record {
-  font-size: var(--sp-type-caption-size);
-  line-height: var(--sp-type-caption-line);
-  font-weight: var(--sp-type-caption-weight);
+.lp-tk__d {
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--sp-color-text-on-game-secondary);
 }
 
-.lp-row__gain {
-  min-width: 88px;
-  text-align: right;
+.lp-tk__d--up {
+  color: var(--sp-color-data-gain-on-game);
 }
 
-.lp-standings__chyron {
-  margin-top: var(--sp-space-5);
-  margin-inline: var(--sp-space-4);
-}
-
-/* ── The money side ──────────────────────────────────────────────────── */
-.lp-money__grid {
-  display: grid;
-  gap: var(--sp-space-9);
-}
-
-@media (min-width: 1024px) {
-  .lp-money__grid {
-    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-    align-items: center;
-    column-gap: var(--sp-space-11);
-  }
-}
-
-.lp-facts {
-  display: grid;
-  gap: var(--sp-space-6);
-  margin-top: var(--sp-space-8);
-}
-
-.lp-facts dt {
-  font-size: var(--sp-type-headline-size);
-  line-height: var(--sp-type-headline-line);
-  font-weight: var(--sp-type-headline-weight);
-}
-
-.lp-facts dd {
-  max-width: 44ch;
-  margin-top: var(--sp-space-2);
-  color: var(--sp-color-text-secondary);
-}
-
-.lp-card {
-  border-radius: var(--sp-radius-lg);
-  padding: var(--sp-space-6);
-}
-
-@media (min-width: 768px) {
-  .lp-card {
-    padding: var(--sp-space-8);
-  }
-}
-
-.lp-card__head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--sp-space-4) var(--sp-space-7);
-}
-
-.lp-card__week {
-  text-align: right;
-}
-
-.lp-card__chart-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--sp-space-5);
-  margin-top: var(--sp-space-7);
-  padding-top: var(--sp-space-6);
-  border-top: 1px solid var(--sp-color-border-default);
-}
-
-.lp-chart {
-  margin-top: var(--sp-space-5);
-}
-
-.lp-chart svg {
-  display: block;
-  width: 100%;
-  height: auto;
-  overflow: visible;
-}
-
-.lp-chart__zero {
-  stroke: var(--sp-color-border-control);
-  stroke-width: 1;
-  stroke-dasharray: 4 4;
-}
-
-.lp-chart__line {
-  fill: none;
-  stroke-width: 3;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.lp-chart__line--gain {
-  stroke: var(--sp-color-data-gain-base);
-}
-
-.lp-chart__line--loss {
-  stroke: var(--sp-color-data-loss-base);
-}
-
-.lp-chart__end {
-  fill: var(--sp-color-data-gain-base);
-}
-
-.lp-chart__axis {
-  display: flex;
-  justify-content: space-between;
-  margin-top: var(--sp-space-3);
-  color: var(--sp-color-text-secondary);
-  font-size: var(--sp-type-caption-size);
-  line-height: var(--sp-type-caption-line);
-  font-weight: var(--sp-type-caption-weight);
-}
-
-.lp-card__note {
-  margin-top: var(--sp-space-6);
+.lp-tk__d--down {
+  color: var(--sp-color-data-loss-on-game);
 }
 
 /* ── FAQ ─────────────────────────────────────────────────────────────── */
@@ -1181,17 +2087,27 @@ body:has(> #root > .lp) {
   color: var(--sp-color-text-secondary);
 }
 
-/* ── Launch band & footer ────────────────────────────────────────────── */
-.lp-launch__band {
+/* ── CTA strip & footer ──────────────────────────────────────────────── */
+.lp-cta__glow-area {
+  position: relative;
   padding-block: calc(var(--sp-space-11) + var(--sp-space-5));
 }
 
-.lp-launch__inner {
+.lp-cta__inner {
+  position: relative;
+  z-index: 1;
   display: grid;
-  gap: var(--sp-space-5);
+  gap: var(--sp-space-7);
+  align-items: end;
 }
 
-.lp-launch__title {
+@media (min-width: 1024px) {
+  .lp-cta__inner {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}
+
+.lp-cta__title {
   font-family: var(--lp-font-condensed);
   font-size: var(--lp-launch-title-size);
   line-height: var(--sp-type-hero-line);
@@ -1202,24 +2118,74 @@ body:has(> #root > .lp) {
   color: var(--sp-color-text-on-game-primary);
 }
 
-.lp-launch__promise {
-  max-width: 40ch;
+.lp-cta__body {
+  max-width: 46ch;
+  margin-top: var(--sp-space-5);
   font-size: var(--sp-type-headline-size);
   line-height: 26px;
   color: var(--sp-color-text-on-game-secondary);
 }
 
-.lp-footer {
-  padding-block: var(--sp-space-9);
+.lp-cta .lp-status {
+  padding: var(--sp-space-4) var(--sp-space-6);
+  font-size: var(--sp-type-body-size);
+  line-height: var(--sp-type-body-line);
 }
 
-.lp-footer__inner {
+.lp-footer {
+  padding-block: var(--sp-space-10) var(--sp-space-9);
+}
+
+.lp-footer__top {
   display: grid;
-  gap: var(--sp-space-4);
+  gap: var(--sp-space-8);
+  padding-bottom: var(--sp-space-8);
+  border-bottom: 1px solid var(--sp-color-border-default);
+}
+
+@media (min-width: 768px) {
+  .lp-footer__top {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  }
 }
 
 .lp-brand--static {
   font-size: var(--sp-type-body-size);
+}
+
+.lp-footer__tagline {
+  max-width: 40ch;
+  margin-top: var(--sp-space-4);
+  color: var(--sp-color-text-secondary);
+}
+
+.lp-footer__col {
+  display: grid;
+  align-content: start;
+  gap: var(--sp-space-3);
+}
+
+.lp-footer__h {
+  font-size: var(--sp-type-caption-size);
+  line-height: var(--sp-type-caption-line);
+  font-weight: 600;
+  color: var(--sp-color-text-secondary);
+}
+
+.lp-footer__col a {
+  width: fit-content;
+  color: var(--sp-color-text-primary);
+  text-decoration: none;
+}
+
+.lp-footer__col a:hover {
+  text-decoration: underline;
+}
+
+.lp-footer__bottom {
+  display: grid;
+  gap: var(--sp-space-3);
+  padding-top: var(--sp-space-6);
 }
 
 .lp-footer__disclaimer,
@@ -1230,25 +2196,27 @@ body:has(> #root > .lp) {
   color: var(--sp-color-text-secondary);
 }
 
-@media (min-width: 1024px) {
-  .lp-footer__inner {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: center;
-    column-gap: var(--sp-space-8);
-  }
-}
-
 /* ── Reduced motion ──────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .lp-press,
+  .lp-nav__links a,
   .lp-nav__links a::after,
+  .lp-step,
   .lp-step__num,
-  .lp-row,
-  .lp-faq__chevron {
+  .lp-srow,
+  .lp-days__d,
+  .lp-faq__chevron,
+  .lp-tilt,
+  .lp-tilt__light,
+  .lp-magnet,
+  .lp-glow {
     transition: none;
   }
 
-  .lp-press:active {
+  .lp-press:active,
+  .lp-magnet,
+  .lp-magnet:active,
+  .lp-tilt {
     transform: none;
   }
 }

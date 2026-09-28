@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { AnimatePresence, LayoutGroup, motion } from 'motion/react';
 import { brand } from '../../brand';
 import { useLandingMotion } from './hooks';
-import { faqItems } from './sampleData';
+import { faq } from './copy';
+import { Reveal } from './scroll';
 
 function Chevron() {
   return (
@@ -21,7 +22,7 @@ function Chevron() {
  * answer open. Once hydrated they fold to the usual closed accordion — one
  * commit after load, far below the fold. */
 export function Faq() {
-  const items = faqItems(brand.name);
+  const items = faq.items(brand.name);
   const { hydrated, reduced, duration, ease } = useLandingMotion();
   const [open, setOpen] = useState<ReadonlySet<number>>(() => new Set(items.map((_, i) => i)));
 
@@ -42,9 +43,13 @@ export function Faq() {
   return (
     <section className="lp-section lp-faq" id="faq" aria-labelledby="lp-faq-title">
       <div className="lp-wrap lp-faq__grid">
-        <h2 className="lp-h2" id="lp-faq-title">
-          Questions
-        </h2>
+        <Reveal className="lp-head">
+          <p className="lp-kicker">{faq.kicker}</p>
+          <h2 className="lp-h2" id="lp-faq-title">
+            {faq.title.text}
+            <em>{faq.title.em}</em>
+          </h2>
+        </Reveal>
         <LayoutGroup>
           <ul className="lp-faq__list">
             {items.map((item, i) => {

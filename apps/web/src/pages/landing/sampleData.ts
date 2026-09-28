@@ -1,175 +1,243 @@
-// Illustrative sample data for the landing: a preview of the product, not
-// real users. Product rules it must obey (phase3a-landing.md):
-//   - a matchup is won on DOLLAR gain (percent only breaks a tie);
-//   - everyone in a league starts from the same budget, so the dollar and
-//     percent orders always agree here (Design Lead, 2026-09-26);
-//   - no win probability, anywhere.
-// sampleData.test.ts checks these invariants.
+// Illustrative mock data for the landing's product scenes — the live
+// landing page's own mock (Stock Scudetto, Week 6, Roberto B. vs
+// Gianluigi B., the tape, movers and standings), reused inside the richer
+// animated components, plus the extra frames those animations need.
+// A preview of the product, not real users. sampleData.test.ts checks the
+// invariants (no win probability anywhere; the matchup lead is in dollars;
+// every standings frame is a consistent ranking).
 
-/** Every sample league uses the same starting budget. */
-export const BUDGET = 10_000;
+export const LEAGUE = 'Stock Scudetto';
+export const WEEK = 6;
+export const WEEKS = 14;
 
-export const LEAGUE_NAME = 'Friday Night Stocks';
-export const WEEK = 3;
+// ── Price tape (top of page), verbatim ───────────────────────────────────
+export const TAPE: ReadonlyArray<{ t: string; p: string; d: string; up: boolean }> = [
+  { t: 'NVDA', p: '318.37', d: '+3.81%', up: true },
+  { t: 'AAPL', p: '211.42', d: '+1.24%', up: true },
+  { t: 'MSFT', p: '421.62', d: '+0.88%', up: true },
+  { t: 'TSLA', p: '248.36', d: '−0.52%', up: false },
+  { t: 'GOOGL', p: '179.01', d: '+0.41%', up: true },
+  { t: 'META', p: '498.50', d: '+1.92%', up: true },
+  { t: 'AMZN', p: '236.40', d: '−1.18%', up: false },
+  { t: 'AMD', p: '172.95', d: '−0.31%', up: false },
+  { t: 'AVGO', p: '1124.20', d: '+0.84%', up: true },
+  { t: 'COIN', p: '212.07', d: '+2.04%', up: true },
+  { t: 'PLTR', p: '34.18', d: '+5.12%', up: true },
+  { t: 'JPM', p: '215.45', d: '+0.22%', up: true },
+];
 
-export interface Team {
-  name: string;
-  gain: number;
-}
+// ── "A look inside": portfolio card ──────────────────────────────────────
+/** The card's live frames: value + today's change, and the holdings. The
+ * first frame is the old page's static mock; the rest tick it around. */
+export const PORTFOLIO_FRAMES: ReadonlyArray<{
+  value: number;
+  today: number;
+  todayPct: number;
+  holdings: ReadonlyArray<{ t: string; co: string; sh: number; value: number; pct: number }>;
+}> = [
+  {
+    value: 12430.55,
+    today: 284.1,
+    todayPct: 2.34,
+    holdings: [
+      { t: 'NVDA', co: 'NVIDIA', sh: 12, value: 3820.4, pct: 3.81 },
+      { t: 'AAPL', co: 'Apple', sh: 10, value: 2114.22, pct: 1.24 },
+      { t: 'TSLA', co: 'Tesla', sh: 6, value: 1490.18, pct: -0.52 },
+    ],
+  },
+  {
+    value: 12468.9,
+    today: 322.45,
+    todayPct: 2.65,
+    holdings: [
+      { t: 'NVDA', co: 'NVIDIA', sh: 12, value: 3851.16, pct: 4.64 },
+      { t: 'AAPL', co: 'Apple', sh: 10, value: 2118.6, pct: 1.45 },
+      { t: 'TSLA', co: 'Tesla', sh: 6, value: 1485.36, pct: -0.84 },
+    ],
+  },
+  {
+    value: 12451.3,
+    today: 304.85,
+    todayPct: 2.51,
+    holdings: [
+      { t: 'NVDA', co: 'NVIDIA', sh: 12, value: 3838.2, pct: 4.29 },
+      { t: 'AAPL', co: 'Apple', sh: 10, value: 2109.9, pct: 1.03 },
+      { t: 'TSLA', co: 'Tesla', sh: 6, value: 1493.82, pct: -0.28 },
+    ],
+  },
+];
 
-// ── Hero: Week 3, Wednesday mid-morning ──────────────────────────────────
-export const HERO = {
-  week: WEEK,
-  you: { name: 'You', gain: 56.8 },
-  opponent: { name: 'Priya', gain: 39.4 },
-  chyron: 'NVDA +4.1% puts you ahead',
-  /** The prerendered / JS-off state: the week hasn't moved yet. */
-  kickoff: { tag: 'Monday open', clock: '4d 6h 30m to Friday close' },
-  live: { tag: 'Wednesday', clock: '2d 5h to Friday close' },
+/** Sparkline points from the old mock (320×80 viewBox, y down). */
+export const SPARKLINE = '0,76 24,72 48,66 72,68 96,58 120,52 144,55 168,42 192,38 216,32 240,28 264,18 288,12 320,6';
+
+export const RANGES = ['1D', '1W', '1M', '3M', 'YTD', 'ALL'] as const;
+
+// ── "A look inside": this week's matchup ────────────────────────────────
+// The old card showed percent and "Win prob 72%". Win probability is out
+// (no model); the foot shows the lead in DOLLARS, which is what matchups
+// are decided on. Percent stays in the rows, as on the old card.
+export const MATCHUP_FRAMES: ReadonlyArray<{ you: number; youPct: number; opp: number; oppPct: number }> = [
+  { you: 284.1, youPct: 2.34, opp: -96.4, oppPct: -0.91 },
+  { you: 322.45, youPct: 2.65, opp: -71.2, oppPct: -0.67 },
+  { you: 304.85, youPct: 2.51, opp: -38.9, oppPct: -0.37 },
+];
+export const MATCHUP = {
+  you: { name: 'Roberto B.', init: 'RB', role: 'you' },
+  opp: { name: 'Gianluigi B.', init: 'GB', role: 'opponent' },
+  left: '3d 4h left',
 } as const;
 
-// ── Ticker: other Week 3 matchups around the leagues ─────────────────────
-export const TICKER: ReadonlyArray<readonly [Team, Team]> = [
-  [{ name: 'Marco', gain: 112.4 }, { name: 'Dana', gain: 98.15 }],
-  [{ name: 'Kenji', gain: -12.75 }, { name: 'Sofia', gain: 44.3 }],
-  [{ name: 'Ava', gain: 23.1 }, { name: 'Luis', gain: 21.85 }],
-  [{ name: 'Noor', gain: 67.9 }, { name: 'Theo', gain: -5.2 }],
-  [{ name: 'Omar', gain: 31.45 }, { name: 'Ines', gain: 38.7 }],
-  [{ name: 'Maya', gain: -18.3 }, { name: 'Eli', gain: -9.95 }],
-  [{ name: 'Hana', gain: 84.6 }, { name: 'Ravi', gain: 79.05 }],
+// ── "A look inside": this week's movers ─────────────────────────────────
+export const MOVERS_FRAMES: ReadonlyArray<ReadonlyArray<{ t: string; co: string; pct: number }>> = [
+  [
+    { t: 'NVDA', co: 'NVIDIA', pct: 3.81 },
+    { t: 'PLTR', co: 'Palantir', pct: 5.12 },
+    { t: 'META', co: 'Meta', pct: 1.92 },
+    { t: 'TSLA', co: 'Tesla', pct: -0.52 },
+    { t: 'AMZN', co: 'Amazon', pct: -1.18 },
+  ],
+  [
+    { t: 'NVDA', co: 'NVIDIA', pct: 4.64 },
+    { t: 'PLTR', co: 'Palantir', pct: 4.87 },
+    { t: 'META', co: 'Meta', pct: 1.61 },
+    { t: 'TSLA', co: 'Tesla', pct: -0.84 },
+    { t: 'AMZN', co: 'Amazon', pct: -0.95 },
+  ],
+  [
+    { t: 'NVDA', co: 'NVIDIA', pct: 5.02 },
+    { t: 'PLTR', co: 'Palantir', pct: 4.66 },
+    { t: 'META', co: 'Meta', pct: 1.73 },
+    { t: 'TSLA', co: 'Tesla', pct: -0.28 },
+    { t: 'AMZN', co: 'Amazon', pct: -1.31 },
+  ],
 ];
+/** The old page listed movers in this order; the live card ranks them. */
+export const moversRanked = (frame: number) =>
+  [...MOVERS_FRAMES[frame]].sort((a, b) => b.pct - a.pct);
 
-// ── How a week works: the same You-vs-Priya week, day by day ─────────────
-// Priya takes the lead Monday and stretches it Tuesday; NVDA puts you back
-// in front on Wednesday (the hero's moment); you hold on to Friday's close.
-export type StepId = 'draft' | 'open' | 'week' | 'close';
-
-export interface WeekState {
-  id: string;
-  step: StepId;
-  /** Scoreboard tag, e.g. "Tue close". */
-  label: string;
-  you: number;
-  opponent: number;
-  /** Lead-change call, shown as a chyron when this state is reached. */
-  chyron?: string;
-}
-
-export const WEEK_STATES: readonly WeekState[] = [
-  { id: 'draft', step: 'draft', label: 'Rosters set', you: 0, opponent: 0 },
-  { id: 'open', step: 'open', label: 'Mon 9:30 open', you: 0, opponent: 0 },
-  { id: 'mon', step: 'week', label: 'Mon close', you: 18.2, opponent: 24.6, chyron: 'AMD +3.2% puts Priya ahead' },
-  { id: 'tue', step: 'week', label: 'Tue close', you: 12.4, opponent: 31.1 },
-  { id: 'wed', step: 'week', label: 'Wed close', you: 56.8, opponent: 39.4, chyron: HERO.chyron },
-  { id: 'thu', step: 'week', label: 'Thu close', you: 61.3, opponent: 58.9 },
-  { id: 'fri', step: 'close', label: 'Fri close', you: 71.25, opponent: 64.1, chyron: 'Final: you take Week 3' },
-];
-
-export const STEPS: ReadonlyArray<{ id: StepId; title: string; body: string }> = [
-  {
-    id: 'draft',
-    title: 'Draft',
-    body: 'Your league takes turns picking real stocks in a snake draft. Once a stock is taken, it’s off the board for everyone else.',
-  },
-  {
-    id: 'open',
-    title: 'Monday open',
-    body: 'At the opening bell you’re matched against one leaguemate, and both scores start at $0.00.',
-  },
-  {
-    id: 'week',
-    title: 'The week',
-    body: 'Your score is your portfolio’s dollar gain since Monday’s open, tracked with real prices. Trade any day to chase the lead.',
-  },
-  {
-    id: 'close',
-    title: 'Friday close',
-    body: 'At the closing bell, the bigger dollar gain wins the matchup. Percent gain only breaks a tie. The result goes into your league standings.',
-  },
-];
-
-/** Four static panels shown instead of the scroll-scrub under reduced
- * motion, or with JavaScript off (DESIGN_DIRECTION §5). */
-export const WEEK_PANELS: ReadonlyArray<{ title: string; stateId: string; note: string }> = [
-  { title: 'Mon', stateId: 'open', note: 'Both scores start at $0.00.' },
-  { title: 'Tue–Thu', stateId: 'wed', note: 'Priya led through Tuesday. NVDA put you ahead on Wednesday.' },
-  { title: 'Fri close', stateId: 'fri', note: 'The closing bell locks both scores.' },
-  { title: 'Final', stateId: 'fri', note: 'You win Week 3 by $7.15 and move to 3–0.' },
-];
-
-// ── Leagues in action: Week 3's live board ───────────────────────────────
-// Ranked by this week's dollar gain, live. Each snapshot differs from the
-// one before by exactly one move, which the chyron names.
-export interface StandingsRow {
+// ── /02 Leagues in action: the Stock Scudetto board ──────────────────────
+// The old board's six players, ranked by season gain (as it was). Each
+// frame changes the order by the move its chyron names; the last frame is
+// Friday's close, where records update and the week locks.
+export interface Player {
   id: string;
   name: string;
-  record: string;
+  init: string;
   you?: boolean;
 }
-
-export const STANDINGS_ROWS: readonly StandingsRow[] = [
-  { id: 'marco', name: 'Marco', record: '2–0' },
-  { id: 'dana', name: 'Dana', record: '1–1' },
-  { id: 'you', name: 'You', record: '2–0', you: true },
-  { id: 'sofia', name: 'Sofia', record: '1–1' },
-  { id: 'priya', name: 'Priya', record: '1–1' },
-  { id: 'kenji', name: 'Kenji', record: '0–2' },
+export const PLAYERS: readonly Player[] = [
+  { id: 'paolo', name: 'Paolo M.', init: 'PM' },
+  { id: 'roberto', name: 'Roberto B.', init: 'RB', you: true },
+  { id: 'alessandro', name: 'Alessandro D.', init: 'AD' },
+  { id: 'francesco', name: 'Francesco T.', init: 'FT' },
+  { id: 'gianluigi', name: 'Gianluigi B.', init: 'GB' },
+  { id: 'andrea', name: 'Andrea P.', init: 'AP' },
 ];
 
-export interface StandingsSnapshot {
-  gains: Record<string, number>;
-  /** The move this snapshot makes, relative to the previous one. */
+export interface BoardFrame {
+  pct: Record<string, number>;
+  rec: Record<string, string>;
+  final?: boolean;
   chyron?: string;
 }
 
-export const STANDINGS_SNAPSHOTS: readonly StandingsSnapshot[] = [
-  { gains: { marco: 112.4, dana: 98.15, you: 56.8, sofia: 44.3, priya: 39.4, kenji: -12.75 } },
-  { gains: { marco: 109.9, dana: 118.6, you: 58.1, sofia: 44.9, priya: 40.2, kenji: -10.4 }, chyron: 'Dana passes Marco for 1st' },
-  { gains: { marco: 111.2, dana: 119.85, you: 60.45, sofia: 42.8, priya: 47.1, kenji: -8.9 }, chyron: 'Priya passes Sofia for 4th' },
-  { gains: { marco: 121.35, dana: 117.95, you: 61.3, sofia: 43.6, priya: 47.65, kenji: -6.15 }, chyron: 'Marco takes 1st back from Dana' },
-  { gains: { marco: 122.1, dana: 118.4, you: 63.9, sofia: 49.9, priya: 47.6, kenji: -1.6 }, chyron: 'Sofia passes Priya for 4th' },
+const REC_LIVE = { paolo: '5–0', roberto: '4–1', alessandro: '4–1', francesco: '3–2', gianluigi: '2–3', andrea: '1–4' };
+const REC_FINAL = { paolo: '5–1', roberto: '5–1', alessandro: '5–1', francesco: '3–3', gianluigi: '2–4', andrea: '2–4' };
+
+export const BOARD_FRAMES: readonly BoardFrame[] = [
+  // The old page's board, verbatim numbers.
+  { pct: { paolo: 8.42, roberto: 5.1, alessandro: 4.88, francesco: 2.31, gianluigi: -1.04, andrea: -2.88 }, rec: REC_LIVE },
+  {
+    pct: { paolo: 8.36, roberto: 4.97, alessandro: 5.21, francesco: 2.44, gianluigi: -1.12, andrea: -2.61 },
+    rec: REC_LIVE,
+    chyron: 'Alessandro D. moves up to 2nd',
+  },
+  {
+    pct: { paolo: 8.3, roberto: 5.58, alessandro: 5.26, francesco: 2.4, gianluigi: -1.2, andrea: -1.34 },
+    rec: REC_LIVE,
+    chyron: 'Roberto B. takes 2nd back',
+  },
+  {
+    pct: { paolo: 8.18, roberto: 5.64, alessandro: 5.3, francesco: 2.38, gianluigi: -1.31, andrea: -0.74 },
+    rec: REC_LIVE,
+    chyron: 'Andrea P. climbs to 5th',
+  },
+  {
+    pct: { paolo: 8.05, roberto: 8.61, alessandro: 5.42, francesco: 2.2, gianluigi: -1.46, andrea: -0.52 },
+    rec: REC_FINAL,
+    final: true,
+    chyron: `Final · Week ${WEEK}: Roberto B. takes 1st`,
+  },
 ];
 
-// ── The money side: cumulative gain since joining (zero baseline) ────────
-// DESIGN_DIRECTION §3 chart decision (PR #38): the line is value − cost
-// basis + realized P/L, so joining the league or drafting never shows as a
-// jump. Daily closes over three weeks; week 1 dips below zero.
-export const PORTFOLIO = {
-  value: BUDGET + 71.25 + 38.9,
-  weekGain: 71.25,
-  cumulative: [
-    0, -14.2, -31.5, -22.8, -9.4, // week 1
-    6.1, 18.7, 12.3, 29.8, 38.9, // week 2
-    57.1, 51.3, 95.7, 100.2, 110.15, // week 3
-  ],
-} as const;
+export const boardRanked = (frame: number) => {
+  const { pct, rec } = BOARD_FRAMES[frame];
+  return [...PLAYERS]
+    .sort((a, b) => pct[b.id] - pct[a.id])
+    .map((p, i) => ({ ...p, rank: i + 1, pct: pct[p.id], rec: rec[p.id] }));
+};
 
-// ── FAQ: today's pre-launch answers ──────────────────────────────────────
-export function faqItems(name: string): ReadonlyArray<{ q: string; a: string }> {
-  return [
-    {
-      q: `When does ${name} launch?`,
-      a: `${name} is in development and launching soon. This page is a preview of what’s coming; there’s nothing to sign up for yet.`,
-    },
-    {
-      q: 'How do I get access?',
-      a: 'There’s no signup right now. When we launch, you’ll be able to start a league and invite friends from this page.',
-    },
-    {
-      q: 'How is a matchup won?',
-      a: 'Whoever’s portfolio gains more dollars between Monday’s open and Friday’s close wins. If the dollar gains tie, the bigger percentage gain wins.',
-    },
-    {
-      q: 'Is this real investing?',
-      a: `No. ${name} follows the prices of real stocks, but it never buys, sells or holds any securities. It’s a game built on market data, not a brokerage.`,
-    },
-    {
-      q: 'Does it cost anything?',
-      a: `No. ${name} is free to play. There are no entry fees and no subscriptions.`,
-    },
-    {
-      q: 'Do I win money?',
-      a: 'No. There are no cash prizes or payouts, just standings, trophies and bragging rights.',
-    },
-  ];
-}
+/** Rank change per player from the previous frame (positive = moved up).
+ * Frame 0 is the loop's restart, so it names no moves. */
+export const boardMoves = (frame: number): Record<string, number> => {
+  if (frame === 0) return {};
+  const before = Object.fromEntries(boardRanked(frame - 1).map((r) => [r.id, r.rank]));
+  const out: Record<string, number> = {};
+  for (const r of boardRanked(frame)) if (before[r.id] !== r.rank) out[r.id] = before[r.id] - r.rank;
+  return out;
+};
+
+// ── /01 How it works: the phone's three screens ─────────────────────────
+/** Draft: the snake order for rounds 1–2 of a 6-team league, and who took
+ * what. Roberto (you) picks 2nd, so his picks are #2 and #11. */
+export const DRAFT_PICKS: ReadonlyArray<{ pick: number; player: string; t: string; you?: boolean }> = [
+  { pick: 1, player: 'Paolo M.', t: 'MSFT' },
+  { pick: 2, player: 'Roberto B.', t: 'NVDA', you: true },
+  { pick: 3, player: 'Alessandro D.', t: 'META' },
+  { pick: 4, player: 'Francesco T.', t: 'AVGO' },
+  { pick: 5, player: 'Gianluigi B.', t: 'AMZN' },
+  { pick: 6, player: 'Andrea P.', t: 'GOOGL' },
+  { pick: 7, player: 'Andrea P.', t: 'COIN' },
+  { pick: 8, player: 'Gianluigi B.', t: 'JPM' },
+  { pick: 9, player: 'Francesco T.', t: 'AMD' },
+  { pick: 10, player: 'Alessandro D.', t: 'PLTR' },
+  { pick: 11, player: 'Roberto B.', t: 'AAPL', you: true },
+  { pick: 12, player: 'Paolo M.', t: 'TSLA' },
+];
+
+/** Compete: Roberto vs Gianluigi, Week 6, daily closes (dollar gain). */
+export const WEEK_CLOSES: ReadonlyArray<{ day: string; you: number; opp: number }> = [
+  { day: 'Mon', you: 0, opp: 0 },
+  { day: 'Mon', you: 61.2, opp: 88.4 },
+  { day: 'Tue', you: 142.75, opp: 101.3 },
+  { day: 'Wed', you: 118.4, opp: 34.9 },
+  { day: 'Thu', you: 238.6, opp: -12.55 },
+  { day: 'Fri', you: 351.8, opp: -40.25 },
+];
+
+/** Climb: Roberto's row rising 4th → 2nd after two wins. */
+export const CLIMB_FRAMES: ReadonlyArray<ReadonlyArray<{ id: string; name: string; rec: string; you?: boolean }>> = [
+  [
+    { id: 'paolo', name: 'Paolo M.', rec: '3–0' },
+    { id: 'alessandro', name: 'Alessandro D.', rec: '2–1' },
+    { id: 'francesco', name: 'Francesco T.', rec: '2–1' },
+    { id: 'roberto', name: 'Roberto B.', rec: '2–1', you: true },
+  ],
+  [
+    { id: 'paolo', name: 'Paolo M.', rec: '4–0' },
+    { id: 'roberto', name: 'Roberto B.', rec: '3–1', you: true },
+    { id: 'alessandro', name: 'Alessandro D.', rec: '2–2' },
+    { id: 'francesco', name: 'Francesco T.', rec: '2–2' },
+  ],
+];
+
+// ── /03 Why: "Real prices." bars — data, not decoration ─────────────────
+/** Roberto's Week 6 portfolio, dollar change per day (M–F as on the old
+ * page's bars, now labelled with their values and signed). */
+export const DAILY_MOVES: ReadonlyArray<{ l: string; day: string; v: number }> = [
+  { l: 'M', day: 'Mon', v: 62.4 },
+  { l: 'T', day: 'Tue', v: 188.75 },
+  { l: 'W', day: 'Wed', v: -41.1 },
+  { l: 'T', day: 'Thu', v: 156.3 },
+  { l: 'F', day: 'Fri', v: 146.05 },
+];

@@ -1,0 +1,342 @@
+import { useEffect, useRef, useState } from 'react';
+import { motion, useAnimate, useScroll, useTransform } from 'motion/react';
+import { brand } from '../../brand';
+import { Surface } from '../../design/Surface';
+import { ScoreDigits } from '../../design/game/ScoreDigits';
+import { TugBar } from '../../design/game/TugBar';
+import { formatMoney } from '../../design/lib/money';
+import { hero, inside } from './copy';
+import { LaunchingSoon } from './Nav';
+import {
+  useEnhanced,
+  useFinePointer,
+  useInView,
+  useLandingMotion,
+  useLoop,
+  useMagnet,
+  useMediaQuery,
+  usePageVisible,
+  usePointerGlow,
+  useTilt,
+} from './hooks';
+import {
+  LEAGUE,
+  MATCHUP,
+  MATCHUP_FRAMES,
+  PORTFOLIO_FRAMES,
+  RANGES,
+  SPARKLINE,
+  WEEK,
+  moversRanked,
+} from './sampleData';
+
+/** Live-loop pacing for the "look inside" cards: how long each tick of
+ * sample prices stays up. Content pacing, not an animation duration. */
+const INSIDE_TICK_MS = 2800;
+
+/** "+2.34%" / "−0.52%" (U+2212, like the money formatter); zero unsigned. */
+export function fmtPct(v: number): string {
+  const r = Math.round(Math.abs(v) * 100) / 100;
+  if (r === 0) return '0.00%';
+  return `${v > 0 ? '+' : '−'}${r.toFixed(2)}%`;
+}
+
+function LivePill({ label = 'Live' }: { label?: string }) {
+  return (
+    <span className="lp-live">
+      <span className="lp-live__dot" aria-hidden="true" />
+      {label}
+    </span>
+  );
+}
+
+/** A mock card with the pointer tilt + cursor-light (fine pointers only,
+ * off under reduced motion). */
+function TiltCard({ className, children }: { className?: string; children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const enhanced = useEnhanced();
+  const fine = useFinePointer();
+  useTilt(ref, enhanced && fine);
+  return (
+    <div ref={ref} className={['lp-tilt', className].filter(Boolean).join(' ')}>
+      {children}
+      <span className="lp-tilt__light" aria-hidden="true" />
+    </div>
+  );
+}
+
+function Sparkline({ draw }: { draw: boolean }) {
+  const { hydrated, reduced, duration, ease } = useLandingMotion();
+  const [scope, animate] = useAnimate<SVGSVGElement>();
+  const state = useRef<'idle' | 'armed' | 'done'>('idle');
+  useEffect(() => {
+    if (!hydrated || reduced || state.current === 'done') return;
+    const line = scope.current?.querySelector('.lp-spark__line');
+    if (!line) return;
+    if (state.current === 'idle' && !draw) {
+      state.current = 'armed';
+      animate(line, { pathLength: 0 }, { duration: 0 });
+    } else if (draw) {
+      state.current = 'done';
+      animate(line, { pathLength: 1 }, { duration: duration.feature, ease: ease.settle });
+    }
+  }, [hydrated, reduced, draw, animate, scope, duration.feature, ease.settle]);
+  const pts = SPARKLINE.split(' ');
+  const [ex, ey] = pts[pts.length - 1].split(',');
+  return (
+    <svg ref={scope} className="lp-spark" viewBox="0 0 320 80" aria-hidden="true">
+      <polyline className="lp-spark__line" points={SPARKLINE} />
+      <circle className="lp-spark__end" cx={ex} cy={ey} r="4" />
+    </svg>
+  );
+}
+
+function PortfolioCard({ frame, drawn }: { frame: number; drawn: boolean }) {
+  const f = PORTFOLIO_FRAMES[frame];
+  return (
+    <TiltCard className="lp-inside__main">
+      <Surface kind="money" elevated className="lp-card lp-card--portfolio">
+        <div className="lp-card__head">
+          <div>
+            <div className="lp-card__lbl">Portfolio · {LEAGUE}</div>
+            <div className="lp-card__title">Week {WEEK} · Live</div>
+          </div>
+          <LivePill />
+        </div>
+        <ScoreDigits value={formatMoney(f.value)} className="lp-roll lp-roll--xl" />
+        <div className="lp-card__delta">
+          <span className="lp-delta lp-delta--gain">
+            ▲ {formatMoney(f.today)} · {fmtPct(f.todayPct)}
+          </span>
+          <span className="lp-card__muted">today</span>
+        </div>
+        <Sparkline draw={drawn} />
+        <div className="lp-ranges" aria-hidden="true">
+          {RANGES.map((r) => (
+            <span key={r} className={r === '1M' ? 'lp-range lp-range--on' : 'lp-range'}>
+              {r}
+            </span>
+          ))}
+        </div>
+        <ul className="lp-holdings">
+          {f.holdings.map((h) => (
+            <li key={h.t} className="lp-holding">
+              <span className={h.pct >= 0 ? 'lp-sd lp-sd--gain' : 'lp-sd lp-sd--loss'} aria-hidden="true" />
+              <span className="lp-holding__name">
+                <span className="lp-holding__t">{h.t}</span>
+                <span className="lp-holding__co">
+                  {h.co} · {h.sh} sh
+                </span>
+              </span>
+              <ScoreDigits value={formatMoney(h.value)} className="lp-roll lp-roll--sm" />
+              <span className={h.pct >= 0 ? 'lp-delta lp-delta--gain' : 'lp-delta lp-delta--loss'}>{fmtPct(h.pct)}</span>
+            </li>
+          ))}
+        </ul>
+      </Surface>
+    </TiltCard>
+  );
+}
+
+function MatchupCard({ frame }: { frame: number }) {
+  const f = MATCHUP_FRAMES[frame];
+  const lead = f.you - f.opp;
+  const leader = lead >= 0 ? MATCHUP.you.name : MATCHUP.opp.name;
+  return (
+    <TiltCard>
+      <Surface kind="game" level="raised" className="lp-card lp-card--matchup">
+        <div className="lp-card__head">
+          <span className="lp-card__lbl">This week’s matchup</span>
+          <LivePill />
+        </div>
+        <div className="lp-mrow">
+          <span className="lp-avatar lp-avatar--you" aria-hidden="true">
+            {MATCHUP.you.init}
+          </span>
+          <span className="lp-mrow__who">
+            <span className="lp-mrow__name">{MATCHUP.you.name}</span>
+            <span className="lp-mrow__sub">{MATCHUP.you.role}</span>
+          </span>
+          <span className={f.youPct >= 0 ? 'lp-delta lp-delta--gain' : 'lp-delta lp-delta--loss'}>{fmtPct(f.youPct)}</span>
+        </div>
+        <div className="lp-mbar" aria-hidden="true">
+          <TugBar you={f.you} opponent={f.opp} youLabel={MATCHUP.you.name} opponentLabel={MATCHUP.opp.name} />
+        </div>
+        <div className="lp-mrow lp-mrow--opp">
+          <span className={f.oppPct >= 0 ? 'lp-delta lp-delta--gain' : 'lp-delta lp-delta--loss'}>{fmtPct(f.oppPct)}</span>
+          <span className="lp-mrow__who">
+            <span className="lp-mrow__name">{MATCHUP.opp.name}</span>
+            <span className="lp-mrow__sub">{MATCHUP.opp.role}</span>
+          </span>
+          <span className="lp-avatar lp-avatar--opp" aria-hidden="true">
+            {MATCHUP.opp.init}
+          </span>
+        </div>
+        <div className="lp-card__foot">
+          {/* Was "Win prob 72%" on the old mock: no win-probability model
+              exists, so the foot shows the lead in dollars instead. */}
+          <span>
+            {leader} leads by <span className="lp-num">{formatMoney(Math.abs(lead))}</span>
+          </span>
+          <span>{MATCHUP.left}</span>
+        </div>
+      </Surface>
+    </TiltCard>
+  );
+}
+
+function MoversCard({ frame }: { frame: number }) {
+  const { reduced, duration, ease } = useLandingMotion();
+  const rows = moversRanked(frame);
+  return (
+    <TiltCard>
+      <Surface kind="game" level="raised" className="lp-card lp-card--movers">
+        <div className="lp-card__head">
+          <span className="lp-card__lbl">This week’s movers</span>
+        </div>
+        <ul className="lp-movers">
+          {rows.map((m) => (
+            <motion.li
+              key={m.t}
+              layout={reduced ? false : 'position'}
+              transition={{ layout: { duration: duration.base, ease: ease.settle } }}
+              className="lp-mover"
+            >
+              <span className={m.pct >= 0 ? 'lp-sd lp-sd--gain' : 'lp-sd lp-sd--loss'} aria-hidden="true" />
+              <span className="lp-mover__t">{m.t}</span>
+              <span className="lp-mover__co">{m.co}</span>
+              <span className={m.pct >= 0 ? 'lp-delta lp-delta--gain' : 'lp-delta lp-delta--loss'}>{fmtPct(m.pct)}</span>
+            </motion.li>
+          ))}
+        </ul>
+      </Surface>
+    </TiltCard>
+  );
+}
+
+function SeeHowItWorks() {
+  const ref = useRef<HTMLAnchorElement>(null);
+  const enhanced = useEnhanced();
+  const fine = useFinePointer();
+  useMagnet(ref, enhanced && fine);
+  return (
+    <a ref={ref} className="lp-link lp-magnet lp-press" href={hero.link.href}>
+      {hero.link.label}
+    </a>
+  );
+}
+
+/** The opening shot: the hero, then "A look inside", as ONE continuous
+ * scroll (Design Lead, round 3). On large screens the hero holds (sticky)
+ * while the navy stage rises over it: the headline block scales down and
+ * drifts up, the stage opens from an inset card to full bleed, and the
+ * product cards rise into the pinned stage, then drift in parallax depth
+ * while they tick live. Phones and short viewports keep it in normal flow
+ * (no pin), with the same panel opening and live cards. Server render,
+ * JS-off and reduced motion: both sections static, the cards at their
+ * first frame, everything readable. */
+export function Opening() {
+  const enhanced = useEnhanced();
+  const bigStage = useMediaQuery('(min-width: 1024px) and (min-height: 700px)') === true;
+  const pinned = enhanced && bigStage;
+
+  const insideRef = useRef<HTMLElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const cardsRef = useRef<HTMLDivElement>(null);
+
+  // Approach: the stage's top from the viewport bottom to the top.
+  const { scrollYProgress: approach } = useScroll({ target: insideRef, offset: ['start end', 'start start'] });
+  // Dwell: the pinned stretch.
+  const { scrollYProgress: dwell } = useScroll({ target: insideRef, offset: ['start start', 'end end'] });
+
+  const heroScale = useTransform(approach, [0, 1], [1, 0.9]);
+  const heroY = useTransform(approach, [0, 1], ['0vh', '-8vh']);
+  const panel = useTransform(approach, [0.35, 1], [0, 1]);
+  const clipPath = useTransform(panel, (v) =>
+    v >= 0.999
+      ? 'none'
+      : `inset(0 calc(var(--lp-panel-inset) * ${(1 - v).toFixed(3)}) 0 calc(var(--lp-panel-inset) * ${(1 - v).toFixed(3)}) round calc(var(--sp-radius-xl) * ${(1 - v).toFixed(3)}))`
+  );
+  const cardsRise = useTransform(approach, [0.15, 1], ['22vh', '0vh']);
+  const depthMain = useTransform(dwell, [0, 1], ['0vh', '-2vh']);
+  const depthSide = useTransform(dwell, [0, 1], ['0vh', '-7vh']);
+
+  // Live loop: only while the cards are on screen, the tab is visible and
+  // nobody is pointing at / focused in them.
+  const inView = useInView(cardsRef, { threshold: 0.25 });
+  const visible = usePageVisible();
+  const [held, setHeld] = useState(false);
+  const frame = useLoop(PORTFOLIO_FRAMES.length, INSIDE_TICK_MS, enhanced && inView === true && visible && !held);
+  usePointerGlow(stageRef, enhanced);
+
+  return (
+    <div className={pinned ? 'lp-opening lp-opening--pinned' : 'lp-opening'}>
+      <section className="lp-hero" id="top" aria-labelledby="lp-hero-title">
+        <motion.div className="lp-wrap lp-hero__inner" style={pinned ? { scale: heroScale, y: heroY } : undefined}>
+          <p className="lp-eyebrow lp-hero__eyebrow">
+            <span className="lp-eyebrow__dot" aria-hidden="true" />
+            {hero.eyebrow}
+          </p>
+          <h1 id="lp-hero-title" className="lp-hero__title">
+            {hero.lines.map((line, i) => (
+              <span key={line} className="lp-line" style={{ ['--lp-i' as string]: i }}>
+                <span className="lp-line__in">{i === hero.lines.length - 1 ? <em>{line}</em> : line}</span>
+                {i < hero.lines.length - 1 ? ' ' : null}
+              </span>
+            ))}
+          </h1>
+          <p className="lp-hero__lede">{hero.lede(brand.name)}</p>
+          <div className="lp-hero__cta">
+            <LaunchingSoon label={hero.status} />
+            <SeeHowItWorks />
+          </div>
+          <p className="lp-hero__meta">
+            {hero.meta.map((m, i) => (
+              <span key={m.strong}>
+                {i > 0 && (
+                  <span className="lp-hero__sep" aria-hidden="true">
+                    ·
+                  </span>
+                )}
+                <b>{m.strong}</b>
+                {m.rest}
+              </span>
+            ))}
+          </p>
+        </motion.div>
+      </section>
+
+      <section ref={insideRef} className="lp-inside" aria-label={inside.label(brand.name)}>
+        <div ref={stageRef} className="lp-inside__stage">
+          <motion.div className="lp-dark__bg" aria-hidden="true" style={enhanced ? { clipPath } : undefined} />
+          <span className="lp-glow" aria-hidden="true" />
+          <Surface kind="game" className="lp-wrap lp-inside__content" style={{ backgroundColor: 'transparent' }}>
+            <p className="lp-inside__label">
+              <span>{inside.label(brand.name)}</span>
+              <span className="lp-inside__dash" aria-hidden="true" />
+            </p>
+            <motion.div
+              ref={cardsRef}
+              className="lp-inside__cards"
+              style={pinned ? { y: cardsRise } : undefined}
+              onPointerEnter={() => setHeld(true)}
+              onPointerLeave={() => setHeld(false)}
+              onFocus={() => setHeld(true)}
+              onBlur={() => setHeld(false)}
+            >
+              <motion.div className="lp-inside__col" style={pinned ? { y: depthMain } : undefined}>
+                <PortfolioCard frame={frame} drawn={inView === true} />
+              </motion.div>
+              <motion.div className="lp-inside__col lp-inside__side" style={pinned ? { y: depthSide } : undefined}>
+                <MatchupCard frame={frame} />
+                <MoversCard frame={frame} />
+              </motion.div>
+            </motion.div>
+          </Surface>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+export default Opening;
