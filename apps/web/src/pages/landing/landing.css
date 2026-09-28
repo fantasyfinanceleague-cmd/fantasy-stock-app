@@ -647,7 +647,7 @@ body:has(> #root > .lp) {
   transition: opacity var(--sp-motion-duration-slow) var(--sp-motion-ease-settle);
 }
 
-[data-glow='true'] > .lp-glow {
+.lp [data-glow='true'] > .lp-glow {
   opacity: 1;
 }
 
