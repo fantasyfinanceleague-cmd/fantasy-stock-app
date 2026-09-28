@@ -5,9 +5,9 @@ import { fileURLToPath } from 'node:url';
 import { formatMoney } from '../../design/lib/money';
 import {
   BOARD_FRAMES,
-  CLIMB_FRAMES,
   DAILY_MOVES,
   DRAFT_PICKS,
+  LINEUPS,
   MATCHUP_FRAMES,
   MOVERS_FRAMES,
   PLAYERS,
@@ -126,9 +126,23 @@ describe('live frames are consistent', () => {
     expect(new Set(DRAFT_PICKS.map((p) => p.t)).size).toBe(DRAFT_PICKS.length);
   });
 
-  it('the climb: Roberto from 4th to 2nd, one more game played by everyone', () => {
-    expect(CLIMB_FRAMES[0].findIndex((r) => r.you)).toBe(3);
-    expect(CLIMB_FRAMES[1].findIndex((r) => r.you)).toBe(1);
+  it('the phone’s climb is the /02 board, live → FINAL: Roberto 2nd → 1st', () => {
+    const last = BOARD_FRAMES.length - 1;
+    expect(boardRanked(0).find((r) => r.id === 'roberto')!.rank).toBe(2);
+    expect(boardRanked(last).find((r) => r.id === 'roberto')!.rank).toBe(1);
+    expect(boardMoves(last, 0).roberto).toBe(1);
+  });
+
+  it('each lineup adds up to its side’s score (weights sum to 1)', () => {
+    for (const side of ['you', 'opp'] as const) {
+      expect(LINEUPS[side].reduce((a, h) => a + h.w, 0)).toBeCloseTo(1, 10);
+    }
+  });
+
+  it('the week has exactly one lead change to Roberto, which the chyron calls', () => {
+    const changes = WEEK_CLOSES.filter((d, i) => i > 0 && d.you > d.opp && WEEK_CLOSES[i - 1].you <= WEEK_CLOSES[i - 1].opp);
+    expect(changes).toHaveLength(1);
+    expect(LINEUPS.leadChangeCall).toMatch(/Roberto B\. ahead/);
   });
 
   it('the "Real prices" bars are signed daily dollar moves summing to the week', () => {

@@ -177,11 +177,12 @@ export const boardRanked = (frame: number) => {
     .map((p, i) => ({ ...p, rank: i + 1, pct: pct[p.id], rec: rec[p.id] }));
 };
 
-/** Rank change per player from the previous frame (positive = moved up).
- * Frame 0 is the loop's restart, so it names no moves. */
-export const boardMoves = (frame: number): Record<string, number> => {
-  if (frame === 0) return {};
-  const before = Object.fromEntries(boardRanked(frame - 1).map((r) => [r.id, r.rank]));
+/** Rank change per player from frame `from` (default: the previous frame)
+ * to `frame`; positive = moved up. Frame 0 with no earlier frame is the
+ * loop's restart, so it names no moves. */
+export const boardMoves = (frame: number, from = frame - 1): Record<string, number> => {
+  if (from < 0) return {};
+  const before = Object.fromEntries(boardRanked(from).map((r) => [r.id, r.rank]));
   const out: Record<string, number> = {};
   for (const r of boardRanked(frame)) if (before[r.id] !== r.rank) out[r.id] = before[r.id] - r.rank;
   return out;
@@ -215,21 +216,28 @@ export const WEEK_CLOSES: ReadonlyArray<{ day: string; you: number; opp: number 
   { day: 'Fri', you: 351.8, opp: -40.25 },
 ];
 
-/** Climb: Roberto's row rising 4th → 2nd after two wins. */
-export const CLIMB_FRAMES: ReadonlyArray<ReadonlyArray<{ id: string; name: string; rec: string; you?: boolean }>> = [
-  [
-    { id: 'paolo', name: 'Paolo M.', rec: '3–0' },
-    { id: 'alessandro', name: 'Alessandro D.', rec: '2–1' },
-    { id: 'francesco', name: 'Francesco T.', rec: '2–1' },
-    { id: 'roberto', name: 'Roberto B.', rec: '2–1', you: true },
+/** Draft: the six roster spots the snake fills (rounds 1–6); the phone
+ * shows the first two filling. */
+export const ROSTER_SLOTS = ['Rd 1', 'Rd 2', 'Rd 3', 'Rd 4', 'Rd 5', 'Rd 6'] as const;
+
+/** Compete: each side's lineup as shares of that side's dollar gain (the
+ * weights sum to 1, so the lineup always adds up to the score), and the
+ * lead-change call. Roberto's are his drafted picks. */
+export const LINEUPS = {
+  you: [
+    { t: 'NVDA', w: 0.52 },
+    { t: 'AAPL', w: 0.31 },
+    { t: 'CRM', w: 0.24 },
+    { t: 'TSLA', w: -0.07 },
   ],
-  [
-    { id: 'paolo', name: 'Paolo M.', rec: '4–0' },
-    { id: 'roberto', name: 'Roberto B.', rec: '3–1', you: true },
-    { id: 'alessandro', name: 'Alessandro D.', rec: '2–2' },
-    { id: 'francesco', name: 'Francesco T.', rec: '2–2' },
+  opp: [
+    { t: 'AMZN', w: 0.58 },
+    { t: 'JPM', w: 0.47 },
+    { t: 'DIS', w: 0.13 },
+    { t: 'NKE', w: -0.18 },
   ],
-];
+  leadChangeCall: 'NVDA +4.1% puts Roberto B. ahead',
+} as const;
 
 // ── /03 Why: "Real prices." bars — data, not decoration ─────────────────
 /** Roberto's Week 6 portfolio, dollar change per day (M–F as on the old
