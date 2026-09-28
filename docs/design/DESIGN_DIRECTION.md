@@ -57,7 +57,7 @@ Everything else in this document applies whichever direction wins.
 
 All three use the same product facts. Matchups are won on **dollar gain**
 (percent is only the tiebreak; `process-week-results/index.ts:1188`,
-`:1245`), so every matchup leads with dollars. Every data colour passes WCAG AA
+`:1245`), so every matchup leads with dollars. **Copy stays generic** ("best performance wins"), because stake modes vary capital per player; data displays show the scorer's metric via one helper (Giorgio, 2026-09-27). Every data colour passes WCAG AA
 (4.5:1) on its own background; the ratios are measured and printed on the board.
 
 ### A. Ledger (light, calm fintech)

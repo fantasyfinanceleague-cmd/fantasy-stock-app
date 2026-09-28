@@ -54,6 +54,16 @@ DESIGN_DIRECTION §7, with #9–#11 added here.
 
 ## Shared rules for every Phase 3 worker
 
+- **Generic scoring copy (Giorgio, 2026-09-27).** Rules, marketing, onboarding,
+  empty-state and help copy must hold for **any league setting** (stake modes
+  change how much capital each player puts to work, so dollar and percent can
+  rank players differently). Say "**best performance** wins the matchup", not
+  "best return" or "biggest dollar gain". **Data displays** (scoreboards, lead
+  lines, standings) show the metric the scorer actually uses, today dollar
+  gain with percent as tiebreak, through **one shared score-display helper**,
+  so a future scoring change is a one-place edit. Never hard-code "$" scoring
+  language in prose.
+
 - The charter's UI worker contract applies verbatim (branch from `origin/main`,
   `git branch --show-current` before commits, no push/merge/deploy, report
   PLAN → wait for "go" → DONE/BLOCKED to **both** `Orchestrator` and

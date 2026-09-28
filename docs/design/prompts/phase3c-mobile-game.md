@@ -30,8 +30,10 @@ All on `Surface kind="game"` unless noted.
 
 1. **Matchup tab**
    - **Scoreboard** (foundation `Scoreboard`): league + week, "LIVE" /
-     "FINAL" tag, both **display names** (ask #2), both dollar gains
-     (`type.score.xl`), the TugBar, "You lead by $X", time to Friday close.
+     "FINAL" tag, both **display names** (ask #2), both scores in the
+     **scorer's metric** (today dollar gain, percent as tiebreak) via one shared
+     score-display helper (`type.score.xl`), the TugBar, the lead line, time to
+     Friday close.
    - **Lineups:** two columns (you / opponent) of holdings with dollar and percent
      change; tapping a ticker opens the 3e stock sheet (a stub until 3e merges).
    - **Lead-change Chyron:** when the leader flips (client-side, comparing
