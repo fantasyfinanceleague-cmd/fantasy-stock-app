@@ -17,6 +17,10 @@
 @font-face {
   font-family: 'Archivo Fallback';
   src: local('Arial'), local('ArialMT'), local('Helvetica'), local('Roboto');
+  /* Local faces default to font-display: auto, which can BLOCK text while
+     a cold browser looks the local font up — seen as a 485-millisecond FCP in a
+     Lighthouse run. A fallback must never hold text back. */
+  font-display: swap;
   /* Archivo 400 vs Arial, 100px sample sentence: 5732.8 / 5851.8 px. */
   size-adjust: 98%;
   ascent-override: 89.8%;
@@ -29,6 +33,7 @@
   src: local('Arial Narrow Bold'), local('ArialNarrow-Bold'), local('Arial Narrow'), local('ArialNarrow'),
     local('Roboto Condensed Bold'), local('RobotoCondensed-Bold');
   font-weight: 900;
+  font-display: swap;
   /* Archivo wdth 62 / 900 vs Arial Narrow Bold: 2740.6 / 3075.4 px. */
   size-adjust: 89.1%;
   ascent-override: 98.8%;
