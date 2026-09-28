@@ -1499,6 +1499,11 @@ body:has(> #root > .lp) {
   stroke: var(--sp-color-live);
 }
 
+/* All picks in: a complete ring. */
+.lp-clock__arc--done {
+  stroke: var(--sp-color-data-gain-on-game);
+}
+
 .lp-clock__txt {
   display: grid;
   gap: var(--sp-space-1);

@@ -100,12 +100,12 @@ export function DraftScreen({ picks, clock }: { picks: number; clock: number }) 
         <svg className="lp-clock__ring" viewBox="0 0 44 44" aria-hidden="true">
           <circle className="lp-clock__track" cx="22" cy="22" r="19" />
           <circle
-            className={yourTurn ? 'lp-clock__arc lp-clock__arc--you' : 'lp-clock__arc'}
+            className={done ? 'lp-clock__arc lp-clock__arc--done' : yourTurn ? 'lp-clock__arc lp-clock__arc--you' : 'lp-clock__arc'}
             cx="22"
             cy="22"
             r="19"
             pathLength={1}
-            strokeDasharray={`${(done ? 0 : 1 - clock).toFixed(3)} 1`}
+            strokeDasharray={`${(done ? 1 : 1 - clock).toFixed(3)} 1`}
           />
         </svg>
         <span className="lp-clock__txt">
