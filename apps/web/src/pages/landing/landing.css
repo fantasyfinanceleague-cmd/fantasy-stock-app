@@ -187,11 +187,10 @@ body:has(> #root > .lp) {
   scroll-margin-top: calc(var(--lp-top) + var(--sp-space-5));
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  html:has(> body > #root > .lp) {
-    scroll-behavior: smooth;
-  }
-}
+/* Smooth anchor scrolling is done in JS (LandingPage.tsx), not with CSS
+   scroll-behavior: in iOS Safari a CSS-smooth load-time fragment jump
+   raced the post-hydration layout and landed deep links in the wrong
+   place. */
 
 /* ── Nav + chapter progress ──────────────────────────────────────────── */
 .lp-nav {
@@ -1118,6 +1117,32 @@ body:has(> #root > .lp) {
 .lp-num {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+/* A money (white) card nested inside a navy stage takes the money colours
+   back: the on-navy rules above match any descendant of a game surface,
+   so without these the portfolio card's gain text and label rendered in
+   the light-on-dark tokens on white (caught by the AA scan, round 3).
+   Same specificity, later in the sheet, so these win. */
+.sp-surface--money .lp-card__lbl {
+  color: var(--sp-color-text-secondary);
+}
+
+.sp-surface--money .lp-delta--gain {
+  color: var(--sp-color-data-gain-base);
+}
+
+.sp-surface--money .lp-delta--loss {
+  color: var(--sp-color-data-loss-base);
+}
+
+.sp-surface--money .lp-live {
+  background-color: var(--sp-color-surface-money-sunken);
+  color: var(--sp-color-text-primary);
+}
+
+.sp-surface--money .lp-live__dot {
+  background-color: var(--sp-color-data-gain-base);
 }
 
 /* ── /01 How it works: the phone chapter ─────────────────────────────── */
