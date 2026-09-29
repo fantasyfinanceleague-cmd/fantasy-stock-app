@@ -82,13 +82,14 @@ export async function updateJobStatus(
 }
 
 /**
- * Suffix for season transitions (playoff seeding / non-playoff completion)
- * refused because the unified standings rank could not be read. Empty when
- * none were refused, so a clean run's message is unchanged.
+ * Suffix for season transitions (playoff seeding / non-playoff completion) that
+ * were refused (standings rank unreadable: retried next run) or left an
+ * incomplete bracket (manual repair). Empty when there were none, so a clean
+ * run's message is unchanged.
  */
 function transitionsSuffix(transitionsRefused: number): string {
   return transitionsRefused > 0
-    ? `; ${transitionsRefused} season transitions refused (standings rank unavailable, retried next run)`
+    ? `; ${transitionsRefused} season transitions refused or incomplete (see skipped[])`
     : '';
 }
 

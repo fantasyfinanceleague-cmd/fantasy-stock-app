@@ -446,7 +446,17 @@ async function transitionAfterRegularSeason(
       return { ok: false, reason: `playoff transition write failed: ${statusErr.message ?? JSON.stringify(statusErr)}` };
     }
     console.log(`League ${leagueId} transitioning to playoffs`);
-    await generatePlayoffs(supabase, leagueId, numWeeks + 1, seeding.seeds);
+    const bracket = await generatePlayoffs(supabase, leagueId, numWeeks + 1, seeding.seeds);
+    if (bracket.failed > 0) {
+      // Pre-existing hazard, now surfaced: the status flip above already landed,
+      // so the heal pass (which needs 'active') cannot retry this. Report it in
+      // skipped[] / the job status instead of a log line nobody reads.
+      return {
+        ok: false,
+        reason: `bracket_incomplete: ${bracket.failed} of ${bracket.attempted} playoff matchups ` +
+          `failed to insert; league is already in playoffs, needs manual repair`,
+      };
+    }
     return { ok: true };
   }
 
@@ -468,14 +478,16 @@ async function transitionAfterRegularSeason(
 
 /**
  * Generate the playoff bracket from seeds already decided by
- * transitionAfterRegularSeason (seed = unified standings rank).
+ * transitionAfterRegularSeason (seed = unified standings rank). Returns how many
+ * bracket rows it attempted and how many failed, so the caller can surface an
+ * incomplete bracket. A throw counts every row as failed.
  */
 async function generatePlayoffs(
   supabase: any,
   leagueId: string,
   startWeek: number,
   seededTeams: Array<{ user_id: string; seed: number }>
-) {
+): Promise<{ attempted: number; failed: number }> {
   const playoffTeams = seededTeams.length;
   console.log(`Generating playoffs for league ${leagueId} with ${playoffTeams} teams`);
 
@@ -496,6 +508,7 @@ async function generatePlayoffs(
 
     // Generate bracket based on number of teams
     const bracketMatchups = generateBracket(seededTeams, playoffStartDate, startWeek, playoffTeams);
+    let failed = bracketMatchups.length === 0 ? 1 : 0; // an unsupported size builds nothing
 
     // Insert playoff matchups
     for (const m of bracketMatchups) {
@@ -516,12 +529,15 @@ async function generatePlayoffs(
 
       if (error) {
         console.error('Failed to insert playoff matchup:', error);
+        failed++;
       }
     }
 
-    console.log(`Created ${bracketMatchups.length} playoff matchups`);
+    console.log(`Created ${bracketMatchups.length - failed} of ${bracketMatchups.length} playoff matchups`);
+    return { attempted: Math.max(bracketMatchups.length, 1), failed };
   } catch (e) {
     console.error('Error generating playoffs:', e);
+    return { attempted: playoffTeams, failed: playoffTeams };
   }
 }
 
