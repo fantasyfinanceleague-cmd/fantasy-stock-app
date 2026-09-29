@@ -73,6 +73,7 @@ export type StartBlockerCode =
   | 'no_draft_date'
   | 'draft_date_not_reached'
   | 'not_enough_members'
+  | 'invalid_playoff_teams'
   | 'playoff_teams_exceeds_members';
 
 export interface StartBlocker {
@@ -81,7 +82,7 @@ export interface StartBlocker {
   draftDate?: string;
   have?: number;
   need?: number;
-  playoffTeams?: number;
+  playoffTeams?: number | null;
   members?: number;
 }
 
@@ -108,6 +109,8 @@ export function describeStartBlocker(b: StartBlocker): string {
       const more = Math.max(need - have, 0);
       return `Need ${more} more member${more === 1 ? '' : 's'} to start (have ${have}, need ${need}).`;
     }
+    case 'invalid_playoff_teams':
+      return 'Set how many teams make the playoffs before starting.';
     case 'playoff_teams_exceeds_members': {
       // Playoff spots are fixed at league creation (read-only in League
       // Settings), so the fix is reaching that many managers.

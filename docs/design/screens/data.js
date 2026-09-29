@@ -294,7 +294,7 @@
   // 2026-09-29). Other leagues live only in the pill ("+N") → league sheet.
   const OTHER_LEAGUES = [
     { name: 'Friday Night Stocks', phase: 'live_open', status: 'Week 2 · Live', rank: '3rd of 8', record: '1–0' },
-    { name: 'Serie A Traders', phase: 'pre_draft', status: 'Draft Sat 7:00 PM', rank: null, record: null },
+    { name: 'Serie A Traders', phase: 'pre_draft', status: 'Draft Sat 7:00 PM ET', rank: null, record: null },
   ];
 
   // Home chart: this league's cumulative gain since the draft (value − cost
@@ -364,8 +364,8 @@
     // source per sale with unspent proceeds.
     const v = PORTFOLIO_LIVE.rows.find((x) => x.t === 'V');
     const sources = [
-      { symbol: r.t, amount: r.value, when: 'Thu 1:38 PM' },
-      { symbol: 'V', amount: cents(v.qty * v.prev), when: 'Wed 3:58 PM' },
+      { symbol: r.t, amount: r.value, when: 'Thu 1:38 PM ET' },
+      { symbol: 'V', amount: cents(v.qty * v.prev), when: 'Wed 3:58 PM ET' },
     ];
     return { sold: r.t, proceeds: r.value, realized: cents(r.value - r.cost), buy, sources };
   })();
@@ -402,7 +402,7 @@
    * it). Never automatically commissioner-first. Order below = the revealed
    * random order. */
   const SERIE_A = {
-    name: 'Serie A Traders', draftAt: 'Sat 7:00 PM', revealAt: 'Sat 6:00 PM', rounds: 6,
+    name: 'Serie A Traders', draftAt: 'Sat 7:00 PM ET', revealAt: 'Sat 6:00 PM ET', rounds: 6,
     order: [
       { name: 'Marco R.', init: 'MR' }, { name: 'Luca C.', init: 'LC' }, { name: 'Atlas', init: 'AT', bot: true },
       { name: 'Roberto B.', init: 'RB', you: true, commish: true }, { name: 'Sofia F.', init: 'SF' },

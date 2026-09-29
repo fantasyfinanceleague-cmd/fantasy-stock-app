@@ -14,6 +14,10 @@
 
 You are the UI worker for **Phase 3b-1: the mobile app shell and first run**. Your branch is `ui/mobile-shell`. You report to `Orchestrator` and `Design Lead` via `SendMessage`.
 
+**The bar.** "Would this impress on first use next to Robinhood, Sleeper, Revolut or Arc?", not "is it correct". Correctness, honesty, tokens, contrast and Reduce Motion are **table stakes, not the goal**. Giorgio's brief is "cool animations and transitions", so the **signature moments** in the motion table are **required**, each with a Reduce Motion version and a recording. The Design Lead pushes back on timid work.
+
+**Copy.** Keep existing strings and Giorgio's copy **verbatim**. New copy comes from the board; propose other wording changes, don't make them.
+
 ## Read first
 
 - `CLAUDE.md`, especially:
@@ -67,16 +71,30 @@ You are the UI worker for **Phase 3b-1: the mobile app shell and first run**. Yo
 - Any new text-on-fill combination adds its pair to `constants/tokens/contrastPairs.ts` **and** tells the Design Lead, who adds it to the board's PAIRS. The two lists stay identical, and the contrast test must pass.
 - `--c-text-3` / `text3` is for disabled or decorative text only, never information.
 
-## Motion (tokens only; Reduce Motion rows are required)
+## Motion (tokens only; every row is required, with a Reduce Motion version)
+
+### Signature moments (the ambition bar; each needs its own recording)
+
+| # | Moment | Full | Reduce Motion |
+|---|---|---|---|
+| S1 | **Onboarding live vignettes** | Each card shows the product working, built on the board's three cards: (1) roster slots filling round by round; (2) the tug bar swinging through a lead change with the scores counting up (ScoreDigits roll) and a Chyron; (3) the FINAL chip landing and "You win Week 6" rising. Each vignette plays once per card focus, with no loops. Parallax only on **decorative** layers (frame, backdrop shapes at 0.2×/0.6×), never on data (§4). Cards slide + fade (`slow`, settle) with the dots stretching (`quick`). | Each vignette shows its final frame, still; cards crossfade `quick`; no parallax. |
+| S2 | **Tab bar sliding indicator** | A small accent pill under the active tab label springs between tabs (`spring.snappy`). The selected icon does a one-shot scale 1 → 1.12 → 1 (`quick`) as it goes outline → filled. Screens crossfade (`quick`). | The indicator jumps; no icon bounce; screens crossfade `quick` with no translation. |
+| S3 | **League sheet → pill shared element** | Picking a league flies its name from the sheet row into the header pill as the sheet closes (`spring.snappy`). The "+N" hint re-counts. On open, the rows spring in, staggered 30 ms, max 8. | The sheet fades out and the pill text swaps; rows appear together. |
+| S4 | **Auth brand moment** | On Sign in / Create account the three brand bars rise in sequence (`slow`, 60 ms stagger). A successful sign-in transitions into the app with a crossfade + a 0.96 → 1 scale-in of Home (`feature`), never a hard cut. | The bars are static; the transition is a `base` crossfade. |
+| S5 | **Custom pull-to-refresh** | The three brand bars rise with the pull distance (armed at the threshold with a light haptic), then pulse while a refresh is actually in flight (a progress indicator, not a decorative loop), replacing the default spinner. It follows the theme. iOS gets the full treatment; Android falls back to an accent-tinted RefreshControl. | A static bar icon with a text "Refreshing…" label. |
+| S6 | **Username check** | The field's trailing state animates checking (a 3-dot pulse) → available (a ✓ drawn with a stroke, gain colour, with a `spring.snappy` pop). **Taken/invalid appear instantly** (✗ in danger colour plus the message; §4: error states never animate, so no shake). The suggestions then stagger in (30 ms), which is the recovery path and allowed to move. | Instant swaps; suggestions appear together. |
+
+### Standard transitions
 
 | Moment | Full | Reduce Motion |
 |---|---|---|
-| Tab switch | crossfade, `quick`, settle | crossfade `quick`, no translation |
-| League sheet open/close | `spring.snappy`; backdrop fades `base` | fade in place |
 | Pressables | scale 0.98, `instant`, light haptic | no scale; haptic kept |
-| Onboarding advance | slide + fade, `slow`; dots stretch `quick` | crossfade |
-| League sheet groups | stagger 30 ms, max 8, `base` | appear together |
+| Sheets (any) | `spring.snappy`; backdrop fades `base` | fade in place |
 | Appearance change | the whole app crossfades, `base` | instant swap |
+| Button → loading → done (sign in, save) | label crossfades to a spinner, then a ✓ (`quick`) | instant swaps |
+| Error under a field | appears instantly, no fade or movement (§4: error states never animate) | same |
+
+Motion lives in `constants/tokens` and `useMotion()` only: no raw durations, easings or spring constants in screens (the foundation's lint/test covers this).
 
 ## Accessibility
 
@@ -94,7 +112,7 @@ You are the UI worker for **Phase 3b-1: the mobile app shell and first run**. Yo
 - **Captures, Light AND Dark at standard size:** every screen in the table (1–15), including the sign-ups-paused state, the username taken state, and the league sheet open with all three groups populated.
 - **Captures, accessibility-XL (Light + Dark):** Create account, Pick a username, League sheet, Profile, Appearance, Home with no leagues, and the tab bar.
 - **Smallest width:** the same XL set on the iPhone 17e.
-- **Recordings (Reduce Motion OFF and ON):** tab switch, sheet open/close, the onboarding advance, and Appearance changing System → Dark → Light **live**.
+- **Recordings, Reduce Motion OFF and ON, one per row:** S1 onboarding (all three vignettes plus the swipe between cards), S2 tab switching across all four tabs, S3 picking a league from the sheet (the name flying into the pill), S4 the auth brand moment and the sign-in → Home transition, S5 pull-to-refresh on Home, S6 the username check (checking → taken → pick a suggestion → available), plus Appearance changing System → Dark → Light **live**. Record at 60 fps on the simulator; the Design Lead reviews them frame by frame.
 - **Guard proof:** signed out, open `create-league`, `join-league` and `trade-history` deep links (`xcrun simctl openurl`). Each lands on sign-in and resumes after sign-in.
 - **Reachability list (the CLAUDE.md lesson):** for the league sheet, Create, Join, Profile and Appearance, who navigates there and under what condition. Nothing may be reachable only from an empty state.
 - **Copy audit:** a table of every visible string, marked *verbatim (existing)*, *verbatim (Giorgio)* or *new (board)*. No invented copy that isn't on the board.
@@ -109,19 +127,7 @@ The Design Lead compares the captures side by side with the board and approves o
 5. Username errors map to the server's outcomes; case-insensitive "taken" is proven with a capture (e.g. "Roberto" vs "roberto").
 6. The pill's "+N" appears on every league-scoped header; the sheet groups by phase; the active league persists across relaunch.
 7. The sign-ups-paused text is verbatim, through brand.name.
-8. Motion comes from tokens, and every Reduce Motion row is evidenced.
+8. **All six signature moments (S1–S6) are present, smooth (no dropped frames visible in the recordings) and on-brand**, each with its Reduce Motion version recorded. Motion comes from tokens only. A missing or timid signature moment is a DESIGN-CHANGES, not a nit.
 9. Signed-out deep links never render a context-dependent screen, and the target resumes after sign-in.
 
 Report your PLAN first and wait for "go".
-
-## Ambition bar (added 2026-09-27, after Giorgio called the first landing "still very basic")
-
-**The bar is "would this impress on first use next to Robinhood, Sleeper, Revolut or Arc?"**, not "is it correct". Performance, honesty, tokens and reduced motion are **table stakes, not the goal**. The Design Lead will push back on timid work. **Copy:** keep Giorgio's existing copy **verbatim** unless this prompt explicitly changes it; propose wording changes, don't make them.
-
-**Signature moments this phase must include** (each with its reduced-motion row and a recording):
-- **Onboarding with live vignettes:** each card shows the product working (a mini scoreboard counting up, a tug bar swinging on a lead change, a standings row climbing), not static text. Parallax layers between cards.
-- **Tab bar with a sliding active indicator** that springs between tabs, plus a small icon micro-animation on select.
-- **League sheet → pill shared element:** picking a league flies its name into the header pill as the sheet closes; the rows spring in, staggered.
-- **An animated brand moment on auth:** the refined bars rise on the login screen; signing in transitions into the app (crossfade + scale-in), not a hard cut.
-- **Custom pull-to-refresh** (bars rising) instead of the default spinner.
-- **The username availability check** animates its state (checking → available ✓ / taken ✗).

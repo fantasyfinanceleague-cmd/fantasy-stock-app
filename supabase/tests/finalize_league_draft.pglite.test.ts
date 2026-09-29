@@ -102,7 +102,7 @@ Deno.test({
       // fixture's member list is that order. finalize_league_draft checks it
       // against the member SET, so order-sensitivity lives in schedule.test.ts.
       const p = planSeason({ leagueType: l.league_type, order: members,
-        numWeeks: l.num_weeks, durationDays: l.duration_days, now });
+        numWeeks: l.num_weeks, durationDays: l.duration_days, playoffTeams: l.playoff_teams, now });
       if (!p.ok) throw new Error(p.reason);
       return p;
     }
@@ -140,6 +140,10 @@ Deno.test({
       assert(L.current_season_id !== null);
       assertEquals(new Date(L.league_start_date).toISOString(), p.leagueStart);
       assertEquals(new Date(L.league_end_date).toISOString(), p.leagueEnd);
+      // The stamped end covers the playoffs: playoff_teams defaults to 4, so
+      // W = 2 weeks past the last regular-season Friday (flexible playoffs).
+      const [last] = await q(`select max(week_end) e from matchups where league_id=$1 and not is_playoff`, [l.id]);
+      assertEquals(new Date(L.league_end_date).getTime() - new Date(last.e).getTime(), 14 * 24 * 3600 * 1000);
       const ids = await q(`select team1_user_id a, team2_user_id b from matchups where league_id=$1`, [l.id]);
       assert(ids.every((x: Row) => mem.includes(x.a) && mem.includes(x.b)), 'team ids are the exact roster strings');
       assertEquals(await finPlan(l, p), { status: 'already_finalized', matchups_inserted: 0, standings_inserted: 0, season_created: false });

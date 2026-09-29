@@ -190,3 +190,34 @@ It **cannot** prove the following (the file header lists them). The SQL-editor t
 
 Running it may rewrite `deno.lock` with unrelated npm workspace churn. Don't commit
 that as part of a test change.
+
+## flexible_playoffs.pglite.test.ts
+
+What it does:
+- Loads the prior definitions (`20261011000003` `start_league_playoffs`, the
+  `20261011000004` backstop index) on a replica of `leagues`/`matchups` with the
+  OLD `IN (2,4,8)` and 3-round CHECKs.
+- Inserts **legacy fixtures** (a finished 4-team bracket, an in-flight 8-team one,
+  NULL `playoff_teams`, live and finished leagues) **before** applying
+  `20261012000000`–`03` verbatim, so the backfills run against real legacy data.
+- Drives the function with brackets from the real `buildPlayoffBracket`, and
+  advances winners with the real `planAdvance` plus the same conditional,
+  addressed UPDATE `advancePlayoffWinner` issues.
+
+It covers:
+- bracket-address backfill (the in-flight 8-team bracket gets exactly
+  `planBracket`'s addresses), NULL → 4 on matchup leagues only, the new CHECKs,
+  and the `league_end_date` extension (live only; idempotent)
+- acceptance of the exact bracket for every P from 2 to 16 (byes pre-placed in
+  round 2), P below the member count, and P = 17 refused (`bracket_too_large`)
+- 20 shape refusals, each asserted to write nothing
+- a full tournament for every P: every slot is filled when its week starts,
+  nobody plays twice in a week, retries are no-ops, and there is one champion
+- the `playoff_teams` freeze, including the designed order (lower P while
+  `not_started`, then start) and the service-role exemption
+- `proacl` of the replaced function and the new trigger function
+
+`start_league_playoffs.pglite.test.ts` now loads the whole chain through
+`20261012000003`, so it tests the live definition. Its backstop steps test the
+address index that replaced it.
+

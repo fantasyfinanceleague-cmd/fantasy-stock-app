@@ -432,15 +432,6 @@ export function getWeekStatus(league: League | null, matchup: Matchup | null, no
   };
 }
 
-export function getPlayoffRoundLabel(round: string | null | undefined): string | null {
-  if (!round) return null;
-  const labels: Record<string, string> = {
-    quarter: 'Quarterfinals',
-    semi: 'Semifinals',
-    finals: 'Finals',
-  };
-  return labels[round] || round;
-}
 
 export function isWeekActive(matchup: Matchup | null): boolean {
   if (!matchup) return false;

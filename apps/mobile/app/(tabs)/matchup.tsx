@@ -16,6 +16,7 @@ import LeagueSwitcher from '@/components/LeagueSwitcher';
 import { getWeekStatus, isWeekActive as checkWeekActive, isPreSeasonPhase, getSeasonLabel, getUpcomingMatchupLabel, formatSignedCurrency } from '@/lib/weekStatus';
 import { isUuid } from '@/lib/uuid';
 import { getMatchupScreenState } from '@/lib/matchupScreenState';
+import { playoffRoundLabelForWeek } from '@/lib/playoffs';
 
 interface Matchup {
   id: string;
@@ -90,7 +91,12 @@ export default function MatchupScreen() {
   const [weekSnapshots, setWeekSnapshots] = useState<Record<string, { quantity: number; weekStartPrice: number }>>({});
   const [hasSnapshots, setHasSnapshots] = useState(false);
   const [profiles, setProfiles] = useState<Record<string, UserProfile>>({});
-  const [playoffRounds, setPlayoffRounds] = useState<Record<number, string>>({});
+  // Playoff rows' weeks + teams: the navigator's range, and whether a missing
+  // matchup in playoff week 1 is an earned BYE (the seed already sits in a
+  // week-2 game) or an elimination. Byes are not rows (flexible playoffs).
+  const [playoffRows, setPlayoffRows] = useState<
+    Array<{ week_number: number; team1_user_id: string | null; team2_user_id: string | null }>
+  >([]);
   const [lastMatchupWeek, setLastMatchupWeek] = useState(0);
   const [error, setError] = useState('');
 
@@ -218,19 +224,15 @@ export default function MatchupScreen() {
     setError('');
 
     try {
-      // Fetch playoff round mapping for WeekNavigator labels
+      // Playoff rows: the navigator's last week, and bye vs eliminated below.
       const { data: playoffMatchups } = await supabase
         .from('matchups')
-        .select('week_number, playoff_round')
+        .select('week_number, team1_user_id, team2_user_id')
         .eq('league_id', activeLeagueId)
         .eq('is_playoff', true);
 
       if (playoffMatchups && playoffMatchups.length > 0) {
-        const rounds: Record<number, string> = {};
-        playoffMatchups.forEach(m => {
-          if (m.playoff_round) rounds[m.week_number] = m.playoff_round;
-        });
-        setPlayoffRounds(rounds);
+        setPlayoffRows(playoffMatchups);
         setLastMatchupWeek(Math.max(...playoffMatchups.map(m => m.week_number)));
       } else {
         setLastMatchupWeek(activeLeague?.num_weeks || currentWeek);
@@ -632,7 +634,13 @@ export default function MatchupScreen() {
     const isSeasonDone = activeLeague?.season_status === 'completed';
     const isPlayoffs = activeLeague?.season_status === 'playoffs';
     const numWeeks = activeLeague?.num_weeks || 0;
-    const isEliminated = isPlayoffs && selectedWeek > numWeeks;
+    // A top seed with a first-round bye has no game in playoff week 1 but is
+    // already placed in a week-2 game. That is an auto-advance, not an exit.
+    const hasBye = isPlayoffs && selectedWeek === numWeeks + 1 && playoffRows.some(
+      (r) => r.week_number === numWeeks + 2 && (r.team1_user_id === user?.id || r.team2_user_id === user?.id)
+    );
+    const isEliminated = isPlayoffs && selectedWeek > numWeeks && !hasBye;
+    const nextRoundLabel = playoffRoundLabelForWeek(numWeeks + 2, numWeeks, activeLeague?.playoff_teams);
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <LeagueSwitcher />
@@ -644,17 +652,19 @@ export default function MatchupScreen() {
             maxWeek={lastMatchupWeek > 0 ? lastMatchupWeek : undefined}
             onWeekChange={setSelectedWeek}
             phase={weekStatus.phase}
-            playoffRoundForWeek={(week) => playoffRounds[week] || null}
+            playoffRoundForWeek={(week) => playoffRoundLabelForWeek(week, activeLeague?.num_weeks, activeLeague?.playoff_teams)}
           />
         </View>
         <View style={styles.centeredFlex}>
           <Text style={styles.emptyIcon}>{isSeasonDone ? '🏁' : isEliminated ? '🏁' : '📈'}</Text>
           <Text style={styles.emptyTitle}>
-            {isSeasonDone ? 'Season Complete' : 'No Matchup This Week'}
+            {isSeasonDone ? 'Season Complete' : hasBye ? 'First-Round Bye' : 'No Matchup This Week'}
           </Text>
           <Text style={styles.emptySubtitle}>
             {isSeasonDone
               ? 'The season has ended. Check the League tab for final standings.'
+              : hasBye
+              ? `You earned a bye as a top seed. You advance automatically${nextRoundLabel ? ` to the ${nextRoundLabel}` : ''} next week.`
               : isEliminated
               ? "You've been eliminated from playoff contention. Check the League tab to follow the remaining matchups."
               : `You don't have a matchup scheduled for Week ${selectedWeek}.`
@@ -726,7 +736,7 @@ export default function MatchupScreen() {
             maxWeek={lastMatchupWeek > 0 ? lastMatchupWeek : undefined}
             onWeekChange={setSelectedWeek}
             phase={weekStatus.phase}
-            playoffRoundForWeek={(week) => playoffRounds[week] || null}
+            playoffRoundForWeek={(week) => playoffRoundLabelForWeek(week, activeLeague?.num_weeks, activeLeague?.playoff_teams)}
           />
         </View>
 

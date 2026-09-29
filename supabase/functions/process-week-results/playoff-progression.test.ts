@@ -13,11 +13,15 @@
  * The `FIXED` prefix marks them as regression guards, not endorsements.
  */
 
-import { assertEquals } from 'jsr:@std/assert';
+import { assert, assertEquals, assertThrows } from 'jsr:@std/assert';
+import { planBracket, playoffShape } from '../_shared/playoff-bracket.ts';
 import {
   decideMatchupOutcome,
   willAdvanceWinner,
-  nextRoundOf,
+  planAdvance,
+  isScoreableNow,
+  findMissedAdvances,
+  type PlayoffRowState,
   winnerSeedForAdvance,
   resolveBySeed,
   standingsIncrements,
@@ -211,15 +215,109 @@ Deno.test('negative gains compare correctly — losing least wins', () => {
 });
 
 // ===========================================================================
-// Round chaining
+// DEFECT 3 — advancement by ADDRESS, not "first empty slot"
 // ===========================================================================
 
-Deno.test('rounds chain quarter -> semi -> finals, and finals terminates', () => {
-  assertEquals(nextRoundOf('quarter'), 'semi');
-  assertEquals(nextRoundOf('semi'), 'finals');
-  assertEquals(nextRoundOf('finals'), null);
-  assertEquals(nextRoundOf(null), null);
-  assertEquals(nextRoundOf(undefined), null);
+Deno.test('FIXED 3: a winner goes to (round+1, floor(pos/2)), slot by parity, with its own seed', () => {
+  const row = (roundNumber: number, position: number) =>
+    ({ roundNumber, position, team1UserId: 'hi', team2UserId: 'lo', team1Seed: 3, team2Seed: 6 });
+  assertEquals(planAdvance(row(1, 2), 'hi', 3), { kind: 'advance', round: 2, position: 1, slot: 'team1', userId: 'hi', seed: 3 });
+  assertEquals(planAdvance(row(1, 3), 'lo', 3), { kind: 'advance', round: 2, position: 1, slot: 'team2', userId: 'lo', seed: 6 });
+  assertEquals(planAdvance(row(2, 1), 'lo', 3), { kind: 'advance', round: 3, position: 0, slot: 'team2', userId: 'lo', seed: 6 });
+  assertEquals(planAdvance(row(3, 0), 'hi', 3), { kind: 'final' });
+  assertEquals(planAdvance(row(1, 0), 'hi', 1), { kind: 'final' }, 'P=2: round 1 is the final');
+  assertThrows(() => planAdvance(row(1, 4), 'hi', 3), RangeError);
+});
+
+Deno.test("FIXED 3: P=6 — W(4v5) meets seed 1 and W(3v6) meets seed 2, in whatever order they're scored", () => {
+  // The old fill put the first-processed winner into the first empty slot of
+  // any semi, so 3v6's winner could meet seed 1. planAdvance has no order input.
+  const plan = planBracket(6);
+  const r1 = plan.filter((g) => g.round === 1); // #1 4v5, #2 3v6
+  const target = (pos: number) => {
+    const a = planAdvance({ roundNumber: 1, position: pos, team1UserId: 'x', team2UserId: 'y', team1Seed: 0, team2Seed: 0 }, 'x', 3);
+    assert(a.kind === 'advance');
+    return [a.round, a.position, a.slot];
+  };
+  assertEquals(r1.map((g) => g.position), [1, 2]);
+  assertEquals(target(1), [2, 0, 'team2']); // semi #0: seed 1 (team1) vs W(4v5)
+  assertEquals(target(2), [2, 1, 'team1']); // semi #1: W(3v6) vs seed 2 (team2)
+});
+
+// ===========================================================================
+// DEFECT 4 — a half-filled playoff row is awaiting, never a walkover
+// ===========================================================================
+
+Deno.test('FIXED 4: a playoff row needs both teams to be scored; a regular bye does not', () => {
+  assertEquals(isScoreableNow({ is_playoff: true, team1_user_id: 'seed1', team2_user_id: null }), false);
+  assertEquals(isScoreableNow({ is_playoff: true, team1_user_id: null, team2_user_id: 'seed2' }), false);
+  assertEquals(isScoreableNow({ is_playoff: true, team1_user_id: null, team2_user_id: null }), false);
+  assertEquals(isScoreableNow({ is_playoff: true, team1_user_id: 'a', team2_user_id: 'b' }), true);
+  assertEquals(isScoreableNow({ is_playoff: false, team1_user_id: 'a', team2_user_id: null }), true, 'regular bye');
+  assertEquals(isScoreableNow({ is_playoff: null, team1_user_id: 'a', team2_user_id: 'b' }), true);
+  assertEquals(isScoreableNow({ is_playoff: false, team1_user_id: null, team2_user_id: 'b' }), false);
+});
+
+// ===========================================================================
+// The missed-advance heal
+// ===========================================================================
+
+/** A P-team bracket's rows with seed user ids 'sN', as start_league_playoffs inserts them. */
+function bracketRows(p: number): PlayoffRowState[] {
+  return planBracket(p).map((g, i) => ({
+    id: `m${i}`,
+    roundNumber: g.round,
+    position: g.position,
+    team1UserId: g.team1.kind === 'seed' ? `s${g.team1.seed}` : null,
+    team2UserId: g.team2.kind === 'seed' ? `s${g.team2.seed}` : null,
+    team1Seed: g.team1.kind === 'seed' ? g.team1.seed : null,
+    team2Seed: g.team2.kind === 'seed' ? g.team2.seed : null,
+    scored: false,
+    winnerUserId: null,
+  }));
+}
+const at = (rows: PlayoffRowState[], round: number, position: number) =>
+  rows.find((r) => r.roundNumber === round && r.position === position)!;
+
+Deno.test('heal: a fresh bracket, and one whose advances all landed, need nothing', () => {
+  for (let p = 2; p <= 16; p++) {
+    assertEquals(findMissedAdvances(bracketRows(p), playoffShape(p).weeks), { advances: [], conflicts: [] }, `P=${p}`);
+  }
+  const rows = bracketRows(6);
+  Object.assign(at(rows, 1, 1), { scored: true, winnerUserId: 's5' });
+  Object.assign(at(rows, 2, 0), { team2UserId: 's5', team2Seed: 5 }); // the advance landed
+  assertEquals(findMissedAdvances(rows, 3), { advances: [], conflicts: [] });
+});
+
+Deno.test('heal: a scored game whose winner never reached its slot is re-advanced, per game', () => {
+  const rows = bracketRows(6);
+  Object.assign(at(rows, 1, 1), { scored: true, winnerUserId: 's5' }); // landed
+  Object.assign(at(rows, 2, 0), { team2UserId: 's5', team2Seed: 5 });
+  Object.assign(at(rows, 1, 2), { scored: true, winnerUserId: 's3' }); // did NOT land
+  const { advances, conflicts } = findMissedAdvances(rows, 3);
+  assertEquals(conflicts, []);
+  assertEquals(advances, [{ fromId: at(rows, 1, 2).id, plan: { kind: 'advance', round: 2, position: 1, slot: 'team1', userId: 's3', seed: 3 } }]);
+});
+
+Deno.test('heal: a slot held by someone else, a missing target, or a winnerless scored game is reported, never overwritten', () => {
+  const rows = bracketRows(4);
+  Object.assign(at(rows, 1, 0), { scored: true, winnerUserId: 's1' });
+  Object.assign(at(rows, 2, 0), { team1UserId: 's3', team1Seed: 3 }); // wrong occupant
+  Object.assign(at(rows, 1, 1), { scored: true, winnerUserId: null });
+  let r = findMissedAdvances(rows, 2);
+  assertEquals(r.advances, []);
+  assertEquals(r.conflicts.map((c) => c.reason).sort(), ['playoff_game_scored_without_winner', 'playoff_slot_taken: round 2 position 0 team1']);
+
+  const noFinal = bracketRows(4).filter((x) => x.roundNumber === 1);
+  Object.assign(noFinal[0], { scored: true, winnerUserId: 's1' });
+  r = findMissedAdvances(noFinal, 2);
+  assertEquals(r.conflicts.map((c) => c.reason), ['playoff_target_missing: round 2 position 0']);
+});
+
+Deno.test('heal: the scored final needs no advance; unscored placeholders are ignored', () => {
+  const rows = bracketRows(2);
+  Object.assign(rows[0], { scored: true, winnerUserId: 's2' });
+  assertEquals(findMissedAdvances(rows, 1), { advances: [], conflicts: [] });
 });
 
 // ===========================================================================

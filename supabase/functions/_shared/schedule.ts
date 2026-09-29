@@ -33,6 +33,7 @@
  * before the stored order existed were backfilled with the old derived order
  * (commissioner first, rest sorted), so their schedules are unchanged.
  */
+import { isValidPlayoffTeams, playoffShape } from './playoff-bracket.ts';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const OPEN_H = 14, OPEN_M = 30; // 9:30 ET (EST) as fixed UTC
@@ -54,7 +55,8 @@ export interface MatchupRow {
 export interface SeasonInput {
   leagueType: string; // leagues.league_type: 'matchup' | 'duration'
   order: string[]; // the stored draft order (league_draft_order), a permutation of the members
-  numWeeks: number | null; // leagues.num_weeks
+  numWeeks: number | null; // leagues.num_weeks (REGULAR-season weeks only)
+  playoffTeams: number | null; // leagues.playoff_teams (matchup leagues; ignored for duration)
   durationDays: number | null; // leagues.duration_days
   now: Date; // draft-completion instant
 }
@@ -64,10 +66,14 @@ export type SeasonPlan =
     ok: true;
     roster: string[]; // canonical order
     leagueStart: string; // ISO
-    leagueEnd: string; // ISO
-    matchups: MatchupRow[]; // [] for duration leagues
+    leagueEnd: string; // ISO — for matchup leagues, the end of the LAST PLAYOFF week
+    playoffWeeks: number; // W = ceil(log2 playoff_teams); 0 for duration leagues
+    matchups: MatchupRow[]; // [] for duration leagues; regular season only
   }
-  | { ok: false; reason: 'no_members' | 'too_few_members' | 'invalid_num_weeks' | 'unknown_league_type' };
+  | {
+    ok: false;
+    reason: 'no_members' | 'too_few_members' | 'invalid_num_weeks' | 'invalid_playoff_teams' | 'unknown_league_type';
+  };
 
 /** UTC midnight of `d`'s calendar day, as epoch ms. */
 function utcDay(d: Date): number {
@@ -128,8 +134,18 @@ export function roundRobinPairings(
 }
 
 /** Plan a league's season at draft completion (DraftPage completeDraft rules).
- *  - matchup:  round-robin schedule; league window = week 1 start .. last week end.
- *              num_weeks null/0 falls back to (members - 1), as the web did.
+ *  - matchup:  round-robin schedule for the regular season; league window =
+ *              week 1 start .. the end of the last PLAYOFF week, num_weeks + W
+ *              where W = ceil(log2 playoff_teams) (flexible playoffs, Giorgio
+ *              2026-09-29). Playoff weeks are consecutive Tue-Fri windows right
+ *              after the regular season, the same windows the bracket is dated
+ *              with when playoffs start. num_weeks null/0 falls back to
+ *              (members - 1), as the web did. num_weeks stays REGULAR weeks.
+ *              playoff_teams must be an integer >= 2 or the plan is refused:
+ *              there is no default (a NULL used to read as 4 downstream).
+ *              P <= member count is NOT checked here: draft-control enforces
+ *              it at draft start, and refusing now, after the last pick, would
+ *              strand a finished draft with no season.
  *  - duration: no matchups; next-day open .. +duration_days at market close. */
 export function planSeason(input: SeasonInput): SeasonPlan {
   const roster = [...new Set(input.order)];
@@ -139,7 +155,14 @@ export function planSeason(input: SeasonInput): SeasonPlan {
     const start = nextDayMarketOpen(input.now);
     const days = input.durationDays || DEFAULT_DURATION_DAYS;
     const end = marketCloseOn(new Date(start.getTime() + days * DAY_MS));
-    return { ok: true, roster, leagueStart: start.toISOString(), leagueEnd: end.toISOString(), matchups: [] };
+    return {
+      ok: true,
+      roster,
+      leagueStart: start.toISOString(),
+      leagueEnd: end.toISOString(),
+      playoffWeeks: 0,
+      matchups: [],
+    };
   }
 
   if (input.leagueType !== 'matchup') return { ok: false, reason: 'unknown_league_type' };
@@ -149,6 +172,8 @@ export function planSeason(input: SeasonInput): SeasonPlan {
 
   const numWeeks = input.numWeeks || roster.length - 1;
   if (!Number.isInteger(numWeeks) || numWeeks < 1) return { ok: false, reason: 'invalid_num_weeks' };
+  if (!isValidPlayoffTeams(input.playoffTeams)) return { ok: false, reason: 'invalid_playoff_teams' };
+  const playoffWeeks = playoffShape(input.playoffTeams).weeks;
 
   const matchups: MatchupRow[] = roundRobinPairings(roster, numWeeks).map((p) => {
     const w = weekWindow(input.now, p.week);
@@ -165,7 +190,8 @@ export function planSeason(input: SeasonInput): SeasonPlan {
     ok: true,
     roster,
     leagueStart: weekWindow(input.now, 1).start.toISOString(),
-    leagueEnd: weekWindow(input.now, numWeeks).end.toISOString(),
+    leagueEnd: weekWindow(input.now, numWeeks + playoffWeeks).end.toISOString(),
+    playoffWeeks,
     matchups,
   };
 }

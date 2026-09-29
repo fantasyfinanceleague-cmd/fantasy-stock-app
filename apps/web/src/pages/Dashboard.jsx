@@ -7,7 +7,7 @@ import { useAuthUser } from '../auth/useAuthUser';
 import { prettyName, formatUSD } from '../utils/formatting';
 import { fetchQuotesInBatch, fetchCompanyNamesInBatch } from '../utils/stockData';
 import { getHolidaysInRange } from '../utils/marketHolidays';
-import { getPlayoffRoundName } from '../utils/scheduleGenerator';
+import { playoffRoundLabelForWeek } from '../utils/playoffs';
 import { PageLoader } from '../components/LoadingSpinner';
 import { useUserProfiles } from '../context/UserProfilesContext';
 import EmptyState from '../components/EmptyState';
@@ -736,7 +736,7 @@ export default function Dashboard() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: isPlayoff ? '#fbbf24' : '#e5e7eb' }}>
                     {isPlayoff
-                      ? `🏆 ${getPlayoffRoundName(currentMatchup.playoff_round)}`
+                      ? `🏆 ${playoffRoundLabelForWeek(currentMatchup.week_number, activeLeague.num_weeks, activeLeague.playoff_teams) || 'Playoffs'}`
                       : `Week ${currentMatchup.week_number} Matchup`
                     }
                   </div>

@@ -81,6 +81,7 @@
             'After Friday\'s close the card shows "Scoring…" until the results post; nothing is presented as final before it is.',
           ]}>
           <Fit caption="Before the draft" note="Serie A Traders"><I.HomePreDraft /></Fit>
+          <Fit caption="Before the draft · waiting for managers" note="3 of 4 joined, so the order isn't set yet (new copy)"><I.HomePreDraft waiting /></Fit>
           <Fit caption="Draft in progress"><I.HomeDrafting /></Fit>
           <Fit caption="Before the season"><I.HomePreSeason /></Fit>
           <Fit caption="Market closed" note="Thursday night"><I.HomeClosed /></Fit>
@@ -95,7 +96,8 @@
             'An auto-pick is never hidden: a banner names who ran out of time and what was picked, the board cell gets an Auto badge, and the pick log says "Auto-picked · from his queue" or "Auto-picked · best available" (new copy). The rule is fixed, not a league setting: queue first, then best available, never random, never a skip.',
             'The draft recap lives under League › History after the draft: your picks ranked by how they have done since.',
             'Draft order is a league setting with two modes, and BOTH become final 1 hour before the draft: Random is drawn then; Manual can be arranged any time until then (if the commissioner never saves, the random starting order is used, never commissioner-first). The mode can be switched until then too. Anyone who joins after that picks last. (New copy.)',
-            'When the order is set, everyone gets a push ("Serie A Traders: The draft order is set. You pick 4th. The draft starts at 7:00 PM." / "The commissioner set the draft order…") and an in-app card, "Draft order set · 6:00 PM · You pick 4th, then 13th, 20th…", in the lobby and on the pre-draft Home. (New copy.)',
+            'The order is set at the LATER of 1 hour before the draft and the league reaching 4 managers (the minimum to draft). Until then Home and the lobby show "Draft order · waiting" with a 3-of-4 progress bar; Start draft stays disabled below 4 managers and offers the invite code. While a Manual order is unsaved, anyone who joins lands in a random slot (so the start stays fair); once it\'s saved or final, joiners go last. (New copy.)',
+            'When the order is set, everyone gets a push ("Serie A Traders: The draft order is set. You pick 4th. The draft starts at 7:00 PM ET." / "The commissioner set the draft order…") and an in-app card, "Draft order set · 6:00 PM ET · You pick 4th, then 13th, 20th…", in the lobby and on the pre-draft Home. (New copy.)',
             'Leaving is fine: "If you step away, we\'ll auto-pick from your queue when your time runs out. You can come back any time." There is no "don\'t leave" warning anywhere.',
             'Uneven byes get a short heads-up, never an explanation of how byes work, and never a block: on the weeks control in Create league / League settings (based on the expected size, and it says so), and on the commissioner\'s Start draft confirm (the count is final there). It only appears for an odd number of managers when the weeks don\'t divide evenly; with an even count there are no byes. Backend: byes per manager = floor or ceil(weeks / managers) when managers is odd.',
             <>A bye is no result: in the Season strip on Home it shows as a neutral <span className="ks-chip ks-chip--money" style={{ textTransform: 'none', letterSpacing: 0, fontStretch: '100%' }}>Bye</span> chip, never W or L, and it doesn't count toward win percentage. (Stock Scudetto has 6 managers, so it has no byes.)</>,
@@ -105,10 +107,12 @@
           ]}>
           <Fit caption="All matchups"><I.AllMatchups /></Fit>
           <Fit caption="Matchup before the season"><I.MatchupPreSeason /></Fit>
-          <Fit caption="Draft lobby · order revealed" note="After 6:00 PM: the full order, your slot, and the snake picks that follow (new copy)"><I.DraftLobby /></Fit>
+          <Fit caption="Draft lobby · order revealed" note="After 6:00 PM ET: the full order, your slot, and the snake picks that follow (new copy)"><I.DraftLobby /></Fit>
+          <Fit caption="Draft lobby · still waiting" note="Past 6:00 PM ET but only 3 of 4 managers: set as soon as one more joins (new copy)"><I.DraftLobby waiting /></Fit>
+          <Fit caption="Start the draft · not enough managers" note="Needs 4; invite one more (new copy)"><I.StartDraftConfirm managers={3} /></Fit>
           <Fit caption="Arrange order (commissioner, Manual)" note="Drag to reorder; starts from a random order, never commissioner-first; set by 1 hour before the draft (new copy)"><I.ArrangeOrder /></Fit>
-          <Fit caption="Draft order · final" note="After 6:00 PM: read-only; late joiners pick last (new copy)"><I.ArrangeOrder locked /></Fit>
-          <Fit caption="Push · draft order set (random)" note="At 6:00 PM in either mode, plus an in-app card (new copy)"><I.OrderPush /></Fit>
+          <Fit caption="Draft order · final" note="After 6:00 PM ET: read-only; late joiners pick last (new copy)"><I.ArrangeOrder locked /></Fit>
+          <Fit caption="Push · draft order set (random)" note="At 6:00 PM ET in either mode, plus an in-app card (new copy)"><I.OrderPush /></Fit>
           <Fit caption="Push · draft order set (manual)"><I.OrderPush mode="manual" /></Fit>
           <Fit caption="Start the draft (commissioner)" note="Office League: 7 managers, 10 weeks, so the uneven-bye heads-up shows (new copy)"><I.StartDraftConfirm /></Fit>
           <Fit caption="Start the draft · too many playoff teams" note="7 playoff teams, 6 managers: fix it right here; Start stays disabled until it fits (new copy)"><I.StartDraftConfirm managers={6} playoff={7} /></Fit>
