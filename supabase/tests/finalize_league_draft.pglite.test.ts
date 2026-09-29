@@ -98,7 +98,10 @@ Deno.test({
       return l;
     }
     function payload(l: Row, members: string[], now = NOW) {
-      const p = planSeason({ leagueType: l.league_type, commissionerId: l.commissioner_id, memberIds: members,
+      // The stored draft order is the season roster (20261013000000); here the
+      // fixture's member list is that order. finalize_league_draft checks it
+      // against the member SET, so order-sensitivity lives in schedule.test.ts.
+      const p = planSeason({ leagueType: l.league_type, order: members,
         numWeeks: l.num_weeks, durationDays: l.duration_days, now });
       if (!p.ok) throw new Error(p.reason);
       return p;
