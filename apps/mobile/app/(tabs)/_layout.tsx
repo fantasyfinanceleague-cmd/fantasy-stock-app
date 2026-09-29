@@ -1,10 +1,9 @@
 import React from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { Tabs, Redirect } from 'expo-router';
+import { Tabs } from 'expo-router';
 import { StyleSheet } from 'react-native';
 import { Colors } from '@/constants/Colors';
-import { useAuth } from '@/lib/useAuth';
 
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof Ionicons>['name'];
@@ -14,18 +13,8 @@ function TabBarIcon(props: {
 }
 
 export default function TabLayout() {
-  const { user, loading } = useAuth();
-
-  // Don't render tabs while loading auth state
-  if (loading) {
-    return null;
-  }
-
-  // Redirect to login if not authenticated
-  if (!user) {
-    return <Redirect href="/login" />;
-  }
-
+  // No auth check here: the root Stack.Protected guard (app/_layout.tsx)
+  // removes (tabs) from the navigator entirely while signed out.
   return (
     <Tabs
       screenListeners={{
