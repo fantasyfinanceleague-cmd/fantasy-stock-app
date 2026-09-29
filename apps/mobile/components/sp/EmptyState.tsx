@@ -35,9 +35,17 @@ export interface EmptyStateProps {
   message: string;
   actionLabel?: string;
   onAction?: () => void;
+  /**
+   * Phase 3b-1: an optional second action (the board's "Check your email"
+   * and "Home with no leagues" both have two). With two actions, both render
+   * full-width and stacked, primary then secondary; a lone action keeps its
+   * original sized-to-label look (full-width only past FULL_WIDTH_FONT_SCALE).
+   */
+  secondaryActionLabel?: string;
+  onSecondaryAction?: () => void;
 }
 
-export function EmptyState({ icon: Icon, title, message, actionLabel, onAction }: EmptyStateProps) {
+export function EmptyState({ icon: Icon, title, message, actionLabel, onAction, secondaryActionLabel, onSecondaryAction }: EmptyStateProps) {
   const { colors } = useTheme();
   const { fontScale } = useWindowDimensions();
   const iconColor = colors.text2;
@@ -59,7 +67,12 @@ export function EmptyState({ icon: Icon, title, message, actionLabel, onAction }
       <Text variant="body" tone="secondary" style={styles.message}>
         {message}
       </Text>
-      {actionLabel && onAction ? (
+      {actionLabel && onAction && secondaryActionLabel && onSecondaryAction ? (
+        <View style={[styles.action, styles.actionStretched, styles.actionPair]}>
+          <Button label={actionLabel} onPress={onAction} />
+          <Button label={secondaryActionLabel} onPress={onSecondaryAction} variant="secondary" />
+        </View>
+      ) : actionLabel && onAction ? (
         <View style={[styles.action, stretched ? styles.actionStretched : null]}>
           <Button label={actionLabel} onPress={onAction} size="sm" fullWidth />
         </View>
@@ -94,5 +107,8 @@ const styles = StyleSheet.create({
   },
   actionStretched: {
     alignSelf: 'stretch',
+  },
+  actionPair: {
+    gap: space[4],
   },
 });

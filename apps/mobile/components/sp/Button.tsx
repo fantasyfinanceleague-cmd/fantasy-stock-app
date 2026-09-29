@@ -1,10 +1,17 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useEffect } from 'react';
+import { ActivityIndicator, StyleSheet, useWindowDimensions } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
 
 import { radius, space } from '@/constants/tokens';
 import { PressableScale, PressableScaleProps } from '@/components/sp/PressableScale';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
+import { useMotion } from '@/components/sp/motion';
+import { buttonStatusA11y, type ButtonStatus } from '@/components/sp/logic/buttonStatus';
+
+export type { ButtonStatus } from '@/components/sp/logic/buttonStatus';
 
 // Stockpile — <Button> (§9A, "One design, two themes", 2026-09-29). Every
 // variant reads the active theme's tokens directly — no more onGame variant
@@ -29,6 +36,13 @@ export type ButtonSize = 'md' | 'sm';
 
 export interface ButtonProps extends Omit<PressableScaleProps, 'children' | 'style'> {
   label: string;
+  /**
+   * idle → loading → done (Phase 3b-1). Loading shows a spinner and done a ✓
+   * in place of the label, which stays in layout (invisible) so the button
+   * never changes width. Loading announces "Loading" and ignores presses;
+   * the caller shows done for `duration.quick`, then proceeds.
+   */
+  status?: ButtonStatus;
   variant?: ButtonVariant;
   size?: ButtonSize;
   /** Goes full-width, but only once fontScale reaches FULL_WIDTH_FONT_SCALE — a lone primary action (e.g. EmptyState's CTA), not a general layout prop. */
@@ -41,10 +55,23 @@ const MIN_HEIGHT: Record<ButtonSize, number> = { md: 52, sm: 44 };
 const PADDING_X: Record<ButtonSize, number> = { md: space[6], sm: space[5] };
 const PADDING_Y: Record<ButtonSize, number> = { md: space[3], sm: space[2] };
 
-export function Button({ label, variant = 'primary', size = 'md', fullWidth = false, disabled, ...rest }: ButtonProps) {
+export function Button({ label, variant = 'primary', size = 'md', fullWidth = false, disabled, status = 'idle', ...rest }: ButtonProps) {
   const { colors } = useTheme();
   const { fontScale } = useWindowDimensions();
+  const { reduced, duration, easing } = useMotion();
   const stretched = fullWidth && fontScale >= FULL_WIDTH_FONT_SCALE;
+  const a11y = buttonStatusA11y(label, status, !!disabled);
+
+  // 0 = label, 1 = spinner, 2 = check. Each layer's opacity is derived from
+  // this one value so the swap is a single crossfade (instant under Reduce Motion).
+  const layer = useSharedValue(status === 'loading' ? 1 : status === 'done' ? 2 : 0);
+  useEffect(() => {
+    const target = status === 'loading' ? 1 : status === 'done' ? 2 : 0;
+    layer.value = reduced ? target : withTiming(target, { duration: duration.quick, easing: easing.settle });
+  }, [status, reduced, duration.quick, easing.settle, layer]);
+  const labelStyle = useAnimatedStyle(() => ({ opacity: Math.max(0, 1 - layer.value) }));
+  const spinnerStyle = useAnimatedStyle(() => ({ opacity: Math.max(0, 1 - Math.abs(layer.value - 1)) }));
+  const checkStyle = useAnimatedStyle(() => ({ opacity: Math.max(0, layer.value - 1) }));
 
   let backgroundColor: string | undefined;
   let textColor: string;
@@ -76,8 +103,9 @@ export function Button({ label, variant = 'primary', size = 'md', fullWidth = fa
   return (
     <PressableScale
       accessibilityRole="button"
-      accessibilityState={{ disabled: !!disabled }}
-      disabled={disabled}
+      accessibilityLabel={a11y.label}
+      accessibilityState={{ disabled: !!disabled, busy: a11y.busy }}
+      disabled={!a11y.pressable}
       style={[
         styles.base,
         {
@@ -94,7 +122,7 @@ export function Button({ label, variant = 'primary', size = 'md', fullWidth = fa
       ]}
       {...rest}
     >
-      <View style={styles.content}>
+      <Animated.View style={[styles.content, labelStyle]}>
         <Text
           variant={size === 'md' ? 'headline' : 'callout'}
           color={textColor}
@@ -104,7 +132,17 @@ export function Button({ label, variant = 'primary', size = 'md', fullWidth = fa
         >
           {label}
         </Text>
-      </View>
+      </Animated.View>
+      {status !== 'idle' ? (
+        <>
+          <Animated.View pointerEvents="none" style={[styles.overlay, spinnerStyle]}>
+            <ActivityIndicator color={textColor} />
+          </Animated.View>
+          <Animated.View pointerEvents="none" style={[styles.overlay, checkStyle]}>
+            <Ionicons name="checkmark" size={22} color={textColor} />
+          </Animated.View>
+        </>
+      ) : null}
     </PressableScale>
   );
 }
@@ -121,5 +159,10 @@ const styles = StyleSheet.create({
   },
   label: {
     textAlign: 'center',
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

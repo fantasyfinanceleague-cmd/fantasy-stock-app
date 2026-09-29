@@ -16,9 +16,24 @@
 import type { League } from '../LeagueContext';
 import type { SheetLeague } from './leagueSheet';
 
-export type ShellFixture = 'leagues' | 'no-leagues' | 'no-username';
+/**
+ * leagues      — signed in as roberto_b, in the board's four leagues
+ * no-leagues   — signed in, in no leagues
+ * no-username  — signed in with a NULL username (the Pick-a-username gate)
+ * signed-out   — starts signed out: any sign-in succeeds locally (into
+ *                `leagues`), and create-account gets the server's
+ *                signups-paused refusal, so every auth state can be captured
+ *                without typing a credential
+ */
+export type ShellFixture = 'leagues' | 'no-leagues' | 'no-username' | 'signed-out';
 
-const FIXTURES: readonly ShellFixture[] = ['leagues', 'no-leagues', 'no-username'];
+const FIXTURES: readonly ShellFixture[] = ['leagues', 'no-leagues', 'no-username', 'signed-out'];
+
+/** The Before User Created hook's refusal, as the fixture's sign-up returns it. */
+export const FIXTURE_SIGNUPS_PAUSED_MESSAGE = 'Sign-ups are not open for new signups right now.';
+
+/** Long enough to see a button's loading state in a capture. */
+export const FIXTURE_NETWORK_MS = 900;
 
 function parse(raw: string | undefined): ShellFixture | null {
   return raw && (FIXTURES as readonly string[]).includes(raw) ? (raw as ShellFixture) : null;

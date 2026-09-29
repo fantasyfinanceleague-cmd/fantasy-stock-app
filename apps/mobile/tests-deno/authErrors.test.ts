@@ -18,7 +18,7 @@
  * real call sites (login.tsx, reset-password.tsx) pass the real one.
  */
 import { assertEquals } from 'jsr:@std/assert';
-import { getAuthErrorMessage } from '../lib/authErrors.ts';
+import { getAuthErrorMessage, isSignupsPausedError } from '../lib/authErrors.ts';
 
 const RULE_SENTENCE_STANDIN = 'Use at least 8 characters, with an uppercase letter, a lowercase letter, a number, and a symbol.';
 
@@ -90,11 +90,24 @@ Deno.test('getAuthErrorMessage: rate limited', () => {
   );
 });
 
-Deno.test('getAuthErrorMessage: signups closed (message-only, no stable code for this one)', () => {
+Deno.test('getAuthErrorMessage: signups closed — Giorgio\'s final text, verbatim, through brand.name', () => {
+  // Phase 3b-1 spec row 3: "{brand.name} is not open for new signups yet —
+  // check back soon. Existing accounts can still sign in."
+  assertEquals(
+    getAuthErrorMessage({ message: 'Signups not open for new signups' }, undefined, 'Stockade'),
+    'Stockade is not open for new signups yet — check back soon. Existing accounts can still sign in.'
+  );
+  // No product name passed: a neutral subject, never a hard-coded brand.
   assertEquals(
     getAuthErrorMessage({ message: 'Signups not open for new signups' }),
-    'Stockpile isn\'t open for new signups yet — check back soon. Existing accounts can still sign in.'
+    'This app is not open for new signups yet — check back soon. Existing accounts can still sign in.'
   );
+});
+
+Deno.test('isSignupsPausedError: only the signup gate\'s refusal', () => {
+  assertEquals(isSignupsPausedError({ message: 'Sign-ups are not open for new signups right now' }), true);
+  assertEquals(isSignupsPausedError({ message: 'Invalid login credentials' }), false);
+  assertEquals(isSignupsPausedError(null), false);
 });
 
 Deno.test('getAuthErrorMessage: network failure (new case, no code — never reached the server)', () => {

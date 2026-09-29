@@ -10,7 +10,7 @@ import {
 import { Stack, router } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Linking from 'expo-linking';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -23,6 +23,8 @@ import { parseRecoveryLink } from '@/lib/recoveryLink';
 import { SessionProvider, useSession } from '@/lib/SessionProvider';
 import { pendingRoute, type AuthPhase } from '@/lib/shell/pendingRoute';
 import { ShellOverlayProvider } from '@/components/shell/ShellOverlay';
+import { useMotion } from '@/components/sp/motion';
+import { takeSignInIntent } from '@/lib/shell/signInTransition';
 import { ThemeProvider, useTheme } from '@/components/sp/ThemeProvider';
 
 export {
@@ -58,11 +60,20 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
   // is read. Rendering nothing then would unmount the whole Stack and rebuild
   // it on its first available screen (a hard cut, and it once landed on
   // reset-password). So only the cold start waits; afterwards the last known
-  // phase stays on screen (e.g. sign-in, with its button busy) until the new
-  // one resolves.
-  const lastKnownPhase = useRef<AuthPhase>('unknown');
-  if (authPhase !== 'unknown') lastKnownPhase.current = authPhase;
-  const shownPhase = lastKnownPhase.current;
+  // phase stays on screen (e.g. sign-in, its button busy) until the new one
+  // resolves. An intentional sign-in also holds for `quick` so the button's
+  // ✓ is seen before the app takes over (S4; lib/shell/signInTransition.ts).
+  const { duration: motionDuration, reduced: reducedMotion } = useMotion();
+  const [shownPhase, setShownPhase] = useState<AuthPhase>(authPhase);
+  useEffect(() => {
+    if (authPhase === 'unknown' || authPhase === shownPhase) return;
+    const signingIn = shownPhase === 'signedOut' && (authPhase === 'ready' || authPhase === 'gated');
+    if (signingIn && takeSignInIntent()) {
+      const t = setTimeout(() => setShownPhase(authPhase), motionDuration.quick);
+      return () => clearTimeout(t);
+    }
+    setShownPhase(authPhase);
+  }, [authPhase, shownPhase, motionDuration.quick]);
   // §9A ("One design, two themes", 2026-09-29): the status bar's own content
   // colour must flip with the app's theme, not stay hardcoded to "dark"
   // (dark content, for a light background) — "light" content is needed for
@@ -117,14 +128,14 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
   // redirect to the newly available first screen settle before the push.
   const lastPhase = useRef<AuthPhase>('unknown');
   useEffect(() => {
-    if (authPhase === lastPhase.current) return;
-    lastPhase.current = authPhase;
-    const target = pendingRoute.authChanged(authPhase);
+    if (shownPhase === lastPhase.current) return;
+    lastPhase.current = shownPhase;
+    const target = pendingRoute.authChanged(shownPhase);
     if (target) {
       const t = setTimeout(() => router.push(target as never), 0);
       return () => clearTimeout(t);
     }
-  }, [authPhase]);
+  }, [shownPhase]);
 
   // Handle deep links for password reset
   useEffect(() => {
@@ -230,6 +241,15 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
 
   const signedIn = shownPhase === 'ready' || shownPhase === 'gated';
 
+  // S4: the app and the auth screens crossfade into each other (never a hard
+  // cut) — `feature` into the app, where (tabs) adds its 0.96 → 1 scale-in;
+  // Reduce Motion: a `base` crossfade.
+  const crossfade = {
+    headerShown: false,
+    animation: 'fade',
+    animationDuration: reducedMotion ? motionDuration.base : motionDuration.feature,
+  } as const;
+
   // ONE Stack for every state (Phase 3b-1). Stack.Protected removes a guarded
   // screen from the navigator entirely while its guard is false, so a
   // signed-out deep link to a context-dependent screen can't render it: the
@@ -248,12 +268,13 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
         <ShellOverlayProvider>
           <Stack screenOptions={HIDDEN_HEADER}>
             <Stack.Protected guard={!signedIn}>
-              <Stack.Screen name="login" />
+              <Stack.Screen name="login" options={crossfade} />
+              <Stack.Screen name="create-account" />
               <Stack.Screen name="forgot-password" options={HIDDEN_HEADER_MODAL} />
             </Stack.Protected>
 
             <Stack.Protected guard={signedIn}>
-              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="(tabs)" options={crossfade} />
               <Stack.Screen name="create-league" options={HIDDEN_HEADER_FULLSCREEN} />
               <Stack.Screen name="join-league" options={HIDDEN_HEADER_FULLSCREEN} />
               <Stack.Screen name="league-settings" options={HIDDEN_HEADER_MODAL} />

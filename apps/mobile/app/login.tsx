@@ -1,285 +1,144 @@
-/* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  Image,
-  Dimensions,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+/* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
+import { useRef, useState } from 'react';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '@/lib/supabase';
-import { validateUsername } from '@/lib/contentModeration';
+
+import { space, type } from '@/constants/tokens';
+import { brand } from '@/constants/brand';
+import { PASSWORD_RULE_SENTENCE } from '@/constants/passwordRules';
+import { Button, type ButtonStatus } from '@/components/sp/Button';
+import { Text } from '@/components/sp/Text';
+import { useTheme } from '@/components/sp/ThemeProvider';
+import { AuthScaffold } from '@/components/shell/AuthScaffold';
+import { BrandLockup } from '@/components/shell/BrandBars';
+import { Field } from '@/components/shell/Field';
 import { getAuthErrorMessage } from '@/lib/authErrors';
-import { PASSWORD_REQUIREMENTS, PASSWORD_RULE_SENTENCE, checkPassword } from '@/constants/passwordRules';
-import { Colors } from '@/constants/Colors';
-import { Button, Card } from '@/components/ui';
+import { useSession } from '@/lib/SessionProvider';
+import { clearSignInIntent, markSignInIntent } from '@/lib/shell/signInTransition';
 
-const { width } = Dimensions.get('window');
+// Phase 3b-1 — Sign in (spec row 1, board "Sign in"). Strings verbatim from
+// the previous login.tsx, sentence case: "Welcome back", "Sign in to your
+// league", "Forgot password?", "New here? Create an account", "Sign in".
+//
+// S4: the brand bars rise on arrival; the button goes loading → ✓ done, and
+// the root layout holds the ✓ for `quick` before the app crossfades and
+// scales in (lib/shell/signInTransition.ts). The session flip is the
+// navigation — nothing here calls the router on success.
+//
+// Create account moved to its own screen (app/create-account.tsx; board
+// "Create account"), so this file is sign-in only.
 
-export default function LoginScreen() {
-  const insets = useSafeAreaInsets();
+export default function SignInScreen() {
+  const { colors } = useTheme();
+  const { signIn } = useSession();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [username, setUsername] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [status, setStatus] = useState<ButtonStatus>('idle');
+  const [error, setError] = useState<string | null>(null);
+  const passwordRef = useRef<TextInput>(null);
 
-  async function handleAuth() {
+  async function handleSignIn() {
+    if (status !== 'idle') return;
     if (!email || !password) {
-      Alert.alert('Error', 'Please enter email and password');
+      setError('Please enter email and password');
       return;
     }
-    if (isSignUp) {
-      const trimmedUsername = username.trim();
-      if (!trimmedUsername) { Alert.alert('Error', 'Please enter a username'); return; }
-      if (trimmedUsername.length < 3) { Alert.alert('Error', 'Username must be at least 3 characters'); return; }
-      if (trimmedUsername.length > 20) { Alert.alert('Error', 'Username must be 20 characters or less'); return; }
-      if (!/^[a-zA-Z0-9_]+$/.test(trimmedUsername)) { Alert.alert('Error', 'Username can only contain letters, numbers, and underscores'); return; }
-      const contentCheck = validateUsername(trimmedUsername);
-      if (!contentCheck.isValid) { Alert.alert('Error', contentCheck.reason || 'Username is not allowed'); return; }
+    setError(null);
+    setStatus('loading');
+    markSignInIntent();
+    const { error: authError } = await signIn(email.trim(), password);
+    if (authError) {
+      clearSignInIntent();
+      setStatus('idle');
+      setError(getAuthErrorMessage(authError, PASSWORD_RULE_SENTENCE, brand.name));
+      return;
     }
-
-    setLoading(true);
-    if (isSignUp) {
-      // Enforce the password policy before hitting the server, naming what's missing.
-      const { failing } = checkPassword(password);
-      if (failing.length > 0) {
-        Alert.alert('Weak password', `Your password needs: ${failing.map((r) => r.label.toLowerCase()).join(', ')}.`);
-        setLoading(false);
-        return;
-      }
-      // Ask #6 fix: pass the username as auth metadata, not just to the
-      // post-signUp user_profiles upsert below. With "Confirm email" on,
-      // signUp() returns no session, so that upsert runs as anon and is
-      // refused by RLS (auth.uid() = id) — the username was otherwise lost
-      // server-side with no other record of it. A DB trigger
-      // (handle_new_user_profile, 20261005000001) reads this metadata inside
-      // the same transaction that creates the auth.users row, so it works
-      // regardless of confirmation timing. The upsert below stays as a
-      // (now-redundant) fallback.
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { username: username.trim() } },
-      });
-      if (error) { Alert.alert('Error', getAuthErrorMessage(error, PASSWORD_RULE_SENTENCE)); setLoading(false); return; }
-      if (data?.user) {
-        const { error: profileError } = await supabase.from('user_profiles').upsert({ id: data.user.id, username: username.trim() }, { onConflict: 'id' });
-        if (profileError?.code === '23505') { Alert.alert('Error', 'This username is already taken.'); setLoading(false); return; }
-      }
-      Alert.alert('Success', 'Account created! Check your email to verify.');
-      setIsSignUp(false);
-      setUsername('');
-    } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) { Alert.alert('Error', getAuthErrorMessage(error, PASSWORD_RULE_SENTENCE)); }
-      else { router.replace('/'); }
-    }
-    setLoading(false);
+    setStatus('done');
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      {/* Logo */}
-      <View style={styles.logoContainer}>
-        <Image
-          source={require('../assets/images/stockpile-logo-light-full.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <Text style={styles.tagline}>Fantasy Sports Meets the Stock Market</Text>
+    <AuthScaffold>
+      <View style={styles.brand}>
+        <BrandLockup />
       </View>
-
-      {/* Card */}
-      <Card padded={false} style={styles.card}>
-        <Text style={styles.title}>{isSignUp ? 'Create Account' : 'Welcome back'}</Text>
-        <Text style={styles.subtitle}>{isSignUp ? 'Join the competition' : 'Sign in to your league'}</Text>
-
-        {isSignUp && (
-          <>
-            <View style={styles.inputContainer}>
-              <Ionicons name="person-outline" size={20} color={Colors.textMuted} style={styles.inputIcon} />
-              <TextInput
-                style={styles.inputField}
-                placeholder="Username"
-                placeholderTextColor={Colors.textMuted}
-                value={username}
-                onChangeText={setUsername}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-            </View>
-            <Text style={styles.hint}>Displayed on leaderboards</Text>
-          </>
-        )}
-
-        <View style={styles.inputContainer}>
-          <Ionicons name="mail-outline" size={20} color={Colors.textMuted} style={styles.inputIcon} />
-          <TextInput
-            style={styles.inputField}
-            placeholder="Email address"
-            placeholderTextColor={Colors.textMuted}
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Ionicons name="lock-closed-outline" size={20} color={Colors.textMuted} style={styles.inputIcon} />
-          <TextInput
-            style={styles.inputField}
-            placeholder="Password"
-            placeholderTextColor={Colors.textMuted}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-        </View>
-
-        {isSignUp && (
-          <View style={{ marginTop: -4, marginBottom: 16, paddingHorizontal: 4 }}>
-            <Text style={{ fontSize: 13, fontFamily: 'Inter_400Regular', color: Colors.textSecondary, marginBottom: 6 }}>Password must include:</Text>
-            {PASSWORD_REQUIREMENTS.map((r) => {
-              const ok = r.test(password);
-              return (
-                <View key={r.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                  <Text style={{ width: 16, textAlign: 'center', color: ok ? Colors.success : Colors.textMuted }}>{ok ? '✓' : '○'}</Text>
-                  <Text style={{ fontSize: 13, fontFamily: 'Inter_400Regular', color: ok ? Colors.success : Colors.textMuted }}>{r.label}</Text>
-                </View>
-              );
-            })}
-          </View>
-        )}
-
-        {!isSignUp && (
-          <TouchableOpacity style={styles.forgotButton} onPress={() => router.push('/forgot-password')}>
-            <Text style={styles.forgotText}>Forgot password?</Text>
-          </TouchableOpacity>
-        )}
-
-        <Button
-          title={isSignUp ? 'Create Account' : 'Sign In'}
-          onPress={handleAuth}
-          variant="primary"
-          loading={loading}
-          style={styles.authButton}
-        />
-      </Card>
-
-      {/* Switch auth mode */}
-      <TouchableOpacity
-        style={styles.switchButton}
-        onPress={() => { setIsSignUp(!isSignUp); setUsername(''); }}
-      >
-        <Text style={styles.switchText}>
-          {isSignUp ? 'Already have an account? ' : "New here? "}
-          <Text style={styles.switchTextBold}>{isSignUp ? 'Sign In' : 'Create an account'}</Text>
+      <View style={styles.heading}>
+        <Text variant="display" accessibilityRole="header">
+          Welcome back
         </Text>
-      </TouchableOpacity>
-    </View>
+        <Text variant="body" tone="secondary">
+          Sign in to your league
+        </Text>
+      </View>
+      <View style={styles.fields}>
+        <Field
+          label="Email address"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          autoComplete="email"
+          keyboardType="email-address"
+          textContentType="username"
+          returnKeyType="next"
+          onSubmitEditing={() => passwordRef.current?.focus()}
+          invalid={!!error && !email}
+        />
+        <Field
+          ref={passwordRef}
+          label="Password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+          autoComplete="current-password"
+          textContentType="password"
+          returnKeyType="go"
+          onSubmitEditing={handleSignIn}
+          error={error}
+        />
+        <Pressable
+          onPress={() => router.push('/forgot-password')}
+          accessibilityRole="link"
+          style={styles.forgot}
+          hitSlop={8}
+        >
+          <Text variant="body" color={colors.accent} style={styles.bold}>
+            Forgot password?
+          </Text>
+        </Pressable>
+      </View>
+      <Button label="Sign in" status={status} onPress={handleSignIn} />
+      <Pressable onPress={() => router.push('/create-account')} accessibilityRole="link" style={styles.switch} hitSlop={8}>
+        <Text variant="body" tone="secondary" style={styles.center}>
+          New here? <Text variant="body" color={colors.accent} style={styles.bold}>Create an account</Text>
+        </Text>
+      </Pressable>
+    </AuthScaffold>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.white,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
+  brand: {
+    paddingTop: space[7],
   },
-  logoContainer: {
-    alignItems: 'center',
-    marginBottom: 40,
+  heading: {
+    gap: space[2],
   },
-  logo: {
-    width: width * 0.9,
-    height: 160,
+  fields: {
+    gap: space[5],
   },
-  tagline: {
-    fontSize: 15,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textSecondary,
-    marginTop: 12,
-    letterSpacing: 0.3,
-  },
-  card: {
-    borderRadius: 20,
-    padding: 28,
-  },
-  title: {
-    fontSize: 26,
-    fontFamily: 'Inter_600SemiBold',
-    color: Colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 15,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 28,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.bgElevated,
-    borderRadius: 12,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  inputIcon: {
-    paddingLeft: 16,
-  },
-  inputField: {
-    flex: 1,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    fontSize: 16,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textPrimary,
-  },
-  hint: {
-    fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textMuted,
-    marginTop: -10,
-    marginBottom: 16,
-    marginLeft: 4,
-  },
-  authButton: {
-    marginTop: 8,
-  },
-  switchButton: {
-    marginTop: 24,
-    alignItems: 'center',
-  },
-  switchText: {
-    color: Colors.textSecondary,
-    fontSize: 15,
-    fontFamily: 'Inter_400Regular',
-  },
-  switchTextBold: {
-    color: Colors.primary,
-    fontFamily: 'Inter_600SemiBold',
-  },
-  forgotButton: {
+  forgot: {
     alignSelf: 'flex-end',
-    marginTop: -8,
-    marginBottom: 8,
+    minHeight: 32,
+    justifyContent: 'center',
   },
-  forgotText: {
-    color: Colors.textSecondary,
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
+  bold: {
+    fontFamily: type.headline.fontFamily,
+  },
+  switch: {
+    alignSelf: 'center',
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  center: {
+    textAlign: 'center',
   },
 });

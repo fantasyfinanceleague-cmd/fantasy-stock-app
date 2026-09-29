@@ -28,5 +28,9 @@
   // would break the app build just to satisfy Deno, this flag makes Deno
   // tolerate the same extensionless imports the app source already uses
   // everywhere, scoped to this directory only.
-  "unstable": ["sloppy-imports"]
+  // "raw-imports" (Phase 3b-1): shell-username.test.ts imports the username
+  // migration as text (`with { type: 'text' }`) to prove the client's format
+  // regex matches the server's byte for byte. A module import needs no
+  // --allow-read, so `deno test .` keeps working with no flags.
+  "unstable": ["sloppy-imports", "raw-imports"]
 }

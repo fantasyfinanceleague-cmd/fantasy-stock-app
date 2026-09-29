@@ -4,7 +4,29 @@ import { supabase } from './supabase';
 import { setupPushNotifications, removePushToken } from './notifications';
 import { setRecoverySession } from './recoveryNonce';
 import type { AuthPhase } from './shell/pendingRoute';
-import { FIXTURE_EMAIL, FIXTURE_USER_ID, SHELL_FIXTURE, fixtureUsername } from './shell/devFixture';
+import {
+  FIXTURE_EMAIL,
+  FIXTURE_NETWORK_MS,
+  FIXTURE_SIGNUPS_PAUSED_MESSAGE,
+  FIXTURE_USER_ID,
+  SHELL_FIXTURE,
+  fixtureUsername,
+} from './shell/devFixture';
+
+const FIXTURE_USER = { id: FIXTURE_USER_ID, email: FIXTURE_EMAIL } as User;
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** The shape both auth calls resolve to; `error` carries Supabase's own error (message + code). */
+export interface AuthResult {
+  error: { message: string; code?: string } | null;
+}
+
+export type SignUpResult = AuthResult & {
+  /** true when the account exists but must confirm its email before signing in. */
+  needsConfirmation: boolean;
+  /** true when the username was refused as taken (the profile's unique index). */
+  usernameTaken: boolean;
+};
 
 // Phase 3b-1 — the ONE auth subscription for the whole app.
 //
@@ -33,6 +55,8 @@ export interface SessionContextValue {
   /** Call after set_username returns 'ok' so the guard flips without a refetch. */
   setUsernameLocal: (username: string) => void;
   refreshProfile: () => Promise<void>;
+  signIn: (email: string, password: string) => Promise<AuthResult>;
+  signUp: (email: string, password: string, username: string) => Promise<SignUpResult>;
   signOut: () => Promise<void>;
 }
 
@@ -53,7 +77,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     if (SHELL_FIXTURE) {
       // DEV-only fixture (lib/shell/devFixture.ts): a local fake session.
       // supabase.auth is never touched, so nothing signs in or out for real.
-      setUser({ id: FIXTURE_USER_ID, email: FIXTURE_EMAIL } as User);
+      setUser(SHELL_FIXTURE === 'signed-out' ? null : FIXTURE_USER);
       setLoading(false);
       return;
     }
@@ -146,6 +170,38 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     [userId]
   );
 
+  const signIn = useCallback(async (email: string, password: string): Promise<AuthResult> => {
+    if (SHELL_FIXTURE) {
+      await wait(FIXTURE_NETWORK_MS);
+      setUser(FIXTURE_USER);
+      return { error: null };
+    }
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return { error: error ? { message: error.message, code: error.code } : null };
+  }, []);
+
+  const signUp = useCallback(async (email: string, password: string, username: string): Promise<SignUpResult> => {
+    if (SHELL_FIXTURE) {
+      await wait(FIXTURE_NETWORK_MS);
+      return { error: { message: FIXTURE_SIGNUPS_PAUSED_MESSAGE }, needsConfirmation: false, usernameTaken: false };
+    }
+    // The username travels as auth metadata: with "Confirm email" on, signUp()
+    // returns no session, so a client-side profile write would run as anon
+    // and be refused by RLS. The handle_new_user_profile trigger
+    // (20261005000001) reads this metadata in the same transaction that
+    // creates the auth.users row. The upsert after it is the pre-existing
+    // (now-redundant) fallback, kept for its 23505 "taken" signal.
+    const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { username } } });
+    if (error) return { error: { message: error.message, code: error.code }, needsConfirmation: false, usernameTaken: false };
+    if (data?.user) {
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .upsert({ id: data.user.id, username }, { onConflict: 'id' });
+      if (profileError?.code === '23505') return { error: null, needsConfirmation: false, usernameTaken: true };
+    }
+    return { error: null, needsConfirmation: !data?.session, usernameTaken: false };
+  }, []);
+
   const signOut = useCallback(async () => {
     if (SHELL_FIXTURE) {
       setUser(null);
@@ -180,9 +236,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       authPhase,
       setUsernameLocal,
       refreshProfile,
+      signIn,
+      signUp,
       signOut,
     }),
-    [session, user, loading, username, profileLoading, authPhase, setUsernameLocal, refreshProfile, signOut]
+    [session, user, loading, username, profileLoading, authPhase, setUsernameLocal, refreshProfile, signIn, signUp, signOut]
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
