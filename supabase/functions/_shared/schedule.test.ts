@@ -38,6 +38,7 @@ function matchup(over: Partial<SeasonInput> = {}): SeasonInput {
     memberIds: ['a', 'b', 'c', 'd'],
     numWeeks: null,
     durationDays: null,
+    playoffTeams: 4,
     now: THU,
     ...over,
   };
@@ -231,11 +232,42 @@ Deno.test('fixed UTC clock is DST-invariant (documented, mirrors web)', () => {
   assertEquals(marketCloseOn(new Date('2026-07-01T03:00:00Z')).toISOString(), '2026-07-01T21:00:00.000Z');
 });
 
-Deno.test('matchup league window = week 1 start .. last week end', () => {
-  const p = plan(matchup({ numWeeks: 5 }));
+Deno.test('matchup league window = week 1 start .. end of the last PLAYOFF week', () => {
+  const p = plan(matchup({ numWeeks: 5 })); // playoffTeams 4 -> 2 playoff weeks
   assertEquals(p.leagueStart, p.matchups[0].week_start);
-  assertEquals(p.leagueEnd, p.matchups[p.matchups.length - 1].week_end);
-  assertEquals(p.leagueEnd, '2026-10-30T21:00:00.000Z');
+  assertEquals(p.playoffWeeks, 2);
+  // Regular season still ends week 5; the league window runs two weeks past it.
+  assertEquals(p.matchups[p.matchups.length - 1].week_end, '2026-10-30T21:00:00.000Z');
+  assertEquals(p.leagueEnd, '2026-11-13T21:00:00.000Z');
+  assertEquals(p.leagueEnd, weekWindow(THU, 5 + 2).end.toISOString());
+});
+
+Deno.test('flexible playoffs: leagueEnd = end of week num_weeks + ceil(log2 P); matchups stay regular-season only', () => {
+  const lastRegular = plan(matchup({ numWeeks: 5 })).matchups.at(-1)!.week_end;
+  const WEEK = 7 * 24 * 3600 * 1000;
+  // P -> W: 2->1, 3->2, 4->2, 5->3, 8->3, 9->4, 16->4
+  for (const [playoffTeams, w] of [[2, 1], [3, 2], [4, 2], [5, 3], [8, 3], [9, 4], [16, 4]]) {
+    const p = plan(matchup({ numWeeks: 5, playoffTeams }));
+    assertEquals(p.playoffWeeks, w, `P=${playoffTeams}`);
+    assertEquals(p.leagueEnd, weekWindow(THU, 5 + w).end.toISOString(), `P=${playoffTeams}`);
+    assertEquals(new Date(p.leagueEnd).getTime() - new Date(lastRegular).getTime(), w * WEEK, `P=${playoffTeams}`);
+    assertEquals(p.matchups.length, plan(matchup({ numWeeks: 5 })).matchups.length, 'no playoff rows are planned here');
+    assert(p.matchups.every((m) => m.week_number <= 5));
+  }
+});
+
+Deno.test('flexible playoffs: P is not capped by roster size here (draft-control owns P <= members)', () => {
+  // Refusing after the last pick would strand a finished draft with no season.
+  assertEquals(plan(matchup({ numWeeks: 3, playoffTeams: 6 })).playoffWeeks, 3); // 4 members, P=6
+});
+
+Deno.test('playoff_teams must be an integer >= 2 for a matchup league (no silent default)', () => {
+  for (const playoffTeams of [null, 0, 1, 2.5, NaN]) {
+    assertEquals(planSeason(matchup({ numWeeks: 3, playoffTeams })), { ok: false, reason: 'invalid_playoff_teams' });
+  }
+  // Duration leagues ignore it entirely.
+  const d = plan(matchup({ leagueType: 'duration', playoffTeams: null }));
+  assertEquals(d.playoffWeeks, 0);
 });
 
 Deno.test('duration league: durationDays null defaults to 30; other lengths honored', () => {
