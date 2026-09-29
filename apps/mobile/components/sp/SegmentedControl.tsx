@@ -3,9 +3,9 @@ import { useEffect, useState } from 'react';
 import { LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
-import { color, radius, space } from '@/constants/tokens';
+import { radius, space } from '@/constants/tokens';
 import { Text } from '@/components/sp/Text';
-import { useSurface } from '@/components/sp/Surface';
+import { useTheme } from '@/components/sp/ThemeProvider';
 import { useMotion } from '@/components/sp/motion';
 
 // Stockpile — <SegmentedControl> (Phase 2 foundation). Used for "All
@@ -26,8 +26,7 @@ export interface SegmentedControlProps {
 }
 
 export function SegmentedControl({ options, value, onChange }: SegmentedControlProps) {
-  const { kind } = useSurface();
-  const onGame = kind === 'game';
+  const { colors } = useTheme();
   const { duration, easing, withTiming } = useMotion();
 
   const [segmentWidth, setSegmentWidth] = useState(0);
@@ -45,13 +44,10 @@ export function SegmentedControl({ options, value, onChange }: SegmentedControlP
     width: segmentWidth,
   }));
 
-  const trackColor = onGame ? color.surface.game.raised : color.surface.money.sunken;
-  // The indicator must contrast with the active label colour on ITS OWN
-  // surface: white-on-white would disappear on a game surface if both used
-  // the same "on light" white indicator, so the indicator darkens on game.
-  const indicatorColor = onGame ? color.surface.game.line : color.surface.money.base;
-  const activeTextColor = onGame ? color.text.onGame.primary : color.text.primary;
-  const idleTextColor = onGame ? color.text.onGame.secondary : color.text.secondary;
+  const trackColor = colors.sunken;
+  const indicatorColor = colors.surface;
+  const activeTextColor = colors.text;
+  const idleTextColor = colors.text2;
 
   function handleLayout(event: LayoutChangeEvent) {
     setSegmentWidth(event.nativeEvent.layout.width / options.length);

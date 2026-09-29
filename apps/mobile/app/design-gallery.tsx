@@ -4,9 +4,9 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
-import { color, radius, space } from '@/constants/tokens';
+import { radius, space } from '@/constants/tokens';
 import { brand } from '@/constants/brand';
-import { Surface } from '@/components/sp/Surface';
+import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { Money } from '@/components/sp/Money';
 import { Button } from '@/components/sp/Button';
@@ -21,12 +21,20 @@ import { BrandMark } from '@/components/sp/BrandMark';
 import { LiveDot } from '@/components/sp/game/LiveDot';
 import { Scoreboard } from '@/components/sp/game/Scoreboard';
 import { useMotion } from '@/components/sp/motion';
+import { useTheme, ThemePreference } from '@/components/sp/ThemeProvider';
 
-// Stockpile — dev-only design gallery (Phase 2 foundation). SOURCE OF TRUTH:
-// the Phase 2 brief, build item 7: "renders every primitive in every state
-// on both surfaces, plus a live Scoreboard demo with a button that triggers
-// a lead change. This is your proof and the living spec." Redirects home
-// outside __DEV__ so it never ships as a reachable screen in a release build.
+// Stockpile — dev-only design gallery (§9A, "One design, two themes",
+// 2026-09-29). SOURCE OF TRUTH: the Phase 2 brief, build item 7: "renders
+// every primitive in every state... This is your proof and the living
+// spec," now extended with the Light/Dark/System theme switch §9A asks for.
+// Redirects home outside __DEV__ so it never ships as a reachable screen in
+// a release build.
+//
+// The old "money surface" / "game surface" section split is gone along with
+// <Surface kind>: a screen is entirely Light or entirely Dark now, so there's
+// nothing left to illustrate as two separately-coloured boxes on the same
+// screen — every section here just renders on one <Card>, in whichever
+// theme the switch above is set to.
 
 const ALL_PHASES: LeaguePhase[] = [
   'pre_draft',
@@ -39,12 +47,19 @@ const ALL_PHASES: LeaguePhase[] = [
   'season_complete',
 ];
 
+const THEME_OPTIONS: { label: string; value: ThemePreference }[] = [
+  { label: 'System', value: 'system' },
+  { label: 'Light', value: 'light' },
+  { label: 'Dark', value: 'dark' },
+];
+
 export default function DesignGalleryScreen() {
   // Hooks run unconditionally, ABOVE the __DEV__ early return below — RN's
   // eslint-plugin-react-hooks rules-of-hooks (error-level in this repo) has
   // no special case for a compile-time-constant guard, so the guard has to
   // come after every hook call, not before.
   const { reduced } = useMotion();
+  const { preference, resolvedTheme, colors, setPreference } = useTheme();
   const [segment, setSegment] = useState('all');
   const [sheetVisible, setSheetVisible] = useState(false);
   const [chipSelected, setChipSelected] = useState(false);
@@ -67,20 +82,28 @@ export default function DesignGalleryScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollContent}>
+    <ScrollView contentContainerStyle={[styles.scrollContent, { backgroundColor: colors.bg }]}>
+      <Section title="Theme">
+        <SegmentedControl options={THEME_OPTIONS} value={preference} onChange={(value) => setPreference(value as ThemePreference)} />
+        <Text variant="body" tone="secondary">
+          {`preference = ${preference}, resolvedTheme = ${resolvedTheme}`}
+        </Text>
+      </Section>
+
       <Section title="Reduce Motion">
         <Text variant="body">{`useMotion().reduced = ${reduced ? 'true' : 'false'}`}</Text>
       </Section>
 
       <Section title="Brand">
         <View style={styles.row}>
-          <BrandMark size={32} tone="onLight" />
+          <BrandMark size={32} />
           <Text variant="title">{brand.wordmark}</Text>
         </View>
       </Section>
 
-      <Section title="Type — money surface">
-        <Surface kind="money" style={styles.moneySurface}>
+      <Section title="Type">
+        <Card style={styles.card}>
+          <Text variant="tag">LIVE · WEEK 3</Text>
           <Text variant="score.xl">$1,234</Text>
           <Text variant="score.lg">$1,234</Text>
           <Text variant="score.md">$1,234</Text>
@@ -97,22 +120,11 @@ export default function DesignGalleryScreen() {
           <Text variant="body" tone="disabled">
             Disabled text
           </Text>
-        </Surface>
-      </Section>
-
-      <Section title="Type — game surface">
-        <Surface kind="game" style={styles.gameSurface}>
-          <Text variant="tag">LIVE · WEEK 3</Text>
-          <Text variant="score.xl">$1,234</Text>
-          <Text variant="headline">On-game headline</Text>
-          <Text variant="callout" tone="secondary">
-            On-game secondary
-          </Text>
-        </Surface>
+        </Card>
       </Section>
 
       <Section title="Money — sign & compact">
-        <Surface kind="money" style={styles.moneySurface}>
+        <Card style={styles.card}>
           <Money value={56.8} sign="always" />
           <Money value={-3000} sign="always" />
           <Money value={0} sign="always" />
@@ -121,11 +133,11 @@ export default function DesignGalleryScreen() {
           <Money value={128.4} colorBySign />
           <Money value={-92.1} colorBySign />
           <Money value={0} colorBySign />
-        </Surface>
+        </Card>
       </Section>
 
-      <Section title="Buttons — money surface">
-        <Surface kind="money" style={styles.moneySurface}>
+      <Section title="Buttons">
+        <Card style={styles.card}>
           <View style={styles.row}>
             <Button label="Primary" variant="primary" onPress={() => {}} />
             <Button label="Secondary" variant="secondary" onPress={() => {}} />
@@ -138,21 +150,11 @@ export default function DesignGalleryScreen() {
             <Button label="Small" variant="primary" size="sm" onPress={() => {}} />
             <Button label="Disabled" variant="primary" onPress={() => {}} disabled />
           </View>
-        </Surface>
-      </Section>
-
-      <Section title="Buttons — game surface">
-        <Surface kind="game" style={styles.gameSurface}>
-          <View style={styles.row}>
-            <Button label="Primary" variant="primary" onPress={() => {}} />
-            <Button label="Secondary" variant="secondary" onPress={() => {}} />
-            <Button label="Ghost" variant="ghost" onPress={() => {}} />
-          </View>
-        </Surface>
+        </Card>
       </Section>
 
       <Section title="Chip & PhaseChip">
-        <Surface kind="money" style={styles.moneySurface}>
+        <Card style={styles.card}>
           <View style={styles.row}>
             <Chip label="All leagues" selected={chipSelected} onPress={() => setChipSelected((v) => !v)} />
             <Chip label="Disabled" disabled />
@@ -162,18 +164,18 @@ export default function DesignGalleryScreen() {
               <PhaseChip key={phase} phase={phase} />
             ))}
           </View>
-        </Surface>
+        </Card>
       </Section>
 
       <Section title="ListRow">
-        <Surface kind="money" style={styles.moneySurface}>
+        <Card style={styles.card}>
           <ListRow title="Test League" subtitle="Rank 2 · 5-1" onPress={() => {}} trailing={<Avatar name="Priya" size={28} />} />
           <ListRow title="No chevron" subtitle="hideChevron" hideChevron trailing={<Text variant="callout">3rd</Text>} />
-        </Surface>
+        </Card>
       </Section>
 
       <Section title="SegmentedControl">
-        <Surface kind="money" style={styles.moneySurface}>
+        <Card style={styles.card}>
           <SegmentedControl
             options={[
               { label: 'All matchups', value: 'all' },
@@ -182,7 +184,7 @@ export default function DesignGalleryScreen() {
             value={segment}
             onChange={setSegment}
           />
-        </Surface>
+        </Card>
       </Section>
 
       <Section title="Avatar">
@@ -194,16 +196,16 @@ export default function DesignGalleryScreen() {
       </Section>
 
       <Section title="LiveDot">
-        <Surface kind="game" style={styles.gameSurface}>
+        <Card style={styles.card}>
           <View style={styles.row}>
             <LiveDot />
             <Text variant="tag">LIVE</Text>
           </View>
-        </Surface>
+        </Card>
       </Section>
 
       <Section title="EmptyState">
-        <Surface kind="money" style={styles.moneySurface}>
+        <Card style={styles.card}>
           <EmptyState
             icon={(p) => <Ionicons name="trophy-outline" {...p} />}
             title="No leagues yet"
@@ -211,7 +213,7 @@ export default function DesignGalleryScreen() {
             actionLabel="Create a league"
             onAction={() => {}}
           />
-        </Surface>
+        </Card>
       </Section>
 
       <Section title="Sheet">
@@ -242,7 +244,7 @@ export default function DesignGalleryScreen() {
       </Section>
 
       <Section title="Scoreboard — widest pair (regression check)">
-        {/* Design Lead, 2026-09-29: standard-size stress case for the
+        {/* Design Lead, 2026-09-26: standard-size stress case for the
             accessibility-XL overflow fix — a wide leader and a wide,
             negative trailer, the combination most likely to squeeze the
             name column or push ScoreDigits past its card. */}
@@ -267,7 +269,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: space[6],
     gap: space[8],
-    backgroundColor: color.bg.app,
   },
   section: {
     gap: space[3],
@@ -278,12 +279,7 @@ const styles = StyleSheet.create({
   sectionBody: {
     gap: space[4],
   },
-  moneySurface: {
-    padding: space[5],
-    borderRadius: radius.lg,
-    gap: space[3],
-  },
-  gameSurface: {
+  card: {
     padding: space[5],
     borderRadius: radius.lg,
     gap: space[3],

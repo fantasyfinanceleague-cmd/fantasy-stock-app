@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import {
   Inter_400Regular,
@@ -20,6 +20,7 @@ import { supabase } from '@/lib/supabase';
 import { verifyAndConsumeRecoveryNonce, setRecoverySession } from '@/lib/recoveryNonce';
 import { parseRecoveryLink } from '@/lib/recoveryLink';
 import { useAuth } from '@/lib/useAuth';
+import { ThemeProvider, useTheme } from '@/components/sp/ThemeProvider';
 
 export {
   ErrorBoundary,
@@ -40,6 +41,12 @@ const AUTH_SCREEN_OPTIONS = { headerShown: false } as const;
 
 function RootLayoutNav() {
   const { user, loading } = useAuth();
+  // §9A ("One design, two themes", 2026-09-29): the status bar's own content
+  // colour must flip with the app's theme, not stay hardcoded to "dark"
+  // (dark content, for a light background) — "light" content is needed for
+  // Dark's navy background, or the clock/battery icons disappear into it.
+  const { resolvedTheme } = useTheme();
+  const statusBarStyle = resolvedTheme === 'dark' ? 'light' : 'dark';
 
   // Handle deep links for password reset
   useEffect(() => {
@@ -146,21 +153,21 @@ function RootLayoutNav() {
   // Not authenticated — no LeagueProvider needed, stable screenOptions
   if (!user) {
     return (
-      <ThemeProvider value={DefaultTheme}>
-        <StatusBar style="dark" />
+      <NavigationThemeProvider value={DefaultTheme}>
+        <StatusBar style={statusBarStyle} />
         <Stack screenOptions={AUTH_SCREEN_OPTIONS}>
           <Stack.Screen name="login" />
           <Stack.Screen name="forgot-password" options={HIDDEN_HEADER_MODAL} />
           <Stack.Screen name="reset-password" options={HIDDEN_HEADER_FULLSCREEN} />
         </Stack>
-      </ThemeProvider>
+      </NavigationThemeProvider>
     );
   }
 
   // Authenticated — full app with tabs
   return (
-    <ThemeProvider value={DefaultTheme}>
-      <StatusBar style="dark" />
+    <NavigationThemeProvider value={DefaultTheme}>
+      <StatusBar style={statusBarStyle} />
       <LeagueProvider>
         <Stack>
           <Stack.Screen name="(tabs)" options={HIDDEN_HEADER} />
@@ -175,7 +182,7 @@ function RootLayoutNav() {
           <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
         </Stack>
       </LeagueProvider>
-    </ThemeProvider>
+    </NavigationThemeProvider>
   );
 }
 
@@ -235,5 +242,9 @@ export default function RootLayout() {
   // needs to branch on it, because a failure already falls back gracefully.
   void archivoLoaded;
 
-  return <RootLayoutNav />;
+  return (
+    <ThemeProvider>
+      <RootLayoutNav />
+    </ThemeProvider>
+  );
 }

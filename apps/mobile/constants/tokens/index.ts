@@ -3,7 +3,10 @@
 // (transitional, deleted in Phase 3c — see CLAUDE.md).
 
 export { color } from './color';
-export type { Color } from './color';
+export type { ThemeColors, ThemeMode } from './color';
+
+export { TOKEN_ROWS, PAIRS } from './contrastPairs';
+export type { TokenKey, TokenRow, ContrastPair } from './contrastPairs';
 
 export { type, typeFontFamily } from './type';
 export type { TypeVariant, TypeStyle } from './type';

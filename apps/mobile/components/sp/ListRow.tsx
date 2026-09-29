@@ -3,10 +3,10 @@ import { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { color, space } from '@/constants/tokens';
+import { space } from '@/constants/tokens';
 import { PressableScale } from '@/components/sp/PressableScale';
 import { Text } from '@/components/sp/Text';
-import { useSurface } from '@/components/sp/Surface';
+import { useTheme } from '@/components/sp/ThemeProvider';
 
 // Stockpile — <ListRow> (Phase 2 foundation). A generic row for standings,
 // holdings, league lists, settings — leading slot, title/subtitle, trailing
@@ -23,10 +23,9 @@ export interface ListRowProps {
 }
 
 export function ListRow({ leading, title, subtitle, trailing, onPress, hideChevron }: ListRowProps) {
-  const { kind } = useSurface();
-  const onGame = kind === 'game';
-  const chevronColor = onGame ? color.text.onGame.secondary : color.text.secondary;
-  const dividerColor = onGame ? color.surface.game.line : color.border.default;
+  const { colors } = useTheme();
+  const chevronColor = colors.text2;
+  const dividerColor = colors.line;
 
   const content = (
     <View style={[styles.row, { borderBottomColor: dividerColor }]}>

@@ -3,8 +3,8 @@ import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 
-import { color } from '@/constants/tokens';
 import { useMotion } from '@/components/sp/motion';
+import { useTheme } from '@/components/sp/ThemeProvider';
 
 // Stockpile — <LiveDot> (Phase 2 foundation). SOURCE OF TRUTH: §4 "What never
 // animates": "Anything looping, except the live dot while the market is
@@ -35,6 +35,7 @@ const HALO_MAX_SCALE = 2.2;
 const HALO_DURATION = 1400;
 
 export function LiveDot({ size = 8 }: LiveDotProps) {
+  const { colors } = useTheme();
   const { reduced } = useMotion();
   const haloScale = useSharedValue(1);
   const haloOpacity = useSharedValue(0.5);
@@ -62,8 +63,8 @@ export function LiveDot({ size = 8 }: LiveDotProps) {
 
   return (
     <View accessibilityLabel="Live" style={styles.wrap}>
-      {reduced ? null : <Animated.View style={[styles.halo, dimension, haloAnimatedStyle]} />}
-      <View style={[styles.core, dimension]} />
+      {reduced ? null : <Animated.View style={[styles.halo, dimension, { backgroundColor: colors.live }, haloAnimatedStyle]} />}
+      <View style={[styles.core, dimension, { backgroundColor: colors.live }]} />
     </View>
   );
 }
@@ -73,11 +74,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  core: {
-    backgroundColor: color.live,
-  },
+  core: {},
   halo: {
     position: 'absolute',
-    backgroundColor: color.live,
   },
 });

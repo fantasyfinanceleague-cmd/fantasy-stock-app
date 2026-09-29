@@ -1,25 +1,26 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { StyleSheet, Text as RNText, View } from 'react-native';
 
-import { color, radius, space, type } from '@/constants/tokens';
+import { radius, space, type } from '@/constants/tokens';
+import { useTheme } from '@/components/sp/ThemeProvider';
 
-// Stockpile — <PhaseChip> (Phase 2 foundation). SOURCE OF TRUTH: §3's
-// "one league-lifecycle model" table and §9's `type.tag`.
+// Stockpile — <PhaseChip> (§9A, "One design, two themes", 2026-09-29).
+// SOURCE OF TRUTH: §3's "one league-lifecycle model" table and §9's
+// `type.tag`.
 //
 // Visual only, by design (the Phase 2 brief): it takes the phase string and
 // renders the broadcast tag for it. It does NOT decide which phase a league
 // is in — that's the shared `getSeasonPhase` helper (extended in a later
 // phase per §3), so no screen infers phase on its own by re-deriving it here.
 //
-// Self-contained rather than <Surface>-aware: a phase badge keeps its own
-// small "broadcast tag" look wherever it's placed (Home's "this week" strip,
-// a money-surface list row, a game scoreboard header) — the same way a
-// "LIVE" badge in a broadcast graphic doesn't change style with what's
-// behind it. `type.tag` (§9: "game surfaces only") describes the TYPOGRAPHY
-// treatment this component always uses, not a constraint on where the chip
-// itself may appear. Deliberately NOT built on the shared <Text> primitive,
-// since <Text> resolves colour from the ambient <Surface> and this chip's
-// colour never changes with its surroundings.
+// Self-contained: a phase badge keeps its own small "broadcast tag" look
+// wherever it's placed, always inverted relative to the current theme
+// (colors.inverseBg/Fg — the PAIRS list's own "FINAL chip, selected toggle"
+// pair) rather than matching the surrounding card — the same way a "LIVE"
+// badge in a broadcast graphic doesn't change style with what's behind it.
+// Deliberately NOT built on the shared <Text> primitive, since <Text>
+// resolves colour from the theme's normal text roles and this chip's colour
+// is always inverted, never the theme's plain text colour.
 
 export type LeaguePhase =
   | 'pre_draft'
@@ -33,15 +34,15 @@ export type LeaguePhase =
 
 interface PhaseMeta {
   label: string;
-  /** A small live-indicator dot, only for the phase that's actually live. */
-  dot?: string;
+  /** Only the phase that's actually live gets a dot. */
+  live?: boolean;
 }
 
 const PHASE_META: Record<LeaguePhase, PhaseMeta> = {
   pre_draft: { label: 'Pre-draft' },
   drafting: { label: 'Drafting' },
   pre_season: { label: 'Pre-season' },
-  live_open: { label: 'Live', dot: color.live },
+  live_open: { label: 'Live', live: true },
   live_closed: { label: 'Closed' },
   week_final: { label: 'Final' },
   playoffs: { label: 'Playoffs' },
@@ -53,12 +54,20 @@ export interface PhaseChipProps {
 }
 
 export function PhaseChip({ phase }: PhaseChipProps) {
+  const { colors } = useTheme();
   const meta = PHASE_META[phase];
   const tagStyle = type.tag;
 
   return (
-    <View style={styles.base}>
-      {meta.dot ? <View style={[styles.dot, { backgroundColor: meta.dot }]} /> : null}
+    <View style={[styles.base, { backgroundColor: colors.inverseBg }]}>
+      {/* colors.live, not inverseFg, was tried here first — computed out to
+          1.46:1 in Dark (colors.live there is tuned for the app's normal
+          navy background, not this chip's INVERTED light one) against the
+          3:1 graphic minimum. inverseFg is guaranteed to contrast with
+          inverseBg by definition, so the dot uses that instead — the label
+          text already carries "Live"; this dot is a secondary cue, not the
+          only signal. */}
+      {meta.live ? <View style={[styles.dot, { backgroundColor: colors.inverseFg }]} /> : null}
       <RNText
         style={{
           fontFamily: tagStyle.fontFamily,
@@ -66,7 +75,7 @@ export function PhaseChip({ phase }: PhaseChipProps) {
           lineHeight: tagStyle.lineHeight,
           letterSpacing: tagStyle.letterSpacing,
           textTransform: tagStyle.textTransform,
-          color: color.text.onGame.primary,
+          color: colors.inverseFg,
         }}
       >
         {meta.label}
@@ -80,7 +89,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    backgroundColor: color.surface.game.raised,
     borderRadius: radius.sm,
     paddingHorizontal: space[4],
     paddingVertical: space[2],

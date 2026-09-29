@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
-import { color, radius, space } from '@/constants/tokens';
-import { Surface } from '@/components/sp/Surface';
+import { radius, space } from '@/constants/tokens';
+import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
+import { useTheme } from '@/components/sp/ThemeProvider';
 import { formatMoney } from '@/components/sp/logic/money';
 import { leaderOf } from '@/components/sp/logic/tug';
 import { ScoreDigits } from '@/components/sp/game/ScoreDigits';
@@ -11,18 +12,22 @@ import { TugBar } from '@/components/sp/game/TugBar';
 import { LiveDot } from '@/components/sp/game/LiveDot';
 import { Chyron } from '@/components/sp/game/Chyron';
 
-// Stockpile — <Scoreboard> (Phase 2 foundation). SOURCE OF TRUTH: the Phase 2
-// brief: "composes them: league/week line, two teams, tug, lead line."
+// Stockpile — <Scoreboard> (§9A, "One design, two themes", 2026-09-29).
+// SOURCE OF TRUTH: the Phase 2 brief: "composes them: league/week line, two
+// teams, tug, lead line."
 //
-// Self-contained (wraps its own <Surface kind="game">), so it can drop into
-// a "this week" strip on an otherwise money-surface screen (Home) without
-// the host screen needing to know it's entering the game register — the
-// same self-containment reasoning as <PhaseChip>.
+// Self-contained (wraps its own <Card variant="scoreboard">), so it can drop
+// into a "this week" strip on any screen without the host needing to know
+// anything about it. §9A replaces the old dark "stadium" card with the
+// theme's own surface plus the scoreboard variant's accent wash and hairline
+// border — emphasis now comes from the condensed score type, the wash, the
+// tug bar/live dot colour and motion, not an inverted dark card.
 //
-// Team colours mark PEOPLE (§9 non-negotiable): each side's score digits use
-// its team colour, never a gain/loss colour. The one line that mixes
-// registers on purpose is the "lead line", which states the dollar gap in
-// words and colours it by gain/loss/zero, since that IS a money figure.
+// Team colours mark PEOPLE (§9A non-negotiable): each side's score digits use
+// its team colour (colors.you / colors.opp), never a gain/loss colour. The
+// one line that mixes registers on purpose is the "lead line", which states
+// the dollar gap in words and colours it by gain/loss/zero, since that IS a
+// money figure.
 //
 // Teams stack in their own full-width rows (name left, score right) rather
 // than sitting side by side — amended 2026-09-26: ui/foundation-web found two
@@ -95,6 +100,7 @@ export interface ScoreboardProps {
 }
 
 export function Scoreboard({ leagueName, week, you, opponent, live = false, chyronMessage, onChyronDismiss }: ScoreboardProps) {
+  const { colors } = useTheme();
   const { fontScale } = useWindowDimensions();
   const stacked = fontScale >= STACKED_FONT_SCALE;
   const leader = leaderOf(you.gain, opponent.gain);
@@ -115,7 +121,7 @@ export function Scoreboard({ leagueName, week, you, opponent, live = false, chyr
   }
 
   return (
-    <Surface kind="game" style={styles.surface}>
+    <Card variant="scoreboard" style={styles.surface}>
       <View style={styles.header}>
         <Text variant="tag" tone="secondary">
           {`WEEK ${week} · ${leagueName}`.toUpperCase()}
@@ -124,8 +130,8 @@ export function Scoreboard({ leagueName, week, you, opponent, live = false, chyr
       </View>
 
       <View style={styles.teams}>
-        <TeamRow name={you.name} gain={you.gain} teamColor={color.team.you.onGame} stacked={stacked} />
-        <TeamRow name={opponent.name} gain={opponent.gain} teamColor={color.team.opponent} stacked={stacked} />
+        <TeamRow name={you.name} gain={you.gain} teamColor={colors.you} stacked={stacked} />
+        <TeamRow name={opponent.name} gain={opponent.gain} teamColor={colors.opp} stacked={stacked} />
       </View>
 
       <View style={styles.tugWrap}>
@@ -143,7 +149,7 @@ export function Scoreboard({ leagueName, week, you, opponent, live = false, chyr
           <Chyron message={chyronMessage} onDismiss={onChyronDismiss} />
         </View>
       ) : null}
-    </Surface>
+    </Card>
   );
 }
 

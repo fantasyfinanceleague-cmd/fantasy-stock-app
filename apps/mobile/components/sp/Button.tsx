@@ -1,20 +1,19 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
-import { color, radius, space } from '@/constants/tokens';
+import { radius, space } from '@/constants/tokens';
 import { PressableScale, PressableScaleProps } from '@/components/sp/PressableScale';
 import { Text } from '@/components/sp/Text';
-import { useSurface } from '@/components/sp/Surface';
+import { useTheme } from '@/components/sp/ThemeProvider';
 
-// Stockpile — <Button> (Phase 2 foundation). SOURCE OF TRUTH: §9.
-// Amended 2026-09-26 after ui/foundation-web found the primary button
-// invisible on stadium navy (`action.primary.bg` equals
-// `color.surface.game.base`): every action colour now resolves per surface
-// through <Surface>, not per call site. On a game surface, primary INVERTS
-// to a white "broadcast chip"; secondary becomes a transparent fill with a
-// light outline; ghost becomes white text. Destructive is unchanged on
-// either surface — `color.status.danger` has no `.onGame` variant in §9,
-// and red-on-navy already contrasts fine.
+// Stockpile — <Button> (§9A, "One design, two themes", 2026-09-29). Every
+// variant reads the active theme's tokens directly — no more onGame variant
+// per colour, since there's no more game surface to invert for. `primary`
+// is `primaryBg`/`primaryFg` (navy-on-white in Light, white-on-navy in
+// Dark — this IS the old on-game inversion, just keyed by theme instead of
+// by a caller-chosen surface kind). `destructive` uses `lossFill`/`onAccent`
+// (the PAIRS list's own "Sell button label" pair, board.jsx-verified 4.5:1
+// in both themes).
 //
 // Amended 2026-09-29 (Design Lead, DESIGN-CHANGES): a button label never
 // truncates — this is a primitive-level rule, not a per-caller patch. The
@@ -43,9 +42,8 @@ const PADDING_X: Record<ButtonSize, number> = { md: space[6], sm: space[5] };
 const PADDING_Y: Record<ButtonSize, number> = { md: space[3], sm: space[2] };
 
 export function Button({ label, variant = 'primary', size = 'md', fullWidth = false, disabled, ...rest }: ButtonProps) {
-  const { kind } = useSurface();
+  const { colors } = useTheme();
   const { fontScale } = useWindowDimensions();
-  const onGame = kind === 'game';
   const stretched = fullWidth && fontScale >= FULL_WIDTH_FONT_SCALE;
 
   let backgroundColor: string | undefined;
@@ -55,24 +53,23 @@ export function Button({ label, variant = 'primary', size = 'md', fullWidth = fa
 
   switch (variant) {
     case 'primary':
-      backgroundColor = onGame ? color.action.primary.onGame.bg : color.action.primary.bg;
-      textColor = onGame ? color.action.primary.onGame.fg : color.action.primary.fg;
+      backgroundColor = colors.primaryBg;
+      textColor = colors.primaryFg;
       break;
     case 'destructive':
-      // No `.onGame` variant in §9 — red-on-navy already contrasts fine.
-      backgroundColor = color.status.danger;
-      textColor = color.action.primary.fg;
+      backgroundColor = colors.lossFill;
+      textColor = colors.onAccent;
       break;
     case 'secondary':
-      backgroundColor = onGame ? undefined : color.action.secondary.bg;
-      borderColor = onGame ? color.action.secondary.onGame.border : color.action.secondary.border;
-      textColor = onGame ? color.action.secondary.onGame.fg : color.action.secondary.fg;
+      backgroundColor = colors.secondaryBg === 'transparent' ? undefined : colors.secondaryBg;
+      borderColor = colors.secondaryBorder;
+      textColor = colors.secondaryFg;
       borderWidth = 1;
       break;
     case 'ghost':
     default:
       backgroundColor = undefined;
-      textColor = onGame ? color.action.ghost.onGame.fg : color.action.ghost.fg;
+      textColor = colors.text;
       break;
   }
 

@@ -2,10 +2,10 @@
 import { ReactNode } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
-import { color, radius, space } from '@/constants/tokens';
+import { radius, space } from '@/constants/tokens';
 import { Button, FULL_WIDTH_FONT_SCALE } from '@/components/sp/Button';
 import { Text } from '@/components/sp/Text';
-import { useSurface } from '@/components/sp/Surface';
+import { useTheme } from '@/components/sp/ThemeProvider';
 
 // Stockpile — <EmptyState> (Phase 2 foundation). SOURCE OF TRUTH: the Phase 2
 // brief's build list — "the ONE empty-state pattern: icon, title, one line,
@@ -38,11 +38,10 @@ export interface EmptyStateProps {
 }
 
 export function EmptyState({ icon: Icon, title, message, actionLabel, onAction }: EmptyStateProps) {
-  const { kind } = useSurface();
+  const { colors } = useTheme();
   const { fontScale } = useWindowDimensions();
-  const onGame = kind === 'game';
-  const iconColor = onGame ? color.text.onGame.secondary : color.text.secondary;
-  const circleColor = onGame ? color.surface.game.raised : color.surface.money.sunken;
+  const iconColor = colors.text2;
+  const circleColor = colors.sunken;
   // Button's own `fullWidth` prop only takes effect past FULL_WIDTH_FONT_SCALE
   // (see Button.tsx) — but that's a no-op unless ITS wrapper also stretches
   // to the full row; below the threshold this wrapper stays shrink-to-content

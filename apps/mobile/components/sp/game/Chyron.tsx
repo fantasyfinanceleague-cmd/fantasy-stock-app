@@ -3,8 +3,9 @@ import { useEffect } from 'react';
 import { AccessibilityInfo, StyleSheet, Text as RNText } from 'react-native';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
-import { color, radius, space, type } from '@/constants/tokens';
+import { radius, space, type } from '@/constants/tokens';
 import { useMotion } from '@/components/sp/motion';
+import { useTheme } from '@/components/sp/ThemeProvider';
 
 // Stockpile — <Chyron> (Phase 2 foundation). SOURCE OF TRUTH: the Phase 2
 // brief: "slides in, auto-dismisses, announced via
@@ -22,6 +23,7 @@ export interface ChyronProps {
 const OFFSCREEN_X = 320;
 
 export function Chyron({ message, onDismiss, durationMs = 3500 }: ChyronProps) {
+  const { colors } = useTheme();
   const { reduced, duration, easing, withTiming } = useMotion();
   const translateX = useSharedValue(OFFSCREEN_X);
   const opacity = useSharedValue(0);
@@ -68,13 +70,13 @@ export function Chyron({ message, onDismiss, durationMs = 3500 }: ChyronProps) {
   if (!message) return null;
 
   return (
-    <Animated.View style={[styles.container, animatedStyle]} accessibilityLiveRegion="polite">
+    <Animated.View style={[styles.container, { backgroundColor: colors.inverseBg }, animatedStyle]} accessibilityLiveRegion="polite">
       <RNText
         style={{
           fontFamily: type.headline.fontFamily,
           fontSize: type.headline.fontSize,
           lineHeight: type.headline.lineHeight,
-          color: color.text.onGame.primary,
+          color: colors.inverseFg,
         }}
         numberOfLines={1}
       >
@@ -86,7 +88,6 @@ export function Chyron({ message, onDismiss, durationMs = 3500 }: ChyronProps) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: color.surface.game.raised,
     borderRadius: radius.sm,
     paddingHorizontal: space[5],
     paddingVertical: space[3],

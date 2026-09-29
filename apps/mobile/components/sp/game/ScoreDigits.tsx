@@ -3,9 +3,10 @@ import { Text as RNText } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, WithSpringConfig } from 'react-native-reanimated';
 import type { withTiming as withTimingType, EasingFunctionFactory } from 'react-native-reanimated';
 
-import { color as tokenColor, type, TypeVariant } from '@/constants/tokens';
+import { type, TypeVariant } from '@/constants/tokens';
 import { digitDiff, DigitDiffEntry } from '@/components/sp/logic/digits';
 import { useMotion } from '@/components/sp/motion';
+import { useTheme } from '@/components/sp/ThemeProvider';
 import { useLeadChangeSpring } from '@/components/sp/game/motion';
 
 // Stockpile — <ScoreDigits> (Phase 2 foundation). SOURCE OF TRUTH: the Phase
@@ -106,6 +107,7 @@ export interface ScoreDigitsProps {
 }
 
 export function ScoreDigits({ text, variant = 'score.md', color: colorProp, slam = false }: ScoreDigitsProps) {
+  const { colors } = useTheme();
   const prevTextRef = useRef(text);
   const diff = digitDiff(prevTextRef.current, text);
   const { reduced, duration, easing, withTiming } = useMotion();
@@ -116,7 +118,7 @@ export function ScoreDigits({ text, variant = 'score.md', color: colorProp, slam
   }, [text]);
 
   const typeStyle = type[variant];
-  const textColor = colorProp ?? tokenColor.text.onGame.primary;
+  const textColor = colorProp ?? colors.text;
 
   return (
     <Animated.View style={{ flexDirection: 'row', flexShrink: 1 }}>

@@ -1,22 +1,23 @@
 import Svg, { Rect } from 'react-native-svg';
 
-import { color } from '@/constants/tokens';
+import { useTheme } from '@/components/sp/ThemeProvider';
 
-// Stockpile — <BrandMark> (Phase 2 foundation).
+// Stockpile — <BrandMark> (§9A, "One design, two themes", 2026-09-29).
 // SOURCE OF TRUTH: DESIGN_DIRECTION.md, mark option "1 · Bars, refined"
 // (the Decisions block: today's icon, equalised — name-agnostic, safe to
 // build regardless of the pending brand-name decision).
 //
 // Three equal-WIDTH bars sharing a baseline, rounded tops, ascending height
-// left to right; the tallest (rightmost) bar carries the brand accent
-// colour (§9 color.brand — "mark accent bar"). The other two use the
-// surface-appropriate secondary text colour, so the mark reads correctly
-// on both a light card and a stadium background without a second asset.
+// left to right; the tallest (rightmost) bar carries the accent colour
+// (colors.accent — "mark accent bar"). The other two use the theme's
+// secondary text colour. No more `tone` prop: the mark reads its colours
+// from the active theme directly, the same as every other component, so it
+// reads correctly wherever it's placed without the caller needing to know
+// what's behind it.
 
 export interface BrandMarkProps {
   /** Overall square size in points. Bars scale proportionally. */
   size?: number;
-  tone: 'onLight' | 'onGame';
 }
 
 const VIEWBOX = 24;
@@ -27,8 +28,8 @@ const RADIUS = 1.5;
 // Ascending heights, left to right — the third bar is tallest.
 const HEIGHTS = [8, 12, 16];
 
-export function BrandMark({ size = 24, tone }: BrandMarkProps) {
-  const mutedColor = tone === 'onGame' ? color.text.onGame.secondary : color.text.secondary;
+export function BrandMark({ size = 24 }: BrandMarkProps) {
+  const { colors } = useTheme();
   const totalWidth = HEIGHTS.length * BAR_WIDTH + (HEIGHTS.length - 1) * GAP;
   const startX = (VIEWBOX - totalWidth) / 2;
 
@@ -47,7 +48,7 @@ export function BrandMark({ size = 24, tone }: BrandMarkProps) {
             height={height}
             rx={RADIUS}
             ry={RADIUS}
-            fill={isTallest ? color.brand : mutedColor}
+            fill={isTallest ? colors.accent : colors.text2}
           />
         );
       })}

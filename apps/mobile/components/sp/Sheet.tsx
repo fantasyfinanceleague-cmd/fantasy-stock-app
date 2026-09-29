@@ -3,8 +3,9 @@ import { ReactNode, useEffect, useRef, useState } from 'react';
 import { Dimensions, Modal, PanResponder, StyleSheet, View } from 'react-native';
 import Animated, { ReduceMotion, runOnJS, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
-import { color, elevation, radius, space } from '@/constants/tokens';
+import { radius, space } from '@/constants/tokens';
 import { useMotion } from '@/components/sp/motion';
+import { useTheme } from '@/components/sp/ThemeProvider';
 
 // Stockpile — <Sheet> (Phase 2 foundation). SOURCE OF TRUTH: §4 ("Sheets:
 // spring up, dim behind — spring.snappy") and the Phase 2 brief's explicit
@@ -23,6 +24,7 @@ const DISMISS_DISTANCE = 120;
 const DISMISS_VELOCITY = 0.8;
 
 export function Sheet({ visible, onClose, children }: SheetProps) {
+  const { colors, elevation } = useTheme();
   const [mounted, setMounted] = useState(visible);
   const screenHeight = Dimensions.get('window').height;
   const translateY = useSharedValue(screenHeight);
@@ -69,10 +71,10 @@ export function Sheet({ visible, onClose, children }: SheetProps) {
   return (
     <Modal transparent visible={mounted} animationType="none" onRequestClose={onClose} statusBarTranslucent>
       <View style={styles.container}>
-        <Animated.View style={[styles.backdrop, backdropAnimatedStyle]} onTouchEnd={onClose} />
-        <Animated.View style={[styles.sheet, elevation.sheet, sheetAnimatedStyle]}>
+        <Animated.View style={[styles.backdrop, { backgroundColor: colors.scrim }, backdropAnimatedStyle]} onTouchEnd={onClose} />
+        <Animated.View style={[styles.sheet, { backgroundColor: colors.surface }, elevation.sheet, sheetAnimatedStyle]}>
           <View {...panResponder.panHandlers} style={styles.handleArea}>
-            <View style={styles.handle} />
+            <View style={[styles.handle, { backgroundColor: colors.border }]} />
           </View>
           {children}
         </Animated.View>
@@ -88,10 +90,8 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(13,27,46,0.4)',
   },
   sheet: {
-    backgroundColor: color.surface.money.base,
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
     paddingBottom: space[8],
@@ -105,6 +105,5 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: color.border.default,
   },
 });

@@ -1,13 +1,14 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { Text as RNText, TextProps as RNTextProps, StyleSheet } from 'react-native';
 
-import { color, type, TypeVariant } from '@/constants/tokens';
-import { useSurface } from '@/components/sp/Surface';
+import { type, TypeVariant } from '@/constants/tokens';
+import { useTheme } from '@/components/sp/ThemeProvider';
 
-// Stockpile — <Text> (Phase 2 foundation). SOURCE OF TRUTH: DESIGN_DIRECTION §9.
-// `variant` covers every `type.*` token; the default colour comes from the
-// ambient <Surface> (money vs game), so a component never has to remember
-// which text colour is legal on the surface it happens to be nested in.
+// Stockpile — <Text> (§9A, "One design, two themes", 2026-09-29). `variant`
+// covers every `type.*` token; the default colour comes from the active
+// theme (useTheme()), not a surface kind — a component never has to
+// remember which text colour is legal where, because there's only one
+// legal set at a time now.
 
 export type TextTone = 'primary' | 'secondary' | 'disabled';
 
@@ -24,13 +25,6 @@ export interface TextProps extends RNTextProps {
 // a wrapped scoreboard number is worse than a clipped one.
 const NEVER_WRAP: ReadonlySet<TypeVariant> = new Set(['score.xl', 'score.lg', 'score.md', 'display']);
 
-function tonePrimary(onGame: boolean): string {
-  return onGame ? color.text.onGame.primary : color.text.primary;
-}
-function toneSecondary(onGame: boolean): string {
-  return onGame ? color.text.onGame.secondary : color.text.secondary;
-}
-
 export function Text({
   variant,
   tone = 'primary',
@@ -40,20 +34,19 @@ export function Text({
   maxFontSizeMultiplier,
   ...rest
 }: TextProps) {
-  const { kind } = useSurface();
-  const onGame = kind === 'game';
+  const { colors } = useTheme();
   const typeStyle = type[variant];
 
   let resolvedColor: string;
   if (colorOverride) {
     resolvedColor = colorOverride;
   } else if (tone === 'disabled') {
-    // Disabled is never information-bearing (§9) — same value on both surfaces.
-    resolvedColor = color.text.disabled;
+    // §9A: text3 is disabled/decorative ONLY, never information-bearing.
+    resolvedColor = colors.text3;
   } else if (tone === 'secondary') {
-    resolvedColor = toneSecondary(onGame);
+    resolvedColor = colors.text2;
   } else {
-    resolvedColor = tonePrimary(onGame);
+    resolvedColor = colors.text;
   }
 
   const resolvedNumberOfLines = numberOfLines ?? (NEVER_WRAP.has(variant) ? 1 : undefined);

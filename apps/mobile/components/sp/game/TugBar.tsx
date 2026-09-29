@@ -3,15 +3,16 @@ import { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
-import { color, radius } from '@/constants/tokens';
+import { radius } from '@/constants/tokens';
 import { tugRatio, hasLeadChanged, tugAccessibilityLabel } from '@/components/sp/logic/tug';
 import { useMotion } from '@/components/sp/motion';
+import { useTheme } from '@/components/sp/ThemeProvider';
 import { useLeadChangeSpring } from '@/components/sp/game/motion';
 
-// Stockpile — <TugBar> (Phase 2 foundation). SOURCE OF TRUTH: §4/§9. "you vs
-// opponent ratio, clamps, overshoots with `lively` on a lead change."
-// Game surface only — team colours are used here strictly as FILLS, never
-// as text (§9's non-swap rule), which is exactly what this component does.
+// Stockpile — <TugBar> (§9A, "One design, two themes", 2026-09-29). SOURCE
+// OF TRUTH: §4/§9A. "you vs opponent ratio, clamps, overshoots with `lively`
+// on a lead change." Team colours are used here strictly as FILLS, never as
+// text (§9A's non-swap rule), which is exactly what this component does.
 //
 // Accessibility (Design Lead, 2026-09-26): the label is dollars only, never a
 // percentage — the visual ratio is a clamped layout fraction, not a
@@ -28,6 +29,7 @@ export interface TugBarProps {
 }
 
 export function TugBar({ you, opponent, opponentName, height = 8 }: TugBarProps) {
+  const { colors } = useTheme();
   const ratio = tugRatio(you, opponent);
   const prevRef = useRef({ you, opponent });
   const leadChanged = hasLeadChanged(prevRef.current.you, prevRef.current.opponent, you, opponent);
@@ -55,13 +57,13 @@ export function TugBar({ you, opponent, opponentName, height = 8 }: TugBarProps)
 
   return (
     <View
-      style={[styles.track, { height, borderRadius: height / 2 }]}
+      style={[styles.track, { height, borderRadius: height / 2, backgroundColor: colors.track }]}
       accessible
       accessibilityRole="progressbar"
       accessibilityLabel={tugAccessibilityLabel(you, opponent, opponentName)}
     >
-      <Animated.View style={[styles.fill, styles.youFill, youFillStyle]} />
-      <Animated.View style={[styles.fill, styles.opponentFill, opponentFillStyle]} />
+      <Animated.View style={[styles.fill, styles.youFill, { backgroundColor: colors.you }, youFillStyle]} />
+      <Animated.View style={[styles.fill, styles.opponentFill, { backgroundColor: colors.opp }, opponentFillStyle]} />
     </View>
   );
 }
@@ -70,18 +72,15 @@ const styles = StyleSheet.create({
   track: {
     flexDirection: 'row',
     overflow: 'hidden',
-    backgroundColor: color.surface.game.line,
   },
   fill: {
     height: '100%',
   },
   youFill: {
-    backgroundColor: color.team.you.onGame,
     borderTopLeftRadius: radius.pill,
     borderBottomLeftRadius: radius.pill,
   },
   opponentFill: {
-    backgroundColor: color.team.opponent,
     borderTopRightRadius: radius.pill,
     borderBottomRightRadius: radius.pill,
   },
