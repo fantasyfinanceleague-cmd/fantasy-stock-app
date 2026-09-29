@@ -34,20 +34,39 @@ afterEach(() => {
 describe('server render (what the prerendered / JS-off page shows)', () => {
   const html = renderToString(<LandingPage />);
   const doc = new DOMParser().parseFromString(html, 'text/html');
-  const text = (sel: string) => [...doc.querySelectorAll(sel)].map((e) => e.textContent?.replace(/\s+/g, ' ').trim());
+  // What assistive tech reads: the text minus aria-hidden subtrees (the
+  // kinetic headings carry a visually-hidden verbatim twin).
+  const readable = (e: Element) => {
+    const c = e.cloneNode(true) as Element;
+    c.querySelectorAll('[aria-hidden="true"]').forEach((h) => h.remove());
+    return c.textContent?.replace(/\s+/g, ' ').trim();
+  };
+  const text = (sel: string) => [...doc.querySelectorAll(sel)].map(readable);
+
+  it('kinetic headings: the split twin is aria-hidden and spells exactly the verbatim text (spaces kept, so word-spacing holds)', () => {
+    for (const sel of ['h1', '#lp-why-title']) {
+      const h = doc.querySelector(sel)!;
+      const twin = h.querySelector('[aria-hidden="true"]')!;
+      expect(twin).not.toBeNull();
+      expect(h.querySelector('.lp-sr')?.textContent).toBe(readable(h));
+      // Lines are blocks (no space between them in textContent).
+      const lines = [...twin.querySelectorAll(':scope > *, :scope .lp-kinetic__line')].map((l) => l.textContent!.trim());
+      expect(lines.join(' ').replace(/\s+/g, ' ')).toContain(readable(h)!.split(' ').slice(-2).join(' '));
+      expect(twin.textContent!.replace(/\s+/g, '')).toBe(readable(h)!.replace(/\s+/g, ''));
+    }
+    expect(doc.querySelectorAll('h1 .lp-char').length).toBe('Draftstocks.Beatyourfriends.Winthe league.'.replace(/\s/g, '').length);
+  });
 
   it('is deterministic (two renders are byte-identical)', () => {
     expect(renderToString(<LandingPage />)).toBe(html);
   });
 
   it('has the live page’s headline and section headings, in order', () => {
-    expect(doc.querySelector('h1')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
-      'Draft stocks. Beat your friends. Win the league.'
-    );
+    expect(readable(doc.querySelector('h1')!)).toBe('Draft stocks. Beat your friends. Win the league.');
     expect(text('h2')).toEqual([
       'Draft a team. Compete weekly.Climb the league.',
       'A scoreboard for your portfolio.',
-      'The rigor of investing,the rhythm of fantasy.',
+      'The rigor of investing, the rhythm of fantasy.',
       'Questions, answered.',
       'Launching soon.',
     ]);

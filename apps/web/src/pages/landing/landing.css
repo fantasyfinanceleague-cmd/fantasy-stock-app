@@ -3036,3 +3036,67 @@ html[data-lp3d-cta='painted'] .lp-cta__mark-dom {
 .lp-sky-tip[data-on='true'] {
   opacity: 1;
 }
+
+/* ── Round 4: kinetic type ────────────────────────────────────────────── */
+/* Visually hidden, read by assistive tech (the split twin is aria-hidden). */
+.lp-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.lp-word,
+.lp-kword {
+  display: inline-block;
+}
+
+.lp-char {
+  display: inline-block;
+}
+
+/* The hero letters rise inside their line's mask, staggered along the
+   line; the whole headline is set within ~850 of the page's first
+   milliseconds. Reduced motion: none of it. */
+@media (prefers-reduced-motion: no-preference) {
+  .lp-line__in {
+    animation: none;
+  }
+
+  .lp-char {
+    animation: lp-line-rise var(--sp-motion-duration-slow) var(--sp-motion-ease-settle) both;
+    animation-delay: calc(
+      var(--lp-i, 0) * var(--sp-motion-duration-quick) * 0.75 + var(--lp-c, 0) * var(--sp-motion-duration-instant) * 0.15
+    );
+  }
+}
+
+/* "Win the league." grows from its own start (left on desktop, centre on
+   phones, where the headline is centred). */
+.lp-hero__title .lp-line {
+  transform-origin: 50% 60%;
+}
+
+@media (min-width: 1024px) {
+  .lp-hero__title .lp-line {
+    transform-origin: 0% 60%;
+  }
+}
+
+/* Section headlines scrubbed word by word in depth. */
+.lp-kinetic__line {
+  display: block;
+}
+
+.lp-kinetic--live {
+  perspective: 900px;
+}
+
+.lp-kinetic--live .lp-kword {
+  transform-origin: 50% 100%;
+}

@@ -11,6 +11,7 @@ import { FullSlot, useFullReady } from './FullSlot';
 import { HomeScreen, Phone } from './PhoneScreens';
 import { Layer } from './scroll';
 import { LaunchingSoon } from './Nav';
+import { SplitLetters } from './Kinetic';
 import {
   useEnhanced,
   useFinePointer,
@@ -266,6 +267,15 @@ export function Opening() {
   const frame = useLoop(PORTFOLIO_FRAMES.length, INSIDE_TICK_MS, enhanced && inView === true && visible && !held);
   usePointerGlow(stageRef, enhanced);
 
+  // Kinetic headline: as the next layer rises over the hero, the lines
+  // drift apart in depth and "Win the league." grows toward the camera.
+  const { scrollY } = useScroll();
+  const heroCover = useTransform(scrollY, (v) => Math.min(1, Math.max(0, v / (typeof window === 'undefined' ? 1 : window.innerHeight))));
+  const drift0 = useTransform(heroCover, [0, 1], ['0em', '-0.28em']);
+  const drift1 = useTransform(heroCover, [0, 1], ['0em', '-0.12em']);
+  const grow2 = useTransform(heroCover, [0, 1], [1, 1.1]);
+  const lineDrift = [{ y: drift0 }, { y: drift1 }, { scale: grow2 }];
+
   // The hero device's screen ticks through the same frames as the cards.
   const heroInView = useInView(deviceRef, { threshold: 0.1 });
   const heroFrame = useLoop(PORTFOLIO_FRAMES.length, INSIDE_TICK_MS, enhanced && heroInView === true && visible);
@@ -284,12 +294,29 @@ export function Opening() {
                 {hero.eyebrow}
               </p>
               <h1 id="lp-hero-title" className="lp-hero__title">
-                {hero.lines.map((line, i) => (
-                  <span key={line} className="lp-line" style={{ ['--lp-i' as string]: i }}>
-                    <span className="lp-line__in">{i === hero.lines.length - 1 ? <em>{line}</em> : line}</span>
-                    {i < hero.lines.length - 1 ? ' ' : null}
-                  </span>
-                ))}
+                {/* Kinetic type: the verbatim headline for assistive tech,
+                    the split letters (aria-hidden) for the eye. */}
+                <span className="lp-sr">{hero.lines.join(' ')}</span>
+                <span aria-hidden="true">
+                  {hero.lines.map((line, i) => (
+                    <motion.span
+                      key={line}
+                      className="lp-line"
+                      style={enhanced ? { ['--lp-i' as string]: i, ...lineDrift[i] } : { ['--lp-i' as string]: i }}
+                    >
+                      <span className="lp-line__in">
+                        {i === hero.lines.length - 1 ? (
+                          <em>
+                            <SplitLetters text={line} />
+                          </em>
+                        ) : (
+                          <SplitLetters text={line} />
+                        )}
+                      </span>
+                      {i < hero.lines.length - 1 ? ' ' : null}
+                    </motion.span>
+                  ))}
+                </span>
               </h1>
               <p className="lp-hero__lede">{hero.lede(brand.name)}</p>
               <div className="lp-hero__cta">

@@ -5,6 +5,7 @@ import { formatMoney } from '../../design/lib/money';
 import { why } from './copy';
 import { useEnhanced, useInView, useLandingMotion } from './hooks';
 import { MATCHUP, WEEK, raceSeries } from './sampleData';
+import { KineticHeading } from './Kinetic';
 import { Layer, Reveal } from './scroll';
 
 function IconActivity() {
@@ -159,12 +160,11 @@ export function Why() {
       <div className="lp-wrap">
         <Reveal className="lp-head lp-head--center">
           <p className="lp-kicker">{why.kicker(brand.name)}</p>
-          <h2 className="lp-h2" id="lp-why-title">
-            {why.title.line1}
-            <br />
-            {why.title.line2}
-            <em>{why.title.em}</em>
-          </h2>
+          <KineticHeading
+            id="lp-why-title"
+            className="lp-h2"
+            lines={[[{ text: why.title.line1 }], [{ text: why.title.line2 }, { text: why.title.em, em: true }]]}
+          />
         </Reveal>
         <div className="lp-bento">
           <Cell className="lp-bento__cell--tall" depth={24}>
