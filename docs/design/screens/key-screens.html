@@ -2304,8 +2304,52 @@
     </div>
   );
 
-  function HomePreDraft() {
-    const members = ['RB', 'MR', 'LC', 'SF', 'GV', 'TP'];
+  /** Draft order waits for the start minimum (backend: waiting_for_members,
+   * member_count, min_members). The order is set at the LATER of 1 hour
+   * before the draft and the league reaching the minimum. New copy. */
+  function OrderWaiting({ count = 3, min = 4, pastReveal }) {
+    const need = min - count;
+    return (
+      <div className="ks-raised" style={{ padding: '12px 14px', display: 'grid', gap: 8 }}>
+        <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Draft order · waiting</span>
+        <span className="ks-callout" style={{ fontWeight: 600 }}>
+          {pastReveal
+            ? `Set as soon as ${need} more ${need === 1 ? 'manager joins' : 'managers join'}.`
+            : `Set 1 hour before the draft, once ${min} managers have joined.`}
+        </span>
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${min}, 1fr)`, gap: 4 }} aria-label={`${count} of ${min} managers`}>
+          {Array.from({ length: min }, (_, i) => <span key={i} style={{ height: 6, borderRadius: 3, background: i < count ? 'var(--c-you)' : 'var(--c-track)' }} />)}
+        </div>
+        <span className="ks-caption ks-num">{count} of {min} managers</span>
+      </div>
+    );
+  }
+
+  function HomePreDraft({ waiting }) {
+    const members = waiting ? ['RB', 'MR', 'LC'] : ['RB', 'MR', 'LC', 'SF', 'GV', 'TP'];
+    if (waiting) {
+      return (
+        <Device tab="home" label="Home, pre-draft, waiting for managers">
+          <Head name="Weekend Warriors" avatar />
+          <div className="ks-pad ks-stack">
+            <GameCard tag="Draft" chip={<span className="ks-chip">Pre-draft</span>}>
+              <span className="ks-title">Sat, Oct 3 · 7:00 PM</span>
+              <span className="ks-score ks-num" style={{ fontSize: 40 }}>3d 04h 12m</span>
+              <span className="ks-callout ks-muted">60-second picks · 6 rounds</span>
+            </GameCard>
+            <OrderWaiting count={3} min={4} />
+            <Card pad="14px">
+              <div className="ks-section-h"><h3>Members</h3><span className="ks-caption ks-num">3 joined · 4 needed to draft</span></div>
+              <div style={{ display: 'flex', gap: 6 }}>{members.map((m, i) => <span key={m} className={i === 0 ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{m}</span>)}<span className="ks-avatar ks-avatar--sm" style={{ background: 'transparent', border: '1.5px dashed var(--c-border-strong)', color: 'var(--c-text-2)' }}>+1</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, padding: '10px 12px', borderRadius: 10, background: 'var(--c-sunken)' }}>
+                <span><span className="ks-caption">Invite code</span><br /><b className="ks-num" style={{ letterSpacing: '0.12em' }}>WKND4ME</b></span>
+                <span className="ks-callout" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Share</span>
+              </div>
+            </Card>
+          </div>
+        </Device>
+      );
+    }
     return (
       <Device tab="home" label="Home, pre-draft">
         <Head name="Serie A Traders" avatar />
@@ -2550,7 +2594,25 @@
    * managers the draft can't start: the sheet says why in one line and puts
    * the playoff stepper right there, capped at the member count; Start
    * draft stays disabled until P ≤ managers (friendly, blocking). */
-  function StartDraftConfirm({ managers = 7, playoff = 6, weeks = 10, order = 'random' }) {
+  function StartDraftConfirm({ managers = 7, playoff = 6, weeks = 10, order = 'random', min = 4 }) {
+    const short = managers < min;
+    if (short) {
+      return (
+        <Device tab="league" label="Start the draft, not enough managers" overlay={
+          <Sheet top={400}>
+            <span className="ks-title">Start the draft?</span>
+            <div role="alert" className="ks-card" style={{ padding: '10px 12px', background: 'var(--c-warn-tint)', borderColor: 'var(--c-warn-line)', boxShadow: 'none' }}>
+              <span className="ks-callout" style={{ fontWeight: 600, color: 'var(--c-text)' }}>A draft needs at least {min} managers. {managers} are in, so invite {min - managers} more to start.</span>
+            </div>
+            <span className="ks-callout"><b>Draft order:</b> set as soon as the {K.ordinal(min)} manager joins.</span>
+            <span className="ks-btn ks-btn--secondary">Share invite code</span>
+            <span className="ks-btn" style={{ opacity: 0.4 }} aria-disabled="true">Start draft</span>
+          </Sheet>
+        }>
+          <Head name="Weekend Warriors" chip={<span className="ks-chip">Pre-draft</span>} />
+        </Device>
+      );
+    }
     const blocked = playoff > managers;
     const StepInline = () => (
       <div style={{ display: 'grid', gap: 6 }}>
@@ -2709,7 +2771,7 @@
               ))}
             </ol>
           </div>
-          <span className="ks-caption">Started from a random order. Shuffle again or drag anyone anywhere. If you never save, this order is used.</span>
+          <span className="ks-caption">Started from a random order. Shuffle again or drag anyone anywhere. If you never save, this order is used. Until you save, anyone who joins lands in a random slot; after you save, they're added at the end.</span>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <span className="ks-btn ks-btn--secondary">Shuffle again</span>
             <span className="ks-btn">Save order</span>
@@ -2719,18 +2781,18 @@
     );
   }
 
-  function DraftLobby() {
+  function DraftLobby({ waiting }) {
     const queue = ['NVDA', 'MSFT', 'AAPL', 'CRM', 'COST'];
     return (
-      <Device game tab="league" label="Draft lobby">
-        <Head name="Serie A Traders" chip={<span className="ks-chip">Pre-draft</span>} />
+      <Device game tab="league" label={waiting ? 'Draft lobby, waiting for managers' : 'Draft lobby'}>
+        <Head name={waiting ? 'Weekend Warriors' : 'Serie A Traders'} chip={<span className="ks-chip">Pre-draft</span>} />
         <div className="ks-pad ks-stack" style={{ gap: 14 }}>
           <div className="ks-raised" style={{ padding: 16, display: 'grid', gap: 4, textAlign: 'center' }}>
             <span className="ks-tag">Draft starts in</span>
             <span className="ks-score ks-num" style={{ fontSize: 56, lineHeight: '56px' }}>04:59</span>
             <span className="ks-caption ks-muted">Sat 7:00 PM · 60-second picks</span>
           </div>
-          <DraftOrder />
+          {waiting ? <OrderWaiting count={3} min={4} pastReveal /> : <DraftOrder />}
           <div>
             <div className="ks-section-h"><h3>Your queue</h3></div>
             <span className="ks-caption" style={{ display: 'block', marginBottom: 4 }}>If you step away, we'll auto-pick from your queue when your time runs out. You can come back any time.</span>
@@ -3227,6 +3289,7 @@
             'After Friday\'s close the card shows "Scoring…" until the results post; nothing is presented as final before it is.',
           ]}>
           <Fit caption="Before the draft" note="Serie A Traders"><I.HomePreDraft /></Fit>
+          <Fit caption="Before the draft · waiting for managers" note="3 of 4 joined, so the order isn't set yet (new copy)"><I.HomePreDraft waiting /></Fit>
           <Fit caption="Draft in progress"><I.HomeDrafting /></Fit>
           <Fit caption="Before the season"><I.HomePreSeason /></Fit>
           <Fit caption="Market closed" note="Thursday night"><I.HomeClosed /></Fit>
@@ -3241,6 +3304,7 @@
             'An auto-pick is never hidden: a banner names who ran out of time and what was picked, the board cell gets an Auto badge, and the pick log says "Auto-picked · from his queue" or "Auto-picked · best available" (new copy). The rule is fixed, not a league setting: queue first, then best available, never random, never a skip.',
             'The draft recap lives under League › History after the draft: your picks ranked by how they have done since.',
             'Draft order is a league setting with two modes, and BOTH become final 1 hour before the draft: Random is drawn then; Manual can be arranged any time until then (if the commissioner never saves, the random starting order is used, never commissioner-first). The mode can be switched until then too. Anyone who joins after that picks last. (New copy.)',
+            'The order is set at the LATER of 1 hour before the draft and the league reaching 4 managers (the minimum to draft). Until then Home and the lobby show "Draft order · waiting" with a 3-of-4 progress bar; Start draft stays disabled below 4 managers and offers the invite code. While a Manual order is unsaved, anyone who joins lands in a random slot (so the start stays fair); once it\'s saved or final, joiners go last. (New copy.)',
             'When the order is set, everyone gets a push ("Serie A Traders: The draft order is set. You pick 4th. The draft starts at 7:00 PM." / "The commissioner set the draft order…") and an in-app card, "Draft order set · 6:00 PM · You pick 4th, then 13th, 20th…", in the lobby and on the pre-draft Home. (New copy.)',
             'Leaving is fine: "If you step away, we\'ll auto-pick from your queue when your time runs out. You can come back any time." There is no "don\'t leave" warning anywhere.',
             'Uneven byes get a short heads-up, never an explanation of how byes work, and never a block: on the weeks control in Create league / League settings (based on the expected size, and it says so), and on the commissioner\'s Start draft confirm (the count is final there). It only appears for an odd number of managers when the weeks don\'t divide evenly; with an even count there are no byes. Backend: byes per manager = floor or ceil(weeks / managers) when managers is odd.',
@@ -3252,6 +3316,8 @@
           <Fit caption="All matchups"><I.AllMatchups /></Fit>
           <Fit caption="Matchup before the season"><I.MatchupPreSeason /></Fit>
           <Fit caption="Draft lobby · order revealed" note="After 6:00 PM: the full order, your slot, and the snake picks that follow (new copy)"><I.DraftLobby /></Fit>
+          <Fit caption="Draft lobby · still waiting" note="Past 6:00 PM but only 3 of 4 managers: set as soon as one more joins (new copy)"><I.DraftLobby waiting /></Fit>
+          <Fit caption="Start the draft · not enough managers" note="Needs 4; invite one more (new copy)"><I.StartDraftConfirm managers={3} /></Fit>
           <Fit caption="Arrange order (commissioner, Manual)" note="Drag to reorder; starts from a random order, never commissioner-first; set by 1 hour before the draft (new copy)"><I.ArrangeOrder /></Fit>
           <Fit caption="Draft order · final" note="After 6:00 PM: read-only; late joiners pick last (new copy)"><I.ArrangeOrder locked /></Fit>
           <Fit caption="Push · draft order set (random)" note="At 6:00 PM in either mode, plus an in-app card (new copy)"><I.OrderPush /></Fit>
