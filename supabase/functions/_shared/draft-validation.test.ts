@@ -21,9 +21,11 @@ import {
   computeDraftOrder,
   currentTurn,
   fillQuantity,
+  fixedNotionalFunding,
   leagueOwnedSymbols,
   type LeagueRules,
   type PickRow,
+  resolveFunding,
   SKIP_SYMBOL,
   type Slot,
   type TradeRow,
@@ -69,8 +71,15 @@ function pick(userId: string, symbol: string, price: number, extra: Partial<Pick
 function skipRow(userId: string): PickRow {
   return pick(userId, SKIP_SYMBOL, 0, { quantity: 0 });
 }
-function trade(userId: string, symbol: string, action: 'buy' | 'sell', quantity: number, price: number): TradeRow {
-  return { user_id: userId, symbol, action, quantity, price };
+function trade(
+  userId: string,
+  symbol: string,
+  action: 'buy' | 'sell',
+  quantity: number,
+  price: number,
+  extra: Partial<TradeRow> = {},
+): TradeRow {
+  return { user_id: userId, symbol, action, quantity, price, ...extra };
 }
 function slot(id: string, slotIndex: number, over: Partial<Slot> = {}): Slot {
   return { id, slotIndex, slotCount: 1, priceMin: null, priceMax: null, categoryId: null, ...over };
@@ -656,6 +665,235 @@ Deno.test('validateTradeAdd: allow_undraftable override permits a non-draftable 
     isDraftable: false,
   });
   assert(d.legal);
+});
+
+// ---------------------------------------------------------------------------
+// fixed_notional slot proceeds (2026-09-29 product rule): a rebuy reinvests
+// exactly the SALE PROCEEDS of the slot it fills, not a fresh notional stake.
+// See fixedNotionalFunding/resolveFunding above draft-validation.ts and the
+// migration header at
+// supabase/migrations/20261006000000_trades_funded_by_trade_id.sql.
+// ---------------------------------------------------------------------------
+
+const FN_RULES = (over: Partial<LeagueRules> = {}) =>
+  rules({ stakeMode: 'fixed_notional', notionalPerSlot: 2000, numRounds: 3, ...over });
+
+Deno.test('fixedNotionalFunding: a full sell opens proceeds at its stored price × quantity', () => {
+  const picks = [pick('a', 'AAPL', 160, { quantity: 12.5 })];
+  const trades = [trade('a', 'AAPL', 'sell', 12.5, 120, { id: 't-sell-1', created_at: '2026-10-05T10:00:00Z' })];
+  const funding = fixedNotionalFunding('a', picks, trades);
+  assertEquals(funding, { open: [{ tradeId: 't-sell-1', symbol: 'AAPL', amount: 1500 }], unfilledSlots: 0 });
+});
+
+Deno.test('fixedNotionalFunding: prefers the row\'s stored total_value over re-derived price × quantity', () => {
+  const picks = [pick('a', 'AAPL', 160, { quantity: 12.5 })];
+  // A contrived mismatch: total_value (what was actually recorded, rounded to
+  // cents) differs slightly from price*quantity (what re-deriving would give).
+  // The stored value must win — it's the sale's own recorded proceeds.
+  const trades = [
+    trade('a', 'AAPL', 'sell', 12.5, 120, { id: 't-sell-1', created_at: '2026-10-05T10:00:00Z', total_value: 1499.99 }),
+  ];
+  const funding = fixedNotionalFunding('a', picks, trades);
+  assertEquals(funding.open, [{ tradeId: 't-sell-1', symbol: 'AAPL', amount: 1499.99 }]);
+});
+
+Deno.test('fixedNotionalFunding: falls back to price × quantity when total_value is absent (hermetic test shape)', () => {
+  const picks = [pick('a', 'AAPL', 160, { quantity: 12.5 })];
+  const trades = [trade('a', 'AAPL', 'sell', 12.5, 120, { id: 't-sell-1', created_at: '2026-10-05T10:00:00Z' })];
+  assertEquals(fixedNotionalFunding('a', picks, trades).open[0].amount, 1500);
+});
+
+Deno.test('fixedNotionalFunding: two sells stay open in FIFO (chronological, not array) order', () => {
+  const picks = [pick('a', 'AAA', 100, { quantity: 20 }), pick('a', 'BBB', 100, { quantity: 20 })];
+  const trades = [
+    // Listed newest-first; the walk must still resolve chronologically.
+    trade('a', 'BBB', 'sell', 20, 90, { id: 't-2', created_at: '2026-10-05T12:00:00Z' }),
+    trade('a', 'AAA', 'sell', 20, 80, { id: 't-1', created_at: '2026-10-05T09:00:00Z' }),
+  ];
+  const funding = fixedNotionalFunding('a', picks, trades);
+  assertEquals(funding.open.map((o) => o.tradeId), ['t-1', 't-2']);
+});
+
+Deno.test('fixedNotionalFunding: a voluntary SKIP is an unfilled slot until a NULL-linked buy claims it', () => {
+  const picks = [pick('a', 'AAA', 100, { quantity: 20 }), skipRow('a'), skipRow('a')];
+  assertEquals(fixedNotionalFunding('a', picks, []), { open: [], unfilledSlots: 2 });
+
+  const trades = [trade('a', 'BBB', 'buy', 20, 100, { created_at: '2026-10-05T09:00:00Z' })];
+  assertEquals(fixedNotionalFunding('a', picks, trades).unfilledSlots, 1);
+});
+
+Deno.test('fixedNotionalFunding: an explicit funded_by_trade_id consumes exactly that sale, not FIFO order', () => {
+  const picks = [pick('a', 'AAA', 100, { quantity: 20 }), pick('a', 'BBB', 100, { quantity: 20 })];
+  const trades = [
+    trade('a', 'AAA', 'sell', 20, 80, { id: 't-1', created_at: '2026-10-05T09:00:00Z' }),
+    trade('a', 'BBB', 'sell', 20, 90, { id: 't-2', created_at: '2026-10-05T10:00:00Z' }),
+    // Explicitly claims t-2 even though t-1 is the FIFO default.
+    trade('a', 'CCC', 'buy', 18, 100, { created_at: '2026-10-05T11:00:00Z', funded_by_trade_id: 't-2' }),
+  ];
+  assertEquals(fixedNotionalFunding('a', picks, trades).open.map((o) => o.tradeId), ['t-1']);
+});
+
+Deno.test('fixedNotionalFunding: a pre-fix anomaly buy (no proceeds, no unfilled slot) consumes nothing', () => {
+  // A fully-drafted roster, no sale at all, yet a NULL-linked buy row exists
+  // — only reachable from the OLD bug (an overbuy with no legality gate).
+  // The walk must not crash or fabricate a consumption for it.
+  const picks = [pick('a', 'AAA', 100), pick('a', 'BBB', 100), pick('a', 'CCC', 100)];
+  const trades = [trade('a', 'DDD', 'buy', 20, 100, { created_at: '2026-10-05T09:00:00Z' })];
+  assertEquals(fixedNotionalFunding('a', picks, trades), { open: [], unfilledSlots: 0 });
+});
+
+Deno.test('resolveFunding: reinvest proceeds first even when an unfilled slot also exists', () => {
+  const state = { open: [{ tradeId: 't-1', symbol: 'AAA', amount: 1500 }], unfilledSlots: 1 };
+  assertEquals(resolveFunding(state, 2000), {
+    ok: true,
+    source: { kind: 'proceeds', tradeId: 't-1', amount: 1500 },
+  });
+});
+
+Deno.test('resolveFunding: an unfilled slot funds a fresh buy at full notional once proceeds run out', () => {
+  assertEquals(resolveFunding({ open: [], unfilledSlots: 1 }, 2000), {
+    ok: true,
+    source: { kind: 'unfilled_slot', amount: 2000 },
+  });
+});
+
+Deno.test('resolveFunding: an explicit sold_trade_id not among open proceeds is proceeds_unavailable', () => {
+  const state = { open: [{ tradeId: 't-1', symbol: 'AAA', amount: 1500 }], unfilledSlots: 0 };
+  assertEquals(resolveFunding(state, 2000, 't-does-not-exist'), { ok: false, reason: 'proceeds_unavailable' });
+  assertEquals(resolveFunding({ open: [], unfilledSlots: 1 }, 2000, 't-1'), { ok: false, reason: 'proceeds_unavailable' });
+});
+
+Deno.test('resolveFunding: no open proceeds and no unfilled slot is no_proceeds', () => {
+  assertEquals(resolveFunding({ open: [], unfilledSlots: 0 }, 2000), { ok: false, reason: 'no_proceeds' });
+});
+
+Deno.test('validateTradeAdd fixed_notional: sell at a LOSS sizes the rebuy off the actual proceeds', () => {
+  freshPicks();
+  // Slot started at $2,000 (this test only needs the sale, not the original
+  // draft cost); sold for $1,500. The rebuy must be $1,500 of NVDA, not $2,000.
+  const picks = [pick('a', 'AAPL', 140, { quantity: 12.5 })];
+  const trades = [trade('a', 'AAPL', 'sell', 12.5, 120, { id: 't-sell', created_at: '2026-10-05T10:00:00Z' })];
+  const d = validateTradeAdd({
+    rules: FN_RULES(), slots: [], picks, trades, userId: 'a', symbol: 'NVDA', price: 100, eligibleCategories: NO_CATS,
+  });
+  assertEquals(d, { legal: true, quantity: 15, fundedByTradeId: 't-sell', stakeAmount: 1500 });
+});
+
+Deno.test('validateTradeAdd fixed_notional: sell at a GAIN sizes the rebuy ABOVE a fresh notional stake', () => {
+  freshPicks();
+  // Sold for $2,500 — the $2,000 notional is NOT a ceiling on reinvestment.
+  const picks = [pick('a', 'AAPL', 180, { quantity: 10 })];
+  const trades = [trade('a', 'AAPL', 'sell', 10, 250, { id: 't-sell', created_at: '2026-10-05T10:00:00Z' })];
+  const d = validateTradeAdd({
+    rules: FN_RULES(), slots: [], picks, trades, userId: 'a', symbol: 'MSFT', price: 250, eligibleCategories: NO_CATS,
+  });
+  assertEquals(d, { legal: true, quantity: 10, fundedByTradeId: 't-sell', stakeAmount: 2500 });
+});
+
+Deno.test('validateTradeAdd fixed_notional: two freed slots — the caller picks which sale funds the buy', () => {
+  freshPicks();
+  const picks = [pick('a', 'AAA', 100, { quantity: 20 }), pick('a', 'BBB', 100, { quantity: 20 })];
+  const trades = [
+    trade('a', 'AAA', 'sell', 20, 80, { id: 't-aaa', created_at: '2026-10-05T09:00:00Z' }), // proceeds $1,600
+    trade('a', 'BBB', 'sell', 20, 120, { id: 't-bbb', created_at: '2026-10-05T10:00:00Z' }), // proceeds $2,400
+  ];
+  // Explicitly reinvests BBB's proceeds even though AAA's is the FIFO default.
+  const d = validateTradeAdd({
+    rules: FN_RULES(), slots: [], picks, trades, userId: 'a', symbol: 'NVDA', price: 100, eligibleCategories: NO_CATS,
+    soldTradeId: 't-bbb',
+  });
+  assertEquals(d, { legal: true, quantity: 24, fundedByTradeId: 't-bbb', stakeAmount: 2400 });
+});
+
+Deno.test('validateTradeAdd fixed_notional: an omitted sold_trade_id defaults to FIFO (the oldest sale)', () => {
+  freshPicks();
+  const picks = [pick('a', 'AAA', 100, { quantity: 20 }), pick('a', 'BBB', 100, { quantity: 20 })];
+  const trades = [
+    trade('a', 'AAA', 'sell', 20, 80, { id: 't-aaa', created_at: '2026-10-05T09:00:00Z' }), // oldest, proceeds $1,600
+    trade('a', 'BBB', 'sell', 20, 120, { id: 't-bbb', created_at: '2026-10-05T10:00:00Z' }),
+  ];
+  const d = validateTradeAdd({
+    rules: FN_RULES(), slots: [], picks, trades, userId: 'a', symbol: 'NVDA', price: 100, eligibleCategories: NO_CATS,
+  });
+  assertEquals(d, { legal: true, quantity: 16, fundedByTradeId: 't-aaa', stakeAmount: 1600 });
+});
+
+Deno.test('validateTradeAdd fixed_notional: an unfilled draft slot (voluntary skip) funds a fresh buy at full notional', () => {
+  freshPicks();
+  const picks = [pick('a', 'AAA', 100, { quantity: 20 }), skipRow('a')];
+  const d = validateTradeAdd({
+    rules: FN_RULES(), slots: [], picks, trades: [], userId: 'a', symbol: 'NVDA', price: 100, eligibleCategories: NO_CATS,
+  });
+  assertEquals(d, { legal: true, quantity: 20, fundedByTradeId: null, stakeAmount: 2000 });
+});
+
+Deno.test('validateTradeAdd fixed_notional: with open proceeds AND an unfilled slot, the buy must reinvest proceeds', () => {
+  freshPicks();
+  const picks = [pick('a', 'AAA', 100, { quantity: 20 }), skipRow('a')];
+  const trades = [trade('a', 'AAA', 'sell', 20, 75, { id: 't-aaa', created_at: '2026-10-05T09:00:00Z' })]; // proceeds $1,500
+  const d = validateTradeAdd({
+    rules: FN_RULES(), slots: [], picks, trades, userId: 'a', symbol: 'NVDA', price: 100, eligibleCategories: NO_CATS,
+  });
+  // Sized from the $1,500 proceeds, NOT the $2,000 unfilled-slot notional.
+  assertEquals(d, { legal: true, quantity: 15, fundedByTradeId: 't-aaa', stakeAmount: 1500 });
+});
+
+Deno.test('validateTradeAdd fixed_notional: roster_full refuses BEFORE funding is even considered', () => {
+  freshPicks();
+  const picks = [pick('a', 'AAA', 100, { quantity: 20 }), pick('a', 'BBB', 100, { quantity: 20 })];
+  const d = validateTradeAdd({
+    rules: FN_RULES({ numRounds: 2 }), slots: [], picks, trades: [], userId: 'a', symbol: 'CCC', price: 100, eligibleCategories: NO_CATS,
+  });
+  assertEquals(d, { legal: false, reason: 'roster_full' });
+});
+
+Deno.test('validateTradeAdd fixed_notional: a foreign or already-spent sold_trade_id is proceeds_unavailable', () => {
+  freshPicks();
+  const picks = [pick('a', 'AAA', 100, { quantity: 20 })];
+  const trades = [trade('a', 'AAA', 'sell', 20, 80, { id: 't-aaa', created_at: '2026-10-05T09:00:00Z' })];
+  const d = validateTradeAdd({
+    rules: FN_RULES(), slots: [], picks, trades, userId: 'a', symbol: 'NVDA', price: 100, eligibleCategories: NO_CATS,
+    soldTradeId: 't-not-mine',
+  });
+  assertEquals(d, { legal: false, reason: 'proceeds_unavailable' });
+});
+
+Deno.test('validateTradeAdd fixed_notional: no open proceeds and no unfilled slot is no_proceeds', () => {
+  freshPicks();
+  const picks = [pick('a', 'AAA', 100, { quantity: 20 }), pick('a', 'BBB', 100, { quantity: 20 })];
+  const trades = [
+    trade('a', 'BBB', 'sell', 20, 90, { id: 't-bbb', created_at: '2026-10-05T09:00:00Z' }),
+    // Already claims the only proceeds — nothing left open, and there was
+    // never an unfilled (skipped) slot on this fully-drafted roster.
+    trade('a', 'CCC', 'buy', 18, 100, { created_at: '2026-10-05T10:00:00Z', funded_by_trade_id: 't-bbb' }),
+  ];
+  const d = validateTradeAdd({
+    rules: FN_RULES(), slots: [], picks, trades, userId: 'a', symbol: 'NVDA', price: 100, eligibleCategories: NO_CATS,
+  });
+  assertEquals(d, { legal: false, reason: 'no_proceeds' });
+});
+
+Deno.test('validateTradeAdd: fixed_notional-only decision fields are absent in every other stake mode', () => {
+  freshPicks();
+  const modes: Array<Partial<LeagueRules>> = [
+    {}, // legacy (stakeMode: null)
+    { stakeMode: 'price_tiers' },
+    { stakeMode: 'budget_cap', budgetAmount: 1000 },
+  ];
+  for (const over of modes) {
+    const d = validateTradeAdd({
+      rules: rules({ numRounds: 3, ...over }),
+      slots: [],
+      picks: [],
+      trades: [],
+      userId: 'a',
+      symbol: 'AAA',
+      price: 100,
+      eligibleCategories: NO_CATS,
+    });
+    assert(d.legal, JSON.stringify(over));
+    assertEquals(d, { legal: true, quantity: 1 });
+  }
 });
 
 // ---------------------------------------------------------------------------
