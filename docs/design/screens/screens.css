@@ -223,7 +223,7 @@
 .ks-field__box.is-focus { border: 2px solid var(--c-accent); padding: 0 13px; }
 .ks-field__box.is-error { border: 2px solid var(--c-danger); padding: 0 13px; }
 .ks-field__error { color: var(--c-danger); font-size: var(--sp-type-callout-size); font-weight: 600; }
-.ks-rules { display: flex; gap: 12px; flex-wrap: wrap; font-size: var(--sp-type-caption-size); font-weight: 600; }
+.ks-rules { display: flex; gap: 4px 12px; flex-wrap: wrap; font-size: var(--sp-type-caption-size); font-weight: 600; }
 .ks-caret--dark { background: var(--c-accent); margin-left: 1px; }
 .ks-btn--secondary { background: var(--c-secondary-bg); color: var(--c-secondary-fg); border: 1px solid var(--c-secondary-border); }
 .ks-kbd-dock { position: absolute; left: 0; right: 0; bottom: 0; z-index: 6; }
