@@ -27,6 +27,7 @@ import {
   formatSignedCurrency,
   canTradeInPhase,
   getUpcomingMatchupLabel,
+  isWeekActive,
 } from '../lib/weekStatus.ts';
 
 // ---------------------------------------------------------------------------
@@ -343,4 +344,29 @@ Deno.test('getUpcomingMatchupLabel: defaults to week 1 when current_week is miss
 Deno.test('getUpcomingMatchupLabel: falls back to "soon" for a missing/invalid start date', () => {
   assertEquals(getUpcomingMatchupLabel(null), 'Week 1 starts soon');
   assertEquals(getUpcomingMatchupLabel({ current_week: 1, league_start_date: null }), 'Week 1 starts soon');
+});
+
+// ---------------------------------------------------------------------------
+// Scored bye = NO RESULT (2026-09-29): still a complete week
+// ---------------------------------------------------------------------------
+
+Deno.test('a scored bye (no winner, not a tie, no team2_gain) is a complete week, not live', () => {
+  const fridayAfterClose = new Date('2026-09-25T22:00:00Z');
+  const scoredBye = { winner_user_id: null, is_tie: false, team1_gain: 7, team2_gain: null, team2_user_id: null, is_playoff: false };
+  const status = getWeekStatus(
+    { draft_status: 'completed', league_start_date: '2026-09-01T13:30:00Z', current_week: 2, num_weeks: 10, season_status: 'active' },
+    scoredBye,
+    fridayAfterClose,
+  );
+  assertEquals(status.isWeekComplete, true);
+  assertEquals(isWeekActive(scoredBye), false);
+});
+
+Deno.test('an UNSCORED bye, and a row that does not select team2_user_id, are not treated as a scored bye', () => {
+  const league = { draft_status: 'completed', league_start_date: '2026-09-01T13:30:00Z', current_week: 2, num_weeks: 10, season_status: 'active' };
+  const wed = new Date('2026-09-23T16:00:00Z');
+  const unscoredBye = { winner_user_id: null, is_tie: false, team1_gain: null, team2_gain: null, team2_user_id: null, is_playoff: false };
+  assertEquals(getWeekStatus(league, unscoredBye, wed).isWeekComplete, false);
+  const noTeam2Selected = { winner_user_id: null, is_tie: false, team1_gain: 7, team2_gain: null };
+  assertEquals(getWeekStatus(league, noTeam2Selected, wed).isWeekComplete, false);
 });

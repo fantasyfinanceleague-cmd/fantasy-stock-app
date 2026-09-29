@@ -1,0 +1,124 @@
+/* COPY of apps/web/src/styles/tokens.css (origin/main 9d86213) so the key-screens board is self-contained. The app file is the source; re-copy, never edit here. */
+/* ============================================================
+   Stockpile design tokens — Game Day (DESIGN_DIRECTION.md §9, approved).
+
+   Generated to match apps/web/src/design/tokens.ts leaf-for-leaf (verified
+   by design/tokens.parity.test.ts). Do not hand-edit a value here without
+   also updating tokens.ts — the parity test fails the build if they drift.
+
+   On :root (NOT scoped to a class) — but this file is imported only by
+   design/index.ts, which nothing in main.jsx / App.jsx / the landing
+   imports, so these custom properties never reach the production landing
+   bundle. Leave src/styles/stockpile-tokens.css (the landing's own scoped
+   token set) alone; Phase 3a retires it separately.
+   ============================================================ */
+
+:root {
+  --sp-color-bg-app: #F3F5F8;
+  --sp-color-surface-money-base: #FFFFFF;
+  --sp-color-surface-money-sunken: #EBEFF4;
+  --sp-color-surface-game-base: #0D1B2E;
+  --sp-color-surface-game-raised: #16263D;
+  --sp-color-surface-game-line: #22334D;
+  --sp-color-border-default: #DDE3EA;
+  --sp-color-border-control: #76828F;
+  --sp-color-text-primary: #0D1B2E;
+  --sp-color-text-secondary: #5B6678;
+  --sp-color-text-disabled: #A3ACBA;
+  --sp-color-text-on-game-primary: #FFFFFF;
+  --sp-color-text-on-game-secondary: #8DA0BD;
+  --sp-color-brand: #2860F0;
+  --sp-color-team-you-base: #2860F0;
+  --sp-color-team-you-on-game: #6E9BFF;
+  --sp-color-team-opponent: #FF6A3D;
+  --sp-color-live: #FFC53D;
+  --sp-color-data-gain-base: #12803F;
+  --sp-color-data-gain-on-game: #4ADE8B;
+  --sp-color-data-loss-base: #C8303A;
+  --sp-color-data-loss-on-game: #FF7A7A;
+  --sp-color-data-zero-base: #5B6678;
+  --sp-color-data-zero-on-game: #8DA0BD;
+  --sp-color-status-warning: #B45309;
+  --sp-color-status-danger: #B42318;
+  --sp-color-action-primary-bg: #0D1B2E;
+  --sp-color-action-primary-fg: #FFFFFF;
+  --sp-color-action-primary-on-game-bg: #FFFFFF;
+  --sp-color-action-primary-on-game-fg: #0D1B2E;
+  --sp-color-action-secondary-bg: #FFFFFF;
+  --sp-color-action-secondary-border: #76828F;
+  --sp-color-action-secondary-fg: #0D1B2E;
+  --sp-color-action-secondary-on-game-border: #8DA0BD;
+  --sp-color-action-secondary-on-game-fg: #FFFFFF;
+  --sp-color-action-ghost-fg: #0D1B2E;
+  --sp-color-action-ghost-on-game-fg: #FFFFFF;
+  --sp-type-family: 'Archivo', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --sp-type-score-xl-size: 56px;
+  --sp-type-score-xl-line: 52px;
+  --sp-type-score-xl-weight: 900;
+  --sp-type-score-xl-stretch: 62%;
+  --sp-type-score-lg-size: 40px;
+  --sp-type-score-lg-line: 38px;
+  --sp-type-score-lg-weight: 900;
+  --sp-type-score-lg-stretch: 62%;
+  --sp-type-score-md-size: 28px;
+  --sp-type-score-md-line: 28px;
+  --sp-type-score-md-weight: 900;
+  --sp-type-score-md-stretch: 62%;
+  --sp-type-tag-size: 11px;
+  --sp-type-tag-line: 14px;
+  --sp-type-tag-weight: 800;
+  --sp-type-tag-stretch: 125%;
+  --sp-type-tag-tracking: 0.04em;
+  --sp-type-tag-transform: uppercase;
+  --sp-type-display-size: 32px;
+  --sp-type-display-line: 36px;
+  --sp-type-display-weight: 800;
+  --sp-type-display-stretch: 100%;
+  --sp-type-display-tracking: -0.5px;
+  --sp-type-title-size: 22px;
+  --sp-type-title-line: 28px;
+  --sp-type-title-weight: 700;
+  --sp-type-title-stretch: 100%;
+  --sp-type-headline-size: 17px;
+  --sp-type-headline-line: 22px;
+  --sp-type-headline-weight: 600;
+  --sp-type-headline-stretch: 100%;
+  --sp-type-body-size: 15px;
+  --sp-type-body-line: 22px;
+  --sp-type-body-weight: 400;
+  --sp-type-body-stretch: 100%;
+  --sp-type-callout-size: 13px;
+  --sp-type-callout-line: 18px;
+  --sp-type-callout-weight: 500;
+  --sp-type-callout-stretch: 100%;
+  --sp-type-caption-size: 12px;
+  --sp-type-caption-line: 16px;
+  --sp-type-caption-weight: 500;
+  --sp-type-caption-stretch: 100%;
+  --sp-space-1: 2px;
+  --sp-space-2: 4px;
+  --sp-space-3: 8px;
+  --sp-space-4: 12px;
+  --sp-space-5: 16px;
+  --sp-space-6: 20px;
+  --sp-space-7: 24px;
+  --sp-space-8: 32px;
+  --sp-space-9: 40px;
+  --sp-space-10: 48px;
+  --sp-space-11: 64px;
+  --sp-radius-sm: 6px;
+  --sp-radius-md: 10px;
+  --sp-radius-lg: 14px;
+  --sp-radius-xl: 20px;
+  --sp-radius-pill: 999px;
+  --sp-elevation-money-card: 0 2px 8px rgba(13, 27, 46, 0.04);
+  --sp-elevation-game: none;
+  --sp-elevation-sheet: 0 8px 24px rgba(13, 27, 46, 0.12);
+  --sp-motion-duration-instant: 90ms;
+  --sp-motion-duration-quick: 160ms;
+  --sp-motion-duration-base: 240ms;
+  --sp-motion-duration-slow: 380ms;
+  --sp-motion-duration-feature: 700ms;
+  --sp-motion-ease-settle: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --sp-motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+}

@@ -20,6 +20,7 @@ import {
   nextRoundOf,
   winnerSeedForAdvance,
   resolveBySeed,
+  standingsIncrements,
   type PlayoffMatchup,
   type TeamScore,
 } from './playoff-progression.ts';
@@ -150,11 +151,30 @@ Deno.test('a regular-season double tie stays a tie and names no winner', () => {
   assertEquals(willAdvanceWinner(m, outcome), false, 'never advances — not a playoff');
 });
 
-Deno.test('a regular-season bye is an automatic win', () => {
+Deno.test('a regular-season bye is NO RESULT: no winner, not a tie, no W/L/T', () => {
   const m = regular({ team2UserId: null });
-  const outcome = decideMatchupOutcome(m, empty, empty);
-  assertEquals(outcome.reason, 'bye');
-  assertEquals(outcome.winnerId, 'alice');
+  for (const score of [empty, withPositions(500, 5)]) {
+    const outcome = decideMatchupOutcome(m, score, empty);
+    assertEquals(outcome, { winnerId: null, isTie: false, team1Won: false, team2Won: false, reason: 'bye_no_result' });
+    assertEquals(standingsIncrements(outcome), { team1: { wins: 0, losses: 0, ties: 0 }, team2: null });
+    assertEquals(willAdvanceWinner(m, outcome), false);
+  }
+});
+
+Deno.test('standingsIncrements: a win, a loss and a true tie each count exactly one game', () => {
+  const m = regular();
+  const won = decideMatchupOutcome(m, withPositions(10, 1), withPositions(5, 1));
+  assertEquals(standingsIncrements(won), {
+    team1: { wins: 1, losses: 0, ties: 0 },
+    team2: { wins: 0, losses: 1, ties: 0 },
+  });
+  const tie = decideMatchupOutcome(m, withPositions(3, 2), withPositions(3, 2));
+  assertEquals(standingsIncrements(tie), {
+    team1: { wins: 0, losses: 0, ties: 1 },
+    team2: { wins: 0, losses: 0, ties: 1 },
+  });
+  const bothEmpty = decideMatchupOutcome(m, empty, empty);
+  assertEquals(standingsIncrements(bothEmpty).team1, { wins: 0, losses: 0, ties: 1 });
 });
 
 Deno.test('both-empty in the REGULAR season is a tie, which is correct there', () => {
