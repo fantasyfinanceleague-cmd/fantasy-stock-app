@@ -409,6 +409,13 @@ Remotion's licence is confirmed before anything is published.
 
 ## 9. Game Day token spec (approved; Phase 2 implements exactly this)
 
+> **Amended 2026-09-29 (Giorgio): the money/game surface axis below is
+> SUPERSEDED as a colour axis by §9A, "One design, two themes".** Type,
+> space, radius, motion and the data/team colour *rules* in this section still
+> hold. Every `surface.money.*`, `surface.game.*` and `*.onGame` leaf is
+> replaced by §9A's semantic tokens, one value per theme. Nothing inverts inside
+> a screen any more.
+
 Names are identical on both platforms (dot paths in TS; `--sp-` kebab custom
 properties on web, e.g. `color.surface.game.base` → `--sp-color-surface-game-base`).
 Web names are all lowercase kebab, with camelCase split: `color.data.gain.onGame`
@@ -531,6 +538,80 @@ importable only from game components.
 `brand.mark` (refined bars as an SVG component with an `accent` prop).
 
 ---
+
+## 9A. One design, two themes (2026-09-29, supersedes the surface axis)
+
+**Decision (Giorgio):** one design everywhere (the same layout, features and
+components) in two complete themes, **Light** and **Dark**. The user picks in
+Settings. No screen mixes the two: in Light, Matchup, the Draft room,
+scoreboards and onboarding are light; in Dark, Portfolio, sheets and forms are
+dark. A dark card inside a light screen (the old "stadium" scoreboard) is
+exactly what this removes.
+
+**Tokens.** Semantic names, one value per theme. The web source of truth is
+`docs/design/screens/themes.css` (`--c-*`), which becomes `tokens.css`
+`[data-theme="light" | "dark"]` blocks and the mobile theme objects.
+
+| Token | Light | Dark | Role |
+|---|---|---|---|
+| `bg` | `#F3F5F8` | `#0D1B2E` | App background |
+| `surface` | `#FFFFFF` | `#16263D` | Cards, sheets, tab bar base |
+| `inset` | `#F0F3F7` | `#1E3250` | Panels inside cards, chips, cells, inputs on cards |
+| `sunken` | `#EBEFF4` | `#0A1524` | Segmented tracks, recessed wells |
+| `line` / `border` | `#E3E8EF` / `#DDE3EA` | `#263A58` | Dividers / card borders |
+| `border-strong` | `#76828F` | `#8DA0BD` | Control borders (≥3:1) |
+| `text` / `text-2` / `text-3` | `#0D1B2E` / `#5B6678` / `#8A94A3` | `#F3F6FA` / `#9AAAC4` / `#6B7D99` | Primary / secondary / **disabled or decorative only** (≈3:1; never information) |
+| `accent` | `#2860F0` | `#7FA6FF` | Links, selected states |
+| `you` / `you-text` | `#2860F0` / `#2860F0` | `#3366FF` / `#8AB0FF` | Your fills (white text on them ≥4.5) / your text |
+| `opp` / `opp-text` | `#E8541F` / `#B93C0E` | `#FF6A3D` / `#FF8F66` | Opponent fills / text |
+| `live` / `live-text` | `#C07E00` / `#8A5B00` | `#FFC53D` / `#FFC53D` | Live dot, clock ring / live tags |
+| `gain` / `loss` / `zero` | `#12803F` / `#C8303A` / `#5B6678` | `#4ADE8B` / `#FF7A7A` / `#9AAAC4` | Money up / down / flat (zero never green) |
+| `danger` | `#B42318` | `#FF8A80` | Errors |
+| `loss-fill` | `#C8303A` | `#D93A44` | Sell / destructive button fill (white label ≥4.5) |
+| `on-opp` | `#0D1B2E` | `#0D1B2E` | Text on opponent fills (white fails on Light orange) |
+| `primary-bg` / `primary-fg` | `#0D1B2E` / `#FFFFFF` | `#FFFFFF` / `#0D1B2E` | Primary button |
+| `inverse-bg` / `inverse-fg` | `#0D1B2E` / `#FFFFFF` | `#F3F6FA` / `#0D1B2E` | FINAL chip, selected toggle |
+
+Plus `accent-tint`, `accent-wash`, `you-tint`, `gain-tint`, `loss-tint`,
+`warn-*`, `track`, `scrim`, `tabbar`, `shadow` / `sheet-shadow` (none in Dark),
+and `on-accent` / `on-opp`. The full list with contrast is computed live on the
+key-screens board. **Two tables, both themes, all passing (76/76 at v3.1):** every
+text token ≥ 4.5:1 and graphic token ≥ 3:1 on `surface`, AND every
+foreground-on-fill pair the components render (text on `you`, `opp`,
+`loss-fill`, `primary`, `inverse`, `inset`, `sunken`, the tints and the tab bar),
+with translucent tints composited over what they sit on. A token-on-surface
+check alone missed three failures (white on Dark `you`, white on Dark sell red,
+white on Light `opp`); the pair table is the evidence that matches the claim. Yellow, orange and bright blue get darker
+`*-text` cuts in Light because they fail as text on white.
+
+**Emphasis without an inverted surface.** Scoreboards stand out through:
+- the condensed 900 score type, the largest thing on any screen;
+- the `scoreboard` card variant: the theme's surface with a faint accent wash
+  at the top and a hairline border;
+- the tug bar and live dot in colour, and broadcast tags (still the only
+  uppercase);
+- motion: digit rolls, lead changes, FLIP re-sorts.
+
+**Settings.** Profile › Appearance offers System / Light / Dark, with System as
+the default, saved on the device. The web has the same control under Settings ›
+Appearance, saved in the browser. Giorgio asked for a simple light/dark switch.
+System is the Design Lead's recommendation; cut it to two options if he
+prefers.
+
+**Component API changes** (foundation PR #53, then web):
+- `<Surface kind="money" | "game">` is removed. A `ThemeProvider` at the root
+  supplies `light | dark`: System resolves via `useColorScheme()` on mobile and
+  `prefers-color-scheme` on web. One `<Card>` with `variant="scoreboard"`.
+- Delete every `*.onGame`, `surface.money.*` and `surface.game.*` leaf; add the
+  semantic set above.
+- `Button` drops its on-game variant; `primary` reads the theme.
+- `ScoreDigits`, `Scoreboard`/`TeamRow`, `TugBar`, `Chyron`, `LiveDot`,
+  `PhaseChip`, `SegmentedControl`, `Sheet`, `EmptyState` and `Money` read theme
+  tokens only. No component checks for a game surface.
+- Tests: `tokens.parity.test.ts` covers both themes leaf by leaf, plus a new
+  contrast test asserting BOTH tables (token-on-surface AND the full
+  foreground-on-fill pair list, tints composited) for both themes. A new
+  component that puts text on a fill adds its pair to the list.
 
 ## 10. What happens next
 
