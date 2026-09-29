@@ -84,3 +84,48 @@ The "PR #9 trigger" step loads `enforce_leagues_member_update_columns` /
 
 If neither is found, the step reports **ignored**, never passed. So an unrun trigger
 check stays visible in the summary.
+
+## username_write_path.pglite.test.ts
+
+What it does:
+- Loads `20261007000000_username_write_path.sql` **verbatim**, on top of the five
+  earlier `user_profiles` migrations, also verbatim. Those five give it the real
+  table, the `LOWER(username)` unique index, the RLS policies and the
+  `handle_new_user_profile` signup trigger.
+- Stubs only the Supabase shell: the roles and their default grants, a three-column
+  `auth.users`, `auth.uid()` (the real body), and the `supabase_realtime`
+  publication.
+
+It covers:
+- regex parity between the CHECK, both RPCs and the trigger
+- the migration failing closed on a violating row (nothing half-applied)
+- `convalidated`
+- grants, `SECURITY DEFINER` and `search_path`
+- the CHECK on direct writes
+- `set_username`: ok, idempotent, re-casing your own name, taken
+  (case-insensitive), invalid (including NULL, `''`, `\n` and non-ASCII), and the
+  no-row insert arm
+- a simulated `unique_violation` race → `taken`
+- `check_usernames`: order, duplicates, the NULL element, the 10/11 cap, and
+  NULL/`{}` input
+- no-JWT and anon → 42501
+- direct DML through the real RLS policies
+- the signup trigger after the CHECK
+
+Mutation-checked on 2026-09-29. Each of these is caught:
+- dropping the own-row exclusion
+- keeping the anon grant (caught by two steps)
+- removing the `unique_violation` handler
+- letting NULL through `set_username`
+
+It **cannot** prove the following (the file header lists them). The SQL-editor test
+`docs/security/username-write-path-effect-test.sql` still owns them:
+- prod's real roles and grants
+- PostgREST/GoTrue JWT handling
+- the real `auth.users` and GoTrue's signup transaction
+- real concurrency (PGlite is one connection; the race is simulated with a
+  test-only trigger)
+- prod data (the migration's PRE-CHECK covers that)
+
+Running it may rewrite `deno.lock` with unrelated npm workspace churn. Don't commit
+that as part of a test change.

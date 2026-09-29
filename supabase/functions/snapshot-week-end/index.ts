@@ -1,6 +1,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { classifyCloseCoverage, buildCloseWork } from './close.ts';
+import { classifyCloseCoverage, buildCloseWork, type Holding } from './close.ts';
+import { checkSnapshotReads, matchupParticipants, snapshotHoldings } from '../_shared/snapshot-holdings.ts';
 
 /**
  * Snapshot Week End Prices
@@ -186,47 +187,10 @@ async function fetchClosePrices(symbols: string[], alpacaKey: string, alpacaSecr
   return prices;
 }
 
-interface Holding {
-  symbol: string;
-  quantity: number;
-}
-
-// Calculate user's current holdings from drafts and trades
-function calculateHoldings(
-  userId: string,
-  drafts: any[],
-  trades: any[]
-): Holding[] {
-  const holdings = new Map<string, number>();
-
-  // Process drafts
-  for (const draft of drafts.filter(d => d.user_id === userId)) {
-    const sym = draft.symbol?.toUpperCase();
-    if (!sym) continue;
-
-    const qty = Number(draft.quantity || 1);
-    holdings.set(sym, (holdings.get(sym) || 0) + qty);
-  }
-
-  // Process trades
-  for (const trade of trades.filter(t => t.user_id === userId)) {
-    const sym = trade.symbol?.toUpperCase();
-    if (!sym) continue;
-
-    const qty = Number(trade.quantity || 0);
-
-    if (trade.action === 'buy') {
-      holdings.set(sym, (holdings.get(sym) || 0) + qty);
-    } else if (trade.action === 'sell') {
-      holdings.set(sym, (holdings.get(sym) || 0) - qty);
-    }
-  }
-
-  // Return holdings with positive quantity
-  return Array.from(holdings.entries())
-    .filter(([_, qty]) => qty > 0)
-    .map(([symbol, quantity]) => ({ symbol, quantity }));
-}
+// Holdings come from ../_shared/snapshot-holdings.ts (shared with
+// snapshot-week-start). The local copy this replaced coerced the SKIP sentinel's
+// quantity 0 to a 1-share 'SKIP' holding (`quantity || 1`), which no close price
+// could satisfy, so it aborted the whole league's week-end write on every retry.
 // midWeekEntryPrice moved to ./close.ts so it is covered by the hermetic
 // tests in close.test.ts. Keeping a second copy here would let the tested
 // and untested implementations drift.
@@ -270,7 +234,7 @@ Deno.serve(async (req) => {
 
     if (leaguesErr) {
       console.error('Error fetching leagues:', leaguesErr);
-      throw new Error('Failed to fetch leagues');
+      throw new Error(`Failed to fetch leagues: ${leaguesErr.message ?? leaguesErr}`);
     }
 
     if (!leagues || leagues.length === 0) {
@@ -282,7 +246,7 @@ Deno.serve(async (req) => {
     console.log(`Found ${leagues.length} active matchup leagues`);
 
     // Set by any league that could not be fully closed this run (unpriceable
-    // symbol, or a failed write). Forces terminal status 'retrying' instead of
+    // symbol, a failed read, or a failed write). Forces terminal status 'retrying' instead of
     // 'success', so a partial run never reports clean — CLAUDE.md silent-failure.
     let anyIncomplete = false;
 
@@ -294,17 +258,50 @@ Deno.serve(async (req) => {
       const leagueId = league.id;
       const currentWeek = league.current_week;
 
-      // 2. Get existing week snapshots from Monday (have week_start_price but no week_end_price)
-      const { data: existingSnapshots, error: snapErr } = await supabase
-        .from('week_snapshots')
-        .select('id, user_id, symbol, quantity, week_start_price, week_end_price')
-        .eq('league_id', leagueId)
-        .eq('week_number', currentWeek);
-
-      if (snapErr) {
-        console.error(`Error fetching snapshots for league ${leagueId}:`, snapErr);
+      // 2–4. Read everything coverage depends on: this week's existing snapshots
+      //      (KIND 1), the participants, and their drafts + trades (holdings and
+      //      KIND 2). ALL must succeed before coverage is classified — see
+      //      checkSnapshotReads in ../_shared/snapshot-holdings.ts. A failed
+      //      drafts/trades/matchups read used to default to [] and read as
+      //      "nothing held": Monday rows closed, mid-week buys silently dropped,
+      //      and the league then classified 'complete' forever. A failed snapshots
+      //      read used to `continue` with no retry and a 'success' status.
+      //      `price` on trades is needed for a real mid-week entry price (see the
+      //      entered_mid_week migration); week_start_price is read for cost basis
+      //      in the UI, so a placeholder is never acceptable.
+      const inputs = checkSnapshotReads({
+        existingSnapshots: await supabase
+          .from('week_snapshots')
+          .select('id, user_id, symbol, quantity, week_start_price, week_end_price')
+          .eq('league_id', leagueId)
+          .eq('week_number', currentWeek),
+        matchups: await supabase
+          .from('matchups')
+          .select('team1_user_id, team2_user_id')
+          .eq('league_id', leagueId)
+          .eq('week_number', currentWeek),
+        drafts: await supabase
+          .from('drafts')
+          .select('user_id, symbol, quantity')
+          .eq('league_id', leagueId),
+        trades: await supabase
+          .from('trades')
+          .select('user_id, symbol, action, quantity, price')
+          .eq('league_id', leagueId),
+      });
+      if (!inputs.ok) {
+        // ABORT this league for this run, exactly like an unpriceable symbol:
+        // write nothing, flag the run so the existing retry path re-runs it.
+        anyIncomplete = true;
+        console.error(
+          `ABORT league ${leagueId} week ${currentWeek}: read failed — ` +
+          inputs.failed.map((f) => `${f.read}: ${f.message}`).join('; ') +
+          ` — refusing to classify coverage on missing inputs, will retry.`
+        );
+        results.push({ leagueId, week: currentWeek, updated: 0, newSnapshots: 0, incomplete: true, failedReads: inputs.failed.map((f) => f.read) });
         continue;
       }
+      const { existingSnapshots, matchups, drafts, trades } = inputs.rows;
 
       // NOTE: the completeness gate is NOT here. It cannot run yet — coverage
       // depends on current holdings (KIND 2, mid-week buys), which are computed
@@ -313,44 +310,16 @@ Deno.serve(async (req) => {
       // SINGLE priced row, which is exactly what made a partial week-end write
       // unhealable. See close.ts for the two kinds of "missing".
 
-      // 3. Get all matchups for current week to find all users
-      const { data: matchups } = await supabase
-        .from('matchups')
-        .select('team1_user_id, team2_user_id')
-        .eq('league_id', leagueId)
-        .eq('week_number', currentWeek);
-
-      // Collect all user IDs
-      const userIds = new Set<string>();
-      for (const m of matchups || []) {
-        if (m.team1_user_id && !m.team1_user_id.startsWith('bot-')) {
-          userIds.add(m.team1_user_id);
-        }
-        if (m.team2_user_id && !m.team2_user_id.startsWith('bot-')) {
-          userIds.add(m.team2_user_id);
-        }
-      }
-
-      // 4. Fetch current holdings for each user (to detect mid-week purchases)
-      const { data: drafts } = await supabase
-        .from('drafts')
-        .select('user_id, symbol, quantity')
-        .eq('league_id', leagueId);
-
-      // `price` is needed to record a real entry price for mid-week purchases
-      // (see the entered_mid_week migration). Without it we could only write a
-      // placeholder, and week_start_price is read for cost basis in the UI.
-      const { data: trades } = await supabase
-        .from('trades')
-        .select('user_id, symbol, action, quantity, price')
-        .eq('league_id', leagueId);
+      // Collect all participant IDs (null team2 = bye week). Bots are INCLUDED:
+      // excluding them left every bot matchup unscoreable from week 2 on.
+      const userIds = matchupParticipants(matchups);
 
       // Calculate current holdings for each user
       const userHoldings = new Map<string, Holding[]>();
       const allSymbols = new Set<string>();
 
       for (const userId of userIds) {
-        const holdings = calculateHoldings(userId, drafts || [], trades || []);
+        const holdings = snapshotHoldings(userId, drafts, trades);
         userHoldings.set(userId, holdings);
         for (const h of holdings) {
           allSymbols.add(h.symbol);
@@ -358,13 +327,13 @@ Deno.serve(async (req) => {
       }
 
       // Also add symbols from existing snapshots
-      for (const snap of existingSnapshots || []) {
+      for (const snap of existingSnapshots) {
         if (snap.symbol) allSymbols.add(snap.symbol.toUpperCase());
       }
 
       // 5. COVERAGE GATE — replaces the old existence-only `alreadyProcessed`.
       //    Runs BEFORE the Alpaca call so a complete league costs no quota.
-      const coverage = classifyCloseCoverage(userHoldings, existingSnapshots || []);
+      const coverage = classifyCloseCoverage(userHoldings, existingSnapshots);
       if (coverage === 'none_expected') {
         console.log(`League ${leagueId} week ${currentWeek}: nothing held and no rows — nothing to close`);
         continue;
@@ -389,9 +358,9 @@ Deno.serve(async (req) => {
         leagueId,
         currentWeek,
         userHoldings,
-        existingSnapshots || [],
+        existingSnapshots,
         prices,
-        trades || [],
+        trades,
       );
 
       // Positions priced but with no derivable entry price. NOT retryable — no
