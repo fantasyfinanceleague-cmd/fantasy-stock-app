@@ -9,7 +9,9 @@
 //   portfolio      = Σ quantity × price
 //   standings      = records + points-for (season $ gain), in ONE order that
 //                    is also the playoff seeding (Giorgio, 2026-09-29):
-//                    wins → head-to-head → season gain
+//                    win % → head-to-head → season gain. Win % =
+//                    (W + 0.5·T) / games played; a bye is NO RESULT and
+//                    is excluded (Giorgio, 2026-09-29).
 // Records are a legal league: after N weeks of 3 matchups, wins = losses.
 //
 // Scoring copy stays generic ("best performance wins"); data displays show
@@ -254,7 +256,8 @@
   function standings(rec) {
     return PLAYERS.map((p) => ({ ...p, ...rec[p.id] }))
       .sort((x, y) => {
-        if (y.w !== x.w) return y.w - x.w;
+        const pct = (r) => (r.w + 0.5 * (r.t || 0)) / Math.max(1, r.w + r.l + (r.t || 0));
+        if (pct(y) !== pct(x)) return pct(y) - pct(x);
         const h = h2hWins(y.id, x.id) - h2hWins(x.id, y.id);
         if (h !== 0) return h;
         return y.pf - x.pf;
@@ -367,6 +370,16 @@
     return { sold: r.t, proceeds: r.value, realized: cents(r.value - r.cost), buy, sources };
   })();
 
+  /** Uneven-bye heads-up. With an odd member count one manager sits out
+   * each week, so byes per manager = floor or ceil(weeks / members); they
+   * are uneven when weeks isn't a multiple of members. Even counts: no byes. */
+  function byeNotice(members, weeks) {
+    if (members % 2 === 0 || weeks % members === 0) return null;
+    return { lo: Math.floor(weeks / members), hi: Math.ceil(weeks / members) };
+  }
+  /** Record as W–L, with –T only when there are ties. */
+  const record = (r) => `${r.w}–${r.l}${r.t ? `–${r.t}` : ''}`;
+
   window.KS = {
     formatMoney, formatPct, tugRatio,
     LEAGUE, PLAYERS, byId, seatForPick,
@@ -374,6 +387,6 @@
     MATCHUP, WEEK_CLOSES, CHYRONS,
     STANDINGS_BEFORE, STANDINGS_FINAL, WEEK6,
     PORTFOLIO_LIVE, OTHER_LEAGUES, HOME, NVDA, ROBERTO_WEEKS, SALE,
-    lineup, score, scoreDisplay,
+    lineup, score, scoreDisplay, byeNotice, record,
   };
 })();

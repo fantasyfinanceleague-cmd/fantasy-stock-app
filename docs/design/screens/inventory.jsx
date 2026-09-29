@@ -607,6 +607,77 @@
     );
   }
 
+  /** Uneven-bye heads-up (new copy). Informational only, never blocking,
+   * and only when byes are actually uneven (odd count, weeks not a multiple). */
+  function ByeNotice({ members, weeks, expected }) {
+    const b = K.byeNotice(members, weeks);
+    if (!b) return null;
+    return (
+      <div role="note" className="ks-card" style={{ padding: '10px 12px', display: 'grid', gap: 2, background: 'var(--c-warn-tint)', borderColor: 'var(--c-warn-line)', boxShadow: 'none' }}>
+        <span className="ks-callout" style={{ fontWeight: 600, color: 'var(--c-text)' }}>With {members} managers and {weeks} weeks, byes won't be even: some get {b.hi}, some get {b.lo}.</span>
+        {expected ? <span className="ks-caption" style={{ color: 'var(--c-text)' }}>Based on the {members} you expect. This updates as people join.</span> : null}
+      </div>
+    );
+  }
+  const Stepper = ({ label, value, unit, sub }) => (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: 10 }}>
+      <span><span className="ks-callout" style={{ fontWeight: 600 }}>{label}</span>{sub ? <><br /><span className="ks-caption">{sub}</span></> : null}</span>
+      <span style={{ display: 'inline-flex', alignItems: 'center', border: '1px solid var(--c-border)', borderRadius: 10, overflow: 'hidden' }}>
+        <span style={{ width: 36, height: 36, display: 'grid', placeItems: 'center', fontSize: 20, color: 'var(--c-text-2)' }}>−</span>
+        <b className="ks-num" style={{ minWidth: 64, textAlign: 'center', borderInline: '1px solid var(--c-border)', lineHeight: '36px' }}>{value}{unit ? ` ${unit}` : ''}</b>
+        <span style={{ width: 36, height: 36, display: 'grid', placeItems: 'center', fontSize: 20, color: 'var(--c-text-2)' }}>+</span>
+      </span>
+    </div>
+  );
+
+  /** Create league · Season step (the same controls live in League settings
+   * until the draft). The member count isn't final yet, so the notice is
+   * based on the expected size and says so. */
+  function CreateSeason() {
+    return (
+      <Device noTabs label="Create league, season settings">
+        <Back right={<span className="ks-caption ks-num">Step 2 of 4</span>} />
+        <div className="ks-pad ks-stack">
+          <div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4, marginBottom: 14 }}>
+              {[1, 2, 3, 4].map((i) => <span key={i} style={{ height: 4, borderRadius: 2, background: i <= 2 ? 'var(--c-accent)' : 'var(--c-border)' }} />)}
+            </div>
+            <h2 className="ks-head__title" style={{ fontSize: 28 }}>Season</h2>
+            <p className="ks-callout ks-muted" style={{ margin: '4px 0 0' }}>How big the league is and how long it runs.</p>
+          </div>
+          <div className="ks-card" style={{ padding: 14, display: 'grid', gap: 14 }}>
+            <Stepper label="Managers" value={5} sub="How many you expect, you included" />
+            <Stepper label="Regular season" value={14} unit="weeks" />
+            <ByeNotice members={5} weeks={14} expected />
+            <div style={{ display: 'grid', gap: 8 }}>
+              <span className="ks-callout" style={{ fontWeight: 600 }}>Playoff teams</span>
+              <div className="ks-seg"><span>2</span><span className="on">4</span><span>8</span></div>
+            </div>
+          </div>
+          <span className="ks-btn">Next</span>
+        </div>
+      </Device>
+    );
+  }
+
+  /** Commissioner's Start draft confirm. The member count is final here;
+   * the notice is informational and never blocks. */
+  function StartDraftConfirm() {
+    return (
+      <Device tab="league" label="Start the draft, confirm" overlay={
+        <Sheet top={380}>
+          <span className="ks-title">Start the draft?</span>
+          <span className="ks-callout ks-muted">7 managers are in. The draft order is set at random when you start, and each pick gets 60 seconds.</span>
+          <ByeNotice members={7} weeks={10} />
+          <span className="ks-btn">Start draft</span>
+          <span className="ks-btn ks-btn--secondary">Not yet</span>
+        </Sheet>
+      }>
+        <Head name="Serie A Traders" chip={<span className="ks-chip">Pre-draft</span>} />
+      </Device>
+    );
+  }
+
   function DraftLobby() {
     const queue = ['NVDA', 'MSFT', 'AAPL', 'CRM', 'COST'];
     return (
@@ -987,7 +1058,7 @@
   window.KSInventory = {
     SignIn, SignUp, SignUpPaused, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeScoring, HomeComplete,
-    AllMatchups, MatchupPreSeason, DraftLobby, DraftAutoPick, DraftRecap, Playoffs,
+    AllMatchups, MatchupPreSeason, DraftLobby, StartDraftConfirm, CreateSeason, DraftAutoPick, DraftRecap, Playoffs,
     SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,
     WebHome, WebPortfolio, WebSettings,
   };

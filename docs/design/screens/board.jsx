@@ -119,6 +119,7 @@
     ['text-2', 'tabbar', 'bg', 4.5, 'Inactive tab labels'],
     ['warn-text', 'warn-tint', 'bg', 4.5, '"Your call" notes'],
     ['text', 'warn-tint', 'bg', 4.5, 'Sign-ups-paused banner'],
+    ['text', 'warn-tint', 'surface', 4.5, 'Uneven-bye heads-up (inside a card)'],
     ['on-accent', 'you', null, 3, 'Chevrons on the drawn draft track (graphic)'],
     ['surface', 'live', null, 3, 'Trophy icon on the champion badge (graphic)'],
   ];
@@ -341,7 +342,7 @@
           phones={<Fit><S.LeagueScreen after={after} /></Fit>}
           notes={<Notes
             shows={[
-              <><b>One order, also the playoff seeding</b> (your call): wins, then head-to-head, then <b>season gain</b> (the sum of your weekly matchup gains). Paolo M. and Roberto B. are both 5–1 and haven't played each other, so season gain decides: Roberto's {$s(K.STANDINGS_FINAL[0].pf)} beats Paolo's {$s(K.STANDINGS_FINAL[1].pf)}. Ties and byes aren't shown yet (pending the backend proposal).</>,
+              <><b>One order, also the playoff seeding</b> (your call): win percentage, then head-to-head, then <b>season gain</b> (the sum of your weekly matchup gains). Paolo M. and Roberto B. are both 5–1 and haven't played each other, so season gain decides: Roberto's {$s(K.STANDINGS_FINAL[0].pf)} beats Paolo's {$s(K.STANDINGS_FINAL[1].pf)}. A bye is no result: it counts as neither a win nor a loss and is left out of win percentage. Records read W–L, with –T only when there are ties.</>,
               <>▲/▼ show the move since last week. You are highlighted wherever you land.</>,
               <>Week 6 results underneath: every matchup, both scores.</>,
             ]}
@@ -417,7 +418,7 @@
       ['Portfolio', `Σ 6 holdings = ${$(P.value)}`, `Basis 6 × $2,000.00 = ${$(P.cost)}`, `Gain ${$s(P.gain)} (${pct(P.gainPct)})`],
       ['Home (this league)', `Value = Portfolio = ${$(H.value)}`, `Gain since the draft ${$s(H.gain)} = weeks 1–5 ${$s(H.throughW5)} + this week ${$s(K.MATCHUP.live.you.gain)}`, `Chart ends at ${$s(H.series[H.series.length - 1])}`],
       ['Trade (fixed per slot)', `Sell TSLA: ${K.SALE.buy && K.lineup('roberto', 'thu').find((r) => r.t === 'TSLA').qty} sh × ${$(248.36)} = ${$(K.SALE.proceeds)}`, `Realized vs the $2,000.00 slot: ${$s(K.SALE.realized)}`, `Buy SHOP with exactly ${$(K.SALE.proceeds)} ≈ ${K.SALE.buy.qty.toFixed(4)} sh; value unchanged`],
-      ['Standings', `After Week 6: ${wins} wins = ${losses} losses`, 'Ranked: wins, then head-to-head, then season gain (= playoff seeds)', `Roberto B. ${$s(K.STANDINGS_FINAL[0].pf)} > Paolo M. ${$s(K.STANDINGS_FINAL[1].pf)}`],
+      ['Standings', `After Week 6: ${wins} wins = ${losses} losses`, 'Ranked: win %, then head-to-head, then season gain (= playoff seeds); byes excluded', `Roberto B. ${$s(K.STANDINGS_FINAL[0].pf)} > Paolo M. ${$s(K.STANDINGS_FINAL[1].pf)}`],
       ['Draft', 'Seat on the clock at pick n: odd rounds 1→6, even rounds 6→1', 'Roberto B. (seat 2): picks 2, 11, 14, 23, 26, 35', 'Gianluigi B. (seat 5): picks 5, 8, 17, 20, 29, 32'],
     ];
     return (
@@ -441,7 +442,7 @@
         <h3>Changes from the landing's current sample data</h3>
         <ol className="b-changes">
           <li>Records: the landing's 5–0, 4–1, 4–1, 3–2, 2–3, 1–4 add up to 19 wins against 11 losses, which no league can produce. Now 5–0, 4–1, 3–2, 2–3, 1–4, 0–5 after Week 5.</li>
-          <li>Standings rank by record, then season gain in dollars (as the app does), not by season percent.</li>
+          <li>Standings rank by win percentage, then head-to-head, then season gain in dollars (one order, also the playoff seeding), not by season percent.</li>
           <li>Pick 12 was TSLA for Paolo M., but TSLA is in Roberto B.'s lineup. Paolo M. now takes LLY; Roberto B. took TSLA in round 4.</li>
           <li>The hero phone's matchup (+$322.45 vs −$71.20, "3d 4h left") contradicted the week's daily closes. The live moment is now Thu 1:37 PM: {$s(L.you.gain)} vs {$s(L.opp.gain)}.</li>
           <li>Thursday's close for Gianluigi B. is +$71.35 (was −$12.55), so the live game is close enough for the tug bar to move. Friday is derived from the holdings: {$s(F.you.gain)} vs {$s(F.opp.gain)} (was +$351.80 vs −$40.25).</li>

@@ -429,7 +429,7 @@
                 );
               })}
             </div>
-            <div className="ks-caption ks-muted" style={{ padding: '8px 14px 14px' }}>Ranked by wins, then head-to-head, then season gain. This is also the playoff seeding.</div>
+            <div className="ks-caption ks-muted" style={{ padding: '8px 14px 14px' }}>Ranked by win percentage, then head-to-head, then season gain. This is also the playoff seeding.</div>
           </div>
           {after ? (
           <div className="ks-card ks-fade-in" style={{ padding: '12px 14px' }}>
