@@ -298,6 +298,14 @@ shared-element transitions.
 | Charts | Draw once on first view; afterwards update in place | `feature` then `base` |
 | Tab change | Icon fill + label colour | `quick` |
 
+### Ambition (added 2026-09-27)
+
+Restraint was over-applied in the first pass. **Motion should be abundant
+wherever it explains state or place**: scores changing, standings moving, a
+screen handing off to the next, the market being live. Every screen should have
+at least one moment people would show a friend. The limits below still hold,
+and every animation keeps its reduced-motion fallback.
+
 ### What never animates
 
 - Money on first render (it appears; it only rolls when it **changes**).
@@ -332,6 +340,13 @@ recording of each animation it added.
 ---
 
 ## 6. Landing concept (written for B; A and C variants noted)
+
+> **Superseded in part (2026-09-27).** Giorgio judged the first build "still very
+> basic". The **"one pinned section" limit is lifted**: the landing now has
+> **multiple** scroll-scrubbed chapters, a sticky app mockup, background morphs,
+> mask reveals, parallax and live standings/scoreboards (see the 3a round-3 brief
+> in `prompts/phase3a-landing.md`). **The copy stays the current live landing's,
+> verbatim.** The table below is kept for history.
 
 The landing stays **pre-launch**: "Launching soon" is a status, never a
 button that looks clickable. It doesn't import app CSS.
@@ -447,7 +462,7 @@ surfaces: primary is the most prominent, then secondary, then ghost. Opponent or
 
 | Token | Width / weight | Size / line | Use |
 |---|---|---|---|
-| `type.hero` | 62% / 900 | web: `clamp(56px, 7.6vw, 112px)` / 0.92; mobile: 56 / 52 | **Landing hero headline only** (added 2026-09-26 for Phase 3a); −0.01em tracking |
+| `type.hero` | 62% / 900 | web: `clamp(56px, 7.6vw, 112px)` / 0.92; mobile: 56 / 52 | **Landing display family**: the hero headline, plus the landing's section heads and launch title at sizes derived from it (Phase 3a). Tracking −0.01em; **`type.hero.wordSpacing` = 0.12em** (added 2026-09-27; at 62% width the word gaps otherwise collapse, e.g. "Yourportfolio"). Web: `--sp-type-hero-word-spacing` |
 | `type.score.xl` | 62% / 900 | 56 / 52 | Matchup scoreboard |
 | `type.score.lg` | 62% / 900 | 40 / 38 | Standings, Home "this week" |
 | `type.score.md` | 62% / 900 | 28 / 28 | Compact scores |

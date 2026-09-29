@@ -40,7 +40,14 @@ mirrors their structure and states.
    whatever stylesheet bundles it) to an async `<link>` with preconnect and
    metric-tuned fallbacks, matching what the 3a landing does locally. Prove there's
    no layout shift on font swap (CLS ≤ 0.05) and that the landing is still byte-identical.
-5. **Keyboard and screen reader:** everything operable by keyboard; landmarks;
+5. **Motion root:** wrap the app shell in the foundation's `<MotionRoot>`
+   (`MotionConfig reducedMotion="user"`, added in 3a), so `motion.*` components
+   honour the OS setting; `useMotion()` already ORs in the OS preference.
+6. **Lint baseline:** `npm run lint` in `apps/web` fails on `main` today (~55
+   pre-existing errors, e.g. `Header.jsx:53` unused `setLoggingOut`). Most sit
+   in the legacy files you delete; fix the rest, and report **before/after
+   error counts**. Lint must pass at DONE.
+7. **Keyboard and screen reader:** everything operable by keyboard; landmarks;
    the Scoreboard's live region; focus management in panels.
 
 ## Motion
@@ -71,3 +78,12 @@ no lift or tilt. **Reduced motion:** the same rows as mobile, plus
 5. Keyboard and screen reader pass; motion from tokens; every reduced-motion row evidenced.
 
 Report your PLAN first and wait for "go".
+
+## Ambition bar (added 2026-09-27, after Giorgio called the first landing "still very basic")
+
+**The bar is "would this impress on first use next to Apple, Stripe or Linear product pages and web apps?"**, not "is it correct". Performance, honesty, tokens and reduced motion are **table stakes, not the goal**. The Design Lead will push back on timid work. **Copy:** keep Giorgio's existing copy **verbatim** unless this prompt explicitly changes it; propose wording changes, don't make them.
+
+**Signature moments this phase must include** (each with its reduced-motion row and a recording):
+- **Page transitions** between app routes (View Transitions API, with a crossfade fallback).
+- **A sticky header that condenses on scroll**; a league pill → panel shared element.
+- Every mobile signature moment from 3b-2 / 3c / 3e, adapted to web (hover previews on standings rows and tickers).

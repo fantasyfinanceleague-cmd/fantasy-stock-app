@@ -107,3 +107,14 @@ All on `Surface kind="game"` unless noted.
 7. **Bots never pass as real friends:** wherever a bot's display name renders (scoreboards, standings, lineups, This-week cards), show a visible **"Bot" badge / bot avatar treatment**, driven by the `is_bot` flag from ask #2, not by parsing ids. Bot names come from the curated list (≤ 12 chars).
 
 Report your PLAN first and wait for "go".
+
+## Ambition bar (added 2026-09-27, after Giorgio called the first landing "still very basic")
+
+**The bar is "would this impress on first use next to Robinhood, Sleeper, Revolut or Arc?"**, not "is it correct". Performance, honesty, tokens and reduced motion are **table stakes, not the goal**. The Design Lead will push back on timid work. **Copy:** keep Giorgio's existing copy **verbatim** unless this prompt explicitly changes it; propose wording changes, don't make them.
+
+**Signature moments this phase must include** (each with its reduced-motion row and a recording):
+- **Live scoreboard:** per-digit rolls on every quote refresh; the tug bar eases continuously; LIVE dot pulse.
+- **Lead-change broadcast moment:** a full-width chyron takeover + tug overshoot + score slam + haptic (rate-limited).
+- **Standings FLIP re-order** with ▲/▼ badges and position-delta chips, and rows that visibly slide past each other.
+- **The Friday FINAL reveal as a sequence:** the lights dim, scores lock digit by digit, the winner banner drops in, and on a win a burst of refined-bar particles. It plays once per matchup-week and never blocks input.
+- **Draft room energy:** an on-the-clock ring; a **pick-snap** (the chosen card flies from search into its board slot); a "your turn" pulse + haptic; a draft-complete celebration.

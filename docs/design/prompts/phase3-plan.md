@@ -54,6 +54,12 @@ DESIGN_DIRECTION §7, with #9–#11 added here.
 
 ## Shared rules for every Phase 3 worker
 
+- **Ambition bar (2026-09-27):** each phase prompt now lists **signature
+  moments**, and the review bar is "would this impress on first use next to
+  best-in-class products" (Apple / Stripe / Linear on web; Robinhood / Sleeper /
+  Revolut / Arc on mobile). Correctness and performance are table stakes, not the goal.
+- **Keep Giorgio's copy verbatim** unless a prompt explicitly changes it;
+  propose wording changes, don't make them.
 - **Generic scoring copy (Giorgio, 2026-09-27).** Rules, marketing, onboarding,
   empty-state and help copy must hold for **any league setting** (stake modes
   change how much capital each player puts to work, so dollar and percent can
