@@ -13,6 +13,8 @@
   // Secure fields render as bullets, so a mock password is only a length.
   // Never put credential-looking strings here (secret scanners flag them).
   const MASK = (n) => 'x'.repeat(n);
+  // The server's real password policy (5 rules), labels verbatim from the app.
+  const PASSWORD_RULES_OK = [[true, 'At least 8 characters'], [true, 'A lowercase letter (a–z)'], [true, 'An uppercase letter (A–Z)'], [true, 'A number (0–9)'], [true, 'A symbol (! ? @ # …)']];
 
   // ── Small shared pieces ───────────────────────────────────────────────
   // The league pill with its "+N more leagues" hint (Concept B, decided).
@@ -130,7 +132,7 @@
           </div>
           <Field label="Username" value="roberto_b" helper="Displayed on leaderboards" />
           <Field label="Email address" value="roberto@example.com" />
-          <Field label="Password" value={MASK(10)} secure rules={[[true, '8+ characters'], [true, 'A letter'], [true, 'A number']]} />
+          <Field label="Password" value={MASK(10)} secure rules={PASSWORD_RULES_OK} />
           <div role="alert" className="ks-card" style={{ padding: 14, display: 'grid', gap: 4, background: 'var(--c-warn-tint)', borderColor: 'var(--c-warn-line)', boxShadow: 'none' }}>
             <b className="ks-callout" style={{ color: 'var(--c-text)' }}>{BRAND} is not open for new signups yet — check back soon. Existing accounts can still sign in.</b>
           </div>
@@ -150,7 +152,7 @@
           </div>
           <Field label="Username" value="roberto_b" helper="Displayed on leaderboards" />
           <Field label="Email address" value="roberto@example.com" />
-          <Field label="Password" value={MASK(7)} secure focused rules={[[true, '8+ characters'], [true, 'A letter'], [false, 'A number']]} />
+          <Field label="Password" value={MASK(7)} secure focused rules={[[false, 'At least 8 characters'], [true, 'A lowercase letter (a–z)'], [true, 'An uppercase letter (A–Z)'], [false, 'A number (0–9)'], [false, 'A symbol (! ? @ # …)']]} />
         </div>
         <div className="ks-kbd-dock">
           <span className="ks-btn" style={{ margin: '0 16px 8px' }}>Create account</span>
@@ -171,7 +173,7 @@
             <>
               <div>
                 <h2 className="ks-head__title" style={{ fontSize: 28 }}>Forgot password?</h2>
-                <p className="ks-callout ks-muted" style={{ margin: '4px 0 0' }}>Enter your email and we'll send you a link to reset it.</p>
+                <p className="ks-callout ks-muted" style={{ margin: '4px 0 0' }}>Enter your email address and we'll send you a link to reset your password.</p>
               </div>
               <Field label="Email address" value="roberto@example.com" focused />
               <span className="ks-btn">Send reset link</span>
@@ -387,7 +389,7 @@
         <Back label="Profile" />
         <div className="ks-pad ks-stack" style={{ gap: 16 }}>
           <h2 className="ks-head__title" style={{ fontSize: 28 }}>Set a new password</h2>
-          <Field label="New password" value={MASK(10)} secure rules={[[true, '8+ characters'], [true, 'A letter'], [true, 'A number']]} />
+          <Field label="New password" value={MASK(10)} secure rules={PASSWORD_RULES_OK} />
           <Field label="Confirm new password" value={MASK(9)} secure focused error="Passwords don't match." />
           <span className="ks-btn" style={{ opacity: 0.4 }}>Update password</span>
           <span className="ks-callout ks-muted" style={{ textAlign: 'center' }}>Cancel</span>
