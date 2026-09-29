@@ -723,14 +723,71 @@
     );
   }
 
-  function PortfolioScreen({ sheet }) {
-    const P = K.PORTFOLIO_LIVE;
+  /** Buy with a freed slot's proceeds (fixed-per-slot leagues): the amount
+   * is capped at that slot's cash, never a fresh $2,000. */
+  function BuySheet({ open }) {
+    const S = K.SALE, B = S.buy;
     return (
-      <Device tab="portfolio" label={sheet ? 'Portfolio with the NVDA sheet open' : 'Portfolio'} overlay={<StockSheet open={sheet} />}>
+      <>
+        <div className="ks-scrim" style={{ opacity: open ? 1 : 0, pointerEvents: 'none' }} />
+        <div className={open ? 'ks-sheet' : 'ks-sheet ks-sheet--hidden'} aria-hidden={!open}>
+          <div className="ks-grabber" />
+          <div style={{ padding: '10px 20px 20px', display: 'grid', gap: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <Logo t={B.t} />
+              <span style={{ flex: 1 }}><span className="ks-headline" style={{ fontWeight: 800 }}>{B.t}</span><br /><span className="ks-caption">{B.co}</span></span>
+              <span className="ks-muted"><Icon d={ICON.close} size={22} /></span>
+            </div>
+            <div>
+              <div className="ks-num" style={{ fontSize: 34, lineHeight: '38px', fontWeight: 800 }}>{$(B.price)}</div>
+              <div className="ks-callout ks-gain ks-num" style={{ fontWeight: 700 }}>{pct(B.todayPct)} <span className="ks-muted" style={{ fontWeight: 500 }}>today · No one in {K.LEAGUE.name} owns {B.t}</span></div>
+            </div>
+            <div className="ks-seg" style={{ height: 40 }}><span className="on">Buy</span><span>Sell</span></div>
+            <div className="ks-card" style={{ padding: 14, boxShadow: 'none', background: 'var(--sp-color-surface-money-sunken)', border: 0, display: 'grid', gap: 4 }}>
+              <span className="ks-headline" style={{ fontWeight: 700 }}>You have {$(S.proceeds)} from selling {S.sold} to invest</span>
+              <span className="ks-caption">Your slot's buying power is what the sale brought in, not a fresh {$(K.LEAGUE.notionalPerSlot)}.</span>
+            </div>
+            <div className="ks-card" style={{ padding: '2px 14px', boxShadow: 'none' }}>
+              <ul className="ks-rows">
+                <li className="ks-row" style={{ gridTemplateColumns: '1fr auto 16px', padding: '12px 0' }}>
+                  <span className="ks-callout" style={{ fontWeight: 600 }}>Invest from</span>
+                  <span className="ks-callout ks-muted ks-num">{S.sold} slot · {$(S.proceeds)}</span>
+                  <span className="ks-muted"><Icon d={ICON.right} size={16} /></span>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <div className="ks-caption">Amount</div>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                <span className="ks-num" style={{ fontSize: 30, fontWeight: 800 }}>{$(S.proceeds)}</span>
+                <span style={{ display: 'flex', gap: 6 }}>
+                  {['Half', 'All'].map((c) => (
+                    <span key={c} className="ks-chip ks-chip--money" style={{ height: 30, padding: '0 12px', fontSize: 13, textTransform: 'none', fontStretch: '100%', letterSpacing: 0, ...(c === 'All' ? { background: 'var(--sp-color-text-primary)', color: '#fff' } : {}) }}>{c}</span>
+                  ))}
+                </span>
+              </div>
+              <div className="ks-caption ks-num">≈ {B.qty.toFixed(4)} shares at {$(B.price)}. Anything you don't invest stays in this slot as cash and doesn't earn.</div>
+            </div>
+            <span className="ks-btn">Review buy</span>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  /** variant: 'live' (all six slots invested) | 'cash' (TSLA sold, its slot
+   * holds the proceeds) | 'buy' (cash state with the buy sheet open). */
+  function PortfolioScreen({ sheet, variant = 'live' }) {
+    const P = K.PORTFOLIO_LIVE, S = K.SALE;
+    const cash = variant === 'cash' || variant === 'buy';
+    const rows = cash ? P.rows.filter((r) => r.t !== S.sold) : P.rows;
+    const overlay = variant === 'buy' ? <BuySheet open /> : <StockSheet open={sheet} />;
+    return (
+      <Device tab="portfolio" label={variant === 'buy' ? 'Buying with sale proceeds' : cash ? 'Portfolio with a slot ready to invest' : sheet ? 'Portfolio with the NVDA sheet open' : 'Portfolio'} overlay={overlay}>
         <LeagueHead chip={<Chip kind="live">Live</Chip>} />
         <div className="ks-pad ks-stack">
           <div>
-            <div className="ks-caption">Portfolio value</div>
+            <div className="ks-caption">Portfolio value{cash ? ' · includes cash' : ''}</div>
             <div className="ks-score ks-num" style={{ fontSize: 48, lineHeight: '50px', fontStretch: '75%' }}>{$(P.value)}</div>
             <div className="ks-callout ks-num" style={{ fontWeight: 700 }}>
               <span className="ks-gain">{$s(P.gain)} · {pct(P.gainPct)}</span> <span className="ks-muted" style={{ fontWeight: 500 }}>since the draft</span>
@@ -740,25 +797,32 @@
             </div>
           </div>
           <div className="ks-card" style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between' }}>
-            <span className="ks-callout"><b>6 of 6</b> slots filled</span>
-            <span className="ks-callout ks-muted">$2,000 per slot</span>
+            <span className="ks-callout"><b>{cash ? '5 of 6' : '6 of 6'}</b> slots invested</span>
+            <span className="ks-callout ks-muted">{cash ? '1 ready to invest' : `${$(K.LEAGUE.notionalPerSlot)} per slot at the draft`}</span>
           </div>
           <div>
             <div className="ks-section-h"><h3>Holdings</h3><span className="ks-caption">Value · today</span></div>
             <div className="ks-card" style={{ padding: '2px 14px' }}>
               <ul className="ks-rows">
-                {P.rows.map((r) => (
+                {rows.map((r) => (
                   <li key={r.t} className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto', background: sheet && r.t === 'NVDA' ? 'var(--sp-color-surface-money-sunken)' : undefined }}>
                     <Logo t={r.t} />
                     <span><span className="ks-t">{r.t}</span><br /><span className="ks-caption ks-num">{r.co} · {r.qty.toFixed(2)} sh</span></span>
                     <span className="ks-right ks-num"><b>{$(r.value)}</b><br /><span className={`ks-caption ${tone(r.todayPct)}`} style={{ fontWeight: 700 }}>{pct(r.todayPct)}</span></span>
                   </li>
                 ))}
+                {cash ? (
+                  <li className="ks-row ks-fade-in" style={{ gridTemplateColumns: '36px 1fr auto' }}>
+                    <span className="ks-logo" style={{ background: '#E6F4EA', color: 'var(--sp-color-data-gain-base)', fontSize: 16 }}>$</span>
+                    <span><span className="ks-t">Cash</span><br /><span className="ks-caption">From selling {S.sold} · ready to invest</span></span>
+                    <span className="ks-right ks-num"><b>{$(S.proceeds)}</b><br /><span className="ks-caption" style={{ color: 'var(--sp-color-brand)', fontWeight: 700 }}>Invest ›</span></span>
+                  </li>
+                ) : null}
               </ul>
             </div>
           </div>
           <div className="ks-card" style={{ padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span><b>Trade history</b><br /><span className="ks-caption">Includes your 6 draft picks</span></span>
+            <span><b>Trade history</b><br /><span className="ks-caption">{cash ? `Sold ${S.sold} · includes your 6 draft picks` : 'Includes your 6 draft picks'}</span></span>
             <span className="ks-muted"><Icon d={ICON.right} size={18} /></span>
           </div>
         </div>

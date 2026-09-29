@@ -97,7 +97,7 @@
           <div className="b-brand">
             <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="13" width="4.5" height="8" rx="1" fill="#5B6678" /><rect x="9.75" y="9" width="4.5" height="12" rx="1" fill="#5B6678" /><rect x="16.5" y="4" width="4.5" height="17" rx="1" fill="#2860F0" /></svg>
             <span>Stockpile</span>
-            <span className="b-brand__meta">Key screens · v1.1 · 29 Sep 2026</span>
+            <span className="b-brand__meta">Key screens · v1.2 · 29 Sep 2026</span>
           </div>
           <h1>The app, as it will ship.</h1>
           <p className="b-lead">
@@ -106,7 +106,7 @@
             can only show what the app will actually look like. Every screen tells one story:
             the same league, the same week, and numbers that add up.
           </p>
-          <p className="b-changed"><b>New in v1.1, from your answers:</b> Home shows one league at a time (switch with the league pill); the standings column is "Season gain"; the draft pick clock defaults to 60 seconds and the commissioner can set 30–90.</p>
+          <p className="b-changed"><b>New from your answers:</b> Home shows one league at a time (switch with the league pill); the standings column is "Season gain"; the draft pick clock defaults to 60 seconds and the commissioner can set 30–90; dollars decide matchups, with percent as the tiebreak; and a sold slot reinvests exactly its sale proceeds.</p>
           <dl className="b-canon">
             <div><dt>League</dt><dd>{K.LEAGUE.name} · 6 managers</dd></div>
             <div><dt>Moment</dt><dd>Week 6 of 14 · Thu 1:37 PM ET</dd></div>
@@ -147,7 +147,7 @@
           notes={<Notes
             shows={[
               <>A broadcast scoreboard: both managers, both scores in the condensed 62% cut, and the tug bar. Live: {$s(L.you.gain)} vs {$s(L.opp.gain)}.</>,
-              <>The scores and the lead show whatever DECIDES the matchup, today dollars ({$(L.you.gain - L.opp.gain)} lead), with the tiebreak beside it, small ({pct(L.you.pct)} vs {pct(L.opp.pct)}). Every score on every screen comes from one helper, so if you change what decides, it changes everywhere at once.</>,
+              <><b>Dollars decide</b> (your call, v1.2): the scores and the lead are in dollars ({$(L.you.gain - L.opp.gain)} lead), with the tiebreak beside it, small ({pct(L.you.pct)} vs {pct(L.opp.pct)}). Every score on every screen comes from one helper, so if you change what decides, it changes everywhere at once.</>,
               <>A chyron names what just moved the game. The race chart replaces the Mon–Fri bars and is the same chart as the landing's /03.</>,
               <>Both lineups, each stock's dollar contribution this week. They add up to the score exactly.</>,
               <>Final: the winner banner, the new record, and next week's opponent.</>,
@@ -157,7 +157,7 @@
               <li>Lead change (live): the chyron slides in (base), the tug crosses centre with the lively spring, one light haptic.</li>
             </>}
             reduced="scores swap, the tug jumps to its split, the banner and chyron fade in place."
-            ask={['Pending your decision: keep dollars as what decides (percent breaks ties), switch to percent, or let each league choose? The screens follow your answer automatically.']}
+            ask={null}
           />}
         />
 
@@ -205,18 +205,21 @@
           phones={<>
             <Fit caption={sheet ? 'NVDA tapped' : 'Portfolio · live'}><S.PortfolioScreen sheet={sheet} /></Fit>
             <Fit caption="Stock sheet · Sell pre-selected"><S.PortfolioScreen sheet /></Fit>
+            <Fit caption="After selling TSLA · the slot holds the proceeds"><S.PortfolioScreen variant="cash" /></Fit>
+            <Fit caption="Buying with the proceeds"><S.PortfolioScreen variant="buy" /></Fit>
           </>}
           notes={<Notes
             shows={[
               <>Value {$(K.PORTFOLIO_LIVE.value)}; gain since the draft {$s(K.PORTFOLIO_LIVE.gain)} against a $12,000.00 basis; today {$s(K.PORTFOLIO_LIVE.today)}.</>,
               <>Six holdings, each with value and today's move. Trade history includes the draft picks.</>,
               <>Any ticker row opens the stock sheet: price and today's chart against the previous close, your position, who in the league owns it, and <b>Sell pre-selected</b> because you hold it.</>,
+              <><b>Trading</b> (your call, v1.2): buy and sell freely, but a slot you sell out of can only reinvest what the sale brought in ({$(K.SALE.proceeds)} from TSLA), never a fresh $2,000. The freed slot shows as a Cash row ready to invest; cash earns nothing but counts in value, so the portfolio value doesn't change on the sale. The buy sheet says "You have {$(K.SALE.proceeds)} from selling TSLA to invest" and lets you pick which freed slot pays.</>,
             ]}
             motion={<>
               <li><Play label={sheet ? 'Close sheet' : 'Tap NVDA'} playing={sheet} onPlay={() => setSheet(!sheet)} /> The sheet springs up (spring.snappy, no overshoot) while the scrim fades in (base).</li>
             </>}
             reduced="the sheet fades in place."
-            ask={['Can managers buy and sell mid-season in a $2,000-per-slot league, or only swap? The sheet follows the IA (Buy / Sell) until you decide.']}
+            ask={null}
           />}
         />
 
@@ -235,6 +238,7 @@
       ['Matchup, final', `Roberto B. = ${$s(F.you.gain)} (${pct(F.you.pct)} of ${$(F.you.startValue)})`, `Gianluigi B. = ${$s(F.opp.gain)} (${pct(F.opp.pct)} of ${$(F.opp.startValue)})`, `Margin ${$(F.you.gain - F.opp.gain)}`],
       ['Portfolio', `Σ 6 holdings = ${$(P.value)}`, `Basis 6 × $2,000.00 = ${$(P.cost)}`, `Gain ${$s(P.gain)} (${pct(P.gainPct)})`],
       ['Home (this league)', `Value = Portfolio = ${$(H.value)}`, `Gain since the draft ${$s(H.gain)} = weeks 1–5 ${$s(H.throughW5)} + this week ${$s(K.MATCHUP.live.you.gain)}`, `Chart ends at ${$s(H.series[H.series.length - 1])}`],
+      ['Trade (fixed per slot)', `Sell TSLA: ${K.SALE.buy && K.lineup('roberto', 'thu').find((r) => r.t === 'TSLA').qty} sh × ${$(248.36)} = ${$(K.SALE.proceeds)}`, `Realized vs the $2,000.00 slot: ${$s(K.SALE.realized)}`, `Buy SHOP with exactly ${$(K.SALE.proceeds)} ≈ ${K.SALE.buy.qty.toFixed(4)} sh; value unchanged`],
       ['Standings', `After Week 6: ${wins} wins = ${losses} losses`, 'Ranked: win %, then wins, then season gain', `Roberto B. ${$s(K.STANDINGS_FINAL[0].pf)} > Paolo M. ${$s(K.STANDINGS_FINAL[1].pf)}`],
       ['Draft', 'Seat on the clock at pick n: odd rounds 1→6, even rounds 6→1', 'Roberto B. (seat 2): picks 2, 11, 14, 23, 26, 35', 'Gianluigi B. (seat 5): picks 5, 8, 17, 20, 29, 32'],
     ];

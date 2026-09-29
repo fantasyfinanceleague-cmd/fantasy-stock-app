@@ -342,13 +342,26 @@
     };
   })();
 
+  // Trading in a fixed-per-slot league (Giorgio, 2026-09-29): buy and sell
+  // freely, but a replacement buy invests exactly the SALE PROCEEDS of the
+  // slot it refills (sell at $1,890.12 → buy $1,890.12, never a fresh
+  // $2,000). One stock per slot; uninvested proceeds sit as cash in that
+  // slot, earn nothing, and count in value; the manager picks which freed
+  // slot funds a buy. Sample: sell TSLA at Thursday's price, buy SHOP.
+  const SALE = (() => {
+    const r = PORTFOLIO_LIVE.rows.find((x) => x.t === 'TSLA');
+    const buy = { t: 'SHOP', co: 'Shopify', price: 104.2, todayPct: 1.12 };
+    buy.qty = Math.floor((r.value / buy.price) * 1e4) / 1e4;
+    return { sold: r.t, proceeds: r.value, realized: cents(r.value - r.cost), buy };
+  })();
+
   window.KS = {
     formatMoney, formatPct, tugRatio,
     LEAGUE, PLAYERS, byId, seatForPick,
     DRAFT_MOMENT, DRAFT_PICKS, DRAFT_SEARCH,
     MATCHUP, WEEK_CLOSES, CHYRONS,
     STANDINGS_BEFORE, STANDINGS_FINAL, WEEK6,
-    PORTFOLIO_LIVE, OTHER_LEAGUES, HOME, NVDA, ROBERTO_WEEKS,
+    PORTFOLIO_LIVE, OTHER_LEAGUES, HOME, NVDA, ROBERTO_WEEKS, SALE,
     lineup, score, scoreDisplay,
   };
 })();
