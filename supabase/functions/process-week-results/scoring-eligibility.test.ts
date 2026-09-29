@@ -27,8 +27,12 @@ import {
   decideBatchScoring,
   decideUserScorer,
   decideMatchupScoring,
+  ledgerPositionState,
   BATCH_SKIP_REASON,
   MATCHUP_REFUSAL_REASON,
+  type LedgerDraftRow,
+  type LedgerState,
+  type LedgerTradeRow,
   type ScorerKind,
 } from './scoring-eligibility.ts';
 
@@ -338,4 +342,301 @@ Deno.test('REGRESSION: same partial-snapshot mix at WEEK 1 scores everything (no
   const { scored, refused } = simulateWeek(users, [m1], /* weekNumber */ 1, false, decideUserScorer);
   assertEquals(refused, [], 'week-1 snapshot-less user is a valid fallback, not unscoreable');
   assertEquals(scored, [m1]);
+});
+
+// ===========================================================================
+// GUARD 4 — THE ALL-CASH RULE: ledgerPositionState + the 'cash_only' scorer kind
+//
+// A snapshot-less user may be scored as all-cash ONLY when the ledger proves them
+// flat at BOTH week boundaries. Everything ambiguous fails closed to "held".
+// End-to-end scenarios (a)-(e) live in user-score.test.ts; these pin the pieces.
+// ===========================================================================
+
+const WEEK_START = '2026-10-06T14:30:00.000Z';
+const WEEK_END = '2026-10-09T21:00:00.000Z';
+const BEFORE = '2026-10-02T15:00:00.000Z'; // prior week
+const DURING = '2026-10-07T15:00:00.000Z';
+const AFTER = '2026-10-12T15:00:00.000Z';
+
+const U = 'aaaaaaaa-0000-4000-8000-000000000001';
+
+const draft = (symbol: string, quantity: unknown = 10, user_id: unknown = U): LedgerDraftRow =>
+  ({ user_id, symbol, quantity });
+const trade = (
+  action: 'buy' | 'sell',
+  symbol: string,
+  quantity: unknown,
+  created_at: string | null,
+  user_id: unknown = U,
+): LedgerTradeRow => ({ user_id, symbol, action, quantity, created_at });
+
+const FLAT: LedgerState = { heldAtWeekStart: false, heldAtWeekEnd: false, hasLedgerHistory: true };
+const HELD_ALL: LedgerState = { heldAtWeekStart: true, heldAtWeekEnd: true, hasLedgerHistory: true };
+
+Deno.test('ledger: drafted and never sold -> held at both boundaries', () => {
+  assertEquals(
+    ledgerPositionState(U, [draft('AAPL')], [], WEEK_START, WEEK_END),
+    HELD_ALL,
+  );
+});
+
+Deno.test('ledger: sold everything BEFORE week_start -> flat at both, with history', () => {
+  assertEquals(
+    ledgerPositionState(U, [draft('AAPL', 10)], [trade('sell', 'AAPL', 10, BEFORE)], WEEK_START, WEEK_END),
+    FLAT,
+  );
+});
+
+Deno.test('ledger: nets PER SYMBOL — one symbol flat, another still held -> held', () => {
+  // The partial case: selling AAPL to zero must not hide the MSFT still held.
+  assertEquals(
+    ledgerPositionState(
+      U,
+      [draft('AAPL', 10), draft('MSFT', 3)],
+      [trade('sell', 'AAPL', 10, BEFORE)],
+      WEEK_START,
+      WEEK_END,
+    ),
+    HELD_ALL,
+  );
+});
+
+Deno.test('ledger: flat at start, bought mid-week and held -> held at END only', () => {
+  assertEquals(
+    ledgerPositionState(
+      U,
+      [draft('AAPL', 10)],
+      [trade('sell', 'AAPL', 10, BEFORE), trade('buy', 'NVDA', 2, DURING)],
+      WEEK_START,
+      WEEK_END,
+    ),
+    { heldAtWeekStart: false, heldAtWeekEnd: true, hasLedgerHistory: true },
+  );
+});
+
+Deno.test('ledger: boundary — a trade AT week_start is mid-week, not pre-week', () => {
+  // Partitions exactly with the handler's mid-week query (gte week_start): a sell
+  // at exactly week_start leaves the holding in place AT the start boundary.
+  assertEquals(
+    ledgerPositionState(U, [draft('AAPL', 10)], [trade('sell', 'AAPL', 10, WEEK_START)], WEEK_START, WEEK_END),
+    { heldAtWeekStart: true, heldAtWeekEnd: false, hasLedgerHistory: true },
+  );
+});
+
+Deno.test('ledger: boundary — a trade AT week_end counts; one after is ignored', () => {
+  assertEquals(
+    ledgerPositionState(
+      U,
+      [draft('AAPL', 10)],
+      [trade('sell', 'AAPL', 10, BEFORE), trade('buy', 'NVDA', 1, WEEK_END)],
+      WEEK_START,
+      WEEK_END,
+    ).heldAtWeekEnd,
+    true,
+  );
+  // A post-week_end buy does not make the user held at week_end...
+  assertEquals(
+    ledgerPositionState(
+      U,
+      [draft('AAPL', 10)],
+      [trade('sell', 'AAPL', 10, BEFORE), trade('buy', 'NVDA', 1, AFTER)],
+      WEEK_START,
+      WEEK_END,
+    ),
+    FLAT,
+  );
+  // ...and a post-week_end SELL does not make a held user look flat.
+  assertEquals(
+    ledgerPositionState(U, [draft('AAPL', 10)], [trade('sell', 'AAPL', 10, AFTER)], WEEK_START, WEEK_END),
+    HELD_ALL,
+  );
+});
+
+Deno.test('ledger: fixed_notional rounding dust (<= 1e-9) is flat; anything above is held', () => {
+  const d = [draft('AAPL', 1.5)];
+  assertEquals(
+    ledgerPositionState(U, d, [trade('sell', 'AAPL', 1.5 - 1e-10, BEFORE)], WEEK_START, WEEK_END),
+    FLAT,
+  );
+  assertEquals(
+    ledgerPositionState(U, d, [trade('sell', 'AAPL', 1.5 - 1e-6, BEFORE)], WEEK_START, WEEK_END),
+    HELD_ALL,
+  );
+});
+
+Deno.test('ledger: SKIP sentinel draft rows are not holdings and not history', () => {
+  // A forfeited pick (symbol SKIP, quantity 0). Mirroring calculateHoldings'
+  // `|| 1` without the SKIP filter would make this "1 share of SKIP".
+  assertEquals(
+    ledgerPositionState(U, [draft('SKIP', 0), draft('skip', 0)], [], WEEK_START, WEEK_END),
+    { heldAtWeekStart: false, heldAtWeekEnd: false, hasLedgerHistory: false },
+  );
+});
+
+Deno.test('ledger: no rows at all -> flat with NO history (genuinely empty)', () => {
+  assertEquals(
+    ledgerPositionState(U, [], [], WEEK_START, WEEK_END),
+    { heldAtWeekStart: false, heldAtWeekEnd: false, hasLedgerHistory: false },
+  );
+});
+
+Deno.test("ledger: other users' rows are ignored", () => {
+  const other = 'bbbbbbbb-0000-4000-8000-000000000002';
+  assertEquals(
+    ledgerPositionState(
+      U,
+      [draft('AAPL', 10), draft('MSFT', 5, other)],
+      [trade('sell', 'AAPL', 10, BEFORE), trade('buy', 'NVDA', 3, DURING, other)],
+      WEEK_START,
+      WEEK_END,
+    ),
+    FLAT,
+  );
+});
+
+Deno.test('ledger: drafts.user_id TEXT vs trades.user_id UUID — matched after normalisation', () => {
+  // A non-canonical text id must NOT hide the user's drafts (which would read as
+  // FLAT — the dangerous direction). Upper-case + padded text still matches.
+  assertEquals(
+    ledgerPositionState(U, [draft('AAPL', 10, `  ${U.toUpperCase()} `)], [], WEEK_START, WEEK_END),
+    HELD_ALL,
+  );
+});
+
+Deno.test('ledger: draft quantity mirrors calculateHoldings `|| 1` (null/0 non-SKIP draft is held)', () => {
+  assertEquals(ledgerPositionState(U, [draft('AAPL', null)], [], WEEK_START, WEEK_END), HELD_ALL);
+  assertEquals(ledgerPositionState(U, [draft('AAPL', 0)], [], WEEK_START, WEEK_END), HELD_ALL);
+  assertEquals(ledgerPositionState(U, [draft('AAPL', '2.5')], [], WEEK_START, WEEK_END), HELD_ALL);
+});
+
+Deno.test('ledger: FAILS CLOSED — null / unparseable week bounds -> held', () => {
+  const d = [draft('AAPL', 10)];
+  const t = [trade('sell', 'AAPL', 10, BEFORE)];
+  assertEquals(ledgerPositionState(U, d, t, null, WEEK_END), HELD_ALL);
+  assertEquals(ledgerPositionState(U, d, t, WEEK_START, null), HELD_ALL);
+  assertEquals(ledgerPositionState(U, d, t, 'not-a-date', WEEK_END), HELD_ALL);
+});
+
+Deno.test("ledger: FAILS CLOSED — one of the user's trades has no parseable created_at -> held", () => {
+  // A sell of unknown time could be hiding a start-of-week holding.
+  assertEquals(
+    ledgerPositionState(U, [draft('AAPL', 10)], [trade('sell', 'AAPL', 10, null)], WEEK_START, WEEK_END),
+    HELD_ALL,
+  );
+  assertEquals(
+    ledgerPositionState(U, [draft('AAPL', 10)], [trade('sell', 'AAPL', 10, 'garbage')], WEEK_START, WEEK_END),
+    HELD_ALL,
+  );
+});
+
+Deno.test('ledger: FAILS CLOSED — non-finite quantity -> held', () => {
+  assertEquals(ledgerPositionState(U, [draft('AAPL', 'abc')], [], WEEK_START, WEEK_END), HELD_ALL);
+  assertEquals(
+    ledgerPositionState(U, [draft('AAPL', 10)], [trade('sell', 'AAPL', 'abc', BEFORE)], WEEK_START, WEEK_END),
+    HELD_ALL,
+  );
+});
+
+Deno.test('user: ledger flat at both boundaries -> cash_only, at week 1 AND past it', () => {
+  for (const weekNumber of [1, 2, 7]) {
+    assertEquals(
+      decideUserScorer({ hasSnapshot: false, hasWeekEndPrices: true, weekNumber, ledger: FLAT }),
+      'cash_only' as ScorerKind,
+    );
+    // Independent of the batch's end-price flag — cash needs no snapshot price.
+    assertEquals(
+      decideUserScorer({ hasSnapshot: false, hasWeekEndPrices: false, weekNumber, ledger: FLAT }),
+      'cash_only' as ScorerKind,
+    );
+  }
+});
+
+Deno.test('user: ledger held at EITHER boundary -> NOT cash_only (unscoreable past week 1)', () => {
+  const heldStartOnly: LedgerState = { heldAtWeekStart: true, heldAtWeekEnd: false, hasLedgerHistory: true };
+  const heldEndOnly: LedgerState = { heldAtWeekStart: false, heldAtWeekEnd: true, hasLedgerHistory: true };
+  for (const ledger of [HELD_ALL, heldStartOnly, heldEndOnly]) {
+    assertEquals(
+      decideUserScorer({ hasSnapshot: false, hasWeekEndPrices: true, weekNumber: 4, ledger }),
+      'unscoreable' as ScorerKind,
+    );
+    // Week 1 keeps its existing fallback for a genuinely-held snapshot-less user.
+    assertEquals(
+      decideUserScorer({ hasSnapshot: false, hasWeekEndPrices: false, weekNumber: 1, ledger }),
+      'fallback' as ScorerKind,
+    );
+  }
+});
+
+Deno.test('user: NO ledger supplied -> never cash_only (absence is not proof)', () => {
+  assertEquals(
+    decideUserScorer({ hasSnapshot: false, hasWeekEndPrices: true, weekNumber: 4 }),
+    'unscoreable' as ScorerKind,
+  );
+});
+
+Deno.test('user: a snapshot always wins over the ledger branch', () => {
+  assertEquals(
+    decideUserScorer({ hasSnapshot: true, hasWeekEndPrices: true, weekNumber: 4, ledger: FLAT }),
+    'full' as ScorerKind,
+  );
+  assertEquals(
+    decideUserScorer({ hasSnapshot: true, hasWeekEndPrices: false, weekNumber: 4, ledger: FLAT }),
+    'legacy' as ScorerKind,
+  );
+});
+
+Deno.test('batch: every participant all-cash + no snapshots -> proceed (any week, any age)', () => {
+  // Correctly snapshot-less: nobody held anything. cash_only scores from stored
+  // trade prices, so neither guard's rationale applies.
+  for (const [weekNumber, weekAgeHours] of [[1, 10], [5, 10], [5, 500], [1, Number.POSITIVE_INFINITY]]) {
+    assertEquals(
+      decideBatchScoring({
+        hasSnapshots: false,
+        weekAgeHours,
+        weekNumber,
+        fallbackMaxAgeHours: MAX_AGE,
+        allParticipantsCashOnly: true,
+      }),
+      { action: 'proceed' },
+    );
+  }
+});
+
+Deno.test('batch: MIXED snapshot-less batch (someone ledger-held) still skips as before', () => {
+  assertEquals(
+    decideBatchScoring({
+      hasSnapshots: false,
+      weekAgeHours: 10,
+      weekNumber: 3,
+      fallbackMaxAgeHours: MAX_AGE,
+      allParticipantsCashOnly: false,
+    }),
+    { action: 'skip', reason: BATCH_SKIP_REASON.NO_SNAPSHOTS_WEEK_GT_1 },
+  );
+});
+
+Deno.test("batch: a scoring-input fetch error -> skip 'scoring_inputs_fetch_failed', FIRST", () => {
+  // The false-flat trap: a failed query reads as "no rows" = everyone flat. The
+  // fetch-failed refusal must beat the all-cash proceed AND a snapshotted batch.
+  assertEquals(
+    decideBatchScoring({
+      hasSnapshots: false,
+      weekAgeHours: 10,
+      weekNumber: 3,
+      fallbackMaxAgeHours: MAX_AGE,
+      scoringInputsFetchFailed: true,
+      allParticipantsCashOnly: true,
+    }),
+    { action: 'skip', reason: BATCH_SKIP_REASON.SCORING_INPUTS_FETCH_FAILED },
+  );
+  assertEquals(
+    decideBatchScoring({
+      hasSnapshots: true,
+      weekAgeHours: 10,
+      weekNumber: 3,
+      fallbackMaxAgeHours: MAX_AGE,
+      scoringInputsFetchFailed: true,
+    }),
+    { action: 'skip', reason: BATCH_SKIP_REASON.SCORING_INPUTS_FETCH_FAILED },
+  );
 });
