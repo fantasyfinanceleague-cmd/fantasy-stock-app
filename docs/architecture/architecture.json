@@ -2,13 +2,13 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "9d8d06bef71e90eccf1c8ca0903ac178b0735d99",
-    "commitShort": "9d8d06b",
+    "commit": "f740fe5046248ee68f55349fc280b78932d4907b",
+    "commitShort": "f740fe5",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "feat/flexible-playoffs",
     "dirty": false,
     "dirtyPaths": [],
-    "timestamp": "2026-09-29T22:18:11Z",
+    "timestamp": "2026-09-29T22:25:21Z",
     "sourceHash": "sha256:f7e08bf6c6f9bd584003eae41e0550720017102b7b582f820085fae012788eb7",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
@@ -16,7 +16,7 @@
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1169.4,
+    "ageHours": 1169.5,
     "ageDays": 48.7,
     "staleAfterDays": 14,
     "stale": true,
@@ -2120,7 +2120,7 @@
       "declared": {
         "definedIn": [
           "supabase/migrations/20261011000003_start_league_playoffs.sql:80",
-          "supabase/migrations/20261012000001_start_league_playoffs_flexible.sql:55"
+          "supabase/migrations/20261012000001_start_league_playoffs_flexible.sql:57"
         ],
         "latestDefinition": "supabase/migrations/20261012000001_start_league_playoffs_flexible.sql",
         "redefinitions": 2
@@ -2142,7 +2142,7 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261012000001_start_league_playoffs_flexible.sql",
-        "line": 55
+        "line": 57
       }
     },
     {
@@ -6660,8 +6660,8 @@
       "callSites": [
         "supabase/migrations/20261011000003_start_league_playoffs.sql:127",
         "supabase/migrations/20261011000003_start_league_playoffs.sql:128",
-        "supabase/migrations/20261012000001_start_league_playoffs_flexible.sql:158",
-        "supabase/migrations/20261012000001_start_league_playoffs_flexible.sql:159"
+        "supabase/migrations/20261012000001_start_league_playoffs_flexible.sql:166",
+        "supabase/migrations/20261012000001_start_league_playoffs_flexible.sql:167"
       ]
     },
     {
@@ -6676,8 +6676,8 @@
       "callSites": [
         "supabase/migrations/20261011000003_start_league_playoffs.sql:161",
         "supabase/migrations/20261011000003_start_league_playoffs.sql:95",
-        "supabase/migrations/20261012000001_start_league_playoffs_flexible.sql:250",
-        "supabase/migrations/20261012000001_start_league_playoffs_flexible.sql:84"
+        "supabase/migrations/20261012000001_start_league_playoffs_flexible.sql:258",
+        "supabase/migrations/20261012000001_start_league_playoffs_flexible.sql:86"
       ]
     },
     {
@@ -6692,8 +6692,8 @@
       "callSites": [
         "supabase/migrations/20261011000003_start_league_playoffs.sql:157",
         "supabase/migrations/20261011000003_start_league_playoffs.sql:163",
-        "supabase/migrations/20261012000001_start_league_playoffs_flexible.sql:246",
-        "supabase/migrations/20261012000001_start_league_playoffs_flexible.sql:252"
+        "supabase/migrations/20261012000001_start_league_playoffs_flexible.sql:254",
+        "supabase/migrations/20261012000001_start_league_playoffs_flexible.sql:260"
       ]
     },
     {
@@ -6707,7 +6707,7 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261011000003_start_league_playoffs.sql:171",
-        "supabase/migrations/20261012000001_start_league_playoffs_flexible.sql:260"
+        "supabase/migrations/20261012000001_start_league_playoffs_flexible.sql:268"
       ]
     },
     {
