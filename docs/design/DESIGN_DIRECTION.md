@@ -271,6 +271,12 @@ Same token names on web (`motion` library) and mobile (Reanimated 4.1).
 Nothing that blocks input runs longer than `slow`. `feature` never blocks
 input.
 
+**List stagger (token, 2026-09-29).** `motion.stagger = { step: 30, max: 8 }`:
+item *i* waits `min(i, max) × step` ms, so a long list never waits more than
+240 ms to finish starting. Read it through `useMotion().stagger.delayFor(i)`,
+which returns 0 under Reduce Motion (items appear together). Screens never
+hand-roll stagger delays.
+
 ### Easings
 
 | Token | Curve | Use |
