@@ -7,6 +7,7 @@ import { usePortfolio, Holding } from '@/lib/usePortfolio';
 import { useHistoricalPL } from '@/lib/useHistoricalPL';
 import { useStockNames, abbreviateName } from '@/lib/useStockNames';
 import { PerformanceChart, PeriodPL } from '@/components/PerformanceChart';
+import { decideHeroPL } from '@/lib/plCoverage';
 import { router } from 'expo-router';
 import { useState, useMemo, useCallback } from 'react';
 import { SkeletonHolding } from '@/components/Skeleton';
@@ -16,6 +17,7 @@ import TradeModal from '@/components/TradeModal';
 import PLBreakdownModal from '@/components/PLBreakdownModal';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui';
+import { getSeasonPhase, getSeasonLabel, canTradeInPhase, formatSignedCurrency } from '@/lib/weekStatus';
 
 function formatCurrency(value: number): string {
   return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -135,6 +137,12 @@ export default function PortfolioScreen() {
     ? Math.max((activeLeague.budget_amount || 0) - portfolioSummary.totalCost, 0)
     : null;
 
+  // Before the draft finishes, record-trade refuses every buy/sell — see
+  // canTradeInPhase's docstring. The Buy CTAs below are gated on this, not
+  // on whether the user currently has holdings.
+  const seasonPhase = getSeasonPhase(activeLeague);
+  const canTrade = canTradeInPhase(seasonPhase);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <LeagueSwitcher />
@@ -162,11 +170,15 @@ export default function PortfolioScreen() {
               <Text style={styles.heroValue}>${formatCurrency(portfolioSummary.totalValue)}</Text>
 
               {portfolioSummary.hasLivePrices && portfolioSummary.totalCost > 0 && (() => {
+                // Same scope as the value above and the breakdown modal; the
+                // chart only supplies a fully-priced 1W/1M delta.
                 const hasChart = historicalData.length >= 2;
-                const gl = hasChart && periodPL ? periodPL.gainLoss : portfolioSummary.totalGainLoss;
-                const glPct = hasChart && periodPL ? periodPL.gainLossPercent : portfolioSummary.totalGainLossPercent;
-                const isUp = hasChart && periodPL ? periodPL.isPositive : portfolioSummary.totalGainLoss >= 0;
+                const heroPL = decideHeroPL(portfolioSummary.summary, hasChart ? periodPL : null);
+                const gl = heroPL.gainLoss;
+                const glPct = heroPL.gainLossPercent;
+                const isUp = heroPL.isPositive;
                 return (
+                  <>
                   <TouchableOpacity
                     style={styles.plPill}
                     onPress={() => setPlModalVisible(true)}
@@ -179,12 +191,16 @@ export default function PortfolioScreen() {
                         color={isUp ? Colors.success : Colors.error}
                       />
                       <Text style={[styles.plPillText, isUp ? styles.positive : styles.negative]}>
-                        {isUp ? '+' : ''}${formatCurrency(gl)}
+                        {formatSignedCurrency(gl)}
                         {' '}({formatPercent(glPct)})
                       </Text>
                     </View>
                     <Ionicons name="chevron-forward" size={14} color={Colors.textMuted} style={{ marginLeft: 4 }} />
                   </TouchableOpacity>
+                  {heroPL.notes.map(note => (
+                    <Text key={note} style={styles.plNote}>{note}</Text>
+                  ))}
+                  </>
                 );
               })()}
 
@@ -195,65 +211,93 @@ export default function PortfolioScreen() {
               )}
             </View>
 
-            {/* Performance Chart */}
-            {historicalData.length >= 2 && (
-              <View style={styles.chartSection}>
-                <PerformanceChart
-                  data={historicalData}
-                  loading={histLoading}
-                  onPeriodPLChange={handlePeriodPLChange}
-                />
-              </View>
-            )}
-
-            {/* Actions */}
-            <View style={styles.actionsRow}>
-              <Button
-                title="Buy Stock"
-                onPress={() => openTradeModal('', 'buy')}
-                variant="primary"
-              />
-              <Button
-                title="View trade history"
-                onPress={() => router.push('/trade-history')}
-                variant="ghost"
-                icon={<Ionicons name="arrow-forward" size={16} color={Colors.primary} />}
-              />
-            </View>
-
-            {/* Holdings */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Current Holdings</Text>
-              {portfolioLoading ? (
-                <>
-                  <SkeletonHolding />
-                  <SkeletonHolding />
-                  <SkeletonHolding />
-                </>
-              ) : holdings.length === 0 ? (
+            {!canTrade ? (
+              // Before the draft finishes there is no acquisition path other
+              // than the draft itself — record-trade refuses every buy/sell
+              // with 'draft_not_completed' until draft_status === 'completed'
+              // (see lib/weekStatus.ts's canTradeInPhase). Showing a Buy
+              // Stock button here would offer a trade the server will
+              // refuse, so this replaces the chart/actions/holdings section
+              // with a single status + "Go to draft" CTA instead of the two
+              // separate "Buy Stock" primaries (Actions row + empty-holdings
+              // state) that used to render side by side.
+              <View style={styles.section}>
                 <View style={styles.emptyHoldings}>
                   <View style={styles.emptyIcon}>
-                    <Ionicons name="bar-chart-outline" size={32} color={Colors.textMuted} />
+                    <Ionicons name="hourglass-outline" size={32} color={Colors.textMuted} />
                   </View>
-                  <Text style={styles.emptyText}>No holdings yet</Text>
-                  <Text style={styles.emptySubtext}>Draft stocks or buy your first share!</Text>
+                  <Text style={styles.emptyText}>{getSeasonLabel(seasonPhase, activeLeague)}</Text>
+                  <Text style={styles.emptySubtext}>Trading opens once the draft finishes.</Text>
+                  <Button
+                    title="Go to draft"
+                    onPress={() => router.push('/(tabs)/draft')}
+                    variant="primary"
+                  />
+                </View>
+              </View>
+            ) : (
+              <>
+                {/* Performance Chart */}
+                {historicalData.length >= 2 && (
+                  <View style={styles.chartSection}>
+                    <PerformanceChart
+                      data={historicalData}
+                      loading={histLoading}
+                      onPeriodPLChange={handlePeriodPLChange}
+                    />
+                  </View>
+                )}
+
+                {/* Actions */}
+                <View style={styles.actionsRow}>
                   <Button
                     title="Buy Stock"
                     onPress={() => openTradeModal('', 'buy')}
                     variant="primary"
                   />
-                </View>
-              ) : (
-                holdings.map((holding) => (
-                  <HoldingRow
-                    key={holding.symbol}
-                    holding={holding}
-                    companyName={stockNames[holding.symbol.toUpperCase()]}
-                    onPress={() => openTradeModal(holding.symbol, 'buy')}
+                  <Button
+                    title="View trade history"
+                    onPress={() => router.push('/trade-history')}
+                    variant="ghost"
+                    icon={<Ionicons name="arrow-forward" size={16} color={Colors.primary} />}
                   />
-                ))
-              )}
-            </View>
+                </View>
+
+                {/* Holdings */}
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Current Holdings</Text>
+                  {portfolioLoading ? (
+                    <>
+                      <SkeletonHolding />
+                      <SkeletonHolding />
+                      <SkeletonHolding />
+                    </>
+                  ) : holdings.length === 0 ? (
+                    <View style={styles.emptyHoldings}>
+                      <View style={styles.emptyIcon}>
+                        <Ionicons name="bar-chart-outline" size={32} color={Colors.textMuted} />
+                      </View>
+                      <Text style={styles.emptyText}>No holdings yet</Text>
+                      <Text style={styles.emptySubtext}>Draft stocks or buy your first share!</Text>
+                      <Button
+                        title="Buy Stock"
+                        onPress={() => openTradeModal('', 'buy')}
+                        variant="primary"
+                      />
+                    </View>
+                  ) : (
+                    holdings.map((holding) => (
+                      <HoldingRow
+                        key={holding.symbol}
+                        holding={holding}
+                        companyName={stockNames[holding.symbol.toUpperCase()]}
+                        onPress={() => openTradeModal(holding.symbol, 'buy')}
+                      />
+                    ))
+                  )}
+                </View>
+              </>
+            )}
           </>
         )}
       </ScrollView>
@@ -339,6 +383,12 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
+    marginTop: 8,
+  },
+  plNote: {
+    fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textSecondary, // 4.76:1 — discloses what the P/L pill assumed
     marginTop: 8,
   },
 

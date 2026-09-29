@@ -1,0 +1,48 @@
+.sp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-space-2);
+  padding-block: var(--sp-space-2);
+  padding-inline: var(--sp-space-4);
+  border-radius: var(--sp-radius-pill);
+  font-family: var(--sp-type-family);
+  font-size: var(--sp-type-caption-size);
+  line-height: var(--sp-type-caption-line);
+  font-weight: var(--sp-type-caption-weight);
+  white-space: nowrap;
+  width: fit-content;
+}
+
+.sp-chip--neutral-money {
+  background-color: var(--sp-color-surface-money-sunken);
+  color: var(--sp-color-text-secondary);
+}
+
+.sp-chip--neutral-game {
+  background-color: var(--sp-color-surface-game-raised);
+  color: var(--sp-color-text-on-game-secondary);
+}
+
+.sp-chip--brand-money {
+  background-color: var(--sp-color-surface-money-sunken);
+  color: var(--sp-color-brand);
+}
+
+.sp-chip--brand-game {
+  background-color: var(--sp-color-surface-game-raised);
+  color: var(--sp-color-team-you-on-game);
+}
+
+/* Broadcast-tag styling for a live phase chip on a game surface: uppercase,
+   expanded width, the live colour. The only uppercase in the app, and only
+   ever on a game surface (DESIGN_DIRECTION §9 type.tag). */
+.sp-chip--tag {
+  background-color: var(--sp-color-surface-game-raised);
+  color: var(--sp-color-live);
+  font-size: var(--sp-type-tag-size);
+  line-height: var(--sp-type-tag-line);
+  font-weight: var(--sp-type-tag-weight);
+  font-stretch: var(--sp-type-tag-stretch);
+  letter-spacing: var(--sp-type-tag-tracking);
+  text-transform: var(--sp-type-tag-transform);
+}

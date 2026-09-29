@@ -57,7 +57,7 @@ Everything else in this document applies whichever direction wins.
 
 All three use the same product facts. Matchups are won on **dollar gain**
 (percent is only the tiebreak; `process-week-results/index.ts:1188`,
-`:1245`), so every matchup leads with dollars. Every data colour passes WCAG AA
+`:1245`), so every matchup leads with dollars. **Copy stays generic** ("best performance wins"), because stake modes vary capital per player; data displays show the scorer's metric via one helper (Giorgio, 2026-09-27). Every data colour passes WCAG AA
 (4.5:1) on its own background; the ratios are measured and printed on the board.
 
 ### A. Ledger (light, calm fintech)
@@ -163,7 +163,7 @@ them harder than using them.**
 | Layer | Mobile | Web |
 |---|---|---|
 | Source | `apps/mobile/constants/theme/*` (colors, type, space, radius, elevation, **motion**) | `apps/web/src/styles/tokens.css` (CSS custom properties on `:root`, **not** scoped to `.sp-landing`) + `tokens.ts` mirror for JS/motion |
-| Names | `color.surface.money.base`, `color.surface.game.base`, `color.text.primary`, `color.data.gain`, `type.score`, `type.body`, `motion.duration.base`, `motion.ease.settle` … identical strings on both platforms |
+| Names | `color.surface.money.base`, `color.surface.game.base`, `color.text.primary`, `color.data.gain.base`, `type.score`, `type.body`, `motion.duration.base`, `motion.ease.settle` … identical strings on both platforms |
 | Enforcement | `<Text variant="…">`, `<Money value=… />`, `<Surface kind="money\|game">`, `Pressable` with built-in press motion; ESLint `no-restricted-syntax` on raw `fontSize` / hex in `app/` + `components/` (warning first, error after Phase 3) | Same primitives in React; a lint rule against raw hex outside `tokens.css` |
 
 Non-negotiables carried from the audit: every text/background pair ≥ 4.5:1
@@ -189,6 +189,19 @@ Header:        [league pill ▾]  on Matchup / League / Portfolio      [avatar] 
 - **Home**: cross-league overview (the planned 3b rebuild). Total value,
   an honest performance chart (§7 ask 3), "This week" matchup strip (one card
   per live league), your leagues grouped by phase. Avatar → Profile & settings.
+  - **Chart decision (2026-09-26): plot cumulative gain, not value.** The
+    line is `value − cost basis + realized P/L` for the selected window,
+    with a **zero baseline**. It sits in the gain colour above zero and the
+    loss colour below (§9 data tokens). Reason: the game is scored on dollar
+    gain, and the header already shows cash-flow-adjusted gain. A value line
+    turns every draft, buy or league join into a fake rally (seen by the P/L
+    worker: +$5,000 of in-window drafts made the line climb while the header
+    correctly read +$25.14, and flagged as the "staircase chart" in the
+    audit). Deposits (drafts, league joins) therefore produce **no jump**. An
+    optional small marker on the axis may note "joined Friday Night Stocks";
+    it's never a step in the line. **Portfolio value** stays the big number
+    in the header, not the chart. Data: this needs the daily series in §7
+    ask 3, with per-day cost basis.
 - **Matchup**: your matchup in the active league, with a segmented control
   for **All matchups this week** in that league.
 - **League**: standings, schedule, history, league settings (commissioner).
@@ -285,6 +298,14 @@ shared-element transitions.
 | Charts | Draw once on first view; afterwards update in place | `feature` then `base` |
 | Tab change | Icon fill + label colour | `quick` |
 
+### Ambition (added 2026-09-27)
+
+Restraint was over-applied in the first pass. **Motion should be abundant
+wherever it explains state or place**: scores changing, standings moving, a
+screen handing off to the next, the market being live. Every screen should have
+at least one moment people would show a friend. The limits below still hold,
+and every animation keeps its reduced-motion fallback.
+
 ### What never animates
 
 - Money on first render (it appears; it only rolls when it **changes**).
@@ -319,6 +340,13 @@ recording of each animation it added.
 ---
 
 ## 6. Landing concept (written for B; A and C variants noted)
+
+> **Superseded in part (2026-09-27).** Giorgio judged the first build "still very
+> basic". The **"one pinned section" limit is lifted**: the landing now has
+> **multiple** scroll-scrubbed chapters, a sticky app mockup, background morphs,
+> mask reveals, parallax and live standings/scoreboards (see the 3a round-3 brief
+> in `prompts/phase3a-landing.md`). **The copy stays the current live landing's,
+> verbatim.** The table below is kept for history.
 
 The landing stays **pre-launch**: "Launching soon" is a status, never a
 button that looks clickable. It doesn't import app CSS.
@@ -383,6 +411,10 @@ Remotion's licence is confirmed before anything is published.
 
 Names are identical on both platforms (dot paths in TS; `--sp-` kebab custom
 properties on web, e.g. `color.surface.game.base` → `--sp-color-surface-game-base`).
+Web names are all lowercase kebab, with camelCase split: `color.data.gain.onGame`
+→ `--sp-color-data-gain-on-game`. **A token is never both a leaf and a parent**:
+where a variant exists, the default lives at `.base` (amended 2026-09-26 at
+ui/foundation-mobile's request).
 Every text pair below is measured; "on" means the background it may sit on.
 
 ### Colour
@@ -403,24 +435,34 @@ Every text pair below is measured; "on" means the background it may sit on.
 | `color.text.onGame.primary` | `#FFFFFF` | 17:1 on stadium |
 | `color.text.onGame.secondary` | `#8DA0BD` | 6.5 on base, 5.7 on raised |
 | `color.brand` | `#2860F0` | Mark accent bar, focus ring. 5.2 on white |
-| `color.team.you` | `#2860F0` | **Fills/bars only** on light; as text on game use `team.you.onGame` |
+| `color.team.you.base` | `#2860F0` | **Fills/bars only** on light; as text on game use `team.you.onGame` |
 | `color.team.you.onGame` | `#6E9BFF` | 6.4 on stadium |
 | `color.team.opponent` | `#FF6A3D` | **Fills/bars only** (2.9 on white fails as text; 6.1 on stadium ok) |
 | `color.live` | `#FFC53D` | Live dot/tag, on game only (11:1) |
-| `color.data.gain` / `.loss` | `#12803F` / `#C8303A` | On money: 5.0 / 5.3 |
-| `color.data.gain.onGame` / `.loss.onGame` | `#4ADE8B` / `#FF7A7A` | 10.0 / 6.9 |
-| `color.data.zero` | = `text.secondary` | Zero is never green |
+| `color.data.gain.base` / `color.data.loss.base` | `#12803F` / `#C8303A` | On money: 5.0 / 5.3 |
+| `color.data.gain.onGame` / `color.data.loss.onGame` | `#4ADE8B` / `#FF7A7A` | 10.0 / 6.9 |
+| `color.data.zero.base` / `color.data.zero.onGame` | = `text.secondary` / = `text.onGame.secondary` | Zero is never green; on game it must use the light-on-dark grey (6.5:1), not the light-surface one (~3:1) |
 | `color.status.warning` | `#B45309` | 5.0 on white |
 | `color.status.danger` | `#B42318` | 6.6 on white (destructive buttons, errors) |
 | `color.action.primary.bg` / `.fg` | `#0D1B2E` / `#FFFFFF` | Primary buttons are stadium navy: neutral, and not a team colour |
+| `color.action.secondary.bg` / `.border` / `.fg` | `#FFFFFF` / = `border.control` / = `text.primary` | Money-surface secondary, explicit for parity with `.onGame` |
+| `color.action.ghost.fg` | = `text.primary` | Money-surface ghost |
+| `color.action.primary.onGame.bg` / `.fg` | `#FFFFFF` / `#0D1B2E` | **On game surfaces the primary inverts** to a white "broadcast chip" (17:1). Navy-on-navy would be invisible |
+| `color.action.secondary.onGame.border` / `.fg` | `#8DA0BD` / `#FFFFFF` | Transparent fill, light outline (6.5:1 against stadium) |
+| `color.action.ghost.onGame.fg` | `#FFFFFF` | Text-only action on game surfaces |
 
 Rules: team colours mark **people**, data colours mark **money**, and they
-never swap. Opponent orange never appears as text on light.
+never swap. **Every colour a component uses must resolve per surface**: a
+component on a `game` surface takes its `.onGame` token automatically through
+the `Surface` context (amended 2026-09-26 after ui/foundation-web found the
+primary button invisible on stadium navy). The hierarchy holds on both
+surfaces: primary is the most prominent, then secondary, then ghost. Opponent orange never appears as text on light.
 
 ### Type (Archivo)
 
 | Token | Width / weight | Size / line | Use |
 |---|---|---|---|
+| `type.hero` | 62% / 900 | web: `clamp(56px, 7.6vw, 112px)` / 0.92; mobile: 56 / 52 | **Landing display family**: the hero headline, plus the landing's section heads and launch title at sizes derived from it (Phase 3a). Tracking −0.01em; **`type.hero.wordSpacing` = 0.12em** (added 2026-09-27; at 62% width the word gaps otherwise collapse, e.g. "Yourportfolio"). Web: `--sp-type-hero-word-spacing` |
 | `type.score.xl` | 62% / 900 | 56 / 52 | Matchup scoreboard |
 | `type.score.lg` | 62% / 900 | 40 / 38 | Standings, Home "this week" |
 | `type.score.md` | 62% / 900 | 28 / 28 | Compact scores |
@@ -432,7 +474,36 @@ never swap. Opponent orange never appears as text on light.
 | `type.callout` | 100% / 500 | 13 / 18 | Secondary lines |
 | `type.caption` | 100% / 500 | 12 / 16 | **Smallest informational size** |
 
-Money always uses `tabular-nums`. **Mobile font delivery:** React Native
+Money always uses `tabular-nums`.
+
+**Money formatting** (both platforms, amended 2026-09-26):
+- `sign: 'negative'` (default): no "+", negatives show U+2212 before the currency.
+- `sign: 'always'`: "+" or "−" on any value that is non-zero *after rounding*
+  (−0.004 → `$0.00`).
+- `alignSign`: puts a U+2007 figure space in an empty sign slot so signed
+  columns align. **Zero is never signed.**
+- `compact`: ≥ 1,000 → two decimals plus K/M/B/T, with rollover (999,999.99 →
+  `$1.00M`); below 1,000 in full; negatives as `−$1.23M`.
+
+| input | options | output |
+|---|---|---|
+| 56.8 | `sign: 'always'` | `+$56.80` |
+| −3000 | `sign: 'always'` | `−$3,000.00` |
+| 0 | either | `$0.00` |
+| 1234567.891 | `compact` (default sign) | `$1.23M` |
+| −0.004 | `sign: 'always'` | `$0.00` |
+
+**Pinned for byte-identical platforms** (Orchestrator, 2026-09-26; both
+workers test these):
+- **Rounding:** `cents = Math.round(Math.abs(v) * 100)`, with the sign reapplied
+  after rounding (so a value that rounds to zero is unsigned). Plain JS float
+  behaviour, no `Intl` rounding and no half-even: `1.005 → $1.00`,
+  `2.675 → $2.68` (2.675 × 100 is exactly 267.5, which rounds up; `toFixed` would give $2.67, which is why it is excluded). Grouping and currency are formatted from the integer cents.
+- **Tug ratio:** `p = 0.5 + 0.5 · (you − opp) / max(|you| + |opp|, 1)`,
+  clamped to `[0.08, 0.92]` so the trailing colour is always visible; both
+  zero → `0.5`. (Board example: $56.80 vs $39.40 → 0.59.)
+- **Digit diff:** right-aligned character diff (units align, so `$999.99 →
+  $1,000.00` rolls from the right). **Mobile font delivery:** React Native
 can't drive a variable font's width axis, so Phase 2 bundles **static
 instances** cut from Archivo's variable TTF (OFL): `Archivo-Condensed-Black`
 (wdth 62, wght 900), `Archivo-Expanded-ExtraBold` (125/800), and Archivo

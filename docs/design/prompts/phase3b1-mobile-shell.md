@@ -1,0 +1,152 @@
+# Phase 3b-1 worker prompt — Mobile shell + first run (`ui/mobile-shell`)
+
+> Drafted by Design Lead, 2026-09-26. Starts when **`ui/foundation-mobile` is
+> merged**. Backend asks: **#6**. Backend B found usernames were **never
+> persisted** (the client upsert ran as anon under email confirmation); the
+> fix is a DB trigger, and taken names fall back to NULL. So this phase owns the
+> **username prompt** below. Everything else is client-side. Suggested model:
+> plan on Opus, build on Sonnet.
+
+---
+
+You are the UI worker for **Phase 3b-1 · the mobile app shell and first run**.
+Your branch is `ui/mobile-shell`. You report to `Orchestrator` and
+`Design Lead` via `SendMessage`.
+
+## Read first
+
+`CLAUDE.md` (especially the ESLint RN-styles header rule, "UI entry points:
+verify MOUNTED and REACHABLE", and the Metro `--clear` lesson) and
+`docs/STATUS.md`. `docs/design/UI-UX-PROGRAM.md` (the contract).
+`docs/design/prompts/phase3-plan.md` (shared rules).
+`docs/design/DESIGN_DIRECTION.md` **§3 (IA)**, §4, §5, §9.
+`docs/design/AUDIT-2026-09.md` §5 (empty-state and first-run findings,
+screenshots 10–19) and §8 (navigation). The mobile foundation:
+`constants/tokens`, `components/sp` (+ `game/`), `useMotion`, and the dev
+design gallery.
+
+## Scope (the frame every other mobile phase lives in)
+
+1. **Tab bar → 4 tabs:** **Home · Matchup · League · Portfolio**. Profile
+   leaves the tab bar. Icons come from one consistent outline/filled pair per
+   tab; the active tab changes icon fill and label colour (`quick`). Labels
+   use `type.caption` and scale with Dynamic Type (today they're fixed at 10px).
+2. **Header pattern:** Home shows an **avatar button** (→ Profile). Matchup,
+   League and Portfolio show the **league pill** (`[emoji-free league name ▾]`
+   + a `PhaseChip`).
+3. **League sheet** (replaces the unreachable `leagues` screen; remove its
+   `href:null` route or redirect it here): every league **grouped by phase**
+   (Live this week / Upcoming / Drafting / Finished), each row with name,
+   rank, record and `PhaseChip`. **Create league** and **Join with code** at
+   the bottom. Choosing a league sets the **global active league, persisted
+   with AsyncStorage** (already installed) and restored on launch.
+4. **Auth** (login, signup, forgot/reset password) on the money surface,
+   with **one input style** (build `TextField` into `components/sp` if the
+   foundation lacks it; propose it to the Design Lead first). Keyboard-safe
+   layouts: the submit button is never covered (audit: signup). Sheets close
+   with ✕ or swipe, not a back arrow. Honest pre-launch copy: when
+   `signups_paused` refuses a signup, say so plainly (the existing server
+   message) instead of dead-ending.
+5. **First run:** replace the "FANTASY STOCK LEAGUE" interstitial with a
+   **Get started** chooser (Create / Join) on the brand system, plus a
+   **3-card onboarding** before it. Card 1: "Fantasy football, but with
+   stocks." Card 2: "Draft real stocks. Face one friend each week." Card 3:
+   "Best performance by Friday's close wins." (generic scoring copy; see the plan's shared rules) Skippable, shown once.
+6. **Empty states:** every "no leagues / no data" state uses the one
+   `EmptyState` primitive (icon in a soft circle, title, one line, one real
+   action; the action never loops back to another empty screen). Replace all
+   emoji-as-icon on the screens you touch.
+7. **Profile** (from the avatar): a settings-list screen with the username
+   (editable, from ask #6), email **once**, and "Change password" as **its own
+   screen**, not an always-open form. Sign out. Version = the real app
+   version. "Open web app" is removed while the web is paused.
+8. **Pick a username (first run, and every existing account):** whenever the
+   signed-in user's `username` **IS NULL**, show a one-screen prompt **before**
+   the tabs: title "Pick a username", helper "Shown to your league on standings
+   and matchups", the validation rules inline (3–20 characters, letters, numbers and
+   underscores), a live availability check, and **one primary action**. Taken
+   names get a clear inline error plus 2–3 suggestions. It can't be skipped (a
+   username is required to play), but it never blocks sign-out. It also covers
+   accounts where the trigger fell back to NULL because the name was taken.
+9. **Signed-out routing (G3, from the deep-link review):** move to a **single
+   `Stack` with `Stack.Protected guard={!!user}`** around every
+   context-dependent screen: `create-league`, `join-league`, `league-settings`,
+   `player-portfolio`, `trade-history`, the tabs. A signed-out deep link lands
+   on auth, then continues to the intended screen after sign-in (preserve the
+   target). Auth screens and the `reset-password` link stay outside the guard.
+   Verify the password-reset flow still works end-to-end from an email link.
+10. **Route transitions:** stack pushes use the platform default; **tab
+   switches crossfade** (`quick`); sheets use `spring.snappy`.
+
+**Out of scope:** Home's dashboard content (3b-2), Matchup/League/Draft
+content (3c), Portfolio/trade content (3e). Put **honest phase-aware
+placeholders** on those tabs (`EmptyState` / `PhaseChip`), not the old screens
+restyled piecemeal.
+
+## Motion (tokens only)
+
+| Moment | Spec |
+|---|---|
+| Tab switch | Crossfade, `quick`, `ease.settle` |
+| League sheet open / close | `spring.snappy`; backdrop fades `base` |
+| Sheet row press / any pressable | Scale 0.98, `instant` + light haptic |
+| Onboarding card advance | Horizontal slide + fade, `slow`, `settle`; the progress dots animate width `quick` |
+| List appear (league sheet groups) | Stagger 30ms, max 8, `base` |
+
+## Reduced motion
+
+| Full | Reduced |
+|---|---|
+| Crossfade / slide transitions | Crossfade at `quick` only (no translation) |
+| Sheet spring | Fade in place |
+| Stagger | Appear together |
+| Onboarding slide | Crossfade |
+
+## Verify, then report DONE
+
+- `npx tsc --noEmit`, `npm run lint`, deno tests (+ new tests for the league
+  persistence store and phase grouping): counts in the report.
+- **Device capture** on the simulator the Orchestrator assigns you:
+  login, signup (keyboard up), forgot password, onboarding 1–3, Get started,
+  every tab in an **empty** account and in the **populated** account
+  (Giorgio signs in; never type credentials), the league sheet (open, with
+  every group populated), Profile, Change password.
+- The same set at **Dynamic Type accessibility-extra-large**, and on the
+  **iPhone 17e** (smallest width).
+- Recordings: tab switch, sheet open/close, onboarding. **Reduce Motion on
+  and off** each.
+- **Username prompt:** capture it in an account with `username IS NULL` (ask
+  Giorgio/the Orchestrator for one; never type credentials): empty, invalid,
+  taken + suggestions, success.
+- **Guard proof:** with the app signed out, open deep links to `create-league`,
+  `join-league` and `trade-history` (`xcrun simctl openurl`), and show each lands
+  on auth and then continues to the target after sign-in.
+- **Reachability proof** (the CLAUDE.md lesson): for the league sheet,
+  Create, Join and Profile, list who navigates to each and under what
+  condition. Nothing may be reachable only from an empty state.
+
+## DESIGN-APPROVED criteria
+
+1. Four tabs plus the avatar, one header pattern, and the league pill on every league-scoped tab.
+2. The active league persists across relaunch; the sheet groups by phase; Create/Join are always reachable.
+3. One input style, one empty-state pattern, and no emoji-as-icon on touched screens.
+4. First run reads as the product (the onboarding copy above), not a template.
+5. Nothing clips or wraps badly at XL Dynamic Type; tab labels scale.
+6. Motion from tokens; every reduced-motion row evidenced.
+7. No regressions on the untouched tabs (they show honest placeholders).
+8. No signed-in surface renders with `username IS NULL`; the prompt appears first.
+9. Signed-out deep links never render a context-dependent screen; the intended target resumes after sign-in.
+
+Report your PLAN first and wait for "go".
+
+## Ambition bar (added 2026-09-27, after Giorgio called the first landing "still very basic")
+
+**The bar is "would this impress on first use next to Robinhood, Sleeper, Revolut or Arc?"**, not "is it correct". Performance, honesty, tokens and reduced motion are **table stakes, not the goal**. The Design Lead will push back on timid work. **Copy:** keep Giorgio's existing copy **verbatim** unless this prompt explicitly changes it; propose wording changes, don't make them.
+
+**Signature moments this phase must include** (each with its reduced-motion row and a recording):
+- **Onboarding with live vignettes:** each card shows the product working (a mini scoreboard counting up, a tug bar swinging on a lead change, a standings row climbing), not static text. Parallax layers between cards.
+- **Tab bar with a sliding active indicator** that springs between tabs, plus a small icon micro-animation on select.
+- **League sheet → pill shared element:** picking a league flies its name into the header pill as the sheet closes; the rows spring in, staggered.
+- **An animated brand moment on auth:** the refined bars rise on the login screen; signing in transitions into the app (crossfade + scale-in), not a hard cut.
+- **Custom pull-to-refresh** (bars rising) instead of the default spinner.
+- **The username availability check** animates its state (checking → available ✓ / taken ✗).

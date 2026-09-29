@@ -1,0 +1,38 @@
+.sp-segmented {
+  display: inline-flex;
+  padding: var(--sp-space-1);
+  border-radius: var(--sp-radius-md);
+  background-color: var(--sp-color-surface-money-sunken);
+  gap: var(--sp-space-1);
+}
+
+.sp-segmented__option {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding-block: var(--sp-space-2);
+  padding-inline: var(--sp-space-4);
+  border-radius: calc(var(--sp-radius-md) - 2px);
+  font-family: var(--sp-type-family);
+  font-size: var(--sp-type-callout-size);
+  line-height: var(--sp-type-callout-line);
+  font-weight: var(--sp-type-callout-weight);
+  color: var(--sp-color-text-secondary);
+  transition:
+    background-color var(--sp-motion-duration-quick) var(--sp-motion-ease-settle),
+    color var(--sp-motion-duration-quick) var(--sp-motion-ease-settle);
+}
+
+.sp-segmented__option--selected {
+  background-color: var(--sp-color-surface-money-base);
+  color: var(--sp-color-text-primary);
+}
+
+.sp-segmented__option:focus {
+  outline: none;
+}
+
+.sp-segmented__option:focus-visible {
+  outline: 2px solid var(--sp-color-brand);
+  outline-offset: 2px;
+}

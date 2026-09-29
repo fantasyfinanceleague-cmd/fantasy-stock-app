@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="128" height="128" role="img" aria-label="Odd Lot mark: the refined bars plus one short amber odd-lot bar">
+  <rect x="6" y="34" width="10" height="20" rx="2.5" fill="#0D1B2E"/>
+  <rect x="20" y="24" width="10" height="30" rx="2.5" fill="#0D1B2E"/>
+  <rect x="34" y="12" width="10" height="42" rx="2.5" fill="#2860F0"/>
+  <rect x="48" y="44" width="10" height="10" rx="2.5" fill="#FFC53D"/>
+</svg>

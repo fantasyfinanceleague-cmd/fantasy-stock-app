@@ -1,0 +1,97 @@
+.sp-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-space-3);
+  border: none;
+  cursor: pointer;
+  font-family: var(--sp-type-family);
+  border-radius: var(--sp-radius-md);
+  transition: opacity var(--sp-motion-duration-quick) var(--sp-motion-ease-settle);
+}
+
+.sp-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Visible focus ring (DESIGN_DIRECTION §2): suppress the default outline on
+   a plain :focus (e.g. mouse click) and show it only for :focus-visible
+   (keyboard / assistive tech), in color.brand. */
+.sp-button:focus {
+  outline: none;
+}
+
+.sp-button:focus-visible {
+  outline: 2px solid var(--sp-color-brand);
+  outline-offset: 2px;
+}
+
+.sp-button--md {
+  min-height: 44px;
+  padding-inline: var(--sp-space-6);
+  font-size: var(--sp-type-body-size);
+  line-height: var(--sp-type-body-line);
+  font-weight: var(--sp-type-body-weight);
+}
+
+.sp-button--sm {
+  min-height: 36px;
+  padding-inline: var(--sp-space-5);
+  font-size: var(--sp-type-callout-size);
+  line-height: var(--sp-type-callout-line);
+  font-weight: var(--sp-type-callout-weight);
+}
+
+.sp-button--primary {
+  /* Stadium navy — neutral, deliberately NOT a team colour
+     (DESIGN_DIRECTION §9). Overridden below on a game surface. */
+  background-color: var(--sp-color-action-primary-bg);
+  color: var(--sp-color-action-primary-fg);
+  border: none;
+}
+
+.sp-button--secondary {
+  /* DESIGN_DIRECTION §9 (amended 1c131fe): named color.action.secondary.*
+     tokens for parity with .onGame — same values this already rendered. */
+  background-color: var(--sp-color-action-secondary-bg);
+  color: var(--sp-color-action-secondary-fg);
+  border: 1px solid var(--sp-color-action-secondary-border);
+}
+
+.sp-button--ghost {
+  background-color: transparent;
+  color: var(--sp-color-action-ghost-fg);
+}
+
+.sp-button--destructive {
+  /* Same status.danger red on both surfaces, deliberately: a strong
+     universal warning colour, not one of the tokens that collided. */
+  background-color: var(--sp-color-status-danger);
+  /* No dedicated "destructive fg" token in §9 — reuses action.primary.fg
+     (white), the same value a dark filled button needs regardless of hue. */
+  color: var(--sp-color-action-primary-fg);
+}
+
+/* DESIGN_DIRECTION §9 (amended fb0bc9d, "Raised by ui/foundation-web
+   [finding] the primary button invisible on stadium navy"): §9 gives
+   color.action.primary.bg and color.surface.game.base the same value
+   (#0D1B2E), so on a game surface the primary INVERTS to a white
+   "broadcast chip" instead of growing a border. secondary/ghost get their
+   own game-surface tokens too, per the same amendment. destructive is
+   unaffected (see above) — `Button.tsx` doesn't even apply this class for
+   that variant. */
+.sp-button--primary.sp-button--on-game {
+  background-color: var(--sp-color-action-primary-on-game-bg);
+  color: var(--sp-color-action-primary-on-game-fg);
+}
+
+.sp-button--secondary.sp-button--on-game {
+  background-color: transparent;
+  color: var(--sp-color-action-secondary-on-game-fg);
+  border: 1px solid var(--sp-color-action-secondary-on-game-border);
+}
+
+.sp-button--ghost.sp-button--on-game {
+  color: var(--sp-color-action-ghost-on-game-fg);
+}

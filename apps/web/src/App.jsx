@@ -1,4 +1,5 @@
 // src/App.jsx
+import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Layout from "./Layout";
 import Home from "./pages/Home";
@@ -36,7 +37,31 @@ import './layout.css'; // custom grid and layout styles
 // TO UN-PAUSE THE UI: set APP_PAUSED = false.
 const APP_PAUSED = true;
 
+// ── Design gallery (dev-only, Phase 2 foundation) ──────────────────────────
+// docs/design/prompts/phase2-foundation-web.md: "a /design route that
+// exists ONLY in development ... outside the APP_PAUSED branch, so it works
+// while the app is paused." `import.meta.env.DEV` is a build-time constant
+// Vite inlines as a literal `false` in a production build, so the ternary
+// folds to `null` and Rollup drops the dead `lazy(() => import(...))` branch
+// (and everything design/gallery/DesignGallery.tsx pulls in — tokens.css,
+// the whole design system) from the shipped bundle entirely. Checked with a
+// dist/ diff against origin/main, not just this comment — see the worker's
+// DONE report.
+//
+// Read via `window.location.pathname`, not react-router's `useLocation()`:
+// this must not add a router hook to the code path APP_PAUSED takes, since
+// that path renders its own separate <Routes> tree below.
+const DesignGallery = import.meta.env.DEV ? lazy(() => import("./design/gallery/DesignGallery")) : null;
+
 function App() {
+  if (DesignGallery && window.location.pathname === "/design") {
+    return (
+      <Suspense fallback={null}>
+        <DesignGallery />
+      </Suspense>
+    );
+  }
+
   // Paused: serve only the landing page; send every other path back to it.
   if (APP_PAUSED) {
     return (

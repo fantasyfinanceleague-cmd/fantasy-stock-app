@@ -1,0 +1,15 @@
+/* Shared "visually hidden" utility for game components: content that
+   should reach assistive tech (a plain-text score, a "Live" label) without
+   duplicating what an aria-hidden animated element already shows sighted
+   users. */
+.sp-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
