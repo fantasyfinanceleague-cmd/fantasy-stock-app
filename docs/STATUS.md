@@ -219,11 +219,40 @@ Phase 3: **app first**.
     keys disabled, `APP_PAUSED = false`, then open signups with
     `UPDATE public.app_config SET signups_paused = false;` (and verify the signup hook
     toggle first).
-18. **One league ranking (`fix/unified-league-ranking`, in progress). Deploy before
-    Fri 2026-10-16**, when the test leagues' regular seasons end.
-    - Standings, Home and playoff seeding currently use 9 different orders. The branch unifies them via the `league_standings_ranked` RPC: W + 0.5·T, then balanced mini-league H2H, then season gain, then join order.
-    - It also fixes two bugs: a slice-before-tiebreak at the playoff cutoff, and a league stranded in 'playoffs' with no bracket. The atomic playoff transition is still being finished.
-    - **Open for Giorgio:** byes are currently an automatic WIN and aren't evenly distributed. Should a bye instead be scored against the league median?
+18. **One league ranking (`fix/unified-league-ranking`, DONE, awaiting push/deploy).
+    Deploy before Fri 2026-10-16**, when the test leagues' regular seasons end;
+    ideally before the first scoring run, Fri 2026-10-02 21:15 UTC (see byes below).
+    Push migrations `20261011000000`–`04` first; the function calls the rpcs.
+    - **Ranking.** Standings, Home, playoff seeds and season history all read
+      `league_standings_ranked`: win% = (W + 0.5·T) / games played (byes
+      excluded; 0 games = 0%), then balanced mini-league H2H, then season gain,
+      then join order, then user id. `get_home_summary` / `complete_league_season`
+      are re-created on it (ACL byte-identical).
+    - **Byes are NO RESULT** (Giorgio, 2026-09-29): no W/L/T and not a game
+      played. The bye week's real gain still counts toward season gain, so
+      everyone's season gain spans the same weeks.
+      - Odd-roster leagues scored before the deploy keep their old bye wins until
+        corrected with `docs/migrations/bye-no-result-standings-recompute.sql`
+        (read-only steps 1–2, data-changing step 3).
+      - The mobile schedule shows a bye as "–", and a scored bye week now reads
+        as complete.
+    - **Playoff start is atomic and idempotent.**
+      - `start_league_playoffs` (`03`) does the claim (compare-and-swap on
+        `current_week`) plus the bracket insert in one transaction. A repeat or
+        concurrent run is a no-op.
+      - `04` is a unique-index backstop against any second bracket.
+      - A refused transition writes nothing and a heal pass retries it.
+      - This fixes the slice-before-tiebreak at the playoff cutoff and the league
+        stranded in 'playoffs' with no bracket, or half of one.
+    - **Playoff spots can never exceed managers** (Giorgio, 2026-09-29; equal is
+      fine).
+      - draft-control's start refuses with `playoff_teams_exceeds_members`
+        (both numbers shown).
+      - process-week-results' refusal stays as the last-line guard.
+      - Non-playoff completion is unreachable: `playoff_teams || 4` maps
+        NULL/0 to 4.
+      - Non-power-of-2 brackets (everyone makes the playoffs in a 6-team league)
+        are a separate follow-up.
 19. **Promote the auto-pick cron.** Live test first (deferred README precondition 5):
     1. Create a test league with bots.
     2. Before starting the draft, `UPDATE leagues SET pick_seconds = 30 WHERE id = …`.
@@ -279,7 +308,7 @@ Phase 3: **app first**.
 | `ui/landing-gameday` | PR #45, **draft, parked**: the Game Day 3D landing, round 4. Resume after the key screens are approved. |
 | `ui/foundation-mobile` | PR #53, **draft, held** for the Light/Dark ThemeProvider rework (§9A). |
 | `design/key-screens-2026-09-29` | PR #52, **draft**: the design board (v3.3), the source of truth for the app screens. Merge after Giorgio signs off. |
-| `fix/unified-league-ranking` | In progress (item 18). |
+| `fix/unified-league-ranking` | Done, awaiting push + deploy (item 18). |
 | `chore/rename-to-stockade` | LOCAL only (a97bfbb), parked until the name is final. |
 | `fix/effect-test-anon-expectations` | PR #50 (test file only). |
 | `docs/status-sync-2026-09-29` | This update (PR #51). |

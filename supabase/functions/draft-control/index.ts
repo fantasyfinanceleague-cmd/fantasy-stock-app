@@ -137,7 +137,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: league, error: lgErr } = await admin
       .from('leagues')
-      .select('id, commissioner_id, draft_status, stake_mode, draft_date, num_participants')
+      .select('id, commissioner_id, draft_status, stake_mode, draft_date, num_participants, league_type, playoff_teams')
       .eq('id', leagueId)
       .maybeSingle();
     if (lgErr) return json({ ok: false, reason: 'unhandled' }, 500);
@@ -161,6 +161,8 @@ Deno.serve(async (req: Request) => {
       memberCount: memberIds.length,
       numParticipants: Number(league.num_participants) || MIN_DRAFT_MEMBERS,
       draftDate: league.draft_date ?? null,
+      leagueType: league.league_type ?? null,
+      playoffTeams: league.playoff_teams == null ? null : Number(league.playoff_teams),
     };
     const botsAllowed = isBotsAllowedForEmail(BOTS_ALLOWED_EMAILS, user.email);
     const botsNeeded = computeBotsNeeded(state.memberCount, state.numParticipants);
