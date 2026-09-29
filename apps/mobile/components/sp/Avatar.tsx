@@ -3,6 +3,7 @@ import { Image, StyleSheet, View } from 'react-native';
 
 import { color } from '@/constants/tokens';
 import { Text } from '@/components/sp/Text';
+import { initialFontSize } from '@/components/sp/logic/avatar';
 
 // Stockpile — <Avatar> (Phase 2 foundation). Used for the Home header avatar
 // button (Profile leaves the tab bar per DESIGN_DIRECTION §3 decision 4) and
@@ -31,9 +32,21 @@ export function Avatar({ uri, name, size = DEFAULT_SIZE }: AvatarProps) {
     return <Image source={{ uri }} style={[styles.image, dimension]} accessibilityLabel={name} />;
   }
 
+  // Design Lead, 2026-09-29 (DESIGN-CHANGES follow-up): the initial is a
+  // GLYPH inside a fixed-diameter circle, not running text — scaling it with
+  // Dynamic Type outgrows the circle and clips ("G"/"?" clipped in the xl-03
+  // capture). Sized proportionally to the circle (components/sp/logic/avatar.ts,
+  // so it stays legible at any `size` this component is ever given) and
+  // rendered with allowFontScaling={false} so the system font setting can't
+  // grow it past that either — two independent causes of the same clip.
   return (
     <View style={[styles.fallback, isUnknown ? styles.fallbackNeutral : null, dimension]} accessibilityLabel={name}>
-      <Text variant="callout" color={isUnknown ? color.text.secondary : color.action.primary.fg}>
+      <Text
+        variant="callout"
+        color={isUnknown ? color.text.secondary : color.action.primary.fg}
+        allowFontScaling={false}
+        style={{ fontSize: initialFontSize(size), lineHeight: initialFontSize(size) }}
+      >
         {initial}
       </Text>
     </View>
