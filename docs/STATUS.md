@@ -161,6 +161,18 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
     - ~25 merged local branches;
     - `db-snapshot.json` needs re-capture;
     - `process-week-results/index.ts` has 10 pre-existing `deno check` errors.
+16. **Unified league ranking** (`fix/unified-league-ranking`, migrations
+    `20261011000000`–`02`). Standings, Home rank, playoff seeds and season history
+    all read `league_standings_ranked`: W + 0.5·T → balanced mini-league H2H →
+    season gain → join order → user id. It fixes seeding that cut the playoff
+    field before H2H ran. Push + deploy `process-week-results` **before the test
+    leagues' regular seasons end Fri 2026-10-16** (push first; the function calls
+    the rpc). Open decisions:
+    - **Bye = automatic win (Giorgio's call).** Odd rosters give byes unevenly
+      (5 managers × 4 weeks: one never gets a bye). The proposal is to score a bye
+      against the week's median; the ranking is already neutral to that change.
+    - **Non-playoff completion is unreachable.** `playoff_teams || 4` maps NULL/0
+      to 4.
 15. **Before public launch:** item 1, F8, trade race, leave-league, season 2+, legacy
     keys disabled, `APP_PAUSED = false`, then open signups with
     `UPDATE public.app_config SET signups_paused = false;` (and verify the signup hook

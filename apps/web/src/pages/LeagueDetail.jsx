@@ -56,11 +56,9 @@ export default function LeagueDetail() {
 
       // Fetch standings if matchup league
       if (leagueData.league_type === 'matchup') {
+        // Ranked server-side (league_standings_ranked): rank order == seed order.
         const { data: standingsData } = await supabase
-          .from('league_standings')
-          .select('*')
-          .eq('league_id', leagueId)
-          .order('wins', { ascending: false });
+          .rpc('league_standings_ranked', { p_league_id: leagueId });
 
         setStandings(standingsData || []);
       }

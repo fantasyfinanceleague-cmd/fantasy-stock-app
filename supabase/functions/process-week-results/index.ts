@@ -15,6 +15,13 @@ import {
   BATCH_SKIP_REASON,
 } from './scoring-eligibility.ts';
 import { updateJobStatus, noPendingMessage, scoredMessage } from './job-status.ts';
+import {
+  decidePlayoffSeeds,
+  decidePodium,
+  needsRegularSeasonTransition,
+  type RpcResult,
+  type TransitionLeague,
+} from './season-transition.ts';
 
 /**
  * Process Weekly Matchup Results
@@ -408,41 +415,71 @@ function calculateWeeklyGainLegacy(
   return totalGain;
 }
 
+type TransitionOutcome = { ok: true } | { ok: false; reason: string };
+
 /**
- * Generate playoff bracket when regular season ends
+ * End a league's regular season: seed the playoffs, or complete the season when
+ * the league has none.
+ *
+ * Ranking comes ONLY from public.league_standings_ranked (20261011000000) — the
+ * same order the standings screens show. The rpc result is validated in
+ * ./season-transition.ts and a bad read REFUSES before anything is written, so
+ * the league stays 'active' at its last regular week and the heal pass at the
+ * top of the handler retries it next run. Never an unranked fallback.
+ */
+async function transitionAfterRegularSeason(
+  supabase: any,
+  leagueId: string,
+  numWeeks: number,
+  playoffTeams: number
+): Promise<TransitionOutcome> {
+  const rankRes: RpcResult = await supabase.rpc('league_standings_ranked', { p_league_id: leagueId });
+
+  if (playoffTeams > 0) {
+    const seeding = decidePlayoffSeeds(rankRes, playoffTeams);
+    if (!seeding.ok) return seeding;
+
+    const { error: statusErr } = await supabase.from('leagues')
+      .update({ current_week: numWeeks + 1, season_status: 'playoffs' })
+      .eq('id', leagueId);
+    if (statusErr) {
+      return { ok: false, reason: `playoff transition write failed: ${statusErr.message ?? JSON.stringify(statusErr)}` };
+    }
+    console.log(`League ${leagueId} transitioning to playoffs`);
+    await generatePlayoffs(supabase, leagueId, numWeeks + 1, seeding.seeds);
+    return { ok: true };
+  }
+
+  // No playoffs — complete season, do NOT advance past numWeeks
+  const podium = decidePodium(rankRes);
+  if (!podium.ok) return podium;
+  console.log(`League ${leagueId} regular season complete (no playoffs)`);
+  const { error } = await supabase.rpc('complete_league_season', {
+    p_league_id: leagueId,
+    p_champion_user_id: podium.champion,
+    p_runner_up_user_id: podium.runnerUp,
+  });
+  if (error) {
+    return { ok: false, reason: `complete_league_season failed: ${error.message ?? JSON.stringify(error)}` };
+  }
+  console.log(`Season completed - Champion: ${podium.champion}, Runner-up: ${podium.runnerUp}`);
+  return { ok: true };
+}
+
+/**
+ * Generate the playoff bracket from seeds already decided by
+ * transitionAfterRegularSeason (seed = unified standings rank).
  */
 async function generatePlayoffs(
   supabase: any,
   leagueId: string,
   startWeek: number,
-  playoffTeams: number
+  seededTeams: Array<{ user_id: string; seed: number }>
 ) {
+  const playoffTeams = seededTeams.length;
   console.log(`Generating playoffs for league ${leagueId} with ${playoffTeams} teams`);
 
   try {
-    // Get standings sorted by wins (with tiebreakers)
-    const { data: standings } = await supabase
-      .from('league_standings')
-      .select('user_id, wins, losses, ties, points_for, points_against')
-      .eq('league_id', leagueId)
-      .order('wins', { ascending: false })
-      .order('points_for', { ascending: false });
-
-    if (!standings || standings.length < playoffTeams) {
-      console.error('Not enough teams for playoffs');
-      return;
-    }
-
-    // Get all regular season matchups for head-to-head tiebreaker
-    const { data: allMatchups } = await supabase
-      .from('matchups')
-      .select('team1_user_id, team2_user_id, winner_user_id, team1_gain, is_playoff')
-      .eq('league_id', leagueId)
-      .eq('is_playoff', false);
-
-    // Apply head-to-head tiebreaker for teams with same wins
-    const seededTeams = applyTiebreakers(standings.slice(0, playoffTeams), allMatchups || []);
-
     // Get last regular season matchup to determine playoff start date
     const { data: lastMatchup } = await supabase
       .from('matchups')
@@ -486,75 +523,6 @@ async function generatePlayoffs(
   } catch (e) {
     console.error('Error generating playoffs:', e);
   }
-}
-
-/**
- * Apply head-to-head tiebreaker to standings
- */
-function applyTiebreakers(standings: any[], matchups: any[]): any[] {
-  // Group by wins
-  const byWins = new Map<number, any[]>();
-  for (const s of standings) {
-    const wins = s.wins || 0;
-    if (!byWins.has(wins)) byWins.set(wins, []);
-    byWins.get(wins)!.push(s);
-  }
-
-  const result: any[] = [];
-  let seed = 1;
-
-  // Process each win group (sorted desc by wins)
-  const sortedWins = Array.from(byWins.keys()).sort((a, b) => b - a);
-
-  for (const wins of sortedWins) {
-    const group = byWins.get(wins)!;
-
-    if (group.length === 1) {
-      result.push({ ...group[0], seed: seed++ });
-    } else {
-      // Apply tiebreakers within group
-      group.sort((a, b) => {
-        // Head-to-head
-        const h2h = getHeadToHead(a.user_id, b.user_id, matchups);
-        if (h2h.aWins !== h2h.bWins) {
-          return h2h.bWins - h2h.aWins;
-        }
-        // Points for
-        return (b.points_for || 0) - (a.points_for || 0);
-      });
-
-      for (const s of group) {
-        result.push({ ...s, seed: seed++ });
-      }
-    }
-  }
-
-  return result;
-}
-
-/**
- * Get head-to-head record between two users
- */
-function getHeadToHead(userId1: string, userId2: string, matchups: any[]) {
-  let aWins = 0;
-  let bWins = 0;
-
-  for (const m of matchups) {
-    if (m.is_playoff) continue;
-    if (m.team1_gain === null) continue;
-
-    const isMatch = (
-      (m.team1_user_id === userId1 && m.team2_user_id === userId2) ||
-      (m.team1_user_id === userId2 && m.team2_user_id === userId1)
-    );
-
-    if (isMatch) {
-      if (m.winner_user_id === userId1) aWins++;
-      else if (m.winner_user_id === userId2) bWins++;
-    }
-  }
-
-  return { aWins, bWins };
 }
 
 /**
@@ -770,47 +738,74 @@ async function completeSeasonFromPlayoffs(
 }
 
 /**
- * Complete season for non-playoff leagues - top 2 from standings
+ * Heal pass: retry season transitions that an earlier run refused.
+ *
+ * The in-loop transition only runs inside a batch of PENDING matchups for the
+ * league's current week. After the final regular week is scored there are none,
+ * so a refused transition would never be re-entered. transitionAfterRegularSeason
+ * refuses before writing anything, which leaves exactly the state
+ * needsRegularSeasonTransition detects: 'active', past the last week, every
+ * regular matchup scored, no playoff rows. Runs before the pending-matchup query
+ * so it also runs on weeks with nothing to score.
+ *
+ * Returns the refusals (skipped[] entries). A failed read, or even a throw, is
+ * logged and skipped here: the heal pass must never block this run's scoring,
+ * and whatever it could not do is retried next run.
  */
-async function completeSeasonFromStandings(
-  supabase: any,
-  leagueId: string
-) {
-  console.log(`Completing season from standings for league ${leagueId}`);
-
+async function healRefusedTransitions(supabase: any, leagueIdFilter: string | null): Promise<any[]> {
   try {
-    // Get top 2 from standings
-    const { data: standings } = await supabase
-      .from('league_standings')
-      .select('user_id, wins, points_for')
-      .eq('league_id', leagueId)
-      .order('wins', { ascending: false })
-      .order('points_for', { ascending: false })
-      .limit(2);
-
-    if (!standings || standings.length < 2) {
-      console.log('Not enough standings to determine champion');
-      return;
-    }
-
-    const championUserId = standings[0].user_id;
-    const runnerUpUserId = standings[1].user_id;
-
-    // Call the database function to complete the season
-    const { error } = await supabase.rpc('complete_league_season', {
-      p_league_id: leagueId,
-      p_champion_user_id: championUserId,
-      p_runner_up_user_id: runnerUpUserId,
-    });
-
-    if (error) {
-      console.error('Failed to complete season:', error);
-    } else {
-      console.log(`Season completed - Champion: ${championUserId}, Runner-up: ${runnerUpUserId}`);
-    }
+    return await healRefusedTransitionsInner(supabase, leagueIdFilter);
   } catch (e) {
-    console.error('Error completing season from standings:', e);
+    console.error('Heal pass threw (skipping heal this run):', e);
+    return [];
   }
+}
+
+async function healRefusedTransitionsInner(supabase: any, leagueIdFilter: string | null): Promise<any[]> {
+  const refusals: any[] = [];
+  let lq = supabase
+    .from('leagues')
+    .select('id, league_type, season_status, draft_status, current_week, num_weeks, playoff_teams')
+    .eq('league_type', 'matchup')
+    .eq('season_status', 'active')
+    .eq('draft_status', 'completed');
+  if (leagueIdFilter) lq = lq.eq('id', leagueIdFilter);
+  const { data: leagues, error: leaguesErr } = await lq;
+  if (leaguesErr) {
+    console.error('Heal pass: failed to read leagues (skipping heal this run):', leaguesErr);
+    return refusals;
+  }
+
+  for (const league of (leagues ?? []) as Array<TransitionLeague & { id: string; playoff_teams: number | null }>) {
+    if (league.current_week == null || !league.num_weeks || league.current_week < league.num_weeks) continue;
+
+    const { data: rows, error: rowsErr } = await supabase
+      .from('matchups')
+      .select('is_playoff, team1_gain')
+      .eq('league_id', league.id);
+    if (rowsErr) {
+      console.error(`Heal pass: failed to read matchups for league ${league.id} (skipping):`, rowsErr);
+      continue;
+    }
+    const regular = (rows ?? []).filter((m: any) => m.is_playoff !== true);
+    const counts = {
+      regularTotal: regular.length,
+      regularUnscored: regular.filter((m: any) => m.team1_gain === null).length,
+      playoffTotal: (rows ?? []).length - regular.length,
+    };
+    if (!needsRegularSeasonTransition(league, counts)) continue;
+
+    console.log(`Heal pass: league ${league.id} finished its regular season without transitioning; retrying`);
+    // Same derivation as the in-loop path (`playoff_teams || 4`).
+    const outcome = await transitionAfterRegularSeason(
+      supabase, league.id, league.num_weeks, league.playoff_teams || 4,
+    );
+    if (!outcome.ok) {
+      console.error(`REFUSED season transition for league ${league.id} (heal pass): ${outcome.reason}`);
+      refusals.push({ league_id: league.id, week_number: league.num_weeks, reason: outcome.reason });
+    }
+  }
+  return refusals;
 }
 
 Deno.serve(async (req) => {
@@ -861,6 +856,11 @@ Deno.serve(async (req) => {
   await updateJobStatus(supabase, JOB_NAME, 'running', 1);
 
   try {
+    // 0. Retry season transitions refused on an earlier run (see
+    //    healRefusedTransitions). Before the pending query so it runs on quiet weeks.
+    const transitionRefusals = await healRefusedTransitions(supabase, leagueIdFilter);
+    let transitionsRefused = transitionRefusals.length;
+
     // 1. Find matchups that need processing (week_end has passed, no results yet)
     let query = supabase
       .from('matchups')
@@ -903,8 +903,13 @@ Deno.serve(async (req) => {
       console.log('No pending matchups to process');
       // Terminal success: the common weekly path. The schema has no distinct
       // "nothing to do" status, so the message carries it.
-      await updateJobStatus(supabase, JOB_NAME, 'success', 1, noPendingMessage());
-      return json({ message: 'No pending matchups', processed: 0 });
+      await updateJobStatus(supabase, JOB_NAME, 'success', 1, noPendingMessage(transitionsRefused));
+      return json({
+        message: 'No pending matchups',
+        processed: 0,
+        skipped: transitionRefusals,
+        skipped_count: transitionRefusals.length,
+      });
     }
 
     console.log(`Found ${pendingMatchups.length} matchups to process`);
@@ -917,7 +922,7 @@ Deno.serve(async (req) => {
 
     let processedCount = 0;
     const results: any[] = [];
-    const skipped: any[] = [];
+    const skipped: any[] = [...transitionRefusals];
 
     // Process each (league, week) batch. weekStart / weekEnd come off the batch,
     // not leagueMatchups[0] — every matchup in the batch shares the same window.
@@ -1447,17 +1452,13 @@ Deno.serve(async (req) => {
             }
 
           } else if (currentWeek >= numWeeks) {
-            // Last regular-season week just completed
-            if (playoffTeams > 0) {
-              await supabase.from('leagues')
-                .update({ current_week: numWeeks + 1, season_status: 'playoffs' })
-                .eq('id', leagueId);
-              console.log(`League ${leagueId} transitioning to playoffs`);
-              await generatePlayoffs(supabase, leagueId, numWeeks + 1, playoffTeams);
-            } else {
-              // No playoffs — complete season, do NOT advance past numWeeks
-              console.log(`League ${leagueId} regular season complete (no playoffs)`);
-              await completeSeasonFromStandings(supabase, leagueId);
+            // Last regular-season week just completed. A refusal writes nothing,
+            // so the heal pass at the top of the next run retries it.
+            const transition = await transitionAfterRegularSeason(supabase, leagueId, numWeeks, playoffTeams);
+            if (!transition.ok) {
+              console.error(`REFUSED season transition for league ${leagueId}: ${transition.reason}`);
+              skipped.push({ league_id: leagueId, week_number: weekNumber, reason: transition.reason });
+              transitionsRefused++;
             }
 
           } else {
@@ -1478,7 +1479,7 @@ Deno.serve(async (req) => {
     // message column is never a scored-vs-nothing-to-do discriminator.
     await updateJobStatus(
       supabase, JOB_NAME, 'success', 1,
-      scoredMessage(processedCount, skipped.length),
+      scoredMessage(processedCount, skipped.length - transitionsRefused, transitionsRefused),
     );
 
     return json({

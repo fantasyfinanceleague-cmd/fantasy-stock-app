@@ -33,6 +33,26 @@ It covers:
 - PR #9's leagues trigger contract
 - the stuck-draft detector query in the migration header
 
+## league_standings_ranked.pglite.test.ts
+
+What it does:
+- Loads the three `20261011*` ranking migrations **verbatim**, on top of the real
+  prior definitions they replace: `20261004000000` + `20261004000001` whole, and
+  `complete_league_season` sliced out of `20260125000000` with its lockdown grants
+  (`20260718000002`) and `search_path` pin (`20260724000002`).
+- Recreates the prod members-only SELECT policies (with `is_member()` sliced out of
+  `20260712000000`) so the INVOKER function runs under real RLS.
+
+It covers:
+- grants and security mode; the two re-created functions' `proacl`, `prosecdef`
+  and `proconfig` byte-identical before/after
+- the motivating 5-1 vs 5-1 case, including `get_home_summary`'s rank flipping
+  from 2nd to 1st
+- ties counted half, 2-/3-/4-way H2H (balanced, cycle, unbalanced, never-met,
+  recursive subgroups), byes, unscored and playoff games ignored
+- the pre-season join-order key, the playoff-cutoff case, ranks exactly 1..N
+- RLS (member / non-member / anon) and `complete_league_season`'s snapshot
+
 ### Run (from the repo root)
 
 ```bash

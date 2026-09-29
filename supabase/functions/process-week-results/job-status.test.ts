@@ -186,3 +186,12 @@ Deno.test('scoredMessage surfaces refused batches/matchups', () => {
   assert(msg.includes('processed 4 matchups'));
   assert(msg.includes('2 refused'));
 });
+
+Deno.test('refused season transitions are appended; a clean run\'s text is unchanged', () => {
+  assertEquals(noPendingMessage(0), noPendingMessage());
+  assertEquals(scoredMessage(4, 2, 0), scoredMessage(4, 2));
+  assert(noPendingMessage(1).includes('1 season transitions refused'));
+  const msg = scoredMessage(4, 2, 3);
+  assert(msg.includes('2 refused by eligibility guards'));
+  assert(msg.includes('3 season transitions refused'));
+});

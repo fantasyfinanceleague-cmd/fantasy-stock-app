@@ -92,37 +92,26 @@ export default function LeagueScreen() {
   const previousPositionsRef = useRef<Record<string, number>>({});
   const [animatingRows, setAnimatingRows] = useState<Record<string, 'up' | 'down'>>({});
 
-  // Sort standings
-  const sortedStandings = useMemo(() => {
-    return [...standings].sort((a, b) => {
-      const aTotal = a.wins + a.losses + a.ties;
-      const bTotal = b.wins + b.losses + b.ties;
-      const aPct = aTotal > 0 ? (a.wins + a.ties * 0.5) / aTotal : 0;
-      const bPct = bTotal > 0 ? (b.wins + b.ties * 0.5) / bTotal : 0;
-
-      if (bPct !== aPct) return bPct - aPct;
-      if (b.wins !== a.wins) return b.wins - a.wins;
-      return Number(b.points_for) - Number(a.points_for);
-    });
-  }, [standings]);
+  // Standings arrive already ranked by league_standings_ranked (the single
+  // ranking that also seeds the playoffs), so the screen shows exactly the
+  // seed order. Do NOT re-sort here: any client-side order is a second
+  // ranking that can disagree with the seeds.
+  const sortedStandings = standings;
 
   async function fetchData() {
     if (!activeLeagueId) return;
 
     setLoading(true);
     try {
-      // Fetch standings
+      // Fetch standings, ranked server-side (rank order == playoff seed order)
       const { data: standingsData, error: standingsError } = await supabase
-        .from('league_standings')
-        .select('*')
-        .eq('league_id', activeLeagueId)
-        .order('wins', { ascending: false });
+        .rpc('league_standings_ranked', { p_league_id: activeLeagueId });
 
       if (standingsError) {
         console.error('Error fetching standings:', standingsError);
       }
 
-      const fetchedStandings = standingsData || [];
+      const fetchedStandings: Standing[] = standingsData || [];
       setStandings(fetchedStandings);
 
       // Fetch matchups for matchup leagues
