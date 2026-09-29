@@ -56,7 +56,8 @@ refused by RLS when they draft (confirmed on Giorgio's phone). The fix is the
 
 | Fact | State | Evidence |
 |---|---|---|
-| Migrations applied | Everything in `supabase/migrations/` **through `20261010000000`** | `db push` dry-run (exactly `20261006000000`, `20261007000000`, `20261010000000`) + push, and `schema_migrations` verified by query, 2026-09-29 |
+| Migrations applied | Everything in `supabase/migrations/` **through `20261011000004`** | Two pushes on 2026-09-29, each dry-run → push → `schema_migrations` verified: (1) `20261006000000`, `20261007000000`, `20261010000000`; (2) `20261011000000`–`04` (ranking) |
+| Unified ranking + atomic playoff start (#59) | Applied. The pre-check (duplicate playoff rows) returned 0.<br>• `league_standings_ranked`: authenticated + service_role, INVOKER, search_path pinned<br>• `start_league_playoffs`: service_role only, DEFINER, exactly one overload (3 args)<br>• `get_home_summary` / `complete_league_season`: ACL and settings unchanged<br>• index `matchups_one_bracket_per_league` present<br>The heal-candidate query returned 0 rows before deploy | 2026-09-29 |
 | `trades.funded_by_trade_id` (#54) | Applied: a nullable uuid FK, CHECK `trades_funded_by_trade_id_buy_only` (validated), and the partial UNIQUE index `trades_funded_by_trade_id_unique` (one sale funds at most one buy) | Verified by query, 2026-09-29 |
 | Username write path (#55) | Applied. CHECK `user_profiles_username_format` `convalidated = true` (pre-check: 0 violators of 4 rows). `set_username` / `check_usernames` are DEFINER with `search_path` pinned; the ACL is `postgres, service_role, authenticated`, with no anon. `username-write-path-effect-test.sql`: **19/19 PASS** (incl. message-strict anon cases) | 2026-09-29 |
 | Draft pick clock + queue (#58) | Applied. `leagues.pick_seconds` (CHECK 30/45/60/75/90), `pick_clock_enabled`, `draft_started_at` (trigger `trg_leagues_pick_clock`, enabled); `drafts.recorded_at` / `pick_source` (CHECK); `draft_queue` (RLS on; no anon; authenticated `r` + PG17 default `m`). Grants:<br>• `get_draft_clock`: authenticated + service_role (INVOKER)<br>• `set_draft_queue`: authenticated (DEFINER)<br>• `overdue_draft_turns`, `auto_pick_search_candidates`, `enforce_leagues_pick_clock`: service_role only<br>`draft-pick-clock-effect-test.sql`: **26/26 PASS** | 2026-09-29 |
@@ -90,9 +91,9 @@ scratch, then `diff`), all from the deploy checkout `/Users/giorgio/fantasy-stoc
 | `validate-and-record-pick` | `f0e8eda` | #58: every pick (manual, bot, auto) goes through `_shared/pick-gate.ts` + `draft-write.ts`; new `action:'auto_pick'`; finalize + heal; `bot_pick` |
 | `draft-autopick-sweep` (new) | `f0e8eda` | #58. `verify_jwt=false` + the shared `_shared/cron-auth.ts` guard. A no-credential POST returns its own `401 {"error":"Unauthorized"}`. A manual `net.http_post` with the vault key returned `200 {"ok":true,"examined":0}`. **Not scheduled yet** (cron deferred) |
 | `record-trade` | `f0e8eda` | #54: proceeds-sized rebuys, `sold_trade_id`, read-only `action:'preview'`, price rounded before sizing. (Previously UNVERIFIED; now byte-verified) |
-| `process-week-results` | `f0e8eda` | #56: the `cash_only` scorer, `scoring_inputs_fetch_failed` refusal, and the week-1 fallback SKIP fix; plus the earlier terminal job status |
+| `process-week-results` | `4337b0a` | #59: seeds and podium come from `league_standings_ranked`; `bye_no_result` (a bye records no W/L/T); the atomic `start_league_playoffs` plus a heal pass for refused transitions. Also #56's `cash_only`, `scoring_inputs_fetch_failed` and fallback SKIP fixes. Deployed **before** the first scored week (Fri 10-02), so no bye was ever recorded as a win and the recompute script isn't needed |
 | `snapshot-week-start`, `snapshot-week-end` | `eb89df3` | #57: bots included, SKIP rows dropped (`_shared/snapshot-holdings.ts`), and `checkSnapshotReads`, so a failed read aborts and retries the league instead of classifying it complete. (Previously UNVERIFIED; now byte-verified) |
-| `draft-control` (new) | `28e6885` | start / add_bots / status; `DRAFT_BOTS_ALLOWED_EMAILS` = test account |
+| `draft-control` | `baee415` | #60: Start draft is refused with `playoff_teams_exceeds_members` when playoff spots exceed members (equal is allowed). Plus start / add_bots / status; `DRAFT_BOTS_ALLOWED_EMAILS` = test account |
 | `enrich-symbols` | `8015e95` | batch-pricing fix |
 | `preview-league` | `336775a` | hard `draft_started` refusal |
 | `historical-bars` | `451ac8e` | PR #29 pagination + timeouts + `complete`/`truncatedSymbols` flags; byte-verified 2026-09-26; its new log line is live |
@@ -219,10 +220,10 @@ Phase 3: **app first**.
     keys disabled, `APP_PAUSED = false`, then open signups with
     `UPDATE public.app_config SET signups_paused = false;` (and verify the signup hook
     toggle first).
-18. **One league ranking (`fix/unified-league-ranking`, DONE, awaiting push/deploy).
-    Deploy before Fri 2026-10-16**, when the test leagues' regular seasons end;
-    ideally before the first scoring run, Fri 2026-10-02 21:15 UTC (see byes below).
-    Push migrations `20261011000000`–`04` first; the function calls the rpcs.
+18. ✅ **One league ranking: LIVE 2026-09-29** (PRs #59 + #60).
+    Migrations `20261011000000`–`04` are applied; `process-week-results` and
+    `draft-control` are deployed and byte-verified. It went out before the first
+    scored week, so no legacy bye wins exist. The details below are kept for reference.
     - **Ranking.** Standings, Home, playoff seeds and season history all read
       `league_standings_ranked`: win% = (W + 0.5·T) / games played (byes
       excluded; 0 games = 0%), then balanced mini-league H2H, then season gain,
@@ -308,11 +309,12 @@ Phase 3: **app first**.
 | `ui/landing-gameday` | PR #45, **draft, parked**: the Game Day 3D landing, round 4. Resume after the key screens are approved. |
 | `ui/foundation-mobile` | PR #53, **draft, held** for the Light/Dark ThemeProvider rework (§9A). |
 | `design/key-screens-2026-09-29` | PR #52, **draft**: the design board (v3.3), the source of truth for the app screens. Merge after Giorgio signs off. |
-| `fix/unified-league-ranking` | Done, awaiting push + deploy (item 18). |
+| `feat/flexible-playoffs` | In progress: any playoff size 2..members, auto weeks/byes, fixed bracket, fix for the addressed-advance bug. |
+| `feat/draft-order-modes` | Planned: Random (reveal T−1h) / Manual; awaiting Giorgio's decisions a–e. |
 | `chore/rename-to-stockade` | LOCAL only (a97bfbb), parked until the name is final. |
 | `fix/effect-test-anon-expectations` | PR #50 (test file only). |
 | `docs/status-sync-2026-09-29` | This update (PR #51). |
-| Merged 2026-09-29, safe to delete | `fix/fixed-notional-slot-proceeds`, `fix/username-write-path`, `fix/all-cash-unscoreable-matchup`, `fix/snapshot-bots-and-skip-rows`, `feat/draft-pick-clock-autopick` |
+| Merged 2026-09-29, safe to delete | `fix/fixed-notional-slot-proceeds`, `fix/username-write-path`, `fix/all-cash-unscoreable-matchup`, `fix/snapshot-bots-and-skip-rows`, `feat/draft-pick-clock-autopick`, `fix/unified-league-ranking` |
 | Merged, safe to delete with `git branch -d` | `security/claude-security-fixes-20260730`, `feat/server-schedule-generation`, `feat/mobile-draft-start-search-finalize`, `fix/*` from PRs #12/#13/#16–#19/#22, `docs/status-sync-2026-09-25`, `ui/design-system-pass-v2`, `docs/ui-ux-program`, `claude/platform-project-analysis-34b47a`, plus ~20 older (`simulator-core`, `phase4-*`, `item*`, …) |
 | Superseded backups | `ui/design-system-pass`, `item4-fix-refresh-symbols-cron`, `backup/pre-filter-2025-08-20` |
 
