@@ -46,11 +46,11 @@
 
   // ── Device chrome ─────────────────────────────────────────────────────
   const TABS = [['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['portfolio', 'Portfolio']];
-  function Device({ game, tab, children, overlay, label, noTabs, full }) {
+  function Device({ game, tab, children, overlay, label, noTabs, full, time = '1:37', style }) {
     return (
-      <div className={full ? 'ks-device ks-device--full' : 'ks-device'} role="img" aria-label={label}>
+      <div className={full ? 'ks-device ks-device--full' : 'ks-device'} role="img" aria-label={label} style={style}>
         <div className="ks-os">
-          <span>1:37</span>
+          <span>{time}</span>
           <span className="ks-os__island" />
           <span className="ks-os__icons">
             <span className="ks-os__bars"><i /><i /><i /><i /></span>
@@ -656,7 +656,7 @@
               <li className="ks-row" style={{ gridTemplateColumns: '1fr', padding: '13px 0', gap: 8 }}>
                 <span className="ks-callout" style={{ fontWeight: 600 }}>Draft order</span>
                 <div className="ks-seg"><span className="on">Random</span><span>Manual</span></div>
-                <span className="ks-caption">Revealed 1 hour before the draft (Sat 6:00 PM). With Manual, you arrange it yourself.</span>
+                <span className="ks-caption">Random: revealed 1 hour before the draft (Sat 6:00 PM).<br />Manual: arrange it any time up to 1 hour before the draft.<br />You can switch until then.</span>
               </li>
               <Row k="Rounds" v="6" sub="One per roster slot" />
               <li className="ks-row" style={{ gridTemplateColumns: '1fr', padding: '13px 0' }}>

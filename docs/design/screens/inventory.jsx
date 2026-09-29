@@ -432,7 +432,7 @@
             <span className="ks-title">Sat, Oct 3 · 7:00 PM</span>
             <span className="ks-score ks-num" style={{ fontSize: 40 }}>3d 04h 12m</span>
             <span className="ks-callout ks-muted">60-second picks · 6 rounds</span>
-            <span className="ks-callout" style={{ display: 'flex', gap: 8, alignItems: 'center' }}><span className="ks-dot" />Draft order revealed Sat 6:00 PM, an hour before the draft</span>
+            <span className="ks-callout" style={{ display: 'flex', gap: 8, alignItems: 'center' }}><span className="ks-dot" />Draft order set Sat 6:00 PM, an hour before the draft</span>
             <span className="ks-btn ks-btn--ongame">Build your queue</span>
           </GameCard>
           <Card pad="14px">
@@ -688,7 +688,7 @@
         <Sheet top={blocked ? 330 : 380}>
           <span className="ks-title">Start the draft?</span>
           <span className="ks-callout ks-muted">{managers} managers are in, and each pick gets 60 seconds.</span>
-          <span className="ks-callout"><b>Draft order:</b> {order === 'manual' ? 'set by the commissioner' : 'Random, revealed at 6:00 PM'}</span>
+          <span className="ks-callout"><b>Draft order:</b> {order === 'manual' ? 'set by the commissioner, final since 6:00 PM' : 'random, final since 6:00 PM'}</span>
           {blocked ? (
             <>
               <div role="alert" className="ks-card" style={{ padding: '10px 12px', background: 'var(--c-warn-tint)', borderColor: 'var(--c-warn-line)', boxShadow: 'none' }}>
@@ -713,17 +713,28 @@
 
   /** The revealed draft order (after 6:00 PM), your slot highlighted, with
    * what the snake means for you. New copy. */
-  function DraftOrder() {
+  /** The in-app "order is set" card (posted at T−1h in either mode, with a
+   * push). mode: 'random' | 'manual'. New copy. */
+  function OrderSetCard({ mode = 'random' }) {
     const L = K.SERIE_A, teams = L.order.length;
     const seat = L.order.findIndex((m) => m.you) + 1;
     const picks = K.picksForSeat(seat, teams, L.rounds);
     return (
-      <div>
-        <div className="ks-section-h"><h3>Draft order</h3><span className="ks-caption ks-muted">Revealed 6:00 PM</span></div>
-        <div className="ks-raised" style={{ padding: '10px 12px', marginBottom: 8 }}>
-          <span className="ks-headline" style={{ fontWeight: 800, color: 'var(--c-you-text)' }}>You pick {K.ordinal(seat)}</span>
-          <span className="ks-callout ks-muted">, then {picks.slice(1, 3).map(K.ordinal).join(', ')}… The order reverses each round.</span>
-        </div>
+      <div className="ks-raised" style={{ padding: '12px 14px', display: 'grid', gap: 4 }}>
+        <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Draft order set · 6:00 PM</span>
+        <span><span className="ks-headline" style={{ fontWeight: 800, color: 'var(--c-you-text)' }}>You pick {K.ordinal(seat)}</span>
+          <span className="ks-callout ks-muted">, then {picks.slice(1, 3).map(K.ordinal).join(', ')}…</span></span>
+        <span className="ks-caption">{mode === 'manual' ? 'Set by the commissioner.' : 'Random draw.'} It's final. The order reverses each round.</span>
+      </div>
+    );
+  }
+
+  function DraftOrder({ mode = 'random' }) {
+    const L = K.SERIE_A;
+    return (
+      <div style={{ display: 'grid', gap: 8 }}>
+        <div className="ks-section-h" style={{ margin: 0 }}><h3>Draft order</h3><span className="ks-chip ks-chip--final">Final</span></div>
+        <OrderSetCard mode={mode} />
         <ol className="ks-rows" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 16 }}>
           {L.order.map((m, i) => (
             <li key={m.name} className="ks-row" style={{ gridTemplateColumns: '18px 28px 1fr', padding: '7px 6px', borderRadius: 8, background: m.you ? 'var(--c-you-tint)' : undefined }}>
@@ -733,22 +744,75 @@
             </li>
           ))}
         </ol>
+        <span className="ks-caption">Anyone who joins now picks last.</span>
       </div>
+    );
+  }
+
+  /** The push at T−1h (OS lock screen, so theme-independent). */
+  function OrderPush({ mode = 'random' }) {
+    const seat = K.SERIE_A.order.findIndex((m) => m.you) + 1;
+    return (
+      <Device noTabs time="6:00" label={`Push notification, draft order set (${mode})`} style={{ background: 'linear-gradient(160deg, #3B4F7A 0%, #1B2540 55%, #0E1426 100%)', color: '#fff' }}>
+        <div style={{ position: 'relative', textAlign: 'center', color: '#fff', paddingTop: 16 }}>
+          <div style={{ fontSize: 17, fontWeight: 600, opacity: 0.9 }}>Saturday, October 3</div>
+          <div style={{ fontSize: 84, fontWeight: 700, lineHeight: '90px', letterSpacing: '-2px' }}>6:00</div>
+        </div>
+        <div style={{ position: 'relative', margin: '28px 12px 0', padding: '12px 14px', borderRadius: 22, background: 'rgba(245, 246, 250, 0.82)', backdropFilter: 'blur(20px)', color: '#0D1B2E', display: 'grid', gridTemplateColumns: '38px 1fr', gap: 10 }}>
+          <span style={{ width: 38, height: 38, borderRadius: 9, background: '#0D1B2E', display: 'grid', placeItems: 'center' }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="13" width="4.5" height="8" rx="1" fill="#8DA0BD" /><rect x="9.75" y="9" width="4.5" height="12" rx="1" fill="#8DA0BD" /><rect x="16.5" y="4" width="4.5" height="17" rx="1" fill="#6E9BFF" /></svg>
+          </span>
+          <span>
+            <span style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15 }}><b>Serie A Traders</b><span style={{ color: '#5B6678', fontSize: 13 }}>now</span></span>
+            <span style={{ fontSize: 15, lineHeight: '20px' }}>{mode === 'manual' ? `The commissioner set the draft order. You pick ${K.ordinal(seat)}.` : `The draft order is set. You pick ${K.ordinal(seat)}.`} The draft starts at 7:00 PM.</span>
+          </span>
+        </div>
+      </Device>
     );
   }
 
   /** The commissioner's Arrange order (Manual mode): drag to reorder, pre-
    * filled with a random order (never commissioner-first), Save. Locked
    * once the draft starts. Row 3 is shown mid-drag. New copy. */
-  function ArrangeOrder() {
+  function ArrangeOrder({ locked }) {
     const L = K.SERIE_A;
+    if (locked) {
+      return (
+        <Device noTabs label="Draft order, locked">
+          <Back label="League settings" />
+          <div className="ks-pad ks-stack" style={{ gap: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 className="ks-head__title" style={{ fontSize: 28 }}>Draft order</h2>
+              <span className="ks-chip ks-chip--final">Final</span>
+            </div>
+            <p className="ks-callout ks-muted" style={{ margin: 0 }}>Locked at 6:00 PM, an hour before the draft. Anyone who joins now picks last.</p>
+            <div className="ks-card" style={{ padding: '2px 8px' }}>
+              <ol className="ks-rows">
+                {L.order.map((m, i) => (
+                  <li key={m.name} className="ks-row" style={{ gridTemplateColumns: '22px 32px 1fr auto', padding: '10px 6px', background: m.you ? 'var(--c-you-tint)' : undefined }}>
+                    <span className="ks-callout ks-num" style={{ fontWeight: 700 }}>{i + 1}</span>
+                    <span className={m.you ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{m.init}</span>
+                    <span className="ks-callout" style={{ fontWeight: 700 }}>{m.name}{m.you ? <span className="ks-muted" style={{ fontWeight: 500 }}> (you)</span> : null}</span>
+                    <span>{m.bot ? <span className="ks-chip ks-chip--money">Bot</span> : null}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </div>
+        </Device>
+      );
+    }
     return (
       <Device noTabs label="Arrange the draft order">
         <Back label="League settings" />
         <div className="ks-pad ks-stack" style={{ gap: 12 }}>
           <div>
             <h2 className="ks-head__title" style={{ fontSize: 28 }}>Arrange order</h2>
-            <p className="ks-callout ks-muted" style={{ margin: '4px 0 0' }}>Drag to set who picks first. The order reverses each round. It locks when the draft starts.</p>
+            <p className="ks-callout ks-muted" style={{ margin: '4px 0 0' }}>Drag to set who picks first. The order reverses each round. Set it by Sat 6:00 PM (1 hour before the draft). After that it's final.</p>
+          </div>
+          <div className="ks-card" role="note" style={{ padding: '8px 12px', display: 'flex', justifyContent: 'space-between', background: 'var(--c-warn-tint)', borderColor: 'var(--c-warn-line)', boxShadow: 'none' }}>
+            <span className="ks-callout" style={{ fontWeight: 600, color: 'var(--c-text)' }}>Locks in 2h 14m</span>
+            <span className="ks-callout ks-num" style={{ color: 'var(--c-text)' }}>Sat 6:00 PM</span>
           </div>
           <div className="ks-card" style={{ padding: '2px 8px' }}>
             <ol className="ks-rows">
@@ -763,7 +827,7 @@
               ))}
             </ol>
           </div>
-          <span className="ks-caption">Started from a random order. Shuffle again or drag anyone anywhere.</span>
+          <span className="ks-caption">Started from a random order. Shuffle again or drag anyone anywhere. If you never save, this order is used.</span>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <span className="ks-btn ks-btn--secondary">Shuffle again</span>
             <span className="ks-btn">Save order</span>
@@ -782,11 +846,12 @@
           <div className="ks-raised" style={{ padding: 16, display: 'grid', gap: 4, textAlign: 'center' }}>
             <span className="ks-tag">Draft starts in</span>
             <span className="ks-score ks-num" style={{ fontSize: 56, lineHeight: '56px' }}>04:59</span>
-            <span className="ks-caption ks-muted">Sat 7:00 PM · 60-second picks · random order, revealed at 6:00 PM</span>
+            <span className="ks-caption ks-muted">Sat 7:00 PM · 60-second picks</span>
           </div>
           <DraftOrder />
           <div>
-            <div className="ks-section-h"><h3>Your queue</h3><span className="ks-caption ks-muted">If your clock runs out, we pick from here first</span></div>
+            <div className="ks-section-h"><h3>Your queue</h3></div>
+            <span className="ks-caption" style={{ display: 'block', marginBottom: 4 }}>If you step away, we'll auto-pick from your queue when your time runs out. You can come back any time.</span>
             <ul className="ks-rows">{queue.map((t, i) => <li key={t} className="ks-row" style={{ gridTemplateColumns: '20px 36px 1fr 20px', padding: '8px 0' }}><span className="ks-caption ks-muted ks-num">{i + 1}</span><Logo t={t} game /><span className="ks-t ks-callout">{t}</span><span className="ks-muted">≡</span></li>)}</ul>
           </div>
         </div>
@@ -1189,7 +1254,7 @@
   window.KSInventory = {
     SignIn, SignUp, SignUpPaused, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeScoring, HomeComplete,
-    AllMatchups, MatchupPreSeason, Playoffs6, ArrangeOrder, DraftLobby, StartDraftConfirm, CreateSeason, DraftAutoPick, DraftRecap, Playoffs,
+    AllMatchups, MatchupPreSeason, Playoffs6, ArrangeOrder, OrderPush, DraftLobby, StartDraftConfirm, CreateSeason, DraftAutoPick, DraftRecap, Playoffs,
     SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,
     WebHome, WebPortfolio, WebSettings,
   };
