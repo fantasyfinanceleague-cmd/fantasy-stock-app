@@ -2,62 +2,26 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "277e86cd73b89e4f1c1cccee69e00f68f309caac",
-    "commitShort": "277e86c",
+    "commit": "b585872f159aa04aca700e6dee5e634c03101cfc",
+    "commitShort": "b585872",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "feat/draft-pick-clock-autopick",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "supabase/config.toml"
-      },
-      {
-        "code": "??",
-        "path": "supabase/functions/_shared/auto-pick.test.ts"
-      },
-      {
-        "code": "??",
         "path": "supabase/functions/_shared/auto-pick.ts"
       },
       {
         "code": "M",
-        "path": "supabase/functions/_shared/bot-pick.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/_shared/category-eligibility.ts"
-      },
-      {
-        "code": "??",
-        "path": "supabase/functions/_shared/cron-auth.ts"
-      },
-      {
-        "code": "??",
-        "path": "supabase/functions/_shared/draft-write.ts"
-      },
-      {
-        "code": "??",
-        "path": "supabase/functions/draft-autopick-sweep/"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/validate-and-record-pick/index.ts"
-      },
-      {
-        "code": "??",
         "path": "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql"
-      },
-      {
-        "code": "??",
-        "path": "supabase/migrations/deferred/20261010000001_schedule_draft_autopick_sweep.sql"
       },
       {
         "code": "M",
         "path": "supabase/migrations/deferred/README.md"
       }
     ],
-    "timestamp": "2026-09-29T17:07:44Z",
+    "timestamp": "2026-09-29T17:18:05Z",
     "sourceHash": "sha256:43022171ebc134c6c6bcd6352686ac2145f1a0c2e3e652b1f4e974e9ed773a38",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
@@ -65,7 +29,7 @@
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1164.2,
+    "ageHours": 1164.4,
     "ageDays": 48.5,
     "staleAfterDays": 14,
     "stale": true,
@@ -1286,7 +1250,7 @@
       "db": null,
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:112"
+          "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:113"
         ],
         "latestDefinition": "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql",
         "redefinitions": 1
@@ -1308,7 +1272,7 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql",
-        "line": 112
+        "line": 113
       }
     },
     {
@@ -1425,7 +1389,7 @@
       "db": null,
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:233"
+          "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:239"
         ],
         "latestDefinition": "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql",
         "redefinitions": 1
@@ -1447,7 +1411,7 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql",
-        "line": 233
+        "line": 239
       }
     },
     {
@@ -1794,7 +1758,7 @@
       "db": null,
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:281"
+          "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:287"
         ],
         "latestDefinition": "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql",
         "redefinitions": 1
@@ -1816,7 +1780,7 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql",
-        "line": 281
+        "line": 287
       }
     },
     {
@@ -1938,7 +1902,7 @@
       "db": null,
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:315"
+          "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:321"
         ],
         "latestDefinition": "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql",
         "redefinitions": 1
@@ -1960,7 +1924,7 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql",
-        "line": 315
+        "line": 321
       }
     },
     {
@@ -2567,7 +2531,7 @@
       "kind": "table",
       "source": {
         "path": "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql",
-        "line": 199
+        "line": 205
       }
     },
     {
@@ -5866,7 +5830,7 @@
       "payload": "SELECT drafts (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:246"
+        "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:252"
       ]
     },
     {
@@ -5879,7 +5843,7 @@
       "payload": "SELECT leagues (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:243"
+        "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:249"
       ]
     },
     {
@@ -6166,7 +6130,7 @@
       "payload": "SELECT leagues (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:284"
+        "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:290"
       ]
     },
     {
@@ -6234,7 +6198,7 @@
       "payload": "SELECT draft_queue (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:364"
+        "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:370"
       ]
     },
     {
@@ -6247,7 +6211,7 @@
       "payload": "DELETE draft_queue (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:364"
+        "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:370"
       ]
     },
     {
@@ -6260,7 +6224,7 @@
       "payload": "INSERT draft_queue (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:365"
+        "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:371"
       ]
     },
     {
@@ -6273,7 +6237,7 @@
       "payload": "SELECT league_members (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:327"
+        "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:333"
       ]
     },
     {
@@ -6286,7 +6250,7 @@
       "payload": "SELECT leagues (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:334"
+        "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:340"
       ]
     },
     {
@@ -6299,7 +6263,7 @@
       "payload": "SELECT symbols (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:359"
+        "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:365"
       ]
     },
     {
@@ -6520,7 +6484,7 @@
       "payload": "trigger on leagues",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:158"
+        "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:164"
       ]
     },
     {
@@ -9418,7 +9382,7 @@
       "node": "pg.get_draft_clock",
       "label": "get_draft_clock()",
       "kind": "pg-function",
-      "source": "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:233",
+      "source": "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:239",
       "outbound": [
         "tbl.drafts",
         "tbl.leagues"
@@ -9489,7 +9453,7 @@
       "node": "pg.set_draft_queue",
       "label": "set_draft_queue()",
       "kind": "pg-function",
-      "source": "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:315",
+      "source": "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:321",
       "outbound": [
         "tbl.draft_queue",
         "tbl.draft_queue",
