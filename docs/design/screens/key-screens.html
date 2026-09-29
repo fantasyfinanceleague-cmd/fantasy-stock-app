@@ -831,7 +831,15 @@
     const r = PORTFOLIO_LIVE.rows.find((x) => x.t === 'TSLA');
     const buy = { t: 'SHOP', co: 'Shopify', price: 104.2, todayPct: 1.12 };
     buy.qty = Math.floor((r.value / buy.price) * 1e4) / 1e4;
-    return { sold: r.t, proceeds: r.value, realized: cents(r.value - r.cost), buy };
+    // A second freed slot, for the "which sale pays?" picker (hypothetical:
+    // V sold at Wednesday's close). record-trade's preview returns one
+    // source per sale with unspent proceeds.
+    const v = PORTFOLIO_LIVE.rows.find((x) => x.t === 'V');
+    const sources = [
+      { symbol: r.t, amount: r.value, when: 'Thu 1:38 PM' },
+      { symbol: 'V', amount: cents(v.qty * v.prev), when: 'Wed 3:58 PM' },
+    ];
+    return { sold: r.t, proceeds: r.value, realized: cents(r.value - r.cost), buy, sources };
   })();
 
   window.KS = {
@@ -1561,10 +1569,7 @@
               </div>
             </div>
             <div className="ks-seg" style={{ height: 40 }}><span>Buy</span><span className="on">Sell</span></div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              {['25%', '50%', 'All'].map((c) => <span key={c} className="ks-chip ks-chip--money" style={{ height: 32, padding: '0 14px', fontSize: 13, textTransform: 'none', fontStretch: '100%', letterSpacing: 0 }}>{c}</span>)}
-              <span className="ks-caption" style={{ marginLeft: 'auto', alignSelf: 'center' }}>Up to {$(N.value)}</span>
-            </div>
+            <div className="ks-callout ks-num"><b>Sell all {N.qty.toFixed(4)} sh ≈ {$(N.value)}</b><br /><span className="ks-caption">A slot holds one stock, so you sell the whole position. The cash stays in this slot to reinvest.</span></div>
             <span className="ks-btn">Review sell</span>
           </div>
         </div>
@@ -1606,16 +1611,9 @@
               </ul>
             </div>
             <div>
-              <div className="ks-caption">Amount</div>
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                <span className="ks-num" style={{ fontSize: 30, fontWeight: 800 }}>{$(S.proceeds)}</span>
-                <span style={{ display: 'flex', gap: 6 }}>
-                  {['Half', 'All'].map((c) => (
-                    <span key={c} className="ks-chip ks-chip--money" style={{ height: 30, padding: '0 12px', fontSize: 13, textTransform: 'none', fontStretch: '100%', letterSpacing: 0, ...(c === 'All' ? { background: 'var(--sp-color-text-primary)', color: '#fff' } : {}) }}>{c}</span>
-                  ))}
-                </span>
-              </div>
-              <div className="ks-caption ks-num">≈ {B.qty.toFixed(4)} shares at {$(B.price)}. Anything you don't invest stays in this slot as cash and doesn't earn.</div>
+              <div className="ks-caption">You invest</div>
+              <span className="ks-num" style={{ fontSize: 30, fontWeight: 800 }}>{$(S.proceeds)}</span>
+              <div className="ks-caption ks-num">≈ {B.qty.toFixed(4)} shares at {$(B.price)}. The whole slot goes into {B.t}.</div>
             </div>
             <span className="ks-btn">Review buy</span>
           </div>
@@ -2283,7 +2281,7 @@
             <b style={{ color: n.startsWith('Roberto') ? 'var(--sp-color-team-you-on-game)' : undefined }}>{n}</b><span className="ks-num">{s}</span>
           </div>
         ))}
-        {live ? <span className="ks-caption" style={{ color: 'var(--sp-color-live)' }}>Live · Week 14</span> : null}
+        {live ? <span className="ks-caption" style={{ color: 'var(--sp-color-live)' }}>Live · ends Fri 4:00 PM ET</span> : null}
       </div>
     );
     return (
@@ -2291,12 +2289,12 @@
         <Head chip={<Chip kind="live">Playoffs</Chip>} />
         <div className="ks-pad ks-stack" style={{ gap: 14 }}>
           <div className="ks-seg ks-seg--game"><span>Standings</span><span className="on">Playoffs</span><span>History</span></div>
-          <div className="ks-tag">Semifinals · Week 13 · Final</div>
+          <div className="ks-tag">Semifinals · playoff week 1 · Final</div>
           <M a="1 Roberto B." b="4 Francesco T." sa="+$288.10" sb="+$96.42" win={0} />
           <M a="2 Paolo M." b="3 Alessandro D." sa="−$41.30" sb="+$120.55" win={1} />
-          <div className="ks-tag">Championship · Week 14</div>
+          <div className="ks-tag">Championship · playoff week 2</div>
           <M a="1 Roberto B." b="3 Alessandro D." sa="+$164.20" sb="+$131.05" live />
-          <span className="ks-caption ks-muted">Top 4 by record make the playoffs. Seeds 1 and 2 get the easier side.</span>
+          <span className="ks-caption ks-muted">The top 4 by record make the playoffs: 1 plays 4, 2 plays 3. A tied game goes to the higher seed.</span>
         </div>
       </Device>
     );
@@ -2318,12 +2316,9 @@
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}><Logo t="TSLA" /><span style={{ flex: 1 }}><span className="ks-headline" style={{ fontWeight: 800 }}>TSLA</span><br /><span className="ks-caption">Tesla · {$(t.thu)}</span></span><span className="ks-muted"><Icon d={ICON.close} size={22} /></span></div>
           <div className="ks-seg" style={{ height: 40 }}><span>Buy</span><span className="on">Sell</span></div>
           <div>
-            <div className="ks-caption">Amount</div>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-              <span className="ks-num" style={{ fontSize: 30, fontWeight: 800 }}>{$(t.value)}</span>
-              <span style={{ display: 'flex', gap: 6 }}>{['25%', '50%', 'All'].map((c) => <span key={c} className="ks-chip ks-chip--money" style={{ height: 30, padding: '0 12px', fontSize: 13, textTransform: 'none', fontStretch: '100%', letterSpacing: 0, ...(c === 'All' ? { background: 'var(--sp-color-text-primary)', color: '#fff' } : {}) }}>{c}</span>)}</span>
-            </div>
-            <div className="ks-caption ks-num">{t.qty.toFixed(4)} shares. The sale stays in this slot as cash to reinvest.</div>
+            <div className="ks-num" style={{ fontSize: 26, fontWeight: 800, lineHeight: '32px' }}>Sell all {t.qty.toFixed(4)} sh</div>
+            <div className="ks-callout ks-num">≈ {$(t.value)} at {$(t.thu)}</div>
+            <div className="ks-caption" style={{ marginTop: 4 }}>A slot holds one stock, so you sell the whole position. The cash stays in this slot to reinvest.</div>
           </div>
           <span className="ks-btn">Review sell</span>
         </Sheet>
@@ -2387,6 +2382,36 @@
           <span className="ks-btn">Buy SHOP</span>
           <span className="ks-caption" style={{ textAlign: 'center' }}>Prices can move before the order fills.</span>
         </div>
+      </Device>
+    );
+  }
+
+  /** record-trade preview can return several sources (one per sale with
+   * unspent proceeds). The buyer picks which sale pays; a buy never mixes
+   * two slots. */
+  function PickSource() {
+    const src = K.SALE.sources;
+    return (
+      <Device tab="portfolio" label="Which sale pays for this" overlay={
+        <Sheet top={250}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span className="ks-title">Which sale pays for this?</span><span className="ks-muted"><Icon d={ICON.close} size={22} /></span></div>
+          <span className="ks-callout ks-muted">Each sale's cash stays in its own slot. Pick one; the buy uses all of it.</span>
+          <Card>
+            <ul className="ks-rows">
+              {src.map((s, i) => (
+                <li key={s.symbol} className="ks-row" style={{ gridTemplateColumns: '24px 36px 1fr auto', padding: '12px 0' }}>
+                  <span style={{ display: 'block', boxSizing: 'border-box', alignSelf: 'center', width: 20, height: 20, borderRadius: 10, border: i === 0 ? '6px solid var(--sp-color-brand)' : '2px solid var(--sp-color-border-control)' }} />
+                  <Logo t={s.symbol} />
+                  <span><span className="ks-t">{s.symbol} slot</span><br /><span className="ks-caption">Sold {s.when}</span></span>
+                  <b className="ks-num">{$(s.amount)}</b>
+                </li>
+              ))}
+            </ul>
+          </Card>
+          <span className="ks-btn">Use the TSLA sale</span>
+        </Sheet>
+      }>
+        <Head chip={<Chip kind="live">Live</Chip>} />
       </Device>
     );
   }
@@ -2512,7 +2537,7 @@
     SignIn, SignUp, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, ChangePassword, EmptyHome,
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeScoring, HomeComplete,
     AllMatchups, MatchupPreSeason, DraftLobby, DraftRecap, Playoffs,
-    SellSheet, ReviewSell, Done, ReviewBuy, MarketClosed, TradeHistory,
+    SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,
     WebHome, WebPortfolio,
   };
 })();
@@ -2612,7 +2637,7 @@
             'All matchups this week: every game in the league, yours marked, same scoreboard grammar at a smaller size.',
             'The draft lobby opens before the draft: countdown, who is in the room, and your queue. Auto-pick uses the queue if your clock runs out (pending your answer on auto-pick vs skip).',
             'The draft recap lives under League › History after the draft: your picks ranked by how they have done since.',
-            'Playoffs: top 4 by record, a two-round bracket; the live final shows its running scores.',
+            'Playoffs follow the scorer: the commissioner picks 2, 4 or 8 teams (default 4); seeds by wins, then head-to-head, then season gain; 1 plays 4 and 2 plays 3; a tied game goes to the higher seed. The explanatory line under the bracket is new copy.',
           ]}>
           <Fit caption="All matchups"><I.AllMatchups /></Fit>
           <Fit caption="Matchup before the season"><I.MatchupPreSeason /></Fit>
@@ -2623,16 +2648,20 @@
 
         <Group id="money" code="3e" name="Trading" job="Sell, keep the cash in the slot, and buy again with exactly what the sale brought in."
           notes={[
-            'Sell: the amount defaults to All; the sheet says the money stays in the slot.',
+            'Sell is all or nothing: a slot holds one stock, so the sheet confirms "Sell all X sh ≈ $Y" (no partial amounts). The money stays in the slot.',
+            'Buy invests the whole slot: its full sale proceeds, never a partial amount and never a fresh $2,000.',
+            'When more than one sale has cash waiting, the buy asks which sale pays; one buy never mixes two slots.',
+            'If a sale\'s cash is gone (no_proceeds / proceeds_unavailable), the sheet says so and returns to the picker: "That sale\'s cash isn\'t available anymore. Pick another." (new copy).',
             'Review screens show the numbers that matter: shares, price, what you get, and how the slot compares with its $2,000.00 start.',
             'After a sale you can invest right away or later; the slot shows as Cash on Portfolio until you do.',
             'Buy review names the slot paying for it and what is left in it.',
             'With the market closed, trading is shown but disabled, with the time it opens.',
             'Trade history includes the draft picks, so every dollar in the portfolio has a line.',
           ]}>
-          <Fit caption="Sell TSLA" note="Sell pre-selected, All"><I.SellSheet /></Fit>
+          <Fit caption="Sell TSLA" note="Sell pre-selected · whole position"><I.SellSheet /></Fit>
           <Fit caption="Review sell"><I.ReviewSell /></Fit>
           <Fit caption="Sold" note="Invest now or later"><I.Done kind="sold" /></Fit>
+          <Fit caption="Which sale pays?" note="When two sales have cash (V sale hypothetical)"><I.PickSource /></Fit>
           <Fit caption="Review buy" note="Paid from the TSLA slot"><I.ReviewBuy /></Fit>
           <Fit caption="Bought"><I.Done kind="bought" /></Fit>
           <Fit caption="Market closed"><I.MarketClosed /></Fit>
@@ -2873,7 +2902,7 @@
               <>Value {$(K.PORTFOLIO_LIVE.value)}; gain since the draft {$s(K.PORTFOLIO_LIVE.gain)} against a $12,000.00 basis; today {$s(K.PORTFOLIO_LIVE.today)}.</>,
               <>Six holdings, each with value and today's move. Trade history includes the draft picks.</>,
               <>Any ticker row opens the stock sheet: price and today's chart against the previous close, your position, who in the league owns it, and <b>Sell pre-selected</b> because you hold it.</>,
-              <><b>Trading</b> (your call, v1.2): buy and sell freely, but a slot you sell out of can only reinvest what the sale brought in ({$(K.SALE.proceeds)} from TSLA), never a fresh $2,000. The freed slot shows as a Cash row ready to invest; cash earns nothing but counts in value, so the portfolio value doesn't change on the sale. The buy sheet says "You have {$(K.SALE.proceeds)} from selling TSLA to invest" and lets you pick which freed slot pays.</>,
+              <><b>Trading</b> (your call, v1.2): buy and sell freely, whole positions only, but a slot you sell out of can only reinvest what the sale brought in ({$(K.SALE.proceeds)} from TSLA), never a fresh $2,000. The freed slot shows as a Cash row ready to invest; cash earns nothing but counts in value, so the portfolio value doesn't change on the sale. The buy sheet says "You have {$(K.SALE.proceeds)} from selling TSLA to invest" and lets you pick which freed slot pays.</>,
             ]}
             motion={<>
               <li><Play label={sheet ? 'Close sheet' : 'Tap NVDA'} playing={sheet} onPlay={() => setSheet(!sheet)} /> The sheet springs up (spring.snappy, no overshoot) while the scrim fades in (base).</li>

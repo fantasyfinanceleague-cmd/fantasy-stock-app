@@ -595,7 +595,7 @@
             <b style={{ color: n.startsWith('Roberto') ? 'var(--sp-color-team-you-on-game)' : undefined }}>{n}</b><span className="ks-num">{s}</span>
           </div>
         ))}
-        {live ? <span className="ks-caption" style={{ color: 'var(--sp-color-live)' }}>Live · Week 14</span> : null}
+        {live ? <span className="ks-caption" style={{ color: 'var(--sp-color-live)' }}>Live · ends Fri 4:00 PM ET</span> : null}
       </div>
     );
     return (
@@ -603,12 +603,12 @@
         <Head chip={<Chip kind="live">Playoffs</Chip>} />
         <div className="ks-pad ks-stack" style={{ gap: 14 }}>
           <div className="ks-seg ks-seg--game"><span>Standings</span><span className="on">Playoffs</span><span>History</span></div>
-          <div className="ks-tag">Semifinals · Week 13 · Final</div>
+          <div className="ks-tag">Semifinals · playoff week 1 · Final</div>
           <M a="1 Roberto B." b="4 Francesco T." sa="+$288.10" sb="+$96.42" win={0} />
           <M a="2 Paolo M." b="3 Alessandro D." sa="−$41.30" sb="+$120.55" win={1} />
-          <div className="ks-tag">Championship · Week 14</div>
+          <div className="ks-tag">Championship · playoff week 2</div>
           <M a="1 Roberto B." b="3 Alessandro D." sa="+$164.20" sb="+$131.05" live />
-          <span className="ks-caption ks-muted">Top 4 by record make the playoffs. Seeds 1 and 2 get the easier side.</span>
+          <span className="ks-caption ks-muted">The top 4 by record make the playoffs: 1 plays 4, 2 plays 3. A tied game goes to the higher seed.</span>
         </div>
       </Device>
     );
@@ -630,12 +630,9 @@
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}><Logo t="TSLA" /><span style={{ flex: 1 }}><span className="ks-headline" style={{ fontWeight: 800 }}>TSLA</span><br /><span className="ks-caption">Tesla · {$(t.thu)}</span></span><span className="ks-muted"><Icon d={ICON.close} size={22} /></span></div>
           <div className="ks-seg" style={{ height: 40 }}><span>Buy</span><span className="on">Sell</span></div>
           <div>
-            <div className="ks-caption">Amount</div>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-              <span className="ks-num" style={{ fontSize: 30, fontWeight: 800 }}>{$(t.value)}</span>
-              <span style={{ display: 'flex', gap: 6 }}>{['25%', '50%', 'All'].map((c) => <span key={c} className="ks-chip ks-chip--money" style={{ height: 30, padding: '0 12px', fontSize: 13, textTransform: 'none', fontStretch: '100%', letterSpacing: 0, ...(c === 'All' ? { background: 'var(--sp-color-text-primary)', color: '#fff' } : {}) }}>{c}</span>)}</span>
-            </div>
-            <div className="ks-caption ks-num">{t.qty.toFixed(4)} shares. The sale stays in this slot as cash to reinvest.</div>
+            <div className="ks-num" style={{ fontSize: 26, fontWeight: 800, lineHeight: '32px' }}>Sell all {t.qty.toFixed(4)} sh</div>
+            <div className="ks-callout ks-num">≈ {$(t.value)} at {$(t.thu)}</div>
+            <div className="ks-caption" style={{ marginTop: 4 }}>A slot holds one stock, so you sell the whole position. The cash stays in this slot to reinvest.</div>
           </div>
           <span className="ks-btn">Review sell</span>
         </Sheet>
@@ -699,6 +696,36 @@
           <span className="ks-btn">Buy SHOP</span>
           <span className="ks-caption" style={{ textAlign: 'center' }}>Prices can move before the order fills.</span>
         </div>
+      </Device>
+    );
+  }
+
+  /** record-trade preview can return several sources (one per sale with
+   * unspent proceeds). The buyer picks which sale pays; a buy never mixes
+   * two slots. */
+  function PickSource() {
+    const src = K.SALE.sources;
+    return (
+      <Device tab="portfolio" label="Which sale pays for this" overlay={
+        <Sheet top={250}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span className="ks-title">Which sale pays for this?</span><span className="ks-muted"><Icon d={ICON.close} size={22} /></span></div>
+          <span className="ks-callout ks-muted">Each sale's cash stays in its own slot. Pick one; the buy uses all of it.</span>
+          <Card>
+            <ul className="ks-rows">
+              {src.map((s, i) => (
+                <li key={s.symbol} className="ks-row" style={{ gridTemplateColumns: '24px 36px 1fr auto', padding: '12px 0' }}>
+                  <span style={{ display: 'block', boxSizing: 'border-box', alignSelf: 'center', width: 20, height: 20, borderRadius: 10, border: i === 0 ? '6px solid var(--sp-color-brand)' : '2px solid var(--sp-color-border-control)' }} />
+                  <Logo t={s.symbol} />
+                  <span><span className="ks-t">{s.symbol} slot</span><br /><span className="ks-caption">Sold {s.when}</span></span>
+                  <b className="ks-num">{$(s.amount)}</b>
+                </li>
+              ))}
+            </ul>
+          </Card>
+          <span className="ks-btn">Use the TSLA sale</span>
+        </Sheet>
+      }>
+        <Head chip={<Chip kind="live">Live</Chip>} />
       </Device>
     );
   }
@@ -824,7 +851,7 @@
     SignIn, SignUp, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, ChangePassword, EmptyHome,
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeScoring, HomeComplete,
     AllMatchups, MatchupPreSeason, DraftLobby, DraftRecap, Playoffs,
-    SellSheet, ReviewSell, Done, ReviewBuy, MarketClosed, TradeHistory,
+    SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,
     WebHome, WebPortfolio,
   };
 })();

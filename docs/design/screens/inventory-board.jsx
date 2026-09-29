@@ -91,7 +91,7 @@
             'All matchups this week: every game in the league, yours marked, same scoreboard grammar at a smaller size.',
             'The draft lobby opens before the draft: countdown, who is in the room, and your queue. Auto-pick uses the queue if your clock runs out (pending your answer on auto-pick vs skip).',
             'The draft recap lives under League › History after the draft: your picks ranked by how they have done since.',
-            'Playoffs: top 4 by record, a two-round bracket; the live final shows its running scores.',
+            'Playoffs follow the scorer: the commissioner picks 2, 4 or 8 teams (default 4); seeds by wins, then head-to-head, then season gain; 1 plays 4 and 2 plays 3; a tied game goes to the higher seed. The explanatory line under the bracket is new copy.',
           ]}>
           <Fit caption="All matchups"><I.AllMatchups /></Fit>
           <Fit caption="Matchup before the season"><I.MatchupPreSeason /></Fit>
@@ -102,16 +102,20 @@
 
         <Group id="money" code="3e" name="Trading" job="Sell, keep the cash in the slot, and buy again with exactly what the sale brought in."
           notes={[
-            'Sell: the amount defaults to All; the sheet says the money stays in the slot.',
+            'Sell is all or nothing: a slot holds one stock, so the sheet confirms "Sell all X sh ≈ $Y" (no partial amounts). The money stays in the slot.',
+            'Buy invests the whole slot: its full sale proceeds, never a partial amount and never a fresh $2,000.',
+            'When more than one sale has cash waiting, the buy asks which sale pays; one buy never mixes two slots.',
+            'If a sale\'s cash is gone (no_proceeds / proceeds_unavailable), the sheet says so and returns to the picker: "That sale\'s cash isn\'t available anymore. Pick another." (new copy).',
             'Review screens show the numbers that matter: shares, price, what you get, and how the slot compares with its $2,000.00 start.',
             'After a sale you can invest right away or later; the slot shows as Cash on Portfolio until you do.',
             'Buy review names the slot paying for it and what is left in it.',
             'With the market closed, trading is shown but disabled, with the time it opens.',
             'Trade history includes the draft picks, so every dollar in the portfolio has a line.',
           ]}>
-          <Fit caption="Sell TSLA" note="Sell pre-selected, All"><I.SellSheet /></Fit>
+          <Fit caption="Sell TSLA" note="Sell pre-selected · whole position"><I.SellSheet /></Fit>
           <Fit caption="Review sell"><I.ReviewSell /></Fit>
           <Fit caption="Sold" note="Invest now or later"><I.Done kind="sold" /></Fit>
+          <Fit caption="Which sale pays?" note="When two sales have cash (V sale hypothetical)"><I.PickSource /></Fit>
           <Fit caption="Review buy" note="Paid from the TSLA slot"><I.ReviewBuy /></Fit>
           <Fit caption="Bought"><I.Done kind="bought" /></Fit>
           <Fit caption="Market closed"><I.MarketClosed /></Fit>

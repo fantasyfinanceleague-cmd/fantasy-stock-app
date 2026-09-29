@@ -352,7 +352,15 @@
     const r = PORTFOLIO_LIVE.rows.find((x) => x.t === 'TSLA');
     const buy = { t: 'SHOP', co: 'Shopify', price: 104.2, todayPct: 1.12 };
     buy.qty = Math.floor((r.value / buy.price) * 1e4) / 1e4;
-    return { sold: r.t, proceeds: r.value, realized: cents(r.value - r.cost), buy };
+    // A second freed slot, for the "which sale pays?" picker (hypothetical:
+    // V sold at Wednesday's close). record-trade's preview returns one
+    // source per sale with unspent proceeds.
+    const v = PORTFOLIO_LIVE.rows.find((x) => x.t === 'V');
+    const sources = [
+      { symbol: r.t, amount: r.value, when: 'Thu 1:38 PM' },
+      { symbol: 'V', amount: cents(v.qty * v.prev), when: 'Wed 3:58 PM' },
+    ];
+    return { sold: r.t, proceeds: r.value, realized: cents(r.value - r.cost), buy, sources };
   })();
 
   window.KS = {

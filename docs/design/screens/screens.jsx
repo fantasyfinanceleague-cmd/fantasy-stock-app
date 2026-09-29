@@ -712,10 +712,7 @@
               </div>
             </div>
             <div className="ks-seg" style={{ height: 40 }}><span>Buy</span><span className="on">Sell</span></div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              {['25%', '50%', 'All'].map((c) => <span key={c} className="ks-chip ks-chip--money" style={{ height: 32, padding: '0 14px', fontSize: 13, textTransform: 'none', fontStretch: '100%', letterSpacing: 0 }}>{c}</span>)}
-              <span className="ks-caption" style={{ marginLeft: 'auto', alignSelf: 'center' }}>Up to {$(N.value)}</span>
-            </div>
+            <div className="ks-callout ks-num"><b>Sell all {N.qty.toFixed(4)} sh ≈ {$(N.value)}</b><br /><span className="ks-caption">A slot holds one stock, so you sell the whole position. The cash stays in this slot to reinvest.</span></div>
             <span className="ks-btn">Review sell</span>
           </div>
         </div>
@@ -757,16 +754,9 @@
               </ul>
             </div>
             <div>
-              <div className="ks-caption">Amount</div>
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                <span className="ks-num" style={{ fontSize: 30, fontWeight: 800 }}>{$(S.proceeds)}</span>
-                <span style={{ display: 'flex', gap: 6 }}>
-                  {['Half', 'All'].map((c) => (
-                    <span key={c} className="ks-chip ks-chip--money" style={{ height: 30, padding: '0 12px', fontSize: 13, textTransform: 'none', fontStretch: '100%', letterSpacing: 0, ...(c === 'All' ? { background: 'var(--sp-color-text-primary)', color: '#fff' } : {}) }}>{c}</span>
-                  ))}
-                </span>
-              </div>
-              <div className="ks-caption ks-num">≈ {B.qty.toFixed(4)} shares at {$(B.price)}. Anything you don't invest stays in this slot as cash and doesn't earn.</div>
+              <div className="ks-caption">You invest</div>
+              <span className="ks-num" style={{ fontSize: 30, fontWeight: 800 }}>{$(S.proceeds)}</span>
+              <div className="ks-caption ks-num">≈ {B.qty.toFixed(4)} shares at {$(B.price)}. The whole slot goes into {B.t}.</div>
             </div>
             <span className="ks-btn">Review buy</span>
           </div>
