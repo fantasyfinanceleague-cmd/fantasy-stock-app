@@ -15,6 +15,7 @@
 
 import type { League } from '../LeagueContext';
 import type { SheetLeague } from './leagueSheet';
+import { USERNAME_RE } from './usernameRules';
 
 /**
  * leagues      — signed in as roberto_b, in the board's four leagues
@@ -24,10 +25,16 @@ import type { SheetLeague } from './leagueSheet';
  *                `leagues`), and create-account gets the server's
  *                signups-paused refusal, so every auth state can be captured
  *                without typing a credential
+ * onboarding   — like signed-out, but onboarding is shown on every launch
  */
-export type ShellFixture = 'leagues' | 'no-leagues' | 'no-username' | 'signed-out';
+export type ShellFixture = 'leagues' | 'no-leagues' | 'no-username' | 'signed-out' | 'onboarding';
 
-const FIXTURES: readonly ShellFixture[] = ['leagues', 'no-leagues', 'no-username', 'signed-out'];
+const FIXTURES: readonly ShellFixture[] = ['leagues', 'no-leagues', 'no-username', 'signed-out', 'onboarding'];
+
+/** Fixtures that start signed out. */
+export function fixtureStartsSignedOut(f: ShellFixture): boolean {
+  return f === 'signed-out' || f === 'onboarding';
+}
 
 /** The Before User Created hook's refusal, as the fixture's sign-up returns it. */
 export const FIXTURE_SIGNUPS_PAUSED_MESSAGE = 'Sign-ups are not open for new signups right now.';
@@ -109,4 +116,24 @@ export function fixtureLeagues(fixture: ShellFixture): { leagues: League[]; shee
   ];
 
   return { leagues, sheet };
+}
+
+/** Names "other users" hold in the fixture — "roberto" makes the case-insensitive capture (Roberto vs roberto). */
+const FIXTURE_TAKEN = ['roberto', 'roberto_26', 'rob'];
+
+/** check_usernames' semantics, locally: case-insensitive, the caller's own name available. */
+export function fixtureCheckUsernames(candidates: string[]): { username: string; status: 'available' | 'taken' | 'invalid' }[] {
+  return candidates.slice(0, 10).map((username) => ({
+    username,
+    status: !USERNAME_RE.test(username)
+      ? 'invalid'
+      : FIXTURE_TAKEN.some((t) => t.toLowerCase() === username.toLowerCase())
+        ? 'taken'
+        : 'available',
+  }));
+}
+
+export function fixtureSetUsername(name: string): 'ok' | 'taken' | 'invalid' {
+  const { status } = fixtureCheckUsernames([name])[0];
+  return status === 'available' ? 'ok' : status;
 }

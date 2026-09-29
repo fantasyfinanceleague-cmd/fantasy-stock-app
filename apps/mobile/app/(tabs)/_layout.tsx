@@ -70,7 +70,6 @@ export default function TabLayout() {
         <Tabs.Screen name="league" options={{ title: 'League' }} />
         <Tabs.Screen name="portfolio" options={{ title: 'Portfolio' }} />
         <Tabs.Screen name="draft" options={{ href: null }} />
-        <Tabs.Screen name="profile" options={{ href: null }} />
       </Tabs>
     </Animated.View>
   );

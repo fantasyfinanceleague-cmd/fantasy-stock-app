@@ -10,6 +10,7 @@ import {
   FIXTURE_SIGNUPS_PAUSED_MESSAGE,
   FIXTURE_USER_ID,
   SHELL_FIXTURE,
+  fixtureStartsSignedOut,
   fixtureUsername,
 } from './shell/devFixture';
 
@@ -77,7 +78,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     if (SHELL_FIXTURE) {
       // DEV-only fixture (lib/shell/devFixture.ts): a local fake session.
       // supabase.auth is never touched, so nothing signs in or out for real.
-      setUser(SHELL_FIXTURE === 'signed-out' ? null : FIXTURE_USER);
+      setUser(fixtureStartsSignedOut(SHELL_FIXTURE) ? null : FIXTURE_USER);
       setLoading(false);
       return;
     }

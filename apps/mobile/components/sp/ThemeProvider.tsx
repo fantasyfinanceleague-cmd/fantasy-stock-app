@@ -61,7 +61,7 @@ import { resolveTheme } from '@/components/sp/logic/theme';
 // draft room are still light-only legacy screens and will render light
 // inside a Dark app until 3c/3e rebuild them. Keep resolveTheme's forced
 // path (and sp-theme.test.ts) for any future release that needs it again.
-const THEME_FORCED: ThemeMode | null = null;
+export const THEME_FORCED: ThemeMode | null = null;
 
 export type ThemePreference = 'system' | ThemeMode;
 

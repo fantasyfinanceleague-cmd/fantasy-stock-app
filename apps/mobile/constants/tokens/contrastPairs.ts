@@ -65,6 +65,7 @@ export const PAIRS: readonly ContrastPair[] = [
   ['loss', 'bg', null, 4.5, 'Loss on the screen background'],
   ['danger', 'bg', null, 4.5, 'Field errors on the screen background (3b-1 auth, username)'],
   ['gain', 'inset', null, 4.5, 'Gain inside panels'],
+  ['loss', 'inset', null, 4.5, 'Loss inside panels (3b-1 onboarding FINAL vignette)'],
   ['accent', 'accentTint', 'surface', 4.5, 'Selected web nav, icon tiles'],
   ['gain', 'gainTint', 'surface', 4.5, 'Cash tile "$", done check'],
   ['text', 'youTint', 'surface', 4.5, 'Your standings row'],

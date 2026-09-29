@@ -7,6 +7,7 @@ import { EmptyState, type EmptyStateIconProps } from '@/components/sp/EmptyState
 import { PhaseChip } from '@/components/sp/PhaseChip';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { ShellHeader } from '@/components/shell/ShellHeader';
+import { BarsRefresh } from '@/components/shell/BarsRefresh';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { chipPhaseFor } from '@/lib/shell/leagueSheet';
 
@@ -25,24 +26,57 @@ export interface PhasePlaceholderProps {
   showAvatar?: boolean;
   actionLabel?: string;
   onAction?: () => void;
+  secondaryActionLabel?: string;
+  onSecondaryAction?: () => void;
+  /** S5: pull to refresh with the rising bars (Home). */
+  onRefresh?: () => Promise<void>;
 }
 
-export function PhasePlaceholder({ title, icon, heading, message, showAvatar, actionLabel, onAction }: PhasePlaceholderProps) {
+export function PhasePlaceholder({
+  title,
+  icon,
+  heading,
+  message,
+  showAvatar,
+  actionLabel,
+  onAction,
+  secondaryActionLabel,
+  onSecondaryAction,
+  onRefresh,
+}: PhasePlaceholderProps) {
   const { colors } = useTheme();
   const { sheetLeagues, activeLeagueId } = useLeagueContext();
   const active = sheetLeagues.find((l) => l.id === activeLeagueId) ?? null;
 
+  const body = (
+    <>
+      {active ? (
+        <View style={styles.chip}>
+          <PhaseChip phase={chipPhaseFor(active.seasonPhase, active.marketOpen)} />
+        </View>
+      ) : null}
+      <EmptyState
+        icon={icon}
+        title={heading}
+        message={message}
+        actionLabel={actionLabel}
+        onAction={onAction}
+        secondaryActionLabel={secondaryActionLabel}
+        onSecondaryAction={onSecondaryAction}
+      />
+    </>
+  );
+
   return (
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
       <ShellHeader title={title} showAvatar={showAvatar} />
-      <ScrollView contentContainerStyle={styles.content}>
-        {active ? (
-          <View style={styles.chip}>
-            <PhaseChip phase={chipPhaseFor(active.seasonPhase, active.marketOpen)} />
-          </View>
-        ) : null}
-        <EmptyState icon={icon} title={heading} message={message} actionLabel={actionLabel} onAction={onAction} />
-      </ScrollView>
+      {onRefresh ? (
+        <BarsRefresh onRefresh={onRefresh} contentContainerStyle={styles.content}>
+          {body}
+        </BarsRefresh>
+      ) : (
+        <ScrollView contentContainerStyle={styles.content}>{body}</ScrollView>
+      )}
     </View>
   );
 }

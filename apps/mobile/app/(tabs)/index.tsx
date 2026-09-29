@@ -7,9 +7,11 @@ import { useLeagueContext } from '@/lib/LeagueContext';
 // Phase 3b-1: Home's header (pill + avatar) and its no-leagues state are
 // this phase; the dashboard itself is Phase 3b-2, so a league member sees an
 // honest placeholder until then (copy NEW-PROPOSED pending the Design Lead).
-// "No leagues yet" copy is the board's, verbatim.
+// "No leagues yet" copy is the board's, verbatim, with both of its actions
+// (spec row 14) — neither leads to another empty screen. Pull to refresh
+// (S5) re-reads the leagues.
 export default function HomeScreen() {
-  const { leagues, loading } = useLeagueContext();
+  const { leagues, loading, refresh } = useLeagueContext();
 
   if (!loading && leagues.length === 0) {
     return (
@@ -21,6 +23,9 @@ export default function HomeScreen() {
         message="Create or join a league to get started."
         actionLabel="Create a league"
         onAction={() => router.push('/create-league')}
+        secondaryActionLabel="Join with a code"
+        onSecondaryAction={() => router.push('/join-league')}
+        onRefresh={refresh}
       />
     );
   }
@@ -32,6 +37,7 @@ export default function HomeScreen() {
       icon={(p) => <Ionicons name="home-outline" {...p} />}
       heading="Your dashboard is on the way"
       message="Your leagues at a glance will live here in the next update."
+      onRefresh={refresh}
     />
   );
 }

@@ -25,6 +25,8 @@ import { pendingRoute, type AuthPhase } from '@/lib/shell/pendingRoute';
 import { ShellOverlayProvider } from '@/components/shell/ShellOverlay';
 import { useMotion } from '@/components/sp/motion';
 import { takeSignInIntent } from '@/lib/shell/signInTransition';
+import { useOnboardingSeen } from '@/lib/shell/firstRun';
+import { ThemeDipProvider } from '@/components/shell/ThemeDip';
 import { ThemeProvider, useTheme } from '@/components/sp/ThemeProvider';
 
 export {
@@ -46,14 +48,9 @@ const WITH_HEADER = { headerShown: true } as const;
 const ROOT = { flex: 1 } as const;
 const WITH_HEADER_MODAL = { headerShown: true, presentation: 'modal' } as const;
 
-// The username gate (Pick a username, before the tabs) is wired in with its
-// screen in a later step of this branch; until then a 'gated' account is
-// treated as 'ready' so nothing waits on a screen that doesn't exist yet.
-const USERNAME_GATE_ENABLED = false;
-
 function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
-  const { user, authPhase: sessionPhase } = useSession();
-  const authPhase: AuthPhase = !USERNAME_GATE_ENABLED && sessionPhase === 'gated' ? 'ready' : sessionPhase;
+  const { user, authPhase } = useSession();
+  const onboardingSeen = useOnboardingSeen();
 
   // The phase the navigator renders. authPhase passes through 'unknown' not
   // only at cold start but on EVERY sign-in, while the new account's profile
@@ -114,7 +111,7 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
   // (session read AND, when signed in, the profile's username read). The
   // guards below pick the first screen from that phase, so rendering before
   // it resolves would flash the wrong one.
-  const phaseKnown = shownPhase !== 'unknown';
+  const phaseKnown = shownPhase !== 'unknown' && onboardingSeen !== null;
   useEffect(() => {
     if (fontsLoaded && themeReady && phaseKnown) {
       SplashScreen.hideAsync();
@@ -240,6 +237,7 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
   }
 
   const signedIn = shownPhase === 'ready' || shownPhase === 'gated';
+  const needsUsername = shownPhase === 'gated';
 
   // S4: the app and the auth screens crossfade into each other (never a hard
   // cut) — `feature` into the app, where (tabs) adds its 0.96 → 1 scale-in;
@@ -260,42 +258,62 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
   // that ISN'T declared as an unguarded screen, which would put it outside
   // both guards and make it reachable signed out.
   return (
-    <NavigationThemeProvider value={navigationTheme}>
-      <StatusBar style={statusBarStyle} />
-      <LeagueProvider>
-        {/* The league sheet and S3's flying label are drawn in a layer above
-            the Stack (components/shell/ShellOverlay.tsx explains why). */}
-        <ShellOverlayProvider>
-          <Stack screenOptions={HIDDEN_HEADER}>
-            <Stack.Protected guard={!signedIn}>
-              <Stack.Screen name="login" options={crossfade} />
-              <Stack.Screen name="create-account" />
-              <Stack.Screen name="forgot-password" options={HIDDEN_HEADER_MODAL} />
-            </Stack.Protected>
+    <ThemeDipProvider>
+      <NavigationThemeProvider value={navigationTheme}>
+        <StatusBar style={statusBarStyle} />
+        <LeagueProvider>
+          {/* The league sheet and S3's flying label are drawn in a layer above
+              the Stack (components/shell/ShellOverlay.tsx explains why). */}
+          <ShellOverlayProvider>
+            <Stack screenOptions={HIDDEN_HEADER}>
+              <Stack.Protected guard={!signedIn}>
+                {/* First run only (the stored "seen" flag), and skipped when a
+                    deep link is waiting: that user already knows where they're
+                    going, so they land on sign-in (spec gate 9). */}
+                <Stack.Protected guard={!onboardingSeen && !pendingRoute.peek()}>
+                  <Stack.Screen name="onboarding" options={crossfade} />
+                  <Stack.Screen name="get-started" />
+                </Stack.Protected>
+                <Stack.Screen name="login" options={crossfade} />
+                <Stack.Screen name="create-account" />
+                <Stack.Screen name="forgot-password" options={HIDDEN_HEADER_MODAL} />
+              </Stack.Protected>
 
-            <Stack.Protected guard={signedIn}>
-              <Stack.Screen name="(tabs)" options={crossfade} />
-              <Stack.Screen name="create-league" options={HIDDEN_HEADER_FULLSCREEN} />
-              <Stack.Screen name="join-league" options={HIDDEN_HEADER_FULLSCREEN} />
-              <Stack.Screen name="league-settings" options={HIDDEN_HEADER_MODAL} />
-              <Stack.Screen name="player-portfolio" options={HIDDEN_HEADER_MODAL} />
-              <Stack.Screen name="trade-history" options={HIDDEN_HEADER_MODAL} />
-              <Stack.Screen name="design-gallery" options={WITH_HEADER} />
-              <Stack.Screen name="modal" options={WITH_HEADER_MODAL} />
-            </Stack.Protected>
+              <Stack.Protected guard={signedIn}>
+                {/* A NULL username puts Pick a username in front of everything
+                    else (spec row 8); saving it lifts this guard. */}
+                <Stack.Protected guard={needsUsername}>
+                  <Stack.Screen name="pick-username" options={crossfade} />
+                </Stack.Protected>
+                <Stack.Protected guard={!needsUsername}>
+                  <Stack.Screen name="(tabs)" options={crossfade} />
+                  <Stack.Screen name="profile" />
+                  <Stack.Screen name="username" />
+                  <Stack.Screen name="appearance" />
+                  <Stack.Screen name="change-password" />
+                  <Stack.Screen name="create-league" options={HIDDEN_HEADER_FULLSCREEN} />
+                  <Stack.Screen name="join-league" options={HIDDEN_HEADER_FULLSCREEN} />
+                  <Stack.Screen name="league-settings" options={HIDDEN_HEADER_MODAL} />
+                  <Stack.Screen name="player-portfolio" options={HIDDEN_HEADER_MODAL} />
+                  <Stack.Screen name="trade-history" options={HIDDEN_HEADER_MODAL} />
+                  <Stack.Screen name="design-gallery" options={WITH_HEADER} />
+                  <Stack.Screen name="modal" options={WITH_HEADER_MODAL} />
+                </Stack.Protected>
+              </Stack.Protected>
 
-            {/* The recovery link signs the user in to show this screen, so it
-                sits outside both guards; its own nonce-checked handler above
-                decides whether the form appears (PR #41). It is declared LAST
-                on purpose: with no target (a cold start, a remount, or a guard
-                flipping at sign-in/out) the Stack opens its FIRST available
-                screen, which must be sign-in when signed out and (tabs) when
-                signed in — never this one. */}
-            <Stack.Screen name="reset-password" options={HIDDEN_HEADER_FULLSCREEN} />
-          </Stack>
-        </ShellOverlayProvider>
-      </LeagueProvider>
-    </NavigationThemeProvider>
+              {/* The recovery link signs the user in to show this screen, so it
+                  sits outside both guards; its own nonce-checked handler above
+                  decides whether the form appears (PR #41). It is declared LAST
+                  on purpose: with no target (a cold start, a remount, or a guard
+                  flipping at sign-in/out) the Stack opens its FIRST available
+                  screen, which must be sign-in when signed out and (tabs) when
+                  signed in — never this one. */}
+              <Stack.Screen name="reset-password" options={HIDDEN_HEADER_FULLSCREEN} />
+            </Stack>
+          </ShellOverlayProvider>
+        </LeagueProvider>
+      </NavigationThemeProvider>
+    </ThemeDipProvider>
   );
 }
 
