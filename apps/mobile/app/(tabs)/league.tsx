@@ -10,7 +10,8 @@ import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/Colors';
 import StatusBadge from '@/components/StatusBadge';
 import LeagueSwitcher from '@/components/LeagueSwitcher';
-import { getWeekStatus, getCountdownMessage, getPlayoffRoundLabel, getSeasonLabel, isPreSeasonPhase, formatSeasonStartShort, formatSignedCurrency } from '@/lib/weekStatus';
+import { getWeekStatus, getCountdownMessage, getSeasonLabel, isPreSeasonPhase, formatSeasonStartShort, formatSignedCurrency } from '@/lib/weekStatus';
+import { playoffRoundLabelForWeek } from '@/lib/playoffs';
 import { isUuid } from '@/lib/uuid';
 import { Button, Card } from '@/components/ui';
 import { SkeletonCard, SkeletonRows } from '@/components/Skeleton';
@@ -278,21 +279,23 @@ export default function LeagueScreen() {
     return getCountdownMessage(weekStatus);
   }, [weekStatus]);
 
-  const currentPlayoffRound = useMemo(() => {
+  const currentPlayoffWeek = useMemo(() => {
     if (weekStatus.phase !== 'playoffs') return null;
     const activePlayoffMatchup = matchups.find(
       m => m.is_playoff && m.week_number === currentWeek && m.team1_gain === null
     );
-    if (activePlayoffMatchup) return activePlayoffMatchup.playoff_round || null;
+    if (activePlayoffMatchup) return activePlayoffMatchup.week_number;
     const nextPlayoffMatchup = matchups.find(
       m => m.is_playoff && m.team1_gain === null
     );
-    return nextPlayoffMatchup?.playoff_round || null;
+    return nextPlayoffMatchup?.week_number ?? null;
   }, [matchups, currentWeek, weekStatus.phase]);
 
+  // Labelled from structure (week, num_weeks, playoff_teams), never from the
+  // stored playoff_round code.
   const currentPlayoffRoundLabel = useMemo(() => {
-    return getPlayoffRoundLabel(currentPlayoffRound);
-  }, [currentPlayoffRound]);
+    return playoffRoundLabelForWeek(currentPlayoffWeek, numWeeks, activeLeague?.playoff_teams);
+  }, [currentPlayoffWeek, numWeeks, activeLeague?.playoff_teams]);
 
   // Set schedule user to current user by default
   useEffect(() => {
@@ -821,7 +824,7 @@ export default function LeagueScreen() {
                                 styles.scheduleWeekNumber,
                                 isCurrent && styles.scheduleWeekCurrent
                               ]}>
-                                {matchup.is_playoff ? (getPlayoffRoundLabel(matchup.playoff_round) || matchup.playoff_round) : `Wk ${matchup.week_number}`}
+                                {matchup.is_playoff ? (playoffRoundLabelForWeek(matchup.week_number, numWeeks, activeLeague?.playoff_teams) || `Wk ${matchup.week_number}`) : `Wk ${matchup.week_number}`}
                               </Text>
                             </View>
 

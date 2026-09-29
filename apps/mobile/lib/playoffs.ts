@@ -38,3 +38,35 @@ export function playoffPlan(teams: number | null | undefined): PlayoffPlan | nul
   if (byes > 0 && weeks > 1) rounds[0] = 'Wild card';
   return { teams, weeks, byes, rounds };
 }
+
+/**
+ * One-line summary for the playoff-teams control, verbatim from the design
+ * board (KS.playoffLine): "6 teams · 3 weeks of playoffs · the top 2 seeds get
+ * first-round byes". Null when P is invalid.
+ */
+export function playoffLine(teams: number | null | undefined): string | null {
+  const p = playoffPlan(teams);
+  if (!p) return null;
+  const bye = p.byes === 0
+    ? 'no byes'
+    : p.byes === 1
+    ? 'the top seed gets a first-round bye'
+    : `the top ${p.byes} seeds get first-round byes`;
+  return `${p.teams} teams · ${p.weeks} ${p.weeks === 1 ? 'week' : 'weeks'} of playoffs · ${bye}`;
+}
+
+/**
+ * Display label for a playoff WEEK: playoff week r is week num_weeks + r, and
+ * its name is playoffPlan(P).rounds[r - 1]. Keyed on structure (week, the
+ * regular-season length, P), never on the stored playoff_round code, so the
+ * copy is decided in one place. Null for a regular-season week or bad input.
+ */
+export function playoffRoundLabelForWeek(
+  week: number | null | undefined,
+  numWeeks: number | null | undefined,
+  playoffTeams: number | null | undefined,
+): string | null {
+  const plan = playoffPlan(playoffTeams);
+  if (!plan || typeof week !== 'number' || typeof numWeeks !== 'number') return null;
+  return plan.rounds[week - numWeeks - 1] ?? null;
+}
