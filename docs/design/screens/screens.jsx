@@ -653,7 +653,7 @@
           <div className="ks-card" style={{ padding: '2px 14px' }}>
             <ul className="ks-rows">
               <Row k="Draft date" v="Sat, Oct 3 · 7:00 PM" />
-              <Row k="Draft order" v="Random" sub="Set when the draft starts" />
+              <Row k="Draft order" v="" sub="Set when the draft starts" />
               <Row k="Rounds" v="6" sub="One per roster slot" />
               <li className="ks-row" style={{ gridTemplateColumns: '1fr', padding: '13px 0' }}>
                 <span><span className="ks-callout" style={{ fontWeight: 600 }}>If time runs out</span><br /><span className="ks-caption">We pick for you: the first stock still available in your queue, otherwise the biggest company that fits the league's rules. Never a random pick, never a skip.</span></span>

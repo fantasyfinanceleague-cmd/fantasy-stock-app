@@ -667,7 +667,7 @@
       <Device tab="league" label="Start the draft, confirm" overlay={
         <Sheet top={380}>
           <span className="ks-title">Start the draft?</span>
-          <span className="ks-callout ks-muted">7 managers are in. The draft order is set at random when you start, and each pick gets 60 seconds.</span>
+          <span className="ks-callout ks-muted">7 managers are in. The draft order is set when you start, and each pick gets 60 seconds.</span>
           <ByeNotice members={7} weeks={10} />
           <span className="ks-btn">Start draft</span>
           <span className="ks-btn ks-btn--secondary">Not yet</span>
