@@ -67,6 +67,7 @@
           <Fit caption="Pick a username" note="Taken, with suggestions"><I.PickUsername /></Fit>
           <Fit caption="League sheet" note="Opened from the pill on any tab"><I.LeagueSheet /></Fit>
           <Fit caption="Profile" note="From the avatar on Home"><I.Profile /></Fit>
+          <Fit caption="Appearance" note="Profile › Appearance · System / Light / Dark"><I.Appearance /></Fit>
           <Fit caption="Change password" note="Its own screen"><I.ChangePassword /></Fit>
           <Fit caption="Home with no leagues"><I.EmptyHome /></Fit>
         </Group>
@@ -132,6 +133,7 @@
           <div className="b-inv__wide">
             <Fit w={1280} h={800} radius={12} caption="Home · 1280"><I.WebHome /></Fit>
             <Fit w={1280} h={800} radius={12} caption="Portfolio with the stock panel · 1280"><I.WebPortfolio /></Fit>
+            <Fit w={1280} h={800} radius={12} caption="Settings › Appearance · 1280"><I.WebSettings /></Fit>
           </div>
         </Group>
       </>

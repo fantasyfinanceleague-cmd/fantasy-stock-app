@@ -1,0 +1,114 @@
+/* One design, two themes (Giorgio, 2026-09-29). Supersedes the money/game
+   surface axis: every screen is entirely Light or entirely Dark; nothing
+   inverts inside a screen. Same semantic names, two values each. Scoreboards
+   get emphasis from type scale, motion and accent, not from a dark card.
+
+   Naming: --c-<role>. "*-text" variants are the text-safe (≥4.5:1) cut of a
+   colour whose fill value is too light or too loud for text. Contrast for
+   every pair is computed live on the board (the token table). */
+
+[data-ks-theme='light'] {
+  color-scheme: light;
+  --c-bg: #F3F5F8;
+  --c-surface: #FFFFFF;
+  --c-inset: #F0F3F7;
+  --c-sunken: #EBEFF4;
+  --c-line: #E3E8EF;
+  --c-border: #DDE3EA;
+  --c-border-strong: #76828F;
+  --c-text: #0D1B2E;
+  --c-text-2: #5B6678;
+  --c-text-3: #8A94A3;
+  --c-accent: #2860F0;
+  --c-accent-tint: #E8EEFF;
+  --c-accent-wash: rgba(40, 96, 240, 0.06);
+  --c-on-accent: #FFFFFF;
+  --c-you: #2860F0;
+  --c-you-text: #2860F0;
+  --c-you-tint: rgba(40, 96, 240, 0.08);
+  --c-opp: #E8541F;
+  --c-opp-text: #B93C0E;
+  --c-on-opp: #FFFFFF;
+  --c-live: #C07E00;
+  --c-live-text: #8A5B00;
+  --c-live-glow: rgba(192, 126, 0, 0.35);
+  --c-gain: #12803F;
+  --c-loss: #C8303A;
+  --c-zero: #5B6678;
+  --c-gain-tint: #E6F4EA;
+  --c-loss-tint: #FCE8E9;
+  --c-danger: #B42318;
+  --c-warn-tint: #FFF6DE;
+  --c-warn-line: #F5D48A;
+  --c-warn-text: #7A4B00;
+  --c-primary-bg: #0D1B2E;
+  --c-primary-fg: #FFFFFF;
+  --c-secondary-bg: #FFFFFF;
+  --c-secondary-fg: #0D1B2E;
+  --c-secondary-border: #76828F;
+  --c-inverse-bg: #0D1B2E;
+  --c-inverse-fg: #FFFFFF;
+  --c-track: #E3E8EF;
+  --c-shadow: 0 2px 8px rgba(13, 27, 46, 0.05);
+  --c-sheet-shadow: 0 8px 24px rgba(13, 27, 46, 0.12);
+  --c-scrim: rgba(13, 27, 46, 0.38);
+  --c-tabbar: rgba(255, 255, 255, 0.92);
+  --c-kbd-bg: #D1D4DB;
+  --c-kbd-key: #FFFFFF;
+  --c-kbd-key-2: #ABB0BA;
+  --c-chrome: #E4E8EE;
+  --c-chrome-dot: #C6CCD5;
+}
+
+[data-ks-theme='dark'] {
+  color-scheme: dark;
+  --c-bg: #0D1B2E;
+  --c-surface: #16263D;
+  --c-inset: #1E3250;
+  --c-sunken: #0A1524;
+  --c-line: #263A58;
+  --c-border: #263A58;
+  --c-border-strong: #8DA0BD;
+  --c-text: #F3F6FA;
+  --c-text-2: #9AAAC4;
+  --c-text-3: #6B7D99;
+  --c-accent: #7FA6FF;
+  --c-accent-tint: rgba(127, 166, 255, 0.16);
+  --c-accent-wash: rgba(127, 166, 255, 0.07);
+  --c-on-accent: #FFFFFF;
+  --c-you: #3D74FF;
+  --c-you-text: #8AB0FF;
+  --c-you-tint: rgba(61, 116, 255, 0.18);
+  --c-opp: #FF6A3D;
+  --c-opp-text: #FF8F66;
+  --c-on-opp: #0D1B2E;
+  --c-live: #FFC53D;
+  --c-live-text: #FFC53D;
+  --c-live-glow: rgba(255, 197, 61, 0.45);
+  --c-gain: #4ADE8B;
+  --c-loss: #FF7A7A;
+  --c-zero: #9AAAC4;
+  --c-gain-tint: rgba(74, 222, 139, 0.14);
+  --c-loss-tint: rgba(255, 122, 122, 0.14);
+  --c-danger: #FF8A80;
+  --c-warn-tint: rgba(255, 197, 61, 0.1);
+  --c-warn-line: rgba(255, 197, 61, 0.35);
+  --c-warn-text: #FFC53D;
+  --c-primary-bg: #FFFFFF;
+  --c-primary-fg: #0D1B2E;
+  --c-secondary-bg: transparent;
+  --c-secondary-fg: #F3F6FA;
+  --c-secondary-border: #8DA0BD;
+  --c-inverse-bg: #F3F6FA;
+  --c-inverse-fg: #0D1B2E;
+  --c-track: #263A58;
+  --c-shadow: none;
+  --c-sheet-shadow: 0 -8px 32px rgba(0, 0, 0, 0.45);
+  --c-scrim: rgba(0, 0, 0, 0.55);
+  --c-tabbar: rgba(13, 27, 46, 0.92);
+  --c-kbd-bg: #2A2B2F;
+  --c-kbd-key: #5A5B60;
+  --c-kbd-key-2: #414246;
+  --c-chrome: #0A1524;
+  --c-chrome-dot: #263A58;
+}

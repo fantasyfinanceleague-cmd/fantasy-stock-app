@@ -48,7 +48,7 @@
   const TABS = [['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['portfolio', 'Portfolio']];
   function Device({ game, tab, children, overlay, label, noTabs }) {
     return (
-      <div className={game ? 'ks-device ks-device--game' : 'ks-device'} role="img" aria-label={label}>
+      <div className="ks-device" role="img" aria-label={label}>
         <div className="ks-os">
           <span>1:37</span>
           <span className="ks-os__island" />
@@ -142,7 +142,7 @@
   /** Ticker tile: the full symbol, sized to fit (never a 2-letter guess). */
   function Logo({ t, game }) {
     const size = t.length <= 2 ? 13 : t.length === 3 ? 11 : 9.5;
-    const style = game ? { background: 'var(--sp-color-surface-game-raised)', color: 'var(--sp-color-text-on-game-primary)', fontSize: size } : { fontSize: size };
+    const style = game ? { background: 'var(--c-inset)', color: 'var(--c-text)', fontSize: size } : { fontSize: size };
     return <span className="ks-logo" style={style}>{t}</span>;
   }
 
@@ -174,27 +174,27 @@
           <clipPath id={`${id}a`}><rect x="0" y="0" width={w} height={z} /></clipPath>
           <clipPath id={`${id}b`}><rect x="0" y={z} width={w} height={h - z} /></clipPath>
         </defs>
-        <path d={area} fill="var(--sp-color-data-gain-base)" opacity=".1" clipPath={`url(#${id}a)`} />
-        <path d={area} fill="var(--sp-color-data-loss-base)" opacity=".1" clipPath={`url(#${id}b)`} />
-        <line x1="0" x2={w} y1={z} y2={z} stroke="var(--sp-color-border-control)" strokeDasharray="3 4" strokeWidth="1" />
+        <path d={area} fill="var(--c-gain)" opacity=".1" clipPath={`url(#${id}a)`} />
+        <path d={area} fill="var(--c-loss)" opacity=".1" clipPath={`url(#${id}b)`} />
+        <line x1="0" x2={w} y1={z} y2={z} stroke="var(--c-border-strong)" strokeDasharray="3 4" strokeWidth="1" />
         <g className={run ? 'ks-draw ks-draw--run' : 'ks-draw'} style={{ '--len': 1 }} key={run ? 'r' : 's'}>
-          <path d={d} pathLength="1" className="ks-chart__line" stroke="var(--sp-color-data-gain-base)" clipPath={`url(#${id}a)`} strokeDasharray="1" />
-          <path d={d} pathLength="1" className="ks-chart__line" stroke="var(--sp-color-data-loss-base)" clipPath={`url(#${id}b)`} strokeDasharray="1" />
+          <path d={d} pathLength="1" className="ks-chart__line" stroke="var(--c-gain)" clipPath={`url(#${id}a)`} strokeDasharray="1" />
+          <path d={d} pathLength="1" className="ks-chart__line" stroke="var(--c-loss)" clipPath={`url(#${id}b)`} strokeDasharray="1" />
         </g>
-        <circle cx={x(series.length - 1)} cy={y(end)} r="4" fill="var(--sp-color-data-gain-base)" stroke="#fff" strokeWidth="2" />
+        <circle cx={x(series.length - 1)} cy={y(end)} r="4" fill="var(--c-gain)" stroke="var(--c-surface)" strokeWidth="2" />
         {marker != null ? (
           <g>
-            <line x1={x(marker)} x2={x(marker)} y1={z - 5} y2={z + 5} stroke="var(--sp-color-text-secondary)" strokeWidth="1.5" />
-            <text x={x(marker)} y={h - 4} textAnchor="middle" fontSize="11" fontWeight="600" fill="var(--sp-color-text-secondary)">Joined Friday Night Stocks</text>
+            <line x1={x(marker)} x2={x(marker)} y1={z - 5} y2={z + 5} stroke="var(--c-text-2)" strokeWidth="1.5" />
+            <text x={x(marker)} y={h - 4} textAnchor="middle" fontSize="11" fontWeight="600" fill="var(--c-text-2)">Joined Friday Night Stocks</text>
           </g>
         ) : null}
         {weeks ? weeks.map((ix, k) => (
           <g key={k}>
-            <line x1={x(ix)} x2={x(ix)} y1={h - 20} y2={h - 16} stroke="var(--sp-color-border-control)" strokeWidth="1" />
-            <text x={Math.min(x(ix) + 2, w - 18)} y={h - 4} fontSize="11" fontWeight="600" fill="var(--sp-color-text-secondary)">W{k + 1}</text>
+            <line x1={x(ix)} x2={x(ix)} y1={h - 20} y2={h - 16} stroke="var(--c-border-strong)" strokeWidth="1" />
+            <text x={Math.min(x(ix) + 2, w - 18)} y={h - 4} fontSize="11" fontWeight="600" fill="var(--c-text-2)">W{k + 1}</text>
           </g>
         )) : null}
-        <text x="2" y={z - 6} fontSize="11" fontWeight="600" fill="var(--sp-color-text-secondary)">$0</text>
+        <text x="2" y={z - 6} fontSize="11" fontWeight="600" fill="var(--c-text-2)">$0</text>
       </svg>
     );
   }
@@ -212,13 +212,13 @@
     const last = pts[pts.length - 1];
     return (
       <svg viewBox={`0 0 ${w} ${h}`} width="100%" height={h} role="img" aria-label="Week 6 race: cumulative dollar gain by day">
-        <line x1="8" x2={w - 8} y1={Y(0)} y2={Y(0)} stroke="var(--sp-color-surface-game-line)" strokeDasharray="3 4" />
-        <path d={line('opp')} fill="none" stroke="var(--sp-color-team-opponent)" strokeWidth="2.25" strokeLinejoin="round" />
-        <path d={line('you')} fill="none" stroke="var(--sp-color-team-you-on-game)" strokeWidth="2.5" strokeLinejoin="round" />
-        <circle cx={X(last.x)} cy={Y(last.opp)} r="3.5" fill="var(--sp-color-team-opponent)" />
-        <circle cx={X(last.x)} cy={Y(last.you)} r="4" fill="var(--sp-color-team-you-on-game)" />
+        <line x1="8" x2={w - 8} y1={Y(0)} y2={Y(0)} stroke="var(--c-line)" strokeDasharray="3 4" />
+        <path d={line('opp')} fill="none" stroke="var(--c-opp)" strokeWidth="2.25" strokeLinejoin="round" />
+        <path d={line('you')} fill="none" stroke="var(--c-you-text)" strokeWidth="2.5" strokeLinejoin="round" />
+        <circle cx={X(last.x)} cy={Y(last.opp)} r="3.5" fill="var(--c-opp)" />
+        <circle cx={X(last.x)} cy={Y(last.you)} r="4" fill="var(--c-you-text)" />
         {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((d, i) => (
-          <text key={d} x={X(i + 1)} y={h - 4} textAnchor="middle" fontSize="12" fontWeight="600" fill="var(--sp-color-text-on-game-secondary)">{d}</text>
+          <text key={d} x={X(i + 1)} y={h - 4} textAnchor="middle" fontSize="12" fontWeight="600" fill="var(--c-text-2)">{d}</text>
         ))}
       </svg>
     );
@@ -233,17 +233,17 @@
     return (
       <div className="ks-game" style={{ padding: 16, display: 'grid', gap: 10 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span className="ks-tag" style={{ color: 'var(--sp-color-live)' }}>This week</span>
+          <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>This week</span>
           <Chip kind="live">Week {K.LEAGUE.week} · Live</Chip>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between' }} className="ks-callout">
-          <span style={{ color: 'var(--sp-color-team-you-on-game)', fontWeight: 700 }}>You</span>
+          <span style={{ color: 'var(--c-you-text)', fontWeight: 700 }}>You</span>
           <span className="ks-muted">{oppName}</span>
         </div>
         <Scores left={y.primary} right={o.primary} size="lg" />
         <Tug you={y.value} opp={o.value} />
         <div style={{ display: 'flex', justifyContent: 'space-between' }} className="ks-caption">
-          <span style={{ color: 'var(--sp-color-text-on-game-primary)' }}>{ahead ? 'You lead by' : 'You trail by'} <b className="ks-num">{margin(you, opp)}</b></span>
+          <span style={{ color: 'var(--c-text)' }}>{ahead ? 'You lead by' : 'You trail by'} <b className="ks-num">{margin(you, opp)}</b></span>
           <span className="ks-muted">{left}</span>
         </div>
       </div>
@@ -265,7 +265,7 @@
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
               <span className="ks-caption">Your team</span>
-              <span className="ks-caption ks-num"><b style={{ color: 'var(--sp-color-text-primary)' }}>2nd</b> of 6 · {H.record} · Week {K.LEAGUE.week} of {K.LEAGUE.weeks}</span>
+              <span className="ks-caption ks-num"><b style={{ color: 'var(--c-text)' }}>2nd</b> of 6 · {H.record} · Week {K.LEAGUE.week} of {K.LEAGUE.weeks}</span>
             </div>
             <div className="ks-score ks-num" style={{ fontSize: 48, lineHeight: '50px', fontStretch: '75%' }}>{$(H.value)}</div>
             <div className="ks-callout ks-num" style={{ fontWeight: 700 }}>
@@ -283,7 +283,7 @@
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4, padding: '6px 0 8px' }}>
               {H.weekResults.map((w) => (
                 <span key={w.week} className="ks-chip ks-chip--money ks-num" style={{ textTransform: 'none', letterSpacing: 0, fontStretch: '100%', fontSize: 12, height: 26, padding: 0, justifyContent: 'center' }}>
-                  <b style={{ color: w.result === 'W' ? 'var(--sp-color-data-gain-base)' : 'var(--sp-color-data-loss-base)' }}>{w.result}</b>&nbsp;W{w.week}
+                  <b style={{ color: w.result === 'W' ? 'var(--c-gain)' : 'var(--c-loss)' }}>{w.result}</b>&nbsp;W{w.week}
                 </span>
               ))}
               <span className="ks-chip" style={{ height: 26, padding: 0, justifyContent: 'center', gap: 4 }}><span className="ks-dot" />W6</span>
@@ -294,7 +294,7 @@
             <div className="ks-section-h"><h3>Standings</h3><span className="ks-caption">Through Week 5</span></div>
             <ul className="ks-rows">
               {near.map((r) => (
-                <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '18px 1fr auto auto', padding: '9px 0', background: r.you ? 'rgba(40, 96, 240, .07)' : undefined }}>
+                <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '18px 1fr auto auto', padding: '9px 0', background: r.you ? 'var(--c-you-tint)' : undefined }}>
                   <span className="ks-t ks-num">{r.rank}</span>
                   <span className="ks-callout" style={{ fontWeight: 700 }}>{r.name}{r.you ? <span className="ks-muted" style={{ fontWeight: 500 }}> (you)</span> : null}</span>
                   <span className="ks-callout ks-num ks-muted">{r.w}–{r.l}</span>
@@ -408,7 +408,7 @@
           <div className="ks-game" style={{ overflow: 'hidden' }}>
             <div style={{ padding: '14px 14px 8px', display: 'grid', gap: 10 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span className="ks-tag" style={{ color: 'var(--sp-color-live)' }}>Week 6 of 14</span>
+                <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Week 6 of 14</span>
                 <span className="ks-caption ks-muted">{after ? 'Records updated · Fri close' : 'Through Week 5'}</span>
               </div>
               {after ? <div className="ks-chyron ks-chyron--in"><span>Roberto B. takes 1st on season gain</span></div> : null}
@@ -514,14 +514,14 @@
     return (
       <div>
         <div className="ks-board__cols" style={{ marginBottom: 6 }}>
-          {seats.map((p) => <span key={p.id} className="ks-tag" style={p.you ? { color: 'var(--sp-color-team-you-on-game)' } : undefined}>{p.init}</span>)}
+          {seats.map((p) => <span key={p.id} className="ks-tag" style={p.you ? { color: 'var(--c-you-text)' } : undefined}>{p.init}</span>)}
         </div>
         <div className="ks-board" ref={ref} style={{ display: 'grid', rowGap: 18 }}>
           <svg className="ks-board__track" width="100%" height="100%" aria-hidden="true">
-            <path d={path(18)} fill="none" stroke="var(--sp-color-surface-game-line)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-            <path d={path(reach)} fill="none" stroke="var(--sp-color-team-you-base)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'all var(--sp-motion-duration-slow) var(--sp-motion-ease-settle)' }} />
+            <path d={path(18)} fill="none" stroke="var(--c-line)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+            <path d={path(reach)} fill="none" stroke="var(--c-you)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'all var(--sp-motion-duration-slow) var(--sp-motion-ease-settle)' }} />
             {chevrons.map((c) => (
-              <path key={c.n} d={`M${c.x - 2 * c.dir},${c.y - 4} L${c.x + 2 * c.dir},${c.y} L${c.x - 2 * c.dir},${c.y + 4}`} fill="none" stroke={c.n <= reach ? '#fff' : 'var(--sp-color-text-on-game-secondary)'} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+              <path key={c.n} d={`M${c.x - 2 * c.dir},${c.y - 4} L${c.x + 2 * c.dir},${c.y} L${c.x - 2 * c.dir},${c.y + 4}`} fill="none" stroke={c.n <= reach ? 'var(--c-on-accent)' : 'var(--c-text-2)'} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
             ))}
           </svg>
           {rows.map((row, ri) => (
@@ -561,8 +561,8 @@
           <div className="ks-raised" style={{ padding: 14, display: 'flex', gap: 14, alignItems: 'center' }}>
             <div className="ks-ring">
               <svg width="84" height="84" viewBox="0 0 84 84">
-                <circle cx="42" cy="42" r={R} fill="none" stroke="var(--sp-color-surface-game-line)" strokeWidth="6" />
-                <circle cx="42" cy="42" r={R} fill="none" stroke={landed ? 'var(--sp-color-text-on-game-secondary)' : 'var(--sp-color-live)'} strokeWidth="6" strokeLinecap="round" strokeDasharray={C} strokeDashoffset={C * (1 - frac)} style={{ transition: 'stroke-dashoffset 1s linear' }} />
+                <circle cx="42" cy="42" r={R} fill="none" stroke="var(--c-line)" strokeWidth="6" />
+                <circle cx="42" cy="42" r={R} fill="none" stroke={landed ? 'var(--c-text-2)' : 'var(--c-live)'} strokeWidth="6" strokeLinecap="round" strokeDasharray={C} strokeDashoffset={C * (1 - frac)} style={{ transition: 'stroke-dashoffset 1s linear' }} />
               </svg>
               <span className="ks-ring__t">{`${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`}</span>
             </div>
@@ -571,11 +571,11 @@
                 <>
                   <span className="ks-title">Paolo M. is up</span>
                   <span className="ks-callout ks-muted">Round 2 · Pick 12, then 13</span>
-                  <span className="ks-caption" style={{ color: 'var(--sp-color-team-you-on-game)' }}>You took AAPL · next pick 14</span>
+                  <span className="ks-caption" style={{ color: 'var(--c-you-text)' }}>You took AAPL · next pick 14</span>
                 </>
               ) : (
                 <>
-                  <span className="ks-title" style={{ color: 'var(--sp-color-live)' }}>You're on the clock</span>
+                  <span className="ks-title" style={{ color: 'var(--c-live-text)' }}>You're on the clock</span>
                   <span className="ks-callout">Round 2 · Pick 11</span>
                   <span className="ks-caption ks-muted">Then Paolo M. picks twice (12, 13)</span>
                   <span className="ks-caption ks-muted">{D.secondsTotal}-second picks · set by the commissioner</span>
@@ -639,7 +639,7 @@
         <div className="ks-pad ks-stack">
           <div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4, marginBottom: 14 }}>
-              {[1, 2, 3, 4].map((i) => <span key={i} style={{ height: 4, borderRadius: 2, background: i <= 3 ? 'var(--sp-color-brand)' : 'var(--sp-color-border-default)' }} />)}
+              {[1, 2, 3, 4].map((i) => <span key={i} style={{ height: 4, borderRadius: 2, background: i <= 3 ? 'var(--c-accent)' : 'var(--c-border)' }} />)}
             </div>
             <h2 className="ks-head__title" style={{ fontSize: 28 }}>Draft</h2>
             <p className="ks-callout ks-muted" style={{ margin: '4px 0 0' }}>A live snake draft. Everyone picks in turn, and the order reverses each round.</p>
@@ -696,13 +696,13 @@
               <div className="ks-callout ks-gain ks-num" style={{ fontWeight: 700 }}>{$s(perShare)} · {pct(N.todayPct)} <span className="ks-muted" style={{ fontWeight: 500 }}>today</span></div>
             </div>
             <svg viewBox={`0 0 ${w} ${h}`} width="100%" height={h} role="img" aria-label="NVDA today">
-              <line x1="0" x2={w} y1={Y(N.prev)} y2={Y(N.prev)} stroke="var(--sp-color-border-control)" strokeDasharray="3 4" />
-              <text x="0" y={Y(N.prev) + 14} fontSize="11" fontWeight="600" fill="var(--sp-color-text-secondary)">Prev close {$(N.prev)}</text>
-              <path d={d} fill="none" stroke="var(--sp-color-data-gain-base)" strokeWidth="2.25" strokeLinejoin="round" />
-              <circle cx={X(pts.length - 1)} cy={Y(pts[pts.length - 1])} r="4" fill="var(--sp-color-data-gain-base)" stroke="#fff" strokeWidth="2" />
+              <line x1="0" x2={w} y1={Y(N.prev)} y2={Y(N.prev)} stroke="var(--c-border-strong)" strokeDasharray="3 4" />
+              <text x="0" y={Y(N.prev) + 14} fontSize="11" fontWeight="600" fill="var(--c-text-2)">Prev close {$(N.prev)}</text>
+              <path d={d} fill="none" stroke="var(--c-gain)" strokeWidth="2.25" strokeLinejoin="round" />
+              <circle cx={X(pts.length - 1)} cy={Y(pts[pts.length - 1])} r="4" fill="var(--c-gain)" stroke="var(--c-surface)" strokeWidth="2" />
             </svg>
             <div className="ks-seg">{N.range.map((r, i) => <span key={r} className={i === 0 ? 'on' : undefined}>{r}</span>)}</div>
-            <div className="ks-card" style={{ padding: 14, boxShadow: 'none', background: 'var(--sp-color-surface-money-sunken)', border: 0 }}>
+            <div className="ks-card" style={{ padding: 14, boxShadow: 'none', background: 'var(--c-sunken)', border: 0 }}>
               <div className="ks-section-h"><h3>Your position</h3><span className="ks-caption">{N.ownership}</span></div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', rowGap: 10 }} className="ks-num">
                 <span><span className="ks-caption">Shares</span><br /><b>{N.qty.toFixed(4)}</b></span>
@@ -740,7 +740,7 @@
               <div className="ks-callout ks-gain ks-num" style={{ fontWeight: 700 }}>{pct(B.todayPct)} <span className="ks-muted" style={{ fontWeight: 500 }}>today · No one in {K.LEAGUE.name} owns {B.t}</span></div>
             </div>
             <div className="ks-seg" style={{ height: 40 }}><span className="on">Buy</span><span>Sell</span></div>
-            <div className="ks-card" style={{ padding: 14, boxShadow: 'none', background: 'var(--sp-color-surface-money-sunken)', border: 0, display: 'grid', gap: 4 }}>
+            <div className="ks-card" style={{ padding: 14, boxShadow: 'none', background: 'var(--c-sunken)', border: 0, display: 'grid', gap: 4 }}>
               <span className="ks-headline" style={{ fontWeight: 700 }}>You have {$(S.proceeds)} from selling {S.sold} to invest</span>
               <span className="ks-caption">Your slot's buying power is what the sale brought in, not a fresh {$(K.LEAGUE.notionalPerSlot)}.</span>
             </div>
@@ -795,7 +795,7 @@
             <div className="ks-card" style={{ padding: '2px 14px' }}>
               <ul className="ks-rows">
                 {rows.map((r) => (
-                  <li key={r.t} className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto', background: sheet && r.t === 'NVDA' ? 'var(--sp-color-surface-money-sunken)' : undefined }}>
+                  <li key={r.t} className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto', background: sheet && r.t === 'NVDA' ? 'var(--c-sunken)' : undefined }}>
                     <Logo t={r.t} />
                     <span><span className="ks-t">{r.t}</span><br /><span className="ks-caption ks-num">{r.co} · {r.qty.toFixed(2)} sh</span></span>
                     <span className="ks-right ks-num"><b>{$(r.value)}</b><br /><span className={`ks-caption ${tone(r.todayPct)}`} style={{ fontWeight: 700 }}>{pct(r.todayPct)}</span></span>
@@ -803,9 +803,9 @@
                 ))}
                 {cash ? (
                   <li className="ks-row ks-fade-in" style={{ gridTemplateColumns: '36px 1fr auto' }}>
-                    <span className="ks-logo" style={{ background: '#E6F4EA', color: 'var(--sp-color-data-gain-base)', fontSize: 16 }}>$</span>
+                    <span className="ks-logo" style={{ background: 'var(--c-gain-tint)', color: 'var(--c-gain)', fontSize: 16 }}>$</span>
                     <span><span className="ks-t">Cash</span><br /><span className="ks-caption">From selling {S.sold} · ready to invest</span></span>
-                    <span className="ks-right ks-num"><b>{$(S.proceeds)}</b><br /><span className="ks-caption" style={{ color: 'var(--sp-color-brand)', fontWeight: 700 }}>Invest ›</span></span>
+                    <span className="ks-right ks-num"><b>{$(S.proceeds)}</b><br /><span className="ks-caption" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Invest ›</span></span>
                   </li>
                 ) : null}
               </ul>

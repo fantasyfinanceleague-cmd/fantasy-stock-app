@@ -10,6 +10,7 @@ the landing disagree, this folder wins until Giorgio changes it.
 | `data.js` | Canonical sample data. One league (Stock Scudetto, Week 6 of 14), one moment (Thu 1:37 PM ET), one week of closes. Every displayed number is derived from share quantities and prices, so the screens reconcile by construction. |
 | `screens.jsx` | `HomeScreen`, `MatchupScreen` (live/final), `LeagueScreen` (before/after the re-sort), `DraftScreen` (on the clock / after the pick), `PortfolioScreen` (+ the stock sheet). |
 | `screens.css` | Component styles, `ks-` prefix, only `--sp-*` token values. |
+| `themes.css` | The two themes (Light / Dark) as semantic `--c-*` tokens, one value per theme (DESIGN_DIRECTION §9A). Every screen reads only these. |
 | `tokens.css` | A copy of `apps/web/src/styles/tokens.css`. |
 | `inventory.jsx` | Step 2: every other screen (3b-1 sign in and first run, 3b-2 Home in every phase, 3c game, 3e trading, 3d web) built from the same blocks (`window.KSKit`). |
 | `inventory-board.jsx` | Board part 2, grouped by the phase that builds each screen. |

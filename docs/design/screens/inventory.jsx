@@ -48,7 +48,7 @@
   );
   const Brand = () => (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 800, fontSize: 20 }}>
-      <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="13" width="4.5" height="8" rx="1" fill="#5B6678" /><rect x="9.75" y="9" width="4.5" height="12" rx="1" fill="#5B6678" /><rect x="16.5" y="4" width="4.5" height="17" rx="1" fill="#2860F0" /></svg>
+      <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="13" width="4.5" height="8" rx="1" fill="var(--c-text-2)" /><rect x="9.75" y="9" width="4.5" height="12" rx="1" fill="var(--c-text-2)" /><rect x="16.5" y="4" width="4.5" height="17" rx="1" fill="var(--c-you)" /></svg>
       {BRAND}
     </div>
   );
@@ -62,7 +62,7 @@
   );
   const Empty = ({ icon, title, line, primary, secondary }) => (
     <div className="ks-card" style={{ padding: '28px 20px', display: 'grid', justifyItems: 'center', gap: 10, textAlign: 'center' }}>
-      <span style={{ width: 64, height: 64, borderRadius: 32, display: 'grid', placeItems: 'center', background: 'var(--sp-color-surface-money-sunken)', color: 'var(--sp-color-text-secondary)' }}><Icon d={icon} size={28} /></span>
+      <span style={{ width: 64, height: 64, borderRadius: 32, display: 'grid', placeItems: 'center', background: 'var(--c-sunken)', color: 'var(--c-text-2)' }}><Icon d={icon} size={28} /></span>
       <span className="ks-title" style={{ fontSize: 20 }}>{title}</span>
       <span className="ks-callout ks-muted">{line}</span>
       {primary ? <span className="ks-btn" style={{ width: '100%', marginTop: 6 }}>{primary}</span> : null}
@@ -71,7 +71,7 @@
   );
   const Row = ({ k, v, sub, danger, chevron = true }) => (
     <li className="ks-row" style={{ gridTemplateColumns: '1fr auto 16px', padding: '13px 0' }}>
-      <span><span className="ks-callout" style={{ fontWeight: 600, color: danger ? 'var(--sp-color-status-danger)' : undefined }}>{k}</span>{sub ? <><br /><span className="ks-caption">{sub}</span></> : null}</span>
+      <span><span className="ks-callout" style={{ fontWeight: 600, color: danger ? 'var(--c-danger)' : undefined }}>{k}</span>{sub ? <><br /><span className="ks-caption">{sub}</span></> : null}</span>
       <span className="ks-callout ks-muted ks-num">{v}</span>
       <span className="ks-muted">{chevron ? <Icon d={ICON.right} size={16} /> : null}</span>
     </li>
@@ -105,9 +105,9 @@
           </div>
           <Field label="Email address" value="roberto@example.com" />
           <Field label="Password" value="hunter2hunter" secure focused />
-          <span className="ks-callout" style={{ color: 'var(--sp-color-brand)', fontWeight: 600, justifySelf: 'end' }}>Forgot password?</span>
+          <span className="ks-callout" style={{ color: 'var(--c-accent)', fontWeight: 600, justifySelf: 'end' }}>Forgot password?</span>
           <span className="ks-btn">Sign in</span>
-          <span className="ks-callout ks-muted" style={{ textAlign: 'center' }}>New here? <b style={{ color: 'var(--sp-color-brand)' }}>Create an account</b></span>
+          <span className="ks-callout ks-muted" style={{ textAlign: 'center' }}>New here? <b style={{ color: 'var(--c-accent)' }}>Create an account</b></span>
         </div>
       </Device>
     );
@@ -166,7 +166,7 @@
       <Device noTabs game label={`Onboarding card ${card + 1}`}>
         <div className="ks-head"><span /><span className="ks-callout ks-muted">Skip</span></div>
         <div className="ks-pad" style={{ display: 'grid', gap: 26, paddingTop: 20 }} key={card}>
-          <div className="ks-fade-in" style={{ height: 340, borderRadius: 20, background: 'var(--sp-color-surface-game-raised)', display: 'grid', placeItems: 'center', padding: 20 }}>
+          <div className="ks-fade-in" style={{ height: 340, borderRadius: 20, background: 'var(--c-inset)', display: 'grid', placeItems: 'center', padding: 20 }}>
             {c.art === 'field' ? (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, width: '100%' }}>
                 {['NVDA', 'AAPL', 'CRM', 'TSLA', 'COST', 'V'].map((t, i) => <span key={t} className="ks-cell" style={{ height: 70 }}><span className="ks-cell__n">Rd {i + 1}</span><span className="ks-cell__t">{t}</span></span>)}
@@ -187,7 +187,7 @@
           </div>
           <h2 className="ks-score" style={{ fontSize: 44, lineHeight: '44px', margin: 0, wordSpacing: '0.12em', whiteSpace: 'normal', textWrap: 'balance' }}>{c.t}</h2>
           <div style={{ display: 'flex', gap: 6 }}>
-            {ONBOARD.map((_, i) => <span key={i} style={{ height: 6, width: i === card ? 22 : 6, borderRadius: 3, background: i === card ? '#fff' : 'var(--sp-color-surface-game-line)', transition: 'width var(--sp-motion-duration-quick) var(--sp-motion-ease-settle)' }} />)}
+            {ONBOARD.map((_, i) => <span key={i} style={{ height: 6, width: i === card ? 22 : 6, borderRadius: 3, background: i === card ? 'var(--c-text)' : 'var(--c-line)', transition: 'width var(--sp-motion-duration-quick) var(--sp-motion-ease-settle)' }} />)}
           </div>
           <span className="ks-btn ks-btn--ongame">{card === 2 ? 'Get started' : 'Next'}</span>
         </div>
@@ -198,7 +198,7 @@
   function GetStarted() {
     const Choice = ({ icon, t, d }) => (
       <div className="ks-card" style={{ padding: 18, display: 'grid', gridTemplateColumns: '48px 1fr 16px', gap: 14, alignItems: 'center' }}>
-        <span style={{ width: 48, height: 48, borderRadius: 14, display: 'grid', placeItems: 'center', background: '#E8EEFF', color: 'var(--sp-color-brand)' }}><Icon d={icon} size={24} /></span>
+        <span style={{ width: 48, height: 48, borderRadius: 14, display: 'grid', placeItems: 'center', background: 'var(--c-accent-tint)', color: 'var(--c-accent)' }}><Icon d={icon} size={24} /></span>
         <span><span className="ks-headline" style={{ fontWeight: 700 }}>{t}</span><br /><span className="ks-callout ks-muted">{d}</span></span>
         <span className="ks-muted"><Icon d={ICON.right} size={18} /></span>
       </div>
@@ -228,7 +228,7 @@
           <div>
             <div className="ks-caption" style={{ marginBottom: 6 }}>Available</div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {['roberto_b', 'roberto26', 'rob_bianchi'].map((s) => <span key={s} className="ks-chip ks-chip--money" style={{ height: 32, padding: '0 14px', fontSize: 14, textTransform: 'none', fontStretch: '100%', letterSpacing: 0, color: 'var(--sp-color-text-primary)' }}>{s}</span>)}
+              {['roberto_b', 'roberto26', 'rob_bianchi'].map((s) => <span key={s} className="ks-chip ks-chip--money" style={{ height: 32, padding: '0 14px', fontSize: 14, textTransform: 'none', fontStretch: '100%', letterSpacing: 0, color: 'var(--c-text)' }}>{s}</span>)}
             </div>
           </div>
           <span className="ks-btn" style={{ opacity: 0.4 }}>Continue</span>
@@ -250,22 +250,22 @@
         <Sheet top={210}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span className="ks-title">Your leagues</span><span className="ks-muted"><Icon d={ICON.close} size={22} /></span></div>
           <div>
-            <div className="ks-tag" style={{ color: 'var(--sp-color-text-secondary)' }}>Live this week</div>
+            <div className="ks-tag" style={{ color: 'var(--c-text-2)' }}>Live this week</div>
             <ul className="ks-rows">
               <li className="ks-row" style={{ gridTemplateColumns: '1fr auto 20px', padding: '12px 0' }}>
                 <span><span className="ks-t">{K.LEAGUE.name}</span><br /><span className="ks-caption ks-num">2nd of 6 · 4–1</span></span>
                 <Chip kind="live">Week 6</Chip>
-                <span style={{ color: 'var(--sp-color-brand)' }}><Icon d={CHECK} size={18} width={2.6} /></span>
+                <span style={{ color: 'var(--c-accent)' }}><Icon d={CHECK} size={18} width={2.6} /></span>
               </li>
               <Lg n="Friday Night Stocks" meta="3rd of 8 · 1–0" chip="Week 2" live />
             </ul>
           </div>
           <div>
-            <div className="ks-tag" style={{ color: 'var(--sp-color-text-secondary)' }}>Upcoming</div>
+            <div className="ks-tag" style={{ color: 'var(--c-text-2)' }}>Upcoming</div>
             <ul className="ks-rows"><Lg n="Serie A Traders" meta="6 of 8 joined" chip="Draft Sat 7:00 PM" /></ul>
           </div>
           <div>
-            <div className="ks-tag" style={{ color: 'var(--sp-color-text-secondary)' }}>Finished</div>
+            <div className="ks-tag" style={{ color: 'var(--c-text-2)' }}>Finished</div>
             <ul className="ks-rows"><Lg n="Summer Cup" meta="Champion · 1st of 8 · 10–4" chip="Final" /></ul>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -294,6 +294,7 @@
               <Row k="Username" v="roberto_b" />
               <Row k="Email" v="roberto@example.com" chevron={false} />
               <Row k="Change password" v="" />
+              <Row k="Appearance" v="System" />
             </ul>
           </Card>
           <Card>
@@ -302,6 +303,52 @@
             </ul>
           </Card>
           <span className="ks-caption" style={{ textAlign: 'center' }}>{BRAND} 1.1.0</span>
+        </div>
+      </Device>
+    );
+  }
+
+  /** Appearance: one design in two complete themes. System follows the
+   * phone; stored on the device. The option previews are the only place
+   * both themes appear together. */
+  const THEMES = [['system', 'System', 'Matches your phone'], ['light', 'Light', ''], ['dark', 'Dark', '']];
+  function Swatch({ kind }) {
+    const L = { bg: '#F3F5F8', card: '#FFFFFF', ink: '#0D1B2E', line: '#DDE3EA' };
+    const D = { bg: '#0D1B2E', card: '#16263D', ink: '#F3F6FA', line: '#263A58' };
+    const half = (t, clip) => (
+      <g clipPath={clip}>
+        <rect width="72" height="96" rx="10" fill={t.bg} />
+        <rect x="8" y="12" width="40" height="7" rx="3.5" fill={t.ink} />
+        <rect x="8" y="26" width="56" height="30" rx="6" fill={t.card} stroke={t.line} />
+        <rect x="14" y="34" width="26" height="9" rx="3" fill={t.ink} />
+        <rect x="14" y="47" width="44" height="3" rx="1.5" fill="#2860F0" />
+        <rect x="8" y="62" width="56" height="10" rx="5" fill={t.card} stroke={t.line} />
+      </g>
+    );
+    return (
+      <svg width="72" height="96" viewBox="0 0 72 96" aria-hidden="true">
+        <defs><clipPath id="sw-l"><rect width="36" height="96" /></clipPath><clipPath id="sw-r"><rect x="36" width="36" height="96" /></clipPath></defs>
+        {kind === 'system' ? <>{half(L, 'url(#sw-l)')}{half(D, 'url(#sw-r)')}</> : half(kind === 'light' ? L : D)}
+        <rect x=".5" y=".5" width="71" height="95" rx="10" fill="none" stroke="var(--c-border)" />
+      </svg>
+    );
+  }
+  function Appearance({ selected = 'system' }) {
+    return (
+      <Device noTabs label="Appearance">
+        <Back label="Profile" />
+        <div className="ks-pad ks-stack">
+          <h2 className="ks-head__title" style={{ fontSize: 28 }}>Appearance</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+            {THEMES.map(([id, name, sub]) => (
+              <div key={id} className="ks-card" style={{ padding: '14px 8px', display: 'grid', justifyItems: 'center', gap: 8, boxShadow: id === selected ? '0 0 0 2px var(--c-accent)' : 'var(--c-shadow)' }}>
+                <Swatch kind={id} />
+                <b className="ks-callout">{name}</b>
+                <span style={{ width: 20, height: 20, borderRadius: 10, boxSizing: 'border-box', display: 'block', border: id === selected ? '6px solid var(--c-accent)' : '2px solid var(--c-border-strong)' }} />
+              </div>
+            ))}
+          </div>
+          <span className="ks-callout ks-muted">System follows your phone's light or dark setting. Saved on this device.</span>
         </div>
       </Device>
     );
@@ -339,7 +386,7 @@
   const GameCard = ({ tag, chip, children }) => (
     <div className="ks-game" style={{ padding: 16, display: 'grid', gap: 12 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span className="ks-tag" style={{ color: 'var(--sp-color-live)' }}>{tag}</span>{chip}
+        <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>{tag}</span>{chip}
       </div>
       {children}
     </div>
@@ -366,10 +413,10 @@
           </GameCard>
           <Card pad="14px">
             <div className="ks-section-h"><h3>Members</h3><span className="ks-caption ks-num">6 of 8 joined</span></div>
-            <div style={{ display: 'flex', gap: 6 }}>{members.map((m, i) => <span key={m} className={i === 0 ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{m}</span>)}<span className="ks-avatar ks-avatar--sm" style={{ background: 'transparent', border: '1.5px dashed var(--sp-color-border-control)', color: 'var(--sp-color-text-secondary)' }}>+2</span></div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, padding: '10px 12px', borderRadius: 10, background: 'var(--sp-color-surface-money-sunken)' }}>
+            <div style={{ display: 'flex', gap: 6 }}>{members.map((m, i) => <span key={m} className={i === 0 ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{m}</span>)}<span className="ks-avatar ks-avatar--sm" style={{ background: 'transparent', border: '1.5px dashed var(--c-border-strong)', color: 'var(--c-text-2)' }}>+2</span></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, padding: '10px 12px', borderRadius: 10, background: 'var(--c-sunken)' }}>
               <span><span className="ks-caption">Invite code</span><br /><b className="ks-num" style={{ letterSpacing: '0.12em' }}>SERIEA7</b></span>
-              <span className="ks-callout" style={{ color: 'var(--sp-color-brand)', fontWeight: 700 }}>Share</span>
+              <span className="ks-callout" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Share</span>
             </div>
           </Card>
           <Card pad="14px"><span className="ks-callout ks-muted">No buying before the draft. Your team is set at the draft.</span></Card>
@@ -384,14 +431,14 @@
         <Head avatar />
         <div className="ks-pad ks-stack">
           <GameCard tag="Draft is live" chip={<Chip kind="live">Drafting</Chip>}>
-            <span className="ks-title" style={{ color: 'var(--sp-color-live)' }}>You're on the clock</span>
+            <span className="ks-title" style={{ color: 'var(--c-live-text)' }}>You're on the clock</span>
             <span className="ks-callout">Round 2 · Pick 11 · 0:42 left</span>
             <span className="ks-btn ks-btn--ongame">Go to the draft room</span>
           </GameCard>
           <Card pad="14px">
             <div className="ks-section-h"><h3>Your team so far</h3><span className="ks-caption">1 of 6</span></div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-              {['NVDA', null, null, null, null, null].map((t, i) => <span key={i} className="ks-slot" style={t ? { background: 'var(--sp-color-brand)', color: '#fff', border: 0 } : { borderColor: 'var(--sp-color-border-default)', color: 'var(--sp-color-text-secondary)' }}>{t || `Rd ${i + 1}`}</span>)}
+              {['NVDA', null, null, null, null, null].map((t, i) => <span key={i} className="ks-slot" style={t ? { background: 'var(--c-you)', color: 'var(--c-on-accent)', border: 0 } : { borderColor: 'var(--c-border)', color: 'var(--c-text-2)' }}>{t || `Rd ${i + 1}`}</span>)}
             </div>
           </Card>
         </div>
@@ -462,9 +509,9 @@
       <Device tab="home" label="Home, season complete">
         <Head avatar chip={null} />
         <div className="ks-pad ks-stack">
-          <div className="ks-game" style={{ padding: 20, display: 'grid', justifyItems: 'center', gap: 8, textAlign: 'center', background: 'radial-gradient(120% 90% at 50% 0%, #1E3A6E 0%, var(--sp-color-surface-game-base) 70%)' }}>
-            <span style={{ width: 72, height: 72, borderRadius: 36, display: 'grid', placeItems: 'center', background: 'var(--sp-color-live)', color: 'var(--sp-color-surface-game-base)' }}><Icon d={TROPHY} size={36} width={2.2} /></span>
-            <span className="ks-tag" style={{ color: 'var(--sp-color-live)' }}>Season complete</span>
+          <div className="ks-game" style={{ padding: 20, display: 'grid', justifyItems: 'center', gap: 8, textAlign: 'center', background: 'radial-gradient(120% 90% at 50% 0%, var(--c-live-glow) 0%, var(--c-surface) 70%)' }}>
+            <span style={{ width: 72, height: 72, borderRadius: 36, display: 'grid', placeItems: 'center', background: 'var(--c-live)', color: 'var(--c-surface)' }}><Icon d={TROPHY} size={36} width={2.2} /></span>
+            <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Season complete</span>
             <span className="ks-score" style={{ fontSize: 44, lineHeight: '44px', whiteSpace: 'normal' }}>Champion</span>
             <span className="ks-callout">You won {K.LEAGUE.name} · 11–3 · playoffs 2–0</span>
           </div>
@@ -498,7 +545,7 @@
         <div className="ks-pad ks-stack" style={{ gap: 12 }}>
           <div className="ks-seg ks-seg--game"><span>My matchup</span><span className="on">All matchups</span></div>
           {live.map((m) => (
-            <div key={m.a} className="ks-raised" style={{ padding: 14, display: 'grid', gap: 8, boxShadow: m.you ? 'inset 3px 0 0 var(--sp-color-team-you-base)' : undefined }}>
+            <div key={m.a} className="ks-raised" style={{ padding: 14, display: 'grid', gap: 8, boxShadow: m.you ? 'inset 3px 0 0 var(--c-you)' : undefined }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }} className="ks-callout"><b>{m.a}{m.you ? ' (you)' : ''}</b><b>{m.b}</b></div>
               <Scores left={$s(m.ga)} right={$s(m.gb)} size="md" />
               <Tug you={m.ga} opp={m.gb} />
@@ -550,7 +597,7 @@
           </div>
           <div>
             <div className="ks-section-h"><h3>In the room</h3><span className="ks-caption ks-muted ks-num">5 of 6</span></div>
-            <div style={{ display: 'flex', gap: 6 }}>{['RB', 'MR', 'LC', 'SF', 'GV'].map((m, i) => <span key={m} className={i === 0 ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{m}</span>)}<span className="ks-avatar ks-avatar--sm" style={{ background: 'transparent', border: '1.5px dashed var(--sp-color-surface-game-line)' }} /></div>
+            <div style={{ display: 'flex', gap: 6 }}>{['RB', 'MR', 'LC', 'SF', 'GV'].map((m, i) => <span key={m} className={i === 0 ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{m}</span>)}<span className="ks-avatar ks-avatar--sm" style={{ background: 'transparent', border: '1.5px dashed var(--c-line)' }} /></div>
           </div>
           <div>
             <div className="ks-section-h"><h3>Your queue</h3><span className="ks-caption ks-muted">Auto-pick uses it if your clock runs out</span></div>
@@ -592,10 +639,10 @@
       <div className="ks-raised" style={{ padding: '10px 12px', display: 'grid', gap: 6 }}>
         {[[a, sa, win === 0], [b, sb, win === 1]].map(([n, s, w]) => (
           <div key={n} style={{ display: 'flex', justifyContent: 'space-between', opacity: win != null && !w ? 0.55 : 1 }} className="ks-callout">
-            <b style={{ color: n.startsWith('Roberto') ? 'var(--sp-color-team-you-on-game)' : undefined }}>{n}</b><span className="ks-num">{s}</span>
+            <b style={{ color: n.startsWith('Roberto') ? 'var(--c-you-text)' : undefined }}>{n}</b><span className="ks-num">{s}</span>
           </div>
         ))}
-        {live ? <span className="ks-caption" style={{ color: 'var(--sp-color-live)' }}>Live · ends Fri 4:00 PM ET</span> : null}
+        {live ? <span className="ks-caption" style={{ color: 'var(--c-live-text)' }}>Live · ends Fri 4:00 PM ET</span> : null}
       </div>
     );
     return (
@@ -668,7 +715,7 @@
     return (
       <Device noTabs label={sold ? 'Sold' : 'Bought'}>
         <div className="ks-pad ks-stack" style={{ paddingTop: 120, justifyItems: 'center', textAlign: 'center' }}>
-          <span className="ks-pop" style={{ width: 88, height: 88, borderRadius: 44, display: 'grid', placeItems: 'center', background: '#E6F4EA', color: 'var(--sp-color-data-gain-base)', alignSelf: 'center' }}><Icon d={CHECK} size={44} width={2.6} /></span>
+          <span className="ks-pop" style={{ width: 88, height: 88, borderRadius: 44, display: 'grid', placeItems: 'center', background: 'var(--c-gain-tint)', color: 'var(--c-gain)', alignSelf: 'center' }}><Icon d={CHECK} size={44} width={2.6} /></span>
           <h2 className="ks-head__title" style={{ fontSize: 30 }}>{sold ? 'Sold TSLA' : 'Bought SHOP'}</h2>
           <p className="ks-callout ks-muted" style={{ margin: 0 }}>
             {sold ? `${$(K.SALE.proceeds)} is ready to invest in this slot.` : `${K.SALE.buy.qty.toFixed(4)} shares at ${$(K.SALE.buy.price)}. Slot 4 is invested again.`}
@@ -714,7 +761,7 @@
             <ul className="ks-rows">
               {src.map((s, i) => (
                 <li key={s.symbol} className="ks-row" style={{ gridTemplateColumns: '24px 36px 1fr auto', padding: '12px 0' }}>
-                  <span style={{ display: 'block', boxSizing: 'border-box', alignSelf: 'center', width: 20, height: 20, borderRadius: 10, border: i === 0 ? '6px solid var(--sp-color-brand)' : '2px solid var(--sp-color-border-control)' }} />
+                  <span style={{ display: 'block', boxSizing: 'border-box', alignSelf: 'center', width: 20, height: 20, borderRadius: 10, border: i === 0 ? '6px solid var(--c-accent)' : '2px solid var(--c-border-strong)' }} />
                   <Logo t={s.symbol} />
                   <span><span className="ks-t">{s.symbol} slot</span><br /><span className="ks-caption">Sold {s.when}</span></span>
                   <b className="ks-num">{$(s.amount)}</b>
@@ -736,7 +783,7 @@
       <Device tab="portfolio" label="Trading closed" overlay={
         <Sheet top={200}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}><Logo t="NVDA" /><span style={{ flex: 1 }}><span className="ks-headline" style={{ fontWeight: 800 }}>NVDA</span><br /><span className="ks-caption">NVIDIA · last close {$(N.fri)}</span></span></div>
-          <div className="ks-card" style={{ padding: 14, boxShadow: 'none', background: 'var(--sp-color-surface-money-sunken)', border: 0, display: 'grid', gap: 4 }}>
+          <div className="ks-card" style={{ padding: 14, boxShadow: 'none', background: 'var(--c-sunken)', border: 0, display: 'grid', gap: 4 }}>
             <span className="ks-headline" style={{ fontWeight: 700, display: 'flex', gap: 8, alignItems: 'center' }}><Icon d={LOCK} size={18} />Market closed</span>
             <span className="ks-callout ks-muted">Trading opens Mon 9:30 AM ET. Prices show Friday's close.</span>
           </div>
@@ -820,6 +867,30 @@
     );
   }
 
+  function WebSettings() {
+    return (
+      <WebFrame active="none">
+        <h2 className="ks-head__title" style={{ margin: '0 0 18px' }}>Settings</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 28 }}>
+          <div style={{ display: 'grid', gap: 4, alignContent: 'start' }}>
+            {['Account', 'Appearance', 'Password'].map((n) => <span key={n} className={n === 'Appearance' ? 'ks-web__nav is-on' : 'ks-web__nav'}>{n}</span>)}
+          </div>
+          <div className="ks-card" style={{ padding: 22, display: 'grid', gap: 16, maxWidth: 620 }}>
+            <div><div className="ks-title">Appearance</div><div className="ks-callout ks-muted">One look everywhere, in light or dark. System follows your computer.</div></div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 150px)', gap: 12 }}>
+              {THEMES.map(([id, name]) => (
+                <div key={id} className="ks-card" style={{ padding: 12, display: 'grid', justifyItems: 'center', gap: 8, boxShadow: id === 'system' ? '0 0 0 2px var(--c-accent)' : 'none' }}>
+                  <Swatch kind={id} /><b className="ks-callout">{name}</b>
+                </div>
+              ))}
+            </div>
+            <span className="ks-caption">Saved in this browser.</span>
+          </div>
+        </div>
+      </WebFrame>
+    );
+  }
+
   function WebPortfolio() {
     const P = K.PORTFOLIO_LIVE, N = K.NVDA;
     return (
@@ -828,7 +899,7 @@
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><Logo t="NVDA" /><span style={{ flex: 1 }}><b>NVDA</b><br /><span className="ks-caption">NVIDIA</span></span><Icon d={ICON.close} size={18} /></div>
           <div className="ks-num" style={{ fontSize: 28, fontWeight: 800 }}>{$(N.thu)}</div>
           <div className="ks-callout ks-gain ks-num" style={{ fontWeight: 700 }}>{$s(N.thu - N.prev)} · {pct(N.todayPct)} today</div>
-          <div className="ks-card" style={{ padding: 12, background: 'var(--sp-color-surface-money-sunken)', border: 0, boxShadow: 'none' }} >
+          <div className="ks-card" style={{ padding: 12, background: 'var(--c-sunken)', border: 0, boxShadow: 'none' }} >
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', rowGap: 8 }} className="ks-num"><span><span className="ks-caption">Shares</span><br /><b>{N.qty.toFixed(4)}</b></span><span><span className="ks-caption">Value</span><br /><b>{$(N.value)}</b></span></div>
           </div>
           <div className="ks-seg"><span>Buy</span><span className="on">Sell</span></div>
@@ -841,17 +912,17 @@
           <div className="ks-callout ks-num" style={{ fontWeight: 700, paddingBottom: 8 }}><span className="ks-gain">{$s(P.gain)} · {pct(P.gainPct)}</span> <span className="ks-muted">since the draft</span></div>
         </div>
         <div className="ks-card" style={{ padding: '2px 14px' }}>
-          <ul className="ks-rows">{P.rows.map((r) => <li key={r.t} className="ks-row" style={{ gridTemplateColumns: '36px 1fr 90px 90px 70px', background: r.t === 'NVDA' ? 'var(--sp-color-surface-money-sunken)' : undefined }}><Logo t={r.t} /><span><b>{r.t}</b> <span className="ks-caption">{r.co}</span></span><span className="ks-num ks-muted ks-right">{r.qty.toFixed(2)} sh</span><b className="ks-num ks-right">{$(r.value)}</b><span className={`ks-num ks-right ${tone(r.todayPct)}`} style={{ fontWeight: 700 }}>{pct(r.todayPct)}</span></li>)}</ul>
+          <ul className="ks-rows">{P.rows.map((r) => <li key={r.t} className="ks-row" style={{ gridTemplateColumns: '36px 1fr 90px 90px 70px', background: r.t === 'NVDA' ? 'var(--c-sunken)' : undefined }}><Logo t={r.t} /><span><b>{r.t}</b> <span className="ks-caption">{r.co}</span></span><span className="ks-num ks-muted ks-right">{r.qty.toFixed(2)} sh</span><b className="ks-num ks-right">{$(r.value)}</b><span className={`ks-num ks-right ${tone(r.todayPct)}`} style={{ fontWeight: 700 }}>{pct(r.todayPct)}</span></li>)}</ul>
         </div>
       </WebFrame>
     );
   }
 
   window.KSInventory = {
-    SignIn, SignUp, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, ChangePassword, EmptyHome,
+    SignIn, SignUp, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeScoring, HomeComplete,
     AllMatchups, MatchupPreSeason, DraftLobby, DraftRecap, Playoffs,
     SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,
-    WebHome, WebPortfolio,
+    WebHome, WebPortfolio, WebSettings,
   };
 })();

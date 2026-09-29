@@ -83,7 +83,105 @@
     return [v, n, (next) => { setV(next); setN((x) => x + 1); }];
   }
 
+  // ── Themes: one design, two complete themes ───────────────────────────
+  const TOKEN_ROWS = [
+    // [token, role, min contrast vs surface (text 4.5, graphics 3)]
+    ['text', 'Primary text', 4.5], ['text-2', 'Secondary text', 4.5], ['accent', 'Links, accent text', 4.5],
+    ['you-text', 'Your name / score text', 4.5], ['opp-text', 'Opponent text', 4.5], ['live-text', 'Live tags', 4.5],
+    ['gain', 'Money up', 4.5], ['loss', 'Money down', 4.5], ['zero', 'Money flat', 4.5], ['danger', 'Errors', 4.5],
+    ['you', 'Your fills (tug, avatar)', 3], ['opp', 'Opponent fills', 3], ['live', 'Live dot, clock ring', 3], ['border-strong', 'Control borders', 3],
+  ];
+  function readTheme(theme) {
+    const el = document.createElement('div');
+    el.setAttribute('data-ks-theme', theme);
+    el.style.display = 'none';
+    document.body.appendChild(el);
+    const cs = getComputedStyle(el);
+    const out = {};
+    for (const [t] of TOKEN_ROWS.concat([['surface'], ['bg']])) out[t] = cs.getPropertyValue(`--c-${t}`).trim();
+    el.remove();
+    return out;
+  }
+  function lum(hex) {
+    const h = hex.replace('#', '');
+    return [0, 2, 4].map((i) => parseInt(h.substr(i, 2), 16) / 255)
+      .map((v) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)))
+      .reduce((a, v, i) => a + v * [0.2126, 0.7152, 0.0722][i], 0);
+  }
+  const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+
+  function ThemesSection() {
+    const [vals, setVals] = useState(null);
+    useEffect(() => { setVals({ light: readTheme('light'), dark: readTheme('dark') }); }, []);
+    const cell = (t, tok, min) => {
+      const v = vals[t][tok], c = contrast(v, vals[t].surface);
+      return <td><span className="b-swatch" style={{ background: v }} />{v} <span className={c >= min ? 'b-pass' : 'b-fail'}>{c.toFixed(2)}</span></td>;
+    };
+    return (
+      <section className="b-sec" id="themes" aria-labelledby="themes-h">
+        <header className="b-sec__head">
+          <span className="b-sec__n">◐</span>
+          <div>
+            <h2 id="themes-h">One design, two themes</h2>
+            <p className="b-job">Every screen is entirely Light or entirely Dark. Same layout, same components, same names; only the values change. Use the switch at the top right to see every screen in either theme.</p>
+          </div>
+        </header>
+        <div className="b-tokens">
+          <ul className="b-inv__notes" style={{ margin: 0 }}>
+            <li><b>The money/game split is gone as a colour.</b> Matchup, Draft room, scoreboards and onboarding are light in Light; Portfolio, sheets and forms are dark in Dark. No dark card inside a light screen, or the reverse.</li>
+            <li><b>What replaces the dark scoreboard for emphasis:</b> the condensed 900 score type (the biggest thing on any screen), a faint accent wash at the top of the scoreboard card, the tug bar and live dot in colour, broadcast-style tags, and motion (digit rolls, lead changes, re-sorts).</li>
+            <li><b>Text-safe cuts.</b> Yellow, orange and bright blue are too light for text on white, so each has a darker "-text" value in Light. The fills (tug bar, live dot, avatars) keep their colour.</li>
+            <li><b>Rules that still hold:</b> team colours mark people (you blue, opponent orange); data colours mark money (gain green, loss red, zero grey, never green).</li>
+            <li><b>Settings:</b> Profile › Appearance, with System, Light and Dark; System is the default and the choice is saved on the device. You asked for a simple light/dark switch. System is our recommendation, since it follows the phone; say the word and we cut it to two options.</li>
+          </ul>
+          {vals ? (
+            <div className="b-table-wrap">
+              <table className="b-table">
+                <thead><tr><th scope="col">Token</th><th scope="col">Role</th><th scope="col">Light (contrast on surface)</th><th scope="col">Dark (contrast on surface)</th><th scope="col">Needs</th></tr></thead>
+                <tbody>
+                  {TOKEN_ROWS.map(([tok, role, min]) => (
+                    <tr key={tok}><th scope="row">--c-{tok}</th><td>{role}</td>{cell('light', tok, min)}{cell('dark', tok, min)}<td>{min}:1</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+          <div>
+            <h3 style={{ margin: '0 0 8px', fontSize: 12, fontWeight: 800, fontStretch: '125%', letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--c-text-2)' }}>Component API changes (foundation, PR #53 + web)</h3>
+            <ul className="b-inv__notes" style={{ margin: 0 }}>
+              <li><code>&lt;Surface kind="money" | "game"&gt;</code> → removed. A <code>ThemeProvider</code> at the root supplies <code>theme: 'light' | 'dark'</code> (System resolves via <code>useColorScheme()</code> on mobile and <code>prefers-color-scheme</code> on web). Cards use one <code>&lt;Card&gt;</code> (with a <code>variant="scoreboard"</code> that adds the accent wash).</li>
+              <li>Tokens: every <code>*.onGame</code> leaf is deleted (<code>text.onGame.*</code>, <code>team.you.onGame</code>, <code>data.gain/loss/zero.onGame</code>, <code>action.*.onGame</code>, <code>surface.game.*</code>, <code>surface.money.*</code>). They are replaced by the semantic set in this table, one value per theme. New leaves: <code>*-text</code> cuts, <code>inset</code>, <code>track</code>, <code>scrim</code>, <code>tabbar</code>, <code>inverse</code>.</li>
+              <li><code>Button</code>: drop the on-game variant; <code>primary</code> reads <code>primary.bg/fg</code> from the theme (navy on Light, white on Dark).</li>
+              <li><code>ScoreDigits</code>, <code>Scoreboard</code>/<code>TeamRow</code>, <code>TugBar</code>, <code>Chyron</code>, <code>LiveDot</code>, <code>PhaseChip</code>, <code>SegmentedControl</code>, <code>Sheet</code>, <code>EmptyState</code>, <code>Money</code>: any prop or style that picks an <code>onGame</code> colour or checks <code>surface === 'game'</code> goes; they read theme tokens only. <code>Money</code>'s gain/loss/zero colours come from the theme.</li>
+              <li>Web: <code>tokens.css</code> gains <code>[data-theme="light"]</code> / <code>[data-theme="dark"]</code> blocks with these values (the app sets the attribute from Settings; System uses the media query). <code>tokens.parity.test.ts</code> checks both themes leaf by leaf.</li>
+              <li>Tests to add: a contrast test that asserts this table's minimums for both themes, so a token edit can't silently fail AA.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  function ThemeBar({ theme, setTheme }) {
+    return (
+      <div className="b-themebar">
+        <div className="b-themebar__in" role="group" aria-label="Board theme">
+          <span>Theme</span>
+          {['light', 'dark'].map((t) => (
+            <button key={t} type="button" aria-pressed={theme === t} onClick={() => setTheme(t)}>{t === 'light' ? 'Light' : 'Dark'}</button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   function Board() {
+    const [theme, setThemeState] = useState(() => document.documentElement.dataset.ksTheme || 'light');
+    const setTheme = (t) => {
+      setThemeState(t);
+      document.documentElement.dataset.ksTheme = t;
+      try { localStorage.setItem('ks-theme', t); } catch (e) { /* private mode: board still switches */ }
+    };
     const [homeRun, homeN, setHome] = useMoment(false);
     const [final, finalN, setFinal] = useMoment(false);
     const [after, afterN, setAfter] = useMoment(true);
@@ -93,11 +191,12 @@
 
     return (
       <main className="b-page">
+        <ThemeBar theme={theme} setTheme={setTheme} />
         <header className="b-hero">
           <div className="b-brand">
-            <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="13" width="4.5" height="8" rx="1" fill="#5B6678" /><rect x="9.75" y="9" width="4.5" height="12" rx="1" fill="#5B6678" /><rect x="16.5" y="4" width="4.5" height="17" rx="1" fill="#2860F0" /></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="13" width="4.5" height="8" rx="1" fill="var(--c-text-2)" /><rect x="9.75" y="9" width="4.5" height="12" rx="1" fill="var(--c-text-2)" /><rect x="16.5" y="4" width="4.5" height="17" rx="1" fill="var(--c-you)" /></svg>
             <span>Stockpile</span>
-            <span className="b-brand__meta">App screens · v2 · 29 Sep 2026</span>
+            <span className="b-brand__meta">App screens · v3 · 29 Sep 2026</span>
           </div>
           <h1>The app, as it will ship.</h1>
           <p className="b-lead">
@@ -106,7 +205,7 @@
             can only show what the app will actually look like. Every screen tells one story:
             the same league, the same week, and numbers that add up.
           </p>
-          <p className="b-changed"><b>New from your answers:</b> Home shows one league at a time (switch with the league pill); the standings column is "Season gain"; the draft pick clock defaults to 60 seconds and the commissioner can set 30–90; dollars decide matchups, with percent as the tiebreak; and a sold slot reinvests exactly its sale proceeds.</p>
+          <p className="b-changed"><b>New in v3:</b> one design in two complete themes, Light and Dark (switch at the top right). <b>From your earlier answers:</b> Home shows one league at a time (switch with the league pill); the standings column is "Season gain"; the draft pick clock defaults to 60 seconds and the commissioner can set 30–90; dollars decide matchups, with percent as the tiebreak; and a sold slot reinvests exactly its sale proceeds.</p>
           <dl className="b-canon">
             <div><dt>League</dt><dd>{K.LEAGUE.name} · 6 managers</dd></div>
             <div><dt>Moment</dt><dd>Week 6 of 14 · Thu 1:37 PM ET</dd></div>
@@ -114,9 +213,11 @@
             <div><dt>Stakes</dt><dd>$2,000 per slot · 6 slots</dd></div>
           </dl>
           <nav className="b-toc" aria-label="Screens">
-            {[['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['phases', 'Home phases'], ['game', 'Game'], ['money', 'Trading'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
+            {[['themes', 'Themes'], ['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['phases', 'Home phases'], ['game', 'Game'], ['money', 'Trading'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
           </nav>
         </header>
+
+        <ThemesSection />
 
         <Section
           id="home" n="1" name="Home" job="How is my team doing in this league, and how is this week going?"
