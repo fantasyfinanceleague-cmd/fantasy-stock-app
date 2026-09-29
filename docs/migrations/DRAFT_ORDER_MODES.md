@@ -57,9 +57,9 @@ Randomness lives only in `_draft_order_materialize`, which no API role can execu
   - SELECT is owner-only.
 - **Push:** the `draft-order-notify` edge function (cron only, `cron-auth.ts` guard). It claims each `pending` row with a conditional UPDATE (status + attempt count), then reads the member's **current** position. The body is built server-side, using the Design Lead's copy verbatim (board @ 4ab3429):
   - Title: the league name.
-  - Random: "The draft order is set. You pick 4th. The draft starts at 7:00 PM."
-  - Manual: "The commissioner set the draft order. You pick 4th. The draft starts at 7:00 PM."
-  - The time is shown **time only, in America/New_York**, because no per-user time zone is stored (the `lib/marketHours.ts` convention). There is no "ET" label, to keep the copy verbatim, so a non-Eastern user sees Eastern time unlabeled (flagged).
+  - Random: "The draft order is set. You pick 4th. The draft starts at 7:00 PM ET."
+  - Manual: "The commissioner set the draft order. You pick 4th. The draft starts at 7:00 PM ET."
+  - The time is shown **time only, in America/New_York**, because no per-user time zone is stored (the `lib/marketHours.ts` convention). It is labeled "ET", as the app labels Eastern times everywhere (Orchestrator, 2026-09-29).
   - The "starts at" sentence is dropped when the date is TBD or the draft has already started (the start-backstop notice).
   - Delivery states: `pending` → `sending` → `sent` | `no_device` | `skipped` | `failed`. A transient failure retries up to 3 times.
   - Token handling reuses `send-notification`'s logic verbatim via `_shared/push.ts`. Tokens never leave the function, and F8 exposure is not widened.

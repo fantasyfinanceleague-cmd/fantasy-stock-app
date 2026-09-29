@@ -43,7 +43,8 @@ export function formatDraftTime(iso: string): string {
  * The push, built SERVER-SIDE from verified values only (send-notification's
  * closed-set rule: no caller-supplied strings). The position is read AT SEND
  * TIME from the current order, so a leaver closing the gap after the finalize
- * never makes it stale. Copy: Design Lead, board @ 4ab3429 (verbatim).
+ * never makes it stale. Copy: Design Lead, board @ 4ab3429, plus the "ET"
+ * suffix (Orchestrator, 2026-09-29).
  * The "starts at" sentence is dropped when there is no draft_date or the
  * draft has already started (the start-backstop finalize): announcing a start
  * time that has passed would be wrong.
@@ -57,7 +58,9 @@ export function draftOrderSetMessage(i: {
   draftStarted: boolean;
 }) {
   const lead = i.mode === 'manual' ? 'The commissioner set the draft order.' : 'The draft order is set.';
-  const when = i.draftDate && !i.draftStarted ? ` The draft starts at ${formatDraftTime(i.draftDate)}.` : '';
+  // "ET" label: the app marks Eastern times everywhere ("Resumes Fri 9:30 AM
+  // ET"); an unlabeled Eastern time is wrong for anyone outside ET.
+  const when = i.draftDate && !i.draftStarted ? ` The draft starts at ${formatDraftTime(i.draftDate)} ET.` : '';
   return {
     title: i.leagueName,
     body: `${lead} You pick ${ordinal(i.position)}.${when}`,
