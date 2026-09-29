@@ -13,14 +13,21 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 // is in — that's the shared `getSeasonPhase` helper (extended in a later
 // phase per §3), so no screen infers phase on its own by re-deriving it here.
 //
-// Self-contained: a phase badge keeps its own small "broadcast tag" look
-// wherever it's placed, always inverted relative to the current theme
-// (colors.inverseBg/Fg — the PAIRS list's own "FINAL chip, selected toggle"
-// pair) rather than matching the surrounding card — the same way a "LIVE"
-// badge in a broadcast graphic doesn't change style with what's behind it.
-// Deliberately NOT built on the shared <Text> primitive, since <Text>
-// resolves colour from the theme's normal text roles and this chip's colour
-// is always inverted, never the theme's plain text colour.
+// Amended (Design Lead, Round 3, 2026-09-29): every phase used to render as
+// one inverted style with a white dot on the live phase — which threw away
+// the actual live signal (inverseFg carries no "this is live" meaning by
+// itself). Now three styles by phase type, matching the board's own chips:
+//   - live-type (live_open, drafting, playoffs in progress): inset
+//     background, liveText label, a real live-coloured dot — `live` on
+//     `inset` is a board-verified graphic pair (3.03:1 Light / 8.18:1 Dark).
+//   - final-type (week_final, season_complete): inverseBg/inverseFg, no
+//     dot — this is the one case that still wants to "pop" regardless of
+//     theme, the same reasoning <Chyron> uses.
+//   - everything else (pre_draft, pre_season, live_closed): inset
+//     background, plain text label, no dot.
+// Deliberately NOT built on the shared <Text> primitive: <Text> resolves
+// colour from the theme's normal text roles, and the final-type style needs
+// the inverted pair, not a plain text role.
 
 export type LeaguePhase =
   | 'pre_draft'
@@ -32,21 +39,22 @@ export type LeaguePhase =
   | 'playoffs'
   | 'season_complete';
 
+type PhaseStyle = 'live' | 'final' | 'default';
+
 interface PhaseMeta {
   label: string;
-  /** Only the phase that's actually live gets a dot. */
-  live?: boolean;
+  style: PhaseStyle;
 }
 
 const PHASE_META: Record<LeaguePhase, PhaseMeta> = {
-  pre_draft: { label: 'Pre-draft' },
-  drafting: { label: 'Drafting' },
-  pre_season: { label: 'Pre-season' },
-  live_open: { label: 'Live', live: true },
-  live_closed: { label: 'Closed' },
-  week_final: { label: 'Final' },
-  playoffs: { label: 'Playoffs' },
-  season_complete: { label: 'Complete' },
+  pre_draft: { label: 'Pre-draft', style: 'default' },
+  drafting: { label: 'Drafting', style: 'live' },
+  pre_season: { label: 'Pre-season', style: 'default' },
+  live_open: { label: 'Live', style: 'live' },
+  live_closed: { label: 'Closed', style: 'default' },
+  week_final: { label: 'Final', style: 'final' },
+  playoffs: { label: 'Playoffs', style: 'live' },
+  season_complete: { label: 'Complete', style: 'final' },
 };
 
 export interface PhaseChipProps {
@@ -58,16 +66,32 @@ export function PhaseChip({ phase }: PhaseChipProps) {
   const meta = PHASE_META[phase];
   const tagStyle = type.tag;
 
+  let backgroundColor: string;
+  let textColor: string;
+  let dotColor: string | null;
+
+  switch (meta.style) {
+    case 'live':
+      backgroundColor = colors.inset;
+      textColor = colors.liveText;
+      dotColor = colors.live;
+      break;
+    case 'final':
+      backgroundColor = colors.inverseBg;
+      textColor = colors.inverseFg;
+      dotColor = null;
+      break;
+    case 'default':
+    default:
+      backgroundColor = colors.inset;
+      textColor = colors.text;
+      dotColor = null;
+      break;
+  }
+
   return (
-    <View style={[styles.base, { backgroundColor: colors.inverseBg }]}>
-      {/* colors.live, not inverseFg, was tried here first — computed out to
-          1.46:1 in Dark (colors.live there is tuned for the app's normal
-          navy background, not this chip's INVERTED light one) against the
-          3:1 graphic minimum. inverseFg is guaranteed to contrast with
-          inverseBg by definition, so the dot uses that instead — the label
-          text already carries "Live"; this dot is a secondary cue, not the
-          only signal. */}
-      {meta.live ? <View style={[styles.dot, { backgroundColor: colors.inverseFg }]} /> : null}
+    <View style={[styles.base, { backgroundColor }]}>
+      {dotColor ? <View style={[styles.dot, { backgroundColor: dotColor }]} /> : null}
       <RNText
         style={{
           fontFamily: tagStyle.fontFamily,
@@ -75,7 +99,7 @@ export function PhaseChip({ phase }: PhaseChipProps) {
           lineHeight: tagStyle.lineHeight,
           letterSpacing: tagStyle.letterSpacing,
           textTransform: tagStyle.textTransform,
-          color: colors.inverseFg,
+          color: textColor,
         }}
       >
         {meta.label}

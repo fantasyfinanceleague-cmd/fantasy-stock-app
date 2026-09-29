@@ -24,7 +24,13 @@ import { Chyron } from '@/components/sp/game/Chyron';
 // tug bar/live dot colour and motion, not an inverted dark card.
 //
 // Team colours mark PEOPLE (§9A non-negotiable): each side's score digits use
-// its team colour (colors.you / colors.opp), never a gain/loss colour. The
+// its team colour — the TEXT cut (colors.youText / colors.oppText), not the
+// fill (Design Lead, Round 3 2026-09-29): scores are text, and the board's
+// own pair table scores fills as text-on-surface at only 3.25–3.67:1 in
+// spots (Dark colors.you, Light colors.opp) — below 4.5:1 for text-sized
+// use, while the *Text cuts clear 5.22–7.06:1 in both themes. The fills
+// stay exactly where they were: TugBar, avatars, draft slots — fills, not
+// text, never a gain/loss colour. The
 // one line that mixes registers on purpose is the "lead line", which states
 // the dollar gap in words and colours it by gain/loss/zero, since that IS a
 // money figure.
@@ -130,8 +136,8 @@ export function Scoreboard({ leagueName, week, you, opponent, live = false, chyr
       </View>
 
       <View style={styles.teams}>
-        <TeamRow name={you.name} gain={you.gain} teamColor={colors.you} stacked={stacked} />
-        <TeamRow name={opponent.name} gain={opponent.gain} teamColor={colors.opp} stacked={stacked} />
+        <TeamRow name={you.name} gain={you.gain} teamColor={colors.youText} stacked={stacked} />
+        <TeamRow name={opponent.name} gain={opponent.gain} teamColor={colors.oppText} stacked={stacked} />
       </View>
 
       <View style={styles.tugWrap}>

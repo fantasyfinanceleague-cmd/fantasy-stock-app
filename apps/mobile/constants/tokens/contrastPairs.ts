@@ -1,10 +1,13 @@
 // Stockpile — the contrast check tables (§9A, "One design, two themes",
 // 2026-09-29). SOURCE OF TRUTH: docs/design/screens/board.jsx's `TOKEN_ROWS`
-// and `PAIRS` (design/key-screens-2026-09-29 branch), copied verbatim —
-// this is the SAME table the design-review board itself scores live, now
-// also enforced by tests-deno/sp-contrast.test.ts so a token edit can't
-// silently fail AA without the board being open. Add a pair here (not just
-// on the board) when a new component puts text or a graphic on a fill.
+// and `PAIRS` (design/key-screens-2026-09-29 branch, synced as of commit
+// 0bd741f — "contrast PAIRS +3 (live dot on inset, neutral avatar initials,
+// '?' fallback)"), copied verbatim — this is the SAME table the
+// design-review board itself scores live (86/86: 14 tokens + 29 pairs × 2
+// themes), now also enforced by tests-deno/sp-contrast.test.ts so a token
+// edit can't silently fail AA without the board being open. This list must
+// stay IDENTICAL to the board's — add a pair here AND there when a new
+// component puts text or a graphic on a fill, never here alone.
 //
 // Keys here are ThemeColors keys (constants/tokens/color.ts), not the
 // `--c-*` kebab names board.jsx uses — same values, this file's naming
@@ -68,12 +71,10 @@ export const PAIRS: readonly ContrastPair[] = [
   ['text2', 'tabbar', 'bg', 4.5, 'Inactive tab labels'],
   ['warnText', 'warnTint', 'bg', 4.5, '"Your call" notes'],
   ['text', 'warnTint', 'bg', 4.5, 'Sign-ups-paused banner'],
+  ['text', 'warnTint', 'surface', 4.5, 'Uneven-bye heads-up (inside a card)'],
+  ['live', 'inset', null, 3, 'Live dot inside a LIVE chip (graphic)'],
+  ['text', 'line', null, 4.5, 'Initials on a neutral (other manager) avatar'],
+  ['text2', 'line', null, 4.5, 'Neutral "?" avatar fallback'],
   ['onAccent', 'you', null, 3, 'Chevrons on the drawn draft track (graphic)'],
   ['surface', 'live', null, 3, 'Trophy icon on the champion badge (graphic)'],
-
-  // Mobile-only additions below — not in board.jsx's 25 (nothing there
-  // exercises a mobile-only composition), each computed and verified before
-  // being added, not assumed. A new mobile component that puts text or a
-  // graphic on a fill adds its pair here too.
-  ['text2', 'line', null, 4.5, 'Avatar initial, neutral "?" fallback (components/sp/Avatar.tsx)'],
 ];
