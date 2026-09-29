@@ -2,35 +2,27 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "9d86213effe1dda8b8bc6826e9050f9989f32a0a",
-    "commitShort": "9d86213",
+    "commit": "277e86cd73b89e4f1c1cccee69e00f68f309caac",
+    "commitShort": "277e86c",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "fix/game-data-effect-test",
+    "branch": "fix/username-write-path",
     "dirty": true,
     "dirtyPaths": [
       {
-        "code": "R",
-        "path": "supabase/migrations/20261005000003_schedule_refresh_market_calendar.sql"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/20261005000004_backfill_missing_user_profiles.sql"
-      },
-      {
-        "code": "M",
-        "path": "supabase/migrations/deferred/README.md"
+        "code": "??",
+        "path": "supabase/migrations/20261007000000_username_write_path.sql"
       }
     ],
-    "timestamp": "2026-09-29T01:57:07Z",
-    "sourceHash": "sha256:05fd36dd978ae6515239465e7f343c7e434b558e57e2c1d83cbaf214f864da44",
+    "timestamp": "2026-09-29T16:40:39Z",
+    "sourceHash": "sha256:6c015ba4e849a86000aeb09e485c56326867470fa560676a22d4f6ce57067475",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1149.1,
-    "ageDays": 47.9,
+    "ageHours": 1163.8,
+    "ageDays": 48.5,
     "staleAfterDays": 14,
     "stale": true,
     "hash": "sha256:3c923bcd46e36dfa365d24852d7b8fb6ead9ff99a06c3b26dc0853c648e07ded",
@@ -1138,6 +1130,37 @@
     {
       "layer": "db",
       "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261007000000_username_write_path.sql:164"
+        ],
+        "latestDefinition": "supabase/migrations/20261007000000_username_write_path.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.check_usernames",
+      "label": "check_usernames()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261007000000_username_write_path.sql",
+        "line": 164
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
       "db": {
         "securityDefiner": true,
         "searchPath": "public",
@@ -1771,6 +1794,37 @@
       "source": {
         "path": "supabase/migrations/20260727000000_fix_schedule_snapshot_retry_cron_expression.sql",
         "line": 69
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261007000000_username_write_path.sql:95"
+        ],
+        "latestDefinition": "supabase/migrations/20261007000000_username_write_path.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.set_username",
+      "label": "set_username()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261007000000_username_write_path.sql",
+        "line": 95
       }
     },
     {
@@ -3341,7 +3395,8 @@
         "touchedBy": [
           "supabase/migrations/20251210100000_create_user_profiles.sql",
           "supabase/migrations/20251230230000_add_avatar_to_profiles.sql",
-          "supabase/migrations/20260122000000_add_push_tokens.sql"
+          "supabase/migrations/20260122000000_add_push_tokens.sql",
+          "supabase/migrations/20261007000000_username_write_path.sql"
         ],
         "rlsEnabled": true
       },
@@ -5554,6 +5609,19 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.pg.check_usernames->tbl.user_profiles",
+      "from": "pg.check_usernames",
+      "to": "tbl.user_profiles",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT user_profiles (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261007000000_username_write_path.sql:190"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.pg.complete_league_season->tbl.league_seasons#update",
       "from": "pg.complete_league_season",
       "to": "tbl.league_seasons",
@@ -6048,6 +6116,32 @@
         "supabase/migrations/20260612000000_migrate_snapshot_week_end_cron_auth.sql:151",
         "supabase/migrations/20260618000001_migrate_snapshot_week_start_cron_auth.sql:118",
         "supabase/migrations/20260727000000_fix_schedule_snapshot_retry_cron_expression.sql:135"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.set_username->tbl.user_profiles",
+      "from": "pg.set_username",
+      "to": "tbl.user_profiles",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT user_profiles (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261007000000_username_write_path.sql:118"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.set_username->tbl.user_profiles#insert",
+      "from": "pg.set_username",
+      "to": "tbl.user_profiles",
+      "protocol": "plpgsql-insert",
+      "payload": "INSERT user_profiles (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261007000000_username_write_path.sql:131"
       ]
     },
     {
@@ -8799,6 +8893,16 @@
       "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
     },
     {
+      "node": "pg.check_usernames",
+      "label": "check_usernames()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
       "node": "pg.enforce_leagues_member_update_columns",
       "label": "enforce_leagues_member_update_columns()",
       "groupKey": "existence",
@@ -8871,6 +8975,16 @@
     {
       "node": "pg.restrict_new_signups",
       "label": "restrict_new_signups()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.set_username",
+      "label": "set_username()",
       "groupKey": "existence",
       "field": "existence",
       "declared": "created by migration",
@@ -9083,6 +9197,16 @@
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
     {
+      "node": "pg.check_usernames",
+      "label": "check_usernames()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261007000000_username_write_path.sql:164",
+      "outbound": [
+        "tbl.user_profiles"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
       "node": "pg.get_home_summary",
       "label": "get_home_summary()",
       "kind": "pg-function",
@@ -9139,6 +9263,17 @@
       "outbound": [
         "tbl.app_config",
         "tbl.signup_allowlist"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "pg.set_username",
+      "label": "set_username()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261007000000_username_write_path.sql:95",
+      "outbound": [
+        "tbl.user_profiles",
+        "tbl.user_profiles"
       ],
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
@@ -9281,6 +9416,18 @@
       "resolve": "Re-capture the snapshot, or confirm the migration was applied."
     },
     {
+      "scope": "pg.set_username",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.check_usernames",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
       "scope": "tbl.broker_credentials",
       "claim": "table exists in prod",
       "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
@@ -9331,13 +9478,13 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 130,
-    "edges": 285,
+    "nodes": 132,
+    "edges": 288,
     "flows": 8,
-    "drift": 28,
-    "driftHigh": 10,
-    "deadCode": 16,
-    "unverified": 17
+    "drift": 30,
+    "driftHigh": 12,
+    "deadCode": 18,
+    "unverified": 19
   },
   "sourceIndex": {
     "edgeFunctions": [
@@ -9720,7 +9867,8 @@
       "20261005000001_signup_username_trigger.sql",
       "20261005000002_market_calendar.sql",
       "20261005000003_schedule_refresh_market_calendar.sql",
-      "20261005000004_backfill_missing_user_profiles.sql"
+      "20261005000004_backfill_missing_user_profiles.sql",
+      "20261007000000_username_write_path.sql"
     ],
     "config": [
       "draft-control=true",
