@@ -37,8 +37,10 @@ import {
   type PickSource,
 } from './auto-pick.ts';
 import {
-  computeDraftOrder,
+  checkStoredOrder,
+  type DraftOrderRow,
   type LeagueRules,
+  orderFromRows,
   type PickRow,
   SKIP_SYMBOL,
   type Slot,
@@ -68,10 +70,18 @@ export const LEAGUE_COLUMNS =
 
 export type LoadResult =
   | { ok: true; ctx: DraftContext }
-  | { ok: false; status: number; reason: 'unhandled' | 'league_not_found' };
+  | { ok: false; status: number; reason: 'unhandled' | 'league_not_found' | 'draft_order_invalid' };
 
-/** League + members + picks + trades, service role. Status/membership checks
- * are the CALLER's (a cron sweep has no caller identity to check). */
+/** League + members + STORED draft order + picks + trades, service role.
+ * Status/membership checks are the CALLER's (a cron sweep has no caller
+ * identity to check).
+ *
+ * The order comes from league_draft_order (20261013000000). Once the draft has
+ * started it MUST be an exact permutation of the members (the start trigger
+ * locks it so); anything else refuses with 'draft_order_invalid' (500) rather
+ * than guessing, because turn math over a wrong order silently skips or
+ * invents a picker. Before start the order may legitimately not exist yet
+ * (random mode before draft_date - 1h), and no caller does turn math then. */
 export async function loadDraftContext(admin: Admin, leagueId: string): Promise<LoadResult> {
   const { data: league, error: lgErr } = await admin
     .from('leagues').select(LEAGUE_COLUMNS).eq('id', leagueId).maybeSingle();
@@ -83,6 +93,21 @@ export async function loadDraftContext(admin: Admin, leagueId: string): Promise<
   if (memErr) return { ok: false, status: 500, reason: 'unhandled' };
   // deno-lint-ignore no-explicit-any
   const memberIds = (members ?? []).map((m: any) => String(m.user_id));
+
+  const { data: orderData, error: oErr } = await admin
+    .from('league_draft_order')
+    .select('position, user_id')
+    .eq('league_id', leagueId)
+    .order('position', { ascending: true });
+  if (oErr) return { ok: false, status: 500, reason: 'unhandled' };
+  const order = orderFromRows((orderData ?? []) as DraftOrderRow[]);
+  if ((league.draft_status ?? 'not_started') !== 'not_started') {
+    const check = checkStoredOrder(order, memberIds);
+    if (!check.ok) {
+      console.error('draft order invalid', leagueId, check.reason, order.length, memberIds.length);
+      return { ok: false, status: 500, reason: 'draft_order_invalid' };
+    }
+  }
 
   const { data: pickData, error: pErr } = await admin
     .from('drafts')
@@ -102,7 +127,7 @@ export async function loadDraftContext(admin: Admin, leagueId: string): Promise<
     ctx: {
       league,
       memberIds,
-      order: computeDraftOrder(String(league.commissioner_id ?? ''), memberIds),
+      order,
       numRounds: Number(league.num_rounds) || 6,
       picks: (pickData ?? []) as PickRow[],
       // deno-lint-ignore no-explicit-any
@@ -203,7 +228,7 @@ export async function insertSkip(
     return { ok: false, reason: 'unhandled' };
   }
   const complete = decision.pickNumber >= ctx.order.length * ctx.numRounds;
-  const statusError = complete ? await finalizeDraft(admin, ctx.league, ctx.memberIds) : null;
+  const statusError = complete ? await finalizeDraft(admin, ctx.league, ctx.order) : null;
   return { ok: true, pick: inserted, complete, statusError };
 }
 
@@ -223,12 +248,11 @@ export async function finalizeDraft(
   admin: Admin,
   // deno-lint-ignore no-explicit-any
   league: any,
-  memberIds: string[],
+  order: string[], // the stored draft order (DraftContext.order): the season roster
 ): Promise<string | null> {
   const plan = planSeason({
     leagueType: String(league.league_type ?? 'duration'),
-    commissionerId: league.commissioner_id == null ? null : String(league.commissioner_id),
-    memberIds,
+    order,
     numWeeks: league.num_weeks == null ? null : Number(league.num_weeks),
     durationDays: league.duration_days == null ? null : Number(league.duration_days),
     now: new Date(),
@@ -434,7 +458,7 @@ export async function autoPickTurn(
       const ins = await insertGatedPick(admin, choice.gated, choice.source);
       if (!ins.ok) return { ok: false, reason: ins.reason };
       const complete = choice.gated.pickNumber >= ctx.order.length * ctx.numRounds;
-      const statusError = complete ? await finalizeDraft(admin, ctx.league, ctx.memberIds) : null;
+      const statusError = complete ? await finalizeDraft(admin, ctx.league, ctx.order) : null;
       console.log('auto-pick', ctx.league.id, choice.gated.pickNumber, choice.source, choice.gated.symbol, choice.attempts, strategy.id);
       return { ok: true, pick: ins.row, pickSource: choice.source, complete, statusError, priceSource: choice.priceSource };
     }

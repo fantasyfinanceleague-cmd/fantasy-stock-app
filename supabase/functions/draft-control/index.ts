@@ -25,8 +25,14 @@
 //               2026-09-25: test-account-only at launch — see rules.ts). Tops
 //               the league up to MIN_DRAFT_MEMBERS bots, never past the
 //               league's own num_participants cap. Only while
-//               draft_status='not_started' (adding bots mid-draft would
-//               reshuffle computeDraftOrder for every already-picking member).
+//               draft_status='not_started' (the DB refuses joins once the
+//               stored draft order is locked at start anyway).
+//
+// Draft order: stored in league_draft_order (20261013000000), NOT decided
+// here. The flip to 'in_progress' below fires trg_leagues_order_start, which
+// materializes the order if nothing has yet (date TBD), reconciles it to the
+// exact member set, and LOCKS it — the same trigger covers the commissioner's
+// direct [I2a] flip, so no start path can skip it.
 //
 // Auth: gateway verify_jwt=true + in-code getUser() (join-league pattern).
 // Commissioner identity is read from the leagues row via the VERIFIED user id

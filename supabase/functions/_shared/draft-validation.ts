@@ -111,15 +111,46 @@ export const SKIP_SYMBOL = 'SKIP';
 
 const isSkip = (p: PickRow) => (p.symbol ?? '').toUpperCase() === SKIP_SYMBOL;
 
-/** Canonical draft order: commissioner first, others sorted ascending. */
-export function computeDraftOrder(
-  commissionerId: string | null,
-  memberIds: string[],
-): string[] {
-  const rest = memberIds.filter((id) => id !== commissionerId).sort();
-  return commissionerId && memberIds.includes(commissionerId)
-    ? [commissionerId, ...rest]
-    : rest;
+/**
+ * THE DRAFT ORDER IS STORED, NOT DERIVED. It lives in public.league_draft_order
+ * (20261013000000_draft_order_modes.sql): random (server-generated, revealed at
+ * draft_date - 1h) or manual (commissioner-arranged), locked at draft start. The
+ * old computeDraftOrder (commissioner first, then ids sorted) is gone; started
+ * drafts were backfilled with exactly what it returned, so no turn shifted.
+ */
+export interface DraftOrderRow {
+  position: number;
+  user_id: string;
+}
+
+/** Stored rows -> the ordered id list turn math takes. Sorted here rather than
+ * trusting a query's ORDER BY, so a caller that forgets it cannot reorder turns. */
+export function orderFromRows(rows: DraftOrderRow[]): string[] {
+  return [...rows]
+    .sort((a, b) => Number(a.position) - Number(b.position))
+    .map((r) => String(r.user_id));
+}
+
+export type StoredOrderCheck =
+  | { ok: true }
+  | { ok: false; reason: 'missing' | 'not_permutation' };
+
+/**
+ * Is the stored order EXACTLY a permutation of the current members? Compared
+ * per participant in both directions — never "does an order exist" (CLAUDE.md:
+ * guards keyed on all-or-nothing state are blind to partial state). A started
+ * draft always has one (the start trigger locks it); a mismatch means turn math
+ * would silently skip or invent a picker, so callers refuse rather than guess.
+ */
+export function checkStoredOrder(order: string[], memberIds: string[]): StoredOrderCheck {
+  if (order.length === 0) return { ok: false, reason: 'missing' };
+  const members = new Set(memberIds);
+  const seen = new Set<string>();
+  for (const id of order) {
+    if (!members.has(id) || seen.has(id)) return { ok: false, reason: 'not_permutation' };
+    seen.add(id);
+  }
+  return seen.size === members.size ? { ok: true } : { ok: false, reason: 'not_permutation' };
 }
 
 export interface TurnState {
@@ -462,7 +493,7 @@ export type PickDecision =
 export interface PickInputs {
   rules: LeagueRules;
   slots: Slot[];
-  order: string[]; // canonical draft order (computeDraftOrder)
+  order: string[]; // the STORED draft order (league_draft_order, orderFromRows)
   picks: PickRow[]; // ALL drafts rows for the league, pick_number asc
   trades: TradeRow[]; // defensive: owned-check survives any pre-existing trades
   pickerId: string; // who this pick is FOR (caller or a bot)

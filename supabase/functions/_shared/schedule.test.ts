@@ -17,7 +17,6 @@
  */
 
 import { assert, assertEquals } from 'jsr:@std/assert';
-import { computeDraftOrder } from './draft-validation.ts';
 import {
   buildFinalizeArgs,
   marketCloseOn,
@@ -34,8 +33,7 @@ const THU = new Date('2026-09-24T18:00:00Z'); // a Thursday
 function matchup(over: Partial<SeasonInput> = {}): SeasonInput {
   return {
     leagueType: 'matchup',
-    commissionerId: 'c',
-    memberIds: ['a', 'b', 'c', 'd'],
+    order: ['c', 'a', 'b', 'd'], // the stored draft order
     numWeeks: null,
     durationDays: null,
     now: THU,
@@ -73,7 +71,7 @@ Deno.test('golden: 4 players, 4 weeks matches the web generator exactly', () => 
 });
 
 Deno.test('golden: 5 players (byes), 6 weeks matches the web generator exactly', () => {
-  assertEquals(rows(matchup({ memberIds: ['e', 'd', 'c', 'b', 'a'], numWeeks: 6 })), [
+  assertEquals(rows(matchup({ order: ['c', 'a', 'b', 'd', 'e'], numWeeks: 6 })), [
     [1, 'c', null, '2026-09-29T14:30:00.000Z', '2026-10-02T21:00:00.000Z'],
     [1, 'a', 'e', '2026-09-29T14:30:00.000Z', '2026-10-02T21:00:00.000Z'],
     [1, 'b', 'd', '2026-09-29T14:30:00.000Z', '2026-10-02T21:00:00.000Z'],
@@ -152,7 +150,7 @@ for (const n of [3, 5, 7]) {
 }
 
 Deno.test('no BYE sentinel ever leaks into matchup rows', () => {
-  for (const m of plan(matchup({ memberIds: ['a', 'b', 'c'], numWeeks: 9 })).matchups) {
+  for (const m of plan(matchup({ order: ['c', 'a', 'b'], numWeeks: 9 })).matchups) {
     assert(m.team1_user_id !== 'BYE' && m.team2_user_id !== 'BYE');
     assert(typeof m.team1_user_id === 'string' && m.team1_user_id.length > 0);
   }
@@ -169,7 +167,7 @@ Deno.test('num_weeks > n-1 cycles: week n repeats week 1', () => {
 });
 
 Deno.test('num_weeks < n-1 truncates the round-robin', () => {
-  const p = plan(matchup({ memberIds: ['a', 'b', 'c', 'd', 'e', 'f'], numWeeks: 2 }));
+  const p = plan(matchup({ order: ['c', 'a', 'b', 'd', 'e', 'f'], numWeeks: 2 }));
   assertEquals(p.matchups.length, 6); // 2 weeks x 3 games
   assertEquals(new Set(p.matchups.map((m) => m.week_number)), new Set([1, 2]));
 });
@@ -253,21 +251,20 @@ Deno.test('determinism: same inputs give deep-equal plans', () => {
   assertEquals(planSeason(matchup({ numWeeks: 6 })), planSeason(matchup({ numWeeks: 6 })));
 });
 
-Deno.test('member order from the query does not matter (canonical roster)', () => {
-  const base = planSeason(matchup({ memberIds: ['a', 'b', 'c', 'd', 'e'], numWeeks: 5 }));
-  for (const order of [['e', 'd', 'c', 'b', 'a'], ['c', 'e', 'a', 'd', 'b'], ['b', 'a', 'e', 'c', 'd']]) {
-    assertEquals(planSeason(matchup({ memberIds: order, numWeeks: 5 })), base);
+Deno.test('roster IS the stored draft order — planSeason never reorders it', () => {
+  for (const order of [['e', 'd', 'c', 'b', 'a'], ['c', 'e', 'a', 'd', 'b'], ['bot-2', 'z', 'c', 'bot-1', 'a']]) {
+    assertEquals(plan(matchup({ order, numWeeks: 5 })).roster, order);
   }
+  // A different order is a different (equally valid) round-robin: the schedule
+  // follows the draft order, so a non-commissioner-first draft gets its own.
+  assert(
+    JSON.stringify(plan(matchup({ order: ['a', 'b', 'c', 'd'] })).matchups) !==
+      JSON.stringify(plan(matchup({ order: ['c', 'a', 'b', 'd'] })).matchups),
+  );
 });
 
-Deno.test('roster is commissioner first, then remaining ids sorted ascending', () => {
-  assertEquals(plan(matchup({ memberIds: ['z', 'bot-2', 'c', 'bot-1', 'a'] })).roster, ['c', 'a', 'bot-1', 'bot-2', 'z']);
-  // Commissioner not a member (e.g. left): plain sorted order, as computeDraftOrder does.
-  assertEquals(plan(matchup({ commissionerId: 'x', memberIds: ['b', 'a'] })).roster, ['a', 'b']);
-});
-
-Deno.test('duplicate member ids are collapsed, never double-scheduled', () => {
-  const p = plan(matchup({ memberIds: ['a', 'b', 'a', 'c', 'd', 'd'] }));
+Deno.test('duplicate ids are collapsed, never double-scheduled', () => {
+  const p = plan(matchup({ order: ['c', 'a', 'b', 'a', 'd', 'd'] }));
   assertEquals(p.roster, ['c', 'a', 'b', 'd']);
   assertEquals(p.matchups.filter((m) => m.week_number === 1).length, 2);
 });
@@ -277,17 +274,17 @@ Deno.test('duplicate member ids are collapsed, never double-scheduled', () => {
 // ---------------------------------------------------------------------------
 
 Deno.test('refusals: empty roster, solo matchup league, bad num_weeks, unknown type', () => {
-  assertEquals(planSeason(matchup({ memberIds: [] })), { ok: false, reason: 'no_members' });
-  assertEquals(planSeason(matchup({ memberIds: ['c'] })), { ok: false, reason: 'too_few_members' });
+  assertEquals(planSeason(matchup({ order: [] })), { ok: false, reason: 'no_members' });
+  assertEquals(planSeason(matchup({ order: ['c'] })), { ok: false, reason: 'too_few_members' });
   assertEquals(planSeason(matchup({ numWeeks: -2 })), { ok: false, reason: 'invalid_num_weeks' });
   assertEquals(planSeason(matchup({ numWeeks: 2.5 })), { ok: false, reason: 'invalid_num_weeks' });
   assertEquals(planSeason(matchup({ leagueType: 'weird' })), { ok: false, reason: 'unknown_league_type' });
   // A solo DURATION league is fine — it has no pairings.
-  assert(planSeason(matchup({ leagueType: 'duration', memberIds: ['c'] })).ok);
+  assert(planSeason(matchup({ leagueType: 'duration', order: ['c'] })).ok);
 });
 
 Deno.test('payload shape: integer weeks, ISO-8601 UTC strings, exactly the matchups columns', () => {
-  for (const m of plan(matchup({ memberIds: ['a', 'b', 'c'], numWeeks: 3 })).matchups) {
+  for (const m of plan(matchup({ order: ['c', 'a', 'b'], numWeeks: 3 })).matchups) {
     assertEquals(Object.keys(m).sort(), ['team1_user_id', 'team2_user_id', 'week_end', 'week_number', 'week_start']);
     assert(Number.isInteger(m.week_number) && m.week_number >= 1);
     assert(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.000Z$/.test(m.week_start));
@@ -299,19 +296,18 @@ Deno.test('payload shape: integer weeks, ISO-8601 UTC strings, exactly the match
 // RPC glue: id-string identity (cross-table type footgun) + result reading
 // ---------------------------------------------------------------------------
 
-Deno.test('payload ids are exactly computeDraftOrder strings (uuids, bots, mixed case)', () => {
-  const members = [
+Deno.test('payload ids are exactly the stored order strings (uuids, bots, mixed case)', () => {
+  const order = [
     'f3a1c2d4-0000-4000-8000-00000000000b',
     'bot-2',
     'F3A1C2D4-0000-4000-8000-00000000000A', // case is preserved, never normalised
     'bot-10',
     'a0000000-0000-4000-8000-000000000001',
   ];
-  const commissioner = 'a0000000-0000-4000-8000-000000000001';
-  const p = plan(matchup({ commissionerId: commissioner, memberIds: members, numWeeks: 5 }));
-  assertEquals(p.roster, computeDraftOrder(commissioner, members));
+  const p = plan(matchup({ order, numWeeks: 5 }));
+  assertEquals(p.roster, order);
   const args = buildFinalizeArgs('L', p);
-  assertEquals(args.p_member_ids, computeDraftOrder(commissioner, members));
+  assertEquals(args.p_member_ids, order);
   for (const m of args.p_matchups) {
     assert(args.p_member_ids.includes(m.team1_user_id), `team1 ${m.team1_user_id}`);
     assert(m.team2_user_id === null || args.p_member_ids.includes(m.team2_user_id), `team2 ${m.team2_user_id}`);
