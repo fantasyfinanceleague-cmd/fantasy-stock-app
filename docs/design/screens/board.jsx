@@ -120,6 +120,9 @@
     ['warn-text', 'warn-tint', 'bg', 4.5, '"Your call" notes'],
     ['text', 'warn-tint', 'bg', 4.5, 'Sign-ups-paused banner'],
     ['text', 'warn-tint', 'surface', 4.5, 'Uneven-bye heads-up (inside a card)'],
+    ['live', 'inset', null, 3, 'Live dot inside a LIVE chip (graphic)'],
+    ['text', 'line', null, 4.5, 'Initials on a neutral (other manager) avatar'],
+    ['text-2', 'line', null, 4.5, 'Neutral "?" avatar fallback'],
     ['on-accent', 'you', null, 3, 'Chevrons on the drawn draft track (graphic)'],
     ['surface', 'live', null, 3, 'Trophy icon on the champion badge (graphic)'],
   ];
