@@ -222,7 +222,7 @@ Deno.serve(async (req: Request) => {
     // finalize failed — then any call for the league retries it. Checked before
     // pricing so a retry never spends an Alpaca call on a finished draft.
     if (isDraftFull(ctx)) {
-      const finalizeError = await finalizeDraft(admin, league, memberIds);
+      const finalizeError = await finalizeDraft(admin, league, order);
       if (action === 'finalize') {
         return json({ ok: finalizeError === null, draft_complete: true, status_update_error: finalizeError });
       }
@@ -370,7 +370,7 @@ Deno.serve(async (req: Request) => {
     const decision = gate.pick;
 
     const complete = decision.pickNumber >= order.length * numRounds;
-    const statusError = complete ? await finalizeDraft(admin, league, memberIds) : null;
+    const statusError = complete ? await finalizeDraft(admin, league, order) : null;
     return json({
       ok: true,
       pick: inserted,

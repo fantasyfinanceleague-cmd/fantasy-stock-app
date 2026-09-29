@@ -6,7 +6,7 @@ Supabase CLI applies only the timestamped `.sql` files directly in
 Do **not** move a file back to the parent directory until its stated precondition
 is met.
 
-**Currently held:** 2 files (see *Held* below): `20260929000000_drop_I6_I2b.sql` and `20261010000001_schedule_draft_autopick_sweep.sql`.
+**Currently held:** 3 files (see *Held* below): `20260929000000_drop_I6_I2b.sql`, `20261010000001_schedule_draft_autopick_sweep.sql` and `20261013000001_schedule_draft_order_notify.sql`.
 
 ## How to use it
 
@@ -116,6 +116,47 @@ closed keeps advancing, every pick ≥ `pick_seconds` apart). From then on, the
 standing stuck-draft check is the query in `docs/migrations/DRAFT_PICK_CLOCK.md`
 §Monitoring: any turn more than 2 minutes overdue means that league's sweep is
 failing. Then move this section to *History*.
+
+### `20261013000001_schedule_draft_order_notify.sql`
+
+Schedules `draft_order_notify` (every minute). It posts to `draft-order-notify`
+**only when** `public.draft_order_notify_due()` is true. That function
+finalizes every due draft order nobody has opened, which creates the
+"draft order is set" notices in the same transaction. It then delivers the
+pending pushes. The order itself never depends on this job, because every read
+finalizes lazily; the job owns timeliness and the push.
+
+**Where to run:** the deploy checkout only, refreshed first (see the entries
+above and CLAUDE.md).
+
+**Precondition: ALL of the following, in order.**
+1. `20261013000000_draft_order_modes.sql` is applied (`schema_migrations`),
+   and `docs/security/draft-order-modes-effect-test.sql` returned all PASS.
+   `draft_order_notify_due`'s and `finalize_due_draft_orders`' `proacl` show
+   `service_role` only.
+2. `draft-order-notify` is **deployed**
+   (`supabase functions deploy draft-order-notify --project-ref haiaaifjcclsvmkfqgmd`)
+   and byte-verified against the commit (`supabase functions download`, then
+   diff). The "Uploading asset" list must include `_shared/push.ts`,
+   `_shared/cron-auth.ts` and `draft-order-notify/plan.ts`. A no-credential
+   POST must return the function's own `401 {"error":"Unauthorized"}`, not the
+   gateway's generic 401.
+3. A manual run passes: `net.http_post` to the function with the vault
+   `cron_apikey`, on a TEST league with 4 members and `draft_date` 30–50
+   minutes out. It must set `league_draft_order_meta.state = 'finalized'` and
+   settle that league's `league_notifications.push_status` rows (`sent` for a
+   1.1.0 device, `no_device` otherwise).
+   `net.http_post(... timeout_milliseconds := 30000)` is already proven on
+   this `pg_net`: the applied, running `20261005000003_schedule_refresh_market_calendar.sql`
+   passes it. The manual run still exercises it before scheduling.
+
+**Timestamp note:** if migrations newer than `20261013000001` have been
+applied before this is promoted, rename it to a fresh timestamp rather than
+passing `--include-all`.
+
+**After applying:** `SELECT jobname, schedule, command FROM cron.job WHERE jobname = 'draft_order_notify';`,
+then run the data check at the bottom of the file. Then move this section to
+*History*.
 
 ## History
 

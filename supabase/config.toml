@@ -117,6 +117,17 @@ enabled = true
 verify_jwt = false
 entrypoint = "./functions/draft-autopick-sweep/index.ts"
 
+# Draft order modes (20261013000000): delivers the "draft order is set" push
+# and finalizes due leagues nobody has opened. CRON ONLY: verify_jwt=false and
+# the shared constant-time apikey guard (../_shared/cron-auth.ts,
+# SB_SECRET_KEY_CRON, fail-closed) is the whole auth boundary. Its cron is
+# DEFERRED (supabase/migrations/deferred/20261013000001) until this is deployed
+# and effect-verified.
+[functions.draft-order-notify]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/draft-order-notify/index.ts"
+
 # In-house simulator (DR-001 Phase 3): server-side draft legality gate. RLS on
 # drafts remains the membership backstop; this function is the single legality
 # gate + write path the clients use. verify_jwt=true + in-code getUser() +

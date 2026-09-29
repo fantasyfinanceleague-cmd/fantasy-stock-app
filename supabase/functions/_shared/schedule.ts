@@ -27,11 +27,12 @@
  *   - Duration leagues start the NEXT CALENDAR DAY and end duration_days later,
  *     neither snapped to a trading day (a Friday draft starts on a Saturday).
  *
- * Roster order is the canonical draft order (computeDraftOrder: commissioner
- * first, rest sorted ascending) so the schedule is a pure function of league
- * membership, not of whichever order a query returned rows in.
+ * Roster order is the league's STORED draft order (league_draft_order,
+ * 20261013000000), so the schedule is a pure function of that locked order,
+ * never of whichever order a query returned member rows in. Drafts that started
+ * before the stored order existed were backfilled with the old derived order
+ * (commissioner first, rest sorted), so their schedules are unchanged.
  */
-import { computeDraftOrder } from './draft-validation.ts';
 import { isValidPlayoffTeams, playoffShape } from './playoff-bracket.ts';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -53,8 +54,7 @@ export interface MatchupRow {
 
 export interface SeasonInput {
   leagueType: string; // leagues.league_type: 'matchup' | 'duration'
-  commissionerId: string | null;
-  memberIds: string[]; // league_members.user_id, any order
+  order: string[]; // the stored draft order (league_draft_order), a permutation of the members
   numWeeks: number | null; // leagues.num_weeks (REGULAR-season weeks only)
   playoffTeams: number | null; // leagues.playoff_teams (matchup leagues; ignored for duration)
   durationDays: number | null; // leagues.duration_days
@@ -148,7 +148,7 @@ export function roundRobinPairings(
  *              strand a finished draft with no season.
  *  - duration: no matchups; next-day open .. +duration_days at market close. */
 export function planSeason(input: SeasonInput): SeasonPlan {
-  const roster = computeDraftOrder(input.commissionerId, [...new Set(input.memberIds)]);
+  const roster = [...new Set(input.order)];
   if (roster.length === 0) return { ok: false, reason: 'no_members' };
 
   if (input.leagueType === 'duration') {
