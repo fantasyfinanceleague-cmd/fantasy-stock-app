@@ -49,6 +49,9 @@
 -- partial-state trap. A plain ADD CONSTRAINT validates existing rows and
 -- FAILS CLOSED: if any row violates it, this whole migration rolls back
 -- cleanly (nothing half-applied). Run the PRE-CHECK below first.
+-- Pre-check 2026-09-29: 0 violators of 4 rows; 2 NULL, which the first-run
+-- prompt handles. So no data step. Re-run it before the push anyway — prod can
+-- change in between, and the constraint still fails closed if it has.
 --
 -- REGEX PARITY WITH THE SIGNUP TRIGGER (keep them identical): the trigger
 -- nulls anything failing this exact pattern BEFORE inserting, so the CHECK
