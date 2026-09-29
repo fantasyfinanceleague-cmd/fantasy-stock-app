@@ -431,7 +431,8 @@
           <GameCard tag="Draft" chip={<span className="ks-chip">Pre-draft</span>}>
             <span className="ks-title">Sat, Oct 3 · 7:00 PM</span>
             <span className="ks-score ks-num" style={{ fontSize: 40 }}>3d 04h 12m</span>
-            <span className="ks-callout ks-muted">60-second picks · 6 rounds · order set when the draft starts</span>
+            <span className="ks-callout ks-muted">60-second picks · 6 rounds</span>
+            <span className="ks-callout" style={{ display: 'flex', gap: 8, alignItems: 'center' }}><span className="ks-dot" />Draft order revealed Sat 6:00 PM, an hour before the draft</span>
             <span className="ks-btn ks-btn--ongame">Build your queue</span>
           </GameCard>
           <Card pad="14px">
@@ -667,7 +668,7 @@
    * managers the draft can't start: the sheet says why in one line and puts
    * the playoff stepper right there, capped at the member count; Start
    * draft stays disabled until P ≤ managers (friendly, blocking). */
-  function StartDraftConfirm({ managers = 7, playoff = 6, weeks = 10 }) {
+  function StartDraftConfirm({ managers = 7, playoff = 6, weeks = 10, order = 'random' }) {
     const blocked = playoff > managers;
     const StepInline = () => (
       <div style={{ display: 'grid', gap: 6 }}>
@@ -686,7 +687,8 @@
       <Device tab="league" label={blocked ? 'Start the draft, playoff teams too many' : 'Start the draft, confirm'} overlay={
         <Sheet top={blocked ? 330 : 380}>
           <span className="ks-title">Start the draft?</span>
-          <span className="ks-callout ks-muted">{managers} managers are in. The draft order is set when you start, and each pick gets 60 seconds.</span>
+          <span className="ks-callout ks-muted">{managers} managers are in, and each pick gets 60 seconds.</span>
+          <span className="ks-callout"><b>Draft order:</b> {order === 'manual' ? 'set by the commissioner' : 'Random, revealed at 6:00 PM'}</span>
           {blocked ? (
             <>
               <div role="alert" className="ks-card" style={{ padding: '10px 12px', background: 'var(--c-warn-tint)', borderColor: 'var(--c-warn-line)', boxShadow: 'none' }}>
@@ -704,7 +706,69 @@
           <span className="ks-btn ks-btn--secondary">Not yet</span>
         </Sheet>
       }>
-        <Head name="Serie A Traders" chip={<span className="ks-chip">Pre-draft</span>} />
+        <Head name="Office League" chip={<span className="ks-chip">Pre-draft</span>} />
+      </Device>
+    );
+  }
+
+  /** The revealed draft order (after 6:00 PM), your slot highlighted, with
+   * what the snake means for you. New copy. */
+  function DraftOrder() {
+    const L = K.SERIE_A, teams = L.order.length;
+    const seat = L.order.findIndex((m) => m.you) + 1;
+    const picks = K.picksForSeat(seat, teams, L.rounds);
+    return (
+      <div>
+        <div className="ks-section-h"><h3>Draft order</h3><span className="ks-caption ks-muted">Revealed 6:00 PM</span></div>
+        <div className="ks-raised" style={{ padding: '10px 12px', marginBottom: 8 }}>
+          <span className="ks-headline" style={{ fontWeight: 800, color: 'var(--c-you-text)' }}>You pick {K.ordinal(seat)}</span>
+          <span className="ks-callout ks-muted">, then {picks.slice(1, 3).map(K.ordinal).join(', ')}… The order reverses each round.</span>
+        </div>
+        <ol className="ks-rows" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 16 }}>
+          {L.order.map((m, i) => (
+            <li key={m.name} className="ks-row" style={{ gridTemplateColumns: '18px 28px 1fr', padding: '7px 6px', borderRadius: 8, background: m.you ? 'var(--c-you-tint)' : undefined }}>
+              <span className="ks-caption ks-num">{i + 1}</span>
+              <span className={m.you ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{m.init}</span>
+              <span className="ks-callout" style={{ fontWeight: m.you ? 800 : 600, whiteSpace: 'nowrap' }}>{m.name}{m.bot ? <span className="ks-caption"> · Bot</span> : null}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+    );
+  }
+
+  /** The commissioner's Arrange order (Manual mode): drag to reorder, pre-
+   * filled with a random order (never commissioner-first), Save. Locked
+   * once the draft starts. Row 3 is shown mid-drag. New copy. */
+  function ArrangeOrder() {
+    const L = K.SERIE_A;
+    return (
+      <Device noTabs label="Arrange the draft order">
+        <Back label="League settings" />
+        <div className="ks-pad ks-stack" style={{ gap: 12 }}>
+          <div>
+            <h2 className="ks-head__title" style={{ fontSize: 28 }}>Arrange order</h2>
+            <p className="ks-callout ks-muted" style={{ margin: '4px 0 0' }}>Drag to set who picks first. The order reverses each round. It locks when the draft starts.</p>
+          </div>
+          <div className="ks-card" style={{ padding: '2px 8px' }}>
+            <ol className="ks-rows">
+              {L.order.map((m, i) => (
+                <li key={m.name} className="ks-row" style={{ gridTemplateColumns: '22px 32px 1fr auto 24px', padding: '10px 6px', ...(i === 2 ? { background: 'var(--c-surface)', boxShadow: 'var(--c-sheet-shadow)', borderRadius: 10, transform: 'scale(1.02) translateY(-4px)', position: 'relative', zIndex: 1 } : {}) }}>
+                  <span className="ks-callout ks-num" style={{ fontWeight: 700 }}>{i + 1}</span>
+                  <span className={m.you ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{m.init}</span>
+                  <span className="ks-callout" style={{ fontWeight: 700 }}>{m.name}{m.you ? <span className="ks-muted" style={{ fontWeight: 500 }}> (you)</span> : null}</span>
+                  <span>{m.bot ? <span className="ks-chip ks-chip--money">Bot</span> : m.commish ? <span className="ks-chip ks-chip--money">Commish</span> : null}</span>
+                  <span className="ks-muted" aria-label="Drag handle" style={{ fontSize: 18, textAlign: 'center' }}>≡</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+          <span className="ks-caption">Started from a random order. Shuffle again or drag anyone anywhere.</span>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <span className="ks-btn ks-btn--secondary">Shuffle again</span>
+            <span className="ks-btn">Save order</span>
+          </div>
+        </div>
       </Device>
     );
   }
@@ -718,12 +782,9 @@
           <div className="ks-raised" style={{ padding: 16, display: 'grid', gap: 4, textAlign: 'center' }}>
             <span className="ks-tag">Draft starts in</span>
             <span className="ks-score ks-num" style={{ fontSize: 56, lineHeight: '56px' }}>04:59</span>
-            <span className="ks-caption ks-muted">Sat 7:00 PM · 60-second picks · order set at the start</span>
+            <span className="ks-caption ks-muted">Sat 7:00 PM · 60-second picks · random order, revealed at 6:00 PM</span>
           </div>
-          <div>
-            <div className="ks-section-h"><h3>In the room</h3><span className="ks-caption ks-muted ks-num">5 of 6</span></div>
-            <div style={{ display: 'flex', gap: 6 }}>{['RB', 'MR', 'LC', 'SF', 'GV'].map((m, i) => <span key={m} className={i === 0 ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{m}</span>)}<span className="ks-avatar ks-avatar--sm" style={{ background: 'transparent', border: '1.5px dashed var(--c-line)' }} /></div>
-          </div>
+          <DraftOrder />
           <div>
             <div className="ks-section-h"><h3>Your queue</h3><span className="ks-caption ks-muted">If your clock runs out, we pick from here first</span></div>
             <ul className="ks-rows">{queue.map((t, i) => <li key={t} className="ks-row" style={{ gridTemplateColumns: '20px 36px 1fr 20px', padding: '8px 0' }}><span className="ks-caption ks-muted ks-num">{i + 1}</span><Logo t={t} game /><span className="ks-t ks-callout">{t}</span><span className="ks-muted">≡</span></li>)}</ul>
@@ -1128,7 +1189,7 @@
   window.KSInventory = {
     SignIn, SignUp, SignUpPaused, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeScoring, HomeComplete,
-    AllMatchups, MatchupPreSeason, Playoffs6, DraftLobby, StartDraftConfirm, CreateSeason, DraftAutoPick, DraftRecap, Playoffs,
+    AllMatchups, MatchupPreSeason, Playoffs6, ArrangeOrder, DraftLobby, StartDraftConfirm, CreateSeason, DraftAutoPick, DraftRecap, Playoffs,
     SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,
     WebHome, WebPortfolio, WebSettings,
   };

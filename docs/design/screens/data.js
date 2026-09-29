@@ -397,6 +397,23 @@
     const bye = p.byes === 0 ? 'no byes' : p.byes === 1 ? 'the top seed gets a first-round bye' : `the top ${p.byes} seeds get first-round byes`;
     return `${P} teams · ${p.weeks} ${p.weeks === 1 ? 'week' : 'weeks'} of playoffs · ${bye}`;
   };
+  /** Serie A Traders (pre-draft sample): 8 members incl. 2 bots; Roberto
+   * is the commissioner. Draft order mode (Giorgio, 2026-09-29): 'random'
+   * (revealed 1 hour before the draft) or 'manual' (the commissioner sets
+   * it). Never automatically commissioner-first. Order below = the revealed
+   * random order. */
+  const SERIE_A = {
+    name: 'Serie A Traders', draftAt: 'Sat 7:00 PM', revealAt: 'Sat 6:00 PM', rounds: 6,
+    order: [
+      { name: 'Marco R.', init: 'MR' }, { name: 'Luca C.', init: 'LC' }, { name: 'Atlas', init: 'AT', bot: true },
+      { name: 'Roberto B.', init: 'RB', you: true, commish: true }, { name: 'Sofia F.', init: 'SF' },
+      { name: 'Giulia V.', init: 'GV' }, { name: 'Nova', init: 'NV', bot: true }, { name: 'Tommaso P.', init: 'TP' },
+    ],
+  };
+  /** Overall pick numbers for a seat in a snake draft. */
+  const picksForSeat = (seat, teams, rounds) =>
+    Array.from({ length: rounds }, (_, r) => (r % 2 === 0 ? r * teams + seat : (r + 1) * teams - seat + 1));
+  const ordinal = (n) => `${n}${[, 'st', 'nd', 'rd'][(n % 100 >> 3) ^ 1 && n % 10] || 'th'}`;
   /** Record as W–L, with –T only when there are ties. */
   const record = (r) => `${r.w}–${r.l}${r.t ? `–${r.t}` : ''}`;
 
@@ -407,6 +424,6 @@
     MATCHUP, WEEK_CLOSES, CHYRONS,
     STANDINGS_BEFORE, STANDINGS_FINAL, WEEK6,
     PORTFOLIO_LIVE, OTHER_LEAGUES, HOME, NVDA, ROBERTO_WEEKS, SALE,
-    lineup, score, scoreDisplay, byeNotice, record, playoffPlan, playoffLine,
+    lineup, score, scoreDisplay, byeNotice, record, playoffPlan, playoffLine, SERIE_A, picksForSeat, ordinal,
   };
 })();

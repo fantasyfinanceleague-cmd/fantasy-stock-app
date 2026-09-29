@@ -1015,6 +1015,23 @@
     const bye = p.byes === 0 ? 'no byes' : p.byes === 1 ? 'the top seed gets a first-round bye' : `the top ${p.byes} seeds get first-round byes`;
     return `${P} teams · ${p.weeks} ${p.weeks === 1 ? 'week' : 'weeks'} of playoffs · ${bye}`;
   };
+  /** Serie A Traders (pre-draft sample): 8 members incl. 2 bots; Roberto
+   * is the commissioner. Draft order mode (Giorgio, 2026-09-29): 'random'
+   * (revealed 1 hour before the draft) or 'manual' (the commissioner sets
+   * it). Never automatically commissioner-first. Order below = the revealed
+   * random order. */
+  const SERIE_A = {
+    name: 'Serie A Traders', draftAt: 'Sat 7:00 PM', revealAt: 'Sat 6:00 PM', rounds: 6,
+    order: [
+      { name: 'Marco R.', init: 'MR' }, { name: 'Luca C.', init: 'LC' }, { name: 'Atlas', init: 'AT', bot: true },
+      { name: 'Roberto B.', init: 'RB', you: true, commish: true }, { name: 'Sofia F.', init: 'SF' },
+      { name: 'Giulia V.', init: 'GV' }, { name: 'Nova', init: 'NV', bot: true }, { name: 'Tommaso P.', init: 'TP' },
+    ],
+  };
+  /** Overall pick numbers for a seat in a snake draft. */
+  const picksForSeat = (seat, teams, rounds) =>
+    Array.from({ length: rounds }, (_, r) => (r % 2 === 0 ? r * teams + seat : (r + 1) * teams - seat + 1));
+  const ordinal = (n) => `${n}${[, 'st', 'nd', 'rd'][(n % 100 >> 3) ^ 1 && n % 10] || 'th'}`;
   /** Record as W–L, with –T only when there are ties. */
   const record = (r) => `${r.w}–${r.l}${r.t ? `–${r.t}` : ''}`;
 
@@ -1025,7 +1042,7 @@
     MATCHUP, WEEK_CLOSES, CHYRONS,
     STANDINGS_BEFORE, STANDINGS_FINAL, WEEK6,
     PORTFOLIO_LIVE, OTHER_LEAGUES, HOME, NVDA, ROBERTO_WEEKS, SALE,
-    lineup, score, scoreDisplay, byeNotice, record, playoffPlan, playoffLine,
+    lineup, score, scoreDisplay, byeNotice, record, playoffPlan, playoffLine, SERIE_A, picksForSeat, ordinal,
   };
 })();
 
@@ -1686,7 +1703,11 @@
           <div className="ks-card" style={{ padding: '2px 14px' }}>
             <ul className="ks-rows">
               <Row k="Draft date" v="Sat, Oct 3 · 7:00 PM" />
-              <Row k="Draft order" v="" sub="Set when the draft starts" />
+              <li className="ks-row" style={{ gridTemplateColumns: '1fr', padding: '13px 0', gap: 8 }}>
+                <span className="ks-callout" style={{ fontWeight: 600 }}>Draft order</span>
+                <div className="ks-seg"><span className="on">Random</span><span>Manual</span></div>
+                <span className="ks-caption">Revealed 1 hour before the draft (Sat 6:00 PM). With Manual, you arrange it yourself.</span>
+              </li>
               <Row k="Rounds" v="6" sub="One per roster slot" />
               <li className="ks-row" style={{ gridTemplateColumns: '1fr', padding: '13px 0' }}>
                 <span><span className="ks-callout" style={{ fontWeight: 600 }}>If time runs out</span><br /><span className="ks-caption">We pick for you: the first stock still available in your queue, otherwise the biggest company that fits the league's rules. Never a random pick, never a skip.</span></span>
@@ -2293,7 +2314,8 @@
           <GameCard tag="Draft" chip={<span className="ks-chip">Pre-draft</span>}>
             <span className="ks-title">Sat, Oct 3 · 7:00 PM</span>
             <span className="ks-score ks-num" style={{ fontSize: 40 }}>3d 04h 12m</span>
-            <span className="ks-callout ks-muted">60-second picks · 6 rounds · order set when the draft starts</span>
+            <span className="ks-callout ks-muted">60-second picks · 6 rounds</span>
+            <span className="ks-callout" style={{ display: 'flex', gap: 8, alignItems: 'center' }}><span className="ks-dot" />Draft order revealed Sat 6:00 PM, an hour before the draft</span>
             <span className="ks-btn ks-btn--ongame">Build your queue</span>
           </GameCard>
           <Card pad="14px">
@@ -2529,7 +2551,7 @@
    * managers the draft can't start: the sheet says why in one line and puts
    * the playoff stepper right there, capped at the member count; Start
    * draft stays disabled until P ≤ managers (friendly, blocking). */
-  function StartDraftConfirm({ managers = 7, playoff = 6, weeks = 10 }) {
+  function StartDraftConfirm({ managers = 7, playoff = 6, weeks = 10, order = 'random' }) {
     const blocked = playoff > managers;
     const StepInline = () => (
       <div style={{ display: 'grid', gap: 6 }}>
@@ -2548,7 +2570,8 @@
       <Device tab="league" label={blocked ? 'Start the draft, playoff teams too many' : 'Start the draft, confirm'} overlay={
         <Sheet top={blocked ? 330 : 380}>
           <span className="ks-title">Start the draft?</span>
-          <span className="ks-callout ks-muted">{managers} managers are in. The draft order is set when you start, and each pick gets 60 seconds.</span>
+          <span className="ks-callout ks-muted">{managers} managers are in, and each pick gets 60 seconds.</span>
+          <span className="ks-callout"><b>Draft order:</b> {order === 'manual' ? 'set by the commissioner' : 'Random, revealed at 6:00 PM'}</span>
           {blocked ? (
             <>
               <div role="alert" className="ks-card" style={{ padding: '10px 12px', background: 'var(--c-warn-tint)', borderColor: 'var(--c-warn-line)', boxShadow: 'none' }}>
@@ -2566,7 +2589,69 @@
           <span className="ks-btn ks-btn--secondary">Not yet</span>
         </Sheet>
       }>
-        <Head name="Serie A Traders" chip={<span className="ks-chip">Pre-draft</span>} />
+        <Head name="Office League" chip={<span className="ks-chip">Pre-draft</span>} />
+      </Device>
+    );
+  }
+
+  /** The revealed draft order (after 6:00 PM), your slot highlighted, with
+   * what the snake means for you. New copy. */
+  function DraftOrder() {
+    const L = K.SERIE_A, teams = L.order.length;
+    const seat = L.order.findIndex((m) => m.you) + 1;
+    const picks = K.picksForSeat(seat, teams, L.rounds);
+    return (
+      <div>
+        <div className="ks-section-h"><h3>Draft order</h3><span className="ks-caption ks-muted">Revealed 6:00 PM</span></div>
+        <div className="ks-raised" style={{ padding: '10px 12px', marginBottom: 8 }}>
+          <span className="ks-headline" style={{ fontWeight: 800, color: 'var(--c-you-text)' }}>You pick {K.ordinal(seat)}</span>
+          <span className="ks-callout ks-muted">, then {picks.slice(1, 3).map(K.ordinal).join(', ')}… The order reverses each round.</span>
+        </div>
+        <ol className="ks-rows" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 16 }}>
+          {L.order.map((m, i) => (
+            <li key={m.name} className="ks-row" style={{ gridTemplateColumns: '18px 28px 1fr', padding: '7px 6px', borderRadius: 8, background: m.you ? 'var(--c-you-tint)' : undefined }}>
+              <span className="ks-caption ks-num">{i + 1}</span>
+              <span className={m.you ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{m.init}</span>
+              <span className="ks-callout" style={{ fontWeight: m.you ? 800 : 600, whiteSpace: 'nowrap' }}>{m.name}{m.bot ? <span className="ks-caption"> · Bot</span> : null}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+    );
+  }
+
+  /** The commissioner's Arrange order (Manual mode): drag to reorder, pre-
+   * filled with a random order (never commissioner-first), Save. Locked
+   * once the draft starts. Row 3 is shown mid-drag. New copy. */
+  function ArrangeOrder() {
+    const L = K.SERIE_A;
+    return (
+      <Device noTabs label="Arrange the draft order">
+        <Back label="League settings" />
+        <div className="ks-pad ks-stack" style={{ gap: 12 }}>
+          <div>
+            <h2 className="ks-head__title" style={{ fontSize: 28 }}>Arrange order</h2>
+            <p className="ks-callout ks-muted" style={{ margin: '4px 0 0' }}>Drag to set who picks first. The order reverses each round. It locks when the draft starts.</p>
+          </div>
+          <div className="ks-card" style={{ padding: '2px 8px' }}>
+            <ol className="ks-rows">
+              {L.order.map((m, i) => (
+                <li key={m.name} className="ks-row" style={{ gridTemplateColumns: '22px 32px 1fr auto 24px', padding: '10px 6px', ...(i === 2 ? { background: 'var(--c-surface)', boxShadow: 'var(--c-sheet-shadow)', borderRadius: 10, transform: 'scale(1.02) translateY(-4px)', position: 'relative', zIndex: 1 } : {}) }}>
+                  <span className="ks-callout ks-num" style={{ fontWeight: 700 }}>{i + 1}</span>
+                  <span className={m.you ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{m.init}</span>
+                  <span className="ks-callout" style={{ fontWeight: 700 }}>{m.name}{m.you ? <span className="ks-muted" style={{ fontWeight: 500 }}> (you)</span> : null}</span>
+                  <span>{m.bot ? <span className="ks-chip ks-chip--money">Bot</span> : m.commish ? <span className="ks-chip ks-chip--money">Commish</span> : null}</span>
+                  <span className="ks-muted" aria-label="Drag handle" style={{ fontSize: 18, textAlign: 'center' }}>≡</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+          <span className="ks-caption">Started from a random order. Shuffle again or drag anyone anywhere.</span>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <span className="ks-btn ks-btn--secondary">Shuffle again</span>
+            <span className="ks-btn">Save order</span>
+          </div>
+        </div>
       </Device>
     );
   }
@@ -2580,12 +2665,9 @@
           <div className="ks-raised" style={{ padding: 16, display: 'grid', gap: 4, textAlign: 'center' }}>
             <span className="ks-tag">Draft starts in</span>
             <span className="ks-score ks-num" style={{ fontSize: 56, lineHeight: '56px' }}>04:59</span>
-            <span className="ks-caption ks-muted">Sat 7:00 PM · 60-second picks · order set at the start</span>
+            <span className="ks-caption ks-muted">Sat 7:00 PM · 60-second picks · random order, revealed at 6:00 PM</span>
           </div>
-          <div>
-            <div className="ks-section-h"><h3>In the room</h3><span className="ks-caption ks-muted ks-num">5 of 6</span></div>
-            <div style={{ display: 'flex', gap: 6 }}>{['RB', 'MR', 'LC', 'SF', 'GV'].map((m, i) => <span key={m} className={i === 0 ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{m}</span>)}<span className="ks-avatar ks-avatar--sm" style={{ background: 'transparent', border: '1.5px dashed var(--c-line)' }} /></div>
-          </div>
+          <DraftOrder />
           <div>
             <div className="ks-section-h"><h3>Your queue</h3><span className="ks-caption ks-muted">If your clock runs out, we pick from here first</span></div>
             <ul className="ks-rows">{queue.map((t, i) => <li key={t} className="ks-row" style={{ gridTemplateColumns: '20px 36px 1fr 20px', padding: '8px 0' }}><span className="ks-caption ks-muted ks-num">{i + 1}</span><Logo t={t} game /><span className="ks-t ks-callout">{t}</span><span className="ks-muted">≡</span></li>)}</ul>
@@ -2990,7 +3072,7 @@
   window.KSInventory = {
     SignIn, SignUp, SignUpPaused, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeScoring, HomeComplete,
-    AllMatchups, MatchupPreSeason, Playoffs6, DraftLobby, StartDraftConfirm, CreateSeason, DraftAutoPick, DraftRecap, Playoffs,
+    AllMatchups, MatchupPreSeason, Playoffs6, ArrangeOrder, DraftLobby, StartDraftConfirm, CreateSeason, DraftAutoPick, DraftRecap, Playoffs,
     SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,
     WebHome, WebPortfolio, WebSettings,
   };
@@ -3094,6 +3176,7 @@
             'The draft lobby opens before the draft: countdown, who is in the room, and your queue. If your clock runs out, the server auto-picks from your queue, then the best available (the largest market cap that fits the league\'s rules; it never breaks them).',
             'An auto-pick is never hidden: a banner names who ran out of time and what was picked, the board cell gets an Auto badge, and the pick log says "Auto-picked · from his queue" or "Auto-picked · best available" (new copy). The rule is fixed, not a league setting: queue first, then best available, never random, never a skip.',
             'The draft recap lives under League › History after the draft: your picks ranked by how they have done since.',
+            'Draft order is a league setting with two modes: Random (shuffled and revealed to everyone 1 hour before the draft) or Manual (the commissioner arranges it, starting from a random order, never commissioner-first). Before the reveal, Home says when it comes; after it, the lobby shows the full order, your slot and your later picks. The Start-draft confirm states the mode. (New copy.)',
             'Uneven byes get a short heads-up, never an explanation of how byes work, and never a block: on the weeks control in Create league / League settings (based on the expected size, and it says so), and on the commissioner\'s Start draft confirm (the count is final there). It only appears for an odd number of managers when the weeks don\'t divide evenly; with an even count there are no byes. Backend: byes per manager = floor or ceil(weeks / managers) when managers is odd.',
             <>A bye is no result: in the Season strip on Home it shows as a neutral <span className="ks-chip ks-chip--money" style={{ textTransform: 'none', letterSpacing: 0, fontStretch: '100%' }}>Bye</span> chip, never W or L, and it doesn't count toward win percentage. (Stock Scudetto has 6 managers, so it has no byes.)</>,
             <>Playoffs are auto-configured from the number of teams the commissioner picks (any number from 2 up to the managers): weeks = ceil(log2 teams), first-round byes = the next power of two minus teams, given to the top seeds, fixed bracket with no re-seeding. For example, {window.KS.playoffLine(4)}; {window.KS.playoffLine(6)}; {window.KS.playoffLine(10)}; and 2 teams play just the final. Before the draft the cap is the expected size. Start draft re-checks it against who's actually in: if there are more playoff teams than managers, the draft can't start until the commissioner lowers them, right on the confirm sheet. (New copy.)</>,
@@ -3102,8 +3185,9 @@
           ]}>
           <Fit caption="All matchups"><I.AllMatchups /></Fit>
           <Fit caption="Matchup before the season"><I.MatchupPreSeason /></Fit>
-          <Fit caption="Draft lobby"><I.DraftLobby /></Fit>
-          <Fit caption="Start the draft (commissioner)" note="Uneven-bye heads-up: 7 managers, 10 weeks (new copy)"><I.StartDraftConfirm /></Fit>
+          <Fit caption="Draft lobby · order revealed" note="After 6:00 PM: the full order, your slot, and the snake picks that follow (new copy)"><I.DraftLobby /></Fit>
+          <Fit caption="Arrange order (commissioner, Manual)" note="Drag to reorder; starts from a random order, never commissioner-first; locks at the draft (new copy)"><I.ArrangeOrder /></Fit>
+          <Fit caption="Start the draft (commissioner)" note="Office League: 7 managers, 10 weeks, so the uneven-bye heads-up shows (new copy)"><I.StartDraftConfirm /></Fit>
           <Fit caption="Start the draft · too many playoff teams" note="7 playoff teams, 6 managers: fix it right here; Start stays disabled until it fits (new copy)"><I.StartDraftConfirm managers={6} playoff={7} /></Fit>
           <Fit caption="Create league · Season" note="Uneven-bye heads-up on the weeks control, based on the expected size (new copy)"><I.CreateSeason /></Fit>
           <Fit caption="Draft room · auto-picks" note="New copy: the banner, the Auto badge and the pick-log lines"><I.DraftAutoPick /></Fit>
