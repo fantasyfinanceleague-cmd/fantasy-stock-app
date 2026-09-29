@@ -44,9 +44,9 @@
 --   league exists and is a matchup league with num_weeks > 0; the bracket is a
 --   non-empty array of objects; each row's playoff_round is quarter|semi|finals
 --   and its week_number is within num_weeks+1 .. num_weeks+3; every non-null
---   team id is a member of the league; no self-pairing; the first round has at
---   least one fully populated matchup. current_week comes from the league's
---   own num_weeks, never from the caller.
+--   team id is a member of the league; no self-pairing; EVERY first-round row
+--   is fully populated. current_week comes from the league's own num_weeks,
+--   never from the caller.
 --
 -- SECURITY
 --   SECURITY DEFINER (it writes leagues + matchups, which clients cannot) with
@@ -78,7 +78,7 @@ declare
   v_league    leagues%rowtype;
   v_row       jsonb;
   v_round     text;
-  v_week      int;
+  v_wnum      numeric;
   v_t1        text;
   v_t2        text;
   v_first_wk  int;
@@ -109,9 +109,11 @@ begin
     if jsonb_typeof(v_row -> 'week_number') <> 'number' then
       return jsonb_build_object('status', 'refused', 'reason', 'bracket_bad_week');
     end if;
-    v_week := (v_row ->> 'week_number')::numeric;
-    if v_week::numeric <> (v_row ->> 'week_number')::numeric
-       or v_week < v_league.num_weeks + 1 or v_week > v_league.num_weeks + 3 then
+    -- Range-checked as numeric BEFORE the int cast, so an out-of-range value is
+    -- a clean refusal rather than an "integer out of range" exception.
+    v_wnum := (v_row ->> 'week_number')::numeric;
+    if v_wnum <> trunc(v_wnum)
+       or v_wnum < v_league.num_weeks + 1 or v_wnum > v_league.num_weeks + 3 then
       return jsonb_build_object('status', 'refused', 'reason', 'bracket_bad_week');
     end if;
     v_t1 := v_row ->> 'team1_user_id';
@@ -125,13 +127,18 @@ begin
     end if;
   end loop;
 
+  -- EVERY first-round row must be fully populated, not just one (an EXISTS here
+  -- would accept a first round with one real game and one half-empty slot:
+  -- the CLAUDE.md "any row" vs "every row" trap). Later rounds are placeholders.
   v_first_wk := v_league.num_weeks + 1;
   if not exists (
-    select 1 from jsonb_array_elements(p_bracket) r
-    where (r ->> 'week_number')::int = v_first_wk
-      and r ->> 'team1_user_id' is not null and r ->> 'team2_user_id' is not null
-  ) then
-    return jsonb_build_object('status', 'refused', 'reason', 'bracket_first_round_empty');
+       select 1 from jsonb_array_elements(p_bracket) r
+       where (r ->> 'week_number')::int = v_first_wk)
+     or exists (
+       select 1 from jsonb_array_elements(p_bracket) r
+       where (r ->> 'week_number')::int = v_first_wk
+         and (r ->> 'team1_user_id' is null or r ->> 'team2_user_id' is null)) then
+    return jsonb_build_object('status', 'refused', 'reason', 'bracket_first_round_incomplete');
   end if;
 
   -- (a) CLAIM. See CONCURRENCY above.

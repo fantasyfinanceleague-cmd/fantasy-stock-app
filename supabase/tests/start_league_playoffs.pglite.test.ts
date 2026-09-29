@@ -146,7 +146,10 @@ Deno.test({
       ['string week', (b) => b.map((r, i) => i === 0 ? { ...r, week_number: '4' } : r), 'bracket_bad_week'],
       ['non-member', (b) => b.map((r, i) => i === 0 ? { ...r, team2_user_id: 'intruder' } : r), 'bracket_non_member'],
       ['self pairing', (b) => b.map((r, i) => i === 0 ? { ...r, team2_user_id: r.team1_user_id } : r), 'bracket_self_pairing'],
-      ['first round empty', (b) => b.map((r) => ({ ...r, team1_user_id: null, team2_user_id: null })), 'bracket_first_round_empty'],
+      ['first round empty', (b) => b.map((r) => ({ ...r, team1_user_id: null, team2_user_id: null })), 'bracket_first_round_incomplete'],
+      ['first round half-empty', (b) => b.map((r, i) => i === 1 ? { ...r, team2_user_id: null } : r), 'bracket_first_round_incomplete'],
+      ['no first-round rows', (b) => b.filter((r) => r.week_number !== 4), 'bracket_first_round_incomplete'],
+      ['week beyond int range', (b) => b.map((r, i) => i === 2 ? { ...r, week_number: 1e12 } : r), 'bracket_bad_week'],
       ['duration league', (b) => b, 'not_a_scheduled_matchup_league', { league_type: 'duration' }],
       ['no num_weeks', (b) => b, 'not_a_scheduled_matchup_league', { num_weeks: null }],
     ];

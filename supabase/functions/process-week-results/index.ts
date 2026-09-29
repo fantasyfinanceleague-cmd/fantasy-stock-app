@@ -191,7 +191,12 @@ async function transitionAfterRegularSeason(
     if (lastErr) {
       return { ok: false, reason: `last regular week read failed: ${lastErr.message ?? JSON.stringify(lastErr)}` };
     }
-    const playoffStartDate = lastMatchup?.week_end ? new Date(lastMatchup.week_end) : new Date();
+    // Refuse rather than date the bracket from "now": the heal pass only runs
+    // with regular matchups present, so a missing week_end is a data problem.
+    if (!lastMatchup?.week_end) {
+      return { ok: false, reason: 'no regular-season week_end to schedule playoffs from' };
+    }
+    const playoffStartDate = new Date(lastMatchup.week_end);
     const bracket = buildPlayoffBracket(seeding.seeds, playoffStartDate, numWeeks + 1);
 
     // ONE atomic call claims the league ('active' -> 'playoffs', current_week =
