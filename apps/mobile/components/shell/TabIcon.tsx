@@ -1,29 +1,26 @@
 import { useEffect } from 'react';
-import Svg, { Path } from 'react-native-svg';
-import Animated, { useAnimatedProps, useSharedValue, withTiming } from 'react-native-reanimated';
+import { StyleSheet, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
 
 import { useMotion } from '@/components/sp/motion';
 
-// Phase 3b-1 — the four tab icons, ported path-for-path from the board
-// (docs/design/screens/screens.jsx ICON.home/matchup/league/portfolio).
-// The board's "filled" active state is a heavier stroke on the same outline
-// (1.8 → 2.4), not a second glyph, so the change can animate instead of
-// swapping — that stroke tween is half of S2's icon micro-animation (the
-// other half, the scale bump, lives in ShellTabBar).
+// Phase 3b-1 — the four tab icons (spec row 15; Design Lead ruling
+// 2026-09-29): a filled glyph when active, its outline when not —
+// home, trending-up (line chart), trophy, bar-chart.
+//
+// Both glyphs are stacked and crossfade (`quick`, settle) so the outline →
+// filled change is part of S2's micro-animation rather than a hard swap;
+// ShellTabBar adds the one-shot scale bump. Reduce Motion: instant swap.
 
 export type TabIconName = 'home' | 'matchup' | 'league' | 'portfolio';
 
-const PATHS: Record<TabIconName, string> = {
-  home: 'M4 11 12 4l8 7v8a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z',
-  matchup: 'M4 17 9 11l4 4 7-8M15 7h5v5',
-  league: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3',
-  portfolio: 'M4 20V10M10 20V4M16 20v-8M22 20H2',
+const GLYPHS: Record<TabIconName, { filled: keyof typeof Ionicons.glyphMap; outline: keyof typeof Ionicons.glyphMap }> = {
+  home: { filled: 'home', outline: 'home-outline' },
+  matchup: { filled: 'trending-up', outline: 'trending-up-outline' },
+  league: { filled: 'trophy', outline: 'trophy-outline' },
+  portfolio: { filled: 'bar-chart', outline: 'bar-chart-outline' },
 };
-
-const STROKE_IDLE = 1.8;
-const STROKE_ACTIVE = 2.4;
-
-const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 export interface TabIconProps {
   name: TabIconName;
@@ -32,26 +29,27 @@ export interface TabIconProps {
   size?: number;
 }
 
-export function TabIcon({ name, color, focused, size = 26 }: TabIconProps) {
+export function TabIcon({ name, color, focused, size = 24 }: TabIconProps) {
   const { reduced, duration, easing } = useMotion();
-  const stroke = useSharedValue(focused ? STROKE_ACTIVE : STROKE_IDLE);
+  const filled = useSharedValue(focused ? 1 : 0);
 
   useEffect(() => {
-    const target = focused ? STROKE_ACTIVE : STROKE_IDLE;
-    stroke.value = reduced ? target : withTiming(target, { duration: duration.quick, easing: easing.settle });
-  }, [focused, reduced, duration.quick, easing.settle, stroke]);
+    const target = focused ? 1 : 0;
+    filled.value = reduced ? target : withTiming(target, { duration: duration.quick, easing: easing.settle });
+  }, [focused, reduced, duration.quick, easing.settle, filled]);
 
-  const animatedProps = useAnimatedProps(() => ({ strokeWidth: stroke.value }));
+  const filledStyle = useAnimatedStyle(() => ({ opacity: filled.value }));
+  const outlineStyle = useAnimatedStyle(() => ({ opacity: 1 - filled.value }));
+  const glyph = GLYPHS[name];
 
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <AnimatedPath
-        d={PATHS[name]}
-        stroke={color}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        animatedProps={animatedProps}
-      />
-    </Svg>
+    <View style={{ width: size, height: size }}>
+      <Animated.View style={[StyleSheet.absoluteFill, outlineStyle]}>
+        <Ionicons name={glyph.outline} size={size} color={color} />
+      </Animated.View>
+      <Animated.View style={[StyleSheet.absoluteFill, filledStyle]}>
+        <Ionicons name={glyph.filled} size={size} color={color} />
+      </Animated.View>
+    </View>
   );
 }

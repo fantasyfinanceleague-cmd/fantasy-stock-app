@@ -38,8 +38,6 @@ import { groupLeagues } from '@/lib/shell/leagueSheet';
 // dismiss; while the list is scrolled, the drag scrolls it instead
 // (react-native-gesture-handler, so the two gestures interleave).
 
-const STAGGER_MS = 30;
-const STAGGER_MAX = 8;
 const DISMISS_DISTANCE = 120;
 const DISMISS_VELOCITY = 800;
 
@@ -55,7 +53,7 @@ export function LeagueSheet({ open, onClose, onPick, onCreate, onJoin }: LeagueS
   const { colors, elevation } = useTheme();
   const { height: windowHeight, fontScale } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const { reduced, spring, duration, easing } = useMotion();
+  const { reduced, spring, duration, easing, stagger } = useMotion();
   const { sheetLeagues, activeLeagueId } = useLeagueContext();
   const [mounted, setMounted] = useState(open);
 
@@ -175,10 +173,10 @@ export function LeagueSheet({ open, onClose, onPick, onCreate, onJoin }: LeagueS
                     const index = rowIndex++;
                     const entering = reduced
                       ? undefined
-                      : FadeInDown.delay(Math.min(index, STAGGER_MAX) * STAGGER_MS)
+                      : FadeInDown.delay(stagger.delayFor(index))
                           .springify()
-                          .damping(spring.snappy.damping ?? 26)
-                          .stiffness(spring.snappy.stiffness ?? 320)
+                          .damping(spring.snappy.damping)
+                          .stiffness(spring.snappy.stiffness)
                           .reduceMotion(ReduceMotion.System);
                     return (
                       <Animated.View key={league.id} entering={entering}>

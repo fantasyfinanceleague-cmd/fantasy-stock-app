@@ -26,6 +26,11 @@ export const motion = {
   spring: {
     snappy: { damping: 26, stiffness: 320, mass: 1 },
   },
+  /** §4 "Lists: stagger in, 30ms apart, max 8 items" (Phase 3b-1 made it a token). */
+  stagger: {
+    step: 30,
+    max: 8,
+  },
 } as const;
 
 export type MotionDuration = keyof typeof motion.duration;

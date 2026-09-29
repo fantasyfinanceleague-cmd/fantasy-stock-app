@@ -52,6 +52,17 @@ const USERNAME_GATE_ENABLED = false;
 function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
   const { user, authPhase: sessionPhase } = useSession();
   const authPhase: AuthPhase = !USERNAME_GATE_ENABLED && sessionPhase === 'gated' ? 'ready' : sessionPhase;
+
+  // The phase the navigator renders. authPhase passes through 'unknown' not
+  // only at cold start but on EVERY sign-in, while the new account's profile
+  // is read. Rendering nothing then would unmount the whole Stack and rebuild
+  // it on its first available screen (a hard cut, and it once landed on
+  // reset-password). So only the cold start waits; afterwards the last known
+  // phase stays on screen (e.g. sign-in, with its button busy) until the new
+  // one resolves.
+  const lastKnownPhase = useRef<AuthPhase>('unknown');
+  if (authPhase !== 'unknown') lastKnownPhase.current = authPhase;
+  const shownPhase = lastKnownPhase.current;
   // §9A ("One design, two themes", 2026-09-29): the status bar's own content
   // colour must flip with the app's theme, not stay hardcoded to "dark"
   // (dark content, for a light background) — "light" content is needed for
@@ -92,7 +103,7 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
   // (session read AND, when signed in, the profile's username read). The
   // guards below pick the first screen from that phase, so rendering before
   // it resolves would flash the wrong one.
-  const phaseKnown = authPhase !== 'unknown';
+  const phaseKnown = shownPhase !== 'unknown';
   useEffect(() => {
     if (fontsLoaded && themeReady && phaseKnown) {
       SplashScreen.hideAsync();
@@ -217,7 +228,7 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
     return null;
   }
 
-  const signedIn = !!user;
+  const signedIn = shownPhase === 'ready' || shownPhase === 'gated';
 
   // ONE Stack for every state (Phase 3b-1). Stack.Protected removes a guarded
   // screen from the navigator entirely while its guard is false, so a
@@ -241,11 +252,6 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
               <Stack.Screen name="forgot-password" options={HIDDEN_HEADER_MODAL} />
             </Stack.Protected>
 
-            {/* The recovery link signs the user in to show this screen, so it
-                sits outside both guards; its own nonce-checked handler above
-                decides whether the form appears (PR #41). */}
-            <Stack.Screen name="reset-password" options={HIDDEN_HEADER_FULLSCREEN} />
-
             <Stack.Protected guard={signedIn}>
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="create-league" options={HIDDEN_HEADER_FULLSCREEN} />
@@ -256,6 +262,15 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
               <Stack.Screen name="design-gallery" options={WITH_HEADER} />
               <Stack.Screen name="modal" options={WITH_HEADER_MODAL} />
             </Stack.Protected>
+
+            {/* The recovery link signs the user in to show this screen, so it
+                sits outside both guards; its own nonce-checked handler above
+                decides whether the form appears (PR #41). It is declared LAST
+                on purpose: with no target (a cold start, a remount, or a guard
+                flipping at sign-in/out) the Stack opens its FIRST available
+                screen, which must be sign-in when signed out and (tabs) when
+                signed in — never this one. */}
+            <Stack.Screen name="reset-password" options={HIDDEN_HEADER_FULLSCREEN} />
           </Stack>
         </ShellOverlayProvider>
       </LeagueProvider>
