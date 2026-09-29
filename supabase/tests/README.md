@@ -104,6 +104,14 @@ The "PR #9 trigger" step loads `enforce_leagues_member_update_columns` /
 If neither is found, the step reports **ignored**, never passed. So an unrun trigger
 check stays visible in the summary.
 
+## draft_pick_clock.pglite.test.ts
+
+Loads `supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql` verbatim, together with PR #9's leagues column guard. It covers the pick clock (trigger, CHECK, lock, deadline math, overdue list), the draft queue (RLS and `set_draft_queue`), grants (proacl, and in practice), and `auto_pick_search_candidates` compared against its TS mirror, which uses `effectiveCategoryIds`, the rule the pick gate uses. It also runs `docs/security/draft-pick-clock-effect-test.sql` itself. That is the file Giorgio runs in the SQL editor after the push, and every line must PASS here first.
+
+## draft_insert_sites.test.ts
+
+A structural guard. Only `insertGatedPick` (gated picks) and `insertSkip` (SKIP rows) may write `drafts`, and only `gatePick` may produce a `GatedPick`. It reads files only: `deno test --allow-read supabase/tests/draft_insert_sites.test.ts`.
+
 ## username_write_path.pglite.test.ts
 
 What it does:

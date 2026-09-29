@@ -37,3 +37,63 @@ export async function fetchEligibleCategoryIds(admin: any, symbol: string): Prom
   if (rErr) throw new Error('eligibility_fetch_failed');
   return effectiveCategoryIds([], rule?.category_id ? String(rule.category_id) : null);
 }
+
+/**
+ * The same three-layer lookup for MANY symbols in three reads total (the
+ * auto-pick pre-filters a whole candidate pool by category; per-symbol reads
+ * would be 3×pool-size round trips). Same layer rule, same throw-on-error
+ * contract as fetchEligibleCategoryIds. Every requested symbol gets an entry
+ * (empty set = unclassified -> flex-only).
+ */
+export async function fetchEligibleCategoryIdsBatch(
+  // deno-lint-ignore no-explicit-any
+  admin: any,
+  symbols: string[],
+): Promise<Map<string, Set<string>>> {
+  const syms = [...new Set(symbols.map((s) => s.toUpperCase()))];
+  const out = new Map<string, Set<string>>();
+  if (syms.length === 0) return out;
+
+  const { data: ovr, error: oErr } = await admin
+    .from('symbol_category_overrides')
+    .select('symbol, category_id')
+    .in('symbol', syms);
+  if (oErr) throw new Error('eligibility_fetch_failed');
+  const overrides = new Map<string, string[]>();
+  // deno-lint-ignore no-explicit-any
+  for (const o of (ovr ?? []) as any[]) {
+    const s = String(o.symbol).toUpperCase();
+    overrides.set(s, [...(overrides.get(s) ?? []), String(o.category_id)]);
+  }
+
+  const { data: symRows, error: sErr } = await admin
+    .from('symbols')
+    .select('symbol, gics_industry')
+    .in('symbol', syms);
+  if (sErr) throw new Error('eligibility_fetch_failed');
+  const industryBySymbol = new Map<string, string>();
+  // deno-lint-ignore no-explicit-any
+  for (const r of (symRows ?? []) as any[]) {
+    if (r.gics_industry) industryBySymbol.set(String(r.symbol).toUpperCase(), String(r.gics_industry));
+  }
+
+  const industries = [...new Set(industryBySymbol.values())];
+  const ruleByIndustry = new Map<string, string>();
+  if (industries.length > 0) {
+    const { data: rules, error: rErr } = await admin
+      .from('category_rules')
+      .select('gics_industry, category_id')
+      .in('gics_industry', industries);
+    if (rErr) throw new Error('eligibility_fetch_failed');
+    // deno-lint-ignore no-explicit-any
+    for (const r of (rules ?? []) as any[]) {
+      if (r.category_id) ruleByIndustry.set(String(r.gics_industry), String(r.category_id));
+    }
+  }
+
+  for (const s of syms) {
+    const industry = industryBySymbol.get(s);
+    out.set(s, effectiveCategoryIds(overrides.get(s) ?? [], industry ? ruleByIndustry.get(industry) ?? null : null));
+  }
+  return out;
+}
