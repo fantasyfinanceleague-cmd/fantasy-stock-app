@@ -46,9 +46,9 @@
 
   // ── Device chrome ─────────────────────────────────────────────────────
   const TABS = [['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['portfolio', 'Portfolio']];
-  function Device({ game, tab, children, overlay, label, noTabs }) {
+  function Device({ game, tab, children, overlay, label, noTabs, full }) {
     return (
-      <div className="ks-device" role="img" aria-label={label}>
+      <div className={full ? 'ks-device ks-device--full' : 'ks-device'} role="img" aria-label={label}>
         <div className="ks-os">
           <span>1:37</span>
           <span className="ks-os__island" />
@@ -252,13 +252,19 @@
 
   /** Home = the league chosen in the pill. Switching leagues swaps ALL of
    * it (Giorgio, 2026-09-29): no cross-league totals. */
-  function HomeScreen({ run }) {
+  /** concept: 'A' = the "Your other leagues" row at the bottom (default);
+   * 'B' = pill only, with a "+2" hint on the pill. `full` renders the whole
+   * scroll length (for side-by-side comparison). */
+  function HomeScreen({ run, concept = 'A', full }) {
     const H = K.HOME, L = K.MATCHUP.live;
     const near = K.STANDINGS_BEFORE.slice(0, 3);
+    const more = K.OTHER_LEAGUES.length;
     return (
-      <Device tab="home" label="Home screen">
+      <Device tab="home" label={`Home screen, concept ${concept}`} full={full}>
         <div className="ks-head">
-          <span className="ks-pill"><span>{K.LEAGUE.name}</span><Icon d={ICON.chevron} size={14} width={2.6} /></span>
+          <span className="ks-pill"><span>{K.LEAGUE.name}</span>
+            {concept === 'B' ? <span className="ks-pill__more" aria-label={`${more} more leagues`}>+{more}</span> : null}
+            <Icon d={ICON.chevron} size={14} width={2.6} /></span>
           <span className="ks-avatar" aria-label="Profile">RB</span>
         </div>
         <div className="ks-pad ks-stack">
@@ -303,7 +309,7 @@
               ))}
             </ul>
           </div>
-          <div>
+          {concept === 'A' ? <div>
             <div className="ks-section-h"><h3>Your other leagues</h3><span className="ks-caption">Tap to switch</span></div>
             <div style={{ display: 'grid', gap: 8 }}>
               {K.OTHER_LEAGUES.map((o) => (
@@ -314,7 +320,7 @@
                 </div>
               ))}
             </div>
-          </div>
+          </div> : null}
         </div>
       </Device>
     );

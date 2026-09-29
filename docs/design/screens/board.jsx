@@ -31,6 +31,33 @@
     );
   }
 
+  /** Like Fit, but for a full-length device whose height is its content. */
+  function FitFull({ children, caption, note }) {
+    const ref = useRef(null);
+    const inner = useRef(null);
+    useLayoutEffect(() => {
+      // Size imperatively: the content height is only known after layout.
+      const fit = () => {
+        const k = Math.min(1, ref.current.clientWidth / 402);
+        inner.current.style.transform = `scale(${k})`;
+        ref.current.style.height = `${inner.current.offsetHeight * k}px`;
+      };
+      const ro = new ResizeObserver(fit);
+      ro.observe(ref.current);
+      ro.observe(inner.current.firstChild);
+      fit();
+      return () => ro.disconnect();
+    }, []);
+    return (
+      <figure className="b-fig">
+        <div className="b-fit" ref={ref}>
+          <div className="b-fit__in" ref={inner}>{children}</div>
+        </div>
+        <figcaption><b style={{ color: 'var(--c-text)', fontSize: 15 }}>{caption}</b><br /><span style={{ fontWeight: 500 }}>{note}</span></figcaption>
+      </figure>
+    );
+  }
+
   function Play({ label, onPlay, playing }) {
     return (
       <button type="button" className="b-play" onClick={onPlay} aria-pressed={playing}>
@@ -285,7 +312,7 @@
             <div><dt>Stakes</dt><dd>$2,000 per slot · 6 slots</dd></div>
           </dl>
           <nav className="b-toc" aria-label="Screens">
-            {[['themes', 'Themes'], ['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['phases', 'Home phases'], ['game', 'Game'], ['money', 'Trading'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
+            {[['themes', 'Themes'], ['home', 'Home'], ['home-concepts', 'Other leagues: A vs B'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['phases', 'Home phases'], ['game', 'Game'], ['money', 'Trading'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
           </nav>
         </header>
 
@@ -307,9 +334,24 @@
               <li>Switching league in the pill: the sheet closes (spring.snappy) and Home crossfades to the new league (quick, 160ms). Numbers roll only where the value changed.</li>
             </>}
             reduced="the line and cards appear in place; digits swap without rolling."
-            ask={['Keep the small "Your other leagues" row at the bottom, or leave other leagues only in the pill?']}
+            ask={['Other leagues on Home: compare Concept A and Concept B just below.']}
           />}
         />
+
+        <section className="b-sec" id="home-concepts" aria-labelledby="home-concepts-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n">?</span>
+            <div>
+              <h2 id="home-concepts-h">Your call: other leagues on Home</h2>
+              <p className="b-job">The same Home (Stock Scudetto, Week 6, same numbers), full length, in two versions. Tap the switch at the top right to compare them in Dark too.</p>
+            </div>
+          </header>
+          <div className="b-concepts">
+            <FitFull caption="Concept A · with the row" note='A "Your other leagues · Tap to switch" list at the bottom of Home. Other leagues are one scroll away; the pill still switches too.'><S.HomeScreen concept="A" full /></FitFull>
+            <FitFull caption="Concept B · pill only" note='No list on Home. The pill shows "+2" (two more leagues) so it reads as a switcher; tapping it opens the league sheet with every league grouped by phase.'><S.HomeScreen concept="B" full /></FitFull>
+          </div>
+          <p className="b-reduced" style={{ maxWidth: '70ch' }}>Our lean: <b>B</b>. Home stays about this league only (your call from round 1), the pill is always in the same place on every tab, and the "+2" hint removes the discoverability risk. A is friendlier for someone in many leagues who wants their status at a glance.</p>
+        </section>
 
         <Section
           id="matchup" n="2" name="Matchup" job="Am I winning this week, by how much, and why?"

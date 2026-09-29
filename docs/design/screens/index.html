@@ -74,6 +74,9 @@
   .b-table tr:first-child th, .b-table tr:first-child td { border-top: 0; }
   .b-table th { white-space: nowrap; font-weight: 800; }
   .b-changes { display: grid; gap: 8px; max-width: 80ch; padding-left: 22px; }
+  .b-concepts { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 402px)); gap: 40px; align-items: start; margin-bottom: 18px; }
+  .b-concepts .b-fig { max-width: 402px; }
+  .b-concepts figcaption { text-align: left; line-height: 1.45; }
   .b-themebar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50; display: flex; justify-content: flex-end; padding: 10px 0; pointer-events: none; }
   .b-themebar__in { pointer-events: auto; display: inline-flex; align-items: center; gap: 10px; padding: 6px 6px 6px 14px; border-radius: 999px;
     background: var(--c-surface); border: 1px solid var(--c-border); box-shadow: var(--c-sheet-shadow); font-size: 13px; font-weight: 700; }

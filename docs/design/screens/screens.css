@@ -67,6 +67,10 @@
   max-width: 230px; white-space: nowrap;
 }
 .ks-pill span { overflow: hidden; text-overflow: ellipsis; }
+.ks-pill__more { flex: none; padding: 0 6px; border-radius: 999px; font-size: 11px; line-height: 18px; font-weight: 800; background: var(--c-accent-tint); color: var(--c-accent); font-variant-numeric: tabular-nums; }
+/* Full-length device: the whole scroll, for side-by-side comparisons. */
+.ks-device--full { height: auto; min-height: 874px; }
+.ks-device--full .ks-scroll { position: relative; inset: auto; padding: 54px 0 100px; overflow: visible; }
 .ks-pill svg { flex: none; width: 14px; height: 14px; opacity: .7; }
 
 .ks-chip {

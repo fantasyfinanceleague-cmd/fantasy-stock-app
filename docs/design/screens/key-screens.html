@@ -322,6 +322,10 @@
   max-width: 230px; white-space: nowrap;
 }
 .ks-pill span { overflow: hidden; text-overflow: ellipsis; }
+.ks-pill__more { flex: none; padding: 0 6px; border-radius: 999px; font-size: 11px; line-height: 18px; font-weight: 800; background: var(--c-accent-tint); color: var(--c-accent); font-variant-numeric: tabular-nums; }
+/* Full-length device: the whole scroll, for side-by-side comparisons. */
+.ks-device--full { height: auto; min-height: 874px; }
+.ks-device--full .ks-scroll { position: relative; inset: auto; padding: 54px 0 100px; overflow: visible; }
 .ks-pill svg { flex: none; width: 14px; height: 14px; opacity: .7; }
 
 .ks-chip {
@@ -571,6 +575,9 @@
   .b-table tr:first-child th, .b-table tr:first-child td { border-top: 0; }
   .b-table th { white-space: nowrap; font-weight: 800; }
   .b-changes { display: grid; gap: 8px; max-width: 80ch; padding-left: 22px; }
+  .b-concepts { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 402px)); gap: 40px; align-items: start; margin-bottom: 18px; }
+  .b-concepts .b-fig { max-width: 402px; }
+  .b-concepts figcaption { text-align: left; line-height: 1.45; }
   .b-themebar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50; display: flex; justify-content: flex-end; padding: 10px 0; pointer-events: none; }
   .b-themebar__in { pointer-events: auto; display: inline-flex; align-items: center; gap: 10px; padding: 6px 6px 6px 14px; border-radius: 999px;
     background: var(--c-surface); border: 1px solid var(--c-border); box-shadow: var(--c-sheet-shadow); font-size: 13px; font-weight: 700; }
@@ -1035,9 +1042,9 @@
 
   // ── Device chrome ─────────────────────────────────────────────────────
   const TABS = [['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['portfolio', 'Portfolio']];
-  function Device({ game, tab, children, overlay, label, noTabs }) {
+  function Device({ game, tab, children, overlay, label, noTabs, full }) {
     return (
-      <div className="ks-device" role="img" aria-label={label}>
+      <div className={full ? 'ks-device ks-device--full' : 'ks-device'} role="img" aria-label={label}>
         <div className="ks-os">
           <span>1:37</span>
           <span className="ks-os__island" />
@@ -1241,13 +1248,19 @@
 
   /** Home = the league chosen in the pill. Switching leagues swaps ALL of
    * it (Giorgio, 2026-09-29): no cross-league totals. */
-  function HomeScreen({ run }) {
+  /** concept: 'A' = the "Your other leagues" row at the bottom (default);
+   * 'B' = pill only, with a "+2" hint on the pill. `full` renders the whole
+   * scroll length (for side-by-side comparison). */
+  function HomeScreen({ run, concept = 'A', full }) {
     const H = K.HOME, L = K.MATCHUP.live;
     const near = K.STANDINGS_BEFORE.slice(0, 3);
+    const more = K.OTHER_LEAGUES.length;
     return (
-      <Device tab="home" label="Home screen">
+      <Device tab="home" label={`Home screen, concept ${concept}`} full={full}>
         <div className="ks-head">
-          <span className="ks-pill"><span>{K.LEAGUE.name}</span><Icon d={ICON.chevron} size={14} width={2.6} /></span>
+          <span className="ks-pill"><span>{K.LEAGUE.name}</span>
+            {concept === 'B' ? <span className="ks-pill__more" aria-label={`${more} more leagues`}>+{more}</span> : null}
+            <Icon d={ICON.chevron} size={14} width={2.6} /></span>
           <span className="ks-avatar" aria-label="Profile">RB</span>
         </div>
         <div className="ks-pad ks-stack">
@@ -1292,7 +1305,7 @@
               ))}
             </ul>
           </div>
-          <div>
+          {concept === 'A' ? <div>
             <div className="ks-section-h"><h3>Your other leagues</h3><span className="ks-caption">Tap to switch</span></div>
             <div style={{ display: 'grid', gap: 8 }}>
               {K.OTHER_LEAGUES.map((o) => (
@@ -1303,7 +1316,7 @@
                 </div>
               ))}
             </div>
-          </div>
+          </div> : null}
         </div>
       </Device>
     );
@@ -2973,6 +2986,33 @@
     );
   }
 
+  /** Like Fit, but for a full-length device whose height is its content. */
+  function FitFull({ children, caption, note }) {
+    const ref = useRef(null);
+    const inner = useRef(null);
+    useLayoutEffect(() => {
+      // Size imperatively: the content height is only known after layout.
+      const fit = () => {
+        const k = Math.min(1, ref.current.clientWidth / 402);
+        inner.current.style.transform = `scale(${k})`;
+        ref.current.style.height = `${inner.current.offsetHeight * k}px`;
+      };
+      const ro = new ResizeObserver(fit);
+      ro.observe(ref.current);
+      ro.observe(inner.current.firstChild);
+      fit();
+      return () => ro.disconnect();
+    }, []);
+    return (
+      <figure className="b-fig">
+        <div className="b-fit" ref={ref}>
+          <div className="b-fit__in" ref={inner}>{children}</div>
+        </div>
+        <figcaption><b style={{ color: 'var(--c-text)', fontSize: 15 }}>{caption}</b><br /><span style={{ fontWeight: 500 }}>{note}</span></figcaption>
+      </figure>
+    );
+  }
+
   function Play({ label, onPlay, playing }) {
     return (
       <button type="button" className="b-play" onClick={onPlay} aria-pressed={playing}>
@@ -3227,7 +3267,7 @@
             <div><dt>Stakes</dt><dd>$2,000 per slot · 6 slots</dd></div>
           </dl>
           <nav className="b-toc" aria-label="Screens">
-            {[['themes', 'Themes'], ['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['phases', 'Home phases'], ['game', 'Game'], ['money', 'Trading'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
+            {[['themes', 'Themes'], ['home', 'Home'], ['home-concepts', 'Other leagues: A vs B'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['phases', 'Home phases'], ['game', 'Game'], ['money', 'Trading'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
           </nav>
         </header>
 
@@ -3249,9 +3289,24 @@
               <li>Switching league in the pill: the sheet closes (spring.snappy) and Home crossfades to the new league (quick, 160ms). Numbers roll only where the value changed.</li>
             </>}
             reduced="the line and cards appear in place; digits swap without rolling."
-            ask={['Keep the small "Your other leagues" row at the bottom, or leave other leagues only in the pill?']}
+            ask={['Other leagues on Home: compare Concept A and Concept B just below.']}
           />}
         />
+
+        <section className="b-sec" id="home-concepts" aria-labelledby="home-concepts-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n">?</span>
+            <div>
+              <h2 id="home-concepts-h">Your call: other leagues on Home</h2>
+              <p className="b-job">The same Home (Stock Scudetto, Week 6, same numbers), full length, in two versions. Tap the switch at the top right to compare them in Dark too.</p>
+            </div>
+          </header>
+          <div className="b-concepts">
+            <FitFull caption="Concept A · with the row" note='A "Your other leagues · Tap to switch" list at the bottom of Home. Other leagues are one scroll away; the pill still switches too.'><S.HomeScreen concept="A" full /></FitFull>
+            <FitFull caption="Concept B · pill only" note='No list on Home. The pill shows "+2" (two more leagues) so it reads as a switcher; tapping it opens the league sheet with every league grouped by phase.'><S.HomeScreen concept="B" full /></FitFull>
+          </div>
+          <p className="b-reduced" style={{ maxWidth: '70ch' }}>Our lean: <b>B</b>. Home stays about this league only (your call from round 1), the pill is always in the same place on every tab, and the "+2" hint removes the discoverability risk. A is friendlier for someone in many leagues who wants their status at a glance.</p>
+        </section>
 
         <Section
           id="matchup" n="2" name="Matchup" job="Am I winning this week, by how much, and why?"
