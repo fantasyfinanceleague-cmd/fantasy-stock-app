@@ -10,6 +10,10 @@
   const { Device, Chip, Icon, ICON, Logo, Scores, Tug, SD, margin, $, $s, pct, tone } = window.KSKit;
   const BRAND = 'Stockpile'; // brand.name placeholder (naming deferred)
 
+  // Secure fields render as bullets, so a mock password is only a length.
+  // Never put credential-looking strings here (secret scanners flag them).
+  const MASK = (n) => 'x'.repeat(n);
+
   // ── Small shared pieces ───────────────────────────────────────────────
   // The league pill with its "+N more leagues" hint (Concept B, decided).
   const Pill = ({ name = K.LEAGUE.name }) => (
@@ -105,7 +109,7 @@
             <p className="ks-callout ks-muted" style={{ margin: '4px 0 0' }}>Sign in to your league</p>
           </div>
           <Field label="Email address" value="roberto@example.com" />
-          <Field label="Password" value="hunter2hunter" secure focused />
+          <Field label="Password" value={MASK(13)} secure focused />
           <span className="ks-callout" style={{ color: 'var(--c-accent)', fontWeight: 600, justifySelf: 'end' }}>Forgot password?</span>
           <span className="ks-btn">Sign in</span>
           <span className="ks-callout ks-muted" style={{ textAlign: 'center' }}>New here? <b style={{ color: 'var(--c-accent)' }}>Create an account</b></span>
@@ -126,7 +130,7 @@
           </div>
           <Field label="Username" value="roberto_b" helper="Displayed on leaderboards" />
           <Field label="Email address" value="roberto@example.com" />
-          <Field label="Password" value="Scudetto26" secure rules={[[true, '8+ characters'], [true, 'A letter'], [true, 'A number']]} />
+          <Field label="Password" value={MASK(10)} secure rules={[[true, '8+ characters'], [true, 'A letter'], [true, 'A number']]} />
           <div role="alert" className="ks-card" style={{ padding: 14, display: 'grid', gap: 4, background: 'var(--c-warn-tint)', borderColor: 'var(--c-warn-line)', boxShadow: 'none' }}>
             <b className="ks-callout" style={{ color: 'var(--c-text)' }}>{BRAND} is not open for new signups yet — check back soon. Existing accounts can still sign in.</b>
           </div>
@@ -146,7 +150,7 @@
           </div>
           <Field label="Username" value="roberto_b" helper="Displayed on leaderboards" />
           <Field label="Email address" value="roberto@example.com" />
-          <Field label="Password" value="Scudett" secure focused rules={[[true, '8+ characters'], [true, 'A letter'], [false, 'A number']]} />
+          <Field label="Password" value={MASK(7)} secure focused rules={[[true, '8+ characters'], [true, 'A letter'], [false, 'A number']]} />
         </div>
         <div className="ks-kbd-dock">
           <span className="ks-btn" style={{ margin: '0 16px 8px' }}>Create account</span>
@@ -383,8 +387,8 @@
         <Back label="Profile" />
         <div className="ks-pad ks-stack" style={{ gap: 16 }}>
           <h2 className="ks-head__title" style={{ fontSize: 28 }}>Set a new password</h2>
-          <Field label="New password" value="Scudetto26" secure rules={[[true, '8+ characters'], [true, 'A letter'], [true, 'A number']]} />
-          <Field label="Confirm new password" value="Scudetto2" secure focused error="Passwords don't match." />
+          <Field label="New password" value={MASK(10)} secure rules={[[true, '8+ characters'], [true, 'A letter'], [true, 'A number']]} />
+          <Field label="Confirm new password" value={MASK(9)} secure focused error="Passwords don't match." />
           <span className="ks-btn" style={{ opacity: 0.4 }}>Update password</span>
           <span className="ks-callout ks-muted" style={{ textAlign: 'center' }}>Cancel</span>
         </div>
@@ -422,8 +426,52 @@
     </div>
   );
 
-  function HomePreDraft() {
-    const members = ['RB', 'MR', 'LC', 'SF', 'GV', 'TP'];
+  /** Draft order waits for the start minimum (backend: waiting_for_members,
+   * member_count, min_members). The order is set at the LATER of 1 hour
+   * before the draft and the league reaching the minimum. New copy. */
+  function OrderWaiting({ count = 3, min = 4, pastReveal }) {
+    const need = min - count;
+    return (
+      <div className="ks-raised" style={{ padding: '12px 14px', display: 'grid', gap: 8 }}>
+        <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Draft order · waiting</span>
+        <span className="ks-callout" style={{ fontWeight: 600 }}>
+          {pastReveal
+            ? `Set as soon as ${need} more ${need === 1 ? 'manager joins' : 'managers join'}.`
+            : `Set 1 hour before the draft, once ${min} managers have joined.`}
+        </span>
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${min}, 1fr)`, gap: 4 }} aria-label={`${count} of ${min} managers`}>
+          {Array.from({ length: min }, (_, i) => <span key={i} style={{ height: 6, borderRadius: 3, background: i < count ? 'var(--c-you)' : 'var(--c-track)' }} />)}
+        </div>
+        <span className="ks-caption ks-num">{count} of {min} managers</span>
+      </div>
+    );
+  }
+
+  function HomePreDraft({ waiting }) {
+    const members = waiting ? ['RB', 'MR', 'LC'] : ['RB', 'MR', 'LC', 'SF', 'GV', 'TP'];
+    if (waiting) {
+      return (
+        <Device tab="home" label="Home, pre-draft, waiting for managers">
+          <Head name="Weekend Warriors" avatar />
+          <div className="ks-pad ks-stack">
+            <GameCard tag="Draft" chip={<span className="ks-chip">Pre-draft</span>}>
+              <span className="ks-title">Sat, Oct 3 · 7:00 PM</span>
+              <span className="ks-score ks-num" style={{ fontSize: 40 }}>3d 04h 12m</span>
+              <span className="ks-callout ks-muted">60-second picks · 6 rounds</span>
+            </GameCard>
+            <OrderWaiting count={3} min={4} />
+            <Card pad="14px">
+              <div className="ks-section-h"><h3>Members</h3><span className="ks-caption ks-num">3 joined · 4 needed to draft</span></div>
+              <div style={{ display: 'flex', gap: 6 }}>{members.map((m, i) => <span key={m} className={i === 0 ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{m}</span>)}<span className="ks-avatar ks-avatar--sm" style={{ background: 'transparent', border: '1.5px dashed var(--c-border-strong)', color: 'var(--c-text-2)' }}>+1</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, padding: '10px 12px', borderRadius: 10, background: 'var(--c-sunken)' }}>
+                <span><span className="ks-caption">Invite code</span><br /><b className="ks-num" style={{ letterSpacing: '0.12em' }}>WKND4ME</b></span>
+                <span className="ks-callout" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Share</span>
+              </div>
+            </Card>
+          </div>
+        </Device>
+      );
+    }
     return (
       <Device tab="home" label="Home, pre-draft">
         <Head name="Serie A Traders" avatar />
@@ -668,7 +716,25 @@
    * managers the draft can't start: the sheet says why in one line and puts
    * the playoff stepper right there, capped at the member count; Start
    * draft stays disabled until P ≤ managers (friendly, blocking). */
-  function StartDraftConfirm({ managers = 7, playoff = 6, weeks = 10, order = 'random' }) {
+  function StartDraftConfirm({ managers = 7, playoff = 6, weeks = 10, order = 'random', min = 4 }) {
+    const short = managers < min;
+    if (short) {
+      return (
+        <Device tab="league" label="Start the draft, not enough managers" overlay={
+          <Sheet top={400}>
+            <span className="ks-title">Start the draft?</span>
+            <div role="alert" className="ks-card" style={{ padding: '10px 12px', background: 'var(--c-warn-tint)', borderColor: 'var(--c-warn-line)', boxShadow: 'none' }}>
+              <span className="ks-callout" style={{ fontWeight: 600, color: 'var(--c-text)' }}>A draft needs at least {min} managers. {managers} are in, so invite {min - managers} more to start.</span>
+            </div>
+            <span className="ks-callout"><b>Draft order:</b> set as soon as the {K.ordinal(min)} manager joins.</span>
+            <span className="ks-btn ks-btn--secondary">Share invite code</span>
+            <span className="ks-btn" style={{ opacity: 0.4 }} aria-disabled="true">Start draft</span>
+          </Sheet>
+        }>
+          <Head name="Weekend Warriors" chip={<span className="ks-chip">Pre-draft</span>} />
+        </Device>
+      );
+    }
     const blocked = playoff > managers;
     const StepInline = () => (
       <div style={{ display: 'grid', gap: 6 }}>
@@ -827,7 +893,7 @@
               ))}
             </ol>
           </div>
-          <span className="ks-caption">Started from a random order. Shuffle again or drag anyone anywhere. If you never save, this order is used.</span>
+          <span className="ks-caption">Started from a random order. Shuffle again or drag anyone anywhere. If you never save, this order is used. Until you save, anyone who joins lands in a random slot; after you save, they're added at the end.</span>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <span className="ks-btn ks-btn--secondary">Shuffle again</span>
             <span className="ks-btn">Save order</span>
@@ -837,18 +903,18 @@
     );
   }
 
-  function DraftLobby() {
+  function DraftLobby({ waiting }) {
     const queue = ['NVDA', 'MSFT', 'AAPL', 'CRM', 'COST'];
     return (
-      <Device game tab="league" label="Draft lobby">
-        <Head name="Serie A Traders" chip={<span className="ks-chip">Pre-draft</span>} />
+      <Device game tab="league" label={waiting ? 'Draft lobby, waiting for managers' : 'Draft lobby'}>
+        <Head name={waiting ? 'Weekend Warriors' : 'Serie A Traders'} chip={<span className="ks-chip">Pre-draft</span>} />
         <div className="ks-pad ks-stack" style={{ gap: 14 }}>
           <div className="ks-raised" style={{ padding: 16, display: 'grid', gap: 4, textAlign: 'center' }}>
             <span className="ks-tag">Draft starts in</span>
             <span className="ks-score ks-num" style={{ fontSize: 56, lineHeight: '56px' }}>04:59</span>
             <span className="ks-caption ks-muted">Sat 7:00 PM · 60-second picks</span>
           </div>
-          <DraftOrder />
+          {waiting ? <OrderWaiting count={3} min={4} pastReveal /> : <DraftOrder />}
           <div>
             <div className="ks-section-h"><h3>Your queue</h3></div>
             <span className="ks-caption" style={{ display: 'block', marginBottom: 4 }}>If you step away, we'll auto-pick from your queue when your time runs out. You can come back any time.</span>

@@ -3,6 +3,7 @@ import { Platform, useColorScheme } from 'react-native';
 
 import { color, ThemeColors, ThemeMode } from '@/constants/tokens/color';
 import { elevation } from '@/constants/tokens/elevation';
+import { resolveTheme } from '@/components/sp/logic/theme';
 
 // Stockpile — <ThemeProvider> / useTheme() (§9A, "One design, two themes",
 // 2026-09-29). SOURCE OF TRUTH: docs/design/DESIGN_DIRECTION.md §9A.
@@ -35,6 +36,25 @@ import { elevation } from '@/constants/tokens/elevation';
 // font-loading gate. The read is milliseconds, so the splash (already
 // showing regardless) simply covers it. A read/write failure (storage
 // full, unavailable, denied) falls back to System rather than throwing.
+//
+// THEME_FORCED (Orchestrator, 2026-09-29, 1.1.0 regression fix): every
+// legacy screen shipped before this migration — and app/(tabs)/_layout.tsx's
+// tab bar/headers, hardcoded to Colors.white — is still LIGHT-ONLY; none of
+// them read useTheme(). A 1.1.0 build on a phone in system Dark mode would
+// otherwise show LIGHT status-bar content over those white screens
+// (invisible clock/battery) and a dark navigator background flashing behind
+// transitions, since app/_layout.tsx's status bar and navigation theme
+// already follow resolvedTheme. Forcing resolvedTheme to 'light' keeps both
+// consistent with what every screen actually renders, until the 3b shell
+// ships and legacy screens read the theme themselves. The design gallery
+// still needs to render both themes for review, so the force is gated on
+// `!__DEV__` (see resolveTheme in components/sp/logic/theme.ts) rather than
+// scoped to the gallery specifically — nothing outside the dev-only gallery
+// calls setPreference() today, so the two are equivalent in practice, and
+// gating on __DEV__ avoids threading a scoping prop through this hook.
+//
+// 3b-1 sets this to null once the shell reads useTheme() itself.
+const THEME_FORCED: ThemeMode | null = 'light';
 
 export type ThemePreference = 'system' | ThemeMode;
 
@@ -118,7 +138,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     });
   }
 
-  const resolvedTheme: ThemeMode = preference === 'system' ? (systemScheme === 'dark' ? 'dark' : 'light') : preference;
+  const resolvedTheme = resolveTheme(preference, systemScheme, THEME_FORCED, __DEV__);
 
   const value = useMemo<ThemeContextValue>(
     () => ({
