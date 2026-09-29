@@ -38,7 +38,7 @@
  * THE ALL-CASH RULE (CLAUDE.md's partial-state / existence-only family):
  *   "No snapshot row" alone proves nothing — it is exactly what a failed snapshot
  *   job also looks like. A snapshot-less user is scored as all-cash ONLY when the
- *   LEDGER (drafts + trades, netted per symbol, SKIP draft rows excluded) proves
+ *   LEDGER (drafts + trades, netted by the shared userNetHoldings) proves
  *   BOTH boundaries empty:
  *     - flat at week_start: nothing snapshot-week-start should have written.
  *     - flat at week_end:   nothing snapshot-week-end should have written.
@@ -61,15 +61,20 @@
  *
  * These functions decide ONLY. All logging, DB writes, price fetches, and the
  * skipped[] payload shaping stay in index.ts — this module has no side effects and
- * no runtime dependencies beyond the pure ../_shared/draft-validation.ts constant,
+ * no runtime dependencies beyond the pure ../_shared/draft-validation.ts helpers,
  * so it is trivially and hermetically testable. Where the
  * evaluation ORDER is load-bearing it is called out per function.
  */
 
-// SKIP_SYMBOL marks a forfeited draft pick. ../_shared/draft-validation.ts is itself
-// pure and import-free, so importing it keeps this module hermetic while keeping
-// ONE definition of the sentinel.
-import { SKIP_SYMBOL } from '../_shared/draft-validation.ts';
+// ../_shared/draft-validation.ts is itself pure and import-free, so importing it
+// keeps this module hermetic while keeping ONE definition of the SKIP sentinel and
+// ONE netting rule (userNetHoldings) shared with draft legality and the snapshot jobs.
+import {
+  SKIP_SYMBOL,
+  userNetHoldings,
+  type PickRow,
+  type TradeRow,
+} from '../_shared/draft-validation.ts';
 
 // ---------------------------------------------------------------------------
 // Reason strings — exported as constants so index.ts (the producer of the
@@ -310,15 +315,6 @@ export interface LedgerState {
   hasLedgerHistory: boolean;
 }
 
-/**
- * A net quantity at or below this is fixed_notional rounding dust, not a holding —
- * the SAME ownership predicate as userNetHoldings in ../_shared/draft-validation.ts
- * (`q > 1e-9`), so a round trip that nets to 1e-7 is not a false refusal. Dust this
- * small is worth well under a cent at any real price, so scoring it as cash is exact
- * to the cent.
- */
-const HELD_EPSILON = 1e-9;
-
 /** Held at BOTH boundaries — the fail-closed answer to any ambiguity. */
 const HELD: LedgerState = { heldAtWeekStart: true, heldAtWeekEnd: true, hasLedgerHistory: true };
 
@@ -326,6 +322,8 @@ const HELD: LedgerState = { heldAtWeekStart: true, heldAtWeekEnd: true, hasLedge
  * drafts.user_id is TEXT and trades.user_id is UUID (CLAUDE.md). In JS both arrive
  * as strings, but a text id is not guaranteed canonical, and a mismatch here would
  * hide the user's rows and read as FLAT — so compare normalised forms.
+ * userNetHoldings compares with a raw `String(user_id) !== userId`, so rows are
+ * handed to it with their id ALREADY normalised.
  */
 function normId(id: unknown): string {
   return String(id ?? '').trim().toLowerCase();
@@ -336,21 +334,38 @@ function isProvablyCash(ledger: LedgerState | undefined): boolean {
 }
 
 /**
- * Derive one user's holdings at both week boundaries from the ledger, netting
- * per symbol with the SAME semantics as snapshot-week-start's calculateHoldings
- * (draft qty `|| 1`, buy +, sell -, held = net > 0 beyond rounding dust) — the question being asked is
- * "would the snapshot jobs have expected a row for this user?". The one deliberate
- * divergence: SKIP sentinel draft rows are excluded (a forfeited pick is not a
- * holding; calculateHoldings' `|| 1` would turn one into 1 share of 'SKIP').
+ * `Number(q) || 0` (userNetHoldings' coercion) silently turns garbage into 0 = flat.
+ * Null is a legitimate 0 (shared semantics); '' / whitespace is NOT — `Number('')`
+ * is 0, so it is rejected explicitly rather than read as flat.
+ */
+function isFiniteQty(q: unknown): boolean {
+  if (typeof q === 'string' && q.trim() === '') return false;
+  return Number.isFinite(Number(q ?? 0));
+}
+
+/**
+ * Derive one user's holdings at both week boundaries from the ledger.
  *
- * Boundaries partition exactly with the handler's mid-week trade query
- * (`created_at >= week_start AND created_at <= week_end`): start = trades strictly
- * BEFORE week_start; end = trades AT OR BEFORE week_end. Drafts count at both
- * (they precede the season). Trades after week_end are ignored.
+ * NETTING IS DELEGATED to userNetHoldings in ../_shared/draft-validation.ts — the
+ * same function draft legality uses and the snapshot jobs' holdings helper
+ * delegates to — so "held" means ONE thing across draft legality, the snapshot
+ * jobs and this eligibility check: SKIP draft rows excluded (case-insensitive),
+ * quantity `Number(q) || 0` (no coercion to 1), buys +, sells -, per symbol, a
+ * position held only when its net exceeds the 1e-9 fixed_notional rounding-dust
+ * threshold. The question is "would the snapshot jobs have expected a row?", so
+ * the answer must come from the function they use.
  *
- * FAILS CLOSED to HELD on: a null/unparseable week bound, any of the user's
- * trades with a null/unparseable created_at (a sell of unknown time could be
- * hiding a start-of-week holding), or any non-finite quantity.
+ * This layer adds only what userNetHoldings cannot know:
+ *   - TIME. Trades are filtered before netting: start = trades strictly BEFORE
+ *     week_start; end = trades AT OR BEFORE week_end. That partitions exactly with
+ *     the handler's mid-week trade query (`created_at >= week_start AND
+ *     created_at <= week_end`). Drafts count at both (they precede the season).
+ *   - FAIL-CLOSED to HELD on: a null/unparseable week bound; any of the user's
+ *     trades with a null/unparseable created_at (a sell of unknown time could be
+ *     hiding a start-of-week holding); any non-finite quantity (which
+ *     `Number(q) || 0` would otherwise read as 0 — i.e. as flat).
+ *   - id normalisation (see normId) and dropping null-symbol rows, which carry no
+ *     position and would throw inside userNetHoldings.
  */
 export function ledgerPositionState(
   userId: string,
@@ -364,43 +379,34 @@ export function ledgerPositionState(
   if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) return HELD;
 
   const uid = normId(userId);
-  const atStart = new Map<string, number>();
-  const atEnd = new Map<string, number>();
-  let hasLedgerHistory = false;
 
-  const add = (m: Map<string, number>, sym: string, qty: number) =>
-    m.set(sym, (m.get(sym) ?? 0) + qty);
-
+  // userNetHoldings reads only user_id / symbol / quantity (+ action for trades);
+  // the remaining PickRow / TradeRow fields are zero-filled to satisfy the type.
+  const picks: PickRow[] = [];
   for (const d of drafts) {
-    if (normId(d.user_id) !== uid) continue;
-    const sym = d.symbol?.toUpperCase();
-    if (!sym || sym === SKIP_SYMBOL) continue;
-    const qty = Number(d.quantity || 1);
-    if (!Number.isFinite(qty)) return HELD;
-    hasLedgerHistory = true;
-    add(atStart, sym, qty);
-    add(atEnd, sym, qty);
+    if (normId(d.user_id) !== uid || !d.symbol) continue;
+    if (!isFiniteQty(d.quantity)) return HELD;
+    picks.push({ user_id: uid, symbol: d.symbol, quantity: Number(d.quantity ?? 0), entry_price: 0, pick_number: 0 });
   }
 
+  const beforeStart: TradeRow[] = [];
+  const throughEnd: TradeRow[] = [];
   for (const t of trades) {
-    if (normId(t.user_id) !== uid) continue;
-    const sym = t.symbol?.toUpperCase();
-    if (!sym) continue;
+    if (normId(t.user_id) !== uid || !t.symbol) continue;
     const at = t.created_at ? Date.parse(t.created_at) : NaN;
     if (!Number.isFinite(at)) return HELD;
+    if (!isFiniteQty(t.quantity)) return HELD;
     if (at > endMs) continue;
-    const qty = Number(t.quantity || 0);
-    if (!Number.isFinite(qty)) return HELD;
-    const signed = t.action === 'buy' ? qty : t.action === 'sell' ? -qty : 0;
-    hasLedgerHistory = true;
-    add(atEnd, sym, signed);
-    if (at < startMs) add(atStart, sym, signed);
+    const row: TradeRow = { user_id: uid, symbol: t.symbol, action: t.action, quantity: Number(t.quantity ?? 0), price: 0 };
+    throughEnd.push(row);
+    if (at < startMs) beforeStart.push(row);
   }
 
-  const anyHeld = (m: Map<string, number>) => [...m.values()].some((q) => q > HELD_EPSILON);
   return {
-    heldAtWeekStart: anyHeld(atStart),
-    heldAtWeekEnd: anyHeld(atEnd),
-    hasLedgerHistory,
+    heldAtWeekStart: userNetHoldings(uid, picks, beforeStart).size > 0,
+    heldAtWeekEnd: userNetHoldings(uid, picks, throughEnd).size > 0,
+    // Same SKIP predicate as userNetHoldings' isSkip.
+    hasLedgerHistory:
+      picks.some((p) => p.symbol.toUpperCase() !== SKIP_SYMBOL) || throughEnd.length > 0,
   };
 }

@@ -35,6 +35,7 @@ import {
   type LedgerTradeRow,
   type ScorerKind,
 } from './scoring-eligibility.ts';
+import { userNetHoldings } from '../_shared/draft-validation.ts';
 
 // index.ts uses FALLBACK_MAX_AGE_HOURS = 72; mirror it here so the boundary tests
 // exercise the same threshold the handler passes in.
@@ -503,10 +504,39 @@ Deno.test('ledger: drafts.user_id TEXT vs trades.user_id UUID — matched after 
   );
 });
 
-Deno.test('ledger: draft quantity mirrors calculateHoldings `|| 1` (null/0 non-SKIP draft is held)', () => {
-  assertEquals(ledgerPositionState(U, [draft('AAPL', null)], [], WEEK_START, WEEK_END), HELD_ALL);
-  assertEquals(ledgerPositionState(U, [draft('AAPL', 0)], [], WEEK_START, WEEK_END), HELD_ALL);
+Deno.test('ledger: draft quantity is `Number(q) || 0` (shared userNetHoldings) — no coercion to 1', () => {
+  // A null/0-quantity non-SKIP draft is NOT a holding (the snapshot jobs, via the
+  // same helper, expect no row for it) but IS ledger history.
+  const flatWithHistory = { heldAtWeekStart: false, heldAtWeekEnd: false, hasLedgerHistory: true };
+  assertEquals(ledgerPositionState(U, [draft('AAPL', null)], [], WEEK_START, WEEK_END), flatWithHistory);
+  assertEquals(ledgerPositionState(U, [draft('AAPL', 0)], [], WEEK_START, WEEK_END), flatWithHistory);
   assertEquals(ledgerPositionState(U, [draft('AAPL', '2.5')], [], WEEK_START, WEEK_END), HELD_ALL);
+});
+
+Deno.test('ledger: agrees with userNetHoldings (draft legality / snapshot jobs) on the same rows', () => {
+  // ONE meaning of "held": with every trade before week_start, both boundaries
+  // must equal the shared helper's verdict over the same rows.
+  const cases: { drafts: LedgerDraftRow[]; trades: LedgerTradeRow[] }[] = [
+    { drafts: [draft('AAPL', 10)], trades: [] },
+    { drafts: [draft('AAPL', 10)], trades: [trade('sell', 'AAPL', 10, BEFORE)] },
+    { drafts: [draft('AAPL', 1.5)], trades: [trade('sell', 'aapl', 1.5 - 1e-10, BEFORE)] },
+    { drafts: [draft('Skip', 0), draft('MSFT', 0)], trades: [trade('buy', 'KO', 2, BEFORE)] },
+    { drafts: [draft('SKIP', 0)], trades: [] },
+  ];
+  for (const c of cases) {
+    const shared = userNetHoldings(
+      U,
+      c.drafts.map((x) => ({
+        user_id: String(x.user_id), symbol: x.symbol!, quantity: x.quantity as number, entry_price: 0, pick_number: 0,
+      })),
+      c.trades.map((x) => ({
+        user_id: String(x.user_id), symbol: x.symbol!, action: x.action, quantity: x.quantity as number, price: 0,
+      })),
+    );
+    const ledger = ledgerPositionState(U, c.drafts, c.trades, WEEK_START, WEEK_END);
+    assertEquals(ledger.heldAtWeekStart, shared.size > 0, JSON.stringify(c));
+    assertEquals(ledger.heldAtWeekEnd, shared.size > 0, JSON.stringify(c));
+  }
 });
 
 Deno.test('ledger: FAILS CLOSED — null / unparseable week bounds -> held', () => {
@@ -531,6 +561,12 @@ Deno.test("ledger: FAILS CLOSED — one of the user's trades has no parseable cr
 
 Deno.test('ledger: FAILS CLOSED — non-finite quantity -> held', () => {
   assertEquals(ledgerPositionState(U, [draft('AAPL', 'abc')], [], WEEK_START, WEEK_END), HELD_ALL);
+  // Number('') and Number(' ') are 0: must not read as flat.
+  assertEquals(ledgerPositionState(U, [draft('AAPL', '')], [], WEEK_START, WEEK_END), HELD_ALL);
+  assertEquals(
+    ledgerPositionState(U, [draft('AAPL', 10)], [trade('sell', 'AAPL', ' ', BEFORE)], WEEK_START, WEEK_END),
+    HELD_ALL,
+  );
   assertEquals(
     ledgerPositionState(U, [draft('AAPL', 10)], [trade('sell', 'AAPL', 'abc', BEFORE)], WEEK_START, WEEK_END),
     HELD_ALL,

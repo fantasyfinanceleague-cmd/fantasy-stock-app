@@ -8,11 +8,30 @@
  * ./playoff-progression.ts. The console.log lines are kept byte-identical so the
  * operational log surface does not change; they are the scorer's only side effect.
  *
+ * calculatePortfolio (the week-1 snapshot-less fallback) and its types were moved
+ * here the same way, with ONE behaviour fix: SKIP draft rows are excluded and draft
+ * quantity is `Number(q) || 0`, not `|| 1` (see the comment in its draft loop).
+ *
  * scoreCashOnlyUser is the one addition: the scorer for a user whose ledger proves
  * they held NOTHING at week_start AND NOTHING at week_end (scorer kind 'cash_only'
  * in ./scoring-eligibility.ts). See that module for why both boundaries matter.
  */
 
+import { SKIP_SYMBOL } from '../_shared/draft-validation.ts';
+
+export interface PortfolioHolding {
+  symbol: string;
+  quantity: number;
+  totalCost: number;
+}
+
+export interface UserPortfolio {
+  userId: string;
+  holdings: PortfolioHolding[];
+  totalCost: number;
+  totalValue: number;
+  gain: number;
+}
 export interface WeekSnapshot {
   symbol: string;
   quantity: number;
@@ -230,4 +249,81 @@ export function scoreCashOnlyUser(
 ): UserScore {
   const score = calculateUserScore(userId, [], midWeekTrades);
   return { ...score, hasPositions: hasLedgerHistory };
+}
+
+// Calculate user's portfolio from drafts and trades (fallback if no snapshots)
+export function calculatePortfolio(
+  userId: string,
+  drafts: any[],
+  trades: any[],
+  prices: Map<string, number>
+): UserPortfolio {
+  const holdings = new Map<string, PortfolioHolding>();
+
+  // Process drafts. SKIP sentinel rows (a forfeited pick: symbol 'SKIP', qty 0)
+  // are not holdings, and quantity is `Number(q) || 0` — the old `|| 1` turned
+  // every SKIP row into a 1-share 'SKIP' holding, which made a genuinely empty
+  // roster read hasPositions:true and put 'SKIP' in the price request. Same
+  // semantics as userNetHoldings in ../_shared/draft-validation.ts.
+  for (const draft of drafts.filter(d => d.user_id === userId)) {
+    const sym = draft.symbol?.toUpperCase();
+    if (!sym || sym === SKIP_SYMBOL) continue;
+
+    const qty = Number(draft.quantity) || 0;
+    const price = Number(draft.entry_price || 0);
+
+    if (!holdings.has(sym)) {
+      holdings.set(sym, { symbol: sym, quantity: 0, totalCost: 0 });
+    }
+    const h = holdings.get(sym)!;
+    h.quantity += qty;
+    h.totalCost += price * qty;
+  }
+
+  // Process trades
+  for (const trade of trades.filter(t => t.user_id === userId)) {
+    const sym = trade.symbol?.toUpperCase();
+    if (!sym) continue;
+
+    const qty = Number(trade.quantity || 0);
+    const price = Number(trade.price || 0);
+
+    if (!holdings.has(sym)) {
+      holdings.set(sym, { symbol: sym, quantity: 0, totalCost: 0 });
+    }
+    const h = holdings.get(sym)!;
+
+    if (trade.action === 'buy') {
+      h.quantity += qty;
+      h.totalCost += price * qty;
+    } else if (trade.action === 'sell') {
+      const avgCost = h.quantity > 0 ? h.totalCost / h.quantity : price;
+      h.quantity -= qty;
+      h.totalCost -= avgCost * qty;
+    }
+  }
+
+  // Calculate totals
+  let totalCost = 0;
+  let totalValue = 0;
+  const holdingsArray: PortfolioHolding[] = [];
+
+  for (const h of holdings.values()) {
+    if (h.quantity <= 0) continue;
+
+    const currentPrice = prices.get(h.symbol) || (h.totalCost / h.quantity);
+    const value = currentPrice * h.quantity;
+
+    totalCost += h.totalCost;
+    totalValue += value;
+    holdingsArray.push(h);
+  }
+
+  return {
+    userId,
+    holdings: holdingsArray,
+    totalCost,
+    totalValue,
+    gain: totalValue - totalCost,
+  };
 }

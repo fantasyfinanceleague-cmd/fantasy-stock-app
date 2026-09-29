@@ -18,6 +18,8 @@
  *       not regress: this is the broken-snapshot-job guard)
  *   (e) week 1, all-cash                                  -> not an accidental
  *       auto-loss; a genuinely EMPTY roster keeps the empty rules
+ *   (f) the week-1 fallback (calculatePortfolio) no longer turns a SKIP draft row
+ *       into a 1-share holding
  *
  * runWeek mirrors the handler's per-(league, week) flow: batch decision -> per-user
  * scorer choice -> scoring -> per-matchup refusal -> outcome. The scorer choice,
@@ -42,6 +44,7 @@ import {
   type ScorerKind,
 } from './scoring-eligibility.ts';
 import {
+  calculatePortfolio,
   calculateUserScore,
   scoreCashOnlyUser,
   type MidWeekTrade,
@@ -459,4 +462,45 @@ Deno.test('(e) genuinely EMPTY (only SKIP draft rows, never traded) keeps the em
     matchups: [{ team1: CASH, team2: OPP }],
   });
   assertEquals(scored(bothEmpty.matchups[0]).outcome.reason, 'both_empty_tie');
+});
+
+// ===========================================================================
+// (f) calculatePortfolio — the week-1 snapshot-less fallback
+// ===========================================================================
+
+const SKIP_ROW = { user_id: CASH, symbol: 'SKIP', entry_price: 0, quantity: 0 };
+
+Deno.test('(f) fallback: a SKIP draft row (qty 0) is NOT a 1-share holding', () => {
+  const p = calculatePortfolio(CASH, [SKIP_ROW, { ...SKIP_ROW, symbol: 'skip' }], [], new Map());
+  assertEquals(p.holdings, [], 'no SKIP holding');
+  assertEquals(p.holdings.length > 0, false, 'so hasPositions (holdings.length > 0) is false');
+  assertEquals({ totalCost: p.totalCost, totalValue: p.totalValue, gain: p.gain }, { totalCost: 0, totalValue: 0, gain: 0 });
+});
+
+Deno.test('(f) fallback: SKIP rows alongside real picks leave only the real holdings', () => {
+  const p = calculatePortfolio(
+    CASH,
+    [SKIP_ROW, { user_id: CASH, symbol: 'AAPL', entry_price: 100, quantity: 2 }, { user_id: OPP, symbol: 'MSFT', entry_price: 1, quantity: 1 }],
+    [],
+    new Map([['AAPL', 110]]),
+  );
+  assertEquals(p.holdings, [{ symbol: 'AAPL', quantity: 2, totalCost: 200 }]);
+  assertAlmostEquals(p.gain, 20, 1e-9);
+});
+
+Deno.test('(f) fallback: draft quantity is `Number(q) || 0` — a null/0 quantity is not coerced to 1', () => {
+  const p = calculatePortfolio(
+    CASH,
+    [{ user_id: CASH, symbol: 'AAPL', entry_price: 100, quantity: null }, { user_id: CASH, symbol: 'KO', entry_price: 60, quantity: 0 }],
+    [],
+    new Map([['AAPL', 110], ['KO', 61]]),
+  );
+  assertEquals(p.holdings, []);
+});
+
+Deno.test('(f) fallback: a malformed SKIP row WITH a quantity is still not a holding (as userNetHoldings)', () => {
+  // Excluded by symbol, not merely zeroed by quantity — the same isSkip rule the
+  // shared netting helper applies regardless of quantity.
+  const p = calculatePortfolio(CASH, [{ ...SKIP_ROW, quantity: 3, entry_price: 5 }], [], new Map());
+  assertEquals(p.holdings, []);
 });

@@ -17,12 +17,14 @@ import {
   type LedgerState,
 } from './scoring-eligibility.ts';
 import {
+  calculatePortfolio,
   calculateUserScore,
   scoreCashOnlyUser,
   type WeekSnapshot,
   type MidWeekTrade,
   type UserScore,
 } from './user-score.ts';
+import { SKIP_SYMBOL } from '../_shared/draft-validation.ts';
 import { updateJobStatus, noPendingMessage, scoredMessage } from './job-status.ts';
 
 /**
@@ -81,20 +83,6 @@ function isAuthorized(req: Request): boolean {
   return constantTimeEqual(providedKey, expectedKey);
 }
 
-interface PortfolioHolding {
-  symbol: string;
-  quantity: number;
-  totalCost: number;
-}
-
-interface UserPortfolio {
-  userId: string;
-  holdings: PortfolioHolding[];
-  totalCost: number;
-  totalValue: number;
-  gain: number;
-}
-
 // Fetch latest prices from Alpaca (using service credentials)
 async function fetchPrices(symbols: string[], alpacaKey: string, alpacaSecret: string): Promise<Map<string, number>> {
   const prices = new Map<string, number>();
@@ -129,79 +117,6 @@ async function fetchPrices(symbols: string[], alpacaKey: string, alpacaSecret: s
   }
 
   return prices;
-}
-
-// Calculate user's portfolio from drafts and trades (fallback if no snapshots)
-function calculatePortfolio(
-  userId: string,
-  drafts: any[],
-  trades: any[],
-  prices: Map<string, number>
-): UserPortfolio {
-  const holdings = new Map<string, PortfolioHolding>();
-
-  // Process drafts
-  for (const draft of drafts.filter(d => d.user_id === userId)) {
-    const sym = draft.symbol?.toUpperCase();
-    if (!sym) continue;
-
-    const qty = Number(draft.quantity || 1);
-    const price = Number(draft.entry_price || 0);
-
-    if (!holdings.has(sym)) {
-      holdings.set(sym, { symbol: sym, quantity: 0, totalCost: 0 });
-    }
-    const h = holdings.get(sym)!;
-    h.quantity += qty;
-    h.totalCost += price * qty;
-  }
-
-  // Process trades
-  for (const trade of trades.filter(t => t.user_id === userId)) {
-    const sym = trade.symbol?.toUpperCase();
-    if (!sym) continue;
-
-    const qty = Number(trade.quantity || 0);
-    const price = Number(trade.price || 0);
-
-    if (!holdings.has(sym)) {
-      holdings.set(sym, { symbol: sym, quantity: 0, totalCost: 0 });
-    }
-    const h = holdings.get(sym)!;
-
-    if (trade.action === 'buy') {
-      h.quantity += qty;
-      h.totalCost += price * qty;
-    } else if (trade.action === 'sell') {
-      const avgCost = h.quantity > 0 ? h.totalCost / h.quantity : price;
-      h.quantity -= qty;
-      h.totalCost -= avgCost * qty;
-    }
-  }
-
-  // Calculate totals
-  let totalCost = 0;
-  let totalValue = 0;
-  const holdingsArray: PortfolioHolding[] = [];
-
-  for (const h of holdings.values()) {
-    if (h.quantity <= 0) continue;
-
-    const currentPrice = prices.get(h.symbol) || (h.totalCost / h.quantity);
-    const value = currentPrice * h.quantity;
-
-    totalCost += h.totalCost;
-    totalValue += value;
-    holdingsArray.push(h);
-  }
-
-  return {
-    userId,
-    holdings: holdingsArray,
-    totalCost,
-    totalValue,
-    gain: totalValue - totalCost,
-  };
 }
 
 // Legacy function for backward compatibility (when no week_end_price available)
@@ -955,7 +870,8 @@ Deno.serve(async (req) => {
       const symbols = new Set<string>(snapshotSymbols);
       if (snapshotSymbols.size === 0) {
         for (const d of drafts || []) {
-          if (d.symbol) symbols.add(d.symbol.toUpperCase());
+          // A SKIP row is a forfeited pick, not a ticker to quote.
+          if (d.symbol && d.symbol.toUpperCase() !== SKIP_SYMBOL) symbols.add(d.symbol.toUpperCase());
         }
         for (const t of trades || []) {
           if (t.symbol) symbols.add(t.symbol.toUpperCase());
