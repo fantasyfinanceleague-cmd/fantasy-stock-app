@@ -41,8 +41,10 @@
 --   G2 B: direct UPSERT (PostgREST shape) with bad name -> 23514  -> PASS
 --   H  B: direct UPDATE own username to NULL -> allowed (1 row)   -> PASS
 --   I  B: direct UPDATE of A's row -> 0 rows, A unchanged         -> PASS
---   E  anon: set_username -> 42501                                -> PASS
---   F  anon: check_usernames -> 42501                             -> PASS
+--   E  anon: set_username -> 42501 permission denied (grant)      -> PASS
+--   F  anon: check_usernames -> 42501 permission denied (grant)   -> PASS
+--      (E/F: the functions' own no-JWT RAISE is also 42501, so only
+--       the "permission denied for function" message counts as PASS)
 --   K  trigger: invalid signup metadata still stored as NULL      -> PASS
 --      (regression: the CHECK must never fire inside the trigger)
 --   N  no JWT (editor role): set_username -> 42501                -> PASS
@@ -259,11 +261,16 @@ begin
   perform set_config('role', 'anon', true);
   perform set_config('request.jwt.claims', '{}', true);
 
+  -- E/F PASS only on the GRANT's refusal: the functions' own no-JWT RAISE also
+  -- uses SQLSTATE 42501, so a leftover anon EXECUTE grant would still yield 42501.
   begin
     res := public.set_username('fxe_' || sfx);
     out := out || format(E'E  anon: set_username -> returned %s  FAIL\n', res);
   exception
-    when insufficient_privilege then out := out || E'E  anon: set_username -> 42501 -> PASS\n';
+    when insufficient_privilege then
+      out := out || case when sqlerrm like '%permission denied for function%'
+        then E'E  anon: set_username -> 42501 permission denied (grant) -> PASS\n'
+        else format(E'E  anon: set_username -> 42501 but NOT the grant: %s  FAIL (anon can execute)\n', sqlerrm) end;
     when others then out := out || format(E'E  anon: set_username -> %s %s  FAIL\n', sqlstate, sqlerrm);
   end;
 
@@ -271,7 +278,10 @@ begin
     select count(*) into n from public.check_usernames(array['fxe_' || sfx]);
     out := out || format(E'F  anon: check_usernames -> returned %s rows  FAIL\n', n);
   exception
-    when insufficient_privilege then out := out || E'F  anon: check_usernames -> 42501 -> PASS\n';
+    when insufficient_privilege then
+      out := out || case when sqlerrm like '%permission denied for function%'
+        then E'F  anon: check_usernames -> 42501 permission denied (grant) -> PASS\n'
+        else format(E'F  anon: check_usernames -> 42501 but NOT the grant: %s  FAIL (anon can execute)\n', sqlerrm) end;
     when others then out := out || format(E'F  anon: check_usernames -> %s %s  FAIL\n', sqlstate, sqlerrm);
   end;
 
