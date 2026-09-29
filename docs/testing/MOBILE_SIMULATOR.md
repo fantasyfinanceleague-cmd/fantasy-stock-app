@@ -65,3 +65,28 @@ A second person or worker can run in parallel on another device, with Metro on
   one-off value to a dev build, put it in `apps/mobile/.env.local` (gitignored
   via `.env*.local`), not a shell export. Verified 2026-09-26 by reading the
   served bundle directly (`curl` the entry bundle, grep for the var).
+- **Reduce Motion / Dynamic Type are read once at JS-bundle load, not live.**
+  `react-native-reanimated`'s `useReducedMotion()` caches
+  `isReducedMotionEnabledInSystem()` in a module-level constant on first
+  import (its own JSDoc: "Changing the reduced motion system setting doesn't
+  cause your components to rerender... enabled when the app started") and RN's
+  Dynamic Type font scaling behaves the same way. Toggling Settings while the
+  app is already running has no visible effect — you'll capture the wrong
+  state and not notice, since nothing errors. Verified 2026-09-28: flipped
+  Reduce Motion on mid-session, the gallery's own `useMotion().reduced`
+  readout kept reporting `false` for 3+ screenshots. Fix: change the Settings
+  toggle FIRST, then force a fresh JS load —
+  `xcrun simctl terminate <UDID> host.exp.Exponent`, then re-`openurl` the
+  `exp://` deep link. This conveniently reloads AND re-lands on the same
+  deep-linked route, since iOS remembers the Expo Go association after the
+  first manual "Open in Expo Go?" tap.
+- **Settings toggle switches need a drag, not a tap.** On this simulator/iOS
+  build, a plain `tap` on a `UISwitch` in Settings (e.g. Accessibility →
+  Motion → Reduce Motion) silently no-ops — no error, the switch just stays
+  put — while taps on everything else (rows, back buttons, other switches
+  tested as a control) work fine. A short `touch_path` drag across the switch
+  (a few points, e.g. from one edge to the other) toggles it reliably.
+  Verified 2026-09-28: 3 consecutive plain taps at pixel-verified coordinates
+  on "Reduce Motion" and on an unrelated control switch ("Prefer Non-Blinking
+  Cursor") all failed to toggle; a drag gesture at the same location worked
+  on the first try.
