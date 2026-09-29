@@ -13,6 +13,7 @@ import * as Linking from 'expo-linking';
 import { useEffect, useMemo, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { LeagueProvider } from '@/lib/LeagueContext';
 import { addNotificationListeners } from '@/lib/notifications';
@@ -21,6 +22,7 @@ import { verifyAndConsumeRecoveryNonce, setRecoverySession } from '@/lib/recover
 import { parseRecoveryLink } from '@/lib/recoveryLink';
 import { SessionProvider, useSession } from '@/lib/SessionProvider';
 import { pendingRoute, type AuthPhase } from '@/lib/shell/pendingRoute';
+import { ShellOverlayProvider } from '@/components/shell/ShellOverlay';
 import { ThemeProvider, useTheme } from '@/components/sp/ThemeProvider';
 
 export {
@@ -39,6 +41,7 @@ const HIDDEN_HEADER = { headerShown: false } as const;
 const HIDDEN_HEADER_MODAL = { headerShown: false, presentation: 'modal' } as const;
 const HIDDEN_HEADER_FULLSCREEN = { headerShown: false, presentation: 'fullScreenModal' } as const;
 const WITH_HEADER = { headerShown: true } as const;
+const ROOT = { flex: 1 } as const;
 const WITH_HEADER_MODAL = { headerShown: true, presentation: 'modal' } as const;
 
 // The username gate (Pick a username, before the tabs) is wired in with its
@@ -229,28 +232,32 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
     <NavigationThemeProvider value={navigationTheme}>
       <StatusBar style={statusBarStyle} />
       <LeagueProvider>
-        <Stack screenOptions={HIDDEN_HEADER}>
-          <Stack.Protected guard={!signedIn}>
-            <Stack.Screen name="login" />
-            <Stack.Screen name="forgot-password" options={HIDDEN_HEADER_MODAL} />
-          </Stack.Protected>
+        {/* The league sheet and S3's flying label are drawn in a layer above
+            the Stack (components/shell/ShellOverlay.tsx explains why). */}
+        <ShellOverlayProvider>
+          <Stack screenOptions={HIDDEN_HEADER}>
+            <Stack.Protected guard={!signedIn}>
+              <Stack.Screen name="login" />
+              <Stack.Screen name="forgot-password" options={HIDDEN_HEADER_MODAL} />
+            </Stack.Protected>
 
-          {/* The recovery link signs the user in to show this screen, so it
-              sits outside both guards; its own nonce-checked handler above
-              decides whether the form appears (PR #41). */}
-          <Stack.Screen name="reset-password" options={HIDDEN_HEADER_FULLSCREEN} />
+            {/* The recovery link signs the user in to show this screen, so it
+                sits outside both guards; its own nonce-checked handler above
+                decides whether the form appears (PR #41). */}
+            <Stack.Screen name="reset-password" options={HIDDEN_HEADER_FULLSCREEN} />
 
-          <Stack.Protected guard={signedIn}>
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="create-league" options={HIDDEN_HEADER_FULLSCREEN} />
-            <Stack.Screen name="join-league" options={HIDDEN_HEADER_FULLSCREEN} />
-            <Stack.Screen name="league-settings" options={HIDDEN_HEADER_MODAL} />
-            <Stack.Screen name="player-portfolio" options={HIDDEN_HEADER_MODAL} />
-            <Stack.Screen name="trade-history" options={HIDDEN_HEADER_MODAL} />
-            <Stack.Screen name="design-gallery" options={WITH_HEADER} />
-            <Stack.Screen name="modal" options={WITH_HEADER_MODAL} />
-          </Stack.Protected>
-        </Stack>
+            <Stack.Protected guard={signedIn}>
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="create-league" options={HIDDEN_HEADER_FULLSCREEN} />
+              <Stack.Screen name="join-league" options={HIDDEN_HEADER_FULLSCREEN} />
+              <Stack.Screen name="league-settings" options={HIDDEN_HEADER_MODAL} />
+              <Stack.Screen name="player-portfolio" options={HIDDEN_HEADER_MODAL} />
+              <Stack.Screen name="trade-history" options={HIDDEN_HEADER_MODAL} />
+              <Stack.Screen name="design-gallery" options={WITH_HEADER} />
+              <Stack.Screen name="modal" options={WITH_HEADER_MODAL} />
+            </Stack.Protected>
+          </Stack>
+        </ShellOverlayProvider>
       </LeagueProvider>
     </NavigationThemeProvider>
   );
@@ -304,10 +311,12 @@ export default function RootLayout() {
   void archivoLoaded;
 
   return (
-    <ThemeProvider>
-      <SessionProvider>
-        <RootLayoutNav fontsLoaded={loaded} />
-      </SessionProvider>
-    </ThemeProvider>
+    <GestureHandlerRootView style={ROOT}>
+      <ThemeProvider>
+        <SessionProvider>
+          <RootLayoutNav fontsLoaded={loaded} />
+        </SessionProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }

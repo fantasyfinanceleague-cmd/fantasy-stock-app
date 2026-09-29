@@ -4,6 +4,7 @@ import { supabase } from './supabase';
 import { setupPushNotifications, removePushToken } from './notifications';
 import { setRecoverySession } from './recoveryNonce';
 import type { AuthPhase } from './shell/pendingRoute';
+import { FIXTURE_EMAIL, FIXTURE_USER_ID, SHELL_FIXTURE, fixtureUsername } from './shell/devFixture';
 
 // Phase 3b-1 — the ONE auth subscription for the whole app.
 //
@@ -49,6 +50,14 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const notificationsSetup = useRef(false);
 
   useEffect(() => {
+    if (SHELL_FIXTURE) {
+      // DEV-only fixture (lib/shell/devFixture.ts): a local fake session.
+      // supabase.auth is never touched, so nothing signs in or out for real.
+      setUser({ id: FIXTURE_USER_ID, email: FIXTURE_EMAIL } as User);
+      setLoading(false);
+      return;
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -97,6 +106,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const refreshProfile = useCallback(async () => {
     if (!userId) return;
+    if (SHELL_FIXTURE) {
+      setUsername(fixtureUsername(SHELL_FIXTURE));
+      setProfileFor(userId);
+      return;
+    }
     const { data, error } = await supabase
       .from('user_profiles')
       .select('username')
@@ -133,6 +147,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   );
 
   const signOut = useCallback(async () => {
+    if (SHELL_FIXTURE) {
+      setUser(null);
+      setSession(null);
+      return;
+    }
     // Remove push token before signing out
     if (userId) {
       await removePushToken(userId);
