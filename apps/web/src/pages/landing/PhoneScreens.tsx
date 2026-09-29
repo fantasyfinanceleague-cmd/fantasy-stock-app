@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from 'motion/react';
+import { Surface } from '../../design/Surface';
 import { ScoreDigits } from '../../design/game/ScoreDigits';
 import { TugBar } from '../../design/game/TugBar';
 import { Chyron } from '../../design/game/Chyron';
@@ -11,7 +12,10 @@ import {
   LEAGUE,
   LINEUPS,
   MATCHUP,
+  MATCHUP_FRAMES,
+  PORTFOLIO_FRAMES,
   ROSTER_SLOTS,
+  SPARKLINE,
   WEEK,
   WEEK_CLOSES,
   boardMoves,
@@ -35,6 +39,20 @@ const TABS: ReadonlyArray<{ id: PhoneTab; label: string; d: string }> = [
   { id: 'league', label: 'League', d: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3' },
   { id: 'portfolio', label: 'Portfolio', d: 'M4 20V10M10 20V4M16 20v-8M22 20H2' },
 ];
+
+/** The DOM device (ENHANCED and STATIC tiers, and the FULL tier's first
+ * frame): a flat frame around a game-surface screen. aria-hidden — the
+ * page's text beside it carries the meaning. */
+export function Phone({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={['lp-phone', className].filter(Boolean).join(' ')} aria-hidden="true">
+      <span className="lp-phone__notch" />
+      <Surface kind="game" className="lp-phone__screen">
+        {children}
+      </Surface>
+    </div>
+  );
+}
 
 function StatusBar() {
   return (
@@ -81,6 +99,60 @@ export function PhoneShell({ tab, tag, children }: { tab: PhoneTab; tag: string;
       <div className="lp-app__body">{children}</div>
       <TabBar active={tab} />
     </div>
+  );
+}
+
+// ── Home ─────────────────────────────────────────────────────────────────
+
+/** The hero device's screen (round 4): the app's Home tab — this week's
+ * matchup and your portfolio, ticking through the same sample frames as
+ * the "look inside" cards, so the device and the cards never disagree. */
+export function HomeScreen({ frame }: { frame: number }) {
+  const m = MATCHUP_FRAMES[frame % MATCHUP_FRAMES.length];
+  const p = PORTFOLIO_FRAMES[frame % PORTFOLIO_FRAMES.length];
+  const lead = m.you - m.opp;
+  return (
+    <PhoneShell tab="home" tag={`Week ${WEEK} · Live`}>
+      <section className="lp-home__block">
+        <p className="lp-home__label">
+          <span>This week</span>
+          <span>{MATCHUP.left}</span>
+        </p>
+        <div className="lp-compete__names">
+          <span className="lp-compete__name lp-compete__name--you">{MATCHUP.you.name}</span>
+          <span className="lp-compete__name lp-compete__name--opp">{MATCHUP.opp.name}</span>
+        </div>
+        <div className="lp-compete__scores">
+          <ScoreDigits value={formatMoney(m.you, { sign: 'always' })} className="lp-roll lp-roll--md" />
+          <ScoreDigits value={formatMoney(m.opp, { sign: 'always' })} className="lp-roll lp-roll--md" />
+        </div>
+        <TugBar you={m.you} opponent={m.opp} youLabel={MATCHUP.you.name} opponentLabel={MATCHUP.opp.name} />
+        <p className="lp-compete__lead">
+          {lead > 0 ? MATCHUP.you.name : MATCHUP.opp.name} leads by <span className="lp-num">{formatMoney(Math.abs(lead))}</span>
+        </p>
+      </section>
+      <section className="lp-home__block">
+        <p className="lp-home__label">
+          <span>Portfolio</span>
+          <span className={p.today >= 0 ? 'lp-home__chg lp-home__chg--gain' : 'lp-home__chg lp-home__chg--loss'}>
+            {formatMoney(p.today, { sign: 'always' })} · {fmtPct(p.todayPct)}
+          </span>
+        </p>
+        <ScoreDigits value={formatMoney(p.value)} className="lp-roll lp-roll--md lp-home__value" />
+        <svg className="lp-home__spark" viewBox="0 0 320 80" preserveAspectRatio="none" aria-hidden="true">
+          <polyline points={SPARKLINE} />
+        </svg>
+        <ul className="lp-lineup lp-home__holdings">
+          {p.holdings.map((h) => (
+            <li key={h.t} className="lp-lineup__row">
+              <span className="lp-lineup__t">{h.t}</span>
+              <span className="lp-home__hv">{formatMoney(h.value)}</span>
+              <span className={h.pct >= 0 ? 'lp-lineup__v lp-lineup__v--gain' : 'lp-lineup__v lp-lineup__v--loss'}>{fmtPct(h.pct)}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </PhoneShell>
   );
 }
 

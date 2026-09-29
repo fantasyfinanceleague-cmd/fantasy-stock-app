@@ -170,7 +170,8 @@ describe('full motion (client)', () => {
 
 describe('source guards', () => {
   const dir = path.dirname(new URL(import.meta.url).pathname);
-  const sources = readdirSync(dir)
+  // The landing's own files and the FULL tier's lazy chunk (full/).
+  const sources = [...readdirSync(dir), ...readdirSync(path.join(dir, 'full')).map((f) => `full/${f}`)]
     .filter((f) => /\.(ts|tsx|css)$/.test(f) && !/\.test\./.test(f))
     .map((f) => [f, readFileSync(path.join(dir, f), 'utf-8')] as const);
 

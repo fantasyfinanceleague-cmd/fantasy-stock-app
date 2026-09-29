@@ -14,11 +14,14 @@
   "dependencies": {
     "@fantasy-stock/shared": "*",
     "@hcaptcha/react-hcaptcha": "^1.14.0",
+    "@react-three/drei": "^10.7.9",
+    "@react-three/fiber": "^9.8.1",
     "@supabase/supabase-js": "^2.53.0",
     "motion": "^13.4.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-router-dom": "^7.7.1"
+    "react-router-dom": "^7.7.1",
+    "three": "^0.186.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.30.1",
@@ -29,6 +32,7 @@
     "@types/node": "^22.20.4",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
+    "@types/three": "^0.186.0",
     "@vitejs/plugin-react": "^4.6.0",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.30.1",

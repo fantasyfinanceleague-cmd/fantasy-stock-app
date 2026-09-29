@@ -1,25 +1,13 @@
 import { useRef, useState } from 'react';
 import { motion, useMotionValueEvent, useScroll, useSpring } from 'motion/react';
-import { Surface } from '../../design/Surface';
 import { how } from './copy';
 import { useEnhanced, useLandingMotion, useMediaQuery } from './hooks';
-import { ClimbScreen, CompeteScreen, DraftScreen } from './PhoneScreens';
+import { ClimbScreen, CompeteScreen, DraftScreen, Phone } from './PhoneScreens';
 import { Layer, Reveal } from './scroll';
 import { CHAPTER_BEATS, chapterStateAt } from './pacing';
 
 /** ≈ ScrollTrigger `scrub: 0.8` — a critically-damped trail. */
 const SCRUB_SPRING = { stiffness: 90, damping: 24, mass: 1, restDelta: 0.0002 };
-
-function Phone({ children, className }: { children: React.ReactNode; className?: string }) {
-  return (
-    <div className={['lp-phone', className].filter(Boolean).join(' ')} aria-hidden="true">
-      <span className="lp-phone__notch" />
-      <Surface kind="game" className="lp-phone__screen">
-        {children}
-      </Surface>
-    </div>
-  );
-}
 
 function StepTitle({ i }: { i: number }) {
   const t = how.steps[i].title;

@@ -2656,3 +2656,225 @@ body:has(> #root > .lp) {
     transform: none;
   }
 }
+
+/* ── Round 4: the hero device slot (all tiers) ───────────────────────── */
+/* The copy and the device share the hero: side by side on desktop, the
+   device under the copy on phones. The DOM phone in the slot is the first
+   paint in every tier; the FULL tier's 3D device is anchored to the same
+   box and crossfades over it. */
+.lp-hero__inner {
+  position: relative;
+  z-index: 1;
+}
+
+.lp-hero__copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+}
+
+.lp-hero__device {
+  --lp-hero-scale: 0.62;
+  position: relative;
+  flex: none;
+  width: calc(300px * var(--lp-hero-scale));
+  height: calc(600px * var(--lp-hero-scale));
+  margin-top: var(--sp-space-10);
+}
+
+.lp-hero__phone.lp-phone {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin: -300px 0 0 -150px;
+  transform: scale(var(--lp-hero-scale));
+  transition: opacity var(--sp-motion-duration-slow) var(--sp-motion-ease-settle);
+}
+
+@media (min-width: 1024px) {
+  .lp-hero__inner {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-space-10);
+    text-align: left;
+  }
+
+  .lp-hero__copy {
+    align-items: flex-start;
+  }
+
+  .lp-hero__cta,
+  .lp-hero__meta {
+    justify-content: flex-start;
+  }
+
+  .lp-hero__device {
+    --lp-hero-scale: 0.86;
+    margin-top: 0;
+    margin-right: var(--sp-space-9);
+  }
+}
+
+@media (min-width: 1024px) and (max-height: 820px) {
+  .lp-hero__device {
+    --lp-hero-scale: 0.76;
+  }
+}
+
+@media (min-width: 1024px) and (max-height: 720px) {
+  .lp-hero__device {
+    --lp-hero-scale: 0.64;
+  }
+}
+
+@media (min-width: 1024px) and (min-height: 980px) {
+  .lp-hero__device {
+    --lp-hero-scale: 1;
+  }
+}
+
+/* ENHANCED: the DOM phone in CSS 3D — the same three-quarter turn the
+   FULL device rests at, and a slow float (a few px, never a loop that
+   draws the eye). */
+.lp-hero__device--live {
+  perspective: 1800px;
+}
+
+.lp-hero__device--live .lp-hero__phone.lp-phone {
+  transform: scale(var(--lp-hero-scale)) rotateY(-16deg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lp-hero__device--live .lp-hero__phone.lp-phone {
+    animation: lp-hero-float calc(var(--sp-motion-duration-feature) * 12) ease-in-out infinite alternate;
+  }
+}
+
+@keyframes lp-hero-float {
+  from {
+    translate: 0 -5px;
+  }
+  to {
+    translate: 0 5px;
+  }
+}
+
+/* The generic device has one camera dot, no notch silhouette (FULL and
+   DOM devices match, so the crossfade doesn't morph the hardware). */
+.lp-phone__notch {
+  top: 17px;
+  width: 9px;
+  height: 9px;
+}
+
+/* ── Round 4: the FULL tier's WebGL stages ───────────────────────────── */
+.lp-3d {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  isolation: isolate;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--sp-motion-duration-feature) var(--sp-motion-ease-settle);
+}
+
+.lp-3d--painted {
+  opacity: 1;
+}
+
+.lp-stage3d {
+  position: absolute;
+  inset: 0;
+}
+
+/* The 3D device's live screen (drei Html, behind the canvas). */
+.lp-3d-screen__inner {
+  overflow: hidden;
+  border-radius: 34px;
+}
+
+.lp-3d-screen__inner .lp-phone__screen {
+  height: 100%;
+  border-radius: 0;
+}
+
+/* Once the 3D device's first frame is up, the DOM phone under it steps
+   aside; a demotion removes the flag and it returns. */
+html[data-lp3d-hero='painted'] .lp-hero__phone.lp-phone {
+  opacity: 0;
+}
+
+/* Home screen (the hero device). */
+.lp-home__block {
+  display: grid;
+  gap: var(--sp-space-3);
+}
+
+.lp-home__block + .lp-home__block {
+  padding-top: var(--sp-space-4);
+  border-top: 1px solid var(--sp-color-surface-game-line);
+}
+
+.lp-home__label {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-space-3);
+  font-size: var(--sp-type-caption-size);
+  line-height: var(--sp-type-caption-line);
+  font-weight: 700;
+  color: var(--sp-color-text-on-game-secondary);
+}
+
+.lp-home__chg {
+  font-variant-numeric: tabular-nums;
+}
+
+.lp-home__chg--gain {
+  color: var(--sp-color-data-gain-on-game);
+}
+
+.lp-home__chg--loss {
+  color: var(--sp-color-data-loss-on-game);
+}
+
+.lp-home__spark {
+  width: 100%;
+  height: 34px;
+}
+
+.lp-home__spark polyline {
+  fill: none;
+  stroke: var(--sp-color-data-gain-on-game);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.lp-home__holdings .lp-lineup__row {
+  display: grid;
+  grid-template-columns: 1fr auto 64px;
+}
+
+.lp-home__hv {
+  color: var(--sp-color-text-on-game-primary);
+}
+
+.lp-home__holdings .lp-lineup__v {
+  text-align: right;
+}
+
+/* The hero's skyline keeps clear of the copy: the stage fades in from
+   the copy's side (desktop) or from under the copy (phones), so no hero
+   text ever sits on a column. The device lives entirely in the opaque part. */
+.lp-3d--hero canvas {
+  mask-image: linear-gradient(180deg, transparent 52%, black 66%);
+}
+
+@media (min-width: 1024px) {
+  .lp-3d--hero canvas {
+    mask-image: linear-gradient(90deg, transparent 46%, black 68%);
+  }
+}

@@ -6,6 +6,8 @@ import { ScoreDigits } from '../../design/game/ScoreDigits';
 import { TugBar } from '../../design/game/TugBar';
 import { formatMoney } from '../../design/lib/money';
 import { hero, inside } from './copy';
+import { FullSlot } from './FullSlot';
+import { HomeScreen, Phone } from './PhoneScreens';
 import { Layer } from './scroll';
 import { LaunchingSoon } from './Nav';
 import {
@@ -238,6 +240,7 @@ export function Opening() {
   const bigStage = useMediaQuery('(min-width: 1024px) and (min-height: 700px)') === true;
   const pinned = enhanced && bigStage;
 
+  const deviceRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const cardsRef = useRef<HTMLDivElement>(null);
@@ -258,41 +261,58 @@ export function Opening() {
   const frame = useLoop(PORTFOLIO_FRAMES.length, INSIDE_TICK_MS, enhanced && inView === true && visible && !held);
   usePointerGlow(stageRef, enhanced);
 
+  // The hero device's screen ticks through the same frames as the cards.
+  const heroInView = useInView(deviceRef, { threshold: 0.1 });
+  const heroFrame = useLoop(PORTFOLIO_FRAMES.length, INSIDE_TICK_MS, enhanced && heroInView === true && visible);
+
   return (
     <>
       <Layer id="top" tone="light" first labelledBy="lp-hero-title" className="lp-hero-layer">
         <div className="lp-hero">
+          {/* FULL tier: the WebGL stage behind the copy (skyline + the 3D
+              device, anchored to the device slot below). */}
+          <FullSlot name="hero" slot={deviceRef} frame={heroFrame} />
           <div className="lp-wrap lp-hero__inner">
-            <p className="lp-eyebrow lp-hero__eyebrow">
-              <span className="lp-eyebrow__dot" aria-hidden="true" />
-              {hero.eyebrow}
-            </p>
-            <h1 id="lp-hero-title" className="lp-hero__title">
-              {hero.lines.map((line, i) => (
-                <span key={line} className="lp-line" style={{ ['--lp-i' as string]: i }}>
-                  <span className="lp-line__in">{i === hero.lines.length - 1 ? <em>{line}</em> : line}</span>
-                  {i < hero.lines.length - 1 ? ' ' : null}
-                </span>
-              ))}
-            </h1>
-            <p className="lp-hero__lede">{hero.lede(brand.name)}</p>
-            <div className="lp-hero__cta">
-              <LaunchingSoon label={hero.status} />
-              <SeeHowItWorks />
+            <div className="lp-hero__copy">
+              <p className="lp-eyebrow lp-hero__eyebrow">
+                <span className="lp-eyebrow__dot" aria-hidden="true" />
+                {hero.eyebrow}
+              </p>
+              <h1 id="lp-hero-title" className="lp-hero__title">
+                {hero.lines.map((line, i) => (
+                  <span key={line} className="lp-line" style={{ ['--lp-i' as string]: i }}>
+                    <span className="lp-line__in">{i === hero.lines.length - 1 ? <em>{line}</em> : line}</span>
+                    {i < hero.lines.length - 1 ? ' ' : null}
+                  </span>
+                ))}
+              </h1>
+              <p className="lp-hero__lede">{hero.lede(brand.name)}</p>
+              <div className="lp-hero__cta">
+                <LaunchingSoon label={hero.status} />
+                <SeeHowItWorks />
+              </div>
+              <p className="lp-hero__meta">
+                {hero.meta.map((m, i) => (
+                  <span key={m.strong}>
+                    {i > 0 && (
+                      <span className="lp-hero__sep" aria-hidden="true">
+                        ·
+                      </span>
+                    )}
+                    <b>{m.strong}</b>
+                    {m.rest}
+                  </span>
+                ))}
+              </p>
             </div>
-            <p className="lp-hero__meta">
-              {hero.meta.map((m, i) => (
-                <span key={m.strong}>
-                  {i > 0 && (
-                    <span className="lp-hero__sep" aria-hidden="true">
-                      ·
-                    </span>
-                  )}
-                  <b>{m.strong}</b>
-                  {m.rest}
-                </span>
-              ))}
-            </p>
+            {/* The device slot. Its DOM phone is the first paint in every
+                tier (no blank moment); FULL crossfades the 3D device over
+                it once the first WebGL frame is presented. */}
+            <div ref={deviceRef} className={enhanced ? 'lp-hero__device lp-hero__device--live' : 'lp-hero__device'}>
+              <Phone className="lp-hero__phone">
+                <HomeScreen frame={heroFrame} />
+              </Phone>
+            </div>
           </div>
           {/* The one scroll cue on the page (Design Lead, round 4). */}
           <span className="lp-scroll-cue" aria-hidden="true">
