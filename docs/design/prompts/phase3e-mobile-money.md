@@ -86,3 +86,13 @@ closed" sheet; trade history omitting draft picks.
 6. Motion from tokens; every reduced-motion row evidenced.
 
 Report your PLAN first and wait for "go".
+
+## Ambition bar (added 2026-09-27, after Giorgio called the first landing "still very basic")
+
+**The bar is "would this impress on first use next to Robinhood, Sleeper, Revolut or Arc?"**, not "is it correct". Performance, honesty, tokens and reduced motion are **table stakes, not the goal**. The Design Lead will push back on timid work. **Copy:** keep Giorgio's existing copy **verbatim** unless this prompt explicitly changes it; propose wording changes, don't make them.
+
+**Signature moments this phase must include** (each with its reduced-motion row and a recording):
+- **Row → stock sheet shared element:** the ticker row expands into the sheet header.
+- **Live chart** with an endpoint pulse on each price update; the scrub has haptic ticks and a floating price.
+- **Trade flow:** an amount control with haptic detents and a live estimate that rolls; confirm → a success choreography (a check draws, and the position card morphs into place in the holdings list).
+- **Holdings re-order** smoothly when values change the sort.
