@@ -652,11 +652,11 @@
           </div>
           <div className="ks-card" style={{ padding: '2px 14px' }}>
             <ul className="ks-rows">
-              <Row k="Draft date" v="Sat, Oct 3 · 7:00 PM" />
+              <Row k="Draft date" v="Sat, Oct 3 · 7:00 PM ET" />
               <li className="ks-row" style={{ gridTemplateColumns: '1fr', padding: '13px 0', gap: 8 }}>
                 <span className="ks-callout" style={{ fontWeight: 600 }}>Draft order</span>
                 <div className="ks-seg"><span className="on">Random</span><span>Manual</span></div>
-                <span className="ks-caption">Random: revealed 1 hour before the draft (Sat 6:00 PM).<br />Manual: arrange it any time up to 1 hour before the draft.<br />You can switch until then.</span>
+                <span className="ks-caption">Random: revealed 1 hour before the draft (Sat 6:00 PM ET).<br />Manual: arrange it any time up to 1 hour before the draft.<br />You can switch until then.</span>
               </li>
               <Row k="Rounds" v="6" sub="One per roster slot" />
               <li className="ks-row" style={{ gridTemplateColumns: '1fr', padding: '13px 0' }}>
