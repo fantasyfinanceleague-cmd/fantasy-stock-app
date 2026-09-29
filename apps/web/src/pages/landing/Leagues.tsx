@@ -6,7 +6,7 @@ import { leagues } from './copy';
 import { fmtPct } from './Opening';
 import { useEnhanced, useFinePointer, useInView, useLandingMotion, useLoop, usePageVisible, useTilt } from './hooks';
 import { BOARD_FRAMES, LEAGUE, WEEK, WEEKS, boardMoves, boardRanked } from './sampleData';
-import { DarkPanel, Reveal } from './scroll';
+import { Layer, Reveal } from './scroll';
 
 /** Board pacing: how long each live frame is up, and how long the Friday
  * FINAL holds before the week restarts. Content pacing, not animation. */
@@ -105,7 +105,7 @@ function Board() {
 
 export function Leagues() {
   return (
-    <DarkPanel id="leagues" className="lp-leagues" labelledBy="lp-leagues-title">
+    <Layer tone="dark" id="leagues" className="lp-leagues" labelledBy="lp-leagues-title">
       <div className="lp-wrap lp-leagues__grid">
         <div className="lp-leagues__copy">
           <Reveal>
@@ -129,7 +129,7 @@ export function Leagues() {
         </div>
         <Board />
       </div>
-    </DarkPanel>
+    </Layer>
   );
 }
 

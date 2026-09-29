@@ -3,7 +3,7 @@ import { AnimatePresence, LayoutGroup, motion } from 'motion/react';
 import { brand } from '../../brand';
 import { useLandingMotion } from './hooks';
 import { faq } from './copy';
-import { Reveal } from './scroll';
+import { Layer, Reveal } from './scroll';
 
 function Chevron() {
   return (
@@ -41,7 +41,7 @@ export function Faq() {
   const layoutTransition = reduced ? { duration: 0 } : { duration: duration.base, ease: ease.settle };
 
   return (
-    <section className="lp-section lp-faq" id="faq" aria-labelledby="lp-faq-title">
+    <Layer tone="light" id="faq" className="lp-faq" labelledBy="lp-faq-title">
       <div className="lp-wrap lp-faq__grid">
         <Reveal className="lp-head">
           <p className="lp-kicker">{faq.kicker}</p>
@@ -94,7 +94,7 @@ export function Faq() {
           </ul>
         </LayoutGroup>
       </div>
-    </section>
+    </Layer>
   );
 }
 

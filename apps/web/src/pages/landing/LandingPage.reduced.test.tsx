@@ -39,7 +39,8 @@ describe('reduced motion (OS preference)', () => {
     vi.useFakeTimers();
     const { container } = render(<LandingPage />);
     await act(async () => {});
-    expect(container.querySelector('.lp-opening--pinned')).toBeNull();
+    expect(container.querySelector('.lp-inside--pinned')).toBeNull();
+    expect(container.querySelector('.lp-layer--stacked')).toBeNull();
     expect(container.querySelector('.lp-chapter')).toBeNull();
     expect(container.querySelectorAll('.lp-steps--static > li')).toHaveLength(3);
     expect(container.querySelector('.lp-ticker__track')?.getAttribute('data-state')).toBe('paused');

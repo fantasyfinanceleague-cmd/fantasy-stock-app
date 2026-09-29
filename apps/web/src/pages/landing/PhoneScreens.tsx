@@ -86,11 +86,118 @@ export function PhoneShell({ tab, tag, children }: { tab: PhoneTab; tag: string;
 
 // ── Draft ────────────────────────────────────────────────────────────────
 
+// The snake, drawn (Giorgio, round 4: it "goes in the right order, then
+// jumps to the bottom and goes backwards"). Teams are columns, rounds are
+// rows; round 1 runs left → right, round 2 right → left, joined by a
+// U-turn. A track runs through every cell in pick order BEHIND the cells —
+// visible in the gaps and around the turn — and draws forward as picks
+// land; the on-the-clock ring sits on the live pick. Geometry is in the
+// phone's fixed 300px design space, so it is exact at every scale.
+const SNAKE = (() => {
+  const W = 232; // grid width (body 248 minus the turn's margin)
+  const gap = 4;
+  const col = (W - gap * 5) / 6;
+  const row = 42;
+  const rowGap = 14;
+  const top = 0;
+  const cx = (c: number) => c * (col + gap) + col / 2;
+  const cy = (r: number) => top + r * (row + rowGap) + row / 2;
+  const left = cx(0);
+  const right = cx(5);
+  const turnX = W + 12;
+  const y1 = cy(0);
+  const y2 = cy(1);
+  const d = `M ${left} ${y1} H ${right} C ${turnX} ${y1} ${turnX} ${y2} ${right} ${y2} H ${left}`;
+  const rowLen = right - left;
+  const turnLen = (y2 - y1) * 1.45; // cubic bulge ≈ 1.45 × its chord here
+  const total = rowLen * 2 + turnLen;
+  /** Path-length fraction at pick n's cell centre (1–12). */
+  const at = (n: number) => {
+    const i = n - 1;
+    if (i < 6) return (cx(i) - left) / total;
+    const c = 11 - i; // round 2 runs back from the last column
+    return (rowLen + turnLen + (right - cx(c))) / total;
+  };
+  const pos = (n: number) => {
+    const i = n - 1;
+    return i < 6 ? { x: cx(i), y: y1 } : { x: cx(11 - i), y: y2 };
+  };
+  return { W, col, row, rowGap, d, at, pos, height: row * 2 + rowGap, turnX };
+})();
+
+const TEAMS = ['PM', 'RB', 'AD', 'FT', 'GB', 'AP'];
+
+function SnakeBoard({ picks, done }: { picks: number; done: boolean }) {
+  const current = Math.min(picks + 1, 12);
+  const drawn = done ? 1 : SNAKE.at(current);
+  const ring = SNAKE.pos(current);
+  const cell = (n: number) => DRAFT_PICKS[n - 1];
+  const rows = [
+    [1, 2, 3, 4, 5, 6],
+    [12, 11, 10, 9, 8, 7],
+  ];
+  return (
+    <div className="lp-snake">
+      <div className="lp-snake__teams">
+        {TEAMS.map((t) => (
+          <span key={t} className={t === 'RB' ? 'lp-snake__team lp-snake__team--you' : 'lp-snake__team'}>
+            {t}
+          </span>
+        ))}
+      </div>
+      <div className="lp-snake__labels">
+        <span>Round 1 →</span>
+      </div>
+      <div className="lp-snake__grid" style={{ height: SNAKE.height }}>
+        <svg className="lp-snake__track" width={SNAKE.turnX + 4} height={SNAKE.height} aria-hidden="true">
+          <path className="lp-snake__path lp-snake__path--all" d={SNAKE.d} pathLength={1} />
+          <path className="lp-snake__path lp-snake__path--drawn" d={SNAKE.d} pathLength={1} strokeDasharray={`${drawn.toFixed(4)} 1`} />
+          {/* The turn's arrowhead, pointing into round 2. */}
+          <path className="lp-snake__arrow" d={`M ${SNAKE.turnX - 7} ${SNAKE.height - SNAKE.row / 2 - 5} l -6 5 l 6 5`} />
+        </svg>
+        {rows.map((r, ri) =>
+          r.map((n, ci) => {
+            const p = cell(n);
+            const taken = n <= picks;
+            const live = !done && n === current;
+            return (
+              <div
+                key={n}
+                className={['lp-pick', taken ? 'lp-pick--taken' : '', p.you ? 'lp-pick--you' : '', live ? 'lp-pick--now' : '']
+                  .filter(Boolean)
+                  .join(' ')}
+                style={{
+                  left: ci * (SNAKE.col + 4),
+                  top: ri * (SNAKE.row + SNAKE.rowGap),
+                  width: SNAKE.col,
+                  height: SNAKE.row,
+                }}
+              >
+                <span className="lp-pick__n">{n}</span>
+                <span className="lp-pick__t">{taken ? p.t : ''}</span>
+              </div>
+            );
+          })
+        )}
+        {!done && (
+          <span
+            className="lp-snake__ring"
+            aria-hidden="true"
+            style={{ transform: `translate(${ring.x - 24}px, ${ring.y - 24}px)` }}
+          />
+        )}
+      </div>
+      <div className="lp-snake__labels lp-snake__labels--end">
+        <span>← Round 2</span>
+      </div>
+    </div>
+  );
+}
+
 /** `picks` = how many of the 12 shown picks are in (0–12); `clock` = how
  * far the current pick's clock has run (0–1). */
 export function DraftScreen({ picks, clock }: { picks: number; clock: number }) {
   const { reduced, duration, ease } = useLandingMotion();
-  const rows = [DRAFT_PICKS.slice(0, 6), DRAFT_PICKS.slice(6, 12).reverse()];
   const current = DRAFT_PICKS[Math.min(picks, DRAFT_PICKS.length - 1)];
   const done = picks >= DRAFT_PICKS.length;
   const yourTurn = !done && current.you;
@@ -118,29 +225,7 @@ export function DraftScreen({ picks, clock }: { picks: number; clock: number }) 
           </span>
         </span>
       </div>
-      <div className="lp-draft">
-        {rows.map((row, r) => (
-          <div key={r} className="lp-draft__row">
-            {row.map((p) => {
-              const taken = p.pick <= picks;
-              const now = !done && p.pick === current.pick;
-              return (
-                <div
-                  key={p.pick}
-                  className={['lp-pick', taken ? 'lp-pick--taken' : '', p.you ? 'lp-pick--you' : '', now ? 'lp-pick--now' : '']
-                    .filter(Boolean)
-                    .join(' ')}
-                >
-                  <span className="lp-pick__n">
-                    {p.pick} · {p.player.split(' ')[0]}
-                  </span>
-                  <span className="lp-pick__t">{taken ? p.t : '—'}</span>
-                </div>
-              );
-            })}
-          </div>
-        ))}
-      </div>
+      <SnakeBoard picks={picks} done={done} />
       <div className="lp-roster">
         <span className="lp-screen__muted">Your roster</span>
         <div className="lp-roster__slots">

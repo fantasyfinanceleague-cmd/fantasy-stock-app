@@ -5,7 +5,6 @@ import { fileURLToPath } from 'node:url';
 import { formatMoney } from '../../design/lib/money';
 import {
   BOARD_FRAMES,
-  DAILY_MOVES,
   DRAFT_PICKS,
   LINEUPS,
   MATCHUP_FRAMES,
@@ -16,6 +15,7 @@ import {
   WEEK_CLOSES,
   boardMoves,
   boardRanked,
+  raceSeries,
   moversRanked,
 } from './sampleData';
 
@@ -145,9 +145,11 @@ describe('live frames are consistent', () => {
     expect(LINEUPS.leadChangeCall).toMatch(/Roberto B\. ahead/);
   });
 
-  it('the "Real prices" bars are signed daily dollar moves summing to the week', () => {
-    expect(DAILY_MOVES.map((d) => d.l)).toEqual(['M', 'T', 'W', 'T', 'F']);
-    expect(DAILY_MOVES.some((d) => d.v < 0)).toBe(true);
-    expect(formatMoney(DAILY_MOVES.reduce((a, d) => a + d.v, 0), { sign: 'always' })).toBe('+$512.40');
+  it('the /03 race chart is the /01 Compete week (one story): same closes, same Tuesday lead change', () => {
+    const race = raceSeries();
+    expect(race.map((p) => [p.you, p.opp])).toEqual(WEEK_CLOSES.map((d) => [d.you, d.opp]));
+    expect(race.map((p) => p.label)).toEqual(['Open', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
+    const leadChange = race.findIndex((p, i) => i > 0 && p.you > p.opp && race[i - 1].you <= race[i - 1].opp);
+    expect(race[leadChange].label).toBe('Tue');
   });
 });

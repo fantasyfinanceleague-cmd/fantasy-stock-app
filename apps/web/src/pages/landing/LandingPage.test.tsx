@@ -54,9 +54,10 @@ describe('server render (what the prerendered / JS-off page shows)', () => {
     expect(text('.lp-kicker')).toEqual(['/ 01 — How it works', '/ 02 — Leagues in action', `/ 03 — Why ${brand.name}`, '/ 04 — FAQ']);
   });
 
-  it('is the static version: nothing pinned, all three steps each with its screen', () => {
+  it('is the static version: nothing pinned or stacked, all three steps each with its screen', () => {
     expect(doc.querySelector('.lp-chapter')).toBeNull();
-    expect(doc.querySelector('.lp-opening--pinned')).toBeNull();
+    expect(doc.querySelector('.lp-inside--pinned')).toBeNull();
+    expect(doc.querySelector('.lp-layer--stacked')).toBeNull();
     expect(doc.querySelectorAll('.lp-steps--static > li')).toHaveLength(3);
     for (const step of how.steps) expect(html).toContain(step.num);
     expect(doc.querySelectorAll('.lp-steps--static .lp-phone')).toHaveLength(3);
@@ -70,6 +71,22 @@ describe('server render (what the prerendered / JS-off page shows)', () => {
   it('shows the mock at its first frame (the live page’s numbers)', () => {
     expect(html).toContain('$12,430.55');
     expect(text('.lp-srow__name')[0]).toBe('Paolo M.');
+  });
+
+  it('has no chapter progress bar (removed, round 4)', () => {
+    expect(doc.querySelector('.lp-progress')).toBeNull();
+  });
+
+  it('draws the snake draft as a path through the pick order, with round directions', () => {
+    expect(doc.querySelectorAll('.lp-snake__path')).toHaveLength(2);
+    expect(text('.lp-snake__labels')).toEqual(['Round 1 →', '← Round 2']);
+  });
+
+  it('replaces the Mon–Fri bars with the Week 6 race chart', () => {
+    expect(doc.querySelector('.lp-dbars')).toBeNull();
+    expect(doc.querySelectorAll('.lp-race__line')).toHaveLength(2);
+    expect(doc.querySelector('.lp-race__zero')).not.toBeNull();
+    expect(text('.lp-race__tick')).toEqual(['Open', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
   });
 
   it('has no dead links, and every in-page anchor has a target', () => {
@@ -114,10 +131,14 @@ describe('hydration', () => {
 });
 
 describe('full motion (client)', () => {
-  it('switches in the pinned opening and the phone chapter after hydration', async () => {
+  it('switches in the stacked layers, the pinned stage and the phone chapter after hydration', async () => {
     const { container } = render(<LandingPage />);
     await act(async () => {});
-    expect(container.querySelector('.lp-opening--pinned')).not.toBeNull();
+    // Every top-level section is a layer in the swallow grammar.
+    const layers = [...container.querySelectorAll('main > .lp-layer')];
+    expect(layers.length).toBe(7);
+    expect(layers.every((l) => l.classList.contains('lp-layer--stacked'))).toBe(true);
+    expect(container.querySelector('.lp-inside--pinned')).not.toBeNull();
     expect(container.querySelector('.lp-chapter')).not.toBeNull();
     // The three step texts stay in the DOM while pinned.
     expect(container.querySelectorAll('.lp-chapter .lp-step')).toHaveLength(3);
@@ -127,7 +148,7 @@ describe('full motion (client)', () => {
     installMatchMedia((q) => !q.includes('min-height') && !q.includes('min-width') && !q.includes('prefers-reduced-motion'));
     const { container } = render(<LandingPage />);
     await act(async () => {});
-    expect(container.querySelector('.lp-opening--pinned')).toBeNull();
+    expect(container.querySelector('.lp-inside--pinned')).toBeNull();
     expect(container.querySelector('.lp-chapter')).toBeNull();
     expect(container.querySelectorAll('.lp-steps--static > li')).toHaveLength(3);
   });

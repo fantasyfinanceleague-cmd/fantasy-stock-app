@@ -6,6 +6,7 @@ import { ScoreDigits } from '../../design/game/ScoreDigits';
 import { TugBar } from '../../design/game/TugBar';
 import { formatMoney } from '../../design/lib/money';
 import { hero, inside } from './copy';
+import { Layer } from './scroll';
 import { LaunchingSoon } from './Nav';
 import {
   useEnhanced,
@@ -226,37 +227,25 @@ function SeeHowItWorks() {
   );
 }
 
-/** The opening shot: the hero, then "A look inside", as ONE continuous
- * scroll (Design Lead, round 3). On large screens the hero holds (sticky)
- * while the navy stage rises over it: the headline block scales down and
- * drifts up, the stage opens from an inset card to full bleed, and the
- * product cards rise into the pinned stage, then drift in parallax depth
- * while they tick live. Phones and short viewports keep it in normal flow
- * (no pin), with the same panel opening and live cards. Server render,
- * JS-off and reduced motion: both sections static, the cards at their
- * first frame, everything readable. */
+/** The opening shot: the hero, then "A look inside" rising over it — the
+ * first two layers of the page's swallow grammar (scroll.tsx Layer). On
+ * large screens the look-inside stage then pins while its product cards
+ * rise into place and drift in parallax depth as they tick live. Server
+ * render, JS-off and reduced motion: both sections static, the cards at
+ * their first frame, everything readable. */
 export function Opening() {
   const enhanced = useEnhanced();
   const bigStage = useMediaQuery('(min-width: 1024px) and (min-height: 700px)') === true;
   const pinned = enhanced && bigStage;
 
-  const insideRef = useRef<HTMLElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const cardsRef = useRef<HTMLDivElement>(null);
 
   // Approach: the stage's top from the viewport bottom to the top.
-  const { scrollYProgress: approach } = useScroll({ target: insideRef, offset: ['start end', 'start start'] });
+  const { scrollYProgress: approach } = useScroll({ target: trackRef, offset: ['start end', 'start start'] });
   // Dwell: the pinned stretch.
-  const { scrollYProgress: dwell } = useScroll({ target: insideRef, offset: ['start start', 'end end'] });
-
-  const heroScale = useTransform(approach, [0, 1], [1, 0.9]);
-  const heroY = useTransform(approach, [0, 1], ['0vh', '-8vh']);
-  const panel = useTransform(approach, [0.35, 1], [0, 1]);
-  const clipPath = useTransform(panel, (v) =>
-    v >= 0.999
-      ? 'none'
-      : `inset(0 calc(var(--lp-panel-inset) * ${(1 - v).toFixed(3)}) 0 calc(var(--lp-panel-inset) * ${(1 - v).toFixed(3)}) round calc(var(--sp-radius-xl) * ${(1 - v).toFixed(3)}))`
-  );
+  const { scrollYProgress: dwell } = useScroll({ target: trackRef, offset: ['start start', 'end end'] });
   const cardsRise = useTransform(approach, [0.15, 1], ['22vh', '0vh']);
   const depthMain = useTransform(dwell, [0, 1], ['0vh', '-2vh']);
   const depthSide = useTransform(dwell, [0, 1], ['0vh', '-7vh']);
@@ -270,72 +259,79 @@ export function Opening() {
   usePointerGlow(stageRef, enhanced);
 
   return (
-    <div className={pinned ? 'lp-opening lp-opening--pinned' : 'lp-opening'}>
-      <section className="lp-hero" id="top" aria-labelledby="lp-hero-title">
-        <motion.div className="lp-wrap lp-hero__inner" style={pinned ? { scale: heroScale, y: heroY } : undefined}>
-          <p className="lp-eyebrow lp-hero__eyebrow">
-            <span className="lp-eyebrow__dot" aria-hidden="true" />
-            {hero.eyebrow}
-          </p>
-          <h1 id="lp-hero-title" className="lp-hero__title">
-            {hero.lines.map((line, i) => (
-              <span key={line} className="lp-line" style={{ ['--lp-i' as string]: i }}>
-                <span className="lp-line__in">{i === hero.lines.length - 1 ? <em>{line}</em> : line}</span>
-                {i < hero.lines.length - 1 ? ' ' : null}
-              </span>
-            ))}
-          </h1>
-          <p className="lp-hero__lede">{hero.lede(brand.name)}</p>
-          <div className="lp-hero__cta">
-            <LaunchingSoon label={hero.status} />
-            <SeeHowItWorks />
-          </div>
-          <p className="lp-hero__meta">
-            {hero.meta.map((m, i) => (
-              <span key={m.strong}>
-                {i > 0 && (
-                  <span className="lp-hero__sep" aria-hidden="true">
-                    ·
-                  </span>
-                )}
-                <b>{m.strong}</b>
-                {m.rest}
-              </span>
-            ))}
-          </p>
-        </motion.div>
-      </section>
-
-      <section ref={insideRef} className="lp-inside" aria-label={inside.label(brand.name)}>
-        <div ref={stageRef} className="lp-inside__stage">
-          <motion.div className="lp-dark__bg" aria-hidden="true" style={enhanced ? { clipPath } : undefined} />
-          <span className="lp-glow" aria-hidden="true" />
-          <Surface kind="game" className="lp-wrap lp-inside__content" style={{ backgroundColor: 'transparent' }}>
-            <p className="lp-inside__label">
-              <span>{inside.label(brand.name)}</span>
-              <span className="lp-inside__dash" aria-hidden="true" />
+    <>
+      <Layer id="top" tone="light" first labelledBy="lp-hero-title" className="lp-hero-layer">
+        <div className="lp-hero">
+          <div className="lp-wrap lp-hero__inner">
+            <p className="lp-eyebrow lp-hero__eyebrow">
+              <span className="lp-eyebrow__dot" aria-hidden="true" />
+              {hero.eyebrow}
             </p>
-            <motion.div
-              ref={cardsRef}
-              className="lp-inside__cards"
-              style={pinned ? { y: cardsRise } : undefined}
-              onPointerEnter={() => setHeld(true)}
-              onPointerLeave={() => setHeld(false)}
-              onFocus={() => setHeld(true)}
-              onBlur={() => setHeld(false)}
-            >
-              <motion.div className="lp-inside__col" style={pinned ? { y: depthMain } : undefined}>
-                <PortfolioCard frame={frame} drawn={inView === true} />
-              </motion.div>
-              <motion.div className="lp-inside__col lp-inside__side" style={pinned ? { y: depthSide } : undefined}>
-                <MatchupCard frame={frame} />
-                <MoversCard frame={frame} />
-              </motion.div>
-            </motion.div>
-          </Surface>
+            <h1 id="lp-hero-title" className="lp-hero__title">
+              {hero.lines.map((line, i) => (
+                <span key={line} className="lp-line" style={{ ['--lp-i' as string]: i }}>
+                  <span className="lp-line__in">{i === hero.lines.length - 1 ? <em>{line}</em> : line}</span>
+                  {i < hero.lines.length - 1 ? ' ' : null}
+                </span>
+              ))}
+            </h1>
+            <p className="lp-hero__lede">{hero.lede(brand.name)}</p>
+            <div className="lp-hero__cta">
+              <LaunchingSoon label={hero.status} />
+              <SeeHowItWorks />
+            </div>
+            <p className="lp-hero__meta">
+              {hero.meta.map((m, i) => (
+                <span key={m.strong}>
+                  {i > 0 && (
+                    <span className="lp-hero__sep" aria-hidden="true">
+                      ·
+                    </span>
+                  )}
+                  <b>{m.strong}</b>
+                  {m.rest}
+                </span>
+              ))}
+            </p>
+          </div>
+          {/* The one scroll cue on the page (Design Lead, round 4). */}
+          <span className="lp-scroll-cue" aria-hidden="true">
+            <span className="lp-scroll-cue__line" />
+          </span>
         </div>
-      </section>
-    </div>
+      </Layer>
+
+      <Layer tone="dark" label={inside.label(brand.name)} className={pinned ? 'lp-inside lp-inside--pinned' : 'lp-inside'}>
+        <div ref={trackRef} className="lp-inside__track">
+          <div ref={stageRef} className="lp-inside__stage">
+            <span className="lp-glow" aria-hidden="true" />
+            <div className="lp-wrap lp-inside__content">
+              <p className="lp-inside__label">
+                <span>{inside.label(brand.name)}</span>
+                <span className="lp-inside__dash" aria-hidden="true" />
+              </p>
+              <motion.div
+                ref={cardsRef}
+                className="lp-inside__cards"
+                style={pinned ? { y: cardsRise } : undefined}
+                onPointerEnter={() => setHeld(true)}
+                onPointerLeave={() => setHeld(false)}
+                onFocus={() => setHeld(true)}
+                onBlur={() => setHeld(false)}
+              >
+                <motion.div className="lp-inside__col" style={pinned ? { y: depthMain } : undefined}>
+                  <PortfolioCard frame={frame} drawn={inView === true} />
+                </motion.div>
+                <motion.div className="lp-inside__col lp-inside__side" style={pinned ? { y: depthSide } : undefined}>
+                  <MatchupCard frame={frame} />
+                  <MoversCard frame={frame} />
+                </motion.div>
+              </motion.div>
+            </div>
+          </div>
+        </div>
+      </Layer>
+    </>
   );
 }
 

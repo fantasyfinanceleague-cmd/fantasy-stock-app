@@ -239,13 +239,9 @@ export const LINEUPS = {
   leadChangeCall: 'NVDA +4.1% puts Roberto B. ahead',
 } as const;
 
-// ── /03 Why: "Real prices." bars — data, not decoration ─────────────────
-/** Roberto's Week 6 portfolio, dollar change per day (M–F as on the old
- * page's bars, now labelled with their values and signed). */
-export const DAILY_MOVES: ReadonlyArray<{ l: string; day: string; v: number }> = [
-  { l: 'M', day: 'Mon', v: 62.4 },
-  { l: 'T', day: 'Tue', v: 188.75 },
-  { l: 'W', day: 'Wed', v: -41.1 },
-  { l: 'T', day: 'Thu', v: 156.3 },
-  { l: 'F', day: 'Fri', v: 146.05 },
-];
+// ── /03 Why: "Real prices." race chart ───────────────────────────────────
+/** The /03 race chart's series: the SAME Roberto vs Gianluigi Week 6 as the
+ * /01 Compete chapter (Design Lead, round 4: one story) — Monday's open,
+ * then each daily close, as cumulative dollar gain. */
+export const raceSeries = () =>
+  WEEK_CLOSES.map((d, i) => ({ label: i === 0 ? 'Open' : d.day, you: d.you, opp: d.opp }));

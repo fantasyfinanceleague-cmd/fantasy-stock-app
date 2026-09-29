@@ -1,10 +1,14 @@
 import { useRef, useState } from 'react';
-import { motion, useMotionValueEvent, useScroll } from 'motion/react';
+import { motion, useMotionValueEvent, useScroll, useSpring } from 'motion/react';
 import { Surface } from '../../design/Surface';
 import { how } from './copy';
 import { useEnhanced, useLandingMotion, useMediaQuery } from './hooks';
 import { ClimbScreen, CompeteScreen, DraftScreen } from './PhoneScreens';
-import { Reveal } from './scroll';
+import { Layer, Reveal } from './scroll';
+import { CHAPTER_BEATS, chapterStateAt } from './pacing';
+
+/** ≈ ScrollTrigger `scrub: 0.8` — a critically-damped trail. */
+const SCRUB_SPRING = { stiffness: 90, damping: 24, mass: 1, restDelta: 0.0002 };
 
 function Phone({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
@@ -60,22 +64,15 @@ function Chapter() {
   const { reduced, duration, ease } = useLandingMotion();
   const trackRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: trackRef, offset: ['start start', 'end end'] });
-  const [state, setState] = useState({ step: 0, picks: 0, clock: 0, day: 0, final: false, climb: false });
+  const [state, setState] = useState(() => chapterStateAt(0));
 
-  useMotionValueEvent(scrollYProgress, 'change', (p) => {
-    const step = Math.min(2, Math.floor(p * 3));
-    const sub = Math.max(0, Math.min(1, p * 3 - step));
-    // Draft: 12 picks across the step; the clock runs down within each
-    // pick in quarter steps (so it moves, without a render per frame).
-    const pickPos = step > 0 ? 12 : sub * 12;
-    const next = {
-      step,
-      picks: Math.floor(pickPos),
-      clock: step > 0 ? 0 : Math.floor((pickPos % 1) * 4) / 4,
-      day: step > 1 ? 5 : step === 1 ? Math.min(5, Math.floor(sub * 6)) : 0,
-      final: step > 1 || (step === 1 && sub > 0.86),
-      climb: step === 2 && sub > 0.4,
-    };
+  // Scrub smoothing (Design Lead: ≈ ScrollTrigger scrub 0.8): the chapter
+  // follows a spring that trails the scroll position, so a flick glides
+  // through the beats instead of skipping them. A filter, not an animation
+  // duration — it has no length of its own.
+  const smooth = useSpring(scrollYProgress, SCRUB_SPRING);
+  useMotionValueEvent(smooth, 'change', (p) => {
+    const next = chapterStateAt(p);
     setState((s) =>
       s.step === next.step &&
       s.picks === next.picks &&
@@ -95,7 +92,7 @@ function Chapter() {
   ];
 
   return (
-    <div className="lp-chapter" ref={trackRef}>
+    <div className="lp-chapter" ref={trackRef} style={{ height: `calc(${CHAPTER_BEATS.total}svh + 100svh)` }}>
       <div className="lp-chapter__stage">
         <div className="lp-wrap lp-chapter__grid">
           <Steps active={state.step} />
@@ -145,7 +142,7 @@ export function HowItWorks() {
   const enhanced = useEnhanced();
   const roomy = useMediaQuery('(min-height: 640px)') === true;
   return (
-    <section className="lp-section lp-how" id="how" aria-labelledby="lp-how-title">
+    <Layer tone="light" id="how" labelledBy="lp-how-title" className="lp-how">
       <div className="lp-wrap">
         <Reveal className="lp-head lp-head--center">
           <p className="lp-kicker">{how.kicker}</p>
@@ -159,7 +156,7 @@ export function HowItWorks() {
         </Reveal>
       </div>
       {enhanced && roomy ? <Chapter /> : <StaticSteps />}
-    </section>
+    </Layer>
   );
 }
 

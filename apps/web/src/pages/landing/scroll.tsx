@@ -1,5 +1,5 @@
-import { useRef, type ReactNode } from 'react';
-import { motion, useScroll, useTransform, type MotionValue } from 'motion/react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { motion, useScroll, useTransform } from 'motion/react';
 import { Surface } from '../../design/Surface';
 import { useEnhanced } from './hooks';
 
@@ -25,43 +25,100 @@ export function Reveal({ children, className }: { children: ReactNode; className
   );
 }
 
-/** The navy "stadium" register for a whole section, and the page's
- * light ↔ navy transition. Rather than crossfading a backdrop behind text
- * (which would put text on a half-blended colour), the navy is a solid
- * panel that opens from an inset, rounded card to full bleed as the section
- * scrolls in. Only an EMPTY background layer is clipped, and the content's
- * gutter is wider than the largest inset, so every text pixel is on solid
- * navy and every pixel outside is on solid snow at all times (Design Lead
- * condition 3). `progress` lets a caller drive it from its own scroll range. */
-export function DarkPanel({
+/** How far a layer recedes while the next one covers it. */
+const RECEDE_SCALE = 0.94;
+
+/** One layer of the page's single transition grammar (Giorgio, round 4:
+ * "every section boundary … the next section rises and swallows the
+ * previous one"). Every top-level section is a Layer, siblings in <main>,
+ * stacked in page order:
+ *
+ * - ARRIVE: as a layer's top travels from the viewport bottom to the top,
+ *   it opens from an inset, rounded card to full bleed (clip-path) with a
+ *   soft top-edge shadow — rising over the layer in front of it.
+ * - HOLD: each layer is bottom-sticky (`top: min(0, 100svh − height)`), so
+ *   once its end reaches the viewport bottom it stays put underneath while
+ *   the next layer rises over it.
+ * - RECEDE: meanwhile its content scales to 0.94 and drifts up 4vh — depth,
+ *   never dimming (Design Lead: dimmed text would drop below AA mid-way).
+ *
+ * The clip only ever trims the layer's own inset margin, and content
+ * gutters are wider than the inset, so text is always on its own solid
+ * background. Server render, JS-off and reduced motion: plain document
+ * flow — no sticking, no clipping, no scaling. */
+export function Layer({
   id,
-  className,
+  tone,
+  first = false,
+  last = false,
   labelledBy,
+  label,
+  className,
   children,
-  progress,
 }: {
   id?: string;
-  className?: string;
+  tone: 'light' | 'dark';
+  first?: boolean;
+  last?: boolean;
   labelledBy?: string;
+  label?: string;
+  className?: string;
   children: ReactNode;
-  progress?: MotionValue<number>;
 }) {
   const enhanced = useEnhanced();
   const ref = useRef<HTMLElement>(null);
-  const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'start 0.1'] });
-  const p = progress ?? scrollYProgress;
-  const clipPath = useTransform(p, (v) => {
+  const [top, setTop] = useState(0);
+
+  // Bottom-sticky offset: 0 for a layer no taller than the viewport, else
+  // negative so it only sticks once its END reaches the viewport bottom.
+  useEffect(() => {
+    const el = ref.current;
+    if (!enhanced || !el || typeof ResizeObserver === 'undefined') return;
+    const measure = () => setTop(Math.min(0, Math.round(window.innerHeight - el.offsetHeight)));
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    window.addEventListener('resize', measure);
+    measure();
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [enhanced]);
+
+  const { scrollYProgress: arrive } = useScroll({ target: ref, offset: ['start end', 'start start'] });
+  // Layout position (not the stuck one): its end passing from the viewport
+  // bottom to the top is exactly the stretch the next layer spends rising.
+  const { scrollYProgress: recede } = useScroll({ target: ref, offset: ['end end', 'end start'] });
+  const clipPath = useTransform(arrive, (v) => {
     const k = Math.max(0, Math.min(1, v));
     if (k >= 0.999) return 'none';
-    // Inset shrinks from var(--lp-panel-inset) to 0; corners from xl radius to 0.
-    return `inset(0 calc(var(--lp-panel-inset) * ${(1 - k).toFixed(3)}) 0 calc(var(--lp-panel-inset) * ${(1 - k).toFixed(3)}) round calc(var(--sp-radius-xl) * ${(1 - k).toFixed(3)}))`;
+    const r = (1 - k).toFixed(3);
+    return `inset(0 calc(var(--lp-panel-inset) * ${r}) 0 calc(var(--lp-panel-inset) * ${r}) round calc(var(--sp-radius-xl) * ${r}) calc(var(--sp-radius-xl) * ${r}) 0 0)`;
   });
-  return (
-    <section ref={ref} id={id} className={['lp-dark', className].filter(Boolean).join(' ')} aria-labelledby={labelledBy}>
-      <motion.div className="lp-dark__bg" aria-hidden="true" style={enhanced ? { clipPath } : undefined} />
-      <Surface kind="game" className="lp-dark__content" style={{ backgroundColor: 'transparent' }}>
+  const scale = useTransform(recede, [0, 1], [1, RECEDE_SCALE]);
+  const y = useTransform(recede, [0, 1], ['0vh', '-4vh']);
+
+  const body =
+    tone === 'dark' ? (
+      <Surface kind="game" className="lp-layer__surface lp-dark" style={{ backgroundColor: 'transparent' }}>
         {children}
       </Surface>
-    </section>
+    ) : (
+      children
+    );
+
+  return (
+    <motion.section
+      ref={ref}
+      id={id}
+      aria-labelledby={labelledBy}
+      aria-label={label}
+      className={['lp-layer', `lp-layer--${tone}`, enhanced ? 'lp-layer--stacked' : '', className].filter(Boolean).join(' ')}
+      style={enhanced ? { top, clipPath: first ? undefined : clipPath } : undefined}
+    >
+      <motion.div className="lp-layer__inner" style={enhanced && !last ? { scale, y } : undefined}>
+        {body}
+      </motion.div>
+    </motion.section>
   );
 }

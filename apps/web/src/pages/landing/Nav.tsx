@@ -1,16 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { brand } from '../../brand';
 import { BrandMark } from '../../design/BrandMark';
 import { linkLabel, nav } from './copy';
 
-/** The chapters the progress indicator tracks, in page order (the page's
- * own "/ 01"–"/ 04" numbering). */
-const CHAPTERS = [
-  { id: 'how', num: '01' },
-  { id: 'leagues', num: '02' },
-  { id: 'why', num: '03' },
-  { id: 'faq', num: '04' },
-] as const;
+/** The chapters the nav tracks for its active link, in page order. */
+const CHAPTERS = ['how', 'leagues', 'why', 'faq'] as const;
 
 export function LaunchingSoon({ label, tone = 'onLight' }: { label: string; tone?: 'onLight' | 'onGame' }) {
   // A status, not a control: a span with no border, hover, pointer or press.
@@ -22,18 +16,15 @@ export function LaunchingSoon({ label, tone = 'onLight' }: { label: string; tone
   );
 }
 
-/** Sticky nav: brand, the page's three anchor links, the launching-soon
- * status, and a four-segment chapter progress bar that fills as you scroll
- * through /01–/04 (and marks the active link). The bar is decorative
- * (aria-hidden); the active link carries aria-current for AT. Progress is
- * written straight to the segments' transforms from one rAF-throttled
- * scroll listener, so scrolling never re-renders React. */
+/** Sticky nav: brand, the page's three anchor links (the active one marked
+ * with aria-current) and the launching-soon status. (The round-3 chapter
+ * progress bar is gone — Giorgio, round 4.) One rAF-throttled scroll
+ * listener; React only re-renders when the active chapter changes. */
 export function Nav() {
-  const segRefs = useRef<Array<HTMLSpanElement | null>>([]);
   const [active, setActive] = useState<string | null>(null);
 
   useEffect(() => {
-    const sections = CHAPTERS.map((c) => document.getElementById(c.id));
+    const sections = CHAPTERS.map((id) => document.getElementById(id));
     let raf = 0;
     let lastActive: string | null = null;
     const update = () => {
@@ -41,12 +32,9 @@ export function Nav() {
       const line = window.innerHeight * 0.4;
       let current: string | null = null;
       sections.forEach((el, i) => {
-        const seg = segRefs.current[i];
-        if (!el || !seg) return;
+        if (!el) return;
         const r = el.getBoundingClientRect();
-        const p = Math.max(0, Math.min(1, (line - r.top) / Math.max(1, r.height)));
-        seg.style.transform = `scaleX(${p.toFixed(4)})`;
-        if (r.top <= line && r.bottom > line) current = CHAPTERS[i].id;
+        if (r.top <= line && r.bottom > line) current = CHAPTERS[i];
       });
       if (current !== lastActive) {
         lastActive = current;
@@ -83,23 +71,6 @@ export function Nav() {
           ))}
         </nav>
         <LaunchingSoon label={nav.status} />
-      </div>
-      <div className="lp-progress" aria-hidden="true">
-        <div className="lp-wrap lp-progress__inner">
-          {CHAPTERS.map((c, i) => (
-            <span key={c.id} className={active === c.id ? 'lp-progress__seg lp-progress__seg--on' : 'lp-progress__seg'}>
-              <span className="lp-progress__num">/{c.num}</span>
-              <span className="lp-progress__track">
-                <span
-                  className="lp-progress__fill"
-                  ref={(el) => {
-                    segRefs.current[i] = el;
-                  }}
-                />
-              </span>
-            </span>
-          ))}
-        </div>
       </div>
     </header>
   );

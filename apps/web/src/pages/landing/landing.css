@@ -177,9 +177,8 @@ body:has(> #root > .lp) {
 .lp {
   --lp-tape-h: 48px;
   --lp-nav-h: 64px;
-  --lp-progress-h: 26px;
-  /* Everything that pins sits below the sticky nav + progress bar. */
-  --lp-top: calc(var(--lp-nav-h) + var(--lp-progress-h));
+  /* Everything that pins sits below the sticky nav. */
+  --lp-top: var(--lp-nav-h);
   /* The largest side inset a navy panel starts from — always smaller than
      the content gutter, so text never sits outside the solid navy. */
   --lp-panel-inset: clamp(8px, 2.4vw, 32px);
@@ -305,55 +304,6 @@ body:has(> #root > .lp) {
   background-color: var(--sp-color-team-you-on-game);
 }
 
-.lp-progress {
-  height: var(--lp-progress-h);
-}
-
-.lp-progress__inner {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--sp-space-4);
-  align-items: center;
-  height: 100%;
-}
-
-.lp-progress__seg {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-space-3);
-  min-width: 0;
-}
-
-.lp-progress__num {
-  display: none;
-  font-size: var(--sp-type-caption-size);
-  line-height: var(--sp-type-caption-line);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: var(--sp-color-text-secondary);
-}
-
-.lp-progress__seg--on .lp-progress__num {
-  color: var(--sp-color-text-primary);
-}
-
-.lp-progress__track {
-  position: relative;
-  flex: 1;
-  height: 3px;
-  overflow: hidden;
-  border-radius: var(--sp-radius-pill);
-  background-color: var(--sp-color-border-default);
-}
-
-.lp-progress__fill {
-  position: absolute;
-  inset: 0;
-  background-color: var(--sp-color-brand);
-  transform: scaleX(0);
-  transform-origin: left center;
-}
-
 @media (min-width: 768px) {
   .lp-nav__links {
     display: flex;
@@ -361,10 +311,6 @@ body:has(> #root > .lp) {
 
   .lp-status {
     margin-left: 0;
-  }
-
-  .lp-progress__num {
-    display: inline;
   }
 }
 
@@ -430,7 +376,9 @@ body:has(> #root > .lp) {
   margin-inline: auto;
 }
 
-.lp-section {
+.lp-how > .lp-layer__inner,
+.lp-why > .lp-layer__inner,
+.lp-faq > .lp-layer__inner {
   padding-block: var(--lp-section-gap);
 }
 
@@ -442,8 +390,6 @@ body:has(> #root > .lp) {
   align-items: center;
   min-height: calc(100svh - var(--lp-tape-h) - var(--lp-top) - var(--lp-peek));
   padding-block: var(--sp-space-10);
-  background-color: var(--sp-color-bg-app);
-  transform-origin: 50% 0;
 }
 
 .lp-hero__inner {
@@ -621,20 +567,47 @@ body:has(> #root > .lp) {
 }
 
 /* ── Navy panels (the light ↔ navy transition) ───────────────────────── */
-.lp-dark {
-  position: relative;
-  isolation: isolate;
+/* ── Layers: the page's one transition grammar (scroll.tsx Layer) ──── */
+.lp {
+  /* What a receding layer recedes INTO. */
+  --lp-stage: var(--sp-color-text-primary);
 }
 
-.lp-dark__bg {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
+.lp-layer {
+  position: relative;
+}
+
+.lp-layer__inner {
+  position: relative;
+  background-color: var(--sp-color-bg-app);
+}
+
+.lp-layer--dark > .lp-layer__inner {
   background-color: var(--sp-color-surface-game-base);
 }
 
-.lp-dark__content {
-  position: relative;
+.lp-layer--stacked {
+  position: sticky;
+  min-height: 100svh;
+  background-color: var(--lp-stage);
+}
+
+.lp-layer--stacked > .lp-layer__inner {
+  min-height: 100svh;
+  /* Recede toward the middle of what is on screen: the layer is stuck with
+     its bottom at the viewport bottom, so that is 50svh above its end. */
+  transform-origin: 50% calc(100% - 50svh);
+}
+
+/* The arriving edge: a soft shadow cast on the layer being swallowed. */
+.lp-layer--stacked:not(:first-child)::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 2;
+  height: 1px;
+  box-shadow: 0 -18px 40px color-mix(in srgb, var(--lp-stage) 35%, transparent);
+  pointer-events: none;
 }
 
 /* Pointer-follow glow on a navy stage (opacity only; hooks.ts). */
@@ -657,32 +630,17 @@ body:has(> #root > .lp) {
 }
 
 /* ── "A look inside" (the opening shot) ──────────────────────────────── */
-.lp-inside {
-  position: relative;
-  z-index: 1;
-}
-
 .lp-inside__stage {
   position: relative;
   isolation: isolate;
   padding-block: var(--sp-space-10) var(--sp-space-11);
 }
 
-.lp-inside__content {
-  position: relative;
-  z-index: 1;
-}
-
-.lp-opening--pinned .lp-hero {
-  position: sticky;
-  top: var(--lp-top);
-}
-
-.lp-opening--pinned .lp-inside {
+.lp-inside--pinned .lp-inside__track {
   height: 210svh;
 }
 
-.lp-opening--pinned .lp-inside__stage {
+.lp-inside--pinned .lp-inside__stage {
   position: sticky;
   top: var(--lp-top);
   display: flex;
@@ -690,6 +648,11 @@ body:has(> #root > .lp) {
   height: calc(100svh - var(--lp-top));
   padding-block: 0;
   overflow: hidden;
+}
+
+.lp-inside__content {
+  position: relative;
+  z-index: 1;
 }
 
 .lp-inside__label {
@@ -728,7 +691,7 @@ body:has(> #root > .lp) {
     gap: var(--sp-space-8);
   }
 
-  .lp-opening--pinned .lp-inside__label {
+  .lp-inside--pinned .lp-inside__label {
     margin-bottom: var(--sp-space-7);
   }
 }
@@ -1151,13 +1114,12 @@ body:has(> #root > .lp) {
 }
 
 /* ── /01 How it works: the phone chapter ─────────────────────────────── */
-.lp-how {
+.lp-how > .lp-layer__inner {
   padding-bottom: calc(var(--lp-section-gap) / 2);
 }
 
 .lp-chapter {
   position: relative;
-  height: 320svh;
   margin-top: var(--sp-space-9);
 }
 
@@ -1622,9 +1584,90 @@ body:has(> #root > .lp) {
   color: var(--sp-color-text-on-game-secondary);
 }
 
-.lp-draft {
+.lp-snake {
   display: grid;
   gap: var(--sp-space-2);
+}
+
+.lp-snake__teams {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
+  width: 232px;
+  font-size: 10px;
+  line-height: 12px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--sp-color-text-on-game-secondary);
+}
+
+.lp-snake__team--you {
+  color: var(--sp-color-team-you-on-game);
+}
+
+.lp-snake__labels {
+  width: 232px;
+  font-size: 10px;
+  line-height: 12px;
+  font-weight: 700;
+  color: var(--sp-color-text-on-game-secondary);
+}
+
+.lp-snake__labels--end {
+  text-align: right;
+}
+
+.lp-snake__grid {
+  position: relative;
+  width: 248px;
+}
+
+.lp-snake__track {
+  position: absolute;
+  inset: 0 auto auto 0;
+  overflow: visible;
+}
+
+.lp-snake__path {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.lp-snake__path--all {
+  stroke: var(--sp-color-surface-game-line);
+}
+
+.lp-snake__path--drawn {
+  stroke: var(--sp-color-team-you-on-game);
+}
+
+.lp-snake__arrow {
+  fill: none;
+  stroke: var(--sp-color-team-you-on-game);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.lp-snake .lp-pick {
+  position: absolute;
+  z-index: 1;
+}
+
+.lp-snake__ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  width: 48px;
+  height: 48px;
+  border: 2px solid var(--sp-color-live);
+  border-radius: var(--sp-radius-pill);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--sp-color-live) 45%, transparent);
+  pointer-events: none;
+  transition: transform var(--sp-motion-duration-base) var(--sp-motion-ease-settle);
 }
 
 .lp-draft__row {
@@ -1635,8 +1678,10 @@ body:has(> #root > .lp) {
 
 .lp-pick {
   display: grid;
+  align-content: center;
+  justify-items: center;
   gap: 0;
-  padding: var(--sp-space-2) var(--sp-space-3);
+  padding: 0 var(--sp-space-1);
   min-width: 0;
   border-radius: var(--sp-radius-sm);
   background-color: var(--sp-color-surface-game-raised);
@@ -1644,17 +1689,15 @@ body:has(> #root > .lp) {
 }
 
 .lp-pick__n {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 10px;
-  line-height: 14px;
+  font-size: 9px;
+  line-height: 12px;
   color: var(--sp-color-text-on-game-secondary);
 }
 
 .lp-pick__t {
-  font-size: var(--sp-type-callout-size);
-  line-height: var(--sp-type-callout-line);
+  min-height: 14px;
+  font-size: 10px;
+  line-height: 14px;
   font-weight: 700;
   color: var(--sp-color-text-on-game-secondary);
 }
@@ -1871,7 +1914,7 @@ body:has(> #root > .lp) {
 }
 
 /* ── /02 Leagues in action ───────────────────────────────────────────── */
-.lp-leagues .lp-dark__content {
+.lp-leagues .lp-layer__surface {
   padding-block: var(--lp-section-gap);
 }
 
@@ -2116,102 +2159,173 @@ body:has(> #root > .lp) {
   color: var(--sp-color-text-secondary);
 }
 
-.lp-dbars-wrap {
+/* ── /03 race chart ──────────────────────────────────────────────────── */
+.lp-race {
   margin-top: auto;
   padding-top: var(--sp-space-7);
 }
 
-.lp-dbars {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: var(--sp-space-4);
-}
-
-.lp-dbar {
-  display: grid;
-  justify-items: center;
-  gap: var(--sp-space-3);
-}
-
-.lp-dbar__v {
-  font-size: var(--sp-type-caption-size);
-  line-height: var(--sp-type-caption-line);
+.lp-race__legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-space-2) var(--sp-space-6);
+  margin-bottom: var(--sp-space-4);
+  font-size: var(--sp-type-callout-size);
+  line-height: var(--sp-type-callout-line);
   font-weight: 600;
-  font-variant-numeric: tabular-nums;
+  color: var(--sp-color-text-primary);
+}
+
+.lp-race__week {
+  font-size: var(--sp-type-caption-size);
+  font-weight: 600;
+  color: var(--sp-color-text-secondary);
+}
+
+.lp-race__who {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-space-3);
   white-space: nowrap;
 }
 
-.lp-dbar__v--gain {
+.lp-race__key {
+  width: 14px;
+  height: 3px;
+  border-radius: var(--sp-radius-pill);
+}
+
+.lp-race__key--you {
+  background-color: var(--sp-color-team-you-base);
+}
+
+.lp-race__key--opp {
+  background-color: var(--sp-color-team-opponent);
+}
+
+.lp-race__v {
+  font-variant-numeric: tabular-nums;
+}
+
+.lp-race__v--gain {
   color: var(--sp-color-data-gain-base);
 }
 
-.lp-dbar__v--loss {
+.lp-race__v--loss {
   color: var(--sp-color-data-loss-base);
 }
 
-.lp-dbar__track {
-  position: relative;
+.lp-race__chart {
+  display: block;
   width: 100%;
-  max-width: 56px;
-  height: 140px;
-  /* The zero line. */
-  background-image: linear-gradient(
-    to top,
-    transparent calc(var(--lp-zero) * 100% - 0.5px),
-    var(--sp-color-border-control) calc(var(--lp-zero) * 100% - 0.5px),
-    var(--sp-color-border-control) calc(var(--lp-zero) * 100% + 0.5px),
-    transparent calc(var(--lp-zero) * 100% + 0.5px)
-  );
+  height: auto;
+  overflow: visible;
 }
 
-.lp-dbar__fill {
+.lp-race__area--you {
+  fill: color-mix(in srgb, var(--sp-color-team-you-base) 14%, transparent);
+}
+
+.lp-race__area--opp {
+  fill: color-mix(in srgb, var(--sp-color-team-opponent) 16%, transparent);
+}
+
+.lp-race__zero {
+  stroke: var(--sp-color-border-control);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+
+.lp-race__zero-label,
+.lp-race__tick {
+  font-family: var(--lp-font);
+  font-size: 12px;
+  font-weight: 600;
+  fill: var(--sp-color-text-secondary);
+}
+
+/* SVG text scales with the viewBox; on phones the chart is ~300px wide,
+   so the ticks grow in user units to stay ≈ 11px on screen. */
+@media (max-width: 599px) {
+  .lp-race__zero-label,
+  .lp-race__tick {
+    font-size: 21px;
+  }
+}
+
+.lp-race__line {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.lp-race__line--you {
+  stroke: var(--sp-color-team-you-base);
+}
+
+.lp-race__line--opp {
+  stroke: var(--sp-color-team-opponent);
+}
+
+.lp-race__glow--you {
+  fill: color-mix(in srgb, var(--sp-color-team-you-base) 22%, transparent);
+}
+
+.lp-race__glow--opp {
+  fill: color-mix(in srgb, var(--sp-color-team-opponent) 22%, transparent);
+}
+
+.lp-race__dot--you {
+  fill: var(--sp-color-team-you-base);
+  stroke: var(--sp-color-surface-money-base);
+  stroke-width: 2;
+}
+
+.lp-race__dot--opp {
+  fill: var(--sp-color-team-opponent);
+  stroke: var(--sp-color-surface-money-base);
+  stroke-width: 2;
+}
+
+/* ── Hero scroll cue (the only one on the page) ──────────────────────── */
+.lp-hero {
+  position: relative;
+}
+
+.lp-scroll-cue {
   position: absolute;
-  left: 12%;
-  right: 12%;
-  height: calc(var(--lp-h) * 100%);
-  border-radius: var(--sp-radius-sm);
+  left: 50%;
+  bottom: var(--sp-space-6);
+  width: 1px;
+  height: 40px;
+  overflow: hidden;
+  background-color: var(--sp-color-border-default);
 }
 
-.lp-dbar__fill--gain {
-  bottom: calc(var(--lp-zero) * 100%);
-  background-color: var(--sp-color-data-gain-base);
-  transform-origin: 50% 100%;
+.lp-scroll-cue__line {
+  display: block;
+  width: 100%;
+  height: 50%;
+  background-color: var(--sp-color-text-secondary);
 }
 
-.lp-dbar__fill--loss {
-  top: calc((1 - var(--lp-zero)) * 100%);
-  background-color: var(--sp-color-data-loss-base);
-  transform-origin: 50% 0;
-}
-
-@media (max-width: 479px) {
-  .lp-dbars {
-    gap: var(--sp-space-2);
-  }
-
-  .lp-dbar__v {
-    font-size: var(--sp-type-tag-size);
-    letter-spacing: -0.01em;
+@media (prefers-reduced-motion: no-preference) {
+  .lp-scroll-cue__line {
+    /* Two slow passes after the hero settles, then still — a cue, not a loop. */
+    animation: lp-cue calc(var(--sp-motion-duration-feature) * 2) var(--sp-motion-ease-settle) 2 both;
+    animation-delay: var(--sp-motion-duration-feature);
   }
 }
 
-.lp-dbar__l {
-  font-size: var(--sp-type-caption-size);
-  line-height: var(--sp-type-caption-line);
-  font-weight: 600;
-  color: var(--sp-color-text-secondary);
-}
-
-.lp-dbars__cap {
-  margin-top: var(--sp-space-5);
-  font-size: var(--sp-type-caption-size);
-  line-height: var(--sp-type-caption-line);
-  color: var(--sp-color-text-secondary);
-}
-
-.lp-dbars__cap .lp-num {
-  color: var(--sp-color-data-gain-base);
-  font-weight: 600;
+@keyframes lp-cue {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(200%);
+  }
 }
 
 /* ── Ticker ──────────────────────────────────────────────────────────── */
@@ -2523,6 +2637,7 @@ body:has(> #root > .lp) {
   .lp-days__d,
   .lp-banner,
   .lp-faq__chevron,
+  .lp-snake__ring,
   .lp-tilt,
   .lp-tilt__light,
   .lp-magnet,

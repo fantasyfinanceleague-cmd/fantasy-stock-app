@@ -4,8 +4,8 @@ import { brand } from '../../brand';
 import { formatMoney } from '../../design/lib/money';
 import { why } from './copy';
 import { useEnhanced, useInView, useLandingMotion } from './hooks';
-import { DAILY_MOVES, LEAGUE, WEEK } from './sampleData';
-import { Reveal } from './scroll';
+import { MATCHUP, WEEK, raceSeries } from './sampleData';
+import { Layer, Reveal } from './scroll';
 
 function IconActivity() {
   return (
@@ -29,65 +29,111 @@ function IconTrophy() {
   );
 }
 
-/** "Real prices." — the old page's five M–F bars, now data (Design Lead:
- * "no decorative data viz on a page about real data"): the sample
- * portfolio's dollar change per day, signed, labelled with its value, on a
- * zero baseline, gain/loss coloured. They grow from the baseline once, the
- * first time they come into view (scaleY — transform only); with reduced
- * motion or JS off they are simply drawn. */
-function DailyBars() {
+const CW = 560;
+const CH = 220;
+const PAD = { top: 16, right: 12, bottom: 30, left: 12 };
+
+/** "Real prices." — a two-player race chart (Giorgio, round 4, replacing
+ * the Mon–Fri bars; Design Lead: the SAME Roberto vs Gianluigi Week 6 as
+ * the /01 Compete chapter). Both cumulative dollar gains from Monday's
+ * open to Friday's close on one chart, a zero baseline, the area between
+ * the lines tinted by whoever leads (split exactly at the crossing), a
+ * glowing head on the leader, labelled day ticks. Draws on once when it
+ * first comes into view (pathLength — stroke only); drawn from the start
+ * under reduced motion or with JS off. */
+function RaceChart() {
   const { hydrated, reduced, duration, ease } = useLandingMotion();
   const wrapRef = useRef<HTMLDivElement>(null);
-  const [scope, animate] = useAnimate<HTMLDivElement>();
+  const [scope, animate] = useAnimate<SVGSVGElement>();
   const inView = useInView(wrapRef, { threshold: 0.4 });
   const state = useRef<'idle' | 'armed' | 'done'>('idle');
-  // One scale for both directions: the zero line sits where the largest
-  // loss would reach, so a -$41 bar is visibly shorter than a +$188 one.
-  const up = Math.max(0, ...DAILY_MOVES.map((d) => d.v));
-  const down = Math.max(0, ...DAILY_MOVES.map((d) => -d.v));
-  const range = up + down || 1;
-  const total = DAILY_MOVES.reduce((a, d) => a + d.v, 0);
+  const series = raceSeries();
+  const all = series.flatMap((p) => [p.you, p.opp, 0]);
+  const min = Math.min(...all);
+  const max = Math.max(...all);
+  const x = (i: number) => PAD.left + (i / (series.length - 1)) * (CW - PAD.left - PAD.right);
+  const y = (v: number) => PAD.top + ((max - v) / (max - min || 1)) * (CH - PAD.top - PAD.bottom);
+  const line = (k: 'you' | 'opp') => series.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(p[k]).toFixed(1)}`).join(' ');
+
+  // Lead areas, split where the lines cross.
+  const areas: Array<{ d: string; you: boolean }> = [];
+  for (let i = 0; i < series.length - 1; i++) {
+    const a = series[i];
+    const b = series[i + 1];
+    const da = a.you - a.opp;
+    const db = b.you - b.opp;
+    const poly = (x0: number, y0a: number, y0b: number, x1: number, y1a: number, y1b: number) =>
+      `M${x0.toFixed(1)} ${y0a.toFixed(1)} L${x1.toFixed(1)} ${y1a.toFixed(1)} L${x1.toFixed(1)} ${y1b.toFixed(1)} L${x0.toFixed(1)} ${y0b.toFixed(1)} Z`;
+    if (da * db < 0) {
+      const t = da / (da - db);
+      const xm = x(i) + t * (x(i + 1) - x(i));
+      const vm = a.you + t * (b.you - a.you);
+      areas.push({ d: poly(x(i), y(a.you), y(a.opp), xm, y(vm), y(vm)), you: da > 0 });
+      areas.push({ d: poly(xm, y(vm), y(vm), x(i + 1), y(b.you), y(b.opp)), you: db > 0 });
+    } else if (da !== 0 || db !== 0) {
+      areas.push({ d: poly(x(i), y(a.you), y(a.opp), x(i + 1), y(b.you), y(b.opp)), you: da + db > 0 });
+    }
+  }
+  const last = series[series.length - 1];
+  const leader: 'you' | 'opp' = last.you >= last.opp ? 'you' : 'opp';
+  const head = { x: x(series.length - 1), y: y(last[leader]) };
 
   useEffect(() => {
     if (!hydrated || reduced || state.current === 'done') return;
-    const bars = scope.current?.querySelectorAll('.lp-dbar__fill');
-    if (!bars?.length) return;
+    const svg = scope.current;
+    const lines = svg?.querySelectorAll('.lp-race__line');
+    const fills = svg?.querySelectorAll('.lp-race__area, .lp-race__head');
+    if (!lines?.length || !fills) return;
     if (state.current === 'idle' && inView === false) {
       state.current = 'armed';
-      animate(bars, { scaleY: 0 }, { duration: 0 });
+      animate(lines, { pathLength: 0 }, { duration: 0 });
+      animate(fills, { opacity: 0 }, { duration: 0 });
     } else if (inView) {
       state.current = 'done';
-      animate(bars, { scaleY: 1 }, { duration: duration.slow, ease: ease.settle, delay: (i: number) => i * 0.06 });
+      animate(lines, { pathLength: 1 }, { duration: duration.feature, ease: ease.settle });
+      animate(fills, { opacity: 1 }, { duration: duration.slow, ease: ease.settle, delay: duration.feature * 0.6 });
     }
-  }, [hydrated, reduced, inView, animate, scope, duration.slow, ease.settle]);
+  }, [hydrated, reduced, inView, animate, scope, duration.feature, duration.slow, ease.settle]);
 
   return (
-    <div ref={wrapRef} className="lp-dbars-wrap">
-      <div
-        ref={scope}
-        className="lp-dbars"
-        style={{ ['--lp-zero' as string]: (down / range).toFixed(3) }}
-        role="img"
-        aria-label={`${LEAGUE}, week ${WEEK}: portfolio change by day — ${DAILY_MOVES.map((d) => `${d.day} ${formatMoney(d.v, { sign: 'always' })}`).join(', ')}.`}
-      >
-        {DAILY_MOVES.map((d, i) => (
-          <div key={`${d.l}-${i}`} className="lp-dbar">
-            <span className={d.v >= 0 ? 'lp-dbar__v lp-dbar__v--gain' : 'lp-dbar__v lp-dbar__v--loss'}>
-              {formatMoney(d.v, { sign: 'always' })}
-            </span>
-            <div className="lp-dbar__track">
-              <span
-                className={d.v >= 0 ? 'lp-dbar__fill lp-dbar__fill--gain' : 'lp-dbar__fill lp-dbar__fill--loss'}
-                style={{ ['--lp-h' as string]: (Math.abs(d.v) / range).toFixed(3) }}
-              />
-            </div>
-            <span className="lp-dbar__l">{d.l}</span>
-          </div>
-        ))}
+    <div ref={wrapRef} className="lp-race">
+      <div className="lp-race__legend">
+        <span className="lp-race__week">Week {WEEK}</span>
+        <span className="lp-race__who">
+          <span className="lp-race__key lp-race__key--you" aria-hidden="true" />
+          {MATCHUP.you.name} <span className={last.you >= 0 ? 'lp-race__v lp-race__v--gain' : 'lp-race__v lp-race__v--loss'}>{formatMoney(last.you, { sign: 'always' })}</span>
+        </span>
+        <span className="lp-race__who">
+          <span className="lp-race__key lp-race__key--opp" aria-hidden="true" />
+          {MATCHUP.opp.name} <span className={last.opp >= 0 ? 'lp-race__v lp-race__v--gain' : 'lp-race__v lp-race__v--loss'}>{formatMoney(last.opp, { sign: 'always' })}</span>
+        </span>
       </div>
-      <p className="lp-dbars__cap">
-        Week {WEEK}: <span className="lp-num">{formatMoney(total, { sign: 'always' })}</span>
-      </p>
+      <svg
+        ref={scope}
+        className="lp-race__chart"
+        viewBox={`0 0 ${CW} ${CH}`}
+        role="img"
+        aria-label={`Week ${WEEK}, cumulative dollar gain from Monday's open to Friday's close: ${MATCHUP.you.name} ${series.map((p) => formatMoney(p.you, { sign: 'always' })).join(', ')}; ${MATCHUP.opp.name} ${series.map((p) => formatMoney(p.opp, { sign: 'always' })).join(', ')}. ${MATCHUP.opp.name} led after Monday; ${MATCHUP.you.name} led from Tuesday and won by ${formatMoney(last.you - last.opp)}.`}
+      >
+        {areas.map((a, i) => (
+          <path key={i} className={a.you ? 'lp-race__area lp-race__area--you' : 'lp-race__area lp-race__area--opp'} d={a.d} />
+        ))}
+        <line className="lp-race__zero" x1={PAD.left} x2={CW - PAD.right} y1={y(0)} y2={y(0)} />
+        <text className="lp-race__zero-label" x={CW - PAD.right} y={y(0) - 6} textAnchor="end">
+          $0
+        </text>
+        <path className="lp-race__line lp-race__line--opp" d={line('opp')} />
+        <path className="lp-race__line lp-race__line--you" d={line('you')} />
+        <g className="lp-race__head">
+          <circle className={`lp-race__glow lp-race__glow--${leader}`} cx={head.x} cy={head.y} r="12" />
+          <circle className={`lp-race__dot lp-race__dot--${leader}`} cx={head.x} cy={head.y} r="5" />
+        </g>
+        {series.map((p, i) => (
+          <text key={i} className="lp-race__tick" x={x(i)} y={CH - 8} textAnchor={i === 0 ? 'start' : i === series.length - 1 ? 'end' : 'middle'}>
+            {p.label}
+          </text>
+        ))}
+      </svg>
     </div>
   );
 }
@@ -109,7 +155,7 @@ function Cell({ className, depth, children }: { className?: string; depth: numbe
 export function Why() {
   const [prices, gamified, free] = why.cells;
   return (
-    <section className="lp-section lp-why" id="why" aria-labelledby="lp-why-title">
+    <Layer tone="light" id="why" className="lp-why" labelledBy="lp-why-title">
       <div className="lp-wrap">
         <Reveal className="lp-head lp-head--center">
           <p className="lp-kicker">{why.kicker(brand.name)}</p>
@@ -131,7 +177,7 @@ export function Why() {
               <em>{prices.title.em}</em>
             </h3>
             <p className="lp-bento__body">{prices.body as string}</p>
-            <DailyBars />
+            <RaceChart />
           </Cell>
           <Cell depth={48}>
             <span className="lp-bento__icon">
@@ -155,7 +201,7 @@ export function Why() {
           </Cell>
         </div>
       </div>
-    </section>
+    </Layer>
   );
 }
 
