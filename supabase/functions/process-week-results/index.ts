@@ -6,6 +6,8 @@ import {
   willAdvanceWinner,
   nextRoundOf,
   winnerSeedForAdvance,
+  standingsIncrements,
+  type RecordIncrement,
   type PlayoffRound,
 } from './playoff-progression.ts';
 import {
@@ -171,7 +173,8 @@ async function transitionAfterRegularSeason(
   supabase: any,
   leagueId: string,
   numWeeks: number,
-  playoffTeams: number
+  playoffTeams: number,
+  expectedWeek: number
 ): Promise<TransitionOutcome> {
   const rankRes: RpcResult = await supabase.rpc('league_standings_ranked', { p_league_id: leagueId });
 
@@ -206,6 +209,7 @@ async function transitionAfterRegularSeason(
     // half-written one is impossible.
     const started = readPlayoffStart(await supabase.rpc('start_league_playoffs', {
       p_league_id: leagueId,
+      p_expected_week: expectedWeek, // compare-and-swap on the week this run read
       p_bracket: bracket,
     }));
     if (!started.ok) return started;
@@ -217,7 +221,14 @@ async function transitionAfterRegularSeason(
     return { ok: true };
   }
 
-  // No playoffs — complete season, do NOT advance past numWeeks
+  // No playoffs — complete season, do NOT advance past numWeeks.
+  // No claim step is needed here, unlike the playoff start: complete_league_season
+  // only UPDATEs (the season record + season_status) and inserts no rows, so a
+  // repeated or concurrent call rewrites the same champion / runner-up /
+  // final_standings (the regular season is over, so the ranking is fixed): it
+  // cannot duplicate anything. The heal pass only selects 'active' leagues, so
+  // once this lands it is never re-entered. (Unreachable today anyway:
+  // `playoff_teams || 4` maps NULL/0 to 4.)
   const podium = decidePodium(rankRes);
   if (!podium.ok) return podium;
   console.log(`League ${leagueId} regular season complete (no playoffs)`);
@@ -386,7 +397,7 @@ async function healRefusedTransitionsInner(supabase: any, leagueIdFilter: string
     console.log(`Heal pass: league ${league.id} finished its regular season without transitioning; retrying`);
     // Same derivation as the in-loop path (`playoff_teams || 4`).
     const outcome = await transitionAfterRegularSeason(
-      supabase, league.id, league.num_weeks, league.playoff_teams || 4,
+      supabase, league.id, league.num_weeks, league.playoff_teams || 4, league.current_week,
     );
     if (!outcome.ok) {
       console.error(`REFUSED season transition for league ${league.id} (heal pass): ${outcome.reason}`);
@@ -880,8 +891,8 @@ Deno.serve(async (req) => {
         // surface is byte-identical to the inline version. The module decides;
         // index.ts presents — same split as grouping.ts / scoring-eligibility.ts.
         switch (outcome.reason) {
-          case 'bye':
-            console.log(`Processing bye week for user ${matchup.team1_user_id}`);
+          case 'bye_no_result':
+            console.log(`Processing bye week for user ${matchup.team1_user_id} (no result)`);
             break;
           case 'both_empty_tie':
             console.log(`Both teams have empty portfolios - tie`);
@@ -949,16 +960,15 @@ Deno.serve(async (req) => {
         async function updateUserStandings(
           lgId: string,
           oderId: string,
-          won: boolean,
-          lost: boolean,
-          tied: boolean,
+          inc: RecordIncrement,
           pointsFor: number,
           pointsAgainst: number
         ) {
-          // Calculate increments - ties only increment ties column, not wins/losses
-          const winsIncrement = won ? 1 : 0;
-          const lossesIncrement = lost ? 1 : 0;
-          const tiesIncrement = tied ? 1 : 0;
+          // Increments come from standingsIncrements: a bye adds no W/L/T (it is
+          // not a game played); a tie adds only to ties.
+          const winsIncrement = inc.wins;
+          const lossesIncrement = inc.losses;
+          const tiesIncrement = inc.ties;
 
           // First try to get existing record
           const { data: existing } = await supabase
@@ -1002,14 +1012,13 @@ Deno.serve(async (req) => {
 
         // Only update standings for regular season matchups (not playoffs)
         if (!isPlayoff) {
-          // Team 1 standings update
-          // For bye weeks, points_against is 0 (no opponent)
+          const increments = standingsIncrements(outcome);
+          // Team 1 standings update. On a bye: no W/L/T, but the week's real
+          // gain still counts toward season gain; points_against is 0.
           const stand1Err = await updateUserStandings(
             leagueId,
             matchup.team1_user_id,
-            team1Won,
-            team2Won,
-            isTie,
+            increments.team1,
             team1Gain,
             isByeWeek ? 0 : team2Gain
           );
@@ -1017,14 +1026,12 @@ Deno.serve(async (req) => {
             console.error(`Failed to update standings for ${matchup.team1_user_id}:`, stand1Err);
           }
 
-          // Team 2 standings update (skip for bye weeks)
-          if (!isByeWeek) {
+          // Team 2 standings update (none on a bye: increments.team2 is null)
+          if (increments.team2) {
             const stand2Err = await updateUserStandings(
               leagueId,
               matchup.team2_user_id,
-              team2Won,
-              team1Won,
-              isTie,
+              increments.team2,
               team2Gain,
               team1Gain
             );
@@ -1108,7 +1115,7 @@ Deno.serve(async (req) => {
           } else if (currentWeek >= numWeeks) {
             // Last regular-season week just completed. A refusal writes nothing,
             // so the heal pass at the top of the next run retries it.
-            const transition = await transitionAfterRegularSeason(supabase, leagueId, numWeeks, playoffTeams);
+            const transition = await transitionAfterRegularSeason(supabase, leagueId, numWeeks, playoffTeams, currentWeek);
             if (!transition.ok) {
               console.error(`REFUSED season transition for league ${leagueId}: ${transition.reason}`);
               skipped.push({ league_id: leagueId, week_number: weekNumber, reason: transition.reason });

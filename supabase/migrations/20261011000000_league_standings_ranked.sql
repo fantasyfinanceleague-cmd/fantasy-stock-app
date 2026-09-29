@@ -19,12 +19,22 @@
 --
 -- THE RULE (Giorgio, 2026-09-29; approved by the Orchestrator)
 --   Standings order == seed order. Keys, in order:
---     1. win_points = wins + 0.5 * ties, desc. A tie counts as half a win (the
---        NFL / common-fantasy convention). Every member appears in every week of
---        the schedule, so games played are equal and this orders exactly like
---        win% while matching "wins decide". The key reads the RECORDED W/L/T
---        verbatim, so it stays correct if a bye is ever scored differently
---        (e.g. vs the week's median) than today's automatic win.
+--     1. win_pct = (wins + 0.5 * ties) / games_played, desc, where
+--        games_played = wins + losses + ties. A tie counts as half a win (the
+--        NFL / common-fantasy convention). A regular-season BYE is NO RESULT
+--        (Giorgio, 2026-09-29): it adds no W/L/T (process-week-results
+--        standingsIncrements), so games_played excludes byes, and unscored
+--        matchups never reach standings at all. With equal games played this
+--        orders exactly like "wins decide"; with uneven byes (odd rosters) it
+--        stays fair where raw wins would not.
+--        0 GAMES PLAYED (pre-season, or a manager whose only scored week was a
+--        bye) counts as win_pct 0: grouped with winless managers and separated
+--        by the keys below, never ranked above anyone with a win.
+--        The value is rounded to 12 places so equal fractions always compare
+--        equal (distinct fractions with realistic denominators differ by far
+--        more than 1e-12). Data written under the old bye-as-win rule keeps its
+--        bye wins until recomputed; see
+--        docs/migrations/bye-no-result-standings-recompute.sql.
 --     2. head-to-head, as a MINI-LEAGUE among the whole tied set:
 --          * counted games: scored (team1_gain IS NOT NULL), regular-season,
 --            NON-BYE (team2_user_id IS NOT NULL) matchups with BOTH managers in
@@ -43,7 +53,7 @@
 --   Ranks are strictly 1..N (no shared ranks) so a rank IS a seed.
 --
 --   `tiebreak` says which key placed a manager among the managers it was tied
---   with on win_points: NULL (not tied), 'h2h', 'season_gain' or 'join_order'.
+--   with on win_pct: NULL (not tied), 'h2h', 'season_gain' or 'join_order'.
 --
 -- SECURITY -- SECURITY INVOKER, and why that is safe here
 --   Runs with the caller's rights, so RLS is the boundary: it reads
@@ -93,6 +103,7 @@ returns table(
   losses          numeric,
   ties            numeric,
   win_points      numeric,
+  win_pct         numeric,
   games_played    numeric,
   points_for      numeric,
   points_against  numeric,
@@ -120,14 +131,17 @@ declare
   v_u        text;
   v_dup      boolean;
 begin
-  -- Seed the queue with win_points buckets, best first.
-  select coalesce(jsonb_agg(jsonb_build_object('u', b.users, 'l', null) order by b.wp desc), '[]'::jsonb)
+  -- Seed the queue with win_pct buckets, best first.
+  select coalesce(jsonb_agg(jsonb_build_object('u', b.users, 'l', null) order by b.pct desc), '[]'::jsonb)
     into v_queue
   from (
-    select s.wins + 0.5 * s.ties as wp, jsonb_agg(s.user_id order by s.user_id) as users
+    select case when s.wins + s.losses + s.ties > 0
+                then round((s.wins + 0.5 * s.ties) / (s.wins + s.losses + s.ties), 12)
+                else 0 end as pct,
+           jsonb_agg(s.user_id order by s.user_id) as users
     from league_standings s
     where s.league_id = p_league_id
-    group by s.wins + 0.5 * s.ties
+    group by 1
   ) b;
 
   while jsonb_array_length(v_queue) > 0 loop
@@ -219,6 +233,9 @@ begin
          o.ord::int,
          s.wins, s.losses, s.ties,
          s.wins + 0.5 * s.ties,
+         case when s.wins + s.losses + s.ties > 0
+              then round((s.wins + 0.5 * s.ties) / (s.wins + s.losses + s.ties), 12)
+              else 0 end,
          s.wins + s.losses + s.ties,
          s.points_for, s.points_against,
          v_labels[o.ord]

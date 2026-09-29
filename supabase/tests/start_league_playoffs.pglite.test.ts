@@ -8,7 +8,8 @@
  * (20251230220000), and nullable team ids (20260318000000). Supabase's default
  * anon/authenticated EXECUTE grants are simulated. Brackets come from the real
  * pure builder (season-transition.ts buildPlayoffBracket), so the TS <-> SQL
- * row contract is exercised end to end.
+ * row contract is exercised end to end. Also loads the 20261011000004 backstop
+ * index and proves normal winner advancement never trips it.
  *
  * What this cannot show: two truly concurrent transactions (PGlite has one
  * connection). The concurrency guarantee rests on the claim's row lock plus
@@ -22,6 +23,7 @@ import { buildPlayoffBracket } from '../functions/process-week-results/season-tr
 
 const ROOT = new URL('../../', import.meta.url);
 const MIGRATION = new URL('supabase/migrations/20261011000003_start_league_playoffs.sql', ROOT);
+const BACKSTOP = new URL('supabase/migrations/20261011000004_playoff_bracket_unique_backstop.sql', ROOT);
 
 const SCHEMA = `
 create role anon; create role authenticated; create role service_role;
@@ -55,6 +57,7 @@ Deno.test({
     const q = async (s: string, p: unknown[] = []) => (await db.query(s, p)).rows as Row[];
     await db.exec(SCHEMA);
     await db.exec(await Deno.readTextFile(MIGRATION));
+    await db.exec(await Deno.readTextFile(BACKSTOP));
 
     const MEM = ['c', 'a', 'b', 'd'];
     async function league(extra: Record<string, unknown> = {}, members = MEM) {
@@ -69,8 +72,9 @@ Deno.test({
       return l.id as string;
     }
     const bracket = (members = MEM) => buildPlayoffBracket(members.map((user_id) => ({ user_id })), LAST_END, 4);
-    const start = async (id: string, b: unknown) =>
-      (await q(`select start_league_playoffs($1, $2::jsonb) r`, [id, JSON.stringify(b)]))[0].r;
+    // expected = the current_week the caller observed (3 = num_weeks for every fixture)
+    const start = async (id: string, b: unknown, expected = 3) =>
+      (await q(`select start_league_playoffs($1, $2, $3::jsonb) r`, [id, expected, JSON.stringify(b)]))[0].r;
     const state = async (id: string) => {
       const [l] = await q(`select season_status, current_week from leagues where id=$1`, [id]);
       const [{ n }] = await q(`select count(*)::int n from matchups where league_id=$1 and is_playoff`, [id]);
@@ -89,7 +93,7 @@ Deno.test({
 
     await t.step('claim: flips to playoffs at num_weeks+1 and inserts the whole bracket', async () => {
       const id = await league();
-      assertEquals(await start(id, bracket()), { status: 'claimed', matchups_inserted: 3 });
+      assertEquals(await start(id, bracket()), { status: 'started', matchups_inserted: 3 });
       assertEquals(await state(id), { status: 'playoffs', week: 4, playoffRows: 3 });
       const rows = await q(`select week_number w, playoff_round r, team1_user_id t1, team2_user_id t2, team1_seed s1, team2_seed s2
         from matchups where league_id=$1 and is_playoff order by week_number, team1_seed`, [id]);
@@ -98,7 +102,7 @@ Deno.test({
       ]);
     });
 
-    await t.step('idempotent: a second (or different) call is already_transitioned and writes nothing', async () => {
+    await t.step('idempotent: two calls give exactly one bracket; the second (or a different one) is already_transitioned', async () => {
       const id = await league();
       await start(id, bracket());
       assertEquals(await start(id, bracket()), { status: 'already_transitioned', season_status: 'playoffs' });
@@ -115,8 +119,44 @@ Deno.test({
       const dup = bracket().map((r, i) => i === 1 ? { ...r, team1_user_id: 'c' } : r);
       await assertRejects(() => start(id, dup), Error, 'duplicate key');
       assertEquals(await state(id), UNTOUCHED);
-      assertEquals((await start(id, bracket())).status, 'claimed');
+      assertEquals((await start(id, bracket())).status, 'started');
       assertEquals(await state(id), { status: 'playoffs', week: 4, playoffRows: 3 });
+    });
+
+    await t.step('compare-and-swap: a stale expected_week is not_eligible and writes nothing', async () => {
+      const id = await league();
+      assertEquals(await start(id, bracket(), 2), { status: 'not_eligible', current_week: 3, expected_week: 2 });
+      assertEquals(await state(id), UNTOUCHED);
+      assertEquals((await start(id, bracket(), 3)).status, 'started');
+    });
+
+    await t.step('backstop index: a non-atomic second bracket cannot be inserted', async () => {
+      const id = await league();
+      await start(id, bracket());
+      // A rogue writer re-inserting a first round with DIFFERENT players still
+      // collides on (league, round, week, team1_seed = 1).
+      const [fresh] = await q(`insert into leagues (name, num_weeks, current_week) values ('x', 3, 3) returning id`);
+      await assertRejects(() => q(`insert into matchups (league_id, week_number, team1_user_id, team2_user_id, team1_seed, team2_seed, is_playoff, playoff_round)
+        values ($1, 4, 'zz1', 'zz2', 1, 2, true, 'semi')`, [id]), Error, 'matchups_one_bracket_per_league');
+      // Other leagues are unaffected.
+      await q(`insert into matchups (league_id, week_number, team1_user_id, team2_user_id, team1_seed, team2_seed, is_playoff, playoff_round)
+        values ($1, 4, 'zz1', 'zz2', 1, 2, true, 'semi')`, [fresh.id]);
+    });
+
+    await t.step('backstop index: normal winner advancement never trips it (4- and 8-team)', async () => {
+      const id = await league();
+      await start(id, bracket());
+      // advancePlayoffWinner writes each winner's own seed into the finals slots.
+      await q(`update matchups set team1_user_id='c', team1_seed=1 where league_id=$1 and playoff_round='finals'`, [id]);
+      await q(`update matchups set team2_user_id='b', team2_seed=3 where league_id=$1 and playoff_round='finals'`, [id]);
+      const eight = ['c', 'a', 'b', 'd', 'e', 'f', 'g', 'h'];
+      const id8 = await league({}, eight);
+      assertEquals((await start(id8, bracket(eight))).status, 'started');
+      const semis = await q(`select id from matchups where league_id=$1 and playoff_round='semi' order by id`, [id8]);
+      // Quarter winners seeds 1, 4, 2, 3 fill the two semis.
+      await q(`update matchups set team1_user_id='c', team1_seed=1, team2_user_id='d', team2_seed=4 where id=$1`, [semis[0].id]);
+      await q(`update matchups set team1_user_id='a', team1_seed=2, team2_user_id='b', team2_seed=3 where id=$1`, [semis[1].id]);
+      assertEquals((await state(id8)).playoffRows, 7);
     });
 
     await t.step('an active league that already has playoff rows is not claimed again', async () => {

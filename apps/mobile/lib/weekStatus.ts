@@ -202,6 +202,21 @@ interface Matchup {
   is_tie?: boolean;
   team1_gain?: number | null;
   team2_gain?: number | null;
+  team2_user_id?: string | null;
+  is_playoff?: boolean | null;
+}
+
+/**
+ * A SCORED regular-season bye. Since 2026-09-29 a bye is NO RESULT: winner
+ * NULL, is_tie false, team2_gain NULL, so none of the usual "has results"
+ * signals fire and a scored bye week would read as live forever. The
+ * discriminator is an explicitly null team2 on a non-playoff row with
+ * team1_gain set (team1_gain NULL = not scored yet). An unselected team2_user_id
+ * (undefined) does NOT match, so callers that don't select it keep the old
+ * behaviour.
+ */
+function isScoredBye(m: Matchup): boolean {
+  return m.team2_user_id === null && m.is_playoff !== true && m.team1_gain != null;
 }
 
 // US Market Holidays
@@ -370,7 +385,8 @@ export function getWeekStatus(league: League | null, matchup: Matchup | null, no
   const isWeekComplete = matchup && (
     matchup.winner_user_id !== null ||
     matchup.is_tie === true ||
-    (matchup.team1_gain !== null && matchup.team2_gain !== null)
+    (matchup.team1_gain !== null && matchup.team2_gain !== null) ||
+    isScoredBye(matchup)
   );
 
   // Threaded from getWeekStatus's own `now` param rather than reading
@@ -433,7 +449,7 @@ export function isWeekActive(matchup: Matchup | null): boolean {
     return false;
   }
 
-  if (matchup.team1_gain !== null && matchup.team2_gain !== null) {
+  if ((matchup.team1_gain !== null && matchup.team2_gain !== null) || isScoredBye(matchup)) {
     return false;
   }
 

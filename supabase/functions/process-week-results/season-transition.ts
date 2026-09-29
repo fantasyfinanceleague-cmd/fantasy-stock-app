@@ -185,7 +185,7 @@ export function buildPlayoffBracket(
 }
 
 /**
- * Interpret the start_league_playoffs rpc result. `claimed` and
+ * Interpret the start_league_playoffs rpc result. `started` and
  * `already_transitioned` are both success. The latter is the concurrency
  * backstop working (another run started the playoffs first) and writes nothing.
  * An rpc error means the function's transaction rolled back, so the league is
@@ -193,9 +193,20 @@ export function buildPlayoffBracket(
  */
 export function readPlayoffStart(res: RpcResult): { ok: true; claimed: boolean } | Refusal {
   if (res.error) return { ok: false, reason: `start_league_playoffs failed: ${res.error.message ?? 'unknown'}` };
-  const d = res.data as { status?: unknown; reason?: unknown } | null;
-  if (d?.status === 'claimed') return { ok: true, claimed: true };
+  const d = res.data as
+    | { status?: unknown; reason?: unknown; current_week?: unknown; expected_week?: unknown }
+    | null;
+  if (d?.status === 'started') return { ok: true, claimed: true };
   if (d?.status === 'already_transitioned') return { ok: true, claimed: false };
+  // Still active with no bracket, but current_week moved since the caller read
+  // it. Nothing was written. Report it (not a silent success); the heal pass
+  // re-reads the league on the next run.
+  if (d?.status === 'not_eligible') {
+    return {
+      ok: false,
+      reason: `start_league_playoffs not_eligible: current_week ${String(d.current_week)} != expected ${String(d.expected_week)}`,
+    };
+  }
   if (d?.status === 'refused') return { ok: false, reason: `start_league_playoffs refused: ${String(d.reason)}` };
   return { ok: false, reason: `start_league_playoffs: unexpected response ${JSON.stringify(res.data)}` };
 }

@@ -96,7 +96,7 @@ export type PlayoffRound = 'quarter' | 'semi' | 'finals';
 
 /** Why the outcome came out the way it did. Mirrors the handler's log lines. */
 export type OutcomeReason =
-  | 'bye'
+  | 'bye_no_result'
   | 'both_empty_tie'
   | 'both_empty_playoff_seed_tiebreak'
   | 'playoff_no_opponent'
@@ -139,8 +139,18 @@ export function decideMatchupOutcome(
   const isByeWeek = !m.team2UserId && !m.isPlayoff;
 
   if (isByeWeek) {
-    // index.ts:1179 — bye gets an automatic win.
-    return { winnerId: m.team1UserId, isTie: false, team1Won: true, team2Won: false, reason: 'bye' };
+    // A regular-season bye is NO RESULT (Giorgio, 2026-09-29): not a win, not a
+    // loss, not a tie. It used to be an automatic win, which handed uneven free
+    // wins to odd-roster leagues (byes are not evenly spread when num_weeks is
+    // not a multiple of the roster size).
+    //
+    // winner NULL + is_tie false is the same row shape a scored bye has always
+    // had apart from the winner, so the row's discriminator is NOT the NULL
+    // winner: it is `team2_user_id IS NULL AND NOT is_playoff` (CLAUDE.md
+    // "overloaded NULLs are type tags"). Consumers must key on that, never read
+    // a NULL winner on a scored row as a tie. The standings writer keys on this
+    // reason via standingsIncrements (no W/L/T, no games played).
+    return { winnerId: null, isTie: false, team1Won: false, team2Won: false, reason: 'bye_no_result' };
   }
 
   const team1Empty = !team1Score.hasPositions;
@@ -257,4 +267,36 @@ export interface AdvancingRow {
  */
 export function winnerSeedForAdvance(row: AdvancingRow, winnerId: string): number | null {
   return winnerId === row.team1UserId ? row.team1Seed : row.team2Seed;
+}
+
+// ---------------------------------------------------------------------------
+// Standings increments — what updateUserStandings adds per participant
+// ---------------------------------------------------------------------------
+
+export interface RecordIncrement {
+  wins: number;
+  losses: number;
+  ties: number;
+}
+
+/**
+ * The W/L/T each side of a scored regular-season matchup adds to
+ * league_standings. A bye adds NOTHING to either record, so it is not a game
+ * played. W + L + T stays exactly the non-bye games played, which is the
+ * denominator of the win% ranking key (league_standings_ranked). team2 is null
+ * on a bye: there is no second participant to update.
+ *
+ * points_for is deliberately NOT here: a bye week still adds the manager's real
+ * weekly dollar gain to season gain, so everyone's season gain covers the same
+ * weeks.
+ */
+export function standingsIncrements(outcome: Outcome): { team1: RecordIncrement; team2: RecordIncrement | null } {
+  if (outcome.reason === 'bye_no_result') {
+    return { team1: { wins: 0, losses: 0, ties: 0 }, team2: null };
+  }
+  const t = outcome.isTie ? 1 : 0;
+  return {
+    team1: { wins: outcome.team1Won ? 1 : 0, losses: outcome.team2Won ? 1 : 0, ties: t },
+    team2: { wins: outcome.team2Won ? 1 : 0, losses: outcome.team1Won ? 1 : 0, ties: t },
+  };
 }

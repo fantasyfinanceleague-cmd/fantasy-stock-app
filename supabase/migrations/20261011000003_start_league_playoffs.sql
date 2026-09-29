@@ -16,13 +16,23 @@
 -- DESIGN: one transaction does both, and the claim comes first.
 --   (a) CLAIM:  UPDATE leagues SET season_status='playoffs', current_week =
 --               num_weeks + 1 WHERE id = p_league_id AND season_status = 'active'
---               AND no playoff matchup exists for the league.
+--               AND current_week = p_expected_week AND no playoff matchup exists
+--               for the league. p_expected_week is the current_week the caller
+--               observed when it decided to transition: a compare-and-swap token,
+--               so a caller acting on a stale read changes nothing. current_week
+--               is set to num_weeks + 1 (the bracket's first week, which the
+--               validation below pins the bracket to), not p_expected_week + 1:
+--               the two are equal in the normal case (current_week = num_weeks).
 --   (b) INSERT: the bracket rows passed in (built by the pure, unit-tested
 --               buildPlayoffBracket in process-week-results/season-transition.ts
 --               from seeds read from league_standings_ranked).
---   (c) RETURN: {status:'claimed', matchups_inserted:n}
---               | {status:'already_transitioned', season_status:...}
---               | {status:'refused', reason:...}
+--   (c) RETURN: {status:'started', matchups_inserted:n}
+--               | {status:'already_transitioned', season_status:...}  (not
+--                 'active', or playoff rows exist: another run did it; no-op)
+--               | {status:'not_eligible', current_week, expected_week}  (still
+--                 'active' with no bracket, but current_week moved: no-op, and
+--                 the caller reports it; the heal pass re-reads next run)
+--               | {status:'refused', reason:...}  (validation; no-op)
 --   Any error in (b) (a constraint violation, a bad timestamp) raises, and the
 --   whole call rolls back INCLUDING the claim, so the league is back to
 --   'active' with zero playoff rows and the heal pass retries it next run. A
@@ -67,7 +77,7 @@
 --   -- 2. call-time: as anon / authenticated, expect 42501 permission denied
 -- ============================================================================
 
-create or replace function public.start_league_playoffs(p_league_id uuid, p_bracket jsonb)
+create or replace function public.start_league_playoffs(p_league_id uuid, p_expected_week int, p_bracket jsonb)
 returns jsonb
 language plpgsql
 volatile
@@ -85,6 +95,7 @@ declare
   v_claimed   int;
   v_inserted  int;
   v_status    text;
+  v_cur_week  int;
 begin
   select * into v_league from leagues where id = p_league_id;
   if not found then
@@ -147,12 +158,18 @@ begin
          current_week  = v_league.num_weeks + 1
    where l.id = p_league_id
      and l.season_status = 'active'
+     and l.current_week = p_expected_week
      and not exists (select 1 from matchups m where m.league_id = p_league_id and m.is_playoff);
   get diagnostics v_claimed = row_count;
 
   if v_claimed = 0 then
-    select season_status into v_status from leagues where id = p_league_id;
-    return jsonb_build_object('status', 'already_transitioned', 'season_status', v_status);
+    select season_status, current_week into v_status, v_cur_week from leagues where id = p_league_id;
+    if v_status is distinct from 'active'
+       or exists (select 1 from matchups m where m.league_id = p_league_id and m.is_playoff) then
+      return jsonb_build_object('status', 'already_transitioned', 'season_status', v_status);
+    end if;
+    return jsonb_build_object('status', 'not_eligible', 'current_week', v_cur_week,
+                              'expected_week', p_expected_week);
   end if;
 
   -- (b) INSERT. Any error here rolls back the claim too.
@@ -165,12 +182,12 @@ begin
     week_start timestamptz, week_end timestamptz, playoff_round text);
   get diagnostics v_inserted = row_count;
 
-  return jsonb_build_object('status', 'claimed', 'matchups_inserted', v_inserted);
+  return jsonb_build_object('status', 'started', 'matchups_inserted', v_inserted);
 end;
 $$;
 
-revoke all on function public.start_league_playoffs(uuid, jsonb) from public;
-revoke all on function public.start_league_playoffs(uuid, jsonb) from anon;
-revoke all on function public.start_league_playoffs(uuid, jsonb) from authenticated;
-revoke all on function public.start_league_playoffs(uuid, jsonb) from service_role;
-grant execute on function public.start_league_playoffs(uuid, jsonb) to service_role;
+revoke all on function public.start_league_playoffs(uuid, int, jsonb) from public;
+revoke all on function public.start_league_playoffs(uuid, int, jsonb) from anon;
+revoke all on function public.start_league_playoffs(uuid, int, jsonb) from authenticated;
+revoke all on function public.start_league_playoffs(uuid, int, jsonb) from service_role;
+grant execute on function public.start_league_playoffs(uuid, int, jsonb) to service_role;

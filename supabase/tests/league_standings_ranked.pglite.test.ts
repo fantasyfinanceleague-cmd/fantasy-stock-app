@@ -15,7 +15,7 @@
  * simulated, so the proacl assertions prove the explicit revokes work.
  *
  * The ranking rule under test (see the 20261011000000 header):
- *   W + 0.5*T -> balanced mini-league H2H (recursive) -> points_for
+ *   win% = (W + 0.5*T) / (W+L+T), byes excluded -> balanced mini-league H2H (recursive) -> points_for
  *   -> joined_at -> user_id; ranks strictly 1..N.
  */
 import { assert, assertEquals, assertRejects } from 'jsr:@std/assert';
@@ -142,12 +142,14 @@ Deno.test({
         [lg, opts.week ?? 1, a, b, opts.scored === false ? null : 1, opts.scored === false ? null : 1,
           winner === 'tie' || opts.scored === false ? null : winner, winner === 'tie', opts.playoff ?? false]);
     }
-    async function bye(lg: string, u: string) {
-      await q(`insert into matchups (league_id, week_number, team1_user_id, team2_user_id, team1_gain, winner_user_id)
-        values ($1, 1, $2, null, 5, $2)`, [lg, u]);
+    /** A scored bye: NO RESULT (winner NULL, is_tie false). `legacy` writes the
+     * pre-2026-09-29 bye-as-win shape (winner = the bye manager). */
+    async function bye(lg: string, u: string, legacy = false) {
+      await q(`insert into matchups (league_id, week_number, team1_user_id, team2_user_id, team1_gain, winner_user_id, is_tie)
+        values ($1, 1, $2, null, 5, $3, false)`, [lg, u, legacy ? u : null]);
     }
     const ranked = async (lg: string) =>
-      await q(`select user_id, rank, tiebreak, win_points::float8 wp, games_played::float8 gp
+      await q(`select user_id, rank, tiebreak, win_points::float8 wp, win_pct::float8 pct, games_played::float8 gp
         from league_standings_ranked($1) order by rank`, [lg]);
     const order = async (lg: string) => (await ranked(lg)).map((r: Row) => r.user_id);
     const labels = async (lg: string) => (await ranked(lg)).map((r: Row) => r.tiebreak);
@@ -216,13 +218,37 @@ Deno.test({
       assertEquals(await labels(lg), ['season_gain', 'season_gain', null]);
     });
 
-    await t.step('ties count half: 6-3-1 above 6-4-0 despite less season gain; 7-4-0 above 6-3-1', async () => {
+    await t.step('ties count half, ranked by win%: 6-3-1 (.650) > 7-4-0 (.636) > 6-4-0 (.600)', async () => {
+      // 7-4-0 has more raw wins AND more win points than 6-3-1, but played one
+      // more game (the 6-3-1 manager had a bye): win% puts 6-3-1 first.
       const [x, y, z] = [uid(), uid(), uid()];
       const lg = await league([[y, 999, 6, 4, 0], [x, 1, 6, 3, 1], [z, 0, 7, 4, 0]]);
-      assertEquals(await order(lg), [z, x, y]);
+      assertEquals(await order(lg), [x, z, y]);
       assertEquals(await labels(lg), [null, null, null]);
       const r = await ranked(lg);
-      assertEquals(r.map((x: Row) => x.wp), [7, 6.5, 6]);
+      assertEquals(r.map((x: Row) => x.wp), [6.5, 7, 6]);
+      assertEquals(r.map((x: Row) => x.gp), [10, 11, 10]);
+      assertEquals(r.map((x: Row) => x.pct), [0.65, 0.636363636364, 0.6]);
+    });
+
+    await t.step('uneven byes: win% beats raw wins (3-1 above 4-2)', async () => {
+      const [a, b, c] = [uid(), uid(), uid()];
+      // a sat out a bye week (no result, so it is not in a's record).
+      const lg = await league([[b, 900, 4, 2], [a, 1, 3, 1], [c, 50, 2, 4]]);
+      await bye(lg, a);
+      assertEquals(await order(lg), [a, b, c]);
+      assertEquals((await ranked(lg)).map((r: Row) => r.gp), [4, 6, 6]);
+    });
+
+    await t.step('0 games played counts as win% 0: after any winner, level with the winless, then season gain', async () => {
+      const [w, byeOnly, lost] = [uid(), uid(), uid()];
+      // Week 1 of a 3-manager league: w beat lost; byeOnly had the bye.
+      const lg = await league([[lost, 10, 0, 1], [byeOnly, 50, 0, 0], [w, 20, 1, 0]]);
+      await bye(lg, byeOnly);
+      await game(lg, w, lost, w);
+      assertEquals(await order(lg), [w, byeOnly, lost]);
+      assertEquals(await labels(lg), [null, 'season_gain', 'season_gain']);
+      assertEquals((await ranked(lg)).map((r: Row) => [r.pct, r.gp]), [[1, 1], [0, 0], [0, 1]]);
     });
 
     await t.step('a drawn H2H game counts half inside the mini-league', async () => {
@@ -279,9 +305,10 @@ Deno.test({
 
     await t.step('byes are ignored by H2H and meeting counts; the recorded W/L/T is used as-is', async () => {
       const [a, b] = [uid(), uid()];
-      // a's 3 wins include a bye win; b beat a head to head.
+      // a also had a bye (no result, so not in the 3-1); b beat a head to head.
       const lg = await league([[a, 900, 3, 1], [b, 1, 3, 1]]);
       await bye(lg, a);
+      await bye(lg, b, true); // a legacy bye-as-win row is ignored by H2H too
       await game(lg, a, b, b);
       assertEquals(await order(lg), [b, a]);
       assertEquals(await labels(lg), ['h2h', 'h2h']);

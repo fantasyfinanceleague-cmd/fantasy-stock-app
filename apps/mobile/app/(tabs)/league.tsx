@@ -795,7 +795,10 @@ export default function LeagueScreen() {
                         const myGain = isTeam1 ? matchup.team1_gain : matchup.team2_gain;
                         const isComplete = myGain !== null;
                         const iWon = matchup.winner_user_id === scheduleUserId;
-                        const isTie = isComplete && matchup.winner_user_id === null;
+                        // A scored bye is NO RESULT (winner NULL, not a tie): key on
+                        // the bye discriminator, never read its NULL winner as a tie.
+                        const isBye = !matchup.team2_user_id && !matchup.is_playoff;
+                        const isTie = isComplete && !isBye && matchup.winner_user_id === null;
                         const isCurrent = matchup.week_number === currentWeek && !isComplete;
 
                         return (
@@ -835,13 +838,13 @@ export default function LeagueScreen() {
                                 <>
                                   <View style={[
                                     styles.resultBadge,
-                                    iWon ? styles.resultWin : isTie ? styles.resultTie : styles.resultLoss
+                                    iWon ? styles.resultWin : isTie || isBye ? styles.resultTie : styles.resultLoss
                                   ]}>
                                     <Text style={[
                                       styles.resultBadgeText,
-                                      iWon ? styles.positive : isTie ? { color: Colors.warning } : styles.negative
+                                      iWon ? styles.positive : isBye ? { color: Colors.textSecondary } : isTie ? { color: Colors.warning } : styles.negative
                                     ]}>
-                                      {iWon ? 'W' : isTie ? 'T' : 'L'}
+                                      {iWon ? 'W' : isBye ? '–' : isTie ? 'T' : 'L'}
                                     </Text>
                                   </View>
                                   <Text style={[

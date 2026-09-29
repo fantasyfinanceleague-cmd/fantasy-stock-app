@@ -167,8 +167,13 @@ Deno.test('bracket: a Tuesday end date rolls a full week; unsupported size build
   assertEquals(buildPlayoffBracket(seedsOf(3), LAST_END, 4), []);
 });
 
-Deno.test('readPlayoffStart: claimed and already_transitioned are success; everything else refuses', () => {
-  assertEquals(readPlayoffStart(ok({ status: 'claimed', matchups_inserted: 3 })), { ok: true, claimed: true });
+Deno.test('readPlayoffStart: started and already_transitioned are success; everything else refuses', () => {
+  assertEquals(readPlayoffStart(ok({ status: 'started', matchups_inserted: 3 })), { ok: true, claimed: true });
+  assertEquals(readPlayoffStart(ok({ status: 'not_eligible', current_week: 4, expected_week: 3 })), {
+    ok: false,
+    reason: 'start_league_playoffs not_eligible: current_week 4 != expected 3',
+  });
+  assertEquals(readPlayoffStart(ok({ status: 'claimed' })).ok, false, 'the old status name is not accepted');
   assertEquals(readPlayoffStart(ok({ status: 'already_transitioned', season_status: 'playoffs' })), { ok: true, claimed: false });
   assertEquals(readPlayoffStart(ok({ status: 'refused', reason: 'bracket_non_member' })),
     { ok: false, reason: 'start_league_playoffs refused: bracket_non_member' });

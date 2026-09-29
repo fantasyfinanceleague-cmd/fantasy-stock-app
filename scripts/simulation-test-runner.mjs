@@ -249,8 +249,7 @@ function calculateExpectedStandings(schedule, gainsMap) {
     const gain1 = gainsMap.get(team1UserId);
 
     if (team2UserId === null) {
-      // Bye week = automatic win
-      s1.wins += 1;
+      // Bye week = NO RESULT (no W/L/T); the week's gain still counts as season gain
       s1.pointsFor += gain1;
       continue;
     }
@@ -667,9 +666,9 @@ async function validate(supabase, lgId, config, userIds, expectedStandings, logg
       failures.push(`Week ${m.week_number}: team1_gain is null`);
     }
     if (m.team2_user_id === null) {
-      // Bye week
-      if (m.winner_user_id !== m.team1_user_id) {
-        failures.push(`Week ${m.week_number} bye: winner should be ${m.team1_user_id}`);
+      // Bye week: NO RESULT — no winner and not a tie
+      if (m.winner_user_id !== null || m.is_tie === true) {
+        failures.push(`Week ${m.week_number} bye: should be no result (winner null, is_tie false)`);
       }
       if (m.team2_gain !== null) {
         failures.push(`Week ${m.week_number} bye: team2_gain should be null`);
