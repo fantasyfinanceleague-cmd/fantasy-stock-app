@@ -2,43 +2,67 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "86b8898b94eae19cf5209cf8ea5602fefcc6e94b",
-    "commitShort": "86b8898",
+    "commit": "17e1a449988e3f450ffc318749d26d13c0faae5c",
+    "commitShort": "17e1a44",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "fix/all-cash-unscoreable-matchup",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "supabase/functions/process-week-results/index.ts"
+        "path": "supabase/functions/_shared/draft-validation.test.ts"
       },
       {
         "code": "M",
-        "path": "supabase/functions/process-week-results/scoring-eligibility.test.ts"
+        "path": "supabase/functions/_shared/draft-validation.ts"
+      },
+      {
+        "code": "A",
+        "path": "supabase/functions/_shared/snapshot-holdings.test.ts"
+      },
+      {
+        "code": "A",
+        "path": "supabase/functions/_shared/snapshot-holdings.ts"
       },
       {
         "code": "M",
-        "path": "supabase/functions/process-week-results/scoring-eligibility.ts"
+        "path": "supabase/functions/record-trade/index.ts"
       },
       {
         "code": "M",
-        "path": "supabase/functions/process-week-results/user-score.test.ts"
+        "path": "supabase/functions/snapshot-week-end/close.test.ts"
       },
       {
         "code": "M",
-        "path": "supabase/functions/process-week-results/user-score.ts"
+        "path": "supabase/functions/snapshot-week-end/index.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/snapshot-week-start/index.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/snapshot-week-start/plan.test.ts"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20261006000000_trades_funded_by_trade_id.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20261007000000_username_write_path.sql"
       }
     ],
-    "timestamp": "2026-09-29T16:50:16Z",
-    "sourceHash": "sha256:ae3eae5ed7d63b01e7b25cf5654b8584af994571f847576521599cbc036680b5",
+    "timestamp": "2026-09-29T18:16:10Z",
+    "sourceHash": "sha256:bdcae24d486f63c15c807fb8f14fc01d1d5d25307018741a9a6a4c2cdc4fd547",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1164,
-    "ageDays": 48.5,
+    "ageHours": 1165.4,
+    "ageDays": 48.6,
     "staleAfterDays": 14,
     "stale": true,
     "hash": "sha256:3c923bcd46e36dfa365d24852d7b8fb6ead9ff99a06c3b26dc0853c648e07ded",
@@ -561,7 +585,7 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 257
+        "lines": 334
       },
       "db": null,
       "declared": null,
@@ -574,7 +598,7 @@
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/record-trade/index.ts",
-        "line": 78
+        "line": 101
       }
     },
     {
@@ -689,7 +713,7 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 505
+        "lines": 474
       },
       "db": null,
       "declared": null,
@@ -702,7 +726,7 @@
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/snapshot-week-end/index.ts",
-        "line": 234
+        "line": 198
       }
     },
     {
@@ -724,7 +748,7 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 566
+        "lines": 565
       },
       "db": null,
       "declared": null,
@@ -737,7 +761,7 @@
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/snapshot-week-start/index.ts",
-        "line": 261
+        "line": 230
       }
     },
     {
@@ -1162,6 +1186,37 @@
       "source": {
         "path": "supabase/migrations/20260716000000_preview_join_league_infra.sql",
         "line": 26
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261007000000_username_write_path.sql:167"
+        ],
+        "latestDefinition": "supabase/migrations/20261007000000_username_write_path.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.check_usernames",
+      "label": "check_usernames()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261007000000_username_write_path.sql",
+        "line": 167
       }
     },
     {
@@ -1800,6 +1855,37 @@
       "source": {
         "path": "supabase/migrations/20260727000000_fix_schedule_snapshot_retry_cron_expression.sql",
         "line": 69
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261007000000_username_write_path.sql:98"
+        ],
+        "latestDefinition": "supabase/migrations/20261007000000_username_write_path.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.set_username",
+      "label": "set_username()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261007000000_username_write_path.sql",
+        "line": 98
       }
     },
     {
@@ -3302,7 +3388,8 @@
         "touchedBy": [
           "supabase/migrations/20250118000000_create_trades.sql",
           "supabase/migrations/20251210000000_add_alpaca_order_id_to_trades.sql",
-          "supabase/migrations/20260810000000_widen_draft_trade_quantity_numeric.sql"
+          "supabase/migrations/20260810000000_widen_draft_trade_quantity_numeric.sql",
+          "supabase/migrations/20261006000000_trades_funded_by_trade_id.sql"
         ],
         "rlsEnabled": true
       },
@@ -3370,7 +3457,8 @@
         "touchedBy": [
           "supabase/migrations/20251210100000_create_user_profiles.sql",
           "supabase/migrations/20251230230000_add_avatar_to_profiles.sql",
-          "supabase/migrations/20260122000000_add_push_tokens.sql"
+          "supabase/migrations/20260122000000_add_push_tokens.sql",
+          "supabase/migrations/20261007000000_username_write_path.sql"
         ],
         "rlsEnabled": true
       },
@@ -4791,8 +4879,8 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('check_and_bump_rate_limit')",
       "callSites": [
-        "supabase/functions/record-trade/index.ts:66",
-        "supabase/functions/record-trade/index.ts:69"
+        "supabase/functions/record-trade/index.ts:89",
+        "supabase/functions/record-trade/index.ts:92"
       ]
     },
     {
@@ -4807,7 +4895,7 @@
         "user_id, symbol, entry_price, quantity, pick_number, slot_id"
       ],
       "callSites": [
-        "supabase/functions/record-trade/index.ts:138"
+        "supabase/functions/record-trade/index.ts:169"
       ]
     },
     {
@@ -4822,7 +4910,7 @@
         "id, slot_index, slot_count, price_min, price_max, category_id"
       ],
       "callSites": [
-        "supabase/functions/record-trade/index.ts:178"
+        "supabase/functions/record-trade/index.ts:237"
       ]
     },
     {
@@ -4837,7 +4925,7 @@
         "user_id"
       ],
       "callSites": [
-        "supabase/functions/record-trade/index.ts:128"
+        "supabase/functions/record-trade/index.ts:159"
       ]
     },
     {
@@ -4852,7 +4940,7 @@
         "id, num_rounds, draft_status, stake_mode, budget_amount, notional_per_slot, allow_undraftable"
       ],
       "callSites": [
-        "supabase/functions/record-trade/index.ts:115"
+        "supabase/functions/record-trade/index.ts:146"
       ]
     },
     {
@@ -4867,7 +4955,7 @@
         "is_draftable"
       ],
       "callSites": [
-        "supabase/functions/record-trade/index.ts:203"
+        "supabase/functions/record-trade/index.ts:262"
       ]
     },
     {
@@ -4877,12 +4965,12 @@
       "from": "fn.record-trade",
       "to": "tbl.trades",
       "protocol": "postgrest-select",
-      "payload": ".from('trades').select('user_id, symbol, action, quantity, price')",
+      "payload": ".from('trades').select('id, user_id, symbol, action, quantity, price, total_value, created_at, funded_by_trade_id')",
       "columns": [
-        "user_id, symbol, action, quantity, price"
+        "id, user_id, symbol, action, quantity, price, total_value, created_at, funded_by_trade_id"
       ],
       "callSites": [
-        "supabase/functions/record-trade/index.ts:145"
+        "supabase/functions/record-trade/index.ts:176"
       ]
     },
     {
@@ -4895,7 +4983,7 @@
       "payload": ".from('trades').insert()",
       "columns": [],
       "callSites": [
-        "supabase/functions/record-trade/index.ts:238"
+        "supabase/functions/record-trade/index.ts:303"
       ]
     },
     {
@@ -5045,7 +5133,7 @@
       "protocol": "vendor-https",
       "payload": "https://data.alpaca.markets/v2",
       "callSites": [
-        "supabase/functions/snapshot-week-end/index.ts:22"
+        "supabase/functions/snapshot-week-end/index.ts:23"
       ]
     },
     {
@@ -5069,7 +5157,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('schedule_snapshot_retry')",
       "callSites": [
-        "supabase/functions/snapshot-week-end/index.ts:100"
+        "supabase/functions/snapshot-week-end/index.ts:101"
       ]
     },
     {
@@ -5082,7 +5170,7 @@
       "payload": ".from('cron_job_status').upsert()",
       "columns": [],
       "callSites": [
-        "supabase/functions/snapshot-week-end/index.ts:72"
+        "supabase/functions/snapshot-week-end/index.ts:73"
       ]
     },
     {
@@ -5097,7 +5185,7 @@
         "user_id, symbol, quantity"
       ],
       "callSites": [
-        "supabase/functions/snapshot-week-end/index.ts:336"
+        "supabase/functions/snapshot-week-end/index.ts:284"
       ]
     },
     {
@@ -5112,7 +5200,7 @@
         "id, current_week, num_weeks"
       ],
       "callSites": [
-        "supabase/functions/snapshot-week-end/index.ts:266"
+        "supabase/functions/snapshot-week-end/index.ts:230"
       ]
     },
     {
@@ -5127,7 +5215,7 @@
         "team1_user_id, team2_user_id"
       ],
       "callSites": [
-        "supabase/functions/snapshot-week-end/index.ts:318"
+        "supabase/functions/snapshot-week-end/index.ts:279"
       ]
     },
     {
@@ -5142,7 +5230,7 @@
         "user_id, symbol, action, quantity, price"
       ],
       "callSites": [
-        "supabase/functions/snapshot-week-end/index.ts:344"
+        "supabase/functions/snapshot-week-end/index.ts:288"
       ]
     },
     {
@@ -5157,7 +5245,7 @@
         "id, user_id, symbol, quantity, week_start_price, week_end_price"
       ],
       "callSites": [
-        "supabase/functions/snapshot-week-end/index.ts:299"
+        "supabase/functions/snapshot-week-end/index.ts:274"
       ]
     },
     {
@@ -5170,7 +5258,7 @@
       "payload": ".from('week_snapshots').update()",
       "columns": [],
       "callSites": [
-        "supabase/functions/snapshot-week-end/index.ts:425"
+        "supabase/functions/snapshot-week-end/index.ts:394"
       ]
     },
     {
@@ -5183,7 +5271,7 @@
       "payload": ".from('week_snapshots').upsert()",
       "columns": [],
       "callSites": [
-        "supabase/functions/snapshot-week-end/index.ts:440"
+        "supabase/functions/snapshot-week-end/index.ts:409"
       ]
     },
     {
@@ -5195,7 +5283,7 @@
       "protocol": "vendor-https",
       "payload": "https://data.alpaca.markets/v2",
       "callSites": [
-        "supabase/functions/snapshot-week-start/index.ts:29"
+        "supabase/functions/snapshot-week-start/index.ts:30"
       ]
     },
     {
@@ -5207,7 +5295,7 @@
       "protocol": "vendor-https",
       "payload": "https://paper-api.alpaca.markets/v2",
       "callSites": [
-        "supabase/functions/snapshot-week-start/index.ts:30"
+        "supabase/functions/snapshot-week-start/index.ts:31"
       ]
     },
     {
@@ -5231,7 +5319,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('schedule_snapshot_retry')",
       "callSites": [
-        "supabase/functions/snapshot-week-start/index.ts:135"
+        "supabase/functions/snapshot-week-start/index.ts:136"
       ]
     },
     {
@@ -5244,7 +5332,7 @@
       "payload": ".from('cron_job_status').upsert()",
       "columns": [],
       "callSites": [
-        "supabase/functions/snapshot-week-start/index.ts:107"
+        "supabase/functions/snapshot-week-start/index.ts:108"
       ]
     },
     {
@@ -5259,7 +5347,7 @@
         "user_id, symbol, quantity"
       ],
       "callSites": [
-        "supabase/functions/snapshot-week-start/index.ts:373"
+        "supabase/functions/snapshot-week-start/index.ts:368"
       ]
     },
     {
@@ -5274,7 +5362,7 @@
         "id, current_week, num_weeks"
       ],
       "callSites": [
-        "supabase/functions/snapshot-week-start/index.ts:312"
+        "supabase/functions/snapshot-week-start/index.ts:281"
       ]
     },
     {
@@ -5289,7 +5377,7 @@
         "team1_user_id, team2_user_id"
       ],
       "callSites": [
-        "supabase/functions/snapshot-week-start/index.ts:350"
+        "supabase/functions/snapshot-week-start/index.ts:341"
       ]
     },
     {
@@ -5304,7 +5392,7 @@
         "user_id, symbol, action, quantity"
       ],
       "callSites": [
-        "supabase/functions/snapshot-week-start/index.ts:379"
+        "supabase/functions/snapshot-week-start/index.ts:372"
       ]
     },
     {
@@ -5319,7 +5407,7 @@
         "user_id, week_end_price"
       ],
       "callSites": [
-        "supabase/functions/snapshot-week-start/index.ts:397"
+        "supabase/functions/snapshot-week-start/index.ts:376"
       ]
     },
     {
@@ -5332,7 +5420,7 @@
       "payload": ".from('week_snapshots').upsert()",
       "columns": [],
       "callSites": [
-        "supabase/functions/snapshot-week-start/index.ts:488"
+        "supabase/functions/snapshot-week-start/index.ts:487"
       ]
     },
     {
@@ -5589,6 +5677,19 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20260716000000_preview_join_league_infra.sql:32"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.check_usernames->tbl.user_profiles",
+      "from": "pg.check_usernames",
+      "to": "tbl.user_profiles",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT user_profiles (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261007000000_username_write_path.sql:193"
       ]
     },
     {
@@ -6088,6 +6189,32 @@
         "supabase/migrations/20260612000000_migrate_snapshot_week_end_cron_auth.sql:151",
         "supabase/migrations/20260618000001_migrate_snapshot_week_start_cron_auth.sql:118",
         "supabase/migrations/20260727000000_fix_schedule_snapshot_retry_cron_expression.sql:135"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.set_username->tbl.user_profiles",
+      "from": "pg.set_username",
+      "to": "tbl.user_profiles",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT user_profiles (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261007000000_username_write_path.sql:121"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.set_username->tbl.user_profiles#insert",
+      "from": "pg.set_username",
+      "to": "tbl.user_profiles",
+      "protocol": "plpgsql-insert",
+      "payload": "INSERT user_profiles (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261007000000_username_write_path.sql:134"
       ]
     },
     {
@@ -8428,7 +8555,7 @@
           "edge": "e.fn.snapshot-week-start->ext.alpaca-data",
           "detail": "Historical bars for week-start prices.",
           "files": [
-            "supabase/functions/snapshot-week-start/index.ts:29"
+            "supabase/functions/snapshot-week-start/index.ts:30"
           ]
         },
         {
@@ -8436,7 +8563,7 @@
           "edge": "e.fn.snapshot-week-start->tbl.week_snapshots",
           "detail": "ALL-OR-NOTHING per league-week with completeness-based skip (fixed in 2caf9f8). A partial price fetch writes nothing rather than a half-week.",
           "files": [
-            "supabase/functions/snapshot-week-start/index.ts:397"
+            "supabase/functions/snapshot-week-start/index.ts:376"
           ]
         },
         {
@@ -8444,7 +8571,7 @@
           "edge": "e.fn.snapshot-week-start->pg.schedule_snapshot_retry",
           "detail": "Retry scheduling, shared with snapshot-week-end.",
           "files": [
-            "supabase/functions/snapshot-week-start/index.ts:135"
+            "supabase/functions/snapshot-week-start/index.ts:136"
           ]
         }
       ],
@@ -8481,7 +8608,7 @@
           "edge": "e.fn.snapshot-week-end->ext.alpaca-data",
           "detail": "Friday close prices.",
           "files": [
-            "supabase/functions/snapshot-week-end/index.ts:22"
+            "supabase/functions/snapshot-week-end/index.ts:23"
           ]
         },
         {
@@ -8498,7 +8625,7 @@
           "edge": "e.fn.snapshot-week-end->tbl.week_snapshots#update",
           "detail": "Writes week_end_price onto existing Monday rows.",
           "files": [
-            "supabase/functions/snapshot-week-end/index.ts:426"
+            "supabase/functions/snapshot-week-end/index.ts:395"
           ]
         },
         {
@@ -8508,7 +8635,7 @@
           "files": [
             "supabase/functions/snapshot-week-end/close.ts:102",
             "supabase/functions/snapshot-week-end/close.ts:160",
-            "supabase/functions/snapshot-week-end/index.ts:441"
+            "supabase/functions/snapshot-week-end/index.ts:410"
           ]
         },
         {
@@ -8516,7 +8643,7 @@
           "edge": "e.fn.snapshot-week-end->pg.schedule_snapshot_retry",
           "detail": "Shared retry path.",
           "files": [
-            "supabase/functions/snapshot-week-end/index.ts:100"
+            "supabase/functions/snapshot-week-end/index.ts:101"
           ]
         }
       ],
@@ -8561,7 +8688,7 @@
           "edge": "e.fn.record-trade->pg.check_and_bump_rate_limit",
           "detail": "Per-user and per-IP buckets.",
           "files": [
-            "supabase/functions/record-trade/index.ts:66"
+            "supabase/functions/record-trade/index.ts:89"
           ]
         },
         {
@@ -8569,7 +8696,7 @@
           "edge": "e.fn.record-trade->tbl.leagues",
           "detail": "League rules: stake mode, budget, notional, allow_undraftable.",
           "files": [
-            "supabase/functions/record-trade/index.ts:197"
+            "supabase/functions/record-trade/index.ts:256"
           ]
         },
         {
@@ -8577,7 +8704,7 @@
           "edge": "e.fn.record-trade->tbl.symbols",
           "detail": "is_draftable gate for buys (bypassed only when the commissioner set allow_undraftable).",
           "files": [
-            "supabase/functions/record-trade/index.ts:203"
+            "supabase/functions/record-trade/index.ts:262"
           ]
         },
         {
@@ -8585,7 +8712,7 @@
           "edge": "e.fn.record-trade->tbl.trades#insert",
           "detail": "Validated by the shared pure module (_shared/draft-validation.ts), filled at the server-fetched price. KNOWN RACE: two concurrent buys can both pass validation — needs an atomic SECURITY DEFINER RPC.",
           "files": [
-            "supabase/functions/record-trade/index.ts:211"
+            "supabase/functions/record-trade/index.ts:270"
           ]
         }
       ],
@@ -8839,6 +8966,16 @@
       "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
     },
     {
+      "node": "pg.check_usernames",
+      "label": "check_usernames()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
       "node": "pg.enforce_leagues_member_update_columns",
       "label": "enforce_leagues_member_update_columns()",
       "groupKey": "existence",
@@ -8911,6 +9048,16 @@
     {
       "node": "pg.restrict_new_signups",
       "label": "restrict_new_signups()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.set_username",
+      "label": "set_username()",
       "groupKey": "existence",
       "field": "existence",
       "declared": "created by migration",
@@ -9123,6 +9270,16 @@
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
     {
+      "node": "pg.check_usernames",
+      "label": "check_usernames()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261007000000_username_write_path.sql:167",
+      "outbound": [
+        "tbl.user_profiles"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
       "node": "pg.get_home_summary",
       "label": "get_home_summary()",
       "kind": "pg-function",
@@ -9179,6 +9336,17 @@
       "outbound": [
         "tbl.app_config",
         "tbl.signup_allowlist"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "pg.set_username",
+      "label": "set_username()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261007000000_username_write_path.sql:98",
+      "outbound": [
+        "tbl.user_profiles",
+        "tbl.user_profiles"
       ],
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
@@ -9321,6 +9489,18 @@
       "resolve": "Re-capture the snapshot, or confirm the migration was applied."
     },
     {
+      "scope": "pg.set_username",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.check_usernames",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
       "scope": "tbl.broker_credentials",
       "claim": "table exists in prod",
       "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
@@ -9371,13 +9551,13 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 131,
-    "edges": 286,
+    "nodes": 133,
+    "edges": 289,
     "flows": 8,
-    "drift": 28,
-    "driftHigh": 10,
-    "deadCode": 16,
-    "unverified": 17
+    "drift": 30,
+    "driftHigh": 12,
+    "deadCode": 18,
+    "unverified": 19
   },
   "sourceIndex": {
     "edgeFunctions": [
@@ -9450,13 +9630,13 @@
       "supabase/functions/preview-league/index.ts:35 -> check_and_bump_rate_limit",
       "supabase/functions/process-week-results/index.ts:494 -> complete_league_season",
       "supabase/functions/process-week-results/index.ts:538 -> complete_league_season",
-      "supabase/functions/record-trade/index.ts:66 -> check_and_bump_rate_limit",
-      "supabase/functions/record-trade/index.ts:69 -> check_and_bump_rate_limit",
+      "supabase/functions/record-trade/index.ts:89 -> check_and_bump_rate_limit",
+      "supabase/functions/record-trade/index.ts:92 -> check_and_bump_rate_limit",
       "supabase/functions/refresh-market-calendar/index.ts:148 -> apply_market_calendar",
       "supabase/functions/send-notification/index.ts:101 -> check_and_bump_rate_limit",
       "supabase/functions/send-notification/index.ts:104 -> check_and_bump_rate_limit",
-      "supabase/functions/snapshot-week-end/index.ts:100 -> schedule_snapshot_retry",
-      "supabase/functions/snapshot-week-start/index.ts:135 -> schedule_snapshot_retry",
+      "supabase/functions/snapshot-week-end/index.ts:101 -> schedule_snapshot_retry",
+      "supabase/functions/snapshot-week-start/index.ts:136 -> schedule_snapshot_retry",
       "supabase/functions/validate-and-record-pick/index.ts:103 -> check_and_bump_rate_limit",
       "supabase/functions/validate-and-record-pick/index.ts:106 -> check_and_bump_rate_limit",
       "supabase/functions/validate-and-record-pick/index.ts:560 -> finalize_league_draft"
@@ -9624,13 +9804,13 @@
       "supabase/functions/process-week-results/index.ts:740 -> drafts.select",
       "supabase/functions/process-week-results/index.ts:753 -> trades.select",
       "supabase/functions/process-week-results/job-status.ts:61 -> cron_job_status.upsert",
-      "supabase/functions/record-trade/index.ts:115 -> leagues.select",
-      "supabase/functions/record-trade/index.ts:128 -> league_members.select",
-      "supabase/functions/record-trade/index.ts:138 -> drafts.select",
-      "supabase/functions/record-trade/index.ts:145 -> trades.select",
-      "supabase/functions/record-trade/index.ts:178 -> league_draft_slots.select",
-      "supabase/functions/record-trade/index.ts:203 -> symbols.select",
-      "supabase/functions/record-trade/index.ts:238 -> trades.insert",
+      "supabase/functions/record-trade/index.ts:146 -> leagues.select",
+      "supabase/functions/record-trade/index.ts:159 -> league_members.select",
+      "supabase/functions/record-trade/index.ts:169 -> drafts.select",
+      "supabase/functions/record-trade/index.ts:176 -> trades.select",
+      "supabase/functions/record-trade/index.ts:237 -> league_draft_slots.select",
+      "supabase/functions/record-trade/index.ts:262 -> symbols.select",
+      "supabase/functions/record-trade/index.ts:303 -> trades.insert",
       "supabase/functions/refresh-symbols/index.ts:171 -> symbols.upsert",
       "supabase/functions/send-notification/index.ts:148 -> user_profiles.select",
       "supabase/functions/send-notification/index.ts:153 -> push_tokens.select",
@@ -9638,21 +9818,21 @@
       "supabase/functions/send-notification/index.ts:214 -> league_members.select",
       "supabase/functions/send-notification/index.ts:220 -> league_members.select",
       "supabase/functions/send-notification/index.ts:229 -> leagues.select",
-      "supabase/functions/snapshot-week-end/index.ts:266 -> leagues.select",
-      "supabase/functions/snapshot-week-end/index.ts:299 -> week_snapshots.select",
-      "supabase/functions/snapshot-week-end/index.ts:318 -> matchups.select",
-      "supabase/functions/snapshot-week-end/index.ts:336 -> drafts.select",
-      "supabase/functions/snapshot-week-end/index.ts:344 -> trades.select",
-      "supabase/functions/snapshot-week-end/index.ts:425 -> week_snapshots.update",
-      "supabase/functions/snapshot-week-end/index.ts:440 -> week_snapshots.upsert",
-      "supabase/functions/snapshot-week-end/index.ts:72 -> cron_job_status.upsert",
-      "supabase/functions/snapshot-week-start/index.ts:107 -> cron_job_status.upsert",
-      "supabase/functions/snapshot-week-start/index.ts:312 -> leagues.select",
-      "supabase/functions/snapshot-week-start/index.ts:350 -> matchups.select",
-      "supabase/functions/snapshot-week-start/index.ts:373 -> drafts.select",
-      "supabase/functions/snapshot-week-start/index.ts:379 -> trades.select",
-      "supabase/functions/snapshot-week-start/index.ts:397 -> week_snapshots.select",
-      "supabase/functions/snapshot-week-start/index.ts:488 -> week_snapshots.upsert",
+      "supabase/functions/snapshot-week-end/index.ts:230 -> leagues.select",
+      "supabase/functions/snapshot-week-end/index.ts:274 -> week_snapshots.select",
+      "supabase/functions/snapshot-week-end/index.ts:279 -> matchups.select",
+      "supabase/functions/snapshot-week-end/index.ts:284 -> drafts.select",
+      "supabase/functions/snapshot-week-end/index.ts:288 -> trades.select",
+      "supabase/functions/snapshot-week-end/index.ts:394 -> week_snapshots.update",
+      "supabase/functions/snapshot-week-end/index.ts:409 -> week_snapshots.upsert",
+      "supabase/functions/snapshot-week-end/index.ts:73 -> cron_job_status.upsert",
+      "supabase/functions/snapshot-week-start/index.ts:108 -> cron_job_status.upsert",
+      "supabase/functions/snapshot-week-start/index.ts:281 -> leagues.select",
+      "supabase/functions/snapshot-week-start/index.ts:341 -> matchups.select",
+      "supabase/functions/snapshot-week-start/index.ts:368 -> drafts.select",
+      "supabase/functions/snapshot-week-start/index.ts:372 -> trades.select",
+      "supabase/functions/snapshot-week-start/index.ts:376 -> week_snapshots.select",
+      "supabase/functions/snapshot-week-start/index.ts:487 -> week_snapshots.upsert",
       "supabase/functions/symbol-name/index.ts:36 -> symbols.select",
       "supabase/functions/symbols-search/index.ts:107 -> symbols.select",
       "supabase/functions/symbols-search/index.ts:118 -> symbols.select",
@@ -9760,7 +9940,9 @@
       "20261005000001_signup_username_trigger.sql",
       "20261005000002_market_calendar.sql",
       "20261005000003_schedule_refresh_market_calendar.sql",
-      "20261005000004_backfill_missing_user_profiles.sql"
+      "20261005000004_backfill_missing_user_profiles.sql",
+      "20261006000000_trades_funded_by_trade_id.sql",
+      "20261007000000_username_write_path.sql"
     ],
     "config": [
       "draft-control=true",
