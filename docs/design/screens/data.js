@@ -53,6 +53,16 @@
     const s = v < 0 ? MINUS : o.sign === 'always' ? '+' : '';
     return `${s}${Math.floor(h / 100)}.${String(h % 100).padStart(2, '0')}%`;
   }
+  /** The ONE score-display helper. `s` is { gain, pct }. Returns the
+   * deciding metric as the primary string and the tiebreak as secondary. */
+  function scoreDisplay(s, scoring) {
+    const sc = scoring || { decides: 'dollars', tiebreak: 'percent' };
+    const money = formatMoney(s.gain, { sign: 'always' });
+    const pctS = formatPct(s.pct, { sign: 'always' });
+    return sc.decides === 'percent'
+      ? { primary: pctS, secondary: money, value: s.pct }
+      : { primary: money, secondary: pctS, value: s.gain };
+  }
   function tugRatio(you, opp) {
     const d = Math.max(Math.abs(you) + Math.abs(opp), 1);
     return Math.min(0.92, Math.max(0.08, 0.5 + (0.5 * (you - opp)) / d));
@@ -68,6 +78,14 @@
     stakeMode: 'fixed_notional',
     notionalPerSlot: 2000,
     slots: 6,
+    // Draft pick clock: default 60s; the commissioner sets 30–90s (Giorgio,
+    // 2026-09-29). Not yet in the backend: a server-enforced timeout is a
+    // backend feature (auto-pick vs skip still to decide).
+    pickClock: { seconds: 60, min: 30, max: 90, step: 15 },
+    // What DECIDES a matchup. Today (DR-001) dollars decide in every stake
+    // mode and percent breaks ties. Every score on every screen goes through
+    // scoreDisplay() below, so changing this is a one-place edit.
+    scoring: { decides: 'dollars', tiebreak: 'percent' },
   };
 
   const PLAYERS = [
@@ -98,7 +116,7 @@
 
   /** The Draft room screen's moment: draft night, round 2, pick 11,
    * you're on the clock, 0:42 left. Picks 1–10 are in. */
-  const DRAFT_MOMENT = { pick: 11, secondsLeft: 42, secondsTotal: 60, queued: 'AAPL' };
+  const DRAFT_MOMENT = { pick: 11, secondsLeft: 42, secondsTotal: LEAGUE.pickClock.seconds, queued: 'AAPL' };
   const DRAFT_PICKS = Array.from({ length: 18 }, (_, k) => {
     const n = k + 1;
     const seat = seatForPick(n, 6);
@@ -205,13 +223,23 @@
   // ── Standings ──────────────────────────────────────────────────────────
   // Weeks 1–5 are a legal league (15 wins = 15 losses). Week 6 pairings:
   // Roberto–Gianluigi, Paolo–Alessandro, Francesco–Andrea.
+  // Season gain = the sum of a manager's weekly matchup gains. Roberto's
+  // weeks 1–5 are ROBERTO_WEEKS below (sum +$129.99), so his season gain,
+  // his Home chart and his portfolio's gain since the draft all agree.
+  const ROBERTO_WEEKS = [
+    { week: 1, gain: 41.3, result: 'W' },
+    { week: 2, gain: 58.75, result: 'W' },
+    { week: 3, gain: -96.4, result: 'L' },
+    { week: 4, gain: 72.1, result: 'W' },
+    { week: 5, gain: 54.24, result: 'W' },
+  ];
   const THROUGH_W5 = {
-    paolo: { w: 5, l: 0, pf: 1188.4 },
-    roberto: { w: 4, l: 1, pf: 842.35 },
-    alessandro: { w: 3, l: 2, pf: 903.1 },
-    francesco: { w: 2, l: 3, pf: 410.25 },
-    gianluigi: { w: 1, l: 4, pf: -122.6 },
-    andrea: { w: 0, l: 5, pf: -385.9 },
+    paolo: { w: 5, l: 0, pf: 512.4 },
+    roberto: { w: 4, l: 1, pf: sum(ROBERTO_WEEKS.map((w) => w.gain)) },
+    alessandro: { w: 3, l: 2, pf: 348.15 },
+    francesco: { w: 2, l: 3, pf: 96.2 },
+    gianluigi: { w: 1, l: 4, pf: -142.35 },
+    andrea: { w: 0, l: 5, pf: -231.8 },
   };
   const WEEK6 = [
     { a: 'roberto', b: 'gianluigi', ga: MATCHUP.final.you.gain, gb: MATCHUP.final.opp.gain },
@@ -255,51 +283,52 @@
     return { rows, value, cost, gain: cents(value - cost), gainPct: ((value - cost) / cost) * 100, today, todayPct: (today / prevValue) * 100 };
   })();
 
-  // A second live league so Home's cross-league view is real.
+  // Home shows ONE league: the one picked in the league pill (Giorgio,
+  // 2026-09-29). Other leagues appear only as a small switcher row.
   const OTHER_LEAGUES = [
-    {
-      name: 'Friday Night Stocks',
-      phase: 'live_open',
-      week: 2,
-      weeks: 10,
-      opp: 'Marco R.',
-      you: 42.18,
-      oppGain: -15.6,
-      value: 5058.3,
-      cost: 5000,
-      rank: 3,
-      record: '1–0',
-      members: 8,
-    },
-    {
-      name: 'Serie A Traders',
-      phase: 'pre_draft',
-      draftAt: 'Draft Sat 7:00 PM',
-      members: 6,
-      of: 8,
-    },
+    { name: 'Friday Night Stocks', phase: 'live_open', status: 'Week 2 · Live', rank: '3rd of 8', record: '1–0' },
+    { name: 'Serie A Traders', phase: 'pre_draft', status: 'Draft Sat 7:00 PM', rank: null, record: null },
   ];
-  // Home chart: cumulative gain (value − cost + realized) across leagues,
-  // one point per trading day, 1M window, rebased to the window start.
-  // It ends EXACTLY at the header's 1M gain (see HOME below).
-  const HOME_SERIES_RAW = [
-    // Stock Scudetto contributes from day 0; Friday Night Stocks joins on
-    // day 13 (a deposit: NO jump, because the line is gain, not value).
-    118.2, 131.6, 109.4, 95.8, 122.9, 140.3, 151.7, 138.2, 162.5, 171.9,
-    158.4, 149.6, 176.3, 188.1, 201.4, 215.8, 196.2, 224.6, 262.3, 319.5, 294.1,
+
+  // Home chart: this league's cumulative gain since the draft (value − cost
+  // + realized; no trades yet, so value − cost), one point per trading day.
+  // Weeks 1–5 end exactly on each week's result; Week 6 follows the matchup's
+  // daily closes, and the last point is the LIVE gain. Weekend gaps are zero
+  // in this sample (Monday opens at Friday's close), so the chart's rise this
+  // week equals the matchup score.
+  const DAY_SHAPES = [
+    [0.4, 0.9, 0.6, 1.2, 1],
+    [0.3, 0.2, 0.7, 0.9, 1],
+    [-0.2, 0.3, 0.6, 0.85, 1],
+    [0.5, 1.1, 0.8, 0.7, 1],
+    [0.2, -0.3, 0.4, 0.9, 1],
   ];
   const HOME = (() => {
-    const scudetto = PORTFOLIO_LIVE;
-    const fns = OTHER_LEAGUES[0];
-    const totalValue = cents(scudetto.value + fns.value);
-    const nowGain = cents(scudetto.gain + (fns.value - fns.cost));
-    // Replace the last point with the true current all-time gain, then
-    // rebase the window to its first point.
-    const raw = HOME_SERIES_RAW.slice();
-    raw.push(nowGain);
-    const base = raw[0];
-    const series = raw.map((v) => cents(v - base));
-    return { totalValue, allTimeGain: nowGain, windowGain: series[series.length - 1], series, joinedIndex: 13 };
+    const P = PORTFOLIO_LIVE;
+    const series = [0];
+    const weekStarts = [0];
+    let base = 0;
+    ROBERTO_WEEKS.forEach((w, i) => {
+      DAY_SHAPES[i].forEach((f) => series.push(cents(base + w.gain * f)));
+      base = cents(base + w.gain);
+      weekStarts.push(series.length - 1);
+    });
+    // Week 6: Mon–Wed closes, then Thursday live.
+    WEEK_CLOSES.slice(1, 4).forEach((d) => series.push(cents(base + d.you)));
+    series.push(P.gain);
+    return {
+      value: P.value,
+      gain: P.gain,
+      gainPct: P.gainPct,
+      today: P.today,
+      todayPct: P.todayPct,
+      series,
+      weekStarts, // index where each week begins (W1..W6)
+      weekResults: ROBERTO_WEEKS,
+      throughW5: base,
+      rank: 2,
+      record: '4–1',
+    };
   })();
 
   // The stock sheet (NVDA), Thursday live.
@@ -319,7 +348,7 @@
     DRAFT_MOMENT, DRAFT_PICKS, DRAFT_SEARCH,
     MATCHUP, WEEK_CLOSES, CHYRONS,
     STANDINGS_BEFORE, STANDINGS_FINAL, WEEK6,
-    PORTFOLIO_LIVE, OTHER_LEAGUES, HOME, NVDA,
-    lineup, score,
+    PORTFOLIO_LIVE, OTHER_LEAGUES, HOME, NVDA, ROBERTO_WEEKS,
+    lineup, score, scoreDisplay,
   };
 })();

@@ -15,6 +15,13 @@
   const $s = (v) => K.formatMoney(v, { sign: 'always' });
   const pct = (v) => K.formatPct(v, { sign: 'always' });
   const tone = (v) => (Math.round(Math.abs(v) * 100) === 0 ? 'ks-zero' : v > 0 ? 'ks-gain' : 'ks-loss');
+  // Every score goes through ONE helper (data.js scoreDisplay): the metric
+  // that decides the matchup is primary, the tiebreak secondary.
+  const SD = (x) => K.scoreDisplay(x, K.LEAGUE.scoring);
+  const margin = (a, b) =>
+    K.LEAGUE.scoring.decides === 'percent'
+      ? `${Math.abs(a.pct - b.pct).toFixed(2)} pts`
+      : $(Math.abs(a.gain - b.gain));
   const reduced = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // ── Icons (one outline set; filled weight on the active tab) ──────────
@@ -39,7 +46,7 @@
 
   // ── Device chrome ─────────────────────────────────────────────────────
   const TABS = [['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['portfolio', 'Portfolio']];
-  function Device({ game, tab, children, overlay, label }) {
+  function Device({ game, tab, children, overlay, label, noTabs }) {
     return (
       <div className={game ? 'ks-device ks-device--game' : 'ks-device'} role="img" aria-label={label}>
         <div className="ks-os">
@@ -50,15 +57,15 @@
             <span className="ks-os__batt"><i /></span>
           </span>
         </div>
-        <div className="ks-scroll">{children}</div>
-        <nav className="ks-tabs">
+        <div className="ks-scroll" style={noTabs ? { bottom: 34 } : undefined}>{children}</div>
+        {noTabs ? null : <nav className="ks-tabs">
           {TABS.map(([id, name]) => (
             <span key={id} className={id === tab ? 'ks-tabs__t ks-tabs__t--on' : 'ks-tabs__t'}>
               <Icon d={ICON[id]} width={id === tab ? 2.4 : 1.8} />
               {name}
             </span>
           ))}
-        </nav>
+        </nav>}
         <span className="ks-home-ind" />
         {overlay}
       </div>
@@ -150,7 +157,7 @@
   }
 
   // ── Line chart helper (zero baseline, gain above / loss below) ─────────
-  function GainChart({ series, w = 362, h = 148, marker, run }) {
+  function GainChart({ series, w = 362, h = 148, marker, weeks, run, label = 'Cumulative gain' }) {
     const pad = { t: 10, b: 22, l: 0, r: 0 };
     const min = Math.min(0, ...series);
     const max = Math.max(0, ...series);
@@ -162,7 +169,7 @@
     const id = useRef(`c${Math.random().toString(36).slice(2, 8)}`).current;
     const end = series[series.length - 1];
     return (
-      <svg className="ks-chart" viewBox={`0 0 ${w} ${h}`} role="img" aria-label={`Cumulative gain, past month: ${$s(end)}`}>
+      <svg className="ks-chart" viewBox={`0 0 ${w} ${h}`} role="img" aria-label={`${label}: ${$s(end)}`}>
         <defs>
           <clipPath id={`${id}a`}><rect x="0" y="0" width={w} height={z} /></clipPath>
           <clipPath id={`${id}b`}><rect x="0" y={z} width={w} height={h - z} /></clipPath>
@@ -181,6 +188,12 @@
             <text x={x(marker)} y={h - 4} textAnchor="middle" fontSize="11" fontWeight="600" fill="var(--sp-color-text-secondary)">Joined Friday Night Stocks</text>
           </g>
         ) : null}
+        {weeks ? weeks.map((ix, k) => (
+          <g key={k}>
+            <line x1={x(ix)} x2={x(ix)} y1={h - 20} y2={h - 16} stroke="var(--sp-color-border-control)" strokeWidth="1" />
+            <text x={Math.min(x(ix) + 2, w - 18)} y={h - 4} fontSize="11" fontWeight="600" fill="var(--sp-color-text-secondary)">W{k + 1}</text>
+          </g>
+        )) : null}
         <text x="2" y={z - 6} fontSize="11" fontWeight="600" fill="var(--sp-color-text-secondary)">$0</text>
       </svg>
     );
@@ -214,79 +227,92 @@
   // ═════════════════════════════════════════════════════════════════════
   // 1. HOME
   // ═════════════════════════════════════════════════════════════════════
-  function ThisWeekCard({ league, week, oppName, you, opp, left, init }) {
-    const lead = you - opp;
+  function ThisWeekCard({ you, opp, oppName, left }) {
+    const y = SD(you), o = SD(opp);
+    const ahead = y.value >= o.value;
     return (
       <div className="ks-game" style={{ padding: 16, display: 'grid', gap: 10 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span className="ks-headline" style={{ fontWeight: 700 }}>{league}</span>
-          <Chip kind="live">Week {week} · Live</Chip>
+          <span className="ks-tag" style={{ color: 'var(--sp-color-live)' }}>This week</span>
+          <Chip kind="live">Week {K.LEAGUE.week} · Live</Chip>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between' }} className="ks-callout">
           <span style={{ color: 'var(--sp-color-team-you-on-game)', fontWeight: 700 }}>You</span>
-          <span className="ks-muted">vs {oppName}</span>
+          <span className="ks-muted">{oppName}</span>
         </div>
-        <Scores left={$s(you)} right={$s(opp)} size="lg" />
-        <Tug you={you} opp={opp} />
+        <Scores left={y.primary} right={o.primary} size="lg" />
+        <Tug you={y.value} opp={o.value} />
         <div style={{ display: 'flex', justifyContent: 'space-between' }} className="ks-caption">
-          <span style={{ color: 'var(--sp-color-text-on-game-primary)' }}>{lead >= 0 ? 'You lead by' : 'You trail by'} <b className="ks-num">{$(Math.abs(lead))}</b></span>
+          <span style={{ color: 'var(--sp-color-text-on-game-primary)' }}>{ahead ? 'You lead by' : 'You trail by'} <b className="ks-num">{margin(you, opp)}</b></span>
           <span className="ks-muted">{left}</span>
         </div>
       </div>
     );
   }
 
+  /** Home = the league chosen in the pill. Switching leagues swaps ALL of
+   * it (Giorgio, 2026-09-29): no cross-league totals. */
   function HomeScreen({ run }) {
-    const H = K.HOME, L = K.MATCHUP.live, F = K.OTHER_LEAGUES[0], S = K.OTHER_LEAGUES[1];
+    const H = K.HOME, L = K.MATCHUP.live;
+    const near = K.STANDINGS_BEFORE.slice(0, 3);
     return (
       <Device tab="home" label="Home screen">
         <div className="ks-head">
-          <h2 className="ks-head__title">Home</h2>
+          <span className="ks-pill"><span>{K.LEAGUE.name}</span><Icon d={ICON.chevron} size={14} width={2.6} /></span>
           <span className="ks-avatar" aria-label="Profile">RB</span>
         </div>
         <div className="ks-pad ks-stack">
           <div>
-            <div className="ks-caption">Total value · 2 live leagues</div>
-            <div className="ks-score ks-num" style={{ fontSize: 48, lineHeight: '50px', fontStretch: '75%' }}>{$(H.totalValue)}</div>
-            <div className="ks-callout ks-gain ks-num" style={{ fontWeight: 700 }}>▲ {$s(H.windowGain)} <span className="ks-muted" style={{ fontWeight: 500 }}>past month</span></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <span className="ks-caption">Your team</span>
+              <span className="ks-caption ks-num"><b style={{ color: 'var(--sp-color-text-primary)' }}>2nd</b> of 6 · {H.record} · Week {K.LEAGUE.week} of {K.LEAGUE.weeks}</span>
+            </div>
+            <div className="ks-score ks-num" style={{ fontSize: 48, lineHeight: '50px', fontStretch: '75%' }}>{$(H.value)}</div>
+            <div className="ks-callout ks-num" style={{ fontWeight: 700 }}>
+              <span className="ks-gain">{$s(H.gain)} · {pct(H.gainPct)}</span> <span className="ks-muted" style={{ fontWeight: 500 }}>since the draft</span>
+              <span className="ks-muted" style={{ fontWeight: 500 }}> · </span>
+              <span className="ks-gain">{$s(H.today)}</span> <span className="ks-muted" style={{ fontWeight: 500 }}>today</span>
+            </div>
+          </div>
+          <div className={run ? 'ks-fade-in' : undefined}>
+            <ThisWeekCard you={L.you} opp={L.opp} oppName="vs Gianluigi B." left="Ends Fri 4:00 PM ET" />
           </div>
           <div className="ks-card" style={{ padding: '12px 12px 6px' }}>
-            <GainChart series={H.series} marker={H.joinedIndex} run={run} w={336} h={140} />
-            <div className="ks-seg" style={{ marginTop: 8 }}>
-              <span>1W</span><span className="on">1M</span><span>3M</span><span>All</span>
+            <div className="ks-section-h" style={{ padding: '0 2px' }}><h3>Season</h3><span className="ks-caption">Gain since the draft</span></div>
+            <GainChart series={H.series} weeks={H.weekStarts} run={run} w={336} h={140} label="Gain since the draft" />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4, padding: '6px 0 8px' }}>
+              {H.weekResults.map((w) => (
+                <span key={w.week} className="ks-chip ks-chip--money ks-num" style={{ textTransform: 'none', letterSpacing: 0, fontStretch: '100%', fontSize: 12, height: 26, padding: 0, justifyContent: 'center' }}>
+                  <b style={{ color: w.result === 'W' ? 'var(--sp-color-data-gain-base)' : 'var(--sp-color-data-loss-base)' }}>{w.result}</b>&nbsp;W{w.week}
+                </span>
+              ))}
+              <span className="ks-chip" style={{ height: 26, padding: 0, justifyContent: 'center', gap: 4 }}><span className="ks-dot" />W6</span>
             </div>
+            <div className="ks-seg"><span>1W</span><span>1M</span><span className="on">Season</span></div>
           </div>
-          <div>
-            <div className="ks-section-h"><h3>This week</h3><span className="ks-caption">{L.label}</span></div>
-            <div style={{ display: 'grid', gap: 10 }} className={run ? 'ks-fade-in' : undefined}>
-              <ThisWeekCard league={K.LEAGUE.name} week={K.LEAGUE.week} oppName="Gianluigi B." you={L.you.gain} opp={L.opp.gain} left="Ends Fri 4:00 PM ET" />
-              <ThisWeekCard league={F.name} week={F.week} oppName={F.opp} you={F.you} opp={F.oppGain} left="Ends Fri 4:00 PM ET" />
-            </div>
-          </div>
-          <div>
-            <div className="ks-section-h"><h3>Your leagues</h3></div>
-            <div className="ks-card" style={{ padding: '4px 14px' }}>
-              <div className="ks-tag" style={{ color: 'var(--sp-color-text-secondary)', paddingTop: 10 }}>Live this week</div>
-              <ul className="ks-rows">
-                {[
-                  { n: K.LEAGUE.name, meta: `2nd of 6 · 4–1`, chip: 'Week 6' },
-                  { n: F.name, meta: `3rd of ${F.members} · ${F.record}`, chip: 'Week 2' },
-                ].map((r) => (
-                  <li key={r.n} className="ks-row" style={{ gridTemplateColumns: '1fr auto 16px' }}>
-                    <span><span className="ks-t">{r.n}</span><br /><span className="ks-caption ks-num">{r.meta}</span></span>
-                    <Chip kind="live">{r.chip}</Chip>
-                    <span className="ks-muted"><Icon d={ICON.right} size={16} /></span>
-                  </li>
-                ))}
-              </ul>
-              <div className="ks-tag" style={{ color: 'var(--sp-color-text-secondary)', paddingTop: 6 }}>Upcoming</div>
-              <ul className="ks-rows">
-                <li className="ks-row" style={{ gridTemplateColumns: '1fr auto 16px' }}>
-                  <span><span className="ks-t">{S.name}</span><br /><span className="ks-caption">{S.members} of {S.of} joined</span></span>
-                  <span className="ks-chip ks-chip--money">{S.draftAt}</span>
-                  <span className="ks-muted"><Icon d={ICON.right} size={16} /></span>
+          <div className="ks-card" style={{ padding: '12px 14px' }}>
+            <div className="ks-section-h"><h3>Standings</h3><span className="ks-caption">Through Week 5</span></div>
+            <ul className="ks-rows">
+              {near.map((r) => (
+                <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '18px 1fr auto auto', padding: '9px 0', background: r.you ? 'rgba(40, 96, 240, .07)' : undefined }}>
+                  <span className="ks-t ks-num">{r.rank}</span>
+                  <span className="ks-callout" style={{ fontWeight: 700 }}>{r.name}{r.you ? <span className="ks-muted" style={{ fontWeight: 500 }}> (you)</span> : null}</span>
+                  <span className="ks-callout ks-num ks-muted">{r.w}–{r.l}</span>
+                  <span className={`ks-callout ks-num ${tone(r.pf)}`} style={{ fontWeight: 700, minWidth: 78, textAlign: 'right' }}>{$s(r.pf)}</span>
                 </li>
-              </ul>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <div className="ks-section-h"><h3>Your other leagues</h3><span className="ks-caption">Tap to switch</span></div>
+            <div style={{ display: 'grid', gap: 8 }}>
+              {K.OTHER_LEAGUES.map((o) => (
+                <div key={o.name} className="ks-card" style={{ padding: '10px 14px', display: 'grid', gridTemplateColumns: '1fr auto 16px', gap: 10, alignItems: 'center' }}>
+                  <span><span className="ks-t">{o.name}</span>{o.rank ? <><br /><span className="ks-caption ks-num">{o.rank} · {o.record}</span></> : null}</span>
+                  {o.phase === 'live_open' ? <Chip kind="live">{o.status}</Chip> : <span className="ks-chip ks-chip--money">{o.status}</span>}
+                  <span className="ks-muted"><Icon d={ICON.right} size={16} /></span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -334,11 +360,11 @@
                 <span className="ks-avatar ks-avatar--sm ks-avatar--opp">GB</span>
               </span>
             </div>
-            <Scores left={$s(you)} right={$s(opp)} size="xl" />
-            <Tug you={you} opp={opp} />
+            <Scores left={SD(s.you).primary} right={SD(s.opp).primary} size="xl" />
+            <Tug you={SD(s.you).value} opp={SD(s.opp).value} />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-              <span className="ks-callout">{final ? 'Roberto B. won by' : 'Roberto B. leads by'} <b className="ks-num">{$(Math.abs(lead))}</b></span>
-              <span className="ks-caption ks-muted ks-num">{pct(s.you.pct)} vs {pct(s.opp.pct)}</span>
+              <span className="ks-callout">{final ? 'Roberto B. won by' : 'Roberto B. leads by'} <b className="ks-num">{margin(s.you, s.opp)}</b></span>
+              <span className="ks-caption ks-muted ks-num">Tiebreak {SD(s.you).secondary} vs {SD(s.opp).secondary}</span>
             </div>
           </div>
           {final ? (
@@ -387,7 +413,7 @@
               </div>
               {after ? <div className="ks-chyron ks-chyron--in"><span>Roberto B. takes 1st on season gain</span></div> : null}
               <div style={{ display: 'grid', gridTemplateColumns: '22px 30px 30px 1fr auto 86px', gap: 10 }} className="ks-tag">
-                <span>#</span><span /><span /><span>Manager</span><span>W–L</span><span style={{ textAlign: 'right' }}>Gain</span>
+                <span>#</span><span /><span /><span>Manager</span><span>W–L</span><span style={{ textAlign: 'right', whiteSpace: 'nowrap', fontStretch: '100%' }}>Season gain</span>
               </div>
             </div>
             <div className="ks-lb" style={{ height: ROW * 6 }}>
@@ -525,7 +551,7 @@
 
   function DraftScreen({ landed }) {
     const D = K.DRAFT_MOMENT;
-    const secs = landed ? 60 : D.secondsLeft;
+    const secs = landed ? D.secondsTotal : D.secondsLeft;
     const frac = secs / D.secondsTotal;
     const R = 36, C = 2 * Math.PI * R;
     return (
@@ -538,7 +564,7 @@
                 <circle cx="42" cy="42" r={R} fill="none" stroke="var(--sp-color-surface-game-line)" strokeWidth="6" />
                 <circle cx="42" cy="42" r={R} fill="none" stroke={landed ? 'var(--sp-color-text-on-game-secondary)' : 'var(--sp-color-live)'} strokeWidth="6" strokeLinecap="round" strokeDasharray={C} strokeDashoffset={C * (1 - frac)} style={{ transition: 'stroke-dashoffset 1s linear' }} />
               </svg>
-              <span className="ks-ring__t">{landed ? '1:00' : `0:${String(secs).padStart(2, '0')}`}</span>
+              <span className="ks-ring__t">{`${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`}</span>
             </div>
             <div style={{ display: 'grid', gap: 2 }}>
               {landed ? (
@@ -552,6 +578,7 @@
                   <span className="ks-title" style={{ color: 'var(--sp-color-live)' }}>You're on the clock</span>
                   <span className="ks-callout">Round 2 · Pick 11</span>
                   <span className="ks-caption ks-muted">Then Paolo M. picks twice (12, 13)</span>
+                  <span className="ks-caption ks-muted">{D.secondsTotal}-second picks · set by the commissioner</span>
                 </>
               )}
             </div>
@@ -585,6 +612,57 @@
               ))}
             </div>
           </div>
+        </div>
+      </Device>
+    );
+  }
+
+  /** Create league · Draft step (the same controls appear in League
+   * settings until the draft starts). Pick clock: 30–90s, default 60s. */
+  function DraftSettingsScreen() {
+    const pc = K.LEAGUE.pickClock;
+    const opts = [];
+    for (let v = pc.min; v <= pc.max; v += pc.step) opts.push(v);
+    const Row = ({ k, v, sub }) => (
+      <li className="ks-row" style={{ gridTemplateColumns: '1fr auto 16px', padding: '13px 0' }}>
+        <span><span className="ks-callout" style={{ fontWeight: 600 }}>{k}</span>{sub ? <><br /><span className="ks-caption">{sub}</span></> : null}</span>
+        <span className="ks-callout ks-muted">{v}</span>
+        <span className="ks-muted"><Icon d={ICON.right} size={16} /></span>
+      </li>
+    );
+    return (
+      <Device noTabs label="Create league, draft settings">
+        <div className="ks-head">
+          <span className="ks-muted" style={{ display: 'flex', alignItems: 'center', gap: 2 }}><span style={{ transform: 'rotate(180deg)', display: 'flex' }}><Icon d={ICON.right} size={20} /></span><span className="ks-callout">Back</span></span>
+          <span className="ks-caption ks-num">Step 3 of 4</span>
+        </div>
+        <div className="ks-pad ks-stack">
+          <div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4, marginBottom: 14 }}>
+              {[1, 2, 3, 4].map((i) => <span key={i} style={{ height: 4, borderRadius: 2, background: i <= 3 ? 'var(--sp-color-brand)' : 'var(--sp-color-border-default)' }} />)}
+            </div>
+            <h2 className="ks-head__title" style={{ fontSize: 28 }}>Draft</h2>
+            <p className="ks-callout ks-muted" style={{ margin: '4px 0 0' }}>A live snake draft. Everyone picks in turn, and the order reverses each round.</p>
+          </div>
+          <div className="ks-card" style={{ padding: 14, display: 'grid', gap: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <span className="ks-headline" style={{ fontWeight: 700 }}>Pick clock</span>
+              <span className="ks-callout ks-num"><b>{pc.seconds} seconds</b></span>
+            </div>
+            <div className="ks-seg">
+              {opts.map((v) => <span key={v} className={v === pc.seconds ? 'on ks-num' : 'ks-num'}>{v}s</span>)}
+            </div>
+            <span className="ks-caption">Time each manager has to make a pick. 60 seconds is the default.</span>
+          </div>
+          <div className="ks-card" style={{ padding: '2px 14px' }}>
+            <ul className="ks-rows">
+              <Row k="Draft date" v="Sat, Oct 3 · 7:00 PM" />
+              <Row k="Draft order" v="Random" sub="Set when the draft starts" />
+              <Row k="Rounds" v="6" sub="One per roster slot" />
+              <Row k="If time runs out" v="Auto-pick" sub="From your queue, then the top-ranked stock" />
+            </ul>
+          </div>
+          <span className="ks-btn">Next</span>
         </div>
       </Device>
     );
@@ -688,5 +766,5 @@
     );
   }
 
-  window.KSScreens = { HomeScreen, MatchupScreen, LeagueScreen, DraftScreen, PortfolioScreen };
+  window.KSScreens = { HomeScreen, MatchupScreen, LeagueScreen, DraftScreen, DraftSettingsScreen, PortfolioScreen };
 })();

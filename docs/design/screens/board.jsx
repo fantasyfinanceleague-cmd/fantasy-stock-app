@@ -97,7 +97,7 @@
           <div className="b-brand">
             <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="13" width="4.5" height="8" rx="1" fill="#5B6678" /><rect x="9.75" y="9" width="4.5" height="12" rx="1" fill="#5B6678" /><rect x="16.5" y="4" width="4.5" height="17" rx="1" fill="#2860F0" /></svg>
             <span>Stockpile</span>
-            <span className="b-brand__meta">Key screens · v1 · 29 Sep 2026</span>
+            <span className="b-brand__meta">Key screens · v1.1 · 29 Sep 2026</span>
           </div>
           <h1>The app, as it will ship.</h1>
           <p className="b-lead">
@@ -106,6 +106,7 @@
             can only show what the app will actually look like. Every screen tells one story:
             the same league, the same week, and numbers that add up.
           </p>
+          <p className="b-changed"><b>New in v1.1, from your answers:</b> Home shows one league at a time (switch with the league pill); the standings column is "Season gain"; the draft pick clock defaults to 60 seconds and the commissioner can set 30–90.</p>
           <dl className="b-canon">
             <div><dt>League</dt><dd>{K.LEAGUE.name} · 6 managers</dd></div>
             <div><dt>Moment</dt><dd>Week 6 of 14 · Thu 1:37 PM ET</dd></div>
@@ -118,21 +119,22 @@
         </header>
 
         <Section
-          id="home" n="1" name="Home" job="Where am I across all my leagues, and how is this week going?"
+          id="home" n="1" name="Home" job="How is my team doing in this league, and how is this week going?"
           phones={<Fit key={homeN}><S.HomeScreen run={homeRun} /></Fit>}
           notes={<Notes
             shows={[
-              <>Total value across live leagues ({$(K.HOME.totalValue)}) with the past month's gain ({$s(K.HOME.windowGain)}).</>,
-              <>The chart plots <b>cumulative gain</b> against a zero baseline, not value. Joining Friday Night Stocks is a small marker on the axis, never a jump in the line.</>,
-              <>"This week": one live scoreboard card per league, each with the tug bar and the lead in dollars.</>,
-              <>Your leagues grouped by phase, with rank and record. The avatar opens Profile.</>,
+              <><b>One league at a time</b> (your call, v1.1). The league pill picks it; switching swaps everything on Home. No cross-league totals.</>,
+              <>Your team in this league: value {$(K.HOME.value)}, gain since the draft {$s(K.HOME.gain)}, today {$s(K.HOME.today)}, and rank and record (2nd of 6, {K.HOME.record}).</>,
+              <>This week's matchup comes first: the live scoreboard card, with the lead in the metric that decides the matchup.</>,
+              <>The season chart plots gain since the draft against $0, with week ticks and each week's result (W/L) underneath. This week's rise on the chart equals this week's matchup score.</>,
+              <>Top of the standings with you highlighted, then your other leagues as a small switcher row. The avatar opens Profile.</>,
             ]}
             motion={<>
-              <li><Play label="Open Home" playing={homeRun} onPlay={() => setHome(true)} /> The gain line draws on (feature, 700ms); the week cards rise in (slow, 380ms).</li>
-              <li>Live cards tick: digits roll only where they changed (base, 240ms); the tug bar eases to its new split.</li>
+              <li><Play label="Open Home" playing={homeRun} onPlay={() => setHome(true)} /> The week card rises in (slow, 380ms); the season line draws on (feature, 700ms).</li>
+              <li>Switching league in the pill: the sheet closes (spring.snappy) and Home crossfades to the new league (quick, 160ms). Numbers roll only where the value changed.</li>
             </>}
             reduced="the line and cards appear in place; digits swap without rolling."
-            ask={['Total value across every live league, or only the active one?', 'One "This week" card per live league, stacked: fine at 2 leagues. At 4+, swipeable instead?']}
+            ask={['Keep the small "Your other leagues" row at the bottom, or leave other leagues only in the pill?']}
           />}
         />
 
@@ -145,7 +147,7 @@
           notes={<Notes
             shows={[
               <>A broadcast scoreboard: both managers, both scores in the condensed 62% cut, and the tug bar. Live: {$s(L.you.gain)} vs {$s(L.opp.gain)}.</>,
-              <>The lead is in dollars ({$(L.you.gain - L.opp.gain)}); the percent tiebreak sits beside it, small ({pct(L.you.pct)} vs {pct(L.opp.pct)}).</>,
+              <>The scores and the lead show whatever DECIDES the matchup, today dollars ({$(L.you.gain - L.opp.gain)} lead), with the tiebreak beside it, small ({pct(L.you.pct)} vs {pct(L.opp.pct)}). Every score on every screen comes from one helper, so if you change what decides, it changes everywhere at once.</>,
               <>A chyron names what just moved the game. The race chart replaces the Mon–Fri bars and is the same chart as the landing's /03.</>,
               <>Both lineups, each stock's dollar contribution this week. They add up to the score exactly.</>,
               <>Final: the winner banner, the new record, and next week's opponent.</>,
@@ -155,7 +157,7 @@
               <li>Lead change (live): the chyron slides in (base), the tug crosses centre with the lively spring, one light haptic.</li>
             </>}
             reduced="scores swap, the tug jumps to its split, the banner and chyron fade in place."
-            ask={['Lineups show each stock\'s dollar contribution this week. Would you rather see percent per stock?']}
+            ask={['Pending your decision: keep dollars as what decides (percent breaks ties), switch to percent, or let each league choose? The screens follow your answer automatically.']}
           />}
         />
 
@@ -164,7 +166,7 @@
           phones={<Fit><S.LeagueScreen after={after} /></Fit>}
           notes={<Notes
             shows={[
-              <>Ranked the way the app ranks: win percentage, then wins, then <b>season gain in dollars</b>. Paolo M. and Roberto B. are both 5–1; Roberto's {$s(K.STANDINGS_FINAL[0].pf)} beats Paolo's {$s(K.STANDINGS_FINAL[1].pf)}.</>,
+              <>Ranked the way the app ranks: win percentage, then wins, then <b>season gain</b> (the sum of your weekly matchup gains). Paolo M. and Roberto B. are both 5–1; Roberto's {$s(K.STANDINGS_FINAL[0].pf)} beats Paolo's {$s(K.STANDINGS_FINAL[1].pf)}.</>,
               <>▲/▼ show the move since last week. You are highlighted wherever you land.</>,
               <>Week 6 results underneath: every matchup, both scores.</>,
             ]}
@@ -172,25 +174,29 @@
               <li><Play label="Replay Friday's re-sort" playing={false} onPlay={() => { setAfter(false); setTimeout(() => setAfter(true), 700); }} /> Rows slide to their new ranks (FLIP, slow 380ms, settle), then the ▲/▼ badges pop.</li>
             </>}
             reduced="rows jump to their new order; the badges appear without scaling."
-            ask={['Column name: "Season gain" (plain) or "Points for" (fantasy)?']}
+            ask={null}
           />}
         />
 
         <Section
           id="draft" n="4" name="Draft room" job="Whose pick is it, what's left, and how does the snake run?"
-          phones={<Fit caption={landed ? 'After the pick' : 'On the clock · Round 2, pick 11'}><S.DraftScreen landed={landed} /></Fit>}
+          phones={<>
+            <Fit caption={landed ? 'After the pick' : 'On the clock · Round 2, pick 11'}><S.DraftScreen landed={landed} /></Fit>
+            <Fit caption="Create league · Draft step (also in League settings)"><S.DraftSettingsScreen /></Fit>
+          </>}
           notes={<Notes
             shows={[
               <>The on-the-clock ring counts down; the card says what the snake means for you right now ("Then Paolo M. picks twice").</>,
               <>The snake board: a track runs through every pick in order, with chevrons in the gaps and a half-loop at every row end, so the reversal reads without the labels. Your picks are outlined in team blue.</>,
               <>Search with your queue; Draft is one tap. Your roster fills slot by slot at $2,000 each.</>,
+              <><b>Pick clock</b> (your call, v1.1): 60 seconds by default; the commissioner sets 30–90s when creating the league or in League settings before the draft. The draft room shows the league's clock.</>,
             ]}
             motion={<>
               <li><Play label={landed ? 'Reset' : 'Make the pick'} playing={landed} onPlay={() => setLanded(!landed)} /> AAPL lands in pick 11, the blue track extends to 12, the ring hands over to Paolo M., and the roster slot fills.</li>
               <li>The clock ring pulses its outline at 1.2s; the last 10 seconds turn the ring to loss red.</li>
             </>}
             reduced="the ticker appears in place; the track extends without drawing; no pulse."
-            ask={['Pick clock: 60 seconds assumed. Is that the league default?']}
+            ask={['When a manager\'s time runs out: auto-pick (from their queue, then the top-ranked stock) or skip them? The settings screen shows auto-pick as a placeholder. The pick timer is new backend work either way.']}
           />}
         />
 
@@ -221,7 +227,6 @@
 
   function Ledger() {
     const L = K.MATCHUP.live, F = K.MATCHUP.final, P = K.PORTFOLIO_LIVE, H = K.HOME;
-    const fns = K.OTHER_LEAGUES[0];
     const rowsSum = (rows) => rows.map((r) => $s(r.weekGain)).join(' ');
     const wins = K.STANDINGS_FINAL.reduce((a, r) => a + r.w, 0);
     const losses = K.STANDINGS_FINAL.reduce((a, r) => a + r.l, 0);
@@ -229,7 +234,7 @@
       ['Matchup, live', `Roberto B.: ${rowsSum(L.you.rows)} = ${$s(L.you.gain)}`, `Gianluigi B.: ${rowsSum(L.opp.rows)} = ${$s(L.opp.gain)}`, `Lead ${$(L.you.gain - L.opp.gain)}`],
       ['Matchup, final', `Roberto B. = ${$s(F.you.gain)} (${pct(F.you.pct)} of ${$(F.you.startValue)})`, `Gianluigi B. = ${$s(F.opp.gain)} (${pct(F.opp.pct)} of ${$(F.opp.startValue)})`, `Margin ${$(F.you.gain - F.opp.gain)}`],
       ['Portfolio', `Σ 6 holdings = ${$(P.value)}`, `Basis 6 × $2,000.00 = ${$(P.cost)}`, `Gain ${$s(P.gain)} (${pct(P.gainPct)})`],
-      ['Home', `${$(P.value)} + ${$(fns.value)} = ${$(H.totalValue)}`, `All-time gain ${$s(H.allTimeGain)}`, `Past month = last point − first = ${$s(H.windowGain)}`],
+      ['Home (this league)', `Value = Portfolio = ${$(H.value)}`, `Gain since the draft ${$s(H.gain)} = weeks 1–5 ${$s(H.throughW5)} + this week ${$s(K.MATCHUP.live.you.gain)}`, `Chart ends at ${$s(H.series[H.series.length - 1])}`],
       ['Standings', `After Week 6: ${wins} wins = ${losses} losses`, 'Ranked: win %, then wins, then season gain', `Roberto B. ${$s(K.STANDINGS_FINAL[0].pf)} > Paolo M. ${$s(K.STANDINGS_FINAL[1].pf)}`],
       ['Draft', 'Seat on the clock at pick n: odd rounds 1→6, even rounds 6→1', 'Roberto B. (seat 2): picks 2, 11, 14, 23, 26, 35', 'Gianluigi B. (seat 5): picks 5, 8, 17, 20, 29, 32'],
     ];
