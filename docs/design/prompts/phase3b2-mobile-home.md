@@ -50,7 +50,7 @@ original intent.
 4. **"This week" strip:** a horizontal row of **game-surface** mini
    scoreboards, one per league in `live_open` / `live_closed` / `week_final`
    (from ask #1): league name + week, **both display names** (ask #2), both dollar
-   gains, a mini TugBar, and "You lead by $X" / "Priya leads by $X". Pre-season
+   scores, a mini TugBar, and the lead line ("You lead by $X" / "Priya leads by $X"; values come from the shared score-display helper; see the plan's generic-scoring rule). Pre-season
    and pre-draft leagues show their phase state (PR #36's copy), never a fake
    score. Tapping a card sets the active league and opens Matchup.
 5. **Your leagues:** grouped by phase (the same grouping as the league sheet);

@@ -51,7 +51,7 @@ design gallery.
    **Get started** chooser (Create / Join) on the brand system, plus a
    **3-card onboarding** before it. Card 1: "Fantasy football, but with
    stocks." Card 2: "Draft real stocks. Face one friend each week." Card 3:
-   "Biggest dollar gain by Friday's close wins." Skippable, shown once.
+   "Best performance by Friday's close wins." (generic scoring copy; see the plan's shared rules) Skippable, shown once.
 6. **Empty states:** every "no leagues / no data" state uses the one
    `EmptyState` primitive (icon in a soft circle, title, one line, one real
    action; the action never loops back to another empty screen). Replace all
