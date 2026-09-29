@@ -197,7 +197,14 @@ Phase 3: **app first**.
 10. **`record-trade` concurrent-buy race**, now narrowed by #54 to **cross-user
     same-symbol** (the same-user proceeds race is closed by
     `trades_funded_by_trade_id_unique`). It still needs an atomic SECURITY DEFINER RPC.
-11. **No leave-league flow on mobile.**
+11. **No leave-league flow on mobile.** When one is built, it must handle a
+    league whose member count drops below `playoff_teams` after the draft
+    starts. Today that league reaches the end of its regular season and the
+    playoff start refuses every run (`standings_rank_refused: N ranked managers
+    for P playoff spots`). The refusal is surfaced in `skipped[]` and the heal
+    pass retries it, but it can never succeed on its own: it is stuck, not
+    silent (Orchestrator decision, 2026-09-29: leave it as a surfaced refusal
+    until leave-league exists).
 12. **Deployed-function drift audit** for the UNVERIFIED functions in §2.
 13. **Cron monitoring gap:** give each cron `net.http_post` an explicit
     `timeout_milliseconds` so `net._http_response` records real outcomes; share
@@ -251,9 +258,8 @@ Phase 3: **app first**.
         (both numbers shown).
       - process-week-results' refusal stays as the last-line guard.
       - Non-playoff completion is unreachable: `playoff_teams || 4` maps
-        NULL/0 to 4.
-      - Non-power-of-2 brackets (everyone makes the playoffs in a 6-team league)
-        are a separate follow-up.
+        NULL/0 to 4. (Removed by item 21: `playoff_teams` becomes required.)
+      - Non-power-of-2 brackets: item 21.
 19. **Promote the auto-pick cron.** Live test first (deferred README precondition 5):
     1. Create a test league with bots.
     2. Before starting the draft, `UPDATE leagues SET pick_seconds = 30 WHERE id = …`.
@@ -266,6 +272,39 @@ Phase 3: **app first**.
     - revoke PG17 `MAINTAIN` from `authenticated` on `draft_queue`;
     - `validate-and-record-pick` returns `draft_not_in_progress` before its membership check (pre-existing);
     - the client TradeModal must show proceeds-sized buys and the "which sale pays?" picker (3e).
+21. **Flexible playoffs (`feat/flexible-playoffs`): AUTHORED, NOT APPLIED.**
+    Any playoff team count P from 2 to the number of managers (Giorgio,
+    2026-09-29). Weeks W = ceil(log2 P); the top 2^W − P seeds get a
+    first-round bye (an auto-advance: no result, in no record); a FIXED
+    bracket in the board's display order (for 8: 1v8, 4v5, 3v6, 2v7). Round
+    names (decided): Final / Semifinals / Quarterfinals / Round of 16, with
+    round 1 = "Wild card" when it has byes.
+    - **Migrations `20261012000000`–`03`.**
+      - Every playoff game gets an address (`playoff_round_number`,
+        `bracket_position`). The unique address index replaces
+        `matchups_one_bracket_per_league`.
+      - Byes are NOT rows: the bye seed is written into its round-2 slot.
+      - `playoff_teams` NULL → 4 on matchup leagues, then required; the CHECK
+        is relaxed from IN (2,4,8) to >= 2.
+      - `start_league_playoffs` recomputes the exact bracket for the league's P
+        and refuses anything else.
+      - `playoff_teams` is frozen once the draft leaves `not_started` (service
+        role exempt).
+      - Live leagues' `league_end_date` is extended by W weeks (the two test
+        leagues: 2026-10-16 → 2026-10-30). `planSeason` stamps the same for
+        new leagues.
+    - **Bugs it fixes.** Winners used to fill the FIRST EMPTY next-round slot in
+      query order, so even 8-team brackets were not fixed. A half-filled
+      later-round game could be scored as a walkover. A failed advance was
+      permanent. Now: addressed, conditional advances; a missed-advance heal;
+      playoff games are scored only when both slots are filled.
+    - **Clients:** a 2..size playoff-team control; round labels from structure;
+      "First-Round Bye" instead of "eliminated" (mobile matchup). The web
+      delete gate keys on `season_status`.
+    - **⚠ DEPLOY ORDER:** `db push` `20261012000000` BEFORE deploying
+      `process-week-results`, `validate-and-record-pick`, `draft-autopick-sweep`
+      or `draft-control`. They now refuse a NULL `playoff_teams` instead of
+      reading it as 4. Pre-checks are in the headers of `20261012000000` and `03`.
 
 ---
 
@@ -309,7 +348,7 @@ Phase 3: **app first**.
 | `ui/landing-gameday` | PR #45, **draft, parked**: the Game Day 3D landing, round 4. Resume after the key screens are approved. |
 | `ui/foundation-mobile` | PR #53, **draft, held** for the Light/Dark ThemeProvider rework (§9A). |
 | `design/key-screens-2026-09-29` | PR #52, **draft**: the design board (v3.3), the source of truth for the app screens. Merge after Giorgio signs off. |
-| `feat/flexible-playoffs` | In progress: any playoff size 2..members, auto weeks/byes, fixed bracket, fix for the addressed-advance bug. |
+| `feat/flexible-playoffs` | Ready for review (§4 item 21): migrations `20261012000000`–`03` authored, not applied; functions not deployed. |
 | `feat/draft-order-modes` | Planned: Random (reveal T−1h) / Manual; awaiting Giorgio's decisions a–e. |
 | `chore/rename-to-stockade` | LOCAL only (a97bfbb), parked until the name is final. |
 | `fix/effect-test-anon-expectations` | PR #50 (test file only). |
