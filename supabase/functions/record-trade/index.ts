@@ -9,8 +9,21 @@
 //   Quantity is server-computed per stake mode (fractional for
 //   fixed_notional); the client's quantity input is NOT trusted.
 //
+//   fixed_notional (2026-09-29): a buy reinvests the SALE PROCEEDS of the
+//   slot it fills, not a fresh notional stake — see fixedNotionalFunding /
+//   resolveFunding in ../_shared/draft-validation.ts and the migration header
+//   at supabase/migrations/20261006000000_trades_funded_by_trade_id.sql. The
+//   caller may name which of their own open sales to reinvest via
+//   `sold_trade_id`; omitted = server default (oldest unclaimed, FIFO).
+//
 // DROP ('sell'): legal iff the caller's net position is > 0; always sells the
 //   ENTIRE position at the current quote, freeing the symbol league-wide.
+//
+// PREVIEW ('preview'): read-only. Returns the caller's fixed_notional funding
+//   state for the league (open sale proceeds + unfilled-slot count + the
+//   league's stake) so a client can build the "reinvest which sale?" picker
+//   without re-deriving the walk itself. No vendor call, no write. Other
+//   stake modes get an empty/zero shape back.
 //
 // Mid-week scoring: NO new mechanism here. A buy lands as a plain trades row;
 // snapshot-week-end's close.ts derives the entered_mid_week snapshot from
@@ -20,11 +33,21 @@
 //
 // user_id: trades.user_id is UUID (auth.uid()), so bots ('bot-*', TEXT ids)
 // cannot trade — only the authenticated caller trades, for themself.
+//
+// PRICE ROUNDING: trades.price is NUMERIC(10,2) — Postgres rounds it to
+// cents on insert regardless of what JS sends. Sizing a fixed_notional
+// quantity off the UNROUNDED Alpaca quote (the pre-fix behaviour) then leaves
+// stored total_value slightly inconsistent with stored price × quantity — a
+// few cents to a few dollars per trade on a cheap stock (CLAUDE.md, "verify
+// the effect, not the status"). Fixed by rounding the fill price to cents
+// ONCE, right after the quote, and using that rounded price for every
+// downstream computation and for the insert.
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { fetchFillPrice } from '../_shared/alpaca-price.ts';
 import { fetchEligibleCategoryIds } from '../_shared/category-eligibility.ts';
 import {
+  fixedNotionalFunding,
   type LeagueRules,
   type PickRow,
   type Slot,
@@ -106,9 +129,17 @@ Deno.serve(async (req: Request) => {
     const leagueId = String(body.league_id ?? '').trim();
     const symbol = String(body.symbol ?? '').trim().toUpperCase();
     const action = String(body.action ?? '');
-    if (!leagueId || !symbol || (action !== 'buy' && action !== 'sell')) {
+    if (!leagueId || (action !== 'buy' && action !== 'sell' && action !== 'preview')) {
       return json({ ok: false, reason: 'bad_request' }, 400);
     }
+    // preview needs no symbol — it reports the caller's funding state only.
+    if ((action === 'buy' || action === 'sell') && !symbol) {
+      return json({ ok: false, reason: 'bad_request' }, 400);
+    }
+    // fixed_notional only: which of the caller's own open sales a buy
+    // reinvests. Validated as "actually one of theirs" by validateTradeAdd
+    // (via resolveFunding), not here.
+    const soldTradeId = body.sold_trade_id == null ? undefined : String(body.sold_trade_id).trim() || undefined;
 
     // ---- League + membership ----------------------------------------------
     const { data: league, error: lgErr } = await admin
@@ -143,12 +174,32 @@ Deno.serve(async (req: Request) => {
 
     const { data: tradeData, error: tErr } = await admin
       .from('trades')
-      .select('user_id, symbol, action, quantity, price')
+      .select('id, user_id, symbol, action, quantity, price, total_value, created_at, funded_by_trade_id')
       .eq('league_id', leagueId);
     if (tErr) return json({ ok: false, reason: 'unhandled' }, 500);
     // trades.user_id is UUID — normalize to string so every comparison against
     // drafts' TEXT user_id is string-vs-string (the documented cast footgun).
     const trades = (tradeData ?? []).map((t) => ({ ...t, user_id: String(t.user_id) })) as TradeRow[];
+
+    // ---- Preview (read-only; no vendor call, no write) ----------------------
+    // Returns the caller's fixed_notional funding state so a client can build
+    // a "reinvest which sale?" picker without re-deriving the walk. Other
+    // stake modes get an empty/zero shape — this endpoint exists for
+    // fixed_notional; there is nothing to preview elsewhere.
+    if (action === 'preview') {
+      if (league.stake_mode !== 'fixed_notional') {
+        return json({ ok: true, stake_mode: league.stake_mode ?? null, stake: null, unfilled_slots: 0, sources: [] });
+      }
+      const notional = league.notional_per_slot == null ? 1000 : Number(league.notional_per_slot);
+      const funding = fixedNotionalFunding(user.id, picks, trades);
+      return json({
+        ok: true,
+        stake_mode: 'fixed_notional',
+        stake: notional,
+        unfilled_slots: funding.unfilledSlots,
+        sources: funding.open.map((o) => ({ trade_id: o.tradeId, symbol: o.symbol, amount: o.amount })),
+      });
+    }
 
     if (!ALPACA_KEY || !ALPACA_SECRET) return json({ ok: false, reason: 'server_config_error' }, 500);
 
@@ -170,9 +221,17 @@ Deno.serve(async (req: Request) => {
       console.error('no_price', symbol, JSON.stringify(fill.error));
       return json({ ok: false, reason: 'no_price', symbol }); // 200: game-flow refusal
     }
+    // Round to the cents trades.price actually stores (NUMERIC(10,2)) BEFORE
+    // sizing or inserting anything — see the PRICE ROUNDING header note.
+    const price = Math.round(fill.price * 100) / 100;
+    if (!(price > 0)) return json({ ok: false, reason: 'no_price', symbol }); // 200: game-flow refusal
 
     // ---- Validate buy ------------------------------------------------------
     let quantity: number;
+    // fixed_notional only: which sale this buy reinvests (null = filled a
+    // previously-unfilled/skipped slot at full notional). Always null for a
+    // sell and for every other stake mode.
+    let fundedByTradeId: string | null = null;
     if (action === 'buy') {
       const { data: slotData, error: sErr } = await admin
         .from('league_draft_slots')
@@ -215,25 +274,31 @@ Deno.serve(async (req: Request) => {
         trades,
         userId: user.id,
         symbol,
-        price: fill.price,
+        price,
         eligibleCategories,
         isDraftable,
+        soldTradeId,
       });
       if (!decision.legal) return json({ ok: false, reason: decision.reason }); // 200: game-flow refusal
       quantity = decision.quantity;
+      fundedByTradeId = decision.fundedByTradeId ?? null;
     } else {
       quantity = dropQuantity!; // validated above, before the vendor call
     }
 
     // ---- Record ------------------------------------------------------------
-    // KNOWN RACE (accepted for launch, flagged for follow-up): two concurrent
-    // buys of the same symbol both pass the in-memory ownership check before
-    // either row lands — trades has no uniqueness backstop analogous to the
-    // drafts (league_id, pick_number) index, and a partial unique index can't
-    // express "one OWNER at a time" over a buy/sell ledger. The correct fix is
-    // an atomic SECURITY DEFINER RPC (join_league_by_code pattern) that
-    // validates and inserts in one transaction. Window is sub-second and the
-    // failure mode (two owners of one symbol) is heal-able with a drop.
+    // KNOWN RACE (accepted for launch, narrowed 2026-09-29 to the cross-user
+    // case — see the funded_by_trade_id unique index in
+    // 20261006000000_trades_funded_by_trade_id.sql, which now closes the
+    // same-user concurrent-rebuy variant of this race with a 23505 below):
+    // two concurrent buys of DIFFERENT users for the same symbol both pass
+    // the in-memory ownership check before either row lands — trades has no
+    // uniqueness backstop analogous to the drafts (league_id, pick_number)
+    // index, and a partial unique index can't express "one OWNER at a time"
+    // over a buy/sell ledger. The correct fix is an atomic SECURITY DEFINER
+    // RPC (join_league_by_code pattern) that validates and inserts in one
+    // transaction. Window is sub-second and the failure mode (two owners of
+    // one symbol) is heal-able with a drop.
     const { data: inserted, error: insErr } = await admin
       .from('trades')
       .insert({
@@ -242,12 +307,24 @@ Deno.serve(async (req: Request) => {
         symbol,
         action,
         quantity,
-        price: fill.price,
-        total_value: Math.round(fill.price * quantity * 100) / 100,
+        price,
+        total_value: Math.round(price * quantity * 100) / 100,
+        funded_by_trade_id: fundedByTradeId,
       })
       .select('*')
       .single();
-    if (insErr) return json({ ok: false, reason: 'unhandled' }, 500);
+    if (insErr) {
+      // 23505 on trades_funded_by_trade_id_unique specifically means another
+      // request spent this same sale's proceeds first (or, vanishingly
+      // rarely, exactly this trade concurrently) — a legality-time race the
+      // in-memory check above cannot see. Matched by constraint name, not
+      // bare code, so a FUTURE unique constraint on trades (unrelated to
+      // proceeds) can't be mislabeled as this refusal.
+      if (insErr.code === '23505' && (insErr.message ?? '').includes('trades_funded_by_trade_id_unique')) {
+        return json({ ok: false, reason: 'proceeds_unavailable' }); // 200: game-flow refusal
+      }
+      return json({ ok: false, reason: 'unhandled' }, 500);
+    }
 
     return json({ ok: true, trade: inserted, price_source: fill.source });
   } catch (_e) {

@@ -53,10 +53,10 @@
 -- EXPECTED OUTPUT (all PASS after the three migrations are applied):
 --   #9  A  member reads N picks incl. 1 SKIP row -> PASS
 --   #9  B  non-member reads 0 picks               -> PASS
---   #9  C  anon reads 0 picks                      -> PASS
+--   #9  C  anon reads 0 picks OR 42501 insufficient_privilege -> PASS
 --   #5  D  member's league_activity: 2 rows, SKIP excluded, casts correct -> PASS
 --   #5  E  non-member's league_activity: 0 rows    -> PASS
---   #5  F  anon's league_activity: 0 rows           -> PASS
+--   #5  F  anon's league_activity: 0 rows OR 42501 insufficient_privilege -> PASS
 --   #6  G  valid username persisted                -> PASS
 --   #6  H  invalid-format usernames stored NULL     -> PASS
 --   #6  I  username collision: second user gets NULL, no error -> PASS
@@ -165,6 +165,14 @@ begin
       then E'#9  C  anon reads 0 picks                      -> PASS\n'
       else format(E'#9  C  anon reads 0 picks                      -> rows=%s  FAIL\n', n) end;
   exception
+    -- ACCEPTABLE PASS, not just a CHECK: drafts' SELECT policy calls
+    -- is_member(), and a separate RLS-hardening pass revoked anon's EXECUTE
+    -- on is_member entirely — so anon can be refused at the PRIVILEGE layer
+    -- (42501) before RLS ever gets a chance to evaluate to "0 rows". A
+    -- privilege-level refusal is STRICTER than an empty result set (anon
+    -- cannot even attempt the read, not merely see nothing), so it is an
+    -- equally valid — arguably preferable — way for this case to pass.
+    when insufficient_privilege then out := out || E'#9  C  anon reads picks -> 42501 insufficient_privilege (stricter than 0 rows)  PASS\n';
     when others then out := out || format(E'#9  C  anon reads picks -> %s %s  CHECK\n', sqlstate, sqlerrm);
   end;
 
@@ -224,6 +232,14 @@ begin
       then E'#5  F  anon''s league_activity: 0 rows           -> PASS\n'
       else format(E'#5  F  anon league_activity -> rows=%s  FAIL\n', n) end;
   exception
+    -- ACCEPTABLE PASS, not just a CHECK: league_activity's own grants are
+    -- authenticated-only BY DESIGN (20261005000000_league_activity_view.sql
+    -- revokes anon explicitly), so anon can be refused at the PRIVILEGE
+    -- layer (42501) before the view's security_invoker RLS check is ever
+    -- reached. Same reasoning as #9 C above: a privilege-level refusal is
+    -- STRICTER than an empty result set, so it is an equally valid —
+    -- arguably preferable — way for this case to pass.
+    when insufficient_privilege then out := out || E'#5  F  anon league_activity -> 42501 insufficient_privilege (stricter than 0 rows)  PASS\n';
     when others then out := out || format(E'#5  F  anon league_activity -> %s %s  CHECK\n', sqlstate, sqlerrm);
   end;
 
