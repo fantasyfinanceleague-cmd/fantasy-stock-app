@@ -6,6 +6,7 @@ import { useToast } from '../components/Toast';
 import EmptyState from '../components/EmptyState';
 import { validateLeagueName } from '../utils/contentModeration';
 import SlotBuilder from '../components/SlotBuilder';
+import { playoffLine } from '../utils/playoffs';
 import {
   STAKE_MODE_OPTIONS,
   DEFAULT_NOTIONAL_PER_SLOT,
@@ -61,12 +62,6 @@ export default function Leagues() {
 
   useEffect(() => { fetchCategories().then(setCategories); }, []);
 
-  // Calculate valid playoff options
-  const getPlayoffOptions = () => {
-    const allOptions = [2, 4, 8]; // DB CHECK: playoff_teams NULL or in (2,4,8)
-    return allOptions.filter(o => o < participants);
-  };
-  const validPlayoffOptions = getPlayoffOptions();
 
   // Update form state
   const [selectedLeagueForUpdate, setSelectedLeagueForUpdate] = useState('');
@@ -89,6 +84,12 @@ export default function Leagues() {
   // Helpers
   // 4-16 = DB CHECK leagues_num_participants_range (20250819185319)
   const clampParticipants = (n) => Math.max(4, Math.min(16, Number(n) || 4));
+
+  // Flexible playoffs (Giorgio, 2026-09-29): any P from 2 up to the league
+  // size, equal included; clamped so shrinking the league never leaves it above.
+  const leagueSize = clampParticipants(participants);
+  const validPlayoffOptions = Array.from({ length: Math.max(leagueSize - 1, 1) }, (_, i) => i + 2);
+  const effectivePlayoffTeams = Math.min(Math.max(playoffTeams, 2), leagueSize);
   const clampRounds = (n) => Math.max(1, Math.min(12, Number(n) || 1));
 
   const filteredLeagues = useMemo(() => {
@@ -183,7 +184,7 @@ export default function Leagues() {
       leagueType,
       durationDays: leagueType === 'duration' ? Number(durationDays) : 30,
       numWeeks: leagueType === 'matchup' ? Math.max(numWeeks, minWeeks) : null,
-      playoffTeams: leagueType === 'matchup' ? playoffTeams : null,
+      playoffTeams: leagueType === 'matchup' ? effectivePlayoffTeams : null,
       allowUndraftable,
     });
 
@@ -302,11 +303,11 @@ export default function Leagues() {
         return new Date() > new Date(lg.end_date);
       }
 
-      // For matchup leagues, check if current_week > num_weeks (playoffs done)
-      // Adding buffer for playoff weeks (max 3 rounds: quarter, semi, finals)
-      if (lg.league_type === 'matchup' && lg.num_weeks && lg.current_week) {
-        const playoffWeeks = lg.playoff_teams === 8 ? 3 : lg.playoff_teams === 4 ? 2 : 1;
-        return lg.current_week > lg.num_weeks + playoffWeeks;
+      // Matchup leagues: the season is over when it is 'completed'. The old
+      // current_week > num_weeks + playoffWeeks test could never pass: the
+      // final completes the season WITHOUT advancing current_week.
+      if (lg.league_type === 'matchup') {
+        return lg.season_status === 'completed';
       }
 
       // If we can't determine, don't allow deletion mid-season
@@ -756,7 +757,7 @@ export default function Leagues() {
                   <div>
                     <label style={labelStyle}>Playoff Teams</label>
                     <select
-                      value={playoffTeams}
+                      value={effectivePlayoffTeams}
                       onChange={(e) => setPlayoffTeams(Number(e.target.value))}
                       style={inputStyle}
                     >
@@ -766,6 +767,7 @@ export default function Leagues() {
                         </option>
                       ))}
                     </select>
+                    <small style={{ color: '#6b7280', fontSize: 11 }}>{playoffLine(effectivePlayoffTeams)}</small>
                   </div>
                 </div>
               )}

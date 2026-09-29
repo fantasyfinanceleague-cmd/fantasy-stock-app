@@ -447,7 +447,7 @@
           <li>Records: the landing's 5–0, 4–1, 4–1, 3–2, 2–3, 1–4 add up to 19 wins against 11 losses, which no league can produce. Now 5–0, 4–1, 3–2, 2–3, 1–4, 0–5 after Week 5.</li>
           <li>Standings rank by win percentage, then head-to-head, then season gain in dollars (one order, also the playoff seeding), not by season percent.</li>
           <li>Pick 12 was TSLA for Paolo M., but TSLA is in Roberto B.'s lineup. Paolo M. now takes LLY; Roberto B. took TSLA in round 4.</li>
-          <li>The hero phone's matchup (+$322.45 vs −$71.20, "3d 4h left") contradicted the week's daily closes. The live moment is now Thu 1:37 PM: {$s(L.you.gain)} vs {$s(L.opp.gain)}.</li>
+          <li>The hero phone's matchup (+$322.45 vs −$71.20, "3d 4h left") contradicted the week's daily closes. The live moment is now Thu 1:37 PM ET: {$s(L.you.gain)} vs {$s(L.opp.gain)}.</li>
           <li>Thursday's close for Gianluigi B. is +$71.35 (was −$12.55), so the live game is close enough for the tug bar to move. Friday is derived from the holdings: {$s(F.you.gain)} vs {$s(F.opp.gain)} (was +$351.80 vs −$40.25).</li>
           <li>Lineups are six stocks (the landing showed four); the portfolio is {$(P.value)} across six holdings.</li>
         </ol>

@@ -70,6 +70,8 @@
  * mechanism DEFECT 1's sibling branch relies on.
  */
 
+import { nextSlot, type PlayoffRoundCode } from '../_shared/playoff-bracket.ts';
+
 // ---------------------------------------------------------------------------
 // Inputs
 // ---------------------------------------------------------------------------
@@ -92,7 +94,10 @@ export interface PlayoffMatchup {
   playoffRound?: PlayoffRound | null;
 }
 
-export type PlayoffRound = 'quarter' | 'semi' | 'finals';
+/** The structural round code stored in matchups.playoff_round (by distance
+ * from the final). Never used to decide advancement: that keys on the row's
+ * address (playoff_round_number, bracket_position). */
+export type PlayoffRound = PlayoffRoundCode;
 
 /** Why the outcome came out the way it did. Mirrors the handler's log lines. */
 export type OutcomeReason =
@@ -234,13 +239,6 @@ export function willAdvanceWinner(m: PlayoffMatchup, outcome: Outcome): boolean 
   return m.isPlayoff && !!outcome.winnerId;
 }
 
-/** index.ts:701-703. Finals has no next round. */
-export function nextRoundOf(round: PlayoffRound | null | undefined): PlayoffRound | null {
-  if (round === 'quarter') return 'semi';
-  if (round === 'semi') return 'finals';
-  return null;
-}
-
 // ---------------------------------------------------------------------------
 // The seed carried forward — index.ts:689
 // ---------------------------------------------------------------------------
@@ -267,6 +265,125 @@ export interface AdvancingRow {
  */
 export function winnerSeedForAdvance(row: AdvancingRow, winnerId: string): number | null {
   return winnerId === row.team1UserId ? row.team1Seed : row.team2Seed;
+}
+
+// ---------------------------------------------------------------------------
+// Addressed advancement (flexible playoffs, 20261012000000)
+// ---------------------------------------------------------------------------
+//
+// DEFECT 3 FIXED — advancement is by ADDRESS, not "first empty slot".
+// advancePlayoffWinner used to select every next-round row with an empty slot
+// (in no particular order) and write the winner into the first one. So the
+// bracket was not actually fixed even for 8 teams: 1v8's winner could meet
+// 2v7's, depending on the order the quarterfinals were processed. With byes it
+// would be wrong outright (a round-2 row already holds the bye seed in one
+// slot). Now the winner of (round r, position p) goes to exactly
+// (r+1, floor(p/2)), slot team1 if p is even else team2 (nextSlot, pure and
+// exhaustively tested in _shared/playoff-bracket.test.ts).
+
+/** A playoff row's address plus what the advance writes from it. */
+export interface AddressedRow extends AdvancingRow {
+  roundNumber: number;
+  position: number;
+}
+
+export type AdvancePlan =
+  | { kind: 'final' }
+  | { kind: 'advance'; round: number; position: number; slot: 'team1' | 'team2'; userId: string; seed: number | null };
+
+/** Where this row's winner goes (or 'final' when it was the final). `weeks`
+ * is W for the league's playoff_teams. Throws on an address outside the
+ * bracket, which start_league_playoffs makes impossible for its rows. */
+export function planAdvance(row: AddressedRow, winnerId: string, weeks: number): AdvancePlan {
+  const next = nextSlot(row.roundNumber, row.position, weeks);
+  if (!next) return { kind: 'final' };
+  return { kind: 'advance', ...next, userId: winnerId, seed: winnerSeedForAdvance(row, winnerId) };
+}
+
+/**
+ * Whether a pending row may be scored now. A playoff row needs BOTH teams:
+ * one with a NULL slot is still awaiting its feeder's winner.
+ *
+ * DEFECT 4 FIXED. The pending query only required team1, so once its week
+ * ended, a HALF-filled later-round row was selected and scored as a walkover
+ * (team2_empty_auto_loss / playoff_no_opponent) — latent for a 4-team bracket
+ * whose semi was refused past the final's week, and the NORMAL state with byes
+ * (every round-2 row starts as "bye seed vs NULL"). A regular-season row with
+ * team2 NULL is a bye and stays scoreable (it is recorded as no result).
+ */
+export function isScoreableNow(m: { is_playoff?: boolean | null; team1_user_id: string | null; team2_user_id: string | null }): boolean {
+  if (!m.team1_user_id) return false;
+  if (m.is_playoff === true) return !!m.team2_user_id;
+  return true;
+}
+
+/** A playoff row as the heal pass reads it (placeholders have NULL teams). */
+export interface PlayoffRowState {
+  id: string;
+  roundNumber: number;
+  position: number;
+  team1UserId: string | null;
+  team2UserId: string | null;
+  team1Seed: number | null;
+  team2Seed: number | null;
+  scored: boolean; // team1_gain IS NOT NULL
+  winnerUserId: string | null;
+}
+
+export interface MissedAdvance {
+  fromId: string;
+  plan: Extract<AdvancePlan, { kind: 'advance' }>;
+}
+
+/**
+ * Heal-pass decision: scored playoff games whose winner never reached the next
+ * round. Once a game is scored it is never selected again, so an advance that
+ * failed (a transport error, a crash between the two writes) would leave the
+ * next-round slot NULL FOREVER, and that game could then never be played: a
+ * recoverable gap made permanent (the CLAUDE.md partial-state family). This
+ * compares EVERY scored game against its target slot, per game:
+ *   target slot NULL          -> advance again (idempotent: the write is
+ *                                conditional on the slot still being NULL)
+ *   target slot = the winner  -> already done
+ *   target slot = someone else, target row missing, or a scored game with no
+ *   winner                    -> a conflict, REPORTED and never overwritten.
+ * Unscored rows (including placeholders) are ignored. `rows` is ONE league's
+ * complete set of playoff rows.
+ */
+export function findMissedAdvances(
+  rows: PlayoffRowState[],
+  weeks: number,
+): { advances: MissedAdvance[]; conflicts: Array<{ fromId: string; reason: string }> } {
+  const advances: MissedAdvance[] = [];
+  const conflicts: Array<{ fromId: string; reason: string }> = [];
+  const at = new Map(rows.map((r) => [`${r.roundNumber}:${r.position}`, r]));
+
+  for (const r of rows) {
+    if (!r.scored) continue;
+    if (!r.winnerUserId || !r.team1UserId) {
+      conflicts.push({ fromId: r.id, reason: 'playoff_game_scored_without_winner' });
+      continue;
+    }
+    let plan: AdvancePlan;
+    try {
+      plan = planAdvance({ ...r, team1UserId: r.team1UserId }, r.winnerUserId, weeks);
+    } catch (e) {
+      conflicts.push({ fromId: r.id, reason: `playoff_row_bad_address: ${(e as Error).message}` });
+      continue;
+    }
+    if (plan.kind === 'final') continue;
+    const target = at.get(`${plan.round}:${plan.position}`);
+    if (!target) {
+      conflicts.push({ fromId: r.id, reason: `playoff_target_missing: round ${plan.round} position ${plan.position}` });
+      continue;
+    }
+    const current = plan.slot === 'team1' ? target.team1UserId : target.team2UserId;
+    if (current === null || current === undefined) advances.push({ fromId: r.id, plan });
+    else if (current !== plan.userId) {
+      conflicts.push({ fromId: r.id, reason: `playoff_slot_taken: round ${plan.round} position ${plan.position} ${plan.slot}` });
+    }
+  }
+  return { advances, conflicts };
 }
 
 // ---------------------------------------------------------------------------

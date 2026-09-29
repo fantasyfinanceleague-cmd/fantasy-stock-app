@@ -4,12 +4,15 @@ import { groupMatchupsByLeagueWeek } from './grouping.ts';
 import {
   decideMatchupOutcome,
   willAdvanceWinner,
-  nextRoundOf,
-  winnerSeedForAdvance,
+  planAdvance,
+  isScoreableNow,
+  findMissedAdvances,
   standingsIncrements,
   type RecordIncrement,
   type PlayoffRound,
+  type PlayoffRowState,
 } from './playoff-progression.ts';
+import { isValidPlayoffTeams, playoffShape } from '../_shared/playoff-bracket.ts';
 import {
   decideBatchScoring,
   decideUserScorer,
@@ -31,7 +34,6 @@ import { updateJobStatus, noPendingMessage, scoredMessage } from './job-status.t
 import {
   buildPlayoffBracket,
   decidePlayoffSeeds,
-  decidePodium,
   needsRegularSeasonTransition,
   readPlayoffStart,
   type RpcResult,
@@ -173,138 +175,189 @@ async function transitionAfterRegularSeason(
   supabase: any,
   leagueId: string,
   numWeeks: number,
-  playoffTeams: number,
+  playoffTeams: number | null,
   expectedWeek: number
 ): Promise<TransitionOutcome> {
+  // Every matchup league has playoffs: P is 2..managers (Giorgio, 2026-09-29)
+  // and required on matchup leagues (20261012000000). There is no "no playoffs"
+  // path any more, and no `playoff_teams || 4` default: an invalid P refuses
+  // here (decidePlayoffSeeds) and is surfaced in skipped[].
   const rankRes: RpcResult = await supabase.rpc('league_standings_ranked', { p_league_id: leagueId });
+  const seeding = decidePlayoffSeeds(rankRes, playoffTeams);
+  if (!seeding.ok) return seeding;
 
-  if (playoffTeams > 0) {
-    const seeding = decidePlayoffSeeds(rankRes, playoffTeams);
-    if (!seeding.ok) return seeding;
-
-    // Playoffs start the Tuesday after the last regular-season week ends.
-    const { data: lastMatchup, error: lastErr } = await supabase
-      .from('matchups')
-      .select('week_end')
-      .eq('league_id', leagueId)
-      .eq('is_playoff', false)
-      .order('week_end', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (lastErr) {
-      return { ok: false, reason: `last regular week read failed: ${lastErr.message ?? JSON.stringify(lastErr)}` };
-    }
-    // Refuse rather than date the bracket from "now": the heal pass only runs
-    // with regular matchups present, so a missing week_end is a data problem.
-    if (!lastMatchup?.week_end) {
-      return { ok: false, reason: 'no regular-season week_end to schedule playoffs from' };
-    }
-    const playoffStartDate = new Date(lastMatchup.week_end);
-    const bracket = buildPlayoffBracket(seeding.seeds, playoffStartDate, numWeeks + 1);
-
-    // ONE atomic call claims the league ('active' -> 'playoffs', current_week =
-    // num_weeks + 1) and inserts the bracket, or does neither
-    // (20261011000003). A concurrent or repeated run gets
-    // already_transitioned and writes nothing, so a double bracket or a
-    // half-written one is impossible.
-    const started = readPlayoffStart(await supabase.rpc('start_league_playoffs', {
-      p_league_id: leagueId,
-      p_expected_week: expectedWeek, // compare-and-swap on the week this run read
-      p_bracket: bracket,
-    }));
-    if (!started.ok) return started;
-    console.log(
-      started.claimed
-        ? `League ${leagueId} transitioning to playoffs: ${bracket.length} bracket matchups created`
-        : `League ${leagueId} already transitioned to playoffs by another run; nothing written`,
-    );
-    return { ok: true };
+  // Playoffs start the Tuesday after the last regular-season week ends.
+  const { data: lastMatchup, error: lastErr } = await supabase
+    .from('matchups')
+    .select('week_end')
+    .eq('league_id', leagueId)
+    .eq('is_playoff', false)
+    .order('week_end', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (lastErr) {
+    return { ok: false, reason: `last regular week read failed: ${lastErr.message ?? JSON.stringify(lastErr)}` };
   }
+  // Refuse rather than date the bracket from "now": the heal pass only runs
+  // with regular matchups present, so a missing week_end is a data problem.
+  if (!lastMatchup?.week_end) {
+    return { ok: false, reason: 'no regular-season week_end to schedule playoffs from' };
+  }
+  const playoffStartDate = new Date(lastMatchup.week_end);
+  // Any P: byes are not rows (the bye seeds sit in their round-2 slots), and
+  // every row carries its (round, position) address. See _shared/playoff-bracket.ts.
+  const bracket = buildPlayoffBracket(seeding.seeds, playoffStartDate, numWeeks + 1);
 
-  // No playoffs — complete season, do NOT advance past numWeeks.
-  // No claim step is needed here, unlike the playoff start: complete_league_season
-  // only UPDATEs (the season record + season_status) and inserts no rows, so a
-  // repeated or concurrent call rewrites the same champion / runner-up /
-  // final_standings (the regular season is over, so the ranking is fixed): it
-  // cannot duplicate anything. The heal pass only selects 'active' leagues, so
-  // once this lands it is never re-entered. (Unreachable today anyway:
-  // `playoff_teams || 4` maps NULL/0 to 4.)
-  const podium = decidePodium(rankRes);
-  if (!podium.ok) return podium;
-  console.log(`League ${leagueId} regular season complete (no playoffs)`);
-  const { error } = await supabase.rpc('complete_league_season', {
+  // ONE atomic call claims the league ('active' -> 'playoffs', current_week =
+  // num_weeks + 1) and inserts the bracket, or does neither (20261011000003,
+  // validation 20261012000001: the exact shape for this league's P). A
+  // concurrent or repeated run gets already_transitioned and writes nothing, so
+  // a double bracket or a half-written one is impossible.
+  const started = readPlayoffStart(await supabase.rpc('start_league_playoffs', {
     p_league_id: leagueId,
-    p_champion_user_id: podium.champion,
-    p_runner_up_user_id: podium.runnerUp,
-  });
-  if (error) {
-    return { ok: false, reason: `complete_league_season failed: ${error.message ?? JSON.stringify(error)}` };
-  }
-  console.log(`Season completed - Champion: ${podium.champion}, Runner-up: ${podium.runnerUp}`);
+    p_expected_week: expectedWeek, // compare-and-swap on the week this run read
+    p_bracket: bracket,
+  }));
+  if (!started.ok) return started;
+  console.log(
+    started.claimed
+      ? `League ${leagueId} transitioning to playoffs: ${bracket.length} bracket matchups created`
+      : `League ${leagueId} already transitioned to playoffs by another run; nothing written`,
+  );
   return { ok: true };
 }
 
 /**
- * Advance playoff winner to next round
+ * Advance a playoff winner into its next-round slot, BY ADDRESS: the winner of
+ * (round r, position p) plays in (r+1, floor(p/2)), slot team1 if p is even,
+ * else team2 (planAdvance / nextSlot). Replaces the old "first empty slot of
+ * any next-round row" fill, which made the bracket depend on processing order
+ * (DEFECT 3 in playoff-progression.ts).
+ *
+ * The write is conditional on the slot still being NULL, so a retry (the
+ * missed-advance heal) is idempotent: if the slot already holds this winner
+ * that is success; if it holds someone else that is a conflict and nothing is
+ * overwritten. Every { error } is checked (CLAUDE.md "Success signals" #5: the
+ * old version discarded both update results and logged success regardless).
  */
 async function advancePlayoffWinner(
   supabase: any,
   leagueId: string,
-  matchup: any,
-  winnerId: string
-) {
-  const round = matchup.playoff_round as PlayoffRound | null;
-  // DEFECT 2 FIXED: the winner is passed in rather than re-derived from
-  // matchup.winner_user_id, which is not in the pending-matchup select list and is
-  // written only later by the UPDATE — so it was undefined here and the seed was
-  // always team2_seed. See playoff-progression.test.ts.
-  const winnerSeed = winnerSeedForAdvance({
-    team1UserId: matchup.team1_user_id,
-    team2UserId: matchup.team2_user_id,
-    team1Seed: matchup.team1_seed,
-    team2Seed: matchup.team2_seed,
-  }, winnerId);
+  row: { roundNumber: number; position: number; team1UserId: string; team2UserId: string | null;
+    team1Seed: number | null; team2Seed: number | null },
+  winnerId: string,
+  weeks: number,
+): Promise<TransitionOutcome> {
+  let plan;
+  try {
+    plan = planAdvance(row, winnerId, weeks);
+  } catch (e) {
+    return { ok: false, reason: `playoff_advance_bad_address: ${(e as Error).message}` };
+  }
+  if (plan.kind === 'final') return { ok: true };
 
-  console.log(`Advancing ${winnerId} (seed ${winnerSeed}) from ${round}`);
-
-  // Determine next round
-  const nextRound = nextRoundOf(round);
-  if (!nextRound) return; // Finals has no next round
-
-  // Find the next round matchup to update
-  const { data: nextMatchups } = await supabase
+  const userCol = plan.slot === 'team1' ? 'team1_user_id' : 'team2_user_id';
+  const seedCol = plan.slot === 'team1' ? 'team1_seed' : 'team2_seed';
+  const { data: written, error: writeErr } = await supabase
     .from('matchups')
-    .select('id, team1_user_id, team2_user_id, team1_seed, team2_seed')
+    .update({ [userCol]: winnerId, [seedCol]: plan.seed })
     .eq('league_id', leagueId)
     .eq('is_playoff', true)
-    .eq('playoff_round', nextRound)
-    .or('team1_user_id.is.null,team2_user_id.is.null');
-
-  if (!nextMatchups || nextMatchups.length === 0) {
-    console.error('No next round matchup found');
-    return;
+    .eq('playoff_round_number', plan.round)
+    .eq('bracket_position', plan.position)
+    .is(userCol, null)
+    .select('id');
+  if (writeErr) {
+    return { ok: false, reason: `playoff_advance_failed: ${writeErr.message ?? JSON.stringify(writeErr)}` };
+  }
+  if (Array.isArray(written) && written.length === 1) {
+    console.log(`Advanced ${winnerId} (seed ${plan.seed}) to round ${plan.round} position ${plan.position} ${plan.slot}`);
+    return { ok: true };
   }
 
-  // Find an empty slot
-  for (const next of nextMatchups) {
-    if (!next.team1_user_id) {
-      await supabase
-        .from('matchups')
-        .update({ team1_user_id: winnerId, team1_seed: winnerSeed })
-        .eq('id', next.id);
-      console.log(`Set ${winnerId} as team1 in next round`);
-      return;
-    } else if (!next.team2_user_id) {
-      await supabase
-        .from('matchups')
-        .update({ team2_user_id: winnerId, team2_seed: winnerSeed })
-        .eq('id', next.id);
-      console.log(`Set ${winnerId} as team2 in next round`);
-      return;
+  // Nothing written: the slot is already filled, or the row does not exist.
+  const { data: target, error: readErr } = await supabase
+    .from('matchups')
+    .select(`id, ${userCol}`)
+    .eq('league_id', leagueId)
+    .eq('is_playoff', true)
+    .eq('playoff_round_number', plan.round)
+    .eq('bracket_position', plan.position)
+    .maybeSingle();
+  if (readErr) {
+    return { ok: false, reason: `playoff_advance_recheck_failed: ${readErr.message ?? JSON.stringify(readErr)}` };
+  }
+  if (!target) {
+    return { ok: false, reason: `playoff_target_missing: round ${plan.round} position ${plan.position}` };
+  }
+  if (target[userCol] === winnerId) return { ok: true }; // already advanced (a retry)
+  return { ok: false, reason: `playoff_slot_taken: round ${plan.round} position ${plan.position} ${plan.slot}` };
+}
+
+/**
+ * Heal pass for playoff advancement. A game is never re-selected once scored,
+ * so a winner whose advance failed would never reach the next round and that
+ * game could never be played. For every league in 'playoffs', re-apply any
+ * missed advance (findMissedAdvances decides, per game) and report conflicts.
+ * Runs before the pending-matchup query, so a healed slot is scoreable in the
+ * same run. Never throws: whatever it cannot do is reported and retried.
+ */
+async function healMissedAdvances(supabase: any, leagueIdFilter: string | null): Promise<any[]> {
+  const refusals: any[] = [];
+  try {
+    let lq = supabase
+      .from('leagues')
+      .select('id, playoff_teams')
+      .eq('league_type', 'matchup')
+      .eq('season_status', 'playoffs');
+    if (leagueIdFilter) lq = lq.eq('id', leagueIdFilter);
+    const { data: leagues, error: leaguesErr } = await lq;
+    if (leaguesErr) {
+      console.error('Advance heal: failed to read leagues (skipping this run):', leaguesErr);
+      return refusals;
     }
+    for (const league of leagues ?? []) {
+      if (!isValidPlayoffTeams(league.playoff_teams)) {
+        refusals.push({ league_id: league.id, reason: `invalid_playoff_teams: ${String(league.playoff_teams)}` });
+        continue;
+      }
+      const weeks = playoffShape(league.playoff_teams).weeks;
+      const { data: rows, error: rowsErr } = await supabase
+        .from('matchups')
+        .select('id, week_number, playoff_round_number, bracket_position, team1_user_id, team2_user_id, team1_seed, team2_seed, team1_gain, winner_user_id')
+        .eq('league_id', league.id)
+        .eq('is_playoff', true);
+      if (rowsErr) {
+        console.error(`Advance heal: failed to read playoff rows for league ${league.id} (skipping):`, rowsErr);
+        continue;
+      }
+      const state: PlayoffRowState[] = (rows ?? []).map((r: any) => ({
+        id: r.id,
+        roundNumber: r.playoff_round_number,
+        position: r.bracket_position,
+        team1UserId: r.team1_user_id,
+        team2UserId: r.team2_user_id,
+        team1Seed: r.team1_seed,
+        team2Seed: r.team2_seed,
+        scored: r.team1_gain !== null,
+        winnerUserId: r.winner_user_id,
+      }));
+      const { advances, conflicts } = findMissedAdvances(state, weeks);
+      for (const c of conflicts) {
+        console.error(`Advance heal: league ${league.id} row ${c.fromId}: ${c.reason}`);
+        refusals.push({ league_id: league.id, matchup_id: c.fromId, reason: c.reason });
+      }
+      for (const a of advances) {
+        const from = state.find((r) => r.id === a.fromId)!;
+        console.log(`Advance heal: league ${league.id} re-advancing ${a.plan.userId} from row ${a.fromId}`);
+        const res = await advancePlayoffWinner(supabase, league.id, { ...from, team1UserId: from.team1UserId! }, a.plan.userId, weeks);
+        if (!res.ok) refusals.push({ league_id: league.id, matchup_id: a.fromId, reason: res.reason });
+      }
+    }
+  } catch (e) {
+    console.error('Advance heal threw (skipping this run):', e);
   }
-
-  console.error('No empty slot found in next round');
+  return refusals;
 }
 
 /**
@@ -395,9 +448,9 @@ async function healRefusedTransitionsInner(supabase: any, leagueIdFilter: string
     if (!needsRegularSeasonTransition(league, counts)) continue;
 
     console.log(`Heal pass: league ${league.id} finished its regular season without transitioning; retrying`);
-    // Same derivation as the in-loop path (`playoff_teams || 4`).
+    // playoff_teams as stored: no default (see transitionAfterRegularSeason).
     const outcome = await transitionAfterRegularSeason(
-      supabase, league.id, league.num_weeks, league.playoff_teams || 4, league.current_week,
+      supabase, league.id, league.num_weeks, league.playoff_teams, league.current_week,
     );
     if (!outcome.ok) {
       console.error(`REFUSED season transition for league ${league.id} (heal pass): ${outcome.reason}`);
@@ -457,7 +510,12 @@ Deno.serve(async (req) => {
   try {
     // 0. Retry season transitions refused on an earlier run (see
     //    healRefusedTransitions). Before the pending query so it runs on quiet weeks.
-    const transitionRefusals = await healRefusedTransitions(supabase, leagueIdFilter);
+    //    Then re-apply playoff advances an earlier run failed to write, so a
+    //    healed next-round game is scoreable in this same run.
+    const transitionRefusals = [
+      ...(await healRefusedTransitions(supabase, leagueIdFilter)),
+      ...(await healMissedAdvances(supabase, leagueIdFilter)),
+    ];
     let transitionsRefused = transitionRefusals.length;
 
     // 1. Find matchups that need processing (week_end has passed, no results yet)
@@ -476,6 +534,8 @@ Deno.serve(async (req) => {
         week_end,
         is_playoff,
         playoff_round,
+        playoff_round_number,
+        bracket_position,
         leagues!inner(id, league_type, current_week, num_weeks, playoff_teams)
       `)
       .eq('leagues.league_type', 'matchup')
@@ -487,7 +547,7 @@ Deno.serve(async (req) => {
       query = query.eq('league_id', leagueIdFilter);
     }
 
-    const { data: pendingMatchups, error: matchupErr } = await query;
+    const { data: pendingRows, error: matchupErr } = await query;
 
     if (matchupErr) {
       console.error('Error fetching matchups:', matchupErr);
@@ -498,7 +558,14 @@ Deno.serve(async (req) => {
       return json({ error: 'Failed to fetch matchups', details: matchupErr }, 500);
     }
 
-    if (!pendingMatchups || pendingMatchups.length === 0) {
+    // A playoff row with an empty slot is still awaiting its feeder's winner,
+    // never a walkover (isScoreableNow, DEFECT 4). The query cannot express
+    // "team2 required only on playoff rows" as simply, so it is filtered here.
+    const pendingMatchups: any[] = ((pendingRows ?? []) as any[]).filter(isScoreableNow);
+    const awaiting = ((pendingRows ?? []) as any[]).length - pendingMatchups.length;
+    if (awaiting > 0) console.log(`${awaiting} playoff matchup(s) still await a feeder winner; not scored yet`);
+
+    if (pendingMatchups.length === 0) {
       console.log('No pending matchups to process');
       // Terminal success: the common weekly path. The schema has no distinct
       // "nothing to do" status, so the message carries it.
@@ -953,7 +1020,25 @@ Deno.serve(async (req) => {
         // willAdvanceWinner is `isPlayoff && !!winnerId` — the same gate as before,
         // and the one DEFECT 1 trips when a playoff matchup ends both-empty.
         if (willAdvanceWinner(progressionMatchup, outcome)) {
-          await advancePlayoffWinner(supabase, leagueId, matchup, winnerId!);
+          // deno-lint-ignore no-explicit-any
+          const pm = matchup as any; // batch rows are untyped supabase rows
+          const playoffTeams = pm.leagues?.playoff_teams;
+          const advanced = isValidPlayoffTeams(playoffTeams)
+            ? await advancePlayoffWinner(supabase, leagueId, {
+                roundNumber: pm.playoff_round_number,
+                position: pm.bracket_position,
+                team1UserId: pm.team1_user_id,
+                team2UserId: pm.team2_user_id,
+                team1Seed: pm.team1_seed,
+                team2Seed: pm.team2_seed,
+              }, winnerId!, playoffShape(playoffTeams).weeks)
+            : { ok: false as const, reason: `invalid_playoff_teams: ${String(playoffTeams)}` };
+          if (!advanced.ok) {
+            // The game IS scored; only the advance failed. Reported now and
+            // retried by healMissedAdvances on the next run.
+            console.error(`Playoff advance failed for matchup ${matchup.id}: ${advanced.reason}`);
+            skipped.push({ league_id: leagueId, week_number: weekNumber, matchup_id: matchup.id, reason: advanced.reason });
+          }
         }
 
         // Helper to update standings with proper increment
@@ -1062,7 +1147,7 @@ Deno.serve(async (req) => {
       // Multi-week catch-up still works because batches are sorted week-ascending
       // and current_week is re-read from the DB here on every batch.
       const numWeeks = leagueMatchups[0]?.leagues?.num_weeks || 0;
-      const playoffTeams = leagueMatchups[0]?.leagues?.playoff_teams || 4;
+      const playoffTeams: number | null = leagueMatchups[0]?.leagues?.playoff_teams ?? null;
 
       // Re-read current_week from DB (may have changed from a prior batch)
       const { data: leagueData } = await supabase
@@ -1090,8 +1175,11 @@ Deno.serve(async (req) => {
           const isPlayoffWeek = leagueMatchups.some(m => m.is_playoff);
 
           if (isPlayoffWeek) {
-            // Check if this was the finals round
-            const finalsMatchup = leagueMatchups.find(m => m.playoff_round === 'finals');
+            // Was this the final? Keyed on the ADDRESS (round W of W), never on
+            // the playoff_round label. An invalid P finds no final here; its
+            // advance already refused above and is reported in skipped[].
+            const playoffWeeks = isValidPlayoffTeams(playoffTeams) ? playoffShape(playoffTeams).weeks : null;
+            const finalsMatchup = leagueMatchups.find(m => m.playoff_round_number === playoffWeeks);
             if (finalsMatchup) {
               // Finals completed — complete the season (do NOT advance current_week)
               const finalsWinner = results.find(r => r.matchupId === finalsMatchup.id)?.winner;

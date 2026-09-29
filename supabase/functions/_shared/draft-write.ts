@@ -64,7 +64,7 @@ export interface DraftContext {
 }
 
 export const LEAGUE_COLUMNS =
-  'id, commissioner_id, num_rounds, draft_status, stake_mode, budget_amount, notional_per_slot, allow_undraftable, league_type, num_weeks, duration_days';
+  'id, commissioner_id, num_rounds, draft_status, stake_mode, budget_amount, notional_per_slot, allow_undraftable, league_type, num_weeks, duration_days, playoff_teams';
 
 export type LoadResult =
   | { ok: true; ctx: DraftContext }
@@ -230,6 +230,7 @@ export async function finalizeDraft(
     commissionerId: league.commissioner_id == null ? null : String(league.commissioner_id),
     memberIds,
     numWeeks: league.num_weeks == null ? null : Number(league.num_weeks),
+    playoffTeams: league.playoff_teams == null ? null : Number(league.playoff_teams),
     durationDays: league.duration_days == null ? null : Number(league.duration_days),
     now: new Date(),
   });

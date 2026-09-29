@@ -3,7 +3,6 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/Colors';
-import { getPlayoffRoundLabel } from '@/lib/weekStatus';
 
 interface WeekNavigatorProps {
   currentWeek: number;
@@ -13,6 +12,7 @@ interface WeekNavigatorProps {
   onWeekChange: (week: number) => void;
   disabled?: boolean;
   phase?: 'regular' | 'playoffs' | 'completed';
+  /** Display label for a playoff week (playoffRoundLabelForWeek), or null. */
   playoffRoundForWeek?: (week: number) => string | null;
 }
 
@@ -75,7 +75,7 @@ export default function WeekNavigator({
       <View style={styles.weekDisplay}>
         <Text style={styles.weekText}>
           {totalWeeks && selectedWeek > totalWeeks && playoffRoundForWeek
-            ? (getPlayoffRoundLabel(playoffRoundForWeek(selectedWeek)) || `Week ${selectedWeek}`)
+            ? (playoffRoundForWeek(selectedWeek) || `Week ${selectedWeek}`)
             : `Week ${selectedWeek}`
           }
         </Text>

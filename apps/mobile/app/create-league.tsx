@@ -12,6 +12,7 @@ import { supabase } from '@/lib/supabase';
 import { validateLeagueName } from '@/lib/contentModeration';
 import { generateInviteCode } from '@/lib/inviteCode';
 import SlotBuilder from '@/components/SlotBuilder';
+import { playoffLine } from '@/lib/playoffs';
 import {
   type Category,
   type SlotDraft,
@@ -81,10 +82,10 @@ export default function CreateLeagueWizard() {
   });
 
   const minWeeks = state.size - 1;
-  const getPlayoffOptions = () => {
-    const allOptions = [2, 4, 8]; // DB CHECK: playoff_teams NULL or in (2,4,8)
-    return allOptions.filter(o => o < state.size);
-  };
+  // Flexible playoffs (Giorgio, 2026-09-29): any P from 2 up to the league
+  // size, equal included. Clamped like numWeeks, so shrinking the league never
+  // leaves a stale P above it.
+  const playoffTeams = Math.min(Math.max(state.playoffTeams, 2), state.size);
 
   // Navigation helpers
   const goBack = () => {
@@ -138,7 +139,7 @@ export default function CreateLeagueWizard() {
           league_type: state.type,
           duration_days: state.type === 'duration' ? state.durationDays : 30,
           num_weeks: effectiveWeeks,
-          playoff_teams: state.type === 'matchup' ? state.playoffTeams : null,
+          playoff_teams: state.type === 'matchup' ? playoffTeams : null,
           draft_status: 'not_started',
           draft_date: state.draftDateTBD ? null : state.draftDate?.toISOString(),
         })
@@ -588,8 +589,6 @@ export default function CreateLeagueWizard() {
   };
 
   const renderMatchup = () => {
-    const playoffOptions = getPlayoffOptions();
-
     return (
       <View style={styles.stepContainer}>
         <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
@@ -620,19 +619,27 @@ export default function CreateLeagueWizard() {
 
           <View style={styles.settingSection}>
             <Text style={styles.settingLabel}>Playoff Teams</Text>
-            <View style={styles.playoffGrid}>
-              {playoffOptions.map((num) => (
-                <TouchableOpacity
-                  key={num}
-                  style={[styles.playoffButton, state.playoffTeams === num && styles.playoffButtonSelected]}
-                  onPress={() => setState({ ...state, playoffTeams: num })}
-                >
-                  <Text style={[styles.playoffButtonText, state.playoffTeams === num && styles.playoffButtonTextSelected]}>
-                    {num} teams
-                  </Text>
-                </TouchableOpacity>
-              ))}
+            <View style={styles.stepper}>
+              <TouchableOpacity
+                style={styles.stepperBtn}
+                onPress={() => setState({ ...state, playoffTeams: Math.max(2, playoffTeams - 1) })}
+                accessibilityLabel="Fewer playoff teams"
+              >
+                <Ionicons name="remove" size={24} color={Colors.textPrimary} />
+              </TouchableOpacity>
+              <View style={styles.stepperValue}>
+                <Text style={styles.stepperValueText}>{playoffTeams}</Text>
+                <Text style={styles.stepperValueLabel}>teams</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.stepperBtn}
+                onPress={() => setState({ ...state, playoffTeams: Math.min(state.size, playoffTeams + 1) })}
+                accessibilityLabel="More playoff teams"
+              >
+                <Ionicons name="add" size={24} color={Colors.textPrimary} />
+              </TouchableOpacity>
             </View>
+            <Text style={styles.settingHint}>{playoffLine(playoffTeams)}</Text>
           </View>
         </ScrollView>
 
@@ -1201,32 +1208,6 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
     color: Colors.textMuted,
   },
-  playoffGrid: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  playoffButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: Colors.cardBg,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: Colors.border,
-  },
-  playoffButtonSelected: {
-    backgroundColor: ACCENT_BG,
-    borderColor: ACCENT,
-  },
-  playoffButtonText: {
-    fontSize: 14,
-    fontFamily: 'Inter_600SemiBold',
-    color: Colors.textMuted,
-  },
-  playoffButtonTextSelected: {
-    color: ACCENT,
-  },
-
   // Date picker
   dateButton: {
     flexDirection: 'row',

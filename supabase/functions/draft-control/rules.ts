@@ -9,6 +9,8 @@
  * web UI used to imply, rather than inventing new behaviour.
  */
 
+import { isValidPlayoffTeams } from '../_shared/playoff-bracket.ts';
+
 /** Members needed (people + bots) to start a draft — matches web's
  * MIN_PARTICIPANTS and sits at the floor of leagues_num_participants_range
  * (20250819185319_leagues_rules.sql: 4..16). Product decision (2026-09-25,
@@ -27,14 +29,7 @@ export interface LeagueStartState {
   numParticipants: number; // the CAP (leagues.num_participants), not the floor
   draftDate: string | null; // ISO, or null = TBD
   leagueType: string | null; // leagues.league_type: 'matchup' | 'duration'
-  playoffTeams: number | null; // leagues.playoff_teams (NULL/0 read as 4, see below)
-}
-
-/** Playoff spots process-week-results will actually seed: it reads
- * `playoff_teams || 4`, so NULL and 0 mean 4. Mirrored here so the start-time
- * check and the season-end seeding can never disagree. */
-export function effectivePlayoffTeams(playoffTeams: number | null): number {
-  return playoffTeams || 4;
+  playoffTeams: number | null; // leagues.playoff_teams, as stored (no default)
 }
 
 export type StartBlocker =
@@ -43,6 +38,7 @@ export type StartBlocker =
   | { code: 'no_draft_date' }
   | { code: 'draft_date_not_reached'; draftDate: string }
   | { code: 'not_enough_members'; have: number; need: number }
+  | { code: 'invalid_playoff_teams'; playoffTeams: number | null }
   | { code: 'playoff_teams_exceeds_members'; playoffTeams: number; members: number };
 
 /**
@@ -71,7 +67,13 @@ export function computeStartBlockers(state: LeagueStartState, now: Date): StartB
   }
   if (state.memberCount < MIN_DRAFT_MEMBERS) {
     blockers.push({ code: 'not_enough_members', have: state.memberCount, need: MIN_DRAFT_MEMBERS });
-  } else if (state.leagueType === 'matchup' && effectivePlayoffTeams(state.playoffTeams) > state.memberCount) {
+  } else if (state.leagueType === 'matchup' && !isValidPlayoffTeams(state.playoffTeams)) {
+    // playoff_teams is required on matchup leagues (20261012000000) and is used
+    // AS STORED, with no default: planSeason and the season-end seeding refuse
+    // an invalid value too, so a league that got here could never finish its
+    // season. (It used to read NULL/0 as 4 via `playoff_teams || 4`.)
+    blockers.push({ code: 'invalid_playoff_teams', playoffTeams: state.playoffTeams });
+  } else if (state.leagueType === 'matchup' && state.playoffTeams! > state.memberCount) {
     // Product rule (Giorgio, 2026-09-29): playoff spots may EQUAL the number of
     // managers but never exceed it. A league that started with more spots than
     // managers reaches the end of its regular season and cannot be seeded;
@@ -85,7 +87,7 @@ export function computeStartBlockers(state: LeagueStartState, now: Date): StartB
     // headcount problem at a time.
     blockers.push({
       code: 'playoff_teams_exceeds_members',
-      playoffTeams: effectivePlayoffTeams(state.playoffTeams),
+      playoffTeams: state.playoffTeams!,
       members: state.memberCount,
     });
   }
