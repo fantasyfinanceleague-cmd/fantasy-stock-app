@@ -33,6 +33,58 @@ It covers:
 - PR #9's leagues trigger contract
 - the stuck-draft detector query in the migration header
 
+## league_standings_ranked.pglite.test.ts
+
+What it does:
+- Loads the three `20261011*` ranking migrations **verbatim**, on top of the real
+  prior definitions they replace: `20261004000000` + `20261004000001` whole, and
+  `complete_league_season` sliced out of `20260125000000` with its lockdown grants
+  (`20260718000002`) and `search_path` pin (`20260724000002`).
+- Recreates the prod members-only SELECT policies (with `is_member()` sliced out of
+  `20260712000000`) so the INVOKER function runs under real RLS.
+
+It covers:
+- grants and security mode; the two re-created functions' `proacl`, `prosecdef`
+  and `proconfig` byte-identical before/after
+- the motivating 5-1 vs 5-1 case, including `get_home_summary`'s rank flipping
+  from 2nd to 1st
+- win % over non-bye games (ties half; uneven byes; 0 games played = 0%), 2-/3-/4-way H2H (balanced, cycle, unbalanced, never-met,
+  recursive subgroups), byes, unscored and playoff games ignored
+- the pre-season join-order key, the playoff-cutoff case, ranks exactly 1..N
+- RLS (member / non-member / anon) and `complete_league_season`'s snapshot
+
+## start_league_playoffs.pglite.test.ts
+
+What it does: loads `20261011000003` and the `20261011000004` backstop index
+**verbatim** on a replica of `matchups`' unique keys and `valid_playoff_round` check. It drives the function with brackets from the
+real `buildPlayoffBracket` (`process-week-results/season-transition.ts`).
+
+It covers:
+- grants (DEFINER, `service_role` only)
+- claim + full bracket insert
+- idempotency: a repeat call is `already_transitioned` and writes nothing
+- atomicity: a bad timestamp or duplicate key rolls back the claim, and a retry then
+  succeeds
+- no re-claim with existing playoff rows or a non-active status
+- compare-and-swap: a stale `p_expected_week` is `not_eligible` and writes nothing
+- backstop index: a non-atomic second bracket is rejected, while normal winner
+  advancement (4- and 8-team) never trips it
+- 17 write-free refusals
+- anon/authenticated denied
+
+PGlite has one connection, so true concurrency is argued in the migration header (row
+lock + READ COMMITTED re-check of `season_status`), not executed.
+
+## bye_recompute.pglite.test.ts
+
+Runs the hand-run HUMAN ACTION `docs/migrations/bye-no-result-standings-recompute.sql`
+**verbatim**. Steps 1–2 run as written; step 3 has its `-- ` prefix stripped and the
+league id substituted. It proves:
+- steps 1–2 find the legacy bye wins and the managers they inflate;
+- step 3 corrects W/L/T only for the target league, keeps `points_for`, and rewrites
+  legacy bye rows to the no-result shape;
+- a completed season is never touched.
+
 ### Run (from the repo root)
 
 ```bash

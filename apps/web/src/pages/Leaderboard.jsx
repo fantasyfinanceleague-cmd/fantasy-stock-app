@@ -173,11 +173,9 @@ export default function Leaderboard() {
     if (!leagueId) return;
 
     try {
+      // Ranked server-side (league_standings_ranked): rank order == playoff seed order.
       const { data: standingsRows, error: sErr } = await supabase
-        .from('league_standings')
-        .select('*')
-        .eq('league_id', leagueId)
-        .order('wins', { ascending: false });
+        .rpc('league_standings_ranked', { p_league_id: leagueId });
 
       if (sErr) throw sErr;
       setLeagueStandings(standingsRows || []);
@@ -342,11 +340,9 @@ export default function Leaderboard() {
         setTrades(tradeRows || []);
 
         // Load matchup league data (standings and matchups)
+        // Ranked server-side (league_standings_ranked): rank order == playoff seed order.
         const { data: standingsRows, error: sErr } = await supabase
-          .from('league_standings')
-          .select('*')
-          .eq('league_id', leagueId)
-          .order('wins', { ascending: false });
+          .rpc('league_standings_ranked', { p_league_id: leagueId });
 
         if (sErr) throw sErr;
         setLeagueStandings(standingsRows || []);
@@ -506,23 +502,14 @@ export default function Leaderboard() {
   const currentWeek = activeLeague?.current_week || 1;
 
 
-  // Matchup standings sorted by win pct, then wins, then points_for
+  // Matchup standings: already in rank order from league_standings_ranked
+  // (the same order that seeds the playoffs). Do not re-sort client-side.
   const matchupStandings = useMemo(() => {
     if (!isMatchupLeague) return [];
 
     // If we have standings entries, use them
     if (leagueStandings.length > 0) {
-      return [...leagueStandings].sort((a, b) => {
-        // Calculate win percentage
-        const aTotal = a.wins + a.losses + a.ties;
-        const bTotal = b.wins + b.losses + b.ties;
-        const aPct = aTotal > 0 ? (a.wins + a.ties * 0.5) / aTotal : 0;
-        const bPct = bTotal > 0 ? (b.wins + b.ties * 0.5) / bTotal : 0;
-
-        if (bPct !== aPct) return bPct - aPct;
-        if (b.wins !== a.wins) return b.wins - a.wins;
-        return Number(b.points_for) - Number(a.points_for);
-      });
+      return leagueStandings;
     }
 
     // No standings yet - show all users with 0-0 records
@@ -639,7 +626,9 @@ export default function Leaderboard() {
         };
       });
 
-      // Sort by wins (desc), then points for (desc) as tiebreaker
+      // PROJECTION ONLY, not a source of truth: approximates the real ranking
+      // (league_standings_ranked: W + 0.5*T -> H2H -> season gain) with wins
+      // then points for, since simulated games have no H2H results.
       simWins.sort((a, b) => {
         if (b.wins !== a.wins) return b.wins - a.wins;
         return b.pointsFor - a.pointsFor;

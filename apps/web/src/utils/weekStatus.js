@@ -95,6 +95,15 @@ export function getRelativeCountdown(nextWeek, holidayInfo = null) {
  * @param {Object} matchup - Current matchup object with winner_user_id, team1_gain, team2_gain
  * @returns {Object} Week status information
  */
+/**
+ * A SCORED regular-season bye: NO RESULT since 2026-09-29 (winner null, is_tie
+ * false, team2_gain null), so it must be recognised explicitly or the week
+ * reads as live forever. Mirrors apps/mobile/lib/weekStatus.ts isScoredBye.
+ */
+function isScoredBye(m) {
+  return m.team2_user_id === null && m.is_playoff !== true && m.team1_gain != null;
+}
+
 export function getWeekStatus(league, matchup) {
   const currentWeek = league?.current_week || 1;
   const numWeeks = league?.num_weeks || 0;
@@ -104,7 +113,8 @@ export function getWeekStatus(league, matchup) {
   const isWeekComplete = matchup && (
     matchup.winner_user_id !== null ||
     matchup.is_tie === true ||
-    (matchup.team1_gain !== null && matchup.team2_gain !== null)
+    (matchup.team1_gain !== null && matchup.team2_gain !== null) ||
+    isScoredBye(matchup)
   );
 
   // Determine if we're in a transition period (weekend)
@@ -160,8 +170,8 @@ export function isWeekActive(matchup) {
     return false;
   }
 
-  // If both gains are populated, results are in
-  if (matchup.team1_gain !== null && matchup.team2_gain !== null) {
+  // If both gains are populated (or it is a scored bye), results are in
+  if ((matchup.team1_gain !== null && matchup.team2_gain !== null) || isScoredBye(matchup)) {
     return false;
   }
 

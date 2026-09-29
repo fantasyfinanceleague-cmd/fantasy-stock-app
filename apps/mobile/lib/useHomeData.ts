@@ -279,15 +279,15 @@ export function useHomeData(): HomeData {
 
         // 3. Standings
         if (league.league_type === 'matchup') {
+          // Ranked server-side by league_standings_ranked: the same order as the
+          // standings screen and the playoff seeds (rows arrive in rank order).
           const { data: standingsData } = await supabase
-            .from('league_standings')
-            .select('user_id, wins, losses, ties')
-            .eq('league_id', league.id)
-            .order('wins', { ascending: false });
+            .rpc('league_standings_ranked', { p_league_id: league.id });
 
           if (standingsData) {
-            const userStanding = standingsData.find(s => s.user_id === user.id);
-            const userRank = standingsData.findIndex(s => s.user_id === user.id) + 1;
+            type RankedRow = { user_id: string; wins: number; losses: number; ties: number };
+            const userStanding = (standingsData as RankedRow[]).find(s => s.user_id === user.id);
+            const userRank = (standingsData as RankedRow[]).findIndex(s => s.user_id === user.id) + 1;
             standingsResults[league.id] = {
               rank: userRank || standingsData.length,
               totalPlayers: standingsData.length,
