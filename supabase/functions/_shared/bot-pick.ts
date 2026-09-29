@@ -54,6 +54,24 @@ export interface BotCandidateInputs {
  * fall back to SKIP without spending an Alpaca call.
  */
 export function rankBotCandidates(i: BotCandidateInputs): string[] {
+  return i.candidates
+    .filter(candidateFilter(i))
+    .sort((a, b) => (b.marketCap ?? 0) - (a.marketCap ?? 0) || a.symbol.localeCompare(b.symbol))
+    .map((c) => c.symbol);
+}
+
+/**
+ * The cheap cached-price pre-filter on its own, WITHOUT reordering — so a
+ * manager's draft queue (../_shared/auto-pick.ts) can be filtered by exactly
+ * the same rules while keeping the manager's order. `unpricedOk` keeps
+ * candidates with no cached last_price (a queued symbol the enrichment cron
+ * hasn't priced yet is still worth one live attempt; for the market-cap pool
+ * it is not, because the pool query already excludes them).
+ */
+export function candidateFilter(
+  i: Omit<BotCandidateInputs, 'candidates'>,
+  opts: { unpricedOk?: boolean } = {},
+): (c: BotSymbolCandidate) => boolean {
   const owned = leagueOwnedSymbols(i.picks, i.trades);
 
   const budgetRemaining = i.rules.stakeMode === 'budget_cap'
@@ -70,19 +88,16 @@ export function rankBotCandidates(i: BotCandidateInputs): string[] {
   const fitsAnyBracket = (price: number) =>
     brackets.some((b) => (b.min == null || price >= b.min) && (b.max == null || price <= b.max));
 
-  const filtered = i.candidates.filter((c) => {
+  return (c) => {
     if (!c.isDraftable && !i.rules.allowUndraftable) return false;
-    const price = c.lastPrice;
-    if (price == null || !(price > 0)) return false;
     if (owned.has(c.symbol.toUpperCase())) return false;
+    const price = c.lastPrice;
+    if (price == null) return opts.unpricedOk === true;
+    if (!(price > 0)) return false;
     if (price > budgetRemaining + 1e-9) return false;
     if (!fitsAnyBracket(price)) return false;
     return true;
-  });
-
-  return filtered
-    .sort((a, b) => (b.marketCap ?? 0) - (a.marketCap ?? 0) || a.symbol.localeCompare(b.symbol))
-    .map((c) => c.symbol);
+  };
 }
 
 /** How many ranked candidates the caller should actually try live (fetch a

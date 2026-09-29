@@ -105,6 +105,18 @@ enabled = true
 verify_jwt = false
 entrypoint = "./functions/refresh-market-calendar/index.ts"
 
+# Draft pick clock backstop (feat/draft-pick-clock-autopick): auto-picks every
+# overdue turn in every clocked live draft, so a draft with nobody connected
+# still finishes. Cron-only, same pattern as enrich-symbols above — JWT
+# verification disabled; the shared apikey guard (_shared/cron-auth.ts,
+# SB_SECRET_KEY_CRON, constant-time, fail-closed) is the authentication guard.
+# The cron that calls this is DEFERRED (supabase/migrations/deferred/) until
+# this function is deployed and effect-verified.
+[functions.draft-autopick-sweep]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/draft-autopick-sweep/index.ts"
+
 # In-house simulator (DR-001 Phase 3): server-side draft legality gate. RLS on
 # drafts remains the membership backstop; this function is the single legality
 # gate + write path the clients use. verify_jwt=true + in-code getUser() +
