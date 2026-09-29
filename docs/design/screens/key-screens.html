@@ -418,6 +418,7 @@
 }
 .ks-cell__n { font-size: 10px; line-height: 12px; color: var(--c-text-2); font-weight: 600; }
 .ks-cell__t { font-size: 12.5px; line-height: 15px; font-weight: 800; letter-spacing: -0.01em; }
+.ks-auto { position: absolute; top: -7px; right: -5px; z-index: 2; padding: 1px 5px; border-radius: 6px; font-size: 8.5px; line-height: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; background: var(--c-inverse-bg); color: var(--c-inverse-fg); }
 .ks-cell--you { border-color: var(--c-you); box-shadow: inset 0 0 0 1px var(--c-you); }
 .ks-cell--you .ks-cell__n { color: var(--c-you-text); }
 .ks-cell--future { background: transparent; border-style: dashed; }
@@ -1451,7 +1452,7 @@
   // ═════════════════════════════════════════════════════════════════════
   // 4. DRAFT ROOM (on the clock, the snake board, search, your roster)
   // ═════════════════════════════════════════════════════════════════════
-  function SnakeBoard({ current, landed }) {
+  function SnakeBoard({ current, landed, autoPicks = [] }) {
     const ref = useRef(null);
     const cells = useRef({});
     const [geo, setGeo] = useState(null);
@@ -1522,6 +1523,7 @@
                 return (
                   <div key={p.pick} className={cls} ref={(el) => (cells.current[p.pick] = el)}>
                     <span className="ks-cell__n">{p.pick}</span>
+                    {filled && autoPicks.includes(p.pick) ? <span className="ks-auto" title="Auto-picked">Auto</span> : null}
                     {filled ? <span className="ks-cell__t">{p.intended}</span> : <span className="ks-cell__t" style={{ opacity: 0 }}>·</span>}
                   </div>
                 );
@@ -1647,7 +1649,9 @@
               <Row k="Draft date" v="Sat, Oct 3 · 7:00 PM" />
               <Row k="Draft order" v="Random" sub="Set when the draft starts" />
               <Row k="Rounds" v="6" sub="One per roster slot" />
-              <Row k="If time runs out" v="Auto-pick" sub="From your queue, then the top-ranked stock" />
+              <li className="ks-row" style={{ gridTemplateColumns: '1fr', padding: '13px 0' }}>
+                <span><span className="ks-callout" style={{ fontWeight: 600 }}>If time runs out</span><br /><span className="ks-caption">We pick for you: the first stock still available in your queue, otherwise the best available. Never a random pick, never a skip.</span></span>
+              </li>
             </ul>
           </div>
           <span className="ks-btn">Next</span>
@@ -1809,7 +1813,7 @@
   }
 
   // The building blocks, shared with inventory.jsx (step 2's screens).
-  window.KSKit = { Device, LeagueHead, Chip, Icon, ICON, Logo, Scores, Tug, GainChart, WeekRace, ThisWeekCard, SD, margin, $, $s, pct, tone };
+  window.KSKit = { SnakeBoard, Device, LeagueHead, Chip, Icon, ICON, Logo, Scores, Tug, GainChart, WeekRace, ThisWeekCard, SD, margin, $, $s, pct, tone };
   window.KSScreens = { HomeScreen, MatchupScreen, LeagueScreen, DraftScreen, DraftSettingsScreen, PortfolioScreen };
 })();
 
@@ -2417,8 +2421,49 @@
             <div style={{ display: 'flex', gap: 6 }}>{['RB', 'MR', 'LC', 'SF', 'GV'].map((m, i) => <span key={m} className={i === 0 ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{m}</span>)}<span className="ks-avatar ks-avatar--sm" style={{ background: 'transparent', border: '1.5px dashed var(--c-line)' }} /></div>
           </div>
           <div>
-            <div className="ks-section-h"><h3>Your queue</h3><span className="ks-caption ks-muted">Auto-pick uses it if your clock runs out</span></div>
+            <div className="ks-section-h"><h3>Your queue</h3><span className="ks-caption ks-muted">If your clock runs out, we pick from here first</span></div>
             <ul className="ks-rows">{queue.map((t, i) => <li key={t} className="ks-row" style={{ gridTemplateColumns: '20px 36px 1fr 20px', padding: '8px 0' }}><span className="ks-caption ks-muted ks-num">{i + 1}</span><Logo t={t} game /><span className="ks-t ks-callout">{t}</span><span className="ks-muted">≡</span></li>)}</ul>
+          </div>
+        </div>
+      </Device>
+    );
+  }
+
+  /** Paolo M. timed out twice in a row (picks 12 and 13, back to back at
+   * the snake turn): 12 came from his queue, 13 from the best available.
+   * New copy throughout. */
+  function DraftAutoPick() {
+    const { SnakeBoard } = window.KSKit;
+    const log = [
+      { n: 13, who: 'Paolo M.', t: 'NFLX', how: 'Auto-picked · best available' },
+      { n: 12, who: 'Paolo M.', t: 'LLY', how: 'Auto-picked · from his queue' },
+      { n: 11, who: 'Roberto B.', t: 'AAPL', how: 'Picked', you: true },
+    ];
+    return (
+      <Device game tab="league" label="Draft room, after two auto-picks">
+        <Head chip={<Chip kind="live">Drafting</Chip>} />
+        <div className="ks-pad ks-stack" style={{ gap: 14 }}>
+          <div className="ks-chyron ks-chyron--in" style={{ display: 'grid', gap: 2 }}>
+            <b>Paolo M. ran out of time</b>
+            <span className="ks-caption">Auto-picked LLY from his queue, then NFLX (best available).</span>
+          </div>
+          <div className="ks-raised" style={{ padding: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span><span className="ks-title" style={{ color: 'var(--c-live-text)' }}>You're on the clock</span><br /><span className="ks-callout">Round 3 · Pick 14</span></span>
+            <span className="ks-score ks-num" style={{ fontSize: 34 }}>1:00</span>
+          </div>
+          <SnakeBoard current={13} landed autoPicks={[12, 13]} />
+          <div>
+            <div className="ks-section-h"><h3>Latest picks</h3></div>
+            <ul className="ks-rows">
+              {log.map((p) => (
+                <li key={p.n} className="ks-row" style={{ gridTemplateColumns: '22px 36px 1fr', padding: '9px 0' }}>
+                  <span className="ks-caption ks-num">{p.n}</span>
+                  <Logo t={p.t} game />
+                  <span><span className="ks-t ks-callout">{p.t}</span> <span className="ks-callout ks-muted">· {p.who}{p.you ? ' (you)' : ''}</span><br />
+                    <span className="ks-caption" style={p.how.startsWith('Auto') ? { color: 'var(--c-live-text)', fontWeight: 700 } : undefined}>{p.how}</span></span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </Device>
@@ -2738,7 +2783,7 @@
   window.KSInventory = {
     SignIn, SignUp, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeScoring, HomeComplete,
-    AllMatchups, MatchupPreSeason, DraftLobby, DraftRecap, Playoffs,
+    AllMatchups, MatchupPreSeason, DraftLobby, DraftAutoPick, DraftRecap, Playoffs,
     SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,
     WebHome, WebPortfolio, WebSettings,
   };
@@ -2839,14 +2884,16 @@
           notes={[
             'All matchups this week: every game in the league, yours marked, same scoreboard grammar at a smaller size.',
             'The draft lobby opens before the draft: countdown, who is in the room, and your queue. If your clock runs out, the server auto-picks from your queue, then the best available.',
+            'An auto-pick is never hidden: a banner names who ran out of time and what was picked, the board cell gets an Auto badge, and the pick log says "Auto-picked · from his queue" or "Auto-picked · best available" (new copy). The rule is fixed, not a league setting: queue first, then best available, never random, never a skip.',
             'The draft recap lives under League › History after the draft: your picks ranked by how they have done since.',
             'Playoffs follow the scorer: the commissioner picks 2, 4 or 8 teams (default 4); seeds by wins, then head-to-head, then season gain; 1 plays 4 and 2 plays 3; a tied game goes to the higher seed. The explanatory line under the bracket is new copy.',
           ]}>
           <Fit caption="All matchups"><I.AllMatchups /></Fit>
           <Fit caption="Matchup before the season"><I.MatchupPreSeason /></Fit>
           <Fit caption="Draft lobby"><I.DraftLobby /></Fit>
+          <Fit caption="Draft room · auto-picks" note="New copy: the banner, the Auto badge and the pick-log lines"><I.DraftAutoPick /></Fit>
           <Fit caption="Draft recap"><I.DraftRecap /></Fit>
-          <Fit caption="Playoff bracket" note="Weeks 13–14"><I.Playoffs /></Fit>
+          <Fit caption="Playoff bracket" note="Two playoff weeks after the regular season"><I.Playoffs /></Fit>
         </Group>
 
         <Group id="money" code="3e" name="Trading" job="Sell, keep the cash in the slot, and buy again with exactly what the sale brought in."

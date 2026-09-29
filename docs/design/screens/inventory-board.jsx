@@ -91,14 +91,16 @@
           notes={[
             'All matchups this week: every game in the league, yours marked, same scoreboard grammar at a smaller size.',
             'The draft lobby opens before the draft: countdown, who is in the room, and your queue. If your clock runs out, the server auto-picks from your queue, then the best available.',
+            'An auto-pick is never hidden: a banner names who ran out of time and what was picked, the board cell gets an Auto badge, and the pick log says "Auto-picked · from his queue" or "Auto-picked · best available" (new copy). The rule is fixed, not a league setting: queue first, then best available, never random, never a skip.',
             'The draft recap lives under League › History after the draft: your picks ranked by how they have done since.',
             'Playoffs follow the scorer: the commissioner picks 2, 4 or 8 teams (default 4); seeds by wins, then head-to-head, then season gain; 1 plays 4 and 2 plays 3; a tied game goes to the higher seed. The explanatory line under the bracket is new copy.',
           ]}>
           <Fit caption="All matchups"><I.AllMatchups /></Fit>
           <Fit caption="Matchup before the season"><I.MatchupPreSeason /></Fit>
           <Fit caption="Draft lobby"><I.DraftLobby /></Fit>
+          <Fit caption="Draft room · auto-picks" note="New copy: the banner, the Auto badge and the pick-log lines"><I.DraftAutoPick /></Fit>
           <Fit caption="Draft recap"><I.DraftRecap /></Fit>
-          <Fit caption="Playoff bracket" note="Weeks 13–14"><I.Playoffs /></Fit>
+          <Fit caption="Playoff bracket" note="Two playoff weeks after the regular season"><I.Playoffs /></Fit>
         </Group>
 
         <Group id="money" code="3e" name="Trading" job="Sell, keep the cash in the slot, and buy again with exactly what the sale brought in."

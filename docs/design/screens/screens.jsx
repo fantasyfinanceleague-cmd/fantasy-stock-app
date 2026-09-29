@@ -463,7 +463,7 @@
   // ═════════════════════════════════════════════════════════════════════
   // 4. DRAFT ROOM (on the clock, the snake board, search, your roster)
   // ═════════════════════════════════════════════════════════════════════
-  function SnakeBoard({ current, landed }) {
+  function SnakeBoard({ current, landed, autoPicks = [] }) {
     const ref = useRef(null);
     const cells = useRef({});
     const [geo, setGeo] = useState(null);
@@ -534,6 +534,7 @@
                 return (
                   <div key={p.pick} className={cls} ref={(el) => (cells.current[p.pick] = el)}>
                     <span className="ks-cell__n">{p.pick}</span>
+                    {filled && autoPicks.includes(p.pick) ? <span className="ks-auto" title="Auto-picked">Auto</span> : null}
                     {filled ? <span className="ks-cell__t">{p.intended}</span> : <span className="ks-cell__t" style={{ opacity: 0 }}>·</span>}
                   </div>
                 );
@@ -659,7 +660,9 @@
               <Row k="Draft date" v="Sat, Oct 3 · 7:00 PM" />
               <Row k="Draft order" v="Random" sub="Set when the draft starts" />
               <Row k="Rounds" v="6" sub="One per roster slot" />
-              <Row k="If time runs out" v="Auto-pick" sub="From your queue, then the top-ranked stock" />
+              <li className="ks-row" style={{ gridTemplateColumns: '1fr', padding: '13px 0' }}>
+                <span><span className="ks-callout" style={{ fontWeight: 600 }}>If time runs out</span><br /><span className="ks-caption">We pick for you: the first stock still available in your queue, otherwise the best available. Never a random pick, never a skip.</span></span>
+              </li>
             </ul>
           </div>
           <span className="ks-btn">Next</span>
@@ -821,6 +824,6 @@
   }
 
   // The building blocks, shared with inventory.jsx (step 2's screens).
-  window.KSKit = { Device, LeagueHead, Chip, Icon, ICON, Logo, Scores, Tug, GainChart, WeekRace, ThisWeekCard, SD, margin, $, $s, pct, tone };
+  window.KSKit = { SnakeBoard, Device, LeagueHead, Chip, Icon, ICON, Logo, Scores, Tug, GainChart, WeekRace, ThisWeekCard, SD, margin, $, $s, pct, tone };
   window.KSScreens = { HomeScreen, MatchupScreen, LeagueScreen, DraftScreen, DraftSettingsScreen, PortfolioScreen };
 })();

@@ -600,8 +600,49 @@
             <div style={{ display: 'flex', gap: 6 }}>{['RB', 'MR', 'LC', 'SF', 'GV'].map((m, i) => <span key={m} className={i === 0 ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{m}</span>)}<span className="ks-avatar ks-avatar--sm" style={{ background: 'transparent', border: '1.5px dashed var(--c-line)' }} /></div>
           </div>
           <div>
-            <div className="ks-section-h"><h3>Your queue</h3><span className="ks-caption ks-muted">Auto-pick uses it if your clock runs out</span></div>
+            <div className="ks-section-h"><h3>Your queue</h3><span className="ks-caption ks-muted">If your clock runs out, we pick from here first</span></div>
             <ul className="ks-rows">{queue.map((t, i) => <li key={t} className="ks-row" style={{ gridTemplateColumns: '20px 36px 1fr 20px', padding: '8px 0' }}><span className="ks-caption ks-muted ks-num">{i + 1}</span><Logo t={t} game /><span className="ks-t ks-callout">{t}</span><span className="ks-muted">≡</span></li>)}</ul>
+          </div>
+        </div>
+      </Device>
+    );
+  }
+
+  /** Paolo M. timed out twice in a row (picks 12 and 13, back to back at
+   * the snake turn): 12 came from his queue, 13 from the best available.
+   * New copy throughout. */
+  function DraftAutoPick() {
+    const { SnakeBoard } = window.KSKit;
+    const log = [
+      { n: 13, who: 'Paolo M.', t: 'NFLX', how: 'Auto-picked · best available' },
+      { n: 12, who: 'Paolo M.', t: 'LLY', how: 'Auto-picked · from his queue' },
+      { n: 11, who: 'Roberto B.', t: 'AAPL', how: 'Picked', you: true },
+    ];
+    return (
+      <Device game tab="league" label="Draft room, after two auto-picks">
+        <Head chip={<Chip kind="live">Drafting</Chip>} />
+        <div className="ks-pad ks-stack" style={{ gap: 14 }}>
+          <div className="ks-chyron ks-chyron--in" style={{ display: 'grid', gap: 2 }}>
+            <b>Paolo M. ran out of time</b>
+            <span className="ks-caption">Auto-picked LLY from his queue, then NFLX (best available).</span>
+          </div>
+          <div className="ks-raised" style={{ padding: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span><span className="ks-title" style={{ color: 'var(--c-live-text)' }}>You're on the clock</span><br /><span className="ks-callout">Round 3 · Pick 14</span></span>
+            <span className="ks-score ks-num" style={{ fontSize: 34 }}>1:00</span>
+          </div>
+          <SnakeBoard current={13} landed autoPicks={[12, 13]} />
+          <div>
+            <div className="ks-section-h"><h3>Latest picks</h3></div>
+            <ul className="ks-rows">
+              {log.map((p) => (
+                <li key={p.n} className="ks-row" style={{ gridTemplateColumns: '22px 36px 1fr', padding: '9px 0' }}>
+                  <span className="ks-caption ks-num">{p.n}</span>
+                  <Logo t={p.t} game />
+                  <span><span className="ks-t ks-callout">{p.t}</span> <span className="ks-callout ks-muted">· {p.who}{p.you ? ' (you)' : ''}</span><br />
+                    <span className="ks-caption" style={p.how.startsWith('Auto') ? { color: 'var(--c-live-text)', fontWeight: 700 } : undefined}>{p.how}</span></span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </Device>
@@ -921,7 +962,7 @@
   window.KSInventory = {
     SignIn, SignUp, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeScoring, HomeComplete,
-    AllMatchups, MatchupPreSeason, DraftLobby, DraftRecap, Playoffs,
+    AllMatchups, MatchupPreSeason, DraftLobby, DraftAutoPick, DraftRecap, Playoffs,
     SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,
     WebHome, WebPortfolio, WebSettings,
   };
