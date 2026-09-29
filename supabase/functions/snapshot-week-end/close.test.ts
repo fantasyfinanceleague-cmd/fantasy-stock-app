@@ -35,6 +35,7 @@ import {
   type Holding,
   type ExistingSnapshot,
 } from './close.ts';
+import { matchupParticipants, snapshotHoldings } from '../_shared/snapshot-holdings.ts';
 
 // Small builders to keep the intent of each case legible (mirrors plan.test.ts).
 const holdings = (...pairs: [string, number][]): Holding[] =>
@@ -436,3 +437,99 @@ Deno.test(
     assertEquals(inserts.length, 0);
   },
 );
+
+// ===========================================================================
+// Bots + SKIP rows, end to end through the shared holdings helper
+// (../_shared/snapshot-holdings.ts) — the SAME pipeline as the handler:
+// matchups -> matchupParticipants -> snapshotHoldings -> classifyCloseCoverage /
+// buildCloseWork.
+// ===========================================================================
+
+const HUMAN_A = '11111111-1111-1111-1111-111111111111';
+const HUMAN_B = '22222222-2222-2222-2222-222222222222';
+const BOT = 'bot-1';
+
+function holdingsFor(
+  matchups: Array<{ team1_user_id: string | null; team2_user_id: string | null }>,
+  drafts: Array<{ user_id: string; symbol: string | null; quantity: number | null }>,
+): Map<string, Holding[]> {
+  const out = new Map<string, Holding[]>();
+  for (const id of matchupParticipants(matchups)) out.set(id, snapshotHoldings(id, drafts, []));
+  return out;
+}
+
+const MIXED_MATCHUPS = [
+  { team1_user_id: HUMAN_A, team2_user_id: BOT },
+  { team1_user_id: HUMAN_B, team2_user_id: 'bot-2' },
+];
+const MIXED_DRAFTS = [
+  { user_id: HUMAN_A, symbol: 'AAPL', quantity: 1 },
+  { user_id: HUMAN_B, symbol: 'KO', quantity: 1 },
+  { user_id: HUMAN_B, symbol: 'SKIP', quantity: 0 },
+  { user_id: BOT, symbol: 'MSFT', quantity: 1 },
+  { user_id: 'bot-2', symbol: 'SKIP', quantity: 0 }, // skip-only bot: empty
+];
+
+Deno.test('bots: a bot\'s Monday rows are closed like anyone else\'s (F1, KIND 1)', () => {
+  const uh = holdingsFor(MIXED_MATCHUPS, MIXED_DRAFTS);
+  const existing = [
+    row('r1', HUMAN_A, 'AAPL', 1, 200, null),
+    row('r2', HUMAN_B, 'KO', 1, 60, null),
+    row('r3', BOT, 'MSFT', 1, 400, null),
+  ];
+  assertEquals(classifyCloseCoverage(uh, existing), 'incomplete');
+  const work = buildCloseWork('L', 2, uh, existing, priceMap({ AAPL: 210, KO: 61, MSFT: 390 }), []);
+  assertEquals(work.missingSymbols, []);
+  assertEquals(work.inserts, []);
+  assertEquals(work.unbasedPositions, []);
+  assertEquals(
+    work.updates.map((u) => u.id).sort(),
+    ['r1', 'r2', 'r3'],
+  );
+});
+
+Deno.test('SKIP: a SKIP row is never a KIND-2 mid-week holding that blocks the league (F2)', () => {
+  // Before the fix HUMAN_B's SKIP row became a 1-share 'SKIP' holding with no
+  // row and no close price -> missingSymbols=['SKIP'] -> the whole league's
+  // week-end write aborted on every retry.
+  const uh = holdingsFor(MIXED_MATCHUPS, MIXED_DRAFTS);
+  const existing = [
+    row('r1', HUMAN_A, 'AAPL', 1, 200, null),
+    row('r2', HUMAN_B, 'KO', 1, 60, null),
+    row('r3', BOT, 'MSFT', 1, 400, null),
+  ];
+  const work = buildCloseWork('L', 2, uh, existing, priceMap({ AAPL: 210, KO: 61, MSFT: 390 }), []);
+  assert(!work.missingSymbols.includes('SKIP'));
+  assert(!work.inserts.some((i) => i.symbol === 'SKIP'));
+});
+
+Deno.test('mixed bot+human league-week, all closed, skip-only bot has no rows -> complete', () => {
+  const uh = holdingsFor(MIXED_MATCHUPS, MIXED_DRAFTS);
+  assertEquals(uh.get('bot-2'), []);
+  const existing = [
+    row('r1', HUMAN_A, 'AAPL', 1, 200, 210),
+    row('r2', HUMAN_B, 'KO', 1, 60, 61),
+    row('r3', BOT, 'MSFT', 1, 400, 390),
+  ];
+  assertEquals(classifyCloseCoverage(uh, existing), 'complete');
+});
+
+Deno.test('SKIP: a league whose only participant holds only SKIP -> none_expected', () => {
+  const uh = holdingsFor(
+    [{ team1_user_id: HUMAN_B, team2_user_id: null }],
+    [{ user_id: HUMAN_B, symbol: 'SKIP', quantity: 0 }],
+  );
+  assertEquals(classifyCloseCoverage(uh, []), 'none_expected');
+});
+
+Deno.test('quantity 0 on a real symbol is not coerced into a KIND-2 holding', () => {
+  const uh = holdingsFor(
+    [{ team1_user_id: HUMAN_A, team2_user_id: null }],
+    [
+      { user_id: HUMAN_A, symbol: 'AAPL', quantity: 1 },
+      { user_id: HUMAN_A, symbol: 'ZZZZ', quantity: 0 },
+    ],
+  );
+  const existing = [row('r1', HUMAN_A, 'AAPL', 1, 200, 210)];
+  assertEquals(classifyCloseCoverage(uh, existing), 'complete');
+});

@@ -6,6 +6,7 @@ import {
   buildPricedRows,
   type Holding,
 } from './plan.ts';
+import { matchupParticipants, snapshotHoldings } from '../_shared/snapshot-holdings.ts';
 
 /**
  * Snapshot Week Start Prices
@@ -221,42 +222,10 @@ async function fetchOpenPrices(symbols: string[], alpacaKey: string, alpacaSecre
   return prices;
 }
 
-// Calculate user's current holdings from drafts and trades
-function calculateHoldings(
-  userId: string,
-  drafts: any[],
-  trades: any[]
-): Holding[] {
-  const holdings = new Map<string, number>();
-
-  // Process drafts
-  for (const draft of drafts.filter(d => d.user_id === userId)) {
-    const sym = draft.symbol?.toUpperCase();
-    if (!sym) continue;
-
-    const qty = Number(draft.quantity || 1);
-    holdings.set(sym, (holdings.get(sym) || 0) + qty);
-  }
-
-  // Process trades
-  for (const trade of trades.filter(t => t.user_id === userId)) {
-    const sym = trade.symbol?.toUpperCase();
-    if (!sym) continue;
-
-    const qty = Number(trade.quantity || 0);
-
-    if (trade.action === 'buy') {
-      holdings.set(sym, (holdings.get(sym) || 0) + qty);
-    } else if (trade.action === 'sell') {
-      holdings.set(sym, (holdings.get(sym) || 0) - qty);
-    }
-  }
-
-  // Return holdings with positive quantity
-  return Array.from(holdings.entries())
-    .filter(([_, qty]) => qty > 0)
-    .map(([symbol, quantity]) => ({ symbol, quantity }));
-}
+// Holdings come from ../_shared/snapshot-holdings.ts (shared with
+// snapshot-week-end). The local copy this replaced coerced the SKIP sentinel's
+// quantity 0 to a 1-share 'SKIP' holding (`quantity || 1`), which no price could
+// satisfy, so it aborted the whole league's snapshot on every retry.
 
 Deno.serve(async (req) => {
   // SECURITY: validate the apikey before anything else — before DB connection or
@@ -357,16 +326,9 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Collect all user IDs (excluding null for bye weeks and bots)
-      const userIds = new Set<string>();
-      for (const m of matchups) {
-        if (m.team1_user_id && !m.team1_user_id.startsWith('bot-')) {
-          userIds.add(m.team1_user_id);
-        }
-        if (m.team2_user_id && !m.team2_user_id.startsWith('bot-')) {
-          userIds.add(m.team2_user_id);
-        }
-      }
+      // Collect all participant IDs (null team2 = bye week). Bots are INCLUDED:
+      // excluding them left every bot matchup unscoreable from week 2 on.
+      const userIds = matchupParticipants(matchups);
 
       // 3. Fetch drafts for this league
       const { data: drafts } = await supabase
@@ -383,7 +345,7 @@ Deno.serve(async (req) => {
       // 5. Calculate holdings for each user
       const userHoldings = new Map<string, Holding[]>();
       for (const userId of userIds) {
-        userHoldings.set(userId, calculateHoldings(userId, drafts || [], trades || []));
+        userHoldings.set(userId, snapshotHoldings(userId, drafts || [], trades || []));
       }
 
       // ── Coverage gate (replaces the old existence-only skip) ────────────────

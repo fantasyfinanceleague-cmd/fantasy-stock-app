@@ -1,6 +1,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { classifyCloseCoverage, buildCloseWork } from './close.ts';
+import { classifyCloseCoverage, buildCloseWork, type Holding } from './close.ts';
+import { matchupParticipants, snapshotHoldings } from '../_shared/snapshot-holdings.ts';
 
 /**
  * Snapshot Week End Prices
@@ -186,47 +187,10 @@ async function fetchClosePrices(symbols: string[], alpacaKey: string, alpacaSecr
   return prices;
 }
 
-interface Holding {
-  symbol: string;
-  quantity: number;
-}
-
-// Calculate user's current holdings from drafts and trades
-function calculateHoldings(
-  userId: string,
-  drafts: any[],
-  trades: any[]
-): Holding[] {
-  const holdings = new Map<string, number>();
-
-  // Process drafts
-  for (const draft of drafts.filter(d => d.user_id === userId)) {
-    const sym = draft.symbol?.toUpperCase();
-    if (!sym) continue;
-
-    const qty = Number(draft.quantity || 1);
-    holdings.set(sym, (holdings.get(sym) || 0) + qty);
-  }
-
-  // Process trades
-  for (const trade of trades.filter(t => t.user_id === userId)) {
-    const sym = trade.symbol?.toUpperCase();
-    if (!sym) continue;
-
-    const qty = Number(trade.quantity || 0);
-
-    if (trade.action === 'buy') {
-      holdings.set(sym, (holdings.get(sym) || 0) + qty);
-    } else if (trade.action === 'sell') {
-      holdings.set(sym, (holdings.get(sym) || 0) - qty);
-    }
-  }
-
-  // Return holdings with positive quantity
-  return Array.from(holdings.entries())
-    .filter(([_, qty]) => qty > 0)
-    .map(([symbol, quantity]) => ({ symbol, quantity }));
-}
+// Holdings come from ../_shared/snapshot-holdings.ts (shared with
+// snapshot-week-start). The local copy this replaced coerced the SKIP sentinel's
+// quantity 0 to a 1-share 'SKIP' holding (`quantity || 1`), which no close price
+// could satisfy, so it aborted the whole league's week-end write on every retry.
 // midWeekEntryPrice moved to ./close.ts so it is covered by the hermetic
 // tests in close.test.ts. Keeping a second copy here would let the tested
 // and untested implementations drift.
@@ -320,16 +284,9 @@ Deno.serve(async (req) => {
         .eq('league_id', leagueId)
         .eq('week_number', currentWeek);
 
-      // Collect all user IDs
-      const userIds = new Set<string>();
-      for (const m of matchups || []) {
-        if (m.team1_user_id && !m.team1_user_id.startsWith('bot-')) {
-          userIds.add(m.team1_user_id);
-        }
-        if (m.team2_user_id && !m.team2_user_id.startsWith('bot-')) {
-          userIds.add(m.team2_user_id);
-        }
-      }
+      // Collect all participant IDs (null team2 = bye week). Bots are INCLUDED:
+      // excluding them left every bot matchup unscoreable from week 2 on.
+      const userIds = matchupParticipants(matchups);
 
       // 4. Fetch current holdings for each user (to detect mid-week purchases)
       const { data: drafts } = await supabase
@@ -350,7 +307,7 @@ Deno.serve(async (req) => {
       const allSymbols = new Set<string>();
 
       for (const userId of userIds) {
-        const holdings = calculateHoldings(userId, drafts || [], trades || []);
+        const holdings = snapshotHoldings(userId, drafts || [], trades || []);
         userHoldings.set(userId, holdings);
         for (const h of holdings) {
           allSymbols.add(h.symbol);
