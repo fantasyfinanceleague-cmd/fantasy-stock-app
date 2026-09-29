@@ -6,15 +6,37 @@ import {
   willAdvanceWinner,
   nextRoundOf,
   winnerSeedForAdvance,
+  standingsIncrements,
+  type RecordIncrement,
   type PlayoffRound,
 } from './playoff-progression.ts';
 import {
   decideBatchScoring,
   decideUserScorer,
   decideMatchupScoring,
+  ledgerPositionState,
   BATCH_SKIP_REASON,
+  type LedgerState,
 } from './scoring-eligibility.ts';
+import {
+  calculatePortfolio,
+  calculateUserScore,
+  scoreCashOnlyUser,
+  type WeekSnapshot,
+  type MidWeekTrade,
+  type UserScore,
+} from './user-score.ts';
+import { SKIP_SYMBOL } from '../_shared/draft-validation.ts';
 import { updateJobStatus, noPendingMessage, scoredMessage } from './job-status.ts';
+import {
+  buildPlayoffBracket,
+  decidePlayoffSeeds,
+  decidePodium,
+  needsRegularSeasonTransition,
+  readPlayoffStart,
+  type RpcResult,
+  type TransitionLeague,
+} from './season-transition.ts';
 
 /**
  * Process Weekly Matchup Results
@@ -72,50 +94,6 @@ function isAuthorized(req: Request): boolean {
   return constantTimeEqual(providedKey, expectedKey);
 }
 
-interface PortfolioHolding {
-  symbol: string;
-  quantity: number;
-  totalCost: number;
-}
-
-interface WeekSnapshot {
-  symbol: string;
-  quantity: number;
-  weekStartPrice: number | null;  // legacy rows only; see enteredMidWeek
-  weekEndPrice: number | null;    // Friday close price
-  /**
-   * True when the position was opened DURING the week. Such a row's
-   * week_start_price is a purchase entry price, NOT a Monday open — and the same
-   * buy is already carried in midWeekTrades, so treating it as a week-start
-   * holding would count it twice. This flag replaces the old convention of
-   * signalling "mid-week purchase" with a NULL week_start_price, which could
-   * never actually be stored (the column is NOT NULL).
-   */
-  enteredMidWeek: boolean;
-}
-
-interface MidWeekTrade {
-  symbol: string;
-  action: 'buy' | 'sell';
-  quantity: number;
-  price: number;
-  createdAt: Date;
-}
-
-interface UserScore {
-  dollarGain: number;
-  percentGain: number;
-  hasPositions: boolean;
-}
-
-interface UserPortfolio {
-  userId: string;
-  holdings: PortfolioHolding[];
-  totalCost: number;
-  totalValue: number;
-  gain: number;
-}
-
 // Fetch latest prices from Alpaca (using service credentials)
 async function fetchPrices(symbols: string[], alpacaKey: string, alpacaSecret: string): Promise<Map<string, number>> {
   const prices = new Map<string, number>();
@@ -152,235 +130,6 @@ async function fetchPrices(symbols: string[], alpacaKey: string, alpacaSecret: s
   return prices;
 }
 
-// Calculate user's portfolio from drafts and trades (fallback if no snapshots)
-function calculatePortfolio(
-  userId: string,
-  drafts: any[],
-  trades: any[],
-  prices: Map<string, number>
-): UserPortfolio {
-  const holdings = new Map<string, PortfolioHolding>();
-
-  // Process drafts
-  for (const draft of drafts.filter(d => d.user_id === userId)) {
-    const sym = draft.symbol?.toUpperCase();
-    if (!sym) continue;
-
-    const qty = Number(draft.quantity || 1);
-    const price = Number(draft.entry_price || 0);
-
-    if (!holdings.has(sym)) {
-      holdings.set(sym, { symbol: sym, quantity: 0, totalCost: 0 });
-    }
-    const h = holdings.get(sym)!;
-    h.quantity += qty;
-    h.totalCost += price * qty;
-  }
-
-  // Process trades
-  for (const trade of trades.filter(t => t.user_id === userId)) {
-    const sym = trade.symbol?.toUpperCase();
-    if (!sym) continue;
-
-    const qty = Number(trade.quantity || 0);
-    const price = Number(trade.price || 0);
-
-    if (!holdings.has(sym)) {
-      holdings.set(sym, { symbol: sym, quantity: 0, totalCost: 0 });
-    }
-    const h = holdings.get(sym)!;
-
-    if (trade.action === 'buy') {
-      h.quantity += qty;
-      h.totalCost += price * qty;
-    } else if (trade.action === 'sell') {
-      const avgCost = h.quantity > 0 ? h.totalCost / h.quantity : price;
-      h.quantity -= qty;
-      h.totalCost -= avgCost * qty;
-    }
-  }
-
-  // Calculate totals
-  let totalCost = 0;
-  let totalValue = 0;
-  const holdingsArray: PortfolioHolding[] = [];
-
-  for (const h of holdings.values()) {
-    if (h.quantity <= 0) continue;
-
-    const currentPrice = prices.get(h.symbol) || (h.totalCost / h.quantity);
-    const value = currentPrice * h.quantity;
-
-    totalCost += h.totalCost;
-    totalValue += value;
-    holdingsArray.push(h);
-  }
-
-  return {
-    userId,
-    holdings: holdingsArray,
-    totalCost,
-    totalValue,
-    gain: totalValue - totalCost,
-  };
-}
-
-/**
- * Calculate user's score for the week using snapshots and mid-week trades.
- *
- * Score calculation (by individual trade):
- * - Stocks held all week: quantity × (week_end_price - week_start_price)
- * - Stocks sold mid-week: sold_qty × (sale_price - week_start_price)
- * - Partial holds: remaining_qty × (week_end_price - week_start_price)
- * - Stocks bought mid-week: quantity × (week_end_price - purchase_price)
- * - Stocks bought then sold same week: quantity × (sale_price - purchase_price)
- *
- * Returns dollar gain, percent gain, and whether user had any positions.
- */
-function calculateUserScore(
-  userId: string,
-  snapshots: WeekSnapshot[],
-  midWeekTrades: MidWeekTrade[]
-): UserScore {
-  let totalGain = 0;
-  let totalStartValue = 0;
-
-  // Build a map of week end prices by symbol (for looking up Friday close)
-  const weekEndPrices = new Map<string, number>();
-  for (const snap of snapshots) {
-    if (snap.weekEndPrice !== null) {
-      weekEndPrices.set(snap.symbol.toUpperCase(), snap.weekEndPrice);
-    }
-  }
-
-  // Build a map of week start holdings by symbol
-  // This represents what the user held at Monday open
-  // Excludes mid-week entries explicitly. Filtering on `weekStartPrice !== null`
-  // was the old marker, and it was never reachable — the column is NOT NULL, so
-  // those rows could not be stored at all (DEFECT 3). Now they ARE stored, with a
-  // real entry price, so the flag is what separates them; keying on the price
-  // being non-null would silently double-count every mid-week buy.
-  const weekStartHoldings = new Map<string, { quantity: number; price: number }>();
-  for (const snap of snapshots.filter(s => !s.enteredMidWeek && s.weekStartPrice !== null)) {
-    weekStartHoldings.set(snap.symbol.toUpperCase(), {
-      quantity: snap.quantity,
-      price: snap.weekStartPrice!,
-    });
-  }
-
-  // Sort trades by time to process in order (FIFO for sells)
-  const sortedTrades = [...midWeekTrades].sort(
-    (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
-  );
-
-  // Track remaining quantities for week-start holdings (for partial sells)
-  const remainingHoldings = new Map<string, number>();
-  for (const [symbol, holding] of weekStartHoldings) {
-    remainingHoldings.set(symbol, holding.quantity);
-  }
-
-  // Track mid-week buys that haven't been sold yet (for buy-then-sell same week)
-  // Each entry: { quantity, price }
-  const midWeekBuys = new Map<string, { quantity: number; price: number }[]>();
-
-  // Process each trade in order
-  for (const trade of sortedTrades) {
-    const symbol = trade.symbol.toUpperCase();
-
-    if (trade.action === 'sell') {
-      let remainingToSell = trade.quantity;
-      const salePrice = trade.price;
-
-      // First, sell from week-start holdings (Monday open → Sale price)
-      const weekStartQty = remainingHoldings.get(symbol) || 0;
-      if (weekStartQty > 0 && remainingToSell > 0) {
-        const sellFromStart = Math.min(weekStartQty, remainingToSell);
-        const startPrice = weekStartHoldings.get(symbol)!.price;
-
-        const gain = sellFromStart * (salePrice - startPrice);
-        totalGain += gain;
-        totalStartValue += sellFromStart * startPrice;
-
-        console.log(`${symbol}: Sold ${sellFromStart} from week-start holdings. Monday: $${startPrice}, Sold: $${salePrice}, Gain: $${gain.toFixed(2)}`);
-
-        remainingHoldings.set(symbol, weekStartQty - sellFromStart);
-        remainingToSell -= sellFromStart;
-      }
-
-      // Then, sell from mid-week buys (FIFO: Purchase price → Sale price)
-      if (remainingToSell > 0) {
-        const buys = midWeekBuys.get(symbol) || [];
-        while (remainingToSell > 0 && buys.length > 0) {
-          const oldestBuy = buys[0];
-          const sellFromBuy = Math.min(oldestBuy.quantity, remainingToSell);
-
-          const gain = sellFromBuy * (salePrice - oldestBuy.price);
-          totalGain += gain;
-          totalStartValue += sellFromBuy * oldestBuy.price;
-
-          console.log(`${symbol}: Sold ${sellFromBuy} from mid-week buy. Bought: $${oldestBuy.price}, Sold: $${salePrice}, Gain: $${gain.toFixed(2)}`);
-
-          oldestBuy.quantity -= sellFromBuy;
-          remainingToSell -= sellFromBuy;
-
-          if (oldestBuy.quantity <= 0) {
-            buys.shift(); // Remove exhausted buy lot
-          }
-        }
-        midWeekBuys.set(symbol, buys);
-      }
-    } else if (trade.action === 'buy') {
-      // Add to mid-week buys (will be processed at week end or if sold later)
-      const buys = midWeekBuys.get(symbol) || [];
-      buys.push({ quantity: trade.quantity, price: trade.price });
-      midWeekBuys.set(symbol, buys);
-      console.log(`${symbol}: Bought ${trade.quantity} mid-week at $${trade.price}`);
-    }
-  }
-
-  // Process remaining week-start holdings (held all week: Monday open → Friday close)
-  for (const [symbol, remaining] of remainingHoldings) {
-    if (remaining <= 0) continue;
-
-    const startPrice = weekStartHoldings.get(symbol)!.price;
-    const endPrice = weekEndPrices.get(symbol);
-
-    if (endPrice !== undefined) {
-      const gain = remaining * (endPrice - startPrice);
-      totalGain += gain;
-      totalStartValue += remaining * startPrice;
-      console.log(`${symbol}: Held ${remaining} all week. Monday: $${startPrice}, Friday: $${endPrice}, Gain: $${gain.toFixed(2)}`);
-    }
-  }
-
-  // Process remaining mid-week buys (bought and held to Friday: Purchase price → Friday close)
-  for (const [symbol, buys] of midWeekBuys) {
-    const endPrice = weekEndPrices.get(symbol);
-    if (endPrice === undefined) continue;
-
-    for (const buy of buys) {
-      if (buy.quantity <= 0) continue;
-
-      const gain = buy.quantity * (endPrice - buy.price);
-      totalGain += gain;
-      totalStartValue += buy.quantity * buy.price;
-      console.log(`${symbol}: Mid-week buy held to Friday. ${buy.quantity} shares @ $${buy.price} → $${endPrice}, Gain: $${gain.toFixed(2)}`);
-    }
-  }
-
-  // Calculate percentage gain
-  const percentGain = totalStartValue > 0
-    ? (totalGain / totalStartValue) * 100
-    : 0;
-
-  // User has positions if they had week-start holdings OR any mid-week trades
-  const hasPositions = weekStartHoldings.size > 0 || midWeekTrades.length > 0;
-
-  console.log(`User ${userId} total: Gain=$${totalGain.toFixed(2)}, StartValue=$${totalStartValue.toFixed(2)}, Percent=${percentGain.toFixed(2)}%`);
-
-  return { dollarGain: totalGain, percentGain, hasPositions };
-}
-
 // Legacy function for backward compatibility (when no week_end_price available)
 function calculateWeeklyGainLegacy(
   userId: string,
@@ -408,273 +157,91 @@ function calculateWeeklyGainLegacy(
   return totalGain;
 }
 
+type TransitionOutcome = { ok: true } | { ok: false; reason: string };
+
 /**
- * Generate playoff bracket when regular season ends
+ * End a league's regular season: seed the playoffs, or complete the season when
+ * the league has none.
+ *
+ * Ranking comes ONLY from public.league_standings_ranked (20261011000000) — the
+ * same order the standings screens show. The rpc result is validated in
+ * ./season-transition.ts and a bad read REFUSES before anything is written, so
+ * the league stays 'active' at its last regular week and the heal pass at the
+ * top of the handler retries it next run. Never an unranked fallback.
  */
-async function generatePlayoffs(
+async function transitionAfterRegularSeason(
   supabase: any,
   leagueId: string,
-  startWeek: number,
-  playoffTeams: number
-) {
-  console.log(`Generating playoffs for league ${leagueId} with ${playoffTeams} teams`);
+  numWeeks: number,
+  playoffTeams: number,
+  expectedWeek: number
+): Promise<TransitionOutcome> {
+  const rankRes: RpcResult = await supabase.rpc('league_standings_ranked', { p_league_id: leagueId });
 
-  try {
-    // Get standings sorted by wins (with tiebreakers)
-    const { data: standings } = await supabase
-      .from('league_standings')
-      .select('user_id, wins, losses, ties, points_for, points_against')
-      .eq('league_id', leagueId)
-      .order('wins', { ascending: false })
-      .order('points_for', { ascending: false });
+  if (playoffTeams > 0) {
+    const seeding = decidePlayoffSeeds(rankRes, playoffTeams);
+    if (!seeding.ok) return seeding;
 
-    if (!standings || standings.length < playoffTeams) {
-      console.error('Not enough teams for playoffs');
-      return;
-    }
-
-    // Get all regular season matchups for head-to-head tiebreaker
-    const { data: allMatchups } = await supabase
-      .from('matchups')
-      .select('team1_user_id, team2_user_id, winner_user_id, team1_gain, is_playoff')
-      .eq('league_id', leagueId)
-      .eq('is_playoff', false);
-
-    // Apply head-to-head tiebreaker for teams with same wins
-    const seededTeams = applyTiebreakers(standings.slice(0, playoffTeams), allMatchups || []);
-
-    // Get last regular season matchup to determine playoff start date
-    const { data: lastMatchup } = await supabase
+    // Playoffs start the Tuesday after the last regular-season week ends.
+    const { data: lastMatchup, error: lastErr } = await supabase
       .from('matchups')
       .select('week_end')
       .eq('league_id', leagueId)
       .eq('is_playoff', false)
       .order('week_end', { ascending: false })
       .limit(1)
-      .single();
-
-    const playoffStartDate = lastMatchup?.week_end
-      ? new Date(lastMatchup.week_end)
-      : new Date();
-
-    // Generate bracket based on number of teams
-    const bracketMatchups = generateBracket(seededTeams, playoffStartDate, startWeek, playoffTeams);
-
-    // Insert playoff matchups
-    for (const m of bracketMatchups) {
-      const { error } = await supabase
-        .from('matchups')
-        .insert({
-          league_id: leagueId,
-          week_number: m.week,
-          team1_user_id: m.team1,
-          team2_user_id: m.team2,
-          team1_seed: m.team1_seed,
-          team2_seed: m.team2_seed,
-          week_start: m.weekStart,
-          week_end: m.weekEnd,
-          is_playoff: true,
-          playoff_round: m.playoff_round,
-        });
-
-      if (error) {
-        console.error('Failed to insert playoff matchup:', error);
-      }
+      .maybeSingle();
+    if (lastErr) {
+      return { ok: false, reason: `last regular week read failed: ${lastErr.message ?? JSON.stringify(lastErr)}` };
     }
-
-    console.log(`Created ${bracketMatchups.length} playoff matchups`);
-  } catch (e) {
-    console.error('Error generating playoffs:', e);
-  }
-}
-
-/**
- * Apply head-to-head tiebreaker to standings
- */
-function applyTiebreakers(standings: any[], matchups: any[]): any[] {
-  // Group by wins
-  const byWins = new Map<number, any[]>();
-  for (const s of standings) {
-    const wins = s.wins || 0;
-    if (!byWins.has(wins)) byWins.set(wins, []);
-    byWins.get(wins)!.push(s);
-  }
-
-  const result: any[] = [];
-  let seed = 1;
-
-  // Process each win group (sorted desc by wins)
-  const sortedWins = Array.from(byWins.keys()).sort((a, b) => b - a);
-
-  for (const wins of sortedWins) {
-    const group = byWins.get(wins)!;
-
-    if (group.length === 1) {
-      result.push({ ...group[0], seed: seed++ });
-    } else {
-      // Apply tiebreakers within group
-      group.sort((a, b) => {
-        // Head-to-head
-        const h2h = getHeadToHead(a.user_id, b.user_id, matchups);
-        if (h2h.aWins !== h2h.bWins) {
-          return h2h.bWins - h2h.aWins;
-        }
-        // Points for
-        return (b.points_for || 0) - (a.points_for || 0);
-      });
-
-      for (const s of group) {
-        result.push({ ...s, seed: seed++ });
-      }
+    // Refuse rather than date the bracket from "now": the heal pass only runs
+    // with regular matchups present, so a missing week_end is a data problem.
+    if (!lastMatchup?.week_end) {
+      return { ok: false, reason: 'no regular-season week_end to schedule playoffs from' };
     }
-  }
+    const playoffStartDate = new Date(lastMatchup.week_end);
+    const bracket = buildPlayoffBracket(seeding.seeds, playoffStartDate, numWeeks + 1);
 
-  return result;
-}
-
-/**
- * Get head-to-head record between two users
- */
-function getHeadToHead(userId1: string, userId2: string, matchups: any[]) {
-  let aWins = 0;
-  let bWins = 0;
-
-  for (const m of matchups) {
-    if (m.is_playoff) continue;
-    if (m.team1_gain === null) continue;
-
-    const isMatch = (
-      (m.team1_user_id === userId1 && m.team2_user_id === userId2) ||
-      (m.team1_user_id === userId2 && m.team2_user_id === userId1)
+    // ONE atomic call claims the league ('active' -> 'playoffs', current_week =
+    // num_weeks + 1) and inserts the bracket, or does neither
+    // (20261011000003). A concurrent or repeated run gets
+    // already_transitioned and writes nothing, so a double bracket or a
+    // half-written one is impossible.
+    const started = readPlayoffStart(await supabase.rpc('start_league_playoffs', {
+      p_league_id: leagueId,
+      p_expected_week: expectedWeek, // compare-and-swap on the week this run read
+      p_bracket: bracket,
+    }));
+    if (!started.ok) return started;
+    console.log(
+      started.claimed
+        ? `League ${leagueId} transitioning to playoffs: ${bracket.length} bracket matchups created`
+        : `League ${leagueId} already transitioned to playoffs by another run; nothing written`,
     );
-
-    if (isMatch) {
-      if (m.winner_user_id === userId1) aWins++;
-      else if (m.winner_user_id === userId2) bWins++;
-    }
+    return { ok: true };
   }
 
-  return { aWins, bWins };
-}
-
-/**
- * Generate bracket matchups
- */
-function generateBracket(seededTeams: any[], startDate: Date, startWeek: number, numTeams: number) {
-  const matchups: any[] = [];
-
-  // Helper to get week timing
-  function getWeekTiming(weekOffset: number) {
-    const base = new Date(startDate);
-    // Move to next Tuesday
-    const dayOfWeek = base.getUTCDay();
-    let daysUntilTuesday = (2 - dayOfWeek + 7) % 7;
-    if (daysUntilTuesday === 0) daysUntilTuesday = 7;
-    base.setUTCDate(base.getUTCDate() + daysUntilTuesday + (weekOffset * 7));
-    base.setUTCHours(14, 30, 0, 0);
-
-    const end = new Date(base);
-    end.setUTCDate(end.getUTCDate() + 3);
-    end.setUTCHours(21, 0, 0, 0);
-
-    return { start: base, end };
+  // No playoffs — complete season, do NOT advance past numWeeks.
+  // No claim step is needed here, unlike the playoff start: complete_league_season
+  // only UPDATEs (the season record + season_status) and inserts no rows, so a
+  // repeated or concurrent call rewrites the same champion / runner-up /
+  // final_standings (the regular season is over, so the ranking is fixed): it
+  // cannot duplicate anything. The heal pass only selects 'active' leagues, so
+  // once this lands it is never re-entered. (Unreachable today anyway:
+  // `playoff_teams || 4` maps NULL/0 to 4.)
+  const podium = decidePodium(rankRes);
+  if (!podium.ok) return podium;
+  console.log(`League ${leagueId} regular season complete (no playoffs)`);
+  const { error } = await supabase.rpc('complete_league_season', {
+    p_league_id: leagueId,
+    p_champion_user_id: podium.champion,
+    p_runner_up_user_id: podium.runnerUp,
+  });
+  if (error) {
+    return { ok: false, reason: `complete_league_season failed: ${error.message ?? JSON.stringify(error)}` };
   }
-
-  if (numTeams === 2) {
-    const timing = getWeekTiming(0);
-    matchups.push({
-      week: startWeek,
-      team1: seededTeams[0].user_id,
-      team2: seededTeams[1].user_id,
-      team1_seed: 1,
-      team2_seed: 2,
-      weekStart: timing.start,
-      weekEnd: timing.end,
-      playoff_round: 'finals',
-    });
-  } else if (numTeams === 4) {
-    // Semifinals
-    const semiTiming = getWeekTiming(0);
-    matchups.push({
-      week: startWeek,
-      team1: seededTeams[0].user_id,
-      team2: seededTeams[3].user_id,
-      team1_seed: 1,
-      team2_seed: 4,
-      weekStart: semiTiming.start,
-      weekEnd: semiTiming.end,
-      playoff_round: 'semi',
-    });
-    matchups.push({
-      week: startWeek,
-      team1: seededTeams[1].user_id,
-      team2: seededTeams[2].user_id,
-      team1_seed: 2,
-      team2_seed: 3,
-      weekStart: semiTiming.start,
-      weekEnd: semiTiming.end,
-      playoff_round: 'semi',
-    });
-
-    // Finals placeholder
-    const finalsTiming = getWeekTiming(1);
-    matchups.push({
-      week: startWeek + 1,
-      team1: null,
-      team2: null,
-      team1_seed: null,
-      team2_seed: null,
-      weekStart: finalsTiming.start,
-      weekEnd: finalsTiming.end,
-      playoff_round: 'finals',
-    });
-  } else if (numTeams === 8) {
-    // Quarterfinals
-    const quarterTiming = getWeekTiming(0);
-    const quarterPairs = [[0, 7], [3, 4], [1, 6], [2, 5]];
-    for (const [i1, i2] of quarterPairs) {
-      matchups.push({
-        week: startWeek,
-        team1: seededTeams[i1].user_id,
-        team2: seededTeams[i2].user_id,
-        team1_seed: i1 + 1,
-        team2_seed: i2 + 1,
-        weekStart: quarterTiming.start,
-        weekEnd: quarterTiming.end,
-        playoff_round: 'quarter',
-      });
-    }
-
-    // Semi placeholders
-    const semiTiming = getWeekTiming(1);
-    for (let i = 0; i < 2; i++) {
-      matchups.push({
-        week: startWeek + 1,
-        team1: null,
-        team2: null,
-        team1_seed: null,
-        team2_seed: null,
-        weekStart: semiTiming.start,
-        weekEnd: semiTiming.end,
-        playoff_round: 'semi',
-      });
-    }
-
-    // Finals placeholder
-    const finalsTiming = getWeekTiming(2);
-    matchups.push({
-      week: startWeek + 2,
-      team1: null,
-      team2: null,
-      team1_seed: null,
-      team2_seed: null,
-      weekStart: finalsTiming.start,
-      weekEnd: finalsTiming.end,
-      playoff_round: 'finals',
-    });
-  }
-
-  return matchups;
+  console.log(`Season completed - Champion: ${podium.champion}, Runner-up: ${podium.runnerUp}`);
+  return { ok: true };
 }
 
 /**
@@ -770,47 +337,74 @@ async function completeSeasonFromPlayoffs(
 }
 
 /**
- * Complete season for non-playoff leagues - top 2 from standings
+ * Heal pass: retry season transitions that an earlier run refused.
+ *
+ * The in-loop transition only runs inside a batch of PENDING matchups for the
+ * league's current week. After the final regular week is scored there are none,
+ * so a refused transition would never be re-entered. transitionAfterRegularSeason
+ * refuses before writing anything, which leaves exactly the state
+ * needsRegularSeasonTransition detects: 'active', past the last week, every
+ * regular matchup scored, no playoff rows. Runs before the pending-matchup query
+ * so it also runs on weeks with nothing to score.
+ *
+ * Returns the refusals (skipped[] entries). A failed read, or even a throw, is
+ * logged and skipped here: the heal pass must never block this run's scoring,
+ * and whatever it could not do is retried next run.
  */
-async function completeSeasonFromStandings(
-  supabase: any,
-  leagueId: string
-) {
-  console.log(`Completing season from standings for league ${leagueId}`);
-
+async function healRefusedTransitions(supabase: any, leagueIdFilter: string | null): Promise<any[]> {
   try {
-    // Get top 2 from standings
-    const { data: standings } = await supabase
-      .from('league_standings')
-      .select('user_id, wins, points_for')
-      .eq('league_id', leagueId)
-      .order('wins', { ascending: false })
-      .order('points_for', { ascending: false })
-      .limit(2);
-
-    if (!standings || standings.length < 2) {
-      console.log('Not enough standings to determine champion');
-      return;
-    }
-
-    const championUserId = standings[0].user_id;
-    const runnerUpUserId = standings[1].user_id;
-
-    // Call the database function to complete the season
-    const { error } = await supabase.rpc('complete_league_season', {
-      p_league_id: leagueId,
-      p_champion_user_id: championUserId,
-      p_runner_up_user_id: runnerUpUserId,
-    });
-
-    if (error) {
-      console.error('Failed to complete season:', error);
-    } else {
-      console.log(`Season completed - Champion: ${championUserId}, Runner-up: ${runnerUpUserId}`);
-    }
+    return await healRefusedTransitionsInner(supabase, leagueIdFilter);
   } catch (e) {
-    console.error('Error completing season from standings:', e);
+    console.error('Heal pass threw (skipping heal this run):', e);
+    return [];
   }
+}
+
+async function healRefusedTransitionsInner(supabase: any, leagueIdFilter: string | null): Promise<any[]> {
+  const refusals: any[] = [];
+  let lq = supabase
+    .from('leagues')
+    .select('id, league_type, season_status, draft_status, current_week, num_weeks, playoff_teams')
+    .eq('league_type', 'matchup')
+    .eq('season_status', 'active')
+    .eq('draft_status', 'completed');
+  if (leagueIdFilter) lq = lq.eq('id', leagueIdFilter);
+  const { data: leagues, error: leaguesErr } = await lq;
+  if (leaguesErr) {
+    console.error('Heal pass: failed to read leagues (skipping heal this run):', leaguesErr);
+    return refusals;
+  }
+
+  for (const league of (leagues ?? []) as Array<TransitionLeague & { id: string; playoff_teams: number | null }>) {
+    if (league.current_week == null || !league.num_weeks || league.current_week < league.num_weeks) continue;
+
+    const { data: rows, error: rowsErr } = await supabase
+      .from('matchups')
+      .select('is_playoff, team1_gain')
+      .eq('league_id', league.id);
+    if (rowsErr) {
+      console.error(`Heal pass: failed to read matchups for league ${league.id} (skipping):`, rowsErr);
+      continue;
+    }
+    const regular = (rows ?? []).filter((m: any) => m.is_playoff !== true);
+    const counts = {
+      regularTotal: regular.length,
+      regularUnscored: regular.filter((m: any) => m.team1_gain === null).length,
+      playoffTotal: (rows ?? []).length - regular.length,
+    };
+    if (!needsRegularSeasonTransition(league, counts)) continue;
+
+    console.log(`Heal pass: league ${league.id} finished its regular season without transitioning; retrying`);
+    // Same derivation as the in-loop path (`playoff_teams || 4`).
+    const outcome = await transitionAfterRegularSeason(
+      supabase, league.id, league.num_weeks, league.playoff_teams || 4, league.current_week,
+    );
+    if (!outcome.ok) {
+      console.error(`REFUSED season transition for league ${league.id} (heal pass): ${outcome.reason}`);
+      refusals.push({ league_id: league.id, week_number: league.num_weeks, reason: outcome.reason });
+    }
+  }
+  return refusals;
 }
 
 Deno.serve(async (req) => {
@@ -861,6 +455,11 @@ Deno.serve(async (req) => {
   await updateJobStatus(supabase, JOB_NAME, 'running', 1);
 
   try {
+    // 0. Retry season transitions refused on an earlier run (see
+    //    healRefusedTransitions). Before the pending query so it runs on quiet weeks.
+    const transitionRefusals = await healRefusedTransitions(supabase, leagueIdFilter);
+    let transitionsRefused = transitionRefusals.length;
+
     // 1. Find matchups that need processing (week_end has passed, no results yet)
     let query = supabase
       .from('matchups')
@@ -903,8 +502,13 @@ Deno.serve(async (req) => {
       console.log('No pending matchups to process');
       // Terminal success: the common weekly path. The schema has no distinct
       // "nothing to do" status, so the message carries it.
-      await updateJobStatus(supabase, JOB_NAME, 'success', 1, noPendingMessage());
-      return json({ message: 'No pending matchups', processed: 0 });
+      await updateJobStatus(supabase, JOB_NAME, 'success', 1, noPendingMessage(transitionsRefused));
+      return json({
+        message: 'No pending matchups',
+        processed: 0,
+        skipped: transitionRefusals,
+        skipped_count: transitionRefusals.length,
+      });
     }
 
     console.log(`Found ${pendingMatchups.length} matchups to process`);
@@ -917,7 +521,7 @@ Deno.serve(async (req) => {
 
     let processedCount = 0;
     const results: any[] = [];
-    const skipped: any[] = [];
+    const skipped: any[] = [...transitionRefusals];
 
     // Process each (league, week) batch. weekStart / weekEnd come off the batch,
     // not leagueMatchups[0] — every matchup in the batch shares the same window.
@@ -932,7 +536,7 @@ Deno.serve(async (req) => {
       }
 
       // Fetch week snapshots for this league/week (including week_end_price)
-      const { data: snapshotData } = await supabase
+      const { data: snapshotData, error: snapshotErr } = await supabase
         .from('week_snapshots')
         .select('user_id, symbol, quantity, week_start_price, week_end_price, entered_mid_week')
         .eq('league_id', leagueId)
@@ -961,6 +565,92 @@ Deno.serve(async (req) => {
       } else {
         console.log(`No week snapshots found for week ${weekNumber}, using fallback calculation`);
       }
+
+      let midWeekTradesData: any[] = [];
+      // Stays null when the query is NOT attempted (a null week bound). That is
+      // "not attempted", not "succeeded" — safe here only because
+      // ledgerPositionState fails closed to HELD on a null bound, so no user can
+      // reach cash_only off the empty list.
+      let midWeekTradesErr: unknown = null;
+      if (weekStart && weekEnd) {
+        const { data: tradesDuringWeek, error } = await supabase
+          .from('trades')
+          .select('user_id, symbol, action, quantity, price, created_at')
+          .eq('league_id', leagueId)
+          .gte('created_at', weekStart)
+          .lte('created_at', weekEnd);
+
+        midWeekTradesErr = error;
+        midWeekTradesData = tradesDuringWeek || [];
+        console.log(`Found ${midWeekTradesData.length} mid-week trades`);
+      }
+
+      // Build mid-week trades map by user
+      const userMidWeekTrades = new Map<string, MidWeekTrade[]>();
+      for (const t of midWeekTradesData) {
+        if (!userMidWeekTrades.has(t.user_id)) {
+          userMidWeekTrades.set(t.user_id, []);
+        }
+        userMidWeekTrades.get(t.user_id)!.push({
+          symbol: t.symbol,
+          action: t.action as 'buy' | 'sell',
+          quantity: Number(t.quantity),
+          price: Number(t.price),
+          createdAt: new Date(t.created_at),
+        });
+      }
+
+      // Fetch drafts for this league (needed for fallback if no snapshots, and for
+      // the all-cash ledger proof below)
+      const { data: drafts, error: draftsErr } = await supabase
+        .from('drafts')
+        .select('user_id, symbol, entry_price, quantity')
+        .eq('league_id', leagueId);
+
+      // Fetch trades for this league (needed for fallback if no snapshots).
+      // Bound to week_end so fallback holdings reflect state AS OF week_end, not
+      // NOW. Without this, a user who held positions DURING the week but SOLD them
+      // after week_end shows empty holdings -> hasPositions=false -> auto-loss,
+      // flipping a legitimate win to a loss. (This only fixes WHICH trades count
+      // toward holdings; calculatePortfolio is still cumulative-from-entry at
+      // current prices — not a weekly delta.) weekEnd is normally truthy inside the
+      // loop; guard anyway so a null bound never corrupts the query.
+      let tradesQuery = supabase
+        .from('trades')
+        .select('user_id, symbol, action, quantity, price, created_at')
+        .eq('league_id', leagueId);
+      if (weekEnd) {
+        tradesQuery = tradesQuery.lte('created_at', weekEnd);
+      }
+      const { data: trades, error: tradesErr } = await tradesQuery;
+
+      // ---- The all-cash ledger proof (THE ALL-CASH RULE in ./scoring-eligibility.ts)
+      // A snapshot-less user is not necessarily a broken snapshot: snapshot-week-start
+      // only snapshots HELD symbols, so a user sitting in cash correctly has no row.
+      // They may be scored as all-cash ONLY when drafts + trades prove them flat at
+      // BOTH week_start and week_end. Computed before the batch guard because a
+      // batch whose participants are ALL cash is complete, not broken.
+      const ledgerStates = new Map<string, LedgerState>();
+      for (const userId of userIds) {
+        ledgerStates.set(
+          userId,
+          ledgerPositionState(userId, drafts || [], trades || [], weekStart, weekEnd),
+        );
+      }
+      const allParticipantsCashOnly = userIds.size > 0 && [...userIds].every((userId) =>
+        decideUserScorer({
+          hasSnapshot: (userSnapshots.get(userId)?.length ?? 0) > 0,
+          hasWeekEndPrices,
+          weekNumber,
+          ledger: ledgerStates.get(userId),
+        }) === 'cash_only'
+      );
+      // supabase-js resolves `{ data, error }` rather than throwing. A failed query's
+      // null data would read, via the `|| []` above, as "no rows" — no snapshots,
+      // no holdings, everyone FLAT. Never score off that: refuse the batch.
+      const scoringInputsFetchFailed =
+        !!snapshotErr || !!draftsErr || !!tradesErr || !!midWeekTradesErr;
+      // -------------------------------------------------------------------------
 
       // weekStart / weekEnd are destructured from the batch above (the whole batch
       // is one (league, week), so the window is shared) and drive the mid-week
@@ -992,12 +682,27 @@ Deno.serve(async (req) => {
         weekAgeHours,
         weekNumber,
         fallbackMaxAgeHours: FALLBACK_MAX_AGE_HOURS,
+        scoringInputsFetchFailed,
+        allParticipantsCashOnly,
       });
       if (batchDecision.action === 'skip') {
         // Distinct log + skipped[] shape per reason (the stale skip additionally
         // records week_age_hours) — the DECISION is single-sourced in the module,
         // the PRESENTATION stays here.
-        if (batchDecision.reason === BATCH_SKIP_REASON.STALE_NO_SNAPSHOTS) {
+        if (batchDecision.reason === BATCH_SKIP_REASON.SCORING_INPUTS_FETCH_FAILED) {
+          console.error(
+            `SKIP league ${leagueId} week ${weekNumber}: a scoring-input query failed ` +
+            `(snapshots: ${JSON.stringify(snapshotErr)}, drafts: ${JSON.stringify(draftsErr)}, ` +
+            `trades: ${JSON.stringify(tradesErr)}, mid-week trades: ${JSON.stringify(midWeekTradesErr)}) ` +
+            `— refusing to read a failed query as "no rows".`
+          );
+          skipped.push({
+            league_id: leagueId,
+            week_number: weekNumber,
+            matchups: leagueMatchups.length,
+            reason: batchDecision.reason,
+          });
+        } else if (batchDecision.reason === BATCH_SKIP_REASON.STALE_NO_SNAPSHOTS) {
           console.error(
             `SKIP league ${leagueId} week ${weekNumber}: no week_snapshots and week ` +
             `ended ${weekAgeHours.toFixed(1)}h ago (> ${FALLBACK_MAX_AGE_HOURS}h) — ` +
@@ -1027,62 +732,12 @@ Deno.serve(async (req) => {
       }
       // -------------------------------------------------------------------------
 
-      let midWeekTradesData: any[] = [];
-      if (weekStart && weekEnd) {
-        const { data: tradesDuringWeek } = await supabase
-          .from('trades')
-          .select('user_id, symbol, action, quantity, price, created_at')
-          .eq('league_id', leagueId)
-          .gte('created_at', weekStart)
-          .lte('created_at', weekEnd);
-
-        midWeekTradesData = tradesDuringWeek || [];
-        console.log(`Found ${midWeekTradesData.length} mid-week trades`);
-      }
-
-      // Build mid-week trades map by user
-      const userMidWeekTrades = new Map<string, MidWeekTrade[]>();
-      for (const t of midWeekTradesData) {
-        if (!userMidWeekTrades.has(t.user_id)) {
-          userMidWeekTrades.set(t.user_id, []);
-        }
-        userMidWeekTrades.get(t.user_id)!.push({
-          symbol: t.symbol,
-          action: t.action as 'buy' | 'sell',
-          quantity: Number(t.quantity),
-          price: Number(t.price),
-          createdAt: new Date(t.created_at),
-        });
-      }
-
-      // Fetch drafts for this league (needed for fallback if no snapshots)
-      const { data: drafts } = await supabase
-        .from('drafts')
-        .select('user_id, symbol, entry_price, quantity')
-        .eq('league_id', leagueId);
-
-      // Fetch trades for this league (needed for fallback if no snapshots).
-      // Bound to week_end so fallback holdings reflect state AS OF week_end, not
-      // NOW. Without this, a user who held positions DURING the week but SOLD them
-      // after week_end shows empty holdings -> hasPositions=false -> auto-loss,
-      // flipping a legitimate win to a loss. (This only fixes WHICH trades count
-      // toward holdings; calculatePortfolio is still cumulative-from-entry at
-      // current prices — not a weekly delta.) weekEnd is normally truthy inside the
-      // loop; guard anyway so a null bound never corrupts the query.
-      let tradesQuery = supabase
-        .from('trades')
-        .select('user_id, symbol, action, quantity, price')
-        .eq('league_id', leagueId);
-      if (weekEnd) {
-        tradesQuery = tradesQuery.lte('created_at', weekEnd);
-      }
-      const { data: trades } = await tradesQuery;
-
       // Get all symbols (from snapshots or drafts/trades)
       const symbols = new Set<string>(snapshotSymbols);
       if (snapshotSymbols.size === 0) {
         for (const d of drafts || []) {
-          if (d.symbol) symbols.add(d.symbol.toUpperCase());
+          // A SKIP row is a forfeited pick, not a ticker to quote.
+          if (d.symbol && d.symbol.toUpperCase() !== SKIP_SYMBOL) symbols.add(d.symbol.toUpperCase());
         }
         for (const t of trades || []) {
           if (t.symbol) symbols.add(t.symbol.toUpperCase());
@@ -1110,10 +765,12 @@ Deno.serve(async (req) => {
         const snapshots = userSnapshots.get(userId) || [];
         const midWeekTrades = userMidWeekTrades.get(userId) || [];
 
+        const ledger = ledgerStates.get(userId);
         const scorerKind = decideUserScorer({
           hasSnapshot: snapshots.length > 0,
           hasWeekEndPrices,
           weekNumber,
+          ledger,
         });
 
         if (scorerKind === 'full') {
@@ -1125,13 +782,26 @@ Deno.serve(async (req) => {
           // Legacy: Use week snapshots with live prices (no week_end_price stored yet)
           const gain = calculateWeeklyGainLegacy(userId, snapshots, prices);
           userScores.set(userId, { dollarGain: gain, percentGain: 0, hasPositions: true });
+        } else if (scorerKind === 'cash_only') {
+          // No snapshot, and the ledger proves nothing was held at week_start OR at
+          // week_end — so no snapshot row was ever expected, and every in-week lot
+          // is a closed round trip priced from trades alone. Not a fallback: no
+          // current prices, no cumulative-from-entry.
+          const score = scoreCashOnlyUser(userId, midWeekTrades, ledger!.hasLedgerHistory);
+          userScores.set(userId, score);
+          console.log(
+            `User ${userId}: scored as ALL-CASH (ledger flat at week_start and week_end, ` +
+            `no week_snapshot expected). Dollar gain: $${score.dollarGain.toFixed(2)}, ` +
+            `Percent: ${score.percentGain.toFixed(2)}%, hasPositions: ${score.hasPositions}`
+          );
         } else if (scorerKind === 'unscoreable') {
           // Snapshot-less user AFTER week 1: refuse rather than write a fabricated
           // score. Recorded here, enforced at the matchup level below.
           unscoreableUsers.add(userId);
           console.error(
             `UNSCOREABLE user ${userId} in league ${leagueId} week ${weekNumber}: ` +
-            `no week_snapshot and week_number > 1 — refusing cumulative-from-entry ` +
+            `no week_snapshot, ledger shows holdings at week_start or week_end, and ` +
+            `week_number > 1 — refusing cumulative-from-entry ` +
             `fallback (all-time P/L, not a weekly delta). Matchup will be left pending.`
           );
         } else {
@@ -1221,8 +891,8 @@ Deno.serve(async (req) => {
         // surface is byte-identical to the inline version. The module decides;
         // index.ts presents — same split as grouping.ts / scoring-eligibility.ts.
         switch (outcome.reason) {
-          case 'bye':
-            console.log(`Processing bye week for user ${matchup.team1_user_id}`);
+          case 'bye_no_result':
+            console.log(`Processing bye week for user ${matchup.team1_user_id} (no result)`);
             break;
           case 'both_empty_tie':
             console.log(`Both teams have empty portfolios - tie`);
@@ -1290,16 +960,15 @@ Deno.serve(async (req) => {
         async function updateUserStandings(
           lgId: string,
           oderId: string,
-          won: boolean,
-          lost: boolean,
-          tied: boolean,
+          inc: RecordIncrement,
           pointsFor: number,
           pointsAgainst: number
         ) {
-          // Calculate increments - ties only increment ties column, not wins/losses
-          const winsIncrement = won ? 1 : 0;
-          const lossesIncrement = lost ? 1 : 0;
-          const tiesIncrement = tied ? 1 : 0;
+          // Increments come from standingsIncrements: a bye adds no W/L/T (it is
+          // not a game played); a tie adds only to ties.
+          const winsIncrement = inc.wins;
+          const lossesIncrement = inc.losses;
+          const tiesIncrement = inc.ties;
 
           // First try to get existing record
           const { data: existing } = await supabase
@@ -1343,14 +1012,13 @@ Deno.serve(async (req) => {
 
         // Only update standings for regular season matchups (not playoffs)
         if (!isPlayoff) {
-          // Team 1 standings update
-          // For bye weeks, points_against is 0 (no opponent)
+          const increments = standingsIncrements(outcome);
+          // Team 1 standings update. On a bye: no W/L/T, but the week's real
+          // gain still counts toward season gain; points_against is 0.
           const stand1Err = await updateUserStandings(
             leagueId,
             matchup.team1_user_id,
-            team1Won,
-            team2Won,
-            isTie,
+            increments.team1,
             team1Gain,
             isByeWeek ? 0 : team2Gain
           );
@@ -1358,14 +1026,12 @@ Deno.serve(async (req) => {
             console.error(`Failed to update standings for ${matchup.team1_user_id}:`, stand1Err);
           }
 
-          // Team 2 standings update (skip for bye weeks)
-          if (!isByeWeek) {
+          // Team 2 standings update (none on a bye: increments.team2 is null)
+          if (increments.team2) {
             const stand2Err = await updateUserStandings(
               leagueId,
               matchup.team2_user_id,
-              team2Won,
-              team1Won,
-              isTie,
+              increments.team2,
               team2Gain,
               team1Gain
             );
@@ -1447,17 +1113,13 @@ Deno.serve(async (req) => {
             }
 
           } else if (currentWeek >= numWeeks) {
-            // Last regular-season week just completed
-            if (playoffTeams > 0) {
-              await supabase.from('leagues')
-                .update({ current_week: numWeeks + 1, season_status: 'playoffs' })
-                .eq('id', leagueId);
-              console.log(`League ${leagueId} transitioning to playoffs`);
-              await generatePlayoffs(supabase, leagueId, numWeeks + 1, playoffTeams);
-            } else {
-              // No playoffs — complete season, do NOT advance past numWeeks
-              console.log(`League ${leagueId} regular season complete (no playoffs)`);
-              await completeSeasonFromStandings(supabase, leagueId);
+            // Last regular-season week just completed. A refusal writes nothing,
+            // so the heal pass at the top of the next run retries it.
+            const transition = await transitionAfterRegularSeason(supabase, leagueId, numWeeks, playoffTeams, currentWeek);
+            if (!transition.ok) {
+              console.error(`REFUSED season transition for league ${leagueId}: ${transition.reason}`);
+              skipped.push({ league_id: leagueId, week_number: weekNumber, reason: transition.reason });
+              transitionsRefused++;
             }
 
           } else {
@@ -1478,7 +1140,7 @@ Deno.serve(async (req) => {
     // message column is never a scored-vs-nothing-to-do discriminator.
     await updateJobStatus(
       supabase, JOB_NAME, 'success', 1,
-      scoredMessage(processedCount, skipped.length),
+      scoredMessage(processedCount, skipped.length - transitionsRefused, transitionsRefused),
     );
 
     return json({

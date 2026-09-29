@@ -81,18 +81,30 @@ export async function updateJobStatus(
   }
 }
 
+/**
+ * Suffix for season transitions (playoff start / non-playoff completion) that
+ * were refused. Every refusal writes nothing, so the heal pass retries it next
+ * run. Empty when there were none, so a clean run's message is unchanged.
+ */
+function transitionsSuffix(transitionsRefused: number): string {
+  return transitionsRefused > 0
+    ? `; ${transitionsRefused} season transitions refused (see skipped[]; retried next run)`
+    : '';
+}
+
 /** Summary for the common weekly path: the run completed with nothing to score. */
-export function noPendingMessage(): string {
-  return 'processed 0 matchups: no pending matchups';
+export function noPendingMessage(transitionsRefused = 0): string {
+  return 'processed 0 matchups: no pending matchups' + transitionsSuffix(transitionsRefused);
 }
 
 /**
- * Summary for a run that reached scoring. `refusedCount` is the length of the
- * handler's skipped[] — whole league-weeks (batch guards) and single matchups
+ * Summary for a run that reached scoring. `refusedCount` is the number of
+ * eligibility refusals in the handler's skipped[] — whole league-weeks (batch guards) and single matchups
  * (per-matchup guard) refused by the eligibility guards, left pending. A
  * success row with a nonzero refused count is NOT a clean week (CLAUDE.md
  * "Success signals" #4).
  */
-export function scoredMessage(processedCount: number, refusedCount: number): string {
-  return `processed ${processedCount} matchups; ${refusedCount} refused by eligibility guards (batches or matchups, left pending)`;
+export function scoredMessage(processedCount: number, refusedCount: number, transitionsRefused = 0): string {
+  return `processed ${processedCount} matchups; ${refusedCount} refused by eligibility guards (batches or matchups, left pending)` +
+    transitionsSuffix(transitionsRefused);
 }

@@ -50,7 +50,7 @@ original intent.
 4. **"This week" strip:** a horizontal row of **game-surface** mini
    scoreboards, one per league in `live_open` / `live_closed` / `week_final`
    (from ask #1): league name + week, **both display names** (ask #2), both dollar
-   gains, a mini TugBar, and "You lead by $X" / "Priya leads by $X". Pre-season
+   scores, a mini TugBar, and the lead line ("You lead by $X" / "Priya leads by $X"; values come from the shared score-display helper; see the plan's generic-scoring rule). Pre-season
    and pre-draft leagues show their phase state (PR #36's copy), never a fake
    score. Tapping a card sets the active league and opens Matchup.
 5. **Your leagues:** grouped by phase (the same grouping as the league sheet);
@@ -94,3 +94,14 @@ original intent.
 7. **Bots never pass as real friends:** wherever a bot's display name renders (scoreboards, standings, lineups, This-week cards), show a visible **"Bot" badge / bot avatar treatment**, driven by the `is_bot` flag from ask #2, not by parsing ids. Bot names come from the curated list (≤ 12 chars).
 
 Report your PLAN first and wait for "go".
+
+## Ambition bar (added 2026-09-27, after Giorgio called the first landing "still very basic")
+
+**The bar is "would this impress on first use next to Robinhood, Sleeper, Revolut or Arc?"**, not "is it correct". Performance, honesty, tokens and reduced motion are **table stakes, not the goal**. The Design Lead will push back on timid work. **Copy:** keep Giorgio's existing copy **verbatim** unless this prompt explicitly changes it; propose wording changes, don't make them.
+
+**Signature moments this phase must include** (each with its reduced-motion row and a recording):
+- **Hero value digit-roll** on every live update, with a soft pulse on the gain chip.
+- **Chart draw-in** with a glowing, pulsing endpoint; scrubbing gives haptic ticks at data points and a floating value label.
+- **Live "This week" cards:** tug bars that move on quote refresh; a card flashes subtly when its leader changes.
+- **Card → Matchup shared element:** tapping a This-week card expands it into the full scoreboard.
+- **Leagues list rank changes** animate with ▲/▼ badges and the position delta.

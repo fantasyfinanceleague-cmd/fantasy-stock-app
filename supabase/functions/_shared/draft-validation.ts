@@ -81,13 +81,30 @@ export interface PickRow {
 
 /** A trades row. user_id is UUID in the DB — callers must String() it before
  * handing rows in, so all comparisons here are string-vs-string (the
- * documented drafts-TEXT / trades-UUID cast footgun, JS edition). */
+ * documented drafts-TEXT / trades-UUID cast footgun, JS edition).
+ *
+ * id / created_at / total_value / funded_by_trade_id are optional because
+ * most callers (turn math, ownership, budget) never need them — only
+ * fixedNotionalFunding() (below) does, for the proceeds walk. */
 export interface TradeRow {
+  id?: string;
   user_id: string;
   symbol: string;
   action: string; // 'buy' | 'sell'
   quantity: number;
   price: number;
+  created_at?: string; // ISO timestamp; orders the funding walk
+  /** The row's own recorded total_value (price × quantity, rounded to cents
+   * at insert — trades.total_value is NUMERIC(10,2)). When present,
+   * fixedNotionalFunding uses THIS as a sell's proceeds rather than
+   * recomputing price*quantity, so a rebuy is sized from exactly what the
+   * sale actually recorded, not a re-derived value that can differ from it
+   * by a sub-cent rounding residual (fractional fixed_notional quantities
+   * are 6dp; price is 2dp). Optional so hermetic tests may omit it. */
+  total_value?: number;
+  /** fixed_notional only: the SELL this BUY reinvests. See the NULL
+   * DISCIPLINE note on fixedNotionalFunding() below. */
+  funded_by_trade_id?: string | null;
 }
 
 export const SKIP_SYMBOL = 'SKIP';
@@ -279,6 +296,150 @@ export function fillQuantity(rules: LeagueRules, price: number): number {
   return 1;
 }
 
+// ---------------------------------------------------------------------------
+// fixed_notional slot proceeds (2026-09-29 product rule)
+//
+// A replacement buy in a fixed_notional league reinvests exactly the SALE
+// PROCEEDS of the slot it fills — not a fresh full notional stake (that was
+// the bug: fillQuantity() above sizes every buy at notional/price regardless
+// of what was sold, creating or destroying money on every sell-then-rebuy).
+// A slot the user voluntarily SKIPPED at draft time was never funded by a
+// sale, so a buy into it still gets the full notional — nothing was ever
+// reduced.
+// ---------------------------------------------------------------------------
+
+/** One SELL's proceeds not yet claimed by a later BUY's funded_by_trade_id. */
+export interface OpenProceeds {
+  tradeId: string;
+  symbol: string;
+  amount: number; // price * quantity of the sell, at the precision it was stored
+}
+
+export interface FundingState {
+  /** Oldest first — unclaimed SELL proceeds available to fund a buy. */
+  open: OpenProceeds[];
+  /** Draft slots the user voluntarily skipped and has not yet filled. */
+  unfilledSlots: number;
+}
+
+/**
+ * Walks one user's picks + trades to derive their current fixed_notional
+ * funding state. Every dollar of a user's roster capital is, at any moment,
+ * in exactly one of three places: currently held (userNetHoldings, above),
+ * sitting as unclaimed sale proceeds (`open` here), or never allocated at all
+ * (an `unfilledSlots` credit from a voluntary SKIP) — so this function and
+ * userNetHoldings together account for the whole roster.
+ *
+ * NULL DISCIPLINE (CLAUDE.md "overloaded NULLs are type tags, and you cannot
+ * fill them in"): a BUY with funded_by_trade_id NULL reads exactly ONE way —
+ * "consumed the oldest open proceeds at that moment, else filled an unfilled
+ * slot at full notional." record-trade writes NULL ONLY when neither existed
+ * at insert time, which is what keeps that single reading true for every row
+ * going forward. A buy with NEITHER open proceeds NOR an unfilled slot
+ * available (only reachable via a pre-fix row — the old bug's full-notional
+ * overbuy after a partial-value sale) consumes nothing here and is otherwise
+ * ignored by the walk; the ledger row itself stays the permanent record and
+ * is never rewritten (CLAUDE.md: "we do not rewrite applied migrations to fix
+ * their headers" — the same principle applies to historical trade rows).
+ */
+export function fixedNotionalFunding(
+  userId: string,
+  picks: PickRow[],
+  trades: TradeRow[],
+): FundingState {
+  let unfilledSlots = 0;
+  for (const p of picks) {
+    if (String(p.user_id) === userId && isSkip(p)) unfilledSlots++;
+  }
+
+  // Stable chronological order: created_at, then array order as a tiebreak
+  // for equal (or missing, in tests) timestamps.
+  const sorted = trades
+    .map((t, i) => ({ t, i }))
+    .filter(({ t }) => String(t.user_id) === userId)
+    .sort((a, b) => {
+      const ta = a.t.created_at ? Date.parse(a.t.created_at) : 0;
+      const tb = b.t.created_at ? Date.parse(b.t.created_at) : 0;
+      return ta - tb || a.i - b.i;
+    })
+    .map(({ t }) => t);
+
+  const open: OpenProceeds[] = [];
+  for (const t of sorted) {
+    if (t.action === 'sell') {
+      if (!t.id) continue;
+      // Prefer the row's own stored total_value (what the sale actually
+      // recorded, rounded to cents) over re-deriving price × quantity, which
+      // can differ from it by a sub-cent residual — see the total_value field
+      // comment on TradeRow above.
+      const amount = t.total_value != null
+        ? Number(t.total_value)
+        : (Number(t.price) || 0) * (Number(t.quantity) || 0);
+      open.push({ tradeId: t.id, symbol: (t.symbol ?? '').toUpperCase(), amount });
+      continue;
+    }
+    if (t.action !== 'buy') continue;
+
+    if (t.funded_by_trade_id) {
+      const idx = open.findIndex((o) => o.tradeId === t.funded_by_trade_id);
+      if (idx >= 0) open.splice(idx, 1);
+      continue;
+    }
+    // NULL: oldest open proceeds first, else an unfilled slot, else a pre-fix
+    // anomaly — see the NULL DISCIPLINE note above.
+    if (open.length > 0) {
+      open.shift();
+    } else if (unfilledSlots > 0) {
+      unfilledSlots--;
+    }
+  }
+
+  return { open, unfilledSlots };
+}
+
+export type FundingSource =
+  | { kind: 'proceeds'; tradeId: string; amount: number }
+  | { kind: 'unfilled_slot'; amount: number };
+
+export type FundingResolution =
+  | { ok: true; source: FundingSource }
+  | { ok: false; reason: 'no_proceeds' | 'proceeds_unavailable' };
+
+/**
+ * Picks the funding source for one fixed_notional buy.
+ *
+ * "Reinvest proceeds first" (product rule): when open proceeds exist, the
+ * buy MUST use one of them — an unfilled slot's full notional is only
+ * offered when there is no open proceeds at all. This is checked in order
+ * below, not by preferring whichever is larger.
+ *
+ * `soldTradeId`, when given, must name one of the CALLER's own open proceeds
+ * (record-trade enforces "own" via the caller's trades before this runs);
+ * naming anything else — someone else's, an already-spent, or a
+ * concurrently-spent one (closed by the DB's unique index, surfaced here as
+ * the same refusal) — is 'proceeds_unavailable'. Omitted = server default:
+ * the oldest unclaimed proceeds (FIFO).
+ */
+export function resolveFunding(
+  state: FundingState,
+  notionalPerSlot: number,
+  soldTradeId?: string | null,
+): FundingResolution {
+  if (soldTradeId) {
+    const match = state.open.find((o) => o.tradeId === soldTradeId);
+    if (!match) return { ok: false, reason: 'proceeds_unavailable' };
+    return { ok: true, source: { kind: 'proceeds', tradeId: match.tradeId, amount: match.amount } };
+  }
+  if (state.open.length > 0) {
+    const oldest = state.open[0];
+    return { ok: true, source: { kind: 'proceeds', tradeId: oldest.tradeId, amount: oldest.amount } };
+  }
+  if (state.unfilledSlots > 0) {
+    return { ok: true, source: { kind: 'unfilled_slot', amount: notionalPerSlot } };
+  }
+  return { ok: false, reason: 'no_proceeds' };
+}
+
 export type PickRefusal =
   | 'draft_complete'
   | 'not_your_turn'
@@ -396,10 +557,28 @@ export type TradeRefusal =
   | 'roster_full'
   | 'no_eligible_slot'
   | 'over_budget'
-  | 'not_owned';
+  | 'not_owned'
+  /** fixed_notional only: roster has room but the user has neither open sale
+   * proceeds nor an unfilled draft slot to fund the buy (a pre-fix anomaly —
+   * see fixedNotionalFunding's NULL DISCIPLINE note). */
+  | 'no_proceeds'
+  /** fixed_notional only: an explicit sold_trade_id that isn't one of the
+   * caller's own open proceeds — foreign, already spent, or lost a
+   * concurrent race to the DB's unique index. */
+  | 'proceeds_unavailable';
 
 export type TradeDecision =
-  | { legal: true; quantity: number }
+  | {
+    legal: true;
+    quantity: number;
+    /** fixed_notional only: the SELL this buy reinvests, or null when it
+     * filled a previously-unfilled (skipped) draft slot instead. Omitted
+     * (undefined) in every other stake mode. */
+    fundedByTradeId?: string | null;
+    /** fixed_notional only: the dollar amount the quantity was sized from
+     * (sale proceeds, or a fresh notional for an unfilled slot). */
+    stakeAmount?: number;
+  }
   | { legal: false; reason: TradeRefusal };
 
 export interface TradeAddInputs {
@@ -415,6 +594,10 @@ export interface TradeAddInputs {
   /** symbols.is_draftable (false when the row is missing). Only explicit `false`
    * refuses; undefined = draftable (keeps rule tests green). */
   isDraftable?: boolean;
+  /** fixed_notional only: which of the caller's own open sale proceeds this
+   * buy reinvests. Omitted = server default (oldest unclaimed, FIFO).
+   * Ignored in every other stake mode. */
+  soldTradeId?: string | null;
 }
 
 /**
@@ -459,6 +642,28 @@ export function validateTradeAdd(i: TradeAddInputs): TradeDecision {
       .map((p) => p.slot_id);
     const slot = assignSlot(i.slots, activeSlotIds, price, i.eligibleCategories);
     if (!slot) return { legal: false, reason: 'no_eligible_slot' };
+  }
+
+  // fixed_notional: size the buy from the slot's actual proceeds, not a fresh
+  // notional stake — see fixedNotionalFunding/resolveFunding above and the
+  // 2026-09-29 product rule in the migration header. Every other stake mode
+  // is unaffected — fillQuantity's one-share-per-pick branch is unchanged.
+  if (i.rules.stakeMode === 'fixed_notional') {
+    const notional = Number(i.rules.notionalPerSlot) || 1000;
+    const funding = fixedNotionalFunding(i.userId, i.picks, i.trades);
+    const resolved = resolveFunding(funding, notional, i.soldTradeId);
+    if (!resolved.ok) return { legal: false, reason: resolved.reason };
+
+    const stakeAmount = resolved.source.amount;
+    const quantity = Math.round((stakeAmount / price) * 1e6) / 1e6;
+    if (!(quantity > 0)) return { legal: false, reason: 'invalid_price' };
+
+    return {
+      legal: true,
+      quantity,
+      fundedByTradeId: resolved.source.kind === 'proceeds' ? resolved.source.tradeId : null,
+      stakeAmount,
+    };
   }
 
   const quantity = fillQuantity(i.rules, price);

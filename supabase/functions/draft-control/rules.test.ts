@@ -10,6 +10,7 @@ import {
   canStartDraft,
   computeBotsNeeded,
   computeStartBlockers,
+  effectivePlayoffTeams,
   isBotsAllowedForEmail,
   isCommissioner,
   type LeagueStartState,
@@ -27,6 +28,8 @@ function startState(overrides: Partial<LeagueStartState> = {}): LeagueStartState
     memberCount: MIN_DRAFT_MEMBERS,
     numParticipants: 8,
     draftDate: '2026-09-30T00:00:00Z', // in the past relative to NOW
+    leagueType: 'matchup',
+    playoffTeams: 4,
     ...overrides,
   };
 }
@@ -130,4 +133,35 @@ Deno.test('isBotsAllowedForEmail: comma-separated list', () => {
 Deno.test('isBotsAllowedForEmail: "*" allows every caller (never a code default — deploy-time only)', () => {
   assert(isBotsAllowedForEmail('*', 'anyone@example.com'));
   assert(!isBotsAllowedForEmail('*', null));
+});
+
+// ---------------------------------------------------------------------------
+// Playoff spots vs managers (Giorgio, 2026-09-29): equal is fine, more is not
+// ---------------------------------------------------------------------------
+
+Deno.test('playoff spots EQUAL to the member count may start', () => {
+  assertEquals(computeStartBlockers(startState({ memberCount: 4, playoffTeams: 4 }), NOW), []);
+  assertEquals(computeStartBlockers(startState({ memberCount: 8, playoffTeams: 8 }), NOW), []);
+});
+
+Deno.test('more playoff spots than members blocks with both numbers', () => {
+  const blockers = computeStartBlockers(startState({ memberCount: 5, playoffTeams: 8 }), NOW);
+  assertEquals(blockers, [{ code: 'playoff_teams_exceeds_members', playoffTeams: 8, members: 5 }]);
+  assertEquals(canStartDraft(startState({ memberCount: 5, playoffTeams: 8 }), NOW), false);
+});
+
+Deno.test('NULL / 0 playoff_teams read as 4, exactly like process-week-results', () => {
+  assertEquals(effectivePlayoffTeams(null), 4);
+  assertEquals(effectivePlayoffTeams(0), 4);
+  assertEquals(effectivePlayoffTeams(2), 2);
+  assertEquals(computeStartBlockers(startState({ memberCount: 4, playoffTeams: null }), NOW), []);
+});
+
+Deno.test('duration leagues have no playoffs and are never blocked on playoff spots', () => {
+  assertEquals(computeStartBlockers(startState({ leagueType: 'duration', memberCount: 4, playoffTeams: 8 }), NOW), []);
+});
+
+Deno.test('below the headcount floor only the headcount blocker is shown', () => {
+  const blockers = computeStartBlockers(startState({ memberCount: 3, playoffTeams: 8 }), NOW);
+  assertEquals(blockers, [{ code: 'not_enough_members', have: 3, need: MIN_DRAFT_MEMBERS }]);
 });

@@ -1,5 +1,17 @@
 # Phase 3a worker prompt — Web landing (`ui/landing-gameday`)
 
+> **Superseded in part on 2026-09-27 by the Orchestrator's round-3 brief**,
+> after Giorgio called the first build "still very basic": (1) the **current live
+> landing's copy is kept VERBATIM** (except the "Win prob 72%" mock and the
+> attribution placeholder); this prompt's new headline is withdrawn. (2)
+> **Far more ambition:** multiple pinned, scroll-scrubbed chapters, a sticky app
+> mockup changing screens, light↔stadium background morphs between sections,
+> mask reveals, parallax, a nav progress indicator, live scorecard updates,
+> standings FLIP re-orders with ▲/▼, a draft pick-snap, a FINAL reveal, and
+> micro-interactions. GSAP/ScrollTrigger allowed; JS budget 220 KB gz;
+> LCP/CLS, reduced motion and JS-off completeness unchanged. The bar is
+> **Apple / Stripe / Linear product pages**.
+
 > Drafted by Design Lead, 2026-09-26. **Live on merge**: merging to `main`
 > deploys this page to Vercel production. Backend asks: **none**. Can start
 > now (web foundation merged in PR #35). Suggested model: plan on Opus; this is
