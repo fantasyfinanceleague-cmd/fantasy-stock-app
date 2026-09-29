@@ -26,6 +26,15 @@ export interface LeagueStartState {
   memberCount: number;
   numParticipants: number; // the CAP (leagues.num_participants), not the floor
   draftDate: string | null; // ISO, or null = TBD
+  leagueType: string | null; // leagues.league_type: 'matchup' | 'duration'
+  playoffTeams: number | null; // leagues.playoff_teams (NULL/0 read as 4, see below)
+}
+
+/** Playoff spots process-week-results will actually seed: it reads
+ * `playoff_teams || 4`, so NULL and 0 mean 4. Mirrored here so the start-time
+ * check and the season-end seeding can never disagree. */
+export function effectivePlayoffTeams(playoffTeams: number | null): number {
+  return playoffTeams || 4;
 }
 
 export type StartBlocker =
@@ -33,11 +42,12 @@ export type StartBlocker =
   | { code: 'no_stake_mode' }
   | { code: 'no_draft_date' }
   | { code: 'draft_date_not_reached'; draftDate: string }
-  | { code: 'not_enough_members'; have: number; need: number };
+  | { code: 'not_enough_members'; have: number; need: number }
+  | { code: 'playoff_teams_exceeds_members'; playoffTeams: number; members: number };
 
 /**
  * Every reason the draft cannot start right now, in a stable order (state,
- * then stake mode, then date, then headcount) so the UI can show the most
+ * then stake mode, then date, then headcount, then playoff spots vs headcount) so the UI can show the most
  * fundamental blocker first. Empty = startable.
  *
  * Q3 (2026-09-25, Giorgio): starting REQUIRES draft_date to be set AND
@@ -61,6 +71,23 @@ export function computeStartBlockers(state: LeagueStartState, now: Date): StartB
   }
   if (state.memberCount < MIN_DRAFT_MEMBERS) {
     blockers.push({ code: 'not_enough_members', have: state.memberCount, need: MIN_DRAFT_MEMBERS });
+  } else if (state.leagueType === 'matchup' && effectivePlayoffTeams(state.playoffTeams) > state.memberCount) {
+    // Product rule (Giorgio, 2026-09-29): playoff spots may EQUAL the number of
+    // managers but never exceed it. A league that started with more spots than
+    // managers reaches the end of its regular season and cannot be seeded;
+    // process-week-results refuses that transition every run
+    // ('standings_rank_refused: N ranked managers for M playoff spots'), which
+    // is the last-line guard. This is the prevention: start-time is the right
+    // place because membership is frozen once the draft starts
+    // (join_league_by_code's draft guard), and "playoff_teams <= member
+    // count" spans two tables, so it cannot be a single-row CHECK.
+    // Only evaluated once the headcount floor is met, so the UI shows one
+    // headcount problem at a time.
+    blockers.push({
+      code: 'playoff_teams_exceeds_members',
+      playoffTeams: effectivePlayoffTeams(state.playoffTeams),
+      members: state.memberCount,
+    });
   }
 
   return blockers;

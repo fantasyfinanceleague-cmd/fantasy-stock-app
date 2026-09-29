@@ -213,3 +213,10 @@ Deno.test('computeDraftHeaderState: date blocker takes priority in the returned 
     'date_pending',
   );
 });
+
+Deno.test('describeStartBlocker: playoff_teams_exceeds_members names both numbers', () => {
+  const msg = describeStartBlocker({ code: 'playoff_teams_exceeds_members', playoffTeams: 8, members: 5 });
+  assertStringIncludes(msg, '8 playoff spots');
+  assertStringIncludes(msg, 'at least 8 managers');
+  assertStringIncludes(msg, 'have 5');
+});

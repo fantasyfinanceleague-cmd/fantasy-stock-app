@@ -244,9 +244,15 @@ Phase 3: **app first**.
       - A refused transition writes nothing and a heal pass retries it.
       - This fixes the slice-before-tiebreak at the playoff cutoff and the league
         stranded in 'playoffs' with no bracket, or half of one.
-    - **Open:** `playoff_teams` > members is a visible refusal every run, not a
-      clamp (product call); non-playoff completion is unreachable because
-      `playoff_teams || 4` maps NULL/0 to 4.
+    - **Playoff spots can never exceed managers** (Giorgio, 2026-09-29; equal is
+      fine).
+      - draft-control's start refuses with `playoff_teams_exceeds_members`
+        (both numbers shown).
+      - process-week-results' refusal stays as the last-line guard.
+      - Non-playoff completion is unreachable: `playoff_teams || 4` maps
+        NULL/0 to 4.
+      - Non-power-of-2 brackets (everyone makes the playoffs in a 6-team league)
+        are a separate follow-up.
 19. **Promote the auto-pick cron.** Live test first (deferred README precondition 5):
     1. Create a test league with bots.
     2. Before starting the draft, `UPDATE leagues SET pick_seconds = 30 WHERE id = …`.
