@@ -1,0 +1,1728 @@
+<meta charset="utf-8">
+<title>Stockpile Key Screens</title>
+<meta name="description" content="The app's five key screens as real components: the single source of truth for the mobile app and the landing's phone.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap">
+<style>
+/* COPY of apps/web/src/styles/tokens.css (origin/main 9d86213) so the key-screens board is self-contained. The app file is the source; re-copy, never edit here. */
+/* ============================================================
+   Stockpile design tokens — Game Day (DESIGN_DIRECTION.md §9, approved).
+
+   Generated to match apps/web/src/design/tokens.ts leaf-for-leaf (verified
+   by design/tokens.parity.test.ts). Do not hand-edit a value here without
+   also updating tokens.ts — the parity test fails the build if they drift.
+
+   On :root (NOT scoped to a class) — but this file is imported only by
+   design/index.ts, which nothing in main.jsx / App.jsx / the landing
+   imports, so these custom properties never reach the production landing
+   bundle. Leave src/styles/stockpile-tokens.css (the landing's own scoped
+   token set) alone; Phase 3a retires it separately.
+   ============================================================ */
+
+:root {
+  --sp-color-bg-app: #F3F5F8;
+  --sp-color-surface-money-base: #FFFFFF;
+  --sp-color-surface-money-sunken: #EBEFF4;
+  --sp-color-surface-game-base: #0D1B2E;
+  --sp-color-surface-game-raised: #16263D;
+  --sp-color-surface-game-line: #22334D;
+  --sp-color-border-default: #DDE3EA;
+  --sp-color-border-control: #76828F;
+  --sp-color-text-primary: #0D1B2E;
+  --sp-color-text-secondary: #5B6678;
+  --sp-color-text-disabled: #A3ACBA;
+  --sp-color-text-on-game-primary: #FFFFFF;
+  --sp-color-text-on-game-secondary: #8DA0BD;
+  --sp-color-brand: #2860F0;
+  --sp-color-team-you-base: #2860F0;
+  --sp-color-team-you-on-game: #6E9BFF;
+  --sp-color-team-opponent: #FF6A3D;
+  --sp-color-live: #FFC53D;
+  --sp-color-data-gain-base: #12803F;
+  --sp-color-data-gain-on-game: #4ADE8B;
+  --sp-color-data-loss-base: #C8303A;
+  --sp-color-data-loss-on-game: #FF7A7A;
+  --sp-color-data-zero-base: #5B6678;
+  --sp-color-data-zero-on-game: #8DA0BD;
+  --sp-color-status-warning: #B45309;
+  --sp-color-status-danger: #B42318;
+  --sp-color-action-primary-bg: #0D1B2E;
+  --sp-color-action-primary-fg: #FFFFFF;
+  --sp-color-action-primary-on-game-bg: #FFFFFF;
+  --sp-color-action-primary-on-game-fg: #0D1B2E;
+  --sp-color-action-secondary-bg: #FFFFFF;
+  --sp-color-action-secondary-border: #76828F;
+  --sp-color-action-secondary-fg: #0D1B2E;
+  --sp-color-action-secondary-on-game-border: #8DA0BD;
+  --sp-color-action-secondary-on-game-fg: #FFFFFF;
+  --sp-color-action-ghost-fg: #0D1B2E;
+  --sp-color-action-ghost-on-game-fg: #FFFFFF;
+  --sp-type-family: 'Archivo', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --sp-type-score-xl-size: 56px;
+  --sp-type-score-xl-line: 52px;
+  --sp-type-score-xl-weight: 900;
+  --sp-type-score-xl-stretch: 62%;
+  --sp-type-score-lg-size: 40px;
+  --sp-type-score-lg-line: 38px;
+  --sp-type-score-lg-weight: 900;
+  --sp-type-score-lg-stretch: 62%;
+  --sp-type-score-md-size: 28px;
+  --sp-type-score-md-line: 28px;
+  --sp-type-score-md-weight: 900;
+  --sp-type-score-md-stretch: 62%;
+  --sp-type-tag-size: 11px;
+  --sp-type-tag-line: 14px;
+  --sp-type-tag-weight: 800;
+  --sp-type-tag-stretch: 125%;
+  --sp-type-tag-tracking: 0.04em;
+  --sp-type-tag-transform: uppercase;
+  --sp-type-display-size: 32px;
+  --sp-type-display-line: 36px;
+  --sp-type-display-weight: 800;
+  --sp-type-display-stretch: 100%;
+  --sp-type-display-tracking: -0.5px;
+  --sp-type-title-size: 22px;
+  --sp-type-title-line: 28px;
+  --sp-type-title-weight: 700;
+  --sp-type-title-stretch: 100%;
+  --sp-type-headline-size: 17px;
+  --sp-type-headline-line: 22px;
+  --sp-type-headline-weight: 600;
+  --sp-type-headline-stretch: 100%;
+  --sp-type-body-size: 15px;
+  --sp-type-body-line: 22px;
+  --sp-type-body-weight: 400;
+  --sp-type-body-stretch: 100%;
+  --sp-type-callout-size: 13px;
+  --sp-type-callout-line: 18px;
+  --sp-type-callout-weight: 500;
+  --sp-type-callout-stretch: 100%;
+  --sp-type-caption-size: 12px;
+  --sp-type-caption-line: 16px;
+  --sp-type-caption-weight: 500;
+  --sp-type-caption-stretch: 100%;
+  --sp-space-1: 2px;
+  --sp-space-2: 4px;
+  --sp-space-3: 8px;
+  --sp-space-4: 12px;
+  --sp-space-5: 16px;
+  --sp-space-6: 20px;
+  --sp-space-7: 24px;
+  --sp-space-8: 32px;
+  --sp-space-9: 40px;
+  --sp-space-10: 48px;
+  --sp-space-11: 64px;
+  --sp-radius-sm: 6px;
+  --sp-radius-md: 10px;
+  --sp-radius-lg: 14px;
+  --sp-radius-xl: 20px;
+  --sp-radius-pill: 999px;
+  --sp-elevation-money-card: 0 2px 8px rgba(13, 27, 46, 0.04);
+  --sp-elevation-game: none;
+  --sp-elevation-sheet: 0 8px 24px rgba(13, 27, 46, 0.12);
+  --sp-motion-duration-instant: 90ms;
+  --sp-motion-duration-quick: 160ms;
+  --sp-motion-duration-base: 240ms;
+  --sp-motion-duration-slow: 380ms;
+  --sp-motion-duration-feature: 700ms;
+  --sp-motion-ease-settle: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --sp-motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+}
+
+</style>
+<style>
+/* Key screens: the app's real screens as web components (Design Lead,
+   2026-09-29). Every value comes from tokens.css (--sp-*, DESIGN_DIRECTION
+   §9). Device geometry is iPhone 18 Pro class: 402 × 874 pt, a 54pt status
+   area with the Dynamic Island, and an 83pt tab bar including the 34pt
+   home indicator. Class prefix: ks- (landing port: rename to lp-/sp-). */
+
+.ks-device {
+  position: relative;
+  width: 402px;
+  height: 874px;
+  border-radius: 56px;
+  overflow: hidden;
+  background: var(--sp-color-bg-app);
+  font-family: var(--sp-type-family);
+  color: var(--sp-color-text-primary);
+  font-size: var(--sp-type-body-size);
+  line-height: var(--sp-type-body-line);
+  -webkit-font-smoothing: antialiased;
+  isolation: isolate;
+}
+.ks-device--game { background: var(--sp-color-surface-game-base); color: var(--sp-color-text-on-game-primary); }
+
+/* ── OS chrome ─────────────────────────────────────────────────────────── */
+.ks-os {
+  position: absolute; inset: 0 0 auto 0; height: 54px; z-index: 5;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 34px 0 46px; font-weight: 600; font-size: 17px;
+  font-variant-numeric: tabular-nums; pointer-events: none;
+}
+.ks-os__island { position: absolute; left: 50%; top: 11px; width: 126px; height: 37px; margin-left: -63px; border-radius: 20px; background: #000; }
+.ks-os__icons { display: flex; gap: 6px; align-items: center; }
+.ks-os__bars { display: flex; gap: 2px; align-items: flex-end; height: 12px; }
+.ks-os__bars i { width: 3px; background: currentColor; border-radius: 1px; }
+.ks-os__bars i:nth-child(1) { height: 4px; } .ks-os__bars i:nth-child(2) { height: 6px; }
+.ks-os__bars i:nth-child(3) { height: 9px; } .ks-os__bars i:nth-child(4) { height: 12px; }
+.ks-os__batt { width: 25px; height: 12px; border: 1.5px solid currentColor; border-radius: 4px; padding: 1.5px; opacity: .9; }
+.ks-os__batt i { display: block; height: 100%; width: 70%; background: currentColor; border-radius: 1.5px; }
+
+.ks-scroll { position: absolute; inset: 54px 0 83px 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; }
+.ks-scroll::-webkit-scrollbar { display: none; }
+.ks-pad { padding: 0 var(--sp-space-5); }
+.ks-stack { display: flex; flex-direction: column; gap: var(--sp-space-5); padding-bottom: var(--sp-space-7); }
+
+.ks-tabs {
+  position: absolute; inset: auto 0 0 0; height: 83px; z-index: 5;
+  display: grid; grid-template-columns: repeat(4, 1fr); padding: 7px 8px 0;
+  background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(20px);
+  border-top: 1px solid var(--sp-color-border-default);
+}
+.ks-tabs__t { display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--sp-color-text-secondary); font-size: 10.5px; font-weight: 600; }
+.ks-tabs__t svg { width: 26px; height: 26px; }
+.ks-tabs__t--on { color: var(--sp-color-brand); }
+.ks-home-ind { position: absolute; left: 50%; bottom: 8px; width: 139px; height: 5px; margin-left: -69.5px; border-radius: 3px; background: var(--sp-color-text-primary); z-index: 6; }
+
+/* ── Headers ───────────────────────────────────────────────────────────── */
+.ks-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-space-3); padding: var(--sp-space-3) var(--sp-space-5) var(--sp-space-4); }
+.ks-head__title { font-size: var(--sp-type-display-size); line-height: var(--sp-type-display-line); font-weight: var(--sp-type-display-weight); letter-spacing: var(--sp-type-display-tracking); margin: 0; }
+.ks-avatar { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 800; background: var(--sp-color-brand); color: #fff; flex: none; }
+.ks-avatar--sm { width: 28px; height: 28px; font-size: 11px; }
+.ks-avatar--opp { background: var(--sp-color-team-opponent); color: var(--sp-color-surface-game-base); }
+.ks-avatar--neutral { background: var(--sp-color-surface-game-line); color: var(--sp-color-text-on-game-primary); }
+.ks-pill {
+  display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px 0 14px;
+  border-radius: var(--sp-radius-pill); font-weight: 700; font-size: var(--sp-type-headline-size);
+  background: var(--sp-color-surface-money-base); border: 1px solid var(--sp-color-border-default);
+  max-width: 230px; white-space: nowrap;
+}
+.ks-pill span { overflow: hidden; text-overflow: ellipsis; }
+.ks-device--game .ks-pill { background: var(--sp-color-surface-game-raised); border-color: var(--sp-color-surface-game-line); color: var(--sp-color-text-on-game-primary); }
+.ks-pill svg { flex: none; width: 14px; height: 14px; opacity: .7; }
+
+.ks-chip {
+  display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px;
+  border-radius: var(--sp-radius-pill); font-size: var(--sp-type-tag-size); line-height: 1;
+  font-weight: var(--sp-type-tag-weight); font-stretch: var(--sp-type-tag-stretch);
+  letter-spacing: var(--sp-type-tag-tracking); text-transform: uppercase; white-space: nowrap;
+  background: var(--sp-color-surface-game-raised); color: var(--sp-color-text-on-game-primary);
+}
+.ks-chip--live { color: var(--sp-color-live); }
+.ks-chip--final { background: var(--sp-color-text-on-game-primary); color: var(--sp-color-surface-game-base); }
+.ks-chip--money { background: var(--sp-color-surface-money-sunken); color: var(--sp-color-text-secondary); }
+.ks-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--sp-color-live); flex: none; }
+.ks-dot--pulse { animation: ks-pulse 1.6s var(--sp-motion-ease-settle) infinite; }
+@keyframes ks-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255, 197, 61, .55); } 60% { box-shadow: 0 0 0 6px rgba(255, 197, 61, 0); } }
+
+/* ── Type helpers ──────────────────────────────────────────────────────── */
+.ks-tag { font-size: var(--sp-type-tag-size); line-height: var(--sp-type-tag-line); font-weight: var(--sp-type-tag-weight); font-stretch: var(--sp-type-tag-stretch); letter-spacing: var(--sp-type-tag-tracking); text-transform: uppercase; color: var(--sp-color-text-on-game-secondary); }
+.ks-caption { font-size: var(--sp-type-caption-size); line-height: var(--sp-type-caption-line); font-weight: var(--sp-type-caption-weight); color: var(--sp-color-text-secondary); }
+.ks-callout { font-size: var(--sp-type-callout-size); line-height: var(--sp-type-callout-line); font-weight: var(--sp-type-callout-weight); }
+.ks-headline { font-size: var(--sp-type-headline-size); line-height: var(--sp-type-headline-line); font-weight: var(--sp-type-headline-weight); }
+.ks-title { font-size: var(--sp-type-title-size); line-height: var(--sp-type-title-line); font-weight: var(--sp-type-title-weight); margin: 0; }
+.ks-num { font-variant-numeric: tabular-nums; }
+.ks-muted { color: var(--sp-color-text-secondary); }
+.ks-device--game .ks-muted, .ks-game .ks-muted { color: var(--sp-color-text-on-game-secondary); }
+.ks-gain { color: var(--sp-color-data-gain-base); } .ks-loss { color: var(--sp-color-data-loss-base); } .ks-zero { color: var(--sp-color-data-zero-base); }
+.ks-game .ks-gain, .ks-device--game .ks-gain { color: var(--sp-color-data-gain-on-game); }
+.ks-game .ks-loss, .ks-device--game .ks-loss { color: var(--sp-color-data-loss-on-game); }
+.ks-game .ks-zero, .ks-device--game .ks-zero { color: var(--sp-color-data-zero-on-game); }
+.ks-section-h { display: flex; justify-content: space-between; align-items: baseline; margin: 0 0 var(--sp-space-3); }
+.ks-section-h h3 { margin: 0; font-size: var(--sp-type-headline-size); line-height: var(--sp-type-headline-line); font-weight: 700; }
+
+/* ── Scores (condensed 62%) + the shared ScoreRow ──────────────────────── */
+.ks-score { font-weight: 900; font-stretch: 62%; font-variant-numeric: tabular-nums; white-space: nowrap; letter-spacing: -0.01em; }
+.ks-score--xl { font-size: var(--sp-type-score-xl-size); line-height: var(--sp-type-score-xl-line); }
+.ks-score--lg { font-size: var(--sp-type-score-lg-size); line-height: var(--sp-type-score-lg-line); }
+.ks-score--md { font-size: var(--sp-type-score-md-size); line-height: var(--sp-type-score-md-line); }
+/* ScoreRow: two scores that can NEVER touch — a 1fr / 1fr grid with a
+   ≥16px column gap; each score is fitted to its own column by ScoreRow's
+   fit logic (both sides share the smaller size). */
+.ks-scorerow { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--sp-space-5); align-items: end; }
+.ks-scorerow > :last-child { text-align: right; }
+.ks-rollin { animation: ks-rollin var(--sp-motion-duration-base) var(--sp-motion-ease-settle) both; }
+@keyframes ks-rollin { from { transform: translateY(55%); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ── Tug bar ───────────────────────────────────────────────────────────── */
+.ks-tug { display: flex; height: var(--sp-space-4); border-radius: var(--sp-radius-pill); overflow: hidden; background: var(--sp-color-surface-game-line); gap: 2px; }
+.ks-tug__you { background: var(--sp-color-team-you-base); transition: flex-grow var(--sp-motion-duration-feature) var(--sp-motion-ease-settle); }
+.ks-tug__opp { background: var(--sp-color-team-opponent); transition: flex-grow var(--sp-motion-duration-feature) var(--sp-motion-ease-settle); }
+
+/* ── Cards ─────────────────────────────────────────────────────────────── */
+.ks-card { background: var(--sp-color-surface-money-base); border-radius: var(--sp-radius-lg); box-shadow: var(--sp-elevation-money-card); border: 1px solid var(--sp-color-border-default); }
+.ks-game { background: var(--sp-color-surface-game-base); color: var(--sp-color-text-on-game-primary); border-radius: var(--sp-radius-lg); }
+.ks-raised { background: var(--sp-color-surface-game-raised); border-radius: var(--sp-radius-md); }
+
+.ks-seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; padding: 2px; border-radius: var(--sp-radius-md); background: var(--sp-color-surface-money-sunken); }
+.ks-seg span { text-align: center; padding: 6px 0; border-radius: 8px; font-size: var(--sp-type-callout-size); font-weight: 600; color: var(--sp-color-text-secondary); }
+.ks-seg .on { background: var(--sp-color-surface-money-base); color: var(--sp-color-text-primary); box-shadow: 0 1px 3px rgba(13, 27, 46, .12); }
+.ks-seg--game { background: var(--sp-color-surface-game-raised); }
+.ks-seg--game span { color: var(--sp-color-text-on-game-secondary); }
+.ks-seg--game .on { background: var(--sp-color-surface-game-line); color: var(--sp-color-text-on-game-primary); box-shadow: none; }
+
+.ks-btn { display: flex; align-items: center; justify-content: center; height: 50px; border-radius: var(--sp-radius-lg); font-weight: 700; font-size: var(--sp-type-headline-size); background: var(--sp-color-action-primary-bg); color: var(--sp-color-action-primary-fg); }
+.ks-btn--ongame { background: var(--sp-color-action-primary-on-game-bg); color: var(--sp-color-action-primary-on-game-fg); }
+.ks-btn--sell { background: var(--sp-color-data-loss-base); color: #fff; }
+
+/* ── Lists ─────────────────────────────────────────────────────────────── */
+.ks-rows { list-style: none; margin: 0; padding: 0; }
+.ks-row { display: grid; align-items: center; gap: var(--sp-space-4); padding: 11px 0; border-top: 1px solid var(--sp-color-border-default); }
+.ks-rows > .ks-row:first-child { border-top: 0; }
+.ks-game .ks-row, .ks-device--game .ks-row { border-top-color: var(--sp-color-surface-game-line); }
+.ks-logo { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; font-weight: 800; font-size: 12px; background: var(--sp-color-surface-money-sunken); color: var(--sp-color-text-primary); letter-spacing: -0.02em; }
+.ks-right { text-align: right; }
+.ks-t { font-weight: 700; }
+
+/* ── Home chart ────────────────────────────────────────────────────────── */
+.ks-chart { display: block; width: 100%; height: 148px; overflow: visible; }
+.ks-chart__line { fill: none; stroke-width: 2.25; stroke-linejoin: round; stroke-linecap: round; }
+.ks-draw { stroke-dasharray: var(--len); stroke-dashoffset: 0; }
+.ks-draw--run { animation: ks-draw var(--sp-motion-duration-feature) var(--sp-motion-ease-settle) both; }
+@keyframes ks-draw { from { stroke-dashoffset: var(--len); } to { stroke-dashoffset: 0; } }
+
+/* ── Draft ─────────────────────────────────────────────────────────────── */
+.ks-ring { position: relative; width: 84px; height: 84px; flex: none; }
+.ks-ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.ks-ring__t { position: absolute; inset: 0; display: grid; place-items: center; font-weight: 900; font-stretch: 62%; font-size: 30px; font-variant-numeric: tabular-nums; }
+.ks-board { position: relative; }
+.ks-board__cols, .ks-board__row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.ks-board__cols span { text-align: center; }
+.ks-cell {
+  position: relative; z-index: 1; height: 50px; border-radius: 10px; background: var(--sp-color-surface-game-raised);
+  border: 1px solid var(--sp-color-surface-game-line); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  font-variant-numeric: tabular-nums;
+}
+.ks-cell__n { font-size: 10px; line-height: 12px; color: var(--sp-color-text-on-game-secondary); font-weight: 600; }
+.ks-cell__t { font-size: 12.5px; line-height: 15px; font-weight: 800; letter-spacing: -0.01em; }
+.ks-cell--you { border-color: var(--sp-color-team-you-base); box-shadow: inset 0 0 0 1px var(--sp-color-team-you-base); }
+.ks-cell--you .ks-cell__n { color: var(--sp-color-team-you-on-game); }
+.ks-cell--future { background: transparent; border-style: dashed; }
+.ks-cell--clock { border-color: transparent; background: var(--sp-color-surface-game-line); }
+.ks-cell--clock::after {
+  content: ''; position: absolute; inset: -4px; border-radius: 13px; border: 2px solid var(--sp-color-live);
+  animation: ks-clock 1.2s var(--sp-motion-ease-settle) infinite alternate;
+}
+@keyframes ks-clock { from { opacity: 1; } to { opacity: .55; } }
+.ks-cell--landed .ks-cell__t { animation: ks-land var(--sp-motion-duration-slow) var(--sp-motion-ease-settle) both; }
+@keyframes ks-land { from { transform: translateY(8px) scale(.8); opacity: 0; } to { transform: none; opacity: 1; } }
+.ks-board__track { position: absolute; inset: 0; z-index: 0; overflow: visible; pointer-events: none; }
+.ks-board__rlabel { display: flex; justify-content: space-between; margin: 6px 0; }
+.ks-search { display: flex; align-items: center; gap: 8px; height: 42px; padding: 0 12px; border-radius: var(--sp-radius-md); background: var(--sp-color-surface-game-raised); border: 1px solid var(--sp-color-surface-game-line); }
+.ks-search svg { width: 18px; height: 18px; color: var(--sp-color-text-on-game-secondary); }
+.ks-caret { display: inline-block; width: 2px; height: 18px; background: var(--sp-color-team-you-on-game); margin-left: -6px; animation: ks-caret 1s steps(1) infinite; }
+@keyframes ks-caret { 50% { opacity: 0; } }
+.ks-slot { height: 40px; border-radius: 10px; display: grid; place-items: center; font-weight: 700; font-size: var(--sp-type-callout-size); border: 1px dashed var(--sp-color-surface-game-line); color: var(--sp-color-text-on-game-secondary); }
+.ks-slot--on { border: 0; background: var(--sp-color-team-you-base); color: #fff; }
+
+/* ── Sheet ─────────────────────────────────────────────────────────────── */
+.ks-scrim { position: absolute; inset: 0; z-index: 7; background: rgba(13, 27, 46, .38); transition: opacity var(--sp-motion-duration-base) var(--sp-motion-ease-settle); }
+.ks-sheet {
+  position: absolute; left: 0; right: 0; bottom: 0; top: 64px; z-index: 8; border-radius: 22px 22px 0 0;
+  background: var(--sp-color-surface-money-base); box-shadow: var(--sp-elevation-sheet);
+  transition: transform var(--sp-motion-duration-slow) cubic-bezier(.2, .9, .25, 1);
+  overflow: hidden;
+}
+.ks-sheet--hidden { transform: translateY(105%); }
+.ks-grabber { width: 36px; height: 5px; border-radius: 3px; background: var(--sp-color-border-default); margin: 7px auto 0; }
+
+/* ── Leaderboard rows (FLIP) ───────────────────────────────────────────── */
+.ks-lb { position: relative; }
+.ks-lbrow { position: absolute; left: 0; right: 0; height: 56px; display: grid; grid-template-columns: 22px 30px 30px 1fr auto 86px; align-items: center; gap: 10px; padding: 0 14px; transition: transform var(--sp-motion-duration-slow) var(--sp-motion-ease-settle); }
+.ks-lbrow--you { background: rgba(40, 96, 240, .16); box-shadow: inset 3px 0 0 var(--sp-color-team-you-base); }
+.ks-delta { font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; gap: 1px; }
+.ks-delta--up { color: var(--sp-color-data-gain-on-game); } .ks-delta--down { color: var(--sp-color-data-loss-on-game); }
+.ks-delta--flat { color: var(--sp-color-text-on-game-secondary); }
+.ks-pop { animation: ks-pop var(--sp-motion-duration-slow) var(--sp-motion-ease-settle) both; }
+@keyframes ks-pop { from { transform: scale(.4); opacity: 0; } to { transform: none; opacity: 1; } }
+
+.ks-chyron { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: var(--sp-radius-md); background: var(--sp-color-surface-game-raised); font-size: var(--sp-type-callout-size); font-weight: 600; }
+.ks-chyron--in { animation: ks-chy var(--sp-motion-duration-base) var(--sp-motion-ease-settle) both; }
+@keyframes ks-chy { from { transform: translateX(-12px); opacity: 0; } to { transform: none; opacity: 1; } }
+.ks-winner { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-radius: var(--sp-radius-md); background: var(--sp-color-team-you-base); color: #fff; font-weight: 800; }
+.ks-fade-in { animation: ks-fade var(--sp-motion-duration-slow) var(--sp-motion-ease-settle) both; }
+@keyframes ks-fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .ks-dot--pulse, .ks-cell--clock::after, .ks-caret { animation: none; }
+  .ks-draw--run, .ks-cell--landed .ks-cell__t, .ks-pop, .ks-chyron--in, .ks-fade-in { animation-duration: 1ms; }
+  .ks-lbrow, .ks-tug__you, .ks-tug__opp { transition-duration: 1ms; }
+  .ks-rollin { animation: none; }
+  .ks-sheet { transition: opacity var(--sp-motion-duration-quick) linear; }
+  .ks-sheet--hidden { transform: none; opacity: 0; pointer-events: none; }
+}
+
+</style>
+<style>
+  /* Board chrome. The board commits to the product's light Game Day world
+     (one theme by choice): every colour is set explicitly from the tokens. */
+  :root { color-scheme: light; }
+  body {
+    margin: 0; background: var(--sp-color-bg-app); color: var(--sp-color-text-primary);
+    font-family: var(--sp-type-family); font-size: 16px; line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .b-page { max-width: 1240px; margin: 0 auto; padding-inline: max(16px, 4vw); padding-block: 40px 96px; }
+  .b-hero { display: grid; gap: 18px; padding-bottom: 36px; border-bottom: 1px solid var(--sp-color-border-default); }
+  .b-brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 17px; flex-wrap: wrap; }
+  .b-brand__meta { margin-left: 8px; font-weight: 500; font-size: 13px; color: var(--sp-color-text-secondary); }
+  .b-hero h1 {
+    margin: 8px 0 0; font-weight: 900; font-stretch: 62%; font-size: clamp(48px, 8vw, 104px);
+    line-height: .92; letter-spacing: -0.01em; word-spacing: 0.12em; text-wrap: balance;
+  }
+  .b-lead { max-width: 64ch; margin: 0; font-size: 18px; color: var(--sp-color-text-secondary); }
+  .b-canon { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0; margin: 6px 0 0;
+    background: var(--sp-color-surface-game-base); color: var(--sp-color-text-on-game-primary); border-radius: 14px; overflow: hidden; }
+  .b-canon div { padding: 14px 18px; border-right: 1px solid var(--sp-color-surface-game-line); }
+  .b-canon dt { font-size: 11px; font-weight: 800; font-stretch: 125%; letter-spacing: .04em; text-transform: uppercase; color: var(--sp-color-live); }
+  .b-canon dd { margin: 2px 0 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .b-toc { display: flex; flex-wrap: wrap; gap: 8px; }
+  .b-toc a { padding: 6px 14px; border-radius: 999px; border: 1px solid var(--sp-color-border-default); background: var(--sp-color-surface-money-base);
+    color: var(--sp-color-text-primary); text-decoration: none; font-weight: 600; font-size: 14px; }
+  .b-toc a:hover { border-color: var(--sp-color-border-control); }
+  .b-toc a:focus-visible, .b-play:focus-visible { outline: 3px solid var(--sp-color-brand); outline-offset: 2px; }
+
+  .b-sec { padding-block: 56px; border-bottom: 1px solid var(--sp-color-border-default); scroll-margin-top: 12px; }
+  .b-sec__head { display: flex; gap: 18px; align-items: flex-start; margin-bottom: 28px; }
+  .b-sec__n { flex: none; width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center;
+    background: var(--sp-color-surface-game-base); color: var(--sp-color-live); font-weight: 900; font-stretch: 62%; font-size: 26px; }
+  .b-sec h2 { margin: 0; font-weight: 900; font-stretch: 62%; font-size: clamp(34px, 4.4vw, 52px); line-height: 1; word-spacing: .12em; }
+  .b-job { margin: 6px 0 0; color: var(--sp-color-text-secondary); font-size: 17px; }
+  .b-sec__grid { display: grid; grid-template-columns: minmax(0, 402px) minmax(0, 1fr); gap: 48px; align-items: start; }
+  .b-sec__grid--two { grid-template-columns: minmax(0, 836px) minmax(0, 1fr); }
+  .b-phones { display: flex; gap: 32px; flex-wrap: wrap; }
+  .b-sec__grid--two .b-phones > * { flex: 1 1 360px; max-width: 402px; }
+  .b-fig { margin: 0; flex: 1 1 320px; max-width: 402px; }
+  .b-fit { position: relative; width: 100%; max-width: 402px; }
+  .b-fit__in { position: absolute; top: 0; left: 0; width: 402px; transform-origin: 0 0;
+    border-radius: 56px; box-shadow: 0 0 0 10px #0B0F16, 0 0 0 11px #2A3140, 0 30px 60px -20px rgba(13, 27, 46, .45); }
+  .b-fig figcaption { margin-top: 22px; font-size: 13px; font-weight: 600; color: var(--sp-color-text-secondary); text-align: center; }
+  .b-notes { max-width: 60ch; }
+  .b-notes h3, .b-ledger h3 { margin: 22px 0 8px; font-size: 12px; font-weight: 800; font-stretch: 125%; letter-spacing: .06em; text-transform: uppercase; color: var(--sp-color-text-secondary); }
+  .b-notes h3:first-child { margin-top: 0; }
+  .b-notes ul { margin: 0; padding-left: 18px; display: grid; gap: 8px; }
+  .b-motion { list-style: none; padding-left: 0 !important; }
+  .b-motion li { display: grid; gap: 6px; justify-items: start; }
+  .b-play { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px 0 12px; border-radius: 999px; cursor: pointer;
+    border: 0; background: var(--sp-color-surface-game-base); color: var(--sp-color-text-on-game-primary); font: 700 14px/1 var(--sp-type-family); }
+  .b-play:hover { background: #16263D; }
+  .b-play svg { color: var(--sp-color-live); }
+  .b-reduced { margin: 14px 0 0; font-size: 14px; color: var(--sp-color-text-secondary); }
+  .b-ask { margin-top: 22px; padding: 4px 18px 16px; border-radius: 14px; background: #FFF6DE; border: 1px solid #F5D48A; }
+  .b-ask h3 { color: #7A4B00 !important; }
+  .b-table-wrap { overflow-x: auto; border-radius: 14px; border: 1px solid var(--sp-color-border-default); background: var(--sp-color-surface-money-base); }
+  .b-table { border-collapse: collapse; width: 100%; min-width: 760px; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .b-table th, .b-table td { text-align: left; padding: 12px 16px; border-top: 1px solid var(--sp-color-border-default); vertical-align: top; }
+  .b-table tr:first-child th, .b-table tr:first-child td { border-top: 0; }
+  .b-table th { white-space: nowrap; font-weight: 800; }
+  .b-changes { display: grid; gap: 8px; max-width: 80ch; padding-left: 22px; }
+  @media (max-width: 1100px) {
+    .b-sec__grid, .b-sec__grid--two { grid-template-columns: 1fr; gap: 32px; }
+  }
+  @media (max-width: 520px) {
+    .b-fit__in { box-shadow: 0 0 0 6px #0B0F16, 0 20px 40px -20px rgba(13, 27, 46, .45); }
+    .b-canon div { border-right: 0; border-bottom: 1px solid var(--sp-color-surface-game-line); }
+  }
+</style>
+
+<div id="root"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.4/babel.min.js"></script>
+<script>
+// Key screens: canonical sample data (Design Lead, 2026-09-29).
+//
+// ONE league, ONE week, ONE set of people, shared by every key screen AND
+// by the landing's phone (3a) AND by the mobile phases' dev fixtures.
+// Everything a screen shows is DERIVED here from a few inputs (share
+// quantities and prices), so the numbers reconcile by construction:
+//   matchup score  = Σ per-holding week gain (each row rounded to cents first)
+//   lead           = your score − their score
+//   portfolio      = Σ quantity × price
+//   standings      = records + points-for (season $ gain), sorted the way the
+//                    app sorts (win %, then wins, then points-for:
+//                    apps/mobile/app/(tabs)/league.tsx sortedStandings)
+// Records are a legal league: after N weeks of 3 matchups, wins = losses.
+//
+// Scoring copy stays generic ("best performance wins"); data displays show
+// the scorer's actual metric (dollar gain, percent as the tiebreak).
+//
+// Plain JS (no imports) so the board runs without a build; the port to
+// apps/web is `export` on each const. formatMoney / tugRatio below are
+// byte-for-byte ports of apps/web/src/design/lib/{money,tugRatio}.ts.
+
+(function () {
+  // ── Formatters (ports; keep in sync with design/lib) ───────────────────
+  const MINUS = '−';
+  const FIGURE_SPACE = ' ';
+  function roundToCents(v) { return Math.round(Math.abs(v) * 100); }
+  function formatMoney(value, opts) {
+    const o = opts || {};
+    const sign = o.sign || 'negative';
+    const cents = roundToCents(value);
+    const isZero = cents === 0;
+    const isNeg = !isZero && value < 0;
+    let s;
+    if (isZero) s = o.alignSign ? FIGURE_SPACE : '';
+    else if (isNeg) s = MINUS;
+    else s = sign === 'always' ? '+' : o.alignSign ? FIGURE_SPACE : '';
+    const dollars = Math.floor(cents / 100);
+    if (o.compact && dollars >= 1000) {
+      const tiers = [['T', 1e12], ['B', 1e9], ['M', 1e6], ['K', 1e3]];
+      let i = tiers.findIndex((t) => dollars >= t[1]);
+      let h = Math.round((cents * 100) / (tiers[i][1] * 100));
+      while (h >= 100000 && i > 0) { i -= 1; h = Math.round((cents * 100) / (tiers[i][1] * 100)); }
+      return `${s}$${Math.floor(h / 100)}.${String(h % 100).padStart(2, '0')}${tiers[i][0]}`;
+    }
+    const cp = String(cents % 100).padStart(2, '0');
+    return `${s}$${String(dollars).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}.${cp}`;
+  }
+  /** Percent with the same sign rules as money: U+2212, zero unsigned. */
+  function formatPct(v, opts) {
+    const o = opts || {};
+    const h = Math.round(Math.abs(v) * 100);
+    if (h === 0) return '0.00%';
+    const s = v < 0 ? MINUS : o.sign === 'always' ? '+' : '';
+    return `${s}${Math.floor(h / 100)}.${String(h % 100).padStart(2, '0')}%`;
+  }
+  function tugRatio(you, opp) {
+    const d = Math.max(Math.abs(you) + Math.abs(opp), 1);
+    return Math.min(0.92, Math.max(0.08, 0.5 + (0.5 * (you - opp)) / d));
+  }
+  const cents = (v) => Math.round(v * 100) / 100;
+  const sum = (xs) => cents(xs.reduce((a, b) => a + b, 0));
+
+  // ── The league ─────────────────────────────────────────────────────────
+  const LEAGUE = {
+    name: 'Stock Scudetto',
+    week: 6,
+    weeks: 14,
+    stakeMode: 'fixed_notional',
+    notionalPerSlot: 2000,
+    slots: 6,
+  };
+
+  const PLAYERS = [
+    { id: 'paolo', name: 'Paolo M.', init: 'PM', seat: 1 },
+    { id: 'roberto', name: 'Roberto B.', init: 'RB', seat: 2, you: true },
+    { id: 'alessandro', name: 'Alessandro D.', init: 'AD', seat: 3 },
+    { id: 'francesco', name: 'Francesco T.', init: 'FT', seat: 4 },
+    { id: 'gianluigi', name: 'Gianluigi B.', init: 'GB', seat: 5 },
+    { id: 'andrea', name: 'Andrea P.', init: 'AP', seat: 6 },
+  ];
+  const byId = Object.fromEntries(PLAYERS.map((p) => [p.id, p]));
+
+  // ── The draft (6 teams, snake, 6 rounds) ───────────────────────────────
+  /** Seat on the clock at overall pick n (1-based), snake order. */
+  function seatForPick(n, teams) {
+    const r = Math.ceil(n / teams);
+    const i = (n - 1) % teams;
+    return r % 2 === 1 ? i + 1 : teams - i;
+  }
+  // Overall picks 1–18 in order (R1 →, R2 ←, R3 →). A stock is drafted
+  // once per league. Roberto (seat 2) picks 2, 11, 14, 23, 26, 35;
+  // Gianluigi (seat 5) picks 5, 8, 17, 20, 29, 32 — matching H below.
+  const DRAFT_BOARD = [
+    'MSFT', 'NVDA', 'META', 'AVGO', 'AMZN', 'GOOGL',
+    'COIN', 'JPM', 'AMD', 'PLTR', 'AAPL', 'LLY',
+    'NFLX', 'CRM', 'ORCL', 'UBER', 'DIS', 'UNH',
+  ];
+
+  /** The Draft room screen's moment: draft night, round 2, pick 11,
+   * you're on the clock, 0:42 left. Picks 1–10 are in. */
+  const DRAFT_MOMENT = { pick: 11, secondsLeft: 42, secondsTotal: 60, queued: 'AAPL' };
+  const DRAFT_PICKS = Array.from({ length: 18 }, (_, k) => {
+    const n = k + 1;
+    const seat = seatForPick(n, 6);
+    const player = PLAYERS.find((p) => p.seat === seat);
+    const t = DRAFT_BOARD[k];
+    return {
+      pick: n,
+      round: Math.ceil(n / 6),
+      player: player.id,
+      t: n < DRAFT_MOMENT.pick ? t : null, // not yet picked at the moment
+      intended: t,
+    };
+  });
+  /** Search results in the draft room at the moment (AAPL queued). */
+  const DRAFT_SEARCH = {
+    query: 'app',
+    results: [
+      { t: 'AAPL', co: 'Apple', price: 198.6, tag: 'Queued' },
+      { t: 'APP', co: 'AppLovin', price: 88.4 },
+      { t: 'APPF', co: 'AppFolio', price: 231.15 },
+      { t: 'APPN', co: 'Appian', price: 30.72 },
+    ],
+  };
+
+  // ── Holdings (fixed notional: $2,000 per slot at the draft price) ──────
+  // Prices: draft = season start; mon = Week 6 Monday open (the week-start
+  // price every week gain is measured from); thu = Thursday 1:37 PM ET
+  // (the LIVE moment; also the landing tape's prices); fri = Friday close.
+  // prev = Wednesday close (today's change base on Thursday).
+  const H = {
+    roberto: [
+      { t: 'NVDA', co: 'NVIDIA', draft: 290.1, mon: 300.2, prev: 306.68, thu: 318.37, fri: 321.9, pick: 2 },
+      { t: 'AAPL', co: 'Apple', draft: 198.6, mon: 205.1, prev: 208.83, thu: 211.42, fri: 214.8, pick: 11 },
+      { t: 'CRM', co: 'Salesforce', draft: 262.4, mon: 268.0, prev: 269.96, thu: 271.35, fri: 274.1, pick: 14 },
+      { t: 'TSLA', co: 'Tesla', draft: 262.8, mon: 251.9, prev: 249.66, thu: 248.36, fri: 250.1, pick: 23 },
+      { t: 'COST', co: 'Costco', draft: 905.2, mon: 912.4, prev: 915.22, thu: 918.1, fri: 921.7, pick: 26 },
+      { t: 'V', co: 'Visa', draft: 281.5, mon: 284.2, prev: 285.04, thu: 286.1, fri: 291.4, pick: 35 },
+    ],
+    gianluigi: [
+      { t: 'AMZN', co: 'Amazon', draft: 221.3, mon: 238.1, prev: 239.22, thu: 236.4, fri: 234.9, pick: 5 },
+      { t: 'JPM', co: 'JPMorgan', draft: 204.9, mon: 214.2, prev: 214.98, thu: 215.45, fri: 216.3, pick: 8 },
+      { t: 'DIS', co: 'Disney', draft: 104.2, mon: 101.3, prev: 101.41, thu: 102.9, fri: 100.2, pick: 17 },
+      { t: 'NKE', co: 'Nike', draft: 82.4, mon: 79.6, prev: 79.71, thu: 81.3, fri: 79.1, pick: 20 },
+      { t: 'KO', co: 'Coca-Cola', draft: 68.1, mon: 69.4, prev: 69.47, thu: 69.9, fri: 69.85, pick: 29 },
+      { t: 'BA', co: 'Boeing', draft: 172.6, mon: 176.3, prev: 176.02, thu: 176.9, fri: 175.4, pick: 32 },
+    ],
+  };
+  // Draft shares, 4 dp (fractional shares under fixed notional).
+  for (const side of Object.values(H)) {
+    for (const h of side) h.qty = Math.round((LEAGUE.notionalPerSlot / h.draft) * 1e4) / 1e4;
+  }
+
+  /** Per-holding view at a moment ('thu' live or 'fri' final). Each row's
+   * dollar gain is rounded to cents FIRST, and the score is the sum of the
+   * rounded rows, so the lineup always adds up to the scoreboard. */
+  function lineup(id, at) {
+    return H[id].map((h) => {
+      const price = h[at];
+      const weekGain = cents(h.qty * (price - h.mon));
+      const value = cents(h.qty * price);
+      // Fixed notional: each slot's cost basis IS the notional ($2,000).
+      const cost = LEAGUE.notionalPerSlot;
+      const todayPct = ((h.thu - h.prev) / h.prev) * 100;
+      const today = cents(h.qty * (h.thu - h.prev));
+      return { ...h, price, weekGain, value, cost, gain: cents(value - cost), gainPct: ((price - h.draft) / h.draft) * 100, todayPct, today };
+    });
+  }
+  function score(id, at) {
+    const rows = lineup(id, at);
+    const gain = sum(rows.map((r) => r.weekGain));
+    const startValue = sum(H[id].map((h) => cents(h.qty * h.mon)));
+    return { gain, pct: (gain / startValue) * 100, startValue, rows };
+  }
+
+  const MATCHUP = {
+    you: 'roberto',
+    opp: 'gianluigi',
+    live: { label: 'Thu 1:37 PM ET', left: 'Ends Fri 4:00 PM ET · 1d 2h', you: score('roberto', 'thu'), opp: score('gianluigi', 'thu') },
+    final: { label: 'Final', you: score('roberto', 'fri'), opp: score('gianluigi', 'fri') },
+  };
+  // Daily closes (cumulative week gain) for the matchup's week strip and
+  // the landing's race chart. Mon–Wed closes are the landing's WEEK_CLOSES;
+  // Thu is CHANGED (Gianluigi +$71.35, was −$12.55) so the LIVE moment
+  // (Thu 1:37 PM, Gianluigi +$90.44) is a real game, not a pinned tug bar;
+  // Fri is DERIVED from the holdings above (so the FINAL screen, the race
+  // chart's end and the lineup all agree).
+  const WEEK_CLOSES = [
+    { day: 'Open', you: 0, opp: 0 },
+    { day: 'Mon', you: 61.2, opp: 88.4 },
+    { day: 'Tue', you: 142.75, opp: 101.3 },
+    { day: 'Wed', you: 118.4, opp: 34.9 },
+    { day: 'Thu', you: 238.6, opp: 71.35 },
+    { day: 'Fri', you: MATCHUP.final.you.gain, opp: MATCHUP.final.opp.gain },
+  ];
+  // Chyrons, one per beat, each TRUE against WEEK_CLOSES.
+  const CHYRONS = {
+    Mon: 'Gianluigi B. opens the week ahead',
+    Tue: 'NVDA +2.9% puts Roberto B. ahead',
+    Wed: 'Roberto B. holds the lead through a red day',
+    Thu: 'NKE +2.0% keeps Gianluigi B. in it',
+    Fri: 'DIS −2.6% on Friday seals it', // (100.20 − 102.90) / 102.90
+  };
+
+  // ── Standings ──────────────────────────────────────────────────────────
+  // Weeks 1–5 are a legal league (15 wins = 15 losses). Week 6 pairings:
+  // Roberto–Gianluigi, Paolo–Alessandro, Francesco–Andrea.
+  const THROUGH_W5 = {
+    paolo: { w: 5, l: 0, pf: 1188.4 },
+    roberto: { w: 4, l: 1, pf: 842.35 },
+    alessandro: { w: 3, l: 2, pf: 903.1 },
+    francesco: { w: 2, l: 3, pf: 410.25 },
+    gianluigi: { w: 1, l: 4, pf: -122.6 },
+    andrea: { w: 0, l: 5, pf: -385.9 },
+  };
+  const WEEK6 = [
+    { a: 'roberto', b: 'gianluigi', ga: MATCHUP.final.you.gain, gb: MATCHUP.final.opp.gain },
+    { a: 'paolo', b: 'alessandro', ga: -48.3, gb: 96.15 },
+    { a: 'francesco', b: 'andrea', ga: 61.4, gb: -22.75 },
+  ];
+  function standings(rec) {
+    return PLAYERS.map((p) => ({ ...p, ...rec[p.id] }))
+      .sort((x, y) => {
+        const px = x.w / (x.w + x.l);
+        const py = y.w / (y.w + y.l);
+        if (py !== px) return py - px;
+        if (y.w !== x.w) return y.w - x.w;
+        return y.pf - x.pf;
+      })
+      .map((r, i) => ({ ...r, rank: i + 1 }));
+  }
+  const AFTER_W6 = JSON.parse(JSON.stringify(THROUGH_W5));
+  for (const m of WEEK6) {
+    const aWins = m.ga > m.gb;
+    AFTER_W6[m.a].w += aWins ? 1 : 0;
+    AFTER_W6[m.a].l += aWins ? 0 : 1;
+    AFTER_W6[m.b].w += aWins ? 0 : 1;
+    AFTER_W6[m.b].l += aWins ? 1 : 0;
+    AFTER_W6[m.a].pf = cents(AFTER_W6[m.a].pf + m.ga);
+    AFTER_W6[m.b].pf = cents(AFTER_W6[m.b].pf + m.gb);
+  }
+  const STANDINGS_BEFORE = standings(THROUGH_W5);
+  const STANDINGS_FINAL = standings(AFTER_W6).map((r) => {
+    const before = STANDINGS_BEFORE.find((b) => b.id === r.id).rank;
+    return { ...r, delta: before - r.rank };
+  });
+
+  // ── Portfolio + Home ───────────────────────────────────────────────────
+  const PORTFOLIO_LIVE = (() => {
+    const rows = lineup('roberto', 'thu');
+    const value = sum(rows.map((r) => r.value));
+    const cost = sum(rows.map((r) => r.cost));
+    const today = sum(rows.map((r) => r.today));
+    const prevValue = sum(rows.map((r) => cents(r.qty * r.prev)));
+    return { rows, value, cost, gain: cents(value - cost), gainPct: ((value - cost) / cost) * 100, today, todayPct: (today / prevValue) * 100 };
+  })();
+
+  // A second live league so Home's cross-league view is real.
+  const OTHER_LEAGUES = [
+    {
+      name: 'Friday Night Stocks',
+      phase: 'live_open',
+      week: 2,
+      weeks: 10,
+      opp: 'Marco R.',
+      you: 42.18,
+      oppGain: -15.6,
+      value: 5058.3,
+      cost: 5000,
+      rank: 3,
+      record: '1–0',
+      members: 8,
+    },
+    {
+      name: 'Serie A Traders',
+      phase: 'pre_draft',
+      draftAt: 'Draft Sat 7:00 PM',
+      members: 6,
+      of: 8,
+    },
+  ];
+  // Home chart: cumulative gain (value − cost + realized) across leagues,
+  // one point per trading day, 1M window, rebased to the window start.
+  // It ends EXACTLY at the header's 1M gain (see HOME below).
+  const HOME_SERIES_RAW = [
+    // Stock Scudetto contributes from day 0; Friday Night Stocks joins on
+    // day 13 (a deposit: NO jump, because the line is gain, not value).
+    118.2, 131.6, 109.4, 95.8, 122.9, 140.3, 151.7, 138.2, 162.5, 171.9,
+    158.4, 149.6, 176.3, 188.1, 201.4, 215.8, 196.2, 224.6, 262.3, 319.5, 294.1,
+  ];
+  const HOME = (() => {
+    const scudetto = PORTFOLIO_LIVE;
+    const fns = OTHER_LEAGUES[0];
+    const totalValue = cents(scudetto.value + fns.value);
+    const nowGain = cents(scudetto.gain + (fns.value - fns.cost));
+    // Replace the last point with the true current all-time gain, then
+    // rebase the window to its first point.
+    const raw = HOME_SERIES_RAW.slice();
+    raw.push(nowGain);
+    const base = raw[0];
+    const series = raw.map((v) => cents(v - base));
+    return { totalValue, allTimeGain: nowGain, windowGain: series[series.length - 1], series, joinedIndex: 13 };
+  })();
+
+  // The stock sheet (NVDA), Thursday live.
+  const NVDA = (() => {
+    const r = PORTFOLIO_LIVE.rows.find((x) => x.t === 'NVDA');
+    return {
+      ...r,
+      dayPoints: [306.68, 307.9, 309.4, 308.7, 311.2, 313.05, 312.4, 314.9, 316.2, 315.6, 317.1, 318.37],
+      range: ['1D', '1W', '1M', '3M', '1Y'],
+      ownership: 'Drafted by you · Round 1, pick 2',
+    };
+  })();
+
+  window.KS = {
+    formatMoney, formatPct, tugRatio,
+    LEAGUE, PLAYERS, byId, seatForPick,
+    DRAFT_MOMENT, DRAFT_PICKS, DRAFT_SEARCH,
+    MATCHUP, WEEK_CLOSES, CHYRONS,
+    STANDINGS_BEFORE, STANDINGS_FINAL, WEEK6,
+    PORTFOLIO_LIVE, OTHER_LEAGUES, HOME, NVDA,
+    lineup, score,
+  };
+})();
+
+</script>
+<script type="text/babel" data-presets="react">
+// Key screens: the app's five key screens as React components (Design Lead,
+// 2026-09-29). The single source of truth for BOTH the landing's phone
+// (3a) and mobile phases 3b-1 / 3b-2 / 3c / 3e.
+//
+// Written against the web foundation's tokens (tokens.css --sp-*) and the
+// canonical data in data.js (window.KS). No build: the board compiles this
+// with Babel standalone. Port to apps/web: drop the IIFE, `export` each
+// screen, import KS from sampleData, and swap Roll/ScoreRow/Tug for the
+// foundation's ScoreDigits/TugBar where they already exist.
+
+(function () {
+  const { useState, useEffect, useLayoutEffect, useRef } = React;
+  const K = window.KS;
+  const $ = (v, o) => K.formatMoney(v, o);
+  const $s = (v) => K.formatMoney(v, { sign: 'always' });
+  const pct = (v) => K.formatPct(v, { sign: 'always' });
+  const tone = (v) => (Math.round(Math.abs(v) * 100) === 0 ? 'ks-zero' : v > 0 ? 'ks-gain' : 'ks-loss');
+  const reduced = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ── Icons (one outline set; filled weight on the active tab) ──────────
+  const ICON = {
+    home: 'M4 11 12 4l8 7v8a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z',
+    matchup: 'M4 17 9 11l4 4 7-8M15 7h5v5',
+    league: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3',
+    portfolio: 'M4 20V10M10 20V4M16 20v-8M22 20H2',
+    chevron: 'm6 9 6 6 6-6',
+    search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4',
+    plus: 'M12 5v14M5 12h14',
+    close: 'M6 6l12 12M18 6 6 18',
+    right: 'm9 6 6 6-6 6',
+  };
+  function Icon({ d, size = 24, width = 2 }) {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={width} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d={d} />
+      </svg>
+    );
+  }
+
+  // ── Device chrome ─────────────────────────────────────────────────────
+  const TABS = [['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['portfolio', 'Portfolio']];
+  function Device({ game, tab, children, overlay, label }) {
+    return (
+      <div className={game ? 'ks-device ks-device--game' : 'ks-device'} role="img" aria-label={label}>
+        <div className="ks-os">
+          <span>1:37</span>
+          <span className="ks-os__island" />
+          <span className="ks-os__icons">
+            <span className="ks-os__bars"><i /><i /><i /><i /></span>
+            <span className="ks-os__batt"><i /></span>
+          </span>
+        </div>
+        <div className="ks-scroll">{children}</div>
+        <nav className="ks-tabs">
+          {TABS.map(([id, name]) => (
+            <span key={id} className={id === tab ? 'ks-tabs__t ks-tabs__t--on' : 'ks-tabs__t'}>
+              <Icon d={ICON[id]} width={id === tab ? 2.4 : 1.8} />
+              {name}
+            </span>
+          ))}
+        </nav>
+        <span className="ks-home-ind" />
+        {overlay}
+      </div>
+    );
+  }
+  function LeagueHead({ chip, sub }) {
+    return (
+      <div className="ks-head">
+        <span className="ks-pill"><span>{K.LEAGUE.name}</span><Icon d={ICON.chevron} size={14} width={2.6} /></span>
+        {chip}
+        {sub}
+      </div>
+    );
+  }
+  function Chip({ kind, children }) {
+    return (
+      <span className={`ks-chip ks-chip--${kind}`}>
+        {kind === 'live' ? <span className="ks-dot ks-dot--pulse" /> : null}
+        {children}
+      </span>
+    );
+  }
+
+  // ── Roll: per-character roll on change, never on first paint ──────────
+  function Roll({ text, className }) {
+    const first = useRef(true);
+    const prev = useRef(text);
+    useEffect(() => { first.current = false; prev.current = text; });
+    const old = prev.current;
+    return (
+      <span className={className} aria-label={text}>
+        {text.split('').map((c, i) => (
+          <span
+            key={`${i}-${c}`}
+            aria-hidden="true"
+            style={{ display: 'inline-block' }}
+            className={!first.current && old[i] !== c && !reduced() ? 'ks-rollin' : undefined}
+          >
+            {c}
+          </span>
+        ))}
+      </span>
+    );
+  }
+
+  // ── Scores: the shared ScoreRow. Two scores that never touch: a 1fr/1fr
+  // grid with a ≥16px gap, and ONE shared size (the largest at which BOTH
+  // fit their columns), so the widest pair (+$351.77 / −$38.88) is safe.
+  function Scores({ left, right, size = 'xl', leftTone, rightTone }) {
+    const ref = useRef(null);
+    const [k, setK] = useState(1);
+    useLayoutEffect(() => {
+      const el = ref.current;
+      if (!el) return;
+      el.style.setProperty('--k', '1');
+      let s = 1;
+      el.querySelectorAll('.ks-scorerow > div').forEach((cell) => {
+        const inner = cell.firstChild;
+        if (inner.scrollWidth > cell.clientWidth) s = Math.min(s, cell.clientWidth / inner.scrollWidth);
+      });
+      el.style.setProperty('--k', String(s));
+      setK(s);
+    }, [left, right]);
+    return (
+      <div ref={ref} style={{ fontSize: `calc(var(--sp-type-score-${size}-size) * var(--k, 1))`, lineHeight: 1 }} data-k={k.toFixed(2)}>
+        <div className="ks-scorerow">
+          <div><Roll text={left} className={`ks-score ${leftTone || ''}`} /></div>
+          <div><Roll text={right} className={`ks-score ${rightTone || ''}`} /></div>
+        </div>
+      </div>
+    );
+  }
+
+  /** Ticker tile: the full symbol, sized to fit (never a 2-letter guess). */
+  function Logo({ t, game }) {
+    const size = t.length <= 2 ? 13 : t.length === 3 ? 11 : 9.5;
+    const style = game ? { background: 'var(--sp-color-surface-game-raised)', color: 'var(--sp-color-text-on-game-primary)', fontSize: size } : { fontSize: size };
+    return <span className="ks-logo" style={style}>{t}</span>;
+  }
+
+  function Tug({ you, opp }) {
+    const r = K.tugRatio(you, opp);
+    return (
+      <div className="ks-tug" aria-label={`Tug of war: you ${$s(you)}, opponent ${$s(opp)}`}>
+        <span className="ks-tug__you" style={{ flexGrow: r }} />
+        <span className="ks-tug__opp" style={{ flexGrow: 1 - r }} />
+      </div>
+    );
+  }
+
+  // ── Line chart helper (zero baseline, gain above / loss below) ─────────
+  function GainChart({ series, w = 362, h = 148, marker, run }) {
+    const pad = { t: 10, b: 22, l: 0, r: 0 };
+    const min = Math.min(0, ...series);
+    const max = Math.max(0, ...series);
+    const x = (i) => pad.l + (i / (series.length - 1)) * (w - pad.l - pad.r);
+    const y = (v) => pad.t + (1 - (v - min) / (max - min || 1)) * (h - pad.t - pad.b);
+    const d = series.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+    const area = `${d} L${x(series.length - 1)},${y(0)} L${x(0)},${y(0)} Z`;
+    const z = y(0);
+    const id = useRef(`c${Math.random().toString(36).slice(2, 8)}`).current;
+    const end = series[series.length - 1];
+    return (
+      <svg className="ks-chart" viewBox={`0 0 ${w} ${h}`} role="img" aria-label={`Cumulative gain, past month: ${$s(end)}`}>
+        <defs>
+          <clipPath id={`${id}a`}><rect x="0" y="0" width={w} height={z} /></clipPath>
+          <clipPath id={`${id}b`}><rect x="0" y={z} width={w} height={h - z} /></clipPath>
+        </defs>
+        <path d={area} fill="var(--sp-color-data-gain-base)" opacity=".1" clipPath={`url(#${id}a)`} />
+        <path d={area} fill="var(--sp-color-data-loss-base)" opacity=".1" clipPath={`url(#${id}b)`} />
+        <line x1="0" x2={w} y1={z} y2={z} stroke="var(--sp-color-border-control)" strokeDasharray="3 4" strokeWidth="1" />
+        <g className={run ? 'ks-draw ks-draw--run' : 'ks-draw'} style={{ '--len': 1 }} key={run ? 'r' : 's'}>
+          <path d={d} pathLength="1" className="ks-chart__line" stroke="var(--sp-color-data-gain-base)" clipPath={`url(#${id}a)`} strokeDasharray="1" />
+          <path d={d} pathLength="1" className="ks-chart__line" stroke="var(--sp-color-data-loss-base)" clipPath={`url(#${id}b)`} strokeDasharray="1" />
+        </g>
+        <circle cx={x(series.length - 1)} cy={y(end)} r="4" fill="var(--sp-color-data-gain-base)" stroke="#fff" strokeWidth="2" />
+        {marker != null ? (
+          <g>
+            <line x1={x(marker)} x2={x(marker)} y1={z - 5} y2={z + 5} stroke="var(--sp-color-text-secondary)" strokeWidth="1.5" />
+            <text x={x(marker)} y={h - 4} textAnchor="middle" fontSize="11" fontWeight="600" fill="var(--sp-color-text-secondary)">Joined Friday Night Stocks</text>
+          </g>
+        ) : null}
+        <text x="2" y={z - 6} fontSize="11" fontWeight="600" fill="var(--sp-color-text-secondary)">$0</text>
+      </svg>
+    );
+  }
+
+  // Week race chart (the landing /03 chart, small, on a game surface).
+  function WeekRace({ upto, live }) {
+    const w = 330, h = 118, pb = 20, pt = 10;
+    const pts = K.WEEK_CLOSES.slice(0, upto + 1).map((p, i) => ({ ...p, x: i }));
+    if (live) pts.push({ day: 'now', x: upto + live.frac, you: live.you, opp: live.opp });
+    const all = K.WEEK_CLOSES.flatMap((p) => [p.you, p.opp]).concat(live ? [live.you, live.opp] : []);
+    const min = Math.min(0, ...all), max = Math.max(0, ...all);
+    const X = (i) => 8 + (i / 5) * (w - 16);
+    const Y = (v) => pt + (1 - (v - min) / (max - min)) * (h - pt - pb);
+    const line = (k) => pts.map((p, i) => `${i ? 'L' : 'M'}${X(p.x).toFixed(1)},${Y(p[k]).toFixed(1)}`).join(' ');
+    const last = pts[pts.length - 1];
+    return (
+      <svg viewBox={`0 0 ${w} ${h}`} width="100%" height={h} role="img" aria-label="Week 6 race: cumulative dollar gain by day">
+        <line x1="8" x2={w - 8} y1={Y(0)} y2={Y(0)} stroke="var(--sp-color-surface-game-line)" strokeDasharray="3 4" />
+        <path d={line('opp')} fill="none" stroke="var(--sp-color-team-opponent)" strokeWidth="2.25" strokeLinejoin="round" />
+        <path d={line('you')} fill="none" stroke="var(--sp-color-team-you-on-game)" strokeWidth="2.5" strokeLinejoin="round" />
+        <circle cx={X(last.x)} cy={Y(last.opp)} r="3.5" fill="var(--sp-color-team-opponent)" />
+        <circle cx={X(last.x)} cy={Y(last.you)} r="4" fill="var(--sp-color-team-you-on-game)" />
+        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((d, i) => (
+          <text key={d} x={X(i + 1)} y={h - 4} textAnchor="middle" fontSize="12" fontWeight="600" fill="var(--sp-color-text-on-game-secondary)">{d}</text>
+        ))}
+      </svg>
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // 1. HOME
+  // ═════════════════════════════════════════════════════════════════════
+  function ThisWeekCard({ league, week, oppName, you, opp, left, init }) {
+    const lead = you - opp;
+    return (
+      <div className="ks-game" style={{ padding: 16, display: 'grid', gap: 10 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span className="ks-headline" style={{ fontWeight: 700 }}>{league}</span>
+          <Chip kind="live">Week {week} · Live</Chip>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }} className="ks-callout">
+          <span style={{ color: 'var(--sp-color-team-you-on-game)', fontWeight: 700 }}>You</span>
+          <span className="ks-muted">vs {oppName}</span>
+        </div>
+        <Scores left={$s(you)} right={$s(opp)} size="lg" />
+        <Tug you={you} opp={opp} />
+        <div style={{ display: 'flex', justifyContent: 'space-between' }} className="ks-caption">
+          <span style={{ color: 'var(--sp-color-text-on-game-primary)' }}>{lead >= 0 ? 'You lead by' : 'You trail by'} <b className="ks-num">{$(Math.abs(lead))}</b></span>
+          <span className="ks-muted">{left}</span>
+        </div>
+      </div>
+    );
+  }
+
+  function HomeScreen({ run }) {
+    const H = K.HOME, L = K.MATCHUP.live, F = K.OTHER_LEAGUES[0], S = K.OTHER_LEAGUES[1];
+    return (
+      <Device tab="home" label="Home screen">
+        <div className="ks-head">
+          <h2 className="ks-head__title">Home</h2>
+          <span className="ks-avatar" aria-label="Profile">RB</span>
+        </div>
+        <div className="ks-pad ks-stack">
+          <div>
+            <div className="ks-caption">Total value · 2 live leagues</div>
+            <div className="ks-score ks-num" style={{ fontSize: 48, lineHeight: '50px', fontStretch: '75%' }}>{$(H.totalValue)}</div>
+            <div className="ks-callout ks-gain ks-num" style={{ fontWeight: 700 }}>▲ {$s(H.windowGain)} <span className="ks-muted" style={{ fontWeight: 500 }}>past month</span></div>
+          </div>
+          <div className="ks-card" style={{ padding: '12px 12px 6px' }}>
+            <GainChart series={H.series} marker={H.joinedIndex} run={run} w={336} h={140} />
+            <div className="ks-seg" style={{ marginTop: 8 }}>
+              <span>1W</span><span className="on">1M</span><span>3M</span><span>All</span>
+            </div>
+          </div>
+          <div>
+            <div className="ks-section-h"><h3>This week</h3><span className="ks-caption">{L.label}</span></div>
+            <div style={{ display: 'grid', gap: 10 }} className={run ? 'ks-fade-in' : undefined}>
+              <ThisWeekCard league={K.LEAGUE.name} week={K.LEAGUE.week} oppName="Gianluigi B." you={L.you.gain} opp={L.opp.gain} left="Ends Fri 4:00 PM ET" />
+              <ThisWeekCard league={F.name} week={F.week} oppName={F.opp} you={F.you} opp={F.oppGain} left="Ends Fri 4:00 PM ET" />
+            </div>
+          </div>
+          <div>
+            <div className="ks-section-h"><h3>Your leagues</h3></div>
+            <div className="ks-card" style={{ padding: '4px 14px' }}>
+              <div className="ks-tag" style={{ color: 'var(--sp-color-text-secondary)', paddingTop: 10 }}>Live this week</div>
+              <ul className="ks-rows">
+                {[
+                  { n: K.LEAGUE.name, meta: `2nd of 6 · 4–1`, chip: 'Week 6' },
+                  { n: F.name, meta: `3rd of ${F.members} · ${F.record}`, chip: 'Week 2' },
+                ].map((r) => (
+                  <li key={r.n} className="ks-row" style={{ gridTemplateColumns: '1fr auto 16px' }}>
+                    <span><span className="ks-t">{r.n}</span><br /><span className="ks-caption ks-num">{r.meta}</span></span>
+                    <Chip kind="live">{r.chip}</Chip>
+                    <span className="ks-muted"><Icon d={ICON.right} size={16} /></span>
+                  </li>
+                ))}
+              </ul>
+              <div className="ks-tag" style={{ color: 'var(--sp-color-text-secondary)', paddingTop: 6 }}>Upcoming</div>
+              <ul className="ks-rows">
+                <li className="ks-row" style={{ gridTemplateColumns: '1fr auto 16px' }}>
+                  <span><span className="ks-t">{S.name}</span><br /><span className="ks-caption">{S.members} of {S.of} joined</span></span>
+                  <span className="ks-chip ks-chip--money">{S.draftAt}</span>
+                  <span className="ks-muted"><Icon d={ICON.right} size={16} /></span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </Device>
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // 2. MATCHUP (live + final)
+  // ═════════════════════════════════════════════════════════════════════
+  function Lineup({ name, rows, align }) {
+    return (
+      <div>
+        <div className="ks-tag" style={{ textAlign: align, marginBottom: 4 }}>{name}</div>
+        <ul className="ks-rows">
+          {rows.map((r) => (
+            <li key={r.t} className="ks-row" style={{ gridTemplateColumns: '1fr auto', padding: '8px 0' }}>
+              <span className="ks-t ks-callout">{r.t}</span>
+              <span className={`ks-callout ks-num ${tone(r.weekGain)}`} style={{ fontWeight: 600 }}>{$s(r.weekGain)}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
+  function MatchupScreen({ final }) {
+    const M = K.MATCHUP;
+    const s = final ? M.final : M.live;
+    const you = s.you.gain, opp = s.opp.gain, lead = you - opp;
+    const liveFrac = 0.63; // 1:37 PM is 63% through Thursday's 6.5-hour session
+    return (
+      <Device game tab="matchup" label={final ? 'Matchup, final' : 'Matchup, live'}>
+        <LeagueHead chip={final ? <Chip kind="final">Week 6 · Final</Chip> : <Chip kind="live">Week 6 · Live</Chip>} />
+        <div className="ks-pad ks-stack" style={{ gap: 14 }}>
+          <div className="ks-seg ks-seg--game"><span className="on">My matchup</span><span>All matchups</span></div>
+          <div style={{ display: 'grid', gap: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <span className="ks-avatar ks-avatar--sm">RB</span>
+                <span className="ks-callout" style={{ fontWeight: 700 }}>Roberto B. <span className="ks-muted" style={{ fontWeight: 500 }}>(you)</span></span>
+              </span>
+              <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <span className="ks-callout" style={{ fontWeight: 700 }}>Gianluigi B.</span>
+                <span className="ks-avatar ks-avatar--sm ks-avatar--opp">GB</span>
+              </span>
+            </div>
+            <Scores left={$s(you)} right={$s(opp)} size="xl" />
+            <Tug you={you} opp={opp} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <span className="ks-callout">{final ? 'Roberto B. won by' : 'Roberto B. leads by'} <b className="ks-num">{$(Math.abs(lead))}</b></span>
+              <span className="ks-caption ks-muted ks-num">{pct(s.you.pct)} vs {pct(s.opp.pct)}</span>
+            </div>
+          </div>
+          {final ? (
+            <div className="ks-winner ks-fade-in"><span>Roberto B. wins Week 6</span><span className="ks-num">W · 5–1</span></div>
+          ) : null}
+          <div className="ks-chyron ks-chyron--in" key={final ? 'f' : 'l'}>
+            {final ? null : <span className="ks-dot ks-dot--pulse" />}
+            <span>{final ? K.CHYRONS.Fri : K.CHYRONS.Thu}</span>
+          </div>
+          <div className="ks-raised" style={{ padding: '10px 8px 4px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 6px' }}>
+              <span className="ks-tag">This week</span>
+              <span className="ks-caption ks-muted">{final ? 'Fri close' : `Live · ${M.live.label}`}</span>
+            </div>
+            <WeekRace upto={final ? 5 : 3} live={final ? null : { frac: liveFrac, you, opp }} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 20 }}>
+            <Lineup name="Roberto B." rows={s.you.rows} align="left" />
+            <Lineup name="Gianluigi B." rows={s.opp.rows} align="left" />
+          </div>
+          <div className="ks-caption ks-muted" style={{ textAlign: 'center' }}>
+            {final ? 'Next: Week 7 vs Paolo M. · starts Mon 9:30 AM ET' : 'Scored on dollar gain; percent breaks ties · Ends Fri 4:00 PM ET'}
+          </div>
+        </div>
+      </Device>
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // 3. LEAGUE STANDINGS (week final, with the FLIP re-sort)
+  // ═════════════════════════════════════════════════════════════════════
+  function LeagueScreen({ after }) {
+    const rows = after ? K.STANDINGS_FINAL : K.STANDINGS_BEFORE;
+    const pos = Object.fromEntries(rows.map((r) => [r.id, r]));
+    const ROW = 56;
+    return (
+      <Device tab="league" label="League standings">
+        <LeagueHead chip={<Chip kind={after ? 'final' : 'live'}>{after ? 'Week 6 · Final' : 'Week 6 · Live'}</Chip>} />
+        <div className="ks-pad ks-stack" style={{ gap: 14 }}>
+          <div className="ks-seg"><span className="on">Standings</span><span>Schedule</span><span>History</span></div>
+          <div className="ks-game" style={{ overflow: 'hidden' }}>
+            <div style={{ padding: '14px 14px 8px', display: 'grid', gap: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="ks-tag" style={{ color: 'var(--sp-color-live)' }}>Week 6 of 14</span>
+                <span className="ks-caption ks-muted">{after ? 'Records updated · Fri close' : 'Through Week 5'}</span>
+              </div>
+              {after ? <div className="ks-chyron ks-chyron--in"><span>Roberto B. takes 1st on season gain</span></div> : null}
+              <div style={{ display: 'grid', gridTemplateColumns: '22px 30px 30px 1fr auto 86px', gap: 10 }} className="ks-tag">
+                <span>#</span><span /><span /><span>Manager</span><span>W–L</span><span style={{ textAlign: 'right' }}>Gain</span>
+              </div>
+            </div>
+            <div className="ks-lb" style={{ height: ROW * 6 }}>
+              {K.PLAYERS.map((p) => {
+                const r = pos[p.id];
+                const d = after ? r.delta : 0;
+                return (
+                  <div key={p.id} className={p.you ? 'ks-lbrow ks-lbrow--you' : 'ks-lbrow'} style={{ transform: `translateY(${(r.rank - 1) * ROW}px)` }}>
+                    <span className="ks-score" style={{ fontSize: 22 }}>{r.rank}</span>
+                    <span className={`ks-delta ${d > 0 ? 'ks-delta--up' : d < 0 ? 'ks-delta--down' : 'ks-delta--flat'}`} key={`${after}${d}`}>
+                      {d > 0 ? <span className="ks-pop">▲{d}</span> : d < 0 ? <span className="ks-pop">▼{-d}</span> : '–'}
+                    </span>
+                    <span className={p.you ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{p.init}</span>
+                    <span className="ks-callout" style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{p.name}{p.you ? <span className="ks-muted" style={{ fontWeight: 500 }}> (you)</span> : null}</span>
+                    <span className="ks-callout ks-num ks-muted">{r.w}–{r.l}</span>
+                    <span className={`ks-callout ks-num ks-right ${tone(r.pf)}`} style={{ fontWeight: 700 }}>{$s(r.pf)}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="ks-caption ks-muted" style={{ padding: '8px 14px 14px' }}>Ranked by record. Ties break on season gain.</div>
+          </div>
+          {after ? (
+          <div className="ks-card ks-fade-in" style={{ padding: '12px 14px' }}>
+            <div className="ks-section-h"><h3>Week 6 results</h3><span className="ks-caption">Final</span></div>
+            <ul className="ks-rows">
+              {K.WEEK6.map((m) => {
+                const a = K.byId[m.a], b = K.byId[m.b];
+                const aw = m.ga > m.gb;
+                return (
+                  <li key={m.a} className="ks-row" style={{ gridTemplateColumns: '1fr auto', gap: 4 }}>
+                    <span className="ks-callout"><b style={{ fontWeight: aw ? 800 : 500 }}>{a.name}</b> <span className="ks-muted">vs</span> <b style={{ fontWeight: aw ? 500 : 800 }}>{b.name}</b></span>
+                    <span className="ks-callout ks-num" style={{ fontWeight: 600 }}>
+                      <span className={tone(m.ga)}>{$s(m.ga)}</span> <span className="ks-muted">·</span> <span className={tone(m.gb)}>{$s(m.gb)}</span>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+          ) : null}
+        </div>
+      </Device>
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // 4. DRAFT ROOM (on the clock, the snake board, search, your roster)
+  // ═════════════════════════════════════════════════════════════════════
+  function SnakeBoard({ current, landed }) {
+    const ref = useRef(null);
+    const cells = useRef({});
+    const [geo, setGeo] = useState(null);
+    useLayoutEffect(() => {
+      const box = ref.current.getBoundingClientRect();
+      const k = box.width / ref.current.offsetWidth || 1; // undo the board's CSS scale
+      const c = {};
+      for (const [n, el] of Object.entries(cells.current)) {
+        if (!el) continue;
+        const r = el.getBoundingClientRect();
+        c[n] = { x: (r.left - box.left + r.width / 2) / k, y: (r.top - box.top + r.height / 2) / k, w: r.width / k, h: r.height / k };
+      }
+      setGeo({ c, w: ref.current.offsetWidth });
+    }, []);
+    const picks = K.DRAFT_PICKS;
+    const seats = [...K.PLAYERS].sort((a, b) => a.seat - b.seat);
+    const rows = [1, 2, 3].map((r) => picks.filter((p) => p.round === r).sort((a, b) => K.seatForPick(a.pick, 6) - K.seatForPick(b.pick, 6)));
+    // The track: through every pick centre in pick order; between rounds, a
+    // half-loop OUTSIDE the row ends (right after odd rounds, left after even).
+    function path(toPick) {
+      if (!geo) return '';
+      let d = '';
+      for (let n = 1; n <= toPick; n++) {
+        const p = geo.c[n];
+        if (n === 1) { d += `M${p.x},${p.y}`; continue; }
+        const q = geo.c[n - 1];
+        if (p.y !== q.y) {
+          const right = Math.ceil((n - 1) / 6) % 2 === 1;
+          const r = (p.y - q.y) / 2;
+          // A 14px-deep half-loop just outside the row end (stays inside
+          // the 20px screen gutter), then into the next round's first cell.
+          const edge = right ? q.x + q.w / 2 + 2 : q.x - q.w / 2 - 2;
+          d += ` L${edge},${q.y} A14,${r} 0 0 ${right ? 1 : 0} ${edge},${p.y} L${p.x},${p.y}`;
+        } else d += ` L${p.x},${p.y}`;
+      }
+      return d;
+    }
+    const chevrons = [];
+    if (geo) {
+      for (let n = 2; n <= 18; n++) {
+        const p = geo.c[n], q = geo.c[n - 1];
+        if (p.y !== q.y) continue;
+        chevrons.push({ n, x: (p.x + q.x) / 2, y: p.y, dir: p.x > q.x ? 1 : -1 });
+      }
+    }
+    // The blue (drawn) track runs to whoever is on the clock.
+    const reach = landed ? current + 1 : current;
+    return (
+      <div>
+        <div className="ks-board__cols" style={{ marginBottom: 6 }}>
+          {seats.map((p) => <span key={p.id} className="ks-tag" style={p.you ? { color: 'var(--sp-color-team-you-on-game)' } : undefined}>{p.init}</span>)}
+        </div>
+        <div className="ks-board" ref={ref} style={{ display: 'grid', rowGap: 18 }}>
+          <svg className="ks-board__track" width="100%" height="100%" aria-hidden="true">
+            <path d={path(18)} fill="none" stroke="var(--sp-color-surface-game-line)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+            <path d={path(reach)} fill="none" stroke="var(--sp-color-team-you-base)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'all var(--sp-motion-duration-slow) var(--sp-motion-ease-settle)' }} />
+            {chevrons.map((c) => (
+              <path key={c.n} d={`M${c.x - 2 * c.dir},${c.y - 4} L${c.x + 2 * c.dir},${c.y} L${c.x - 2 * c.dir},${c.y + 4}`} fill="none" stroke={c.n <= reach ? '#fff' : 'var(--sp-color-text-on-game-secondary)'} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+            ))}
+          </svg>
+          {rows.map((row, ri) => (
+            <div key={ri} className="ks-board__row">
+              {row.map((p) => {
+                const you = K.byId[p.player].you;
+                const isClock = landed ? p.pick === current + 1 : p.pick === current;
+                const filled = p.pick < current || (landed && p.pick === current);
+                const cls = ['ks-cell', you ? 'ks-cell--you' : '', isClock ? 'ks-cell--clock' : '', !filled && !isClock ? 'ks-cell--future' : '', landed && p.pick === current ? 'ks-cell--landed' : ''].join(' ');
+                return (
+                  <div key={p.pick} className={cls} ref={(el) => (cells.current[p.pick] = el)}>
+                    <span className="ks-cell__n">{p.pick}</span>
+                    {filled ? <span className="ks-cell__t">{p.intended}</span> : <span className="ks-cell__t" style={{ opacity: 0 }}>·</span>}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+        <div className="ks-board__rlabel ks-caption ks-muted" style={{ marginTop: 10 }}>
+          <span>Round 1 → · Round 2 ← · Round 3 →</span>
+          <span>Order reverses each round</span>
+        </div>
+      </div>
+    );
+  }
+
+  function DraftScreen({ landed }) {
+    const D = K.DRAFT_MOMENT;
+    const secs = landed ? 60 : D.secondsLeft;
+    const frac = secs / D.secondsTotal;
+    const R = 36, C = 2 * Math.PI * R;
+    return (
+      <Device game tab="league" label="Draft room">
+        <LeagueHead chip={<Chip kind="live">Drafting</Chip>} />
+        <div className="ks-pad ks-stack" style={{ gap: 16 }}>
+          <div className="ks-raised" style={{ padding: 14, display: 'flex', gap: 14, alignItems: 'center' }}>
+            <div className="ks-ring">
+              <svg width="84" height="84" viewBox="0 0 84 84">
+                <circle cx="42" cy="42" r={R} fill="none" stroke="var(--sp-color-surface-game-line)" strokeWidth="6" />
+                <circle cx="42" cy="42" r={R} fill="none" stroke={landed ? 'var(--sp-color-text-on-game-secondary)' : 'var(--sp-color-live)'} strokeWidth="6" strokeLinecap="round" strokeDasharray={C} strokeDashoffset={C * (1 - frac)} style={{ transition: 'stroke-dashoffset 1s linear' }} />
+              </svg>
+              <span className="ks-ring__t">{landed ? '1:00' : `0:${String(secs).padStart(2, '0')}`}</span>
+            </div>
+            <div style={{ display: 'grid', gap: 2 }}>
+              {landed ? (
+                <>
+                  <span className="ks-title">Paolo M. is up</span>
+                  <span className="ks-callout ks-muted">Round 2 · Pick 12, then 13</span>
+                  <span className="ks-caption" style={{ color: 'var(--sp-color-team-you-on-game)' }}>You took AAPL · next pick 14</span>
+                </>
+              ) : (
+                <>
+                  <span className="ks-title" style={{ color: 'var(--sp-color-live)' }}>You're on the clock</span>
+                  <span className="ks-callout">Round 2 · Pick 11</span>
+                  <span className="ks-caption ks-muted">Then Paolo M. picks twice (12, 13)</span>
+                </>
+              )}
+            </div>
+          </div>
+          <SnakeBoard current={D.pick} landed={landed} />
+          <div style={{ display: 'grid', gap: 10 }}>
+            <div className="ks-search">
+              <Icon d={ICON.search} size={18} />
+              <span className="ks-callout">{K.DRAFT_SEARCH.query}</span><span className="ks-caret" />
+            </div>
+            <ul className="ks-rows">
+              {K.DRAFT_SEARCH.results.map((r, i) => (
+                <li key={r.t} className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto auto', padding: '9px 0' }}>
+                  <Logo t={r.t} game />
+                  <span><span className="ks-t ks-callout">{r.t}</span><br /><span className="ks-caption ks-muted">{r.co}</span></span>
+                  <span className="ks-callout ks-num ks-muted">{$(r.price)}</span>
+                  {i === 0 ? (
+                    <span className={landed ? 'ks-chip' : 'ks-btn ks-btn--ongame'} style={landed ? undefined : { height: 34, padding: '0 14px', fontSize: 14 }}>{landed ? 'Drafted' : 'Draft'}</span>
+                  ) : (
+                    <span className="ks-muted" aria-label="Queue"><Icon d={ICON.plus} size={20} /></span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <div className="ks-section-h"><h3>Your roster</h3><span className="ks-caption ks-muted">{landed ? 2 : 1} of 6 · $2,000 per slot</span></div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+              {['NVDA', landed ? 'AAPL' : null, null, null, null, null].map((t, i) => (
+                <span key={i} className={t ? 'ks-slot ks-slot--on' + (i === 1 ? ' ks-fade-in' : '') : 'ks-slot'}>{t || `Rd ${i + 1}`}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </Device>
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // 5. PORTFOLIO + STOCK SHEET (Sell pre-selected)
+  // ═════════════════════════════════════════════════════════════════════
+  function StockSheet({ open }) {
+    const N = K.NVDA;
+    const pts = N.dayPoints;
+    const w = 362, h = 120;
+    const min = Math.min(...pts) - 1, max = Math.max(...pts) + 1;
+    const X = (i) => (i / (pts.length - 1)) * (w - 8);
+    const Y = (v) => 6 + (1 - (v - min) / (max - min)) * (h - 12);
+    const d = pts.map((v, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+    const perShare = N.thu - N.prev;
+    return (
+      <>
+        <div className="ks-scrim" style={{ opacity: open ? 1 : 0, pointerEvents: 'none' }} />
+        <div className={open ? 'ks-sheet' : 'ks-sheet ks-sheet--hidden'} aria-hidden={!open}>
+          <div className="ks-grabber" />
+          <div style={{ padding: '10px 20px 20px', display: 'grid', gap: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <Logo t="NVDA" />
+              <span style={{ flex: 1 }}><span className="ks-headline" style={{ fontWeight: 800 }}>NVDA</span><br /><span className="ks-caption">NVIDIA</span></span>
+              <span className="ks-muted"><Icon d={ICON.close} size={22} /></span>
+            </div>
+            <div>
+              <div className="ks-num" style={{ fontSize: 34, lineHeight: '38px', fontWeight: 800 }}>{$(N.thu)}</div>
+              <div className="ks-callout ks-gain ks-num" style={{ fontWeight: 700 }}>{$s(perShare)} · {pct(N.todayPct)} <span className="ks-muted" style={{ fontWeight: 500 }}>today</span></div>
+            </div>
+            <svg viewBox={`0 0 ${w} ${h}`} width="100%" height={h} role="img" aria-label="NVDA today">
+              <line x1="0" x2={w} y1={Y(N.prev)} y2={Y(N.prev)} stroke="var(--sp-color-border-control)" strokeDasharray="3 4" />
+              <text x="0" y={Y(N.prev) + 14} fontSize="11" fontWeight="600" fill="var(--sp-color-text-secondary)">Prev close {$(N.prev)}</text>
+              <path d={d} fill="none" stroke="var(--sp-color-data-gain-base)" strokeWidth="2.25" strokeLinejoin="round" />
+              <circle cx={X(pts.length - 1)} cy={Y(pts[pts.length - 1])} r="4" fill="var(--sp-color-data-gain-base)" stroke="#fff" strokeWidth="2" />
+            </svg>
+            <div className="ks-seg">{N.range.map((r, i) => <span key={r} className={i === 0 ? 'on' : undefined}>{r}</span>)}</div>
+            <div className="ks-card" style={{ padding: 14, boxShadow: 'none', background: 'var(--sp-color-surface-money-sunken)', border: 0 }}>
+              <div className="ks-section-h"><h3>Your position</h3><span className="ks-caption">{N.ownership}</span></div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', rowGap: 10 }} className="ks-num">
+                <span><span className="ks-caption">Shares</span><br /><b>{N.qty.toFixed(4)}</b></span>
+                <span><span className="ks-caption">Avg entry</span><br /><b>{$(N.draft)}</b></span>
+                <span><span className="ks-caption">Value</span><br /><b>{$(N.value)}</b></span>
+                <span><span className="ks-caption">Gain</span><br /><b className="ks-gain">{$s(N.gain)} · {pct((N.gain / N.cost) * 100)}</b></span>
+              </div>
+            </div>
+            <div className="ks-seg" style={{ height: 40 }}><span>Buy</span><span className="on">Sell</span></div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {['25%', '50%', 'All'].map((c) => <span key={c} className="ks-chip ks-chip--money" style={{ height: 32, padding: '0 14px', fontSize: 13, textTransform: 'none', fontStretch: '100%', letterSpacing: 0 }}>{c}</span>)}
+              <span className="ks-caption" style={{ marginLeft: 'auto', alignSelf: 'center' }}>Up to {$(N.value)}</span>
+            </div>
+            <span className="ks-btn">Review sell</span>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  function PortfolioScreen({ sheet }) {
+    const P = K.PORTFOLIO_LIVE;
+    return (
+      <Device tab="portfolio" label={sheet ? 'Portfolio with the NVDA sheet open' : 'Portfolio'} overlay={<StockSheet open={sheet} />}>
+        <LeagueHead chip={<Chip kind="live">Live</Chip>} />
+        <div className="ks-pad ks-stack">
+          <div>
+            <div className="ks-caption">Portfolio value</div>
+            <div className="ks-score ks-num" style={{ fontSize: 48, lineHeight: '50px', fontStretch: '75%' }}>{$(P.value)}</div>
+            <div className="ks-callout ks-num" style={{ fontWeight: 700 }}>
+              <span className="ks-gain">{$s(P.gain)} · {pct(P.gainPct)}</span> <span className="ks-muted" style={{ fontWeight: 500 }}>since the draft</span>
+            </div>
+            <div className="ks-callout ks-num" style={{ fontWeight: 700 }}>
+              <span className="ks-gain">{$s(P.today)} · {pct(P.todayPct)}</span> <span className="ks-muted" style={{ fontWeight: 500 }}>today</span>
+            </div>
+          </div>
+          <div className="ks-card" style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between' }}>
+            <span className="ks-callout"><b>6 of 6</b> slots filled</span>
+            <span className="ks-callout ks-muted">$2,000 per slot</span>
+          </div>
+          <div>
+            <div className="ks-section-h"><h3>Holdings</h3><span className="ks-caption">Value · today</span></div>
+            <div className="ks-card" style={{ padding: '2px 14px' }}>
+              <ul className="ks-rows">
+                {P.rows.map((r) => (
+                  <li key={r.t} className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto', background: sheet && r.t === 'NVDA' ? 'var(--sp-color-surface-money-sunken)' : undefined }}>
+                    <Logo t={r.t} />
+                    <span><span className="ks-t">{r.t}</span><br /><span className="ks-caption ks-num">{r.co} · {r.qty.toFixed(2)} sh</span></span>
+                    <span className="ks-right ks-num"><b>{$(r.value)}</b><br /><span className={`ks-caption ${tone(r.todayPct)}`} style={{ fontWeight: 700 }}>{pct(r.todayPct)}</span></span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+          <div className="ks-card" style={{ padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span><b>Trade history</b><br /><span className="ks-caption">Includes your 6 draft picks</span></span>
+            <span className="ks-muted"><Icon d={ICON.right} size={18} /></span>
+          </div>
+        </div>
+      </Device>
+    );
+  }
+
+  window.KSScreens = { HomeScreen, MatchupScreen, LeagueScreen, DraftScreen, PortfolioScreen };
+})();
+
+</script>
+<script type="text/babel" data-presets="react">
+// The review board around the key screens: one section per screen, each
+// with the live component, what it shows, its motion moments (playable),
+// and the questions only Giorgio can answer. Then the ledger, computed
+// from data.js, proving the numbers tie out.
+
+(function () {
+  const { useState, useEffect, useLayoutEffect, useRef } = React;
+  const K = window.KS;
+  const S = window.KSScreens;
+  const $ = (v, o) => K.formatMoney(v, o);
+  const $s = (v) => K.formatMoney(v, { sign: 'always' });
+  const pct = (v) => K.formatPct(v, { sign: 'always' });
+
+  /** Scales a 402×874 device to its column (never above 1:1). */
+  function Fit({ children, caption }) {
+    const ref = useRef(null);
+    const [k, setK] = useState(1);
+    useLayoutEffect(() => {
+      const el = ref.current;
+      const ro = new ResizeObserver(() => setK(Math.min(1, el.clientWidth / 402)));
+      ro.observe(el);
+      return () => ro.disconnect();
+    }, []);
+    return (
+      <figure className="b-fig">
+        <div className="b-fit" ref={ref} style={{ height: 874 * k }}>
+          <div className="b-fit__in" style={{ transform: `scale(${k})` }}>{children}</div>
+        </div>
+        {caption ? <figcaption>{caption}</figcaption> : null}
+      </figure>
+    );
+  }
+
+  function Play({ label, onPlay, playing }) {
+    return (
+      <button type="button" className="b-play" onClick={onPlay} aria-pressed={playing}>
+        <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5v14l12-7z" fill="currentColor" /></svg>
+        {label}
+      </button>
+    );
+  }
+
+  function Section({ id, n, name, job, phones, notes }) {
+    return (
+      <section className="b-sec" id={id} aria-labelledby={`${id}-h`}>
+        <header className="b-sec__head">
+          <span className="b-sec__n">{n}</span>
+          <div>
+            <h2 id={`${id}-h`}>{name}</h2>
+            <p className="b-job">{job}</p>
+          </div>
+        </header>
+        <div className={phones.length > 1 ? 'b-sec__grid b-sec__grid--two' : 'b-sec__grid'}>
+          <div className="b-phones">{phones}</div>
+          <div className="b-notes">{notes}</div>
+        </div>
+      </section>
+    );
+  }
+
+  function Notes({ shows, motion, reduced, ask }) {
+    return (
+      <>
+        <h3>On screen</h3>
+        <ul>{shows.map((s, i) => <li key={i}>{s}</li>)}</ul>
+        <h3>Motion</h3>
+        <ul className="b-motion">{motion}</ul>
+        <p className="b-reduced"><b>Reduce Motion:</b> {reduced}</p>
+        {ask ? (
+          <div className="b-ask">
+            <h3>Your call</h3>
+            <ul>{ask.map((s, i) => <li key={i}>{s}</li>)}</ul>
+          </div>
+        ) : null}
+      </>
+    );
+  }
+
+  // One replayable moment: toggles a boolean for `ms`, then settles.
+  function useMoment(initial) {
+    const [v, setV] = useState(initial);
+    const [n, setN] = useState(0);
+    return [v, n, (next) => { setV(next); setN((x) => x + 1); }];
+  }
+
+  function Board() {
+    const [homeRun, homeN, setHome] = useMoment(false);
+    const [final, finalN, setFinal] = useMoment(false);
+    const [after, afterN, setAfter] = useMoment(true);
+    const [landed, landedN, setLanded] = useMoment(false);
+    const [sheet, sheetN, setSheet] = useMoment(false);
+    const L = K.MATCHUP.live, F = K.MATCHUP.final;
+
+    return (
+      <main className="b-page">
+        <header className="b-hero">
+          <div className="b-brand">
+            <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="13" width="4.5" height="8" rx="1" fill="#5B6678" /><rect x="9.75" y="9" width="4.5" height="12" rx="1" fill="#5B6678" /><rect x="16.5" y="4" width="4.5" height="17" rx="1" fill="#2860F0" /></svg>
+            <span>Stockpile</span>
+            <span className="b-brand__meta">Key screens · v1 · 29 Sep 2026</span>
+          </div>
+          <h1>The app, as it will ship.</h1>
+          <p className="b-lead">
+            Five key screens, built as real components on the Game Day tokens. They are the
+            source of truth for the mobile app and for the landing page's phone, so the landing
+            can only show what the app will actually look like. Every screen tells one story:
+            the same league, the same week, and numbers that add up.
+          </p>
+          <dl className="b-canon">
+            <div><dt>League</dt><dd>{K.LEAGUE.name} · 6 managers</dd></div>
+            <div><dt>Moment</dt><dd>Week 6 of 14 · Thu 1:37 PM ET</dd></div>
+            <div><dt>You</dt><dd>Roberto B. vs Gianluigi B.</dd></div>
+            <div><dt>Stakes</dt><dd>$2,000 per slot · 6 slots</dd></div>
+          </dl>
+          <nav className="b-toc" aria-label="Screens">
+            {[['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
+          </nav>
+        </header>
+
+        <Section
+          id="home" n="1" name="Home" job="Where am I across all my leagues, and how is this week going?"
+          phones={<Fit key={homeN}><S.HomeScreen run={homeRun} /></Fit>}
+          notes={<Notes
+            shows={[
+              <>Total value across live leagues ({$(K.HOME.totalValue)}) with the past month's gain ({$s(K.HOME.windowGain)}).</>,
+              <>The chart plots <b>cumulative gain</b> against a zero baseline, not value. Joining Friday Night Stocks is a small marker on the axis, never a jump in the line.</>,
+              <>"This week": one live scoreboard card per league, each with the tug bar and the lead in dollars.</>,
+              <>Your leagues grouped by phase, with rank and record. The avatar opens Profile.</>,
+            ]}
+            motion={<>
+              <li><Play label="Open Home" playing={homeRun} onPlay={() => setHome(true)} /> The gain line draws on (feature, 700ms); the week cards rise in (slow, 380ms).</li>
+              <li>Live cards tick: digits roll only where they changed (base, 240ms); the tug bar eases to its new split.</li>
+            </>}
+            reduced="the line and cards appear in place; digits swap without rolling."
+            ask={['Total value across every live league, or only the active one?', 'One "This week" card per live league, stacked: fine at 2 leagues. At 4+, swipeable instead?']}
+          />}
+        />
+
+        <Section
+          id="matchup" n="2" name="Matchup" job="Am I winning this week, by how much, and why?"
+          phones={<>
+            <Fit caption={final ? 'Final (played from Live)' : 'Live · Thu 1:37 PM ET'}><S.MatchupScreen final={final} /></Fit>
+            <Fit caption="Final · Fri close"><S.MatchupScreen final /></Fit>
+          </>}
+          notes={<Notes
+            shows={[
+              <>A broadcast scoreboard: both managers, both scores in the condensed 62% cut, and the tug bar. Live: {$s(L.you.gain)} vs {$s(L.opp.gain)}.</>,
+              <>The lead is in dollars ({$(L.you.gain - L.opp.gain)}); the percent tiebreak sits beside it, small ({pct(L.you.pct)} vs {pct(L.opp.pct)}).</>,
+              <>A chyron names what just moved the game. The race chart replaces the Mon–Fri bars and is the same chart as the landing's /03.</>,
+              <>Both lineups, each stock's dollar contribution this week. They add up to the score exactly.</>,
+              <>Final: the winner banner, the new record, and next week's opponent.</>,
+            ]}
+            motion={<>
+              <li><Play label={final ? 'Back to Live' : 'Final whistle'} playing={final} onPlay={() => setFinal(!final)} /> Scores roll to the close, the chip flips Live → Final, the tug settles, and the winner banner rises (slow, 380ms).</li>
+              <li>Lead change (live): the chyron slides in (base), the tug crosses centre with the lively spring, one light haptic.</li>
+            </>}
+            reduced="scores swap, the tug jumps to its split, the banner and chyron fade in place."
+            ask={['Lineups show each stock\'s dollar contribution this week. Would you rather see percent per stock?']}
+          />}
+        />
+
+        <Section
+          id="league" n="3" name="League standings" job="Where do I stand, and what changed this week?"
+          phones={<Fit><S.LeagueScreen after={after} /></Fit>}
+          notes={<Notes
+            shows={[
+              <>Ranked the way the app ranks: win percentage, then wins, then <b>season gain in dollars</b>. Paolo M. and Roberto B. are both 5–1; Roberto's {$s(K.STANDINGS_FINAL[0].pf)} beats Paolo's {$s(K.STANDINGS_FINAL[1].pf)}.</>,
+              <>▲/▼ show the move since last week. You are highlighted wherever you land.</>,
+              <>Week 6 results underneath: every matchup, both scores.</>,
+            ]}
+            motion={<>
+              <li><Play label="Replay Friday's re-sort" playing={false} onPlay={() => { setAfter(false); setTimeout(() => setAfter(true), 700); }} /> Rows slide to their new ranks (FLIP, slow 380ms, settle), then the ▲/▼ badges pop.</li>
+            </>}
+            reduced="rows jump to their new order; the badges appear without scaling."
+            ask={['Column name: "Season gain" (plain) or "Points for" (fantasy)?']}
+          />}
+        />
+
+        <Section
+          id="draft" n="4" name="Draft room" job="Whose pick is it, what's left, and how does the snake run?"
+          phones={<Fit caption={landed ? 'After the pick' : 'On the clock · Round 2, pick 11'}><S.DraftScreen landed={landed} /></Fit>}
+          notes={<Notes
+            shows={[
+              <>The on-the-clock ring counts down; the card says what the snake means for you right now ("Then Paolo M. picks twice").</>,
+              <>The snake board: a track runs through every pick in order, with chevrons in the gaps and a half-loop at every row end, so the reversal reads without the labels. Your picks are outlined in team blue.</>,
+              <>Search with your queue; Draft is one tap. Your roster fills slot by slot at $2,000 each.</>,
+            ]}
+            motion={<>
+              <li><Play label={landed ? 'Reset' : 'Make the pick'} playing={landed} onPlay={() => setLanded(!landed)} /> AAPL lands in pick 11, the blue track extends to 12, the ring hands over to Paolo M., and the roster slot fills.</li>
+              <li>The clock ring pulses its outline at 1.2s; the last 10 seconds turn the ring to loss red.</li>
+            </>}
+            reduced="the ticker appears in place; the track extends without drawing; no pulse."
+            ask={['Pick clock: 60 seconds assumed. Is that the league default?']}
+          />}
+        />
+
+        <Section
+          id="portfolio" n="5" name="Portfolio and stock sheet" job="What do I own, how is it doing, and how do I act on one stock?"
+          phones={<>
+            <Fit caption={sheet ? 'NVDA tapped' : 'Portfolio · live'}><S.PortfolioScreen sheet={sheet} /></Fit>
+            <Fit caption="Stock sheet · Sell pre-selected"><S.PortfolioScreen sheet /></Fit>
+          </>}
+          notes={<Notes
+            shows={[
+              <>Value {$(K.PORTFOLIO_LIVE.value)}; gain since the draft {$s(K.PORTFOLIO_LIVE.gain)} against a $12,000.00 basis; today {$s(K.PORTFOLIO_LIVE.today)}.</>,
+              <>Six holdings, each with value and today's move. Trade history includes the draft picks.</>,
+              <>Any ticker row opens the stock sheet: price and today's chart against the previous close, your position, who in the league owns it, and <b>Sell pre-selected</b> because you hold it.</>,
+            ]}
+            motion={<>
+              <li><Play label={sheet ? 'Close sheet' : 'Tap NVDA'} playing={sheet} onPlay={() => setSheet(!sheet)} /> The sheet springs up (spring.snappy, no overshoot) while the scrim fades in (base).</li>
+            </>}
+            reduced="the sheet fades in place."
+            ask={['Can managers buy and sell mid-season in a $2,000-per-slot league, or only swap? The sheet follows the IA (Buy / Sell) until you decide.']}
+          />}
+        />
+
+        <Ledger />
+      </main>
+    );
+  }
+
+  function Ledger() {
+    const L = K.MATCHUP.live, F = K.MATCHUP.final, P = K.PORTFOLIO_LIVE, H = K.HOME;
+    const fns = K.OTHER_LEAGUES[0];
+    const rowsSum = (rows) => rows.map((r) => $s(r.weekGain)).join(' ');
+    const wins = K.STANDINGS_FINAL.reduce((a, r) => a + r.w, 0);
+    const losses = K.STANDINGS_FINAL.reduce((a, r) => a + r.l, 0);
+    const lines = [
+      ['Matchup, live', `Roberto B.: ${rowsSum(L.you.rows)} = ${$s(L.you.gain)}`, `Gianluigi B.: ${rowsSum(L.opp.rows)} = ${$s(L.opp.gain)}`, `Lead ${$(L.you.gain - L.opp.gain)}`],
+      ['Matchup, final', `Roberto B. = ${$s(F.you.gain)} (${pct(F.you.pct)} of ${$(F.you.startValue)})`, `Gianluigi B. = ${$s(F.opp.gain)} (${pct(F.opp.pct)} of ${$(F.opp.startValue)})`, `Margin ${$(F.you.gain - F.opp.gain)}`],
+      ['Portfolio', `Σ 6 holdings = ${$(P.value)}`, `Basis 6 × $2,000.00 = ${$(P.cost)}`, `Gain ${$s(P.gain)} (${pct(P.gainPct)})`],
+      ['Home', `${$(P.value)} + ${$(fns.value)} = ${$(H.totalValue)}`, `All-time gain ${$s(H.allTimeGain)}`, `Past month = last point − first = ${$s(H.windowGain)}`],
+      ['Standings', `After Week 6: ${wins} wins = ${losses} losses`, 'Ranked: win %, then wins, then season gain', `Roberto B. ${$s(K.STANDINGS_FINAL[0].pf)} > Paolo M. ${$s(K.STANDINGS_FINAL[1].pf)}`],
+      ['Draft', 'Seat on the clock at pick n: odd rounds 1→6, even rounds 6→1', 'Roberto B. (seat 2): picks 2, 11, 14, 23, 26, 35', 'Gianluigi B. (seat 5): picks 5, 8, 17, 20, 29, 32'],
+    ];
+    return (
+      <section className="b-sec b-ledger" id="ledger" aria-labelledby="ledger-h">
+        <header className="b-sec__head">
+          <span className="b-sec__n">$</span>
+          <div>
+            <h2 id="ledger-h">The ledger</h2>
+            <p className="b-job">Computed live from the same data the screens use, so it cannot drift from them.</p>
+          </div>
+        </header>
+        <div className="b-table-wrap">
+          <table className="b-table">
+            <tbody>
+              {lines.map(([k, ...v]) => (
+                <tr key={k}><th scope="row">{k}</th>{v.map((x, i) => <td key={i}>{x}</td>)}</tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <h3>Changes from the landing's current sample data</h3>
+        <ol className="b-changes">
+          <li>Records: the landing's 5–0, 4–1, 4–1, 3–2, 2–3, 1–4 add up to 19 wins against 11 losses, which no league can produce. Now 5–0, 4–1, 3–2, 2–3, 1–4, 0–5 after Week 5.</li>
+          <li>Standings rank by record, then season gain in dollars (as the app does), not by season percent.</li>
+          <li>Pick 12 was TSLA for Paolo M., but TSLA is in Roberto B.'s lineup. Paolo M. now takes LLY; Roberto B. took TSLA in round 4.</li>
+          <li>The hero phone's matchup (+$322.45 vs −$71.20, "3d 4h left") contradicted the week's daily closes. The live moment is now Thu 1:37 PM: {$s(L.you.gain)} vs {$s(L.opp.gain)}.</li>
+          <li>Thursday's close for Gianluigi B. is +$71.35 (was −$12.55), so the live game is close enough for the tug bar to move. Friday is derived from the holdings: {$s(F.you.gain)} vs {$s(F.opp.gain)} (was +$351.80 vs −$40.25).</li>
+          <li>Lineups are six stocks (the landing showed four); the portfolio is {$(P.value)} across six holdings.</li>
+        </ol>
+      </section>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById('root')).render(<Board />);
+})();
+
+</script>

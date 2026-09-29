@@ -1,0 +1,692 @@
+// Key screens: the app's five key screens as React components (Design Lead,
+// 2026-09-29). The single source of truth for BOTH the landing's phone
+// (3a) and mobile phases 3b-1 / 3b-2 / 3c / 3e.
+//
+// Written against the web foundation's tokens (tokens.css --sp-*) and the
+// canonical data in data.js (window.KS). No build: the board compiles this
+// with Babel standalone. Port to apps/web: drop the IIFE, `export` each
+// screen, import KS from sampleData, and swap Roll/ScoreRow/Tug for the
+// foundation's ScoreDigits/TugBar where they already exist.
+
+(function () {
+  const { useState, useEffect, useLayoutEffect, useRef } = React;
+  const K = window.KS;
+  const $ = (v, o) => K.formatMoney(v, o);
+  const $s = (v) => K.formatMoney(v, { sign: 'always' });
+  const pct = (v) => K.formatPct(v, { sign: 'always' });
+  const tone = (v) => (Math.round(Math.abs(v) * 100) === 0 ? 'ks-zero' : v > 0 ? 'ks-gain' : 'ks-loss');
+  const reduced = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ── Icons (one outline set; filled weight on the active tab) ──────────
+  const ICON = {
+    home: 'M4 11 12 4l8 7v8a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z',
+    matchup: 'M4 17 9 11l4 4 7-8M15 7h5v5',
+    league: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3',
+    portfolio: 'M4 20V10M10 20V4M16 20v-8M22 20H2',
+    chevron: 'm6 9 6 6 6-6',
+    search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4',
+    plus: 'M12 5v14M5 12h14',
+    close: 'M6 6l12 12M18 6 6 18',
+    right: 'm9 6 6 6-6 6',
+  };
+  function Icon({ d, size = 24, width = 2 }) {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={width} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d={d} />
+      </svg>
+    );
+  }
+
+  // ── Device chrome ─────────────────────────────────────────────────────
+  const TABS = [['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['portfolio', 'Portfolio']];
+  function Device({ game, tab, children, overlay, label }) {
+    return (
+      <div className={game ? 'ks-device ks-device--game' : 'ks-device'} role="img" aria-label={label}>
+        <div className="ks-os">
+          <span>1:37</span>
+          <span className="ks-os__island" />
+          <span className="ks-os__icons">
+            <span className="ks-os__bars"><i /><i /><i /><i /></span>
+            <span className="ks-os__batt"><i /></span>
+          </span>
+        </div>
+        <div className="ks-scroll">{children}</div>
+        <nav className="ks-tabs">
+          {TABS.map(([id, name]) => (
+            <span key={id} className={id === tab ? 'ks-tabs__t ks-tabs__t--on' : 'ks-tabs__t'}>
+              <Icon d={ICON[id]} width={id === tab ? 2.4 : 1.8} />
+              {name}
+            </span>
+          ))}
+        </nav>
+        <span className="ks-home-ind" />
+        {overlay}
+      </div>
+    );
+  }
+  function LeagueHead({ chip, sub }) {
+    return (
+      <div className="ks-head">
+        <span className="ks-pill"><span>{K.LEAGUE.name}</span><Icon d={ICON.chevron} size={14} width={2.6} /></span>
+        {chip}
+        {sub}
+      </div>
+    );
+  }
+  function Chip({ kind, children }) {
+    return (
+      <span className={`ks-chip ks-chip--${kind}`}>
+        {kind === 'live' ? <span className="ks-dot ks-dot--pulse" /> : null}
+        {children}
+      </span>
+    );
+  }
+
+  // ── Roll: per-character roll on change, never on first paint ──────────
+  function Roll({ text, className }) {
+    const first = useRef(true);
+    const prev = useRef(text);
+    useEffect(() => { first.current = false; prev.current = text; });
+    const old = prev.current;
+    return (
+      <span className={className} aria-label={text}>
+        {text.split('').map((c, i) => (
+          <span
+            key={`${i}-${c}`}
+            aria-hidden="true"
+            style={{ display: 'inline-block' }}
+            className={!first.current && old[i] !== c && !reduced() ? 'ks-rollin' : undefined}
+          >
+            {c}
+          </span>
+        ))}
+      </span>
+    );
+  }
+
+  // ── Scores: the shared ScoreRow. Two scores that never touch: a 1fr/1fr
+  // grid with a ≥16px gap, and ONE shared size (the largest at which BOTH
+  // fit their columns), so the widest pair (+$351.77 / −$38.88) is safe.
+  function Scores({ left, right, size = 'xl', leftTone, rightTone }) {
+    const ref = useRef(null);
+    const [k, setK] = useState(1);
+    useLayoutEffect(() => {
+      const el = ref.current;
+      if (!el) return;
+      el.style.setProperty('--k', '1');
+      let s = 1;
+      el.querySelectorAll('.ks-scorerow > div').forEach((cell) => {
+        const inner = cell.firstChild;
+        if (inner.scrollWidth > cell.clientWidth) s = Math.min(s, cell.clientWidth / inner.scrollWidth);
+      });
+      el.style.setProperty('--k', String(s));
+      setK(s);
+    }, [left, right]);
+    return (
+      <div ref={ref} style={{ fontSize: `calc(var(--sp-type-score-${size}-size) * var(--k, 1))`, lineHeight: 1 }} data-k={k.toFixed(2)}>
+        <div className="ks-scorerow">
+          <div><Roll text={left} className={`ks-score ${leftTone || ''}`} /></div>
+          <div><Roll text={right} className={`ks-score ${rightTone || ''}`} /></div>
+        </div>
+      </div>
+    );
+  }
+
+  /** Ticker tile: the full symbol, sized to fit (never a 2-letter guess). */
+  function Logo({ t, game }) {
+    const size = t.length <= 2 ? 13 : t.length === 3 ? 11 : 9.5;
+    const style = game ? { background: 'var(--sp-color-surface-game-raised)', color: 'var(--sp-color-text-on-game-primary)', fontSize: size } : { fontSize: size };
+    return <span className="ks-logo" style={style}>{t}</span>;
+  }
+
+  function Tug({ you, opp }) {
+    const r = K.tugRatio(you, opp);
+    return (
+      <div className="ks-tug" aria-label={`Tug of war: you ${$s(you)}, opponent ${$s(opp)}`}>
+        <span className="ks-tug__you" style={{ flexGrow: r }} />
+        <span className="ks-tug__opp" style={{ flexGrow: 1 - r }} />
+      </div>
+    );
+  }
+
+  // ── Line chart helper (zero baseline, gain above / loss below) ─────────
+  function GainChart({ series, w = 362, h = 148, marker, run }) {
+    const pad = { t: 10, b: 22, l: 0, r: 0 };
+    const min = Math.min(0, ...series);
+    const max = Math.max(0, ...series);
+    const x = (i) => pad.l + (i / (series.length - 1)) * (w - pad.l - pad.r);
+    const y = (v) => pad.t + (1 - (v - min) / (max - min || 1)) * (h - pad.t - pad.b);
+    const d = series.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+    const area = `${d} L${x(series.length - 1)},${y(0)} L${x(0)},${y(0)} Z`;
+    const z = y(0);
+    const id = useRef(`c${Math.random().toString(36).slice(2, 8)}`).current;
+    const end = series[series.length - 1];
+    return (
+      <svg className="ks-chart" viewBox={`0 0 ${w} ${h}`} role="img" aria-label={`Cumulative gain, past month: ${$s(end)}`}>
+        <defs>
+          <clipPath id={`${id}a`}><rect x="0" y="0" width={w} height={z} /></clipPath>
+          <clipPath id={`${id}b`}><rect x="0" y={z} width={w} height={h - z} /></clipPath>
+        </defs>
+        <path d={area} fill="var(--sp-color-data-gain-base)" opacity=".1" clipPath={`url(#${id}a)`} />
+        <path d={area} fill="var(--sp-color-data-loss-base)" opacity=".1" clipPath={`url(#${id}b)`} />
+        <line x1="0" x2={w} y1={z} y2={z} stroke="var(--sp-color-border-control)" strokeDasharray="3 4" strokeWidth="1" />
+        <g className={run ? 'ks-draw ks-draw--run' : 'ks-draw'} style={{ '--len': 1 }} key={run ? 'r' : 's'}>
+          <path d={d} pathLength="1" className="ks-chart__line" stroke="var(--sp-color-data-gain-base)" clipPath={`url(#${id}a)`} strokeDasharray="1" />
+          <path d={d} pathLength="1" className="ks-chart__line" stroke="var(--sp-color-data-loss-base)" clipPath={`url(#${id}b)`} strokeDasharray="1" />
+        </g>
+        <circle cx={x(series.length - 1)} cy={y(end)} r="4" fill="var(--sp-color-data-gain-base)" stroke="#fff" strokeWidth="2" />
+        {marker != null ? (
+          <g>
+            <line x1={x(marker)} x2={x(marker)} y1={z - 5} y2={z + 5} stroke="var(--sp-color-text-secondary)" strokeWidth="1.5" />
+            <text x={x(marker)} y={h - 4} textAnchor="middle" fontSize="11" fontWeight="600" fill="var(--sp-color-text-secondary)">Joined Friday Night Stocks</text>
+          </g>
+        ) : null}
+        <text x="2" y={z - 6} fontSize="11" fontWeight="600" fill="var(--sp-color-text-secondary)">$0</text>
+      </svg>
+    );
+  }
+
+  // Week race chart (the landing /03 chart, small, on a game surface).
+  function WeekRace({ upto, live }) {
+    const w = 330, h = 118, pb = 20, pt = 10;
+    const pts = K.WEEK_CLOSES.slice(0, upto + 1).map((p, i) => ({ ...p, x: i }));
+    if (live) pts.push({ day: 'now', x: upto + live.frac, you: live.you, opp: live.opp });
+    const all = K.WEEK_CLOSES.flatMap((p) => [p.you, p.opp]).concat(live ? [live.you, live.opp] : []);
+    const min = Math.min(0, ...all), max = Math.max(0, ...all);
+    const X = (i) => 8 + (i / 5) * (w - 16);
+    const Y = (v) => pt + (1 - (v - min) / (max - min)) * (h - pt - pb);
+    const line = (k) => pts.map((p, i) => `${i ? 'L' : 'M'}${X(p.x).toFixed(1)},${Y(p[k]).toFixed(1)}`).join(' ');
+    const last = pts[pts.length - 1];
+    return (
+      <svg viewBox={`0 0 ${w} ${h}`} width="100%" height={h} role="img" aria-label="Week 6 race: cumulative dollar gain by day">
+        <line x1="8" x2={w - 8} y1={Y(0)} y2={Y(0)} stroke="var(--sp-color-surface-game-line)" strokeDasharray="3 4" />
+        <path d={line('opp')} fill="none" stroke="var(--sp-color-team-opponent)" strokeWidth="2.25" strokeLinejoin="round" />
+        <path d={line('you')} fill="none" stroke="var(--sp-color-team-you-on-game)" strokeWidth="2.5" strokeLinejoin="round" />
+        <circle cx={X(last.x)} cy={Y(last.opp)} r="3.5" fill="var(--sp-color-team-opponent)" />
+        <circle cx={X(last.x)} cy={Y(last.you)} r="4" fill="var(--sp-color-team-you-on-game)" />
+        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((d, i) => (
+          <text key={d} x={X(i + 1)} y={h - 4} textAnchor="middle" fontSize="12" fontWeight="600" fill="var(--sp-color-text-on-game-secondary)">{d}</text>
+        ))}
+      </svg>
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // 1. HOME
+  // ═════════════════════════════════════════════════════════════════════
+  function ThisWeekCard({ league, week, oppName, you, opp, left, init }) {
+    const lead = you - opp;
+    return (
+      <div className="ks-game" style={{ padding: 16, display: 'grid', gap: 10 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span className="ks-headline" style={{ fontWeight: 700 }}>{league}</span>
+          <Chip kind="live">Week {week} · Live</Chip>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }} className="ks-callout">
+          <span style={{ color: 'var(--sp-color-team-you-on-game)', fontWeight: 700 }}>You</span>
+          <span className="ks-muted">vs {oppName}</span>
+        </div>
+        <Scores left={$s(you)} right={$s(opp)} size="lg" />
+        <Tug you={you} opp={opp} />
+        <div style={{ display: 'flex', justifyContent: 'space-between' }} className="ks-caption">
+          <span style={{ color: 'var(--sp-color-text-on-game-primary)' }}>{lead >= 0 ? 'You lead by' : 'You trail by'} <b className="ks-num">{$(Math.abs(lead))}</b></span>
+          <span className="ks-muted">{left}</span>
+        </div>
+      </div>
+    );
+  }
+
+  function HomeScreen({ run }) {
+    const H = K.HOME, L = K.MATCHUP.live, F = K.OTHER_LEAGUES[0], S = K.OTHER_LEAGUES[1];
+    return (
+      <Device tab="home" label="Home screen">
+        <div className="ks-head">
+          <h2 className="ks-head__title">Home</h2>
+          <span className="ks-avatar" aria-label="Profile">RB</span>
+        </div>
+        <div className="ks-pad ks-stack">
+          <div>
+            <div className="ks-caption">Total value · 2 live leagues</div>
+            <div className="ks-score ks-num" style={{ fontSize: 48, lineHeight: '50px', fontStretch: '75%' }}>{$(H.totalValue)}</div>
+            <div className="ks-callout ks-gain ks-num" style={{ fontWeight: 700 }}>▲ {$s(H.windowGain)} <span className="ks-muted" style={{ fontWeight: 500 }}>past month</span></div>
+          </div>
+          <div className="ks-card" style={{ padding: '12px 12px 6px' }}>
+            <GainChart series={H.series} marker={H.joinedIndex} run={run} w={336} h={140} />
+            <div className="ks-seg" style={{ marginTop: 8 }}>
+              <span>1W</span><span className="on">1M</span><span>3M</span><span>All</span>
+            </div>
+          </div>
+          <div>
+            <div className="ks-section-h"><h3>This week</h3><span className="ks-caption">{L.label}</span></div>
+            <div style={{ display: 'grid', gap: 10 }} className={run ? 'ks-fade-in' : undefined}>
+              <ThisWeekCard league={K.LEAGUE.name} week={K.LEAGUE.week} oppName="Gianluigi B." you={L.you.gain} opp={L.opp.gain} left="Ends Fri 4:00 PM ET" />
+              <ThisWeekCard league={F.name} week={F.week} oppName={F.opp} you={F.you} opp={F.oppGain} left="Ends Fri 4:00 PM ET" />
+            </div>
+          </div>
+          <div>
+            <div className="ks-section-h"><h3>Your leagues</h3></div>
+            <div className="ks-card" style={{ padding: '4px 14px' }}>
+              <div className="ks-tag" style={{ color: 'var(--sp-color-text-secondary)', paddingTop: 10 }}>Live this week</div>
+              <ul className="ks-rows">
+                {[
+                  { n: K.LEAGUE.name, meta: `2nd of 6 · 4–1`, chip: 'Week 6' },
+                  { n: F.name, meta: `3rd of ${F.members} · ${F.record}`, chip: 'Week 2' },
+                ].map((r) => (
+                  <li key={r.n} className="ks-row" style={{ gridTemplateColumns: '1fr auto 16px' }}>
+                    <span><span className="ks-t">{r.n}</span><br /><span className="ks-caption ks-num">{r.meta}</span></span>
+                    <Chip kind="live">{r.chip}</Chip>
+                    <span className="ks-muted"><Icon d={ICON.right} size={16} /></span>
+                  </li>
+                ))}
+              </ul>
+              <div className="ks-tag" style={{ color: 'var(--sp-color-text-secondary)', paddingTop: 6 }}>Upcoming</div>
+              <ul className="ks-rows">
+                <li className="ks-row" style={{ gridTemplateColumns: '1fr auto 16px' }}>
+                  <span><span className="ks-t">{S.name}</span><br /><span className="ks-caption">{S.members} of {S.of} joined</span></span>
+                  <span className="ks-chip ks-chip--money">{S.draftAt}</span>
+                  <span className="ks-muted"><Icon d={ICON.right} size={16} /></span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </Device>
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // 2. MATCHUP (live + final)
+  // ═════════════════════════════════════════════════════════════════════
+  function Lineup({ name, rows, align }) {
+    return (
+      <div>
+        <div className="ks-tag" style={{ textAlign: align, marginBottom: 4 }}>{name}</div>
+        <ul className="ks-rows">
+          {rows.map((r) => (
+            <li key={r.t} className="ks-row" style={{ gridTemplateColumns: '1fr auto', padding: '8px 0' }}>
+              <span className="ks-t ks-callout">{r.t}</span>
+              <span className={`ks-callout ks-num ${tone(r.weekGain)}`} style={{ fontWeight: 600 }}>{$s(r.weekGain)}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
+  function MatchupScreen({ final }) {
+    const M = K.MATCHUP;
+    const s = final ? M.final : M.live;
+    const you = s.you.gain, opp = s.opp.gain, lead = you - opp;
+    const liveFrac = 0.63; // 1:37 PM is 63% through Thursday's 6.5-hour session
+    return (
+      <Device game tab="matchup" label={final ? 'Matchup, final' : 'Matchup, live'}>
+        <LeagueHead chip={final ? <Chip kind="final">Week 6 · Final</Chip> : <Chip kind="live">Week 6 · Live</Chip>} />
+        <div className="ks-pad ks-stack" style={{ gap: 14 }}>
+          <div className="ks-seg ks-seg--game"><span className="on">My matchup</span><span>All matchups</span></div>
+          <div style={{ display: 'grid', gap: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <span className="ks-avatar ks-avatar--sm">RB</span>
+                <span className="ks-callout" style={{ fontWeight: 700 }}>Roberto B. <span className="ks-muted" style={{ fontWeight: 500 }}>(you)</span></span>
+              </span>
+              <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <span className="ks-callout" style={{ fontWeight: 700 }}>Gianluigi B.</span>
+                <span className="ks-avatar ks-avatar--sm ks-avatar--opp">GB</span>
+              </span>
+            </div>
+            <Scores left={$s(you)} right={$s(opp)} size="xl" />
+            <Tug you={you} opp={opp} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <span className="ks-callout">{final ? 'Roberto B. won by' : 'Roberto B. leads by'} <b className="ks-num">{$(Math.abs(lead))}</b></span>
+              <span className="ks-caption ks-muted ks-num">{pct(s.you.pct)} vs {pct(s.opp.pct)}</span>
+            </div>
+          </div>
+          {final ? (
+            <div className="ks-winner ks-fade-in"><span>Roberto B. wins Week 6</span><span className="ks-num">W · 5–1</span></div>
+          ) : null}
+          <div className="ks-chyron ks-chyron--in" key={final ? 'f' : 'l'}>
+            {final ? null : <span className="ks-dot ks-dot--pulse" />}
+            <span>{final ? K.CHYRONS.Fri : K.CHYRONS.Thu}</span>
+          </div>
+          <div className="ks-raised" style={{ padding: '10px 8px 4px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 6px' }}>
+              <span className="ks-tag">This week</span>
+              <span className="ks-caption ks-muted">{final ? 'Fri close' : `Live · ${M.live.label}`}</span>
+            </div>
+            <WeekRace upto={final ? 5 : 3} live={final ? null : { frac: liveFrac, you, opp }} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 20 }}>
+            <Lineup name="Roberto B." rows={s.you.rows} align="left" />
+            <Lineup name="Gianluigi B." rows={s.opp.rows} align="left" />
+          </div>
+          <div className="ks-caption ks-muted" style={{ textAlign: 'center' }}>
+            {final ? 'Next: Week 7 vs Paolo M. · starts Mon 9:30 AM ET' : 'Scored on dollar gain; percent breaks ties · Ends Fri 4:00 PM ET'}
+          </div>
+        </div>
+      </Device>
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // 3. LEAGUE STANDINGS (week final, with the FLIP re-sort)
+  // ═════════════════════════════════════════════════════════════════════
+  function LeagueScreen({ after }) {
+    const rows = after ? K.STANDINGS_FINAL : K.STANDINGS_BEFORE;
+    const pos = Object.fromEntries(rows.map((r) => [r.id, r]));
+    const ROW = 56;
+    return (
+      <Device tab="league" label="League standings">
+        <LeagueHead chip={<Chip kind={after ? 'final' : 'live'}>{after ? 'Week 6 · Final' : 'Week 6 · Live'}</Chip>} />
+        <div className="ks-pad ks-stack" style={{ gap: 14 }}>
+          <div className="ks-seg"><span className="on">Standings</span><span>Schedule</span><span>History</span></div>
+          <div className="ks-game" style={{ overflow: 'hidden' }}>
+            <div style={{ padding: '14px 14px 8px', display: 'grid', gap: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="ks-tag" style={{ color: 'var(--sp-color-live)' }}>Week 6 of 14</span>
+                <span className="ks-caption ks-muted">{after ? 'Records updated · Fri close' : 'Through Week 5'}</span>
+              </div>
+              {after ? <div className="ks-chyron ks-chyron--in"><span>Roberto B. takes 1st on season gain</span></div> : null}
+              <div style={{ display: 'grid', gridTemplateColumns: '22px 30px 30px 1fr auto 86px', gap: 10 }} className="ks-tag">
+                <span>#</span><span /><span /><span>Manager</span><span>W–L</span><span style={{ textAlign: 'right' }}>Gain</span>
+              </div>
+            </div>
+            <div className="ks-lb" style={{ height: ROW * 6 }}>
+              {K.PLAYERS.map((p) => {
+                const r = pos[p.id];
+                const d = after ? r.delta : 0;
+                return (
+                  <div key={p.id} className={p.you ? 'ks-lbrow ks-lbrow--you' : 'ks-lbrow'} style={{ transform: `translateY(${(r.rank - 1) * ROW}px)` }}>
+                    <span className="ks-score" style={{ fontSize: 22 }}>{r.rank}</span>
+                    <span className={`ks-delta ${d > 0 ? 'ks-delta--up' : d < 0 ? 'ks-delta--down' : 'ks-delta--flat'}`} key={`${after}${d}`}>
+                      {d > 0 ? <span className="ks-pop">▲{d}</span> : d < 0 ? <span className="ks-pop">▼{-d}</span> : '–'}
+                    </span>
+                    <span className={p.you ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{p.init}</span>
+                    <span className="ks-callout" style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{p.name}{p.you ? <span className="ks-muted" style={{ fontWeight: 500 }}> (you)</span> : null}</span>
+                    <span className="ks-callout ks-num ks-muted">{r.w}–{r.l}</span>
+                    <span className={`ks-callout ks-num ks-right ${tone(r.pf)}`} style={{ fontWeight: 700 }}>{$s(r.pf)}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="ks-caption ks-muted" style={{ padding: '8px 14px 14px' }}>Ranked by record. Ties break on season gain.</div>
+          </div>
+          {after ? (
+          <div className="ks-card ks-fade-in" style={{ padding: '12px 14px' }}>
+            <div className="ks-section-h"><h3>Week 6 results</h3><span className="ks-caption">Final</span></div>
+            <ul className="ks-rows">
+              {K.WEEK6.map((m) => {
+                const a = K.byId[m.a], b = K.byId[m.b];
+                const aw = m.ga > m.gb;
+                return (
+                  <li key={m.a} className="ks-row" style={{ gridTemplateColumns: '1fr auto', gap: 4 }}>
+                    <span className="ks-callout"><b style={{ fontWeight: aw ? 800 : 500 }}>{a.name}</b> <span className="ks-muted">vs</span> <b style={{ fontWeight: aw ? 500 : 800 }}>{b.name}</b></span>
+                    <span className="ks-callout ks-num" style={{ fontWeight: 600 }}>
+                      <span className={tone(m.ga)}>{$s(m.ga)}</span> <span className="ks-muted">·</span> <span className={tone(m.gb)}>{$s(m.gb)}</span>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+          ) : null}
+        </div>
+      </Device>
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // 4. DRAFT ROOM (on the clock, the snake board, search, your roster)
+  // ═════════════════════════════════════════════════════════════════════
+  function SnakeBoard({ current, landed }) {
+    const ref = useRef(null);
+    const cells = useRef({});
+    const [geo, setGeo] = useState(null);
+    useLayoutEffect(() => {
+      const box = ref.current.getBoundingClientRect();
+      const k = box.width / ref.current.offsetWidth || 1; // undo the board's CSS scale
+      const c = {};
+      for (const [n, el] of Object.entries(cells.current)) {
+        if (!el) continue;
+        const r = el.getBoundingClientRect();
+        c[n] = { x: (r.left - box.left + r.width / 2) / k, y: (r.top - box.top + r.height / 2) / k, w: r.width / k, h: r.height / k };
+      }
+      setGeo({ c, w: ref.current.offsetWidth });
+    }, []);
+    const picks = K.DRAFT_PICKS;
+    const seats = [...K.PLAYERS].sort((a, b) => a.seat - b.seat);
+    const rows = [1, 2, 3].map((r) => picks.filter((p) => p.round === r).sort((a, b) => K.seatForPick(a.pick, 6) - K.seatForPick(b.pick, 6)));
+    // The track: through every pick centre in pick order; between rounds, a
+    // half-loop OUTSIDE the row ends (right after odd rounds, left after even).
+    function path(toPick) {
+      if (!geo) return '';
+      let d = '';
+      for (let n = 1; n <= toPick; n++) {
+        const p = geo.c[n];
+        if (n === 1) { d += `M${p.x},${p.y}`; continue; }
+        const q = geo.c[n - 1];
+        if (p.y !== q.y) {
+          const right = Math.ceil((n - 1) / 6) % 2 === 1;
+          const r = (p.y - q.y) / 2;
+          // A 14px-deep half-loop just outside the row end (stays inside
+          // the 20px screen gutter), then into the next round's first cell.
+          const edge = right ? q.x + q.w / 2 + 2 : q.x - q.w / 2 - 2;
+          d += ` L${edge},${q.y} A14,${r} 0 0 ${right ? 1 : 0} ${edge},${p.y} L${p.x},${p.y}`;
+        } else d += ` L${p.x},${p.y}`;
+      }
+      return d;
+    }
+    const chevrons = [];
+    if (geo) {
+      for (let n = 2; n <= 18; n++) {
+        const p = geo.c[n], q = geo.c[n - 1];
+        if (p.y !== q.y) continue;
+        chevrons.push({ n, x: (p.x + q.x) / 2, y: p.y, dir: p.x > q.x ? 1 : -1 });
+      }
+    }
+    // The blue (drawn) track runs to whoever is on the clock.
+    const reach = landed ? current + 1 : current;
+    return (
+      <div>
+        <div className="ks-board__cols" style={{ marginBottom: 6 }}>
+          {seats.map((p) => <span key={p.id} className="ks-tag" style={p.you ? { color: 'var(--sp-color-team-you-on-game)' } : undefined}>{p.init}</span>)}
+        </div>
+        <div className="ks-board" ref={ref} style={{ display: 'grid', rowGap: 18 }}>
+          <svg className="ks-board__track" width="100%" height="100%" aria-hidden="true">
+            <path d={path(18)} fill="none" stroke="var(--sp-color-surface-game-line)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+            <path d={path(reach)} fill="none" stroke="var(--sp-color-team-you-base)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'all var(--sp-motion-duration-slow) var(--sp-motion-ease-settle)' }} />
+            {chevrons.map((c) => (
+              <path key={c.n} d={`M${c.x - 2 * c.dir},${c.y - 4} L${c.x + 2 * c.dir},${c.y} L${c.x - 2 * c.dir},${c.y + 4}`} fill="none" stroke={c.n <= reach ? '#fff' : 'var(--sp-color-text-on-game-secondary)'} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+            ))}
+          </svg>
+          {rows.map((row, ri) => (
+            <div key={ri} className="ks-board__row">
+              {row.map((p) => {
+                const you = K.byId[p.player].you;
+                const isClock = landed ? p.pick === current + 1 : p.pick === current;
+                const filled = p.pick < current || (landed && p.pick === current);
+                const cls = ['ks-cell', you ? 'ks-cell--you' : '', isClock ? 'ks-cell--clock' : '', !filled && !isClock ? 'ks-cell--future' : '', landed && p.pick === current ? 'ks-cell--landed' : ''].join(' ');
+                return (
+                  <div key={p.pick} className={cls} ref={(el) => (cells.current[p.pick] = el)}>
+                    <span className="ks-cell__n">{p.pick}</span>
+                    {filled ? <span className="ks-cell__t">{p.intended}</span> : <span className="ks-cell__t" style={{ opacity: 0 }}>·</span>}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+        <div className="ks-board__rlabel ks-caption ks-muted" style={{ marginTop: 10 }}>
+          <span>Round 1 → · Round 2 ← · Round 3 →</span>
+          <span>Order reverses each round</span>
+        </div>
+      </div>
+    );
+  }
+
+  function DraftScreen({ landed }) {
+    const D = K.DRAFT_MOMENT;
+    const secs = landed ? 60 : D.secondsLeft;
+    const frac = secs / D.secondsTotal;
+    const R = 36, C = 2 * Math.PI * R;
+    return (
+      <Device game tab="league" label="Draft room">
+        <LeagueHead chip={<Chip kind="live">Drafting</Chip>} />
+        <div className="ks-pad ks-stack" style={{ gap: 16 }}>
+          <div className="ks-raised" style={{ padding: 14, display: 'flex', gap: 14, alignItems: 'center' }}>
+            <div className="ks-ring">
+              <svg width="84" height="84" viewBox="0 0 84 84">
+                <circle cx="42" cy="42" r={R} fill="none" stroke="var(--sp-color-surface-game-line)" strokeWidth="6" />
+                <circle cx="42" cy="42" r={R} fill="none" stroke={landed ? 'var(--sp-color-text-on-game-secondary)' : 'var(--sp-color-live)'} strokeWidth="6" strokeLinecap="round" strokeDasharray={C} strokeDashoffset={C * (1 - frac)} style={{ transition: 'stroke-dashoffset 1s linear' }} />
+              </svg>
+              <span className="ks-ring__t">{landed ? '1:00' : `0:${String(secs).padStart(2, '0')}`}</span>
+            </div>
+            <div style={{ display: 'grid', gap: 2 }}>
+              {landed ? (
+                <>
+                  <span className="ks-title">Paolo M. is up</span>
+                  <span className="ks-callout ks-muted">Round 2 · Pick 12, then 13</span>
+                  <span className="ks-caption" style={{ color: 'var(--sp-color-team-you-on-game)' }}>You took AAPL · next pick 14</span>
+                </>
+              ) : (
+                <>
+                  <span className="ks-title" style={{ color: 'var(--sp-color-live)' }}>You're on the clock</span>
+                  <span className="ks-callout">Round 2 · Pick 11</span>
+                  <span className="ks-caption ks-muted">Then Paolo M. picks twice (12, 13)</span>
+                </>
+              )}
+            </div>
+          </div>
+          <SnakeBoard current={D.pick} landed={landed} />
+          <div style={{ display: 'grid', gap: 10 }}>
+            <div className="ks-search">
+              <Icon d={ICON.search} size={18} />
+              <span className="ks-callout">{K.DRAFT_SEARCH.query}</span><span className="ks-caret" />
+            </div>
+            <ul className="ks-rows">
+              {K.DRAFT_SEARCH.results.map((r, i) => (
+                <li key={r.t} className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto auto', padding: '9px 0' }}>
+                  <Logo t={r.t} game />
+                  <span><span className="ks-t ks-callout">{r.t}</span><br /><span className="ks-caption ks-muted">{r.co}</span></span>
+                  <span className="ks-callout ks-num ks-muted">{$(r.price)}</span>
+                  {i === 0 ? (
+                    <span className={landed ? 'ks-chip' : 'ks-btn ks-btn--ongame'} style={landed ? undefined : { height: 34, padding: '0 14px', fontSize: 14 }}>{landed ? 'Drafted' : 'Draft'}</span>
+                  ) : (
+                    <span className="ks-muted" aria-label="Queue"><Icon d={ICON.plus} size={20} /></span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <div className="ks-section-h"><h3>Your roster</h3><span className="ks-caption ks-muted">{landed ? 2 : 1} of 6 · $2,000 per slot</span></div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+              {['NVDA', landed ? 'AAPL' : null, null, null, null, null].map((t, i) => (
+                <span key={i} className={t ? 'ks-slot ks-slot--on' + (i === 1 ? ' ks-fade-in' : '') : 'ks-slot'}>{t || `Rd ${i + 1}`}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </Device>
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // 5. PORTFOLIO + STOCK SHEET (Sell pre-selected)
+  // ═════════════════════════════════════════════════════════════════════
+  function StockSheet({ open }) {
+    const N = K.NVDA;
+    const pts = N.dayPoints;
+    const w = 362, h = 120;
+    const min = Math.min(...pts) - 1, max = Math.max(...pts) + 1;
+    const X = (i) => (i / (pts.length - 1)) * (w - 8);
+    const Y = (v) => 6 + (1 - (v - min) / (max - min)) * (h - 12);
+    const d = pts.map((v, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+    const perShare = N.thu - N.prev;
+    return (
+      <>
+        <div className="ks-scrim" style={{ opacity: open ? 1 : 0, pointerEvents: 'none' }} />
+        <div className={open ? 'ks-sheet' : 'ks-sheet ks-sheet--hidden'} aria-hidden={!open}>
+          <div className="ks-grabber" />
+          <div style={{ padding: '10px 20px 20px', display: 'grid', gap: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <Logo t="NVDA" />
+              <span style={{ flex: 1 }}><span className="ks-headline" style={{ fontWeight: 800 }}>NVDA</span><br /><span className="ks-caption">NVIDIA</span></span>
+              <span className="ks-muted"><Icon d={ICON.close} size={22} /></span>
+            </div>
+            <div>
+              <div className="ks-num" style={{ fontSize: 34, lineHeight: '38px', fontWeight: 800 }}>{$(N.thu)}</div>
+              <div className="ks-callout ks-gain ks-num" style={{ fontWeight: 700 }}>{$s(perShare)} · {pct(N.todayPct)} <span className="ks-muted" style={{ fontWeight: 500 }}>today</span></div>
+            </div>
+            <svg viewBox={`0 0 ${w} ${h}`} width="100%" height={h} role="img" aria-label="NVDA today">
+              <line x1="0" x2={w} y1={Y(N.prev)} y2={Y(N.prev)} stroke="var(--sp-color-border-control)" strokeDasharray="3 4" />
+              <text x="0" y={Y(N.prev) + 14} fontSize="11" fontWeight="600" fill="var(--sp-color-text-secondary)">Prev close {$(N.prev)}</text>
+              <path d={d} fill="none" stroke="var(--sp-color-data-gain-base)" strokeWidth="2.25" strokeLinejoin="round" />
+              <circle cx={X(pts.length - 1)} cy={Y(pts[pts.length - 1])} r="4" fill="var(--sp-color-data-gain-base)" stroke="#fff" strokeWidth="2" />
+            </svg>
+            <div className="ks-seg">{N.range.map((r, i) => <span key={r} className={i === 0 ? 'on' : undefined}>{r}</span>)}</div>
+            <div className="ks-card" style={{ padding: 14, boxShadow: 'none', background: 'var(--sp-color-surface-money-sunken)', border: 0 }}>
+              <div className="ks-section-h"><h3>Your position</h3><span className="ks-caption">{N.ownership}</span></div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', rowGap: 10 }} className="ks-num">
+                <span><span className="ks-caption">Shares</span><br /><b>{N.qty.toFixed(4)}</b></span>
+                <span><span className="ks-caption">Avg entry</span><br /><b>{$(N.draft)}</b></span>
+                <span><span className="ks-caption">Value</span><br /><b>{$(N.value)}</b></span>
+                <span><span className="ks-caption">Gain</span><br /><b className="ks-gain">{$s(N.gain)} · {pct((N.gain / N.cost) * 100)}</b></span>
+              </div>
+            </div>
+            <div className="ks-seg" style={{ height: 40 }}><span>Buy</span><span className="on">Sell</span></div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {['25%', '50%', 'All'].map((c) => <span key={c} className="ks-chip ks-chip--money" style={{ height: 32, padding: '0 14px', fontSize: 13, textTransform: 'none', fontStretch: '100%', letterSpacing: 0 }}>{c}</span>)}
+              <span className="ks-caption" style={{ marginLeft: 'auto', alignSelf: 'center' }}>Up to {$(N.value)}</span>
+            </div>
+            <span className="ks-btn">Review sell</span>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  function PortfolioScreen({ sheet }) {
+    const P = K.PORTFOLIO_LIVE;
+    return (
+      <Device tab="portfolio" label={sheet ? 'Portfolio with the NVDA sheet open' : 'Portfolio'} overlay={<StockSheet open={sheet} />}>
+        <LeagueHead chip={<Chip kind="live">Live</Chip>} />
+        <div className="ks-pad ks-stack">
+          <div>
+            <div className="ks-caption">Portfolio value</div>
+            <div className="ks-score ks-num" style={{ fontSize: 48, lineHeight: '50px', fontStretch: '75%' }}>{$(P.value)}</div>
+            <div className="ks-callout ks-num" style={{ fontWeight: 700 }}>
+              <span className="ks-gain">{$s(P.gain)} · {pct(P.gainPct)}</span> <span className="ks-muted" style={{ fontWeight: 500 }}>since the draft</span>
+            </div>
+            <div className="ks-callout ks-num" style={{ fontWeight: 700 }}>
+              <span className="ks-gain">{$s(P.today)} · {pct(P.todayPct)}</span> <span className="ks-muted" style={{ fontWeight: 500 }}>today</span>
+            </div>
+          </div>
+          <div className="ks-card" style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between' }}>
+            <span className="ks-callout"><b>6 of 6</b> slots filled</span>
+            <span className="ks-callout ks-muted">$2,000 per slot</span>
+          </div>
+          <div>
+            <div className="ks-section-h"><h3>Holdings</h3><span className="ks-caption">Value · today</span></div>
+            <div className="ks-card" style={{ padding: '2px 14px' }}>
+              <ul className="ks-rows">
+                {P.rows.map((r) => (
+                  <li key={r.t} className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto', background: sheet && r.t === 'NVDA' ? 'var(--sp-color-surface-money-sunken)' : undefined }}>
+                    <Logo t={r.t} />
+                    <span><span className="ks-t">{r.t}</span><br /><span className="ks-caption ks-num">{r.co} · {r.qty.toFixed(2)} sh</span></span>
+                    <span className="ks-right ks-num"><b>{$(r.value)}</b><br /><span className={`ks-caption ${tone(r.todayPct)}`} style={{ fontWeight: 700 }}>{pct(r.todayPct)}</span></span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+          <div className="ks-card" style={{ padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span><b>Trade history</b><br /><span className="ks-caption">Includes your 6 draft picks</span></span>
+            <span className="ks-muted"><Icon d={ICON.right} size={18} /></span>
+          </div>
+        </div>
+      </Device>
+    );
+  }
+
+  window.KSScreens = { HomeScreen, MatchupScreen, LeagueScreen, DraftScreen, PortfolioScreen };
+})();
