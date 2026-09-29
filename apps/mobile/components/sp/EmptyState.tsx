@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { color, radius, space } from '@/constants/tokens';
-import { Button } from '@/components/sp/Button';
+import { Button, FULL_WIDTH_FONT_SCALE } from '@/components/sp/Button';
 import { Text } from '@/components/sp/Text';
 import { useSurface } from '@/components/sp/Surface';
 
@@ -39,9 +39,15 @@ export interface EmptyStateProps {
 
 export function EmptyState({ icon: Icon, title, message, actionLabel, onAction }: EmptyStateProps) {
   const { kind } = useSurface();
+  const { fontScale } = useWindowDimensions();
   const onGame = kind === 'game';
   const iconColor = onGame ? color.text.onGame.secondary : color.text.secondary;
   const circleColor = onGame ? color.surface.game.raised : color.surface.money.sunken;
+  // Button's own `fullWidth` prop only takes effect past FULL_WIDTH_FONT_SCALE
+  // (see Button.tsx) — but that's a no-op unless ITS wrapper also stretches
+  // to the full row; below the threshold this wrapper stays shrink-to-content
+  // so the button keeps its normal, sized-to-label look.
+  const stretched = fontScale >= FULL_WIDTH_FONT_SCALE;
 
   return (
     <View style={styles.container}>
@@ -55,8 +61,8 @@ export function EmptyState({ icon: Icon, title, message, actionLabel, onAction }
         {message}
       </Text>
       {actionLabel && onAction ? (
-        <View style={styles.action}>
-          <Button label={actionLabel} onPress={onAction} size="sm" />
+        <View style={[styles.action, stretched ? styles.actionStretched : null]}>
+          <Button label={actionLabel} onPress={onAction} size="sm" fullWidth />
         </View>
       ) : null}
     </View>
@@ -86,5 +92,8 @@ const styles = StyleSheet.create({
   },
   action: {
     marginTop: space[5],
+  },
+  actionStretched: {
+    alignSelf: 'stretch',
   },
 });

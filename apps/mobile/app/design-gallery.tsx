@@ -240,6 +240,14 @@ export default function DesignGalleryScreen() {
           <Button label="Trigger lead change" variant="primary" onPress={triggerLeadChange} />
         </View>
       </Section>
+
+      <Section title="Scoreboard — widest pair (regression check)">
+        {/* Design Lead, 2026-09-29: standard-size stress case for the
+            accessibility-XL overflow fix — a wide leader and a wide,
+            negative trailer, the combination most likely to squeeze the
+            name column or push ScoreDigits past its card. */}
+        <Scoreboard leagueName="Test League" week={3} you={{ name: 'You', gain: 1284.6 }} opponent={{ name: 'Priya', gain: -1038.25 }} live />
+      </Section>
     </ScrollView>
   );
 }

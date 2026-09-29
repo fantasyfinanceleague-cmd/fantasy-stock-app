@@ -24,17 +24,6 @@ export interface TextProps extends RNTextProps {
 // a wrapped scoreboard number is worse than a clipped one.
 const NEVER_WRAP: ReadonlySet<TypeVariant> = new Set(['score.xl', 'score.lg', 'score.md', 'display']);
 
-// Sensible per-variant Dynamic Type ceilings so a headline scoreboard number
-// doesn't grow into three lines at accessibility text sizes (§9 caption is
-// the smallest INFORMATIONAL size — this is a max-scale rule, not a min).
-const MAX_FONT_SIZE_MULTIPLIER: Partial<Record<TypeVariant, number>> = {
-  'score.xl': 1.2,
-  'score.lg': 1.2,
-  'score.md': 1.3,
-  tag: 1.3,
-  display: 1.4,
-};
-
 function tonePrimary(onGame: boolean): string {
   return onGame ? color.text.onGame.primary : color.text.primary;
 }
@@ -68,7 +57,7 @@ export function Text({
   }
 
   const resolvedNumberOfLines = numberOfLines ?? (NEVER_WRAP.has(variant) ? 1 : undefined);
-  const resolvedMaxFontSizeMultiplier = maxFontSizeMultiplier ?? MAX_FONT_SIZE_MULTIPLIER[variant];
+  const resolvedMaxFontSizeMultiplier = maxFontSizeMultiplier ?? typeStyle.maxScale;
 
   return (
     <RNText

@@ -21,14 +21,19 @@ const DEFAULT_SIZE = 36;
 export function Avatar({ uri, name, size = DEFAULT_SIZE }: AvatarProps) {
   const dimension = { width: size, height: size, borderRadius: size / 2 };
   const initial = name.trim().charAt(0).toUpperCase() || '?';
+  // Blue (`color.brand`) means "you" elsewhere in the app (§9 team colour),
+  // so an avatar with no real initial to show shouldn't borrow that meaning
+  // for someone unidentified — it gets a neutral fill instead (Design Lead,
+  // 2026-09-29).
+  const isUnknown = initial === '?';
 
   if (uri) {
     return <Image source={{ uri }} style={[styles.image, dimension]} accessibilityLabel={name} />;
   }
 
   return (
-    <View style={[styles.fallback, dimension]} accessibilityLabel={name}>
-      <Text variant="callout" color={color.action.primary.fg}>
+    <View style={[styles.fallback, isUnknown ? styles.fallbackNeutral : null, dimension]} accessibilityLabel={name}>
+      <Text variant="callout" color={isUnknown ? color.text.secondary : color.action.primary.fg}>
         {initial}
       </Text>
     </View>
@@ -43,5 +48,8 @@ const styles = StyleSheet.create({
     backgroundColor: color.brand,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  fallbackNeutral: {
+    backgroundColor: color.surface.game.line,
   },
 });

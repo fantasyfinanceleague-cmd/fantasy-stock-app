@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { color, radius, space } from '@/constants/tokens';
 import { Surface } from '@/components/sp/Surface';
@@ -30,20 +30,51 @@ import { Chyron } from '@/components/sp/game/Chyron';
 // for the same reason. `TeamRow` is declared BEFORE `Scoreboard` (an ordinary
 // forward reference), not covered by the file's own styles-at-bottom
 // eslint-disable above, which is scoped to `styles` only.
+//
+// Amended 2026-09-29 (Design Lead, DESIGN-CHANGES on the accessibility-XL
+// capture): at large Dynamic Type sizes the name-left/score-right row ran
+// out of room and the name column collapsed to a sliver while the score
+// overflowed the card. Two changes work together: `ScoreDigits`/its digit
+// Text nodes now cap their own growth and shrink-to-fit as a safety net
+// (see ScoreDigits.tsx), and this component reflows the row itself past a
+// threshold — name gets its own full-width line, score moves below it,
+// right-aligned. Below the threshold, the name gets a minWidth floor so it
+// can never be squeezed to nothing, and flexShrink moves to the score's
+// wrapping View (not the name) so it's the score, not the name, that gives
+// ground first.
+const STACKED_FONT_SCALE = 1.35;
 
 interface TeamRowProps {
   name: string;
   gain: number;
   teamColor: string;
+  stacked: boolean;
 }
 
-function TeamRow({ name, gain, teamColor }: TeamRowProps) {
+function TeamRow({ name, gain, teamColor, stacked }: TeamRowProps) {
+  const scoreText = formatMoney(gain, { sign: 'always' });
+
+  if (stacked) {
+    return (
+      <View style={styles.teamRowStacked}>
+        <Text variant="headline" numberOfLines={2} style={styles.teamNameStacked}>
+          {name}
+        </Text>
+        <View style={styles.scoreRowStacked}>
+          <ScoreDigits text={scoreText} variant="score.lg" color={teamColor} />
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.teamRow}>
       <Text variant="headline" numberOfLines={1} style={styles.teamName}>
         {name}
       </Text>
-      <ScoreDigits text={formatMoney(gain, { sign: 'always' })} variant="score.lg" color={teamColor} />
+      <View style={styles.scoreShrinkWrap}>
+        <ScoreDigits text={scoreText} variant="score.lg" color={teamColor} />
+      </View>
     </View>
   );
 }
@@ -64,6 +95,8 @@ export interface ScoreboardProps {
 }
 
 export function Scoreboard({ leagueName, week, you, opponent, live = false, chyronMessage, onChyronDismiss }: ScoreboardProps) {
+  const { fontScale } = useWindowDimensions();
+  const stacked = fontScale >= STACKED_FONT_SCALE;
   const leader = leaderOf(you.gain, opponent.gain);
   const gap = Math.abs(you.gain - opponent.gain);
 
@@ -91,8 +124,8 @@ export function Scoreboard({ leagueName, week, you, opponent, live = false, chyr
       </View>
 
       <View style={styles.teams}>
-        <TeamRow name={you.name} gain={you.gain} teamColor={color.team.you.onGame} />
-        <TeamRow name={opponent.name} gain={opponent.gain} teamColor={color.team.opponent} />
+        <TeamRow name={you.name} gain={you.gain} teamColor={color.team.you.onGame} stacked={stacked} />
+        <TeamRow name={opponent.name} gain={opponent.gain} teamColor={color.team.opponent} stacked={stacked} />
       </View>
 
       <View style={styles.tugWrap}>
@@ -134,8 +167,22 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: space[4],
   },
+  // The name never collapses — it's the score's flexShrink wrap (below)
+  // that gives ground when space is tight, not the name.
   teamName: {
+    minWidth: 64,
+  },
+  scoreShrinkWrap: {
     flexShrink: 1,
+  },
+  teamRowStacked: {
+    gap: space[1],
+  },
+  teamNameStacked: {
+    width: '100%',
+  },
+  scoreRowStacked: {
+    alignItems: 'flex-end',
   },
   tugWrap: {
     width: '100%',

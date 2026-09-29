@@ -35,6 +35,7 @@ interface DigitColumnProps {
   withTiming: typeof withTimingType;
   slam: boolean;
   leadChangeSpring: WithSpringConfig;
+  maxFontSizeMultiplier?: number;
 }
 
 function DigitColumn({
@@ -49,6 +50,7 @@ function DigitColumn({
   withTiming,
   slam,
   leadChangeSpring,
+  maxFontSizeMultiplier,
 }: DigitColumnProps) {
   const progress = useSharedValue(entry.changed ? 0 : 1);
 
@@ -75,7 +77,21 @@ function DigitColumn({
 
   return (
     <Animated.View style={animatedStyle}>
-      <RNText style={{ fontFamily, fontSize, lineHeight, color: textColor, fontVariant: ['tabular-nums'] }}>{entry.char}</RNText>
+      <RNText
+        style={{ fontFamily, fontSize, lineHeight, color: textColor, fontVariant: ['tabular-nums'] }}
+        maxFontSizeMultiplier={maxFontSizeMultiplier}
+        // Safety net (Design Lead, 2026-09-29): a score must never leave its
+        // card, even past the maxFontSizeMultiplier cap above or at an
+        // unusually wide value. The parent row's container applies
+        // flexShrink, which gives each column's Text a real width to shrink
+        // against; adjustsFontSizeToFit then scales it down (never below
+        // 0.6x) rather than letting it overflow.
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.6}
+      >
+        {entry.char}
+      </RNText>
     </Animated.View>
   );
 }
@@ -103,7 +119,7 @@ export function ScoreDigits({ text, variant = 'score.md', color: colorProp, slam
   const textColor = colorProp ?? tokenColor.text.onGame.primary;
 
   return (
-    <Animated.View style={{ flexDirection: 'row' }}>
+    <Animated.View style={{ flexDirection: 'row', flexShrink: 1 }}>
       {diff.map((entry, index) => (
         <DigitColumn
           key={`${index}-${diff.length}`}
@@ -118,6 +134,7 @@ export function ScoreDigits({ text, variant = 'score.md', color: colorProp, slam
           withTiming={withTiming}
           slam={slam}
           leadChangeSpring={leadChangeSpring}
+          maxFontSizeMultiplier={typeStyle.maxScale}
         />
       ))}
     </Animated.View>
