@@ -21,13 +21,25 @@
 -- role switch, not a fake one; `reset role;` between sections un-switches it
 -- back to the editor's own privileged connection role.
 --
--- auth.users COLUMN CAVEAT: section #6's INSERTs list the columns this
--- project's GoTrue version requires with no usable default (id, email,
--- raw_user_meta_data, the token/timestamp columns some auth versions declare
--- NOT NULL with no default). If a push of a newer/older GoTrue schema
--- changes that set, adjust the column list here — the trigger under test
--- does not care which columns exist, only that raw_user_meta_data is one of
--- them.
+-- auth.users COLUMN LIST: every INSERT below (section #6, and the single
+-- one in #9 that backs the trades FK) uses the SAME minimal column set —
+-- id, email, created_at, updated_at, aud, role, instance_id, plus
+-- raw_user_meta_data where the trigger under test needs to read it. This is
+-- the exact set proven to work against the LIVE schema by
+-- docs/security/home-summary-display-names-effect-test.sql (ran in prod,
+-- ALL PASS) — not a guess. An earlier version of this file used a longer,
+-- unverified column list (encrypted_password, confirmation_token,
+-- email_change, raw_app_meta_data, ...) that was never actually exercised in
+-- prod, because section #9's trades FK failure (below) aborted the whole
+-- transaction before section #6 ever ran. Prefer this proven set over adding
+-- columns back speculatively.
+--
+-- LIVE TRIGGER: handle_new_user_profile (20261005000001, now deployed) fires
+-- on EVERY auth.users insert below, not just section #6's — including the
+-- one that backs the trades FK. Any fixture row this file ALSO inserts into
+-- public.user_profiles directly (case J) uses
+-- `ON CONFLICT (id) DO UPDATE SET username = ...`, never a bare INSERT, so
+-- it cannot collide with the row the trigger already created.
 --
 -- CAVEAT UNIQUE TO THIS FILE: section #7 temporarily DELETEs and replaces
 -- any existing rows in public.market_calendar for 2026-10-01..2026-11-30 and
@@ -104,6 +116,17 @@ begin
   returning id into pick1;
   insert into public.drafts (league_id, user_id, symbol, entry_price, quantity, round, pick_number)
   values (l, m_uid, 'SKIP', 0, 0, 1, 2);
+
+  -- trades.user_id has a real FK to auth.users(id) (drafts/league_members do
+  -- NOT — both are text columns with no FK, per CLAUDE.md's drafts.user_id
+  -- text vs trades.user_id uuid note) — a bare gen_random_uuid() here 23503s
+  -- (confirmed in prod). c_uid and x_uid never touch an FK-checked column in
+  -- this file, so only m_uid needs a real row. handle_new_user_profile
+  -- (live) fires on this insert and creates a user_profiles row with
+  -- username=NULL (no raw_user_meta_data set) — harmless, since neither #9
+  -- nor #5 below reads user_profiles.
+  insert into auth.users (id, email, created_at, updated_at, aud, role, instance_id)
+  values (m_uid::uuid, 'fixture-m-' || m_uid || '@game-data-asks-test.invalid', now(), now(), 'authenticated', 'authenticated', '00000000-0000-0000-0000-000000000000');
 
   insert into public.trades (league_id, user_id, symbol, action, quantity, price, total_value)
   values (l, m_uid::uuid, 'MSFT', 'sell', 1.75, 10.1234, round(1.75 * 10.1234, 2));
@@ -213,17 +236,10 @@ begin
   -- ==========================================================================
   -- G: valid format persisted.
   begin
-    insert into auth.users (
-      instance_id, id, aud, role, email, encrypted_password,
-      email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
-      created_at, updated_at, confirmation_token, email_change,
-      email_change_token_new, recovery_token
-    ) values (
-      '00000000-0000-0000-0000-000000000000', u_a, 'authenticated', 'authenticated',
-      u_a::text || '@game-data-asks-test.invalid', 'x',
-      now(), '{"provider":"email","providers":["email"]}'::jsonb,
-      jsonb_build_object('username', 'trader_joe'),
-      now(), now(), '', '', '', ''
+    insert into auth.users (id, email, created_at, updated_at, aud, role, instance_id, raw_user_meta_data)
+    values (
+      u_a, u_a::text || '@game-data-asks-test.invalid', now(), now(), 'authenticated', 'authenticated',
+      '00000000-0000-0000-0000-000000000000', jsonb_build_object('username', 'trader_joe')
     );
     select username into uname_a from public.user_profiles where id = u_a;
     out := out || case when uname_a = 'trader_joe'
@@ -235,29 +251,15 @@ begin
 
   -- H: invalid-format usernames (a space; too short) both store NULL, no error.
   begin
-    insert into auth.users (
-      instance_id, id, aud, role, email, encrypted_password,
-      email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
-      created_at, updated_at, confirmation_token, email_change,
-      email_change_token_new, recovery_token
-    ) values (
-      '00000000-0000-0000-0000-000000000000', u_b, 'authenticated', 'authenticated',
-      u_b::text || '@game-data-asks-test.invalid', 'x',
-      now(), '{"provider":"email","providers":["email"]}'::jsonb,
-      jsonb_build_object('username', 'has a space'),
-      now(), now(), '', '', '', ''
+    insert into auth.users (id, email, created_at, updated_at, aud, role, instance_id, raw_user_meta_data)
+    values (
+      u_b, u_b::text || '@game-data-asks-test.invalid', now(), now(), 'authenticated', 'authenticated',
+      '00000000-0000-0000-0000-000000000000', jsonb_build_object('username', 'has a space')
     );
-    insert into auth.users (
-      instance_id, id, aud, role, email, encrypted_password,
-      email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
-      created_at, updated_at, confirmation_token, email_change,
-      email_change_token_new, recovery_token
-    ) values (
-      '00000000-0000-0000-0000-000000000000', u_c, 'authenticated', 'authenticated',
-      u_c::text || '@game-data-asks-test.invalid', 'x',
-      now(), '{"provider":"email","providers":["email"]}'::jsonb,
-      jsonb_build_object('username', 'ab'),
-      now(), now(), '', '', '', ''
+    insert into auth.users (id, email, created_at, updated_at, aud, role, instance_id, raw_user_meta_data)
+    values (
+      u_c, u_c::text || '@game-data-asks-test.invalid', now(), now(), 'authenticated', 'authenticated',
+      '00000000-0000-0000-0000-000000000000', jsonb_build_object('username', 'ab')
     );
     select username into uname_b from public.user_profiles where id = u_b;
     select username into uname_c from public.user_profiles where id = u_c;
@@ -274,30 +276,17 @@ begin
   -- refused by the partial unique index and the trigger retries with NULL
   -- rather than failing the signup.
   begin
-    insert into auth.users (
-      instance_id, id, aud, role, email, encrypted_password,
-      email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
-      created_at, updated_at, confirmation_token, email_change,
-      email_change_token_new, recovery_token
-    ) values (
-      '00000000-0000-0000-0000-000000000000', u_d1, 'authenticated', 'authenticated',
-      u_d1::text || '@game-data-asks-test.invalid', 'x',
-      now(), '{"provider":"email","providers":["email"]}'::jsonb,
-      jsonb_build_object('username', 'collision_name'),
-      now(), now(), '', '', '', ''
+    insert into auth.users (id, email, created_at, updated_at, aud, role, instance_id, raw_user_meta_data)
+    values (
+      u_d1, u_d1::text || '@game-data-asks-test.invalid', now(), now(), 'authenticated', 'authenticated',
+      '00000000-0000-0000-0000-000000000000', jsonb_build_object('username', 'collision_name')
     );
-    insert into auth.users (
-      instance_id, id, aud, role, email, encrypted_password,
-      email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
-      created_at, updated_at, confirmation_token, email_change,
-      email_change_token_new, recovery_token
-    ) values (
-      '00000000-0000-0000-0000-000000000000', u_d2, 'authenticated', 'authenticated',
-      u_d2::text || '@game-data-asks-test.invalid', 'x',
-      now(), '{"provider":"email","providers":["email"]}'::jsonb,
+    insert into auth.users (id, email, created_at, updated_at, aud, role, instance_id, raw_user_meta_data)
+    values (
+      u_d2, u_d2::text || '@game-data-asks-test.invalid', now(), now(), 'authenticated', 'authenticated',
+      '00000000-0000-0000-0000-000000000000',
       -- case-insensitive collision, per the unique index on LOWER(username)
-      jsonb_build_object('username', 'COLLISION_NAME'),
-      now(), now(), '', '', '', ''
+      jsonb_build_object('username', 'COLLISION_NAME')
     );
     select username into uname_d1 from public.user_profiles where id = u_d1;
     select username into uname_d2 from public.user_profiles where id = u_d2;
@@ -314,17 +303,10 @@ begin
   -- profiled (e.g. Backend A's own fixture setup, or a client's legacy
   -- upsert) must not error.
   begin
-    insert into auth.users (
-      instance_id, id, aud, role, email, encrypted_password,
-      email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
-      created_at, updated_at, confirmation_token, email_change,
-      email_change_token_new, recovery_token
-    ) values (
-      '00000000-0000-0000-0000-000000000000', u_e, 'authenticated', 'authenticated',
-      u_e::text || '@game-data-asks-test.invalid', 'x',
-      now(), '{"provider":"email","providers":["email"]}'::jsonb,
-      jsonb_build_object('username', 'race_user'),
-      now(), now(), '', '', '', ''
+    insert into auth.users (id, email, created_at, updated_at, aud, role, instance_id, raw_user_meta_data)
+    values (
+      u_e, u_e::text || '@game-data-asks-test.invalid', now(), now(), 'authenticated', 'authenticated',
+      '00000000-0000-0000-0000-000000000000', jsonb_build_object('username', 'race_user')
     );
     insert into public.user_profiles (id, username)
     values (u_e, 'race_user')

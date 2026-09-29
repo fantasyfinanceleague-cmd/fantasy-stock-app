@@ -2,74 +2,34 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "a981108c985e3e218b7f3b9461d0b7afb71bdebe",
-    "commitShort": "a981108",
+    "commit": "9d86213effe1dda8b8bc6826e9050f9989f32a0a",
+    "commitShort": "9d86213",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "feat/game-data-asks",
+    "branch": "fix/game-data-effect-test",
     "dirty": true,
     "dirtyPaths": [
       {
-        "code": "M",
-        "path": "apps/mobile/app/_layout.tsx"
+        "code": "R",
+        "path": "supabase/migrations/20261005000003_schedule_refresh_market_calendar.sql"
       },
       {
-        "code": "UU",
-        "path": "apps/mobile/app/login.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/reset-password.tsx"
+        "code": "A",
+        "path": "supabase/migrations/20261005000004_backfill_missing_user_profiles.sql"
       },
       {
         "code": "M",
-        "path": "apps/mobile/constants/passwordRules.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/lib/authErrors.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/lib/recoveryLink.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/recoveryNonce.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/useAuth.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/tests-deno/authErrors.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/tests-deno/passwordRules.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/tests-deno/recoveryLink.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/20261004000000_participant_display_names.sql"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/20261004000001_get_home_summary_rpc.sql"
+        "path": "supabase/migrations/deferred/README.md"
       }
     ],
-    "timestamp": "2026-09-29T01:40:24Z",
-    "sourceHash": "sha256:f61c7f1cb4a2cfa8dd39de2caf4920f8bd35ec6143c223eec176268c1bb8cf84",
+    "timestamp": "2026-09-29T01:57:07Z",
+    "sourceHash": "sha256:05fd36dd978ae6515239465e7f343c7e434b558e57e2c1d83cbaf214f864da44",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1148.8,
+    "ageHours": 1149.1,
     "ageDays": 47.9,
     "staleAfterDays": 14,
     "stale": true,
@@ -9758,7 +9718,9 @@
       "20261004000001_get_home_summary_rpc.sql",
       "20261005000000_league_activity_view.sql",
       "20261005000001_signup_username_trigger.sql",
-      "20261005000002_market_calendar.sql"
+      "20261005000002_market_calendar.sql",
+      "20261005000003_schedule_refresh_market_calendar.sql",
+      "20261005000004_backfill_missing_user_profiles.sql"
     ],
     "config": [
       "draft-control=true",
