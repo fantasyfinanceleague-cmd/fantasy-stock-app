@@ -56,7 +56,9 @@ refused by RLS when they draft (confirmed on Giorgio's phone). The fix is the
 
 | Fact | State | Evidence |
 |---|---|---|
-| Migrations applied | Everything in `supabase/migrations/` **through `20261011000004`** | Two pushes on 2026-09-29, each dry-run → push → `schema_migrations` verified: (1) `20261006000000`, `20261007000000`, `20261010000000`; (2) `20261011000000`–`04` (ranking) |
+| Migrations applied | Everything in `supabase/migrations/` **through `20261013000000`** | Four pushes on 2026-09-29, each dry-run/confirm → push → `schema_migrations` verified: (1) `20261006000000`, `20261007000000`, `20261010000000`; (2) `20261011000000`–`04` (ranking); (3) `20261012000000`–`03` (flexible playoffs); (4) `20261013000000` (draft order modes) |
+| Flexible playoffs (#66) | Applied.<br>• 0 unaddressed playoff rows; only `matchups_bracket_address` exists (the old backstop is dropped)<br>• 0 matchup leagues with a NULL playoff size<br>• the 4 constraints are validated<br>• `start_league_playoffs`: service_role only, DEFINER, with the bracket-shape check<br>• the freeze trigger is enabled<br>• test_0925 and test_09_25_v2 now end **2026-10-30** (playoff weeks included) | 2026-09-29 |
+| Draft order modes (#67) | Applied.<br>• The pre-check passed: ids ASCII; test_07_05_26's order matches its picks; only the stale `test_timer_0925` was finalized silently; no draft due in the window<br>• `draft-order-modes-effect-test.sql`: **24/24 PASS** (B1: all 8 started drafts have a locked order; B2: the in-progress order = its members)<br>• the notify cron is still deferred | 2026-09-29 |
 | Unified ranking + atomic playoff start (#59) | Applied. The pre-check (duplicate playoff rows) returned 0.<br>• `league_standings_ranked`: authenticated + service_role, INVOKER, search_path pinned<br>• `start_league_playoffs`: service_role only, DEFINER, exactly one overload (3 args)<br>• `get_home_summary` / `complete_league_season`: ACL and settings unchanged<br>• index `matchups_one_bracket_per_league` present<br>The heal-candidate query returned 0 rows before deploy | 2026-09-29 |
 | `trades.funded_by_trade_id` (#54) | Applied: a nullable uuid FK, CHECK `trades_funded_by_trade_id_buy_only` (validated), and the partial UNIQUE index `trades_funded_by_trade_id_unique` (one sale funds at most one buy) | Verified by query, 2026-09-29 |
 | Username write path (#55) | Applied. CHECK `user_profiles_username_format` `convalidated = true` (pre-check: 0 violators of 4 rows). `set_username` / `check_usernames` are DEFINER with `search_path` pinned; the ACL is `postgres, service_role, authenticated`, with no anon. `username-write-path-effect-test.sql`: **19/19 PASS** (incl. message-strict anon cases) | 2026-09-29 |
@@ -88,12 +90,13 @@ scratch, then `diff`), all from the deploy checkout `/Users/giorgio/fantasy-stoc
 
 | Function | Deployed from | Notes |
 |---|---|---|
-| `validate-and-record-pick` | `f0e8eda` | #58: every pick (manual, bot, auto) goes through `_shared/pick-gate.ts` + `draft-write.ts`; new `action:'auto_pick'`; finalize + heal; `bot_pick` |
-| `draft-autopick-sweep` (new) | `f0e8eda` | #58. `verify_jwt=false` + the shared `_shared/cron-auth.ts` guard. A no-credential POST returns its own `401 {"error":"Unauthorized"}`. A manual `net.http_post` with the vault key returned `200 {"ok":true,"examined":0}`. **Not scheduled yet** (cron deferred) |
+| `validate-and-record-pick` | `1f8e2d5` | #58: every pick (manual, bot, auto) goes through `_shared/pick-gate.ts` + `draft-write.ts`; new `action:'auto_pick'`; finalize + heal; `bot_pick` |
+| `draft-autopick-sweep` (new) | `1f8e2d5` | #58. `verify_jwt=false` + the shared `_shared/cron-auth.ts` guard. A no-credential POST returns its own `401 {"error":"Unauthorized"}`. A manual `net.http_post` with the vault key returned `200 {"ok":true,"examined":0}`. **Not scheduled yet** (cron deferred) |
 | `record-trade` | `f0e8eda` | #54: proceeds-sized rebuys, `sold_trade_id`, read-only `action:'preview'`, price rounded before sizing. (Previously UNVERIFIED; now byte-verified) |
-| `process-week-results` | `4337b0a` | #59: seeds and podium come from `league_standings_ranked`; `bye_no_result` (a bye records no W/L/T); the atomic `start_league_playoffs` plus a heal pass for refused transitions. Also #56's `cash_only`, `scoring_inputs_fetch_failed` and fallback SKIP fixes. Deployed **before** the first scored week (Fri 10-02), so no bye was ever recorded as a win and the recompute script isn't needed |
+| `process-week-results` | `f20de93` | #59: seeds and podium come from `league_standings_ranked`; `bye_no_result` (a bye records no W/L/T); the atomic `start_league_playoffs` plus a heal pass for refused transitions. Also #56's `cash_only`, `scoring_inputs_fetch_failed` and fallback SKIP fixes. Deployed **before** the first scored week (Fri 10-02), so no bye was ever recorded as a win and the recompute script isn't needed |
 | `snapshot-week-start`, `snapshot-week-end` | `eb89df3` | #57: bots included, SKIP rows dropped (`_shared/snapshot-holdings.ts`), and `checkSnapshotReads`, so a failed read aborts and retries the league instead of classifying it complete. (Previously UNVERIFIED; now byte-verified) |
-| `draft-control` | `baee415` | #60: Start draft is refused with `playoff_teams_exceeds_members` when playoff spots exceed members (equal is allowed). Plus start / add_bots / status; `DRAFT_BOTS_ALLOWED_EMAILS` = test account |
+| `draft-control` | `1f8e2d5` |
+| `draft-order-notify` (new) | `1f8e2d5` | #67. It pushes "the draft order is set" (Expo, via `_shared/push.ts`). `verify_jwt=false` + `_shared/cron-auth.ts`; a no-credential POST returns its own 401. Its first two deploys failed with a Supabase-side `500 internal error`; the third, with `--debug`, succeeded. **Not scheduled yet** (cron deferred). | #60: Start draft is refused with `playoff_teams_exceeds_members` when playoff spots exceed members (equal is allowed). Plus start / add_bots / status; `DRAFT_BOTS_ALLOWED_EMAILS` = test account |
 | `enrich-symbols` | `8015e95` | batch-pricing fix |
 | `preview-league` | `336775a` | hard `draft_started` refusal |
 | `historical-bars` | `451ac8e` | PR #29 pagination + timeouts + `complete`/`truncatedSymbols` flags; byte-verified 2026-09-26; its new log line is live |
@@ -166,7 +169,7 @@ Phase 3: **app first**.
 
 ## 4. Open items (ordered by launch impact)
 
-1. **Ship mobile 1.1.0 (EAS build).** It's the only way any of 2026-09-25's mobile
+1. **Ship mobile 1.1.0 (EAS build): main is READY to cut as of 2026-09-29** (the #64 force-light fix and the #67 stored-draft-order client are in; 3b-1 is held off main until the build is cut, because it replaces tabs with placeholders). It's the only way any of 2026-09-25's mobile
    work reaches phones. 1.0.0 builds can't draft (RLS refuses their direct inserts).
    After install, verify a real **trade** on the publishable key (API-key Phase 4
    gate 1) and the F2 password-reset flow (needs the `fantasystockapp://**` redirect
@@ -272,7 +275,7 @@ Phase 3: **app first**.
     - revoke PG17 `MAINTAIN` from `authenticated` on `draft_queue`;
     - `validate-and-record-pick` returns `draft_not_in_progress` before its membership check (pre-existing);
     - the client TradeModal must show proceeds-sized buys and the "which sale pays?" picker (3e).
-21. **Flexible playoffs (`feat/flexible-playoffs`): AUTHORED, NOT APPLIED.**
+21. ✅ **Flexible playoffs: LIVE 2026-09-29** (#66; migrations `20261012000000`–`03` applied; 4 functions deployed and byte-verified).
     Any playoff team count P from 2 to the number of managers (Giorgio,
     2026-09-29). Weeks W = ceil(log2 P); the top 2^W − P seeds get a
     first-round bye (an auto-advance: no result, in no record); a FIXED
@@ -313,6 +316,13 @@ Phase 3: **app first**.
       `process-week-results`, `validate-and-record-pick`, `draft-autopick-sweep`
       or `draft-control`. They now refuse a NULL `playoff_teams` instead of
       reading it as 4. Pre-checks are in the headers of `20261012000000` and `03`.
+
+22. ✅ **Draft order modes: LIVE 2026-09-29** (#67; migration `20261013000000` applied; `validate-and-record-pick`, `draft-autopick-sweep`, `draft-control` and the new `draft-order-notify` deployed and byte-verified; effect test 24/24).
+    - Random (drawn at the later of T−1h and 4 managers) or Manual; final at T−1h; locked at start; never commissioner-first by default.
+    - **Open:**
+      - promote `deferred/20261013000001_schedule_draft_order_notify.sql` after a manual notify run on a test league (4 members, draft 30–50 min out);
+      - the mode picker / Arrange-order editor / reveal UI come with the 3b/3c screens;
+      - the client change ships with 1.1.0.
 
 ---
 
@@ -356,8 +366,8 @@ Phase 3: **app first**.
 | `ui/landing-gameday` | PR #45, **draft, parked**: the Game Day 3D landing, round 4. Resume after the key screens are approved. |
 | `ui/foundation-mobile` | PR #53, **draft, held** for the Light/Dark ThemeProvider rework (§9A). |
 | `design/key-screens-2026-09-29` | PR #52, **draft**: the design board (v3.3), the source of truth for the app screens. Merge after Giorgio signs off. |
-| `feat/flexible-playoffs` | Ready for review (§4 item 21): migrations `20261012000000`–`03` authored, not applied; functions not deployed. |
-| `feat/draft-order-modes` | Planned: Random (reveal T−1h) / Manual; awaiting Giorgio's decisions a–e. |
+| `ui/mobile-shell-3b1` | 3b-1 app shell + first run: in progress; merge HELD until the 1.1.0 build is cut. |
+
 | `chore/rename-to-stockade` | LOCAL only (a97bfbb), parked until the name is final. |
 | `fix/effect-test-anon-expectations` | PR #50 (test file only). |
 | `docs/status-sync-2026-09-29` | This update (PR #51). |
