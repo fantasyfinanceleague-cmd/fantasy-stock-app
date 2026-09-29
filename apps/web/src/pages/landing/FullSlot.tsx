@@ -65,6 +65,17 @@ export function useFullModule(enabled: boolean): FullModule | null {
   return mod;
 }
 
+/** True once the page is on FULL and the 3D chunk is in hand — the point
+ * from which DOM choreography that hands off to a 3D scene (the inside
+ * cards launching out of the device) may assume the scene will be there.
+ * A later demotion flips it back and the DOM settles to its plain state. */
+export function useFullReady(): boolean {
+  const tier = useTier();
+  const full = tier?.tier === 'full';
+  const mod = useFullModule(full);
+  return full && mod !== null;
+}
+
 /** Renders the named FULL scene (absolutely filling its positioned parent)
  * when — and only when — the tier is FULL and the chunk has arrived. */
 export function FullSlot<N extends SceneName>({

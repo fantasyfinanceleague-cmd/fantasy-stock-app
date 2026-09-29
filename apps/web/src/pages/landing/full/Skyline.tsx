@@ -52,7 +52,18 @@ export function skylineCells(): SkylineCell[] {
 
 /** The field stands on the bottom edge of the view at z = 0, so it grows
  * out of the layer's floor at any viewport size. */
-export function Skyline({ frame, origin = [3, -4] as [number, number], bg }: { frame: number; origin?: [number, number]; bg: string }) {
+export function Skyline({
+  frame,
+  origin = [3, -4] as [number, number],
+  bg,
+  night = false,
+}: {
+  frame: number;
+  origin?: [number, number];
+  bg: string;
+  /** On stadium navy: on-game tints, and the signal bars glow a little. */
+  night?: boolean;
+}) {
   const camera = useThree((s) => s.camera) as unknown as { fov: number; position: { z: number } };
   const mesh = useRef<InstancedMesh>(null);
   const cells = useMemo(skylineCells, []);
@@ -65,12 +76,18 @@ export function Skyline({ frame, origin = [3, -4] as [number, number], bg }: { f
   const tints = useMemo(() => {
     const base = new Color(bg);
     // Like the mark: two quiet bars, then the one that carries the signal.
-    return {
-      quiet: new Color(color.text.secondary).lerp(base, 0.62),
-      up: new Color(color.data.gain.base).lerp(base, 0.2),
-      down: new Color(color.data.loss.base).lerp(base, 0.2),
-    };
-  }, [bg]);
+    return night
+      ? {
+          quiet: new Color(color.text.onGame.secondary).lerp(base, 0.78),
+          up: new Color(color.data.gain.onGame).lerp(base, 0.55),
+          down: new Color(color.data.loss.onGame).lerp(base, 0.55),
+        }
+      : {
+          quiet: new Color(color.text.secondary).lerp(base, 0.62),
+          up: new Color(color.data.gain.base).lerp(base, 0.2),
+          down: new Color(color.data.loss.base).lerp(base, 0.2),
+        };
+  }, [bg, night]);
 
   useLayoutEffect(() => {
     const m = mesh.current;
@@ -122,7 +139,7 @@ export function Skyline({ frame, origin = [3, -4] as [number, number], bg }: { f
   return (
     <instancedMesh ref={mesh} args={[undefined, undefined, count]} frustumCulled={false}>
       <boxGeometry args={[1, 1, 1]} />
-      <meshStandardMaterial roughness={0.45} metalness={0} envMapIntensity={0.6} />
+      <meshStandardMaterial roughness={0.45} metalness={0} envMapIntensity={night ? 0.5 : 0.6} />
     </instancedMesh>
   );
 }

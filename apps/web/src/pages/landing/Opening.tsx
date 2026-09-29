@@ -6,7 +6,8 @@ import { ScoreDigits } from '../../design/game/ScoreDigits';
 import { TugBar } from '../../design/game/TugBar';
 import { formatMoney } from '../../design/lib/money';
 import { hero, inside } from './copy';
-import { FullSlot } from './FullSlot';
+import { FlyOut } from './FlyOut';
+import { FullSlot, useFullReady } from './FullSlot';
 import { HomeScreen, Phone } from './PhoneScreens';
 import { Layer } from './scroll';
 import { LaunchingSoon } from './Nav';
@@ -239,8 +240,12 @@ export function Opening() {
   const enhanced = useEnhanced();
   const bigStage = useMediaQuery('(min-width: 1024px) and (min-height: 700px)') === true;
   const pinned = enhanced && bigStage;
+  // FULL + pinned: the cards launch out of the 3D device (FlyOut).
+  const fullReady = useFullReady();
+  const fly = pinned && fullReady;
 
   const deviceRef = useRef<HTMLDivElement>(null);
+  const insideDeviceRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const cardsRef = useRef<HTMLDivElement>(null);
@@ -325,6 +330,12 @@ export function Opening() {
         <div ref={trackRef} className="lp-inside__track">
           <div ref={stageRef} className="lp-inside__stage">
             <span className="lp-glow" aria-hidden="true" />
+            {pinned && (
+              <>
+                <div ref={insideDeviceRef} className="lp-inside__device" aria-hidden="true" />
+                <FullSlot name="inside" slot={insideDeviceRef} frame={frame} approach={approach} dwell={dwell} />
+              </>
+            )}
             <div className="lp-wrap lp-inside__content">
               <p className="lp-inside__label">
                 <span>{inside.label(brand.name)}</span>
@@ -333,18 +344,24 @@ export function Opening() {
               <motion.div
                 ref={cardsRef}
                 className="lp-inside__cards"
-                style={pinned ? { y: cardsRise } : undefined}
+                style={pinned && !fly ? { y: cardsRise } : undefined}
                 onPointerEnter={() => setHeld(true)}
                 onPointerLeave={() => setHeld(false)}
                 onFocus={() => setHeld(true)}
                 onBlur={() => setHeld(false)}
               >
                 <motion.div className="lp-inside__col" style={pinned ? { y: depthMain } : undefined}>
-                  <PortfolioCard frame={frame} drawn={inView === true} />
+                  <FlyOut i={0} on={fly} progress={dwell} slot={insideDeviceRef} stage={stageRef}>
+                    <PortfolioCard frame={frame} drawn={inView === true} />
+                  </FlyOut>
                 </motion.div>
                 <motion.div className="lp-inside__col lp-inside__side" style={pinned ? { y: depthSide } : undefined}>
-                  <MatchupCard frame={frame} />
-                  <MoversCard frame={frame} />
+                  <FlyOut i={1} on={fly} progress={dwell} slot={insideDeviceRef} stage={stageRef}>
+                    <MatchupCard frame={frame} />
+                  </FlyOut>
+                  <FlyOut i={2} on={fly} progress={dwell} slot={insideDeviceRef} stage={stageRef}>
+                    <MoversCard frame={frame} />
+                  </FlyOut>
                 </motion.div>
               </motion.div>
             </div>
