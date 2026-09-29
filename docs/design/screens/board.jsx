@@ -145,6 +145,7 @@
     ['accent', 'tabbar', 'bg', 4.5, 'Active tab label'],
     ['text-2', 'tabbar', 'bg', 4.5, 'Inactive tab labels'],
     ['warn-text', 'warn-tint', 'bg', 4.5, '"Your call" notes'],
+    ['text', 'warn-tint', 'bg', 4.5, 'Sign-ups-paused banner'],
     ['on-accent', 'you', null, 3, 'Chevrons on the drawn draft track (graphic)'],
     ['surface', 'live', null, 3, 'Trophy icon on the champion badge (graphic)'],
   ];
@@ -214,7 +215,7 @@
             <li><b>What replaces the dark scoreboard for emphasis:</b> the condensed 900 score type (the biggest thing on any screen), a faint accent wash at the top of the scoreboard card, the tug bar and live dot in colour, broadcast-style tags, and motion (digit rolls, lead changes, re-sorts).</li>
             <li><b>Text-safe cuts.</b> Yellow, orange and bright blue are too light for text on white, so each has a darker "-text" value in Light. The fills (tug bar, live dot, avatars) keep their colour.</li>
             <li><b>Rules that still hold:</b> team colours mark people (you blue, opponent orange); data colours mark money (gain green, loss red, zero grey, never green).</li>
-            <li><b>Settings:</b> Profile › Appearance, with System, Light and Dark; System is the default and the choice is saved on the device. You asked for a simple light/dark switch. System is our recommendation, since it follows the phone; say the word and we cut it to two options.</li>
+            <li><b>Settings:</b> Profile › Appearance, with System, Light and Dark; System is the default and the choice is saved on the device. All three options stay (your call).</li>
           </ul>
           {vals ? (
             <p className="b-changed" style={{ margin: 0 }}>
@@ -381,7 +382,7 @@
           phones={<Fit><S.LeagueScreen after={after} /></Fit>}
           notes={<Notes
             shows={[
-              <>Ranked the way the app ranks: win percentage, then wins, then <b>season gain</b> (the sum of your weekly matchup gains). Paolo M. and Roberto B. are both 5–1; Roberto's {$s(K.STANDINGS_FINAL[0].pf)} beats Paolo's {$s(K.STANDINGS_FINAL[1].pf)}.</>,
+              <><b>One order, also the playoff seeding</b> (your call): wins, then head-to-head, then <b>season gain</b> (the sum of your weekly matchup gains). Paolo M. and Roberto B. are both 5–1 and haven't played each other, so season gain decides: Roberto's {$s(K.STANDINGS_FINAL[0].pf)} beats Paolo's {$s(K.STANDINGS_FINAL[1].pf)}. Ties and byes aren't shown yet (pending the backend proposal).</>,
               <>▲/▼ show the move since last week. You are highlighted wherever you land.</>,
               <>Week 6 results underneath: every matchup, both scores.</>,
             ]}
@@ -404,7 +405,7 @@
               <>The on-the-clock ring counts down; the card says what the snake means for you right now ("Then Paolo M. picks twice").</>,
               <>The snake board: a track runs through every pick in order, with chevrons in the gaps and a half-loop at every row end, so the reversal reads without the labels. Your picks are outlined in team blue.</>,
               <>Search with your queue; Draft is one tap. Your roster fills slot by slot at $2,000 each.</>,
-              <><b>When the clock runs out</b> (your call): the server auto-picks a good stock, never a random one: the manager's queue first, then the best available (the ranking basis is still to confirm).</>,
+              <><b>When the clock runs out</b> (your call): the server auto-picks a good stock, never a random one: the manager's queue first, then the best available: the largest market cap that fits the league's rules (price brackets, category slots, budget). An auto-pick never breaks them.</>,
               <><b>Pick clock</b> (your call, v1.1): 60 seconds by default; the commissioner sets 30–90s when creating the league or in League settings before the draft. The draft room shows the league's clock.</>,
             ]}
             motion={<>
@@ -457,7 +458,7 @@
       ['Portfolio', `Σ 6 holdings = ${$(P.value)}`, `Basis 6 × $2,000.00 = ${$(P.cost)}`, `Gain ${$s(P.gain)} (${pct(P.gainPct)})`],
       ['Home (this league)', `Value = Portfolio = ${$(H.value)}`, `Gain since the draft ${$s(H.gain)} = weeks 1–5 ${$s(H.throughW5)} + this week ${$s(K.MATCHUP.live.you.gain)}`, `Chart ends at ${$s(H.series[H.series.length - 1])}`],
       ['Trade (fixed per slot)', `Sell TSLA: ${K.SALE.buy && K.lineup('roberto', 'thu').find((r) => r.t === 'TSLA').qty} sh × ${$(248.36)} = ${$(K.SALE.proceeds)}`, `Realized vs the $2,000.00 slot: ${$s(K.SALE.realized)}`, `Buy SHOP with exactly ${$(K.SALE.proceeds)} ≈ ${K.SALE.buy.qty.toFixed(4)} sh; value unchanged`],
-      ['Standings', `After Week 6: ${wins} wins = ${losses} losses`, 'Ranked: win %, then wins, then season gain', `Roberto B. ${$s(K.STANDINGS_FINAL[0].pf)} > Paolo M. ${$s(K.STANDINGS_FINAL[1].pf)}`],
+      ['Standings', `After Week 6: ${wins} wins = ${losses} losses`, 'Ranked: wins, then head-to-head, then season gain (= playoff seeds)', `Roberto B. ${$s(K.STANDINGS_FINAL[0].pf)} > Paolo M. ${$s(K.STANDINGS_FINAL[1].pf)}`],
       ['Draft', 'Seat on the clock at pick n: odd rounds 1→6, even rounds 6→1', 'Roberto B. (seat 2): picks 2, 11, 14, 23, 26, 35', 'Gianluigi B. (seat 5): picks 5, 8, 17, 20, 29, 32'],
     ];
     return (

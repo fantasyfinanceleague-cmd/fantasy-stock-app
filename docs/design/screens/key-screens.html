@@ -625,9 +625,9 @@
 //   matchup score  = Σ per-holding week gain (each row rounded to cents first)
 //   lead           = your score − their score
 //   portfolio      = Σ quantity × price
-//   standings      = records + points-for (season $ gain), sorted the way the
-//                    app sorts (win %, then wins, then points-for:
-//                    apps/mobile/app/(tabs)/league.tsx sortedStandings)
+//   standings      = records + points-for (season $ gain), in ONE order that
+//                    is also the playoff seeding (Giorgio, 2026-09-29):
+//                    wins → head-to-head → season gain
 // Records are a legal league: after N weeks of 3 matchups, wins = losses.
 //
 // Scoring copy stays generic ("best performance wins"); data displays show
@@ -729,7 +729,7 @@
   const DRAFT_BOARD = [
     'MSFT', 'NVDA', 'META', 'AVGO', 'AMZN', 'GOOGL',
     'COIN', 'JPM', 'AMD', 'PLTR', 'AAPL', 'LLY',
-    'NFLX', 'CRM', 'ORCL', 'UBER', 'DIS', 'UNH',
+    'BRK.B', 'CRM', 'ORCL', 'UBER', 'DIS', 'UNH',
   ];
 
   /** The Draft room screen's moment: draft night, round 2, pick 11,
@@ -864,13 +864,17 @@
     { a: 'paolo', b: 'alessandro', ga: -48.3, gb: 96.15 },
     { a: 'francesco', b: 'andrea', ga: 61.4, gb: -22.75 },
   ];
+  // Head-to-head results that matter for ties: [winner, loser]. Roberto's
+  // only loss (Week 3) was to Alessandro; Roberto and Paolo haven't met, so
+  // their 5–1 tie after Week 6 falls through to season gain.
+  const H2H = [['alessandro', 'roberto']];
+  const h2hWins = (a, b) => H2H.filter(([w, l]) => w === a && l === b).length;
   function standings(rec) {
     return PLAYERS.map((p) => ({ ...p, ...rec[p.id] }))
       .sort((x, y) => {
-        const px = x.w / (x.w + x.l);
-        const py = y.w / (y.w + y.l);
-        if (py !== px) return py - px;
         if (y.w !== x.w) return y.w - x.w;
+        const h = h2hWins(y.id, x.id) - h2hWins(x.id, y.id);
+        if (h !== 0) return h;
         return y.pf - x.pf;
       })
       .map((r, i) => ({ ...r, rank: i + 1 }));
@@ -1436,7 +1440,7 @@
                 );
               })}
             </div>
-            <div className="ks-caption ks-muted" style={{ padding: '8px 14px 14px' }}>Ranked by record. Ties break on season gain.</div>
+            <div className="ks-caption ks-muted" style={{ padding: '8px 14px 14px' }}>Ranked by wins, then head-to-head, then season gain. This is also the playoff seeding.</div>
           </div>
           {after ? (
           <div className="ks-card ks-fade-in" style={{ padding: '12px 14px' }}>
@@ -1663,7 +1667,7 @@
               <Row k="Draft order" v="Random" sub="Set when the draft starts" />
               <Row k="Rounds" v="6" sub="One per roster slot" />
               <li className="ks-row" style={{ gridTemplateColumns: '1fr', padding: '13px 0' }}>
-                <span><span className="ks-callout" style={{ fontWeight: 600 }}>If time runs out</span><br /><span className="ks-caption">We pick for you: the first stock still available in your queue, otherwise the best available. Never a random pick, never a skip.</span></span>
+                <span><span className="ks-callout" style={{ fontWeight: 600 }}>If time runs out</span><br /><span className="ks-caption">We pick for you: the first stock still available in your queue, otherwise the biggest company that fits the league's rules. Never a random pick, never a skip.</span></span>
               </li>
             </ul>
           </div>
@@ -1719,6 +1723,7 @@
             <div className="ks-seg" style={{ height: 40 }}><span>Buy</span><span className="on">Sell</span></div>
             <div className="ks-callout ks-num"><b>Sell all {N.qty.toFixed(4)} sh ≈ {$(N.value)}</b><br /><span className="ks-caption">A slot holds one stock, so you sell the whole position. The cash stays in this slot to reinvest.</span></div>
             <span className="ks-btn">Review sell</span>
+            <span className="ks-caption" style={{ textAlign: 'center' }}>Market data provided by Alpaca</span>
           </div>
         </div>
       </>
@@ -1820,6 +1825,7 @@
             <span><b>Trade history</b><br /><span className="ks-caption">{cash ? `Sold ${S.sold} · includes your 6 draft picks` : 'Includes your 6 draft picks'}</span></span>
             <span className="ks-muted"><Icon d={ICON.right} size={18} /></span>
           </div>
+          <span className="ks-caption" style={{ textAlign: 'center' }}>Market data provided by Alpaca</span>
         </div>
       </Device>
     );
@@ -1942,6 +1948,28 @@
           <span className="ks-callout" style={{ color: 'var(--c-accent)', fontWeight: 600, justifySelf: 'end' }}>Forgot password?</span>
           <span className="ks-btn">Sign in</span>
           <span className="ks-callout ks-muted" style={{ textAlign: 'center' }}>New here? <b style={{ color: 'var(--c-accent)' }}>Create an account</b></span>
+        </div>
+      </Device>
+    );
+  }
+
+  /** The server's refusal while sign-ups are paused. Giorgio's final text,
+   * verbatim; the product name comes from brand.name. */
+  function SignUpPaused() {
+    return (
+      <Device noTabs label="Create account, sign-ups paused">
+        <div className="ks-pad ks-stack" style={{ paddingTop: 8, gap: 14 }}>
+          <div>
+            <h2 className="ks-head__title" style={{ fontSize: 28 }}>Create account</h2>
+            <p className="ks-callout ks-muted" style={{ margin: '2px 0 0' }}>Join the competition</p>
+          </div>
+          <Field label="Username" value="roberto_b" helper="Displayed on leaderboards" />
+          <Field label="Email address" value="roberto@example.com" />
+          <Field label="Password" value="Scudetto26" secure rules={[[true, '8+ characters'], [true, 'A letter'], [true, 'A number']]} />
+          <div role="alert" className="ks-card" style={{ padding: 14, display: 'grid', gap: 4, background: 'var(--c-warn-tint)', borderColor: 'var(--c-warn-line)', boxShadow: 'none' }}>
+            <b className="ks-callout" style={{ color: 'var(--c-text)' }}>{BRAND} is not open for new signups yet — check back soon. Existing accounts can still sign in.</b>
+          </div>
+          <span className="ks-btn ks-btn--secondary">Sign in instead</span>
         </div>
       </Device>
     );
@@ -2448,7 +2476,7 @@
   function DraftAutoPick() {
     const { SnakeBoard } = window.KSKit;
     const log = [
-      { n: 13, who: 'Paolo M.', t: 'NFLX', how: 'Auto-picked · best available' },
+      { n: 13, who: 'Paolo M.', t: 'BRK.B', how: 'Auto-picked · best available' },
       { n: 12, who: 'Paolo M.', t: 'LLY', how: 'Auto-picked · from his queue' },
       { n: 11, who: 'Roberto B.', t: 'AAPL', how: 'Picked', you: true },
     ];
@@ -2458,7 +2486,7 @@
         <div className="ks-pad ks-stack" style={{ gap: 14 }}>
           <div className="ks-chyron ks-chyron--in" style={{ display: 'grid', gap: 2 }}>
             <b>Paolo M. ran out of time</b>
-            <span className="ks-caption">Auto-picked LLY from his queue, then NFLX (best available).</span>
+            <span className="ks-caption">Auto-picked LLY from his queue, then BRK.B (best available).</span>
           </div>
           <div className="ks-raised" style={{ padding: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span><span className="ks-title" style={{ color: 'var(--c-live-text)' }}>You're on the clock</span><br /><span className="ks-callout">Round 3 · Pick 14</span></span>
@@ -2530,7 +2558,7 @@
           <M a="2 Paolo M." b="3 Alessandro D." sa="−$41.30" sb="+$120.55" win={1} />
           <div className="ks-tag">Championship · playoff week 2</div>
           <M a="1 Roberto B." b="3 Alessandro D." sa="+$164.20" sb="+$131.05" live />
-          <span className="ks-caption ks-muted">The top 4 by record make the playoffs: 1 plays 4, 2 plays 3. A tied game goes to the higher seed.</span>
+          <span className="ks-caption ks-muted">The top 4 in the standings make the playoffs: 1 plays 4, 2 plays 3. A tied game goes to the higher seed.</span>
         </div>
       </Device>
     );
@@ -2777,8 +2805,10 @@
           <div className="ks-card" style={{ padding: 12, background: 'var(--c-sunken)', border: 0, boxShadow: 'none' }} >
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', rowGap: 8 }} className="ks-num"><span><span className="ks-caption">Shares</span><br /><b>{N.qty.toFixed(4)}</b></span><span><span className="ks-caption">Value</span><br /><b>{$(N.value)}</b></span></div>
           </div>
+          <div className="ks-callout ks-num"><b>Sell all {N.qty.toFixed(4)} sh ≈ {$(N.value)}</b></div>
           <div className="ks-seg"><span>Buy</span><span className="on">Sell</span></div>
           <span className="ks-btn">Review sell</span>
+          <span className="ks-caption" style={{ textAlign: 'center' }}>Market data provided by Alpaca</span>
         </div>
       }>
         <div className="ks-head" style={{ padding: '0 0 18px' }}><Pill /><Chip kind="live">Live</Chip></div>
@@ -2794,7 +2824,7 @@
   }
 
   window.KSInventory = {
-    SignIn, SignUp, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
+    SignIn, SignUp, SignUpPaused, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeScoring, HomeComplete,
     AllMatchups, MatchupPreSeason, DraftLobby, DraftAutoPick, DraftRecap, Playoffs,
     SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,
@@ -2866,6 +2896,7 @@
           ]}>
           <Fit caption="Sign in"><I.SignIn /></Fit>
           <Fit caption="Create account" note="Keyboard up; the button stays visible"><I.SignUp /></Fit>
+          <Fit caption="Create account · sign-ups paused" note="Your final text, verbatim; product name via brand.name"><I.SignUpPaused /></Fit>
           <Fit caption="Forgot password"><I.Forgot /></Fit>
           <Fit caption="Check your email" note="New copy: the explanation line"><I.Forgot sent /></Fit>
           <Fit caption={`Onboarding · card ${card + 1} of 3`} note="Slide + fade (slow); dots stretch (quick)"><I.Onboarding card={card} /></Fit>
@@ -2896,7 +2927,7 @@
         <Group id="game" code="3c" name="Matchups, draft and playoffs" job="The game surfaces around the key Matchup, Standings and Draft room screens."
           notes={[
             'All matchups this week: every game in the league, yours marked, same scoreboard grammar at a smaller size.',
-            'The draft lobby opens before the draft: countdown, who is in the room, and your queue. If your clock runs out, the server auto-picks from your queue, then the best available.',
+            'The draft lobby opens before the draft: countdown, who is in the room, and your queue. If your clock runs out, the server auto-picks from your queue, then the best available (the largest market cap that fits the league\'s rules; it never breaks them).',
             'An auto-pick is never hidden: a banner names who ran out of time and what was picked, the board cell gets an Auto badge, and the pick log says "Auto-picked · from his queue" or "Auto-picked · best available" (new copy). The rule is fixed, not a league setting: queue first, then best available, never random, never a skip.',
             'The draft recap lives under League › History after the draft: your picks ranked by how they have done since.',
             'Playoffs follow the scorer: the commissioner picks 2, 4 or 8 teams (default 4); seeds by wins, then head-to-head, then season gain; 1 plays 4 and 2 plays 3; a tied game goes to the higher seed. The explanatory line under the bracket is new copy.',
@@ -2921,6 +2952,7 @@
             'After a sale you can invest right away or later; the slot shows as Cash on Portfolio until you do.',
             'Buy review names the slot paying for it and what is left in it.',
             'With the market closed, trading is shown but disabled, with the time it opens.',
+            'Screens that show prices carry a quiet credit, "Market data provided by Alpaca" (caption, secondary text). Wording to confirm against the provider\'s terms.',
             'Trade history includes the draft picks, so every dollar in the portfolio has a line.',
           ]}>
           <Fit caption="Sell TSLA" note="Sell pre-selected · whole position"><I.SellSheet /></Fit>
@@ -3100,6 +3132,7 @@
     ['accent', 'tabbar', 'bg', 4.5, 'Active tab label'],
     ['text-2', 'tabbar', 'bg', 4.5, 'Inactive tab labels'],
     ['warn-text', 'warn-tint', 'bg', 4.5, '"Your call" notes'],
+    ['text', 'warn-tint', 'bg', 4.5, 'Sign-ups-paused banner'],
     ['on-accent', 'you', null, 3, 'Chevrons on the drawn draft track (graphic)'],
     ['surface', 'live', null, 3, 'Trophy icon on the champion badge (graphic)'],
   ];
@@ -3169,7 +3202,7 @@
             <li><b>What replaces the dark scoreboard for emphasis:</b> the condensed 900 score type (the biggest thing on any screen), a faint accent wash at the top of the scoreboard card, the tug bar and live dot in colour, broadcast-style tags, and motion (digit rolls, lead changes, re-sorts).</li>
             <li><b>Text-safe cuts.</b> Yellow, orange and bright blue are too light for text on white, so each has a darker "-text" value in Light. The fills (tug bar, live dot, avatars) keep their colour.</li>
             <li><b>Rules that still hold:</b> team colours mark people (you blue, opponent orange); data colours mark money (gain green, loss red, zero grey, never green).</li>
-            <li><b>Settings:</b> Profile › Appearance, with System, Light and Dark; System is the default and the choice is saved on the device. You asked for a simple light/dark switch. System is our recommendation, since it follows the phone; say the word and we cut it to two options.</li>
+            <li><b>Settings:</b> Profile › Appearance, with System, Light and Dark; System is the default and the choice is saved on the device. All three options stay (your call).</li>
           </ul>
           {vals ? (
             <p className="b-changed" style={{ margin: 0 }}>
@@ -3336,7 +3369,7 @@
           phones={<Fit><S.LeagueScreen after={after} /></Fit>}
           notes={<Notes
             shows={[
-              <>Ranked the way the app ranks: win percentage, then wins, then <b>season gain</b> (the sum of your weekly matchup gains). Paolo M. and Roberto B. are both 5–1; Roberto's {$s(K.STANDINGS_FINAL[0].pf)} beats Paolo's {$s(K.STANDINGS_FINAL[1].pf)}.</>,
+              <><b>One order, also the playoff seeding</b> (your call): wins, then head-to-head, then <b>season gain</b> (the sum of your weekly matchup gains). Paolo M. and Roberto B. are both 5–1 and haven't played each other, so season gain decides: Roberto's {$s(K.STANDINGS_FINAL[0].pf)} beats Paolo's {$s(K.STANDINGS_FINAL[1].pf)}. Ties and byes aren't shown yet (pending the backend proposal).</>,
               <>▲/▼ show the move since last week. You are highlighted wherever you land.</>,
               <>Week 6 results underneath: every matchup, both scores.</>,
             ]}
@@ -3359,7 +3392,7 @@
               <>The on-the-clock ring counts down; the card says what the snake means for you right now ("Then Paolo M. picks twice").</>,
               <>The snake board: a track runs through every pick in order, with chevrons in the gaps and a half-loop at every row end, so the reversal reads without the labels. Your picks are outlined in team blue.</>,
               <>Search with your queue; Draft is one tap. Your roster fills slot by slot at $2,000 each.</>,
-              <><b>When the clock runs out</b> (your call): the server auto-picks a good stock, never a random one: the manager's queue first, then the best available (the ranking basis is still to confirm).</>,
+              <><b>When the clock runs out</b> (your call): the server auto-picks a good stock, never a random one: the manager's queue first, then the best available: the largest market cap that fits the league's rules (price brackets, category slots, budget). An auto-pick never breaks them.</>,
               <><b>Pick clock</b> (your call, v1.1): 60 seconds by default; the commissioner sets 30–90s when creating the league or in League settings before the draft. The draft room shows the league's clock.</>,
             ]}
             motion={<>
@@ -3412,7 +3445,7 @@
       ['Portfolio', `Σ 6 holdings = ${$(P.value)}`, `Basis 6 × $2,000.00 = ${$(P.cost)}`, `Gain ${$s(P.gain)} (${pct(P.gainPct)})`],
       ['Home (this league)', `Value = Portfolio = ${$(H.value)}`, `Gain since the draft ${$s(H.gain)} = weeks 1–5 ${$s(H.throughW5)} + this week ${$s(K.MATCHUP.live.you.gain)}`, `Chart ends at ${$s(H.series[H.series.length - 1])}`],
       ['Trade (fixed per slot)', `Sell TSLA: ${K.SALE.buy && K.lineup('roberto', 'thu').find((r) => r.t === 'TSLA').qty} sh × ${$(248.36)} = ${$(K.SALE.proceeds)}`, `Realized vs the $2,000.00 slot: ${$s(K.SALE.realized)}`, `Buy SHOP with exactly ${$(K.SALE.proceeds)} ≈ ${K.SALE.buy.qty.toFixed(4)} sh; value unchanged`],
-      ['Standings', `After Week 6: ${wins} wins = ${losses} losses`, 'Ranked: win %, then wins, then season gain', `Roberto B. ${$s(K.STANDINGS_FINAL[0].pf)} > Paolo M. ${$s(K.STANDINGS_FINAL[1].pf)}`],
+      ['Standings', `After Week 6: ${wins} wins = ${losses} losses`, 'Ranked: wins, then head-to-head, then season gain (= playoff seeds)', `Roberto B. ${$s(K.STANDINGS_FINAL[0].pf)} > Paolo M. ${$s(K.STANDINGS_FINAL[1].pf)}`],
       ['Draft', 'Seat on the clock at pick n: odd rounds 1→6, even rounds 6→1', 'Roberto B. (seat 2): picks 2, 11, 14, 23, 26, 35', 'Gianluigi B. (seat 5): picks 5, 8, 17, 20, 29, 32'],
     ];
     return (

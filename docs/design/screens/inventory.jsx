@@ -113,6 +113,28 @@
     );
   }
 
+  /** The server's refusal while sign-ups are paused. Giorgio's final text,
+   * verbatim; the product name comes from brand.name. */
+  function SignUpPaused() {
+    return (
+      <Device noTabs label="Create account, sign-ups paused">
+        <div className="ks-pad ks-stack" style={{ paddingTop: 8, gap: 14 }}>
+          <div>
+            <h2 className="ks-head__title" style={{ fontSize: 28 }}>Create account</h2>
+            <p className="ks-callout ks-muted" style={{ margin: '2px 0 0' }}>Join the competition</p>
+          </div>
+          <Field label="Username" value="roberto_b" helper="Displayed on leaderboards" />
+          <Field label="Email address" value="roberto@example.com" />
+          <Field label="Password" value="Scudetto26" secure rules={[[true, '8+ characters'], [true, 'A letter'], [true, 'A number']]} />
+          <div role="alert" className="ks-card" style={{ padding: 14, display: 'grid', gap: 4, background: 'var(--c-warn-tint)', borderColor: 'var(--c-warn-line)', boxShadow: 'none' }}>
+            <b className="ks-callout" style={{ color: 'var(--c-text)' }}>{BRAND} is not open for new signups yet — check back soon. Existing accounts can still sign in.</b>
+          </div>
+          <span className="ks-btn ks-btn--secondary">Sign in instead</span>
+        </div>
+      </Device>
+    );
+  }
+
   function SignUp() {
     return (
       <Device noTabs label="Create account, keyboard up">
@@ -614,7 +636,7 @@
   function DraftAutoPick() {
     const { SnakeBoard } = window.KSKit;
     const log = [
-      { n: 13, who: 'Paolo M.', t: 'NFLX', how: 'Auto-picked · best available' },
+      { n: 13, who: 'Paolo M.', t: 'BRK.B', how: 'Auto-picked · best available' },
       { n: 12, who: 'Paolo M.', t: 'LLY', how: 'Auto-picked · from his queue' },
       { n: 11, who: 'Roberto B.', t: 'AAPL', how: 'Picked', you: true },
     ];
@@ -624,7 +646,7 @@
         <div className="ks-pad ks-stack" style={{ gap: 14 }}>
           <div className="ks-chyron ks-chyron--in" style={{ display: 'grid', gap: 2 }}>
             <b>Paolo M. ran out of time</b>
-            <span className="ks-caption">Auto-picked LLY from his queue, then NFLX (best available).</span>
+            <span className="ks-caption">Auto-picked LLY from his queue, then BRK.B (best available).</span>
           </div>
           <div className="ks-raised" style={{ padding: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span><span className="ks-title" style={{ color: 'var(--c-live-text)' }}>You're on the clock</span><br /><span className="ks-callout">Round 3 · Pick 14</span></span>
@@ -696,7 +718,7 @@
           <M a="2 Paolo M." b="3 Alessandro D." sa="−$41.30" sb="+$120.55" win={1} />
           <div className="ks-tag">Championship · playoff week 2</div>
           <M a="1 Roberto B." b="3 Alessandro D." sa="+$164.20" sb="+$131.05" live />
-          <span className="ks-caption ks-muted">The top 4 by record make the playoffs: 1 plays 4, 2 plays 3. A tied game goes to the higher seed.</span>
+          <span className="ks-caption ks-muted">The top 4 in the standings make the playoffs: 1 plays 4, 2 plays 3. A tied game goes to the higher seed.</span>
         </div>
       </Device>
     );
@@ -943,8 +965,10 @@
           <div className="ks-card" style={{ padding: 12, background: 'var(--c-sunken)', border: 0, boxShadow: 'none' }} >
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', rowGap: 8 }} className="ks-num"><span><span className="ks-caption">Shares</span><br /><b>{N.qty.toFixed(4)}</b></span><span><span className="ks-caption">Value</span><br /><b>{$(N.value)}</b></span></div>
           </div>
+          <div className="ks-callout ks-num"><b>Sell all {N.qty.toFixed(4)} sh ≈ {$(N.value)}</b></div>
           <div className="ks-seg"><span>Buy</span><span className="on">Sell</span></div>
           <span className="ks-btn">Review sell</span>
+          <span className="ks-caption" style={{ textAlign: 'center' }}>Market data provided by Alpaca</span>
         </div>
       }>
         <div className="ks-head" style={{ padding: '0 0 18px' }}><Pill /><Chip kind="live">Live</Chip></div>
@@ -960,7 +984,7 @@
   }
 
   window.KSInventory = {
-    SignIn, SignUp, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
+    SignIn, SignUp, SignUpPaused, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeScoring, HomeComplete,
     AllMatchups, MatchupPreSeason, DraftLobby, DraftAutoPick, DraftRecap, Playoffs,
     SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,

@@ -7,9 +7,9 @@
 //   matchup score  = Σ per-holding week gain (each row rounded to cents first)
 //   lead           = your score − their score
 //   portfolio      = Σ quantity × price
-//   standings      = records + points-for (season $ gain), sorted the way the
-//                    app sorts (win %, then wins, then points-for:
-//                    apps/mobile/app/(tabs)/league.tsx sortedStandings)
+//   standings      = records + points-for (season $ gain), in ONE order that
+//                    is also the playoff seeding (Giorgio, 2026-09-29):
+//                    wins → head-to-head → season gain
 // Records are a legal league: after N weeks of 3 matchups, wins = losses.
 //
 // Scoring copy stays generic ("best performance wins"); data displays show
@@ -111,7 +111,7 @@
   const DRAFT_BOARD = [
     'MSFT', 'NVDA', 'META', 'AVGO', 'AMZN', 'GOOGL',
     'COIN', 'JPM', 'AMD', 'PLTR', 'AAPL', 'LLY',
-    'NFLX', 'CRM', 'ORCL', 'UBER', 'DIS', 'UNH',
+    'BRK.B', 'CRM', 'ORCL', 'UBER', 'DIS', 'UNH',
   ];
 
   /** The Draft room screen's moment: draft night, round 2, pick 11,
@@ -246,13 +246,17 @@
     { a: 'paolo', b: 'alessandro', ga: -48.3, gb: 96.15 },
     { a: 'francesco', b: 'andrea', ga: 61.4, gb: -22.75 },
   ];
+  // Head-to-head results that matter for ties: [winner, loser]. Roberto's
+  // only loss (Week 3) was to Alessandro; Roberto and Paolo haven't met, so
+  // their 5–1 tie after Week 6 falls through to season gain.
+  const H2H = [['alessandro', 'roberto']];
+  const h2hWins = (a, b) => H2H.filter(([w, l]) => w === a && l === b).length;
   function standings(rec) {
     return PLAYERS.map((p) => ({ ...p, ...rec[p.id] }))
       .sort((x, y) => {
-        const px = x.w / (x.w + x.l);
-        const py = y.w / (y.w + y.l);
-        if (py !== px) return py - px;
         if (y.w !== x.w) return y.w - x.w;
+        const h = h2hWins(y.id, x.id) - h2hWins(x.id, y.id);
+        if (h !== 0) return h;
         return y.pf - x.pf;
       })
       .map((r, i) => ({ ...r, rank: i + 1 }));

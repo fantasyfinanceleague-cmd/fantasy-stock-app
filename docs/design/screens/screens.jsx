@@ -440,7 +440,7 @@
                 );
               })}
             </div>
-            <div className="ks-caption ks-muted" style={{ padding: '8px 14px 14px' }}>Ranked by record. Ties break on season gain.</div>
+            <div className="ks-caption ks-muted" style={{ padding: '8px 14px 14px' }}>Ranked by wins, then head-to-head, then season gain. This is also the playoff seeding.</div>
           </div>
           {after ? (
           <div className="ks-card ks-fade-in" style={{ padding: '12px 14px' }}>
@@ -667,7 +667,7 @@
               <Row k="Draft order" v="Random" sub="Set when the draft starts" />
               <Row k="Rounds" v="6" sub="One per roster slot" />
               <li className="ks-row" style={{ gridTemplateColumns: '1fr', padding: '13px 0' }}>
-                <span><span className="ks-callout" style={{ fontWeight: 600 }}>If time runs out</span><br /><span className="ks-caption">We pick for you: the first stock still available in your queue, otherwise the best available. Never a random pick, never a skip.</span></span>
+                <span><span className="ks-callout" style={{ fontWeight: 600 }}>If time runs out</span><br /><span className="ks-caption">We pick for you: the first stock still available in your queue, otherwise the biggest company that fits the league's rules. Never a random pick, never a skip.</span></span>
               </li>
             </ul>
           </div>
@@ -723,6 +723,7 @@
             <div className="ks-seg" style={{ height: 40 }}><span>Buy</span><span className="on">Sell</span></div>
             <div className="ks-callout ks-num"><b>Sell all {N.qty.toFixed(4)} sh ≈ {$(N.value)}</b><br /><span className="ks-caption">A slot holds one stock, so you sell the whole position. The cash stays in this slot to reinvest.</span></div>
             <span className="ks-btn">Review sell</span>
+            <span className="ks-caption" style={{ textAlign: 'center' }}>Market data provided by Alpaca</span>
           </div>
         </div>
       </>
@@ -824,6 +825,7 @@
             <span><b>Trade history</b><br /><span className="ks-caption">{cash ? `Sold ${S.sold} · includes your 6 draft picks` : 'Includes your 6 draft picks'}</span></span>
             <span className="ks-muted"><Icon d={ICON.right} size={18} /></span>
           </div>
+          <span className="ks-caption" style={{ textAlign: 'center' }}>Market data provided by Alpaca</span>
         </div>
       </Device>
     );
