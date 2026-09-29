@@ -2954,3 +2954,85 @@ html[data-lp3d-chapter='painted'] .lp-chapter .lp-phone {
     mask-image: linear-gradient(90deg, transparent 40%, black 58%);
   }
 }
+
+/* ── Round 4: the CTA sign-off (all tiers) ───────────────────────────── */
+/* The copy and a large mark, centred in the last layer's full viewport. */
+.lp-layer--stacked.lp-cta .lp-cta__glow-area {
+  display: flex;
+  align-items: center;
+  min-height: 100svh;
+}
+
+.lp-cta__inner {
+  align-items: center;
+}
+
+.lp-cta__status {
+  margin-top: var(--sp-space-7);
+}
+
+.lp-cta__mark {
+  position: relative;
+  justify-self: center;
+  width: clamp(160px, 30vh, 300px);
+  aspect-ratio: 1;
+}
+
+.lp-cta__mark-dom,
+.lp-cta__mark-dom svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.lp-cta__mark-dom {
+  transition: opacity var(--sp-motion-duration-slow) var(--sp-motion-ease-settle);
+}
+
+html[data-lp3d-cta='painted'] .lp-cta__mark-dom {
+  opacity: 0;
+}
+
+@media (min-width: 1024px) {
+  .lp-cta__mark {
+    width: clamp(220px, 40vh, 380px);
+    margin-right: var(--sp-space-9);
+  }
+}
+
+/* ── Round 4: the hero skyline's caption and hover tooltip (FULL) ────── */
+/* On a solid chip, so both hold AA whatever the columns behind them do. */
+.lp-sky-caption,
+.lp-sky-tip {
+  position: absolute;
+  /* Above the stage's canvas (z 50 inside the isolated .lp-3d). */
+  z-index: 60;
+  padding: var(--sp-space-1) var(--sp-space-3);
+  border-radius: var(--sp-radius-pill);
+  background-color: var(--sp-color-surface-money-base);
+  font-size: var(--sp-type-caption-size);
+  line-height: var(--sp-type-caption-line);
+  font-weight: 600;
+  color: var(--sp-color-text-secondary);
+  white-space: nowrap;
+}
+
+.lp-sky-caption {
+  right: var(--sp-space-6);
+  bottom: var(--sp-space-5);
+  border: 1px solid var(--sp-color-border-default);
+}
+
+.lp-sky-tip {
+  top: 0;
+  left: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--sp-color-text-primary);
+  box-shadow: var(--sp-elevation-sheet);
+  opacity: 0;
+  transition: opacity var(--sp-motion-duration-quick) var(--sp-motion-ease-settle);
+}
+
+.lp-sky-tip[data-on='true'] {
+  opacity: 1;
+}

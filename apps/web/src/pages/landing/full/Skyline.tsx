@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { Color, Object3D, type InstancedMesh } from 'three';
+import { Color, Object3D, Vector2, type InstancedMesh } from 'three';
 import { color } from '../../../design/tokens';
 import { TAPE } from '../sampleData';
 
@@ -24,6 +24,13 @@ const WAVE_WIDTH = 2.2;
 const WAVE_LIFT = 0.35;
 
 const moves = TAPE.map((x) => ({ t: x.t, up: x.up, mag: Math.abs(parseFloat(x.d.replace('−', '-'))) }));
+
+export interface SkylineHover {
+  /** The ticker under the pointer, or null. */
+  cell: SkylineCell | null;
+  x: number;
+  y: number;
+}
 
 export interface SkylineCell {
   x: number;
@@ -57,14 +64,21 @@ export function Skyline({
   origin = [3, -4] as [number, number],
   bg,
   night = false,
+  onHover,
+  hoverable,
 }: {
   frame: number;
   origin?: [number, number];
   bg: string;
-  /** On stadium navy: on-game tints, and the signal bars glow a little. */
+  /** On stadium navy: on-game tints. */
   night?: boolean;
+  /** Pointer hover (fine pointers): which form is under it, if any. */
+  onHover?: (h: SkylineHover) => void;
+  /** Where hover may register (client x, y): the unmasked part. */
+  hoverable?: (x: number, y: number, canvas: DOMRect) => boolean;
 }) {
-  const camera = useThree((s) => s.camera) as unknown as { fov: number; position: { z: number } };
+  const three = useThree();
+  const camera = three.camera as unknown as { fov: number; position: { z: number } };
   const mesh = useRef<InstancedMesh>(null);
   const cells = useMemo(skylineCells, []);
   const count = cells.length * STEPS.length;
@@ -104,6 +118,39 @@ export function Skyline({
       waveAt.current = performance.now();
     }
   }, [frame]);
+
+  // Hover: raycast only when the pointer has moved (window-level — the
+  // canvas takes no events), against the instanced forms.
+  const pointer = useRef<{ x: number; y: number; dirty: boolean } | null>(null);
+  useEffect(() => {
+    if (!onHover || !window.matchMedia('(pointer: fine)').matches) return;
+    const move = (e: PointerEvent) => {
+      pointer.current = { x: e.clientX, y: e.clientY, dirty: true };
+    };
+    window.addEventListener('pointermove', move, { passive: true });
+    return () => window.removeEventListener('pointermove', move);
+  }, [onHover]);
+  const ndc = useMemo(() => new Vector2(), []);
+  const hovered = useRef<number | null>(null);
+  useFrame(() => {
+    const p = pointer.current;
+    const m = mesh.current;
+    if (!p || !p.dirty || !m || !onHover) return;
+    p.dirty = false;
+    const c = three.gl.domElement.getBoundingClientRect();
+    const inside = p.x >= c.left && p.x <= c.right && p.y >= c.top && p.y <= c.bottom;
+    let hit: number | null = null;
+    if (inside && (!hoverable || hoverable(p.x, p.y, c))) {
+      ndc.set(((p.x - c.left) / c.width) * 2 - 1, -(((p.y - c.top) / c.height) * 2 - 1));
+      three.raycaster.setFromCamera(ndc, three.camera);
+      const hits = three.raycaster.intersectObject(m, false);
+      if (hits.length && hits[0].instanceId !== undefined) hit = Math.floor(hits[0].instanceId / STEPS.length);
+    }
+    if (hit !== hovered.current || hit !== null) {
+      hovered.current = hit;
+      onHover({ cell: hit === null ? null : cells[hit], x: p.x - c.left, y: p.y - c.top });
+    }
+  });
 
   const settled = useRef(false);
   const lastFloor = useRef(0);

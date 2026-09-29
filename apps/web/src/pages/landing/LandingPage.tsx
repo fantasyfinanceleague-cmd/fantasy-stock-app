@@ -12,7 +12,8 @@ import { HowItWorks } from './HowItWorks';
 import { Leagues } from './Leagues';
 import { Why } from './Why';
 import { Faq } from './Faq';
-import { Layer } from './scroll';
+import { Layer, Reveal } from './scroll';
+import { FullSlot } from './FullSlot';
 // Tokens and primitives by module path — NOT the design/index barrel,
 // which also pulls design/fonts.css (a render-blocking @import). The font
 // comes from head.ts instead (Orchestrator decision C, phase 3a).
@@ -47,12 +48,15 @@ function anchorTop(target: Element): number {
 
 function Cta() {
   const glowRef = useRef<HTMLDivElement>(null);
+  const markRef = useRef<HTMLDivElement>(null);
   const enhanced = useEnhanced();
   usePointerGlow(glowRef, enhanced);
   return (
     <Layer tone="dark" last className="lp-cta" labelledBy="lp-cta-title">
       <div ref={glowRef} className="lp-cta__glow-area">
         <span className="lp-glow" aria-hidden="true" />
+        {/* FULL: the market's particles assemble into the mark in its slot. */}
+        <FullSlot name="cta" slot={markRef} />
         <div className="lp-wrap lp-cta__inner">
           <div>
             <h2 className="lp-cta__title" id="lp-cta-title">
@@ -60,8 +64,17 @@ function Cta() {
               <em>{cta.title.em}</em>
             </h2>
             <p className="lp-cta__body">{cta.body(brand.name)}</p>
+            <div className="lp-cta__status">
+              <LaunchingSoon label={cta.status} tone="onGame" />
+            </div>
           </div>
-          <LaunchingSoon label={cta.status} tone="onGame" />
+          {/* The mark, big: the page's sign-off in every tier (decorative —
+              the nav and footer carry the named mark). */}
+          <div ref={markRef} className="lp-cta__mark" aria-hidden="true">
+            <Reveal className="lp-cta__mark-dom">
+              <BrandMark size={24} tone="onGame" accent="var(--sp-color-team-you-on-game)" />
+            </Reveal>
+          </div>
         </div>
       </div>
     </Layer>

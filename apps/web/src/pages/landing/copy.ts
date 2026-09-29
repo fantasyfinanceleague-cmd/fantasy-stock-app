@@ -152,5 +152,11 @@ export const footer = {
   copy: (name: string, year: number) => `© ${year} ${name} · Simulated portfolios, real market data.`,
 } as const;
 
+/** Round 4, FULL tier only (Design Lead condition 5): the hero skyline's
+ * caption — new copy, the one line the 3D world adds. */
+export const world = {
+  skylineCaption: 'Every column is a stock on the tape.',
+} as const;
+
 export const linkLabel = (label: string | ((name: string) => string), name: string) =>
   typeof label === 'function' ? label(name) : label;

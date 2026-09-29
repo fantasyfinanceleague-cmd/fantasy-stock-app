@@ -5,10 +5,12 @@ import HeroScene from './HeroScene';
 import InsideScene from './InsideScene';
 import ChapterScene from './ChapterScene';
 import LeaguesScene from './LeaguesScene';
+import CtaScene from './CtaScene';
 
 export const scenes = {
   hero: HeroScene,
   inside: InsideScene,
   chapter: ChapterScene,
   leagues: LeaguesScene,
+  cta: CtaScene,
 };
