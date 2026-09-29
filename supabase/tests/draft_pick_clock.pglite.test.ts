@@ -14,6 +14,7 @@
  */
 import { assert, assertEquals, assertRejects } from 'jsr:@std/assert';
 import { PGlite } from 'npm:@electric-sql/pglite@0.2';
+import { effectiveCategoryIds } from '../functions/_shared/draft-validation.ts';
 
 const ROOT = new URL('../../', import.meta.url);
 const MIGRATION = new URL('supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql', ROOT);
@@ -43,8 +44,16 @@ create table league_members (league_id uuid not null references leagues(id) on d
 create table drafts (id serial primary key, league_id uuid, user_id text, symbol text,
   entry_price numeric, quantity numeric, round int, pick_number int, created_at timestamptz default now());
 create unique index drafts_league_pick_unique_idx on drafts (league_id, pick_number) where created_at > '2026-01-08';
-create table symbols (symbol text primary key);
-insert into symbols values ('AAPL'),('MSFT'),('NVDA'),('BRK.B');
+-- symbols with the columns the search reads (prod: created out-of-band, then
+-- 20260810000001 / 20260811000007 / 20260928000000 added these).
+create table symbols (symbol text primary key, active boolean default true, is_draftable boolean not null default false,
+  price_unsupported boolean not null default false, last_price numeric, market_cap numeric, gics_industry text);
+insert into symbols (symbol, is_draftable, last_price, market_cap) values
+  ('AAPL', true, 200, 3000), ('MSFT', true, 400, 2900), ('NVDA', true, 150, 2800), ('BRK.B', true, 450, 900);
+create table categories (id uuid primary key default gen_random_uuid(), slug text unique not null);
+create table category_rules (gics_industry text unique not null, category_id uuid not null references categories(id));
+create table symbol_category_overrides (symbol text not null, category_id uuid not null references categories(id),
+  unique (symbol, category_id));
 create function is_member(l uuid) returns boolean language sql stable security definer as
   $$ select exists (select 1 from league_members m where m.league_id = l and m.user_id = auth.uid()::text) $$;
 alter table leagues enable row level security;
@@ -130,7 +139,10 @@ Deno.test({
       assert(/authenticated=X/.test(sq.a), sq.a);
       const tr = await acl('enforce_leagues_pick_clock');
       assert(!/anon=|authenticated=/.test(tr.a) && !/(^|[{,])=X/.test(tr.a), tr.a);
-      for (const f of [clk, od, sq, tr]) assert(String(f.c).includes('search_path=public, pg_temp'), f.c);
+      const se = await acl('auto_pick_search_candidates');
+      assert(!/anon=|authenticated=/.test(se.a) && !/(^|[{,])=X/.test(se.a), se.a);
+      assert(/service_role=X/.test(se.a), se.a);
+      for (const f of [clk, od, sq, tr, se]) assert(String(f.c).includes('search_path=public, pg_temp'), f.c);
     });
 
     await step('backfill: pre-existing in_progress draft is unclocked; others clocked', async () => {
@@ -325,6 +337,65 @@ Deno.test({
       await assertRejects(() => q(`insert into drafts (league_id,user_id,symbol,pick_number,pick_source) values ($1,$2,'AAPL',1,'auto')`, [l.id, C]));
     });
 
+    await step('auto_pick_search_candidates == its TS mirror (bracket, category layers, draftable, exclude, order)', async () => {
+      // Catalog fixture: categories via rule table AND overrides (which REPLACE
+      // the rule category), unclassified, inactive, unsupported, unpriced.
+      const [tech, energy, fin] = (await q(`insert into categories (slug) values ('tech'),('energy'),('fin') returning id`)).map((r: Row) => r.id);
+      await q(`insert into category_rules values ('Semis',$1),('Oil',$2),('Banks',$3)`, [tech, energy, fin]);
+      const rows: Array<[string, boolean, boolean, boolean, number | null, number | null, string | null]> = [
+        // symbol, active, draftable, unsupported, price, cap, industry
+        ['Q_CHIP', true, true, false, 50, 900, 'Semis'],
+        ['Q_OIL', true, true, false, 20, 800, 'Oil'],
+        ['Q_BANK', true, true, false, 20, 700, 'Banks'],
+        ['Q_OVR', true, true, false, 25, 650, 'Semis'], // override -> energy ONLY (replaces tech)
+        ['Q_MULTI', true, true, false, 30, 600, 'Banks'], // overrides -> tech + fin
+        ['Q_NONE', true, true, false, 15, 500, null], // unclassified: flex only
+        ['Q_ODD', true, true, false, 15, 450, 'Unmapped'], // unknown industry: flex only
+        ['Q_JUNK', true, false, false, 10, 990, 'Oil'], // not draftable
+        ['Q_DEAD', false, false, false, 10, 995, 'Oil'], // inactive
+        ['Q_UNSUP', true, true, true, 10, 996, 'Oil'], // Alpaca-unsupported
+        ['Q_NOPX', true, false, false, null, 997, 'Oil'], // unpriced (never draftable)
+        ['Q_ZERO', true, true, false, 0, 998, 'Oil'], // bad price
+      ];
+      for (const r of rows) {
+        await q(`insert into symbols (symbol, active, is_draftable, price_unsupported, last_price, market_cap, gics_industry) values ($1,$2,$3,$4,$5,$6,$7)`, r);
+      }
+      await q(`insert into symbol_category_overrides values ('Q_OVR',$1),('Q_MULTI',$2),('Q_MULTI',$3)`, [energy, tech, fin]);
+
+      // TS mirror, from the same fixture: effectiveCategoryIds is the exact
+      // function the pick gate uses — so SQL == mirror means SQL == gate's rule.
+      const ruleOf: Record<string, string> = { Semis: tech, Oil: energy, Banks: fin };
+      const overrides: Record<string, string[]> = { Q_OVR: [energy], Q_MULTI: [tech, fin] };
+      const mirror = (min: number | null, max: number | null, cat: string | null, draftableOnly: boolean, exclude: string[]) =>
+        rows
+          .filter(([sym, active, dr, unsup, px]) =>
+            active && !unsup && (!draftableOnly || dr) && !exclude.includes(sym) &&
+            (px == null ? !draftableOnly : px > 0 && (min == null || px >= min) && (max == null || px <= max))
+          )
+          .filter(([sym, , , , , , ind]) =>
+            cat == null || effectiveCategoryIds(overrides[sym] ?? [], ind ? ruleOf[ind] ?? null : null).has(cat)
+          )
+          .sort((a, b) => Number(a[4] == null) - Number(b[4] == null) || (b[5] ?? 0) - (a[5] ?? 0) || a[0].localeCompare(b[0]))
+          .map((r) => r[0]);
+
+      const specs: Array<[number | null, number | null, string | null, boolean, string[]]> = [];
+      for (const [min, max] of [[null, null], [10, 30], [21, 60], [1, 5]] as Array<[number | null, number | null]>) {
+        for (const cat of [null, tech, energy, fin]) {
+          for (const dOnly of [true, false]) specs.push([min, max, cat, dOnly, []]);
+        }
+      }
+      specs.push([null, null, null, true, ['Q_CHIP', 'Q_OIL']], [null, null, energy, false, ['Q_OVR']]);
+      for (const [min, max, cat, dOnly, ex] of specs) {
+        const got = (await q(`select symbol from auto_pick_search_candidates($1,$2,$3,$4,$5,100)`, [min, max, cat, dOnly, ex]))
+          .map((r: Row) => r.symbol).filter((x: string) => x.startsWith('Q_'));
+        assertEquals(got, mirror(min, max, cat, dOnly, ex), JSON.stringify({ min, max, cat, dOnly, ex }));
+      }
+      // Spot checks a reader can verify by eye:
+      assertEquals(mirror(null, null, energy, true, []), ['Q_OIL', 'Q_OVR']); // override replaced tech with energy
+      assertEquals(mirror(null, null, tech, true, []), ['Q_CHIP', 'Q_MULTI']);
+      assertEquals((await q(`select count(*)::int n from auto_pick_search_candidates(null,null,null,true,'{}',3)`))[0].n, 3, 'limit honoured');
+    });
+
     // The prod SQL-editor effect test, executed here first so a parse or
     // logic bug surfaces before Giorgio's run. It ends by RAISING its result
     // table; every line must PASS, and nothing it wrote may survive.
@@ -334,7 +405,7 @@ Deno.test({
       const msg = String((err as Error).message);
       assert(msg.includes('DRAFT PICK CLOCK EFFECT TEST RESULTS'), msg);
       assert(!msg.includes('FAIL'), msg);
-      assertEquals(msg.match(/PASS/g)?.length, 24, msg);
+      assertEquals(msg.match(/PASS/g)?.length, 26, msg);
       assertEquals((await q(`select count(*)::int n from leagues`))[0].n, before, 'fixture rolled back');
     });
   },

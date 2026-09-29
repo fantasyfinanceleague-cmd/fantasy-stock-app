@@ -23,7 +23,7 @@
 --     42501 (a function's own raise can share that code).
 --
 -- EXPECTED OUTPUT (the final "ERROR:" text): every line ends in PASS.
---   G1..G4  proacl for the 4 functions                              PASS
+--   G1..G5  proacl for the 5 functions                              PASS
 --   P0      pre-existing in_progress drafts are all unclocked      PASS (count shown)
 --   T1      pick_seconds=20 refused by CHECK                        PASS
 --   T2      draft_started_at NULL before the draft starts           PASS
@@ -35,6 +35,8 @@
 --   R1      same pick_number twice -> 23505, one row                PASS
 --   R2      pick_source 'auto' refused by CHECK                     PASS
 --   S1      overdue_draft_turns (service_role) lists no unclocked league  PASS
+--   S2      auto_pick_search_candidates (service_role): only active,
+--           draftable, in-bracket, not-excluded rows, largest first  PASS
 --   A1      member sets queue: normalized + de-duplicated           PASS
 --   A2      unknown symbol refused, queue unchanged                 PASS
 --   A3      member reads own queue (RLS)                            PASS
@@ -57,6 +59,9 @@ declare
   res    jsonb;
   n      int;
   acl    text;
+  res_bad    int;
+  res_ok     boolean;
+  res_sorted boolean;
   out    text := E'\n';
 begin
   -- ---- G: grants (proacl), read as the editor's role ------------------------
@@ -76,6 +81,11 @@ begin
    where s.nspname = 'public' and proname = 'enforce_leagues_pick_clock';
   out := out || format(E'G4 trigger fn           %s  %s\n', acl,
     case when acl !~ '(anon|authenticated)=' and acl !~ '(^|[{,])=X' then 'PASS' else 'FAIL' end);
+
+  select proacl::text into acl from pg_proc p join pg_namespace s on s.oid = p.pronamespace
+   where s.nspname = 'public' and proname = 'auto_pick_search_candidates';
+  out := out || format(E'G5 search fn           %s  %s\n', acl,
+    case when acl !~ '(anon|authenticated)=' and acl !~ '(^|[{,])=X' and acl ~ 'service_role=X' then 'PASS' else 'FAIL' end);
 
   -- ---- P0: the Q2 hold — nothing running before the push is clocked ---------
   select count(*) into n from public.leagues
@@ -159,6 +169,28 @@ begin
     out := out || format(E'S1 overdue lists unclocked = %s  %s\n', n, case when n = 0 then 'PASS' else 'FAIL' end);
   exception when others then
     out := out || format(E'S1 overdue as service_role -> %s FAIL (%s)\n', sqlstate, sqlerrm);
+  end;
+
+  -- S2: the best-available search against the REAL catalog. Largest-first,
+  --     every row active + draftable + inside the bracket, the excluded
+  --     symbol absent. (Legality itself is validatePick's job, in the edge
+  --     function; this proves the search feeding it respects its filters.)
+  begin
+    select count(*),
+           count(*) filter (where not (s.active is true and s.is_draftable is true
+                                       and r.last_price between 10 and 500 and r.symbol <> 'AAPL')),
+           bool_and(r.market_cap is not null)
+      into n, res_bad, res_ok
+      from public.auto_pick_search_candidates(10, 500, null, true, array['AAPL'], 25) r
+      join public.symbols s on s.symbol = r.symbol;
+    select coalesce(bool_and(ordered), true) into res_sorted from (
+      select market_cap <= lag(market_cap) over (order by ord) or lag(market_cap) over (order by ord) is null as ordered
+        from public.auto_pick_search_candidates(10, 500, null, true, array['AAPL'], 25)
+             with ordinality as x(symbol, last_price, is_draftable, market_cap, ord)) y;
+    out := out || format(E'S2 search: rows=%s bad=%s sorted=%s  %s\n', n, res_bad, res_sorted,
+      case when n > 0 and res_bad = 0 and res_sorted then 'PASS' else 'FAIL' end);
+  exception when others then
+    out := out || format(E'S2 search as service_role -> %s FAIL (%s)\n', sqlstate, sqlerrm);
   end;
 
   -- ---- authenticated: member A ---------------------------------------------

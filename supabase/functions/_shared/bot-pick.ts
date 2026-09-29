@@ -1,25 +1,21 @@
 /**
- * Pure candidate ranking for a bot's draft pick (mobile launch-blocker: mobile
- * has no bot auto-picker at all — see draft-control's header comment). Mirrors
- * the intent of web's DraftPage.jsx botAutoPick (budget-tiered stock pool) but
- * draws from the live `symbols` catalog instead of a hard-coded ticker list,
- * so bots respect this league's actual slot brackets and the draftable-universe
- * gate instead of a fixed pool that predates Phase 4 categories/slots.
+ * Cheap cached-price candidate filtering for draft auto-picks.
  *
- * DELIBERATELY COARSE: this only pre-filters using symbols.last_price (the
- * enrichment cron's cached price), NOT a live quote, and does NOT check
- * category eligibility (that needs a DB read per symbol — see
- * category-eligibility.ts). The caller (validate-and-record-pick) still runs
- * each returned candidate through the real gate — a live fetchFillPrice +
- * validatePick (which re-derives slot fit, including category eligibility,
- * from the authoritative price) — and moves to the next candidate on any
- * refusal. So a stale last_price or a category mismatch costs one wasted
+ * HISTORY: this module used to BE the bot picker — rankBotCandidates over a
+ * top-150-by-market-cap pool, 5 live attempts. The pick clock
+ * (20261010000000) replaced that production path: best available now comes
+ * from public.auto_pick_search_candidates (searched per open slot, category-
+ * aware) ranked by ./auto-pick.ts MARKET_CAP_STRATEGY, for bots and humans
+ * alike. What remains live here is `candidateFilter`, the cheap pre-filter
+ * ./auto-pick.ts applies to a manager's queue. `rankBotCandidates` is kept as
+ * the thin sort-over-filter its tests exercise (they pin candidateFilter's
+ * rules: draftable, unpriced, owned, budget, bracket).
+ *
+ * DELIBERATELY COARSE: cached symbols.last_price only, no category check.
+ * Nothing here decides legality — every candidate still goes through
+ * ./pick-gate.ts gatePick (validatePick on the LIVE fill price + category
+ * eligibility) before any row is written. A stale last_price costs one wasted
  * Alpaca call, never a wrong pick.
- *
- * No randomization: the league's own leagueOwnedSymbols set already produces
- * pick-to-pick variety (the first bot's pick removes it from every later
- * bot's candidate list), so a deterministic market-cap-desc ordering keeps
- * this module simple to test and its output reproducible.
  */
 import {
   type LeagueRules,
@@ -99,8 +95,3 @@ export function candidateFilter(
     return true;
   };
 }
-
-/** How many ranked candidates the caller should actually try live (fetch a
- * real price + run validatePick) before giving up and recording a SKIP. Kept
- * here so the edge function and its tests agree on one number. */
-export const BOT_PICK_MAX_ATTEMPTS = 5;

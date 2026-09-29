@@ -36,6 +36,8 @@
 --   get_draft_clock(league)     THE one definition of the turn deadline.
 --   overdue_draft_turns()       the sweep's work list (service_role only).
 --   set_draft_queue(league, [])  replace-the-whole-list write path.
+--   auto_pick_search_candidates  best-available SEARCH per open slot (service
+--                               role only); legality stays in validatePick.
 --
 -- THE DEADLINE IS DERIVED, NOT STORED
 --   turn_started_at = GREATEST(draft_started_at, max(drafts.recorded_at))
@@ -385,13 +387,83 @@ revoke all on function public.set_draft_queue(uuid, text[]) from anon;
 grant execute on function public.set_draft_queue(uuid, text[]) to authenticated;
 
 -- ===========================================================================
+-- 7. auto_pick_search_candidates — "best available", searched deep
+-- ===========================================================================
+-- Giorgio (2026-09-29): best available = the largest company that fits —
+-- walk the market by market cap and take the next one that passes the
+-- league's rules — and auto-draft must NEVER pick a stock the rules forbid,
+-- nor skip when a legal one exists. A fixed top-N-by-market-cap list fails
+-- the second half: in a narrow bracket or a category slot it can contain no
+-- fit while fits exist. So the auto-pick (_shared/auto-pick.ts
+-- chooseAutoPick) asks THIS function, once per OPEN slot, for the largest
+-- stocks fitting that slot, and pages past refused ones via p_exclude.
+--
+-- This is a SEARCH, not a legality check: every row it returns still goes
+-- through validatePick on the live fill price before anything is written
+-- (_shared/pick-gate.ts). Its filters only need to be no LOOSER than useful:
+--   * active, not Alpaca-unsupported (price_unsupported);
+--   * is_draftable when the league does not allow the full universe;
+--   * cached last_price inside the bracket (whose top the caller clamps to the
+--     remaining budget); unpriced symbols only for allow_undraftable leagues,
+--     after every priced one;
+--   * category: the DR-001 three-layer rule, mirrored from
+--     draft-validation.ts effectiveCategoryIds — curated overrides REPLACE the
+--     rule-table category when any exist; else the category of the symbol's
+--     gics_industry; unclassified => flex slots only (p_category_id NULL);
+--   * not in p_exclude (league-owned + already tried).
+-- Service role only: it is an unthrottled catalog scan.
+create or replace function public.auto_pick_search_candidates(
+  p_min            numeric,
+  p_max            numeric,
+  p_category_id    uuid,
+  p_draftable_only boolean,
+  p_exclude        text[],
+  p_limit          integer
+)
+returns table (symbol text, last_price numeric, is_draftable boolean, market_cap numeric)
+language sql
+stable
+security invoker
+set search_path = public, pg_temp
+as $$
+  select s.symbol, s.last_price, s.is_draftable, s.market_cap
+    from public.symbols s
+   where s.active is true
+     and s.price_unsupported is not true
+     and (not p_draftable_only or s.is_draftable is true)
+     and not (upper(s.symbol) = any (coalesce(p_exclude, '{}'::text[])))
+     and case
+           when s.last_price is null then not p_draftable_only
+           else s.last_price > 0
+            and (p_min is null or s.last_price >= p_min)
+            and (p_max is null or s.last_price <= p_max)
+         end
+     and (p_category_id is null or
+          case
+            when exists (select 1 from public.symbol_category_overrides o where o.symbol = s.symbol)
+              then exists (select 1 from public.symbol_category_overrides o
+                            where o.symbol = s.symbol and o.category_id = p_category_id)
+            else exists (select 1 from public.category_rules r
+                          where r.gics_industry = s.gics_industry and r.category_id = p_category_id)
+          end)
+   order by (s.last_price is null), s.market_cap desc nulls last, s.symbol
+   limit least(greatest(coalesce(p_limit, 20), 1), 100);
+$$;
+
+revoke all on function public.auto_pick_search_candidates(numeric, numeric, uuid, boolean, text[], integer) from public;
+revoke all on function public.auto_pick_search_candidates(numeric, numeric, uuid, boolean, text[], integer) from anon, authenticated;
+grant execute on function public.auto_pick_search_candidates(numeric, numeric, uuid, boolean, text[], integer) to service_role;
+
+-- ===========================================================================
 -- Effect-verify AFTER push (HUMAN ACTION; CLAUDE.md: never trust the push):
 --   SELECT proname, proacl FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
 --    WHERE n.nspname = 'public'
---      AND proname IN ('get_draft_clock','overdue_draft_turns','set_draft_queue','enforce_leagues_pick_clock');
+--      AND proname IN ('get_draft_clock','overdue_draft_turns','set_draft_queue','enforce_leagues_pick_clock',
+--                      'auto_pick_search_candidates');
 --   -- get_draft_clock: authenticated + service_role, no anon, no bare "=X"
 --   -- overdue_draft_turns: service_role only
 --   -- set_draft_queue: authenticated only (no anon, no bare "=X")
+--   -- auto_pick_search_candidates: service_role only
 --   SELECT id, name, pick_clock_enabled, draft_started_at FROM leagues WHERE draft_status = 'in_progress';
 --   -- every row pick_clock_enabled = false (pre-existing), until Giorgio opts one in
 --   SELECT pick_source, count(*) FROM drafts GROUP BY 1;

@@ -10,6 +10,12 @@
  * sweep cannot drift from the client path: a race loser, a finalize retry and
  * a skip mean the same thing whichever caller wrote them.
  *
+ * ONE LEGALITY AUTHORITY: insertGatedPick is the only code in the repo that
+ * inserts a non-SKIP drafts row, and it takes a GatedPick — which only
+ * ./pick-gate.ts gatePick (= validatePick on the live price) can produce. A
+ * structural test (supabase/tests/draft_insert_sites.test.ts) fails if any
+ * other drafts insert, or any `as GatedPick` cast, appears.
+ *
  * RACE BACKSTOP: every insert here names an explicit pick_number and relies
  * on the drafts (league_id, pick_number) unique index. A lost race surfaces as
  * 23505 -> 'pick_conflict'; the loser writes nothing and the caller re-derives
@@ -17,31 +23,26 @@
  * auto-pick at 60s produce exactly ONE row: the first committed insert wins.
  */
 import { fetchFillPrice } from './alpaca-price.ts';
-import { fetchEligibleCategoryIds, fetchEligibleCategoryIdsBatch } from './category-eligibility.ts';
+import { fetchEligibleCategoryIdsBatch } from './category-eligibility.ts';
 import { buildFinalizeArgs, planSeason, readFinalizeResult } from './schedule.ts';
 import type { BotSymbolCandidate } from './bot-pick.ts';
+import type { GatedPick } from './pick-gate.ts';
 import {
-  type AutoPickCandidate,
+  type AutoPickPorts,
   BEST_AVAILABLE_STRATEGY,
   type BestAvailableStrategy,
-  decideNoPick,
+  chooseAutoPick,
   type DraftClock,
-  openBrackets,
   parseDraftClockRow,
   type PickSource,
-  planAutoPickCandidates,
-  postgrestInList,
 } from './auto-pick.ts';
 import {
   computeDraftOrder,
-  currentTurn,
   type LeagueRules,
-  leagueOwnedSymbols,
   type PickRow,
   SKIP_SYMBOL,
   type Slot,
   type TradeRow,
-  validatePick,
   validateSkip,
 } from './draft-validation.ts';
 
@@ -253,6 +254,47 @@ export async function finalizeDraft(
 }
 
 // ---------------------------------------------------------------------------
+// The one pick write
+// ---------------------------------------------------------------------------
+
+export type InsertResult =
+  // deno-lint-ignore no-explicit-any
+  | { ok: true; row: any }
+  | { ok: false; reason: 'pick_conflict' | 'unhandled' };
+
+/**
+ * Write a pick that passed the legality gate. Takes a GatedPick, never a
+ * symbol: there is no way to reach this insert with a pick validatePick
+ * refused. (league_id comes from the gated pick itself, so a pick gated for
+ * one league cannot be written into another.)
+ */
+export async function insertGatedPick(admin: Admin, pick: GatedPick, pickSource: PickSource): Promise<InsertResult> {
+  const { data: row, error: insErr } = await admin
+    .from('drafts')
+    .insert({
+      league_id: pick.leagueId,
+      user_id: pick.pickerId,
+      symbol: pick.symbol,
+      entry_price: pick.price,
+      quantity: pick.quantity,
+      round: pick.round,
+      pick_number: pick.pickNumber,
+      slot_id: pick.slotId,
+      pick_source: pickSource,
+      // draft_date / recorded_at / created_at omitted: server defaults.
+    })
+    .select('*')
+    .single();
+  if (insErr) {
+    // Unique (league_id, pick_number) index = the race backstop: a concurrent
+    // pick, auto-pick or sweep got this number first. Nothing was written.
+    if ((insErr as { code?: string }).code === '23505') return { ok: false, reason: 'pick_conflict' };
+    return { ok: false, reason: 'unhandled' };
+  }
+  return { ok: true, row };
+}
+
+// ---------------------------------------------------------------------------
 // Auto-pick (bots, and humans whose clock ran out)
 // ---------------------------------------------------------------------------
 
@@ -289,76 +331,63 @@ function toCandidate(s: any): BotSymbolCandidate {
   };
 }
 
-/** Best-available pool: top-N per OPEN price bracket (openBrackets), never
- * including a symbol already owned in the league. Throws on read failure — a
- * failed pool read must not look like "nothing is legal" (which would skip). */
-async function fetchBestAvailablePool(
-  admin: Admin,
-  strategy: BestAvailableStrategy,
-  rules: LeagueRules,
-  ctx: DraftContext,
-  slots: Slot[],
-  pickerId: string,
-): Promise<BotSymbolCandidate[]> {
-  const brackets = openBrackets(rules, slots, ctx.picks, ctx.trades, pickerId);
-  const owned = leagueOwnedSymbols(ctx.picks, ctx.trades);
-  const results = await Promise.all(brackets.map((b) => {
-    let q = admin
-      .from('symbols')
-      .select(SYMBOL_COLUMNS)
-      .not('last_price', 'is', null)
-      .gt('last_price', 0)
-      .order(strategy.poolOrderColumn, { ascending: false, nullsFirst: false })
-      .limit(strategy.poolPerBracket);
-    if (!rules.allowUndraftable) q = q.eq('is_draftable', true);
-    if (b.min != null) q = q.gte('last_price', b.min);
-    if (b.max != null) q = q.lte('last_price', b.max);
-    if (owned.size > 0) q = q.not('symbol', 'in', postgrestInList(owned));
-    return q;
-  }));
-  const pool = new Map<string, BotSymbolCandidate>();
-  for (const { data, error } of results) {
-    if (error) throw new Error('pool_fetch_failed');
-    for (const row of data ?? []) {
-      const c = toCandidate(row);
-      if (!pool.has(c.symbol)) pool.set(c.symbol, c);
-    }
-  }
-  return [...pool.values()];
-}
-
-/** The manager's queue in position order, with cached symbol rows. */
-async function fetchQueue(
-  admin: Admin,
-  leagueId: string,
-  userId: string,
-): Promise<{ queue: string[]; meta: BotSymbolCandidate[] }> {
-  const { data, error } = await admin
-    .from('draft_queue')
-    .select('symbol, position')
-    .eq('league_id', leagueId)
-    .eq('user_id', userId)
-    .order('position', { ascending: true });
-  if (error) throw new Error('queue_fetch_failed');
-  // deno-lint-ignore no-explicit-any
-  const queue = (data ?? []).map((r: any) => String(r.symbol).toUpperCase());
-  if (queue.length === 0) return { queue, meta: [] };
-  const { data: rows, error: sErr } = await admin.from('symbols').select(SYMBOL_COLUMNS).in('symbol', queue);
-  if (sErr) throw new Error('queue_fetch_failed');
-  return { queue, meta: (rows ?? []).map(toCandidate) };
+/** The real I/O behind chooseAutoPick. Every port THROWS on a read failure:
+ * a failed read must never look like "nothing legal" (which would skip). */
+export function supabaseAutoPickPorts(admin: Admin, leagueId: string, deps: AutoPickDeps): AutoPickPorts {
+  return {
+    async loadSlots() {
+      const { slots, error } = await loadSlots(admin, leagueId);
+      if (error) throw new Error('slots_fetch_failed');
+      return slots;
+    },
+    async loadQueue(pickerId) {
+      const { data, error } = await admin
+        .from('draft_queue')
+        .select('symbol, position')
+        .eq('league_id', leagueId)
+        .eq('user_id', pickerId)
+        .order('position', { ascending: true });
+      if (error) throw new Error('queue_fetch_failed');
+      // deno-lint-ignore no-explicit-any
+      const queue = (data ?? []).map((r: any) => String(r.symbol).toUpperCase());
+      if (queue.length === 0) return { queue, meta: [] };
+      const { data: rows, error: sErr } = await admin.from('symbols').select(SYMBOL_COLUMNS).in('symbol', queue);
+      if (sErr) throw new Error('queue_fetch_failed');
+      return { queue, meta: (rows ?? []).map(toCandidate) };
+    },
+    async searchCandidates(spec, exclude, draftableOnly, limit) {
+      const { data, error } = await admin.rpc('auto_pick_search_candidates', {
+        p_min: spec.min,
+        p_max: spec.max,
+        p_category_id: spec.categoryId,
+        p_draftable_only: draftableOnly,
+        p_exclude: exclude.map((x) => x.toUpperCase()),
+        p_limit: limit,
+      });
+      if (error) {
+        console.error('auto_pick_search_candidates failed', leagueId, JSON.stringify(error));
+        throw new Error('search_failed');
+      }
+      return (data ?? []).map(toCandidate);
+    },
+    eligibility: (symbols) => fetchEligibleCategoryIdsBatch(admin, symbols),
+    async livePrice(symbol) {
+      const fill = await fetchFillPrice(symbol, deps.alpacaKey, deps.alpacaSecret);
+      if (fill.price == null) {
+        // Vendor detail is logged, never returned (it would leak app-key state).
+        console.error('auto-pick: no_price', leagueId, symbol, JSON.stringify(fill.error));
+      }
+      return { price: fill.price, source: fill.source ?? null };
+    },
+  };
 }
 
 /**
- * Pick for whoever's turn it is NOW (never a caller-named target). Bots: best
- * available only, source 'bot', falling back to 'skip' (unchanged bot rules).
- * Humans: queue then best available (auto_queue / auto_best); auto_skip only
- * when nothing is legal — a vendor outage returns price_unavailable instead
- * (decideNoPick), leaving the turn open for the next attempt.
- *
- * `expectedPickNumber`: the pick the caller's gate authorized. If the draft
- * has moved on since (a manual pick landed between the gate's clock read and
- * this function's picks read), refuse with pick_conflict rather than picking
- * for the NEXT manager, whose clock has not expired.
+ * Choose (chooseAutoPick: queue, then best available, every candidate through
+ * the one gate) and write, for whoever's turn it is. Bots: best available,
+ * source 'bot', falling back to 'skip'. Humans: auto_queue / auto_best, and
+ * auto_skip only when nothing is legal; a vendor outage returns
+ * price_unavailable, leaving the turn open.
  */
 export async function autoPickTurn(
   admin: Admin,
@@ -366,121 +395,48 @@ export async function autoPickTurn(
   ctx: DraftContext,
   expectedPickNumber: number | null,
 ): Promise<AutoPickResult> {
-  const turn = currentTurn(ctx.picks.length, ctx.order, ctx.numRounds);
-  if (!turn) return { ok: false, reason: 'draft_complete' };
-  if (expectedPickNumber != null && turn.pickNumber !== expectedPickNumber) {
-    return { ok: false, reason: 'pick_conflict' };
-  }
-  const pickerId = turn.pickerId;
-  const isBot = pickerId.startsWith('bot-');
   const strategy = deps.strategy ?? BEST_AVAILABLE_STRATEGY;
-  const rules = leagueRules(ctx.league, ctx.numRounds);
-
-  const { slots, error: slotsErrored } = await loadSlots(admin, ctx.league.id);
-  if (slotsErrored) return { ok: false, reason: 'unhandled' };
-
-  let planned: AutoPickCandidate[];
-  const hasCategorySlots = slots.some((s) => s.categoryId != null);
-  let eligibility: Map<string, Set<string>> | undefined;
-  const isDraftableBySymbol = new Map<string, boolean>();
+  let choice;
   try {
-    const [q, pool] = await Promise.all([
-      isBot ? Promise.resolve({ queue: [], meta: [] as BotSymbolCandidate[] }) : fetchQueue(admin, ctx.league.id, pickerId),
-      fetchBestAvailablePool(admin, strategy, rules, ctx, slots, pickerId),
-    ]);
-    for (const c of [...q.meta, ...pool]) isDraftableBySymbol.set(c.symbol, c.isDraftable);
-    if (hasCategorySlots) {
-      eligibility = await fetchEligibleCategoryIdsBatch(admin, [...isDraftableBySymbol.keys()]);
-    }
-    planned = planAutoPickCandidates({
-      isBot,
-      rules,
-      slots,
-      picks: ctx.picks,
-      trades: ctx.trades,
-      pickerId,
-      queue: q.queue,
-      queueMeta: q.meta,
-      pool,
+    choice = await chooseAutoPick(
+      {
+        leagueId: String(ctx.league.id),
+        rules: leagueRules(ctx.league, ctx.numRounds),
+        order: ctx.order,
+        numRounds: ctx.numRounds,
+        picks: ctx.picks,
+        trades: ctx.trades,
+      },
+      supabaseAutoPickPorts(admin, String(ctx.league.id), deps),
+      expectedPickNumber,
       strategy,
-      eligibility,
-    });
+    );
   } catch (e) {
-    console.error('auto-pick: candidate load failed', ctx.league.id, String(e));
+    console.error('auto-pick: search failed', ctx.league.id, String(e));
     return { ok: false, reason: 'unhandled' };
   }
 
-  let priced = 0;
-  for (const cand of planned) {
-    const fill = await fetchFillPrice(cand.symbol, deps.alpacaKey, deps.alpacaSecret);
-    if (fill.price == null) {
-      // Vendor detail is logged, never returned (it would leak app-key state).
-      console.error('auto-pick: no_price', ctx.league.id, cand.symbol, JSON.stringify(fill.error));
-      continue;
+  switch (choice.kind) {
+    case 'draft_complete':
+      return { ok: false, reason: 'draft_complete' };
+    case 'conflict':
+      return { ok: false, reason: 'pick_conflict' };
+    case 'retry_later':
+      console.error('auto-pick: nothing priceable, turn left open', ctx.league.id, choice.attempts);
+      return { ok: false, reason: 'price_unavailable' };
+    case 'skip': {
+      const skipped = await insertSkip(admin, ctx, choice.pickerId, choice.source);
+      if (!skipped.ok) return { ok: false, reason: skipped.reason };
+      console.log('auto-pick', ctx.league.id, skipped.pick?.pick_number, choice.source, choice.why, choice.attempts, strategy.id);
+      return { ok: true, pick: skipped.pick, pickSource: choice.source, complete: skipped.complete, statusError: skipped.statusError, priceSource: null };
     }
-    priced++;
-
-    let eligibleCategories = new Set<string>();
-    if (hasCategorySlots) {
-      try {
-        eligibleCategories = eligibility?.get(cand.symbol) ?? await fetchEligibleCategoryIds(admin, cand.symbol);
-      } catch {
-        return { ok: false, reason: 'unhandled' }; // never treat a read failure as "unclassified"
-      }
+    case 'pick': {
+      const ins = await insertGatedPick(admin, choice.gated, choice.source);
+      if (!ins.ok) return { ok: false, reason: ins.reason };
+      const complete = choice.gated.pickNumber >= ctx.order.length * ctx.numRounds;
+      const statusError = complete ? await finalizeDraft(admin, ctx.league, ctx.memberIds) : null;
+      console.log('auto-pick', ctx.league.id, choice.gated.pickNumber, choice.source, choice.gated.symbol, choice.attempts, strategy.id);
+      return { ok: true, pick: ins.row, pickSource: choice.source, complete, statusError, priceSource: choice.priceSource };
     }
-
-    const decision = validatePick({
-      rules,
-      slots,
-      order: ctx.order,
-      picks: ctx.picks,
-      trades: ctx.trades,
-      pickerId,
-      symbol: cand.symbol,
-      price: fill.price,
-      eligibleCategories,
-      isDraftable: isDraftableBySymbol.get(cand.symbol),
-    });
-    if (!decision.legal) continue;
-
-    const { data: row, error: insErr } = await admin
-      .from('drafts')
-      .insert({
-        league_id: ctx.league.id,
-        user_id: pickerId,
-        symbol: cand.symbol,
-        entry_price: fill.price,
-        quantity: decision.quantity,
-        round: decision.round,
-        pick_number: decision.pickNumber,
-        slot_id: decision.slotId,
-        pick_source: cand.source,
-      })
-      .select('*')
-      .single();
-    if (insErr) {
-      // Someone else's write took this pick number first (a manual pick, a
-      // client auto_pick, or another sweep). Stop — the winner's row stands.
-      if ((insErr as { code?: string }).code === '23505') return { ok: false, reason: 'pick_conflict' };
-      return { ok: false, reason: 'unhandled' };
-    }
-    const complete = decision.pickNumber >= ctx.order.length * ctx.numRounds;
-    const statusError = complete ? await finalizeDraft(admin, ctx.league, ctx.memberIds) : null;
-    console.log('auto-pick', ctx.league.id, decision.pickNumber, cand.source, cand.symbol, strategy.id);
-    return { ok: true, pick: row, pickSource: cand.source, complete, statusError, priceSource: fill.source };
   }
-
-  const none = decideNoPick(isBot, planned.length, priced);
-  if (none.kind === 'retry_later') return { ok: false, reason: 'price_unavailable' };
-  const skipped = await insertSkip(admin, ctx, pickerId, none.source);
-  if (!skipped.ok) return { ok: false, reason: skipped.reason };
-  console.log('auto-pick', ctx.league.id, skipped.pick?.pick_number, none.source, 'SKIP', strategy.id);
-  return {
-    ok: true,
-    pick: skipped.pick,
-    pickSource: none.source,
-    complete: skipped.complete,
-    statusError: skipped.statusError,
-    priceSource: null,
-  };
 }

@@ -77,13 +77,15 @@ import {
   autoPickTurn,
   fetchDraftClock,
   finalizeDraft,
+  insertGatedPick,
   insertSkip,
   isDraftFull,
   leagueRules,
   loadDraftContext,
   loadSlots,
 } from '../_shared/draft-write.ts';
-import { currentTurn, validatePick } from '../_shared/draft-validation.ts';
+import { currentTurn } from '../_shared/draft-validation.ts';
+import { gatePick } from '../_shared/pick-gate.ts';
 
 function isAllowedOrigin(origin: string): boolean {
   if (!origin) return false;
@@ -337,7 +339,9 @@ Deno.serve(async (req: Request) => {
       ? await fetchEligibleCategoryIds(admin, symbol)
       : new Set<string>();
 
-    const decision = validatePick({
+    // The ONE legality gate (../_shared/pick-gate.ts): the same validatePick
+    // every auto-pick passes, producing the only thing insertGatedPick accepts.
+    const gate = gatePick(leagueId, {
       rules,
       slots,
       order,
@@ -349,34 +353,21 @@ Deno.serve(async (req: Request) => {
       eligibleCategories,
       isDraftable,
     });
-    if (!decision.legal) return json({ ok: false, reason: decision.reason }); // 200: game-flow refusal (join-league pattern)
+    if (!gate.ok) return json({ ok: false, reason: gate.reason }); // 200: game-flow refusal (join-league pattern)
 
-    const { data: inserted, error: insErr } = await admin
-      .from('drafts')
-      .insert({
-        league_id: leagueId,
-        user_id: targetId,
-        symbol,
-        entry_price: fill.price,
-        quantity: decision.quantity,
-        round: decision.round,
-        pick_number: decision.pickNumber,
-        // draft_date omitted — see the SKIP insert note (DEFAULT now()).
-        slot_id: decision.slotId,
-        pick_source: 'manual',
-      })
-      .select('*')
-      .single();
-    if (insErr) {
+    const ins = await insertGatedPick(admin, gate.pick, 'manual');
+    if (!ins.ok) {
       // Unique (league_id, pick_number) index = the race backstop: a
       // concurrent pick — or an auto-pick for an expired clock — got this
       // number first. The client refetches and retries — legality is
       // re-derived from the new state, never reused.
-      if ((insErr as { code?: string }).code === '23505') {
+      if (ins.reason === 'pick_conflict') {
         return json({ ok: false, reason: 'pick_conflict' }); // 200: race lost, client refetches + retries
       }
       return json({ ok: false, reason: 'unhandled' }, 500);
     }
+    const inserted = ins.row;
+    const decision = gate.pick;
 
     const complete = decision.pickNumber >= order.length * numRounds;
     const statusError = complete ? await finalizeDraft(admin, league, memberIds) : null;

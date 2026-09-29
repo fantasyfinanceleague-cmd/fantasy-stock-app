@@ -92,13 +92,35 @@ Send `{ league_id, action: 'auto_pick', pick_number }`, where `pick_number` is t
 
 `leagues.pick_seconds` is written with the league on insert (omit it for the default of 60), or updated by the commissioner while `draft_status = 'not_started'`. After that the DB refuses changes (`pick_seconds_locked`, 22023). A CHECK allows only 30/45/60/75/90.
 
-## Best available
+## Auto-draft never breaks a league's rules (the acceptance criterion)
 
-- Candidates come from **one query per open slot price bracket** (clamped to the remaining budget in `budget_cap` mode). Symbols already owned in the league are excluded.
-- Category leagues get a batched category pre-filter.
-- The pool is ranked by the pluggable `BEST_AVAILABLE_STRATEGY` in `_shared/auto-pick.ts`, which is market cap descending by default. Swapping the basis (say, a composite with recent performance) means adding a new strategy object. The timer is untouched.
-- Every candidate still goes through the live `fetchFillPrice` + `validatePick` gate a manual pick uses.
-- Humans get up to 5 live attempts from the queue, then 5 from best available. Bots get 5 from best available.
+Giorgio's hard requirement: **auto-draft must never give someone a stock their league's criteria forbid.** That covers price brackets, category slots, `budget_cap`, the draftable universe (`allow_undraftable = false`), league-owned symbols, and any rule added later. It's enforced by structure, not by care:
+
+- **One authority.** Every candidate, from the queue or best available, human or bot, is judged by `_shared/pick-gate.ts` `gatePick`. That is the same `validatePick` a manual pick passes, fed the **live** Alpaca fill price, the symbol's category eligibility (the same three-layer rule), and the catalog's `is_draftable`.
+- **The writer takes a decision, not a symbol.** `gatePick` is the only producer of a `GatedPick`, and a module-private brand makes an object literal fail to compile. `_shared/draft-write.ts` `insertGatedPick(admin, GatedPick, pickSource)` is the only code that inserts a non-SKIP `drafts` row, and it accepts nothing else. The manual pick path uses it too, so a rule added to `validatePick` applies to every pick the day it's added.
+- **Guarded by a structural test.** `supabase/tests/draft_insert_sites.test.ts` fails if any other `drafts` insert, upsert, update or delete, or any `as GatedPick` cast, appears in the functions.
+
+## Best available (decided: the largest company that fits)
+
+Giorgio: like fantasy football's best available. Walk the market by size and take the next stock that fits the league's criteria.
+
+- **The search.** `public.auto_pick_search_candidates` runs once per **open slot**. It returns the largest stocks, by market cap, that fit that slot:
+  - the slot's price bracket on the cached price, with the top clamped to the remaining budget in `budget_cap`;
+  - the slot's category (overrides replace the industry rule, mirrored from `effectiveCategoryIds` and proven equal in PGlite);
+  - `is_draftable` unless the league allows the full universe;
+  - `active`, and not Alpaca-unsupported;
+  - not owned in the league and not already tried.
+
+  A stock far outside any "top N" is found when it's the only fit.
+- **Paging.** Rounds repeat, excluding what was tried, until a candidate passes the live gate or the search comes back empty.
+- **Ranking.** The pluggable `BEST_AVAILABLE_STRATEGY` in `_shared/auto-pick.ts` (default `market_cap_desc`) orders each round. A different basis is a new strategy object; the timer and the gate don't change.
+- **Bounds (documented):** at most **5** live-priced queue candidates and **15** live-priced best-available candidates, so at most 20 Alpaca calls per auto-pick.
+- **`auto_skip` is recorded only when:**
+  - the search returns nothing for every open slot (nothing legal on the catalog's prices: roster, budget or category exhausted), or
+  - all 15 best-available candidates were refused by the live gate (the catalog's cached prices disagreed with live prices 15 times in a row).
+
+  It is never recorded when **no** candidate could be priced: during an Alpaca outage a human's turn stays open and the sweep retries.
+- **Queue items** are tried in the manager's order. A queued stock that has since become illegal (owned, off-bracket, not draftable) is skipped, never forced. One whose live price has left its bracket is refused by the gate and skipped the same way.
 
 ## Drafts already running when this ships (Q2, pending Giorgio)
 
@@ -150,18 +172,35 @@ One query is enough: a draft that advances always has a recent `deadline_at`, so
 
 ## Tests
 
-- `deno test supabase/functions/_shared/auto-pick.test.ts`: hermetic. Covers the gate, open brackets, queue then best-available planning, caps, category fit, strategy swap, and the outage-vs-illegal skip rule.
-- `deno test --allow-read --allow-env supabase/tests/draft_pick_clock.pglite.test.ts`: the migration on real Postgres, loaded verbatim alongside PR #9's leagues guard. Covers:
-  - grants (proacl, and in practice);
-  - the backfill hold;
+- `deno test supabase/functions/_shared/auto-pick.test.ts` (hermetic, 29 tests). The acceptance criterion, **brute-forced**: `chooseAutoPick` runs against an in-memory market whose search mirrors the SQL, and every result is checked against the real `validatePick` over the whole market. It covers:
+  - **Sweep 1**, 400 generated rule configurations (brackets, category slots, `budget_cap` near exhaustion, `fixed_notional`, `allow_undraftable` on and off, slots filled, SKIPs, queues, bots) with exact prices: every pick is legal, and every skip happens only when brute force finds **no** legal stock.
+  - **Sweep 2**, 400 configurations with stale and unpriceable live prices: never an illegal pick, never more than 20 price calls, never the same symbol priced twice.
+  - **Sweep 3**, 400 configurations against a **hostile** search that ignores every rule: the gate alone still never lets an illegal pick through.
+  - Targeted cases:
+    - the only legal stock ranks below #150 by market cap, behind 300 same-price decoys in the wrong category, and is found on the first attempt;
+    - the queue skips a stock that became illegal;
+    - budget near exhaustion;
+    - undraftable giants;
+    - one open slot;
+    - stale prices paged past;
+    - the 15-refusal bound;
+    - outage vs skip;
+    - the conflict guard;
+    - a `GatedPick` can't be forged (compile-time).
+  - Mutation-checked: feeding the gate the cached price, a category-blind search, forcing `isDraftable = true`, and forcing category eligibility **each** fail a test.
+- `deno test --allow-read --allow-env supabase/tests/draft_pick_clock.pglite.test.ts`: the migration on real Postgres, loaded verbatim alongside PR #9's leagues guard (18 steps). It covers:
+  - grants;
+  - the hold and the re-draft case;
   - the CHECK;
-  - trigger stamping and neutralization;
-  - the `pick_seconds` lock;
+  - the trigger;
+  - the lock;
   - deadline math;
   - the overdue list;
   - `set_draft_queue`;
   - queue RLS;
-  - the 23505 race.
+  - the 23505 race;
+  - **`auto_pick_search_candidates` equal to its TS mirror** across 34 filter combinations (mutation-checked on the override layer).
 
-  It also runs the prod effect test file itself (24/24 PASS, rolled back).
+  It also runs the prod effect test file itself (26/26 PASS, rolled back).
+- `deno test --allow-read supabase/tests/draft_insert_sites.test.ts`: the one-writer structural guard (mutation-checked with an extra insert, an upsert, and a forged cast).
 - The pg_cron, pg_net and vault SQL in the deferred file can't run in PGlite. It is statically reviewed, and H4's data check is its first real run.
