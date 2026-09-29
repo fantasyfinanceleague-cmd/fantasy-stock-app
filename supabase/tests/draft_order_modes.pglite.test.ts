@@ -117,6 +117,11 @@ Deno.test({
     const [done] = await q(`insert into leagues (name, commissioner_id, draft_status) values ('legacy-done',$1,'completed') returning id`, [B]);
     const [ghost] = await q(`insert into leagues (name, commissioner_id, draft_status) values ('legacy-ghost','ghost','in_progress') returning id`);
     const [pre] = await q(`insert into leagues (name, commissioner_id, draft_status) values ('pre','${C}','not_started') returning id`);
+    // Already past due at push time, 4 members: the migration's one-off sweep
+    // must finalize it SILENTLY (no push about an abandoned league).
+    const [staleAtPush] = await q(
+      `insert into leagues (name, commissioner_id, draft_status, draft_date) values ('stale-at-push',$1,'not_started', now() - interval '3 days') returning id`, [C]);
+    for (const m of [C, A, B, D]) await q(`insert into league_members (league_id, user_id) values ($1,$2)`, [staleAtPush.id, m]);
     for (const m of MIXED) await q(`insert into league_members (league_id, user_id) values ($1,$2)`, [inProg.id, m]);
     for (const m of [A, B, D]) await q(`insert into league_members (league_id, user_id) values ($1,$2)`, [done.id, m]);
     for (const m of [D, A]) await q(`insert into league_members (league_id, user_id) values ($1,$2)`, [ghost.id, m]);
@@ -209,6 +214,10 @@ Deno.test({
       assertEquals(await order(inProg.id), [C, A, 'Zed', 'bot-1', 'bot-10', 'bot-2', 'test-user-2']);
       assertEquals((await lg(pre.id)).draft_order_mode, 'random');
       assertEquals(await meta(pre.id), undefined);
+      const sm = await meta(staleAtPush.id);
+      assertEquals([sm.state, sm.source], ['finalized', 'random']);
+      assert(isPermutationOf(await order(staleAtPush.id), [C, A, B, D]));
+      assertEquals(await notices(staleAtPush.id), [], 'past due at push time: finalized silently');
       // Idempotent: re-applying the migration changes nothing.
       const before = await order(inProg.id);
       await db.exec(migration);
@@ -462,7 +471,7 @@ Deno.test({
       const m = await meta(l.id);
       assertEquals([m.state, m.source, m.reconciled_at_start], ['locked', 'start_backstop', false]);
       assert(isPermutationOf(await order(l.id), [C, A, B, D]));
-      assertEquals(await notices(l.id), [], 'no "order is set" notice for a start-time finalize (no future draft_date)');
+      assertEquals(await notices(l.id), [A, B, C, D].sort(), 'the start-backstop finalize notifies too (Orchestrator decision)');
       const r = await getOrder(A, l.id);
       assertEquals([r.locked, r.finalized, r.can_edit_order, r.can_change_mode], [true, true, false, false]);
 
@@ -542,7 +551,7 @@ Deno.test({
       assertEquals((await q(`select count(*)::int n from league_draft_order where league_id=$1`, [l.id]))[0].n, 0);
     });
 
-    await step('cron path: stale leagues finalize silently; due leagues finalize with notices; due flag', async () => {
+    await step('cron path: due leagues finalize with notices (incl. past-due after the push); due flag', async () => {
       await q(`update league_notifications set push_status = 'sent'`);
       // Members join BEFORE the date moves inside the hour (triggers off), so
       // only the cron can finalize these — as for a league nobody opens.
@@ -557,13 +566,13 @@ Deno.test({
       assertEquals((await q(`select finalize_due_draft_orders() n`))[0].n, 2);
       await asRole(null);
       assertEquals((await meta(stale.id)).state, 'finalized');
-      assertEquals(await notices(stale.id), [], 'no push about a league whose draft time already passed');
+      assertEquals(await notices(stale.id), [A, B, C, D].sort(), 'after the push, every finalize notifies');
       assertEquals(await notices(soon.id), [A, B, C].sort());
       assertEquals(await meta(small.id), undefined, 'under 4 members: never finalized, never "due"');
       assertEquals(await meta(later.id), undefined);
       await asRole('service_role');
       assertEquals((await q(`select draft_order_notify_due() d`))[0].d, true, 'pending pushes');
-      await q(`update league_notifications set push_status='sent', push_attempts = 1, push_attempted_at = now() where league_id=$1`, [soon.id]);
+      await q(`update league_notifications set push_status='sent', push_attempts = 1, push_attempted_at = now() where league_id = any($1::uuid[])`, [[soon.id, stale.id]]);
       assertEquals((await q(`select draft_order_notify_due() d`))[0].d, false);
       await assertRejects(() => q(`update league_notifications set user_id = 'x' where league_id=$1`, [soon.id]), Error, 'permission denied');
     });

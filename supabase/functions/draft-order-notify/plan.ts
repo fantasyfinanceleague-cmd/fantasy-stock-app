@@ -27,16 +27,40 @@ export function ordinal(n: number): string {
   }
 }
 
+/** The app's time convention: no per-user time zone is stored, so draft
+ * times in pushes are Eastern (as lib/marketHours.ts). */
+export const PUSH_TIME_ZONE = 'America/New_York';
+
+/** "7:00 PM" — time only, no date, in PUSH_TIME_ZONE. ICU may emit a narrow
+ * no-break space before AM/PM; normalized to a plain space. */
+export function formatDraftTime(iso: string): string {
+  return new Intl.DateTimeFormat('en-US', { timeZone: PUSH_TIME_ZONE, hour: 'numeric', minute: '2-digit' })
+    .format(new Date(iso))
+    .replace(/[\u202f\u00a0]/g, ' ');
+}
+
 /**
  * The push, built SERVER-SIDE from verified values only (send-notification's
  * closed-set rule: no caller-supplied strings). The position is read AT SEND
  * TIME from the current order, so a leaver closing the gap after the finalize
- * never makes it stale. COPY IS PROVISIONAL — pending the Design Lead.
+ * never makes it stale. Copy: Design Lead, board @ 4ab3429 (verbatim).
+ * The "starts at" sentence is dropped when there is no draft_date or the
+ * draft has already started (the start-backstop finalize): announcing a start
+ * time that has passed would be wrong.
  */
-export function draftOrderSetMessage(i: { leagueName: string; leagueId: string; position: number }) {
+export function draftOrderSetMessage(i: {
+  leagueName: string;
+  leagueId: string;
+  mode: string; // leagues.draft_order_mode
+  position: number;
+  draftDate: string | null;
+  draftStarted: boolean;
+}) {
+  const lead = i.mode === 'manual' ? 'The commissioner set the draft order.' : 'The draft order is set.';
+  const when = i.draftDate && !i.draftStarted ? ` The draft starts at ${formatDraftTime(i.draftDate)}.` : '';
   return {
-    title: 'Draft order is set',
-    body: `You pick ${ordinal(i.position)} in ${i.leagueName}.`,
+    title: i.leagueName,
+    body: `${lead} You pick ${ordinal(i.position)}.${when}`,
     data: { type: 'draft_order_set', screen: 'draft', league_id: i.leagueId },
   };
 }

@@ -79,6 +79,15 @@
 --    GROUP BY l.id ORDER BY l.draft_status, l.name;
 --   STOP unless: ids_ascii is true on every row, and for every in_progress
 --   league round1_actual is a prefix of backfill_order.
+--   And list what section 11 will finalize SILENTLY at push (no notice):
+--   SELECT l.id, l.name, l.draft_date, count(m.user_id) AS members
+--     FROM leagues l JOIN league_members m ON m.league_id = l.id
+--    WHERE coalesce(l.draft_status,'not_started') = 'not_started'
+--      AND l.draft_date IS NOT NULL AND now() >= l.draft_date - interval '1 hour'
+--    GROUP BY l.id HAVING count(m.user_id) >= 4;
+--   Expected: only stale/abandoned leagues. A REAL league drafting within the
+--   hour of the push would get its order set without a push — push at a
+--   quiet time, or tell its members.
 --   Also confirm no not_started league is due to START between this push and
 --   the edge deploy (old edge code still derives commissioner-first).
 --
@@ -258,11 +267,12 @@ as $$
 $$;
 
 -- open -> finalized (materializing first if no order exists). Caller holds
--- the leagues row lock. The notice is created only when the finalize happens
--- BEFORE draft_date — a real heads-up. A finalize at/after draft_date (the
--- start backstop for a TBD or past date, or an abandoned test league swept
--- after this migration lands) creates no notice, so nobody is pushed about a
--- stale league.
+-- the leagues row lock. EVERY finalize creates the "order is set" notice —
+-- at T−1h, when the 4th member joins, or at the start backstop (Orchestrator
+-- decision 2026-09-29: keep the start-time notice). The one exception is the
+-- one-off sweep at the bottom of THIS migration, which finalizes leagues that
+-- were already past due when it was pushed without notifying anyone, so the
+-- first cron tick does not push about abandoned test leagues.
 create or replace function public._draft_order_finalize(p_league_id uuid)
 returns boolean
 language plpgsql
@@ -292,9 +302,7 @@ begin
      set state = 'finalized', finalized_at = now()
    where league_id = p_league_id and state = 'open';
 
-  if v_l.draft_date is not null and now() < v_l.draft_date then
-    perform public._draft_order_notify_members(p_league_id);
-  end if;
+  perform public._draft_order_notify_members(p_league_id);
   return true;
 end;
 $$;
@@ -645,7 +653,7 @@ create trigger trg_leagues_order_start
 --   join:  no order yet -> nothing (materialize will include them)
 --          open, never edited (the manual seed) -> a uniformly random slot
 --          open, edited by the commissioner / finalized -> append at the end
---          (+ a notice if finalized before draft_date); locked -> REFUSED.
+--          (+ their own notice if finalized); locked -> REFUSED.
 --          A join that brings a due league to 4 members finalizes it here.
 --   leave: open / finalized -> remove and close the gap;
 --          locked + in_progress -> REFUSED (no leaving mid-draft);
@@ -702,8 +710,7 @@ begin
       -- append, so every placed or announced slot is preserved.
       insert into public.league_draft_order (league_id, position, user_id)
       values (new.league_id, v_n + 1, new.user_id);
-      if v_state = 'finalized' and new.user_id not like 'bot-%'
-         and v_l.draft_date is not null and now() < v_l.draft_date then
+      if v_state = 'finalized' and new.user_id not like 'bot-%' then
         insert into public.league_notifications (league_id, user_id, kind)
         values (new.league_id, new.user_id, 'draft_order_set')
         on conflict (league_id, user_id) where kind = 'draft_order_set' do nothing;
@@ -1013,6 +1020,37 @@ revoke all on function public.enforce_league_draft_order_meta()           from p
 revoke all on function public.enforce_leagues_draft_order_mode()          from public, anon, authenticated, service_role;
 revoke all on function public.lock_draft_order_on_start()                 from public, anon, authenticated, service_role;
 revoke all on function public.sync_draft_order_on_member_change()         from public, anon, authenticated, service_role;
+
+-- ===========================================================================
+-- 11. One-off: leagues ALREADY past due at push time, finalized SILENTLY
+-- ===========================================================================
+-- A not-started league with >= 4 members whose draft_date − 1h has already
+-- passed (abandoned test leagues, typically — the pre-check query in the
+-- header lists them) is finalized here with NO notice. Otherwise the first
+-- cron tick would finalize them through the normal path and push "the draft
+-- order is set" about drafts nobody is going to run. Every finalize after
+-- this migration notifies. Idempotent: a re-run finds nothing still open.
+do $$
+declare
+  r record;
+begin
+  for r in
+    select l.id, l.draft_order_mode
+      from public.leagues l
+     where coalesce(l.draft_status, 'not_started') = 'not_started'
+       and public._draft_order_is_due(l.draft_date)
+       and (select count(*) from public.league_members x where x.league_id = l.id) >= 4
+       and not exists (select 1 from public.league_draft_order_meta m
+                        where m.league_id = l.id and m.state <> 'open')
+  loop
+    perform public._draft_order_materialize(
+      r.id, case when r.draft_order_mode = 'manual' then 'manual_seed' else 'random' end);
+    update public.league_draft_order_meta
+       set state = 'finalized', finalized_at = now()
+     where league_id = r.id and state = 'open';
+  end loop;
+end;
+$$;
 
 -- ===========================================================================
 -- Verify AFTER push (HUMAN ACTION) — never assume the revokes took:

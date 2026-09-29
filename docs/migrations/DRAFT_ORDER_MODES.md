@@ -52,9 +52,15 @@ Randomness lives only in `_draft_order_materialize`, which no API role can execu
   - It is written in the SAME transaction as the finalize, whichever path finalizes it.
   - A partial UNIQUE index makes it exactly once.
   - A late joiner after the finalize gets their own row.
-  - No notice is created when the finalize happens at or after `draft_date` (the start backstop, or a stale league swept after the push).
+  - **Every** finalize notifies, including the start backstop (Orchestrator decision, 2026-09-29).
+  - The one exception: migration §11 finalizes, **silently**, the leagues that are already past due at push time (≥ 4 members). Otherwise the first cron tick would push about abandoned test leagues. The pre-check lists them.
   - SELECT is owner-only.
-- **Push:** the `draft-order-notify` edge function (cron only, `cron-auth.ts` guard). It claims each `pending` row with a conditional UPDATE (status + attempt count), then reads the member's **current** position. The body is built server-side ("Draft order is set", "You pick 4th in &lt;league&gt;."). The copy is provisional, pending the Design Lead.
+- **Push:** the `draft-order-notify` edge function (cron only, `cron-auth.ts` guard). It claims each `pending` row with a conditional UPDATE (status + attempt count), then reads the member's **current** position. The body is built server-side, using the Design Lead's copy verbatim (board @ 4ab3429):
+  - Title: the league name.
+  - Random: "The draft order is set. You pick 4th. The draft starts at 7:00 PM."
+  - Manual: "The commissioner set the draft order. You pick 4th. The draft starts at 7:00 PM."
+  - The time is shown **time only, in America/New_York**, because no per-user time zone is stored (the `lib/marketHours.ts` convention). There is no "ET" label, to keep the copy verbatim, so a non-Eastern user sees Eastern time unlabeled (flagged).
+  - The "starts at" sentence is dropped when the date is TBD or the draft has already started (the start-backstop notice).
   - Delivery states: `pending` → `sending` → `sent` | `no_device` | `skipped` | `failed`. A transient failure retries up to 3 times.
   - Token handling reuses `send-notification`'s logic verbatim via `_shared/push.ts`. Tokens never leave the function, and F8 exposure is not widened.
 

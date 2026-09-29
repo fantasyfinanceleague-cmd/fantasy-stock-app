@@ -75,15 +75,24 @@ Deno.serve(async (req: Request) => {
 
   const counts: Record<string, number> = {};
   const bump = (k: string) => (counts[k] = (counts[k] ?? 0) + 1);
-  const leagueNames = new Map<string, string | null>();
+  interface LeagueInfo { name: string; mode: string; draftDate: string | null; started: boolean }
+  const leagues = new Map<string, LeagueInfo | null>();
 
-  async function leagueName(id: string): Promise<string | null | undefined> {
-    if (leagueNames.has(id)) return leagueNames.get(id);
-    const { data, error } = await admin.from('leagues').select('name').eq('id', id).maybeSingle();
+  async function leagueInfo(id: string): Promise<LeagueInfo | null | undefined> {
+    if (leagues.has(id)) return leagues.get(id);
+    const { data, error } = await admin
+      .from('leagues').select('name, draft_order_mode, draft_date, draft_status').eq('id', id).maybeSingle();
     if (error) return undefined; // lookup failed: not cached, retried next row/tick
-    const name = data ? String(data.name ?? 'your league') : null;
-    leagueNames.set(id, name);
-    return name;
+    const info = data
+      ? {
+        name: String(data.name ?? 'Your league'),
+        mode: String(data.draft_order_mode ?? 'random'),
+        draftDate: data.draft_date ?? null,
+        started: (data.draft_status ?? 'not_started') !== 'not_started',
+      }
+      : null;
+    leagues.set(id, info);
+    return info;
   }
 
   async function deliver(row: NoticeRow): Promise<DeliveryOutcome> {
@@ -92,9 +101,9 @@ Deno.serve(async (req: Request) => {
       .eq('league_id', row.league_id).eq('user_id', row.user_id).maybeSingle();
     if (posErr) return 'lookup_failed';
     if (!pos) return 'not_in_order';
-    const name = await leagueName(row.league_id);
-    if (name === undefined) return 'lookup_failed';
-    if (name === null) return 'not_in_order'; // league deleted since (cascade would normally remove the row)
+    const lg = await leagueInfo(row.league_id);
+    if (lg === undefined) return 'lookup_failed';
+    if (lg === null) return 'not_in_order'; // league deleted since (cascade would normally remove the row)
 
     const { token, enabled, lookupFailed } = await getTargetToken(admin, row.user_id);
     if (lookupFailed) return 'lookup_failed';
@@ -102,7 +111,14 @@ Deno.serve(async (req: Request) => {
 
     const res = await sendExpoPush(
       token,
-      draftOrderSetMessage({ leagueName: name, leagueId: row.league_id, position: Number(pos.position) }),
+      draftOrderSetMessage({
+        leagueName: lg.name,
+        leagueId: row.league_id,
+        mode: lg.mode,
+        position: Number(pos.position),
+        draftDate: lg.draftDate,
+        draftStarted: lg.started,
+      }),
     );
     return res.sent ? 'sent' : res.reason;
   }

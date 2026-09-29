@@ -3,7 +3,7 @@
  *   deno test supabase/functions/draft-order-notify/plan.test.ts
  */
 import { assertEquals } from 'jsr:@std/assert';
-import { draftOrderSetMessage, MAX_PUSH_ATTEMPTS, nextPushStatus, ordinal } from './plan.ts';
+import { draftOrderSetMessage, formatDraftTime, MAX_PUSH_ATTEMPTS, nextPushStatus, ordinal } from './plan.ts';
 
 Deno.test('ordinal: 1st 2nd 3rd 4th, the teens, and the twenties', () => {
   const got = [1, 2, 3, 4, 10, 11, 12, 13, 14, 21, 22, 23, 24, 101, 111, 112, 113].map(ordinal);
@@ -13,12 +13,30 @@ Deno.test('ordinal: 1st 2nd 3rd 4th, the teens, and the twenties', () => {
   ]);
 });
 
-Deno.test('message: built only from server values; deep-links to the draft', () => {
-  assertEquals(draftOrderSetMessage({ leagueName: 'Office League', leagueId: 'L1', position: 4 }), {
-    title: 'Draft order is set',
-    body: 'You pick 4th in Office League.',
+Deno.test('message: Design Lead copy verbatim, random and manual; time only, Eastern', () => {
+  const base = { leagueName: 'Office League', leagueId: 'L1', position: 4, draftStarted: false };
+  // 2026-10-10 23:00Z = 7:00 PM EDT
+  assertEquals(draftOrderSetMessage({ ...base, mode: 'random', draftDate: '2026-10-10T23:00:00Z' }), {
+    title: 'Office League',
+    body: 'The draft order is set. You pick 4th. The draft starts at 7:00 PM.',
     data: { type: 'draft_order_set', screen: 'draft', league_id: 'L1' },
   });
+  assertEquals(
+    draftOrderSetMessage({ ...base, mode: 'manual', position: 1, draftDate: '2026-12-01T00:30:00Z' }).body,
+    'The commissioner set the draft order. You pick 1st. The draft starts at 7:30 PM.', // EST in December
+  );
+});
+
+Deno.test('message: no start time when the date is TBD or the draft already started', () => {
+  const base = { leagueName: 'L', leagueId: 'L1', mode: 'random', position: 2 };
+  assertEquals(draftOrderSetMessage({ ...base, draftDate: null, draftStarted: false }).body,
+    'The draft order is set. You pick 2nd.');
+  assertEquals(draftOrderSetMessage({ ...base, draftDate: '2026-10-10T23:00:00Z', draftStarted: true }).body,
+    'The draft order is set. You pick 2nd.');
+});
+
+Deno.test('formatDraftTime: plain ASCII space before AM/PM', () => {
+  assertEquals(formatDraftTime('2026-10-10T13:05:00Z'), '9:05 AM');
 });
 
 Deno.test('nextPushStatus: definitive outcomes settle at once', () => {
