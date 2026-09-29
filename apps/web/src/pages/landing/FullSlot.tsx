@@ -1,4 +1,4 @@
-import { useEffect, useState, type ComponentProps } from 'react';
+import { Component, useEffect, useState, type ComponentProps, type ReactNode } from 'react';
 import { demoteToEnhanced, tierForced, useTier } from './tier';
 
 // The bridge from the entry bundle to the lazily loaded FULL (WebGL) chunk.
@@ -65,6 +65,23 @@ export function useFullModule(enabled: boolean): FullModule | null {
   return mod;
 }
 
+/** A FULL scene must never take the page down: any render error inside a
+ * scene (three, fiber, drei or ours) demotes the page to ENHANCED — whose
+ * DOM versions are already on screen underneath — instead of reaching the
+ * app's error boundary. */
+class SceneBoundary extends Component<{ name: string; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch(error: unknown) {
+    demoteToEnhanced(`scene "${this.props.name}" threw: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}
+
 /** True once the page is on FULL and the 3D chunk is in hand — the point
  * from which DOM choreography that hands off to a 3D scene (the inside
  * cards launching out of the device) may assume the scene will be there.
@@ -98,7 +115,9 @@ export function FullSlot<N extends SceneName>({
   const Scene = mod.scenes[name] as React.ComponentType<Record<string, unknown>>;
   return (
     <div className={painted ? `lp-3d lp-3d--${name} lp-3d--painted` : `lp-3d lp-3d--${name}`} aria-hidden="true">
-      <Scene {...(props as Record<string, unknown>)} onPainted={() => setPainted(true)} />
+      <SceneBoundary name={name}>
+        <Scene {...(props as Record<string, unknown>)} onPainted={() => setPainted(true)} />
+      </SceneBoundary>
     </div>
   );
 }

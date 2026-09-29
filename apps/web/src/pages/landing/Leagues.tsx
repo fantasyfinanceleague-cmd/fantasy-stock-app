@@ -1,8 +1,9 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { Chyron } from '../../design/game/Chyron';
 import { ScoreDigits } from '../../design/game/ScoreDigits';
 import { leagues } from './copy';
+import { FullSlot } from './FullSlot';
 import { fmtPct } from './Opening';
 import { useEnhanced, useFinePointer, useInView, useLandingMotion, useLoop, usePageVisible, useTilt } from './hooks';
 import { BOARD_FRAMES, LEAGUE, WEEK, WEEKS, boardMoves, boardRanked } from './sampleData';
@@ -19,7 +20,7 @@ const BOARD_FINAL_MS = 7000;
  * the week (FINAL) with records updated — then the week restarts. It stops
  * off-screen or when the tab is hidden and holds on hover and focus.
  * Reduced motion / JS off: the board sits at its first frame, unmoving. */
-function Board() {
+function Board({ onFrame }: { onFrame: (frame: number) => void }) {
   const enhanced = useEnhanced();
   const fine = useFinePointer();
   const { reduced, duration, ease } = useLandingMotion();
@@ -30,6 +31,7 @@ function Board() {
   const visible = usePageVisible();
   const [held, setHeld] = useState(false);
   const frame = useLoop(BOARD_FRAMES.length, BOARD_TICK_MS, enhanced && inView === true && visible && !held, BOARD_FINAL_MS);
+  useEffect(() => onFrame(frame), [frame, onFrame]);
 
   // Rank changes relative to the previous frame (badges, flashes). The
   // frames are fixed data, so this is a pure function of `frame`; frame 0
@@ -104,8 +106,12 @@ function Board() {
 }
 
 export function Leagues() {
+  // The board's live frame, shared with the FULL arena behind it.
+  const [frame, setFrame] = useState(0);
+  const boardSlot = useRef<HTMLDivElement>(null);
   return (
     <Layer tone="dark" id="leagues" className="lp-leagues" labelledBy="lp-leagues-title">
+      <FullSlot name="leagues" frame={frame} board={boardSlot} />
       <div className="lp-wrap lp-leagues__grid">
         <div className="lp-leagues__copy">
           <Reveal>
@@ -127,7 +133,9 @@ export function Leagues() {
             ))}
           </ul>
         </div>
-        <Board />
+        <div ref={boardSlot}>
+          <Board onFrame={setFrame} />
+        </div>
       </div>
     </Layer>
   );

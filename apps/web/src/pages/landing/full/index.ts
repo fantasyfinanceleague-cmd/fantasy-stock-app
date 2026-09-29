@@ -3,8 +3,12 @@
 // only after first paint, only when the capability gate says FULL.
 import HeroScene from './HeroScene';
 import InsideScene from './InsideScene';
+import ChapterScene from './ChapterScene';
+import LeaguesScene from './LeaguesScene';
 
 export const scenes = {
   hero: HeroScene,
   inside: InsideScene,
+  chapter: ChapterScene,
+  leagues: LeaguesScene,
 };

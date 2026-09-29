@@ -5,6 +5,7 @@ import { TugBar } from '../../design/game/TugBar';
 import { Chyron } from '../../design/game/Chyron';
 import { formatMoney } from '../../design/lib/money';
 import { useLandingMotion } from './hooks';
+import type { ChapterState } from './pacing';
 import { fmtPct } from './Opening';
 import {
   BOARD_FRAMES,
@@ -333,7 +334,7 @@ export function DraftScreen({ picks, clock }: { picks: number; clock: number }) 
 
 // ── Compete ──────────────────────────────────────────────────────────────
 
-const LEAD_CHANGE_DAY = WEEK_CLOSES.findIndex((d, i) => i > 0 && d.you > d.opp && WEEK_CLOSES[i - 1].you <= WEEK_CLOSES[i - 1].opp);
+export const LEAD_CHANGE_DAY = WEEK_CLOSES.findIndex((d, i) => i > 0 && d.you > d.opp && WEEK_CLOSES[i - 1].you <= WEEK_CLOSES[i - 1].opp);
 
 export function CompeteScreen({ day, final }: { day: number; final: boolean }) {
   const { reduced, duration, ease } = useLandingMotion();
@@ -448,5 +449,34 @@ export function ClimbScreen({ final }: { final: boolean }) {
         })}
       </ol>
     </PhoneShell>
+  );
+}
+
+// ── The /01 chapter's screen stack ───────────────────────────────────────
+
+/** The three step screens stacked, the active one in front — shared by
+ * the DOM phone (ENHANCED) and the 3D device's live screen (FULL), so both
+ * tiers show exactly the same thing at every scroll position. */
+export function ChapterScreens({ state }: { state: ChapterState }) {
+  const { reduced, duration, ease } = useLandingMotion();
+  const screens = [
+    <DraftScreen key="draft" picks={state.picks} clock={state.clock} />,
+    <CompeteScreen key="compete" day={state.day} final={state.final} />,
+    <ClimbScreen key="climb" final={state.climb} />,
+  ];
+  return (
+    <>
+      {screens.map((screen, i) => (
+        <motion.div
+          key={i}
+          className="lp-phone__layer"
+          initial={false}
+          animate={{ opacity: state.step === i ? 1 : 0, y: state.step === i ? 0 : i < state.step ? -24 : 24 }}
+          transition={reduced ? { duration: 0 } : { duration: duration.base, ease: ease.settle }}
+        >
+          {screen}
+        </motion.div>
+      ))}
+    </>
   );
 }

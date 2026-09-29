@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react';
-import { motion, useMotionValueEvent, useScroll, useSpring } from 'motion/react';
+import { useMotionValueEvent, useScroll, useSpring } from 'motion/react';
 import { how } from './copy';
-import { useEnhanced, useLandingMotion, useMediaQuery } from './hooks';
-import { ClimbScreen, CompeteScreen, DraftScreen, Phone } from './PhoneScreens';
+import { FullSlot } from './FullSlot';
+import { useEnhanced, useMediaQuery } from './hooks';
+import { ChapterScreens, ClimbScreen, CompeteScreen, DraftScreen, Phone } from './PhoneScreens';
 import { Layer, Reveal } from './scroll';
 import { CHAPTER_BEATS, chapterStateAt } from './pacing';
 
@@ -49,9 +50,12 @@ function Steps({ active }: { active: number | null }) {
  * week scrubbing Mon → Fri to a FINAL stamp, your row climbing the table.
  * Native scroll; sticky pins the stage; progress is only read. */
 function Chapter() {
-  const { reduced, duration, ease } = useLandingMotion();
   const trackRef = useRef<HTMLDivElement>(null);
+  const phoneRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: trackRef, offset: ['start start', 'end end'] });
+  // The stage's arrival (the chapter's top from the viewport bottom to the
+  // top): the FULL device dives in over it.
+  const { scrollYProgress: arrive } = useScroll({ target: trackRef, offset: ['start end', 'start start'] });
   const [state, setState] = useState(() => chapterStateAt(0));
 
   // Scrub smoothing (Design Lead: ≈ ScrollTrigger scrub 0.8): the chapter
@@ -73,30 +77,18 @@ function Chapter() {
     );
   });
 
-  const screens = [
-    <DraftScreen key="draft" picks={state.picks} clock={state.clock} />,
-    <CompeteScreen key="compete" day={state.day} final={state.final} />,
-    <ClimbScreen key="climb" final={state.climb} />,
-  ];
-
   return (
     <div className="lp-chapter" ref={trackRef} style={{ height: `calc(${CHAPTER_BEATS.total}svh + 100svh)` }}>
       <div className="lp-chapter__stage">
+        {/* FULL: the 3D device dives in and takes over the phone slot. */}
+        <FullSlot name="chapter" slot={phoneRef} state={state} arrive={arrive} />
         <div className="lp-wrap lp-chapter__grid">
           <Steps active={state.step} />
-          <Phone className="lp-phone--live">
-            {screens.map((screen, i) => (
-              <motion.div
-                key={i}
-                className="lp-phone__layer"
-                initial={false}
-                animate={{ opacity: state.step === i ? 1 : 0, y: state.step === i ? 0 : i < state.step ? -24 : 24 }}
-                transition={reduced ? { duration: 0 } : { duration: duration.base, ease: ease.settle }}
-              >
-                {screen}
-              </motion.div>
-            ))}
-          </Phone>
+          <div ref={phoneRef} className="lp-chapter__slot">
+            <Phone className="lp-phone--live">
+              <ChapterScreens state={state} />
+            </Phone>
+          </div>
         </div>
       </div>
     </div>

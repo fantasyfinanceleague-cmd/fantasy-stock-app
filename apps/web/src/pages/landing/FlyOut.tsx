@@ -55,6 +55,7 @@ export function FlyOut({
       setD({ x: b.x - a.x, y: b.y - a.y });
     };
     measure();
+    if (typeof ResizeObserver === 'undefined') return;
     const ro = new ResizeObserver(measure);
     ro.observe(st);
     return () => ro.disconnect();
