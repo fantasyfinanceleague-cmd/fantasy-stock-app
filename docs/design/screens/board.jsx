@@ -97,7 +97,7 @@
           <div className="b-brand">
             <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="13" width="4.5" height="8" rx="1" fill="#5B6678" /><rect x="9.75" y="9" width="4.5" height="12" rx="1" fill="#5B6678" /><rect x="16.5" y="4" width="4.5" height="17" rx="1" fill="#2860F0" /></svg>
             <span>Stockpile</span>
-            <span className="b-brand__meta">Key screens · v1.2 · 29 Sep 2026</span>
+            <span className="b-brand__meta">App screens · v2 · 29 Sep 2026</span>
           </div>
           <h1>The app, as it will ship.</h1>
           <p className="b-lead">
@@ -114,7 +114,7 @@
             <div><dt>Stakes</dt><dd>$2,000 per slot · 6 slots</dd></div>
           </dl>
           <nav className="b-toc" aria-label="Screens">
-            {[['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
+            {[['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['phases', 'Home phases'], ['game', 'Game'], ['money', 'Trading'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
           </nav>
         </header>
 
@@ -222,6 +222,8 @@
             ask={null}
           />}
         />
+
+        {window.KSInventoryBoard ? <window.KSInventoryBoard /> : null}
 
         <Ledger />
       </main>

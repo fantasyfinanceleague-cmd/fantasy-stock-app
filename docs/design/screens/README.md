@@ -11,6 +11,8 @@ the landing disagree, this folder wins until Giorgio changes it.
 | `screens.jsx` | `HomeScreen`, `MatchupScreen` (live/final), `LeagueScreen` (before/after the re-sort), `DraftScreen` (on the clock / after the pick), `PortfolioScreen` (+ the stock sheet). |
 | `screens.css` | Component styles, `ks-` prefix, only `--sp-*` token values. |
 | `tokens.css` | A copy of `apps/web/src/styles/tokens.css`. |
+| `inventory.jsx` | Step 2: every other screen (3b-1 sign in and first run, 3b-2 Home in every phase, 3c game, 3e trading, 3d web) built from the same blocks (`window.KSKit`). |
+| `inventory-board.jsx` | Board part 2, grouped by the phase that builds each screen. |
 | `board.jsx`, `index.html` | The review board: each screen with its notes, playable motion moments, open questions, and a ledger computed from `data.js`. |
 | `key-screens.html` | Single-file build of the board for publishing (`node docs/design/screens/build.mjs`). |
 

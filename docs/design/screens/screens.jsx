@@ -830,5 +830,7 @@
     );
   }
 
+  // The building blocks, shared with inventory.jsx (step 2's screens).
+  window.KSKit = { Device, LeagueHead, Chip, Icon, ICON, Logo, Scores, Tug, GainChart, WeekRace, ThisWeekCard, SD, margin, $, $s, pct, tone };
   window.KSScreens = { HomeScreen, MatchupScreen, LeagueScreen, DraftScreen, DraftSettingsScreen, PortfolioScreen };
 })();

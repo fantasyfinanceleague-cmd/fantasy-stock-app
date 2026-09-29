@@ -72,6 +72,19 @@
   .b-table tr:first-child th, .b-table tr:first-child td { border-top: 0; }
   .b-table th { white-space: nowrap; font-weight: 800; }
   .b-changes { display: grid; gap: 8px; max-width: 80ch; padding-left: 22px; }
+  .b-part { padding-block: 72px 8px; display: grid; gap: 10px; }
+  .b-part__eyebrow { font-size: 12px; font-weight: 800; font-stretch: 125%; letter-spacing: .08em; text-transform: uppercase; color: var(--sp-color-brand); }
+  .b-part h2 { margin: 0; font-weight: 900; font-stretch: 62%; font-size: clamp(44px, 7vw, 88px); line-height: .95; word-spacing: .12em; }
+  .b-part p { margin: 0; max-width: 70ch; color: var(--sp-color-text-secondary); font-size: 17px; }
+  .b-sec__n--code { width: auto; padding: 0 12px; font-size: 18px; font-stretch: 100%; }
+  .b-inv__notes { margin: 0 0 28px; padding-left: 18px; display: grid; gap: 6px; max-width: 90ch; }
+  .b-inv__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 36px 28px; align-items: start; }
+  .b-fig--inv { flex: none; max-width: 402px; }
+  .b-fig--inv figcaption { margin-top: 16px; display: grid; gap: 2px; }
+  .b-fig--inv figcaption b { color: var(--sp-color-text-primary); }
+  .b-fig--inv figcaption span { font-weight: 500; }
+  .b-inv__wide { grid-column: 1 / -1; display: grid; gap: 36px; }
+  .b-play--sm { height: 28px; font-size: 12px; margin-left: 8px; vertical-align: middle; }
   @media (max-width: 1100px) {
     .b-sec__grid, .b-sec__grid--two { grid-template-columns: 1fr; gap: 32px; }
   }
@@ -90,5 +103,9 @@
 <script src="data.js"></script>
 <!-- @inline screens.jsx -->
 <script type="text/babel" data-presets="react" src="screens.jsx"></script>
+<!-- @inline inventory.jsx -->
+<script type="text/babel" data-presets="react" src="inventory.jsx"></script>
+<!-- @inline inventory-board.jsx -->
+<script type="text/babel" data-presets="react" src="inventory-board.jsx"></script>
 <!-- @inline board.jsx -->
 <script type="text/babel" data-presets="react" src="board.jsx"></script>
