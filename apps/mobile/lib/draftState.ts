@@ -72,7 +72,8 @@ export type StartBlockerCode =
   | 'no_stake_mode'
   | 'no_draft_date'
   | 'draft_date_not_reached'
-  | 'not_enough_members';
+  | 'not_enough_members'
+  | 'playoff_teams_exceeds_members';
 
 export interface StartBlocker {
   code: StartBlockerCode;
@@ -80,6 +81,8 @@ export interface StartBlocker {
   draftDate?: string;
   have?: number;
   need?: number;
+  playoffTeams?: number;
+  members?: number;
 }
 
 /** Human copy for one draft-control start blocker. Mirrors
@@ -104,6 +107,13 @@ export function describeStartBlocker(b: StartBlocker): string {
       const need = b.need ?? 0;
       const more = Math.max(need - have, 0);
       return `Need ${more} more member${more === 1 ? '' : 's'} to start (have ${have}, need ${need}).`;
+    }
+    case 'playoff_teams_exceeds_members': {
+      // Playoff spots are fixed at league creation (read-only in League
+      // Settings), so the fix is reaching that many managers.
+      const spots = b.playoffTeams ?? 0;
+      const members = b.members ?? 0;
+      return `This league has ${spots} playoff spots, so it needs at least ${spots} managers to start (have ${members}).`;
     }
     default:
       return 'The draft cannot start yet.';

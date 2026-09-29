@@ -2,70 +2,42 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "e73602e3c5d44ecedd8c0ff7eaad7b1cd4db0675",
-    "commitShort": "e73602e",
+    "commit": "9634e6366fed000f85dde356762165a97e7fa5b1",
+    "commitShort": "9634e63",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "fix/unified-league-ranking",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/app/(tabs)/league.tsx"
+        "path": "apps/mobile/lib/draftState.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/lib/weekStatus.ts"
+        "path": "apps/mobile/tests-deno/draftState.test.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/tests-deno/weekStatus.test.ts"
+        "path": "supabase/functions/draft-control/index.ts"
       },
       {
         "code": "M",
-        "path": "apps/web/src/utils/weekStatus.js"
+        "path": "supabase/functions/draft-control/rules.test.ts"
       },
       {
         "code": "M",
-        "path": "supabase/functions/process-week-results/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/process-week-results/playoff-progression.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/process-week-results/playoff-progression.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/process-week-results/season-transition.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/process-week-results/season-transition.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/migrations/20261011000000_league_standings_ranked.sql"
-      },
-      {
-        "code": "M",
-        "path": "supabase/migrations/20261011000003_start_league_playoffs.sql"
-      },
-      {
-        "code": "??",
-        "path": "supabase/migrations/20261011000004_playoff_bracket_unique_backstop.sql"
+        "path": "supabase/functions/draft-control/rules.ts"
       }
     ],
-    "timestamp": "2026-09-29T19:42:51Z",
-    "sourceHash": "sha256:cca06aad782d8ec6b63446540e2fdedc73086440dac03b0dc0558a8cc8c7fe81",
+    "timestamp": "2026-09-29T19:49:39Z",
+    "sourceHash": "sha256:76a94b329a34ce445591ec8ac0c8e343dda4c635f37d4e0c02fe0ad0f56bffc4",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1166.8,
+    "ageHours": 1166.9,
     "ageDays": 48.6,
     "staleAfterDays": 14,
     "stale": true,
@@ -360,7 +332,7 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 254
+        "lines": 256
       },
       "db": null,
       "declared": null,
@@ -4650,7 +4622,7 @@
       "payload": ".from('league_members').insert()",
       "columns": [],
       "callSites": [
-        "supabase/functions/draft-control/index.ts:196"
+        "supabase/functions/draft-control/index.ts:198"
       ]
     },
     {
@@ -4660,14 +4632,14 @@
       "from": "fn.draft-control",
       "to": "tbl.leagues",
       "protocol": "postgrest-select",
-      "payload": ".from('leagues').select('id, commissioner_id, draft_status, stake_mode, draft_date, num_participants')",
+      "payload": ".from('leagues').select('id, commissioner_id, draft_status, stake_mode, draft_date, num_participants, league_type, playoff_teams')",
       "columns": [
         "draft_status",
-        "id, commissioner_id, draft_status, stake_mode, draft_date, num_participants"
+        "id, commissioner_id, draft_status, stake_mode, draft_date, num_participants, league_type, playoff_teams"
       ],
       "callSites": [
         "supabase/functions/draft-control/index.ts:139",
-        "supabase/functions/draft-control/index.ts:239"
+        "supabase/functions/draft-control/index.ts:241"
       ]
     },
     {
@@ -4680,7 +4652,7 @@
       "payload": ".from('leagues').update()",
       "columns": [],
       "callSites": [
-        "supabase/functions/draft-control/index.ts:226"
+        "supabase/functions/draft-control/index.ts:228"
       ]
     },
     {
@@ -10500,9 +10472,9 @@
       "supabase/functions/_shared/draft-write.ts:97 -> trades.select",
       "supabase/functions/draft-control/index.ts:139 -> leagues.select",
       "supabase/functions/draft-control/index.ts:147 -> league_members.select",
-      "supabase/functions/draft-control/index.ts:196 -> league_members.insert",
-      "supabase/functions/draft-control/index.ts:226 -> leagues.update",
-      "supabase/functions/draft-control/index.ts:239 -> leagues.select",
+      "supabase/functions/draft-control/index.ts:198 -> league_members.insert",
+      "supabase/functions/draft-control/index.ts:228 -> leagues.update",
+      "supabase/functions/draft-control/index.ts:241 -> leagues.select",
       "supabase/functions/enrich-symbols/index.ts:183 -> symbols.select",
       "supabase/functions/enrich-symbols/index.ts:196 -> symbols.select",
       "supabase/functions/enrich-symbols/index.ts:211 -> category_rules.select",
