@@ -2,38 +2,18 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "0d4a2fa46b4b93d5fb1eeca42e9f6175d6f7bdc7",
-    "commitShort": "0d4a2fa",
+    "commit": "d1dd52e637efb25c01c02b2d3821209bcdcb5dca",
+    "commitShort": "d1dd52e",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "fix/snapshot-bots-and-skip-rows",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "supabase/functions/_shared/snapshot-holdings.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/_shared/snapshot-holdings.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/snapshot-week-end/close.test.ts"
-      },
-      {
-        "code": "M",
         "path": "supabase/functions/snapshot-week-end/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/snapshot-week-start/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/snapshot-week-start/plan.test.ts"
       }
     ],
-    "timestamp": "2026-09-29T16:54:18Z",
+    "timestamp": "2026-09-29T16:58:03Z",
     "sourceHash": "sha256:f8bc6078b889000cbc4879bf5cdfd85358b00024e0367733a5916860da7470ba",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
@@ -41,7 +21,7 @@
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1164,
+    "ageHours": 1164.1,
     "ageDays": 48.5,
     "staleAfterDays": 14,
     "stale": true,

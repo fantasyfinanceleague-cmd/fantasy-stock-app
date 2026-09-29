@@ -234,7 +234,7 @@ Deno.serve(async (req) => {
 
     if (leaguesErr) {
       console.error('Error fetching leagues:', leaguesErr);
-      throw new Error('Failed to fetch leagues');
+      throw new Error(`Failed to fetch leagues: ${leaguesErr.message ?? leaguesErr}`);
     }
 
     if (!leagues || leagues.length === 0) {
