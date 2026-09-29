@@ -19,7 +19,7 @@
  */
 
 import { assertEquals } from 'jsr:@std/assert';
-import { matchupParticipants, snapshotHoldings } from './snapshot-holdings.ts';
+import { checkSnapshotReads, matchupParticipants, snapshotHoldings } from './snapshot-holdings.ts';
 
 const HUMAN = '11111111-1111-1111-1111-111111111111';
 const HUMAN2 = '22222222-2222-2222-2222-222222222222';
@@ -150,4 +150,53 @@ Deno.test('snapshotHoldings: output is sorted by symbol (deterministic row order
     { user_id: HUMAN, symbol: 'KO', quantity: 1 },
   ];
   assertEquals(snapshotHoldings(HUMAN, drafts, []).map((h) => h.symbol), ['AAPL', 'KO', 'ZM']);
+});
+
+// ── checkSnapshotReads ───────────────────────────────────────────────────────
+// supabase-js resolves a failed read to { data: null, error } — it does not
+// throw. The handlers used to default `data || []`, so a transient failure on
+// drafts/trades/matchups read as "everyone holds nothing" -> 'none_expected' /
+// 'complete' -> nothing written, status success, and every retry skipped too.
+
+const ok = (data: unknown[]) => ({ data, error: null });
+const fail = (message = 'boom') => ({ data: null, error: { message } });
+
+Deno.test('checkSnapshotReads: all reads succeeded -> ok with the rows', () => {
+  const r = checkSnapshotReads({ drafts: ok([{ a: 1 }]), trades: ok([]) });
+  assertEquals(r, { ok: true, rows: { drafts: [{ a: 1 }], trades: [] } });
+});
+
+Deno.test('checkSnapshotReads: an EMPTY result is a legitimate success, not a failure', () => {
+  // A league with no trades is normal; only an error (or a missing array) is not.
+  const r = checkSnapshotReads({ matchups: ok([]), drafts: ok([]), trades: ok([]) });
+  assertEquals(r.ok, true);
+});
+
+Deno.test('checkSnapshotReads: ANY failed read fails the whole set, naming each failure', () => {
+  const r = checkSnapshotReads({
+    matchups: ok([{}]),
+    drafts: fail('timeout'),
+    trades: ok([]),
+    snapshots: fail('reset'),
+  });
+  assertEquals(r.ok, false);
+  if (!r.ok) {
+    assertEquals(r.failed.map((f) => f.read), ['drafts', 'snapshots']);
+    assertEquals(r.failed.map((f) => f.message), ['timeout', 'reset']);
+    // No rows are handed back on failure, so a caller cannot fall through to
+    // coverage classification with defaulted empty arrays.
+    assertEquals('rows' in r, false);
+  }
+});
+
+Deno.test('checkSnapshotReads: data null with NO error is still a failure (never defaulted to [])', () => {
+  const r = checkSnapshotReads({ drafts: { data: null, error: null } });
+  assertEquals(r.ok, false);
+  if (!r.ok) assertEquals(r.failed, [{ read: 'drafts', message: 'no data returned' }]);
+});
+
+Deno.test('checkSnapshotReads: a non-object error still produces a readable message', () => {
+  const r = checkSnapshotReads({ trades: { data: null, error: 'socket hang up' } });
+  assertEquals(r.ok, false);
+  if (!r.ok) assertEquals(r.failed, [{ read: 'trades', message: 'socket hang up' }]);
 });

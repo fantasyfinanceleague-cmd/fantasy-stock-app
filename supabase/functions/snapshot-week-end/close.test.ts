@@ -556,3 +556,17 @@ Deno.test('deploy transition: a bot with NO Monday row is unbased (not written),
   assertEquals(work.inserts, []);
   assertEquals(work.unbasedPositions, [{ userId: BOT, symbol: 'MSFT' }]);
 });
+
+Deno.test('why reads are gated BEFORE coverage: a defaulted matchups/drafts read silently drops mid-week buys', () => {
+  // With matchups/drafts/trades defaulted to [], every participant looks empty:
+  // the Monday rows still close (KIND 1) but a mid-week buy (KIND 2) vanishes,
+  // and the league-week then reads 'complete' forever. checkSnapshotReads in
+  // index.ts must pass first — pinned in _shared/snapshot-holdings.test.ts.
+  const existing = [row('r1', HUMAN_A, 'AAPL', 1, 200, 210)];
+  const failedReads = holdingsFor([], []);
+  assertEquals(classifyCloseCoverage(failedReads, existing), 'complete');
+
+  // Same league with its inputs actually read: HUMAN_A bought TSLA mid-week.
+  const real = new Map([[HUMAN_A, [{ symbol: 'AAPL', quantity: 1 }, { symbol: 'TSLA', quantity: 2 }]]]);
+  assertEquals(classifyCloseCoverage(real, existing), 'incomplete');
+});

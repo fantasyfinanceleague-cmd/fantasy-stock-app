@@ -121,3 +121,59 @@ export function snapshotHoldings(
     .map(([symbol, quantity]) => ({ symbol, quantity }))
     .sort((a, b) => (a.symbol < b.symbol ? -1 : a.symbol > b.symbol ? 1 : 0));
 }
+
+// ── Read guard ───────────────────────────────────────────────────────────────
+
+/** A supabase-js read result, as resolved (it does NOT throw on a DB error). */
+export interface SnapshotRead {
+  data: unknown[] | null;
+  error: unknown;
+}
+
+export type SnapshotReadsCheck<K extends string> =
+  // deno-lint-ignore no-explicit-any
+  | { ok: true; rows: Record<K, any[]> }
+  | { ok: false; failed: Array<{ read: K; message: string }> };
+
+/**
+ * Gate every read that feeds coverage. Returns the rows ONLY when every read
+ * succeeded; otherwise returns which reads failed and NO rows.
+ *
+ * WHY: supabase-js resolves a failed read to { data: null, error } rather than
+ * throwing, and both handlers used to default `data || []`. A transient failure
+ * on drafts/trades/matchups therefore read as "every participant holds nothing":
+ * classifyCoverage / classifyCloseCoverage said 'none_expected', nothing was
+ * written, the run reported success, and every retry saw the same "nothing to
+ * do". A DB blip on Monday became a permanent, silent zero-snapshot week — the
+ * partial-state trap and the success-signals-lie pattern at once. Worse, a
+ * failed week_snapshots read in week-start made every participant look
+ * uncovered, so a Tuesday (or post-Friday) run would re-upsert everyone and
+ * overwrite Monday's week_start_price.
+ *
+ * Handing back no rows on failure means a caller cannot reach coverage
+ * classification with defaulted arrays; the only safe move is to treat the
+ * league as failed for this run and let the existing retry path re-run it.
+ * An EMPTY array is a legitimate success (no trades is normal); `data: null`
+ * without an error is treated as a failure rather than defaulted.
+ */
+export function checkSnapshotReads<K extends string>(
+  reads: Record<K, SnapshotRead>,
+): SnapshotReadsCheck<K> {
+  const failed: Array<{ read: K; message: string }> = [];
+  // deno-lint-ignore no-explicit-any
+  const rows = {} as Record<K, any[]>;
+  for (const read of Object.keys(reads) as K[]) {
+    const { data, error } = reads[read];
+    if (error != null) {
+      const message = typeof error === 'object' && error !== null && 'message' in error
+        ? String((error as { message: unknown }).message)
+        : String(error);
+      failed.push({ read, message });
+    } else if (!Array.isArray(data)) {
+      failed.push({ read, message: 'no data returned' });
+    } else {
+      rows[read] = data;
+    }
+  }
+  return failed.length > 0 ? { ok: false, failed } : { ok: true, rows };
+}

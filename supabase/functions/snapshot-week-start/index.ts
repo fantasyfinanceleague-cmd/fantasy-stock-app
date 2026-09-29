@@ -6,7 +6,7 @@ import {
   buildPricedRows,
   type Holding,
 } from './plan.ts';
-import { matchupParticipants, snapshotHoldings } from '../_shared/snapshot-holdings.ts';
+import { checkSnapshotReads, matchupParticipants, snapshotHoldings } from '../_shared/snapshot-holdings.ts';
 
 /**
  * Snapshot Week Start Prices
@@ -284,8 +284,11 @@ Deno.serve(async (req) => {
       .not('current_week', 'is', null);
 
     if (leaguesErr) {
+      // Throw into the catch below so this run gets a terminal status and a
+      // retry. Returning 500 here used to leave cron_job_status stranded at
+      // 'running' with no retry scheduled.
       console.error('Error fetching leagues:', leaguesErr);
-      return json({ error: 'Failed to fetch leagues' }, 500);
+      throw new Error(`Failed to fetch leagues: ${leaguesErr.message ?? leaguesErr}`);
     }
 
     if (!leagues || leagues.length === 0) {
@@ -297,10 +300,28 @@ Deno.serve(async (req) => {
 
     let totalSnapshots = 0;
     const results: any[] = [];
-    // Set when a league is ABORTED for a missing price this run (per-league
-    // all-or-nothing). Drives a single post-loop retry so the gap self-heals,
-    // without throwing (which would abort the leagues that DID snapshot).
+    // Set when a league is ABORTED this run — a missing price (per-league
+    // all-or-nothing) or a failed read. Drives a single post-loop retry so the
+    // gap self-heals, without throwing (which would abort the leagues that DID
+    // snapshot).
     let anyIncomplete = false;
+
+    // A failed read ABORTS the league for this run, exactly like a missing price:
+    // never fall through to coverage with defaulted empty arrays (see
+    // checkSnapshotReads in ../_shared/snapshot-holdings.ts).
+    const abortOnFailedReads = (
+      leagueId: string,
+      week: number,
+      failed: Array<{ read: string; message: string }>,
+    ) => {
+      anyIncomplete = true;
+      console.error(
+        `ABORT league ${leagueId} week ${week}: read failed — ` +
+        failed.map((f) => `${f.read}: ${f.message}`).join('; ') +
+        ` — refusing to classify coverage on missing inputs, will retry.`
+      );
+      results.push({ leagueId, week, snapshots: 0, incomplete: true, failedReads: failed.map((f) => f.read) });
+    };
 
     for (const league of leagues) {
       const leagueId = league.id;
@@ -315,13 +336,20 @@ Deno.serve(async (req) => {
       // ./plan.ts.
 
       // 2. Get all matchups for current week to find all users
-      const { data: matchups } = await supabase
-        .from('matchups')
-        .select('team1_user_id, team2_user_id')
-        .eq('league_id', leagueId)
-        .eq('week_number', currentWeek);
+      const matchupsRead = checkSnapshotReads({
+        matchups: await supabase
+          .from('matchups')
+          .select('team1_user_id, team2_user_id')
+          .eq('league_id', leagueId)
+          .eq('week_number', currentWeek),
+      });
+      if (!matchupsRead.ok) {
+        abortOnFailedReads(leagueId, currentWeek, matchupsRead.failed);
+        continue;
+      }
+      const { matchups } = matchupsRead.rows;
 
-      if (!matchups || matchups.length === 0) {
+      if (matchups.length === 0) {
         console.log(`No matchups found for league ${leagueId} week ${currentWeek}`);
         continue;
       }
@@ -330,22 +358,36 @@ Deno.serve(async (req) => {
       // excluding them left every bot matchup unscoreable from week 2 on.
       const userIds = matchupParticipants(matchups);
 
-      // 3. Fetch drafts for this league
-      const { data: drafts } = await supabase
-        .from('drafts')
-        .select('user_id, symbol, quantity')
-        .eq('league_id', leagueId);
-
-      // 4. Fetch trades for this league
-      const { data: trades } = await supabase
-        .from('trades')
-        .select('user_id, symbol, action, quantity')
-        .eq('league_id', leagueId);
+      // 3–4. Fetch drafts + trades (holdings) and this week's existing snapshots
+      //      (coverage). ALL must succeed before coverage is classified: a failed
+      //      drafts/trades read would make everyone look empty ('none_expected',
+      //      permanently skipped), and a failed snapshots read would make
+      //      everyone look uncovered (re-upserting Monday's rows at today's price).
+      const inputs = checkSnapshotReads({
+        drafts: await supabase
+          .from('drafts')
+          .select('user_id, symbol, quantity')
+          .eq('league_id', leagueId),
+        trades: await supabase
+          .from('trades')
+          .select('user_id, symbol, action, quantity')
+          .eq('league_id', leagueId),
+        existingSnapshots: await supabase
+          .from('week_snapshots')
+          .select('user_id, week_end_price')
+          .eq('league_id', leagueId)
+          .eq('week_number', currentWeek),
+      });
+      if (!inputs.ok) {
+        abortOnFailedReads(leagueId, currentWeek, inputs.failed);
+        continue;
+      }
+      const { drafts, trades, existingSnapshots } = inputs.rows;
 
       // 5. Calculate holdings for each user
       const userHoldings = new Map<string, Holding[]>();
       for (const userId of userIds) {
-        userHoldings.set(userId, snapshotHoldings(userId, drafts || [], trades || []));
+        userHoldings.set(userId, snapshotHoldings(userId, drafts, trades));
       }
 
       // ── Coverage gate (replaces the old existence-only skip) ────────────────
@@ -355,21 +397,16 @@ Deno.serve(async (req) => {
       // than being locked out. Completeness is per-participant (see ./plan.ts) so a
       // Monday-complete league is a no-op on Tuesday even if someone traded in
       // between. Done BEFORE the Alpaca fetch so a complete league costs no price call.
-      const { data: existingSnapshots } = await supabase
-        .from('week_snapshots')
-        .select('user_id, week_end_price')
-        .eq('league_id', leagueId)
-        .eq('week_number', currentWeek);
-
+      // (existingSnapshots was read — and error-checked — with drafts/trades above.)
       const coveredUserIds = new Set<string>(
-        (existingSnapshots ?? []).map((r: any) => r.user_id)
+        existingSnapshots.map((r: any) => r.user_id)
       );
 
       // Guard: if ANY row already carries a Friday close, snapshot-week-end has run
       // and this week may already be scored — re-snapshotting week-START prices now
       // would pair a fresh start price with an old end price. Treat as complete.
       // Mirrors snapshot-week-end's own `alreadyProcessed` guard.
-      const alreadyEndPriced = (existingSnapshots ?? []).some((r: any) => r.week_end_price != null);
+      const alreadyEndPriced = existingSnapshots.some((r: any) => r.week_end_price != null);
       if (alreadyEndPriced) {
         console.log(`League ${leagueId} week ${currentWeek} already has week_end_price(s) — week is being/has been scored, skipping week-start snapshot`);
         results.push({ leagueId, week: currentWeek, users: userIds.size, snapshots: coveredUserIds.size, skipped: 'already_end_priced' });
@@ -473,9 +510,9 @@ Deno.serve(async (req) => {
     // skips the complete ones on the next pass).
     if (anyIncomplete) {
       if (retryAttempt < MAX_RETRIES) {
-        console.log(`One or more leagues incomplete (missing prices); scheduling retry ${retryAttempt + 1}`);
+        console.log(`One or more leagues incomplete (missing prices or failed reads); scheduling retry ${retryAttempt + 1}`);
         await scheduleRetry(supabase, JOB_NAME, retryAttempt + 1);
-        await updateJobStatus(supabase, JOB_NAME, 'retrying', retryAttempt, 'Incomplete: missing prices for some holdings');
+        await updateJobStatus(supabase, JOB_NAME, 'retrying', retryAttempt, 'Incomplete: missing prices or failed reads for some leagues');
         return json({
           message: 'Snapshot incomplete — retry scheduled',
           totalSnapshots,
@@ -489,7 +526,7 @@ Deno.serve(async (req) => {
       // the downstream per-user gate is the backstop. Report failed for ops
       // visibility, but do NOT throw (the leagues that snapshotted are valid).
       console.error(`Max retries (${MAX_RETRIES}) reached; some leagues still incomplete (likely unpriceable/delisted symbols).`);
-      await updateJobStatus(supabase, JOB_NAME, 'failed', retryAttempt, 'Incomplete after max retries: unpriceable holdings');
+      await updateJobStatus(supabase, JOB_NAME, 'failed', retryAttempt, 'Incomplete after max retries: unpriceable holdings or failed reads');
       return json({
         message: 'Snapshot incomplete after max retries',
         totalSnapshots,

@@ -338,3 +338,21 @@ Deno.test('mixed bot+human: every holder covered (skip-only bot has none) -> com
   );
   assertEquals(classifyCoverage(uh, new Set([HUMAN_A, HUMAN_B, BOT])), 'complete');
 });
+
+Deno.test('why reads are gated BEFORE coverage: defaulted-empty inputs are indistinguishable from "nothing held"', () => {
+  // classifyCoverage cannot tell "drafts read failed -> []" from "nobody holds
+  // anything". The old `drafts || []` therefore turned a DB blip into
+  // 'none_expected' (skip, success, every retry skips too), and a defaulted
+  // week_snapshots read made covered users look uncovered (re-upsert at today's
+  // price). The fix is ordering in index.ts: checkSnapshotReads must pass
+  // before any of this runs — pinned in _shared/snapshot-holdings.test.ts.
+  const failedDraftsRead = holdingsFor([{ team1_user_id: HUMAN_A, team2_user_id: BOT }], []);
+  assertEquals(classifyCoverage(failedDraftsRead, new Set()), 'none_expected');
+
+  const real = holdingsFor(
+    [{ team1_user_id: HUMAN_A, team2_user_id: null }],
+    [{ user_id: HUMAN_A, symbol: 'AAPL', quantity: 1 }],
+  );
+  const failedSnapshotsRead = new Set<string>(); // really: HUMAN_A is covered
+  assertEquals([...selectMissingHoldings(real, failedSnapshotsRead).keys()], [HUMAN_A]);
+});
