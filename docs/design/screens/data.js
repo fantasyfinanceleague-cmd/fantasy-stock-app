@@ -288,7 +288,7 @@
   })();
 
   // Home shows ONE league: the one picked in the league pill (Giorgio,
-  // 2026-09-29). Other leagues appear only as a small switcher row.
+  // 2026-09-29). Other leagues live only in the pill ("+N") → league sheet.
   const OTHER_LEAGUES = [
     { name: 'Friday Night Stocks', phase: 'live_open', status: 'Week 2 · Live', rank: '3rd of 8', record: '1–0' },
     { name: 'Serie A Traders', phase: 'pre_draft', status: 'Draft Sat 7:00 PM', rank: null, record: null },

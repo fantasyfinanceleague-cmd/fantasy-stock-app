@@ -31,33 +31,6 @@
     );
   }
 
-  /** Like Fit, but for a full-length device whose height is its content. */
-  function FitFull({ children, caption, note }) {
-    const ref = useRef(null);
-    const inner = useRef(null);
-    useLayoutEffect(() => {
-      // Size imperatively: the content height is only known after layout.
-      const fit = () => {
-        const k = Math.min(1, ref.current.clientWidth / 402);
-        inner.current.style.transform = `scale(${k})`;
-        ref.current.style.height = `${inner.current.offsetHeight * k}px`;
-      };
-      const ro = new ResizeObserver(fit);
-      ro.observe(ref.current);
-      ro.observe(inner.current.firstChild);
-      fit();
-      return () => ro.disconnect();
-    }, []);
-    return (
-      <figure className="b-fig">
-        <div className="b-fit" ref={ref}>
-          <div className="b-fit__in" ref={inner}>{children}</div>
-        </div>
-        <figcaption><b style={{ color: 'var(--c-text)', fontSize: 15 }}>{caption}</b><br /><span style={{ fontWeight: 500 }}>{note}</span></figcaption>
-      </figure>
-    );
-  }
-
   function Play({ label, onPlay, playing }) {
     return (
       <button type="button" className="b-play" onClick={onPlay} aria-pressed={playing}>
@@ -305,7 +278,7 @@
             can only show what the app will actually look like. Every screen tells one story:
             the same league, the same week, and numbers that add up.
           </p>
-          <p className="b-changed"><b>New in v3:</b> one design in two complete themes, Light and Dark (switch at the top right). <b>From your earlier answers:</b> Home shows one league at a time (switch with the league pill); the standings column is "Season gain"; the draft pick clock defaults to 60 seconds and the commissioner can set 30–90; dollars decide matchups, with percent as the tiebreak; and a sold slot reinvests exactly its sale proceeds.</p>
+          <p className="b-changed"><b>New in v3:</b> one design in two complete themes, Light and Dark (switch at the top right). <b>From your earlier answers:</b> Home shows one league at a time (switch with the league pill, which shows "+2" more leagues; no list on Home); the standings column is "Season gain"; the draft pick clock defaults to 60 seconds and the commissioner can set 30–90; dollars decide matchups, with percent as the tiebreak; and a sold slot reinvests exactly its sale proceeds.</p>
           <dl className="b-canon">
             <div><dt>League</dt><dd>{K.LEAGUE.name} · 6 managers</dd></div>
             <div><dt>Moment</dt><dd>Week 6 of 14 · Thu 1:37 PM ET</dd></div>
@@ -313,7 +286,7 @@
             <div><dt>Stakes</dt><dd>$2,000 per slot · 6 slots</dd></div>
           </dl>
           <nav className="b-toc" aria-label="Screens">
-            {[['themes', 'Themes'], ['home', 'Home'], ['home-concepts', 'Other leagues: A vs B'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['phases', 'Home phases'], ['game', 'Game'], ['money', 'Trading'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
+            {[['themes', 'Themes'], ['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['phases', 'Home phases'], ['game', 'Game'], ['money', 'Trading'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
           </nav>
         </header>
 
@@ -328,31 +301,17 @@
               <>Your team in this league: value {$(K.HOME.value)}, gain since the draft {$s(K.HOME.gain)}, today {$s(K.HOME.today)}, and rank and record (2nd of 6, {K.HOME.record}).</>,
               <>This week's matchup comes first: the live scoreboard card, with the lead in the metric that decides the matchup.</>,
               <>The season chart plots gain since the draft against $0, with week ticks and each week's result (W/L) underneath. This week's rise on the chart equals this week's matchup score.</>,
-              <>Top of the standings with you highlighted, then your other leagues as a small switcher row. The avatar opens Profile.</>,
+              <>Top of the standings with you highlighted. The avatar opens Profile.</>,
+              <><b>Other leagues</b> (your call: Concept B, pill only): there is no list on Home. The league pill shows "+2" (two more leagues) on every tab and opens the league sheet with every league grouped by phase.</>,
             ]}
             motion={<>
               <li><Play label="Open Home" playing={homeRun} onPlay={() => setHome(true)} /> The week card rises in (slow, 380ms); the season line draws on (feature, 700ms).</li>
               <li>Switching league in the pill: the sheet closes (spring.snappy) and Home crossfades to the new league (quick, 160ms). Numbers roll only where the value changed.</li>
             </>}
             reduced="the line and cards appear in place; digits swap without rolling."
-            ask={['Other leagues on Home: compare Concept A and Concept B just below.']}
+            ask={null}
           />}
         />
-
-        <section className="b-sec" id="home-concepts" aria-labelledby="home-concepts-h">
-          <header className="b-sec__head">
-            <span className="b-sec__n">?</span>
-            <div>
-              <h2 id="home-concepts-h">Your call: other leagues on Home</h2>
-              <p className="b-job">The same Home (Stock Scudetto, Week 6, same numbers), full length, in two versions. Tap the switch at the top right to compare them in Dark too.</p>
-            </div>
-          </header>
-          <div className="b-concepts">
-            <FitFull caption="Concept A · with the row" note='A "Your other leagues · Tap to switch" list at the bottom of Home. Other leagues are one scroll away; the pill still switches too.'><S.HomeScreen concept="A" full /></FitFull>
-            <FitFull caption="Concept B · pill only" note='No list on Home. The pill shows "+2" (two more leagues) so it reads as a switcher; tapping it opens the league sheet with every league grouped by phase.'><S.HomeScreen concept="B" full /></FitFull>
-          </div>
-          <p className="b-reduced" style={{ maxWidth: '70ch' }}>Our lean: <b>B</b>. Home stays about this league only (your call from round 1), the pill is always in the same place on every tab, and the "+2" hint removes the discoverability risk. A is friendlier for someone in many leagues who wants their status at a glance.</p>
-        </section>
 
         <Section
           id="matchup" n="2" name="Matchup" job="Am I winning this week, by how much, and why?"

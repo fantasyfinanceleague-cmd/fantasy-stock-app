@@ -74,7 +74,7 @@
   function LeagueHead({ chip, sub }) {
     return (
       <div className="ks-head">
-        <span className="ks-pill"><span>{K.LEAGUE.name}</span><Icon d={ICON.chevron} size={14} width={2.6} /></span>
+        <span className="ks-pill"><span>{K.LEAGUE.name}</span><span className="ks-pill__more" aria-label={`${K.OTHER_LEAGUES.length} more leagues`}>+{K.OTHER_LEAGUES.length}</span><Icon d={ICON.chevron} size={14} width={2.6} /></span>
         {chip}
         {sub}
       </div>
@@ -252,18 +252,19 @@
 
   /** Home = the league chosen in the pill. Switching leagues swaps ALL of
    * it (Giorgio, 2026-09-29): no cross-league totals. */
-  /** concept: 'A' = the "Your other leagues" row at the bottom (default);
-   * 'B' = pill only, with a "+2" hint on the pill. `full` renders the whole
-   * scroll length (for side-by-side comparison). */
-  function HomeScreen({ run, concept = 'A', full }) {
+  /** Home = the league chosen in the pill (Giorgio, 2026-09-29: Concept B,
+   * pill only). Other leagues are reached through the pill, which shows
+   * "+N" more leagues; there is no list on Home. `full` renders the whole
+   * scroll length. */
+  function HomeScreen({ run, full }) {
     const H = K.HOME, L = K.MATCHUP.live;
     const near = K.STANDINGS_BEFORE.slice(0, 3);
     const more = K.OTHER_LEAGUES.length;
     return (
-      <Device tab="home" label={`Home screen, concept ${concept}`} full={full}>
+      <Device tab="home" label="Home screen" full={full}>
         <div className="ks-head">
           <span className="ks-pill"><span>{K.LEAGUE.name}</span>
-            {concept === 'B' ? <span className="ks-pill__more" aria-label={`${more} more leagues`}>+{more}</span> : null}
+            <span className="ks-pill__more" aria-label={`${more} more leagues`}>+{more}</span>
             <Icon d={ICON.chevron} size={14} width={2.6} /></span>
           <span className="ks-avatar" aria-label="Profile">RB</span>
         </div>
@@ -309,18 +310,6 @@
               ))}
             </ul>
           </div>
-          {concept === 'A' ? <div>
-            <div className="ks-section-h"><h3>Your other leagues</h3><span className="ks-caption">Tap to switch</span></div>
-            <div style={{ display: 'grid', gap: 8 }}>
-              {K.OTHER_LEAGUES.map((o) => (
-                <div key={o.name} className="ks-card" style={{ padding: '10px 14px', display: 'grid', gridTemplateColumns: '1fr auto 16px', gap: 10, alignItems: 'center' }}>
-                  <span><span className="ks-t">{o.name}</span>{o.rank ? <><br /><span className="ks-caption ks-num">{o.rank} · {o.record}</span></> : null}</span>
-                  {o.phase === 'live_open' ? <Chip kind="live">{o.status}</Chip> : <span className="ks-chip ks-chip--money">{o.status}</span>}
-                  <span className="ks-muted"><Icon d={ICON.right} size={16} /></span>
-                </div>
-              ))}
-            </div>
-          </div> : null}
         </div>
       </Device>
     );

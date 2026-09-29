@@ -11,8 +11,9 @@
   const BRAND = 'Stockpile'; // brand.name placeholder (naming deferred)
 
   // ── Small shared pieces ───────────────────────────────────────────────
+  // The league pill with its "+N more leagues" hint (Concept B, decided).
   const Pill = ({ name = K.LEAGUE.name }) => (
-    <span className="ks-pill"><span>{name}</span><Icon d={ICON.chevron} size={14} width={2.6} /></span>
+    <span className="ks-pill"><span>{name}</span><span className="ks-pill__more" aria-label={`${K.OTHER_LEAGUES.length} more leagues`}>+{K.OTHER_LEAGUES.length}</span><Icon d={ICON.chevron} size={14} width={2.6} /></span>
   );
   const Head = ({ name, chip, avatar }) => (
     <div className="ks-head">
