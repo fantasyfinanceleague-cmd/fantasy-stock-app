@@ -162,7 +162,9 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
     - `db-snapshot.json` needs re-capture;
     - `process-week-results/index.ts` has 10 pre-existing `deno check` errors.
 16. **Unified league ranking** (`fix/unified-league-ranking`, migrations
-    `20261011000000`–`02`). Standings, Home rank, playoff seeds and season history
+    `20261011000000`–`03`; `03` = `start_league_playoffs`, which claims the league
+    and inserts the bracket in one transaction, so a double or half-written bracket
+    is impossible). Standings, Home rank, playoff seeds and season history
     all read `league_standings_ranked`: W + 0.5·T → balanced mini-league H2H →
     season gain → join order → user id. It fixes seeding that cut the playoff
     field before H2H ran. Push + deploy `process-week-results` **before the test
@@ -171,6 +173,8 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
     - **Bye = automatic win (Giorgio's call).** Odd rosters give byes unevenly
       (5 managers × 4 weeks: one never gets a bye). The proposal is to score a bye
       against the week's median; the ranking is already neutral to that change.
+    - **`playoff_teams` > members** is a visible refusal every run, not a clamp
+      (clamping is a product call).
     - **Non-playoff completion is unreachable.** `playoff_teams || 4` maps NULL/0
       to 4.
 15. **Before public launch:** item 1, F8, trade race, leave-league, season 2+, legacy

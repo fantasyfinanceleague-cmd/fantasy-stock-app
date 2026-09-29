@@ -13,7 +13,8 @@
  * ---------------------------------------------------------------------------
  * FIRST, WHAT IS *NOT* BROKEN — the finals row is not derived from winners.
  * ---------------------------------------------------------------------------
- * generateBracket (index.ts:566) inserts the finals row as a PLACEHOLDER at the
+ * buildPlayoffBracket (season-transition.ts; was index.ts:566 generateBracket, and
+ * the rows are now inserted atomically by start_league_playoffs) creates the finals row as a PLACEHOLDER at the
  * same moment as the semis, in one loop (index.ts:465). For a 4-team bracket that
  * is 2 semis at startWeek plus 1 finals at startWeek+1 with team1/team2 NULL. So
  * finals GENERATION cannot depend on semifinal outcomes — the row already exists

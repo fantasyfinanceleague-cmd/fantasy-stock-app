@@ -27,9 +27,11 @@ import {
 import { SKIP_SYMBOL } from '../_shared/draft-validation.ts';
 import { updateJobStatus, noPendingMessage, scoredMessage } from './job-status.ts';
 import {
+  buildPlayoffBracket,
   decidePlayoffSeeds,
   decidePodium,
   needsRegularSeasonTransition,
+  readPlayoffStart,
   type RpcResult,
   type TransitionLeague,
 } from './season-transition.ts';
@@ -177,24 +179,36 @@ async function transitionAfterRegularSeason(
     const seeding = decidePlayoffSeeds(rankRes, playoffTeams);
     if (!seeding.ok) return seeding;
 
-    const { error: statusErr } = await supabase.from('leagues')
-      .update({ current_week: numWeeks + 1, season_status: 'playoffs' })
-      .eq('id', leagueId);
-    if (statusErr) {
-      return { ok: false, reason: `playoff transition write failed: ${statusErr.message ?? JSON.stringify(statusErr)}` };
+    // Playoffs start the Tuesday after the last regular-season week ends.
+    const { data: lastMatchup, error: lastErr } = await supabase
+      .from('matchups')
+      .select('week_end')
+      .eq('league_id', leagueId)
+      .eq('is_playoff', false)
+      .order('week_end', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (lastErr) {
+      return { ok: false, reason: `last regular week read failed: ${lastErr.message ?? JSON.stringify(lastErr)}` };
     }
-    console.log(`League ${leagueId} transitioning to playoffs`);
-    const bracket = await generatePlayoffs(supabase, leagueId, numWeeks + 1, seeding.seeds);
-    if (bracket.failed > 0) {
-      // Pre-existing hazard, now surfaced: the status flip above already landed,
-      // so the heal pass (which needs 'active') cannot retry this. Report it in
-      // skipped[] / the job status instead of a log line nobody reads.
-      return {
-        ok: false,
-        reason: `bracket_incomplete: ${bracket.failed} of ${bracket.attempted} playoff matchups ` +
-          `failed to insert; league is already in playoffs, needs manual repair`,
-      };
-    }
+    const playoffStartDate = lastMatchup?.week_end ? new Date(lastMatchup.week_end) : new Date();
+    const bracket = buildPlayoffBracket(seeding.seeds, playoffStartDate, numWeeks + 1);
+
+    // ONE atomic call claims the league ('active' -> 'playoffs', current_week =
+    // num_weeks + 1) and inserts the bracket, or does neither
+    // (20261011000003). A concurrent or repeated run gets
+    // already_transitioned and writes nothing, so a double bracket or a
+    // half-written one is impossible.
+    const started = readPlayoffStart(await supabase.rpc('start_league_playoffs', {
+      p_league_id: leagueId,
+      p_bracket: bracket,
+    }));
+    if (!started.ok) return started;
+    console.log(
+      started.claimed
+        ? `League ${leagueId} transitioning to playoffs: ${bracket.length} bracket matchups created`
+        : `League ${leagueId} already transitioned to playoffs by another run; nothing written`,
+    );
     return { ok: true };
   }
 
@@ -212,191 +226,6 @@ async function transitionAfterRegularSeason(
   }
   console.log(`Season completed - Champion: ${podium.champion}, Runner-up: ${podium.runnerUp}`);
   return { ok: true };
-}
-
-/**
- * Generate the playoff bracket from seeds already decided by
- * transitionAfterRegularSeason (seed = unified standings rank). Returns how many
- * bracket rows it attempted and how many failed, so the caller can surface an
- * incomplete bracket. A throw counts every row as failed.
- */
-async function generatePlayoffs(
-  supabase: any,
-  leagueId: string,
-  startWeek: number,
-  seededTeams: Array<{ user_id: string; seed: number }>
-): Promise<{ attempted: number; failed: number }> {
-  const playoffTeams = seededTeams.length;
-  console.log(`Generating playoffs for league ${leagueId} with ${playoffTeams} teams`);
-
-  try {
-    // Get last regular season matchup to determine playoff start date
-    const { data: lastMatchup } = await supabase
-      .from('matchups')
-      .select('week_end')
-      .eq('league_id', leagueId)
-      .eq('is_playoff', false)
-      .order('week_end', { ascending: false })
-      .limit(1)
-      .single();
-
-    const playoffStartDate = lastMatchup?.week_end
-      ? new Date(lastMatchup.week_end)
-      : new Date();
-
-    // Generate bracket based on number of teams
-    const bracketMatchups = generateBracket(seededTeams, playoffStartDate, startWeek, playoffTeams);
-    let failed = bracketMatchups.length === 0 ? 1 : 0; // an unsupported size builds nothing
-
-    // Insert playoff matchups
-    for (const m of bracketMatchups) {
-      const { error } = await supabase
-        .from('matchups')
-        .insert({
-          league_id: leagueId,
-          week_number: m.week,
-          team1_user_id: m.team1,
-          team2_user_id: m.team2,
-          team1_seed: m.team1_seed,
-          team2_seed: m.team2_seed,
-          week_start: m.weekStart,
-          week_end: m.weekEnd,
-          is_playoff: true,
-          playoff_round: m.playoff_round,
-        });
-
-      if (error) {
-        console.error('Failed to insert playoff matchup:', error);
-        failed++;
-      }
-    }
-
-    console.log(`Created ${bracketMatchups.length - failed} of ${bracketMatchups.length} playoff matchups`);
-    return { attempted: Math.max(bracketMatchups.length, 1), failed };
-  } catch (e) {
-    console.error('Error generating playoffs:', e);
-    return { attempted: playoffTeams, failed: playoffTeams };
-  }
-}
-
-/**
- * Generate bracket matchups
- */
-function generateBracket(seededTeams: any[], startDate: Date, startWeek: number, numTeams: number) {
-  const matchups: any[] = [];
-
-  // Helper to get week timing
-  function getWeekTiming(weekOffset: number) {
-    const base = new Date(startDate);
-    // Move to next Tuesday
-    const dayOfWeek = base.getUTCDay();
-    let daysUntilTuesday = (2 - dayOfWeek + 7) % 7;
-    if (daysUntilTuesday === 0) daysUntilTuesday = 7;
-    base.setUTCDate(base.getUTCDate() + daysUntilTuesday + (weekOffset * 7));
-    base.setUTCHours(14, 30, 0, 0);
-
-    const end = new Date(base);
-    end.setUTCDate(end.getUTCDate() + 3);
-    end.setUTCHours(21, 0, 0, 0);
-
-    return { start: base, end };
-  }
-
-  if (numTeams === 2) {
-    const timing = getWeekTiming(0);
-    matchups.push({
-      week: startWeek,
-      team1: seededTeams[0].user_id,
-      team2: seededTeams[1].user_id,
-      team1_seed: 1,
-      team2_seed: 2,
-      weekStart: timing.start,
-      weekEnd: timing.end,
-      playoff_round: 'finals',
-    });
-  } else if (numTeams === 4) {
-    // Semifinals
-    const semiTiming = getWeekTiming(0);
-    matchups.push({
-      week: startWeek,
-      team1: seededTeams[0].user_id,
-      team2: seededTeams[3].user_id,
-      team1_seed: 1,
-      team2_seed: 4,
-      weekStart: semiTiming.start,
-      weekEnd: semiTiming.end,
-      playoff_round: 'semi',
-    });
-    matchups.push({
-      week: startWeek,
-      team1: seededTeams[1].user_id,
-      team2: seededTeams[2].user_id,
-      team1_seed: 2,
-      team2_seed: 3,
-      weekStart: semiTiming.start,
-      weekEnd: semiTiming.end,
-      playoff_round: 'semi',
-    });
-
-    // Finals placeholder
-    const finalsTiming = getWeekTiming(1);
-    matchups.push({
-      week: startWeek + 1,
-      team1: null,
-      team2: null,
-      team1_seed: null,
-      team2_seed: null,
-      weekStart: finalsTiming.start,
-      weekEnd: finalsTiming.end,
-      playoff_round: 'finals',
-    });
-  } else if (numTeams === 8) {
-    // Quarterfinals
-    const quarterTiming = getWeekTiming(0);
-    const quarterPairs = [[0, 7], [3, 4], [1, 6], [2, 5]];
-    for (const [i1, i2] of quarterPairs) {
-      matchups.push({
-        week: startWeek,
-        team1: seededTeams[i1].user_id,
-        team2: seededTeams[i2].user_id,
-        team1_seed: i1 + 1,
-        team2_seed: i2 + 1,
-        weekStart: quarterTiming.start,
-        weekEnd: quarterTiming.end,
-        playoff_round: 'quarter',
-      });
-    }
-
-    // Semi placeholders
-    const semiTiming = getWeekTiming(1);
-    for (let i = 0; i < 2; i++) {
-      matchups.push({
-        week: startWeek + 1,
-        team1: null,
-        team2: null,
-        team1_seed: null,
-        team2_seed: null,
-        weekStart: semiTiming.start,
-        weekEnd: semiTiming.end,
-        playoff_round: 'semi',
-      });
-    }
-
-    // Finals placeholder
-    const finalsTiming = getWeekTiming(2);
-    matchups.push({
-      week: startWeek + 2,
-      team1: null,
-      team2: null,
-      team1_seed: null,
-      team2_seed: null,
-      weekStart: finalsTiming.start,
-      weekEnd: finalsTiming.end,
-      playoff_round: 'finals',
-    });
-  }
-
-  return matchups;
 }
 
 /**

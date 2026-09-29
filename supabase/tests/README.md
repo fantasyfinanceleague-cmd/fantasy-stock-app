@@ -53,6 +53,25 @@ It covers:
 - the pre-season join-order key, the playoff-cutoff case, ranks exactly 1..N
 - RLS (member / non-member / anon) and `complete_league_season`'s snapshot
 
+## start_league_playoffs.pglite.test.ts
+
+What it does: loads `20261011000003` **verbatim** on a replica of `matchups`' unique
+keys and `valid_playoff_round` check. It drives the function with brackets from the
+real `buildPlayoffBracket` (`process-week-results/season-transition.ts`).
+
+It covers:
+- grants (DEFINER, `service_role` only)
+- claim + full bracket insert
+- idempotency: a repeat call is `already_transitioned` and writes nothing
+- atomicity: a bad timestamp or duplicate key rolls back the claim, and a retry then
+  succeeds
+- no re-claim with existing playoff rows or a non-active status
+- 14 write-free refusals
+- anon/authenticated denied
+
+PGlite has one connection, so true concurrency is argued in the migration header (row
+lock + READ COMMITTED re-check of `season_status`), not executed.
+
 ### Run (from the repo root)
 
 ```bash

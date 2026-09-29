@@ -4,6 +4,8 @@ import {
   decidePodium,
   needsRegularSeasonTransition,
   readRanking,
+  buildPlayoffBracket,
+  readPlayoffStart,
 } from './season-transition.ts';
 
 const rows = (...ids: string[]) => ids.map((user_id, i) => ({ user_id, rank: i + 1 }));
@@ -128,4 +130,49 @@ Deno.test('heal: mid-season, non-active, undrafted, duration, or no schedule nev
   ];
   for (const l of cases) assertEquals(needsRegularSeasonTransition(l, done), false, JSON.stringify(l));
   assertEquals(needsRegularSeasonTransition(league, { ...done, regularTotal: 0 }), false);
+});
+
+// ---------------------------------------------------------------------------
+// buildPlayoffBracket / readPlayoffStart
+// ---------------------------------------------------------------------------
+
+const seedsOf = (n: number) => Array.from({ length: n }, (_, i) => ({ user_id: `s${i + 1}` }));
+// Fri 2026-10-16 21:00Z, the last regular week_end of the test leagues.
+const LAST_END = new Date('2026-10-16T21:00:00Z');
+
+Deno.test('bracket (4): 1v4 and 2v3 semis the next Tuesday, finals placeholder a week later', () => {
+  const b = buildPlayoffBracket(seedsOf(4), LAST_END, 4);
+  assertEquals(b.map((r) => [r.week_number, r.playoff_round, r.team1_user_id, r.team2_user_id, r.team1_seed, r.team2_seed]), [
+    [4, 'semi', 's1', 's4', 1, 4],
+    [4, 'semi', 's2', 's3', 2, 3],
+    [5, 'finals', null, null, null, null],
+  ]);
+  assertEquals([b[0].week_start, b[0].week_end], ['2026-10-20T14:30:00.000Z', '2026-10-23T21:00:00.000Z']);
+  assertEquals(b[2].week_start, '2026-10-27T14:30:00.000Z');
+});
+
+Deno.test('bracket (2): finals only; (8): 1v8, 4v5, 2v7, 3v6 then placeholders', () => {
+  const two = buildPlayoffBracket(seedsOf(2), LAST_END, 4);
+  assertEquals(two.map((r) => [r.playoff_round, r.team1_seed, r.team2_seed]), [['finals', 1, 2]]);
+  const eight = buildPlayoffBracket(seedsOf(8), LAST_END, 8);
+  assertEquals(eight.map((r) => [r.week_number, r.playoff_round, r.team1_seed, r.team2_seed]), [
+    [8, 'quarter', 1, 8], [8, 'quarter', 4, 5], [8, 'quarter', 2, 7], [8, 'quarter', 3, 6],
+    [9, 'semi', null, null], [9, 'semi', null, null], [10, 'finals', null, null],
+  ]);
+});
+
+Deno.test('bracket: a Tuesday end date rolls a full week; unsupported size builds nothing', () => {
+  const tue = buildPlayoffBracket(seedsOf(2), new Date('2026-10-20T21:00:00Z'), 4);
+  assertEquals(tue[0].week_start, '2026-10-27T14:30:00.000Z');
+  assertEquals(buildPlayoffBracket(seedsOf(3), LAST_END, 4), []);
+});
+
+Deno.test('readPlayoffStart: claimed and already_transitioned are success; everything else refuses', () => {
+  assertEquals(readPlayoffStart(ok({ status: 'claimed', matchups_inserted: 3 })), { ok: true, claimed: true });
+  assertEquals(readPlayoffStart(ok({ status: 'already_transitioned', season_status: 'playoffs' })), { ok: true, claimed: false });
+  assertEquals(readPlayoffStart(ok({ status: 'refused', reason: 'bracket_non_member' })),
+    { ok: false, reason: 'start_league_playoffs refused: bracket_non_member' });
+  assertEquals(readPlayoffStart({ data: null, error: { message: 'duplicate key' } }).ok, false);
+  assertEquals(readPlayoffStart(ok(null)).ok, false);
+  assertEquals(readPlayoffStart(ok({ status: 'weird' })).ok, false);
 });

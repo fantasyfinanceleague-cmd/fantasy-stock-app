@@ -82,14 +82,13 @@ export async function updateJobStatus(
 }
 
 /**
- * Suffix for season transitions (playoff seeding / non-playoff completion) that
- * were refused (standings rank unreadable: retried next run) or left an
- * incomplete bracket (manual repair). Empty when there were none, so a clean
- * run's message is unchanged.
+ * Suffix for season transitions (playoff start / non-playoff completion) that
+ * were refused. Every refusal writes nothing, so the heal pass retries it next
+ * run. Empty when there were none, so a clean run's message is unchanged.
  */
 function transitionsSuffix(transitionsRefused: number): string {
   return transitionsRefused > 0
-    ? `; ${transitionsRefused} season transitions refused or incomplete (see skipped[])`
+    ? `; ${transitionsRefused} season transitions refused (see skipped[]; retried next run)`
     : '';
 }
 
