@@ -8,7 +8,7 @@ import { ChapterScreens, LEAD_CHANGE_DAY } from '../PhoneScreens';
 import { useSlotAnchor } from './anchor';
 import { Burst } from './Burst';
 import { DEG, PARALLAX_MAX, clamp01, smooth, turnToward, usePointer } from './motion3d';
-import { Device, DEVICE_H, DeviceLights } from './Device';
+import { Device, DEVICE_H, DeviceLights, DeviceScreen } from './Device';
 import { Stage } from './Stage';
 
 // /01 How it works (round 4, storyboard scene 3). The device DIVES in from
@@ -23,7 +23,17 @@ const LEAD_COLORS = [color.team.you.base, color.team.you.onGame] as const;
 const FINAL_COLORS = [color.live, color.data.gain.base, color.team.you.base] as const;
 const STEP_YAW = [-12 * DEG, -4 * DEG, -9 * DEG] as const;
 
-function ChapterDevice({ slot, state, arrive }: { slot: RefObject<HTMLElement | null>; state: ChapterState; arrive: MotionValue<number> }) {
+function ChapterDevice({
+  slot,
+  screenEl,
+  state,
+  arrive,
+}: {
+  slot: RefObject<HTMLElement | null>;
+  screenEl: RefObject<HTMLDivElement | null>;
+  state: ChapterState;
+  arrive: MotionValue<number>;
+}) {
   const anchor = useSlotAnchor(slot, DEVICE_H);
   const rig = useRef<Group>(null);
   const pointer = usePointer();
@@ -52,7 +62,7 @@ function ChapterDevice({ slot, state, arrive }: { slot: RefObject<HTMLElement | 
   return (
     <group ref={anchor}>
       <group ref={rig}>
-        <Device screen={<ChapterScreens state={state} />} />
+        <Device screenEl={screenEl} />
         <Burst fire={fires.lead} colors={LEAD_COLORS} />
         <Burst fire={fires.final} colors={FINAL_COLORS} />
       </group>
@@ -71,11 +81,21 @@ export default function ChapterScene({
   state: ChapterState;
   arrive: MotionValue<number>;
 }) {
+  const screen = useRef<HTMLDivElement>(null);
   return (
-    <Stage onPainted={onPainted} fov={30} position={[0, 0, 9]}>
+    <Stage
+      onPainted={onPainted}
+      fov={30}
+      position={[0, 0, 9]}
+      overlay={
+        <DeviceScreen ref={screen}>
+          <ChapterScreens state={state} />
+        </DeviceScreen>
+      }
+    >
       <fog attach="fog" args={[color.bg.app, 12, 26]} />
       <DeviceLights />
-      <ChapterDevice slot={slot} state={state} arrive={arrive} />
+      <ChapterDevice slot={slot} screenEl={screen} state={state} arrive={arrive} />
     </Stage>
   );
 }

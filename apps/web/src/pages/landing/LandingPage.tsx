@@ -14,6 +14,7 @@ import { Why } from './Why';
 import { Faq } from './Faq';
 import { Layer, Reveal } from './scroll';
 import { FullSlot } from './FullSlot';
+import { useTierDebug } from './tier';
 // Tokens and primitives by module path — NOT the design/index barrel,
 // which also pulls design/fonts.css (a render-blocking @import). The font
 // comes from head.ts instead (Orchestrator decision C, phase 3a).
@@ -123,6 +124,7 @@ function Footer() {
 }
 
 export default function LandingPage() {
+  const tierDebug = useTierDebug();
   useEffect(() => {
     ensureArchivoStylesheet();
   }, []);
@@ -188,6 +190,11 @@ export default function LandingPage() {
   return (
     <MotionRoot>
       <div className="lp">
+        {tierDebug && (
+          <output className="lp-tier-debug" aria-live="off">
+            {tierDebug}
+          </output>
+        )}
         <a className="lp-skip" href="#main">
           Skip to content
         </a>

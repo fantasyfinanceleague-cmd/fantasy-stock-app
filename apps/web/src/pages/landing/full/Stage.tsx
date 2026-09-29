@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { demoteToEnhanced } from '../tier';
 
@@ -13,14 +13,6 @@ const FRAME_GUARD_P90_MS = 24;
 /** Frames skipped before sampling: the first ones carry shader compiles
  * and the environment bake, which are one-off costs, not the frame rate. */
 const FRAME_GUARD_WARMUP = 12;
-
-/** The stage's own DOM box, as a stable mount point for drei <Html>.
- * Left to itself, Html mounts into the R3F event target, which changes
- * once events connect — it then rebuilds an empty root and the screen
- * never renders. R3F bridges React context into the canvas, so scenes
- * read this with useStagePortal(). */
-const StagePortal = createContext<RefObject<HTMLDivElement | null> | null>(null);
-export const useStagePortal = () => useContext(StagePortal) ?? undefined;
 
 /** Reports the first rendered frame, and demotes the page to ENHANCED if
  * the first ~2 s of visible frames run slow (p90 > 24 ms). */
@@ -52,6 +44,25 @@ function FrameWatch({ onPainted }: { onPainted: () => void }) {
   return null;
 }
 
+/** Renders ONE frame while the browser is idle after mount, even while
+ * the stage is off screen: shader compiles and the environment bake then
+ * happen at load time instead of as a hitch the moment the stage scrolls
+ * into view. The loop itself stays off until it is visible. */
+function Warmup() {
+  const advance = useThree((s) => s.advance);
+  useEffect(() => {
+    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number; cancelIdleCallback?: (id: number) => void };
+    const run = () => advance(performance.now()); // rAF-style ms, like the loop
+    if (w.requestIdleCallback) {
+      const id = w.requestIdleCallback(run, { timeout: 1500 });
+      return () => w.cancelIdleCallback?.(id);
+    }
+    const t = window.setTimeout(run, 200);
+    return () => window.clearTimeout(t);
+  }, [advance]);
+  return null;
+}
+
 /** Hooks the context-loss event (→ ENHANCED). */
 function ContextWatch() {
   const gl = useThree((s) => s.gl);
@@ -73,8 +84,11 @@ export function Stage({
   fov = 30,
   position = [0, 0, 6] as [number, number, number],
   className,
+  overlay,
 }: {
   children: ReactNode;
+  /** DOM drawn BEHIND the canvas, in the stage's box (device screens). */
+  overlay?: ReactNode;
   onPainted: () => void;
   fov?: number;
   position?: [number, number, number];
@@ -102,23 +116,25 @@ export function Stage({
 
   return (
     <div ref={ref} className={['lp-stage3d', className].filter(Boolean).join(' ')}>
-      <StagePortal.Provider value={ref}>
-        <Canvas
-          frameloop={onScreen && pageVisible ? 'always' : 'never'}
-          dpr={[1, dprCap]}
-          gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
-          camera={{ fov, position, near: 0.1, far: 80 }}
-          // Layers scale while they recede (a transform, not layout): measuring
-          // on scroll would read the scaled rect and resize the drawing buffer
-          // every frame, so size tracks layout (ResizeObserver) only.
-          resize={{ scroll: false }}
-          style={{ pointerEvents: 'none' }}
-        >
-          <FrameWatch onPainted={onPainted} />
-          <ContextWatch />
-          {children}
-        </Canvas>
-      </StagePortal.Provider>
+      {overlay}
+      <Canvas
+        frameloop={onScreen && pageVisible ? 'always' : 'never'}
+        dpr={[1, dprCap]}
+        gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
+        camera={{ fov, position, near: 0.1, far: 80 }}
+        // Layers scale while they recede (a transform, not layout): measuring
+        // on scroll would read the scaled rect and resize the drawing buffer
+        // every frame, so size tracks layout (ResizeObserver) only.
+        resize={{ scroll: false }}
+        // Above the overlay: the canvas is transparent wherever the scene
+        // cuts it open (the device screens).
+        style={{ pointerEvents: 'none', position: 'relative', zIndex: 1 }}
+      >
+        <FrameWatch onPainted={onPainted} />
+        <ContextWatch />
+        <Warmup />
+        {children}
+      </Canvas>
     </div>
   );
 }

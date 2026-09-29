@@ -6,7 +6,7 @@ import { color } from '../../../design/tokens';
 import { HomeScreen } from '../PhoneScreens';
 import { useSlotAnchor } from './anchor';
 import { PARALLAX_MAX, clamp01, smooth, turnToward, usePointer } from './motion3d';
-import { Device, DEVICE_H, DeviceLights } from './Device';
+import { Device, DEVICE_H, DeviceLights, DeviceScreen } from './Device';
 import { Skyline } from './Skyline';
 import { Stage } from './Stage';
 
@@ -27,12 +27,12 @@ const DOLLY_TO = 0.55;
 
 function InsideDevice({
   slot,
-  frame,
+  screenEl,
   approach,
   dwell,
 }: {
   slot: RefObject<HTMLElement | null>;
-  frame: number;
+  screenEl: RefObject<HTMLDivElement | null>;
   approach: MotionValue<number>;
   dwell: MotionValue<number>;
 }) {
@@ -54,7 +54,7 @@ function InsideDevice({
   return (
     <group ref={anchor}>
       <group ref={rig}>
-        <Device screen={<HomeScreen frame={frame} />} />
+        <Device screenEl={screenEl} />
       </group>
     </group>
   );
@@ -73,12 +73,22 @@ export default function InsideScene({
   approach: MotionValue<number>;
   dwell: MotionValue<number>;
 }) {
+  const screen = useRef<HTMLDivElement>(null);
   return (
-    <Stage onPainted={onPainted} fov={30} position={[0, 0, 9]}>
+    <Stage
+      onPainted={onPainted}
+      fov={30}
+      position={[0, 0, 9]}
+      overlay={
+        <DeviceScreen ref={screen}>
+          <HomeScreen frame={frame} />
+        </DeviceScreen>
+      }
+    >
       <fog attach="fog" args={[color.surface.game.base, 9, 24]} />
       <DeviceLights />
       <Skyline frame={frame} bg={color.surface.game.base} night />
-      <InsideDevice slot={slot} frame={frame} approach={approach} dwell={dwell} />
+      <InsideDevice slot={slot} screenEl={screen} approach={approach} dwell={dwell} />
     </Stage>
   );
 }

@@ -1,8 +1,9 @@
-import { useMemo, type ReactNode } from 'react';
-import { ContactShadows, Environment, Html, Lightformer } from '@react-three/drei';
-import { Color, ExtrudeGeometry, Shape, ShapeGeometry } from 'three';
+import { useMemo, useRef, type ReactNode, type RefObject } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
+import { ContactShadows, Environment, Lightformer } from '@react-three/drei';
+import { Color, ExtrudeGeometry, Shape, ShapeGeometry, Vector3, type Mesh } from 'three';
 import { Surface } from '../../../design/Surface';
-import { useStagePortal } from './Stage';
+import { homographyMatrix3d, type Quad } from './homography';
 import { color } from '../../../design/tokens';
 
 // The throughline device (round 4). A GENERIC phone — a rounded slab with a
@@ -12,10 +13,13 @@ import { color } from '../../../design/tokens';
 // no HDR downloads, no third-party assets to license.
 //
 // Its screen is LIVE: the same Game Day screen components as the ENHANCED
-// tier, mounted with drei <Html transform occlude="blending"> so the DOM
-// sits BEHIND the canvas (the glass sheen and any particles render over
-// it), aria-hidden and pointer-events: none — the page's DOM carries the
-// accessible text. One Html root per device.
+// tier, as a DOM overlay (DeviceScreen) BEHIND the canvas. Each frame the
+// screen's four corners are projected with the GL camera and the DOM is
+// mapped onto that quad by one 2D projective matrix3d (homography.ts) —
+// no CSS 3D context, so every engine agrees with the GL body. An occluder
+// cuts the canvas open over it (the glass sheen then draws on top). The
+// overlay is aria-hidden and pointer-events: none; the page's DOM carries
+// the accessible text.
 
 /** The DOM screens are laid out at 280 × 580 css px (the ENHANCED phone's
  * screen inside its 300 × 600 frame), so the 3D screen has that aspect and
@@ -29,8 +33,6 @@ export const DEVICE_H = SCREEN_H + BEZEL * 2;
 const H = DEVICE_H;
 const D = 0.085;
 const SCREEN_R = SCREEN_W * (34 / 280);
-/** drei Html transform maps 400 css px to `distanceFactor` world units. */
-const DF = (400 * SCREEN_W) / SCREEN_PX.w;
 
 function roundedRect(width: number, height: number, r: number) {
   const w = width / 2;
@@ -68,12 +70,17 @@ function bodyGeometry() {
   return g;
 }
 
-export function DeviceLights() {
+export function DeviceLights({ rim = false }: { rim?: boolean }) {
   return (
     <>
-      <ambientLight intensity={0.35} />
+      <ambientLight intensity={0.45} />
       <directionalLight position={[3, 4, 5]} intensity={1.1} />
+      {/* Rim: a back light on the far long edge, so the device reads lit
+          on both sides (Design Lead: at 375 one edge went unlit black). */}
+      {rim && <directionalLight position={[-4, 3, -5]} intensity={1.4} />}
       <Environment resolution={128} frames={1}>
+        {rim && <Lightformer form="rect" intensity={5} position={[-3.2, 0.5, -2.5]} rotation-y={Math.PI * 0.8} scale={[0.35, 7, 1]} />}
+        {rim && <Lightformer form="rect" intensity={2.5} position={[3.2, 0.5, -2.5]} rotation-y={-Math.PI * 0.8} scale={[0.25, 7, 1]} />}
         {/* Soft studio: a long key strip, two rims, a floor bounce. */}
         <Lightformer form="rect" intensity={3} position={[0, 3, 4]} scale={[6, 1.2, 1]} />
         <Lightformer form="rect" intensity={1.6} position={[-4, 1, 1]} rotation-y={Math.PI / 2} scale={[4, 0.6, 1]} />
@@ -84,12 +91,67 @@ export function DeviceLights() {
   );
 }
 
-export function Device({ screen, shadow = false }: { screen: ReactNode; shadow?: boolean }) {
+/** The DOM screen, rendered by a scene OUTSIDE its canvas (in the stage's
+ * DOM, behind the canvas) and positioned by the Device each frame. Hidden
+ * until the first projection lands. */
+export function DeviceScreen({ ref, children }: { ref: RefObject<HTMLDivElement | null>; children: ReactNode }) {
+  return (
+    <div ref={ref} className="lp-3d-screen" aria-hidden="true" style={{ width: SCREEN_PX.w, height: SCREEN_PX.h }}>
+      <div className="lp-3d-screen__inner">
+        <Surface kind="game" className="lp-phone__screen">
+          {children}
+        </Surface>
+      </div>
+    </div>
+  );
+}
+
+const SCREEN_Z = D / 2 + 0.002;
+const CORNERS = [
+  [-SCREEN_W / 2, SCREEN_H / 2],
+  [SCREEN_W / 2, SCREEN_H / 2],
+  [SCREEN_W / 2, -SCREEN_H / 2],
+  [-SCREEN_W / 2, -SCREEN_H / 2],
+] as const;
+const OCCLUDE_FRAG = 'void main() { gl_FragColor = vec4(0.0); }';
+const OCCLUDE_VERT = 'void main() { gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }';
+
+/** Cuts the canvas open over the screen and maps the DOM screen onto it. */
+function LiveScreen({ geometry, screenEl }: { geometry: ShapeGeometry; screenEl: RefObject<HTMLDivElement | null> }) {
+  const occluder = useRef<Mesh>(null);
+  const { camera, size } = useThree();
+  const v = useMemo(() => new Vector3(), []);
+  const last = useRef('');
+  useFrame(() => {
+    const m = occluder.current;
+    const el = screenEl.current;
+    if (!m || !el) return;
+    m.updateWorldMatrix(true, false);
+    let behind = false;
+    const q = CORNERS.map(([x, y]) => {
+      v.set(x, y, 0).applyMatrix4(m.matrixWorld).project(camera);
+      if (v.z > 1) behind = true;
+      return [((v.x + 1) / 2) * size.width, ((1 - v.y) / 2) * size.height] as const;
+    }) as unknown as Quad;
+    const t = behind ? '' : homographyMatrix3d(SCREEN_PX.w, SCREEN_PX.h, q);
+    if (t !== last.current) {
+      last.current = t;
+      el.style.transform = t;
+      el.style.visibility = t ? 'visible' : 'hidden';
+    }
+  });
+  return (
+    <mesh ref={occluder} geometry={geometry} position={[0, 0, SCREEN_Z]}>
+      <shaderMaterial vertexShader={OCCLUDE_VERT} fragmentShader={OCCLUDE_FRAG} />
+    </mesh>
+  );
+}
+
+export function Device({ screenEl, shadow = false }: { screenEl: RefObject<HTMLDivElement | null>; shadow?: boolean }) {
   const bodyColor = useMemo(() => new Color(color.surface.game.base), []);
   const frameColor = useMemo(() => new Color(color.surface.game.raised), []);
   const glass = useMemo(screenShape, []);
   const body = useMemo(bodyGeometry, []);
-  const portal = useStagePortal();
   return (
     <group>
       {/* Body: a bevelled slab, satin metal edges. */}
@@ -101,31 +163,14 @@ export function Device({ screen, shadow = false }: { screen: ReactNode; shadow?:
         <shapeGeometry args={[roundedRect(W - BEVEL * 2, H - BEVEL * 2, SCREEN_R + BEZEL - BEVEL), 16]} />
         <meshStandardMaterial color={bodyColor} roughness={0.9} />
       </mesh>
-      {/* The live screen: DOM behind the canvas, cut through by an
-          occluding plane (occlude="blending"). */}
-      <Html
-        transform
-        occlude="blending"
-        portal={portal as React.RefObject<HTMLElement>}
-        geometry={<primitive object={glass} attach="geometry" />}
-        distanceFactor={DF}
-        position={[0, 0, D / 2 + 0.002]}
-        zIndexRange={[100, 0]}
-        pointerEvents="none"
-        className="lp-3d-screen"
-      >
-        <div aria-hidden="true" className="lp-3d-screen__inner" style={{ width: SCREEN_PX.w, height: SCREEN_PX.h }}>
-          <Surface kind="game" className="lp-phone__screen">
-            {screen}
-          </Surface>
-        </div>
-      </Html>
+      {/* The live screen: the DOM overlay behind the canvas, cut open here. */}
+      <LiveScreen geometry={glass} screenEl={screenEl} />
       {/* Glass: a thin reflective sheet over the screen — the studio strips
           slide across it as the device turns. */}
       <mesh geometry={glass} position={[0, 0, D / 2 + 0.004]}>
         <meshPhysicalMaterial
           transparent
-          opacity={0.1}
+          opacity={0.12}
           color={bodyColor}
           metalness={0}
           roughness={0.05}
@@ -135,10 +180,14 @@ export function Device({ screen, shadow = false }: { screen: ReactNode; shadow?:
           depthWrite={false}
         />
       </mesh>
-      {/* The single camera dot. */}
+      {/* The single camera dot, recessed: a lens inside a slightly lighter ring. */}
       <mesh position={[0, H / 2 - BEZEL - 0.035, D / 2 + 0.005]}>
-        <circleGeometry args={[0.018, 24]} />
-        <meshStandardMaterial color={bodyColor} roughness={0.3} metalness={0.4} />
+        <circleGeometry args={[0.022, 28]} />
+        <meshStandardMaterial color={frameColor} roughness={0.5} metalness={0.3} />
+      </mesh>
+      <mesh position={[0, H / 2 - BEZEL - 0.035, D / 2 + 0.006]}>
+        <circleGeometry args={[0.014, 28]} />
+        <meshPhysicalMaterial color="black" roughness={0.1} clearcoat={1} />
       </mesh>
       {shadow && <ContactShadows position={[0, -H / 2 - 0.08, 0]} opacity={0.35} scale={3} blur={2.6} far={1.6} resolution={256} frames={1} />}
     </group>

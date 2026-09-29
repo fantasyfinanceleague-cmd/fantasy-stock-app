@@ -2290,6 +2290,10 @@ body:has(> #root > .lp) {
 }
 
 /* ── Hero scroll cue (the only one on the page) ──────────────────────── */
+/* Round 4 (Design Lead B.7): presence — an 8px dot travelling a 40px
+   track, two passes after the hero settles, then still. Desktop only: on
+   phones the device and the city rising into the first viewport are the
+   cue. Hidden under reduced motion. */
 .lp-hero {
   position: relative;
 }
@@ -2298,33 +2302,53 @@ body:has(> #root > .lp) {
   position: absolute;
   left: 50%;
   bottom: var(--sp-space-6);
-  width: 1px;
-  height: 40px;
-  overflow: hidden;
-  background-color: var(--sp-color-border-default);
+  z-index: 2;
+  display: none;
+  width: 12px;
+  height: 48px;
+  margin-left: -6px;
+  border: 1.5px solid var(--sp-color-border-control);
+  border-radius: var(--sp-radius-pill);
 }
 
 .lp-scroll-cue__line {
-  display: block;
-  width: 100%;
-  height: 50%;
-  background-color: var(--sp-color-text-secondary);
+  position: absolute;
+  top: 3px;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  border-radius: var(--sp-radius-pill);
+  background-color: var(--sp-color-text-primary);
 }
 
-@media (prefers-reduced-motion: no-preference) {
+@media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
+  .lp-scroll-cue {
+    display: block;
+  }
+
   .lp-scroll-cue__line {
-    /* Two slow passes after the hero settles, then still — a cue, not a loop. */
     animation: lp-cue calc(var(--sp-motion-duration-feature) * 2) var(--sp-motion-ease-settle) 2 both;
     animation-delay: var(--sp-motion-duration-feature);
   }
 }
 
 @keyframes lp-cue {
-  from {
-    transform: translateY(-100%);
+  0% {
+    transform: translateY(0);
+    opacity: 1;
   }
-  to {
-    transform: translateY(200%);
+  70% {
+    transform: translateY(30px);
+    opacity: 1;
+  }
+  85% {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
   }
 }
 
@@ -2790,8 +2814,21 @@ body:has(> #root > .lp) {
   inset: 0;
 }
 
-/* The 3D device's live screen (drei Html, behind the canvas). */
+/* The 3D device's live screen: a DOM overlay behind the canvas, mapped
+   onto the device each frame by one projective matrix3d (Device.tsx). */
+.lp-3d-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  transform-origin: 0 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
 .lp-3d-screen__inner {
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   border-radius: 34px;
 }
@@ -2866,18 +2903,8 @@ html[data-lp3d-hero='painted'] .lp-hero__phone.lp-phone {
   text-align: right;
 }
 
-/* The hero's skyline keeps clear of the copy: the stage fades in from
-   the copy's side (desktop) or from under the copy (phones), so no hero
-   text ever sits on a column. The device lives entirely in the opaque part. */
-.lp-3d--hero canvas {
-  mask-image: linear-gradient(180deg, transparent 52%, black 66%);
-}
-
-@media (min-width: 1024px) {
-  .lp-3d--hero canvas {
-    mask-image: linear-gradient(90deg, transparent 46%, black 68%);
-  }
-}
+/* The hero city's copy mask is computed from the real copy box in the
+   scene (HeroScene CopyMask: ≥120px feather, never over the device). */
 
 /* ── Round 4: "A look inside", FULL ──────────────────────────────────── */
 /* The 3D device's slot: centred in the pinned stage, empty (the device is
@@ -3099,4 +3126,72 @@ html[data-lp3d-cta='painted'] .lp-cta__mark-dom {
 
 .lp-kinetic--live .lp-kword {
   transform-origin: 50% 100%;
+}
+
+/* Evidence aid (?lpdebug only): which tier ran, and why. */
+.lp-tier-debug {
+  position: fixed;
+  right: var(--sp-space-3);
+  bottom: var(--sp-space-3);
+  z-index: 100;
+  max-width: min(92vw, 520px);
+  padding: var(--sp-space-2) var(--sp-space-3);
+  border-radius: var(--sp-radius-md);
+  background-color: var(--sp-color-text-primary);
+  color: var(--sp-color-text-on-game-primary);
+  font-size: var(--sp-type-caption-size);
+  line-height: var(--sp-type-caption-line);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Round 4 (Design Lead B.5): phones get a tighter hero rhythm, so the
+   device and the city rise ≥245px into the first 812px viewport. */
+@media (max-width: 1023px) {
+  .lp-hero {
+    padding-block: var(--sp-space-7) 0;
+  }
+
+  .lp-hero .lp-eyebrow {
+    margin-bottom: var(--sp-space-5);
+  }
+
+  .lp-hero__lede {
+    margin-top: var(--sp-space-5);
+  }
+
+  .lp-hero__cta {
+    margin-top: var(--sp-space-6);
+  }
+
+  .lp-hero__meta {
+    margin-top: var(--sp-space-5);
+  }
+
+  .lp-hero__device {
+    margin-top: var(--sp-space-6);
+  }
+}
+
+/* Round 4 (Design Lead A.3a): the shared score row — both scores at one
+   fitted size (--lp-score-px, from the widest pair in the data), a fixed
+   16px gap, never touching. */
+.lp-scorerow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 16px;
+  align-items: baseline;
+}
+
+.lp-scorerow > :last-child {
+  justify-self: end;
+}
+
+.lp .lp-roll--row {
+  --lp-roll-size: var(--lp-score-px);
+  --lp-roll-line: calc(var(--lp-score-px) * 1.1);
+  font-family: var(--lp-font-condensed);
+  font-weight: var(--sp-type-score-lg-weight);
+  font-stretch: var(--sp-type-score-lg-stretch);
+  white-space: nowrap;
+  color: var(--sp-color-text-on-game-primary);
 }

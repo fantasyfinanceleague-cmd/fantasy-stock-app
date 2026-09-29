@@ -119,3 +119,24 @@ export function useTier(): TierDecision | null {
 export function __resetTierForTests() {
   current = null;
 }
+
+/** Evidence aid: `?lpdebug` shows the tier, why, and the frame guard's
+ * p90 in a corner badge (iOS Simulator Safari has no scriptable DOM, so
+ * this is how a capture there shows which tier ran). Nothing otherwise. */
+export function useTierDebug(): string | null {
+  const tier = useTier();
+  const [guard, setGuard] = useState<string>('');
+  const on = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('lpdebug');
+  useEffect(() => {
+    if (!on) return;
+    const w = window as unknown as { __lpFrameGuard?: { p90: number; frames: number }; __lpAnchor?: string; __lpDebug?: boolean };
+    w.__lpDebug = true;
+    const t = window.setInterval(() => {
+      const g = w.__lpFrameGuard;
+      setGuard(`${g ? ` · p90 ${g.p90.toFixed(1)}ms/${g.frames}f` : ''}${w.__lpAnchor ? ` · ${w.__lpAnchor}` : ''}`);
+    }, 500);
+    return () => window.clearInterval(t);
+  }, [on]);
+  if (!on || !tier) return null;
+  return `${tier.tier.toUpperCase()} — ${tier.reasons.join(' | ')}${guard}`;
+}

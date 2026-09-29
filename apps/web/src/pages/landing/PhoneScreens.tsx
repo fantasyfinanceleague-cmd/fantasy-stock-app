@@ -55,6 +55,41 @@ export function Phone({ children, className }: { children: React.ReactNode; clas
   );
 }
 
+// ── Scores ───────────────────────────────────────────────────────────────
+
+/** Advance of the display face's score glyphs, in em per character
+ * (tabular figures; measured in the built page: "+$351.80" is 3.35em). */
+export const SCORE_EM_PER_CHAR = 0.42;
+/** The screen's content column (280px screen − 2 × 20px body padding), and
+ * the gap two scores must always keep (Design Lead A.3a: ≥ 16px). */
+export const SCORE_ROW = { contentPx: 240, gapPx: 16, maxPx: 40 } as const;
+
+/** The largest size at which the widest of `values` fits half the row. */
+export function fitScoreSize(values: readonly string[], row = SCORE_ROW): number {
+  const widest = Math.max(...values.map((v) => v.length));
+  const col = (row.contentPx - row.gapPx) / 2;
+  return Math.min(row.maxPx, Math.floor(col / (widest * SCORE_EM_PER_CHAR)));
+}
+
+/** Every score any phone screen shows (the Home matchup ticks and the
+ * week's closes), so one size fits them all and never changes mid-week. */
+export const PHONE_SCORES = [...MATCHUP_FRAMES.flatMap((f) => [f.you, f.opp]), ...WEEK_CLOSES.flatMap((d) => [d.you, d.opp])].map((v) =>
+  formatMoney(v, { sign: 'always' })
+);
+export const SCORE_ROW_PX = fitScoreSize(PHONE_SCORES);
+
+/** Two scores on one row that can never touch: both at the same fitted
+ * size, a fixed ≥ 16px gap, you left and the opponent right. Shared by the
+ * Home (hero device) and Compete screens. */
+export function ScoreRow({ you, opp }: { you: number; opp: number }) {
+  return (
+    <div className="lp-scorerow" style={{ ['--lp-score-px' as string]: `${SCORE_ROW_PX}px` }}>
+      <ScoreDigits value={formatMoney(you, { sign: 'always' })} className="lp-roll lp-roll--row" />
+      <ScoreDigits value={formatMoney(opp, { sign: 'always' })} className="lp-roll lp-roll--row" />
+    </div>
+  );
+}
+
 function StatusBar() {
   return (
     <div className="lp-os">
@@ -123,10 +158,7 @@ export function HomeScreen({ frame }: { frame: number }) {
           <span className="lp-compete__name lp-compete__name--you">{MATCHUP.you.name}</span>
           <span className="lp-compete__name lp-compete__name--opp">{MATCHUP.opp.name}</span>
         </div>
-        <div className="lp-compete__scores">
-          <ScoreDigits value={formatMoney(m.you, { sign: 'always' })} className="lp-roll lp-roll--md" />
-          <ScoreDigits value={formatMoney(m.opp, { sign: 'always' })} className="lp-roll lp-roll--md" />
-        </div>
+        <ScoreRow you={m.you} opp={m.opp} />
         <TugBar you={m.you} opponent={m.opp} youLabel={MATCHUP.you.name} opponentLabel={MATCHUP.opp.name} />
         <p className="lp-compete__lead">
           {lead > 0 ? MATCHUP.you.name : MATCHUP.opp.name} leads by <span className="lp-num">{formatMoney(Math.abs(lead))}</span>
@@ -353,10 +385,7 @@ export function CompeteScreen({ day, final }: { day: number; final: boolean }) {
         <span className="lp-compete__name lp-compete__name--you">{MATCHUP.you.name}</span>
         <span className="lp-compete__name lp-compete__name--opp">{MATCHUP.opp.name}</span>
       </div>
-      <div className="lp-compete__scores">
-        <ScoreDigits value={formatMoney(d.you, { sign: 'always' })} className="lp-roll lp-roll--md" />
-        <ScoreDigits value={formatMoney(d.opp, { sign: 'always' })} className="lp-roll lp-roll--md" />
-      </div>
+      <ScoreRow you={d.you} opp={d.opp} />
       <TugBar you={d.you} opponent={d.opp} youLabel={MATCHUP.you.name} opponentLabel={MATCHUP.opp.name} />
       <p className="lp-compete__lead">
         {lead === 0 ? (
