@@ -998,13 +998,15 @@
   /** Playoffs, auto-configured from P teams (Giorgio, 2026-09-29): 2 ≤ P ≤
    * managers; weeks W = ceil(log2 P); first-round byes = 2^W − P, to the top
    * seeds, in a FIXED bracket (no re-seeding). Round names count back from
-   * the final (proposal, copy to confirm): Final, Semifinals, Quarterfinals,
-   * Round 1; a first round that has byes is called "Wild card". */
+   * the final (proposal, copy to confirm): Final, Semifinals, Quarterfinals;
+   * any earlier round is "Round N" counting from the start (so 17–32 teams
+   * read Round 1 · Round 2 · Quarterfinals · Semifinals · Final). A first
+   * round that has byes is called "Wild card". No cap beyond P ≤ managers. */
   function playoffPlan(P) {
     const weeks = Math.ceil(Math.log2(P));
     const byes = 2 ** weeks - P;
-    const fromEnd = ['Final', 'Semifinals', 'Quarterfinals', 'Round 1'];
-    const rounds = Array.from({ length: weeks }, (_, i) => fromEnd[weeks - 1 - i]);
+    const fromEnd = ['Final', 'Semifinals', 'Quarterfinals'];
+    const rounds = Array.from({ length: weeks }, (_, i) => fromEnd[weeks - 1 - i] || `Round ${i + 1}`);
     if (byes > 0 && weeks > 1) rounds[0] = 'Wild card';
     return { teams: P, weeks, byes, rounds };
   }
@@ -2523,15 +2525,44 @@
 
   /** Commissioner's Start draft confirm. The member count is final here;
    * the notice is informational and never blocks. */
-  function StartDraftConfirm() {
+  /** managers = who's in now (final); playoff = the league's P. If P >
+   * managers the draft can't start: the sheet says why in one line and puts
+   * the playoff stepper right there, capped at the member count; Start
+   * draft stays disabled until P ≤ managers (friendly, blocking). */
+  function StartDraftConfirm({ managers = 7, playoff = 6, weeks = 10 }) {
+    const blocked = playoff > managers;
+    const StepInline = () => (
+      <div style={{ display: 'grid', gap: 6 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center' }}>
+          <span className="ks-callout" style={{ fontWeight: 600 }}>Playoff teams</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', border: `${blocked ? 2 : 1}px solid ${blocked ? 'var(--c-warn-line)' : 'var(--c-border)'}`, borderRadius: 10, overflow: 'hidden' }}>
+            <span style={{ width: 36, height: 36, display: 'grid', placeItems: 'center', fontSize: 20, color: 'var(--c-text)' }}>−</span>
+            <b className="ks-num" style={{ minWidth: 48, textAlign: 'center', borderInline: '1px solid var(--c-border)', lineHeight: '36px' }}>{playoff}</b>
+            <span style={{ width: 36, height: 36, display: 'grid', placeItems: 'center', fontSize: 20, color: 'var(--c-text-3)' }} aria-disabled="true">+</span>
+          </span>
+        </div>
+        <span className="ks-caption ks-num">{blocked ? `Up to ${managers}, one per manager.` : `${K.playoffLine(playoff)}. Season: ${weeks} weeks + ${K.playoffPlan(playoff).weeks} playoff weeks.`}</span>
+      </div>
+    );
     return (
-      <Device tab="league" label="Start the draft, confirm" overlay={
-        <Sheet top={380}>
+      <Device tab="league" label={blocked ? 'Start the draft, playoff teams too many' : 'Start the draft, confirm'} overlay={
+        <Sheet top={blocked ? 330 : 380}>
           <span className="ks-title">Start the draft?</span>
-          <span className="ks-callout ks-muted">7 managers are in. The draft order is set when you start, and each pick gets 60 seconds.</span>
-          <span className="ks-callout ks-num"><b>Playoffs:</b> {K.playoffLine(6)}. Season: 10 weeks + {K.playoffPlan(6).weeks} playoff weeks.</span>
-          <ByeNotice members={7} weeks={10} />
-          <span className="ks-btn">Start draft</span>
+          <span className="ks-callout ks-muted">{managers} managers are in. The draft order is set when you start, and each pick gets 60 seconds.</span>
+          {blocked ? (
+            <>
+              <div role="alert" className="ks-card" style={{ padding: '10px 12px', background: 'var(--c-warn-tint)', borderColor: 'var(--c-warn-line)', boxShadow: 'none' }}>
+                <span className="ks-callout" style={{ fontWeight: 600, color: 'var(--c-text)' }}>{playoff} playoff teams, but {managers} managers are in. Lower the playoff teams to start.</span>
+              </div>
+              <StepInline />
+            </>
+          ) : (
+            <>
+              <span className="ks-callout ks-num"><b>Playoffs:</b> {K.playoffLine(playoff)}. Season: {weeks} weeks + {K.playoffPlan(playoff).weeks} playoff weeks.</span>
+              <ByeNotice members={managers} weeks={weeks} />
+            </>
+          )}
+          <span className="ks-btn" style={blocked ? { opacity: 0.4 } : undefined} aria-disabled={blocked}>Start draft</span>
           <span className="ks-btn ks-btn--secondary">Not yet</span>
         </Sheet>
       }>
@@ -3065,14 +3096,15 @@
             'The draft recap lives under League › History after the draft: your picks ranked by how they have done since.',
             'Uneven byes get a short heads-up, never an explanation of how byes work, and never a block: on the weeks control in Create league / League settings (based on the expected size, and it says so), and on the commissioner\'s Start draft confirm (the count is final there). It only appears for an odd number of managers when the weeks don\'t divide evenly; with an even count there are no byes. Backend: byes per manager = floor or ceil(weeks / managers) when managers is odd.',
             <>A bye is no result: in the Season strip on Home it shows as a neutral <span className="ks-chip ks-chip--money" style={{ textTransform: 'none', letterSpacing: 0, fontStretch: '100%' }}>Bye</span> chip, never W or L, and it doesn't count toward win percentage. (Stock Scudetto has 6 managers, so it has no byes.)</>,
-            <>Playoffs are auto-configured from the number of teams the commissioner picks (any number from 2 up to the managers): weeks = ceil(log2 teams), first-round byes = the next power of two minus teams, given to the top seeds, fixed bracket with no re-seeding. For example, {window.KS.playoffLine(4)}; {window.KS.playoffLine(6)}; {window.KS.playoffLine(10)}; and 2 teams play just the final. Before the draft the cap is the expected size, and Start draft re-checks it and shows the playoff line. (New copy.)</>,
-            <>Round names, counting back from the final (proposal, your call): <b>Final</b>, <b>Semifinals</b>, <b>Quarterfinals</b>, <b>Round 1</b>; any first round with byes is called <b>Wild card</b>. So 6 teams read "Wild card · Semifinals · Final", 10 teams "Wild card · Quarterfinals · Semifinals · Final", and 16 teams "Round 1 · Quarterfinals · Semifinals · Final". The plainer alternative is "Round 1 · Round 2 · … · Final" everywhere.</>,
+            <>Playoffs are auto-configured from the number of teams the commissioner picks (any number from 2 up to the managers): weeks = ceil(log2 teams), first-round byes = the next power of two minus teams, given to the top seeds, fixed bracket with no re-seeding. For example, {window.KS.playoffLine(4)}; {window.KS.playoffLine(6)}; {window.KS.playoffLine(10)}; and 2 teams play just the final. Before the draft the cap is the expected size. Start draft re-checks it against who's actually in: if there are more playoff teams than managers, the draft can't start until the commissioner lowers them, right on the confirm sheet. (New copy.)</>,
+            <>Round names, counting back from the final (proposal, your call): <b>Final</b>, <b>Semifinals</b>, <b>Quarterfinals</b>; any earlier round is <b>Round N</b> counting from the start; any first round with byes is called <b>Wild card</b>. So 6 teams read "Wild card · Semifinals · Final", 10 teams "Wild card · Quarterfinals · Semifinals · Final", 16 teams "Round 1 · Quarterfinals · Semifinals · Final", and 32 teams "Round 1 · Round 2 · Quarterfinals · Semifinals · Final". No cap beyond one playoff team per manager. The plainer alternative is "Round 1 · Round 2 · … · Final" everywhere.</>,
             'Playoffs follow the scorer: the commissioner picks 2, 4 or 8 teams (default 4); seeds by win percentage (byes excluded), then head-to-head, then season gain; 1 plays 4 and 2 plays 3; a tied game goes to the higher seed. The explanatory line under the bracket is new copy.',
           ]}>
           <Fit caption="All matchups"><I.AllMatchups /></Fit>
           <Fit caption="Matchup before the season"><I.MatchupPreSeason /></Fit>
           <Fit caption="Draft lobby"><I.DraftLobby /></Fit>
           <Fit caption="Start the draft (commissioner)" note="Uneven-bye heads-up: 7 managers, 10 weeks (new copy)"><I.StartDraftConfirm /></Fit>
+          <Fit caption="Start the draft · too many playoff teams" note="7 playoff teams, 6 managers: fix it right here; Start stays disabled until it fits (new copy)"><I.StartDraftConfirm managers={6} playoff={7} /></Fit>
           <Fit caption="Create league · Season" note="Uneven-bye heads-up on the weeks control, based on the expected size (new copy)"><I.CreateSeason /></Fit>
           <Fit caption="Draft room · auto-picks" note="New copy: the banner, the Auto badge and the pick-log lines"><I.DraftAutoPick /></Fit>
           <Fit caption="Draft recap"><I.DraftRecap /></Fit>

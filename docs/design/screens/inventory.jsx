@@ -663,15 +663,44 @@
 
   /** Commissioner's Start draft confirm. The member count is final here;
    * the notice is informational and never blocks. */
-  function StartDraftConfirm() {
+  /** managers = who's in now (final); playoff = the league's P. If P >
+   * managers the draft can't start: the sheet says why in one line and puts
+   * the playoff stepper right there, capped at the member count; Start
+   * draft stays disabled until P ≤ managers (friendly, blocking). */
+  function StartDraftConfirm({ managers = 7, playoff = 6, weeks = 10 }) {
+    const blocked = playoff > managers;
+    const StepInline = () => (
+      <div style={{ display: 'grid', gap: 6 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center' }}>
+          <span className="ks-callout" style={{ fontWeight: 600 }}>Playoff teams</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', border: `${blocked ? 2 : 1}px solid ${blocked ? 'var(--c-warn-line)' : 'var(--c-border)'}`, borderRadius: 10, overflow: 'hidden' }}>
+            <span style={{ width: 36, height: 36, display: 'grid', placeItems: 'center', fontSize: 20, color: 'var(--c-text)' }}>−</span>
+            <b className="ks-num" style={{ minWidth: 48, textAlign: 'center', borderInline: '1px solid var(--c-border)', lineHeight: '36px' }}>{playoff}</b>
+            <span style={{ width: 36, height: 36, display: 'grid', placeItems: 'center', fontSize: 20, color: 'var(--c-text-3)' }} aria-disabled="true">+</span>
+          </span>
+        </div>
+        <span className="ks-caption ks-num">{blocked ? `Up to ${managers}, one per manager.` : `${K.playoffLine(playoff)}. Season: ${weeks} weeks + ${K.playoffPlan(playoff).weeks} playoff weeks.`}</span>
+      </div>
+    );
     return (
-      <Device tab="league" label="Start the draft, confirm" overlay={
-        <Sheet top={380}>
+      <Device tab="league" label={blocked ? 'Start the draft, playoff teams too many' : 'Start the draft, confirm'} overlay={
+        <Sheet top={blocked ? 330 : 380}>
           <span className="ks-title">Start the draft?</span>
-          <span className="ks-callout ks-muted">7 managers are in. The draft order is set when you start, and each pick gets 60 seconds.</span>
-          <span className="ks-callout ks-num"><b>Playoffs:</b> {K.playoffLine(6)}. Season: 10 weeks + {K.playoffPlan(6).weeks} playoff weeks.</span>
-          <ByeNotice members={7} weeks={10} />
-          <span className="ks-btn">Start draft</span>
+          <span className="ks-callout ks-muted">{managers} managers are in. The draft order is set when you start, and each pick gets 60 seconds.</span>
+          {blocked ? (
+            <>
+              <div role="alert" className="ks-card" style={{ padding: '10px 12px', background: 'var(--c-warn-tint)', borderColor: 'var(--c-warn-line)', boxShadow: 'none' }}>
+                <span className="ks-callout" style={{ fontWeight: 600, color: 'var(--c-text)' }}>{playoff} playoff teams, but {managers} managers are in. Lower the playoff teams to start.</span>
+              </div>
+              <StepInline />
+            </>
+          ) : (
+            <>
+              <span className="ks-callout ks-num"><b>Playoffs:</b> {K.playoffLine(playoff)}. Season: {weeks} weeks + {K.playoffPlan(playoff).weeks} playoff weeks.</span>
+              <ByeNotice members={managers} weeks={weeks} />
+            </>
+          )}
+          <span className="ks-btn" style={blocked ? { opacity: 0.4 } : undefined} aria-disabled={blocked}>Start draft</span>
           <span className="ks-btn ks-btn--secondary">Not yet</span>
         </Sheet>
       }>
