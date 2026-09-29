@@ -18,6 +18,15 @@
  * on the next run, because the caller refuses BEFORE writing anything.
  */
 
+import {
+  isValidPlayoffTeams,
+  planBracket,
+  playoffRoundCode,
+  playoffShape,
+  type PlayoffRoundCode,
+  type SlotSource,
+} from '../_shared/playoff-bracket.ts';
+
 export interface RankedStanding {
   user_id: string;
   rank: number;
@@ -57,25 +66,21 @@ export function readRanking(res: RpcResult): { ok: true; ranked: RankedStanding[
   return { ok: true, ranked };
 }
 
-/** Playoff seeds: the top `playoffTeams` ranks, seed = rank. */
+/** Playoff seeds: the top `playoffTeams` ranks, seed = rank. playoffTeams
+ * is leagues.playoff_teams as read: an integer >= 2 or this refuses (there is
+ * no default; NULL used to read as 4 via `playoff_teams || 4`, and matchup
+ * leagues now require it, 20261012000000). */
 export function decidePlayoffSeeds(
   res: RpcResult,
-  playoffTeams: number,
+  playoffTeams: number | null,
 ): { ok: true; seeds: Array<{ user_id: string; seed: number }> } | Refusal {
+  if (!isValidPlayoffTeams(playoffTeams)) return { ok: false, reason: `invalid_playoff_teams: ${String(playoffTeams)}` };
   const r = readRanking(res);
   if (!r.ok) return r;
   if (r.ranked.length < playoffTeams) {
     return refuse(`${r.ranked.length} ranked managers for ${playoffTeams} playoff spots`);
   }
   return { ok: true, seeds: r.ranked.slice(0, playoffTeams).map((s) => ({ user_id: s.user_id, seed: s.rank })) };
-}
-
-/** Champion and runner-up for a league that ends without playoffs. */
-export function decidePodium(res: RpcResult): { ok: true; champion: string; runnerUp: string } | Refusal {
-  const r = readRanking(res);
-  if (!r.ok) return r;
-  if (r.ranked.length < 2) return refuse('fewer than two ranked managers');
-  return { ok: true, champion: r.ranked[0].user_id, runnerUp: r.ranked[1].user_id };
 }
 
 export interface TransitionLeague {
@@ -123,8 +128,13 @@ export function needsRegularSeasonTransition(l: TransitionLeague, c: MatchupCoun
 // ---------------------------------------------------------------------------
 
 /** One playoff matchup row, shaped for public.start_league_playoffs (keys MUST
- * match its jsonb_to_recordset column list in 20261011000003). A null team is a
- * placeholder filled later by advancePlayoffWinner. */
+ * match its jsonb_to_recordset column list, 20261012000001).
+ *
+ * A null team is a placeholder awaiting the winner of its feeder game, and
+ * that is the ONLY meaning a null team has on a playoff row. A bye is not a
+ * row: the bye seed is already in its round-2 slot. The address
+ * (playoff_round_number, bracket_position) is what advancement keys on;
+ * playoff_round is the structural code by distance from the final. */
 export interface PlayoffBracketRow {
   week_number: number;
   team1_user_id: string | null;
@@ -133,24 +143,31 @@ export interface PlayoffBracketRow {
   team2_seed: number | null;
   week_start: string; // ISO-8601 UTC
   week_end: string; // ISO-8601 UTC
-  playoff_round: 'quarter' | 'semi' | 'finals';
+  playoff_round: PlayoffRoundCode;
+  playoff_round_number: number; // 1..W
+  bracket_position: number; // 0..2^(W-round)-1
 }
 
 /**
- * Build the bracket from seeds (index 0 = seed 1). Moved verbatim in logic from
- * index.ts generateBracket: each round starts on the first Tuesday strictly
- * after `startDate` (+1 week per round) at 14:30Z and ends that Friday at 21:00Z;
- * 2 teams = finals only; 4 = 1v4, 2v3 semis + finals placeholder; 8 = 1v8, 4v5,
- * 2v7, 3v6 quarters + two semi placeholders + finals placeholder. Any other
- * size returns [], which start_league_playoffs refuses.
+ * Build the bracket from seeds (index 0 = seed 1) for ANY playoff size, from
+ * the pure plan in _shared/playoff-bracket.ts (planBracket). Round r is played
+ * in week startWeek + r - 1, starting on the first Tuesday strictly after
+ * `startDate` (+1 week per round) at 14:30Z and ending that Friday at 21:00Z
+ * (unchanged from the old 2/4/8-only builder, and the same windows
+ * planSeason's league end date assumes). For 2, 4 and 8 teams the pairings
+ * are the ones prod has always used (1v2; 1v4, 2v3; 1v8, 4v5, 3v6, 2v7).
+ *
+ * Returns [] for fewer than 2 seeds or a bracket longer than 4 rounds (more
+ * than 16 teams, which has no round code); start_league_playoffs refuses both.
  */
 export function buildPlayoffBracket(
   seeds: Array<{ user_id: string }>,
   startDate: Date,
   startWeek: number,
 ): PlayoffBracketRow[] {
-  const numTeams = seeds.length;
-  const rows: PlayoffBracketRow[] = [];
+  if (!isValidPlayoffTeams(seeds.length)) return [];
+  const { weeks } = playoffShape(seeds.length);
+  if (weeks > 4) return [];
 
   function timing(weekOffset: number) {
     const base = new Date(startDate);
@@ -163,25 +180,25 @@ export function buildPlayoffBracket(
     end.setUTCHours(21, 0, 0, 0);
     return { week_start: base.toISOString(), week_end: end.toISOString() };
   }
-  const game = (offset: number, round: PlayoffBracketRow['playoff_round'], i1?: number, i2?: number): PlayoffBracketRow => ({
-    week_number: startWeek + offset,
-    team1_user_id: i1 === undefined ? null : seeds[i1].user_id,
-    team2_user_id: i2 === undefined ? null : seeds[i2].user_id,
-    team1_seed: i1 === undefined ? null : i1 + 1,
-    team2_seed: i2 === undefined ? null : i2 + 1,
-    ...timing(offset),
-    playoff_round: round,
-  });
+  const side = (s: SlotSource) =>
+    s.kind === 'seed'
+      ? { user: seeds[s.seed - 1].user_id, seed: s.seed }
+      : { user: null, seed: null }; // awaiting the feeder game's winner
 
-  if (numTeams === 2) {
-    rows.push(game(0, 'finals', 0, 1));
-  } else if (numTeams === 4) {
-    rows.push(game(0, 'semi', 0, 3), game(0, 'semi', 1, 2), game(1, 'finals'));
-  } else if (numTeams === 8) {
-    for (const [a, b] of [[0, 7], [3, 4], [1, 6], [2, 5]]) rows.push(game(0, 'quarter', a, b));
-    rows.push(game(1, 'semi'), game(1, 'semi'), game(2, 'finals'));
-  }
-  return rows;
+  return planBracket(seeds.length).map((g) => {
+    const t1 = side(g.team1), t2 = side(g.team2);
+    return {
+      week_number: startWeek + g.round - 1,
+      team1_user_id: t1.user,
+      team2_user_id: t2.user,
+      team1_seed: t1.seed,
+      team2_seed: t2.seed,
+      ...timing(g.round - 1),
+      playoff_round: playoffRoundCode(g.round, weeks),
+      playoff_round_number: g.round,
+      bracket_position: g.position,
+    };
+  });
 }
 
 /**
