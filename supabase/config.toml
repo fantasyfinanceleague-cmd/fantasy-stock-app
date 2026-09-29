@@ -93,6 +93,18 @@ enabled = true
 verify_jwt = false
 entrypoint = "./functions/enrich-symbols/index.ts"
 
+# Ask #7 (docs/design/prompts/phase3-plan.md): daily refresh of
+# public.market_calendar from Alpaca's /v2/calendar. Cron-only, same pattern
+# as enrich-symbols above — JWT verification disabled; the function's own
+# apikey-header validation (SB_SECRET_KEY_CRON, constant-time, fail-closed)
+# is the authentication guard. The cron that calls this is DEFERRED
+# (supabase/migrations/deferred/) until this function is deployed and
+# effect-verified.
+[functions.refresh-market-calendar]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/refresh-market-calendar/index.ts"
+
 # In-house simulator (DR-001 Phase 3): server-side draft legality gate. RLS on
 # drafts remains the membership backstop; this function is the single legality
 # gate + write path the clients use. verify_jwt=true + in-code getUser() +

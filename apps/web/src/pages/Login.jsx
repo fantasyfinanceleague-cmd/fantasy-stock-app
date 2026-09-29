@@ -78,16 +78,26 @@ export default function Login({ initialSignUp = false }) {
         return;
       }
 
+      // Ask #6 fix: pass the username as auth metadata, not just to the
+      // post-signUp user_profiles upsert below. With "Confirm email" on,
+      // signUp() returns no session, so that upsert runs as anon and is
+      // refused by RLS (auth.uid() = id) — the username was otherwise lost
+      // server-side with no other record of it. A DB trigger
+      // (handle_new_user_profile, 20261005000001) reads this metadata inside
+      // the same transaction that creates the auth.users row, so it works
+      // regardless of confirmation timing. The upsert below stays as a
+      // (now-redundant) fallback.
       const signUpOptions = {
         email,
         password: pw,
+        options: {
+          data: { username: username.trim() },
+        },
       };
 
       // Only include captcha token if not on localhost and token exists
       if (!IS_LOCALHOST && captchaToken) {
-        signUpOptions.options = {
-          captchaToken: captchaToken
-        };
+        signUpOptions.options.captchaToken = captchaToken;
       }
 
       const { data, error } = await supabase.auth.signUp(signUpOptions);

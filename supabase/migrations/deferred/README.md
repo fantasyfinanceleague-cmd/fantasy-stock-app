@@ -6,7 +6,7 @@ Supabase CLI applies only the timestamped `.sql` files directly in
 Do **not** move a file back to the parent directory until its stated precondition
 is met.
 
-**Currently held:** 2 files (see *Held* below).
+**Currently held:** 3 files (see *Held* below).
 
 ## How to use it
 
@@ -75,6 +75,48 @@ timestamp when promoting instead of passing `--include-all`.
 must return zero rows) and re-run the effect-verify query above against a
 *second* fresh test league to prove drafting still works with the policies
 gone. Then move this section to *History*.
+
+### `20261005000003_schedule_refresh_market_calendar.sql`
+
+Schedules `refresh_market_calendar_daily`, which drives ask #7's market
+session status (`docs/design/prompts/phase3-plan.md`). Held so the cron never
+calls a function that doesn't exist yet in prod.
+
+**Precondition: ALL of the following, in order.**
+1. `20261005000002_market_calendar.sql` is applied (check `schema_migrations`)
+   and its proacl/relacl checks pass — see the HUMAN ACTION block at the end
+   of that file.
+2. `refresh-market-calendar` is **deployed**
+   (`supabase functions deploy refresh-market-calendar --project-ref haiaaifjcclsvmkfqgmd`)
+   from `/Users/giorgio/fantasy-stock-deploy`, and effect-verified: a
+   no-credential POST reaches OUR code (a 401 from the function's own apikey
+   guard, not the gateway's generic 401 — CLAUDE.md verify_jwt guidance), and
+   one manually-triggered run (with the real cron apikey, never printed to a
+   log) populates `market_calendar` / `market_calendar_coverage`:
+   ```sql
+   SELECT covered_from, covered_through, refreshed_at FROM public.market_calendar_coverage;
+   SELECT count(*) FROM public.market_calendar;
+   ```
+3. `docs/security/game-data-asks-effect-test.sql` section #7 passes against
+   the now-populated tables.
+
+**Timestamp note:** same as the sibling entries — if migrations newer than
+`20261005000003` are applied before this is promoted, rename it to a fresh
+timestamp when promoting instead of passing `--include-all`.
+
+**After applying:** confirm the schedule took (CLAUDE.md — a dry-run or push
+output is not enough):
+```sql
+SELECT command FROM cron.job WHERE jobname = 'refresh_market_calendar_daily';
+```
+Then, the FOLLOWING day, confirm the data moved (not `cron.job_run_details` —
+`net.http_post` is async, and this job's own runtime can exceed pg_net's 5s
+default response-tracking window):
+```sql
+SELECT covered_from, covered_through, refreshed_at FROM public.market_calendar_coverage;
+```
+`refreshed_at` should be within the last ~24h. Then move this section to
+*History*.
 
 ## History
 
