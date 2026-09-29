@@ -146,6 +146,9 @@ above and CLAUDE.md).
    minutes out. It must set `league_draft_order_meta.state = 'finalized'` and
    settle that league's `league_notifications.push_status` rows (`sent` for a
    1.1.0 device, `no_device` otherwise).
+   `net.http_post(... timeout_milliseconds := 30000)` is already proven on
+   this `pg_net`: the applied, running `20261005000003_schedule_refresh_market_calendar.sql`
+   passes it. The manual run still exercises it before scheduling.
 
 **Timestamp note:** if migrations newer than `20261013000001` have been
 applied before this is promoted, rename it to a fresh timestamp rather than

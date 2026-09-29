@@ -292,9 +292,12 @@ begin
   if v_state is null then
     perform public._draft_order_materialize(
       p_league_id, case when v_l.draft_order_mode = 'manual' then 'manual_seed' else 'random' end);
-    v_state := 'open';
+    -- Re-read, never assume 'open': if a concurrent caller won the
+    -- materialize (only reachable without the leagues row lock, which every
+    -- current caller holds), its state is the truth (supabase-reviewer).
+    select state into v_state from public.league_draft_order_meta where league_id = p_league_id;
   end if;
-  if v_state <> 'open' then
+  if v_state is distinct from 'open' then
     return false;
   end if;
 
@@ -699,7 +702,10 @@ begin
       -- new element placed uniformly among n+1 slots, is a uniform permutation
       -- of n+1). Appending here would put the commissioner — usually the seed's
       -- only member — first by default.
-      v_pos := 1 + floor(random() * (v_n + 1))::integer;
+      -- Drawn from gen_random_uuid() (pg_strong_random), the same source as
+      -- the initial shuffle — not random(). The first 8 hex digits of a v4
+      -- uuid are all random bits; modulo bias over 2^32 is negligible.
+      v_pos := 1 + (('x' || substr(gen_random_uuid()::text, 1, 8))::bit(32)::bigint % (v_n + 1))::integer;
       update public.league_draft_order
          set position = position + 1
        where league_id = new.league_id and position >= v_pos;

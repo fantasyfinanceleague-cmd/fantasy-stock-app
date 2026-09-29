@@ -145,16 +145,20 @@ Deno.serve(async (req: Request) => {
       outcome = 'expo_error';
     }
     const status = nextPushStatus(outcome, attempts);
-    const { error: setErr } = await admin
+    // Check the EFFECT, not just the error: an UPDATE matching zero rows
+    // resolves { data: null, error: null } (CLAUDE.md success signals #5).
+    const { data: settled, error: setErr } = await admin
       .from('league_notifications')
       .update({ push_status: status, push_error: outcome === 'sent' ? null : outcome })
       .eq('id', row.id)
-      .eq('push_status', 'sending');
-    if (setErr) {
+      .eq('push_status', 'sending')
+      .select('id')
+      .maybeSingle();
+    if (setErr || !settled) {
       // The row stays 'sending' and is reclaimed after STALE_SENDING_MS — a
       // possible duplicate push, never a lost one.
       bump('settle_failed');
-      console.error('settle failed', row.id, JSON.stringify(setErr));
+      console.error('settle failed', row.id, setErr ? JSON.stringify(setErr) : 'no row settled (reclaimed?)');
       continue;
     }
     bump(status === 'pending' ? `retry_${outcome}` : status);
