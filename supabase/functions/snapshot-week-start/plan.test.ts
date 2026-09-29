@@ -28,6 +28,7 @@ import {
   buildPricedRows,
   type Holding,
 } from './plan.ts';
+import { matchupParticipants, snapshotHoldings } from '../_shared/snapshot-holdings.ts';
 
 // Small builders to keep the intent of each case legible.
 const holdings = (...pairs: [string, number][]): Holding[] =>
@@ -202,4 +203,156 @@ Deno.test('buildPricedRows: no users -> empty rows, empty missing', () => {
   const { rows, missingSymbols } = buildPricedRows('lg1', 1, new Map(), priceMap({}));
   assertEquals(rows, []);
   assertEquals(missingSymbols, []);
+});
+
+// ===========================================================================
+// Bots + SKIP rows, end to end through the shared holdings helper
+// (../_shared/snapshot-holdings.ts). These run the SAME pipeline as the handler:
+// matchups -> matchupParticipants -> snapshotHoldings -> classifyCoverage /
+// selectMissingHoldings / buildPricedRows.
+// ===========================================================================
+
+const HUMAN_A = '11111111-1111-1111-1111-111111111111';
+const HUMAN_B = '22222222-2222-2222-2222-222222222222';
+const BOT = 'bot-1';
+
+function holdingsFor(
+  matchups: Array<{ team1_user_id: string | null; team2_user_id: string | null }>,
+  drafts: Array<{ user_id: string; symbol: string | null; quantity: number | null }>,
+): Map<string, Holding[]> {
+  const out = new Map<string, Holding[]>();
+  for (const id of matchupParticipants(matchups)) out.set(id, snapshotHoldings(id, drafts, []));
+  return out;
+}
+
+Deno.test('bots: a bot participant is snapshotted like anyone else (F1)', () => {
+  const uh = holdingsFor(
+    [{ team1_user_id: HUMAN_A, team2_user_id: BOT }],
+    [
+      { user_id: HUMAN_A, symbol: 'AAPL', quantity: 1 },
+      { user_id: BOT, symbol: 'MSFT', quantity: 1 },
+    ],
+  );
+  assertEquals(classifyCoverage(uh, new Set()), 'incomplete');
+  const { rows, missingSymbols } = buildPricedRows(
+    'L', 2, selectMissingHoldings(uh, new Set()), priceMap({ AAPL: 200, MSFT: 400 }),
+  );
+  assertEquals(missingSymbols, []);
+  assertEquals(rows.map((r) => r.user_id).sort(), [HUMAN_A, BOT].sort());
+});
+
+Deno.test('SKIP: a SKIP row never reaches the price fetch or blocks the league (F2)', () => {
+  // Before the fix the SKIP row became a 1-share 'SKIP' holding, which no price
+  // could satisfy, so buildPricedRows returned missingSymbols=['SKIP'] and the
+  // WHOLE league aborted on every retry.
+  const uh = holdingsFor(
+    [{ team1_user_id: HUMAN_A, team2_user_id: BOT }],
+    [
+      { user_id: HUMAN_A, symbol: 'AAPL', quantity: 1 },
+      { user_id: BOT, symbol: 'MSFT', quantity: 1 },
+      { user_id: BOT, symbol: 'SKIP', quantity: 0 },
+    ],
+  );
+  const { rows, missingSymbols } = buildPricedRows(
+    'L', 2, selectMissingHoldings(uh, new Set()), priceMap({ AAPL: 200, MSFT: 400 }),
+  );
+  assertEquals(missingSymbols, []);
+  assert(!rows.some((r) => r.symbol === 'SKIP'));
+  assertEquals(rows.length, 2);
+});
+
+Deno.test('SKIP: a user whose only row is SKIP is legitimately EMPTY, not missing', () => {
+  // The partial-state rule: an empty holder must not make the league-week read
+  // incomplete, or a fully-snapshotted league would re-run (and re-price) forever.
+  const uh = holdingsFor(
+    [{ team1_user_id: HUMAN_A, team2_user_id: HUMAN_B }],
+    [
+      { user_id: HUMAN_A, symbol: 'AAPL', quantity: 1 },
+      { user_id: HUMAN_B, symbol: 'SKIP', quantity: 0 },
+    ],
+  );
+  assertEquals(uh.get(HUMAN_B), []);
+  // HUMAN_A covered, HUMAN_B has no row and needs none -> complete.
+  assertEquals(classifyCoverage(uh, new Set([HUMAN_A])), 'complete');
+  assertEquals(selectMissingHoldings(uh, new Set([HUMAN_A])).size, 0);
+});
+
+Deno.test('SKIP: a league where the only participant holds only SKIP -> none_expected', () => {
+  const uh = holdingsFor(
+    [{ team1_user_id: HUMAN_B, team2_user_id: null }],
+    [{ user_id: HUMAN_B, symbol: 'SKIP', quantity: 0 }],
+  );
+  assertEquals(classifyCoverage(uh, new Set()), 'none_expected');
+});
+
+Deno.test('quantity 0 on a real symbol is not coerced to a 1-share holding', () => {
+  const uh = holdingsFor(
+    [{ team1_user_id: HUMAN_A, team2_user_id: null }],
+    [
+      { user_id: HUMAN_A, symbol: 'AAPL', quantity: 0 },
+      { user_id: HUMAN_A, symbol: 'MSFT', quantity: 2 },
+    ],
+  );
+  assertEquals(uh.get(HUMAN_A), [{ symbol: 'MSFT', quantity: 2 }]);
+});
+
+Deno.test('mixed bot+human: humans covered, bot missing -> incomplete, heal writes ONLY the bot', () => {
+  // The "already-missed week" heal: the pre-fix Monday run wrote the humans and
+  // skipped the bot. A post-deploy run (e.g. the Tuesday cron) must fill the bot
+  // without touching the humans' rows.
+  const uh = holdingsFor(
+    [
+      { team1_user_id: HUMAN_A, team2_user_id: BOT },
+      { team1_user_id: HUMAN_B, team2_user_id: 'bot-2' },
+    ],
+    [
+      { user_id: HUMAN_A, symbol: 'AAPL', quantity: 1 },
+      { user_id: HUMAN_B, symbol: 'KO', quantity: 1 },
+      { user_id: BOT, symbol: 'MSFT', quantity: 1 },
+      { user_id: 'bot-2', symbol: 'SKIP', quantity: 0 }, // skip-only bot: empty
+    ],
+  );
+  const covered = new Set([HUMAN_A, HUMAN_B]);
+  assertEquals(classifyCoverage(uh, covered), 'incomplete');
+  const missing = selectMissingHoldings(uh, covered);
+  assertEquals([...missing.keys()], [BOT]);
+  const { rows, missingSymbols } = buildPricedRows('L', 2, missing, priceMap({ MSFT: 400 }));
+  assertEquals(missingSymbols, []);
+  assertEquals(rows, [{
+    league_id: 'L', user_id: BOT, week_number: 2, symbol: 'MSFT', quantity: 1, week_start_price: 400,
+  }]);
+});
+
+Deno.test('mixed bot+human: every holder covered (skip-only bot has none) -> complete', () => {
+  const uh = holdingsFor(
+    [
+      { team1_user_id: HUMAN_A, team2_user_id: BOT },
+      { team1_user_id: HUMAN_B, team2_user_id: 'bot-2' },
+    ],
+    [
+      { user_id: HUMAN_A, symbol: 'AAPL', quantity: 1 },
+      { user_id: HUMAN_B, symbol: 'KO', quantity: 1 },
+      { user_id: BOT, symbol: 'MSFT', quantity: 1 },
+      { user_id: 'bot-2', symbol: 'SKIP', quantity: 0 },
+    ],
+  );
+  assertEquals(classifyCoverage(uh, new Set([HUMAN_A, HUMAN_B, BOT])), 'complete');
+});
+
+Deno.test('why reads are gated BEFORE coverage: defaulted-empty inputs are indistinguishable from "nothing held"', () => {
+  // classifyCoverage cannot tell "drafts read failed -> []" from "nobody holds
+  // anything". The old `drafts || []` therefore turned a DB blip into
+  // 'none_expected' (skip, success, every retry skips too), and a defaulted
+  // week_snapshots read made covered users look uncovered (re-upsert at today's
+  // price). The fix is ordering in index.ts: checkSnapshotReads must pass
+  // before any of this runs — pinned in _shared/snapshot-holdings.test.ts.
+  const failedDraftsRead = holdingsFor([{ team1_user_id: HUMAN_A, team2_user_id: BOT }], []);
+  assertEquals(classifyCoverage(failedDraftsRead, new Set()), 'none_expected');
+
+  const real = holdingsFor(
+    [{ team1_user_id: HUMAN_A, team2_user_id: null }],
+    [{ user_id: HUMAN_A, symbol: 'AAPL', quantity: 1 }],
+  );
+  const failedSnapshotsRead = new Set<string>(); // really: HUMAN_A is covered
+  assertEquals([...selectMissingHoldings(real, failedSnapshotsRead).keys()], [HUMAN_A]);
 });
