@@ -379,16 +379,15 @@
   }
   /** Playoffs, auto-configured from P teams (Giorgio, 2026-09-29): 2 ≤ P ≤
    * managers; weeks W = ceil(log2 P); first-round byes = 2^W − P, to the top
-   * seeds, in a FIXED bracket (no re-seeding). Round names count back from
-   * the final (proposal, copy to confirm): Final, Semifinals, Quarterfinals;
-   * any earlier round is "Round N" counting from the start (so 17–32 teams
-   * read Round 1 · Round 2 · Quarterfinals · Semifinals · Final). A first
-   * round that has byes is called "Wild card". No cap beyond P ≤ managers. */
+   * seeds, in a FIXED bracket (no re-seeding). Round names (Giorgio,
+   * confirmed): counted back from the final — Final, Semifinals,
+   * Quarterfinals, Round of 16 — and a first round that has byes is called
+   * "Wild card". Leagues are capped at 16 managers, so W ≤ 4. */
   function playoffPlan(P) {
     const weeks = Math.ceil(Math.log2(P));
     const byes = 2 ** weeks - P;
-    const fromEnd = ['Final', 'Semifinals', 'Quarterfinals'];
-    const rounds = Array.from({ length: weeks }, (_, i) => fromEnd[weeks - 1 - i] || `Round ${i + 1}`);
+    const fromEnd = ['Final', 'Semifinals', 'Quarterfinals', 'Round of 16'];
+    const rounds = Array.from({ length: weeks }, (_, i) => fromEnd[weeks - 1 - i]);
     if (byes > 0 && weeks > 1) rounds[0] = 'Wild card';
     return { teams: P, weeks, byes, rounds };
   }
