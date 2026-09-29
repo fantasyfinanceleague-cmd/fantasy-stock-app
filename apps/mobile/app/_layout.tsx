@@ -10,7 +10,7 @@ import {
 import { Stack, router } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Linking from 'expo-linking';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
@@ -39,14 +39,48 @@ const HIDDEN_HEADER_MODAL = { headerShown: false, presentation: 'modal' } as con
 const HIDDEN_HEADER_FULLSCREEN = { headerShown: false, presentation: 'fullScreenModal' } as const;
 const AUTH_SCREEN_OPTIONS = { headerShown: false } as const;
 
-function RootLayoutNav() {
+function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
   const { user, loading } = useAuth();
   // §9A ("One design, two themes", 2026-09-29): the status bar's own content
   // colour must flip with the app's theme, not stay hardcoded to "dark"
   // (dark content, for a light background) — "light" content is needed for
   // Dark's navy background, or the clock/battery icons disappear into it.
-  const { resolvedTheme } = useTheme();
+  const { resolvedTheme, colors, ready: themeReady } = useTheme();
   const statusBarStyle = resolvedTheme === 'dark' ? 'light' : 'dark';
+
+  // Orchestrator, 2026-09-29 follow-up: React Navigation's own chrome (the
+  // native-stack background behind transitions, header/tab-bar surfaces)
+  // was still hardcoded to React Navigation's light DefaultTheme regardless
+  // of app/_layout.tsx's own theme — exactly the light/dark mixing §9A
+  // exists to remove. Built from useTheme() instead; `fonts` is unrelated
+  // to colour and stays React Navigation's own default.
+  const navigationTheme = useMemo(
+    () => ({
+      dark: resolvedTheme === 'dark',
+      colors: {
+        primary: colors.accent,
+        background: colors.bg,
+        card: colors.surface,
+        text: colors.text,
+        border: colors.border,
+        notification: colors.loss,
+      },
+      fonts: DefaultTheme.fonts,
+    }),
+    [resolvedTheme, colors]
+  );
+
+  // Cold-start flash fix (components/sp/ThemeProvider.tsx has the full
+  // reasoning): hold the splash screen until the theme preference has
+  // been read from storage, alongside the existing font-loading gate —
+  // `fontsLoaded` is already guaranteed true by the time this component
+  // ever mounts (RootLayout below returns null until then), kept explicit
+  // here anyway so the gate reads as a real AND, not an assumption.
+  useEffect(() => {
+    if (fontsLoaded && themeReady) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, themeReady]);
 
   // Handle deep links for password reset
   useEffect(() => {
@@ -153,7 +187,7 @@ function RootLayoutNav() {
   // Not authenticated — no LeagueProvider needed, stable screenOptions
   if (!user) {
     return (
-      <NavigationThemeProvider value={DefaultTheme}>
+      <NavigationThemeProvider value={navigationTheme}>
         <StatusBar style={statusBarStyle} />
         <Stack screenOptions={AUTH_SCREEN_OPTIONS}>
           <Stack.Screen name="login" />
@@ -166,7 +200,7 @@ function RootLayoutNav() {
 
   // Authenticated — full app with tabs
   return (
-    <NavigationThemeProvider value={DefaultTheme}>
+    <NavigationThemeProvider value={navigationTheme}>
       <StatusBar style={statusBarStyle} />
       <LeagueProvider>
         <Stack>
@@ -224,15 +258,6 @@ export default function RootLayout() {
     }
   }, [archivoError]);
 
-  useEffect(() => {
-    // Splash hides once the CORE fonts are ready. Archivo is intentionally
-    // excluded from this gate (see above) so a slow or failed Archivo load
-    // never keeps the app on the splash screen.
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
   if (!loaded) {
     return null;
   }
@@ -244,7 +269,7 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider>
-      <RootLayoutNav />
+      <RootLayoutNav fontsLoaded={loaded} />
     </ThemeProvider>
   );
 }

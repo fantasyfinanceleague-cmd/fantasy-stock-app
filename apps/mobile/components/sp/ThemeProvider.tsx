@@ -22,16 +22,19 @@ import { elevation } from '@/constants/tokens/elevation';
 // whenever the OS theme flips while the app is running, not just at launch —
 // that's RN's own behaviour, nothing extra needed here for it.
 //
-// Cold-start flash: the AsyncStorage read is necessarily async, so the very
-// first render can't yet know a stored override. Chose to default to System
-// immediately (resolved synchronously via useColorScheme(), no wait) rather
-// than holding the first frame until the read completes — System is already
-// correct for anyone who hasn't set an explicit preference, i.e. most users,
-// and it's the Design Lead's own stated recommendation. The minority who
-// explicitly chose Light or Dark against their OS setting see one silent
-// correction moments after mount once the stored value loads, which reads as
-// a normal settle rather than a flash. A read/write failure (storage full,
-// unavailable, denied) falls back to System rather than throwing.
+// Cold-start flash (Orchestrator, 2026-09-29 follow-up): the AsyncStorage
+// read is necessarily async, so the very first render can't yet know a
+// stored override — the initial state below defaults to System (resolved
+// synchronously via useColorScheme()), then corrects once the read
+// resolves. Left alone, that correction would visibly flash for anyone who
+// explicitly chose Light or Dark against their OS setting. Fixed at the
+// splash-screen layer instead of by delaying this provider's own first
+// render: `ready` flips true once the read has resolved (success OR
+// failure/fallback — never hangs), and app/_layout.tsx doesn't call
+// SplashScreen.hideAsync() until `ready` is true alongside its existing
+// font-loading gate. The read is milliseconds, so the splash (already
+// showing regardless) simply covers it. A read/write failure (storage
+// full, unavailable, denied) falls back to System rather than throwing.
 
 export type ThemePreference = 'system' | ThemeMode;
 
@@ -56,6 +59,10 @@ export interface ThemeContextValue {
   colors: ThemeColors;
   elevation: (typeof elevation)[ThemeMode];
   setPreference: (next: ThemePreference) => void;
+  /** True once the stored preference has been read (or the read failed and
+   * fell back to System) — app/_layout.tsx holds the splash screen on this
+   * so a stored Light/Dark override never flashes System first. */
+  ready: boolean;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -75,6 +82,10 @@ export interface ThemeProviderProps {
 export function ThemeProvider({ children }: ThemeProviderProps) {
   const systemScheme = useColorScheme();
   const [preference, setPreferenceState] = useState<ThemePreference>('system');
+  // No storage available (web/static rendering) means there is nothing to
+  // wait for — ready starts true in that case, false only while a real
+  // AsyncStorage read is in flight.
+  const [ready, setReady] = useState(() => getAsyncStorage() === null);
 
   useEffect(() => {
     const storage = getAsyncStorage();
@@ -83,11 +94,14 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     storage
       .getItem(STORAGE_KEY)
       .then((stored) => {
-        if (cancelled || !isThemePreference(stored)) return;
-        setPreferenceState(stored);
+        if (cancelled) return;
+        if (isThemePreference(stored)) setPreferenceState(stored);
       })
       .catch(() => {
         // Falls back to the initial 'system' state — nothing to do.
+      })
+      .finally(() => {
+        if (!cancelled) setReady(true);
       });
     return () => {
       cancelled = true;
@@ -113,8 +127,9 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
       colors: color[resolvedTheme],
       elevation: elevation[resolvedTheme],
       setPreference,
+      ready,
     }),
-    [preference, resolvedTheme]
+    [preference, resolvedTheme, ready]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
