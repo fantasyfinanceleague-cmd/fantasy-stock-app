@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import {
   Inter_400Regular,
@@ -10,7 +10,7 @@ import {
 import { Stack, router } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Linking from 'expo-linking';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
@@ -20,6 +20,7 @@ import { supabase } from '@/lib/supabase';
 import { verifyAndConsumeRecoveryNonce, setRecoverySession } from '@/lib/recoveryNonce';
 import { parseRecoveryLink } from '@/lib/recoveryLink';
 import { useAuth } from '@/lib/useAuth';
+import { ThemeProvider, useTheme } from '@/components/sp/ThemeProvider';
 
 export {
   ErrorBoundary,
@@ -38,8 +39,48 @@ const HIDDEN_HEADER_MODAL = { headerShown: false, presentation: 'modal' } as con
 const HIDDEN_HEADER_FULLSCREEN = { headerShown: false, presentation: 'fullScreenModal' } as const;
 const AUTH_SCREEN_OPTIONS = { headerShown: false } as const;
 
-function RootLayoutNav() {
+function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
   const { user, loading } = useAuth();
+  // §9A ("One design, two themes", 2026-09-29): the status bar's own content
+  // colour must flip with the app's theme, not stay hardcoded to "dark"
+  // (dark content, for a light background) — "light" content is needed for
+  // Dark's navy background, or the clock/battery icons disappear into it.
+  const { resolvedTheme, colors, ready: themeReady } = useTheme();
+  const statusBarStyle = resolvedTheme === 'dark' ? 'light' : 'dark';
+
+  // Orchestrator, 2026-09-29 follow-up: React Navigation's own chrome (the
+  // native-stack background behind transitions, header/tab-bar surfaces)
+  // was still hardcoded to React Navigation's light DefaultTheme regardless
+  // of app/_layout.tsx's own theme — exactly the light/dark mixing §9A
+  // exists to remove. Built from useTheme() instead; `fonts` is unrelated
+  // to colour and stays React Navigation's own default.
+  const navigationTheme = useMemo(
+    () => ({
+      dark: resolvedTheme === 'dark',
+      colors: {
+        primary: colors.accent,
+        background: colors.bg,
+        card: colors.surface,
+        text: colors.text,
+        border: colors.border,
+        notification: colors.loss,
+      },
+      fonts: DefaultTheme.fonts,
+    }),
+    [resolvedTheme, colors]
+  );
+
+  // Cold-start flash fix (components/sp/ThemeProvider.tsx has the full
+  // reasoning): hold the splash screen until the theme preference has
+  // been read from storage, alongside the existing font-loading gate —
+  // `fontsLoaded` is already guaranteed true by the time this component
+  // ever mounts (RootLayout below returns null until then), kept explicit
+  // here anyway so the gate reads as a real AND, not an assumption.
+  useEffect(() => {
+    if (fontsLoaded && themeReady) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, themeReady]);
 
   // Handle deep links for password reset
   useEffect(() => {
@@ -146,21 +187,21 @@ function RootLayoutNav() {
   // Not authenticated — no LeagueProvider needed, stable screenOptions
   if (!user) {
     return (
-      <ThemeProvider value={DefaultTheme}>
-        <StatusBar style="dark" />
+      <NavigationThemeProvider value={navigationTheme}>
+        <StatusBar style={statusBarStyle} />
         <Stack screenOptions={AUTH_SCREEN_OPTIONS}>
           <Stack.Screen name="login" />
           <Stack.Screen name="forgot-password" options={HIDDEN_HEADER_MODAL} />
           <Stack.Screen name="reset-password" options={HIDDEN_HEADER_FULLSCREEN} />
         </Stack>
-      </ThemeProvider>
+      </NavigationThemeProvider>
     );
   }
 
   // Authenticated — full app with tabs
   return (
-    <ThemeProvider value={DefaultTheme}>
-      <StatusBar style="dark" />
+    <NavigationThemeProvider value={navigationTheme}>
+      <StatusBar style={statusBarStyle} />
       <LeagueProvider>
         <Stack>
           <Stack.Screen name="(tabs)" options={HIDDEN_HEADER} />
@@ -175,7 +216,7 @@ function RootLayoutNav() {
           <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
         </Stack>
       </LeagueProvider>
-    </ThemeProvider>
+    </NavigationThemeProvider>
   );
 }
 
@@ -189,19 +230,46 @@ export default function RootLayout() {
     Inter_700Bold,
   });
 
+  // Archivo (Phase 2 foundation, constants/tokens/type.ts): loaded in its OWN
+  // useFonts call, deliberately NOT gating the splash screen or throwing on
+  // failure like the core fonts above. Per the Orchestrator (2026-09-26): "If
+  // Archivo fails to load, the app must still render (fall back; don't hang
+  // on the splash)." A missing/corrupt Archivo file falls back to the system
+  // font wherever `constants/tokens/type.ts`'s fontFamily isn't registered —
+  // RN does this automatically — rather than taking down the whole app the
+  // way a core-font failure still does.
+  const [archivoLoaded, archivoError] = useFonts({
+    'Archivo-Condensed-Black': require('../assets/fonts/archivo/Archivo-Condensed-Black.ttf'),
+    'Archivo-Expanded-ExtraBold': require('../assets/fonts/archivo/Archivo-Expanded-ExtraBold.ttf'),
+    'Archivo-Regular': require('../assets/fonts/archivo/Archivo-Regular.ttf'),
+    'Archivo-Medium': require('../assets/fonts/archivo/Archivo-Medium.ttf'),
+    'Archivo-SemiBold': require('../assets/fonts/archivo/Archivo-SemiBold.ttf'),
+    'Archivo-Bold': require('../assets/fonts/archivo/Archivo-Bold.ttf'),
+    'Archivo-ExtraBold': require('../assets/fonts/archivo/Archivo-ExtraBold.ttf'),
+  });
+
   useEffect(() => {
     if (error) throw error;
   }, [error]);
 
   useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
+    if (archivoError) {
+      console.warn('[fonts] Archivo failed to load — sp.* text falls back to the system font.', archivoError);
     }
-  }, [loaded]);
+  }, [archivoError]);
 
   if (!loaded) {
     return null;
   }
 
-  return <RootLayoutNav />;
+  // `archivoLoaded` isn't read anywhere: it exists only so useFonts' return
+  // tuple is fully destructured for clarity at the call site above; nothing
+  // needs to branch on it, because a failure already falls back gracefully.
+  void archivoLoaded;
+
+  return (
+    <ThemeProvider>
+      <RootLayoutNav fontsLoaded={loaded} />
+    </ThemeProvider>
+  );
 }
