@@ -995,6 +995,24 @@
     if (members % 2 === 0 || weeks % members === 0) return null;
     return { lo: Math.floor(weeks / members), hi: Math.ceil(weeks / members) };
   }
+  /** Playoffs, auto-configured from P teams (Giorgio, 2026-09-29): 2 ≤ P ≤
+   * managers; weeks W = ceil(log2 P); first-round byes = 2^W − P, to the top
+   * seeds, in a FIXED bracket (no re-seeding). Round names count back from
+   * the final (proposal, copy to confirm): Final, Semifinals, Quarterfinals,
+   * Round 1; a first round that has byes is called "Wild card". */
+  function playoffPlan(P) {
+    const weeks = Math.ceil(Math.log2(P));
+    const byes = 2 ** weeks - P;
+    const fromEnd = ['Final', 'Semifinals', 'Quarterfinals', 'Round 1'];
+    const rounds = Array.from({ length: weeks }, (_, i) => fromEnd[weeks - 1 - i]);
+    if (byes > 0 && weeks > 1) rounds[0] = 'Wild card';
+    return { teams: P, weeks, byes, rounds };
+  }
+  const playoffLine = (P) => {
+    const p = playoffPlan(P);
+    const bye = p.byes === 0 ? 'no byes' : p.byes === 1 ? 'the top seed gets a first-round bye' : `the top ${p.byes} seeds get first-round byes`;
+    return `${P} teams · ${p.weeks} ${p.weeks === 1 ? 'week' : 'weeks'} of playoffs · ${bye}`;
+  };
   /** Record as W–L, with –T only when there are ties. */
   const record = (r) => `${r.w}–${r.l}${r.t ? `–${r.t}` : ''}`;
 
@@ -1005,7 +1023,7 @@
     MATCHUP, WEEK_CLOSES, CHYRONS,
     STANDINGS_BEFORE, STANDINGS_FINAL, WEEK6,
     PORTFOLIO_LIVE, OTHER_LEAGUES, HOME, NVDA, ROBERTO_WEEKS, SALE,
-    lineup, score, scoreDisplay, byeNotice, record,
+    lineup, score, scoreDisplay, byeNotice, record, playoffPlan, playoffLine,
   };
 })();
 
@@ -2488,12 +2506,13 @@
             <p className="ks-callout ks-muted" style={{ margin: '4px 0 0' }}>How big the league is and how long it runs.</p>
           </div>
           <div className="ks-card" style={{ padding: 14, display: 'grid', gap: 14 }}>
-            <Stepper label="Managers" value={5} sub="How many you expect, you included" />
-            <Stepper label="Regular season" value={14} unit="weeks" />
-            <ByeNotice members={5} weeks={14} expected />
-            <div style={{ display: 'grid', gap: 8 }}>
-              <span className="ks-callout" style={{ fontWeight: 600 }}>Playoff teams</span>
-              <div className="ks-seg"><span>2</span><span className="on">4</span><span>8</span></div>
+            <Stepper label="Managers" value={7} sub="How many you expect, you included" />
+            <Stepper label="Regular season" value={13} unit="weeks" />
+            <ByeNotice members={7} weeks={13} expected />
+            <div style={{ display: 'grid', gap: 6 }}>
+              <Stepper label="Playoff teams" value={6} sub="2 to 7, up to your expected managers" />
+              <span className="ks-caption ks-num" style={{ color: 'var(--c-text)' }}>{K.playoffLine(6)}</span>
+              <span className="ks-caption ks-num">Season: 13 weeks + {K.playoffPlan(6).weeks} playoff weeks. We check this again when the draft starts.</span>
             </div>
           </div>
           <span className="ks-btn">Next</span>
@@ -2510,6 +2529,7 @@
         <Sheet top={380}>
           <span className="ks-title">Start the draft?</span>
           <span className="ks-callout ks-muted">7 managers are in. The draft order is set when you start, and each pick gets 60 seconds.</span>
+          <span className="ks-callout ks-num"><b>Playoffs:</b> {K.playoffLine(6)}. Season: 10 weeks + {K.playoffPlan(6).weeks} playoff weeks.</span>
           <ByeNotice members={7} weeks={10} />
           <span className="ks-btn">Start draft</span>
           <span className="ks-btn ks-btn--secondary">Not yet</span>
@@ -2633,6 +2653,45 @@
           <div className="ks-tag">Championship · playoff week 2</div>
           <M a="1 Roberto B." b="3 Alessandro D." sa="+$164.20" sb="+$131.05" live />
           <span className="ks-caption ks-muted">The top 4 in the standings make the playoffs: 1 plays 4, 2 plays 3. A tied game goes to the higher seed.</span>
+        </div>
+      </Device>
+    );
+  }
+
+  /** 6-team bracket: 3 playoff weeks, seeds 1–2 get first-round byes and
+   * advance; fixed bracket (1 meets the 4/5 winner, 2 meets the 3/6 winner). */
+  function Playoffs6() {
+    const plan = K.playoffPlan(6);
+    const S = K.STANDINGS_FINAL;
+    const nm = (i) => `${i} ${S[i - 1].name}`;
+    const Game = ({ a, b, sa, sb, live, bye, pending }) => (
+      <div className="ks-raised" style={{ padding: '10px 12px', display: 'grid', gap: 6 }}>
+        {[[a, sa], [b, sb]].map(([n, s], i) => (
+          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', color: pending && !n ? 'var(--c-text-2)' : undefined }} className="ks-callout">
+            <b style={{ color: n && n.includes('Roberto') ? 'var(--c-you-text)' : bye && i === 1 ? 'var(--c-text-2)' : undefined, fontWeight: bye && i === 1 ? 500 : 700 }}>{n}</b>
+            <span className="ks-num">{s}</span>
+          </div>
+        ))}
+        {live ? <span className="ks-caption" style={{ color: 'var(--c-live-text)' }}>Live · ends Fri 4:00 PM ET</span> : null}
+        {bye ? <span className="ks-caption">Advances to the {plan.rounds[1]}</span> : null}
+      </div>
+    );
+    return (
+      <Device game tab="league" label="Playoff bracket, 6 teams">
+        <Head chip={<Chip kind="live">Playoffs</Chip>} />
+        <div className="ks-pad ks-stack" style={{ gap: 12 }}>
+          <div className="ks-seg ks-seg--game"><span>Standings</span><span className="on">Playoffs</span><span>History</span></div>
+          <span className="ks-caption ks-num">{K.playoffLine(6)}</span>
+          <div className="ks-tag">{plan.rounds[0]} · playoff week 1</div>
+          <Game a={nm(1)} b="Bye" bye />
+          <Game a={nm(2)} b="Bye" bye />
+          <Game a={nm(4)} b={nm(5)} sa="+$84.20" sb="+$112.65" live />
+          <Game a={nm(3)} b={nm(6)} sa="+$58.10" sb="−$21.40" live />
+          <div className="ks-tag">{plan.rounds[1]} · playoff week 2</div>
+          <Game a={nm(1)} b="Winner of 4 v 5" pending />
+          <Game a={nm(2)} b="Winner of 3 v 6" pending />
+          <div className="ks-tag">{plan.rounds[2]} · playoff week 3</div>
+          <Game a="Semifinal winners" b="" pending />
         </div>
       </Device>
     );
@@ -2900,7 +2959,7 @@
   window.KSInventory = {
     SignIn, SignUp, SignUpPaused, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeScoring, HomeComplete,
-    AllMatchups, MatchupPreSeason, DraftLobby, StartDraftConfirm, CreateSeason, DraftAutoPick, DraftRecap, Playoffs,
+    AllMatchups, MatchupPreSeason, Playoffs6, DraftLobby, StartDraftConfirm, CreateSeason, DraftAutoPick, DraftRecap, Playoffs,
     SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,
     WebHome, WebPortfolio, WebSettings,
   };
@@ -3006,6 +3065,8 @@
             'The draft recap lives under League › History after the draft: your picks ranked by how they have done since.',
             'Uneven byes get a short heads-up, never an explanation of how byes work, and never a block: on the weeks control in Create league / League settings (based on the expected size, and it says so), and on the commissioner\'s Start draft confirm (the count is final there). It only appears for an odd number of managers when the weeks don\'t divide evenly; with an even count there are no byes. Backend: byes per manager = floor or ceil(weeks / managers) when managers is odd.',
             <>A bye is no result: in the Season strip on Home it shows as a neutral <span className="ks-chip ks-chip--money" style={{ textTransform: 'none', letterSpacing: 0, fontStretch: '100%' }}>Bye</span> chip, never W or L, and it doesn't count toward win percentage. (Stock Scudetto has 6 managers, so it has no byes.)</>,
+            <>Playoffs are auto-configured from the number of teams the commissioner picks (any number from 2 up to the managers): weeks = ceil(log2 teams), first-round byes = the next power of two minus teams, given to the top seeds, fixed bracket with no re-seeding. For example, {window.KS.playoffLine(4)}; {window.KS.playoffLine(6)}; {window.KS.playoffLine(10)}; and 2 teams play just the final. Before the draft the cap is the expected size, and Start draft re-checks it and shows the playoff line. (New copy.)</>,
+            <>Round names, counting back from the final (proposal, your call): <b>Final</b>, <b>Semifinals</b>, <b>Quarterfinals</b>, <b>Round 1</b>; any first round with byes is called <b>Wild card</b>. So 6 teams read "Wild card · Semifinals · Final", 10 teams "Wild card · Quarterfinals · Semifinals · Final", and 16 teams "Round 1 · Quarterfinals · Semifinals · Final". The plainer alternative is "Round 1 · Round 2 · … · Final" everywhere.</>,
             'Playoffs follow the scorer: the commissioner picks 2, 4 or 8 teams (default 4); seeds by win percentage (byes excluded), then head-to-head, then season gain; 1 plays 4 and 2 plays 3; a tied game goes to the higher seed. The explanatory line under the bracket is new copy.',
           ]}>
           <Fit caption="All matchups"><I.AllMatchups /></Fit>
@@ -3015,7 +3076,8 @@
           <Fit caption="Create league · Season" note="Uneven-bye heads-up on the weeks control, based on the expected size (new copy)"><I.CreateSeason /></Fit>
           <Fit caption="Draft room · auto-picks" note="New copy: the banner, the Auto badge and the pick-log lines"><I.DraftAutoPick /></Fit>
           <Fit caption="Draft recap"><I.DraftRecap /></Fit>
-          <Fit caption="Playoff bracket" note="Two playoff weeks after the regular season"><I.Playoffs /></Fit>
+          <Fit caption="Playoff bracket · 4 teams" note="Two playoff weeks after the regular season"><I.Playoffs /></Fit>
+          <Fit caption="Playoff bracket · 6 teams" note="3 weeks; seeds 1–2 get first-round byes (new copy, round names to confirm)"><I.Playoffs6 /></Fit>
         </Group>
 
         <Group id="money" code="3e" name="Trading" job="Sell, keep the cash in the slot, and buy again with exactly what the sale brought in."

@@ -646,12 +646,13 @@
             <p className="ks-callout ks-muted" style={{ margin: '4px 0 0' }}>How big the league is and how long it runs.</p>
           </div>
           <div className="ks-card" style={{ padding: 14, display: 'grid', gap: 14 }}>
-            <Stepper label="Managers" value={5} sub="How many you expect, you included" />
-            <Stepper label="Regular season" value={14} unit="weeks" />
-            <ByeNotice members={5} weeks={14} expected />
-            <div style={{ display: 'grid', gap: 8 }}>
-              <span className="ks-callout" style={{ fontWeight: 600 }}>Playoff teams</span>
-              <div className="ks-seg"><span>2</span><span className="on">4</span><span>8</span></div>
+            <Stepper label="Managers" value={7} sub="How many you expect, you included" />
+            <Stepper label="Regular season" value={13} unit="weeks" />
+            <ByeNotice members={7} weeks={13} expected />
+            <div style={{ display: 'grid', gap: 6 }}>
+              <Stepper label="Playoff teams" value={6} sub="2 to 7, up to your expected managers" />
+              <span className="ks-caption ks-num" style={{ color: 'var(--c-text)' }}>{K.playoffLine(6)}</span>
+              <span className="ks-caption ks-num">Season: 13 weeks + {K.playoffPlan(6).weeks} playoff weeks. We check this again when the draft starts.</span>
             </div>
           </div>
           <span className="ks-btn">Next</span>
@@ -668,6 +669,7 @@
         <Sheet top={380}>
           <span className="ks-title">Start the draft?</span>
           <span className="ks-callout ks-muted">7 managers are in. The draft order is set when you start, and each pick gets 60 seconds.</span>
+          <span className="ks-callout ks-num"><b>Playoffs:</b> {K.playoffLine(6)}. Season: 10 weeks + {K.playoffPlan(6).weeks} playoff weeks.</span>
           <ByeNotice members={7} weeks={10} />
           <span className="ks-btn">Start draft</span>
           <span className="ks-btn ks-btn--secondary">Not yet</span>
@@ -791,6 +793,45 @@
           <div className="ks-tag">Championship · playoff week 2</div>
           <M a="1 Roberto B." b="3 Alessandro D." sa="+$164.20" sb="+$131.05" live />
           <span className="ks-caption ks-muted">The top 4 in the standings make the playoffs: 1 plays 4, 2 plays 3. A tied game goes to the higher seed.</span>
+        </div>
+      </Device>
+    );
+  }
+
+  /** 6-team bracket: 3 playoff weeks, seeds 1–2 get first-round byes and
+   * advance; fixed bracket (1 meets the 4/5 winner, 2 meets the 3/6 winner). */
+  function Playoffs6() {
+    const plan = K.playoffPlan(6);
+    const S = K.STANDINGS_FINAL;
+    const nm = (i) => `${i} ${S[i - 1].name}`;
+    const Game = ({ a, b, sa, sb, live, bye, pending }) => (
+      <div className="ks-raised" style={{ padding: '10px 12px', display: 'grid', gap: 6 }}>
+        {[[a, sa], [b, sb]].map(([n, s], i) => (
+          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', color: pending && !n ? 'var(--c-text-2)' : undefined }} className="ks-callout">
+            <b style={{ color: n && n.includes('Roberto') ? 'var(--c-you-text)' : bye && i === 1 ? 'var(--c-text-2)' : undefined, fontWeight: bye && i === 1 ? 500 : 700 }}>{n}</b>
+            <span className="ks-num">{s}</span>
+          </div>
+        ))}
+        {live ? <span className="ks-caption" style={{ color: 'var(--c-live-text)' }}>Live · ends Fri 4:00 PM ET</span> : null}
+        {bye ? <span className="ks-caption">Advances to the {plan.rounds[1]}</span> : null}
+      </div>
+    );
+    return (
+      <Device game tab="league" label="Playoff bracket, 6 teams">
+        <Head chip={<Chip kind="live">Playoffs</Chip>} />
+        <div className="ks-pad ks-stack" style={{ gap: 12 }}>
+          <div className="ks-seg ks-seg--game"><span>Standings</span><span className="on">Playoffs</span><span>History</span></div>
+          <span className="ks-caption ks-num">{K.playoffLine(6)}</span>
+          <div className="ks-tag">{plan.rounds[0]} · playoff week 1</div>
+          <Game a={nm(1)} b="Bye" bye />
+          <Game a={nm(2)} b="Bye" bye />
+          <Game a={nm(4)} b={nm(5)} sa="+$84.20" sb="+$112.65" live />
+          <Game a={nm(3)} b={nm(6)} sa="+$58.10" sb="−$21.40" live />
+          <div className="ks-tag">{plan.rounds[1]} · playoff week 2</div>
+          <Game a={nm(1)} b="Winner of 4 v 5" pending />
+          <Game a={nm(2)} b="Winner of 3 v 6" pending />
+          <div className="ks-tag">{plan.rounds[2]} · playoff week 3</div>
+          <Game a="Semifinal winners" b="" pending />
         </div>
       </Device>
     );
@@ -1058,7 +1099,7 @@
   window.KSInventory = {
     SignIn, SignUp, SignUpPaused, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeScoring, HomeComplete,
-    AllMatchups, MatchupPreSeason, DraftLobby, StartDraftConfirm, CreateSeason, DraftAutoPick, DraftRecap, Playoffs,
+    AllMatchups, MatchupPreSeason, Playoffs6, DraftLobby, StartDraftConfirm, CreateSeason, DraftAutoPick, DraftRecap, Playoffs,
     SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,
     WebHome, WebPortfolio, WebSettings,
   };

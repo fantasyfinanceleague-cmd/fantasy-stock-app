@@ -377,6 +377,24 @@
     if (members % 2 === 0 || weeks % members === 0) return null;
     return { lo: Math.floor(weeks / members), hi: Math.ceil(weeks / members) };
   }
+  /** Playoffs, auto-configured from P teams (Giorgio, 2026-09-29): 2 ≤ P ≤
+   * managers; weeks W = ceil(log2 P); first-round byes = 2^W − P, to the top
+   * seeds, in a FIXED bracket (no re-seeding). Round names count back from
+   * the final (proposal, copy to confirm): Final, Semifinals, Quarterfinals,
+   * Round 1; a first round that has byes is called "Wild card". */
+  function playoffPlan(P) {
+    const weeks = Math.ceil(Math.log2(P));
+    const byes = 2 ** weeks - P;
+    const fromEnd = ['Final', 'Semifinals', 'Quarterfinals', 'Round 1'];
+    const rounds = Array.from({ length: weeks }, (_, i) => fromEnd[weeks - 1 - i]);
+    if (byes > 0 && weeks > 1) rounds[0] = 'Wild card';
+    return { teams: P, weeks, byes, rounds };
+  }
+  const playoffLine = (P) => {
+    const p = playoffPlan(P);
+    const bye = p.byes === 0 ? 'no byes' : p.byes === 1 ? 'the top seed gets a first-round bye' : `the top ${p.byes} seeds get first-round byes`;
+    return `${P} teams · ${p.weeks} ${p.weeks === 1 ? 'week' : 'weeks'} of playoffs · ${bye}`;
+  };
   /** Record as W–L, with –T only when there are ties. */
   const record = (r) => `${r.w}–${r.l}${r.t ? `–${r.t}` : ''}`;
 
@@ -387,6 +405,6 @@
     MATCHUP, WEEK_CLOSES, CHYRONS,
     STANDINGS_BEFORE, STANDINGS_FINAL, WEEK6,
     PORTFOLIO_LIVE, OTHER_LEAGUES, HOME, NVDA, ROBERTO_WEEKS, SALE,
-    lineup, score, scoreDisplay, byeNotice, record,
+    lineup, score, scoreDisplay, byeNotice, record, playoffPlan, playoffLine,
   };
 })();

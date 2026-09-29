@@ -96,6 +96,8 @@
             'The draft recap lives under League › History after the draft: your picks ranked by how they have done since.',
             'Uneven byes get a short heads-up, never an explanation of how byes work, and never a block: on the weeks control in Create league / League settings (based on the expected size, and it says so), and on the commissioner\'s Start draft confirm (the count is final there). It only appears for an odd number of managers when the weeks don\'t divide evenly; with an even count there are no byes. Backend: byes per manager = floor or ceil(weeks / managers) when managers is odd.',
             <>A bye is no result: in the Season strip on Home it shows as a neutral <span className="ks-chip ks-chip--money" style={{ textTransform: 'none', letterSpacing: 0, fontStretch: '100%' }}>Bye</span> chip, never W or L, and it doesn't count toward win percentage. (Stock Scudetto has 6 managers, so it has no byes.)</>,
+            <>Playoffs are auto-configured from the number of teams the commissioner picks (any number from 2 up to the managers): weeks = ceil(log2 teams), first-round byes = the next power of two minus teams, given to the top seeds, fixed bracket with no re-seeding. For example, {window.KS.playoffLine(4)}; {window.KS.playoffLine(6)}; {window.KS.playoffLine(10)}; and 2 teams play just the final. Before the draft the cap is the expected size, and Start draft re-checks it and shows the playoff line. (New copy.)</>,
+            <>Round names, counting back from the final (proposal, your call): <b>Final</b>, <b>Semifinals</b>, <b>Quarterfinals</b>, <b>Round 1</b>; any first round with byes is called <b>Wild card</b>. So 6 teams read "Wild card · Semifinals · Final", 10 teams "Wild card · Quarterfinals · Semifinals · Final", and 16 teams "Round 1 · Quarterfinals · Semifinals · Final". The plainer alternative is "Round 1 · Round 2 · … · Final" everywhere.</>,
             'Playoffs follow the scorer: the commissioner picks 2, 4 or 8 teams (default 4); seeds by win percentage (byes excluded), then head-to-head, then season gain; 1 plays 4 and 2 plays 3; a tied game goes to the higher seed. The explanatory line under the bracket is new copy.',
           ]}>
           <Fit caption="All matchups"><I.AllMatchups /></Fit>
@@ -105,7 +107,8 @@
           <Fit caption="Create league · Season" note="Uneven-bye heads-up on the weeks control, based on the expected size (new copy)"><I.CreateSeason /></Fit>
           <Fit caption="Draft room · auto-picks" note="New copy: the banner, the Auto badge and the pick-log lines"><I.DraftAutoPick /></Fit>
           <Fit caption="Draft recap"><I.DraftRecap /></Fit>
-          <Fit caption="Playoff bracket" note="Two playoff weeks after the regular season"><I.Playoffs /></Fit>
+          <Fit caption="Playoff bracket · 4 teams" note="Two playoff weeks after the regular season"><I.Playoffs /></Fit>
+          <Fit caption="Playoff bracket · 6 teams" note="3 weeks; seeds 1–2 get first-round byes (new copy, round names to confirm)"><I.Playoffs6 /></Fit>
         </Group>
 
         <Group id="money" code="3e" name="Trading" job="Sell, keep the cash in the slot, and buy again with exactly what the sale brought in."
