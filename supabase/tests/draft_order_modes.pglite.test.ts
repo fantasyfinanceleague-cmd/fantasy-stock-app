@@ -24,6 +24,18 @@ const MIGRATION = new URL('supabase/migrations/20261013000000_draft_order_modes.
 const PICK_CLOCK = new URL('supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql', ROOT);
 const GUARD = new URL('supabase/migrations/20260925000000_leagues_member_draft_complete_column_guard.sql', ROOT);
 const EFFECT_TEST = new URL('docs/security/draft-order-modes-effect-test.sql', ROOT);
+// Everything applied to prod BEFORE 20261013000000 that touches leagues /
+// league_members / matchups, loaded VERBATIM in timestamp order, so this test
+// proves the migration applies cleanly on top of flexible playoffs (#66) and
+// that its leagues triggers coexist with trg_leagues_freeze_playoff_teams.
+const PRIOR = [
+  '20261011000003_start_league_playoffs.sql',
+  '20261011000004_playoff_bracket_unique_backstop.sql',
+  '20261012000000_flexible_playoffs_schema.sql',
+  '20261012000001_start_league_playoffs_flexible.sql',
+  '20261012000002_freeze_playoff_teams_after_draft_start.sql',
+  '20261012000003_backfill_league_end_date_playoff_weeks.sql',
+].map((f) => new URL(`supabase/migrations/${f}`, ROOT));
 
 const SCHEMA = `
 create role anon; create role authenticated; create role service_role bypassrls;
@@ -39,7 +51,18 @@ create table leagues (
   id uuid primary key default gen_random_uuid(), name text, commissioner_id text not null,
   draft_status text default 'not_started', num_rounds int not null default 6,
   invite_code text, num_participants int default 4, draft_date timestamptz,
-  league_start_date timestamptz, league_end_date timestamptz);
+  league_start_date timestamptz, league_end_date timestamptz,
+  -- the columns the playoff migrations (20261011/12) meet in prod
+  league_type text not null default 'matchup', num_weeks int, current_week int default 1,
+  season_status text default 'active', playoff_teams int default 4,
+  constraint valid_playoff_teams check (playoff_teams is null or playoff_teams in (2, 4, 8)));
+create table matchups (id uuid primary key default gen_random_uuid(),
+  league_id uuid not null references leagues(id) on delete cascade, week_number int not null,
+  team1_user_id text, team2_user_id text, team1_gain numeric(12,2), team2_gain numeric(12,2),
+  winner_user_id text, week_start timestamptz, week_end timestamptz, is_playoff boolean default false,
+  playoff_round text, team1_seed int, team2_seed int,
+  unique(league_id, week_number, team1_user_id), unique(league_id, week_number, team2_user_id),
+  constraint valid_playoff_round check (playoff_round is null or playoff_round in ('quarter', 'semi', 'finals')));
 create table league_members (league_id uuid not null references leagues(id) on delete cascade,
   user_id text not null, role text not null default 'member',
   joined_at timestamptz not null default clock_timestamp(), primary key (league_id, user_id));
@@ -129,6 +152,7 @@ Deno.test({
 
     await db.exec(await Deno.readTextFile(GUARD));
     await db.exec(await Deno.readTextFile(PICK_CLOCK));
+    for (const f of PRIOR) await db.exec(await Deno.readTextFile(f));
     const migration = await Deno.readTextFile(MIGRATION);
     await db.exec(migration);
 
@@ -537,6 +561,22 @@ Deno.test({
       // A later re-start with a locked order that no longer fits is refused, not reshuffled.
       await raw(`update leagues set draft_status='not_started' where id=$1`, [l.id]);
       await assertRejects(() => q(`update leagues set draft_status='in_progress' where id=$1`, [l.id]), Error, 'draft_order_locked_mismatch');
+    });
+
+    await step('coexists with flexible playoffs: freeze trigger + order lock on one start UPDATE', async () => {
+      const [tg] = await q(`select count(*)::int n from pg_trigger where tgname in
+        ('trg_leagues_freeze_playoff_teams','trg_leagues_order_mode','trg_leagues_order_start','trg_leagues_pick_clock','trg_leagues_member_update_columns')`);
+      assertEquals(tg.n, 5);
+      // The commissioner lowers playoff spots and starts in ONE [I2a] update:
+      // both features' rules apply, neither blocks the other.
+      const l = await mkLeague([C, A, B, D], { playoff_teams: 4 });
+      await asUser(C);
+      await q(`update leagues set playoff_teams = 2, draft_status = 'in_progress' where id=$1`, [l.id]);
+      await assertRejects(() => q(`update leagues set playoff_teams = 4 where id=$1`, [l.id]), Error, 'playoff_teams_locked');
+      await assertRejects(() => q(`update leagues set draft_order_mode = 'manual' where id=$1`, [l.id]), Error, 'draft_order_mode_locked');
+      await asRole(null);
+      assertEquals([(await lg(l.id)).playoff_teams, (await meta(l.id)).state], [2, 'locked']);
+      assert(isPermutationOf(await order(l.id), [C, A, B, D]));
     });
 
     await step('league delete still cascades through a locked order', async () => {

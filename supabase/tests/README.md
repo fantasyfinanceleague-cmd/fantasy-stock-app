@@ -123,7 +123,7 @@ Loads `supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql` verbat
 
 ## draft_order_modes.pglite.test.ts
 
-Loads `20261013000000_draft_order_modes.sql` verbatim, on top of PR #9's leagues column guard and the pick-clock migration, so all three `leagues` triggers fire in their real order. It covers:
+Loads `20261013000000_draft_order_modes.sql` verbatim, on top of (all verbatim, in timestamp order) PR #9's leagues column guard, the pick-clock migration, `20261011000003`/`04`, and flexible playoffs `20261012000000`–`03`. That proves it applies cleanly on what prod will have, and that all `leagues` triggers (column guard, playoff-teams freeze, order mode, pick clock, order start) fire together in their real order. It covers:
 - grants: proacl, relacl, and the column-level UPDATE on `league_notifications`
 - the legacy backfill, byte-identical to the deleted `computeDraftOrder`, with mixed-case and bot ids
 - reveal gating at `draft_date − 1h`, and generated-exactly-once
