@@ -92,7 +92,7 @@ You are the UI worker for **Phase 3b-1: the mobile app shell and first run**. Yo
 | Sheets (any) | `spring.snappy`; backdrop fades `base` | fade in place |
 | Appearance change | the whole app crossfades, `base` | instant swap |
 | Button → loading → done (sign in, save) | label crossfades to a spinner, then a ✓ (`quick`) | instant swaps |
-| Error under a field | fades + rises 4pt (`quick`) | appears in place |
+| Error under a field | appears instantly, no fade or movement (§4: error states never animate) | same |
 
 Motion lives in `constants/tokens` and `useMotion()` only: no raw durations, easings or spring constants in screens (the foundation's lint/test covers this).
 
