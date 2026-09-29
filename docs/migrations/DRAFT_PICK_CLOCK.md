@@ -55,6 +55,7 @@ Send `{ league_id, action: 'auto_pick', pick_number }`, where `pick_number` is t
 | `{ok:false, reason:'not_overdue', deadline_at, server_now}` | the device clock is off; resync and wait |
 | `{ok:false, reason:'pick_conflict'}` | the race was lost; refetch picks |
 | `{ok:false, reason:'price_unavailable'}` | market-data outage; the turn stays open and the sweep retries |
+| `{ok:false, reason:'draft_complete', status_update_error}` | every pick is made and the finalize is being retried; show "finalizing" |
 | `{ok:false, reason:'stale_pick_number' \| 'clock_not_running' \| 'draft_not_in_progress'}` | refetch state |
 
 **Existing actions:** `pick`, `skip`, `bot_pick` and `finalize` keep their shapes. Successful rows and responses now also carry `pick_source`.
@@ -101,7 +102,7 @@ Send `{ league_id, action: 'auto_pick', pick_number }`, where `pick_number` is t
 
 ## Drafts already running when this ships (Q2, pending Giorgio)
 
-- The migration sets `pick_clock_enabled = false` on every league already `in_progress`, so **the sweep never touches them**.
+- The migration sets `pick_clock_enabled = false` on every league already `in_progress`, so **the sweep never touches them**. The hold covers **only that running draft**: the trigger forces the clock back on at that league's next draft start (a new season, or a re-draft), whoever starts it.
   - Clients can't change that flag.
   - Such a draft keeps working the old way: manual picks plus client-fired bot picks, with no clock.
 - Giorgio picks one of these per league, as a separate explicit step (SQL editor):
@@ -125,6 +126,27 @@ Send `{ league_id, action: 'auto_pick', pick_number }`, where `pick_number` is t
 - **H5.** Refresh `db-snapshot.json` (new grants, RLS and cron), then `node scripts/gen-architecture.mjs`. The four "ABSENT from prod snapshot" drift rows should clear.
 
 Old mobile builds keep working. Once H4 is live the server auto-picks for their users too, but the countdown and queue UI arrive only with a new build.
+
+## Monitoring: the stuck-draft check (verify by effect)
+
+The sweep's `ok:true` only means "the sweep ran". Per-league failures (`errors[]`: `unhandled`, `price_unavailable`, `pick_conflict` loops) reach only the function logs, and `cron.job_run_details` / `net._http_response` prove nothing (CLAUDE.md "success signals").
+
+**The effect-based check.** Once H4 is live, every overdue turn is picked within one tick plus pricing time. A turn still overdue minutes later means that league is stuck:
+
+```sql
+-- Run as postgres/service role (overdue_draft_turns is service-only).
+SELECT o.league_id, l.name, o.pick_number, o.deadline_at, now() - o.deadline_at AS overdue_by
+  FROM public.overdue_draft_turns() o
+  JOIN public.leagues l ON l.id = o.league_id
+ WHERE o.deadline_at < now() - interval '2 minutes';
+-- Expect ZERO rows. A row = that league's sweep is failing every tick: read
+-- the draft-autopick-sweep logs for its errors[] entry.
+```
+
+One query is enough: a draft that advances always has a recent `deadline_at`, so an old deadline can only mean nothing has been written for that turn.
+
+- **Before H4** (no cron), a draft where nobody has the app open legitimately shows up here.
+- A draft whose picks are all made but whose finalize is failing shows up too. The sweep retries its finalize every tick; the logs carry `finalize_failed:<code>`.
 
 ## Tests
 

@@ -10,10 +10,11 @@
 --   leagues.pick_seconds        smallint, 30..90 in 15s steps, default 60.
 --                               Locked once the draft leaves 'not_started'.
 --   leagues.pick_clock_enabled  EXPLICIT discriminator for "does the sweep
---                               auto-pick this draft". Every new league gets
---                               true; drafts ALREADY in_progress at push time
---                               are set false here (see PRE-EXISTING DRAFTS).
---                               Clients can never change it.
+--                               auto-pick this draft". Every new league, and
+--                               every draft START, gets true; only the drafts
+--                               ALREADY in_progress at push time are set false
+--                               here (see PRE-EXISTING DRAFTS), and only until
+--                               that draft ends. Clients can never change it.
 --   leagues.draft_started_at    Written ONLY by trg_leagues_pick_clock: stamped
 --                               on the transition into 'in_progress' (via
 --                               draft-control, the commissioner's direct [I2a]
@@ -138,6 +139,11 @@ begin
   end if;
 
   if new.draft_status = 'in_progress' and old.draft_status is distinct from 'in_progress' then
+    -- Every draft START is clocked, whoever starts it. The push-time hold
+    -- (pick_clock_enabled=false) covers only the draft that was ALREADY
+    -- running; a held league's next draft (a new season, a re-draft) must
+    -- not inherit it, or the hold would silently become permanent.
+    new.pick_clock_enabled := true;
     new.draft_started_at := now();                      -- draft (re)starts: first turn's clock
   elsif new.draft_status = 'in_progress' and new.pick_clock_enabled and not old.pick_clock_enabled then
     new.draft_started_at := now();                      -- operator opt-in of a pre-existing draft: fresh clock

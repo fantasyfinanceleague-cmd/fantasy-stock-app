@@ -205,6 +205,21 @@ Deno.test({
       assert(L.pick_clock_enabled && L.draft_started_at !== null);
     });
 
+    await step('trigger: the push-time hold covers only the running draft, never the next one', async () => {
+      // A held legacy draft finishes, the league re-drafts (new season):
+      // the new draft must be clocked even when a CLIENT starts it.
+      const [l] = await raw(`insert into leagues (name, commissioner_id, draft_status, pick_clock_enabled) values ('held',$1,'in_progress',false) returning id`, [C]);
+      await q(`update leagues set draft_status='completed' where id=$1`, [l.id]);
+      await q(`update leagues set draft_status='not_started' where id=$1`, [l.id]);
+      assertEquals((await lg(l.id)).pick_clock_enabled, false);
+      await asUser(C);
+      await q(`update leagues set draft_status='in_progress' where id=$1`, [l.id]); // [I2a] direct start
+      await asUser(null);
+      const L = await lg(l.id);
+      assertEquals(L.pick_clock_enabled, true);
+      assert(L.draft_started_at !== null);
+    });
+
     await step('get_draft_clock: deadline = GREATEST(start, last pick) + pick_seconds', async () => {
       const l = await mkLeague([C, A], { pick_seconds: 30 });
       assertEquals((await clock(l.id)).clock_running, false); // not started

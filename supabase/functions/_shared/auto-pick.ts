@@ -22,7 +22,7 @@
  * recent performance is a new strategy object, with no change to the gate,
  * the queue handling, or the write path.
  */
-import { type BotSymbolCandidate, candidateFilter, rankBotCandidates } from './bot-pick.ts';
+import { BOT_PICK_MAX_ATTEMPTS, type BotSymbolCandidate, candidateFilter, rankBotCandidates } from './bot-pick.ts';
 import {
   assignSlot,
   type LeagueRules,
@@ -191,7 +191,7 @@ export function openBrackets(
 /** Live attempts (fetchFillPrice + validatePick) per source. The bot cap
  * stays BOT_PICK_MAX_ATTEMPTS (5) via BEST_MAX_ATTEMPTS. */
 export const QUEUE_MAX_ATTEMPTS = 5;
-export const BEST_MAX_ATTEMPTS = 5;
+export const BEST_MAX_ATTEMPTS = BOT_PICK_MAX_ATTEMPTS; // one number for bots and timeouts
 
 export interface AutoPickCandidate {
   symbol: string;

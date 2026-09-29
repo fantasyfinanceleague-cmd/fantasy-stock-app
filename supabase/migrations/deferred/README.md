@@ -112,8 +112,10 @@ passing `--include-all`.
 
 **After applying:** `SELECT jobname, schedule, command FROM cron.job WHERE jobname = 'draft_autopick_sweep';`,
 then run the data check at the bottom of the file (a test draft with every app
-closed keeps advancing, every pick ≥ `pick_seconds` apart). Then move this
-section to *History*.
+closed keeps advancing, every pick ≥ `pick_seconds` apart). From then on, the
+standing stuck-draft check is the query in `docs/migrations/DRAFT_PICK_CLOCK.md`
+§Monitoring: any turn more than 2 minutes overdue means that league's sweep is
+failing. Then move this section to *History*.
 
 ## History
 
