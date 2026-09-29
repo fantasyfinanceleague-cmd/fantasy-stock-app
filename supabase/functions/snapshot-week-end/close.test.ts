@@ -533,3 +533,26 @@ Deno.test('quantity 0 on a real symbol is not coerced into a KIND-2 holding', ()
   const existing = [row('r1', HUMAN_A, 'AAPL', 1, 200, 210)];
   assertEquals(classifyCloseCoverage(uh, existing), 'complete');
 });
+
+Deno.test('deploy transition: a bot with NO Monday row is unbased (not written), and does NOT block the humans', () => {
+  // Pins current behaviour for the one-time transition: if the week-start run
+  // for this week ran under the OLD code (bots excluded), the bot's drafted
+  // holdings reach week-end as KIND 2. Bots never trade, so no entry price is
+  // derivable -> unbasedPositions (logged, not written, no retry). The humans'
+  // Monday rows must still close. Downstream: week 1 -> the bot falls back to
+  // the week-1 scorer (same as before this fix); week >1 -> the matchup is
+  // refused (same as before this fix). Healable only by a week-start run
+  // before Friday close, or a manual backfill after it.
+  const uh = holdingsFor(MIXED_MATCHUPS, MIXED_DRAFTS);
+  const existing = [
+    row('r1', HUMAN_A, 'AAPL', 1, 200, null),
+    row('r2', HUMAN_B, 'KO', 1, 60, null),
+    // no row for BOT
+  ];
+  assertEquals(classifyCloseCoverage(uh, existing), 'incomplete');
+  const work = buildCloseWork('L', 2, uh, existing, priceMap({ AAPL: 210, KO: 61, MSFT: 390 }), []);
+  assertEquals(work.missingSymbols, []);
+  assertEquals(work.updates.map((u) => u.id).sort(), ['r1', 'r2']);
+  assertEquals(work.inserts, []);
+  assertEquals(work.unbasedPositions, [{ userId: BOT, symbol: 'MSFT' }]);
+});

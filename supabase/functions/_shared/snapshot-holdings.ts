@@ -23,6 +23,10 @@
  *       one who skipped. F1 without F2 would have made this worse: the SKIP
  *       sentinel exists mainly for bots that cannot afford a pick.
  *
+ *   The same `|| 1` also coerced a NON-SKIP quantity-0 row to one share. It now
+ *   counts as 0 (no holding) — deliberate, not a side effect of the refactor.
+ *   Unreachable in practice: fillQuantity never yields 0 for a real pick.
+ *
  * Netting is delegated to userNetHoldings in ./draft-validation.ts — the SAME
  * function draft/drop legality uses — so "what does this user hold" has one
  * definition across drafting, trading and snapshotting. It excludes SKIP by the
