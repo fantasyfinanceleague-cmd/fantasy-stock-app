@@ -289,7 +289,7 @@
           </div>
           <div>
             <div className="ks-tag" style={{ color: 'var(--c-text-2)' }}>Upcoming</div>
-            <ul className="ks-rows"><Lg n="Serie A Traders" meta="6 of 8 joined" chip="Draft Sat 7:00 PM" /></ul>
+            <ul className="ks-rows"><Lg n="Serie A Traders" meta="6 of 8 joined" chip="Draft Sat 7:00 PM ET" /></ul>
           </div>
           <div>
             <div className="ks-tag" style={{ color: 'var(--c-text-2)' }}>Finished</div>
@@ -455,7 +455,7 @@
           <Head name="Weekend Warriors" avatar />
           <div className="ks-pad ks-stack">
             <GameCard tag="Draft" chip={<span className="ks-chip">Pre-draft</span>}>
-              <span className="ks-title">Sat, Oct 3 · 7:00 PM</span>
+              <span className="ks-title">Sat, Oct 3 · 7:00 PM ET</span>
               <span className="ks-score ks-num" style={{ fontSize: 40 }}>3d 04h 12m</span>
               <span className="ks-callout ks-muted">60-second picks · 6 rounds</span>
             </GameCard>
@@ -477,10 +477,10 @@
         <Head name="Serie A Traders" avatar />
         <div className="ks-pad ks-stack">
           <GameCard tag="Draft" chip={<span className="ks-chip">Pre-draft</span>}>
-            <span className="ks-title">Sat, Oct 3 · 7:00 PM</span>
+            <span className="ks-title">Sat, Oct 3 · 7:00 PM ET</span>
             <span className="ks-score ks-num" style={{ fontSize: 40 }}>3d 04h 12m</span>
             <span className="ks-callout ks-muted">60-second picks · 6 rounds</span>
-            <span className="ks-callout" style={{ display: 'flex', gap: 8, alignItems: 'center' }}><span className="ks-dot" />Draft order set Sat 6:00 PM, an hour before the draft</span>
+            <span className="ks-callout" style={{ display: 'flex', gap: 8, alignItems: 'center' }}><span className="ks-dot" />Draft order set Sat 6:00 PM ET, an hour before the draft</span>
             <span className="ks-btn ks-btn--ongame">Build your queue</span>
           </GameCard>
           <Card pad="14px">
@@ -754,7 +754,7 @@
         <Sheet top={blocked ? 330 : 380}>
           <span className="ks-title">Start the draft?</span>
           <span className="ks-callout ks-muted">{managers} managers are in, and each pick gets 60 seconds.</span>
-          <span className="ks-callout"><b>Draft order:</b> {order === 'manual' ? 'set by the commissioner, final since 6:00 PM' : 'random, final since 6:00 PM'}</span>
+          <span className="ks-callout"><b>Draft order:</b> {order === 'manual' ? 'set by the commissioner, final since 6:00 PM ET' : 'random, final since 6:00 PM ET'}</span>
           {blocked ? (
             <>
               <div role="alert" className="ks-card" style={{ padding: '10px 12px', background: 'var(--c-warn-tint)', borderColor: 'var(--c-warn-line)', boxShadow: 'none' }}>
@@ -787,7 +787,7 @@
     const picks = K.picksForSeat(seat, teams, L.rounds);
     return (
       <div className="ks-raised" style={{ padding: '12px 14px', display: 'grid', gap: 4 }}>
-        <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Draft order set · 6:00 PM</span>
+        <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Draft order set · 6:00 PM ET</span>
         <span><span className="ks-headline" style={{ fontWeight: 800, color: 'var(--c-you-text)' }}>You pick {K.ordinal(seat)}</span>
           <span className="ks-callout ks-muted">, then {picks.slice(1, 3).map(K.ordinal).join(', ')}…</span></span>
         <span className="ks-caption">{mode === 'manual' ? 'Set by the commissioner.' : 'Random draw.'} It's final. The order reverses each round.</span>
@@ -830,7 +830,7 @@
           </span>
           <span>
             <span style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15 }}><b>Serie A Traders</b><span style={{ color: '#5B6678', fontSize: 13 }}>now</span></span>
-            <span style={{ fontSize: 15, lineHeight: '20px' }}>{mode === 'manual' ? `The commissioner set the draft order. You pick ${K.ordinal(seat)}.` : `The draft order is set. You pick ${K.ordinal(seat)}.`} The draft starts at 7:00 PM.</span>
+            <span style={{ fontSize: 15, lineHeight: '20px' }}>{mode === 'manual' ? `The commissioner set the draft order. You pick ${K.ordinal(seat)}.` : `The draft order is set. You pick ${K.ordinal(seat)}.`} The draft starts at 7:00 PM ET.</span>
           </span>
         </div>
       </Device>
@@ -851,7 +851,7 @@
               <h2 className="ks-head__title" style={{ fontSize: 28 }}>Draft order</h2>
               <span className="ks-chip ks-chip--final">Final</span>
             </div>
-            <p className="ks-callout ks-muted" style={{ margin: 0 }}>Locked at 6:00 PM, an hour before the draft. Anyone who joins now picks last.</p>
+            <p className="ks-callout ks-muted" style={{ margin: 0 }}>Locked at 6:00 PM ET, an hour before the draft. Anyone who joins now picks last.</p>
             <div className="ks-card" style={{ padding: '2px 8px' }}>
               <ol className="ks-rows">
                 {L.order.map((m, i) => (
@@ -874,11 +874,11 @@
         <div className="ks-pad ks-stack" style={{ gap: 12 }}>
           <div>
             <h2 className="ks-head__title" style={{ fontSize: 28 }}>Arrange order</h2>
-            <p className="ks-callout ks-muted" style={{ margin: '4px 0 0' }}>Drag to set who picks first. The order reverses each round. Set it by Sat 6:00 PM (1 hour before the draft). After that it's final.</p>
+            <p className="ks-callout ks-muted" style={{ margin: '4px 0 0' }}>Drag to set who picks first. The order reverses each round. Set it by Sat 6:00 PM ET (1 hour before the draft). After that it's final.</p>
           </div>
           <div className="ks-card" role="note" style={{ padding: '8px 12px', display: 'flex', justifyContent: 'space-between', background: 'var(--c-warn-tint)', borderColor: 'var(--c-warn-line)', boxShadow: 'none' }}>
             <span className="ks-callout" style={{ fontWeight: 600, color: 'var(--c-text)' }}>Locks in 2h 14m</span>
-            <span className="ks-callout ks-num" style={{ color: 'var(--c-text)' }}>Sat 6:00 PM</span>
+            <span className="ks-callout ks-num" style={{ color: 'var(--c-text)' }}>Sat 6:00 PM ET</span>
           </div>
           <div className="ks-card" style={{ padding: '2px 8px' }}>
             <ol className="ks-rows">
@@ -912,7 +912,7 @@
           <div className="ks-raised" style={{ padding: 16, display: 'grid', gap: 4, textAlign: 'center' }}>
             <span className="ks-tag">Draft starts in</span>
             <span className="ks-score ks-num" style={{ fontSize: 56, lineHeight: '56px' }}>04:59</span>
-            <span className="ks-caption ks-muted">Sat 7:00 PM · 60-second picks</span>
+            <span className="ks-caption ks-muted">Sat 7:00 PM ET · 60-second picks</span>
           </div>
           {waiting ? <OrderWaiting count={3} min={4} pastReveal /> : <DraftOrder />}
           <div>
@@ -1203,8 +1203,8 @@
           <div>
             <div className="ks-section-h"><h3>This week</h3></div>
             <Card><ul className="ks-rows">
-              <li className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto' }}><Logo t="SHOP" /><span><span className="ks-t">Bought SHOP</span><br /><span className="ks-caption ks-num">Thu 1:41 PM · {K.SALE.buy.qty.toFixed(4)} sh at {$(K.SALE.buy.price)}</span></span><span className="ks-num"><b>{$(K.SALE.proceeds)}</b></span></li>
-              <li className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto' }}><Logo t="TSLA" /><span><span className="ks-t">Sold TSLA</span><br /><span className="ks-caption ks-num">Thu 1:38 PM · {TS().qty.toFixed(4)} sh at {$(248.36)}</span></span><span className="ks-right ks-num"><b>{$(K.SALE.proceeds)}</b><br /><span className={`ks-caption ${tone(K.SALE.realized)}`} style={{ fontWeight: 700 }}>{$s(K.SALE.realized)}</span></span></li>
+              <li className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto' }}><Logo t="SHOP" /><span><span className="ks-t">Bought SHOP</span><br /><span className="ks-caption ks-num">Thu 1:41 PM ET · {K.SALE.buy.qty.toFixed(4)} sh at {$(K.SALE.buy.price)}</span></span><span className="ks-num"><b>{$(K.SALE.proceeds)}</b></span></li>
+              <li className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto' }}><Logo t="TSLA" /><span><span className="ks-t">Sold TSLA</span><br /><span className="ks-caption ks-num">Thu 1:38 PM ET · {TS().qty.toFixed(4)} sh at {$(248.36)}</span></span><span className="ks-right ks-num"><b>{$(K.SALE.proceeds)}</b><br /><span className={`ks-caption ${tone(K.SALE.realized)}`} style={{ fontWeight: 700 }}>{$s(K.SALE.realized)}</span></span></li>
             </ul></Card>
           </div>
           <div>
