@@ -12,8 +12,19 @@ import {
   decideBatchScoring,
   decideUserScorer,
   decideMatchupScoring,
+  ledgerPositionState,
   BATCH_SKIP_REASON,
+  type LedgerState,
 } from './scoring-eligibility.ts';
+import {
+  calculatePortfolio,
+  calculateUserScore,
+  scoreCashOnlyUser,
+  type WeekSnapshot,
+  type MidWeekTrade,
+  type UserScore,
+} from './user-score.ts';
+import { SKIP_SYMBOL } from '../_shared/draft-validation.ts';
 import { updateJobStatus, noPendingMessage, scoredMessage } from './job-status.ts';
 
 /**
@@ -72,50 +83,6 @@ function isAuthorized(req: Request): boolean {
   return constantTimeEqual(providedKey, expectedKey);
 }
 
-interface PortfolioHolding {
-  symbol: string;
-  quantity: number;
-  totalCost: number;
-}
-
-interface WeekSnapshot {
-  symbol: string;
-  quantity: number;
-  weekStartPrice: number | null;  // legacy rows only; see enteredMidWeek
-  weekEndPrice: number | null;    // Friday close price
-  /**
-   * True when the position was opened DURING the week. Such a row's
-   * week_start_price is a purchase entry price, NOT a Monday open — and the same
-   * buy is already carried in midWeekTrades, so treating it as a week-start
-   * holding would count it twice. This flag replaces the old convention of
-   * signalling "mid-week purchase" with a NULL week_start_price, which could
-   * never actually be stored (the column is NOT NULL).
-   */
-  enteredMidWeek: boolean;
-}
-
-interface MidWeekTrade {
-  symbol: string;
-  action: 'buy' | 'sell';
-  quantity: number;
-  price: number;
-  createdAt: Date;
-}
-
-interface UserScore {
-  dollarGain: number;
-  percentGain: number;
-  hasPositions: boolean;
-}
-
-interface UserPortfolio {
-  userId: string;
-  holdings: PortfolioHolding[];
-  totalCost: number;
-  totalValue: number;
-  gain: number;
-}
-
 // Fetch latest prices from Alpaca (using service credentials)
 async function fetchPrices(symbols: string[], alpacaKey: string, alpacaSecret: string): Promise<Map<string, number>> {
   const prices = new Map<string, number>();
@@ -150,235 +117,6 @@ async function fetchPrices(symbols: string[], alpacaKey: string, alpacaSecret: s
   }
 
   return prices;
-}
-
-// Calculate user's portfolio from drafts and trades (fallback if no snapshots)
-function calculatePortfolio(
-  userId: string,
-  drafts: any[],
-  trades: any[],
-  prices: Map<string, number>
-): UserPortfolio {
-  const holdings = new Map<string, PortfolioHolding>();
-
-  // Process drafts
-  for (const draft of drafts.filter(d => d.user_id === userId)) {
-    const sym = draft.symbol?.toUpperCase();
-    if (!sym) continue;
-
-    const qty = Number(draft.quantity || 1);
-    const price = Number(draft.entry_price || 0);
-
-    if (!holdings.has(sym)) {
-      holdings.set(sym, { symbol: sym, quantity: 0, totalCost: 0 });
-    }
-    const h = holdings.get(sym)!;
-    h.quantity += qty;
-    h.totalCost += price * qty;
-  }
-
-  // Process trades
-  for (const trade of trades.filter(t => t.user_id === userId)) {
-    const sym = trade.symbol?.toUpperCase();
-    if (!sym) continue;
-
-    const qty = Number(trade.quantity || 0);
-    const price = Number(trade.price || 0);
-
-    if (!holdings.has(sym)) {
-      holdings.set(sym, { symbol: sym, quantity: 0, totalCost: 0 });
-    }
-    const h = holdings.get(sym)!;
-
-    if (trade.action === 'buy') {
-      h.quantity += qty;
-      h.totalCost += price * qty;
-    } else if (trade.action === 'sell') {
-      const avgCost = h.quantity > 0 ? h.totalCost / h.quantity : price;
-      h.quantity -= qty;
-      h.totalCost -= avgCost * qty;
-    }
-  }
-
-  // Calculate totals
-  let totalCost = 0;
-  let totalValue = 0;
-  const holdingsArray: PortfolioHolding[] = [];
-
-  for (const h of holdings.values()) {
-    if (h.quantity <= 0) continue;
-
-    const currentPrice = prices.get(h.symbol) || (h.totalCost / h.quantity);
-    const value = currentPrice * h.quantity;
-
-    totalCost += h.totalCost;
-    totalValue += value;
-    holdingsArray.push(h);
-  }
-
-  return {
-    userId,
-    holdings: holdingsArray,
-    totalCost,
-    totalValue,
-    gain: totalValue - totalCost,
-  };
-}
-
-/**
- * Calculate user's score for the week using snapshots and mid-week trades.
- *
- * Score calculation (by individual trade):
- * - Stocks held all week: quantity × (week_end_price - week_start_price)
- * - Stocks sold mid-week: sold_qty × (sale_price - week_start_price)
- * - Partial holds: remaining_qty × (week_end_price - week_start_price)
- * - Stocks bought mid-week: quantity × (week_end_price - purchase_price)
- * - Stocks bought then sold same week: quantity × (sale_price - purchase_price)
- *
- * Returns dollar gain, percent gain, and whether user had any positions.
- */
-function calculateUserScore(
-  userId: string,
-  snapshots: WeekSnapshot[],
-  midWeekTrades: MidWeekTrade[]
-): UserScore {
-  let totalGain = 0;
-  let totalStartValue = 0;
-
-  // Build a map of week end prices by symbol (for looking up Friday close)
-  const weekEndPrices = new Map<string, number>();
-  for (const snap of snapshots) {
-    if (snap.weekEndPrice !== null) {
-      weekEndPrices.set(snap.symbol.toUpperCase(), snap.weekEndPrice);
-    }
-  }
-
-  // Build a map of week start holdings by symbol
-  // This represents what the user held at Monday open
-  // Excludes mid-week entries explicitly. Filtering on `weekStartPrice !== null`
-  // was the old marker, and it was never reachable — the column is NOT NULL, so
-  // those rows could not be stored at all (DEFECT 3). Now they ARE stored, with a
-  // real entry price, so the flag is what separates them; keying on the price
-  // being non-null would silently double-count every mid-week buy.
-  const weekStartHoldings = new Map<string, { quantity: number; price: number }>();
-  for (const snap of snapshots.filter(s => !s.enteredMidWeek && s.weekStartPrice !== null)) {
-    weekStartHoldings.set(snap.symbol.toUpperCase(), {
-      quantity: snap.quantity,
-      price: snap.weekStartPrice!,
-    });
-  }
-
-  // Sort trades by time to process in order (FIFO for sells)
-  const sortedTrades = [...midWeekTrades].sort(
-    (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
-  );
-
-  // Track remaining quantities for week-start holdings (for partial sells)
-  const remainingHoldings = new Map<string, number>();
-  for (const [symbol, holding] of weekStartHoldings) {
-    remainingHoldings.set(symbol, holding.quantity);
-  }
-
-  // Track mid-week buys that haven't been sold yet (for buy-then-sell same week)
-  // Each entry: { quantity, price }
-  const midWeekBuys = new Map<string, { quantity: number; price: number }[]>();
-
-  // Process each trade in order
-  for (const trade of sortedTrades) {
-    const symbol = trade.symbol.toUpperCase();
-
-    if (trade.action === 'sell') {
-      let remainingToSell = trade.quantity;
-      const salePrice = trade.price;
-
-      // First, sell from week-start holdings (Monday open → Sale price)
-      const weekStartQty = remainingHoldings.get(symbol) || 0;
-      if (weekStartQty > 0 && remainingToSell > 0) {
-        const sellFromStart = Math.min(weekStartQty, remainingToSell);
-        const startPrice = weekStartHoldings.get(symbol)!.price;
-
-        const gain = sellFromStart * (salePrice - startPrice);
-        totalGain += gain;
-        totalStartValue += sellFromStart * startPrice;
-
-        console.log(`${symbol}: Sold ${sellFromStart} from week-start holdings. Monday: $${startPrice}, Sold: $${salePrice}, Gain: $${gain.toFixed(2)}`);
-
-        remainingHoldings.set(symbol, weekStartQty - sellFromStart);
-        remainingToSell -= sellFromStart;
-      }
-
-      // Then, sell from mid-week buys (FIFO: Purchase price → Sale price)
-      if (remainingToSell > 0) {
-        const buys = midWeekBuys.get(symbol) || [];
-        while (remainingToSell > 0 && buys.length > 0) {
-          const oldestBuy = buys[0];
-          const sellFromBuy = Math.min(oldestBuy.quantity, remainingToSell);
-
-          const gain = sellFromBuy * (salePrice - oldestBuy.price);
-          totalGain += gain;
-          totalStartValue += sellFromBuy * oldestBuy.price;
-
-          console.log(`${symbol}: Sold ${sellFromBuy} from mid-week buy. Bought: $${oldestBuy.price}, Sold: $${salePrice}, Gain: $${gain.toFixed(2)}`);
-
-          oldestBuy.quantity -= sellFromBuy;
-          remainingToSell -= sellFromBuy;
-
-          if (oldestBuy.quantity <= 0) {
-            buys.shift(); // Remove exhausted buy lot
-          }
-        }
-        midWeekBuys.set(symbol, buys);
-      }
-    } else if (trade.action === 'buy') {
-      // Add to mid-week buys (will be processed at week end or if sold later)
-      const buys = midWeekBuys.get(symbol) || [];
-      buys.push({ quantity: trade.quantity, price: trade.price });
-      midWeekBuys.set(symbol, buys);
-      console.log(`${symbol}: Bought ${trade.quantity} mid-week at $${trade.price}`);
-    }
-  }
-
-  // Process remaining week-start holdings (held all week: Monday open → Friday close)
-  for (const [symbol, remaining] of remainingHoldings) {
-    if (remaining <= 0) continue;
-
-    const startPrice = weekStartHoldings.get(symbol)!.price;
-    const endPrice = weekEndPrices.get(symbol);
-
-    if (endPrice !== undefined) {
-      const gain = remaining * (endPrice - startPrice);
-      totalGain += gain;
-      totalStartValue += remaining * startPrice;
-      console.log(`${symbol}: Held ${remaining} all week. Monday: $${startPrice}, Friday: $${endPrice}, Gain: $${gain.toFixed(2)}`);
-    }
-  }
-
-  // Process remaining mid-week buys (bought and held to Friday: Purchase price → Friday close)
-  for (const [symbol, buys] of midWeekBuys) {
-    const endPrice = weekEndPrices.get(symbol);
-    if (endPrice === undefined) continue;
-
-    for (const buy of buys) {
-      if (buy.quantity <= 0) continue;
-
-      const gain = buy.quantity * (endPrice - buy.price);
-      totalGain += gain;
-      totalStartValue += buy.quantity * buy.price;
-      console.log(`${symbol}: Mid-week buy held to Friday. ${buy.quantity} shares @ $${buy.price} → $${endPrice}, Gain: $${gain.toFixed(2)}`);
-    }
-  }
-
-  // Calculate percentage gain
-  const percentGain = totalStartValue > 0
-    ? (totalGain / totalStartValue) * 100
-    : 0;
-
-  // User has positions if they had week-start holdings OR any mid-week trades
-  const hasPositions = weekStartHoldings.size > 0 || midWeekTrades.length > 0;
-
-  console.log(`User ${userId} total: Gain=$${totalGain.toFixed(2)}, StartValue=$${totalStartValue.toFixed(2)}, Percent=${percentGain.toFixed(2)}%`);
-
-  return { dollarGain: totalGain, percentGain, hasPositions };
 }
 
 // Legacy function for backward compatibility (when no week_end_price available)
@@ -932,7 +670,7 @@ Deno.serve(async (req) => {
       }
 
       // Fetch week snapshots for this league/week (including week_end_price)
-      const { data: snapshotData } = await supabase
+      const { data: snapshotData, error: snapshotErr } = await supabase
         .from('week_snapshots')
         .select('user_id, symbol, quantity, week_start_price, week_end_price, entered_mid_week')
         .eq('league_id', leagueId)
@@ -961,6 +699,92 @@ Deno.serve(async (req) => {
       } else {
         console.log(`No week snapshots found for week ${weekNumber}, using fallback calculation`);
       }
+
+      let midWeekTradesData: any[] = [];
+      // Stays null when the query is NOT attempted (a null week bound). That is
+      // "not attempted", not "succeeded" — safe here only because
+      // ledgerPositionState fails closed to HELD on a null bound, so no user can
+      // reach cash_only off the empty list.
+      let midWeekTradesErr: unknown = null;
+      if (weekStart && weekEnd) {
+        const { data: tradesDuringWeek, error } = await supabase
+          .from('trades')
+          .select('user_id, symbol, action, quantity, price, created_at')
+          .eq('league_id', leagueId)
+          .gte('created_at', weekStart)
+          .lte('created_at', weekEnd);
+
+        midWeekTradesErr = error;
+        midWeekTradesData = tradesDuringWeek || [];
+        console.log(`Found ${midWeekTradesData.length} mid-week trades`);
+      }
+
+      // Build mid-week trades map by user
+      const userMidWeekTrades = new Map<string, MidWeekTrade[]>();
+      for (const t of midWeekTradesData) {
+        if (!userMidWeekTrades.has(t.user_id)) {
+          userMidWeekTrades.set(t.user_id, []);
+        }
+        userMidWeekTrades.get(t.user_id)!.push({
+          symbol: t.symbol,
+          action: t.action as 'buy' | 'sell',
+          quantity: Number(t.quantity),
+          price: Number(t.price),
+          createdAt: new Date(t.created_at),
+        });
+      }
+
+      // Fetch drafts for this league (needed for fallback if no snapshots, and for
+      // the all-cash ledger proof below)
+      const { data: drafts, error: draftsErr } = await supabase
+        .from('drafts')
+        .select('user_id, symbol, entry_price, quantity')
+        .eq('league_id', leagueId);
+
+      // Fetch trades for this league (needed for fallback if no snapshots).
+      // Bound to week_end so fallback holdings reflect state AS OF week_end, not
+      // NOW. Without this, a user who held positions DURING the week but SOLD them
+      // after week_end shows empty holdings -> hasPositions=false -> auto-loss,
+      // flipping a legitimate win to a loss. (This only fixes WHICH trades count
+      // toward holdings; calculatePortfolio is still cumulative-from-entry at
+      // current prices — not a weekly delta.) weekEnd is normally truthy inside the
+      // loop; guard anyway so a null bound never corrupts the query.
+      let tradesQuery = supabase
+        .from('trades')
+        .select('user_id, symbol, action, quantity, price, created_at')
+        .eq('league_id', leagueId);
+      if (weekEnd) {
+        tradesQuery = tradesQuery.lte('created_at', weekEnd);
+      }
+      const { data: trades, error: tradesErr } = await tradesQuery;
+
+      // ---- The all-cash ledger proof (THE ALL-CASH RULE in ./scoring-eligibility.ts)
+      // A snapshot-less user is not necessarily a broken snapshot: snapshot-week-start
+      // only snapshots HELD symbols, so a user sitting in cash correctly has no row.
+      // They may be scored as all-cash ONLY when drafts + trades prove them flat at
+      // BOTH week_start and week_end. Computed before the batch guard because a
+      // batch whose participants are ALL cash is complete, not broken.
+      const ledgerStates = new Map<string, LedgerState>();
+      for (const userId of userIds) {
+        ledgerStates.set(
+          userId,
+          ledgerPositionState(userId, drafts || [], trades || [], weekStart, weekEnd),
+        );
+      }
+      const allParticipantsCashOnly = userIds.size > 0 && [...userIds].every((userId) =>
+        decideUserScorer({
+          hasSnapshot: (userSnapshots.get(userId)?.length ?? 0) > 0,
+          hasWeekEndPrices,
+          weekNumber,
+          ledger: ledgerStates.get(userId),
+        }) === 'cash_only'
+      );
+      // supabase-js resolves `{ data, error }` rather than throwing. A failed query's
+      // null data would read, via the `|| []` above, as "no rows" — no snapshots,
+      // no holdings, everyone FLAT. Never score off that: refuse the batch.
+      const scoringInputsFetchFailed =
+        !!snapshotErr || !!draftsErr || !!tradesErr || !!midWeekTradesErr;
+      // -------------------------------------------------------------------------
 
       // weekStart / weekEnd are destructured from the batch above (the whole batch
       // is one (league, week), so the window is shared) and drive the mid-week
@@ -992,12 +816,27 @@ Deno.serve(async (req) => {
         weekAgeHours,
         weekNumber,
         fallbackMaxAgeHours: FALLBACK_MAX_AGE_HOURS,
+        scoringInputsFetchFailed,
+        allParticipantsCashOnly,
       });
       if (batchDecision.action === 'skip') {
         // Distinct log + skipped[] shape per reason (the stale skip additionally
         // records week_age_hours) — the DECISION is single-sourced in the module,
         // the PRESENTATION stays here.
-        if (batchDecision.reason === BATCH_SKIP_REASON.STALE_NO_SNAPSHOTS) {
+        if (batchDecision.reason === BATCH_SKIP_REASON.SCORING_INPUTS_FETCH_FAILED) {
+          console.error(
+            `SKIP league ${leagueId} week ${weekNumber}: a scoring-input query failed ` +
+            `(snapshots: ${JSON.stringify(snapshotErr)}, drafts: ${JSON.stringify(draftsErr)}, ` +
+            `trades: ${JSON.stringify(tradesErr)}, mid-week trades: ${JSON.stringify(midWeekTradesErr)}) ` +
+            `— refusing to read a failed query as "no rows".`
+          );
+          skipped.push({
+            league_id: leagueId,
+            week_number: weekNumber,
+            matchups: leagueMatchups.length,
+            reason: batchDecision.reason,
+          });
+        } else if (batchDecision.reason === BATCH_SKIP_REASON.STALE_NO_SNAPSHOTS) {
           console.error(
             `SKIP league ${leagueId} week ${weekNumber}: no week_snapshots and week ` +
             `ended ${weekAgeHours.toFixed(1)}h ago (> ${FALLBACK_MAX_AGE_HOURS}h) — ` +
@@ -1027,62 +866,12 @@ Deno.serve(async (req) => {
       }
       // -------------------------------------------------------------------------
 
-      let midWeekTradesData: any[] = [];
-      if (weekStart && weekEnd) {
-        const { data: tradesDuringWeek } = await supabase
-          .from('trades')
-          .select('user_id, symbol, action, quantity, price, created_at')
-          .eq('league_id', leagueId)
-          .gte('created_at', weekStart)
-          .lte('created_at', weekEnd);
-
-        midWeekTradesData = tradesDuringWeek || [];
-        console.log(`Found ${midWeekTradesData.length} mid-week trades`);
-      }
-
-      // Build mid-week trades map by user
-      const userMidWeekTrades = new Map<string, MidWeekTrade[]>();
-      for (const t of midWeekTradesData) {
-        if (!userMidWeekTrades.has(t.user_id)) {
-          userMidWeekTrades.set(t.user_id, []);
-        }
-        userMidWeekTrades.get(t.user_id)!.push({
-          symbol: t.symbol,
-          action: t.action as 'buy' | 'sell',
-          quantity: Number(t.quantity),
-          price: Number(t.price),
-          createdAt: new Date(t.created_at),
-        });
-      }
-
-      // Fetch drafts for this league (needed for fallback if no snapshots)
-      const { data: drafts } = await supabase
-        .from('drafts')
-        .select('user_id, symbol, entry_price, quantity')
-        .eq('league_id', leagueId);
-
-      // Fetch trades for this league (needed for fallback if no snapshots).
-      // Bound to week_end so fallback holdings reflect state AS OF week_end, not
-      // NOW. Without this, a user who held positions DURING the week but SOLD them
-      // after week_end shows empty holdings -> hasPositions=false -> auto-loss,
-      // flipping a legitimate win to a loss. (This only fixes WHICH trades count
-      // toward holdings; calculatePortfolio is still cumulative-from-entry at
-      // current prices — not a weekly delta.) weekEnd is normally truthy inside the
-      // loop; guard anyway so a null bound never corrupts the query.
-      let tradesQuery = supabase
-        .from('trades')
-        .select('user_id, symbol, action, quantity, price')
-        .eq('league_id', leagueId);
-      if (weekEnd) {
-        tradesQuery = tradesQuery.lte('created_at', weekEnd);
-      }
-      const { data: trades } = await tradesQuery;
-
       // Get all symbols (from snapshots or drafts/trades)
       const symbols = new Set<string>(snapshotSymbols);
       if (snapshotSymbols.size === 0) {
         for (const d of drafts || []) {
-          if (d.symbol) symbols.add(d.symbol.toUpperCase());
+          // A SKIP row is a forfeited pick, not a ticker to quote.
+          if (d.symbol && d.symbol.toUpperCase() !== SKIP_SYMBOL) symbols.add(d.symbol.toUpperCase());
         }
         for (const t of trades || []) {
           if (t.symbol) symbols.add(t.symbol.toUpperCase());
@@ -1110,10 +899,12 @@ Deno.serve(async (req) => {
         const snapshots = userSnapshots.get(userId) || [];
         const midWeekTrades = userMidWeekTrades.get(userId) || [];
 
+        const ledger = ledgerStates.get(userId);
         const scorerKind = decideUserScorer({
           hasSnapshot: snapshots.length > 0,
           hasWeekEndPrices,
           weekNumber,
+          ledger,
         });
 
         if (scorerKind === 'full') {
@@ -1125,13 +916,26 @@ Deno.serve(async (req) => {
           // Legacy: Use week snapshots with live prices (no week_end_price stored yet)
           const gain = calculateWeeklyGainLegacy(userId, snapshots, prices);
           userScores.set(userId, { dollarGain: gain, percentGain: 0, hasPositions: true });
+        } else if (scorerKind === 'cash_only') {
+          // No snapshot, and the ledger proves nothing was held at week_start OR at
+          // week_end — so no snapshot row was ever expected, and every in-week lot
+          // is a closed round trip priced from trades alone. Not a fallback: no
+          // current prices, no cumulative-from-entry.
+          const score = scoreCashOnlyUser(userId, midWeekTrades, ledger!.hasLedgerHistory);
+          userScores.set(userId, score);
+          console.log(
+            `User ${userId}: scored as ALL-CASH (ledger flat at week_start and week_end, ` +
+            `no week_snapshot expected). Dollar gain: $${score.dollarGain.toFixed(2)}, ` +
+            `Percent: ${score.percentGain.toFixed(2)}%, hasPositions: ${score.hasPositions}`
+          );
         } else if (scorerKind === 'unscoreable') {
           // Snapshot-less user AFTER week 1: refuse rather than write a fabricated
           // score. Recorded here, enforced at the matchup level below.
           unscoreableUsers.add(userId);
           console.error(
             `UNSCOREABLE user ${userId} in league ${leagueId} week ${weekNumber}: ` +
-            `no week_snapshot and week_number > 1 — refusing cumulative-from-entry ` +
+            `no week_snapshot, ledger shows holdings at week_start or week_end, and ` +
+            `week_number > 1 — refusing cumulative-from-entry ` +
             `fallback (all-time P/L, not a weekly delta). Matchup will be left pending.`
           );
         } else {

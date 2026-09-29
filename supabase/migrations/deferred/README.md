@@ -6,7 +6,7 @@ Supabase CLI applies only the timestamped `.sql` files directly in
 Do **not** move a file back to the parent directory until its stated precondition
 is met.
 
-**Currently held:** 2 files (see *Held* below).
+**Currently held:** 2 files (see *Held* below): `20260929000000_drop_I6_I2b.sql` and `20261010000001_schedule_draft_autopick_sweep.sql`.
 
 ## How to use it
 
@@ -75,6 +75,47 @@ timestamp when promoting instead of passing `--include-all`.
 must return zero rows) and re-run the effect-verify query above against a
 *second* fresh test league to prove drafting still works with the policies
 gone. Then move this section to *History*.
+
+### `20261010000001_schedule_draft_autopick_sweep.sql`
+
+Schedules `draft_autopick_sweep`, the pick clock's server backstop: every tick
+it posts to `draft-autopick-sweep` **only when** `public.overdue_draft_turns()`
+returns a row, and that function auto-picks every expired turn in every clocked
+live draft. This is what finishes a draft when nobody has the app open.
+
+**Where to run:** the deploy checkout only, refreshed first (see the entry
+above and CLAUDE.md).
+
+**Precondition: ALL of the following, in order.**
+1. `20261010000000_draft_pick_clock_and_queue.sql` is applied
+   (`schema_migrations`), and `overdue_draft_turns`' `proacl` shows
+   `service_role` only (the query is at the bottom of that migration).
+2. `draft-autopick-sweep` is **deployed**
+   (`supabase functions deploy draft-autopick-sweep --project-ref haiaaifjcclsvmkfqgmd`),
+   byte-verified against the commit (`supabase functions download`, then diff),
+   and a no-credential POST returns the function's own
+   `401 {"error":"Unauthorized"}`, not the gateway's generic 401.
+3. `validate-and-record-pick` with `action:'auto_pick'` is deployed. Check the
+   content first: `grep -c auto_pick supabase/functions/validate-and-record-pick/index.ts`
+   must be ≥ 1.
+4. **The pg_cron version decides the schedule literal.**
+   `SELECT extversion FROM pg_extension WHERE extname = 'pg_cron';` must be
+   ≥ 1.5 for `'10 seconds'`. On an older version, change it to `'* * * * *'`
+   before promoting (see the file header).
+5. A manual run passes: `net.http_post` to the function with the vault
+   `cron_apikey`, on a test league with a 30 s clock whose turn is overdue,
+   writes a `drafts` row with `pick_source` `auto_*` or `bot`.
+
+**Timestamp note:** if migrations newer than `20261010000001` have been
+applied before this is promoted, rename it to a fresh timestamp rather than
+passing `--include-all`.
+
+**After applying:** `SELECT jobname, schedule, command FROM cron.job WHERE jobname = 'draft_autopick_sweep';`,
+then run the data check at the bottom of the file (a test draft with every app
+closed keeps advancing, every pick ≥ `pick_seconds` apart). From then on, the
+standing stuck-draft check is the query in `docs/migrations/DRAFT_PICK_CLOCK.md`
+§Monitoring: any turn more than 2 minutes overdue means that league's sweep is
+failing. Then move this section to *History*.
 
 ## History
 
