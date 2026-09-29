@@ -205,6 +205,24 @@ Deno.test({
       assertEquals(await start(id, [{ any: 1 }]), { status: 'refused', reason: 'bracket_too_large' });
     });
 
+    await t.step('start: a huge playoff_teams is refused BEFORE any bit shift (no hang)', async () => {
+      // playoff_teams has no DB upper bound. Before the fix, int4 `1 << n` for
+      // n >= 32 wrapped and the round loop never terminated (security review).
+      for (const p of [2 ** 30 + 1, 2147483647]) {
+        const id = await mkLeague({ playoff_teams: p }, users(2));
+        await regularSeason(id);
+        assertEquals(await start(id, [{ any: 1 }]), { status: 'refused', reason: 'bracket_too_large' }, `P=${p}`);
+      }
+    });
+
+    await t.step('end-date backfill: any int playoff_teams gets a real (non-NULL) end date', async () => {
+      const id = await mkLeague({ playoff_teams: 2147483647, league_end_date: LAST_END.toISOString() }, ['c']);
+      await regularSeason(id);
+      await db.exec(await read(FLEXIBLE[3]));
+      const [{ e }] = await q(`select league_end_date e from leagues where id=$1`, [id]);
+      assertEquals(new Date(e).toISOString(), new Date(LAST_END.getTime() + 31 * 7 * DAY).toISOString());
+    });
+
     // ---- START: shape refusals (P = 6: 4v5 #1, 3v6 #2; 1 -> R2#0.t1, 2 -> R2#1.t2)
     const six = () => bracketFor(6).map((r) => ({ ...r }));
     const idx = (b: Row[], rn: number, pos: number) => b.findIndex((r) => r.playoff_round_number === rn && r.bracket_position === pos);

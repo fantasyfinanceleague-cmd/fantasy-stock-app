@@ -301,6 +301,14 @@ Phase 3: **app first**.
     - **Clients:** a 2..size playoff-team control; round labels from structure;
       "First-Round Bye" instead of "eliminated" (mobile matchup). The web
       delete gate keys on `season_status`.
+    - **Known limit (security review, tracked as [I2a]):** "P ≤ managers" is
+      enforced only by draft-control's start check. A commissioner can still flip
+      `draft_status` over raw PostgREST (leagues_update_commissioner), and one
+      UPDATE setting both `draft_status` and `playoff_teams` passes the freeze
+      trigger (judged on OLD). The effect is limited to that league: its playoff
+      start refuses as a surfaced, self-inflicted stall. It closes when [I2a]
+      retires with a server-side `update-league` (not designed yet;
+      `docs/migrations/RLS_HARDENING_SPEC.md`), not with the deferred I6/I2b drop.
     - **⚠ DEPLOY ORDER:** `db push` `20261012000000` BEFORE deploying
       `process-week-results`, `validate-and-record-pick`, `draft-autopick-sweep`
       or `draft-control`. They now refuse a NULL `playoff_teams` instead of

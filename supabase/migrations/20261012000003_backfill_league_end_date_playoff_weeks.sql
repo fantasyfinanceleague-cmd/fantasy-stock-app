@@ -22,14 +22,23 @@
 -- PRE-CHECK (read-only; the exact rows this will change, with before/after):
 --   SELECT l.id, l.name, l.playoff_teams, l.season_status, l.league_end_date AS before,
 --          r.last_regular_end
---            + make_interval(days => 7 * (SELECT min(w) FROM generate_series(0, 12) w
---                                          WHERE (1 << w) >= l.playoff_teams)) AS after
+--            + make_interval(days => 7 * (SELECT min(w) FROM generate_series(0, 31) w
+--                                          WHERE (1::bigint << w) >= l.playoff_teams)) AS after
 --   FROM leagues l
 --   JOIN (SELECT league_id, max(week_end) AS last_regular_end FROM matchups
 --         WHERE NOT coalesce(is_playoff, false) GROUP BY league_id) r ON r.league_id = l.id
 --   WHERE l.league_type = 'matchup' AND l.draft_status = 'completed'
 --     AND l.season_status IN ('active', 'playoffs') AND l.playoff_teams IS NOT NULL;
 --   -- expected: test_0925 and test_09_25_v2 (P = 4): 2026-10-16 21:00Z -> 2026-10-30 21:00Z
+--
+-- PRE-CHECK 2 (read-only; supabase-reviewer 2026-09-29): in-scope leagues with NO
+-- regular-season matchups are invisible to the INNER JOIN below and keep their
+-- end date. Expect 0 rows; any row needs a manual decision.
+--   SELECT id, name, draft_status, season_status, league_end_date FROM leagues
+--   WHERE league_type = 'matchup' AND draft_status = 'completed'
+--     AND season_status IN ('active', 'playoffs')
+--     AND NOT EXISTS (SELECT 1 FROM matchups m WHERE m.league_id = leagues.id
+--                     AND NOT coalesce(m.is_playoff, false));
 --
 -- POST-PUSH EFFECT CHECK: re-run the pre-check; expect before = after on every row.
 -- ============================================================================
@@ -39,8 +48,10 @@ update public.leagues l
   from (
     select l2.id,
            r.last_regular_end
-             + make_interval(days => 7 * (select min(w) from generate_series(0, 12) w
-                                          where (1 << w) >= l2.playoff_teams)) as new_end
+             -- bigint shifts over 0..31 cover every int playoff_teams, so W is
+             -- never NULL (an int4 shift is undefined past 31).
+             + make_interval(days => 7 * (select min(w) from generate_series(0, 31) w
+                                          where (1::bigint << w) >= l2.playoff_teams)) as new_end
       from public.leagues l2
       join (select league_id, max(week_end) as last_regular_end
               from public.matchups

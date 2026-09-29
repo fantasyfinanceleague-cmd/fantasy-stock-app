@@ -61,6 +61,11 @@
 --   WHERE (l.league_type = 'matchup' AND l.playoff_teams IS NULL)
 --      OR l.playoff_teams > (SELECT count(*) FROM league_members m WHERE m.league_id = l.id)
 --      OR l.season_status = 'playoffs';
+--   -- For any league above with season_status = 'playoffs' (supabase-reviewer
+--   -- 2026-09-29): if a later round has TWO fully seedless placeholder rows,
+--   -- which physical row becomes position 0 vs 1 is arbitrary (by id). This is
+--   -- display order only; advancement stays correct, because both feeder games
+--   -- of a pair target the same relabelled row. No action needed; just know.
 --   -- b. legacy playoff rows to address, per league
 --   SELECT league_id, count(*) AS rows, count(DISTINCT week_number) AS rounds,
 --          count(*) FILTER (WHERE team1_user_id IS NULL OR team2_user_id IS NULL) AS unfilled
@@ -75,6 +80,10 @@
 --   SELECT conname, convalidated FROM pg_constraint
 --     WHERE conname IN ('valid_playoff_teams', 'leagues_matchup_requires_playoff_teams',
 --                       'matchups_playoff_address', 'valid_playoff_round');         -- all t
+--
+-- LOCKS: the CHECKs validate and the unique index builds under locks on
+-- matchups (no NOT VALID / CONCURRENTLY). Momentary at today's size; use the
+-- NOT VALID + VALIDATE / CONCURRENTLY pattern once matchups is large.
 --
 -- DEPLOY ORDER: push this BEFORE deploying validate-and-record-pick,
 -- draft-autopick-sweep, draft-control or process-week-results with the flexible

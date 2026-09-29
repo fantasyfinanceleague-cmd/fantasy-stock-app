@@ -24,7 +24,9 @@
 --
 -- NEW REFUSAL REASONS (write-free, before the claim):
 --   invalid_playoff_teams       playoff_teams NULL or < 2
---   bracket_too_large           more than 4 rounds (no round code; > 16 teams)
+--   bracket_too_large           more than 16 teams (> 4 rounds: no round code),
+--                               checked before any bit shift (a huge P can
+--                               not reach the loop)
 --   bracket_bad_position        bracket_position missing / not an integer / out of range
 --   bracket_bad_seed            a seed that is not an integer 1..P, or a team
 --                               without a seed (or a seed without a team)
@@ -98,11 +100,17 @@ begin
   if v_p is null or v_p < 2 then
     return jsonb_build_object('status', 'refused', 'reason', 'invalid_playoff_teams');
   end if;
-  v_w := 0;
-  while (1 << v_w) < v_p loop v_w := v_w + 1; end loop;
-  if v_w > array_length(v_codes, 1) then
+  -- Refuse > 16 teams (more than 4 rounds: no round code) BEFORE any shift.
+  -- playoff_teams has no DB upper bound (P <= managers is enforced at draft
+  -- start), and int4 `1 << n` is undefined for n >= 32 (it wraps to 1 on x86),
+  -- so the loop below must never see a P it could not reach: a huge P would
+  -- otherwise spin forever inside the shared process-week-results run
+  -- (security review, 2026-09-29).
+  if v_p > (1 << array_length(v_codes, 1)) then
     return jsonb_build_object('status', 'refused', 'reason', 'bracket_too_large');
   end if;
+  v_w := 0;
+  while (1 << v_w) < v_p loop v_w := v_w + 1; end loop;
   v_size := 1 << v_w;
 
   if p_bracket is null or jsonb_typeof(p_bracket) <> 'array' or jsonb_array_length(p_bracket) = 0 then
