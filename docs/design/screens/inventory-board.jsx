@@ -90,7 +90,7 @@
         <Group id="game" code="3c" name="Matchups, draft and playoffs" job="The game surfaces around the key Matchup, Standings and Draft room screens."
           notes={[
             'All matchups this week: every game in the league, yours marked, same scoreboard grammar at a smaller size.',
-            'The draft lobby opens before the draft: countdown, who is in the room, and your queue. Auto-pick uses the queue if your clock runs out (pending your answer on auto-pick vs skip).',
+            'The draft lobby opens before the draft: countdown, who is in the room, and your queue. If your clock runs out, the server auto-picks from your queue, then the best available.',
             'The draft recap lives under League › History after the draft: your picks ranked by how they have done since.',
             'Playoffs follow the scorer: the commissioner picks 2, 4 or 8 teams (default 4); seeds by wins, then head-to-head, then season gain; 1 plays 4 and 2 plays 3; a tied game goes to the higher seed. The explanatory line under the bracket is new copy.',
           ]}>

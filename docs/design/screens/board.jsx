@@ -90,6 +90,36 @@
     ['you-text', 'Your name / score text', 4.5], ['opp-text', 'Opponent text', 4.5], ['live-text', 'Live tags', 4.5],
     ['gain', 'Money up', 4.5], ['loss', 'Money down', 4.5], ['zero', 'Money flat', 4.5], ['danger', 'Errors', 4.5],
     ['you', 'Your fills (tug, avatar)', 3], ['opp', 'Opponent fills', 3], ['live', 'Live dot, clock ring', 3], ['border-strong', 'Control borders', 3],
+    ['text-3', 'Disabled / decorative text ONLY, never information', 0],
+  ];
+  // Every foreground-on-fill pair the components actually render, with the
+  // background it really sits on. rgba tints are composited over `over`.
+  // [fg token, bg token, over (for translucent bgs), min, where it's used]
+  const PAIRS = [
+    ['on-accent', 'you', null, 4.5, 'Avatar initials, winner banner, filled roster slots'],
+    ['on-opp', 'opp', null, 4.5, 'Opponent avatar initials'],
+    ['on-accent', 'loss-fill', null, 4.5, 'Sell button label'],
+    ['primary-fg', 'primary-bg', null, 4.5, 'Primary button label'],
+    ['inverse-fg', 'inverse-bg', null, 4.5, 'FINAL chip, selected toggle'],
+    ['secondary-fg', 'secondary-bg', 'surface', 4.5, 'Secondary button label'],
+    ['text', 'inset', null, 4.5, 'Chips, draft cells, search field, panels'],
+    ['text-2', 'inset', null, 4.5, 'Chip meta, race-chart day labels'],
+    ['live-text', 'inset', null, 4.5, 'LIVE chip'],
+    ['live-text', 'surface', null, 4.5, 'Broadcast tags on cards'],
+    ['text-2', 'sunken', null, 4.5, 'Segmented-control labels'],
+    ['text', 'bg', null, 4.5, 'Screen text'],
+    ['text-2', 'bg', null, 4.5, 'Captions on the screen background'],
+    ['gain', 'bg', null, 4.5, 'Gain on the screen background (Home hero)'],
+    ['loss', 'bg', null, 4.5, 'Loss on the screen background'],
+    ['gain', 'inset', null, 4.5, 'Gain inside panels'],
+    ['accent', 'accent-tint', 'surface', 4.5, 'Selected web nav, icon tiles'],
+    ['gain', 'gain-tint', 'surface', 4.5, 'Cash tile "$", done check'],
+    ['text', 'you-tint', 'surface', 4.5, 'Your standings row'],
+    ['accent', 'tabbar', 'bg', 4.5, 'Active tab label'],
+    ['text-2', 'tabbar', 'bg', 4.5, 'Inactive tab labels'],
+    ['warn-text', 'warn-tint', 'bg', 4.5, '"Your call" notes'],
+    ['on-accent', 'you', null, 3, 'Chevrons on the drawn draft track (graphic)'],
+    ['surface', 'live', null, 3, 'Trophy icon on the champion badge (graphic)'],
   ];
   function readTheme(theme) {
     const el = document.createElement('div');
@@ -98,25 +128,50 @@
     document.body.appendChild(el);
     const cs = getComputedStyle(el);
     const out = {};
-    for (const [t] of TOKEN_ROWS.concat([['surface'], ['bg']])) out[t] = cs.getPropertyValue(`--c-${t}`).trim();
+    const names = new Set(TOKEN_ROWS.map((r) => r[0]).concat(['surface', 'bg']));
+    for (const p of PAIRS) { names.add(p[0]); names.add(p[1]); if (p[2]) names.add(p[2]); }
+    for (const t of names) out[t] = cs.getPropertyValue(`--c-${t}`).trim();
     el.remove();
     return out;
   }
-  function lum(hex) {
-    const h = hex.replace('#', '');
-    return [0, 2, 4].map((i) => parseInt(h.substr(i, 2), 16) / 255)
-      .map((v) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)))
+  /** '#RRGGBB' | 'rgba(r, g, b, a)' | 'transparent' → [r, g, b, a] (0–255, 0–1). */
+  function parse(c) {
+    if (c === 'transparent') return [0, 0, 0, 0];
+    if (c.startsWith('#')) { const h = c.slice(1); return [0, 2, 4].map((i) => parseInt(h.substr(i, 2), 16)).concat(1); }
+    const m = c.match(/[\d.]+/g).map(Number);
+    return [m[0], m[1], m[2], m[3] ?? 1];
+  }
+  /** Composite `top` over opaque `base` → opaque [r, g, b]. */
+  const over = (top, base) => { const t = parse(top), b = parse(base); return [0, 1, 2].map((i) => t[i] * t[3] + b[i] * (1 - t[3])); };
+  function lumRGB(rgb) {
+    return rgb.map((v) => v / 255).map((v) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)))
       .reduce((a, v, i) => a + v * [0.2126, 0.7152, 0.0722][i], 0);
   }
-  const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  const ratio = (fgRGB, bgRGB) => { const x = lumRGB(fgRGB), y = lumRGB(bgRGB); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  const contrast = (a, b) => ratio(over(a, b), over(b, '#FFFFFF'));
+  /** A pair's real ratio: the bg composited over its base, then the fg over that. */
+  function pairRatio(T, fg, bg, base) {
+    const bgRGB = base ? over(T[bg], T[base]) : over(T[bg], '#FFFFFF');
+    const hex = '#' + bgRGB.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('');
+    return ratio(over(T[fg], hex), bgRGB);
+  }
 
   function ThemesSection() {
     const [vals, setVals] = useState(null);
     useEffect(() => { setVals({ light: readTheme('light'), dark: readTheme('dark') }); }, []);
     const cell = (t, tok, min) => {
       const v = vals[t][tok], c = contrast(v, vals[t].surface);
-      return <td><span className="b-swatch" style={{ background: v }} />{v} <span className={c >= min ? 'b-pass' : 'b-fail'}>{c.toFixed(2)}</span></td>;
+      return <td><span className="b-swatch" style={{ background: v }} />{v} <span className={min === 0 ? '' : c >= min ? 'b-pass' : 'b-fail'}>{c.toFixed(2)}</span></td>;
     };
+    const pairCell = (t, [fg, bg, base, min]) => {
+      const T = vals[t], c = pairRatio(T, fg, bg, base);
+      return <td><span className="b-swatch" style={{ background: T[fg], outline: `3px solid ${T[bg]}` }} /><span className={c >= min ? 'b-pass' : 'b-fail'}>{c.toFixed(2)}</span></td>;
+    };
+    const scored = vals ? ['light', 'dark'].flatMap((t) => [
+      ...TOKEN_ROWS.filter((r) => r[2] > 0).map(([tok, , min]) => contrast(vals[t][tok], vals[t].surface) >= min),
+      ...PAIRS.map((p) => pairRatio(vals[t], p[0], p[1], p[2]) >= p[3]),
+    ]) : [];
+    const passed = scored.filter(Boolean).length;
     return (
       <section className="b-sec" id="themes" aria-labelledby="themes-h">
         <header className="b-sec__head">
@@ -135,12 +190,29 @@
             <li><b>Settings:</b> Profile › Appearance, with System, Light and Dark; System is the default and the choice is saved on the device. You asked for a simple light/dark switch. System is our recommendation, since it follows the phone; say the word and we cut it to two options.</li>
           </ul>
           {vals ? (
+            <p className="b-changed" style={{ margin: 0 }}>
+              <b>{passed} of {scored.length} checks pass</b>: {TOKEN_ROWS.filter((r) => r[2] > 0).length} tokens against the card surface, and {PAIRS.length} foreground-on-fill pairs exactly as the components render them, each in both themes. Translucent tints are measured composited over what they sit on. <code>--c-text-3</code> is measured but not scored: it is for disabled or decorative text only, never information.
+            </p>
+          ) : null}
+          {vals ? (
             <div className="b-table-wrap">
               <table className="b-table">
                 <thead><tr><th scope="col">Token</th><th scope="col">Role</th><th scope="col">Light (contrast on surface)</th><th scope="col">Dark (contrast on surface)</th><th scope="col">Needs</th></tr></thead>
                 <tbody>
                   {TOKEN_ROWS.map(([tok, role, min]) => (
-                    <tr key={tok}><th scope="row">--c-{tok}</th><td>{role}</td>{cell('light', tok, min)}{cell('dark', tok, min)}<td>{min}:1</td></tr>
+                    <tr key={tok}><th scope="row">--c-{tok}</th><td>{role}</td>{cell('light', tok, min)}{cell('dark', tok, min)}<td>{min ? `${min}:1` : 'n/a (disabled only)'}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+          {vals ? (
+            <div className="b-table-wrap">
+              <table className="b-table">
+                <thead><tr><th scope="col">Text or icon</th><th scope="col">On</th><th scope="col">Where</th><th scope="col">Light</th><th scope="col">Dark</th><th scope="col">Needs</th></tr></thead>
+                <tbody>
+                  {PAIRS.map((p, i) => (
+                    <tr key={i}><th scope="row">--c-{p[0]}</th><td>--c-{p[1]}{p[2] ? ` over ${p[2]}` : ''}</td><td>{p[4]}</td>{pairCell('light', p)}{pairCell('dark', p)}<td>{p[3]}:1</td></tr>
                   ))}
                 </tbody>
               </table>
@@ -154,7 +226,7 @@
               <li><code>Button</code>: drop the on-game variant; <code>primary</code> reads <code>primary.bg/fg</code> from the theme (navy on Light, white on Dark).</li>
               <li><code>ScoreDigits</code>, <code>Scoreboard</code>/<code>TeamRow</code>, <code>TugBar</code>, <code>Chyron</code>, <code>LiveDot</code>, <code>PhaseChip</code>, <code>SegmentedControl</code>, <code>Sheet</code>, <code>EmptyState</code>, <code>Money</code>: any prop or style that picks an <code>onGame</code> colour or checks <code>surface === 'game'</code> goes; they read theme tokens only. <code>Money</code>'s gain/loss/zero colours come from the theme.</li>
               <li>Web: <code>tokens.css</code> gains <code>[data-theme="light"]</code> / <code>[data-theme="dark"]</code> blocks with these values (the app sets the attribute from Settings; System uses the media query). <code>tokens.parity.test.ts</code> checks both themes leaf by leaf.</li>
-              <li>Tests to add: a contrast test that asserts this table's minimums for both themes, so a token edit can't silently fail AA.</li>
+              <li>Tests to add: a contrast test that asserts BOTH tables for both themes, token-on-surface and every foreground-on-fill pair above (same pair list, tints composited over their base), so a token edit can't silently fail AA. A new component that puts text on a fill adds its pair to the list.</li>
             </ul>
           </div>
         </div>
@@ -290,6 +362,7 @@
               <>The on-the-clock ring counts down; the card says what the snake means for you right now ("Then Paolo M. picks twice").</>,
               <>The snake board: a track runs through every pick in order, with chevrons in the gaps and a half-loop at every row end, so the reversal reads without the labels. Your picks are outlined in team blue.</>,
               <>Search with your queue; Draft is one tap. Your roster fills slot by slot at $2,000 each.</>,
+              <><b>When the clock runs out</b> (your call): the server auto-picks a good stock, never a random one: the manager's queue first, then the best available (the ranking basis is still to confirm).</>,
               <><b>Pick clock</b> (your call, v1.1): 60 seconds by default; the commissioner sets 30–90s when creating the league or in League settings before the draft. The draft room shows the league's clock.</>,
             ]}
             motion={<>
@@ -297,7 +370,7 @@
               <li>The clock ring pulses its outline at 1.2s; the last 10 seconds turn the ring to loss red.</li>
             </>}
             reduced="the ticker appears in place; the track extends without drawing; no pulse."
-            ask={['When a manager\'s time runs out: auto-pick (from their queue, then the top-ranked stock) or skip them? The settings screen shows auto-pick as a placeholder. The pick timer is new backend work either way.']}
+            ask={null}
           />}
         />
 

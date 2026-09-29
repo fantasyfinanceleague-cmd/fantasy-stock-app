@@ -545,21 +545,28 @@ exactly what this removes.
 | `sunken` | `#EBEFF4` | `#0A1524` | Segmented tracks, recessed wells |
 | `line` / `border` | `#E3E8EF` / `#DDE3EA` | `#263A58` | Dividers / card borders |
 | `border-strong` | `#76828F` | `#8DA0BD` | Control borders (≥3:1) |
-| `text` / `text-2` / `text-3` | `#0D1B2E` / `#5B6678` / `#8A94A3` | `#F3F6FA` / `#9AAAC4` / `#6B7D99` | Primary / secondary / disabled |
+| `text` / `text-2` / `text-3` | `#0D1B2E` / `#5B6678` / `#8A94A3` | `#F3F6FA` / `#9AAAC4` / `#6B7D99` | Primary / secondary / **disabled or decorative only** (≈3:1; never information) |
 | `accent` | `#2860F0` | `#7FA6FF` | Links, selected states |
-| `you` / `you-text` | `#2860F0` / `#2860F0` | `#3D74FF` / `#8AB0FF` | Your fills / your text |
+| `you` / `you-text` | `#2860F0` / `#2860F0` | `#3366FF` / `#8AB0FF` | Your fills (white text on them ≥4.5) / your text |
 | `opp` / `opp-text` | `#E8541F` / `#B93C0E` | `#FF6A3D` / `#FF8F66` | Opponent fills / text |
 | `live` / `live-text` | `#C07E00` / `#8A5B00` | `#FFC53D` / `#FFC53D` | Live dot, clock ring / live tags |
 | `gain` / `loss` / `zero` | `#12803F` / `#C8303A` / `#5B6678` | `#4ADE8B` / `#FF7A7A` / `#9AAAC4` | Money up / down / flat (zero never green) |
 | `danger` | `#B42318` | `#FF8A80` | Errors |
+| `loss-fill` | `#C8303A` | `#D93A44` | Sell / destructive button fill (white label ≥4.5) |
+| `on-opp` | `#0D1B2E` | `#0D1B2E` | Text on opponent fills (white fails on Light orange) |
 | `primary-bg` / `primary-fg` | `#0D1B2E` / `#FFFFFF` | `#FFFFFF` / `#0D1B2E` | Primary button |
 | `inverse-bg` / `inverse-fg` | `#0D1B2E` / `#FFFFFF` | `#F3F6FA` / `#0D1B2E` | FINAL chip, selected toggle |
 
 Plus `accent-tint`, `accent-wash`, `you-tint`, `gain-tint`, `loss-tint`,
 `warn-*`, `track`, `scrim`, `tabbar`, `shadow` / `sheet-shadow` (none in Dark),
 and `on-accent` / `on-opp`. The full list with contrast is computed live on the
-key-screens board. **Every text token is ≥ 4.5:1 and every graphic token is
-≥ 3:1 on `surface`, in both themes.** Yellow, orange and bright blue get darker
+key-screens board. **Two tables, both themes, all passing (76/76 at v3.1):** every
+text token ≥ 4.5:1 and graphic token ≥ 3:1 on `surface`, AND every
+foreground-on-fill pair the components render (text on `you`, `opp`,
+`loss-fill`, `primary`, `inverse`, `inset`, `sunken`, the tints and the tab bar),
+with translucent tints composited over what they sit on. A token-on-surface
+check alone missed three failures (white on Dark `you`, white on Dark sell red,
+white on Light `opp`); the pair table is the evidence that matches the claim. Yellow, orange and bright blue get darker
 `*-text` cuts in Light because they fail as text on white.
 
 **Emphasis without an inverted surface.** Scoreboards stand out through:
@@ -587,7 +594,9 @@ prefers.
   `PhaseChip`, `SegmentedControl`, `Sheet`, `EmptyState` and `Money` read theme
   tokens only. No component checks for a game surface.
 - Tests: `tokens.parity.test.ts` covers both themes leaf by leaf, plus a new
-  contrast test that asserts the minimums above for both themes.
+  contrast test asserting BOTH tables (token-on-surface AND the full
+  foreground-on-fill pair list, tints composited) for both themes. A new
+  component that puts text on a fill adds its pair to the list.
 
 ## 10. What happens next
 

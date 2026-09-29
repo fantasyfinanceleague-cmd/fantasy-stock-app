@@ -5,7 +5,9 @@
 
    Naming: --c-<role>. "*-text" variants are the text-safe (≥4.5:1) cut of a
    colour whose fill value is too light or too loud for text. Contrast for
-   every pair is computed live on the board (the token table). */
+   every token AND every foreground-on-fill pair the components use is
+   computed live on the board. --c-text-3 is for disabled/decorative text
+   only (≈3:1), never information. */
 
 [data-ks-theme='light'] {
   color-scheme: light;
@@ -28,16 +30,17 @@
   --c-you-tint: rgba(40, 96, 240, 0.08);
   --c-opp: #E8541F;
   --c-opp-text: #B93C0E;
-  --c-on-opp: #FFFFFF;
+  --c-on-opp: #0D1B2E;
   --c-live: #C07E00;
   --c-live-text: #8A5B00;
   --c-live-glow: rgba(192, 126, 0, 0.35);
   --c-gain: #12803F;
   --c-loss: #C8303A;
   --c-zero: #5B6678;
-  --c-gain-tint: #E6F4EA;
+  --c-gain-tint: #EDF7F0;
   --c-loss-tint: #FCE8E9;
   --c-danger: #B42318;
+  --c-loss-fill: #C8303A;
   --c-warn-tint: #FFF6DE;
   --c-warn-line: #F5D48A;
   --c-warn-text: #7A4B00;
@@ -76,9 +79,9 @@
   --c-accent-tint: rgba(127, 166, 255, 0.16);
   --c-accent-wash: rgba(127, 166, 255, 0.07);
   --c-on-accent: #FFFFFF;
-  --c-you: #3D74FF;
+  --c-you: #3366FF;
   --c-you-text: #8AB0FF;
-  --c-you-tint: rgba(61, 116, 255, 0.18);
+  --c-you-tint: rgba(51, 102, 255, 0.18);
   --c-opp: #FF6A3D;
   --c-opp-text: #FF8F66;
   --c-on-opp: #0D1B2E;
@@ -91,6 +94,7 @@
   --c-gain-tint: rgba(74, 222, 139, 0.14);
   --c-loss-tint: rgba(255, 122, 122, 0.14);
   --c-danger: #FF8A80;
+  --c-loss-fill: #D93A44;
   --c-warn-tint: rgba(255, 197, 61, 0.1);
   --c-warn-line: rgba(255, 197, 61, 0.35);
   --c-warn-text: #FFC53D;

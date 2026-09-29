@@ -131,7 +131,7 @@
 
 .ks-btn { display: flex; align-items: center; justify-content: center; height: 50px; border-radius: var(--sp-radius-lg); font-weight: 700; font-size: var(--sp-type-headline-size); background: var(--c-primary-bg); color: var(--c-primary-fg); }
 .ks-btn--ongame { /* retired: identical to .ks-btn */ }
-.ks-btn--sell { background: var(--c-loss); color: var(--c-on-accent); }
+.ks-btn--sell { background: var(--c-loss-fill); color: var(--c-on-accent); }
 
 /* ── Lists ─────────────────────────────────────────────────────────────── */
 .ks-rows { list-style: none; margin: 0; padding: 0; }
