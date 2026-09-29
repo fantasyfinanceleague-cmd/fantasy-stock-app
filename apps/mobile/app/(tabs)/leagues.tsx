@@ -11,6 +11,7 @@ import { validateLeagueName } from '@/lib/contentModeration';
 import { generateInviteCode } from '@/lib/inviteCode';
 import { stakeModeLabel } from '@/lib/categoryData';
 import { isUuid } from '@/lib/uuid';
+import { playoffLine } from '@/lib/playoffs';
 import {
   type StakeMode,
   DEFAULT_BUDGET_CAP,
@@ -65,11 +66,9 @@ export default function LeaguesScreen() {
 
   // Derived values
   const minWeeks = numTeams - 1;
-  const getPlayoffOptions = () => {
-    const allOptions = [2, 4, 8]; // DB CHECK: playoff_teams NULL or in (2,4,8)
-    return allOptions.filter(o => o < numTeams);
-  };
-  const validPlayoffOptions = getPlayoffOptions();
+  // Flexible playoffs (Giorgio, 2026-09-29): any P from 2 up to the league
+  // size, equal included; clamped so shrinking the league never leaves it above.
+  const effectivePlayoffTeams = Math.min(Math.max(playoffTeams, 2), numTeams);
 
   // League detail modal state
   const [selectedLeague, setSelectedLeague] = useState<League | null>(null);
@@ -225,7 +224,7 @@ export default function LeaguesScreen() {
           league_type: leagueType,
           duration_days: leagueType === 'duration' ? durationDays : 30,
           num_weeks: effectiveWeeks,
-          playoff_teams: leagueType === 'matchup' ? playoffTeams : null,
+          playoff_teams: leagueType === 'matchup' ? effectivePlayoffTeams : null,
           draft_status: 'not_started',
           draft_date: draftDate!.toISOString(),
         })
@@ -613,19 +612,24 @@ export default function LeaguesScreen() {
 
                 <View style={styles.formGroup}>
                   <Text style={styles.formLabel}>Playoff Teams</Text>
-                  <View style={styles.optionList}>
-                    {validPlayoffOptions.map((option) => (
-                      <TouchableOpacity
-                        key={option}
-                        style={[styles.optionItem, playoffTeams === option && styles.optionItemActive]}
-                        onPress={() => setPlayoffTeams(option)}
-                      >
-                        <Text style={[styles.optionText, playoffTeams === option && styles.optionTextActive]}>
-                          {option} teams
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
+                  <View style={styles.stepper}>
+                    <TouchableOpacity
+                      style={styles.stepperButton}
+                      onPress={() => setPlayoffTeams(Math.max(2, effectivePlayoffTeams - 1))}
+                      accessibilityLabel="Fewer playoff teams"
+                    >
+                      <Text style={styles.stepperButtonText}>−</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.stepperValue}>{effectivePlayoffTeams}</Text>
+                    <TouchableOpacity
+                      style={styles.stepperButton}
+                      onPress={() => setPlayoffTeams(Math.min(numTeams, effectivePlayoffTeams + 1))}
+                      accessibilityLabel="More playoff teams"
+                    >
+                      <Text style={styles.stepperButtonText}>+</Text>
+                    </TouchableOpacity>
                   </View>
+                  <Text style={styles.formHint}>{playoffLine(effectivePlayoffTeams)}</Text>
                 </View>
               </>
             )}

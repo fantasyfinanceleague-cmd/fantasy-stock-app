@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import '../layout.css';
 import { validateLeagueName } from '../utils/contentModeration';
+import { playoffLine, playoffPlan } from '../utils/playoffs';
 
 const MIN_TEAMS = 4, MAX_TEAMS = 16;
 const MIN_ROUNDS = 6, MAX_ROUNDS = 12;
@@ -23,26 +24,17 @@ const LeagueSetupWizard = ({ onComplete }) => {
   const [leagueType, setLeagueType] = useState('duration');
   const [duration, setDuration] = useState(30);
   const [numWeeks, setNumWeeks] = useState(7);      // default for 8 teams
-  const [playoffTeams, setPlayoffTeams] = useState(4); // 2, 4, or 8 teams
+  const [playoffTeams, setPlayoffTeams] = useState(4); // any 2..numTeams
   const [budgetMode, setBudgetMode] = useState(null);
   const [budgetAmount, setBudgetAmount] = useState('');
 
   const minWeeks = numTeams - 1;
 
-  // Calculate valid playoff team options based on league size
-  // Playoff teams must be strictly less than total teams (can't have everyone in playoffs)
-  const getPlayoffOptions = () => {
-    const allOptions = [2, 4, 8];
-    const validOptions = allOptions.filter(o => o < numTeams);
-    // Always need at least one option - minimum 2 teams for finals
-    return validOptions.length > 0 ? validOptions : [2];
-  };
-
-  // Update playoffTeams when numTeams changes if current value is invalid
-  const validPlayoffOptions = getPlayoffOptions();
-  if (!validPlayoffOptions.includes(playoffTeams)) {
-    setPlayoffTeams(validPlayoffOptions[validPlayoffOptions.length - 1] || 2);
-  }
+  // Flexible playoffs (Giorgio, 2026-09-29): any P from 2 up to the league
+  // size, equal included. Derived + clamped (like numWeeks) so shrinking the
+  // league never leaves a stale P above it.
+  const effectivePlayoffTeams = Math.min(Math.max(playoffTeams, 2), numTeams);
+  const playoffRounds = playoffPlan(effectivePlayoffTeams)?.rounds ?? [];
 
   const next = () => setStep((s) => s + 1);
   const back = () => setStep((s) => Math.max(1, s - 1));
@@ -57,7 +49,7 @@ const LeagueSetupWizard = ({ onComplete }) => {
       leagueType,
       duration: leagueType === 'duration' ? duration : null,
       numWeeks: leagueType === 'matchup' ? Math.max(numWeeks, minWeeks) : null,
-      playoffTeams: leagueType === 'matchup' ? playoffTeams : null,
+      playoffTeams: leagueType === 'matchup' ? effectivePlayoffTeams : null,
       budgetMode,
       budgetAmount: budgetMode === 'budget' ? Number(budgetAmount) : null,
     });
@@ -284,31 +276,21 @@ const LeagueSetupWizard = ({ onComplete }) => {
             <p className="muted" style={{ marginTop: 0, marginBottom: 16 }}>
               How many teams make the playoffs?
             </p>
-            <div className="modal-options">
-              {validPlayoffOptions.map((opt) => {
-                const roundsText = opt === 2 ? 'Finals only'
-                  : opt === 4 ? 'Semifinals + Finals'
-                  : 'Quarters + Semis + Finals';
-                return (
-                  <label key={opt} className="modal-option">
-                    <input
-                      type="radio"
-                      value={opt}
-                      checked={playoffTeams === opt}
-                      onChange={() => setPlayoffTeams(opt)}
-                    />
-                    <div>
-                      <strong>{opt} Teams</strong>
-                      <p className="muted" style={{ margin: '4px 0 0', fontSize: '0.85rem' }}>
-                        {roundsText}
-                      </p>
-                    </div>
-                  </label>
-                );
-              })}
-            </div>
+            <input
+              type="number"
+              min={2}
+              max={numTeams}
+              value={effectivePlayoffTeams}
+              onChange={(e) => setPlayoffTeams(Math.min(numTeams, Math.max(2, Number(e.target.value) || 2)))}
+              className="modal-input"
+            />
+            <p className="muted" style={{ marginTop: 8, fontSize: '0.85rem' }}>
+              {playoffLine(effectivePlayoffTeams)}
+              <br />
+              {playoffRounds.join(' · ')}
+            </p>
             <p className="muted" style={{ marginTop: 12, fontSize: '0.8rem' }}>
-              Top {playoffTeams} teams by record advance to playoffs at the end of the regular season.
+              Top {effectivePlayoffTeams} teams by record advance to playoffs at the end of the regular season.
               Ties broken by head-to-head record, then total points.
             </p>
             <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>

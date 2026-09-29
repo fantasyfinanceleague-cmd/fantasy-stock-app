@@ -1,7 +1,7 @@
-import { assertEquals } from 'jsr:@std/assert';
+import { assert, assertEquals } from 'jsr:@std/assert';
+import { planBracket, playoffRoundCode, playoffShape } from '../_shared/playoff-bracket.ts';
 import {
   decidePlayoffSeeds,
-  decidePodium,
   needsRegularSeasonTransition,
   readRanking,
   buildPlayoffBracket,
@@ -73,21 +73,16 @@ Deno.test('decidePlayoffSeeds: an rpc error refuses before any seed exists', () 
   assertEquals(decidePlayoffSeeds({ data: null, error: { message: 'x' } }, 4).ok, false);
 });
 
-// ---------------------------------------------------------------------------
-// decidePodium — non-playoff completion
-// ---------------------------------------------------------------------------
-
-Deno.test('decidePodium: rank 1 is champion, rank 2 runner-up', () => {
-  assertEquals(decidePodium(ok([{ user_id: 'b', rank: 2 }, { user_id: 'a', rank: 1 }])), {
-    ok: true,
-    champion: 'a',
-    runnerUp: 'b',
-  });
-});
-
-Deno.test('decidePodium: fewer than two ranked managers refuses', () => {
-  assertEquals(decidePodium(ok(rows('a'))).ok, false);
-  assertEquals(decidePodium({ data: null, error: { message: 'x' } }).ok, false);
+Deno.test('decidePlayoffSeeds: any P >= 2 works; an invalid P refuses with no default (no `|| 4`)', () => {
+  const six = decidePlayoffSeeds(ok(rows('a', 'b', 'c', 'd', 'e', 'f', 'g')), 6);
+  assert(six.ok);
+  assertEquals(six.seeds.map((x) => x.user_id), ['a', 'b', 'c', 'd', 'e', 'f']);
+  for (const bad of [null, 0, 1, 2.5]) {
+    assertEquals(decidePlayoffSeeds(ok(rows('a', 'b', 'c', 'd')), bad), {
+      ok: false,
+      reason: `invalid_playoff_teams: ${String(bad)}`,
+    });
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -140,31 +135,75 @@ const seedsOf = (n: number) => Array.from({ length: n }, (_, i) => ({ user_id: `
 // Fri 2026-10-16 21:00Z, the last regular week_end of the test leagues.
 const LAST_END = new Date('2026-10-16T21:00:00Z');
 
-Deno.test('bracket (4): 1v4 and 2v3 semis the next Tuesday, finals placeholder a week later', () => {
+const shape = (b: ReturnType<typeof buildPlayoffBracket>) =>
+  b.map((r) => [r.week_number, r.playoff_round_number, r.bracket_position, r.playoff_round, r.team1_seed, r.team2_seed]);
+
+Deno.test('bracket (4): 1v4 and 2v3 semis the next Tuesday, final placeholder a week later (unchanged pairings)', () => {
   const b = buildPlayoffBracket(seedsOf(4), LAST_END, 4);
   assertEquals(b.map((r) => [r.week_number, r.playoff_round, r.team1_user_id, r.team2_user_id, r.team1_seed, r.team2_seed]), [
     [4, 'semi', 's1', 's4', 1, 4],
     [4, 'semi', 's2', 's3', 2, 3],
     [5, 'finals', null, null, null, null],
   ]);
+  assertEquals(shape(b).map((x) => [x[1], x[2]]), [[1, 0], [1, 1], [2, 0]]);
   assertEquals([b[0].week_start, b[0].week_end], ['2026-10-20T14:30:00.000Z', '2026-10-23T21:00:00.000Z']);
   assertEquals(b[2].week_start, '2026-10-27T14:30:00.000Z');
 });
 
-Deno.test('bracket (2): finals only; (8): 1v8, 4v5, 2v7, 3v6 then placeholders', () => {
+Deno.test('bracket (2): the final only; (8): 1v8, 4v5, 3v6, 2v7 then addressed placeholders', () => {
   const two = buildPlayoffBracket(seedsOf(2), LAST_END, 4);
-  assertEquals(two.map((r) => [r.playoff_round, r.team1_seed, r.team2_seed]), [['finals', 1, 2]]);
+  assertEquals(shape(two), [[4, 1, 0, 'finals', 1, 2]]);
   const eight = buildPlayoffBracket(seedsOf(8), LAST_END, 8);
-  assertEquals(eight.map((r) => [r.week_number, r.playoff_round, r.team1_seed, r.team2_seed]), [
-    [8, 'quarter', 1, 8], [8, 'quarter', 4, 5], [8, 'quarter', 2, 7], [8, 'quarter', 3, 6],
-    [9, 'semi', null, null], [9, 'semi', null, null], [10, 'finals', null, null],
+  assertEquals(shape(eight), [
+    [8, 1, 0, 'quarter', 1, 8], [8, 1, 1, 'quarter', 4, 5], [8, 1, 2, 'quarter', 3, 6], [8, 1, 3, 'quarter', 2, 7],
+    [9, 2, 0, 'semi', null, null], [9, 2, 1, 'semi', null, null], [10, 3, 0, 'finals', null, null],
   ]);
 });
 
-Deno.test('bracket: a Tuesday end date rolls a full week; unsupported size builds nothing', () => {
+Deno.test("bracket (6): Giorgio's example — 4v5 and 3v6, seeds 1 and 2 already in the semis", () => {
+  const b = buildPlayoffBracket(seedsOf(6), LAST_END, 4);
+  assertEquals(b.map((r) => [r.week_number, r.playoff_round, r.team1_user_id, r.team2_user_id]), [
+    [4, 'quarter', 's4', 's5'],
+    [4, 'quarter', 's3', 's6'],
+    [5, 'semi', 's1', null], // seed 1 vs W(4v5)
+    [5, 'semi', null, 's2'], // W(3v6) vs seed 2
+    [6, 'finals', null, null],
+  ]);
+  assertEquals(b[2].week_start, '2026-10-27T14:30:00.000Z');
+  assertEquals(b[4].week_end, '2026-11-06T21:00:00.000Z');
+});
+
+Deno.test('bracket: every P from 2 to 16 is the pure plan, addressed, one week per round', () => {
+  for (let p = 2; p <= 16; p++) {
+    const { weeks } = playoffShape(p);
+    const b = buildPlayoffBracket(seedsOf(p), LAST_END, 11);
+    const plan = planBracket(p);
+    assertEquals(b.length, p - 1, `P=${p}`);
+    b.forEach((r, i) => {
+      const g = plan[i];
+      assertEquals([r.playoff_round_number, r.bracket_position], [g.round, g.position], `P=${p}`);
+      assertEquals(r.week_number, 10 + g.round, `P=${p}`);
+      assertEquals(r.playoff_round, playoffRoundCode(g.round, weeks));
+      for (const [slot, user, seed] of [[g.team1, r.team1_user_id, r.team1_seed], [g.team2, r.team2_user_id, r.team2_seed]] as const) {
+        if (slot.kind === 'seed') assertEquals([user, seed], [`s${slot.seed}`, slot.seed], `P=${p}`);
+        else assertEquals([user, seed], [null, null], `P=${p}: an awaiting slot is empty`);
+      }
+      // A row's week window is the same Tue..Fri the round number implies.
+      assertEquals(new Date(r.week_start).getUTCDay(), 2);
+      assertEquals(new Date(r.week_end).getUTCDay(), 5);
+    });
+    // Round 1 is always fully populated; byes are never rows.
+    assert(b.filter((r) => r.playoff_round_number === 1).every((r) => r.team1_user_id && r.team2_user_id));
+  }
+});
+
+Deno.test('bracket: a Tuesday end date rolls a full week; < 2 seeds or > 16 builds nothing', () => {
   const tue = buildPlayoffBracket(seedsOf(2), new Date('2026-10-20T21:00:00Z'), 4);
   assertEquals(tue[0].week_start, '2026-10-27T14:30:00.000Z');
-  assertEquals(buildPlayoffBracket(seedsOf(3), LAST_END, 4), []);
+  assertEquals(buildPlayoffBracket(seedsOf(1), LAST_END, 4), []);
+  assertEquals(buildPlayoffBracket(seedsOf(0), LAST_END, 4), []);
+  assertEquals(buildPlayoffBracket(seedsOf(17), LAST_END, 4), []);
+  assertEquals(buildPlayoffBracket(seedsOf(3), LAST_END, 4).length, 2, '3 teams is supported now');
 });
 
 Deno.test('readPlayoffStart: started and already_transitioned are success; everything else refuses', () => {

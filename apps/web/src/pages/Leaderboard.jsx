@@ -10,7 +10,7 @@ import { usePrices } from '../context/PriceContext';
 import { useUserProfiles } from '../context/UserProfilesContext';
 import { PageLoader } from '../components/LoadingSpinner';
 import { SkeletonLeaderboard } from '../components/Skeleton';
-import { getPlayoffRoundName } from '../utils/scheduleGenerator';
+import { playoffPlan } from '../utils/playoffs';
 import { useRealtimeStandings } from '../hooks/useRealtimeStandings';
 import WeekIndicator from '../components/WeekIndicator';
 import { getWeekStatus } from '../utils/weekStatus';
@@ -663,32 +663,39 @@ export default function Leaderboard() {
     return matchups.filter(m => m.week_number === currentWeek);
   }, [matchups, currentWeek]);
 
-  // Playoff matchups organized by round
+  // Playoff matchups organized by round. Keyed on the structural address
+  // (playoff_round_number, bracket_position), never on the playoff_round code,
+  // so any playoff size works (flexible playoffs); labels come from playoffPlan.
   const playoffData = useMemo(() => {
     const playoffMatchups = matchups.filter(m => m.is_playoff);
     if (playoffMatchups.length === 0) return null;
 
-    // Group by round
-    const quarters = playoffMatchups.filter(m => m.playoff_round === 'quarter');
-    const semis = playoffMatchups.filter(m => m.playoff_round === 'semi');
-    const finals = playoffMatchups.filter(m => m.playoff_round === 'finals');
+    const labels = playoffPlan(activeLeague?.playoff_teams)?.rounds ?? [];
+    const roundNumbers = [...new Set(playoffMatchups.map(m => m.playoff_round_number))].sort((a, b) => a - b);
+    const finalRound = roundNumbers[roundNumbers.length - 1];
+    const rounds = roundNumbers.map(r => ({
+      roundNumber: r,
+      label: labels[r - 1] || `Round ${r}`,
+      isFinal: r === finalRound,
+      games: playoffMatchups
+        .filter(m => m.playoff_round_number === r)
+        .sort((a, b) => a.bracket_position - b.bracket_position),
+    }));
+    const finals = rounds.length > 0 ? rounds[rounds.length - 1].games : [];
 
-    // Check if playoffs have started (any team1_user_id is set in first round)
-    const firstRound = quarters.length > 0 ? quarters : (semis.length > 0 ? semis : finals);
-    const hasStarted = firstRound.some(m => m.team1_user_id !== null);
+    // The current round is the LOWEST with a ready, unscored game: with byes a
+    // later-round game can be fully populated before round 1 is played.
+    const ready = rounds.find(rd => rd.games.some(m => m.team1_user_id && m.team2_user_id && m.winner_user_id === null));
 
     return {
-      hasStarted,
-      quarters,
-      semis,
-      finals,
-      currentRound: finals.some(m => m.team1_user_id && m.team2_user_id && m.winner_user_id === null) ? 'finals'
-        : semis.some(m => m.team1_user_id && m.team2_user_id && m.winner_user_id === null) ? 'semi'
-        : quarters.some(m => m.winner_user_id === null) ? 'quarter'
+      hasStarted: rounds.length > 0 && rounds[0].games.some(m => m.team1_user_id !== null),
+      rounds,
+      currentRound: ready ? ready.roundNumber
         : finals.some(m => m.winner_user_id) ? 'complete' : 'upcoming',
+      currentRoundLabel: ready ? ready.label : null,
       champion: finals.find(m => m.winner_user_id)?.winner_user_id || null,
     };
-  }, [matchups]);
+  }, [matchups, activeLeague]);
 
   // Get schedule for a specific player (all weeks)
   const getPlayerSchedule = (playerId) => {
@@ -1124,10 +1131,8 @@ export default function Leaderboard() {
               🏆 Playoff Bracket
             </h3>
             <div className="muted" style={{ fontSize: 12 }}>
-              {playoffData.currentRound === 'complete' ? 'Season Complete' :
-               playoffData.currentRound === 'quarter' ? 'Quarterfinals' :
-               playoffData.currentRound === 'semi' ? 'Semifinals' :
-               playoffData.currentRound === 'finals' ? 'Finals' : 'Upcoming'}
+              {playoffData.currentRound === 'complete' ? 'Season Complete'
+                : playoffData.currentRoundLabel || 'Upcoming'}
             </div>
           </div>
 
@@ -1139,75 +1144,31 @@ export default function Leaderboard() {
             overflowX: 'auto',
             padding: '16px 0'
           }}>
-            {/* Quarterfinals Column */}
-            {playoffData.quarters.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 180 }}>
-                <div style={{ textAlign: 'center', fontWeight: 700, color: '#9ca3af', marginBottom: 8 }}>
-                  Quarterfinals
-                </div>
-                {playoffData.quarters.map((m, idx) => (
-                  <PlayoffMatchupCard
-                    key={m.id || idx}
-                    matchup={m}
-                    getDisplayName={getDisplayName}
-                    getAvatar={getAvatar}
-                    userId={USER_ID}
-                    isCurrentRound={playoffData.currentRound === 'quarter'}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Semifinals Column */}
-            {playoffData.semis.length > 0 && (
-              <div style={{
+            {/* One column per round (any playoff size); the final keeps its gold styling. */}
+            {playoffData.rounds.map((rd) => (
+              <div key={rd.roundNumber} style={{
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 16,
                 minWidth: 180,
-                justifyContent: 'center'
+                justifyContent: rd.roundNumber === 1 ? undefined : 'center'
               }}>
-                <div style={{ textAlign: 'center', fontWeight: 700, color: '#9ca3af', marginBottom: 8 }}>
-                  Semifinals
+                <div style={{ textAlign: 'center', fontWeight: 700, color: rd.isFinal ? '#fbbf24' : '#9ca3af', marginBottom: 8 }}>
+                  {rd.isFinal ? `🏆 ${rd.label}` : rd.label}
                 </div>
-                {playoffData.semis.map((m, idx) => (
+                {rd.games.map((m, idx) => (
                   <PlayoffMatchupCard
                     key={m.id || idx}
                     matchup={m}
                     getDisplayName={getDisplayName}
                     getAvatar={getAvatar}
                     userId={USER_ID}
-                    isCurrentRound={playoffData.currentRound === 'semi'}
+                    isCurrentRound={playoffData.currentRound === rd.roundNumber}
+                    isFinals={rd.isFinal}
                   />
                 ))}
               </div>
-            )}
-
-            {/* Finals Column */}
-            {playoffData.finals.length > 0 && (
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 16,
-                minWidth: 180,
-                justifyContent: 'center'
-              }}>
-                <div style={{ textAlign: 'center', fontWeight: 700, color: '#fbbf24', marginBottom: 8 }}>
-                  🏆 Finals
-                </div>
-                {playoffData.finals.map((m, idx) => (
-                  <PlayoffMatchupCard
-                    key={m.id || idx}
-                    matchup={m}
-                    getDisplayName={getDisplayName}
-                    getAvatar={getAvatar}
-                    userId={USER_ID}
-                    isCurrentRound={playoffData.currentRound === 'finals'}
-                    isFinals
-                  />
-                ))}
-              </div>
-            )}
+            ))}
           </div>
         </div>
       )}

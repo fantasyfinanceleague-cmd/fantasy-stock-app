@@ -10,7 +10,6 @@ import {
   canStartDraft,
   computeBotsNeeded,
   computeStartBlockers,
-  effectivePlayoffTeams,
   isBotsAllowedForEmail,
   isCommissioner,
   type LeagueStartState,
@@ -150,11 +149,28 @@ Deno.test('more playoff spots than members blocks with both numbers', () => {
   assertEquals(canStartDraft(startState({ memberCount: 5, playoffTeams: 8 }), NOW), false);
 });
 
-Deno.test('NULL / 0 playoff_teams read as 4, exactly like process-week-results', () => {
-  assertEquals(effectivePlayoffTeams(null), 4);
-  assertEquals(effectivePlayoffTeams(0), 4);
-  assertEquals(effectivePlayoffTeams(2), 2);
-  assertEquals(computeStartBlockers(startState({ memberCount: 4, playoffTeams: null }), NOW), []);
+Deno.test('NULL / 0 / 1 / fractional playoff_teams on a matchup league blocks (no silent default)', () => {
+  // playoff_teams is required on matchup leagues (20261012000000); planSeason and
+  // the season-end seeding refuse an invalid value too, so starting would strand
+  // the season. It used to read NULL/0 as 4.
+  for (const playoffTeams of [null, 0, 1, 2.5]) {
+    assertEquals(computeStartBlockers(startState({ memberCount: 4, playoffTeams }), NOW), [
+      { code: 'invalid_playoff_teams', playoffTeams },
+    ]);
+  }
+  assertEquals(computeStartBlockers(startState({ memberCount: 4, playoffTeams: 2 }), NOW), []);
+  assertEquals(computeStartBlockers(startState({ memberCount: 4, playoffTeams: 3 }), NOW), [], 'any P from 2, not just 2/4/8');
+});
+
+Deno.test('flexible P: every P from 2 to the member count may start; one more may not', () => {
+  for (let members = 4; members <= 16; members++) {
+    for (let p = 2; p <= members; p++) {
+      assertEquals(computeStartBlockers(startState({ memberCount: members, playoffTeams: p }), NOW), [], `P=${p} members=${members}`);
+    }
+    assertEquals(computeStartBlockers(startState({ memberCount: members, playoffTeams: members + 1 }), NOW), [
+      { code: 'playoff_teams_exceeds_members', playoffTeams: members + 1, members },
+    ]);
+  }
 });
 
 Deno.test('duration leagues have no playoffs and are never blocked on playoff spots', () => {
