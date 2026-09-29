@@ -2,67 +2,75 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "c2a44130f8d62f3faadc67c21b3f1216e301799e",
-    "commitShort": "c2a4413",
+    "commit": "a981108c985e3e218b7f3b9461d0b7afb71bdebe",
+    "commitShort": "a981108",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "feat/game-data-asks",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
+        "path": "apps/mobile/app/_layout.tsx"
+      },
+      {
+        "code": "UU",
         "path": "apps/mobile/app/login.tsx"
       },
       {
         "code": "M",
-        "path": "apps/web/src/pages/Login.jsx"
+        "path": "apps/mobile/app/reset-password.tsx"
       },
       {
         "code": "M",
-        "path": "supabase/config.toml"
+        "path": "apps/mobile/constants/passwordRules.ts"
       },
       {
         "code": "A",
-        "path": "supabase/functions/refresh-market-calendar/index.ts"
-      },
-      {
-        "code": "AM",
-        "path": "supabase/functions/refresh-market-calendar/plan.test.ts"
-      },
-      {
-        "code": "AM",
-        "path": "supabase/functions/refresh-market-calendar/plan.ts"
+        "path": "apps/mobile/lib/authErrors.ts"
       },
       {
         "code": "A",
-        "path": "supabase/migrations/20261005000000_league_activity_view.sql"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/20261005000001_signup_username_trigger.sql"
-      },
-      {
-        "code": "AM",
-        "path": "supabase/migrations/20261005000002_market_calendar.sql"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/deferred/20261005000003_schedule_refresh_market_calendar.sql"
+        "path": "apps/mobile/lib/recoveryLink.ts"
       },
       {
         "code": "M",
-        "path": "supabase/migrations/deferred/README.md"
+        "path": "apps/mobile/lib/recoveryNonce.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/useAuth.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/mobile/tests-deno/authErrors.test.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/mobile/tests-deno/passwordRules.test.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/mobile/tests-deno/recoveryLink.test.ts"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20261004000000_participant_display_names.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20261004000001_get_home_summary_rpc.sql"
       }
     ],
-    "timestamp": "2026-09-27T05:48:51Z",
-    "sourceHash": "sha256:bc1a4ff4336d2ce33a58312b49360b30f5fd9ecfa4877bb33d3f7ab06cec731c",
+    "timestamp": "2026-09-29T01:40:24Z",
+    "sourceHash": "sha256:f61c7f1cb4a2cfa8dd39de2caf4920f8bd35ec6143c223eec176268c1bb8cf84",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1104.9,
-    "ageDays": 46,
+    "ageHours": 1148.8,
+    "ageDays": 47.9,
     "staleAfterDays": 14,
     "stale": true,
     "hash": "sha256:3c923bcd46e36dfa365d24852d7b8fb6ead9ff99a06c3b26dc0853c648e07ded",
@@ -1357,6 +1365,68 @@
     {
       "layer": "db",
       "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261004000001_get_home_summary_rpc.sql:78"
+        ],
+        "latestDefinition": "supabase/migrations/20261004000001_get_home_summary_rpc.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.get_home_summary",
+      "label": "get_home_summary()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261004000001_get_home_summary_rpc.sql",
+        "line": 78
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261004000000_participant_display_names.sql:170"
+        ],
+        "latestDefinition": "supabase/migrations/20261004000000_participant_display_names.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.get_league_display_names",
+      "label": "get_league_display_names()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261004000000_participant_display_names.sql",
+        "line": 170
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
       "db": {
         "securityDefiner": true,
         "searchPath": "public",
@@ -1628,6 +1698,37 @@
       "source": {
         "path": "supabase/migrations/20261005000002_market_calendar.sql",
         "line": 160
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261004000000_participant_display_names.sql:87"
+        ],
+        "latestDefinition": "supabase/migrations/20261004000000_participant_display_names.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.participant_display_name",
+      "label": "participant_display_name()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261004000000_participant_display_names.sql",
+        "line": 87
       }
     },
     {
@@ -5663,6 +5764,137 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.pg.get_home_summary->tbl.league_members",
+      "from": "pg.get_home_summary",
+      "to": "tbl.league_members",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_members (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261004000001_get_home_summary_rpc.sql:91"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.get_home_summary->tbl.league_seasons",
+      "from": "pg.get_home_summary",
+      "to": "tbl.league_seasons",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_seasons (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261004000001_get_home_summary_rpc.sql:132"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.get_home_summary->tbl.league_standings",
+      "from": "pg.get_home_summary",
+      "to": "tbl.league_standings",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_standings (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261004000001_get_home_summary_rpc.sql:109"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.get_home_summary->tbl.leagues",
+      "from": "pg.get_home_summary",
+      "to": "tbl.leagues",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT leagues (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261004000001_get_home_summary_rpc.sql:90"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.get_home_summary->tbl.matchups",
+      "from": "pg.get_home_summary",
+      "to": "tbl.matchups",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT matchups (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261004000001_get_home_summary_rpc.sql:120"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.get_league_display_names->tbl.drafts",
+      "from": "pg.get_league_display_names",
+      "to": "tbl.drafts",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT drafts (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261004000000_participant_display_names.sql:198"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.get_league_display_names->tbl.league_members",
+      "from": "pg.get_league_display_names",
+      "to": "tbl.league_members",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_members (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261004000000_participant_display_names.sql:190"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.get_league_display_names->tbl.league_standings",
+      "from": "pg.get_league_display_names",
+      "to": "tbl.league_standings",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_standings (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261004000000_participant_display_names.sql:192"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.get_league_display_names->tbl.matchups",
+      "from": "pg.get_league_display_names",
+      "to": "tbl.matchups",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT matchups (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261004000000_participant_display_names.sql:194",
+        "supabase/migrations/20261004000000_participant_display_names.sql:196"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.get_league_display_names->tbl.trades",
+      "from": "pg.get_league_display_names",
+      "to": "tbl.trades",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT trades (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261004000000_participant_display_names.sql:209"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.pg.handle_new_user_profile->tbl.user_profiles#insert",
       "from": "pg.handle_new_user_profile",
       "to": "tbl.user_profiles",
@@ -5801,6 +6033,19 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261005000002_market_calendar.sql:174"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.participant_display_name->tbl.user_profiles",
+      "from": "pg.participant_display_name",
+      "to": "tbl.user_profiles",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT user_profiles (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261004000000_participant_display_names.sql:142"
       ]
     },
     {
@@ -6652,7 +6897,7 @@
       "payload": ".from('user_profiles').upsert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/login.tsx:85"
+        "apps/mobile/app/login.tsx:73"
       ]
     },
     {
@@ -8614,6 +8859,26 @@
       "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
     },
     {
+      "node": "pg.get_home_summary",
+      "label": "get_home_summary()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.get_league_display_names",
+      "label": "get_league_display_names()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
       "node": "pg.handle_new_user_profile",
       "label": "handle_new_user_profile()",
       "groupKey": "existence",
@@ -8626,6 +8891,16 @@
     {
       "node": "pg.market_session_status",
       "label": "market_session_status()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.participant_display_name",
+      "label": "participant_display_name()",
       "groupKey": "existence",
       "field": "existence",
       "declared": "created by migration",
@@ -8848,6 +9123,34 @@
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
     {
+      "node": "pg.get_home_summary",
+      "label": "get_home_summary()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261004000001_get_home_summary_rpc.sql:78",
+      "outbound": [
+        "tbl.league_members",
+        "tbl.league_seasons",
+        "tbl.league_standings",
+        "tbl.leagues",
+        "tbl.matchups"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "pg.get_league_display_names",
+      "label": "get_league_display_names()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261004000000_participant_display_names.sql:170",
+      "outbound": [
+        "tbl.drafts",
+        "tbl.league_members",
+        "tbl.league_standings",
+        "tbl.matchups",
+        "tbl.trades"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
       "node": "pg.market_session_status",
       "label": "market_session_status()",
       "kind": "pg-function",
@@ -8855,6 +9158,16 @@
       "outbound": [
         "tbl.market_calendar",
         "tbl.market_calendar_coverage"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "pg.participant_display_name",
+      "label": "participant_display_name()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261004000000_participant_display_names.sql:87",
+      "outbound": [
+        "tbl.user_profiles"
       ],
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
@@ -8972,6 +9285,24 @@
       "resolve": "Re-capture the snapshot, or confirm the migration was applied."
     },
     {
+      "scope": "pg.participant_display_name",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.get_league_display_names",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.get_home_summary",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
       "scope": "pg.handle_new_user_profile",
       "claim": "function exists in prod",
       "reason": "Present in migrations, absent from db-snapshot.json.",
@@ -9040,13 +9371,13 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 127,
-    "edges": 274,
+    "nodes": 130,
+    "edges": 285,
     "flows": 8,
-    "drift": 25,
-    "driftHigh": 7,
-    "deadCode": 13,
-    "unverified": 14
+    "drift": 28,
+    "driftHigh": 10,
+    "deadCode": 16,
+    "unverified": 17
   },
   "sourceIndex": {
     "edgeFunctions": [
@@ -9158,7 +9489,7 @@
       "apps/mobile/app/create-league.tsx:125 -> leagues.insert",
       "apps/mobile/app/create-league.tsx:151 -> league_members.insert",
       "apps/mobile/app/league-settings.tsx:137 -> leagues.update",
-      "apps/mobile/app/login.tsx:85 -> user_profiles.upsert",
+      "apps/mobile/app/login.tsx:73 -> user_profiles.upsert",
       "apps/mobile/app/player-portfolio.tsx:123 -> user_profiles.select",
       "apps/mobile/app/player-portfolio.tsx:135 -> drafts.select",
       "apps/mobile/app/player-portfolio.tsx:142 -> trades.select",
@@ -9423,6 +9754,8 @@
       "20260930000000_join_league_refuse_mid_draft.sql",
       "20261001000000_narrow_league_members_insert_self.sql",
       "20261002000000_drop_client_schedule_insert_policies.sql",
+      "20261004000000_participant_display_names.sql",
+      "20261004000001_get_home_summary_rpc.sql",
       "20261005000000_league_activity_view.sql",
       "20261005000001_signup_username_trigger.sql",
       "20261005000002_market_calendar.sql"

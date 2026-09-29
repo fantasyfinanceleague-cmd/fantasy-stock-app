@@ -29,3 +29,26 @@ export const PASSWORD_REQUIREMENTS: PasswordRequirement[] = [
 export function failingPasswordRequirements(pw: string): PasswordRequirement[] {
   return PASSWORD_REQUIREMENTS.filter((r) => !r.test(pw));
 }
+
+// One sentence stating the policy above, for a screen that wants to show
+// the rule as prose rather than (or in addition to) the live checklist —
+// e.g. reset-password.tsx, which has no room for a per-requirement list.
+// Sentence case, matching this app's copy conventions.
+export const PASSWORD_RULE_SENTENCE =
+  `Use at least ${PASSWORD_MIN_LENGTH} characters, with an uppercase letter, a lowercase letter, a number, and a symbol.`;
+
+export interface PasswordCheckResult {
+  valid: boolean;
+  failing: PasswordRequirement[];
+}
+
+/**
+ * Pure pass/fail check against the same policy as the checklist and
+ * failingPasswordRequirements() above (this just packages that result more
+ * conveniently for a caller that only wants a single valid/invalid answer
+ * plus what's missing, e.g. to build a "Your password needs: …" message).
+ */
+export function checkPassword(pw: string): PasswordCheckResult {
+  const failing = failingPasswordRequirements(pw);
+  return { valid: failing.length === 0, failing };
+}
