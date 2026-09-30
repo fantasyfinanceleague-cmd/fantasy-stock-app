@@ -9,6 +9,7 @@
 import { assertEquals } from 'jsr:@std/assert';
 import {
   accessibleLeagueRow,
+  chipLabelFor,
   chipPhaseFor,
   moreLeaguesCount,
   pillAccessibilityLabel,
@@ -36,6 +37,10 @@ function league(over: Partial<SheetLeague> = {}): SheetLeague {
     capacity: 6,
     isChampion: false,
     seasonLabel: '',
+    currentWeek: 6,
+    numWeeks: 10,
+    playoffTeams: 4,
+    draftDate: null,
     ...over,
   };
 }
@@ -158,15 +163,15 @@ Deno.test('active league: the storage key is per user, so accounts never share a
 
 // ── VoiceOver + pill copy ─────────────────────────────────────────────────
 
-Deno.test('a11y: sheet rows announce name, rank, record in words, and phase', () => {
-  assertEquals(accessibleLeagueRow(league(), true), 'Friday Night Stocks, 2nd of 6, 4 wins, 1 loss, Live, selected');
+Deno.test('a11y: sheet rows announce name, rank, record in words, and the chip as shown', () => {
+  assertEquals(accessibleLeagueRow(league(), true), 'Friday Night Stocks, 2nd of 6, 4 wins, 1 loss, Week 6, selected');
   assertEquals(
     accessibleLeagueRow(league({ wins: 1, losses: 0, ties: 2, marketOpen: false }), false),
-    'Friday Night Stocks, 2nd of 6, 1 win, 0 losses, 2 ties, Closed'
+    'Friday Night Stocks, 2nd of 6, 1 win, 0 losses, 2 ties, Week 6'
   );
   assertEquals(
     accessibleLeagueRow(league({ seasonPhase: 'completed', rank: 1, rankCount: 8, wins: 10, losses: 4, isChampion: true }), false),
-    'Friday Night Stocks, Champion, 1st of 8, 10 wins, 4 losses, Complete'
+    'Friday Night Stocks, Champion, 1st of 8, 10 wins, 4 losses, Final'
   );
   assertEquals(
     accessibleLeagueRow(league({ seasonPhase: 'pre_draft', membersJoined: 6, capacity: 8, rank: null }), false),
@@ -181,4 +186,38 @@ Deno.test('pill: "+N" counts the OTHER leagues and hides at zero; the label matc
   assertEquals(pillAccessibilityLabel('Friday Night Stocks', 3), 'Friday Night Stocks, 3 more leagues');
   assertEquals(pillAccessibilityLabel('Friday Night Stocks', 1), 'Friday Night Stocks, 1 more league');
   assertEquals(pillAccessibilityLabel('Friday Night Stocks', 0), 'Friday Night Stocks');
+});
+
+// ── PhaseChip labels in the sheet (Design Lead ruling) ────────────────────
+
+Deno.test('chip label: live leagues read "Week N"', () => {
+  assertEquals(chipLabelFor(league({ seasonPhase: 'regular', currentWeek: 6 })), 'Week 6');
+  assertEquals(chipLabelFor(league({ seasonPhase: 'regular', currentWeek: 2, marketOpen: false })), 'Week 2');
+});
+
+Deno.test('chip label: an upcoming draft reads "Draft Sat 7:00 PM ET" in Eastern time', () => {
+  // 2026-10-03 23:00 UTC = Sat 7:00 PM EDT
+  assertEquals(chipLabelFor(league({ seasonPhase: 'pre_draft', draftDate: '2026-10-03T23:00:00Z' })), 'Draft Sat 7:00 PM ET');
+  // 2026-12-05 00:30 UTC = Fri Dec 4, 7:30 PM EST
+  assertEquals(chipLabelFor(league({ seasonPhase: 'pre_draft', draftDate: '2026-12-05T00:30:00Z' })), 'Draft Fri 7:30 PM ET');
+});
+
+Deno.test('chip label: finished reads "Final"; phases without a better label keep the chip default', () => {
+  assertEquals(chipLabelFor(league({ seasonPhase: 'completed' })), 'Final');
+  assertEquals(chipLabelFor(league({ seasonPhase: 'pre_draft', draftDate: null })), undefined);
+  assertEquals(chipLabelFor(league({ seasonPhase: 'drafting' })), undefined);
+  assertEquals(chipLabelFor(league({ seasonPhase: 'pre_season' })), undefined);
+  assertEquals(chipLabelFor(league({ seasonPhase: 'playoffs' })), undefined);
+});
+
+Deno.test('chip label: playoffs name the round (lib/playoffs), keyed on structure', () => {
+  // 10-week season, 4-team playoff: week 11 = round 1, week 12 = round 2.
+  const r1 = chipLabelFor(league({ seasonPhase: 'playoffs', currentWeek: 11, numWeeks: 10, playoffTeams: 4 }));
+  const r2 = chipLabelFor(league({ seasonPhase: 'playoffs', currentWeek: 12, numWeeks: 10, playoffTeams: 4 }));
+  assertEquals(typeof r1, 'string');
+  assertEquals(r1 === r2, false);
+});
+
+Deno.test('a11y: a row announces the chip label it shows ("Week 6"), not the generic phase', () => {
+  assertEquals(accessibleLeagueRow(league(), false), 'Friday Night Stocks, 2nd of 6, 4 wins, 1 loss, Week 6');
 });

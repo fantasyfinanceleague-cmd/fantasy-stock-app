@@ -139,6 +139,10 @@ async function fetchSheetFacts(userId: string, leagueData: League[]) {
       capacity: league.num_participants,
       isChampion: !!league.current_season_id && championBySeason.get(league.current_season_id) === userId,
       seasonLabel: getSeasonLabel(phase, league),
+      currentWeek: league.current_week,
+      numWeeks: league.num_weeks,
+      playoffTeams: league.playoff_teams,
+      draftDate: league.draft_date,
     };
   });
 }

@@ -26,6 +26,13 @@ import { groupLeagues } from '@/lib/shell/leagueSheet';
 
 // Phase 3b-1 — the league sheet (spec row 9, board "League sheet").
 //
+// A shell-local sheet (approved) because S3's flight needs the sheet in the
+// same layer as the flying label, which an RN Modal (sp/Sheet) can't give.
+// It matches components/sp/Sheet.tsx exactly — radius.xl corners, the
+// 36×4 grabber in a space[3] handle area, the `scrim` token, spring.snappy,
+// swipe-down-to-close, 90% max height — plus a ✕ and accessibilityViewIsModal.
+// TODO(consolidation): fold into sp/Sheet as `presentation="overlay"`.
+//
 // Leagues grouped Live this week / Upcoming / Finished (lib/shell/leagueSheet
 // .ts), each row rank · record + PhaseChip, a check on the active league,
 // and [Create league] [Join with code] ALWAYS at the bottom — the sheet is
@@ -141,12 +148,14 @@ export function LeagueSheet({ open, onClose, onPick, onCreate, onJoin }: LeagueS
           onAccessibilityEscape={onClose}
           style={[
             styles.sheet,
-            { backgroundColor: colors.surface, maxHeight: windowHeight * 0.85, paddingBottom: Math.max(insets.bottom, space[5]) },
+            { backgroundColor: colors.surface, maxHeight: windowHeight * 0.9, paddingBottom: Math.max(insets.bottom, space[5]) },
             elevation.sheet,
             sheetStyle,
           ]}
         >
-          <View style={[styles.grabber, { backgroundColor: colors.border }]} />
+          <View style={styles.handleArea}>
+            <View style={[styles.grabber, { backgroundColor: colors.border }]} />
+          </View>
           <View style={styles.header}>
             <Text variant="title" accessibilityRole="header">
               Your leagues
@@ -217,19 +226,20 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
   },
+  handleArea: {
+    alignItems: 'center',
+    paddingVertical: space[3],
+  },
   grabber: {
-    alignSelf: 'center',
     width: 36,
-    height: 5,
-    borderRadius: radius.pill,
-    marginTop: space[3],
+    height: 4,
+    borderRadius: 2,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: space[6],
-    paddingTop: space[4],
     paddingBottom: space[3],
   },
   close: {

@@ -100,19 +100,24 @@ export function fixtureLeagues(fixture: ShellFixture): { leagues: League[]; shee
       name: 'Serie A Traders',
       num_participants: 8,
       draft_status: 'not_started',
-      draft_date: new Date(Date.now() + 4 * DAY).toISOString(),
+      draft_date: '2026-10-03T23:00:00Z', // the board's "Draft Sat 7:00 PM" (ET)
       league_start_date: null,
       current_week: 1,
     }),
     league({ id: 'fx-summer', name: 'Summer Cup', num_participants: 8, season_status: 'completed', current_week: 14, num_weeks: 14 }),
   ];
 
+  const byId = new Map(leagues.map((l) => [l.id, l]));
+  const facts = (id: string) => {
+    const l = byId.get(id)!;
+    return { currentWeek: l.current_week, numWeeks: l.num_weeks, playoffTeams: l.playoff_teams, draftDate: l.draft_date };
+  };
   const base = { marketOpen: true, ties: 0, isChampion: false, seasonLabel: '' };
   const sheet: SheetLeague[] = [
-    { ...base, id: 'fx-scudetto', name: 'Stock Scudetto', seasonPhase: 'regular', rank: 2, rankCount: 6, wins: 4, losses: 1, membersJoined: 6, capacity: 6 },
-    { ...base, id: 'fx-friday', name: 'Friday Night Stocks', seasonPhase: 'regular', rank: 3, rankCount: 8, wins: 1, losses: 0, membersJoined: 8, capacity: 8 },
-    { ...base, id: 'fx-seriea', name: 'Serie A Traders', seasonPhase: 'pre_draft', rank: null, rankCount: null, wins: 0, losses: 0, membersJoined: 6, capacity: 8 },
-    { ...base, id: 'fx-summer', name: 'Summer Cup', seasonPhase: 'completed', rank: 1, rankCount: 8, wins: 10, losses: 4, membersJoined: 8, capacity: 8, isChampion: true },
+    { ...base, ...facts('fx-scudetto'), id: 'fx-scudetto', name: 'Stock Scudetto', seasonPhase: 'regular', rank: 2, rankCount: 6, wins: 4, losses: 1, membersJoined: 6, capacity: 6 },
+    { ...base, ...facts('fx-friday'), id: 'fx-friday', name: 'Friday Night Stocks', seasonPhase: 'regular', rank: 3, rankCount: 8, wins: 1, losses: 0, membersJoined: 8, capacity: 8 },
+    { ...base, ...facts('fx-seriea'), id: 'fx-seriea', name: 'Serie A Traders', seasonPhase: 'pre_draft', rank: null, rankCount: null, wins: 0, losses: 0, membersJoined: 6, capacity: 8 },
+    { ...base, ...facts('fx-summer'), id: 'fx-summer', name: 'Summer Cup', seasonPhase: 'completed', rank: 1, rankCount: 8, wins: 10, losses: 4, membersJoined: 8, capacity: 8, isChampion: true },
   ];
 
   return { leagues, sheet };

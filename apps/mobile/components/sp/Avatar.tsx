@@ -3,7 +3,7 @@ import { Image, StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
-import { initialFontSize } from '@/components/sp/logic/avatar';
+import { avatarInitials, initialFontSize } from '@/components/sp/logic/avatar';
 
 // Stockpile — <Avatar> (§9A, "One design, two themes", 2026-09-29). Used for
 // the Home header avatar button (Profile leaves the tab bar per
@@ -14,7 +14,7 @@ import { initialFontSize } from '@/components/sp/logic/avatar';
 
 export interface AvatarProps {
   uri?: string | null;
-  /** Display name — only its first character is shown when there's no photo. */
+  /** Display name — its initials (up to two) are shown when there's no photo. */
   name: string;
   size?: number;
 }
@@ -24,7 +24,9 @@ const DEFAULT_SIZE = 36;
 export function Avatar({ uri, name, size = DEFAULT_SIZE }: AvatarProps) {
   const { colors } = useTheme();
   const dimension = { width: size, height: size, borderRadius: size / 2 };
-  const initial = name.trim().charAt(0).toUpperCase() || '?';
+  // Two initials (Design Lead ruling, Phase 3b-1): "Roberto B." → "RB",
+  // "roberto_b" → "RB", one word → one letter, nothing → "?".
+  const initial = avatarInitials(name);
   // Blue (colors.you) means "you" elsewhere in the app (§9A team colour), so
   // an avatar with no real initial to show shouldn't borrow that meaning for
   // someone unidentified — it gets a neutral fill instead (Design Lead,

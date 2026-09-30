@@ -33,3 +33,38 @@ Deno.test('initialFontSize: at the component default (36), matches the pinned 0.
 Deno.test('initialFontSize: rounds to a whole pixel rather than a fractional font size', () => {
   assertEquals(Number.isInteger(initialFontSize(37)), true);
 });
+
+// ── Two initials (Design Lead ruling, Phase 3b-1) ─────────────────────────
+
+import { avatarInitials } from '../components/sp/logic/avatar.ts';
+
+Deno.test('avatarInitials: first letter of the first word + first letter of the last word', () => {
+  assertEquals(avatarInitials('Roberto B.'), 'RB');
+  assertEquals(avatarInitials('Gianluigi Buffon'), 'GB');
+  assertEquals(avatarInitials('maria de la cruz'), 'MC');
+});
+
+Deno.test('avatarInitials: usernames split on _ . - too ("roberto_b" reads RB, like the board)', () => {
+  assertEquals(avatarInitials('roberto_b'), 'RB');
+  assertEquals(avatarInitials('rob.bianchi'), 'RB');
+  assertEquals(avatarInitials('ann-marie'), 'AM');
+});
+
+Deno.test('avatarInitials: one word → one letter; nothing usable → "?"', () => {
+  assertEquals(avatarInitials('Roberto'), 'R');
+  assertEquals(avatarInitials('roberto26'), 'R');
+  assertEquals(avatarInitials(''), '?');
+  assertEquals(avatarInitials('   '), '?');
+  assertEquals(avatarInitials('___'), '?');
+});
+
+Deno.test('avatarInitials: an email falls back to its local part', () => {
+  assertEquals(avatarInitials('roberto.bianchi@example.com'), 'RB');
+});
+
+Deno.test('avatarInitials: two letters still fit the smallest avatar (28 pt → 11 pt glyphs)', () => {
+  // 2 capitals at ≈0.62 em wide each must stay inside the circle's inner 80%.
+  const size = 28;
+  const twoLettersWidth = 2 * 0.62 * initialFontSize(size);
+  assertEquals(twoLettersWidth <= size * 0.8, true);
+});

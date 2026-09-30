@@ -9,7 +9,7 @@ import { PhaseChip } from '@/components/sp/PhaseChip';
 import { PressableScale } from '@/components/sp/PressableScale';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
-import { accessibleLeagueRow, chipPhaseFor, formatLeagueMeta, type SheetLeague } from '@/lib/shell/leagueSheet';
+import { accessibleLeagueRow, chipLabelFor, chipPhaseFor, formatLeagueMeta, type SheetLeague } from '@/lib/shell/leagueSheet';
 
 // Phase 3b-1 — one league in the sheet: name, "2nd of 6 · 4–1", PhaseChip,
 // and a check on the active league (board "League sheet"). The name sits in
@@ -30,7 +30,7 @@ export function LeagueSheetRow({ league, selected, first, onPick }: LeagueSheetR
   // it squeezed the text into "Ser…" / "joine d". Stacked, nothing truncates.
   const { fontScale } = useWindowDimensions();
   const stacked = fontScale >= FULL_WIDTH_FONT_SCALE;
-  const chip = <PhaseChip phase={chipPhaseFor(league.seasonPhase, league.marketOpen)} />;
+  const chip = <PhaseChip phase={chipPhaseFor(league.seasonPhase, league.marketOpen)} label={chipLabelFor(league)} />;
 
   return (
     <PressableScale

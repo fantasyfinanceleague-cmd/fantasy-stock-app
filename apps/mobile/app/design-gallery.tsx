@@ -192,6 +192,13 @@ export default function DesignGalleryScreen() {
                 <PhaseChip key={phase} phase={phase} />
               ))}
             </View>
+            {/* `label` (Phase 3b-1): the phase keeps the style, the label replaces the text. */}
+            <View style={[styles.row, styles.wrap]}>
+              <PhaseChip phase="live_open" label="Week 6" />
+              <PhaseChip phase="live_closed" label="Week 2" />
+              <PhaseChip phase="pre_draft" label="Draft Sat 7:00 PM ET" />
+              <PhaseChip phase="season_complete" label="Final" />
+            </View>
           </Card>
         </Section>
   
@@ -220,6 +227,10 @@ export default function DesignGalleryScreen() {
             <Avatar name="Priya" size={44} />
             <Avatar name="Giorgio" size={32} />
             <Avatar name="?" size={24} />
+            {/* Two initials (Phase 3b-1): first word + last word; 28pt is the smallest in use. */}
+            <Avatar name="Roberto B." size={44} />
+            <Avatar name="roberto_b" size={36} />
+            <Avatar name="Gianluigi Buffon" size={28} />
           </View>
         </Section>
   

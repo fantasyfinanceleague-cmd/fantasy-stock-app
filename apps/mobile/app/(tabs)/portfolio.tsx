@@ -8,7 +8,7 @@ export default function PortfolioScreen() {
   return (
     <PhasePlaceholder
       title="Portfolio"
-      icon={(p) => <Ionicons name="pie-chart-outline" {...p} />}
+      icon={(p) => <Ionicons name="bar-chart-outline" {...p} />}
       heading="Your portfolio is on the way"
       message="Your holdings and trades will live here in the next update."
     />

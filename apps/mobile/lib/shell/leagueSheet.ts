@@ -7,22 +7,11 @@
 // a phase on its own.
 
 import type { SeasonPhase } from '../weekStatus';
+import { playoffRoundLabelForWeek } from '../playoffs';
+import { phaseChipText, type LeaguePhase } from '../../components/sp/logic/phaseChip';
 
-/**
- * The PhaseChip phases this sheet renders. Kept as a local union (not an
- * import of components/sp/PhaseChip's LeaguePhase) because that module
- * imports React Native, which tests-deno can't load. It is structurally the
- * same union; passing a ChipPhase to <PhaseChip phase> is type-checked by
- * tsc at the call site, so the two can't drift silently.
- */
-export type ChipPhase =
-  | 'pre_draft'
-  | 'drafting'
-  | 'pre_season'
-  | 'live_open'
-  | 'live_closed'
-  | 'playoffs'
-  | 'season_complete';
+/** The PhaseChip phases this sheet renders (the shared pure union, minus week_final). */
+export type ChipPhase = Exclude<LeaguePhase, 'week_final'>;
 
 export type SheetGroupKey = 'live' | 'upcoming' | 'finished';
 
@@ -45,6 +34,11 @@ export interface SheetLeague {
   isChampion: boolean;
   /** The existing getSeasonLabel() text, used verbatim for pre-season ("Starts Tue, Sep 29"). */
   seasonLabel: string;
+  /** leagues.current_week / num_weeks / playoff_teams / draft_date, for the chip's label. */
+  currentWeek: number;
+  numWeeks: number | null;
+  playoffTeams: number | null;
+  draftDate: string | null;
 }
 
 export interface SheetGroup {
@@ -139,21 +133,44 @@ export function formatLeagueMeta(l: SheetLeague): string {
   }
 }
 
+/** "Sat 7:00 PM" in US Eastern time (the market's clock), whatever the phone's zone. */
+function easternDayTime(iso: string): string | null {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return new Intl.DateTimeFormat('en-US', {
+    weekday: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: 'America/New_York',
+  })
+    .format(d)
+    .replace(/[\u202f\u00a0]/g, ' ') // ICU puts a narrow no-break space before AM/PM
+    .replace(',', '');
+}
+
 /**
- * The PhaseChip's visible labels (components/sp/PhaseChip.tsx PHASE_META),
- * repeated here so a row's VoiceOver label can include the phase: a row with
- * its own accessibilityLabel hides its children, chip included. Keep in step
- * with PHASE_META.
+ * The PhaseChip's text for a league row / header (Design Lead ruling): the
+ * phase keeps deciding the chip's style; this only names it better.
+ *   live → "Week 6" · playoffs → the round ("Semifinals", from lib/playoffs)
+ *   pre-draft with a date → "Draft Sat 7:00 PM ET" · finished → "Final"
+ * undefined = keep the chip's default text.
  */
-const CHIP_SPOKEN: Record<ChipPhase, string> = {
-  pre_draft: 'Pre-draft',
-  drafting: 'Drafting',
-  pre_season: 'Pre-season',
-  live_open: 'Live',
-  live_closed: 'Closed',
-  playoffs: 'Playoffs',
-  season_complete: 'Complete',
-};
+export function chipLabelFor(l: SheetLeague): string | undefined {
+  switch (l.seasonPhase) {
+    case 'regular':
+      return l.currentWeek > 0 ? `Week ${l.currentWeek}` : undefined;
+    case 'playoffs':
+      return playoffRoundLabelForWeek(l.currentWeek, l.numWeeks, l.playoffTeams) ?? undefined;
+    case 'pre_draft': {
+      const when = l.draftDate ? easternDayTime(l.draftDate) : null;
+      return when ? `Draft ${when} ET` : undefined;
+    }
+    case 'completed':
+      return 'Final';
+    default:
+      return undefined;
+  }
+}
 
 function plural(n: number, one: string, many: string): string {
   return `${count(n)} ${n === 1 ? one : many}`;
@@ -172,7 +189,7 @@ export function accessibleLeagueRow(l: SheetLeague, selected: boolean): string {
     const meta = formatLeagueMeta(l);
     if (meta) parts.push(meta);
   }
-  parts.push(CHIP_SPOKEN[chipPhaseFor(l.seasonPhase, l.marketOpen)]);
+  parts.push(phaseChipText(chipPhaseFor(l.seasonPhase, l.marketOpen), chipLabelFor(l)));
   if (selected) parts.push('selected');
   return parts.join(', ');
 }

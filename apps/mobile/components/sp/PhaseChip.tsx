@@ -3,6 +3,7 @@ import { StyleSheet, Text as RNText, View } from 'react-native';
 
 import { radius, space, type } from '@/constants/tokens';
 import { useTheme } from '@/components/sp/ThemeProvider';
+import { phaseChipStyle, phaseChipText, type LeaguePhase } from '@/components/sp/logic/phaseChip';
 
 // Stockpile — <PhaseChip> (§9A, "One design, two themes", 2026-09-29).
 // SOURCE OF TRUTH: §3's "one league-lifecycle model" table and §9's
@@ -29,41 +30,21 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 // colour from the theme's normal text roles, and the final-type style needs
 // the inverted pair, not a plain text role.
 
-export type LeaguePhase =
-  | 'pre_draft'
-  | 'drafting'
-  | 'pre_season'
-  | 'live_open'
-  | 'live_closed'
-  | 'week_final'
-  | 'playoffs'
-  | 'season_complete';
-
-type PhaseStyle = 'live' | 'final' | 'default';
-
-interface PhaseMeta {
-  label: string;
-  style: PhaseStyle;
-}
-
-const PHASE_META: Record<LeaguePhase, PhaseMeta> = {
-  pre_draft: { label: 'Pre-draft', style: 'default' },
-  drafting: { label: 'Drafting', style: 'live' },
-  pre_season: { label: 'Pre-season', style: 'default' },
-  live_open: { label: 'Live', style: 'live' },
-  live_closed: { label: 'Closed', style: 'default' },
-  week_final: { label: 'Final', style: 'final' },
-  playoffs: { label: 'Playoffs', style: 'live' },
-  season_complete: { label: 'Complete', style: 'final' },
-};
+export type { LeaguePhase } from '@/components/sp/logic/phaseChip';
 
 export interface PhaseChipProps {
   phase: LeaguePhase;
+  /**
+   * Phase 3b-1 (Design Lead ruling): overrides the TEXT only — "Week 6",
+   * "Draft Sat 7:00 PM ET", "Final". The phase still decides the style
+   * (live dot, inverse final, default). Shown in the tag style (uppercase).
+   */
+  label?: string;
 }
 
-export function PhaseChip({ phase }: PhaseChipProps) {
+export function PhaseChip({ phase, label }: PhaseChipProps) {
   const { colors } = useTheme();
-  const meta = PHASE_META[phase];
+  const meta = { label: phaseChipText(phase, label), style: phaseChipStyle(phase) };
   const tagStyle = type.tag;
 
   let backgroundColor: string;

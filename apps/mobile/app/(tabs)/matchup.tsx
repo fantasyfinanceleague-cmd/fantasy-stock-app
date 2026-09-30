@@ -8,7 +8,7 @@ export default function MatchupScreen() {
   return (
     <PhasePlaceholder
       title="Matchup"
-      icon={(p) => <Ionicons name="swap-horizontal" {...p} />}
+      icon={(p) => <Ionicons name="trending-up-outline" {...p} />}
       heading="Matchups are on the way"
       message="Your weekly head-to-head will live here in the next update."
     />

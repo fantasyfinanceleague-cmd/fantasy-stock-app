@@ -4,12 +4,9 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { space } from '@/constants/tokens';
 import { EmptyState, type EmptyStateIconProps } from '@/components/sp/EmptyState';
-import { PhaseChip } from '@/components/sp/PhaseChip';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { ShellHeader } from '@/components/shell/ShellHeader';
 import { BarsRefresh } from '@/components/shell/BarsRefresh';
-import { useLeagueContext } from '@/lib/LeagueContext';
-import { chipPhaseFor } from '@/lib/shell/leagueSheet';
 
 // Phase 3b-1 — the honest placeholder for a tab whose real screen belongs to
 // a later phase (spec row 16: Matchup → 3c, League → 3c, Portfolio → 3e,
@@ -45,31 +42,24 @@ export function PhasePlaceholder({
   onRefresh,
 }: PhasePlaceholderProps) {
   const { colors } = useTheme();
-  const { sheetLeagues, activeLeagueId } = useLeagueContext();
-  const active = sheetLeagues.find((l) => l.id === activeLeagueId) ?? null;
 
   const body = (
-    <>
-      {active ? (
-        <View style={styles.chip}>
-          <PhaseChip phase={chipPhaseFor(active.seasonPhase, active.marketOpen)} />
-        </View>
-      ) : null}
-      <EmptyState
-        icon={icon}
-        title={heading}
-        message={message}
-        actionLabel={actionLabel}
-        onAction={onAction}
-        secondaryActionLabel={secondaryActionLabel}
-        onSecondaryAction={onSecondaryAction}
-      />
-    </>
+    <EmptyState
+      icon={icon}
+      title={heading}
+      message={message}
+      actionLabel={actionLabel}
+      onAction={onAction}
+      secondaryActionLabel={secondaryActionLabel}
+      onSecondaryAction={onSecondaryAction}
+    />
   );
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
-      <ShellHeader title={title} showAvatar={showAvatar} />
+      {/* The phase chip lives in the header, right of the pill (Design Lead
+          ruling); Home (the avatar screen) has none. */}
+      <ShellHeader title={title} showAvatar={showAvatar} showPhase={!showAvatar} />
       {onRefresh ? (
         <BarsRefresh onRefresh={onRefresh} contentContainerStyle={styles.content}>
           {body}
@@ -90,10 +80,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: space[5],
     paddingBottom: space[10],
-  },
-  // The wrapper centres itself; PhaseChip's own alignSelf: 'flex-start'
-  // would otherwise pin it to the left.
-  chip: {
-    alignSelf: 'center',
   },
 });
