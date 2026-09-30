@@ -86,3 +86,21 @@ Deno.test('playoffRoundShortName: WC / QF / SF / F / R16', () => {
 Deno.test('playoffRoundShortName: an unrecognized round name passes through unchanged, never blank', () => {
   assertEquals(playoffRoundShortName('Some Future Round'), 'Some Future Round');
 });
+
+// ── B7 bullet 3 (Orchestrator, 2026-09-30): confirms playoffRoundLabelForWeek
+// is keyed on the bracket ADDRESS (week - numWeeks, the round offset), never
+// on an absolute week number -- so a fixture using a short (numWeeks=6)
+// regular season instead of a long one (numWeeks=14) gets IDENTICAL round
+// labels and chips for the same bracket, as long as its playoff week
+// numbers are derived the same way the backend does: week = numWeeks +
+// round. No code changes were needed for this: the function already
+// computes `plan.rounds[week - numWeeks - 1]`, which is round-offset-only
+// by construction; this test exists to pin that invariant, not to fix a bug. ─
+
+Deno.test('playoffRoundLabelForWeek: a 6-team bracket gives IDENTICAL round labels at numWeeks=6 and numWeeks=14, given week = numWeeks + round', () => {
+  for (let round = 1; round <= 3; round++) {
+    const short = mobileWeek(6 + round, 6, 6);
+    const long = mobileWeek(14 + round, 14, 6);
+    assertEquals(short, long, `round ${round}`);
+  }
+});

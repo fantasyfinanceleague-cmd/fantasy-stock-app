@@ -128,7 +128,9 @@ function HomeBody({
         ties={myStanding?.ties ?? 0}
         seasonGain={myStanding?.points_for ?? 0}
         playoffTeams={league?.playoff_teams ?? null}
-        numWeeks={league?.num_weeks ?? null}
+        // phase.numWeeks, not league.num_weeks (B7 bullet 3 -- same
+        // two-fixture-axis gap as SeasonCard's numWeeks below).
+        numWeeks={phase.numWeeks}
       />
     );
   }

@@ -90,10 +90,22 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
   const isEliminated = fixture === 'eliminated';
   const isMissedPlayoffs = fixture === 'missed_playoffs';
   const isPlayoffState = isPlayoffLive || isPlayoffBye || isEliminated || isMissedPlayoffs;
-  // Every playoff-family fixture happens chronologically AFTER the regular
-  // season concluded, so week 6 (and every earlier week) is necessarily
-  // already scored by then -- never the live/unscored shape.
-  const isScored = fixture === 'scored' || isPlayoffState;
+  // B7 bullet 3 (Orchestrator, 2026-09-30): the regular season a playoff
+  // fixture builds on must match `numWeeks`, or the season chart shows a
+  // flat plateau for every week between the real history and numWeeks
+  // (found in the capture pass: numWeeks stayed 14 while only 6 weeks of
+  // history existed). Derived from the fixture's OWN history length
+  // (regularSeasonWeeks + week6), never hard-coded, so it can't drift from
+  // the data again. Also covers 'complete'/'complete_runner_up': a
+  // finished season is, by definition, the same 6-week history.
+  const regularSeasonComplete = isPlayoffState || fixture === 'complete' || fixture === 'complete_runner_up';
+  // ROBERTO_WEEKS (1..5) + week6 -- derived, never hard-coded (see doc above).
+  const playoffNumWeeks = ROBERTO_WEEKS.length + 1;
+  // Every playoff-family (and complete-family) fixture happens
+  // chronologically AFTER the regular season concluded, so week 6 (and
+  // every earlier week) is necessarily already scored by then -- never
+  // the live/unscored shape.
+  const isScored = fixture === 'scored' || regularSeasonComplete;
   const week6Gains = isScored
     ? { team1_gain: cents(ROBERTO_HOLDINGS.reduce((s, h) => s + fixtureQty(h) * (h.fri - h.mon), 0)), team2_gain: cents(GIANLUIGI_HOLDINGS.reduce((s, h) => s + fixtureQty(h) * (h.fri - h.mon), 0)) }
     : { team1_gain: null, team2_gain: null };
@@ -106,14 +118,20 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
     ...(isBye ? { team1_gain: null, team2_gain: null } : week6Gains),
   };
 
-  // Wild-card week (15): a real, live game with a decided opponent.
-  // Populated with real playoff-week snapshots when isPlayoffLive (Design
-  // Lead ruling, 2026-09-30: "a $0 vs $0 playoff isn't a useful capture"),
-  // so the tug and scores show real numbers -- "Semifinals" per the round
-  // name, but still using the wild-card week_number the fixture's other
-  // playoff states share for round-1 purposes.
+  // Playoff week numbers derived the way the backend does (Orchestrator,
+  // 2026-09-30, B7 bullet 3): week = numWeeks + round -- never typed in.
+  // Round 1 is the Wild Card round for a 6-team bracket (playoffPlan(6)),
+  // round 2 is the Semifinals; see tests-deno/playoffs.test.ts's proof
+  // that this gives IDENTICAL round labels regardless of numWeeks.
+  const round1Week = playoffNumWeeks + 1;
+  const round2Week = playoffNumWeeks + 2;
+
+  // Wild-card week: a real, live game with a decided opponent. Populated
+  // with real playoff-week snapshots when isPlayoffLive (Design Lead
+  // ruling, 2026-09-30: "a $0 vs $0 playoff isn't a useful capture"), so
+  // the tug and scores show real numbers.
   const wildCardWeek = {
-    week_number: 15, week_start: '2026-12-14T13:30:00.000Z', week_end: '2026-12-18T20:00:00.000Z',
+    week_number: round1Week, week_start: '2026-12-14T13:30:00.000Z', week_end: '2026-12-18T20:00:00.000Z',
     is_playoff: true, team1_user_id: 'roberto', team2_user_id: 'gianluigi',
     team1_gain: null, team2_gain: null,
   };
@@ -121,9 +139,9 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
   // Eliminated: the lost round is the ONLY playoff row that exists at
   // all -- no row at the (later) current week, matching a team with no
   // later playoff row and no current one either (Design Lead ruling,
-  // 2026-09-30, case c).
+  // 2026-09-30, case c). Lost in round 1 (Wild Card), same as wildCardWeek.
   const lostSemifinalWeek = {
-    week_number: 15, week_start: '2026-12-14T13:30:00.000Z', week_end: '2026-12-18T20:00:00.000Z',
+    week_number: round1Week, week_start: '2026-12-14T13:30:00.000Z', week_end: '2026-12-18T20:00:00.000Z',
     is_playoff: true, team1_user_id: 'roberto', team2_user_id: 'gianluigi',
     team1_gain: -10, team2_gain: 40,
   };
@@ -133,7 +151,7 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
   // bye is written straight into its round-2 row instead, opponent NULL
   // until round 1 is scored.
   const round2ByeWeek = {
-    week_number: 16, week_start: '2026-12-21T13:30:00.000Z', week_end: '2026-12-25T20:00:00.000Z',
+    week_number: round2Week, week_start: '2026-12-21T13:30:00.000Z', week_end: '2026-12-25T20:00:00.000Z',
     is_playoff: true, team1_user_id: 'roberto', team2_user_id: null,
     team1_gain: null, team2_gain: null,
   };
@@ -184,7 +202,7 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
   // 2026-09-30): a bye/live game is IN the wild-card week; eliminated is
   // read the week AFTER the lost round, since there is by definition no
   // row at all for me at the current week once I'm out.
-  const playoffCurrentWeek = isEliminated ? 16 : 15;
+  const playoffCurrentWeek = isEliminated ? round2Week : round1Week;
 
   const data: GetHomeLeagueResult = {
     my_ledger: { drafts: myDrafts, trades: [] },
@@ -209,7 +227,18 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
         // array is exactly what rendered as "2, 1, 6" instead of "1, 2, 3".
         [
           { user_id: 'paolo', rank: 1, wins: 5, losses: 0, ties: 0, points_for: 512.4, display_name: 'Paolo M.', is_bot: false },
-          { user_id: 'roberto', rank: 2, wins: 4, losses: 1, ties: 0, points_for: 129.99, display_name: 'Roberto B.', is_bot: false },
+          // B7 bullet 3 (Orchestrator, 2026-09-30): a finished 6-week
+          // regular season (regularSeasonComplete) has a 6-game record,
+          // not 5 -- "4-1" stood for weeks 1-5 only, but week 6 is ALSO
+          // scored (and won: team1_gain=$213.60 > team2_gain=$90.45) for
+          // every one of these fixtures, so the real record is 5-1 and
+          // points_for includes week 6's gain too.
+          {
+            user_id: 'roberto', rank: 2,
+            wins: regularSeasonComplete ? 5 : 4, losses: 1, ties: 0,
+            points_for: regularSeasonComplete ? cents(129.99 + (week6Gains.team1_gain ?? 0)) : 129.99,
+            display_name: 'Roberto B.', is_bot: false,
+          },
           { user_id: 'luca', rank: 3, wins: 3, losses: 2, ties: 0, points_for: 88.2, display_name: 'Luca V.', is_bot: false },
           { user_id: 'chiara', rank: 4, wins: 2, losses: 3, ties: 0, points_for: -34.1, display_name: 'Chiara R.', is_bot: false },
           { user_id: 'marco', rank: 5, wins: 2, losses: 3, ties: 0, points_for: -61.5, display_name: 'Marco T.', is_bot: false },
@@ -228,7 +257,7 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
 
   const meta: HomeLeagueMeta = {
     myUserId: 'roberto', draftStatus, leagueStartDate,
-    seasonStatus, currentWeek, numWeeks: FIXTURE_LEAGUE.numWeeks,
+    seasonStatus, currentWeek, numWeeks: regularSeasonComplete ? playoffNumWeeks : FIXTURE_LEAGUE.numWeeks,
     playoffTeams: FIXTURE_LEAGUE.playoffTeams, stakeMode: FIXTURE_LEAGUE.stakeMode,
     notionalPerSlot: FIXTURE_LEAGUE.notionalPerSlot, numRounds: FIXTURE_LEAGUE.numRounds,
     draftOrderWaiting: fixture === 'pre_draft_waiting',
