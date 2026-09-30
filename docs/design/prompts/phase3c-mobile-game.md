@@ -38,7 +38,7 @@ You are the UI worker for **Phase 3c: the competitive screens**. Your branch is 
 ## Rulings in force (don't reopen them without Giorgio)
 
 - **Dollars decide.** Dollar gain decides every matchup and percent is the tiebreak, both through the one score-display helper. The scoreboard shows the lead in dollars, with the tiebreak small beside it.
-- **Standings = SQL `league_standings_ranked`, only.** Win % = (W + 0.5·T)/GP, then balanced head-to-head, then season gain, then join order. **Never re-sort on the client.** The same order is the playoff seeding. The column is **"Season gain"** (the sum of scored weekly gains; not Portfolio's "since the draft").
+- **Standings = SQL `league_standings_ranked`, only.** Win % = (W + 0.5·T)/GP, then balanced head-to-head, then season gain, then join order. **Never re-sort on the client.** The same order is the playoff seeding. The column is **"Season gain"**: the sum of scored **regular-season** weekly gains (`points_for`; the server adds no playoff games to it), not Portfolio's "since the draft". Home's hero and every other "season gain" must be this same number. During and after the playoffs it stays at the final regular-season total, and playoff scores live on the playoff cards.
 - **Regular-season byes are NO RESULT.** They don't count as W or L and they're left out of games played. A bye shows as a neutral "Bye" chip, never W/L.
 - **Flexible playoffs.**
   - P is anywhere from 2 to the number of managers; W = ceil(log2 P); first-round byes = 2^W − P, to the top seeds; the bracket is fixed.
