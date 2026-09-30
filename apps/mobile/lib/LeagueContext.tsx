@@ -26,6 +26,8 @@ export interface League {
   salary_cap_limit: number | null;
   num_participants: number;
   num_rounds: number;
+  /** 30-90s in 15s steps, default 60 (20261010000000_draft_pick_clock_and_queue.sql). */
+  pick_seconds: number;
   league_type: 'duration' | 'matchup';
   duration_days: number | null;
   num_weeks: number | null;

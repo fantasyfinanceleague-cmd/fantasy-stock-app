@@ -78,6 +78,7 @@ function league(over: Partial<League> & Pick<League, 'id' | 'name'>): League {
     salary_cap_limit: null,
     num_participants: 6,
     num_rounds: 6,
+    pick_seconds: 60,
     league_type: 'matchup',
     duration_days: null,
     num_weeks: 10,

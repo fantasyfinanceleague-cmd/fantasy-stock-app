@@ -2,8 +2,8 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "95dcb84a12984028f5c208736dc6ddc1df12e409",
-    "commitShort": "95dcb84",
+    "commit": "398bf94e55297bffc9dab04405fef636976dc1c1",
+    "commitShort": "398bf94",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "ui/mobile-home",
     "dirty": true,
@@ -14,11 +14,23 @@
       },
       {
         "code": "??",
-        "path": "apps/mobile/components/home/SeasonCard.tsx"
+        "path": "apps/mobile/components/home/DraftingCard.tsx"
       },
       {
         "code": "??",
-        "path": "apps/mobile/components/home/SeasonChart.tsx"
+        "path": "apps/mobile/components/home/PhaseMessageCard.tsx"
+      },
+      {
+        "code": "??",
+        "path": "apps/mobile/components/home/PreDraftCard.tsx"
+      },
+      {
+        "code": "??",
+        "path": "apps/mobile/components/home/SeasonCompleteCard.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/home/ThisWeekCard.tsx"
       },
       {
         "code": "M",
@@ -26,22 +38,30 @@
       },
       {
         "code": "??",
-        "path": "apps/mobile/lib/home/chartGeometry.ts"
+        "path": "apps/mobile/lib/home/draftTurn.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/LeagueContext.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/shell/devFixture.ts"
       },
       {
         "code": "??",
-        "path": "apps/mobile/tests-deno/chart-geometry.test.ts"
+        "path": "apps/mobile/tests-deno/draft-turn.test.ts"
       }
     ],
-    "timestamp": "2026-09-30T05:47:12Z",
-    "sourceHash": "sha256:63955785ebe286122310d27b9b3017daff8d5d89dd8721bd987d918c816e995a",
+    "timestamp": "2026-09-30T05:57:32Z",
+    "sourceHash": "sha256:5070fbfc015c51604c1c4f11d6893704e7c557d4f348218265f28026cb53d3b5",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1176.9,
+    "ageHours": 1177.1,
     "ageDays": 49,
     "staleAfterDays": 14,
     "stale": true,
@@ -4543,6 +4563,57 @@
       "drift": [],
       "annotation": null,
       "verified": true,
+      "id": "ui.home.DraftingCard",
+      "label": "DraftingCard.tsx",
+      "sublabel": "mobile/components/home/DraftingCard.tsx",
+      "kind": "client-component",
+      "source": {
+        "path": "apps/mobile/components/home/DraftingCard.tsx",
+        "line": 1
+      }
+    },
+    {
+      "layer": "client",
+      "facts": {},
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "ui.home.PreDraftCard",
+      "label": "PreDraftCard.tsx",
+      "sublabel": "mobile/components/home/PreDraftCard.tsx",
+      "kind": "client-component",
+      "source": {
+        "path": "apps/mobile/components/home/PreDraftCard.tsx",
+        "line": 1
+      }
+    },
+    {
+      "layer": "client",
+      "facts": {},
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "ui.home.SeasonCompleteCard",
+      "label": "SeasonCompleteCard.tsx",
+      "sublabel": "mobile/components/home/SeasonCompleteCard.tsx",
+      "kind": "client-component",
+      "source": {
+        "path": "apps/mobile/components/home/SeasonCompleteCard.tsx",
+        "line": 1
+      }
+    },
+    {
+      "layer": "client",
+      "facts": {},
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
       "id": "ui.home.useHomeLeague",
       "label": "useHomeLeague.ts",
       "sublabel": "mobile/lib/home/useHomeLeague.ts",
@@ -8773,6 +8844,81 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.ui.home.DraftingCard->pg.get_draft_clock",
+      "from": "ui.home.DraftingCard",
+      "to": "pg.get_draft_clock",
+      "protocol": "postgrest-rpc",
+      "payload": "rpc('get_draft_clock')",
+      "callSites": [
+        "apps/mobile/components/home/DraftingCard.tsx:47"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.home.DraftingCard->pg.get_draft_order",
+      "from": "ui.home.DraftingCard",
+      "to": "pg.get_draft_order",
+      "protocol": "postgrest-rpc",
+      "payload": "rpc('get_draft_order')",
+      "callSites": [
+        "apps/mobile/components/home/DraftingCard.tsx:48"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.home.DraftingCard->tbl.drafts",
+      "from": "ui.home.DraftingCard",
+      "to": "tbl.drafts",
+      "protocol": "postgrest-select",
+      "payload": ".from('drafts').select('symbol')",
+      "columns": [
+        "symbol"
+      ],
+      "callSites": [
+        "apps/mobile/components/home/DraftingCard.tsx:49"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.home.PreDraftCard->pg.get_draft_order",
+      "from": "ui.home.PreDraftCard",
+      "to": "pg.get_draft_order",
+      "protocol": "postgrest-rpc",
+      "payload": "rpc('get_draft_order')",
+      "callSites": [
+        "apps/mobile/components/home/PreDraftCard.tsx:46"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.home.PreDraftCard->pg.get_league_display_names",
+      "from": "ui.home.PreDraftCard",
+      "to": "pg.get_league_display_names",
+      "protocol": "postgrest-rpc",
+      "payload": "rpc('get_league_display_names')",
+      "callSites": [
+        "apps/mobile/components/home/PreDraftCard.tsx:47"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.home.SeasonCompleteCard->pg.get_season_result",
+      "from": "ui.home.SeasonCompleteCard",
+      "to": "pg.get_season_result",
+      "protocol": "postgrest-rpc",
+      "payload": "rpc('get_season_result')",
+      "callSites": [
+        "apps/mobile/components/home/SeasonCompleteCard.tsx:58"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.ui.home.useHomeLeague->fn.historical-bars",
       "from": "ui.home.useHomeLeague",
       "to": "fn.historical-bars",
@@ -8911,7 +9057,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_home_summary')",
       "callSites": [
-        "apps/mobile/lib/LeagueContext.tsx:145"
+        "apps/mobile/lib/LeagueContext.tsx:147"
       ]
     },
     {
@@ -8923,7 +9069,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('market_session_status')",
       "callSites": [
-        "apps/mobile/lib/LeagueContext.tsx:150"
+        "apps/mobile/lib/LeagueContext.tsx:152"
       ]
     },
     {
@@ -8938,8 +9084,8 @@
         "league_id"
       ],
       "callSites": [
-        "apps/mobile/lib/LeagueContext.tsx:146",
-        "apps/mobile/lib/LeagueContext.tsx:254"
+        "apps/mobile/lib/LeagueContext.tsx:148",
+        "apps/mobile/lib/LeagueContext.tsx:256"
       ]
     },
     {
@@ -8954,7 +9100,7 @@
         "id, champion_user_id"
       ],
       "callSites": [
-        "apps/mobile/lib/LeagueContext.tsx:148"
+        "apps/mobile/lib/LeagueContext.tsx:150"
       ]
     },
     {
@@ -8969,7 +9115,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/lib/LeagueContext.tsx:270"
+        "apps/mobile/lib/LeagueContext.tsx:272"
       ]
     },
     {
@@ -11559,31 +11705,6 @@
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
     {
-      "node": "pg.get_draft_clock",
-      "label": "get_draft_clock()",
-      "kind": "pg-function",
-      "source": "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:241",
-      "outbound": [
-        "tbl.drafts",
-        "tbl.leagues"
-      ],
-      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
-    },
-    {
-      "node": "pg.get_league_display_names",
-      "label": "get_league_display_names()",
-      "kind": "pg-function",
-      "source": "supabase/migrations/20261004000000_participant_display_names.sql:170",
-      "outbound": [
-        "tbl.drafts",
-        "tbl.league_members",
-        "tbl.league_standings",
-        "tbl.matchups",
-        "tbl.trades"
-      ],
-      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
-    },
-    {
       "node": "pg.participant_display_name",
       "label": "participant_display_name()",
       "kind": "pg-function",
@@ -12028,12 +12149,12 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 163,
-    "edges": 366,
+    "nodes": 166,
+    "edges": 372,
     "flows": 8,
     "drift": 55,
     "driftHigh": 37,
-    "deadCode": 29,
+    "deadCode": 27,
     "unverified": 51
   },
   "sourceIndex": {
@@ -12100,8 +12221,13 @@
     "rpcs": [
       "apps/mobile/app/(tabs)/draft.tsx:216 -> get_draft_order",
       "apps/mobile/app/league-settings.tsx:174 -> start_new_league_season",
-      "apps/mobile/lib/LeagueContext.tsx:145 -> get_home_summary",
-      "apps/mobile/lib/LeagueContext.tsx:150 -> market_session_status",
+      "apps/mobile/components/home/DraftingCard.tsx:47 -> get_draft_clock",
+      "apps/mobile/components/home/DraftingCard.tsx:48 -> get_draft_order",
+      "apps/mobile/components/home/PreDraftCard.tsx:46 -> get_draft_order",
+      "apps/mobile/components/home/PreDraftCard.tsx:47 -> get_league_display_names",
+      "apps/mobile/components/home/SeasonCompleteCard.tsx:58 -> get_season_result",
+      "apps/mobile/lib/LeagueContext.tsx:147 -> get_home_summary",
+      "apps/mobile/lib/LeagueContext.tsx:152 -> market_session_status",
       "apps/mobile/lib/home/useHomeLeague.ts:158 -> get_home_league",
       "apps/mobile/lib/shell/usernameApi.ts:30 -> check_usernames",
       "apps/mobile/lib/shell/usernameApi.ts:49 -> set_username",
@@ -12152,10 +12278,11 @@
       "apps/mobile/components/LeagueCarousel.tsx:128 -> league_standings.select",
       "apps/mobile/components/LeagueCarousel.tsx:63 -> league_seasons.select",
       "apps/mobile/components/LeagueCarousel.tsx:75 -> user_profiles.select",
-      "apps/mobile/lib/LeagueContext.tsx:146 -> league_members.select",
-      "apps/mobile/lib/LeagueContext.tsx:148 -> league_seasons.select",
-      "apps/mobile/lib/LeagueContext.tsx:254 -> league_members.select",
-      "apps/mobile/lib/LeagueContext.tsx:270 -> leagues.select",
+      "apps/mobile/components/home/DraftingCard.tsx:49 -> drafts.select",
+      "apps/mobile/lib/LeagueContext.tsx:148 -> league_members.select",
+      "apps/mobile/lib/LeagueContext.tsx:150 -> league_seasons.select",
+      "apps/mobile/lib/LeagueContext.tsx:256 -> league_members.select",
+      "apps/mobile/lib/LeagueContext.tsx:272 -> leagues.select",
       "apps/mobile/lib/SessionProvider.tsx:140 -> user_profiles.select",
       "apps/mobile/lib/SessionProvider.tsx:199 -> user_profiles.upsert",
       "apps/mobile/lib/categoryData.ts:101 -> category_rules.select",

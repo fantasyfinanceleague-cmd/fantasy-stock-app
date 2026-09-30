@@ -10,7 +10,8 @@ import { leaderOf } from '@/components/sp/logic/tug';
 import { ScoreDigits } from '@/components/sp/game/ScoreDigits';
 import { TugBar } from '@/components/sp/game/TugBar';
 import { LiveDot } from '@/components/sp/game/LiveDot';
-import { THIS_WEEK_TAG, YOU_LABEL, vsOpponentLabel, leadLabel, thisWeekLiveChip, thisWeekAccessibilityLabel } from '@/lib/home/homeCopy';
+import { Skeleton } from '@/components/Skeleton';
+import { THIS_WEEK_TAG, YOU_LABEL, vsOpponentLabel, leadLabel, thisWeekLiveChip, thisWeekAccessibilityLabel, SCORING_MESSAGE } from '@/lib/home/homeCopy';
 
 // Stockpile — <ThisWeekCard> (Phase 3b-2, board "Home", key screen 1). A
 // `<Card variant="scoreboard">` — every "game surface" now looks like this
@@ -36,9 +37,19 @@ export interface ThisWeekCardProps {
   /** "Ends Fri 4:00 PM ET" / "…at Thursday's close" / etc. */
   rightLabel: string;
   liveChipLabel?: string;
+  /** State 3: neither side's gain is posted yet — skeleton scores, no
+   * tug, no lead line, the "Results post…" message instead of a footer. */
+  scoring?: boolean;
+  /** State 4: both gains are posted (real numbers, from `you`/`opponent`
+   * — the caller passes the authoritative scored values here, never a
+   * live recompute). Adds the win/loss result line and swaps the footer
+   * to "Week N+1 starts…" instead of the tug's lead line. */
+  resultLine?: string;
 }
 
-export function ThisWeekCard({ week, isLive, you, opponent, opponentName, rightLabel, liveChipLabel }: ThisWeekCardProps) {
+export function ThisWeekCard({
+  week, isLive, you, opponent, opponentName, rightLabel, liveChipLabel, scoring = false, resultLine,
+}: ThisWeekCardProps) {
   const { colors } = useTheme();
   const leader = leaderOf(you.gain, opponent.gain);
   const ahead = leader === 'you' || leader === 'tie';
@@ -47,7 +58,9 @@ export function ThisWeekCard({ week, isLive, you, opponent, opponentName, rightL
   const youText = formatMoney(you.gain, { sign: 'always' });
   const oppText = formatMoney(opponent.gain, { sign: 'always' });
 
-  const a11yLabel = thisWeekAccessibilityLabel(week, isLive, youText, opponentName, oppText, gap.toString(), ahead, rightLabel);
+  const a11yLabel = scoring
+    ? `Week ${week}. Scoring — results post shortly.`
+    : thisWeekAccessibilityLabel(week, isLive, youText, opponentName, oppText, gap.toString(), ahead, rightLabel);
 
   return (
     <Card variant="scoreboard" style={styles.card} accessible accessibilityLabel={a11yLabel}>
@@ -72,25 +85,46 @@ export function ThisWeekCard({ week, isLive, you, opponent, opponentName, rightL
         </Text>
       </View>
 
-      <View style={styles.scoresRow}>
-        <View style={styles.scoreCell}>
-          <ScoreDigits text={youText} variant="score.lg" color={colors.youText} />
+      {scoring ? (
+        <View style={styles.scoresRow}>
+          <View style={styles.scoreCell}>
+            <Skeleton width="70%" height={38} />
+          </View>
+          <View style={styles.scoreCell}>
+            <Skeleton width="70%" height={38} />
+          </View>
         </View>
-        <View style={styles.scoreCell}>
-          <ScoreDigits text={oppText} variant="score.lg" color={colors.oppText} />
+      ) : (
+        <View style={styles.scoresRow}>
+          <View style={styles.scoreCell}>
+            <ScoreDigits text={youText} variant="score.lg" color={colors.youText} />
+          </View>
+          <View style={styles.scoreCell}>
+            <ScoreDigits text={oppText} variant="score.lg" color={colors.oppText} />
+          </View>
         </View>
-      </View>
+      )}
 
-      <TugBar you={you.gain} opponent={opponent.gain} opponentName={opponentName} />
+      {!scoring ? <TugBar you={you.gain} opponent={opponent.gain} opponentName={opponentName} /> : null}
 
-      <View style={styles.footerRow}>
-        <Text variant="caption">
-          {leadLabel(ahead)} <Text variant="caption" style={styles.leadAmount}>{formatMoney(gap)}</Text>
-        </Text>
+      {scoring ? (
         <Text variant="caption" tone="secondary">
-          {rightLabel}
+          {SCORING_MESSAGE}
         </Text>
-      </View>
+      ) : (
+        <View style={styles.footerRow}>
+          <Text variant="caption">
+            {resultLine ?? (
+              <>
+                {leadLabel(ahead)} <Text variant="caption" style={styles.leadAmount}>{formatMoney(gap)}</Text>
+              </>
+            )}
+          </Text>
+          <Text variant="caption" tone="secondary">
+            {rightLabel}
+          </Text>
+        </View>
+      )}
     </Card>
   );
 }

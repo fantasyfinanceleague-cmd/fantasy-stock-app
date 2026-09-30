@@ -97,6 +97,10 @@ export interface HeroViewModel {
 export interface ThisWeekViewModel {
   you: { gain: number; pct: number; unpriced: string[] };
   opponent: { gain: number; pct: number; unpriced: string[] };
+  /** True once BOTH sides' matchups gains are posted — the scores shown
+   * are then the authoritative scored values, not a live recompute
+   * (which could disagree with the official number by a stale quote). */
+  final: boolean;
 }
 
 export interface WeeklyResult {
@@ -222,11 +226,22 @@ export function buildHomeViewModel(input: HomeViewModelInput): HomeViewModel {
   const myLive = liveWeekScore(myCurrentSnapshots, myCurrentTrades, quote);
   const oppLive = liveWeekScore(oppCurrentSnapshots, oppCurrentTrades, quote);
 
+  // Once both sides are scored, the this-week card shows the AUTHORITATIVE
+  // matchups gain, never a live recompute from (possibly stale) quotes —
+  // "nothing is shown as final before team1_gain/team2_gain are non-null"
+  // cuts both ways: once they ARE non-null, that number is the truth.
   const thisWeek: ThisWeekViewModel | null = current?.hasOpponent
-    ? {
-        you: { gain: myLive.gain, pct: myLive.pct, unpriced: myLive.unpriced },
-        opponent: { gain: oppLive.gain, pct: oppLive.pct, unpriced: oppLive.unpriced },
-      }
+    ? currentRowScored
+      ? {
+          you: { gain: current!.myGain!, pct: 0, unpriced: [] },
+          opponent: { gain: current!.opponentGain!, pct: 0, unpriced: [] },
+          final: true,
+        }
+      : {
+          you: { gain: myLive.gain, pct: myLive.pct, unpriced: myLive.unpriced },
+          opponent: { gain: oppLive.gain, pct: oppLive.pct, unpriced: oppLive.unpriced },
+          final: false,
+        }
     : null;
 
   // Season gain = every already-scored week's gain for me, plus the
