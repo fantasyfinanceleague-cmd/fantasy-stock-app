@@ -55,7 +55,7 @@ export function SeasonCard({ series, weekResults, currentWeek, isLive }: SeasonC
 
       <SeasonChart
         points={windowed}
-        live={isLive && window !== '1M'}
+        live={isLive}
         weekStartIdx={window === 'Season' ? series.weekStartIdx : []}
         onScrubIndex={setScrubIndex}
       />

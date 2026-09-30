@@ -1,9 +1,12 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
+import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
 import { space } from '@/constants/tokens';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
+import { useMotion } from '@/components/sp/motion';
 import { formatMoney, formatPercent, isZeroMoney } from '@/components/sp/logic/money';
 import { RollingMoney } from '@/components/home/RollingMoney';
 import { HERO_SEASON_GAIN_LABEL, HERO_TODAY_LABEL, heroAccessibilityLabel } from '@/lib/home/homeCopy';
@@ -45,6 +48,26 @@ function ordinal(n: number): string {
 
 export function HomeHero({ leagueId, rank, totalPlayers, record, week, numWeeks, value, seasonGainDollars, seasonGainPct, today }: HomeHeroProps) {
   const { colors } = useTheme();
+  const { reduced, duration, easing, withTiming } = useMotion();
+
+  // H4: the hero rises in on first appearance — translateY 8 -> 0 at
+  // `slow`/`settle` under full motion; Reduce Motion drops the rise for a
+  // plain `quick` opacity crossfade (§5: "translate/scale -> crossfade").
+  // A custom mount-driven value (not the built-in FadeInDown, whose
+  // default offset isn't the spec's exact 8px) run once, never again —
+  // this is an ENTER moment, not a live-update roll.
+  const enterProgress = useSharedValue(0);
+  useEffect(() => {
+    enterProgress.value = withTiming(1, {
+      duration: reduced ? duration.quick : duration.slow,
+      easing: reduced ? easing.settle : easing.settle,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only, intentionally not re-running on prop changes.
+  }, []);
+  const enterStyle = useAnimatedStyle(() => ({
+    opacity: enterProgress.value,
+    transform: reduced ? [] : [{ translateY: (1 - enterProgress.value) * 8 }],
+  }));
 
   const gainColor = isZeroMoney(seasonGainDollars) ? colors.zero : seasonGainDollars > 0 ? colors.gain : colors.loss;
   const todayColor = today == null ? colors.text2 : isZeroMoney(today) ? colors.zero : today > 0 ? colors.gain : colors.loss;
@@ -56,7 +79,7 @@ export function HomeHero({ leagueId, rank, totalPlayers, record, week, numWeeks,
   const a11yLabel = heroAccessibilityLabel(valueText, gainText, HERO_SEASON_GAIN_LABEL);
 
   return (
-    <View style={styles.wrap}>
+    <Animated.View style={[styles.wrap, enterStyle]}>
       <View style={styles.metaRow}>
         <Text variant="caption" tone="secondary">
           Your team
@@ -81,7 +104,7 @@ export function HomeHero({ leagueId, rank, totalPlayers, record, week, numWeeks,
           </>
         ) : null}
       </View>
-    </View>
+    </Animated.View>
   );
 }
 

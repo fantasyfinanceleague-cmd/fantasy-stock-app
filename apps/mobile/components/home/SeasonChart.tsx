@@ -11,6 +11,7 @@ import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { useMotion } from '@/components/sp/motion';
 import { formatMoney } from '@/components/sp/logic/money';
+import { LiveDot } from '@/components/sp/game/LiveDot';
 import { buildChartGeometry, nearestPointIndex } from '@/lib/home/chartGeometry';
 import type { SeasonGainPoint } from '@/lib/home/seasonGainSeries';
 
@@ -135,7 +136,7 @@ export function SeasonChart({ points, live = false, weekStartIdx, onScrubIndex }
                 strokeWidth={2}
                 fill="none"
               />
-              {endpoint && !scrubPoint ? (
+              {endpoint && !scrubPoint && !live ? (
                 <Circle cx={endpoint.x} cy={endpoint.y} r={4} fill={endValue >= 0 ? colors.gain : colors.loss} stroke={colors.surface} strokeWidth={2} />
               ) : null}
               {scrubPoint ? (
@@ -150,6 +151,16 @@ export function SeasonChart({ points, live = false, weekStartIdx, onScrubIndex }
                 return <Line key={w} x1={p.x} x2={p.x} y1={HEIGHT - 20} y2={HEIGHT - 16} stroke={colors.borderStrong} strokeWidth={1} />;
               })}
             </Svg>
+            {endpoint && !scrubPoint && live ? (
+              // LiveDot is an RN View (its halo pulse is a reanimated
+              // View transform, not an SVG element), so the ONLY loop on
+              // this screen (spec §4: "the live dot while the market is
+              // open") is overlaid on top of the SVG at the endpoint's
+              // pixel position, rather than forced into the SVG tree.
+              <View style={[styles.liveDotOverlay, { left: endpoint.x - 4, top: endpoint.y - 4 }]} pointerEvents="none">
+                <LiveDot size={8} />
+              </View>
+            ) : null}
             {scrubValue ? (
               <View style={[styles.scrubLabel, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <Text variant="caption" tone="secondary">
@@ -179,5 +190,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: space[3],
     paddingVertical: space[2],
+  },
+  liveDotOverlay: {
+    position: 'absolute',
   },
 });

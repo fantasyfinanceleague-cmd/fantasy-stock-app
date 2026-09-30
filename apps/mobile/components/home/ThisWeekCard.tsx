@@ -1,12 +1,15 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
+import { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
 import { space } from '@/constants/tokens';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
+import { useMotion } from '@/components/sp/motion';
 import { formatMoney } from '@/components/sp/logic/money';
-import { leaderOf } from '@/components/sp/logic/tug';
+import { leaderOf, type Leader } from '@/components/sp/logic/tug';
 import { ScoreDigits } from '@/components/sp/game/ScoreDigits';
 import { TugBar } from '@/components/sp/game/TugBar';
 import { LiveDot } from '@/components/sp/game/LiveDot';
@@ -51,6 +54,7 @@ export function ThisWeekCard({
   week, isLive, you, opponent, opponentName, rightLabel, liveChipLabel, scoring = false, resultLine,
 }: ThisWeekCardProps) {
   const { colors } = useTheme();
+  const { reduced, duration, easing, withTiming } = useMotion();
   const leader = leaderOf(you.gain, opponent.gain);
   const ahead = leader === 'you' || leader === 'tie';
   const gap = Math.abs(you.gain - opponent.gain);
@@ -62,8 +66,28 @@ export function ThisWeekCard({
     ? `Week ${week}. Scoring — results post shortly.`
     : thisWeekAccessibilityLabel(week, isLive, youText, opponentName, oppText, gap.toString(), ahead, rightLabel);
 
+  // H3: a leader change gets one accent wash (never a loop; no haptic —
+  // this isn't user-initiated). Never on first paint — prevLeaderRef
+  // starts at the CURRENT leader, so mount reads as "unchanged".
+  const prevLeaderRef = useRef<Leader>(leader);
+  const washOpacity = useSharedValue(0);
+  useEffect(() => {
+    if (prevLeaderRef.current !== leader && !scoring) {
+      if (reduced) {
+        washOpacity.value = 0; // a one-shot fade is exactly the motion Reduce Motion removes
+      } else {
+        washOpacity.value = 0.35;
+        washOpacity.value = withTiming(0, { duration: duration.base * 3, easing: easing.exit });
+      }
+    }
+    prevLeaderRef.current = leader;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-running per `leader` change is the point; duration/easing/withTiming are stable per render from useMotion().
+  }, [leader, scoring, reduced]);
+  const washStyle = useAnimatedStyle(() => ({ opacity: washOpacity.value }));
+
   return (
     <Card variant="scoreboard" style={styles.card} accessible accessibilityLabel={a11yLabel}>
+      <Animated.View style={[styles.wash, { backgroundColor: colors.accentWash }, washStyle]} pointerEvents="none" />
       <View style={styles.header}>
         <Text variant="tag" style={{ color: colors.liveText }}>
           {THIS_WEEK_TAG}
@@ -166,5 +190,8 @@ const styles = StyleSheet.create({
   leadAmount: {
     fontVariant: ['tabular-nums'],
     fontWeight: '700',
+  },
+  wash: {
+    ...StyleSheet.absoluteFillObject,
   },
 });

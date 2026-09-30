@@ -1,11 +1,20 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import { space } from '@/constants/tokens';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { Money } from '@/components/sp/Money';
+import { useMotion } from '@/components/sp/motion';
+// `lively` (spring.lively) is scoped to game components by convention
+// (§9: "importable only from game components"), but the spec explicitly
+// calls for it here — "Season complete: the trophy springs in once
+// (spring.lively)" — a one-shot celebration beat, the same family of
+// motion as a lead-change overshoot, not a money-surface digit roll.
+import { lively } from '@/components/sp/game/motion';
 import { supabase } from '@/lib/supabase';
 import { playoffTileLine, REGULAR_SEASON_TILE_TITLE, PLAYOFFS_TILE_TITLE, BEST_WEEK_TILE_TITLE, SEASON_GAIN_TILE_TITLE } from '@/lib/home/homeCopy';
 import { playoffRoundLabelForWeek } from '@/lib/playoffs';
@@ -48,9 +57,42 @@ interface SeasonResultRow {
 }
 
 export function SeasonCompleteCard({
-  leagueId, finalRank, standingsCount, wins, losses, ties, seasonGain, playoffTeams, numWeeks,
+  leagueId, seasonNumber, finalRank, standingsCount, wins, losses, ties, seasonGain, playoffTeams, numWeeks,
 }: SeasonCompleteCardProps) {
   const [result, setResult] = useState<SeasonResultRow | null>(null);
+  const { reduced } = useMotion();
+  const trophyScale = useSharedValue(0);
+
+  // H6: the trophy springs in ONCE PER SEASON (a device-local flag,
+  // keyed by league+season) — never on every Home open. Reduce Motion:
+  // it just appears (final value, no spring, no glow).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const key = `home.trophy.${leagueId}.${seasonNumber ?? 'current'}`;
+      let already = false;
+      try {
+        already = (await AsyncStorage.getItem(key)) === '1';
+      } catch {
+        // Storage failure: play it once, harmlessly, rather than never.
+      }
+      if (cancelled) return;
+      if (already || reduced) {
+        trophyScale.value = 1;
+        return;
+      }
+      trophyScale.value = withSpring(1, lively);
+      try {
+        await AsyncStorage.setItem(key, '1');
+      } catch {
+        // A failed write just means it may play again next time — safe.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only per league/season.
+  }, [leagueId, seasonNumber]);
 
   useEffect(() => {
     let cancelled = false;
@@ -80,9 +122,22 @@ export function SeasonCompleteCard({
       )
     : null;
 
+  const trophyStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: trophyScale.value }],
+    opacity: trophyScale.value,
+  }));
+  const isChampion = result?.playoff_result === 'champion';
+
   return (
     <Card style={styles.card}>
-      <Text variant="title">Season complete</Text>
+      <View style={styles.titleRow}>
+        <Text variant="title">Season complete</Text>
+        {isChampion ? (
+          <Animated.View style={trophyStyle}>
+            <Text variant="title">{'\u{1F3C6}'}</Text>
+          </Animated.View>
+        ) : null}
+      </View>
 
       <View style={styles.tilesGrid}>
         <View style={styles.tile}>
@@ -123,6 +178,11 @@ const styles = StyleSheet.create({
     padding: space[6],
     gap: space[4],
     borderRadius: 14,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[2],
   },
   tilesGrid: {
     flexDirection: 'row',

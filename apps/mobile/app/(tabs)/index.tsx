@@ -19,6 +19,7 @@ import { PreDraftCard } from '@/components/home/PreDraftCard';
 import { DraftingCard } from '@/components/home/DraftingCard';
 import { SeasonCompleteCard } from '@/components/home/SeasonCompleteCard';
 import { PhaseMessageCard } from '@/components/home/PhaseMessageCard';
+import { PhaseTransition } from '@/components/home/PhaseTransition';
 import {
   ENDS_FRIDAY_LABEL, MARKET_CLOSED_CHIP, SCORING_CHIP, SCORED_CHIP,
   PRE_SEASON_NO_LEADER, PRE_SEASON_SCORING_STARTS, BYE_MESSAGE, byeNextWeekLabel,
@@ -205,7 +206,7 @@ function HomeBody({
         seasonGainPct={hero.seasonGainPct}
         today={hero.today}
       />
-      {middleCard}
+      {middleCard ? <PhaseTransition key={phase.kind}>{middleCard}</PhaseTransition> : null}
       {showSeasonCard ? (
         <SeasonCard
           series={season!}
