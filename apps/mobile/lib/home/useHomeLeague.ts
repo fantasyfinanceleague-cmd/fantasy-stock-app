@@ -149,17 +149,22 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
 
   const matchups = isPreSeason
     ? [] // a league whose leagueStartDate is still in the future cannot have any scored (or even started) weeks yet
+    // Every OTHER state below reached the playoffs at all, which requires
+    // a real, fully-scored regular season to have happened first -- the
+    // Standings' real win/loss record and the Season chart's history are
+    // never optional just because the CURRENT week is a playoff week
+    // (found in the capture pass, 2026-09-30: the chart was flat/empty
+    // for playoff_bye/eliminated/playoff_live despite "4-1" showing right
+    // above it -- the same partial-state family as the pre_season/
+    // missed_playoffs fixes above).
     : isMissedPlayoffs
-      // Missing the playoffs still means a real, fully-scored regular
-      // season happened -- only the (nonexistent) playoff week is
-      // missing, never the history that determined the standings.
-      ? [...regularSeasonWeeks, week6]
+      ? [...regularSeasonWeeks, week6] // the (nonexistent) playoff week is the only thing missing
       : isPlayoffBye
-        ? [round2ByeWeek] // no row at all for the current (wild-card) week
+        ? [...regularSeasonWeeks, week6, round2ByeWeek] // no row at all for the current (wild-card) week
         : isEliminated
-          ? [lostSemifinalWeek] // no row at all for the current (round-2) week
+          ? [...regularSeasonWeeks, week6, lostSemifinalWeek] // no row at all for the current (round-2) week
           : isPlayoffLive
-            ? [wildCardWeek]
+            ? [...regularSeasonWeeks, week6, wildCardWeek]
             : [...regularSeasonWeeks, week6];
 
   // currentWeek differs per playoff sub-state (Design Lead ruling,
