@@ -323,11 +323,19 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
     if (fixture === 'leader_flip') {
       flipCall += 1;
       const flipped = flipCall % 2 === 0;
-      const rows = flipped ? GIANLUIGI_HOLDINGS : ROBERTO_HOLDINGS;
       const mine = ROBERTO_HOLDINGS.find((h) => h.symbol === sym);
       const theirs = GIANLUIGI_HOLDINGS.find((h) => h.symbol === sym);
-      if (mine) return flipped ? mine.mon : mine.thu; // my side goes flat when "flipped" (opponent leads)
-      if (theirs) return flipped ? theirs.thu * 1.5 : theirs.mon; // opponent surges when "flipped"
+      // S5 (Design Lead, 2026-09-30): "flipped" used to zero my side out
+      // entirely (mon -- no gain at all) while surging theirs 50% off
+      // Thursday's close, an aggregate move worth thousands of dollars in
+      // a single week ("a $3,123 week reads as a bug"). Replaced with a
+      // partial pullback on my side (I keep ~77% of my real week's move,
+      // $163.40) and a real-but-larger move on theirs (~1.9x its real
+      // week's move, $170.94) -- both ordinary-looking weekly swings,
+      // landing within a few cents of the board's own example (+$163.40
+      // vs +$171.02), that genuinely flip who's ahead.
+      if (mine) return flipped ? mine.mon + 0.765 * (mine.thu - mine.mon) : mine.thu;
+      if (theirs) return flipped ? theirs.mon + 1.89 * (theirs.thu - theirs.mon) : theirs.mon;
       return null;
     }
     return ROBERTO_HOLDINGS.find((h) => h.symbol === sym)?.thu ?? GIANLUIGI_HOLDINGS.find((h) => h.symbol === sym)?.thu ?? null;
