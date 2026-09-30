@@ -31,8 +31,12 @@ export interface HomeHeroProps {
   rank: number;
   totalPlayers: number;
   record: string;
-  week: number;
-  numWeeks: number;
+  /** "Week N of M" in the regular season, the playoff round name during
+   * playoffs, or null once the season is past playing entirely (missed
+   * the playoffs, complete) — see homeCopy.ts's heroWeekOrRoundLabel,
+   * Design Lead ruling 2026-09-30. Dropping the segment removes its
+   * leading " · " too. */
+  weekOrRound: string | null;
   value: number;
   seasonGainDollars: number;
   seasonGainPct: number;
@@ -55,7 +59,7 @@ function ordinal(n: number): string {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
-export function HomeHero({ leagueId, rank, totalPlayers, record, week, numWeeks, value, seasonGainDollars, seasonGainPct, today, unpricedValue, unpricedToday, skipEntrance = false }: HomeHeroProps) {
+export function HomeHero({ leagueId, rank, totalPlayers, record, weekOrRound, value, seasonGainDollars, seasonGainPct, today, unpricedValue, unpricedToday, skipEntrance = false }: HomeHeroProps) {
   const { colors } = useTheme();
   const { reduced, duration, easing, withTiming } = useMotion();
 
@@ -104,7 +108,7 @@ export function HomeHero({ leagueId, rank, totalPlayers, record, week, numWeeks,
           Your team
         </Text>
         <Text variant="caption" tone="secondary" style={styles.metaNum}>
-          {ordinal(rank)} of {totalPlayers} · {record} · Week {week} of {numWeeks}
+          {ordinal(rank)} of {totalPlayers} · {record}{weekOrRound ? ` · ${weekOrRound}` : ''}
         </Text>
       </View>
 

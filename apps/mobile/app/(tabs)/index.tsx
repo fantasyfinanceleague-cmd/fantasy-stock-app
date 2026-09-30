@@ -26,7 +26,7 @@ import {
   MARKET_CLOSED_CHIP, SCORING_CHIP, SCORED_CHIP, endsAtLabel, marketClosedAt, marketResumesAt,
   PRE_SEASON_NO_LEADER, PRE_SEASON_SCORING_STARTS, BYE_MESSAGE, byeNextWeekLabel,
   byeToRoundLabel, eliminatedLabel, SEE_THE_BRACKET, scoredResultLine, nextWeekStartsLabel,
-  MISSED_PLAYOFFS_MESSAGE, THIS_WEEK_TAG,
+  MISSED_PLAYOFFS_MESSAGE, THIS_WEEK_TAG, heroWeekOrRoundLabel,
 } from '@/lib/home/homeCopy';
 
 // `rightLabel` for live/closed states is derived from the phase's own
@@ -227,8 +227,7 @@ function HomeBody({
         rank={myRow?.rank ?? 0}
         totalPlayers={standingRows.length}
         record={record}
-        week={week}
-        numWeeks={phase.numWeeks ?? 0}
+        weekOrRound={heroWeekOrRoundLabel(phase)}
         value={hero.value}
         seasonGainDollars={hero.seasonGainDollars}
         seasonGainPct={hero.seasonGainPct}

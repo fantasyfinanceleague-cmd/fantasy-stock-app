@@ -6,7 +6,7 @@
  * Run: `cd apps/mobile/tests-deno && deno test .`
  */
 import { assertEquals } from 'jsr:@std/assert';
-import { heroUnpricedCaption, sideUnpricedCaption, seasonScrubLabel, heroAccessibilityLabel } from '../lib/home/homeCopy.ts';
+import { heroUnpricedCaption, sideUnpricedCaption, seasonScrubLabel, heroAccessibilityLabel, heroWeekOrRoundLabel } from '../lib/home/homeCopy.ts';
 
 Deno.test('heroUnpricedCaption: null when both lists are empty', () => {
   assertEquals(heroUnpricedCaption([], []), null);
@@ -76,4 +76,38 @@ Deno.test('heroAccessibilityLabel: joins value, gain, today and the caption into
 Deno.test('heroAccessibilityLabel: omits the today sentence entirely when today is null (non-trading day)', () => {
   const label = heroAccessibilityLabel('$12,343.59', '+$343.59', '+2.86%', null, null);
   assertEquals(label, 'Your team, $12,343.59. +$343.59, +2.86% season gain.');
+});
+
+// ── Hero meta row's week/round segment (Design Lead ruling, 2026-09-30) ────
+
+Deno.test('heroWeekOrRoundLabel: pre_season always reads "Week 1 of M"', () => {
+  assertEquals(heroWeekOrRoundLabel({ kind: 'pre_season', numWeeks: 14 }), 'Week 1 of 14');
+});
+
+Deno.test('heroWeekOrRoundLabel: a regular-season bye reads "Week N of M"', () => {
+  assertEquals(heroWeekOrRoundLabel({ kind: 'bye', week: 7, nextStart: null, numWeeks: 14 }), 'Week 7 of 14');
+});
+
+Deno.test('heroWeekOrRoundLabel: a regular-season live week reads "Week N of M"', () => {
+  assertEquals(
+    heroWeekOrRoundLabel({ kind: 'live_open', week: 6, isPlayoff: false, round: null, weekEnd: '2026-09-25T20:00:00.000Z', numWeeks: 14 }),
+    'Week 6 of 14',
+  );
+});
+
+Deno.test('heroWeekOrRoundLabel: a PLAYOFF live week reads the round name, never "Week N of M"', () => {
+  assertEquals(
+    heroWeekOrRoundLabel({ kind: 'live_open', week: 15, isPlayoff: true, round: 'Semifinals', weekEnd: '2026-12-18T20:00:00.000Z', numWeeks: 14 }),
+    'Semifinals',
+  );
+});
+
+Deno.test('heroWeekOrRoundLabel: playoff_bye and eliminated read the round name', () => {
+  assertEquals(heroWeekOrRoundLabel({ kind: 'playoff_bye', week: 16, round: 'Semifinals', numWeeks: 14 }), 'Semifinals');
+  assertEquals(heroWeekOrRoundLabel({ kind: 'eliminated', round: 'Wild Card', numWeeks: 14 }), 'Wild Card');
+});
+
+Deno.test('heroWeekOrRoundLabel: missed_playoffs and complete drop the segment entirely (null)', () => {
+  assertEquals(heroWeekOrRoundLabel({ kind: 'missed_playoffs', numWeeks: 14 }), null);
+  assertEquals(heroWeekOrRoundLabel({ kind: 'complete', numWeeks: 14 }), null);
 });

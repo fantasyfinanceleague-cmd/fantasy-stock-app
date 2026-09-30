@@ -12,6 +12,7 @@
  */
 
 import { formatSignedCurrency } from '../weekStatus';
+import type { PhaseResult } from './homePhase';
 
 // ── D1 hero (Concept A, decided 2026-09-29) — board, verbatim ─────────────
 // "+$343.59 · +2.86% season gain · +$121.26 today"
@@ -170,6 +171,34 @@ export const SEASON_GAIN_TILE_TITLE = 'Season gain'; // board, reused
 // ── Money-side helpers (existing formatters live in weekStatus.ts /
 // components/sp/logic/money.ts — Home reuses them, does not redefine them). ─
 export { formatSignedCurrency };
+
+// ── Hero meta row's week/round segment (Design Lead ruling, 2026-09-30) ────
+// "Week N of M" only means something during the regular season. During
+// playoffs it's replaced by the round name (e.g. "Semifinals"), and once
+// the season is past playing entirely (missed the playoffs, complete) the
+// segment is dropped rather than showing a stale or meaningless week
+// number ("Week 0 of 14", "Week 15 of 14") -- found in code review,
+// 2026-09-30, during the capture pass.
+export function heroWeekOrRoundLabel(phase: PhaseResult): string | null {
+  switch (phase.kind) {
+    case 'pre_season':
+      return `Week 1 of ${phase.numWeeks ?? '?'}`;
+    case 'bye':
+      return `Week ${phase.week} of ${phase.numWeeks ?? '?'}`;
+    case 'scoring':
+    case 'scored':
+    case 'live_open':
+    case 'live_closed':
+      return phase.isPlayoff ? phase.round : `Week ${phase.week} of ${phase.numWeeks ?? '?'}`;
+    case 'playoff_bye':
+    case 'eliminated':
+      return phase.round;
+    default:
+      // missed_playoffs, complete: the season is past playing entirely --
+      // drop the segment. pre_draft/drafting never reach the hero at all.
+      return null;
+  }
+}
 
 // ── Season chart scrub label (Orchestrator ruling, 2026-09-30) ─────────────
 // A 'weekly' point (a past week's single real point, or the Week-1-open
