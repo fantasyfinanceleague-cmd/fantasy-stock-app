@@ -74,6 +74,8 @@
  * no runtime dependencies, so it is trivially and hermetically testable.
  */
 
+import { weekCut, type CalendarSession, type Coverage as MarketCalendarCoverage } from '../_shared/week-window.ts';
+
 /** A holding derived from drafts + trades for one participant. */
 export interface Holding {
   symbol: string;
@@ -160,7 +162,8 @@ export function classifyCloseCoverage(
 export function midWeekEntryPrice(
   userId: string,
   symbol: string,
-  trades: Array<{ user_id: string; symbol: string; action: string; quantity: number; price: number }>,
+  trades: Array<{ user_id: string; symbol: string; action: string; quantity: number; price: number; created_at: string }>,
+  windowOpenIso: string,
 ): number | null {
   let qty = 0;
   let cost = 0;
@@ -168,6 +171,16 @@ export function midWeekEntryPrice(
     if (t.user_id !== userId) continue;
     if ((t.symbol ?? '').toUpperCase() !== symbol.toUpperCase()) continue;
     if (t.action !== 'buy') continue;
+    // THIS week's buys only (single-cut fix — S1 in
+    // docs/audits/2026-09-30-week-window-audit.md). `trades` is a
+    // KIND-2 buy: no row exists for this (user, symbol) this league-week,
+    // which only means "flat at this week's open" — NOT "never bought this
+    // symbol before." A user who bought this symbol in a PRIOR week, fully
+    // sold it (hence no row this week), then bought it again mid-week would
+    // otherwise have their entry price averaged across BOTH purchases,
+    // silently wrong. The caller passes `trades` already bounded to
+    // created_at <= this week's close; this bounds the OPEN side.
+    if (t.created_at < windowOpenIso) continue;
     const q = Number(t.quantity);
     const p = Number(t.price);
     if (!(q > 0) || !(p > 0)) continue;
@@ -210,7 +223,15 @@ export function buildCloseWork(
   userHoldings: Map<string, Holding[]>,
   existing: ExistingSnapshot[],
   prices: Map<string, number>,
-  trades: Array<{ user_id: string; symbol: string; action: string; quantity: number; price: number }>,
+  trades: Array<{ user_id: string; symbol: string; action: string; quantity: number; price: number; created_at: string }>,
+  /**
+   * This week's real open instant (ISO), single-cut fix — bounds
+   * midWeekEntryPrice to buys from THIS week only. `trades` and
+   * `userHoldings` are expected to already be bounded on the CLOSE side by
+   * the caller (created_at <= this week's real close); this bounds the OPEN
+   * side, which midWeekEntryPrice cannot infer from `trades` alone.
+   */
+  windowOpenIso: string,
 ): CloseWork {
   const updates: SnapshotUpdate[] = [];
   const inserts: NewSnapshotRow[] = [];
@@ -249,7 +270,7 @@ export function buildCloseWork(
         continue;
       }
 
-      const entryPrice = midWeekEntryPrice(userId, sym, trades);
+      const entryPrice = midWeekEntryPrice(userId, sym, trades, windowOpenIso);
       if (entryPrice === null) {
         // Priced, but no trade to derive a basis from. Not retryable.
         unbasedPositions.push({ userId, symbol: sym });
@@ -277,4 +298,72 @@ export function buildCloseWork(
   }
 
   return { updates, inserts, missingSymbols, unbasedPositions };
+}
+
+// ---------------------------------------------------------------------------
+// Single-cut week window (fix for the Monday-gap scoring defect —
+// docs/audits/2026-09-30-week-window-audit.md). Wraps the shared
+// ../_shared/week-window.ts weekCut() with the ONE decision specific to
+// snapshot-week-end: is this league's week's real CLOSE due yet.
+//
+// UNLIKE snapshot-week-start, this function never REWRITES
+// matchups.week_start/week_end — that side effect is owned exclusively by
+// snapshot-week-start, which runs earlier in the week. By the time a
+// league-week reaches snapshot-week-end it already has week_snapshots rows
+// (buildCloseWork only ever closes a week that has something to close), and
+// snapshot-week-start never writes a row without first successfully
+// rewriting the window (or determining no rewrite was needed because the
+// stored value already matched) — so matchups.week_start is GUARANTEED
+// already canonical by the time this runs. This still independently
+// computes its own cut via weekCut() rather than trusting that guarantee
+// blindly, both because weekCut is a pure fixpoint (recomputing costs
+// nothing and is exactly as correct either way) and because trusting a
+// cross-function invariant that isn't locally checkable is the kind of
+// assumption CLAUDE.md's lessons warn against.
+// ---------------------------------------------------------------------------
+
+export type CloseWindowPlan =
+  | { action: 'not_due' }
+  | { action: 'refuse'; reason: 'no_coverage' | 'no_sessions_in_week' | 'floor_beyond_week' }
+  | {
+    action: 'proceed';
+    /** This week's real open — needed only to bound midWeekEntryPrice (buildCloseWork's windowOpenIso). */
+    open: Date;
+    /** This week's real close — the ledger cut and the price date for this run. */
+    close: Date;
+    closeSessionDate: string;
+  };
+
+/**
+ * Decide whether this league-week's close is due yet. `anchor`/`floor` are
+ * the same inputs snapshot-week-start's planWeekWindow takes (normally
+ * matchups.week_start and the earliest matchup row's created_at) — see that
+ * function's doc for why re-deriving from either the nominal or the
+ * already-reconciled value yields the identical cut.
+ */
+export function planCloseWindow(
+  now: Date,
+  anchor: Date,
+  floor: Date | null,
+  sessions: ReadonlyArray<CalendarSession>,
+  coverage: MarketCalendarCoverage | null,
+): CloseWindowPlan {
+  const cut = weekCut(anchor, floor, sessions, coverage);
+  if (!cut.ok) return { action: 'refuse', reason: cut.reason };
+
+  // Not yet due: this week hasn't closed yet. The OLD code had NO "due"
+  // check at all — it processed every active matchup league's current_week
+  // unconditionally on every Friday run, trusting that current_week only
+  // ever points at a week whose real window has already ended. This adds an
+  // explicit guard instead of relying on that being true everywhere
+  // current_week gets set. If it ever fires early for a league (closed
+  // before the real close), the consequence would be serious and silent:
+  // snapshot-week-start's `alreadyEndPriced` guard treats ANY week_end_price
+  // as "this week is being/has been scored" and permanently skips
+  // re-baselining it — so an early close could never self-heal. Refusing to
+  // proceed before `now` reaches the real close removes that failure mode
+  // entirely, regardless of how current_week came to point at this week.
+  if (now.getTime() < cut.close.getTime()) return { action: 'not_due' };
+
+  return { action: 'proceed', open: cut.open, close: cut.close, closeSessionDate: cut.closeSessionDate };
 }

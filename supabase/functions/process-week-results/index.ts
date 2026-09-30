@@ -603,6 +603,20 @@ Deno.serve(async (req) => {
         console.log(`No week snapshots found for week ${weekNumber}, using fallback calculation`);
       }
 
+      // weekStart/weekEnd (from the batch, ultimately matchups.week_start/
+      // week_end) are the single-cut fix's canonical instants once
+      // snapshot-week-start has rewritten them (see
+      // _shared/week-window.ts's weekCut and snapshot-week-start/plan.ts's
+      // planWeekWindow) — this function needed NO logic change for that fix:
+      // it already read the window off the matchups row rather than
+      // computing its own, so the P1-P4 defects (docs/audits/2026-09-30-week-
+      // window-audit.md) were entirely upstream, in snapshot-week-start and
+      // snapshot-week-end computing DIFFERENT instants than the ones stored
+      // here. A league-week scored before its first snapshot-week-start run
+      // (impossible in practice — nothing to score without a baseline) would
+      // still see the OLD nominal Tuesday/Friday values; every real week is
+      // scored well after its baseline exists, so this always sees the real
+      // instants by the time it matters.
       let midWeekTradesData: any[] = [];
       // Stays null when the query is NOT attempted (a null week bound). That is
       // "not attempted", not "succeeded" — safe here only because

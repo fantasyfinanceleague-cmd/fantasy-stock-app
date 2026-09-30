@@ -26,9 +26,11 @@ import {
   classifyCoverage,
   selectMissingHoldings,
   buildPricedRows,
+  planWeekWindow,
   type Holding,
 } from './plan.ts';
 import { matchupParticipants, snapshotHoldings } from '../_shared/snapshot-holdings.ts';
+import type { CalendarSession, Coverage as MarketCalendarCoverage } from '../_shared/week-window.ts';
 
 // Small builders to keep the intent of each case legible.
 const holdings = (...pairs: [string, number][]): Holding[] =>
@@ -355,4 +357,114 @@ Deno.test('why reads are gated BEFORE coverage: defaulted-empty inputs are indis
   );
   const failedSnapshotsRead = new Set<string>(); // really: HUMAN_A is covered
   assertEquals([...selectMissingHoldings(real, failedSnapshotsRead).keys()], [HUMAN_A]);
+});
+
+// ===========================================================================
+// planWeekWindow — the single-cut week window (S1-S4 fix)
+// ===========================================================================
+
+const NORMAL_WEEK: CalendarSession[] = [
+  { sessionDate: '2026-09-28', openEt: '09:30', closeEt: '16:00' }, // Mon
+  { sessionDate: '2026-09-29', openEt: '09:30', closeEt: '16:00' },
+  { sessionDate: '2026-09-30', openEt: '09:30', closeEt: '16:00' },
+  { sessionDate: '2026-10-01', openEt: '09:30', closeEt: '16:00' },
+  { sessionDate: '2026-10-02', openEt: '09:30', closeEt: '16:00' }, // Fri
+];
+const WIDE_COVERAGE: MarketCalendarCoverage = { from: '2026-01-01', through: '2027-12-31' };
+const NOMINAL_ANCHOR = new Date('2026-09-29T14:30:00.000Z'); // old fixed-UTC Tuesday value
+
+Deno.test('planWeekWindow: now before this week\'s real open -> not_due (replaces the old holiday/day-of-week branch)', () => {
+  const beforeOpen = new Date('2026-09-28T12:00:00.000Z'); // before Monday's 13:30Z open
+  const r = planWeekWindow(beforeOpen, NOMINAL_ANCHOR, null, NORMAL_WEEK, WIDE_COVERAGE, '', '', 0);
+  assertEquals(r, { action: 'not_due' });
+});
+
+Deno.test('planWeekWindow: now at/after the real open -> proceed, with the real (not nominal) open/close', () => {
+  const afterOpen = new Date('2026-09-28T13:30:00.000Z'); // exactly Monday's open
+  const r = planWeekWindow(afterOpen, NOMINAL_ANCHOR, null, NORMAL_WEEK, WIDE_COVERAGE, '', '', 0);
+  if (r.action !== 'proceed') throw new Error(`expected proceed, got ${r.action}`);
+  assertEquals(r.open.toISOString(), '2026-09-28T13:30:00.000Z');
+  assertEquals(r.close.toISOString(), '2026-10-02T20:00:00.000Z');
+  assertEquals(r.openSessionDate, '2026-09-28');
+});
+
+Deno.test('planWeekWindow: cut failure (no calendar coverage) -> refuse, not not_due — an operational gap, not "nothing to do"', () => {
+  const now = new Date('2026-09-29T15:00:00.000Z');
+  const staleCoverage: MarketCalendarCoverage = { from: '2026-01-01', through: '2026-09-20' };
+  const r = planWeekWindow(now, NOMINAL_ANCHOR, null, NORMAL_WEEK, staleCoverage, '', '', 0);
+  assertEquals(r, { action: 'refuse', reason: 'no_coverage' });
+});
+
+Deno.test('planWeekWindow: REWRITE — zero existing snapshots, stored window differs from the cut -> rewrite: true', () => {
+  const now = new Date('2026-09-28T14:00:00.000Z');
+  const r = planWeekWindow(
+    now, NOMINAL_ANCHOR, null, NORMAL_WEEK, WIDE_COVERAGE,
+    /* storedWeekStartIso */ '2026-09-29T14:30:00.000Z', // the OLD nominal value
+    /* storedWeekEndIso   */ '2026-10-02T21:00:00.000Z',
+    /* existingSnapshotCount */ 0,
+  );
+  if (r.action !== 'proceed') throw new Error(`expected proceed, got ${r.action}`);
+  assertEquals(r.rewrite, true);
+});
+
+Deno.test('planWeekWindow: PROTECTED WEEK — existingSnapshotCount > 0 -> rewrite: false, even though the stored window still differs', () => {
+  // This is the exact case that protects prod's real week 1: already fully
+  // snapshotted under the OLD nominal window before this fix deploys. It must
+  // NEVER be re-windowed, no matter how many times this runs again.
+  const now = new Date('2026-09-28T14:00:00.000Z');
+  const r = planWeekWindow(
+    now, NOMINAL_ANCHOR, null, NORMAL_WEEK, WIDE_COVERAGE,
+    '2026-09-29T14:30:00.000Z', '2026-10-02T21:00:00.000Z',
+    /* existingSnapshotCount */ 1,
+  );
+  if (r.action !== 'proceed') throw new Error(`expected proceed, got ${r.action}`);
+  assertEquals(r.rewrite, false);
+  // The cut itself is UNCHANGED by the protection — this run still computes
+  // (and uses for ITS OWN baseline/pricing) the real Monday-open cut; only the
+  // STORED matchups columns are left alone.
+  assertEquals(r.open.toISOString(), '2026-09-28T13:30:00.000Z');
+});
+
+Deno.test('planWeekWindow: already matches the stored window -> rewrite: false (idempotent no-op, not just protected)', () => {
+  const now = new Date('2026-09-28T14:00:00.000Z');
+  const r = planWeekWindow(
+    now, NOMINAL_ANCHOR, null, NORMAL_WEEK, WIDE_COVERAGE,
+    '2026-09-28T13:30:00.000Z', '2026-10-02T20:00:00.000Z', // already the real cut
+    0,
+  );
+  if (r.action !== 'proceed') throw new Error(`expected proceed, got ${r.action}`);
+  assertEquals(r.rewrite, false);
+});
+
+Deno.test('planWeekWindow FIXPOINT: a second run anchored on the already-rewritten values never re-triggers a rewrite', () => {
+  const now = new Date('2026-09-29T15:00:00.000Z'); // Tuesday heal run
+  const firstRun = planWeekWindow(
+    new Date('2026-09-28T14:00:00.000Z'), NOMINAL_ANCHOR, null, NORMAL_WEEK, WIDE_COVERAGE,
+    '2026-09-29T14:30:00.000Z', '2026-10-02T21:00:00.000Z', 0,
+  );
+  if (firstRun.action !== 'proceed' || !firstRun.rewrite) throw new Error('expected a rewrite on the first run');
+
+  // Simulate index.ts having applied the rewrite: the stored columns AND the
+  // anchor for the next run are now firstRun's own open/close.
+  const secondRun = planWeekWindow(
+    now, firstRun.open, null, NORMAL_WEEK, WIDE_COVERAGE,
+    firstRun.open.toISOString(), firstRun.close.toISOString(),
+    /* existingSnapshotCount */ 1, // Monday's run wrote at least one row
+  );
+  if (secondRun.action !== 'proceed') throw new Error('expected proceed');
+  assertEquals(secondRun.rewrite, false);
+  assertEquals(secondRun.open.getTime(), firstRun.open.getTime());
+  assertEquals(secondRun.close.getTime(), firstRun.close.getTime());
+});
+
+Deno.test('planWeekWindow FLOOR: a league drafted Monday 11 AM ET (after Monday\'s open) starts Tuesday, and is due only from Tuesday\'s open', () => {
+  const draftInstant = new Date('2026-09-28T15:00:00.000Z'); // Monday 11 AM EDT
+  const beforeTuesdayOpen = new Date('2026-09-29T13:00:00.000Z'); // Tue 9:00 AM EDT
+  const r1 = planWeekWindow(beforeTuesdayOpen, NOMINAL_ANCHOR, draftInstant, NORMAL_WEEK, WIDE_COVERAGE, '', '', 0);
+  assertEquals(r1, { action: 'not_due' });
+
+  const atTuesdayOpen = new Date('2026-09-29T13:30:00.000Z');
+  const r2 = planWeekWindow(atTuesdayOpen, NOMINAL_ANCHOR, draftInstant, NORMAL_WEEK, WIDE_COVERAGE, '', '', 0);
+  if (r2.action !== 'proceed') throw new Error(`expected proceed, got ${r2.action}`);
+  assertEquals(r2.openSessionDate, '2026-09-29');
 });
