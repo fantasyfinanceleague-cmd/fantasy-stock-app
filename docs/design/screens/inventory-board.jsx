@@ -87,7 +87,7 @@
           <Fit caption="Before the season"><I.HomePreSeason /></Fit>
           <Fit caption="Market closed" note="Thursday night"><I.HomeClosed /></Fit>
           <Fit caption="Week final, scoring" note="Friday after 4 PM"><I.HomeScoring /></Fit>
-          <Fit caption="Season complete" note="New copy throughout"><I.HomeComplete /></Fit>
+          <Fit caption="Season complete" note="New copy throughout. Every tile comes from the season result (ask #11): season gain, best week, regular-season rank and record, playoff result"><I.HomeComplete /></Fit>
         </Group>
 
         <Group id="game" code="3c" name="Matchups, draft and playoffs" job="The game surfaces around the key Matchup, Standings and Draft room screens."

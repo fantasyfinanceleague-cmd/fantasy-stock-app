@@ -587,14 +587,14 @@
             <span style={{ width: 72, height: 72, borderRadius: 36, display: 'grid', placeItems: 'center', background: 'var(--c-live)', color: 'var(--c-surface)' }}><Icon d={TROPHY} size={36} width={2.2} /></span>
             <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Season complete</span>
             <span className="ks-score" style={{ fontSize: 44, lineHeight: '44px', whiteSpace: 'normal' }}>Champion</span>
-            <span className="ks-callout">You won {K.LEAGUE.name} · 11–3 · playoffs 2–0</span>
+            <span className="ks-callout">You won {K.LEAGUE.name}</span>
           </div>
           <Card pad="14px">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', rowGap: 12 }} className="ks-num">
               <span><span className="ks-caption">Season gain</span><br /><b className="ks-gain">+$1,962.40</b></span>
               <span><span className="ks-caption">Best week</span><br /><b>Week 11 · +$412.08</b></span>
-              <span><span className="ks-caption">Best pick</span><br /><b>NVDA · +31.4%</b></span>
-              <span><span className="ks-caption">Final value</span><br /><b>$13,962.40</b></span>
+              <span><span className="ks-caption">Regular season</span><br /><b>1st of 6 · 11–3</b></span>
+              <span><span className="ks-caption">Playoffs</span><br /><b>2–0 · won the Final</b></span>
             </div>
           </Card>
           <span className="ks-btn">See the final standings</span>
