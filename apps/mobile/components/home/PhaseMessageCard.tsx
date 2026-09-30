@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { space } from '@/constants/tokens';
 import { Card } from '@/components/sp/Card';
-import { Button } from '@/components/ui';
+import { Button } from '@/components/sp/Button';
 import { Text } from '@/components/sp/Text';
 
 // Stockpile — <PhaseMessageCard> (Phase 3b-2). The plain-message states
@@ -28,7 +28,7 @@ export function PhaseMessageCard({ lines, actionLabel, onAction }: PhaseMessageC
       ))}
       {actionLabel && onAction ? (
         <View style={styles.actionRow}>
-          <Button title={actionLabel} onPress={onAction} variant="secondary" />
+          <Button label={actionLabel} onPress={onAction} variant="secondary" />
         </View>
       ) : null}
     </Card>

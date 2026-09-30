@@ -6,7 +6,7 @@ import { router } from 'expo-router';
 import { space } from '@/constants/tokens';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
-import { Button } from '@/components/ui';
+import { Button } from '@/components/sp/Button';
 import { LiveDot } from '@/components/sp/game/LiveDot';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { supabase } from '@/lib/supabase';
@@ -98,7 +98,7 @@ export function DraftingCard({ leagueId, myUserId, numRounds }: DraftingCardProp
         </Text>
       )}
 
-      <Button title={GO_TO_DRAFT_ROOM} onPress={() => router.push('/draft')} variant="primary" />
+      <Button label={GO_TO_DRAFT_ROOM} onPress={() => router.push('/draft')} variant="primary" />
 
       {myPickCount > 0 ? (
         <Text variant="caption" tone="secondary">

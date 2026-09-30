@@ -6,7 +6,7 @@ import { router } from 'expo-router';
 import { space } from '@/constants/tokens';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
-import { Button } from '@/components/ui';
+import { Button } from '@/components/sp/Button';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { Avatar } from '@/components/sp/Avatar';
 import { supabase } from '@/lib/supabase';
@@ -102,10 +102,10 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds }: P
         <Text variant="callout" style={styles.code}>
           {inviteCode}
         </Text>
-        <Button title="Share" onPress={onShare} variant="secondary" size="sm" />
+        <Button label="Share" onPress={onShare} variant="secondary" size="sm" />
       </View>
 
-      <Button title={BUILD_YOUR_QUEUE} onPress={() => router.push('/draft')} variant="primary" />
+      <Button label={BUILD_YOUR_QUEUE} onPress={() => router.push('/draft')} variant="primary" />
     </Card>
   );
 }
