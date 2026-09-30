@@ -2,43 +2,39 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "904d0ae9966c3a1e783e219e25ee8314adf81c47",
-    "commitShort": "904d0ae",
+    "commit": "002c5e49cba70993c9c6e4b80f1fd48c3f8fec2a",
+    "commitShort": "002c5e4",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "fix/s7-no-legacy-after-close",
+    "branch": "fix/record-trade-market-hours",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "supabase/functions/process-week-results/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/process-week-results/scoring-eligibility.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/process-week-results/scoring-eligibility.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/process-week-results/user-score.test.ts"
+        "path": "supabase/functions/_shared/alpaca-price.ts"
       },
       {
         "code": "??",
-        "path": "supabase/migrations/20261019000000_process_week_results_heal_crons.sql"
+        "path": "supabase/functions/_shared/market-hours.test.ts"
+      },
+      {
+        "code": "??",
+        "path": "supabase/functions/_shared/market-hours.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/record-trade/index.ts"
       }
     ],
-    "timestamp": "2026-09-30T20:05:26Z",
-    "sourceHash": "sha256:1d7408c45a5882ff3fa2c11c6866c401f962f3a56e2853081d10fe40c42c4c31",
+    "timestamp": "2026-09-30T22:30:08Z",
+    "sourceHash": "sha256:d951ba92a1c61a950a0e8c4e74fdb1fa747e98e5a6e68c43bbc2146da4ced59a",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-09-30T16:53:15Z",
-    "ageHours": 3.2,
-    "ageDays": 0.1,
+    "ageHours": 5.6,
+    "ageDays": 0.2,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:8e08382dfe9edf557c6371cfc39da9fb788590ad82209f15e2e74a7c90dcfc6b",
@@ -655,7 +651,7 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 334
+        "lines": 427
       },
       "db": null,
       "declared": null,
@@ -668,7 +664,7 @@
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/record-trade/index.ts",
-        "line": 101
+        "line": 146
       }
     },
     {
@@ -6659,8 +6655,8 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('check_and_bump_rate_limit')",
       "callSites": [
-        "supabase/functions/record-trade/index.ts:89",
-        "supabase/functions/record-trade/index.ts:92"
+        "supabase/functions/record-trade/index.ts:134",
+        "supabase/functions/record-trade/index.ts:137"
       ]
     },
     {
@@ -6675,7 +6671,7 @@
         "user_id, symbol, entry_price, quantity, pick_number, slot_id"
       ],
       "callSites": [
-        "supabase/functions/record-trade/index.ts:169"
+        "supabase/functions/record-trade/index.ts:242"
       ]
     },
     {
@@ -6690,7 +6686,7 @@
         "id, slot_index, slot_count, price_min, price_max, category_id"
       ],
       "callSites": [
-        "supabase/functions/record-trade/index.ts:237"
+        "supabase/functions/record-trade/index.ts:315"
       ]
     },
     {
@@ -6705,7 +6701,7 @@
         "user_id"
       ],
       "callSites": [
-        "supabase/functions/record-trade/index.ts:159"
+        "supabase/functions/record-trade/index.ts:232"
       ]
     },
     {
@@ -6720,7 +6716,37 @@
         "id, num_rounds, draft_status, stake_mode, budget_amount, notional_per_slot, allow_undraftable"
       ],
       "callSites": [
-        "supabase/functions/record-trade/index.ts:146"
+        "supabase/functions/record-trade/index.ts:219"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.record-trade->tbl.market_calendar",
+      "from": "fn.record-trade",
+      "to": "tbl.market_calendar",
+      "protocol": "postgrest-select",
+      "payload": ".from('market_calendar').select('session_date, open_et, close_et')",
+      "columns": [
+        "session_date, open_et, close_et"
+      ],
+      "callSites": [
+        "supabase/functions/record-trade/index.ts:114"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.record-trade->tbl.market_calendar_coverage",
+      "from": "fn.record-trade",
+      "to": "tbl.market_calendar_coverage",
+      "protocol": "postgrest-select",
+      "payload": ".from('market_calendar_coverage').select('covered_from, covered_through')",
+      "columns": [
+        "covered_from, covered_through"
+      ],
+      "callSites": [
+        "supabase/functions/record-trade/index.ts:113"
       ]
     },
     {
@@ -6735,7 +6761,7 @@
         "is_draftable"
       ],
       "callSites": [
-        "supabase/functions/record-trade/index.ts:262"
+        "supabase/functions/record-trade/index.ts:340"
       ]
     },
     {
@@ -6750,7 +6776,7 @@
         "id, user_id, symbol, action, quantity, price, total_value, created_at, funded_by_trade_id"
       ],
       "callSites": [
-        "supabase/functions/record-trade/index.ts:176"
+        "supabase/functions/record-trade/index.ts:249"
       ]
     },
     {
@@ -6763,7 +6789,7 @@
       "payload": ".from('trades').insert()",
       "columns": [],
       "callSites": [
-        "supabase/functions/record-trade/index.ts:303"
+        "supabase/functions/record-trade/index.ts:396"
       ]
     },
     {
@@ -11341,7 +11367,7 @@
           "edge": "e.fn.record-trade->pg.check_and_bump_rate_limit",
           "detail": "Per-user and per-IP buckets.",
           "files": [
-            "supabase/functions/record-trade/index.ts:89"
+            "supabase/functions/record-trade/index.ts:134"
           ]
         },
         {
@@ -11349,7 +11375,7 @@
           "edge": "e.fn.record-trade->tbl.leagues",
           "detail": "League rules: stake mode, budget, notional, allow_undraftable.",
           "files": [
-            "supabase/functions/record-trade/index.ts:256"
+            "supabase/functions/record-trade/index.ts:334"
           ]
         },
         {
@@ -11357,7 +11383,7 @@
           "edge": "e.fn.record-trade->tbl.symbols",
           "detail": "is_draftable gate for buys (bypassed only when the commissioner set allow_undraftable).",
           "files": [
-            "supabase/functions/record-trade/index.ts:262"
+            "supabase/functions/record-trade/index.ts:340"
           ]
         },
         {
@@ -11365,7 +11391,7 @@
           "edge": "e.fn.record-trade->tbl.trades#insert",
           "detail": "Validated by the shared pure module (_shared/draft-validation.ts), filled at the server-fetched price. KNOWN RACE: two concurrent buys can both pass validation — needs an atomic SECURITY DEFINER RPC.",
           "files": [
-            "supabase/functions/record-trade/index.ts:270"
+            "supabase/functions/record-trade/index.ts:348"
           ]
         }
       ],
@@ -12236,7 +12262,7 @@
   "orphanAnnotations": [],
   "stats": {
     "nodes": 164,
-    "edges": 367,
+    "edges": 369,
     "flows": 8,
     "drift": 26,
     "driftHigh": 1,
@@ -12330,8 +12356,8 @@
       "supabase/functions/process-week-results/index.ts:171 -> league_standings_ranked",
       "supabase/functions/process-week-results/index.ts:202 -> start_league_playoffs",
       "supabase/functions/process-week-results/season-completion.ts:134 -> complete_league_season",
-      "supabase/functions/record-trade/index.ts:89 -> check_and_bump_rate_limit",
-      "supabase/functions/record-trade/index.ts:92 -> check_and_bump_rate_limit",
+      "supabase/functions/record-trade/index.ts:134 -> check_and_bump_rate_limit",
+      "supabase/functions/record-trade/index.ts:137 -> check_and_bump_rate_limit",
       "supabase/functions/refresh-market-calendar/index.ts:148 -> apply_market_calendar",
       "supabase/functions/send-notification/index.ts:101 -> check_and_bump_rate_limit",
       "supabase/functions/send-notification/index.ts:104 -> check_and_bump_rate_limit",
@@ -12503,13 +12529,15 @@
       "supabase/functions/process-week-results/job-status.ts:61 -> cron_job_status.upsert",
       "supabase/functions/process-week-results/season-completion.ts:173 -> leagues.select",
       "supabase/functions/process-week-results/season-completion.ts:192 -> matchups.select",
-      "supabase/functions/record-trade/index.ts:146 -> leagues.select",
-      "supabase/functions/record-trade/index.ts:159 -> league_members.select",
-      "supabase/functions/record-trade/index.ts:169 -> drafts.select",
-      "supabase/functions/record-trade/index.ts:176 -> trades.select",
-      "supabase/functions/record-trade/index.ts:237 -> league_draft_slots.select",
-      "supabase/functions/record-trade/index.ts:262 -> symbols.select",
-      "supabase/functions/record-trade/index.ts:303 -> trades.insert",
+      "supabase/functions/record-trade/index.ts:113 -> market_calendar_coverage.select",
+      "supabase/functions/record-trade/index.ts:114 -> market_calendar.select",
+      "supabase/functions/record-trade/index.ts:219 -> leagues.select",
+      "supabase/functions/record-trade/index.ts:232 -> league_members.select",
+      "supabase/functions/record-trade/index.ts:242 -> drafts.select",
+      "supabase/functions/record-trade/index.ts:249 -> trades.select",
+      "supabase/functions/record-trade/index.ts:315 -> league_draft_slots.select",
+      "supabase/functions/record-trade/index.ts:340 -> symbols.select",
+      "supabase/functions/record-trade/index.ts:396 -> trades.insert",
       "supabase/functions/refresh-symbols/index.ts:171 -> symbols.upsert",
       "supabase/functions/send-notification/index.ts:148 -> user_profiles.select",
       "supabase/functions/send-notification/index.ts:153 -> push_tokens.select",
