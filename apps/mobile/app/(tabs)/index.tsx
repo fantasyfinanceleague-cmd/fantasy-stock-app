@@ -23,7 +23,7 @@ import { PhaseTransition } from '@/components/home/PhaseTransition';
 import { HomeLeagueTransition } from '@/components/home/HomeLeagueTransition';
 import type { PhaseResult } from '@/lib/home/homePhase';
 import {
-  MARKET_CLOSED_CHIP, SCORING_CHIP, SCORED_CHIP, endsAtLabel, marketClosedAt, marketResumesAt,
+  MARKET_CLOSED_CHIP, SCORING_CHIP, SCORED_CHIP, PLAYOFF_LIVE_CHIP, endsAtLabel, marketClosedAt, marketResumesAt,
   PRE_SEASON_CAPTION, PRE_SEASON_TAG, PRE_SEASON_CHIP, preSeasonStartsLabel, BYE_MESSAGE, byeNextWeekLabel,
   byeToRoundLabel, eliminatedLabel, SEE_THE_BRACKET, scoredResultLine, nextWeekStartsLabel,
   MISSED_PLAYOFFS_MESSAGE, THIS_WEEK_TAG, heroWeekOrRoundLabel, playoffPendingLine,
@@ -39,7 +39,7 @@ function thisWeekChrome(phase: PhaseResult, week: number): { isLive: boolean; ri
   const tag = phase.kind !== 'missed_playoffs' && 'isPlayoff' in phase && phase.isPlayoff && 'round' in phase && phase.round ? phase.round : THIS_WEEK_TAG;
   switch (phase.kind) {
     case 'live_open':
-      return { isLive: true, rightLabel: endsAtLabel(phase.weekEnd), liveChipLabel: `Week ${week} · Live`, tag };
+      return { isLive: true, rightLabel: endsAtLabel(phase.weekEnd), liveChipLabel: phase.isPlayoff ? PLAYOFF_LIVE_CHIP : `Week ${week} · Live`, tag };
     case 'live_closed':
       return {
         isLive: false,
@@ -295,6 +295,16 @@ function HomeBody({
             .map((w) => ({ week: w.week, result: w.result }))}
           currentWeek={week}
           isLive={chrome.isLive}
+          // phase.numWeeks (not league.num_weeks): the SAME value that
+          // decided this phase's own round labels in buildHomeViewModel,
+          // so a week chip's round can never disagree with the phase's
+          // own tag/chip. In the dev fixture universe specifically,
+          // league (SHELL_FIXTURE) and phase (HOME_FIXTURE) are two
+          // independent fixture axes with their own numbers -- using
+          // league's here would silently mismatch HOME_FIXTURE's actual
+          // playoff week structure.
+          numWeeks={phase.numWeeks}
+          playoffTeams={league?.playoff_teams ?? null}
           skipEntrance={skipEntrance}
         />
       ) : null}

@@ -8,7 +8,7 @@
  *   cd apps/mobile/tests-deno && deno test .
  */
 import { assertEquals } from 'jsr:@std/assert';
-import { playoffLine as mobileLine, playoffPlan as mobilePlan, playoffRoundLabelForWeek as mobileWeek } from '../lib/playoffs.ts';
+import { playoffLine as mobileLine, playoffPlan as mobilePlan, playoffRoundLabelForWeek as mobileWeek, playoffRoundShortName } from '../lib/playoffs.ts';
 // Plain ESM .js; Deno imports it directly and type-checks it via its JSDoc.
 import { playoffLine as webLine, playoffPlan as webPlan, playoffRoundLabelForWeek as webWeek } from '../../web/src/utils/playoffs.js';
 import {
@@ -69,4 +69,20 @@ Deno.test('playoffRoundLabelForWeek: week num_weeks + r is round r; regular week
   for (let p = 2; p <= 16; p++) {
     for (let w = 1; w <= 20; w++) assertEquals(webWeek(w, 8, p), mobileWeek(w, 8, p), `P=${p} w=${w}`);
   }
+});
+
+// ── playoffRoundShortName (B7, Design Lead ruling, 2026-09-30): the season
+// chart's week chips, mobile-only (not mirrored to web/server -- a chip-
+// width display concern, not shared playoff structure). ────────────────────
+
+Deno.test('playoffRoundShortName: WC / QF / SF / F / R16', () => {
+  assertEquals(playoffRoundShortName('Wild card'), 'WC');
+  assertEquals(playoffRoundShortName('Quarterfinals'), 'QF');
+  assertEquals(playoffRoundShortName('Semifinals'), 'SF');
+  assertEquals(playoffRoundShortName('Final'), 'F');
+  assertEquals(playoffRoundShortName('Round of 16'), 'R16');
+});
+
+Deno.test('playoffRoundShortName: an unrecognized round name passes through unchanged, never blank', () => {
+  assertEquals(playoffRoundShortName('Some Future Round'), 'Some Future Round');
 });

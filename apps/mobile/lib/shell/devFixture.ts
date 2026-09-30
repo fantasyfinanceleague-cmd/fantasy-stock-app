@@ -89,7 +89,12 @@ function league(over: Partial<League> & Pick<League, 'id' | 'name'>): League {
     league_type: 'matchup',
     duration_days: null,
     num_weeks: 10,
-    playoff_teams: 4,
+    // Matches lib/home/homeFixtureData.ts's FIXTURE_LEAGUE.playoffTeams
+    // (6) -- SeasonCard's week chips read `league.playoff_teams` (this
+    // object) but the actual playoff week structure comes from HOME_
+    // FIXTURE's own numbers, a fully independent fixture axis. A mismatch
+    // here would silently produce the wrong round short-name (B7).
+    playoff_teams: 6,
     current_week: 6,
     created_at: new Date(Date.now() - 50 * DAY).toISOString(),
     current_season_id: null,

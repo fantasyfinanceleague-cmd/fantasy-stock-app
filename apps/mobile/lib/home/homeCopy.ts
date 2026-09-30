@@ -56,6 +56,11 @@ export const THIS_WEEK_TAG = 'This week'; // board
 export function thisWeekLiveChip(week: number): string {
   return `Week ${week} · Live`; // board
 }
+/** B7 (Design Lead ruling, 2026-09-30): a playoff week's chip reads just
+ * "Live" with the dot -- the tag already carries the round name (e.g.
+ * "Semifinals"), so "Week 15 · Live" repeats the week number for no
+ * reason and names nothing the tag doesn't already say. */
+export const PLAYOFF_LIVE_CHIP = 'Live'; // board
 export const YOU_LABEL = 'You'; // board
 export function vsOpponentLabel(oppName: string): string {
   return `vs ${oppName}`; // board
