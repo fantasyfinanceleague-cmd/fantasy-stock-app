@@ -28,11 +28,13 @@ import {
   decideUserScorer,
   decideMatchupScoring,
   ledgerPositionState,
+  userWeekEndPricesComplete,
   BATCH_SKIP_REASON,
   MATCHUP_REFUSAL_REASON,
   type LedgerDraftRow,
   type LedgerState,
   type LedgerTradeRow,
+  type MatchupRefusalReason,
   type ScorerKind,
 } from './scoring-eligibility.ts';
 import { userNetHoldings } from '../_shared/draft-validation.ts';
@@ -122,6 +124,103 @@ Deno.test('batch: null week_end (Infinity age) -> stale even at week 1', () => {
 });
 
 // ===========================================================================
+// userWeekEndPricesComplete — PER-USER week-end-price completeness
+//
+// Found during review of the S7 fix (by both the security and supabase
+// reviewers, independently): before this function existed, the handler fed a
+// BATCH-LEVEL "does any row in the league-week have a close price" flag into
+// decideUserScorer for every user. snapshot-week-end's close writes are
+// decided all-or-nothing per league-week (close.ts's buildCloseWork) but then
+// APPLIED as a loop of separate per-row .update() calls (not one
+// transaction), so a mid-loop failure can leave one user's row(s) NULL while
+// others in the same batch are closed. The batch-level flag read that as
+// "closed" for every user, routing the affected user to 'full' and silently
+// dropping their unpriced position from calculateUserScore's totals instead
+// of refusing — reintroducing the exact partial-state shape the S7 fix was
+// meant to close, one level down.
+// ===========================================================================
+
+Deno.test('userWeekEndPricesComplete: every row priced -> true', () => {
+  assertEquals(
+    userWeekEndPricesComplete([{ weekEndPrice: 80 }, { weekEndPrice: 70 }]),
+    true,
+  );
+});
+
+Deno.test('userWeekEndPricesComplete: ANY row null -> false (per-row, not per-batch)', () => {
+  assertEquals(
+    userWeekEndPricesComplete([{ weekEndPrice: 80 }, { weekEndPrice: null }]),
+    false,
+  );
+  // Order doesn't matter.
+  assertEquals(
+    userWeekEndPricesComplete([{ weekEndPrice: null }, { weekEndPrice: 80 }]),
+    false,
+  );
+});
+
+Deno.test('userWeekEndPricesComplete: no rows at all -> false (nothing to be complete about)', () => {
+  assertEquals(userWeekEndPricesComplete([]), false);
+});
+
+Deno.test('userWeekEndPricesComplete: a single unpriced row -> false', () => {
+  assertEquals(userWeekEndPricesComplete([{ weekEndPrice: null }]), false);
+});
+
+Deno.test('REGRESSION (S7 partial-write): a batch where SOME users are closed and one is not — the unclosed user is close_incomplete, never full', () => {
+  // Mirrors the reviewer-found scenario: snapshot-week-end's per-row update
+  // loop closed alice's and bob's rows but failed on carol's (a transient
+  // write error, not an Alpaca pricing gap — buildCloseWork already decided
+  // all three were priceable). A BATCH-level hasWeekEndPrices would read
+  // `true` here (alice's and bob's rows ARE priced) and wrongly score carol
+  // as 'full', silently dropping her unpriced position. The per-user check
+  // must catch this even though snapshotData.some(...) across the whole
+  // batch is true.
+  const aliceSnaps = [{ weekEndPrice: 80 }];
+  const bobSnaps = [{ weekEndPrice: 199 }];
+  const carolSnaps = [{ weekEndPrice: null }]; // her row's update() failed mid-loop
+
+  // The old (wrong) batch-level computation: true, because SOME row is priced.
+  const batchLevelWouldSay = [...aliceSnaps, ...bobSnaps, ...carolSnaps].some((s) => s.weekEndPrice != null);
+  assertEquals(batchLevelWouldSay, true, 'sanity: the batch genuinely has priced rows, which is exactly what makes this dangerous');
+
+  // The fix: each user's OWN completeness, independent of the others.
+  assertEquals(userWeekEndPricesComplete(aliceSnaps), true);
+  assertEquals(userWeekEndPricesComplete(bobSnaps), true);
+  assertEquals(userWeekEndPricesComplete(carolSnaps), false);
+
+  assertEquals(
+    decideUserScorer({ hasSnapshot: true, hasWeekEndPrices: userWeekEndPricesComplete(aliceSnaps), weekNumber: 5 }),
+    'full' as ScorerKind,
+  );
+  assertEquals(
+    decideUserScorer({ hasSnapshot: true, hasWeekEndPrices: userWeekEndPricesComplete(bobSnaps), weekNumber: 5 }),
+    'full' as ScorerKind,
+  );
+  // The key assertion: carol is refused, not silently full-scored with a
+  // dropped position, DESPITE the batch-level flag being true.
+  assertEquals(
+    decideUserScorer({ hasSnapshot: true, hasWeekEndPrices: userWeekEndPricesComplete(carolSnaps), weekNumber: 5 }),
+    'close_incomplete' as ScorerKind,
+  );
+});
+
+Deno.test('REGRESSION (S7 partial-write, per-symbol): one user with TWO positions, only one priced — must still refuse, not silently drop the unpriced symbol', () => {
+  // A single user can also be partially closed: buildCloseWork updates rows
+  // one at a time, so even within one user's own snapshots, one symbol's
+  // update() can fail while another succeeds. calculateUserScore's
+  // `if (endPrice !== undefined)` guard would silently omit the unpriced
+  // symbol's contribution rather than error — so this must be caught here,
+  // before calculateUserScore ever runs.
+  const mixedSnaps = [{ weekEndPrice: 80 }, { weekEndPrice: null }];
+  assertEquals(userWeekEndPricesComplete(mixedSnaps), false);
+  assertEquals(
+    decideUserScorer({ hasSnapshot: true, hasWeekEndPrices: userWeekEndPricesComplete(mixedSnaps), weekNumber: 3 }),
+    'close_incomplete' as ScorerKind,
+  );
+});
+
+// ===========================================================================
 // GUARD 3a — decideUserScorer
 // ===========================================================================
 
@@ -132,10 +231,21 @@ Deno.test('user: snapshot + week_end_price -> full', () => {
   );
 });
 
-Deno.test('user: snapshot without week_end_price -> legacy', () => {
+Deno.test('user: snapshot without week_end_price -> close_incomplete (S7 — never score from live prices)', () => {
   assertEquals(
     decideUserScorer({ hasSnapshot: true, hasWeekEndPrices: false, weekNumber: 5 }),
-    'legacy' as ScorerKind,
+    'close_incomplete' as ScorerKind,
+  );
+});
+
+Deno.test('user: close_incomplete applies at week 1 too (week_end has already passed by construction)', () => {
+  // Every batch reaching process-week-results has week_end < now (the
+  // top-level query), so a snapshotted-but-unclosed week 1 is exactly the
+  // same "snapshot-week-end hasn't finished yet" situation as any other week
+  // — not a legitimate week-1 fallback case.
+  assertEquals(
+    decideUserScorer({ hasSnapshot: true, hasWeekEndPrices: false, weekNumber: 1 }),
+    'close_incomplete' as ScorerKind,
   );
 });
 
@@ -171,33 +281,96 @@ Deno.test('user: a snapshotted user is scored regardless of week number', () => 
 // ===========================================================================
 
 Deno.test('matchup: neither participant unscoreable -> proceed', () => {
-  const unscoreable = new Set<string>();
+  const unscoreable = new Map<string, MatchupRefusalReason>();
   assertEquals(decideMatchupScoring('u1', 'u2', unscoreable), { action: 'proceed' });
 });
 
-Deno.test('matchup: team1 unscoreable -> refuse', () => {
-  const unscoreable = new Set(['u1']);
+Deno.test('matchup: team1 unscoreable (no snapshot) -> refuse with NO_SNAPSHOT', () => {
+  const unscoreable = new Map([['u1', MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_SNAPSHOT]]);
   assertEquals(
     decideMatchupScoring('u1', 'u2', unscoreable),
     { action: 'refuse', reason: MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_SNAPSHOT },
   );
 });
 
-Deno.test('matchup: team2 unscoreable -> refuse', () => {
-  const unscoreable = new Set(['u2']);
+Deno.test('matchup: team2 unscoreable (no snapshot) -> refuse with NO_SNAPSHOT', () => {
+  const unscoreable = new Map([['u2', MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_SNAPSHOT]]);
   assertEquals(
     decideMatchupScoring('u1', 'u2', unscoreable),
     { action: 'refuse', reason: MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_SNAPSHOT },
+  );
+});
+
+Deno.test('matchup: team1 unscoreable (close incomplete, S7) -> refuse with NO_CLOSE_PRICE', () => {
+  const unscoreable = new Map([['u1', MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_CLOSE_PRICE]]);
+  assertEquals(
+    decideMatchupScoring('u1', 'u2', unscoreable),
+    { action: 'refuse', reason: MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_CLOSE_PRICE },
+  );
+});
+
+Deno.test('matchup: team2 unscoreable (close incomplete, S7) -> refuse with NO_CLOSE_PRICE', () => {
+  const unscoreable = new Map([['u2', MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_CLOSE_PRICE]]);
+  assertEquals(
+    decideMatchupScoring('u1', 'u2', unscoreable),
+    { action: 'refuse', reason: MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_CLOSE_PRICE },
+  );
+});
+
+Deno.test('matchup: BOTH participants unscoreable for DIFFERENT reasons -> NO_SNAPSHOT wins (severity, not team position)', () => {
+  // Found in review of the S7 fix: NO_SNAPSHOT (does not self-heal) must win
+  // over NO_CLOSE_PRICE (usually self-heals via the heal crons) regardless of
+  // which team carries which — reporting the self-healing-sounding reason
+  // would mask a matchup that will NOT actually heal on its own. See
+  // decideMatchupScoring's doc.
+  const team2HasTheSnapshotIssue = new Map<string, MatchupRefusalReason>([
+    ['u1', MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_CLOSE_PRICE],
+    ['u2', MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_SNAPSHOT],
+  ]);
+  assertEquals(
+    decideMatchupScoring('u1', 'u2', team2HasTheSnapshotIssue),
+    { action: 'refuse', reason: MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_SNAPSHOT },
+  );
+  // Swap which user carries which reason: NO_SNAPSHOT still wins, now from team1.
+  const team1HasTheSnapshotIssue = new Map<string, MatchupRefusalReason>([
+    ['u1', MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_SNAPSHOT],
+    ['u2', MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_CLOSE_PRICE],
+  ]);
+  assertEquals(
+    decideMatchupScoring('u1', 'u2', team1HasTheSnapshotIssue),
+    { action: 'refuse', reason: MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_SNAPSHOT },
+  );
+});
+
+Deno.test('matchup: BOTH participants unscoreable for the SAME reason -> that reason, trivially', () => {
+  const bothNoSnapshot = new Map<string, MatchupRefusalReason>([
+    ['u1', MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_SNAPSHOT],
+    ['u2', MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_SNAPSHOT],
+  ]);
+  assertEquals(
+    decideMatchupScoring('u1', 'u2', bothNoSnapshot),
+    { action: 'refuse', reason: MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_SNAPSHOT },
+  );
+  const bothNoClosePrice = new Map<string, MatchupRefusalReason>([
+    ['u1', MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_CLOSE_PRICE],
+    ['u2', MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_CLOSE_PRICE],
+  ]);
+  assertEquals(
+    decideMatchupScoring('u1', 'u2', bothNoClosePrice),
+    { action: 'refuse', reason: MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_CLOSE_PRICE },
   );
 });
 
 Deno.test('matchup: bye week gates on team1 only (null team2 never consulted)', () => {
-  // A bye has team2 == null. Even if the unscoreable set is non-empty, a null id
+  // A bye has team2 == null. Even if the unscoreable map is non-empty, a null id
   // can't be unscoreable, so a scoreable team1 proceeds...
-  assertEquals(decideMatchupScoring('u1', null, new Set(['someone-else'])), { action: 'proceed' });
+  assertEquals(
+    decideMatchupScoring('u1', null, new Map([['someone-else', MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_SNAPSHOT]])),
+    { action: 'proceed' },
+  );
   // ...and an unscoreable team1 on a bye still refuses.
   assertEquals(
-    decideMatchupScoring('u1', null, new Set(['u1'])),
+    decideMatchupScoring('u1', null, new Map([['u1', MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_SNAPSHOT]])),
     { action: 'refuse', reason: MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_SNAPSHOT },
   );
 });
@@ -232,12 +405,17 @@ function simulateWeek(
   matchups: SimMatchup[],
   weekNumber: number,
   hasWeekEndPrices: boolean,
-  scorer: (i: { hasSnapshot: boolean; hasWeekEndPrices: boolean; weekNumber: number }) => ScorerKind,
+  // Widened to accept decideUserScorerPreFix's historical 'legacy' return too
+  // (see its doc) — simulateWeek only ever checks for 'unscoreable'.
+  scorer: (i: { hasSnapshot: boolean; hasWeekEndPrices: boolean; weekNumber: number }) => ScorerKind | 'legacy',
 ): { scored: SimMatchup[]; refused: SimMatchup[] } {
-  const unscoreable = new Set<string>();
+  // This regression is specifically about the no-snapshot-past-week-1 case, so
+  // every entry carries that one reason — decideMatchupScoring's Map shape is
+  // exercised for real (with both reasons) in the GUARD 3b tests above.
+  const unscoreable = new Map<string, MatchupRefusalReason>();
   for (const u of users) {
     if (scorer({ hasSnapshot: u.hasSnapshot, hasWeekEndPrices, weekNumber }) === 'unscoreable') {
-      unscoreable.add(u.id);
+      unscoreable.set(u.id, MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_SNAPSHOT);
     }
   }
 
@@ -256,12 +434,18 @@ function simulateWeek(
  * 'unscoreable' branch — a snapshot-less user past week 1 fell straight into the
  * cumulative-from-entry 'fallback', fabricating an all-time-P/L score. This is the
  * exact leak the per-user gate closes.
+ *
+ * Its own return type ('legacy' included) is deliberately NOT the current
+ * ScorerKind — 'legacy' was removed from that union by the S7 fix (see
+ * ./index.ts's removed calculateWeeklyGainLegacy), but this function exists
+ * specifically to model what the code USED to return, so it keeps its own
+ * historical union rather than being forced onto the current one.
  */
 function decideUserScorerPreFix(i: {
   hasSnapshot: boolean;
   hasWeekEndPrices: boolean;
   weekNumber: number;
-}): ScorerKind {
+}): 'full' | 'legacy' | 'fallback' {
   if (i.hasSnapshot && i.hasWeekEndPrices) return 'full';
   if (i.hasSnapshot) return 'legacy';
   return 'fallback';
@@ -617,8 +801,76 @@ Deno.test('user: a snapshot always wins over the ledger branch', () => {
   );
   assertEquals(
     decideUserScorer({ hasSnapshot: true, hasWeekEndPrices: false, weekNumber: 4, ledger: FLAT }),
-    'legacy' as ScorerKind,
+    'close_incomplete' as ScorerKind,
   );
+});
+
+// ===========================================================================
+// S7 RECOVERABILITY — a refused close_incomplete matchup converges once the
+// close actually finishes (CLAUDE.md's partial-state rule: a refusal must be
+// recoverable, never a permanent stranding). This is what the heal crons
+// (22:00Z Friday, Saturday — see the migration) rely on: same snapshot row,
+// same matchup, a LATER run with hasWeekEndPrices now true.
+// ===========================================================================
+
+Deno.test('S7 RECOVERABILITY: close_incomplete refusal converges to full scoring once week_end_price lands', () => {
+  const inputsBeforeClose = { hasSnapshot: true, hasWeekEndPrices: false, weekNumber: 5 } as const;
+  const inputsAfterClose = { hasSnapshot: true, hasWeekEndPrices: true, weekNumber: 5 } as const;
+
+  // Run 1 (e.g. 21:15Z, snapshot-week-end still retrying): refused, not scored.
+  const kindBefore = decideUserScorer(inputsBeforeClose);
+  assertEquals(kindBefore, 'close_incomplete' as ScorerKind);
+  const matchupBefore = decideMatchupScoring(
+    'u1',
+    'u2',
+    new Map([['u1', MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_CLOSE_PRICE]]),
+  );
+  assertEquals(matchupBefore, {
+    action: 'refuse',
+    reason: MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_CLOSE_PRICE,
+  });
+
+  // Run 2 (e.g. the 22:00Z heal cron, close now complete): the SAME matchup
+  // (team1_gain is still NULL — the refusal never wrote anything) is picked up
+  // by the exact same `.is('team1_gain', null)` query and now scores normally.
+  const kindAfter = decideUserScorer(inputsAfterClose);
+  assertEquals(kindAfter, 'full' as ScorerKind);
+  const matchupAfter = decideMatchupScoring('u1', 'u2', new Map<string, MatchupRefusalReason>());
+  assertEquals(matchupAfter, { action: 'proceed' });
+});
+
+Deno.test("S7 MUTATION-CHECK: the pre-fix 'legacy' behavior would have SCORED this matchup instead of refusing it", () => {
+  // decideUserScorerPreFix (above) reconstructs the exact old branch this fix
+  // removed: `if (hasSnapshot) return 'legacy'`. 'legacy' was never unscoreable,
+  // so the old code's unscoreable set stayed empty and the matchup PROCEEDED —
+  // scored from live prices by calculateWeeklyGainLegacy, ignoring every
+  // mid-week trade, and written irreversibly. This pins that regression: if
+  // decideUserScorer's `if (i.hasSnapshot) return 'close_incomplete';` line is
+  // ever reverted to 'legacy', this test's CONTRAST (refuse vs proceed) is what
+  // a real mutation test would catch going stale, because the fixed and
+  // pre-fix decisions would then agree again.
+  const inputs = { hasSnapshot: true, hasWeekEndPrices: false, weekNumber: 5 };
+
+  // RED (pre-fix): 'legacy' is not in the unscoreable set -> matchup proceeds.
+  const preFixKind = decideUserScorerPreFix(inputs);
+  assertEquals(preFixKind, 'legacy');
+  const preFixUnscoreable = new Map<string, MatchupRefusalReason>(); // 'legacy' never added
+  assertEquals(
+    decideMatchupScoring('u1', 'u2', preFixUnscoreable),
+    { action: 'proceed' },
+    "pre-fix logic would score this matchup from live prices — exactly S7's bug",
+  );
+
+  // GREEN (current): 'close_incomplete' IS in the unscoreable set -> refused.
+  const fixedKind = decideUserScorer(inputs);
+  assertEquals(fixedKind, 'close_incomplete' as ScorerKind);
+  const fixedUnscoreable = new Map([['u1', MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_CLOSE_PRICE]]);
+  assertEquals(
+    decideMatchupScoring('u1', 'u2', fixedUnscoreable),
+    { action: 'refuse', reason: MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_CLOSE_PRICE },
+  );
+
+  assert(preFixKind !== fixedKind, 'the fix must change the decision, not just its label');
 });
 
 Deno.test('batch: every participant all-cash + no snapshots -> proceed (any week, any age)', () => {

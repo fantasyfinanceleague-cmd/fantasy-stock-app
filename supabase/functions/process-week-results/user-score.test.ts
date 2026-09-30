@@ -36,11 +36,13 @@ import {
   decideMatchupScoring,
   decideUserScorer,
   ledgerPositionState,
+  userWeekEndPricesComplete,
   BATCH_SKIP_REASON,
   MATCHUP_REFUSAL_REASON,
   type BatchDecision,
   type LedgerDraftRow,
   type LedgerTradeRow,
+  type MatchupRefusalReason,
   type ScorerKind,
 } from './scoring-eligibility.ts';
 import {
@@ -129,7 +131,6 @@ function runWeek(w: WeekInput): WeekResult {
 
   const allSnaps = Object.values(w.snapshots).flat();
   const hasSnapshots = allSnaps.length > 0;
-  const hasWeekEndPrices = allSnaps.some((s) => s.weekEndPrice != null);
 
   const ledgers = new Map(
     [...userIds].map((u) => [u, ledgerPositionState(u, w.drafts, w.trades, WEEK_START, WEEK_END)]),
@@ -140,7 +141,11 @@ function runWeek(w: WeekInput): WeekResult {
       u,
       decideUserScorer({
         hasSnapshot: (w.snapshots[u]?.length ?? 0) > 0,
-        hasWeekEndPrices,
+        // Per-user (userWeekEndPricesComplete), NOT "does any row in the
+        // WHOLE league-week batch have a price" — mirrors index.ts exactly,
+        // after the S7-review fix. Using a batch-level `allSnaps.some(...)`
+        // here would hide the exact partial-write bug that fix closes.
+        hasWeekEndPrices: userWeekEndPricesComplete(w.snapshots[u] || []),
         weekNumber: w.weekNumber,
         ledger: ledgers.get(u),
       }),
@@ -157,12 +162,13 @@ function runWeek(w: WeekInput): WeekResult {
   const scores = new Map<string, UserScore>();
   if (batch.action === 'skip') return { batch, kinds, scores, matchups: [] };
 
-  const unscoreable = new Set<string>();
+  const unscoreable = new Map<string, MatchupRefusalReason>();
   for (const u of userIds) {
     const kind = kinds.get(u)!;
     if (kind === 'full') scores.set(u, calculateUserScore(u, w.snapshots[u], midWeek(u)));
     else if (kind === 'cash_only') scores.set(u, scoreCashOnlyUser(u, midWeek(u), ledgers.get(u)!.hasLedgerHistory));
-    else if (kind === 'unscoreable') unscoreable.add(u);
+    else if (kind === 'unscoreable') unscoreable.set(u, MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_SNAPSHOT);
+    else if (kind === 'close_incomplete') unscoreable.set(u, MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_CLOSE_PRICE);
     else throw new Error(`scenario reached unmodelled scorer '${kind}' for ${u}`);
   }
 
@@ -219,7 +225,7 @@ Deno.test('(a) DISCRIMINATOR: without the ledger proof the same user is refused 
     'unscoreable',
   );
   assertEquals(
-    decideMatchupScoring(CASH, OPP, new Set([CASH])),
+    decideMatchupScoring(CASH, OPP, new Map([[CASH, MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_SNAPSHOT]])),
     { action: 'refuse', reason: MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_SNAPSHOT },
   );
 });
@@ -350,6 +356,38 @@ Deno.test('(d) PARTIAL: one symbol sold to zero, another still held -> still ref
   });
   assertEquals(r.kinds.get(CASH), 'unscoreable');
   assert(r.matchups[0].refused);
+});
+
+Deno.test('(d) S7 PARTIAL CLOSE: a user with two snapshot rows, only one end-priced -> close_incomplete, refused — never silently scored missing a position', () => {
+  // Mirrors snapshot-week-end's non-atomic per-row update loop leaving one
+  // row of a user's own snapshots unclosed while another closes fine (the
+  // exact scenario reviewers found in the S7 fix). If hasWeekEndPrices were
+  // computed at BATCH level (any row anywhere has a price), OPP would read
+  // as closed and calculateUserScore would silently drop the MSFT
+  // contribution (weekEndPrices.get('KO') undefined -> skipped) instead of
+  // refusing — a real dollar understated with no error surfaced, written
+  // irreversibly. This must refuse instead.
+  const oppPartiallyClosedSnaps = {
+    [OPP]: [
+      { symbol: 'MSFT', quantity: 5, weekStartPrice: 200, weekEndPrice: 199, enteredMidWeek: false }, // closed
+      { symbol: 'KO', quantity: 4, weekStartPrice: 60, weekEndPrice: null, enteredMidWeek: false },   // NOT closed
+    ],
+  };
+  const r = runWeek({
+    weekNumber: 5,
+    drafts: [d(CASH, 'AAPL', 10), d(OPP, 'MSFT', 5), d(OPP, 'KO', 4)],
+    trades: [CASH_SOLD_OUT],
+    snapshots: oppPartiallyClosedSnaps,
+    matchups: [{ team1: CASH, team2: OPP }],
+  });
+  assertEquals(r.kinds.get(OPP), 'close_incomplete');
+  assertEquals(r.matchups[0], {
+    refused: true,
+    reason: MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_CLOSE_PRICE,
+  });
+  // Nothing was scored for OPP — the matchup carries no dollar figures at
+  // all, which is the whole point: a refusal, not an understated number.
+  assertEquals(r.scores.has(OPP), false);
 });
 
 Deno.test('(d) in the SAME week an all-cash matchup scores while the broken one is refused', () => {
