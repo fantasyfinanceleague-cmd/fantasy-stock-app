@@ -31,6 +31,7 @@ import {
   type HomeViewModel,
 } from './buildHomeViewModel';
 import type { MarketInfo } from './homePhase';
+import { standardWeekSessions, type MarketCalendarSession } from './marketWeek';
 import {
   HOME_FIXTURE,
   ROBERTO_HOLDINGS,
@@ -76,7 +77,7 @@ function cents(v: number): number {
 
 function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): {
   data: GetHomeLeagueResult; meta: HomeLeagueMeta; market: MarketInfo; now: Date;
-  quote: (s: string) => number | null; bars: BarsBySymbol;
+  quote: (s: string) => number | null; bars: BarsBySymbol; marketCalendar: MarketCalendarSession[];
 } {
   const myDrafts = ROBERTO_HOLDINGS.map((h) => ({ symbol: h.symbol, entry_price: h.draft, quantity: fixtureQty(h), created_at: '2026-08-01T00:00:00Z' }));
   const mySnapshots = ROBERTO_HOLDINGS.map((h) => ({ symbol: h.symbol, quantity: fixtureQty(h), week_start_price: h.mon, entered_mid_week: false, created_at: FIXTURE_WEEK6_START }));
@@ -247,12 +248,18 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
     bars[h.symbol] = bars[h.symbol] ?? [{ date: '2026-09-18', close: h.prev }, { date: '2026-09-21', close: h.mon }, { date: '2026-09-24', close: h.thu }];
   }
 
-  return { data, meta, market, now, quote, bars };
+  // B1 (Design Lead, 2026-09-30): a standard no-holiday Mon-Fri week for
+  // every distinct week this fixture's matchups touch, so captures also
+  // exercise the real resolveWeekWindow path rather than falling back to
+  // the (known-wrong) nominal timestamps for lack of any calendar rows.
+  const marketCalendar: MarketCalendarSession[] = matchups.flatMap((m) => standardWeekSessions(m.week_end));
+
+  return { data, meta, market, now, quote, bars, marketCalendar };
 }
 
 export function useHomeLeague(leagueId: string | null): UseHomeLeagueResult {
   const { user } = useAuth();
-  const { leagues, homeSummaryByLeague, market } = useLeagueContext();
+  const { leagues, homeSummaryByLeague, market, marketCalendar } = useLeagueContext();
   const [status, setStatus] = useState<HomeLeagueStatus>('loading');
   const [viewModel, setViewModel] = useState<HomeViewModel | null>(null);
   const [summary, setSummary] = useState<HomeSummaryRow | null>(null);
@@ -276,10 +283,10 @@ export function useHomeLeague(leagueId: string | null): UseHomeLeagueResult {
     }
 
     if (HOME_FIXTURE) {
-      const { data, meta, market: fixtureMarket, now: fixtureNow, quote, bars } = fixtureHomeLeague(HOME_FIXTURE);
+      const { data, meta, market: fixtureMarket, now: fixtureNow, quote, bars, marketCalendar: fixtureMarketCalendar } = fixtureHomeLeague(HOME_FIXTURE);
       const vm = buildHomeViewModel({
         now: fixtureNow, meta, market: fixtureMarket,
-        data, quote, bars, playoffRoundLabelForWeek,
+        data, quote, bars, playoffRoundLabelForWeek, marketCalendar: fixtureMarketCalendar,
       });
       if (!isStale()) {
         setViewModel(vm);
@@ -375,7 +382,7 @@ export function useHomeLeague(leagueId: string | null): UseHomeLeagueResult {
     const vm = buildHomeViewModel({
       now: new Date(), meta, market: toMarketInfo(market), data,
       quote: (sym: string) => quotePrices[sym] ?? null,
-      bars, playoffRoundLabelForWeek,
+      bars, playoffRoundLabelForWeek, marketCalendar,
     });
 
     cacheRef.current.set(leagueId, vm);
@@ -384,7 +391,7 @@ export function useHomeLeague(leagueId: string | null): UseHomeLeagueResult {
     setSummary(summary);
     setStatus('ready');
     setError(null);
-  }, [leagueId, user?.id, leagues, homeSummaryByLeague, market]);
+  }, [leagueId, user?.id, leagues, homeSummaryByLeague, market, marketCalendar]);
 
   useEffect(() => {
     // Serve the cached view instantly on a league switch (H5), then

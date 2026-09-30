@@ -6,6 +6,7 @@ import { getSeasonLabel, getSeasonPhase } from './weekStatus';
 import type { SheetLeague } from './shell/leagueSheet';
 import { activeLeagueStorageKey, resolveActiveLeagueId } from './shell/activeLeague';
 import { FIXTURE_NETWORK_MS, SHELL_FIXTURE, fixtureLeagues } from './shell/devFixture';
+import type { MarketCalendarSession } from './home/marketWeek';
 
 export interface League {
   id: string;
@@ -81,6 +82,14 @@ interface LeagueContextType {
    * rather than collapsed to a boolean. Null only while still loading or
    * on a failed read (never fabricated as "open"). */
   market: MarketRow | null;
+  /** public.market_calendar rows (20261005000002) — B1 (Design Lead,
+   * 2026-09-30): the real Monday-open/Friday-close session bounds
+   * buildHomeViewModel needs to reinterpret schedule.ts's fixed-UTC,
+   * nominal-Tuesday matchups.week_start/week_end. Empty (never
+   * fabricated) on a failed read or while still loading — every caller
+   * already falls back to the nominal timestamp when it can't resolve a
+   * week from this list. */
+  marketCalendar: MarketCalendarSession[];
   refresh: () => Promise<void>;
 }
 
@@ -143,13 +152,14 @@ async function fetchSheetFacts(userId: string, leagueData: League[]) {
   const ids = leagueData.map((l) => l.id);
   const seasonIds = leagueData.map((l) => l.current_season_id).filter((id): id is string => !!id);
 
-  const [summary, members, seasons, market] = await Promise.all([
+  const [summary, members, seasons, market, calendar] = await Promise.all([
     supabase.rpc('get_home_summary'),
     supabase.from('league_members').select('league_id').in('league_id', ids),
     seasonIds.length
       ? supabase.from('league_seasons').select('id, champion_user_id').in('id', seasonIds)
       : Promise.resolve({ data: [] as { id: string; champion_user_id: string | null }[], error: null }),
     supabase.rpc('market_session_status'),
+    supabase.from('market_calendar').select('session_date, open_et, close_et'),
   ]);
 
   const summaryByLeague = new Map<string, HomeSummaryRow>();
@@ -172,6 +182,16 @@ async function fetchSheetFacts(userId: string, leagueData: League[]) {
   if (market.error) console.warn('[leagues] market_session_status failed', market.error.message);
   const marketRow = (!market.error ? (market.data as MarketRow[] | null)?.[0] : null) ?? null;
   const marketOpen = marketRow?.status === 'open';
+
+  // B1: an empty array (never fabricated rows) on a failed read — every
+  // caller already falls back to the nominal matchups timestamp when it
+  // can't resolve a week from this list (marketWeek.ts's resolveWeekWindow).
+  if (calendar.error) console.warn('[leagues] market_calendar failed', calendar.error.message);
+  const marketCalendar: MarketCalendarSession[] = calendar.error
+    ? []
+    : ((calendar.data ?? []) as { session_date: string; open_et: string; close_et: string }[]).map((row) => ({
+        sessionDate: row.session_date, openEt: row.open_et, closeEt: row.close_et,
+      }));
 
   const sheet = leagueData.map<SheetLeague>((league) => {
     const phase = getSeasonPhase(league);
@@ -197,7 +217,7 @@ async function fetchSheetFacts(userId: string, leagueData: League[]) {
     };
   });
 
-  return { sheet, summaryByLeague, market: marketRow };
+  return { sheet, summaryByLeague, market: marketRow, marketCalendar };
 }
 
 async function readStoredActiveLeague(userId: string): Promise<string | null> {
@@ -214,6 +234,7 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
   const [sheetLeagues, setSheetLeagues] = useState<SheetLeague[]>([]);
   const [homeSummaryByLeague, setHomeSummaryByLeague] = useState<Map<string, HomeSummaryRow>>(new Map());
   const [market, setMarket] = useState<MarketRow | null>(null);
+  const [marketCalendar, setMarketCalendar] = useState<MarketCalendarSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeLeagueId, setActiveLeagueIdState] = useState<string | null>(null);
   // The latest choice, readable from inside an in-flight fetch (a pick made
@@ -262,6 +283,7 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
       setSheetLeagues([]);
       setHomeSummaryByLeague(new Map());
       setMarket(null);
+      setMarketCalendar([]);
       setLoading(false);
       return;
     }
@@ -288,6 +310,7 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
     setSheetLeagues(sheet);
     setHomeSummaryByLeague(facts.summaryByLeague);
     setMarket(facts.market);
+    setMarketCalendar(facts.marketCalendar);
 
     // In-session choice first, then the persisted one, then the first live
     // league (lib/shell/activeLeague.ts). A league the user has left falls
@@ -304,6 +327,7 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
       setSheetLeagues([]);
       setHomeSummaryByLeague(new Map());
       setMarket(null);
+      setMarketCalendar([]);
       activeRef.current = null;
       setActiveLeagueIdState(null);
       setLoading(false);
@@ -326,6 +350,7 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
         sheetLeagues,
         homeSummaryByLeague,
         market,
+        marketCalendar,
         refresh: fetchLeagues,
       }}
     >

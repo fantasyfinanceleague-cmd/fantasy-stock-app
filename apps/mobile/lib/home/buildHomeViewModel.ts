@@ -20,6 +20,7 @@ import { buildSeasonGainSeries, type SeasonWeekInput, type SeasonGainSeriesResul
 import { todayChange, type TodayPosition } from './todayChange';
 import { teamValue, type StakeMode } from './teamValue';
 import { seasonGain } from './seasonGain';
+import { resolveWeekWindow, type MarketCalendarSession } from './marketWeek';
 
 export interface HomeLedgerRow {
   symbol: string;
@@ -80,6 +81,11 @@ export interface HomeViewModelInput {
    * and for `prevClose` (the last close strictly before `now`'s date). */
   bars: BarsBySymbol;
   playoffRoundLabelForWeek: (week: number | null | undefined, numWeeks: number | null | undefined, playoffTeams: number | null | undefined) => string | null;
+  /** public.market_calendar rows (any range covering the matchup weeks in
+   * `data.matchups`) — B1's real session bounds, see matchupRowFor's doc.
+   * An empty array is safe (every row falls back to its nominal
+   * timestamp), never a crash. */
+  marketCalendar: MarketCalendarSession[];
 }
 
 export interface HeroViewModel {
@@ -156,15 +162,33 @@ function rawMatchupFor(data: GetHomeLeagueResult, week: number): GetHomeLeagueRe
   return data.matchups.find((row) => row.week_number === week) ?? null;
 }
 
-function matchupRowFor(data: GetHomeLeagueResult, meta: HomeLeagueMeta, week: number): MatchupRow | null {
+/**
+ * B1 (Design Lead, 2026-09-30): `m.week_start`/`m.week_end` are schedule.ts's
+ * fixed-UTC, nominal-Tuesday-to-Friday timestamps -- never the real
+ * Monday-open/Friday-close a person sees (wrong by an hour every summer,
+ * wrong by a full trading day every Monday). `m.week_end`'s own ET
+ * calendar date still reliably identifies WHICH real week this is (see
+ * marketWeek.ts's doc), so `resolveWeekWindow` looks up that week's actual
+ * session bounds from the market calendar and this is the one place a raw
+ * matchups row becomes a MatchupRow -- homePhase.ts and homeCopy.ts never
+ * see the nominal timestamps at all, and neither needs to know this
+ * lookup happened. Falls back to the nominal values when the calendar has
+ * no coverage for that week (never a fabricated guess), matching
+ * market_session_status's own "unknown, not invented" discipline.
+ */
+function matchupRowFor(data: GetHomeLeagueResult, meta: HomeLeagueMeta, week: number, marketCalendar: MarketCalendarSession[]): MatchupRow | null {
   const m = rawMatchupFor(data, week);
   if (!m) return null;
   const isMe1 = m.team1_user_id === meta.myUserId;
   const myGain = isMe1 ? m.team1_gain : m.team2_gain;
   const oppGain = isMe1 ? m.team2_gain : m.team1_gain;
   const hasOpponent = isMe1 ? !!m.team2_user_id : !!m.team1_user_id;
+  const resolved = resolveWeekWindow(m.week_end, marketCalendar);
   return {
-    week: m.week_number, weekStart: m.week_start, weekEnd: m.week_end, isPlayoff: m.is_playoff,
+    week: m.week_number,
+    weekStart: resolved?.weekStart ?? m.week_start,
+    weekEnd: resolved?.weekEnd ?? m.week_end,
+    isPlayoff: m.is_playoff,
     myGain, opponentGain: oppGain, hasOpponent,
   };
 }
@@ -247,10 +271,10 @@ function prevCloseFor(bars: BarsBySymbol, symbol: string, now: Date): number | n
 }
 
 export function buildHomeViewModel(input: HomeViewModelInput): HomeViewModel {
-  const { now, meta, market, data, quote, bars } = input;
+  const { now, meta, market, data, quote, bars, marketCalendar } = input;
 
-  const current = matchupRowFor(data, meta, meta.currentWeek);
-  const previous = matchupRowFor(data, meta, meta.currentWeek - 1);
+  const current = matchupRowFor(data, meta, meta.currentWeek, marketCalendar);
+  const previous = matchupRowFor(data, meta, meta.currentWeek - 1, marketCalendar);
   const { laterPlayoffWeek, lastPlayoffLoss, lastPlayoffWeek } = playoffStatusFlags(data, meta);
 
   const phase = homePhase(
@@ -284,7 +308,7 @@ export function buildHomeViewModel(input: HomeViewModelInput): HomeViewModel {
   // stored gain — never a live recompute, which is exactly the case the
   // spec wants for a scored week anyway.
   const relevantWeek = 'week' in phase ? phase.week : meta.currentWeek;
-  const relevantRow = relevantWeek === meta.currentWeek ? current : matchupRowFor(data, meta, relevantWeek);
+  const relevantRow = relevantWeek === meta.currentWeek ? current : matchupRowFor(data, meta, relevantWeek, marketCalendar);
   const relevantIsCurrent = relevantWeek === meta.currentWeek;
 
   const myCurrentSnapshots = toLiveSnapshots(data.current_week.my_snapshots);
@@ -391,7 +415,7 @@ export function buildHomeViewModel(input: HomeViewModelInput): HomeViewModel {
   const weeks: SeasonWeekInput[] = [];
   let closesByDate: Record<string, Record<string, number>> = {};
   for (let w = 1; w <= meta.currentWeek; w++) {
-    const row = matchupRowFor(data, meta, w);
+    const row = matchupRowFor(data, meta, w, marketCalendar);
     const isCurrent = w === meta.currentWeek;
     const weekStart = row?.weekStart ?? now.toISOString();
     const weekEnd = row?.weekEnd ?? now.toISOString();

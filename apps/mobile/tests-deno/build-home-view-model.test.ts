@@ -13,6 +13,7 @@ import { buildHomeViewModel, type GetHomeLeagueResult, type HomeLeagueMeta } fro
 import { windowSeries } from '../lib/home/seasonGainSeries.ts';
 import { playoffRoundLabelForWeek } from '../lib/playoffs.ts';
 import { ROBERTO_WEEKS, FIXTURE_WEEK6_START, FIXTURE_WEEK6_END } from '../lib/home/homeFixtureData.ts';
+import { standardWeekSessions } from '../lib/home/marketWeek.ts';
 
 const ROBERTO = [
   { symbol: 'NVDA', draft: 290.1, mon: 300.2, prev: 306.68, thu: 318.37 },
@@ -107,7 +108,7 @@ Deno.test('honesty check: the chart endpoint equals the hero season-gain number'
   const now = new Date('2026-09-24T17:37:00-04:00'); // Thursday, after market close for bars purposes
   const vm = buildHomeViewModel({
     now, meta, market: { status: 'closed', reason: 'after_hours', nextOpenAt: null },
-    data, quote, bars, playoffRoundLabelForWeek,
+    data, quote, bars, playoffRoundLabelForWeek, marketCalendar: [],
   });
   const endpoint = vm.season!.points[vm.season!.points.length - 1].gain;
   assertEquals(endpoint, vm.hero!.seasonGainDollars);
@@ -118,7 +119,7 @@ Deno.test('honesty check: the 1W endpoint equals the this-week live score', () =
   const now = new Date('2026-09-24T17:37:00-04:00');
   const vm = buildHomeViewModel({
     now, meta, market: { status: 'closed', reason: 'after_hours', nextOpenAt: null },
-    data, quote, bars, playoffRoundLabelForWeek,
+    data, quote, bars, playoffRoundLabelForWeek, marketCalendar: [],
   });
   const win = windowSeries(vm.season!, '1W', 5); // week index 5 = week 6
   const endpoint = win[win.length - 1].gain;
@@ -130,7 +131,7 @@ Deno.test('honesty check: every completed week (1-5) is exactly ONE real point, 
   const now = new Date('2026-09-24T17:37:00-04:00');
   const vm = buildHomeViewModel({
     now, meta, market: { status: 'closed', reason: 'after_hours', nextOpenAt: null },
-    data, quote, bars, playoffRoundLabelForWeek,
+    data, quote, bars, playoffRoundLabelForWeek, marketCalendar: [],
   });
   // No-cosmetic-ramp ruling (Orchestrator, 2026-09-30): a past, scored
   // week contributes exactly one point (week 1 also carries the series'
@@ -150,7 +151,7 @@ Deno.test('phase is live_open (Thursday, market open) and the this-week card has
   const now = new Date('2026-09-24T13:37:00-04:00'); // Thu 1:37 PM ET
   const vm = buildHomeViewModel({
     now, meta, market: { status: 'open', reason: 'regular_session', nextOpenAt: null },
-    data, quote, bars, playoffRoundLabelForWeek,
+    data, quote, bars, playoffRoundLabelForWeek, marketCalendar: [],
   });
   assertEquals(vm.phase.kind, 'live_open');
   assertEquals(vm.thisWeek !== null, true);
@@ -175,7 +176,7 @@ Deno.test('C1: the weekend after current_week advances shows the REAL scored fin
   const now = new Date('2026-09-26T12:00:00.000Z'); // Saturday
   const vm = buildHomeViewModel({
     now, meta: advancedMeta, market: { status: 'closed', reason: 'weekend', nextOpenAt: '2026-09-28T13:30:00.000Z' },
-    data, quote, bars, playoffRoundLabelForWeek,
+    data, quote, bars, playoffRoundLabelForWeek, marketCalendar: [],
   });
 
   assertEquals(vm.phase.kind, 'scored');
@@ -203,7 +204,7 @@ Deno.test('C3: laterPlayoffWeek/lastPlayoffLoss are derived from matchups, not h
   const now = new Date('2026-12-15T18:00:00.000Z');
   const vm = buildHomeViewModel({
     now, meta: playoffMeta, market: { status: 'open', reason: 'regular_session', nextOpenAt: null },
-    data, quote, bars, playoffRoundLabelForWeek,
+    data, quote, bars, playoffRoundLabelForWeek, marketCalendar: [],
   });
   assertEquals(vm.phase.kind, 'playoff_bye');
   if (vm.phase.kind === 'playoff_bye') assertEquals(vm.phase.week, 16);
@@ -220,7 +221,7 @@ Deno.test('C3: a first-round bye is found whether I am in team1 OR team2 of the 
   const now = new Date('2026-12-15T18:00:00.000Z');
   const vm = buildHomeViewModel({
     now, meta: playoffMeta, market: { status: 'open', reason: 'regular_session', nextOpenAt: null },
-    data, quote, bars, playoffRoundLabelForWeek,
+    data, quote, bars, playoffRoundLabelForWeek, marketCalendar: [],
   });
   assertEquals(vm.phase.kind, 'playoff_bye');
   if (vm.phase.kind === 'playoff_bye') assertEquals(vm.phase.week, 16);
@@ -239,7 +240,7 @@ Deno.test('C3: a round-2 game with a real, decided opponent is an ordinary live 
   const now = new Date('2026-12-15T18:00:00.000Z');
   const vm = buildHomeViewModel({
     now, meta: playoffMeta, market: { status: 'open', reason: 'regular_session', nextOpenAt: null },
-    data, quote, bars, playoffRoundLabelForWeek,
+    data, quote, bars, playoffRoundLabelForWeek, marketCalendar: [],
   });
   assertEquals(vm.phase.kind, 'live_open');
   if (vm.phase.kind === 'live_open') assertEquals(vm.phase.isPlayoff, true);
@@ -255,7 +256,7 @@ Deno.test('C3: a real elimination (last playoff row scored as a loss, no later r
   const now = new Date('2026-12-21T18:00:00.000Z');
   const vm = buildHomeViewModel({
     now, meta: playoffMeta, market: { status: 'open', reason: 'regular_session', nextOpenAt: null },
-    data, quote, bars, playoffRoundLabelForWeek,
+    data, quote, bars, playoffRoundLabelForWeek, marketCalendar: [],
   });
   assertEquals(vm.phase.kind, 'eliminated');
   // Round comes from the REAL last-played week (15), never a guess like
@@ -272,7 +273,7 @@ Deno.test('C3: a team never seeded into the playoff bracket reads missed_playoff
   const now = new Date('2026-12-15T18:00:00.000Z');
   const vm = buildHomeViewModel({
     now, meta: playoffMeta, market: { status: 'open', reason: 'regular_session', nextOpenAt: null },
-    data, quote, bars, playoffRoundLabelForWeek,
+    data, quote, bars, playoffRoundLabelForWeek, marketCalendar: [],
   });
   assertEquals(vm.phase.kind, 'missed_playoffs');
 });
@@ -286,7 +287,7 @@ Deno.test('I12: an unpriced symbol on each side reaches thisWeek.you/opponent.un
   const noNvdaOrAmzn = (sym: string) => (sym === 'NVDA' || sym === 'AMZN' ? null : quote(sym));
   const vm = buildHomeViewModel({
     now, meta, market: { status: 'open', reason: 'regular_session', nextOpenAt: null },
-    data, quote: noNvdaOrAmzn, bars, playoffRoundLabelForWeek,
+    data, quote: noNvdaOrAmzn, bars, playoffRoundLabelForWeek, marketCalendar: [],
   });
   assertEquals(vm.thisWeek!.you.unpriced, ['NVDA']);
   assertEquals(vm.thisWeek!.opponent.unpriced, ['AMZN']);
@@ -301,7 +302,7 @@ Deno.test('I12: a missing prevClose only shows up in unpricedToday, never in unp
   const noNvdaBars = { ...bars, NVDA: [] }; // prevCloseFor(bars, 'NVDA', now) -> null; quote('NVDA') is untouched
   const vm = buildHomeViewModel({
     now, meta, market: { status: 'open', reason: 'regular_session', nextOpenAt: null },
-    data, quote, bars: noNvdaBars, playoffRoundLabelForWeek,
+    data, quote, bars: noNvdaBars, playoffRoundLabelForWeek, marketCalendar: [],
   });
   assertEquals(vm.hero!.unpricedToday, ['NVDA']);
   assertEquals(vm.hero!.unpricedValue, []);
@@ -313,8 +314,81 @@ Deno.test('season gain through week 5 matches ROBERTO_WEEKS = 129.99, before thi
   const now = new Date('2026-09-24T17:37:00-04:00');
   const vm = buildHomeViewModel({
     now, meta, market: { status: 'closed', reason: 'after_hours', nextOpenAt: null },
-    data, quote, bars, playoffRoundLabelForWeek,
+    data, quote, bars, playoffRoundLabelForWeek, marketCalendar: [],
   });
   const throughW5 = vm.season!.weekBase[5]; // cumulative just before week 6 starts
   assertAlmostEquals(throughW5, 129.99, 1e-9);
+});
+
+// ── B1 (Design Lead, 2026-09-30): real market-calendar session bounds,
+// not schedule.ts's fixed-UTC nominal-Tuesday timestamps. These matchups
+// rows are written in schedule.ts's OWN shape (week_start = nominal
+// Tuesday 14:30Z, week_end = nominal Friday 21:00Z -- the fixed-UTC
+// quirk), not the already-correct times buildFixtureInput's week 6 uses,
+// so these tests actually exercise the bug being fixed. ───────────────────
+
+function nominalWeek6(data: GetHomeLeagueResult) {
+  const week6 = data.matchups.find((m) => m.week_number === 6)!;
+  week6.week_start = '2026-09-22T14:30:00.000Z'; // nominal Tuesday, fixed UTC (schedule.ts)
+  week6.week_end = '2026-09-25T21:00:00.000Z'; // nominal Friday, fixed UTC (schedule.ts)
+  return week6;
+}
+
+Deno.test('B1: Monday 10:00 AM ET is live_open, not pre_season — the real week starts Monday, not the nominal Tuesday', () => {
+  const { data, meta, quote, bars } = buildFixtureInput();
+  nominalWeek6(data);
+  const marketCalendar = standardWeekSessions('2026-09-25T21:00:00.000Z'); // real Mon 9/21 - Fri 9/25
+  const now = new Date('2026-09-21T10:00:00-04:00'); // Monday 10:00 AM EDT
+  const vm = buildHomeViewModel({
+    now, meta, market: { status: 'open', reason: 'regular_session', nextOpenAt: null },
+    data, quote, bars, playoffRoundLabelForWeek, marketCalendar,
+  });
+  assertEquals(vm.phase.kind, 'live_open');
+});
+
+Deno.test('B1: without the market calendar, the same Monday 10:00 AM ET is stuck on last week\'s scored state — pins the bug the fix removes', () => {
+  const { data, meta, quote, bars } = buildFixtureInput();
+  nominalWeek6(data);
+  const now = new Date('2026-09-21T10:00:00-04:00'); // Monday 10:00 AM EDT
+  const vm = buildHomeViewModel({
+    now, meta, market: { status: 'open', reason: 'regular_session', nextOpenAt: null },
+    data, quote, bars, playoffRoundLabelForWeek, marketCalendar: [],
+  });
+  // now < nominal week_start (Tue 14:30Z) and week 5 IS already scored, so
+  // the OLD behaviour reads this as still "week 5, scored" all Monday
+  // instead of "week 6, live" -- exactly B1's "shows last week's scored
+  // state while Monday is being scored," a full trading day wrong.
+  assertEquals(vm.phase.kind, 'scored');
+  if (vm.phase.kind === 'scored') assertEquals(vm.phase.week, 5);
+});
+
+Deno.test('B1: Friday 4:30 PM ET is scoring, not still live — the real close is 4:00 PM, not the nominal 5:00 PM EDT', () => {
+  const { data, meta, quote, bars } = buildFixtureInput();
+  nominalWeek6(data);
+  const marketCalendar = standardWeekSessions('2026-09-25T21:00:00.000Z');
+  const now = new Date('2026-09-25T16:30:00-04:00'); // Friday 4:30 PM EDT
+  const vm = buildHomeViewModel({
+    now, meta, market: { status: 'closed', reason: 'after_hours', nextOpenAt: null },
+    data, quote, bars, playoffRoundLabelForWeek, marketCalendar,
+  });
+  assertEquals(vm.phase.kind, 'scoring');
+});
+
+Deno.test('B1: a Monday holiday pushes live_open to Tuesday, from the calendar, never a weekday guess', () => {
+  const { data, meta, quote, bars } = buildFixtureInput();
+  nominalWeek6(data);
+  // Monday 9/21 missing from the calendar (holiday) -- Tue-Fri only.
+  const marketCalendar = standardWeekSessions('2026-09-25T21:00:00.000Z').slice(1);
+  const mondayNow = new Date('2026-09-21T10:00:00-04:00');
+  const stillClosed = buildHomeViewModel({
+    now: mondayNow, meta, market: { status: 'closed', reason: 'holiday', nextOpenAt: '2026-09-22T13:30:00.000Z' },
+    data, quote, bars, playoffRoundLabelForWeek, marketCalendar,
+  });
+  assertEquals(stillClosed.phase.kind, 'scored'); // Monday's real session hasn't opened yet -- still week 5
+  const tuesdayNow = new Date('2026-09-22T10:00:00-04:00');
+  const nowOpen = buildHomeViewModel({
+    now: tuesdayNow, meta, market: { status: 'open', reason: 'regular_session', nextOpenAt: null },
+    data, quote, bars, playoffRoundLabelForWeek, marketCalendar,
+  });
+  assertEquals(nowOpen.phase.kind, 'live_open');
 });
