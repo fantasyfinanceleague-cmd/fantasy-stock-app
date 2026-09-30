@@ -22,7 +22,7 @@ The Orchestrator's suggested order stands, with **two adjustments**:
 |---|---|---|---|---|
 | 1 | **3a** | Web landing: the showpiece, **live on merge** | **Now** (web foundation merged, PR #35) | `phase3a-landing.md` |
 | 2 | **3b-1** | Mobile shell + first run: nav, league pill/sheet, auth, onboarding, empty states, profile | When `ui/foundation-mobile` merges | `phase3b1-mobile-shell.md` |
-| 3 | **3b-2** | Mobile Home dashboard | After 3b-1, **and** asks #1, #2 (#3 already met on the client, PR #37) | `phase3b2-mobile-home.md` |
+| 3 | **3b-2** | Mobile Home: the selected league in every phase | After 3b-1 **and** decision D1 (season gain vs value, in the prompt). Asks #1/#2 live; #11 blocks only the season-complete state | `phase3b2-mobile-home.md` (v2) |
 | 4 | **3c** | Mobile competitive screens: Matchup, Friday reveal, League/standings, Draft room | After 3b-1; ask #2 blocks, #7 blocks one state | `phase3c-mobile-game.md` |
 | 5 | **3e** | Mobile money screens: Portfolio, stock sheet, trade, history | After 3b-1; ask #5 blocks history only | `phase3e-mobile-money.md` |
 | 6 | **3d** | Web app pages (still paused) | After 3c/3e settle the patterns | `phase3d-web-app.md` |

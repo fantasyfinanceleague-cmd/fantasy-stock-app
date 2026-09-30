@@ -276,7 +276,7 @@
             </div>
             <div className="ks-score ks-num" style={{ fontSize: 48, lineHeight: '50px', fontStretch: '75%' }}>{$(H.value)}</div>
             <div className="ks-callout ks-num" style={{ fontWeight: 700 }}>
-              <span className="ks-gain">{$s(H.gain)} · {pct(H.gainPct)}</span> <span className="ks-muted" style={{ fontWeight: 500 }}>since the draft</span>
+              <span className="ks-gain">{$s(H.gain)} · {pct(H.gainPct)}</span> <span className="ks-muted" style={{ fontWeight: 500 }}>season gain</span>
               <span className="ks-muted" style={{ fontWeight: 500 }}> · </span>
               <span className="ks-gain">{$s(H.today)}</span> <span className="ks-muted" style={{ fontWeight: 500 }}>today</span>
             </div>
@@ -285,8 +285,8 @@
             <ThisWeekCard you={L.you} opp={L.opp} oppName="vs Gianluigi B." left="Ends Fri 4:00 PM ET" />
           </div>
           <div className="ks-card" style={{ padding: '12px 12px 6px' }}>
-            <div className="ks-section-h" style={{ padding: '0 2px' }}><h3>Season</h3><span className="ks-caption">Gain since the draft</span></div>
-            <GainChart series={H.series} weeks={H.weekStarts} run={run} w={336} h={140} label="Gain since the draft" />
+            <div className="ks-section-h" style={{ padding: '0 2px' }}><h3>Season</h3><span className="ks-caption">Season gain, week by week</span></div>
+            <GainChart series={H.series} weeks={H.weekStarts} run={run} w={336} h={140} label="Season gain" />
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4, padding: '6px 0 8px' }}>
               {H.weekResults.map((w) => (
                 <span key={w.week} className="ks-chip ks-chip--money ks-num" style={{ textTransform: 'none', letterSpacing: 0, fontStretch: '100%', fontSize: 12, height: 26, padding: 0, justifyContent: 'center' }}>

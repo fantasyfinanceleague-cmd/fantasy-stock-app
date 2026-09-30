@@ -221,3 +221,50 @@ It covers:
 `20261012000003`, so it tests the live definition. Its backstop steps test the
 address index that replaced it.
 
+
+## season_result.pglite.test.ts
+
+What it does:
+- Loads `20261014000000` (`get_season_result`) and `20261014000001` (the
+  `league_seasons` commissioner-write drop) **verbatim**, on top of the real
+  functions they read or depend on: `is_member` (sliced), `participant_display_name`,
+  `league_standings_ranked`, `complete_league_season` (`20261011000002`), and
+  `start_new_league_season` (sliced from `20260718000000`). It also loads both prod
+  `league_seasons` policies, sliced from `20260125000000`.
+- Every `final_standings` is written by the **real** `complete_league_season`, so
+  `final_rank` is the unified ranking's output, never a hand-typed number.
+- Simulates Supabase's default EXECUTE and table-ALL grants to the API roles, so the
+  `proacl` and table-grant assertions prove the explicit revokes work.
+
+It covers:
+- grants: DEFINER, authenticated only, `search_path` pinned; anon, service_role and a
+  missing `sub` are all refused
+- the policy drop:
+  - the FOR ALL hole is reproduced BEFORE the migration;
+  - after it, a commissioner's UPDATE (champion / final_standings), INSERT and
+    DELETE fail with 42501, and a member still reads;
+  - the DEFINER completion and `start_new_league_season` still write
+- a 4-team league: the champion, the runner-up and an eliminated semifinalist; the
+  best week; `final_rank` equal to the stored rank
+- a 6-team league with P=6: a bye seed losing its first game (0-1, round 2), the
+  wild-card exit (round 1), and the champion at 3-0
+- a 5-team odd roster: a bye adds no W/L/T, but it can be the best week; a manager who
+  missed the playoffs
+- 12 `inconsistent` refusals, each checked from a third member's seat with every
+  derived field NULL:
+  - `champion_mismatch` (a forged champion, a forged runner-up)
+  - `weeks_unscored` (a week unscored, a week missing)
+  - `points_for_mismatch`
+  - `playoffs_unscored` (a game unscored, all games missing)
+  - `playoff_final_unresolved`
+  - `playoff_shape_mismatch`
+  - `standings_missing_participant`
+  - `final_standings_missing`
+  - `season_status_mismatch`
+- `not_complete` (no podium, even with the final scored), and `no_season`
+- the archived season after `start_new_league_season`:
+  - `standings_only`;
+  - the default picks the last *completed* season;
+  - eliminated vs missed is NULL, not guessed;
+  - a member who joined later gets `caller_participated = false`
+- 0 rows for a non-member, an unknown league, and a season from another league

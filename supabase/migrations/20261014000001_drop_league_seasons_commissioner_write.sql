@@ -1,0 +1,75 @@
+-- ============================================================================
+-- league_seasons: drop the commissioner FOR ALL policy (client-forgeable podium)
+-- ============================================================================
+-- PROBLEM
+--   "Commissioners can manage league seasons" (20260125000000) is
+--   FOR ALL TO PUBLIC USING (league_id IN (<leagues the caller commissions>))
+--   with NO WITH CHECK, so the USING expression doubles as the check. A
+--   commissioner could therefore, straight from the client with the publishable
+--   key:
+--     * UPDATE champion_user_id / runner_up_user_id / final_standings /
+--       completed_at on any season of their league (crown themselves, rewrite
+--       every member's final rank and record);
+--     * INSERT a fabricated completed season, or DELETE a real one.
+--   Those are exactly the fields get_season_result (20261014000000) and season
+--   history read. get_season_result cross-checks the podium against the scored
+--   final for the CURRENT season, but an archived season has no matchups left to
+--   check against (start_new_league_season deletes them), so there the stored
+--   row is the only evidence -- and it must not be client-writable.
+--
+-- EVERY WRITER OF league_seasons (grepped 2026-09-29: apps/, supabase/functions/,
+-- scripts/, supabase/migrations/). None depends on this policy:
+--   SQL functions, all SECURITY DEFINER owned by postgres (RLS not applied to
+--   the owner):
+--     complete_league_season   UPDATE   20261011000002 (service_role only)
+--     start_new_league_season  INSERT   20260718000000 (commissioner gate in-fn)
+--     finalize_league_draft    INSERT   20260926000000 (service_role only)
+--   Migration backfills (run as postgres): 20260125000000, 20260125100000,
+--     20260125100001, 20260926000000.
+--   scripts/simulation-test-runner.mjs INSERT/DELETE: SB_SECRET_KEY_LOCAL_SCRIPTS
+--     (a secret key = service_role, which bypasses RLS and keeps its grants).
+--   Edge functions: none touch league_seasons directly (process-week-results
+--     goes through the complete_league_season RPC).
+--   Clients: SELECT only (apps/mobile LeagueCarousel.tsx, useHomeData.ts,
+--     LeagueContext.tsx; apps/web has no reference).
+--
+-- WHAT THIS DOES
+--   1. Drops the FOR ALL policy. The members SELECT policy ("Users can view
+--      league seasons for their leagues") is untouched; a commissioner is a
+--      member of their own league, so they keep read access through it.
+--   2. Belt and braces: revokes INSERT/UPDATE/DELETE/TRUNCATE on the table from
+--      anon and authenticated, so a future permissive policy added by mistake
+--      still cannot reopen client writes (Supabase grants ALL on new tables to
+--      anon/authenticated by default; RLS was the only barrier). service_role
+--      and the postgres owner are unaffected. SELECT stays granted (RLS gates it).
+--
+-- RESULT
+--   authenticated UPDATE/DELETE/INSERT -> ERROR 42501 permission denied for
+--   table league_seasons. The DEFINER completion path is unchanged (pinned by
+--   supabase/tests/season_result.pglite.test.ts).
+--
+-- ---------------------------------------------------------------------------
+-- POST-PUSH EFFECT CHECKS (run each separately):
+--   -- 1. policies: expect exactly ONE row, the SELECT policy
+--   --    "Users can view league seasons for their leagues" (cmd = SELECT)
+--   SELECT policyname, cmd, roles, qual, with_check FROM pg_policies
+--   WHERE schemaname = 'public' AND tablename = 'league_seasons';
+--   -- 2. table grants: anon/authenticated have SELECT only (plus REFERENCES /
+--   --    TRIGGER defaults); no INSERT, UPDATE, DELETE, TRUNCATE
+--   SELECT grantee, string_agg(privilege_type, ',' ORDER BY privilege_type)
+--   FROM information_schema.role_table_grants
+--   WHERE table_schema = 'public' AND table_name = 'league_seasons'
+--   GROUP BY grantee ORDER BY grantee;
+--   -- 3. effect: as a COMMISSIONER, an update is refused (expect ERROR 42501)
+--   BEGIN;
+--   SET LOCAL ROLE authenticated;
+--   SELECT set_config('request.jwt.claim.sub', '<commissioner-uuid>', true);
+--   UPDATE league_seasons SET champion_user_id = champion_user_id
+--   WHERE league_id = '<their-league-uuid>';
+--   ROLLBACK;
+-- ============================================================================
+
+drop policy if exists "Commissioners can manage league seasons" on public.league_seasons;
+
+revoke insert, update, delete, truncate on table public.league_seasons from anon;
+revoke insert, update, delete, truncate on table public.league_seasons from authenticated;

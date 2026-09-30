@@ -186,9 +186,13 @@ Tab bar (4):   Home      Matchup      League      Portfolio
 Header:        [league pill ▾]  on Matchup / League / Portfolio      [avatar] on Home
 ```
 
-- **Home**: cross-league overview (the planned 3b rebuild). Total value,
-  an honest performance chart (§7 ask 3), "This week" matchup strip (one card
-  per live league), your leagues grouped by phase. Avatar → Profile & settings.
+- **Home**: **the one league picked in the pill** (Giorgio, 2026-09-29,
+  Concept B; this supersedes the earlier cross-league overview). There are no
+  cross-league totals and no leagues list: the pill shows "+N" and opens the
+  league sheet. Home has one hero card per league phase (pre-draft → drafting
+  → pre-season → live → closed → scoring → final → complete), the this-week
+  scoreboard, the season chart and a standings excerpt. Built in 3b-2.
+  Avatar → Profile & settings.
   - **Chart decision (2026-09-26): plot cumulative gain, not value.** The
     line is `value − cost basis + realized P/L` for the selected window,
     with a **zero baseline**. It sits in the gain colour above zero and the
