@@ -10,6 +10,7 @@ import { Text } from '@/components/sp/Text';
 import { useMotion } from '@/components/sp/motion';
 import { Field } from '@/components/shell/Field';
 import { UsernameStatusIcon } from '@/components/shell/UsernameStatusIcon';
+import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { validateUsername } from '@/lib/contentModeration';
 import { checkUsernames, setUsername } from '@/lib/shell/usernameApi';
 import {
@@ -112,9 +113,7 @@ export function UsernamePicker({ current, email, onSaved }: UsernamePickerProps)
   return (
     <>
       <View style={styles.heading}>
-        <Text variant="display" accessibilityRole="header">
-          Pick a username
-        </Text>
+        <ScreenTitle>Pick a username</ScreenTitle>
         <Text variant="body" tone="secondary">
           Shown to your league on standings and matchups
         </Text>

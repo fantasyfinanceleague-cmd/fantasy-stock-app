@@ -8,6 +8,7 @@ import { Button, type ButtonStatus } from '@/components/sp/Button';
 import { Text } from '@/components/sp/Text';
 import { useMotion } from '@/components/sp/motion';
 import { Field } from '@/components/shell/Field';
+import { ScreenTitle } from '@/components/shell/ScreenTitle';
 
 // Phase 3b-1 — "Set a new password" (board "Change password"), shared by
 // Reset password (spec row 5, the recovery link) and Change password (row
@@ -66,9 +67,7 @@ export function NewPasswordForm({ submit, onDone, onCancel }: NewPasswordFormPro
   return (
     <>
       <View style={styles.heading}>
-        <Text variant="display" accessibilityRole="header">
-          Set a new password
-        </Text>
+        <ScreenTitle>Set a new password</ScreenTitle>
         <Text variant="body" tone="secondary">
           {PASSWORD_RULE_SENTENCE}
         </Text>
@@ -77,7 +76,10 @@ export function NewPasswordForm({ submit, onDone, onCancel }: NewPasswordFormPro
         <Field
           label="New password"
           value={password}
-          onChangeText={setPassword}
+          onChangeText={(v) => {
+            setPassword(v);
+            if (passwordError) setPasswordError(null);
+          }}
           secureTextEntry
           autoComplete="new-password"
           textContentType="newPassword"
@@ -91,7 +93,10 @@ export function NewPasswordForm({ submit, onDone, onCancel }: NewPasswordFormPro
           ref={confirmRef}
           label="Confirm new password"
           value={confirm}
-          onChangeText={setConfirm}
+          onChangeText={(v) => {
+            setConfirm(v);
+            if (confirmError) setConfirmError(null);
+          }}
           secureTextEntry
           autoComplete="new-password"
           textContentType="newPassword"

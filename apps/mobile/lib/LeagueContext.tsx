@@ -5,7 +5,7 @@ import { useAuth } from './useAuth';
 import { getSeasonLabel, getSeasonPhase } from './weekStatus';
 import type { SheetLeague } from './shell/leagueSheet';
 import { activeLeagueStorageKey, resolveActiveLeagueId } from './shell/activeLeague';
-import { SHELL_FIXTURE, fixtureLeagues } from './shell/devFixture';
+import { FIXTURE_NETWORK_MS, SHELL_FIXTURE, fixtureLeagues } from './shell/devFixture';
 
 export interface League {
   id: string;
@@ -180,7 +180,9 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
 
     if (SHELL_FIXTURE) {
-      // DEV-only fixture (lib/shell/devFixture.ts): the board's leagues, no queries.
+      // DEV-only fixture (lib/shell/devFixture.ts): the board's leagues, no
+      // queries — after a realistic delay, so pull-to-refresh (S5) is visible.
+      await new Promise((resolve) => setTimeout(resolve, FIXTURE_NETWORK_MS));
       const fixture = fixtureLeagues(SHELL_FIXTURE);
       const stored = await readStoredActiveLeague(userId);
       setLeagues(fixture.leagues);

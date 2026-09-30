@@ -5,8 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { space } from '@/constants/tokens';
 import { Avatar } from '@/components/sp/Avatar';
-import { Text } from '@/components/sp/Text';
 import { LeaguePill } from '@/components/shell/LeaguePill';
+import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { useSession } from '@/lib/SessionProvider';
 
@@ -25,7 +25,7 @@ export interface ShellHeaderProps {
 
 export function ShellHeader({ title, showAvatar = false }: ShellHeaderProps) {
   const insets = useSafeAreaInsets();
-  const { activeLeague, leagues } = useLeagueContext();
+  const { activeLeague, leagues, loading } = useLeagueContext();
   const { username, user } = useSession();
   const displayName = username ?? user?.email ?? '';
 
@@ -33,10 +33,12 @@ export function ShellHeader({ title, showAvatar = false }: ShellHeaderProps) {
     <View style={[styles.header, { paddingTop: insets.top + space[3] }]}>
       {activeLeague ? (
         <LeaguePill name={activeLeague.name} totalLeagues={leagues.length} />
+      ) : loading ? (
+        // Leagues still loading (e.g. right after sign-in): hold the pill's
+        // place rather than flash the no-leagues title and swap it out.
+        <View style={styles.pending} />
       ) : (
-        <Text variant="display" accessibilityRole="header" style={styles.title}>
-          {title}
-        </Text>
+        <ScreenTitle style={styles.title}>{title}</ScreenTitle>
       )}
       {showAvatar ? (
         <Pressable
@@ -63,5 +65,8 @@ const styles = StyleSheet.create({
   },
   title: {
     flexShrink: 1,
+  },
+  pending: {
+    minHeight: 36,
   },
 });

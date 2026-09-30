@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
 
 import { radius, space, type } from '@/constants/tokens';
 import { brand } from '@/constants/brand';
 import { Avatar } from '@/components/sp/Avatar';
+import { FULL_WIDTH_FONT_SCALE } from '@/components/sp/Button';
 import { Text } from '@/components/sp/Text';
 import { useTheme, type ThemePreference } from '@/components/sp/ThemeProvider';
 
@@ -64,18 +65,25 @@ export function ProfileView({ username, email, onUsername, onChangePassword, onA
 
 function Row({ label, value, onPress, danger = false, first = false }: { label: string; value?: string; onPress?: () => void; danger?: boolean; first?: boolean }) {
   const { colors } = useTheme();
-  const content = (
-    <>
+  // At accessibility sizes the value moves under its label (full width, wrapping)
+  // instead of being squeezed into an ellipsis beside it — nothing truncates.
+  const { fontScale } = useWindowDimensions();
+  const stacked = fontScale >= FULL_WIDTH_FONT_SCALE;
+  const text = (
+    <View style={stacked ? styles.rowTextStacked : styles.rowTextInline}>
       <Text variant="body" color={danger ? colors.danger : colors.text} style={styles.rowLabel}>
         {label}
       </Text>
       {value ? (
-        <Text variant="body" tone="secondary" numberOfLines={1} style={styles.rowValue}>
+        <Text variant="body" tone="secondary" numberOfLines={stacked ? undefined : 1} style={stacked ? null : styles.rowValue}>
           {value}
         </Text>
-      ) : (
-        <View style={styles.rowValue} />
-      )}
+      ) : null}
+    </View>
+  );
+  const content = (
+    <>
+      {text}
       {onPress && !danger ? <Ionicons name="chevron-forward" size={16} color={colors.text2} /> : null}
     </>
   );
@@ -111,6 +119,16 @@ const styles = StyleSheet.create({
     gap: space[4],
     minHeight: 50,
     paddingVertical: space[4],
+  },
+  rowTextInline: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[4],
+  },
+  rowTextStacked: {
+    flex: 1,
+    gap: space[1],
   },
   rowLabel: {
     fontFamily: type.headline.fontFamily,

@@ -13,6 +13,7 @@ import { useMotion } from '@/components/sp/motion';
 import { AuthScaffold } from '@/components/shell/AuthScaffold';
 import { BrandLockup } from '@/components/shell/BrandBars';
 import { Field } from '@/components/shell/Field';
+import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { getAuthErrorMessage, isSignupsPausedError } from '@/lib/authErrors';
 import { validateUsername } from '@/lib/contentModeration';
 import { useSession } from '@/lib/SessionProvider';
@@ -132,9 +133,7 @@ export default function CreateAccountScreen() {
     <AuthScaffold ref={scrollRef} footer={footer}>
       <BrandLockup />
       <View style={styles.heading}>
-        <Text variant="display" accessibilityRole="header">
-          Create account
-        </Text>
+        <ScreenTitle>Create account</ScreenTitle>
         <Text variant="body" tone="secondary">
           Join the competition
         </Text>
@@ -160,7 +159,10 @@ export default function CreateAccountScreen() {
           ref={emailRef}
           label="Email address"
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(v) => {
+            setEmail(v);
+            if (formError) setFormError(null);
+          }}
           autoCapitalize="none"
           autoComplete="email"
           keyboardType="email-address"
@@ -173,7 +175,10 @@ export default function CreateAccountScreen() {
           ref={passwordRef}
           label="Password"
           value={password}
-          onChangeText={setPassword}
+          onChangeText={(v) => {
+            setPassword(v);
+            if (formError) setFormError(null); // a stale "needs: …" must not sit under a now-valid password
+          }}
           secureTextEntry
           autoComplete="new-password"
           textContentType="newPassword"

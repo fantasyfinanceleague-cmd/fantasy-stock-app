@@ -1,12 +1,13 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { useCallback, useEffect, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { radius, space } from '@/constants/tokens';
 import { PressableScale } from '@/components/sp/PressableScale';
+import { FULL_WIDTH_FONT_SCALE } from '@/components/sp/Button';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { useMotion } from '@/components/sp/motion';
@@ -32,6 +33,10 @@ export function LeaguePill({ name, totalLeagues }: LeaguePillProps) {
   const { openLeagueSheet, registerPillLabel, pillLabelOpacity, landings } = useShellOverlay();
   const labelRef = useRef<View>(null);
   const more = moreLeaguesCount(totalLeagues);
+  // At accessibility sizes a long league name gets a second line rather than
+  // an ellipsis (spec: nothing truncates at XL); the pill grows to fit.
+  const { fontScale } = useWindowDimensions();
+  const large = fontScale >= FULL_WIDTH_FONT_SCALE;
 
   useFocusEffect(
     useCallback(() => {
@@ -57,10 +62,10 @@ export function LeaguePill({ name, totalLeagues }: LeaguePillProps) {
       accessibilityLabel={pillAccessibilityLabel(name, more)}
       accessibilityHint="Shows your leagues"
       hitSlop={{ top: 4, bottom: 4 }}
-      style={[styles.pill, { backgroundColor: colors.surface, borderColor: colors.border }]}
+      style={[styles.pill, large ? styles.pillLarge : null, { backgroundColor: colors.surface, borderColor: colors.border }]}
     >
       <Animated.View ref={labelRef} collapsable={false} style={[styles.label, labelStyle]}>
-        <Text variant="headline" numberOfLines={1} maxFontSizeMultiplier={1.3}>
+        <Text variant="headline" numberOfLines={large ? 2 : 1} maxFontSizeMultiplier={1.3}>
           {name}
         </Text>
       </Animated.View>
@@ -88,6 +93,11 @@ const styles = StyleSheet.create({
     paddingRight: space[4],
     borderRadius: radius.pill,
     borderWidth: 1,
+  },
+  pillLarge: {
+    maxWidth: undefined,
+    borderRadius: radius.lg,
+    paddingVertical: space[2],
   },
   label: {
     flexShrink: 1,

@@ -11,8 +11,10 @@ import { EmptyState } from '@/components/sp/EmptyState';
 import { Text } from '@/components/sp/Text';
 import { AuthScaffold } from '@/components/shell/AuthScaffold';
 import { Field } from '@/components/shell/Field';
+import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { supabase } from '@/lib/supabase';
 import { generateRecoveryNonce, storeRecoveryNonce } from '@/lib/recoveryNonce';
+import { FIXTURE_NETWORK_MS, SHELL_FIXTURE } from '@/lib/shell/devFixture';
 
 // Phase 3b-1 — Forgot password + "Check your email" (spec row 4; board
 // "Forgot password", "Check your email"). Existing strings kept verbatim in
@@ -43,6 +45,16 @@ export default function ForgotPasswordScreen() {
 
     setError(null);
     setStatus('loading');
+
+    if (SHELL_FIXTURE) {
+      // DEV fixture (lib/shell/devFixture.ts): show the sent state without
+      // emailing anyone — no nonce, no network.
+      setTimeout(() => {
+        setStatus('idle');
+        setSent(true);
+      }, FIXTURE_NETWORK_MS);
+      return;
+    }
 
     // Bind this reset to a per-request nonce so only a link WE requested on THIS
     // device can complete the recovery (fixes F2: deep-link session fixation).
@@ -97,9 +109,7 @@ export default function ForgotPasswordScreen() {
   return (
     <AuthScaffold back={{ label: 'Back to sign in', onPress: () => (router.canGoBack() ? router.back() : backToSignIn()) }}>
       <View style={styles.heading}>
-        <Text variant="display" accessibilityRole="header">
-          Forgot password?
-        </Text>
+        <ScreenTitle>Forgot password?</ScreenTitle>
         <Text variant="body" tone="secondary">
           Enter your email address and we&apos;ll send you a link to reset your password.
         </Text>
@@ -107,7 +117,10 @@ export default function ForgotPasswordScreen() {
       <Field
         label="Email address"
         value={email}
-        onChangeText={setEmail}
+        onChangeText={(v) => {
+          setEmail(v);
+          if (error) setError(null);
+        }}
         autoCapitalize="none"
         autoComplete="email"
         keyboardType="email-address"

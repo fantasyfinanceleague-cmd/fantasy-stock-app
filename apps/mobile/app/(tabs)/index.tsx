@@ -1,7 +1,10 @@
+import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
+import { useTheme } from '@/components/sp/ThemeProvider';
 import { PhasePlaceholder } from '@/components/shell/PhasePlaceholder';
+import { ShellHeader } from '@/components/shell/ShellHeader';
 import { useLeagueContext } from '@/lib/LeagueContext';
 
 // Phase 3b-1: Home's header (pill + avatar) and its no-leagues state are
@@ -12,6 +15,17 @@ import { useLeagueContext } from '@/lib/LeagueContext';
 // (S5) re-reads the leagues.
 export default function HomeScreen() {
   const { leagues, loading, refresh } = useLeagueContext();
+  const { colors } = useTheme();
+
+  // First load (e.g. just signed in): just the header, so neither state
+  // flashes and then swaps for the other.
+  if (loading && leagues.length === 0) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.bg }}>
+        <ShellHeader title="Home" showAvatar />
+      </View>
+    );
+  }
 
   if (!loading && leagues.length === 0) {
     return (

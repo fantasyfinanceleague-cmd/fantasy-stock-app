@@ -12,6 +12,7 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 import { AuthScaffold } from '@/components/shell/AuthScaffold';
 import { BrandLockup } from '@/components/shell/BrandBars';
 import { Field } from '@/components/shell/Field';
+import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { getAuthErrorMessage } from '@/lib/authErrors';
 import { useSession } from '@/lib/SessionProvider';
 import { clearSignInIntent, markSignInIntent } from '@/lib/shell/signInTransition';
@@ -62,9 +63,7 @@ export default function SignInScreen() {
         <BrandLockup />
       </View>
       <View style={styles.heading}>
-        <Text variant="display" accessibilityRole="header">
-          Welcome back
-        </Text>
+        <ScreenTitle>Welcome back</ScreenTitle>
         <Text variant="body" tone="secondary">
           Sign in to your league
         </Text>
@@ -73,7 +72,10 @@ export default function SignInScreen() {
         <Field
           label="Email address"
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(v) => {
+            setEmail(v);
+            if (error) setError(null);
+          }}
           autoCapitalize="none"
           autoComplete="email"
           keyboardType="email-address"
@@ -86,7 +88,10 @@ export default function SignInScreen() {
           ref={passwordRef}
           label="Password"
           value={password}
-          onChangeText={setPassword}
+          onChangeText={(v) => {
+            setPassword(v);
+            if (error) setError(null);
+          }}
           secureTextEntry
           autoComplete="current-password"
           textContentType="password"

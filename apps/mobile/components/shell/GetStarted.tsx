@@ -8,6 +8,7 @@ import { PressableScale } from '@/components/sp/PressableScale';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { BrandLockup } from '@/components/shell/BrandBars';
+import { ScreenTitle } from '@/components/shell/ScreenTitle';
 
 // Phase 3b-1 — Get started (spec row 7, board "Get started"; D1 ruling).
 // Shown at the end of onboarding, signed out. Each choice records where the
@@ -28,9 +29,7 @@ export function GetStarted({ onCreate, onJoin, onSignIn }: GetStartedProps) {
     <>
       <BrandLockup />
       <View style={styles.heading}>
-        <Text variant="display" accessibilityRole="header">
-          Get started
-        </Text>
+        <ScreenTitle>Get started</ScreenTitle>
         <Text variant="body" tone="secondary">
           Start a league for your friends, or join one with a code.
         </Text>
