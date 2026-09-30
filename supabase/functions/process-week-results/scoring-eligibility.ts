@@ -11,7 +11,7 @@
  * draft entry — a player's all-time P/L, NOT this week's delta (week_start_price
  * -> week_end_price). Scoring a week off that number fabricates results, and
  * because league_standings increments are irreversible, a re-run cannot undo it.
- * Three guards refuse rather than fabricate; every one of them is DECIDED here:
+ * Several guards refuse rather than fabricate; every one of them is DECIDED here:
  *
  *   1. Stale batch    (decideBatchScoring): a snapshot-less week that ended
  *                      > fallbackMaxAgeHours ago is skipped whole
@@ -27,7 +27,17 @@
  *                      so they are marked 'unscoreable' and any matchup they are in
  *                      is refused (reason 'unscoreable_participant_no_snapshot').
  *
- *   4. All-cash user  (ledgerPositionState + decideUserScorer -> 'cash_only'): a
+ *   4. Unclosed user  (decideUserScorer -> 'close_incomplete'): a user WITH a
+ *                      week_snapshots row but no week_end_price yet (every batch
+ *                      here has week_end < now, so this only ever means
+ *                      snapshot-week-end hasn't finished closing the week — its
+ *                      retry chain still running, or exhausted on an unpriceable
+ *                      symbol). Refused rather than scored from live prices
+ *                      (reason 'unscoreable_participant_no_close_price'); see
+ *                      MATCHUP_REFUSAL_REASON's doc and
+ *                      docs/audits/2026-09-30-week-window-audit.md's S7.
+ *
+ *   5. All-cash user  (ledgerPositionState + decideUserScorer -> 'cash_only'): a
  *                      snapshot-less user is NOT automatically a broken snapshot.
  *                      snapshot-week-start only snapshots HELD symbols, so a user
  *                      sitting entirely in cash correctly has no row — and before
@@ -105,6 +115,20 @@ export type BatchSkipReason =
 export const MATCHUP_REFUSAL_REASON = {
   /** A participant is snapshot-less past week 1, so the matchup can't be scored. */
   UNSCOREABLE_PARTICIPANT_NO_SNAPSHOT: 'unscoreable_participant_no_snapshot',
+  /**
+   * A participant HAS a week_snapshots row but no week_end_price yet — every
+   * batch reaching process-week-results has already had its week_end pass (the
+   * top-level query is `.lt('week_end', now)`), so this always means
+   * snapshot-week-end has not finished closing this week: its Friday retry
+   * chain may still be running, or it exhausted retries on a permanently
+   * unpriceable symbol (S7 — see ./user-score.ts's removed
+   * calculateWeeklyGainLegacy and CLAUDE.md "success signals" #5/#6). Distinct
+   * from NO_SNAPSHOT so ops can tell "never snapshotted" (a backfill issue)
+   * apart from "close never completed" (usually self-heals once
+   * snapshot-week-end finishes and the next process-week-results run — the
+   * 22:00Z/Saturday heal crons — re-reads hasWeekEndPrices as true).
+   */
+  UNSCOREABLE_PARTICIPANT_NO_CLOSE_PRICE: 'unscoreable_participant_no_close_price',
 } as const;
 export type MatchupRefusalReason =
   (typeof MATCHUP_REFUSAL_REASON)[keyof typeof MATCHUP_REFUSAL_REASON];
@@ -115,19 +139,34 @@ export type BatchDecision =
 
 /**
  * Which scorer the handler should run for a single user:
- *  - 'full'        -> calculateUserScore (snapshots + week_end_price + trades)
- *  - 'legacy'      -> calculateWeeklyGainLegacy (snapshots, live prices, no end price)
- *  - 'cash_only'   -> scoreCashOnlyUser (no snapshot; ledger proves flat at BOTH
- *                     week boundaries — any week number)
- *  - 'fallback'    -> calculatePortfolio (cumulative-from-entry — ONLY valid at week 1)
- *  - 'unscoreable' -> refuse; do NOT write a score (snapshot-less past week 1)
+ *  - 'full'             -> calculateUserScore (snapshots + week_end_price + trades)
+ *  - 'close_incomplete' -> refuse; do NOT score from live prices (snapshot
+ *                          exists, week_end_price does not — see
+ *                          MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_CLOSE_PRICE)
+ *  - 'cash_only'        -> scoreCashOnlyUser (no snapshot; ledger proves flat at BOTH
+ *                          week boundaries — any week number)
+ *  - 'fallback'         -> calculatePortfolio (cumulative-from-entry — ONLY valid at week 1)
+ *  - 'unscoreable'      -> refuse; do NOT write a score (snapshot-less past week 1)
  *
  * 'cash_only' is a distinct kind rather than folded into 'full' because (i) 'full'
  * is gated on the batch-level hasWeekEndPrices flag, which a cash user does not
  * need; (ii) its evidence is a ledger proof, not a snapshot, and ops must be able
  * to tell the two apart in the log; (iii) the handler branches exhaustively.
+ *
+ * 'close_incomplete' REPLACES the old 'legacy' kind (calculateWeeklyGainLegacy,
+ * removed from index.ts). 'legacy' scored a snapshotted-but-unclosed user from
+ * LIVE prices, ignoring every mid-week trade and writing team1_gain
+ * irreversibly — for every batch reaching this module week_end has already
+ * passed (index.ts's top-level query), so "snapshot but no close price" can
+ * only mean the close job hasn't finished, never a legitimate steady state.
+ * Scoring it from whatever price Alpaca returns at THIS run produced a
+ * different, wrong, and irreversible number depending on exactly when
+ * snapshot-week-end's retry chain happened to finish relative to the 21:15Z
+ * scorer cron (S7 in docs/audits/2026-09-30-week-window-audit.md). Refusing
+ * is recoverable: the matchup stays pending and the heal crons (22:00Z Friday,
+ * Saturday) pick it up once snapshot-week-end actually closes the week.
  */
-export type ScorerKind = 'full' | 'legacy' | 'cash_only' | 'fallback' | 'unscoreable';
+export type ScorerKind = 'full' | 'close_incomplete' | 'cash_only' | 'fallback' | 'unscoreable';
 
 export type MatchupDecision =
   | { action: 'proceed' }
@@ -203,10 +242,53 @@ export function decideBatchScoring(i: BatchScoringInputs): BatchDecision {
 // GUARD 3a — per user
 // ---------------------------------------------------------------------------
 
+/**
+ * Whether THIS USER's OWN week_snapshots rows are ALL priced — every row for
+ * this user carries a week_end_price, not merely "some row somewhere in the
+ * league-week batch does."
+ *
+ * WHY THIS MUST BE PER-USER, NOT BATCH-LEVEL (found in review of the S7 fix,
+ * by both the security and supabase reviewers, independently, before this
+ * function existed): snapshot-week-end/close.ts's buildCloseWork decides
+ * all-or-nothing PER LEAGUE-WEEK (if any required symbol is unpriced, the
+ * whole batch's writes are withheld) — but the writes that DECISION produces
+ * are then applied by snapshot-week-end/index.ts as a LOOP of separate
+ * per-row `.update()` calls, not one transaction. A mid-loop failure (a
+ * timeout, a transient error on one row) can leave SOME users' rows closed
+ * and one user's still NULL, in the exact same league-week. A batch-level
+ * `snapshotData.some(s => s.week_end_price != null)` reads that state as
+ * "closed" — routing the affected user to 'full' (not 'close_incomplete'),
+ * and calculateUserScore's `if (endPrice !== undefined)` guards then silently
+ * DROP that user's unpriced position from both dollarGain and startValue
+ * instead of refusing. The matchup then scores and team1_gain is written
+ * non-NULL — permanently unreachable by the `.is('team1_gain', null)` query,
+ * unlike a genuine 'close_incomplete' refusal, which stays pending and heals.
+ * This is the same "guard keyed on ANY-row-exists rather than per-participant
+ * completeness" shape CLAUDE.md's partial-state family catalogs repeatedly —
+ * reintroduced one level down, for the very check the S7 fix added.
+ *
+ * `.every()`, not `.some()`, mirrors close.ts's own classifyCloseCoverage
+ * KIND-1 rule ("any existing row still lacking a close price -> incomplete").
+ * An entered_mid_week row is unaffected: close.ts only ever inserts one with
+ * its week_end_price already set (NewSnapshotRow.week_end_price is required,
+ * non-null), so such a row can never be the cause of a false 'true' here.
+ */
+export function userWeekEndPricesComplete(
+  snapshots: ReadonlyArray<{ weekEndPrice: number | null }>,
+): boolean {
+  return snapshots.length > 0 && snapshots.every((s) => s.weekEndPrice !== null);
+}
+
 export interface UserScorerInputs {
   /** snapshots.length > 0 for THIS user (per-user, not the batch-level flag). */
   hasSnapshot: boolean;
-  /** Batch-level: any snapshot row for the week carries a week_end_price. */
+  /**
+   * THIS USER's OWN week_snapshots rows are fully priced — see
+   * userWeekEndPricesComplete's doc for why this must never be computed at
+   * batch level ("any row in the league-week has a price"). The caller
+   * (index.ts) must pass userWeekEndPricesComplete(thisUsersSnapshots), not a
+   * flag shared across every user in the batch.
+   */
   hasWeekEndPrices: boolean;
   weekNumber: number;
   /**
@@ -217,11 +299,13 @@ export interface UserScorerInputs {
 }
 
 /**
- * Guard 3a. Picks the scorer for one user, or marks them 'unscoreable'.
+ * Guard 3a. Picks the scorer for one user, or marks them unscoreable (either
+ * 'close_incomplete' or 'unscoreable').
  *
  * The order mirrors the handler's if/else-if chain exactly:
  *   snapshot + end price -> 'full'
- *   snapshot only        -> 'legacy'
+ *   snapshot only        -> 'close_incomplete'  (S7: refuse rather than score
+ *                          from live prices — see MATCHUP_REFUSAL_REASON's doc)
  *   no snapshot, ledger flat at BOTH week boundaries
  *                        -> 'cash_only'     (ANY week — see THE ALL-CASH RULE)
  *   no snapshot, week>1  -> 'unscoreable'  (the per-user residual of the defect:
@@ -230,13 +314,14 @@ export interface UserScorerInputs {
  *   no snapshot, week 1  -> 'fallback'     (draft entry ~= week-1 start price, so
  *                          cumulative-from-entry is an acceptable week-1 proxy)
  *
- * Note the snapshot branches win REGARDLESS of week number — a snapshotted user is
- * always scored from their snapshot; the week>1 refusal only ever applies to a
- * snapshot-less user.
+ * Note the snapshot branches win REGARDLESS of week number — a snapshotted user
+ * is always scored from their snapshot (or refused as 'close_incomplete' if it
+ * isn't closed yet); the week>1 refusal only ever applies to a snapshot-less
+ * user.
  */
 export function decideUserScorer(i: UserScorerInputs): ScorerKind {
   if (i.hasSnapshot && i.hasWeekEndPrices) return 'full';
-  if (i.hasSnapshot) return 'legacy';
+  if (i.hasSnapshot) return 'close_incomplete';
   // Before the week check, so it applies at week 1 too: there the fallback would
   // see empty holdings and return hasPositions:false — an accidental auto-loss.
   if (isProvablyCash(i.ledger)) return 'cash_only';
@@ -252,6 +337,27 @@ export function decideUserScorer(i: UserScorerInputs): ScorerKind {
  * Guard 3b. Refuses a matchup if EITHER participant is unscoreable; otherwise the
  * matchup proceeds and is scored normally.
  *
+ * `unscoreableUserIds` maps each unscoreable user to WHY (NO_SNAPSHOT or
+ * NO_CLOSE_PRICE — see MATCHUP_REFUSAL_REASON), not merely THAT — a Map, not a
+ * Set, so the matchup refusal carries the same distinction the per-user decision
+ * made.
+ *
+ * PRECEDENCE, when BOTH participants are unscoreable for DIFFERENT reasons, is
+ * by SEVERITY, not by team position (found in review of the S7 fix):
+ * NO_SNAPSHOT (a backfill issue, does not self-heal) wins over NO_CLOSE_PRICE
+ * (usually self-heals once snapshot-week-end finishes and a heal cron
+ * re-runs). Reporting team1's reason regardless of which is worse — the
+ * original approach — could report the self-healing-sounding NO_CLOSE_PRICE
+ * for a matchup that will NOT actually heal on its own because the OTHER
+ * participant's cause is the permanent one, silently masking it: the heal
+ * crons would run, do nothing (the real cause is unrelated to a close), and
+ * the matchup would sit refused with a reason that reads as "should have
+ * fixed itself by now." Same "verdict scope must match evidence scope"
+ * lesson CLAUDE.md tracks (case 5): a single reported reason must describe
+ * the worse of the two truths, not an arbitrary one. Scoring correctness is
+ * identical either way — the matchup is refused regardless of which reason is
+ * reported — this only affects what ops sees in skipped[] and the logs.
+ *
  * BYE WEEKS gate on team1 only: a bye has team2UserId == null, so team2 is never
  * consulted (a null id can't be "unscoreable"). This is why team2UserId is
  * nullable and guarded — mirroring the handler's
@@ -260,21 +366,30 @@ export function decideUserScorer(i: UserScorerInputs): ScorerKind {
  * This is the composition point that pins the KEY regression: in a partially-
  * snapshotted week>1, decideUserScorer marks only the snapshot-less user
  * 'unscoreable', so ONLY matchups containing that user are refused here — an
- * all-snapshotted matchup in the SAME week still proceeds and scores.
+ * all-snapshotted matchup in the SAME week still proceeds and scores. The same
+ * holds for 'close_incomplete'.
  */
 export function decideMatchupScoring(
   team1UserId: string,
   team2UserId: string | null,
-  unscoreableUserIds: ReadonlySet<string>,
+  unscoreableUserIds: ReadonlyMap<string, MatchupRefusalReason>,
 ): MatchupDecision {
-  const team1Unscoreable = unscoreableUserIds.has(team1UserId);
-  const team2Unscoreable =
-    team2UserId != null && unscoreableUserIds.has(team2UserId);
-  if (team1Unscoreable || team2Unscoreable) {
-    return {
-      action: 'refuse',
-      reason: MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_SNAPSHOT,
-    };
+  const team1Reason = unscoreableUserIds.get(team1UserId);
+  const team2Reason =
+    team2UserId != null ? unscoreableUserIds.get(team2UserId) : undefined;
+  let reason: MatchupRefusalReason | undefined;
+  if (team1Reason && team2Reason) {
+    // Both unscoreable, for potentially different reasons: report the one
+    // that does NOT self-heal, so a permanent backfill issue on one side is
+    // never hidden behind a self-healing-sounding reason from the other.
+    reason = team1Reason === MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_SNAPSHOT
+      ? team1Reason
+      : team2Reason;
+  } else {
+    reason = team1Reason ?? team2Reason;
+  }
+  if (reason) {
+    return { action: 'refuse', reason };
   }
   return { action: 'proceed' };
 }

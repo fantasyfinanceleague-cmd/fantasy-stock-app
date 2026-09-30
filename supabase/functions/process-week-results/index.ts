@@ -18,8 +18,11 @@ import {
   decideUserScorer,
   decideMatchupScoring,
   ledgerPositionState,
+  userWeekEndPricesComplete,
   BATCH_SKIP_REASON,
+  MATCHUP_REFUSAL_REASON,
   type LedgerState,
+  type MatchupRefusalReason,
 } from './scoring-eligibility.ts';
 import {
   calculatePortfolio,
@@ -133,32 +136,14 @@ async function fetchPrices(symbols: string[], alpacaKey: string, alpacaSecret: s
   return prices;
 }
 
-// Legacy function for backward compatibility (when no week_end_price available)
-function calculateWeeklyGainLegacy(
-  userId: string,
-  snapshots: WeekSnapshot[],
-  prices: Map<string, number>
-): number {
-  let totalGain = 0;
-
-  for (const snapshot of snapshots) {
-    // Same reasoning as calculateUserScore: a mid-week entry is not a week-start
-    // holding, and its week_start_price is an entry price, not a Monday open.
-    if (snapshot.enteredMidWeek) continue;
-    if (snapshot.weekStartPrice === null) continue;
-
-    const currentPrice = prices.get(snapshot.symbol);
-    if (currentPrice === undefined) {
-      console.warn(`No current price for ${snapshot.symbol}, skipping`);
-      continue;
-    }
-
-    const gain = (currentPrice - snapshot.weekStartPrice) * snapshot.quantity;
-    totalGain += gain;
-  }
-
-  return totalGain;
-}
+// calculateWeeklyGainLegacy (scored a snapshotted-but-unclosed user from LIVE
+// prices, ignoring every mid-week trade) was REMOVED here — it wrote an
+// irreversible team1_gain for a week that was never actually closed, and the
+// number depended on exactly when it ran relative to snapshot-week-end's
+// retry chain (S7, docs/audits/2026-09-30-week-window-audit.md). Such a user
+// is now 'close_incomplete' (see ./scoring-eligibility.ts) and the matchup is
+// refused — recoverable, because the heal crons re-run process-week-results
+// after snapshot-week-end's Friday retries finish.
 
 type TransitionOutcome = { ok: true } | { ok: false; reason: string };
 
@@ -590,7 +575,14 @@ Deno.serve(async (req) => {
       // Build snapshots map by user
       const userSnapshots = new Map<string, WeekSnapshot[]>();
       const snapshotSymbols = new Set<string>();
-      const hasWeekEndPrices = snapshotData?.some(s => s.week_end_price != null) ?? false;
+      // LOGGING ONLY — "does ANY row in this league-week batch have a close
+      // price yet". NEVER feed this into a scoring decision: a genuine
+      // partial write from snapshot-week-end's non-atomic per-row update loop
+      // (see userWeekEndPricesComplete's doc in ./scoring-eligibility.ts) can
+      // make this true while one specific user's own rows are still NULL.
+      // Each user's OWN completeness is computed per-user below, in the loop,
+      // from that user's own `snapshots` via userWeekEndPricesComplete.
+      const batchHasAnyWeekEndPrice = snapshotData?.some(s => s.week_end_price != null) ?? false;
 
       if (snapshotData && snapshotData.length > 0) {
         for (const s of snapshotData) {
@@ -606,7 +598,7 @@ Deno.serve(async (req) => {
           });
           snapshotSymbols.add(s.symbol);
         }
-        console.log(`Found ${snapshotData.length} week snapshots for week ${weekNumber}, hasWeekEndPrices: ${hasWeekEndPrices}`);
+        console.log(`Found ${snapshotData.length} week snapshots for week ${weekNumber}, batchHasAnyWeekEndPrice: ${batchHasAnyWeekEndPrice}`);
       } else {
         console.log(`No week snapshots found for week ${weekNumber}, using fallback calculation`);
       }
@@ -685,7 +677,12 @@ Deno.serve(async (req) => {
       const allParticipantsCashOnly = userIds.size > 0 && [...userIds].every((userId) =>
         decideUserScorer({
           hasSnapshot: (userSnapshots.get(userId)?.length ?? 0) > 0,
-          hasWeekEndPrices,
+          // Per-user, like the main loop below (userWeekEndPricesComplete's
+          // doc) — though for THIS check it can never change the outcome: a
+          // user reaching 'cash_only' has hasSnapshot=false, and
+          // hasWeekEndPrices only matters when hasSnapshot is true. Computed
+          // the same way regardless, so there is one source of truth.
+          hasWeekEndPrices: userWeekEndPricesComplete(userSnapshots.get(userId) || []),
           weekNumber,
           ledger: ledgerStates.get(userId),
         }) === 'cash_only'
@@ -803,14 +800,24 @@ Deno.serve(async (req) => {
       // would still reach the cumulative-from-entry fallback (all-time P/L, not a
       // weekly delta). decideUserScorer marks such a user 'unscoreable'; the matchup
       // loop below refuses any matchup they're in rather than fabricating a score.
-      // Scorer choice extracted + unit-tested in ./scoring-eligibility.ts.
+      // A snapshotted-but-unclosed user (S7) is the other unscoreable kind,
+      // 'close_incomplete' — see ./scoring-eligibility.ts.
+      // unscoreableUsers maps userId -> WHY (the specific MatchupRefusalReason),
+      // not just THAT, so decideMatchupScoring and the skipped[] payload can tell
+      // "never snapshotted" apart from "close never completed".
       const userScores = new Map<string, UserScore>();
-      const unscoreableUsers = new Set<string>();
+      const unscoreableUsers = new Map<string, MatchupRefusalReason>();
       for (const userId of userIds) {
         const snapshots = userSnapshots.get(userId) || [];
         const midWeekTrades = userMidWeekTrades.get(userId) || [];
 
         const ledger = ledgerStates.get(userId);
+        // THIS USER's OWN rows, all priced — not "some row in the batch has a
+        // price". See userWeekEndPricesComplete's doc: a batch-level flag here
+        // let a genuine partial write from snapshot-week-end's non-atomic
+        // per-row update loop silently drop one user's unpriced position
+        // instead of refusing it (found in review of this very fix).
+        const hasWeekEndPrices = userWeekEndPricesComplete(snapshots);
         const scorerKind = decideUserScorer({
           hasSnapshot: snapshots.length > 0,
           hasWeekEndPrices,
@@ -823,10 +830,21 @@ Deno.serve(async (req) => {
           const score = calculateUserScore(userId, snapshots, midWeekTrades);
           userScores.set(userId, score);
           console.log(`User ${userId}: Dollar gain: $${score.dollarGain.toFixed(2)}, Percent: ${score.percentGain.toFixed(2)}%`);
-        } else if (scorerKind === 'legacy') {
-          // Legacy: Use week snapshots with live prices (no week_end_price stored yet)
-          const gain = calculateWeeklyGainLegacy(userId, snapshots, prices);
-          userScores.set(userId, { dollarGain: gain, percentGain: 0, hasPositions: true });
+        } else if (scorerKind === 'close_incomplete') {
+          // This user has a week_snapshots row, but at least one of THEIR OWN
+          // rows has no week_end_price yet. week_end has already passed (the
+          // top-level query), so this only ever means snapshot-week-end hasn't
+          // finished closing this user's rows — never score from live prices
+          // (S7), and never assume another user's closed row means THIS user
+          // is closed too. Refuse; enforced at the matchup level below. The
+          // heal crons (22:00Z Friday, Saturday) re-run this once this user's
+          // own close actually finishes.
+          unscoreableUsers.set(userId, MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_CLOSE_PRICE);
+          console.error(
+            `UNSCOREABLE (close incomplete) user ${userId} in league ${leagueId} week ${weekNumber}: ` +
+            `has a week_snapshot but no week_end_price — snapshot-week-end has not finished closing ` +
+            `this week. Refusing to score from live prices. Matchup will be left pending for the heal crons.`
+          );
         } else if (scorerKind === 'cash_only') {
           // No snapshot, and the ledger proves nothing was held at week_start OR at
           // week_end — so no snapshot row was ever expected, and every in-week lot
@@ -842,7 +860,7 @@ Deno.serve(async (req) => {
         } else if (scorerKind === 'unscoreable') {
           // Snapshot-less user AFTER week 1: refuse rather than write a fabricated
           // score. Recorded here, enforced at the matchup level below.
-          unscoreableUsers.add(userId);
+          unscoreableUsers.set(userId, MATCHUP_REFUSAL_REASON.UNSCOREABLE_PARTICIPANT_NO_SNAPSHOT);
           console.error(
             `UNSCOREABLE user ${userId} in league ${leagueId} week ${weekNumber}: ` +
             `no week_snapshot, ledger shows holdings at week_start or week_end, and ` +
