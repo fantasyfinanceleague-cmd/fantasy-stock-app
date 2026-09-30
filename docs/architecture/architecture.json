@@ -2,8 +2,8 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "036ed32e4ab6e43f203048f0957aca8f59aed67f",
-    "commitShort": "036ed32",
+    "commit": "95dcb84a12984028f5c208736dc6ddc1df12e409",
+    "commitShort": "95dcb84",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "ui/mobile-home",
     "dirty": true,
@@ -14,26 +14,26 @@
       },
       {
         "code": "??",
-        "path": "apps/mobile/components/home/"
+        "path": "apps/mobile/components/home/SeasonCard.tsx"
       },
       {
-        "code": "M",
-        "path": "apps/mobile/components/sp/logic/money.ts"
+        "code": "??",
+        "path": "apps/mobile/components/home/SeasonChart.tsx"
       },
       {
         "code": "M",
         "path": "apps/mobile/lib/home/buildHomeViewModel.ts"
       },
       {
-        "code": "M",
-        "path": "apps/mobile/lib/home/useHomeLeague.ts"
+        "code": "??",
+        "path": "apps/mobile/lib/home/chartGeometry.ts"
       },
       {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/sp-money.test.ts"
+        "code": "??",
+        "path": "apps/mobile/tests-deno/chart-geometry.test.ts"
       }
     ],
-    "timestamp": "2026-09-30T05:40:52Z",
+    "timestamp": "2026-09-30T05:47:12Z",
     "sourceHash": "sha256:63955785ebe286122310d27b9b3017daff8d5d89dd8721bd987d918c816e995a",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
@@ -41,7 +41,7 @@
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1176.8,
+    "ageHours": 1176.9,
     "ageDays": 49,
     "staleAfterDays": 14,
     "stale": true,

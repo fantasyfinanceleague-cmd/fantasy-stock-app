@@ -12,6 +12,7 @@ import type { HomeSummaryRow } from '@/lib/LeagueContext';
 import { useHomeLeague } from '@/lib/home/useHomeLeague';
 import { HomeHero } from '@/components/home/HomeHero';
 import { ThisWeekCard } from '@/components/home/ThisWeekCard';
+import { SeasonCard } from '@/components/home/SeasonCard';
 import { StandingsCard, type StandingRow } from '@/components/home/StandingsCard';
 import { ENDS_FRIDAY_LABEL, MARKET_CLOSED_CHIP, SCORING_CHIP, SCORED_CHIP } from '@/lib/home/homeCopy';
 
@@ -60,7 +61,7 @@ function HomeBody({
     );
   }
 
-  const { phase, hero, thisWeek, standings, myUserId } = viewModel;
+  const { phase, hero, thisWeek, standings, myUserId, season, weeklyResults } = viewModel;
 
   // States 6/7/8 (pre_draft, drafting, complete) have no money views yet —
   // Task 8 replaces this branch with the real phase cards (pick clock,
@@ -127,6 +128,18 @@ function HomeBody({
           opponentName={opponentName}
           rightLabel={chrome.rightLabel}
           liveChipLabel={chrome.liveChipLabel}
+        />
+      ) : null}
+      {season ? (
+        <SeasonCard
+          series={season}
+          // Regular-season byes are NO RESULT (Giorgio, 2026-09-29): never
+          // shown as a W/L chip.
+          weekResults={weeklyResults
+            .filter((w): w is typeof w & { result: 'W' | 'L' | 'T' } => w.result !== 'BYE')
+            .map((w) => ({ week: w.week, result: w.result }))}
+          currentWeek={week}
+          isLive={chrome.isLive}
         />
       ) : null}
       <StandingsCard rows={standingRows} numWeeks={phase.numWeeks ?? 0} />

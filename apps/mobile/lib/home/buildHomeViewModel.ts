@@ -99,6 +99,13 @@ export interface ThisWeekViewModel {
   opponent: { gain: number; pct: number; unpriced: string[] };
 }
 
+export interface WeeklyResult {
+  week: number;
+  gain: number;
+  /** 'BYE' for a regular-season bye (no result — never a win or a loss). */
+  result: 'W' | 'L' | 'T' | 'BYE';
+}
+
 export interface HomeViewModel {
   phase: PhaseResult;
   hero: HeroViewModel | null;
@@ -108,6 +115,10 @@ export interface HomeViewModel {
   /** So a caller (index.tsx) can mark which standings row is "you" without
    * re-deriving the caller's id from elsewhere. */
   myUserId: string;
+  /** Every already-scored week's result for me — the Season card's W/L
+   * chips (spec: "W1...W(N-1) result chips"). Empty when nothing is
+   * scored yet. */
+  weeklyResults: WeeklyResult[];
 }
 
 function toLedger(rows: HomeLedgerRow[]): { symbol: string; entryPrice: number; quantity: number }[] {
@@ -198,7 +209,7 @@ export function buildHomeViewModel(input: HomeViewModelInput): HomeViewModel {
   // reason about (states 6/7/5/8 have no hero/this-week card at all).
   const inSeason = !['pre_draft', 'drafting', 'complete'].includes(phase.kind);
   if (!inSeason) {
-    return { phase, hero: null, thisWeek: null, season: null, standings: data.standings, myUserId: meta.myUserId };
+    return { phase, hero: null, thisWeek: null, season: null, standings: data.standings, myUserId: meta.myUserId, weeklyResults: [] };
   }
 
   const myCurrentSnapshots = toLiveSnapshots(data.current_week.my_snapshots);
@@ -221,11 +232,18 @@ export function buildHomeViewModel(input: HomeViewModelInput): HomeViewModel {
   // Season gain = every already-scored week's gain for me, plus the
   // current week's live gain ONLY when it isn't scored yet.
   const scoredWeeklyGains: number[] = [];
+  const weeklyResults: WeeklyResult[] = [];
   for (const m of data.matchups) {
     if (m.week_number >= meta.currentWeek) continue;
     const isMe1 = m.team1_user_id === meta.myUserId;
     const g = isMe1 ? m.team1_gain : m.team2_gain;
-    if (g !== null) scoredWeeklyGains.push(g);
+    const opp = isMe1 ? m.team2_gain : m.team1_gain;
+    if (g !== null) {
+      scoredWeeklyGains.push(g);
+      const hasOpp = isMe1 ? !!m.team2_user_id : !!m.team1_user_id;
+      const result: WeeklyResult['result'] = !hasOpp ? 'BYE' : opp === null ? 'BYE' : g > opp ? 'W' : g < opp ? 'L' : 'T';
+      weeklyResults.push({ week: m.week_number, gain: g, result });
+    }
   }
   const currentWeekLiveGain = currentRowScored ? null : myLive.gain;
   if (currentRowScored && current) {
@@ -299,5 +317,5 @@ export function buildHomeViewModel(input: HomeViewModelInput): HomeViewModel {
     weeks, closesByDate, live: currentRowScored ? null : { gain: myLive.gain },
   });
 
-  return { phase, hero, thisWeek, season, standings: data.standings, myUserId: meta.myUserId };
+  return { phase, hero, thisWeek, season, standings: data.standings, myUserId: meta.myUserId, weeklyResults };
 }
