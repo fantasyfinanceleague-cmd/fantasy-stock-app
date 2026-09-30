@@ -81,11 +81,6 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
   const mySnapshots = ROBERTO_HOLDINGS.map((h) => ({ symbol: h.symbol, quantity: fixtureQty(h), week_start_price: h.mon, entered_mid_week: false, created_at: FIXTURE_WEEK6_START }));
   const oppSnapshots = GIANLUIGI_HOLDINGS.map((h) => ({ symbol: h.symbol, quantity: fixtureQty(h), week_start_price: h.mon, entered_mid_week: false, created_at: FIXTURE_WEEK6_START }));
 
-  const isScored = fixture === 'scored';
-  const week6Gains = isScored
-    ? { team1_gain: cents(ROBERTO_HOLDINGS.reduce((s, h) => s + fixtureQty(h) * (h.fri - h.mon), 0)), team2_gain: cents(GIANLUIGI_HOLDINGS.reduce((s, h) => s + fixtureQty(h) * (h.fri - h.mon), 0)) }
-    : { team1_gain: null, team2_gain: null };
-
   const isPreSeason = fixture === 'pre_season';
   const isBye = fixture === 'bye';
   const isPlayoffLive = fixture === 'playoff_live';
@@ -93,6 +88,13 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
   const isEliminated = fixture === 'eliminated';
   const isMissedPlayoffs = fixture === 'missed_playoffs';
   const isPlayoffState = isPlayoffLive || isPlayoffBye || isEliminated || isMissedPlayoffs;
+  // Every playoff-family fixture happens chronologically AFTER the regular
+  // season concluded, so week 6 (and every earlier week) is necessarily
+  // already scored by then -- never the live/unscored shape.
+  const isScored = fixture === 'scored' || isPlayoffState;
+  const week6Gains = isScored
+    ? { team1_gain: cents(ROBERTO_HOLDINGS.reduce((s, h) => s + fixtureQty(h) * (h.fri - h.mon), 0)), team2_gain: cents(GIANLUIGI_HOLDINGS.reduce((s, h) => s + fixtureQty(h) * (h.fri - h.mon), 0)) }
+    : { team1_gain: null, team2_gain: null };
 
   const week6 = {
     week_number: 6, week_start: FIXTURE_WEEK6_START, week_end: FIXTURE_WEEK6_END,
@@ -111,22 +113,26 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
     team2_gain: isEliminated ? 40 : null,
   };
 
+  const regularSeasonWeeks = ROBERTO_WEEKS.map((w, i) => {
+    const monday = new Date(Date.UTC(2026, 6, 6 + i * 7, 13, 30));
+    const friday = new Date(monday.getTime() + 4 * 24 * 3600 * 1000 + 6.5 * 3600 * 1000);
+    return {
+      week_number: w.week, week_start: monday.toISOString(), week_end: friday.toISOString(),
+      is_playoff: false, team1_user_id: 'roberto', team2_user_id: 'gianluigi',
+      team1_gain: w.gain, team2_gain: -w.gain,
+    };
+  });
+
   const matchups = isPreSeason
     ? [] // a league whose leagueStartDate is still in the future cannot have any scored (or even started) weeks yet
-    : isPlayoffState
-      ? (isMissedPlayoffs ? [] : [playoffWeek])
-      : [
-          ...ROBERTO_WEEKS.map((w, i) => {
-            const monday = new Date(Date.UTC(2026, 6, 6 + i * 7, 13, 30));
-            const friday = new Date(monday.getTime() + 4 * 24 * 3600 * 1000 + 6.5 * 3600 * 1000);
-            return {
-              week_number: w.week, week_start: monday.toISOString(), week_end: friday.toISOString(),
-              is_playoff: false, team1_user_id: 'roberto', team2_user_id: 'gianluigi',
-              team1_gain: w.gain, team2_gain: -w.gain,
-            };
-          }),
-          week6,
-        ];
+    : isMissedPlayoffs
+      // Missing the playoffs still means a real, fully-scored regular
+      // season happened -- only the (nonexistent) playoff week is
+      // missing, never the history that determined the standings.
+      ? [...regularSeasonWeeks, week6]
+      : isPlayoffState
+        ? [playoffWeek]
+        : [...regularSeasonWeeks, week6];
 
   const data: GetHomeLeagueResult = {
     my_ledger: { drafts: myDrafts, trades: [] },
