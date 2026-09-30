@@ -1,6 +1,19 @@
 {
     "tables": [
         {
+            "name": "app_config",
+            "policies": [
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true,
+            "checkConstraints": [
+                {
+                    "name": "app_config_id_check",
+                    "definition": "CHECK (id)"
+                }
+            ]
+        },
+        {
             "name": "categories",
             "policies": [
                 {
@@ -58,6 +71,37 @@
                 {
                     "name": "cron_job_status_status_check",
                     "definition": "CHECK ((status = ANY (ARRAY['running'::text, 'success'::text, 'failed'::text, 'retrying'::text])))"
+                }
+            ]
+        },
+        {
+            "name": "draft_queue",
+            "policies": [
+                {
+                    "name": "draft_queue_select_own",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "using": "(user_id = (auth.uid())::text)",
+                    "command": "SELECT",
+                    "withCheck": null,
+                    "permissive": true
+                }
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true,
+            "checkConstraints": [
+                {
+                    "name": "draft_queue_position_check",
+                    "definition": "CHECK (((\"position\" >= 1) AND (\"position\" <= 50)))"
+                },
+                {
+                    "name": "draft_queue_symbol_check",
+                    "definition": "CHECK (((symbol = upper(symbol)) AND ((length(symbol) >= 1) AND (length(symbol) <= 12))))"
+                },
+                {
+                    "name": "draft_queue_user_id_check",
+                    "definition": "CHECK ((user_id !~ '^bot-'::text))"
                 }
             ]
         },
@@ -151,8 +195,66 @@
             "rlsEnabled": true,
             "checkConstraints": [
                 {
+                    "name": "drafts_pick_source_check",
+                    "definition": "CHECK ((pick_source = ANY (ARRAY['manual'::text, 'bot'::text, 'skip'::text, 'auto_queue'::text, 'auto_best'::text, 'auto_skip'::text])))"
+                },
+                {
                     "name": "drafts_status_check",
                     "definition": "CHECK ((status = ANY (ARRAY['pending'::text, 'active'::text, 'completed'::text])))"
+                }
+            ]
+        },
+        {
+            "name": "league_draft_order",
+            "policies": [
+                {
+                    "name": "league_draft_order_select_member",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "using": "is_member(league_id)",
+                    "command": "SELECT",
+                    "withCheck": null,
+                    "permissive": true
+                }
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true,
+            "checkConstraints": [
+                {
+                    "name": "league_draft_order_position_check",
+                    "definition": "CHECK ((\"position\" >= 1))"
+                }
+            ]
+        },
+        {
+            "name": "league_draft_order_meta",
+            "policies": [
+                {
+                    "name": "league_draft_order_meta_select_member",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "using": "is_member(league_id)",
+                    "command": "SELECT",
+                    "withCheck": null,
+                    "permissive": true
+                }
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true,
+            "checkConstraints": [
+                {
+                    "name": "league_draft_order_meta_source_check",
+                    "definition": "CHECK ((source = ANY (ARRAY['random'::text, 'manual_seed'::text, 'start_backstop'::text, 'legacy_backfill'::text])))"
+                },
+                {
+                    "name": "league_draft_order_meta_stamps_check",
+                    "definition": "CHECK ((((state = 'open'::text) AND (finalized_at IS NULL) AND (locked_at IS NULL)) OR ((state = 'finalized'::text) AND (finalized_at IS NOT NULL) AND (locked_at IS NULL)) OR ((state = 'locked'::text) AND (finalized_at IS NOT NULL) AND (locked_at IS NOT NULL))))"
+                },
+                {
+                    "name": "league_draft_order_meta_state_check",
+                    "definition": "CHECK ((state = ANY (ARRAY['open'::text, 'finalized'::text, 'locked'::text])))"
                 }
             ]
         },
@@ -276,7 +378,7 @@
                     ],
                     "using": null,
                     "command": "INSERT",
-                    "withCheck": "(user_id = (auth.uid())::text)",
+                    "withCheck": "((user_id = (auth.uid())::text) AND (role = 'commissioner'::text) AND (EXISTS ( SELECT 1\n   FROM leagues l\n  WHERE ((l.id = league_members.league_id) AND (l.commissioner_id = (auth.uid())::text) AND (l.draft_status = 'not_started'::text)))))",
                     "permissive": true
                 },
                 {
@@ -300,18 +402,35 @@
             ]
         },
         {
-            "name": "league_seasons",
+            "name": "league_notifications",
             "policies": [
                 {
-                    "name": "Commissioners can manage league seasons",
+                    "name": "league_notifications_select_own",
                     "roles": [
-                        "PUBLIC"
+                        "authenticated"
                     ],
-                    "using": "(league_id IN ( SELECT leagues.id\n   FROM leagues\n  WHERE (leagues.commissioner_id = (auth.uid())::text)))",
-                    "command": "ALL",
+                    "using": "(user_id = (auth.uid())::text)",
+                    "command": "SELECT",
                     "withCheck": null,
                     "permissive": true
+                }
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true,
+            "checkConstraints": [
+                {
+                    "name": "league_notifications_kind_check",
+                    "definition": "CHECK ((kind = 'draft_order_set'::text))"
                 },
+                {
+                    "name": "league_notifications_push_status_check",
+                    "definition": "CHECK ((push_status = ANY (ARRAY['pending'::text, 'sending'::text, 'sent'::text, 'no_device'::text, 'skipped'::text, 'failed'::text])))"
+                }
+            ]
+        },
+        {
+            "name": "league_seasons",
+            "policies": [
                 {
                     "name": "Users can view league seasons for their leagues",
                     "roles": [
@@ -331,16 +450,6 @@
         {
             "name": "league_standings",
             "policies": [
-                {
-                    "name": "league_standings_insert_members",
-                    "roles": [
-                        "authenticated"
-                    ],
-                    "using": null,
-                    "command": "INSERT",
-                    "withCheck": "is_member(league_id)",
-                    "permissive": true
-                },
                 {
                     "name": "league_standings_select_members",
                     "roles": [
@@ -419,6 +528,10 @@
                     "definition": "CHECK ((budget_mode = ANY (ARRAY['budget'::text, 'no-budget'::text])))"
                 },
                 {
+                    "name": "leagues_draft_order_mode_check",
+                    "definition": "CHECK ((draft_order_mode = ANY (ARRAY['random'::text, 'manual'::text, 'legacy'::text])))"
+                },
+                {
                     "name": "leagues_draft_status_check",
                     "definition": "CHECK ((draft_status = ANY (ARRAY['not_started'::text, 'in_progress'::text, 'completed'::text])))"
                 },
@@ -431,8 +544,20 @@
                     "definition": "CHECK ((league_type = ANY (ARRAY['duration'::text, 'matchup'::text])))"
                 },
                 {
+                    "name": "leagues_matchup_requires_playoff_teams",
+                    "definition": "CHECK (((league_type IS DISTINCT FROM 'matchup'::text) OR (playoff_teams IS NOT NULL)))"
+                },
+                {
                     "name": "leagues_num_participants_range",
                     "definition": "CHECK (((num_participants >= 4) AND (num_participants <= 16)))"
+                },
+                {
+                    "name": "leagues_pick_clock_started_check",
+                    "definition": "CHECK (((NOT pick_clock_enabled) OR (draft_status IS DISTINCT FROM 'in_progress'::text) OR (draft_started_at IS NOT NULL)))"
+                },
+                {
+                    "name": "leagues_pick_seconds_check",
+                    "definition": "CHECK ((((pick_seconds >= 30) AND (pick_seconds <= 90)) AND (((pick_seconds)::integer % 15) = 0)))"
                 },
                 {
                     "name": "leagues_season_status_check",
@@ -444,23 +569,63 @@
                 },
                 {
                     "name": "valid_playoff_teams",
-                    "definition": "CHECK (((playoff_teams IS NULL) OR (playoff_teams = ANY (ARRAY[2, 4, 8]))))"
+                    "definition": "CHECK (((playoff_teams IS NULL) OR (playoff_teams >= 2)))"
+                }
+            ]
+        },
+        {
+            "name": "market_calendar",
+            "policies": [
+                {
+                    "name": "market_calendar_select_authenticated",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "using": "true",
+                    "command": "SELECT",
+                    "withCheck": null,
+                    "permissive": true
+                }
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true,
+            "checkConstraints": [
+                {
+                    "name": "market_calendar_open_before_close",
+                    "definition": "CHECK ((open_et < close_et))"
+                }
+            ]
+        },
+        {
+            "name": "market_calendar_coverage",
+            "policies": [
+                {
+                    "name": "market_calendar_coverage_select_authenticated",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "using": "true",
+                    "command": "SELECT",
+                    "withCheck": null,
+                    "permissive": true
+                }
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true,
+            "checkConstraints": [
+                {
+                    "name": "market_calendar_coverage_id_check",
+                    "definition": "CHECK (id)"
+                },
+                {
+                    "name": "market_calendar_coverage_range",
+                    "definition": "CHECK ((covered_through >= covered_from))"
                 }
             ]
         },
         {
             "name": "matchups",
             "policies": [
-                {
-                    "name": "matchups_insert_members",
-                    "roles": [
-                        "authenticated"
-                    ],
-                    "using": null,
-                    "command": "INSERT",
-                    "withCheck": "is_member(league_id)",
-                    "permissive": true
-                },
                 {
                     "name": "matchups_select_members",
                     "roles": [
@@ -476,8 +641,12 @@
             "rlsEnabled": true,
             "checkConstraints": [
                 {
+                    "name": "matchups_playoff_address",
+                    "definition": "CHECK (((COALESCE(is_playoff, false) AND (playoff_round_number IS NOT NULL) AND (bracket_position IS NOT NULL) AND (playoff_round_number >= 1) AND (bracket_position >= 0)) OR ((NOT COALESCE(is_playoff, false)) AND (playoff_round_number IS NULL) AND (bracket_position IS NULL))))"
+                },
+                {
                     "name": "valid_playoff_round",
-                    "definition": "CHECK (((playoff_round IS NULL) OR (playoff_round = ANY (ARRAY['quarter'::text, 'semi'::text, 'finals'::text]))))"
+                    "definition": "CHECK (((playoff_round IS NULL) OR (playoff_round = ANY (ARRAY['round_of_16'::text, 'quarter'::text, 'semi'::text, 'finals'::text]))))"
                 }
             ]
         },
@@ -488,6 +657,19 @@
             "rlsForced": false,
             "rlsEnabled": true,
             "checkConstraints": [
+            ]
+        },
+        {
+            "name": "signup_allowlist",
+            "policies": [
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true,
+            "checkConstraints": [
+                {
+                    "name": "signup_allowlist_email_check",
+                    "definition": "CHECK ((email = lower(email)))"
+                }
             ]
         },
         {
@@ -573,6 +755,10 @@
                     "definition": "CHECK ((action = ANY (ARRAY['buy'::text, 'sell'::text])))"
                 },
                 {
+                    "name": "trades_funded_by_trade_id_buy_only",
+                    "definition": "CHECK (((funded_by_trade_id IS NULL) OR (action = 'buy'::text)))"
+                },
+                {
                     "name": "trades_price_check",
                     "definition": "CHECK ((price > (0)::numeric))"
                 },
@@ -619,6 +805,10 @@
             "rlsForced": false,
             "rlsEnabled": true,
             "checkConstraints": [
+                {
+                    "name": "user_profiles_username_format",
+                    "definition": "CHECK (((username IS NULL) OR (username ~ '^[A-Za-z0-9_]{3,20}$'::text)))"
+                }
             ]
         },
         {
@@ -662,6 +852,15 @@
             "username": "postgres"
         },
         {
+            "jobid": 26,
+            "active": true,
+            "command": "\n  select net.http_post(\n    url     := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/refresh-market-calendar',\n    headers := jsonb_build_object(\n      'Content-Type', 'application/json',\n      'apikey', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_apikey' limit 1)\n    ),\n    body    := '{}'::jsonb,\n    timeout_milliseconds := 30000\n  );\n  ",
+            "jobname": "refresh_market_calendar_daily",
+            "database": "postgres",
+            "schedule": "20 10 * * *",
+            "username": "postgres"
+        },
+        {
             "jobid": 24,
             "active": true,
             "command": "\n  select net.http_post(\n    url     := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/refresh-symbols',\n    headers := jsonb_build_object(\n      'Content-Type', 'application/json',\n      'apikey', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_apikey' limit 1)\n    ),\n    body    := '{}'::jsonb\n  );\n  ",
@@ -693,6 +892,134 @@
     "functions": [
         {
             "acl": [
+                "postgres=X/postgres"
+            ],
+            "args": "p_league_id uuid",
+            "name": "_draft_order_finalize",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres"
+            ],
+            "args": "p_draft_date timestamp with time zone",
+            "name": "_draft_order_is_due",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
+            "securityDefiner": false
+        },
+        {
+            "acl": [
+                "postgres=X/postgres"
+            ],
+            "args": "p_league_id uuid",
+            "name": "_draft_order_matches_members",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres"
+            ],
+            "args": "p_league_id uuid, p_source text",
+            "name": "_draft_order_materialize",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres"
+            ],
+            "args": "p_league_id uuid",
+            "name": "_draft_order_notify_members",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres"
+            ],
+            "args": "p_league_id uuid",
+            "name": "_draft_order_reconcile",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres"
+            ],
+            "args": "p_league_id uuid, p_lock boolean",
+            "name": "_draft_order_sync",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_from date, p_through date, p_sessions jsonb",
+            "name": "apply_market_calendar",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_min numeric, p_max numeric, p_category_id uuid, p_draftable_only boolean, p_exclude text[], p_limit integer",
+            "name": "auto_pick_search_candidates",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
+            "securityDefiner": false
+        },
+        {
+            "acl": [
                 "postgres=X/postgres",
                 "service_role=X/postgres"
             ],
@@ -709,6 +1036,22 @@
         {
             "acl": [
                 "postgres=X/postgres",
+                "service_role=X/postgres",
+                "authenticated=X/postgres"
+            ],
+            "args": "p_candidates text[]",
+            "name": "check_usernames",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
                 "service_role=X/postgres"
             ],
             "args": "p_league_id uuid, p_champion_user_id text, p_runner_up_user_id text",
@@ -720,6 +1063,108 @@
             "searchPath": "public",
             "volatility": "volatile",
             "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "",
+            "name": "draft_order_notify_due",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
+            "securityDefiner": false
+        },
+        {
+            "acl": [
+                "postgres=X/postgres"
+            ],
+            "args": "",
+            "name": "enforce_league_draft_order_meta",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres"
+            ],
+            "args": "",
+            "name": "enforce_league_draft_order_rows",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres"
+            ],
+            "args": "",
+            "name": "enforce_leagues_draft_order_mode",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "",
+            "name": "enforce_leagues_member_update_columns",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "",
+            "name": "enforce_leagues_pick_clock",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "",
+            "name": "enforce_playoff_teams_frozen_after_draft_start",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": false
         },
         {
             "acl": [
@@ -742,6 +1187,97 @@
         {
             "acl": [
                 "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "",
+            "name": "finalize_due_draft_orders",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_league_id uuid, p_member_ids text[], p_league_start timestamp with time zone, p_league_end timestamp with time zone, p_matchups jsonb",
+            "name": "finalize_league_draft",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "authenticated=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_league_id uuid",
+            "name": "get_draft_clock",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
+            "securityDefiner": false
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "authenticated=X/postgres"
+            ],
+            "args": "p_league_id uuid",
+            "name": "get_draft_order",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "authenticated=X/postgres"
+            ],
+            "args": "",
+            "name": "get_home_summary",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "authenticated=X/postgres"
+            ],
+            "args": "p_league_id uuid",
+            "name": "get_league_display_names",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
                 "authenticated=X/postgres",
                 "service_role=X/postgres"
             ],
@@ -752,6 +1288,36 @@
                 "search_path=public"
             ],
             "searchPath": "public",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "authenticated=X/postgres"
+            ],
+            "args": "p_league_id uuid, p_season_id uuid",
+            "name": "get_season_result",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "",
+            "name": "handle_new_user_profile",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
             "volatility": "volatile",
             "securityDefiner": true
         },
@@ -796,9 +1362,100 @@
             "name": "join_league_by_code",
             "owner": "postgres",
             "proconfig": [
-                "search_path=public"
+                "search_path=public, pg_temp"
             ],
-            "searchPath": "public",
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "authenticated=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_league_id uuid",
+            "name": "league_standings_ranked",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
+            "securityDefiner": false
+        },
+        {
+            "acl": [
+                "postgres=X/postgres"
+            ],
+            "args": "",
+            "name": "lock_draft_order_on_start",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "authenticated=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_now timestamp with time zone",
+            "name": "market_session_status",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
+            "securityDefiner": false
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "",
+            "name": "overdue_draft_turns",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
+            "securityDefiner": false
+        },
+        {
+            "acl": [
+                "postgres=X/postgres"
+            ],
+            "args": "p_user_id text",
+            "name": "participant_display_name",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres",
+                "supabase_auth_admin=X/postgres"
+            ],
+            "args": "event jsonb",
+            "name": "restrict_new_signups",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
             "volatility": "volatile",
             "securityDefiner": true
         },
@@ -814,6 +1471,68 @@
                 "search_path=public"
             ],
             "searchPath": "public",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "authenticated=X/postgres"
+            ],
+            "args": "p_league_id uuid, p_user_ids text[]",
+            "name": "set_draft_order",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "authenticated=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_league_id uuid, p_symbols text[]",
+            "name": "set_draft_queue",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres",
+                "authenticated=X/postgres"
+            ],
+            "args": "p_username text",
+            "name": "set_username",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_league_id uuid, p_expected_week integer, p_bracket jsonb",
+            "name": "start_league_playoffs",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
             "volatility": "volatile",
             "securityDefiner": true
         },
@@ -850,6 +1569,20 @@
             "searchPath": "public",
             "volatility": "volatile",
             "securityDefiner": false
+        },
+        {
+            "acl": [
+                "postgres=X/postgres"
+            ],
+            "args": "",
+            "name": "sync_draft_order_on_member_change",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
         },
         {
             "acl": [
@@ -929,6 +1662,6 @@
             "securityDefiner": false
         }
     ],
-    "capturedAt": "2026-08-12T04:52:52Z",
+    "capturedAt": "2026-09-30T16:53:15Z",
     "postgresVersion": "17.4"
 }
