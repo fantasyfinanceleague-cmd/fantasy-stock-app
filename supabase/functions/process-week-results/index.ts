@@ -31,6 +31,7 @@ import {
 } from './user-score.ts';
 import { SKIP_SYMBOL } from '../_shared/draft-validation.ts';
 import { updateJobStatus, noPendingMessage, scoredMessage } from './job-status.ts';
+import { completeLeagueSeason, healUncompletedSeasons } from './season-completion.ts';
 import {
   buildPlayoffBracket,
   decidePlayoffSeeds,
@@ -361,35 +362,6 @@ async function healMissedAdvances(supabase: any, leagueIdFilter: string | null):
 }
 
 /**
- * Complete season when playoffs finish - champion is finals winner
- */
-async function completeSeasonFromPlayoffs(
-  supabase: any,
-  leagueId: string,
-  championUserId: string,
-  runnerUpUserId: string
-) {
-  console.log(`Completing season for league ${leagueId} - Champion: ${championUserId}, Runner-up: ${runnerUpUserId}`);
-
-  try {
-    // Call the database function to complete the season
-    const { error } = await supabase.rpc('complete_league_season', {
-      p_league_id: leagueId,
-      p_champion_user_id: championUserId,
-      p_runner_up_user_id: runnerUpUserId,
-    });
-
-    if (error) {
-      console.error('Failed to complete season:', error);
-    } else {
-      console.log(`Season completed successfully for league ${leagueId}`);
-    }
-  } catch (e) {
-    console.error('Error completing season:', e);
-  }
-}
-
-/**
  * Heal pass: retry season transitions that an earlier run refused.
  *
  * The in-loop transition only runs inside a batch of PENDING matchups for the
@@ -511,10 +483,16 @@ Deno.serve(async (req) => {
     // 0. Retry season transitions refused on an earlier run (see
     //    healRefusedTransitions). Before the pending query so it runs on quiet weeks.
     //    Then re-apply playoff advances an earlier run failed to write, so a
-    //    healed next-round game is scoreable in this same run.
+    //    healed next-round game is scoreable in this same run. Then retry any
+    //    season completion whose rpc call failed on an earlier run: a scored
+    //    final is never re-selected (team1_gain IS NOT NULL), so without this
+    //    heal a failed completeLeagueSeason call would strand the league at
+    //    season_status='playoffs' forever (F-B: the "all-or-nothing guard,
+    //    unrecoverable partial state" family — see season-completion.ts).
     const transitionRefusals = [
       ...(await healRefusedTransitions(supabase, leagueIdFilter)),
       ...(await healMissedAdvances(supabase, leagueIdFilter)),
+      ...(await healUncompletedSeasons(supabase, leagueIdFilter)),
     ];
     let transitionsRefused = transitionRefusals.length;
 
@@ -1187,8 +1165,19 @@ Deno.serve(async (req) => {
                 const loserId = finalsMatchup.team1_user_id === finalsWinner
                   ? finalsMatchup.team2_user_id
                   : finalsMatchup.team1_user_id;
-                await completeSeasonFromPlayoffs(supabase, leagueId, finalsWinner, loserId);
-                console.log(`Season completed for league ${leagueId} - Champion: ${finalsWinner}`);
+                // The game IS scored; only the completion write can still fail
+                // (a bad rpc `{ error }`, checked here — CLAUDE.md "Success
+                // signals" #5). A failure is reported and retried by
+                // healUncompletedSeasons on the next run: never a silent,
+                // fabricated "Season completed" log (the exact bug this fixes).
+                const completion = await completeLeagueSeason(supabase, leagueId, finalsWinner, loserId);
+                if (completion.ok) {
+                  console.log(`Season completed for league ${leagueId} - Champion: ${finalsWinner}`);
+                } else {
+                  console.error(`Season completion failed for league ${leagueId}: ${completion.reason}`);
+                  skipped.push({ league_id: leagueId, week_number: weekNumber, reason: completion.reason });
+                  transitionsRefused++;
+                }
               } else {
                 console.error(`Finals processed but no winner determined for league ${leagueId}`);
               }
