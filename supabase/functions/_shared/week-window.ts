@@ -93,23 +93,53 @@ export type WeekCutResult =
      *                         anchor rule, which puts the draft strictly before
      *                         the week's Tuesday — handled so this module never
      *                         assumes a caller invariant it cannot itself verify).
+     * 'invalid_calendar_data' — etDateParts/etWallClockToUtc got a part set
+     *                         from Intl.DateTimeFormat missing a field, or an
+     *                         unrecognized weekday. Not expected on this
+     *                         module's actual runtime (Deno's ICU, server
+     *                         side only — never Hermes, where an incomplete
+     *                         Intl part set is a real, previously-seen
+     *                         failure mode elsewhere in this codebase).
+     *                         Refuse and retry rather than silently default
+     *                         (e.g. treating "weekday unknown" as Monday).
      */
-    reason: 'no_coverage' | 'no_sessions_in_week' | 'floor_beyond_week';
+    reason: 'no_coverage' | 'no_sessions_in_week' | 'floor_beyond_week' | 'invalid_calendar_data';
   };
 
 const ET_ZONE = 'America/New_York';
 const WEEKDAY_NUM: Record<string, number> = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 };
 
-/** ET calendar date (YYYY-MM-DD) and ISO weekday (Mon=1..Sun=7) of an instant. */
+/**
+ * ET calendar date (YYYY-MM-DD) and ISO weekday (Mon=1..Sun=7) of an instant.
+ *
+ * THROWS rather than silently defaulting (`?? ''`, `?? 1`) if
+ * Intl.DateTimeFormat ever returns a part set missing 'year'/'month'/'day'/
+ * 'weekday', or a 'weekday' value this module doesn't recognize. Found in
+ * review (2026-09-30): the runtime this actually ships on is Deno's ICU,
+ * where that shouldn't happen — but a silent `?? 1` default here would mean
+ * "isoWeekday unknown" reads as "it's Monday," silently mis-deriving the
+ * week's Monday/Friday boundary rather than refusing. This is exactly the
+ * silent-default shape that bit the mobile Home port on Hermes (a DIFFERENT
+ * JS runtime, where Intl part sets can genuinely be incomplete) — this
+ * module is server-only and never runs on Hermes, but the caller (weekCut)
+ * already has a 'refuse' path for exactly this kind of "can't trust the
+ * inputs" case, so there is no reason to default instead of using it.
+ */
 function etDateParts(instant: Date): { dateStr: string; isoWeekday: number } {
   const fmt = new Intl.DateTimeFormat('en-US', {
     timeZone: ET_ZONE,
     year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short',
   });
   const parts = fmt.formatToParts(instant);
-  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
+  const get = (t: string): string => {
+    const v = parts.find((p) => p.type === t)?.value;
+    if (v === undefined) throw new Error(`etDateParts: missing '${t}' part from Intl.DateTimeFormat`);
+    return v;
+  };
   const dateStr = `${get('year')}-${get('month')}-${get('day')}`;
-  const isoWeekday = WEEKDAY_NUM[get('weekday')] ?? 1;
+  const weekdayStr = get('weekday');
+  const isoWeekday = WEEKDAY_NUM[weekdayStr];
+  if (isoWeekday === undefined) throw new Error(`etDateParts: unrecognized weekday '${weekdayStr}' from Intl.DateTimeFormat`);
   return { dateStr, isoWeekday };
 }
 
@@ -131,6 +161,10 @@ function shiftDateStr(dateStr: string, days: number): string {
  * by the difference. Safe for this module's inputs (market open/close times,
  * always well outside the 1-3 AM DST-transition window), so there is no
  * spring-forward "this wall-clock time doesn't exist" case to handle.
+ *
+ * THROWS (rather than the old silent `?? '0'`) if Intl.DateTimeFormat ever
+ * returns a part set missing one of year/month/day/hour/minute/second — see
+ * etDateParts' doc for why a missing part must refuse, not default.
  */
 export function etWallClockToUtc(dateStr: string, timeStr: string): Date {
   const [y, m, d] = dateStr.split('-').map(Number);
@@ -143,7 +177,11 @@ export function etWallClockToUtc(dateStr: string, timeStr: string): Date {
     hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
   });
   const parts = fmt.formatToParts(new Date(guess));
-  const get = (t: string) => parseInt(parts.find((p) => p.type === t)?.value ?? '0', 10);
+  const get = (t: string): number => {
+    const v = parts.find((p) => p.type === t)?.value;
+    if (v === undefined) throw new Error(`etWallClockToUtc: missing '${t}' part from Intl.DateTimeFormat`);
+    return parseInt(v, 10);
+  };
   // hour12:false can format midnight as "24"; normalize like marketHours.ts does.
   const shownAsIfUtc = Date.UTC(get('year'), get('month') - 1, get('day'), get('hour') % 24, get('minute'), get('second'));
   const offset = guess - shownAsIfUtc;
@@ -166,45 +204,57 @@ export function weekCut(
   sessions: ReadonlyArray<CalendarSession>,
   coverage: Coverage | null,
 ): WeekCutResult {
-  const { dateStr: anchorDate, isoWeekday } = etDateParts(anchor);
-  const monday = shiftDateStr(anchorDate, 1 - isoWeekday);
-  const friday = shiftDateStr(monday, 4);
+  // Wraps the whole computation: etDateParts/etWallClockToUtc throw rather
+  // than silently defaulting on an incomplete Intl.DateTimeFormat part set
+  // (see their docs) — caught here and translated into the existing
+  // 'invalid_calendar_data' refusal, so every caller's fail-closed handling
+  // of a WeekCutResult (already built for 'no_coverage' etc.) covers this
+  // case too with no extra plumbing. Logged, not swallowed: the message
+  // names exactly which part was missing, for whoever reads the run's logs.
+  try {
+    const { dateStr: anchorDate, isoWeekday } = etDateParts(anchor);
+    const monday = shiftDateStr(anchorDate, 1 - isoWeekday);
+    const friday = shiftDateStr(monday, 4);
 
-  if (!coverage || monday < coverage.from || friday > coverage.through) {
-    return { ok: false, reason: 'no_coverage' };
-  }
-
-  const weekSessions = sessions
-    .filter((s) => s.sessionDate >= monday && s.sessionDate <= friday)
-    .slice()
-    .sort((a, b) => (a.sessionDate < b.sessionDate ? -1 : a.sessionDate > b.sessionDate ? 1 : 0));
-
-  if (weekSessions.length === 0) {
-    return { ok: false, reason: 'no_sessions_in_week' };
-  }
-
-  let openSession: CalendarSession | undefined;
-  let openInstant: Date | undefined;
-  for (const s of weekSessions) {
-    const candidate = etWallClockToUtc(s.sessionDate, s.openEt);
-    if (!floor || candidate.getTime() >= floor.getTime()) {
-      openSession = s;
-      openInstant = candidate;
-      break;
+    if (!coverage || monday < coverage.from || friday > coverage.through) {
+      return { ok: false, reason: 'no_coverage' };
     }
-  }
-  if (!openSession || !openInstant) {
-    return { ok: false, reason: 'floor_beyond_week' };
-  }
 
-  const closeSession = weekSessions[weekSessions.length - 1];
-  const closeInstant = etWallClockToUtc(closeSession.sessionDate, closeSession.closeEt);
+    const weekSessions = sessions
+      .filter((s) => s.sessionDate >= monday && s.sessionDate <= friday)
+      .slice()
+      .sort((a, b) => (a.sessionDate < b.sessionDate ? -1 : a.sessionDate > b.sessionDate ? 1 : 0));
 
-  return {
-    ok: true,
-    open: openInstant,
-    close: closeInstant,
-    openSessionDate: openSession.sessionDate,
-    closeSessionDate: closeSession.sessionDate,
-  };
+    if (weekSessions.length === 0) {
+      return { ok: false, reason: 'no_sessions_in_week' };
+    }
+
+    let openSession: CalendarSession | undefined;
+    let openInstant: Date | undefined;
+    for (const s of weekSessions) {
+      const candidate = etWallClockToUtc(s.sessionDate, s.openEt);
+      if (!floor || candidate.getTime() >= floor.getTime()) {
+        openSession = s;
+        openInstant = candidate;
+        break;
+      }
+    }
+    if (!openSession || !openInstant) {
+      return { ok: false, reason: 'floor_beyond_week' };
+    }
+
+    const closeSession = weekSessions[weekSessions.length - 1];
+    const closeInstant = etWallClockToUtc(closeSession.sessionDate, closeSession.closeEt);
+
+    return {
+      ok: true,
+      open: openInstant,
+      close: closeInstant,
+      openSessionDate: openSession.sessionDate,
+      closeSessionDate: closeSession.sessionDate,
+    };
+  } catch (e) {
+    console.error('weekCut: refusing — Intl.DateTimeFormat returned an incomplete/unrecognized part set:', e);
+    return { ok: false, reason: 'invalid_calendar_data' };
+  }
 }

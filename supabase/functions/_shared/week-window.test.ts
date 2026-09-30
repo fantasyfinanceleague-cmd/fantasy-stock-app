@@ -6,7 +6,7 @@
  *   deno test supabase/functions/_shared/week-window.test.ts
  */
 
-import { assertEquals } from 'jsr:@std/assert';
+import { assertEquals, assertThrows } from 'jsr:@std/assert';
 import { etWallClockToUtc, weekCut, type CalendarSession, type Coverage } from './week-window.ts';
 
 // ===========================================================================
@@ -45,6 +45,74 @@ Deno.test('etWallClockToUtc: the day AFTER spring-forward (2026-03-09) is alread
 
 Deno.test('etWallClockToUtc: an early-close time (1:00 PM ET, Black Friday) converts like any other', () => {
   assertEquals(etWallClockToUtc('2026-11-27', '13:00').toISOString(), '2026-11-27T18:00:00.000Z');
+});
+
+// ===========================================================================
+// Missing-part hardening (found in review, 2026-09-30): this module's own
+// Intl runtime (Deno's ICU) is not expected to ever omit a formatToParts
+// field, but the old code defaulted silently (`?? ''`, `?? 1`, `?? '0'`)
+// rather than refusing if it ever did — the exact "silent default masks a
+// bad input" shape that bit the mobile Home port on Hermes (a genuinely
+// incomplete-Intl-parts runtime). These tests mock Intl.DateTimeFormat to
+// simulate that failure and assert this module now refuses instead.
+// ===========================================================================
+
+/** Temporarily replace global Intl.DateTimeFormat with a stub whose
+ * formatToParts drops `omit` from whatever the real formatter would return,
+ * runs `fn`, and restores the real Intl.DateTimeFormat afterward — even if
+ * `fn` throws, so one bad test can't poison the rest of the suite. */
+function withMissingIntlPart<T>(omit: string, fn: () => T): T {
+  const RealDTF = Intl.DateTimeFormat;
+  class StubDTF extends RealDTF {
+    override formatToParts(date?: Date | number) {
+      return super.formatToParts(date).filter((p) => p.type !== omit);
+    }
+  }
+  // deno-lint-ignore no-explicit-any
+  (Intl as any).DateTimeFormat = StubDTF;
+  try {
+    return fn();
+  } finally {
+    // deno-lint-ignore no-explicit-any
+    (Intl as any).DateTimeFormat = RealDTF;
+  }
+}
+
+Deno.test('etWallClockToUtc: THROWS (not a silent 0) when Intl.DateTimeFormat omits a part', () => {
+  withMissingIntlPart('hour', () => {
+    assertThrows(
+      () => etWallClockToUtc('2026-09-29', '09:30'),
+      Error,
+      "missing 'hour' part",
+    );
+  });
+});
+
+Deno.test('weekCut: REFUSES with invalid_calendar_data (not a silent Monday-1) when Intl.DateTimeFormat omits the weekday part', () => {
+  const sessions = normalWeek('2026-09-28');
+  withMissingIntlPart('weekday', () => {
+    const r = weekCut(new Date('2026-09-29T14:30:00.000Z'), null, sessions, WIDE_COVERAGE);
+    assertEquals(r, { ok: false, reason: 'invalid_calendar_data' });
+  });
+});
+
+Deno.test('weekCut: REFUSES with invalid_calendar_data when Intl.DateTimeFormat omits the hour part (breaks etWallClockToUtc mid-computation)', () => {
+  const sessions = normalWeek('2026-09-28');
+  withMissingIntlPart('hour', () => {
+    const r = weekCut(new Date('2026-09-29T14:30:00.000Z'), null, sessions, WIDE_COVERAGE);
+    assertEquals(r, { ok: false, reason: 'invalid_calendar_data' });
+  });
+});
+
+Deno.test('weekCut: fully recovers once Intl.DateTimeFormat is back to normal (the mock doesn\'t leak)', () => {
+  const sessions = normalWeek('2026-09-28');
+  const anchor = new Date('2026-09-29T14:30:00.000Z');
+  withMissingIntlPart('weekday', () => {
+    assertEquals(weekCut(anchor, null, sessions, WIDE_COVERAGE), { ok: false, reason: 'invalid_calendar_data' });
+  });
+  const r = weekCut(anchor, null, sessions, WIDE_COVERAGE);
+  if (!r.ok) throw new Error('expected ok after the mock was restored');
+  assertEquals(r.openSessionDate, '2026-09-28');
 });
 
 // ===========================================================================

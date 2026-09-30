@@ -186,7 +186,7 @@ import { weekCut, type CalendarSession, type Coverage as MarketCalendarCoverage 
 
 export type WeekWindowPlan =
   | { action: 'not_due' }
-  | { action: 'refuse'; reason: 'no_coverage' | 'no_sessions_in_week' | 'floor_beyond_week' }
+  | { action: 'refuse'; reason: 'no_coverage' | 'no_sessions_in_week' | 'floor_beyond_week' | 'invalid_calendar_data' }
   | {
     action: 'proceed';
     open: Date;

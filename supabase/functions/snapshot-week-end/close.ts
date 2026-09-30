@@ -324,7 +324,7 @@ export function buildCloseWork(
 
 export type CloseWindowPlan =
   | { action: 'not_due' }
-  | { action: 'refuse'; reason: 'no_coverage' | 'no_sessions_in_week' | 'floor_beyond_week' }
+  | { action: 'refuse'; reason: 'no_coverage' | 'no_sessions_in_week' | 'floor_beyond_week' | 'invalid_calendar_data' }
   | {
     action: 'proceed';
     /** This week's real open — needed only to bound midWeekEntryPrice (buildCloseWork's windowOpenIso). */
