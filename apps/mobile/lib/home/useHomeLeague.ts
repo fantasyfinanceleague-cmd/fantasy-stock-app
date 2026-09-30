@@ -86,6 +86,7 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
     ? { team1_gain: cents(ROBERTO_HOLDINGS.reduce((s, h) => s + fixtureQty(h) * (h.fri - h.mon), 0)), team2_gain: cents(GIANLUIGI_HOLDINGS.reduce((s, h) => s + fixtureQty(h) * (h.fri - h.mon), 0)) }
     : { team1_gain: null, team2_gain: null };
 
+  const isPreSeason = fixture === 'pre_season';
   const isBye = fixture === 'bye';
   const isPlayoffLive = fixture === 'playoff_live';
   const isPlayoffBye = fixture === 'playoff_bye';
@@ -110,42 +111,50 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
     team2_gain: isEliminated ? 40 : null,
   };
 
-  const matchups = isPlayoffState
-    ? (isMissedPlayoffs ? [] : [playoffWeek])
-    : [
-        ...ROBERTO_WEEKS.map((w, i) => {
-          const monday = new Date(Date.UTC(2026, 6, 6 + i * 7, 13, 30));
-          const friday = new Date(monday.getTime() + 4 * 24 * 3600 * 1000 + 6.5 * 3600 * 1000);
-          return {
-            week_number: w.week, week_start: monday.toISOString(), week_end: friday.toISOString(),
-            is_playoff: false, team1_user_id: 'roberto', team2_user_id: 'gianluigi',
-            team1_gain: w.gain, team2_gain: -w.gain,
-          };
-        }),
-        week6,
-      ];
+  const matchups = isPreSeason
+    ? [] // a league whose leagueStartDate is still in the future cannot have any scored (or even started) weeks yet
+    : isPlayoffState
+      ? (isMissedPlayoffs ? [] : [playoffWeek])
+      : [
+          ...ROBERTO_WEEKS.map((w, i) => {
+            const monday = new Date(Date.UTC(2026, 6, 6 + i * 7, 13, 30));
+            const friday = new Date(monday.getTime() + 4 * 24 * 3600 * 1000 + 6.5 * 3600 * 1000);
+            return {
+              week_number: w.week, week_start: monday.toISOString(), week_end: friday.toISOString(),
+              is_playoff: false, team1_user_id: 'roberto', team2_user_id: 'gianluigi',
+              team1_gain: w.gain, team2_gain: -w.gain,
+            };
+          }),
+          week6,
+        ];
 
   const data: GetHomeLeagueResult = {
     my_ledger: { drafts: myDrafts, trades: [] },
     current_week: {
-      week_number: isPlayoffState ? 15 : 6,
-      my_snapshots: isBye || isPlayoffState ? [] : mySnapshots,
+      week_number: isPlayoffState ? 15 : isPreSeason ? 1 : 6,
+      my_snapshots: isBye || isPlayoffState || isPreSeason ? [] : mySnapshots,
       my_trades: [],
-      opponent_snapshots: isBye || isPlayoffState ? [] : oppSnapshots,
+      opponent_snapshots: isBye || isPlayoffState || isPreSeason ? [] : oppSnapshots,
       opponent_trades: [],
     },
     matchups,
-    standings: [
-      { user_id: 'roberto', rank: 2, wins: 4, losses: 1, ties: 0, points_for: 129.99, display_name: 'Roberto B.', is_bot: false },
-      { user_id: 'paolo', rank: 1, wins: 5, losses: 0, ties: 0, points_for: 512.4, display_name: 'Paolo M.', is_bot: false },
-      { user_id: 'gianluigi', rank: 6, wins: 1, losses: 4, ties: 0, points_for: -142.35, display_name: 'Gianluigi B.', is_bot: false },
-    ],
+    standings: isPreSeason
+      ? [
+          { user_id: 'roberto', rank: 1, wins: 0, losses: 0, ties: 0, points_for: 0, display_name: 'Roberto B.', is_bot: false },
+          { user_id: 'paolo', rank: 2, wins: 0, losses: 0, ties: 0, points_for: 0, display_name: 'Paolo M.', is_bot: false },
+          { user_id: 'gianluigi', rank: 3, wins: 0, losses: 0, ties: 0, points_for: 0, display_name: 'Gianluigi B.', is_bot: false },
+        ]
+      : [
+          { user_id: 'roberto', rank: 2, wins: 4, losses: 1, ties: 0, points_for: 129.99, display_name: 'Roberto B.', is_bot: false },
+          { user_id: 'paolo', rank: 1, wins: 5, losses: 0, ties: 0, points_for: 512.4, display_name: 'Paolo M.', is_bot: false },
+          { user_id: 'gianluigi', rank: 6, wins: 1, losses: 4, ties: 0, points_for: -142.35, display_name: 'Gianluigi B.', is_bot: false },
+        ],
   };
 
   const draftStatus = fixture === 'pre_draft' || fixture === 'pre_draft_waiting' ? 'not_started'
     : fixture === 'drafting' ? 'in_progress' : 'completed';
   const seasonStatus = fixture === 'complete' ? 'completed' : isPlayoffState ? 'playoffs' : 'active';
-  const currentWeek = isPlayoffState ? 15 : draftStatus === 'completed' ? 6 : 1;
+  const currentWeek = isPlayoffState ? 15 : isPreSeason ? 1 : draftStatus === 'completed' ? 6 : 1;
   const leagueStartDate = fixture === 'pre_season' ? '2099-01-01T00:00:00Z' : '2026-08-01T00:00:00Z';
 
   const meta: HomeLeagueMeta = {
