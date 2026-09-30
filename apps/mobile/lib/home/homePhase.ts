@@ -71,6 +71,23 @@ export interface HomePhaseInput {
   draftOrderWaiting: boolean;
   now: Date;
   market: MarketInfo;
+  /** The REAL start of the week right after `league.currentWeek`, when the
+   * schedule already has a row for it — read straight from `matchups` by
+   * the caller (a whole season's schedule is generated at draft
+   * completion, B3, so this is normally known well before that week
+   * itself starts). S2 (Design Lead, 2026-09-30): used for a bye's own
+   * nextStart always (an in-progress bye's `row` is always `current` — the
+   * week hasn't ended, so there's no current/previous grace-period split
+   * to read a next week from at all), and for 'scored' ONLY in the common
+   * case where `row === current` (right after this week's own close,
+   * before current_week has advanced) — that case used to always fall
+   * back to "starts soon", since `current` can't name a week after
+   * itself. 'scored' during the ACTUAL Fri-close -> next-open grace period
+   * (F5, `row === previous`) still reads `current` directly, unchanged —
+   * `current` already IS that next week's row once current_week has
+   * advanced, and that's a stronger source than this field would be once
+   * currentWeek has moved (see the 'scored' branch below). */
+  nextWeekStart: string | null;
 }
 
 interface BaseResult {
@@ -137,7 +154,7 @@ export function homePhase(
   input: HomePhaseInput,
   playoffRoundLabelForWeek: (week: number | null | undefined, numWeeks: number | null | undefined, playoffTeams: number | null | undefined) => string | null,
 ): PhaseResult {
-  const { league, current, previous, laterPlayoffWeek, lastPlayoffLoss, lastPlayoffWeek, draftOrderWaiting, now, market } = input;
+  const { league, current, previous, laterPlayoffWeek, lastPlayoffLoss, lastPlayoffWeek, draftOrderWaiting, now, market, nextWeekStart } = input;
   const numWeeks = league.numWeeks;
   const base: BaseResult = { numWeeks };
 
@@ -198,11 +215,22 @@ export function homePhase(
       }
       // Both sides are in (or there was never an opponent to wait on).
       const won = row.hasOpponent ? (row.myGain ?? 0) > (row.opponentGain ?? 0) : null;
-      // nextStart: the OTHER row's start (whichever of current/previous is
-      // not `row`), so a holiday-shifted Monday reads from real data, never
-      // a weekday rule.
-      const other = row === current ? null : current;
-      const nextStart = other ? other.weekStart : null;
+      // nextStart: a holiday-shifted Monday must read from real data, never
+      // a weekday rule. Two cases, both correct because the schedule is
+      // generated up front (B3) -- `nextWeekStart` (meta.currentWeek + 1)
+      // and `current` (meta.currentWeek's own row) name the SAME week
+      // whenever `row` is `previous`, by construction (current_week - 1 ==
+      // previous's week, so current_week's row IS "previous's next week"):
+      //   - row === current (the common case, right after this week's own
+      //     close, before current_week has advanced): the schedule already
+      //     has a row for currentWeek + 1 -- use `nextWeekStart` (S2,
+      //     Design Lead, 2026-09-30 -- this case used to always fall
+      //     through to "starts soon" below, since `current` can't name a
+      //     week after itself).
+      //   - row === previous (F5's Fri-close -> next-open grace period,
+      //     current_week has already advanced): `current` IS that next
+      //     week's row -- unchanged from before this fix.
+      const nextStart = row === current ? nextWeekStart : (current ? current.weekStart : null);
       if (now.getTime() < (nextStart ? new Date(nextStart).getTime() : Infinity)) {
         return { kind: 'scored', week: row.week, won, isPlayoff: row.isPlayoff, round, nextStart, ...base };
       }
@@ -224,8 +252,13 @@ export function homePhase(
         const previousRound = roundLabelForWeek(playoffRoundLabelForWeek, row.week - 1, numWeeks, league.playoffTeams);
         return { kind: 'playoff_pending', week: row.week, round, previousRound, ...base };
       }
-      const nextStart = current && current !== row ? current.weekStart : null;
-      return { kind: 'bye', week: row.week, nextStart, ...base };
+      // S2 (Design Lead, 2026-09-30): NOT `current !== row` (scored's
+      // grace-period check, above) -- an in-progress bye's `row` IS
+      // `current` (the week hasn't ended), so that check was always
+      // false here and this always fell back to "starts soon". The
+      // schedule already knows next week's start regardless of whether
+      // this week has ended yet.
+      return { kind: 'bye', week: row.week, nextStart: nextWeekStart, ...base };
     }
     if (market.status === 'open') {
       return { kind: 'live_open', week: row.week, isPlayoff: row.isPlayoff, round, weekEnd: row.weekEnd, ...base };

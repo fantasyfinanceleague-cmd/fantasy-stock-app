@@ -281,6 +281,10 @@ export function buildHomeViewModel(input: HomeViewModelInput): HomeViewModel {
 
   const current = matchupRowFor(data, meta, meta.currentWeek, marketCalendar);
   const previous = matchupRowFor(data, meta, meta.currentWeek - 1, marketCalendar);
+  // S2 (Design Lead, 2026-09-30): read straight from the schedule, not
+  // from the current/previous grace-period swap -- see homePhase.ts's own
+  // doc on this field for why a bye needs it read this way.
+  const nextWeekStart = matchupRowFor(data, meta, meta.currentWeek + 1, marketCalendar)?.weekStart ?? null;
   const { laterPlayoffWeek, lastPlayoffLoss, lastPlayoffWeek } = playoffStatusFlags(data, meta);
 
   // B3 (Design Lead, 2026-09-30): leagueStartDate is written by the same
@@ -301,7 +305,7 @@ export function buildHomeViewModel(input: HomeViewModelInput): HomeViewModel {
       },
       current, previous,
       laterPlayoffWeek, lastPlayoffLoss, lastPlayoffWeek,
-      draftOrderWaiting: meta.draftOrderWaiting, now, market,
+      draftOrderWaiting: meta.draftOrderWaiting, now, market, nextWeekStart,
     },
     input.playoffRoundLabelForWeek,
   );

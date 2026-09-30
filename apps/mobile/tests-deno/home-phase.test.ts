@@ -36,6 +36,7 @@ function baseInput(overrides: Partial<HomePhaseInput>): HomePhaseInput {
     draftOrderWaiting: false,
     now: ET('2026-09-24T15:00:00-04:00'), // Thu 3:00 PM ET, week 6
     market: { status: 'open', reason: 'regular_session', nextOpenAt: null },
+    nextWeekStart: null,
     ...overrides,
   };
 }
@@ -88,6 +89,16 @@ Deno.test('scored: both gains posted, before next week starts', () => {
     assertEquals(r.won, true);
     assertEquals(r.week, 6);
   }
+});
+
+Deno.test('scored: nextStart is real even BEFORE current_week advances (S2 -- the common case, not just the F5 grace period)', () => {
+  const scored = { ...week6, myGain: 41.3, opponentGain: -12.0 };
+  const r = homePhase(
+    baseInput({ current: scored, now: ET('2026-09-25T16:05:00-04:00'), nextWeekStart: week7.weekStart }),
+    playoffRoundLabelForWeek,
+  );
+  assertEquals(r.kind, 'scored');
+  if (r.kind === 'scored') assertEquals(r.nextStart, week7.weekStart);
 });
 
 Deno.test('scored: the weekend after current_week already advanced (F5)', () => {
@@ -197,6 +208,26 @@ Deno.test('bye: regular season, no opponent this week, never a score', () => {
   );
   assertEquals(r.kind, 'bye');
   if (r.kind === 'bye') assertEquals(r.week, 6);
+});
+
+Deno.test('bye: nextStart with no schedule row for next week yet stays null (never "starts soon" made up)', () => {
+  const bye = row({ week: 6, weekStart: week6.weekStart, weekEnd: week6.weekEnd, hasOpponent: false });
+  const r = homePhase(
+    baseInput({ current: bye, now: ET('2026-09-23T15:00:00-04:00'), nextWeekStart: null }),
+    playoffRoundLabelForWeek,
+  );
+  assertEquals(r.kind, 'bye');
+  if (r.kind === 'bye') assertEquals(r.nextStart, null);
+});
+
+Deno.test('bye: nextStart is the REAL week-7 start read straight from the schedule (S2, mid-week -- current IS row, never the scored grace-period swap)', () => {
+  const bye = row({ week: 6, weekStart: week6.weekStart, weekEnd: week6.weekEnd, hasOpponent: false });
+  const r = homePhase(
+    baseInput({ current: bye, now: ET('2026-09-23T15:00:00-04:00'), nextWeekStart: week7.weekStart }),
+    playoffRoundLabelForWeek,
+  );
+  assertEquals(r.kind, 'bye');
+  if (r.kind === 'bye') assertEquals(r.nextStart, week7.weekStart);
 });
 
 Deno.test('playoffs: live semifinal carries the round label', () => {

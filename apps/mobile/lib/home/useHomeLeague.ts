@@ -118,6 +118,17 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
     ...(isBye ? { team1_gain: null, team2_gain: null } : week6Gains),
   };
 
+  // S2 (Design Lead, 2026-09-30): a real week 7 row -- the whole season's
+  // schedule is generated at draft completion (B3), so week 7 is already
+  // known (just ungained) the moment week 6 closes. Only 'scored' and
+  // 'bye' read this (via nextWeekStart, see homePhase.ts's own doc) --
+  // every other regular-season fixture hasn't reached week 6's close yet.
+  const week7 = {
+    week_number: 7, week_start: '2026-09-28T09:30:00.000-04:00', week_end: '2026-10-02T16:00:00.000-04:00',
+    is_playoff: false, team1_user_id: 'roberto', team2_user_id: 'gianluigi',
+    team1_gain: null, team2_gain: null,
+  };
+
   // Playoff week numbers derived the way the backend does (Orchestrator,
   // 2026-09-30, B7 bullet 3): week = numWeeks + round -- never typed in.
   // Round 1 is the Wild Card round for a 6-team bracket (playoffPlan(6)),
@@ -196,7 +207,16 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
           ? [...regularSeasonWeeks, week6, lostSemifinalWeek] // no row at all for the current (round-2) week
           : isPlayoffLive
             ? [...regularSeasonWeeks, week6, wildCardWeek]
-            : [...regularSeasonWeeks, week6];
+            // S2 (Design Lead, 2026-09-30): 'scored' and 'bye' both read
+            // week 7's real start via nextWeekStart (homePhase.ts) --
+            // every other fixture here (live_open/live_closed/scoring/
+            // leader_flip/complete/complete_runner_up) never reaches a
+            // code path that looks past week 6, so adding it for them too
+            // would be inert but untested; scoped to just the two states
+            // that need it.
+            : fixture === 'scored' || isBye
+              ? [...regularSeasonWeeks, week6, week7]
+              : [...regularSeasonWeeks, week6];
 
   // currentWeek differs per playoff sub-state (Design Lead ruling,
   // 2026-09-30): a bye/live game is IN the wild-card week; eliminated is
