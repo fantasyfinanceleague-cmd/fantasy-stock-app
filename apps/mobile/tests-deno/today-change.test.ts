@@ -42,11 +42,29 @@ Deno.test('a slot sold then rebought the same day', () => {
   assertAlmostEquals(result.total!, soldPortion + rebuyPortion, 1e-9);
 });
 
-Deno.test('a missing prevClose is reported as unpriced, never counted as zero', () => {
+Deno.test('C2 (code review, 2026-09-29): when NOTHING could be priced, total is null, not a fabricated 0', () => {
   const positions: TodayPosition[] = [{ symbol: 'ZZZZ', quantityBeforeToday: 5 }];
   const result = todayChange(positions, [], () => 50, () => null, true);
   assertEquals(result.unpriced, ['ZZZZ']);
-  assertEquals(result.total, 0); // nothing priceable contributed
+  assertEquals(result.total, null);
+});
+
+Deno.test('C2: a mix of one unpriced and one priced position keeps total as the real partial number, not null', () => {
+  const positions: TodayPosition[] = [
+    { symbol: 'ZZZZ', quantityBeforeToday: 5 },
+    { symbol: 'NVDA', quantityBeforeToday: 10 },
+  ];
+  const price = (s: string) => (s === 'NVDA' ? 313.05 : 50);
+  const prevClose = (s: string) => (s === 'NVDA' ? 306.68 : null);
+  const result = todayChange(positions, [], price, prevClose, true);
+  assertEquals(result.unpriced, ['ZZZZ']);
+  assertAlmostEquals(result.total!, 10 * (313.05 - 306.68), 1e-9);
+});
+
+Deno.test('C2: no positions and no trades at all is a genuine, real zero — not null', () => {
+  const result = todayChange([], [], () => 50, () => 50, true);
+  assertEquals(result.unpriced, []);
+  assertEquals(result.total, 0);
 });
 
 Deno.test('a non-trading day hides the "today" segment entirely', () => {

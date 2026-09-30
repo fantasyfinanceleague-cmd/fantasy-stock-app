@@ -50,8 +50,10 @@ export function todayChange(
 
   const snapshots: LiveSnapshot[] = [];
   const unpricedPrevClose: string[] = [];
+  const attempted = new Set<string>();
   for (const p of positionsBeforeToday) {
     if (p.quantityBeforeToday <= 0) continue;
+    attempted.add(p.symbol.toUpperCase());
     const pc = prevClose(p.symbol);
     if (pc == null) {
       unpricedPrevClose.push(p.symbol);
@@ -59,9 +61,16 @@ export function todayChange(
     }
     snapshots.push({ symbol: p.symbol, quantity: p.quantityBeforeToday, weekStartPrice: pc, enteredMidWeek: false });
   }
+  for (const trade of todaysTrades) attempted.add(trade.symbol.toUpperCase());
 
   const result = liveWeekScore(snapshots, todaysTrades, price);
   const unpriced = [...new Set([...unpricedPrevClose, ...result.unpriced])];
 
-  return { total: result.gain, unpriced };
+  // "Nothing could be priced at all" per the doc above: every symbol this
+  // call touched failed to price, so `result.gain` is 0 not because
+  // nothing moved but because we could not see any of it. Distinct from
+  // `attempted.size === 0` (no positions, no trades) — that 0 is real.
+  const nothingPriced = attempted.size > 0 && attempted.size === new Set(unpriced.map((s) => s.toUpperCase())).size;
+
+  return { total: nothingPriced ? null : result.gain, unpriced };
 }
