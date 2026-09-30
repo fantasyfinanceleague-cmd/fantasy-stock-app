@@ -11,7 +11,7 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 import { Avatar } from '@/components/sp/Avatar';
 import { supabase } from '@/lib/supabase';
 import { parseDraftOrder } from '@/lib/draftOrder';
-import { pickClockLine, BUILD_YOUR_QUEUE } from '@/lib/home/homeCopy';
+import { pickClockLine, BUILD_YOUR_QUEUE, BEFORE_THE_DRAFT_TITLE } from '@/lib/home/homeCopy';
 
 // Stockpile — <PreDraftCard> (Phase 3b-2, states 6 — "before the draft" +
 // "waiting for managers"). One fetch of get_draft_order on mount (no live
@@ -69,7 +69,7 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds }: P
 
   return (
     <Card style={styles.card}>
-      <Text variant="headline">Before the draft</Text>
+      <Text variant="headline">{BEFORE_THE_DRAFT_TITLE}</Text>
       <Text variant="callout" tone="secondary">
         {pickClockLine(pickSeconds, numRounds)}
       </Text>

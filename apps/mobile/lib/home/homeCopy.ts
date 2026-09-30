@@ -106,6 +106,11 @@ export const PRE_SEASON_NO_LEADER = 'No leader yet.'; // board
 export const PRE_SEASON_SCORING_STARTS = "Scoring starts at Monday's open."; // board
 
 // ── States 6/7: pre-draft / drafting — board, verbatim where noted ─────────
+// Housekeeping (Design Lead, 2026-09-29): these three headings lived as
+// literal strings in their own cards instead of here — moved in so the
+// module really is the one place for Home's copy, per its own doc above.
+export const BEFORE_THE_DRAFT_TITLE = 'Before the draft'; // board
+export const DRAFT_IN_PROGRESS_TITLE = 'Draft in progress'; // board
 export function pickClockLine(pickSeconds: number, rounds: number): string {
   return `${pickSeconds}-second picks · ${rounds} rounds`; // board ("60-second picks · 6 rounds")
 }
@@ -144,6 +149,7 @@ export const MISSED_PLAYOFFS_MESSAGE = 'Missed the playoffs'; // new-flagged
 // ── State 8: season complete — mapping rules from the RPC author, relayed
 // by the Orchestrator (2026-09-29); render only fields get_season_result
 // actually returns. ───────────────────────────────────────────────────────
+export const SEASON_COMPLETE_TITLE = 'Season complete'; // board
 export function playoffTileLine(
   result: 'champion' | 'runner_up' | 'eliminated' | 'missed' | null,
   exitRoundLabel: string | null,

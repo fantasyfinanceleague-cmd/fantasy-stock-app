@@ -12,7 +12,7 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 import { supabase } from '@/lib/supabase';
 import { parseDraftOrder } from '@/lib/draftOrder';
 import { currentPickerFor, picksUntilTurn } from '@/lib/home/draftTurn';
-import { YOURE_ON_THE_CLOCK, onTheClockLine, upNextLine, GO_TO_DRAFT_ROOM, YOUR_TEAM_SO_FAR } from '@/lib/home/homeCopy';
+import { YOURE_ON_THE_CLOCK, onTheClockLine, upNextLine, GO_TO_DRAFT_ROOM, YOUR_TEAM_SO_FAR, DRAFT_IN_PROGRESS_TITLE } from '@/lib/home/homeCopy';
 
 // Stockpile — <DraftingCard> (Phase 3b-2, state 7 — "draft in progress").
 // One fetch of get_draft_clock + get_draft_order on mount — no live
@@ -65,7 +65,7 @@ export function DraftingCard({ leagueId, myUserId, numRounds }: DraftingCardProp
   if (!clock || !order) {
     return (
       <Card style={styles.card}>
-        <Text variant="headline">Draft in progress</Text>
+        <Text variant="headline">{DRAFT_IN_PROGRESS_TITLE}</Text>
       </Card>
     );
   }
@@ -79,7 +79,7 @@ export function DraftingCard({ leagueId, myUserId, numRounds }: DraftingCardProp
   return (
     <Card style={styles.card}>
       <View style={styles.header}>
-        <Text variant="headline">Draft in progress</Text>
+        <Text variant="headline">{DRAFT_IN_PROGRESS_TITLE}</Text>
         <LiveDot size={7} />
       </View>
 

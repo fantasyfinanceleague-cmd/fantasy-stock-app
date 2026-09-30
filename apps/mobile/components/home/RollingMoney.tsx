@@ -8,13 +8,12 @@ import { digitDiff } from '@/components/sp/logic/digits';
 import { useMotion } from '@/components/sp/motion';
 import { useTheme } from '@/components/sp/ThemeProvider';
 
-// Stockpile — <RollingMoney> (Phase 3b-2, Home's H1 "hero roll"). A
-// MONEY-surface digit roll, deliberately separate from the game-surface
-// <ScoreDigits> (components/sp/game/ScoreDigits.tsx): §9 restricts the
-// `lively` overshoot spring to game components only ("importable only from
-// game components"), and this is the hero's big number + gain line, not a
-// scoreboard — it rolls on `duration.base` + `easing.settle`, a plain
-// timing curve, never a spring, never an overshoot.
+// Stockpile — <RollingMoney> (Phase 3b-2, Home's H1 "hero roll"), separate
+// from <ScoreDigits> (components/sp/game/ScoreDigits.tsx): the hero uses
+// `<Card>` with no `variant`, so it rolls on `duration.base` + `easing.settle`
+// — a plain timing curve, never a spring or an overshoot — matching that
+// row's own H1 motion. ScoreDigits is `<Card variant="scoreboard">`'s own
+// digit roll and is free to use `lively` where the game surface calls for it.
 //
 // `rollKey` (the active league's id) is the H5 guard: switching leagues
 // must never present a different league's number as a "change" (spec:
@@ -65,8 +64,6 @@ function DigitColumn({
         style={{ fontFamily, fontSize, lineHeight, color: textColor, fontVariant: ['tabular-nums'] }}
         maxFontSizeMultiplier={maxFontSizeMultiplier}
         numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.6}
       >
         {char}
       </RNText>

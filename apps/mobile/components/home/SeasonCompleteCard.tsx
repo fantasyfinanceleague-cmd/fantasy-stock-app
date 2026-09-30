@@ -16,7 +16,7 @@ import { useMotion } from '@/components/sp/motion';
 // motion as a lead-change overshoot, not a money-surface digit roll.
 import { lively } from '@/components/sp/game/motion';
 import { supabase } from '@/lib/supabase';
-import { playoffTileLine, REGULAR_SEASON_TILE_TITLE, PLAYOFFS_TILE_TITLE, BEST_WEEK_TILE_TITLE, SEASON_GAIN_TILE_TITLE } from '@/lib/home/homeCopy';
+import { playoffTileLine, REGULAR_SEASON_TILE_TITLE, PLAYOFFS_TILE_TITLE, BEST_WEEK_TILE_TITLE, SEASON_GAIN_TILE_TITLE, SEASON_COMPLETE_TITLE } from '@/lib/home/homeCopy';
 import { playoffRoundLabelForWeek } from '@/lib/playoffs';
 
 // Stockpile — <SeasonCompleteCard> (Phase 3b-2, state 8). Backed by
@@ -131,7 +131,7 @@ export function SeasonCompleteCard({
   return (
     <Card style={styles.card}>
       <View style={styles.titleRow}>
-        <Text variant="title">Season complete</Text>
+        <Text variant="title">{SEASON_COMPLETE_TITLE}</Text>
         {isChampion ? (
           <Animated.View style={trophyStyle}>
             <Text variant="title">{'\u{1F3C6}'}</Text>
