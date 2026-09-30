@@ -9,6 +9,7 @@ import { assertEquals } from 'jsr:@std/assert';
 import {
   heroUnpricedCaption, sideUnpricedCaption, seasonScrubLabel, heroAccessibilityLabel, heroWeekOrRoundLabel,
   standingsThroughWeek, preSeasonStartsLabel, placeLabel, nonChampionLine, regularSeasonTileLine, playoffRecordLine,
+  playoffTileLine, championAnnounceLine,
 } from '../lib/home/homeCopy.ts';
 
 Deno.test('heroUnpricedCaption: null when both lists are empty', () => {
@@ -179,4 +180,18 @@ Deno.test('playoffRecordLine: prefixes the win-loss record when known', () => {
 
 Deno.test('playoffRecordLine: drops the prefix (never "undefined–undefined") when the record is unknown', () => {
   assertEquals(playoffRecordLine(null, null, 'won the Final'), 'won the Final');
+});
+
+// ── B6 edge cases (Orchestrator, 2026-09-30) ────────────────────────────────
+
+Deno.test('playoffTileLine: runner_up always reads "lost in the Final", even with no exitRoundLabel (detail_scope=standings_only never indexes rounds for it)', () => {
+  assertEquals(playoffTileLine('runner_up', null), 'lost in the Final');
+});
+
+Deno.test('playoffTileLine: a null playoff_result (detail_scope=standings_only, eliminated/missed unknowable) hides the tile -- never "missed"', () => {
+  assertEquals(playoffTileLine(null, null), null);
+});
+
+Deno.test('championAnnounceLine: "Won {league}", never "You won" (caller_participated=false)', () => {
+  assertEquals(championAnnounceLine('Stock Scudetto'), 'Won Stock Scudetto');
 });

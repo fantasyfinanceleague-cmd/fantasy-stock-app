@@ -261,6 +261,13 @@ export function placeLabel(rank: number): string {
 export function nonChampionLine(leagueName: string, record: string): string {
   return `${leagueName} · ${record}`; // board
 }
+/** "Won {league}" -- Orchestrator ruling, 2026-09-30, B6 edge case: a
+ * league member who did not participate this season (caller_participated
+ * = false) still sees who won, just never "You won" (they didn't play).
+ * NEW COPY, flagged -- no board reference for this case. */
+export function championAnnounceLine(leagueName: string): string {
+  return `Won ${leagueName}`; // new-flagged
+}
 /** "1st of 6" (S6, Design Lead ruling, 2026-09-30: ordinals, never "1 of 6"). */
 export function regularSeasonTileLine(rank: number, standingsCount: number, record: string): string {
   return `${ordinal(rank)} of ${standingsCount} · ${record}`; // board

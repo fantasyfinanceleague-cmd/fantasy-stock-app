@@ -23,7 +23,7 @@ import { lively } from '@/components/sp/game/motion';
 import { useSeasonResult } from '@/lib/home/useSeasonResult';
 import {
   playoffTileLine, REGULAR_SEASON_TILE_TITLE, PLAYOFFS_TILE_TITLE, BEST_WEEK_TILE_TITLE, SEASON_GAIN_TILE_TITLE,
-  SEASON_COMPLETE_TITLE, CHAMPION_LABEL, wonLeagueLine, placeLabel, nonChampionLine, regularSeasonTileLine,
+  SEASON_COMPLETE_TITLE, CHAMPION_LABEL, wonLeagueLine, placeLabel, nonChampionLine, championAnnounceLine, regularSeasonTileLine,
   playoffRecordLine, bestWeekLine, SEE_FINAL_STANDINGS, START_NEXT_SEASON,
 } from '@/lib/home/homeCopy';
 import { playoffRoundLabelForWeek } from '@/lib/playoffs';
@@ -113,6 +113,15 @@ export function SeasonCompleteCard({
     opacity: trophyScale.value,
   }));
   const isChampion = result?.playoff_result === 'champion';
+  // Orchestrator ruling (2026-09-30), B6 edge case: a league member who
+  // did not play this particular season (joined after it started, say)
+  // still sees who won -- the podium/champion always renders -- but never
+  // "You won" or any of the CALLER tiles (final_rank/wins/points_for/best
+  // week are all meaningless for someone who wasn't in the standings).
+  // Defaults to true when `result` hasn't loaded yet (or the honest-
+  // minimum fallback is in play): both of those paths already assume the
+  // caller participated, by construction.
+  const participated = result ? result.caller_participated : true;
 
   return (
     <>
@@ -124,42 +133,55 @@ export function SeasonCompleteCard({
         <Text variant="tag" style={{ color: colors.liveText }}>
           {SEASON_COMPLETE_TITLE}
         </Text>
-        <Text variant="score.md" style={styles.headline}>
-          {isChampion ? CHAMPION_LABEL : placeLabel(finalRank)}
-        </Text>
-        <Text variant="callout">{isChampion ? wonLeagueLine(leagueName) : nonChampionLine(leagueName, record)}</Text>
+        {participated ? (
+          <>
+            <Text variant="score.md" style={styles.headline}>
+              {isChampion ? CHAMPION_LABEL : placeLabel(finalRank)}
+            </Text>
+            <Text variant="callout">{isChampion ? wonLeagueLine(leagueName) : nonChampionLine(leagueName, record)}</Text>
+          </>
+        ) : (
+          <>
+            <Text variant="score.md" style={styles.headline}>
+              {result?.champion_display_name ?? CHAMPION_LABEL}
+            </Text>
+            <Text variant="callout">{championAnnounceLine(leagueName)}</Text>
+          </>
+        )}
       </Card>
 
-      <Card style={styles.tilesCard}>
-        <View style={styles.tilesGrid}>
-          <View style={styles.tile}>
-            <Text variant="caption" tone="secondary">{SEASON_GAIN_TILE_TITLE}</Text>
-            <Money value={seasonGain} size="headline" colorBySign sign="always" />
-          </View>
-          {result?.best_week_number != null && result.best_week_gain != null ? (
+      {participated ? (
+        <Card style={styles.tilesCard}>
+          <View style={styles.tilesGrid}>
             <View style={styles.tile}>
-              <Text variant="caption" tone="secondary">{BEST_WEEK_TILE_TITLE}</Text>
-              <View style={styles.inlineRow}>
-                <Text variant="headline">{bestWeekLine(result.best_week_number)} · </Text>
-                <Money value={result.best_week_gain} size="headline" colorBySign sign="always" />
+              <Text variant="caption" tone="secondary">{SEASON_GAIN_TILE_TITLE}</Text>
+              <Money value={seasonGain} size="headline" colorBySign sign="always" />
+            </View>
+            {result?.best_week_number != null && result.best_week_gain != null ? (
+              <View style={styles.tile}>
+                <Text variant="caption" tone="secondary">{BEST_WEEK_TILE_TITLE}</Text>
+                <View style={styles.inlineRow}>
+                  <Text variant="headline">{bestWeekLine(result.best_week_number)} · </Text>
+                  <Money value={result.best_week_gain} size="headline" colorBySign sign="always" />
+                </View>
               </View>
-            </View>
-          ) : null}
-          <View style={styles.tile}>
-            <Text variant="caption" tone="secondary">{REGULAR_SEASON_TILE_TITLE}</Text>
-            <Text variant="headline">{regularSeasonTileLine(finalRank, standingsCount, record)}</Text>
-          </View>
-          {/* detail_scope='standings_only' (a past season) never gets exit-round
-           * indexing; playoffResultLine is null for that case unless the podium
-           * itself (champion/runner_up) already answers it. */}
-          {playoffResultLine ? (
+            ) : null}
             <View style={styles.tile}>
-              <Text variant="caption" tone="secondary">{PLAYOFFS_TILE_TITLE}</Text>
-              <Text variant="headline">{playoffRecordLine(result?.playoff_wins ?? null, result?.playoff_losses ?? null, playoffResultLine)}</Text>
+              <Text variant="caption" tone="secondary">{REGULAR_SEASON_TILE_TITLE}</Text>
+              <Text variant="headline">{regularSeasonTileLine(finalRank, standingsCount, record)}</Text>
             </View>
-          ) : null}
-        </View>
-      </Card>
+            {/* detail_scope='standings_only' (a past season) never gets exit-round
+             * indexing; playoffResultLine is null for that case unless the podium
+             * itself (champion/runner_up) already answers it. */}
+            {playoffResultLine ? (
+              <View style={styles.tile}>
+                <Text variant="caption" tone="secondary">{PLAYOFFS_TILE_TITLE}</Text>
+                <Text variant="headline">{playoffRecordLine(result?.playoff_wins ?? null, result?.playoff_losses ?? null, playoffResultLine)}</Text>
+              </View>
+            ) : null}
+          </View>
+        </Card>
+      ) : null}
 
       <Button label={SEE_FINAL_STANDINGS} onPress={() => router.push('/(tabs)/league')} variant="primary" />
       {/* B6 (Design Lead, 2026-09-30): "Start next season" is deliberately

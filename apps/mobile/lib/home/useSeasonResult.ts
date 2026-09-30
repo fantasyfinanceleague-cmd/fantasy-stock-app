@@ -22,6 +22,11 @@ export interface SeasonResultRow {
   reason: string | null;
   detail_scope: string | null;
   season_number: number | null;
+  /** False for a league member who did not play this particular season
+   * (e.g. joined after it started) -- the podium (champion/runner_up)
+   * still resolves, but every CALLER field (final_rank, wins, points_for,
+   * best_week) is meaningless for them and must not be shown. */
+  caller_participated: boolean;
   champion_display_name: string | null;
   runner_up_display_name: string | null;
   playoff_wins: number | null;
@@ -37,6 +42,7 @@ export interface SeasonResultRow {
 function fixtureChampion(): SeasonResultRow {
   return {
     status: 'complete', reason: null, detail_scope: 'full', season_number: 1,
+    caller_participated: true,
     champion_display_name: 'Roberto B.', runner_up_display_name: 'Gianluigi B.',
     playoff_wins: 2, playoff_losses: 0,
     playoff_result: 'champion', playoff_exit_round: null,
@@ -52,6 +58,7 @@ function fixtureChampion(): SeasonResultRow {
 function fixtureRunnerUp(): SeasonResultRow {
   return {
     status: 'complete', reason: null, detail_scope: 'full', season_number: 1,
+    caller_participated: true,
     champion_display_name: 'Paolo M.', runner_up_display_name: 'Roberto B.',
     playoff_wins: 1, playoff_losses: 1,
     playoff_result: 'runner_up', playoff_exit_round: null,
