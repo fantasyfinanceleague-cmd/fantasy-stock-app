@@ -181,7 +181,7 @@ function HomeBody({
   } else if (thisWeek) {
     if (phase.kind === 'scoring') {
       middleCard = (
-        <ThisWeekCard week={week} isLive={false} you={thisWeek.you} opponent={thisWeek.opponent} opponentName={opponentName} rightLabel="" tag={chrome.tag} scoring />
+        <ThisWeekCard week={week} isLive={false} you={thisWeek.you} opponent={thisWeek.opponent} opponentName={opponentName} rightLabel="" liveChipLabel={chrome.liveChipLabel} tag={chrome.tag} scoring />
       );
     } else if (phase.kind === 'scored') {
       // `thisWeek.won` — the AUTHORITATIVE result from the pure phase
