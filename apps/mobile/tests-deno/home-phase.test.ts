@@ -218,6 +218,35 @@ Deno.test('playoffs: live semifinal carries the round label', () => {
   }
 });
 
+Deno.test('playoffs: a current-week row with NO opponent yet is playoff_pending, never bye or eliminated', () => {
+  // Design Lead ruling, 2026-09-30: round 2 has started, but the previous
+  // round (Wild Card, week 15) hasn't posted its results yet, so my
+  // round-2 row (week 16) has a real slot for me and NULL for the winner
+  // of the other bracket path.
+  const pendingRound2 = row({
+    week: 16, weekStart: '2026-12-21T09:30:00-04:00', weekEnd: '2026-12-25T16:00:00-04:00',
+    isPlayoff: true, hasOpponent: false,
+  });
+  const r = homePhase(
+    baseInput({
+      league: { draftStatus: 'completed', leagueStartDate: '2026-08-01T00:00:00Z', seasonStatus: 'playoffs', currentWeek: 16, numWeeks: 14, playoffTeams: 4 },
+      current: pendingRound2,
+      // These would misclassify it if the branch still consulted them —
+      // pinning that it does NOT fall back to bye/eliminated/missed.
+      laterPlayoffWeek: null,
+      lastPlayoffLoss: false,
+      now: ET('2026-12-22T15:00:00-04:00'),
+    }),
+    playoffRoundLabelForWeek,
+  );
+  assertEquals(r.kind, 'playoff_pending');
+  if (r.kind === 'playoff_pending') {
+    assertEquals(r.week, 16);
+    assertEquals(r.round, 'Final');
+    assertEquals(r.previousRound, 'Semifinals');
+  }
+});
+
 Deno.test('playoffs: first-round bye when a later round is already scheduled for me', () => {
   const r = homePhase(
     baseInput({

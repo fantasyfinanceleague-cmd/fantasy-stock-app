@@ -146,6 +146,12 @@ export function eliminatedLabel(round: string | null): string {
 }
 export const SEE_THE_BRACKET = 'See the bracket'; // new-flagged
 export const MISSED_PLAYOFFS_MESSAGE = 'Missed the playoffs'; // new-flagged
+/** A current-week playoff row with no opponent yet — the previous round
+ * hasn't posted its results (Design Lead ruling, 2026-09-30). NEW COPY,
+ * not on the board — flagged for review. */
+export function playoffPendingLine(previousRound: string | null): string {
+  return `Your opponent is set when the ${previousRound ?? 'previous round'} results post.`; // new-flagged
+}
 
 // ── State 8: season complete — mapping rules from the RPC author, relayed
 // by the Orchestrator (2026-09-29); render only fields get_season_result
@@ -191,6 +197,7 @@ export function heroWeekOrRoundLabel(phase: PhaseResult): string | null {
     case 'live_closed':
       return phase.isPlayoff ? phase.round : `Week ${phase.week} of ${phase.numWeeks ?? '?'}`;
     case 'playoff_bye':
+    case 'playoff_pending':
     case 'eliminated':
       return phase.round;
     default:

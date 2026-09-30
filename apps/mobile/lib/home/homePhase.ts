@@ -86,6 +86,13 @@ export type PhaseResult =
   | ({ kind: 'scored'; week: number; won: boolean | null; isPlayoff: boolean; round: string | null; nextStart: string | null } & BaseResult)
   | ({ kind: 'bye'; week: number; nextStart: string | null } & BaseResult)
   | ({ kind: 'playoff_bye'; week: number; round: string | null } & BaseResult)
+  /** A playoff row exists for THIS week, but the opponent slot is still
+   * NULL because the previous round's scoring hasn't posted yet (e.g.
+   * Monday of round 2 before the wild card's results land) — Design Lead
+   * ruling, 2026-09-30: real, rare, and never a bye/eliminated/"no
+   * matchup" — there IS a game this round, just not yet a named
+   * opponent. */
+  | ({ kind: 'playoff_pending'; week: number; round: string | null; previousRound: string | null } & BaseResult)
   | ({ kind: 'eliminated'; round: string | null } & BaseResult)
   /** Playoffs are on, but I was never seeded into the bracket at all — no
    * playoff row EVER (not a bye-to-later-round, not a scored loss). Found
@@ -204,10 +211,13 @@ export function homePhase(
       // bracket writes it straight into its later round instead) — a row
       // AT the current week with no opponent means the OTHER bracket path
       // hasn't been decided yet, not a bye (Design Lead ruling,
-      // 2026-09-30: "A NULL opponent in the current week means waiting on
-      // the previous round's winner ... it isn't a bye"). No fixture or
-      // design exists yet for that narrow case, so it falls through to
-      // the plain bye copy below rather than guessing a new state.
+      // 2026-09-30: real, rare — e.g. Monday of round 2 before the wild
+      // card's scoring lands — and never a bye/eliminated/"no matchup":
+      // there IS a game this round, just not yet a named opponent).
+      if (isPlayoffs) {
+        const previousRound = roundLabelForWeek(playoffRoundLabelForWeek, row.week - 1, numWeeks, league.playoffTeams);
+        return { kind: 'playoff_pending', week: row.week, round, previousRound, ...base };
+      }
       const nextStart = current && current !== row ? current.weekStart : null;
       return { kind: 'bye', week: row.week, nextStart, ...base };
     }

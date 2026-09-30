@@ -26,7 +26,7 @@ import {
   MARKET_CLOSED_CHIP, SCORING_CHIP, SCORED_CHIP, endsAtLabel, marketClosedAt, marketResumesAt,
   PRE_SEASON_NO_LEADER, PRE_SEASON_SCORING_STARTS, BYE_MESSAGE, byeNextWeekLabel,
   byeToRoundLabel, eliminatedLabel, SEE_THE_BRACKET, scoredResultLine, nextWeekStartsLabel,
-  MISSED_PLAYOFFS_MESSAGE, THIS_WEEK_TAG, heroWeekOrRoundLabel,
+  MISSED_PLAYOFFS_MESSAGE, THIS_WEEK_TAG, heroWeekOrRoundLabel, playoffPendingLine,
 } from '@/lib/home/homeCopy';
 
 // `rightLabel` for live/closed states is derived from the phase's own
@@ -178,6 +178,25 @@ function HomeBody({
     );
   } else if (phase.kind === 'missed_playoffs') {
     middleCard = <PhaseMessageCard lines={[MISSED_PLAYOFFS_MESSAGE]} />;
+  } else if (phase.kind === 'playoff_pending') {
+    // A real playoff row for me this week, but no named opponent yet —
+    // the previous round hasn't posted (Design Lead ruling, 2026-09-30).
+    // thisWeek is null here by construction (relevantRow.hasOpponent is
+    // false), so this reuses the scoring-state shape directly rather than
+    // needing real you/opponent data that doesn't exist yet.
+    middleCard = (
+      <ThisWeekCard
+        week={week}
+        isLive
+        you={{ gain: 0, pct: 0 }}
+        opponent={{ gain: 0, pct: 0 }}
+        opponentName={opponentName}
+        rightLabel=""
+        tag={phase.round ?? THIS_WEEK_TAG}
+        scoring
+        scoringMessage={playoffPendingLine(phase.previousRound)}
+      />
+    );
   } else if (thisWeek) {
     if (phase.kind === 'scoring') {
       middleCard = (

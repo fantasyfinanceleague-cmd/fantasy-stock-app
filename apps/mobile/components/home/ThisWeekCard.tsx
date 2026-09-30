@@ -48,6 +48,10 @@ export interface ThisWeekCardProps {
   /** State 3: neither side's gain is posted yet — skeleton scores, no
    * tug, no lead line, the "Results post…" message instead of a footer. */
   scoring?: boolean;
+  /** Overrides SCORING_MESSAGE when `scoring` is set — the playoff_pending
+   * state's "Your opponent is set when…" line is a different reason to be
+   * in this same visual shape, not a delayed Friday close. */
+  scoringMessage?: string;
   /** State 4: both gains are posted (real numbers, from `you`/`opponent`
    * — the caller passes the authoritative scored values here, never a
    * live recompute). Adds the win/loss result line and swaps the footer
@@ -56,7 +60,7 @@ export interface ThisWeekCardProps {
 }
 
 export function ThisWeekCard({
-  week, isLive, you, opponent, opponentName, rightLabel, liveChipLabel, tag, scoring = false, resultLine,
+  week, isLive, you, opponent, opponentName, rightLabel, liveChipLabel, tag, scoring = false, scoringMessage, resultLine,
 }: ThisWeekCardProps) {
   const { colors } = useTheme();
   const { reduced, duration, easing, withTiming } = useMotion();
@@ -75,7 +79,7 @@ export function ThisWeekCard({
 
   const captionA11y = [youCaption, oppCaption].filter(Boolean).join('. ');
   const a11yLabel = scoring
-    ? `Week ${week}. Scoring — results post shortly.`
+    ? `Week ${week}. ${scoringMessage ?? SCORING_MESSAGE}`
     : `${thisWeekAccessibilityLabel(week, isLive, youText, opponentName, oppText, gap.toString(), ahead, rightLabel)}${captionA11y ? `. ${captionA11y}` : ''}`;
 
   // H3: a leader change gets one accent wash (never a loop; no haptic —
@@ -145,7 +149,7 @@ export function ThisWeekCard({
 
       {scoring ? (
         <Text variant="caption" tone="secondary">
-          {SCORING_MESSAGE}
+          {scoringMessage ?? SCORING_MESSAGE}
         </Text>
       ) : (
         <View style={styles.footerRow}>
