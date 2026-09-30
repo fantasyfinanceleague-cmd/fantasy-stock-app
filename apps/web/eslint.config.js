@@ -31,11 +31,12 @@ export default defineConfig([
     },
   },
   // Phase 2 foundation (docs/design/prompts/phase2-foundation-web.md): the
-  // design-system source gets TS + typescript-eslint. Scoped to src/design
-  // and src/brand.ts only — the rest of apps/web stays JS/eslint-recommended
+  // design-system source gets TS + typescript-eslint. Scoped to src/design,
+  // the Phase 3a landing (src/pages/landing) and src/brand.ts only — the
+  // rest of apps/web stays JS/eslint-recommended
   // as above, untouched.
   {
-    files: ['src/design/**/*.{ts,tsx}', 'src/brand.ts'],
+    files: ['src/design/**/*.{ts,tsx}', 'src/pages/landing/**/*.{ts,tsx}', 'src/brand.ts'],
     extends: [
       ...tseslint.configs.recommended,
       reactHooks.configs['recommended-latest'],
@@ -57,8 +58,8 @@ export default defineConfig([
   // (golden-case assertions legitimately compare against hex strings) are
   // the only exemptions.
   {
-    files: ['src/design/**/*.{ts,tsx}', 'src/brand.ts'],
-    ignores: ['src/design/tokens.ts', 'src/design/**/*.test.{ts,tsx}'],
+    files: ['src/design/**/*.{ts,tsx}', 'src/pages/landing/**/*.{ts,tsx}', 'src/brand.ts'],
+    ignores: ['src/design/tokens.ts', 'src/design/**/*.test.{ts,tsx}', 'src/pages/landing/**/*.test.{ts,tsx}'],
     rules: {
       'no-restricted-syntax': [
         'error',
