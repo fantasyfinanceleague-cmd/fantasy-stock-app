@@ -98,7 +98,14 @@ function HomeBody({
   // States 6/7: no money views at all — the draft's own cards.
   if (phase.kind === 'pre_draft') {
     return league ? (
-      <PreDraftCard leagueId={leagueId!} inviteCode={league.invite_code} pickSeconds={league.pick_seconds} numRounds={league.num_rounds} />
+      <PreDraftCard
+        leagueId={leagueId!}
+        inviteCode={league.invite_code}
+        pickSeconds={league.pick_seconds}
+        numRounds={league.num_rounds}
+        draftDate={league.draft_date}
+        numParticipants={league.num_participants}
+      />
     ) : null;
   }
   if (phase.kind === 'drafting') {

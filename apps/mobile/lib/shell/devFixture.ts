@@ -68,7 +68,14 @@ function league(over: Partial<League> & Pick<League, 'id' | 'name'>): League {
     invite_code: 'SCUD26',
     commissioner_id: FIXTURE_USER_ID,
     draft_status: 'completed',
-    draft_date: null,
+    // The board's "Draft Sat 7:00 PM" (ET) -- harmless for a
+    // draft_status:'completed' league (draft_date has no effect once the
+    // draft is done), but needed so HOME_FIXTURE's pre_draft/
+    // pre_draft_waiting states (an independent fixture axis from this
+    // one, both keyed to whichever league the picker has active -- almost
+    // always this one) have a real date/countdown to render instead of
+    // silently hiding those lines for lack of one.
+    draft_date: '2026-10-03T23:00:00Z',
     league_start_date: new Date(Date.now() - 40 * DAY).toISOString(),
     budget_mode: 'no-budget',
     stake_mode: 'fixed_notional',

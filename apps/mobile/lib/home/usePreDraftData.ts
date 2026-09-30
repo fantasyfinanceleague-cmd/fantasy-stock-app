@@ -34,6 +34,13 @@ export interface PreDraftData {
   orderRevealed: string[] | null;
   members: PreDraftMember[];
   loading: boolean;
+  /** draft_date - 1h, or the later time the order actually finalized
+   * (DraftOrderInfo.finalizeAt) -- board: "Draft order set Sat 6:00 PM
+   * ET, an hour before the draft". Null while `waiting` is true (there is
+   * no set time yet to show -- OrderWaiting's own bar covers that case). */
+  finalizeAt: string | null;
+  memberCount: number;
+  minMembers: number;
 }
 
 /** "3 of 4 joined, so the order isn't set yet" (Design Lead capture spec,
@@ -48,32 +55,46 @@ function fixturePreDraftWaiting(): PreDraftData {
       { userId: 'gianluigi', displayName: 'Gianluigi B.', isBot: false },
     ],
     loading: false,
+    finalizeAt: null,
+    memberCount: 3,
+    minMembers: 4,
   };
 }
 
+/** The board's plain "before the draft" sample: the order IS set (board
+ * always shows the order-set line in this variant), well short of the
+ * league's full roster. */
+function fixturePreDraft(): PreDraftData {
+  return {
+    waiting: false,
+    orderRevealed: ['roberto', 'paolo', 'gianluigi'],
+    members: [
+      { userId: 'roberto', displayName: 'Roberto B.', isBot: false },
+      { userId: 'paolo', displayName: 'Paolo M.', isBot: false },
+      { userId: 'gianluigi', displayName: 'Gianluigi B.', isBot: false },
+      { userId: 'luca', displayName: 'Luca V.', isBot: false },
+      { userId: 'chiara', displayName: 'Chiara R.', isBot: false },
+      { userId: 'marco', displayName: 'Marco T.', isBot: false },
+    ],
+    loading: false,
+    finalizeAt: '2026-10-03T22:00:00.000Z', // Sat 6:00 PM ET, an hour before
+    memberCount: 6,
+    minMembers: 4,
+  };
+}
+
+const EMPTY: PreDraftData = { waiting: null, orderRevealed: null, members: [], loading: true, finalizeAt: null, memberCount: 0, minMembers: 0 };
+
 export function usePreDraftData(leagueId: string): PreDraftData {
-  const [waiting, setWaiting] = useState<boolean | null>(null);
-  const [orderRevealed, setOrderRevealed] = useState<string[] | null>(null);
-  const [members, setMembers] = useState<PreDraftMember[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<PreDraftData>(EMPTY);
 
   useEffect(() => {
     if (HOME_FIXTURE === 'pre_draft_waiting') {
-      const fx = fixturePreDraftWaiting();
-      setWaiting(fx.waiting);
-      setOrderRevealed(fx.orderRevealed);
-      setMembers(fx.members);
-      setLoading(false);
+      setData(fixturePreDraftWaiting());
       return;
     }
     if (HOME_FIXTURE === 'pre_draft') {
-      // The plain pre-draft capture: order not yet revealed, not waiting
-      // on more members either -- the board's "before the draft" sample
-      // with no order/waiting line shown at all.
-      setWaiting(false);
-      setOrderRevealed(null);
-      setMembers([]);
-      setLoading(false);
+      setData(fixturePreDraft());
       return;
     }
 
@@ -85,16 +106,21 @@ export function usePreDraftData(leagueId: string): PreDraftData {
       ]);
       if (cancelled) return;
       const parsed = parseDraftOrder(orderRaw);
-      setWaiting(parsed?.waitingForMembers ?? null);
-      setOrderRevealed(parsed?.order ?? null);
       const names = (namesRaw ?? []) as { user_id: string; display_name: string; is_bot: boolean }[];
-      setMembers(names.map((n) => ({ userId: n.user_id, displayName: n.display_name, isBot: n.is_bot })));
-      setLoading(false);
+      setData({
+        waiting: parsed?.waitingForMembers ?? null,
+        orderRevealed: parsed?.order ?? null,
+        members: names.map((n) => ({ userId: n.user_id, displayName: n.display_name, isBot: n.is_bot })),
+        loading: false,
+        finalizeAt: parsed?.finalizeAt ?? null,
+        memberCount: parsed?.memberCount ?? 0,
+        minMembers: parsed?.minMembers ?? 0,
+      });
     })();
     return () => {
       cancelled = true;
     };
   }, [leagueId]);
 
-  return { waiting, orderRevealed, members, loading };
+  return data;
 }

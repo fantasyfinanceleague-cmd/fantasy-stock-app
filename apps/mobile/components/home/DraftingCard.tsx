@@ -10,7 +10,7 @@ import { LiveDot } from '@/components/sp/game/LiveDot';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { useDraftingData } from '@/lib/home/useDraftingData';
 import { currentPickerFor, picksUntilTurn } from '@/lib/home/draftTurn';
-import { YOURE_ON_THE_CLOCK, onTheClockLine, upNextLine, GO_TO_DRAFT_ROOM, YOUR_TEAM_SO_FAR, DRAFT_IN_PROGRESS_TITLE } from '@/lib/home/homeCopy';
+import { YOURE_ON_THE_CLOCK, onTheClockLine, upNextLine, GO_TO_DRAFT_ROOM, YOUR_TEAM_SO_FAR, DRAFTING_TAG, DRAFTING_CHIP } from '@/lib/home/homeCopy';
 
 // Stockpile — <DraftingCard> (Phase 3b-2, state 7 — "draft in progress").
 // One fetch of get_draft_clock + get_draft_order on mount — no live
@@ -33,7 +33,7 @@ export function DraftingCard({ leagueId, myUserId, numRounds }: DraftingCardProp
   if (!clock || !order) {
     return (
       <Card style={styles.card}>
-        <Text variant="headline">{DRAFT_IN_PROGRESS_TITLE}</Text>
+        <Text variant="tag" style={{ color: colors.liveText }}>{DRAFTING_TAG}</Text>
       </Card>
     );
   }
@@ -47,13 +47,18 @@ export function DraftingCard({ leagueId, myUserId, numRounds }: DraftingCardProp
   return (
     <Card style={styles.card}>
       <View style={styles.header}>
-        <Text variant="headline">{DRAFT_IN_PROGRESS_TITLE}</Text>
-        <LiveDot size={7} />
+        <Text variant="tag" style={{ color: colors.liveText }}>{DRAFTING_TAG}</Text>
+        <View style={[styles.chip, { backgroundColor: colors.inset }]}>
+          <LiveDot size={7} />
+          <Text variant="tag" style={{ color: colors.liveText }}>{DRAFTING_CHIP}</Text>
+        </View>
       </View>
 
       {isMyTurn ? (
         <>
-          <Text variant="title" style={{ color: colors.accent }}>
+          {/* B5 (Design Lead, 2026-09-30): the board's "You're on the
+              clock" is in the live-text colour, not accent blue. */}
+          <Text variant="title" style={{ color: colors.liveText }}>
             {YOURE_ON_THE_CLOCK}
           </Text>
           <Text variant="callout" tone="secondary">
@@ -87,5 +92,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[2],
+    paddingHorizontal: space[3],
+    paddingVertical: space[2],
+    borderRadius: 999,
   },
 });

@@ -144,16 +144,46 @@ export function preSeasonStartsLabel(startsAtIso: string | null): string {
 }
 
 // ── States 6/7: pre-draft / drafting — board, verbatim where noted ─────────
-// Housekeeping (Design Lead, 2026-09-29): these three headings lived as
-// literal strings in their own cards instead of here — moved in so the
-// module really is the one place for Home's copy, per its own doc above.
-export const BEFORE_THE_DRAFT_TITLE = 'Before the draft'; // board
-export const DRAFT_IN_PROGRESS_TITLE = 'Draft in progress'; // board
+// CORRECTION (Design Lead, 2026-09-30, B4): "Before the draft"/"Draft in
+// progress" are the BOARD'S OWN FIGURE CAPTIONS (docs/design/screens/
+// inventory-board.jsx's <Fit caption="...">), not on-screen copy -- an
+// earlier pass here wrongly accepted them as such. The real on-screen
+// copy is the card's tag + chip pair, below.
+export const PRE_DRAFT_TAG = 'Draft'; // board
+export const PRE_DRAFT_CHIP = 'Pre-draft'; // board
+export const DRAFTING_TAG = 'Draft is live'; // board
+export const DRAFTING_CHIP = 'Drafting'; // board
 export function pickClockLine(pickSeconds: number, rounds: number): string {
   return `${pickSeconds}-second picks · ${rounds} rounds`; // board ("60-second picks · 6 rounds")
 }
 export const BUILD_YOUR_QUEUE = 'Build your queue'; // board
 export const YOURE_ON_THE_CLOCK = "You're on the clock"; // board
+// ── Members / invite / note cards (board, B4) ───────────────────────────────
+export const MEMBERS_TITLE = 'Members'; // board
+/** "6 of 8 joined" (board) -- `capacity` is the league's full roster size
+ * (league.num_participants), never the draft-order minimum (see
+ * membersNeededCaption for that number, used only while waiting). */
+export function membersJoinedCaption(count: number, capacity: number): string {
+  return `${count} of ${capacity} joined`; // board
+}
+/** "3 joined · 4 needed to draft" (board, WAITING variant) -- `needed` is
+ * the draft-order minimum (DraftOrderInfo.minMembers), a different number
+ * from the league's full capacity. */
+export function membersNeededCaption(count: number, needed: number): string {
+  return `${count} joined · ${needed} needed to draft`; // board
+}
+export const INVITE_CODE_LABEL = 'Invite code'; // board
+export const NO_BUYING_BEFORE_DRAFT = 'No buying before the draft. Your team is set at the draft.'; // board
+// ── OrderWaiting (board, B4) ─────────────────────────────────────────────
+export const DRAFT_ORDER_WAITING_TAG = 'Draft order · waiting'; // board
+/** "Set 1 hour before the draft, once 4 managers have joined." (board). */
+export function orderWaitingLine(min: number): string {
+  return `Set 1 hour before the draft, once ${min} managers have joined.`; // board
+}
+/** "3 of 4 managers" (board) -- the OrderWaiting progress bar's own caption. */
+export function managersProgressCaption(count: number, min: number): string {
+  return `${count} of ${min} managers`; // board
+}
 export function onTheClockLine(round: number, pick: number, secondsLeft: number): string {
   const m = Math.floor(secondsLeft / 60);
   const s = secondsLeft % 60;
