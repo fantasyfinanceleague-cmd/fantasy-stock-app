@@ -232,6 +232,37 @@ Deno.test('C3: a team never seeded into the playoff bracket reads missed_playoff
   assertEquals(vm.phase.kind, 'missed_playoffs');
 });
 
+// ── I12 (Design Lead ruling, 2026-09-29): unpriced symbols reach the view
+// model's caption inputs correctly. ────────────────────────────────────────
+
+Deno.test('I12: an unpriced symbol on each side reaches thisWeek.you/opponent.unpriced and the hero value caption', () => {
+  const { data, meta, quote, bars } = buildFixtureInput();
+  const now = new Date('2026-09-24T13:37:00-04:00'); // Thu, live
+  const noNvdaOrAmzn = (sym: string) => (sym === 'NVDA' || sym === 'AMZN' ? null : quote(sym));
+  const vm = buildHomeViewModel({
+    now, meta, market: { status: 'open', reason: 'regular_session', nextOpenAt: null },
+    data, quote: noNvdaOrAmzn, bars, playoffRoundLabelForWeek,
+  });
+  assertEquals(vm.thisWeek!.you.unpriced, ['NVDA']);
+  assertEquals(vm.thisWeek!.opponent.unpriced, ['AMZN']);
+  // The hero is MY team's value -- the opponent's unpriced symbol never
+  // reaches it, only mine does.
+  assertEquals(vm.hero!.unpricedValue, ['NVDA']);
+});
+
+Deno.test('I12: a missing prevClose only shows up in unpricedToday, never in unpricedValue or thisWeek.you', () => {
+  const { data, meta, quote, bars } = buildFixtureInput();
+  const now = new Date('2026-09-24T13:37:00-04:00'); // Thu, live
+  const noNvdaBars = { ...bars, NVDA: [] }; // prevCloseFor(bars, 'NVDA', now) -> null; quote('NVDA') is untouched
+  const vm = buildHomeViewModel({
+    now, meta, market: { status: 'open', reason: 'regular_session', nextOpenAt: null },
+    data, quote, bars: noNvdaBars, playoffRoundLabelForWeek,
+  });
+  assertEquals(vm.hero!.unpricedToday, ['NVDA']);
+  assertEquals(vm.hero!.unpricedValue, []);
+  assertEquals(vm.thisWeek!.you.unpriced, []);
+});
+
 Deno.test('season gain through week 5 matches ROBERTO_WEEKS = 129.99, before this week live is added', () => {
   const { data, meta, quote, bars } = buildFixtureInput();
   const now = new Date('2026-09-24T17:37:00-04:00');

@@ -9,7 +9,7 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 import { useMotion } from '@/components/sp/motion';
 import { formatMoney, formatPercent, isZeroMoney } from '@/components/sp/logic/money';
 import { RollingMoney } from '@/components/home/RollingMoney';
-import { HERO_SEASON_GAIN_LABEL, HERO_TODAY_LABEL, heroAccessibilityLabel } from '@/lib/home/homeCopy';
+import { HERO_SEASON_GAIN_LABEL, HERO_TODAY_LABEL, heroAccessibilityLabel, heroUnpricedCaption } from '@/lib/home/homeCopy';
 
 // Stockpile — <HomeHero> (Phase 3b-2, D1 Concept A). The big number is
 // team VALUE; the line under it is the scored season gain plus today's
@@ -38,6 +38,11 @@ export interface HomeHeroProps {
   seasonGainPct: number;
   /** Null hides the "today" segment entirely (a non-trading day). */
   today: number | null;
+  /** Symbols with no live price counted into `value`/`seasonGainDollars`
+   * at cost, and into `today` at zero gain (see lib/plCoverage.ts). Drives
+   * the caption under the gain row — Design Lead ruling, 2026-09-29. */
+  unpricedValue: string[];
+  unpricedToday: string[];
 }
 
 function ordinal(n: number): string {
@@ -46,7 +51,7 @@ function ordinal(n: number): string {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
-export function HomeHero({ leagueId, rank, totalPlayers, record, week, numWeeks, value, seasonGainDollars, seasonGainPct, today }: HomeHeroProps) {
+export function HomeHero({ leagueId, rank, totalPlayers, record, week, numWeeks, value, seasonGainDollars, seasonGainPct, today, unpricedValue, unpricedToday }: HomeHeroProps) {
   const { colors } = useTheme();
   const { reduced, duration, easing, withTiming } = useMotion();
 
@@ -76,7 +81,10 @@ export function HomeHero({ leagueId, rank, totalPlayers, record, week, numWeeks,
   const gainText = `${formatMoney(seasonGainDollars, { sign: 'always' })} · ${formatPercent(seasonGainPct, { sign: 'always' })}`;
   const todayText = today != null ? formatMoney(today, { sign: 'always' }) : null;
 
-  const a11yLabel = heroAccessibilityLabel(valueText, gainText, HERO_SEASON_GAIN_LABEL);
+  const caption = heroUnpricedCaption(unpricedValue, unpricedToday);
+  const a11yLabel = caption
+    ? `${heroAccessibilityLabel(valueText, gainText, HERO_SEASON_GAIN_LABEL)}. ${caption}`
+    : heroAccessibilityLabel(valueText, gainText, HERO_SEASON_GAIN_LABEL);
 
   return (
     <Animated.View style={[styles.wrap, enterStyle]}>
@@ -104,6 +112,15 @@ export function HomeHero({ leagueId, rank, totalPlayers, record, week, numWeeks,
           </>
         ) : null}
       </View>
+
+      {caption ? (
+        <Text variant="caption" tone="secondary">
+          <Text variant="caption" tone="secondary" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            {'ⓘ '}
+          </Text>
+          {caption}
+        </Text>
+      ) : null}
     </Animated.View>
   );
 }

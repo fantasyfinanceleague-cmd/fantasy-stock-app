@@ -228,6 +228,8 @@ function HomeBody({
         seasonGainDollars={hero.seasonGainDollars}
         seasonGainPct={hero.seasonGainPct}
         today={hero.today}
+        unpricedValue={hero.unpricedValue}
+        unpricedToday={hero.unpricedToday}
       />
       {middleCard ? <PhaseTransition key={phase.kind}>{middleCard}</PhaseTransition> : null}
       {showSeasonCard ? (

@@ -14,7 +14,7 @@ import { ScoreDigits } from '@/components/sp/game/ScoreDigits';
 import { TugBar } from '@/components/sp/game/TugBar';
 import { LiveDot } from '@/components/sp/game/LiveDot';
 import { Skeleton } from '@/components/Skeleton';
-import { THIS_WEEK_TAG, YOU_LABEL, vsOpponentLabel, leadLabel, thisWeekLiveChip, thisWeekAccessibilityLabel, SCORING_MESSAGE } from '@/lib/home/homeCopy';
+import { THIS_WEEK_TAG, YOU_LABEL, vsOpponentLabel, leadLabel, thisWeekLiveChip, thisWeekAccessibilityLabel, SCORING_MESSAGE, sideUnpricedCaption } from '@/lib/home/homeCopy';
 
 // Stockpile — <ThisWeekCard> (Phase 3b-2, board "Home", key screen 1). A
 // `<Card variant="scoreboard">` — every "game surface" now looks like this
@@ -34,8 +34,8 @@ import { THIS_WEEK_TAG, YOU_LABEL, vsOpponentLabel, leadLabel, thisWeekLiveChip,
 export interface ThisWeekCardProps {
   week: number;
   isLive: boolean;
-  you: { gain: number; pct: number };
-  opponent: { gain: number; pct: number };
+  you: { gain: number; pct: number; unpriced?: string[] };
+  opponent: { gain: number; pct: number; unpriced?: string[] };
   opponentName: string;
   /** "Ends Fri 4:00 PM ET" / "…at Thursday's close" / etc. */
   rightLabel: string;
@@ -67,9 +67,16 @@ export function ThisWeekCard({
   const youText = formatMoney(you.gain, { sign: 'always' });
   const oppText = formatMoney(opponent.gain, { sign: 'always' });
 
+  // I12 (Design Lead ruling, 2026-09-29): one caption per side that has an
+  // unpriced symbol, reusing plCoverage.ts's wording. Never shown during
+  // `scoring` -- there are no numbers on screen yet to qualify.
+  const youCaption = !scoring ? sideUnpricedCaption(YOU_LABEL, you.unpriced ?? []) : null;
+  const oppCaption = !scoring ? sideUnpricedCaption(opponentName, opponent.unpriced ?? []) : null;
+
+  const captionA11y = [youCaption, oppCaption].filter(Boolean).join('. ');
   const a11yLabel = scoring
     ? `Week ${week}. Scoring — results post shortly.`
-    : thisWeekAccessibilityLabel(week, isLive, youText, opponentName, oppText, gap.toString(), ahead, rightLabel);
+    : `${thisWeekAccessibilityLabel(week, isLive, youText, opponentName, oppText, gap.toString(), ahead, rightLabel)}${captionA11y ? `. ${captionA11y}` : ''}`;
 
   // H3: a leader change gets one accent wash (never a loop; no haptic —
   // this isn't user-initiated). Never on first paint — prevLeaderRef
@@ -154,6 +161,17 @@ export function ThisWeekCard({
           </Text>
         </View>
       )}
+
+      {youCaption ? (
+        <Text variant="caption" tone="secondary">
+          {youCaption}
+        </Text>
+      ) : null}
+      {oppCaption ? (
+        <Text variant="caption" tone="secondary">
+          {oppCaption}
+        </Text>
+      ) : null}
     </Card>
   );
 }

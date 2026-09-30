@@ -163,6 +163,31 @@ export const SEASON_GAIN_TILE_TITLE = 'Season gain'; // board, reused
 // components/sp/logic/money.ts — Home reuses them, does not redefine them). ─
 export { formatSignedCurrency } from '../weekStatus';
 
+// ── Unpriced-symbol captions (Design Lead ruling, 2026-09-29, I12) ─────────
+// Reuses plCoverage.ts's `unpricedNote` wording (already approved, already
+// on main via fix/mobile-home-pl-partial-basis) rather than authoring new
+// copy: "N holding(s) counted at cost (no live price yet)".
+import { unpricedNote } from '../plCoverage';
+
+function distinctSymbolCount(...lists: string[][]): number {
+  return new Set(lists.flat().map((s) => s.toUpperCase())).size;
+}
+
+/** Hero caption: one line under the gain row when the hero's value and/or
+ * today segment assumed a cost basis for any symbol. Counts each symbol
+ * once even when it appears in both lists (a missing price affects both). */
+export function heroUnpricedCaption(unpricedValue: string[], unpricedToday: string[]): string | null {
+  return unpricedNote(distinctSymbolCount(unpricedValue, unpricedToday));
+}
+
+/** ThisWeekCard caption: "{name}: N holding(s) counted at cost (no live
+ * price yet)" for one side. `name` is new-flagged copy (the prefix) — the
+ * note itself is not. */
+export function sideUnpricedCaption(name: string, unpriced: string[]): string | null {
+  const note = unpricedNote(distinctSymbolCount(unpriced));
+  return note ? `${name}: ${note}` : null;
+}
+
 // ── VoiceOver strings (spec §Accessibility) — new-flagged ──────────────────
 export function heroAccessibilityLabel(valueText: string, gainText: string, gainLabel: string): string {
   return `Your team, ${valueText}, ${gainText} ${gainLabel}`;
