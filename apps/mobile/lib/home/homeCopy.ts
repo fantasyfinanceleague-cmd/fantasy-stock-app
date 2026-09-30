@@ -125,6 +125,23 @@ export function nextWeekStartsLabel(week: number, when: string | null): string {
 // ── State 5: before the season — board, verbatim ───────────────────────────
 export const PRE_SEASON_NO_LEADER = 'No leader yet.'; // board
 export const PRE_SEASON_SCORING_STARTS = "Scoring starts at Monday's open."; // board
+// board's HomePreSeason GameCard renders these as ONE sentence, not two
+// separate lines -- PhaseMessageCard's two-line layout was the mismatch
+// B3 (Design Lead, 2026-09-30) flagged, not the wording of either half.
+export const PRE_SEASON_CAPTION = `${PRE_SEASON_NO_LEADER} ${PRE_SEASON_SCORING_STARTS}`; // board
+export const PRE_SEASON_TAG = 'Week 1'; // board
+export const PRE_SEASON_CHIP = 'Pre-season'; // board
+/** "Season starts Mon 9:30 AM ET" (board) from the REAL market-open
+ * instant -- `startsAtIso` must already be resolved (buildHomeViewModel's
+ * B3 fix), never schedule.ts's nominal leagueStartDate directly, or this
+ * repeats B1's bug for the season start instead of a week boundary. */
+export function preSeasonStartsLabel(startsAtIso: string | null): string {
+  if (!startsAtIso) return 'Season starts soon'; // new-flagged, mirrors nextWeekStartsLabel's fallback
+  const d = new Date(startsAtIso);
+  if (Number.isNaN(d.getTime())) return 'Season starts soon';
+  const formatted = new Intl.DateTimeFormat('en-US', ET_WEEKDAY_TIME).format(d);
+  return `Season starts ${formatted} ET`; // board
+}
 
 // ── States 6/7: pre-draft / drafting — board, verbatim where noted ─────────
 // Housekeeping (Design Lead, 2026-09-29): these three headings lived as

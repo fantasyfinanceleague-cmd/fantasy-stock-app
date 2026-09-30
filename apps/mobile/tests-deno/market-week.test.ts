@@ -70,6 +70,20 @@ Deno.test('resolveWeekWindow: December (EST) week -> still 9:30 AM open / 4:00 P
   assertEquals(window, { weekStart: '2026-12-14T14:30:00.000Z', weekEnd: '2026-12-18T21:00:00.000Z' });
 });
 
+Deno.test('resolveWeekWindow: a non-Friday anchor (e.g. a league start date) resolves the SAME week -- never assumes the anchor is Friday', () => {
+  // A league's leagueStartDate can land on any weekday (schedule.ts's own
+  // nominal-Tuesday convention, or any other day) -- anchoring on it must
+  // find the correct Monday via the REAL day of week, not by subtracting
+  // a fixed 4 days as if the anchor were always a Friday.
+  const sessions = standardWeekSessions('2026-09-25T21:00:00.000Z'); // Mon 9/21 - Fri 9/25
+  const fromTuesday = resolveWeekWindow('2026-09-22T14:30:00.000Z', sessions); // nominal Tuesday anchor
+  const fromMonday = resolveWeekWindow('2026-09-21T13:30:00.000Z', sessions); // Monday anchor
+  const fromFriday = resolveWeekWindow('2026-09-25T21:00:00.000Z', sessions); // Friday anchor
+  assertEquals(fromTuesday, { weekStart: '2026-09-21T13:30:00.000Z', weekEnd: '2026-09-25T20:00:00.000Z' });
+  assertEquals(fromTuesday, fromMonday);
+  assertEquals(fromTuesday, fromFriday);
+});
+
 Deno.test('resolveWeekWindow: no coverage for the week -> null, never a guess', () => {
   const window = resolveWeekWindow('2026-09-25T21:00:00.000Z', []);
   assertEquals(window, null);

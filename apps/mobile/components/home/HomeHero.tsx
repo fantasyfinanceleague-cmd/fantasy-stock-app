@@ -28,7 +28,10 @@ import { HERO_SEASON_GAIN_LABEL, HERO_TODAY_LABEL, heroAccessibilityLabel, heroU
 
 export interface HomeHeroProps {
   leagueId: string;
-  rank: number;
+  /** Null hides the "Nth of M ·" segment entirely — the board's
+   * pre-season hero has no rank yet (Design Lead ruling, 2026-09-30, B3):
+   * nobody has played a week, so a rank is a fabricated ordering. */
+  rank: number | null;
   totalPlayers: number;
   record: string;
   /** "Week N of M" in the regular season, the playoff round name during
@@ -47,6 +50,12 @@ export interface HomeHeroProps {
    * the caption under the gain row — Design Lead ruling, 2026-09-29. */
   unpricedValue: string[];
   unpricedToday: string[];
+  /** Pre-season override (Design Lead ruling, 2026-09-30, B3): the board's
+   * HomePreSeason hero has no pct and no "today" at all -- just ONE pair,
+   * "$0.00 · {label}", in zero grey (board: "Season starts Mon 9:30 AM
+   * ET"). Set to replace the whole gain/pct/today line with that pair;
+   * leave null/undefined for every other state. */
+  preSeasonLabel?: string | null;
   /** True when this mount was caused by a LEAGUE SWITCH, not Home's first
    * open (H5, Design Lead ruling 2026-09-29, Blocking 1) — the hero comes
    * in already settled, with no H4 rise. */
@@ -59,7 +68,7 @@ function ordinal(n: number): string {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
-export function HomeHero({ leagueId, rank, totalPlayers, record, weekOrRound, value, seasonGainDollars, seasonGainPct, today, unpricedValue, unpricedToday, skipEntrance = false }: HomeHeroProps) {
+export function HomeHero({ leagueId, rank, totalPlayers, record, weekOrRound, value, seasonGainDollars, seasonGainPct, today, unpricedValue, unpricedToday, preSeasonLabel, skipEntrance = false }: HomeHeroProps) {
   const { colors } = useTheme();
   const { reduced, duration, easing, withTiming } = useMotion();
 
@@ -93,13 +102,15 @@ export function HomeHero({ leagueId, rank, totalPlayers, record, weekOrRound, va
   const todayText = today != null ? formatMoney(today, { sign: 'always' }) : null;
 
   const caption = heroUnpricedCaption(unpricedValue, unpricedToday);
-  const a11yLabel = heroAccessibilityLabel(
-    valueText,
-    formatMoney(seasonGainDollars, { sign: 'always' }),
-    formatPercent(seasonGainPct, { sign: 'always' }),
-    todayText,
-    caption,
-  );
+  const a11yLabel = preSeasonLabel != null
+    ? `Your team, ${valueText}. $0.00, ${preSeasonLabel}.`
+    : heroAccessibilityLabel(
+        valueText,
+        formatMoney(seasonGainDollars, { sign: 'always' }),
+        formatPercent(seasonGainPct, { sign: 'always' }),
+        todayText,
+        caption,
+      );
 
   return (
     <Animated.View style={[styles.wrap, enterStyle]}>
@@ -108,7 +119,13 @@ export function HomeHero({ leagueId, rank, totalPlayers, record, weekOrRound, va
           Your team
         </Text>
         <Text variant="caption" tone="secondary" style={styles.metaNum}>
-          {ordinal(rank)} of {totalPlayers} · {record}{weekOrRound ? ` · ${weekOrRound}` : ''}
+          {rank != null
+            ? `${ordinal(rank)} of ${totalPlayers} · ${record}${weekOrRound ? ` · ${weekOrRound}` : ''}`
+            // Pre-season (rank null, board: "Week 1 of 14 · 0–0"): the
+            // week/round leads, since there's no record worth leading
+            // with yet -- the one case where this order differs from
+            // every other state's "record · week" (Design Lead, B3).
+            : `${weekOrRound ?? ''}${weekOrRound && record ? ' · ' : ''}${record}`}
         </Text>
       </View>
 
@@ -120,19 +137,26 @@ export function HomeHero({ leagueId, rank, totalPlayers, record, weekOrRound, va
       <View accessible accessibilityLabel={a11yLabel} style={styles.heroBody}>
         <RollingMoney text={valueText} size="score.xl" rollKey={leagueId} />
 
-        <View style={styles.gainRow}>
-          <RollingMoney text={gainText} size="callout" color={gainColor} rollKey={leagueId} />
-          <Text variant="callout" tone="secondary"> {HERO_SEASON_GAIN_LABEL}</Text>
-          {todayText ? (
-            <>
-              <Text variant="callout" tone="secondary"> · </Text>
-              <RollingMoney text={todayText} size="callout" color={todayColor} rollKey={leagueId} />
-              <Text variant="callout" tone="secondary"> {HERO_TODAY_LABEL}</Text>
-            </>
-          ) : null}
-        </View>
+        {preSeasonLabel != null ? (
+          <View style={styles.gainRow}>
+            <RollingMoney text={formatMoney(0, { sign: 'always' })} size="callout" color={colors.zero} rollKey={leagueId} />
+            <Text variant="callout" tone="secondary"> · {preSeasonLabel}</Text>
+          </View>
+        ) : (
+          <View style={styles.gainRow}>
+            <RollingMoney text={gainText} size="callout" color={gainColor} rollKey={leagueId} />
+            <Text variant="callout" tone="secondary"> {HERO_SEASON_GAIN_LABEL}</Text>
+            {todayText ? (
+              <>
+                <Text variant="callout" tone="secondary"> · </Text>
+                <RollingMoney text={todayText} size="callout" color={todayColor} rollKey={leagueId} />
+                <Text variant="callout" tone="secondary"> {HERO_TODAY_LABEL}</Text>
+              </>
+            ) : null}
+          </View>
+        )}
 
-        {caption ? (
+        {preSeasonLabel == null && caption ? (
           <Text variant="caption" tone="secondary">
             <Text variant="caption" tone="secondary" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
               {'ⓘ '}

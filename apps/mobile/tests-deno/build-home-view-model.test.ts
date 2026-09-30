@@ -392,3 +392,28 @@ Deno.test('B1: a Monday holiday pushes live_open to Tuesday, from the calendar, 
   });
   assertEquals(nowOpen.phase.kind, 'live_open');
 });
+
+Deno.test('B3: pre-season seasonStartsAt is the REAL Monday open, not schedule.ts\'s nominal leagueStartDate', () => {
+  const { data, meta, quote, bars } = buildFixtureInput();
+  const preSeasonMeta = { ...meta, leagueStartDate: '2026-08-04T14:30:00.000Z' }; // nominal Tuesday, fixed UTC
+  const marketCalendar = standardWeekSessions('2026-08-07T21:00:00.000Z'); // real Mon 8/3 - Fri 8/7
+  const now = new Date('2026-08-01T12:00:00.000Z'); // well before the season
+  const vm = buildHomeViewModel({
+    now, meta: preSeasonMeta, market: { status: 'closed', reason: 'weekend', nextOpenAt: null },
+    data, quote, bars, playoffRoundLabelForWeek, marketCalendar,
+  });
+  assertEquals(vm.phase.kind, 'pre_season');
+  if (vm.phase.kind === 'pre_season') assertEquals(vm.phase.seasonStartsAt, '2026-08-03T13:30:00.000Z');
+});
+
+Deno.test('B3: without the market calendar, seasonStartsAt falls back to the nominal leagueStartDate -- never a crash', () => {
+  const { data, meta, quote, bars } = buildFixtureInput();
+  const preSeasonMeta = { ...meta, leagueStartDate: '2026-08-04T14:30:00.000Z' };
+  const now = new Date('2026-08-01T12:00:00.000Z');
+  const vm = buildHomeViewModel({
+    now, meta: preSeasonMeta, market: { status: 'closed', reason: 'weekend', nextOpenAt: null },
+    data, quote, bars, playoffRoundLabelForWeek, marketCalendar: [],
+  });
+  assertEquals(vm.phase.kind, 'pre_season');
+  if (vm.phase.kind === 'pre_season') assertEquals(vm.phase.seasonStartsAt, '2026-08-04T14:30:00.000Z');
+});

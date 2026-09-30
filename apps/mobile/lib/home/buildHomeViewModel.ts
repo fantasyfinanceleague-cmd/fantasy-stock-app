@@ -277,10 +277,19 @@ export function buildHomeViewModel(input: HomeViewModelInput): HomeViewModel {
   const previous = matchupRowFor(data, meta, meta.currentWeek - 1, marketCalendar);
   const { laterPlayoffWeek, lastPlayoffLoss, lastPlayoffWeek } = playoffStatusFlags(data, meta);
 
+  // B3 (Design Lead, 2026-09-30): leagueStartDate is written by the same
+  // schedule.ts that gives matchup rows their nominal, fixed-UTC
+  // timestamps (B1) — resolved here, at the same seam, so the board's
+  // "Season starts Mon 9:30 AM ET" is never B1's bug in a new place.
+  // Falls back to the nominal value when the calendar has no coverage.
+  const realLeagueStartDate = meta.leagueStartDate
+    ? (resolveWeekWindow(meta.leagueStartDate, marketCalendar)?.weekStart ?? meta.leagueStartDate)
+    : null;
+
   const phase = homePhase(
     {
       league: {
-        draftStatus: meta.draftStatus, leagueStartDate: meta.leagueStartDate,
+        draftStatus: meta.draftStatus, leagueStartDate: realLeagueStartDate,
         seasonStatus: meta.seasonStatus, currentWeek: meta.currentWeek, numWeeks: meta.numWeeks,
         playoffTeams: meta.playoffTeams,
       },

@@ -49,6 +49,25 @@ function addDaysToDateStr(dateStr: string, days: number): string {
 }
 
 /**
+ * The Monday (YYYY-MM-DD, America/New_York) of the ISO week containing
+ * `dateIso` -- found from the REAL day of week, never by assuming
+ * `dateIso` itself is any particular weekday. A matchup row's week_end
+ * happens to always land on a Friday under schedule.ts's own convention,
+ * but a caller anchoring on some OTHER date within the week (e.g. a
+ * league's start date, which can fall on any day) must get the same
+ * Monday either way -- an earlier version of this file assumed "Friday
+ * minus 4 days" and would have silently mis-anchored on any non-Friday
+ * input.
+ */
+function mondayOfIsoWeek(dateIso: string): string {
+  const etDate = etDateOnlyOf(dateIso);
+  const [y, m, d] = etDate.split('-').map(Number);
+  const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay(); // 0=Sun .. 6=Sat
+  const daysSinceMonday = (dow + 6) % 7; // Mon->0, Tue->1, ..., Sun->6
+  return addDaysToDateStr(etDate, -daysSinceMonday);
+}
+
+/**
  * An ET wall-clock date + time (as market_calendar stores them, no
  * timezone of its own) to the UTC instant it names, DST-aware. Same
  * offset-by-round-trip technique as the Postgres side's
@@ -77,7 +96,8 @@ export function etWallClockToUtcIso(dateStr: string, timeStr: string): string {
 
 /**
  * The real trading-session window for the ISO week (Mon-Fri,
- * America/New_York) that `nominalWeekEndIso` identifies. `sessions` need
+ * America/New_York) containing `anchorIso` -- ANY date within that week,
+ * not necessarily a Friday (see mondayOfIsoWeek's doc). `sessions` need
  * only cover that week -- callers pass whatever range they already
  * fetched. Null when the calendar has no session that week at all
  * (outside the refreshed coverage window, or a truly empty range) --
@@ -86,11 +106,11 @@ export function etWallClockToUtcIso(dateStr: string, timeStr: string): string {
  * already uses.
  */
 export function resolveWeekWindow(
-  nominalWeekEndIso: string,
+  anchorIso: string,
   sessions: MarketCalendarSession[],
 ): { weekStart: string; weekEnd: string } | null {
-  const fridayDate = etDateOnlyOf(nominalWeekEndIso);
-  const mondayDate = addDaysToDateStr(fridayDate, -4);
+  const mondayDate = mondayOfIsoWeek(anchorIso);
+  const fridayDate = addDaysToDateStr(mondayDate, 4);
   const inWeek = sessions
     .filter((s) => s.sessionDate >= mondayDate && s.sessionDate <= fridayDate)
     .sort((a, b) => (a.sessionDate < b.sessionDate ? -1 : a.sessionDate > b.sessionDate ? 1 : 0));
@@ -104,15 +124,15 @@ export function resolveWeekWindow(
 }
 
 /**
- * A normal, no-holiday Mon-Fri 9:30-4:00 ET week for `nominalWeekEndIso`'s
- * ISO week. Used by the dev fixture (never real prod data, which always
- * reads the actual market_calendar) so fixture captures also exercise the
- * real resolveWeekWindow path end-to-end, rather than falling back to the
- * (known-wrong) nominal timestamps for lack of any calendar rows.
+ * A normal, no-holiday Mon-Fri 9:30-4:00 ET week for the ISO week
+ * containing `anchorIso` (any date within it). Used by the dev fixture
+ * (never real prod data, which always reads the actual market_calendar)
+ * so fixture captures also exercise the real resolveWeekWindow path end-
+ * to-end, rather than falling back to the (known-wrong) nominal
+ * timestamps for lack of any calendar rows.
  */
-export function standardWeekSessions(nominalWeekEndIso: string): MarketCalendarSession[] {
-  const fridayDate = etDateOnlyOf(nominalWeekEndIso);
-  const mondayDate = addDaysToDateStr(fridayDate, -4);
+export function standardWeekSessions(anchorIso: string): MarketCalendarSession[] {
+  const mondayDate = mondayOfIsoWeek(anchorIso);
   const sessions: MarketCalendarSession[] = [];
   for (let i = 0; i <= 4; i++) {
     sessions.push({ sessionDate: addDaysToDateStr(mondayDate, i), openEt: '09:30:00', closeEt: '16:00:00' });

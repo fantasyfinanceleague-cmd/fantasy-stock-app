@@ -81,7 +81,13 @@ export type PhaseResult =
   | ({ kind: 'complete' } & BaseResult)
   | ({ kind: 'pre_draft'; waiting: boolean } & BaseResult)
   | ({ kind: 'drafting' } & BaseResult)
-  | ({ kind: 'pre_season' } & BaseResult)
+  /** `seasonStartsAt` is `league.leagueStartDate` verbatim -- the CALLER
+   * (buildHomeViewModel) is responsible for it already being the REAL
+   * market-open instant, not schedule.ts's nominal one (B3, Design Lead,
+   * 2026-09-30: the board's "Season starts Mon 9:30 AM ET" must never be
+   * B1's bug in a new place). homePhase.ts stays unaware of market
+   * calendars either way -- it only carries the value through. */
+  | ({ kind: 'pre_season'; seasonStartsAt: string | null } & BaseResult)
   | ({ kind: 'scoring'; week: number; isPlayoff: boolean; round: string | null; weekEnd: string } & BaseResult)
   | ({ kind: 'scored'; week: number; won: boolean | null; isPlayoff: boolean; round: string | null; nextStart: string | null } & BaseResult)
   | ({ kind: 'bye'; week: number; nextStart: string | null } & BaseResult)
@@ -148,7 +154,7 @@ export function homePhase(
   }
   // 5. Draft done, but the season hasn't started yet.
   if (league.leagueStartDate && new Date(league.leagueStartDate).getTime() > now.getTime()) {
-    return { kind: 'pre_season', ...base };
+    return { kind: 'pre_season', seasonStartsAt: league.leagueStartDate, ...base };
   }
 
   const isPlayoffs = league.seasonStatus === 'playoffs';
@@ -178,7 +184,7 @@ export function homePhase(
     } else if (previous && bothScored(previous)) {
       row = previous;
     } else {
-      return { kind: 'pre_season', ...base };
+      return { kind: 'pre_season', seasonStartsAt: league.leagueStartDate, ...base };
     }
   }
 
@@ -253,5 +259,5 @@ export function homePhase(
   }
   // Regular season, no row, market otherwise irrelevant: pre-season is the
   // only honest default left (a schedule that hasn't been generated yet).
-  return { kind: 'pre_season', ...base };
+  return { kind: 'pre_season', seasonStartsAt: league.leagueStartDate, ...base };
 }

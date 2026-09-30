@@ -24,7 +24,7 @@ import { HomeLeagueTransition } from '@/components/home/HomeLeagueTransition';
 import type { PhaseResult } from '@/lib/home/homePhase';
 import {
   MARKET_CLOSED_CHIP, SCORING_CHIP, SCORED_CHIP, endsAtLabel, marketClosedAt, marketResumesAt,
-  PRE_SEASON_NO_LEADER, PRE_SEASON_SCORING_STARTS, BYE_MESSAGE, byeNextWeekLabel,
+  PRE_SEASON_CAPTION, PRE_SEASON_TAG, PRE_SEASON_CHIP, preSeasonStartsLabel, BYE_MESSAGE, byeNextWeekLabel,
   byeToRoundLabel, eliminatedLabel, SEE_THE_BRACKET, scoredResultLine, nextWeekStartsLabel,
   MISSED_PLAYOFFS_MESSAGE, THIS_WEEK_TAG, heroWeekOrRoundLabel, playoffPendingLine,
   standingsThroughWeek,
@@ -168,7 +168,23 @@ function HomeBody({
   // same holds for these).
   let middleCard: ReactElement | null = null;
   if (phase.kind === 'pre_season') {
-    middleCard = <PhaseMessageCard lines={[PRE_SEASON_NO_LEADER, PRE_SEASON_SCORING_STARTS]} />;
+    // B3 (Design Lead, 2026-09-30): the board's HomePreSeason is a real
+    // scoreboard PREVIEW -- both team names, $0.00/$0.00 in zero grey --
+    // not a plain message card with no opponent shown at all.
+    middleCard = (
+      <ThisWeekCard
+        week={1}
+        isLive={false}
+        you={{ gain: thisWeek?.you.gain ?? 0, pct: 0 }}
+        opponent={{ gain: thisWeek?.opponent.gain ?? 0, pct: 0 }}
+        opponentName={opponentName}
+        rightLabel=""
+        tag={PRE_SEASON_TAG}
+        liveChipLabel={PRE_SEASON_CHIP}
+        preSeason
+        scoringMessage={PRE_SEASON_CAPTION}
+      />
+    );
   } else if (phase.kind === 'bye') {
     middleCard = <PhaseMessageCard lines={[BYE_MESSAGE, byeNextWeekLabel(week + 1, phase.nextStart)]} />;
   } else if (phase.kind === 'playoff_bye') {
@@ -247,7 +263,7 @@ function HomeBody({
     <>
       <HomeHero
         leagueId={leagueId ?? ''}
-        rank={myRow?.rank ?? 0}
+        rank={phase.kind === 'pre_season' ? null : myRow?.rank ?? 0}
         totalPlayers={standingRows.length}
         record={record}
         weekOrRound={heroWeekOrRoundLabel(phase)}
@@ -257,6 +273,7 @@ function HomeBody({
         today={hero.today}
         unpricedValue={hero.unpricedValue}
         unpricedToday={hero.unpricedToday}
+        preSeasonLabel={phase.kind === 'pre_season' ? preSeasonStartsLabel(phase.seasonStartsAt) : null}
         skipEntrance={skipEntrance}
       />
       {middleCard ? <PhaseTransition key={phase.kind}>{middleCard}</PhaseTransition> : null}

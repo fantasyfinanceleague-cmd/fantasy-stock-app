@@ -48,9 +48,16 @@ export interface ThisWeekCardProps {
   /** State 3: neither side's gain is posted yet — skeleton scores, no
    * tug, no lead line, the "Results post…" message instead of a footer. */
   scoring?: boolean;
-  /** Overrides SCORING_MESSAGE when `scoring` is set — the playoff_pending
-   * state's "Your opponent is set when…" line is a different reason to be
-   * in this same visual shape, not a delayed Friday close. */
+  /** State 5, pre-season (Design Lead ruling, 2026-09-30, B3): real
+   * "$0.00" scores in zero grey — never a loading skeleton, since these
+   * are KNOWN values (nothing has traded yet), not pending ones. Like
+   * `scoring`, drops the tug bar and the lead-line footer for the single
+   * `scoringMessage` caption instead — the board's HomePreSeason has no
+   * tug and no "ends at" line either. */
+  preSeason?: boolean;
+  /** Overrides SCORING_MESSAGE when `scoring` or `preSeason` is set — the
+   * playoff_pending/pre_season states each have their own reason to be in
+   * this same visual shape, not a delayed Friday close. */
   scoringMessage?: string;
   /** State 4: both gains are posted (real numbers, from `you`/`opponent`
    * — the caller passes the authoritative scored values here, never a
@@ -60,7 +67,7 @@ export interface ThisWeekCardProps {
 }
 
 export function ThisWeekCard({
-  week, isLive, you, opponent, opponentName, rightLabel, liveChipLabel, tag, scoring = false, scoringMessage, resultLine,
+  week, isLive, you, opponent, opponentName, rightLabel, liveChipLabel, tag, scoring = false, preSeason = false, scoringMessage, resultLine,
 }: ThisWeekCardProps) {
   const { colors } = useTheme();
   const { reduced, duration, easing, withTiming } = useMotion();
@@ -73,12 +80,13 @@ export function ThisWeekCard({
 
   // I12 (Design Lead ruling, 2026-09-29): one caption per side that has an
   // unpriced symbol, reusing plCoverage.ts's wording. Never shown during
-  // `scoring` -- there are no numbers on screen yet to qualify.
-  const youCaption = !scoring ? sideUnpricedCaption(YOU_LABEL, you.unpriced ?? []) : null;
-  const oppCaption = !scoring ? sideUnpricedCaption(opponentName, opponent.unpriced ?? []) : null;
+  // `scoring`/`preSeason` -- there are no real numbers on screen yet (or,
+  // for pre-season, nothing has traded at all) to qualify.
+  const youCaption = !scoring && !preSeason ? sideUnpricedCaption(YOU_LABEL, you.unpriced ?? []) : null;
+  const oppCaption = !scoring && !preSeason ? sideUnpricedCaption(opponentName, opponent.unpriced ?? []) : null;
 
   const captionA11y = [youCaption, oppCaption].filter(Boolean).join('. ');
-  const a11yLabel = scoring
+  const a11yLabel = scoring || preSeason
     ? `Week ${week}. ${scoringMessage ?? SCORING_MESSAGE}`
     : `${thisWeekAccessibilityLabel(week, isLive, youText, opponentName, oppText, gap.toString(), ahead, rightLabel)}${captionA11y ? `. ${captionA11y}` : ''}`;
 
@@ -88,7 +96,7 @@ export function ThisWeekCard({
   const prevLeaderRef = useRef<Leader>(leader);
   const washOpacity = useSharedValue(0);
   useEffect(() => {
-    if (prevLeaderRef.current !== leader && !scoring) {
+    if (prevLeaderRef.current !== leader && !scoring && !preSeason) {
       if (reduced) {
         washOpacity.value = 0; // a one-shot fade is exactly the motion Reduce Motion removes
       } else {
@@ -98,7 +106,7 @@ export function ThisWeekCard({
     }
     prevLeaderRef.current = leader;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-running per `leader` change is the point; duration/easing/withTiming are stable per render from useMotion().
-  }, [leader, scoring, reduced]);
+  }, [leader, scoring, preSeason, reduced]);
   const washStyle = useAnimatedStyle(() => ({ opacity: washOpacity.value }));
 
   return (
@@ -137,17 +145,17 @@ export function ThisWeekCard({
       ) : (
         <View style={styles.scoresRow}>
           <View style={styles.scoreCell}>
-            <ScoreDigits text={youText} variant="score.lg" color={colors.youText} />
+            <ScoreDigits text={youText} variant="score.lg" color={preSeason ? colors.zero : colors.youText} />
           </View>
           <View style={styles.scoreCell}>
-            <ScoreDigits text={oppText} variant="score.lg" color={colors.oppText} />
+            <ScoreDigits text={oppText} variant="score.lg" color={preSeason ? colors.zero : colors.oppText} />
           </View>
         </View>
       )}
 
-      {!scoring ? <TugBar you={you.gain} opponent={opponent.gain} opponentName={opponentName} /> : null}
+      {!scoring && !preSeason ? <TugBar you={you.gain} opponent={opponent.gain} opponentName={opponentName} /> : null}
 
-      {scoring ? (
+      {scoring || preSeason ? (
         <Text variant="caption" tone="secondary">
           {scoringMessage ?? SCORING_MESSAGE}
         </Text>

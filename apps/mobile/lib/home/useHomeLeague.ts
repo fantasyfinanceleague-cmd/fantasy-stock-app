@@ -148,8 +148,20 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
     };
   });
 
+  // B3 (Design Lead, 2026-09-30): the whole schedule is generated at draft
+  // completion (finalize_league_draft), before the season itself starts --
+  // week 1's matchup row (opponent, dates) is already real and knowable
+  // pre-season, just ungained. An empty matchups array was a fixture
+  // fiction that made the opponent unresolvable and forced the board's
+  // scoreboard-preview card back to a generic "Opponent" placeholder.
+  const preSeasonWeek1 = {
+    week_number: 1, week_start: '2026-08-03T13:30:00.000Z', week_end: '2026-08-07T20:00:00.000Z',
+    is_playoff: false, team1_user_id: 'roberto', team2_user_id: 'gianluigi',
+    team1_gain: null, team2_gain: null,
+  };
+
   const matchups = isPreSeason
-    ? [] // a league whose leagueStartDate is still in the future cannot have any scored (or even started) weeks yet
+    ? [preSeasonWeek1]
     // Every OTHER state below reached the playoffs at all, which requires
     // a real, fully-scored regular season to have happened first -- the
     // Standings' real win/loss record and the Season chart's history are
@@ -209,7 +221,10 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
     : isDraftingFixture(fixture) ? 'in_progress' : 'completed';
   const seasonStatus = fixture === 'complete' ? 'completed' : isPlayoffState ? 'playoffs' : 'active';
   const currentWeek = isPlayoffState ? playoffCurrentWeek : isPreSeason ? 1 : draftStatus === 'completed' ? 6 : 1;
-  const leagueStartDate = fixture === 'pre_season' ? '2099-01-01T00:00:00Z' : '2026-08-01T00:00:00Z';
+  // The real Monday 9:30 AM ET open (matches preSeasonWeek1.week_start
+  // above) -- never a far-future placeholder, so preSeasonStartsLabel
+  // reads a real, near date like the board's, not "2099".
+  const leagueStartDate = fixture === 'pre_season' ? '2026-08-03T13:30:00.000Z' : '2026-08-01T00:00:00Z';
 
   const meta: HomeLeagueMeta = {
     myUserId: 'roberto', draftStatus, leagueStartDate,
@@ -229,7 +244,9 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
       ? new Date('2026-12-22T18:00:00.000Z') // into round 2's week, after the wild-card loss
       : isPlayoffState
         ? new Date('2026-12-15T18:00:00.000Z')
-        : new Date('2026-09-24T17:37:00.000Z'); // Thursday 1:37 PM ET, the board's live moment
+        : isPreSeason
+          ? new Date('2026-07-30T14:00:00.000Z') // Thursday, a few days before leagueStartDate
+          : new Date('2026-09-24T17:37:00.000Z'); // Thursday 1:37 PM ET, the board's live moment
 
   // leader_flip: a call-counter alternates whose price is higher, to
   // exercise H3's leader-change wash under the live poll.

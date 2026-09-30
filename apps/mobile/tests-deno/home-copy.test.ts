@@ -6,7 +6,7 @@
  * Run: `cd apps/mobile/tests-deno && deno test .`
  */
 import { assertEquals } from 'jsr:@std/assert';
-import { heroUnpricedCaption, sideUnpricedCaption, seasonScrubLabel, heroAccessibilityLabel, heroWeekOrRoundLabel, standingsThroughWeek } from '../lib/home/homeCopy.ts';
+import { heroUnpricedCaption, sideUnpricedCaption, seasonScrubLabel, heroAccessibilityLabel, heroWeekOrRoundLabel, standingsThroughWeek, preSeasonStartsLabel } from '../lib/home/homeCopy.ts';
 
 Deno.test('heroUnpricedCaption: null when both lists are empty', () => {
   assertEquals(heroUnpricedCaption([], []), null);
@@ -81,7 +81,7 @@ Deno.test('heroAccessibilityLabel: omits the today sentence entirely when today 
 // ── Hero meta row's week/round segment (Design Lead ruling, 2026-09-30) ────
 
 Deno.test('heroWeekOrRoundLabel: pre_season always reads "Week 1 of M"', () => {
-  assertEquals(heroWeekOrRoundLabel({ kind: 'pre_season', numWeeks: 14 }), 'Week 1 of 14');
+  assertEquals(heroWeekOrRoundLabel({ kind: 'pre_season', seasonStartsAt: null, numWeeks: 14 }), 'Week 1 of 14');
 });
 
 Deno.test('heroWeekOrRoundLabel: a regular-season bye reads "Week N of M"', () => {
@@ -136,4 +136,19 @@ Deno.test('standingsThroughWeek: any playoff-family state reads the full numWeek
 
 Deno.test('standingsThroughWeek: never negative (a bogus week 0 clamps to 0, not -1)', () => {
   assertEquals(standingsThroughWeek({ kind: 'bye', week: 0, nextStart: null, numWeeks: 14 }), 0);
+});
+
+// ── preSeasonStartsLabel (Design Lead ruling, 2026-09-30, B3) ──────────────
+
+Deno.test('preSeasonStartsLabel: formats a real Monday-open instant as "Season starts Mon H:MM AM/PM ET"', () => {
+  assertEquals(preSeasonStartsLabel('2026-08-03T13:30:00.000Z'), 'Season starts Mon 9:30 AM ET');
+});
+
+Deno.test('preSeasonStartsLabel: a holiday-shifted Tuesday start reads Tuesday, never a hardcoded Monday', () => {
+  assertEquals(preSeasonStartsLabel('2026-09-08T13:30:00.000Z'), 'Season starts Tue 9:30 AM ET');
+});
+
+Deno.test('preSeasonStartsLabel: null/invalid falls back to "Season starts soon", never "Invalid Date"', () => {
+  assertEquals(preSeasonStartsLabel(null), 'Season starts soon');
+  assertEquals(preSeasonStartsLabel('not-a-date'), 'Season starts soon');
 });
