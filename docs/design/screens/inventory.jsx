@@ -420,11 +420,20 @@
       {children}
     </div>
   );
-  const Hero = ({ value, gain, gainLabel = 'season gain', meta }) => (
+  // The approved assumption caption (plCoverage.ts): an unpriced holding
+  // counts at cost, and the screen says so. Appears instantly, never animates.
+  const AtCost = ({ who, n }) => (
+    <span className="ks-caption ks-muted" style={{ display: 'flex', gap: 6, alignItems: 'baseline' }}>
+      <span aria-hidden="true">ⓘ</span>
+      <span>{who ? `${who}: ` : ''}{n} {n === 1 ? 'holding' : 'holdings'} counted at cost (no live price yet)</span>
+    </span>
+  );
+  const Hero = ({ value, gain, gainLabel = 'season gain', meta, note }) => (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="ks-caption">Your team</span><span className="ks-caption ks-num">{meta}</span></div>
       <div className="ks-score ks-num" style={{ fontSize: 48, lineHeight: '50px', fontStretch: '75%' }}>{$(value)}</div>
       <div className="ks-callout ks-num" style={{ fontWeight: 700 }}><span className={tone(gain)}>{$s(gain)}</span> <span className="ks-muted" style={{ fontWeight: 500 }}>{gainLabel}</span></div>
+      {note}
     </div>
   );
 
@@ -562,16 +571,46 @@
     );
   }
 
+  /** A symbol with no live price: counted at cost (zero gain, never $0 of
+   * value), and the screen says so in the approved caption. */
+  function HomeUnpriced() {
+    const L = K.MATCHUP.live, y = SD(L.you), o = SD(L.opp);
+    return (
+      <Device tab="home" label="Home, a holding without a live price">
+        <Head avatar />
+        <div className="ks-pad ks-stack">
+          <Hero value={K.HOME.value} gain={K.HOME.gain} meta="2nd of 6 · 4–1 · Week 6 of 14" note={<AtCost n={1} />} />
+          <GameCard tag="This week" chip={<Chip kind="live">Week 6 · Live</Chip>}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }} className="ks-callout">
+              <span style={{ color: 'var(--c-you-text)', fontWeight: 700 }}>You</span>
+              <span className="ks-muted">vs Gianluigi B.</span>
+            </div>
+            <Scores left={y.primary} right={o.primary} size="lg" />
+            <Tug you={y.value} opp={o.value} />
+            <div style={{ display: 'flex', justifyContent: 'space-between' }} className="ks-caption">
+              <span>You lead by <b className="ks-num">{margin(L.you, L.opp)}</b></span>
+              <span className="ks-muted">Ends Fri 4:00 PM ET</span>
+            </div>
+            <div style={{ display: 'grid', gap: 2, paddingTop: 8, borderTop: '1px solid var(--c-line)' }}>
+              <AtCost who="You" n={1} />
+              <AtCost who="Gianluigi B." n={2} />
+            </div>
+          </GameCard>
+        </div>
+      </Device>
+    );
+  }
+
   function HomeScoring() {
     return (
       <Device tab="home" label="Home, week final, scoring">
         <Head avatar />
         <div className="ks-pad ks-stack">
           <Hero value={12000 + K.HOME.throughW5 + K.MATCHUP.final.you.gain} gain={K.HOME.throughW5 + K.MATCHUP.final.you.gain} meta="Week 6 of 14" />
-          <GameCard tag="Week 6" chip={<span className="ks-chip ks-chip--final">Final</span>}>
+          <GameCard tag="Week 6" chip={<span className="ks-chip">Scoring…</span>}>
             <div className="ks-skel" style={{ height: 40 }} />
             <div className="ks-skel" style={{ height: 12 }} />
-            <span className="ks-callout" style={{ display: 'flex', gap: 8, alignItems: 'center' }}><span className="ks-dot ks-dot--pulse" />Scoring… Results post a few minutes after Friday's close.</span>
+            <span className="ks-callout" style={{ display: 'flex', gap: 8, alignItems: 'center' }}><span className="ks-dot ks-dot--pulse" />Results post a few minutes after Friday's close.</span>
           </GameCard>
         </div>
       </Device>
@@ -1321,7 +1360,7 @@
 
   window.KSInventory = {
     SignIn, SignUp, SignUpPaused, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
-    HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeScoring, HomeComplete,
+    HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeUnpriced, HomeScoring, HomeComplete,
     AllMatchups, MatchupPreSeason, Playoffs6, ArrangeOrder, OrderPush, DraftLobby, StartDraftConfirm, CreateSeason, DraftAutoPick, DraftRecap, Playoffs,
     SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,
     WebHome, WebPortfolio, WebSettings,
