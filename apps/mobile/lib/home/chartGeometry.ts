@@ -45,6 +45,13 @@ export function buildChartGeometry(
   width: number,
   height: number,
   options: ChartGeometryOptions = {},
+  /** One x-position per series value (e.g. a trading-day index), used
+   * instead of even index-spacing — Design Lead ruling, 2026-09-30: with
+   * one point per past week but up to five per live week, spacing by
+   * array index gave the live week's few days as much width as whole
+   * past weeks, a visual lie about time. Omitted, this defaults to
+   * `[0, 1, 2, ...]` — identical to the old even-spacing behavior. */
+  positions?: number[],
 ): ChartGeometry {
   const { padTop, padBottom, padLeft, padRight } = { ...DEFAULTS, ...options };
   const min = Math.min(0, ...series);
@@ -54,7 +61,10 @@ export function buildChartGeometry(
   const innerW = width - padLeft - padRight;
   const innerH = height - padTop - padBottom;
 
-  const x = (i: number) => padLeft + (series.length <= 1 ? 0 : (i / (series.length - 1)) * innerW);
+  const pos = positions ?? series.map((_, i) => i);
+  const posMin = pos.length > 0 ? pos[0] : 0;
+  const posRange = pos.length > 0 ? (pos[pos.length - 1] - posMin || 1) : 1;
+  const x = (i: number) => padLeft + (pos.length <= 1 ? 0 : ((pos[i] - posMin) / posRange) * innerW);
   const y = (v: number) => padTop + (1 - (v - min) / range) * innerH;
 
   const points: ChartPoint[] = series.map((v, i) => ({ x: x(i), y: y(v) }));

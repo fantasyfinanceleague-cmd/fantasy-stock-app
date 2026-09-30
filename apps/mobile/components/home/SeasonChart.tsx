@@ -59,7 +59,11 @@ export function SeasonChart({ points, live = false, weekStartIdx, onScrubIndex, 
   const skippedFirstDraw = useRef(false);
 
   const series = points.map((p) => p.gain);
-  const geometry = width > 0 ? buildChartGeometry(series, width, HEIGHT) : null;
+  // x-extent is exactly the real points on screen -- through the CURRENT
+  // week, never the whole regular season padded out to a hypothetical
+  // future Friday (Design Lead ruling, 2026-09-30, board convention).
+  const positions = points.map((p) => p.dayIndex);
+  const geometry = width > 0 ? buildChartGeometry(series, width, HEIGHT, {}, positions) : null;
 
   // H2: draw on first view only (a window/series change morphs instead —
   // approximated here as a re-draw, since a true morph between differing

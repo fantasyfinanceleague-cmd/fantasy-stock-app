@@ -67,6 +67,34 @@ export interface SeasonGainPoint {
    * unscored week. The renderer must never label a 'weekly' point's
    * neighboring gap as if it were also measured. */
   kind: 'weekly' | 'daily';
+  /** This point's position on a TRADING-DAY timeline across the season —
+   * the chart's x value (Design Lead ruling, 2026-09-30). Each week
+   * (by its position in `weeks`, not its `week` number, which can skip
+   * for playoffs) occupies TRADING_DAYS_PER_WEEK slots; a past week's
+   * point sits at its own Friday slot, a live day sits at its own
+   * weekday offset from that week's Monday. Positioning by array index
+   * instead would give a live week's handful of days as much width as
+   * whole past weeks — a visual lie about time. */
+  dayIndex: number;
+}
+
+/** Trading days per week, used ONLY for x-axis spacing — a simplification
+ * (Design Lead ruling, 2026-09-30: "otherwise 5") since past weeks no
+ * longer carry a real per-week trading-day count (see the no-cosmetic-
+ * ramp doc above). Never used for anything that affects a dollar figure. */
+const TRADING_DAYS_PER_WEEK = 5;
+
+function dateOnly(iso: string): string {
+  return iso.slice(0, 10);
+}
+
+/** Calendar-day offset of `dateIso` from `weekStartIso`'s own date — safe
+ * within one Mon-Fri span (no weekend can fall between them), so this is
+ * also the trading-day offset: Monday=0, Tuesday=1, ..., Friday=4. */
+function dayOffsetInWeek(weekStartIso: string, dateIso: string): number {
+  const start = new Date(`${dateOnly(weekStartIso)}T00:00:00Z`).getTime();
+  const day = new Date(`${dateOnly(dateIso)}T00:00:00Z`).getTime();
+  return Math.round((day - start) / 86_400_000);
 }
 
 export interface SeasonGainSeriesResult {
@@ -101,40 +129,46 @@ export function buildSeasonGainSeries(input: SeasonGainSeriesInput): SeasonGainS
 
   for (let wi = 0; wi < input.weeks.length; wi++) {
     const week = input.weeks[wi];
+    const weekBaseDayIndex = wi * TRADING_DAYS_PER_WEEK;
     weekStartIdx.push(points.length);
     weekBase.push(base);
 
     if (wi === 0) {
-      points.push({ date: week.weekStart, week: week.week, gain: 0, kind: 'weekly' });
+      points.push({ date: week.weekStart, week: week.week, gain: 0, kind: 'weekly', dayIndex: weekBaseDayIndex });
     }
 
     const isCurrentWeek = week.scoredGain === null;
 
     if (!isCurrentWeek) {
       // A past, scored week: one real point, pinned directly to the
-      // source of truth. No bar-derived value is computed for it, so
-      // there is nothing to compare or claim a mismatch against.
+      // source of truth, positioned at its own Friday slot. No bar-
+      // derived value is computed for it, so there is nothing to
+      // compare or claim a mismatch against.
       base = cents(base + week.scoredGain!);
-      points.push({ date: week.weekEnd, week: week.week, gain: base, kind: 'weekly' });
+      points.push({
+        date: week.weekEnd, week: week.week, gain: base, kind: 'weekly',
+        dayIndex: weekBaseDayIndex + TRADING_DAYS_PER_WEEK - 1,
+      });
       continue;
     }
 
     // The live, unscored week: real per-day granularity from the
-    // caller's fetched bars.
+    // caller's fetched bars, each positioned at its own weekday offset.
     const days = week.tradingDays;
     for (let di = 0; di < days.length; di++) {
       const date = days[di];
       const isLastDay = di === days.length - 1;
+      const dayIndex = weekBaseDayIndex + dayOffsetInWeek(week.weekStart, date);
 
       if (isLastDay && input.live) {
         // The live hero's own number — never recomputed here.
-        points.push({ date, week: week.week, gain: cents(base + input.live.gain), kind: 'daily' });
+        points.push({ date, week: week.week, gain: cents(base + input.live.gain), kind: 'daily', dayIndex });
         continue;
       }
 
       const tradesUpToDay = week.trades.filter((t) => t.createdAt.getTime() <= endOfDay(date));
       const dayResult = liveWeekScore(week.snapshots, tradesUpToDay, (sym) => priceOn(input.closesByDate, date, sym));
-      points.push({ date, week: week.week, gain: cents(base + dayResult.gain), kind: 'daily' });
+      points.push({ date, week: week.week, gain: cents(base + dayResult.gain), kind: 'daily', dayIndex });
     }
 
     if (input.live) base = cents(base + input.live.gain);
