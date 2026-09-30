@@ -1,5 +1,8 @@
 /**
- * get_home_league (20261016000000) against REAL Postgres (PGlite = Postgres
+ * get_home_league (20261018000000 -- renamed from 20261016000000 so it
+ * sorts after 20261017000000_f8_push_tokens_relocation.sql, landed on
+ * main first; `supabase db push` refuses a pending file older than the
+ * latest applied one) against REAL Postgres (PGlite = Postgres
  * 16 in WASM). NOT hermetic: the first run fetches npm:@electric-sql/pglite.
  * Run instructions: supabase/tests/README.md.
  *
@@ -129,7 +132,7 @@ Deno.test({
     await db.exec(RLS);
     await db.exec(await mig('20261011000000_league_standings_ranked.sql'));
     await db.exec(await mig('20261004000000_participant_display_names.sql'));
-    await db.exec(await mig('20261016000000_get_home_league_rpc.sql'));
+    await db.exec(await mig('20261018000000_get_home_league_rpc.sql'));
 
     const MEMBER = '00000000-0000-4000-8000-000000000001';
     const OPPONENT = '00000000-0000-4000-8000-000000000002';
