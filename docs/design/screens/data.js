@@ -305,13 +305,13 @@
   // daily closes, and the last point is the LIVE gain. Weekend gaps are zero
   // in this sample (Monday opens at Friday's close), so the chart's rise this
   // week equals the matchup score.
-  const DAY_SHAPES = [
-    [0.4, 0.9, 0.6, 1.2, 1],
-    [0.3, 0.2, 0.7, 0.9, 1],
-    [-0.2, 0.3, 0.6, 0.85, 1],
-    [0.5, 1.1, 0.8, 0.7, 1],
-    [0.2, -0.3, 0.4, 0.9, 1],
-  ];
+  // Past weeks are ONE real point each (their scored gain, at the Friday
+  // close): the app draws a straight segment between them and never
+  // invents day-by-day detail it doesn't have (3b-2 ruling, 2026-09-30).
+  // The x-axis stays proportional to trading days, so each past week spans
+  // five of them; only the live week has real daily points.
+  const LINEAR_WEEK = [0.2, 0.4, 0.6, 0.8, 1];
+  const DAY_SHAPES = [LINEAR_WEEK, LINEAR_WEEK, LINEAR_WEEK, LINEAR_WEEK, LINEAR_WEEK];
   const HOME = (() => {
     const P = PORTFOLIO_LIVE;
     const series = [0];
