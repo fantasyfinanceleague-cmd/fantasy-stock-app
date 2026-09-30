@@ -149,14 +149,14 @@ export function ThisWeekCard({
         </Text>
       ) : (
         <View style={styles.footerRow}>
-          <Text variant="caption">
+          <Text variant="caption" style={styles.footerLeft}>
             {resultLine ?? (
               <>
                 {leadLabel(ahead)} <Text variant="caption" style={styles.leadAmount}>{formatMoney(gap)}</Text>
               </>
             )}
           </Text>
-          <Text variant="caption" tone="secondary">
+          <Text variant="caption" tone="secondary" style={styles.footerRight}>
             {rightLabel}
           </Text>
         </View>
@@ -208,7 +208,16 @@ const styles = StyleSheet.create({
   },
   footerRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
+    rowGap: space[1],
+  },
+  footerLeft: {
+    flexShrink: 1,
+  },
+  footerRight: {
+    flexShrink: 1,
+    textAlign: 'right',
   },
   leadAmount: {
     fontVariant: ['tabular-nums'],
