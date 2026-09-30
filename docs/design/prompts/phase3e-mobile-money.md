@@ -1,98 +1,164 @@
-# Phase 3e worker prompt — Mobile money screens (`ui/mobile-money`)
+# Phase 3e worker prompt: mobile Portfolio, the stock sheet and trading (`ui/mobile-money`)
 
-> Drafted by Design Lead, 2026-09-26 (a phase added to the Orchestrator's list:
-> Portfolio and trading had no owner). Starts after **3b-1 merges**; runs in
-> parallel with 3c. Backend asks: **#5** (trade history unioned with draft
-> picks) blocks the history screen only; **#3** (daily series) is a
-> nice-to-have for the position chart. Plan on Opus, build on Sonnet.
+> **v2, Design Lead, 2026-09-30.** This replaces the 2026-09-26 draft, which predates the key-screens board, the Light/Dark themes (§9A: there is no "money surface" any more) and the 2026-09-29 trading rulings (whole positions, per-slot proceeds).
+>
+> **Runs in parallel with 3c** (`ui/mobile-game`; disjoint screens). Both target the **1.2.0** TestFlight build, which ships every tab on the new design with no placeholder tabs.
+>
+> **Starts when** `ui/mobile-home` (3b-2) is merged **and** Giorgio has ruled the board's **"Your call: trading in budget and tier leagues"**. Branch off `main` after that merge.
+>
+> **Visual source of truth:** the key-screens board, `docs/design/screens/key-screens.html`. Its sections are key screen **5 Portfolio and stock sheet** (all four phones) and Part 2 › **"Trading" (3e)** with all its figures and notes, plus the "Your call" section after it.
+>
+> Plan on Opus, build on Sonnet.
 
 ---
 
-You are the UI worker for **Phase 3e · the money screens**, the calm
-fintech register of Game Day. Your branch is `ui/mobile-money`. You report to
-`Orchestrator` and `Design Lead`.
+You are the UI worker for **Phase 3e: the money screens**. Your branch is `ui/mobile-money`. You report to `Orchestrator` and `Design Lead` via `SendMessage`.
+
+**The bar.** "Would this impress on first use next to Robinhood, Revolut or Arc?", not "is it correct". Correctness, honesty, tokens, contrast and Reduce Motion are **table stakes, not the goal**. This is the calm, precise register of the app (no `spring.lively` here), but calm is not timid. The **signature moments** below are **required**, each with a Reduce Motion version and a recording.
+
+**Copy.** Keep existing strings and Giorgio's copy **verbatim**. New copy comes from the board, where it is marked "new copy". Take text from **inside the phone frames**, never from a figure's caption. Propose other wording; don't make it. Keep all strings in one module (e.g. `lib/money/moneyCopy.ts`).
 
 ## Read first
 
-`CLAUDE.md`, `docs/STATUS.md`, the charter contract,
-`docs/design/prompts/phase3-plan.md`. `docs/design/DESIGN_DIRECTION.md` §1 B
-(the money register), §3 (the stock-detail sheet, Sell pre-selected), §4, §5,
-§9 (money-surface tokens, money formatting). `docs/design/AUDIT-2026-09.md` §5
-Populated: Portfolio contradictions ($1,000.00 beside +1.32%); a green "+$0.00"
-chip; the Buy CTA at $0 budget; raw feed names ("JP Morgan Chase & Co. C…");
-6-decimal shares; a holding tap opening **Buy**; the "Market Closed / Market
-closed" sheet; trade history omitting draft picks.
+- `CLAUDE.md`:
+  - the partial-state family;
+  - "Success signals are unreliable" (`supabase-js` `.rpc()`/`functions.invoke` resolve errors, they don't throw: always check `{ error }`);
+  - "Overloaded NULLs";
+  - the styles-at-bottom ESLint rule;
+  - "UI entry points: MOUNTED and REACHABLE".
+- `docs/STATUS.md`.
+- `docs/audits/2026-09-30-week-window-audit.md`: **U2 is yours** (below).
+- `docs/design/DESIGN_DIRECTION.md`: §3 (the stock-detail sheet, Sell pre-selected), §4/§5, §9 and **§9A**.
+- The merged 3b-2 prompt and its review log `~/fantasy-stock-design-review/ui-mobile-home/DESIGN-REVIEW.md`. **Every finding there is a rule here.**
+- `supabase/functions/record-trade/index.ts` and `_shared/draft-validation.ts` (`fixedNotionalFunding`, `resolveFunding`, `leagueOwnedSymbols`, `userCashSpent`, `fillQuantity`): the server is the authority on every trade.
 
-## Scope (all `Surface kind="money"`)
+## Rulings in force (don't reopen them without Giorgio)
 
-1. **Portfolio tab** (active league from the pill)
-   - Header: portfolio value (`type.display`, roll on change), window gain
-     (cash-flow adjusted; zero neutral), and budget remaining. The Buy CTA is
-     **disabled with a reason** when the budget can't buy anything or trading
-     isn't open (the phase from the shared helper; PR #36's pre-draft state stays).
-   - Holdings list rows: ticker (`type.headline`), a **clean company name**
-     (strip feed suffixes like "- Common Stock", ", Inc. - Class A": a pure,
-     tested helper), shares to ≤ 4 decimals, **market value** (live) and gain
-     since entry (dollar and percent). The value and the gain must come from the same
-     prices, so the row can't contradict itself.
-   - Sector split: a compact bar (not a donut), if data allows.
-2. **Stock-detail sheet** (new; opened from any ticker anywhere, including 3c lineups)
-   - Price + day change; a chart (1D / 1W / 1M) with scrub; your position (shares,
-     avg entry, value, gain); **who in your league owns it**; and actions
-     **Buy / Sell** with **Sell pre-selected when you hold it**.
-   - Market closed: the sheet still shows the detail; the actions are disabled with
-     "Trading opens Mon 9:30 AM ET" (ask #7 when available; otherwise the
-     existing market check), replacing the "Market Closed / Market closed" modal.
-3. **Trade flow** (from the sheet): quantity or dollar amount, a live estimate,
-   budget impact, confirm, then a **success state with the new position** (no
-   silent close). Keep `record-trade` as the authority; show its refusal reasons
-   verbatim and politely.
-4. **History**: trades **and draft picks** (ask #5), grouped by week, with
-   filters (All / Buys / Sells / Draft). Honest empty state.
+- **Whole positions.**
+  - **Sell = the entire position** ("Sell all X sh ≈ $Y"). No partial amounts.
+  - **Buy = invests the whole source.**
+- **Per-slot (`fixed_notional`) leagues reinvest the SALE PROCEEDS**, never a fresh $2,000.
+  - After a sale the slot shows as a **Cash** row: zero gain, counted in value, so the portfolio value doesn't change on the sale.
+  - A buy asks **which sale pays** when more than one has cash. One buy never mixes two slots.
+  - A draft slot that was **skipped** counts as a source worth the full notional.
+  - Server: `record-trade` `action: 'preview'` returns `{ unfilled_slots, sources: [{ trade_id, symbol, amount }] }`, and a buy passes `sold_trade_id`.
+  - Refusals `proceeds_unavailable` ("That sale's cash isn't available anymore. Pick another." → back to the picker) and `no_proceeds` ("There's no cash in your slots to invest.", terminal) are board copy.
+- **Budget-cap / price-tier leagues: pending Giorgio's "Your call".** The server trades one share per buy, and a sale's cash returns to the budget (`userCashSpent`). Build whichever concept he picks. Don't start this part before the ruling.
+- **A stock is owned by at most one manager in a league** (`symbol_owned`). The stock sheet says who owns it: "Drafted by you · Round 1, pick 2", or another manager's name with the Bot badge where it applies. When someone else owns it, Buy is disabled with that reason.
+- **Portfolio's gain is value − cost, labelled "since the draft".** It is deliberately NOT Home's "season gain". Never reuse one label for the other number (D1, Concept A).
+- **Unpriced holdings count at cost**, with the approved caption (`plCoverage.ts`: "N holding(s) counted at cost (no live price yet)"). A row with no live price shows its entry value and the caption, never $0.
+- **Market-data credit:** screens that show prices carry "Market data provided by Alpaca" (caption, secondary text). The wording is still to be confirmed against the provider's terms, so keep it in one constant.
+- **Market closed:** trading is shown but disabled, with the time it opens ("Trading opens Mon 9:30 AM ET"), from the calendar.
 
-## Motion
+## Hard rules from 3b-2 (each one cost a review round there)
 
-| Moment | Spec | Reduced |
+1. **Times and windows** come from the **market calendar** (`market_session_status` / `market_calendar`), via 3b-2's `marketWeek.ts` and `lib/time/etParts.ts`, and are shown in ET. Never format `matchups.week_start/week_end`: they're fixed-UTC.
+2. **Numbers are real or absent, never fabricated.**
+   - The stock-sheet chart draws only real bars.
+   - "Today" shows only on trading days.
+   - No part defaults to 0.
+   - Value and gain on a row come from the **same prices**, so a row can never contradict itself.
+3. **Hermes.** Pin `hourCycle: 'h23'` (or `hour12: false`) for `formatToParts` with an hour, and VALIDATE the parts. Probe any state-deciding timezone logic on the simulator.
+4. **Fixtures are derived, not typed.** One fixture league with the board's numbers (Stock Scudetto, $2,000 per slot, Roberto's six holdings, the TSLA sale of $1,890.12, the SHOP buy). Sums must tie out, as on the board's ledger.
+5. **Fix everything, then shoot once.**
+6. **A visible product decision that isn't ruled goes to Giorgio as a board "Your call" BEFORE "go".**
+
+## Shared code and ownership
+
+- **Reuse** 3b-2's `teamValue`, `todayChange`, `plCoverage`, `marketWeek`, `etParts` and `ordinal`, plus 3c's promoted locations once they land (3c owns every `lib/` move: rebase onto it rather than moving files yourself).
+- **3e OWNS the trade and portfolio primitives:**
+  - the stock sheet;
+  - the trade flow screens;
+  - money formatting helpers: a **company-name cleaner** (strip feed suffixes like "- Common Stock" or ", Inc. - Class A"; a pure, tested function) and **share formatting** (≤ 4 decimals);
+  - the `TradeModal.tsx` retirement.
+- **Replace the legacy `components/TradeModal.tsx`** once the new flow lands. Grep every entry point first (CLAUDE.md: MOUNTED and REACHABLE), and delete it only when nothing imports it.
+- Changes to shared primitives (tokens, `Card`, `ShellHeader`, `sp/*`) go through the Design Lead. Tell the Orchestrator so 3c can rebase.
+- **U2 is yours.** The trade gate in `lib/marketHours.ts` has a hard-coded holiday list that ends in 2026 and no early closes, so it would allow a trade on 2026-11-27 after the 1 PM close. Replace it with the calendar (`market_session_status` / `market_calendar` via `marketWeek`), including half days.
+  - **Note: `record-trade` does NOT check market hours.** Off-hours trades fill at the last quote, so the client gate is the only gate today (the audit's S5; the Orchestrator owns any server change). The gate must fail CLOSED: if the calendar can't be read, trading is disabled with "Trading hours unavailable. Try again shortly." (new copy, flagged). Never fall back to "open".
+  - Also depends on 3c's **U1** fix to `weekStatus.getSeasonPhase`/`canTradeInPhase` (week 1's Monday). Rebase onto it when it lands.
+
+## Screens: build each to its board screen
+
+| # | Screen | Board | Notes |
+|---|---|---|---|
+| 1 | **Portfolio** | key screen 5, "Portfolio · live" | Header: "Portfolio value" (roll on change), "+$343.59 · +2.86% since the draft", "today". "6 of 6 slots invested · $2,000.00 per slot at the draft". Holdings: logo tile (the full ticker), ticker, clean company name, shares (≤ 4 dp), value, today %. "Trade history · Includes your 6 draft picks". Alpaca credit. |
+| 2 | Portfolio with a **Cash** slot | "After selling TSLA · the slot holds the proceeds" | "Portfolio value · includes cash", "5 of 6" slots, "1 ready to invest", the Cash row "From selling TSLA · ready to invest" with "Invest ›". |
+| 3 | **Stock sheet** (held) | "Stock sheet · Sell pre-selected" | Price + today; a chart against the previous close with range tabs (the board's `1D 1W 1M 3M 1Y`; each range draws real bars only); your position; the ownership line; **Sell pre-selected**. Opens from any ticker anywhere, including 3c's lineups (expose a route both phases use). |
+| 4 | Stock sheet (not held; owned by someone else; market closed) | "Market closed" + the ownership rule | Not held and free: Buy primary. Owned by another manager: Buy disabled "Owned by Paolo M." (new copy, flagged). Market closed: the sheet still informs, and actions are disabled with the open time. |
+| 5 | **Sell** → **Review sell** → **Sold** | "Sell TSLA", "Review sell", "Sold" | Whole position; the review shows shares, price, what you get, and how the slot compares with its $2,000.00 start; Sold offers invest now or later. |
+| 6 | **Which sale pays?** | "Which sale pays?" | Shown when `preview.sources.length > 1`; the skipped-slot source appears as full notional. |
+| 7 | **Review buy** → **Bought** | "Review buy", "Bought" | "≈ 18.1393 SHOP", price, "Paid from · TSLA slot · $1,890.12", "Left in the slot · $0.00" (zero grey). |
+| 8 | **Trade history** | "Trade history" | Trades **and draft picks** (`league_activity`, #5), grouped by week, with filters All / Buys / Sells / Draft and an honest empty state. |
+| 9 | Budget/tier league trading | the "Your call" section | Only after Giorgio rules; build the chosen concept. |
+
+**Refusals:** show every `record-trade` refusal as polite, specific copy, mapped by `reason`:
+- the per-slot board copy above;
+- `symbol_owned`, `not_owned`, `over_budget`, `no_eligible_slot`, `roster_full`, `not_draftable`, `no_price`, `rate_limited`, `draft_not_completed`, `not_a_member`: each flagged new copy;
+- an unknown reason gets one generic line.
+
+A refusal appears **instantly** and never looks like success. Check `{ error }` on every call.
+
+## Backend (check before building; don't assume)
+
+- **Live, use as-is:**
+  - `record-trade` (`buy` / `sell` / `preview`, `sold_trade_id`);
+  - the `league_activity` view (#5, trades ∪ picks);
+  - `market_session_status`, `quote` / `ticker-quotes` (with `prevClose`), `historical-bars`, `symbol-name`;
+  - `get_league_display_names` (owner names + `is_bot`).
+- A **new RPC** (e.g. one call for "who owns each symbol in this league", if the sheet needs it beyond `drafts`/`trades` reads) needs a plan-first message to the Orchestrator and uses migration range **`20261021000000`–`20261021000009`**.
+
+## Motion and signature moments
+
+| Moment | Spec | Reduce Motion |
 |---|---|---|
-| Sheet open / close | `spring.snappy`; backdrop `base` | Fade in place |
-| Row → sheet | Shared-element feel: the ticker row lifts (scale 1.02, `quick`) as the sheet rises | No lift |
-| Value / gain change | Digit roll, `base` | Instant |
-| Chart first view / range change | Draw `feature` / morph `base` | Drawn / instant |
-| Trade confirm → success | A check draws (`slow`), the position row updates (roll) | A static check |
-| Pressables | Scale 0.98, `instant` + haptic | No scale; haptic stays |
+| **M1 Row → sheet** | The tapped holding row's ticker tile and name travel into the sheet header (shared element) while the sheet rises on `spring.snappy` and the scrim fades (`base`) | Sheet fades in place |
+| **M2 Live chart** | The line draws on first view (`feature`), a range change morphs (`base`), the endpoint is the **live dot** only while the market is open, and the scrub gives haptic ticks on real bars with a floating price + time label | Drawn, instant range change; scrub label works, no ticks |
+| **M3 Value roll** | Portfolio value, today and row values roll per changed digit on quote refresh (`base`, `settle`), never on first paint | Instant swap |
+| **M4 Trade success** | Confirm → the button's check draws (`slow`) → on return, the position row morphs into place in the holdings list (the Cash row becomes the new stock) and the value rolls | A static check; the rows update in place |
+| **M5 Holdings re-order** | When values change the sort, rows FLIP to their new positions (`base`), using the stagger token | Rows jump |
+| Pressables | Scale 0.98 (`instant`) + light haptic | No scale; the haptic stays |
+| Refusals / errors | Appear **instantly** (§4) | same |
 
-**No `spring.lively`** on money screens.
+**No `spring.lively` on money screens.**
 
-## Verify, then report DONE
+## Accessibility
 
-- tsc / lint / deno tests (+ tests for the company-name cleaner, share
-  formatting, the Buy/Sell default, and disabled-reason logic).
-- **Device capture** (populated account; Giorgio signs in): Portfolio
-  (holdings, zero-budget state, pre-draft state), the stock sheet (held and not
-  held; market open and closed), the trade flow through success, history with
-  draft picks. Also XL Dynamic Type and **iPhone 17e**.
-- A **trade test** only when the market is open, in a test league, with Giorgio's
-  go-ahead in the report. Otherwise capture up to confirm and stop.
-- Recordings: sheet open from a row, a trade confirm → success. **Reduce Motion on/off.**
-- Architecture map regenerated if call sites change.
+- At XL:
+  - money never wraps;
+  - the holdings rows reflow (value under the name) without truncating;
+  - the sheet's actions stay reachable above the home indicator;
+  - the review screens' labels wrap and their values never truncate.
+- VoiceOver:
+  - a holding row reads "NVDA, NVIDIA, 6.8942 shares, $2,194.91, up 3.81% today";
+  - the chart has a summary plus an adjustable action through its points;
+  - disabled Buy/Sell announce their reason.
+- Contrast test passes in both themes; report any new pair.
+
+## Verify, then report DONE (captures in `~/fantasy-stock-design-review/ui-mobile-money/`)
+
+- **Checks:**
+  - `npx tsc --noEmit` (baseline 1);
+  - `npm run lint` (0 errors);
+  - the deno suites, plus new tests for: the company-name cleaner; share formatting; Buy/Sell defaults (held → Sell; owned by another → Buy disabled); the refusal → copy map (every `reason`); the U2 gate (a 2027 holiday, the 2026-11-27 half day, **calendar unreadable → closed**); preview → picker logic (0, 1 and 2 sources; a skipped slot);
+  - the contrast test;
+  - `node scripts/gen-architecture.mjs`.
+  - Report the counts and the **request count on load** (Portfolio ≤ 4).
+- **Captures:** every row of the screens table, in Light AND Dark, full length; XL on the 17e (Light): Portfolio, the stock sheet, both reviews.
+- **Recordings, Reduce Motion OFF:** M1–M5. Plus one combined Reduce-Motion-ON clip.
+- **Real trade test** (Phase 4 of the API-key work), against the **1.1.0 backend** in a **test league**, market open, with **Giorgio's explicit go-ahead in the report**. Sell a position, then buy with its proceeds. Verify the EFFECT in the data, not the response: the `trades` rows, `funded_by_trade_id`, and value unchanged across the sale. Never trade in a real league. If the market is closed, capture up to the review and stop.
+- **Honesty check, Giorgio signed in:** Portfolio value = Σ holding rows (+ cash); the stock sheet's position = the row.
+- **Copy audit** as in 3b-2.
 
 ## DESIGN-APPROVED criteria
 
-1. No row contradicts itself (value and gain from the same prices).
-2. Tapping something you hold defaults to **Sell**; the market-closed sheet still informs.
-3. Clean names, sane decimals, zero neutral, U+2212 minus, no wrapping at XL.
-4. Buy is disabled with a reason, never a dead primary button.
-5. Calm register: no `lively` springs, no game-surface bleed.
-6. Motion from tokens; every reduced-motion row evidenced.
+1. Every screen matches its board screen in both themes. Off-board states are built from board parts, with their copy flagged.
+2. No row contradicts itself; the Portfolio value equals the sum of rows plus cash; the sale leaves value unchanged.
+3. Whole positions and per-slot proceeds are exactly as ruled; the picker appears only with more than one source; every refusal is mapped and instant.
+4. Holding → Sell pre-selected; owned by another → Buy disabled with the reason; market closed → informs, disabled with the open time.
+5. The U2 gate reads the calendar and fails closed; no fabricated numbers; Hermes-safe formatting.
+6. "Since the draft" is never confused with Home's "season gain"; the unpriced caption and the Alpaca credit are present.
+7. **All five signature moments (M1–M5) are present, smooth and calm-but-premium**, with their Reduce Motion versions. A missing or timid moment is a DESIGN-CHANGES.
+8. Clean names, ≤ 4 dp shares, U+2212 minus, zero grey, no truncation at XL.
+9. The real trade test passed, with its effect verified in the data.
 
-Report your PLAN first and wait for "go".
-
-## Ambition bar (added 2026-09-27, after Giorgio called the first landing "still very basic")
-
-**The bar is "would this impress on first use next to Robinhood, Sleeper, Revolut or Arc?"**, not "is it correct". Performance, honesty, tokens and reduced motion are **table stakes, not the goal**. The Design Lead will push back on timid work. **Copy:** keep Giorgio's existing copy **verbatim** unless this prompt explicitly changes it; propose wording changes, don't make them.
-
-**Signature moments this phase must include** (each with its reduced-motion row and a recording):
-- **Row → stock sheet shared element:** the ticker row expands into the sheet header.
-- **Live chart** with an endpoint pulse on each price update; the scrub has haptic ticks and a floating price.
-- **Trade flow:** an amount control with haptic detents and a live estimate that rolls; confirm → a success choreography (a check draws, and the position card morphs into place in the holdings list).
-- **Holdings re-order** smoothly when values change the sort.
+Report your PLAN first (including your fixture plan and how the U2 gate fails closed) and wait for "go".

@@ -967,13 +967,13 @@
   }
 
   /** Paolo M. timed out twice in a row (picks 12 and 13, back to back at
-   * the snake turn): 12 came from his queue, 13 from the best available.
+   * the snake turn): 12 came from their queue, 13 from the best available.
    * New copy throughout. */
   function DraftAutoPick() {
     const { SnakeBoard } = window.KSKit;
     const log = [
       { n: 13, who: 'Paolo M.', t: 'BRK.B', how: 'Auto-picked · best available' },
-      { n: 12, who: 'Paolo M.', t: 'LLY', how: 'Auto-picked · from his queue' },
+      { n: 12, who: 'Paolo M.', t: 'LLY', how: 'Auto-picked · from their queue' },
       { n: 11, who: 'Roberto B.', t: 'AAPL', how: 'Picked', you: true },
     ];
     return (
@@ -982,7 +982,7 @@
         <div className="ks-pad ks-stack" style={{ gap: 14 }}>
           <div className="ks-chyron ks-chyron--in" style={{ display: 'grid', gap: 2 }}>
             <b>Paolo M. ran out of time</b>
-            <span className="ks-caption">Auto-picked LLY from his queue, then BRK.B (best available).</span>
+            <span className="ks-caption">Auto-picked LLY from their queue, then BRK.B (best available).</span>
           </div>
           <div className="ks-raised" style={{ padding: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span><span className="ks-title" style={{ color: 'var(--c-live-text)' }}>You're on the clock</span><br /><span className="ks-callout">Round 3 · Pick 14</span></span>
