@@ -169,11 +169,22 @@ Phase 3: **app first**.
 
 ## 4. Open items (ordered by launch impact)
 
-1. **Ship mobile 1.1.0 (EAS build): main is READY to cut as of 2026-09-29** (the #64 force-light fix and the #67 stored-draft-order client are in; 3b-1 is held off main until the build is cut, because it replaces tabs with placeholders). It's the only way any of 2026-09-25's mobile
-   work reaches phones. 1.0.0 builds can't draft (RLS refuses their direct inserts).
-   After install, verify a real **trade** on the publishable key (API-key Phase 4
-   gate 1) and the F2 password-reset flow (needs the `fantasystockapp://**` redirect
-   URL, added 2026-09-25).
+1. ✅ **Mobile 1.1.0 SHIPPED to TestFlight 2026-09-29.**
+   - Built with EAS from main `7571d10` (production profile) and submitted via `eas submit`.
+   - Verified on Giorgio's phone: sign-in works, and leagues + every tab load. That also proves the #71 fix.
+   - **#71 was a release blocker:** `eas.json` had set the publishable key to the literal `@EXPO_PUBLIC_…`, and the profile env overrides the EAS env var. The build would have shipped a bogus key and failed silently.
+   - The Apple Developer agreement and EU trader status were resolved by Giorgio. The App Store Connect API key is now managed by EAS.
+   - **Now unblocked** (once testers install 1.1.0):
+     - API-key Phase 4 gate 1: a real **trade** from 1.1.0 on the publishable key;
+     - F8 (item 7);
+     - the `[I6]/[I2b]` drop (item 8);
+     - the 3b-1 merge (it replaces tabs with placeholders, so it ships in the next build).
+   - **Follow-ups:**
+     - add `ITSAppUsesNonExemptEncryption: false` to app.json so Apple stops asking about export compliance;
+     - add the key to the EAS `preview` environment before any preview build;
+     - upgrade eas-cli (16.28 → 24.x) outside a release;
+     - the legacy Profile shows a hard-coded "Version 1.0.0" (fixed in 3b-1).
+
 2. ✅ **F10: closed 2026-09-25** (see §5). Number kept so references stay stable.
 3. **First scored week, Fri 2026-10-02.** Check `week_snapshots` rows for
    test_0925/test_09_25_v2 after Tue 09-29 14:35 UTC, then `matchups.team1_gain` set
