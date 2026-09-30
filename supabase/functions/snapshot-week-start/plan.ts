@@ -168,3 +168,85 @@ export function buildPricedRows(
 
   return { rows, missingSymbols: [...missing] };
 }
+
+// ---------------------------------------------------------------------------
+// Single-cut week window (fix for the Monday-gap scoring defect —
+// docs/audits/2026-09-30-week-window-audit.md). Wraps the shared
+// ../_shared/week-window.ts weekCut() with the two decisions specific to
+// snapshot-week-start: is this league's week DUE yet (now before this week's
+// open means nothing to do, not an error — this REPLACES the old
+// Alpaca-calendar holiday check and the Monday/Tuesday day-of-week branch:
+// the cron still fires both days, but the decision no longer cares which day
+// it is, only whether `now` has reached the week's real open), and should
+// matchups.week_start/week_end be REWRITTEN to the canonical cut (only when
+// this league-week has NO week_snapshots rows yet — see planWeekWindow's doc).
+// ---------------------------------------------------------------------------
+
+import { weekCut, type CalendarSession, type Coverage as MarketCalendarCoverage } from '../_shared/week-window.ts';
+
+export type WeekWindowPlan =
+  | { action: 'not_due' }
+  | { action: 'refuse'; reason: 'no_coverage' | 'no_sessions_in_week' | 'floor_beyond_week' | 'invalid_calendar_data' }
+  | {
+    action: 'proceed';
+    open: Date;
+    close: Date;
+    openSessionDate: string;
+    closeSessionDate: string;
+    /**
+     * Rewrite matchups.week_start/week_end to [open, close] for this
+     * league-week. ONLY true when existingSnapshotCount === 0 — once even one
+     * week_snapshots row exists, SOME baseline was already taken at SOME
+     * instant/price under whatever window was stored at the time, and every
+     * other consumer of matchups.week_start/week_end (process-week-results'
+     * trade window, get_home_league, mobile) may already be reasoning about
+     * that stored window. Rewriting it out from under already-written data
+     * would retroactively change what "in-week" means for trades already
+     * classified — so a league-week is either rewritten ONCE, before its
+     * first snapshot, or never touched again. This protects prod's real
+     * week 1 (already fully snapshotted under the OLD nominal window before
+     * this fix deploys): it keeps its old window forever, exactly as
+     * intended, never re-windowed.
+     */
+    rewrite: boolean;
+  };
+
+/**
+ * Decide the window for one league-week. `anchor` is normally
+ * matchups.week_start as currently stored (whether still the old nominal
+ * value or an already-reconciled cut.open — weekCut is a fixpoint on its own
+ * output, so either produces the identical result). `floor` is normally the
+ * EARLIEST created_at across this league-week's matchup rows (the
+ * draft-completion instant — see week-window.ts's FLOOR doc).
+ */
+export function planWeekWindow(
+  now: Date,
+  anchor: Date,
+  floor: Date | null,
+  sessions: ReadonlyArray<CalendarSession>,
+  coverage: MarketCalendarCoverage | null,
+  storedWeekStartIso: string,
+  storedWeekEndIso: string,
+  existingSnapshotCount: number,
+): WeekWindowPlan {
+  const cut = weekCut(anchor, floor, sessions, coverage);
+  if (!cut.ok) return { action: 'refuse', reason: cut.reason };
+
+  // Not yet due: this week's real open hasn't happened. Not an error — the
+  // Tuesday run of a normal (non-holiday) week hits this every time, and
+  // correctly no-ops (the coverage gate below would have healed nothing
+  // different anyway, since Monday's run already wrote everyone reachable).
+  if (now.getTime() < cut.open.getTime()) return { action: 'not_due' };
+
+  const matchesStored =
+    storedWeekStartIso === cut.open.toISOString() && storedWeekEndIso === cut.close.toISOString();
+
+  return {
+    action: 'proceed',
+    open: cut.open,
+    close: cut.close,
+    openSessionDate: cut.openSessionDate,
+    closeSessionDate: cut.closeSessionDate,
+    rewrite: existingSnapshotCount === 0 && !matchesStored,
+  };
+}

@@ -1,19 +1,37 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { classifyCloseCoverage, buildCloseWork, type Holding } from './close.ts';
+import { classifyCloseCoverage, buildCloseWork, planCloseWindow, type Holding } from './close.ts';
 import { checkSnapshotReads, matchupParticipants, snapshotHoldings } from '../_shared/snapshot-holdings.ts';
+import type { CalendarSession, Coverage as MarketCalendarCoverage } from '../_shared/week-window.ts';
 
 /**
  * Snapshot Week End Prices
  *
- * This function runs automatically at Friday market close (4:05 PM ET / 21:05 UTC)
- * to capture the ending prices for weekly matchup calculations.
+ * Runs on a fixed cron (Friday 21:05Z) to capture each league's week-end
+ * close, but — same as snapshot-week-start — the cron schedule no longer
+ * decides which prices get used or which trades count. ./close.ts's
+ * planCloseWindow (built on the single-cut fix, ../_shared/week-window.ts,
+ * docs/audits/2026-09-30-week-window-audit.md) computes each league-week's
+ * REAL close instant from market_calendar and checks whether `now` has
+ * reached it yet ('not_due' if not — this REPLACES having no due check at
+ * all, which meant a week could in principle be closed before its real
+ * window ended; see planCloseWindow's doc). This function never rewrites
+ * matchups.week_start/week_end — that side effect belongs to
+ * snapshot-week-start, which runs earlier in the week and guarantees the
+ * stored window is already canonical by the time a league-week has anything
+ * for this function to close.
  *
  * For each active matchup league:
- * 1. Find existing week snapshots (from Monday)
- * 2. Fetch current prices for all symbols
- * 3. Update snapshots with week_end_price
- * 4. Create new snapshots for stocks bought mid-week (only week_end_price)
+ * 1. Compute this week's real cut; skip leagues not yet due, retry leagues
+ *    the calendar can't answer for yet.
+ * 2. Find existing week snapshots (from Monday)
+ * 3. Fetch current prices for all symbols, for the cut's own close session
+ *    date — not "today" (a delayed retry used to re-price at whatever day it
+ *    happened to run, not the week's real close day).
+ * 4. Update snapshots with week_end_price
+ * 5. Create new snapshots for stocks bought mid-week (only week_end_price),
+ *    with drafts/trades bounded to this week's real [open, close] — not "all
+ *    trades as of whenever this run happens" (S1/S7 in the audit).
  *
  * Includes retry logic: up to 3 retries with 5-minute intervals
  */
@@ -56,6 +74,32 @@ function isAuthorized(req: Request): boolean {
   }
   const providedKey = req.headers.get('apikey') ?? '';
   return constantTimeEqual(providedKey, expectedKey);
+}
+
+// Fetch every market_calendar row plus the single market_calendar_coverage
+// row, ONCE per invocation (not per league). Same shape and rationale as
+// snapshot-week-start's own copy — kept local rather than shared, matching
+// this codebase's existing convention for small per-function IO helpers
+// (fetchOpenPrices/fetchClosePrices are likewise not shared).
+async function fetchMarketCalendar(
+  supabase: any,
+): Promise<{ sessions: CalendarSession[]; coverage: MarketCalendarCoverage | null; error: unknown }> {
+  const [sessionsRes, coverageRes] = await Promise.all([
+    supabase.from('market_calendar').select('session_date, open_et, close_et'),
+    supabase.from('market_calendar_coverage').select('covered_from, covered_through').maybeSingle(),
+  ]);
+  if (sessionsRes.error || coverageRes.error) {
+    return { sessions: [], coverage: null, error: sessionsRes.error ?? coverageRes.error };
+  }
+  const sessions: CalendarSession[] = (sessionsRes.data ?? []).map((r: any) => ({
+    sessionDate: r.session_date,
+    openEt: String(r.open_et).slice(0, 5),
+    closeEt: String(r.close_et).slice(0, 5),
+  }));
+  const coverage: MarketCalendarCoverage | null = coverageRes.data
+    ? { from: coverageRes.data.covered_from, through: coverageRes.data.covered_through }
+    : null;
+  return { sessions, coverage, error: null };
 }
 
 // Update job status for retry tracking
@@ -117,17 +161,31 @@ async function scheduleRetry(supabase: any, jobName: string, attemptNumber: numb
   }
 }
 
-// Fetch official closing prices from Alpaca bars (today's close)
-async function fetchClosePrices(symbols: string[], alpacaKey: string, alpacaSecret: string): Promise<Map<string, number>> {
+/**
+ * Fetch official closing prices from Alpaca bars, for `sessionDate` — the
+ * cut's OWN closeSessionDate (planCloseWindow), never "today". A holiday
+ * Friday's real close session is Thursday; a retried run must still price
+ * the same session the on-time run would have, never "whatever day this
+ * retry happens to run on" (S6 in the audit).
+ *
+ * The latest-quote FALLBACK is only meaningful for the current day, so it is
+ * skipped entirely when `sessionDate` isn't today — same reasoning as
+ * snapshot-week-start's fetchOpenPrices.
+ */
+async function fetchClosePrices(
+  symbols: string[],
+  alpacaKey: string,
+  alpacaSecret: string,
+  sessionDate: string,
+): Promise<Map<string, number>> {
   const prices = new Map<string, number>();
 
   if (symbols.length === 0) return prices;
 
-  const today = new Date().toISOString().split('T')[0];
   const symbolsParam = symbols.join(',');
 
   // Use bars endpoint to get official OHLCV data
-  const url = `${ALPACA_BASE}/stocks/bars?symbols=${encodeURIComponent(symbolsParam)}&timeframe=1Day&start=${today}&end=${today}&feed=iex`;
+  const url = `${ALPACA_BASE}/stocks/bars?symbols=${encodeURIComponent(symbolsParam)}&timeframe=1Day&start=${sessionDate}&end=${sessionDate}&feed=iex`;
 
   try {
     const res = await fetch(url, {
@@ -153,8 +211,12 @@ async function fetchClosePrices(symbols: string[], alpacaKey: string, alpacaSecr
     console.error('Failed to fetch bar prices:', e);
   }
 
-  // Fallback to quotes for any missing symbols
-  const missingSymbols = symbols.filter(s => !prices.has(s.toUpperCase()));
+  // Fallback to quotes for any missing symbols — ONLY when sessionDate is
+  // today. A missing bar for a PAST session date (e.g. a delayed retry for a
+  // holiday-Friday week whose real close was Thursday) must stay missing,
+  // not be silently filled with a live quote mislabeled as that day's close.
+  const isToday = sessionDate === new Date().toISOString().split('T')[0];
+  const missingSymbols = isToday ? symbols.filter(s => !prices.has(s.toUpperCase())) : [];
   if (missingSymbols.length > 0) {
     console.log(`Falling back to quotes for ${missingSymbols.length} symbols:`, missingSymbols);
     const quotesUrl = `${ALPACA_BASE}/stocks/quotes/latest?symbols=${encodeURIComponent(missingSymbols.join(','))}&feed=iex`;
@@ -225,6 +287,15 @@ Deno.serve(async (req) => {
   await updateJobStatus(supabase, JOB_NAME, 'running', retryAttempt);
 
   try {
+    // 0. Read the market calendar ONCE for this whole run — see
+    //    snapshot-week-start's identical step for the full rationale.
+    const { sessions: marketCalendarSessions, coverage: marketCalendarCoverage, error: calendarErr } =
+      await fetchMarketCalendar(supabase);
+    if (calendarErr) {
+      console.error('Failed to read market_calendar:', calendarErr);
+      throw new Error(`Failed to read market_calendar: ${(calendarErr as any).message ?? calendarErr}`);
+    }
+
     // 1. Find all active matchup leagues and their current week
     const { data: leagues, error: leaguesErr } = await supabase
       .from('leagues')
@@ -258,26 +329,76 @@ Deno.serve(async (req) => {
       const leagueId = league.id;
       const currentWeek = league.current_week;
 
-      // 2–4. Read everything coverage depends on: this week's existing snapshots
-      //      (KIND 1), the participants, and their drafts + trades (holdings and
-      //      KIND 2). ALL must succeed before coverage is classified — see
-      //      checkSnapshotReads in ../_shared/snapshot-holdings.ts. A failed
-      //      drafts/trades/matchups read used to default to [] and read as
-      //      "nothing held": Monday rows closed, mid-week buys silently dropped,
-      //      and the league then classified 'complete' forever. A failed snapshots
-      //      read used to `continue` with no retry and a 'success' status.
-      //      `price` on trades is needed for a real mid-week entry price (see the
-      //      entered_mid_week migration); week_start_price is read for cost basis
-      //      in the UI, so a placeholder is never acceptable.
+      // 2. Read matchups first — also the window anchor/floor inputs (single-
+      //    cut fix). Extended with week_start/week_end/created_at.
+      const matchupsRead = checkSnapshotReads({
+        matchups: await supabase
+          .from('matchups')
+          .select('team1_user_id, team2_user_id, week_start, week_end, created_at')
+          .eq('league_id', leagueId)
+          .eq('week_number', currentWeek),
+      });
+      if (!matchupsRead.ok) {
+        anyIncomplete = true;
+        console.error(
+          `ABORT league ${leagueId} week ${currentWeek}: matchups read failed — ` +
+          matchupsRead.failed.map((f) => `${f.read}: ${f.message}`).join('; ') + ` — will retry.`
+        );
+        results.push({ leagueId, week: currentWeek, updated: 0, newSnapshots: 0, incomplete: true, failedReads: ['matchups'] });
+        continue;
+      }
+      const { matchups } = matchupsRead.rows;
+      if (matchups.length === 0) {
+        console.log(`No matchups found for league ${leagueId} week ${currentWeek}`);
+        continue;
+      }
+
+      // ── Single-cut week window (S1-S7 fix, plus a new defensive not-due
+      //    guard) — see close.ts's planCloseWindow. NOT an S8 fix: S8's
+      //    defect (a refused week N strands week N+1's baseline because both
+      //    snapshot jobs key off leagues.current_week, not the calendar) is
+      //    untouched here — both index.ts files still select and loop by
+      //    league.current_week unchanged. S8 is tracked as a separate
+      //    follow-up (Orchestrator).
+      //    No rewrite here: snapshot-week-start owns that side effect, and by
+      //    the time a league-week reaches THIS function (buildCloseWork only
+      //    ever closes a week that has something to close) matchups.week_start
+      //    is already canonical. Re-derived anyway rather than trusted blindly.
+      const windowAnchor = new Date(matchups[0].week_start);
+      const floorMs = Math.min(...matchups.map((m: any) => new Date(m.created_at).getTime()));
+      const windowFloor = Number.isFinite(floorMs) ? new Date(floorMs) : null;
+      const windowPlan = planCloseWindow(new Date(), windowAnchor, windowFloor, marketCalendarSessions, marketCalendarCoverage);
+      if (windowPlan.action === 'not_due') {
+        console.log(`League ${leagueId} week ${currentWeek}: not due yet (this week hasn't really closed), skipping`);
+        continue;
+      }
+      if (windowPlan.action === 'refuse') {
+        anyIncomplete = true;
+        console.error(
+          `ABORT league ${leagueId} week ${currentWeek}: week window refused (${windowPlan.reason}) — will retry.`
+        );
+        results.push({ leagueId, week: currentWeek, updated: 0, newSnapshots: 0, incomplete: true, windowRefused: windowPlan.reason });
+        continue;
+      }
+      // windowPlan.action === 'proceed' from here.
+      // ─────────────────────────────────────────────────────────────────────
+
+      // 3–4. Read everything coverage depends on: this week's existing snapshots
+      //      (KIND 1), and drafts + trades (holdings and KIND 2). ALL must
+      //      succeed before coverage is classified — see checkSnapshotReads in
+      //      ../_shared/snapshot-holdings.ts. A failed drafts/trades read used
+      //      to default to [] and read as "nothing held": Monday rows closed,
+      //      mid-week buys silently dropped, and the league then classified
+      //      'complete' forever. A failed snapshots read used to `continue`
+      //      with no retry and a 'success' status. `price`/`created_at` on
+      //      trades are needed for a real, time-bounded mid-week entry price
+      //      (see the entered_mid_week migration and close.ts's
+      //      midWeekEntryPrice); week_start_price is read for cost basis in
+      //      the UI, so a placeholder is never acceptable.
       const inputs = checkSnapshotReads({
         existingSnapshots: await supabase
           .from('week_snapshots')
           .select('id, user_id, symbol, quantity, week_start_price, week_end_price')
-          .eq('league_id', leagueId)
-          .eq('week_number', currentWeek),
-        matchups: await supabase
-          .from('matchups')
-          .select('team1_user_id, team2_user_id')
           .eq('league_id', leagueId)
           .eq('week_number', currentWeek),
         drafts: await supabase
@@ -286,7 +407,7 @@ Deno.serve(async (req) => {
           .eq('league_id', leagueId),
         trades: await supabase
           .from('trades')
-          .select('user_id, symbol, action, quantity, price')
+          .select('user_id, symbol, action, quantity, price, created_at')
           .eq('league_id', leagueId),
       });
       if (!inputs.ok) {
@@ -301,7 +422,7 @@ Deno.serve(async (req) => {
         results.push({ leagueId, week: currentWeek, updated: 0, newSnapshots: 0, incomplete: true, failedReads: inputs.failed.map((f) => f.read) });
         continue;
       }
-      const { existingSnapshots, matchups, drafts, trades } = inputs.rows;
+      const { existingSnapshots, drafts, trades } = inputs.rows;
 
       // NOTE: the completeness gate is NOT here. It cannot run yet — coverage
       // depends on current holdings (KIND 2, mid-week buys), which are computed
@@ -314,12 +435,20 @@ Deno.serve(async (req) => {
       // excluding them left every bot matchup unscoreable from week 2 on.
       const userIds = matchupParticipants(matchups);
 
-      // Calculate current holdings for each user
+      // Trades bounded to THIS week's real close (single-cut fix, P5): "as of
+      // the real close", not "as of whenever this cron happens to run" — a
+      // trade placed after close but before a delayed retry must not be read
+      // as having been held at close (or, conversely, a position sold in that
+      // gap must not vanish from what WAS held at close).
+      const cutCloseIso = windowPlan.close.toISOString();
+      const tradesThroughClose = trades.filter((t: any) => t.created_at <= cutCloseIso);
+
+      // Calculate current holdings for each user, AS OF the real close.
       const userHoldings = new Map<string, Holding[]>();
       const allSymbols = new Set<string>();
 
       for (const userId of userIds) {
-        const holdings = snapshotHoldings(userId, drafts, trades);
+        const holdings = snapshotHoldings(userId, drafts, tradesThroughClose);
         userHoldings.set(userId, holdings);
         for (const h of holdings) {
           allSymbols.add(h.symbol);
@@ -348,19 +477,22 @@ Deno.serve(async (req) => {
       // 6. Fetch official closing prices for all symbols
       let prices = new Map<string, number>();
       if (ALPACA_KEY && ALPACA_SECRET && allSymbols.size > 0) {
-        prices = await fetchClosePrices(Array.from(allSymbols), ALPACA_KEY, ALPACA_SECRET);
+        prices = await fetchClosePrices(Array.from(allSymbols), ALPACA_KEY, ALPACA_SECRET, windowPlan.closeSessionDate);
       }
 
       // 7. Build ALL the writes for this league, all-or-nothing.
       //    entered_mid_week rows keep the basis fix from cc26857: week_start_price
-      //    carries the real weighted entry price, never a NULL or a placeholder.
+      //    carries the real weighted entry price, never a NULL or a placeholder —
+      //    and, since the single-cut fix, never blended with a stale prior-week
+      //    buy of the same symbol either (windowPlan.open bounds it).
       const work = buildCloseWork(
         leagueId,
         currentWeek,
         userHoldings,
         existingSnapshots,
         prices,
-        trades,
+        tradesThroughClose,
+        windowPlan.open.toISOString(),
       );
 
       // Positions priced but with no derivable entry price. NOT retryable — no
