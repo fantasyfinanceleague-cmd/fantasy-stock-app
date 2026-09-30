@@ -923,13 +923,13 @@
   // daily closes, and the last point is the LIVE gain. Weekend gaps are zero
   // in this sample (Monday opens at Friday's close), so the chart's rise this
   // week equals the matchup score.
-  const DAY_SHAPES = [
-    [0.4, 0.9, 0.6, 1.2, 1],
-    [0.3, 0.2, 0.7, 0.9, 1],
-    [-0.2, 0.3, 0.6, 0.85, 1],
-    [0.5, 1.1, 0.8, 0.7, 1],
-    [0.2, -0.3, 0.4, 0.9, 1],
-  ];
+  // Past weeks are ONE real point each (their scored gain, at the Friday
+  // close): the app draws a straight segment between them and never
+  // invents day-by-day detail it doesn't have (3b-2 ruling, 2026-09-30).
+  // The x-axis stays proportional to trading days, so each past week spans
+  // five of them; only the live week has real daily points.
+  const LINEAR_WEEK = [0.2, 0.4, 0.6, 0.8, 1];
+  const DAY_SHAPES = [LINEAR_WEEK, LINEAR_WEEK, LINEAR_WEEK, LINEAR_WEEK, LINEAR_WEEK];
   const HOME = (() => {
     const P = PORTFOLIO_LIVE;
     const series = [0];
@@ -3735,7 +3735,7 @@
               <>Your team in this league: value {$(K.HOME.value)} as the big number, then <b>season gain</b> {$s(K.HOME.gain)} (the scored weeks plus this week live), today {$s(K.HOME.today)}, and rank and record (2nd of 6, {K.HOME.record}).</>,
               <><b>The Home hero</b> (your call: Concept A). Team value is the big number; the line under it is the season gain, the same words as the Standings column. It is not value − $12,000: the value also moves between the draft and Week 1's open and over every Friday close → Monday open, when no matchup is scoring. Portfolio keeps its own gain, value − cost, labelled "since the draft".</>,
               <>This week's matchup comes first: the live scoreboard card, with the lead in the metric that decides the matchup.</>,
-              <>The season chart ("Season gain, week by week") plots the same season gain against $0, with week ticks and each week's result (W/L) underneath. It ends at the hero's season gain, and this week's rise equals this week's matchup score.</>,
+              <>The season chart ("Season gain, week by week") plots the same season gain against $0, with week ticks and each week's result (W/L) underneath. It ends at the hero's season gain, and this week's rise equals this week's matchup score. <b>Past weeks are one point each</b> (that week's scored result, at Friday's close) joined by straight lines; only this week has day-by-day points. Time stays to scale: every week is five trading days wide. Scrubbing a past week reads that week's own result ("Week 3 · {$s(K.ROBERTO_WEEKS[2].gain)}"); this week reads the day and the running total.</>,
               <>Top of the standings with you highlighted. The avatar opens Profile.</>,
               <><b>Other leagues</b> (your call: Concept B, pill only): there is no list on Home. The league pill shows "+2" (two more leagues) on every tab and opens the league sheet with every league grouped by phase.</>,
             ]}
