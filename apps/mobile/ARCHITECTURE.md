@@ -192,7 +192,7 @@ policies `[I2b]`/`[I6]` that used to allow them directly are deferred for remova
   is sent **client-side** to the next picker's token. This is security finding **F8**
   (tokens readable by any authenticated user); the fix moves tokens to an owner-only
   `push_tokens` table and sending to the `send-notification` edge function (PR #9 +
-  `docs/migrations/STAGED_L2_push_token_capability.sql`).
+  `supabase/migrations/20261017000000_f8_push_tokens_relocation.sql` (promoted 2026-09-30 from the staged file)).
 
 ---
 

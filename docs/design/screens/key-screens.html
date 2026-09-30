@@ -923,13 +923,13 @@
   // daily closes, and the last point is the LIVE gain. Weekend gaps are zero
   // in this sample (Monday opens at Friday's close), so the chart's rise this
   // week equals the matchup score.
-  const DAY_SHAPES = [
-    [0.4, 0.9, 0.6, 1.2, 1],
-    [0.3, 0.2, 0.7, 0.9, 1],
-    [-0.2, 0.3, 0.6, 0.85, 1],
-    [0.5, 1.1, 0.8, 0.7, 1],
-    [0.2, -0.3, 0.4, 0.9, 1],
-  ];
+  // Past weeks are ONE real point each (their scored gain, at the Friday
+  // close): the app draws a straight segment between them and never
+  // invents day-by-day detail it doesn't have (3b-2 ruling, 2026-09-30).
+  // The x-axis stays proportional to trading days, so each past week spans
+  // five of them; only the live week has real daily points.
+  const LINEAR_WEEK = [0.2, 0.4, 0.6, 0.8, 1];
+  const DAY_SHAPES = [LINEAR_WEEK, LINEAR_WEEK, LINEAR_WEEK, LINEAR_WEEK, LINEAR_WEEK];
   const HOME = (() => {
     const P = PORTFOLIO_LIVE;
     const series = [0];
@@ -2304,11 +2304,20 @@
       {children}
     </div>
   );
-  const Hero = ({ value, gain, gainLabel = 'season gain', meta }) => (
+  // The approved assumption caption (plCoverage.ts): an unpriced holding
+  // counts at cost, and the screen says so. Appears instantly, never animates.
+  const AtCost = ({ who, n }) => (
+    <span className="ks-caption ks-muted" style={{ display: 'flex', gap: 6, alignItems: 'baseline' }}>
+      <span aria-hidden="true">ⓘ</span>
+      <span>{who ? `${who}: ` : ''}{n} {n === 1 ? 'holding' : 'holdings'} counted at cost (no live price yet)</span>
+    </span>
+  );
+  const Hero = ({ value, gain, gainLabel = 'season gain', meta, note }) => (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="ks-caption">Your team</span><span className="ks-caption ks-num">{meta}</span></div>
       <div className="ks-score ks-num" style={{ fontSize: 48, lineHeight: '50px', fontStretch: '75%' }}>{$(value)}</div>
       <div className="ks-callout ks-num" style={{ fontWeight: 700 }}><span className={tone(gain)}>{$s(gain)}</span> <span className="ks-muted" style={{ fontWeight: 500 }}>{gainLabel}</span></div>
+      {note}
     </div>
   );
 
@@ -2446,16 +2455,46 @@
     );
   }
 
+  /** A symbol with no live price: counted at cost (zero gain, never $0 of
+   * value), and the screen says so in the approved caption. */
+  function HomeUnpriced() {
+    const L = K.MATCHUP.live, y = SD(L.you), o = SD(L.opp);
+    return (
+      <Device tab="home" label="Home, a holding without a live price">
+        <Head avatar />
+        <div className="ks-pad ks-stack">
+          <Hero value={K.HOME.value} gain={K.HOME.gain} meta="2nd of 6 · 4–1 · Week 6 of 14" note={<AtCost n={1} />} />
+          <GameCard tag="This week" chip={<Chip kind="live">Week 6 · Live</Chip>}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }} className="ks-callout">
+              <span style={{ color: 'var(--c-you-text)', fontWeight: 700 }}>You</span>
+              <span className="ks-muted">vs Gianluigi B.</span>
+            </div>
+            <Scores left={y.primary} right={o.primary} size="lg" />
+            <Tug you={y.value} opp={o.value} />
+            <div style={{ display: 'flex', justifyContent: 'space-between' }} className="ks-caption">
+              <span>You lead by <b className="ks-num">{margin(L.you, L.opp)}</b></span>
+              <span className="ks-muted">Ends Fri 4:00 PM ET</span>
+            </div>
+            <div style={{ display: 'grid', gap: 2, paddingTop: 8, borderTop: '1px solid var(--c-line)' }}>
+              <AtCost who="You" n={1} />
+              <AtCost who="Gianluigi B." n={2} />
+            </div>
+          </GameCard>
+        </div>
+      </Device>
+    );
+  }
+
   function HomeScoring() {
     return (
       <Device tab="home" label="Home, week final, scoring">
         <Head avatar />
         <div className="ks-pad ks-stack">
           <Hero value={12000 + K.HOME.throughW5 + K.MATCHUP.final.you.gain} gain={K.HOME.throughW5 + K.MATCHUP.final.you.gain} meta="Week 6 of 14" />
-          <GameCard tag="Week 6" chip={<span className="ks-chip ks-chip--final">Final</span>}>
+          <GameCard tag="Week 6" chip={<span className="ks-chip">Scoring…</span>}>
             <div className="ks-skel" style={{ height: 40 }} />
             <div className="ks-skel" style={{ height: 12 }} />
-            <span className="ks-callout" style={{ display: 'flex', gap: 8, alignItems: 'center' }}><span className="ks-dot ks-dot--pulse" />Scoring… Results post a few minutes after Friday's close.</span>
+            <span className="ks-callout" style={{ display: 'flex', gap: 8, alignItems: 'center' }}><span className="ks-dot ks-dot--pulse" />Results post a few minutes after Friday's close.</span>
           </GameCard>
         </div>
       </Device>
@@ -3205,7 +3244,7 @@
 
   window.KSInventory = {
     SignIn, SignUp, SignUpPaused, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
-    HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeScoring, HomeComplete,
+    HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeUnpriced, HomeScoring, HomeComplete,
     AllMatchups, MatchupPreSeason, Playoffs6, ArrangeOrder, OrderPush, DraftLobby, StartDraftConfirm, CreateSeason, DraftAutoPick, DraftRecap, Playoffs,
     SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,
     WebHome, WebPortfolio, WebSettings,
@@ -3296,12 +3335,14 @@
             'Before the season there is no leader and no gain: zero is grey, never green.',
             'Nights and weekends freeze the scoreboard at the last close and say when it resumes.',
             'After Friday\'s close the card shows "Scoring…" until the results post; nothing is presented as final before it is.',
+            'A symbol with no live price counts at cost and is named in a caption ("1 holding counted at cost (no live price yet)"), on the hero and on whichever side of the scoreboard it affects. A partial total never passes as a complete one.',
           ]}>
           <Fit caption="Before the draft" note="Serie A Traders"><I.HomePreDraft /></Fit>
           <Fit caption="Before the draft · waiting for managers" note="3 of 4 joined, so the order isn't set yet (new copy)"><I.HomePreDraft waiting /></Fit>
           <Fit caption="Draft in progress"><I.HomeDrafting /></Fit>
           <Fit caption="Before the season"><I.HomePreSeason /></Fit>
           <Fit caption="Market closed" note="Thursday night"><I.HomeClosed /></Fit>
+          <Fit caption="A holding without a live price" note='Counted at cost (zero gain, never $0 of value), and the screen says so in the approved caption. "{name}: " is new copy. Appears instantly.'><I.HomeUnpriced /></Fit>
           <Fit caption="Week final, scoring" note="Friday after 4 PM"><I.HomeScoring /></Fit>
           <Fit caption="Season complete" note="New copy throughout. Every tile comes from the season result (ask #11): season gain, best week, regular-season rank and record, playoff result"><I.HomeComplete /></Fit>
         </Group>
@@ -3694,7 +3735,7 @@
               <>Your team in this league: value {$(K.HOME.value)} as the big number, then <b>season gain</b> {$s(K.HOME.gain)} (the scored weeks plus this week live), today {$s(K.HOME.today)}, and rank and record (2nd of 6, {K.HOME.record}).</>,
               <><b>The Home hero</b> (your call: Concept A). Team value is the big number; the line under it is the season gain, the same words as the Standings column. It is not value − $12,000: the value also moves between the draft and Week 1's open and over every Friday close → Monday open, when no matchup is scoring. Portfolio keeps its own gain, value − cost, labelled "since the draft".</>,
               <>This week's matchup comes first: the live scoreboard card, with the lead in the metric that decides the matchup.</>,
-              <>The season chart ("Season gain, week by week") plots the same season gain against $0, with week ticks and each week's result (W/L) underneath. It ends at the hero's season gain, and this week's rise equals this week's matchup score.</>,
+              <>The season chart ("Season gain, week by week") plots the same season gain against $0, with week ticks and each week's result (W/L) underneath. It ends at the hero's season gain, and this week's rise equals this week's matchup score. <b>Past weeks are one point each</b> (that week's scored result, at Friday's close) joined by straight lines; only this week has day-by-day points. Time stays to scale: every week is five trading days wide. Scrubbing a past week reads that week's own result ("Week 3 · {$s(K.ROBERTO_WEEKS[2].gain)}"); this week reads the day and the running total.</>,
               <>Top of the standings with you highlighted. The avatar opens Profile.</>,
               <><b>Other leagues</b> (your call: Concept B, pill only): there is no list on Home. The league pill shows "+2" (two more leagues) on every tab and opens the league sheet with every league grouped by phase.</>,
             ]}
