@@ -151,6 +151,25 @@
           <Fit caption="Trade history" note="Includes the draft"><I.TradeHistory /></Fit>
         </Group>
 
+        <section className="b-sec" id="call-one-share" aria-labelledby="call-one-share-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n">?</span>
+            <div>
+              <h2 id="call-one-share-h">Your call: trading in budget and tier leagues</h2>
+              <p className="b-job">Everything above is a per-slot league ($2,000 a slot). A league can also be created as <b>budget cap</b> or <b>price tiers</b>: the draft takes one share of each stock, and today's server trades the same way, one share per buy, with a sale's cash going back into the budget. Which should 1.2.0 ship?</p>
+            </div>
+          </header>
+          <div className="b-ask" style={{ marginTop: 0, marginBottom: 28, maxWidth: '80ch' }}>
+            <h3>Your call</h3>
+            <p style={{ margin: 0 }}>Our lean: <b>A</b>. It is what the server already does, so it needs no backend change and every league type can trade in 1.2.0; the review screens just say "1 share" and show the budget left. <b>B</b> is the smallest build but leaves those leagues with no trading at all. A third option, making them work like per-slot leagues (a buy spends the whole sale), changes how those leagues play and needs backend work, so we'd leave it for later.</p>
+          </div>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="A · one share, as the server does now" note="Sell returns the cash to the budget; the budget left is always shown (new copy)"><I.OneShareSell /></Fit>
+            <Fit caption="A · buying one share" note="Tier leagues show the open slot's price tier instead of the budget (new copy)"><I.OneShareBuy /></Fit>
+            <Fit caption="B · no trading in these leagues for now" note="The stock sheet explains; Buy and Sell are shown disabled (new copy)"><I.OneShareOff /></Fit>
+          </div>
+        </section>
+
         <Group id="web" code="3d" name="Web app" job="The same four destinations in a left rail, the same content in two columns, and the stock sheet as a side panel."
           notes={[
             'The rail replaces the tab bar at 768px and wider; below that the web app uses the phone layout.',

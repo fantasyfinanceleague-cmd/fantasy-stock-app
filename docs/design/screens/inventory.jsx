@@ -1215,6 +1215,82 @@
     );
   }
 
+  // ── Your call D-3e: trading in the other two league types ───────────────
+  // budget_cap and price_tiers leagues draft ONE share per pick, and the
+  // server (record-trade → fillQuantity) buys exactly one share per trade; a
+  // sale's cash goes back into the budget (userCashSpent). Numbers derive from
+  // Roberto's draft prices, one share each, in a $2,500.00 budget league.
+  const ONE = (() => {
+    const rows = K.lineup('roberto', 'thu');
+    const drafted = rows.reduce((a, r) => a + r.draft, 0);
+    const budget = 2500;
+    const tsla = rows.find((r) => r.t === 'TSLA');
+    const sellPx = tsla.thu;
+    const afterSell = Math.round((budget - drafted + sellPx) * 100) / 100;
+    const buyPx = K.SALE.buy.price;
+    const afterBuy = Math.round((afterSell - buyPx) * 100) / 100;
+    return { budget, drafted, sellPx, afterSell, buyPx, afterBuy };
+  })();
+  function OneShareSell() {
+    return (
+      <Device noTabs label="Review sell, one-share league">
+        <Back label="Edit" />
+        <div className="ks-pad ks-stack">
+          <h2 className="ks-head__title" style={{ fontSize: 28 }}>Review sell</h2>
+          <Card><Sum rows={[
+            ['Sell', '1 TSLA · all you hold'],
+            ['Price', `${$(ONE.sellPx)} · market`],
+            ['Back to your budget', $(ONE.sellPx)],
+            ['Budget left after', $(ONE.afterSell)],
+          ]} /></Card>
+          <span className="ks-btn">Sell TSLA</span>
+          <span className="ks-caption" style={{ textAlign: 'center' }}>Office League · {$(ONE.budget)} budget · one share per stock</span>
+        </div>
+      </Device>
+    );
+  }
+  function OneShareBuy() {
+    return (
+      <Device noTabs label="Review buy, one-share league">
+        <Back label="Edit" />
+        <div className="ks-pad ks-stack">
+          <h2 className="ks-head__title" style={{ fontSize: 28 }}>Review buy</h2>
+          <Card><Sum rows={[
+            ['Buy', '1 SHOP'],
+            ['Price', `${$(ONE.buyPx)} · market`],
+            ['Budget now', $(ONE.afterSell)],
+            ['Budget left after', $(ONE.afterBuy)],
+          ]} /></Card>
+          <span className="ks-btn">Buy SHOP</span>
+          <span className="ks-caption" style={{ textAlign: 'center' }}>Prices can move before the order fills.</span>
+        </div>
+      </Device>
+    );
+  }
+  function OneShareOff() {
+    const N = K.NVDA;
+    return (
+      <Device tab="portfolio" label="Trading not offered in this league type">
+        <div className="ks-pad ks-stack" style={{ paddingTop: 12 }}>
+          <div className="ks-card" style={{ padding: 16, display: 'grid', gap: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <span><span className="ks-t" style={{ fontSize: 20 }}>{N.t}</span> <span className="ks-caption">{N.co}</span></span>
+              <b className="ks-num">{$(N.price)}</b>
+            </div>
+            <span className="ks-caption">You hold 1 share · Office League</span>
+            <div className="ks-raised" style={{ padding: '10px 12px', borderRadius: 10 }}>
+              <span className="ks-callout">Trading isn't available in budget and tier leagues yet. Your team is the one you drafted.</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <span className="ks-btn ks-btn--secondary" style={{ opacity: 0.45 }}>Sell</span>
+              <span className="ks-btn" style={{ opacity: 0.45 }}>Buy</span>
+            </div>
+          </div>
+        </div>
+      </Device>
+    );
+  }
+
   function MarketClosed() {
     const N = K.NVDA;
     return (
@@ -1363,6 +1439,7 @@
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeUnpriced, HomeScoring, HomeComplete,
     AllMatchups, MatchupPreSeason, Playoffs6, ArrangeOrder, OrderPush, DraftLobby, StartDraftConfirm, CreateSeason, DraftAutoPick, DraftRecap, Playoffs,
     SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,
+    OneShareSell, OneShareBuy, OneShareOff,
     WebHome, WebPortfolio, WebSettings,
   };
 })();

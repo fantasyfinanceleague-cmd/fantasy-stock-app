@@ -578,6 +578,7 @@
   .b-concepts { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 402px)); gap: 40px; align-items: start; margin-bottom: 18px; }
   .b-concepts .b-fig { max-width: 402px; }
   .b-concepts figcaption { text-align: left; line-height: 1.45; }
+  .b-concepts--three { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 28px; }
   .b-themebar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50; display: flex; justify-content: flex-end; padding: 10px 0; pointer-events: none; }
   .b-themebar__in { pointer-events: auto; display: inline-flex; align-items: center; gap: 10px; padding: 6px 6px 6px 14px; border-radius: 999px;
     background: var(--c-surface); border: 1px solid var(--c-border); box-shadow: var(--c-sheet-shadow); font-size: 13px; font-weight: 700; }
@@ -3099,6 +3100,82 @@
     );
   }
 
+  // ── Your call D-3e: trading in the other two league types ───────────────
+  // budget_cap and price_tiers leagues draft ONE share per pick, and the
+  // server (record-trade → fillQuantity) buys exactly one share per trade; a
+  // sale's cash goes back into the budget (userCashSpent). Numbers derive from
+  // Roberto's draft prices, one share each, in a $2,500.00 budget league.
+  const ONE = (() => {
+    const rows = K.lineup('roberto', 'thu');
+    const drafted = rows.reduce((a, r) => a + r.draft, 0);
+    const budget = 2500;
+    const tsla = rows.find((r) => r.t === 'TSLA');
+    const sellPx = tsla.thu;
+    const afterSell = Math.round((budget - drafted + sellPx) * 100) / 100;
+    const buyPx = K.SALE.buy.price;
+    const afterBuy = Math.round((afterSell - buyPx) * 100) / 100;
+    return { budget, drafted, sellPx, afterSell, buyPx, afterBuy };
+  })();
+  function OneShareSell() {
+    return (
+      <Device noTabs label="Review sell, one-share league">
+        <Back label="Edit" />
+        <div className="ks-pad ks-stack">
+          <h2 className="ks-head__title" style={{ fontSize: 28 }}>Review sell</h2>
+          <Card><Sum rows={[
+            ['Sell', '1 TSLA · all you hold'],
+            ['Price', `${$(ONE.sellPx)} · market`],
+            ['Back to your budget', $(ONE.sellPx)],
+            ['Budget left after', $(ONE.afterSell)],
+          ]} /></Card>
+          <span className="ks-btn">Sell TSLA</span>
+          <span className="ks-caption" style={{ textAlign: 'center' }}>Office League · {$(ONE.budget)} budget · one share per stock</span>
+        </div>
+      </Device>
+    );
+  }
+  function OneShareBuy() {
+    return (
+      <Device noTabs label="Review buy, one-share league">
+        <Back label="Edit" />
+        <div className="ks-pad ks-stack">
+          <h2 className="ks-head__title" style={{ fontSize: 28 }}>Review buy</h2>
+          <Card><Sum rows={[
+            ['Buy', '1 SHOP'],
+            ['Price', `${$(ONE.buyPx)} · market`],
+            ['Budget now', $(ONE.afterSell)],
+            ['Budget left after', $(ONE.afterBuy)],
+          ]} /></Card>
+          <span className="ks-btn">Buy SHOP</span>
+          <span className="ks-caption" style={{ textAlign: 'center' }}>Prices can move before the order fills.</span>
+        </div>
+      </Device>
+    );
+  }
+  function OneShareOff() {
+    const N = K.NVDA;
+    return (
+      <Device tab="portfolio" label="Trading not offered in this league type">
+        <div className="ks-pad ks-stack" style={{ paddingTop: 12 }}>
+          <div className="ks-card" style={{ padding: 16, display: 'grid', gap: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <span><span className="ks-t" style={{ fontSize: 20 }}>{N.t}</span> <span className="ks-caption">{N.co}</span></span>
+              <b className="ks-num">{$(N.price)}</b>
+            </div>
+            <span className="ks-caption">You hold 1 share · Office League</span>
+            <div className="ks-raised" style={{ padding: '10px 12px', borderRadius: 10 }}>
+              <span className="ks-callout">Trading isn't available in budget and tier leagues yet. Your team is the one you drafted.</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <span className="ks-btn ks-btn--secondary" style={{ opacity: 0.45 }}>Sell</span>
+              <span className="ks-btn" style={{ opacity: 0.45 }}>Buy</span>
+            </div>
+          </div>
+        </div>
+      </Device>
+    );
+  }
+
   function MarketClosed() {
     const N = K.NVDA;
     return (
@@ -3247,6 +3324,7 @@
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeUnpriced, HomeScoring, HomeComplete,
     AllMatchups, MatchupPreSeason, Playoffs6, ArrangeOrder, OrderPush, DraftLobby, StartDraftConfirm, CreateSeason, DraftAutoPick, DraftRecap, Playoffs,
     SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,
+    OneShareSell, OneShareBuy, OneShareOff,
     WebHome, WebPortfolio, WebSettings,
   };
 })();
@@ -3405,6 +3483,25 @@
           <Fit caption="Market closed"><I.MarketClosed /></Fit>
           <Fit caption="Trade history" note="Includes the draft"><I.TradeHistory /></Fit>
         </Group>
+
+        <section className="b-sec" id="call-one-share" aria-labelledby="call-one-share-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n">?</span>
+            <div>
+              <h2 id="call-one-share-h">Your call: trading in budget and tier leagues</h2>
+              <p className="b-job">Everything above is a per-slot league ($2,000 a slot). A league can also be created as <b>budget cap</b> or <b>price tiers</b>: the draft takes one share of each stock, and today's server trades the same way, one share per buy, with a sale's cash going back into the budget. Which should 1.2.0 ship?</p>
+            </div>
+          </header>
+          <div className="b-ask" style={{ marginTop: 0, marginBottom: 28, maxWidth: '80ch' }}>
+            <h3>Your call</h3>
+            <p style={{ margin: 0 }}>Our lean: <b>A</b>. It is what the server already does, so it needs no backend change and every league type can trade in 1.2.0; the review screens just say "1 share" and show the budget left. <b>B</b> is the smallest build but leaves those leagues with no trading at all. A third option, making them work like per-slot leagues (a buy spends the whole sale), changes how those leagues play and needs backend work, so we'd leave it for later.</p>
+          </div>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="A · one share, as the server does now" note="Sell returns the cash to the budget; the budget left is always shown (new copy)"><I.OneShareSell /></Fit>
+            <Fit caption="A · buying one share" note="Tier leagues show the open slot's price tier instead of the budget (new copy)"><I.OneShareBuy /></Fit>
+            <Fit caption="B · no trading in these leagues for now" note="The stock sheet explains; Buy and Sell are shown disabled (new copy)"><I.OneShareOff /></Fit>
+          </div>
+        </section>
 
         <Group id="web" code="3d" name="Web app" job="The same four destinations in a left rail, the same content in two columns, and the stock sheet as a side panel."
           notes={[
