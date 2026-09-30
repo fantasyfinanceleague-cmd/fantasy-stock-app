@@ -263,9 +263,28 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
     draftOrderWaiting: fixture === 'pre_draft_waiting',
   };
 
+  // S1 (Design Lead, 2026-09-30): "today" must never show a fabricated
+  // number. States with no live game happening right now -- results
+  // already posted, no matchup this week, or the bracket still deciding
+  // my next opponent -- get a non-trading reason so isTradingDay hides
+  // the hero's "today" segment entirely, instead of showing "$0.00" or
+  // the whole week's gain mislabeled as one day (found in the capture
+  // pass: 'bye', with no matchup at all, showed "+$213.60 today"). Only
+  // live_open/live_closed (and leader_flip, which shares their Thursday
+  // `now`) keep a real trading day -- see the `bars` fix below for why
+  // that's when todayChange has an actual previous close to diff against.
+  // playoff_live is deliberately left alone: its `now` (a December
+  // wild-card week) has no corresponding December price bar, and
+  // changing `market.status` here would also flip its phase.kind
+  // (homePhase.ts's live_open/live_closed branch reads market.status
+  // directly) -- out of scope for this fix.
+  const noLiveGameToday = fixture === 'scoring' || fixture === 'scored' || isBye
+    || isPlayoffBye || isEliminated || isMissedPlayoffs;
   const market: MarketInfo = fixture === 'live_closed'
     ? { status: 'closed', reason: 'after_hours', nextOpenAt: '2026-09-24T13:30:00.000Z' }
-    : { status: 'open', reason: 'regular_session', nextOpenAt: null };
+    : noLiveGameToday
+      ? { status: 'closed', reason: 'weekend', nextOpenAt: null }
+      : { status: 'open', reason: 'regular_session', nextOpenAt: null };
 
   const now = fixture === 'scoring' || fixture === 'scored'
     ? new Date('2026-09-25T20:30:00.000Z') // Friday, after week_end
@@ -296,10 +315,21 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
 
   const bars: BarsBySymbol = {};
   for (const h of ROBERTO_HOLDINGS) {
-    bars[h.symbol] = [{ date: '2026-09-18', close: h.prev }, { date: '2026-09-21', close: h.mon }, { date: '2026-09-24', close: h.thu }];
+    // S1 (Design Lead, 2026-09-30): must be in ascending date order --
+    // prevCloseFor takes the LAST entry strictly before "today", so an
+    // out-of-order array (this used to list a stray '09-18' bar, a full
+    // week earlier, ahead of Monday's) silently skips straight to
+    // Monday's open as "yesterday". Monday -> Wednesday (h.prev) ->
+    // Thursday (h.thu, "now" for every live fixture) gives todayChange a
+    // real Wednesday-to-Thursday close to diff, instead of reporting the
+    // whole week's move as "today" (found in the capture pass:
+    // live_open's today equalled its own season gain, $213.60).
+    bars[h.symbol] = [{ date: '2026-09-21', close: h.mon }, { date: '2026-09-23', close: h.prev }, { date: '2026-09-24', close: h.thu }];
   }
   for (const h of GIANLUIGI_HOLDINGS) {
-    bars[h.symbol] = bars[h.symbol] ?? [{ date: '2026-09-18', close: h.prev }, { date: '2026-09-21', close: h.mon }, { date: '2026-09-24', close: h.thu }];
+    // Same ascending-date fix as ROBERTO_HOLDINGS above, for consistency
+    // (not currently read by todayChange, which only sees my own symbols).
+    bars[h.symbol] = bars[h.symbol] ?? [{ date: '2026-09-21', close: h.mon }, { date: '2026-09-23', close: h.prev }, { date: '2026-09-24', close: h.thu }];
   }
 
   // B1 (Design Lead, 2026-09-30): a standard no-holiday Mon-Fri week for
