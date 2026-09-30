@@ -1215,7 +1215,7 @@
     );
   }
 
-  // ── Your call D-3e: trading in the other two league types ───────────────
+  // ── Budget-cap / price-tier leagues (your call: A, decided 2026-09-30) ──
   // budget_cap and price_tiers leagues draft ONE share per pick, and the
   // server (record-trade → fillQuantity) buys exactly one share per trade; a
   // sale's cash goes back into the budget (userCashSpent). Numbers derive from
@@ -1263,29 +1263,6 @@
           ]} /></Card>
           <span className="ks-btn">Buy SHOP</span>
           <span className="ks-caption" style={{ textAlign: 'center' }}>Prices can move before the order fills.</span>
-        </div>
-      </Device>
-    );
-  }
-  function OneShareOff() {
-    const N = K.NVDA;
-    return (
-      <Device tab="portfolio" label="Trading not offered in this league type">
-        <div className="ks-pad ks-stack" style={{ paddingTop: 12 }}>
-          <div className="ks-card" style={{ padding: 16, display: 'grid', gap: 10 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-              <span><span className="ks-t" style={{ fontSize: 20 }}>{N.t}</span> <span className="ks-caption">{N.co}</span></span>
-              <b className="ks-num">{$(N.price)}</b>
-            </div>
-            <span className="ks-caption">You hold 1 share · Office League</span>
-            <div className="ks-raised" style={{ padding: '10px 12px', borderRadius: 10 }}>
-              <span className="ks-callout">Trading isn't available in budget and tier leagues yet. Your team is the one you drafted.</span>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <span className="ks-btn ks-btn--secondary" style={{ opacity: 0.45 }}>Sell</span>
-              <span className="ks-btn" style={{ opacity: 0.45 }}>Buy</span>
-            </div>
-          </div>
         </div>
       </Device>
     );
@@ -1439,7 +1416,7 @@
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeUnpriced, HomeScoring, HomeComplete,
     AllMatchups, MatchupPreSeason, Playoffs6, ArrangeOrder, OrderPush, DraftLobby, StartDraftConfirm, CreateSeason, DraftAutoPick, DraftRecap, Playoffs,
     SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,
-    OneShareSell, OneShareBuy, OneShareOff,
+    OneShareSell, OneShareBuy,
     WebHome, WebPortfolio, WebSettings,
   };
 })();

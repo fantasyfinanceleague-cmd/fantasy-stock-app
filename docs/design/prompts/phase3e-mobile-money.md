@@ -4,9 +4,9 @@
 >
 > **Runs in parallel with 3c** (`ui/mobile-game`; disjoint screens). Both target the **1.2.0** TestFlight build, which ships every tab on the new design with no placeholder tabs.
 >
-> **Starts when** `ui/mobile-home` (3b-2) is merged **and** Giorgio has ruled the board's **"Your call: trading in budget and tier leagues"**. Branch off `main` after that merge.
+> **Starts when** `ui/mobile-home` (3b-2) is merged. Branch off `main` after that merge. (The budget/tier trading question is **decided: A**, 2026-09-30.)
 >
-> **Visual source of truth:** the key-screens board, `docs/design/screens/key-screens.html`. Its sections are key screen **5 Portfolio and stock sheet** (all four phones) and Part 2 › **"Trading" (3e)** with all its figures and notes, plus the "Your call" section after it.
+> **Visual source of truth:** the key-screens board, `docs/design/screens/key-screens.html`. Its sections are key screen **5 Portfolio and stock sheet** (all four phones) and Part 2 › **"Trading" (3e)** with all its figures and notes (including the two "Budget league" review screens).
 >
 > Plan on Opus, build on Sonnet.
 
@@ -43,7 +43,12 @@ You are the UI worker for **Phase 3e: the money screens**. Your branch is `ui/mo
   - A draft slot that was **skipped** counts as a source worth the full notional.
   - Server: `record-trade` `action: 'preview'` returns `{ unfilled_slots, sources: [{ trade_id, symbol, amount }] }`, and a buy passes `sold_trade_id`.
   - Refusals `proceeds_unavailable` ("That sale's cash isn't available anymore. Pick another." → back to the picker) and `no_proceeds` ("There's no cash in your slots to invest.", terminal) are board copy.
-- **Budget-cap / price-tier leagues: pending Giorgio's "Your call".** The server trades one share per buy, and a sale's cash returns to the budget (`userCashSpent`). Build whichever concept he picks. Don't start this part before the ruling.
+- **Budget-cap / price-tier leagues: decided A (Giorgio, 2026-09-30).** Trade exactly as the server does now:
+  - one share per buy (`fillQuantity`); a sell is the whole position;
+  - a sale's cash goes back into the budget (`userCashSpent`);
+  - every review says "1 share" and shows the **budget left** (budget cap). A tier league shows the open slot's **price tier** instead, and a stock outside it is refused (`no_eligible_slot`);
+  - there's no Cash row and no "which sale pays" picker in these leagues; those are per-slot only.
+  The board's "Budget league · review sell / review buy" screens are the target. Making these leagues spend a whole sale is a possible later backend change, so don't build it.
 - **A stock is owned by at most one manager in a league** (`symbol_owned`). The stock sheet says who owns it: "Drafted by you · Round 1, pick 2", or another manager's name with the Bot badge where it applies. When someone else owns it, Buy is disabled with that reason.
 - **Portfolio's gain is value − cost, labelled "since the draft".** It is deliberately NOT Home's "season gain". Never reuse one label for the other number (D1, Concept A).
 - **Unpriced holdings count at cost**, with the approved caption (`plCoverage.ts`: "N holding(s) counted at cost (no live price yet)"). A row with no live price shows its entry value and the caption, never $0.
@@ -74,7 +79,8 @@ You are the UI worker for **Phase 3e: the money screens**. Your branch is `ui/mo
 - **Replace the legacy `components/TradeModal.tsx`** once the new flow lands. Grep every entry point first (CLAUDE.md: MOUNTED and REACHABLE), and delete it only when nothing imports it.
 - Changes to shared primitives (tokens, `Card`, `ShellHeader`, `sp/*`) go through the Design Lead. Tell the Orchestrator so 3c can rebase.
 - **U2 is yours.** The trade gate in `lib/marketHours.ts` has a hard-coded holiday list that ends in 2026 and no early closes, so it would allow a trade on 2026-11-27 after the 1 PM close. Replace it with the calendar (`market_session_status` / `market_calendar` via `marketWeek`), including half days.
-  - **Note: `record-trade` does NOT check market hours.** Off-hours trades fill at the last quote, so the client gate is the only gate today (the audit's S5; the Orchestrator owns any server change). The gate must fail CLOSED: if the calendar can't be read, trading is disabled with "Trading hours unavailable. Try again shortly." (new copy, flagged). Never fall back to "open".
+  - The client gate must fail CLOSED: if the calendar can't be read, trading is disabled with "Trading hours unavailable. Try again shortly." (new copy, flagged). Never fall back to "open".
+  - **A server gate is coming** (`fix/record-trade-market-hours`, owned by the Orchestrator); see "Market-hours refusals" below. The client gate stays: it keeps a closed market from ever offering a trade button.
   - Also depends on 3c's **U1** fix to `weekStatus.getSeasonPhase`/`canTradeInPhase` (week 1's Monday). Rebase onto it when it lands.
 
 ## Screens: build each to its board screen
@@ -89,7 +95,7 @@ You are the UI worker for **Phase 3e: the money screens**. Your branch is `ui/mo
 | 6 | **Which sale pays?** | "Which sale pays?" | Shown when `preview.sources.length > 1`; the skipped-slot source appears as full notional. |
 | 7 | **Review buy** → **Bought** | "Review buy", "Bought" | "≈ 18.1393 SHOP", price, "Paid from · TSLA slot · $1,890.12", "Left in the slot · $0.00" (zero grey). |
 | 8 | **Trade history** | "Trade history" | Trades **and draft picks** (`league_activity`, #5), grouped by week, with filters All / Buys / Sells / Draft and an honest empty state. |
-| 9 | Budget/tier league trading | the "Your call" section | Only after Giorgio rules; build the chosen concept. |
+| 9 | **Budget/tier league trading** (decided A) | "Budget league · review sell", "Budget league · review buy" | "1 TSLA · all you hold", "Back to your budget $248.36" (neutral, not a gain), "Budget left after"; the buy shows "1 SHOP", "Budget now", "Budget left after". A tier league swaps the budget rows for the slot's price tier. Fixture: derive the budget league from the board's numbers ($2,500 budget, Roberto's draft prices, one share each). |
 
 **Refusals:** show every `record-trade` refusal as polite, specific copy, mapped by `reason`:
 - the per-slot board copy above;
@@ -97,6 +103,13 @@ You are the UI worker for **Phase 3e: the money screens**. Your branch is `ui/mo
 - an unknown reason gets one generic line.
 
 A refusal appears **instantly** and never looks like success. Check `{ error }` on every call.
+
+**Market-hours refusals (server gate, `fix/record-trade-market-hours`):**
+- **Market closed:** HTTP 200 `{ ok: false, reason: 'market_closed', market_reason: 'pre_market' | 'after_hours' | 'weekend' | 'holiday', next_open_at }`. Show the board's market-closed copy with the time from `next_open_at` formatted in ET: "Market closed" / "Trading opens Mon 9:30 AM ET." (verbatim board pattern). `market_reason` may pick a short lead-in (e.g. "It's a market holiday."); flag any such line as new copy. Never show a raw reason code.
+- **Calendar unavailable:** HTTP **503**. Show "Trading hours unavailable. Try again shortly." (the same copy as the client gate) and keep the review screen open so the user can retry. It must not read as a failed trade.
+- **The race:** a review opened while the market was open and submitted after the close. The server's refusal wins. Replace the review's confirm state with the closed message instantly (no spinner-then-error flash), keep the review's numbers visible, disable Confirm, and return the user to the sheet in its closed state. Test it with a fixture clock that crosses 4:00 PM ET, and a half-day 1:00 PM close, between opening the review and confirming.
+- **Previews stay allowed when closed** (`action: 'preview'` returns a `market` label). Use it to label the sheet ("Prices show Friday's close.") and never to enable a trade.
+- Until that branch deploys, the refusal can't happen in production. Build and test against a fixture response, and verify it for real once it's live.
 
 ## Backend (check before building; don't assume)
 
@@ -139,7 +152,7 @@ A refusal appears **instantly** and never looks like success. Check `{ error }` 
 - **Checks:**
   - `npx tsc --noEmit` (baseline 1);
   - `npm run lint` (0 errors);
-  - the deno suites, plus new tests for: the company-name cleaner; share formatting; Buy/Sell defaults (held → Sell; owned by another → Buy disabled); the refusal → copy map (every `reason`); the U2 gate (a 2027 holiday, the 2026-11-27 half day, **calendar unreadable → closed**); preview → picker logic (0, 1 and 2 sources; a skipped slot);
+  - the deno suites, plus new tests for: the company-name cleaner; share formatting; Buy/Sell defaults (held → Sell; owned by another → Buy disabled); the refusal → copy map (every `reason`); the U2 gate (a 2027 holiday, the 2026-11-27 half day, **calendar unreadable → closed**); preview → picker logic (0, 1 and 2 sources; a skipped slot); the market-hours refusals (`market_closed` for each `market_reason`, the 503, and the open-then-closed race incl. a half-day close); the budget/tier review numbers (budget left after a sell and a buy);
   - the contrast test;
   - `node scripts/gen-architecture.mjs`.
   - Report the counts and the **request count on load** (Portfolio ≤ 4).
@@ -155,7 +168,7 @@ A refusal appears **instantly** and never looks like success. Check `{ error }` 
 2. No row contradicts itself; the Portfolio value equals the sum of rows plus cash; the sale leaves value unchanged.
 3. Whole positions and per-slot proceeds are exactly as ruled; the picker appears only with more than one source; every refusal is mapped and instant.
 4. Holding → Sell pre-selected; owned by another → Buy disabled with the reason; market closed → informs, disabled with the open time.
-5. The U2 gate reads the calendar and fails closed; no fabricated numbers; Hermes-safe formatting.
+5. The U2 gate reads the calendar and fails closed; the server's `market_closed`/503 refusals and the close-time race are handled instantly and politely; no fabricated numbers; Hermes-safe formatting.
 6. "Since the draft" is never confused with Home's "season gain"; the unpriced caption and the Alpaca credit are present.
 7. **All five signature moments (M1–M5) are present, smooth and calm-but-premium**, with their Reduce Motion versions. A missing or timid moment is a DESIGN-CHANGES.
 8. Clean names, ≤ 4 dp shares, U+2212 minus, zero grey, no truncation at XL.
