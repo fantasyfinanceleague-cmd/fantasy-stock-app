@@ -18,9 +18,13 @@ export const HERO_TODAY_LABEL = 'today'; // board
 export const SEASON_CARD_TITLE = 'Season'; // board
 export const SEASON_CARD_CAPTION = 'Season gain, week by week'; // board
 export const STANDINGS_CARD_TITLE = 'Standings'; // board
-export function standingsThroughWeekCaption(numWeeks: number): string {
+/** `throughWeek` is the already-resolved "last completed week" (week - 1
+ * for a live week), NOT the league's total week count — code review
+ * (2026-09-29) found the caller passing `numWeeks`, so this always read
+ * "Through Week 14" regardless of which week was actually live. */
+export function standingsThroughWeekCaption(throughWeek: number): string {
   // board: "Through Week N−1"
-  return `Through Week ${numWeeks}`;
+  return `Through Week ${throughWeek}`;
 }
 
 // ── This-week card (state 1/2/3/4) — board, verbatim ───────────────────────
@@ -35,15 +39,39 @@ export function vsOpponentLabel(oppName: string): string {
 export function leadLabel(ahead: boolean): string {
   return ahead ? 'You lead by' : 'You trail by'; // board
 }
-export const ENDS_FRIDAY_LABEL = 'Ends Fri 4:00 PM ET'; // board (literal week-end time varies by row; formatted from matchup.week_end)
+const ET_WEEKDAY_TIME: Intl.DateTimeFormatOptions = {
+  timeZone: 'America/New_York', weekday: 'short', hour: 'numeric', minute: '2-digit',
+};
+
+/** "Ends Fri 4:00 PM" from the matchup's real `week_end`, always in ET
+ * regardless of the viewer's own timezone (board: "Ends Fri 4:00 PM ET").
+ * Fixed in code review (2026-09-29): this used to be a hardcoded literal
+ * ("Ends Fri 4:00 PM ET" every week), wrong on any holiday-shifted week. */
+export function endsAtLabel(weekEndIso: string): string {
+  const d = new Date(weekEndIso);
+  if (Number.isNaN(d.getTime())) return '';
+  const formatted = new Intl.DateTimeFormat('en-US', ET_WEEKDAY_TIME).format(d);
+  return `Ends ${formatted} ET`;
+}
 
 // ── State 2: market closed — board, verbatim ────────────────────────────────
 export const MARKET_CLOSED_CHIP = 'Market closed'; // board
-export function marketClosedAt(when: string): string {
-  return `…at ${when}'s close`; // board ("…at Thursday's close")
+/** "…at Thursday's close" from the matchup's `week_end` — the last
+ * trading day the score is frozen at, in ET (board: "…at Thursday's close"). */
+export function marketClosedAt(weekEndIso: string): string {
+  const d = new Date(weekEndIso);
+  if (Number.isNaN(d.getTime())) return '';
+  const weekday = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'long' }).format(d);
+  return `…at ${weekday}'s close`;
 }
-export function marketResumesAt(when: string): string {
-  return `Resumes ${when}`; // board ("Resumes Fri 9:30 AM ET")
+/** "Resumes Fri 9:30 AM ET" from market_session_status's own next-open
+ * timestamp — never a hardcoded weekday (board: "Resumes Fri 9:30 AM ET"). */
+export function marketResumesAt(resumesAtIso: string | null): string {
+  if (!resumesAtIso) return '';
+  const d = new Date(resumesAtIso);
+  if (Number.isNaN(d.getTime())) return '';
+  const formatted = new Intl.DateTimeFormat('en-US', ET_WEEKDAY_TIME).format(d);
+  return `Resumes ${formatted} ET`;
 }
 
 // ── State 3: scoring — board, verbatim ──────────────────────────────────────
@@ -57,8 +85,18 @@ export function scoredResultLine(won: boolean, week: number, opponentName?: stri
   // (onboarding card 3), reused verbatim; the subject swap is new-flagged.
   return won ? `You win Week ${week}` : `${opponentName ?? 'Your opponent'} wins Week ${week}`;
 }
-export function nextWeekStartsLabel(week: number, when: string): string {
-  return `Week ${week} starts ${when}`; // new-flagged, mirrors board's "Resumes" pattern
+/** `when` is the next week's real `week_start` ISO timestamp, or null when
+ * it isn't known yet (formats to "" rather than leaking a raw ISO string
+ * — fixed in code review, 2026-09-29, which found the raw timestamp
+ * reaching the screen: "Week 7 starts 2026-09-28T13:30:00+00:00"). */
+export function nextWeekStartsLabel(week: number, when: string | null): string {
+  if (!when) return `Week ${week} starts soon`; // new-flagged, mirrors board's "Resumes" pattern
+  const d = new Date(when);
+  if (Number.isNaN(d.getTime())) return `Week ${week} starts soon`;
+  const formatted = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York', weekday: 'short', hour: 'numeric', minute: '2-digit',
+  }).format(d);
+  return `Week ${week} starts ${formatted} ET`; // new-flagged, mirrors board's "Resumes" pattern
 }
 
 // ── State 5: before the season — board, verbatim ───────────────────────────
@@ -85,18 +123,21 @@ export const YOUR_TEAM_SO_FAR = 'Your team so far'; // board
 
 // ── State 9: bye week — NOT on the board. new-flagged. ──────────────────────
 export const BYE_MESSAGE = 'No matchup this week'; // new-flagged
-export function byeNextWeekLabel(week: number, when: string): string {
-  return `Week ${week} starts ${when}`; // new-flagged (same pattern as scored → next)
+/** Same formatting/null-handling as {@link nextWeekStartsLabel} — a bye's
+ * `nextStart` is null whenever there's no schedule row after it yet. */
+export function byeNextWeekLabel(week: number, when: string | null): string {
+  return nextWeekStartsLabel(week, when); // new-flagged (same pattern as scored -> next)
 }
 
 // ── State 10: playoffs — NOT on the board. new-flagged. ─────────────────────
-export function byeToRoundLabel(round: string): string {
-  return `Bye to the ${round}`; // new-flagged
+export function byeToRoundLabel(round: string | null): string {
+  return round ? `Bye to the ${round}` : 'Bye this round'; // new-flagged
 }
-export function eliminatedLabel(round: string): string {
-  return `Out in the ${round}`; // new-flagged
+export function eliminatedLabel(round: string | null): string {
+  return round ? `Out in the ${round}` : 'Out of the playoffs'; // new-flagged
 }
 export const SEE_THE_BRACKET = 'See the bracket'; // new-flagged
+export const MISSED_PLAYOFFS_MESSAGE = 'Missed the playoffs'; // new-flagged
 
 // ── State 8: season complete — mapping rules from the RPC author, relayed
 // by the Orchestrator (2026-09-29); render only fields get_season_result

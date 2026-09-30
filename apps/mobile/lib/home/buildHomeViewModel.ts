@@ -64,8 +64,6 @@ export interface HomeLeagueMeta {
   notionalPerSlot: number | null;
   numRounds: number | null;
   draftOrderWaiting: boolean;
-  hasLaterPlayoffRow: boolean;
-  lastPlayoffLoss: boolean;
 }
 
 export interface BarsBySymbol {
@@ -101,6 +99,14 @@ export interface ThisWeekViewModel {
    * are then the authoritative scored values, not a live recompute
    * (which could disagree with the official number by a stale quote). */
   final: boolean;
+  /** Null while live (no result yet — never re-derive "who's ahead" as
+   * "who won"); set once `final`. Ties are false (nobody "won"). */
+  won: boolean | null;
+  /** The opponent's user id for THIS card's week — which may be the
+   * previous week during the Fri-close -> next-open grace period (see
+   * `relevantWeek` below), so the caller must not assume it always
+   * matches get_home_summary's CURRENT-week opponent. */
+  opponentUserId: string | null;
 }
 
 export interface WeeklyResult {
@@ -125,8 +131,16 @@ export interface HomeViewModel {
   weeklyResults: WeeklyResult[];
 }
 
+/** A SKIP sentinel draft row (forfeited pick: symbol 'SKIP', 0 qty) is not
+ * a holding — same convention as the server's SKIP_SYMBOL
+ * (supabase/functions/_shared/draft-validation.ts), mirrored here since
+ * that file is Deno-only and unreachable from the RN bundle. */
+const SKIP_SYMBOL = 'SKIP';
+
 function toLedger(rows: HomeLedgerRow[]): { symbol: string; entryPrice: number; quantity: number }[] {
-  return rows.map((r) => ({ symbol: r.symbol, entryPrice: r.entry_price ?? 0, quantity: r.quantity }));
+  return rows
+    .filter((r) => r.symbol?.toUpperCase() !== SKIP_SYMBOL)
+    .map((r) => ({ symbol: r.symbol, entryPrice: r.entry_price ?? 0, quantity: r.quantity }));
 }
 function toTrades(rows: HomeLedgerRow[]): { symbol: string; action: 'buy' | 'sell'; quantity: number; price: number }[] {
   return rows.map((r) => ({ symbol: r.symbol, action: r.action!, quantity: r.quantity, price: r.price ?? 0 }));
@@ -138,8 +152,12 @@ function toLiveSnapshots(rows: HomeLedgerRow[]): LiveSnapshot[] {
   return rows.map((r) => ({ symbol: r.symbol, quantity: r.quantity, weekStartPrice: r.week_start_price ?? 0, enteredMidWeek: !!r.entered_mid_week }));
 }
 
+function rawMatchupFor(data: GetHomeLeagueResult, week: number): GetHomeLeagueResult['matchups'][number] | null {
+  return data.matchups.find((row) => row.week_number === week) ?? null;
+}
+
 function matchupRowFor(data: GetHomeLeagueResult, meta: HomeLeagueMeta, week: number): MatchupRow | null {
-  const m = data.matchups.find((row) => row.week_number === week);
+  const m = rawMatchupFor(data, week);
   if (!m) return null;
   const isMe1 = m.team1_user_id === meta.myUserId;
   const myGain = isMe1 ? m.team1_gain : m.team2_gain;
@@ -151,13 +169,64 @@ function matchupRowFor(data: GetHomeLeagueResult, meta: HomeLeagueMeta, week: nu
   };
 }
 
+/** The opponent's raw user id for `week`, or null (no row, or a bye). */
+function opponentUserIdFor(data: GetHomeLeagueResult, meta: HomeLeagueMeta, week: number): string | null {
+  const m = rawMatchupFor(data, week);
+  if (!m) return null;
+  const isMe1 = m.team1_user_id === meta.myUserId;
+  return isMe1 ? m.team2_user_id : m.team1_user_id;
+}
+
+/** Every playoff row that names me, ascending by week. */
+function myPlayoffRows(data: GetHomeLeagueResult, meta: HomeLeagueMeta) {
+  return data.matchups
+    .filter((m) => m.is_playoff && (m.team1_user_id === meta.myUserId || m.team2_user_id === meta.myUserId))
+    .sort((a, b) => a.week_number - b.week_number);
+}
+
+/** Derives homePhase's two playoff flags from the RPC's own `matchups`
+ * array — found missing in code review (2026-09-29): these were
+ * hardcoded false in useHomeLeague, so every bye/eliminated/missed-
+ * playoffs team read as "before the season" instead. Computed here,
+ * from data the RPC already returns, rather than a new fetch. */
+function playoffStatusFlags(data: GetHomeLeagueResult, meta: HomeLeagueMeta): { hasLaterPlayoffRow: boolean; lastPlayoffLoss: boolean } {
+  const rows = myPlayoffRows(data, meta);
+  const hasLaterPlayoffRow = rows.some((m) => m.week_number > meta.currentWeek);
+  if (hasLaterPlayoffRow) return { hasLaterPlayoffRow, lastPlayoffLoss: false };
+  const lastScored = [...rows].reverse().find((m) => {
+    const isMe1 = m.team1_user_id === meta.myUserId;
+    const myGain = isMe1 ? m.team1_gain : m.team2_gain;
+    return myGain !== null;
+  });
+  if (!lastScored) return { hasLaterPlayoffRow: false, lastPlayoffLoss: false };
+  const isMe1 = lastScored.team1_user_id === meta.myUserId;
+  const myGain = isMe1 ? lastScored.team1_gain : lastScored.team2_gain;
+  const oppGain = isMe1 ? lastScored.team2_gain : lastScored.team1_gain;
+  const lastPlayoffLoss = myGain !== null && oppGain !== null && myGain < oppGain;
+  return { hasLaterPlayoffRow: false, lastPlayoffLoss };
+}
+
 function dateOnly(iso: string): string {
   return new Date(iso).toISOString().slice(0, 10);
 }
 
-/** Yesterday's close for `symbol`: the latest bar strictly before `now`'s date. */
+/** The calendar date in America/New_York for `date` — "today" for the
+ * hero's "+$Z today" segment must be the MARKET's day, not UTC's. Found
+ * in code review (2026-09-29): after 20:00 ET (00:00 UTC), the old
+ * UTC-based `dateOnly` rolled "today" over a day early, so a real
+ * same-day trade or gain read as "yesterday" and today showed $0. */
+function etDateOnly(date: Date): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(date);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
+  return `${get('year')}-${get('month')}-${get('day')}`;
+}
+
+/** Yesterday's close for `symbol`: the latest bar strictly before `now`'s
+ * ET calendar date (see etDateOnly's doc — the market's day, not UTC's). */
 function prevCloseFor(bars: BarsBySymbol, symbol: string, now: Date): number | null {
-  const today = dateOnly(now.toISOString());
+  const today = etDateOnly(now);
   const series = bars[symbol];
   if (!series) return null;
   const before = series.filter((b) => b.date < today);
@@ -194,6 +263,7 @@ export function buildHomeViewModel(input: HomeViewModelInput): HomeViewModel {
 
   const current = matchupRowFor(data, meta, meta.currentWeek);
   const previous = matchupRowFor(data, meta, meta.currentWeek - 1);
+  const { hasLaterPlayoffRow, lastPlayoffLoss } = playoffStatusFlags(data, meta);
 
   const phase = homePhase(
     {
@@ -203,18 +273,31 @@ export function buildHomeViewModel(input: HomeViewModelInput): HomeViewModel {
         playoffTeams: meta.playoffTeams,
       },
       current, previous,
-      hasLaterPlayoffRow: meta.hasLaterPlayoffRow, lastPlayoffLoss: meta.lastPlayoffLoss,
+      hasLaterPlayoffRow, lastPlayoffLoss,
       draftOrderWaiting: meta.draftOrderWaiting, now, market,
     },
     input.playoffRoundLabelForWeek,
   );
 
   // Only build the money views once the season has real matchup weeks to
-  // reason about (states 6/7/5/8 have no hero/this-week card at all).
+  // reason about (states 6/7/8 have no hero/this-week card at all).
   const inSeason = !['pre_draft', 'drafting', 'complete'].includes(phase.kind);
   if (!inSeason) {
     return { phase, hero: null, thisWeek: null, season: null, standings: data.standings, myUserId: meta.myUserId, weeklyResults: [] };
   }
+
+  // The week THIS card is actually about — 'scored' can point at the
+  // PREVIOUS week during the Fri-close -> next-open grace period (F5:
+  // current_week already advanced). Found in code review (2026-09-29):
+  // using `current` unconditionally here fabricated a $0-$0 "Final" and
+  // a false loss every single weekend. `get_home_league` only fetches
+  // snapshots/trades for `league.current_week`, so a relevantWeek that
+  // ISN'T the current week can only ever be shown from its AUTHORITATIVE
+  // stored gain — never a live recompute, which is exactly the case the
+  // spec wants for a scored week anyway.
+  const relevantWeek = 'week' in phase ? phase.week : meta.currentWeek;
+  const relevantRow = relevantWeek === meta.currentWeek ? current : matchupRowFor(data, meta, relevantWeek);
+  const relevantIsCurrent = relevantWeek === meta.currentWeek;
 
   const myCurrentSnapshots = toLiveSnapshots(data.current_week.my_snapshots);
   const myCurrentTrades = toLiveTrades(data.current_week.my_trades);
@@ -222,26 +305,37 @@ export function buildHomeViewModel(input: HomeViewModelInput): HomeViewModel {
   const oppCurrentTrades = toLiveTrades(data.current_week.opponent_trades);
 
   const currentRowScored = current && current.myGain !== null && (current.opponentGain !== null || !current.hasOpponent);
+  const relevantRowScored = relevantRow && relevantRow.myGain !== null && (relevantRow.opponentGain !== null || !relevantRow.hasOpponent);
 
   const myLive = liveWeekScore(myCurrentSnapshots, myCurrentTrades, quote);
   const oppLive = liveWeekScore(oppCurrentSnapshots, oppCurrentTrades, quote);
 
   // Once both sides are scored, the this-week card shows the AUTHORITATIVE
-  // matchups gain, never a live recompute from (possibly stale) quotes —
-  // "nothing is shown as final before team1_gain/team2_gain are non-null"
-  // cuts both ways: once they ARE non-null, that number is the truth.
-  const thisWeek: ThisWeekViewModel | null = current?.hasOpponent
-    ? currentRowScored
+  // matchups gain for `relevantRow` (never `current` unconditionally —
+  // see the relevantWeek comment above), and never a live recompute from
+  // (possibly stale) quotes — "nothing is shown as final before
+  // team1_gain/team2_gain are non-null" cuts both ways: once they ARE
+  // non-null, that number is the truth. A live recompute is only valid
+  // when relevantRow IS the current week (the only week we have
+  // snapshots/trades for at all).
+  const thisWeek: ThisWeekViewModel | null = relevantRow?.hasOpponent
+    ? relevantRowScored
       ? {
-          you: { gain: current!.myGain!, pct: 0, unpriced: [] },
-          opponent: { gain: current!.opponentGain!, pct: 0, unpriced: [] },
+          you: { gain: relevantRow.myGain!, pct: 0, unpriced: [] },
+          opponent: { gain: relevantRow.opponentGain!, pct: 0, unpriced: [] },
           final: true,
+          won: relevantRow.myGain! > relevantRow.opponentGain!,
+          opponentUserId: opponentUserIdFor(data, meta, relevantWeek),
         }
-      : {
-          you: { gain: myLive.gain, pct: myLive.pct, unpriced: myLive.unpriced },
-          opponent: { gain: oppLive.gain, pct: oppLive.pct, unpriced: oppLive.unpriced },
-          final: false,
-        }
+      : relevantIsCurrent
+        ? {
+            you: { gain: myLive.gain, pct: myLive.pct, unpriced: myLive.unpriced },
+            opponent: { gain: oppLive.gain, pct: oppLive.pct, unpriced: oppLive.unpriced },
+            final: false,
+            won: null,
+            opponentUserId: opponentUserIdFor(data, meta, relevantWeek),
+          }
+        : null // a past, unscored row with no snapshot data to recompute from — shouldn't occur, but never fabricate a live score for it
     : null;
 
   // Season gain = every already-scored week's gain for me, plus the
@@ -273,15 +367,19 @@ export function buildHomeViewModel(input: HomeViewModelInput): HomeViewModel {
   const { gain: seasonGainDollars, pct: seasonGainPct } = seasonGain(scoredWeeklyGains, currentWeekLiveGain, stake.stake);
 
   const isTradingDay = !['weekend', 'holiday', 'no_coverage'].includes(market.reason);
-  const todaysDateStr = dateOnly(now.toISOString());
-  const todaysTrades = toLiveTrades(data.my_ledger.trades).filter((t) => dateOnly(t.createdAt.toISOString()) === todaysDateStr);
-  const beforeToday = toLiveTrades(data.my_ledger.trades).filter((t) => dateOnly(t.createdAt.toISOString()) !== todaysDateStr || t.createdAt.getTime() < now.getTime());
+  // ET, not UTC (code review, 2026-09-29): the market's day, not the
+  // server's — see etDateOnly's own doc for the after-20:00-ET bug this fixes.
+  const todaysDateStr = etDateOnly(now);
+  const todaysTrades = toLiveTrades(data.my_ledger.trades).filter((t) => etDateOnly(t.createdAt) === todaysDateStr);
   // Net position before today's trades, from the full ledger minus today's activity.
   const positionsBeforeToday: TodayPosition[] = (() => {
     const qty = new Map<string, number>();
-    for (const d of data.my_ledger.drafts) qty.set(d.symbol, (qty.get(d.symbol) ?? 0) + d.quantity);
+    for (const d of data.my_ledger.drafts) {
+      if (d.symbol?.toUpperCase() === SKIP_SYMBOL) continue;
+      qty.set(d.symbol, (qty.get(d.symbol) ?? 0) + d.quantity);
+    }
     for (const t of data.my_ledger.trades) {
-      if (dateOnly(t.created_at) === todaysDateStr) continue; // exclude today's own trades
+      if (etDateOnly(new Date(t.created_at)) === todaysDateStr) continue; // exclude today's own trades
       qty.set(t.symbol, (qty.get(t.symbol) ?? 0) + (t.action === 'buy' ? t.quantity : -t.quantity));
     }
     return Array.from(qty.entries()).map(([symbol, quantityBeforeToday]) => ({ symbol, quantityBeforeToday }));
@@ -304,6 +402,15 @@ export function buildHomeViewModel(input: HomeViewModelInput): HomeViewModel {
   for (let w = 1; w <= meta.currentWeek; w++) {
     const row = matchupRowFor(data, meta, w);
     const isCurrent = w === meta.currentWeek;
+    // No row at all for this week — a bye, a playoff bye, elimination,
+    // missed playoffs, or a genuinely un-generated week (found in code
+    // review, 2026-09-29: `current!.weekStart` crashed here for every one
+    // of those, since `current` is null whenever there's no row this
+    // week). Nothing to plot: flat at the running total.
+    if (isCurrent && !current) {
+      weeks.push({ week: w, scoredGain: 0, snapshots: [], trades: [], tradingDays: [], hasData: false });
+      continue;
+    }
     if (!isCurrent || currentRowScored) {
       const scoredGain = isCurrent ? current!.myGain : row ? (row.hasOpponent === false ? 0 : row.myGain) : 0;
       const days = row ? weekdayDates(row.weekStart, row.weekEnd) : [];

@@ -39,12 +39,13 @@ export type HomeFixture =
   | 'playoff_live'
   | 'playoff_bye'
   | 'eliminated'
+  | 'missed_playoffs'
   | 'leader_flip';
 
 const FIXTURES: readonly HomeFixture[] = [
   'live_open', 'live_closed', 'scoring', 'scored', 'pre_season', 'pre_draft',
   'pre_draft_waiting', 'drafting', 'complete', 'bye', 'playoff_live', 'playoff_bye',
-  'eliminated', 'leader_flip',
+  'eliminated', 'missed_playoffs', 'leader_flip',
 ];
 
 function parse(raw: string | undefined): HomeFixture | null {

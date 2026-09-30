@@ -32,14 +32,17 @@ export interface StandingRow {
 
 export interface StandingsCardProps {
   rows: StandingRow[];
-  numWeeks: number;
+  /** The last COMPLETED week (not the league's total week count — code
+   * review, 2026-09-29 found this receiving `numWeeks`, so the caption
+   * always said "Through Week 14" regardless of which week was live). */
+  throughWeek: number;
 }
 
 function record(r: StandingRow): string {
   return `${r.wins}–${r.losses}${r.ties ? `–${r.ties}` : ''}`;
 }
 
-export function StandingsCard({ rows, numWeeks }: StandingsCardProps) {
+export function StandingsCard({ rows, throughWeek }: StandingsCardProps) {
   const { colors } = useTheme();
   const { reduced, stagger, spring } = useMotion();
 
@@ -54,7 +57,7 @@ export function StandingsCard({ rows, numWeeks }: StandingsCardProps) {
       <View style={styles.header}>
         <Text variant="headline">{STANDINGS_CARD_TITLE}</Text>
         <Text variant="caption" tone="secondary">
-          {standingsThroughWeekCaption(numWeeks)}
+          {standingsThroughWeekCaption(throughWeek)}
         </Text>
       </View>
       <View>

@@ -64,32 +64,76 @@ function toMarketInfo(row: { status: string; reason: string; next_open_at: strin
 
 /** The dev fixture's data, in get_home_league's own shape, so the same
  * buildHomeViewModel call path is exercised whether the data came from
- * Supabase or from the board's sample numbers. */
-function fixtureHomeLeague(): { data: GetHomeLeagueResult; meta: HomeLeagueMeta; quote: (s: string) => number | null; bars: BarsBySymbol } {
+ * Supabase or from the board's sample numbers.
+ *
+ * Varies per `EXPO_PUBLIC_HOME_FIXTURE` state (code review, 2026-09-29:
+ * this used to render `live_open` for all 14 declared fixture values,
+ * silently — Task 11's per-state captures need each state reachable). */
+function cents(v: number): number {
+  return Math.round(v * 100) / 100;
+}
+
+function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): {
+  data: GetHomeLeagueResult; meta: HomeLeagueMeta; market: MarketInfo; now: Date;
+  quote: (s: string) => number | null; bars: BarsBySymbol;
+} {
   const myDrafts = ROBERTO_HOLDINGS.map((h) => ({ symbol: h.symbol, entry_price: h.draft, quantity: fixtureQty(h), created_at: '2026-08-01T00:00:00Z' }));
   const mySnapshots = ROBERTO_HOLDINGS.map((h) => ({ symbol: h.symbol, quantity: fixtureQty(h), week_start_price: h.mon, entered_mid_week: false, created_at: FIXTURE_WEEK6_START }));
   const oppSnapshots = GIANLUIGI_HOLDINGS.map((h) => ({ symbol: h.symbol, quantity: fixtureQty(h), week_start_price: h.mon, entered_mid_week: false, created_at: FIXTURE_WEEK6_START }));
 
-  const matchups = [
-    ...ROBERTO_WEEKS.map((w, i) => {
-      const monday = new Date(Date.UTC(2026, 6, 6 + i * 7, 13, 30));
-      const friday = new Date(monday.getTime() + 4 * 24 * 3600 * 1000 + 6.5 * 3600 * 1000);
-      return {
-        week_number: w.week, week_start: monday.toISOString(), week_end: friday.toISOString(),
-        is_playoff: false, team1_user_id: 'roberto', team2_user_id: 'gianluigi',
-        team1_gain: w.gain, team2_gain: -w.gain,
-      };
-    }),
-    {
-      week_number: 6, week_start: FIXTURE_WEEK6_START, week_end: FIXTURE_WEEK6_END,
-      is_playoff: false, team1_user_id: 'roberto', team2_user_id: 'gianluigi',
-      team1_gain: null, team2_gain: null,
-    },
-  ];
+  const isScored = fixture === 'scored';
+  const week6Gains = isScored
+    ? { team1_gain: cents(ROBERTO_HOLDINGS.reduce((s, h) => s + fixtureQty(h) * (h.fri - h.mon), 0)), team2_gain: cents(GIANLUIGI_HOLDINGS.reduce((s, h) => s + fixtureQty(h) * (h.fri - h.mon), 0)) }
+    : { team1_gain: null, team2_gain: null };
+
+  const isBye = fixture === 'bye';
+  const isPlayoffLive = fixture === 'playoff_live';
+  const isPlayoffBye = fixture === 'playoff_bye';
+  const isEliminated = fixture === 'eliminated';
+  const isMissedPlayoffs = fixture === 'missed_playoffs';
+  const isPlayoffState = isPlayoffLive || isPlayoffBye || isEliminated || isMissedPlayoffs;
+
+  const week6 = {
+    week_number: 6, week_start: FIXTURE_WEEK6_START, week_end: FIXTURE_WEEK6_END,
+    is_playoff: false,
+    team1_user_id: 'roberto',
+    team2_user_id: isBye ? null : 'gianluigi',
+    ...(isBye ? { team1_gain: null, team2_gain: null } : week6Gains),
+  };
+
+  const playoffWeek = {
+    week_number: 15, week_start: '2026-12-14T13:30:00.000Z', week_end: '2026-12-18T20:00:00.000Z',
+    is_playoff: true,
+    team1_user_id: 'roberto',
+    team2_user_id: isPlayoffBye || isEliminated || isMissedPlayoffs ? null : 'gianluigi',
+    team1_gain: isEliminated ? -10 : null,
+    team2_gain: isEliminated ? 40 : null,
+  };
+
+  const matchups = isPlayoffState
+    ? (isMissedPlayoffs ? [] : [playoffWeek])
+    : [
+        ...ROBERTO_WEEKS.map((w, i) => {
+          const monday = new Date(Date.UTC(2026, 6, 6 + i * 7, 13, 30));
+          const friday = new Date(monday.getTime() + 4 * 24 * 3600 * 1000 + 6.5 * 3600 * 1000);
+          return {
+            week_number: w.week, week_start: monday.toISOString(), week_end: friday.toISOString(),
+            is_playoff: false, team1_user_id: 'roberto', team2_user_id: 'gianluigi',
+            team1_gain: w.gain, team2_gain: -w.gain,
+          };
+        }),
+        week6,
+      ];
 
   const data: GetHomeLeagueResult = {
     my_ledger: { drafts: myDrafts, trades: [] },
-    current_week: { week_number: 6, my_snapshots: mySnapshots, my_trades: [], opponent_snapshots: oppSnapshots, opponent_trades: [] },
+    current_week: {
+      week_number: isPlayoffState ? 15 : 6,
+      my_snapshots: isBye || isPlayoffState ? [] : mySnapshots,
+      my_trades: [],
+      opponent_snapshots: isBye || isPlayoffState ? [] : oppSnapshots,
+      opponent_trades: [],
+    },
     matchups,
     standings: [
       { user_id: 'roberto', rank: 2, wins: 4, losses: 1, ties: 0, points_for: 129.99, display_name: 'Roberto B.', is_bot: false },
@@ -98,23 +142,56 @@ function fixtureHomeLeague(): { data: GetHomeLeagueResult; meta: HomeLeagueMeta;
     ],
   };
 
+  const draftStatus = fixture === 'pre_draft' || fixture === 'pre_draft_waiting' ? 'not_started'
+    : fixture === 'drafting' ? 'in_progress' : 'completed';
+  const seasonStatus = fixture === 'complete' ? 'completed' : isPlayoffState ? 'playoffs' : 'active';
+  const currentWeek = isPlayoffState ? 15 : draftStatus === 'completed' ? 6 : 1;
+  const leagueStartDate = fixture === 'pre_season' ? '2099-01-01T00:00:00Z' : '2026-08-01T00:00:00Z';
+
   const meta: HomeLeagueMeta = {
-    myUserId: 'roberto', draftStatus: 'completed', leagueStartDate: '2026-08-01T00:00:00Z',
-    seasonStatus: 'active', currentWeek: FIXTURE_LEAGUE.currentWeek, numWeeks: FIXTURE_LEAGUE.numWeeks,
+    myUserId: 'roberto', draftStatus, leagueStartDate,
+    seasonStatus, currentWeek, numWeeks: FIXTURE_LEAGUE.numWeeks,
     playoffTeams: FIXTURE_LEAGUE.playoffTeams, stakeMode: FIXTURE_LEAGUE.stakeMode,
     notionalPerSlot: FIXTURE_LEAGUE.notionalPerSlot, numRounds: FIXTURE_LEAGUE.numRounds,
-    draftOrderWaiting: false, hasLaterPlayoffRow: false, lastPlayoffLoss: false,
+    draftOrderWaiting: fixture === 'pre_draft_waiting',
   };
 
-  const quote = (sym: string) =>
-    ROBERTO_HOLDINGS.find((h) => h.symbol === sym)?.thu ?? GIANLUIGI_HOLDINGS.find((h) => h.symbol === sym)?.thu ?? null;
+  const market: MarketInfo = fixture === 'live_closed'
+    ? { status: 'closed', reason: 'after_hours', nextOpenAt: '2026-09-24T13:30:00.000Z' }
+    : { status: 'open', reason: 'regular_session', nextOpenAt: null };
+
+  const now = fixture === 'scoring' || fixture === 'scored'
+    ? new Date('2026-09-25T20:30:00.000Z') // Friday, after week_end
+    : isPlayoffState
+      ? new Date('2026-12-15T18:00:00.000Z')
+      : new Date('2026-09-24T17:37:00.000Z'); // Thursday 1:37 PM ET, the board's live moment
+
+  // leader_flip: a call-counter alternates whose price is higher, to
+  // exercise H3's leader-change wash under the live poll.
+  let flipCall = 0;
+  const quote = (sym: string) => {
+    if (fixture === 'leader_flip') {
+      flipCall += 1;
+      const flipped = flipCall % 2 === 0;
+      const rows = flipped ? GIANLUIGI_HOLDINGS : ROBERTO_HOLDINGS;
+      const mine = ROBERTO_HOLDINGS.find((h) => h.symbol === sym);
+      const theirs = GIANLUIGI_HOLDINGS.find((h) => h.symbol === sym);
+      if (mine) return flipped ? mine.mon : mine.thu; // my side goes flat when "flipped" (opponent leads)
+      if (theirs) return flipped ? theirs.thu * 1.5 : theirs.mon; // opponent surges when "flipped"
+      return null;
+    }
+    return ROBERTO_HOLDINGS.find((h) => h.symbol === sym)?.thu ?? GIANLUIGI_HOLDINGS.find((h) => h.symbol === sym)?.thu ?? null;
+  };
 
   const bars: BarsBySymbol = {};
   for (const h of ROBERTO_HOLDINGS) {
-    bars[h.symbol] = [{ date: '2026-09-21', close: h.mon }, { date: '2026-09-24', close: h.thu }];
+    bars[h.symbol] = [{ date: '2026-09-18', close: h.prev }, { date: '2026-09-21', close: h.mon }, { date: '2026-09-24', close: h.thu }];
+  }
+  for (const h of GIANLUIGI_HOLDINGS) {
+    bars[h.symbol] = bars[h.symbol] ?? [{ date: '2026-09-18', close: h.prev }, { date: '2026-09-21', close: h.mon }, { date: '2026-09-24', close: h.thu }];
   }
 
-  return { data, meta, quote, bars };
+  return { data, meta, market, now, quote, bars };
 }
 
 export function useHomeLeague(leagueId: string | null): UseHomeLeagueResult {
@@ -127,49 +204,68 @@ export function useHomeLeague(leagueId: string | null): UseHomeLeagueResult {
   // One cache entry per league, so switching leagues (H5) can crossfade
   // onto already-fetched data instead of a blank loading flash.
   const cacheRef = useRef<Map<string, HomeViewModel>>(new Map());
+  // Staleness guard (code review, 2026-09-29): switching leagues quickly
+  // had no cancellation, so a slow response for league A could land
+  // AFTER a newer request for league B started, silently overwriting B's
+  // view with A's data. Every setter below checks this before writing.
+  const requestedLeagueRef = useRef<string | null>(null);
 
   const fetchLive = useCallback(async () => {
+    requestedLeagueRef.current = leagueId;
+    const isStale = () => requestedLeagueRef.current !== leagueId;
+
     if (!leagueId || !user?.id) {
-      setStatus('no-league');
+      if (!isStale()) setStatus('no-league');
       return;
     }
 
     if (HOME_FIXTURE) {
-      const { data, meta, quote, bars } = fixtureHomeLeague();
+      const { data, meta, market: fixtureMarket, now: fixtureNow, quote, bars } = fixtureHomeLeague(HOME_FIXTURE);
       const vm = buildHomeViewModel({
-        now: new Date(), meta, market: { status: 'open', reason: 'regular_session', nextOpenAt: null },
+        now: fixtureNow, meta, market: fixtureMarket,
         data, quote, bars, playoffRoundLabelForWeek,
       });
-      setViewModel(vm);
-      setStatus('ready');
+      if (!isStale()) {
+        setViewModel(vm);
+        setStatus('ready');
+      }
       return;
     }
 
     const league = leagues.find((l) => l.id === leagueId);
     const summary = homeSummaryByLeague.get(leagueId);
     if (!league || !summary) {
-      setStatus('no-league');
+      if (!isStale()) setStatus('no-league');
       return;
     }
 
-    setStatus((prev) => (cacheRef.current.has(leagueId) ? prev : 'loading'));
+    if (!isStale()) setStatus((prev) => (cacheRef.current.has(leagueId) ? prev : 'loading'));
 
     let requestCount = 0;
     const { data: homeLeagueData, error: homeLeagueError } = await supabase.rpc('get_home_league', { p_league_id: leagueId });
     requestCount += 1;
     if (homeLeagueError || !homeLeagueData) {
       console.warn('[home] get_home_league failed', homeLeagueError?.message);
-      setError(homeLeagueError?.message ?? 'Could not load this league.');
-      setStatus('error');
+      if (!isStale()) {
+        setError(homeLeagueError?.message ?? 'Could not load this league.');
+        setStatus('error');
+      }
       return;
     }
     const data = homeLeagueData as GetHomeLeagueResult;
 
+    // Every symbol either side could hold or have traded THIS WEEK — a
+    // mid-week buy of a symbol with no Monday snapshot row was missing
+    // from this list (code review, 2026-09-29), so `quote` never priced
+    // it and liveWeekScore silently dropped that position's gain.
     const symbols = Array.from(new Set([
       ...data.my_ledger.drafts.map((d) => d.symbol),
+      ...data.my_ledger.trades.map((t) => t.symbol),
       ...data.current_week.my_snapshots.map((s) => s.symbol),
+      ...data.current_week.my_trades.map((t) => t.symbol),
       ...data.current_week.opponent_snapshots.map((s) => s.symbol),
-    ]));
+      ...data.current_week.opponent_trades.map((t) => t.symbol),
+    ].filter((s) => s?.toUpperCase() !== 'SKIP')));
 
     let quotePrices: Record<string, number> = {};
     if (symbols.length > 0) {
@@ -182,7 +278,14 @@ export function useHomeLeague(leagueId: string | null): UseHomeLeagueResult {
     let bars: BarsBySymbol = {};
     if (symbols.length > 0) {
       const weekStart = data.matchups.find((m) => m.week_number === league.current_week)?.week_start;
-      const startDate = weekStart ? weekStart.slice(0, 10) : new Date().toISOString().slice(0, 10);
+      // 6 calendar days before Monday's open, not Monday's own date — so
+      // there's always at least one earlier bar to serve as Monday's own
+      // `prevClose` (code review, 2026-09-29: starting exactly AT
+      // week_start left "today" on Monday with no prior bar in range,
+      // showing +$0.00 every Monday regardless of the real move).
+      const anchor = weekStart ? new Date(weekStart) : new Date();
+      anchor.setUTCDate(anchor.getUTCDate() - 6);
+      const startDate = anchor.toISOString().slice(0, 10);
       const { data: barsData, error: barsError } = await supabase.functions.invoke('historical-bars', {
         body: { symbols, start: startDate },
       });
@@ -205,9 +308,12 @@ export function useHomeLeague(leagueId: string | null): UseHomeLeagueResult {
       seasonStatus: league.season_status, currentWeek: league.current_week, numWeeks: league.num_weeks,
       playoffTeams: league.playoff_teams, stakeMode: league.stake_mode,
       notionalPerSlot: league.notional_per_slot, numRounds: league.num_rounds,
-      // Per-state extras (draft order, playoff bracket) are fetched by the
-      // specific phase card that needs them, not here — see module doc.
-      draftOrderWaiting: false, hasLaterPlayoffRow: false, lastPlayoffLoss: false,
+      // Draft-order-waiting is a per-state extra (fetched by the pre_draft
+      // card itself). The two playoff flags are NOT extras — they're
+      // derived inside buildHomeViewModel from `data.matchups` (code
+      // review, 2026-09-29: hardcoding them false here meant every bye/
+      // eliminated/missed-playoffs team read as "before the season").
+      draftOrderWaiting: false,
     };
 
     const vm = buildHomeViewModel({
@@ -217,6 +323,7 @@ export function useHomeLeague(leagueId: string | null): UseHomeLeagueResult {
     });
 
     cacheRef.current.set(leagueId, vm);
+    if (isStale()) return; // a newer league switch has already superseded this response
     setViewModel(vm);
     setSummary(summary);
     setStatus('ready');
@@ -232,6 +339,20 @@ export function useHomeLeague(leagueId: string | null): UseHomeLeagueResult {
     }
     fetchLive();
   }, [fetchLive, leagueId]);
+
+  // Live poll (code review, 2026-09-29: there was none — Home never
+  // refreshed on its own, so H1/H3's rolls and the live->scoring->scored
+  // transition never played without a manual pull-to-refresh). Only
+  // while the market is actually open for this league's current week —
+  // no point polling a closed market or an already-scored week.
+  const isLiveOpen = viewModel?.phase.kind === 'live_open';
+  useEffect(() => {
+    if (!isLiveOpen) return;
+    const id = setInterval(() => {
+      fetchLive();
+    }, 30_000);
+    return () => clearInterval(id);
+  }, [isLiveOpen, fetchLive]);
 
   return { status, viewModel, summary, error, refresh: fetchLive };
 }

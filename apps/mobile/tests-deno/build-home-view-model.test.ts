@@ -84,7 +84,7 @@ function buildFixtureInput() {
     draftStatus: 'completed', leagueStartDate: '2026-08-01T00:00:00Z',
     seasonStatus: 'active', currentWeek: 6, numWeeks: 14, playoffTeams: 6,
     stakeMode: 'fixed_notional', notionalPerSlot: 2000, numRounds: 6,
-    draftOrderWaiting: false, hasLaterPlayoffRow: false, lastPlayoffLoss: false,
+    draftOrderWaiting: false,
   };
 
   const quote = (sym: string) => ROBERTO.find((h) => h.symbol === sym)?.thu ?? GIANLUIGI.find((h) => h.symbol === sym)?.thu ?? null;
@@ -153,6 +153,83 @@ Deno.test('phase is live_open (Thursday, market open) and the this-week card has
   });
   assertEquals(vm.phase.kind, 'live_open');
   assertEquals(vm.thisWeek !== null, true);
+});
+
+// ── Regression: code review findings, 2026-09-29 ──────────────────────────
+
+Deno.test('C1: the weekend after current_week advances shows the REAL scored final, not a fabricated $0-$0', () => {
+  const { data, meta, quote, bars } = buildFixtureInput();
+  // Week 6 is now SCORED (both gains posted); current_week has already
+  // advanced to 7 (an unstarted, empty row) — the F5 grace period.
+  const week6 = data.matchups.find((m) => m.week_number === 6)!;
+  week6.team1_gain = 72.1;
+  week6.team2_gain = -20.5;
+  data.matchups.push({
+    week_number: 7, week_start: '2026-09-28T13:30:00.000Z', week_end: '2026-10-02T20:00:00.000Z',
+    is_playoff: false, team1_user_id: MY_ID, team2_user_id: OPP_ID, team1_gain: null, team2_gain: null,
+  });
+  data.current_week = { week_number: 7, my_snapshots: [], my_trades: [], opponent_snapshots: [], opponent_trades: [] };
+  const advancedMeta = { ...meta, currentWeek: 7 };
+
+  const now = new Date('2026-09-26T12:00:00.000Z'); // Saturday
+  const vm = buildHomeViewModel({
+    now, meta: advancedMeta, market: { status: 'closed', reason: 'weekend', nextOpenAt: '2026-09-28T13:30:00.000Z' },
+    data, quote, bars, playoffRoundLabelForWeek,
+  });
+
+  assertEquals(vm.phase.kind, 'scored');
+  // The REAL week-6 gains, never $0-$0.
+  assertEquals(vm.thisWeek?.you.gain, 72.1);
+  assertEquals(vm.thisWeek?.opponent.gain, -20.5);
+  assertEquals(vm.thisWeek?.final, true);
+  assertEquals(vm.thisWeek?.won, true); // 72.1 > -20.5
+  // The opponent is week 6's opponent (still Gianluigi in this fixture,
+  // but resolved via opponentUserId, not an assumption).
+  assertEquals(vm.thisWeek?.opponentUserId, OPP_ID);
+});
+
+Deno.test('C3: hasLaterPlayoffRow/lastPlayoffLoss are derived from matchups, not hardcoded false', () => {
+  const { data, meta, quote, bars } = buildFixtureInput();
+  // A first-round bye: no row for me at week 15, but a later semifinal
+  // row (week 16) names me.
+  data.matchups.push(
+    { week_number: 16, week_start: '2026-12-21T13:30:00.000Z', week_end: '2026-12-25T20:00:00.000Z', is_playoff: true, team1_user_id: MY_ID, team2_user_id: OPP_ID, team1_gain: null, team2_gain: null },
+  );
+  const playoffMeta = { ...meta, seasonStatus: 'playoffs' as const, currentWeek: 15, playoffTeams: 4 };
+  const now = new Date('2026-12-15T18:00:00.000Z');
+  const vm = buildHomeViewModel({
+    now, meta: playoffMeta, market: { status: 'open', reason: 'regular_session', nextOpenAt: null },
+    data, quote, bars, playoffRoundLabelForWeek,
+  });
+  assertEquals(vm.phase.kind, 'playoff_bye');
+});
+
+Deno.test('C3: a real elimination (last playoff row scored as a loss, no later row) reads eliminated', () => {
+  const { data, meta, quote, bars } = buildFixtureInput();
+  data.matchups.push(
+    { week_number: 15, week_start: '2026-12-14T13:30:00.000Z', week_end: '2026-12-18T20:00:00.000Z', is_playoff: true, team1_user_id: MY_ID, team2_user_id: OPP_ID, team1_gain: -10, team2_gain: 40 },
+  );
+  const playoffMeta = { ...meta, seasonStatus: 'playoffs' as const, currentWeek: 16, playoffTeams: 4 };
+  data.current_week = { week_number: 16, my_snapshots: [], my_trades: [], opponent_snapshots: [], opponent_trades: [] };
+  const now = new Date('2026-12-21T18:00:00.000Z');
+  const vm = buildHomeViewModel({
+    now, meta: playoffMeta, market: { status: 'open', reason: 'regular_session', nextOpenAt: null },
+    data, quote, bars, playoffRoundLabelForWeek,
+  });
+  assertEquals(vm.phase.kind, 'eliminated');
+});
+
+Deno.test('C3: a team never seeded into the playoff bracket reads missed_playoffs, never pre_season', () => {
+  const { data, meta, quote, bars } = buildFixtureInput();
+  // No playoff rows at all for me — data.matchups only has the 6 regular
+  // weeks buildFixtureInput already set up.
+  const playoffMeta = { ...meta, seasonStatus: 'playoffs' as const, currentWeek: 15, playoffTeams: 4 };
+  const now = new Date('2026-12-15T18:00:00.000Z');
+  const vm = buildHomeViewModel({
+    now, meta: playoffMeta, market: { status: 'open', reason: 'regular_session', nextOpenAt: null },
+    data, quote, bars, playoffRoundLabelForWeek,
+  });
+  assertEquals(vm.phase.kind, 'missed_playoffs');
 });
 
 Deno.test('season gain through week 5 matches ROBERTO_WEEKS = 129.99, before this week live is added', () => {

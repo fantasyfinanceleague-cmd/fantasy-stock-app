@@ -40,6 +40,11 @@ export interface ThisWeekCardProps {
   /** "Ends Fri 4:00 PM ET" / "…at Thursday's close" / etc. */
   rightLabel: string;
   liveChipLabel?: string;
+  /** The top-left tag — "This week" normally, or the playoff round name
+   * during playoffs (spec: "the this-week card's tag becomes the round
+   * name" — code review, 2026-09-29 found the round never reaching this
+   * card at all). Defaults to THIS_WEEK_TAG. */
+  tag?: string;
   /** State 3: neither side's gain is posted yet — skeleton scores, no
    * tug, no lead line, the "Results post…" message instead of a footer. */
   scoring?: boolean;
@@ -51,7 +56,7 @@ export interface ThisWeekCardProps {
 }
 
 export function ThisWeekCard({
-  week, isLive, you, opponent, opponentName, rightLabel, liveChipLabel, scoring = false, resultLine,
+  week, isLive, you, opponent, opponentName, rightLabel, liveChipLabel, tag, scoring = false, resultLine,
 }: ThisWeekCardProps) {
   const { colors } = useTheme();
   const { reduced, duration, easing, withTiming } = useMotion();
@@ -90,7 +95,7 @@ export function ThisWeekCard({
       <Animated.View style={[styles.wash, { backgroundColor: colors.accentWash }, washStyle]} pointerEvents="none" />
       <View style={styles.header}>
         <Text variant="tag" style={{ color: colors.liveText }}>
-          {THIS_WEEK_TAG}
+          {tag ?? THIS_WEEK_TAG}
         </Text>
         <View style={[styles.chip, { backgroundColor: colors.inset }]}>
           {isLive ? <LiveDot size={7} /> : null}

@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { LayoutChangeEvent, StyleSheet, View } from 'react-native';
 import Svg, { ClipPath, Defs, Line, Path, Rect, Circle } from 'react-native-svg';
-import Animated, { useAnimatedProps, useSharedValue } from 'react-native-reanimated';
+import Animated, { runOnJS, useAnimatedProps, useSharedValue } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
 
@@ -94,11 +94,16 @@ export function SeasonChart({ points, live = false, weekStartIdx, onScrubIndex }
     lastHapticIndex.current = null;
   }
 
+  // Reanimated auto-workletizes these callbacks and runs them on the UI
+  // thread; `updateScrub`/`endScrub` call `setState` and `Haptics`, plain
+  // JS that must run on the JS thread — found in code review (2026-09-29)
+  // as a likely crash on the first long-press. `runOnJS` is what
+  // LeagueSheet.tsx / OnboardingPager.tsx already use for the same reason.
   const pan = Gesture.Pan()
     .activateAfterLongPress(120)
-    .onUpdate((e) => updateScrub(e.x))
-    .onEnd(() => endScrub())
-    .onFinalize(() => endScrub());
+    .onUpdate((e) => runOnJS(updateScrub)(e.x))
+    .onEnd(() => runOnJS(endScrub)())
+    .onFinalize(() => runOnJS(endScrub)());
 
   const scrubPoint = geometry && scrubIndex != null ? geometry.points[scrubIndex] : null;
   const scrubValue = scrubIndex != null ? points[scrubIndex] : null;

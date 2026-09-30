@@ -77,13 +77,19 @@ export type PhaseResult =
   | ({ kind: 'pre_draft'; waiting: boolean } & BaseResult)
   | ({ kind: 'drafting' } & BaseResult)
   | ({ kind: 'pre_season' } & BaseResult)
-  | ({ kind: 'scoring'; week: number; isPlayoff: boolean; round: string | null } & BaseResult)
+  | ({ kind: 'scoring'; week: number; isPlayoff: boolean; round: string | null; weekEnd: string } & BaseResult)
   | ({ kind: 'scored'; week: number; won: boolean | null; isPlayoff: boolean; round: string | null; nextStart: string | null } & BaseResult)
   | ({ kind: 'bye'; week: number; nextStart: string | null } & BaseResult)
   | ({ kind: 'playoff_bye'; week: number; round: string | null } & BaseResult)
   | ({ kind: 'eliminated'; round: string | null } & BaseResult)
-  | ({ kind: 'live_open'; week: number; isPlayoff: boolean; round: string | null } & BaseResult)
-  | ({ kind: 'live_closed'; week: number; isPlayoff: boolean; round: string | null; reason: string; resumesAt: string | null } & BaseResult);
+  /** Playoffs are on, but I was never seeded into the bracket at all — no
+   * playoff row EVER (not a bye-to-later-round, not a scored loss). Found
+   * by the code review (2026-09-29): without this branch, a team that
+   * didn't make the playoffs fell through to `pre_season`, which reads
+   * as "the season hasn't started" — actively wrong mid-playoffs. */
+  | ({ kind: 'missed_playoffs' } & BaseResult)
+  | ({ kind: 'live_open'; week: number; isPlayoff: boolean; round: string | null; weekEnd: string } & BaseResult)
+  | ({ kind: 'live_closed'; week: number; isPlayoff: boolean; round: string | null; reason: string; resumesAt: string | null; weekEnd: string } & BaseResult);
 
 function isBetween(now: Date, startIso: string, endIso: string): boolean {
   const t = now.getTime();
@@ -170,7 +176,7 @@ export function homePhase(
 
     if (ended) {
       if (!bothScored(row)) {
-        return { kind: 'scoring', week: row.week, isPlayoff: row.isPlayoff, round, ...base };
+        return { kind: 'scoring', week: row.week, isPlayoff: row.isPlayoff, round, weekEnd: row.weekEnd, ...base };
       }
       // Both sides are in (or there was never an opponent to wait on).
       const won = row.hasOpponent ? (row.myGain ?? 0) > (row.opponentGain ?? 0) : null;
@@ -197,7 +203,7 @@ export function homePhase(
       return { kind: 'bye', week: row.week, nextStart, ...base };
     }
     if (market.status === 'open') {
-      return { kind: 'live_open', week: row.week, isPlayoff: row.isPlayoff, round, ...base };
+      return { kind: 'live_open', week: row.week, isPlayoff: row.isPlayoff, round, weekEnd: row.weekEnd, ...base };
     }
     return {
       kind: 'live_closed',
@@ -206,6 +212,7 @@ export function homePhase(
       round,
       reason: market.reason,
       resumesAt: market.status === 'unknown' ? null : market.nextOpenAt,
+      weekEnd: row.weekEnd,
       ...base,
     };
   }
@@ -223,6 +230,9 @@ export function homePhase(
       const round = roundLabelForWeek(playoffRoundLabelForWeek, week, numWeeks, league.playoffTeams);
       return { kind: 'eliminated', round, ...base };
     }
+    // Playoffs are on, no row for me now, no later row, and no scored
+    // loss to point to: I was never in the bracket.
+    return { kind: 'missed_playoffs', ...base };
   }
   // Regular season, no row, market otherwise irrelevant: pre-season is the
   // only honest default left (a schedule that hasn't been generated yet).

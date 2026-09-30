@@ -9,7 +9,7 @@ import { PhasePlaceholder } from '@/components/shell/PhasePlaceholder';
 import { ShellHeader } from '@/components/shell/ShellHeader';
 import { BarsRefresh } from '@/components/shell/BarsRefresh';
 import { useLeagueContext } from '@/lib/LeagueContext';
-import type { HomeSummaryRow, League } from '@/lib/LeagueContext';
+import type { League } from '@/lib/LeagueContext';
 import { useHomeLeague } from '@/lib/home/useHomeLeague';
 import { HomeHero } from '@/components/home/HomeHero';
 import { ThisWeekCard } from '@/components/home/ThisWeekCard';
@@ -20,47 +20,56 @@ import { DraftingCard } from '@/components/home/DraftingCard';
 import { SeasonCompleteCard } from '@/components/home/SeasonCompleteCard';
 import { PhaseMessageCard } from '@/components/home/PhaseMessageCard';
 import { PhaseTransition } from '@/components/home/PhaseTransition';
+import type { PhaseResult } from '@/lib/home/homePhase';
 import {
-  ENDS_FRIDAY_LABEL, MARKET_CLOSED_CHIP, SCORING_CHIP, SCORED_CHIP,
+  MARKET_CLOSED_CHIP, SCORING_CHIP, SCORED_CHIP, endsAtLabel, marketClosedAt, marketResumesAt,
   PRE_SEASON_NO_LEADER, PRE_SEASON_SCORING_STARTS, BYE_MESSAGE, byeNextWeekLabel,
   byeToRoundLabel, eliminatedLabel, SEE_THE_BRACKET, scoredResultLine, nextWeekStartsLabel,
+  MISSED_PLAYOFFS_MESSAGE, THIS_WEEK_TAG,
 } from '@/lib/home/homeCopy';
 
-function thisWeekChrome(phaseKind: string, week: number): { isLive: boolean; rightLabel: string; liveChipLabel: string } {
-  switch (phaseKind) {
+// `rightLabel` for live/closed states is derived from the phase's own
+// `weekEnd`/`resumesAt` (never a hardcoded literal — code review,
+// 2026-09-29 found "Ends Fri 4:00 PM ET" as a constant, wrong on any
+// holiday-shifted week). Takes the whole phase, not just its kind, so it
+// has the real timestamps to format.
+function thisWeekChrome(phase: PhaseResult, week: number): { isLive: boolean; rightLabel: string; liveChipLabel: string; tag: string } {
+  const tag = phase.kind !== 'missed_playoffs' && 'isPlayoff' in phase && phase.isPlayoff && 'round' in phase && phase.round ? phase.round : THIS_WEEK_TAG;
+  switch (phase.kind) {
     case 'live_open':
-      return { isLive: true, rightLabel: ENDS_FRIDAY_LABEL, liveChipLabel: `Week ${week} · Live` };
+      return { isLive: true, rightLabel: endsAtLabel(phase.weekEnd), liveChipLabel: `Week ${week} · Live`, tag };
     case 'live_closed':
-      return { isLive: false, rightLabel: ENDS_FRIDAY_LABEL, liveChipLabel: MARKET_CLOSED_CHIP };
+      return {
+        isLive: false,
+        rightLabel: `${marketClosedAt(phase.weekEnd)}${phase.resumesAt ? ` · ${marketResumesAt(phase.resumesAt)}` : ''}`,
+        liveChipLabel: MARKET_CLOSED_CHIP,
+        tag,
+      };
     case 'scoring':
-      return { isLive: false, rightLabel: '', liveChipLabel: SCORING_CHIP };
+      return { isLive: false, rightLabel: '', liveChipLabel: SCORING_CHIP, tag };
     case 'scored':
-      return { isLive: false, rightLabel: '', liveChipLabel: SCORED_CHIP };
+      return { isLive: false, rightLabel: '', liveChipLabel: SCORED_CHIP, tag };
     default:
-      return { isLive: false, rightLabel: '', liveChipLabel: `Week ${week}` };
+      return { isLive: false, rightLabel: '', liveChipLabel: `Week ${week}`, tag };
   }
 }
 
 function HomeBody({
   status,
   viewModel,
-  summary,
   league,
   leagueId,
   onRefresh,
 }: {
   status: string;
   viewModel: ReturnType<typeof useHomeLeague>['viewModel'];
-  summary: HomeSummaryRow | null;
   league: League | null;
   leagueId: string | null;
   onRefresh: () => Promise<void>;
 }) {
-  if (status === 'loading' || !viewModel) {
-    // A skeleton card is a later polish item; an empty body while loading
-    // is honest and never fabricates numbers.
-    return null;
-  }
+  // Error checked BEFORE the `!viewModel` fallback (code review,
+  // 2026-09-29: a first-load failure has no viewModel yet, so the old
+  // ordering returned a silent blank body instead of this message).
   if (status === 'error') {
     return (
       <PhasePlaceholder
@@ -71,6 +80,11 @@ function HomeBody({
         onRefresh={onRefresh}
       />
     );
+  }
+  if (status === 'loading' || !viewModel) {
+    // A skeleton card is a later polish item; an empty body while loading
+    // is honest and never fabricates numbers.
+    return null;
   }
 
   const { phase, hero, thisWeek, standings, myUserId, season, weeklyResults } = viewModel;
@@ -114,7 +128,7 @@ function HomeBody({
   }
 
   const week = 'week' in phase ? phase.week : 0;
-  const chrome = thisWeekChrome(phase.kind, week);
+  const chrome = thisWeekChrome(phase, week);
 
   const standingRows: StandingRow[] = standings.map((s) => ({
     userId: s.user_id,
@@ -130,39 +144,46 @@ function HomeBody({
   const myRow = standingRows.find((r) => r.isYou);
   const record = myRow ? `${myRow.wins}–${myRow.losses}${myRow.ties ? `–${myRow.ties}` : ''}` : '';
 
-  // The opponent's name/bot flag come from get_home_summary (the current
-  // matchup's two slots), not from the standings list — a standings row
-  // can be absent from the displayed top-3+you, but the opponent is
-  // always known from the summary whenever `thisWeek` is non-null.
-  const opponentName = summary
-    ? summary.team1_user_id === myUserId
-      ? summary.team2_display_name ?? 'Opponent'
-      : summary.team1_display_name ?? 'Opponent'
+  // The opponent's name/bot flag for THIS card's week — from `standings`
+  // (every league member, any week) keyed by `thisWeek.opponentUserId`,
+  // NOT get_home_summary (which only ever names the CURRENT week's
+  // opponent). Code review, 2026-09-29: using `summary` unconditionally
+  // named the WRONG opponent during the Fri-close -> next-open grace
+  // period, when the card is about last week's (already-different)
+  // matchup.
+  const opponentName = thisWeek?.opponentUserId
+    ? standings.find((s) => s.user_id === thisWeek.opponentUserId)?.display_name ?? 'Opponent'
     : 'Opponent';
 
   // The middle slot: the this-week card for live/scoring/scored states, or
   // a plain message card for the states the board has no scoreboard for
-  // at all (pre_season, bye, and the playoff_bye/eliminated modifiers of
-  // state 10 — spec: "No score and no tug" for a bye; the same holds for
-  // these).
+  // at all (pre_season, bye, and the playoff_bye/eliminated/missed
+  // modifiers of state 10 — spec: "No score and no tug" for a bye; the
+  // same holds for these).
   let middleCard: ReactElement | null = null;
   if (phase.kind === 'pre_season') {
     middleCard = <PhaseMessageCard lines={[PRE_SEASON_NO_LEADER, PRE_SEASON_SCORING_STARTS]} />;
   } else if (phase.kind === 'bye') {
-    middleCard = <PhaseMessageCard lines={[BYE_MESSAGE, byeNextWeekLabel(week + 1, phase.nextStart ?? '')]} />;
+    middleCard = <PhaseMessageCard lines={[BYE_MESSAGE, byeNextWeekLabel(week + 1, phase.nextStart)]} />;
   } else if (phase.kind === 'playoff_bye') {
-    middleCard = <PhaseMessageCard lines={[byeToRoundLabel(phase.round ?? 'the next round')]} />;
+    middleCard = <PhaseMessageCard lines={[byeToRoundLabel(phase.round)]} />;
   } else if (phase.kind === 'eliminated') {
     middleCard = (
-      <PhaseMessageCard lines={[eliminatedLabel(phase.round ?? '')]} actionLabel={SEE_THE_BRACKET} onAction={() => router.push('/(tabs)/league')} />
+      <PhaseMessageCard lines={[eliminatedLabel(phase.round)]} actionLabel={SEE_THE_BRACKET} onAction={() => router.push('/(tabs)/league')} />
     );
+  } else if (phase.kind === 'missed_playoffs') {
+    middleCard = <PhaseMessageCard lines={[MISSED_PLAYOFFS_MESSAGE]} />;
   } else if (thisWeek) {
     if (phase.kind === 'scoring') {
       middleCard = (
-        <ThisWeekCard week={week} isLive={false} you={thisWeek.you} opponent={thisWeek.opponent} opponentName={opponentName} rightLabel="" scoring />
+        <ThisWeekCard week={week} isLive={false} you={thisWeek.you} opponent={thisWeek.opponent} opponentName={opponentName} rightLabel="" tag={chrome.tag} scoring />
       );
     } else if (phase.kind === 'scored') {
-      const won = thisWeek.you.gain > thisWeek.opponent.gain;
+      // `thisWeek.won` — the AUTHORITATIVE result from the pure phase
+      // module, never re-derived from the displayed gains (code review,
+      // 2026-09-29: `you.gain > opponent.gain` misreads a tie as a loss,
+      // since `false` there means "the opponent wins" in the old code).
+      const won = thisWeek.won ?? false;
       middleCard = (
         <ThisWeekCard
           week={week}
@@ -170,8 +191,9 @@ function HomeBody({
           you={thisWeek.you}
           opponent={thisWeek.opponent}
           opponentName={opponentName}
-          rightLabel={('nextStart' in phase && phase.nextStart) ? nextWeekStartsLabel(week + 1, phase.nextStart) : ''}
+          rightLabel={'nextStart' in phase ? nextWeekStartsLabel(week + 1, phase.nextStart) : ''}
           liveChipLabel={chrome.liveChipLabel}
+          tag={chrome.tag}
           resultLine={scoredResultLine(won, week, opponentName)}
         />
       );
@@ -185,6 +207,7 @@ function HomeBody({
           opponentName={opponentName}
           rightLabel={chrome.rightLabel}
           liveChipLabel={chrome.liveChipLabel}
+          tag={chrome.tag}
         />
       );
     }
@@ -219,7 +242,7 @@ function HomeBody({
           isLive={chrome.isLive}
         />
       ) : null}
-      <StandingsCard rows={standingRows} numWeeks={phase.numWeeks ?? 0} />
+      <StandingsCard rows={standingRows} throughWeek={Math.max(0, week - 1)} />
     </>
   );
 }
@@ -238,7 +261,7 @@ function HomeBody({
 export default function HomeScreen() {
   const { leagues, loading, refresh, activeLeagueId, activeLeague } = useLeagueContext();
   const { colors } = useTheme();
-  const { status, viewModel, summary } = useHomeLeague(activeLeagueId);
+  const { status, viewModel } = useHomeLeague(activeLeagueId);
 
   // First load (e.g. just signed in): just the header, so neither state
   // flashes and then swaps for the other.
@@ -271,7 +294,7 @@ export default function HomeScreen() {
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <ShellHeader title="Home" showAvatar />
       <BarsRefresh onRefresh={refresh} contentContainerStyle={{ paddingHorizontal: space[6], paddingBottom: space[9], gap: space[6] }}>
-        <HomeBody status={status} viewModel={viewModel} summary={summary} league={activeLeague} leagueId={activeLeagueId} onRefresh={refresh} />
+        <HomeBody status={status} viewModel={viewModel} league={activeLeague} leagueId={activeLeagueId} onRefresh={refresh} />
       </BarsRefresh>
     </View>
   );

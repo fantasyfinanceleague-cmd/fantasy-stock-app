@@ -305,3 +305,18 @@ Deno.test('pre_season: draft done, league_start_date in the future', () => {
   );
   assertEquals(r.kind, 'pre_season');
 });
+
+Deno.test('missed_playoffs: playoffs on, no row for me ever (never seeded into the bracket)', () => {
+  const r = homePhase(
+    baseInput({
+      league: { draftStatus: 'completed', leagueStartDate: '2026-08-01T00:00:00Z', seasonStatus: 'playoffs', currentWeek: 15, numWeeks: 14, playoffTeams: 4 },
+      current: null,
+      previous: null,
+      hasLaterPlayoffRow: false,
+      lastPlayoffLoss: false,
+      now: ET('2026-12-15T15:00:00-04:00'),
+    }),
+    playoffRoundLabelForWeek,
+  );
+  assertEquals(r.kind, 'missed_playoffs');
+});
