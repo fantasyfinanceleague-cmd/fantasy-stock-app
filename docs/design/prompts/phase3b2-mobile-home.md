@@ -56,7 +56,7 @@ The header comes from 3b-1: the pill with "+N" and the avatar, with no chip. The
 | 5 | **Before the season** | "Before the season" | Zero is grey, never green; "No leader yet. Scoring starts at Monday's open." |
 | 6 | **Before the draft** + **waiting for managers** | "Before the draft" (both) | The countdown, "60-second picks · 6 rounds" (from `pick_seconds`), the draft-order line from `get_draft_order`, members (from display names, with bots marked), the invite code + Share, and "Build your queue". The waiting variant uses `OrderWaiting` (new copy on the board). |
 | 7 | **Drafting** | "Draft in progress" | From `get_draft_clock`: "You're on the clock" / "Round R · Pick P · 0:42 left" and "Go to the draft room". When it isn't your turn: "Round R · Pick P · you're up in K picks" (**new copy: flag it**). Plus "Your team so far". |
-| 8 | **Season complete** | "Season complete" | The champion / final-rank card and the stats grid. Needs ask **#11**, see "Backend". |
+| 8 | **Season complete** | "Season complete" | The champion / final-rank card and four tiles, **all from the season result (ask #11)**: Season gain · Best week · Regular season (rank + record) · Playoffs (record + result). **No "Final value" and no "Best pick":** neither is honestly derivable (value isn't budget + `points_for` under weekly snapshot scoring). See "Backend". |
 | 9 | **Bye week** (regular season) | *not on the board* | A bye is **no result** (ruling 2026-09-29): the card says "No matchup this week" and "Week N+1 starts Mon 9:30 AM ET". **New copy: flag it.** No score and no tug. |
 | 10 | **Playoffs** | *not on the board* | The this-week card's tag becomes the round name from `playoffLine` / `playoffPlan` ("Wild card", "Semifinals", "Final"). A first-round bye shows "Bye to the Semifinals". Eliminated shows "Out in the Semifinals" plus "See the bracket". **New copy: flag it.** |
 
@@ -110,7 +110,7 @@ Until D1 is ruled, the worker builds with the board's copy behind one string con
   - `week_snapshots` and `matchups` for your league, which members can already read.
 - **Request budget:** in the live state, at most **5 requests on load**: the summary, the snapshots (both players, this week), the quotes, `matchups` (your rows, all weeks) and the bars (lazy, when the Season card enters the viewport). State the count in the report.
 - **Bots:** every place a name renders shows the bot treatment from `is_bot`, never from parsing ids.
-- **Ask #11 (season result: final rank, champion, playoff W–L, best week), open.** It blocks state 8 only. If it hasn't landed, ship state 8 in its honest minimum: final rank, record and season gain, which the summary already has, and no champion claim you can't source. "Best pick" is dropped from v1 unless #11 carries it.
+- **Ask #11 (season result: final rank, record, season gain, best week, playoff result, champion), in progress.** It blocks state 8 only. If it hasn't landed, ship state 8 in its honest minimum: final rank, record and season gain, which the summary already has, and no champion claim you can't source. "Final value" and "Best pick" are **dropped** (the board is updated): render only fields the RPC returns.
 
 ## Motion and signature moments
 
