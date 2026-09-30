@@ -127,8 +127,12 @@ export function SeasonCompleteCard({
   return (
     <>
       <Card style={styles.medallionCard}>
-        <LinearGradient colors={[colors.liveGlow, 'transparent']} style={styles.wash} pointerEvents="none" />
-        <Animated.View style={[styles.trophyCircle, { backgroundColor: colors.live }, trophyStyle]}>
+        {/* S8 (Design Lead, 2026-09-30): gold is a CHAMPION signal --
+            a non-champion (2nd/3rd place) gets a neutral medallion, no
+            live-gold wash or circle, so the color itself never implies
+            a win that didn't happen. */}
+        {isChampion ? <LinearGradient colors={[colors.liveGlow, 'transparent']} style={styles.wash} pointerEvents="none" /> : null}
+        <Animated.View style={[styles.trophyCircle, { backgroundColor: isChampion ? colors.live : colors.text2 }, trophyStyle]}>
           <Ionicons name="trophy" size={36} color={colors.surface} />
         </Animated.View>
         <Text variant="tag" style={{ color: colors.liveText }}>

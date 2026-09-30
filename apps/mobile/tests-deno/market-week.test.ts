@@ -13,7 +13,7 @@
  * Run: `cd apps/mobile/tests-deno && deno test .`
  */
 import { assertEquals } from 'jsr:@std/assert';
-import { etWallClockToUtcIso, resolveWeekWindow, standardWeekSessions, type MarketCalendarSession } from '../lib/home/marketWeek.ts';
+import { etWallClockToUtcIso, resolveWeekWindow, standardWeekSessions, lastSessionCloseBefore, type MarketCalendarSession } from '../lib/home/marketWeek.ts';
 
 Deno.test('etWallClockToUtcIso: 9:30 AM ET in EDT (summer) is 13:30Z', () => {
   assertEquals(etWallClockToUtcIso('2026-09-21', '09:30:00'), '2026-09-21T13:30:00.000Z');
@@ -130,4 +130,35 @@ Deno.test('resolveWeekWindow: the missing-part failure propagates all the way ou
   } finally {
     Intl.DateTimeFormat = RealDateTimeFormat;
   }
+});
+
+// ── R2 (Design Lead, 2026-09-30): live_closed's "…at {weekday}'s close"
+// needs the session that ACTUALLY just closed, not the week's eventual
+// Friday end -- a Tuesday-evening after-hours state was reading "at
+// Friday's close" three days early. ─────────────────────────────────────
+
+Deno.test('lastSessionCloseBefore: Wednesday 8pm ET names Wednesday\'s own close, not Friday\'s', () => {
+  const week = standardWeekSessions('2026-09-25T21:00:00.000Z'); // anchored on Friday's nominal weekEnd
+  const now = new Date('2026-09-24T00:00:00.000Z'); // Wed 8pm ET (00:00Z Thu)
+  const result = lastSessionCloseBefore(now, week);
+  assertEquals(result, '2026-09-23T20:00:00.000Z'); // Wednesday 4:00 PM ET
+});
+
+Deno.test('lastSessionCloseBefore: Monday morning before the open has no session closed yet this week', () => {
+  const week = standardWeekSessions('2026-09-25T21:00:00.000Z');
+  const now = new Date('2026-09-21T12:00:00.000Z'); // Mon 8am ET, before the 9:30 open
+  assertEquals(lastSessionCloseBefore(now, week), null);
+});
+
+Deno.test('lastSessionCloseBefore: exactly at a session\'s close counts as already closed', () => {
+  const week = standardWeekSessions('2026-09-25T21:00:00.000Z');
+  const wedClose = etWallClockToUtcIso('2026-09-23', '16:00:00')!;
+  const result = lastSessionCloseBefore(new Date(wedClose), week);
+  assertEquals(result, wedClose);
+});
+
+Deno.test('lastSessionCloseBefore: no session in range closed yet returns null, never a fabricated guess', () => {
+  const week = standardWeekSessions('2026-09-25T21:00:00.000Z');
+  const now = new Date('2020-01-01T00:00:00.000Z'); // long before any session in `week`
+  assertEquals(lastSessionCloseBefore(now, week), null);
 });

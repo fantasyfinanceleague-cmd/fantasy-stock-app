@@ -148,3 +148,29 @@ export function standardWeekSessions(anchorIso: string): MarketCalendarSession[]
   }
   return sessions;
 }
+
+/**
+ * The most recent trading session's close at or before `now` — for
+ * "…at {weekday}'s close" (R2, Design Lead, 2026-09-30): a mid-week
+ * after-hours state (e.g. Tuesday evening) must name the day that JUST
+ * closed, not the week's eventual Friday end. Callers used to pass
+ * `weekEnd` here, which is always Friday regardless of which day the
+ * market is actually closed for right now. Null when no session in
+ * `sessions` has already closed by `now` (outside calendar coverage, or
+ * `now` is before the week's first close) — never a fabricated guess.
+ */
+export function lastSessionCloseBefore(now: Date, sessions: MarketCalendarSession[]): string | null {
+  const nowMs = now.getTime();
+  let best: string | null = null;
+  let bestMs = -Infinity;
+  for (const s of sessions) {
+    const closeIso = etWallClockToUtcIso(s.sessionDate, s.closeEt);
+    if (!closeIso) continue;
+    const closeMs = new Date(closeIso).getTime();
+    if (closeMs <= nowMs && closeMs > bestMs) {
+      best = closeIso;
+      bestMs = closeMs;
+    }
+  }
+  return best;
+}

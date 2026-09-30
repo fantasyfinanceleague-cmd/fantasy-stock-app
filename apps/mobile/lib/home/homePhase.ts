@@ -88,6 +88,13 @@ export interface HomePhaseInput {
    * advanced, and that's a stronger source than this field would be once
    * currentWeek has moved (see the 'scored' branch below). */
   nextWeekStart: string | null;
+  /** R2 (Design Lead, 2026-09-30): the actual last trading session's close
+   * at or before `now`, read from the market calendar — for live_closed's
+   * "…at {weekday}'s close". `weekEnd` is always Friday, so a mid-week
+   * after-hours state (e.g. Tuesday evening) used to claim "at Friday's
+   * close" days before Friday. Null falls back to `weekEnd` (never worse
+   * than before this field existed). */
+  lastCloseAt: string | null;
 }
 
 interface BaseResult {
@@ -124,7 +131,7 @@ export type PhaseResult =
    * as "the season hasn't started" — actively wrong mid-playoffs. */
   | ({ kind: 'missed_playoffs' } & BaseResult)
   | ({ kind: 'live_open'; week: number; isPlayoff: boolean; round: string | null; weekEnd: string } & BaseResult)
-  | ({ kind: 'live_closed'; week: number; isPlayoff: boolean; round: string | null; reason: string; resumesAt: string | null; weekEnd: string } & BaseResult);
+  | ({ kind: 'live_closed'; week: number; isPlayoff: boolean; round: string | null; reason: string; resumesAt: string | null; weekEnd: string; lastCloseAt: string | null } & BaseResult);
 
 function isBetween(now: Date, startIso: string, endIso: string): boolean {
   const t = now.getTime();
@@ -154,7 +161,7 @@ export function homePhase(
   input: HomePhaseInput,
   playoffRoundLabelForWeek: (week: number | null | undefined, numWeeks: number | null | undefined, playoffTeams: number | null | undefined) => string | null,
 ): PhaseResult {
-  const { league, current, previous, laterPlayoffWeek, lastPlayoffLoss, lastPlayoffWeek, draftOrderWaiting, now, market, nextWeekStart } = input;
+  const { league, current, previous, laterPlayoffWeek, lastPlayoffLoss, lastPlayoffWeek, draftOrderWaiting, now, market, nextWeekStart, lastCloseAt } = input;
   const numWeeks = league.numWeeks;
   const base: BaseResult = { numWeeks };
 
@@ -271,6 +278,7 @@ export function homePhase(
       reason: market.reason,
       resumesAt: market.status === 'unknown' ? null : market.nextOpenAt,
       weekEnd: row.weekEnd,
+      lastCloseAt,
       ...base,
     };
   }

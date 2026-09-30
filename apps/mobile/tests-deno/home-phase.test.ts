@@ -37,6 +37,7 @@ function baseInput(overrides: Partial<HomePhaseInput>): HomePhaseInput {
     now: ET('2026-09-24T15:00:00-04:00'), // Thu 3:00 PM ET, week 6
     market: { status: 'open', reason: 'regular_session', nextOpenAt: null },
     nextWeekStart: null,
+    lastCloseAt: null,
     ...overrides,
   };
 }
@@ -182,6 +183,23 @@ Deno.test('live_closed: Wednesday overnight, resumes from the market calendar', 
   if (r.kind === 'live_closed') {
     assertEquals(r.reason, 'after_hours');
     assertEquals(r.resumesAt, '2026-09-24T09:30:00-04:00');
+  }
+});
+
+Deno.test('live_closed: R2 -- carries lastCloseAt through for "…at {weekday}\'s close", never weekEnd', () => {
+  const r = homePhase(
+    baseInput({
+      current: week6,
+      now: ET('2026-09-23T20:00:00-04:00'), // Wed 8pm
+      market: { status: 'closed', reason: 'after_hours', nextOpenAt: '2026-09-24T09:30:00-04:00' },
+      lastCloseAt: '2026-09-23T16:00:00-04:00', // Wednesday's own close
+    }),
+    playoffRoundLabelForWeek,
+  );
+  assertEquals(r.kind, 'live_closed');
+  if (r.kind === 'live_closed') {
+    assertEquals(r.lastCloseAt, '2026-09-23T16:00:00-04:00');
+    assertEquals(r.lastCloseAt !== r.weekEnd, true); // week6's weekEnd is Friday -- must not collapse to it
   }
 });
 

@@ -20,7 +20,7 @@ import { buildSeasonGainSeries, type SeasonWeekInput, type SeasonGainSeriesResul
 import { todayChange, type TodayPosition } from './todayChange';
 import { teamValue, type StakeMode } from './teamValue';
 import { seasonGain } from './seasonGain';
-import { resolveWeekWindow, type MarketCalendarSession } from './marketWeek';
+import { resolveWeekWindow, lastSessionCloseBefore, type MarketCalendarSession } from './marketWeek';
 import { etDateParts } from '../time/etParts';
 
 export interface HomeLedgerRow {
@@ -285,6 +285,10 @@ export function buildHomeViewModel(input: HomeViewModelInput): HomeViewModel {
   // from the current/previous grace-period swap -- see homePhase.ts's own
   // doc on this field for why a bye needs it read this way.
   const nextWeekStart = matchupRowFor(data, meta, meta.currentWeek + 1, marketCalendar)?.weekStart ?? null;
+  // R2 (Design Lead, 2026-09-30): the actual last-closed session, for
+  // live_closed's "…at {weekday}'s close" -- see homePhase.ts's own doc
+  // on this field for why `weekEnd` (always Friday) was wrong mid-week.
+  const lastCloseAt = lastSessionCloseBefore(now, marketCalendar);
   const { laterPlayoffWeek, lastPlayoffLoss, lastPlayoffWeek } = playoffStatusFlags(data, meta);
 
   // B3 (Design Lead, 2026-09-30): leagueStartDate is written by the same
@@ -305,7 +309,7 @@ export function buildHomeViewModel(input: HomeViewModelInput): HomeViewModel {
       },
       current, previous,
       laterPlayoffWeek, lastPlayoffLoss, lastPlayoffWeek,
-      draftOrderWaiting: meta.draftOrderWaiting, now, market, nextWeekStart,
+      draftOrderWaiting: meta.draftOrderWaiting, now, market, nextWeekStart, lastCloseAt,
     },
     input.playoffRoundLabelForWeek,
   );
@@ -369,12 +373,19 @@ export function buildHomeViewModel(input: HomeViewModelInput): HomeViewModel {
         : null // a past, unscored row with no snapshot data to recompute from — shouldn't occur, but never fabricate a live score for it
     : null;
 
-  // Season gain = every already-scored week's gain for me, plus the
-  // current week's live gain ONLY when it isn't scored yet.
+  // Season gain = every already-scored REGULAR-SEASON week's gain for me,
+  // plus the current week's live gain ONLY when it isn't scored yet AND
+  // isn't a playoff week (R3, Design Lead, 2026-09-30: process-week-
+  // results guards points_for accumulation with `if (!isPlayoff)` --
+  // playoff performance never counts toward "season gain", which is a
+  // regular-season standings stat. Found via playoff_live's hero showing
+  // +$695.38 -- the wild-card week's live gain was being added on top of
+  // the real +$481.78 regular-season total).
   const scoredWeeklyGains: number[] = [];
   const weeklyResults: WeeklyResult[] = [];
   for (const m of data.matchups) {
     if (m.week_number >= meta.currentWeek) continue;
+    if (m.is_playoff) continue;
     const isMe1 = m.team1_user_id === meta.myUserId;
     const g = isMe1 ? m.team1_gain : m.team2_gain;
     const opp = isMe1 ? m.team2_gain : m.team1_gain;
@@ -385,9 +396,16 @@ export function buildHomeViewModel(input: HomeViewModelInput): HomeViewModel {
       weeklyResults.push({ week: m.week_number, gain: g, result });
     }
   }
-  const currentWeekLiveGain = currentRowScored ? null : myLive.gain;
-  if (currentRowScored && current) {
+  const currentWeekLiveGain = currentRowScored || current?.isPlayoff ? null : myLive.gain;
+  if (currentRowScored && current && !current.isPlayoff) {
     scoredWeeklyGains.push(current.myGain!);
+  }
+  // S7 (Design Lead, 2026-09-30): an ONGOING bye (the current week, no
+  // opponent, not yet scored) still gets its own "Bye W6" chip -- the
+  // loop above only walks PAST weeks (week_number < currentWeek), so the
+  // bye week itself never reached weeklyResults at all.
+  if (current && !current.hasOpponent && !current.isPlayoff) {
+    weeklyResults.push({ week: current.week, gain: 0, result: 'BYE' });
   }
 
   const stake = teamValue({
@@ -431,9 +449,16 @@ export function buildHomeViewModel(input: HomeViewModelInput): HomeViewModel {
   // seasonGainSeries's no-cosmetic-ramp doc, Orchestrator ruling
   // 2026-09-30); only the current week uses real per-day granularity from
   // `bars`.
+  //
+  // R3 (Design Lead, 2026-09-30): the line stops at the end of the
+  // REGULAR season -- meta.numWeeks is that boundary (playoffRoundLabel-
+  // ForWeek already treats it the same way, as "week - numWeeks = round").
+  // Playoff weeks show as round chips elsewhere, never as points on this
+  // gain line (same points_for-excludes-playoffs rule as the hero above).
+  const chartEndWeek = Math.min(meta.currentWeek, meta.numWeeks ?? meta.currentWeek);
   const weeks: SeasonWeekInput[] = [];
   let closesByDate: Record<string, Record<string, number>> = {};
-  for (let w = 1; w <= meta.currentWeek; w++) {
+  for (let w = 1; w <= chartEndWeek; w++) {
     const row = matchupRowFor(data, meta, w, marketCalendar);
     const isCurrent = w === meta.currentWeek;
     const weekStart = row?.weekStart ?? now.toISOString();
@@ -466,8 +491,12 @@ export function buildHomeViewModel(input: HomeViewModelInput): HomeViewModel {
       });
     }
   }
+  // R3: the same playoff exclusion as the weeks loop above -- otherwise a
+  // playoff-live week's live gain reaches the chart's endpoint through
+  // this separate "live" marker even though the loop itself never
+  // iterates that far anymore.
   const season = buildSeasonGainSeries({
-    weeks, closesByDate, live: currentRowScored ? null : { gain: myLive.gain },
+    weeks, closesByDate, live: currentRowScored || current?.isPlayoff ? null : { gain: myLive.gain },
   });
 
   return { phase, hero, thisWeek, season, standings: data.standings, myUserId: meta.myUserId, weeklyResults };

@@ -75,6 +75,13 @@ function cents(v: number): number {
   return Math.round(v * 100) / 100;
 }
 
+// leader_flip's call-counter -- module-scoped, not local to
+// fixtureHomeLeague (see that function's own doc on `quote`'s
+// 'leader_flip' branch for why: a function-local counter reset every
+// poll, so the two fixture states were never actually reachable from a
+// live refresh).
+let leaderFlipCall = 0;
+
 function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): {
   data: GetHomeLeagueResult; meta: HomeLeagueMeta; market: MarketInfo; now: Date;
   quote: (s: string) => number | null; bars: BarsBySymbol; marketCalendar: MarketCalendarSession[];
@@ -246,7 +253,21 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
         // trusts SQL's league_standings_ranked), so an out-of-order fixture
         // array is exactly what rendered as "2, 1, 6" instead of "1, 2, 3".
         [
-          { user_id: 'paolo', rank: 1, wins: 5, losses: 0, ties: 0, points_for: 512.4, display_name: 'Paolo M.', is_bot: false },
+          // R4 (Design Lead, 2026-09-30): the SAME regularSeasonComplete
+          // bump B7 bullet 3 already gave Roberto's record must apply to
+          // EVERY manager -- "Paolo 5-0" (weeks 1-5 only) stayed frozen
+          // through week 6 even once the fixture claims a finished 6-week
+          // season. Gianluigi's week 6 is REAL (he's Roberto's own
+          // opponent, so his result is the mirror of week6Gains); the
+          // other three have no tracked week-6 matchup at all, so their
+          // 6th game is a plausible extension of their existing pace --
+          // never invented as PRECISELY as Roberto/Gianluigi's real gain.
+          {
+            user_id: 'paolo', rank: 1,
+            wins: regularSeasonComplete ? 6 : 5, losses: 0, ties: 0,
+            points_for: regularSeasonComplete ? cents(512.4 + 102.48) : 512.4,
+            display_name: 'Paolo M.', is_bot: false,
+          },
           // B7 bullet 3 (Orchestrator, 2026-09-30): a finished 6-week
           // regular season (regularSeasonComplete) has a 6-game record,
           // not 5 -- "4-1" stood for weeks 1-5 only, but week 6 is ALSO
@@ -259,10 +280,30 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
             points_for: regularSeasonComplete ? cents(129.99 + (week6Gains.team1_gain ?? 0)) : 129.99,
             display_name: 'Roberto B.', is_bot: false,
           },
-          { user_id: 'luca', rank: 3, wins: 3, losses: 2, ties: 0, points_for: 88.2, display_name: 'Luca V.', is_bot: false },
-          { user_id: 'chiara', rank: 4, wins: 2, losses: 3, ties: 0, points_for: -34.1, display_name: 'Chiara R.', is_bot: false },
-          { user_id: 'marco', rank: 5, wins: 2, losses: 3, ties: 0, points_for: -61.5, display_name: 'Marco T.', is_bot: false },
-          { user_id: 'gianluigi', rank: 6, wins: 1, losses: 4, ties: 0, points_for: -142.35, display_name: 'Gianluigi B.', is_bot: false },
+          {
+            user_id: 'luca', rank: 3,
+            wins: regularSeasonComplete ? 4 : 3, losses: regularSeasonComplete ? 2 : 2, ties: 0,
+            points_for: regularSeasonComplete ? cents(88.2 + 44.1) : 88.2,
+            display_name: 'Luca V.', is_bot: false,
+          },
+          {
+            user_id: 'chiara', rank: 4,
+            wins: 2, losses: regularSeasonComplete ? 4 : 3, ties: 0,
+            points_for: regularSeasonComplete ? cents(-34.1 - 17.05) : -34.1,
+            display_name: 'Chiara R.', is_bot: false,
+          },
+          {
+            user_id: 'marco', rank: 5,
+            wins: 2, losses: regularSeasonComplete ? 4 : 3, ties: 0,
+            points_for: regularSeasonComplete ? cents(-61.5 - 30.75) : -61.5,
+            display_name: 'Marco T.', is_bot: false,
+          },
+          {
+            user_id: 'gianluigi', rank: 6,
+            wins: 1, losses: regularSeasonComplete ? 5 : 4, ties: 0,
+            points_for: regularSeasonComplete ? cents(-142.35 + (week6Gains.team2_gain ?? 0)) : -142.35,
+            display_name: 'Gianluigi B.', is_bot: false,
+          },
         ],
   };
 
@@ -301,28 +342,55 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
   const noLiveGameToday = fixture === 'scoring' || fixture === 'scored' || isBye
     || isPlayoffBye || isEliminated || isMissedPlayoffs;
   const market: MarketInfo = fixture === 'live_closed'
-    ? { status: 'closed', reason: 'after_hours', nextOpenAt: '2026-09-24T13:30:00.000Z' }
+    // R2 (Design Lead, 2026-09-30): resumes FRIDAY 9:30 AM ET -- paired
+    // with `now` below (Thursday 8 PM, after Thursday's own close).
+    // Previously read Thursday 9:30 AM, which is BEFORE `now` and would
+    // claim the market "resumes" at a time already in the past.
+    ? { status: 'closed', reason: 'after_hours', nextOpenAt: '2026-09-25T13:30:00.000Z' }
     : noLiveGameToday
       ? { status: 'closed', reason: 'weekend', nextOpenAt: null }
       : { status: 'open', reason: 'regular_session', nextOpenAt: null };
 
   const now = fixture === 'scoring' || fixture === 'scored'
     ? new Date('2026-09-25T20:30:00.000Z') // Friday, after week_end
-    : isEliminated
-      ? new Date('2026-12-22T18:00:00.000Z') // into round 2's week, after the wild-card loss
-      : isPlayoffState
-        ? new Date('2026-12-15T18:00:00.000Z')
-        : isPreSeason
-          ? new Date('2026-07-30T14:00:00.000Z') // Thursday, a few days before leagueStartDate
-          : new Date('2026-09-24T17:37:00.000Z'); // Thursday 1:37 PM ET, the board's live moment
+    // R2 (Design Lead, 2026-09-30): Thursday 8 PM ET -- AFTER Thursday's
+    // own 4 PM close, so "…at Thursday's close" (lastSessionCloseBefore)
+    // names the day that's actually just closed. Previously reused
+    // live_open's Thursday 1:37 PM (mid-session, market hours 9:30-4) --
+    // internally inconsistent with claiming the market was closed.
+    : fixture === 'live_closed'
+      ? new Date('2026-09-25T00:00:00.000Z')
+      : isEliminated
+        ? new Date('2026-12-22T18:00:00.000Z') // into round 2's week, after the wild-card loss
+        : isPlayoffState
+          ? new Date('2026-12-15T18:00:00.000Z')
+          : isPreSeason
+            ? new Date('2026-07-30T14:00:00.000Z') // Thursday, a few days before leagueStartDate
+            : new Date('2026-09-24T17:37:00.000Z'); // Thursday 1:37 PM ET, the board's live moment
 
   // leader_flip: a call-counter alternates whose price is higher, to
-  // exercise H3's leader-change wash under the live poll.
-  let flipCall = 0;
+  // exercise H3's leader-change wash under the live poll. Module-scoped
+  // (B8 capture pass, 2026-09-30), not local to this function: `fetchLive`
+  // calls `fixtureHomeLeague` fresh on every poll, so a function-local
+  // counter reset to 0 every time and the two fixture states were never
+  // actually reachable from a poll -- every fetch replayed the identical
+  // call sequence, contradicting this comment's own "under the live poll"
+  // (found while trying to actually record H3 for the capture pass).
+  //
+  // Incremented ONCE per fixtureHomeLeague call (i.e. once per poll), not
+  // once per `quote()` call: `quote` runs several times per symbol per
+  // fetch (today's change, the week's live gain, team value, ...), so a
+  // per-call counter both (a) let different symbols land on different
+  // sides of the flip WITHIN the same render -- never a clean, all-or-
+  // nothing "who's ahead" -- and (b) if that per-fetch call count happens
+  // to be even, cancels out over a full fetch, so successive polls could
+  // replay the exact same parity forever despite the counter genuinely
+  // advancing. One decision per fetch avoids both.
+  leaderFlipCall += 1;
+  const leaderFlipFlipped = leaderFlipCall % 2 === 0;
   const quote = (sym: string) => {
     if (fixture === 'leader_flip') {
-      flipCall += 1;
-      const flipped = flipCall % 2 === 0;
+      const flipped = leaderFlipFlipped;
       const mine = ROBERTO_HOLDINGS.find((h) => h.symbol === sym);
       const theirs = GIANLUIGI_HOLDINGS.find((h) => h.symbol === sym);
       // S5 (Design Lead, 2026-09-30): "flipped" used to zero my side out
@@ -337,6 +405,17 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
       if (mine) return flipped ? mine.mon + 0.765 * (mine.thu - mine.mon) : mine.thu;
       if (theirs) return flipped ? theirs.mon + 1.89 * (theirs.thu - theirs.mon) : theirs.mon;
       return null;
+    }
+    // R4 (Design Lead, 2026-09-30): pre-season has to price at the DRAFT
+    // itself -- nothing has happened yet, so "value" is cost basis, not a
+    // future Thursday close that hasn't occurred. Priced at draft, the
+    // hero is exactly $12,000.00 (qty = notional/draft, so qty*draft sums
+    // to the flat notional for every holding); priced at `thu` like every
+    // other fixture, it silently leaked a future price into a state that
+    // shouldn't know it yet, showing $12,343.51 -- the same number every
+    // OTHER (live) state shows.
+    if (isPreSeason) {
+      return ROBERTO_HOLDINGS.find((h) => h.symbol === sym)?.draft ?? GIANLUIGI_HOLDINGS.find((h) => h.symbol === sym)?.draft ?? null;
     }
     return ROBERTO_HOLDINGS.find((h) => h.symbol === sym)?.thu ?? GIANLUIGI_HOLDINGS.find((h) => h.symbol === sym)?.thu ?? null;
   };
@@ -353,6 +432,16 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
     // whole week's move as "today" (found in the capture pass:
     // live_open's today equalled its own season gain, $213.60).
     bars[h.symbol] = [{ date: '2026-09-21', close: h.mon }, { date: '2026-09-23', close: h.prev }, { date: '2026-09-24', close: h.thu }];
+    // S10 (Design Lead, 2026-09-30): playoff_live's `now` (Tue Dec 15, the
+    // wild-card week) is nowhere near these September dates, so
+    // prevCloseFor fell through to Thursday's close as "yesterday" and
+    // quote() (also Thursday's close, unchanged for a non-leader_flip
+    // fixture) gave today = 0 -- a fabricated $0.00 on a genuinely live
+    // playoff week. Appended (stays ascending: Dec > Sep) so prevCloseFor
+    // finds the wild-card week's own Monday close as "yesterday" for a
+    // Tuesday `now`, giving a real, nonzero today (the same total as the
+    // week's live gain so far -- correct for the week's second day).
+    if (isPlayoffLive) bars[h.symbol].push({ date: '2026-12-14', close: h.mon });
   }
   for (const h of GIANLUIGI_HOLDINGS) {
     // Same ascending-date fix as ROBERTO_HOLDINGS above, for consistency

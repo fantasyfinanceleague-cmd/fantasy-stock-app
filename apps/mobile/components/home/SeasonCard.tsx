@@ -19,7 +19,11 @@ import { playoffRoundLabelForWeek, playoffRoundShortName } from '@/lib/playoffs'
 
 export interface SeasonCardWeekResult {
   week: number;
-  result: 'W' | 'L' | 'T';
+  /** S7 (Design Lead, 2026-09-30): a regular-season bye still gets its own
+   * chip ("Bye W6") -- Giorgio's "never a W/L chip" rule (2026-09-29) is
+   * about never colouring a bye green/red as a win or loss, not about
+   * hiding the week from the row entirely. */
+  result: 'W' | 'L' | 'T' | 'BYE';
 }
 
 export interface SeasonCardProps {
@@ -86,9 +90,13 @@ export function SeasonCard({ series, weekResults, currentWeek, isLive, numWeeks,
               highlightWeek === w.week ? { borderColor: colors.accent, borderWidth: 1.5 } : null,
             ]}
           >
-            <Text variant="caption" style={{ color: w.result === 'W' ? colors.gain : w.result === 'L' ? colors.loss : colors.text2, fontWeight: '700' }}>
-              {w.result}
-            </Text>
+            {w.result === 'BYE' ? (
+              <Text variant="caption" tone="secondary">Bye</Text>
+            ) : (
+              <Text variant="caption" style={{ color: w.result === 'W' ? colors.gain : w.result === 'L' ? colors.loss : colors.text2, fontWeight: '700' }}>
+                {w.result}
+              </Text>
+            )}
             <Text variant="caption" tone="secondary"> {weekChipLabel(w.week, numWeeks, playoffTeams)}</Text>
           </View>
         ))}

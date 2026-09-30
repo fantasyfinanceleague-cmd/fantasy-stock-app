@@ -41,9 +41,12 @@ function thisWeekChrome(phase: PhaseResult, week: number): { isLive: boolean; ri
     case 'live_open':
       return { isLive: true, rightLabel: endsAtLabel(phase.weekEnd), liveChipLabel: phase.isPlayoff ? PLAYOFF_LIVE_CHIP : `Week ${week} · Live`, tag };
     case 'live_closed':
+      // R2 (Design Lead, 2026-09-30): the actual last-closed session, not
+      // `weekEnd` (always Friday) -- a Tuesday-evening after-hours state
+      // used to read "…at Friday's close" three days early.
       return {
         isLive: false,
-        rightLabel: `${marketClosedAt(phase.weekEnd)}${phase.resumesAt ? ` · ${marketResumesAt(phase.resumesAt)}` : ''}`,
+        rightLabel: `${marketClosedAt(phase.lastCloseAt ?? phase.weekEnd)}${phase.resumesAt ? ` · ${marketResumesAt(phase.resumesAt)}` : ''}`,
         liveChipLabel: MARKET_CLOSED_CHIP,
         tag,
       };
@@ -291,10 +294,10 @@ function HomeBody({
         <SeasonCard
           series={season!}
           // Regular-season byes are NO RESULT (Giorgio, 2026-09-29): never
-          // shown as a W/L chip.
-          weekResults={weeklyResults
-            .filter((w): w is typeof w & { result: 'W' | 'L' | 'T' } => w.result !== 'BYE')
-            .map((w) => ({ week: w.week, result: w.result }))}
+          // coloured green/red as a win or loss. S7 (Design Lead,
+          // 2026-09-30): still gets its own "Bye W6" chip, not omitted
+          // from the row entirely -- SeasonCard renders 'BYE' distinctly.
+          weekResults={weeklyResults.map((w) => ({ week: w.week, result: w.result }))}
           currentWeek={week}
           isLive={chrome.isLive}
           // phase.numWeeks (not league.num_weeks): the SAME value that

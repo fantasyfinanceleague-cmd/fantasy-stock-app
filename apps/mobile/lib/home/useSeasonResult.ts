@@ -38,7 +38,13 @@ export interface SeasonResultRow {
 }
 
 /** The board's HomeComplete champion sample (docs/design/screens/
- * inventory.jsx): "1st of 6 · 11–3", "2–0 · won the Final", best week 11. */
+ * inventory.jsx): "1st of 6 · 11–3", "2–0 · won the Final". Best week is
+ * NOT the board's own "week 11" (R4, Design Lead, 2026-09-30): this
+ * worker's shared fixture history is only 6 weeks long (ROBERTO_WEEKS +
+ * week 6), so "Week 11" is out of range for it. Week 6 ($213.60, this
+ * fixture's real computed team1_gain) IS the best of those 6 weeks --
+ * bigger than every one of ROBERTO_WEEKS' gains (41.30/58.75/-96.40/
+ * 72.10/54.24). */
 function fixtureChampion(): SeasonResultRow {
   return {
     status: 'complete', reason: null, detail_scope: 'full', season_number: 1,
@@ -46,7 +52,7 @@ function fixtureChampion(): SeasonResultRow {
     champion_display_name: 'Roberto B.', runner_up_display_name: 'Gianluigi B.',
     playoff_wins: 2, playoff_losses: 0,
     playoff_result: 'champion', playoff_exit_round: null,
-    best_week_number: 11, best_week_gain: 412.08,
+    best_week_number: 6, best_week_gain: 213.60,
   };
 }
 
@@ -62,7 +68,10 @@ function fixtureRunnerUp(): SeasonResultRow {
     champion_display_name: 'Paolo M.', runner_up_display_name: 'Roberto B.',
     playoff_wins: 1, playoff_losses: 1,
     playoff_result: 'runner_up', playoff_exit_round: null,
-    best_week_number: 11, best_week_gain: 412.08,
+    // R4 (Design Lead, 2026-09-30): same fix as fixtureChampion above --
+    // week 6 ($213.60) is the real best week in this fixture's 6-week
+    // history, not the board's out-of-range "week 11".
+    best_week_number: 6, best_week_gain: 213.60,
   };
 }
 

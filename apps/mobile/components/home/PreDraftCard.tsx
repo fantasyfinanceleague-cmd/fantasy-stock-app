@@ -64,7 +64,17 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, dra
     }
   }
 
-  const overflow = Math.max(0, numParticipants - members.length);
+  // S9 (Design Lead, 2026-09-30): while WAITING, the caption above is
+  // about reaching the draft-order threshold ("3 joined · 4 needed to
+  // draft"), not filling the whole roster -- the dashed avatar's own "+N"
+  // must track the SAME milestone (minMembers), or it contradicts the
+  // caption right next to it ("+3" toward an 8-seat league that hasn't
+  // even started counting down yet, instead of "+1" until the order sets).
+  // Once the order IS set, "+N" goes back to counting toward the full
+  // roster (numParticipants) -- the board's "6 of 8 joined" case.
+  const overflow = waiting
+    ? Math.max(0, minMembers - members.length)
+    : Math.max(0, numParticipants - members.length);
   const dateLabel = draftDateTimeLabel(draftDate);
   const countdown = countdownLabel(now, draftDate);
 

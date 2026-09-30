@@ -190,6 +190,27 @@ Deno.test('C1: the weekend after current_week advances shows the REAL scored fin
   assertEquals(vm.thisWeek?.opponentUserId, OPP_ID);
 });
 
+Deno.test('S7: an ongoing regular-season bye (current week, no opponent) still gets its own weeklyResults entry', () => {
+  const { data, meta, quote, bars } = buildFixtureInput();
+  // Turn week 6 (the current week) into a bye: no opponent, unscored.
+  const week6 = data.matchups[data.matchups.length - 1];
+  week6.team2_user_id = null;
+  week6.team1_gain = null;
+  week6.team2_gain = null;
+  const now = new Date('2026-09-24T17:37:00-04:00');
+  const vm = buildHomeViewModel({
+    now, meta, market: { status: 'open', reason: 'regular_session', nextOpenAt: null },
+    data, quote, bars, playoffRoundLabelForWeek, marketCalendar: [],
+  });
+  assertEquals(vm.phase.kind, 'bye');
+  // The loop that builds weeklyResults only walks PAST weeks
+  // (week_number < currentWeek) -- without this fix, the bye week itself
+  // (the current one) never reached weeklyResults at all, so the season
+  // chip row silently dropped it instead of showing "Bye W6".
+  const week6Result = vm.weeklyResults.find((w) => w.week === 6);
+  assertEquals(week6Result?.result, 'BYE');
+});
+
 Deno.test('C3: laterPlayoffWeek/lastPlayoffLoss are derived from matchups, not hardcoded false', () => {
   const { data, meta, quote, bars } = buildFixtureInput();
   // A first-round bye seed (Design Lead ruling, 2026-09-30): the real
@@ -276,6 +297,56 @@ Deno.test('C3: a team never seeded into the playoff bracket reads missed_playoff
     data, quote, bars, playoffRoundLabelForWeek, marketCalendar: [],
   });
   assertEquals(vm.phase.kind, 'missed_playoffs');
+});
+
+// ── R3 (Design Lead, 2026-09-30): playoff performance never counts toward
+// "season gain" -- process-week-results guards points_for accumulation
+// with `if (!isPlayoff)`, so a live playoff week's in-progress gain must
+// never reach the hero or extend the chart past the regular season. ───────
+
+Deno.test('R3: a live playoff week\'s gain never inflates the hero season gain', () => {
+  const { data, meta, quote, bars } = buildFixtureInput();
+  // Week 6 (the last regular-season week) scored, so the regular-season
+  // total is a real, known number to assert against.
+  data.matchups[data.matchups.length - 1].team1_gain = 42.5;
+  data.matchups[data.matchups.length - 1].team2_gain = -42.5;
+  const regularSeasonTotal = ROBERTO_WEEKS.reduce((s, w) => s + w.gain, 0) + 42.5;
+  data.matchups.push(
+    { week_number: 7, week_start: '2026-12-14T13:30:00.000Z', week_end: '2026-12-18T20:00:00.000Z', is_playoff: true, team1_user_id: MY_ID, team2_user_id: OPP_ID, team1_gain: null, team2_gain: null },
+  );
+  // Real snapshots for the live playoff week, so myLive.gain is a real,
+  // nonzero number that WOULD inflate the total if the bug were still there.
+  const mySnapshots = ROBERTO.map((h) => ({ symbol: h.symbol, quantity: qty(h.draft), week_start_price: h.mon, entered_mid_week: false, created_at: '2026-12-14T13:30:00.000Z' }));
+  data.current_week = { week_number: 7, my_snapshots: mySnapshots, my_trades: [], opponent_snapshots: [], opponent_trades: [] };
+  const playoffMeta = { ...meta, seasonStatus: 'playoffs' as const, currentWeek: 7, numWeeks: 6, playoffTeams: 4 };
+  const now = new Date('2026-12-15T18:00:00.000Z');
+  const vm = buildHomeViewModel({
+    now, meta: playoffMeta, market: { status: 'open', reason: 'regular_session', nextOpenAt: null },
+    data, quote, bars, playoffRoundLabelForWeek, marketCalendar: [],
+  });
+  assertEquals(vm.phase.kind, 'live_open');
+  assertAlmostEquals(vm.hero!.seasonGainDollars, regularSeasonTotal, 0.01);
+});
+
+Deno.test('R3: the season chart never extends past the regular season into a live playoff week', () => {
+  const { data, meta, quote, bars } = buildFixtureInput();
+  data.matchups[data.matchups.length - 1].team1_gain = 42.5;
+  data.matchups[data.matchups.length - 1].team2_gain = -42.5;
+  data.matchups.push(
+    { week_number: 7, week_start: '2026-12-14T13:30:00.000Z', week_end: '2026-12-18T20:00:00.000Z', is_playoff: true, team1_user_id: MY_ID, team2_user_id: OPP_ID, team1_gain: null, team2_gain: null },
+  );
+  const mySnapshots = ROBERTO.map((h) => ({ symbol: h.symbol, quantity: qty(h.draft), week_start_price: h.mon, entered_mid_week: false, created_at: '2026-12-14T13:30:00.000Z' }));
+  data.current_week = { week_number: 7, my_snapshots: mySnapshots, my_trades: [], opponent_snapshots: [], opponent_trades: [] };
+  const playoffMeta = { ...meta, seasonStatus: 'playoffs' as const, currentWeek: 7, numWeeks: 6, playoffTeams: 4 };
+  const now = new Date('2026-12-15T18:00:00.000Z');
+  const vm = buildHomeViewModel({
+    now, meta: playoffMeta, market: { status: 'open', reason: 'regular_session', nextOpenAt: null },
+    data, quote, bars, playoffRoundLabelForWeek, marketCalendar: [],
+  });
+  // 6 regular-season weeks, one point each, plus the series' own $0
+  // anchor point at week 1's open -- never an 8th point for the live
+  // playoff week.
+  assertEquals(vm.season!.points.length, 7);
 });
 
 // ── I12 (Design Lead ruling, 2026-09-29): unpriced symbols reach the view
