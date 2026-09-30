@@ -67,19 +67,67 @@ interface LeagueContextType {
   activeLeague: League | null;
   /** The league sheet's rows (Phase 3b-1): phase, rank · record, members, champion. Same order as `leagues`. */
   sheetLeagues: SheetLeague[];
+  /**
+   * get_home_summary's full row per league (Phase 3b-2 Home reads this —
+   * NOT a new request: it's the exact call fetchSheetFacts already makes
+   * for the pill/sheet, just no longer discarded after deriving
+   * SheetLeague's narrower fields).
+   */
+  homeSummaryByLeague: Map<string, HomeSummaryRow>;
+  /** market_session_status()'s row (Phase 3b-2 homePhase's MarketInfo) —
+   * same call the sheet's marketOpen flag already makes, exposed in full
+   * rather than collapsed to a boolean. Null only while still loading or
+   * on a failed read (never fabricated as "open"). */
+  market: MarketRow | null;
   refresh: () => Promise<void>;
 }
 
 const LeagueContext = createContext<LeagueContextType | undefined>(undefined);
 
-// get_home_summary's per-league columns the sheet reads (the RPC returns more).
-interface HomeSummaryRow {
+// get_home_summary's columns (20261011000001) — the sheet reads a subset;
+// Phase 3b-2 Home reads the rest (the current matchup + my standing).
+export interface HomeSummaryRow {
   league_id: string;
+  league_name: string;
+  league_type: string;
+  draft_status: 'not_started' | 'in_progress' | 'completed';
+  league_start_date: string | null;
+  league_end_date: string | null;
+  current_week: number;
+  num_weeks: number | null;
+  season_status: 'active' | 'playoffs' | 'completed';
+  season_number: number | null;
   standings_rank: number | null;
   standings_count: number | null;
   wins: number | string | null;
   losses: number | string | null;
   ties: number | string | null;
+  points_for: number | string | null;
+  matchup_id: string | null;
+  matchup_week_number: number | null;
+  matchup_is_playoff: boolean | null;
+  matchup_week_start: string | null;
+  matchup_week_end: string | null;
+  team1_user_id: string | null;
+  team1_display_name: string | null;
+  team1_is_bot: boolean | null;
+  team1_gain: number | string | null;
+  team2_user_id: string | null;
+  team2_display_name: string | null;
+  team2_is_bot: boolean | null;
+  team2_gain: number | string | null;
+}
+
+// market_session_status()'s row (20261005000002).
+export interface MarketRow {
+  status: 'open' | 'closed' | 'unknown';
+  reason: string;
+  session_open_at: string | null;
+  session_close_at: string | null;
+  next_open_at: string | null;
+  next_open_et: string | null;
+  coverage_through: string | null;
+  as_of: string;
 }
 
 /**
@@ -120,9 +168,10 @@ async function fetchSheetFacts(userId: string, leagueData: League[]) {
   // 'unknown' (calendar gap) or a failed read shows the league as Closed:
   // claiming "Live" without evidence the market is open would be the lie.
   if (market.error) console.warn('[leagues] market_session_status failed', market.error.message);
-  const marketOpen = !market.error && (market.data as { status: string }[] | null)?.[0]?.status === 'open';
+  const marketRow = (!market.error ? (market.data as MarketRow[] | null)?.[0] : null) ?? null;
+  const marketOpen = marketRow?.status === 'open';
 
-  return leagueData.map<SheetLeague>((league) => {
+  const sheet = leagueData.map<SheetLeague>((league) => {
     const phase = getSeasonPhase(league);
     const row = summaryByLeague.get(league.id);
     return {
@@ -145,6 +194,8 @@ async function fetchSheetFacts(userId: string, leagueData: League[]) {
       draftDate: league.draft_date,
     };
   });
+
+  return { sheet, summaryByLeague, market: marketRow };
 }
 
 async function readStoredActiveLeague(userId: string): Promise<string | null> {
@@ -159,6 +210,8 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [leagues, setLeagues] = useState<League[]>([]);
   const [sheetLeagues, setSheetLeagues] = useState<SheetLeague[]>([]);
+  const [homeSummaryByLeague, setHomeSummaryByLeague] = useState<Map<string, HomeSummaryRow>>(new Map());
+  const [market, setMarket] = useState<MarketRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeLeagueId, setActiveLeagueIdState] = useState<string | null>(null);
   // The latest choice, readable from inside an in-flight fetch (a pick made
@@ -205,6 +258,8 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
     if (memberError || !memberships || memberships.length === 0) {
       setLeagues([]);
       setSheetLeagues([]);
+      setHomeSummaryByLeague(new Map());
+      setMarket(null);
       setLoading(false);
       return;
     }
@@ -224,10 +279,13 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
     }
 
     const list = (leagueData || []) as League[];
-    const [sheet, stored] = await Promise.all([fetchSheetFacts(userId, list), readStoredActiveLeague(userId)]);
+    const [facts, stored] = await Promise.all([fetchSheetFacts(userId, list), readStoredActiveLeague(userId)]);
+    const { sheet } = facts;
 
     setLeagues(list);
     setSheetLeagues(sheet);
+    setHomeSummaryByLeague(facts.summaryByLeague);
+    setMarket(facts.market);
 
     // In-session choice first, then the persisted one, then the first live
     // league (lib/shell/activeLeague.ts). A league the user has left falls
@@ -242,6 +300,8 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
     if (!userId) {
       setLeagues([]);
       setSheetLeagues([]);
+      setHomeSummaryByLeague(new Map());
+      setMarket(null);
       activeRef.current = null;
       setActiveLeagueIdState(null);
       setLoading(false);
@@ -262,6 +322,8 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
         setActiveLeagueId,
         activeLeague,
         sheetLeagues,
+        homeSummaryByLeague,
+        market,
         refresh: fetchLeagues,
       }}
     >
