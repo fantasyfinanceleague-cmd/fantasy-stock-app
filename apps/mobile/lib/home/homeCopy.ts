@@ -21,6 +21,11 @@ export const HERO_SEASON_GAIN_LABEL = 'season gain'; // board
 export const HERO_TODAY_LABEL = 'today'; // board
 export const SEASON_CARD_TITLE = 'Season'; // board
 export const SEASON_CARD_CAPTION = 'Season gain, week by week'; // board
+/** The chart's zero-baseline label (S4, Design Lead, 2026-09-30) — board
+ * verbatim: `<text ...>$0</text>` at the dashed zero line, screens.jsx's
+ * GainChart. Always the literal string, never formatMoney(0): the axis
+ * label names the LINE's value (zero), not a computed figure. */
+export const CHART_ZERO_LABEL = '$0'; // board
 export const STANDINGS_CARD_TITLE = 'Standings'; // board
 /** `throughWeek` is the already-resolved "last completed week" (week - 1
  * for a live week), NOT the league's total week count — code review

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { useEffect, useRef, useState } from 'react';
 import { LayoutChangeEvent, StyleSheet, View } from 'react-native';
-import Svg, { ClipPath, Defs, Line, Path, Rect, Circle } from 'react-native-svg';
+import Svg, { ClipPath, Defs, Line, Path, Rect, Circle, Text as SvgText } from 'react-native-svg';
 import Animated, { runOnJS, useAnimatedProps, useSharedValue } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
@@ -11,7 +11,7 @@ import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { useMotion } from '@/components/sp/motion';
 import { formatMoney } from '@/components/sp/logic/money';
-import { seasonScrubLabel } from '@/lib/home/homeCopy';
+import { CHART_ZERO_LABEL, seasonScrubLabel } from '@/lib/home/homeCopy';
 import { LiveDot } from '@/components/sp/game/LiveDot';
 import { buildChartGeometry, nearestPointIndex } from '@/lib/home/chartGeometry';
 import type { SeasonGainPoint } from '@/lib/home/seasonGainSeries';
@@ -150,6 +150,12 @@ export function SeasonChart({ points, live = false, weekStartIdx, onScrubIndex, 
               <Path d={geometry.areaPath} fill={colors.gain} opacity={0.1} clipPath="url(#gainClip)" />
               <Path d={geometry.areaPath} fill={colors.loss} opacity={0.1} clipPath="url(#lossClip)" />
               <Line x1={0} x2={width} y1={geometry.zeroY} y2={geometry.zeroY} stroke={colors.borderStrong} strokeDasharray="3 4" strokeWidth={1} />
+              {/* S4 (Design Lead, 2026-09-30): the board's "$0" baseline
+                  label, board-verbatim position (x=2, just above the zero
+                  line) -- screens.jsx's GainChart. */}
+              <SvgText x={2} y={geometry.zeroY - 6} fontSize={11} fontWeight="600" fill={colors.text2}>
+                {CHART_ZERO_LABEL}
+              </SvgText>
               <AnimatedPath
                 d={geometry.linePath}
                 // react-native-svg 15's TS types omit `pathLength`, even
