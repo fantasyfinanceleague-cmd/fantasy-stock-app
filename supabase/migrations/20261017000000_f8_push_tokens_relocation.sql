@@ -1,23 +1,43 @@
 -- ============================================================================
--- STAGED — NOT A LIVE MIGRATION. Do NOT place in supabase/migrations/ yet.
--- L2: expo_push_token is a bearer capability readable by every authenticated user
+-- F8 phase 2: move expo_push_token off user_profiles into owner-scoped push_tokens
 -- ============================================================================
--- Staged in docs/ deliberately: `supabase db push` applies ALL pending files, so
--- a file sitting in supabase/migrations/ can be applied by an unrelated push
--- before its prerequisites ship. security-reviewer flagged exactly that hazard,
--- and this repo has the precedent (STAGED_drop_i7_league_invites_accept.sql).
--- The LOCATION is the control; the ⛔ comment is only documentation.
+-- PROMOTED 2026-09-30 from docs/migrations/STAGED_L2_push_token_capability.sql
+-- (git mv, so `git log --follow` keeps its review history). The SQL body below is
+-- the staged body unchanged, plus one defence-in-depth line
+-- (REVOKE ALL ON push_tokens FROM anon).
 --
--- PRECONDITIONS TO PROMOTE THIS FILE (added 2026-09-24):
---   1. send-notification deployed and effect-verified (DEPLOY-RUNBOOK step 5.3).
---   2. Every tester on the >= 1.1.0 mobile build. 1.0.0 binaries write their own
---      token to user_profiles.expo_push_token and read leaguemates' tokens from
---      it, so dropping the column breaks registration and draft-turn pushes there.
---   3. Give it a timestamp LATER than prod's latest applied migration when it
---      moves into supabase/migrations/ (db push refuses older pending files).
---   (The sendPushNotification() helper cited below was deleted 2026-09-24 as
---   dead code; the finding it illustrates is unchanged, since anyone can POST
---   to exp.host with a stolen token.)
+-- PRECONDITIONS (from the staged header), checked 2026-09-30:
+--   1. send-notification deployed: yes, at 5e3b5d1 (STATUS.md). Its token read
+--      prefers push_tokens and falls back to user_profiles.expo_push_token,
+--      tolerating the missing relation before this migration (PGRST205/42P01) and
+--      the missing column after it (PGRST204/42703); confirmed in the 5e3b5d1
+--      source. draft-order-notify (deployed 1f8e2d5) reads through
+--      _shared/push.ts, which has the same two-sided fallback. So this migration
+--      changes WHERE they read, never WHETHER they can. An end-to-end push is
+--      verification step 5 below, run on the next test draft.
+--   2. Every tester on >= 1.1.0: yes. Giorgio is the only tester, on 1.1.0
+--      (TestFlight). 1.1.0's savePushToken upserts push_tokens first and falls
+--      back to the column; removePushToken clears both. No client READS the
+--      token (grep of apps/: only those two writes).
+--   3. Timestamp later than prod's latest applied migration (20261015000000):
+--      yes. 20261016000000 is reserved by ui/mobile-home (get_home_league);
+--      either push order works, since the two are independent.
+--   PRE-PUSH CHECK (read-only; security-reviewer 2026-09-30). Run in the SQL editor
+--   immediately before `db push`; expect tokens = the known testers' devices,
+--   orphans = 0, publishes_all_tables = false:
+--     SELECT 'tokens' AS k, count(*)::text AS v FROM user_profiles WHERE expo_push_token IS NOT NULL
+--     UNION ALL
+--     SELECT 'orphans (would fail the FK and roll back)', count(*)::text
+--       FROM user_profiles p LEFT JOIN auth.users u ON u.id = p.id
+--      WHERE p.expo_push_token IS NOT NULL AND u.id IS NULL
+--     UNION ALL
+--     SELECT 'publishes_all_tables', coalesce(bool_or(puballtables), false)::text
+--       FROM pg_publication WHERE pubname = 'supabase_realtime';
+--   An orphan makes the backfill raise and the WHOLE migration roll back
+--   (fail-closed), so it is a redo, never a partial state.
+--   Also checked from the 2026-09-30 db-snapshot: push_tokens does not exist in
+--   prod yet. supabase_realtime is built by explicit ADD TABLE, not FOR ALL
+--   TABLES, so the new table is not published (asserted again post-push).
 --
 -- ---------------------------------------------------------------------------
 -- THE FINDING: the token is a CAPABILITY, not an identifier.
@@ -115,6 +135,11 @@ CREATE TABLE IF NOT EXISTS push_tokens (
 );
 
 ALTER TABLE push_tokens ENABLE ROW LEVEL SECURITY;
+
+-- Defence in depth: Supabase grants ALL on new tables to anon. With no anon
+-- policy RLS already returns nothing, but a signed-out caller has no business
+-- touching this table at all.
+REVOKE ALL ON push_tokens FROM anon;
 
 -- Owner-only, all operations. service_role bypasses RLS and is how the
 -- send-notification edge function reads tokens — no policy needed for it.

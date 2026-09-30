@@ -2,27 +2,31 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "72b08b274caad28e5a6d78d337a361075882a7e0",
-    "commitShort": "72b08b2",
+    "commit": "c7fe2431a991a9716dd1beb36704cf0169fc5439",
+    "commitShort": "c7fe243",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "chore/db-snapshot-2026-09-30",
+    "branch": "security/f8-push-tokens-phase2",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "docs/architecture/db-snapshot.json"
+        "path": "apps/mobile/ARCHITECTURE.md"
+      },
+      {
+        "code": "AM",
+        "path": "supabase/migrations/20261017000000_f8_push_tokens_relocation.sql"
       }
     ],
-    "timestamp": "2026-09-30T16:56:00Z",
-    "sourceHash": "sha256:60ad3d858e554866305caa4babff7b5aff686c3147663b1b64474cde2107c367",
+    "timestamp": "2026-09-30T18:07:41Z",
+    "sourceHash": "sha256:9a731121284e70da44ed1fdf82189b9f91258e5f2e4d03248e5780f73e2905b9",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-09-30T16:53:15Z",
-    "ageHours": 0,
-    "ageDays": 0,
+    "ageHours": 1.2,
+    "ageDays": 0.1,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:8e08382dfe9edf557c6371cfc39da9fb788590ad82209f15e2e74a7c90dcfc6b",
@@ -4826,7 +4830,12 @@
       "layer": "db",
       "facts": {},
       "db": null,
-      "declared": null,
+      "declared": {
+        "touchedBy": [
+          "supabase/migrations/20261017000000_f8_push_tokens_relocation.sql"
+        ],
+        "rlsEnabled": true
+      },
       "drift": [],
       "annotation": null,
       "verified": false,
@@ -4834,7 +4843,10 @@
       "label": "push_tokens",
       "sublabel": "not in snapshot",
       "kind": "table",
-      "source": null
+      "source": {
+        "path": "supabase/migrations/20261017000000_f8_push_tokens_relocation.sql",
+        "line": 118
+      }
     },
     {
       "layer": "db",
@@ -5137,7 +5149,8 @@
           "supabase/migrations/20251210100000_create_user_profiles.sql",
           "supabase/migrations/20251230230000_add_avatar_to_profiles.sql",
           "supabase/migrations/20260122000000_add_push_tokens.sql",
-          "supabase/migrations/20261007000000_username_write_path.sql"
+          "supabase/migrations/20261007000000_username_write_path.sql",
+          "supabase/migrations/20261017000000_f8_push_tokens_relocation.sql"
         ],
         "rlsEnabled": true
       },
@@ -12621,7 +12634,8 @@
       "20261013000000_draft_order_modes.sql",
       "20261014000000_get_season_result_rpc.sql",
       "20261014000001_drop_league_seasons_commissioner_write.sql",
-      "20261015000000_complete_league_season_guarded.sql"
+      "20261015000000_complete_league_season_guarded.sql",
+      "20261017000000_f8_push_tokens_relocation.sql"
     ],
     "config": [
       "draft-autopick-sweep=false",

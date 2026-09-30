@@ -268,3 +268,25 @@ It covers:
   - eliminated vs missed is NULL, not guessed;
   - a member who joined later gets `caller_participated = false`
 - 0 rows for a non-member, an unknown league, and a season from another league
+
+## f8_push_tokens.pglite.test.ts
+
+What it does:
+- Loads `supabase/migrations/20261017000000_f8_push_tokens_relocation.sql` **verbatim**
+  onto a replica of prod's `user_profiles` (the token column and its index, the three
+  prod policies, and membership in `supabase_realtime`), with Supabase's default
+  table grants simulated.
+
+It covers:
+- the finding reproduced BEFORE the migration (any authenticated user reads another's token)
+- the backfill (non-null tokens only, keyed by user)
+- the column dropped from the published table (the Realtime vector), while cross-user
+  username/avatar reads keep working
+- `push_tokens` not in `supabase_realtime`
+- owner-only SELECT/INSERT/UPDATE/DELETE, and the 1.1.0 client's upsert + logout delete
+- anon holds no privilege at all (not merely RLS-empty)
+- service_role reads any token (send-notification's admin client)
+- the `auth.users` delete cascade
+
+Mutation-checked: an open SELECT policy, a missing anon revoke, or a kept column
+each fail their own step.

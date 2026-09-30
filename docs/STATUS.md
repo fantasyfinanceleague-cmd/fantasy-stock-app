@@ -201,7 +201,7 @@ Phase 3: **app first**.
    that Alpaca 400s on every run isn't auto-promoted to `price_unsupported` (the
    half-batch cap bounds the damage); a failure counter is the follow-up.
 7. **F8: Expo push tokens** readable by any authenticated user. Staged:
-   `docs/migrations/STAGED_L2_push_token_capability.sql`. Apply only after 1.1.0 is on
+   `supabase/migrations/20261017000000_f8_push_tokens_relocation.sql` (promoted 2026-09-30 from the staged file). Apply only after 1.1.0 is on
    all testers' phones, since 1.0.0 reads and writes the column.
 8. **`[I6]/[I2b]` drop** (`deferred/20260929000000_drop_I6_I2b.sql`), after 1.1.0
    ships. Until then, any member can still add bots directly via PostgREST.

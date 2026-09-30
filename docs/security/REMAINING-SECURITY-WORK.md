@@ -64,7 +64,7 @@ server would re-open a spam/phishing vector.
 
 **Progress (2026-09-24):** steps 2 and 3 are **done** on this branch (`send-notification`
 and the client cut-over). Steps 1, 4 and 5 are phase 2, staged in
-`docs/migrations/STAGED_L2_push_token_capability.sql`. Apply it only after
+`supabase/migrations/20261017000000_f8_push_tokens_relocation.sql` (promoted 2026-09-30 from the staged file). Apply it only after
 `send-notification` is deployed and verified **and** every tester is on the ≥ 1.1.0
 build: 1.0.0 binaries write their own token to `user_profiles.expo_push_token` and read
 leaguemates' tokens from it, so dropping the column breaks them. Give the phase-2
@@ -73,7 +73,7 @@ migration a fresh timestamp later than prod's latest applied, not the `~20260730
 **Build spec (ordered):**
 
 1. **New migration** (`~20260730000005_*.sql` — re-time, see above) — mirrors the already-drafted
-   `docs/migrations/STAGED_L2_push_token_capability.sql`:
+   `supabase/migrations/20261017000000_f8_push_tokens_relocation.sql` (promoted 2026-09-30 from the staged file):
    - `CREATE TABLE push_tokens (user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE, token text NOT NULL, updated_at timestamptz NOT NULL DEFAULT now())`.
    - Enable RLS; owner-only policies (`auth.uid() = user_id`) for select/insert/update/delete.
    - Do **NOT** add `push_tokens` to the `supabase_realtime` publication.
