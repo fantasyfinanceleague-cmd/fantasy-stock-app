@@ -9,7 +9,7 @@ import { assertEquals } from 'jsr:@std/assert';
 import {
   heroUnpricedCaption, sideUnpricedCaption, seasonScrubLabel, heroAccessibilityLabel, heroWeekOrRoundLabel,
   standingsThroughWeek, preSeasonStartsLabel, placeLabel, nonChampionLine, regularSeasonTileLine, playoffRecordLine,
-  playoffTileLine, championAnnounceLine, coreCompleteTiles, teamSoFarCaption, roundSlotLabel,
+  playoffTileLine, championAnnounceLine, coreCompleteTiles, teamSoFarCaption, roundSlotLabel, eliminatedLabel,
 } from '../lib/home/homeCopy.ts';
 
 Deno.test('heroUnpricedCaption: null when both lists are empty', () => {
@@ -216,4 +216,20 @@ Deno.test('teamSoFarCaption: "1 of 6"', () => {
 
 Deno.test('roundSlotLabel: "Rd 2"', () => {
   assertEquals(roundSlotLabel(2), 'Rd 2');
+});
+
+// ── S3 (Design Lead ruling, 2026-09-30) ─────────────────────────────────────
+
+Deno.test('eliminatedLabel: a round-1 (Wild card) elimination reads "Out in the Wild card round"', () => {
+  assertEquals(eliminatedLabel('Wild card'), 'Out in the Wild card round');
+});
+
+Deno.test('eliminatedLabel: every other round keeps "Out in the {round}" unchanged', () => {
+  assertEquals(eliminatedLabel('Semifinals'), 'Out in the Semifinals');
+  assertEquals(eliminatedLabel('Quarterfinals'), 'Out in the Quarterfinals');
+  assertEquals(eliminatedLabel('Final'), 'Out in the Final');
+});
+
+Deno.test('eliminatedLabel: a null round (round unknowable) reads "Out of the playoffs"', () => {
+  assertEquals(eliminatedLabel(null), 'Out of the playoffs');
 });

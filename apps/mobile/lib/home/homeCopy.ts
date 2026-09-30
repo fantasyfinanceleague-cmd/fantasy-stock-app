@@ -223,8 +223,15 @@ export function byeNextWeekLabel(week: number, when: string | null): string {
 export function byeToRoundLabel(round: string | null): string {
   return round ? `Bye to the ${round}` : 'Bye this round'; // new-flagged
 }
+/** S3 (Design Lead ruling, 2026-09-30): a round-1 elimination reads "Out
+ * in the Wild card round" (NEW COPY, flagged) -- "round" is added ONLY
+ * for the Wild card round, since "Out in the Wild card" alone reads oddly
+ * next to "Out in the Semifinals"/"Out in the Final" for every other
+ * round, which already end in a proper round-name noun. */
 export function eliminatedLabel(round: string | null): string {
-  return round ? `Out in the ${round}` : 'Out of the playoffs'; // new-flagged
+  if (!round) return 'Out of the playoffs'; // new-flagged
+  if (round === 'Wild card') return 'Out in the Wild card round'; // new-flagged
+  return `Out in the ${round}`; // new-flagged
 }
 export const SEE_THE_BRACKET = 'See the bracket'; // new-flagged
 export const MISSED_PLAYOFFS_MESSAGE = 'Missed the playoffs'; // new-flagged
