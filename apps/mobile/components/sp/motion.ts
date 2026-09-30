@@ -19,7 +19,19 @@ export interface MotionConfig {
     exit: EasingFunctionFactory;
   };
   spring: {
-    snappy: WithSpringConfig;
+    /** Typed with the token's concrete numbers so layout-animation builders
+     * (`.springify().damping(...)`) can read them without fallback literals. */
+    snappy: WithSpringConfig & { damping: number; stiffness: number; mass: number };
+  };
+  /**
+   * §4 list stagger. `delayFor(i)` is the entering delay for the i-th row,
+   * capped at `max` rows; under Reduce Motion it is always 0 (§5: "Stagger →
+   * appear together").
+   */
+  stagger: {
+    step: number;
+    max: number;
+    delayFor: (index: number) => number;
   };
   /**
    * Standard "enter/settle" timing config for translate/scale/opacity moves.
@@ -53,6 +65,11 @@ export function useMotion(): MotionConfig {
     duration: motion.duration,
     easing: { settle, exit },
     spring: { snappy: { ...motion.spring.snappy, reduceMotion: ReduceMotion.System } },
+    stagger: {
+      step: motion.stagger.step,
+      max: motion.stagger.max,
+      delayFor: (index: number) => (reduced ? 0 : Math.min(index, motion.stagger.max) * motion.stagger.step),
+    },
     enterTiming: reduced
       ? { duration: motion.duration.quick, easing: Easing.linear, reduceMotion: ReduceMotion.System }
       : { duration: motion.duration.slow, easing: settle, reduceMotion: ReduceMotion.System },

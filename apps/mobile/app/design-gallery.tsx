@@ -10,7 +10,7 @@ import { brand } from '@/constants/brand';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { Money } from '@/components/sp/Money';
-import { Button } from '@/components/sp/Button';
+import { Button, type ButtonStatus } from '@/components/sp/Button';
 import { Chip } from '@/components/sp/Chip';
 import { PhaseChip, LeaguePhase } from '@/components/sp/PhaseChip';
 import { ListRow } from '@/components/sp/ListRow';
@@ -66,6 +66,7 @@ export default function DesignGalleryScreen() {
   const [chipSelected, setChipSelected] = useState(false);
   const [scores, setScores] = useState({ you: 128.4, opponent: 92.1 });
   const [chyron, setChyron] = useState<string | null>(null);
+  const [demoStatus, setDemoStatus] = useState<ButtonStatus>('idle');
 
   if (!__DEV__) {
     return <Redirect href="/" />;
@@ -159,6 +160,24 @@ export default function DesignGalleryScreen() {
               <Button label="Small" variant="primary" size="sm" onPress={() => {}} />
               <Button label="Disabled" variant="primary" onPress={() => {}} disabled />
             </View>
+            {/* status (Phase 3b-1): each state pinned, then a live idle → loading → done run. */}
+            <View style={styles.row}>
+              <Button label="Sign in" status="idle" onPress={() => {}} />
+              <Button label="Sign in" status="loading" onPress={() => {}} />
+              <Button label="Sign in" status="done" onPress={() => {}} />
+            </View>
+            <View style={styles.row}>
+              <Button
+                label="Run status demo"
+                variant="secondary"
+                status={demoStatus}
+                onPress={() => {
+                  setDemoStatus('loading');
+                  setTimeout(() => setDemoStatus('done'), 1200);
+                  setTimeout(() => setDemoStatus('idle'), 2400);
+                }}
+              />
+            </View>
           </Card>
         </Section>
   
@@ -172,6 +191,13 @@ export default function DesignGalleryScreen() {
               {ALL_PHASES.map((phase) => (
                 <PhaseChip key={phase} phase={phase} />
               ))}
+            </View>
+            {/* `label` (Phase 3b-1): the phase keeps the style, the label replaces the text. */}
+            <View style={[styles.row, styles.wrap]}>
+              <PhaseChip phase="live_open" label="Week 6" />
+              <PhaseChip phase="live_closed" label="Week 2" />
+              <PhaseChip phase="pre_draft" label="Draft Sat 7:00 PM ET" />
+              <PhaseChip phase="season_complete" label="Final" />
             </View>
           </Card>
         </Section>
@@ -201,6 +227,10 @@ export default function DesignGalleryScreen() {
             <Avatar name="Priya" size={44} />
             <Avatar name="Giorgio" size={32} />
             <Avatar name="?" size={24} />
+            {/* Two initials (Phase 3b-1): first word + last word; 28pt is the smallest in use. */}
+            <Avatar name="Roberto B." size={44} />
+            <Avatar name="roberto_b" size={36} />
+            <Avatar name="Gianluigi Buffon" size={28} />
           </View>
         </Section>
   
@@ -214,15 +244,29 @@ export default function DesignGalleryScreen() {
         </Section>
   
         <Section title="EmptyState">
-          <Card style={styles.card}>
-            <EmptyState
-              icon={(p) => <Ionicons name="trophy-outline" {...p} />}
-              title="No leagues yet"
-              message="Create or join a league to get started."
-              actionLabel="Create a league"
-              onAction={() => {}}
-            />
-          </Card>
+          {/* Informational (no action): flat. */}
+          <EmptyState
+            icon={(p) => <Ionicons name="swap-horizontal-outline" {...p} />}
+            title="No trades yet"
+            message="Trades you make will show up here."
+          />
+          <EmptyState
+            icon={(p) => <Ionicons name="trophy-outline" {...p} />}
+            title="No leagues yet"
+            message="Create or join a league to get started."
+            actionLabel="Create a league"
+            onAction={() => {}}
+          />
+          {/* With actions it is carded (3b-1 ruling); two actions stack full-width. */}
+          <EmptyState
+            icon={(p) => <Ionicons name="trophy-outline" {...p} />}
+            title="No leagues yet"
+            message="Create or join a league to get started."
+            actionLabel="Create a league"
+            onAction={() => {}}
+            secondaryActionLabel="Join with a code"
+            onSecondaryAction={() => {}}
+          />
         </Section>
   
         <Section title="Sheet">

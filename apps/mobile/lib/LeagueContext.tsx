@@ -1,6 +1,11 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
 import { useAuth } from './useAuth';
+import { getSeasonLabel, getSeasonPhase } from './weekStatus';
+import type { SheetLeague } from './shell/leagueSheet';
+import { activeLeagueStorageKey, resolveActiveLeagueId } from './shell/activeLeague';
+import { FIXTURE_NETWORK_MS, SHELL_FIXTURE, fixtureLeagues } from './shell/devFixture';
 
 export interface League {
   id: string;
@@ -60,29 +65,146 @@ interface LeagueContextType {
   activeLeagueId: string | null;
   setActiveLeagueId: (id: string | null) => void;
   activeLeague: League | null;
+  /** The league sheet's rows (Phase 3b-1): phase, rank · record, members, champion. Same order as `leagues`. */
+  sheetLeagues: SheetLeague[];
   refresh: () => Promise<void>;
 }
 
 const LeagueContext = createContext<LeagueContextType | undefined>(undefined);
 
+// get_home_summary's per-league columns the sheet reads (the RPC returns more).
+interface HomeSummaryRow {
+  league_id: string;
+  standings_rank: number | null;
+  standings_count: number | null;
+  wins: number | string | null;
+  losses: number | string | null;
+  ties: number | string | null;
+}
+
+/**
+ * The sheet's extra facts, in parallel, each degrading to "unknown" on its
+ * own. supabase-js resolves a Postgres error as { error } rather than
+ * throwing (CLAUDE.md, success-signal #5), so every result's error is
+ * checked; an unknown fact renders as an empty meta line, never an invented
+ * rank or count (lib/shell/leagueSheet.ts).
+ */
+async function fetchSheetFacts(userId: string, leagueData: League[]) {
+  const ids = leagueData.map((l) => l.id);
+  const seasonIds = leagueData.map((l) => l.current_season_id).filter((id): id is string => !!id);
+
+  const [summary, members, seasons, market] = await Promise.all([
+    supabase.rpc('get_home_summary'),
+    supabase.from('league_members').select('league_id').in('league_id', ids),
+    seasonIds.length
+      ? supabase.from('league_seasons').select('id, champion_user_id').in('id', seasonIds)
+      : Promise.resolve({ data: [] as { id: string; champion_user_id: string | null }[], error: null }),
+    supabase.rpc('market_session_status'),
+  ]);
+
+  const summaryByLeague = new Map<string, HomeSummaryRow>();
+  if (summary.error) console.warn('[leagues] get_home_summary failed', summary.error.message);
+  else for (const row of (summary.data ?? []) as HomeSummaryRow[]) summaryByLeague.set(row.league_id, row);
+
+  let memberCounts: Map<string, number> | null = null;
+  if (members.error) console.warn('[leagues] member counts failed', members.error.message);
+  else {
+    memberCounts = new Map();
+    for (const m of members.data ?? []) memberCounts.set(m.league_id, (memberCounts.get(m.league_id) ?? 0) + 1);
+  }
+
+  const championBySeason = new Map<string, string | null>();
+  if (seasons.error) console.warn('[leagues] season results failed', seasons.error.message);
+  else for (const s of seasons.data ?? []) championBySeason.set(s.id, s.champion_user_id);
+
+  // 'unknown' (calendar gap) or a failed read shows the league as Closed:
+  // claiming "Live" without evidence the market is open would be the lie.
+  if (market.error) console.warn('[leagues] market_session_status failed', market.error.message);
+  const marketOpen = !market.error && (market.data as { status: string }[] | null)?.[0]?.status === 'open';
+
+  return leagueData.map<SheetLeague>((league) => {
+    const phase = getSeasonPhase(league);
+    const row = summaryByLeague.get(league.id);
+    return {
+      id: league.id,
+      name: league.name,
+      seasonPhase: phase,
+      marketOpen,
+      rank: row?.standings_rank ?? null,
+      rankCount: row?.standings_count ?? null,
+      wins: Number(row?.wins ?? 0),
+      losses: Number(row?.losses ?? 0),
+      ties: Number(row?.ties ?? 0),
+      membersJoined: memberCounts ? memberCounts.get(league.id) ?? 0 : null,
+      capacity: league.num_participants,
+      isChampion: !!league.current_season_id && championBySeason.get(league.current_season_id) === userId,
+      seasonLabel: getSeasonLabel(phase, league),
+      currentWeek: league.current_week,
+      numWeeks: league.num_weeks,
+      playoffTeams: league.playoff_teams,
+      draftDate: league.draft_date,
+    };
+  });
+}
+
+async function readStoredActiveLeague(userId: string): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem(activeLeagueStorageKey(userId));
+  } catch {
+    return null;
+  }
+}
+
 export function LeagueProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [leagues, setLeagues] = useState<League[]>([]);
+  const [sheetLeagues, setSheetLeagues] = useState<SheetLeague[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeLeagueId, setActiveLeagueId] = useState<string | null>(null);
+  const [activeLeagueId, setActiveLeagueIdState] = useState<string | null>(null);
+  // The latest choice, readable from inside an in-flight fetch (a pick made
+  // while refresh() is awaiting must not be overwritten by its result).
+  const activeRef = useRef<string | null>(null);
+  const userId = user?.id ?? null;
 
-  async function fetchLeagues() {
-    if (!user) return;
+  // Spec gate 6: the active league persists across relaunch, per user.
+  const setActiveLeagueId = useCallback(
+    (id: string | null) => {
+      activeRef.current = id;
+      setActiveLeagueIdState(id);
+      if (!userId) return;
+      const key = activeLeagueStorageKey(userId);
+      (id ? AsyncStorage.setItem(key, id) : AsyncStorage.removeItem(key)).catch(() => {});
+    },
+    [userId]
+  );
+
+  const fetchLeagues = useCallback(async () => {
+    if (!userId) return;
 
     setLoading(true);
+
+    if (SHELL_FIXTURE) {
+      // DEV-only fixture (lib/shell/devFixture.ts): the board's leagues, no
+      // queries — after a realistic delay, so pull-to-refresh (S5) is visible.
+      await new Promise((resolve) => setTimeout(resolve, FIXTURE_NETWORK_MS));
+      const fixture = fixtureLeagues(SHELL_FIXTURE);
+      const stored = await readStoredActiveLeague(userId);
+      setLeagues(fixture.leagues);
+      setSheetLeagues(fixture.sheet);
+      const resolved = resolveActiveLeagueId(activeRef.current ?? stored, fixture.sheet);
+      if (resolved !== activeRef.current) setActiveLeagueId(resolved);
+      setLoading(false);
+      return;
+    }
 
     const { data: memberships, error: memberError } = await supabase
       .from('league_members')
       .select('league_id')
-      .eq('user_id', user.id);
+      .eq('user_id', userId);
 
     if (memberError || !memberships || memberships.length === 0) {
       setLeagues([]);
+      setSheetLeagues([]);
       setLoading(false);
       return;
     }
@@ -101,29 +223,33 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    setLeagues(leagueData || []);
+    const list = (leagueData || []) as League[];
+    const [sheet, stored] = await Promise.all([fetchSheetFacts(userId, list), readStoredActiveLeague(userId)]);
 
-    // Set first league as active if none selected or current selection invalid
-    if (leagueData && leagueData.length > 0) {
-      const currentValid = leagueData.some(l => l.id === activeLeagueId);
-      if (!activeLeagueId || !currentValid) {
-        setActiveLeagueId(leagueData[0].id);
-      }
-    }
+    setLeagues(list);
+    setSheetLeagues(sheet);
+
+    // In-session choice first, then the persisted one, then the first live
+    // league (lib/shell/activeLeague.ts). A league the user has left falls
+    // through to the fallback.
+    const resolved = resolveActiveLeagueId(activeRef.current ?? stored, sheet);
+    if (resolved !== activeRef.current) setActiveLeagueId(resolved);
 
     setLoading(false);
-  }
+  }, [userId, setActiveLeagueId]);
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setLeagues([]);
-      setActiveLeagueId(null);
+      setSheetLeagues([]);
+      activeRef.current = null;
+      setActiveLeagueIdState(null);
       setLoading(false);
       return;
     }
 
     fetchLeagues();
-  }, [user]);
+  }, [userId, fetchLeagues]);
 
   const activeLeague = leagues.find((l) => l.id === activeLeagueId) || null;
 
@@ -135,6 +261,7 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
         activeLeagueId,
         setActiveLeagueId,
         activeLeague,
+        sheetLeagues,
         refresh: fetchLeagues,
       }}
     >

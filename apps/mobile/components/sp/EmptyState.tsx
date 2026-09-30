@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { ReactNode } from 'react';
-import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { radius, space } from '@/constants/tokens';
-import { Button, FULL_WIDTH_FONT_SCALE } from '@/components/sp/Button';
+import { Button } from '@/components/sp/Button';
+import { isEmptyStateCarded } from '@/components/sp/logic/emptyState';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 
@@ -35,21 +36,30 @@ export interface EmptyStateProps {
   message: string;
   actionLabel?: string;
   onAction?: () => void;
+  /**
+   * Phase 3b-1: an optional second action (the board's "Check your email"
+   * and "Home with no leagues" both have two). Any EmptyState with an action
+   * is carded, and its actions are full-width and stacked, primary first.
+   */
+  secondaryActionLabel?: string;
+  onSecondaryAction?: () => void;
 }
 
-export function EmptyState({ icon: Icon, title, message, actionLabel, onAction }: EmptyStateProps) {
-  const { colors } = useTheme();
-  const { fontScale } = useWindowDimensions();
+export function EmptyState({ icon: Icon, title, message, actionLabel, onAction, secondaryActionLabel, onSecondaryAction }: EmptyStateProps) {
+  const { colors, elevation } = useTheme();
   const iconColor = colors.text2;
   const circleColor = colors.sunken;
-  // Button's own `fullWidth` prop only takes effect past FULL_WIDTH_FONT_SCALE
-  // (see Button.tsx) — but that's a no-op unless ITS wrapper also stretches
-  // to the full row; below the threshold this wrapper stays shrink-to-content
-  // so the button keeps its normal, sized-to-label look.
-  const stretched = fontScale >= FULL_WIDTH_FONT_SCALE;
 
-  return (
-    <View style={styles.container}>
+  // Design Lead ruling (Phase 3b-1): WITH actions it is carded — the board's
+  // `Empty`: a card padded 28/20, full-width actions inside; informational
+  // ones (no action) stay flat on the screen. Drawn like the shell's other
+  // cards (ProfileView, GetStarted) rather than as <Card>: Card clips with
+  // overflow:hidden, which would cut off elevation.card's iOS shadow.
+  const carded = isEmptyStateCarded(actionLabel, !!onAction);
+  const hasPair = !!(actionLabel && onAction && secondaryActionLabel && onSecondaryAction);
+
+  const content = (
+    <>
       <View style={[styles.iconCircle, { backgroundColor: circleColor }]}>
         <Icon size={ICON_SIZE} color={iconColor} />
       </View>
@@ -59,13 +69,21 @@ export function EmptyState({ icon: Icon, title, message, actionLabel, onAction }
       <Text variant="body" tone="secondary" style={styles.message}>
         {message}
       </Text>
-      {actionLabel && onAction ? (
-        <View style={[styles.action, stretched ? styles.actionStretched : null]}>
-          <Button label={actionLabel} onPress={onAction} size="sm" fullWidth />
+      {carded ? (
+        <View style={[styles.action, styles.actionStretched, styles.actionPair]}>
+          <Button label={actionLabel!} onPress={onAction} />
+          {hasPair ? <Button label={secondaryActionLabel!} onPress={onSecondaryAction} variant="secondary" /> : null}
         </View>
       ) : null}
-    </View>
+    </>
   );
+
+  if (carded) {
+    return (
+      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, elevation.card]}>{content}</View>
+    );
+  }
+  return <View style={styles.container}>{content}</View>;
 }
 
 const styles = StyleSheet.create({
@@ -73,6 +91,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: space[8],
+    gap: space[3],
+  },
+  card: {
+    alignItems: 'center',
+    borderRadius: radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingVertical: 28,
+    paddingHorizontal: space[6],
     gap: space[3],
   },
   iconCircle: {
@@ -94,5 +120,8 @@ const styles = StyleSheet.create({
   },
   actionStretched: {
     alignSelf: 'stretch',
+  },
+  actionPair: {
+    gap: space[4],
   },
 });

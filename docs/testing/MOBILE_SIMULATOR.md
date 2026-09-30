@@ -90,3 +90,34 @@ A second person or worker can run in parallel on another device, with Metro on
   on "Reduce Motion" and on an unrelated control switch ("Prefer Non-Blinking
   Cursor") all failed to toggle; a drag gesture at the same location worked
   on the first try.
+- **Reduce Motion and text size can be set without touching Settings.**
+  `xcrun simctl spawn <UDID> defaults write com.apple.Accessibility ReduceMotionEnabled -bool YES`
+  (`NO` to undo) and `xcrun simctl ui <UDID> content_size accessibility-extra-large`
+  (`large` = default), then a fresh JS load (terminate + re-`openurl`, as above).
+  Verified 2026-09-29 against the design gallery's `useMotion().reduced`
+  readout: `true` after the write + relaunch, `false` after undoing it. This
+  replaces the Settings-switch drag above for scripted captures.
+- **`CI=1 npx expo start` disables file watching.** It's the usual way to keep
+  a background Metro from prompting, but in CI mode Metro never picks up edits:
+  the bundle silently goes stale, and the only trace is one log line, "Metro is
+  running in CI mode, reloads are disabled." Run a background Metro as
+  `npx expo start --go --port <port> < /dev/null` instead (stdin closed, watch
+  mode on). Found 2026-09-29: two "fixes" appeared not to work because Metro
+  was still serving the code from before them.
+- **Screenshots can lag the screen by 1–3 s** on a loaded machine (several
+  Metro servers and Simulators from parallel sessions). An empty field right
+  after typing may just be an old frame: wait and re-take before calling it a
+  bug.
+- **Scope process kills to your own device and port.** Other sessions run
+  their own Metro servers and `simctl io … recordVideo` recordings on this Mac.
+  Stop a recording with `pkill -INT -f "io <UDID> recordVideo"`, never
+  `pkill -f recordVideo`, and stop Metro by its `--port`.
+- **Recordings are variable-frame-rate, and H.264 samples arrive in decode
+  order.** Sort sample timestamps before measuring frame gaps, or B-frames
+  produce negative gaps and a meaningless frame rate.
+  `~/fantasy-stock-design-review/tools/vidtool.swift` (`info` / `gaps` /
+  `frames`) does this: it reports late frames (>25 ms) during continuous
+  motion and ignores idle stretches (the recorder writes frames only when
+  something changes). Synthetic touches (typing, swipes) inject input at an
+  irregular rate, so judge an animation's smoothness from a window where only
+  that animation runs.

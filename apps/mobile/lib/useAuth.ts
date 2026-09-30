@@ -1,67 +1,9 @@
-import { useEffect, useState, useRef } from 'react';
-import { Session, User } from '@supabase/supabase-js';
-import { supabase } from './supabase';
-import { setupPushNotifications, removePushToken } from './notifications';
-import { setRecoverySession } from './recoveryNonce';
+import { useSession } from './SessionProvider';
 
+// The auth state now lives in ONE place: lib/SessionProvider.tsx (Phase
+// 3b-1). This hook keeps its original return shape so its ~20 call sites
+// are unchanged; it no longer opens its own onAuthStateChange subscription.
 export function useAuth() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const notificationsSetup = useRef(false);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-
-      // Register for push notifications on initial load if logged in
-      if (session?.user && !notificationsSetup.current) {
-        notificationsSetup.current = true;
-        setupPushNotifications(session.user.id);
-      }
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        // Use functional updates to avoid unnecessary re-renders
-        // that can cause native-stack to reconfigure and dismiss the keyboard
-        setSession(prev => prev?.access_token === session?.access_token ? prev : session);
-        setUser(prev => {
-          const newUser = session?.user ?? null;
-          return prev?.id === newUser?.id ? prev : newUser;
-        });
-        setLoading(false);
-
-        // Register for push notifications on sign in
-        if (event === 'SIGNED_IN' && session?.user && !notificationsSetup.current) {
-          notificationsSetup.current = true;
-          setupPushNotifications(session.user.id);
-        }
-
-        // Reset flag on sign out
-        if (event === 'SIGNED_OUT') {
-          notificationsSetup.current = false;
-          // Defensive: a recovery session ending any other way than
-          // reset-password.tsx's own Cancel/success handlers (e.g. a
-          // sign-out elsewhere in the app) must not leave the flag
-          // stuck true for whatever session comes next.
-          setRecoverySession(false);
-        }
-      }
-    );
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const signOut = async () => {
-    // Remove push token before signing out
-    if (user?.id) {
-      await removePushToken(user.id);
-    }
-    await supabase.auth.signOut();
-  };
-
+  const { session, user, loading, signOut } = useSession();
   return { session, user, loading, signOut };
 }

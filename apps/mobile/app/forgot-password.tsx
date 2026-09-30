@@ -1,41 +1,59 @@
-/* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
+/* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+
+import { space } from '@/constants/tokens';
+import { Button, type ButtonStatus } from '@/components/sp/Button';
+import { EmptyState } from '@/components/sp/EmptyState';
+import { Text } from '@/components/sp/Text';
+import { AuthScaffold } from '@/components/shell/AuthScaffold';
+import { Field } from '@/components/shell/Field';
+import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { supabase } from '@/lib/supabase';
 import { generateRecoveryNonce, storeRecoveryNonce } from '@/lib/recoveryNonce';
-import { Colors } from '@/constants/Colors';
-import { Ionicons } from '@expo/vector-icons';
-import { Button } from '@/components/ui';
+import { FIXTURE_NETWORK_MS, SHELL_FIXTURE } from '@/lib/shell/devFixture';
+
+// Phase 3b-1 — Forgot password + "Check your email" (spec row 4; board
+// "Forgot password", "Check your email"). Existing strings kept verbatim in
+// sentence case ("Forgot password?", "Send reset link", "Back to sign in",
+// "Didn't receive it? Send again", and the original description). The
+// sent state's explanation line is the board's new copy, as the spec allows.
+// Errors are inline and instant (§4). The recovery-nonce logic below is
+// unchanged (F2).
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<ButtonStatus>('idle');
+  const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
 
   async function handleResetPassword() {
+    if (status === 'loading') return;
     if (!email) {
-      Alert.alert('Error', 'Please enter your email address');
+      setError('Please enter your email address');
       return;
     }
 
     // Basic email validation
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      setError('Please enter a valid email address');
       return;
     }
 
-    setLoading(true);
+    setError(null);
+    setStatus('loading');
+
+    if (SHELL_FIXTURE) {
+      // DEV fixture (lib/shell/devFixture.ts): show the sent state without
+      // emailing anyone — no nonce, no network.
+      setTimeout(() => {
+        setStatus('idle');
+        setSent(true);
+      }, FIXTURE_NETWORK_MS);
+      return;
+    }
 
     // Bind this reset to a per-request nonce so only a link WE requested on THIS
     // device can complete the recovery (fixes F2: deep-link session fixation).
@@ -45,190 +63,77 @@ export default function ForgotPasswordScreen() {
     const nonce = generateRecoveryNonce();
     const stored = await storeRecoveryNonce(nonce);
     if (!stored) {
-      setLoading(false);
-      Alert.alert('Error', 'Could not start a secure password reset on this device. Please try again.');
+      setStatus('idle');
+      setError('Could not start a secure password reset on this device. Please try again.');
       return;
     }
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `fantasystockapp://reset-password?rn=${encodeURIComponent(nonce)}`,
     });
 
-    setLoading(false);
+    setStatus('idle');
 
-    if (error) {
-      Alert.alert('Error', error.message);
+    if (resetError) {
+      setError(resetError.message);
       return;
     }
 
     setSent(true);
   }
 
+  const backToSignIn = () => router.replace('/login');
+
   if (sent) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.content}>
-          <View style={styles.iconContainer}>
-            <Ionicons name="mail-outline" size={64} color={Colors.primary} />
-          </View>
-          <Text style={styles.title}>Check Your Email</Text>
-          <Text style={styles.description}>
-            We've sent a password reset link to:
-          </Text>
-          <Text style={styles.email}>{email}</Text>
-          <Text style={styles.hint}>
-            Click the link in the email to reset your password. The link will expire in 24 hours.
-          </Text>
-
-          <Button
-            title="Back to Sign In"
-            onPress={() => router.replace('/login')}
-            variant="primary"
-            style={styles.buttonSpacing}
-          />
-
-          <TouchableOpacity
-            style={styles.resendButton}
-            onPress={() => {
-              setSent(false);
-              handleResetPassword();
-            }}
-          >
-            <Text style={styles.resendText}>Didn't receive it? Send again</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+      <AuthScaffold back={{ label: 'Back to sign in', onPress: backToSignIn }}>
+        <EmptyState
+          icon={(p) => <Ionicons name="mail-outline" {...p} />}
+          title="Check your email"
+          message={`We sent a reset link to ${email}. It opens the app to set a new password.`}
+          actionLabel="Back to sign in"
+          onAction={backToSignIn}
+          secondaryActionLabel="Didn't receive it? Send again"
+          onSecondaryAction={() => {
+            setSent(false);
+            handleResetPassword();
+          }}
+        />
+      </AuthScaffold>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={Colors.primary} />
-        </TouchableOpacity>
-
-        <View style={styles.content}>
-          <Text style={styles.title}>Forgot Password?</Text>
-          <Text style={styles.description}>
-            Enter your email address and we'll send you a link to reset your password.
-          </Text>
-
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            placeholderTextColor={Colors.textMuted}
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            autoFocus
-          />
-
-          <Button
-            title="Send Reset Link"
-            onPress={handleResetPassword}
-            variant="primary"
-            loading={loading}
-            style={styles.buttonSpacing}
-          />
-
-          <TouchableOpacity
-            style={styles.switchButton}
-            onPress={() => router.back()}
-          >
-            <Text style={styles.switchText}>Back to Sign In</Text>
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+    <AuthScaffold back={{ label: 'Back to sign in', onPress: () => (router.canGoBack() ? router.back() : backToSignIn()) }}>
+      <View style={styles.heading}>
+        <ScreenTitle>Forgot password?</ScreenTitle>
+        <Text variant="body" tone="secondary">
+          Enter your email address and we&apos;ll send you a link to reset your password.
+        </Text>
+      </View>
+      <Field
+        label="Email address"
+        value={email}
+        onChangeText={(v) => {
+          setEmail(v);
+          if (error) setError(null);
+        }}
+        autoCapitalize="none"
+        autoComplete="email"
+        keyboardType="email-address"
+        textContentType="emailAddress"
+        returnKeyType="send"
+        onSubmitEditing={handleResetPassword}
+        autoFocus
+        error={error}
+      />
+      <Button label="Send reset link" status={status} onPress={handleResetPassword} />
+    </AuthScaffold>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  backButton: {
-    padding: 16,
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    marginTop: -60,
-  },
-  iconContainer: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontFamily: 'Inter_700Bold',
-    color: Colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  description: {
-    fontSize: 15,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 32,
-    lineHeight: 22,
-  },
-  email: {
-    fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
-    color: Colors.primary,
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  hint: {
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 32,
-    lineHeight: 20,
-  },
-  input: {
-    backgroundColor: Colors.cardBg,
-    borderRadius: 8,
-    padding: 16,
-    fontSize: 16,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textPrimary,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  buttonSpacing: {
-    marginTop: 8,
-  },
-  switchButton: {
-    marginTop: 24,
-    alignItems: 'center',
-  },
-  switchText: {
-    color: Colors.primary,
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
-  },
-  resendButton: {
-    marginTop: 16,
-    alignItems: 'center',
-  },
-  resendText: {
-    color: Colors.textSecondary,
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
+  heading: {
+    gap: space[2],
   },
 });

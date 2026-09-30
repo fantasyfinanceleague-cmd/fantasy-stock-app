@@ -36,7 +36,9 @@ export default tseslint.config(
     // Phase 3). constants/tokens/** itself is NOT in this glob: those files
     // ARE the source of every hex value and font size this rule exists to
     // keep out of their CONSUMERS.
-    files: ['components/sp/**/*.{ts,tsx}'],
+    // Phase 3b-1: extended to components/shell/** (the app shell), which is
+    // held to the same token-only rule.
+    files: ['components/sp/**/*.{ts,tsx}', 'components/shell/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-syntax': [
         'error',

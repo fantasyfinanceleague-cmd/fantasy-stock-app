@@ -26,7 +26,18 @@
 // `weakPasswordMessage` instead (both real call sites do); a caller that
 // doesn't gets a still-reasonable generic fallback.
 
-export function getAuthErrorMessage(error: any, weakPasswordMessage?: string): string {
+/** The server-side signup gate's refusal (Before User Created hook); it has no stable code. */
+export function isSignupsPausedError(error: any): boolean {
+  const message = typeof error?.message === 'string' ? error.message.toLowerCase() : '';
+  return message.includes('not open for new signups');
+}
+
+/**
+ * `productName` is brand.name (constants/brand.ts), passed in rather than
+ * imported for the same Deno reason as the password sentence above. Without
+ * it the paused message uses a neutral subject — never a hard-coded brand.
+ */
+export function getAuthErrorMessage(error: any, weakPasswordMessage?: string, productName?: string): string {
   const code = typeof error?.code === 'string' ? error.code : '';
   const message = typeof error?.message === 'string' ? error.message.toLowerCase() : '';
 
@@ -57,8 +68,9 @@ export function getAuthErrorMessage(error: any, weakPasswordMessage?: string): s
     return 'Too many attempts — please wait a minute and try again.';
   }
   // Server-side signup gate (Before User Created hook).
-  if (message.includes('not open for new signups')) {
-    return 'Stockpile isn\'t open for new signups yet — check back soon. Existing accounts can still sign in.';
+  if (isSignupsPausedError(error)) {
+    // Giorgio's final text, verbatim (3b-1 spec row 3).
+    return `${productName ?? 'This app'} is not open for new signups yet — check back soon. Existing accounts can still sign in.`;
   }
   if (message.includes('network request failed') || message.includes('failed to fetch') || message.includes('network error')) {
     return 'Network error — check your connection and try again.';
