@@ -190,9 +190,17 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
           { user_id: 'paolo', rank: 2, wins: 0, losses: 0, ties: 0, points_for: 0, display_name: 'Paolo M.', is_bot: false },
           { user_id: 'gianluigi', rank: 3, wins: 0, losses: 0, ties: 0, points_for: 0, display_name: 'Gianluigi B.', is_bot: false },
         ]
-      : [
-          { user_id: 'roberto', rank: 2, wins: 4, losses: 1, ties: 0, points_for: 129.99, display_name: 'Roberto B.', is_bot: false },
+      : // B2 (Design Lead, 2026-09-30): a realistic 6-manager league (the
+        // board's, matching FIXTURE_LEAGUE.playoffTeams=6), IN RANK ORDER —
+        // StandingsCard deliberately never re-sorts on the client (it
+        // trusts SQL's league_standings_ranked), so an out-of-order fixture
+        // array is exactly what rendered as "2, 1, 6" instead of "1, 2, 3".
+        [
           { user_id: 'paolo', rank: 1, wins: 5, losses: 0, ties: 0, points_for: 512.4, display_name: 'Paolo M.', is_bot: false },
+          { user_id: 'roberto', rank: 2, wins: 4, losses: 1, ties: 0, points_for: 129.99, display_name: 'Roberto B.', is_bot: false },
+          { user_id: 'luca', rank: 3, wins: 3, losses: 2, ties: 0, points_for: 88.2, display_name: 'Luca V.', is_bot: false },
+          { user_id: 'chiara', rank: 4, wins: 2, losses: 3, ties: 0, points_for: -34.1, display_name: 'Chiara R.', is_bot: false },
+          { user_id: 'marco', rank: 5, wins: 2, losses: 3, ties: 0, points_for: -61.5, display_name: 'Marco T.', is_bot: false },
           { user_id: 'gianluigi', rank: 6, wins: 1, losses: 4, ties: 0, points_for: -142.35, display_name: 'Gianluigi B.', is_bot: false },
         ],
   };

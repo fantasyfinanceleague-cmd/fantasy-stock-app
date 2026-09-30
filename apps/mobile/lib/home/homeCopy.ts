@@ -30,6 +30,26 @@ export function standingsThroughWeekCaption(throughWeek: number): string {
   return `Through Week ${throughWeek}`;
 }
 
+/** Which week the Standings caption should say "through" (Design Lead
+ * ruling, 2026-09-30, B2): during the regular season that's `week - 1`
+ * (the last COMPLETED week), but once the playoffs start the entire
+ * regular season is already complete, so every playoff-family state
+ * (and any live/scored/scoring week that's itself a playoff round) reads
+ * "Through Week {numWeeks}" instead — never a stale `week - 1` computed
+ * from a playoff week number far past `numWeeks` ("Through Week 15"),
+ * and never 0 (found reaching the screen as "Through Week 0"). Callers
+ * must not show the Standings card at all for `pre_season` (B2, B3) —
+ * this function is never reached for it in practice, but still returns 0
+ * rather than a negative number if it ever is. */
+export function standingsThroughWeek(phase: PhaseResult): number {
+  const isPlayoffPhase =
+    phase.kind === 'playoff_bye' || phase.kind === 'eliminated' || phase.kind === 'missed_playoffs' || phase.kind === 'playoff_pending' ||
+    ('isPlayoff' in phase && phase.isPlayoff);
+  if (isPlayoffPhase) return phase.numWeeks ?? 0;
+  const week = 'week' in phase ? phase.week : 0;
+  return Math.max(0, week - 1);
+}
+
 // ── This-week card (state 1/2/3/4) — board, verbatim ───────────────────────
 export const THIS_WEEK_TAG = 'This week'; // board
 export function thisWeekLiveChip(week: number): string {

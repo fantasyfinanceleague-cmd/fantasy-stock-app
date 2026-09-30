@@ -27,6 +27,7 @@ import {
   PRE_SEASON_NO_LEADER, PRE_SEASON_SCORING_STARTS, BYE_MESSAGE, byeNextWeekLabel,
   byeToRoundLabel, eliminatedLabel, SEE_THE_BRACKET, scoredResultLine, nextWeekStartsLabel,
   MISSED_PLAYOFFS_MESSAGE, THIS_WEEK_TAG, heroWeekOrRoundLabel, playoffPendingLine,
+  standingsThroughWeek,
 } from '@/lib/home/homeCopy';
 
 // `rightLabel` for live/closed states is derived from the phase's own
@@ -238,6 +239,9 @@ function HomeBody({
   }
 
   const showSeasonCard = season && !['pre_season'].includes(phase.kind);
+  // B2/B3 (Design Lead, 2026-09-30): the board has no Standings card at
+  // all before the season starts — there's no record yet to show.
+  const showStandingsCard = !['pre_season'].includes(phase.kind);
 
   return (
     <>
@@ -269,7 +273,9 @@ function HomeBody({
           skipEntrance={skipEntrance}
         />
       ) : null}
-      <StandingsCard rows={standingRows} throughWeek={Math.max(0, week - 1)} skipEntrance={skipEntrance} />
+      {showStandingsCard ? (
+        <StandingsCard rows={standingRows} throughWeek={standingsThroughWeek(phase)} skipEntrance={skipEntrance} />
+      ) : null}
     </>
   );
 }
