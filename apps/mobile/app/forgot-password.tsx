@@ -6,7 +6,6 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { space } from '@/constants/tokens';
 import { Button, type ButtonStatus } from '@/components/sp/Button';
-import { Card } from '@/components/sp/Card';
 import { EmptyState } from '@/components/sp/EmptyState';
 import { Text } from '@/components/sp/Text';
 import { AuthScaffold } from '@/components/shell/AuthScaffold';
@@ -88,20 +87,18 @@ export default function ForgotPasswordScreen() {
   if (sent) {
     return (
       <AuthScaffold back={{ label: 'Back to sign in', onPress: backToSignIn }}>
-        <Card>
-          <EmptyState
-            icon={(p) => <Ionicons name="mail-outline" {...p} />}
-            title="Check your email"
-            message={`We sent a reset link to ${email}. It opens the app to set a new password.`}
-            actionLabel="Back to sign in"
-            onAction={backToSignIn}
-            secondaryActionLabel="Didn't receive it? Send again"
-            onSecondaryAction={() => {
-              setSent(false);
-              handleResetPassword();
-            }}
-          />
-        </Card>
+        <EmptyState
+          icon={(p) => <Ionicons name="mail-outline" {...p} />}
+          title="Check your email"
+          message={`We sent a reset link to ${email}. It opens the app to set a new password.`}
+          actionLabel="Back to sign in"
+          onAction={backToSignIn}
+          secondaryActionLabel="Didn't receive it? Send again"
+          onSecondaryAction={() => {
+            setSent(false);
+            handleResetPassword();
+          }}
+        />
       </AuthScaffold>
     );
   }

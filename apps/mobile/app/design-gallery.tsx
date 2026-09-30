@@ -244,27 +244,29 @@ export default function DesignGalleryScreen() {
         </Section>
   
         <Section title="EmptyState">
-          <Card style={styles.card}>
-            <EmptyState
-              icon={(p) => <Ionicons name="trophy-outline" {...p} />}
-              title="No leagues yet"
-              message="Create or join a league to get started."
-              actionLabel="Create a league"
-              onAction={() => {}}
-            />
-          </Card>
-          {/* Two actions (Phase 3b-1): both full-width, stacked. */}
-          <Card style={styles.card}>
-            <EmptyState
-              icon={(p) => <Ionicons name="trophy-outline" {...p} />}
-              title="No leagues yet"
-              message="Create or join a league to get started."
-              actionLabel="Create a league"
-              onAction={() => {}}
-              secondaryActionLabel="Join with a code"
-              onSecondaryAction={() => {}}
-            />
-          </Card>
+          {/* Informational (no action): flat. */}
+          <EmptyState
+            icon={(p) => <Ionicons name="swap-horizontal-outline" {...p} />}
+            title="No trades yet"
+            message="Trades you make will show up here."
+          />
+          <EmptyState
+            icon={(p) => <Ionicons name="trophy-outline" {...p} />}
+            title="No leagues yet"
+            message="Create or join a league to get started."
+            actionLabel="Create a league"
+            onAction={() => {}}
+          />
+          {/* With actions it is carded (3b-1 ruling); two actions stack full-width. */}
+          <EmptyState
+            icon={(p) => <Ionicons name="trophy-outline" {...p} />}
+            title="No leagues yet"
+            message="Create or join a league to get started."
+            actionLabel="Create a league"
+            onAction={() => {}}
+            secondaryActionLabel="Join with a code"
+            onSecondaryAction={() => {}}
+          />
         </Section>
   
         <Section title="Sheet">

@@ -7,7 +7,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { space } from '@/constants/tokens';
 import { brand } from '@/constants/brand';
 import { PASSWORD_RULE_SENTENCE } from '@/constants/passwordRules';
-import { Card } from '@/components/sp/Card';
 import { EmptyState } from '@/components/sp/EmptyState';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
@@ -94,15 +93,13 @@ export default function ResetPasswordScreen() {
   if (success) {
     return (
       <AuthScaffold>
-        <Card>
-          <EmptyState
-            icon={(p) => <Ionicons name="checkmark-circle-outline" {...p} />}
-            title="Password updated"
-            message="You're signed in with your new password."
-            actionLabel="Continue"
-            onAction={() => router.replace('/')}
-          />
-        </Card>
+        <EmptyState
+          icon={(p) => <Ionicons name="checkmark-circle-outline" {...p} />}
+          title="Password updated"
+          message="You're signed in with your new password."
+          actionLabel="Continue"
+          onAction={() => router.replace('/')}
+        />
       </AuthScaffold>
     );
   }
@@ -128,17 +125,15 @@ export default function ResetPasswordScreen() {
   if (screenState === 'invalid') {
     return (
       <AuthScaffold>
-        <Card>
-          <EmptyState
-            icon={(p) => <Ionicons name="alert-circle-outline" {...p} />}
-            title="This link didn't work"
-            message="It may have expired, been used already, or been opened on a different device than the one that asked for it. Request a new link to continue."
-            actionLabel="Request a new link"
-            onAction={() => router.replace('/forgot-password')}
-            secondaryActionLabel="Back to sign in"
-            onSecondaryAction={handleCancel}
-          />
-        </Card>
+        <EmptyState
+          icon={(p) => <Ionicons name="alert-circle-outline" {...p} />}
+          title="This link didn't work"
+          message="It may have expired, been used already, or been opened on a different device than the one that asked for it. Request a new link to continue."
+          actionLabel="Request a new link"
+          onAction={() => router.replace('/forgot-password')}
+          secondaryActionLabel="Back to sign in"
+          onSecondaryAction={handleCancel}
+        />
       </AuthScaffold>
     );
   }
