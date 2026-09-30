@@ -4,64 +4,52 @@
  * mark-to-market — see docs/superpowers/plans/2026-09-29-mobile-home-3b2.md
  * ("The numbers: one source per number, and the chart matches the hero").
  *
- * One point per TRADING DAY, taken directly from the day list the caller
- * supplies (from historical-bars) — weekends and holidays are simply
- * absent from that list, which is what keeps them flat by construction,
- * with no synthetic zero-change point ever inserted for them.
+ * NO COSMETIC RAMP (Orchestrator ruling, 2026-09-30, superseding this
+ * module's earlier `hasData:false` straight-line-ramp behavior): a past,
+ * SCORED week contributes exactly ONE point — its own `matchups` gain,
+ * at `weekEnd` — never a fabricated per-day interpolation. The series
+ * opens with one more real point: Week 1's open, at 0, before anything
+ * has happened. Only the CURRENT (unscored) week gets real per-day
+ * granularity, from the caller's own fetched bars. A straight line drawn
+ * between two real points is honest interpolation; a point that LOOKS
+ * like a third data point but isn't one is not. Every `SeasonGainPoint`
+ * is tagged `kind` so the renderer can tell which is which and never
+ * label an interpolated position as if it were real.
  *
- * The series starts at 0 at Week 1's open: nothing before Week 1 is ever
- * plotted, so there is no "draft price vs. Monday open" jump.
- *
- * Each day's within-week contribution is computed with the SAME
- * liveWeekScore() helper Home/Matchup use for the live card — never a
- * second, independently-derived formula. A completed week's LAST trading
- * day is then PINNED to the real `matchups` gain (the source of truth):
- * the bar-derived value is reported alongside it in `pinned`, and a
- * disagreement over one cent is counted in `mismatches` rather than
- * hidden.
- *
- * The CURRENT (unscored) week's last day is pinned the same way, but to
+ * Each live day's contribution is computed with the SAME liveWeekScore()
+ * helper Home/Matchup use for the live card — never a second,
+ * independently-derived formula. The live week's last day is pinned to
  * `live.gain` — the caller's own already-computed live score, passed in
  * rather than recomputed here, so the chart's endpoint and the hero's
  * displayed gain are the same number by construction, never two
- * independently-rounded calls that could drift apart.
+ * independently-rounded calls that could drift apart. A past week's
+ * point needs no such pin: it's built directly from the source of truth
+ * (`matchups.team_gain`), so there is nothing to compare it against or
+ * disagree with.
  */
 
 import { liveWeekScore, type LiveSnapshot, type LiveTrade } from './liveWeekScore';
 
 export interface SeasonWeekInput {
   week: number;
+  /** ISO. Only week[0]'s is read, for the series' opening 0-point. */
+  weekStart: string;
+  /** ISO. This week's single point's date, when it's a past, scored week. */
+  weekEnd: string;
   /** The matchups.team_gain for this week, or null for the current,
    * not-yet-scored week. */
   scoredGain: number | null;
-  /** This week's Monday-lot snapshots (constant across the week). */
+  /** Only meaningful for the CURRENT (unscored) week. */
   snapshots: LiveSnapshot[];
-  /** This week's trades, any time within the week. */
   trades: LiveTrade[];
   /** Ascending ISO trading-day dates within [weekStart, weekEnd) — from
-   * historical-bars. Empty is valid (a bye week with no market data
-   * needed still advances the running total via `scoredGain`). */
+   * historical-bars. Only meaningful for the CURRENT (unscored) week. */
   tradingDays: string[];
-  /**
-   * False for a COMPLETED week whose per-day snapshots/trades were not
-   * fetched (the request-budget tradeoff: Home's live state fetches only
-   * the CURRENT week's ledger — see the plan's F1 — so a past week's
-   * intra-week shape is drawn as a plain straight-line ramp from the
-   * week's start to its scored end, exactly the same simplification the
-   * design board itself makes with its cosmetic DAY_SHAPES). When false,
-   * `snapshots`/`trades`/`closesByDate` for this week are ignored, and
-   * NO entry is added to `pinned` — there is no independently-fetched bar
-   * value to compare against, so no comparison is claimed (CLAUDE.md
-   * "verdict scope must match evidence scope": reporting a "mismatch"
-   * against data we deliberately didn't fetch would be a false claim,
-   * not a finding). Defaults to true. */
-  hasData?: boolean;
 }
 
 export interface SeasonGainSeriesInput {
   weeks: SeasonWeekInput[];
-  /** date -> symbol -> close, covering every symbol referenced by every
-   * week's snapshots/trades for every date in that week's tradingDays. */
+  /** date -> symbol -> close, for the current week's tradingDays only. */
   closesByDate: Record<string, Record<string, number>>;
   /** The current week's already-computed live gain — see the module doc.
    * Null when there is no live week (e.g. season complete). */
@@ -73,15 +61,12 @@ export interface SeasonGainPoint {
   week: number;
   /** Cumulative season gain through this point (the chart's y value). */
   gain: number;
-}
-
-export interface PinnedWeek {
-  week: number;
-  /** What liveWeekScore computed from the day's close price. */
-  barGain: number;
-  /** What the source of truth (matchups, or the live hero) says. */
-  scoredGain: number;
-  diff: number;
+  /** 'weekly': a past week's single scored point, or the Week-1-open
+   * anchor — there is no real data between it and its neighbors, only a
+   * straight line. 'daily': a real trading day within the live,
+   * unscored week. The renderer must never label a 'weekly' point's
+   * neighboring gap as if it were also measured. */
+  kind: 'weekly' | 'daily';
 }
 
 export interface SeasonGainSeriesResult {
@@ -90,9 +75,6 @@ export interface SeasonGainSeriesResult {
   weekStartIdx: number[];
   /** Cumulative gain immediately BEFORE each week started, parallel to `weeks` — the 1W rebase base. */
   weekBase: number[];
-  pinned: PinnedWeek[];
-  /** Count of `pinned` entries whose diff exceeds one cent. */
-  mismatches: number;
 }
 
 function priceOn(closesByDate: Record<string, Record<string, number>>, date: string, symbol: string): number | null {
@@ -106,7 +88,7 @@ function endOfDay(date: string): number {
 /** Round to the cent — dollar amounts are compared/accumulated at cent
  * precision throughout (matching data.js's `cents()` and the server's
  * `.toFixed(2)` logs), so IEEE-754 noise from repeated float addition
- * never shows up as a false chart wiggle or a spurious mismatch count. */
+ * never shows up as a false chart wiggle. */
 function cents(v: number): number {
   return Math.round(v * 100) / 100;
 }
@@ -115,8 +97,6 @@ export function buildSeasonGainSeries(input: SeasonGainSeriesInput): SeasonGainS
   const points: SeasonGainPoint[] = [];
   const weekStartIdx: number[] = [];
   const weekBase: number[] = [];
-  const pinned: PinnedWeek[] = [];
-  let mismatches = 0;
   let base = 0; // 0 at Week 1's open — no draft/deposit jump.
 
   for (let wi = 0; wi < input.weeks.length; wi++) {
@@ -124,54 +104,43 @@ export function buildSeasonGainSeries(input: SeasonGainSeriesInput): SeasonGainS
     weekStartIdx.push(points.length);
     weekBase.push(base);
 
-    const isCurrentWeek = week.scoredGain === null;
-    const days = week.tradingDays;
-    const hasData = week.hasData ?? true;
+    if (wi === 0) {
+      points.push({ date: week.weekStart, week: week.week, gain: 0, kind: 'weekly' });
+    }
 
+    const isCurrentWeek = week.scoredGain === null;
+
+    if (!isCurrentWeek) {
+      // A past, scored week: one real point, pinned directly to the
+      // source of truth. No bar-derived value is computed for it, so
+      // there is nothing to compare or claim a mismatch against.
+      base = cents(base + week.scoredGain!);
+      points.push({ date: week.weekEnd, week: week.week, gain: base, kind: 'weekly' });
+      continue;
+    }
+
+    // The live, unscored week: real per-day granularity from the
+    // caller's fetched bars.
+    const days = week.tradingDays;
     for (let di = 0; di < days.length; di++) {
       const date = days[di];
       const isLastDay = di === days.length - 1;
 
-      if (isLastDay && isCurrentWeek && input.live) {
+      if (isLastDay && input.live) {
         // The live hero's own number — never recomputed here.
-        points.push({ date, week: week.week, gain: cents(base + input.live.gain) });
-        continue;
-      }
-
-      if (!hasData && week.scoredGain !== null) {
-        // No independently-fetched ledger for this week: a plain
-        // straight-line ramp to the scored end, no pin/mismatch claimed.
-        const fraction = (di + 1) / days.length;
-        points.push({ date, week: week.week, gain: cents(base + week.scoredGain * fraction) });
+        points.push({ date, week: week.week, gain: cents(base + input.live.gain), kind: 'daily' });
         continue;
       }
 
       const tradesUpToDay = week.trades.filter((t) => t.createdAt.getTime() <= endOfDay(date));
       const dayResult = liveWeekScore(week.snapshots, tradesUpToDay, (sym) => priceOn(input.closesByDate, date, sym));
-      let dayGain = dayResult.gain;
-
-      if (isLastDay && week.scoredGain !== null) {
-        const diff = cents(Math.abs(dayGain - week.scoredGain));
-        pinned.push({ week: week.week, barGain: dayGain, scoredGain: week.scoredGain, diff });
-        if (diff > 0.01) mismatches += 1;
-        dayGain = week.scoredGain; // pin to the source of truth
-      }
-
-      points.push({ date, week: week.week, gain: cents(base + dayGain) });
+      points.push({ date, week: week.week, gain: cents(base + dayResult.gain), kind: 'daily' });
     }
 
-    // Advance the running total by this week's FINAL contribution — the
-    // scored gain when known, otherwise the live gain (both already
-    // reflected in the last point pushed above, when one existed; a
-    // zero-tradingDays week still needs this to keep later weeks correct).
-    if (week.scoredGain !== null) {
-      base = cents(base + week.scoredGain);
-    } else if (input.live) {
-      base = cents(base + input.live.gain);
-    }
+    if (input.live) base = cents(base + input.live.gain);
   }
 
-  return { points, weekStartIdx, weekBase, pinned, mismatches };
+  return { points, weekStartIdx, weekBase };
 }
 
 export type SeasonWindow = '1W' | '1M' | 'Season';
@@ -182,8 +151,11 @@ export type SeasonWindow = '1W' | '1M' | 'Season';
  * - '1W': the week at `weekIndex`'s own points, rebased to 0 at that
  *   week's start — its endpoint is exactly liveWeekScore's result for
  *   that week (the this-week card's score), never re-derived.
- * - '1M': the last 21 trading days (or fewer, if the series is shorter),
- *   rebased to 0 at the window's own first point.
+ * - '1M': every point within the last 30 CALENDAR days of the series'
+ *   final point, rebased to 0 at the window's own first point. A point
+ *   count (e.g. "the last 21 points") no longer corresponds to a day
+ *   count now that a past week contributes one point instead of one per
+ *   trading day, so the window is cut by date, not by index.
  */
 export function windowSeries(
   result: SeasonGainSeriesResult,
@@ -200,8 +172,11 @@ export function windowSeries(
   }
 
   // '1M'
-  const WINDOW_DAYS = 21;
-  const slice = result.points.slice(Math.max(0, result.points.length - WINDOW_DAYS));
+  const WINDOW_DAYS = 30;
+  if (result.points.length === 0) return [];
+  const lastDate = result.points[result.points.length - 1].date;
+  const cutoff = new Date(`${lastDate}T00:00:00Z`).getTime() - WINDOW_DAYS * 86_400_000;
+  const slice = result.points.filter((p) => new Date(`${p.date}T00:00:00Z`).getTime() >= cutoff);
   if (slice.length === 0) return slice;
   const base = slice[0].gain;
   return slice.map((p) => ({ ...p, gain: cents(p.gain - base) }));

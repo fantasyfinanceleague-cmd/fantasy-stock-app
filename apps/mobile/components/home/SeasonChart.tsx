@@ -11,6 +11,7 @@ import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { useMotion } from '@/components/sp/motion';
 import { formatMoney } from '@/components/sp/logic/money';
+import { seasonScrubLabel } from '@/lib/home/homeCopy';
 import { LiveDot } from '@/components/sp/game/LiveDot';
 import { buildChartGeometry, nearestPointIndex } from '@/lib/home/chartGeometry';
 import type { SeasonGainPoint } from '@/lib/home/seasonGainSeries';
@@ -107,6 +108,9 @@ export function SeasonChart({ points, live = false, weekStartIdx, onScrubIndex }
 
   const scrubPoint = geometry && scrubIndex != null ? geometry.points[scrubIndex] : null;
   const scrubValue = scrubIndex != null ? points[scrubIndex] : null;
+  const scrubLabel = scrubValue && scrubIndex != null
+    ? seasonScrubLabel(scrubValue, scrubIndex > 0 ? points[scrubIndex - 1].gain : null)
+    : null;
 
   const endpoint = geometry && geometry.points.length > 0 ? geometry.points[geometry.points.length - 1] : null;
   const endValue = series.length > 0 ? series[series.length - 1] : 0;
@@ -166,13 +170,13 @@ export function SeasonChart({ points, live = false, weekStartIdx, onScrubIndex }
                 <LiveDot size={8} />
               </View>
             ) : null}
-            {scrubValue ? (
+            {scrubLabel ? (
               <View style={[styles.scrubLabel, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <Text variant="caption" tone="secondary">
-                  {scrubValue.date}
+                  {scrubLabel.primary}
                 </Text>
                 <Text variant="callout" style={{ fontWeight: '700' }}>
-                  {formatMoney(scrubValue.gain, { sign: 'always' })}
+                  {scrubLabel.money}
                 </Text>
               </View>
             ) : null}

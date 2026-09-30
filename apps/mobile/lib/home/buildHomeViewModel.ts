@@ -234,30 +234,6 @@ function prevCloseFor(bars: BarsBySymbol, symbol: string, now: Date): number | n
   return before[before.length - 1].close;
 }
 
-/** Business-day dates (Mon-Fri) from `start` through `end`, inclusive of
- * start's week — used ONLY for a past week's cosmetic ramp (no real bars
- * fetched for it), matching the design board's own DAY_SHAPES approach.
- * An unparseable date (Postgres always serializes timestamptz with a
- * full offset, so this should never fire on real data — but a malformed
- * or missing matchups row must degrade to "no cosmetic points for this
- * week", never a silent Invalid-Date loop, so it's checked explicitly
- * rather than left to `NaN < NaN` evaluating to false by accident). */
-function weekdayDates(startIso: string, endIso: string): string[] {
-  const out: string[] = [];
-  const d = new Date(startIso);
-  const end = new Date(endIso);
-  if (Number.isNaN(d.getTime()) || Number.isNaN(end.getTime())) {
-    console.warn(`[home] weekdayDates: unparseable date range (${startIso} .. ${endIso})`);
-    return out;
-  }
-  while (d.getTime() < end.getTime()) {
-    const dow = d.getUTCDay();
-    if (dow !== 0 && dow !== 6) out.push(d.toISOString().slice(0, 10));
-    d.setUTCDate(d.getUTCDate() + 1);
-  }
-  return out;
-}
-
 export function buildHomeViewModel(input: HomeViewModelInput): HomeViewModel {
   const { now, meta, market, data, quote, bars } = input;
 
@@ -395,30 +371,33 @@ export function buildHomeViewModel(input: HomeViewModelInput): HomeViewModel {
     cashWentNegative: stake.cashWentNegative,
   };
 
-  // Season chart: one entry per week 1..currentWeek. Past weeks are drawn
-  // cosmetically (no per-week ledger fetched — see seasonGainSeries's
-  // hasData doc); the current week uses real granularity from `bars`.
+  // Season chart: one entry per week 1..currentWeek. Past weeks contribute
+  // exactly ONE point each (their own matchups gain, no per-day ramp — see
+  // seasonGainSeries's no-cosmetic-ramp doc, Orchestrator ruling
+  // 2026-09-30); only the current week uses real per-day granularity from
+  // `bars`.
   const weeks: SeasonWeekInput[] = [];
+  let closesByDate: Record<string, Record<string, number>> = {};
   for (let w = 1; w <= meta.currentWeek; w++) {
     const row = matchupRowFor(data, meta, w);
     const isCurrent = w === meta.currentWeek;
+    const weekStart = row?.weekStart ?? now.toISOString();
+    const weekEnd = row?.weekEnd ?? now.toISOString();
     // No row at all for this week — a bye, a playoff bye, elimination,
     // missed playoffs, or a genuinely un-generated week (found in code
     // review, 2026-09-29: `current!.weekStart` crashed here for every one
     // of those, since `current` is null whenever there's no row this
     // week). Nothing to plot: flat at the running total.
     if (isCurrent && !current) {
-      weeks.push({ week: w, scoredGain: 0, snapshots: [], trades: [], tradingDays: [], hasData: false });
+      weeks.push({ week: w, weekStart, weekEnd, scoredGain: 0, snapshots: [], trades: [], tradingDays: [] });
       continue;
     }
     if (!isCurrent || currentRowScored) {
       const scoredGain = isCurrent ? current!.myGain : row ? (row.hasOpponent === false ? 0 : row.myGain) : 0;
-      const days = row ? weekdayDates(row.weekStart, row.weekEnd) : [];
-      weeks.push({ week: w, scoredGain: scoredGain ?? 0, snapshots: [], trades: [], tradingDays: days, hasData: false });
+      weeks.push({ week: w, weekStart, weekEnd, scoredGain: scoredGain ?? 0, snapshots: [], trades: [], tradingDays: [] });
     } else {
       // The live current week: real bars from Monday through today.
       const days = Object.values(bars)[0]?.map((b) => b.date).filter((d) => d >= dateOnly(current!.weekStart) && d <= todaysDateStr) ?? [todaysDateStr];
-      const closesByDate: Record<string, Record<string, number>> = {};
       for (const [sym, series] of Object.entries(bars)) {
         for (const b of series) {
           if (!days.includes(b.date)) continue;
@@ -427,14 +406,11 @@ export function buildHomeViewModel(input: HomeViewModelInput): HomeViewModel {
         }
       }
       weeks.push({
-        week: w, scoredGain: null, snapshots: myCurrentSnapshots, trades: myCurrentTrades,
-        tradingDays: days.length ? days : [todaysDateStr], hasData: true,
+        week: w, weekStart, weekEnd, scoredGain: null, snapshots: myCurrentSnapshots, trades: myCurrentTrades,
+        tradingDays: days.length ? days : [todaysDateStr],
       });
-      // closesByDate is threaded via the outer buildSeasonGainSeries call below.
-      (weeks[weeks.length - 1] as any).__closesByDate = closesByDate;
     }
   }
-  const closesByDate = (weeks.find((w: any) => w.__closesByDate) as any)?.__closesByDate ?? {};
   const season = buildSeasonGainSeries({
     weeks, closesByDate, live: currentRowScored ? null : { gain: myLive.gain },
   });

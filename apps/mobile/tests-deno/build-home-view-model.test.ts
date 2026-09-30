@@ -125,23 +125,24 @@ Deno.test('honesty check: the 1W endpoint equals the this-week live score', () =
   assertAlmostEquals(endpoint, vm.thisWeek!.you.gain, 0.01); // both round to the cent independently
 });
 
-Deno.test('honesty check: every completed week (1-5) is pinned to its matchups gain, with no mismatches', () => {
+Deno.test('honesty check: every completed week (1-5) is exactly ONE real point, pinned to its matchups gain — no cosmetic ramp', () => {
   const { data, meta, quote, bars } = buildFixtureInput();
   const now = new Date('2026-09-24T17:37:00-04:00');
   const vm = buildHomeViewModel({
     now, meta, market: { status: 'closed', reason: 'after_hours', nextOpenAt: null },
     data, quote, bars, playoffRoundLabelForWeek,
   });
-  // Weeks 1-5 are hasData:false (cosmetic ramp), so they push nothing to
-  // `pinned` -- but they must still each land exactly on their scored
-  // total in the running series.
+  // No-cosmetic-ramp ruling (Orchestrator, 2026-09-30): a past, scored
+  // week contributes exactly one point (week 1 also carries the series'
+  // opening 0-anchor, so it has two), never a per-day interpolation.
   for (const w of ROBERTO_WEEKS) {
     const weekPoints = vm.season!.points.filter((p) => p.week === w.week);
+    assertEquals(weekPoints.length, w.week === 1 ? 2 : 1);
+    for (const p of weekPoints) assertEquals(p.kind, 'weekly');
     const last = weekPoints[weekPoints.length - 1];
     const expectedBase = ROBERTO_WEEKS.filter((x) => x.week <= w.week).reduce((s, x) => s + x.gain, 0);
     assertAlmostEquals(last.gain, Math.round(expectedBase * 100) / 100, 0.01);
   }
-  assertEquals(vm.season!.mismatches, 0);
 });
 
 Deno.test('phase is live_open (Thursday, market open) and the this-week card has both sides', () => {

@@ -1,6 +1,9 @@
 /**
  * Tests for lib/home/seasonGainSeries.ts — Home's "Season gain, week by
  * week" chart (D1, Concept A). Run: `cd apps/mobile/tests-deno && deno test .`
+ *
+ * NO COSMETIC RAMP (Orchestrator ruling, 2026-09-30): a past, scored week
+ * is exactly one real point; only the live week gets per-day granularity.
  */
 import { assertEquals, assertAlmostEquals } from 'jsr:@std/assert';
 import {
@@ -10,90 +13,92 @@ import {
 } from '../lib/home/seasonGainSeries.ts';
 import type { LiveSnapshot, LiveTrade } from '../lib/home/liveWeekScore.ts';
 
-const t = (iso: string) => new Date(iso);
+function pastWeek(weekNum: number, scoredGain: number, weekStart: string, weekEnd: string): SeasonWeekInput {
+  return { week: weekNum, scoredGain, weekStart, weekEnd, snapshots: [], trades: [] as LiveTrade[], tradingDays: [] };
+}
 
-function week(
+function liveWeek(
   weekNum: number,
-  scoredGain: number | null,
+  weekStart: string,
+  weekEnd: string,
   tradingDays: string[],
   snapshots: LiveSnapshot[] = [],
   trades: LiveTrade[] = [],
 ): SeasonWeekInput {
-  return { week: weekNum, scoredGain, snapshots, trades, tradingDays };
+  return { week: weekNum, scoredGain: null, weekStart, weekEnd, snapshots, trades, tradingDays };
 }
 
-Deno.test('no deposit jump: the first point reflects only intraday movement, not draft-to-Monday gap', () => {
-  const snaps: LiveSnapshot[] = [
-    { symbol: 'NVDA', quantity: 10, weekStartPrice: 300.2, enteredMidWeek: false }, // Monday open, NOT the draft price
-  ];
-  const w1 = week(1, 41.3, ['2026-08-03'], snaps, []);
+Deno.test('the series opens with a real Week-1 0-point, before anything has happened', () => {
   const result = buildSeasonGainSeries({
-    weeks: [w1],
-    closesByDate: { '2026-08-03': { NVDA: 300.2 } }, // flat on day 1 vs the Monday open itself
+    weeks: [pastWeek(1, 41.3, '2026-08-03', '2026-08-07')],
+    closesByDate: {},
     live: null,
   });
-  // The draft price (300.1 in the board sample, unused here entirely) never
-  // enters this calculation — only weekStartPrice (Monday's own open) does
-  // — so there is no "draft to Monday" jump to begin with. This single-day
-  // week's one point is also its Friday pin, so it lands on the scored
-  // value exactly, not some intermediate bar-derived figure.
-  assertEquals(result.points[0].gain, 41.3);
+  assertEquals(result.points[0], { date: '2026-08-03', week: 1, gain: 0, kind: 'weekly' });
 });
 
-Deno.test('weekend and holiday gaps are simply absent (no synthetic flat points inserted)', () => {
-  const w1 = week(1, 10, ['2026-08-03', '2026-08-04', '2026-08-05', '2026-08-06', '2026-08-07']);
-  const result = buildSeasonGainSeries({ weeks: [w1], closesByDate: {}, live: null });
-  assertEquals(result.points.length, 5);
-  assertEquals(result.points.map((p) => p.date), ['2026-08-03', '2026-08-04', '2026-08-05', '2026-08-06', '2026-08-07']);
-});
-
-Deno.test('Friday pin: the last day of a scored week is forced to the matchups gain, not the bar-derived value', () => {
-  const snaps: LiveSnapshot[] = [{ symbol: 'AAPL', quantity: 10, weekStartPrice: 200, enteredMidWeek: false }];
-  const w1 = week(1, 100, ['2026-08-07'], snaps, []); // bar-derived: 10*(205-200)=50, scored says 100
+Deno.test('a past, scored week is exactly ONE point — no per-day ramp, no synthetic interpolation', () => {
   const result = buildSeasonGainSeries({
-    weeks: [w1],
-    closesByDate: { '2026-08-07': { AAPL: 205 } },
+    weeks: [pastWeek(1, 100, '2026-08-03', '2026-08-07')],
+    closesByDate: {},
     live: null,
   });
-  assertEquals(result.points[0].gain, 100); // pinned, not 50
-  assertEquals(result.pinned.length, 1);
-  assertEquals(result.pinned[0].scoredGain, 100);
-  assertAlmostEquals(result.pinned[0].barGain, 50, 1e-9);
-  assertAlmostEquals(result.pinned[0].diff, 50, 1e-9);
+  // The opening 0-point, plus this week's own one Friday point. Nothing else.
+  assertEquals(result.points.length, 2);
+  assertEquals(result.points[1], { date: '2026-08-07', week: 1, gain: 100, kind: 'weekly' });
 });
 
-Deno.test('mismatch counting: exactly $0.01 does not count, $0.02 does', () => {
-  const snapsAt = (endPrice: number): LiveSnapshot[] => [
-    { symbol: 'X', quantity: 1, weekStartPrice: 0, enteredMidWeek: false },
+Deno.test('several past weeks each contribute exactly one point, cumulative, at their own weekEnd', () => {
+  const weeks = [
+    pastWeek(1, 41.3, '2026-08-03', '2026-08-07'),
+    pastWeek(2, 58.75, '2026-08-10', '2026-08-14'),
+    pastWeek(3, -96.4, '2026-08-17', '2026-08-21'),
   ];
-  const notCounted = buildSeasonGainSeries({
-    weeks: [week(1, 1.0, ['2026-08-07'], snapsAt(0.99), [])],
-    closesByDate: { '2026-08-07': { X: 0.99 } }, // bar-derived gain = 0.99, scored = 1.00, diff = 0.01
-    live: null,
-  });
-  assertEquals(notCounted.mismatches, 0);
+  const result = buildSeasonGainSeries({ weeks, closesByDate: {}, live: null });
+  assertEquals(result.points.map((p) => p.kind), ['weekly', 'weekly', 'weekly', 'weekly']); // anchor + 3 weeks
+  assertAlmostEquals(result.points[1].gain, 41.3, 1e-9);
+  assertAlmostEquals(result.points[2].gain, 41.3 + 58.75, 1e-9);
+  assertAlmostEquals(result.points[3].gain, 41.3 + 58.75 - 96.4, 1e-9);
+  assertEquals(result.points.map((p) => p.date), ['2026-08-03', '2026-08-07', '2026-08-14', '2026-08-21']);
+});
 
-  const counted = buildSeasonGainSeries({
-    weeks: [week(1, 1.0, ['2026-08-07'], snapsAt(0.98), [])],
-    closesByDate: { '2026-08-07': { X: 0.98 } }, // diff = 0.02
-    live: null,
+Deno.test('a bye week (scoredGain 0) is flat: its one point equals the running total unchanged', () => {
+  const weeks = [
+    pastWeek(1, 50, '2026-08-03', '2026-08-07'),
+    pastWeek(2, 0, '2026-08-10', '2026-08-14'), // bye
+  ];
+  const result = buildSeasonGainSeries({ weeks, closesByDate: {}, live: null });
+  const week2Point = result.points.find((p) => p.week === 2)!;
+  assertEquals(week2Point.gain, 50);
+});
+
+Deno.test('the live week gets real per-day points, tagged "daily", never collapsed to one', () => {
+  const snaps: LiveSnapshot[] = [{ symbol: 'NVDA', quantity: 10, weekStartPrice: 300.2, enteredMidWeek: false }];
+  const weeks = [liveWeek(1, '2026-08-03', '2026-08-07', ['2026-08-03', '2026-08-04'], snaps, [])];
+  const result = buildSeasonGainSeries({
+    weeks,
+    closesByDate: { '2026-08-03': { NVDA: 305 }, '2026-08-04': { NVDA: 310 } },
+    live: { gain: 79.8 },
   });
-  assertEquals(counted.mismatches, 1);
+  // Anchor (weekly) + 2 daily points for the live week.
+  assertEquals(result.points.map((p) => p.kind), ['weekly', 'daily', 'daily']);
+  assertAlmostEquals(result.points[1].gain, 10 * (305 - 300.2), 1e-9);
+  assertEquals(result.points[2].gain, 79.8); // pinned to live.gain, the caller's own number
 });
 
 Deno.test('endpoint = hero: the last point equals sum(scored weeks) + live.gain exactly', () => {
   const weeks = [
-    week(1, 41.3, []),
-    week(2, 58.75, []),
-    week(3, -96.4, []),
-    week(4, 72.1, []),
-    week(5, 54.24, []),
-    week(6, null, ['2026-09-24'], [{ symbol: 'NVDA', quantity: 10, weekStartPrice: 300.2, enteredMidWeek: false }], []),
+    pastWeek(1, 41.3, '2026-08-03', '2026-08-07'),
+    pastWeek(2, 58.75, '2026-08-10', '2026-08-14'),
+    pastWeek(3, -96.4, '2026-08-17', '2026-08-21'),
+    pastWeek(4, 72.1, '2026-08-24', '2026-08-28'),
+    pastWeek(5, 54.24, '2026-08-31', '2026-09-04'),
+    liveWeek(6, '2026-09-21', '2026-09-25', ['2026-09-24'], [{ symbol: 'NVDA', quantity: 10, weekStartPrice: 300.2, enteredMidWeek: false }], []),
   ];
   const liveGain = 238.6;
   const result = buildSeasonGainSeries({
     weeks,
-    closesByDate: { '2026-09-24': { NVDA: 999 } }, // irrelevant: forced by `live`
+    closesByDate: { '2026-09-24': { NVDA: 999 } }, // irrelevant: the last day is forced by `live`
     live: { gain: liveGain },
   });
   const scoredSum = 41.3 + 58.75 - 96.4 + 72.1 + 54.24;
@@ -103,8 +108,8 @@ Deno.test('endpoint = hero: the last point equals sum(scored weeks) + live.gain 
 
 Deno.test('1W endpoint equals the this-week score (liveWeekScore), rebased to 0 at Monday open', () => {
   const weeks = [
-    week(1, 41.3, []),
-    week(6, null, ['2026-09-21', '2026-09-22'], [], []),
+    pastWeek(1, 41.3, '2026-08-03', '2026-08-07'),
+    liveWeek(6, '2026-09-21', '2026-09-25', ['2026-09-21', '2026-09-22'], [], []),
   ];
   const liveGain = 238.6;
   const result = buildSeasonGainSeries({ weeks, closesByDate: {}, live: { gain: liveGain } });
@@ -112,45 +117,44 @@ Deno.test('1W endpoint equals the this-week score (liveWeekScore), rebased to 0 
   assertEquals(win[win.length - 1].gain, liveGain);
 });
 
-Deno.test('1M window is rebased to 0 at its own start', () => {
-  const days = Array.from({ length: 25 }, (_, i) => `2026-08-${String(i + 1).padStart(2, '0')}`);
-  const w = week(1, 100, days, [], []);
-  const result = buildSeasonGainSeries({ weeks: [w], closesByDate: {}, live: null });
-  const win = windowSeries(result, '1M', 0);
-  assertEquals(win[0].gain, 0);
-});
-
-Deno.test('a bye week is flat: no holdings, scoredGain 0, every day unchanged from the running total', () => {
-  const weeks = [
-    week(1, 50, ['2026-08-07']),
-    week(2, 0, ['2026-08-10', '2026-08-14'], [], []), // bye: no snapshots, no trades
+Deno.test('1M window is cut by CALENDAR DATE, not point count — a point count no longer equals a day count', () => {
+  // 5 past weeks plus a live week, with explicit, unambiguous ascending
+  // dates so the 30-day cutoff is easy to reason about exactly.
+  const explicit: SeasonWeekInput[] = [
+    pastWeek(1, 10, '2026-07-06', '2026-07-06'),
+    pastWeek(2, 10, '2026-07-13', '2026-07-13'),
+    pastWeek(3, 10, '2026-07-20', '2026-07-20'),
+    pastWeek(4, 10, '2026-07-27', '2026-07-27'),
+    pastWeek(5, 10, '2026-08-03', '2026-08-03'),
+    liveWeek(6, '2026-08-31', '2026-09-04', ['2026-09-01', '2026-09-02']),
   ];
-  const result = buildSeasonGainSeries({ weeks, closesByDate: {}, live: null });
-  const byeDays = result.points.filter((p) => p.week === 2);
-  for (const p of byeDays) assertEquals(p.gain, 50);
+  const result = buildSeasonGainSeries({ weeks: explicit, closesByDate: {}, live: { gain: 5 } });
+  const win = windowSeries(result, '1M', 5);
+  // The last point is 2026-09-02; a 30-day cutoff excludes everything at
+  // or before 2026-07-27 (more than 30 days earlier) and keeps
+  // 2026-08-03 onward.
+  assertEquals(win.every((p) => p.date >= '2026-08-03'), true);
+  assertEquals(win.some((p) => p.date === '2026-07-06'), false);
 });
 
-Deno.test('hasData: false draws a cosmetic ramp for a past week with no fetched ledger, and claims no pin', () => {
-  const w1: SeasonWeekInput = {
-    week: 1, scoredGain: 100, snapshots: [], trades: [],
-    tradingDays: ['2026-08-03', '2026-08-04'], hasData: false,
-  };
-  const result = buildSeasonGainSeries({ weeks: [w1], closesByDate: {}, live: null });
-  assertEquals(result.points.length, 2);
-  assertEquals(result.points[0].gain, 50); // halfway ramp
-  assertEquals(result.points[1].gain, 100); // reaches the scored end
-  assertEquals(result.pinned.length, 0); // no bar data fetched -> no comparison claimed
-  assertEquals(result.mismatches, 0);
+Deno.test('1M window is rebased to 0 at its own first (real) point', () => {
+  const weeks = [
+    pastWeek(1, 100, '2026-08-03', '2026-08-07'),
+    liveWeek(2, '2026-08-10', '2026-08-14', ['2026-08-10', '2026-08-11']),
+  ];
+  const result = buildSeasonGainSeries({ weeks, closesByDate: {}, live: { gain: 20 } });
+  const win = windowSeries(result, '1M', 1);
+  assertEquals(win[0].gain, 0);
 });
 
 Deno.test('data.js ROBERTO_WEEKS reproduce throughW5 = 129.99', () => {
   const weeks = [
-    week(1, 41.3, []),
-    week(2, 58.75, []),
-    week(3, -96.4, []),
-    week(4, 72.1, []),
-    week(5, 54.24, []),
-    week(6, null, [], [], []), // current week, no days needed for this check
+    pastWeek(1, 41.3, '2026-08-03', '2026-08-07'),
+    pastWeek(2, 58.75, '2026-08-10', '2026-08-14'),
+    pastWeek(3, -96.4, '2026-08-17', '2026-08-21'),
+    pastWeek(4, 72.1, '2026-08-24', '2026-08-28'),
+    pastWeek(5, 54.24, '2026-08-31', '2026-09-04'),
+    liveWeek(6, '2026-09-21', '2026-09-25', []),
   ];
   const result = buildSeasonGainSeries({ weeks, closesByDate: {}, live: { gain: 0 } });
   assertAlmostEquals(result.weekBase[5], 129.99, 1e-9);
