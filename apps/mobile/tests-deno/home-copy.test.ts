@@ -9,7 +9,7 @@ import { assertEquals } from 'jsr:@std/assert';
 import {
   heroUnpricedCaption, sideUnpricedCaption, seasonScrubLabel, heroAccessibilityLabel, heroWeekOrRoundLabel,
   standingsThroughWeek, preSeasonStartsLabel, placeLabel, nonChampionLine, regularSeasonTileLine, playoffRecordLine,
-  playoffTileLine, championAnnounceLine,
+  playoffTileLine, championAnnounceLine, coreCompleteTiles,
 } from '../lib/home/homeCopy.ts';
 
 Deno.test('heroUnpricedCaption: null when both lists are empty', () => {
@@ -194,4 +194,16 @@ Deno.test('playoffTileLine: a null playoff_result (detail_scope=standings_only, 
 
 Deno.test('championAnnounceLine: "Won {league}", never "You won" (caller_participated=false)', () => {
   assertEquals(championAnnounceLine('Stock Scudetto'), 'Won Stock Scudetto');
+});
+
+Deno.test('coreCompleteTiles: the honest-minimum fallback and the full get_season_result render produce IDENTICAL Season-gain/Regular-season tiles for the same season (Orchestrator ruling, 2026-09-30)', () => {
+  // SeasonCompleteCard calls this ONE function regardless of whether
+  // get_season_result succeeded -- there is no second formula for these
+  // two tiles to drift from. Same (seasonGain, finalRank, standingsCount,
+  // record) in, same tiles out, whether or not a result row exists.
+  const forSameSeason = coreCompleteTiles(481.78, 2, 6, '5–1');
+  const again = coreCompleteTiles(481.78, 2, 6, '5–1');
+  assertEquals(forSameSeason, again);
+  assertEquals(forSameSeason.seasonGain, 481.78);
+  assertEquals(forSameSeason.regularSeasonLine, '2nd of 6 · 5–1');
 });

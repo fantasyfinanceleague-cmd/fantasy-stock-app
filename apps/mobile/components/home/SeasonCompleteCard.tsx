@@ -22,8 +22,8 @@ import { useMotion } from '@/components/sp/motion';
 import { lively } from '@/components/sp/game/motion';
 import { useSeasonResult } from '@/lib/home/useSeasonResult';
 import {
-  playoffTileLine, REGULAR_SEASON_TILE_TITLE, PLAYOFFS_TILE_TITLE, BEST_WEEK_TILE_TITLE, SEASON_GAIN_TILE_TITLE,
-  SEASON_COMPLETE_TITLE, CHAMPION_LABEL, wonLeagueLine, placeLabel, nonChampionLine, championAnnounceLine, regularSeasonTileLine,
+  playoffTileLine, PLAYOFFS_TILE_TITLE, BEST_WEEK_TILE_TITLE,
+  SEASON_COMPLETE_TITLE, CHAMPION_LABEL, wonLeagueLine, placeLabel, nonChampionLine, championAnnounceLine, coreCompleteTiles,
   playoffRecordLine, bestWeekLine, SEE_FINAL_STANDINGS, START_NEXT_SEASON,
 } from '@/lib/home/homeCopy';
 import { playoffRoundLabelForWeek } from '@/lib/playoffs';
@@ -122,6 +122,7 @@ export function SeasonCompleteCard({
   // minimum fallback is in play): both of those paths already assume the
   // caller participated, by construction.
   const participated = result ? result.caller_participated : true;
+  const core = coreCompleteTiles(seasonGain, finalRank, standingsCount, record);
 
   return (
     <>
@@ -154,8 +155,8 @@ export function SeasonCompleteCard({
         <Card style={styles.tilesCard}>
           <View style={styles.tilesGrid}>
             <View style={styles.tile}>
-              <Text variant="caption" tone="secondary">{SEASON_GAIN_TILE_TITLE}</Text>
-              <Money value={seasonGain} size="headline" colorBySign sign="always" />
+              <Text variant="caption" tone="secondary">{core.seasonGainTitle}</Text>
+              <Money value={core.seasonGain} size="headline" colorBySign sign="always" />
             </View>
             {result?.best_week_number != null && result.best_week_gain != null ? (
               <View style={styles.tile}>
@@ -167,8 +168,8 @@ export function SeasonCompleteCard({
               </View>
             ) : null}
             <View style={styles.tile}>
-              <Text variant="caption" tone="secondary">{REGULAR_SEASON_TILE_TITLE}</Text>
-              <Text variant="headline">{regularSeasonTileLine(finalRank, standingsCount, record)}</Text>
+              <Text variant="caption" tone="secondary">{core.regularSeasonTitle}</Text>
+              <Text variant="headline">{core.regularSeasonLine}</Text>
             </View>
             {/* detail_scope='standings_only' (a past season) never gets exit-round
              * indexing; playoffResultLine is null for that case unless the podium

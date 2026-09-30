@@ -282,6 +282,28 @@ export function playoffRecordLine(wins: number | null, losses: number | null, re
 export function bestWeekLine(week: number): string {
   return `Week ${week}`; // board (paired with a separate Money element for the gain)
 }
+
+/** Orchestrator ruling (2026-09-30): the two tiles that DON'T need
+ * get_season_result (Season gain, Regular season) must show the SAME
+ * number and the SAME label whether or not that RPC succeeded -- the
+ * "honest minimum" fallback is real data from get_home_summary, not a
+ * degraded guess. Computed by ONE function, used by both
+ * SeasonCompleteCard render paths, so the two can't drift apart: there is
+ * no second formula to keep in sync. */
+export interface CoreCompleteTiles {
+  seasonGainTitle: string;
+  seasonGain: number;
+  regularSeasonTitle: string;
+  regularSeasonLine: string;
+}
+export function coreCompleteTiles(seasonGain: number, finalRank: number, standingsCount: number, record: string): CoreCompleteTiles {
+  return {
+    seasonGainTitle: SEASON_GAIN_TILE_TITLE,
+    seasonGain,
+    regularSeasonTitle: REGULAR_SEASON_TILE_TITLE,
+    regularSeasonLine: regularSeasonTileLine(finalRank, standingsCount, record),
+  };
+}
 export const SEE_FINAL_STANDINGS = 'See the final standings'; // board
 export const START_NEXT_SEASON = 'Start next season'; // board
 
