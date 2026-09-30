@@ -21,7 +21,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../supabase';
 import { useAuth } from '../useAuth';
-import { useLeagueContext } from '../LeagueContext';
+import { useLeagueContext, type HomeSummaryRow } from '../LeagueContext';
 import { playoffRoundLabelForWeek } from '../playoffs';
 import {
   buildHomeViewModel,
@@ -47,6 +47,12 @@ export type HomeLeagueStatus = 'loading' | 'ready' | 'error' | 'no-league';
 export interface UseHomeLeagueResult {
   status: HomeLeagueStatus;
   viewModel: HomeViewModel | null;
+  /** get_home_summary's own row for this league — the source for display
+   * strings buildHomeViewModel doesn't own (the caller's record, the
+   * opponent's display name/bot flag): those are UI presentation, not a
+   * decision, so they're threaded straight from LeagueContext rather than
+   * duplicated into the pure view model. Null under the dev fixture. */
+  summary: HomeSummaryRow | null;
   error: string | null;
   refresh: () => Promise<void>;
 }
@@ -116,6 +122,7 @@ export function useHomeLeague(leagueId: string | null): UseHomeLeagueResult {
   const { leagues, homeSummaryByLeague, market } = useLeagueContext();
   const [status, setStatus] = useState<HomeLeagueStatus>('loading');
   const [viewModel, setViewModel] = useState<HomeViewModel | null>(null);
+  const [summary, setSummary] = useState<HomeSummaryRow | null>(null);
   const [error, setError] = useState<string | null>(null);
   // One cache entry per league, so switching leagues (H5) can crossfade
   // onto already-fetched data instead of a blank loading flash.
@@ -211,6 +218,7 @@ export function useHomeLeague(leagueId: string | null): UseHomeLeagueResult {
 
     cacheRef.current.set(leagueId, vm);
     setViewModel(vm);
+    setSummary(summary);
     setStatus('ready');
     setError(null);
   }, [leagueId, user?.id, leagues, homeSummaryByLeague, market]);
@@ -225,5 +233,5 @@ export function useHomeLeague(leagueId: string | null): UseHomeLeagueResult {
     fetchLive();
   }, [fetchLive, leagueId]);
 
-  return { status, viewModel, error, refresh: fetchLive };
+  return { status, viewModel, summary, error, refresh: fetchLive };
 }

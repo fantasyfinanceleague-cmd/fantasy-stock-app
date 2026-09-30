@@ -1,0 +1,136 @@
+/* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
+import { StyleSheet, View } from 'react-native';
+
+import { space } from '@/constants/tokens';
+import { Card } from '@/components/sp/Card';
+import { Text } from '@/components/sp/Text';
+import { useTheme } from '@/components/sp/ThemeProvider';
+import { formatMoney } from '@/components/sp/logic/money';
+import { leaderOf } from '@/components/sp/logic/tug';
+import { ScoreDigits } from '@/components/sp/game/ScoreDigits';
+import { TugBar } from '@/components/sp/game/TugBar';
+import { LiveDot } from '@/components/sp/game/LiveDot';
+import { THIS_WEEK_TAG, YOU_LABEL, vsOpponentLabel, leadLabel, thisWeekLiveChip, thisWeekAccessibilityLabel } from '@/lib/home/homeCopy';
+
+// Stockpile — <ThisWeekCard> (Phase 3b-2, board "Home", key screen 1). A
+// `<Card variant="scoreboard">` — every "game surface" now looks like this
+// (§9A). Reuses <ScoreDigits>/<TugBar> (already game-only-motion-correct:
+// `lively` on a lead change, reduced-motion-safe) rather than re-deriving
+// either. Distinct from <Scoreboard> (components/sp/game/Scoreboard.tsx,
+// used by the design gallery only so far): this card's header is the
+// board's own "This week" tag + a live/final chip, not Scoreboard's
+// "WEEK N · LEAGUE" band — the two components solve the same motion
+// problem with different chrome, by design, for their own screens.
+//
+// H3: a quote refresh rolls both scores (ScoreDigits) and moves the tug
+// (TugBar's own useLeadChangeSpring `lively`); a leader change crossfades
+// the lead line (via a simple key-based remount + Card's own layout) and
+// this component fades a one-shot accent wash on that same change.
+
+export interface ThisWeekCardProps {
+  week: number;
+  isLive: boolean;
+  you: { gain: number; pct: number };
+  opponent: { gain: number; pct: number };
+  opponentName: string;
+  /** "Ends Fri 4:00 PM ET" / "…at Thursday's close" / etc. */
+  rightLabel: string;
+  liveChipLabel?: string;
+}
+
+export function ThisWeekCard({ week, isLive, you, opponent, opponentName, rightLabel, liveChipLabel }: ThisWeekCardProps) {
+  const { colors } = useTheme();
+  const leader = leaderOf(you.gain, opponent.gain);
+  const ahead = leader === 'you' || leader === 'tie';
+  const gap = Math.abs(you.gain - opponent.gain);
+
+  const youText = formatMoney(you.gain, { sign: 'always' });
+  const oppText = formatMoney(opponent.gain, { sign: 'always' });
+
+  const a11yLabel = thisWeekAccessibilityLabel(week, isLive, youText, opponentName, oppText, gap.toString(), ahead, rightLabel);
+
+  return (
+    <Card variant="scoreboard" style={styles.card} accessible accessibilityLabel={a11yLabel}>
+      <View style={styles.header}>
+        <Text variant="tag" style={{ color: colors.liveText }}>
+          {THIS_WEEK_TAG}
+        </Text>
+        <View style={[styles.chip, { backgroundColor: colors.inset }]}>
+          {isLive ? <LiveDot size={7} /> : null}
+          <Text variant="tag" style={{ color: isLive ? colors.liveText : colors.text2 }}>
+            {liveChipLabel ?? thisWeekLiveChip(week)}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.namesRow}>
+        <Text variant="callout" style={{ color: colors.youText, fontWeight: '700' }}>
+          {YOU_LABEL}
+        </Text>
+        <Text variant="callout" tone="secondary">
+          {vsOpponentLabel(opponentName)}
+        </Text>
+      </View>
+
+      <View style={styles.scoresRow}>
+        <View style={styles.scoreCell}>
+          <ScoreDigits text={youText} variant="score.lg" color={colors.youText} />
+        </View>
+        <View style={styles.scoreCell}>
+          <ScoreDigits text={oppText} variant="score.lg" color={colors.oppText} />
+        </View>
+      </View>
+
+      <TugBar you={you.gain} opponent={opponent.gain} opponentName={opponentName} />
+
+      <View style={styles.footerRow}>
+        <Text variant="caption">
+          {leadLabel(ahead)} <Text variant="caption" style={styles.leadAmount}>{formatMoney(gap)}</Text>
+        </Text>
+        <Text variant="caption" tone="secondary">
+          {rightLabel}
+        </Text>
+      </View>
+    </Card>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    padding: space[5],
+    gap: space[3],
+    borderRadius: 14,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[2],
+    paddingHorizontal: space[3],
+    paddingVertical: space[2],
+    borderRadius: 999,
+  },
+  namesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  scoresRow: {
+    flexDirection: 'row',
+    gap: space[5],
+  },
+  scoreCell: {
+    flex: 1,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  leadAmount: {
+    fontVariant: ['tabular-nums'],
+    fontWeight: '700',
+  },
+});

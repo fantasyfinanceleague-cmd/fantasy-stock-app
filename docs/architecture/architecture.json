@@ -2,46 +2,46 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "167abcb5f4d8d09baea9772d841c96966a5faaa8",
-    "commitShort": "167abcb",
+    "commit": "036ed32e4ab6e43f203048f0957aca8f59aed67f",
+    "commitShort": "036ed32",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "ui/mobile-home",
     "dirty": true,
     "dirtyPaths": [
       {
+        "code": "M",
+        "path": "apps/mobile/app/(tabs)/index.tsx"
+      },
+      {
         "code": "??",
+        "path": "apps/mobile/components/home/"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/sp/logic/money.ts"
+      },
+      {
+        "code": "M",
         "path": "apps/mobile/lib/home/buildHomeViewModel.ts"
       },
       {
-        "code": "??",
-        "path": "apps/mobile/lib/home/devFixture.ts"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/lib/home/homeFixtureData.ts"
-      },
-      {
-        "code": "??",
+        "code": "M",
         "path": "apps/mobile/lib/home/useHomeLeague.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/lib/LeagueContext.tsx"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/tests-deno/build-home-view-model.test.ts"
+        "path": "apps/mobile/tests-deno/sp-money.test.ts"
       }
     ],
-    "timestamp": "2026-09-30T05:28:49Z",
-    "sourceHash": "sha256:4d50e0d5449d7c2ba957813bc3c5ba073f17c058e14a2325617acb44980928e9",
+    "timestamp": "2026-09-30T05:40:52Z",
+    "sourceHash": "sha256:63955785ebe286122310d27b9b3017daff8d5d89dd8721bd987d918c816e995a",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1176.6,
+    "ageHours": 1176.8,
     "ageDays": 49,
     "staleAfterDays": 14,
     "stale": true,
@@ -8779,7 +8779,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('historical-bars')",
       "callSites": [
-        "apps/mobile/lib/home/useHomeLeague.ts:179"
+        "apps/mobile/lib/home/useHomeLeague.ts:186"
       ]
     },
     {
@@ -8791,7 +8791,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('quote')",
       "callSites": [
-        "apps/mobile/lib/home/useHomeLeague.ts:169"
+        "apps/mobile/lib/home/useHomeLeague.ts:176"
       ]
     },
     {
@@ -8803,7 +8803,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_home_league')",
       "callSites": [
-        "apps/mobile/lib/home/useHomeLeague.ts:151"
+        "apps/mobile/lib/home/useHomeLeague.ts:158"
       ]
     },
     {
@@ -10783,7 +10783,7 @@
             "apps/mobile/app/(tabs)/draft.tsx:493",
             "apps/mobile/components/TradeModal.tsx:134",
             "apps/mobile/components/TradeModal.tsx:90",
-            "apps/mobile/lib/home/useHomeLeague.ts:169",
+            "apps/mobile/lib/home/useHomeLeague.ts:176",
             "apps/web/src/components/TradeModal.jsx:159",
             "apps/web/src/components/TradeModal.jsx:63",
             "apps/web/src/context/PriceContext.jsx:99",
@@ -10839,7 +10839,7 @@
           ],
           "detail": "historical-bars — chart series for portfolio P/L.",
           "files": [
-            "apps/mobile/lib/home/useHomeLeague.ts:179",
+            "apps/mobile/lib/home/useHomeLeague.ts:186",
             "apps/mobile/lib/useHistoricalPL.ts:65"
           ]
         }
@@ -12074,8 +12074,8 @@
       "apps/mobile/components/TradeModal.tsx:151 -> symbol-name",
       "apps/mobile/components/TradeModal.tsx:230 -> record-trade",
       "apps/mobile/components/TradeModal.tsx:90 -> quote",
-      "apps/mobile/lib/home/useHomeLeague.ts:169 -> quote",
-      "apps/mobile/lib/home/useHomeLeague.ts:179 -> historical-bars",
+      "apps/mobile/lib/home/useHomeLeague.ts:176 -> quote",
+      "apps/mobile/lib/home/useHomeLeague.ts:186 -> historical-bars",
       "apps/mobile/lib/notifications.ts:167 -> send-notification",
       "apps/mobile/lib/useHistoricalPL.ts:65 -> historical-bars",
       "apps/mobile/lib/useStockNames.ts:13 -> symbol-name",
@@ -12102,7 +12102,7 @@
       "apps/mobile/app/league-settings.tsx:174 -> start_new_league_season",
       "apps/mobile/lib/LeagueContext.tsx:145 -> get_home_summary",
       "apps/mobile/lib/LeagueContext.tsx:150 -> market_session_status",
-      "apps/mobile/lib/home/useHomeLeague.ts:151 -> get_home_league",
+      "apps/mobile/lib/home/useHomeLeague.ts:158 -> get_home_league",
       "apps/mobile/lib/shell/usernameApi.ts:30 -> check_usernames",
       "apps/mobile/lib/shell/usernameApi.ts:49 -> set_username",
       "apps/mobile/lib/useHomeData.ts:285 -> league_standings_ranked",

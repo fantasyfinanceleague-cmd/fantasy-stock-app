@@ -105,6 +105,9 @@ export interface HomeViewModel {
   thisWeek: ThisWeekViewModel | null;
   season: SeasonGainSeriesResult | null;
   standings: GetHomeLeagueResult['standings'];
+  /** So a caller (index.tsx) can mark which standings row is "you" without
+   * re-deriving the caller's id from elsewhere. */
+  myUserId: string;
 }
 
 function toLedger(rows: HomeLedgerRow[]): { symbol: string; entryPrice: number; quantity: number }[] {
@@ -195,7 +198,7 @@ export function buildHomeViewModel(input: HomeViewModelInput): HomeViewModel {
   // reason about (states 6/7/5/8 have no hero/this-week card at all).
   const inSeason = !['pre_draft', 'drafting', 'complete'].includes(phase.kind);
   if (!inSeason) {
-    return { phase, hero: null, thisWeek: null, season: null, standings: data.standings };
+    return { phase, hero: null, thisWeek: null, season: null, standings: data.standings, myUserId: meta.myUserId };
   }
 
   const myCurrentSnapshots = toLiveSnapshots(data.current_week.my_snapshots);
@@ -296,5 +299,5 @@ export function buildHomeViewModel(input: HomeViewModelInput): HomeViewModel {
     weeks, closesByDate, live: currentRowScored ? null : { gain: myLive.gain },
   });
 
-  return { phase, hero, thisWeek, season, standings: data.standings };
+  return { phase, hero, thisWeek, season, standings: data.standings, myUserId: meta.myUserId };
 }
