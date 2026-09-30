@@ -184,26 +184,38 @@ function myPlayoffRows(data: GetHomeLeagueResult, meta: HomeLeagueMeta) {
     .sort((a, b) => a.week_number - b.week_number);
 }
 
-/** Derives homePhase's two playoff flags from the RPC's own `matchups`
- * array — found missing in code review (2026-09-29): these were
- * hardcoded false in useHomeLeague, so every bye/eliminated/missed-
- * playoffs team read as "before the season" instead. Computed here,
- * from data the RPC already returns, rather than a new fetch. */
-function playoffStatusFlags(data: GetHomeLeagueResult, meta: HomeLeagueMeta): { hasLaterPlayoffRow: boolean; lastPlayoffLoss: boolean } {
+/** Derives homePhase's playoff-classification facts from the RPC's own
+ * `matchups` array — found missing in code review (2026-09-29): these
+ * were hardcoded false in useHomeLeague, so every bye/eliminated/missed-
+ * playoffs team read as "before the season" instead. Computed here, from
+ * data the RPC already returns, rather than a new fetch.
+ *
+ * Real week numbers, not arithmetic (Design Lead ruling, 2026-09-30):
+ * homePhase used to guess the bye/eliminated round's week as
+ * `current?.week ?? previous?.week + 1`, which is real week arithmetic
+ * this module has no business inventing (playoff weeks can skip numbers,
+ * rounds vary in length). `laterPlayoffWeek`/`lastPlayoffWeek` are the
+ * REAL week_number of the row that answers the question, read straight
+ * from `matchups`, so the round name is looked up correctly. */
+function playoffStatusFlags(data: GetHomeLeagueResult, meta: HomeLeagueMeta): {
+  laterPlayoffWeek: number | null;
+  lastPlayoffLoss: boolean;
+  lastPlayoffWeek: number | null;
+} {
   const rows = myPlayoffRows(data, meta);
-  const hasLaterPlayoffRow = rows.some((m) => m.week_number > meta.currentWeek);
-  if (hasLaterPlayoffRow) return { hasLaterPlayoffRow, lastPlayoffLoss: false };
+  const laterRow = rows.find((m) => m.week_number > meta.currentWeek);
+  if (laterRow) return { laterPlayoffWeek: laterRow.week_number, lastPlayoffLoss: false, lastPlayoffWeek: null };
   const lastScored = [...rows].reverse().find((m) => {
     const isMe1 = m.team1_user_id === meta.myUserId;
     const myGain = isMe1 ? m.team1_gain : m.team2_gain;
     return myGain !== null;
   });
-  if (!lastScored) return { hasLaterPlayoffRow: false, lastPlayoffLoss: false };
+  if (!lastScored) return { laterPlayoffWeek: null, lastPlayoffLoss: false, lastPlayoffWeek: null };
   const isMe1 = lastScored.team1_user_id === meta.myUserId;
   const myGain = isMe1 ? lastScored.team1_gain : lastScored.team2_gain;
   const oppGain = isMe1 ? lastScored.team2_gain : lastScored.team1_gain;
   const lastPlayoffLoss = myGain !== null && oppGain !== null && myGain < oppGain;
-  return { hasLaterPlayoffRow: false, lastPlayoffLoss };
+  return { laterPlayoffWeek: null, lastPlayoffLoss, lastPlayoffWeek: lastPlayoffLoss ? lastScored.week_number : null };
 }
 
 function dateOnly(iso: string): string {
@@ -239,7 +251,7 @@ export function buildHomeViewModel(input: HomeViewModelInput): HomeViewModel {
 
   const current = matchupRowFor(data, meta, meta.currentWeek);
   const previous = matchupRowFor(data, meta, meta.currentWeek - 1);
-  const { hasLaterPlayoffRow, lastPlayoffLoss } = playoffStatusFlags(data, meta);
+  const { laterPlayoffWeek, lastPlayoffLoss, lastPlayoffWeek } = playoffStatusFlags(data, meta);
 
   const phase = homePhase(
     {
@@ -249,7 +261,7 @@ export function buildHomeViewModel(input: HomeViewModelInput): HomeViewModel {
         playoffTeams: meta.playoffTeams,
       },
       current, previous,
-      hasLaterPlayoffRow, lastPlayoffLoss,
+      laterPlayoffWeek, lastPlayoffLoss, lastPlayoffWeek,
       draftOrderWaiting: meta.draftOrderWaiting, now, market,
     },
     input.playoffRoundLabelForWeek,

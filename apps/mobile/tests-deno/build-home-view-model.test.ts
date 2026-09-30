@@ -189,12 +189,15 @@ Deno.test('C1: the weekend after current_week advances shows the REAL scored fin
   assertEquals(vm.thisWeek?.opponentUserId, OPP_ID);
 });
 
-Deno.test('C3: hasLaterPlayoffRow/lastPlayoffLoss are derived from matchups, not hardcoded false', () => {
+Deno.test('C3: laterPlayoffWeek/lastPlayoffLoss are derived from matchups, not hardcoded false', () => {
   const { data, meta, quote, bars } = buildFixtureInput();
-  // A first-round bye: no row for me at week 15, but a later semifinal
-  // row (week 16) names me.
+  // A first-round bye seed (Design Lead ruling, 2026-09-30): the real
+  // bracket shape has NO row for me at week 15 at all -- the bye is
+  // written straight into its round-2 row instead, opponent NULL until
+  // round 1 is scored. `laterPlayoffWeek` must come from THAT row's real
+  // week_number (16), never guessed as `current?.week + 1`.
   data.matchups.push(
-    { week_number: 16, week_start: '2026-12-21T13:30:00.000Z', week_end: '2026-12-25T20:00:00.000Z', is_playoff: true, team1_user_id: MY_ID, team2_user_id: OPP_ID, team1_gain: null, team2_gain: null },
+    { week_number: 16, week_start: '2026-12-21T13:30:00.000Z', week_end: '2026-12-25T20:00:00.000Z', is_playoff: true, team1_user_id: MY_ID, team2_user_id: null, team1_gain: null, team2_gain: null },
   );
   const playoffMeta = { ...meta, seasonStatus: 'playoffs' as const, currentWeek: 15, playoffTeams: 4 };
   const now = new Date('2026-12-15T18:00:00.000Z');
@@ -203,6 +206,43 @@ Deno.test('C3: hasLaterPlayoffRow/lastPlayoffLoss are derived from matchups, not
     data, quote, bars, playoffRoundLabelForWeek,
   });
   assertEquals(vm.phase.kind, 'playoff_bye');
+  if (vm.phase.kind === 'playoff_bye') assertEquals(vm.phase.week, 16);
+});
+
+Deno.test('C3: a first-round bye is found whether I am in team1 OR team2 of the later round row', () => {
+  const { data, meta, quote, bars } = buildFixtureInput();
+  // Same bye seed, but I hold the team2 slot with team1 NULL this time --
+  // myPlayoffRows must match on EITHER slot, not just team1.
+  data.matchups.push(
+    { week_number: 16, week_start: '2026-12-21T13:30:00.000Z', week_end: '2026-12-25T20:00:00.000Z', is_playoff: true, team1_user_id: null, team2_user_id: MY_ID, team1_gain: null, team2_gain: null },
+  );
+  const playoffMeta = { ...meta, seasonStatus: 'playoffs' as const, currentWeek: 15, playoffTeams: 4 };
+  const now = new Date('2026-12-15T18:00:00.000Z');
+  const vm = buildHomeViewModel({
+    now, meta: playoffMeta, market: { status: 'open', reason: 'regular_session', nextOpenAt: null },
+    data, quote, bars, playoffRoundLabelForWeek,
+  });
+  assertEquals(vm.phase.kind, 'playoff_bye');
+  if (vm.phase.kind === 'playoff_bye') assertEquals(vm.phase.week, 16);
+});
+
+Deno.test('C3: a round-2 game with a real, decided opponent is an ordinary live playoff week, not a bye', () => {
+  const { data, meta, quote, bars } = buildFixtureInput();
+  // Both round-1 paths were decided, so round 2 (the current week) has a
+  // real opponent -- this must NOT be misread as a bye just because it's
+  // a later playoff round.
+  data.matchups.push(
+    { week_number: 16, week_start: '2026-12-14T13:30:00.000Z', week_end: '2026-12-25T20:00:00.000Z', is_playoff: true, team1_user_id: MY_ID, team2_user_id: OPP_ID, team1_gain: null, team2_gain: null },
+  );
+  const playoffMeta = { ...meta, seasonStatus: 'playoffs' as const, currentWeek: 16, playoffTeams: 4 };
+  data.current_week = { week_number: 16, my_snapshots: [], my_trades: [], opponent_snapshots: [], opponent_trades: [] };
+  const now = new Date('2026-12-15T18:00:00.000Z');
+  const vm = buildHomeViewModel({
+    now, meta: playoffMeta, market: { status: 'open', reason: 'regular_session', nextOpenAt: null },
+    data, quote, bars, playoffRoundLabelForWeek,
+  });
+  assertEquals(vm.phase.kind, 'live_open');
+  if (vm.phase.kind === 'live_open') assertEquals(vm.phase.isPlayoff, true);
 });
 
 Deno.test('C3: a real elimination (last playoff row scored as a loss, no later row) reads eliminated', () => {
@@ -218,6 +258,10 @@ Deno.test('C3: a real elimination (last playoff row scored as a loss, no later r
     data, quote, bars, playoffRoundLabelForWeek,
   });
   assertEquals(vm.phase.kind, 'eliminated');
+  // Round comes from the REAL last-played week (15), never a guess like
+  // `previous?.week ?? currentWeek` (which would misname the round if the
+  // bracket has a gap between rounds).
+  if (vm.phase.kind === 'eliminated') assertEquals(vm.phase.round, 'Semifinals');
 });
 
 Deno.test('C3: a team never seeded into the playoff bracket reads missed_playoffs, never pre_season', () => {

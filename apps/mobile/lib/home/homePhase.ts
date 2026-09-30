@@ -55,13 +55,18 @@ export interface HomePhaseInput {
    * (spec F5: "process-week-results advances current_week on Friday once
    * scoring succeeds"). */
   previous: MatchupRow | null;
-  /** True when there's a later playoff round scheduled for me (a
-   * first-round bye), used only when `current`/`previous` show no row for
-   * this week during playoffs. */
-  hasLaterPlayoffRow: boolean;
+  /** The REAL week_number of my next scheduled playoff row (a bye into
+   * that round), or null — used only when `current`/`previous` show no
+   * row for this week during playoffs. Never arithmetic (playoff weeks
+   * can skip numbers and rounds vary in length) — read straight from
+   * `matchups` by the caller. */
+  laterPlayoffWeek: number | null;
   /** True when I lost my most recent playoff game and have no later row —
    * "eliminated" rather than "missed" (never reachable pre-playoffs). */
   lastPlayoffLoss: boolean;
+  /** The REAL week_number of that last (lost) playoff row, for the round
+   * label — null unless `lastPlayoffLoss` is true. */
+  lastPlayoffWeek: number | null;
   /** get_draft_order: true while the order isn't set/revealed yet. */
   draftOrderWaiting: boolean;
   now: Date;
@@ -119,7 +124,7 @@ export function homePhase(
   input: HomePhaseInput,
   playoffRoundLabelForWeek: (week: number | null | undefined, numWeeks: number | null | undefined, playoffTeams: number | null | undefined) => string | null,
 ): PhaseResult {
-  const { league, current, previous, hasLaterPlayoffRow, lastPlayoffLoss, draftOrderWaiting, now, market } = input;
+  const { league, current, previous, laterPlayoffWeek, lastPlayoffLoss, lastPlayoffWeek, draftOrderWaiting, now, market } = input;
   const numWeeks = league.numWeeks;
   const base: BaseResult = { numWeeks };
 
@@ -195,10 +200,14 @@ export function homePhase(
 
     // Row is live (weekStart <= now < weekEnd).
     if (!row.hasOpponent) {
-      if (isPlayoffs) {
-        if (hasLaterPlayoffRow) return { kind: 'playoff_bye', week: row.week, round, ...base };
-        if (lastPlayoffLoss) return { kind: 'eliminated', round, ...base };
-      }
+      // A true bye seed never has a row for the round it's skipping (the
+      // bracket writes it straight into its later round instead) — a row
+      // AT the current week with no opponent means the OTHER bracket path
+      // hasn't been decided yet, not a bye (Design Lead ruling,
+      // 2026-09-30: "A NULL opponent in the current week means waiting on
+      // the previous round's winner ... it isn't a bye"). No fixture or
+      // design exists yet for that narrow case, so it falls through to
+      // the plain bye copy below rather than guessing a new state.
       const nextStart = current && current !== row ? current.weekStart : null;
       return { kind: 'bye', week: row.week, nextStart, ...base };
     }
@@ -220,14 +229,12 @@ export function homePhase(
   // No row at all this week (playoffs with no matchup scheduled for me —
   // bye-to-a-later-round or eliminated — or a genuinely empty schedule).
   if (isPlayoffs) {
-    if (hasLaterPlayoffRow) {
-      const week = current?.week ?? (previous?.week ?? 0) + 1;
-      const round = roundLabelForWeek(playoffRoundLabelForWeek, week, numWeeks, league.playoffTeams);
-      return { kind: 'playoff_bye', week, round, ...base };
+    if (laterPlayoffWeek != null) {
+      const round = roundLabelForWeek(playoffRoundLabelForWeek, laterPlayoffWeek, numWeeks, league.playoffTeams);
+      return { kind: 'playoff_bye', week: laterPlayoffWeek, round, ...base };
     }
-    if (lastPlayoffLoss) {
-      const week = previous?.week ?? league.currentWeek;
-      const round = roundLabelForWeek(playoffRoundLabelForWeek, week, numWeeks, league.playoffTeams);
+    if (lastPlayoffLoss && lastPlayoffWeek != null) {
+      const round = roundLabelForWeek(playoffRoundLabelForWeek, lastPlayoffWeek, numWeeks, league.playoffTeams);
       return { kind: 'eliminated', round, ...base };
     }
     // Playoffs are on, no row for me now, no later row, and no scored

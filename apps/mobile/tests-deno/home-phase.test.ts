@@ -30,8 +30,9 @@ function baseInput(overrides: Partial<HomePhaseInput>): HomePhaseInput {
     },
     current: null,
     previous: null,
-    hasLaterPlayoffRow: false,
+    laterPlayoffWeek: null,
     lastPlayoffLoss: false,
+    lastPlayoffWeek: null,
     draftOrderWaiting: false,
     now: ET('2026-09-24T15:00:00-04:00'), // Thu 3:00 PM ET, week 6
     market: { status: 'open', reason: 'regular_session', nextOpenAt: null },
@@ -222,12 +223,16 @@ Deno.test('playoffs: first-round bye when a later round is already scheduled for
     baseInput({
       league: { draftStatus: 'completed', leagueStartDate: '2026-08-01T00:00:00Z', seasonStatus: 'playoffs', currentWeek: 15, numWeeks: 14, playoffTeams: 6 },
       current: null,
-      hasLaterPlayoffRow: true,
+      laterPlayoffWeek: 16,
       now: ET('2026-12-15T15:00:00-04:00'),
     }),
     playoffRoundLabelForWeek,
   );
   assertEquals(r.kind, 'playoff_bye');
+  // Real week number, not arithmetic (Design Lead ruling, 2026-09-30): the
+  // bye's week is the LATER round's real week_number (16), never
+  // `current?.week ?? previous?.week + 1` guessed from the current week.
+  if (r.kind === 'playoff_bye') assertEquals(r.week, 16);
 });
 
 Deno.test('playoffs: eliminated when the last playoff row was a loss and nothing later is scheduled', () => {
@@ -241,6 +246,7 @@ Deno.test('playoffs: eliminated when the last playoff row was a loss and nothing
       current: null,
       previous: lostSemi,
       lastPlayoffLoss: true,
+      lastPlayoffWeek: 15,
       now: ET('2026-12-21T15:00:00-04:00'),
     }),
     playoffRoundLabelForWeek,
@@ -312,7 +318,7 @@ Deno.test('missed_playoffs: playoffs on, no row for me ever (never seeded into t
       league: { draftStatus: 'completed', leagueStartDate: '2026-08-01T00:00:00Z', seasonStatus: 'playoffs', currentWeek: 15, numWeeks: 14, playoffTeams: 4 },
       current: null,
       previous: null,
-      hasLaterPlayoffRow: false,
+      laterPlayoffWeek: null,
       lastPlayoffLoss: false,
       now: ET('2026-12-15T15:00:00-04:00'),
     }),

@@ -104,13 +104,36 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
     ...(isBye ? { team1_gain: null, team2_gain: null } : week6Gains),
   };
 
-  const playoffWeek = {
+  // Wild-card week (15): a real, live game with a decided opponent.
+  // Populated with real playoff-week snapshots when isPlayoffLive (Design
+  // Lead ruling, 2026-09-30: "a $0 vs $0 playoff isn't a useful capture"),
+  // so the tug and scores show real numbers -- "Semifinals" per the round
+  // name, but still using the wild-card week_number the fixture's other
+  // playoff states share for round-1 purposes.
+  const wildCardWeek = {
     week_number: 15, week_start: '2026-12-14T13:30:00.000Z', week_end: '2026-12-18T20:00:00.000Z',
-    is_playoff: true,
-    team1_user_id: 'roberto',
-    team2_user_id: isPlayoffBye || isEliminated || isMissedPlayoffs ? null : 'gianluigi',
-    team1_gain: isEliminated ? -10 : null,
-    team2_gain: isEliminated ? 40 : null,
+    is_playoff: true, team1_user_id: 'roberto', team2_user_id: 'gianluigi',
+    team1_gain: null, team2_gain: null,
+  };
+
+  // Eliminated: the lost round is the ONLY playoff row that exists at
+  // all -- no row at the (later) current week, matching a team with no
+  // later playoff row and no current one either (Design Lead ruling,
+  // 2026-09-30, case c).
+  const lostSemifinalWeek = {
+    week_number: 15, week_start: '2026-12-14T13:30:00.000Z', week_end: '2026-12-18T20:00:00.000Z',
+    is_playoff: true, team1_user_id: 'roberto', team2_user_id: 'gianluigi',
+    team1_gain: -10, team2_gain: 40,
+  };
+
+  // A first-round bye seed (Design Lead ruling, 2026-09-30): the real
+  // bracket shape has NO row for me at the wild-card week at all -- the
+  // bye is written straight into its round-2 row instead, opponent NULL
+  // until round 1 is scored.
+  const round2ByeWeek = {
+    week_number: 16, week_start: '2026-12-21T13:30:00.000Z', week_end: '2026-12-25T20:00:00.000Z',
+    is_playoff: true, team1_user_id: 'roberto', team2_user_id: null,
+    team1_gain: null, team2_gain: null,
   };
 
   const regularSeasonWeeks = ROBERTO_WEEKS.map((w, i) => {
@@ -130,17 +153,27 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
       // season happened -- only the (nonexistent) playoff week is
       // missing, never the history that determined the standings.
       ? [...regularSeasonWeeks, week6]
-      : isPlayoffState
-        ? [playoffWeek]
-        : [...regularSeasonWeeks, week6];
+      : isPlayoffBye
+        ? [round2ByeWeek] // no row at all for the current (wild-card) week
+        : isEliminated
+          ? [lostSemifinalWeek] // no row at all for the current (round-2) week
+          : isPlayoffLive
+            ? [wildCardWeek]
+            : [...regularSeasonWeeks, week6];
+
+  // currentWeek differs per playoff sub-state (Design Lead ruling,
+  // 2026-09-30): a bye/live game is IN the wild-card week; eliminated is
+  // read the week AFTER the lost round, since there is by definition no
+  // row at all for me at the current week once I'm out.
+  const playoffCurrentWeek = isEliminated ? 16 : 15;
 
   const data: GetHomeLeagueResult = {
     my_ledger: { drafts: myDrafts, trades: [] },
     current_week: {
-      week_number: isPlayoffState ? 15 : isPreSeason ? 1 : 6,
-      my_snapshots: isBye || isPlayoffState || isPreSeason ? [] : mySnapshots,
+      week_number: isPlayoffState ? playoffCurrentWeek : isPreSeason ? 1 : 6,
+      my_snapshots: isBye || isPreSeason || isEliminated || isMissedPlayoffs || isPlayoffBye ? [] : mySnapshots,
       my_trades: [],
-      opponent_snapshots: isBye || isPlayoffState || isPreSeason ? [] : oppSnapshots,
+      opponent_snapshots: isBye || isPreSeason || isEliminated || isMissedPlayoffs || isPlayoffBye ? [] : oppSnapshots,
       opponent_trades: [],
     },
     matchups,
@@ -160,7 +193,7 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
   const draftStatus = fixture === 'pre_draft' || fixture === 'pre_draft_waiting' ? 'not_started'
     : fixture === 'drafting' ? 'in_progress' : 'completed';
   const seasonStatus = fixture === 'complete' ? 'completed' : isPlayoffState ? 'playoffs' : 'active';
-  const currentWeek = isPlayoffState ? 15 : isPreSeason ? 1 : draftStatus === 'completed' ? 6 : 1;
+  const currentWeek = isPlayoffState ? playoffCurrentWeek : isPreSeason ? 1 : draftStatus === 'completed' ? 6 : 1;
   const leagueStartDate = fixture === 'pre_season' ? '2099-01-01T00:00:00Z' : '2026-08-01T00:00:00Z';
 
   const meta: HomeLeagueMeta = {
@@ -177,9 +210,11 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
 
   const now = fixture === 'scoring' || fixture === 'scored'
     ? new Date('2026-09-25T20:30:00.000Z') // Friday, after week_end
-    : isPlayoffState
-      ? new Date('2026-12-15T18:00:00.000Z')
-      : new Date('2026-09-24T17:37:00.000Z'); // Thursday 1:37 PM ET, the board's live moment
+    : isEliminated
+      ? new Date('2026-12-22T18:00:00.000Z') // into round 2's week, after the wild-card loss
+      : isPlayoffState
+        ? new Date('2026-12-15T18:00:00.000Z')
+        : new Date('2026-09-24T17:37:00.000Z'); // Thursday 1:37 PM ET, the board's live moment
 
   // leader_flip: a call-counter alternates whose price is higher, to
   // exercise H3's leader-change wash under the live poll.
