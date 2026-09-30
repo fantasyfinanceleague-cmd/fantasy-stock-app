@@ -6,7 +6,7 @@
  * Run: `cd apps/mobile/tests-deno && deno test .`
  */
 import { assertEquals } from 'jsr:@std/assert';
-import { heroUnpricedCaption, sideUnpricedCaption, seasonScrubLabel } from '../lib/home/homeCopy.ts';
+import { heroUnpricedCaption, sideUnpricedCaption, seasonScrubLabel, heroAccessibilityLabel } from '../lib/home/homeCopy.ts';
 
 Deno.test('heroUnpricedCaption: null when both lists are empty', () => {
   assertEquals(heroUnpricedCaption([], []), null);
@@ -61,4 +61,19 @@ Deno.test('seasonScrubLabel: a daily point shows a FORMATTED date (never the raw
   const label = seasonScrubLabel(point, 50);
   assertEquals(label.primary, 'Tue, Sep 22');
   assertEquals(label.money, '+$118.20'); // cumulative, unlike a weekly point's delta
+});
+
+// ── Hero VoiceOver label (Design Lead ruling, 2026-09-29, Blocking 2) ──────
+
+Deno.test('heroAccessibilityLabel: joins value, gain, today and the caption into ONE sentence-by-sentence label', () => {
+  const label = heroAccessibilityLabel('$12,343.59', '+$343.59', '+2.86%', '+$121.26', '1 holding counted at cost (no live price yet)');
+  assertEquals(
+    label,
+    'Your team, $12,343.59. +$343.59, +2.86% season gain. +$121.26 today. 1 holding counted at cost (no live price yet)',
+  );
+});
+
+Deno.test('heroAccessibilityLabel: omits the today sentence entirely when today is null (non-trading day)', () => {
+  const label = heroAccessibilityLabel('$12,343.59', '+$343.59', '+2.86%', null, null);
+  assertEquals(label, 'Your team, $12,343.59. +$343.59, +2.86% season gain.');
 });

@@ -26,6 +26,8 @@ export interface SeasonCardProps {
   weekResults: SeasonCardWeekResult[];
   currentWeek: number;
   isLive: boolean;
+  /** See SeasonChart's own doc — threaded straight through (H5). */
+  skipEntrance?: boolean;
 }
 
 const WINDOWS: { label: string; value: SeasonWindow }[] = [
@@ -34,7 +36,7 @@ const WINDOWS: { label: string; value: SeasonWindow }[] = [
   { label: 'Season', value: 'Season' },
 ];
 
-export function SeasonCard({ series, weekResults, currentWeek, isLive }: SeasonCardProps) {
+export function SeasonCard({ series, weekResults, currentWeek, isLive, skipEntrance = false }: SeasonCardProps) {
   const { colors } = useTheme();
   const [window, setWindow] = useState<SeasonWindow>('Season');
   const [scrubIndex, setScrubIndex] = useState<number | null>(null);
@@ -58,6 +60,7 @@ export function SeasonCard({ series, weekResults, currentWeek, isLive }: SeasonC
         live={isLive}
         weekStartIdx={window === 'Season' ? series.weekStartIdx : []}
         onScrubIndex={setScrubIndex}
+        skipEntrance={skipEntrance}
       />
 
       <View style={styles.chipsRow}>

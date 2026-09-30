@@ -43,6 +43,10 @@ export interface HomeHeroProps {
    * the caption under the gain row — Design Lead ruling, 2026-09-29. */
   unpricedValue: string[];
   unpricedToday: string[];
+  /** True when this mount was caused by a LEAGUE SWITCH, not Home's first
+   * open (H5, Design Lead ruling 2026-09-29, Blocking 1) — the hero comes
+   * in already settled, with no H4 rise. */
+  skipEntrance?: boolean;
 }
 
 function ordinal(n: number): string {
@@ -51,7 +55,7 @@ function ordinal(n: number): string {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
-export function HomeHero({ leagueId, rank, totalPlayers, record, week, numWeeks, value, seasonGainDollars, seasonGainPct, today, unpricedValue, unpricedToday }: HomeHeroProps) {
+export function HomeHero({ leagueId, rank, totalPlayers, record, week, numWeeks, value, seasonGainDollars, seasonGainPct, today, unpricedValue, unpricedToday, skipEntrance = false }: HomeHeroProps) {
   const { colors } = useTheme();
   const { reduced, duration, easing, withTiming } = useMotion();
 
@@ -60,9 +64,12 @@ export function HomeHero({ leagueId, rank, totalPlayers, record, week, numWeeks,
   // plain `quick` opacity crossfade (§5: "translate/scale -> crossfade").
   // A custom mount-driven value (not the built-in FadeInDown, whose
   // default offset isn't the spec's exact 8px) run once, never again —
-  // this is an ENTER moment, not a live-update roll.
-  const enterProgress = useSharedValue(0);
+  // this is an ENTER moment, not a live-update roll. `skipEntrance` (a
+  // league-switch remount, not Home's first open) starts already settled
+  // — no rise to replay (H5, Design Lead ruling 2026-09-29, Blocking 1).
+  const enterProgress = useSharedValue(skipEntrance ? 1 : 0);
   useEffect(() => {
+    if (skipEntrance) return;
     enterProgress.value = withTiming(1, {
       duration: reduced ? duration.quick : duration.slow,
       easing: reduced ? easing.settle : easing.settle,
@@ -82,9 +89,13 @@ export function HomeHero({ leagueId, rank, totalPlayers, record, week, numWeeks,
   const todayText = today != null ? formatMoney(today, { sign: 'always' }) : null;
 
   const caption = heroUnpricedCaption(unpricedValue, unpricedToday);
-  const a11yLabel = caption
-    ? `${heroAccessibilityLabel(valueText, gainText, HERO_SEASON_GAIN_LABEL)}. ${caption}`
-    : heroAccessibilityLabel(valueText, gainText, HERO_SEASON_GAIN_LABEL);
+  const a11yLabel = heroAccessibilityLabel(
+    valueText,
+    formatMoney(seasonGainDollars, { sign: 'always' }),
+    formatPercent(seasonGainPct, { sign: 'always' }),
+    todayText,
+    caption,
+  );
 
   return (
     <Animated.View style={[styles.wrap, enterStyle]}>
@@ -97,30 +108,35 @@ export function HomeHero({ leagueId, rank, totalPlayers, record, week, numWeeks,
         </Text>
       </View>
 
-      <View accessible accessibilityLabel={a11yLabel}>
+      {/* Blocking 2 (Design Lead, code review 2026-09-29): the whole hero
+          is ONE accessible element — the value, the gain row, today, and
+          the caption were four separately focusable pieces, and
+          RollingMoney renders one Text per character, so VoiceOver could
+          land on a single digit of the value or the gain. */}
+      <View accessible accessibilityLabel={a11yLabel} style={styles.heroBody}>
         <RollingMoney text={valueText} size="score.xl" rollKey={leagueId} />
-      </View>
 
-      <View style={styles.gainRow}>
-        <RollingMoney text={gainText} size="callout" color={gainColor} rollKey={leagueId} />
-        <Text variant="callout" tone="secondary"> {HERO_SEASON_GAIN_LABEL}</Text>
-        {todayText ? (
-          <>
-            <Text variant="callout" tone="secondary"> · </Text>
-            <RollingMoney text={todayText} size="callout" color={todayColor} rollKey={leagueId} />
-            <Text variant="callout" tone="secondary"> {HERO_TODAY_LABEL}</Text>
-          </>
+        <View style={styles.gainRow}>
+          <RollingMoney text={gainText} size="callout" color={gainColor} rollKey={leagueId} />
+          <Text variant="callout" tone="secondary"> {HERO_SEASON_GAIN_LABEL}</Text>
+          {todayText ? (
+            <>
+              <Text variant="callout" tone="secondary"> · </Text>
+              <RollingMoney text={todayText} size="callout" color={todayColor} rollKey={leagueId} />
+              <Text variant="callout" tone="secondary"> {HERO_TODAY_LABEL}</Text>
+            </>
+          ) : null}
+        </View>
+
+        {caption ? (
+          <Text variant="caption" tone="secondary">
+            <Text variant="caption" tone="secondary" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+              {'ⓘ '}
+            </Text>
+            {caption}
+          </Text>
         ) : null}
       </View>
-
-      {caption ? (
-        <Text variant="caption" tone="secondary">
-          <Text variant="caption" tone="secondary" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-            {'ⓘ '}
-          </Text>
-          {caption}
-        </Text>
-      ) : null}
     </Animated.View>
   );
 }
@@ -136,6 +152,9 @@ const styles = StyleSheet.create({
   },
   metaNum: {
     fontVariant: ['tabular-nums'],
+  },
+  heroBody: {
+    gap: space[2],
   },
   gainRow: {
     flexDirection: 'row',

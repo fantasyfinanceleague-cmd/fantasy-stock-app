@@ -214,8 +214,27 @@ export function sideUnpricedCaption(name: string, unpriced: string[]): string | 
 }
 
 // ── VoiceOver strings (spec §Accessibility) — new-flagged ──────────────────
-export function heroAccessibilityLabel(valueText: string, gainText: string, gainLabel: string): string {
-  return `Your team, ${valueText}, ${gainText} ${gainLabel}`;
+/** The hero's WHOLE-element VoiceOver label (Design Lead ruling,
+ * 2026-09-29, Blocking 2, code review): the value, the season-gain row,
+ * today's segment and the unpriced caption were four separately
+ * focusable elements, and RollingMoney renders one Text per character,
+ * so VoiceOver could land on a single digit. `todayText`/`caption` are
+ * both null when that segment is hidden — the label then simply omits
+ * that sentence rather than reading "null" or an empty one. */
+export function heroAccessibilityLabel(
+  valueText: string,
+  gainDollarsText: string,
+  gainPctText: string,
+  todayText: string | null,
+  caption: string | null,
+): string {
+  const parts = [
+    `Your team, ${valueText}.`,
+    `${gainDollarsText}, ${gainPctText} ${HERO_SEASON_GAIN_LABEL}.`,
+  ];
+  if (todayText) parts.push(`${todayText} ${HERO_TODAY_LABEL}.`);
+  if (caption) parts.push(caption);
+  return parts.join(' ');
 }
 export function thisWeekAccessibilityLabel(
   week: number,

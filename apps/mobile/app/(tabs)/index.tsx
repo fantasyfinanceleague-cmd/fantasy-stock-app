@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react';
+import { useEffect, useRef, type ReactElement } from 'react';
 import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -20,6 +20,7 @@ import { DraftingCard } from '@/components/home/DraftingCard';
 import { SeasonCompleteCard } from '@/components/home/SeasonCompleteCard';
 import { PhaseMessageCard } from '@/components/home/PhaseMessageCard';
 import { PhaseTransition } from '@/components/home/PhaseTransition';
+import { HomeLeagueTransition } from '@/components/home/HomeLeagueTransition';
 import type { PhaseResult } from '@/lib/home/homePhase';
 import {
   MARKET_CLOSED_CHIP, SCORING_CHIP, SCORED_CHIP, endsAtLabel, marketClosedAt, marketResumesAt,
@@ -60,12 +61,16 @@ function HomeBody({
   league,
   leagueId,
   onRefresh,
+  skipEntrance,
 }: {
   status: string;
   viewModel: ReturnType<typeof useHomeLeague>['viewModel'];
   league: League | null;
   leagueId: string | null;
   onRefresh: () => Promise<void>;
+  /** True when this Home body was mounted by a LEAGUE SWITCH, not the
+   * screen's first open (H5, Design Lead ruling 2026-09-29, Blocking 1). */
+  skipEntrance: boolean;
 }) {
   // Error checked BEFORE the `!viewModel` fallback (code review,
   // 2026-09-29: a first-load failure has no viewModel yet, so the old
@@ -230,6 +235,7 @@ function HomeBody({
         today={hero.today}
         unpricedValue={hero.unpricedValue}
         unpricedToday={hero.unpricedToday}
+        skipEntrance={skipEntrance}
       />
       {middleCard ? <PhaseTransition key={phase.kind}>{middleCard}</PhaseTransition> : null}
       {showSeasonCard ? (
@@ -242,9 +248,10 @@ function HomeBody({
             .map((w) => ({ week: w.week, result: w.result }))}
           currentWeek={week}
           isLive={chrome.isLive}
+          skipEntrance={skipEntrance}
         />
       ) : null}
-      <StandingsCard rows={standingRows} throughWeek={Math.max(0, week - 1)} />
+      <StandingsCard rows={standingRows} throughWeek={Math.max(0, week - 1)} skipEntrance={skipEntrance} />
     </>
   );
 }
@@ -264,6 +271,18 @@ export default function HomeScreen() {
   const { leagues, loading, refresh, activeLeagueId, activeLeague } = useLeagueContext();
   const { colors } = useTheme();
   const { status, viewModel } = useHomeLeague(activeLeagueId);
+
+  // H5 (Design Lead ruling, 2026-09-29, Blocking 1): entrance animations
+  // (hero rise, chart draw-in, standings stagger) play only on Home's
+  // FIRST open. `hasOpenedRef` lives above the leagueId-keyed subtree
+  // (HomeLeagueTransition below), so it survives every later switch — a
+  // switch reads `skipEntrance: true` on the very render that shows the
+  // new league, not one render late.
+  const hasOpenedRef = useRef(false);
+  const skipEntrance = hasOpenedRef.current;
+  useEffect(() => {
+    if (activeLeagueId) hasOpenedRef.current = true;
+  }, [activeLeagueId]);
 
   // First load (e.g. just signed in): just the header, so neither state
   // flashes and then swaps for the other.
@@ -296,7 +315,9 @@ export default function HomeScreen() {
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <ShellHeader title="Home" showAvatar />
       <BarsRefresh onRefresh={refresh} contentContainerStyle={{ paddingHorizontal: space[6], paddingBottom: space[9], gap: space[6] }}>
-        <HomeBody status={status} viewModel={viewModel} league={activeLeague} leagueId={activeLeagueId} onRefresh={refresh} />
+        <HomeLeagueTransition key={activeLeagueId ?? 'none'}>
+          <HomeBody status={status} viewModel={viewModel} league={activeLeague} leagueId={activeLeagueId} onRefresh={refresh} skipEntrance={skipEntrance} />
+        </HomeLeagueTransition>
       </BarsRefresh>
     </View>
   );

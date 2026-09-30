@@ -39,17 +39,24 @@ export interface SeasonChartProps {
   live?: boolean;
   weekStartIdx: number[];
   onScrubIndex?: (index: number | null) => void;
+  /** True when this mount was caused by a LEAGUE SWITCH, not Home's first
+   * open (H5, Design Lead ruling 2026-09-29, Blocking 1) — the very first
+   * draw after the switch shows the new line already fully drawn, with no
+   * H2 draw-in to replay. Later window changes within the SAME league
+   * still draw in as usual. */
+  skipEntrance?: boolean;
 }
 
 const HEIGHT = 148;
 
-export function SeasonChart({ points, live = false, weekStartIdx, onScrubIndex }: SeasonChartProps) {
+export function SeasonChart({ points, live = false, weekStartIdx, onScrubIndex, skipEntrance = false }: SeasonChartProps) {
   const { colors } = useTheme();
   const { reduced, duration, easing, withTiming } = useMotion();
   const [width, setWidth] = useState(0);
   const [scrubIndex, setScrubIndex] = useState<number | null>(null);
   const lastHapticIndex = useRef<number | null>(null);
-  const drawProgress = useSharedValue(reduced ? 1 : 0);
+  const drawProgress = useSharedValue(reduced || skipEntrance ? 1 : 0);
+  const skippedFirstDraw = useRef(false);
 
   const series = points.map((p) => p.gain);
   const geometry = width > 0 ? buildChartGeometry(series, width, HEIGHT) : null;
@@ -61,6 +68,13 @@ export function SeasonChart({ points, live = false, weekStartIdx, onScrubIndex }
   useEffect(() => {
     if (reduced) {
       drawProgress.value = 1;
+      return;
+    }
+    if (skipEntrance && !skippedFirstDraw.current) {
+      // The mount this component was created with — already handled by
+      // this shared value's own initializer above. Only skip ONCE: a
+      // window change right after a switch should still draw in.
+      skippedFirstDraw.current = true;
       return;
     }
     drawProgress.value = 0;

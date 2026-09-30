@@ -36,13 +36,17 @@ export interface StandingsCardProps {
    * review, 2026-09-29 found this receiving `numWeeks`, so the caption
    * always said "Through Week 14" regardless of which week was live). */
   throughWeek: number;
+  /** True when this mount was caused by a LEAGUE SWITCH, not Home's first
+   * open (H5, Design Lead ruling 2026-09-29, Blocking 1) — rows render at
+   * their final position with no stagger to replay. */
+  skipEntrance?: boolean;
 }
 
 function record(r: StandingRow): string {
   return `${r.wins}–${r.losses}${r.ties ? `–${r.ties}` : ''}`;
 }
 
-export function StandingsCard({ rows, throughWeek }: StandingsCardProps) {
+export function StandingsCard({ rows, throughWeek, skipEntrance = false }: StandingsCardProps) {
   const { colors } = useTheme();
   const { reduced, stagger, spring } = useMotion();
 
@@ -62,7 +66,7 @@ export function StandingsCard({ rows, throughWeek }: StandingsCardProps) {
       </View>
       <View>
         {displayed.map((r, i) => {
-          const entering = reduced
+          const entering = reduced || skipEntrance
             ? undefined
             : FadeInDown.delay(stagger.delayFor(i))
                 .springify()
