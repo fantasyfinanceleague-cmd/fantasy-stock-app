@@ -417,3 +417,32 @@ Deno.test('B3: without the market calendar, seasonStartsAt falls back to the nom
   assertEquals(vm.phase.kind, 'pre_season');
   if (vm.phase.kind === 'pre_season') assertEquals(vm.phase.seasonStartsAt, '2026-08-04T14:30:00.000Z');
 });
+
+Deno.test('server parity: the live score is independent of marketCalendar -- liveWeekScore never re-filters data.current_week by the resolved window', () => {
+  // Orchestrator ruling (2026-09-30): scoring windows (which trades count
+  // this week) must match process-week-results exactly -- the STORED
+  // matchups.week_start/week_end, which get_home_league's own SQL already
+  // uses to scope data.current_week.my_trades/opponent_trades server-side
+  // (20261018000000_get_home_league_rpc.sql: "t.created_at >= v_matchup.
+  // week_start and t.created_at <= v_matchup.week_end"). marketWeek.ts's
+  // resolved calendar window governs phase classification and DISPLAYED
+  // times only (B1) -- it must never reach liveWeekScore's inputs, which
+  // are data.current_week's arrays verbatim. This pins that boundary: the
+  // live score must come out identical whether or not a marketCalendar is
+  // even supplied, for the same trades/snapshots/quotes.
+  const { data, meta, quote, bars } = buildFixtureInput();
+  nominalWeek6(data);
+  const now = new Date('2026-09-24T17:37:00-04:00'); // Thu, live under either calendar
+  const withoutCalendar = buildHomeViewModel({
+    now, meta, market: { status: 'open', reason: 'regular_session', nextOpenAt: null },
+    data, quote, bars, playoffRoundLabelForWeek, marketCalendar: [],
+  });
+  const withCalendar = buildHomeViewModel({
+    now, meta, market: { status: 'open', reason: 'regular_session', nextOpenAt: null },
+    data, quote, bars, playoffRoundLabelForWeek, marketCalendar: standardWeekSessions('2026-09-25T21:00:00.000Z'),
+  });
+  assertEquals(withoutCalendar.phase.kind, 'live_open');
+  assertEquals(withCalendar.phase.kind, 'live_open');
+  assertAlmostEquals(withoutCalendar.thisWeek!.you.gain, withCalendar.thisWeek!.you.gain, 1e-9);
+  assertAlmostEquals(withoutCalendar.thisWeek!.opponent.gain, withCalendar.thisWeek!.opponent.gain, 1e-9);
+});
