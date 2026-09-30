@@ -9,7 +9,7 @@ import { assertEquals } from 'jsr:@std/assert';
 import {
   heroUnpricedCaption, sideUnpricedCaption, seasonScrubLabel, heroAccessibilityLabel, heroWeekOrRoundLabel,
   standingsThroughWeek, preSeasonStartsLabel, placeLabel, nonChampionLine, regularSeasonTileLine, playoffRecordLine,
-  playoffTileLine, championAnnounceLine, coreCompleteTiles,
+  playoffTileLine, championAnnounceLine, coreCompleteTiles, teamSoFarCaption, roundSlotLabel,
 } from '../lib/home/homeCopy.ts';
 
 Deno.test('heroUnpricedCaption: null when both lists are empty', () => {
@@ -206,4 +206,14 @@ Deno.test('coreCompleteTiles: the honest-minimum fallback and the full get_seaso
   assertEquals(forSameSeason, again);
   assertEquals(forSameSeason.seasonGain, 481.78);
   assertEquals(forSameSeason.regularSeasonLine, '2nd of 6 · 5–1');
+});
+
+// ── B5 (Design Lead ruling, 2026-09-30): DraftingCard's slot grid ──────────
+
+Deno.test('teamSoFarCaption: "1 of 6"', () => {
+  assertEquals(teamSoFarCaption(1, 6), '1 of 6');
+});
+
+Deno.test('roundSlotLabel: "Rd 2"', () => {
+  assertEquals(roundSlotLabel(2), 'Rd 2');
 });

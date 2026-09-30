@@ -29,7 +29,9 @@ export interface DraftClockState {
 export interface DraftingData {
   clock: DraftClockState | null;
   order: string[] | null;
-  myPickCount: number;
+  /** The caller's own drafted symbols so far, in pick order -- the board's
+   * slot grid (B5) needs the SYMBOLS, not just a count. */
+  myPicks: string[];
 }
 
 /** A 6-manager snake order with `myUserId` (the caller's own id) seeded
@@ -50,7 +52,7 @@ function fixtureDraftingData(fixture: 'drafting_on_clock' | 'drafting_waiting_tu
     return {
       clock: { pickSeconds: 60, picksMade: 10, deadlineAt: '2026-10-03T20:00:42.000Z', serverNow: '2026-10-03T20:00:00.000Z' },
       order,
-      myPickCount: 1, // picked once already, in round 1
+      myPicks: ['NVDA'], // picked once already, in round 1 -- board's own slot-grid sample
     };
   }
   // drafting_waiting_turn: round 2 has just started (picksMade 6) -- the
@@ -58,21 +60,21 @@ function fixtureDraftingData(fixture: 'drafting_on_clock' | 'drafting_waiting_tu
   return {
     clock: { pickSeconds: 60, picksMade: 6, deadlineAt: '2026-10-03T19:58:30.000Z', serverNow: '2026-10-03T19:58:00.000Z' },
     order,
-    myPickCount: 1,
+    myPicks: ['NVDA'],
   };
 }
 
 export function useDraftingData(leagueId: string, myUserId: string): DraftingData {
   const [clock, setClock] = useState<DraftClockState | null>(null);
   const [order, setOrder] = useState<string[] | null>(null);
-  const [myPickCount, setMyPickCount] = useState(0);
+  const [myPicks, setMyPicks] = useState<string[]>([]);
 
   useEffect(() => {
     if (HOME_FIXTURE === 'drafting_on_clock' || HOME_FIXTURE === 'drafting_waiting_turn') {
       const fx = fixtureDraftingData(HOME_FIXTURE, myUserId);
       setClock(fx.clock);
       setOrder(fx.order);
-      setMyPickCount(fx.myPickCount);
+      setMyPicks(fx.myPicks);
       return;
     }
 
@@ -90,12 +92,12 @@ export function useDraftingData(leagueId: string, myUserId: string): DraftingDat
       }
       const parsed = parseDraftOrder(orderRaw);
       setOrder(parsed?.order ?? null);
-      setMyPickCount((picksRaw ?? []).length);
+      setMyPicks(((picksRaw ?? []) as { symbol: string }[]).map((r) => r.symbol));
     })();
     return () => {
       cancelled = true;
     };
   }, [leagueId, myUserId]);
 
-  return { clock, order, myPickCount };
+  return { clock, order, myPicks };
 }

@@ -10,7 +10,10 @@ import { LiveDot } from '@/components/sp/game/LiveDot';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { useDraftingData } from '@/lib/home/useDraftingData';
 import { currentPickerFor, picksUntilTurn } from '@/lib/home/draftTurn';
-import { YOURE_ON_THE_CLOCK, onTheClockLine, upNextLine, GO_TO_DRAFT_ROOM, YOUR_TEAM_SO_FAR, DRAFTING_TAG, DRAFTING_CHIP } from '@/lib/home/homeCopy';
+import {
+  YOURE_ON_THE_CLOCK, onTheClockLine, upNextLine, GO_TO_DRAFT_ROOM, YOUR_TEAM_SO_FAR, teamSoFarCaption,
+  roundSlotLabel, DRAFTING_TAG, DRAFTING_CHIP,
+} from '@/lib/home/homeCopy';
 
 // Stockpile — <DraftingCard> (Phase 3b-2, state 7 — "draft in progress").
 // One fetch of get_draft_clock + get_draft_order on mount — no live
@@ -28,7 +31,7 @@ export interface DraftingCardProps {
 
 export function DraftingCard({ leagueId, myUserId, numRounds }: DraftingCardProps) {
   const { colors } = useTheme();
-  const { clock, order, myPickCount } = useDraftingData(leagueId, myUserId);
+  const { clock, order, myPicks } = useDraftingData(leagueId, myUserId);
 
   if (!clock || !order) {
     return (
@@ -44,41 +47,66 @@ export function DraftingCard({ leagueId, myUserId, numRounds }: DraftingCardProp
   const now = new Date(clock.serverNow).getTime();
   const secondsLeft = deadline != null ? Math.max(0, Math.round((deadline - now) / 1000)) : clock.pickSeconds;
 
+  // B5 (Design Lead, 2026-09-30): a slot per round, filled with the
+  // symbol once drafted, "Rd N" (this round's own position, never a
+  // global pick number) while still empty.
+  const slots = Array.from({ length: numRounds }, (_, i) => myPicks[i] ?? null);
+
   return (
-    <Card style={styles.card}>
-      <View style={styles.header}>
-        <Text variant="tag" style={{ color: colors.liveText }}>{DRAFTING_TAG}</Text>
-        <View style={[styles.chip, { backgroundColor: colors.inset }]}>
-          <LiveDot size={7} />
-          <Text variant="tag" style={{ color: colors.liveText }}>{DRAFTING_CHIP}</Text>
+    <>
+      <Card style={styles.card}>
+        <View style={styles.header}>
+          <Text variant="tag" style={{ color: colors.liveText }}>{DRAFTING_TAG}</Text>
+          <View style={[styles.chip, { backgroundColor: colors.inset }]}>
+            <LiveDot size={7} />
+            <Text variant="tag" style={{ color: colors.liveText }}>{DRAFTING_CHIP}</Text>
+          </View>
         </View>
-      </View>
 
-      {isMyTurn ? (
-        <>
-          {/* B5 (Design Lead, 2026-09-30): the board's "You're on the
-              clock" is in the live-text colour, not accent blue. */}
-          <Text variant="title" style={{ color: colors.liveText }}>
-            {YOURE_ON_THE_CLOCK}
-          </Text>
+        {isMyTurn ? (
+          <>
+            {/* B5 (Design Lead, 2026-09-30): the board's "You're on the
+                clock" is in the live-text colour, not accent blue. */}
+            <Text variant="title" style={{ color: colors.liveText }}>
+              {YOURE_ON_THE_CLOCK}
+            </Text>
+            <Text variant="callout" tone="secondary">
+              {onTheClockLine(turn.round, turn.overallPick, secondsLeft)}
+            </Text>
+          </>
+        ) : (
           <Text variant="callout" tone="secondary">
-            {onTheClockLine(turn.round, turn.overallPick, secondsLeft)}
+            {upNextLine(turn.round, turn.overallPick, picksUntilTurn(order, clock.picksMade, numRounds, myUserId))}
           </Text>
-        </>
-      ) : (
-        <Text variant="callout" tone="secondary">
-          {upNextLine(turn.round, turn.overallPick, picksUntilTurn(order, clock.picksMade, numRounds, myUserId))}
-        </Text>
-      )}
+        )}
 
-      <Button label={GO_TO_DRAFT_ROOM} onPress={() => router.push('/draft')} variant="primary" />
+        <Button label={GO_TO_DRAFT_ROOM} onPress={() => router.push('/draft')} variant="primary" />
+      </Card>
 
-      {myPickCount > 0 ? (
-        <Text variant="caption" tone="secondary">
-          {YOUR_TEAM_SO_FAR}: {myPickCount} pick{myPickCount === 1 ? '' : 's'}
-        </Text>
-      ) : null}
-    </Card>
+      <Card style={styles.card}>
+        <View style={styles.header}>
+          <Text variant="headline">{YOUR_TEAM_SO_FAR}</Text>
+          <Text variant="caption" tone="secondary">{teamSoFarCaption(myPicks.length, numRounds)}</Text>
+        </View>
+        <View style={styles.slotGrid}>
+          {slots.map((symbol, i) =>
+            symbol ? (
+              <View key={i} style={[styles.slot, { backgroundColor: colors.youText, borderColor: colors.youText }]}>
+                <Text variant="callout" style={{ color: colors.surface, fontWeight: '700' }}>
+                  {symbol}
+                </Text>
+              </View>
+            ) : (
+              <View key={i} style={[styles.slot, { borderColor: colors.border }]}>
+                <Text variant="callout" tone="secondary">
+                  {roundSlotLabel(i + 1)}
+                </Text>
+              </View>
+            ),
+          )}
+        </View>
+      </Card>
+    </>
   );
 }
 
@@ -100,5 +128,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[3],
     paddingVertical: space[2],
     borderRadius: 999,
+  },
+  slotGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: space[2],
+  },
+  slot: {
+    width: '31%',
+    aspectRatio: 1.6,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

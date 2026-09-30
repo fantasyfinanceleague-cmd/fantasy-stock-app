@@ -201,6 +201,15 @@ export function upNextLine(round: number, pick: number, picksAway: number): stri
 }
 export const GO_TO_DRAFT_ROOM = 'Go to the draft room'; // board
 export const YOUR_TEAM_SO_FAR = 'Your team so far'; // board
+/** "1 of 6" (board) -- the slot-grid card's own header caption. */
+export function teamSoFarCaption(count: number, total: number): string {
+  return `${count} of ${total}`; // board
+}
+/** "Rd 2" (board) -- an EMPTY slot's own label, by its position (1-indexed)
+ * in the caller's personal round order, never a global pick number. */
+export function roundSlotLabel(round: number): string {
+  return `Rd ${round}`; // board
+}
 
 // ── State 9: bye week — NOT on the board. new-flagged. ──────────────────────
 export const BYE_MESSAGE = 'No matchup this week'; // new-flagged
