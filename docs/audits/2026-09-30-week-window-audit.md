@@ -265,7 +265,7 @@ For any hit:
 
 - Grepped `week_start|week_end|weekStart|weekEnd|getWeekStart|14:30|21:00|TUESDAY|weekWindow` across `supabase/functions`, `supabase/migrations`, `apps/web/src`, and `apps/mobile`, then read every hit plus the trade, market-hours, and week-status code they lead to.
 - Cron schedules were taken from `docs/architecture/db-snapshot.json` (captured 2026-09-30T16:53Z), not from migrations: `snapshot-week-start 35 14 * * 1,2`, `snapshot-week-end 5 21 * * 5`, `process-weekly-matchups 15 21 * * 5`.
-- **Replay:** a scratchpad Deno script (not committed) imported the real pure modules and chained them the way the handlers do:
+- **Replay:** [`2026-09-30-week-window-replay.ts`](2026-09-30-week-window-replay.ts) (run from repo root: `deno run --allow-read docs/audits/2026-09-30-week-window-replay.ts`; exits 1 while any scenario is wrong, so it doubles as the fix's failing test) imports the real pure modules and chains them the way the handlers do:
   1. `weekWindow` (`_shared/schedule.ts`) for the window;
   2. `snapshotHoldings` + `classifyCoverage` / `selectMissingHoldings` / `buildPricedRows` (`snapshot-week-start/plan.ts`), with the ledger filtered to `created_at <= run` for each Mon/Tue run;
   3. `buildCloseWork` (`snapshot-week-end/close.ts`) with the ledger at the Fri run;
