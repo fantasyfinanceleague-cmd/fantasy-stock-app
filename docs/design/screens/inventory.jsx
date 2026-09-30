@@ -420,7 +420,7 @@
       {children}
     </div>
   );
-  const Hero = ({ value, gain, gainLabel = 'since the draft', meta }) => (
+  const Hero = ({ value, gain, gainLabel = 'season gain', meta }) => (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="ks-caption">Your team</span><span className="ks-caption ks-num">{meta}</span></div>
       <div className="ks-score ks-num" style={{ fontSize: 48, lineHeight: '50px', fontStretch: '75%' }}>{$(value)}</div>
@@ -1255,7 +1255,7 @@
             <ThisWeekCard you={L.you} opp={L.opp} oppName="vs Gianluigi B." left="Ends Fri 4:00 PM ET" />
           </div>
           <div style={{ display: 'grid', gap: 16, alignContent: 'start' }}>
-            <div className="ks-card" style={{ padding: 14 }}><div className="ks-section-h"><h3>Season</h3><span className="ks-caption">Gain since the draft</span></div><GainChart series={H.series} weeks={H.weekStarts} w={440} h={170} label="Gain since the draft" /></div>
+            <div className="ks-card" style={{ padding: 14 }}><div className="ks-section-h"><h3>Season</h3><span className="ks-caption">Season gain, week by week</span></div><GainChart series={H.series} weeks={H.weekStarts} w={440} h={170} label="Season gain" /></div>
             <div className="ks-card" style={{ padding: '10px 14px' }}>
               <div className="ks-section-h"><h3>Standings</h3><span className="ks-caption">Through Week 5</span></div>
               <ul className="ks-rows">{K.STANDINGS_BEFORE.slice(0, 4).map((r) => <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '18px 1fr auto auto', padding: '8px 0' }}><b className="ks-num">{r.rank}</b><b className="ks-callout">{r.name}</b><span className="ks-callout ks-muted ks-num">{r.w}–{r.l}</span><span className={`ks-callout ks-num ${tone(r.pf)}`} style={{ fontWeight: 700, minWidth: 80, textAlign: 'right' }}>{$s(r.pf)}</span></li>)}</ul>

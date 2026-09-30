@@ -845,7 +845,9 @@
   // Roberto–Gianluigi, Paolo–Alessandro, Francesco–Andrea.
   // Season gain = the sum of a manager's weekly matchup gains. Roberto's
   // weeks 1–5 are ROBERTO_WEEKS below (sum +$129.99), so his season gain,
-  // his Home chart and his portfolio's gain since the draft all agree.
+  // his Home chart and (in this sample only) his portfolio's gain since the
+  // draft all agree. In production the portfolio's gain also includes the
+  // unscored gaps (draft → Week 1 open, Friday close → Monday open): D1.
   const ROBERTO_WEEKS = [
     { week: 1, gain: 41.3, result: 'W' },
     { week: 2, gain: 58.75, result: 'W' },
@@ -915,8 +917,8 @@
     { name: 'Serie A Traders', phase: 'pre_draft', status: 'Draft Sat 7:00 PM ET', rank: null, record: null },
   ];
 
-  // Home chart: this league's cumulative gain since the draft (value − cost
-  // + realized; no trades yet, so value − cost), one point per trading day.
+  // Home chart: this league's season gain (D1, Concept A: the scored weeks
+  // plus this week live), one point per trading day.
   // Weeks 1–5 end exactly on each week's result; Week 6 follows the matchup's
   // daily closes, and the last point is the LIVE gain. Weekend gaps are zero
   // in this sample (Monday opens at Friday's close), so the chart's rise this
@@ -1325,7 +1327,7 @@
             </div>
             <div className="ks-score ks-num" style={{ fontSize: 48, lineHeight: '50px', fontStretch: '75%' }}>{$(H.value)}</div>
             <div className="ks-callout ks-num" style={{ fontWeight: 700 }}>
-              <span className="ks-gain">{$s(H.gain)} · {pct(H.gainPct)}</span> <span className="ks-muted" style={{ fontWeight: 500 }}>since the draft</span>
+              <span className="ks-gain">{$s(H.gain)} · {pct(H.gainPct)}</span> <span className="ks-muted" style={{ fontWeight: 500 }}>season gain</span>
               <span className="ks-muted" style={{ fontWeight: 500 }}> · </span>
               <span className="ks-gain">{$s(H.today)}</span> <span className="ks-muted" style={{ fontWeight: 500 }}>today</span>
             </div>
@@ -1334,8 +1336,8 @@
             <ThisWeekCard you={L.you} opp={L.opp} oppName="vs Gianluigi B." left="Ends Fri 4:00 PM ET" />
           </div>
           <div className="ks-card" style={{ padding: '12px 12px 6px' }}>
-            <div className="ks-section-h" style={{ padding: '0 2px' }}><h3>Season</h3><span className="ks-caption">Gain since the draft</span></div>
-            <GainChart series={H.series} weeks={H.weekStarts} run={run} w={336} h={140} label="Gain since the draft" />
+            <div className="ks-section-h" style={{ padding: '0 2px' }}><h3>Season</h3><span className="ks-caption">Season gain, week by week</span></div>
+            <GainChart series={H.series} weeks={H.weekStarts} run={run} w={336} h={140} label="Season gain" />
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4, padding: '6px 0 8px' }}>
               {H.weekResults.map((w) => (
                 <span key={w.week} className="ks-chip ks-chip--money ks-num" style={{ textTransform: 'none', letterSpacing: 0, fontStretch: '100%', fontSize: 12, height: 26, padding: 0, justifyContent: 'center' }}>
@@ -2302,7 +2304,7 @@
       {children}
     </div>
   );
-  const Hero = ({ value, gain, gainLabel = 'since the draft', meta }) => (
+  const Hero = ({ value, gain, gainLabel = 'season gain', meta }) => (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="ks-caption">Your team</span><span className="ks-caption ks-num">{meta}</span></div>
       <div className="ks-score ks-num" style={{ fontSize: 48, lineHeight: '50px', fontStretch: '75%' }}>{$(value)}</div>
@@ -3137,7 +3139,7 @@
             <ThisWeekCard you={L.you} opp={L.opp} oppName="vs Gianluigi B." left="Ends Fri 4:00 PM ET" />
           </div>
           <div style={{ display: 'grid', gap: 16, alignContent: 'start' }}>
-            <div className="ks-card" style={{ padding: 14 }}><div className="ks-section-h"><h3>Season</h3><span className="ks-caption">Gain since the draft</span></div><GainChart series={H.series} weeks={H.weekStarts} w={440} h={170} label="Gain since the draft" /></div>
+            <div className="ks-card" style={{ padding: 14 }}><div className="ks-section-h"><h3>Season</h3><span className="ks-caption">Season gain, week by week</span></div><GainChart series={H.series} weeks={H.weekStarts} w={440} h={170} label="Season gain" /></div>
             <div className="ks-card" style={{ padding: '10px 14px' }}>
               <div className="ks-section-h"><h3>Standings</h3><span className="ks-caption">Through Week 5</span></div>
               <ul className="ks-rows">{K.STANDINGS_BEFORE.slice(0, 4).map((r) => <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '18px 1fr auto auto', padding: '8px 0' }}><b className="ks-num">{r.rank}</b><b className="ks-callout">{r.name}</b><span className="ks-callout ks-muted ks-num">{r.w}–{r.l}</span><span className={`ks-callout ks-num ${tone(r.pf)}`} style={{ fontWeight: 700, minWidth: 80, textAlign: 'right' }}>{$s(r.pf)}</span></li>)}</ul>
@@ -3689,9 +3691,10 @@
           notes={<Notes
             shows={[
               <><b>One league at a time</b> (your call, v1.1). The league pill picks it; switching swaps everything on Home. No cross-league totals.</>,
-              <>Your team in this league: value {$(K.HOME.value)}, gain since the draft {$s(K.HOME.gain)}, today {$s(K.HOME.today)}, and rank and record (2nd of 6, {K.HOME.record}).</>,
+              <>Your team in this league: value {$(K.HOME.value)} as the big number, then <b>season gain</b> {$s(K.HOME.gain)} (the scored weeks plus this week live), today {$s(K.HOME.today)}, and rank and record (2nd of 6, {K.HOME.record}).</>,
+              <><b>The Home hero</b> (your call: Concept A). Team value is the big number; the line under it is the season gain, the same words as the Standings column. It is not value − $12,000: the value also moves between the draft and Week 1's open and over every Friday close → Monday open, when no matchup is scoring. Portfolio keeps its own gain, value − cost, labelled "since the draft".</>,
               <>This week's matchup comes first: the live scoreboard card, with the lead in the metric that decides the matchup.</>,
-              <>The season chart plots gain since the draft against $0, with week ticks and each week's result (W/L) underneath. This week's rise on the chart equals this week's matchup score.</>,
+              <>The season chart ("Season gain, week by week") plots the same season gain against $0, with week ticks and each week's result (W/L) underneath. It ends at the hero's season gain, and this week's rise equals this week's matchup score.</>,
               <>Top of the standings with you highlighted. The avatar opens Profile.</>,
               <><b>Other leagues</b> (your call: Concept B, pill only): there is no list on Home. The league pill shows "+2" (two more leagues) on every tab and opens the league sheet with every league grouped by phase.</>,
             ]}
@@ -3806,7 +3809,7 @@
       ['Matchup, live', `Roberto B.: ${rowsSum(L.you.rows)} = ${$s(L.you.gain)}`, `Gianluigi B.: ${rowsSum(L.opp.rows)} = ${$s(L.opp.gain)}`, `Lead ${$(L.you.gain - L.opp.gain)}`],
       ['Matchup, final', `Roberto B. = ${$s(F.you.gain)} (${pct(F.you.pct)} of ${$(F.you.startValue)})`, `Gianluigi B. = ${$s(F.opp.gain)} (${pct(F.opp.pct)} of ${$(F.opp.startValue)})`, `Margin ${$(F.you.gain - F.opp.gain)}`],
       ['Portfolio', `Σ 6 holdings = ${$(P.value)}`, `Basis 6 × $2,000.00 = ${$(P.cost)}`, `Gain ${$s(P.gain)} (${pct(P.gainPct)})`],
-      ['Home (this league)', `Value = Portfolio = ${$(H.value)}`, `Gain since the draft ${$s(H.gain)} = weeks 1–5 ${$s(H.throughW5)} + this week ${$s(K.MATCHUP.live.you.gain)}`, `Chart ends at ${$s(H.series[H.series.length - 1])}`],
+      ['Home (this league)', `Value = Portfolio = ${$(H.value)}`, `Season gain ${$s(H.gain)} = weeks 1–5 ${$s(H.throughW5)} + this week ${$s(K.MATCHUP.live.you.gain)}`, `Chart ends at ${$s(H.series[H.series.length - 1])}`],
       ['Trade (fixed per slot)', `Sell TSLA: ${K.SALE.buy && K.lineup('roberto', 'thu').find((r) => r.t === 'TSLA').qty} sh × ${$(248.36)} = ${$(K.SALE.proceeds)}`, `Realized vs the $2,000.00 slot: ${$s(K.SALE.realized)}`, `Buy SHOP with exactly ${$(K.SALE.proceeds)} ≈ ${K.SALE.buy.qty.toFixed(4)} sh; value unchanged`],
       ['Standings', `After Week 6: ${wins} wins = ${losses} losses`, 'Ranked: win %, then head-to-head, then season gain (= playoff seeds); byes excluded', `Roberto B. ${$s(K.STANDINGS_FINAL[0].pf)} > Paolo M. ${$s(K.STANDINGS_FINAL[1].pf)}`],
       ['Draft', 'Seat on the clock at pick n: odd rounds 1→6, even rounds 6→1', 'Roberto B. (seat 2): picks 2, 11, 14, 23, 26, 35', 'Gianluigi B. (seat 5): picks 5, 8, 17, 20, 29, 32'],
