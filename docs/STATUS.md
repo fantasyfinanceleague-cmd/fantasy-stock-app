@@ -5,8 +5,8 @@ Update this file at the end of any session that changes prod state or lands a
 workstream. Per-workstream detail lives in the documents linked below and in the
 PRs; this page summarises and points.
 
-**Last verified against prod: 2026-09-29** (read-only SQL, deploy downloads and
-effect tests run with Giorgio; results recorded inline). Anything marked
+**Last verified against prod: 2026-09-29, late** (read-only SQL, deploy downloads and
+effect tests run with Giorgio; results recorded inline; #77 and #78 released that evening). Anything marked
 **UNVERIFIED** has not been checked against prod and must be confirmed before
 anyone builds on it. Resolved defects are collapsed into §5. Their full reasoning
 lives in the linked PRs and in git history (`git log -p -- docs/STATUS.md`).
@@ -56,7 +56,7 @@ refused by RLS when they draft (confirmed on Giorgio's phone). The fix is the
 
 | Fact | State | Evidence |
 |---|---|---|
-| Migrations applied | Everything in `supabase/migrations/` **through `20261013000000`** | Four pushes on 2026-09-29, each dry-run/confirm → push → `schema_migrations` verified: (1) `20261006000000`, `20261007000000`, `20261010000000`; (2) `20261011000000`–`04` (ranking); (3) `20261012000000`–`03` (flexible playoffs); (4) `20261013000000` (draft order modes) |
+| Migrations applied | Everything in `supabase/migrations/` **through `20261015000000`** | Six pushes on 2026-09-29, each dry-run/confirm → push → `schema_migrations` verified: (1) `20261006000000`, `20261007000000`, `20261010000000`; (2) `20261011000000`–`04` (ranking); (3) `20261012000000`–`03` (flexible playoffs); (4) `20261013000000` (draft order modes); (5) `20261014000000`–`01` (season result RPC + `league_seasons` write lockdown, #77); (6) `20261015000000` (guarded `complete_league_season`, #78) |
 | Flexible playoffs (#66) | Applied.<br>• 0 unaddressed playoff rows; only `matchups_bracket_address` exists (the old backstop is dropped)<br>• 0 matchup leagues with a NULL playoff size<br>• the 4 constraints are validated<br>• `start_league_playoffs`: service_role only, DEFINER, with the bracket-shape check<br>• the freeze trigger is enabled<br>• test_0925 and test_09_25_v2 now end **2026-10-30** (playoff weeks included) | 2026-09-29 |
 | Draft order modes (#67) | Applied.<br>• The pre-check passed: ids ASCII; test_07_05_26's order matches its picks; only the stale `test_timer_0925` was finalized silently; no draft due in the window<br>• `draft-order-modes-effect-test.sql`: **24/24 PASS** (B1: all 8 started drafts have a locked order; B2: the in-progress order = its members)<br>• the notify cron is still deferred | 2026-09-29 |
 | Unified ranking + atomic playoff start (#59) | Applied. The pre-check (duplicate playoff rows) returned 0.<br>• `league_standings_ranked`: authenticated + service_role, INVOKER, search_path pinned<br>• `start_league_playoffs`: service_role only, DEFINER, exactly one overload (3 args)<br>• `get_home_summary` / `complete_league_season`: ACL and settings unchanged<br>• index `matchups_one_bracket_per_league` present<br>The heal-candidate query returned 0 rows before deploy | 2026-09-29 |
@@ -93,7 +93,7 @@ scratch, then `diff`), all from the deploy checkout `/Users/giorgio/fantasy-stoc
 | `validate-and-record-pick` | `1f8e2d5` | #58: every pick (manual, bot, auto) goes through `_shared/pick-gate.ts` + `draft-write.ts`; new `action:'auto_pick'`; finalize + heal; `bot_pick` |
 | `draft-autopick-sweep` (new) | `1f8e2d5` | #58. `verify_jwt=false` + the shared `_shared/cron-auth.ts` guard. A no-credential POST returns its own `401 {"error":"Unauthorized"}`. A manual `net.http_post` with the vault key returned `200 {"ok":true,"examined":0}`. **Not scheduled yet** (cron deferred) |
 | `record-trade` | `f0e8eda` | #54: proceeds-sized rebuys, `sold_trade_id`, read-only `action:'preview'`, price rounded before sizing. (Previously UNVERIFIED; now byte-verified) |
-| `process-week-results` | `f20de93` | #59: seeds and podium come from `league_standings_ranked`; `bye_no_result` (a bye records no W/L/T); the atomic `start_league_playoffs` plus a heal pass for refused transitions. Also #56's `cash_only`, `scoring_inputs_fetch_failed` and fallback SKIP fixes. Deployed **before** the first scored week (Fri 10-02), so no bye was ever recorded as a win and the recompute script isn't needed |
+| `process-week-results` | `e58c980` (merged `b36fdc1`) | #78 (2026-09-29): the season-completion heal (`season-completion.ts`) runs every invocation and retries a scored-but-uncompleted final; the rpc `{ error }` is checked, with no fabricated "Season completed" log. Download byte-identical to main (`index.ts`, `season-completion.ts`); a no-credential POST returns our own 401 `{"error":"Unauthorized"}`. Previously `f20de93`, #59: seeds and podium come from `league_standings_ranked`; `bye_no_result` (a bye records no W/L/T); the atomic `start_league_playoffs` plus a heal pass for refused transitions. Also #56's `cash_only`, `scoring_inputs_fetch_failed` and fallback SKIP fixes. Deployed **before** the first scored week (Fri 10-02), so no bye was ever recorded as a win and the recompute script isn't needed |
 | `snapshot-week-start`, `snapshot-week-end` | `eb89df3` | #57: bots included, SKIP rows dropped (`_shared/snapshot-holdings.ts`), and `checkSnapshotReads`, so a failed read aborts and retries the league instead of classifying it complete. (Previously UNVERIFIED; now byte-verified) |
 | `draft-control` | `1f8e2d5` |
 | `draft-order-notify` (new) | `1f8e2d5` | #67. It pushes "the draft order is set" (Expo, via `_shared/push.ts`). `verify_jwt=false` + `_shared/cron-auth.ts`; a no-credential POST returns its own 401. Its first two deploys failed with a Supabase-side `500 internal error`; the third, with `--debug`, succeeded. **Not scheduled yet** (cron deferred). | #60: Start draft is refused with `playoff_teams_exceeds_members` when playoff spots exceed members (equal is allowed). Plus start / add_bots / status; `DRAFT_BOTS_ALLOWED_EMAILS` = test account |
@@ -160,7 +160,7 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
 Phase 3: **app first**.
 - Board v3.3 (PR #52, draft) holds the key screens plus the full inventory of 41 screens, in Light and Dark, with contrast scored for 14 tokens and 25 fg-on-fill pairs.
 - 3b-1/3b-2/3c/3e build to it, then 3d (the web app). The landing (3a, PR #45) is parked until then. The review bar is raised (#47), and the copy rules are verbatim + generic scoring (#48). | `docs/design/UI-UX-PROGRAM.md`, `docs/design/prompts/phase3-plan.md` |
-| Phase 3 backend asks | ✅ #1 Home summary + #2 display names (#42); ✅ #5 trades ∪ picks, #6 signup username, #7 market calendar, #9 draft recap (verified existing) (#43/#49); ✅ #3 met client-side (`buildPLSeries`, #37). Open, and nice-to-have for 3c: #4 intraday samples, #10 scoring status, #11 season result | `docs/design/prompts/phase3-plan.md` |
+| Phase 3 backend asks | ✅ #1 Home summary + #2 display names (#42); ✅ #5 trades ∪ picks, #6 signup username, #7 market calendar, #9 draft recap (verified existing) (#43/#49); ✅ #3 met client-side (`buildPLSeries`, #37). ✅ #11 season result (`get_season_result`, #77, LIVE 2026-09-29). Open, and nice-to-have for 3c: #4 intraday samples, #10 scoring status | `docs/design/prompts/phase3-plan.md` |
 | Product name | Deferred to pre-launch. Stockpile must go (a live third-party TM); **Stockade** is the front-runner and Odd Lot the runner-up. The rename is prepared on a local, unpushed branch `chore/rename-to-stockade`. Keep the bundle id, slug and scheme | `docs/design/NAMING.md` |
 | Mobile design-system pass (PR #15) | ✅ Merged; ships with 1.1.0 | — |
 | Architecture map | Current on `main`; db-snapshot stale | `docs/architecture/`, CLAUDE.md |
@@ -334,6 +334,20 @@ Phase 3: **app first**.
       - promote `deferred/20261013000001_schedule_draft_order_notify.sql` after a manual notify run on a test league (4 members, draft 30–50 min out);
       - the mode picker / Arrange-order editor / reveal UI come with the 3b/3c screens;
       - the client change ships with 1.1.0.
+
+23. ✅ **Season result + F-A lockdown: LIVE 2026-09-29** (#77; `20261014000000`–`01` applied).
+    - `get_season_result(p_league_id, p_season_id)` is DEFINER with an `is_member` gate; EXECUTE for `authenticated` only (proacl `{postgres=X/postgres,authenticated=X/postgres}`, `search_path=public, pg_temp`).
+    - **F-A closed:** the "Commissioners can manage league seasons" FOR ALL policy is dropped; anon/authenticated keep only REFERENCES/SELECT/TRIGGER on `league_seasons`, and one SELECT policy remains.
+    - The effect test in prod, 5/5 PASS: a member reads; anon is denied; commissioner UPDATE/INSERT/DELETE are all denied (42501).
+
+24. ✅ **F-B season-completion heal: LIVE 2026-09-29** (#78; `20261015000000` applied; `process-week-results` deployed and byte-verified).
+    - `complete_league_season` now:
+      - row-locks;
+      - is an idempotent same-result no-op;
+      - refuses a different result, a non-`playoffs` league, or a champion/runner-up that doesn't match the scored final (NULL-safe);
+      - checks that its season UPDATE hit exactly 1 row.
+    - The pre-deploy check in prod found **0 stuck leagues** and **0 unaddressed playoff rows**, so this is a safeguard, not a repair.
+    - **UNVERIFIED:** re-check `complete_league_season` proacl (expect service_role only, `search_path=public`), and re-capture `docs/architecture/db-snapshot.json` (grants and policies changed in #77).
 
 ---
 
