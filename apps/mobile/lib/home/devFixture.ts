@@ -33,7 +33,8 @@ export type HomeFixture =
   | 'pre_season'
   | 'pre_draft'
   | 'pre_draft_waiting'
-  | 'drafting'
+  | 'drafting_on_clock'
+  | 'drafting_waiting_turn'
   | 'complete'
   | 'bye'
   | 'playoff_live'
@@ -44,9 +45,16 @@ export type HomeFixture =
 
 const FIXTURES: readonly HomeFixture[] = [
   'live_open', 'live_closed', 'scoring', 'scored', 'pre_season', 'pre_draft',
-  'pre_draft_waiting', 'drafting', 'complete', 'bye', 'playoff_live', 'playoff_bye',
-  'eliminated', 'missed_playoffs', 'leader_flip',
+  'pre_draft_waiting', 'drafting_on_clock', 'drafting_waiting_turn', 'complete', 'bye',
+  'playoff_live', 'playoff_bye', 'eliminated', 'missed_playoffs', 'leader_flip',
 ];
+
+/** True for either drafting-family fixture — the states 6/7 group in
+ * useHomeLeague's own fixtureHomeLeague still only needs to know "the
+ * draft is in progress", not which of the two capture variants. */
+export function isDraftingFixture(fixture: HomeFixture | null): boolean {
+  return fixture === 'drafting_on_clock' || fixture === 'drafting_waiting_turn';
+}
 
 function parse(raw: string | undefined): HomeFixture | null {
   return raw && (FIXTURES as readonly string[]).includes(raw) ? (raw as HomeFixture) : null;

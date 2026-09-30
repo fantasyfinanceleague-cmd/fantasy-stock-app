@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { useEffect, useState } from 'react';
 import { Share, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 
@@ -9,15 +8,16 @@ import { Text } from '@/components/sp/Text';
 import { Button } from '@/components/sp/Button';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { Avatar } from '@/components/sp/Avatar';
-import { supabase } from '@/lib/supabase';
-import { parseDraftOrder } from '@/lib/draftOrder';
+import { usePreDraftData } from '@/lib/home/usePreDraftData';
 import { pickClockLine, BUILD_YOUR_QUEUE, BEFORE_THE_DRAFT_TITLE } from '@/lib/home/homeCopy';
 
 // Stockpile — <PreDraftCard> (Phase 3b-2, states 6 — "before the draft" +
 // "waiting for managers"). One fetch of get_draft_order on mount (no live
 // polling — the countdown text is a snapshot, not a ticking clock; the
 // draft room itself, not Home, is where a manager watches the clock tick
-// down). get_league_display_names supplies names + bot marks.
+// down). get_league_display_names supplies names + bot marks. The fetch
+// itself (and its DEV-ONLY fixture seam) lives in usePreDraftData, not
+// here — Design Lead ruling, 2026-09-30.
 
 export interface PreDraftCardProps {
   leagueId: string;
@@ -26,38 +26,9 @@ export interface PreDraftCardProps {
   numRounds: number;
 }
 
-interface Member {
-  userId: string;
-  displayName: string;
-  isBot: boolean;
-}
-
 export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds }: PreDraftCardProps) {
   const { colors } = useTheme();
-  const [waiting, setWaiting] = useState<boolean | null>(null);
-  const [orderRevealed, setOrderRevealed] = useState<string[] | null>(null);
-  const [members, setMembers] = useState<Member[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const [{ data: orderRaw }, { data: namesRaw }] = await Promise.all([
-        supabase.rpc('get_draft_order', { p_league_id: leagueId }),
-        supabase.rpc('get_league_display_names', { p_league_id: leagueId }),
-      ]);
-      if (cancelled) return;
-      const parsed = parseDraftOrder(orderRaw);
-      setWaiting(parsed?.waitingForMembers ?? null);
-      setOrderRevealed(parsed?.order ?? null);
-      const names = (namesRaw ?? []) as { user_id: string; display_name: string; is_bot: boolean }[];
-      setMembers(names.map((n) => ({ userId: n.user_id, displayName: n.display_name, isBot: n.is_bot })));
-      setLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [leagueId]);
+  const { waiting, orderRevealed, members, loading } = usePreDraftData(leagueId);
 
   async function onShare() {
     try {

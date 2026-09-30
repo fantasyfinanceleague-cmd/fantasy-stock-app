@@ -40,6 +40,7 @@ import {
   FIXTURE_WEEK6_START,
   FIXTURE_WEEK6_END,
   fixtureQty,
+  isDraftingFixture,
 } from './devFixture';
 
 export type HomeLeagueStatus = 'loading' | 'ready' | 'error' | 'no-league';
@@ -191,7 +192,7 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
   };
 
   const draftStatus = fixture === 'pre_draft' || fixture === 'pre_draft_waiting' ? 'not_started'
-    : fixture === 'drafting' ? 'in_progress' : 'completed';
+    : isDraftingFixture(fixture) ? 'in_progress' : 'completed';
   const seasonStatus = fixture === 'complete' ? 'completed' : isPlayoffState ? 'playoffs' : 'active';
   const currentWeek = isPlayoffState ? playoffCurrentWeek : isPreSeason ? 1 : draftStatus === 'completed' ? 6 : 1;
   const leagueStartDate = fixture === 'pre_season' ? '2099-01-01T00:00:00Z' : '2026-08-01T00:00:00Z';

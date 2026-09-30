@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 
@@ -9,8 +8,7 @@ import { Text } from '@/components/sp/Text';
 import { Button } from '@/components/sp/Button';
 import { LiveDot } from '@/components/sp/game/LiveDot';
 import { useTheme } from '@/components/sp/ThemeProvider';
-import { supabase } from '@/lib/supabase';
-import { parseDraftOrder } from '@/lib/draftOrder';
+import { useDraftingData } from '@/lib/home/useDraftingData';
 import { currentPickerFor, picksUntilTurn } from '@/lib/home/draftTurn';
 import { YOURE_ON_THE_CLOCK, onTheClockLine, upNextLine, GO_TO_DRAFT_ROOM, YOUR_TEAM_SO_FAR, DRAFT_IN_PROGRESS_TITLE } from '@/lib/home/homeCopy';
 
@@ -19,7 +17,8 @@ import { YOURE_ON_THE_CLOCK, onTheClockLine, upNextLine, GO_TO_DRAFT_ROOM, YOUR_
 // polling (the seconds-left figure is a snapshot; the draft room itself
 // is where a manager watches it tick down and picks). Home's job here is
 // just "should I go to the draft room right now", not to BE the draft
-// room.
+// room. The fetch itself (and its DEV-ONLY fixture seam) lives in
+// useDraftingData, not here — Design Lead ruling, 2026-09-30.
 
 export interface DraftingCardProps {
   leagueId: string;
@@ -27,40 +26,9 @@ export interface DraftingCardProps {
   numRounds: number;
 }
 
-interface ClockState {
-  pickSeconds: number;
-  picksMade: number;
-  deadlineAt: string | null;
-  serverNow: string;
-}
-
 export function DraftingCard({ leagueId, myUserId, numRounds }: DraftingCardProps) {
   const { colors } = useTheme();
-  const [clock, setClock] = useState<ClockState | null>(null);
-  const [order, setOrder] = useState<string[] | null>(null);
-  const [myPickCount, setMyPickCount] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const [{ data: clockRaw }, { data: orderRaw }, { data: picksRaw }] = await Promise.all([
-        supabase.rpc('get_draft_clock', { p_league_id: leagueId }),
-        supabase.rpc('get_draft_order', { p_league_id: leagueId }),
-        supabase.from('drafts').select('symbol').eq('league_id', leagueId).eq('user_id', myUserId),
-      ]);
-      if (cancelled) return;
-      const c = Array.isArray(clockRaw) ? clockRaw[0] : clockRaw;
-      if (c) {
-        setClock({ pickSeconds: c.pick_seconds, picksMade: c.picks_made, deadlineAt: c.deadline_at, serverNow: c.server_now });
-      }
-      const parsed = parseDraftOrder(orderRaw);
-      setOrder(parsed?.order ?? null);
-      setMyPickCount((picksRaw ?? []).length);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [leagueId, myUserId]);
+  const { clock, order, myPickCount } = useDraftingData(leagueId, myUserId);
 
   if (!clock || !order) {
     return (
