@@ -79,11 +79,13 @@ The header comes from 3b-1: the pill with "+N" and the avatar, with no chip. The
   - **Season** starts at Week 1's open.
 
   `buildPLSeries` / `windowPL` stay mark-to-market for Portfolio (3e); Home does not plot them. **Never plot value.**
-- **The honesty check (in the report, on real data):** the Season endpoint equals the hero's gain; the 1W endpoint equals the this-week score; the Friday points equal the `matchups` gains; and a table of value, basis, the scored season gain and **their difference**, which is the weekend/overnight drift D1 is about.
+- **The honesty check (in the report, on real data):** the Season endpoint equals the hero's gain; the 1W endpoint equals the this-week score; the Friday points equal the `matchups` gains; and a table of value, basis, the scored season gain and **their difference**, which is the unscored drift D1 is about (draft → Week 1 open, plus every Friday close → Monday open).
 
 ## Decision needed before "go": D1 (Giorgio, via the Orchestrator)
 
-The board's ledger reads "Value = Portfolio = $12,343.59" and "Gain since the draft = weeks 1–5 + this week", so on the board **value − basis = the scored season gain**. In production they differ: matchups score Monday open → Friday close, but the portfolio's value also moves overnight and over weekends (Friday close → Monday open), and between the draft and Week 1. So a hero showing "$12,351.20 · +$343.59 since the draft" would invite a subtraction that doesn't work.
+**See it on the board:** section **"Your call: the Home hero (D1)"** (branch `design/your-call-d1-home-hero`): Concept A and Concept B side by side, Portfolio under either ruling, and a one-week timeline of what is and isn't scored. Build to whichever concept Giorgio picks there.
+
+The board's ledger reads "Value = Portfolio = $12,343.59" and "Gain since the draft = weeks 1–5 + this week", so on the board **value − basis = the scored season gain**. In production they differ: matchups score Monday open → Friday close (weeknights included, since a week's score runs from Monday's open), but the portfolio's value also moves in the gaps no matchup covers: every Friday close → Monday open, and the draft → Week 1's open. So a hero showing "$12,351.20 · +$343.59 since the draft" would invite a subtraction that doesn't work.
 
 **Recommendation:**
 - Keep the board's hierarchy: the value stays the big number, because it's what your team is worth.
