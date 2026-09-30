@@ -578,6 +578,22 @@
   .b-concepts { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 402px)); gap: 40px; align-items: start; margin-bottom: 18px; }
   .b-concepts .b-fig { max-width: 402px; }
   .b-concepts figcaption { text-align: left; line-height: 1.45; }
+  .b-concepts--three { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 28px; }
+  .b-diff { margin-top: 36px; max-width: 900px; padding: 18px 20px 20px; border-radius: 16px; background: var(--c-surface); border: 1px solid var(--c-border); }
+  .b-diff h3 { margin: 0 0 10px; font-size: 12px; font-weight: 800; font-stretch: 125%; letter-spacing: .06em; text-transform: uppercase; color: var(--c-text-2); }
+  .b-diff svg { display: block; max-width: 760px; }
+  .b-diff__cap { margin: 6px 0 16px; font-size: 14px; color: var(--c-text-2); max-width: 70ch; }
+  .b-diff__eq { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .b-diff__eq > div { position: relative; }
+  .b-diff__op { position: absolute; left: -11px; top: 22px; transform: translateX(-50%); font-weight: 900; font-size: 20px; color: var(--c-text-2); }
+  .b-diff__tile { display: grid; gap: 4px; padding: 12px 14px; border-radius: 12px; background: var(--c-sunken); font-variant-numeric: tabular-nums; }
+  .b-diff__k { font-size: 12px; font-weight: 700; color: var(--c-text-2); }
+  .b-diff__v { font-size: 26px; font-weight: 900; font-stretch: 75%; line-height: 1.1; }
+  .b-diff__sub { font-size: 13px; color: var(--c-text-2); line-height: 1.4; }
+  @media (max-width: 620px) {
+    .b-diff__eq { grid-template-columns: 1fr; }
+    .b-diff__op { position: static; transform: none; }
+  }
   .b-themebar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50; display: flex; justify-content: flex-end; padding: 10px 0; pointer-events: none; }
   .b-themebar__in { pointer-events: auto; display: inline-flex; align-items: center; gap: 10px; padding: 6px 6px 6px 14px; border-radius: 999px;
     background: var(--c-surface); border: 1px solid var(--c-border); box-shadow: var(--c-sheet-shadow); font-size: 13px; font-weight: 700; }
@@ -956,6 +972,23 @@
     };
   })();
 
+  // D1 ("Your call: the Home hero"). Matchups score Monday open → Friday
+  // close, weeknights included. The portfolio's value ALSO moves between
+  // the draft and Week 1's open, and over every Friday-close → Monday-open
+  // gap, and none of that is scored. So in production value − basis ≠ the
+  // season gain. These two gaps make the difference visible (+$7.61).
+  const D1 = (() => {
+    const draftGap = 12.4;      // draft prices → Week 1 Monday open
+    const weekendGaps = -4.79;  // five Fri close → Mon open gaps, weeks 1–6
+    const drift = cents(draftGap + weekendGaps);
+    return {
+      draftGap, weekendGaps, drift,
+      seasonGain: HOME.gain,                 // weeks 1–5 + this week (scored)
+      value: cents(HOME.value + drift),      // what the team is worth
+      valueGain: cents(HOME.gain + drift),   // value − $12,000 basis
+    };
+  })();
+
   // The stock sheet (NVDA), Thursday live.
   const NVDA = (() => {
     const r = PORTFOLIO_LIVE.rows.find((x) => x.t === 'NVDA');
@@ -1040,7 +1073,7 @@
     DRAFT_MOMENT, DRAFT_PICKS, DRAFT_SEARCH,
     MATCHUP, WEEK_CLOSES, CHYRONS,
     STANDINGS_BEFORE, STANDINGS_FINAL, WEEK6,
-    PORTFOLIO_LIVE, OTHER_LEAGUES, HOME, NVDA, ROBERTO_WEEKS, SALE,
+    PORTFOLIO_LIVE, OTHER_LEAGUES, HOME, D1, NVDA, ROBERTO_WEEKS, SALE,
     lineup, score, scoreDisplay, byeNotice, record, playoffPlan, playoffLine, SERIE_A, picksForSeat, ordinal,
   };
 })();
@@ -1273,6 +1306,9 @@
     );
   }
 
+  // The one difference in a "Your call" comparison: a dashed ring.
+  const D1_MARK = { outline: '2px dashed var(--c-warn-text)', outlineOffset: 6, borderRadius: 8 };
+
   // ═════════════════════════════════════════════════════════════════════
   // 1. HOME
   // ═════════════════════════════════════════════════════════════════════
@@ -1305,8 +1341,11 @@
    * pill only). Other leagues are reached through the pill, which shows
    * "+N" more leagues; there is no list on Home. `full` renders the whole
    * scroll length. */
-  function HomeScreen({ run, full }) {
-    const H = K.HOME, L = K.MATCHUP.live;
+  /** `hero` = 'A' | 'B' renders a D1 concept ("Your call: the Home hero"):
+   * the value includes the unscored gaps (K.D1), the gain line is the scored
+   * season gain, and the differing block gets a dashed outline. */
+  function HomeScreen({ run, full, hero }) {
+    const H = K.HOME, L = K.MATCHUP.live, D = K.D1;
     const near = K.STANDINGS_BEFORE.slice(0, 3);
     const more = K.OTHER_LEAGUES.length;
     return (
@@ -1318,24 +1357,40 @@
           <span className="ks-avatar" aria-label="Profile">RB</span>
         </div>
         <div className="ks-pad ks-stack">
-          <div>
+          <div style={hero ? D1_MARK : undefined}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-              <span className="ks-caption">Your team</span>
+              <span className="ks-caption">{hero === 'B' ? 'Season gain' : 'Your team'}</span>
               <span className="ks-caption ks-num"><b style={{ color: 'var(--c-text)' }}>2nd</b> of 6 · {H.record} · Week {K.LEAGUE.week} of {K.LEAGUE.weeks}</span>
             </div>
-            <div className="ks-score ks-num" style={{ fontSize: 48, lineHeight: '50px', fontStretch: '75%' }}>{$(H.value)}</div>
-            <div className="ks-callout ks-num" style={{ fontWeight: 700 }}>
-              <span className="ks-gain">{$s(H.gain)} · {pct(H.gainPct)}</span> <span className="ks-muted" style={{ fontWeight: 500 }}>since the draft</span>
-              <span className="ks-muted" style={{ fontWeight: 500 }}> · </span>
-              <span className="ks-gain">{$s(H.today)}</span> <span className="ks-muted" style={{ fontWeight: 500 }}>today</span>
-            </div>
+            {hero === 'B' ? (
+              <>
+                <div className="ks-score ks-num ks-gain" style={{ fontSize: 48, lineHeight: '50px', fontStretch: '75%' }}>{$s(D.seasonGain)}</div>
+                <div className="ks-callout ks-num" style={{ fontWeight: 700 }}>
+                  <span className="ks-gain">{pct(D.seasonGain / 120)}</span> <span className="ks-muted" style={{ fontWeight: 500 }}>of your $12,000</span>
+                  <span className="ks-muted" style={{ fontWeight: 500 }}> · </span>
+                  <span className="ks-gain">{$s(H.today)}</span> <span className="ks-muted" style={{ fontWeight: 500 }}>today</span>
+                </div>
+                <div className="ks-callout ks-num" style={{ fontWeight: 700 }}>
+                  {$(D.value)} <span className="ks-muted" style={{ fontWeight: 500 }}>team value</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="ks-score ks-num" style={{ fontSize: 48, lineHeight: '50px', fontStretch: '75%' }}>{$(hero ? D.value : H.value)}</div>
+                <div className="ks-callout ks-num" style={{ fontWeight: 700 }}>
+                  <span className="ks-gain">{$s(H.gain)} · {pct(H.gainPct)}</span> <span className="ks-muted" style={{ fontWeight: 500 }}>{hero ? 'season gain' : 'since the draft'}</span>
+                  <span className="ks-muted" style={{ fontWeight: 500 }}> · </span>
+                  <span className="ks-gain">{$s(H.today)}</span> <span className="ks-muted" style={{ fontWeight: 500 }}>today</span>
+                </div>
+              </>
+            )}
           </div>
           <div className={run ? 'ks-fade-in' : undefined}>
             <ThisWeekCard you={L.you} opp={L.opp} oppName="vs Gianluigi B." left="Ends Fri 4:00 PM ET" />
           </div>
           <div className="ks-card" style={{ padding: '12px 12px 6px' }}>
-            <div className="ks-section-h" style={{ padding: '0 2px' }}><h3>Season</h3><span className="ks-caption">Gain since the draft</span></div>
-            <GainChart series={H.series} weeks={H.weekStarts} run={run} w={336} h={140} label="Gain since the draft" />
+            <div className="ks-section-h" style={{ padding: '0 2px' }}><h3>Season</h3><span className="ks-caption">{hero ? 'Season gain, week by week' : 'Gain since the draft'}</span></div>
+            <GainChart series={H.series} weeks={H.weekStarts} run={run} w={336} h={140} label={hero ? 'Season gain' : 'Gain since the draft'} />
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4, padding: '6px 0 8px' }}>
               {H.weekResults.map((w) => (
                 <span key={w.week} className="ks-chip ks-chip--money ks-num" style={{ textTransform: 'none', letterSpacing: 0, fontStretch: '100%', fontSize: 12, height: 26, padding: 0, justifyContent: 'center' }}>
@@ -1819,8 +1874,15 @@
 
   /** variant: 'live' (all six slots invested) | 'cash' (TSLA sold, its slot
    * holds the proceeds) | 'buy' (cash state with the buy sheet open). */
-  function PortfolioScreen({ sheet, variant = 'live' }) {
-    const P = K.PORTFOLIO_LIVE, S = K.SALE;
+  /** `d1` renders Portfolio under the D1 comparison: the same holdings with
+   * the unscored gaps (K.D1.drift) in NVDA's value, so Σ holdings = value and
+   * the gain is value − cost, labelled "since the draft" (not "season gain"). */
+  function PortfolioScreen({ sheet, variant = 'live', d1 }) {
+    const S = K.SALE, D = K.D1;
+    const P = d1 ? (() => {
+      const rows = K.PORTFOLIO_LIVE.rows.map((r) => (r.t === 'NVDA' ? { ...r, value: Math.round((r.value + D.drift) * 100) / 100 } : r));
+      return { ...K.PORTFOLIO_LIVE, rows, value: D.value, gain: D.valueGain, gainPct: (D.valueGain / K.PORTFOLIO_LIVE.cost) * 100 };
+    })() : K.PORTFOLIO_LIVE;
     const cash = variant === 'cash' || variant === 'buy';
     const rows = cash ? P.rows.filter((r) => r.t !== S.sold) : P.rows;
     const overlay = variant === 'buy' ? <BuySheet open /> : <StockSheet open={sheet} />;
@@ -1828,7 +1890,7 @@
       <Device tab="portfolio" label={variant === 'buy' ? 'Buying with sale proceeds' : cash ? 'Portfolio with a slot ready to invest' : sheet ? 'Portfolio with the NVDA sheet open' : 'Portfolio'} overlay={overlay}>
         <LeagueHead chip={<Chip kind="live">Live</Chip>} />
         <div className="ks-pad ks-stack">
-          <div>
+          <div style={d1 ? D1_MARK : undefined}>
             <div className="ks-caption">Portfolio value{cash ? ' · includes cash' : ''}</div>
             <div className="ks-score ks-num" style={{ fontSize: 48, lineHeight: '50px', fontStretch: '75%' }}>{$(P.value)}</div>
             <div className="ks-callout ks-num" style={{ fontWeight: 700 }}>
@@ -3416,6 +3478,89 @@
     );
   }
 
+  /** Like Fit, but for a full-length device whose height is its content. */
+  function FitFull({ children, caption, note }) {
+    const ref = useRef(null);
+    const inner = useRef(null);
+    useLayoutEffect(() => {
+      // Size imperatively: the content height is only known after layout.
+      const fit = () => {
+        const k = Math.min(1, ref.current.clientWidth / 402);
+        inner.current.style.transform = `scale(${k})`;
+        ref.current.style.height = `${inner.current.offsetHeight * k}px`;
+      };
+      const ro = new ResizeObserver(fit);
+      ro.observe(ref.current);
+      ro.observe(inner.current.firstChild);
+      fit();
+      return () => ro.disconnect();
+    }, []);
+    return (
+      <figure className="b-fig">
+        <div className="b-fit" ref={ref}>
+          <div className="b-fit__in" ref={inner}>{children}</div>
+        </div>
+        <figcaption><b style={{ color: 'var(--c-text)', fontSize: 15 }}>{caption}</b><br /><span style={{ fontWeight: 500 }}>{note}</span></figcaption>
+      </figure>
+    );
+  }
+
+  /** D1 explainer: one week on a timeline (what is scored vs what only moves
+   * the value), then the season arithmetic as three tiles. Visual, not prose. */
+  function WhyDiffer() {
+    const D = K.D1, H = K.HOME, week = K.MATCHUP.live.you.gain;
+    const w = 760, h = 118, gap = 110, x0 = 16, x1 = w - 16;
+    const s0 = x0 + gap, s1 = x1 - gap, day = (s1 - s0) / 5;
+    const T = ({ x, y, a = 'middle', c = 'var(--c-text-2)', wt = 600, children }) => (
+      <text x={x} y={y} textAnchor={a} fontSize="12" fontWeight={wt} fill={c}>{children}</text>
+    );
+    const Tile = ({ k, v, sub, tone, op }) => (
+      <div style={{ display: 'grid', gap: 2, alignContent: 'start' }}>
+        <span className="b-diff__op" aria-hidden="true">{op}</span>
+        <div className="b-diff__tile">
+          <span className="b-diff__k">{k}</span>
+          <b className={`b-diff__v ${tone}`}>{v}</b>
+          <span className="b-diff__sub">{sub}</span>
+        </div>
+      </div>
+    );
+    return (
+      <div className="b-diff">
+        <h3>Why the two numbers differ</h3>
+        <svg viewBox={`0 0 ${w} ${h}`} width="100%" role="img" aria-label="One week: Monday 9:30 AM to Friday 4:00 PM ET is scored, weeknights included. Friday close to Monday open moves your value but is not scored.">
+          <defs>
+            <pattern id="b-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <line x1="0" y1="0" x2="0" y2="6" stroke="var(--c-border-strong)" strokeWidth="2" />
+            </pattern>
+          </defs>
+          <rect x={x0} y="34" width={gap} height="30" rx="6" fill="url(#b-hatch)" />
+          <rect x={s1} y="34" width={gap} height="30" rx="6" fill="url(#b-hatch)" />
+          <rect x={s0} y="34" width={s1 - s0} height="30" rx="6" fill="var(--c-accent-tint)" stroke="var(--c-accent)" strokeWidth="1.5" />
+          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((d, i) => (
+            <g key={d}>
+              {i ? <line x1={s0 + i * day} x2={s0 + i * day} y1="34" y2="64" stroke="var(--c-accent)" strokeOpacity=".35" /> : null}
+              <T x={s0 + (i + 0.5) * day} y={54} c="var(--c-accent)" wt={700}>{d}</T>
+            </g>
+          ))}
+          <T x={s0 + (s1 - s0) / 2} y={22} c="var(--c-text)" wt={800}>Week 6 · scored for the matchup (weeknights included)</T>
+          <T x={x0 + gap / 2} y={22}>Weekend</T>
+          <T x={s1 + gap / 2} y={22}>Weekend</T>
+          <T x={s0} y={82}>Mon 9:30 AM ET</T>
+          <T x={s1} y={82}>Fri 4:00 PM ET</T>
+          <T x={x0 + gap / 2} y={104} c="var(--c-text)" wt={700}>Not scored</T>
+          <T x={s1 + gap / 2} y={104} c="var(--c-text)" wt={700}>Not scored</T>
+          <T x={s0 + (s1 - s0) / 2} y={104}>Moves your value and your score</T>
+        </svg>
+        <p className="b-diff__cap">Hatched: prices still move, so your <b>value</b> changes, but no matchup is running, so your <b>season gain</b> doesn't. The same is true between the draft and Week 1's open.</p>
+        <div className="b-diff__eq">
+          <Tile k="Season gain · scored" v={$s(D.seasonGain)} tone="ks-gain" sub={<>Weeks 1–5 {$s(H.throughW5)}<br />+ this week {$s(week)}</>} />
+          <Tile op="+" k="Not scored" v={$s(D.drift)} tone="ks-gain" sub={<>Draft → Week 1 open {$s(D.draftGap)}<br />5 weekends {$s(D.weekendGaps)}</>} />
+          <Tile op="=" k="Value − $12,000" v={$s(D.valueGain)} tone="ks-gain" sub={<>Team value {$(D.value)}</>} />
+        </div>
+      </div>
+    );
+  }
+
   function Play({ label, onPlay, playing }) {
     return (
       <button type="button" className="b-play" onClick={onPlay} aria-pressed={playing}>
@@ -3677,7 +3822,7 @@
             <div><dt>Stakes</dt><dd>$2,000 per slot · 6 slots</dd></div>
           </dl>
           <nav className="b-toc" aria-label="Screens">
-            {[['themes', 'Themes'], ['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['phases', 'Home phases'], ['game', 'Game'], ['money', 'Trading'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
+            {[['themes', 'Themes'], ['home', 'Home'], ['home-hero', 'Your call: Home hero'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['phases', 'Home phases'], ['game', 'Game'], ['money', 'Trading'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
           </nav>
         </header>
 
@@ -3700,9 +3845,29 @@
               <li>Switching league in the pill: the sheet closes (spring.snappy) and Home crossfades to the new league (quick, 160ms). Numbers roll only where the value changed.</li>
             </>}
             reduced="the line and cards appear in place; digits swap without rolling."
-            ask={null}
+            ask={['The Home hero: what the big number is, and what the gain under it means. Compare Concept A and Concept B just below (D1).']}
           />}
         />
+
+        <section className="b-sec" id="home-hero" aria-labelledby="home-hero-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n">?</span>
+            <div>
+              <h2 id="home-hero-h">Your call: the Home hero (D1)</h2>
+              <p className="b-job">The same Home (Stock Scudetto, Week 6, Thursday 1:37 PM ET), full length, in two versions. Only the top block differs; it has a dashed outline. Use the switch at the top right to compare them in Dark.</p>
+            </div>
+          </header>
+          <div className="b-ask" style={{ marginTop: 0, marginBottom: 28, maxWidth: '80ch' }}>
+            <h3>Your call</h3>
+            <p style={{ margin: 0 }}>Our lean: <b>Concept A</b>. The big number stays what your team is worth, and the line under it becomes <b>"season gain"</b>, the same words as the Standings column, so it reads as your score rather than as value − $12,000 (which it isn't; see below). The chart plots the same season gain in both. Portfolio keeps its own gain, value − cost, under its own label, "since the draft".</p>
+          </div>
+          <div className="b-concepts b-concepts--three">
+            <FitFull caption="Concept A · value first" note={`Big number: team value ${$(K.D1.value)}. Under it: ${$s(K.D1.seasonGain)} season gain (scored weeks + this week live), plus today.`}><S.HomeScreen hero="A" full /></FitFull>
+            <FitFull caption="Concept B · season gain first" note={`Big number: season gain ${$s(K.D1.seasonGain)}. Team value ${$(K.D1.value)} moves to a smaller line underneath.`}><S.HomeScreen hero="B" full /></FitFull>
+            <FitFull caption="Portfolio under either ruling" note={`Unchanged by D1: value ${$(K.D1.value)} and its gain ${$s(K.D1.valueGain)} = value − cost, labelled "since the draft". A different number with a different name on purpose: it includes the unscored gaps.`}><S.PortfolioScreen d1 /></FitFull>
+          </div>
+          <WhyDiffer />
+        </section>
 
         <Section
           id="matchup" n="2" name="Matchup" job="Am I winning this week, by how much, and why?"

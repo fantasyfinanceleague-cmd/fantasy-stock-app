@@ -338,6 +338,23 @@
     };
   })();
 
+  // D1 ("Your call: the Home hero"). Matchups score Monday open → Friday
+  // close, weeknights included. The portfolio's value ALSO moves between
+  // the draft and Week 1's open, and over every Friday-close → Monday-open
+  // gap, and none of that is scored. So in production value − basis ≠ the
+  // season gain. These two gaps make the difference visible (+$7.61).
+  const D1 = (() => {
+    const draftGap = 12.4;      // draft prices → Week 1 Monday open
+    const weekendGaps = -4.79;  // five Fri close → Mon open gaps, weeks 1–6
+    const drift = cents(draftGap + weekendGaps);
+    return {
+      draftGap, weekendGaps, drift,
+      seasonGain: HOME.gain,                 // weeks 1–5 + this week (scored)
+      value: cents(HOME.value + drift),      // what the team is worth
+      valueGain: cents(HOME.gain + drift),   // value − $12,000 basis
+    };
+  })();
+
   // The stock sheet (NVDA), Thursday live.
   const NVDA = (() => {
     const r = PORTFOLIO_LIVE.rows.find((x) => x.t === 'NVDA');
@@ -422,7 +439,7 @@
     DRAFT_MOMENT, DRAFT_PICKS, DRAFT_SEARCH,
     MATCHUP, WEEK_CLOSES, CHYRONS,
     STANDINGS_BEFORE, STANDINGS_FINAL, WEEK6,
-    PORTFOLIO_LIVE, OTHER_LEAGUES, HOME, NVDA, ROBERTO_WEEKS, SALE,
+    PORTFOLIO_LIVE, OTHER_LEAGUES, HOME, D1, NVDA, ROBERTO_WEEKS, SALE,
     lineup, score, scoreDisplay, byeNotice, record, playoffPlan, playoffLine, SERIE_A, picksForSeat, ordinal,
   };
 })();

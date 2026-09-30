@@ -224,6 +224,9 @@
     );
   }
 
+  // The one difference in a "Your call" comparison: a dashed ring.
+  const D1_MARK = { outline: '2px dashed var(--c-warn-text)', outlineOffset: 6, borderRadius: 8 };
+
   // ═════════════════════════════════════════════════════════════════════
   // 1. HOME
   // ═════════════════════════════════════════════════════════════════════
@@ -256,8 +259,11 @@
    * pill only). Other leagues are reached through the pill, which shows
    * "+N" more leagues; there is no list on Home. `full` renders the whole
    * scroll length. */
-  function HomeScreen({ run, full }) {
-    const H = K.HOME, L = K.MATCHUP.live;
+  /** `hero` = 'A' | 'B' renders a D1 concept ("Your call: the Home hero"):
+   * the value includes the unscored gaps (K.D1), the gain line is the scored
+   * season gain, and the differing block gets a dashed outline. */
+  function HomeScreen({ run, full, hero }) {
+    const H = K.HOME, L = K.MATCHUP.live, D = K.D1;
     const near = K.STANDINGS_BEFORE.slice(0, 3);
     const more = K.OTHER_LEAGUES.length;
     return (
@@ -269,24 +275,40 @@
           <span className="ks-avatar" aria-label="Profile">RB</span>
         </div>
         <div className="ks-pad ks-stack">
-          <div>
+          <div style={hero ? D1_MARK : undefined}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-              <span className="ks-caption">Your team</span>
+              <span className="ks-caption">{hero === 'B' ? 'Season gain' : 'Your team'}</span>
               <span className="ks-caption ks-num"><b style={{ color: 'var(--c-text)' }}>2nd</b> of 6 · {H.record} · Week {K.LEAGUE.week} of {K.LEAGUE.weeks}</span>
             </div>
-            <div className="ks-score ks-num" style={{ fontSize: 48, lineHeight: '50px', fontStretch: '75%' }}>{$(H.value)}</div>
-            <div className="ks-callout ks-num" style={{ fontWeight: 700 }}>
-              <span className="ks-gain">{$s(H.gain)} · {pct(H.gainPct)}</span> <span className="ks-muted" style={{ fontWeight: 500 }}>since the draft</span>
-              <span className="ks-muted" style={{ fontWeight: 500 }}> · </span>
-              <span className="ks-gain">{$s(H.today)}</span> <span className="ks-muted" style={{ fontWeight: 500 }}>today</span>
-            </div>
+            {hero === 'B' ? (
+              <>
+                <div className="ks-score ks-num ks-gain" style={{ fontSize: 48, lineHeight: '50px', fontStretch: '75%' }}>{$s(D.seasonGain)}</div>
+                <div className="ks-callout ks-num" style={{ fontWeight: 700 }}>
+                  <span className="ks-gain">{pct(D.seasonGain / 120)}</span> <span className="ks-muted" style={{ fontWeight: 500 }}>of your $12,000</span>
+                  <span className="ks-muted" style={{ fontWeight: 500 }}> · </span>
+                  <span className="ks-gain">{$s(H.today)}</span> <span className="ks-muted" style={{ fontWeight: 500 }}>today</span>
+                </div>
+                <div className="ks-callout ks-num" style={{ fontWeight: 700 }}>
+                  {$(D.value)} <span className="ks-muted" style={{ fontWeight: 500 }}>team value</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="ks-score ks-num" style={{ fontSize: 48, lineHeight: '50px', fontStretch: '75%' }}>{$(hero ? D.value : H.value)}</div>
+                <div className="ks-callout ks-num" style={{ fontWeight: 700 }}>
+                  <span className="ks-gain">{$s(H.gain)} · {pct(H.gainPct)}</span> <span className="ks-muted" style={{ fontWeight: 500 }}>{hero ? 'season gain' : 'since the draft'}</span>
+                  <span className="ks-muted" style={{ fontWeight: 500 }}> · </span>
+                  <span className="ks-gain">{$s(H.today)}</span> <span className="ks-muted" style={{ fontWeight: 500 }}>today</span>
+                </div>
+              </>
+            )}
           </div>
           <div className={run ? 'ks-fade-in' : undefined}>
             <ThisWeekCard you={L.you} opp={L.opp} oppName="vs Gianluigi B." left="Ends Fri 4:00 PM ET" />
           </div>
           <div className="ks-card" style={{ padding: '12px 12px 6px' }}>
-            <div className="ks-section-h" style={{ padding: '0 2px' }}><h3>Season</h3><span className="ks-caption">Gain since the draft</span></div>
-            <GainChart series={H.series} weeks={H.weekStarts} run={run} w={336} h={140} label="Gain since the draft" />
+            <div className="ks-section-h" style={{ padding: '0 2px' }}><h3>Season</h3><span className="ks-caption">{hero ? 'Season gain, week by week' : 'Gain since the draft'}</span></div>
+            <GainChart series={H.series} weeks={H.weekStarts} run={run} w={336} h={140} label={hero ? 'Season gain' : 'Gain since the draft'} />
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4, padding: '6px 0 8px' }}>
               {H.weekResults.map((w) => (
                 <span key={w.week} className="ks-chip ks-chip--money ks-num" style={{ textTransform: 'none', letterSpacing: 0, fontStretch: '100%', fontSize: 12, height: 26, padding: 0, justifyContent: 'center' }}>
@@ -770,8 +792,15 @@
 
   /** variant: 'live' (all six slots invested) | 'cash' (TSLA sold, its slot
    * holds the proceeds) | 'buy' (cash state with the buy sheet open). */
-  function PortfolioScreen({ sheet, variant = 'live' }) {
-    const P = K.PORTFOLIO_LIVE, S = K.SALE;
+  /** `d1` renders Portfolio under the D1 comparison: the same holdings with
+   * the unscored gaps (K.D1.drift) in NVDA's value, so Σ holdings = value and
+   * the gain is value − cost, labelled "since the draft" (not "season gain"). */
+  function PortfolioScreen({ sheet, variant = 'live', d1 }) {
+    const S = K.SALE, D = K.D1;
+    const P = d1 ? (() => {
+      const rows = K.PORTFOLIO_LIVE.rows.map((r) => (r.t === 'NVDA' ? { ...r, value: Math.round((r.value + D.drift) * 100) / 100 } : r));
+      return { ...K.PORTFOLIO_LIVE, rows, value: D.value, gain: D.valueGain, gainPct: (D.valueGain / K.PORTFOLIO_LIVE.cost) * 100 };
+    })() : K.PORTFOLIO_LIVE;
     const cash = variant === 'cash' || variant === 'buy';
     const rows = cash ? P.rows.filter((r) => r.t !== S.sold) : P.rows;
     const overlay = variant === 'buy' ? <BuySheet open /> : <StockSheet open={sheet} />;
@@ -779,7 +808,7 @@
       <Device tab="portfolio" label={variant === 'buy' ? 'Buying with sale proceeds' : cash ? 'Portfolio with a slot ready to invest' : sheet ? 'Portfolio with the NVDA sheet open' : 'Portfolio'} overlay={overlay}>
         <LeagueHead chip={<Chip kind="live">Live</Chip>} />
         <div className="ks-pad ks-stack">
-          <div>
+          <div style={d1 ? D1_MARK : undefined}>
             <div className="ks-caption">Portfolio value{cash ? ' · includes cash' : ''}</div>
             <div className="ks-score ks-num" style={{ fontSize: 48, lineHeight: '50px', fontStretch: '75%' }}>{$(P.value)}</div>
             <div className="ks-callout ks-num" style={{ fontWeight: 700 }}>

@@ -77,6 +77,22 @@
   .b-concepts { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 402px)); gap: 40px; align-items: start; margin-bottom: 18px; }
   .b-concepts .b-fig { max-width: 402px; }
   .b-concepts figcaption { text-align: left; line-height: 1.45; }
+  .b-concepts--three { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 28px; }
+  .b-diff { margin-top: 36px; max-width: 900px; padding: 18px 20px 20px; border-radius: 16px; background: var(--c-surface); border: 1px solid var(--c-border); }
+  .b-diff h3 { margin: 0 0 10px; font-size: 12px; font-weight: 800; font-stretch: 125%; letter-spacing: .06em; text-transform: uppercase; color: var(--c-text-2); }
+  .b-diff svg { display: block; max-width: 760px; }
+  .b-diff__cap { margin: 6px 0 16px; font-size: 14px; color: var(--c-text-2); max-width: 70ch; }
+  .b-diff__eq { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .b-diff__eq > div { position: relative; }
+  .b-diff__op { position: absolute; left: -11px; top: 22px; transform: translateX(-50%); font-weight: 900; font-size: 20px; color: var(--c-text-2); }
+  .b-diff__tile { display: grid; gap: 4px; padding: 12px 14px; border-radius: 12px; background: var(--c-sunken); font-variant-numeric: tabular-nums; }
+  .b-diff__k { font-size: 12px; font-weight: 700; color: var(--c-text-2); }
+  .b-diff__v { font-size: 26px; font-weight: 900; font-stretch: 75%; line-height: 1.1; }
+  .b-diff__sub { font-size: 13px; color: var(--c-text-2); line-height: 1.4; }
+  @media (max-width: 620px) {
+    .b-diff__eq { grid-template-columns: 1fr; }
+    .b-diff__op { position: static; transform: none; }
+  }
   .b-themebar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50; display: flex; justify-content: flex-end; padding: 10px 0; pointer-events: none; }
   .b-themebar__in { pointer-events: auto; display: inline-flex; align-items: center; gap: 10px; padding: 6px 6px 6px 14px; border-radius: 999px;
     background: var(--c-surface); border: 1px solid var(--c-border); box-shadow: var(--c-sheet-shadow); font-size: 13px; font-weight: 700; }

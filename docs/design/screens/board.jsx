@@ -31,6 +31,89 @@
     );
   }
 
+  /** Like Fit, but for a full-length device whose height is its content. */
+  function FitFull({ children, caption, note }) {
+    const ref = useRef(null);
+    const inner = useRef(null);
+    useLayoutEffect(() => {
+      // Size imperatively: the content height is only known after layout.
+      const fit = () => {
+        const k = Math.min(1, ref.current.clientWidth / 402);
+        inner.current.style.transform = `scale(${k})`;
+        ref.current.style.height = `${inner.current.offsetHeight * k}px`;
+      };
+      const ro = new ResizeObserver(fit);
+      ro.observe(ref.current);
+      ro.observe(inner.current.firstChild);
+      fit();
+      return () => ro.disconnect();
+    }, []);
+    return (
+      <figure className="b-fig">
+        <div className="b-fit" ref={ref}>
+          <div className="b-fit__in" ref={inner}>{children}</div>
+        </div>
+        <figcaption><b style={{ color: 'var(--c-text)', fontSize: 15 }}>{caption}</b><br /><span style={{ fontWeight: 500 }}>{note}</span></figcaption>
+      </figure>
+    );
+  }
+
+  /** D1 explainer: one week on a timeline (what is scored vs what only moves
+   * the value), then the season arithmetic as three tiles. Visual, not prose. */
+  function WhyDiffer() {
+    const D = K.D1, H = K.HOME, week = K.MATCHUP.live.you.gain;
+    const w = 760, h = 118, gap = 110, x0 = 16, x1 = w - 16;
+    const s0 = x0 + gap, s1 = x1 - gap, day = (s1 - s0) / 5;
+    const T = ({ x, y, a = 'middle', c = 'var(--c-text-2)', wt = 600, children }) => (
+      <text x={x} y={y} textAnchor={a} fontSize="12" fontWeight={wt} fill={c}>{children}</text>
+    );
+    const Tile = ({ k, v, sub, tone, op }) => (
+      <div style={{ display: 'grid', gap: 2, alignContent: 'start' }}>
+        <span className="b-diff__op" aria-hidden="true">{op}</span>
+        <div className="b-diff__tile">
+          <span className="b-diff__k">{k}</span>
+          <b className={`b-diff__v ${tone}`}>{v}</b>
+          <span className="b-diff__sub">{sub}</span>
+        </div>
+      </div>
+    );
+    return (
+      <div className="b-diff">
+        <h3>Why the two numbers differ</h3>
+        <svg viewBox={`0 0 ${w} ${h}`} width="100%" role="img" aria-label="One week: Monday 9:30 AM to Friday 4:00 PM ET is scored, weeknights included. Friday close to Monday open moves your value but is not scored.">
+          <defs>
+            <pattern id="b-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <line x1="0" y1="0" x2="0" y2="6" stroke="var(--c-border-strong)" strokeWidth="2" />
+            </pattern>
+          </defs>
+          <rect x={x0} y="34" width={gap} height="30" rx="6" fill="url(#b-hatch)" />
+          <rect x={s1} y="34" width={gap} height="30" rx="6" fill="url(#b-hatch)" />
+          <rect x={s0} y="34" width={s1 - s0} height="30" rx="6" fill="var(--c-accent-tint)" stroke="var(--c-accent)" strokeWidth="1.5" />
+          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((d, i) => (
+            <g key={d}>
+              {i ? <line x1={s0 + i * day} x2={s0 + i * day} y1="34" y2="64" stroke="var(--c-accent)" strokeOpacity=".35" /> : null}
+              <T x={s0 + (i + 0.5) * day} y={54} c="var(--c-accent)" wt={700}>{d}</T>
+            </g>
+          ))}
+          <T x={s0 + (s1 - s0) / 2} y={22} c="var(--c-text)" wt={800}>Week 6 · scored for the matchup (weeknights included)</T>
+          <T x={x0 + gap / 2} y={22}>Weekend</T>
+          <T x={s1 + gap / 2} y={22}>Weekend</T>
+          <T x={s0} y={82}>Mon 9:30 AM ET</T>
+          <T x={s1} y={82}>Fri 4:00 PM ET</T>
+          <T x={x0 + gap / 2} y={104} c="var(--c-text)" wt={700}>Not scored</T>
+          <T x={s1 + gap / 2} y={104} c="var(--c-text)" wt={700}>Not scored</T>
+          <T x={s0 + (s1 - s0) / 2} y={104}>Moves your value and your score</T>
+        </svg>
+        <p className="b-diff__cap">Hatched: prices still move, so your <b>value</b> changes, but no matchup is running, so your <b>season gain</b> doesn't. The same is true between the draft and Week 1's open.</p>
+        <div className="b-diff__eq">
+          <Tile k="Season gain · scored" v={$s(D.seasonGain)} tone="ks-gain" sub={<>Weeks 1–5 {$s(H.throughW5)}<br />+ this week {$s(week)}</>} />
+          <Tile op="+" k="Not scored" v={$s(D.drift)} tone="ks-gain" sub={<>Draft → Week 1 open {$s(D.draftGap)}<br />5 weekends {$s(D.weekendGaps)}</>} />
+          <Tile op="=" k="Value − $12,000" v={$s(D.valueGain)} tone="ks-gain" sub={<>Team value {$(D.value)}</>} />
+        </div>
+      </div>
+    );
+  }
+
   function Play({ label, onPlay, playing }) {
     return (
       <button type="button" className="b-play" onClick={onPlay} aria-pressed={playing}>
@@ -292,7 +375,7 @@
             <div><dt>Stakes</dt><dd>$2,000 per slot · 6 slots</dd></div>
           </dl>
           <nav className="b-toc" aria-label="Screens">
-            {[['themes', 'Themes'], ['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['phases', 'Home phases'], ['game', 'Game'], ['money', 'Trading'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
+            {[['themes', 'Themes'], ['home', 'Home'], ['home-hero', 'Your call: Home hero'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['phases', 'Home phases'], ['game', 'Game'], ['money', 'Trading'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
           </nav>
         </header>
 
@@ -315,9 +398,29 @@
               <li>Switching league in the pill: the sheet closes (spring.snappy) and Home crossfades to the new league (quick, 160ms). Numbers roll only where the value changed.</li>
             </>}
             reduced="the line and cards appear in place; digits swap without rolling."
-            ask={null}
+            ask={['The Home hero: what the big number is, and what the gain under it means. Compare Concept A and Concept B just below (D1).']}
           />}
         />
+
+        <section className="b-sec" id="home-hero" aria-labelledby="home-hero-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n">?</span>
+            <div>
+              <h2 id="home-hero-h">Your call: the Home hero (D1)</h2>
+              <p className="b-job">The same Home (Stock Scudetto, Week 6, Thursday 1:37 PM ET), full length, in two versions. Only the top block differs; it has a dashed outline. Use the switch at the top right to compare them in Dark.</p>
+            </div>
+          </header>
+          <div className="b-ask" style={{ marginTop: 0, marginBottom: 28, maxWidth: '80ch' }}>
+            <h3>Your call</h3>
+            <p style={{ margin: 0 }}>Our lean: <b>Concept A</b>. The big number stays what your team is worth, and the line under it becomes <b>"season gain"</b>, the same words as the Standings column, so it reads as your score rather than as value − $12,000 (which it isn't; see below). The chart plots the same season gain in both. Portfolio keeps its own gain, value − cost, under its own label, "since the draft".</p>
+          </div>
+          <div className="b-concepts b-concepts--three">
+            <FitFull caption="Concept A · value first" note={`Big number: team value ${$(K.D1.value)}. Under it: ${$s(K.D1.seasonGain)} season gain (scored weeks + this week live), plus today.`}><S.HomeScreen hero="A" full /></FitFull>
+            <FitFull caption="Concept B · season gain first" note={`Big number: season gain ${$s(K.D1.seasonGain)}. Team value ${$(K.D1.value)} moves to a smaller line underneath.`}><S.HomeScreen hero="B" full /></FitFull>
+            <FitFull caption="Portfolio under either ruling" note={`Unchanged by D1: value ${$(K.D1.value)} and its gain ${$s(K.D1.valueGain)} = value − cost, labelled "since the draft". A different number with a different name on purpose: it includes the unscored gaps.`}><S.PortfolioScreen d1 /></FitFull>
+          </div>
+          <WhyDiffer />
+        </section>
 
         <Section
           id="matchup" n="2" name="Matchup" job="Am I winning this week, by how much, and why?"
