@@ -2,21 +2,30 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "6c281257d0114b0a05f575e2b0fb1087462def7e",
-    "commitShort": "6c28125",
+    "commit": "29c214408f4976502663965a17eb1caa4521a4c6",
+    "commitShort": "29c2144",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "ui/mobile-shell-3b1",
-    "dirty": false,
-    "dirtyPaths": [],
-    "timestamp": "2026-09-30T04:05:32Z",
-    "sourceHash": "sha256:4a998cd4620bba996852e195e9555e513aa8fbf68ecfde8080992df0fc328703",
+    "branch": "feat/season-result-summary",
+    "dirty": true,
+    "dirtyPaths": [
+      {
+        "code": "??",
+        "path": "supabase/migrations/20261014000000_get_season_result_rpc.sql"
+      },
+      {
+        "code": "??",
+        "path": "supabase/migrations/20261014000001_drop_league_seasons_commissioner_write.sql"
+      }
+    ],
+    "timestamp": "2026-09-30T04:35:37Z",
+    "sourceHash": "sha256:424332d58f798db20a9b2633ed3e7f421ff15a565e1d62f21cefd37d7e702836",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1175.2,
+    "ageHours": 1175.7,
     "ageDays": 49,
     "staleAfterDays": 14,
     "stale": true,
@@ -2107,6 +2116,37 @@
       "source": {
         "path": "supabase/migrations/20250122000000_check_real_users.sql",
         "line": 4
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261014000000_get_season_result_rpc.sql:162"
+        ],
+        "latestDefinition": "supabase/migrations/20261014000000_get_season_result_rpc.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.get_season_result",
+      "label": "get_season_result()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261014000000_get_season_result_rpc.sql",
+        "line": 162
       }
     },
     {
@@ -7366,6 +7406,53 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.pg.get_season_result->tbl.league_seasons",
+      "from": "pg.get_season_result",
+      "to": "tbl.league_seasons",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_seasons (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261014000000_get_season_result_rpc.sql:210",
+        "supabase/migrations/20261014000000_get_season_result_rpc.sql:217",
+        "supabase/migrations/20261014000000_get_season_result_rpc.sql:223"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.get_season_result->tbl.leagues",
+      "from": "pg.get_season_result",
+      "to": "tbl.leagues",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT leagues (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261014000000_get_season_result_rpc.sql:201"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.get_season_result->tbl.matchups",
+      "from": "pg.get_season_result",
+      "to": "tbl.matchups",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT matchups (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261014000000_get_season_result_rpc.sql:273",
+        "supabase/migrations/20261014000000_get_season_result_rpc.sql:288",
+        "supabase/migrations/20261014000000_get_season_result_rpc.sql:307",
+        "supabase/migrations/20261014000000_get_season_result_rpc.sql:311",
+        "supabase/migrations/20261014000000_get_season_result_rpc.sql:335",
+        "supabase/migrations/20261014000000_get_season_result_rpc.sql:407",
+        "supabase/migrations/20261014000000_get_season_result_rpc.sql:429"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.pg.handle_new_user_profile->tbl.user_profiles#insert",
       "from": "pg.handle_new_user_profile",
       "to": "tbl.user_profiles",
@@ -10897,6 +10984,16 @@
       "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
     },
     {
+      "node": "pg.get_season_result",
+      "label": "get_season_result()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
       "node": "pg.handle_new_user_profile",
       "label": "handle_new_user_profile()",
       "groupKey": "existence",
@@ -11391,6 +11488,18 @@
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
     {
+      "node": "pg.get_season_result",
+      "label": "get_season_result()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261014000000_get_season_result_rpc.sql:162",
+      "outbound": [
+        "tbl.league_seasons",
+        "tbl.leagues",
+        "tbl.matchups"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
       "node": "pg.participant_display_name",
       "label": "participant_display_name()",
       "kind": "pg-function",
@@ -11737,6 +11846,12 @@
       "resolve": "Re-capture the snapshot, or confirm the migration was applied."
     },
     {
+      "scope": "pg.get_season_result",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
       "scope": "tbl.broker_credentials",
       "claim": "table exists in prod",
       "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
@@ -11829,13 +11944,13 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 161,
-    "edges": 358,
+    "nodes": 162,
+    "edges": 361,
     "flows": 8,
-    "drift": 54,
-    "driftHigh": 36,
-    "deadCode": 29,
-    "unverified": 50
+    "drift": 55,
+    "driftHigh": 37,
+    "deadCode": 30,
+    "unverified": 51
   },
   "sourceIndex": {
     "edgeFunctions": [
@@ -12235,7 +12350,9 @@
       "20261012000001_start_league_playoffs_flexible.sql",
       "20261012000002_freeze_playoff_teams_after_draft_start.sql",
       "20261012000003_backfill_league_end_date_playoff_weeks.sql",
-      "20261013000000_draft_order_modes.sql"
+      "20261013000000_draft_order_modes.sql",
+      "20261014000000_get_season_result_rpc.sql",
+      "20261014000001_drop_league_seasons_commissioner_write.sql"
     ],
     "config": [
       "draft-autopick-sweep=false",
