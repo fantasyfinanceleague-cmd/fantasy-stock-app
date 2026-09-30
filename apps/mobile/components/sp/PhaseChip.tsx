@@ -75,6 +75,10 @@ export function PhaseChip({ phase, label }: PhaseChipProps) {
     <View style={[styles.base, { backgroundColor }]}>
       {dotColor ? <View style={[styles.dot, { backgroundColor: dotColor }]} /> : null}
       <RNText
+        // The tag's own ceiling (type.tag.maxScale): the raw RNText doesn't
+        // get it from <Text>, and uncapped the chip outgrew its fixed dot
+        // and the header it sits in at Accessibility XL (3b-1 capture).
+        maxFontSizeMultiplier={tagStyle.maxScale}
         style={{
           fontFamily: tagStyle.fontFamily,
           fontSize: tagStyle.fontSize,

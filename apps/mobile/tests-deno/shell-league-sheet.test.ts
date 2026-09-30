@@ -204,10 +204,12 @@ Deno.test('chip label: an upcoming draft reads "Draft Sat 7:00 PM ET" in Eastern
 
 Deno.test('chip label: finished reads "Final"; phases without a better label keep the chip default', () => {
   assertEquals(chipLabelFor(league({ seasonPhase: 'completed' })), 'Final');
-  assertEquals(chipLabelFor(league({ seasonPhase: 'pre_draft', draftDate: null })), undefined);
-  assertEquals(chipLabelFor(league({ seasonPhase: 'drafting' })), undefined);
-  assertEquals(chipLabelFor(league({ seasonPhase: 'pre_season' })), undefined);
-  assertEquals(chipLabelFor(league({ seasonPhase: 'playoffs' })), undefined);
+  // No specific label: the phase's own name, still passed as a label so the
+  // chip stays sentence case (never the ALL-CAPS tag default in the shell).
+  assertEquals(chipLabelFor(league({ seasonPhase: 'pre_draft', draftDate: null })), 'Pre-draft');
+  assertEquals(chipLabelFor(league({ seasonPhase: 'drafting' })), 'Drafting');
+  assertEquals(chipLabelFor(league({ seasonPhase: 'pre_season' })), 'Pre-season');
+  assertEquals(chipLabelFor(league({ seasonPhase: 'playoffs' })), 'Playoffs');
 });
 
 Deno.test('chip label: playoffs name the round (lib/playoffs), keyed on structure', () => {

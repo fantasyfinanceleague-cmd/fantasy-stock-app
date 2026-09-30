@@ -4,7 +4,6 @@ import { StyleSheet, View } from 'react-native';
 
 import { radius, space } from '@/constants/tokens';
 import { Button } from '@/components/sp/Button';
-import { Card } from '@/components/sp/Card';
 import { isEmptyStateCarded } from '@/components/sp/logic/emptyState';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
@@ -47,13 +46,15 @@ export interface EmptyStateProps {
 }
 
 export function EmptyState({ icon: Icon, title, message, actionLabel, onAction, secondaryActionLabel, onSecondaryAction }: EmptyStateProps) {
-  const { colors } = useTheme();
+  const { colors, elevation } = useTheme();
   const iconColor = colors.text2;
   const circleColor = colors.sunken;
 
   // Design Lead ruling (Phase 3b-1): WITH actions it is carded — the board's
   // `Empty`: a card padded 28/20, full-width actions inside; informational
-  // ones (no action) stay flat on the screen.
+  // ones (no action) stay flat on the screen. Drawn like the shell's other
+  // cards (ProfileView, GetStarted) rather than as <Card>: Card clips with
+  // overflow:hidden, which would cut off elevation.card's iOS shadow.
   const carded = isEmptyStateCarded(actionLabel, !!onAction);
   const hasPair = !!(actionLabel && onAction && secondaryActionLabel && onSecondaryAction);
 
@@ -78,7 +79,9 @@ export function EmptyState({ icon: Icon, title, message, actionLabel, onAction, 
   );
 
   if (carded) {
-    return <Card style={styles.card}>{content}</Card>;
+    return (
+      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, elevation.card]}>{content}</View>
+    );
   }
   return <View style={styles.container}>{content}</View>;
 }
@@ -92,6 +95,8 @@ const styles = StyleSheet.create({
   },
   card: {
     alignItems: 'center',
+    borderRadius: radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
     paddingVertical: 28,
     paddingHorizontal: space[6],
     gap: space[3],

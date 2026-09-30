@@ -91,17 +91,26 @@ export const Field = forwardRef<TextInput, FieldProps>(function Field(
       ) : null}
       {rules && rules.length ? (
         <View style={styles.rules}>
-          {rules.map((rule) => (
-            <Text
-              key={rule.label}
-              variant="caption"
-              color={rule.ok ? colors.gain : colors.text2}
-              accessibilityLabel={`${rule.label}, ${rule.ok ? 'met' : 'not met'}`}
-              style={styles.rule}
-            >
-              {rule.ok ? '✓' : '○'} {rule.label}
-            </Text>
-          ))}
+          {rules.map((rule) => {
+            const color = rule.ok ? colors.gain : colors.text2;
+            // Glyph and label are separate so a label that wraps (Accessibility
+            // XL) hangs under its own text, not under the glyph.
+            return (
+              <View
+                key={rule.label}
+                accessible
+                accessibilityLabel={`${rule.label}, ${rule.ok ? 'met' : 'not met'}`}
+                style={styles.ruleRow}
+              >
+                <Text variant="caption" color={color} style={styles.rule}>
+                  {rule.ok ? '✓' : '○'}
+                </Text>
+                <Text variant="caption" color={color} style={[styles.rule, styles.ruleLabel]}>
+                  {rule.label}
+                </Text>
+              </View>
+            );
+          })}
         </View>
       ) : null}
     </View>
@@ -139,7 +148,15 @@ const styles = StyleSheet.create({
     columnGap: space[4],
     rowGap: space[1],
   },
+  ruleRow: {
+    flexDirection: 'row',
+    gap: space[2],
+    maxWidth: '100%',
+  },
   rule: {
     fontFamily: type.headline.fontFamily,
+  },
+  ruleLabel: {
+    flexShrink: 1,
   },
 });

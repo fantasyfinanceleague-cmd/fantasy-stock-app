@@ -8,7 +8,7 @@
 
 import type { SeasonPhase } from '../weekStatus';
 import { playoffRoundLabelForWeek } from '../playoffs';
-import { phaseChipText, type LeaguePhase } from '../../components/sp/logic/phaseChip';
+import { PHASE_LABELS, phaseChipText, type LeaguePhase } from '../../components/sp/logic/phaseChip';
 
 /** The PhaseChip phases this sheet renders (the shared pure union, minus week_final). */
 export type ChipPhase = Exclude<LeaguePhase, 'week_final'>;
@@ -148,14 +148,8 @@ function easternDayTime(iso: string): string | null {
     .replace(',', '');
 }
 
-/**
- * The PhaseChip's text for a league row / header (Design Lead ruling): the
- * phase keeps deciding the chip's style; this only names it better.
- *   live → "Week 6" · playoffs → the round ("Semifinals", from lib/playoffs)
- *   pre-draft with a date → "Draft Sat 7:00 PM ET" · finished → "Final"
- * undefined = keep the chip's default text.
- */
-export function chipLabelFor(l: SheetLeague): string | undefined {
+/** The specific label, when the league has one (undefined otherwise). */
+function specificChipLabel(l: SheetLeague): string | undefined {
   switch (l.seasonPhase) {
     case 'regular':
       return l.currentWeek > 0 ? `Week ${l.currentWeek}` : undefined;
@@ -170,6 +164,19 @@ export function chipLabelFor(l: SheetLeague): string | undefined {
     default:
       return undefined;
   }
+}
+
+/**
+ * The PhaseChip's text for a league row / header (Design Lead ruling): the
+ * phase keeps deciding the chip's style; this only names it better.
+ *   live → "Week 6" · playoffs → the round ("Semifinals", from lib/playoffs)
+ *   pre-draft with a date → "Draft Sat 7:00 PM ET" · finished → "Final"
+ * Anything else ("Drafting", "Pre-draft" with no date, a playoff week with
+ * no round) gets the phase's own name — always passed as a label, so every
+ * shell chip is sentence case; the ALL-CAPS default is for game surfaces.
+ */
+export function chipLabelFor(l: SheetLeague): string {
+  return specificChipLabel(l) ?? PHASE_LABELS[chipPhaseFor(l.seasonPhase, l.marketOpen)];
 }
 
 function plural(n: number, one: string, many: string): string {

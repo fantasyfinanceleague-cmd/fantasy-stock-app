@@ -26,10 +26,12 @@ import { USERNAME_RE } from './usernameRules';
  *                signups-paused refusal, so every auth state can be captured
  *                without typing a credential
  * onboarding   — like signed-out, but onboarding is shown on every launch
+ * drafting     — signed in, in one league whose draft is in progress (the
+ *                League tab's "Go to the draft room" state)
  */
-export type ShellFixture = 'leagues' | 'no-leagues' | 'no-username' | 'signed-out' | 'onboarding';
+export type ShellFixture = 'leagues' | 'no-leagues' | 'no-username' | 'signed-out' | 'onboarding' | 'drafting';
 
-const FIXTURES: readonly ShellFixture[] = ['leagues', 'no-leagues', 'no-username', 'signed-out', 'onboarding'];
+const FIXTURES: readonly ShellFixture[] = ['leagues', 'no-leagues', 'no-username', 'signed-out', 'onboarding', 'drafting'];
 
 /** Fixtures that start signed out. */
 export function fixtureStartsSignedOut(f: ShellFixture): boolean {
@@ -91,6 +93,20 @@ function league(over: Partial<League> & Pick<League, 'id' | 'name'>): League {
 /** The board's leagues (docs/design/screens/data.js + inventory.jsx "League sheet"). */
 export function fixtureLeagues(fixture: ShellFixture): { leagues: League[]; sheet: SheetLeague[] } {
   if (fixture === 'no-leagues') return { leagues: [], sheet: [] };
+  if (fixture === 'drafting') {
+    // One league, so it is necessarily the active one (no persisted id wins).
+    const l = league({ id: 'fx-drafting', name: 'Serie A Traders', num_participants: 8, draft_status: 'in_progress', league_start_date: null, current_week: 1 });
+    return {
+      leagues: [l],
+      sheet: [
+        {
+          marketOpen: true, ties: 0, isChampion: false, seasonLabel: '',
+          currentWeek: l.current_week, numWeeks: l.num_weeks, playoffTeams: l.playoff_teams, draftDate: l.draft_date,
+          id: l.id, name: l.name, seasonPhase: 'drafting', rank: null, rankCount: null, wins: 0, losses: 0, membersJoined: 8, capacity: 8,
+        },
+      ],
+    };
+  }
 
   const leagues = [
     league({ id: 'fx-scudetto', name: 'Stock Scudetto' }),
