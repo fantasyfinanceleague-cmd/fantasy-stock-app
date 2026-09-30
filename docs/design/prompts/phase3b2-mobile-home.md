@@ -2,7 +2,7 @@
 
 > **v2, Design Lead, 2026-09-29.** This replaces the 2026-09-26 draft. That draft described a cross-league dashboard (total value across leagues, a "This week" strip, a leagues list), which Giorgio's 2026-09-29 rulings removed: **Home shows the one league picked in the pill** (Concept B), with no cross-league totals.
 >
-> **Starts when** 3b-1 (`ui/mobile-shell`) is merged **and** decision **D1** below is ruled. Ask **#11** blocks only the season-complete state (see "Backend").
+> **Starts when** 3b-1 (`ui/mobile-shell`) is merged (merged, #73). Decision **D1** is ruled: **Concept A** (Giorgio, 2026-09-29). Ask **#11** blocks only the season-complete state (see "Backend").
 >
 > **Visual source of truth:** the key-screens board. The file is `docs/design/screens/key-screens.html`, published as the "Stockpile Key Screens" artifact. Its sections are **Home** (key screen 1) and **Home phases** ("Home through the season", 3b-2).
 >
@@ -49,7 +49,7 @@ The header comes from 3b-1: the pill with "+N" and the avatar, with no chip. The
 
 | # | State | Board | Contents (board copy verbatim) |
 |---|---|---|---|
-| 1 | **Live, market open** | Home (key screen 1) | 1. **Hero:** "Your team", then rank · record · "Week N of M", the value, and the gain line (see D1) plus "today".<br>2. **This-week card** (`<Card variant="scoreboard">`): "You" / "vs {opponent}", both dollar scores (`Scores`, one shared size), `Tug`, "You lead by / You trail by $X", "Ends Fri 4:00 PM ET".<br>3. **Season card:** the chart, W1…W(N−1) result chips plus a live chip for the current week, and a `SegmentedControl` 1W · 1M · Season.<br>4. **Standings card:** the top 3 plus your row if you're outside it, "Through Week N−1", "Season gain" column. |
+| 1 | **Live, market open** | Home (key screen 1) | 1. **Hero:** "Your team", then rank · record · "Week N of M", the value (big), and under it the gain line exactly as decided in D1: "+$343.59 · +2.86% season gain · +$121.26 today".<br>2. **This-week card** (`<Card variant="scoreboard">`): "You" / "vs {opponent}", both dollar scores (`Scores`, one shared size), `Tug`, "You lead by / You trail by $X", "Ends Fri 4:00 PM ET".<br>3. **Season card:** the chart, W1…W(N−1) result chips plus a live chip for the current week, and a `SegmentedControl` 1W · 1M · Season.<br>4. **Standings card:** the top 3 plus your row if you're outside it, "Through Week N−1", "Season gain" column. |
 | 2 | **Live, market closed** (nights, weekends, holidays) | "Market closed" | Scores frozen at the last close: "…at Thursday's close", "Resumes Fri 9:30 AM ET" from the **market calendar** (ask #7, live), never a weekday rule. The chip reads "Market closed". |
 | 3 | **Week final, scoring** (Fri after 4 PM until results post) | "Week final, scoring" | Skeleton scores plus "Scoring… Results post a few minutes after Friday's close." **Nothing is shown as final before `team1_gain` / `team2_gain` are non-null for your matchup.** Derive this from the matchup row, not the clock alone. |
 | 4 | **Week final, scored** (results posted, until Monday's open) | *not on the board* | The live card's layout with the "Final" chip, both final scores, the result line ("You win Week 6", as on onboarding card 3, or "{opponent} wins Week 6") and "Week 7 starts Mon 9:30 AM ET". **New copy: flag it.** I'll add it to the board; build it from existing parts. |
@@ -67,7 +67,7 @@ The header comes from 3b-1: the pill with "+N" and the avatar, with no chip. The
 - **Live week score (you and the opponent):** extract the live-score math that `matchup.tsx` runs today (Monday `week_snapshots` × quotes, mid-week buys from their entry, the `entered_mid_week` flag) into **one** pure helper, e.g. `liveWeekScore(snapshots, trades, prices)`. Home and Matchup both call it, and 3c will reuse it. Add deno tests, including a user with SOME mid-week buys (CLAUDE.md's partial-state family). The old Home comment "opponent portfolio not accessible client-side" is wrong: Matchup already reads it.
 - **Rank, record, season gain:** from `get_home_summary` / `league_standings_ranked`. **Never re-sort on the client.**
 - **"Today":** Σ qty × (price − `prevClose`) from the quotes. A position bought today counts from its entry price. Hide it on non-trading days.
-- **The season chart plots the scored season, not mark-to-market** (subject to D1). Build a new pure transform, e.g. `buildSeasonGainSeries`:
+- **The season chart plots the scored season, not mark-to-market** (D1, decided). Build a new pure transform, e.g. `buildSeasonGainSeries`:
   1. For each trading day in week *w*, the point is Σ scored gains of weeks < *w* plus week *w*'s gain at that day's close. Use the week's `week_snapshots` quantities and `week_start_price`, and daily closes from `historical-bars`.
   2. Weekends and holidays are flat. The draft and pre-season sit at 0, with no jump.
   3. **Pin each completed week's Friday point to its scored gain** from `matchups` (the source of truth). If the bar-derived close differs by more than $0.01, count it and report the count. Don't hide it.
@@ -81,21 +81,18 @@ The header comes from 3b-1: the pill with "+N" and the avatar, with no chip. The
   `buildPLSeries` / `windowPL` stay mark-to-market for Portfolio (3e); Home does not plot them. **Never plot value.**
 - **The honesty check (in the report, on real data):** the Season endpoint equals the hero's gain; the 1W endpoint equals the this-week score; the Friday points equal the `matchups` gains; and a table of value, basis, the scored season gain and **their difference**, which is the unscored drift D1 is about (draft → Week 1 open, plus every Friday close → Monday open).
 
-## Decision needed before "go": D1 (Giorgio, via the Orchestrator)
+## D1, decided: Concept A (Giorgio, 2026-09-29)
 
-**See it on the board:** section **"Your call: the Home hero (D1)"** (branch `design/your-call-d1-home-hero`): Concept A and Concept B side by side, Portfolio under either ruling, and a one-week timeline of what is and isn't scored. Build to whichever concept Giorgio picks there.
+**On the board:** section **"Your call: the Home hero (D1)"** shows A, B and Portfolio side by side, plus the one-week timeline of what is and isn't scored. **Build Concept A.**
 
-The board's ledger reads "Value = Portfolio = $12,343.59" and "Gain since the draft = weeks 1–5 + this week", so on the board **value − basis = the scored season gain**. In production they differ: matchups score Monday open → Friday close (weeknights included, since a week's score runs from Monday's open), but the portfolio's value also moves in the gaps no matchup covers: every Friday close → Monday open, and the draft → Week 1's open. So a hero showing "$12,351.20 · +$343.59 since the draft" would invite a subtraction that doesn't work.
+- **The big number = team value** (what your team is worth right now).
+- **The line under it = the scored season gain + this week live + today**, labelled **"season gain"**. For example: "+$343.59 · +2.86% season gain · +$121.26 today". It is never labelled "since the draft".
+- **The Season card is captioned "Season gain, week by week"**, and the chart plots that same season gain (`buildSeasonGainSeries`, above). Its endpoint = the hero's gain line.
+- **Portfolio (3e) keeps its own gain, value − cost, labelled "since the draft".** It is a different number under a different label on purpose, because it includes the unscored gaps. Don't reconcile them, and don't reuse either label for the other number.
 
-**Recommendation:**
-- Keep the board's hierarchy: the value stays the big number, because it's what your team is worth.
-- Make the gain line **the game number**: the scored weeks plus this week live.
-- Relabel it from "since the draft" to **"season gain"**, the same words as the Standings column Giorgio chose. It then reads as a score, not as value − basis.
-- The chart plots the same number.
+Why the numbers differ: matchups score Monday open → Friday close (weeknights included, since a week's score runs from Monday's open). The value also moves in the gaps no matchup covers: every Friday close → Monday open, and the draft → Week 1's open. So value − $12,000 ≠ season gain in production, and the honesty check's drift table shows by how much.
 
-**Alternative:** the hero's big number becomes the season gain, with the value as a secondary line.
-
-Until D1 is ruled, the worker builds with the board's copy behind one string constant, so the ruling is a one-line change. **3e is affected too:** Portfolio's "Gain" is mark-to-market value − cost and stays that way, so Home and Portfolio will show different gains with different labels. The D1 ruling should say that out loud.
+Keep the hero's labels in one string module (e.g. `homeCopy.ts`), so copy review has one place to look.
 
 ## Backend (all live except #11)
 
