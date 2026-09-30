@@ -84,7 +84,7 @@ Deno.serve(async (req: Request) => {
       if (ctx.league.draft_status !== 'in_progress') return results.push({ ...base, outcome: 'not_in_progress' });
 
       if (isDraftFull(ctx)) {
-        const finalizeError = await finalizeDraft(admin, ctx.league, ctx.memberIds);
+        const finalizeError = await finalizeDraft(admin, ctx.league, ctx.order);
         return finalizeError === null
           ? results.push({ ...base, outcome: 'finalize_healed' })
           : errors.push({ ...base, outcome: `finalize_failed:${finalizeError}` });

@@ -372,10 +372,20 @@ export default function DraftPage() {
           return;
         }
 
-        // 3) Draft order: commissioner first, others alphabetical
-        const commissionerId = lg?.commissioner_id || null;
-        const rest = rawIds.filter(id => id !== commissionerId).sort();
-        const orderedIds = commissionerId ? [commissionerId, ...rest] : [...rest];
+        // 3) Draft order: the STORED order (get_draft_order; 20261013000000),
+        // the same list validate-and-record-pick enforces turns against. It is
+        // server-random or commissioner-set and locked at start — never derived
+        // here. Before it is revealed (random mode, until draft_date - 1h) the
+        // plain member list stands in for display only; turn math runs only
+        // once the draft is in progress, when the order is always locked.
+        const { data: orderRes, error: orderErr } = await supabase.rpc('get_draft_order', { p_league_id: leagueId });
+        if (orderErr) console.error('get_draft_order failed:', orderErr.message);
+        const stored = !orderErr && orderRes?.ok && Array.isArray(orderRes.order)
+          ? [...orderRes.order].sort((a, b) => a.position - b.position).map(r => r.user_id)
+          : null;
+        const orderedIds = stored && stored.length === rawIds.length && rawIds.every(id => stored.includes(id))
+          ? stored
+          : rawIds;
         setMemberIds(orderedIds);
 
         // 3b) Check which member IDs are real auth users (for bot detection)

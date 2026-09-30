@@ -121,6 +121,27 @@ check stays visible in the summary.
 
 Loads `supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql` verbatim, together with PR #9's leagues column guard. It covers the pick clock (trigger, CHECK, lock, deadline math, overdue list), the draft queue (RLS and `set_draft_queue`), grants (proacl, and in practice), and `auto_pick_search_candidates` compared against its TS mirror, which uses `effectiveCategoryIds`, the rule the pick gate uses. It also runs `docs/security/draft-pick-clock-effect-test.sql` itself. That is the file Giorgio runs in the SQL editor after the push, and every line must PASS here first.
 
+## draft_order_modes.pglite.test.ts
+
+Loads `20261013000000_draft_order_modes.sql` verbatim, on top of (all verbatim, in timestamp order) PR #9's leagues column guard, the pick-clock migration, `20261011000003`/`04`, and flexible playoffs `20261012000000`–`03`. That proves it applies cleanly on what prod will have, and that all `leagues` triggers (column guard, playoff-teams freeze, order mode, pick clock, order start) fire together in their real order. It covers:
+- grants: proacl, relacl, and the column-level UPDATE on `league_notifications`
+- the legacy backfill, byte-identical to the deleted `computeDraftOrder`, with mixed-case and bot ids
+- reveal gating at `draft_date − 1h`, and generated-exactly-once
+- the **no-commissioner-first regression**, 200 trials on each of four paths, with the commissioner reading the order after every join. This test caught a real bug before the first commit: finalizing with only the commissioner in the league put them first 200/200.
+- the 4-member floor
+- manual seed / save / refusals, and the mode-change rules
+- joins and leaves in each state
+- the start backstop, the reconcile and the lock
+- immutability for every role
+- the league-delete cascade
+- the cron work list
+
+It also runs `docs/security/draft-order-modes-effect-test.sql`, which must show exactly 24 PASS.
+
+## draft_order_no_derivation.test.ts
+
+A structural guard. No production file may call `computeDraftOrder` or re-implement the commissioner filter+sort; the draft order is stored. It reads files only: `deno test --allow-read supabase/tests/draft_order_no_derivation.test.ts`.
+
 ## draft_insert_sites.test.ts
 
 A structural guard. Only `insertGatedPick` (gated picks) and `insertSkip` (SKIP rows) may write `drafts`, and only `gatePick` may produce a `GatedPick`. It reads files only: `deno test --allow-read supabase/tests/draft_insert_sites.test.ts`.

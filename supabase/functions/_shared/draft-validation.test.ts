@@ -17,13 +17,14 @@
 import { assert, assertEquals } from 'jsr:@std/assert';
 import {
   assignSlot,
+  checkStoredOrder,
   effectiveCategoryIds,
-  computeDraftOrder,
   currentTurn,
   fillQuantity,
   fixedNotionalFunding,
   leagueOwnedSymbols,
   type LeagueRules,
+  orderFromRows,
   type PickRow,
   resolveFunding,
   SKIP_SYMBOL,
@@ -94,18 +95,39 @@ function freshPicks(): void {
 }
 
 // ---------------------------------------------------------------------------
-// Canonical draft order
+// Stored draft order (league_draft_order) — nothing derives an order any more
 // ---------------------------------------------------------------------------
 
-Deno.test('computeDraftOrder: commissioner first, rest sorted ascending', () => {
+Deno.test('orderFromRows: sorts by position, never by row arrival', () => {
   assertEquals(
-    computeDraftOrder('carol', ['bob', 'carol', 'alice', 'bot-1']),
-    ['carol', 'alice', 'bob', 'bot-1'],
+    orderFromRows([
+      { position: 3, user_id: 'carol' },
+      { position: 1, user_id: 'bot-1' },
+      { position: 2, user_id: 'alice' },
+    ]),
+    ['bot-1', 'alice', 'carol'],
   );
+  assertEquals(orderFromRows([]), []);
 });
 
-Deno.test('computeDraftOrder: commissioner not a member -> sorted members only', () => {
-  assertEquals(computeDraftOrder('ghost', ['b', 'a']), ['a', 'b']);
+Deno.test('checkStoredOrder: exact permutation of the members only', () => {
+  const members = ['carol', 'alice', 'bot-1'];
+  assertEquals(checkStoredOrder(['bot-1', 'carol', 'alice'], members), { ok: true });
+  assertEquals(checkStoredOrder([], members), { ok: false, reason: 'missing' });
+  assertEquals(checkStoredOrder(['carol', 'alice'], members), { ok: false, reason: 'not_permutation' }); // a member missing
+  assertEquals(checkStoredOrder(['carol', 'alice', 'bot-1', 'dave'], members), { ok: false, reason: 'not_permutation' }); // a non-member
+  assertEquals(checkStoredOrder(['carol', 'carol', 'alice'], members), { ok: false, reason: 'not_permutation' }); // dup hides a missing one
+});
+
+Deno.test('turn math reads the STORED order: a non-commissioner-first order is honored', () => {
+  // commissioner 'carol' drafts third; the old derivation would have put her first.
+  const order = ['bot-1', 'alice', 'carol'];
+  assertEquals(currentTurn(0, order, 2)?.pickerId, 'bot-1');
+  assertEquals(currentTurn(2, order, 2)?.pickerId, 'carol');
+  assertEquals(currentTurn(3, order, 2)?.pickerId, 'carol'); // snake: round 2 starts from the end
+  assertEquals(currentTurn(5, order, 2)?.pickerId, 'bot-1');
+  assertEquals(validateSkip('carol', order, 0, 2), { legal: false, reason: 'not_your_turn' });
+  assertEquals(validateSkip('bot-1', order, 0, 2), { legal: true, round: 1, pickNumber: 1 });
 });
 
 // ---------------------------------------------------------------------------

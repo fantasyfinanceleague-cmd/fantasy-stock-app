@@ -120,6 +120,7 @@
     ['warn-text', 'warn-tint', 'bg', 4.5, '"Your call" notes'],
     ['text', 'warn-tint', 'bg', 4.5, 'Sign-ups-paused banner'],
     ['text', 'warn-tint', 'surface', 4.5, 'Uneven-bye heads-up (inside a card)'],
+    ['danger', 'bg', null, 4.5, 'Field errors on the screen background'],
     ['live', 'inset', null, 3, 'Live dot inside a LIVE chip (graphic)'],
     ['text', 'line', null, 4.5, 'Initials on a neutral (other manager) avatar'],
     ['text-2', 'line', null, 4.5, 'Neutral "?" avatar fallback'],

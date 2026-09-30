@@ -25,6 +25,7 @@ import {
 } from '@/lib/draftState';
 import { formatShortDateTime } from '@/lib/weekStatus';
 import { isUuid } from '@/lib/uuid';
+import { parseDraftOrder } from '@/lib/draftOrder';
 
 interface DraftPick {
   id: string;
@@ -207,18 +208,16 @@ export default function DraftScreen() {
 
       setMembers(membersWithNames);
 
-      // Canonical draft order (must match validate-and-record-pick and web):
-      // commissioner first, remaining member ids sorted ascending. Mobile
-      // previously ordered by joined_at, which could disagree with web about
-      // whose turn it was in a cross-platform league.
-      const memberIdList = (memberData || []).map(m => m.user_id);
-      const commissionerId = activeLeague?.commissioner_id ?? null;
-      const nonCommissioners = memberIdList.filter(id => id !== commissionerId).sort();
-      setDraftOrder(
-        commissionerId && memberIdList.includes(commissionerId)
-          ? [commissionerId, ...nonCommissioners]
-          : nonCommissioners
-      );
+      // The STORED draft order (lib/draftOrder.ts) — the same list
+      // validate-and-record-pick enforces turns against. Never derived here:
+      // it is server-random (revealed at draft_date - 1h) or commissioner-set,
+      // and locked at start. Before the reveal it is null, so the list is
+      // empty; turn math only runs once the draft is in progress (locked).
+      const { data: orderData, error: orderErr } = await supabase.rpc('get_draft_order', {
+        p_league_id: activeLeagueId,
+      });
+      if (orderErr) console.error('get_draft_order failed:', orderErr.message);
+      setDraftOrder(parseDraftOrder(orderErr ? null : orderData)?.order ?? []);
 
       // Fetch picks
       const { data: pickData } = await supabase
@@ -245,7 +244,7 @@ export default function DraftScreen() {
     } finally {
       setLoading(false);
     }
-  }, [activeLeagueId, activeLeague?.commissioner_id]);
+  }, [activeLeagueId]);
 
   // Initial load and refresh
   useEffect(() => {
