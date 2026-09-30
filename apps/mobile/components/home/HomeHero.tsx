@@ -10,6 +10,7 @@ import { useMotion } from '@/components/sp/motion';
 import { formatMoney, formatPercent, isZeroMoney } from '@/components/sp/logic/money';
 import { RollingMoney } from '@/components/home/RollingMoney';
 import { HERO_SEASON_GAIN_LABEL, HERO_TODAY_LABEL, heroAccessibilityLabel, heroUnpricedCaption } from '@/lib/home/homeCopy';
+import { ordinal } from '@/lib/home/ordinal';
 
 // Stockpile — <HomeHero> (Phase 3b-2, D1 Concept A). The big number is
 // team VALUE; the line under it is the scored season gain plus today's
@@ -62,11 +63,6 @@ export interface HomeHeroProps {
   skipEntrance?: boolean;
 }
 
-function ordinal(n: number): string {
-  const s = ['th', 'st', 'nd', 'rd'];
-  const v = n % 100;
-  return n + (s[(v - 20) % 10] || s[v] || s[0]);
-}
 
 export function HomeHero({ leagueId, rank, totalPlayers, record, weekOrRound, value, seasonGainDollars, seasonGainPct, today, unpricedValue, unpricedToday, preSeasonLabel, skipEntrance = false }: HomeHeroProps) {
   const { colors } = useTheme();

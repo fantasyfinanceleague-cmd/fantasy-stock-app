@@ -119,6 +119,7 @@ function HomeBody({
     return (
       <SeasonCompleteCard
         leagueId={leagueId!}
+        leagueName={league?.name ?? 'your league'}
         seasonNumber={null}
         finalRank={myStanding?.rank ?? 0}
         standingsCount={standings.length}

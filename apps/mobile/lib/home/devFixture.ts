@@ -36,6 +36,9 @@ export type HomeFixture =
   | 'drafting_on_clock'
   | 'drafting_waiting_turn'
   | 'complete'
+  /** B6 (Design Lead, 2026-09-30): the board's non-champion HomeComplete
+   * variant -- captured separately from 'complete' (the champion one). */
+  | 'complete_runner_up'
   | 'bye'
   | 'playoff_live'
   | 'playoff_bye'
@@ -45,7 +48,7 @@ export type HomeFixture =
 
 const FIXTURES: readonly HomeFixture[] = [
   'live_open', 'live_closed', 'scoring', 'scored', 'pre_season', 'pre_draft',
-  'pre_draft_waiting', 'drafting_on_clock', 'drafting_waiting_turn', 'complete', 'bye',
+  'pre_draft_waiting', 'drafting_on_clock', 'drafting_waiting_turn', 'complete', 'complete_runner_up', 'bye',
   'playoff_live', 'playoff_bye', 'eliminated', 'missed_playoffs', 'leader_flip',
 ];
 

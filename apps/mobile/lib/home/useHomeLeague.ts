@@ -219,7 +219,7 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
 
   const draftStatus = fixture === 'pre_draft' || fixture === 'pre_draft_waiting' ? 'not_started'
     : isDraftingFixture(fixture) ? 'in_progress' : 'completed';
-  const seasonStatus = fixture === 'complete' ? 'completed' : isPlayoffState ? 'playoffs' : 'active';
+  const seasonStatus = fixture === 'complete' || fixture === 'complete_runner_up' ? 'completed' : isPlayoffState ? 'playoffs' : 'active';
   const currentWeek = isPlayoffState ? playoffCurrentWeek : isPreSeason ? 1 : draftStatus === 'completed' ? 6 : 1;
   // The real Monday 9:30 AM ET open (matches preSeasonWeek1.week_start
   // above) -- never a far-future placeholder, so preSeasonStartsLabel

@@ -1,13 +1,18 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { space } from '@/constants/tokens';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
+import { Button } from '@/components/sp/Button';
 import { Money } from '@/components/sp/Money';
+import { useTheme } from '@/components/sp/ThemeProvider';
 import { useMotion } from '@/components/sp/motion';
 // `lively` (spring.lively) is scoped to game components by convention
 // (§9: "importable only from game components"), but the spec explicitly
@@ -15,26 +20,26 @@ import { useMotion } from '@/components/sp/motion';
 // (spring.lively)" — a one-shot celebration beat, the same family of
 // motion as a lead-change overshoot, not a money-surface digit roll.
 import { lively } from '@/components/sp/game/motion';
-import { supabase } from '@/lib/supabase';
-import { playoffTileLine, REGULAR_SEASON_TILE_TITLE, PLAYOFFS_TILE_TITLE, BEST_WEEK_TILE_TITLE, SEASON_GAIN_TILE_TITLE, SEASON_COMPLETE_TITLE } from '@/lib/home/homeCopy';
+import { useSeasonResult } from '@/lib/home/useSeasonResult';
+import {
+  playoffTileLine, REGULAR_SEASON_TILE_TITLE, PLAYOFFS_TILE_TITLE, BEST_WEEK_TILE_TITLE, SEASON_GAIN_TILE_TITLE,
+  SEASON_COMPLETE_TITLE, CHAMPION_LABEL, wonLeagueLine, placeLabel, nonChampionLine, regularSeasonTileLine,
+  playoffRecordLine, bestWeekLine, SEE_FINAL_STANDINGS, START_NEXT_SEASON,
+} from '@/lib/home/homeCopy';
 import { playoffRoundLabelForWeek } from '@/lib/playoffs';
 
-// Stockpile — <SeasonCompleteCard> (Phase 3b-2, state 8). Backed by
-// get_season_result (Phase 3 ask #11, PR #77 / origin/feat/season-result-
-// summary @ dceeb40 — NOT merged to main as of this branch). Ships in its
-// HONEST MINIMUM until that RPC lands, per the Orchestrator's ruling
-// (2026-09-29): rank, record and season gain, which get_home_summary
-// already has; no fabricated champion claim, no "Final value", no "Best
-// pick" (both dropped from the board — neither is honestly derivable
-// under weekly-snapshot scoring).
-//
-// Once get_season_result IS live, this component upgrades itself: it
-// tries the RPC first, and only falls back to the minimum on any error
-// or an absent/unsupported/inconsistent status — never partial-fills a
-// tile from a mix of the two sources.
+// Stockpile — <SeasonCompleteCard> (Phase 3b-2, state 8). Rebuilt to match
+// the board's HomeComplete exactly (Design Lead ruling, 2026-09-30, B6),
+// on real get_season_result data (#77 merged) via useSeasonResult. Ships
+// its HONEST MINIMUM (rank, record, season gain -- from get_home_summary,
+// already available) only for a season whose get_season_result call
+// errors or returns a non-'complete' status (a league whose current
+// season predates #77, or genuinely inconsistent data) -- never a
+// half-filled tile mixing the two sources.
 
 export interface SeasonCompleteCardProps {
   leagueId: string;
+  leagueName: string;
   seasonNumber: number | null;
   finalRank: number;
   standingsCount: number;
@@ -46,30 +51,28 @@ export interface SeasonCompleteCardProps {
   numWeeks: number | null;
 }
 
-interface SeasonResultRow {
-  status: string;
-  reason: string | null;
-  detail_scope: string | null;
-  playoff_result: 'champion' | 'runner_up' | 'eliminated' | 'missed' | null;
-  playoff_exit_round: number | null;
-  best_week_number: number | null;
-  best_week_gain: number | null;
-}
-
 export function SeasonCompleteCard({
-  leagueId, seasonNumber, finalRank, standingsCount, wins, losses, ties, seasonGain, playoffTeams, numWeeks,
+  leagueId, leagueName, seasonNumber, finalRank, standingsCount, wins, losses, ties, seasonGain, playoffTeams, numWeeks,
 }: SeasonCompleteCardProps) {
-  const [result, setResult] = useState<SeasonResultRow | null>(null);
+  const { colors } = useTheme();
   const { reduced } = useMotion();
+  const result = useSeasonResult(leagueId);
   const trophyScale = useSharedValue(0);
 
   // H6: the trophy springs in ONCE PER SEASON (a device-local flag,
   // keyed by league+season) — never on every Home open. Reduce Motion:
   // it just appears (final value, no spring, no glow).
+  // The RPC's own season_number is the real key once it's loaded — using
+  // only the prop-level `seasonNumber` (currently always null from the
+  // caller) would collapse every completed season into the same "current"
+  // AsyncStorage key, so the trophy would stop replaying after the FIRST
+  // season this league ever completes, breaking H6's "once per season".
+  const effectiveSeasonNumber = result?.season_number ?? seasonNumber;
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const key = `home.trophy.${leagueId}.${seasonNumber ?? 'current'}`;
+      const key = `home.trophy.${leagueId}.${effectiveSeasonNumber ?? 'current'}`;
       let already = false;
       try {
         already = (await AsyncStorage.getItem(key)) === '1';
@@ -91,29 +94,12 @@ export function SeasonCompleteCard({
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only per league/season.
-  }, [leagueId, seasonNumber]);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const { data, error } = await supabase.rpc('get_season_result', { p_league_id: leagueId });
-      if (cancelled) return;
-      // Honest degrade: an unmerged RPC (function does not exist), any
-      // other error, or a non-'complete' status all fall through to the
-      // minimum below — never a half-filled tile.
-      if (error || !data) return;
-      const row = (Array.isArray(data) ? data[0] : data) as SeasonResultRow | undefined;
-      if (row && row.status === 'complete') setResult(row);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [leagueId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-runs once when the RPC's real season_number arrives (see effectiveSeasonNumber's doc); the AsyncStorage check itself is what keeps a slow-network double-run from double-writing.
+  }, [leagueId, effectiveSeasonNumber, reduced]);
 
   const record = `${wins}–${losses}${ties ? `–${ties}` : ''}`;
 
-  const playoffLine = result
+  const playoffResultLine = result
     ? playoffTileLine(
         result.playoff_result,
         result.playoff_result === 'eliminated' && result.playoff_exit_round
@@ -129,60 +115,89 @@ export function SeasonCompleteCard({
   const isChampion = result?.playoff_result === 'champion';
 
   return (
-    <Card style={styles.card}>
-      <View style={styles.titleRow}>
-        <Text variant="title">{SEASON_COMPLETE_TITLE}</Text>
-        {isChampion ? (
-          <Animated.View style={trophyStyle}>
-            <Text variant="title">{'\u{1F3C6}'}</Text>
-          </Animated.View>
-        ) : null}
-      </View>
+    <>
+      <Card style={styles.medallionCard}>
+        <LinearGradient colors={[colors.liveGlow, 'transparent']} style={styles.wash} pointerEvents="none" />
+        <Animated.View style={[styles.trophyCircle, { backgroundColor: colors.live }, trophyStyle]}>
+          <Ionicons name="trophy" size={36} color={colors.surface} />
+        </Animated.View>
+        <Text variant="tag" style={{ color: colors.liveText }}>
+          {SEASON_COMPLETE_TITLE}
+        </Text>
+        <Text variant="score.md" style={styles.headline}>
+          {isChampion ? CHAMPION_LABEL : placeLabel(finalRank)}
+        </Text>
+        <Text variant="callout">{isChampion ? wonLeagueLine(leagueName) : nonChampionLine(leagueName, record)}</Text>
+      </Card>
 
-      <View style={styles.tilesGrid}>
-        <View style={styles.tile}>
-          <Text variant="caption" tone="secondary">{SEASON_GAIN_TILE_TITLE}</Text>
-          <Money value={seasonGain} size="headline" colorBySign sign="always" />
-        </View>
-        <View style={styles.tile}>
-          <Text variant="caption" tone="secondary">{REGULAR_SEASON_TILE_TITLE}</Text>
-          <Text variant="headline">
-            {finalRank}
-            <Text variant="callout" tone="secondary"> of {standingsCount}</Text>
-          </Text>
-          <Text variant="callout" tone="secondary">{record}</Text>
-        </View>
-        {/* detail_scope='standings_only' (a past season) never gets exit-round
-         * indexing; playoffLine is null for that case unless the podium
-         * itself (champion/runner_up) already answers it. */}
-        {playoffLine ? (
+      <Card style={styles.tilesCard}>
+        <View style={styles.tilesGrid}>
           <View style={styles.tile}>
-            <Text variant="caption" tone="secondary">{PLAYOFFS_TILE_TITLE}</Text>
-            <Text variant="headline">{playoffLine}</Text>
+            <Text variant="caption" tone="secondary">{SEASON_GAIN_TILE_TITLE}</Text>
+            <Money value={seasonGain} size="headline" colorBySign sign="always" />
           </View>
-        ) : null}
-        {result?.best_week_number != null && result.best_week_gain != null ? (
+          {result?.best_week_number != null && result.best_week_gain != null ? (
+            <View style={styles.tile}>
+              <Text variant="caption" tone="secondary">{BEST_WEEK_TILE_TITLE}</Text>
+              <View style={styles.inlineRow}>
+                <Text variant="headline">{bestWeekLine(result.best_week_number)} · </Text>
+                <Money value={result.best_week_gain} size="headline" colorBySign sign="always" />
+              </View>
+            </View>
+          ) : null}
           <View style={styles.tile}>
-            <Text variant="caption" tone="secondary">{BEST_WEEK_TILE_TITLE}</Text>
-            <Text variant="headline">Week {result.best_week_number}</Text>
-            <Money value={result.best_week_gain} size="callout" colorBySign sign="always" />
+            <Text variant="caption" tone="secondary">{REGULAR_SEASON_TILE_TITLE}</Text>
+            <Text variant="headline">{regularSeasonTileLine(finalRank, standingsCount, record)}</Text>
           </View>
-        ) : null}
-      </View>
-    </Card>
+          {/* detail_scope='standings_only' (a past season) never gets exit-round
+           * indexing; playoffResultLine is null for that case unless the podium
+           * itself (champion/runner_up) already answers it. */}
+          {playoffResultLine ? (
+            <View style={styles.tile}>
+              <Text variant="caption" tone="secondary">{PLAYOFFS_TILE_TITLE}</Text>
+              <Text variant="headline">{playoffRecordLine(result?.playoff_wins ?? null, result?.playoff_losses ?? null, playoffResultLine)}</Text>
+            </View>
+          ) : null}
+        </View>
+      </Card>
+
+      <Button label={SEE_FINAL_STANDINGS} onPress={() => router.push('/(tabs)/league')} variant="primary" />
+      {/* B6 (Design Lead, 2026-09-30): "Start next season" is deliberately
+       * NOT wired to start_new_league_season here -- that RPC is a
+       * destructive, commissioner-gated action (CLAUDE.md: it deletes the
+       * league's matchups/standings), and this card has no confirmation UX
+       * or commissioner check. Routes to the league screen, where that real
+       * flow belongs, rather than inventing a one-tap destructive action. */}
+      <Button label={START_NEXT_SEASON} onPress={() => router.push('/(tabs)/league')} variant="secondary" />
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
+  medallionCard: {
+    padding: space[6],
+    gap: space[2],
+    borderRadius: 14,
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  wash: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  trophyCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headline: {
+    textAlign: 'center',
+  },
+  tilesCard: {
     padding: space[6],
     gap: space[4],
     borderRadius: 14,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space[2],
   },
   tilesGrid: {
     flexDirection: 'row',
@@ -192,5 +207,9 @@ const styles = StyleSheet.create({
   tile: {
     minWidth: 130,
     gap: space[1],
+  },
+  inlineRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
   },
 });

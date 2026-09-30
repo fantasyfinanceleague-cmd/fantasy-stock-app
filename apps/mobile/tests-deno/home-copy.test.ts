@@ -6,7 +6,10 @@
  * Run: `cd apps/mobile/tests-deno && deno test .`
  */
 import { assertEquals } from 'jsr:@std/assert';
-import { heroUnpricedCaption, sideUnpricedCaption, seasonScrubLabel, heroAccessibilityLabel, heroWeekOrRoundLabel, standingsThroughWeek, preSeasonStartsLabel } from '../lib/home/homeCopy.ts';
+import {
+  heroUnpricedCaption, sideUnpricedCaption, seasonScrubLabel, heroAccessibilityLabel, heroWeekOrRoundLabel,
+  standingsThroughWeek, preSeasonStartsLabel, placeLabel, nonChampionLine, regularSeasonTileLine, playoffRecordLine,
+} from '../lib/home/homeCopy.ts';
 
 Deno.test('heroUnpricedCaption: null when both lists are empty', () => {
   assertEquals(heroUnpricedCaption([], []), null);
@@ -151,4 +154,29 @@ Deno.test('preSeasonStartsLabel: a holiday-shifted Tuesday start reads Tuesday, 
 Deno.test('preSeasonStartsLabel: null/invalid falls back to "Season starts soon", never "Invalid Date"', () => {
   assertEquals(preSeasonStartsLabel(null), 'Season starts soon');
   assertEquals(preSeasonStartsLabel('not-a-date'), 'Season starts soon');
+});
+
+// ── B6 (Design Lead ruling, 2026-09-30): SeasonCompleteCard's non-champion
+// variant and its S6 ordinal-tile fix. ─────────────────────────────────────
+
+Deno.test('placeLabel: "2nd place" / "3rd place" -- ordinal, never "Place 2"', () => {
+  assertEquals(placeLabel(2), '2nd place');
+  assertEquals(placeLabel(3), '3rd place');
+});
+
+Deno.test('nonChampionLine: "{league} · {record}"', () => {
+  assertEquals(nonChampionLine('Stock Scudetto', '11–3'), 'Stock Scudetto · 11–3');
+});
+
+Deno.test('regularSeasonTileLine: ordinal, never "2 of 3" (S6)', () => {
+  assertEquals(regularSeasonTileLine(1, 6, '11–3'), '1st of 6 · 11–3');
+  assertEquals(regularSeasonTileLine(2, 3, '4–1'), '2nd of 3 · 4–1');
+});
+
+Deno.test('playoffRecordLine: prefixes the win-loss record when known', () => {
+  assertEquals(playoffRecordLine(2, 0, 'won the Final'), '2–0 · won the Final');
+});
+
+Deno.test('playoffRecordLine: drops the prefix (never "undefined–undefined") when the record is unknown', () => {
+  assertEquals(playoffRecordLine(null, null, 'won the Final'), 'won the Final');
 });

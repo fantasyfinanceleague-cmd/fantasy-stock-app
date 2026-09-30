@@ -13,6 +13,7 @@
 
 import { formatSignedCurrency } from '../weekStatus';
 import type { PhaseResult } from './homePhase';
+import { ordinal } from './ordinal';
 
 // ── D1 hero (Concept A, decided 2026-09-29) — board, verbatim ─────────────
 // "+$343.59 · +2.86% season gain · +$121.26 today"
@@ -240,6 +241,37 @@ export const REGULAR_SEASON_TILE_TITLE = 'Regular season'; // new-flagged
 export const PLAYOFFS_TILE_TITLE = 'Playoffs'; // new-flagged
 export const BEST_WEEK_TILE_TITLE = 'Best week'; // new-flagged
 export const SEASON_GAIN_TILE_TITLE = 'Season gain'; // board, reused
+
+// ── B6 (Design Lead, 2026-09-30): the board's HomeComplete, on real
+// get_season_result data (#77 merged) -- a trophy medallion, champion/
+// non-champion headline, four tiles, and two buttons. ──────────────────────
+export const CHAMPION_LABEL = 'Champion'; // board
+export function wonLeagueLine(leagueName: string): string {
+  return `You won ${leagueName}`; // board
+}
+/** "2nd place" (board's non-champion variant). NEW COPY -- flagged. */
+export function placeLabel(rank: number): string {
+  return `${ordinal(rank)} place`; // new-flagged
+}
+export function nonChampionLine(leagueName: string, record: string): string {
+  return `${leagueName} · ${record}`; // board
+}
+/** "1st of 6" (S6, Design Lead ruling, 2026-09-30: ordinals, never "1 of 6"). */
+export function regularSeasonTileLine(rank: number, standingsCount: number, record: string): string {
+  return `${ordinal(rank)} of ${standingsCount} · ${record}`; // board
+}
+/** "2–0 · won the Final" -- `resultLine` is playoffTileLine's own suffix;
+ * the record prefix is dropped (never "undefined–undefined") when the RPC
+ * didn't supply playoff_wins/playoff_losses (detail_scope='standings_only'). */
+export function playoffRecordLine(wins: number | null, losses: number | null, resultLine: string): string {
+  return wins != null && losses != null ? `${wins}–${losses} · ${resultLine}` : resultLine; // board
+}
+/** "Week 11 · +$412.08" -- board's Best week tile is one line, not two. */
+export function bestWeekLine(week: number): string {
+  return `Week ${week}`; // board (paired with a separate Money element for the gain)
+}
+export const SEE_FINAL_STANDINGS = 'See the final standings'; // board
+export const START_NEXT_SEASON = 'Start next season'; // board
 
 // ── Money-side helpers (existing formatters live in weekStatus.ts /
 // components/sp/logic/money.ts — Home reuses them, does not redefine them). ─
