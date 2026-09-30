@@ -130,6 +130,19 @@ Deno.test('a bye week is flat: no holdings, scoredGain 0, every day unchanged fr
   for (const p of byeDays) assertEquals(p.gain, 50);
 });
 
+Deno.test('hasData: false draws a cosmetic ramp for a past week with no fetched ledger, and claims no pin', () => {
+  const w1: SeasonWeekInput = {
+    week: 1, scoredGain: 100, snapshots: [], trades: [],
+    tradingDays: ['2026-08-03', '2026-08-04'], hasData: false,
+  };
+  const result = buildSeasonGainSeries({ weeks: [w1], closesByDate: {}, live: null });
+  assertEquals(result.points.length, 2);
+  assertEquals(result.points[0].gain, 50); // halfway ramp
+  assertEquals(result.points[1].gain, 100); // reaches the scored end
+  assertEquals(result.pinned.length, 0); // no bar data fetched -> no comparison claimed
+  assertEquals(result.mismatches, 0);
+});
+
 Deno.test('data.js ROBERTO_WEEKS reproduce throughW5 = 129.99', () => {
   const weeks = [
     week(1, 41.3, []),

@@ -42,6 +42,20 @@ export interface SeasonWeekInput {
    * historical-bars. Empty is valid (a bye week with no market data
    * needed still advances the running total via `scoredGain`). */
   tradingDays: string[];
+  /**
+   * False for a COMPLETED week whose per-day snapshots/trades were not
+   * fetched (the request-budget tradeoff: Home's live state fetches only
+   * the CURRENT week's ledger — see the plan's F1 — so a past week's
+   * intra-week shape is drawn as a plain straight-line ramp from the
+   * week's start to its scored end, exactly the same simplification the
+   * design board itself makes with its cosmetic DAY_SHAPES). When false,
+   * `snapshots`/`trades`/`closesByDate` for this week are ignored, and
+   * NO entry is added to `pinned` — there is no independently-fetched bar
+   * value to compare against, so no comparison is claimed (CLAUDE.md
+   * "verdict scope must match evidence scope": reporting a "mismatch"
+   * against data we deliberately didn't fetch would be a false claim,
+   * not a finding). Defaults to true. */
+  hasData?: boolean;
 }
 
 export interface SeasonGainSeriesInput {
@@ -112,6 +126,7 @@ export function buildSeasonGainSeries(input: SeasonGainSeriesInput): SeasonGainS
 
     const isCurrentWeek = week.scoredGain === null;
     const days = week.tradingDays;
+    const hasData = week.hasData ?? true;
 
     for (let di = 0; di < days.length; di++) {
       const date = days[di];
@@ -120,6 +135,14 @@ export function buildSeasonGainSeries(input: SeasonGainSeriesInput): SeasonGainS
       if (isLastDay && isCurrentWeek && input.live) {
         // The live hero's own number — never recomputed here.
         points.push({ date, week: week.week, gain: cents(base + input.live.gain) });
+        continue;
+      }
+
+      if (!hasData && week.scoredGain !== null) {
+        // No independently-fetched ledger for this week: a plain
+        // straight-line ramp to the scored end, no pin/mismatch claimed.
+        const fraction = (di + 1) / days.length;
+        points.push({ date, week: week.week, gain: cents(base + week.scoredGain * fraction) });
         continue;
       }
 
