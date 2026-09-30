@@ -56,7 +56,7 @@ refused by RLS when they draft (confirmed on Giorgio's phone). The fix is the
 
 | Fact | State | Evidence |
 |---|---|---|
-| Migrations applied | Everything in `supabase/migrations/` **through `20261015000000`** | Six pushes on 2026-09-29, each dry-run/confirm → push → `schema_migrations` verified: (1) `20261006000000`, `20261007000000`, `20261010000000`; (2) `20261011000000`–`04` (ranking); (3) `20261012000000`–`03` (flexible playoffs); (4) `20261013000000` (draft order modes); (5) `20261014000000`–`01` (season result RPC + `league_seasons` write lockdown, #77); (6) `20261015000000` (guarded `complete_league_season`, #78) |
+| Migrations applied | Everything in `supabase/migrations/` **through `20261017000000`** | Seven pushes (six on 2026-09-29, one on 2026-09-30), each dry-run/confirm → push → `schema_migrations` verified: (1) `20261006000000`, `20261007000000`, `20261010000000`; (2) `20261011000000`–`04` (ranking); (3) `20261012000000`–`03` (flexible playoffs); (4) `20261013000000` (draft order modes); (5) `20261014000000`–`01` (season result RPC + `league_seasons` write lockdown, #77); (6) `20261015000000` (guarded `complete_league_season`, #78); (7) `20261017000000` (F8 push-token relocation, #83, 2026-09-30) |
 | Flexible playoffs (#66) | Applied.<br>• 0 unaddressed playoff rows; only `matchups_bracket_address` exists (the old backstop is dropped)<br>• 0 matchup leagues with a NULL playoff size<br>• the 4 constraints are validated<br>• `start_league_playoffs`: service_role only, DEFINER, with the bracket-shape check<br>• the freeze trigger is enabled<br>• test_0925 and test_09_25_v2 now end **2026-10-30** (playoff weeks included) | 2026-09-29 |
 | Draft order modes (#67) | Applied.<br>• The pre-check passed: ids ASCII; test_07_05_26's order matches its picks; only the stale `test_timer_0925` was finalized silently; no draft due in the window<br>• `draft-order-modes-effect-test.sql`: **24/24 PASS** (B1: all 8 started drafts have a locked order; B2: the in-progress order = its members)<br>• the notify cron is still deferred | 2026-09-29 |
 | Unified ranking + atomic playoff start (#59) | Applied. The pre-check (duplicate playoff rows) returned 0.<br>• `league_standings_ranked`: authenticated + service_role, INVOKER, search_path pinned<br>• `start_league_playoffs`: service_role only, DEFINER, exactly one overload (3 args)<br>• `get_home_summary` / `complete_league_season`: ACL and settings unchanged<br>• index `matchups_one_bracket_per_league` present<br>The heal-candidate query returned 0 rows before deploy | 2026-09-29 |
@@ -149,7 +149,7 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
 |---|---|---|
 | Server-side season generation (PR #14) | ✅ Live and proven by two prod drafts | `supabase/migrations/20260926000000_finalize_league_draft_rpc.sql` |
 | Mobile draft flow (PR #20) | ✅ Live (server); mobile client ships with 1.1.0 | `supabase/functions/draft-control/` |
-| Security scan 2026-07-30 (PR #9) | ✅ Server side live and verified; **F10 closed** (PR #22, effect test 3/3). **Open: F8** (push tokens; needs 1.1.0 installed first). F12 superseded. | `docs/security/DEPLOY-RUNBOOK.md`, `docs/security/REMAINING-SECURITY-WORK.md` |
+| Security scan 2026-07-30 (PR #9) | ✅ Server side live and verified; **F10 closed** (PR #22, effect test 3/3). **F8 closed 2026-09-30** (#83, effect test 3/3). F12 superseded. | `docs/security/DEPLOY-RUNBOOK.md`, `docs/security/REMAINING-SECURITY-WORK.md` |
 | RLS hardening | [I4] narrowed (PR #19); [I7] retired. [I8]/[I9] dropped (PR #22). [I6]/[I2b] drop held for 1.1.0. Remaining interim: [I1], [I2a], [I3], [I5] (create/update/delete/leave-league still client-side). | `docs/migrations/RLS_HARDENING_SPEC.md` |
 | Supabase API-key migration | Phases 0–3b done. **Phase 4** (disable legacy keys, a one-way door) is gated on (1) a real publishable-key **trade** from current mobile code (still untested) and (2) a real mobile draft (**done 2026-09-25**). | `docs/migrations/MIGRATION_STATUS.md` |
 | In-house simulator (DR-001) | ✅ Phases 0–4 done and applied | `docs/decisions/DR-001-in-house-simulated-trading.md` |
@@ -163,7 +163,7 @@ Phase 3: **app first**.
 | Phase 3 backend asks | ✅ #1 Home summary + #2 display names (#42); ✅ #5 trades ∪ picks, #6 signup username, #7 market calendar, #9 draft recap (verified existing) (#43/#49); ✅ #3 met client-side (`buildPLSeries`, #37). ✅ #11 season result (`get_season_result`, #77, LIVE 2026-09-29). Open, and nice-to-have for 3c: #4 intraday samples, #10 scoring status | `docs/design/prompts/phase3-plan.md` |
 | Product name | Deferred to pre-launch. Stockpile must go (a live third-party TM); **Stockade** is the front-runner and Odd Lot the runner-up. The rename is prepared on a local, unpushed branch `chore/rename-to-stockade`. Keep the bundle id, slug and scheme | `docs/design/NAMING.md` |
 | Mobile design-system pass (PR #15) | ✅ Merged; ships with 1.1.0 | — |
-| Architecture map | Current on `main`; db-snapshot stale | `docs/architecture/`, CLAUDE.md |
+| Architecture map | Current on `main`; db-snapshot re-captured 2026-09-30 (#81): drift 26 rows, 1 high (`symbols` anon read, decided KEEP 2026-07-28) | `docs/architecture/`, CLAUDE.md |
 
 ---
 
@@ -200,9 +200,10 @@ Phase 3: **app first**.
 6. **Symbol pricing backlog** (~30 h to drain from 2026-09-25). A well-formed ticker
    that Alpaca 400s on every run isn't auto-promoted to `price_unsupported` (the
    half-batch cap bounds the damage); a failure counter is the follow-up.
-7. **F8: Expo push tokens** readable by any authenticated user. Staged:
-   `supabase/migrations/20261017000000_f8_push_tokens_relocation.sql` (promoted 2026-09-30 from the staged file). Apply only after 1.1.0 is on
-   all testers' phones, since 1.0.0 reads and writes the column.
+7. ✅ **F8: Expo push tokens: CLOSED 2026-09-30** (#83; `20261017000000` applied).
+   - The token moved to the owner-only `push_tokens` table, which is NOT in `supabase_realtime`. `user_profiles.expo_push_token` is dropped, and anon holds no privilege.
+   - The pre-check showed 1 token (Giorgio's 1.1.0 phone) and 0 orphans. The prod effect test was 3/3: the owner sees 1, another user sees 0, anon is denied.
+   - **Open:** an end-to-end push delivery on the next test draft (the readers were already falling back both ways, so this confirms, it doesn't unblock).
 8. **`[I6]/[I2b]` drop** (`deferred/20260929000000_drop_I6_I2b.sql`), after 1.1.0
    ships. Until then, any member can still add bots directly via PostgREST.
 9. **Season 2+ never gets a schedule.** `start_new_league_season` deletes matchups
@@ -347,7 +348,16 @@ Phase 3: **app first**.
       - refuses a different result, a non-`playoffs` league, or a champion/runner-up that doesn't match the scored final (NULL-safe);
       - checks that its season UPDATE hit exactly 1 row.
     - The pre-deploy check in prod found **0 stuck leagues** and **0 unaddressed playoff rows**, so this is a safeguard, not a repair.
-    - **UNVERIFIED:** re-check `complete_league_season` proacl (expect service_role only, `search_path=public`), and re-capture `docs/architecture/db-snapshot.json` (grants and policies changed in #77).
+    - Verified 2026-09-30 from the re-captured db-snapshot (#81): `complete_league_season` is `{postgres=X, service_role=X}`, `search_path=public`.
+
+25. ⚠ **Week-window scoring defects: OPEN** (audit #84, `docs/audits/2026-09-30-week-window-audit.md`, with a replay script: 7 of 8 scenarios score WRONG on main).
+    - **Root cause:** the baseline is cut at the Monday 14:35Z run, the trade window starts at the nominal Tuesday 14:30Z `week_start` (fixed UTC, from `_shared/schedule.ts`), and the close is cut at the Friday 21:05Z run. A Monday trade falls in NEITHER the baseline nor the window (S1). Related: S2–S6.
+    - **Also:** S7 (the week-end retries overlap the 21:15Z scorer, so it falls back to `legacy` scoring), S8 (one refused week strands the next week's baseline), and S9 (a missing week-start means partial-portfolio "full" scoring).
+    - **Fri 10-02 exposure:** the prod query found **0 trades** in this week's Monday gap, so S1 doesn't affect it. S7 still could.
+    - **In flight:**
+      - `fix/s7-no-legacy-after-close` (refuse + a recovery run before Monday; deploy before Fri 21:15Z);
+      - `fix/week-window-single-cut` (one calendar-derived cut per week; `matchups.week_start/week_end` rewritten to it at the Monday run; function deploys Sat/Sun 10-03/04).
+    - **Queued after those merge:** S8/S9, U1 (the week-1 "starts Tue" phase), U2 (the mobile holiday list stops at 2026, with no early closes), and a DST-correct `planSeason`.
 
 ---
 
