@@ -23,8 +23,8 @@ The Orchestrator's suggested order stands, with **two adjustments**:
 | 1 | **3a** | Web landing: the showpiece, **live on merge** | **Now** (web foundation merged, PR #35) | `phase3a-landing.md` |
 | 2 | **3b-1** | Mobile shell + first run: nav, league pill/sheet, auth, onboarding, empty states, profile | When `ui/foundation-mobile` merges | `phase3b1-mobile-shell.md` |
 | 3 | **3b-2** | Mobile Home: the selected league in every phase | After 3b-1 **and** decision D1 (season gain vs value, in the prompt). Asks #1/#2 live; #11 blocks only the season-complete state | `phase3b2-mobile-home.md` (v2) |
-| 4 | **3c** | Mobile competitive screens: Matchup, Friday reveal, League/standings, Draft room | After 3b-1; ask #2 blocks, #7 blocks one state | `phase3c-mobile-game.md` |
-| 5 | **3e** | Mobile money screens: Portfolio, stock sheet, trade, history | After 3b-1; ask #5 blocks history only | `phase3e-mobile-money.md` |
+| 4 | **3c** | Mobile Matchup, Friday reveal, League/standings/bracket, draft room (order modes, clock, queue, auto-pick), draft recap; owns U1 and every `lib/` move | After 3b-2 merges; runs in parallel with 3e for 1.2.0. All asks met (#4/#10 not needed) | `phase3c-mobile-game.md` (v2) |
+| 5 | **3e** | Mobile Portfolio, stock sheet, whole-position trading with per-slot proceeds, trade history; owns U2 and the trade/portfolio primitives | After 3b-2 merges **and** the board's "Your call: trading in budget and tier leagues" is ruled; parallel with 3c for 1.2.0 | `phase3e-mobile-money.md` (v2) |
 | 6 | **3d** | Web app pages (still paused) | After 3c/3e settle the patterns | `phase3d-web-app.md` |
 
 3c and 3e can run **in parallel** after 3b-1: they own disjoint screens

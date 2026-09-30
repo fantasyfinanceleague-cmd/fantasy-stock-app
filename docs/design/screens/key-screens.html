@@ -578,6 +578,7 @@
   .b-concepts { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 402px)); gap: 40px; align-items: start; margin-bottom: 18px; }
   .b-concepts .b-fig { max-width: 402px; }
   .b-concepts figcaption { text-align: left; line-height: 1.45; }
+  .b-concepts--three { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 28px; }
   .b-themebar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50; display: flex; justify-content: flex-end; padding: 10px 0; pointer-events: none; }
   .b-themebar__in { pointer-events: auto; display: inline-flex; align-items: center; gap: 10px; padding: 6px 6px 6px 14px; border-radius: 999px;
     background: var(--c-surface); border: 1px solid var(--c-border); box-shadow: var(--c-sheet-shadow); font-size: 13px; font-weight: 700; }
@@ -2851,13 +2852,13 @@
   }
 
   /** Paolo M. timed out twice in a row (picks 12 and 13, back to back at
-   * the snake turn): 12 came from his queue, 13 from the best available.
+   * the snake turn): 12 came from their queue, 13 from the best available.
    * New copy throughout. */
   function DraftAutoPick() {
     const { SnakeBoard } = window.KSKit;
     const log = [
       { n: 13, who: 'Paolo M.', t: 'BRK.B', how: 'Auto-picked · best available' },
-      { n: 12, who: 'Paolo M.', t: 'LLY', how: 'Auto-picked · from his queue' },
+      { n: 12, who: 'Paolo M.', t: 'LLY', how: 'Auto-picked · from their queue' },
       { n: 11, who: 'Roberto B.', t: 'AAPL', how: 'Picked', you: true },
     ];
     return (
@@ -2866,7 +2867,7 @@
         <div className="ks-pad ks-stack" style={{ gap: 14 }}>
           <div className="ks-chyron ks-chyron--in" style={{ display: 'grid', gap: 2 }}>
             <b>Paolo M. ran out of time</b>
-            <span className="ks-caption">Auto-picked LLY from his queue, then BRK.B (best available).</span>
+            <span className="ks-caption">Auto-picked LLY from their queue, then BRK.B (best available).</span>
           </div>
           <div className="ks-raised" style={{ padding: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span><span className="ks-title" style={{ color: 'var(--c-live-text)' }}>You're on the clock</span><br /><span className="ks-callout">Round 3 · Pick 14</span></span>
@@ -3099,6 +3100,59 @@
     );
   }
 
+  // ── Budget-cap / price-tier leagues (your call: A, decided 2026-09-30) ──
+  // budget_cap and price_tiers leagues draft ONE share per pick, and the
+  // server (record-trade → fillQuantity) buys exactly one share per trade; a
+  // sale's cash goes back into the budget (userCashSpent). Numbers derive from
+  // Roberto's draft prices, one share each, in a $2,500.00 budget league.
+  const ONE = (() => {
+    const rows = K.lineup('roberto', 'thu');
+    const drafted = rows.reduce((a, r) => a + r.draft, 0);
+    const budget = 2500;
+    const tsla = rows.find((r) => r.t === 'TSLA');
+    const sellPx = tsla.thu;
+    const afterSell = Math.round((budget - drafted + sellPx) * 100) / 100;
+    const buyPx = K.SALE.buy.price;
+    const afterBuy = Math.round((afterSell - buyPx) * 100) / 100;
+    return { budget, drafted, sellPx, afterSell, buyPx, afterBuy };
+  })();
+  function OneShareSell() {
+    return (
+      <Device noTabs label="Review sell, one-share league">
+        <Back label="Edit" />
+        <div className="ks-pad ks-stack">
+          <h2 className="ks-head__title" style={{ fontSize: 28 }}>Review sell</h2>
+          <Card><Sum rows={[
+            ['Sell', '1 TSLA · all you hold'],
+            ['Price', `${$(ONE.sellPx)} · market`],
+            ['Back to your budget', $(ONE.sellPx)],
+            ['Budget left after', $(ONE.afterSell)],
+          ]} /></Card>
+          <span className="ks-btn">Sell TSLA</span>
+          <span className="ks-caption" style={{ textAlign: 'center' }}>Office League · {$(ONE.budget)} budget · one share per stock</span>
+        </div>
+      </Device>
+    );
+  }
+  function OneShareBuy() {
+    return (
+      <Device noTabs label="Review buy, one-share league">
+        <Back label="Edit" />
+        <div className="ks-pad ks-stack">
+          <h2 className="ks-head__title" style={{ fontSize: 28 }}>Review buy</h2>
+          <Card><Sum rows={[
+            ['Buy', '1 SHOP'],
+            ['Price', `${$(ONE.buyPx)} · market`],
+            ['Budget now', $(ONE.afterSell)],
+            ['Budget left after', $(ONE.afterBuy)],
+          ]} /></Card>
+          <span className="ks-btn">Buy SHOP</span>
+          <span className="ks-caption" style={{ textAlign: 'center' }}>Prices can move before the order fills.</span>
+        </div>
+      </Device>
+    );
+  }
+
   function MarketClosed() {
     const N = K.NVDA;
     return (
@@ -3247,6 +3301,7 @@
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeUnpriced, HomeScoring, HomeComplete,
     AllMatchups, MatchupPreSeason, Playoffs6, ArrangeOrder, OrderPush, DraftLobby, StartDraftConfirm, CreateSeason, DraftAutoPick, DraftRecap, Playoffs,
     SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,
+    OneShareSell, OneShareBuy,
     WebHome, WebPortfolio, WebSettings,
   };
 })();
@@ -3351,7 +3406,7 @@
           notes={[
             'All matchups this week: every game in the league, yours marked, same scoreboard grammar at a smaller size.',
             'The draft lobby opens before the draft: countdown, who is in the room, and your queue. If your clock runs out, the server auto-picks from your queue, then the best available (the largest market cap that fits the league\'s rules; it never breaks them).',
-            'An auto-pick is never hidden: a banner names who ran out of time and what was picked, the board cell gets an Auto badge, and the pick log says "Auto-picked · from his queue" or "Auto-picked · best available" (new copy). The rule is fixed, not a league setting: queue first, then best available, never random, never a skip.',
+            'An auto-pick is never hidden: a banner names who ran out of time and what was picked, the board cell gets an Auto badge, and the pick log says "Auto-picked · from their queue" or "Auto-picked · best available" (new copy). The rule is fixed, not a league setting: queue first, then best available, never random, never a skip.',
             'The draft recap lives under League › History after the draft: your picks ranked by how they have done since.',
             'Draft order is a league setting with two modes, and BOTH become final 1 hour before the draft: Random is drawn then; Manual can be arranged any time until then (if the commissioner never saves, the random starting order is used, never commissioner-first). The mode can be switched until then too. Anyone who joins after that picks last. (New copy.)',
             'The order is set at the LATER of 1 hour before the draft and the league reaching 4 managers (the minimum to draft). Until then Home and the lobby show "Draft order · waiting" with a 3-of-4 progress bar; Start draft stays disabled below 4 managers and offers the invite code. While a Manual order is unsaved, anyone who joins lands in a random slot (so the start stays fair); once it\'s saved or final, joiners go last. (New copy.)',
@@ -3395,6 +3450,7 @@
             'With the market closed, trading is shown but disabled, with the time it opens.',
             'Screens that show prices carry a quiet credit, "Market data provided by Alpaca" (caption, secondary text). Wording to confirm against the provider\'s terms.',
             'Trade history includes the draft picks, so every dollar in the portfolio has a line.',
+            'Budget-cap and price-tier leagues (your call: A, decided): trading works as the server does, one share per buy and the whole position per sell. A sale\'s cash goes back into the budget, and every review shows "1 share" and the budget left (or, in a tier league, the open slot\'s price tier). Making them spend a whole sale like per-slot leagues is a possible later change; it needs backend work.',
           ]}>
           <Fit caption="Sell TSLA" note="Sell pre-selected · whole position"><I.SellSheet /></Fit>
           <Fit caption="Review sell"><I.ReviewSell /></Fit>
@@ -3403,8 +3459,11 @@
           <Fit caption="Review buy" note="Paid from the TSLA slot"><I.ReviewBuy /></Fit>
           <Fit caption="Bought"><I.Done kind="bought" /></Fit>
           <Fit caption="Market closed"><I.MarketClosed /></Fit>
+          <Fit caption="Budget league · review sell" note="Budget-cap and price-tier leagues trade one share at a time; the sale's cash goes back into the budget (your call: A, decided; new copy)"><I.OneShareSell /></Fit>
+          <Fit caption="Budget league · review buy" note="One share; the budget left is always shown. Tier leagues show the open slot's price tier instead (new copy)"><I.OneShareBuy /></Fit>
           <Fit caption="Trade history" note="Includes the draft"><I.TradeHistory /></Fit>
         </Group>
+
 
         <Group id="web" code="3d" name="Web app" job="The same four destinations in a left rail, the same content in two columns, and the stock sheet as a side panel."
           notes={[

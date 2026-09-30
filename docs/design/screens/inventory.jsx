@@ -967,13 +967,13 @@
   }
 
   /** Paolo M. timed out twice in a row (picks 12 and 13, back to back at
-   * the snake turn): 12 came from his queue, 13 from the best available.
+   * the snake turn): 12 came from their queue, 13 from the best available.
    * New copy throughout. */
   function DraftAutoPick() {
     const { SnakeBoard } = window.KSKit;
     const log = [
       { n: 13, who: 'Paolo M.', t: 'BRK.B', how: 'Auto-picked · best available' },
-      { n: 12, who: 'Paolo M.', t: 'LLY', how: 'Auto-picked · from his queue' },
+      { n: 12, who: 'Paolo M.', t: 'LLY', how: 'Auto-picked · from their queue' },
       { n: 11, who: 'Roberto B.', t: 'AAPL', how: 'Picked', you: true },
     ];
     return (
@@ -982,7 +982,7 @@
         <div className="ks-pad ks-stack" style={{ gap: 14 }}>
           <div className="ks-chyron ks-chyron--in" style={{ display: 'grid', gap: 2 }}>
             <b>Paolo M. ran out of time</b>
-            <span className="ks-caption">Auto-picked LLY from his queue, then BRK.B (best available).</span>
+            <span className="ks-caption">Auto-picked LLY from their queue, then BRK.B (best available).</span>
           </div>
           <div className="ks-raised" style={{ padding: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span><span className="ks-title" style={{ color: 'var(--c-live-text)' }}>You're on the clock</span><br /><span className="ks-callout">Round 3 · Pick 14</span></span>
@@ -1215,6 +1215,59 @@
     );
   }
 
+  // ── Budget-cap / price-tier leagues (your call: A, decided 2026-09-30) ──
+  // budget_cap and price_tiers leagues draft ONE share per pick, and the
+  // server (record-trade → fillQuantity) buys exactly one share per trade; a
+  // sale's cash goes back into the budget (userCashSpent). Numbers derive from
+  // Roberto's draft prices, one share each, in a $2,500.00 budget league.
+  const ONE = (() => {
+    const rows = K.lineup('roberto', 'thu');
+    const drafted = rows.reduce((a, r) => a + r.draft, 0);
+    const budget = 2500;
+    const tsla = rows.find((r) => r.t === 'TSLA');
+    const sellPx = tsla.thu;
+    const afterSell = Math.round((budget - drafted + sellPx) * 100) / 100;
+    const buyPx = K.SALE.buy.price;
+    const afterBuy = Math.round((afterSell - buyPx) * 100) / 100;
+    return { budget, drafted, sellPx, afterSell, buyPx, afterBuy };
+  })();
+  function OneShareSell() {
+    return (
+      <Device noTabs label="Review sell, one-share league">
+        <Back label="Edit" />
+        <div className="ks-pad ks-stack">
+          <h2 className="ks-head__title" style={{ fontSize: 28 }}>Review sell</h2>
+          <Card><Sum rows={[
+            ['Sell', '1 TSLA · all you hold'],
+            ['Price', `${$(ONE.sellPx)} · market`],
+            ['Back to your budget', $(ONE.sellPx)],
+            ['Budget left after', $(ONE.afterSell)],
+          ]} /></Card>
+          <span className="ks-btn">Sell TSLA</span>
+          <span className="ks-caption" style={{ textAlign: 'center' }}>Office League · {$(ONE.budget)} budget · one share per stock</span>
+        </div>
+      </Device>
+    );
+  }
+  function OneShareBuy() {
+    return (
+      <Device noTabs label="Review buy, one-share league">
+        <Back label="Edit" />
+        <div className="ks-pad ks-stack">
+          <h2 className="ks-head__title" style={{ fontSize: 28 }}>Review buy</h2>
+          <Card><Sum rows={[
+            ['Buy', '1 SHOP'],
+            ['Price', `${$(ONE.buyPx)} · market`],
+            ['Budget now', $(ONE.afterSell)],
+            ['Budget left after', $(ONE.afterBuy)],
+          ]} /></Card>
+          <span className="ks-btn">Buy SHOP</span>
+          <span className="ks-caption" style={{ textAlign: 'center' }}>Prices can move before the order fills.</span>
+        </div>
+      </Device>
+    );
+  }
+
   function MarketClosed() {
     const N = K.NVDA;
     return (
@@ -1363,6 +1416,7 @@
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeUnpriced, HomeScoring, HomeComplete,
     AllMatchups, MatchupPreSeason, Playoffs6, ArrangeOrder, OrderPush, DraftLobby, StartDraftConfirm, CreateSeason, DraftAutoPick, DraftRecap, Playoffs,
     SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,
+    OneShareSell, OneShareBuy,
     WebHome, WebPortfolio, WebSettings,
   };
 })();
