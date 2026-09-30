@@ -141,6 +141,33 @@ Deno.test('an unpriced symbol is listed, not silently dropped', () => {
   assertEquals(result.startValue, 0);
 });
 
+Deno.test('an unpriced symbol contributes the SAME dollar gain as if it were held flat at its week-start price', () => {
+  // Orchestrator (2026-09-30): the "counted at cost" caption is literally
+  // true for team value (teamValue.ts counts an unpriced holding at cost),
+  // but ThisWeekCard's per-side score comes from liveWeekScore, which
+  // EXCLUDES an unpriced symbol from both gain and startValue entirely
+  // (server parity, matching calculateUserScore). Excluding a position and
+  // valuing it at zero gain (its own weekStartPrice) are equal for the
+  // DOLLAR total either way -- this pins that equivalence as a test rather
+  // than an argument, and is why no percentage may ever share a caption's
+  // scope with an unpriced symbol (excluded changes the startValue
+  // denominator; held-flat does not).
+  const snaps: { symbol: string; quantity: number; weekStartPrice: number; enteredMidWeek: boolean }[] = [
+    { symbol: 'NVDA', quantity: 10, weekStartPrice: 300, enteredMidWeek: false },
+    { symbol: 'ZZZZ', quantity: 5, weekStartPrice: 50, enteredMidWeek: false },
+  ];
+  const excluded = liveWeekScore(snaps, [], (sym) => (sym === 'ZZZZ' ? null : 321.9));
+  const heldFlat = liveWeekScore(snaps, [], (sym) => (sym === 'ZZZZ' ? 50 : 321.9));
+  assertEquals(excluded.unpriced, ['ZZZZ']);
+  assertEquals(heldFlat.unpriced, []);
+  assertAlmostEquals(excluded.gain, heldFlat.gain, 1e-9);
+  assertAlmostEquals(excluded.gain, 10 * (321.9 - 300), 1e-9);
+  // startValue is NOT equal -- the excluded case drops ZZZZ's basis from
+  // the denominator entirely, so pct would differ. Never display a
+  // percentage in the same scope as this caption (Orchestrator's rule).
+  assertEquals(excluded.startValue !== heldFlat.startValue, true);
+});
+
 Deno.test('the data.js Thursday-live sample matches the board number', () => {
   // KS.MATCHUP.live.you (Roberto, Thu 1:37 PM ET): NVDA/AAPL/CRM/TSLA/COST/V
   // week-start (mon) -> thu, fixed-notional qty = 2000/draft price.
