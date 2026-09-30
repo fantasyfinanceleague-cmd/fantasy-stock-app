@@ -2,40 +2,36 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "e58c980244fe46dbea9bd981a8f22acd51f34afc",
-    "commitShort": "e58c980",
+    "commit": "72b08b274caad28e5a6d78d337a361075882a7e0",
+    "commitShort": "72b08b2",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "",
+    "branch": "chore/db-snapshot-2026-09-30",
     "dirty": true,
     "dirtyPaths": [
       {
-        "code": "A",
-        "path": "supabase/migrations/20261014000000_get_season_result_rpc.sql"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/20261014000001_drop_league_seasons_commissioner_write.sql"
+        "code": "M",
+        "path": "docs/architecture/db-snapshot.json"
       }
     ],
-    "timestamp": "2026-09-30T05:07:03Z",
-    "sourceHash": "sha256:0febf9924730d81036c77f2e633e4c6bf300e5af09a259cd2ed4a0d07d9f21d6",
+    "timestamp": "2026-09-30T16:56:00Z",
+    "sourceHash": "sha256:60ad3d858e554866305caa4babff7b5aff686c3147663b1b64474cde2107c367",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
-    "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1176.2,
-    "ageDays": 49,
+    "capturedAt": "2026-09-30T16:53:15Z",
+    "ageHours": 0,
+    "ageDays": 0,
     "staleAfterDays": 14,
-    "stale": true,
-    "hash": "sha256:3c923bcd46e36dfa365d24852d7b8fb6ead9ff99a06c3b26dc0853c648e07ded",
+    "stale": false,
+    "hash": "sha256:8e08382dfe9edf557c6371cfc39da9fb788590ad82209f15e2e74a7c90dcfc6b",
     "database": "postgres",
     "postgresVersion": "17.4",
     "counts": {
-      "functions": 15,
-      "tables": 20,
-      "cronJobs": 5
+      "functions": 51,
+      "tables": 28,
+      "cronJobs": 6
     }
   },
   "layers": [
@@ -127,6 +123,34 @@
       "source": {
         "path": "supabase/migrations/20260618000000_migrate_process_week_results_cron_auth.sql",
         "line": 37
+      }
+    },
+    {
+      "layer": "trigger",
+      "facts": {
+        "schedule": "20 10 * * *",
+        "active": true,
+        "username": "postgres",
+        "target": "refresh-market-calendar",
+        "sendsApikey": true
+      },
+      "db": null,
+      "declared": {
+        "schedule": "20 10 * * *",
+        "definedIn": [
+          "supabase/migrations/20261005000003_schedule_refresh_market_calendar.sql:18"
+        ]
+      },
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "cron.refresh_market_calendar_daily",
+      "label": "refresh_market_calendar_daily",
+      "sublabel": "20 10 * * *",
+      "kind": "cron-job",
+      "source": {
+        "path": "supabase/migrations/20261005000003_schedule_refresh_market_calendar.sql",
+        "line": 18
       }
     },
     {
@@ -1199,7 +1223,25 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261013000000_draft_order_modes.sql:276"
@@ -1207,20 +1249,12 @@
         "latestDefinition": "supabase/migrations/20261013000000_draft_order_modes.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg._draft_order_finalize",
-      "label": "_draft_order_finalize()",
-      "sublabel": "not in snapshot",
+      "label": "_draft_order_finalize(p_league_id uuid)",
+      "sublabel": "SECURITY DEFINER · owner only",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261013000000_draft_order_modes.sql",
@@ -1230,7 +1264,25 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": false,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "stable"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261013000000_draft_order_modes.sql:215"
@@ -1238,20 +1290,12 @@
         "latestDefinition": "supabase/migrations/20261013000000_draft_order_modes.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg._draft_order_is_due",
-      "label": "_draft_order_is_due()",
-      "sublabel": "not in snapshot",
+      "label": "_draft_order_is_due(p_draft_date timestamp with time zone)",
+      "sublabel": "owner only",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261013000000_draft_order_modes.sql",
@@ -1261,7 +1305,25 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "stable"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261013000000_draft_order_modes.sql:358"
@@ -1269,20 +1331,12 @@
         "latestDefinition": "supabase/migrations/20261013000000_draft_order_modes.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg._draft_order_matches_members",
-      "label": "_draft_order_matches_members()",
-      "sublabel": "not in snapshot",
+      "label": "_draft_order_matches_members(p_league_id uuid)",
+      "sublabel": "SECURITY DEFINER · owner only",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261013000000_draft_order_modes.sql",
@@ -1292,7 +1346,25 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261013000000_draft_order_modes.sql:227"
@@ -1300,20 +1372,12 @@
         "latestDefinition": "supabase/migrations/20261013000000_draft_order_modes.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg._draft_order_materialize",
-      "label": "_draft_order_materialize()",
-      "sublabel": "not in snapshot",
+      "label": "_draft_order_materialize(p_league_id uuid, p_source text)",
+      "sublabel": "SECURITY DEFINER · owner only",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261013000000_draft_order_modes.sql",
@@ -1323,7 +1387,25 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261013000000_draft_order_modes.sql:255"
@@ -1331,20 +1413,12 @@
         "latestDefinition": "supabase/migrations/20261013000000_draft_order_modes.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg._draft_order_notify_members",
-      "label": "_draft_order_notify_members()",
-      "sublabel": "not in snapshot",
+      "label": "_draft_order_notify_members(p_league_id uuid)",
+      "sublabel": "SECURITY DEFINER · owner only",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261013000000_draft_order_modes.sql",
@@ -1354,7 +1428,25 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261013000000_draft_order_modes.sql:384"
@@ -1362,20 +1454,12 @@
         "latestDefinition": "supabase/migrations/20261013000000_draft_order_modes.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg._draft_order_reconcile",
-      "label": "_draft_order_reconcile()",
-      "sublabel": "not in snapshot",
+      "label": "_draft_order_reconcile(p_league_id uuid)",
+      "sublabel": "SECURITY DEFINER · owner only",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261013000000_draft_order_modes.sql",
@@ -1385,7 +1469,25 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261013000000_draft_order_modes.sql:328"
@@ -1393,20 +1495,12 @@
         "latestDefinition": "supabase/migrations/20261013000000_draft_order_modes.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg._draft_order_sync",
-      "label": "_draft_order_sync()",
-      "sublabel": "not in snapshot",
+      "label": "_draft_order_sync(p_league_id uuid, p_lock boolean)",
+      "sublabel": "SECURITY DEFINER · owner only",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261013000000_draft_order_modes.sql",
@@ -1416,7 +1510,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261005000002_market_calendar.sql:96"
@@ -1424,20 +1543,12 @@
         "latestDefinition": "supabase/migrations/20261005000002_market_calendar.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.apply_market_calendar",
-      "label": "apply_market_calendar()",
-      "sublabel": "not in snapshot",
+      "label": "apply_market_calendar(p_from date, p_through date, p_sessions jsonb)",
+      "sublabel": "SECURITY DEFINER · service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261005000002_market_calendar.sql",
@@ -1447,7 +1558,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": false,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "stable"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:415"
@@ -1455,20 +1591,12 @@
         "latestDefinition": "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.auto_pick_search_candidates",
-      "label": "auto_pick_search_candidates()",
-      "sublabel": "not in snapshot",
+      "label": "auto_pick_search_candidates(p_min numeric, p_max numeric, p_category_id uuid, p_draftable_only boolean, p_exclude text[], p_limit integer)",
+      "sublabel": "service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql",
@@ -1526,7 +1654,39 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "authenticated",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres",
+          "authenticated=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": true,
+        "owner": "postgres",
+        "volatility": "stable"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261007000000_username_write_path.sql:167"
@@ -1534,20 +1694,12 @@
         "latestDefinition": "supabase/migrations/20261007000000_username_write_path.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.check_usernames",
-      "label": "check_usernames()",
-      "sublabel": "not in snapshot",
+      "label": "check_usernames(p_candidates text[])",
+      "sublabel": "SECURITY DEFINER · service_role, authenticated",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261007000000_username_write_path.sql",
@@ -1607,7 +1759,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": false,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "stable"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261013000000_draft_order_modes.sql:944"
@@ -1615,20 +1792,12 @@
         "latestDefinition": "supabase/migrations/20261013000000_draft_order_modes.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.draft_order_notify_due",
       "label": "draft_order_notify_due()",
-      "sublabel": "not in snapshot",
+      "sublabel": "service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261013000000_draft_order_modes.sql",
@@ -1638,7 +1807,25 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261013000000_draft_order_modes.sql:487"
@@ -1646,20 +1833,12 @@
         "latestDefinition": "supabase/migrations/20261013000000_draft_order_modes.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.enforce_league_draft_order_meta",
       "label": "enforce_league_draft_order_meta()",
-      "sublabel": "not in snapshot",
+      "sublabel": "SECURITY DEFINER · owner only",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261013000000_draft_order_modes.sql",
@@ -1669,7 +1848,25 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261013000000_draft_order_modes.sql:431"
@@ -1677,20 +1874,12 @@
         "latestDefinition": "supabase/migrations/20261013000000_draft_order_modes.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.enforce_league_draft_order_rows",
       "label": "enforce_league_draft_order_rows()",
-      "sublabel": "not in snapshot",
+      "sublabel": "SECURITY DEFINER · owner only",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261013000000_draft_order_modes.sql",
@@ -1700,7 +1889,25 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261013000000_draft_order_modes.sql:537"
@@ -1708,20 +1915,12 @@
         "latestDefinition": "supabase/migrations/20261013000000_draft_order_modes.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.enforce_leagues_draft_order_mode",
       "label": "enforce_leagues_draft_order_mode()",
-      "sublabel": "not in snapshot",
+      "sublabel": "SECURITY DEFINER · owner only",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261013000000_draft_order_modes.sql",
@@ -1731,7 +1930,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20260925000000_leagues_member_draft_complete_column_guard.sql:108"
@@ -1739,20 +1963,12 @@
         "latestDefinition": "supabase/migrations/20260925000000_leagues_member_draft_complete_column_guard.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.enforce_leagues_member_update_columns",
       "label": "enforce_leagues_member_update_columns()",
-      "sublabel": "not in snapshot",
+      "sublabel": "SECURITY DEFINER · service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20260925000000_leagues_member_draft_complete_column_guard.sql",
@@ -1762,7 +1978,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:115"
@@ -1770,20 +2011,12 @@
         "latestDefinition": "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.enforce_leagues_pick_clock",
       "label": "enforce_leagues_pick_clock()",
-      "sublabel": "not in snapshot",
+      "sublabel": "SECURITY DEFINER · service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql",
@@ -1793,7 +2026,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": false,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261012000002_freeze_playoff_teams_after_draft_start.sql:39"
@@ -1801,20 +2059,12 @@
         "latestDefinition": "supabase/migrations/20261012000002_freeze_playoff_teams_after_draft_start.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.enforce_playoff_teams_frozen_after_draft_start",
       "label": "enforce_playoff_teams_frozen_after_draft_start()",
-      "sublabel": "not in snapshot",
+      "sublabel": "service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261012000002_freeze_playoff_teams_after_draft_start.sql",
@@ -1901,7 +2151,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261013000000_draft_order_modes.sql:914"
@@ -1909,20 +2184,12 @@
         "latestDefinition": "supabase/migrations/20261013000000_draft_order_modes.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.finalize_due_draft_orders",
       "label": "finalize_due_draft_orders()",
-      "sublabel": "not in snapshot",
+      "sublabel": "SECURITY DEFINER · service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261013000000_draft_order_modes.sql",
@@ -1932,7 +2199,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20260926000000_finalize_league_draft_rpc.sql:91"
@@ -1940,20 +2232,12 @@
         "latestDefinition": "supabase/migrations/20260926000000_finalize_league_draft_rpc.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.finalize_league_draft",
-      "label": "finalize_league_draft()",
-      "sublabel": "not in snapshot",
+      "label": "finalize_league_draft(p_league_id uuid, p_member_ids text[], p_league_start timestamp with time zone, p_league_end timestamp with time zone, p_matchups jsonb)",
+      "sublabel": "SECURITY DEFINER · service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20260926000000_finalize_league_draft_rpc.sql",
@@ -1963,7 +2247,39 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": false,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "authenticated",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "authenticated=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": true,
+        "owner": "postgres",
+        "volatility": "stable"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:241"
@@ -1973,18 +2289,18 @@
       },
       "drift": [
         {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+          "field": "grants",
+          "declared": "n/a",
+          "live": "postgres=X/postgres, authenticated=X/postgres, service_role=X/postgres",
+          "severity": "low",
+          "note": "SECURITY INVOKER, so it runs with the caller's own privileges and RLS applies — broad EXECUTE here is low risk. Listed for inventory completeness."
         }
       ],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.get_draft_clock",
-      "label": "get_draft_clock()",
-      "sublabel": "not in snapshot",
+      "label": "get_draft_clock(p_league_id uuid)",
+      "sublabel": "authenticated, service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql",
@@ -1994,7 +2310,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "authenticated",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "authenticated=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": true,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261013000000_draft_order_modes.sql:769"
@@ -2002,20 +2343,12 @@
         "latestDefinition": "supabase/migrations/20261013000000_draft_order_modes.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.get_draft_order",
-      "label": "get_draft_order()",
-      "sublabel": "not in snapshot",
+      "label": "get_draft_order(p_league_id uuid)",
+      "sublabel": "SECURITY DEFINER · authenticated",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261013000000_draft_order_modes.sql",
@@ -2025,7 +2358,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "authenticated",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "authenticated=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": true,
+        "owner": "postgres",
+        "volatility": "stable"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261004000001_get_home_summary_rpc.sql:78",
@@ -2034,20 +2392,12 @@
         "latestDefinition": "supabase/migrations/20261011000001_get_home_summary_unified_rank.sql",
         "redefinitions": 2
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.get_home_summary",
       "label": "get_home_summary()",
-      "sublabel": "not in snapshot",
+      "sublabel": "SECURITY DEFINER · authenticated",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261011000001_get_home_summary_unified_rank.sql",
@@ -2057,7 +2407,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "authenticated",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "authenticated=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": true,
+        "owner": "postgres",
+        "volatility": "stable"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261004000000_participant_display_names.sql:170"
@@ -2065,20 +2440,12 @@
         "latestDefinition": "supabase/migrations/20261004000000_participant_display_names.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.get_league_display_names",
-      "label": "get_league_display_names()",
-      "sublabel": "not in snapshot",
+      "label": "get_league_display_names(p_league_id uuid)",
+      "sublabel": "SECURITY DEFINER · authenticated",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261004000000_participant_display_names.sql",
@@ -2143,7 +2510,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "authenticated",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "authenticated=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": true,
+        "owner": "postgres",
+        "volatility": "stable"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261014000000_get_season_result_rpc.sql:162"
@@ -2151,20 +2543,12 @@
         "latestDefinition": "supabase/migrations/20261014000000_get_season_result_rpc.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.get_season_result",
-      "label": "get_season_result()",
-      "sublabel": "not in snapshot",
+      "label": "get_season_result(p_league_id uuid, p_season_id uuid)",
+      "sublabel": "SECURITY DEFINER · authenticated",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261014000000_get_season_result_rpc.sql",
@@ -2174,7 +2558,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261005000001_signup_username_trigger.sql:46"
@@ -2182,20 +2591,12 @@
         "latestDefinition": "supabase/migrations/20261005000001_signup_username_trigger.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.handle_new_user_profile",
       "label": "handle_new_user_profile()",
-      "sublabel": "not in snapshot",
+      "sublabel": "SECURITY DEFINER · service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261005000001_signup_username_trigger.sql",
@@ -2317,7 +2718,7 @@
       "facts": {},
       "db": {
         "securityDefiner": true,
-        "searchPath": "public",
+        "searchPath": "public, pg_temp",
         "grants": [
           {
             "role": "postgres",
@@ -2364,7 +2765,39 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": false,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "authenticated",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "authenticated=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": true,
+        "owner": "postgres",
+        "volatility": "stable"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261011000000_league_standings_ranked.sql:98"
@@ -2374,18 +2807,18 @@
       },
       "drift": [
         {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+          "field": "grants",
+          "declared": "n/a",
+          "live": "postgres=X/postgres, authenticated=X/postgres, service_role=X/postgres",
+          "severity": "low",
+          "note": "SECURITY INVOKER, so it runs with the caller's own privileges and RLS applies — broad EXECUTE here is low risk. Listed for inventory completeness."
         }
       ],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.league_standings_ranked",
-      "label": "league_standings_ranked()",
-      "sublabel": "not in snapshot",
+      "label": "league_standings_ranked(p_league_id uuid)",
+      "sublabel": "authenticated, service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261011000000_league_standings_ranked.sql",
@@ -2395,7 +2828,25 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261013000000_draft_order_modes.sql:605"
@@ -2403,20 +2854,12 @@
         "latestDefinition": "supabase/migrations/20261013000000_draft_order_modes.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.lock_draft_order_on_start",
       "label": "lock_draft_order_on_start()",
-      "sublabel": "not in snapshot",
+      "sublabel": "SECURITY DEFINER · owner only",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261013000000_draft_order_modes.sql",
@@ -2426,7 +2869,39 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": false,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "authenticated",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "authenticated=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": true,
+        "owner": "postgres",
+        "volatility": "stable"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261005000002_market_calendar.sql:160"
@@ -2436,18 +2911,18 @@
       },
       "drift": [
         {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+          "field": "grants",
+          "declared": "n/a",
+          "live": "postgres=X/postgres, authenticated=X/postgres, service_role=X/postgres",
+          "severity": "low",
+          "note": "SECURITY INVOKER, so it runs with the caller's own privileges and RLS applies — broad EXECUTE here is low risk. Listed for inventory completeness."
         }
       ],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.market_session_status",
-      "label": "market_session_status()",
-      "sublabel": "not in snapshot",
+      "label": "market_session_status(p_now timestamp with time zone)",
+      "sublabel": "authenticated, service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261005000002_market_calendar.sql",
@@ -2457,7 +2932,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": false,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "stable"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:289"
@@ -2465,20 +2965,12 @@
         "latestDefinition": "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.overdue_draft_turns",
       "label": "overdue_draft_turns()",
-      "sublabel": "not in snapshot",
+      "sublabel": "service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql",
@@ -2488,7 +2980,25 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "stable"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261004000000_participant_display_names.sql:87"
@@ -2496,20 +3006,12 @@
         "latestDefinition": "supabase/migrations/20261004000000_participant_display_names.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.participant_display_name",
-      "label": "participant_display_name()",
-      "sublabel": "not in snapshot",
+      "label": "participant_display_name(p_user_id text)",
+      "sublabel": "SECURITY DEFINER · owner only",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261004000000_participant_display_names.sql",
@@ -2519,7 +3021,39 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "supabase_auth_admin",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres",
+          "supabase_auth_admin=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20260815000000_signup_gate.sql:82"
@@ -2527,20 +3061,12 @@
         "latestDefinition": "supabase/migrations/20260815000000_signup_gate.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.restrict_new_signups",
-      "label": "restrict_new_signups()",
-      "sublabel": "not in snapshot",
+      "label": "restrict_new_signups(event jsonb)",
+      "sublabel": "SECURITY DEFINER · service_role, supabase_auth_admin",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20260815000000_signup_gate.sql",
@@ -2601,7 +3127,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "authenticated",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "authenticated=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": true,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261013000000_draft_order_modes.sql:847"
@@ -2609,20 +3160,12 @@
         "latestDefinition": "supabase/migrations/20261013000000_draft_order_modes.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.set_draft_order",
-      "label": "set_draft_order()",
-      "sublabel": "not in snapshot",
+      "label": "set_draft_order(p_league_id uuid, p_user_ids text[])",
+      "sublabel": "SECURITY DEFINER · authenticated",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261013000000_draft_order_modes.sql",
@@ -2632,7 +3175,39 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "authenticated",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "authenticated=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": true,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:323"
@@ -2640,20 +3215,12 @@
         "latestDefinition": "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.set_draft_queue",
-      "label": "set_draft_queue()",
-      "sublabel": "not in snapshot",
+      "label": "set_draft_queue(p_league_id uuid, p_symbols text[])",
+      "sublabel": "SECURITY DEFINER · authenticated, service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql",
@@ -2663,7 +3230,39 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "authenticated",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres",
+          "authenticated=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": true,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261007000000_username_write_path.sql:98"
@@ -2671,20 +3270,12 @@
         "latestDefinition": "supabase/migrations/20261007000000_username_write_path.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.set_username",
-      "label": "set_username()",
-      "sublabel": "not in snapshot",
+      "label": "set_username(p_username text)",
+      "sublabel": "SECURITY DEFINER · service_role, authenticated",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261007000000_username_write_path.sql",
@@ -2694,7 +3285,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261011000003_start_league_playoffs.sql:80",
@@ -2703,20 +3319,12 @@
         "latestDefinition": "supabase/migrations/20261012000001_start_league_playoffs_flexible.sql",
         "redefinitions": 2
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.start_league_playoffs",
-      "label": "start_league_playoffs()",
-      "sublabel": "not in snapshot",
+      "label": "start_league_playoffs(p_league_id uuid, p_expected_week integer, p_bracket jsonb)",
+      "sublabel": "SECURITY DEFINER · service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261012000001_start_league_playoffs_flexible.sql",
@@ -2859,7 +3467,25 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261013000000_draft_order_modes.sql:664"
@@ -2867,20 +3493,12 @@
         "latestDefinition": "supabase/migrations/20261013000000_draft_order_modes.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.sync_draft_order_on_member_change",
       "label": "sync_draft_order_on_member_change()",
-      "sublabel": "not in snapshot",
+      "sublabel": "SECURITY DEFINER · owner only",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261013000000_draft_order_modes.sql",
@@ -3160,19 +3778,31 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "rlsEnabled": true,
+        "rlsForced": false,
+        "policies": []
+      },
       "declared": {
         "touchedBy": [
           "supabase/migrations/20260815000000_signup_gate.sql"
         ],
         "rlsEnabled": true
       },
-      "drift": [],
+      "drift": [
+        {
+          "field": "policies",
+          "declared": "n/a",
+          "live": "RLS on, ZERO policies",
+          "severity": "low",
+          "note": "RLS with no policies denies all access except to roles that bypass RLS (service_role, table owner). This is the correct shape for a service-role-only table — confirm that is the intent."
+        }
+      ],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "tbl.app_config",
       "label": "app_config",
-      "sublabel": "not in snapshot",
+      "sublabel": "RLS · 0 policies",
       "kind": "table",
       "source": {
         "path": "supabase/migrations/20260815000000_signup_gate.sql",
@@ -3342,7 +3972,22 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "rlsEnabled": true,
+        "rlsForced": false,
+        "policies": [
+          {
+            "name": "draft_queue_select_own",
+            "roles": [
+              "authenticated"
+            ],
+            "using": "(user_id = (auth.uid())::text)",
+            "command": "SELECT",
+            "withCheck": null,
+            "permissive": true
+          }
+        ]
+      },
       "declared": {
         "touchedBy": [
           "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql"
@@ -3351,10 +3996,10 @@
       },
       "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "tbl.draft_queue",
       "label": "draft_queue",
-      "sublabel": "not in snapshot",
+      "sublabel": "RLS · 1 policy",
       "kind": "table",
       "source": {
         "path": "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql",
@@ -3537,7 +4182,22 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "rlsEnabled": true,
+        "rlsForced": false,
+        "policies": [
+          {
+            "name": "league_draft_order_select_member",
+            "roles": [
+              "authenticated"
+            ],
+            "using": "is_member(league_id)",
+            "command": "SELECT",
+            "withCheck": null,
+            "permissive": true
+          }
+        ]
+      },
       "declared": {
         "touchedBy": [
           "supabase/migrations/20261013000000_draft_order_modes.sql"
@@ -3546,10 +4206,10 @@
       },
       "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "tbl.league_draft_order",
       "label": "league_draft_order",
-      "sublabel": "not in snapshot",
+      "sublabel": "RLS · 1 policy",
       "kind": "table",
       "source": {
         "path": "supabase/migrations/20261013000000_draft_order_modes.sql",
@@ -3559,7 +4219,22 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "rlsEnabled": true,
+        "rlsForced": false,
+        "policies": [
+          {
+            "name": "league_draft_order_meta_select_member",
+            "roles": [
+              "authenticated"
+            ],
+            "using": "is_member(league_id)",
+            "command": "SELECT",
+            "withCheck": null,
+            "permissive": true
+          }
+        ]
+      },
       "declared": {
         "touchedBy": [
           "supabase/migrations/20261013000000_draft_order_modes.sql"
@@ -3568,10 +4243,10 @@
       },
       "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "tbl.league_draft_order_meta",
       "label": "league_draft_order_meta",
-      "sublabel": "not in snapshot",
+      "sublabel": "RLS · 1 policy",
       "kind": "table",
       "source": {
         "path": "supabase/migrations/20261013000000_draft_order_modes.sql",
@@ -3727,7 +4402,7 @@
             ],
             "using": null,
             "command": "INSERT",
-            "withCheck": "(user_id = (auth.uid())::text)",
+            "withCheck": "((user_id = (auth.uid())::text) AND (role = 'commissioner'::text) AND (EXISTS ( SELECT 1\n   FROM leagues l\n  WHERE ((l.id = league_members.league_id) AND (l.commissioner_id = (auth.uid())::text) AND (l.draft_status = 'not_started'::text)))))",
             "permissive": true
           },
           {
@@ -3773,7 +4448,22 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "rlsEnabled": true,
+        "rlsForced": false,
+        "policies": [
+          {
+            "name": "league_notifications_select_own",
+            "roles": [
+              "authenticated"
+            ],
+            "using": "(user_id = (auth.uid())::text)",
+            "command": "SELECT",
+            "withCheck": null,
+            "permissive": true
+          }
+        ]
+      },
       "declared": {
         "touchedBy": [
           "supabase/migrations/20261013000000_draft_order_modes.sql"
@@ -3782,10 +4472,10 @@
       },
       "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "tbl.league_notifications",
       "label": "league_notifications",
-      "sublabel": "not in snapshot",
+      "sublabel": "RLS · 1 policy",
       "kind": "table",
       "source": {
         "path": "supabase/migrations/20261013000000_draft_order_modes.sql",
@@ -3799,16 +4489,6 @@
         "rlsEnabled": true,
         "rlsForced": false,
         "policies": [
-          {
-            "name": "Commissioners can manage league seasons",
-            "roles": [
-              "PUBLIC"
-            ],
-            "using": "(league_id IN ( SELECT leagues.id\n   FROM leagues\n  WHERE (leagues.commissioner_id = (auth.uid())::text)))",
-            "command": "ALL",
-            "withCheck": null,
-            "permissive": true
-          },
           {
             "name": "Users can view league seasons for their leagues",
             "roles": [
@@ -3832,7 +4512,7 @@
           "field": "policy_roles",
           "groupKey": "public-role-policies-gated",
           "declared": "n/a",
-          "live": "2 of 2 policies target PUBLIC; those 2 are gated on caller identity",
+          "live": "1 of 1 policies target PUBLIC; those 1 are gated on caller identity",
           "severity": "low",
           "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
         }
@@ -3841,7 +4521,7 @@
       "verified": true,
       "id": "tbl.league_seasons",
       "label": "league_seasons",
-      "sublabel": "RLS · 2 policies",
+      "sublabel": "RLS · 1 policy",
       "kind": "table",
       "source": {
         "path": "supabase/migrations/20260125000000_add_league_seasons.sql",
@@ -3855,16 +4535,6 @@
         "rlsEnabled": true,
         "rlsForced": false,
         "policies": [
-          {
-            "name": "league_standings_insert_members",
-            "roles": [
-              "authenticated"
-            ],
-            "using": null,
-            "command": "INSERT",
-            "withCheck": "is_member(league_id)",
-            "permissive": true
-          },
           {
             "name": "league_standings_select_members",
             "roles": [
@@ -3890,7 +4560,7 @@
       "verified": true,
       "id": "tbl.league_standings",
       "label": "league_standings",
-      "sublabel": "RLS · 2 policies",
+      "sublabel": "RLS · 1 policy",
       "kind": "table",
       "source": {
         "path": "supabase/migrations/20251230000000_add_league_duration.sql",
@@ -3999,19 +4669,43 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "rlsEnabled": true,
+        "rlsForced": false,
+        "policies": [
+          {
+            "name": "market_calendar_select_authenticated",
+            "roles": [
+              "authenticated"
+            ],
+            "using": "true",
+            "command": "SELECT",
+            "withCheck": null,
+            "permissive": true
+          }
+        ]
+      },
       "declared": {
         "touchedBy": [
           "supabase/migrations/20261005000002_market_calendar.sql"
         ],
         "rlsEnabled": true
       },
-      "drift": [],
+      "drift": [
+        {
+          "field": "policy_roles",
+          "groupKey": "authenticated-role-policies-ungated",
+          "declared": "n/a",
+          "live": "market_calendar_select_authenticated (SELECT, authenticated, predicate: true)",
+          "severity": "medium",
+          "note": "ANY-AUTHENTICATED READ of every row. The predicate never references the caller, so every logged-in user reads the whole table. This is a real exposure, not a cosmetic one — it is simply narrower than the anon case. Before accepting it, check whether any COLUMN here is a capability rather than an attribute (a bearer token, a key, an invite code): an ungated read is tolerable for display attributes like a username and not tolerable for something possession of which grants an action. See this node's annotation."
+        }
+      ],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "tbl.market_calendar",
       "label": "market_calendar",
-      "sublabel": "not in snapshot",
+      "sublabel": "RLS · 1 policy",
       "kind": "table",
       "source": {
         "path": "supabase/migrations/20261005000002_market_calendar.sql",
@@ -4021,19 +4715,43 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "rlsEnabled": true,
+        "rlsForced": false,
+        "policies": [
+          {
+            "name": "market_calendar_coverage_select_authenticated",
+            "roles": [
+              "authenticated"
+            ],
+            "using": "true",
+            "command": "SELECT",
+            "withCheck": null,
+            "permissive": true
+          }
+        ]
+      },
       "declared": {
         "touchedBy": [
           "supabase/migrations/20261005000002_market_calendar.sql"
         ],
         "rlsEnabled": true
       },
-      "drift": [],
+      "drift": [
+        {
+          "field": "policy_roles",
+          "groupKey": "authenticated-role-policies-ungated",
+          "declared": "n/a",
+          "live": "market_calendar_coverage_select_authenticated (SELECT, authenticated, predicate: true)",
+          "severity": "medium",
+          "note": "ANY-AUTHENTICATED READ of every row. The predicate never references the caller, so every logged-in user reads the whole table. This is a real exposure, not a cosmetic one — it is simply narrower than the anon case. Before accepting it, check whether any COLUMN here is a capability rather than an attribute (a bearer token, a key, an invite code): an ungated read is tolerable for display attributes like a username and not tolerable for something possession of which grants an action. See this node's annotation."
+        }
+      ],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "tbl.market_calendar_coverage",
       "label": "market_calendar_coverage",
-      "sublabel": "not in snapshot",
+      "sublabel": "RLS · 1 policy",
       "kind": "table",
       "source": {
         "path": "supabase/migrations/20261005000002_market_calendar.sql",
@@ -4047,16 +4765,6 @@
         "rlsEnabled": true,
         "rlsForced": false,
         "policies": [
-          {
-            "name": "matchups_insert_members",
-            "roles": [
-              "authenticated"
-            ],
-            "using": null,
-            "command": "INSERT",
-            "withCheck": "is_member(league_id)",
-            "permissive": true
-          },
           {
             "name": "matchups_select_members",
             "roles": [
@@ -4085,7 +4793,7 @@
       "verified": true,
       "id": "tbl.matchups",
       "label": "matchups",
-      "sublabel": "RLS · 2 policies",
+      "sublabel": "RLS · 1 policy",
       "kind": "table",
       "source": {
         "path": "supabase/migrations/20251230000000_add_league_duration.sql",
@@ -4165,19 +4873,31 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "rlsEnabled": true,
+        "rlsForced": false,
+        "policies": []
+      },
       "declared": {
         "touchedBy": [
           "supabase/migrations/20260815000000_signup_gate.sql"
         ],
         "rlsEnabled": true
       },
-      "drift": [],
+      "drift": [
+        {
+          "field": "policies",
+          "declared": "n/a",
+          "live": "RLS on, ZERO policies",
+          "severity": "low",
+          "note": "RLS with no policies denies all access except to roles that bypass RLS (service_role, table owner). This is the correct shape for a service-role-only table — confirm that is the intent."
+        }
+      ],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "tbl.signup_allowlist",
       "label": "signup_allowlist",
-      "sublabel": "not in snapshot",
+      "sublabel": "RLS · 0 policies",
       "kind": "table",
       "source": {
         "path": "supabase/migrations/20260815000000_signup_gate.sql",
@@ -5143,6 +5863,18 @@
       "payload": "net.http_post · apikey from vault cron_apikey",
       "callSites": [
         "supabase/migrations/20260618000000_migrate_process_week_results_cron_auth.sql:37"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.cron.refresh_market_calendar_daily->fn.refresh-market-calendar",
+      "from": "cron.refresh_market_calendar_daily",
+      "to": "fn.refresh-market-calendar",
+      "protocol": "pg-net-http",
+      "payload": "net.http_post · apikey from vault cron_apikey",
+      "callSites": [
+        "supabase/migrations/20261005000003_schedule_refresh_market_calendar.sql:18"
       ]
     },
     {
@@ -8296,6 +9028,19 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.tbl.league_draft_order_meta->pg.is_member#rls",
+      "from": "tbl.league_draft_order_meta",
+      "to": "pg.is_member",
+      "protocol": "rls-predicate",
+      "payload": "called by policy league_draft_order_meta_select_member",
+      "derivedFrom": "db-snapshot",
+      "callSites": [
+        "db-snapshot.json · policy league_draft_order_meta_select_member"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.tbl.league_draft_order->pg.enforce_league_draft_order_rows",
       "from": "tbl.league_draft_order",
       "to": "pg.enforce_league_draft_order_rows",
@@ -8304,6 +9049,19 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261013000000_draft_order_modes.sql:483"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.tbl.league_draft_order->pg.is_member#rls",
+      "from": "tbl.league_draft_order",
+      "to": "pg.is_member",
+      "protocol": "rls-predicate",
+      "payload": "called by policy league_draft_order_select_member",
+      "derivedFrom": "db-snapshot",
+      "callSites": [
+        "db-snapshot.json · policy league_draft_order_select_member"
       ]
     },
     {
@@ -8382,10 +9140,9 @@
       "from": "tbl.league_standings",
       "to": "pg.is_member",
       "protocol": "rls-predicate",
-      "payload": "called by policy league_standings_insert_members",
+      "payload": "called by policy league_standings_select_members",
       "derivedFrom": "db-snapshot",
       "callSites": [
-        "db-snapshot.json · policy league_standings_insert_members",
         "db-snapshot.json · policy league_standings_select_members"
       ]
     },
@@ -8490,10 +9247,9 @@
       "from": "tbl.matchups",
       "to": "pg.is_member",
       "protocol": "rls-predicate",
-      "payload": "called by policy matchups_insert_members",
+      "payload": "called by policy matchups_select_members",
       "derivedFrom": "db-snapshot",
       "callSites": [
-        "db-snapshot.json · policy matchups_insert_members",
         "db-snapshot.json · policy matchups_select_members"
       ]
     },
@@ -10824,366 +11580,6 @@
   ],
   "drift": [
     {
-      "node": "pg._draft_order_finalize",
-      "label": "_draft_order_finalize()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg._draft_order_is_due",
-      "label": "_draft_order_is_due()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg._draft_order_matches_members",
-      "label": "_draft_order_matches_members()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg._draft_order_materialize",
-      "label": "_draft_order_materialize()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg._draft_order_notify_members",
-      "label": "_draft_order_notify_members()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg._draft_order_reconcile",
-      "label": "_draft_order_reconcile()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg._draft_order_sync",
-      "label": "_draft_order_sync()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.apply_market_calendar",
-      "label": "apply_market_calendar()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.auto_pick_search_candidates",
-      "label": "auto_pick_search_candidates()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.check_usernames",
-      "label": "check_usernames()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.draft_order_notify_due",
-      "label": "draft_order_notify_due()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.enforce_league_draft_order_meta",
-      "label": "enforce_league_draft_order_meta()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.enforce_league_draft_order_rows",
-      "label": "enforce_league_draft_order_rows()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.enforce_leagues_draft_order_mode",
-      "label": "enforce_leagues_draft_order_mode()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.enforce_leagues_member_update_columns",
-      "label": "enforce_leagues_member_update_columns()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.enforce_leagues_pick_clock",
-      "label": "enforce_leagues_pick_clock()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.enforce_playoff_teams_frozen_after_draft_start",
-      "label": "enforce_playoff_teams_frozen_after_draft_start()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.finalize_due_draft_orders",
-      "label": "finalize_due_draft_orders()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.finalize_league_draft",
-      "label": "finalize_league_draft()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.get_draft_clock",
-      "label": "get_draft_clock()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.get_draft_order",
-      "label": "get_draft_order()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.get_home_summary",
-      "label": "get_home_summary()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.get_league_display_names",
-      "label": "get_league_display_names()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.get_season_result",
-      "label": "get_season_result()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.handle_new_user_profile",
-      "label": "handle_new_user_profile()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.league_standings_ranked",
-      "label": "league_standings_ranked()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.lock_draft_order_on_start",
-      "label": "lock_draft_order_on_start()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.market_session_status",
-      "label": "market_session_status()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.overdue_draft_turns",
-      "label": "overdue_draft_turns()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.participant_display_name",
-      "label": "participant_display_name()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.restrict_new_signups",
-      "label": "restrict_new_signups()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.set_draft_order",
-      "label": "set_draft_order()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.set_draft_queue",
-      "label": "set_draft_queue()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.set_username",
-      "label": "set_username()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.start_league_playoffs",
-      "label": "start_league_playoffs()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.sync_draft_order_on_member_change",
-      "label": "sync_draft_order_on_member_change()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
       "node": "tbl.symbols",
       "label": "symbols",
       "groupKey": "public-role-policies-ungated",
@@ -11210,6 +11606,26 @@
       "field": "policy_roles",
       "declared": "n/a",
       "live": "category_rules_select_authenticated (SELECT, authenticated, predicate: true)",
+      "severity": "medium",
+      "note": "ANY-AUTHENTICATED READ of every row. The predicate never references the caller, so every logged-in user reads the whole table. This is a real exposure, not a cosmetic one — it is simply narrower than the anon case. Before accepting it, check whether any COLUMN here is a capability rather than an attribute (a bearer token, a key, an invite code): an ungated read is tolerable for display attributes like a username and not tolerable for something possession of which grants an action. See this node's annotation."
+    },
+    {
+      "node": "tbl.market_calendar",
+      "label": "market_calendar",
+      "groupKey": "authenticated-role-policies-ungated",
+      "field": "policy_roles",
+      "declared": "n/a",
+      "live": "market_calendar_select_authenticated (SELECT, authenticated, predicate: true)",
+      "severity": "medium",
+      "note": "ANY-AUTHENTICATED READ of every row. The predicate never references the caller, so every logged-in user reads the whole table. This is a real exposure, not a cosmetic one — it is simply narrower than the anon case. Before accepting it, check whether any COLUMN here is a capability rather than an attribute (a bearer token, a key, an invite code): an ungated read is tolerable for display attributes like a username and not tolerable for something possession of which grants an action. See this node's annotation."
+    },
+    {
+      "node": "tbl.market_calendar_coverage",
+      "label": "market_calendar_coverage",
+      "groupKey": "authenticated-role-policies-ungated",
+      "field": "policy_roles",
+      "declared": "n/a",
+      "live": "market_calendar_coverage_select_authenticated (SELECT, authenticated, predicate: true)",
       "severity": "medium",
       "note": "ANY-AUTHENTICATED READ of every row. The predicate never references the caller, so every logged-in user reads the whole table. This is a real exposure, not a cosmetic one — it is simply narrower than the anon case. Before accepting it, check whether any COLUMN here is a capability rather than an attribute (a bearer token, a key, an invite code): an ungated read is tolerable for display attributes like a username and not tolerable for something possession of which grants an action. See this node's annotation."
     },
@@ -11254,6 +11670,36 @@
       "note": "SECURITY INVOKER, so it runs with the caller's own privileges and RLS applies — broad EXECUTE here is low risk. Listed for inventory completeness."
     },
     {
+      "node": "pg.get_draft_clock",
+      "label": "get_draft_clock(p_league_id uuid)",
+      "groupKey": "grants",
+      "field": "grants",
+      "declared": "n/a",
+      "live": "postgres=X/postgres, authenticated=X/postgres, service_role=X/postgres",
+      "severity": "low",
+      "note": "SECURITY INVOKER, so it runs with the caller's own privileges and RLS applies — broad EXECUTE here is low risk. Listed for inventory completeness."
+    },
+    {
+      "node": "pg.league_standings_ranked",
+      "label": "league_standings_ranked(p_league_id uuid)",
+      "groupKey": "grants",
+      "field": "grants",
+      "declared": "n/a",
+      "live": "postgres=X/postgres, authenticated=X/postgres, service_role=X/postgres",
+      "severity": "low",
+      "note": "SECURITY INVOKER, so it runs with the caller's own privileges and RLS applies — broad EXECUTE here is low risk. Listed for inventory completeness."
+    },
+    {
+      "node": "pg.market_session_status",
+      "label": "market_session_status(p_now timestamp with time zone)",
+      "groupKey": "grants",
+      "field": "grants",
+      "declared": "n/a",
+      "live": "postgres=X/postgres, authenticated=X/postgres, service_role=X/postgres",
+      "severity": "low",
+      "note": "SECURITY INVOKER, so it runs with the caller's own privileges and RLS applies — broad EXECUTE here is low risk. Listed for inventory completeness."
+    },
+    {
       "node": "pg.symbols_touch_updated_at",
       "label": "symbols_touch_updated_at()",
       "groupKey": "grants",
@@ -11272,6 +11718,16 @@
       "live": "=X/postgres, postgres=X/postgres, anon=X/postgres, authenticated=X/postgres, service_role=X/postgres",
       "severity": "low",
       "note": "SECURITY INVOKER, so it runs with the caller's own privileges and RLS applies — broad EXECUTE here is low risk. Listed for inventory completeness."
+    },
+    {
+      "node": "tbl.app_config",
+      "label": "app_config",
+      "groupKey": "policies",
+      "field": "policies",
+      "declared": "n/a",
+      "live": "RLS on, ZERO policies",
+      "severity": "low",
+      "note": "RLS with no policies denies all access except to roles that bypass RLS (service_role, table owner). This is the correct shape for a service-role-only table — confirm that is the intent."
     },
     {
       "node": "tbl.cron_job_status",
@@ -11329,7 +11785,7 @@
       "groupKey": "public-role-policies-gated",
       "field": "policy_roles",
       "declared": "n/a",
-      "live": "2 of 2 policies target PUBLIC; those 2 are gated on caller identity",
+      "live": "1 of 1 policies target PUBLIC; those 1 are gated on caller identity",
       "severity": "low",
       "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
     },
@@ -11346,6 +11802,16 @@
     {
       "node": "tbl.rate_limit_counters",
       "label": "rate_limit_counters",
+      "groupKey": "policies",
+      "field": "policies",
+      "declared": "n/a",
+      "live": "RLS on, ZERO policies",
+      "severity": "low",
+      "note": "RLS with no policies denies all access except to roles that bypass RLS (service_role, table owner). This is the correct shape for a service-role-only table — confirm that is the intent."
+    },
+    {
+      "node": "tbl.signup_allowlist",
+      "label": "signup_allowlist",
       "groupKey": "policies",
       "field": "policies",
       "declared": "n/a",
@@ -11401,20 +11867,8 @@
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
     {
-      "node": "fn.refresh-market-calendar",
-      "label": "refresh-market-calendar",
-      "kind": "edge-function",
-      "source": "supabase/functions/refresh-market-calendar/index.ts:80",
-      "outbound": [
-        "ext.alpaca-trading",
-        "mod.refresh-market-calendar/plan",
-        "pg.apply_market_calendar"
-      ],
-      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
-    },
-    {
       "node": "pg._draft_order_finalize",
-      "label": "_draft_order_finalize()",
+      "label": "_draft_order_finalize(p_league_id uuid)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261013000000_draft_order_modes.sql:276",
       "outbound": [
@@ -11426,7 +11880,7 @@
     },
     {
       "node": "pg._draft_order_is_due",
-      "label": "_draft_order_is_due()",
+      "label": "_draft_order_is_due(p_draft_date timestamp with time zone)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261013000000_draft_order_modes.sql:215",
       "outbound": [],
@@ -11434,7 +11888,7 @@
     },
     {
       "node": "pg._draft_order_matches_members",
-      "label": "_draft_order_matches_members()",
+      "label": "_draft_order_matches_members(p_league_id uuid)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261013000000_draft_order_modes.sql:358",
       "outbound": [
@@ -11445,7 +11899,7 @@
     },
     {
       "node": "pg._draft_order_materialize",
-      "label": "_draft_order_materialize()",
+      "label": "_draft_order_materialize(p_league_id uuid, p_source text)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261013000000_draft_order_modes.sql:227",
       "outbound": [
@@ -11457,7 +11911,7 @@
     },
     {
       "node": "pg._draft_order_notify_members",
-      "label": "_draft_order_notify_members()",
+      "label": "_draft_order_notify_members(p_league_id uuid)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261013000000_draft_order_modes.sql:255",
       "outbound": [
@@ -11468,7 +11922,7 @@
     },
     {
       "node": "pg._draft_order_reconcile",
-      "label": "_draft_order_reconcile()",
+      "label": "_draft_order_reconcile(p_league_id uuid)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261013000000_draft_order_modes.sql:384",
       "outbound": [
@@ -11481,7 +11935,7 @@
     },
     {
       "node": "pg._draft_order_sync",
-      "label": "_draft_order_sync()",
+      "label": "_draft_order_sync(p_league_id uuid, p_lock boolean)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261013000000_draft_order_modes.sql:328",
       "outbound": [
@@ -11492,7 +11946,7 @@
     },
     {
       "node": "pg.auto_pick_search_candidates",
-      "label": "auto_pick_search_candidates()",
+      "label": "auto_pick_search_candidates(p_min numeric, p_max numeric, p_category_id uuid, p_draftable_only boolean, p_exclude text[], p_limit integer)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:415",
       "outbound": [
@@ -11517,7 +11971,7 @@
     },
     {
       "node": "pg.finalize_league_draft",
-      "label": "finalize_league_draft()",
+      "label": "finalize_league_draft(p_league_id uuid, p_member_ids text[], p_league_start timestamp with time zone, p_league_end timestamp with time zone, p_matchups jsonb)",
       "kind": "pg-function",
       "source": "supabase/migrations/20260926000000_finalize_league_draft_rpc.sql:91",
       "outbound": [
@@ -11534,7 +11988,7 @@
     },
     {
       "node": "pg.get_draft_clock",
-      "label": "get_draft_clock()",
+      "label": "get_draft_clock(p_league_id uuid)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:241",
       "outbound": [
@@ -11545,7 +11999,7 @@
     },
     {
       "node": "pg.get_league_display_names",
-      "label": "get_league_display_names()",
+      "label": "get_league_display_names(p_league_id uuid)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261004000000_participant_display_names.sql:170",
       "outbound": [
@@ -11559,7 +12013,7 @@
     },
     {
       "node": "pg.get_season_result",
-      "label": "get_season_result()",
+      "label": "get_season_result(p_league_id uuid, p_season_id uuid)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261014000000_get_season_result_rpc.sql:162",
       "outbound": [
@@ -11571,7 +12025,7 @@
     },
     {
       "node": "pg.participant_display_name",
-      "label": "participant_display_name()",
+      "label": "participant_display_name(p_user_id text)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261004000000_participant_display_names.sql:87",
       "outbound": [
@@ -11581,7 +12035,7 @@
     },
     {
       "node": "pg.restrict_new_signups",
-      "label": "restrict_new_signups()",
+      "label": "restrict_new_signups(event jsonb)",
       "kind": "pg-function",
       "source": "supabase/migrations/20260815000000_signup_gate.sql:82",
       "outbound": [
@@ -11592,7 +12046,7 @@
     },
     {
       "node": "pg.set_draft_order",
-      "label": "set_draft_order()",
+      "label": "set_draft_order(p_league_id uuid, p_user_ids text[])",
       "kind": "pg-function",
       "source": "supabase/migrations/20261013000000_draft_order_modes.sql:847",
       "outbound": [
@@ -11608,7 +12062,7 @@
     },
     {
       "node": "pg.set_draft_queue",
-      "label": "set_draft_queue()",
+      "label": "set_draft_queue(p_league_id uuid, p_symbols text[])",
       "kind": "pg-function",
       "source": "supabase/migrations/20261010000000_draft_pick_clock_and_queue.sql:323",
       "outbound": [
@@ -11706,222 +12160,6 @@
   ],
   "unverified": [
     {
-      "scope": "pg.restrict_new_signups",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.enforce_leagues_member_update_columns",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.finalize_league_draft",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.participant_display_name",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.get_league_display_names",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.get_home_summary",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.handle_new_user_profile",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.apply_market_calendar",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.market_session_status",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.set_username",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.check_usernames",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.enforce_leagues_pick_clock",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.get_draft_clock",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.overdue_draft_turns",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.set_draft_queue",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.auto_pick_search_candidates",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.league_standings_ranked",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.start_league_playoffs",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.enforce_playoff_teams_frozen_after_draft_start",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg._draft_order_is_due",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg._draft_order_materialize",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg._draft_order_notify_members",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg._draft_order_finalize",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg._draft_order_sync",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg._draft_order_matches_members",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg._draft_order_reconcile",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.enforce_league_draft_order_rows",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.enforce_league_draft_order_meta",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.enforce_leagues_draft_order_mode",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.lock_draft_order_on_start",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.sync_draft_order_on_member_change",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.get_draft_order",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.set_draft_order",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.finalize_due_draft_orders",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.draft_order_notify_due",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.get_season_result",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
       "scope": "tbl.broker_credentials",
       "claim": "table exists in prod",
       "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
@@ -11929,54 +12167,6 @@
     },
     {
       "scope": "tbl.notification_log",
-      "claim": "table exists in prod",
-      "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot."
-    },
-    {
-      "scope": "tbl.app_config",
-      "claim": "table exists in prod",
-      "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot."
-    },
-    {
-      "scope": "tbl.signup_allowlist",
-      "claim": "table exists in prod",
-      "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot."
-    },
-    {
-      "scope": "tbl.market_calendar",
-      "claim": "table exists in prod",
-      "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot."
-    },
-    {
-      "scope": "tbl.market_calendar_coverage",
-      "claim": "table exists in prod",
-      "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot."
-    },
-    {
-      "scope": "tbl.draft_queue",
-      "claim": "table exists in prod",
-      "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot."
-    },
-    {
-      "scope": "tbl.league_draft_order_meta",
-      "claim": "table exists in prod",
-      "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot."
-    },
-    {
-      "scope": "tbl.league_draft_order",
-      "claim": "table exists in prod",
-      "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot."
-    },
-    {
-      "scope": "tbl.league_notifications",
       "claim": "table exists in prod",
       "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
       "resolve": "Re-capture the snapshot."
@@ -12020,13 +12210,13 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 163,
-    "edges": 364,
+    "nodes": 164,
+    "edges": 367,
     "flows": 8,
-    "drift": 55,
-    "driftHigh": 37,
-    "deadCode": 30,
-    "unverified": 52
+    "drift": 26,
+    "driftHigh": 1,
+    "deadCode": 29,
+    "unverified": 8
   },
   "sourceIndex": {
     "edgeFunctions": [
@@ -12455,6 +12645,6 @@
       "ticker-quotes=false",
       "validate-and-record-pick=true"
     ],
-    "dbSnapshot": "sha256:3c923bcd46e36dfa365d24852d7b8fb6ead9ff99a06c3b26dc0853c648e07ded"
+    "dbSnapshot": "sha256:8e08382dfe9edf557c6371cfc39da9fb788590ad82209f15e2e74a7c90dcfc6b"
   }
 }
