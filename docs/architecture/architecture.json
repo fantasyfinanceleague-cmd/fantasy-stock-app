@@ -2,67 +2,22 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "398bf94e55297bffc9dab04405fef636976dc1c1",
-    "commitShort": "398bf94",
+    "commit": "0620200b435746a52a2a2fc9e43599aa8dd4bac6",
+    "commitShort": "0620200",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "ui/mobile-home",
-    "dirty": true,
-    "dirtyPaths": [
-      {
-        "code": "M",
-        "path": "apps/mobile/app/(tabs)/index.tsx"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/components/home/DraftingCard.tsx"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/components/home/PhaseMessageCard.tsx"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/components/home/PreDraftCard.tsx"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/components/home/SeasonCompleteCard.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/home/ThisWeekCard.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/home/buildHomeViewModel.ts"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/lib/home/draftTurn.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/LeagueContext.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/shell/devFixture.ts"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/tests-deno/draft-turn.test.ts"
-      }
-    ],
-    "timestamp": "2026-09-30T05:57:32Z",
-    "sourceHash": "sha256:5070fbfc015c51604c1c4f11d6893704e7c557d4f348218265f28026cb53d3b5",
+    "dirty": false,
+    "dirtyPaths": [],
+    "timestamp": "2026-09-30T06:09:09Z",
+    "sourceHash": "sha256:4bb13e444cc09574a6b32aa18ab4912aceef24342b71a69e0ce44ef29a57349e",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-08-12T04:52:52Z",
-    "ageHours": 1177.1,
-    "ageDays": 49,
+    "ageHours": 1177.3,
+    "ageDays": 49.1,
     "staleAfterDays": 14,
     "stale": true,
     "hash": "sha256:3c923bcd46e36dfa365d24852d7b8fb6ead9ff99a06c3b26dc0853c648e07ded",
@@ -8913,7 +8868,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_season_result')",
       "callSites": [
-        "apps/mobile/components/home/SeasonCompleteCard.tsx:58"
+        "apps/mobile/components/home/SeasonCompleteCard.tsx:100"
       ]
     },
     {
@@ -12225,7 +12180,7 @@
       "apps/mobile/components/home/DraftingCard.tsx:48 -> get_draft_order",
       "apps/mobile/components/home/PreDraftCard.tsx:46 -> get_draft_order",
       "apps/mobile/components/home/PreDraftCard.tsx:47 -> get_league_display_names",
-      "apps/mobile/components/home/SeasonCompleteCard.tsx:58 -> get_season_result",
+      "apps/mobile/components/home/SeasonCompleteCard.tsx:100 -> get_season_result",
       "apps/mobile/lib/LeagueContext.tsx:147 -> get_home_summary",
       "apps/mobile/lib/LeagueContext.tsx:152 -> market_session_status",
       "apps/mobile/lib/home/useHomeLeague.ts:158 -> get_home_league",
