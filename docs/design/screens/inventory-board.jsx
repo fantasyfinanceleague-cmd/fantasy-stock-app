@@ -53,7 +53,7 @@
         <Group id="shell" code="3b-1" name="Sign in and first run" job="From the App Store to your first league, and the account basics."
           notes={[
             'One input style everywhere: label above, 50pt field, brand-blue focus ring, the error in words under the field (it appears instantly). The password checklist shows the server\'s real five rules, with the app\'s existing labels, checking off live as you type.',
-            'Usernames: the rules are 3–20 characters, letters, numbers and underscores (the server\'s own rule). "Taken" is case-insensitive, and a name that fails the content check shows exactly "Username is not allowed".',
+            'Usernames: the rules are 3–20 characters, letters, numbers and underscores (the server\'s own rule). "Taken" is case-insensitive, and a name that fails the content check shows exactly "Username is not allowed". Suggestions keep the case you typed ("Roberto" → "Roberto26").',
             'Sign up keeps its button above the keyboard, so it is never covered.',
             <>Onboarding is three cards on the game surface, skippable, shown once. The copy is the approved generic scoring line. <button type="button" className="b-play b-play--sm" onClick={() => setCard((c) => (c + 1) % 3)}>Next card</button></>,
             'Pick a username appears before the tabs whenever an account has none. It cannot be skipped, but sign-out is always there. Taken names get three available suggestions.',
