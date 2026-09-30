@@ -227,7 +227,9 @@
   // Roberto–Gianluigi, Paolo–Alessandro, Francesco–Andrea.
   // Season gain = the sum of a manager's weekly matchup gains. Roberto's
   // weeks 1–5 are ROBERTO_WEEKS below (sum +$129.99), so his season gain,
-  // his Home chart and his portfolio's gain since the draft all agree.
+  // his Home chart and (in this sample only) his portfolio's gain since the
+  // draft all agree. In production the portfolio's gain also includes the
+  // unscored gaps (draft → Week 1 open, Friday close → Monday open): D1.
   const ROBERTO_WEEKS = [
     { week: 1, gain: 41.3, result: 'W' },
     { week: 2, gain: 58.75, result: 'W' },
@@ -297,8 +299,8 @@
     { name: 'Serie A Traders', phase: 'pre_draft', status: 'Draft Sat 7:00 PM ET', rank: null, record: null },
   ];
 
-  // Home chart: this league's cumulative gain since the draft (value − cost
-  // + realized; no trades yet, so value − cost), one point per trading day.
+  // Home chart: this league's season gain (D1, Concept A: the scored weeks
+  // plus this week live), one point per trading day.
   // Weeks 1–5 end exactly on each week's result; Week 6 follows the matchup's
   // daily closes, and the last point is the LIVE gain. Weekend gaps are zero
   // in this sample (Monday opens at Friday's close), so the chart's rise this
