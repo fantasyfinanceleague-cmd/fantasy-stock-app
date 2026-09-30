@@ -21,6 +21,7 @@ import { todayChange, type TodayPosition } from './todayChange';
 import { teamValue, type StakeMode } from './teamValue';
 import { seasonGain } from './seasonGain';
 import { resolveWeekWindow, type MarketCalendarSession } from './marketWeek';
+import { etDateParts } from '../time/etParts';
 
 export interface HomeLedgerRow {
   symbol: string;
@@ -250,13 +251,18 @@ function dateOnly(iso: string): string {
  * hero's "+$Z today" segment must be the MARKET's day, not UTC's. Found
  * in code review (2026-09-29): after 20:00 ET (00:00 UTC), the old
  * UTC-based `dateOnly` rolled "today" over a day early, so a real
- * same-day trade or gain read as "yesterday" and today showed $0. */
+ * same-day trade or gain read as "yesterday" and today showed $0.
+ *
+ * Orchestrator ask (2026-09-30): routed through etDateParts (validated,
+ * never a silent 0/empty formatToParts fallback). Falls back to the
+ * UTC-based `dateOnly` only if the runtime's Intl genuinely can't supply
+ * year/month/day -- an honest, if imprecise, degraded answer rather than
+ * a crash; this is the same near-midnight-ET risk the function's own
+ * history already documents, not a new one. */
 function etDateOnly(date: Date): string {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
-  }).formatToParts(date);
-  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
-  return `${get('year')}-${get('month')}-${get('day')}`;
+  const p = etDateParts(date);
+  if (!p) return dateOnly(date.toISOString());
+  return `${p.year}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`;
 }
 
 /** Yesterday's close for `symbol`: the latest bar strictly before `now`'s

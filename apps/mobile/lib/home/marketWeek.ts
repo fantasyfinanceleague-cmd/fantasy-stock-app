@@ -21,7 +21,16 @@
  * whatever they're handed in ET correctly, so the fix lives entirely at
  * the one seam where a nominal row becomes a MatchupRow, not scattered
  * through the decision logic that reads it.
+ *
+ * Orchestrator ask (2026-09-30): every date/time extraction here goes
+ * through lib/time/etParts.ts, which returns null on any part Intl fails
+ * to supply, rather than a silent 0/empty default (the shape that made
+ * marketHours.ts:58's `?? '0'` a live "market always reads closed" risk
+ * if Hermes ever drops a part). A null here propagates all the way out
+ * to resolveWeekWindow returning null -- the caller's existing "fall back
+ * to the nominal timestamp" path, never a wrong-but-confident number.
  */
+import { etDateParts, etDateTimeParts } from '../time/etParts';
 
 export interface MarketCalendarSession {
   /** YYYY-MM-DD, America/New_York calendar date (market_calendar.session_date). */
@@ -32,13 +41,12 @@ export interface MarketCalendarSession {
   closeEt: string;
 }
 
-/** The ET calendar date (YYYY-MM-DD) of an instant, DST-aware. */
-function etDateOnlyOf(iso: string): string {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
-  }).formatToParts(new Date(iso));
-  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
-  return `${get('year')}-${get('month')}-${get('day')}`;
+/** The ET calendar date (YYYY-MM-DD) of an instant, DST-aware -- null if
+ * the runtime's Intl couldn't supply year/month/day. */
+function etDateOnlyOf(iso: string): string | null {
+  const p = etDateParts(new Date(iso));
+  if (!p) return null;
+  return `${p.year}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`;
 }
 
 function addDaysToDateStr(dateStr: string, days: number): string {
@@ -57,10 +65,11 @@ function addDaysToDateStr(dateStr: string, days: number): string {
  * league's start date, which can fall on any day) must get the same
  * Monday either way -- an earlier version of this file assumed "Friday
  * minus 4 days" and would have silently mis-anchored on any non-Friday
- * input.
+ * input. Null propagates from etDateOnlyOf (see its doc).
  */
-function mondayOfIsoWeek(dateIso: string): string {
+function mondayOfIsoWeek(dateIso: string): string | null {
   const etDate = etDateOnlyOf(dateIso);
+  if (!etDate) return null;
   const [y, m, d] = etDate.split('-').map(Number);
   const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay(); // 0=Sun .. 6=Sat
   const daysSinceMonday = (dow + 6) % 7; // Mon->0, Tue->1, ..., Sun->6
@@ -77,19 +86,17 @@ function mondayOfIsoWeek(dateIso: string): string {
  * instant, so the guess can be corrected in one step without a timezone
  * library. Exact at every US market hour; never called near the 2 AM DST
  * transition itself, the one moment this technique would need a second
- * pass.
+ * pass. Null if the runtime's Intl couldn't supply every date/time part
+ * (see this file's top doc) -- never a wrong instant computed from a
+ * partially-missing round trip.
  */
-export function etWallClockToUtcIso(dateStr: string, timeStr: string): string {
+export function etWallClockToUtcIso(dateStr: string, timeStr: string): string | null {
   const [y, mo, d] = dateStr.split('-').map(Number);
   const [hh, mm, ss] = timeStr.split(':').map(Number);
   const guessUtcMs = Date.UTC(y, mo - 1, d, hh, mm, ss || 0);
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York', hourCycle: 'h23',
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
-  }).formatToParts(new Date(guessUtcMs));
-  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value ?? 0);
-  const asIfUtcMs = Date.UTC(get('year'), get('month') - 1, get('day'), get('hour'), get('minute'), get('second'));
+  const p = etDateTimeParts(new Date(guessUtcMs));
+  if (!p) return null;
+  const asIfUtcMs = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
   const offsetMs = asIfUtcMs - guessUtcMs; // America/New_York's offset east of UTC, for this instant
   return new Date(guessUtcMs - offsetMs).toISOString();
 }
@@ -110,6 +117,7 @@ export function resolveWeekWindow(
   sessions: MarketCalendarSession[],
 ): { weekStart: string; weekEnd: string } | null {
   const mondayDate = mondayOfIsoWeek(anchorIso);
+  if (!mondayDate) return null;
   const fridayDate = addDaysToDateStr(mondayDate, 4);
   const inWeek = sessions
     .filter((s) => s.sessionDate >= mondayDate && s.sessionDate <= fridayDate)
@@ -117,10 +125,10 @@ export function resolveWeekWindow(
   if (inWeek.length === 0) return null;
   const first = inWeek[0];
   const last = inWeek[inWeek.length - 1];
-  return {
-    weekStart: etWallClockToUtcIso(first.sessionDate, first.openEt),
-    weekEnd: etWallClockToUtcIso(last.sessionDate, last.closeEt),
-  };
+  const weekStart = etWallClockToUtcIso(first.sessionDate, first.openEt);
+  const weekEnd = etWallClockToUtcIso(last.sessionDate, last.closeEt);
+  if (!weekStart || !weekEnd) return null;
+  return { weekStart, weekEnd };
 }
 
 /**
@@ -133,6 +141,7 @@ export function resolveWeekWindow(
  */
 export function standardWeekSessions(anchorIso: string): MarketCalendarSession[] {
   const mondayDate = mondayOfIsoWeek(anchorIso);
+  if (!mondayDate) return []; // dev-fixture only -- an empty calendar is already resolveWeekWindow's handled "no coverage" case
   const sessions: MarketCalendarSession[] = [];
   for (let i = 0; i <= 4; i++) {
     sessions.push({ sessionDate: addDaysToDateStr(mondayDate, i), openEt: '09:30:00', closeEt: '16:00:00' });

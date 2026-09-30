@@ -94,3 +94,40 @@ Deno.test('standardWeekSessions: five weekday sessions, Monday through Friday', 
   assertEquals(sessions.map((s: MarketCalendarSession) => s.sessionDate), ['2026-09-21', '2026-09-22', '2026-09-23', '2026-09-24', '2026-09-25']);
   assertEquals(sessions.every((s: MarketCalendarSession) => s.openEt === '09:30:00' && s.closeEt === '16:00:00'), true);
 });
+
+// ── Orchestrator ask (2026-09-30): a runtime whose Intl drops a required
+// part must degrade to null all the way out, never a wrong-but-confident
+// window (the marketHours.ts:58 "?? '0'" shape this module now avoids
+// via lib/time/etParts.ts). ─────────────────────────────────────────────
+
+Deno.test('etWallClockToUtcIso: a runtime that drops the hour part returns null, never a fabricated midnight', () => {
+  const RealDateTimeFormat = Intl.DateTimeFormat;
+  try {
+    // deno-lint-ignore no-explicit-any
+    (Intl as any).DateTimeFormat = function (...args: unknown[]) {
+      // deno-lint-ignore no-explicit-any
+      const real = new (RealDateTimeFormat as any)(...args);
+      return { formatToParts: (d: Date) => real.formatToParts(d).filter((p: { type: string }) => p.type !== 'hour') };
+    };
+    assertEquals(etWallClockToUtcIso('2026-09-21', '09:30:00'), null);
+  } finally {
+    Intl.DateTimeFormat = RealDateTimeFormat;
+  }
+});
+
+Deno.test('resolveWeekWindow: the missing-part failure propagates all the way out to null', () => {
+  const RealDateTimeFormat = Intl.DateTimeFormat;
+  try {
+    // deno-lint-ignore no-explicit-any
+    (Intl as any).DateTimeFormat = function (...args: unknown[]) {
+      // deno-lint-ignore no-explicit-any
+      const real = new (RealDateTimeFormat as any)(...args);
+      return { formatToParts: (d: Date) => real.formatToParts(d).filter((p: { type: string }) => p.type !== 'day') };
+    };
+    const nominalWeekEnd = '2026-09-25T21:00:00.000Z';
+    const sessions = [{ sessionDate: '2026-09-25', openEt: '09:30:00', closeEt: '16:00:00' }];
+    assertEquals(resolveWeekWindow(nominalWeekEnd, sessions), null);
+  } finally {
+    Intl.DateTimeFormat = RealDateTimeFormat;
+  }
+});
