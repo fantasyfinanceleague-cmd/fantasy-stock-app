@@ -65,7 +65,7 @@ Deno.test({
 
     await t.step('anon and authenticated hold NO write privilege on matchups (table or column level)', async () => {
       for (const role of ['anon', 'authenticated']) {
-        for (const priv of ['INSERT', 'UPDATE', 'DELETE']) {
+        for (const priv of ['INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER']) {
           const r = await db.query<{ ok: boolean }>(`select has_table_privilege($1, 'public.matchups', $2) as ok`, [role, priv]);
           assert(!r.rows[0].ok, `${role} still has ${priv} on matchups`);
         }

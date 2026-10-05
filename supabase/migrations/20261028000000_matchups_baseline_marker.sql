@@ -21,4 +21,9 @@ ALTER TABLE public.matchups ADD COLUMN IF NOT EXISTS baseline_completed_at times
 REVOKE INSERT, UPDATE, DELETE ON public.matchups FROM PUBLIC;
 REVOKE INSERT, UPDATE, DELETE ON public.matchups FROM anon;
 REVOKE INSERT, UPDATE, DELETE ON public.matchups FROM authenticated;
+-- Supabase's default GRANT ALL also gives TRUNCATE (which ignores RLS), REFERENCES
+-- and TRIGGER. Revoke them too, so the lockdown is complete, not just the writes.
+REVOKE TRUNCATE, REFERENCES, TRIGGER ON public.matchups FROM PUBLIC;
+REVOKE TRUNCATE, REFERENCES, TRIGGER ON public.matchups FROM anon;
+REVOKE TRUNCATE, REFERENCES, TRIGGER ON public.matchups FROM authenticated;
 GRANT INSERT, UPDATE, DELETE ON public.matchups TO service_role;

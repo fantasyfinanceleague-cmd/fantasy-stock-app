@@ -528,9 +528,11 @@ Deno.serve(async (req) => {
       // returned above, so it is never refused here.
       const cutOpenMs = windowPlan.open.getTime();
       const tradesBeforeOpen = trades.filter((t: any) => instantBefore(t.created_at, cutOpenMs));
-      const anyOpenHoldings = [...userIds].some((u) => snapshotHoldings(u, drafts, tradesBeforeOpen).length > 0);
+      const openHolderIds = [...userIds].filter((u) => snapshotHoldings(u, drafts, tradesBeforeOpen).length > 0);
       const anyCloseHoldings = [...userHoldings.values()].some((hs) => hs.length > 0);
-      const needsBaseline = anyOpenHoldings || anyCloseHoldings;
+      const needsBaseline = openHolderIds.length > 0 || anyCloseHoldings;
+      const rowUsers = new Set(existingSnapshots.map((r: any) => String(r.user_id)));
+      const openHoldersAllHaveRows = openHolderIds.length > 0 ? openHolderIds.every((u) => rowUsers.has(u)) : null;
       let markerSet = false;
       let markerReadOk = true;
       if (needsBaseline) {
@@ -544,7 +546,7 @@ Deno.serve(async (req) => {
         markerReadOk = !marker.error;
         markerSet = (marker.data ?? []).length > 0;
       }
-      const baselineGate = weekEndBaselineGate({ needsBaseline, markerSet, markerReadOk });
+      const baselineGate = weekEndBaselineGate({ needsBaseline, markerSet, markerReadOk, openHoldersAllHaveRows });
       if (baselineGate !== 'proceed') {
         anyIncomplete = true;
         console.error(`ABORT league ${leagueId} week ${currentWeek}: ${baselineGate} — holdings exist but week-start has not marked the baseline complete; refusing to close a partial portfolio. A week-start heal will baseline it.`);

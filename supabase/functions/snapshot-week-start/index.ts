@@ -25,9 +25,9 @@ import { shouldWriteJobStatus, successMessage, type JobStatusValue, type StoredJ
  * docs/audits/2026-09-30-week-window-audit.md): each league-week has ONE
  * real market-open instant (this week's first trading-day open, from
  * market_calendar) and the cron just checks per-league whether `now` has
- * reached it yet ('not_due' if not — the Tuesday run of a normal week hits
- * this every single time and correctly no-ops, since Monday's run already
- * handled it). This REPLACES the old Alpaca-/v2/calendar holiday check and
+ * reached it yet ('not_due' only before the open. A Tuesday run of a normal week PROCEEDS
+ * and no-ops through the per-week coverage gates, since Monday's run already
+ * baselined the week; the marker paths below record that). This REPLACES the old Alpaca-/v2/calendar holiday check and
  * the Monday/Tuesday day-of-week branch entirely: a stale Alpaca key
  * returning a 401 used to read as "market closed" (CLAUDE.md "success
  * signals" #1) and silently skip every Monday; the calendar table is now the
@@ -311,13 +311,15 @@ async function fetchOpenPrices(
  * caller treats the league-week as incomplete.
  */
 async function markBaseline(supabase: any, leagueId: string, weekNumber: number): Promise<boolean> {
-  const { error } = await supabase
+  // .select() so an update that matched NO rows is a failure, not a silent success.
+  const { data, error } = await supabase
     .from('matchups')
     .update({ baseline_completed_at: new Date().toISOString() })
     .eq('league_id', leagueId)
-    .eq('week_number', weekNumber);
-  if (error) {
-    console.error(`Failed to mark baseline complete for league ${leagueId} week ${weekNumber}:`, error);
+    .eq('week_number', weekNumber)
+    .select('league_id');
+  if (error || (data ?? []).length === 0) {
+    console.error(`Failed to mark baseline complete for league ${leagueId} week ${weekNumber}:`, error ?? 'no matchups rows matched');
     return false;
   }
   return true;

@@ -69,7 +69,7 @@ Deno.test('snapshot-week-start: every completion path sets the marker on matchup
 
 Deno.test('snapshot-week-end: holdings need the matchups marker, and the gate is consulted (S9)', async () => {
   const src = await Deno.readTextFile(FILES[1]);
-  assert(src.includes('weekEndBaselineGate({ needsBaseline, markerSet, markerReadOk })'), 'week-end does not consult the baseline gate');
+  assert(src.includes('weekEndBaselineGate({ needsBaseline, markerSet, markerReadOk, openHoldersAllHaveRows })'), 'week-end does not consult the baseline gate');
   assert(src.includes(".select('baseline_completed_at')"), 'week-end does not read the marker from matchups');
 });
 
