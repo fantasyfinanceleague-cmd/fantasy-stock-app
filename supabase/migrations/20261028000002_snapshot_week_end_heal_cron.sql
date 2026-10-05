@@ -13,6 +13,13 @@
 -- On a normal week it is a no-op, since Friday's run scored it. It only does work
 -- where a refused close can now proceed.
 --
+-- BEHAVIOUR CHANGE (intended, with refresh-market-calendar LOOKBACK_DAYS 7 -> 120):
+-- calendar coverage now reaches ~120 days back, so UNSCORED past weeks of in-season
+-- leagues can be baselined, closed and scored on the next Friday (retroactive
+-- scoring). In prod today this is a no-op: the live leagues' past weeks are scored,
+-- and the August leagues have no matchups. A week older than the lookback that is
+-- still unscored refuses 'no_coverage' loudly on every run.
+--
 -- The schedule is replaced by name, so re-running this migration is harmless. The
 -- apikey comes from vault, as in every other snapshot cron, with no key literal.
 --

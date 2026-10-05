@@ -2,26 +2,18 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "32b8aa47ac9c8fe4f5d1bae82d482a01cc7c3de2",
-    "commitShort": "32b8aa4",
+    "commit": "c92956218390b401da9523e4141dfaaff727997d",
+    "commitShort": "c929562",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "fix/snapshot-jobs-hardening",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "supabase/functions/_shared/week-select.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/snapshot-week-end/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/snapshot-week-start/index.ts"
+        "path": "supabase/migrations/20261028000002_snapshot_week_end_heal_cron.sql"
       }
     ],
-    "timestamp": "2026-10-05T17:27:03Z",
+    "timestamp": "2026-10-05T17:28:01Z",
     "sourceHash": "sha256:b04414f8be797759825130ef1337c66afcdf85081f1ce037d933d1138288db90",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
