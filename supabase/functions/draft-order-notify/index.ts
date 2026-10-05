@@ -32,7 +32,11 @@ import {
   type DeliveryOutcome,
   draftOrderSetMessage,
   MAX_PUSHES_PER_RUN,
+  NOTICE_KINDS,
   nextPushStatus,
+  RENEWAL_KINDS,
+  type RenewalKind,
+  renewalNoticeMessage,
   STALE_SENDING_MS,
 } from './plan.ts';
 
@@ -43,6 +47,9 @@ interface NoticeRow {
   id: string;
   league_id: string;
   user_id: string;
+  kind: string;
+  subject_user_id: string | null;
+  detail: Record<string, unknown> | null;
   push_status: string;
   push_attempts: number;
 }
@@ -63,8 +70,8 @@ Deno.serve(async (req: Request) => {
   const staleIso = new Date(Date.now() - STALE_SENDING_MS).toISOString();
   const { data: rows, error: selErr } = await admin
     .from('league_notifications')
-    .select('id, league_id, user_id, push_status, push_attempts')
-    .eq('kind', 'draft_order_set')
+    .select('id, league_id, user_id, kind, subject_user_id, detail, push_status, push_attempts')
+    .in('kind', [...NOTICE_KINDS])
     .or(`push_status.eq.pending,and(push_status.eq.sending,push_attempted_at.lt.${staleIso})`)
     .order('created_at', { ascending: true })
     .limit(MAX_PUSHES_PER_RUN);
@@ -96,6 +103,28 @@ Deno.serve(async (req: Request) => {
   }
 
   async function deliver(row: NoticeRow): Promise<DeliveryOutcome> {
+    // Renewal notices carry their whole content in `detail`, and their
+    // recipient is not in a draft order (an invitee is not a member yet), so
+    // they skip the order lookup and the membership-based 'not_in_order' skip.
+    if (row.kind !== 'draft_order_set') {
+      if (!(RENEWAL_KINDS as readonly string[]).includes(row.kind)) return 'unknown_kind';
+      const rl = await leagueInfo(row.league_id);
+      if (rl === undefined) return 'lookup_failed';
+      if (rl === null) return 'not_in_order';   // league deleted (a cancelled renewal cascades here)
+      const { token, enabled, lookupFailed } = await getTargetToken(admin, row.user_id);
+      if (lookupFailed) return 'lookup_failed';
+      if (!token || !enabled) return 'no_token';
+      const message = renewalNoticeMessage({
+        kind: row.kind as RenewalKind,
+        leagueName: rl.name,
+        leagueId: row.league_id,
+        detail: row.detail ?? {},
+      });
+      if (!message) return 'unknown_kind';
+      const rr = await sendExpoPush(token, message);
+      return rr.sent ? 'sent' : rr.reason;
+    }
+
     const { data: pos, error: posErr } = await admin
       .from('league_draft_order').select('position')
       .eq('league_id', row.league_id).eq('user_id', row.user_id).maybeSingle();

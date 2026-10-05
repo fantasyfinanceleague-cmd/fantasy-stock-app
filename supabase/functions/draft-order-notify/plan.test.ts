@@ -2,8 +2,15 @@
  * Hermetic tests for draft-order-notify/plan.ts. Run:
  *   deno test supabase/functions/draft-order-notify/plan.test.ts
  */
-import { assertEquals } from 'jsr:@std/assert';
-import { draftOrderSetMessage, formatDraftTime, MAX_PUSH_ATTEMPTS, nextPushStatus, ordinal } from './plan.ts';
+import { assert, assertEquals } from 'jsr:@std/assert';
+import {
+  draftOrderSetMessage,
+  formatDraftTime,
+  MAX_PUSH_ATTEMPTS,
+  nextPushStatus,
+  ordinal,
+  renewalNoticeMessage,
+} from './plan.ts';
 
 Deno.test('ordinal: 1st 2nd 3rd 4th, the teens, and the twenties', () => {
   const got = [1, 2, 3, 4, 10, 11, 12, 13, 14, 21, 22, 23, 24, 101, 111, 112, 113].map(ordinal);
@@ -51,3 +58,53 @@ Deno.test('nextPushStatus: transient failures retry until the budget is spent, t
     assertEquals(nextPushStatus(o, MAX_PUSH_ATTEMPTS), 'failed', o);
   }
 });
+
+const LEAGUE = { leagueName: 'Stock Scudetto', leagueId: 'lg-1' };
+
+Deno.test('renewal invite and nudge: board copy, from the stored detail only', () => {
+  const detail = { commissioner_name: 'Roberto B.', season_number: 2 };
+  const want = 'Roberto B. is running it back. Are you in for Season 2?';
+  assertEquals(renewalNoticeMessage({ kind: 'renewal_invite', detail, ...LEAGUE })?.body, want);
+  assertEquals(renewalNoticeMessage({ kind: 'renewal_nudge', detail, ...LEAGUE })?.body, want);
+  assertEquals(renewalNoticeMessage({ kind: 'renewal_invite', detail, ...LEAGUE })?.title, 'Stock Scudetto');
+});
+
+Deno.test('renewal reply: board copy with the counts snapshotted at reply time', () => {
+  const m = renewalNoticeMessage({
+    kind: 'renewal_reply', ...LEAGUE,
+    detail: { subject_name: 'Gianluigi B.', response: 'in', season_number: 2, in: 4, out: 1, pending: 1 },
+  });
+  assertEquals(m?.body, 'Gianluigi B. is in for Season 2. 4 in · 1 out · 1 to reply.');
+  const out = renewalNoticeMessage({
+    kind: 'renewal_reply', ...LEAGUE,
+    detail: { subject_name: 'Andrea P.', response: 'out', season_number: 2, in: 4, out: 2, pending: 0 },
+  });
+  assertEquals(out?.body, 'Andrea P. is out for Season 2. 4 in · 2 out · 0 to reply.');
+});
+
+Deno.test('renewal kinds: missing detail degrades to a generic name, never "undefined"', () => {
+  const m = renewalNoticeMessage({ kind: 'renewal_invite', detail: {}, ...LEAGUE });
+  assertEquals(m?.body, 'The commissioner is running it back. Are you in for Season 0?');
+  assert(!m?.body.includes('undefined'));
+});
+
+Deno.test('season_set: the time is shown only when stored, in Eastern', () => {
+  const withTime = renewalNoticeMessage({
+    kind: 'season_set', ...LEAGUE,
+    detail: { season_number: 2, draft_date: '2026-10-21T00:00:00Z' },
+  });
+  assertEquals(withTime?.body, 'Season 2 is set. The draft starts at 8:00 PM ET.');
+  const noTime = renewalNoticeMessage({ kind: 'season_set', ...LEAGUE, detail: { season_number: 2 } });
+  assertEquals(noTime?.body, 'Season 2 is set.');
+});
+
+Deno.test('renewal data: the screen and kind are stable for the client router', () => {
+  const m = renewalNoticeMessage({ kind: 'renewal_removed', ...LEAGUE, detail: { season_number: 2 } });
+  assertEquals(m?.data, { type: 'renewal_removed', screen: 'league', league_id: 'lg-1' });
+});
+
+Deno.test('unknown kind: no message, and the row settles as skipped (never retried)', () => {
+  assertEquals(renewalNoticeMessage({ kind: 'nonsense' as never, ...LEAGUE, detail: {} }), null);
+  assertEquals(nextPushStatus('unknown_kind', 1), 'skipped');
+});
+

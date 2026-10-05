@@ -46,6 +46,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { fetchFillPrice } from '../_shared/alpaca-price.ts';
 import { fetchEligibleCategoryIds } from '../_shared/category-eligibility.ts';
+import { tradeRefusalReason } from './gate.ts';
 import {
   fixedNotionalFunding,
   type LeagueRules,
@@ -217,15 +218,18 @@ Deno.serve(async (req: Request) => {
     // ---- League + membership ----------------------------------------------
     const { data: league, error: lgErr } = await admin
       .from('leagues')
-      .select('id, num_rounds, draft_status, stake_mode, budget_amount, notional_per_slot, allow_undraftable')
+      .select('id, num_rounds, draft_status, season_status, stake_mode, budget_amount, notional_per_slot, allow_undraftable')
       .eq('id', leagueId)
       .maybeSingle();
     if (lgErr) return json({ ok: false, reason: 'unhandled' }, 500);
     if (!league) return json({ ok: false, reason: 'league_not_found' }, 404);
     // Trading opens once the draft is done; before that the draft IS the
     // acquisition path.
-    if (league.draft_status !== 'completed') {
-      return json({ ok: false, reason: 'draft_not_completed' }); // 200: game-flow refusal (join-league pattern)
+    // 200: game-flow refusal (join-league pattern). season_completed: Run it back
+    // (record-trade/gate.ts): a finished season is frozen, and trading closes with it.
+    const refusal = tradeRefusalReason(league);
+    if (refusal) {
+      return json({ ok: false, reason: refusal });
     }
 
     const { data: member, error: memErr } = await admin

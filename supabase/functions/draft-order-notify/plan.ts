@@ -68,10 +68,69 @@ export function draftOrderSetMessage(i: {
   };
 }
 
+/** Run it back notice kinds (20261027000001). Copy: the Design Lead's board
+ * (design/your-call-run-it-back @ 4538f60) where it exists; the rest are
+ * PLACEHOLDERS flagged for the Design Lead and must not ship unreviewed. */
+export const RENEWAL_KINDS = ['renewal_invite', 'renewal_reply', 'renewal_nudge', 'renewal_removed', 'season_set'] as const;
+export type RenewalKind = (typeof RENEWAL_KINDS)[number];
+export const NOTICE_KINDS = ['draft_order_set', ...RENEWAL_KINDS] as const;
+
+export interface RenewalNotice {
+  kind: RenewalKind;
+  leagueName: string;
+  leagueId: string;
+  /** league_notifications.detail: the event as it happened, written at event time. */
+  detail: Record<string, unknown>;
+}
+
+/** The push for a renewal notice, built SERVER-SIDE from the stored detail only.
+ * Returns null for an unknown kind (the caller settles that row as skipped). */
+export function renewalNoticeMessage(n: RenewalNotice) {
+  const d = n.detail;
+  const season = Number(d.season_number) || 0;
+  const data = { type: n.kind, screen: 'league', league_id: n.leagueId };
+  switch (n.kind) {
+    case 'renewal_invite':
+    case 'renewal_nudge':
+      // Board copy (inventory.jsx RibPush, mode 'ask').
+      return {
+        title: n.leagueName,
+        body: `${String(d.commissioner_name ?? 'The commissioner')} is running it back. Are you in for Season ${season}?`,
+        data,
+      };
+    case 'renewal_reply': {
+      // Board copy (RibPush, mode 'reply'): "Gianluigi B. is in for Season 2. 4 in · 1 out · 1 to reply."
+      const verb = d.response === 'in' ? 'in' : 'out';
+      return {
+        title: n.leagueName,
+        body: `${String(d.subject_name ?? 'A player')} is ${verb} for Season ${season}. ${Number(d.in) || 0} in · ${Number(d.out) || 0} out · ${Number(d.pending) || 0} to reply.`,
+        data,
+      };
+    }
+    case 'renewal_removed':
+      // PLACEHOLDER copy (Design Lead to write).
+      return {
+        title: n.leagueName,
+        body: `The commissioner has marked you out for Season ${season}.`,
+        data,
+      };
+    case 'season_set':
+      // PLACEHOLDER copy (Design Lead to write). Time only, as the draft-order push.
+      return {
+        title: n.leagueName,
+        body: `Season ${season} is set.${typeof d.draft_date === 'string' ? ` The draft starts at ${formatDraftTime(d.draft_date)} ET.` : ''}`,
+        data,
+      };
+    default:
+      return null;
+  }
+}
+
 export type DeliveryOutcome =
   | 'sent'
   | 'no_token' // no device registered, or notifications turned off
   | 'not_in_order' // left the league (or never in the order) since the notice was created
+  | 'unknown_kind' // a kind this function does not deliver: never retried
   | 'lookup_failed'
   | 'expo_error'
   | 'expo_ticket_error';
@@ -86,6 +145,7 @@ export function nextPushStatus(outcome: DeliveryOutcome, attempts: number): Push
     case 'sent': return 'sent';
     case 'no_token': return 'no_device';
     case 'not_in_order': return 'skipped';
+    case 'unknown_kind': return 'skipped';
     default: return attempts >= MAX_PUSH_ATTEMPTS ? 'failed' : 'pending';
   }
 }

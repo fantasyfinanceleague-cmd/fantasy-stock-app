@@ -30,6 +30,10 @@ export interface LeagueStartState {
   draftDate: string | null; // ISO, or null = TBD
   leagueType: string | null; // leagues.league_type: 'matchup' | 'duration'
   playoffTeams: number | null; // leagues.playoff_teams, as stored (no default)
+  /** Run it back (20261027000002): how many Season 1 invitees have not answered
+   * yet. Counted by the server (pending rows), never inferred. Optional so
+   * ordinary leagues need no value; undefined means 0. */
+  renewalRepliesPending?: number;
 }
 
 export type StartBlocker =
@@ -39,7 +43,8 @@ export type StartBlocker =
   | { code: 'draft_date_not_reached'; draftDate: string }
   | { code: 'not_enough_members'; have: number; need: number }
   | { code: 'invalid_playoff_teams'; playoffTeams: number | null }
-  | { code: 'playoff_teams_exceeds_members'; playoffTeams: number; members: number };
+  | { code: 'playoff_teams_exceeds_members'; playoffTeams: number; members: number }
+  | { code: 'renewal_replies_pending'; pending: number };
 
 /**
  * Every reason the draft cannot start right now, in a stable order (state,
@@ -90,6 +95,13 @@ export function computeStartBlockers(state: LeagueStartState, now: Date): StartB
       playoffTeams: state.playoffTeams!,
       members: state.memberCount,
     });
+  }
+  // Run it back: no start while any invitee has not answered. The DB gate
+  // (trg_leagues_renewal_gate) enforces the same predicate for every role; this
+  // blocker gives the commissioner the reason instead of a raised error. Last,
+  // so the fundamental blockers above are shown first.
+  if ((state.renewalRepliesPending ?? 0) > 0) {
+    blockers.push({ code: 'renewal_replies_pending', pending: state.renewalRepliesPending! });
   }
 
   return blockers;

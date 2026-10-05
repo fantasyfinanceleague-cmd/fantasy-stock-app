@@ -157,6 +157,17 @@ Deno.serve(async (req: Request) => {
     const memberIds = (members ?? []).map((m) => String(m.user_id));
     if (!memberIds.includes(user.id)) return json({ ok: false, reason: 'not_a_member' }, 403);
 
+    // Run it back: invitees who have not answered yet. A COUNT of the pending
+    // rows (a server read; the table grants service_role SELECT only), so a
+    // read failure is a 500, never a silent "0 pending".
+    const { count: pendingCount, error: pendErr } = await admin
+      .from('league_renewal_responses')
+      .select('user_id', { count: 'exact', head: true })
+      .eq('league_id', leagueId)
+      .eq('status', 'pending');
+    if (pendErr) return json({ ok: false, reason: 'unhandled' }, 500);
+    const repliesPending = pendingCount ?? 0;
+
     // Commissioner identity comes ONLY from the verified league row — never
     // from the request body.
     const commissionerId = String(league.commissioner_id ?? '');
@@ -169,6 +180,7 @@ Deno.serve(async (req: Request) => {
       draftDate: league.draft_date ?? null,
       leagueType: league.league_type ?? null,
       playoffTeams: league.playoff_teams == null ? null : Number(league.playoff_teams),
+      renewalRepliesPending: repliesPending,
     };
     const botsAllowed = isBotsAllowedForEmail(BOTS_ALLOWED_EMAILS, user.email);
     const botsNeeded = computeBotsNeeded(state.memberCount, state.numParticipants);
@@ -183,6 +195,7 @@ Deno.serve(async (req: Request) => {
         is_commissioner: isCommissioner(state, user.id),
         bots_allowed: botsAllowed,
         bots_needed: botsNeeded,
+        replies_pending: repliesPending,
         member_count: state.memberCount,
         min_members: MIN_DRAFT_MEMBERS,
       });
