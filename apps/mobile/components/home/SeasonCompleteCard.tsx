@@ -237,6 +237,7 @@ const styles = StyleSheet.create({
   },
   inlineRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'baseline',
   },
 });
