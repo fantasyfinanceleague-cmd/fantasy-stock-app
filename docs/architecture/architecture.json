@@ -2,83 +2,47 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "fddc5973694257e36f57cc3bd34c596ac2cc568c",
-    "commitShort": "fddc597",
+    "commit": "8ec6462f2a3fbfad3332ca05e82372f96e2e496c",
+    "commitShort": "8ec6462",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "ui/mobile-home",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "supabase/functions/_shared/draft-validation.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/_shared/week-window-replay.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/_shared/week-window.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/_shared/week-window.ts"
+        "path": "apps/mobile/app/(tabs)/index.tsx"
       },
       {
         "code": "M",
-        "path": "supabase/functions/process-week-results/index.ts"
+        "path": "apps/mobile/components/home/ThisWeekCard.tsx"
       },
       {
         "code": "M",
-        "path": "supabase/functions/process-week-results/scoring-eligibility.test.ts"
+        "path": "apps/mobile/lib/home/homeCopy.ts"
       },
       {
         "code": "M",
-        "path": "supabase/functions/process-week-results/scoring-eligibility.ts"
+        "path": "apps/mobile/tests-deno/build-home-view-model.test.ts"
       },
       {
         "code": "M",
-        "path": "supabase/functions/process-week-results/user-score.test.ts"
+        "path": "apps/mobile/tests-deno/home-copy.test.ts"
       },
       {
-        "code": "M",
-        "path": "supabase/functions/snapshot-week-end/close.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/snapshot-week-end/close.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/snapshot-week-end/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/snapshot-week-start/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/snapshot-week-start/plan.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/snapshot-week-start/plan.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/20261019000000_process_week_results_heal_crons.sql"
+        "code": "RM",
+        "path": "supabase/migrations/20261024000000_get_home_league_rpc.sql"
       }
     ],
-    "timestamp": "2026-10-05T03:29:13Z",
-    "sourceHash": "sha256:123b00a157727ec4e1e77d19d7897df7c988e421f8c7de19591e5bf739b2b20f",
+    "timestamp": "2026-10-05T04:07:38Z",
+    "sourceHash": "sha256:52d0cf5e08c77fa92e199a9b70e71639afbd5820a49dfa84d5642b30bd4a6432",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-09-30T16:53:15Z",
-    "ageHours": 106.6,
-    "ageDays": 4.4,
+    "ageHours": 107.2,
+    "ageDays": 4.5,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:8e08382dfe9edf557c6371cfc39da9fb788590ad82209f15e2e74a7c90dcfc6b",
@@ -2417,9 +2381,9 @@
       "db": null,
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261018000000_get_home_league_rpc.sql:82"
+          "supabase/migrations/20261024000000_get_home_league_rpc.sql:86"
         ],
-        "latestDefinition": "supabase/migrations/20261018000000_get_home_league_rpc.sql",
+        "latestDefinition": "supabase/migrations/20261024000000_get_home_league_rpc.sql",
         "redefinitions": 1
       },
       "drift": [
@@ -2438,8 +2402,8 @@
       "sublabel": "not in snapshot",
       "kind": "pg-function",
       "source": {
-        "path": "supabase/migrations/20261018000000_get_home_league_rpc.sql",
-        "line": 82
+        "path": "supabase/migrations/20261024000000_get_home_league_rpc.sql",
+        "line": 86
       }
     },
     {
@@ -8286,7 +8250,7 @@
       "payload": "SELECT drafts (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261018000000_get_home_league_rpc.sql:137"
+        "supabase/migrations/20261024000000_get_home_league_rpc.sql:141"
       ]
     },
     {
@@ -8299,7 +8263,7 @@
       "payload": "SELECT leagues (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261018000000_get_home_league_rpc.sql:110"
+        "supabase/migrations/20261024000000_get_home_league_rpc.sql:114"
       ]
     },
     {
@@ -8312,8 +8276,8 @@
       "payload": "SELECT matchups (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261018000000_get_home_league_rpc.sql:117",
-        "supabase/migrations/20261018000000_get_home_league_rpc.sql:205"
+        "supabase/migrations/20261024000000_get_home_league_rpc.sql:121",
+        "supabase/migrations/20261024000000_get_home_league_rpc.sql:209"
       ]
     },
     {
@@ -8326,9 +8290,9 @@
       "payload": "SELECT trades (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261018000000_get_home_league_rpc.sql:145",
-        "supabase/migrations/20261018000000_get_home_league_rpc.sql:172",
-        "supabase/migrations/20261018000000_get_home_league_rpc.sql:193"
+        "supabase/migrations/20261024000000_get_home_league_rpc.sql:149",
+        "supabase/migrations/20261024000000_get_home_league_rpc.sql:176",
+        "supabase/migrations/20261024000000_get_home_league_rpc.sql:197"
       ]
     },
     {
@@ -8341,8 +8305,8 @@
       "payload": "SELECT week_snapshots (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261018000000_get_home_league_rpc.sql:156",
-        "supabase/migrations/20261018000000_get_home_league_rpc.sql:184"
+        "supabase/migrations/20261024000000_get_home_league_rpc.sql:160",
+        "supabase/migrations/20261024000000_get_home_league_rpc.sql:188"
       ]
     },
     {
@@ -12915,8 +12879,8 @@
       "20261014000001_drop_league_seasons_commissioner_write.sql",
       "20261015000000_complete_league_season_guarded.sql",
       "20261017000000_f8_push_tokens_relocation.sql",
-      "20261018000000_get_home_league_rpc.sql",
-      "20261019000000_process_week_results_heal_crons.sql"
+      "20261019000000_process_week_results_heal_crons.sql",
+      "20261024000000_get_home_league_rpc.sql"
     ],
     "config": [
       "draft-autopick-sweep=false",

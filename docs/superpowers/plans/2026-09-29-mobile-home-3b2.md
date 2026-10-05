@@ -33,7 +33,7 @@
 
 ## Orchestrator rulings (GO received 2026-09-29; session moved to Sonnet from this point)
 
-- **F1 → Option A approved.** New RPC `get_home_league(p_league_id uuid) returns jsonb`, migration `20261018000000`–`20261018000009` reserved (renamed from
+- **F1 → Option A approved.** New RPC `get_home_league(p_league_id uuid) returns jsonb`, migration `20261024000000`–`20261024000009` reserved (renamed from 20261018000000 on 2026-10-04 so it sorts after the 20261023000000 start_new_league_season lockdown; renamed from
   `20261016000000` on 2026-09-30 so it sorts after
   `20261017000000_f8_push_tokens_relocation.sql`, landed on main first —
   `supabase db push` refuses a pending file older than the latest applied
