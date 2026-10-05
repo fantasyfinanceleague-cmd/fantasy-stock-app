@@ -58,3 +58,23 @@ Deno.test('snapshot-week-start: the existence-only alreadyEndPriced check is gon
   assert(src.includes('classifyCloseCoverage(userHoldings, existingSnapshots)'),
     'week-start does not use the per-participant closed gate');
 });
+
+Deno.test('snapshot-week-start: every completion path writes the baseline marker (S9)', async () => {
+  const src = await Deno.readTextFile(FILES[0]);
+  // none_expected, complete, closed-complete, and the post-upsert heal.
+  const n = (src.match(/await markBaseline\(/g) ?? []).length;
+  assert(n >= 4, `week-start writes the baseline marker on ${n} path(s); need at least 4 (none_expected, complete, closed-complete, post-upsert)`);
+});
+
+Deno.test('snapshot-week-end: holdings with no rows and no marker are refused, not closed (S9)', async () => {
+  const src = await Deno.readTextFile(FILES[1]);
+  assert(src.includes('weekEndBaselineGate({'), 'week-end does not consult the baseline gate (S9)');
+  assert(src.includes(".from('week_baselines')"), 'week-end does not read the baseline marker');
+});
+
+Deno.test('both: every terminal status is logged to the append-only run log', async () => {
+  for (const f of FILES) {
+    const src = await Deno.readTextFile(f);
+    assert(src.includes(".from('cron_job_runs').insert("), `${f}: terminal runs are not logged to cron_job_runs`);
+  }
+});

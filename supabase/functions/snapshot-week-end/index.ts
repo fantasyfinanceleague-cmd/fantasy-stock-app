@@ -6,6 +6,7 @@ import type { CalendarSession, Coverage as MarketCalendarCoverage } from '../_sh
 import { IN_SEASON_STATUSES, SNAPSHOT_DRAFT_STATUS, isInSeasonLeague } from '../_shared/snapshot-league-scope.ts';
 import { instantAtOrBefore, instantBefore, selectTargetWeeks, type WeekMatchupRow } from '../_shared/week-select.ts';
 import { shouldWriteJobStatus, successMessage, type JobStatusValue, type StoredJobStatus } from '../_shared/job-status.ts';
+import { weekEndBaselineGate } from '../_shared/baseline.ts';
 
 /**
  * Snapshot Week End Prices
@@ -119,6 +120,9 @@ async function updateJobStatus(
   work?: number,
 ) {
   const today = new Date().toISOString().split('T')[0];
+  const message = status === 'success'
+    ? successMessage(work ?? 0, errorMessage ?? '')
+    : errorMessage;
 
   try {
     const { data: existingRow, error: readErr } = await supabase
@@ -130,28 +134,47 @@ async function updateJobStatus(
     // A failed read must not let a trivial write overwrite evidence: write only
     // what the rule would accept with NO existing row AND it is non-trivial.
     const existing: StoredJobStatus | null = readErr ? null : (existingRow as StoredJobStatus | null);
-    const write = readErr
+    const decided = readErr
       ? (status === 'failed' || status === 'retrying' || (status === 'success' && (work ?? 0) > 0))
       : shouldWriteJobStatus(existing, { status, work });
-    if (!write) {
+
+    // The upsert's OWN error is checked (CLAUDE.md success-signal #5: supabase-js
+    // resolves, it does not throw). The run log records the outcome, not the intent.
+    let written = false;
+    if (decided) {
+      const { error: upsertErr } = await supabase
+        .from('cron_job_status')
+        .upsert({
+          job_name: jobName,
+          run_date: today,
+          status,
+          attempt_number: attemptNumber,
+          error_message: message || null,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'job_name,run_date'
+        });
+      if (upsertErr) {
+        console.error(`FAILED to write cron_job_status ${jobName} '${status}':`, upsertErr);
+      } else {
+        written = true;
+      }
+    } else {
       console.log(`cron_job_status ${jobName} ${today}: no-op '${status}' (work=${work ?? 0}) kept existing ${existing?.status ?? 'unknown'} row`);
-      return;
     }
-    const message = status === 'success'
-      ? successMessage(work ?? 0, errorMessage ?? '')
-      : errorMessage;
-    await supabase
-      .from('cron_job_status')
-      .upsert({
+
+    // Every terminal run is logged (append-only cron_job_runs), written or kept.
+    if (status !== 'running') {
+      const { error: logErr } = await supabase.from('cron_job_runs').insert({
         job_name: jobName,
-        run_date: today,
-        status,
         attempt_number: attemptNumber,
-        error_message: message || null,
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: 'job_name,run_date'
+        status,
+        work: work ?? 0,
+        written,
+        message: message || null,
       });
+      if (logErr) console.error('cron_job_runs insert failed:', logErr);
+    }
   } catch (e) {
     console.error('Failed to update job status:', e);
   }
@@ -506,6 +529,44 @@ Deno.serve(async (req) => {
         if (snap.symbol) allSymbols.add(snap.symbol.toUpperCase());
       }
 
+      // S9 (../_shared/baseline.ts), keyed on the OPEN cut and checked per
+      // participant. A holder who held at the open must have a baseline row, or
+      // week-start must have marked this window complete. Otherwise the baseline is
+      // partial or never ran, and closing would score a partial portfolio. Runs
+      // BEFORE coverage, so a holder who sold out before the close still counts.
+      const cutOpenMs = windowPlan.open.getTime();
+      const tradesBeforeOpen = trades.filter((t: any) => instantBefore(t.created_at, cutOpenMs));
+      const openHolders = [...userIds].filter((u) => snapshotHoldings(u, drafts, tradesBeforeOpen).length > 0);
+      const rowUsers = new Set(existingSnapshots.map((r: any) => String(r.user_id)));
+      const openHoldersMissingRows = openHolders.filter((u) => !rowUsers.has(u)).length;
+      let markerPresent = false;
+      let markerMatchesWindow = false;
+      let markerReadOk = true;
+      if (openHolders.length > 0 && openHoldersMissingRows > 0) {
+        const marker = await supabase
+          .from('week_baselines')
+          .select('open_at')
+          .eq('league_id', leagueId)
+          .eq('week_number', currentWeek)
+          .maybeSingle();
+        markerReadOk = !marker.error;
+        markerPresent = !!marker.data;
+        markerMatchesWindow = !!marker.data && Date.parse(marker.data.open_at) === cutOpenMs;
+      }
+      const baselineGate = weekEndBaselineGate({
+        anyOpenHoldings: openHolders.length > 0,
+        openHoldersMissingRows,
+        markerPresent,
+        markerMatchesWindow,
+        markerReadOk,
+      });
+      if (baselineGate !== 'proceed') {
+        anyIncomplete = true;
+        console.error(`ABORT league ${leagueId} week ${currentWeek}: ${baselineGate} — ${openHoldersMissingRows} holder(s) held at the open have no baseline row; refusing to close a partial portfolio. A week-start heal will baseline it.`);
+        results.push({ leagueId, week: currentWeek, updated: 0, newSnapshots: 0, incomplete: true, baselineRefused: baselineGate });
+        continue;
+      }
+
       // 5. COVERAGE GATE — replaces the old existence-only `alreadyProcessed`.
       //    Runs BEFORE the Alpaca call so a complete league costs no quota.
       const coverage = classifyCloseCoverage(userHoldings, existingSnapshots);
@@ -544,11 +605,16 @@ Deno.serve(async (req) => {
       // Positions priced but with no derivable entry price. NOT retryable — no
       // amount of re-running invents a trade record — so they are reported and
       // skipped rather than blocking the league forever.
-      for (const p of work.unbasedPositions) {
-        console.error(
-          `No entry price derivable for mid-week position ${p.userId}/${p.symbol} ` +
-          `in league ${leagueId} — skipping rather than writing a fabricated basis.`
-        );
+      // Not retryable, but NOT silent either: a holder left out of the write is a
+      // partial league-week, so write NOTHING for this league and flag the run.
+      // Reporting 'success' over it is the verdict-scope defect (CLAUDE.md).
+      if (work.unbasedPositions.length > 0) {
+        for (const p of work.unbasedPositions) {
+          console.error(`No entry price derivable for mid-week position ${p.userId}/${p.symbol} in league ${leagueId}.`);
+        }
+        anyIncomplete = true;
+        results.push({ leagueId, week: currentWeek, updated: 0, newSnapshots: 0, incomplete: true, unbasedPositions: work.unbasedPositions.length });
+        continue;
       }
 
       // ABORT: any unpriceable symbol means we write NOTHING for this league this

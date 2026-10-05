@@ -13,6 +13,7 @@ import { IN_SEASON_STATUSES, SNAPSHOT_DRAFT_STATUS, isInSeasonLeague } from '../
 import { classifyCloseCoverage } from '../snapshot-week-end/close.ts';
 import { instantAtOrBefore, instantBefore, selectTargetWeeks, type WeekMatchupRow } from '../_shared/week-select.ts';
 import { shouldWriteJobStatus, successMessage, type JobStatusValue, type StoredJobStatus } from '../_shared/job-status.ts';
+import { baselineMarkerRow } from '../_shared/baseline.ts';
 
 /**
  * Snapshot Week Start Prices
@@ -137,6 +138,9 @@ async function updateJobStatus(
   work?: number,
 ) {
   const today = new Date().toISOString().split('T')[0];
+  const message = status === 'success'
+    ? successMessage(work ?? 0, errorMessage ?? '')
+    : errorMessage;
 
   try {
     const { data: existingRow, error: readErr } = await supabase
@@ -148,28 +152,47 @@ async function updateJobStatus(
     // A failed read must not let a trivial write overwrite evidence: write only
     // what the rule would accept with NO existing row AND it is non-trivial.
     const existing: StoredJobStatus | null = readErr ? null : (existingRow as StoredJobStatus | null);
-    const write = readErr
+    const decided = readErr
       ? (status === 'failed' || status === 'retrying' || (status === 'success' && (work ?? 0) > 0))
       : shouldWriteJobStatus(existing, { status, work });
-    if (!write) {
+
+    // The upsert's OWN error is checked (CLAUDE.md success-signal #5: supabase-js
+    // resolves, it does not throw). The run log records the outcome, not the intent.
+    let written = false;
+    if (decided) {
+      const { error: upsertErr } = await supabase
+        .from('cron_job_status')
+        .upsert({
+          job_name: jobName,
+          run_date: today,
+          status,
+          attempt_number: attemptNumber,
+          error_message: message || null,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'job_name,run_date'
+        });
+      if (upsertErr) {
+        console.error(`FAILED to write cron_job_status ${jobName} '${status}':`, upsertErr);
+      } else {
+        written = true;
+      }
+    } else {
       console.log(`cron_job_status ${jobName} ${today}: no-op '${status}' (work=${work ?? 0}) kept existing ${existing?.status ?? 'unknown'} row`);
-      return;
     }
-    const message = status === 'success'
-      ? successMessage(work ?? 0, errorMessage ?? '')
-      : errorMessage;
-    await supabase
-      .from('cron_job_status')
-      .upsert({
+
+    // Every terminal run is logged (append-only cron_job_runs), written or kept.
+    if (status !== 'running') {
+      const { error: logErr } = await supabase.from('cron_job_runs').insert({
         job_name: jobName,
-        run_date: today,
-        status,
         attempt_number: attemptNumber,
-        error_message: message || null,
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: 'job_name,run_date'
+        status,
+        work: work ?? 0,
+        written,
+        message: message || null,
       });
+      if (logErr) console.error('cron_job_runs insert failed:', logErr);
+    }
   } catch (e) {
     console.error('Failed to update job status:', e);
   }
@@ -294,6 +317,30 @@ async function fetchOpenPrices(
   }
 
   return prices;
+}
+
+/**
+ * S9: mark a league-week's baseline COMPLETE (../_shared/baseline.ts). Written
+ * whenever week-start has finished the week, including the zero-row cases
+ * (nothing held at the open) and a healed week. week-end refuses to close a
+ * league-week that has holdings but no rows AND no marker. Returns false (and
+ * logs) on a failed write, so the caller treats the league-week as incomplete.
+ */
+async function markBaseline(
+  supabase: any,
+  leagueId: string,
+  weekNumber: number,
+  windowPlan: { open: Date; openSessionDate: string },
+  participants: number,
+  rowsWritten: number,
+): Promise<boolean> {
+  const row = baselineMarkerRow(leagueId, weekNumber, windowPlan.open, windowPlan.openSessionDate, participants, rowsWritten);
+  const { error } = await supabase.from('week_baselines').upsert(row, { onConflict: 'league_id,week_number' });
+  if (error) {
+    console.error(`Failed to mark baseline complete for league ${leagueId} week ${weekNumber}:`, error);
+    return false;
+  }
+  return true;
 }
 
 // Holdings come from ../_shared/snapshot-holdings.ts (shared with
@@ -608,6 +655,12 @@ Deno.serve(async (req) => {
       // baseline can never be re-taken after a close.
       if (existingSnapshots.some((r: any) => r.week_end_price != null)) {
         if (classifyCloseCoverage(userHoldings, existingSnapshots) === 'complete') {
+          const holders = [...userHoldings.values()].filter((h) => h.length > 0).length;
+          if (!(await markBaseline(supabase, leagueId, currentWeek, windowPlan, holders, existingSnapshots.length))) {
+            anyIncomplete = true;
+            results.push({ leagueId, week: currentWeek, incomplete: true, markerWriteFailed: true });
+            continue;
+          }
           console.log(`League ${leagueId} week ${currentWeek}: already fully closed, skipping week-start snapshot`);
           results.push({ leagueId, week: currentWeek, users: userIds.size, snapshots: coveredUserIds.size, skipped: 'already_end_priced' });
           continue;
@@ -619,12 +672,25 @@ Deno.serve(async (req) => {
       }
 
       const coverage = classifyCoverage(userHoldings, coveredUserIds);
+      // Nothing held at the open is a COMPLETE baseline with zero rows, and the
+      // marker says so (S9: zero rows alone cannot tell this apart from "never ran").
       if (coverage === 'none_expected') {
+        if (!(await markBaseline(supabase, leagueId, currentWeek, windowPlan, 0, 0))) {
+          anyIncomplete = true;
+          results.push({ leagueId, week: currentWeek, incomplete: true, markerWriteFailed: true });
+          continue;
+        }
         console.log(`No holdings to snapshot for league ${leagueId} week ${currentWeek}, skipping`);
         results.push({ leagueId, week: currentWeek, users: userIds.size, snapshots: 0, skipped: 'no_holdings' });
         continue;
       }
       if (coverage === 'complete') {
+        const holders = [...userHoldings.values()].filter((h) => h.length > 0).length;
+        if (!(await markBaseline(supabase, leagueId, currentWeek, windowPlan, holders, existingSnapshots.length))) {
+          anyIncomplete = true;
+          results.push({ leagueId, week: currentWeek, incomplete: true, markerWriteFailed: true });
+          continue;
+        }
         console.log(`Snapshots already COMPLETE for league ${leagueId} week ${currentWeek} (${coveredUserIds.size} participants), skipping`);
         results.push({ leagueId, week: currentWeek, users: userIds.size, snapshots: coveredUserIds.size, skipped: 'already_complete' });
         continue;
@@ -698,6 +764,16 @@ Deno.serve(async (req) => {
         anyIncomplete = true;
         console.error(`Failed to upsert snapshots for league ${leagueId}:`, upsertErr);
         results.push({ leagueId, week: currentWeek, users: userIds.size, snapshots: 0, writeError: true });
+        continue;
+      }
+
+      // The baseline is now complete for every holder (usersToWrite was every
+      // uncovered holder, and buildPricedRows wrote them all). Mark it, so a later
+      // week-end can close this week even if zero rows were ever written for it.
+      const holders = [...userHoldings.values()].filter((h) => h.length > 0).length;
+      if (!(await markBaseline(supabase, leagueId, currentWeek, windowPlan, holders, existingSnapshots.length + snapshots.length))) {
+        anyIncomplete = true;
+        results.push({ leagueId, week: currentWeek, users: userIds.size, snapshots: snapshots.length, markerWriteFailed: true });
         continue;
       }
 
