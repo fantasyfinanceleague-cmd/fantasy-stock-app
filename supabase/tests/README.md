@@ -73,8 +73,13 @@ It covers:
 - call-time: a member gets the ranking, a non-member gets zero rows (RLS), anon
   is refused, a NULL or negative week raises
 
-Not yet covered: a tie on win % that head-to-head separates, and an unbalanced
-head-to-head set (both order-sensitive branches of the core).
+Head-to-head: covered for a win-% tie that head-to-head separates (join order
+and season gain both point the other way), and for an unbalanced set that
+falls through to season gain. Both assert through-latest equals the 1-arg.
+
+Known gap (accepted for 1.2.0): the roster comes from `league_standings`, as in
+the 1-arg. A manager whose standings row failed to write is dropped by both
+overloads. The follow-up fix must change both together.
 
 ## start_league_playoffs.pglite.test.ts
 

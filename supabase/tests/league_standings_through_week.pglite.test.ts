@@ -245,3 +245,106 @@ Deno.test({
     });
   },
 });
+
+// ---------------------------------------------------------------------------
+// The order-sensitive branches of the core (F4, Orchestrator 2026-10-05):
+// (1) head-to-head SEPARATES a win-% tie, and a join order / season gain
+//     fixture would put the other manager first;
+// (2) an UNBALANCED set (not every pair met the same number of times) skips
+//     head-to-head and falls through to season gain.
+// Both assert through-latest == 1-arg, so the overload matches the ranking.
+// ---------------------------------------------------------------------------
+
+type Game = [number, string, string | null, number, number | null, string | null, boolean];
+
+/** A fresh database with the 1-arg and the through-week overload loaded verbatim. */
+async function freshDb() {
+  const db = new PGlite();
+  await db.exec(SCHEMA);
+  await db.exec(await mig('20261011000000_league_standings_ranked.sql'));
+  await db.exec(await mig('20261030000000_league_standings_ranked_through_week.sql'));
+  return db;
+}
+
+/** A league whose standings are derived from its matchups, as the server
+ * writes them. `members` is the join order. Returns the league id. */
+async function derivedLeague(db: PGlite, members: string[], games: Game[]): Promise<string> {
+  const q = async (s: string, p: unknown[] = []) => (await db.query(s, p)).rows as Row[];
+  const uid = (name: string) => `00000000-0000-4000-8000-${name.charCodeAt(0).toString(16).padStart(12, '0')}`;
+  const [{ id: lg }] = await q(`insert into leagues (name) values ('t') returning id`);
+  for (const [i, m] of members.entries()) {
+    await q(`insert into league_members (league_id, user_id, joined_at) values ($1,$2, '2026-09-01T00:00Z'::timestamptz + ($3 || ' minutes')::interval)`,
+      [lg, uid(m), String(i)]);
+  }
+  for (const [week, t1, t2, g1, g2, winner, tie] of games) {
+    await q(`insert into matchups (league_id, week_number, team1_user_id, team2_user_id, team1_gain, team2_gain, winner_user_id, is_tie, is_playoff)
+      values ($1,$2,$3,$4,$5,$6,$7,$8,false)`,
+      [lg, week, uid(t1), t2 === null ? null : uid(t2), g1, g2, winner === null ? null : uid(winner), tie]);
+  }
+  for (const m of members) {
+    const rows = await q(`
+      select
+        count(*) filter (where team2_user_id is not null and winner_user_id = $2) w,
+        count(*) filter (where team2_user_id is not null and winner_user_id is not null and winner_user_id <> $2) l,
+        count(*) filter (where team2_user_id is not null and is_tie) t,
+        coalesce(sum(case when team1_user_id = $2 then team1_gain else team2_gain end), 0) pf,
+        coalesce(sum(case when team1_user_id = $2 then coalesce(team2_gain, 0) else team1_gain end), 0) pa
+      from matchups where league_id = $1 and not is_playoff and team1_gain is not null
+        and ($2 in (team1_user_id, team2_user_id))`, [lg, uid(m)]);
+    const r = rows[0];
+    await q(`insert into league_standings (league_id, user_id, wins, losses, ties, points_for, points_against) values ($1,$2,$3,$4,$5,$6,$7)`,
+      [lg, uid(m), r.w, r.l, r.t, r.pf, r.pa]);
+  }
+  return lg;
+}
+
+/** Both rankings for a league, as {user letter, rank} rows, plus the check
+ * that they are identical. */
+async function bothRankings(db: PGlite, lg: string, weeks: number) {
+  const q = async (s: string, p: unknown[] = []) => (await db.query(s, p)).rows as Row[];
+  const letterOf = (id: string) => String.fromCharCode(parseInt(id.slice(-12), 16));
+  const pick = (rows: Row[]) => rows.map((r) => ({ u: letterOf(r.user_id), rank: Number(r.rank), pf: Number(r.points_for), pa: Number(r.points_against), gp: Number(r.games_played) }));
+  const oneArg = pick(await q(`select user_id, rank, points_for, points_against, games_played from league_standings_ranked($1) order by rank`, [lg]));
+  const through = pick(await q(`select user_id, rank, points_for, points_against, games_played from league_standings_ranked($1, $2) order by rank`, [lg, weeks]));
+  return { oneArg, through };
+}
+
+Deno.test({
+  name: 'league_standings_ranked: head-to-head separates a win-% tie; unbalanced sets fall to season gain',
+  sanitizeResources: false,
+  sanitizeOps: false,
+  async fn(t) {
+    // (1) Q and R both finish 1-1 (win % 0.5). Q beat R head-to-head. R joined
+    // FIRST and has the bigger season gain, so only head-to-head puts Q ahead.
+    await t.step('head-to-head separates a win-% tie, ahead of join order and season gain', async () => {
+      const db = await freshDb();
+      const lg = await derivedLeague(db, ['P', 'R', 'Q', 'S'], [
+        [1, 'Q', 'R', 5, -2, 'Q', false],
+        [1, 'P', 'S', 4, -4, 'P', false],
+        [2, 'P', 'Q', 3, -1, 'P', false],
+        [2, 'R', 'S', 20, -20, 'R', false],
+      ]);
+      const { oneArg, through } = await bothRankings(db, lg, 2);
+      assertEquals(through, oneArg);
+      assertEquals(through.map((r) => r.u), ['P', 'Q', 'R', 'S']);
+      await db.close();
+    });
+
+    // (2) A 4-cycle: each manager 1-1, but only four of the six pairs met, so
+    // the set is unbalanced and head-to-head is skipped. Season gain decides:
+    // Z 27, W 14, X 5, Y 4 (join order would have been W, X, Y, Z).
+    await t.step('an unbalanced tied set skips head-to-head and falls to season gain', async () => {
+      const db = await freshDb();
+      const lg = await derivedLeague(db, ['W', 'X', 'Y', 'Z'], [
+        [1, 'W', 'X', 20, -5, 'W', false],
+        [2, 'X', 'Y', 10, -8, 'X', false],
+        [3, 'Y', 'Z', 12, -3, 'Y', false],
+        [4, 'Z', 'W', 30, -6, 'Z', false],
+      ]);
+      const { oneArg, through } = await bothRankings(db, lg, 4);
+      assertEquals(through, oneArg);
+      assertEquals(through.map((r) => r.u), ['Z', 'W', 'X', 'Y']);
+      await db.close();
+    });
+  },
+});

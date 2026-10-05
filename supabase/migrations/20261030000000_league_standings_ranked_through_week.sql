@@ -67,6 +67,14 @@
 --   Each function therefore gets an explicit revoke from public, anon, authenticated
 --   and service_role, then a grant to authenticated and service_role only.
 --
+-- KNOWN GAP (accepted for 1.2.0, Orchestrator 2026-10-05): the roster (the set
+--   of managers ranked) comes from league_standings, like the 1-arg function.
+--   A manager whose standings row failed to write (process-week-results logs and
+--   continues) is dropped by BOTH overloads, so they still agree. Fixing it means
+--   unioning the scored matchup participants into the roster. That must change
+--   BOTH overloads together, or the movement arrows (through-week vs current)
+--   would stop agreeing. Follow-up, not part of this migration.
+--
 -- ---------------------------------------------------------------------------
 -- POST-PUSH EFFECT CHECKS (run each separately, after `supabase db push`)
 --   -- 1. Both overloads. Expect, for EACH row: no anon=, no bare =X (PUBLIC),
