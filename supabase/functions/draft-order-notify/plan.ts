@@ -1,3 +1,10 @@
+import {
+  renewalInviteBody,
+  renewalRemovedBody,
+  renewalReplyBody,
+  seasonSetBody,
+} from '../_shared/renewal-copy.ts';
+
 /**
  * Pure decisions for draft-order-notify — no DB, no network, hermetically
  * tested in plan.test.ts.
@@ -68,9 +75,8 @@ export function draftOrderSetMessage(i: {
   };
 }
 
-/** Run it back notice kinds (20261027000001). Copy: the Design Lead's board
- * (design/your-call-run-it-back @ 4538f60) where it exists; the rest are
- * PLACEHOLDERS flagged for the Design Lead and must not ship unreviewed. */
+/** Run it back notice kinds (20261027000001). Copy: _shared/renewal-copy.ts, the
+ * 3c prompt's "Run it back" section (design @ 3244d02). */
 export const RENEWAL_KINDS = ['renewal_invite', 'renewal_reply', 'renewal_nudge', 'renewal_removed', 'season_set'] as const;
 export type RenewalKind = (typeof RENEWAL_KINDS)[number];
 export const NOTICE_KINDS = ['draft_order_set', ...RENEWAL_KINDS] as const;
@@ -84,41 +90,48 @@ export interface RenewalNotice {
 }
 
 /** The push for a renewal notice, built SERVER-SIDE from the stored detail only.
- * Returns null for an unknown kind (the caller settles that row as skipped). */
+ * Every string comes from _shared/renewal-copy.ts. Returns null for an unknown
+ * kind (the caller settles that row as skipped). */
 export function renewalNoticeMessage(n: RenewalNotice) {
   const d = n.detail;
   const season = Number(d.season_number) || 0;
   const data = { type: n.kind, screen: 'league', league_id: n.leagueId };
+  const num = (v: unknown) => Number(v) || 0;
   switch (n.kind) {
     case 'renewal_invite':
     case 'renewal_nudge':
-      // Board copy (inventory.jsx RibPush, mode 'ask').
       return {
         title: n.leagueName,
-        body: `${String(d.commissioner_name ?? 'The commissioner')} is running it back. Are you in for Season ${season}?`,
+        body: renewalInviteBody({ commissioner: String(d.commissioner_name ?? 'The commissioner'), season }),
         data,
       };
-    case 'renewal_reply': {
-      // Board copy (RibPush, mode 'reply'): "Gianluigi B. is in for Season 2. 4 in · 1 out · 1 to reply."
-      const verb = d.response === 'in' ? 'in' : 'out';
+    case 'renewal_reply':
       return {
         title: n.leagueName,
-        body: `${String(d.subject_name ?? 'A player')} is ${verb} for Season ${season}. ${Number(d.in) || 0} in · ${Number(d.out) || 0} out · ${Number(d.pending) || 0} to reply.`,
+        body: renewalReplyBody({
+          name: String(d.subject_name ?? 'A player'),
+          response: d.response === 'in' ? 'in' : 'out',
+          season,
+          running: num(d.in),
+          out: num(d.out),
+          noReply: num(d.pending),
+        }),
         data,
       };
-    }
     case 'renewal_removed':
-      // PLACEHOLDER copy (Design Lead to write).
       return {
         title: n.leagueName,
-        body: `The commissioner has marked you out for Season ${season}.`,
+        body: renewalRemovedBody({ commissioner: String(d.commissioner_name ?? 'The commissioner'), season, league: n.leagueName }),
         data,
       };
     case 'season_set':
-      // PLACEHOLDER copy (Design Lead to write). Time only, as the draft-order push.
       return {
         title: n.leagueName,
-        body: `Season ${season} is set.${typeof d.draft_date === 'string' ? ` The draft starts at ${formatDraftTime(d.draft_date)} ET.` : ''}`,
+        body: seasonSetBody({
+          league: n.leagueName,
+          season,
+          draftDate: typeof d.draft_date === 'string' ? d.draft_date : null,
+        }),
         data,
       };
     default:
