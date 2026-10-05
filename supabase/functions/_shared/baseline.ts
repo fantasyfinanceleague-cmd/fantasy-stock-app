@@ -1,36 +1,28 @@
 /**
- * S9: may snapshot-week-end close a league-week, given the baseline evidence?
+ * S9: may snapshot-week-end close a league-week, given the baseline marker?
  *
  * THE DEFECT: week-end writes rows for traded symbols even when week-start never
- * baselined the holder. A holder who held the symbol at the OPEN but has no row
- * gets a row priced at their mid-week buy and sized to the CLOSE quantity, and the
- * all-or-nothing family (CLAUDE.md) has no guard for that partial portfolio.
+ * baselined the week. Closing then scores a PARTIAL portfolio, the all-or-nothing
+ * family (CLAUDE.md). Zero rows cannot tell "nothing held at the open" from "the
+ * baseline never ran", so the marker decides it.
  *
- * THE RULE, keyed on the OPEN cut (the same set week-start baselines):
- *   - nobody held anything at the open       -> proceed (every holder bought mid-week;
- *                                               zero rows is then correct, cc26857)
- *   - the baseline marker is unreadable       -> refuse (fail closed)
- *   - the marker is present and matches this
- *     week's open (not a stale prior season)  -> proceed (week-start finished it)
- *   - every open holder already has a row     -> proceed (complete by rows; covers
- *                                               legacy weeks written before the marker)
- *   - any open holder has no row              -> refuse: the baseline is partial or
- *                                               never ran
- * The refusal is recoverable: a later week-start heal baselines the missing
- * participants from the cut's open session bar and writes the marker.
+ * THE RULE: a league-week with any holding (at the open or the close) may close
+ * only when matchups.baseline_completed_at is set. Week-start sets it after its
+ * rows commit, or after confirming nothing was held at the open. A week with
+ * nothing held at either cut needs no marker.
+ *   - cc26857 (every holder bought mid-week): nothing held at the open. Week-start
+ *     still sets the marker with zero rows, so the close proceeds with zero
+ *     baseline rows, and the mid-week rows are correct.
+ *   - a marker read that fails refuses (fail closed).
  *
  * Pure: no DB. See baseline.test.ts.
  */
 
 export interface BaselineEvidence {
-  /** At least one participant held a position at the OPEN cut. */
-  anyOpenHoldings: boolean;
-  /** Open-cut holders with NO week_snapshots row for this league-week. */
-  openHoldersMissingRows: number;
-  /** A week_baselines row exists for (league, week). */
-  markerPresent: boolean;
-  /** That row's open_at equals this week's open (guards against a stale prior season). */
-  markerMatchesWindow: boolean;
+  /** The league-week has a holding at the open or the close. */
+  needsBaseline: boolean;
+  /** matchups.baseline_completed_at is set for this league-week. */
+  markerSet: boolean;
   /** The marker read succeeded. A failed read refuses (fail closed). */
   markerReadOk: boolean;
 }
@@ -38,37 +30,7 @@ export interface BaselineEvidence {
 export type BaselineGate = 'proceed' | 'refuse_no_baseline' | 'refuse_marker_unreadable';
 
 export function weekEndBaselineGate(e: BaselineEvidence): BaselineGate {
-  if (!e.anyOpenHoldings) return 'proceed';
+  if (!e.needsBaseline) return 'proceed';
   if (!e.markerReadOk) return 'refuse_marker_unreadable';
-  if (e.markerPresent && e.markerMatchesWindow) return 'proceed';
-  if (e.openHoldersMissingRows === 0) return 'proceed';
-  return 'refuse_no_baseline';
-}
-
-/** The week_baselines row week-start writes once a league-week's baseline is complete. */
-export interface BaselineMarkerRow {
-  league_id: string;
-  week_number: number;
-  open_at: string;
-  open_session_date: string;
-  participants: number;
-  rows_written: number;
-}
-
-export function baselineMarkerRow(
-  leagueId: string,
-  weekNumber: number,
-  openAt: Date,
-  openSessionDate: string,
-  participants: number,
-  rowsWritten: number,
-): BaselineMarkerRow {
-  return {
-    league_id: leagueId,
-    week_number: weekNumber,
-    open_at: openAt.toISOString(),
-    open_session_date: openSessionDate,
-    participants,
-    rows_written: rowsWritten,
-  };
+  return e.markerSet ? 'proceed' : 'refuse_no_baseline';
 }

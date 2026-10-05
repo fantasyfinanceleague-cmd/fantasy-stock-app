@@ -59,22 +59,38 @@ Deno.test('snapshot-week-start: the existence-only alreadyEndPriced check is gon
     'week-start does not use the per-participant closed gate');
 });
 
-Deno.test('snapshot-week-start: every completion path writes the baseline marker (S9)', async () => {
+Deno.test('snapshot-week-start: every completion path sets the marker on matchups (S9)', async () => {
   const src = await Deno.readTextFile(FILES[0]);
-  // none_expected, complete, closed-complete, and the post-upsert heal.
-  const n = (src.match(/await markBaseline\(/g) ?? []).length;
-  assert(n >= 4, `week-start writes the baseline marker on ${n} path(s); need at least 4 (none_expected, complete, closed-complete, post-upsert)`);
+  const n = (src.match(/await markBaseline\(supabase, leagueId, currentWeek\)/g) ?? []).length;
+  assert(n >= 4, `week-start sets the marker on ${n} path(s); need at least 4 (none_expected, complete, closed-complete, post-upsert)`);
+  assert(src.includes(".from('matchups')\n    .update({ baseline_completed_at"),
+    'the marker is not written to matchups.baseline_completed_at');
 });
 
-Deno.test('snapshot-week-end: holdings with no rows and no marker are refused, not closed (S9)', async () => {
+Deno.test('snapshot-week-end: holdings need the matchups marker, and the gate is consulted (S9)', async () => {
   const src = await Deno.readTextFile(FILES[1]);
-  assert(src.includes('weekEndBaselineGate({'), 'week-end does not consult the baseline gate (S9)');
-  assert(src.includes(".from('week_baselines')"), 'week-end does not read the baseline marker');
+  assert(src.includes('weekEndBaselineGate({ needsBaseline, markerSet, markerReadOk })'), 'week-end does not consult the baseline gate');
+  assert(src.includes(".select('baseline_completed_at')"), 'week-end does not read the marker from matchups');
 });
 
-Deno.test('both: every terminal status is logged to the append-only run log', async () => {
+Deno.test('both: no run log is written (cron_job_status only, approved)', async () => {
   for (const f of FILES) {
     const src = await Deno.readTextFile(f);
-    assert(src.includes(".from('cron_job_runs').insert("), `${f}: terminal runs are not logged to cron_job_runs`);
+    assertFalse(src.includes("cron_job_runs"), `${f}: still writes the run log`);
   }
 });
+
+Deno.test('snapshot-week-start: the marker is never set at the window rewrite, and the heal sets it only after the upsert succeeds (S9)', async () => {
+  const src = await Deno.readTextFile(FILES[0]);
+  const rw = src.indexOf('if (windowPlan.rewrite) {');
+  const rwEnd = src.indexOf('rewrote matchups window', rw);
+  assert(rw >= 0 && rwEnd > rw, 'could not locate the window rewrite block');
+  assertFalse(src.slice(rw, rwEnd).includes('markBaseline('),
+    'the marker is set inside the window rewrite; it must be set only after rows commit');
+  const snapUpsert = src.indexOf('.upsert(snapshots');
+  const upsertErr = src.indexOf('if (upsertErr) {', snapUpsert);
+  const lastMark = src.lastIndexOf('await markBaseline(');
+  assert(snapUpsert >= 0 && upsertErr > snapUpsert && lastMark > upsertErr,
+    'the heal sets the marker before checking the upsert error (an aborted write could leave it set)');
+});
+
