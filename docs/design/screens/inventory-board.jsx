@@ -126,6 +126,53 @@
           <Fit caption="Playoff bracket · 6 teams" note="3 weeks; seeds 1–2 get first-round byes (new copy; round names decided)"><I.Playoffs6 /></Fit>
         </Group>
 
+        <section className="b-sec" id="call-run-it-back" aria-labelledby="call-run-it-back-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n">?</span>
+            <div>
+              <h2 id="call-run-it-back-h">Your call: Run it back</h2>
+              <p className="b-job">Season 1 of Stock Scudetto is over (Roberto B. won, 11–3). The commissioner renews the league so the same group plays Season 2. Four choices to make, then the ways in. All copy here is new. Anything tagged <b>Needs backend</b> depends on the renewal plan being scoped now: today's "start new season" deletes the matchups, keeps the old teams and skips the draft, so it can't be used as it is.</p>
+            </div>
+          </header>
+          <div className="b-ask" style={{ marginTop: 0, marginBottom: 28, maxWidth: '84ch' }}>
+            <h3>Your call · our leans</h3>
+            <ol style={{ margin: 0, paddingLeft: 20, display: 'grid', gap: 6 }}>
+              <li><b>Who's in: everyone carries over</b>, with "I'm out" until the draft order is set. New people join with the league's invite code until the draft.</li>
+              <li><b>Teams: a new draft.</b> Draft night is the best moment in the game, and last season's luck doesn't carry over. Keepers can come later.</li>
+              <li><b>Settings: everything carries over</b>, and the commissioner can change any of it on one review screen before the draft.</li>
+              <li><b>History: Season 1 stays.</b> A champion banner on the League tab until Season 2's draft, and League › History keeps every season's standings, matchups and draft.</li>
+            </ol>
+          </div>
+
+          <h3 className="b-sub">Ways in</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Home · season complete (commissioner)" note='"Start next season" becomes a "Run it back?" card. Members see the champion card without it.'><I.RibHome /></Fit>
+            <Fit caption="League tab · season over (commissioner)" note="The champion banner, the commissioner's action, and Season 1's final standings."><I.RibLeague /></Fit>
+            <Fit caption="Push · a member's phone" note="Sent when the commissioner starts Season 2. With opt-in (a·B) it asks instead of telling."><I.RibPush /></Fit>
+          </div>
+
+          <h3 className="b-sub">(a) Who's in</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="A · everyone carries over (lean)" note="You're in by default; one tap to drop out until the order is set. The league never stalls waiting for replies."><I.RibWhosIn mode="auto" /></Fit>
+            <Fit caption="B · each member says I'm in" note="Nobody plays by accident, but quiet members stall the start; if fewer than 4 say yes by the deadline, the draft can't start."><I.RibWhosIn mode="optin" /></Fit>
+            <Fit caption="C · the commissioner picks" note="Fast and decisive, but a member can be dropped without asking. New people join with the invite code in every option."><I.RibWhosIn mode="commish" /></Fit>
+          </div>
+
+          <h3 className="b-sub">(b) How teams start</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="A · new draft (lean)" note="Fresh and fair; the draft order is new (Random or Manual, set an hour before). Uses the existing draft."><I.RibTeams mode="draft" /></Fit>
+            <Fit caption="B · keep teams" note="No draft night, and last season's best team starts ahead on picks. Needs backend: restart every slot at $2,000 at Week 1's open."><I.RibTeams mode="keep" /></Fit>
+            <Fit caption="C · keepers (keep up to 2)" note="Continuity plus a draft, the fantasy-football favourite. Needs backend: keeper picks and a shorter draft. A good later upgrade."><I.RibTeams mode="keepers" /></Fit>
+          </div>
+
+          <h3 className="b-sub">(c) Settings · (d) History</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Season 2 review (commissioner)" note="Every Season 1 setting carried over, each row editable until the draft. Start Season 2 notifies everyone."><I.RibReview /></Fit>
+            <Fit caption="League tab · Season 2, before the draft" note="The Season 1 champion banner stays until Season 2's draft; History is one tap away."><I.RibHistory /></Fit>
+            <Fit caption="League › History" note="Every season, its champion and final standings; matchups and the draft recap too. Needs backend: keep them instead of deleting."><I.RibHistory view="list" /></Fit>
+          </div>
+        </section>
+
         <Group id="money" code="3e" name="Trading" job="Sell, keep the cash in the slot, and buy again with exactly what the sale brought in."
           notes={[
             'Sell is all or nothing: a slot holds one stock, so the sheet confirms "Sell all X sh ≈ $Y" (no partial amounts). The money stays in the slot.',

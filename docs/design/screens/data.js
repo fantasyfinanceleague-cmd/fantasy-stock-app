@@ -340,6 +340,29 @@
     };
   })();
 
+  // "Run it back" (Your call, 2026-10-04): Season 1 is over and the
+  // commissioner (Roberto B., you) renews the league for Season 2. Season 1's
+  // final regular season: 14 games each, 3 games a week, so wins = losses =
+  // 42 (checked below). Roberto's line matches the Home season-complete card
+  // (11–3, +$1,962.40, won the Final 2–0). Other season gains are sample data.
+  const SEASON1 = (() => {
+    const rows = [
+      { id: 'roberto', w: 11, l: 3, pf: 1962.40 },
+      { id: 'paolo', w: 10, l: 4, pf: 1744.10 },
+      { id: 'alessandro', w: 8, l: 6, pf: 1203.55 },
+      { id: 'francesco', w: 6, l: 8, pf: 612.80 },
+      { id: 'gianluigi', w: 4, l: 10, pf: -148.25 },
+      { id: 'andrea', w: 3, l: 11, pf: -402.90 },
+    ].map((r, i) => ({ ...r, rank: i + 1, name: byId[r.id].name, init: byId[r.id].init, you: !!byId[r.id].you }));
+    const wins = rows.reduce((a, r) => a + r.w, 0), losses = rows.reduce((a, r) => a + r.l, 0);
+    if (wins !== losses || rows.some((r) => r.w + r.l !== 14)) throw new Error('SEASON1 records do not balance');
+    return {
+      season: 1, rows, champion: 'roberto', runnerUp: 'paolo', playoffTeams: 4,
+      finalDate: 'Fri, Jan 15',
+      next: { season: 2, draft: 'Sat, Jan 23 · 7:00 PM ET', orderSet: 'Sat 6:00 PM ET', optInBy: 'Thu, Jan 21 · 7:00 PM ET', keepBy: 'Fri, Jan 22 · 7:00 PM ET', invite: 'SCUD26' },
+    };
+  })();
+
   // The stock sheet (NVDA), Thursday live.
   const NVDA = (() => {
     const r = PORTFOLIO_LIVE.rows.find((x) => x.t === 'NVDA');
@@ -424,7 +447,7 @@
     DRAFT_MOMENT, DRAFT_PICKS, DRAFT_SEARCH,
     MATCHUP, WEEK_CLOSES, CHYRONS,
     STANDINGS_BEFORE, STANDINGS_FINAL, WEEK6,
-    PORTFOLIO_LIVE, OTHER_LEAGUES, HOME, NVDA, ROBERTO_WEEKS, SALE,
+    PORTFOLIO_LIVE, OTHER_LEAGUES, HOME, SEASON1, NVDA, ROBERTO_WEEKS, SALE,
     lineup, score, scoreDisplay, byeNotice, record, playoffPlan, playoffLine, SERIE_A, picksForSeat, ordinal,
   };
 })();

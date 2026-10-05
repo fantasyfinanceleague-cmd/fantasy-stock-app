@@ -1411,12 +1411,311 @@
     );
   }
 
+  // ═════════════════════════════════════════════════════════════════════
+  // YOUR CALL: RUN IT BACK (2026-10-04). Season 1 is over; the commissioner
+  // (Roberto B., you) renews Stock Scudetto for Season 2. All copy is new.
+  // Anything marked BACKEND needs server work the backend plan must cover.
+  // ═════════════════════════════════════════════════════════════════════
+  const S1 = K.SEASON1, NX = K.SEASON1.next;
+  const BackendTag = ({ children }) => (
+    <span className="ks-caption" style={{ display: 'inline-flex', gap: 6, alignItems: 'center', padding: '4px 8px', borderRadius: 8, background: 'var(--c-warn-tint)', color: 'var(--c-warn-text)', fontWeight: 700 }}>Needs backend · {children}</span>
+  );
+  // `me` = whose phone this is (the "you" fill follows the viewer).
+  const Avatars = ({ ids, extra, me = 'roberto' }) => (
+    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      {ids.map((id) => { const p = K.byId[id]; return <span key={id} className={id === me ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{p.init}</span>; })}
+      {extra}
+    </div>
+  );
+  const ALL = S1.rows.map((r) => r.id);
+  const Radio = ({ on, title, line }) => (
+    <li className="ks-row" style={{ gridTemplateColumns: '22px 1fr', alignItems: 'start', padding: '12px 0' }}>
+      <span style={{ width: 20, height: 20, borderRadius: 10, marginTop: 1, display: 'grid', placeItems: 'center', border: `2px solid ${on ? 'var(--c-accent)' : 'var(--c-border-strong)'}` }}>{on ? <span style={{ width: 10, height: 10, borderRadius: 5, background: 'var(--c-accent)' }} /> : null}</span>
+      <span><span className="ks-callout" style={{ fontWeight: 700 }}>{title}</span><br /><span className="ks-caption">{line}</span></span>
+    </li>
+  );
+  const Season1Rows = ({ n = 6 }) => (
+    <ul className="ks-rows">
+      {S1.rows.slice(0, n).map((r) => (
+        <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '18px 1fr auto auto', padding: '9px 0', background: r.you ? 'var(--c-you-tint)' : undefined }}>
+          <span className="ks-t ks-num">{r.rank}</span>
+          <span className="ks-callout" style={{ fontWeight: 700 }}>{r.name}{r.id === S1.champion ? <span className="ks-muted" style={{ fontWeight: 500 }}> · Champion</span> : null}</span>
+          <span className="ks-callout ks-num ks-muted">{r.w}–{r.l}</span>
+          <span className={`ks-callout ks-num ${tone(r.pf)}`} style={{ fontWeight: 700, minWidth: 78, textAlign: 'right' }}>{$s(r.pf)}</span>
+        </li>
+      ))}
+    </ul>
+  );
+  const ChampBanner = ({ compact }) => (
+    <div className="ks-game" style={{ padding: compact ? '12px 14px' : 20, display: 'grid', justifyItems: compact ? 'start' : 'center', gap: 6, textAlign: compact ? 'left' : 'center', background: 'radial-gradient(120% 90% at 50% 0%, var(--c-live-glow) 0%, var(--c-surface) 70%)' }}>
+      <span style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <span style={{ width: compact ? 32 : 56, height: compact ? 32 : 56, borderRadius: 99, display: 'grid', placeItems: 'center', background: 'var(--c-live)', color: 'var(--c-surface)' }}><Icon d={TROPHY} size={compact ? 18 : 28} width={2.2} /></span>
+        {compact ? <span><span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Season 1 champion</span><br /><b className="ks-callout">Roberto B. · 11–3 · won the Final</b></span> : null}
+      </span>
+      {compact ? null : <><span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Season 1 · Final</span><span className="ks-title">Roberto B. won {K.LEAGUE.name}</span><span className="ks-callout ks-muted">11–3 · won the Final 2–0</span></>}
+    </div>
+  );
+
+  /** Entry point 1: Home's season-complete card, commissioner. */
+  function RibHome() {
+    return (
+      <Device tab="home" label="Home, season complete, commissioner can run it back">
+        <Head avatar chip={null} />
+        <div className="ks-pad ks-stack">
+          <div className="ks-game" style={{ padding: 20, display: 'grid', justifyItems: 'center', gap: 8, textAlign: 'center', background: 'radial-gradient(120% 90% at 50% 0%, var(--c-live-glow) 0%, var(--c-surface) 70%)' }}>
+            <span style={{ width: 72, height: 72, borderRadius: 36, display: 'grid', placeItems: 'center', background: 'var(--c-live)', color: 'var(--c-surface)' }}><Icon d={TROPHY} size={36} width={2.2} /></span>
+            <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Season complete</span>
+            <span className="ks-score" style={{ fontSize: 44, lineHeight: '44px', whiteSpace: 'normal' }}>Champion</span>
+            <span className="ks-callout">You won {K.LEAGUE.name}</span>
+          </div>
+          <Card pad="14px">
+            <div style={{ display: 'grid', gap: 4 }}>
+              <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Season 2</span>
+              <span className="ks-title" style={{ fontSize: 20 }}>Run it back?</span>
+              <span className="ks-callout ks-muted">Same league, same group. You choose the settings, then everyone drafts again.</span>
+            </div>
+            <span className="ks-btn" style={{ marginTop: 12 }}>Run it back</span>
+          </Card>
+          <span className="ks-btn ks-btn--secondary">See the final standings</span>
+        </div>
+      </Device>
+    );
+  }
+  /** Entry point 2: the League tab after the season, commissioner. */
+  function RibLeague() {
+    return (
+      <Device tab="league" label="League tab, season over">
+        <Head chip={<span className="ks-chip ks-chip--final">Final</span>} />
+        <div className="ks-pad ks-stack">
+          <ChampBanner />
+          <div className="ks-raised" style={{ padding: '12px 14px', display: 'grid', gap: 8 }}>
+            <span className="ks-callout" style={{ fontWeight: 700 }}>You're the commissioner</span>
+            <span className="ks-caption">Start Season 2 with the same group. Season 1 stays in History.</span>
+            <span className="ks-btn">Run it back</span>
+          </div>
+          <Card pad="12px 14px">
+            <div className="ks-section-h"><h3>Final standings</h3><span className="ks-caption">Season 1 · 14 weeks</span></div>
+            <Season1Rows n={4} />
+          </Card>
+        </div>
+      </Device>
+    );
+  }
+  /** Entry point 3: what a member gets (a push), shown on Gianluigi B.'s phone. */
+  function RibPush({ mode = 'auto' }) {
+    const body = mode === 'auto'
+      ? `Roberto B. is running it back. You're in for Season 2 — the draft is ${NX.draft}.`
+      : `Roberto B. is running it back. Are you in? Say yes by ${NX.optInBy}.`;
+    return (
+      <Device noTabs time="7:42" label="Push notification, run it back" style={{ background: 'linear-gradient(160deg, #3B4F7A 0%, #1B2540 55%, #0E1426 100%)', color: '#fff' }}>
+        <div style={{ position: 'relative', textAlign: 'center', color: '#fff', paddingTop: 16 }}>
+          <div style={{ fontSize: 17, fontWeight: 600, opacity: 0.9 }}>Saturday, January 16</div>
+          <div style={{ fontSize: 84, fontWeight: 700, lineHeight: '90px', letterSpacing: '-2px' }}>7:42</div>
+        </div>
+        <div style={{ position: 'relative', margin: '28px 12px 0', padding: '12px 14px', borderRadius: 22, background: 'rgba(245, 246, 250, 0.82)', backdropFilter: 'blur(20px)', color: '#0D1B2E', display: 'grid', gridTemplateColumns: '38px 1fr', gap: 10 }}>
+          <span style={{ width: 38, height: 38, borderRadius: 9, background: '#0D1B2E', display: 'grid', placeItems: 'center' }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="13" width="4.5" height="8" rx="1" fill="#8DA0BD" /><rect x="9.75" y="9" width="4.5" height="12" rx="1" fill="#8DA0BD" /><rect x="16.5" y="4" width="4.5" height="17" rx="1" fill="#6E9BFF" /></svg>
+          </span>
+          <span>
+            <span style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15 }}><b>{K.LEAGUE.name}</b><span style={{ color: '#5B6678', fontSize: 13 }}>now</span></span>
+            <span style={{ fontSize: 15, lineHeight: '20px' }}>{body}</span>
+          </span>
+        </div>
+      </Device>
+    );
+  }
+
+  /** (a) Who's in — the card a member sees on Home (Gianluigi B.'s phone). */
+  function RibWhosIn({ mode }) {
+    if (mode === 'commish') {
+      return (
+        <Device noTabs label="Who's in, commissioner picks">
+          <Back label="Season 2" />
+          <div className="ks-pad ks-stack">
+            <h2 className="ks-head__title" style={{ fontSize: 28 }}>Who's in</h2>
+            <Card>
+              <ul className="ks-rows">
+                {S1.rows.map((r) => {
+                  const on = r.id !== 'andrea';
+                  return (
+                    <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '28px 1fr auto', padding: '10px 0' }}>
+                      <span className={r.you ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{r.init}</span>
+                      <span className="ks-callout" style={{ fontWeight: 600 }}>{r.name}{r.you ? <span className="ks-muted" style={{ fontWeight: 500 }}> · commissioner</span> : null}</span>
+                      <span style={{ width: 44, height: 26, borderRadius: 13, background: on ? 'var(--c-accent)' : 'var(--c-track)', position: 'relative', opacity: r.you ? 0.5 : 1 }}><span style={{ position: 'absolute', top: 3, left: on ? 21 : 3, width: 20, height: 20, borderRadius: 10, background: 'var(--c-surface)' }} /></span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Card>
+            <span className="ks-caption">5 of 6 back. Andrea P. won't be in Season 2; they'll get a message.</span>
+            <div className="ks-raised" style={{ padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span><span className="ks-caption">Invite someone new</span><br /><b className="ks-num" style={{ letterSpacing: '0.12em' }}>{NX.invite}</b></span>
+              <span className="ks-callout" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Share</span>
+            </div>
+          </div>
+        </Device>
+      );
+    }
+    const auto = mode === 'auto';
+    const inIds = auto ? ALL : ['roberto', 'paolo', 'gianluigi', 'francesco'];
+    return (
+      <Device tab="home" label={auto ? "Member's Home: you're in automatically" : "Member's Home: say you're in"}>
+        <div className="ks-head"><Pill /><span className="ks-avatar">GB</span></div>
+        <div className="ks-pad ks-stack">
+          <div className="ks-game" style={{ padding: 16, display: 'grid', gap: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Season 2</span>
+              <span className="ks-chip">{auto ? "You're in" : 'Reply by Thu'}</span>
+            </div>
+            <span className="ks-title" style={{ fontSize: 20 }}>{auto ? 'Roberto B. is running it back' : 'Are you in for Season 2?'}</span>
+            <span className="ks-callout">Draft {NX.draft}</span>
+            <Avatars me="gianluigi" ids={inIds} extra={auto ? null : <span className="ks-avatar ks-avatar--sm" style={{ background: 'transparent', border: '1.5px dashed var(--c-border-strong)', color: 'var(--c-text-2)' }}>+2</span>} />
+            <span className="ks-caption ks-num">{auto ? '6 of 6 back' : `4 of 6 in so far · say yes by ${NX.optInBy}`}</span>
+            {auto
+              ? <><span className="ks-btn ks-btn--secondary">I'm out this season</span><span className="ks-caption">You can drop out until the draft order is set ({NX.orderSet}).</span></>
+              : <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}><span className="ks-btn ks-btn--secondary">Not this time</span><span className="ks-btn">I'm in</span></div>}
+          </div>
+          <Card pad="12px 14px">
+            <div className="ks-section-h"><h3>Season 1</h3><span className="ks-caption">Final</span></div>
+            <span className="ks-callout">Roberto B. won · you finished {K.ordinal(5)} (4–10)</span>
+          </Card>
+        </div>
+      </Device>
+    );
+  }
+
+  /** (b) How teams start — the commissioner's choice, plus the keeper picker. */
+  function RibTeams({ mode }) {
+    if (mode === 'keepers') {
+      const rows = K.lineup('roberto', 'fri');
+      const kept = ['NVDA', 'AAPL'];
+      return (
+        <Device noTabs label="Keepers: choose up to 2">
+          <Back label="Season 2" />
+          <div className="ks-pad ks-stack">
+            <h2 className="ks-head__title" style={{ fontSize: 28 }}>Keep up to 2</h2>
+            <span className="ks-callout ks-muted">The rest go back in the pool. Choose by {NX.keepBy}.</span>
+            <Card>
+              <ul className="ks-rows">
+                {rows.map((r) => {
+                  const on = kept.includes(r.t);
+                  return (
+                    <li key={r.t} className="ks-row" style={{ gridTemplateColumns: '36px 1fr 24px', padding: '9px 0' }}>
+                      <Logo t={r.t} />
+                      <span><span className="ks-t">{r.t}</span><br /><span className="ks-caption">{r.co}</span></span>
+                      <span style={{ width: 22, height: 22, borderRadius: 6, display: 'grid', placeItems: 'center', background: on ? 'var(--c-accent)' : 'transparent', border: on ? 0 : '2px solid var(--c-border-strong)', color: 'var(--c-on-accent)' }}>{on ? <Icon d={CHECK} size={14} width={3} /> : null}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Card>
+            <span className="ks-caption">Keepers restart at {$(K.LEAGUE.notionalPerSlot)} a slot. The draft covers the other 4 rounds.</span>
+            <BackendTag>keeper picks + a shorter draft</BackendTag>
+          </div>
+        </Device>
+      );
+    }
+    const draft = mode === 'draft';
+    return (
+      <Device noTabs label={`How teams start: ${draft ? 'new draft' : 'keep teams'}`}>
+        <Back label="Season 2" />
+        <div className="ks-pad ks-stack">
+          <h2 className="ks-head__title" style={{ fontSize: 28 }}>How teams start</h2>
+          <Card>
+            <ul className="ks-rows">
+              <Radio on={draft} title="New draft" line={`Everyone drafts again: ${$(K.LEAGUE.notionalPerSlot)} a slot, ${K.LEAGUE.slots} rounds. Every stock goes back in the pool.`} />
+              <Radio on={!draft} title="Keep teams" line="Each team keeps its six stocks. No draft." />
+              <Radio on={false} title="Keepers" line="Keep up to 2 stocks, draft the rest." />
+            </ul>
+          </Card>
+          {draft
+            ? <div className="ks-raised" style={{ padding: '12px 14px', display: 'grid', gap: 4 }}><span className="ks-callout" style={{ fontWeight: 700 }}>Draft {NX.draft}</span><span className="ks-caption">Order: Random, set {NX.orderSet}. Last season's champion has no advantage.</span></div>
+            : <div className="ks-raised" style={{ padding: '12px 14px', display: 'grid', gap: 6 }}><span className="ks-callout" style={{ fontWeight: 700 }}>Every slot restarts at {$(K.LEAGUE.notionalPerSlot)}</span><span className="ks-caption">Shares are recalculated at Week 1's open so everyone starts level. No draft night.</span><BackendTag>restart each slot at Week 1's open</BackendTag></div>}
+        </div>
+      </Device>
+    );
+  }
+
+  /** (c) The commissioner's review: everything carried over, editable. */
+  function RibReview() {
+    return (
+      <Device noTabs label="Season 2 settings review">
+        <Back label="Cancel" />
+        <div className="ks-pad ks-stack">
+          <div><span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>{K.LEAGUE.name}</span><h2 className="ks-head__title" style={{ fontSize: 28, margin: '2px 0 0' }}>Season 2</h2></div>
+          <span className="ks-callout ks-muted">Everything carries over from Season 1. Change anything before the draft.</span>
+          <Card>
+            <ul className="ks-rows">
+              <Row k="Who's in" v="6 back" sub={`Invite more with ${NX.invite}`} />
+              <Row k="How teams start" v="New draft" />
+              <Row k="Draft" v="Sat, Jan 23 · 7:00 PM ET" />
+              <Row k="Draft order" v="Random" />
+              <Row k="Pick clock" v={`${K.LEAGUE.pickClock.seconds} seconds`} />
+              <Row k="Season" v={`${K.LEAGUE.weeks} weeks`} />
+              <Row k="Playoffs" v="4 teams" sub={K.playoffLine(4).replace(/^4 teams · /, '')} />
+              <Row k="Stakes" v={`${$(K.LEAGUE.notionalPerSlot)} a slot`} sub={`${K.LEAGUE.slots} slots`} />
+            </ul>
+          </Card>
+          <span className="ks-btn">Start Season 2</span>
+          <span className="ks-caption" style={{ textAlign: 'center' }}>Everyone gets a notification. Season 1 stays in History.</span>
+        </div>
+      </Device>
+    );
+  }
+
+  /** (d) History: the Season 2 League tab keeps Season 1 visible. */
+  function RibHistory({ view }) {
+    if (view === 'list') {
+      return (
+        <Device tab="league" label="League › History">
+          <Back label="League" />
+          <div className="ks-pad ks-stack">
+            <h2 className="ks-head__title" style={{ fontSize: 28 }}>History</h2>
+            <Card>
+              <ul className="ks-rows">
+                <Row k="Season 2" v="Draft Sat" sub="6 managers · drafting Jan 23" />
+                <Row k="Season 1" v="11–3" sub="Champion Roberto B. · you" />
+              </ul>
+            </Card>
+            <Card pad="12px 14px">
+              <div className="ks-section-h"><h3>Season 1 · final standings</h3><span className="ks-caption">Season gain</span></div>
+              <Season1Rows />
+            </Card>
+            <span className="ks-caption">Every week's matchups and the draft recap stay here too.</span>
+            <BackendTag>keep Season 1's matchups and standings (today they're deleted)</BackendTag>
+          </div>
+        </Device>
+      );
+    }
+    return (
+      <Device tab="league" label="League tab, Season 2 before the draft">
+        <Head chip={<span className="ks-chip">Pre-draft</span>} />
+        <div className="ks-pad ks-stack">
+          <ChampBanner compact />
+          <div className="ks-game" style={{ padding: 16, display: 'grid', gap: 8 }}>
+            <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Season 2 · Draft</span>
+            <span className="ks-title">{NX.draft}</span>
+            <span className="ks-callout ks-muted">6 managers · new draft</span>
+            <span className="ks-btn">Go to the draft lobby</span>
+          </div>
+          <Card>
+            <ul className="ks-rows">
+              <Row k="History" v="2 seasons" />
+              <Row k="League settings" v="" />
+            </ul>
+          </Card>
+        </div>
+      </Device>
+    );
+  }
+
   window.KSInventory = {
     SignIn, SignUp, SignUpPaused, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeUnpriced, HomeScoring, HomeComplete,
     AllMatchups, MatchupPreSeason, Playoffs6, ArrangeOrder, OrderPush, DraftLobby, StartDraftConfirm, CreateSeason, DraftAutoPick, DraftRecap, Playoffs,
     SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,
     OneShareSell, OneShareBuy,
+    RibHome, RibLeague, RibPush, RibWhosIn, RibTeams, RibReview, RibHistory,
     WebHome, WebPortfolio, WebSettings,
   };
 })();
