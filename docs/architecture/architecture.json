@@ -2,22 +2,13 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "e2d9cc691ae601f80a9dfeb68916013b500365b3",
-    "commitShort": "e2d9cc6",
+    "commit": "f199b51555c8ff632943e06682b246984e146006",
+    "commitShort": "f199b51",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "fix/snapshot-jobs-hardening",
-    "dirty": true,
-    "dirtyPaths": [
-      {
-        "code": "M",
-        "path": "supabase/functions/snapshot-week-end/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/snapshot-week-start/index.ts"
-      }
-    ],
-    "timestamp": "2026-10-05T17:37:33Z",
+    "branch": "fix/snapshot-trade-paging",
+    "dirty": false,
+    "dirtyPaths": [],
+    "timestamp": "2026-10-05T19:54:55Z",
     "sourceHash": "sha256:9cfac05ef461a461bc5dad7a51ba997172877904483f3862b63f0f11626afe04",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
@@ -25,8 +16,8 @@
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-09-30T16:53:15Z",
-    "ageHours": 120.7,
-    "ageDays": 5,
+    "ageHours": 123,
+    "ageDays": 5.1,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:8e08382dfe9edf557c6371cfc39da9fb788590ad82209f15e2e74a7c90dcfc6b",
