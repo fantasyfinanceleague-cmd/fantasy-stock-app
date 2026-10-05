@@ -2,19 +2,23 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "bf5426c41ff7b7bb415bb8aad7701a352bcb8de6",
-    "commitShort": "bf5426c",
+    "commit": "dd6f507442ea469ed5f64e2840fdae9085e92d54",
+    "commitShort": "dd6f507",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "fix/snapshot-skip-finished-leagues",
+    "branch": "fix/snapshot-jobs-hardening",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "??",
-        "path": "supabase/functions/_shared/snapshot-league-scope.test.ts"
+        "path": "supabase/functions/_shared/job-status.ts"
       },
       {
         "code": "??",
-        "path": "supabase/functions/_shared/snapshot-league-scope.ts"
+        "path": "supabase/functions/_shared/week-select.test.ts"
+      },
+      {
+        "code": "??",
+        "path": "supabase/functions/_shared/week-select.ts"
       },
       {
         "code": "M",
@@ -25,15 +29,15 @@
         "path": "supabase/functions/snapshot-week-start/index.ts"
       }
     ],
-    "timestamp": "2026-10-05T16:42:21Z",
-    "sourceHash": "sha256:78e63b5673779aca7ee52a8e834567d49b3c3a511136656b2535a812e2657b18",
+    "timestamp": "2026-10-05T16:56:02Z",
+    "sourceHash": "sha256:dc3ed6d2627ef539304f093c1c9d9040e07a0a8a37d90bc6389c259a7cdd6554",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-09-30T16:53:15Z",
-    "ageHours": 119.8,
+    "ageHours": 120,
     "ageDays": 5,
     "staleAfterDays": 14,
     "stale": false,
@@ -779,7 +783,7 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 615
+        "lines": 652
       },
       "db": null,
       "declared": null,
@@ -792,7 +796,7 @@
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/snapshot-week-end/index.ts",
-        "line": 261
+        "line": 287
       }
     },
     {
@@ -814,7 +818,7 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 716
+        "lines": 770
       },
       "db": null,
       "declared": null,
@@ -827,7 +831,7 @@
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/snapshot-week-start/index.ts",
-        "line": 277
+        "line": 304
       }
     },
     {
@@ -6939,7 +6943,7 @@
       "protocol": "vendor-https",
       "payload": "https://data.alpaca.markets/v2",
       "callSites": [
-        "supabase/functions/snapshot-week-end/index.ts:42"
+        "supabase/functions/snapshot-week-end/index.ts:44"
       ]
     },
     {
@@ -6963,7 +6967,22 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('schedule_snapshot_retry')",
       "callSites": [
-        "supabase/functions/snapshot-week-end/index.ts:146"
+        "supabase/functions/snapshot-week-end/index.ts:172"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.snapshot-week-end->tbl.cron_job_status",
+      "from": "fn.snapshot-week-end",
+      "to": "tbl.cron_job_status",
+      "protocol": "postgrest-select",
+      "payload": ".from('cron_job_status').select('status, error_message')",
+      "columns": [
+        "status, error_message"
+      ],
+      "callSites": [
+        "supabase/functions/snapshot-week-end/index.ts:125"
       ]
     },
     {
@@ -6976,7 +6995,7 @@
       "payload": ".from('cron_job_status').upsert()",
       "columns": [],
       "callSites": [
-        "supabase/functions/snapshot-week-end/index.ts:118"
+        "supabase/functions/snapshot-week-end/index.ts:144"
       ]
     },
     {
@@ -6991,7 +7010,7 @@
         "user_id, symbol, quantity"
       ],
       "callSites": [
-        "supabase/functions/snapshot-week-end/index.ts:414"
+        "supabase/functions/snapshot-week-end/index.ts:451"
       ]
     },
     {
@@ -7006,7 +7025,7 @@
         "id, current_week, num_weeks, season_status, draft_status"
       ],
       "callSites": [
-        "supabase/functions/snapshot-week-end/index.ts:305"
+        "supabase/functions/snapshot-week-end/index.ts:331"
       ]
     },
     {
@@ -7021,7 +7040,7 @@
         "session_date, open_et, close_et"
       ],
       "callSites": [
-        "supabase/functions/snapshot-week-end/index.ts:89"
+        "supabase/functions/snapshot-week-end/index.ts:91"
       ]
     },
     {
@@ -7036,7 +7055,7 @@
         "covered_from, covered_through"
       ],
       "callSites": [
-        "supabase/functions/snapshot-week-end/index.ts:90"
+        "supabase/functions/snapshot-week-end/index.ts:92"
       ]
     },
     {
@@ -7046,12 +7065,14 @@
       "from": "fn.snapshot-week-end",
       "to": "tbl.matchups",
       "protocol": "postgrest-select",
-      "payload": ".from('matchups').select('team1_user_id, team2_user_id, week_start, week_end, created_at')",
+      "payload": ".from('matchups').select('league_id, week_number, team1_user_id, week_start, week_end, created_at')",
       "columns": [
+        "league_id, week_number, team1_user_id, week_start, week_end, created_at",
         "team1_user_id, team2_user_id, week_start, week_end, created_at"
       ],
       "callSites": [
-        "supabase/functions/snapshot-week-end/index.ts:344"
+        "supabase/functions/snapshot-week-end/index.ts:365",
+        "supabase/functions/snapshot-week-end/index.ts:387"
       ]
     },
     {
@@ -7066,7 +7087,7 @@
         "user_id, symbol, action, quantity, price, created_at"
       ],
       "callSites": [
-        "supabase/functions/snapshot-week-end/index.ts:418"
+        "supabase/functions/snapshot-week-end/index.ts:455"
       ]
     },
     {
@@ -7081,7 +7102,7 @@
         "id, user_id, symbol, quantity, week_start_price, week_end_price"
       ],
       "callSites": [
-        "supabase/functions/snapshot-week-end/index.ts:409"
+        "supabase/functions/snapshot-week-end/index.ts:446"
       ]
     },
     {
@@ -7094,7 +7115,7 @@
       "payload": ".from('week_snapshots').update()",
       "columns": [],
       "callSites": [
-        "supabase/functions/snapshot-week-end/index.ts:535"
+        "supabase/functions/snapshot-week-end/index.ts:572"
       ]
     },
     {
@@ -7107,7 +7128,7 @@
       "payload": ".from('week_snapshots').upsert()",
       "columns": [],
       "callSites": [
-        "supabase/functions/snapshot-week-end/index.ts:550"
+        "supabase/functions/snapshot-week-end/index.ts:587"
       ]
     },
     {
@@ -7119,7 +7140,7 @@
       "protocol": "vendor-https",
       "payload": "https://data.alpaca.markets/v2",
       "callSites": [
-        "supabase/functions/snapshot-week-start/index.ts:54"
+        "supabase/functions/snapshot-week-start/index.ts:57"
       ]
     },
     {
@@ -7143,7 +7164,22 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('schedule_snapshot_retry')",
       "callSites": [
-        "supabase/functions/snapshot-week-start/index.ts:163"
+        "supabase/functions/snapshot-week-start/index.ts:190"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.snapshot-week-start->tbl.cron_job_status",
+      "from": "fn.snapshot-week-start",
+      "to": "tbl.cron_job_status",
+      "protocol": "postgrest-select",
+      "payload": ".from('cron_job_status').select('status, error_message')",
+      "columns": [
+        "status, error_message"
+      ],
+      "callSites": [
+        "supabase/functions/snapshot-week-start/index.ts:143"
       ]
     },
     {
@@ -7156,7 +7192,7 @@
       "payload": ".from('cron_job_status').upsert()",
       "columns": [],
       "callSites": [
-        "supabase/functions/snapshot-week-start/index.ts:135"
+        "supabase/functions/snapshot-week-start/index.ts:162"
       ]
     },
     {
@@ -7171,7 +7207,7 @@
         "user_id, symbol, quantity"
       ],
       "callSites": [
-        "supabase/functions/snapshot-week-start/index.ts:461"
+        "supabase/functions/snapshot-week-start/index.ts:506"
       ]
     },
     {
@@ -7186,7 +7222,7 @@
         "id, current_week, num_weeks, season_status, draft_status"
       ],
       "callSites": [
-        "supabase/functions/snapshot-week-start/index.ts:324"
+        "supabase/functions/snapshot-week-start/index.ts:351"
       ]
     },
     {
@@ -7201,7 +7237,7 @@
         "session_date, open_et, close_et"
       ],
       "callSites": [
-        "supabase/functions/snapshot-week-start/index.ts:106"
+        "supabase/functions/snapshot-week-start/index.ts:109"
       ]
     },
     {
@@ -7216,7 +7252,7 @@
         "covered_from, covered_through"
       ],
       "callSites": [
-        "supabase/functions/snapshot-week-start/index.ts:107"
+        "supabase/functions/snapshot-week-start/index.ts:110"
       ]
     },
     {
@@ -7226,12 +7262,14 @@
       "from": "fn.snapshot-week-start",
       "to": "tbl.matchups",
       "protocol": "postgrest-select",
-      "payload": ".from('matchups').select('team1_user_id, team2_user_id, week_start, week_end, created_at')",
+      "payload": ".from('matchups').select('league_id, week_number, team1_user_id, week_start, week_end, created_at')",
       "columns": [
+        "league_id, week_number, team1_user_id, week_start, week_end, created_at",
         "team1_user_id, team2_user_id, week_start, week_end, created_at"
       ],
       "callSites": [
-        "supabase/functions/snapshot-week-start/index.ts:393"
+        "supabase/functions/snapshot-week-start/index.ts:407",
+        "supabase/functions/snapshot-week-start/index.ts:438"
       ]
     },
     {
@@ -7244,7 +7282,7 @@
       "payload": ".from('matchups').update()",
       "columns": [],
       "callSites": [
-        "supabase/functions/snapshot-week-start/index.ts:510"
+        "supabase/functions/snapshot-week-start/index.ts:555"
       ]
     },
     {
@@ -7259,7 +7297,7 @@
         "user_id, symbol, action, quantity, created_at"
       ],
       "callSites": [
-        "supabase/functions/snapshot-week-start/index.ts:470"
+        "supabase/functions/snapshot-week-start/index.ts:515"
       ]
     },
     {
@@ -7269,12 +7307,12 @@
       "from": "fn.snapshot-week-start",
       "to": "tbl.week_snapshots",
       "protocol": "postgrest-select",
-      "payload": ".from('week_snapshots').select('user_id, week_end_price')",
+      "payload": ".from('week_snapshots').select('user_id, symbol, week_end_price')",
       "columns": [
-        "user_id, week_end_price"
+        "user_id, symbol, week_end_price"
       ],
       "callSites": [
-        "supabase/functions/snapshot-week-start/index.ts:474"
+        "supabase/functions/snapshot-week-start/index.ts:519"
       ]
     },
     {
@@ -7287,7 +7325,7 @@
       "payload": ".from('week_snapshots').upsert()",
       "columns": [],
       "callSites": [
-        "supabase/functions/snapshot-week-start/index.ts:638"
+        "supabase/functions/snapshot-week-start/index.ts:692"
       ]
     },
     {
@@ -11295,7 +11333,7 @@
           "edge": "e.fn.snapshot-week-start->ext.alpaca-data",
           "detail": "Historical bars for week-start prices.",
           "files": [
-            "supabase/functions/snapshot-week-start/index.ts:54"
+            "supabase/functions/snapshot-week-start/index.ts:57"
           ]
         },
         {
@@ -11303,7 +11341,7 @@
           "edge": "e.fn.snapshot-week-start->tbl.week_snapshots",
           "detail": "ALL-OR-NOTHING per league-week with completeness-based skip (fixed in 2caf9f8). A partial price fetch writes nothing rather than a half-week.",
           "files": [
-            "supabase/functions/snapshot-week-start/index.ts:474"
+            "supabase/functions/snapshot-week-start/index.ts:519"
           ]
         },
         {
@@ -11311,7 +11349,7 @@
           "edge": "e.fn.snapshot-week-start->pg.schedule_snapshot_retry",
           "detail": "Retry scheduling, shared with snapshot-week-end.",
           "files": [
-            "supabase/functions/snapshot-week-start/index.ts:163"
+            "supabase/functions/snapshot-week-start/index.ts:190"
           ]
         }
       ],
@@ -11348,7 +11386,7 @@
           "edge": "e.fn.snapshot-week-end->ext.alpaca-data",
           "detail": "Friday close prices.",
           "files": [
-            "supabase/functions/snapshot-week-end/index.ts:42"
+            "supabase/functions/snapshot-week-end/index.ts:44"
           ]
         },
         {
@@ -11365,7 +11403,7 @@
           "edge": "e.fn.snapshot-week-end->tbl.week_snapshots#update",
           "detail": "Writes week_end_price onto existing Monday rows.",
           "files": [
-            "supabase/functions/snapshot-week-end/index.ts:536"
+            "supabase/functions/snapshot-week-end/index.ts:573"
           ]
         },
         {
@@ -11375,7 +11413,7 @@
           "files": [
             "supabase/functions/snapshot-week-end/close.ts:104",
             "supabase/functions/snapshot-week-end/close.ts:162",
-            "supabase/functions/snapshot-week-end/index.ts:551"
+            "supabase/functions/snapshot-week-end/index.ts:588"
           ]
         },
         {
@@ -11383,7 +11421,7 @@
           "edge": "e.fn.snapshot-week-end->pg.schedule_snapshot_retry",
           "detail": "Shared retry path.",
           "files": [
-            "supabase/functions/snapshot-week-end/index.ts:146"
+            "supabase/functions/snapshot-week-end/index.ts:172"
           ]
         }
       ],
@@ -12323,7 +12361,7 @@
   "orphanAnnotations": [],
   "stats": {
     "nodes": 164,
-    "edges": 373,
+    "edges": 375,
     "flows": 8,
     "drift": 26,
     "driftHigh": 1,
@@ -12422,8 +12460,8 @@
       "supabase/functions/refresh-market-calendar/index.ts:148 -> apply_market_calendar",
       "supabase/functions/send-notification/index.ts:101 -> check_and_bump_rate_limit",
       "supabase/functions/send-notification/index.ts:104 -> check_and_bump_rate_limit",
-      "supabase/functions/snapshot-week-end/index.ts:146 -> schedule_snapshot_retry",
-      "supabase/functions/snapshot-week-start/index.ts:163 -> schedule_snapshot_retry",
+      "supabase/functions/snapshot-week-end/index.ts:172 -> schedule_snapshot_retry",
+      "supabase/functions/snapshot-week-start/index.ts:190 -> schedule_snapshot_retry",
       "supabase/functions/validate-and-record-pick/index.ts:122 -> check_and_bump_rate_limit",
       "supabase/functions/validate-and-record-pick/index.ts:125 -> check_and_bump_rate_limit"
     ],
@@ -12606,26 +12644,30 @@
       "supabase/functions/send-notification/index.ts:214 -> league_members.select",
       "supabase/functions/send-notification/index.ts:220 -> league_members.select",
       "supabase/functions/send-notification/index.ts:229 -> leagues.select",
-      "supabase/functions/snapshot-week-end/index.ts:118 -> cron_job_status.upsert",
-      "supabase/functions/snapshot-week-end/index.ts:305 -> leagues.select",
-      "supabase/functions/snapshot-week-end/index.ts:344 -> matchups.select",
-      "supabase/functions/snapshot-week-end/index.ts:409 -> week_snapshots.select",
-      "supabase/functions/snapshot-week-end/index.ts:414 -> drafts.select",
-      "supabase/functions/snapshot-week-end/index.ts:418 -> trades.select",
-      "supabase/functions/snapshot-week-end/index.ts:535 -> week_snapshots.update",
-      "supabase/functions/snapshot-week-end/index.ts:550 -> week_snapshots.upsert",
-      "supabase/functions/snapshot-week-end/index.ts:89 -> market_calendar.select",
-      "supabase/functions/snapshot-week-end/index.ts:90 -> market_calendar_coverage.select",
-      "supabase/functions/snapshot-week-start/index.ts:106 -> market_calendar.select",
-      "supabase/functions/snapshot-week-start/index.ts:107 -> market_calendar_coverage.select",
-      "supabase/functions/snapshot-week-start/index.ts:135 -> cron_job_status.upsert",
-      "supabase/functions/snapshot-week-start/index.ts:324 -> leagues.select",
-      "supabase/functions/snapshot-week-start/index.ts:393 -> matchups.select",
-      "supabase/functions/snapshot-week-start/index.ts:461 -> drafts.select",
-      "supabase/functions/snapshot-week-start/index.ts:470 -> trades.select",
-      "supabase/functions/snapshot-week-start/index.ts:474 -> week_snapshots.select",
-      "supabase/functions/snapshot-week-start/index.ts:510 -> matchups.update",
-      "supabase/functions/snapshot-week-start/index.ts:638 -> week_snapshots.upsert",
+      "supabase/functions/snapshot-week-end/index.ts:125 -> cron_job_status.select",
+      "supabase/functions/snapshot-week-end/index.ts:144 -> cron_job_status.upsert",
+      "supabase/functions/snapshot-week-end/index.ts:331 -> leagues.select",
+      "supabase/functions/snapshot-week-end/index.ts:365 -> matchups.select",
+      "supabase/functions/snapshot-week-end/index.ts:387 -> matchups.select",
+      "supabase/functions/snapshot-week-end/index.ts:446 -> week_snapshots.select",
+      "supabase/functions/snapshot-week-end/index.ts:451 -> drafts.select",
+      "supabase/functions/snapshot-week-end/index.ts:455 -> trades.select",
+      "supabase/functions/snapshot-week-end/index.ts:572 -> week_snapshots.update",
+      "supabase/functions/snapshot-week-end/index.ts:587 -> week_snapshots.upsert",
+      "supabase/functions/snapshot-week-end/index.ts:91 -> market_calendar.select",
+      "supabase/functions/snapshot-week-end/index.ts:92 -> market_calendar_coverage.select",
+      "supabase/functions/snapshot-week-start/index.ts:109 -> market_calendar.select",
+      "supabase/functions/snapshot-week-start/index.ts:110 -> market_calendar_coverage.select",
+      "supabase/functions/snapshot-week-start/index.ts:143 -> cron_job_status.select",
+      "supabase/functions/snapshot-week-start/index.ts:162 -> cron_job_status.upsert",
+      "supabase/functions/snapshot-week-start/index.ts:351 -> leagues.select",
+      "supabase/functions/snapshot-week-start/index.ts:407 -> matchups.select",
+      "supabase/functions/snapshot-week-start/index.ts:438 -> matchups.select",
+      "supabase/functions/snapshot-week-start/index.ts:506 -> drafts.select",
+      "supabase/functions/snapshot-week-start/index.ts:515 -> trades.select",
+      "supabase/functions/snapshot-week-start/index.ts:519 -> week_snapshots.select",
+      "supabase/functions/snapshot-week-start/index.ts:555 -> matchups.update",
+      "supabase/functions/snapshot-week-start/index.ts:692 -> week_snapshots.upsert",
       "supabase/functions/symbol-name/index.ts:36 -> symbols.select",
       "supabase/functions/symbols-search/index.ts:107 -> symbols.select",
       "supabase/functions/symbols-search/index.ts:118 -> symbols.select",

@@ -4,6 +4,8 @@ import { classifyCloseCoverage, buildCloseWork, planCloseWindow, type Holding } 
 import { checkSnapshotReads, matchupParticipants, snapshotHoldings } from '../_shared/snapshot-holdings.ts';
 import type { CalendarSession, Coverage as MarketCalendarCoverage } from '../_shared/week-window.ts';
 import { IN_SEASON_STATUSES, SNAPSHOT_DRAFT_STATUS, isInSeasonLeague } from '../_shared/snapshot-league-scope.ts';
+import { instantAtOrBefore, instantBefore, selectTargetWeeks, type WeekMatchupRow } from '../_shared/week-select.ts';
+import { shouldWriteJobStatus, successMessage, type JobStatusValue, type StoredJobStatus } from '../_shared/job-status.ts';
 
 /**
  * Snapshot Week End Prices
@@ -104,16 +106,40 @@ async function fetchMarketCalendar(
 }
 
 // Update job status for retry tracking
+// S-STATUS: the same-day row is shared by every run of this job (one row per
+// job per day). A no-op run must not overwrite evidence of earlier work or of a
+// failure — see ../_shared/job-status.ts for the rule and why. `work` is the
+// run's own count of rows/league-weeks it actually changed.
 async function updateJobStatus(
   supabase: any,
   jobName: string,
-  status: 'running' | 'success' | 'failed' | 'retrying',
+  status: JobStatusValue,
   attemptNumber: number,
-  errorMessage?: string
+  errorMessage?: string,
+  work?: number,
 ) {
   const today = new Date().toISOString().split('T')[0];
 
   try {
+    const { data: existingRow, error: readErr } = await supabase
+      .from('cron_job_status')
+      .select('status, error_message')
+      .eq('job_name', jobName)
+      .eq('run_date', today)
+      .maybeSingle();
+    // A failed read must not let a trivial write overwrite evidence: write only
+    // what the rule would accept with NO existing row AND it is non-trivial.
+    const existing: StoredJobStatus | null = readErr ? null : (existingRow as StoredJobStatus | null);
+    const write = readErr
+      ? (status === 'failed' || status === 'retrying' || (status === 'success' && (work ?? 0) > 0))
+      : shouldWriteJobStatus(existing, { status, work });
+    if (!write) {
+      console.log(`cron_job_status ${jobName} ${today}: no-op '${status}' (work=${work ?? 0}) kept existing ${existing?.status ?? 'unknown'} row`);
+      return;
+    }
+    const message = status === 'success'
+      ? successMessage(work ?? 0, errorMessage ?? '')
+      : errorMessage;
     await supabase
       .from('cron_job_status')
       .upsert({
@@ -121,7 +147,7 @@ async function updateJobStatus(
         run_date: today,
         status,
         attempt_number: attemptNumber,
-        error_message: errorMessage || null,
+        error_message: message || null,
         updated_at: new Date().toISOString(),
       }, {
         onConflict: 'job_name,run_date'
@@ -318,7 +344,7 @@ Deno.serve(async (req) => {
 
     if (!leagues || leagues.length === 0) {
       console.log('No active matchup leagues found');
-      await updateJobStatus(supabase, JOB_NAME, 'success', retryAttempt);
+      await updateJobStatus(supabase, JOB_NAME, 'success', retryAttempt, undefined, 0);
       return json({ message: 'No active matchup leagues', updates: 0 });
     }
 
@@ -333,9 +359,26 @@ Deno.serve(async (req) => {
     let totalNewSnapshots = 0;
     const results: any[] = [];
 
+    // S8: target weeks come from each league's matchups and their CLOSE windows
+    // (see ../_shared/week-select.ts), not from leagues.current_week.
+    const { data: weekRows, error: weekRowsErr } = await supabase
+      .from('matchups')
+      .select('league_id, week_number, team1_user_id, week_start, week_end, created_at')
+      .in('league_id', leagues.map((l: any) => l.id));
+    if (weekRowsErr) {
+      throw new Error(`Failed to read matchups for week selection: ${weekRowsErr.message ?? weekRowsErr}`);
+    }
+    const planNow = new Date();
+    const targets: Array<{ leagueId: string; week: number }> = [];
     for (const league of leagues) {
-      const leagueId = league.id;
-      const currentWeek = league.current_week;
+      const rows = (weekRows ?? []).filter((r: any) => r.league_id === league.id) as WeekMatchupRow[];
+      for (const week of selectTargetWeeks(rows, (anchor, floor) =>
+        planCloseWindow(planNow, anchor, floor, marketCalendarSessions, marketCalendarCoverage))) {
+        targets.push({ leagueId: league.id, week });
+      }
+    }
+
+    for (const { leagueId, week: currentWeek } of targets) {
 
       // 2. Read matchups first — also the window anchor/floor inputs (single-
       //    cut fix). Extended with week_start/week_end/created_at.
@@ -361,17 +404,11 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // ── Single-cut week window (S1-S7 fix, plus a new defensive not-due
-      //    guard) — see close.ts's planCloseWindow. NOT an S8 fix: S8's
-      //    defect (a refused week N strands week N+1's baseline because both
-      //    snapshot jobs key off leagues.current_week, not the calendar) is
-      //    untouched here — both index.ts files still select and loop by
-      //    league.current_week unchanged. S8 is tracked as a separate
-      //    follow-up (Orchestrator).
-      //    No rewrite here: snapshot-week-start owns that side effect, and by
-      //    the time a league-week reaches THIS function (buildCloseWork only
-      //    ever closes a week that has something to close) matchups.week_start
-      //    is already canonical. Re-derived anyway rather than trusted blindly.
+      // ── Single-cut week window (S1-S7) and week selection (S8) ───────────────
+      // The target week came from ../_shared/week-select.ts (its CLOSE window
+      // has passed), not from leagues.current_week. planCloseWindow still
+      // decides the cut; the not_due check below stays as a defence.
+      // No rewrite here: snapshot-week-start owns that side effect.
       const windowAnchor = new Date(matchups[0].week_start);
       const floorMs = Math.min(...matchups.map((m: any) => new Date(m.created_at).getTime()));
       const windowFloor = Number.isFinite(floorMs) ? new Date(floorMs) : null;
@@ -449,8 +486,8 @@ Deno.serve(async (req) => {
       // trade placed after close but before a delayed retry must not be read
       // as having been held at close (or, conversely, a position sold in that
       // gap must not vanish from what WAS held at close).
-      const cutCloseIso = windowPlan.close.toISOString();
-      const tradesThroughClose = trades.filter((t: any) => t.created_at <= cutCloseIso);
+      const cutCloseMs = windowPlan.close.getTime();
+      const tradesThroughClose = trades.filter((t: any) => instantAtOrBefore(t.created_at, cutCloseMs));
 
       // Calculate current holdings for each user, AS OF the real close.
       const userHoldings = new Map<string, Holding[]>();
@@ -583,7 +620,7 @@ Deno.serve(async (req) => {
           'One or more leagues still incomplete after max retries');
       }
     } else {
-      await updateJobStatus(supabase, JOB_NAME, 'success', retryAttempt);
+      await updateJobStatus(supabase, JOB_NAME, 'success', retryAttempt, undefined, totalUpdates + totalNewSnapshots);
     }
 
     return json({
@@ -603,12 +640,12 @@ Deno.serve(async (req) => {
       console.log(`Attempt ${retryAttempt} failed, scheduling retry ${retryAttempt + 1}`);
       await scheduleRetry(supabase, JOB_NAME, retryAttempt + 1);
       await updateJobStatus(supabase, JOB_NAME, 'retrying', retryAttempt, errorMessage);
-      return json({ error: 'Failed, retry scheduled', attempt: retryAttempt, message: errorMessage }, 500);
+      return json({ error: 'Failed, retry scheduled', attempt: retryAttempt, message: 'internal error; see function logs' }, 500);
     } else {
       // Max retries reached, mark as failed
       console.error(`Max retries (${MAX_RETRIES}) reached, giving up`);
       await updateJobStatus(supabase, JOB_NAME, 'failed', retryAttempt, errorMessage);
-      return json({ error: 'Failed after max retries', attempts: retryAttempt, message: errorMessage }, 500);
+      return json({ error: 'Failed after max retries', attempts: retryAttempt, message: 'internal error; see function logs' }, 500);
     }
   }
 });
