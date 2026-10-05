@@ -2,30 +2,13 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "acc7e1353fbe0c3205f9373585deece0ef6d77b8",
-    "commitShort": "acc7e13",
+    "commit": "65b1f93a01ae985c01862fbf82ff4dbdeefeb14a",
+    "commitShort": "65b1f93",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "feat/run-it-back",
-    "dirty": true,
-    "dirtyPaths": [
-      {
-        "code": "M",
-        "path": "supabase/functions/draft-control/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/migrations/20261027000000_run_it_back_lineage.sql"
-      },
-      {
-        "code": "M",
-        "path": "supabase/migrations/20261027000003_run_it_back_rpcs.sql"
-      },
-      {
-        "code": "M",
-        "path": "supabase/migrations/20261027000004_run_it_back_gate.sql"
-      }
-    ],
-    "timestamp": "2026-10-05T04:39:28Z",
+    "branch": "",
+    "dirty": false,
+    "dirtyPaths": [],
+    "timestamp": "2026-10-05T04:54:06Z",
     "sourceHash": "sha256:2c55c4cfd0b358c90d79b907a9e8e307b1a8c471eadf50da77b272f8aae6b9f5",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
@@ -33,7 +16,7 @@
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-09-30T16:53:15Z",
-    "ageHours": 107.8,
+    "ageHours": 108,
     "ageDays": 4.5,
     "staleAfterDays": 14,
     "stale": false,
