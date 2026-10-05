@@ -7,7 +7,9 @@
 --
 -- This schedules a second week-end run on Monday and Tuesday at 15:30Z, after
 -- week-start's 14:35Z run. It is idempotent by construction:
---   - week-end targets only CLOSED, UNSCORED league-weeks (week-select.ts);
+--   - week-end targets only CLOSED league-weeks that are not WHOLLY scored (week-select.ts).
+--     A partly scored week stays a target so its unscored matchups can be healed; its
+--     close writes are per participant and idempotent;
 --   - a closed week that is already fully closed is skipped by the coverage gate;
 --   - a week that is still refused just refuses again, loudly.
 -- On a normal week it is a no-op, since Friday's run scored it. It only does work

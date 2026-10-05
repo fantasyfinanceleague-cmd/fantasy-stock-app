@@ -85,7 +85,7 @@ Deno.test('B2: a week-end heal cron runs Mon and Tue after week-start, idempoten
 
 Deno.test('S9 rows-only: week-end gates on baseline ROWS, and no marker remains anywhere', async () => {
   const src = await Deno.readTextFile(FILES[1]);
-  assert(src.includes('weekEndBaselineGate({ openHolderCount: openHolderIds.length, openHoldersMissingRows })'),
+  assert(src.includes('weekEndBaselineGate({ openHolderCount, openPositionsMissingRows })'),
     'week-end does not gate on the per-holder rows evidence');
   for (const f of FILES) {
     const t = await Deno.readTextFile(f);
@@ -137,11 +137,13 @@ Deno.test('retrying is written ONLY when a retry was actually scheduled (both ha
   }
 });
 
-Deno.test('trade ledger is paged, never one truncating read (both handlers)', async () => {
+Deno.test('trade ledger is read snapshot-consistently: server-side cut, keyset paging (both handlers)', async () => {
   for (const f of FILES) {
     const src = await Deno.readTextFile(f);
     assert(src.includes('readAllTrades(supabase, leagueId,'), `${f.pathname}: trades are not read through the paged reader`);
-    assert(src.includes(".order('id')") && src.includes('.range(from, from + TRADE_PAGE_ROWS - 1)'), `${f.pathname}: the trade reader does not page by id`);
+    assert(src.includes("q.gt('id', lastId)") && src.includes(".order('id')"), `${f.pathname}: the trade reader is not keyset-paged by id`);
+    assert(src.includes("q.lt('created_at', cutIso)") && src.includes("q.lte('created_at', cutIso)"), `${f.pathname}: the trade cut is not applied server-side`);
+    assertFalse(/\.range\(from/.test(src), `${f.pathname}: offset paging is back (a mid-run insert shifts pages)`);
   }
 });
 

@@ -89,11 +89,15 @@ async function fetchMarketCalendar(
   supabase: any,
 ): Promise<{ sessions: CalendarSession[]; coverage: MarketCalendarCoverage | null; error: unknown }> {
   const [sessionsRes, coverageRes] = await Promise.all([
-    supabase.from('market_calendar').select('session_date, open_et, close_et'),
+    supabase.from('market_calendar').select('session_date, open_et, close_et', { count: 'exact' }),
     supabase.from('market_calendar_coverage').select('covered_from, covered_through').maybeSingle(),
   ]);
   if (sessionsRes.error || coverageRes.error) {
     return { sessions: [], coverage: null, error: sessionsRes.error ?? coverageRes.error };
+  }
+  // A truncated calendar would silently mis-cut the open (PostgREST max-rows): refuse.
+  if (typeof sessionsRes.count === 'number' && (sessionsRes.data ?? []).length < sessionsRes.count) {
+    return { sessions: [], coverage: null, error: new Error(`market_calendar read truncated: ${(sessionsRes.data ?? []).length} of ${sessionsRes.count}`) };
   }
   const sessions: CalendarSession[] = (sessionsRes.data ?? []).map((r: any) => ({
     sessionDate: r.session_date,
@@ -298,23 +302,39 @@ async function fetchClosePrices(
  * permanently. Pages by primary key until every counted row is read.
  */
 const TRADE_PAGE_ROWS = 1000;
-async function readAllTrades(supabase: any, leagueId: string, cols: string): Promise<{ data: any[] | null; error: unknown; count: number | null }> {
+/**
+ * A league's trades up to a window cut, read in full and snapshot-consistent. The cut
+ * is applied SERVER-side, so trades inserted after the cut are never in the set, and
+ * the set is stable while it is paged. Paging is keyset on id (not offset): a row
+ * inserted mid-run cannot shift a page and be read twice or skipped. The first page's
+ * exact count is the expected total, and the read fails if fewer rows come back.
+ */
+async function readAllTrades(
+  supabase: any,
+  leagueId: string,
+  cols: string,
+  cutIso: string,
+  inclusive: boolean,
+): Promise<{ data: any[] | null; error: unknown; count: number | null }> {
   const rows: any[] = [];
-  let count: number | null = null;
-  for (let from = 0; ; from += TRADE_PAGE_ROWS) {
-    const { data, error, count: c } = await supabase
+  let total: number | null = null;
+  let lastId: string | null = null;
+  for (;;) {
+    let q = supabase
       .from('trades')
-      .select(cols, { count: 'exact' })
-      .eq('league_id', leagueId)
-      .order('id')
-      .range(from, from + TRADE_PAGE_ROWS - 1);
-    if (error) return { data: null, error, count };
-    count = c ?? count;
+      .select(`${cols}, id`, { count: 'exact' })
+      .eq('league_id', leagueId);
+    q = inclusive ? q.lte('created_at', cutIso) : q.lt('created_at', cutIso);
+    if (lastId !== null) q = q.gt('id', lastId);
+    const { data, error, count } = await q.order('id').limit(TRADE_PAGE_ROWS);
+    if (error) return { data: null, error, count: total };
+    if (lastId === null) total = count ?? null;
     const page = data ?? [];
     rows.push(...page);
-    if (page.length === 0 || (count != null && rows.length >= count)) break;
+    if (page.length === 0 || (total != null && rows.length >= total)) break;
+    lastId = String(page[page.length - 1].id);
   }
-  return { data: rows, error: null, count };
+  return { data: rows, error: null, count: total };
 }
 
 /**
@@ -518,7 +538,7 @@ Deno.serve(async (req) => {
           .from('drafts')
           .select('user_id, symbol, quantity', { count: 'exact' })
           .eq('league_id', leagueId),
-        trades: await readAllTrades(supabase, leagueId, 'user_id, symbol, action, quantity, price, created_at'),
+        trades: await readAllTrades(supabase, leagueId, 'user_id, symbol, action, quantity, price, created_at', windowPlan.close.toISOString(), true),
       });
       if (!inputs.ok) {
         // ABORT this league for this run, exactly like an unpriceable symbol:
@@ -581,13 +601,19 @@ Deno.serve(async (req) => {
       // holders at the CLOSE and would otherwise pass a holder who sold out.
       const cutOpenMs = windowPlan.open.getTime();
       const tradesBeforeOpen = trades.filter((t: any) => instantBefore(t.created_at, cutOpenMs));
-      const openHolderIds = [...userIds].filter((u) => snapshotHoldings(u, drafts, tradesBeforeOpen).length > 0);
-      const rowUsers = new Set(existingSnapshots.map((r: any) => String(r.user_id)));
-      const openHoldersMissingRows = openHolderIds.filter((u) => !rowUsers.has(u)).length;
-      const baselineGate = weekEndBaselineGate({ openHolderCount: openHolderIds.length, openHoldersMissingRows });
+      // Per POSITION (holder, symbol), not per holder: a holder with rows for some
+      // open-cut symbols but not others is still a partial baseline (reviewer).
+      const openPositions: Array<[string, string]> = [];
+      for (const u of userIds) {
+        for (const h of snapshotHoldings(u, drafts, tradesBeforeOpen)) openPositions.push([u, h.symbol.toUpperCase()]);
+      }
+      const rowPositions = new Set(existingSnapshots.map((r: any) => `${String(r.user_id)}:${String(r.symbol ?? '').toUpperCase()}`));
+      const openHolderCount = new Set(openPositions.map(([u]) => u)).size;
+      const openPositionsMissingRows = openPositions.filter(([u, sym]) => !rowPositions.has(`${u}:${sym}`)).length;
+      const baselineGate = weekEndBaselineGate({ openHolderCount, openPositionsMissingRows });
       if (baselineGate !== 'proceed') {
         anyIncomplete = true;
-        console.error(`ABORT league ${leagueId} week ${currentWeek}: ${openHoldersMissingRows} holder(s) held at the open have no baseline row; refusing to close a partial portfolio. A week-start heal will baseline them.`);
+        console.error(`ABORT league ${leagueId} week ${currentWeek}: ${openPositionsMissingRows} position(s) held at the open have no baseline row; refusing to close a partial portfolio. A week-start heal will baseline them.`);
         results.push({ leagueId, week: currentWeek, updated: 0, newSnapshots: 0, incomplete: true, baselineRefused: baselineGate });
         continue;
       }
