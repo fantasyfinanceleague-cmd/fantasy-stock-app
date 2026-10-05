@@ -308,6 +308,7 @@ async function fetchOpenPrices(
  * leagues, because PostgREST caps a read at max-rows and a truncated read would
  * silently drop weeks from selection. The exact count below refuses any truncation.
  */
+const MATCHUP_READ_CAP = 1000;
 async function readLeagueMatchupRows(supabase: any, leagueId: string): Promise<WeekMatchupRow[]> {
   const { data, error, count } = await supabase
     .from('matchups')
@@ -315,39 +316,16 @@ async function readLeagueMatchupRows(supabase: any, leagueId: string): Promise<W
     .eq('league_id', leagueId);
   if (error) throw new Error(`Failed to read matchups for league ${leagueId}: ${error.message ?? error}`);
   const rows = (data ?? []) as WeekMatchupRow[];
-  // Exact count, not a fixed threshold: a truncated read (PostgREST max-rows) is
-  // refused whatever the cap is.
+  // S2: a league's matchup rows are bounded far below PostgREST's 1000-row default.
+  // Reaching it means the design assumption broke, so refuse rather than read a
+  // partial set. The exact-count comparison below also refuses any truncation.
+  if (typeof count === 'number' && count >= MATCHUP_READ_CAP) {
+    throw new Error(`league ${leagueId}: ${count} matchups rows is at the 1000-row read budget; paginate before reading`);
+  }
   if (typeof count === 'number' && rows.length < count) {
     throw new Error(`league ${leagueId}: matchups read truncated (${rows.length} of ${count} rows); refusing a partial week selection`);
   }
   return rows;
-}
-
-/**
- * S9: set matchups.baseline_completed_at for a league-week (../_shared/baseline.ts).
- * Called ONLY after the week's rows have committed, or after confirming that nothing
- * was held at the open. Never at the window rewrite, and never on an aborted run,
- * so an abort leaves it NULL. Returns false (and logs) on a failed write, so the
- * caller treats the league-week as incomplete.
- */
-async function markBaseline(supabase: any, leagueId: string, weekNumber: number, marks: { set: number }): Promise<boolean> {
-  // Only a NULL marker is set (an already-set one is left as it is). .select() so
-  // an update that matched NO rows is a failure, not a silent success.
-  const { data, error } = await supabase
-    .from('matchups')
-    .update({ baseline_completed_at: new Date().toISOString() })
-    .eq('league_id', leagueId)
-    .eq('week_number', weekNumber)
-    .is('baseline_completed_at', null)
-    .select('league_id');
-  if (error) {
-    console.error(`Failed to mark baseline complete for league ${leagueId} week ${weekNumber}:`, error);
-    return false;
-  }
-  // A newly set marker is real work (S3): a marker-only heal after a retry must
-  // overwrite 'retrying'. An already-set marker is not work (no daily churn).
-  marks.set += (data ?? []).length;
-  return true;
 }
 
 // Holdings come from ../_shared/snapshot-holdings.ts (shared with
@@ -466,7 +444,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    const marks = { set: 0 };
     for (const { leagueId, week: currentWeek } of targets) {
 
       // NOTE: the "already snapshotted?" skip moved DOWN to the coverage gate
@@ -662,11 +639,6 @@ Deno.serve(async (req) => {
       // baseline can never be re-taken after a close.
       if (existingSnapshots.some((r: any) => r.week_end_price != null)) {
         if (classifyCloseCoverage(userHoldings, existingSnapshots) === 'complete') {
-          if (!(await markBaseline(supabase, leagueId, currentWeek, marks))) {
-            anyIncomplete = true;
-            results.push({ leagueId, week: currentWeek, incomplete: true, markerWriteFailed: true });
-            continue;
-          }
           console.log(`League ${leagueId} week ${currentWeek}: already fully closed, skipping week-start snapshot`);
           results.push({ leagueId, week: currentWeek, users: userIds.size, snapshots: coveredUserIds.size, skipped: 'already_end_priced' });
           continue;
@@ -681,21 +653,11 @@ Deno.serve(async (req) => {
       // Nothing held at the open is a COMPLETE baseline with zero rows, and the
       // marker says so (S9: zero rows alone cannot tell this apart from "never ran").
       if (coverage === 'none_expected') {
-        if (!(await markBaseline(supabase, leagueId, currentWeek, marks))) {
-          anyIncomplete = true;
-          results.push({ leagueId, week: currentWeek, incomplete: true, markerWriteFailed: true });
-          continue;
-        }
         console.log(`No holdings to snapshot for league ${leagueId} week ${currentWeek}, skipping`);
         results.push({ leagueId, week: currentWeek, users: userIds.size, snapshots: 0, skipped: 'no_holdings' });
         continue;
       }
       if (coverage === 'complete') {
-        if (!(await markBaseline(supabase, leagueId, currentWeek, marks))) {
-          anyIncomplete = true;
-          results.push({ leagueId, week: currentWeek, incomplete: true, markerWriteFailed: true });
-          continue;
-        }
         console.log(`Snapshots already COMPLETE for league ${leagueId} week ${currentWeek} (${coveredUserIds.size} participants), skipping`);
         results.push({ leagueId, week: currentWeek, users: userIds.size, snapshots: coveredUserIds.size, skipped: 'already_complete' });
         continue;
@@ -775,11 +737,6 @@ Deno.serve(async (req) => {
       // The baseline is now complete for every holder (usersToWrite was every
       // uncovered holder, and buildPricedRows wrote them all). Mark it, so a later
       // week-end can close this week even if zero rows were ever written for it.
-      if (!(await markBaseline(supabase, leagueId, currentWeek, marks))) {
-        anyIncomplete = true;
-        results.push({ leagueId, week: currentWeek, users: userIds.size, snapshots: snapshots.length, markerWriteFailed: true });
-        continue;
-      }
 
       console.log(`Snapshotted ${snapshots.length} rows for ${usersToWrite.size} participant(s) in league ${leagueId} week ${currentWeek}`);
       totalSnapshots += snapshots.length;
@@ -821,8 +778,7 @@ Deno.serve(async (req) => {
     }
 
     // Update status to success
-    // S3: a newly set marker is work too (a marker-only heal after a retry).
-    await updateJobStatus(supabase, JOB_NAME, 'success', retryAttempt, undefined, totalSnapshots + marks.set);
+    await updateJobStatus(supabase, JOB_NAME, 'success', retryAttempt, undefined, totalSnapshots);
 
     return json({
       message: 'Snapshot complete',

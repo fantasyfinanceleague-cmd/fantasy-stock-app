@@ -92,7 +92,11 @@ Deno.test('status: a no-op success never overwrites a same-day success that reco
 
 Deno.test('status: a no-op success never overwrites a same-day FAILURE', () => {
   assertEquals(shouldWriteJobStatus({ status: 'failed', error_message: 'boom' }, { status: 'success', work: 0 }), false);
-  assertEquals(shouldWriteJobStatus({ status: 'retrying', error_message: 'x' }, { status: 'success', work: 0 }), false);
+});
+
+Deno.test('S3: a clean retry/heal success clears a stale same-day retrying, even with no work', () => {
+  assertEquals(shouldWriteJobStatus({ status: 'retrying', error_message: 'x' }, { status: 'success', work: 0 }), true);
+  assertEquals(shouldWriteJobStatus({ status: 'retrying', error_message: 'x' }, { status: 'success', work: 2 }), true);
 });
 
 Deno.test('status: a legacy success with no work= marker is NOT trivial, so a no-op cannot replace it', () => {

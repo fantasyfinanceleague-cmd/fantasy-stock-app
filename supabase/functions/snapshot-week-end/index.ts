@@ -297,6 +297,7 @@ async function fetchClosePrices(
  * leagues, because PostgREST caps a read at max-rows and a truncated read would
  * silently drop weeks from selection. The exact count below refuses any truncation.
  */
+const MATCHUP_READ_CAP = 1000;
 async function readLeagueMatchupRows(supabase: any, leagueId: string): Promise<WeekMatchupRow[]> {
   const { data, error, count } = await supabase
     .from('matchups')
@@ -304,8 +305,12 @@ async function readLeagueMatchupRows(supabase: any, leagueId: string): Promise<W
     .eq('league_id', leagueId);
   if (error) throw new Error(`Failed to read matchups for league ${leagueId}: ${error.message ?? error}`);
   const rows = (data ?? []) as WeekMatchupRow[];
-  // Exact count, not a fixed threshold: a truncated read (PostgREST max-rows) is
-  // refused whatever the cap is.
+  // S2: a league's matchup rows are bounded far below PostgREST's 1000-row default.
+  // Reaching it means the design assumption broke, so refuse rather than read a
+  // partial set. The exact-count comparison below also refuses any truncation.
+  if (typeof count === 'number' && count >= MATCHUP_READ_CAP) {
+    throw new Error(`league ${leagueId}: ${count} matchups rows is at the 1000-row read budget; paginate before reading`);
+  }
   if (typeof count === 'number' && rows.length < count) {
     throw new Error(`league ${leagueId}: matchups read truncated (${rows.length} of ${count} rows); refusing a partial week selection`);
   }
@@ -542,40 +547,20 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // S9 (../_shared/baseline.ts): a week with any holding at the open or the close
-      // needs week-start's marker. Without it the baseline never ran, and closing
-      // would score a partial portfolio. A legacy week that is already fully closed
-      // returned above, so it is never refused here.
+      // S9 (../_shared/baseline.ts), ROWS ONLY: every holder at the OPEN cut must have
+      // a baseline row, or the close would score a partial portfolio. The holders are
+      // derived from the ledger (trades before the open, plus drafts), so "nothing
+      // held at the open" needs no marker: zero open holders means nothing to
+      // baseline. A week already fully closed returned above, so it is never refused.
       const cutOpenMs = windowPlan.open.getTime();
       const tradesBeforeOpen = trades.filter((t: any) => instantBefore(t.created_at, cutOpenMs));
       const openHolderIds = [...userIds].filter((u) => snapshotHoldings(u, drafts, tradesBeforeOpen).length > 0);
-      const anyCloseHoldings = [...userHoldings.values()].some((hs) => hs.length > 0);
-      const needsBaseline = openHolderIds.length > 0 || anyCloseHoldings;
       const rowUsers = new Set(existingSnapshots.map((r: any) => String(r.user_id)));
       const openHoldersMissingRows = openHolderIds.filter((u) => !rowUsers.has(u)).length;
-      let markerSet = false;
-      let markerReadOk = true;
-      if (needsBaseline) {
-        const marker = await supabase
-          .from('matchups')
-          .select('baseline_completed_at')
-          .eq('league_id', leagueId)
-          .eq('week_number', currentWeek)
-          .not('baseline_completed_at', 'is', null)
-          .limit(1);
-        markerReadOk = !marker.error;
-        markerSet = (marker.data ?? []).length > 0;
-      }
-      const baselineGate = weekEndBaselineGate({
-        needsBaseline,
-        markerSet,
-        markerReadOk,
-        openHolderCount: openHolderIds.length,
-        openHoldersMissingRows,
-      });
+      const baselineGate = weekEndBaselineGate({ openHolderCount: openHolderIds.length, openHoldersMissingRows });
       if (baselineGate !== 'proceed') {
         anyIncomplete = true;
-        console.error(`ABORT league ${leagueId} week ${currentWeek}: ${baselineGate} — holdings exist but week-start has not marked the baseline complete; refusing to close a partial portfolio. A week-start heal will baseline it.`);
+        console.error(`ABORT league ${leagueId} week ${currentWeek}: ${openHoldersMissingRows} holder(s) held at the open have no baseline row; refusing to close a partial portfolio. A week-start heal will baseline them.`);
         results.push({ leagueId, week: currentWeek, updated: 0, newSnapshots: 0, incomplete: true, baselineRefused: baselineGate });
         continue;
       }

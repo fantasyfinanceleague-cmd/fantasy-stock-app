@@ -9,10 +9,14 @@
  * THE RULE (narrow, no migration; the per-run run-log table is deferred):
  *   - failed / retrying are ALWAYS written. A failure must never be hidden.
  *   - success with work > 0 is ALWAYS written. It is the new evidence.
- *   - running and success with work = 0 (intermediate, or a no-op) are written ONLY
- *     when the existing same-day row is itself trivial: no row, a 'running' row, or
- *     a success that recorded work = 0. A no-op never replaces evidence of earlier
- *     work or of a failure. Such a run is logged, not written.
+ *   - a success (any work) DOES overwrite a same-day 'retrying'. 'retrying' means
+ *     "a retry is scheduled", not a final result, so a later attempt that completes
+ *     cleanly must clear it (S3). A failed row is final and is never cleared by a
+ *     no-op.
+ *   - running and success with work = 0 (intermediate, or a no-op) are otherwise
+ *     written ONLY when the existing same-day row is itself trivial: no row, a
+ *     'running' row, or a success that recorded work = 0. A no-op never replaces
+ *     evidence of earlier work or of a failure. Such a run is logged, not written.
  *
  * A pre-existing success row carries no work= marker, and is therefore NOT trivial.
  * That keeps Friday's already-written success safe from a no-op heal.
@@ -44,6 +48,8 @@ export function shouldWriteJobStatus(
 ): boolean {
   if (next.status === 'failed' || next.status === 'retrying') return true;
   if (next.status === 'success' && (next.work ?? 0) > 0) return true;
+  // S3: a clean success clears a scheduled-retry marker, whatever its work count.
+  if (next.status === 'success' && existing?.status === 'retrying') return true;
   // running, or a success that did no work: only over a trivial same-day row.
   if (!existing) return true;
   if (existing.status === 'running') return true;
