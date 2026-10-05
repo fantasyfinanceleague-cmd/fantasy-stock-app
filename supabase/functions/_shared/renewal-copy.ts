@@ -6,8 +6,8 @@
  *
  * Pure: no DB, no network. Tested hermetically in renewal-copy.test.ts.
  *
- * Two lines are NEW COPY pending Giorgio's OK and are marked as such:
- * renewalRemovedBody and seasonSetBody.
+ * renewalRemovedBody and seasonSetBody were NEW COPY; Giorgio APPROVED both
+ * verbatim on 2026-10-05.
  */
 
 /** America/New_York, pinned: the app's Eastern convention (lib/marketHours.ts).
@@ -36,12 +36,12 @@ export function renewalReplyBody(i: {
   return `${lead} ${i.running} running back · ${i.out} out · ${i.noReply} no reply yet.`;
 }
 
-/** NEW COPY, pending Giorgio's OK: "{commissioner} set up Season 2 of {league} without you." */
+/** APPROVED (Giorgio, 2026-10-05): "{commissioner} set up Season 2 of {league} without you." */
 export function renewalRemovedBody(i: { commissioner: string; season: number; league: string }): string {
   return `${i.commissioner} set up Season ${i.season} of ${i.league} without you.`;
 }
 
-/** NEW COPY, pending Giorgio's OK: "Season 2 of {league} is set. The draft is {Sat, Jan 23 · 7:00 PM ET}."
+/** APPROVED (Giorgio, 2026-10-05): "Season 2 of {league} is set. The draft is {Sat, Jan 23 · 7:00 PM ET}."
  * The date is shown only when stored; a TBD date drops the second sentence. */
 export function seasonSetBody(i: { league: string; season: number; draftDate: string | null }): string {
   const head = `Season ${i.season} of ${i.league} is set.`;

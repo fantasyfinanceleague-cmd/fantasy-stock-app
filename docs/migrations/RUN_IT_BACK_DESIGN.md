@@ -965,11 +965,21 @@ for the minutes in between.
    - Does a **pending/out** player see counts? Assumed no, only their own status.
    Either change is one predicate, with no change to the RLS or RPC shape.
 4. **The nudge rate limit:** 24 h per player (default)?
-5. **Copy needed** for `renewal_removed`, `season_set` and, optionally, a nudge variant (Design
-   Lead).
-6. **Newcomers and Season 1 detail:** frozen standings only (phase 1), or full week-by-week
-   Season 1 too (§4.3)?
+5. ~~**Copy needed**~~ **APPROVED (Giorgio, 2026-10-05):** `renewal_removed` ("{commissioner} set
+   up Season 2 of {league} without you.") and `season_set` ("Season 2 of {league} is set. The draft
+   is {…}."). Source: `_shared/renewal-copy.ts`. A nudge reuses the invite copy.
+6. ~~**Newcomers and Season 1 detail**~~ **RESOLVED (decision 4):** newcomers get the standings and
+   the week-by-week matchups, not the detail card (`get_season_result` stays member-of-that-season)
+   and not the draft recap.
 7. **The superseded league in the switcher** (§4.5).
+
+**Resolved (Giorgio, 2026-10-05):**
+- the visibility ceiling: a caller sees seasons up to the latest one they were in (declining a
+  season closes it);
+- pending invitees hold their seats; newcomers and bots cannot take a reserved seat;
+- a `legacy` draft order is not carried over (the renewal starts as `random`);
+- the newcomer history scope in item 6 above;
+- the two push strings in item 5 above.
 
 **Resolved in rev 3.1:**
 - roster visibility (in players see the full list);
