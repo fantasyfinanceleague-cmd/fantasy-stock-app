@@ -6,7 +6,7 @@ Supabase CLI applies only the timestamped `.sql` files directly in
 Do **not** move a file back to the parent directory until its stated precondition
 is met.
 
-**Currently held:** 3 files (see *Held* below): `20260929000000_drop_I6_I2b.sql`, `20261010000001_schedule_draft_autopick_sweep.sql` and `20261013000001_schedule_draft_order_notify.sql`.
+**Currently held:** 4 files (see *Held* below): `20260929000000_drop_I6_I2b.sql`, `20261010000001_schedule_draft_autopick_sweep.sql`, `20261013000001_schedule_draft_order_notify.sql` and `20261023000009_drop_start_new_league_season.sql`.
 
 ## How to use it
 
@@ -157,6 +157,48 @@ passing `--include-all`.
 **After applying:** `SELECT jobname, schedule, command FROM cron.job WHERE jobname = 'draft_order_notify';`,
 then run the data check at the bottom of the file. Then move this section to
 *History*.
+
+### `20261023000009_drop_start_new_league_season.sql`
+
+Drops `start_new_league_season(uuid)`. Phase 0 of Run it back
+(`20261023000000_lock_start_new_league_season.sql`) already revoked EXECUTE
+from PUBLIC, anon, authenticated and service_role, so the function is
+unreachable from every API role; this removes it for good. Design:
+`docs/migrations/RUN_IT_BACK_DESIGN.md` §3.
+
+**Where to run:** only from `/Users/giorgio/fantasy-stock-deploy`, refreshed
+with
+`git -C /Users/giorgio/fantasy-stock-deploy fetch origin && git -C /Users/giorgio/fantasy-stock-deploy checkout --detach origin/main`,
+then `supabase db push --dry-run` (must list exactly this file) and
+`supabase db push`.
+
+**Precondition: ALL of the following.**
+1. `20261023000000` is applied (`schema_migrations`), and the function's
+   `proacl` is exactly `{postgres=X/postgres}`:
+   ```sql
+   SELECT proname, proacl FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+   WHERE n.nspname = 'public' AND proname = 'start_new_league_season';
+   ```
+2. **No shipped client calls it.** The mobile build that removes the
+   `league-settings.tsx` "Start New Season" button (and its
+   `rpc('start_new_league_season')`) is the one testers have installed, and no
+   older build (1.0.0, 1.1.0) is still in use. Check on `main` first:
+   `grep -rn start_new_league_season apps/` must return nothing.
+3. Nothing server-side calls it:
+   `grep -rn start_new_league_season supabase/functions scripts` returns
+   only comments (today: `scripts/gen-architecture.mjs` annotations, which
+   should be removed in the same PR that promotes this file, then
+   `node scripts/gen-architecture.mjs` re-run).
+
+**Timestamp note:** if migrations newer than `20261023000009` have been
+applied before this is promoted, rename it to a fresh timestamp rather than
+passing `--include-all`.
+
+**After applying:** the proacl query above must return zero rows. Then
+re-capture `docs/architecture/db-snapshot.json` and move this section to
+*History*. (`supabase/tests/season_result.pglite.test.ts` keeps slicing the
+function from the historical `20260718000000` file, which is never
+rewritten, so it is unaffected.)
 
 ## History
 

@@ -118,7 +118,7 @@ A refusal appears **instantly** and never looks like success. Check `{ error }` 
   - the `league_activity` view (#5, trades ∪ picks);
   - `market_session_status`, `quote` / `ticker-quotes` (with `prevClose`), `historical-bars`, `symbol-name`;
   - `get_league_display_names` (owner names + `is_bot`).
-- A **new RPC** (e.g. one call for "who owns each symbol in this league", if the sheet needs it beyond `drafts`/`trades` reads) needs a plan-first message to the Orchestrator and uses migration range **`20261021000000`–`20261021000009`**.
+- A **new RPC** (e.g. one call for "who owns each symbol in this league", if the sheet needs it beyond `drafts`/`trades` reads) needs a plan-first message to the Orchestrator and uses migration range **`20261026000000`–`20261026000009`**.
 
 ## Motion and signature moments
 

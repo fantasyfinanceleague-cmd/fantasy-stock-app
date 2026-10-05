@@ -1,0 +1,129 @@
+-- ============================================================================
+-- LOCK: start_new_league_season — no API role may execute it any more
+-- ============================================================================
+-- PROBLEM (Run it back design, docs/migrations/RUN_IT_BACK_DESIGN.md §3)
+--   start_new_league_season(uuid) (latest body: 20260718000000) is SECURITY
+--   DEFINER and EXECUTE-granted to `authenticated` (20260718000000,
+--   re-asserted by 20260718000001). The mobile client calls it directly from
+--   apps/mobile/app/league-settings.tsx ("Start New Season", shown to the
+--   commissioner once season_status = 'completed'), in 1.0.0 and in 1.1.0.
+--   Its commissioner gate is real, but what the commissioner gets is strictly
+--   worse than nothing:
+--     * it DELETEs every matchup of the league, so the finished season's
+--       week-by-week history is lost (get_season_result drops to
+--       detail_scope = 'standings_only' for it);
+--     * it creates NO draft and NO schedule (finalize_league_draft never runs
+--       again) and leaves draft_status = 'completed', so the pick path refuses
+--       and nothing heals it -- the league sits at week 1 with no matchups
+--       forever (STATUS §4 item 9);
+--     * season-1 drafts/trades/week_snapshots persist, so every holdings read
+--       keyed on league_id silently carries last season's roster forward;
+--     * its confirm dialog promises "Generate a new matchup schedule".
+--   The replacement is the Run it back feature (a NEW league row per season,
+--   design approved in principle). Until it ships, the safe behaviour is for
+--   the old button to fail closed.
+--
+-- FIX
+--   Revoke EXECUTE from every API role, explicitly and per role:
+--     * PUBLIC        -- the built-in grant (already revoked in 20260718000000;
+--                        re-stated so this file reads as the lockdown it is);
+--     * anon          -- already revoked in 20260718000001; re-stated;
+--     * authenticated -- THE change: the mobile button's only path;
+--     * service_role  -- no server-side caller exists (grep: nothing under
+--                        supabase/functions/ or scripts/ calls it). Supabase's
+--                        ALTER DEFAULT PRIVILEGES gave it an explicit grant at
+--                        creation that REVOKE FROM PUBLIC never cleared
+--                        (CLAUDE.md "Postgres function grants"), so it is
+--                        revoked explicitly too. Leaving a destructive DEFINER
+--                        function callable by the secret key with no caller
+--                        to justify it is blast radius for nothing.
+--   No grant to anyone. The owner (postgres) keeps EXECUTE implicitly, so the
+--   function stays restorable from the SQL editor if anything unexpected
+--   turns out to need it.
+--
+--   The function is NOT dropped here: supabase/tests/season_result.pglite
+--   .test.ts slices its body from 20260718000000 for the archived-season
+--   fixture (unaffected: migration files are never rewritten), and a DROP
+--   should wait until no shipped client still calls it. The DROP is held in
+--   supabase/migrations/deferred/20261023000009_drop_start_new_league_season.sql
+--   with its precondition in that directory's README.
+--
+-- CLIENT EFFECT (1.0.0 and 1.1.0, league-settings.tsx handleStartNewSeason,
+-- unchanged since cc6379c): `const { error } = await supabase.rpc(...)`;
+-- `if (error) throw error;` -> catch -> Alert.alert('Error', error.message).
+-- PostgREST returns 42501 "permission denied for function
+-- start_new_league_season", so the commissioner sees an "Error" alert with
+-- that text. The success branch (refresh() + "New Season Started!" alert +
+-- dismiss) is never reached, and nothing is written.
+--
+-- ---------------------------------------------------------------------------
+-- PRE-PUSH (read-only; record the result):
+--   SELECT proname, proacl FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+--   WHERE n.nspname = 'public' AND proname = 'start_new_league_season';
+--   -- expected today: authenticated=X present (and likely service_role=X)
+--
+-- POST-PUSH EFFECT CHECKS (run each separately):
+--   -- 1. grants: expect EXACTLY {postgres=X/postgres} -- no anon=, no
+--   --    authenticated=, no service_role=, no bare =X/ (PUBLIC); one overload.
+--   SELECT proname, pg_get_function_identity_arguments(p.oid) AS args, proacl
+--   FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+--   WHERE n.nspname = 'public' AND proname = 'start_new_league_season';
+--
+--   -- 2. effect: an authenticated, UUID-shaped (never bot-*) commissioner is
+--   --    denied with 42501 and nothing changes. Ends in RAISE on EVERY path,
+--   --    so the whole block always rolls back -- even if the revoke had NOT
+--   --    taken and the function ran its DELETE, that DELETE is undone.
+--   --    Read the verdict in the error text: 'PHASE0 EFFECT TEST: PASS ...'.
+--   DO $$
+--   DECLARE
+--     v_league   uuid;
+--     v_comm     text;
+--     v_status   text;
+--     v_m_before bigint;
+--     v_m_after  bigint;
+--     v_s_before bigint;
+--     v_s_after  bigint;
+--     v_verdict  text;
+--   BEGIN
+--     -- prefer a completed league: there the function's own gates would pass,
+--     -- so a denial can only come from the missing grant
+--     SELECT l.id, l.commissioner_id, l.season_status
+--       INTO v_league, v_comm, v_status
+--     FROM leagues l
+--     WHERE l.commissioner_id ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+--     ORDER BY (l.season_status = 'completed') DESC, l.created_at DESC
+--     LIMIT 1;
+--     IF v_league IS NULL THEN
+--       RAISE EXCEPTION 'PHASE0 EFFECT TEST: SETUP FAIL -- no league with a UUID-shaped commissioner';
+--     END IF;
+--     SELECT count(*) INTO v_m_before FROM matchups WHERE league_id = v_league;
+--     SELECT count(*) INTO v_s_before FROM league_seasons WHERE league_id = v_league;
+--
+--     PERFORM set_config('role', 'authenticated', true);
+--     PERFORM set_config('request.jwt.claims',
+--       json_build_object('sub', v_comm, 'role', 'authenticated')::text, true);
+--     PERFORM set_config('request.jwt.claim.sub', v_comm, true);
+--     BEGIN
+--       PERFORM public.start_new_league_season(v_league);
+--       v_verdict := 'FAIL -- the call was ALLOWED (EXECUTE still granted to authenticated)';
+--     EXCEPTION
+--       WHEN insufficient_privilege THEN
+--         v_verdict := 'PASS -- 42501 ' || SQLERRM;
+--       WHEN OTHERS THEN
+--         v_verdict := 'FAIL -- reached the function body (' || SQLSTATE || ' ' || SQLERRM || ')';
+--     END;
+--     PERFORM set_config('role', 'postgres', true);
+--
+--     SELECT count(*) INTO v_m_after FROM matchups WHERE league_id = v_league;
+--     SELECT count(*) INTO v_s_after FROM league_seasons WHERE league_id = v_league;
+--     RAISE EXCEPTION 'PHASE0 EFFECT TEST: % | league % (season_status=%) | matchups % -> % | league_seasons % -> % | (rolled back)',
+--       v_verdict, v_league, v_status, v_m_before, v_m_after, v_s_before, v_s_after;
+--   END $$;
+--   -- PASS requires: the verdict starts with 'PASS -- 42501', and both
+--   -- before/after pairs are equal.
+-- ============================================================================
+
+REVOKE ALL ON FUNCTION public.start_new_league_season(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.start_new_league_season(uuid) FROM anon;
+REVOKE ALL ON FUNCTION public.start_new_league_season(uuid) FROM authenticated;
+REVOKE ALL ON FUNCTION public.start_new_league_season(uuid) FROM service_role;

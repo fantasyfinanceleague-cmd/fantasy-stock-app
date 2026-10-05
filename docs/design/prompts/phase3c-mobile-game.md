@@ -124,7 +124,7 @@ Keep **League settings** (including the commissioner-only "Start new season" via
   - #4 (intraday samples) is NOT needed: the race chart uses daily closes plus the live point.
   - #10 (scoring status) is derived: gains NULL after the week's calendar close means "Scoring…", as in 3b-2.
 - **The auto-pick cron is still deferred** (STATUS §4 item 19), so in production an overdue turn is picked by the sweep only once it's promoted. The UI must read the clock's `deadline` from `get_draft_clock` and never assume a pick happened. Show "Auto-picking…" past the deadline until the pick row arrives.
-- A **new RPC** needs a plan-first message to the Orchestrator and uses migration range **`20261020000000`–`20261020000009`**.
+- A **new RPC** needs a plan-first message to the Orchestrator and uses migration range **`20261025000000`–`20261025000009`**.
 
 ## Motion and signature moments
 
