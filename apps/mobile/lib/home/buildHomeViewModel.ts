@@ -152,10 +152,10 @@ function toLedger(rows: HomeLedgerRow[]): { symbol: string; entryPrice: number; 
 function toTrades(rows: HomeLedgerRow[]): { symbol: string; action: 'buy' | 'sell'; quantity: number; price: number }[] {
   return rows.map((r) => ({ symbol: r.symbol, action: r.action!, quantity: r.quantity, price: r.price ?? 0 }));
 }
-function toLiveTrades(rows: HomeLedgerRow[]): LiveTrade[] {
+export function toLiveTrades(rows: HomeLedgerRow[]): LiveTrade[] {
   return rows.map((r) => ({ symbol: r.symbol, action: r.action!, quantity: r.quantity, price: r.price ?? 0, createdAt: new Date(r.created_at) }));
 }
-function toLiveSnapshots(rows: HomeLedgerRow[]): LiveSnapshot[] {
+export function toLiveSnapshots(rows: HomeLedgerRow[]): LiveSnapshot[] {
   return rows.map((r) => ({ symbol: r.symbol, quantity: r.quantity, weekStartPrice: r.week_start_price ?? 0, enteredMidWeek: !!r.entered_mid_week }));
 }
 
