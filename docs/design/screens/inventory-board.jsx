@@ -137,7 +137,7 @@
           <div className="b-ask" style={{ marginTop: 0, marginBottom: 28, maxWidth: '84ch' }}>
             <h3>Your call · decided and open</h3>
             <ol style={{ margin: 0, paddingLeft: 20, display: 'grid', gap: 6 }}>
-              <li><b>Who's in: DECIDED (opt-in).</b> Only the commissioner can run it back. Every Season 1 player then gets "I'm in / I'm out" (a push, plus a card on Home and the League tab), the commissioner is told about each reply and sees In / Out / No reply yet, and the draft can't be set until nobody is left without a reply. New people can join with the invite code; the team count follows who's in, up to 16. <b>To confirm:</b> how the commissioner clears someone who never replies (frame 4 below).</li>
+              <li><b>Who's in: DECIDED (opt-in).</b> Only the commissioner can run it back. Every Season 1 player then gets "I'm in / I'm out" (a push, plus a card on Home and the League tab), the commissioner is told about each reply and sees In / Out / No reply yet, and the draft can't be set until nobody is left without a reply. New people can join with the invite code; the team count follows who's in, up to 16. The commissioner clears a missing reply with <b>"Nudge again"</b> or <b>"Remove"</b> (decided). Players can change their answer until the draft is set (decided). A player who answers "I'm in" goes straight to the full "Who's running back" list (decided).</li>
               <li><b>Teams: a new draft.</b> Draft night is the best moment in the game, and last season's luck doesn't carry over. Keepers can come later.</li>
               <li><b>Settings: everything carries over</b>, and the commissioner can change any of it on one review screen before the draft.</li>
               <li><b>History: Season 1 stays.</b> A champion banner on the League tab until Season 2's draft, and League › History keeps every season's standings, matchups and draft.</li>
@@ -153,12 +153,12 @@
 
           <h3 className="b-sub">(a) Who's in · decided: opt-in, the commissioner reconciles</h3>
           <div className="b-concepts b-concepts--three">
-            <Fit caption="1 · Member: Home (and the League tab)" note="The same card sits on the League tab. An answer can change until the draft is set."><I.RibMemberPrompt /></Fit>
+            <Fit caption="1 · Member: Home (and the League tab)" note="The same card sits on the League tab. I'm in opens the full list (4b). An answer can change until the draft is set."><I.RibMemberPrompt /></Fit>
             <Fit caption="2 · Commissioner: a push for each reply" note="Every answer notifies the commissioner, with the running count."><I.RibPush mode="reply" /></Fit>
             <Fit caption="3 · Commissioner: Home while replies come in" note="Counts and who's still to reply; opens the reconcile view."><I.RibHomeCounts /></Fit>
-            <Fit caption="4 · Commissioner: League tab, reconcile" note={`Standings-style, in Season 1 order: "Running back" (Giorgio's copy) with the name in bold; "Out" muted; "No reply yet" with Nudge / Mark as out on the row; new joiners last with a New marker and "Joining". Draft rows stay disabled until nobody is left without a reply. New copy except "Running back". Needs backend: replies, and joins during renewal.`}><I.RibReconcile /></Fit>
-            <Fit caption="4b · A member's view · TO CONFIRM" note="Lighter: only who's running back (and new joiners), plus a count of the rest. To confirm whether members should see the out / no-reply names."><I.RibMemberList /></Fit>
-            <Fit caption="5 · PROPOSAL, to confirm: clearing a non-reply" note='"Nudge again" re-sends the push; "Mark as out" closes it and tells that player. Our proposal; Giorgio to confirm.'><I.RibResolve /></Fit>
+            <Fit caption="4 · Commissioner: League tab, reconcile" note={`Standings-style, in Season 1 order: "Running back" (Giorgio's copy) with the name in bold; "Out" muted; "No reply yet" with "Nudge again · Remove" (Giorgio's words) on the row; new joiners last with a New marker and "Joining". Draft rows stay disabled until nobody is left without a reply. Needs backend: replies, and joins during renewal.`}><I.RibReconcile /></Fit>
+            <Fit caption="4b · A member who said I'm in (decided)" note="Answering I'm in opens this: the same list with every answer and no actions, plus 'Change'. To confirm only: players who are out or haven't answered don't see it."><I.RibMemberList /></Fit>
+            <Fit caption="5 · Clearing a non-reply (decided)" note='"Nudge again" re-sends the push; "Remove" takes them out of Season 2 and tells them (Giorgio&#39;s words).'><I.RibResolve /></Fit>
             <Fit caption="6 · After everyone has replied: the review" note="Teams = who's in + new joins (here 4 + 1 = 5, up to 16), with the uneven-bye heads-up. Needs backend: today join refuses league_full."><I.RibReview /></Fit>
           </div>
 

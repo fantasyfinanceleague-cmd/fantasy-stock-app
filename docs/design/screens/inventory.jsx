@@ -1587,12 +1587,13 @@
   }
   /** One row per player in Season 1's final order, answer right-aligned.
    * "Running back" is Giorgio's copy (verbatim); "Out", "No reply yet",
-   * "Joining", "New", "Nudge", "Mark as out" are new copy. `member` hides the
-   * out / no-reply names (whether members see them is to confirm). */
-  function ReplyRows({ member, me = 'roberto' }) {
+   * "Joining", "New" are new copy; "Nudge again" and "Remove" are Giorgio's
+   * (2026-10-04). `actions` = the commissioner's per-row actions; a member
+   * who is in sees the same full list without them. */
+  function ReplyRows({ actions = true, me = 'roberto' }) {
     const R = NX.replies;
     const state = (id) => (R.in.includes(id) ? 'in' : R.out.includes(id) ? 'out' : 'none');
-    const rows = S1.rows.filter((r) => !member || state(r.id) === 'in');
+    const rows = S1.rows;
     return (
       <ul className="ks-rows">
         {rows.map((r) => {
@@ -1606,7 +1607,7 @@
               {st === 'none' ? (
                 <span style={{ display: 'grid', justifyItems: 'end', gap: 2 }}>
                   <span className="ks-callout" style={{ color: 'var(--c-live-text)', fontWeight: 600, display: 'flex', gap: 6, alignItems: 'center' }}><span className="ks-dot" />No reply yet</span>
-                  <span className="ks-caption" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Nudge · Mark as out</span>
+                  {actions ? <span className="ks-caption" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Nudge again · Remove</span> : null}
                 </span>
               ) : null}
             </li>
@@ -1650,36 +1651,41 @@
       </Device>
     );
   }
-  /** A plain member's lighter view (to confirm: do members see out / no-reply names?). */
+  /** A member who answered "I'm in" lands here (auto-redirect): the same
+   * list, every answer, no actions. Out / unanswered players don't get it
+   * (assumed; to confirm). */
   function RibMemberList() {
-    const R = NX.replies;
-    const hidden = R.out.length + R.none.length;
     return (
-      <Device tab="league" label="Member League tab: who's running back">
+      <Device tab="league" label="Member who is in: who's running back">
         <div className="ks-head"><Pill /><span className="ks-chip">Season 2</span><span className="ks-avatar">GB</span></div>
         <div className="ks-pad ks-stack">
+          <div className="ks-raised" style={{ padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className="ks-callout" style={{ fontWeight: 700, display: 'flex', gap: 6, alignItems: 'center', color: 'var(--c-accent)' }}><Icon d={CHECK} size={14} width={3} />You're running back</span>
+            <span className="ks-caption" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Change</span>
+          </div>
           <div><span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Season 2</span><h2 className="ks-head__title" style={{ fontSize: 26, margin: '2px 0 0' }}>Who's running back</h2></div>
-          <span className="ks-callout ks-num"><b>{R.in.length} running back</b> · {NX.joined.length} new</span>
-          <Card pad="4px 14px"><ReplyRows member me="gianluigi" /></Card>
-          <span className="ks-caption">{hidden} more from Season 1 haven't said they're running back yet. The draft is set once everyone has replied.</span>
-          <span className="ks-caption" style={{ justifySelf: 'start', padding: '4px 8px', borderRadius: 8, background: 'var(--c-warn-tint)', color: 'var(--c-warn-text)', fontWeight: 700 }}>To confirm · members see only who's running back</span>
+          <Countline />
+          <Card pad="4px 14px">
+            <div className="ks-section-h" style={{ paddingTop: 8 }}><h3>Season 1 order</h3><span className="ks-caption">Answer</span></div>
+            <ReplyRows actions={false} me="gianluigi" />
+          </Card>
+          <span className="ks-caption">The draft is set once everyone has replied. You can change your answer until then.</span>
+          <span className="ks-caption" style={{ justifySelf: 'start', padding: '4px 8px', borderRadius: 8, background: 'var(--c-warn-tint)', color: 'var(--c-warn-text)', fontWeight: 700 }}>To confirm · players who are out or haven't answered don't see this list</span>
         </div>
       </Device>
     );
   }
-
-  /** PROPOSAL: how the commissioner clears a non-responder. */
+  /** How the commissioner clears a non-reply (Giorgio, 2026-10-04: "Nudge again" / "Remove"). */
   function RibResolve() {
     const who = K.byId[NX.replies.none[0]].name;
     return (
-      <Device tab="league" label="Proposal: resolve a missing reply" overlay={
+      <Device tab="league" label="Commissioner: resolve a missing reply" overlay={
         <Sheet top={430}>
-          <span className="ks-caption" style={{ justifySelf: 'start', padding: '4px 8px', borderRadius: 8, background: 'var(--c-warn-tint)', color: 'var(--c-warn-text)', fontWeight: 700 }}>Proposal · to confirm</span>
           <span className="ks-title" style={{ fontSize: 20 }}>{who} hasn't replied</span>
           <span className="ks-callout ks-muted">Asked Sat, Jan 16. Nudged once.</span>
           <span className="ks-btn">Nudge again</span>
-          <span className="ks-btn ks-btn--secondary">Mark as out</span>
-          <span className="ks-caption">If you mark {who.split(' ')[0]} as out, they get a message and can still ask you to be let back in until the draft is set.</span>
+          <span className="ks-btn ks-btn--secondary">Remove</span>
+          <span className="ks-caption">If you remove {who.split(' ')[0]}, they're out of Season 2 and get a message saying so.</span>
         </Sheet>
       }>
         <Head chip={<span className="ks-chip">Season 2</span>} />
