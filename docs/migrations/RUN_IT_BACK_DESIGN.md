@@ -1,11 +1,11 @@
 # "Run it back": renewing a finished league (backend design)
 
-**Status:** DESIGN ONLY. Nothing here is implemented, and no migration exists.
-The Orchestrator approves the architecture. Giorgio settles the product
-choices in §4 through the Design Lead's "Your call: Run it back" mockups.
-**Rev 2 (2026-10-04):** phase 1 is aligned to the Design Lead's lean path on the board
-(`design/your-call-run-it-back` @ `99032ec`). §2.0 maps each frame to the backend, and §4
-costs every non-lean option as phase 2.
+**Status:** DESIGN ONLY for phase 1. Phase 0 is committed (`5c2175c`). B is approved in
+principle.
+**Rev 3 (2026-10-04):** Giorgio ruled **(a) = opt-in with commissioner reconciliation, in phase
+1** (board `design/your-call-run-it-back` @ `4538f60`, frames a1–a6). §2 is rewritten for it.
+(b) is undecided; a new draft is assumed. Rev 2 mapped the earlier lean path; rev 1 compared the
+architectures (§1, unchanged).
 **Branch:** `docs/run-it-back-design`. **Migration range reserved:** `20261023000000`–`09`.
 **Author:** the "run it back backend" worker, 2026-10-04, read-only against `main` @ `ee2ceff`.
 
@@ -13,37 +13,29 @@ costs every non-lean option as phase 2.
 
 ## TL;DR
 
-- **Recommendation: architecture B.** The renewal is a **new `leagues` row** cloned from the
-  finished one, linked by `previous_league_id`. The old league is never written again, so its
-  history stays **full detail** (week by week, playoffs, best week) through the existing
-  `get_season_result` with no change.
-- **Why B:** every operational table and every reader is keyed by `league_id`. Under B the new
-  season gets a new `league_id`, so each reader stays correct with no change: scoring, both
-  snapshot jobs, draft turn math, `record-trade`, ranking, Home, the draft-order state machine.
-  Under A or C, all of them need season scoping (≈20 server sites and ≈30 client sites). The
-  draft-order triggers also **cannot be reset** for a league that keeps its id (§1.A.4).
-- **Phase 1 = the board's lean path:** carry-over with "I'm out" until the order is set, a new
-  draft, carried and editable settings, a "Start Season 2" notification, and Season 1 history
-  kept.
-  - It is mainly one SQL RPC, `renew_league(old, p_settings, p_slots)`, called atomically at
-    **Start Season 2**: commissioner-only, `authenticated`, explicit revoke from anon. Cancelling
-    the review writes nothing.
-  - It adds `get_league_history`, a two-line `finalize_league_draft` change and a notification
-    kind.
-  - After that, the new league goes through the **existing** draft path: draft-order modes, pick
-    clock, auto-pick, `draft-control`, then the pick path → `planSeason` →
-    `finalize_league_draft`. No new edge function is needed. Estimate ≈2–2.5 worker days.
-- **`start_new_league_season`: revoke it now and drop it later.** It is authenticated-callable,
-  it destroys history, and it leaves the league stuck with no draft and no schedule. Phase 0 is a
-  one-line `REVOKE` migration; phase 1 drops the function.
-- **Phase 2, per non-lean board option (§4):**
-
-  | Option | Size | What it adds |
-  |---|---|---|
-  | (a)-B "I'm in" by a deadline | S | an explicit in/out response table and an RPC |
-  | (a)-C commissioner picks | XS–S | an exclude list and a "not included" notice |
-  | (b)-B keep teams | M–L | an edge function, carried slots, and positions sized at Week 1's open |
-  | (b)-C keepers (up to 2) | L | declarations, plus forced picks in the owner's last rounds of the turn engine |
+- **Architecture B (approved in principle).** Each season is a **new `leagues` row** linked by
+  `previous_league_id`. The finished league is never written again, so its history stays **full
+  detail** (week by week, playoffs, best week) through the existing `get_season_result`.
+- **Why B:** every operational table and reader is keyed by `league_id`, so a new id keeps all of
+  them correct with no change. A or C would mean ≈50 season-scoping edits and a rewrite of the
+  draft-order triggers (§1).
+- **Phase 0, done (`5c2175c`):** `start_new_league_season` is revoked from every API role, with a
+  9-step PGlite test. The 1.1.0 button now fails closed with an "Error" alert. The DROP is held
+  in `deferred/`.
+- **Phase 1 = opt-in renewal + a new draft (≈4–5 worker days):**
+  - "Run it back" → **`renew_league`** creates Season 2 and asks every Season 1 player.
+  - Players answer through **`respond_to_renewal`**. Each answer notifies the commissioner, who
+    sees In / New / Out / No reply through **`get_renewal_roster`** and clears non-replies with
+    **`mark_renewal_out`**.
+  - A **server-side gate** stops the draft date, the order and the start while any reply is
+    pending (a trigger that binds service_role too, `set_draft_order`, and a `draft-control`
+    blocker). The gate is provably one-way.
+  - Newcomers join by code: `num_participants` = **16** until the draft, then the member count.
+  - The review's "Start Season 2" is **`start_renewed_season`**.
+  - After that, the existing draft → finalize → scoring path runs.
+- **Release precondition:** the ask is a push, so the deferred `draft-order-notify` cron must be
+  promoted with phase 1 (§2.9).
+- **Phase 2 = (b), if chosen:** keep teams (M–L) or keepers (L) (§4).
 
 ---
 
@@ -167,8 +159,8 @@ must remember the filter, forever.
 ### B. A new `leagues` row cloned from the old one (recommended)
 
 `renew_league(old)` INSERTs a new league that copies the settings, sets
-`previous_league_id = old.id`, copies the membership (or invites it, §4.1), and gets a fresh
-invite code. The old league is left **exactly as it is**, not one row written: completed,
+`previous_league_id = old.id`, **invites** the Season 1 players (opt-in, §2.2), and gets a
+fresh invite code. The old league is left **exactly as it is**, not one row written: completed,
 scored, read-only.
 
 **B.1 Tables touched.**
@@ -176,8 +168,9 @@ scored, read-only.
 | Table | Action |
 |---|---|
 | `leagues` | **INSERT** one row (copy-classified columns, §2.3). New columns: `previous_league_id uuid REFERENCES leagues(id)`, a partial UNIQUE on it (one successor per league, which is also the race and idempotency guard), `lineage_id uuid` (root league id; NULL = self), `season_number int NOT NULL DEFAULT 1` (lineage ordinal) |
-| `league_members` | INSERT the carried members (auto-carry) or just the commissioner (opt-in, §4.1) |
-| `league_notifications` | INSERT one `season_renewed` row per carried human member (kind CHECK +=) |
+| `league_members` | INSERT the commissioner only; each player's row is inserted when they answer "I'm in" (§2.5) |
+| `league_renewal_responses` | **new table**: one `pending` row per invited Season 1 player (§2.2) |
+| `league_notifications` | INSERT one `renewal_invite` per invited player (kinds CHECK +=, §2.9) |
 | `league_draft_slots` | copy the old league's rows (new ids, same shape) |
 | `league_seasons` | **none at renewal.** `finalize_league_draft` creates the new league's season at draft end, as for every league, now numbered `leagues.season_number` instead of a literal 1 (§2.4) |
 | everything else | **nothing.** No DELETE anywhere, and no row of the old league changes |
@@ -201,17 +194,17 @@ members because nobody's `league_members` row is deleted. Realtime filters on `l
 working, and the client re-subscribes when the active league switches. The Home-switch UX
 therefore matters (§2.6), but it is not a backend risk.
 
-**B.4 Migration size: small.** Three columns and one partial unique index; one DEFINER function
-(`renew_league`); a two-line `finalize_league_draft` change; one notification kind; a
-re-created `get_home_summary`; a new read function (`get_league_history`); the revoke/drop of
+**B.4 Migration size: small to medium** (medium once the opt-in replies are included). Three columns and one partial unique index; one DEFINER function
+(`renew_league`) plus the opt-in reply functions, one new table, one gate trigger (§2); a two-line
+`finalize_league_draft` change; notification kinds; a re-created `get_home_summary`; a new read function (`get_league_history`); the revoke/drop of
 `start_new_league_season`. There
 are no changes to operational tables and no backfill beyond defaults.
 
 **B.5 Partial-state risk: low, and recoverable.** Renewal is one transaction that writes only
 **new** rows. It either fully exists or does not exist, and a failure
 loses nothing. The checks that remain are all count-against-expected-set, per CLAUDE.md:
-- Members copied: `count(new members) = count(old members)` under auto-carry, asserted inside
-  the function before COMMIT.
+- Invitations written: `count(pending responses) = count(old human members) − 1` (the
+  commissioner), asserted inside the function before COMMIT.
 - Slots copied: same, per `slot_index`.
 - Columns copied: classified **exhaustively** (§2.3). The PGlite test enumerates
   `information_schema.columns` for `leagues` and **fails on any column it has not classified** as
@@ -232,7 +225,7 @@ which is exactly what they are.
 **B.7 What B costs that A and C do not.**
 - **Two league rows in the user's list.** The old one moves to "Finished" by itself (F10). Whether
   a superseded league stays in the sheet, collapses under its successor, or hides is a client
-  choice fed by `successor_league_id` (Design question, §4.8).
+  choice fed by `successor_league_id` (Design question, §4.5).
 - **Identity across seasons is the lineage, not the id.** "All-time record vs. Alex" or "3×
   champion" become lineage queries (`lineage_id` index), not single-league ones. That fits a
   read RPC; it is not a reason to share ids.
@@ -250,7 +243,7 @@ which is exactly what they are.
 | Partial-state exposure | high (multi-table move) | high, permanent (every future reader) | **low** (one INSERT transaction) |
 | Past-season detail | `standings_only` unless archive readers are built | full | **full, free** |
 | Old mobile builds | see a league "un-draft" | blend seasons unless filtered | **unaffected** (it's just a new league) |
-| Migration size | L | XL | **S** |
+| Migration size | L | XL | **S** (plus opt-in, which any architecture would need) |
 
 **Recommendation: B.** It is the only option where correctness of the scoring and draft
 pipeline after renewal is a property of the schema, not of every reader remembering a filter.
@@ -258,120 +251,299 @@ C's one real advantage, full history in place, B also gets for free.
 
 ---
 
-## 2. Phase 1: the Design Lead's lean path, end to end
+---
 
-The board (`design/your-call-run-it-back` @ `99032ec`, `docs/design/screens/inventory.jsx`,
-"Your call: Run it back") leans towards:
-- **(a) Who's in:** everyone carries over, with "I'm out this season" until the draft order is
-  set. New people join with the invite code until the draft.
-- **(b) How teams start:** a new draft.
-- **(c) Settings:** every Season 1 setting carries over and is editable until the draft.
-  "Start Season 2" notifies everyone.
-- **(d) History:** a Season 1 champion banner until Season 2's draft, and League › History with
-  Season 1's frozen final standings and, ideally, its matchups.
+## 2. Phase 1: opt-in renewal with commissioner reconciliation, end to end
 
-**Phase 1 implements exactly that.** Every frame of the lean path is mapped to its backend piece
-in §2.0. Every non-lean option is costed in §4.
+**Giorgio's ruling on (a), 2026-10-04: OPT-IN, in phase 1.** The Design Lead's frames a1–a6 are
+on the board (`design/your-call-run-it-back` @ `4538f60`).
+1. **Only the commissioner** runs it back.
+2. **Every Season 1 player** is asked "I'm in / I'm out" by push and a Home/League card.
+3. **Each reply notifies the commissioner**, who sees In / New / Out / No reply yet by name.
+4. **The draft can't be set**, and can't start, while anyone is left without a reply. This is
+   enforced on the **server**.
+5. **New people join with the invite code** during the renewal. The team count follows who's in,
+   up to 16.
+
+**(b) is undecided, so this assumes a new draft.**
+
+Four things change from rev 2:
+- "Carry every member" becomes "invite every member".
+- `renew_league` now runs at the **"Run it back" tap**, because the ask goes out the moment the
+  commissioner runs it back (frame 1). The settings review comes **after** everyone has replied
+  (frame 6), as its own commit, `start_renewed_season`.
+- An abandoned renewal therefore needs an explicit `cancel_league_renewal`.
+- §2.7 corrects rev 2's join claim: `join_league_by_code` also refuses `league_full` at
+  `num_participants`, so a copied team count would block newcomers.
 
 ### 2.0 Board frame → backend
 
-| Board frame | What the backend provides | Phase |
-|---|---|---|
-| Home "Run it back?" card / League tab "Run it back" (commissioner) | The old league is `season_status='completed'`, the caller is commissioner, and `successor_league_id IS NULL`. All three come from `get_home_summary` (+ lineage columns). | 1 |
-| (c) Season 2 review ("Everything carries over… Change anything before the draft", Cancel / **Start Season 2**) | **Nothing is written while reviewing.** The client pre-fills the form from the old league's row and slots. **Start Season 2** = one atomic `renew_league(old_id, p_settings, p_slots)`. **Cancel** leaves no trace, so there is no ghost successor blocking a later renewal (the partial UNIQUE would). | 1 |
-| "Everyone gets a notification" / member push "Roberto B. is running it back. You're in for Season 2, the draft is Sat, Jan 23 · 7:00 PM ET." | `renew_league` writes one `league_notifications` row per carried **human** member except the commissioner, kind `season_renewed`, in the same transaction (exactly once by partial UNIQUE). Push goes through `draft-order-notify`, generalised to build its body by `kind` (copy verbatim from the board; the "the draft is …" clause is dropped when `draft_date` is TBD, as that function already does for the order notice). **Caveat:** that function's cron is still in `deferred/` (STATUS item 19), so the push goes live when the cron is promoted. The in-app record exists from day 1. | 1 |
-| (a) Member Home "You're in · 6 of 6 back" | The member is already in the new league's `league_members` (auto-carry). "N of M back" = `|new members ∩ predecessor members|` over `|predecessor members|`, from `get_league_history`'s roster block (§2.1). No discriminator column is needed: membership itself is the state. | 1 |
-| "I'm out this season · You can drop out until the draft order is set (Sat 6:00 PM ET)" | A self-leave of the **new** league through the existing `[I5]` DELETE (F11). The draft-order trigger already removes the leaver and closes the gap while the order is `open` or `finalized`, and refuses once `locked`. The "until the order is set" window is **client-gated** in phase 1, from `get_draft_order().finalized`. The DB stays permissive between T−1h and the draft (a leave then still closes the gap safely, the existing draft-order rule). If Giorgio wants it hard-enforced, that is one extra refusal (§4, XS). The Season 1 row is never touched, so an opted-out member still sees Season 1. | 1 |
-| "Invite more with SCUD26" / new people join until the draft | `renew_league` gives the new league a **fresh** invite code (the board shows a new code), generated in SQL with the same 32-symbol alphabet and length as `apps/mobile/lib/inviteCode.ts`, retried on the UNIQUE. `join_league_by_code` already admits a `not_started` league and refuses after the draft starts (F13). **Nothing changes here.** The old league's code keeps dead-ending in the existing `completed` refusal. | 1 |
-| (b) "New draft · Order: Random, set Sat 6:00 PM ET. Last season's champion has no advantage." | The new league has no draft-order row, so the existing draft-order modes apply fresh: random at T−1h, or manual. Pick clock, queue and auto-pick are reused unchanged. Nothing seeds the order from Season 1's standings. | 1 |
-| Start draft → finalize → Week 1 | `draft-control` `start` → the existing pick path → `draft-write.ts` → `planSeason` → `finalize_league_draft` (now numbering the season from `leagues.season_number`, §2.4) → the snapshot and scoring crons. All existing. | 1 |
-| (d) Champion banner "Season 1 champion · Roberto B. · 11–3 · won the Final" until Season 2's draft | `get_league_history(new_id)` returns the predecessor's podium. The record comes from the frozen `final_standings`, and "won the Final" from `get_season_result(old_id)` (`playoff_result='champion'`). The client hides the banner once `draft_status <> 'not_started'`. | 1 |
-| Member Home "Season 1 · Roberto B. won · you finished 5th (4–10)" | `get_league_history` returns the caller's own final rank and record per season. | 1 |
-| (d) League › History: the season list, plus "Season 1 · final standings" with season gain | `get_league_history(new_id)`: one row per season in the lineage, **with the full frozen `final_standings` array** (rank, W–L–T, `points_for`, display name) for completed seasons. It is visible to every member of the current league, newcomers included, because it is a frozen snapshot. | 1 |
-| (d) "Every week's matchups and the draft recap stay here too" (tagged "Needs backend: today they're deleted") | **Under B they are no longer deleted.** The old league's `matchups` and `drafts` simply remain. Members who played Season 1 read them with the queries and RLS that exist today, keyed on the **old** `league_id` (`is_member(old)` holds because their Season 1 membership row is never touched). `get_season_result(old_id)` stays `detail_scope='full'`. **Newcomers** who never played Season 1 are not members of the old league, so week-by-week detail needs one read RPC (§4.6). The "Needs backend" tag becomes "phase 1 for players, small phase 2 for newcomers". | 1 / 2 |
+| Board frame (`4538f60` unless noted) | What the backend provides |
+|---|---|
+| Home "Run it back?" / League tab "Run it back" (commissioner) | Shown when the old league is `season_status='completed'`, the caller is commissioner, and `successor_league_id IS NULL` (`get_home_summary` + lineage columns). The tap calls **`renew_league(old_id)`** (§2.3). |
+| Push to every Season 1 player: "Roberto B. is running it back. Are you in for Season 2?" | `renew_league` writes one **`league_renewal_responses`** row per invited player with `status='pending'`, plus one `league_notifications` row of kind `renewal_invite` each, in the same transaction (§2.2). |
+| Member card "Roberto B. is running it back. Are you in? … The draft is set once everyone has replied" · **I'm out** / **I'm in** | **`respond_to_renewal(new_id, 'in'\|'out')`**: self only, keyed on `auth.uid()`. `in` also INSERTs the member's `league_members` row in the new league; `out` deletes it if present. Every reply writes a `renewal_reply` notification to the commissioner. |
+| a2 Commissioner push per reply: "Gianluigi B. is in for Season 2. 4 in · 1 out · 1 to reply." | The `renewal_reply` row carries `subject_user_id` and `detail = {response, in, out, pending}`, **snapshotted at reply time**. A fast in→out flip therefore produces two truthful pushes, not two copies of the latest state. |
+| a3 Commissioner Home "Season 2 · who's in … Waiting on Andrea P." / a4 League tab: In / New / Out / No reply yet, by name; draft rows disabled with the reason | **`get_renewal_roster(new_id)`** (§2.4). It returns `replies_pending`, so the client disables the draft rows from the same fact the server gate uses. |
+| a5 (proposal) "Nudge again" / "Mark as out … they get a message and can still ask you to be let back in until the draft is set" | **`mark_renewal_out(new_id, user_id)`**: commissioner only, `pending` only; writes `renewal_marked_out` to the player. **Proposals, built only if Giorgio confirms them:** `nudge_renewal` (re-sends the ask, rate-limited) and "ask back in" (`request_back_in` + `readmit_to_renewal`). See §2.5. |
+| Server gate: "You can set the draft once everyone has replied" | **`trg_leagues_renewal_gate`** on `leagues` (draft date, order mode, draft start), a check in **`set_draft_order`**, and a **`renewal_replies_pending`** blocker in `draft-control` (§2.6). |
+| a4 "New · joined with the invite code" / a6 "Teams: 5 · Follows who's in, up to 16. More can join with SCUD26 until the draft." | A fresh invite code. **`num_participants = 16`** on a renewed league until the draft starts, then the actual member count (§2.7). `join_league_by_code` is unchanged. |
+| a6 Review (after everyone has replied) → **Start Season 2**: "Everyone who's in gets a notification" | **`start_renewed_season(new_id, p_settings, p_slots)`** applies the reviewed settings and the draft date in one transaction, and writes `season_set` notifications to every member. It is **refused while any reply is pending** (§2.3). |
+| New draft: random order at T−1h, pick clock, auto-pick | Unchanged. The new league has no draft-order row until reveal or start. |
+| Last pick → finalize → Week 1 | Unchanged path. `finalize_league_draft` numbers the season from `leagues.season_number` (§2.8). |
+| Champion banner / League › History / "you finished 5th" (`99032ec` frame d) | `get_league_history(new_id)` (§2.4). Unchanged from rev 2. Season 1's matchups and draft recap are **kept** in the old league, which is never written. |
 
 ### 2.1 New, changed, reused
 
-| Name | Kind | Status | Caller | Notes |
-|---|---|---|---|---|
-| `renew_league(p_league_id uuid, p_settings jsonb default '{}', p_slots jsonb default null)` | SQL, SECURITY DEFINER | **new** | mobile (commissioner, "Start Season 2") | §2.3. Returns `jsonb {status:'renewed'\|'already_renewed', league_id, invite_code}`. Game-flow refusals return `{status:'refused', reason}` (finalize convention). Auth failures raise `42501`. |
-| `get_league_history(p_league_id uuid)` | SQL, SECURITY DEFINER, STABLE | **new** | mobile (banner, History, member Home) | One row per season in the lineage, newest first: `league_id, season_number, season_id, is_current, draft_status, draft_date, completed_at, champion_user_id/_display_name, runner_up_…, final_standings` (a jsonb array of `{user_id, display_name, rank, wins, losses, ties, points_for}` from `league_seasons.final_standings` + `participant_display_name`), plus `my_rank/my_wins/my_losses/my_ties/my_points_for`. The current row also carries `roster: [{user_id, display_name, status: 'in'\|'out'}]` over the predecessor's members (`in` = also a member of the current league). It reads only `leagues`, `league_seasons` and `league_members`, never operational tables. |
-| `finalize_league_draft` | SQL | **changed** | `draft-write.ts` (service_role) | The season INSERT and the select after it use `v_league.season_number`. Grants unchanged; re-asserted (§2.4). |
-| `get_home_summary` | SQL | **changed** (output columns) | mobile | + `previous_league_id`, `successor_league_id`, `season_number`. A `RETURNS TABLE` shape change needs `DROP FUNCTION` + `CREATE`, which **resets privileges**, so the explicit revoke/grant is re-applied (the mirror of CLAUDE.md's `CREATE OR REPLACE` trap). If `ui/mobile-home`'s `get_home_league` (F14) merges first, the columns go there as well. |
-| `league_notifications` | table | **changed** | — | `kind` CHECK += `'season_renewed'`; the exactly-once partial UNIQUE gains a sibling for that kind. |
-| `draft-order-notify` | edge fn | **changed** | cron (deferred) | Body builder switches on `kind`. `season_renewed` copy is verbatim from the board. Token handling is unchanged (`_shared/push.ts`). |
-| `record-trade` | edge fn | **changed** | mobile | Refuses `season_status='completed'` → `{ok:false, reason:'season_completed'}` (200, game-flow refusal). Closes F9 before finished leagues start accumulating next to their successors. |
-| `start_new_league_season` | SQL | **revoked (phase 0), dropped (phase 1, deferred)** | — | §3 |
-| `draft-control`, `get_draft_order`, `set_draft_order`, `get_draft_clock`, `set_draft_queue`, `validate-and-record-pick`, `draft-autopick-sweep`, `_shared/schedule.ts`, `join_league_by_code`, `snapshot-week-start`, `snapshot-week-end`, `process-week-results`, `complete_league_season`, `start_league_playoffs`, `league_standings_ranked`, `get_season_result` | — | **reused unchanged** | — | The new league is an ordinary league. |
-
-STATUS §4 item 9 proposed "route it through an edge function reusing `_shared/schedule.ts` +
-`finalize_league_draft`". Under B that path **already exists**: it is the normal draft
-completion in `draft-write.ts`. The lean path needs no new edge function. Only "keep teams"
-needs one (§4.3), because holdings are computed in TypeScript and must be priced.
-
-### 2.2 Security model
-
-Every new function follows the established shape: SECURITY DEFINER, `SET search_path = public,
-pg_temp`, and grants written out in full:
-```sql
-REVOKE ALL ON FUNCTION public.renew_league(uuid, jsonb, jsonb) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.renew_league(uuid, jsonb, jsonb) FROM anon;          -- Supabase default grant
-REVOKE ALL ON FUNCTION public.renew_league(uuid, jsonb, jsonb) FROM service_role;  -- no server caller; auth.uid() would be NULL anyway
-GRANT EXECUTE ON FUNCTION public.renew_league(uuid, jsonb, jsonb) TO authenticated;
-```
-Verify every one with the `proacl` query. The PGlite test simulates `ALTER DEFAULT PRIVILEGES`
-so the assertion proves the explicit revokes work, as `finalize_league_draft.pglite.test.ts`
-does.
-
-| Function | Who | Identity check (inside, keyed on `auth.uid()`) | State checks |
+| Name | Kind | Status | Caller |
 |---|---|---|---|
-| `renew_league` | commissioner of the **old** league | `auth.uid() IS NULL → 42501`; `leagues.commissioner_id = auth.uid()::text` (text cast, B1 convention), checked **before** state so a non-commissioner learns nothing | old league `league_type='matchup'` (§4.7), `season_status='completed'` **and** its current season `completed_at IS NOT NULL` (both: one without the other is the `season_status_mismatch` that `get_season_result` refuses), no successor yet; `p_settings` keys ⊆ the whitelist (§2.3) |
-| `get_league_history` | a member of `p_league_id` | `auth.uid() IS NULL → 42501`; `is_member(p_league_id)`, else 0 rows (no existence oracle, like `get_season_result`) | — |
+| `renew_league(p_league_id uuid)` | SQL DEFINER | **new** | commissioner, "Run it back" |
+| `respond_to_renewal(p_league_id uuid, p_response text)` | SQL DEFINER | **new** | invited player |
+| `mark_renewal_out(p_league_id uuid, p_user_id text)` | SQL DEFINER | **new** | commissioner |
+| `start_renewed_season(p_league_id uuid, p_settings jsonb, p_slots jsonb default null)` | SQL DEFINER | **new** | commissioner, review → "Start Season 2" |
+| `cancel_league_renewal(p_league_id uuid)` | SQL DEFINER | **new** | commissioner |
+| `get_renewal_roster(p_league_id uuid)` | SQL DEFINER, STABLE | **new** | members + invitees |
+| `get_league_history(p_league_id uuid)` | SQL DEFINER, STABLE | **new** (as rev 2) | members |
+| `league_renewal_responses` | table | **new** | written only by the functions above |
+| `enforce_league_renewal_gate()` + `trg_leagues_renewal_gate` | trigger fn (DEFINER) | **new** | every `leagues` UPDATE |
+| `nudge_renewal`, `request_back_in`, `readmit_to_renewal` | SQL DEFINER | **new if Giorgio confirms a5** | commissioner / marked-out player |
+| `set_draft_order` | SQL | **changed**: refuses `renewal_replies_pending` | commissioner |
+| `league_notifications` | table | **changed**: `kind` CHECK += `renewal_invite`, `renewal_reply`, `renewal_marked_out`, `season_set` (+ `renewal_nudge`, `renewal_rejoin_request` if a5); + `subject_user_id text`, `detail jsonb` | — |
+| `draft-order-notify` | edge fn | **changed**: body builder by `kind`, copy verbatim from the board | cron (still deferred, §2.9) |
+| `draft-control` (`rules.ts`) | edge fn | **changed**: `renewal_replies_pending` start blocker; `status` reports `replies_pending` | members |
+| `finalize_league_draft` | SQL | **changed**: season number (§2.8) | service_role |
+| `get_home_summary` | SQL | **changed**: + `previous_league_id`, `successor_league_id`, `season_number` (DROP/CREATE, grants re-applied) | mobile |
+| `record-trade` | edge fn | **changed**: refuses `season_status='completed'` (F9) | mobile |
+| `join_league_by_code`, `get_draft_order`, `get_draft_clock`, `validate-and-record-pick`, `draft-autopick-sweep`, `_shared/schedule.ts`, the snapshot and scoring crons, `complete_league_season`, `start_league_playoffs`, `league_standings_ranked`, `get_season_result` | — | **reused unchanged** | — |
 
-- **The commissioner of the new league** is the old commissioner. A commissioner hand-off is out
-  of scope.
-- **Edits after Start Season 2** ("change anything before the draft") use the paths that exist
-  today: `leagues_update_commissioner` [I2a], the F1 member column guard, the playoff freeze
-  (still `not_started`, so editable), `trg_leagues_order_mode`, and the slot editor. Nothing new
-  is opened.
-- **The old league is not written at all.** No row of the predecessor changes. Because the code
-  is fresh rather than moved, `renew_league` never UPDATEs another league row under DEFINER.
+### 2.2 `league_renewal_responses`: the reply state is explicit, never inferred
 
-### 2.3 `renew_league`: the column contract
+```sql
+create table public.league_renewal_responses (
+  league_id     uuid not null references public.leagues(id) on delete cascade,  -- the NEW league
+  user_id       text not null,            -- text, like league_members.user_id
+  status        text not null,
+  decided_by    text,
+  invited_at    timestamptz not null default now(),
+  responded_at  timestamptz,
+  nudge_count   smallint not null default 0,
+  last_nudged_at timestamptz,
+  rejoin_requested_at timestamptz,        -- a5 "ask back in" only
+  primary key (league_id, user_id),
+  constraint lrr_status_check check (status in ('pending', 'in', 'out')),
+  constraint lrr_decided_by_check check (decided_by in ('player', 'commissioner')),
+  -- the stamps agree with the discriminator (the league_draft_order_meta pattern)
+  constraint lrr_stamps_check check (
+       (status = 'pending' and decided_by is null and responded_at is null)
+    or (status <> 'pending' and decided_by is not null and responded_at is not null))
+);
+```
+
+- **One row per invited player, written at renewal.** This deliberately departs from the
+  Orchestrator's "no row = pending":
+  - **The expected set is frozen when the ask goes out.** "No reply yet" is then a **count
+    against that fixed set**, not "a Season 1 member with no row".
+  - **A live "no row" read changes meaning under it.** If a Season 1 member later leaves the
+    *old* league (`[I5]` still allows that), they would silently vanish from the pending set.
+    That is the CLAUDE.md all-or-nothing family: a gate keyed on "does a row exist?" over a set
+    that can change underneath it.
+  - **`status` is the discriminator.** NULL or absence never means "no" (CLAUDE.md "Overloaded
+    NULLs are type tags").
+- **Who is invited:** every **human** member of the old league at renewal time. The commissioner
+  gets a row with `status='in', decided_by='commissioner'`, so the In list is just this table
+  plus newcomers.
+  - **Bots are not invited and not carried.** They can't answer, and they are test-account-only.
+    A test commissioner tops up again with `draft-control add_bots`, as for any league.
+- **Newcomers** who join by code get **no** row. They are "New" in the roster: members of the
+  new league with no response row.
+- **RLS:** enabled. No client policies (no direct reads or writes). Every read goes through
+  `get_renewal_roster`, every write through the DEFINER functions. Explicit revokes cover all
+  table privileges for anon and authenticated.
+
+### 2.3 The commissioner's functions
+
+**`renew_league(p_league_id)`**, the "Run it back" tap. One transaction:
+1. **Gates:**
+   - identity first: `auth.uid() IS NULL → 42501`; the caller is `commissioner_id`;
+   - then state: `league_type='matchup'`, `season_status='completed'` **and** the current
+     season's `completed_at IS NOT NULL`, and no successor yet.
+   - Two calls racing → the partial UNIQUE on `previous_league_id` (`23505` caught →
+     `already_renewed` with the existing id).
+2. **INSERT the new `leagues` row** per the column contract (§2.3a), which means:
+   - `num_participants = 16` (§2.7);
+   - `draft_date = NULL`;
+   - a fresh `invite_code` (the client's 32-symbol alphabet and length, retried on UNIQUE);
+   - settings copied **as is**. The review edits them later through `start_renewed_season`.
+3. **Copy `league_draft_slots`.**
+4. **INSERT the commissioner's `league_members` row and their `in` response.**
+5. **INSERT one `pending` response and one `renewal_invite` notification per invited player.**
+   The count must equal the old league's human members minus the commissioner, else raise.
+6. **Returns** `{status:'renewed'|'already_renewed', league_id, invite_code, invited}`.
+
+The old league is not written.
+
+**`mark_renewal_out(p_league_id, p_user_id)`**:
+- commissioner only;
+- refused unless that player's row is `pending` (a player's own answer is never overridden);
+- `draft_status='not_started'`;
+- sets `out` / `commissioner` / `responded_at = now()`;
+- writes `renewal_marked_out` to the player.
+
+**`start_renewed_season(p_league_id, p_settings, p_slots)`**, the review's "Start Season 2":
+- commissioner only, `draft_status='not_started'`, and **zero pending replies** (else
+  `renewal_replies_pending`).
+- **`p_settings`:** a whitelist of rev 2's overridable columns plus `draft_date` (required here:
+  the review's Draft row). An unknown key is **refused**, never ignored. Values are validated by
+  the table CHECKs.
+- **`p_slots`:** NULL means keep the copied slots; an array replaces them.
+- **One transaction:** UPDATE `leagues`, replace the slots, and write one `season_set`
+  notification per member other than the commissioner.
+- **Idempotent:** a second call applies the new values but writes `season_set` only once
+  (partial UNIQUE per member).
+- **Edits after this** (until the draft) use the existing settings paths, behind the gate
+  trigger.
+
+**`cancel_league_renewal(p_league_id)`**:
+- commissioner only;
+- only on a renewed league (`previous_league_id IS NOT NULL`) still at
+  `draft_status='not_started'`;
+- `DELETE`s the new league. Members, responses, notifications, slots and any `open` draft order
+  cascade; the draft-order meta trigger already permits a cascade once the league is gone.
+- This frees the predecessor for a fresh renewal. It is needed because the league now exists
+  from the first tap.
+
+### 2.3a The column contract (`renew_league` and `start_renewed_season`)
 
 Every `leagues` column is classified. The PGlite test fails on any unclassified column (B.5).
 
 | Class | Columns |
 |---|---|
-| **Copy, overridable through `p_settings`** | `name`, `num_participants`, `num_rounds`, `stake_mode`, `notional_per_slot`, `budget_amount`, `allow_undraftable`, `num_weeks`, `playoff_teams`, `draft_order_mode`, `pick_seconds`, `pick_clock_enabled` |
+| **Copy, overridable later through `start_renewed_season`'s `p_settings`** | `name`, `num_rounds`, `stake_mode`, `notional_per_slot`, `budget_amount`, `allow_undraftable`, `num_weeks`, `playoff_teams`, `draft_order_mode`, `pick_seconds`, `pick_clock_enabled` |
 | **Copy, fixed** | `league_type` (a lineage stays one game type), `duration_days`, `budget_mode` (deprecated; copied so the default never differs), `commissioner_id` |
-| **Reset, overridable through `p_settings`** | `draft_date` (default NULL = TBD; the review's "Draft" row sets it) |
+| **Reset, set later through `p_settings`** | `draft_date` (NULL at renewal; **required** by `start_renewed_season`, and refused by the gate while any reply is pending) |
+| **Set to the ceiling** | `num_participants = 16` until the draft starts, then the member count (§2.7). Editable 4–16 by the commissioner, as today. |
 | **Reset, fixed** | `draft_status='not_started'`, `draft_started_at=NULL`, `league_start_date=NULL`, `league_end_date=NULL`, `current_week=1`, `current_season_id=NULL`, `season_status='active'` |
 | **New** | `id`, `created_at`, `invite_code` (fresh), `previous_league_id = old.id`, `lineage_id = coalesce(old.lineage_id, old.id)`, `season_number = old.season_number + 1` |
 
-- **`p_settings`**: a key outside the overridable whitelist is **refused**
+- **`p_settings`** (in `start_renewed_season` only; `renew_league` takes no settings, because
+  the review comes after the replies): a key outside the overridable whitelist is **refused**
   (`invalid_settings`), not ignored, so a client typo can never silently drop a setting the
-  commissioner changed. Values are validated by the table's own CHECKs. A violation aborts the
-  whole transaction and is returned as `{status:'refused', reason:'invalid_settings', detail}`.
-- **`p_slots`**: NULL means copy the old league's `league_draft_slots` (same `slot_index`,
-  `slot_count`, `price_min`, `price_max`, `category_id`, new ids). A provided array replaces
-  them, validated by the table's CHECKs and UNIQUE in the same transaction. The review's
-  "Stakes · 6 slots" edit therefore lands atomically with the league, unlike create-league's
-  separate `saveLeagueSlots` call.
-- **Members**: copy the predecessor's `league_members` (`user_id`, `role`) as a count against
-  the expected set (`inserted = predecessor count`, else raise). **Bots are copied too.** Draft
-  start re-checks `≥4` and `playoff_teams ≤ members` anyway, so opt-outs below either threshold
-  surface as the existing start blockers (`not_enough_members`,
-  `playoff_teams_exceeds_members`), and the commissioner lowers P on the review or settings
-  screen. There is no draft-order row yet, so the members trigger's "no row: nothing to do"
-  branch applies.
-- **Notifications**: one `season_renewed` row per carried human member other than the
-  commissioner (`user_id NOT LIKE 'bot-%'`, the existing bot convention).
-- **`num_weeks`** is copied (or overridden). If opt-outs or joins change the headcount, it stays
-  editable while `not_started`, and `finalize_league_draft` refuses a `num_weeks_mismatch`
-  honestly rather than writing a short schedule.
+  commissioner changed. Values are validated by the table's own CHECKs; a violation aborts the
+  whole transaction.
+- **`p_slots`**: NULL keeps the slots `renew_league` copied; an array replaces them atomically,
+  validated by the table's CHECKs and UNIQUE.
+- **`num_weeks`** is copied and editable in the review. The number of teams is only known once
+  every reply is in. `planSeason` builds the round robin over the **actual** roster for
+  `num_weeks` weeks, so a different team count changes only byes and repeat pairings, never
+  correctness. The review shows the uneven-bye notice (a6).
 
-### 2.4 `finalize_league_draft` change (exact)
+### 2.4 The read functions
+
+**`get_renewal_roster(p_league_id)`**:
+- **Gate:** `auth.uid() IS NULL → 42501`. The caller must be a member of the new league **or**
+  hold a response row in it (an invitee who hasn't answered isn't a member yet). Otherwise 0
+  rows (no existence oracle).
+- **It returns:**
+  - **counts:** `in`, `new`, `out`, `pending`, `team_count = in + new`, `max_teams = 16`;
+  - **`replies_pending`:** boolean, `pending > 0`, the same predicate as the gate;
+  - **`caller_status`:** the caller's own row (`pending`, `in`, `out`), `new`, or `none`;
+  - **`people[]`:** `{user_id, display_name, group: 'in'|'new'|'out'|'pending', decided_by,
+    responded_at, nudge_count, last_nudged_at, rejoin_requested}`.
+- **The commissioner sees every group by name** (frame a4).
+- **Everyone else** sees names for **in** and **new** only, and counts for **out** and
+  **pending**. The member card shows who's in plus a "+N" (frame a1); who declined is not
+  broadcast. If Giorgio wants members to see every name, it is one predicate (§Open questions).
+
+**`get_league_history(p_league_id)`**: unchanged from rev 2. One row per season in the lineage,
+the full frozen `final_standings` with display names, the podium and the caller's own rank, for
+every member of the current league.
+
+### 2.5 Reply semantics, the gate's monotonicity, and the a5 proposals
+
+| From → to | Who | When allowed | Effect |
+|---|---|---|---|
+| `pending → in` | player | `draft_status='not_started'` | INSERT `league_members` (the draft-order trigger appends if an order exists); `renewal_reply` to the commissioner |
+| `pending → out` | player | same | no membership; `renewal_reply` |
+| `in ↔ out` (changing their mind) | player, own row only, `decided_by='player'` | until the draft order is **locked** (draft start). Before lock the draft-order trigger handles it as a normal join/leave: append after T−1h, gap closed on leave. After lock it is refused, by the same trigger. | membership follows; `renewal_reply` |
+| `pending → out` | commissioner (`mark_renewal_out`) | `not_started` | `renewal_marked_out` to the player |
+| `out(commissioner) → in` | — | **refused** in phase 1 (`marked_out`) | — |
+
+**The gate is a one-way door.** `pending` rows are created **only** inside `renew_league`.
+Nothing moves a row back to `pending`: every transition leaves `pending`, and none returns to
+it.
+- Once the count reaches 0, it stays 0.
+- So after "Start Season 2" the gate can never re-close under a scheduled draft. There is no
+  "the date was set, then someone re-opened a reply" state to handle.
+- The PGlite test asserts this on every transition.
+
+**a5 proposals** (Design Lead, pending Giorgio). Each is built only if confirmed, and each is XS:
+- **"Nudge again":** `nudge_renewal(new_id, user_id)`. Commissioner only, `pending` only,
+  refused if `last_nudged_at > now() − 24h`. It bumps `nudge_count`/`last_nudged_at` and writes a
+  `renewal_nudge` notification. a5's "Asked Sat, Jan 16. Nudged once." comes from `invited_at` +
+  `nudge_count`.
+- **"Ask back in":**
+  - `request_back_in(new_id)`: the marked-out player stamps `rejoin_requested_at` and notifies
+    the commissioner (`renewal_rejoin_request`).
+  - `readmit_to_renewal(new_id, user_id)`: the commissioner sets `in` / `commissioner` and
+    INSERTs the membership.
+  - **Neither touches `pending`**, so the gate's monotonicity holds.
+  - Both are allowed "until the draft is set". This design reads that as **until the draft
+    order is finalized (T−1h)**, matching "I'm out" elsewhere on the board. **Giorgio to
+    confirm** which instant "set" means.
+
+### 2.6 The server-side gate (no draft date, order or start while a reply is pending)
+
+"Pending" = `exists (select 1 from league_renewal_responses where league_id = L and status =
+'pending')`. That is an EXISTS over the frozen expected set, the correct predicate here because
+the question is "is ANY reply missing?" (§2.2). One definition is used by every enforcement point
+and by `get_renewal_roster.replies_pending`.
+
+| Path that could schedule or start the draft | Enforcement |
+|---|---|
+| `leagues.draft_date` set or changed (`[I2a]` from league-settings, or `start_renewed_season`) | **`trg_leagues_renewal_gate`**, BEFORE UPDATE OF `draft_date`, `draft_order_mode`, `draft_status`. It raises `renewal_replies_pending` (errcode `22023`) when the value changes and a reply is pending. **No `auth.uid()` exemption:** it binds service_role too, because `draft-control` starts drafts as service_role. SECURITY DEFINER, so it counts the **whole** table regardless of RLS (a subset-derived verdict is the bug CLAUDE.md case 5 describes). Fires only for `previous_league_id IS NOT NULL`, so ordinary leagues are untouched. |
+| `leagues.draft_order_mode` switched (random ↔ manual) | same trigger |
+| `draft_status` `not_started → in_progress`: `draft-control start`, or the commissioner's direct `[I2a]` flip (still live until `deferred/20260929000000`) | same trigger, the backstop for both paths |
+| `set_draft_order` (manual order edits) | an added `renewal_replies_pending` refusal (`CREATE OR REPLACE`, body otherwise verbatim from `20261013000000`, grants re-stated) |
+| `get_draft_order`'s lazy reveal / finalize | needs `draft_date`, which can't be set while pending. Nothing to add, and a read path is never made to raise. |
+| `draft-control status` / `start` | a `renewal_replies_pending` blocker in `computeStartBlockers` (`rules.ts`), so the UI shows the reason; `start` refuses with it. The trigger remains the guarantee. |
+
+### 2.7 `num_participants` on a renewed league (and the audit)
+
+**Correction to rev 2.** `join_league_by_code` (`20260930000000:89`, originally
+`20260716000000:101`) refuses `league_full` when `members ≥ num_participants`, so a copied
+Season 1 size **would** block newcomers.
+
+**The rule (matches a6, "follows who's in, up to 16"):**
+- `renew_league` sets `num_participants = 16`, the `leagues_num_participants_range` CHECK
+  ceiling.
+- At draft start, `trg_leagues_renewal_gate` sets `NEW.num_participants` = the member count for
+  a renewed league. The count is ≥ 4 by the draft-control blocker and ≤ 16 by the join cap, so it
+  satisfies the CHECK.
+- **Trigger order:** BEFORE triggers fire alphabetically, so `trg_leagues_renewal_gate` runs
+  after `trg_leagues_member_update_columns`. The F1 column guard therefore sees the caller's
+  columns, not this server-side write. The PGlite test pins this order.
+- The commissioner may still edit it (4–16) before the draft, as today.
+
+**Every reader of `num_participants`:**
+
+| Reader | Use | Effect of 16-until-start |
+|---|---|---|
+| `join_league_by_code` (`20260930000000:89`) | `league_full` cap | **The point**: newcomers join until 16 or the draft. Unchanged code. |
+| `preview-league/reason.ts:54` | predicts `league_full` for the join preview | consistent with join, unchanged |
+| `draft-control` `computeBotsNeeded` (`rules.ts:110`) | bots to reach `min(4, cap)` | `min(4, 16) = 4`, same as any league; unchanged |
+| `draft-control` `LeagueStartState.numParticipants` | passed to the above only; **not** a start blocker | no effect |
+| `_shared/schedule.ts` `planSeason`, `finalize_league_draft`, byes, playoff checks | **do not read it**: the roster is the stored draft order (the actual members); byes come from roster parity; `playoff_teams ≤ members` is checked against the **member count** (`draft-control`), and `num_weeks` defaults to `roster − 1` | none |
+| `CHECK leagues_num_participants_range` (4–16) | bounds | 16 and the start count both pass |
+| mobile `league-settings.tsx:72,124,422,435-446` | stepper 4–16 + `SlotBuilder leagueSize` | **Client follow-up:** in a renewed pre-draft league, show the stepper as "up to 16 · follows who's in" and pass `leagueSize` = in + new, not 16. Otherwise SlotBuilder's universe check (`SlotBuilder.tsx:69`, "needs at least teams × slots") raises false "only N stocks match" warnings sized for 16 teams. |
+| mobile `create-league.tsx:131,347` | creation only | n/a (renewal doesn't use it) |
+| mobile `LeagueContext.tsx:139` → `leagueSheet.ts:125` "N of capacity joined" | display | **Client follow-up:** a renewed pre-draft league reads "5 of 16 joined". Render a6's "follows who's in, up to 16" instead (renewed = `previous_league_id` non-null). After start, capacity = members. |
+| mobile `join-league.tsx:240` "current/num_participants" | display | shows "/16" during renewal: acceptable, or use the same copy |
+| web `JoinLeague.jsx:72`, `LeagueDetail.jsx:201`, `Leagues.jsx:131,233,516,925`, `useLeagues.js:127`, `DraftPage.jsx:351` | display / web create+edit | web is paused; display-only effect |
+| `scripts/simulation-test-runner.mjs` | test fixtures | none |
+
+### 2.8 `finalize_league_draft`, the old league, Home, and history
+
+#### `finalize_league_draft` change (exact)
 
 ```sql
 -- was: values (p_league_id, 1, …)  /  where … and season_number = 1
@@ -388,7 +560,7 @@ The existing PGlite suite must pass unchanged, plus one new case (`season_number
 migration still re-states the four revokes and the service_role grant, so the file reads as the
 lockdown it is.
 
-### 2.5 The old league after renewal: frozen, guarded where it matters
+#### The old league after renewal: frozen, guarded where it matters
 
 After renewal the old league is `draft_status='completed'`, `season_status='completed'`, with
 every matchup scored. Nothing in phase 1 writes to it. What *could* write to it, and how each
@@ -406,22 +578,62 @@ path is closed:
 - **Commissioner settings edits ([I2a]):** still possible and harmless (no reader re-derives a
   finished season from settings; `get_season_result` takes P from the rows). Flagged, not blocked.
 
-### 2.6 Client contract (for the mobile worker, not this design's code)
+#### Home and history
 
-- **Start Season 2:** call `renew_league` → `setActiveLeagueId(new_id)` (as `create-league.tsx`
-  does). `already_renewed` routes to the existing successor.
-- **Members:** their devices still point at the old league. Its Season-complete Home reads
-  `successor_league_id` and shows the Season 2 card. The new league also appears in their league
-  sheet under Upcoming (F10).
-- **"I'm out this season":** delete own membership of the **new** league. Hide the button once
-  `get_draft_order().finalized`.
-- **Banner, History, "you finished 5th":** `get_league_history(current)`. Detail tap →
-  `get_season_result(row.league_id)` + the existing matchups/draft reads on that league id.
-- **Remove** the `league-settings.tsx` "Start New Season" button, which calls the revoked function.
+`get_home_summary` gains `previous_league_id`, `successor_league_id` and `season_number`. A
+`RETURNS TABLE` shape change needs DROP + CREATE, which **resets** privileges, so the explicit
+revoke/grant is re-applied. If `ui/mobile-home`'s `get_home_league` (F14) merges first, the
+columns go there as well. History is `get_league_history` (§2.4).
+
+### 2.9 Notifications and push
+
+| Kind | To | Written by | Exactly once? | Board copy |
+|---|---|---|---|---|
+| `renewal_invite` | each invited player | `renew_league` | yes (partial UNIQUE per member) | "Roberto B. is running it back. Are you in for Season 2?" |
+| `renewal_reply` | the commissioner | `respond_to_renewal` | no: one per reply event; `detail` snapshots the response and counts | "Gianluigi B. is in for Season 2. 4 in · 1 out · 1 to reply." |
+| `renewal_marked_out` | the player | `mark_renewal_out` | yes | Design Lead to write |
+| `season_set` | every member except the commissioner | `start_renewed_season` | yes | Design Lead to write (a6: "Everyone who's in gets a notification") |
+| `renewal_nudge`, `renewal_rejoin_request` | player / commissioner | a5 functions | rate-limited / once per request | if a5 is confirmed |
+
+- **In-app works from day 1:** the rows exist, and owner-only SELECT already applies.
+- **Push goes through `draft-order-notify`,** with its body builder switched on `kind`. That
+  function's cron is still in `deferred/` (STATUS item 19, a live-test precondition).
+- **Under opt-in, push is no longer a nice-to-have:** the ask itself is a push. **Promoting the
+  notify cron is therefore a phase-1 release precondition.** Until it is promoted, the ask only
+  reaches players who open the app.
+
+### 2.10 Security model
+
+Every new function is SECURITY DEFINER, `SET search_path = public, pg_temp`, `REVOKE ALL … FROM
+PUBLIC, anon, service_role` (no server caller; `auth.uid()` would be NULL), then `GRANT EXECUTE …
+TO authenticated`. Each one is verified by `proacl`, with simulated default grants in PGlite.
+
+| Function | Identity (inside, on `auth.uid()`, before any state check) |
+|---|---|
+| `renew_league`, `mark_renewal_out`, `start_renewed_season`, `cancel_league_renewal`, `nudge_renewal`, `readmit_to_renewal` | caller = `leagues.commissioner_id` (of the **old** league for `renew_league`, of the **new** one otherwise) |
+| `respond_to_renewal`, `request_back_in` | caller holds a response row in that league; the user id is **always** `auth.uid()`, never a parameter (the `join_league_by_code` `p_user_id` lesson) |
+| `get_renewal_roster` | member of the new league **or** holder of a response row; names per §2.4 |
+| `get_league_history` | member of the league asked about |
+| `enforce_league_renewal_gate` | trigger function: not callable; default grants revoked anyway so `proacl` reads as the lockdown it is |
+
+The table `league_renewal_responses` has RLS enabled and no client policies, with table
+privileges revoked from anon and authenticated.
+
+### 2.11 Client contract (for the mobile worker)
+
+- **"Run it back"** → `renew_league` → `setActiveLeagueId(new_id)`. The commissioner lands on
+  the reconcile view (a3/a4).
+- **Invited players** have no `league_members` row in the new league until they answer. The
+  league sheet and Home find the ask through `get_home_summary`'s `successor_league_id` on the
+  **old** league, plus `get_renewal_roster(successor).caller_status = 'pending'`.
+- **The draft rows on a4** are disabled from `replies_pending`. **Start Season 2** →
+  `start_renewed_season`.
+- **Remove** the old league-settings button (it is already dead after phase 0).
+- **`num_participants` displays:** §2.7 client follow-ups.
 
 ---
 
-## 3. Today's `start_new_league_season`: revoke now, drop in phase 1
+## 3. Today's `start_new_league_season`: locked in phase 0 (`5c2175c`), dropped later
 
 It is **strictly worse than nothing**:
 - It deletes the season's matchups, so history drops to `standings_only`.
@@ -433,11 +645,15 @@ It is **strictly worse than nothing**:
 It is callable today by any commissioner of a completed league through the 1.1.0 build's
 settings screen.
 
-- **Phase 0 (now, independent of this feature):** `20261023000000_revoke_start_new_league_season.sql`:
+- **Phase 0, committed as `5c2175c` on `fix/lock-start-new-league-season`:** `20261023000000_lock_start_new_league_season.sql`.
+  It also revokes `service_role`: no server caller exists, and the prod snapshot shows Supabase's
+  default grant. The 9-step PGlite test runs the header's DO-block effect check verbatim, which
+  reports FAIL before the migration and PASS after it:
   ```sql
   REVOKE ALL ON FUNCTION public.start_new_league_season(uuid) FROM PUBLIC;
   REVOKE ALL ON FUNCTION public.start_new_league_season(uuid) FROM anon;
   REVOKE ALL ON FUNCTION public.start_new_league_season(uuid) FROM authenticated;
+  REVOKE ALL ON FUNCTION public.start_new_league_season(uuid) FROM service_role;
   -- no grant to anyone; postgres keeps ownership
   ```
   - **Effect check:** `proacl` shows only `postgres`, and an authenticated commissioner call
@@ -446,55 +662,22 @@ settings screen.
   - **Not dropped yet:** `season_result.pglite.test.ts` slices the function from
     `20260718000000` to build its archived-season fixture, so it keeps working, and the function
     stays restorable if anything unexpected calls it.
-- **Phase 1:** `DROP FUNCTION` in `20261023000009`, **held in `supabase/migrations/deferred/`**
+- **Later:** `DROP FUNCTION` in `20261023000009`, **held in `supabase/migrations/deferred/`** (committed with phase 0)
   until the mobile build without the button ships (CLAUDE.md: a header comment holds nothing).
   The PGlite fixture keeps slicing the historical file, which is never rewritten. **Wrapping it
   was considered and rejected:** nothing in its body is worth keeping under B.
 
 ---
 
-## 4. Phase 2: what each non-lean board option adds
+---
 
-Each option is additive on top of phase 1; nothing in phase 1 has to be undone for any of them.
-Sizes are backend-only, with tests.
+## 4. Phase 2: what each remaining board option adds
 
-### 4.1 (a)-B "I'm in" opt-in by a deadline: **S, ≈1–1.5 days**
+(a) is decided (opt-in) and now lives in phase 1 (§2). What remains is (b), plus a few smaller
+reads. Each item is additive on top of phase 1; nothing in phase 1 has to be undone for any of
+them.
 
-Board: "Are you in for Season 2? Reply by Thu" · "4 of 6 in so far · say yes by Thu, Jan 21 ·
-7:00 PM ET" · **Not this time** / **I'm in** · push "Are you in? Say yes by …".
-- **`renew_league` gets a `p_settings.carry` mode `'opt_in'`:** it copies only the commissioner
-  (and the bots), and writes notification kind `season_renewal_invite` (CHECK +=) instead of
-  `season_renewed`.
-- **`leagues.opt_in_by timestamptz`:** new, set from `p_settings`; it must be ≤ `draft_date` when
-  both are set.
-- **`league_renewal_responses (league_id, user_id, response text CHECK (response IN ('in','out')), responded_at)`, PK `(league_id, user_id)`:**
-  an **explicit tri-state**. No row = no reply yet (the "+2" avatars), and is **never** read as a
-  "no". A NULL or missing response is not a decline (CLAUDE.md "Overloaded NULLs are type tags").
-  RLS: member SELECT on the new league; no direct writes.
-- **`respond_to_renewal(p_league_id uuid, p_response text)`:** SECURITY DEFINER, authenticated,
-  explicit revoke from anon.
-  - **Gate:** `is_member(new.previous_league_id)` for `auth.uid()`, never a caller-supplied id.
-  - **Time gate:** `now() < opt_in_by` and `draft_status='not_started'`, checked on every call
-    (the draft-order "checked everywhere, not flipped once" pattern), so no cron is needed.
-  - **`'in'`:** upserts the response and INSERTs `league_members` in the same transaction (the
-    members trigger then applies the order rules).
-  - **`'out'`:** upserts the response and deletes the membership if present. A member may change
-    their mind until the deadline.
-- **`get_league_history`'s roster block** gains `status: 'in'|'out'|'pending'` from the
-  responses.
-- **Policy decision needed:** does a non-responder lose the invite-code path after the deadline,
-  or can they still join by code until the draft?
-
-### 4.2 (a)-C commissioner picks who's in: **XS–S, ≈0.5 day**
-
-Board: a toggle per manager, "5 of 6 back. Andrea P. won't be in Season 2; they'll get a message."
-- **`p_settings.exclude: text[]`:** renewal copies the predecessor members minus these. Each id
-  must be a predecessor member and never the commissioner; otherwise `invalid_settings`.
-- **Notification kind `season_not_included`** (CHECK +=), with copy from the Design Lead.
-- **After Start**, removing a member before the draft needs a commissioner `remove_league_member`
-  RPC (DEFINER, `not_started` only). It does not exist today: `[I5]` is self-only.
-
-### 4.3 (b)-B "Keep teams": **M–L, ≈4 days**
+### 4.1 (b)-B "Keep teams": **M–L, ≈4 days**
 
 Board: "Each team keeps its six stocks. No draft." · "Every slot restarts at $2,000 · Shares are
 recalculated at Week 1's open so everyone starts level. No draft night."
@@ -512,7 +695,7 @@ recalculated at Week 1's open so everyone starts level. No draft night."
      `trades.funded_by_trade_id` chain (a buy inherits the slot of the sale that funded it).
 3. **At the teams-lock time** (the analogue of the draft time), a time-gated server path flips
    `draft_status` → `in_progress` (the existing start trigger locks the order and freezes
-   membership, which also ends the opt-out window), then `planSeason` → `finalize_league_draft`
+   membership, which also closes replies (§2.5)), then `planSeason` → `finalize_league_draft`
    with zero picks.
 4. **At Week 1's open**, `materialize_carried_rosters(league_id, prices jsonb)` (service_role)
    writes `drafts` rows with **`pick_source='carried'`** (CHECK +=), `entry_price` = the Week 1
@@ -533,7 +716,7 @@ recalculated at Week 1's open so everyone starts level. No draft night."
 - **(iv) Before Week 1:** what Home and Portfolio show between Start and Week 1's open, when
   positions are known but not sized.
 
-### 4.4 (b)-C keepers, up to 2: **L, ≈5 days + a live draft test**
+### 4.2 (b)-C keepers, up to 2: **L, ≈5 days + a live draft test**
 
 Board: "Keep up to 2 · The rest go back in the pool. Choose by Fri, Jan 22 · 7:00 PM ET" ·
 "Keepers restart at $2,000 a slot. The draft covers the other 4 rounds."
@@ -569,16 +752,9 @@ Board: "Keep up to 2 · The rest go back in the pool. Choose by Fri, Jan 22 · 7
   or left its tier): the turn falls back to a normal clocked pick, or to auto-pick.
 - Whether a keeper may be a stock acquired by trade, not drafted. Holdings-based says yes.
 
-### 4.5 Hard-enforced opt-out window: **XS**
+### 4.3 Full Season 1 detail for newcomers: **XS–S**
 
-The phase-1 window ("until the draft order is set") is client-gated. To make it a DB rule, add
-one refusal to the `league_members` DELETE path: a **self**-delete of a league with
-`previous_league_id IS NOT NULL` whose order meta is `finalized` raises `opt_out_closed`. It is
-scoped to renewed leagues, so ordinary leagues keep today's leave rule.
-
-### 4.6 Full Season 1 detail for newcomers: **XS–S**
-
-Players of Season 1 already get full detail in phase 1 (§2.0). For people who joined in Season 2,
+Players of Season 1 already get full detail in phase 1 (§2.0, history row). For people who joined in Season 2,
 there are two options:
 - **(i)** Widen `get_season_result`'s gate to "member of this league **or** of a successor in
   its lineage" (one predicate).
@@ -587,13 +763,13 @@ there are two options:
 
 Raw `matchups`/`drafts` RLS stays per league; it is not widened.
 
-### 4.7 Duration leagues: **out of scope**
+### 4.4 Duration leagues: **out of scope**
 
 `get_season_result` returns `unsupported` for them and `complete_league_season` is matchup-only,
 so a duration league never reaches a completed season the same way. Phase 1 refuses with
 `not_a_matchup_league`.
 
-### 4.8 Superseded league display: **0**
+### 4.5 Superseded league display: **0**
 
 `successor_league_id` is in `get_home_summary` from phase 1. Whether the switcher shows the old
 league under Finished, folds it into its successor, or hides it is a client choice.
@@ -604,112 +780,98 @@ league under Finished, folds it into its successor, or hides it is a client choi
 
 ### 5.1 PGlite (`supabase/tests/`, real Postgres under Deno)
 
-**`renew_league.pglite.test.ts`** loads the new migrations **verbatim** on the replica schema,
-reusing the `finalize_league_draft` and `season_result` fixtures.
-- **Grants:** `proacl` for `renew_league` and `get_league_history`, with the simulated Supabase
-  default grants so revoke-from-anon is proven, not assumed. Also the pinned `search_path`,
-  `prosecdef`, and the re-created `get_home_summary`'s ACL after its DROP/CREATE.
-- **Identity:**
-  - anon → `42501`;
-  - a member who is not commissioner → refused, with the same error whether or not the season is
-    complete (no state leak);
-  - the commissioner passes.
-- **State gates:** each of these is refused and **asserted to write nothing** (row counts of
-  `leagues`, `league_members`, `league_draft_slots`, `league_notifications` unchanged):
-  - active, playoffs;
-  - `completed` with `completed_at` NULL;
-  - a duration league;
-  - already renewed;
-  - an unknown `p_settings` key;
-  - a CHECK-violating value (e.g. `pick_seconds: 20`);
-  - a malformed `p_slots`.
-- **Column contract:** enumerate `information_schema.columns` for `leagues`, fail on any column
-  not classified in §2.3, and assert each class on the new row. Overrides apply. A key naming a
-  fixed column is refused, because it is not in the whitelist.
-- **Count against the expected set:**
-  - members copied == predecessor members, bots included;
-  - slots copied == predecessor slots by `slot_index` (or == `p_slots`);
-  - notifications == predecessor humans − commissioner, exactly once (a re-call writes none).
-- **Idempotency and race:** a second call returns `already_renewed` with the same id. Two
-  concurrent calls → exactly one successor (partial UNIQUE). Cancel-equivalent (no call) → no
-  successor.
-- **Old league frozen:** the predecessor's `leagues` row and its `matchups`, `drafts`, `trades`,
-  `week_snapshots`, `league_standings`, `league_seasons` and `league_members` are byte-identical
-  before and after (row checksums).
-- **Invite code:** the new code is fresh, matches the client alphabet/length regex, and joins the
-  new league. The old code is still refused (`completed`).
-- **Opt-out path:**
-  - an `[I5]` self-leave of the new league while the order is `open` or `finalized` closes the
-    gap;
-  - the leaver is still a member of the old league;
-  - `get_league_history.roster` reports them `out`;
-  - after `locked`, the leave is refused (the existing trigger).
-- **Draft:** the new league has no meta row. The existing order modes materialise at reveal or
-  start. A join after lock is refused.
-- **`finalize_league_draft`:** the existing suite unchanged, plus `season_number = 3`.
-- **`get_league_history`:**
-  - a lineage of 3 is ordered, with full `final_standings` and display names;
-  - `my_*` fields match the caller's entry;
-  - a non-member gets 0 rows;
-  - a newcomer gets the frozen standings;
-  - `get_season_result(old)` stays `detail_scope='full'`.
-- **`start_new_league_season`:** after phase 0, an authenticated call → `42501`, and `proacl`
-  shows postgres only.
+**`run_it_back.pglite.test.ts`** loads the new migrations **verbatim** on the replica schema,
+reusing the `finalize_league_draft`, `season_result` and `draft_order_modes` fixtures, so the
+real draft-order triggers run.
 
-**Phase 2 additions:**
-- `respond_to_renewal`:
-  - the tri-state;
-  - non-predecessor refused;
-  - after the deadline refused;
-  - `in` → member, `out` → not a member;
-  - a change of mind;
-  - no row ≠ out.
-- The keepers ownership gate and forced-turn math (with `draft_pick_clock.pglite.test.ts`'s
-  harness).
-- Keep-teams materialisation: per-participant completeness and recoverable refusal.
+- **Grants:** `proacl` for every new function and the re-created `get_home_summary`, with the
+  simulated Supabase default grants, so revoke-from-anon and revoke-from-service_role are
+  proven, not assumed. Also the pinned `search_path` and `prosecdef`. `league_renewal_responses`
+  has no anon/authenticated table privileges and RLS on.
+- **`renew_league`:**
+  - **identity:** anon → `42501`; a non-commissioner is refused with the same error whatever
+    the league's state;
+  - **state gates:** each refused, writing nothing (active, playoffs, `completed` with an open
+    season row, duration, already renewed);
+  - **column contract:** `information_schema` enumeration; fails on any unclassified column;
+  - **counts against the expected set:** responses = old humans; commissioner `in`; bots
+    excluded; `renewal_invite` exactly once each;
+  - **`num_participants` = 16**, the code is fresh, and the race yields one successor;
+  - **old league byte-identical** before and after.
+- **Replies:**
+  - every transition in the §2.5 table, plus each refusal: a non-invitee, a marked-out player
+    saying `in`, anything after the draft starts;
+  - **`in` ⇒ membership, `out` ⇒ none**, checked after every step;
+  - `renewal_reply.detail` snapshots the counts at the time of the reply;
+  - **monotonicity:** after any sequence of calls, the pending count never increases.
+- **`mark_renewal_out`:** commissioner only; `pending` only (a player's own `in` or `out` can't
+  be overridden); notifies the player.
+- **The gate, each path refused while ≥ 1 reply is pending, and each allowed at 0:**
+  - a direct `[I2a]`-shaped UPDATE of `draft_date`, as the commissioner's JWT;
+  - `draft_order_mode`;
+  - `draft_status` → `in_progress` as **service_role** (the draft-control path, no exemption);
+  - `set_draft_order`;
+  - `start_renewed_season`.
+  - Plus: ordinary leagues (no `previous_league_id`) are unaffected, and the trigger counts
+    rows RLS would hide.
+- **Joins during renewal:** `join_league_by_code` admits newcomers beyond the old league's size,
+  up to 16, then refuses `league_full`. They show as `new` in the roster. At draft start,
+  `num_participants` = the member count.
+  - **Trigger order:** a commissioner-JWT start still passes the F1 column guard.
+- **`start_renewed_season`:** unknown key refused; CHECK violation refused (nothing written);
+  slots replaced atomically; `season_set` exactly once to members; idempotent re-call.
+- **`cancel_league_renewal`:** cascades everything (the open draft order included); the
+  predecessor can be renewed again; refused after draft start.
+- **`get_renewal_roster`:** the commissioner sees all names; a member sees in/new names and
+  out/pending counts; a pending invitee (not yet a member) can read it; a stranger gets 0 rows;
+  `replies_pending` equals the gate predicate.
+- **End to end:**
+  - renew → replies → mark out → start season → draft start (the real `lock_draft_order_on_start`
+    locks an order over the actual members) → `finalize_league_draft` with `season_number = 2`
+    → `get_league_history` shows both seasons;
+  - `get_season_result(old)` is still `detail_scope='full'`.
+- **Phase 0** is already covered by `lock_start_new_league_season.pglite.test.ts` (`5c2175c`).
 
 ### 5.2 Hermetic (Deno, no DB)
 
-- **`record-trade`:** the `season_completed` refusal, as a pure predicate next to
-  `draft_not_completed`.
-- **`draft-order-notify`:** the `season_renewed` body builder, with the board copy verbatim and
-  the TBD-date clause dropped.
+- **`draft-control/rules.test.ts`:** the `renewal_replies_pending` blocker, its order among the
+  existing blockers, and `status` reporting `replies_pending`.
+- **`record-trade`:** the `season_completed` refusal.
+- **`draft-order-notify`:** the body builder for each new kind (board copy verbatim, counts from
+  `detail`, not live).
 - **Mobile `tests-deno`:**
-  - the league-sheet placement of a superseded league;
-  - the "Season N" label;
-  - the opt-out button gate from `get_draft_order().finalized`;
-  - the champion banner visibility (`draft_status = 'not_started'` only).
-- **Phase 2:** `declare-keepers` legality and `renew-league` slot ancestry (the
-  `funded_by_trade_id` chain) as pure modules.
+  - a renewed league's capacity copy ("follows who's in, up to 16");
+  - SlotBuilder `leagueSize` = in + new;
+  - the reconcile groups and the disabled-draft reason, driven from `replies_pending`.
 
 ### 5.3 Prod effect test
 
-`docs/security/run-it-back-effect-test.sql`:
-- `proacl` for all new and changed functions;
-- `start_new_league_season` revoked;
-- inside `BEGIN … ROLLBACK`, a renewal of a completed test league as its commissioner, followed
-  by the asserted row counts.
+`docs/security/run-it-back-effect-test.sql` runs inside `BEGIN … ROLLBACK`, as a real
+commissioner of a completed test league:
+- renew;
+- one invitee says `in`, one is marked `out`;
+- the gate refuses `draft_date` while a third is pending, then allows it at 0;
+- `proacl` for everything.
 
-The real end-to-end proof is a test league renewed, drafted, finalized and its Week 1 scored: the
-same bar `test_0925` set for season 1.
+The real end-to-end proof is a test league renewed, replied to, drafted, finalized, and its
+Week 1 scored.
 
 ### 5.4 Migration range `20261023000000`–`09`
 
 | Version | Content | Phase |
 |---|---|---|
-| `20261023000000` | revoke `start_new_league_season` from PUBLIC/anon/authenticated | **0 (ship now)** |
+| `20261023000000` | lock `start_new_league_season` | **0, committed `5c2175c`** |
 | `20261023000001` | `leagues.previous_league_id`, `lineage_id`, `season_number` + partial UNIQUE + `lineage_id` index | 1 |
 | `20261023000002` | `finalize_league_draft` season number (+ re-stated grants) | 1 |
-| `20261023000003` | `league_notifications.kind` += `season_renewed` + its exactly-once index | 1 |
-| `20261023000004` | `renew_league` | 1 |
-| `20261023000005` | `get_league_history` | 1 |
-| `20261023000006` | `get_home_summary` + lineage columns (DROP/CREATE, grants re-applied) | 1 |
-| `20261023000007` | opt-in (`opt_in_by`, `league_renewal_responses`, `respond_to_renewal`, kinds) **or** commissioner-picks (`season_not_included`, `remove_league_member`) | 2 |
-| `20261023000008` | keep teams **or** keepers (`team_start`, `pick_source` CHECK, `league_carried_slots` / `league_keepers`, `keeper_max`) | 2 |
-| `20261023000009` | `DROP FUNCTION start_new_league_season`, **in `deferred/`** until the button-less mobile build ships | 1, deferred |
+| `20261023000003` | `league_notifications`: kinds, `subject_user_id`, `detail`, exactly-once indexes | 1 |
+| `20261023000004` | `league_renewal_responses` + `renew_league`, `respond_to_renewal`, `mark_renewal_out`, `start_renewed_season`, `cancel_league_renewal` (+ a5 functions if confirmed) | 1 |
+| `20261023000005` | `trg_leagues_renewal_gate` (gate + `num_participants` at start) + `set_draft_order` refusal | 1 |
+| `20261023000006` | `get_renewal_roster`, `get_league_history` | 1 |
+| `20261023000007` | `get_home_summary` + lineage columns (DROP/CREATE, grants re-applied) | 1 |
+| `20261023000008` | (b) keep teams **or** keepers, if chosen | 2 |
+| `20261023000009` | `DROP FUNCTION start_new_league_season`, **in `deferred/`** (committed `5c2175c`) | deferred |
 
-If Giorgio picks **both** keep teams and keepers, `08` is not enough room. Request a second
-range rather than packing unrelated DDL into one file.
+If (b) picks both keep teams and keepers, request a second range.
 
 ---
 
@@ -717,32 +879,38 @@ range rather than packing unrelated DDL into one file.
 
 | Phase | Scope | Backend effort | Gate |
 |---|---|---|---|
-| **0** | Revoke `start_new_league_season` | XS: one migration, one effect query | none; recommended now |
-| **1 (the lean path)** | Carry-over with opt-out, new draft, carried and editable settings, the Start Season 2 notification (in-app; push with the notify cron), Season 1 history kept in full (frozen standings for everyone, week-by-week for its players). Migrations `01`–`06`, the `record-trade` refusal, the `draft-order-notify` kind switch, PGlite + hermetic tests, effect test. | **M: ≈2–2.5 worker days** including tests | Orchestrator approval of B |
-| **1-client** | Run-it-back cards, the Season 2 review → `renew_league`, the "I'm out" button, banner, History, removal of the old button | mobile, sized by the Design Lead's screens | phase 1 deployed |
-| **2a** | (a)-B opt-in by deadline | S: ≈1–1.5 days | Giorgio's ruling + §4.1 policy question |
-| **2b** | (a)-C commissioner picks | XS–S: ≈0.5 day | Giorgio's ruling |
-| **2c** | (b)-B keep teams | M–L: ≈4 days | Giorgio on §4.3 (i)–(iv) |
-| **2d** | (b)-C keepers | L: ≈5 days + a live draft test (the auto-pick precedent) | Giorgio on §4.4's decisions |
-| **2e** | Newcomers see full Season 1 detail; hard opt-out window | XS each | Giorgio's ruling |
+| **0** | Lock `start_new_league_season` | **done: `5c2175c`** (9/9 PGlite) | Giorgio's `db push` |
+| **1 (opt-in renewal + new draft)** | §2: lineage columns, `renew_league`, the replies table and its four functions, the server gate (trigger + `set_draft_order` + draft-control blocker), `num_participants` behaviour, notifications (five kinds + the push body builder), `get_renewal_roster`, `get_league_history`, `get_home_summary`, the `finalize_league_draft` season number, the `record-trade` refusal. PGlite + hermetic + effect tests. | **L: ≈4–5 worker days** including tests (rev 2's lean path was ≈2–2.5; opt-in adds the replies state machine, the gate and its five enforcement points, and four notification kinds) | Orchestrator go, after (b) |
+| **1 + a5** | Nudge again; ask back in | **+0.5 day** | Giorgio confirms a5 |
+| **1 release** | promote the `draft-order-notify` cron (deferred precondition 5), since the ask is a push | ops | live test |
+| **1-client** | a1–a6 + the history frames; `num_participants` displays (§2.7) | mobile | phase 1 deployed |
+| **2c** | (b)-B keep teams | M–L: ≈4 days | Giorgio on §4.1 (i)–(iv) |
+| **2d** | (b)-C keepers | L: ≈5 days + a live draft test | Giorgio on §4.2 |
+| **2e** | newcomers see full Season 1 detail | XS–S | Giorgio |
 
-**Deploy order for phase 1** (the HUMAN ACTIONS for Giorgio, from the refreshed deploy checkout):
-1. `db push` (`01`–`06`).
-2. Deploy `record-trade` and `draft-order-notify`, byte-verified.
+**Deploy order for phase 1** (HUMAN ACTIONS for Giorgio, from the refreshed deploy checkout):
+1. `db push` of `01`–`07`; the dry-run lists exactly those.
+2. Deploy `draft-control`, `record-trade` and `draft-order-notify`, each byte-verified.
 3. Run the effect test.
-4. Re-capture `db-snapshot.json` (new functions and grants).
-5. Commit `node scripts/gen-architecture.mjs` with the code PR.
+4. Re-capture `db-snapshot.json`.
+5. Commit `gen-architecture.mjs` with the code PR.
 
-Nothing in phase 1 breaks an old client: the new columns have defaults, `get_home_summary` only
-gains columns, and the revoked function was already wrong.
+**Ordering hazard:** step 1 before step 2 is safe. The gate trigger refuses a pending-reply start
+even with the old `draft-control`, which then reports a generic 500 instead of the new blocker,
+for the minutes in between.
 
 ---
 
 ## Open questions for the Orchestrator / Giorgio
 
-1. **Approve B**, so phase 1 can be planned for implementation.
-2. **Approve shipping phase 0 now**, ahead of the feature?
-3. **Giorgio's (a)/(b) rulings** pick from §4.1–§4.4. Each is independent and additive.
-4. **Opt-out window:** client-gated (phase 1 default) or hard DB rule (§4.5)?
-5. **Newcomers:** frozen standings only (phase 1), or full week-by-week Season 1 too (§4.6)?
-6. **Superseded league in the switcher:** Finished, folded into its successor, or hidden (§4.8)?
+1. **(b) How teams start.** This design assumes a new draft. Keep teams (§4.1) and keepers
+   (§4.2) are each additive.
+2. **a5:** confirm "Nudge again" and "ask back in", and what "until the draft is set" means for
+   ask-back-in: the order finalized at T−1h (assumed), or the draft date saved.
+3. **Roster privacy:** may ordinary members see **who** said out and who hasn't replied, or only
+   counts (assumed: counts, with names for in/new)?
+4. **Changing your mind:** may a player flip `in ↔ out` freely until the draft starts (assumed),
+   or is the first answer final?
+5. **Copy needed** for `renewal_marked_out` and `season_set` (Design Lead).
+6. **Newcomers:** frozen standings only (phase 1), or full week-by-week Season 1 too (§4.3)?
+7. **The superseded league in the switcher** (§4.5).
