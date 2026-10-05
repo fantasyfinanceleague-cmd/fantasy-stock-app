@@ -32,9 +32,16 @@ SELECT cron.schedule(
     url := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/snapshot-week-end',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
+      -- Attempt 3 = the function's MAX_RETRIES: an incomplete heal fails loudly
+      -- instead of scheduling 'snapshot-week-end-retry-2', which would replace a
+      -- pending Friday retry of the same name (pg_cron replaces by name).
+      'X-Retry-Attempt', '3',
       'apikey', (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'cron_apikey' LIMIT 1)
     ),
-    body := '{}'::jsonb
+    body := '{}'::jsonb,
+    -- pg_net's 5 s default is shorter than a run; the outcome is read from the data
+    -- the job writes, not from net._http_response (CLAUDE.md success-signal #8).
+    timeout_milliseconds := 60000
   );
   $$
 );

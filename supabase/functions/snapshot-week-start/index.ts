@@ -11,7 +11,7 @@ import { checkSnapshotReads, matchupParticipants, snapshotHoldings } from '../_s
 import type { CalendarSession, Coverage as MarketCalendarCoverage } from '../_shared/week-window.ts';
 import { IN_SEASON_STATUSES, SNAPSHOT_DRAFT_STATUS, isInSeasonLeague } from '../_shared/snapshot-league-scope.ts';
 import { classifyCloseCoverage } from '../snapshot-week-end/close.ts';
-import { instantAtOrBefore, instantBefore, isScoredWeek, selectTargetWeeks, type WeekMatchupRow } from '../_shared/week-select.ts';
+import { instantAtOrBefore, instantBefore, instantMs, isScoredWeek, selectTargetWeeks, type WeekMatchupRow } from '../_shared/week-select.ts';
 import { shouldWriteJobStatus, successMessage, type JobStatusValue, type StoredJobStatus } from '../_shared/job-status.ts';
 
 /**
@@ -305,19 +305,20 @@ async function fetchOpenPrices(
 
 /**
  * S2: one league's matchups, ALL weeks. Read per league, never one .in() across
- * leagues: PostgREST caps a read at 1000 rows by default, and a truncated read would
- * silently drop weeks from selection. A count at the cap throws instead.
+ * leagues, because PostgREST caps a read at max-rows and a truncated read would
+ * silently drop weeks from selection. The exact count below refuses any truncation.
  */
-const MATCHUP_READ_CAP = 1000;
 async function readLeagueMatchupRows(supabase: any, leagueId: string): Promise<WeekMatchupRow[]> {
-  const { data, error } = await supabase
+  const { data, error, count } = await supabase
     .from('matchups')
-    .select('league_id, week_number, team1_user_id, team1_gain, week_start, week_end, created_at')
+    .select('league_id, week_number, team1_user_id, team1_gain, week_start, week_end, created_at', { count: 'exact' })
     .eq('league_id', leagueId);
   if (error) throw new Error(`Failed to read matchups for league ${leagueId}: ${error.message ?? error}`);
   const rows = (data ?? []) as WeekMatchupRow[];
-  if (rows.length >= MATCHUP_READ_CAP) {
-    throw new Error(`league ${leagueId}: ${rows.length} matchups rows reached the PostgREST cap; refusing a truncated read`);
+  // Exact count, not a fixed threshold: a truncated read (PostgREST max-rows) is
+  // refused whatever the cap is.
+  if (typeof count === 'number' && rows.length < count) {
+    throw new Error(`league ${leagueId}: matchups read truncated (${rows.length} of ${count} rows); refusing a partial week selection`);
   }
   return rows;
 }
@@ -482,7 +483,7 @@ Deno.serve(async (req) => {
       const matchupsRead = checkSnapshotReads({
         matchups: await supabase
           .from('matchups')
-          .select('team1_user_id, team2_user_id, team1_gain, week_start, week_end, created_at')
+          .select('team1_user_id, team2_user_id, team1_gain, week_start, week_end, created_at', { count: 'exact' })
           .eq('league_id', leagueId)
           .eq('week_number', currentWeek),
       });
@@ -505,7 +506,7 @@ Deno.serve(async (req) => {
       // in case that ever isn't true). See ./plan.ts's planWeekWindow doc.
       const windowAnchor = new Date(matchups[0].week_start);
       // Floor over REAL matchups only: a placeholder playoff row must not move the floor.
-      const floorMs = Math.min(...matchups.filter((m: any) => m.team1_user_id).map((m: any) => new Date(m.created_at).getTime()));
+      const floorMs = Math.min(...matchups.filter((m: any) => m.team1_user_id).map((m: any) => instantMs(m.created_at)));
       const windowFloor = Number.isFinite(floorMs) ? new Date(floorMs) : null;
       const storedWeekStartIso = matchups[0].week_start;
       const storedWeekEndIso = matchups[0].week_end;
@@ -557,7 +558,7 @@ Deno.serve(async (req) => {
       const inputs = checkSnapshotReads({
         drafts: await supabase
           .from('drafts')
-          .select('user_id, symbol, quantity')
+          .select('user_id, symbol, quantity', { count: 'exact' })
           .eq('league_id', leagueId),
         // created_at is needed for the single-cut baseline filter below
         // (created_at < this week's real open) — the fix for the Monday-gap
@@ -566,11 +567,11 @@ Deno.serve(async (req) => {
         // to run" instead of as of one fixed instant.
         trades: await supabase
           .from('trades')
-          .select('user_id, symbol, action, quantity, created_at')
+          .select('user_id, symbol, action, quantity, created_at', { count: 'exact' })
           .eq('league_id', leagueId),
         existingSnapshots: await supabase
           .from('week_snapshots')
-          .select('user_id, symbol, week_end_price')
+          .select('user_id, symbol, week_end_price', { count: 'exact' })
           .eq('league_id', leagueId)
           .eq('week_number', currentWeek),
       });

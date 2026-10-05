@@ -97,11 +97,19 @@ Deno.test('snapshot-week-start: the marker is never set at the window rewrite, a
 
 for (const f of FILES) {
   const nm = f.pathname.split('/').slice(-2)[0];
+  Deno.test(`${nm} truncation: every coverage-feeding read asks for an exact count`, async () => {
+    const src = await Deno.readTextFile(f);
+    const blocks = src.split('checkSnapshotReads({').length - 1;
+    assert(blocks >= 2, `${nm}: expected checkSnapshotReads blocks`);
+    const exact = src.split("{ count: 'exact' }").length - 1;
+    assert(exact >= 5, `${nm}: only ${exact} exact-count reads; drafts, trades, snapshots, matchups and the per-league read must all be counted`);
+  });
+
   Deno.test(`${nm} S2: matchups are read per league, never one .in() across leagues (1000-row cap)`, async () => {
     const src = await Deno.readTextFile(f);
     assertFalse(src.includes(".in('league_id', leagues"), `${nm}: a cross-league .in() read would truncate at the PostgREST cap`);
     assert(src.includes('readLeagueMatchupRows(supabase, league.id)'), `${nm}: matchups are not read per league`);
-    assert(src.includes('MATCHUP_READ_CAP'), `${nm}: no row-cap guard on the matchups read`);
+    assert(src.includes("{ count: 'exact' }"), `${nm}: the reads have no exact-count (truncation) guard`);
   });
 
   Deno.test(`${nm} B1: a refused window on a SCORED past week is a skip, not a failure`, async () => {
@@ -129,5 +137,7 @@ Deno.test('B2: a week-end heal cron runs Mon and Tue after week-start, idempoten
   assert(sql.includes("cron.unschedule('snapshot-week-end-heal')"), 'heal cron is not idempotent (no unschedule first)');
   assert(sql.includes("decrypted_secret FROM vault.decrypted_secrets WHERE name = 'cron_apikey'"), 'heal cron does not send the apikey from vault');
   assertFalse(/eyJ[A-Za-z0-9_-]{20,}|sb_secret_/.test(sql), 'a key-shaped literal appears in the migration');
+  assert(sql.includes("'X-Retry-Attempt', '3'"), 'heal does not stop at max retries: it could clobber a Friday retry-2 job');
+  assert(sql.includes('timeout_milliseconds := 60000'), 'heal uses the 5 s pg_net default timeout');
 });
 
