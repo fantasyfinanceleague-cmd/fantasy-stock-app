@@ -100,7 +100,7 @@ create table user_profiles (id uuid primary key, username text);
 
 -- Supabase grants ALL on new tables to the API roles; RLS is the only barrier
 -- here, and these replicas carry no RLS (the functions are DEFINER).
-grant select, update on leagues to authenticated;
+grant select, insert, update on leagues to authenticated;   -- prod: leagues_insert_self_commissioner, leagues_update_commissioner
 grant select on league_members, league_seasons, matchups, league_draft_slots, league_invites to authenticated;
 grant all on leagues, league_members, league_draft_slots, league_seasons, matchups, league_invites to service_role;
 grant select on user_profiles to authenticated, service_role;
@@ -429,6 +429,9 @@ Deno.test({
     });
 
     await t.step('after the draft starts: replies, nudges, removals and the review are refused', async () => {
+      // A stranger learns nothing about the draft state: not_invited comes first.
+      assertEquals(await refusal('authenticated', E, `select public.respond_to_renewal($1, 'in') r`, [L2]),
+        { status: 'refused', reason: 'not_invited' });
       assertEquals(await refusal('authenticated', B, `select public.respond_to_renewal($1, 'out') r`, [L2]),
         { status: 'refused', reason: 'draft_started' });
       assertEquals(await refusal('authenticated', C, `select public.remove_renewal_invitee($1, $2) r`, [L2, B]),
@@ -466,8 +469,12 @@ Deno.test({
       assertEquals(weeks, [{ c: 2 }]);
       assertEquals(await as('authenticated', E, () => q(`select * from public.get_league_history($1)`, [L2])), []);
       assertEquals(await as('authenticated', E, () => q(`select * from public.get_season_matchups($1)`, [L2])), []);
-      // D is out of Season 2 but still a Season 1 member: Season 1 stays theirs.
-      assertEquals((await as('authenticated', D, () => q(`select count(*)::int c from public.get_league_history($1)`, [L2])))[0].c, 2);
+      // D declined Season 2 (removed) but was a Season 1 member: Season 1 stays theirs,
+      // Season 2 does not (the visibility ceiling, security review MEDIUM-4).
+      const dRows = await as('authenticated', D, () => q(`select season_number from public.get_league_history($1)`, [L2]));
+      assertEquals(dRows, [{ season_number: 1 }]);
+      assertEquals(await as('authenticated', D, () => q(`select count(*)::int c from public.get_season_matchups($1)
+        where season_number = 2`, [L2])), [{ c: 0 }]);
     });
 
     await t.step('set_draft_order is refused while a reply is pending (before any order work runs)', async () => {
@@ -491,6 +498,70 @@ Deno.test({
       const again = await refusal('authenticated', C, `select public.renew_league($1) r`, [L4]);
       assertEquals(again.status, 'renewed');
       assert(again.league_id !== r4.league_id, 'a fresh successor, not the cancelled one');
+    });
+
+    await t.step('seats: pending invitees hold a reserved seat; newcomers and bots cannot take it', async () => {
+      const L5 = await completedLeague('Full House', 'random', 4);
+      const r5 = await refusal('authenticated', C, `select public.renew_league($1) r`, [L5]);
+      // C (member) + 3 pending invitees = 4 seats in use. Bots fill the rest: 12 fit...
+      for (let i = 1; i <= 12; i++) {
+        await q(`insert into league_members (league_id, user_id, role) values ($1, $2, 'member')`, [r5.league_id, `bot-x${i}`]);
+      }
+      assertEquals((await q(`select count(*)::int c from league_members where league_id = $1`, [r5.league_id]))[0].c, 13);
+      // ...the 13th would take a seat reserved for a pending invitee: refused by the table guard.
+      await assertRejects(() => q(`insert into league_members (league_id, user_id, role) values ($1, 'bot-x13', 'member')`, [r5.league_id]),
+        Error, 'league_full');
+      // An invitee still gets in (their seat is reserved): the reply and the membership agree.
+      assertEquals((await refusal('authenticated', A, `select public.respond_to_renewal($1, 'in') r`, [r5.league_id])).status, 'replied');
+      assertEquals((await q(`select status from league_renewal_responses where league_id = $1 and user_id = $2`, [r5.league_id, A])),
+        [{ status: 'in' }]);
+      // A join by code (any path: a direct insert here) for a pending invitee syncs their reply to 'in'.
+      await q(`insert into league_members (league_id, user_id, role) values ($1, $2, 'member')`, [r5.league_id, B]);
+      assertEquals((await q(`select status, decided_by from league_renewal_responses where league_id = $1 and user_id = $2`, [r5.league_id, B])),
+        [{ status: 'in', decided_by: 'player' }]);
+    });
+
+    await t.step('a player removed by the commissioner cannot rejoin by any path (join-by-code included)', async () => {
+      const L6 = await completedLeague('Rejoin', 'random', 4);
+      const r6 = await refusal('authenticated', C, `select public.renew_league($1) r`, [L6]);
+      await refusal('authenticated', C, `select public.remove_renewal_invitee($1, $2) r`, [r6.league_id, D]);
+      await assertRejects(() => q(`insert into league_members (league_id, user_id, role) values ($1, $2, 'member')`, [r6.league_id, D]),
+        Error, 'renewal_removed_final');
+      assertEquals((await q(`select count(*)::int c from league_members where league_id = $1 and user_id = $2`, [r6.league_id, D]))[0].c, 0);
+    });
+
+    await t.step('bots are not newcomers: the roster and the counts exclude them', async () => {
+      const L7 = await completedLeague('Bots', 'random', 8);
+      const r7 = await refusal('authenticated', C, `select public.renew_league($1) r`, [L7]);
+      await q(`insert into league_members (league_id, user_id, role) values ($1, 'bot-z1', 'member')`, [r7.league_id]);
+      const roster = await refusal('authenticated', C, `select public.get_renewal_roster($1) r`, [r7.league_id]);
+      assertEquals(roster.counts.new, 0);
+      assert(!roster.people.some((p: Row) => p.user_id === 'bot-z1'), 'a bot is not a person in the list');
+    });
+
+    await t.step('the lineage columns are written by the renewal functions only (direct client writes are refused)', async () => {
+      // A commissioner's own rename is fine (an ordinary settings write).
+      assertEquals((await rpc('authenticated', C, `update leagues set name = 'Scudetto 2' where id = $1 returning name`, [L2])).name,
+        'Scudetto 2');
+      // Clearing the predecessor link (which would switch the gate off) is refused.
+      await assertRejects(() => rpc('authenticated', C, `update leagues set previous_league_id = null where id = $1 returning id`, [L2]),
+        Error, 'renewal_lineage_locked');
+      // Joining a victim's lineage by writing lineage_id is refused.
+      await assertRejects(() => rpc('authenticated', C, `update leagues set lineage_id = $2 where id = $1 returning id`, [L1, L2]),
+        Error, 'renewal_lineage_locked');
+      // A direct insert that claims a lineage is refused; an ordinary league is fine.
+      await assertRejects(() => rpc('authenticated', C,
+        `insert into leagues (name, commissioner_id, lineage_id) values ('forged', $1, $2) returning id`, [C, L1]),
+        Error, 'renewal_lineage_locked');
+      const ok = await rpc('authenticated', C, `insert into leagues (name, commissioner_id) values ('fresh', $1) returning id`, [C]);
+      assert(ok.id, 'an ordinary league can still be created');
+      // The predecessor of a renewed season cannot be deleted out from under it.
+      await assertRejects(() => q(`delete from leagues where id = $1`, [L1]), Error, 'foreign key');
+    });
+
+    await t.step('renew_league: a missing league and a non-commissioner get the same error (no existence oracle)', async () => {
+      await assertRejects(() => rpc('authenticated', C, `select public.renew_league($1) r`,
+        ['00000000-0000-4000-8000-00000000dead']), Error, 'not_commissioner');
     });
 
     await t.step('finalize_league_draft numbers the season from leagues.season_number (3, not 1)', async () => {

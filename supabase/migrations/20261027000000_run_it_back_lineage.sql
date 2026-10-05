@@ -28,7 +28,7 @@
 
 alter table public.leagues
   add column if not exists previous_league_id uuid
-    references public.leagues(id) on delete set null,
+    references public.leagues(id) on delete restrict,
   add column if not exists lineage_id uuid,
   add column if not exists season_number int not null default 1;
 
@@ -44,7 +44,7 @@ create index if not exists leagues_lineage_idx
   on public.leagues (lineage_id) where lineage_id is not null;
 
 comment on column public.leagues.previous_league_id is
-  'Run it back: the season this league renews (NULL = a first season). At most one successor per league (leagues_one_successor_uidx). Deleting the predecessor keeps this league (set null).';
+  'Run it back: the season this league renews (NULL = a first season). At most one successor per league (leagues_one_successor_uidx). A league that has a successor cannot be deleted (on delete restrict): the lineage must not lose a season silently.';
 comment on column public.leagues.lineage_id is
   'Run it back: root league id of this group of seasons. NULL means the league is its own lineage root; use coalesce(lineage_id, id).';
 comment on column public.leagues.season_number is

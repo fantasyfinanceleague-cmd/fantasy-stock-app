@@ -207,6 +207,8 @@ Deno.serve(async (req: Request) => {
 
     if (action === 'add_bots') {
       if (!botsAllowed) return json({ ok: false, reason: 'bots_not_allowed' }, 403);
+      // Run it back: bots take seats an invitee may still need (the cap is 16).
+      if (repliesPending > 0) return json({ ok: false, reason: 'renewal_replies_pending' }); // 200: game-flow refusal
       if (state.draftStatus !== 'not_started') {
         return json({ ok: false, reason: 'not_started_state' }); // 200: game-flow refusal
       }

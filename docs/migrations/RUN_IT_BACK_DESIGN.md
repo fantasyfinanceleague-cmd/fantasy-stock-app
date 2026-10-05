@@ -975,3 +975,37 @@ for the minutes in between.
 - roster visibility (in players see the full list);
 - Nudge again + Remove (phase 1);
 - in ↔ out flips are free until the draft starts.
+
+---
+
+## 7. Review fixes (2026-10-04, before the first push)
+
+Two read-only reviews (security-reviewer; supabase-reviewer) ran against `feat/run-it-back`.
+The valid findings were fixed in place and are covered by the PGlite suite:
+
+| Finding | Fix | Where |
+|---|---|---|
+| A commissioner could clear `previous_league_id` (switching the gate off) or forge `lineage_id` (reading another lineage) through the self-service RLS policies | `enforce_league_lineage_columns`: a direct client write (`current_user` anon/authenticated) may not set or change the lineage columns. SECURITY INVOKER, so the definer RPCs are exempt | 000004 |
+| The gate keyed on `previous_league_id` | keyed on the pending rows instead | 000004 |
+| A league with a successor could be deleted, silently dropping a season | `previous_league_id` is `on delete restrict` | 000000 |
+| Invitees' seats were not reserved, so newcomers could lock them out | `enforce_renewal_membership` on `league_members` INSERT: a newcomer or bot takes only an unreserved seat (members + pending + 1 <= cap) | 000004 |
+| Removal could be undone by joining with the invite code | the same trigger refuses a commissioner-removed player on ANY insert path | 000004 |
+| A pending invitee who joined by code kept a 'pending' reply | the trigger syncs it to 'in' (decided by the player) | 000004 |
+| Visibility of later seasons persisted after declining | a visibility ceiling: a caller sees seasons up to the latest one they were a member of (**a decision to confirm**) | 000003 |
+| Existence oracle in `renew_league` and `respond_to_renewal` | uniform refusals for non-invitees and missing leagues | 000003 |
+| Bots counted as newcomers in the roster and counts | excluded (`bot-%`) | 000003 |
+| `pick_clock_enabled` silently discarded by the pick-clock guard | removed from the settings whitelist (client writes are always clocked) | 000003 |
+| `add_bots` could fill seats an invitee needs | refused while any reply is pending | draft-control |
+
+Not changed, with reasons:
+- **Stake mode mirror (reported as MED-3):** a false positive. The
+  `leagues_mirror_budget_mode` trigger was dropped by `20260811000001`.
+- **Lock profile (LOW-7):** the affected tables are small, and every existing row
+  satisfies the new constraints. `NOT VALID` plus `VALIDATE` would only matter at
+  scale.
+- **Flip rate limit (LOW-6):** each reply writes one notice. Coalescing is a
+  follow-up.
+- **Seat reservation for join-by-code:** enforced at the table, so it covers every
+  path. The join function's own message still says "league_full" for a full league,
+  and the trigger's message is the one a reserved-seat refusal shows.
+

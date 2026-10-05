@@ -76,6 +76,7 @@ as $$
       where r.league_id = p_league_id and r.status = 'in'),
     (select count(*)::int from public.league_members m
       where m.league_id = p_league_id
+        and m.user_id not like 'bot-%'
         and not exists (select 1 from public.league_renewal_responses r
                          where r.league_id = m.league_id and r.user_id = m.user_id)),
     (select count(*)::int from public.league_renewal_responses r
@@ -111,10 +112,8 @@ begin
 
   -- Serialize: a second tap waits here, then sees the successor below.
   select * into v_old from public.leagues where id = p_league_id for update;
-  if not found then
-    return jsonb_build_object('status', 'refused', 'reason', 'league_not_found');
-  end if;
-  if v_old.commissioner_id is distinct from v_caller then
+  -- A missing league and a non-commissioner get the SAME error: no existence oracle.
+  if not found or v_old.commissioner_id is distinct from v_caller then
     raise exception 'not_commissioner' using errcode = '42501';
   end if;
 
@@ -229,17 +228,16 @@ begin
 
   -- Lock the league first: every reply and the gate serialize on this row.
   select * into v_l from public.leagues where id = p_league_id for update;
-  if not found or v_l.previous_league_id is null then
-    return jsonb_build_object('status', 'refused', 'reason', 'not_renewal');
+  -- Uniform for anyone who is not an invitee (no existence or state oracle):
+  -- an unknown league, a league that is not a renewal, and a stranger all get
+  -- not_invited, BEFORE any draft-state reason is revealed.
+  select * into v_r from public.league_renewal_responses
+   where league_id = p_league_id and user_id = v_caller for update;
+  if not found or v_l.id is null or v_l.previous_league_id is null then
+    return jsonb_build_object('status', 'refused', 'reason', 'not_invited');
   end if;
   if coalesce(v_l.draft_status, 'not_started') <> 'not_started' then
     return jsonb_build_object('status', 'refused', 'reason', 'draft_started');
-  end if;
-
-  select * into v_r from public.league_renewal_responses
-   where league_id = p_league_id and user_id = v_caller for update;
-  if not found then
-    return jsonb_build_object('status', 'refused', 'reason', 'not_invited');
   end if;
   if v_r.decided_by = 'commissioner' and v_r.status = 'out' then
     return jsonb_build_object('status', 'refused', 'reason', 'removed');
@@ -249,6 +247,14 @@ begin
   end if;
   if v_r.status = p_response then
     return jsonb_build_object('status', 'unchanged', 'response', p_response);
+  end if;
+
+  -- The seat cap (num_participants = 16 until the draft), checked BEFORE any
+  -- write so a refusal writes nothing. Newcomers and bots share the seats, so
+  -- this refusal is reachable; it is loud, never a silent over-cap member.
+  if p_response = 'in'
+     and (select count(*) from public.league_members where league_id = p_league_id) >= v_l.num_participants then
+    return jsonb_build_object('status', 'refused', 'reason', 'league_full');
   end if;
 
   update public.league_renewal_responses
@@ -409,7 +415,7 @@ declare
   c_allowed constant text[] := array[
     'name', 'num_rounds', 'stake_mode', 'notional_per_slot', 'budget_amount',
     'allow_undraftable', 'num_weeks', 'playoff_teams', 'draft_order_mode',
-    'pick_seconds', 'pick_clock_enabled', 'draft_date'];
+    'pick_seconds', 'draft_date'];   -- pick_clock_enabled is not a renewal setting (20261010000000: client writes are always clocked)
 begin
   if v_caller is null then
     raise exception 'not authenticated' using errcode = '42501';
@@ -462,7 +468,6 @@ begin
     playoff_teams     = case when p_settings ? 'playoff_teams'     then (p_settings->>'playoff_teams')::int          else playoff_teams end,
     draft_order_mode  = case when p_settings ? 'draft_order_mode'  then p_settings->>'draft_order_mode'              else draft_order_mode end,
     pick_seconds      = case when p_settings ? 'pick_seconds'      then (p_settings->>'pick_seconds')::smallint      else pick_seconds end,
-    pick_clock_enabled= case when p_settings ? 'pick_clock_enabled' then (p_settings->>'pick_clock_enabled')::boolean else pick_clock_enabled end,
     draft_date        = v_draft
   where id = p_league_id;
 
@@ -590,6 +595,7 @@ begin
       select m.user_id, 'new', null::text, null::timestamptz, 0::smallint, null::timestamptz
         from public.league_members m
        where m.league_id = p_league_id
+         and m.user_id not like 'bot-%'
          and not exists (select 1 from public.league_renewal_responses r
                           where r.league_id = m.league_id and r.user_id = m.user_id)
     ) x;
@@ -611,9 +617,10 @@ end;
 $$;
 
 -- ----------------------------------------------------------------------------
--- Lineage reads. The gate for both is: a member of ANY league in this lineage.
--- That is what lets a newcomer (a member of the current season only) read
--- Season 1, and it is the same predicate for every season of the group.
+-- Lineage reads. Visibility is a CEILING: a caller sees every season up to the
+-- latest one they were a member of in this lineage. A newcomer (a member of
+-- Season 2) reads Season 1; a player who declined or was removed from Season 2
+-- does not read Season 2 (the security review's MEDIUM-4; a decision to confirm).
 -- ----------------------------------------------------------------------------
 create or replace function public.get_league_history(p_league_id uuid)
 returns table(
@@ -642,6 +649,7 @@ as $$
 declare
   v_caller text := auth.uid()::text;
   v_key    uuid;
+  v_max    int;
 begin
   if v_caller is null then
     raise exception 'not authenticated' using errcode = '42501';
@@ -650,10 +658,14 @@ begin
   if not found then
     return;
   end if;
-  if not exists (
-       select 1 from public.leagues l
-         join public.league_members m on m.league_id = l.id and m.user_id = v_caller
-        where coalesce(l.lineage_id, l.id) = v_key) then
+  -- Visibility ceiling: a caller sees every season up to the LATEST one they
+  -- were a member of. A newcomer (a member of Season 2) reads Season 1; a player
+  -- who declined or was removed from Season 2 does not read Season 2.
+  select max(l.season_number) into v_max
+    from public.leagues l
+    join public.league_members m on m.league_id = l.id and m.user_id = v_caller
+   where coalesce(l.lineage_id, l.id) = v_key;
+  if v_max is null then
     return;
   end if;
 
@@ -693,6 +705,7 @@ begin
   from public.leagues l
   left join public.league_seasons s on s.id = l.current_season_id
   where coalesce(l.lineage_id, l.id) = v_key
+    and l.season_number <= v_max
   order by l.season_number desc;
 end;
 $$;
@@ -723,6 +736,7 @@ as $$
 declare
   v_caller text := auth.uid()::text;
   v_key    uuid;
+  v_max    int;
 begin
   if v_caller is null then
     raise exception 'not authenticated' using errcode = '42501';
@@ -731,10 +745,12 @@ begin
   if not found then
     return;
   end if;
-  if not exists (
-       select 1 from public.leagues l
-         join public.league_members m on m.league_id = l.id and m.user_id = v_caller
-        where coalesce(l.lineage_id, l.id) = v_key) then
+  -- Same visibility ceiling as get_league_history.
+  select max(l.season_number) into v_max
+    from public.leagues l
+    join public.league_members m on m.league_id = l.id and m.user_id = v_caller
+   where coalesce(l.lineage_id, l.id) = v_key;
+  if v_max is null then
     return;
   end if;
 
@@ -749,6 +765,7 @@ begin
     from public.leagues l
     join public.matchups mu on mu.league_id = l.id
    where coalesce(l.lineage_id, l.id) = v_key
+     and l.season_number <= v_max
    order by l.season_number desc, mu.week_number, coalesce(mu.is_playoff, false), mu.bracket_position;
 end;
 $$;
