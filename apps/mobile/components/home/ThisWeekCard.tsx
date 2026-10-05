@@ -131,7 +131,10 @@ export function ThisWeekCard({
         <Text variant="callout" style={{ color: colors.youText, fontWeight: '700' }}>
           {YOU_LABEL}
         </Text>
-        <Text variant="callout" tone="secondary">
+        {/* XXXL (XL check, 2026-10-05): a long opponent name used to run into
+            "You". The minimum gap and wrap keep them apart; at default size
+            the two labels stay at opposite edges, as before. */}
+        <Text variant="callout" tone="secondary" style={styles.oppName}>
           {vsOpponentLabel(opponentName)}
         </Text>
       </View>
@@ -213,7 +216,13 @@ const styles = StyleSheet.create({
   },
   namesRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
+    gap: space[2],
+  },
+  oppName: {
+    flexShrink: 1,
+    textAlign: 'right',
   },
   scoresRow: {
     flexDirection: 'row',

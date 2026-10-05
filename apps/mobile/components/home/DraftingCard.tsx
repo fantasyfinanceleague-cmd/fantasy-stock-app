@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { StyleSheet, View } from 'react-native';
+import { PixelRatio, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 
 import { space } from '@/constants/tokens';
@@ -31,6 +31,9 @@ export interface DraftingCardProps {
 
 export function DraftingCard({ leagueId, myUserId, numRounds }: DraftingCardProps) {
   const { colors } = useTheme();
+  // XXXL (XL check, 2026-10-05): see styles.slotWide. Default font scale (1)
+  // keeps the 3-across grid, so the default layout does not move.
+  const twoAcross = PixelRatio.getFontScale() >= 1.5;
   const { clock, order, myPicks } = useDraftingData(leagueId, myUserId);
 
   if (!clock || !order) {
@@ -91,14 +94,14 @@ export function DraftingCard({ leagueId, myUserId, numRounds }: DraftingCardProp
         <View style={styles.slotGrid}>
           {slots.map((symbol, i) =>
             symbol ? (
-              <View key={i} style={[styles.slot, { backgroundColor: colors.youText, borderColor: colors.youText }]}>
-                <Text variant="callout" style={{ color: colors.surface, fontWeight: '700' }}>
+              <View key={i} style={[styles.slot, twoAcross && styles.slotWide, { backgroundColor: colors.youText, borderColor: colors.youText }]}>
+                <Text variant="callout" numberOfLines={1} style={{ color: colors.surface, fontWeight: '700' }}>
                   {symbol}
                 </Text>
               </View>
             ) : (
-              <View key={i} style={[styles.slot, { borderColor: colors.border }]}>
-                <Text variant="callout" tone="secondary">
+              <View key={i} style={[styles.slot, twoAcross && styles.slotWide, { borderColor: colors.border }]}>
+                <Text variant="callout" tone="secondary" numberOfLines={1}>
                   {roundSlotLabel(i + 1)}
                 </Text>
               </View>
@@ -134,6 +137,11 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: space[2],
   },
+  // XXXL (XL check, 2026-10-05): at large Dynamic Type a 3-across tile is too
+  // narrow for a ticker like NVDA, so the grid drops to 2 across.
+  slotWide: {
+    width: '48%',
+  },
   slot: {
     width: '31%',
     aspectRatio: 1.6,
@@ -141,5 +149,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: space[1],
   },
 });
