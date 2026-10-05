@@ -9,6 +9,7 @@ import {
 } from './plan.ts';
 import { checkSnapshotReads, matchupParticipants, snapshotHoldings } from '../_shared/snapshot-holdings.ts';
 import type { CalendarSession, Coverage as MarketCalendarCoverage } from '../_shared/week-window.ts';
+import { IN_SEASON_STATUSES, SNAPSHOT_DRAFT_STATUS, isInSeasonLeague } from '../_shared/snapshot-league-scope.ts';
 
 /**
  * Snapshot Week Start Prices
@@ -315,10 +316,16 @@ Deno.serve(async (req) => {
     }
 
     // 1. Find all active matchup leagues and their current week
-    const { data: leagues, error: leaguesErr } = await supabase
+    // Scope: IN-SEASON leagues only (see ../_shared/snapshot-league-scope.ts).
+    // A finished league must never be snapshotted — its old week can predate
+    // market_calendar coverage and refuse forever. Filtered in the query AND
+    // re-checked in code, so dropping one filter cannot silently widen scope.
+    const { data: leaguesRaw, error: leaguesErr } = await supabase
       .from('leagues')
-      .select('id, current_week, num_weeks')
+      .select('id, current_week, num_weeks, season_status, draft_status')
       .eq('league_type', 'matchup')
+      .in('season_status', [...IN_SEASON_STATUSES])
+      .eq('draft_status', SNAPSHOT_DRAFT_STATUS)
       .not('current_week', 'is', null);
 
     if (leaguesErr) {
@@ -329,8 +336,13 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to fetch leagues: ${leaguesErr.message ?? leaguesErr}`);
     }
 
+    const leagues = (leaguesRaw ?? []).filter((l: any) => isInSeasonLeague(l));
+
     if (!leagues || leagues.length === 0) {
       console.log('No active matchup leagues found');
+      // Terminal status is written here too: a 'running' row stranded on this
+      // path is the success-signals #6 pattern (CLAUDE.md). Common off-season.
+      await updateJobStatus(supabase, JOB_NAME, 'success', retryAttempt);
       return json({ message: 'No active matchup leagues', snapshots: 0 });
     }
 
@@ -423,6 +435,8 @@ Deno.serve(async (req) => {
         continue;
       }
       if (earlyWindowPlan.action === 'refuse') {
+        // An IN-SCOPE league whose week cannot be windowed is a real gap (a
+        // stalled or mis-calendared season), so it stays a loud refusal.
         anyIncomplete = true;
         console.error(
           `ABORT league ${leagueId} week ${currentWeek}: week window refused (${earlyWindowPlan.reason}) — ` +

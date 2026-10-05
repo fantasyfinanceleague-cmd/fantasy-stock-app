@@ -3,6 +3,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { classifyCloseCoverage, buildCloseWork, planCloseWindow, type Holding } from './close.ts';
 import { checkSnapshotReads, matchupParticipants, snapshotHoldings } from '../_shared/snapshot-holdings.ts';
 import type { CalendarSession, Coverage as MarketCalendarCoverage } from '../_shared/week-window.ts';
+import { IN_SEASON_STATUSES, SNAPSHOT_DRAFT_STATUS, isInSeasonLeague } from '../_shared/snapshot-league-scope.ts';
 
 /**
  * Snapshot Week End Prices
@@ -297,16 +298,23 @@ Deno.serve(async (req) => {
     }
 
     // 1. Find all active matchup leagues and their current week
-    const { data: leagues, error: leaguesErr } = await supabase
+    // Scope: IN-SEASON leagues only (see ../_shared/snapshot-league-scope.ts).
+    // A finished league's old week predates calendar coverage and would refuse
+    // 'no_coverage' forever — the 2026-10-05 snapshot-week-start failure.
+    const { data: leaguesRaw, error: leaguesErr } = await supabase
       .from('leagues')
-      .select('id, current_week, num_weeks')
+      .select('id, current_week, num_weeks, season_status, draft_status')
       .eq('league_type', 'matchup')
+      .in('season_status', [...IN_SEASON_STATUSES])
+      .eq('draft_status', SNAPSHOT_DRAFT_STATUS)
       .not('current_week', 'is', null);
 
     if (leaguesErr) {
       console.error('Error fetching leagues:', leaguesErr);
       throw new Error(`Failed to fetch leagues: ${leaguesErr.message ?? leaguesErr}`);
     }
+
+    const leagues = (leaguesRaw ?? []).filter((l: any) => isInSeasonLeague(l));
 
     if (!leagues || leagues.length === 0) {
       console.log('No active matchup leagues found');
@@ -373,6 +381,7 @@ Deno.serve(async (req) => {
         continue;
       }
       if (windowPlan.action === 'refuse') {
+        // An IN-SCOPE league whose week cannot be windowed is a real gap: refuse loudly.
         anyIncomplete = true;
         console.error(
           `ABORT league ${leagueId} week ${currentWeek}: week window refused (${windowPlan.reason}) — will retry.`
