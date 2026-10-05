@@ -194,7 +194,10 @@ async function fetchSheetFacts(userId: string, leagueData: League[]) {
       }));
 
   const sheet = leagueData.map<SheetLeague>((league) => {
-    const phase = getSeasonPhase(league);
+    // U1: the phase boundary is T0 (week 1's first calendar open), so pass
+    // the calendar this same fetch just read. Every reader of seasonPhase
+    // (the sheet, PhaseChip, the trade gate's canTradeInPhase) inherits it.
+    const phase = getSeasonPhase(league, new Date(), marketCalendar);
     const row = summaryByLeague.get(league.id);
     return {
       id: league.id,
@@ -209,7 +212,7 @@ async function fetchSheetFacts(userId: string, leagueData: League[]) {
       membersJoined: memberCounts ? memberCounts.get(league.id) ?? 0 : null,
       capacity: league.num_participants,
       isChampion: !!league.current_season_id && championBySeason.get(league.current_season_id) === userId,
-      seasonLabel: getSeasonLabel(phase, league),
+      seasonLabel: getSeasonLabel(phase, league, marketCalendar),
       currentWeek: league.current_week,
       numWeeks: league.num_weeks,
       playoffTeams: league.playoff_teams,
