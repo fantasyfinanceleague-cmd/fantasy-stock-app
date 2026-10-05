@@ -35,7 +35,7 @@ import {
 // 2026-09-29 found "Ends Fri 4:00 PM ET" as a constant, wrong on any
 // holiday-shifted week). Takes the whole phase, not just its kind, so it
 // has the real timestamps to format.
-function thisWeekChrome(phase: PhaseResult, week: number): { isLive: boolean; rightLabel: string; liveChipLabel: string; tag: string } {
+function thisWeekChrome(phase: PhaseResult, week: number): { isLive: boolean; rightLabel: string; leadSuffix?: string; liveChipLabel: string; tag: string } {
   const tag = phase.kind !== 'missed_playoffs' && 'isPlayoff' in phase && phase.isPlayoff && 'round' in phase && phase.round ? phase.round : THIS_WEEK_TAG;
   switch (phase.kind) {
     case 'live_open':
@@ -43,10 +43,13 @@ function thisWeekChrome(phase: PhaseResult, week: number): { isLive: boolean; ri
     case 'live_closed':
       // R2 (Design Lead, 2026-09-30): the actual last-closed session, not
       // `weekEnd` (always Friday) -- a Tuesday-evening after-hours state
-      // used to read "…at Friday's close" three days early.
+      // used to read "…at Friday's close" three days early. The close is
+      // the tail of the LEAD line ("You lead by $X at Wednesday's close");
+      // the right side carries only the resume time, one sentence per side.
       return {
         isLive: false,
-        rightLabel: `${marketClosedAt(phase.lastCloseAt ?? phase.weekEnd)}${phase.resumesAt ? ` · ${marketResumesAt(phase.resumesAt)}` : ''}`,
+        rightLabel: marketResumesAt(phase.resumesAt),
+        leadSuffix: marketClosedAt(phase.lastCloseAt ?? phase.weekEnd),
         liveChipLabel: MARKET_CLOSED_CHIP,
         tag,
       };
@@ -260,6 +263,7 @@ function HomeBody({
           opponent={thisWeek.opponent}
           opponentName={opponentName}
           rightLabel={chrome.rightLabel}
+          leadSuffix={chrome.leadSuffix}
           liveChipLabel={chrome.liveChipLabel}
           tag={chrome.tag}
         />

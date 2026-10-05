@@ -37,8 +37,11 @@ export interface ThisWeekCardProps {
   you: { gain: number; pct: number; unpriced?: string[] };
   opponent: { gain: number; pct: number; unpriced?: string[] };
   opponentName: string;
-  /** "Ends Fri 4:00 PM ET" / "…at Thursday's close" / etc. */
+  /** "Ends Fri 4:00 PM ET" / "Resumes Thu 9:30 AM ET" / etc. */
   rightLabel: string;
+  /** "at Thursday's close" -- the tail of the lead line, set only while the
+   * market is closed ("You lead by $X at Thursday's close"). */
+  leadSuffix?: string;
   liveChipLabel?: string;
   /** The top-left tag — "This week" normally, or the playoff round name
    * during playoffs (spec: "the this-week card's tag becomes the round
@@ -67,7 +70,7 @@ export interface ThisWeekCardProps {
 }
 
 export function ThisWeekCard({
-  week, isLive, you, opponent, opponentName, rightLabel, liveChipLabel, tag, scoring = false, preSeason = false, scoringMessage, resultLine,
+  week, isLive, you, opponent, opponentName, rightLabel, leadSuffix, liveChipLabel, tag, scoring = false, preSeason = false, scoringMessage, resultLine,
 }: ThisWeekCardProps) {
   const { colors } = useTheme();
   const { reduced, duration, easing, withTiming } = useMotion();
@@ -88,7 +91,7 @@ export function ThisWeekCard({
   const captionA11y = [youCaption, oppCaption].filter(Boolean).join('. ');
   const a11yLabel = scoring || preSeason
     ? `Week ${week}. ${scoringMessage ?? SCORING_MESSAGE}`
-    : `${thisWeekAccessibilityLabel(week, isLive, youText, opponentName, oppText, gap.toString(), ahead, rightLabel)}${captionA11y ? `. ${captionA11y}` : ''}`;
+    : `${thisWeekAccessibilityLabel(week, isLive, youText, opponentName, oppText, `${gap.toString()}${leadSuffix ? ` ${leadSuffix}` : ''}`, ahead, rightLabel)}${captionA11y ? `. ${captionA11y}` : ''}`;
 
   // H3: a leader change gets one accent wash (never a loop; no haptic —
   // this isn't user-initiated). Never on first paint — prevLeaderRef
@@ -165,6 +168,7 @@ export function ThisWeekCard({
             {resultLine ?? (
               <>
                 {leadLabel(ahead)} <Text variant="caption" style={styles.leadAmount}>{formatMoney(gap)}</Text>
+                {leadSuffix ? ` ${leadSuffix}` : null}
               </>
             )}
           </Text>

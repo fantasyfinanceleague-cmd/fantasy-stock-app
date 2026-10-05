@@ -10,6 +10,7 @@ import {
   heroUnpricedCaption, sideUnpricedCaption, seasonScrubLabel, heroAccessibilityLabel, heroWeekOrRoundLabel,
   standingsThroughWeek, preSeasonStartsLabel, placeLabel, nonChampionLine, regularSeasonTileLine, playoffRecordLine,
   playoffTileLine, championAnnounceLine, coreCompleteTiles, teamSoFarCaption, roundSlotLabel, eliminatedLabel,
+  marketClosedAt,
 } from '../lib/home/homeCopy.ts';
 
 Deno.test('heroUnpricedCaption: null when both lists are empty', () => {
@@ -232,4 +233,13 @@ Deno.test('eliminatedLabel: every other round keeps "Out in the {round}" unchang
 
 Deno.test('eliminatedLabel: a null round (round unknowable) reads "Out of the playoffs"', () => {
   assertEquals(eliminatedLabel(null), 'Out of the playoffs');
+});
+
+Deno.test('marketClosedAt: "at Wednesday\'s close" -- the lead-line tail, no leading ellipsis (R2)', () => {
+  // 2026-09-23 20:00Z is Wednesday 4:00 PM ET, the close of that session.
+  assertEquals(marketClosedAt('2026-09-23T20:00:00.000Z'), "at Wednesday's close");
+});
+
+Deno.test('marketClosedAt: an invalid instant reads "" so the lead line drops the tail, never "Invalid Date"', () => {
+  assertEquals(marketClosedAt('not-a-date'), '');
 });

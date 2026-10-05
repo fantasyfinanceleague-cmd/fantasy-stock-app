@@ -9,6 +9,7 @@
  *   board               the design board's copy (docs/design/screens/), verbatim.
  *   new-flagged         proposed by this worker; the spec says "flag it" —
  *                       these are NOT final until the Design Lead approves.
+ *   giorgio             Giorgio's approved copy (approved 2026-10-04); tagged `giorgio` in code.
  */
 
 import { formatSignedCurrency } from '../weekStatus';
@@ -90,13 +91,15 @@ export function endsAtLabel(weekEndIso: string): string {
 
 // ── State 2: market closed — board, verbatim ────────────────────────────────
 export const MARKET_CLOSED_CHIP = 'Market closed'; // board
-/** "…at Thursday's close" from the matchup's `week_end` — the last
- * trading day the score is frozen at, in ET (board: "…at Thursday's close"). */
-export function marketClosedAt(weekEndIso: string): string {
-  const d = new Date(weekEndIso);
+/** "at Thursday's close" from the last closed session's close instant, in
+ * ET. It is the tail of the lead line ("You lead by $X at Thursday's
+ * close"), never a standalone label, so it carries no leading ellipsis
+ * (Design Lead, 2026-09-30, R2: one sentence, like the board). */
+export function marketClosedAt(closeIso: string): string {
+  const d = new Date(closeIso);
   if (Number.isNaN(d.getTime())) return '';
   const weekday = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'long' }).format(d);
-  return `…at ${weekday}'s close`;
+  return `at ${weekday}'s close`;
 }
 /** "Resumes Fri 9:30 AM ET" from market_session_status's own next-open
  * timestamp — never a hardcoded weekday (board: "Resumes Fri 9:30 AM ET"). */
@@ -116,7 +119,7 @@ export const SCORING_MESSAGE = "Results post a few minutes after Friday's close.
 export const SCORED_CHIP = 'Final'; // new-flagged
 export function scoredResultLine(won: boolean, week: number, opponentName?: string): string {
   // spec: "You win Week 6" / "{opponent} wins Week 6" — board copy pattern
-  // (onboarding card 3), reused verbatim; the subject swap is new-flagged.
+  // (onboarding card 3), reused verbatim; the subject swap was approved by Giorgio 2026-10-04.
   return won ? `You win Week ${week}` : `${opponentName ?? 'Your opponent'} wins Week ${week}`;
 }
 /** `when` is the next week's real `week_start` ISO timestamp, or null when
@@ -124,13 +127,13 @@ export function scoredResultLine(won: boolean, week: number, opponentName?: stri
  * — fixed in code review, 2026-09-29, which found the raw timestamp
  * reaching the screen: "Week 7 starts 2026-09-28T13:30:00+00:00"). */
 export function nextWeekStartsLabel(week: number, when: string | null): string {
-  if (!when) return `Week ${week} starts soon`; // new-flagged, mirrors board's "Resumes" pattern
+  if (!when) return `Week ${week} starts soon`; // giorgio
   const d = new Date(when);
   if (Number.isNaN(d.getTime())) return `Week ${week} starts soon`;
   const formatted = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/New_York', weekday: 'short', hour: 'numeric', minute: '2-digit',
   }).format(d);
-  return `Week ${week} starts ${formatted} ET`; // new-flagged, mirrors board's "Resumes" pattern
+  return `Week ${week} starts ${formatted} ET`; // giorgio
 }
 
 // ── State 5: before the season — board, verbatim ───────────────────────────
@@ -147,7 +150,7 @@ export const PRE_SEASON_CHIP = 'Pre-season'; // board
  * B3 fix), never schedule.ts's nominal leagueStartDate directly, or this
  * repeats B1's bug for the season start instead of a week boundary. */
 export function preSeasonStartsLabel(startsAtIso: string | null): string {
-  if (!startsAtIso) return 'Season starts soon'; // new-flagged, mirrors nextWeekStartsLabel's fallback
+  if (!startsAtIso) return 'Season starts soon'; // giorgio
   const d = new Date(startsAtIso);
   if (Number.isNaN(d.getTime())) return 'Season starts soon';
   const formatted = new Intl.DateTimeFormat('en-US', ET_WEEKDAY_TIME).format(d);
@@ -202,7 +205,7 @@ export function onTheClockLine(round: number, pick: number, secondsLeft: number)
 }
 export function upNextLine(round: number, pick: number, picksAway: number): string {
   // spec: "new copy: flag it"
-  return `Round ${round} · Pick ${pick} · you're up in ${picksAway} ${picksAway === 1 ? 'pick' : 'picks'}`; // new-flagged
+  return `Round ${round} · Pick ${pick} · you're up in ${picksAway} ${picksAway === 1 ? 'pick' : 'picks'}`; // giorgio
 }
 export const GO_TO_DRAFT_ROOM = 'Go to the draft room'; // board
 export const YOUR_TEAM_SO_FAR = 'Your team so far'; // board
@@ -217,16 +220,16 @@ export function roundSlotLabel(round: number): string {
 }
 
 // ── State 9: bye week — NOT on the board. new-flagged. ──────────────────────
-export const BYE_MESSAGE = 'No matchup this week'; // new-flagged
+export const BYE_MESSAGE = 'No matchup this week'; // giorgio
 /** Same formatting/null-handling as {@link nextWeekStartsLabel} — a bye's
  * `nextStart` is null whenever there's no schedule row after it yet. */
 export function byeNextWeekLabel(week: number, when: string | null): string {
-  return nextWeekStartsLabel(week, when); // new-flagged (same pattern as scored -> next)
+  return nextWeekStartsLabel(week, when); // giorgio (same pattern as scored -> next)
 }
 
 // ── State 10: playoffs — NOT on the board. new-flagged. ─────────────────────
 export function byeToRoundLabel(round: string | null): string {
-  return round ? `Bye to the ${round}` : 'Bye this round'; // new-flagged
+  return round ? `Bye to the ${round}` : 'Bye this round'; // giorgio
 }
 /** S3 (Design Lead ruling, 2026-09-30): a round-1 elimination reads "Out
  * in the Wild card round" (NEW COPY, flagged) -- "round" is added ONLY
@@ -234,17 +237,17 @@ export function byeToRoundLabel(round: string | null): string {
  * next to "Out in the Semifinals"/"Out in the Final" for every other
  * round, which already end in a proper round-name noun. */
 export function eliminatedLabel(round: string | null): string {
-  if (!round) return 'Out of the playoffs'; // new-flagged
-  if (round === 'Wild card') return 'Out in the Wild card round'; // new-flagged
-  return `Out in the ${round}`; // new-flagged
+  if (!round) return 'Out of the playoffs'; // giorgio
+  if (round === 'Wild card') return 'Out in the Wild card round'; // giorgio
+  return `Out in the ${round}`; // giorgio
 }
-export const SEE_THE_BRACKET = 'See the bracket'; // new-flagged
-export const MISSED_PLAYOFFS_MESSAGE = 'Missed the playoffs'; // new-flagged
+export const SEE_THE_BRACKET = 'See the bracket'; // giorgio
+export const MISSED_PLAYOFFS_MESSAGE = 'Missed the playoffs'; // giorgio
 /** A current-week playoff row with no opponent yet — the previous round
  * hasn't posted its results (Design Lead ruling, 2026-09-30). NEW COPY,
  * not on the board — flagged for review. */
 export function playoffPendingLine(previousRound: string | null): string {
-  return `Your opponent is set when the ${previousRound ?? 'previous round'} results post.`; // new-flagged
+  return `Your opponent is set when the ${previousRound ?? 'previous round'} results post.`; // giorgio
 }
 
 // ── State 8: season complete — mapping rules from the RPC author, relayed
@@ -263,9 +266,9 @@ export function playoffTileLine(
     default: return null; // unknown (standings_only, or absent) — hide the tile, never guess
   }
 }
-export const REGULAR_SEASON_TILE_TITLE = 'Regular season'; // new-flagged
-export const PLAYOFFS_TILE_TITLE = 'Playoffs'; // new-flagged
-export const BEST_WEEK_TILE_TITLE = 'Best week'; // new-flagged
+export const REGULAR_SEASON_TILE_TITLE = 'Regular season'; // giorgio
+export const PLAYOFFS_TILE_TITLE = 'Playoffs'; // giorgio
+export const BEST_WEEK_TILE_TITLE = 'Best week'; // giorgio
 export const SEASON_GAIN_TILE_TITLE = 'Season gain'; // board, reused
 
 // ── B6 (Design Lead, 2026-09-30): the board's HomeComplete, on real
@@ -277,7 +280,7 @@ export function wonLeagueLine(leagueName: string): string {
 }
 /** "2nd place" (board's non-champion variant). NEW COPY -- flagged. */
 export function placeLabel(rank: number): string {
-  return `${ordinal(rank)} place`; // new-flagged
+  return `${ordinal(rank)} place`; // giorgio
 }
 export function nonChampionLine(leagueName: string, record: string): string {
   return `${leagueName} · ${record}`; // board
@@ -287,7 +290,7 @@ export function nonChampionLine(leagueName: string, record: string): string {
  * = false) still sees who won, just never "You won" (they didn't play).
  * NEW COPY, flagged -- no board reference for this case. */
 export function championAnnounceLine(leagueName: string): string {
-  return `Won ${leagueName}`; // new-flagged
+  return `Won ${leagueName}`; // giorgio
 }
 /** "1st of 6" (S6, Design Lead ruling, 2026-09-30: ordinals, never "1 of 6"). */
 export function regularSeasonTileLine(rank: number, standingsCount: number, record: string): string {
