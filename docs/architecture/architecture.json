@@ -2,13 +2,13 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "65b1f93a01ae985c01862fbf82ff4dbdeefeb14a",
-    "commitShort": "65b1f93",
+    "commit": "d1aef677ee7fcf25fe4665ff03e38f1334fcb6b5",
+    "commitShort": "d1aef67",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": false,
     "dirtyPaths": [],
-    "timestamp": "2026-10-05T04:54:06Z",
+    "timestamp": "2026-10-05T16:16:34Z",
     "sourceHash": "sha256:2c55c4cfd0b358c90d79b907a9e8e307b1a8c471eadf50da77b272f8aae6b9f5",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
@@ -16,8 +16,8 @@
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-09-30T16:53:15Z",
-    "ageHours": 108,
-    "ageDays": 4.5,
+    "ageHours": 119.4,
+    "ageDays": 5,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:8e08382dfe9edf557c6371cfc39da9fb788590ad82209f15e2e74a7c90dcfc6b",
