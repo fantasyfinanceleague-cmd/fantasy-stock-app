@@ -129,6 +129,14 @@ export const XL_GIANLUIGI_HOLDINGS: HoldingRow[] = [
   { symbol: 'XOM', draft: 96.0, mon: 80.16, prev: 83.86, thu: 86.33, fri: 86.33, qty: 49 },
 ];
 
+/** Roberto's FINAL gain for every scored week of the standard fixture:
+ * weeks 1-5 from the board, week 6 from the closed Friday prices. The best
+ * week is derived from these (bestWeek.ts), never typed in. */
+export function fixtureScoredWeeks(): { week: number; gain: number }[] {
+  const week6 = Math.round(ROBERTO_HOLDINGS.reduce((s, h) => s + fixtureQty(h) * (h.fri - h.mon), 0) * 100) / 100;
+  return [...ROBERTO_WEEKS.map((w) => ({ week: w.week, gain: w.gain })), { week: 6, gain: week6 }];
+}
+
 /** Roberto's scored weeks 1-5 for the XL league. Sums to +$15,235.76. */
 export const XL_ROBERTO_WEEKS: { week: number; gain: number; result: 'W' | 'L' }[] = [
   { week: 1, gain: 2100.37, result: 'W' },

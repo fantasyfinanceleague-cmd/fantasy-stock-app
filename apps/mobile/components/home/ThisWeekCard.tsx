@@ -14,6 +14,7 @@ import { ScoreDigits } from '@/components/sp/game/ScoreDigits';
 import { TugBar } from '@/components/sp/game/TugBar';
 import { LiveDot } from '@/components/sp/game/LiveDot';
 import { Skeleton } from '@/components/Skeleton';
+import { scoreTone } from '@/lib/home/scoreTone';
 import { THIS_WEEK_TAG, YOU_LABEL, vsOpponentLabel, leadLabel, thisWeekLiveChip, thisWeekAccessibilityLabel, SCORING_MESSAGE, sideUnpricedCaption } from '@/lib/home/homeCopy';
 
 // Stockpile — <ThisWeekCard> (Phase 3b-2, board "Home", key screen 1). A
@@ -151,10 +152,10 @@ export function ThisWeekCard({
       ) : (
         <View style={styles.scoresRow}>
           <View style={styles.scoreCell}>
-            <ScoreDigits text={youText} variant="score.lg" color={preSeason ? colors.zero : colors.youText} />
+            <ScoreDigits text={youText} variant="score.lg" color={preSeason || scoreTone(you.gain, 'you') === 'zero' ? colors.zero : colors.youText} />
           </View>
           <View style={styles.scoreCell}>
-            <ScoreDigits text={oppText} variant="score.lg" color={preSeason ? colors.zero : colors.oppText} />
+            <ScoreDigits text={oppText} variant="score.lg" color={preSeason || scoreTone(opponent.gain, 'opp') === 'zero' ? colors.zero : colors.oppText} />
           </View>
         </View>
       )}

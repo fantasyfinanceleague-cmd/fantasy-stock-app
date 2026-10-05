@@ -15,7 +15,12 @@
 import { useEffect, useState } from 'react';
 
 import { supabase } from '@/lib/supabase';
-import { HOME_FIXTURE } from './devFixture';
+import { HOME_FIXTURE, fixtureScoredWeeks } from './devFixture';
+import { bestScoredWeek } from './bestWeek';
+
+// B5 (Design Lead gate, 2026-10-05): the fixture's best week is DERIVED from
+// its final scored weeks, the same rule get_season_result applies to matchups.
+const FIXTURE_BEST_WEEK = bestScoredWeek(fixtureScoredWeeks());
 
 export interface SeasonResultRow {
   status: string;
@@ -52,7 +57,7 @@ function fixtureChampion(): SeasonResultRow {
     champion_display_name: 'Roberto B.', runner_up_display_name: 'Gianluigi B.',
     playoff_wins: 2, playoff_losses: 0,
     playoff_result: 'champion', playoff_exit_round: null,
-    best_week_number: 6, best_week_gain: 213.60,
+    best_week_number: FIXTURE_BEST_WEEK?.week ?? null, best_week_gain: FIXTURE_BEST_WEEK?.gain ?? null,
   };
 }
 
@@ -68,10 +73,9 @@ function fixtureRunnerUp(): SeasonResultRow {
     champion_display_name: 'Paolo M.', runner_up_display_name: 'Roberto B.',
     playoff_wins: 1, playoff_losses: 1,
     playoff_result: 'runner_up', playoff_exit_round: null,
-    // R4 (Design Lead, 2026-09-30): same fix as fixtureChampion above --
-    // week 6 ($213.60) is the real best week in this fixture's 6-week
-    // history, not the board's out-of-range "week 11".
-    best_week_number: 6, best_week_gain: 213.60,
+    // R4 (Design Lead, 2026-09-30) + B5: the best week is derived from the
+    // fixture's final scored weeks (week 6, +$351.79), not typed in.
+    best_week_number: FIXTURE_BEST_WEEK?.week ?? null, best_week_gain: FIXTURE_BEST_WEEK?.gain ?? null,
   };
 }
 

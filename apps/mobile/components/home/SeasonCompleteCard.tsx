@@ -24,7 +24,7 @@ import { useSeasonResult } from '@/lib/home/useSeasonResult';
 import {
   playoffTileLine, PLAYOFFS_TILE_TITLE, BEST_WEEK_TILE_TITLE,
   SEASON_COMPLETE_TITLE, CHAMPION_LABEL, wonLeagueLine, placeLabel, nonChampionLine, championAnnounceLine, coreCompleteTiles,
-  playoffRecordLine, bestWeekLine, SEE_FINAL_STANDINGS, START_NEXT_SEASON,
+  playoffRecordLine, bestWeekLine, SEE_FINAL_STANDINGS,
 } from '@/lib/home/homeCopy';
 import { playoffRoundLabelForWeek } from '@/lib/playoffs';
 
@@ -189,13 +189,9 @@ export function SeasonCompleteCard({
       ) : null}
 
       <Button label={SEE_FINAL_STANDINGS} onPress={() => router.push('/(tabs)/league')} variant="primary" />
-      {/* B6 (Design Lead, 2026-09-30): "Start next season" is deliberately
-       * NOT wired to start_new_league_season here -- that RPC is a
-       * destructive, commissioner-gated action (CLAUDE.md: it deletes the
-       * league's matchups/standings), and this card has no confirmation UX
-       * or commissioner check. Routes to the league screen, where that real
-       * flow belongs, rather than inventing a one-tap destructive action. */}
-      <Button label={START_NEXT_SEASON} onPress={() => router.push('/(tabs)/league')} variant="secondary" />
+      {/* B4 (Design Lead gate, 2026-10-05): no "Start next season" here. The
+       * start_new_league_season path is revoked, so a button for it is dead;
+       * the "Run it back?" card (3c) owns this slot. */}
     </>
   );
 }
