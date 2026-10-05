@@ -566,9 +566,9 @@ Deno.test('mid-week add: record-trade buy row produces the entered_mid_week snap
   }];
   const prices = new Map([['AAPL', 110], ['MSFT', 420]]);
   // The row shape record-trade inserts (user_id stringified, action 'buy'):
-  const tradesRows = [{ user_id: 'a', symbol: 'MSFT', action: 'buy', quantity: 2.5, price: 400 }];
+  const tradesRows = [{ user_id: 'a', symbol: 'MSFT', action: 'buy', quantity: 2.5, price: 400, created_at: '2026-09-30T15:00:00.000Z' }];
 
-  const work = buildCloseWork('lg', 3, userHoldings, existing, prices, tradesRows);
+  const work = buildCloseWork('lg', 3, userHoldings, existing, prices, tradesRows, '2026-09-28T13:30:00.000Z');
 
   assertEquals(work.missingSymbols, []);
   assertEquals(work.updates, [{ id: 'snap-1', week_end_price: 110 }]);
@@ -590,10 +590,10 @@ Deno.test('mid-week add: multiple buys weight the entry price (record-trade shap
   ]);
   const prices = new Map([['MSFT', 500]]);
   const tradesRows = [
-    { user_id: 'a', symbol: 'MSFT', action: 'buy', quantity: 1, price: 400 },
-    { user_id: 'a', symbol: 'MSFT', action: 'buy', quantity: 2, price: 460 },
+    { user_id: 'a', symbol: 'MSFT', action: 'buy', quantity: 1, price: 400, created_at: '2026-09-30T15:00:00.000Z' },
+    { user_id: 'a', symbol: 'MSFT', action: 'buy', quantity: 2, price: 460, created_at: '2026-10-01T15:00:00.000Z' },
   ];
-  const work = buildCloseWork('lg', 3, userHoldings, [], prices, tradesRows);
+  const work = buildCloseWork('lg', 3, userHoldings, [], prices, tradesRows, '2026-09-28T13:30:00.000Z');
   assertEquals(work.inserts.length, 1);
   assertEquals(work.inserts[0].week_start_price, (400 * 1 + 460 * 2) / 3);
 });

@@ -4,22 +4,45 @@ import {
   classifyCoverage,
   selectMissingHoldings,
   buildPricedRows,
+  planWeekWindow,
   type Holding,
 } from './plan.ts';
 import { checkSnapshotReads, matchupParticipants, snapshotHoldings } from '../_shared/snapshot-holdings.ts';
+import type { CalendarSession, Coverage as MarketCalendarCoverage } from '../_shared/week-window.ts';
 
 /**
  * Snapshot Week Start Prices
  *
- * This function runs automatically at Monday market open (9:30 AM ET / 14:30 UTC)
- * to capture the starting prices for weekly matchup calculations.
- * Also runs Tuesday in case Monday is a market holiday.
+ * Runs on a fixed cron ('35 14 * * 1,2' — Monday and Tuesday, both ~9:35 AM
+ * ET in EST) to capture each league's week-start baseline, but the cron
+ * schedule is no longer what decides which day's prices get used or which
+ * trades count. That decision is ./plan.ts's planWeekWindow, built on the
+ * single-cut fix (../_shared/week-window.ts,
+ * docs/audits/2026-09-30-week-window-audit.md): each league-week has ONE
+ * real market-open instant (this week's first trading-day open, from
+ * market_calendar) and the cron just checks per-league whether `now` has
+ * reached it yet ('not_due' if not — the Tuesday run of a normal week hits
+ * this every single time and correctly no-ops, since Monday's run already
+ * handled it). This REPLACES the old Alpaca-/v2/calendar holiday check and
+ * the Monday/Tuesday day-of-week branch entirely: a stale Alpaca key
+ * returning a 401 used to read as "market closed" (CLAUDE.md "success
+ * signals" #1) and silently skip every Monday; the calendar table is now the
+ * only source of "is this a trading day."
  *
  * For each active matchup league:
- * 1. Check if market is open today (skip if holiday)
- * 2. Find the current week's matchups
- * 3. Get all users' holdings (from drafts + trades)
- * 4. Fetch current prices for all symbols
+ * 1. Compute this week's real cut (planWeekWindow) from market_calendar;
+ *    skip leagues not yet due, retry leagues the calendar can't answer for yet.
+ * 2. The FIRST run for a league-week (zero existing week_snapshots) rewrites
+ *    matchups.week_start/week_end to the real cut, so every other consumer
+ *    (process-week-results' trade window, get_home_league, mobile) sees the
+ *    same real instants. A league already snapshotted under the OLD nominal
+ *    window is NEVER re-windowed (see planWeekWindow's `rewrite` doc).
+ * 3. Get all users' holdings from drafts + trades with created_at STRICTLY
+ *    BEFORE the cut's open instant — not "all trades as of whenever this
+ *    cron happens to run" (the Monday-gap defect, S1/S2/S3/S4 in the audit).
+ * 4. Fetch official opening prices for the cut's own session date — not
+ *    "today" (a Tuesday heal run used to re-price everyone at TUESDAY's
+ *    open; it now uses the SAME date Monday's run would have).
  * 5. Insert snapshots into week_snapshots table
  *
  * Includes retry logic: up to 3 retries with 5-minute intervals
@@ -28,7 +51,6 @@ import { checkSnapshotReads, matchupParticipants, snapshotHoldings } from '../_s
 function env(k: string) { return Deno.env.get(k) ?? ''; }
 
 const ALPACA_BASE = 'https://data.alpaca.markets/v2';
-const ALPACA_TRADING_BASE = 'https://paper-api.alpaca.markets/v2';
 const MAX_RETRIES = 3;
 
 const json = (b: unknown, s = 200) =>
@@ -65,32 +87,36 @@ function isAuthorized(req: Request): boolean {
 // Holding is defined in ./plan.ts (the pure planner) and imported above so the
 // handler and the unit-tested decisions share one shape.
 
-// Check if the market is open today using Alpaca Calendar API
-async function isMarketOpenToday(alpacaKey: string, alpacaSecret: string): Promise<{ open: boolean; date: string }> {
-  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+// isMarketOpenToday (Alpaca /v2/calendar) was REMOVED here — it decided the
+// Monday-holiday skip from a LIVE Alpaca call, and a 401 from a stale key
+// read as "market closed" (CLAUDE.md "success signals" #1), silently
+// skipping every Monday. planWeekWindow's 'not_due' check (market_calendar,
+// fetched once below as marketCalendarSessions/marketCalendarCoverage)
+// replaces it for every league.
 
-  try {
-    const url = `${ALPACA_TRADING_BASE}/calendar?start=${today}&end=${today}`;
-    const res = await fetch(url, {
-      headers: {
-        'APCA-API-KEY-ID': alpacaKey,
-        'APCA-API-SECRET-KEY': alpacaSecret,
-        'Accept': 'application/json',
-      },
-    });
-
-    if (res.ok) {
-      const calendar = await res.json();
-      // If today is in the calendar, market is open
-      if (Array.isArray(calendar) && calendar.length > 0) {
-        return { open: true, date: today };
-      }
-    }
-  } catch (e) {
-    console.error('Failed to check market calendar:', e);
+// Fetch every market_calendar row plus the single market_calendar_coverage
+// row, ONCE per invocation (not per league — the calendar isn't
+// league-specific). ~97 days of sessions per refresh-market-calendar's own
+// LOOKBACK/LOOKAHEAD window, so this is a small, cheap read.
+async function fetchMarketCalendar(
+  supabase: any,
+): Promise<{ sessions: CalendarSession[]; coverage: MarketCalendarCoverage | null; error: unknown }> {
+  const [sessionsRes, coverageRes] = await Promise.all([
+    supabase.from('market_calendar').select('session_date, open_et, close_et'),
+    supabase.from('market_calendar_coverage').select('covered_from, covered_through').maybeSingle(),
+  ]);
+  if (sessionsRes.error || coverageRes.error) {
+    return { sessions: [], coverage: null, error: sessionsRes.error ?? coverageRes.error };
   }
-
-  return { open: false, date: today };
+  const sessions: CalendarSession[] = (sessionsRes.data ?? []).map((r: any) => ({
+    sessionDate: r.session_date,
+    openEt: String(r.open_et).slice(0, 5), // Postgres TIME -> 'HH:MM:SS'; weekCut wants 'HH:MM'
+    closeEt: String(r.close_et).slice(0, 5),
+  }));
+  const coverage: MarketCalendarCoverage | null = coverageRes.data
+    ? { from: coverageRes.data.covered_from, through: coverageRes.data.covered_through }
+    : null;
+  return { sessions, coverage, error: null };
 }
 
 // Update job status for retry tracking
@@ -152,17 +178,33 @@ async function scheduleRetry(supabase: any, jobName: string, attemptNumber: numb
   }
 }
 
-// Fetch official opening prices from Alpaca bars (today's open)
-async function fetchOpenPrices(symbols: string[], alpacaKey: string, alpacaSecret: string): Promise<Map<string, number>> {
+/**
+ * Fetch official opening prices from Alpaca bars, for `sessionDate` — the
+ * cut's OWN openSessionDate (planWeekWindow), never "today". A Tuesday heal
+ * run for a week that opened Monday must price at MONDAY's bar, not
+ * Tuesday's — using "today" here was exactly S3's defect (the Tuesday heal
+ * re-based an all-cash Monday buyer at Tuesday's open instead of Monday's).
+ *
+ * The latest-quote FALLBACK is only meaningful for the current day (a "latest
+ * quote" reflects right now, not `sessionDate`), so it is skipped entirely
+ * when `sessionDate` isn't today — a missing historical bar stays missing
+ * (this league aborts and retries) rather than being silently mislabeled
+ * with today's price.
+ */
+async function fetchOpenPrices(
+  symbols: string[],
+  alpacaKey: string,
+  alpacaSecret: string,
+  sessionDate: string,
+): Promise<Map<string, number>> {
   const prices = new Map<string, number>();
 
   if (symbols.length === 0) return prices;
 
-  const today = new Date().toISOString().split('T')[0];
   const symbolsParam = symbols.join(',');
 
   // Use bars endpoint to get official OHLCV data
-  const url = `${ALPACA_BASE}/stocks/bars?symbols=${encodeURIComponent(symbolsParam)}&timeframe=1Day&start=${today}&end=${today}&feed=iex`;
+  const url = `${ALPACA_BASE}/stocks/bars?symbols=${encodeURIComponent(symbolsParam)}&timeframe=1Day&start=${sessionDate}&end=${sessionDate}&feed=iex`;
 
   try {
     const res = await fetch(url, {
@@ -188,8 +230,12 @@ async function fetchOpenPrices(symbols: string[], alpacaKey: string, alpacaSecre
     console.error('Failed to fetch bar prices:', e);
   }
 
-  // Fallback to quotes for any missing symbols
-  const missingSymbols = symbols.filter(s => !prices.has(s.toUpperCase()));
+  // Fallback to quotes for any missing symbols — ONLY when sessionDate is
+  // today (see the function doc). A missing bar for a PAST session date must
+  // stay missing, not be silently filled with a live quote mislabeled as that
+  // day's open.
+  const isToday = sessionDate === new Date().toISOString().split('T')[0];
+  const missingSymbols = isToday ? symbols.filter(s => !prices.has(s.toUpperCase())) : [];
   if (missingSymbols.length > 0) {
     console.log(`Falling back to quotes for ${missingSymbols.length} symbols:`, missingSymbols);
     const quotesUrl = `${ALPACA_BASE}/stocks/quotes/latest?symbols=${encodeURIComponent(missingSymbols.join(','))}&feed=iex`;
@@ -256,24 +302,16 @@ Deno.serve(async (req) => {
   await updateJobStatus(supabase, JOB_NAME, 'running', retryAttempt);
 
   try {
-    // 0. Check if market is open today (for holiday handling)
-    if (ALPACA_KEY && ALPACA_SECRET) {
-      const marketStatus = await isMarketOpenToday(ALPACA_KEY, ALPACA_SECRET);
-      const today = new Date();
-      const dayOfWeek = today.getUTCDay(); // 0 = Sunday, 1 = Monday, etc.
-
-      if (!marketStatus.open) {
-        // Market is closed today
-        if (dayOfWeek === 1) {
-          // Monday and market closed = holiday, skip (Tuesday will run)
-          console.log('Monday is a market holiday, skipping. Tuesday run will handle this week.');
-          await updateJobStatus(supabase, JOB_NAME, 'success', retryAttempt, 'Skipped - Monday holiday');
-          return json({ message: 'Market closed (holiday), skipping Monday run', date: marketStatus.date });
-        } else if (dayOfWeek === 2) {
-          // Tuesday and market closed = unusual, maybe wait?
-          console.log('Market closed on Tuesday, unusual situation');
-        }
-      }
+    // 0. Read the market calendar ONCE for this whole run (not league-specific).
+    //    A failed read or a stale coverage window means every league whose week
+    //    needs the calendar aborts this run and retries — never silently
+    //    default to "no trading days" (CLAUDE.md "success signals" #1), which
+    //    is exactly what the OLD Alpaca-/v2/calendar check risked on a 401.
+    const { sessions: marketCalendarSessions, coverage: marketCalendarCoverage, error: calendarErr } =
+      await fetchMarketCalendar(supabase);
+    if (calendarErr) {
+      console.error('Failed to read market_calendar:', calendarErr);
+      throw new Error(`Failed to read market_calendar: ${(calendarErr as any).message ?? calendarErr}`);
     }
 
     // 1. Find all active matchup leagues and their current week
@@ -335,11 +373,13 @@ Deno.serve(async (req) => {
       // unhealable: the retry skipped the league and the gap never filled. See
       // ./plan.ts.
 
-      // 2. Get all matchups for current week to find all users
+      // 2. Get all matchups for current week to find all users. Extended with
+      //    week_start/week_end/created_at — the inputs to planWeekWindow
+      //    (single-cut fix) below.
       const matchupsRead = checkSnapshotReads({
         matchups: await supabase
           .from('matchups')
-          .select('team1_user_id, team2_user_id')
+          .select('team1_user_id, team2_user_id, week_start, week_end, created_at')
           .eq('league_id', leagueId)
           .eq('week_number', currentWeek),
       });
@@ -353,6 +393,45 @@ Deno.serve(async (req) => {
         console.log(`No matchups found for league ${leagueId} week ${currentWeek}`);
         continue;
       }
+
+      // ── Single-cut week window (S1-S4 fix) ──────────────────────────────────
+      // Every matchup row for one (league, week) shares the same window, so
+      // any row's week_start/week_end anchors the cut. `floor` is the EARLIEST
+      // created_at across this league-week's rows (normally identical — all
+      // inserted atomically by finalize_league_draft — but min() defensively
+      // in case that ever isn't true). See ./plan.ts's planWeekWindow doc.
+      const windowAnchor = new Date(matchups[0].week_start);
+      const floorMs = Math.min(...matchups.map((m: any) => new Date(m.created_at).getTime()));
+      const windowFloor = Number.isFinite(floorMs) ? new Date(floorMs) : null;
+      const storedWeekStartIso = matchups[0].week_start;
+      const storedWeekEndIso = matchups[0].week_end;
+
+      // Cheap check BEFORE any further reads: 'not_due' and 'refuse' don't
+      // depend on existingSnapshotCount (only the `rewrite` flag inside a
+      // 'proceed' result does — recomputed below once that count is known).
+      // This is what makes the common case (a Tuesday run of a normal,
+      // already-Monday-snapshotted week) cost zero drafts/trades/snapshots
+      // reads, mirroring the existing "no Alpaca call for a complete league"
+      // discipline one step earlier.
+      const earlyWindowPlan = planWeekWindow(
+        new Date(), windowAnchor, windowFloor, marketCalendarSessions, marketCalendarCoverage,
+        storedWeekStartIso, storedWeekEndIso, 0,
+      );
+      if (earlyWindowPlan.action === 'not_due') {
+        console.log(`League ${leagueId} week ${currentWeek}: not due yet (this week's real open hasn't happened), skipping`);
+        results.push({ leagueId, week: currentWeek, skipped: 'not_due' });
+        continue;
+      }
+      if (earlyWindowPlan.action === 'refuse') {
+        anyIncomplete = true;
+        console.error(
+          `ABORT league ${leagueId} week ${currentWeek}: week window refused (${earlyWindowPlan.reason}) — ` +
+          `will retry.`
+        );
+        results.push({ leagueId, week: currentWeek, incomplete: true, windowRefused: earlyWindowPlan.reason });
+        continue;
+      }
+      // ─────────────────────────────────────────────────────────────────────
 
       // Collect all participant IDs (null team2 = bye week). Bots are INCLUDED:
       // excluding them left every bot matchup unscoreable from week 2 on.
@@ -368,9 +447,14 @@ Deno.serve(async (req) => {
           .from('drafts')
           .select('user_id, symbol, quantity')
           .eq('league_id', leagueId),
+        // created_at is needed for the single-cut baseline filter below
+        // (created_at < this week's real open) — the fix for the Monday-gap
+        // defect (S1/S2/S3/S4): the OLD code read every trade with no time
+        // bound at all, netting the ledger "as of whenever this cron happens
+        // to run" instead of as of one fixed instant.
         trades: await supabase
           .from('trades')
-          .select('user_id, symbol, action, quantity')
+          .select('user_id, symbol, action, quantity, created_at')
           .eq('league_id', leagueId),
         existingSnapshots: await supabase
           .from('week_snapshots')
@@ -384,10 +468,63 @@ Deno.serve(async (req) => {
       }
       const { drafts, trades, existingSnapshots } = inputs.rows;
 
-      // 5. Calculate holdings for each user
+      // ── Re-derive the window now that existingSnapshots.length is known ────
+      // (the cheap earlyWindowPlan above used a placeholder of 0 to decide
+      // ONLY 'not_due'/'refuse' before this read; `rewrite` needs the real
+      // count.) `now` moving forward between the two calls cannot flip
+      // action away from 'proceed' — 'not_due' only ever gets LESS true as
+      // time passes — but handled defensively rather than assumed.
+      const windowPlan = planWeekWindow(
+        new Date(), windowAnchor, windowFloor, marketCalendarSessions, marketCalendarCoverage,
+        storedWeekStartIso, storedWeekEndIso, existingSnapshots.length,
+      );
+      if (windowPlan.action !== 'proceed') {
+        console.log(`League ${leagueId} week ${currentWeek}: window plan changed to ${windowPlan.action} between reads, skipping this run`);
+        results.push({ leagueId, week: currentWeek, skipped: windowPlan.action });
+        continue;
+      }
+
+      // Rewrite matchups.week_start/week_end to the real cut — ONLY the
+      // first time this league-week is ever snapshotted (windowPlan.rewrite
+      // is false once ANY week_snapshots row exists; see planWeekWindow's
+      // doc). Every OTHER consumer of these columns (process-week-results'
+      // trade window, get_home_league, mobile) then sees the real instants
+      // with no code change of its own.
+      if (windowPlan.rewrite) {
+        const oldStart = storedWeekStartIso, oldEnd = storedWeekEndIso;
+        const { error: rewriteErr } = await supabase
+          .from('matchups')
+          .update({ week_start: windowPlan.open.toISOString(), week_end: windowPlan.close.toISOString() })
+          .eq('league_id', leagueId)
+          .eq('week_number', currentWeek);
+        if (rewriteErr) {
+          // Abort rather than snapshot against a canonical window the stored
+          // columns don't yet reflect — a later retry would otherwise see
+          // existingSnapshots.length > 0 (from THIS run's own write, if we
+          // pressed on) and skip the rewrite forever, permanently stuck on
+          // the stale window while prices reflect the canonical one.
+          anyIncomplete = true;
+          console.error(`ABORT league ${leagueId} week ${currentWeek}: failed to rewrite matchups window:`, rewriteErr);
+          results.push({ leagueId, week: currentWeek, incomplete: true, windowRewriteFailed: true });
+          continue;
+        }
+        console.log(
+          `League ${leagueId} week ${currentWeek}: rewrote matchups window ` +
+          `${oldStart} .. ${oldEnd} -> ${windowPlan.open.toISOString()} .. ${windowPlan.close.toISOString()}`
+        );
+      }
+      // ─────────────────────────────────────────────────────────────────────
+
+      // 5. Calculate holdings for each user. Trades are filtered to STRICTLY
+      //    BEFORE the window's real open — the single cut every consumer of
+      //    "this week" now shares (in-week trades start at this same instant
+      //    in process-week-results, which reads it off the matchups row this
+      //    function just rewrote).
+      const cutOpenIso = windowPlan.open.toISOString();
+      const tradesBeforeOpen = trades.filter((t: any) => t.created_at < cutOpenIso);
       const userHoldings = new Map<string, Holding[]>();
       for (const userId of userIds) {
-        userHoldings.set(userId, snapshotHoldings(userId, drafts, trades));
+        userHoldings.set(userId, snapshotHoldings(userId, drafts, tradesBeforeOpen));
       }
 
       // ── Coverage gate (replaces the old existence-only skip) ────────────────
@@ -444,7 +581,7 @@ Deno.serve(async (req) => {
 
       let prices = new Map<string, number>();
       if (ALPACA_KEY && ALPACA_SECRET && symbolsToPrice.size > 0) {
-        prices = await fetchOpenPrices(Array.from(symbolsToPrice), ALPACA_KEY, ALPACA_SECRET);
+        prices = await fetchOpenPrices(Array.from(symbolsToPrice), ALPACA_KEY, ALPACA_SECRET, windowPlan.openSessionDate);
       }
 
       // 7. Build the snapshot rows for the missing participants — all-or-nothing
