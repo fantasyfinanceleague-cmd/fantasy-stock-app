@@ -359,7 +359,14 @@
     return {
       season: 1, rows, champion: 'roberto', runnerUp: 'paolo', playoffTeams: 4,
       finalDate: 'Fri, Jan 15',
-      next: { season: 2, draft: 'Sat, Jan 23 · 7:00 PM ET', orderSet: 'Sat 6:00 PM ET', optInBy: 'Thu, Jan 21 · 7:00 PM ET', keepBy: 'Fri, Jan 22 · 7:00 PM ET', invite: 'SCUD26' },
+      next: {
+        season: 2, draft: 'Sat, Jan 23 · 7:00 PM ET', orderSet: 'Sat 6:00 PM ET', keepBy: 'Fri, Jan 22 · 7:00 PM ET', invite: 'SCUD26',
+        // Opt-in (Giorgio, 2026-10-04): every Season 1 player answers I'm in /
+        // I'm out; the commissioner reconciles before the draft can be set.
+        replies: { in: ['roberto', 'paolo', 'francesco', 'gianluigi'], out: ['alessandro'], none: ['andrea'] },
+        joined: [{ id: 'marta', name: 'Marta C.', init: 'MC' }], // new via the invite code
+        maxTeams: 16,
+      },
     };
   })();
 
