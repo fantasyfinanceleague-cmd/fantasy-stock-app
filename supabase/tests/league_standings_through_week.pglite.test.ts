@@ -121,23 +121,24 @@ Deno.test({
           count(*) filter (where team2_user_id is not null and winner_user_id = $2) w,
           count(*) filter (where team2_user_id is not null and winner_user_id is not null and winner_user_id <> $2) l,
           count(*) filter (where team2_user_id is not null and is_tie) t,
-          coalesce(sum(case when team1_user_id = $2 then team1_gain else team2_gain end), 0) pf
+          coalesce(sum(case when team1_user_id = $2 then team1_gain else team2_gain end), 0) pf,
+          coalesce(sum(case when team1_user_id = $2 then coalesce(team2_gain, 0) else team1_gain end), 0) pa
         from matchups where league_id = $1 and not is_playoff and team1_gain is not null
           and ($2 in (team1_user_id, team2_user_id))`, [lg, uid]);
       const r = rows[0];
-      await q(`insert into league_standings (league_id, user_id, wins, losses, ties, points_for) values ($1,$2,$3,$4,$5,$6)`,
-        [lg, uid, r.w, r.l, r.t, r.pf]);
+      await q(`insert into league_standings (league_id, user_id, wins, losses, ties, points_for, points_against) values ($1,$2,$3,$4,$5,$6,$7)`,
+        [lg, uid, r.w, r.l, r.t, r.pf, r.pa]);
     }
 
     // numeric columns come back as strings from PGlite; normalise so the
     // comparisons check values, not their text.
     const num = (rows: Row[]) => rows.map((r) => ({
       ...r, user_id: letter(r.user_id), wins: Number(r.wins), losses: Number(r.losses), ties: Number(r.ties),
-      games_played: Number(r.games_played), points_for: Number(r.points_for),
+      games_played: Number(r.games_played), points_for: Number(r.points_for), points_against: Number(r.points_against),
     }));
     const ranked = async (week: number | null) => num(week === null
-      ? await q(`select user_id, rank, wins, losses, ties, games_played, points_for from league_standings_ranked($1) order by rank`, [lg])
-      : await q(`select user_id, rank, wins, losses, ties, games_played, points_for from league_standings_ranked($1, $2) order by rank`, [lg, week]));
+      ? await q(`select user_id, rank, wins, losses, ties, games_played, points_for, points_against from league_standings_ranked($1) order by rank`, [lg])
+      : await q(`select user_id, rank, wins, losses, ties, games_played, points_for, points_against from league_standings_ranked($1, $2) order by rank`, [lg, week]));
 
     await t.step('through the latest scored regular-season week equals the one-arg ranking', async () => {
       const latest = await ranked(3);
@@ -153,10 +154,19 @@ Deno.test({
       assertEquals(Number(b.points_for), -5 + 7); // week 1 loss + the week-2 bye gain
     });
 
-    await t.step('as of week 1 the order is the week-1 standings (tie on 0.5 broken by season gain, then join order)', async () => {
+    await t.step('as of week 1 the order is the week-1 standings (C and D tie on 0.5 with equal season gain: join order decides)', async () => {
       const w1 = await ranked(1);
       assertEquals(w1.map((r: Row) => r.user_id), ['A', 'C', 'D', 'B']);
       assertEquals(w1.map((r: Row) => r.rank), [1, 2, 3, 4]);
+    });
+
+    await t.step('as of week 2 the order and values are exact (the bye counts for points only)', async () => {
+      // A 2-0 (1.0, pf 14); D 0-0-1 + 0 (0.5, pf 3); C 0-1-1 (0.25, pf 2); B 0-1, bye (0, pf 2).
+      const w2 = await ranked(2);
+      assertEquals(w2.map((r: Row) => r.user_id), ['A', 'D', 'C', 'B']);
+      assertEquals(w2.map((r: Row) => Number(r.points_for)), [14, 3, 2, 2]);
+      // points_against = the opponent's gain: A -5 (wk1) + -1 (wk2); D 3; C 3 + 4; B 10 (wk1), 0 (bye).
+      assertEquals(w2.map((r: Row) => Number(r.points_against)), [-6, 3, 7, 10]);
     });
 
     await t.step('ranks are strictly 1..N at every week', async () => {
@@ -180,10 +190,14 @@ Deno.test({
       for (const row of acl) {
         assert(!row.acl.includes('anon='), `anon grant on ${row.args}: ${row.acl}`);
         assert(!/(^|[{,])=/.test(row.acl), `PUBLIC grant on ${row.args}: ${row.acl}`);
+        // Positive: the two roles that should call it, and only they.
+        assert(row.acl.includes('authenticated=X'), `authenticated not granted on ${row.args}: ${row.acl}`);
+        assert(row.acl.includes('service_role=X'), `service_role not granted on ${row.args}: ${row.acl}`);
       }
       const core = await q(`select proacl::text acl from pg_proc p join pg_namespace n on n.oid = p.pronamespace
         where n.nspname = 'public' and proname = '_league_standings_rank_core'`);
       assert(core.length === 1 && !core[0].acl.includes('anon='), 'core must not be anon-callable');
+      assert(!/(^|[{,])=/.test(core[0].acl), 'core must not be PUBLIC-callable');
     });
 
     // Call-time checks: ACL text can say "no anon" and still be wrong, so the

@@ -110,7 +110,7 @@
 --
 -- TESTS
 --   The hermetic PGlite suite lives in supabase/tests/ (run with Deno; see
---   supabase/tests/README.md). Extend supabase/tests/league_standings_ranked.pglite.test.ts
+--   supabase/tests/README.md). Extend supabase/tests/league_standings_through_week.pglite.test.ts
 --   with the through-week cases: week-N derivation, bye adds points_for only,
 --   playoff rows excluded, and through-latest == 1-arg.
 -- ============================================================================

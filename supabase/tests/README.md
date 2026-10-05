@@ -53,6 +53,29 @@ It covers:
 - the pre-season join-order key, the playoff-cutoff case, ranks exactly 1..N
 - RLS (member / non-member / anon) and `complete_league_season`'s snapshot
 
+## league_standings_through_week.pglite.test.ts
+
+What it does:
+- Loads `20261011000000` (the 1-arg ranking) and then `20261030000000` (the
+  through-week overload) **verbatim**, on the real `is_member()` helper and the
+  league-wide SELECT policies from production.
+- Derives `league_standings` from `matchups` the way process-week-results
+  writes it (a bye adds points only; playoff rows add nothing), so the two
+  rankings must agree by construction.
+
+It covers:
+- through the latest scored week equals the 1-arg ranking; playoff week excluded
+- a bye adds points only; exact rows and `points_against` at week 2
+- the week-1 order (a tie decided by join order)
+- ranks 1..N; the 1-arg ACL unchanged by the migration
+- grants: authenticated and service_role present, anon and PUBLIC absent, on
+  both overloads and the private core
+- call-time: a member gets the ranking, a non-member gets zero rows (RLS), anon
+  is refused, a NULL or negative week raises
+
+Not yet covered: a tie on win % that head-to-head separates, and an unbalanced
+head-to-head set (both order-sensitive branches of the core).
+
 ## start_league_playoffs.pglite.test.ts
 
 What it does: loads `20261011000003` and the `20261011000004` backstop index
