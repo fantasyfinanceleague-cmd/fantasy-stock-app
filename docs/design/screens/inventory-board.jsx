@@ -80,6 +80,7 @@
             'Before the season there is no leader and no gain: zero is grey, never green.',
             'Nights and weekends freeze the scoreboard at the last close and say when it resumes.',
             'After Friday\'s close the card shows "Scoring…" until the results post; nothing is presented as final before it is.',
+            'Season complete: the commissioner also gets the "Run it back?" card, and every Season 1 player later gets the "Are you in?" card (see Run it back).',
             'A symbol with no live price counts at cost and is named in a caption ("1 holding counted at cost (no live price yet)"), on the hero and on whichever side of the scoreboard it affects. A partial total never passes as a complete one.',
           ]}>
           <Fit caption="Before the draft" note="Serie A Traders"><I.HomePreDraft /></Fit>
@@ -125,6 +126,50 @@
           <Fit caption="Playoff bracket · 4 teams" note="Two playoff weeks after the regular season"><I.Playoffs /></Fit>
           <Fit caption="Playoff bracket · 6 teams" note="3 weeks; seeds 1–2 get first-round byes (new copy; round names decided)"><I.Playoffs6 /></Fit>
         </Group>
+
+        <section className="b-sec" id="run-it-back" aria-labelledby="run-it-back-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n b-sec__n--code">3c</span>
+            <div>
+              <h2 id="run-it-back-h">Run it back</h2>
+              <p className="b-job">Season 1 is over; the commissioner renews the league so the group plays Season 2. Decided by Giorgio (2026-10-04); all copy here is approved. Built in 3c (League tab + the Home cards) on the backend in feat/run-it-back.</p>
+            </div>
+          </header>
+          <ul className="b-inv__notes">
+            <li><b>Only the commissioner</b> runs it back: the "Run it back?" card on the season-complete Home and the League tab action. Season 2 is a new league linked to Season 1, which stays frozen and complete.</li>
+            <li><b>Opt-in.</b> Every Season 1 player gets "Roberto B. is running it back. Are you in for Season 2?" (push + a card on Home and the League tab). Answers can flip in ↔ out until the draft is set.</li>
+            <li><b>The commissioner hears every reply</b> and reconciles on "Who's running back": Season 1 order, "Running back" (name bold), "Out" (muted), "No reply yet" with <b>Nudge again</b> (once a day) or <b>Remove</b>; new joiners last ("New", "Joining").</li>
+            <li><b>A player who is in</b> goes straight to the same list, read-only, with "You're running back · Change". Players who are out or haven't answered don't see it.</li>
+            <li><b>The draft can't be set</b> while anyone is "No reply yet": the draft rows stay disabled with the reason inline (the server enforces it too).</li>
+            <li><b>New players</b> join with the invite code, not capped by Season 1's size (up to 16 until the draft), and see Season 1's history.</li>
+            <li><b>Teams start with a new draft</b>; every setting carries over and the commissioner can edit it on the review. Keepers / keep teams were not chosen.</li>
+            <li><b>History:</b> a Season 1 champion banner on the League tab until Season 2's draft; League › History lists every season with its final standings, matchups and draft.</li>
+          </ul>
+
+          <h3 className="b-sub">Starting it (commissioner only)</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Home · season complete (commissioner)" note='"Start next season" becomes a "Run it back?" card. Members see the champion card without it.'><I.RibHome /></Fit>
+            <Fit caption="League tab · season over (commissioner)" note="The champion banner, the commissioner's action, and Season 1's final standings."><I.RibLeague /></Fit>
+            <Fit caption="Push · every Season 1 player" note="Sent the moment the commissioner runs it back; opens the I'm in / I'm out card."><I.RibPush mode="ask" /></Fit>
+          </div>
+
+          <h3 className="b-sub">Who's in: opt-in, the commissioner reconciles</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="1 · Member: Home (and the League tab)" note="The same card sits on the League tab. I'm in opens the full list (4b). An answer can change until the draft is set."><I.RibMemberPrompt /></Fit>
+            <Fit caption="2 · Commissioner: a push for each reply" note="Every answer notifies the commissioner, with the running count."><I.RibPush mode="reply" /></Fit>
+            <Fit caption="3 · Commissioner: Home while replies come in" note="Counts and who's still to reply; opens the reconcile view."><I.RibHomeCounts /></Fit>
+            <Fit caption="4 · Commissioner: League tab, reconcile" note={`Standings-style, in Season 1 order: "Running back" (Giorgio's copy) with the name in bold; "Out" muted; "No reply yet" with "Nudge again · Remove" (Giorgio's words) on the row; new joiners last with a New marker and "Joining". Draft rows stay disabled until nobody is left without a reply. Needs backend: replies, and joins during renewal.`}><I.RibReconcile /></Fit>
+            <Fit caption="4b · A member who said I'm in" note="Answering I'm in opens this: the same list with every answer and no actions, plus 'Change'. Players who are out or haven't answered don't see it."><I.RibMemberList /></Fit>
+            <Fit caption="5 · Clearing a non-reply" note='"Nudge again" re-sends the ask (once a day); "Remove" takes them out of Season 2 and tells them.'><I.RibResolve /></Fit>
+            <Fit caption="6 · After everyone has replied: the review" note="Every Season 1 setting carried over and editable; teams = who's in + new joins (here 4 + 1 = 5, up to 16), with the uneven-bye heads-up. Schedule the draft = start_renewed_season."><I.RibReview /></Fit>
+          </div>
+
+          <h3 className="b-sub">History</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="League tab · Season 2, before the draft" note="The Season 1 champion banner stays until Season 2's draft; History is one tap away."><I.RibHistory /></Fit>
+            <Fit caption="League › History" note="Every season, its champion and final standings; matchups and the draft recap too. New players see it as well."><I.RibHistory view="list" /></Fit>
+          </div>
+        </section>
 
         <Group id="money" code="3e" name="Trading" job="Sell, keep the cash in the slot, and buy again with exactly what the sale brought in."
           notes={[
