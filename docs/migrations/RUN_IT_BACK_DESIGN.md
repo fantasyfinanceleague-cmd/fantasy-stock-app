@@ -6,6 +6,11 @@ principle.
 1** (board `design/your-call-run-it-back` @ `4538f60`, frames a1–a6). §2 is rewritten for it.
 (b) is undecided; a new draft is assumed. Rev 2 mapped the earlier lean path; rev 1 compared the
 architectures (§1, unchanged).
+**Rev 3.1 (2026-10-04), Giorgio's rulings:**
+- a player who answered **in** sees the full "Who's running back" list, read-only;
+- the commissioner gets **Nudge again** and **Remove** on pending rows;
+- `in ↔ out` flips are **free** until the draft starts.
+See §2.4 and §2.5.
 **Branch:** `docs/run-it-back-design`. **Migration range reserved:** `20261023000000`–`09`.
 **Author:** the "run it back backend" worker, 2026-10-04, read-only against `main` @ `ee2ceff`.
 
@@ -25,8 +30,10 @@ architectures (§1, unchanged).
 - **Phase 1 = opt-in renewal + a new draft (≈4–5 worker days):**
   - "Run it back" → **`renew_league`** creates Season 2 and asks every Season 1 player.
   - Players answer through **`respond_to_renewal`**. Each answer notifies the commissioner, who
-    sees In / New / Out / No reply through **`get_renewal_roster`** and clears non-replies with
-    **`mark_renewal_out`**.
+    sees In / New / Out / No reply through **`get_renewal_roster`**. On a non-reply they can
+    **Nudge again** (`nudge_renewal`) or **Remove** (`remove_renewal_invitee`).
+  - Players who are in see the same list, read-only. Flips between in and out are free until the
+    draft starts.
   - A **server-side gate** stops the draft date, the order and the start while any reply is
     pending (a trigger that binds service_role too, `set_draft_order`, and a `draft-control`
     blocker). The gate is provably one-way.
@@ -284,8 +291,8 @@ Four things change from rev 2:
 | Push to every Season 1 player: "Roberto B. is running it back. Are you in for Season 2?" | `renew_league` writes one **`league_renewal_responses`** row per invited player with `status='pending'`, plus one `league_notifications` row of kind `renewal_invite` each, in the same transaction (§2.2). |
 | Member card "Roberto B. is running it back. Are you in? … The draft is set once everyone has replied" · **I'm out** / **I'm in** | **`respond_to_renewal(new_id, 'in'\|'out')`**: self only, keyed on `auth.uid()`. `in` also INSERTs the member's `league_members` row in the new league; `out` deletes it if present. Every reply writes a `renewal_reply` notification to the commissioner. |
 | a2 Commissioner push per reply: "Gianluigi B. is in for Season 2. 4 in · 1 out · 1 to reply." | The `renewal_reply` row carries `subject_user_id` and `detail = {response, in, out, pending}`, **snapshotted at reply time**. A fast in→out flip therefore produces two truthful pushes, not two copies of the latest state. |
-| a3 Commissioner Home "Season 2 · who's in … Waiting on Andrea P." / a4 League tab: In / New / Out / No reply yet, by name; draft rows disabled with the reason | **`get_renewal_roster(new_id)`** (§2.4). It returns `replies_pending`, so the client disables the draft rows from the same fact the server gate uses. |
-| a5 (proposal) "Nudge again" / "Mark as out … they get a message and can still ask you to be let back in until the draft is set" | **`mark_renewal_out(new_id, user_id)`**: commissioner only, `pending` only; writes `renewal_marked_out` to the player. **Proposals, built only if Giorgio confirms them:** `nudge_renewal` (re-sends the ask, rate-limited) and "ask back in" (`request_back_in` + `readmit_to_renewal`). See §2.5. |
+| a3 Commissioner Home "Season 2 · who's in … Waiting on Andrea P." / a4 League tab: In / New / Out / No reply yet, by name; draft rows disabled with the reason | **`get_renewal_roster(new_id)`** (§2.4). It returns `replies_pending`, so the client disables the draft rows from the same fact the server gate uses. **Rev 3.1:** a player who answered *in* gets the same full list, read-only ("Who's running back"). |
+| a5 "Nudge again" / "Mark as out" (**Giorgio: "Remove"**) | **Confirmed, phase 1:** `nudge_renewal(new_id, user_id)` re-sends the ask and **never changes status**; `remove_renewal_invitee(new_id, user_id)` moves a row from `pending` to `out` and writes `renewal_removed` to the player. Both are commissioner only and `pending` only. **Still an unconfirmed proposal:** a5's "can still ask you to be let back in" (`request_back_in` + `readmit_to_renewal`). See §2.5. |
 | Server gate: "You can set the draft once everyone has replied" | **`trg_leagues_renewal_gate`** on `leagues` (draft date, order mode, draft start), a check in **`set_draft_order`**, and a **`renewal_replies_pending`** blocker in `draft-control` (§2.6). |
 | a4 "New · joined with the invite code" / a6 "Teams: 5 · Follows who's in, up to 16. More can join with SCUD26 until the draft." | A fresh invite code. **`num_participants = 16`** on a renewed league until the draft starts, then the actual member count (§2.7). `join_league_by_code` is unchanged. |
 | a6 Review (after everyone has replied) → **Start Season 2**: "Everyone who's in gets a notification" | **`start_renewed_season(new_id, p_settings, p_slots)`** applies the reviewed settings and the draft date in one transaction, and writes `season_set` notifications to every member. It is **refused while any reply is pending** (§2.3). |
@@ -299,16 +306,17 @@ Four things change from rev 2:
 |---|---|---|---|
 | `renew_league(p_league_id uuid)` | SQL DEFINER | **new** | commissioner, "Run it back" |
 | `respond_to_renewal(p_league_id uuid, p_response text)` | SQL DEFINER | **new** | invited player |
-| `mark_renewal_out(p_league_id uuid, p_user_id text)` | SQL DEFINER | **new** | commissioner |
+| `remove_renewal_invitee(p_league_id uuid, p_user_id text)` | SQL DEFINER | **new** ("Remove") | commissioner |
+| `nudge_renewal(p_league_id uuid, p_user_id text)` | SQL DEFINER | **new** ("Nudge again") | commissioner |
 | `start_renewed_season(p_league_id uuid, p_settings jsonb, p_slots jsonb default null)` | SQL DEFINER | **new** | commissioner, review → "Start Season 2" |
 | `cancel_league_renewal(p_league_id uuid)` | SQL DEFINER | **new** | commissioner |
 | `get_renewal_roster(p_league_id uuid)` | SQL DEFINER, STABLE | **new** | members + invitees |
 | `get_league_history(p_league_id uuid)` | SQL DEFINER, STABLE | **new** (as rev 2) | members |
 | `league_renewal_responses` | table | **new** | written only by the functions above |
 | `enforce_league_renewal_gate()` + `trg_leagues_renewal_gate` | trigger fn (DEFINER) | **new** | every `leagues` UPDATE |
-| `nudge_renewal`, `request_back_in`, `readmit_to_renewal` | SQL DEFINER | **new if Giorgio confirms a5** | commissioner / marked-out player |
+| `request_back_in`, `readmit_to_renewal` | SQL DEFINER | **new only if Giorgio confirms "ask back in"** | removed player / commissioner |
 | `set_draft_order` | SQL | **changed**: refuses `renewal_replies_pending` | commissioner |
-| `league_notifications` | table | **changed**: `kind` CHECK += `renewal_invite`, `renewal_reply`, `renewal_marked_out`, `season_set` (+ `renewal_nudge`, `renewal_rejoin_request` if a5); + `subject_user_id text`, `detail jsonb` | — |
+| `league_notifications` | table | **changed**: `kind` CHECK += `renewal_invite`, `renewal_reply`, `renewal_removed`, `season_set` + `renewal_nudge` (+ `renewal_rejoin_request` only if "ask back in" is confirmed); + `subject_user_id text`, `detail jsonb` | — |
 | `draft-order-notify` | edge fn | **changed**: body builder by `kind`, copy verbatim from the board | cron (still deferred, §2.9) |
 | `draft-control` (`rules.ts`) | edge fn | **changed**: `renewal_replies_pending` start blocker; `status` reports `replies_pending` | members |
 | `finalize_league_draft` | SQL | **changed**: season number (§2.8) | service_role |
@@ -328,7 +336,7 @@ create table public.league_renewal_responses (
   responded_at  timestamptz,
   nudge_count   smallint not null default 0,
   last_nudged_at timestamptz,
-  rejoin_requested_at timestamptz,        -- a5 "ask back in" only
+  rejoin_requested_at timestamptz,        -- "ask back in" only (unconfirmed)
   primary key (league_id, user_id),
   constraint lrr_status_check check (status in ('pending', 'in', 'out')),
   constraint lrr_decided_by_check check (decided_by in ('player', 'commissioner')),
@@ -382,12 +390,12 @@ create table public.league_renewal_responses (
 
 The old league is not written.
 
-**`mark_renewal_out(p_league_id, p_user_id)`**:
+**`remove_renewal_invitee(p_league_id, p_user_id)`**:
 - commissioner only;
 - refused unless that player's row is `pending` (a player's own answer is never overridden);
 - `draft_status='not_started'`;
 - sets `out` / `commissioner` / `responded_at = now()`;
-- writes `renewal_marked_out` to the player.
+- writes `renewal_removed` to the player.
 
 **`start_renewed_season(p_league_id, p_settings, p_slots)`**, the review's "Start Season 2":
 - commissioner only, `draft_status='not_started'`, and **zero pending replies** (else
@@ -441,32 +449,48 @@ Every `leagues` column is classified. The PGlite test fails on any unclassified 
 
 **`get_renewal_roster(p_league_id)`**:
 - **Gate:** `auth.uid() IS NULL → 42501`. The caller must be a member of the new league **or**
-  hold a response row in it (an invitee who hasn't answered isn't a member yet). Otherwise 0
-  rows (no existence oracle).
+  hold a response row in it (an invitee who hasn't answered, or is out, isn't a member). Otherwise
+  0 rows (no existence oracle).
 - **It returns:**
   - **counts:** `in`, `new`, `out`, `pending`, `team_count = in + new`, `max_teams = 16`;
   - **`replies_pending`:** boolean, `pending > 0`, the same predicate as the gate;
   - **`caller_status`:** the caller's own row (`pending`, `in`, `out`), `new`, or `none`;
   - **`people[]`:** `{user_id, display_name, group: 'in'|'new'|'out'|'pending', decided_by,
     responded_at, nudge_count, last_nudged_at, rejoin_requested}`.
-- **The commissioner sees every group by name** (frame a4).
-- **Everyone else** sees names for **in** and **new** only, and counts for **out** and
-  **pending**. The member card shows who's in plus a "+N" (frame a1); who declined is not
-  broadcast. If Giorgio wants members to see every name, it is one predicate (§Open questions).
+- **Who gets the full list (Giorgio, rev 3.1):**
+
+  | Caller | `people[]` | Counts | Actions |
+  |---|---|---|---|
+  | the commissioner | **full**: every invitee and newcomer, by name and answer (running back / out / no reply / new) | yes | `can_nudge`, `can_remove` per pending row |
+  | a player whose own answer is **in** | **full**, the same list, read-only ("Who's running back") | yes | none |
+  | a newcomer (joined by code, no response row) | **full**, read-only. **To confirm:** assumed, because the rule below makes it free. | yes | none |
+  | a player who is **pending** or **out** | **empty**: only `caller_status` (and, if removed, `decided_by='commissioner'`). **To confirm:** assumed no counts either. | no | none |
+
+  - **The rule is one predicate: `is_member(new league)`.** In the new league, membership is
+    exactly the commissioner, every player who answered in, and the newcomers. Pending and out
+    players are not members by construction (§2.5: in ⇔ membership). So "sees the list" needs
+    no new state.
+  - **Why it stays correct as players flip:** an in → out flip deletes the membership and
+    revokes the list in the same transaction.
+  - **Shape is unaffected:** if the "to confirm" rows change, only this one predicate changes.
+    There is still no client RLS on `league_renewal_responses`; the RPC is the only read path.
+  - **API values vs copy:** `group` stays `'in'|'new'|'out'|'pending'`. The client maps those to
+    the board copy ("running back" / "new" / "out" / "no reply").
 
 **`get_league_history(p_league_id)`**: unchanged from rev 2. One row per season in the lineage,
 the full frozen `final_standings` with display names, the podium and the caller's own rank, for
 every member of the current league.
 
-### 2.5 Reply semantics, the gate's monotonicity, and the a5 proposals
+### 2.5 Reply semantics, the gate's monotonicity, and the commissioner's actions
 
 | From → to | Who | When allowed | Effect |
 |---|---|---|---|
 | `pending → in` | player | `draft_status='not_started'` | INSERT `league_members` (the draft-order trigger appends if an order exists); `renewal_reply` to the commissioner |
 | `pending → out` | player | same | no membership; `renewal_reply` |
-| `in ↔ out` (changing their mind) | player, own row only, `decided_by='player'` | until the draft order is **locked** (draft start). Before lock the draft-order trigger handles it as a normal join/leave: append after T−1h, gap closed on leave. After lock it is refused, by the same trigger. | membership follows; `renewal_reply` |
-| `pending → out` | commissioner (`mark_renewal_out`) | `not_started` | `renewal_marked_out` to the player |
-| `out(commissioner) → in` | — | **refused** in phase 1 (`marked_out`) | — |
+| `in ↔ out` (changing their mind, **free: Giorgio, rev 3.1**) | player, own row only, `decided_by='player'` | any number of times while `draft_status='not_started'`, i.e. until the draft starts and the order locks. Before lock the draft-order trigger treats each flip as a normal join or leave: append after T−1h, gap closed on leave. After lock the same trigger refuses it. | membership follows; `renewal_reply` each time |
+| `pending → out` | commissioner, **"Remove"** (`remove_renewal_invitee`) | `not_started` | `renewal_removed` to the player |
+| `pending → pending` | commissioner, **"Nudge again"** (`nudge_renewal`) | `not_started`, at most once per 24 h per player | **status unchanged**; `nudge_count`/`last_nudged_at` bumped; `renewal_nudge` to the player |
+| `out(commissioner) → in` | — | **refused** in phase 1 (`removed`) | — |
 
 **The gate is a one-way door.** `pending` rows are created **only** inside `renew_league`.
 Nothing moves a row back to `pending`: every transition leaves `pending`, and none returns to
@@ -475,21 +499,38 @@ it.
 - So after "Start Season 2" the gate can never re-close under a scheduled draft. There is no
   "the date was set, then someone re-opened a reply" state to handle.
 - The PGlite test asserts this on every transition.
+- **Rev 3.1's additions keep it:**
+  - **Nudge** writes only `nudge_count` and `last_nudged_at`, never `status`.
+  - **Remove** leaves `pending`.
+  - **Free flips** move between `in` and `out` only; a flip never reaches `pending`.
+- **Free flips after "Start Season 2" are allowed but visible.** They can move the team count
+  after the review, and the commissioner gets a `renewal_reply` for each. At draft start the
+  existing `draft-control` blockers re-check the new count: `not_enough_members` below 4, and
+  `playoff_teams_exceeds_members`. A flip can delay a start, but it can never produce an invalid
+  season.
 
-**a5 proposals** (Design Lead, pending Giorgio). Each is built only if confirmed, and each is XS:
-- **"Nudge again":** `nudge_renewal(new_id, user_id)`. Commissioner only, `pending` only,
-  refused if `last_nudged_at > now() − 24h`. It bumps `nudge_count`/`last_nudged_at` and writes a
-  `renewal_nudge` notification. a5's "Asked Sat, Jan 16. Nudged once." comes from `invited_at` +
-  `nudge_count`.
-- **"Ask back in":**
-  - `request_back_in(new_id)`: the marked-out player stamps `rejoin_requested_at` and notifies
-    the commissioner (`renewal_rejoin_request`).
-  - `readmit_to_renewal(new_id, user_id)`: the commissioner sets `in` / `commissioner` and
-    INSERTs the membership.
-  - **Neither touches `pending`**, so the gate's monotonicity holds.
-  - Both are allowed "until the draft is set". This design reads that as **until the draft
-    order is finalized (T−1h)**, matching "I'm out" elsewhere on the board. **Giorgio to
-    confirm** which instant "set" means.
+**The commissioner's two actions on a pending row (confirmed, rev 3.1):**
+- **"Nudge again":** `nudge_renewal(new_id, user_id)`.
+  - Commissioner only, `pending` only.
+  - Refused (`nudge_too_soon`) if `last_nudged_at > now() − 24h`. That is the design default
+    against push spam; the window is one constant.
+  - It bumps `nudge_count`/`last_nudged_at` and writes a `renewal_nudge` notification, so the
+    player gets the ask again by push and in-app.
+  - It **never changes `status`**.
+  - a5's "Asked Sat, Jan 16. Nudged once." comes from `invited_at` + `nudge_count`.
+- **"Remove":** `remove_renewal_invitee(new_id, user_id)`, `pending → out`,
+  `decided_by='commissioner'`. It notifies the player (`renewal_removed`). A removed player cannot
+  self-flip back to in (`removed`).
+
+**Still an unconfirmed proposal (a5's last line, not covered by the rulings): "ask back in."**
+Build it only if confirmed; it is XS.
+- `request_back_in(new_id)`: the removed player stamps `rejoin_requested_at` and notifies the
+  commissioner (`renewal_rejoin_request`).
+- `readmit_to_renewal(new_id, user_id)`: the commissioner sets `in` / `commissioner` and
+  INSERTs the membership.
+- **Neither touches `pending`**, so the gate's monotonicity holds.
+- Both are allowed "until the draft is set". This design reads that as **until the draft order
+  is finalized (T−1h)**. **Giorgio to confirm** which instant "set" means.
 
 ### 2.6 The server-side gate (no draft date, order or start while a reply is pending)
 
@@ -591,9 +632,10 @@ columns go there as well. History is `get_league_history` (§2.4).
 |---|---|---|---|---|
 | `renewal_invite` | each invited player | `renew_league` | yes (partial UNIQUE per member) | "Roberto B. is running it back. Are you in for Season 2?" |
 | `renewal_reply` | the commissioner | `respond_to_renewal` | no: one per reply event; `detail` snapshots the response and counts | "Gianluigi B. is in for Season 2. 4 in · 1 out · 1 to reply." |
-| `renewal_marked_out` | the player | `mark_renewal_out` | yes | Design Lead to write |
+| `renewal_removed` | the player | `remove_renewal_invitee` | yes | Design Lead to write |
 | `season_set` | every member except the commissioner | `start_renewed_season` | yes | Design Lead to write (a6: "Everyone who's in gets a notification") |
-| `renewal_nudge`, `renewal_rejoin_request` | player / commissioner | a5 functions | rate-limited / once per request | if a5 is confirmed |
+| `renewal_nudge` | the player | `nudge_renewal` | no: one per nudge, at most one per 24 h | the original ask again ("Roberto B. is running it back. Are you in for Season 2?") unless the Design Lead writes a nudge variant |
+| `renewal_rejoin_request` | the commissioner | `request_back_in` | once per request | only if "ask back in" is confirmed |
 
 - **In-app works from day 1:** the rows exist, and owner-only SELECT already applies.
 - **Push goes through `draft-order-notify`,** with its body builder switched on `kind`. That
@@ -610,9 +652,9 @@ TO authenticated`. Each one is verified by `proacl`, with simulated default gran
 
 | Function | Identity (inside, on `auth.uid()`, before any state check) |
 |---|---|
-| `renew_league`, `mark_renewal_out`, `start_renewed_season`, `cancel_league_renewal`, `nudge_renewal`, `readmit_to_renewal` | caller = `leagues.commissioner_id` (of the **old** league for `renew_league`, of the **new** one otherwise) |
+| `renew_league`, `remove_renewal_invitee`, `start_renewed_season`, `cancel_league_renewal`, `nudge_renewal`, `readmit_to_renewal` | caller = `leagues.commissioner_id` (of the **old** league for `renew_league`, of the **new** one otherwise) |
 | `respond_to_renewal`, `request_back_in` | caller holds a response row in that league; the user id is **always** `auth.uid()`, never a parameter (the `join_league_by_code` `p_user_id` lesson) |
-| `get_renewal_roster` | member of the new league **or** holder of a response row; names per §2.4 |
+| `get_renewal_roster` | holder of a response row **or** member of the new league; the **full list only for `is_member(new league)`** (the commissioner, players who are in, newcomers), per §2.4 |
 | `get_league_history` | member of the league asked about |
 | `enforce_league_renewal_gate` | trigger function: not callable; default grants revoked anyway so `proacl` reads as the lockdown it is |
 
@@ -799,12 +841,12 @@ real draft-order triggers run.
   - **`num_participants` = 16**, the code is fresh, and the race yields one successor;
   - **old league byte-identical** before and after.
 - **Replies:**
-  - every transition in the §2.5 table, plus each refusal: a non-invitee, a marked-out player
+  - every transition in the §2.5 table, plus each refusal: a non-invitee, a removed player
     saying `in`, anything after the draft starts;
   - **`in` ⇒ membership, `out` ⇒ none**, checked after every step;
   - `renewal_reply.detail` snapshots the counts at the time of the reply;
   - **monotonicity:** after any sequence of calls, the pending count never increases.
-- **`mark_renewal_out`:** commissioner only; `pending` only (a player's own `in` or `out` can't
+- **`remove_renewal_invitee` ("Remove"):** commissioner only; `pending` only (a player's own `in` or `out` can't
   be overridden); notifies the player.
 - **The gate, each path refused while ≥ 1 reply is pending, and each allowed at 0:**
   - a direct `[I2a]`-shaped UPDATE of `draft_date`, as the commissioner's JWT;
@@ -822,9 +864,19 @@ real draft-order triggers run.
   slots replaced atomically; `season_set` exactly once to members; idempotent re-call.
 - **`cancel_league_renewal`:** cascades everything (the open draft order included); the
   predecessor can be renewed again; refused after draft start.
-- **`get_renewal_roster`:** the commissioner sees all names; a member sees in/new names and
-  out/pending counts; a pending invitee (not yet a member) can read it; a stranger gets 0 rows;
-  `replies_pending` equals the gate predicate.
+- **`get_renewal_roster` (rev 3.1 access):**
+  - the commissioner sees the full list with `can_nudge`/`can_remove`;
+  - an **in** player sees the same full list with no actions;
+  - a newcomer sees the full list;
+  - a **pending** or **out** player gets only `caller_status`, with empty `people[]`;
+  - an **in → out flip revokes the list in the same transaction**, and out → in restores it;
+  - a stranger gets 0 rows;
+  - `replies_pending` equals the gate predicate.
+- **`nudge_renewal`:** commissioner only; `pending` only; refused inside 24 h; status
+  byte-identical after it; one `renewal_nudge` row per accepted nudge.
+- **Free flips:** in → out → in → out by the same player before the draft: membership tracks
+  every step, the pending count never moves, and each flip writes one `renewal_reply`. After
+  draft start the flip is refused.
 - **End to end:**
   - renew → replies → mark out → start season → draft start (the real `lock_draft_order_on_start`
     locks an order over the actual members) → `finalize_league_draft` with `season_number = 2`
@@ -864,7 +916,7 @@ Week 1 scored.
 | `20261023000001` | `leagues.previous_league_id`, `lineage_id`, `season_number` + partial UNIQUE + `lineage_id` index | 1 |
 | `20261023000002` | `finalize_league_draft` season number (+ re-stated grants) | 1 |
 | `20261023000003` | `league_notifications`: kinds, `subject_user_id`, `detail`, exactly-once indexes | 1 |
-| `20261023000004` | `league_renewal_responses` + `renew_league`, `respond_to_renewal`, `mark_renewal_out`, `start_renewed_season`, `cancel_league_renewal` (+ a5 functions if confirmed) | 1 |
+| `20261023000004` | `league_renewal_responses` + `renew_league`, `respond_to_renewal`, `remove_renewal_invitee`, `start_renewed_season`, `cancel_league_renewal`, `nudge_renewal` (+ ask-back-in functions only if confirmed) | 1 |
 | `20261023000005` | `trg_leagues_renewal_gate` (gate + `num_participants` at start) + `set_draft_order` refusal | 1 |
 | `20261023000006` | `get_renewal_roster`, `get_league_history` | 1 |
 | `20261023000007` | `get_home_summary` + lineage columns (DROP/CREATE, grants re-applied) | 1 |
@@ -881,7 +933,7 @@ If (b) picks both keep teams and keepers, request a second range.
 |---|---|---|---|
 | **0** | Lock `start_new_league_season` | **done: `5c2175c`** (9/9 PGlite) | Giorgio's `db push` |
 | **1 (opt-in renewal + new draft)** | §2: lineage columns, `renew_league`, the replies table and its four functions, the server gate (trigger + `set_draft_order` + draft-control blocker), `num_participants` behaviour, notifications (five kinds + the push body builder), `get_renewal_roster`, `get_league_history`, `get_home_summary`, the `finalize_league_draft` season number, the `record-trade` refusal. PGlite + hermetic + effect tests. | **L: ≈4–5 worker days** including tests (rev 2's lean path was ≈2–2.5; opt-in adds the replies state machine, the gate and its five enforcement points, and four notification kinds) | Orchestrator go, after (b) |
-| **1 + a5** | Nudge again; ask back in | **+0.5 day** | Giorgio confirms a5 |
+| **1 + ask back in** | `request_back_in` + `readmit_to_renewal` (Nudge and Remove are already in phase 1) | **+0.25 day** | Giorgio confirms |
 | **1 release** | promote the `draft-order-notify` cron (deferred precondition 5), since the ask is a push | ops | live test |
 | **1-client** | a1–a6 + the history frames; `num_participants` displays (§2.7) | mobile | phase 1 deployed |
 | **2c** | (b)-B keep teams | M–L: ≈4 days | Giorgio on §4.1 (i)–(iv) |
@@ -905,12 +957,21 @@ for the minutes in between.
 
 1. **(b) How teams start.** This design assumes a new draft. Keep teams (§4.1) and keepers
    (§4.2) are each additive.
-2. **a5:** confirm "Nudge again" and "ask back in", and what "until the draft is set" means for
-   ask-back-in: the order finalized at T−1h (assumed), or the draft date saved.
-3. **Roster privacy:** may ordinary members see **who** said out and who hasn't replied, or only
-   counts (assumed: counts, with names for in/new)?
-4. **Changing your mind:** may a player flip `in ↔ out` freely until the draft starts (assumed),
-   or is the first answer final?
-5. **Copy needed** for `renewal_marked_out` and `season_set` (Design Lead).
-6. **Newcomers:** frozen standings only (phase 1), or full week-by-week Season 1 too (§4.3)?
+2. **"Ask back in"** for a removed player (a5's last line). Not covered by the rev 3.1 rulings.
+   If wanted: until when (assumed: the order is finalized at T−1h)?
+3. **To confirm (§2.4):**
+   - Does a **newcomer** see the full "Who's running back" list? Assumed yes, because the
+     predicate is membership.
+   - Does a **pending/out** player see counts? Assumed no, only their own status.
+   Either change is one predicate, with no change to the RLS or RPC shape.
+4. **The nudge rate limit:** 24 h per player (default)?
+5. **Copy needed** for `renewal_removed`, `season_set` and, optionally, a nudge variant (Design
+   Lead).
+6. **Newcomers and Season 1 detail:** frozen standings only (phase 1), or full week-by-week
+   Season 1 too (§4.3)?
 7. **The superseded league in the switcher** (§4.5).
+
+**Resolved in rev 3.1:**
+- roster visibility (in players see the full list);
+- Nudge again + Remove (phase 1);
+- in ↔ out flips are free until the draft starts.
