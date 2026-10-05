@@ -132,3 +132,20 @@ export function formatMoney(value: number, options: FormatMoneyOptions = {}): st
 export function isZeroMoney(value: number): boolean {
   return Math.round(Math.abs(value) * 100) === 0;
 }
+
+/**
+ * Formats a percent with the SAME sign rules as `formatMoney` (Phase 3b-2:
+ * the hero's "+2.86% season gain" and every other percent on Home) —
+ * U+2212 minus, zero never signed, `sign: 'always'` adds '+'. Mirrors
+ * docs/design/screens/data.js's `formatPct` byte-for-byte (2 decimals,
+ * half-away-from-zero on hundredths of a percent).
+ */
+export function formatPercent(value: number, options: { sign?: MoneySign } = {}): string {
+  const sign = options.sign ?? 'negative';
+  const hundredths = Math.round(Math.abs(value) * 100);
+  if (hundredths === 0) return '0.00%';
+  const signChar = value < 0 ? MINUS : sign === 'always' ? '+' : '';
+  const whole = Math.floor(hundredths / 100);
+  const frac = String(hundredths % 100).padStart(2, '0');
+  return `${signChar}${whole}.${frac}%`;
+}

@@ -8,7 +8,7 @@
  *   cd apps/mobile/tests-deno && deno test .
  */
 import { assertEquals } from 'jsr:@std/assert';
-import { playoffLine as mobileLine, playoffPlan as mobilePlan, playoffRoundLabelForWeek as mobileWeek } from '../lib/playoffs.ts';
+import { playoffLine as mobileLine, playoffPlan as mobilePlan, playoffRoundLabelForWeek as mobileWeek, playoffRoundShortName } from '../lib/playoffs.ts';
 // Plain ESM .js; Deno imports it directly and type-checks it via its JSDoc.
 import { playoffLine as webLine, playoffPlan as webPlan, playoffRoundLabelForWeek as webWeek } from '../../web/src/utils/playoffs.js';
 import {
@@ -68,5 +68,39 @@ Deno.test('playoffRoundLabelForWeek: week num_weeks + r is round r; regular week
   assertEquals(mobileWeek(null, 10, 4), null);
   for (let p = 2; p <= 16; p++) {
     for (let w = 1; w <= 20; w++) assertEquals(webWeek(w, 8, p), mobileWeek(w, 8, p), `P=${p} w=${w}`);
+  }
+});
+
+// ── playoffRoundShortName (B7, Design Lead ruling, 2026-09-30): the season
+// chart's week chips, mobile-only (not mirrored to web/server -- a chip-
+// width display concern, not shared playoff structure). ────────────────────
+
+Deno.test('playoffRoundShortName: WC / QF / SF / F / R16', () => {
+  assertEquals(playoffRoundShortName('Wild card'), 'WC');
+  assertEquals(playoffRoundShortName('Quarterfinals'), 'QF');
+  assertEquals(playoffRoundShortName('Semifinals'), 'SF');
+  assertEquals(playoffRoundShortName('Final'), 'F');
+  assertEquals(playoffRoundShortName('Round of 16'), 'R16');
+});
+
+Deno.test('playoffRoundShortName: an unrecognized round name passes through unchanged, never blank', () => {
+  assertEquals(playoffRoundShortName('Some Future Round'), 'Some Future Round');
+});
+
+// ── B7 bullet 3 (Orchestrator, 2026-09-30): confirms playoffRoundLabelForWeek
+// is keyed on the bracket ADDRESS (week - numWeeks, the round offset), never
+// on an absolute week number -- so a fixture using a short (numWeeks=6)
+// regular season instead of a long one (numWeeks=14) gets IDENTICAL round
+// labels and chips for the same bracket, as long as its playoff week
+// numbers are derived the same way the backend does: week = numWeeks +
+// round. No code changes were needed for this: the function already
+// computes `plan.rounds[week - numWeeks - 1]`, which is round-offset-only
+// by construction; this test exists to pin that invariant, not to fix a bug. ─
+
+Deno.test('playoffRoundLabelForWeek: a 6-team bracket gives IDENTICAL round labels at numWeeks=6 and numWeeks=14, given week = numWeeks + round', () => {
+  for (let round = 1; round <= 3; round++) {
+    const short = mobileWeek(6 + round, 6, 6);
+    const long = mobileWeek(14 + round, 14, 6);
+    assertEquals(short, long, `round ${round}`);
   }
 });

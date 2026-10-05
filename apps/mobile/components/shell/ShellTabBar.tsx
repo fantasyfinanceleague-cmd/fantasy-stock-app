@@ -151,6 +151,9 @@ function TabItem({ label, icon, focused, color, onPress, onLongPress }: TabItemP
       <Animated.View style={iconStyle}>
         <TabIcon name={icon} color={color} focused={focused} />
       </Animated.View>
+      {/* Labels scale within their 3b-1 cap (LABEL_MAX_SCALE). Hiding them at
+          large sizes was reverted (Design Lead, F1): the cap keeps every label
+          on one line, and the tab keeps its accessibilityLabel either way. */}
       <Text variant="caption" color={color} numberOfLines={1} maxFontSizeMultiplier={LABEL_MAX_SCALE} style={styles.label}>
         {label}
       </Text>

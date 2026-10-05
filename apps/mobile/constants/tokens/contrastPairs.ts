@@ -57,7 +57,13 @@ export const PAIRS: readonly ContrastPair[] = [
   ['text', 'inset', null, 4.5, 'Chips, draft cells, search field, panels'],
   ['text2', 'inset', null, 4.5, 'Chip meta, race-chart day labels'],
   ['liveText', 'inset', null, 4.5, 'LIVE chip'],
-  ['liveText', 'surface', null, 4.5, 'Broadcast tags on cards'],
+  // 3b-1 carry-over, fixed 3b-2: the header phase chip's `inset` fill was
+  // nearly invisible against `bg` in Light (#F0F3F7 vs #F3F5F8) — the chip
+  // sits on the PAGE background there, not a card, so it now uses
+  // `surface` + a hairline instead (PhaseChip's `onPageBackground` prop,
+  // ShellHeader — retrofits Matchup/League/Portfolio's header chip too).
+  ['liveText', 'surface', null, 4.5, 'Broadcast tags on cards, and the header chip on the page background (3b-2 retrofit)'],
+  ['text', 'surface', null, 4.5, 'Default-style header chip on the page background (3b-2 retrofit)'],
   ['text2', 'sunken', null, 4.5, 'Segmented-control labels'],
   ['text', 'bg', null, 4.5, 'Screen text'],
   ['text2', 'bg', null, 4.5, 'Captions on the screen background'],

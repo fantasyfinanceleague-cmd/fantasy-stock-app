@@ -70,3 +70,22 @@ export function playoffRoundLabelForWeek(
   if (!plan || typeof week !== 'number' || typeof numWeeks !== 'number') return null;
   return plan.rounds[week - numWeeks - 1] ?? null;
 }
+
+/** "WC"/"QF"/"SF"/"F" (Design Lead ruling, 2026-09-30, B7) -- the season
+ * chart's week chips use these for a playoff week instead of the round's
+ * full name, which doesn't fit a chip ("W15" was the old, meaningless
+ * fallback). Approved by Giorgio 2026-10-04 (tag `giorgio`): "WC"/"SF"/"F"
+ * for the common bracket sizes are Design Lead's own examples; "QF"/"R16"
+ * follow the same initialism pattern for the larger brackets
+ * ROUND_NAMES_FROM_FINAL already names. */
+const ROUND_SHORT_NAMES: Record<string, string> = {
+  'Wild card': 'WC',
+  'Round of 16': 'R16',
+  Quarterfinals: 'QF',
+  Semifinals: 'SF',
+  Final: 'F',
+};
+
+export function playoffRoundShortName(round: string): string {
+  return ROUND_SHORT_NAMES[round] ?? round;
+}
