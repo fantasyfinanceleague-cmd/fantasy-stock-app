@@ -62,6 +62,11 @@ export interface LiveWeekScoreResult {
    * it saw everything. */
   unpriced: string[];
   hasPositions: boolean;
+  /** Each priced stock's dollar contribution (its gain across every lot,
+   * week-start and mid-week, closed and open). Keys are upper-case symbols.
+   * Sums to `gain`. An unpriced stock is absent, never zero-filled (3c
+   * lineup ledger). */
+  bySymbol: Record<string, number>;
 }
 
 /**
@@ -79,6 +84,10 @@ export function liveWeekScore(
   let totalGain = 0;
   let totalStartValue = 0;
   const unpriced = new Set<string>();
+  const bySymbol: Record<string, number> = {};
+  const attribute = (symbol: string, amount: number) => {
+    bySymbol[symbol] = (bySymbol[symbol] ?? 0) + amount;
+  };
 
   // Week-start holdings: Monday-open lots only (mid-week entries are
   // carried in `trades` and would double-count here — see LiveSnapshot's
@@ -116,6 +125,7 @@ export function liveWeekScore(
 
         const gain = sellFromStart * (salePrice - startPrice);
         totalGain += gain;
+        attribute(symbol, gain);
         totalStartValue += sellFromStart * startPrice;
 
         remainingHoldings.set(symbol, weekStartQty - sellFromStart);
@@ -131,6 +141,7 @@ export function liveWeekScore(
 
           const gain = sellFromBuy * (salePrice - oldestBuy.price);
           totalGain += gain;
+        attribute(symbol, gain);
           totalStartValue += sellFromBuy * oldestBuy.price;
 
           oldestBuy.quantity -= sellFromBuy;
@@ -157,6 +168,7 @@ export function liveWeekScore(
     }
     const gain = remaining * (live - startPrice);
     totalGain += gain;
+        attribute(symbol, gain);
     totalStartValue += remaining * startPrice;
   }
 
@@ -171,6 +183,7 @@ export function liveWeekScore(
       if (buy.quantity <= 0) continue;
       const gain = buy.quantity * (live - buy.price);
       totalGain += gain;
+        attribute(symbol, gain);
       totalStartValue += buy.quantity * buy.price;
     }
   }
@@ -178,5 +191,5 @@ export function liveWeekScore(
   const pct = totalStartValue > 0 ? (totalGain / totalStartValue) * 100 : 0;
   const hasPositions = weekStartHoldings.size > 0 || trades.length > 0;
 
-  return { gain: totalGain, pct, startValue: totalStartValue, unpriced: [...unpriced], hasPositions };
+  return { gain: totalGain, pct, startValue: totalStartValue, unpriced: [...unpriced], hasPositions, bySymbol };
 }
