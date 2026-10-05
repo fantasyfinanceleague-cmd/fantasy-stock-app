@@ -94,7 +94,11 @@ export function HomeHero({ leagueId, rank, totalPlayers, record, weekOrRound, va
   const todayColor = today == null ? colors.text2 : isZeroMoney(today) ? colors.zero : today > 0 ? colors.gain : colors.loss;
 
   const valueText = formatMoney(value);
-  const gainText = `${formatMoney(seasonGainDollars, { sign: 'always' })} · ${formatPercent(seasonGainPct, { sign: 'always' })}`;
+  // Two roller units, not one string: RollingMoney is a non-wrapping row,
+  // so a single "+$X · +Y%" string clipped at XXXL text sizes. Split, the
+  // percent can wrap to its own line inside gainRow (XL check, 2026-10-05).
+  const gainDollarsText = formatMoney(seasonGainDollars, { sign: 'always' });
+  const gainPctText = formatPercent(seasonGainPct, { sign: 'always' });
   const todayText = today != null ? formatMoney(today, { sign: 'always' }) : null;
 
   const caption = heroUnpricedCaption(unpricedValue, unpricedToday);
@@ -114,7 +118,10 @@ export function HomeHero({ leagueId, rank, totalPlayers, record, weekOrRound, va
         <Text variant="caption" tone="secondary">
           Your team
         </Text>
-        <Text variant="caption" tone="secondary" style={styles.metaNum}>
+        {/* The meta text wraps to a second line at XXXL sizes instead of
+            running off the edge (XL check, 2026-10-05); at default size it
+            fits one line and lays out exactly as before. */}
+        <Text variant="caption" tone="secondary" style={[styles.metaNum, styles.metaRight]}>
           {rank != null
             ? `${ordinal(rank)} of ${totalPlayers} · ${record}${weekOrRound ? ` · ${weekOrRound}` : ''}`
             // Pre-season (rank null, board: "Week 1 of 14 · 0–0"): the
@@ -140,7 +147,9 @@ export function HomeHero({ leagueId, rank, totalPlayers, record, weekOrRound, va
           </View>
         ) : (
           <View style={styles.gainRow}>
-            <RollingMoney text={gainText} size="callout" color={gainColor} rollKey={leagueId} />
+            <RollingMoney text={gainDollarsText} size="callout" color={gainColor} rollKey={leagueId} />
+            <Text variant="callout" style={{ color: gainColor }}> · </Text>
+            <RollingMoney text={gainPctText} size="callout" color={gainColor} rollKey={leagueId} />
             <Text variant="callout" tone="secondary"> {HERO_SEASON_GAIN_LABEL}</Text>
             {todayText ? (
               <>
@@ -171,11 +180,16 @@ const styles = StyleSheet.create({
   },
   metaRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     alignItems: 'baseline',
   },
   metaNum: {
     fontVariant: ['tabular-nums'],
+  },
+  metaRight: {
+    flexShrink: 1,
+    textAlign: 'right',
   },
   heroBody: {
     gap: space[2],
