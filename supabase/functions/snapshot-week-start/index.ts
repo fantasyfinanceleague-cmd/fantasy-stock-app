@@ -314,11 +314,13 @@ async function fetchOpenPrices(
  */
 const TRADE_PAGE_ROWS = 1000;
 /**
- * A league's trades up to a window cut, read in full and snapshot-consistent. The cut
- * is applied SERVER-side, so trades inserted after the cut are never in the set, and
- * the set is stable while it is paged. Paging is keyset on id (not offset): a row
- * inserted mid-run cannot shift a page and be read twice or skipped. The first page's
- * exact count is the expected total, and the read fails if fewer rows come back.
+ * A league's trades up to a window cut. The cut is applied SERVER-side, so trades
+ * created after it are never in the set. Paging is keyset on id, not offset, so an
+ * insert cannot shift a page and duplicate or skip a row. Each page is its own
+ * statement, so the set is not one transaction. Two checks fail the read instead of
+ * trusting it: the loop runs to an EMPTY page (no tail is dropped), and the rows read
+ * must equal the first page's exact count (a set that grew or shrank mid-read is
+ * refused and retried, never silently partial).
  */
 async function readAllTrades(
   supabase: any,
@@ -331,9 +333,11 @@ async function readAllTrades(
   let total: number | null = null;
   let lastId: string | null = null;
   for (;;) {
-    let q = supabase
+    // The exact count is only needed on the first page (the expected total).
+    const countOpt: any = lastId === null ? { count: 'exact' } : {};
+    let q: any = supabase
       .from('trades')
-      .select(`${cols}, id`, { count: 'exact' })
+      .select(`${cols}, id`, countOpt)
       .eq('league_id', leagueId);
     q = inclusive ? q.lte('created_at', cutIso) : q.lt('created_at', cutIso);
     if (lastId !== null) q = q.gt('id', lastId);
@@ -342,8 +346,11 @@ async function readAllTrades(
     if (lastId === null) total = count ?? null;
     const page = data ?? [];
     rows.push(...page);
-    if (page.length === 0 || (total != null && rows.length >= total)) break;
+    if (page.length === 0) break;
     lastId = String(page[page.length - 1].id);
+  }
+  if (total != null && rows.length !== total) {
+    return { data: null, error: new Error(`trade set changed during read: ${rows.length} read, ${total} counted`), count: total };
   }
   return { data: rows, error: null, count: total };
 }
