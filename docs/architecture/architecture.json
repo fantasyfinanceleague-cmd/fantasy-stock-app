@@ -2,34 +2,21 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "7767b9ed3ddf6f7b7b49817446e468cd919b1afe",
-    "commitShort": "7767b9e",
+    "commit": "cc28a0a9c0df36f02fd71bd60603d5fb1606add8",
+    "commitShort": "cc28a0a",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "home-release",
-    "dirty": true,
-    "dirtyPaths": [
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/home/homeCopy.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/build-home-view-model.test.ts"
-      },
-      {
-        "code": "RM",
-        "path": "supabase/migrations/20261029000000_get_home_league_rpc.sql"
-      }
-    ],
-    "timestamp": "2026-10-05T22:59:32Z",
-    "sourceHash": "sha256:b2eef2f26f7ef79a802d19873cbd4e5a26ea0cd3104442ddef2c9e6f7904f7c2",
+    "branch": "fix/u1-season-start-calendar",
+    "dirty": false,
+    "dirtyPaths": [],
+    "timestamp": "2026-10-05T23:50:08Z",
+    "sourceHash": "sha256:6e9f05ebdc77d77c81cd5b2294b93b119c128ab52e46344e932e4b7af9e479c7",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-09-30T16:53:15Z",
-    "ageHours": 126.1,
+    "ageHours": 126.9,
     "ageDays": 5.3,
     "staleAfterDays": 14,
     "stale": false,
@@ -10077,7 +10064,7 @@
       ],
       "callSites": [
         "apps/mobile/lib/LeagueContext.tsx:157",
-        "apps/mobile/lib/LeagueContext.tsx:277"
+        "apps/mobile/lib/LeagueContext.tsx:280"
       ]
     },
     {
@@ -10107,7 +10094,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/lib/LeagueContext.tsx:294"
+        "apps/mobile/lib/LeagueContext.tsx:297"
       ]
     },
     {
@@ -12642,8 +12629,8 @@
       "apps/mobile/lib/LeagueContext.tsx:157 -> league_members.select",
       "apps/mobile/lib/LeagueContext.tsx:159 -> league_seasons.select",
       "apps/mobile/lib/LeagueContext.tsx:162 -> market_calendar.select",
-      "apps/mobile/lib/LeagueContext.tsx:277 -> league_members.select",
-      "apps/mobile/lib/LeagueContext.tsx:294 -> leagues.select",
+      "apps/mobile/lib/LeagueContext.tsx:280 -> league_members.select",
+      "apps/mobile/lib/LeagueContext.tsx:297 -> leagues.select",
       "apps/mobile/lib/SessionProvider.tsx:141 -> user_profiles.select",
       "apps/mobile/lib/SessionProvider.tsx:200 -> user_profiles.upsert",
       "apps/mobile/lib/categoryData.ts:101 -> category_rules.select",
