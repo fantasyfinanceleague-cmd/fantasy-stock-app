@@ -64,10 +64,9 @@
  *   week bound, an unparseable created_at, a non-finite quantity, or no ledger
  *   supplied at all.
  *
- * KNOWN LIMIT (fails in the REFUSING direction): snapshot-week-start computes
- * holdings at RUN time (cron Mon/Tue 14:35Z), not at week_start (14:30Z). A user
- * who liquidates in that gap is ledger-held at week_start with no row, so they are
- * refused ('unscoreable') — a false refusal, never a fabricated score.
+ * The baseline is cut at the week's real open (planWeekWindow / weekCut), the same
+ * instant the matchups window now carries, so holdings and window agree. A user
+ * whose baseline row is missing for any reason fails closed ('unscoreable').
  *
  * These functions decide ONLY. All logging, DB writes, price fetches, and the
  * skipped[] payload shaping stay in index.ts — this module has no side effects and

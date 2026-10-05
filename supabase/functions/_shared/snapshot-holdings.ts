@@ -128,6 +128,12 @@ export function snapshotHoldings(
 export interface SnapshotRead {
   data: unknown[] | null;
   error: unknown;
+  /**
+   * The exact row count, when the read was made with { count: 'exact' }. A read
+   * whose returned rows are fewer than this was TRUNCATED (PostgREST's max-rows
+   * cap), and must fail rather than feed holdings or coverage a partial set (S-cap).
+   */
+  count?: number | null;
 }
 
 export type SnapshotReadsCheck<K extends string> =
@@ -171,6 +177,8 @@ export function checkSnapshotReads<K extends string>(
       failed.push({ read, message });
     } else if (!Array.isArray(data)) {
       failed.push({ read, message: 'no data returned' });
+    } else if (typeof reads[read].count === 'number' && data.length < (reads[read].count as number)) {
+      failed.push({ read, message: `truncated: ${data.length} of ${reads[read].count} rows returned` });
     } else {
       rows[read] = data;
     }

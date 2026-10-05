@@ -238,8 +238,11 @@ export function planWeekWindow(
   // different anyway, since Monday's run already wrote everyone reachable).
   if (now.getTime() < cut.open.getTime()) return { action: 'not_due' };
 
+  // Compare INSTANTS, not strings: PostgREST returns timestamptz as '+00:00' while
+  // toISOString() emits 'Z', so a string compare is never equal and a scored week
+  // would be re-windowed on every run (S4).
   const matchesStored =
-    storedWeekStartIso === cut.open.toISOString() && storedWeekEndIso === cut.close.toISOString();
+    Date.parse(storedWeekStartIso) === cut.open.getTime() && Date.parse(storedWeekEndIso) === cut.close.getTime();
 
   return {
     action: 'proceed',

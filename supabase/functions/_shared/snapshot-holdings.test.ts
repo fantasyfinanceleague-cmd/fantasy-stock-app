@@ -200,3 +200,25 @@ Deno.test('checkSnapshotReads: a non-object error still produces a readable mess
   assertEquals(r.ok, false);
   if (!r.ok) assertEquals(r.failed, [{ read: 'trades', message: 'socket hang up' }]);
 });
+
+Deno.test('truncation: a read whose rows are fewer than its exact count FAILS, never feeds a partial set', () => {
+  const r = checkSnapshotReads({
+    trades: { data: [{ user_id: 'u1' }], error: null, count: 3 },
+  });
+  assertEquals(r.ok, false);
+  if (!r.ok) assertEquals(r.failed[0].read, 'trades');
+  if (!r.ok) assertEquals(r.failed[0].message.startsWith('truncated: 1 of 3'), true);
+});
+
+Deno.test('truncation: a complete read (rows == count) passes', () => {
+  const r = checkSnapshotReads({
+    trades: { data: [{ user_id: 'u1' }, { user_id: 'u2' }], error: null, count: 2 },
+  });
+  assertEquals(r.ok, true);
+});
+
+Deno.test('truncation: a read with no count is unchanged (the guard applies only when counted)', () => {
+  const r = checkSnapshotReads({ drafts: { data: [{ user_id: 'u1' }], error: null } });
+  assertEquals(r.ok, true);
+});
+
