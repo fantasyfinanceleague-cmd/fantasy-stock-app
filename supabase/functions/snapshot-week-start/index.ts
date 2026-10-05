@@ -304,6 +304,31 @@ async function fetchOpenPrices(
 }
 
 /**
+ * A league's trade ledger grows across the whole season, so one read would hit
+ * PostgREST's 1000-row default. The exact-count guard would then refuse every run,
+ * permanently. Pages by primary key until every counted row is read.
+ */
+const TRADE_PAGE_ROWS = 1000;
+async function readAllTrades(supabase: any, leagueId: string, cols: string): Promise<{ data: any[] | null; error: unknown; count: number | null }> {
+  const rows: any[] = [];
+  let count: number | null = null;
+  for (let from = 0; ; from += TRADE_PAGE_ROWS) {
+    const { data, error, count: c } = await supabase
+      .from('trades')
+      .select(cols, { count: 'exact' })
+      .eq('league_id', leagueId)
+      .order('id')
+      .range(from, from + TRADE_PAGE_ROWS - 1);
+    if (error) return { data: null, error, count };
+    count = c ?? count;
+    const page = data ?? [];
+    rows.push(...page);
+    if (page.length === 0 || (count != null && rows.length >= count)) break;
+  }
+  return { data: rows, error: null, count };
+}
+
+/**
  * S2: one league's matchups, ALL weeks. Read per league, never one .in() across
  * leagues, because PostgREST caps a read at max-rows and a truncated read would
  * silently drop weeks from selection. The exact count below refuses any truncation.
@@ -437,7 +462,16 @@ Deno.serve(async (req) => {
     const planNow = new Date();
     const targets: Array<{ leagueId: string; week: number }> = [];
     for (const league of leagues) {
-      const rows = await readLeagueMatchupRows(supabase, league.id);
+      let rows: WeekMatchupRow[];
+      try {
+        rows = await readLeagueMatchupRows(supabase, league.id);
+      } catch (e) {
+        // One league's failed or truncated read must not abort every other league.
+        console.error(`ABORT league ${league.id}: ${String(e)} — will retry`);
+        anyIncomplete = true;
+        results.push({ leagueId: league.id, incomplete: true, failedReads: ['matchups'] });
+        continue;
+      }
       for (const week of selectTargetWeeks(rows, (anchor, floor, storedStart, storedEnd) =>
         planWeekWindow(planNow, anchor, floor, marketCalendarSessions, marketCalendarCoverage, storedStart, storedEnd, 0))) {
         targets.push({ leagueId: league.id, week });
@@ -542,10 +576,7 @@ Deno.serve(async (req) => {
         // defect (S1/S2/S3/S4): the OLD code read every trade with no time
         // bound at all, netting the ledger "as of whenever this cron happens
         // to run" instead of as of one fixed instant.
-        trades: await supabase
-          .from('trades')
-          .select('user_id, symbol, action, quantity, created_at', { count: 'exact' })
-          .eq('league_id', leagueId),
+        trades: await readAllTrades(supabase, leagueId, 'user_id, symbol, action, quantity, created_at'),
         existingSnapshots: await supabase
           .from('week_snapshots')
           .select('user_id, symbol, week_end_price', { count: 'exact' })
@@ -753,8 +784,8 @@ Deno.serve(async (req) => {
     if (anyIncomplete) {
       if (retryAttempt < MAX_RETRIES) {
         console.log(`One or more leagues incomplete (missing prices or failed reads); scheduling retry ${retryAttempt + 1}`);
-        await scheduleRetry(supabase, JOB_NAME, retryAttempt + 1);
-        await updateJobStatus(supabase, JOB_NAME, 'retrying', retryAttempt, 'Incomplete: missing prices or failed reads for some leagues');
+        const scheduled = await scheduleRetry(supabase, JOB_NAME, retryAttempt + 1);
+        await updateJobStatus(supabase, JOB_NAME, scheduled ? 'retrying' : 'failed', retryAttempt, scheduled ? 'Incomplete: missing prices or failed reads for some leagues' : 'retry could not be scheduled');
         return json({
           message: 'Snapshot incomplete — retry scheduled',
           totalSnapshots,
@@ -768,7 +799,7 @@ Deno.serve(async (req) => {
       // the downstream per-user gate is the backstop. Report failed for ops
       // visibility, but do NOT throw (the leagues that snapshotted are valid).
       console.error(`Max retries (${MAX_RETRIES}) reached; some leagues still incomplete (likely unpriceable/delisted symbols).`);
-      await updateJobStatus(supabase, JOB_NAME, 'failed', retryAttempt, 'Incomplete after max retries: unpriceable holdings or failed reads');
+      await updateJobStatus(supabase, JOB_NAME, 'failed', retryAttempt, 'Incomplete: league-weeks still refused or incomplete after this run; see results');
       return json({
         message: 'Snapshot incomplete after max retries',
         totalSnapshots,
@@ -793,8 +824,8 @@ Deno.serve(async (req) => {
     // Handle retries
     if (retryAttempt < MAX_RETRIES) {
       console.log(`Attempt ${retryAttempt} failed, scheduling retry ${retryAttempt + 1}`);
-      await scheduleRetry(supabase, JOB_NAME, retryAttempt + 1);
-      await updateJobStatus(supabase, JOB_NAME, 'retrying', retryAttempt, errorMessage);
+      const scheduled = await scheduleRetry(supabase, JOB_NAME, retryAttempt + 1);
+      await updateJobStatus(supabase, JOB_NAME, scheduled ? 'retrying' : 'failed', retryAttempt, scheduled ? errorMessage : 'retry could not be scheduled');
       return json({ error: 'Failed, retry scheduled', attempt: retryAttempt, message: 'internal error; see function logs' }, 500);
     } else {
       // Max retries reached, mark as failed

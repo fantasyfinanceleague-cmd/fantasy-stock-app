@@ -293,6 +293,31 @@ async function fetchClosePrices(
 // and untested implementations drift.
 
 /**
+ * A league's trade ledger grows across the whole season, so one read would hit
+ * PostgREST's 1000-row default. The exact-count guard would then refuse every run,
+ * permanently. Pages by primary key until every counted row is read.
+ */
+const TRADE_PAGE_ROWS = 1000;
+async function readAllTrades(supabase: any, leagueId: string, cols: string): Promise<{ data: any[] | null; error: unknown; count: number | null }> {
+  const rows: any[] = [];
+  let count: number | null = null;
+  for (let from = 0; ; from += TRADE_PAGE_ROWS) {
+    const { data, error, count: c } = await supabase
+      .from('trades')
+      .select(cols, { count: 'exact' })
+      .eq('league_id', leagueId)
+      .order('id')
+      .range(from, from + TRADE_PAGE_ROWS - 1);
+    if (error) return { data: null, error, count };
+    count = c ?? count;
+    const page = data ?? [];
+    rows.push(...page);
+    if (page.length === 0 || (count != null && rows.length >= count)) break;
+  }
+  return { data: rows, error: null, count };
+}
+
+/**
  * S2: one league's matchups, ALL weeks. Read per league, never one .in() across
  * leagues, because PostgREST caps a read at max-rows and a truncated read would
  * silently drop weeks from selection. The exact count below refuses any truncation.
@@ -397,7 +422,16 @@ Deno.serve(async (req) => {
     const planNow = new Date();
     const targets: Array<{ leagueId: string; week: number }> = [];
     for (const league of leagues) {
-      const rows = await readLeagueMatchupRows(supabase, league.id);
+      let rows: WeekMatchupRow[];
+      try {
+        rows = await readLeagueMatchupRows(supabase, league.id);
+      } catch (e) {
+        // One league's failed or truncated read must not abort every other league.
+        console.error(`ABORT league ${league.id}: ${String(e)} — will retry`);
+        anyIncomplete = true;
+        results.push({ leagueId: league.id, incomplete: true, failedReads: ['matchups'] });
+        continue;
+      }
       for (const week of selectTargetWeeks(rows, (anchor, floor) =>
         planCloseWindow(planNow, anchor, floor, marketCalendarSessions, marketCalendarCoverage))) {
         targets.push({ leagueId: league.id, week });
@@ -484,10 +518,7 @@ Deno.serve(async (req) => {
           .from('drafts')
           .select('user_id, symbol, quantity', { count: 'exact' })
           .eq('league_id', leagueId),
-        trades: await supabase
-          .from('trades')
-          .select('user_id, symbol, action, quantity, price, created_at', { count: 'exact' })
-          .eq('league_id', leagueId),
+        trades: await readAllTrades(supabase, leagueId, 'user_id, symbol, action, quantity, price, created_at'),
       });
       if (!inputs.ok) {
         // ABORT this league for this run, exactly like an unpriceable symbol:
@@ -542,16 +573,12 @@ Deno.serve(async (req) => {
       // 5. COVERAGE GATE — replaces the old existence-only `alreadyProcessed`.
       //    Runs BEFORE the Alpaca call so a complete league costs no quota.
       const coverage = classifyCloseCoverage(userHoldings, existingSnapshots);
-      if (coverage === 'complete') {
-        console.log(`League ${leagueId} week ${currentWeek}: already fully closed, skipping`);
-        continue;
-      }
-
       // S9 (../_shared/baseline.ts), ROWS ONLY: every holder at the OPEN cut must have
       // a baseline row, or the close would score a partial portfolio. The holders are
       // derived from the ledger (trades before the open, plus drafts), so "nothing
       // held at the open" needs no marker: zero open holders means nothing to
-      // baseline. A week already fully closed returned above, so it is never refused.
+      // baseline. It runs BEFORE the window-complete skip, because that skip checks
+      // holders at the CLOSE and would otherwise pass a holder who sold out.
       const cutOpenMs = windowPlan.open.getTime();
       const tradesBeforeOpen = trades.filter((t: any) => instantBefore(t.created_at, cutOpenMs));
       const openHolderIds = [...userIds].filter((u) => snapshotHoldings(u, drafts, tradesBeforeOpen).length > 0);
@@ -562,6 +589,11 @@ Deno.serve(async (req) => {
         anyIncomplete = true;
         console.error(`ABORT league ${leagueId} week ${currentWeek}: ${openHoldersMissingRows} holder(s) held at the open have no baseline row; refusing to close a partial portfolio. A week-start heal will baseline them.`);
         results.push({ leagueId, week: currentWeek, updated: 0, newSnapshots: 0, incomplete: true, baselineRefused: baselineGate });
+        continue;
+      }
+
+      if (coverage === 'complete') {
+        console.log(`League ${leagueId} week ${currentWeek}: already fully closed, skipping`);
         continue;
       }
 
@@ -669,8 +701,8 @@ Deno.serve(async (req) => {
     // Terminal status must reflect whether every league actually closed.
     if (anyIncomplete) {
       if (retryAttempt < MAX_RETRIES) {
-        await scheduleRetry(supabase, JOB_NAME, retryAttempt + 1);
-        await updateJobStatus(supabase, JOB_NAME, 'retrying', retryAttempt,
+        const scheduled = await scheduleRetry(supabase, JOB_NAME, retryAttempt + 1);
+        await updateJobStatus(supabase, JOB_NAME, scheduled ? 'retrying' : 'failed', retryAttempt,
           'One or more leagues incomplete (unpriced symbols or failed write)');
       } else {
         await updateJobStatus(supabase, JOB_NAME, 'failed', retryAttempt,
@@ -695,8 +727,8 @@ Deno.serve(async (req) => {
     // Handle retries
     if (retryAttempt < MAX_RETRIES) {
       console.log(`Attempt ${retryAttempt} failed, scheduling retry ${retryAttempt + 1}`);
-      await scheduleRetry(supabase, JOB_NAME, retryAttempt + 1);
-      await updateJobStatus(supabase, JOB_NAME, 'retrying', retryAttempt, errorMessage);
+      const scheduled = await scheduleRetry(supabase, JOB_NAME, retryAttempt + 1);
+      await updateJobStatus(supabase, JOB_NAME, scheduled ? 'retrying' : 'failed', retryAttempt, scheduled ? errorMessage : 'retry could not be scheduled');
       return json({ error: 'Failed, retry scheduled', attempt: retryAttempt, message: 'internal error; see function logs' }, 500);
     } else {
       // Max retries reached, mark as failed

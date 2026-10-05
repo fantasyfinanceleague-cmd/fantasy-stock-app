@@ -120,3 +120,35 @@ Deno.test('S3: a clean success reports its work count, and the status rule clear
   assert(js.includes("existing?.status === 'retrying'"), 'the status rule does not clear a stale retrying');
 });
 
+Deno.test('snapshot-week-end: the S9 gate runs BEFORE the window-complete skip (the complete check reads CLOSE holders)', async () => {
+  const src = await Deno.readTextFile(FILES[1]);
+  const gate = src.indexOf('weekEndBaselineGate({');
+  const complete = src.indexOf("if (coverage === 'complete') {");
+  assert(gate > 0 && complete > 0, 'gate or complete skip not found');
+  assert(gate < complete, 'the complete skip runs before the S9 gate, so a holder who sold out before close passes unchecked');
+});
+
+Deno.test('retrying is written ONLY when a retry was actually scheduled (both handlers)', async () => {
+  for (const f of FILES) {
+    const src = await Deno.readTextFile(f);
+    assertFalse(/await scheduleRetry\(supabase, JOB_NAME, retryAttempt \+ 1\);\s*\n\s*await updateJobStatus\(supabase, JOB_NAME, 'retrying'/.test(src),
+      `${f.pathname}: 'retrying' is written without checking that the retry was scheduled`);
+    assert(src.includes("scheduled ? 'retrying' : 'failed'"), `${f.pathname}: retry status is not conditional on the schedule result`);
+  }
+});
+
+Deno.test('trade ledger is paged, never one truncating read (both handlers)', async () => {
+  for (const f of FILES) {
+    const src = await Deno.readTextFile(f);
+    assert(src.includes('readAllTrades(supabase, leagueId,'), `${f.pathname}: trades are not read through the paged reader`);
+    assert(src.includes(".order('id')") && src.includes('.range(from, from + TRADE_PAGE_ROWS - 1)'), `${f.pathname}: the trade reader does not page by id`);
+  }
+});
+
+Deno.test("one league's failed or truncated matchups read does not abort the other leagues (both handlers)", async () => {
+  for (const f of FILES) {
+    const src = await Deno.readTextFile(f);
+    assert(src.includes('rows = await readLeagueMatchupRows(supabase, league.id);'), `${f.pathname}: the per-league read is not isolated`);
+  }
+});
+

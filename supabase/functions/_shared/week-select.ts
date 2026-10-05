@@ -36,9 +36,9 @@ export interface WeekMatchupRow {
 }
 
 /**
- * A league-week is SCORED when every real (non-placeholder) matchup in it has a
- * team1_gain. A scored week is finished: nothing about its baseline or close can
- * change, so the snapshot jobs must not revisit it. Revisiting it is what made old
+ * A league-week is WHOLLY SCORED when every real (non-placeholder) matchup in it has a
+ * team1_gain. A wholly scored week is history: the snapshot jobs skip it. A PARTLY
+ * scored week stays a target, so its unscored matchups can still be healed. Revisiting it is what made old
  * weeks refuse 'no_coverage' forever once calendar coverage moved on (B1).
  */
 export function isScoredWeek(rows: ReadonlyArray<Pick<WeekMatchupRow, 'team1_user_id' | 'team1_gain'>>): boolean {
