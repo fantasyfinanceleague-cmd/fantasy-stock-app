@@ -587,6 +587,18 @@ Deno.test({
       assertEquals(p.acl, '{postgres=X/postgres,authenticated=X/postgres}');
     });
 
+    await t.step('the human effect test (docs/security/run-it-back-effect-test.sql) passes against this fixture', async () => {
+      // The file the human runs in prod, executed verbatim here: it must end in
+      // RAISE with a PASS verdict (everything rolls back).
+      await completedLeague('Effect Test', 'random', 4);   // the one league the effect test may pick
+      const renewalsBefore = (await q(`select count(*)::int c from leagues where previous_league_id is not null`))[0].c;
+      const effect = await Deno.readTextFile(new URL('docs/security/run-it-back-effect-test.sql', ROOT));
+      const err = await assertRejects(() => db.exec(effect)) as Error;
+      assert(err.message.startsWith('RUN IT BACK EFFECT TEST: PASS'), err.message);
+      assertEquals((await q(`select count(*)::int c from leagues where previous_league_id is not null`))[0].c, renewalsBefore,
+        'the effect test rolled back: it persisted no renewal');
+    });
+
     await db.close();
   },
 });
