@@ -104,3 +104,33 @@ export function nearestPointIndex(points: ChartPoint[], x: number): number {
   }
   return best;
 }
+
+/**
+ * partialLinePath: the season line drawn only up to `fraction` (0..1) of its
+ * real length, as an SVG path. This is the H2 draw-in. The line is built point
+ * by point, so the cut lands exactly on the line, mid-segment if need be.
+ * fraction >= 1 returns the full line, the same string as linePath.
+ */
+export function partialLinePath(points: ChartPoint[], fraction: number, lineLength: number): string {
+  if (points.length === 0 || fraction <= 0) return '';
+  if (fraction >= 1 || lineLength <= 0) {
+    return points.map((p, i) => `${i ? 'L' : 'M'}${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' ');
+  }
+  const target = fraction * lineLength;
+  const parts: string[] = [`M${points[0].x.toFixed(2)},${points[0].y.toFixed(2)}`];
+  let walked = 0;
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1], b = points[i];
+    const seg = Math.hypot(b.x - a.x, b.y - a.y);
+    if (walked + seg <= target) {
+      parts.push(`L${b.x.toFixed(2)},${b.y.toFixed(2)}`);
+      walked += seg;
+      continue;
+    }
+    const t = seg > 0 ? (target - walked) / seg : 0;
+    parts.push(`L${(a.x + (b.x - a.x) * t).toFixed(2)},${(a.y + (b.y - a.y) * t).toFixed(2)}`);
+    break;
+  }
+  return parts.join(' ');
+}
+

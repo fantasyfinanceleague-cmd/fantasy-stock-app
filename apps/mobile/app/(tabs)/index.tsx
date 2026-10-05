@@ -346,11 +346,15 @@ export default function HomeScreen() {
   // (HomeLeagueTransition below), so it survives every later switch — a
   // switch reads `skipEntrance: true` on the very render that shows the
   // new league, not one render late.
+  // B2-H2 fix (Design Lead gate, 2026-10-05): the flag flips once Home has
+  // SHOWN content, not merely when a league is active. Before, the flag was
+  // set while the data was still loading, so the chart's first real mount
+  // always read skipEntrance: true and the first-view draw-in never ran.
   const hasOpenedRef = useRef(false);
   const skipEntrance = hasOpenedRef.current;
   useEffect(() => {
-    if (activeLeagueId) hasOpenedRef.current = true;
-  }, [activeLeagueId]);
+    if (activeLeagueId && viewModel) hasOpenedRef.current = true;
+  }, [activeLeagueId, viewModel]);
 
   // First load (e.g. just signed in): just the header, so neither state
   // flashes and then swaps for the other.
