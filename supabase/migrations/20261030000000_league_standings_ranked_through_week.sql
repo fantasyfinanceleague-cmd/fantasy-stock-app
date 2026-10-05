@@ -304,6 +304,12 @@ declare
   v_rows  jsonb;
   v_games jsonb;
 begin
+  -- A NULL week compares false against every row, which would return an all-
+  -- 0-0-0 table that looks like a valid pre-season order. Refuse it instead.
+  if p_through_week is null or p_through_week < 0 then
+    raise exception 'p_through_week must be >= 0' using errcode = '22023';
+  end if;
+
   -- Per-member totals, derived from scored regular-season matchups through
   -- p_through_week. Each matchup contributes one row per side (see the header).
   with scored as (
