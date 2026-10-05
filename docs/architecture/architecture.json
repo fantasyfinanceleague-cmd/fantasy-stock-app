@@ -2,67 +2,39 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "4b501b2ceef85b1f6383fc592d4435e19966f899",
-    "commitShort": "4b501b2",
+    "commit": "ee2ceffb957437231c1a25a6d33d377ee0500645",
+    "commitShort": "ee2ceff",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "",
+    "branch": "fix/lock-start-new-league-season",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "supabase/functions/_shared/draft-validation.test.ts"
+        "path": "docs/architecture/annotations.json"
       },
       {
-        "code": "A",
-        "path": "supabase/functions/_shared/week-window-replay.test.ts"
+        "code": "??",
+        "path": "supabase/migrations/20261023000000_lock_start_new_league_season.sql"
       },
       {
-        "code": "A",
-        "path": "supabase/functions/_shared/week-window.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/_shared/week-window.ts"
+        "code": "??",
+        "path": "supabase/migrations/deferred/20261023000009_drop_start_new_league_season.sql"
       },
       {
         "code": "M",
-        "path": "supabase/functions/process-week-results/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/snapshot-week-end/close.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/snapshot-week-end/close.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/snapshot-week-end/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/snapshot-week-start/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/snapshot-week-start/plan.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/snapshot-week-start/plan.ts"
+        "path": "supabase/migrations/deferred/README.md"
       }
     ],
-    "timestamp": "2026-10-05T03:28:21Z",
-    "sourceHash": "sha256:dd54c8a47443bb2fed6d3213275dc4df2d392d287824c4df679b61732bf4b8c8",
+    "timestamp": "2026-10-05T03:59:48Z",
+    "sourceHash": "sha256:bba97fa100ba0a558d7bffbf2a0ac4b3e39d5d54848a5dbf894c987cbec0ebfa",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-09-30T16:53:15Z",
-    "ageHours": 106.6,
-    "ageDays": 4.4,
+    "ageHours": 107.1,
+    "ageDays": 4.5,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:8e08382dfe9edf557c6371cfc39da9fb788590ad82209f15e2e74a7c90dcfc6b",
@@ -3416,7 +3388,7 @@
         "redefinitions": 2
       },
       "drift": [],
-      "annotation": "Destructive (deletes and recreates season state) and callable by any authenticated user. anon was revoked in 20260718000000; `authenticated` was deliberately kept because the mobile client calls it directly. Authorization is therefore entirely the internal commissioner check.",
+      "annotation": "Destructive (deletes and recreates season state) and broken by design: it deletes the season's matchups but creates no draft and no schedule, so the league is stuck (STATUS §4 item 9). LOCKED by 20261023000000: EXECUTE revoked from PUBLIC, anon, authenticated and service_role (owner-only). Until that migration is applied and db-snapshot.json is re-captured, the grants panel still shows the prod ACL from the snapshot (authenticated + service_role). The DROP is held in deferred/20261023000009; the replacement is Run it back (docs/migrations/RUN_IT_BACK_DESIGN.md).",
       "verified": true,
       "id": "pg.start_new_league_season",
       "label": "start_new_league_season(p_league_id uuid)",
@@ -9704,7 +9676,7 @@
       ]
     },
     {
-      "annotation": "The only direct client-to-SECURITY-DEFINER call in the app. Every other definer function is reached through an edge function.",
+      "annotation": "The only direct client-to-SECURITY-DEFINER call in the app. Every other definer function is reached through an edge function. Once 20261023000000 is applied, this call fails closed with 42501 (an \"Error\" alert in 1.0.0/1.1.0); the button is removed in the Run it back client work.",
       "verified": true,
       "id": "e.ui.league-settings->pg.start_new_league_season",
       "from": "ui.league-settings",
@@ -12770,7 +12742,8 @@
       "20261014000001_drop_league_seasons_commissioner_write.sql",
       "20261015000000_complete_league_season_guarded.sql",
       "20261017000000_f8_push_tokens_relocation.sql",
-      "20261019000000_process_week_results_heal_crons.sql"
+      "20261019000000_process_week_results_heal_crons.sql",
+      "20261023000000_lock_start_new_league_season.sql"
     ],
     "config": [
       "draft-autopick-sweep=false",

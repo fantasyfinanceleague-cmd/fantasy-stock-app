@@ -290,3 +290,27 @@ It covers:
 
 Mutation-checked: an open SELECT policy, a missing anon revoke, or a kept column
 each fail their own step.
+
+## lock_start_new_league_season.pglite.test.ts
+
+What it does:
+- Rebuilds the function's real prod ACL history **verbatim**: the body and grant
+  lines from `20260718000000`, then the grant lines from `20260718000001`, under
+  simulated Supabase default grants. The pre-state therefore has
+  `authenticated=X` and `service_role=X`, matching the prod snapshot.
+- Applies `20261023000000_lock_start_new_league_season.sql` whole.
+- Runs the migration header's POST-PUSH **DO-block effect check**,
+  un-commented, both before the migration (it must report `FAIL`) and after it
+  (it must report `PASS -- 42501`). So the HUMAN ACTION query is proven able
+  to tell the two apart, and to pick a UUID-shaped commissioner over a newer
+  `bot-*` one.
+
+It covers:
+- the pre-state: the commissioner reaches the body, and it really DELETEs the
+  league's matchups (inside a rolled-back transaction);
+- `proacl` = `{postgres=X/postgres}` exactly, with one overload kept (not dropped);
+- the authenticated commissioner, anon and service_role each refused with
+  `42501`, with matchups, seasons, standings and the leagues row unchanged;
+- the owner keeps EXECUTE (its call reaches the body's own commissioner gate,
+  `P0001`), so the function stays restorable;
+- re-applying the migration is a no-op.
