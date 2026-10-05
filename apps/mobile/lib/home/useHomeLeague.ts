@@ -50,9 +50,21 @@ import {
 
 export type HomeLeagueStatus = 'loading' | 'ready' | 'error' | 'no-league';
 
+/** The raw inputs the view model was built from (3c Matchup reads the same
+ * ledgers, quotes and bars, so its live score is Home's by construction). */
+export interface HomeRawInputs {
+  data: GetHomeLeagueResult;
+  quote: (symbol: string) => number | null;
+  bars: BarsBySymbol;
+  marketCalendar: MarketCalendarSession[];
+  now: Date;
+}
+
 export interface UseHomeLeagueResult {
   status: HomeLeagueStatus;
   viewModel: HomeViewModel | null;
+  /** The inputs behind `viewModel`, or null while loading (3c). */
+  raw: HomeRawInputs | null;
   /** get_home_summary's own row for this league — the source for display
    * strings buildHomeViewModel doesn't own (the caller's record, the
    * opponent's display name/bot flag): those are UI presentation, not a
@@ -488,11 +500,13 @@ export function useHomeLeague(leagueId: string | null): UseHomeLeagueResult {
   const { leagues, homeSummaryByLeague, market, marketCalendar } = useLeagueContext();
   const [status, setStatus] = useState<HomeLeagueStatus>('loading');
   const [viewModel, setViewModel] = useState<HomeViewModel | null>(null);
+  const [raw, setRaw] = useState<HomeRawInputs | null>(null);
   const [summary, setSummary] = useState<HomeSummaryRow | null>(null);
   const [error, setError] = useState<string | null>(null);
   // One cache entry per league, so switching leagues (H5) can crossfade
   // onto already-fetched data instead of a blank loading flash.
   const cacheRef = useRef<Map<string, HomeViewModel>>(new Map());
+  const rawCacheRef = useRef<Map<string, HomeRawInputs>>(new Map());
   // Staleness guard (code review, 2026-09-29): switching leagues quickly
   // had no cancellation, so a slow response for league A could land
   // AFTER a newer request for league B started, silently overwriting B's
@@ -516,6 +530,7 @@ export function useHomeLeague(leagueId: string | null): UseHomeLeagueResult {
       });
       if (!isStale()) {
         setViewModel(vm);
+        setRaw({ data, quote, bars, marketCalendar: fixtureMarketCalendar, now: fixtureNow });
         setStatus('ready');
       }
       return;
@@ -611,9 +626,12 @@ export function useHomeLeague(leagueId: string | null): UseHomeLeagueResult {
       bars, playoffRoundLabelForWeek, marketCalendar,
     });
 
+    const rawInputs: HomeRawInputs = { data, quote: (sym: string) => quotePrices[sym] ?? null, bars, marketCalendar, now: new Date() };
     cacheRef.current.set(leagueId, vm);
+    rawCacheRef.current.set(leagueId, rawInputs);
     if (isStale()) return; // a newer league switch has already superseded this response
     setViewModel(vm);
+    setRaw(rawInputs);
     setSummary(summary);
     setStatus('ready');
     setError(null);
@@ -624,6 +642,7 @@ export function useHomeLeague(leagueId: string | null): UseHomeLeagueResult {
     // refetch in the background.
     if (leagueId && cacheRef.current.has(leagueId)) {
       setViewModel(cacheRef.current.get(leagueId)!);
+      setRaw(rawCacheRef.current.get(leagueId) ?? null);
       setStatus('ready');
     }
     fetchLive();
@@ -643,5 +662,5 @@ export function useHomeLeague(leagueId: string | null): UseHomeLeagueResult {
     return () => clearInterval(id);
   }, [isLiveOpen, fetchLive]);
 
-  return { status, viewModel, summary, error, refresh: fetchLive };
+  return { status, viewModel, raw, summary, error, refresh: fetchLive };
 }

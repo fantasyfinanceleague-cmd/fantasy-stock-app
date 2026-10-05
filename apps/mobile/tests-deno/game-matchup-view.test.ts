@@ -89,3 +89,45 @@ Deno.test('race: one point per trading day with bars for every held stock; a mis
   const vm = buildMatchupLive(input({ bars: { ...bars, AAPL: [{ date: '2026-09-28', close: 201 }] } }));
   assertEquals(vm.me.race.map((p) => p.date), ['2026-09-28']);
 });
+
+// ---------------------------------------------------------------------------
+// matchupDays: the week's real sessions, from the calendar
+// ---------------------------------------------------------------------------
+import { matchupDays } from '../lib/game/matchupWindow.ts';
+import { resolveWeekWindow, standardWeekSessions } from '../lib/time/marketWeek.ts';
+
+Deno.test('matchupDays: one day per trading session of the matchup week, with its real close', () => {
+  const anchor = '2026-10-02T20:00:00Z'; // a Friday (EDT)
+  const cal = standardWeekSessions(anchor);
+  const win = resolveWeekWindow(anchor, cal)!;
+  const days = matchupDays(cal, win);
+  assertEquals(days.map((d) => d.date), ['2026-09-28', '2026-09-29', '2026-09-30', '2026-10-01', '2026-10-02']);
+  // Monday's close is 16:00 ET (20:00Z in EDT).
+  assertEquals(days[0].closeAt.toISOString(), '2026-09-28T20:00:00.000Z');
+});
+
+Deno.test('matchupDays: a holiday week has no session for the holiday', () => {
+  const anchor = '2026-09-11T20:00:00Z';
+  const cal = standardWeekSessions(anchor).filter((s) => s.sessionDate !== '2026-09-07');
+  const win = resolveWeekWindow(anchor, cal)!;
+  // Monday is Labor Day: Tuesday to Friday, four sessions.
+  assertEquals(matchupDays(cal, win).map((d) => d.date), ['2026-09-08', '2026-09-09', '2026-09-10', '2026-09-11']);
+});
+
+// ---------------------------------------------------------------------------
+// finalGains: the scored matchup row is the truth once it posts
+// ---------------------------------------------------------------------------
+import { finalGains } from '../lib/game/buildMatchupViewModel.ts';
+
+Deno.test('finalGains: null until both gains post (nothing reads final before it is)', () => {
+  const data = fixture();
+  assertEquals(finalGains(data, 'roberto'), null);
+});
+
+Deno.test('finalGains: uses the server\'s gains for my side, whichever team I am', () => {
+  const data = fixture();
+  data.matchups[0].team1_gain = 351.77;
+  data.matchups[0].team2_gain = -38.88;
+  assertEquals(finalGains(data, 'roberto'), { me: 351.77, opp: -38.88 });
+  assertEquals(finalGains(data, 'gianluigi'), { me: -38.88, opp: 351.77 });
+});

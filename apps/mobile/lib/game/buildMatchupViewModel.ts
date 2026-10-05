@@ -102,3 +102,21 @@ export function buildMatchupLive(input: MatchupInput): MatchupLiveViewModel {
     leadDollars: Math.abs(me.gain - opp.gain),
   };
 }
+
+/**
+ * The scored week's gains, from the server's matchup row: the authoritative
+ * numbers once both post (Matchup final). Null until they do: nothing reads
+ * final before it is. My side is team1 or team2, whichever I am.
+ */
+export function finalGains(data: GetHomeLeagueResult, myUserId: string): { me: number; opp: number } | null {
+  const cw = data.current_week;
+  const m = data.matchups.find((row) => row.week_number === cw.week_number) ?? null;
+  if (!m || m.team1_gain === null) return null;
+  if (m.team1_user_id === myUserId) {
+    return m.team2_gain === null ? null : { me: m.team1_gain, opp: m.team2_gain };
+  }
+  if (m.team2_user_id === myUserId) {
+    return m.team1_gain === null ? null : { me: m.team2_gain!, opp: m.team1_gain };
+  }
+  return null;
+}
