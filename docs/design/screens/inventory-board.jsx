@@ -171,6 +171,49 @@
           </div>
         </section>
 
+        <section className="b-sec" id="call-3c-3e" aria-labelledby="call-3c-3e-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n">?</span>
+            <div>
+              <h2 id="call-3c-3e-h">Your call: 3c / 3e</h2>
+              <p className="b-job">Four things the Matchup/League and Portfolio builds need decided. Same data as the rest of the board; new copy throughout.</p>
+            </div>
+          </header>
+          <div className="b-ask" style={{ marginTop: 0, marginBottom: 28, maxWidth: '84ch' }}>
+            <h3>Your call · our leans</h3>
+            <ol style={{ margin: 0, paddingLeft: 20, display: 'grid', gap: 6 }}>
+              <li><b>Stock chart ranges: 1W · 1M · 3M · 1Y, opening on 1W.</b> Our price history is one point per trading day, so a true minute-by-minute "today" line isn't possible yet; 1W shows the week so far with today's live price as the last point. 1D can come back later with a backend change.</li>
+              <li><b>A draft slot that was skipped: show it</b> as a Cash row, "Skipped at the draft · ready to invest · $2,000.00 · Invest ›". It already counts in your value, so hiding it makes the header add up to more than the rows.</li>
+              <li><b>Budget leagues after a sale: a "Cash from sales" line</b> under the holdings, with the header including it. Excluding cash would make Portfolio disagree with Home's "Your team".</li>
+              <li><b>League › Schedule: keep it.</b> Every week's opponent and result in one list; the data already exists, so it's cheap. Dropping it leaves next week's opponent only on Matchup.</li>
+            </ol>
+          </div>
+
+          <h3 className="b-sub">1 · Stock chart ranges</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="A · 1W 1M 3M 1Y, opening on 1W (lean)" note="Daily closes, one point a day; the last point is live. Works with today's data."><I.YcSheet mode="daily" /></Fit>
+            <Fit caption="B · 1D first (later)" note="A minute-by-minute line for today. Needs intraday bars from the backend; not possible in 1.2.0."><I.YcSheet mode="intraday" /></Fit>
+          </div>
+
+          <h3 className="b-sub">2 · A skipped draft slot (per-slot league)</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="A · listed as cash (lean)" note="Roberto skipped round 6: a Cash row, ready to invest, worth the full $2,000.00. Value = the rows."><I.YcSkipped listed /></Fit>
+            <Fit caption="B · not listed" note="The slot counts in the value but no row shows it, so the header is $2,000.00 more than the rows add up to."><I.YcSkipped /></Fit>
+          </div>
+
+          <h3 className="b-sub">3 · Budget league after a sale</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="A · a Cash from sales line (lean)" note="The header includes the $248.36 from selling TSLA, shown on its own line (no Invest ›: buy from any stock's sheet). Matches Home."><I.YcBudgetCash mode="line" /></Fit>
+            <Fit caption="B · header excludes cash" note="Value = the rows, but Home's Your team (which counts cash) shows a different number."><I.YcBudgetCash mode="exclude" /></Fit>
+          </div>
+
+          <h3 className="b-sub">4 · League › Schedule</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="A · keep Schedule (lean)" note="All 14 weeks: past results with your score, this week live, next week marked, then the playoffs. Pairings are sample data that fit the board (his only loss was Week 3 to Alessandro; he meets Paolo in Week 7)."><I.YcSchedule keep /></Fit>
+            <Fit caption="B · drop it for 1.2.0" note="Standings and History only; next week's opponent appears on Matchup alone."><I.YcSchedule /></Fit>
+          </div>
+        </section>
+
         <Group id="money" code="3e" name="Trading" job="Sell, keep the cash in the slot, and buy again with exactly what the sale brought in."
           notes={[
             'Sell is all or nothing: a slot holds one stock, so the sheet confirms "Sell all X sh ≈ $Y" (no partial amounts). The money stays in the slot.',

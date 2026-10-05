@@ -1772,12 +1772,174 @@
     );
   }
 
+  // ═════════════════════════════════════════════════════════════════════
+  // YOUR CALL: 3c/3e (2026-10-05). Four visible decisions for Giorgio.
+  // ═════════════════════════════════════════════════════════════════════
+  const YC_NVDA = (() => {
+    const N = K.NVDA;
+    // Daily closes (sample): the last close of the prior week, Mon, Tue, Wed,
+    // then Thursday's live price. Mon and Wed match the board's data.
+    const week = [['Fri', 297.1], ['Mon', N.mon], ['Tue', 303.55], ['Wed', N.prev], ['Thu', N.thu]];
+    return { N, week };
+  })();
+  function YcSheet({ mode }) {
+    const { N, week } = YC_NVDA;
+    const pts = mode === 'intraday' ? N.dayPoints : week.map((p) => p[1]);
+    const w = 362, h = 130;
+    const min = Math.min(...pts) - 1, max = Math.max(...pts) + 1;
+    const X = (i) => 4 + (i / (pts.length - 1)) * (w - 12);
+    const Y = (v) => 8 + (1 - (v - min) / (max - min)) * (h - 30);
+    const d = pts.map((v, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+    const daily = mode !== 'intraday';
+    const ranges = daily ? ['1W', '1M', '3M', '1Y'] : ['1D', '1W', '1M', '3M', '1Y'];
+    const weekChange = N.thu - week[0][1];
+    return (
+      <Device noTabs label={daily ? 'Stock sheet, daily ranges' : 'Stock sheet, intraday 1D'}>
+        <div className="ks-pad ks-stack" style={{ paddingTop: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Logo t="NVDA" />
+            <span style={{ flex: 1 }}><span className="ks-headline" style={{ fontWeight: 800 }}>NVDA</span><br /><span className="ks-caption">NVIDIA</span></span>
+            <span className="ks-muted"><Icon d={ICON.close} size={22} /></span>
+          </div>
+          <div>
+            <div className="ks-num" style={{ fontSize: 34, lineHeight: '38px', fontWeight: 800 }}>{$(N.thu)}</div>
+            <div className="ks-callout ks-gain ks-num" style={{ fontWeight: 700 }}>
+              {daily ? <>{$s(weekChange)} · {pct((weekChange / week[0][1]) * 100)} <span className="ks-muted" style={{ fontWeight: 500 }}>this week</span></>
+                : <>{$s(N.thu - N.prev)} · {pct(N.todayPct)} <span className="ks-muted" style={{ fontWeight: 500 }}>today</span></>}
+            </div>
+          </div>
+          <svg viewBox={`0 0 ${w} ${h}`} width="100%" height={h} role="img" aria-label={daily ? 'NVDA, daily closes this week' : 'NVDA today'}>
+            <path d={d} fill="none" stroke="var(--c-gain)" strokeWidth="2.25" strokeLinejoin="round" />
+            {daily ? pts.map((v, i) => <circle key={i} cx={X(i)} cy={Y(v)} r={i === pts.length - 1 ? 4.5 : 3} fill={i === pts.length - 1 ? 'var(--c-live)' : 'var(--c-gain)'} stroke="var(--c-surface)" strokeWidth="1.5" />) : <circle cx={X(pts.length - 1)} cy={Y(pts[pts.length - 1])} r="4.5" fill="var(--c-live)" stroke="var(--c-surface)" strokeWidth="1.5" />}
+            {daily ? week.map(([lab], i) => <text key={lab} x={X(i)} y={h - 4} textAnchor="middle" fontSize="11" fontWeight="600" fill="var(--c-text-2)">{i === week.length - 1 ? 'Now' : lab}</text>) : <text x="0" y={h - 4} fontSize="11" fontWeight="600" fill="var(--c-text-2)">9:30 AM</text>}
+          </svg>
+          <div className="ks-seg">{ranges.map((r, i) => <span key={r} className={i === 0 ? 'on' : undefined}>{r}</span>)}</div>
+          {daily ? <span className="ks-caption">One point per trading day; the last point is the live price.</span> : <BackendTag>intraday bars (historical-bars is daily-only today)</BackendTag>}
+          <div className="ks-card" style={{ padding: 14, boxShadow: 'none', background: 'var(--c-sunken)', border: 0 }}>
+            <div className="ks-section-h"><h3>Your position</h3><span className="ks-caption">{N.ownership}</span></div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', rowGap: 8 }} className="ks-num">
+              <span><span className="ks-caption">Value</span><br /><b>{$(N.value)}</b></span>
+              <span><span className="ks-caption">Gain</span><br /><b className="ks-gain">{$s(N.gain)}</b></span>
+            </div>
+          </div>
+        </div>
+      </Device>
+    );
+  }
+
+  /** Portfolio rows shared by the D3/D4 frames. */
+  const YcRow = ({ t, co, sub, value, right, cash }) => (
+    <li className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto' }}>
+      {cash ? <span className="ks-logo" style={{ background: 'var(--c-gain-tint)', color: 'var(--c-gain)', fontSize: 16 }}>$</span> : <Logo t={t} />}
+      <span><span className="ks-t">{t}</span><br /><span className="ks-caption ks-num">{sub || co}</span></span>
+      <span className="ks-right ks-num"><b>{$(value)}</b><br />{right}</span>
+    </li>
+  );
+  const YcHeader = ({ value, gain, cap }) => (
+    <div>
+      <div className="ks-caption">{cap || 'Portfolio value'}</div>
+      <div className="ks-score ks-num" style={{ fontSize: 44, lineHeight: '46px', fontStretch: '75%' }}>{$(value)}</div>
+      {gain != null ? <div className="ks-callout ks-num" style={{ fontWeight: 700 }}><span className={tone(gain)}>{$s(gain)}</span> <span className="ks-muted" style={{ fontWeight: 500 }}>since the draft</span></div> : null}
+    </div>
+  );
+  /** 3e-D3: a draft slot that was skipped (per-slot league). Roberto skipped round 6 (V). */
+  function YcSkipped({ listed }) {
+    const rows = K.PORTFOLIO_LIVE.rows.filter((r) => r.t !== 'V');
+    const notional = K.LEAGUE.notionalPerSlot;
+    const value = Math.round((rows.reduce((a, r) => a + r.value, 0) + notional) * 100) / 100;
+    return (
+      <Device tab="portfolio" label={listed ? 'Portfolio, skipped slot listed' : 'Portfolio, skipped slot not listed'}>
+        <Head chip={null} />
+        <div className="ks-pad ks-stack">
+          <YcHeader value={value} gain={Math.round((value - 12000) * 100) / 100} cap={listed ? 'Portfolio value · includes an unspent slot' : 'Portfolio value'} />
+          <div className="ks-card" style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between' }}>
+            <span className="ks-callout"><b>5 of 6</b> slots invested</span>
+            <span className="ks-callout ks-muted">{listed ? '1 ready to invest' : '1 skipped'}</span>
+          </div>
+          <div className="ks-card" style={{ padding: '2px 14px' }}>
+            <ul className="ks-rows">
+              {rows.map((r) => <YcRow key={r.t} t={r.t} co={`${r.co} · ${r.qty.toFixed(2)} sh`} value={r.value} right={<span className={`ks-caption ${tone(r.todayPct)}`} style={{ fontWeight: 700 }}>{pct(r.todayPct)}</span>} />)}
+              {listed ? <YcRow cash t="Cash" sub="Skipped at the draft · ready to invest" value={notional} right={<span className="ks-caption" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Invest ›</span>} /> : null}
+            </ul>
+          </div>
+          {listed ? null : <span className="ks-caption">The header counts {$(notional)} that no row shows.</span>}
+        </div>
+      </Device>
+    );
+  }
+  /** 3e-D4: a budget-cap league after selling TSLA (one share each). */
+  function YcBudgetCash({ mode }) {
+    const rows = K.lineup('roberto', 'thu').filter((r) => r.t !== 'TSLA');
+    const sum = Math.round(rows.reduce((a, r) => a + r.thu, 0) * 100) / 100;
+    const cash = K.lineup('roberto', 'thu').find((r) => r.t === 'TSLA').thu;
+    const withCash = mode === 'line';
+    return (
+      <Device tab="portfolio" label={withCash ? 'Budget league, cash line' : 'Budget league, header excludes cash'}>
+        <Head name="Office League" chip={null} />
+        <div className="ks-pad ks-stack">
+          <YcHeader value={withCash ? Math.round((sum + cash) * 100) / 100 : sum} cap={withCash ? 'Portfolio value · includes cash' : 'Portfolio value · holdings only'} />
+          <div className="ks-card" style={{ padding: '2px 14px' }}>
+            <ul className="ks-rows">
+              {rows.map((r) => <YcRow key={r.t} t={r.t} co={`${r.co} · 1 sh`} value={r.thu} right={<span className={`ks-caption ${tone(r.todayPct)}`} style={{ fontWeight: 700 }}>{pct(r.todayPct)}</span>} />)}
+            </ul>
+            {withCash ? (
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderTop: '1px solid var(--c-line)' }}>
+                <span className="ks-callout" style={{ fontWeight: 600 }}>Cash from sales</span>
+                <span className="ks-callout ks-num" style={{ fontWeight: 700 }}>{$(cash)}</span>
+              </div>
+            ) : null}
+          </div>
+          {withCash ? <span className="ks-caption">Cash goes back into your budget; buy with it from any stock's sheet.</span>
+            : <span className="ks-caption">Home's "Your team" still counts the {$(cash)} cash, so the two screens disagree.</span>}
+        </div>
+      </Device>
+    );
+  }
+  /** 3c-D4: League › Schedule. Roberto's 14 weeks (sample pairings; the board's
+   * data: his only loss was Week 3 to Alessandro, and he hasn't met Paolo). */
+  function YcSchedule({ keep }) {
+    const opp = ['gianluigi', 'andrea', 'alessandro', 'francesco', 'andrea', 'gianluigi', 'paolo', 'alessandro', 'francesco', 'andrea', 'gianluigi', 'paolo', 'alessandro', 'francesco'];
+    const res = K.ROBERTO_WEEKS;
+    return (
+      <Device tab="league" label={keep ? 'League, Schedule segment' : 'League without Schedule'}>
+        <Head chip={<span className="ks-chip ks-chip--live"><span className="ks-dot ks-dot--pulse" />Week 6</span>} />
+        <div className="ks-pad ks-stack">
+          <div className="ks-seg">{(keep ? ['Standings', 'Schedule', 'History'] : ['Standings', 'History']).map((s) => <span key={s} className={s === (keep ? 'Schedule' : 'Standings') ? 'on' : undefined}>{s}</span>)}</div>
+          {keep ? (
+            <div className="ks-card" style={{ padding: '2px 14px' }}>
+              <ul className="ks-rows">
+                {opp.map((id, i) => {
+                  const wk = i + 1, r = res.find((x) => x.week === wk), live = wk === K.LEAGUE.week;
+                  return (
+                    <li key={wk} className="ks-row" style={{ gridTemplateColumns: '34px 1fr auto', padding: '8px 0', background: live ? 'var(--c-you-tint)' : undefined }}>
+                      <span className="ks-caption ks-num" style={{ fontWeight: 700 }}>W{wk}</span>
+                      <span className="ks-callout" style={{ fontWeight: live ? 700 : 500, color: wk > K.LEAGUE.week ? 'var(--c-text-2)' : undefined }}>vs {K.byId[id].name}</span>
+                      <span className="ks-callout ks-num" style={{ fontWeight: 700 }}>
+                        {r ? <><span style={{ color: r.result === 'W' ? 'var(--c-gain)' : 'var(--c-loss)' }}>{r.result}</span> <span className={tone(r.gain)}>{$s(r.gain)}</span></>
+                          : live ? <span style={{ color: 'var(--c-live-text)' }}>● Live</span>
+                          : wk === K.LEAGUE.week + 1 ? <span className="ks-muted">Next</span> : null}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : (
+            <div className="ks-card" style={{ padding: '12px 14px' }}><span className="ks-callout ks-muted">Standings as on key screen 3. Next week's opponent shows only on Matchup.</span></div>
+          )}
+          {keep ? <span className="ks-caption">Then the playoffs: {K.playoffLine(4)}.</span> : null}
+        </div>
+      </Device>
+    );
+  }
+
   window.KSInventory = {
     SignIn, SignUp, SignUpPaused, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeUnpriced, HomeScoring, HomeComplete,
     AllMatchups, MatchupPreSeason, Playoffs6, ArrangeOrder, OrderPush, DraftLobby, StartDraftConfirm, CreateSeason, DraftAutoPick, DraftRecap, Playoffs,
     SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,
     OneShareSell, OneShareBuy,
+    YcSheet, YcSkipped, YcBudgetCash, YcSchedule,
     RibHome, RibLeague, RibPush, RibMemberPrompt, RibHomeCounts, RibReconcile, RibMemberList, RibResolve, RibReview, RibHistory,
     WebHome, WebPortfolio, WebSettings,
   };
