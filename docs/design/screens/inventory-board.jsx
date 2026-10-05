@@ -156,7 +156,8 @@
             <Fit caption="1 · Member: Home (and the League tab)" note="The same card sits on the League tab. An answer can change until the draft is set."><I.RibMemberPrompt /></Fit>
             <Fit caption="2 · Commissioner: a push for each reply" note="Every answer notifies the commissioner, with the running count."><I.RibPush mode="reply" /></Fit>
             <Fit caption="3 · Commissioner: Home while replies come in" note="Counts and who's still to reply; opens the reconcile view."><I.RibHomeCounts /></Fit>
-            <Fit caption="4 · Commissioner: League tab, reconcile" note="In / New / Out / No reply yet, by name. The draft rows stay disabled, with the reason, until nobody is left without a reply. Needs backend: replies, and joins during renewal."><I.RibReconcile /></Fit>
+            <Fit caption="4 · Commissioner: League tab, reconcile" note={`Standings-style, in Season 1 order: "Running back" (Giorgio's copy) with the name in bold; "Out" muted; "No reply yet" with Nudge / Mark as out on the row; new joiners last with a New marker and "Joining". Draft rows stay disabled until nobody is left without a reply. New copy except "Running back". Needs backend: replies, and joins during renewal.`}><I.RibReconcile /></Fit>
+            <Fit caption="4b · A member's view · TO CONFIRM" note="Lighter: only who's running back (and new joiners), plus a count of the rest. To confirm whether members should see the out / no-reply names."><I.RibMemberList /></Fit>
             <Fit caption="5 · PROPOSAL, to confirm: clearing a non-reply" note='"Nudge again" re-sends the push; "Mark as out" closes it and tells that player. Our proposal; Giorgio to confirm.'><I.RibResolve /></Fit>
             <Fit caption="6 · After everyone has replied: the review" note="Teams = who's in + new joins (here 4 + 1 = 5, up to 16), with the uneven-bye heads-up. Needs backend: today join refuses league_full."><I.RibReview /></Fit>
           </div>

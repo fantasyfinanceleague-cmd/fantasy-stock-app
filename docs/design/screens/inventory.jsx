@@ -1506,7 +1506,7 @@
     const R = NX.replies;
     const body = mode === 'ask'
       ? 'Roberto B. is running it back. Are you in for Season 2?'
-      : `Gianluigi B. is in for Season 2. ${R.in.length} in · ${R.out.length} out · ${R.none.length} to reply.`;
+      : `Gianluigi B. is running back for Season 2. ${R.in.length} running back · ${R.out.length} out · ${R.none.length} no reply yet.`;
     return (
       <Device noTabs time={mode === 'ask' ? '7:42' : '9:15'} label={mode === 'ask' ? "Push to a member: are you in?" : 'Push to the commissioner: a reply'} style={{ background: 'linear-gradient(160deg, #3B4F7A 0%, #1B2540 55%, #0E1426 100%)', color: '#fff' }}>
         <div style={{ position: 'relative', textAlign: 'center', color: '#fff', paddingTop: 16 }}>
@@ -1529,7 +1529,7 @@
   /** (a) Who's in — decided: opt-in + commissioner reconciliation. */
   const Countline = () => {
     const R = NX.replies;
-    return <span className="ks-callout ks-num"><b>{R.in.length} in</b> · {R.out.length} out · {R.none.length} to reply</span>;
+    return <span className="ks-callout ks-num"><b>{R.in.length} running back</b> · {NX.joined.length} new · {R.out.length} out · {R.none.length} no reply yet</span>;
   };
   const NameGroup = ({ title, ids, children }) => (
     <div style={{ display: 'grid', gap: 6 }}>
@@ -1571,43 +1571,69 @@
           <ChampBanner compact />
           <div className="ks-game" style={{ padding: 16, display: 'grid', gap: 10 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Season 2 · who's in</span>
+              <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Season 2 · running back</span>
               <span className="ks-chip">Waiting on {R.none.length}</span>
             </div>
             <Countline />
             <div style={{ display: 'grid', gridTemplateColumns: `repeat(${ALL.length}, 1fr)`, gap: 4 }} aria-hidden="true">
               {[...R.in, ...R.out, ...R.none].map((id) => <span key={id} style={{ height: 6, borderRadius: 3, background: R.in.includes(id) ? 'var(--c-you)' : R.out.includes(id) ? 'var(--c-border-strong)' : 'var(--c-track)' }} />)}
             </div>
-            <span className="ks-caption">Waiting on {R.none.map((id) => K.byId[id].name).join(', ')}. You'll set up the draft once everyone has replied.</span>
+            <span className="ks-caption">Waiting on {R.none.map((id) => K.byId[id].name).join(', ')} You'll set up the draft once everyone has replied.</span>
             <span className="ks-btn">See who's in</span>
           </div>
         </div>
       </Device>
     );
   }
-  /** The reconcile view on the League tab: counts, names, and the draft locked until everyone has replied. */
-  function RibReconcile() {
-    const R = NX.replies, J = NX.joined;
+  /** One row per player in Season 1's final order, answer right-aligned.
+   * "Running back" is Giorgio's copy (verbatim); "Out", "No reply yet",
+   * "Joining", "New", "Nudge", "Mark as out" are new copy. `member` hides the
+   * out / no-reply names (whether members see them is to confirm). */
+  function ReplyRows({ member, me = 'roberto' }) {
+    const R = NX.replies;
+    const state = (id) => (R.in.includes(id) ? 'in' : R.out.includes(id) ? 'out' : 'none');
+    const rows = S1.rows.filter((r) => !member || state(r.id) === 'in');
     return (
-      <Device tab="league" label="Commissioner League tab: who's in">
+      <ul className="ks-rows">
+        {rows.map((r) => {
+          const st = state(r.id);
+          return (
+            <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '18px 1fr auto', padding: '10px 0', alignItems: 'center' }}>
+              <span className="ks-t ks-num" style={{ color: st === 'in' ? undefined : 'var(--c-text-2)' }}>{r.rank}</span>
+              <span className="ks-callout" style={{ fontWeight: st === 'in' ? 700 : 500, color: st === 'in' ? 'var(--c-text)' : 'var(--c-text-2)' }}>{r.name}{r.id === me ? <span className="ks-muted" style={{ fontWeight: 500 }}> (you)</span> : null}</span>
+              {st === 'in' ? <span className="ks-callout" style={{ fontWeight: 700, color: 'var(--c-accent)', display: 'flex', gap: 6, alignItems: 'center' }}><Icon d={CHECK} size={14} width={3} />Running back</span> : null}
+              {st === 'out' ? <span className="ks-callout ks-muted">Out</span> : null}
+              {st === 'none' ? (
+                <span style={{ display: 'grid', justifyItems: 'end', gap: 2 }}>
+                  <span className="ks-callout" style={{ color: 'var(--c-live-text)', fontWeight: 600, display: 'flex', gap: 6, alignItems: 'center' }}><span className="ks-dot" />No reply yet</span>
+                  <span className="ks-caption" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Nudge · Mark as out</span>
+                </span>
+              ) : null}
+            </li>
+          );
+        })}
+        {NX.joined.map((j) => (
+          <li key={j.id} className="ks-row" style={{ gridTemplateColumns: '18px 1fr auto', padding: '10px 0', alignItems: 'center' }}>
+            <span />
+            <span className="ks-callout" style={{ fontWeight: 700, display: 'flex', gap: 8, alignItems: 'center' }}>{j.name}<span className="ks-chip" style={{ height: 20, fontSize: 10 }}>New</span></span>
+            <span className="ks-callout" style={{ fontWeight: 700, color: 'var(--c-accent)', display: 'flex', gap: 6, alignItems: 'center' }}><Icon d={CHECK} size={14} width={3} />Joining</span>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+  /** The reconcile view on the League tab (commissioner). */
+  function RibReconcile() {
+    const R = NX.replies;
+    return (
+      <Device tab="league" label="Commissioner League tab: who's running back">
         <Head chip={<span className="ks-chip">Season 2</span>} />
         <div className="ks-pad ks-stack">
-          <div><span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Season 2</span><h2 className="ks-head__title" style={{ fontSize: 26, margin: '2px 0 0' }}>Who's in</h2></div>
+          <div><span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Season 2</span><h2 className="ks-head__title" style={{ fontSize: 26, margin: '2px 0 0' }}>Who's running back</h2></div>
           <Countline />
-          <Card pad="12px 14px">
-            <div style={{ display: 'grid', gap: 12 }}>
-              <NameGroup title="In" ids={R.in} />
-              <NameGroup title="New" ids={J.map((j) => j.id)}><span className="ks-callout">{J.map((j) => j.name).join(', ')} <span className="ks-muted">· joined with the invite code</span></span></NameGroup>
-              <NameGroup title="Out" ids={R.out} />
-              <NameGroup title="No reply yet" ids={R.none}>
-                {R.none.map((id) => (
-                  <span key={id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span className="ks-callout">{K.byId[id].name}</span>
-                    <span className="ks-callout" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Resolve ›</span>
-                  </span>
-                ))}
-              </NameGroup>
-            </div>
+          <Card pad="4px 14px">
+            <div className="ks-section-h" style={{ paddingTop: 8 }}><h3>Season 1 order</h3><span className="ks-caption">Answer</span></div>
+            <ReplyRows />
           </Card>
           <Card>
             <ul className="ks-rows" style={{ opacity: 0.5 }}>
@@ -1615,7 +1641,7 @@
               <Row k="Draft order" v="Random" />
             </ul>
           </Card>
-          <span className="ks-caption">You can set the draft once everyone has replied. Waiting on {R.none.map((id) => K.byId[id].name).join(', ')}.</span>
+          <span className="ks-caption">You can set the draft once everyone has replied. Waiting on {R.none.map((id) => K.byId[id].name).join(', ')}</span>
           <div className="ks-raised" style={{ padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span><span className="ks-caption">Invite someone new</span><br /><b className="ks-num" style={{ letterSpacing: '0.12em' }}>{NX.invite}</b></span>
             <span className="ks-callout" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Share</span>
@@ -1624,6 +1650,24 @@
       </Device>
     );
   }
+  /** A plain member's lighter view (to confirm: do members see out / no-reply names?). */
+  function RibMemberList() {
+    const R = NX.replies;
+    const hidden = R.out.length + R.none.length;
+    return (
+      <Device tab="league" label="Member League tab: who's running back">
+        <div className="ks-head"><Pill /><span className="ks-chip">Season 2</span><span className="ks-avatar">GB</span></div>
+        <div className="ks-pad ks-stack">
+          <div><span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Season 2</span><h2 className="ks-head__title" style={{ fontSize: 26, margin: '2px 0 0' }}>Who's running back</h2></div>
+          <span className="ks-callout ks-num"><b>{R.in.length} running back</b> · {NX.joined.length} new</span>
+          <Card pad="4px 14px"><ReplyRows member me="gianluigi" /></Card>
+          <span className="ks-caption">{hidden} more from Season 1 haven't said they're running back yet. The draft is set once everyone has replied.</span>
+          <span className="ks-caption" style={{ justifySelf: 'start', padding: '4px 8px', borderRadius: 8, background: 'var(--c-warn-tint)', color: 'var(--c-warn-text)', fontWeight: 700 }}>To confirm · members see only who's running back</span>
+        </div>
+      </Device>
+    );
+  }
+
   /** PROPOSAL: how the commissioner clears a non-responder. */
   function RibResolve() {
     const who = K.byId[NX.replies.none[0]].name;
@@ -1640,7 +1684,7 @@
       }>
         <Head chip={<span className="ks-chip">Season 2</span>} />
         <div className="ks-pad ks-stack">
-          <h2 className="ks-head__title" style={{ fontSize: 26 }}>Who's in</h2>
+          <h2 className="ks-head__title" style={{ fontSize: 26 }}>Who's running back</h2>
           <Countline />
         </div>
       </Device>
@@ -1781,7 +1825,7 @@
     AllMatchups, MatchupPreSeason, Playoffs6, ArrangeOrder, OrderPush, DraftLobby, StartDraftConfirm, CreateSeason, DraftAutoPick, DraftRecap, Playoffs,
     SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,
     OneShareSell, OneShareBuy,
-    RibHome, RibLeague, RibPush, RibMemberPrompt, RibHomeCounts, RibReconcile, RibResolve, RibTeams, RibReview, RibHistory,
+    RibHome, RibLeague, RibPush, RibMemberPrompt, RibHomeCounts, RibReconcile, RibMemberList, RibResolve, RibTeams, RibReview, RibHistory,
     WebHome, WebPortfolio, WebSettings,
   };
 })();
