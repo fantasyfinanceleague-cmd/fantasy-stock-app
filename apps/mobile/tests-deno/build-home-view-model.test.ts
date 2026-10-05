@@ -494,7 +494,7 @@ Deno.test('server parity: the live score is independent of marketCalendar -- liv
   // this week) must match process-week-results exactly -- the STORED
   // matchups.week_start/week_end, which get_home_league's own SQL already
   // uses to scope data.current_week.my_trades/opponent_trades server-side
-  // (20261024000000_get_home_league_rpc.sql: "t.created_at >= v_matchup.
+  // (20261029000000_get_home_league_rpc.sql: "t.created_at >= v_matchup.
   // week_start and t.created_at <= v_matchup.week_end"). marketWeek.ts's
   // resolved calendar window governs phase classification and DISPLAYED
   // times only (B1) -- it must never reach liveWeekScore's inputs, which

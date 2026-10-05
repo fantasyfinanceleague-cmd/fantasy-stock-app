@@ -116,7 +116,7 @@ export const SCORING_CHIP = 'Scoring…'; // board
 export const SCORING_MESSAGE = "Results post a few minutes after Friday's close."; // board
 
 // ── State 4: week final, scored — NOT on the board. new-flagged. ───────────
-export const SCORED_CHIP = 'Final'; // new-flagged
+export const SCORED_CHIP = 'Final'; // giorgio (approved 2026-10-04)
 export function scoredResultLine(won: boolean, week: number, opponentName?: string): string {
   // spec: "You win Week 6" / "{opponent} wins Week 6" — board copy pattern
   // (onboarding card 3), reused verbatim; the subject swap was approved by Giorgio 2026-10-04.
@@ -276,7 +276,7 @@ export const SEASON_GAIN_TILE_TITLE = 'Season gain'; // board, reused
 // non-champion headline, four tiles, and two buttons. ──────────────────────
 export const CHAMPION_LABEL = 'Champion'; // board
 export function wonLeagueLine(leagueName: string): string {
-  return `You won ${leagueName}`; // board
+  return `You won ${leagueName}`; // giorgio (approved 2026-10-04)
 }
 /** "2nd place" (board's non-champion variant). NEW COPY -- flagged. */
 export function placeLabel(rank: number): string {

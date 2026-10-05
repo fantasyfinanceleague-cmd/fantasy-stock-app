@@ -132,7 +132,7 @@ Deno.test({
     await db.exec(RLS);
     await db.exec(await mig('20261011000000_league_standings_ranked.sql'));
     await db.exec(await mig('20261004000000_participant_display_names.sql'));
-    await db.exec(await mig('20261024000000_get_home_league_rpc.sql'));
+    await db.exec(await mig('20261029000000_get_home_league_rpc.sql'));
 
     const MEMBER = '00000000-0000-4000-8000-000000000001';
     const OPPONENT = '00000000-0000-4000-8000-000000000002';

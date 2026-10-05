@@ -1,10 +1,10 @@
 -- ============================================================================
 -- get_home_league: everything Home (3b-2) needs for ONE league in ONE call
 -- ============================================================================
--- Filename: 20261024000000 (was 20261018000000). The 20261023000000
--- start_new_league_season lockdown lands on prod first, and `supabase db
--- push` refuses an unapplied file older than the latest applied one, so
--- this file moves to the 20261024000000..09 range reserved for 3b-2.
+-- Filename: 20261029000000 (was 20261018000000, then 20261024000000). Re-stamped
+-- at release (2026-10-05) to sort after prod's latest applied migration
+-- (20261028000002): `supabase db push` refuses an unapplied file older than
+-- the latest applied one.
 -- Phase 3b-2 (mobile Home). Folds five reads into one RPC so Home's live
 -- state stays inside the spec's 5-request budget (summary [already
 -- fetched by LeagueContext] + get_home_league + quote + matchups-lazy-
