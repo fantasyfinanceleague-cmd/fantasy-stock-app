@@ -10,7 +10,11 @@
  *
  * "Market-hours handling can be 'last available quote' for launch" (spec):
  * outside market hours the latest trade/bar is simply the last session's —
- * no market-hours gate here by design.
+ * no market-hours gate here by design. (2026-09-30: record-trade itself now
+ * refuses off-hours buys/sells before it ever calls this — see
+ * ./market-hours.ts — so this module's "last available quote" behavior is
+ * exercised only by preview, which has no gate. This function's own
+ * contract is unchanged.)
  */
 
 const BASE = 'https://data.alpaca.markets/v2';

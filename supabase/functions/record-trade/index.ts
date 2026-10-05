@@ -55,6 +55,14 @@ import {
   validateTradeAdd,
   validateTradeDrop,
 } from '../_shared/draft-validation.ts';
+import {
+  decideMarketGate,
+  marketLabel,
+  tradeGateResponse,
+  type CalendarRow,
+  type Coverage,
+  type MarketGate,
+} from '../_shared/market-hours.ts';
 
 function isAllowedOrigin(origin: string): boolean {
   if (!origin) return false;
@@ -79,6 +87,43 @@ function jsonFor(origin: string) {
       status,
       headers: { 'Content-Type': 'application/json', ...getCorsHeaders(origin) },
     });
+}
+
+// ---- Market hours gate (2026-09-30, docs/audits/2026-09-30-week-window-
+// audit.md S5/U2) --------------------------------------------------------
+// Reads market_calendar + market_calendar_coverage once per request. A
+// READ ERROR is deliberately NOT folded into decideMarketGate's own
+// "coverage: null" fail-closed path — that path means "never refreshed" or
+// "refresh lapsed", both legitimate calendar states decideMarketGate must
+// reason about (e.g. distinguishing a holiday from no-coverage). A
+// *read* error is a third, distinct thing (a transient DB problem) and
+// must surface as its own calendar_unavailable, never silently degrade
+// into "no sessions today" — that would let a read error be misreported as
+// e.g. a holiday (CLAUDE.md "success signals" #1: a failure must never
+// read as a routine, legitimate outcome).
+interface MarketCalendarReads {
+  sessions: CalendarRow[];
+  coverage: Coverage | null;
+  readError: boolean;
+}
+
+// deno-lint-ignore no-explicit-any
+async function fetchMarketCalendar(admin: any): Promise<MarketCalendarReads> {
+  const [covRes, sessRes] = await Promise.all([
+    admin.from('market_calendar_coverage').select('covered_from, covered_through').maybeSingle(),
+    admin.from('market_calendar').select('session_date, open_et, close_et').order('session_date', { ascending: true }),
+  ]);
+  if (covRes.error || sessRes.error) {
+    console.error('market_calendar read error', covRes.error, sessRes.error);
+    return { sessions: [], coverage: null, readError: true };
+  }
+  return {
+    sessions: (sessRes.data ?? []) as CalendarRow[],
+    coverage: covRes.data
+      ? { covered_from: covRes.data.covered_from, covered_through: covRes.data.covered_through }
+      : null,
+    readError: false,
+  };
 }
 
 // Fail-open rate limit (join-league pattern).
@@ -129,6 +174,34 @@ Deno.serve(async (req: Request) => {
     const leagueId = String(body.league_id ?? '').trim();
     const symbol = String(body.symbol ?? '').trim().toUpperCase();
     const action = String(body.action ?? '');
+
+    // ---- Market hours gate ------------------------------------------------
+    // Deliberately BEFORE leagueId/action/symbol validation: a bare
+    // {"action":"buy"} answers purely off the wall clock and this one read
+    // (market_closed, or calendar_unavailable, or — once past this gate —
+    // bad_request) with no league lookup and no write. That ordering is what
+    // lets a post-deploy check exercise the gate with no real league/session.
+    // `gate` is also reused for the preview's fail-soft market label below,
+    // and `marketReads` is reused again right before the insert (no second
+    // DB read) to close the window between this check and the write.
+    let marketReads: MarketCalendarReads | null = null;
+    let gate: MarketGate | null = null;
+    if (action === 'buy' || action === 'sell' || action === 'preview') {
+      marketReads = await fetchMarketCalendar(admin);
+      if (marketReads.readError) {
+        if (action === 'buy' || action === 'sell') {
+          return json({ ok: false, reason: 'calendar_unavailable' }, 503);
+        }
+        // preview: fall through with gate left null -> fail-soft market:null
+      } else {
+        gate = decideMarketGate(new Date(), marketReads.sessions, marketReads.coverage);
+        if ((action === 'buy' || action === 'sell') && !gate.open) {
+          const resp = tradeGateResponse(gate);
+          return json(resp.body, resp.status);
+        }
+      }
+    }
+
     if (!leagueId || (action !== 'buy' && action !== 'sell' && action !== 'preview')) {
       return json({ ok: false, reason: 'bad_request' }, 400);
     }
@@ -187,8 +260,12 @@ Deno.serve(async (req: Request) => {
     // stake modes get an empty/zero shape — this endpoint exists for
     // fixed_notional; there is nothing to preview elsewhere.
     if (action === 'preview') {
+      // Additive, never blocking: preview has no fill price and no write.
+      // null (fail-soft) when the calendar itself couldn't be read/decided —
+      // see marketLabel's doc for why a guessed status is worse than none.
+      const market = gate ? marketLabel(gate) : null;
       if (league.stake_mode !== 'fixed_notional') {
-        return json({ ok: true, stake_mode: league.stake_mode ?? null, stake: null, unfilled_slots: 0, sources: [] });
+        return json({ ok: true, stake_mode: league.stake_mode ?? null, stake: null, unfilled_slots: 0, sources: [], market });
       }
       const notional = league.notional_per_slot == null ? 1000 : Number(league.notional_per_slot);
       const funding = fixedNotionalFunding(user.id, picks, trades);
@@ -198,6 +275,7 @@ Deno.serve(async (req: Request) => {
         stake: notional,
         unfilled_slots: funding.unfilledSlots,
         sources: funding.open.map((o) => ({ trade_id: o.tradeId, symbol: o.symbol, amount: o.amount })),
+        market,
       });
     }
 
@@ -284,6 +362,21 @@ Deno.serve(async (req: Request) => {
       fundedByTradeId = decision.fundedByTradeId ?? null;
     } else {
       quantity = dropQuantity!; // validated above, before the vendor call
+    }
+
+    // ---- Market hours re-check (right before the write) --------------------
+    // Closes the window between the gate above and this insert: league/
+    // membership/position reads, the slot/category lookups, and the Alpaca
+    // fill-price round trip can together take long enough to cross a close
+    // (or an early close). Re-decides on a FRESH `now` but the SAME already-
+    // fetched calendar rows — no second DB read. marketReads is guaranteed
+    // non-null and readError:false here: action is buy or sell (preview
+    // already returned above), which always fetches it, and a read error
+    // would already have returned 503 at the gate above.
+    const recheckGate = decideMarketGate(new Date(), marketReads!.sessions, marketReads!.coverage);
+    if (!recheckGate.open) {
+      const resp = tradeGateResponse(recheckGate);
+      return json(resp.body, resp.status);
     }
 
     // ---- Record ------------------------------------------------------------
