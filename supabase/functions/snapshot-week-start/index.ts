@@ -106,11 +106,15 @@ async function fetchMarketCalendar(
   supabase: any,
 ): Promise<{ sessions: CalendarSession[]; coverage: MarketCalendarCoverage | null; error: unknown }> {
   const [sessionsRes, coverageRes] = await Promise.all([
-    supabase.from('market_calendar').select('session_date, open_et, close_et'),
+    supabase.from('market_calendar').select('session_date, open_et, close_et', { count: 'exact' }),
     supabase.from('market_calendar_coverage').select('covered_from, covered_through').maybeSingle(),
   ]);
   if (sessionsRes.error || coverageRes.error) {
     return { sessions: [], coverage: null, error: sessionsRes.error ?? coverageRes.error };
+  }
+  // A truncated calendar would silently mis-cut the open (PostgREST max-rows): refuse.
+  if (typeof sessionsRes.count === 'number' && (sessionsRes.data ?? []).length < sessionsRes.count) {
+    return { sessions: [], coverage: null, error: new Error(`market_calendar read truncated: ${(sessionsRes.data ?? []).length} of ${sessionsRes.count}`) };
   }
   const sessions: CalendarSession[] = (sessionsRes.data ?? []).map((r: any) => ({
     sessionDate: r.session_date,
@@ -309,23 +313,46 @@ async function fetchOpenPrices(
  * permanently. Pages by primary key until every counted row is read.
  */
 const TRADE_PAGE_ROWS = 1000;
-async function readAllTrades(supabase: any, leagueId: string, cols: string): Promise<{ data: any[] | null; error: unknown; count: number | null }> {
+/**
+ * A league's trades up to a window cut. The cut is applied SERVER-side, so trades
+ * created after it are never in the set. Paging is keyset on id, not offset, so an
+ * insert cannot shift a page and duplicate or skip a row. Each page is its own
+ * statement, so the set is not one transaction. Two checks fail the read instead of
+ * trusting it: the loop runs to an EMPTY page (no tail is dropped), and the rows read
+ * must equal the first page's exact count (a set that grew or shrank mid-read is
+ * refused and retried, never silently partial).
+ */
+async function readAllTrades(
+  supabase: any,
+  leagueId: string,
+  cols: string,
+  cutIso: string,
+  inclusive: boolean,
+): Promise<{ data: any[] | null; error: unknown; count: number | null }> {
   const rows: any[] = [];
-  let count: number | null = null;
-  for (let from = 0; ; from += TRADE_PAGE_ROWS) {
-    const { data, error, count: c } = await supabase
+  let total: number | null = null;
+  let lastId: string | null = null;
+  for (;;) {
+    // The exact count is only needed on the first page (the expected total).
+    const countOpt: any = lastId === null ? { count: 'exact' } : {};
+    let q: any = supabase
       .from('trades')
-      .select(cols, { count: 'exact' })
-      .eq('league_id', leagueId)
-      .order('id')
-      .range(from, from + TRADE_PAGE_ROWS - 1);
-    if (error) return { data: null, error, count };
-    count = c ?? count;
+      .select(`${cols}, id`, countOpt)
+      .eq('league_id', leagueId);
+    q = inclusive ? q.lte('created_at', cutIso) : q.lt('created_at', cutIso);
+    if (lastId !== null) q = q.gt('id', lastId);
+    const { data, error, count } = await q.order('id').limit(TRADE_PAGE_ROWS);
+    if (error) return { data: null, error, count: total };
+    if (lastId === null) total = count ?? null;
     const page = data ?? [];
     rows.push(...page);
-    if (page.length === 0 || (count != null && rows.length >= count)) break;
+    if (page.length === 0) break;
+    lastId = String(page[page.length - 1].id);
   }
-  return { data: rows, error: null, count };
+  if (total != null && rows.length !== total) {
+    return { data: null, error: new Error(`trade set changed during read: ${rows.length} read, ${total} counted`), count: total };
+  }
+  return { data: rows, error: null, count: total };
 }
 
 /**
@@ -566,6 +593,9 @@ Deno.serve(async (req) => {
       //      drafts/trades read would make everyone look empty ('none_expected',
       //      permanently skipped), and a failed snapshots read would make
       //      everyone look uncovered (re-upserting Monday's rows at today's price).
+      // The trades read is cut at the open of the week being PROCEEDED with: the early
+      // plan (the same anchors as windowPlan below, which re-derives the identical open).
+      if (earlyWindowPlan.action !== 'proceed') throw new Error('window not proceed at read time');
       const inputs = checkSnapshotReads({
         drafts: await supabase
           .from('drafts')
@@ -576,7 +606,7 @@ Deno.serve(async (req) => {
         // defect (S1/S2/S3/S4): the OLD code read every trade with no time
         // bound at all, netting the ledger "as of whenever this cron happens
         // to run" instead of as of one fixed instant.
-        trades: await readAllTrades(supabase, leagueId, 'user_id, symbol, action, quantity, created_at'),
+        trades: await readAllTrades(supabase, leagueId, 'user_id, symbol, action, quantity, created_at', earlyWindowPlan.open.toISOString(), false),
         existingSnapshots: await supabase
           .from('week_snapshots')
           .select('user_id, symbol, week_end_price', { count: 'exact' })
