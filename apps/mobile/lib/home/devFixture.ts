@@ -19,6 +19,7 @@
 
 export {
   ROBERTO_WEEKS, ROBERTO_HOLDINGS, GIANLUIGI_HOLDINGS, fixtureQty,
+  XL_LEAGUE, XL_ROBERTO_HOLDINGS, XL_GIANLUIGI_HOLDINGS, XL_ROBERTO_WEEKS,
   fixtureSnapshots, fixturePrice, fixtureDraftRows,
   FIXTURE_LEAGUE, FIXTURE_OPPONENT_NAME, FIXTURE_MY_NAME,
   FIXTURE_WEEK6_START, FIXTURE_WEEK6_END,
@@ -44,12 +45,16 @@ export type HomeFixture =
   | 'playoff_bye'
   | 'eliminated'
   | 'missed_playoffs'
-  | 'leader_flip';
+  | 'leader_flip'
+  /** XL capture (17e, 2026-10-05): a dedicated $100,000-stake league, live
+   * like live_open, whose hero reads $123,456.78 / +$23,456.78. Its own
+   * holdings (homeFixtureData.ts); the standard states never touch them. */
+  | 'xl_large_numbers';
 
 const FIXTURES: readonly HomeFixture[] = [
   'live_open', 'live_closed', 'scoring', 'scored', 'pre_season', 'pre_draft',
   'pre_draft_waiting', 'drafting_on_clock', 'drafting_waiting_turn', 'complete', 'complete_runner_up', 'bye',
-  'playoff_live', 'playoff_bye', 'eliminated', 'missed_playoffs', 'leader_flip',
+  'playoff_live', 'playoff_bye', 'eliminated', 'missed_playoffs', 'leader_flip', 'xl_large_numbers',
 ];
 
 /** True for either drafting-family fixture — the states 6/7 group in

@@ -37,6 +37,10 @@ import {
   ROBERTO_HOLDINGS,
   GIANLUIGI_HOLDINGS,
   ROBERTO_WEEKS,
+  XL_LEAGUE,
+  XL_ROBERTO_HOLDINGS,
+  XL_GIANLUIGI_HOLDINGS,
+  XL_ROBERTO_WEEKS,
   FIXTURE_LEAGUE,
   FIXTURE_WEEK6_START,
   FIXTURE_WEEK6_END,
@@ -82,13 +86,32 @@ function cents(v: number): number {
 // live refresh).
 let leaderFlipCall = 0;
 
+/** XL league standings (see homeFixtureData.ts): Roberto leads on his
+ * scored +$15,235.76, so the standard fixture's ranks (Paolo first) would
+ * contradict the hero. Ordered by points, as league_standings_ranked
+ * returns them. Gianluigi's points are his mirrored scored weeks. */
+const XL_STANDINGS: GetHomeLeagueResult['standings'] = [
+  { user_id: 'roberto', rank: 1, wins: 4, losses: 1, ties: 0, points_for: 15235.76, display_name: 'Roberto B.', is_bot: false },
+  { user_id: 'paolo', rank: 2, wins: 3, losses: 2, ties: 0, points_for: 9120.44, display_name: 'Paolo M.', is_bot: false },
+  { user_id: 'luca', rank: 3, wins: 3, losses: 2, ties: 0, points_for: 4280.1, display_name: 'Luca V.', is_bot: false },
+  { user_id: 'marco', rank: 4, wins: 2, losses: 3, ties: 0, points_for: -980.25, display_name: 'Marco T.', is_bot: false },
+  { user_id: 'chiara', rank: 5, wins: 2, losses: 3, ties: 0, points_for: -2215.3, display_name: 'Chiara R.', is_bot: false },
+  { user_id: 'gianluigi', rank: 6, wins: 1, losses: 4, ties: 0, points_for: -15235.76, display_name: 'Gianluigi B.', is_bot: false },
+];
+
 function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): {
   data: GetHomeLeagueResult; meta: HomeLeagueMeta; market: MarketInfo; now: Date;
   quote: (s: string) => number | null; bars: BarsBySymbol; marketCalendar: MarketCalendarSession[];
 } {
-  const myDrafts = ROBERTO_HOLDINGS.map((h) => ({ symbol: h.symbol, entry_price: h.draft, quantity: fixtureQty(h), created_at: '2026-08-01T00:00:00Z' }));
-  const mySnapshots = ROBERTO_HOLDINGS.map((h) => ({ symbol: h.symbol, quantity: fixtureQty(h), week_start_price: h.mon, entered_mid_week: false, created_at: FIXTURE_WEEK6_START }));
-  const oppSnapshots = GIANLUIGI_HOLDINGS.map((h) => ({ symbol: h.symbol, quantity: fixtureQty(h), week_start_price: h.mon, entered_mid_week: false, created_at: FIXTURE_WEEK6_START }));
+  // XL capture (2026-10-05): its own $100k roster, weeks and league; every
+  // other fixture keeps the board sample exactly as before.
+  const isXL = fixture === 'xl_large_numbers';
+  const robRows = isXL ? XL_ROBERTO_HOLDINGS : ROBERTO_HOLDINGS;
+  const giaRows = isXL ? XL_GIANLUIGI_HOLDINGS : GIANLUIGI_HOLDINGS;
+  const robWeeks = isXL ? XL_ROBERTO_WEEKS : ROBERTO_WEEKS;
+  const myDrafts = robRows.map((h) => ({ symbol: h.symbol, entry_price: h.draft, quantity: fixtureQty(h), created_at: '2026-08-01T00:00:00Z' }));
+  const mySnapshots = robRows.map((h) => ({ symbol: h.symbol, quantity: fixtureQty(h), week_start_price: h.mon, entered_mid_week: false, created_at: FIXTURE_WEEK6_START }));
+  const oppSnapshots = giaRows.map((h) => ({ symbol: h.symbol, quantity: fixtureQty(h), week_start_price: h.mon, entered_mid_week: false, created_at: FIXTURE_WEEK6_START }));
 
   const isPreSeason = fixture === 'pre_season';
   const isBye = fixture === 'bye';
@@ -106,15 +129,15 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
   // the data again. Also covers 'complete'/'complete_runner_up': a
   // finished season is, by definition, the same 6-week history.
   const regularSeasonComplete = isPlayoffState || fixture === 'complete' || fixture === 'complete_runner_up';
-  // ROBERTO_WEEKS (1..5) + week6 -- derived, never hard-coded (see doc above).
-  const playoffNumWeeks = ROBERTO_WEEKS.length + 1;
+  // robWeeks (1..5) + week6 -- derived, never hard-coded (see doc above).
+  const playoffNumWeeks = robWeeks.length + 1;
   // Every playoff-family (and complete-family) fixture happens
   // chronologically AFTER the regular season concluded, so week 6 (and
   // every earlier week) is necessarily already scored by then -- never
   // the live/unscored shape.
   const isScored = fixture === 'scored' || regularSeasonComplete;
   const week6Gains = isScored
-    ? { team1_gain: cents(ROBERTO_HOLDINGS.reduce((s, h) => s + fixtureQty(h) * (h.fri - h.mon), 0)), team2_gain: cents(GIANLUIGI_HOLDINGS.reduce((s, h) => s + fixtureQty(h) * (h.fri - h.mon), 0)) }
+    ? { team1_gain: cents(robRows.reduce((s, h) => s + fixtureQty(h) * (h.fri - h.mon), 0)), team2_gain: cents(giaRows.reduce((s, h) => s + fixtureQty(h) * (h.fri - h.mon), 0)) }
     : { team1_gain: null, team2_gain: null };
 
   const week6 = {
@@ -174,7 +197,7 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
     team1_gain: null, team2_gain: null,
   };
 
-  const regularSeasonWeeks = ROBERTO_WEEKS.map((w, i) => {
+  const regularSeasonWeeks = robWeeks.map((w, i) => {
     const monday = new Date(Date.UTC(2026, 6, 6 + i * 7, 13, 30));
     const friday = new Date(monday.getTime() + 4 * 24 * 3600 * 1000 + 6.5 * 3600 * 1000);
     return {
@@ -241,7 +264,7 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
       opponent_trades: [],
     },
     matchups,
-    standings: isPreSeason
+    standings: isXL ? XL_STANDINGS : isPreSeason
       ? [
           { user_id: 'roberto', rank: 1, wins: 0, losses: 0, ties: 0, points_for: 0, display_name: 'Roberto B.', is_bot: false },
           { user_id: 'paolo', rank: 2, wins: 0, losses: 0, ties: 0, points_for: 0, display_name: 'Paolo M.', is_bot: false },
@@ -320,7 +343,7 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
     myUserId: 'roberto', draftStatus, leagueStartDate,
     seasonStatus, currentWeek, numWeeks: regularSeasonComplete ? playoffNumWeeks : FIXTURE_LEAGUE.numWeeks,
     playoffTeams: FIXTURE_LEAGUE.playoffTeams, stakeMode: FIXTURE_LEAGUE.stakeMode,
-    notionalPerSlot: FIXTURE_LEAGUE.notionalPerSlot, numRounds: FIXTURE_LEAGUE.numRounds,
+    notionalPerSlot: isXL ? XL_LEAGUE.notionalPerSlot : FIXTURE_LEAGUE.notionalPerSlot, numRounds: isXL ? XL_LEAGUE.numRounds : FIXTURE_LEAGUE.numRounds,
     draftOrderWaiting: fixture === 'pre_draft_waiting',
   };
 
@@ -389,10 +412,12 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
   leaderFlipCall += 1;
   const leaderFlipFlipped = leaderFlipCall % 2 === 0;
   const quote = (sym: string) => {
+    // A holding with no live price (XL's PLTR) counts at cost, never a quote.
+    if (robRows.find((h) => h.symbol === sym)?.unpriced) return null;
     if (fixture === 'leader_flip') {
       const flipped = leaderFlipFlipped;
-      const mine = ROBERTO_HOLDINGS.find((h) => h.symbol === sym);
-      const theirs = GIANLUIGI_HOLDINGS.find((h) => h.symbol === sym);
+      const mine = robRows.find((h) => h.symbol === sym);
+      const theirs = giaRows.find((h) => h.symbol === sym);
       // S5 (Design Lead, 2026-09-30): "flipped" used to zero my side out
       // entirely (mon -- no gain at all) while surging theirs 50% off
       // Thursday's close, an aggregate move worth thousands of dollars in
@@ -415,13 +440,13 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
     // shouldn't know it yet, showing $12,343.51 -- the same number every
     // OTHER (live) state shows.
     if (isPreSeason) {
-      return ROBERTO_HOLDINGS.find((h) => h.symbol === sym)?.draft ?? GIANLUIGI_HOLDINGS.find((h) => h.symbol === sym)?.draft ?? null;
+      return robRows.find((h) => h.symbol === sym)?.draft ?? giaRows.find((h) => h.symbol === sym)?.draft ?? null;
     }
-    return ROBERTO_HOLDINGS.find((h) => h.symbol === sym)?.thu ?? GIANLUIGI_HOLDINGS.find((h) => h.symbol === sym)?.thu ?? null;
+    return robRows.find((h) => h.symbol === sym)?.thu ?? giaRows.find((h) => h.symbol === sym)?.thu ?? null;
   };
 
   const bars: BarsBySymbol = {};
-  for (const h of ROBERTO_HOLDINGS) {
+  for (const h of robRows) {
     // S1 (Design Lead, 2026-09-30): must be in ascending date order --
     // prevCloseFor takes the LAST entry strictly before "today", so an
     // out-of-order array (this used to list a stray '09-18' bar, a full
@@ -443,8 +468,8 @@ function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): 
     // week's live gain so far -- correct for the week's second day).
     if (isPlayoffLive) bars[h.symbol].push({ date: '2026-12-14', close: h.mon });
   }
-  for (const h of GIANLUIGI_HOLDINGS) {
-    // Same ascending-date fix as ROBERTO_HOLDINGS above, for consistency
+  for (const h of giaRows) {
+    // Same ascending-date fix as robRows above, for consistency
     // (not currently read by todayChange, which only sees my own symbols).
     bars[h.symbol] = bars[h.symbol] ?? [{ date: '2026-09-21', close: h.mon }, { date: '2026-09-23', close: h.prev }, { date: '2026-09-24', close: h.thu }];
   }
