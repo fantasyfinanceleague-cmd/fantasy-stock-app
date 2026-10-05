@@ -31,7 +31,7 @@ import {
   type HomeViewModel,
 } from './buildHomeViewModel';
 import type { MarketInfo } from './homePhase';
-import { standardWeekSessions, type MarketCalendarSession } from './marketWeek';
+import { standardWeekSessions, type MarketCalendarSession } from '../time/marketWeek';
 import {
   HOME_FIXTURE,
   ROBERTO_HOLDINGS,

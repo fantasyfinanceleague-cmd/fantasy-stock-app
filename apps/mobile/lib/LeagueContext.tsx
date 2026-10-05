@@ -6,7 +6,7 @@ import { getSeasonLabel, getSeasonPhase } from './weekStatus';
 import type { SheetLeague } from './shell/leagueSheet';
 import { activeLeagueStorageKey, resolveActiveLeagueId } from './shell/activeLeague';
 import { FIXTURE_NETWORK_MS, SHELL_FIXTURE, fixtureLeagues } from './shell/devFixture';
-import type { MarketCalendarSession } from './home/marketWeek';
+import type { MarketCalendarSession } from './time/marketWeek';
 
 export interface League {
   id: string;
