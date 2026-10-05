@@ -11,7 +11,7 @@ import { checkSnapshotReads, matchupParticipants, snapshotHoldings } from '../_s
 import type { CalendarSession, Coverage as MarketCalendarCoverage } from '../_shared/week-window.ts';
 import { IN_SEASON_STATUSES, SNAPSHOT_DRAFT_STATUS, isInSeasonLeague } from '../_shared/snapshot-league-scope.ts';
 import { classifyCloseCoverage } from '../snapshot-week-end/close.ts';
-import { instantAtOrBefore, instantBefore, selectTargetWeeks, type WeekMatchupRow } from '../_shared/week-select.ts';
+import { instantAtOrBefore, instantBefore, isScoredWeek, selectTargetWeeks, type WeekMatchupRow } from '../_shared/week-select.ts';
 import { shouldWriteJobStatus, successMessage, type JobStatusValue, type StoredJobStatus } from '../_shared/job-status.ts';
 
 /**
@@ -304,24 +304,48 @@ async function fetchOpenPrices(
 }
 
 /**
+ * S2: one league's matchups, ALL weeks. Read per league, never one .in() across
+ * leagues: PostgREST caps a read at 1000 rows by default, and a truncated read would
+ * silently drop weeks from selection. A count at the cap throws instead.
+ */
+const MATCHUP_READ_CAP = 1000;
+async function readLeagueMatchupRows(supabase: any, leagueId: string): Promise<WeekMatchupRow[]> {
+  const { data, error } = await supabase
+    .from('matchups')
+    .select('league_id, week_number, team1_user_id, team1_gain, week_start, week_end, created_at')
+    .eq('league_id', leagueId);
+  if (error) throw new Error(`Failed to read matchups for league ${leagueId}: ${error.message ?? error}`);
+  const rows = (data ?? []) as WeekMatchupRow[];
+  if (rows.length >= MATCHUP_READ_CAP) {
+    throw new Error(`league ${leagueId}: ${rows.length} matchups rows reached the PostgREST cap; refusing a truncated read`);
+  }
+  return rows;
+}
+
+/**
  * S9: set matchups.baseline_completed_at for a league-week (../_shared/baseline.ts).
  * Called ONLY after the week's rows have committed, or after confirming that nothing
  * was held at the open. Never at the window rewrite, and never on an aborted run,
  * so an abort leaves it NULL. Returns false (and logs) on a failed write, so the
  * caller treats the league-week as incomplete.
  */
-async function markBaseline(supabase: any, leagueId: string, weekNumber: number): Promise<boolean> {
-  // .select() so an update that matched NO rows is a failure, not a silent success.
+async function markBaseline(supabase: any, leagueId: string, weekNumber: number, marks: { set: number }): Promise<boolean> {
+  // Only a NULL marker is set (an already-set one is left as it is). .select() so
+  // an update that matched NO rows is a failure, not a silent success.
   const { data, error } = await supabase
     .from('matchups')
     .update({ baseline_completed_at: new Date().toISOString() })
     .eq('league_id', leagueId)
     .eq('week_number', weekNumber)
+    .is('baseline_completed_at', null)
     .select('league_id');
-  if (error || (data ?? []).length === 0) {
-    console.error(`Failed to mark baseline complete for league ${leagueId} week ${weekNumber}:`, error ?? 'no matchups rows matched');
+  if (error) {
+    console.error(`Failed to mark baseline complete for league ${leagueId} week ${weekNumber}:`, error);
     return false;
   }
+  // A newly set marker is real work (S3): a marker-only heal after a retry must
+  // overwrite 'retrying'. An already-set marker is not work (no daily churn).
+  marks.set += (data ?? []).length;
   return true;
 }
 
@@ -430,25 +454,18 @@ Deno.serve(async (req) => {
     };
 
     // S8: the target weeks come from each league's matchups and their windows,
-    // NOT from leagues.current_week (see ../_shared/week-select.ts). One refused
-    // week no longer stops the next week's baseline.
-    const { data: weekRows, error: weekRowsErr } = await supabase
-      .from('matchups')
-      .select('league_id, week_number, team1_user_id, week_start, week_end, created_at')
-      .in('league_id', leagues.map((l: any) => l.id));
-    if (weekRowsErr) {
-      throw new Error(`Failed to read matchups for week selection: ${weekRowsErr.message ?? weekRowsErr}`);
-    }
+    // NOT from leagues.current_week. Read PER LEAGUE (S2, see readLeagueMatchupRows).
     const planNow = new Date();
     const targets: Array<{ leagueId: string; week: number }> = [];
     for (const league of leagues) {
-      const rows = (weekRows ?? []).filter((r: any) => r.league_id === league.id) as WeekMatchupRow[];
+      const rows = await readLeagueMatchupRows(supabase, league.id);
       for (const week of selectTargetWeeks(rows, (anchor, floor, storedStart, storedEnd) =>
         planWeekWindow(planNow, anchor, floor, marketCalendarSessions, marketCalendarCoverage, storedStart, storedEnd, 0))) {
         targets.push({ leagueId: league.id, week });
       }
     }
 
+    const marks = { set: 0 };
     for (const { leagueId, week: currentWeek } of targets) {
 
       // NOTE: the "already snapshotted?" skip moved DOWN to the coverage gate
@@ -465,7 +482,7 @@ Deno.serve(async (req) => {
       const matchupsRead = checkSnapshotReads({
         matchups: await supabase
           .from('matchups')
-          .select('team1_user_id, team2_user_id, week_start, week_end, created_at')
+          .select('team1_user_id, team2_user_id, team1_gain, week_start, week_end, created_at')
           .eq('league_id', leagueId)
           .eq('week_number', currentWeek),
       });
@@ -487,7 +504,8 @@ Deno.serve(async (req) => {
       // inserted atomically by finalize_league_draft — but min() defensively
       // in case that ever isn't true). See ./plan.ts's planWeekWindow doc.
       const windowAnchor = new Date(matchups[0].week_start);
-      const floorMs = Math.min(...matchups.map((m: any) => new Date(m.created_at).getTime()));
+      // Floor over REAL matchups only: a placeholder playoff row must not move the floor.
+      const floorMs = Math.min(...matchups.filter((m: any) => m.team1_user_id).map((m: any) => new Date(m.created_at).getTime()));
       const windowFloor = Number.isFinite(floorMs) ? new Date(floorMs) : null;
       const storedWeekStartIso = matchups[0].week_start;
       const storedWeekEndIso = matchups[0].week_end;
@@ -509,6 +527,12 @@ Deno.serve(async (req) => {
         continue;
       }
       if (earlyWindowPlan.action === 'refuse') {
+        // B1c: a refused window on a fully SCORED week is history, not a gap. Skip it.
+        if (isScoredWeek(matchups)) {
+          console.log(`League ${leagueId} week ${currentWeek}: scored past week, window refused (${earlyWindowPlan.reason}) — skipping`);
+          results.push({ leagueId, week: currentWeek, skipped: 'scored_past_window' });
+          continue;
+        }
         // An IN-SCOPE league whose week cannot be windowed is a real gap (a
         // stalled or mis-calendared season), so it stays a loud refusal.
         anyIncomplete = true;
@@ -637,7 +661,7 @@ Deno.serve(async (req) => {
       // baseline can never be re-taken after a close.
       if (existingSnapshots.some((r: any) => r.week_end_price != null)) {
         if (classifyCloseCoverage(userHoldings, existingSnapshots) === 'complete') {
-          if (!(await markBaseline(supabase, leagueId, currentWeek))) {
+          if (!(await markBaseline(supabase, leagueId, currentWeek, marks))) {
             anyIncomplete = true;
             results.push({ leagueId, week: currentWeek, incomplete: true, markerWriteFailed: true });
             continue;
@@ -656,7 +680,7 @@ Deno.serve(async (req) => {
       // Nothing held at the open is a COMPLETE baseline with zero rows, and the
       // marker says so (S9: zero rows alone cannot tell this apart from "never ran").
       if (coverage === 'none_expected') {
-        if (!(await markBaseline(supabase, leagueId, currentWeek))) {
+        if (!(await markBaseline(supabase, leagueId, currentWeek, marks))) {
           anyIncomplete = true;
           results.push({ leagueId, week: currentWeek, incomplete: true, markerWriteFailed: true });
           continue;
@@ -666,7 +690,7 @@ Deno.serve(async (req) => {
         continue;
       }
       if (coverage === 'complete') {
-        if (!(await markBaseline(supabase, leagueId, currentWeek))) {
+        if (!(await markBaseline(supabase, leagueId, currentWeek, marks))) {
           anyIncomplete = true;
           results.push({ leagueId, week: currentWeek, incomplete: true, markerWriteFailed: true });
           continue;
@@ -750,7 +774,7 @@ Deno.serve(async (req) => {
       // The baseline is now complete for every holder (usersToWrite was every
       // uncovered holder, and buildPricedRows wrote them all). Mark it, so a later
       // week-end can close this week even if zero rows were ever written for it.
-      if (!(await markBaseline(supabase, leagueId, currentWeek))) {
+      if (!(await markBaseline(supabase, leagueId, currentWeek, marks))) {
         anyIncomplete = true;
         results.push({ leagueId, week: currentWeek, users: userIds.size, snapshots: snapshots.length, markerWriteFailed: true });
         continue;
@@ -796,7 +820,8 @@ Deno.serve(async (req) => {
     }
 
     // Update status to success
-    await updateJobStatus(supabase, JOB_NAME, 'success', retryAttempt, undefined, totalSnapshots);
+    // S3: a newly set marker is work too (a marker-only heal after a retry).
+    await updateJobStatus(supabase, JOB_NAME, 'success', retryAttempt, undefined, totalSnapshots + marks.set);
 
     return json({
       message: 'Snapshot complete',

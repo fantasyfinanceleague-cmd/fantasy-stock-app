@@ -7,6 +7,7 @@
  */
 import { assert, assertEquals, assertThrows } from 'jsr:@std/assert';
 import {
+  isScoredWeek,
   instantAtOrBefore,
   instantBefore,
   selectTargetWeeks,
@@ -124,3 +125,27 @@ Deno.test('status: workFromMessage parses only a leading work= marker', () => {
   assertEquals(workFromMessage('processed 3 work=3'), null);
   assertEquals(workFromMessage(null), null);
 });
+
+// ── B1: old scored weeks are never revisited ──────────────────────────────────
+
+Deno.test('B1: an OLD SCORED week is not a target, even though its window is past and inside a stale calendar', () => {
+  const scored = (week: number) => row(week, { team1_gain: '12.50' });
+  assertEquals(selectTargetWeeks([scored(1), scored(2), row(3)], planThrough(3)), [3]);
+});
+
+Deno.test('B1: an OLD UNSCORED week IS still a target (its refusal stays loud, it is a real gap)', () => {
+  assertEquals(selectTargetWeeks([row(1), row(2, { team1_gain: '5' })], planThrough(2)), [1]);
+});
+
+Deno.test('B1: a week is scored only when EVERY real matchup is scored (a partly-scored week is still a target)', () => {
+  const partly = [row(1, { team1_gain: '1' }), row(1, { team1_user_id: 'u2', team1_gain: null })];
+  assertEquals(selectTargetWeeks(partly, planThrough(1)), [1]);
+  assertEquals(isScoredWeek(partly), false);
+});
+
+Deno.test('B1: placeholder rows never make a week look unscored (scored real rows + placeholder = scored)', () => {
+  const rows = [row(1, { team1_gain: '3' }), row(1, { team1_user_id: null, team1_gain: null } as any)];
+  assertEquals(isScoredWeek(rows), true);
+  assertEquals(selectTargetWeeks(rows, planThrough(1)), []);
+});
+

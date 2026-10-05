@@ -468,3 +468,13 @@ Deno.test('planWeekWindow FLOOR: a league drafted Monday 11 AM ET (after Monday\
   if (r2.action !== 'proceed') throw new Error(`expected proceed, got ${r2.action}`);
   assertEquals(r2.openSessionDate, '2026-09-29');
 });
+
+Deno.test('planWeekWindow S4: a stored window in PostgREST +00:00 form that equals the cut does NOT rewrite (no re-window every run)', () => {
+  const now = new Date('2026-10-01T00:00:00.000Z');
+  const r = planWeekWindow(
+    now, NOMINAL_ANCHOR, null, NORMAL_WEEK, WIDE_COVERAGE,
+    '2026-09-28T13:30:00+00:00', '2026-10-02T20:00:00+00:00', 5,
+  );
+  assert(r.action === 'proceed');
+  assertEquals(r.rewrite, false);
+});

@@ -5,39 +5,46 @@
 import { assertEquals } from 'jsr:@std/assert';
 import { weekEndBaselineGate, type BaselineEvidence } from './baseline.ts';
 
-const base: BaselineEvidence = { needsBaseline: true, markerSet: false, markerReadOk: true, openHoldersAllHaveRows: false };
+// A partial baseline: two holders at the open, one with no row.
+const partial: BaselineEvidence = {
+  needsBaseline: true, markerSet: false, markerReadOk: true, openHolderCount: 2, openHoldersMissingRows: 1,
+};
 
-Deno.test('S9 refuse: holdings, no marker, and the open holders have no rows -> the baseline never ran', () => {
-  assertEquals(weekEndBaselineGate(base), 'refuse_no_baseline');
+Deno.test('S9 refuse: holders at the open with a missing row and no marker -> the baseline is partial', () => {
+  assertEquals(weekEndBaselineGate(partial), 'refuse_no_baseline');
 });
 
-Deno.test('S9 PARTIAL refuse: no marker, and an open holder is missing a row -> refuse', () => {
-  assertEquals(weekEndBaselineGate({ ...base, openHoldersAllHaveRows: false }), 'refuse_no_baseline');
+Deno.test('S1: a STALE marker cannot override per-holder evidence: marker set, a holder still missing -> refuse', () => {
+  assertEquals(weekEndBaselineGate({ ...partial, markerSet: true }), 'refuse_no_baseline');
 });
 
-Deno.test('S9 recoverable: refuse -> late week-start heal sets the marker -> the same close proceeds', () => {
-  let e = base;
+Deno.test('S9 recoverable: refuse -> late week-start heal writes every row (and the marker) -> the same close proceeds', () => {
+  let e = partial;
   assertEquals(weekEndBaselineGate(e), 'refuse_no_baseline');
-  e = { ...e, markerSet: true, openHoldersAllHaveRows: true };
+  e = { ...e, openHoldersMissingRows: 0, markerSet: true };
   assertEquals(weekEndBaselineGate(e), 'proceed');
 });
 
-Deno.test('cc26857: every holder bought mid-week (nobody held at the open) with the marker set by week-start -> proceed', () => {
-  assertEquals(weekEndBaselineGate({ needsBaseline: true, markerSet: true, markerReadOk: true, openHoldersAllHaveRows: null }), 'proceed');
+Deno.test('legacy: every holder at the open has a row (baselined before the marker existed) -> proceed, not a stall', () => {
+  assertEquals(weekEndBaselineGate({ ...partial, openHoldersMissingRows: 0 }), 'proceed');
 });
 
-Deno.test('cc26857 without the marker: nobody held at the open and no marker -> refuse (cannot tell "never ran" from "ran, nothing held")', () => {
-  assertEquals(weekEndBaselineGate({ needsBaseline: true, markerSet: false, markerReadOk: true, openHoldersAllHaveRows: null }), 'refuse_no_baseline');
+Deno.test('cc26857: every holder bought mid-week (nobody held at the open) with the marker set -> proceed', () => {
+  assertEquals(weekEndBaselineGate({
+    needsBaseline: true, markerSet: true, markerReadOk: true, openHolderCount: 0, openHoldersMissingRows: 0,
+  }), 'proceed');
 });
 
-Deno.test('legacy: no marker, but every open holder already has a row (baselined before deploy) -> proceed, not a stall', () => {
-  assertEquals(weekEndBaselineGate({ ...base, openHoldersAllHaveRows: true }), 'proceed');
+Deno.test('cc26857 without the marker: nobody held at the open and no marker -> refuse ("never ran" vs "ran, nothing held")', () => {
+  assertEquals(weekEndBaselineGate({
+    needsBaseline: true, markerSet: false, markerReadOk: true, openHolderCount: 0, openHoldersMissingRows: 0,
+  }), 'refuse_no_baseline');
 });
 
 Deno.test('S9: nothing held at either cut needs no evidence', () => {
-  assertEquals(weekEndBaselineGate({ ...base, needsBaseline: false }), 'proceed');
+  assertEquals(weekEndBaselineGate({ ...partial, needsBaseline: false }), 'proceed');
 });
 
 Deno.test('S9 fail closed: an unreadable marker refuses, even when every row is present', () => {
-  assertEquals(weekEndBaselineGate({ ...base, markerReadOk: false, openHoldersAllHaveRows: true }), 'refuse_marker_unreadable');
+  assertEquals(weekEndBaselineGate({ ...partial, markerReadOk: false, openHoldersMissingRows: 0 }), 'refuse_marker_unreadable');
 });

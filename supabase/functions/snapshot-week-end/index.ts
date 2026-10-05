@@ -4,7 +4,7 @@ import { classifyCloseCoverage, buildCloseWork, planCloseWindow, type Holding } 
 import { checkSnapshotReads, matchupParticipants, snapshotHoldings } from '../_shared/snapshot-holdings.ts';
 import type { CalendarSession, Coverage as MarketCalendarCoverage } from '../_shared/week-window.ts';
 import { IN_SEASON_STATUSES, SNAPSHOT_DRAFT_STATUS, isInSeasonLeague } from '../_shared/snapshot-league-scope.ts';
-import { instantAtOrBefore, instantBefore, selectTargetWeeks, type WeekMatchupRow } from '../_shared/week-select.ts';
+import { instantAtOrBefore, instantBefore, isScoredWeek, selectTargetWeeks, type WeekMatchupRow } from '../_shared/week-select.ts';
 import { shouldWriteJobStatus, successMessage, type JobStatusValue, type StoredJobStatus } from '../_shared/job-status.ts';
 import { weekEndBaselineGate } from '../_shared/baseline.ts';
 
@@ -292,6 +292,25 @@ async function fetchClosePrices(
 // tests in close.test.ts. Keeping a second copy here would let the tested
 // and untested implementations drift.
 
+/**
+ * S2: one league's matchups, ALL weeks. Read per league, never one .in() across
+ * leagues: PostgREST caps a read at 1000 rows by default, and a truncated read would
+ * silently drop weeks from selection. A count at the cap throws instead.
+ */
+const MATCHUP_READ_CAP = 1000;
+async function readLeagueMatchupRows(supabase: any, leagueId: string): Promise<WeekMatchupRow[]> {
+  const { data, error } = await supabase
+    .from('matchups')
+    .select('league_id, week_number, team1_user_id, team1_gain, week_start, week_end, created_at')
+    .eq('league_id', leagueId);
+  if (error) throw new Error(`Failed to read matchups for league ${leagueId}: ${error.message ?? error}`);
+  const rows = (data ?? []) as WeekMatchupRow[];
+  if (rows.length >= MATCHUP_READ_CAP) {
+    throw new Error(`league ${leagueId}: ${rows.length} matchups rows reached the PostgREST cap; refusing a truncated read`);
+  }
+  return rows;
+}
+
 Deno.serve(async (req) => {
   // SECURITY: apikey validation must be the first thing we do — before reading
   // the body, before any DB connection, before any business logic. With
@@ -367,19 +386,12 @@ Deno.serve(async (req) => {
     let totalNewSnapshots = 0;
     const results: any[] = [];
 
-    // S8: target weeks come from each league's matchups and their CLOSE windows
-    // (see ../_shared/week-select.ts), not from leagues.current_week.
-    const { data: weekRows, error: weekRowsErr } = await supabase
-      .from('matchups')
-      .select('league_id, week_number, team1_user_id, week_start, week_end, created_at')
-      .in('league_id', leagues.map((l: any) => l.id));
-    if (weekRowsErr) {
-      throw new Error(`Failed to read matchups for week selection: ${weekRowsErr.message ?? weekRowsErr}`);
-    }
+    // S8: target weeks come from each league's matchups and their CLOSE windows,
+    // NOT from leagues.current_week. Read PER LEAGUE (S2, see readLeagueMatchupRows).
     const planNow = new Date();
     const targets: Array<{ leagueId: string; week: number }> = [];
     for (const league of leagues) {
-      const rows = (weekRows ?? []).filter((r: any) => r.league_id === league.id) as WeekMatchupRow[];
+      const rows = await readLeagueMatchupRows(supabase, league.id);
       for (const week of selectTargetWeeks(rows, (anchor, floor) =>
         planCloseWindow(planNow, anchor, floor, marketCalendarSessions, marketCalendarCoverage))) {
         targets.push({ leagueId: league.id, week });
@@ -393,7 +405,7 @@ Deno.serve(async (req) => {
       const matchupsRead = checkSnapshotReads({
         matchups: await supabase
           .from('matchups')
-          .select('team1_user_id, team2_user_id, week_start, week_end, created_at')
+          .select('team1_user_id, team2_user_id, team1_gain, week_start, week_end, created_at')
           .eq('league_id', leagueId)
           .eq('week_number', currentWeek),
       });
@@ -418,7 +430,8 @@ Deno.serve(async (req) => {
       // decides the cut; the not_due check below stays as a defence.
       // No rewrite here: snapshot-week-start owns that side effect.
       const windowAnchor = new Date(matchups[0].week_start);
-      const floorMs = Math.min(...matchups.map((m: any) => new Date(m.created_at).getTime()));
+      // Floor over REAL matchups only: a placeholder playoff row must not move the floor.
+      const floorMs = Math.min(...matchups.filter((m: any) => m.team1_user_id).map((m: any) => new Date(m.created_at).getTime()));
       const windowFloor = Number.isFinite(floorMs) ? new Date(floorMs) : null;
       const windowPlan = planCloseWindow(new Date(), windowAnchor, windowFloor, marketCalendarSessions, marketCalendarCoverage);
       if (windowPlan.action === 'not_due') {
@@ -426,6 +439,12 @@ Deno.serve(async (req) => {
         continue;
       }
       if (windowPlan.action === 'refuse') {
+        // B1c: a refused window on a fully SCORED week is history, not a gap. Skip it.
+        if (isScoredWeek(matchups)) {
+          console.log(`League ${leagueId} week ${currentWeek}: scored past week, window refused (${windowPlan.reason}) — skipping`);
+          results.push({ leagueId, week: currentWeek, updated: 0, newSnapshots: 0, skipped: 'scored_past_window' });
+          continue;
+        }
         // An IN-SCOPE league whose week cannot be windowed is a real gap: refuse loudly.
         anyIncomplete = true;
         console.error(
@@ -532,7 +551,7 @@ Deno.serve(async (req) => {
       const anyCloseHoldings = [...userHoldings.values()].some((hs) => hs.length > 0);
       const needsBaseline = openHolderIds.length > 0 || anyCloseHoldings;
       const rowUsers = new Set(existingSnapshots.map((r: any) => String(r.user_id)));
-      const openHoldersAllHaveRows = openHolderIds.length > 0 ? openHolderIds.every((u) => rowUsers.has(u)) : null;
+      const openHoldersMissingRows = openHolderIds.filter((u) => !rowUsers.has(u)).length;
       let markerSet = false;
       let markerReadOk = true;
       if (needsBaseline) {
@@ -546,7 +565,13 @@ Deno.serve(async (req) => {
         markerReadOk = !marker.error;
         markerSet = (marker.data ?? []).length > 0;
       }
-      const baselineGate = weekEndBaselineGate({ needsBaseline, markerSet, markerReadOk, openHoldersAllHaveRows });
+      const baselineGate = weekEndBaselineGate({
+        needsBaseline,
+        markerSet,
+        markerReadOk,
+        openHolderCount: openHolderIds.length,
+        openHoldersMissingRows,
+      });
       if (baselineGate !== 'proceed') {
         anyIncomplete = true;
         console.error(`ABORT league ${leagueId} week ${currentWeek}: ${baselineGate} — holdings exist but week-start has not marked the baseline complete; refusing to close a partial portfolio. A week-start heal will baseline it.`);

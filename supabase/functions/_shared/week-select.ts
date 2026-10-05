@@ -28,9 +28,22 @@ export interface WeekMatchupRow {
   league_id?: string;
   week_number: number;
   team1_user_id: string | null;
+  /** Set by process-week-results when the matchup is scored. Null = unscored. */
+  team1_gain?: number | string | null;
   week_start: string;
   week_end: string;
   created_at: string;
+}
+
+/**
+ * A league-week is SCORED when every real (non-placeholder) matchup in it has a
+ * team1_gain. A scored week is finished: nothing about its baseline or close can
+ * change, so the snapshot jobs must not revisit it. Revisiting it is what made old
+ * weeks refuse 'no_coverage' forever once calendar coverage moved on (B1).
+ */
+export function isScoredWeek(rows: ReadonlyArray<Pick<WeekMatchupRow, 'team1_user_id' | 'team1_gain'>>): boolean {
+  const real = rows.filter((r) => r.team1_user_id);
+  return real.length > 0 && real.every((r) => r.team1_gain != null);
 }
 
 export type WindowPlanAction = 'not_due' | 'refuse' | 'proceed';
@@ -76,6 +89,8 @@ export function selectTargetWeeks(
   const targets: number[] = [];
   for (const week of [...byWeek.keys()].sort((a, b) => a - b)) {
     const weekRows = byWeek.get(week)!;
+    // B1: a scored week is never a target, however old its window is.
+    if (isScoredWeek(weekRows)) continue;
     const first = weekRows[0];
     const floorMs = Math.min(...weekRows.map((r) => instantMs(r.created_at)));
     const result = plan(

@@ -2,37 +2,38 @@
  * S9: may snapshot-week-end close a league-week, given the baseline evidence?
  *
  * THE DEFECT: week-end writes rows for traded symbols even when week-start never
- * baselined the week. Closing then scores a PARTIAL portfolio (all-or-nothing,
- * CLAUDE.md). Zero rows cannot tell "nothing held at the open" from "the baseline
- * never ran", so the marker decides the zero-row case.
+ * baselined a holder. Closing then scores a PARTIAL portfolio (all-or-nothing,
+ * CLAUDE.md).
  *
- * THE RULE: a league-week with any holding (at the open or the close) may close when:
- *   - the marker matchups.baseline_completed_at is set (week-start finished it,
- *     including nothing-held and the late heal), OR
- *   - legacy evidence: every holder held at the OPEN already has a row. That is a
- *     complete baseline written before the marker existed. Without this, every
- *     pre-deploy league-week with holdings would refuse on the first Friday after
- *     deploy and stall scoring. A PARTIAL baseline (any open holder without a row)
- *     still refuses.
- * A week with nothing held at either cut needs no evidence. A failed marker read
- * refuses (fail closed). With nobody held at the open and no marker, the week
- * refuses: that is the zero-row ambiguity the marker exists to resolve.
+ * THE RULE, in this order:
+ *   1. Nothing held at the open or the close  -> proceed (no baseline is needed).
+ *   2. The marker read failed                 -> refuse (fail closed).
+ *   3. Holders held at the OPEN exist         -> the per-holder row evidence governs:
+ *        every one has a row  -> proceed (complete baseline)
+ *        any one lacks a row  -> refuse (partial). The marker does NOT override this.
+ *      (A stale or wrong marker can therefore never let a close proceed past a
+ *      holder that has no baseline; CLAUDE.md "all-or-nothing", case 5.)
+ *   4. Nobody held at the open (every holder bought mid-week, cc26857) -> the zero
+ *      rows are ambiguous, so the marker decides: set by week-start -> proceed;
+ *      unset -> refuse ("never ran" is indistinguishable from "ran, nothing held").
+ *
+ * The marker is therefore needed only where zero rows are ambiguous. It is written by
+ * week-start only after its rows commit, or after confirming nothing was held.
  *
  * Pure: no DB. See baseline.test.ts.
  */
 
 export interface BaselineEvidence {
-  /** The league-week has a holding at the open or the close. */
+  /** A holder held a position at the open or the close. */
   needsBaseline: boolean;
   /** matchups.baseline_completed_at is set for this league-week. */
   markerSet: boolean;
   /** The marker read succeeded. A failed read refuses (fail closed). */
   markerReadOk: boolean;
-  /**
-   * Every holder held at the open has a week_snapshots row. null when nobody held
-   * at the open, so there is no row evidence to offer.
-   */
-  openHoldersAllHaveRows: boolean | null;
+  /** How many holders held at the OPEN cut (the set week-start baselines). */
+  openHolderCount: number;
+  /** Of those, how many have NO week_snapshots row. */
+  openHoldersMissingRows: number;
 }
 
 export type BaselineGate = 'proceed' | 'refuse_no_baseline' | 'refuse_marker_unreadable';
@@ -40,7 +41,8 @@ export type BaselineGate = 'proceed' | 'refuse_no_baseline' | 'refuse_marker_unr
 export function weekEndBaselineGate(e: BaselineEvidence): BaselineGate {
   if (!e.needsBaseline) return 'proceed';
   if (!e.markerReadOk) return 'refuse_marker_unreadable';
-  if (e.markerSet) return 'proceed';
-  if (e.openHoldersAllHaveRows === true) return 'proceed';
-  return 'refuse_no_baseline';
+  if (e.openHolderCount > 0) {
+    return e.openHoldersMissingRows === 0 ? 'proceed' : 'refuse_no_baseline';
+  }
+  return e.markerSet ? 'proceed' : 'refuse_no_baseline';
 }
