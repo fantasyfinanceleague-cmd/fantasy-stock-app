@@ -199,13 +199,16 @@ const styles = StyleSheet.create({
   },
   orderRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: space[2],
   },
   dot: {
     width: 6,
     height: 6,
     borderRadius: 3,
+    // S2 (Design Lead gate, 2026-10-05): with flex-start the dot must sit on
+    // the first line of a wrapped sentence. (callout's 18 pt line - 6 pt dot) / 2.
+    marginTop: 6,
   },
   orderWaiting: {
     padding: space[4],

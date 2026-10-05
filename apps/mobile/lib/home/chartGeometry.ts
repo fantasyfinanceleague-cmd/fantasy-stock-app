@@ -18,6 +18,10 @@ export interface ChartPoint {
 export interface ChartGeometry {
   /** The line's `d` attribute. */
   linePath: string;
+  /** Real length of linePath in px (sum of segment lengths). The draw-in
+   * dash uses this, not a normalised pathLength -- react-native-svg ignores
+   * pathLength at runtime, so a dash of "1" drew the line as dots. */
+  lineLength: number;
   /** The filled area under/over the line, closed at the zero line — pass
    * this to two <Path>s, one clipped above zero (gain fill) and one
    * clipped below (loss fill), exactly like the board's two clipPaths. */
@@ -76,7 +80,12 @@ export function buildChartGeometry(
   const firstX = points.length > 0 ? points[0].x : 0;
   const areaPath = `${linePath} L${lastX.toFixed(2)},${zeroY.toFixed(2)} L${firstX.toFixed(2)},${zeroY.toFixed(2)} Z`;
 
-  return { linePath, areaPath, zeroY, points, width, height };
+  let lineLength = 0;
+  for (let i = 1; i < points.length; i++) {
+    lineLength += Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
+  }
+
+  return { linePath, areaPath, zeroY, points, width, height, lineLength };
 }
 
 /** The index of the series point closest to pixel x — the scrub gesture's

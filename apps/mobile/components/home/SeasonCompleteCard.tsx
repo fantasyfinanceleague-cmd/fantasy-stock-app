@@ -140,14 +140,17 @@ export function SeasonCompleteCard({
         </Text>
         {participated ? (
           <>
-            <Text variant="score.md" style={styles.headline}>
+            {/* S3 (Design Lead gate, 2026-10-05): score.md caps at 1.2x while the
+                subtitle below grows freely, so at XXXL the title rendered smaller
+                than its own subtitle. The title's cap now matches the subtitle's reach. */}
+            <Text variant="score.md" maxFontSizeMultiplier={2.4} style={styles.headline}>
               {isChampion ? CHAMPION_LABEL : placeLabel(finalRank)}
             </Text>
             <Text variant="callout">{isChampion ? wonLeagueLine(leagueName) : nonChampionLine(leagueName, record)}</Text>
           </>
         ) : (
           <>
-            <Text variant="score.md" style={styles.headline}>
+            <Text variant="score.md" maxFontSizeMultiplier={2.4} style={styles.headline}>
               {result?.champion_display_name ?? CHAMPION_LABEL}
             </Text>
             <Text variant="callout">{championAnnounceLine(leagueName)}</Text>

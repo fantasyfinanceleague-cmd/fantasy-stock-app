@@ -17,6 +17,9 @@ import { buildChartGeometry, nearestPointIndex } from '@/lib/home/chartGeometry'
 import type { SeasonGainPoint } from '@/lib/home/seasonGainSeries';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
+// Height the scrub label needs at the top edge (S1): a point above this line
+// flips its label below the point.
+const SCRUB_LABEL_CLEAR = 52;
 
 // Stockpile — <SeasonChart> (Phase 3b-2, D1 Concept A: "Season gain, week
 // by week"). Zero baseline, gain fill above / loss fill below via two
@@ -24,7 +27,8 @@ const AnimatedPath = Animated.createAnimatedComponent(Path);
 // (docs/design/screens/screens.jsx) approach exactly.
 //
 // H2: the line draws in on first view (`feature` duration) via the
-// standard pathLength=1 / strokeDashoffset trick; a window change morphs
+// solid dash of the line's real length, with strokeDashoffset drawing it
+// in (B1, 2026-10-05); a window change morphs
 // between paths at `base`. The live endpoint gets the pulsing dot ONLY
 // while the market is open (the caller passes `live`). Scrub: a
 // long-press-then-drag Pan gesture shows a floating (date · gain) label
@@ -86,8 +90,19 @@ export function SeasonChart({ points, live = false, weekStartIdx, onScrubIndex, 
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-running per `currentKey` change is the point (a new series draws in); duration/easing/withTiming are stable per render from useMotion().
   }, [currentKey, reduced]);
 
+  // B1 (Design Lead gate, 2026-10-05): the draw-in dashes a SOLID line by its
+  // real length. The old pathLength=1 / dash "1" trick is ignored by
+  // react-native-svg: the line rendered as dots and the offset barely moved.
+  // The dash is [L, L] and the offset runs from L (hidden) to 0 (drawn).
+  const lineLength = geometry?.lineLength ?? 0;
+  const lineLengthSV = useSharedValue(0);
+  useEffect(() => {
+    lineLengthSV.value = lineLength;
+  }, [lineLength]);
+  const dashLength = Math.max(lineLength, 1);
+
   const animatedProps = useAnimatedProps(() => ({
-    strokeDashoffset: 1 - drawProgress.value,
+    strokeDashoffset: lineLengthSV.value * (1 - drawProgress.value),
   }));
 
   function handleLayout(e: LayoutChangeEvent) {
@@ -158,12 +173,7 @@ export function SeasonChart({ points, live = false, weekStartIdx, onScrubIndex, 
               </SvgText>
               <AnimatedPath
                 d={geometry.linePath}
-                // react-native-svg 15's TS types omit `pathLength`, even
-                // though RNSVG supports the attribute at runtime (the
-                // standard "normalize the path to length 1" trick this
-                // draw-in animation relies on) — cast only this one prop.
-                {...({ pathLength: 1 } as { pathLength: number })}
-                strokeDasharray="1"
+                strokeDasharray={`${dashLength} ${dashLength}`}
                 animatedProps={animatedProps}
                 stroke={endValue >= 0 ? colors.gain : colors.loss}
                 strokeWidth={2}
@@ -195,7 +205,9 @@ export function SeasonChart({ points, live = false, weekStartIdx, onScrubIndex, 
               </View>
             ) : null}
             {scrubLabel ? (
-              <View style={[styles.scrubLabel, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              // S1 (Design Lead gate, 2026-10-05): a point in the top strip would
+              // sit under a label pinned to the top edge, so the label drops below it.
+              <View style={[styles.scrubLabel, scrubPoint && scrubPoint.y < SCRUB_LABEL_CLEAR ? { top: scrubPoint.y + 12 } : null, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <Text variant="caption" tone="secondary">
                   {scrubLabel.primary}
                 </Text>

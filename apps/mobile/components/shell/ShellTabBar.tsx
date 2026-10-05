@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { ComponentProps, useEffect, useState } from 'react';
-import { LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native';
+import { LayoutChangeEvent, PixelRatio, Pressable, StyleSheet, View } from 'react-native';
 import type { Tabs } from 'expo-router';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -127,6 +127,9 @@ interface TabItemProps {
   onLongPress: () => void;
 }
 
+// Platform large-content threshold (font scale >= 1.5), read once per mount.
+const LARGE_TEXT = PixelRatio.getFontScale() >= 1.5;
+
 function TabItem({ label, icon, focused, color, onPress, onLongPress }: TabItemProps) {
   const { reduced, duration, easing } = useMotion();
   const scale = useSharedValue(1);
@@ -151,9 +154,16 @@ function TabItem({ label, icon, focused, color, onPress, onLongPress }: TabItemP
       <Animated.View style={iconStyle}>
         <TabIcon name={icon} color={color} focused={focused} />
       </Animated.View>
-      <Text variant="caption" color={color} numberOfLines={1} maxFontSizeMultiplier={LABEL_MAX_SCALE} style={styles.label}>
-        {label}
-      </Text>
+      {/* B3 (Design Lead gate, 2026-10-05): at large Dynamic Type a one-line
+          label cannot fit a tab ("Ho…", "Leag…"), and a single word like
+          "Portfolio" cannot wrap. Past the large-content threshold the visible
+          label is hidden; the tab keeps its accessibilityLabel. Default size
+          is unchanged. */}
+      {LARGE_TEXT ? null : (
+        <Text variant="caption" color={color} numberOfLines={1} maxFontSizeMultiplier={LABEL_MAX_SCALE} style={styles.label}>
+          {label}
+        </Text>
+      )}
     </Pressable>
   );
 }
