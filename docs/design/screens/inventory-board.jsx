@@ -80,6 +80,7 @@
             'Before the season there is no leader and no gain: zero is grey, never green.',
             'Nights and weekends freeze the scoreboard at the last close and say when it resumes.',
             'After Friday\'s close the card shows "Scoring…" until the results post; nothing is presented as final before it is.',
+            'Season complete: the commissioner also gets the "Run it back?" card, and every Season 1 player later gets the "Are you in?" card (see Run it back).',
             'A symbol with no live price counts at cost and is named in a caption ("1 holding counted at cost (no live price yet)"), on the hero and on whichever side of the scoreboard it affects. A partial total never passes as a complete one.',
           ]}>
           <Fit caption="Before the draft" note="Serie A Traders"><I.HomePreDraft /></Fit>
@@ -126,23 +127,24 @@
           <Fit caption="Playoff bracket · 6 teams" note="3 weeks; seeds 1–2 get first-round byes (new copy; round names decided)"><I.Playoffs6 /></Fit>
         </Group>
 
-        <section className="b-sec" id="call-run-it-back" aria-labelledby="call-run-it-back-h">
+        <section className="b-sec" id="run-it-back" aria-labelledby="run-it-back-h">
           <header className="b-sec__head">
-            <span className="b-sec__n">?</span>
+            <span className="b-sec__n b-sec__n--code">3c</span>
             <div>
-              <h2 id="call-run-it-back-h">Your call: Run it back</h2>
-              <p className="b-job">Season 1 of Stock Scudetto is over (Roberto B. won, 11–3). The commissioner renews the league so the same group plays Season 2. Who's in is decided; three choices remain. All copy here is new. Anything tagged <b>Needs backend</b> depends on the renewal plan being scoped now: today's "start new season" deletes the matchups, keeps the old teams and skips the draft, so it can't be used as it is.</p>
+              <h2 id="run-it-back-h">Run it back</h2>
+              <p className="b-job">Season 1 is over; the commissioner renews the league so the group plays Season 2. Decided by Giorgio (2026-10-04); all copy here is approved. Built in 3c (League tab + the Home cards) on the backend in feat/run-it-back.</p>
             </div>
           </header>
-          <div className="b-ask" style={{ marginTop: 0, marginBottom: 28, maxWidth: '84ch' }}>
-            <h3>Your call · decided and open</h3>
-            <ol style={{ margin: 0, paddingLeft: 20, display: 'grid', gap: 6 }}>
-              <li><b>Who's in: DECIDED (opt-in).</b> Only the commissioner can run it back. Every Season 1 player then gets "I'm in / I'm out" (a push, plus a card on Home and the League tab), the commissioner is told about each reply and sees In / Out / No reply yet, and the draft can't be set until nobody is left without a reply. New people can join with the invite code; the team count follows who's in, up to 16. The commissioner clears a missing reply with <b>"Nudge again"</b> or <b>"Remove"</b> (decided). Players can change their answer until the draft is set (decided). A player who answers "I'm in" goes straight to the full "Who's running back" list (decided).</li>
-              <li><b>Teams: a new draft.</b> Draft night is the best moment in the game, and last season's luck doesn't carry over. Keepers can come later.</li>
-              <li><b>Settings: everything carries over</b>, and the commissioner can change any of it on one review screen before the draft.</li>
-              <li><b>History: Season 1 stays.</b> A champion banner on the League tab until Season 2's draft, and League › History keeps every season's standings, matchups and draft.</li>
-            </ol>
-          </div>
+          <ul className="b-inv__notes">
+            <li><b>Only the commissioner</b> runs it back: the "Run it back?" card on the season-complete Home and the League tab action. Season 2 is a new league linked to Season 1, which stays frozen and complete.</li>
+            <li><b>Opt-in.</b> Every Season 1 player gets "Roberto B. is running it back. Are you in for Season 2?" (push + a card on Home and the League tab). Answers can flip in ↔ out until the draft is set.</li>
+            <li><b>The commissioner hears every reply</b> and reconciles on "Who's running back": Season 1 order, "Running back" (name bold), "Out" (muted), "No reply yet" with <b>Nudge again</b> (once a day) or <b>Remove</b>; new joiners last ("New", "Joining").</li>
+            <li><b>A player who is in</b> goes straight to the same list, read-only, with "You're running back · Change". Players who are out or haven't answered don't see it.</li>
+            <li><b>The draft can't be set</b> while anyone is "No reply yet": the draft rows stay disabled with the reason inline (the server enforces it too).</li>
+            <li><b>New players</b> join with the invite code, not capped by Season 1's size (up to 16 until the draft), and see Season 1's history.</li>
+            <li><b>Teams start with a new draft</b>; every setting carries over and the commissioner can edit it on the review. Keepers / keep teams were not chosen.</li>
+            <li><b>History:</b> a Season 1 champion banner on the League tab until Season 2's draft; League › History lists every season with its final standings, matchups and draft.</li>
+          </ul>
 
           <h3 className="b-sub">Starting it (commissioner only)</h3>
           <div className="b-concepts b-concepts--three">
@@ -151,28 +153,21 @@
             <Fit caption="Push · every Season 1 player" note="Sent the moment the commissioner runs it back; opens the I'm in / I'm out card."><I.RibPush mode="ask" /></Fit>
           </div>
 
-          <h3 className="b-sub">(a) Who's in · decided: opt-in, the commissioner reconciles</h3>
+          <h3 className="b-sub">Who's in: opt-in, the commissioner reconciles</h3>
           <div className="b-concepts b-concepts--three">
             <Fit caption="1 · Member: Home (and the League tab)" note="The same card sits on the League tab. I'm in opens the full list (4b). An answer can change until the draft is set."><I.RibMemberPrompt /></Fit>
             <Fit caption="2 · Commissioner: a push for each reply" note="Every answer notifies the commissioner, with the running count."><I.RibPush mode="reply" /></Fit>
             <Fit caption="3 · Commissioner: Home while replies come in" note="Counts and who's still to reply; opens the reconcile view."><I.RibHomeCounts /></Fit>
             <Fit caption="4 · Commissioner: League tab, reconcile" note={`Standings-style, in Season 1 order: "Running back" (Giorgio's copy) with the name in bold; "Out" muted; "No reply yet" with "Nudge again · Remove" (Giorgio's words) on the row; new joiners last with a New marker and "Joining". Draft rows stay disabled until nobody is left without a reply. Needs backend: replies, and joins during renewal.`}><I.RibReconcile /></Fit>
-            <Fit caption="4b · A member who said I'm in (decided)" note="Answering I'm in opens this: the same list with every answer and no actions, plus 'Change'. To confirm only: players who are out or haven't answered don't see it."><I.RibMemberList /></Fit>
-            <Fit caption="5 · Clearing a non-reply (decided)" note='"Nudge again" re-sends the push; "Remove" takes them out of Season 2 and tells them (Giorgio&#39;s words).'><I.RibResolve /></Fit>
-            <Fit caption="6 · After everyone has replied: the review" note="Teams = who's in + new joins (here 4 + 1 = 5, up to 16), with the uneven-bye heads-up. Needs backend: today join refuses league_full."><I.RibReview /></Fit>
+            <Fit caption="4b · A member who said I'm in" note="Answering I'm in opens this: the same list with every answer and no actions, plus 'Change'. Players who are out or haven't answered don't see it."><I.RibMemberList /></Fit>
+            <Fit caption="5 · Clearing a non-reply" note='"Nudge again" re-sends the ask (once a day); "Remove" takes them out of Season 2 and tells them.'><I.RibResolve /></Fit>
+            <Fit caption="6 · After everyone has replied: the review" note="Every Season 1 setting carried over and editable; teams = who's in + new joins (here 4 + 1 = 5, up to 16), with the uneven-bye heads-up. Schedule the draft = start_renewed_season."><I.RibReview /></Fit>
           </div>
 
-          <h3 className="b-sub">(b) How teams start</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="A · new draft (lean)" note="Fresh and fair; the draft order is new (Random or Manual, set an hour before). Uses the existing draft."><I.RibTeams mode="draft" /></Fit>
-            <Fit caption="B · keep teams" note="No draft night, and last season's best team starts ahead on picks. Needs backend: restart every slot at $2,000 at Week 1's open."><I.RibTeams mode="keep" /></Fit>
-            <Fit caption="C · keepers (keep up to 2)" note="Continuity plus a draft, the fantasy-football favourite. Needs backend: keeper picks and a shorter draft. A good later upgrade."><I.RibTeams mode="keepers" /></Fit>
-          </div>
-
-          <h3 className="b-sub">(c) Settings: see frame 6 above (every Season 1 setting carried over, editable until the draft) · (d) History</h3>
+          <h3 className="b-sub">History</h3>
           <div className="b-concepts b-concepts--three">
             <Fit caption="League tab · Season 2, before the draft" note="The Season 1 champion banner stays until Season 2's draft; History is one tap away."><I.RibHistory /></Fit>
-            <Fit caption="League › History" note="Every season, its champion and final standings; matchups and the draft recap too. Needs backend: keep them instead of deleting."><I.RibHistory view="list" /></Fit>
+            <Fit caption="League › History" note="Every season, its champion and final standings; matchups and the draft recap too. New players see it as well."><I.RibHistory view="list" /></Fit>
           </div>
         </section>
 

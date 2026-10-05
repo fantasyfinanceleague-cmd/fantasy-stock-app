@@ -110,7 +110,55 @@ You are the UI worker for **Phase 3c: the competitive screens**. Your branch is 
 | 12 | **Create league · Season / Draft steps** | "Create league · Season", key screen 4 "Draft step" | Weeks with the uneven-bye heads-up, playoff teams (2..expected size), pick clock 30–90s, draft order mode. |
 | 13 | **Draft recap** | "Draft recap" | Under League › History after the draft: your picks ranked by how they've done since. |
 
-Keep **League settings** (including the commissioner-only "Start new season" via `start_new_league_season`) reachable from the League tab, as today.
+Keep **League settings** reachable from the League tab, as today. **Remove its "Start new season" button:** `start_new_league_season` is revoked (phase 0, `5c2175c`) and replaced by Run it back below.
+
+## Run it back (decided by Giorgio, 2026-10-04; all copy approved)
+
+**What it is:** when a season finishes, the commissioner renews the league so the same group plays again. **Board:** section **"Run it back"** (12 frames), plus the note added to Home phases. **Backend:** `feat/run-it-back`, designed in `docs/migrations/RUN_IT_BACK_DESIGN.md` (read §2 and §2.11). Each season is a **new `leagues` row** linked by `previous_league_id`; Season 1 stays frozen and complete.
+
+**Rules (all decided):**
+- **Only the commissioner** starts it ("Run it back").
+- **Opt-in.** Every Season 1 player is asked, and answers can flip in ↔ out until the draft is set.
+- **The commissioner hears every reply** and reconciles. On a non-reply they can **"Nudge again"** (at most once per 24 h) or **"Remove"**.
+- **A player who is in goes straight to the read-only list.** Players who are out or haven't answered don't see it (`people[]` is empty for them).
+- **The draft can't be set while any reply is pending** (`replies_pending`; the server enforces it too).
+- **New players** join by code (up to 16 until the draft) and **see Season 1's history**.
+- **Teams start with a NEW draft.** Every setting carries over and is editable on the review. Keepers / keep teams were not chosen.
+
+**Screens (build to the board frames):**
+
+| # | Screen | Board frame | Notes |
+|---|---|---|---|
+| R1 | Home, season complete (commissioner) | "Home · season complete (commissioner)" | The "Run it back?" card under the champion card ("Season 2" tag, "Run it back?", "Everyone from Season 1 gets asked if they're in. Once you've heard from everyone, you set up the draft.", [Run it back]). Members see the champion card without it. |
+| R2 | League tab, season over (commissioner) | "League tab · season over" | Champion banner, the commissioner strip with [Run it back], Season 1 final standings. |
+| R3 | The ask: push + card on Home **and** the League tab (every Season 1 player) | "Push · every Season 1 player", "1 · Member" | "Roberto B. is running it back. Are you in?", [I'm out] [I'm in], "You can change your answer until the draft is set." The league sheet and Home find it via the OLD league's `successor_league_id` + `get_renewal_roster(successor).caller_status = 'pending'` (§2.11). |
+| R4 | Commissioner: Home while replies come in | "3 · Commissioner: Home" | The counts line, the segmented bar, "Waiting on …", [See who's in]. |
+| R5 | **Who's running back** (commissioner) | "4 · Commissioner: League tab, reconcile" | A standings-style list in Season 1 order: **"Running back"** (name bold, accent, ✓), "Out" (muted), "● No reply yet" with "Nudge again · Remove" on the row, then newcomers last with [New] and "Joining". Counts above ("4 running back · 1 new · 1 out · 1 no reply yet"); below, the draft date/order rows disabled with "You can set the draft once everyone has replied. Waiting on …", plus the invite code. |
+| R6 | Who's running back (a player who is in) | "4b · A member who said I'm in" | Auto-redirect after "I'm in". The same list read-only, topped by "✓ You're running back · Change". |
+| R7 | Clear a non-reply (sheet) | "5 · Clearing a non-reply" | "{name} hasn't replied", the asked/nudged dates, [Nudge again] [Remove], "You can nudge once a day. If you remove {first name}, they're out of Season 2 and get a message saying so." When nudged within 24 h, "Nudge again" is disabled with its reason (`last_nudged_at`). |
+| R8 | Season 2 review (commissioner) | "6 · After everyone has replied" | Every Season 1 setting carried over and editable: Who's in, Teams (= in + new, "up to 16"), Draft, Draft order, Pick clock, Season, Playoffs, Stakes. The uneven-bye heads-up when it applies. [Schedule the draft] → `start_renewed_season`. |
+| R9 | League tab, Season 2 before the draft | "League tab · Season 2, before the draft" | The Season 1 champion banner (until Season 2's draft), the Season 2 draft card, History. |
+| R10 | League › History | "League › History" | Every season in the lineage with its champion and frozen final standings (`get_league_history`); matchups and the draft recap per season. Newcomers see it too. |
+
+**Map the API to the copy, never show raw values:** `group` `'in'|'new'|'out'|'pending'` → "Running back" / "Joining" + [New] / "Out" / "No reply yet".
+
+**Push and notification copy** (the backend's `draft-order-notify` body builder switches on `kind`; send these strings to the backend worker via the Orchestrator):
+- `renewal_invite` and `renewal_nudge`: "{commissioner} is running it back. Are you in for Season 2?"
+- `renewal_reply`: "{name} is running back for Season 2. {n} running back · {n} out · {n} no reply yet." For an out answer: "{name} is out for Season 2. …" (same counts). This replaces the design doc's older "… is in … 4 in · 1 out · 1 to reply" wording.
+- `renewal_removed`: "{commissioner} set up Season 2 of {league} without you." NEW COPY, flagged.
+- `season_set`: "Season 2 of {league} is set. The draft is {Sat, Jan 23 · 7:00 PM ET}." NEW COPY, flagged.
+
+**RPCs (from `feat/run-it-back`; the contract summary arrives with its DONE):**
+- `renew_league` → `setActiveLeagueId(new_id)` → the commissioner lands on R5;
+- `respond_to_renewal`;
+- `get_renewal_roster` (counts, `replies_pending`, `caller_status`, `people[]` with `can_nudge`/`can_remove`);
+- `nudge_renewal`, `remove_renewal_invitee`, `start_renewed_season`;
+- `get_league_history`;
+- `get_home_summary`'s new `previous_league_id` / `successor_league_id` / `season_number`.
+
+**Until that branch is DONE, build against fixtures** shaped exactly like §2.4, derived from one fixture (the board's Season 1: Roberto 11–3 … Andrea 3–11; in Roberto/Paolo/Francesco/Gianluigi, out Alessandro, pending Andrea, new Marta C.). Then swap to the live RPCs and run the real-data check below.
+
+**The Home follow-up lives here, in 3c.** R1, R3's Home card and R4 are Home edits. 3b-2 will have merged, so 3c owns these changes to Home's components. Keep them additive (a new card in the season-complete and post-season states), don't restructure 3b-2's Home, and tell the Design Lead if a Home component needs to change shape.
 
 ## Backend (check before building; don't assume)
 
@@ -124,7 +172,7 @@ Keep **League settings** (including the commissioner-only "Start new season" via
   - #4 (intraday samples) is NOT needed: the race chart uses daily closes plus the live point.
   - #10 (scoring status) is derived: gains NULL after the week's calendar close means "Scoring…", as in 3b-2.
 - **The auto-pick cron is still deferred** (STATUS §4 item 19), so in production an overdue turn is picked by the sweep only once it's promoted. The UI must read the clock's `deadline` from `get_draft_clock` and never assume a pick happened. Show "Auto-picking…" past the deadline until the pick row arrives.
-- A **new RPC** needs a plan-first message to the Orchestrator and uses migration range **`20261025000000`–`20261025000009`**.
+- A **new RPC** needs a plan-first message to the Orchestrator and uses migration range **`20261025000000`–`20261025000009`**. **These timestamps are PROVISIONAL:** right before release, any migration you add is re-stamped later than prod's latest applied migration (`supabase db push` refuses older unapplied files). Don't depend on the exact number.
 
 ## Motion and signature moments
 
@@ -160,6 +208,7 @@ Keep **League settings** (including the commissioner-only "Start new season" via
   - `npx tsc --noEmit` (baseline 1);
   - `npm run lint` (0 errors);
   - the deno suites, plus new tests for: the phase → state mapping for Matchup; lead-change detection with the 30s limit; reveal-once persistence; U1 (week-1 Monday = live after T0; a holiday Monday); the ▲/▼ movement against the previous week's RPC order; the auto-pick log line per `pick_source`; the "Auto-picking…" past-deadline state;
+  - Run it back: the `group` → copy map; R5's draft rows disabled exactly while `replies_pending`; the 24 h nudge disable; the in → out flip removing the list (R6 → the ask card); the redirect after "I'm in";
   - the contrast test;
   - `node scripts/gen-architecture.mjs` (you touch `.rpc`/`.from`).
   - Report the counts and the **request count on load** per screen (Matchup live ≤ 5).
@@ -183,5 +232,6 @@ Keep **League settings** (including the commissioner-only "Start new season" via
 7. **All six signature moments (G1–G6) are present, smooth and on-brand**, with their Reduce Motion versions. A missing or timid moment is a DESIGN-CHANGES.
 8. Bots are marked everywhere; U+2212 minus; no truncation at XL.
 9. Shared-code discipline: no copied modules, `lib/` moves done by you in single commits, no unapproved primitive changes.
+10. Run it back R1–R10 match the board, use the approved copy verbatim, map API values to copy, and pass a real-data run once `feat/run-it-back` is live: renew a finished test league, answer from two accounts, nudge, remove, schedule the draft.
 
 Report your PLAN first (including your fixture plan and the order you'll land U1 in) and wait for "go".

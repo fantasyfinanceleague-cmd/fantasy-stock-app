@@ -637,7 +637,6 @@
             </div>
           </Card>
           <span className="ks-btn">See the final standings</span>
-          <span className="ks-btn ks-btn--secondary">Start next season</span>
         </div>
       </Device>
     );
@@ -1412,13 +1411,15 @@
   }
 
   // ═════════════════════════════════════════════════════════════════════
-  // YOUR CALL: RUN IT BACK (2026-10-04). Season 1 is over; the commissioner
-  // (Roberto B., you) renews Stock Scudetto for Season 2. All copy is new.
-  // Anything marked BACKEND needs server work the backend plan must cover.
+  // RUN IT BACK (decided by Giorgio, 2026-10-04; copy approved). Season 1 is
+  // over; the commissioner (Roberto B., you) renews Stock Scudetto for Season 2:
+  // opt-in replies, the commissioner reconciles, then a NEW draft. Backend:
+  // feat/run-it-back (docs/migrations/RUN_IT_BACK_DESIGN.md); each season is a
+  // new league row linked by previous_league_id.
   // ═════════════════════════════════════════════════════════════════════
   const S1 = K.SEASON1, NX = K.SEASON1.next;
   const BackendTag = ({ children }) => (
-    <span className="ks-caption" style={{ display: 'inline-flex', gap: 6, alignItems: 'center', padding: '4px 8px', borderRadius: 8, background: 'var(--c-warn-tint)', color: 'var(--c-warn-text)', fontWeight: 700 }}>Needs backend · {children}</span>
+    <span className="ks-caption" style={{ display: 'inline-flex', gap: 6, alignItems: 'center', padding: '4px 8px', borderRadius: 8, background: 'var(--c-warn-tint)', color: 'var(--c-warn-text)', fontWeight: 700 }}>Backend · {children}</span>
   );
   // `me` = whose phone this is (the "you" fill follows the viewer).
   const Avatars = ({ ids, extra, me = 'roberto' }) => (
@@ -1670,7 +1671,6 @@
             <ReplyRows actions={false} me="gianluigi" />
           </Card>
           <span className="ks-caption">The draft is set once everyone has replied. You can change your answer until then.</span>
-          <span className="ks-caption" style={{ justifySelf: 'start', padding: '4px 8px', borderRadius: 8, background: 'var(--c-warn-tint)', color: 'var(--c-warn-text)', fontWeight: 700 }}>To confirm · players who are out or haven't answered don't see this list</span>
         </div>
       </Device>
     );
@@ -1682,68 +1682,16 @@
       <Device tab="league" label="Commissioner: resolve a missing reply" overlay={
         <Sheet top={430}>
           <span className="ks-title" style={{ fontSize: 20 }}>{who} hasn't replied</span>
-          <span className="ks-callout ks-muted">Asked Sat, Jan 16. Nudged once.</span>
+          <span className="ks-callout ks-muted">Asked Sat, Jan 16. Nudged Sun, Jan 17.</span>
           <span className="ks-btn">Nudge again</span>
           <span className="ks-btn ks-btn--secondary">Remove</span>
-          <span className="ks-caption">If you remove {who.split(' ')[0]}, they're out of Season 2 and get a message saying so.</span>
+          <span className="ks-caption">You can nudge once a day. If you remove {who.split(' ')[0]}, they're out of Season 2 and get a message saying so.</span>
         </Sheet>
       }>
         <Head chip={<span className="ks-chip">Season 2</span>} />
         <div className="ks-pad ks-stack">
           <h2 className="ks-head__title" style={{ fontSize: 26 }}>Who's running back</h2>
           <Countline />
-        </div>
-      </Device>
-    );
-  }
-
-  /** (b) How teams start — the commissioner's choice, plus the keeper picker. */
-  function RibTeams({ mode }) {
-    if (mode === 'keepers') {
-      const rows = K.lineup('roberto', 'fri');
-      const kept = ['NVDA', 'AAPL'];
-      return (
-        <Device noTabs label="Keepers: choose up to 2">
-          <Back label="Season 2" />
-          <div className="ks-pad ks-stack">
-            <h2 className="ks-head__title" style={{ fontSize: 28 }}>Keep up to 2</h2>
-            <span className="ks-callout ks-muted">The rest go back in the pool. Choose by {NX.keepBy}.</span>
-            <Card>
-              <ul className="ks-rows">
-                {rows.map((r) => {
-                  const on = kept.includes(r.t);
-                  return (
-                    <li key={r.t} className="ks-row" style={{ gridTemplateColumns: '36px 1fr 24px', padding: '9px 0' }}>
-                      <Logo t={r.t} />
-                      <span><span className="ks-t">{r.t}</span><br /><span className="ks-caption">{r.co}</span></span>
-                      <span style={{ width: 22, height: 22, borderRadius: 6, display: 'grid', placeItems: 'center', background: on ? 'var(--c-accent)' : 'transparent', border: on ? 0 : '2px solid var(--c-border-strong)', color: 'var(--c-on-accent)' }}>{on ? <Icon d={CHECK} size={14} width={3} /> : null}</span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </Card>
-            <span className="ks-caption">Keepers restart at {$(K.LEAGUE.notionalPerSlot)} a slot. The draft covers the other 4 rounds.</span>
-            <BackendTag>keeper picks + a shorter draft</BackendTag>
-          </div>
-        </Device>
-      );
-    }
-    const draft = mode === 'draft';
-    return (
-      <Device noTabs label={`How teams start: ${draft ? 'new draft' : 'keep teams'}`}>
-        <Back label="Season 2" />
-        <div className="ks-pad ks-stack">
-          <h2 className="ks-head__title" style={{ fontSize: 28 }}>How teams start</h2>
-          <Card>
-            <ul className="ks-rows">
-              <Radio on={draft} title="New draft" line={`Everyone drafts again: ${$(K.LEAGUE.notionalPerSlot)} a slot, ${K.LEAGUE.slots} rounds. Every stock goes back in the pool.`} />
-              <Radio on={!draft} title="Keep teams" line="Each team keeps its six stocks. No draft." />
-              <Radio on={false} title="Keepers" line="Keep up to 2 stocks, draft the rest." />
-            </ul>
-          </Card>
-          {draft
-            ? <div className="ks-raised" style={{ padding: '12px 14px', display: 'grid', gap: 4 }}><span className="ks-callout" style={{ fontWeight: 700 }}>Draft {NX.draft}</span><span className="ks-caption">Order: Random, set {NX.orderSet}. Last season's champion has no advantage.</span></div>
-            : <div className="ks-raised" style={{ padding: '12px 14px', display: 'grid', gap: 6 }}><span className="ks-callout" style={{ fontWeight: 700 }}>Every slot restarts at {$(K.LEAGUE.notionalPerSlot)}</span><span className="ks-caption">Shares are recalculated at Week 1's open so everyone starts level. No draft night.</span><BackendTag>restart each slot at Week 1's open</BackendTag></div>}
         </div>
       </Device>
     );
@@ -1761,7 +1709,6 @@
             <ul className="ks-rows">
               <Row k="Who's in" v={`${NX.replies.in.length} back · ${NX.joined.length} new`} sub="Everyone has replied" />
               <Row k="Teams" v={`${NX.replies.in.length + NX.joined.length}`} sub={`Follows who's in, up to ${NX.maxTeams}. More can join with ${NX.invite} until the draft.`} chevron={false} />
-              <Row k="How teams start" v="New draft" />
               <Row k="Draft" v="Sat, Jan 23 · 7:00 PM ET" />
               <Row k="Draft order" v="Random" />
               <Row k="Pick clock" v={`${K.LEAGUE.pickClock.seconds} seconds`} />
@@ -1771,7 +1718,7 @@
             </ul>
           </Card>
           <ByeNotice members={NX.replies.in.length + NX.joined.length} weeks={K.LEAGUE.weeks} />
-          <BackendTag>team count follows who's in + new joins (today join refuses league_full)</BackendTag>
+          <BackendTag>num_participants stays 16 until the draft, then the member count</BackendTag>
           <span className="ks-btn">Schedule the draft</span>
           <span className="ks-caption" style={{ textAlign: 'center' }}>Everyone who's in gets a notification. Season 1 stays in History.</span>
         </div>
@@ -1797,8 +1744,8 @@
               <div className="ks-section-h"><h3>Season 1 · final standings</h3><span className="ks-caption">Season gain</span></div>
               <Season1Rows />
             </Card>
-            <span className="ks-caption">Every week's matchups and the draft recap stay here too.</span>
-            <BackendTag>keep Season 1's matchups and standings (today they're deleted)</BackendTag>
+            <span className="ks-caption">Every week's matchups and the draft recap stay here too. New players see Season 1 as well.</span>
+            <BackendTag>get_league_history (Season 1 is its own frozen league)</BackendTag>
           </div>
         </Device>
       );
@@ -1831,7 +1778,7 @@
     AllMatchups, MatchupPreSeason, Playoffs6, ArrangeOrder, OrderPush, DraftLobby, StartDraftConfirm, CreateSeason, DraftAutoPick, DraftRecap, Playoffs,
     SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,
     OneShareSell, OneShareBuy,
-    RibHome, RibLeague, RibPush, RibMemberPrompt, RibHomeCounts, RibReconcile, RibMemberList, RibResolve, RibTeams, RibReview, RibHistory,
+    RibHome, RibLeague, RibPush, RibMemberPrompt, RibHomeCounts, RibReconcile, RibMemberList, RibResolve, RibReview, RibHistory,
     WebHome, WebPortfolio, WebSettings,
   };
 })();
