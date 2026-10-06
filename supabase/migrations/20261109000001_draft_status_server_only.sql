@@ -38,6 +38,9 @@
 -- here on (web is APP_PAUSED; re-route them through draft-control before any
 -- unpause). Service role, cron and the SQL editor (auth.uid() IS NULL) are
 -- exempt, as in every guard here.
+--
+-- PLUS the DRAFT TIME guard (Giorgio, 2026-10-06, decisions 4 + 5) and the
+-- reschedule trigger; see the section at the bottom.
 -- ============================================================================
 
 create or replace function public.enforce_league_rules_frozen_after_draft_start()
@@ -142,9 +145,103 @@ create trigger trg_leagues_insert_not_started
   before insert on public.leagues
   for each row execute function public.enforce_leagues_insert_not_started();
 
+-- ----------------------------------------------------------------------------
+-- DRAFT TIME guard (user sessions only; service role / cron / SQL editor exempt)
+-- ----------------------------------------------------------------------------
+-- Decisions 4 + 5 (Giorgio, 2026-10-06):
+--   * a draft time is on a quarter hour (:00/:15/:30/:45, no seconds) and at
+--     least 55 minutes ahead (an hour of notice, with the Design Lead's
+--     invisible slack for a slow form). draft_start_policy() holds both numbers;
+--   * once the room has opened (now >= OLD.draft_date - 1h) the time cannot be
+--     changed or cleared, EXCEPT while the league is postponed (a new time is
+--     exactly what it needs; a real postponement already cleared draft_date).
+-- Only a CHANGED value is judged (IS DISTINCT FROM), so league-settings'
+-- always-sent same-value draft_date passes, legacy off-grid values included.
+-- Only while not_started: after the draft starts draft_date is inert history
+-- (20261104000000's ruling keeps it editable). TBD (NULL) stays allowed before
+-- the room opens. The quarter hour is judged in UTC, which is the same grid in
+-- America/New_York (whole-hour offsets, DST included).
+-- SECURITY DEFINER: it reads draft_postponements, which no client role may
+-- read (service-role table). It writes nothing; auth.uid() still reads the
+-- caller's JWT claim, so the user-session test is unaffected.
+create or replace function public.enforce_leagues_draft_time()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_pol jsonb := public.draft_start_policy();
+begin
+  if auth.uid() is null then
+    return new;
+  end if;
+  if tg_op = 'UPDATE' then
+    if new.draft_date is not distinct from old.draft_date or old.draft_status <> 'not_started' then
+      return new;
+    end if;
+    if old.draft_date is not null
+       and now() >= old.draft_date - make_interval(secs => (v_pol->>'room_lead_s')::int)
+       and not exists (select 1 from public.draft_postponements p where p.league_id = old.id) then
+      raise exception 'draft_time_locked: the draft room is open, so the draft time can''t change'
+        using errcode = '22023';
+    end if;
+  end if;
+  if new.draft_date is not null then
+    if date_trunc('minute', new.draft_date) <> new.draft_date
+       or extract(minute from new.draft_date)::int % (v_pol->>'step_minutes')::int <> 0 then
+      raise exception 'draft_time_invalid: pick a time on the quarter hour'
+        using errcode = '22023';
+    end if;
+    if new.draft_date < now() + make_interval(secs => (v_pol->>'min_lead_s')::int) then
+      raise exception 'draft_time_too_soon: pick a time at least an hour from now'
+        using errcode = '22023';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function public.enforce_leagues_draft_time() from public;
+revoke all on function public.enforce_leagues_draft_time() from anon, authenticated;
+
+drop trigger if exists trg_leagues_draft_time on public.leagues;
+create trigger trg_leagues_draft_time
+  before insert or update of draft_date on public.leagues
+  for each row execute function public.enforce_leagues_draft_time();
+
+-- A NEW draft time ends a postponement (every role: the commissioner's edit,
+-- or an operator's from the SQL editor). AFTER, so a refused edit never gets
+-- here. The stale watch row for the old time goes too (it is keyed by date
+-- anyway).
+create or replace function public.clear_draft_postponement_on_reschedule()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if new.draft_status = 'not_started' and new.draft_date is not null
+     and new.draft_date is distinct from old.draft_date then
+    delete from public.draft_postponements where league_id = new.id;
+    delete from public.draft_start_watch where league_id = new.id and draft_date <> new.draft_date;
+  end if;
+  return null;
+end;
+$$;
+
+revoke all on function public.clear_draft_postponement_on_reschedule() from public;
+revoke all on function public.clear_draft_postponement_on_reschedule() from anon, authenticated, service_role;
+
+drop trigger if exists trg_leagues_draft_rescheduled on public.leagues;
+create trigger trg_leagues_draft_rescheduled
+  after update of draft_date on public.leagues
+  for each row execute function public.clear_draft_postponement_on_reschedule();
+
 -- POST-PUSH CHECKS (HUMAN ACTION; the effect block is
 -- docs/security/draft-auto-start-effect-test.sql):
 --   SELECT tgname, tgenabled FROM pg_trigger
---    WHERE tgname IN ('trg_leagues_freeze_rules','trg_leagues_insert_not_started');
+--    WHERE tgname IN ('trg_leagues_freeze_rules','trg_leagues_insert_not_started',
+--                     'trg_leagues_draft_time','trg_leagues_draft_rescheduled');
 --   SELECT position('draft_status_server_only' in prosrc) > 0 FROM pg_proc
 --    WHERE proname = 'enforce_league_rules_frozen_after_draft_start';   -- true

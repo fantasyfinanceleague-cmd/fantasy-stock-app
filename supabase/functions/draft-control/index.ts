@@ -17,13 +17,12 @@
 //               league member may call this (so a non-commissioner sees why
 //               the Start button is disabled).
 //   start     — commissioner only. Since draft auto-start (2026-10-06) the
-//               server starts every draft at draft_date (draft-autopick-sweep's
-//               start pass); this action runs the SAME path
-//               (_shared/draft-start.ts -> start_league_draft, a locked
-//               compare-and-swap flip), so it can only do what the next tick
-//               would. Kept for the 1.1.0 Start button. A double-tap, a second
-//               device or the cron racing it is 'already_started', never a
-//               double-start.
+//               server starts every draft at draft_date, or postpones it
+//               (draft-autopick-sweep); this action runs the SAME path
+//               (_shared/draft-start.ts startDraftIfDue), so it can only do what
+//               the next tick would. Kept for the 1.1.0 Start button. A
+//               double-tap, a second device or the cron racing it is
+//               'already_started', never a double-start.
 //   confirm_roster — commissioner only. After a pre-draft leave
 //               (leave-league, 20261107000001) the draft can't start, and the
 //               order isn't set, until the commissioner chooses: body.choice
@@ -85,7 +84,7 @@ import {
   startDraftIfDue,
   toStartState,
 } from '../_shared/draft-start.ts';
-import { computeStartState, isRoomOpen } from '../_shared/draft-start-policy.ts';
+import { computeStartState } from '../_shared/draft-start-policy.ts';
 
 function isAllowedOrigin(origin: string): boolean {
   if (!origin) return false;
@@ -202,29 +201,37 @@ Deno.serve(async (req: Request) => {
 
     if (action === 'status') {
       const now = new Date();
-      // Feasibility is judged only when nothing else blocks the start: the pool
-      // read is the costly part, and "set a date" is the more useful message.
-      // From the room-open hour (draft_date - 1h) the not-yet-reached date no
-      // longer gates it, so the commissioner sees what would stop the
-      // automatic start while there is still time to fix it.
-      const evaluated = await evaluateStartBlockers(admin, league, state, undefined, now, {
-        ignoreDateNotReached: isRoomOpen(state.draftDate, now),
-      });
-      const blocked = evaluated.some((b) => b.code !== 'draft_date_not_reached' && b.code !== 'not_started_state');
-      // Auto-start (2026-10-06): the server starts the draft at draft_date.
+      // Auto-start (2026-10-06): the server starts the draft at draft_date, or
+      // postpones it. The full blocker set is judged ahead of the draft time
+      // (the not-yet-reached date is a countdown, not a blocker), so the
+      // commissioner sees what would postpone it while there is time to fix it.
+      const { data: pp, error: ppErr } = await admin
+        .from('draft_postponements')
+        .select('postponed_from, stage, reason')
+        .eq('league_id', leagueId)
+        .maybeSingle();
+      if (ppErr) return json({ ok: false, reason: 'unhandled' }, 500); // never "not postponed" on a failed read
+      const evaluated = await evaluateStartBlockers(admin, league, state, undefined, now, { ignoreDateNotReached: true });
+      const blocked = evaluated.some((b) => b.code !== 'not_started_state' && b.code !== 'no_draft_date');
       // start_state is judged on the server's clock (draft-start-policy.ts).
-      const startState = computeStartState({ draftStatus: state.draftStatus, draftDate: state.draftDate, blocked }, now);
+      const startState = computeStartState(
+        { draftStatus: state.draftStatus, draftDate: state.draftDate, postponed: !!pp, blocked },
+        now,
+      );
       const commissioner = isCommissioner(state, user.id);
-      const blockers: Array<{ code: string }> = [
+      const blockers: Array<{ code: string; [k: string]: unknown }> = [
         // Feasibility detail (hall counts, reserve vs budget) is for the
         // commissioner, who can act on it; members get the code only, the same
         // verdict-not-detail policy as check_setup.
         ...evaluated.map((b) =>
           !commissioner && (b.code === 'slots_infeasible' || b.code === 'budget_infeasible') ? { code: b.code } : b
         ),
-        // Past the grace nothing auto-starts and start refuses: say so, so an
-        // old client's Start button is never enabled on a missed draft.
-        ...(startState === 'missed' ? [{ code: 'draft_start_missed' }] : []),
+        // So an old client's Start button stays disabled until it could start
+        // (1.1.0 enables it on can_start): before the time, and when postponed.
+        ...(state.draftDate && new Date(state.draftDate).getTime() > now.getTime()
+          ? [{ code: 'draft_date_not_reached', draftDate: state.draftDate }]
+          : []),
+        ...(pp ? [{ code: 'draft_postponed' }] : []),
       ];
       return json({
         ok: true,
@@ -232,6 +239,9 @@ Deno.serve(async (req: Request) => {
         blockers,
         starts_at: state.draftDate,
         start_state: startState,
+        // The explicit postponed state (draft_postponements): the time that
+        // couldn't happen, where it was stopped, and the first blocker's code.
+        postponed: pp ? { from: pp.postponed_from, stage: pp.stage, reason: pp.reason } : null,
         is_commissioner: commissioner,
         bots_allowed: botsAllowed,
         bots_needed: botsNeeded,
@@ -356,14 +366,14 @@ Deno.serve(async (req: Request) => {
         return json({ ok: false, reason: 'not_started_state' }); // 200: game-flow refusal
       case 'not_due':
         return json({ ok: false, reason: res.blockers[0]?.code ?? 'draft_date_not_reached', blockers: res.blockers });
-      case 'missed':
-        // Past the start grace (draft-start-policy.ts): a new draft time is needed.
-        return json({ ok: false, reason: 'draft_start_missed' });
-      case 'blocked':
-        return json({ ok: false, reason: res.reason, blockers: res.blockers }); // 200: game-flow refusal
-      case 'changed':
-        // A rule or the roster moved mid-start: the client refetches status.
-        return json({ ok: false, reason: 'draft_changed' });
+      case 'postponed':
+        // Blocked at its time (decision 1: no late start): postponed, everyone told.
+        return json({ ok: false, reason: 'draft_postponed', postponed_reason: res.reason, blockers: res.blockers });
+      case 'already_postponed':
+        return json({ ok: false, reason: 'draft_postponed' });
+      case 'retry':
+        // A system hiccup; the cron retries within seconds. The client refetches status.
+        return json({ ok: false, reason: 'draft_start_retrying' });
       default:
         return json({ ok: false, reason: 'unhandled' }, 500);
     }

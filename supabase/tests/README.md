@@ -659,36 +659,49 @@ rejected status write cannot change the HTTP response. Hermetic (no network, no 
 ## draft_auto_start.pglite.test.ts
 
 What it does: loads, verbatim and in prod order, every migration whose triggers
-fire on a `leagues` / `league_members` write (the freeze test's chain, plus
-`draft_stalls` and #126's reconfirm table + start gate), then `20261109000000` (auto-start) and `20261109000001`
-(`draft_status` server-only). `leagues` is replayed from the migrations' DDL, so
-`start_league_draft`'s compare-and-swap is judged against real column types. The
-expectation it sends is built by the real `buildStartExpect`
-(`functions/_shared/draft-start.ts`) from PostgREST-shaped rows.
+fire on a `leagues` / `league_members` / `league_notifications` write (the freeze
+test's chain, plus `draft_stalls`, participant names, and #126's reconfirm table +
+real start gate), then `20261109000000` (auto-start) and `20261109000001`
+(`draft_status` server-only + the draft-time guard). The chain is loaded in two
+halves around legacy fixtures, so the one-off backfills run on real rows.
+`leagues` is replayed from the migrations' DDL, so the compare-and-swap is judged
+against real column types; the expectation is built by the real
+`buildStartExpect`. Every case sets `draft_date` relative to `now()`, so the
+gate / room / reminder windows run for real.
 
-It covers:
-- grants (service_role only), security mode, `search_path`, RLS on
-  `draft_start_blocks`, and the `FOR UPDATE` row lock before the flip
-- the policy pin: SQL `draft_start_grace()` = TS `START_GRACE_SECONDS`
-- `due_draft_starts`' half-open window, TBD, and the 60 s back-off (re-armed by a
-  new `draft_date`)
-- `start_league_draft`: not_due / missed / not found; the floor (stake mode,
-  members, playoff spots; duration leagues exempt); CAS `changed` for each judged
-  input (rules, slots, a join) with nothing written; started (order locked, clock
-  anchored, block cleared) and idempotent; #126's REAL reconfirm gate and a #94
-  stand-in (its exact text) are `blocked`, any other 22023 re-raises
-- server-only: no user session changes `draft_status` (start, finish, rewind);
-  same-value patches pass; the service role passes; INSERT only `not_started`
-- the cron guard, sliced from the LATEST `draft_autopick_sweep` schedule and
-  executed against the real functions
-- `docs/security/draft-auto-start-effect-test.sql`, verbatim (20 lines, C1 SKIP:
-  no pg_cron), rolled back
+It covers (Giorgio's decisions, 2026-10-06):
+- the one-off backfills: past `not_started` leagues postponed silently (`legacy`,
+  no notices, date untouched); #67's undelivered `draft_order_set` pushes settled
+- grants (service_role only) / security mode / `search_path` for every function;
+  both state tables RLS-on and service_role SELECT-only; the lock clauses
+  (start + postpone `FOR UPDATE`, the watch `FOR SHARE`); the postponement row
+  written before the date is cleared
+- the policy pin: SQL `draft_start_policy()` = TS `SQL_POLICY`
+- the kind CHECK union (+ #67, #94, #126); `draft_order_set` is in-app only
+- the watch: no verdict, a join or settings edit, stale inside 24 h only; the
+  commissioner warned ONCE per blocked episode, the T-2h reminder once (a first
+  warning inside T-2h counts as it); unknown keeps the verdict; CAS + staleness
+- the gate: clear clears it; unknown only at the room time; blocked postpones
+  (date cleared, watch gone, every human told, bots skipped, #67 not finalized)
+- rooms: `open_due_draft_rooms` finalizes + one notice per human, idempotent,
+  late joiners, never without a cleared gate
+- the start: postponed leagues never due; the room must have opened; the floor;
+  CAS; started (order locked, clock anchored, `draft_started` per human);
+  idempotent; #126's REAL gate and a #94 stand-in are `blocked`, others re-raise
+- `draft_notice_context`; the draft-time guard (quarter hours, 55 min, locked once
+  the room opens, postponed and legacy-postponed allowed, the reschedule trigger
+  clears the postponement, INSERT judged, service role exempt, started inert)
+- server-only `draft_status` (UPDATE + INSERT); clients denied everything
+- both cron guards, sliced from the LATEST schedules and executed
+- `docs/security/draft-auto-start-effect-test.sql`, verbatim, rolled back
 
-Negative controls (run 2026-10-06 after the rebase onto #126, each made the
-named steps fail): CAS off; grace 20 min; no row lock; an `authenticated` grant;
-server-only rule off; cron without the due guard; the gate catching every 22023;
-the reconfirm name dropped from the gate list; no back-off; INSERT guard off; a
-service_role write grant on `draft_start_blocks`.
+Negative controls (run 2026-10-06, each made the named steps fail): CAS off; the
+gate lead changed; no room check at start; warn on every blocked verdict; a
+postponement that keeps the date; `draft_order_set` pushes not skipped; no
+room-open lock on the time; no quarter-hour rule; rooms ignoring the gate; no
+legacy backfill; the sweep without the watch guard; server-only off; the
+reschedule trigger keeping the postponement; the gate catching every 22023;
+postponement notices to bots.
 
 Run: `deno test --allow-read --allow-env supabase/tests/draft_auto_start.pglite.test.ts`.
 
@@ -697,8 +710,11 @@ Run: `deno test --allow-read --allow-env supabase/tests/draft_auto_start.pglite.
 A structural guard (files only). The auto-pick cron (`20261106000000`) and the
 auto-start reschedule (`20261109000002`) both re-schedule `draft_autopick_sweep`,
 and the last one applied wins. So the LATEST migration scheduling the job must
-guard on both `overdue_draft_turns()` and `due_draft_starts()`, and both files
-must be present with the auto-start one sorting after the auto-pick one. It also pins the job contract
-(10 s, vault key, 180000 ms, URL, no key literal, no other job).
+guard on `overdue_draft_turns()`, `due_draft_starts()` and `draft_watch_due()`,
+and both files must be present with the auto-start one sorting after the
+auto-pick one. It also pins the job contract (10 s, vault key, 180000 ms, URL, no
+key literal, no other job), and that `draft_order_notify` is promoted: scheduled
+once (`20261109000003`), guarded by `draft_order_notify_due() OR
+draft_room_notices_due()`, 180000 ms, gone from `deferred/`.
 
 Run: `deno test --allow-read supabase/tests/draft_auto_start_cron_wiring.test.ts`.

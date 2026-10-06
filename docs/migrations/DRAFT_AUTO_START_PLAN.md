@@ -129,6 +129,10 @@ New server work for T−1h:
 
 ---
 
+# BUILD v1 (★A, 15-min grace): SUPERSEDED by BUILD v2 below
+
+Kept for the record. Giorgio rejected ★A ("people still need an hour heads up and notice"). The mechanism below (one start path, the locked compare-and-swap flip, the cron reschedule, draft_status server-only) carries over. The grace, `draft_start_blocks` and the "missed" state do not.
+
 # BUILD (2026-10-06, after the Orchestrator's GO)
 
 Built: everything that doesn't depend on decisions 1–4. Not built: notification copy/kinds, the client, the `draft_date` lead-time/edit guards (decisions 3/4), and relaxing `start` to any member (the client kick, §1.6). That needs an explicit OK.
@@ -191,3 +195,91 @@ Accepted / for Giorgio:
 - **Backdating `draft_date`** (security LOW): a commissioner can set the date to a minute ago and the draft starts within ~10 s, fully checked, but skipping the T−1h notice. That's decision 4 (minimum lead).
 - **The manual Start shares the 15-min grace** (M4): after it, only a new date re-opens the window. An operator can rescue a league with a SQL-editor `draft_date` update.
 - **Numeric precision** (M5): a price bound or budget with more than ~15 significant digits would never compare equal, so the CAS returns `changed` and backs off forever. It fails closed, and no realistic value does this.
+
+
+---
+
+# BUILD v2 (2026-10-06): Giorgio's decisions, gate at room-open time
+
+**Decisions (verbatim intent, via the Orchestrator):**
+1. The REAL GATE is room-open time (T−1h). Blocked then: the room doesn't open, the draft doesn't start, the league is **postponed**, everyone is told, and the commissioner picks a **new time** (≥ 1 h notice again). There's no late start. Blocked at T even though the room opened (rare): the same.
+2. The commissioner is warned **before** the room opens: the moment the league becomes blocked, and again at T−2h if still blocked.
+3. Pushes to everyone: the room opens (with your position), the draft started, the draft is postponed.
+4. Draft times: quarter hours only, ≥ 1 h ahead (a 55-min floor, enforced server-side).
+5. Once the room opens the time can't change, except when postponed.
+
+## Lifecycle (T = draft_date)
+
+| When | Who | What |
+|---|---|---|
+| before T−1h | sweep WATCH pass (`draft_watch_due` → `watchLeague` → `record_draft_watch`) | Evaluates a league when its inputs change (join/leave/settings), or every 5 min inside 24 h (price drift). Becoming blocked → `draft_at_risk` to the commissioner. Still blocked at T−2h → one reminder. |
+| T−1h−30s … T | sweep GATE (same pass) | Blocked → `postpone_league_draft` (stage `room_open`). Clear → `gate_cleared_at`. The 30 s lead lets the 10 s sweep act before #67 finalizes at T−1h. |
+| ≥ T−1h | notify cron (`open_due_draft_rooms`) | Finalizes the order and writes `draft_room_open` per human (late joiners too), once per draft time. |
+| ≥ T | sweep START pass (`startDraftIfDue` → `start_league_draft`) | Starts: the room must have opened, then the floor and the CAS. Writes `draft_started` per human. Blocked → postpone (stage `start`). The room never opened → postpone (`room_did_not_open`). A system hiccup → retry for 5 min, then postpone (`start_failed`). |
+
+**Postponed** is an explicit `draft_postponements` row (stage `room_open` / `start` / `legacy`). A real postponement also clears `leagues.draft_date`: nothing is due for #67, leaving re-opens (#126 locks on `_draft_order_is_due(draft_date)`), and every client shows "no time". A new `draft_date` deletes the row (`trg_leagues_draft_rescheduled`).
+
+**Why a new `draft_room_open` kind:** #67's `draft_order_set` is written by every finalize and is unique per member per league, *ever*. A league postponed after its order was set could never announce its new time. `draft_order_set` rows stay as in-app records; a trigger marks their push `skipped` at insert (and the never-delivered backlog is settled once), so nobody gets two pushes. No #67/#126 function is re-created.
+
+## Files (20261109000000–03)
+
+- `…000000_draft_auto_start.sql`:
+  - `draft_start_policy()`, `draft_start_watch`, `draft_postponements`;
+  - the kind CHECK union, plus the in-app trigger and the backlog settle;
+  - the legacy backfill;
+  - `_draft_start_inputs`, `draft_watch_due`, `record_draft_watch`, `postpone_league_draft`, `due_draft_starts`, `start_league_draft`, `open_due_draft_rooms`, `draft_room_notices_due`, `draft_notice_context`.
+- `…000001_draft_status_server_only.sql`:
+  - `draft_status` server-only: #123's rule (1), plus an INSERT guard;
+  - **the draft-time guard** (quarter hour, ≥ now+55 min, locked after room-open unless postponed; DEFINER, since it reads the service-only postponements);
+  - the reschedule trigger.
+- `…000002_draft_autopick_sweep_auto_start.sql`: the sweep guard = overdue (verbatim from `20261106000000`) OR `due_draft_starts()` OR `draft_watch_due()`.
+- `…000003_schedule_draft_order_notify.sql`: **promoted** from `deferred/20261013000001`. Guard = `draft_order_notify_due() OR draft_room_notices_due()`, `timeout_milliseconds := 180000`.
+
+## Copy (board strings where they exist; NEW COPY flagged for the Design Lead)
+
+| Push | Text | Source |
+|---|---|---|
+| Room open (everyone) | "The draft order is set. You pick 4th. The draft starts at 7:00 PM ET." (manual: "The commissioner set the draft order. …") | board (#67's push, unchanged) |
+| Started (everyone) | "Your draft has started. You pick 4th." | board |
+| At risk (commissioner, > 2 h out) | "Your draft can't start at 7:00 PM ET: Sofia F. left the league. Fix it in the lobby." | board |
+| At risk / reminder (commissioner, ≤ 2 h out) | "Your draft can't start at 7:00 PM ET: <reason>. Fix it by 6:00 PM ET, or it will be postponed." | **NEW** |
+| Postponed (members) | "The draft is postponed. Roberto B. will pick a new time." | board |
+| Postponed (commissioner) | "Your draft is postponed: <reason>. Pick a new draft time in the lobby." | **NEW** |
+| Reasons | "Sofia F. left the league" (board). **NEW**: "Sofia F. and Ana P. left the league" · "3 managers left the league" · "the league needs at least 4 managers" · "the league has no stake mode" · "the number of playoff teams isn't set" · "there are more playoff teams than managers" · "some roster slots can't be filled" · "the budget can't fill every roster" · "not every Season 1 player has answered" · "something went wrong on our side" · fallback "something needs fixing" | |
+
+Every push carries `data.screen: 'draft'` (1.1.0 routes by `screen`) and `data.type` = the kind. Each push is re-checked at send time and skipped if no longer true: fixed, rescheduled, started, or the commissioner changed.
+
+## For the mobile worker (client work, not built here)
+
+- **`draft-control status`** now returns `start_state` (`no_date | scheduled | at_risk | room_open | due | postponed | started`), `starts_at`, `postponed: {from, stage, reason} | null`, and blockers judged ahead of time (the date is a countdown; `draft_date_not_reached` and `draft_postponed` stay in `blockers` only to keep the 1.1.0 Start button disabled).
+- **`draft-control start`** refusals: `draft_postponed`, `draft_start_retrying`, plus the existing ones.
+- **Date pickers** (create-league, league-settings): `minuteInterval={15}`, minimum now + 1 h, ET labels. The server refuses `draft_time_invalid` / `draft_time_too_soon` / `draft_time_locked` (22023).
+  - **1.1.0 compatibility:** its picker allows any minute, so a 1.1.0 commissioner picking 12:07 gets a save error. Same-value saves still pass.
+- Lobby: the countdown; at-risk and postponed cards (commissioner: fix / pick a new time; members: "postponed, <commissioner> will pick a new time"); no Start button.
+
+## Release (HUMAN ACTION, in order)
+
+0. **Preconditions:** `20261106000000`–`02` (auto-pick cron), `20261107000000`–`06` (#126) and `20261108000000`–`01` (#121) applied. The `AUTOPICK_CRON_LIVE.md` runbook is complete.
+1. **Read-only pre-check** (run before the push, and again right before it). The backfill postpones every `not_started` league whose time has passed (silently). Any league whose time is within the next hour gets gated on the first tick: it opens its room with less than 1 h notice, or is postponed. Decide on each:
+   ```sql
+   SELECT l.id, l.name, l.draft_date,
+          (SELECT count(*) FROM league_members m WHERE m.league_id = l.id) AS members,
+          CASE WHEN l.draft_date IS NULL THEN 'tbd: nothing happens'
+               WHEN l.draft_date <= now() THEN 'past: postponed silently (legacy)'
+               WHEN l.draft_date <= now() + interval '1 hour' THEN 'WITHIN THE HOUR: gated on the first tick'
+               ELSE 'future: watched; room at T-1h, start at T' END AS on_push
+     FROM leagues l WHERE l.draft_status = 'not_started' ORDER BY l.draft_date NULLS LAST;
+   ```
+2. **Deploy first** (from the refreshed deploy checkout): `draft-order-notify`, then `draft-autopick-sweep`, then `draft-control`. Deploying first means the moment the crons widen, the functions understand the new work; the old functions would ignore it, which is harmless but loses notices for that window.
+   - The upload lists must include `_shared/draft-start.ts`, `_shared/draft-start-policy.ts`, `draft-control/rules.ts` (sweep and draft-control), plus `draft-order-notify/plan.ts`, `_shared/push.ts`, `_shared/cron-auth.ts`.
+   - Content check first: `grep -c watchLeague supabase/functions/draft-autopick-sweep/index.ts` ≥ 1 and `grep -c decideNotice supabase/functions/draft-order-notify/index.ts` ≥ 1.
+   - Byte-verify each with a download + diff.
+3. `supabase db push --dry-run`: exactly `20261109000000`–`03`. Then `supabase db push`, and confirm in `schema_migrations`.
+4. `docs/security/draft-auto-start-effect-test.sql`: every line PASS (24 lines; C1/C2 need pg_cron).
+5. As postgres: `SELECT exists (SELECT 1 FROM public.draft_watch_due()), exists (SELECT 1 FROM public.due_draft_starts()), public.draft_room_notices_due();` must return without error. Neither cron command is validated at schedule time.
+6. **Live test** (a throwaway league, every app closed; verify by DATA):
+   - (a) 4 members, a time ~2 h out: the room opens at T−1h (`room_opened_at`, `draft_room_open` rows settled sent / no_device), and it starts at T (`draft_started_at − draft_date` < 15 s, `draft_started` rows).
+   - (b) 3 members, ~2 h out: an at-risk row for the commissioner within ~10 s of creation; at T−1h a postponement row, `draft_date` NULL, and `draft_postponed` rows.
+7. Re-capture `db-snapshot.json`, re-run the map, update STATUS.
+
+**Supersedes:** lines R7 and D1 of `freeze-league-rules-effect-test.sql`. **Web:** the paused web start/finish writes and off-grid date edits are refused. Route them through draft-control before any unpause.
