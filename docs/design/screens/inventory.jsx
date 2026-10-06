@@ -2021,27 +2021,29 @@
   }
   /** Commissioner leave sheet. q4: 'B' successor picker | 'C' auto-transfer notice. */
   function CommishLeave({ q4 = 'B' }) {
-    const others = K.PLAYERS.filter((p) => !p.you);
+    // Q2 = C (Giorgio, 2026-10-06): teams are locked in once the draft starts,
+    // so a commissioner can only leave BEFORE the draft. Humans only (no bots).
+    const others = K.SERIE_A.order.filter((m) => !m.you && !m.bot);
     return (
       <Device tab="league" label={`Commissioner leave sheet, ${q4}`} overlay={
-        <Sheet top={q4 === 'B' ? 120 : 380}>
-          <span className="ks-title">Leave {K.LEAGUE.name}?</span>
-          <Bullets items={['Your team plays out the season on autopilot.', 'You can’t rejoin this season.']} />
+        <Sheet top={q4 === 'B' ? 150 : 400}>
+          <span className="ks-title">Leave {K.SERIE_A.name}?</span>
+          <Bullets items={['You come off the draft order and everyone after you moves up one.']} />
           {q4 === 'B' ? (
             <div>
               <div className="ks-tag" style={{ color: 'var(--c-text-2)' }}>Who takes over as commissioner?</div>
               <ul className="ks-rows" role="radiogroup">
-                {others.map((p, i) => { const r = K.STANDINGS_BEFORE.find((x) => x.id === p.id); return <Radio key={p.id} on={i === 0} title={p.name} line={`${K.ordinal(r.rank)} · ${r.w}–${r.l}${i === 0 ? ' · in the league longest' : ''}`} />; })}
+                {others.map((m, i) => <Radio key={m.name} on={i === 0} title={m.name} line={i === 0 ? 'In the league longest' : 'Member'} />)}
               </ul>
             </div>
           ) : (
-            <Alert>Paolo M. becomes commissioner: they've been in the league longest. We'll let them know.</Alert>
+            <Alert>Marco R. becomes commissioner: they've been in the league longest. We'll let them know.</Alert>
           )}
-          <DangerBtn>{q4 === 'B' ? 'Leave and hand over to Paolo M.' : 'Leave league'}</DangerBtn>
+          <DangerBtn>{q4 === 'B' ? 'Leave and hand over to Marco R.' : 'Leave league'}</DangerBtn>
           <span className="ks-btn">Stay</span>
         </Sheet>
       }>
-        <Head chip={<Chip kind="live">Week 6</Chip>} />
+        <Head name={K.SERIE_A.name} chip={null} />
       </Device>
     );
   }
@@ -2244,9 +2246,9 @@
   }
   /** Refusals: the cases where leaving (or coming back) is blocked. */
   function LeaveRefused({ kind }) {
-    if (kind === 'drafting') return <LeagueSettingsLeave commish={false} name={K.SERIE_A.name} leave={<LeaveRow off sub="You can leave once the draft finishes." />} />;
-    if (kind === 'season') return <LeagueSettingsLeave commish={false} leave={<LeaveRow off sub="You can leave once the season ends. Until then your team stays yours." />} />;
-    if (kind === 'commish') return <LeagueSettingsLeave leave={<><LeaveRow off sub="Make someone else commissioner first." /></>} />;
+    if (kind === 'drafting') return <LeagueSettingsLeave commish={false} name={K.SERIE_A.name} leave={<LeaveRow off sub="Teams are locked in for the season once the draft starts." />} />;
+    if (kind === 'season') return <LeagueSettingsLeave commish={false} leave={<LeaveRow off sub="Teams are locked in for the season once the draft starts." />} />;
+    if (kind === 'commish') return <LeagueSettingsLeave name={K.SERIE_A.name} leave={<LeaveRow off sub="Make someone else commissioner first." />} />;
     if (kind === 'sole') {
       return (
         <Device tab="league" label="Leave refused, only manager" overlay={
