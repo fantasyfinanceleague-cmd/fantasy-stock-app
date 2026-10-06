@@ -1,8 +1,8 @@
 -- ============================================================================
 -- Freeze a league's rules once its draft has started
 --   league_draft_slots (every row) + the leagues rule / season-shape / season-
---   state columns + no backward draft_status move + no leaving the league,
---   for user sessions (commissioner included)
+--   state columns + no backward draft_status move + no leaving the league +
+--   no deleting draft picks, for user sessions (commissioner included)
 -- ============================================================================
 -- PROBLEM
 --   Roster slots are the boundary for what a manager may buy: a draft pick
@@ -30,6 +30,13 @@
 --   (bracket_non_member), checkStoredOrder 500s (draft_order_invalid), and
 --   the departed manager's drafts/trades still score. No live client leaves
 --   (mobile 1.1.0 has no leave; the paused web app does, useLeagues.js:244).
+--   And so are the picks themselves: "Commissioners can delete picks"
+--   (20251205110000, live) lets the commissioner DELETE any pick in their
+--   league at any time -- after the draft that erases a rival's holdings
+--   (scoring) and frees the slot it held for trade buys; mid-draft it breaks
+--   pick_number / turn math. No client or edge function deletes picks (grep
+--   2026-11-04: every drafts write is the service-role insertGatedPick), so
+--   there is no mid-draft "undo" feature to preserve.
 --
 --   WHAT EXISTING GUARDS ALREADY COVER (and why they are not enough):
 --     * trg_leagues_member_update_columns (F1, 20260925000000) refuses a
@@ -121,6 +128,22 @@
 --      -> leagues ON DELETE CASCADE (user_id has no FK). A league delete
 --      cascades with the deleter's auth.uid(); the league row is gone by
 --      then, so "league not found => allow" lets it through, same as slots.
+--   5. drafts: no DELETE once the league's draft_status is anything but
+--      exactly 'not_started' (draft_picks_locked). Pre-draft deletes stay
+--      allowed (there are normally no picks then). No UPDATE guard: drafts
+--      has NO UPDATE policy and no INSERT policy (both client INSERT
+--      policies dropped in 20260811000003), so a user-session UPDATE matches
+--      0 rows; the test pins that. The league read is scoped to the caller's
+--      own leagues, like the slot trigger (the DELETE policy already limits
+--      rows to the commissioner's leagues, so this is consistency, not a
+--      second probe path). FOR SHARE, like slots: it serializes with a draft
+--      start; pick inserts take only KEY SHARE on the league (compatible).
+--      CASCADE: drafts.league_id's FK is prod-only (no CREATE TABLE in the
+--      repo); the effect block's F2 line reports it. If it cascades, a league
+--      delete removes picks with the deleter's auth.uid(), the league row is
+--      already gone, and "league not found => allow" lets it through.
+--      drafts.slot_id -> league_draft_slots ON DELETE SET NULL is an UPDATE,
+--      which this DELETE-only trigger does not see.
 --
 -- WHO IS EXEMPT: auth.uid() IS NULL -- service_role, cron, migrations, the
 --   dashboard SQL editor. Same test as F1 and the playoff_teams freeze, so a
@@ -210,13 +233,14 @@
 -- POST-PUSH CHECKS (read-only):
 --   SELECT tgname, tgrelid::regclass, tgenabled FROM pg_trigger
 --    WHERE tgname IN ('trg_league_draft_slots_freeze', 'trg_leagues_freeze_rules',
---                     'trg_league_members_freeze_leave');
+--                     'trg_league_members_freeze_leave', 'trg_drafts_freeze_delete');
 --   SELECT proname, prosecdef, proconfig, proacl FROM pg_proc p
 --     JOIN pg_namespace n ON n.oid = p.pronamespace
 --    WHERE n.nspname = 'public'
 --      AND proname IN ('enforce_league_draft_slots_frozen',
 --                      'enforce_league_rules_frozen_after_draft_start',
---                      'enforce_league_members_frozen_after_draft_start');
+--                      'enforce_league_members_frozen_after_draft_start',
+--                      'enforce_drafts_frozen_after_draft_start');
 --   -- expect no anon= / authenticated= / =X/ (PUBLIC) entries
 --
 -- HUMAN ACTION: `supabase db push` is Giorgio's.
@@ -401,3 +425,47 @@ drop trigger if exists trg_league_members_freeze_leave on public.league_members;
 create trigger trg_league_members_freeze_leave
   before delete on public.league_members
   for each row execute function public.enforce_league_members_frozen_after_draft_start();
+
+-- ----------------------------------------------------------------------------
+-- 4. drafts: no deleting picks once the draft has started (see 5.)
+-- ----------------------------------------------------------------------------
+create or replace function public.enforce_drafts_frozen_after_draft_start()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_status text;
+begin
+  if auth.uid() is null then
+    return old;
+  end if;
+
+  -- Only the caller's own league is read and locked (see the slot trigger;
+  -- as there, a NULL auth.uid() matches nothing, so the exemption above is
+  -- belt-and-braces).
+  select l.draft_status into v_status
+    from public.leagues l
+   where l.id = old.league_id
+     and l.commissioner_id = auth.uid()::text
+     for share;
+  if not found then
+    return old;   -- the league is being deleted (cascade), or not the caller's (RLS decides)
+  end if;
+
+  if v_status is distinct from 'not_started' then
+    raise exception 'draft_picks_locked: draft picks cannot be deleted once the draft has started'
+      using errcode = '42501';
+  end if;
+  return old;
+end;
+$$;
+
+revoke all on function public.enforce_drafts_frozen_after_draft_start() from public;
+revoke all on function public.enforce_drafts_frozen_after_draft_start() from anon, authenticated;
+
+drop trigger if exists trg_drafts_freeze_delete on public.drafts;
+create trigger trg_drafts_freeze_delete
+  before delete on public.drafts
+  for each row execute function public.enforce_drafts_frozen_after_draft_start();

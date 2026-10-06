@@ -419,6 +419,8 @@ tests including the repro (`draft-validation.test.ts`, "tier trades: ...").
 
 What it does:
 - Loads, **verbatim** and in prod order:
+  - the `drafts` RLS (`20251205110000`, including the live "Commissioners can delete
+    picks" policy) and its INSERT-policy drop (`20260811000003`);
   - the B1 helpers and the `leagues` / `league_members` RLS (`20260712000000`/`01`/`02`,
     including [I5] delete-self);
   - `league_draft_slots` with its interim commissioner policies (`20260810000004`);
@@ -462,6 +464,10 @@ It covers:
   The lock MODES (`FOR NO KEY UPDATE` for leaves, `FOR SHARE` scoped to the caller's
   leagues for slots) are pinned statically from `pg_proc.prosrc`, because one connection
   can't tell them apart.
+- draft picks: the commissioner's pick DELETE is refused in `in_progress` and `completed`
+  (`draft_picks_locked`). A pre-draft delete is allowed. A member's delete and any user
+  UPDATE match 0 rows (there are no such policies). The service role may delete, and
+  deleting a started league cascades its picks.
 - pre-draft: the commissioner inserts, updates and deletes slots and edits every rule
 - `in_progress` and `completed`: every slot write (and the delete-then-insert client
   save) refused with `league_slots_locked`; each of the 14 frozen columns refused on
@@ -482,7 +488,8 @@ It covers:
 - `proacl`, `prosecdef` and the `search_path` pin of both trigger functions
 - the human post-push block `docs/security/freeze-league-rules-effect-test.sql`, run
   **verbatim** (via `request.jwt.claims` and Supabase's real `auth.uid()` definition):
-  all 23 lines PASS, including F1 (the only FK touching `league_members` is its
+  all 28 lines PASS, including F2 (`drafts.league_id` cascades; prints REVIEW in prod if
+  the prod-only FK differs), F1 (the only FK touching `league_members` is its
   `league_id` cascade) and C1 (every live `leagues` column classified; its list must
   equal the test's `CLASSIFICATION`), and nothing persists
 
@@ -494,18 +501,19 @@ this trigger. #94 also adds `leagues` columns (`previous_league_id`, `lineage_id
 `season_number`), so on rebase this test FAILS until they are classified. They are
 guarded by #94's own `enforce_league_lineage_columns` trigger.
 
-Mutation-checked: 21 mutations, 20 of which fail at least one step. They cover:
+Mutation-checked: 25 mutations, 23 of which fail at least one step. They cover:
 - each guard branch;
 - the leave guard disabled, its cascade allowance removed, its service-role exemption
   removed, and its lock swapped to `FOR SHARE`;
+- the drafts guard disabled, its cascade allowance removed, and its scope removed;
 - the slot trigger's commissioner scope removed;
 - a state column dropped, and `budget_mode` dropped;
 - stamp-once refusing NULL → value, and stamp-once widened back to any time;
 - three probe migrations: an unclassified column, an `ADD` without `COLUMN`, and an
   `ADD COLUMN` inside a `DO` block.
 
-The survivor is equivalent, not a gap. Removing the slot trigger's explicit
-`auth.uid() IS NULL` exemption changes nothing, because the commissioner scope
+The two survivors are equivalent, not gaps. They remove the slot and drafts triggers'
+explicit `auth.uid() IS NULL` exemption, which changes nothing: their commissioner scope
 (`commissioner_id = auth.uid()::text`) already matches no league when the uid is NULL.
 
 #94 compatibility was checked once, in a scratch copy of this suite, against

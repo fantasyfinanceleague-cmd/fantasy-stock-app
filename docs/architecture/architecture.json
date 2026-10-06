@@ -2,8 +2,8 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "3c88bc5cd597fb66a6569c84375c298e5ae05007",
-    "commitShort": "3c88bc5",
+    "commit": "be980209a3cd03fe6b534936812e935eb8e331ca",
+    "commitShort": "be98020",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": true,
@@ -1962,6 +1962,37 @@
     {
       "layer": "db",
       "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:432"
+        ],
+        "latestDefinition": "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.enforce_drafts_frozen_after_draft_start",
+      "label": "enforce_drafts_frozen_after_draft_start()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql",
+        "line": 432
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
       "db": {
         "securityDefiner": true,
         "searchPath": "public, pg_temp",
@@ -2047,7 +2078,7 @@
       "db": null,
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:306"
+          "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:330"
         ],
         "latestDefinition": "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql",
         "redefinitions": 1
@@ -2069,7 +2100,7 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql",
-        "line": 306
+        "line": 330
       }
     },
     {
@@ -2078,7 +2109,7 @@
       "db": null,
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:366"
+          "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:390"
         ],
         "latestDefinition": "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql",
         "redefinitions": 1
@@ -2100,7 +2131,7 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql",
-        "line": 366
+        "line": 390
       }
     },
     {
@@ -2109,7 +2140,7 @@
       "db": null,
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:228"
+          "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:252"
         ],
         "latestDefinition": "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql",
         "redefinitions": 1
@@ -2131,7 +2162,7 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql",
-        "line": 228
+        "line": 252
       }
     },
     {
@@ -8507,6 +8538,19 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.pg.enforce_drafts_frozen_after_draft_start->tbl.leagues",
+      "from": "pg.enforce_drafts_frozen_after_draft_start",
+      "to": "tbl.leagues",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT leagues (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:445"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.pg.enforce_league_draft_order_meta->tbl.leagues",
       "from": "pg.enforce_league_draft_order_meta",
       "to": "tbl.leagues",
@@ -8566,7 +8610,7 @@
       "payload": "SELECT leagues (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:335"
+        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:359"
       ]
     },
     {
@@ -8579,7 +8623,7 @@
       "payload": "SELECT leagues (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:378"
+        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:402"
       ]
     },
     {
@@ -9966,6 +10010,19 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.tbl.drafts->pg.enforce_drafts_frozen_after_draft_start",
+      "from": "tbl.drafts",
+      "to": "pg.enforce_drafts_frozen_after_draft_start",
+      "protocol": "pg-trigger",
+      "payload": "trigger on drafts",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:469"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.tbl.league_draft_order_meta->pg.enforce_league_draft_order_meta",
       "from": "tbl.league_draft_order_meta",
       "to": "pg.enforce_league_draft_order_meta",
@@ -10025,7 +10082,7 @@
       "payload": "trigger on league_draft_slots",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:359"
+        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:383"
       ]
     },
     {
@@ -10080,7 +10137,7 @@
       "payload": "trigger on league_members",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:401"
+        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:425"
       ]
     },
     {
@@ -10133,7 +10190,7 @@
       "payload": "trigger on leagues",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:299"
+        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:323"
       ]
     },
     {
@@ -12602,6 +12659,16 @@
   ],
   "drift": [
     {
+      "node": "pg.enforce_drafts_frozen_after_draft_start",
+      "label": "enforce_drafts_frozen_after_draft_start()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
       "node": "pg.enforce_league_draft_slots_frozen",
       "label": "enforce_league_draft_slots_frozen()",
       "groupKey": "existence",
@@ -13251,6 +13318,12 @@
       "resolve": "Re-capture the snapshot, or confirm the migration was applied."
     },
     {
+      "scope": "pg.enforce_drafts_frozen_after_draft_start",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
       "scope": "tbl.broker_credentials",
       "claim": "table exists in prod",
       "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
@@ -13307,13 +13380,13 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 180,
-    "edges": 402,
+    "nodes": 181,
+    "edges": 404,
     "flows": 8,
-    "drift": 31,
-    "driftHigh": 4,
+    "drift": 32,
+    "driftHigh": 5,
     "deadCode": 30,
-    "unverified": 12
+    "unverified": 13
   },
   "sourceIndex": {
     "edgeFunctions": [

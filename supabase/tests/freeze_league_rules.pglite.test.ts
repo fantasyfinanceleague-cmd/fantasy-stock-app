@@ -3,7 +3,9 @@
  * (PGlite). NOT hermetic: the first run fetches npm:@electric-sql/pglite.
  * Run instructions: supabase/tests/README.md.
  *
- * Loads VERBATIM, in prod order: the B1 helpers (20260712000000), the leagues
+ * Loads VERBATIM, in prod order: the drafts RLS (20251205110000, incl. the live
+ * "Commissioners can delete picks") and its INSERT-policy drop (20260811000003),
+ * the B1 helpers (20260712000000), the leagues
  * and league_members RLS policies (20260712000001/02, incl. [I5] delete-self),
  * league_draft_slots + its interim commissioner policies (20260810000004), the
  * F1 member column guard (20260925000000), the pick clock (20261010000000), the
@@ -38,10 +40,12 @@ import { PGlite } from 'npm:@electric-sql/pglite@0.2';
 
 const ROOT = new URL('../../', import.meta.url);
 const MIGRATIONS = [   // prod (timestamp) order
+  '20251205110000_enable_drafts_rls.sql',
   '20260712000000_rls_b1_00_helpers.sql',
   '20260712000001_rls_b1_01_leagues.sql',
   '20260712000002_rls_b1_02_league_members.sql',
   '20260810000004_create_league_draft_slots.sql',
+  '20260811000003_drafts_drop_direct_client_insert.sql',
   '20260925000000_leagues_member_draft_complete_column_guard.sql',
   '20261010000000_draft_pick_clock_and_queue.sql',
   '20261012000002_freeze_playoff_teams_after_draft_start.sql',
@@ -70,8 +74,13 @@ create table league_members (league_id uuid not null references leagues(id) on d
 create table categories (id uuid primary key default gen_random_uuid(), slug text unique, name text);
 -- Stubs the pick-clock / draft-order SQL functions are validated against (as in
 -- draft_order_modes.pglite.test.ts).
-create table drafts (id serial primary key, league_id uuid, user_id text, symbol text,
-  entry_price numeric, quantity numeric, round int, pick_number int, created_at timestamptz default now());
+-- drafts is prod-only (no CREATE TABLE in the repo): the columns insertGatedPick writes. league_id's FK
+-- is modelled as ON DELETE CASCADE; the effect block's F2 line reports prod's actual FK.
+create table drafts (id serial primary key, league_id uuid not null references leagues(id) on delete cascade,
+  user_id text, symbol text, entry_price numeric, quantity numeric, round int, pick_number int,
+  slot_id uuid, created_at timestamptz default now());
+create table draft_sessions (id serial primary key, league_id uuid);
+create table draft_settings (id serial primary key, league_id uuid);
 create table symbols (symbol text primary key, active boolean default true, is_draftable boolean not null default false,
   price_unsupported boolean not null default false, last_price numeric, market_cap numeric, gics_industry text);
 create table category_rules (gics_industry text unique not null, category_id uuid not null references categories(id));
@@ -264,21 +273,24 @@ Deno.test({
     };
 
     // ---- structure --------------------------------------------------------
-    await t.step('structure: the three triggers enabled, functions locked down, search_path pinned', async () => {
+    await t.step('structure: the four triggers enabled, functions locked down, search_path pinned', async () => {
       const tg = await q(`select tgname, tgrelid::regclass::text rel, tgenabled e from pg_trigger
-        where tgname in ('trg_league_draft_slots_freeze','trg_leagues_freeze_rules','trg_league_members_freeze_leave')
+        where tgname in ('trg_league_draft_slots_freeze','trg_leagues_freeze_rules','trg_league_members_freeze_leave',
+                         'trg_drafts_freeze_delete')
         order by tgname`);
       assertEquals(tg.map((r: Row) => [r.tgname, r.rel, r.e]), [
+        ['trg_drafts_freeze_delete', 'drafts', 'O'],
         ['trg_league_draft_slots_freeze', 'league_draft_slots', 'O'],
         ['trg_league_members_freeze_leave', 'league_members', 'O'],
         ['trg_leagues_freeze_rules', 'leagues', 'O'],
       ]);
       const fns = await q(`select proname, prosecdef, proconfig, coalesce(proacl::text,'') acl from pg_proc
         where proname in ('enforce_league_draft_slots_frozen','enforce_league_rules_frozen_after_draft_start',
-                          'enforce_league_members_frozen_after_draft_start')
+                          'enforce_league_members_frozen_after_draft_start','enforce_drafts_frozen_after_draft_start')
         order by proname`);
-      assertEquals(fns.length, 3);
+      assertEquals(fns.length, 4);
       assertEquals(fns.map((f: Row) => [f.proname, f.prosecdef]), [
+        ['enforce_drafts_frozen_after_draft_start', true],
         ['enforce_league_draft_slots_frozen', true],
         ['enforce_league_members_frozen_after_draft_start', true],
         ['enforce_league_rules_frozen_after_draft_start', false],
@@ -292,6 +304,8 @@ Deno.test({
       assert(/for no key update/i.test(leaveSrc) && !/for share/i.test(leaveSrc), 'leave trigger lock mode');
       const slotsSrc = await src('enforce_league_draft_slots_frozen');
       assert(/l\.commissioner_id = auth\.uid\(\)::text order by l\.id for share/i.test(slotsSrc), 'slot trigger lock scope/mode');
+      const draftsSrc = await src('enforce_drafts_frozen_after_draft_start');
+      assert(/l\.commissioner_id = auth\.uid\(\)::text for share/i.test(draftsSrc), 'drafts trigger lock scope/mode');
       for (const f of fns) {
         assert(f.acl !== '', `${f.proname}: proacl NULL means default PUBLIC execute`);
         assert(!/(^|[{,])=X/.test(f.acl), `${f.proname}: PUBLIC grant survives: ${f.acl}`);
@@ -448,6 +462,53 @@ Deno.test({
         throw e;
       }
       assertEquals(await members(L), []);
+    });
+
+    // ---- drafts: no deleting picks once the draft has started --------------
+    let pickNo = 0;
+    const pick = async (L: string, user = MEMBER) =>
+      (await q(`insert into drafts (league_id, user_id, symbol, entry_price, quantity, round, pick_number, pick_source)
+        values ($1,$2,'AAPL',100,10,1,$3,'manual') returning id`, [L, user, ++pickNo]))[0].id as number;
+    const picks = async (L: string) => (await q(`select count(*)::int n from drafts where league_id=$1`, [L]))[0].n as number;
+
+    for (const st of ['in_progress', 'completed']) {
+      await t.step(`${st}: the commissioner cannot delete picks ("Commissioners can delete picks"); nothing is deleted`, async () => {
+        const L = await league(st);
+        const id = await pick(L);
+        await pick(L, COMMISH);
+        await as('commish', async () => {
+          await refused(() => q(`delete from drafts where id=$1`, [id]), 'draft_picks_locked');
+          await refused(() => q(`delete from drafts where league_id=$1`, [L]), 'draft_picks_locked');
+        });
+        assertEquals(await picks(L), 2);
+      });
+    }
+
+    await t.step('drafts: pre-draft delete allowed; members delete nothing; no UPDATE path; service role exempt', async () => {
+      const open = await league('not_started');
+      await pick(open);
+      await as('commish', () => q(`delete from drafts where league_id=$1`, [open]));
+      assertEquals(await picks(open), 0);
+      const done = await league('completed');
+      const id = await pick(done);
+      await as('member', async () => {
+        // No DELETE policy for members, and no UPDATE policy for anyone: both match 0 rows.
+        assertEquals(await q(`delete from drafts where id=$1 returning id`, [id]), []);
+        assertEquals(await q(`update drafts set quantity=999 where id=$1 returning id`, [id]), []);
+      });
+      await as('commish', async () => {
+        assertEquals(await q(`update drafts set quantity=999, league_id=league_id where id=$1 returning id`, [id]), []);
+      });
+      assertEquals((await q(`select quantity::int qn from drafts where id=$1`, [id]))[0].qn, 10);
+      await as('service', () => q(`delete from drafts where id=$1`, [id]));
+      assertEquals(await picks(done), 0);
+    });
+
+    await t.step('drafts cascade: deleting a started league removes its picks', async () => {
+      const L = await league('completed');
+      await pick(L);
+      await as('commish', () => q(`delete from leagues where id=$1`, [L]));
+      assertEquals(await picks(L), 0);
     });
 
     // ---- pre-draft: the commissioner keeps full control -------------------
@@ -746,7 +807,7 @@ Deno.test({
       }
       assert(msg.startsWith('FREEZE LEAGUE RULES EFFECT TEST RESULTS'), `the block must end by raising: ${msg}`);
       const lines = msg.split('\n').slice(1).filter((l) => l.trim());
-      assertEquals(lines.length, 23, msg);
+      assertEquals(lines.length, 28, msg);
       for (const l of lines) assert(/  PASS$/.test(l), `not PASS: ${l}`);
       // The block's c_classified list is the same set as CLASSIFICATION.
       const m = sql.match(/c_classified text\[\] := array\[([^\]]*)\]/);

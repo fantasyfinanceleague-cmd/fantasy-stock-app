@@ -21,16 +21,24 @@
 --     verbatim on real Postgres and requires every line to PASS.
 --
 -- EXPECTED OUTPUT (the final "ERROR:" text): every line ends in PASS.
---   G1  all three triggers present and enabled                      PASS
---   G2  all three functions: no PUBLIC/anon/authenticated EXECUTE,
---       slots + members fns SECURITY DEFINER, search_path pinned    PASS
+--   G1  all four triggers present and enabled                       PASS
+--   G2  all four functions: no PUBLIC/anon/authenticated EXECUTE,
+--       slots/members/drafts fns SECURITY DEFINER, search_path
+--       pinned                                                      PASS
 --   F1  the only FK touching league_members is its league_id ->
 --       leagues ON DELETE CASCADE (else: a cascade path to review)  PASS
+--   F2  drafts.league_id -> leagues ON DELETE CASCADE, and no FK
+--       references drafts                                           PASS
+--       REVIEW (not a failure of this migration) = prod's drafts FK
+--       differs: a league delete would orphan picks (no FK) or be
+--       blocked (no cascade). Read the listed constraints.
 --   V1  service_role: slot UPDATE on a completed league -> 1 row    PASS
 --   V2  service_role: num_rounds change on a completed league       PASS
 --   V3  service_role: removes a member from a completed league      PASS
+--   V4  service_role: deletes a pick in a completed league          PASS
 --   P1  commissioner, pre-draft: slot UPDATE -> 1 row               PASS
 --   P2  commissioner, pre-draft: num_rounds change -> 1 row         PASS
+--   P3  commissioner, pre-draft: deletes a pick -> 1 row            PASS
 --   S1  commissioner, completed: slot INSERT -> league_slots_locked PASS
 --   S2  commissioner, completed: slot UPDATE -> league_slots_locked PASS
 --   S3  commissioner, completed: slot DELETE -> league_slots_locked PASS
@@ -48,6 +56,9 @@
 --       carve-out) -> 1 row                                         PASS
 --   D1  commissioner, completed -> not_started
 --       -> league_draft_status_locked                               PASS
+--   K1  commissioner, completed: deletes a pick
+--       -> draft_picks_locked                                       PASS
+--   K2  member, completed: UPDATEs a pick -> 0 rows (no policy)     PASS
 --   L1  commissioner, completed: leaves -> league_membership_locked PASS
 --   L2  member, completed: leaves -> league_membership_locked       PASS
 --   L3  member, pre-draft: leaves -> 1 row (unchanged behaviour)    PASS
@@ -81,16 +92,17 @@ declare
 begin
   -- ---- G: catalog -----------------------------------------------------------
   select count(*) into n from pg_trigger
-   where tgname in ('trg_league_draft_slots_freeze', 'trg_leagues_freeze_rules', 'trg_league_members_freeze_leave')
+   where tgname in ('trg_league_draft_slots_freeze', 'trg_leagues_freeze_rules', 'trg_league_members_freeze_leave',
+                    'trg_drafts_freeze_delete')
      and tgenabled = 'O';
-  out := out || format(E'G1 triggers present+enabled = %s/3  %s\n', n, case when n = 3 then 'PASS' else 'FAIL' end);
+  out := out || format(E'G1 triggers present+enabled = %s/4  %s\n', n, case when n = 4 then 'PASS' else 'FAIL' end);
 
   select string_agg(proname || ':' || coalesce(proacl::text, 'NULL') || ':' || prosecdef::text
                     || ':' || coalesce(array_to_string(proconfig, ','), 'NOCONFIG'), ' ') into acl
     from pg_proc p join pg_namespace ns on ns.oid = p.pronamespace
    where ns.nspname = 'public'
      and proname in ('enforce_league_draft_slots_frozen', 'enforce_league_rules_frozen_after_draft_start',
-                     'enforce_league_members_frozen_after_draft_start')
+                     'enforce_league_members_frozen_after_draft_start', 'enforce_drafts_frozen_after_draft_start')
      and (proacl is null
           or proacl::text ~ '(anon|authenticated)='
           or proacl::text ~ '(^|[{,])=X'
@@ -99,9 +111,9 @@ begin
   select count(*) into n from pg_proc p join pg_namespace ns on ns.oid = p.pronamespace
    where ns.nspname = 'public'
      and proname in ('enforce_league_draft_slots_frozen', 'enforce_league_rules_frozen_after_draft_start',
-                     'enforce_league_members_frozen_after_draft_start');
-  out := out || format(E'G2 fn grants/secdef/path   %s (found %s/3)  %s\n', coalesce(acl, 'ok'), n,
-    case when acl is null and n = 3 then 'PASS' else 'FAIL' end);
+                     'enforce_league_members_frozen_after_draft_start', 'enforce_drafts_frozen_after_draft_start');
+  out := out || format(E'G2 fn grants/secdef/path   %s (found %s/4)  %s\n', coalesce(acl, 'ok'), n,
+    case when acl is null and n = 4 then 'PASS' else 'FAIL' end);
 
   select string_agg(conrelid::regclass || '.' || conname || '->' || confrelid::regclass || ':' || confdeltype::text, ' ') into acl
     from pg_constraint
@@ -115,6 +127,19 @@ begin
                                  where contype = 'f' and conrelid = 'public.league_members'::regclass
                                    and confrelid = 'public.leagues'::regclass and confdeltype = 'c')
          then 'PASS' else 'FAIL' end);
+
+  select string_agg(conrelid::regclass || '.' || conname || '->' || confrelid::regclass || ':' || confdeltype::text, ' ') into acl
+    from pg_constraint
+   where contype = 'f'
+     and (conrelid = 'public.drafts'::regclass or confrelid = 'public.drafts'::regclass)
+     and confrelid <> 'public.league_draft_slots'::regclass;   -- slot_id (SET NULL) is expected
+  out := out || format(E'F2 drafts FKs: %s  %s\n', coalesce(acl, 'none'),
+    case when exists (select 1 from pg_constraint
+                       where contype = 'f' and conrelid = 'public.drafts'::regclass
+                         and confrelid = 'public.leagues'::regclass and confdeltype = 'c')
+          and not exists (select 1 from pg_constraint
+                           where contype = 'f' and confrelid = 'public.drafts'::regclass)
+         then 'PASS' else 'REVIEW' end);
 
   -- ---- fixture (as the editor's own role: auth.uid() IS NULL, exempt) -------
   insert into public.leagues (name, commissioner_id, invite_code, num_participants, num_rounds, num_weeks,
@@ -142,6 +167,13 @@ begin
   values (l_done, 1, 3, 50, null);
   update public.leagues set draft_status = 'completed' where id = l_done;
   update public.leagues set draft_status = 'in_progress' where id = l_prog;
+  -- Picks, in the shape the service-role writer (insertGatedPick) uses. They are
+  -- addressed by (league_id, pick_number) below, not by id: drafts is a prod-only
+  -- table and its id type is not in the repo.
+  insert into public.drafts (league_id, user_id, symbol, entry_price, quantity, round, pick_number, pick_source)
+  values (l_open, m_uid, 'AAPL', 100, 10, 1, 900001, 'manual'),
+         (l_done, m_uid, 'AAPL', 100, 10, 1, 900002, 'manual'),
+         (l_done, c_uid, 'MSFT', 100, 10, 1, 900003, 'manual');
 
   -- ---- V: service_role keeps full rights -------------------------------------
   perform set_config('role', 'service_role', true);
@@ -169,6 +201,14 @@ begin
     out := out || format(E'V3 service member removal (completed) -> %s %s  FAIL\n', sqlstate, sqlerrm);
   end;
 
+  begin
+    delete from public.drafts where league_id = l_done and pick_number = 900003;
+    get diagnostics n = row_count;
+    out := out || format(E'V4 service pick delete (completed) rows=%s  %s\n', n, case when n = 1 then 'PASS' else 'FAIL' end);
+  exception when others then
+    out := out || format(E'V4 service pick delete (completed) -> %s %s  FAIL\n', sqlstate, sqlerrm);
+  end;
+
   -- ---- the commissioner (authenticated, real RLS) ----------------------------
   perform set_config('role', 'authenticated', true);
   perform set_config('request.jwt.claims', json_build_object('sub', c_uid, 'role', 'authenticated')::text, true);
@@ -186,6 +226,22 @@ begin
     out := out || format(E'P2 pre-draft num_rounds rows=%s  %s\n', n, case when n = 1 then 'PASS' else 'FAIL' end);
   exception when others then
     out := out || format(E'P2 pre-draft num_rounds -> %s %s  FAIL\n', sqlstate, sqlerrm);
+  end;
+
+  begin
+    delete from public.drafts where league_id = l_open and pick_number = 900001;
+    get diagnostics n = row_count;
+    out := out || format(E'P3 pre-draft pick delete rows=%s  %s\n', n, case when n = 1 then 'PASS' else 'FAIL' end);
+  exception when others then
+    out := out || format(E'P3 pre-draft pick delete -> %s %s  FAIL\n', sqlstate, sqlerrm);
+  end;
+  begin
+    delete from public.drafts where league_id = l_done and pick_number = 900002;
+    get diagnostics n = row_count;
+    out := out || format(E'K1 completed pick delete -> allowed rows=%s  FAIL\n', n);
+  exception when others then
+    out := out || format(E'K1 completed pick delete -> %s  %s\n', sqlstate,
+      case when sqlstate = '42501' and sqlerrm like 'draft_picks_locked:%' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
   end;
 
   begin
@@ -296,6 +352,13 @@ begin
   end;
 
   perform set_config('request.jwt.claims', json_build_object('sub', m_uid, 'role', 'authenticated')::text, true);
+  begin
+    update public.drafts set quantity = 999 where league_id = l_done and pick_number = 900002;
+    get diagnostics n = row_count;
+    out := out || format(E'K2 member pick UPDATE rows=%s  %s\n', n, case when n = 0 then 'PASS' else 'FAIL' end);
+  exception when others then
+    out := out || format(E'K2 member pick UPDATE -> %s %s  FAIL\n', sqlstate, sqlerrm);
+  end;
   begin
     delete from public.league_members where league_id = l_done and user_id = m_uid;
     get diagnostics n = row_count;
