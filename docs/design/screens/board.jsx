@@ -301,7 +301,7 @@
             <div><dt>Stakes</dt><dd>$2,000 per slot · 6 slots</dd></div>
           </dl>
           <nav className="b-toc" aria-label="Screens">
-            {[['themes', 'Themes'], ['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['phases', 'Home phases'], ['game', 'Game'], ['run-it-back', 'Run it back'], ['money', 'Trading'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
+            {[['themes', 'Themes'], ['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['phases', 'Home phases'], ['game', 'Game'], ['run-it-back', 'Run it back'], ['call-tier-trades', 'Tiers call'], ['money', 'Trading'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
           </nav>
         </header>
 

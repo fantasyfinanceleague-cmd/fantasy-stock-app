@@ -179,6 +179,54 @@
           </div>
         </section>
 
+        <section className="b-sec" id="call-tier-trades" aria-labelledby="call-tier-trades-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n b-sec__n--code">3e</span>
+            <div>
+              <h2 id="call-tier-trades-h">Your call: which tier a traded stock fills</h2>
+              <p className="b-job">Price-tier leagues (one share per tier). Today tiers are only counted from the draft, so after a sale a manager can buy a second stock into a tier that is already filled; only the roster cap stops them. Pick how a trade buy fits the tiers. Sample: "Tier Cup", six one-share tiers. Roberto sold DIS ($102.90), his $100–$200 stock. All copy in these frames is new.</p>
+            </div>
+          </header>
+          <ul className="b-inv__notes">
+            <li><b>Already decided (A, 2026-09-30):</b> one share per buy and the whole position per sell. The review says "1 share" and the slot's tier. This choice only decides <i>which</i> tier a buy may fill.</li>
+            <li><b>A · Replace in the same tier.</b> Selling frees that stock's tier slot. A buy must fit a free tier slot; the review says "Fills your $100–$200 slot". If no free tier fits, the buy is refused with the reason.</li>
+            <li><b>B · Any open tier, re-fit by price.</b> A holding's tier comes from its entry price, first fit across every holding. A buy is legal if all holdings plus the new one still fit the tier layout.</li>
+            <li><b>C · Tiers are a draft rule only.</b> Trades ignore tiers; only the roster cap and the budget apply. The review shows no tier.</li>
+            <li><b>Budget rows are unchanged:</b> the decided one-share review keeps "Budget now" and "Budget left after"; these frames leave them out to show only the tier line.</li>
+            <li><b>Either way, a tier is set by the entry price</b> (draft price or buy price) and never moves if the stock's price drifts out of its bracket later.</li>
+          </ul>
+
+          <h3 className="b-sub">A · Replace in the same tier</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Portfolio · the open slot" note="Each row names its slot; the freed slot is a row with Fill, which opens the stock list."><I.TierPortfolio mode="A" /></Fit>
+            <Fit caption="Review buy · SHOP $104.20" note='"Fills your $100–$200 slot", next to the already-decided "1 share" rule.'><I.TierReview mode="A" /></Fit>
+            <Fit caption="Refused · AAPL $211.42" note="Shown before the review, from the stock sheet's Buy. The reason names the price and the open slot's range."><I.TierRefused mode="A" /></Fit>
+          </div>
+
+          <h3 className="b-sub">B · Any open tier, re-fit by price</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Portfolio · tiers by entry price" note="Rows show the tier their entry price falls in. The gap is described by the whole layout, not one slot."><I.TierPortfolio mode="B" /></Fit>
+            <Fit caption="Review buy · SHOP $104.20" note="The tier is computed from today's price, so the review can only say where it lands."><I.TierReview mode="B" /></Fit>
+            <Fit caption="Refused · AAPL $211.42" note="The reason has to explain the whole layout, not one slot."><I.TierRefused mode="B" /></Fit>
+          </div>
+
+          <h3 className="b-sub">C · Tiers are a draft rule only</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Portfolio · after selling DIS, buying AAPL" note="Two stocks between $200 and $400, none between $100 and $200. No tier labels after the draft."><I.TierPortfolio mode="C" /></Fit>
+            <Fit caption="Review buy · AAPL $211.42" note="No tier line: only the roster cap and the budget can refuse."><I.TierReview mode="C" /></Fit>
+          </div>
+
+          <div className="b-ask">
+            <h3>Your call · recommend A</h3>
+            <ul>
+              <li><b>A keeps the league's shape.</b> The tier layout the commissioner chose stays true all season: every roster always holds one cheap stock, one mid-priced stock and one expensive stock. A trade is a swap inside a tier ("sell my $100–$200 stock, buy a better $100–$200 stock"), which is easy to explain on one line and easy to refuse with a reason.</li>
+              <li><b>B plays the same as A</b> while tiers don't overlap (the layout above): each one-share tier holds exactly one stock, so "re-fit everything" always lands back on "fill the open tier". It only differs with overlapping brackets, and there its refusals have to explain the whole roster ("two stocks in $200–$400 and none in $100–$200"). It costs more to explain for the same play.</li>
+              <li><b>C changes what tiers mean.</b> They become a draft-room constraint that dissolves on the first trade: by mid-season a tier league can be five $800+ stocks, the same game as a plain budget league. If that is the intent, a tier league doesn't need its own format.</li>
+              <li><b>Backend (A or B):</b> trade buys need a slot. Tiers today count only <code>drafts.slot_id</code>; a buy in record-trade would carry the freed <code>slot_id</code> (A) or re-check every holding's entry price (B), and refuse with <code>tier_full</code> / <code>tier_mismatch</code>. C needs no backend change.</li>
+            </ul>
+          </div>
+        </section>
+
         <Group id="money" code="3e" name="Trading" job="Sell, keep the cash in the slot, and buy again with exactly what the sale brought in."
           notes={[
             'Sell is all or nothing: a slot holds one stock, so the sheet confirms "Sell all X sh ≈ $Y" (no partial amounts). The money stays in the slot.',
