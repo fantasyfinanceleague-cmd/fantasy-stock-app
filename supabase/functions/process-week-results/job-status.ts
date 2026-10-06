@@ -1,9 +1,8 @@
 /**
- * cron_job_status writer for process-week-results.
- *
- * Extracted from index.ts so the write's failure handling is pinned by
- * hermetic tests (see job-status.test.ts). No Deno APIs; the client is
- * passed in, so a stub stands in for supabase-js.
+ * cron_job_status messages for process-week-results, and the re-export of its
+ * writer primitive (now in ../_shared/job-status-io.ts), so the write's failure
+ * handling stays pinned by hermetic tests (see job-status.test.ts). No Deno APIs;
+ * the client is passed in, so a stub stands in for supabase-js.
  *
  * Two contracts, both learned the hard way (CLAUDE.md "Success signals"):
  *
@@ -20,66 +19,16 @@
  *    into a second failed status write.
  */
 
-// Must match the CHECK constraint on cron_job_status.status
-// (20260116000000_matchup_scoring_redesign.sql). There is no distinct
-// "nothing to do" value; the no-pending path writes 'success' and says so in
-// the message (see noPendingMessage / scoredMessage).
-export type JobStatus = 'running' | 'success' | 'failed' | 'retrying';
-
-// Minimal structural slice of the supabase-js client this writer touches.
-export interface JobStatusClient {
-  from(table: string): {
-    upsert(
-      row: Record<string, unknown>,
-      opts: { onConflict: string },
-    ): PromiseLike<{ error: { message?: string } | null }>;
-  };
-}
-
-/**
- * Upsert today's row for `jobName`. Returns true only if the database
- * accepted the write. Never throws.
- *
- * `message` is stored in the `error_message` column — the only free-text
- * column the table has. On 'failed' it is the error; on 'success' it is a run
- * summary. Both success paths ALWAYS write a summary, so the column's
- * presence/absence is never a discriminator — read `status` for the outcome
- * and the text for what happened.
- */
-export async function updateJobStatus(
-  supabase: JobStatusClient,
-  jobName: string,
-  status: JobStatus,
-  attemptNumber: number,
-  message?: string,
-  now: Date = new Date(),
-): Promise<boolean> {
-  const today = now.toISOString().split('T')[0];
-
-  try {
-    const { error } = await supabase
-      .from('cron_job_status')
-      .upsert({
-        job_name: jobName,
-        run_date: today,
-        status,
-        attempt_number: attemptNumber,
-        error_message: message || null,
-        updated_at: now.toISOString(),
-      }, {
-        onConflict: 'job_name,run_date',
-      });
-
-    if (error) {
-      console.error(`Failed to write job status '${status}' for ${jobName}:`, error);
-      return false;
-    }
-    return true;
-  } catch (e) {
-    console.error(`Failed to write job status '${status}' for ${jobName} (transport):`, e);
-    return false;
-  }
-}
+// The raw upsert primitive and its types live in _shared/job-status-io.ts (shared
+// with the other cron handlers); re-exported so this module's tests, which pin the
+// writer's failure handling, keep importing from here. The handler itself writes
+// through writeJobStatus + runJob (index.ts), which add the same-day overwrite rule.
+//
+// There is no distinct "nothing to do" status in the CHECK constraint; the
+// no-pending path writes 'success' and says so in the message (see
+// noPendingMessage / scoredMessage).
+export { updateJobStatus } from '../_shared/job-status-io.ts';
+export type { JobStatus, JobStatusClient } from '../_shared/job-status-io.ts';
 
 /**
  * Suffix for season transitions (playoff start / non-playoff completion) that

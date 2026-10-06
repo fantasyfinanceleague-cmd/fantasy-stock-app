@@ -12,7 +12,8 @@ import type { CalendarSession, Coverage as MarketCalendarCoverage } from '../_sh
 import { IN_SEASON_STATUSES, SNAPSHOT_DRAFT_STATUS, isInSeasonLeague } from '../_shared/snapshot-league-scope.ts';
 import { classifyCloseCoverage } from '../snapshot-week-end/close.ts';
 import { instantAtOrBefore, instantBefore, instantMs, isScoredWeek, selectTargetWeeks, type WeekMatchupRow } from '../_shared/week-select.ts';
-import { shouldWriteJobStatus, successMessage, type JobStatusValue, type StoredJobStatus } from '../_shared/job-status.ts';
+import { writeJobStatus, type JobStatusRwClient } from '../_shared/job-status-io.ts';
+import { runJob, type JobOutcome, type JobRun } from '../_shared/run-job.ts';
 
 /**
  * Snapshot Week Start Prices
@@ -125,65 +126,6 @@ async function fetchMarketCalendar(
     ? { from: coverageRes.data.covered_from, through: coverageRes.data.covered_through }
     : null;
   return { sessions, coverage, error: null };
-}
-
-// Update job status for retry tracking
-// S-STATUS: the same-day row is shared by every run of this job (one row per
-// job per day). A no-op run must not overwrite evidence of earlier work or of a
-// failure — see ../_shared/job-status.ts for the rule and why. `work` is the
-// run's own count of rows/league-weeks it actually changed.
-async function updateJobStatus(
-  supabase: any,
-  jobName: string,
-  status: JobStatusValue,
-  attemptNumber: number,
-  errorMessage?: string,
-  work?: number,
-) {
-  const today = new Date().toISOString().split('T')[0];
-  const message = status === 'success'
-    ? successMessage(work ?? 0, errorMessage ?? '')
-    : errorMessage;
-
-  try {
-    const { data: existingRow, error: readErr } = await supabase
-      .from('cron_job_status')
-      .select('status, error_message')
-      .eq('job_name', jobName)
-      .eq('run_date', today)
-      .maybeSingle();
-    // A failed read must not let a trivial write overwrite evidence: write only
-    // what the rule would accept with NO existing row AND it is non-trivial.
-    const existing: StoredJobStatus | null = readErr ? null : (existingRow as StoredJobStatus | null);
-    const decided = readErr
-      ? (status === 'failed' || status === 'retrying' || (status === 'success' && (work ?? 0) > 0))
-      : shouldWriteJobStatus(existing, { status, work });
-
-    // The upsert's OWN error is checked (CLAUDE.md success-signal #5: supabase-js
-    // resolves, it does not throw). The run log records the outcome, not the intent.
-    if (decided) {
-      const { error: upsertErr } = await supabase
-        .from('cron_job_status')
-        .upsert({
-          job_name: jobName,
-          run_date: today,
-          status,
-          attempt_number: attemptNumber,
-          error_message: message || null,
-          updated_at: new Date().toISOString(),
-        }, {
-          onConflict: 'job_name,run_date'
-        });
-      if (upsertErr) {
-        console.error(`FAILED to write cron_job_status ${jobName} '${status}':`, upsertErr);
-      }
-    } else {
-      console.log(`cron_job_status ${jobName} ${today}: no-op '${status}' (work=${work ?? 0}) kept existing ${existing?.status ?? 'unknown'} row`);
-    }
-
-  } catch (e) {
-    console.error('Failed to update job status:', e);
-  }
 }
 
 // Schedule a retry via the database function
@@ -410,10 +352,45 @@ Deno.serve(async (req) => {
   // Get retry attempt from header (set by retry mechanism)
   const retryAttempt = parseInt(req.headers.get('X-Retry-Attempt') || '1');
 
-  // Update status to running
-  await updateJobStatus(supabase, JOB_NAME, 'running', retryAttempt);
+  // INVARIANT: every run is bracketed by exactly one 'running' write and exactly
+  // one terminal write, and runJob (../_shared/run-job.ts) is the only place either
+  // happens. The body cannot return a response without an `outcome`, so a new
+  // early return cannot strand today's row at 'running' (CLAUDE.md "Success
+  // signals" #6). The retry scheduling that used to sit in the catch block lives in
+  // onThrow, unchanged: it still runs BEFORE the status write, because the status
+  // depends on whether the retry was actually scheduled.
+  //
+  // The body keeps its original indentation so the diff stays confined to the
+  // exits; only the return statements and the catch block changed.
+  return await runJob<Response>({
+    attempt: retryAttempt,
+    // Cast: structurally checking the full supabase-js client against the writer's
+    // narrow slice trips TS2589; job-status-io.test.ts pins the slice. The same-day
+    // overwrite rule (_shared/job-status.ts) is applied inside writeJobStatus.
+    write: async (status, attempt, message, work) => {
+      await writeJobStatus(supabase as unknown as JobStatusRwClient, JOB_NAME, status, attempt, { message, work });
+    },
+    onThrow: async (e): Promise<JobRun<Response>> => {
+      console.error('Unhandled error:', e);
+      const errorMessage = String(e);
 
-  try {
+      // Handle retries
+      if (retryAttempt < MAX_RETRIES) {
+        console.log(`Attempt ${retryAttempt} failed, scheduling retry ${retryAttempt + 1}`);
+        const scheduled = await scheduleRetry(supabase, JOB_NAME, retryAttempt + 1);
+        return {
+          outcome: { status: scheduled ? 'retrying' : 'failed', attempt: retryAttempt, message: scheduled ? errorMessage : 'retry could not be scheduled' },
+          response: json({ error: 'Failed, retry scheduled', attempt: retryAttempt, message: 'internal error; see function logs' }, 500),
+        };
+      }
+      // Max retries reached, mark as failed
+      console.error(`Max retries (${MAX_RETRIES}) reached, giving up`);
+      return {
+        outcome: { status: 'failed', attempt: retryAttempt, message: String(e) },
+        response: json({ error: 'Failed after max retries', attempts: retryAttempt, message: 'internal error; see function logs' }, 500),
+      };
+    },
+    body: async (): Promise<JobRun<Response>> => {
     // 0. Read the market calendar ONCE for this whole run (not league-specific).
     //    A failed read or a stale coverage window means every league whose week
     //    needs the calendar aborts this run and retries — never silently
@@ -453,8 +430,10 @@ Deno.serve(async (req) => {
       console.log('No active matchup leagues found');
       // Terminal status is written here too: a 'running' row stranded on this
       // path is the success-signals #6 pattern (CLAUDE.md). Common off-season.
-      await updateJobStatus(supabase, JOB_NAME, 'success', retryAttempt, undefined, 0);
-      return json({ message: 'No active matchup leagues', snapshots: 0 });
+      return {
+        outcome: { status: 'success', attempt: retryAttempt, work: 0 },
+        response: json({ message: 'No active matchup leagues', snapshots: 0 }),
+      };
     }
 
     console.log(`Found ${leagues.length} active matchup leagues`);
@@ -815,53 +794,44 @@ Deno.serve(async (req) => {
       if (retryAttempt < MAX_RETRIES) {
         console.log(`One or more leagues incomplete (missing prices or failed reads); scheduling retry ${retryAttempt + 1}`);
         const scheduled = await scheduleRetry(supabase, JOB_NAME, retryAttempt + 1);
-        await updateJobStatus(supabase, JOB_NAME, scheduled ? 'retrying' : 'failed', retryAttempt, scheduled ? 'Incomplete: missing prices or failed reads for some leagues' : 'retry could not be scheduled');
-        return json({
-          message: 'Snapshot incomplete — retry scheduled',
-          totalSnapshots,
-          results,
-          retryScheduled: true,
-          attempt: retryAttempt,
-        });
+        return {
+          outcome: { status: scheduled ? 'retrying' : 'failed', attempt: retryAttempt, message: scheduled ? 'Incomplete: missing prices or failed reads for some leagues' : 'retry could not be scheduled' },
+          response: json({
+            message: 'Snapshot incomplete — retry scheduled',
+            totalSnapshots,
+            results,
+            retryScheduled: true,
+            attempt: retryAttempt,
+          }),
+        };
       }
       // Retries exhausted with leagues still incomplete — almost certainly a
       // permanently-unpriceable (e.g. delisted) symbol. Give up on those leagues;
       // the downstream per-user gate is the backstop. Report failed for ops
       // visibility, but do NOT throw (the leagues that snapshotted are valid).
       console.error(`Max retries (${MAX_RETRIES}) reached; some leagues still incomplete (likely unpriceable/delisted symbols).`);
-      await updateJobStatus(supabase, JOB_NAME, 'failed', retryAttempt, 'Incomplete: league-weeks still refused or incomplete after this run; see results');
-      return json({
-        message: 'Snapshot incomplete after max retries',
+      return {
+        outcome: { status: 'failed', attempt: retryAttempt, message: 'Incomplete: league-weeks still refused or incomplete after this run; see results' },
+        response: json({
+          message: 'Snapshot incomplete after max retries',
+          totalSnapshots,
+          results,
+          incomplete: true,
+        }, 500),
+      };
+    }
+
+    // Terminal success. work = snapshots written; a run that wrote none is a no-op
+    // the same-day rule will not let overwrite an earlier run's evidence.
+    return {
+      outcome: { status: 'success', attempt: retryAttempt, work: totalSnapshots },
+      response: json({
+        message: 'Snapshot complete',
         totalSnapshots,
         results,
-        incomplete: true,
-      }, 500);
-    }
+      }),
+    };
 
-    // Update status to success
-    await updateJobStatus(supabase, JOB_NAME, 'success', retryAttempt, undefined, totalSnapshots);
-
-    return json({
-      message: 'Snapshot complete',
-      totalSnapshots,
-      results,
-    });
-
-  } catch (e) {
-    console.error('Unhandled error:', e);
-    const errorMessage = String(e);
-
-    // Handle retries
-    if (retryAttempt < MAX_RETRIES) {
-      console.log(`Attempt ${retryAttempt} failed, scheduling retry ${retryAttempt + 1}`);
-      const scheduled = await scheduleRetry(supabase, JOB_NAME, retryAttempt + 1);
-      await updateJobStatus(supabase, JOB_NAME, scheduled ? 'retrying' : 'failed', retryAttempt, scheduled ? errorMessage : 'retry could not be scheduled');
-      return json({ error: 'Failed, retry scheduled', attempt: retryAttempt, message: 'internal error; see function logs' }, 500);
-    } else {
-      // Max retries reached, mark as failed
-      console.error(`Max retries (${MAX_RETRIES}) reached, giving up`);
-      await updateJobStatus(supabase, JOB_NAME, 'failed', retryAttempt, errorMessage);
-      return json({ error: 'Failed after max retries', attempts: retryAttempt, message: 'internal error; see function logs' }, 500);
-    }
-  }
+    },
+  });
 });
