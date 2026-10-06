@@ -17,6 +17,7 @@ import { buildSchedule } from '@/lib/game/schedule';
 import { ScheduleList } from '@/components/game/ScheduleList';
 import { BracketView } from '@/components/game/BracketView';
 import { DraftLobby } from '@/components/game/DraftLobby';
+import { DraftRoom } from '@/components/game/DraftRoom';
 import { usePreDraftData } from '@/lib/home/usePreDraftData';
 import { StartDraftConfirm } from '@/components/game/StartDraftConfirm';
 import { useDraftStatus } from '@/lib/game/useDraftStatus';
@@ -103,6 +104,9 @@ export default function LeagueScreen() {
   if (preDraft && activeLeagueId) {
     return <LeagueLobby leagueId={activeLeagueId} />;
   }
+  if (drafting && activeLeagueId && activeLeague) {
+    return <LeagueDraftRoom leagueId={activeLeagueId} rounds={activeLeague.num_rounds ?? 6} />;
+  }
 
   return (
     <PhasePlaceholder
@@ -113,6 +117,21 @@ export default function LeagueScreen() {
       actionLabel={drafting ? 'Go to the draft room' : undefined}
       onAction={drafting ? () => router.push('/(tabs)/draft') : undefined}
     />
+  );
+}
+
+/** The drafting League tab (3c): the draft room. Its own component, so its hooks run only while drafting. */
+function LeagueDraftRoom({ leagueId, rounds }: { leagueId: string; rounds: number }) {
+  const { refresh } = useLeagueContext();
+  const { user } = useAuth();
+  const { colors } = useTheme();
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <ShellHeader title="League" showAvatar />
+      <BarsRefresh onRefresh={refresh} contentContainerStyle={{ paddingHorizontal: space[6], paddingBottom: space[9], gap: space[6] }}>
+        <DraftRoom leagueId={leagueId} myUserId={user?.id ?? ''} rounds={rounds} />
+      </BarsRefresh>
+    </View>
   );
 }
 
