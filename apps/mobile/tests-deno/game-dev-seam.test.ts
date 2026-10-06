@@ -21,3 +21,11 @@ Deno.test('a dev build without the flag, or with any other flag value, is inert'
   assertEquals(seamActive(true, 'true'), false);
   assertEquals(seamActive(true, '0'), false);
 });
+
+import { pickLeagueFixture } from '../lib/game/devSeamGate.ts';
+
+Deno.test('the league context fixture is the shell fixture when one is set, the board\'s leagues only under the seam, and none otherwise', () => {
+  assertEquals(pickLeagueFixture('drafting', false, 'leagues'), 'drafting');
+  assertEquals(pickLeagueFixture(null, true, 'leagues'), 'leagues');
+  assertEquals(pickLeagueFixture(null, false, 'leagues'), null);
+});

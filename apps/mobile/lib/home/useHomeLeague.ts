@@ -21,6 +21,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../supabase';
 import { useAuth } from '../useAuth';
+import { SEAM_ON } from '../game/devSeam';
 import { useLeagueContext, type HomeSummaryRow } from '../LeagueContext';
 import { playoffRoundLabelForWeek } from '../playoffs';
 import {
@@ -111,7 +112,7 @@ const XL_STANDINGS: GetHomeLeagueResult['standings'] = [
   { user_id: 'gianluigi', rank: 6, wins: 1, losses: 4, ties: 0, points_for: -15235.76, display_name: 'Gianluigi B.', is_bot: false },
 ];
 
-function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): {
+export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): {
   data: GetHomeLeagueResult; meta: HomeLeagueMeta; market: MarketInfo; now: Date;
   quote: (s: string) => number | null; bars: BarsBySymbol; marketCalendar: MarketCalendarSession[];
 } {
@@ -522,8 +523,11 @@ export function useHomeLeague(leagueId: string | null): UseHomeLeagueResult {
       return;
     }
 
-    if (HOME_FIXTURE) {
-      const { data, meta, market: fixtureMarket, now: fixtureNow, quote, bars, marketCalendar: fixtureMarketCalendar } = fixtureHomeLeague(HOME_FIXTURE);
+    // Under the capture seam the live path takes this same fixture branch (the board's
+    // live Thursday), so get_home_league, the quotes and the bars are all fixtures (3c).
+    const homeFixture = HOME_FIXTURE ?? (SEAM_ON ? 'live_open' : null);
+    if (homeFixture) {
+      const { data, meta, market: fixtureMarket, now: fixtureNow, quote, bars, marketCalendar: fixtureMarketCalendar } = fixtureHomeLeague(homeFixture);
       const vm = buildHomeViewModel({
         now: fixtureNow, meta, market: fixtureMarket,
         data, quote, bars, playoffRoundLabelForWeek, marketCalendar: fixtureMarketCalendar,

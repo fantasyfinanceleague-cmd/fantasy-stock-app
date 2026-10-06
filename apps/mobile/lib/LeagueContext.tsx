@@ -6,6 +6,13 @@ import { getSeasonLabel, getSeasonPhase } from './weekStatus';
 import type { SheetLeague } from './shell/leagueSheet';
 import { activeLeagueStorageKey, resolveActiveLeagueId } from './shell/activeLeague';
 import { FIXTURE_NETWORK_MS, SHELL_FIXTURE, fixtureLeagues } from './shell/devFixture';
+import type { ShellFixture } from './shell/devFixture';
+import { SEAM_ON } from './game/devSeam';
+import { pickLeagueFixture } from './game/devSeamGate';
+
+// The shell fixture, or the board's leagues under the capture seam (3c). Narrowest point:
+// only this fetch branch reads it, and the seam is off outside a dev build.
+const LEAGUE_FIXTURE = pickLeagueFixture<ShellFixture>(SHELL_FIXTURE, SEAM_ON, 'leagues');
 import type { MarketCalendarSession } from './time/marketWeek';
 
 export interface League {
@@ -266,11 +273,11 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
 
     setLoading(true);
 
-    if (SHELL_FIXTURE) {
+    if (LEAGUE_FIXTURE) {
       // DEV-only fixture (lib/shell/devFixture.ts): the board's leagues, no
       // queries — after a realistic delay, so pull-to-refresh (S5) is visible.
       await new Promise((resolve) => setTimeout(resolve, FIXTURE_NETWORK_MS));
-      const fixture = fixtureLeagues(SHELL_FIXTURE);
+      const fixture = fixtureLeagues(LEAGUE_FIXTURE);
       const stored = await readStoredActiveLeague(userId);
       setLeagues(fixture.leagues);
       setSheetLeagues(fixture.sheet);

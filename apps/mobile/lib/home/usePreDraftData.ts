@@ -21,6 +21,7 @@ import { useEffect, useState } from 'react';
 
 import { supabase } from '@/lib/supabase';
 import { parseDraftOrder } from '@/lib/draftOrder';
+import { seamRpc } from '@/lib/game/seamCalls';
 import { HOME_FIXTURE } from './devFixture';
 
 export interface PreDraftMember {
@@ -101,8 +102,8 @@ export function usePreDraftData(leagueId: string): PreDraftData {
     let cancelled = false;
     (async () => {
       const [{ data: orderRaw }, { data: namesRaw }] = await Promise.all([
-        supabase.rpc('get_draft_order', { p_league_id: leagueId }),
-        supabase.rpc('get_league_display_names', { p_league_id: leagueId }),
+        seamRpc('get_draft_order', { p_league_id: leagueId }),
+        seamRpc('get_league_display_names', { p_league_id: leagueId }),
       ]);
       if (cancelled) return;
       const parsed = parseDraftOrder(orderRaw);
