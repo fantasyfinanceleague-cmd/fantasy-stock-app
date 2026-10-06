@@ -10,11 +10,11 @@
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * 'leave' only. unhide_league exists in the database (20261107000001) but is NOT
- * exposed here: per the board's recommendation (Giorgio, pending), 1.2.0 has no
- * unhide. Exposing it later is one action and one RPC call.
+ * 'leave' and 'transfer' (Q4 = A: the commissioner transfers the title, then
+ * leaves). unhide_league exists in the database (20261107000001) but is NOT
+ * exposed: 1.2.0 has no unhide. Exposing it later is one action and one RPC call.
  */
-export type LeaveAction = 'leave';
+export type LeaveAction = 'leave' | 'transfer';
 
 export interface LeaveRequest {
   action: LeaveAction;
@@ -27,7 +27,7 @@ export function parseLeaveRequest(body: unknown): LeaveRequest | null {
   if (!body || typeof body !== 'object') return null;
   const b = body as Record<string, unknown>;
   const action = b.action ?? 'leave';
-  if (action !== 'leave') return null;
+  if (action !== 'leave' && action !== 'transfer') return null;
   const leagueId = typeof b.league_id === 'string' ? b.league_id.trim() : '';
   if (!UUID_RE.test(leagueId)) return null;
   const raw = b.new_commissioner_id;
@@ -36,6 +36,9 @@ export function parseLeaveRequest(body: unknown): LeaveRequest | null {
     if (typeof raw !== 'string' || !UUID_RE.test(raw.trim())) return null;
     newCommissionerId = raw.trim();
   }
+  // A transfer needs its target. (On 'leave' the id is forwarded and the RPC
+  // refuses it, since the hand-over-inside-leave of #126 is gone.)
+  if (action === 'transfer' && !newCommissionerId) return null;
   return { action, leagueId, newCommissionerId };
 }
 
@@ -52,6 +55,8 @@ export function clientResponse(r: RpcResult): Record<string, unknown> {
       return { ok: true, status: 'left', reconfirm_required: r.reconfirm_required === true };
     case 'hidden':
       return { ok: true, status: 'hidden' };
+    case 'transferred':
+      return { ok: true, status: 'transferred', reconfirm_owed: r.reconfirm_owed === true };
     case 'refused':
       return r.window
         ? { ok: false, reason: String(r.reason), window: String(r.window) }
@@ -82,6 +87,29 @@ export function memberLeftMessage(i: MemberLeftInput) {
     title: league,
     body: i.reconfirmRequired ? `${lead} Confirm your roster before the draft.` : lead,
     data: { type: 'member_left', league_id: i.leagueId },
+  };
+}
+
+export interface CommissionerTransferredInput {
+  leagueId: string;
+  leagueName: string | null;
+  fromName: string | null;
+  reconfirmOwed: boolean;
+}
+
+/**
+ * The push to the NEW commissioner. COPY IS PROVISIONAL for the Design Lead
+ * (Orchestrator's draft: "Roberto B. made you commissioner of Serie A Traders.").
+ * When a roster confirmation is owed, it is now theirs, so the push says so.
+ */
+export function commissionerTransferredMessage(i: CommissionerTransferredInput) {
+  const league = i.leagueName?.trim() || 'your league';
+  const who = i.fromName?.trim();
+  const lead = who ? `${who} made you commissioner of ${league}.` : `You're now the commissioner of ${league}.`;
+  return {
+    title: league,
+    body: i.reconfirmOwed ? `${lead} Confirm your roster before the draft.` : lead,
+    data: { type: 'commissioner_transferred', league_id: i.leagueId },
   };
 }
 

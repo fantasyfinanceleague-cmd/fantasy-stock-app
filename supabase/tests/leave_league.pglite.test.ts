@@ -49,6 +49,10 @@ const OURS = [
   '20261107000004_drop_I5_league_members_delete_self.sql',
   '20261107000005_join_clears_invite_reconfirm.sql',
   '20261107000006_draft_waits_for_roster_reconfirm.sql',
+  // Q4 = A (Giorgio, 2026-10-06): transfer, then leave.
+  '20261110000000_transfer_commissioner.sql',
+  '20261110000001_leave_league_transfer_first.sql',
+  '20261110000002_notify_due_ignores_transfer_notice.sql',
 ];
 const EFFECT_TEST = new URL('docs/security/leave-league-effect-test.sql', ROOT);
 const RIB_FIXTURE = new URL('supabase/tests/fixtures/run_it_back_398da84_membership.sql', ROOT);
@@ -203,6 +207,13 @@ Deno.test({
       await asRole('service_role');
       try { return (await q(`select leave_league($1, $2, $3) r`, [id, uid, successor]))[0].r; } finally { await asRole(null); }
     };
+    const transfer = async (id: string, uid: string, to: string | null) => {
+      await asRole('service_role');
+      try { return (await q(`select transfer_commissioner($1, $2, $3) r`, [id, uid, to]))[0].r; } finally { await asRole(null); }
+    };
+    const transferNotices = async (id: string) =>
+      (await q(`select user_id from league_notifications where league_id=$1 and kind='commissioner_transferred' order by created_at`, [id]))
+        .map((r: Row) => r.user_id);
     const unhide = async (id: string, uid: string) => {
       await asRole('service_role');
       try { return (await q(`select unhide_league($1, $2) r`, [id, uid]))[0].r; } finally { await asRole(null); }
@@ -241,7 +252,7 @@ Deno.test({
     });
 
     await step('grants: service_role only on all three RPCs; search_path pinned; table grants exact', async () => {
-      for (const f of ['leave_league', 'unhide_league', 'confirm_league_roster']) {
+      for (const f of ['leave_league', 'unhide_league', 'confirm_league_roster', 'transfer_commissioner']) {
         const s = await fnState(f);
         assertEquals(s.acl, '{postgres=X/postgres,service_role=X/postgres}', f);
         assertEquals(s.prosecdef, true, f);
@@ -253,6 +264,7 @@ Deno.test({
           `select leave_league(gen_random_uuid(), 'x')`,
           `select unhide_league(gen_random_uuid(), 'x')`,
           `select confirm_league_roster(gen_random_uuid(), 'x', 'invite')`,
+          `select transfer_commissioner(gen_random_uuid(), 'x', 'y')`,
         ]) {
           let code = '';
           try { await q(call); } catch (e) { code = (e as { code?: string }).code ?? 'err'; }
@@ -375,33 +387,67 @@ Deno.test({
       assertEquals((await leave(l.id, D)).status, 'left');
     });
 
-    await step('commissioner: successor required / invalid / sole manager; refusals write nothing', async () => {
+    await step('Q4 = A: the commissioner can never leave: transfer_first, whatever they pass; nothing written', async () => {
       const l = await mkLeague([C, A, B, 'bot-1'], { draft_date: await inHours(48) });
       const before = await snapshot(l.id);
-      assertEquals((await leave(l.id, C)).reason, 'successor_required');
-      assertEquals((await leave(l.id, C, 'bot-1')).reason, 'successor_invalid');
-      assertEquals((await leave(l.id, C, X)).reason, 'successor_invalid');
-      assertEquals((await leave(l.id, C, C)).reason, 'successor_invalid');
-      assertEquals((await leave(l.id, A, B)).reason, 'successor_not_allowed');
+      for (const successor of [null, A, 'bot-1', X, C]) {
+        assertEquals((await leave(l.id, C, successor)).reason, 'transfer_first', String(successor));
+      }
+      assertEquals((await leave(l.id, A, B)).reason, 'successor_not_allowed', 'a member cannot pass a successor');
       assertEquals(await snapshot(l.id), before);
-
+      // The sole human gets the same refusal (they can't transfer to a bot).
       const solo = await mkLeague([C, 'bot-1', 'bot-2', 'bot-3'], { draft_date: await inHours(48) });
-      assertEquals((await leave(solo.id, C)).reason, 'sole_manager');
-      assertEquals((await leave(solo.id, C, 'bot-1')).reason, 'sole_manager');
+      assertEquals((await leave(solo.id, C)).reason, 'transfer_first');
+      assertEquals((await transfer(solo.id, C, 'bot-1')).reason, 'target_invalid');
     });
 
-    await step('commissioner hands over in one transaction; the NEW commissioner is notified and confirms', async () => {
+    await step('transfer: who / whom / when refusals write nothing', async () => {
+      const l = await mkLeague([C, A, B, 'bot-1'], { draft_date: await inHours(48) });
+      const before = await snapshot(l.id);
+      assertEquals((await transfer(l.id, A, B)).reason, 'not_commissioner');
+      assertEquals((await transfer(l.id, X, B)).reason, 'not_commissioner');
+      for (const to of ['bot-1', X, C, null]) assertEquals((await transfer(l.id, C, to)).reason, 'target_invalid', String(to));
+      const [u] = await q(`select gen_random_uuid() id`);
+      assertEquals((await transfer(u.id, C, A)).reason, 'not_commissioner', 'unknown league: uniform');
+      assertEquals(await snapshot(l.id), before);
+      for (const ds of ['in_progress', 'completed']) {
+        const st = await mkLeague([C, A, B, D], { draft_date: await inHours(48) });
+        await raw(`update leagues set draft_status=$2, draft_started_at=now() where id=$1`, [st.id, ds]);
+        assertEquals((await transfer(st.id, C, A)).reason, 'draft_started', ds);
+        assertEquals((await lg(st.id)).commissioner_id, C);
+      }
+    });
+
+    await step('transfer then leave: roles move atomically, the NEW commissioner is notified, then owns the confirmation', async () => {
       const l = await mkLeague([C, A, B, D, E], { draft_date: await inHours(48) });
-      const r = await leave(l.id, C, B);
-      assertEquals([r.status, r.made_commissioner, r.notify_user_id, r.reconfirm_required], ['left', true, B, true]);
+      const t1 = await transfer(l.id, C, B);
+      assertEquals([t1.status, t1.notify_user_id, t1.reconfirm_owed, t1.league_name], ['transferred', B, false, 'Test League']);
+      assert(typeof t1.notice_id === 'string');
       assertEquals((await lg(l.id)).commissioner_id, B);
       assertEquals(
         await q(`select user_id, role from league_members where league_id=$1 order by user_id`, [l.id]),
-        [{ user_id: A, role: 'member' }, { user_id: B, role: 'commissioner' }, { user_id: D, role: 'member' }, { user_id: E, role: 'member' }],
+        [{ user_id: A, role: 'member' }, { user_id: B, role: 'commissioner' }, { user_id: C, role: 'member' },
+          { user_id: D, role: 'member' }, { user_id: E, role: 'member' }],
       );
+      assertEquals(await transferNotices(l.id), [B]);
+      assertEquals((await transfer(l.id, C, A)).reason, 'not_commissioner', 'the old commissioner has no powers left');
+      const r = await leave(l.id, C);
+      assertEquals([r.status, r.made_commissioner, r.notify_user_id, r.reconfirm_required], ['left', false, B, true]);
       assertEquals(await leftNotices(l.id), [B]);
-      assertEquals((await confirm(l.id, C)).reason, 'not_commissioner', 'the old commissioner cannot confirm');
+      assertEquals((await confirm(l.id, C)).reason, 'not_commissioner');
       assertEquals((await confirm(l.id, B)).status, 'confirmed');
+    });
+
+    await step('transfer while a confirmation is owed: the new commissioner owns it (and is told)', async () => {
+      const l = await mkLeague([C, A, B, D, E], { draft_date: await inHours(48), playoff_teams: 2 });
+      await leave(l.id, E);
+      await invite(l.id, C); // the old commissioner had chosen "Invite someone new"
+      const t1 = await transfer(l.id, C, A);
+      assertEquals([t1.status, t1.reconfirm_owed], ['transferred', true]);
+      const rc = await reconfirm(l.id);
+      assertEquals([rc.choice, rc.chosen_by], ['invite', C], 'history kept');
+      assertEquals((await confirm(l.id, C)).reason, 'not_commissioner');
+      assertEquals((await confirm(l.id, A)).status, 'confirmed');
     });
 
     await step('not a member / unknown league / a bot id: uniform not_member', async () => {
@@ -499,13 +545,14 @@ Deno.test({
       assertEquals(await leftNotices(l.id), [C, C]);
     });
 
-    await step('a second hand-over still notifies the NEW commissioner (dedupe is not keyed on the leaver there)', async () => {
+    await step('a notice goes to whoever is commissioner AT THE LEAVE; a repeat leave sends none', async () => {
       const l = await mkLeague([C, A, B, D, E], { draft_date: await inHours(48), invite_code: 'HND01', playoff_teams: 2 });
-      await leave(l.id, C, A);                     // departed [C], commissioner A
-      assertEquals((await join('HND01', C)).ok, true);
-      await leave(l.id, A, B);                     // A hands over to B
-      await leave(l.id, C);                        // C leaves again: a plain repeat, no notice
-      assertEquals(await leftNotices(l.id), [A, B], 'B was told; the repeat was not');
+      await leave(l.id, D);                        // C told
+      await transfer(l.id, C, A);
+      assertEquals((await join('HND01', D)).ok, true);
+      await leave(l.id, B);                        // A (the new commissioner) told
+      await leave(l.id, D);                        // D again: a repeat, no notice
+      assertEquals(await leftNotices(l.id), [C, A]);
     });
 
     await step('the order WAITS past T-1h while a reconfirmation is owed, and is set the moment it clears', async () => {
@@ -602,6 +649,10 @@ Deno.test({
       assertEquals(await reconfirm(l.id), undefined, 'hiding never writes a reconfirm row');
       assertEquals(await leftNotices(l.id), [], 'hiding never notifies');
       assertEquals((await leave(l.id, C, A)).reason, 'successor_not_allowed');
+      // Hiding is not leaving: the commissioner may hide a finished league (a
+      // transfer is impossible by then), and keeps the role.
+      assertEquals((await leave(l.id, C)).status, 'hidden');
+      assertEquals((await lg(l.id)).commissioner_id, C);
       const u = await unhide(l.id, A);
       assertEquals([u.status, u.already_shown], ['shown', false]);
       assert((await home(A)).includes(l.id));
@@ -615,6 +666,7 @@ Deno.test({
         `select leave_league(null, 'x')`, `select unhide_league(null, 'x')`,
         `select confirm_league_roster(null, 'x', 'invite')`,
         `select confirm_league_roster(gen_random_uuid(), 'x', 'nope')`,
+        `select transfer_commissioner(null, 'x', 'y')`,
       ]) {
         let code = '';
         try { await q(call); } catch (e) { code = (e as { code?: string }).code ?? ''; }
@@ -629,7 +681,7 @@ Deno.test({
       const msg = String((err as Error).message);
       assert(msg.includes('LEAVE LEAGUE EFFECT TEST RESULTS'), msg);
       assert(!msg.includes('FAIL'), msg);
-      assertEquals(msg.match(/PASS/g)?.length, 21, msg); // one per case in the file's EXPECTED OUTPUT
+      assertEquals(msg.match(/PASS/g)?.length, 23, msg); // one per case in the file's EXPECTED OUTPUT
       assertEquals((await q(`select count(*)::int n from leagues`))[0].n, before, 'fixture rolled back');
     });
 
@@ -650,17 +702,20 @@ Deno.test({
     };
     const [s1] = await q(`insert into leagues (name, commissioner_id, draft_status, season_status, league_type) values ('S1',$1,'completed','completed','matchup') returning id`, [C]);
     const [s2] = await q(`insert into leagues (name, commissioner_id, previous_league_id, draft_date, league_type) values ('S2',$1,$2, now() + interval '3 days','matchup') returning id`, [C, s1.id]);
-    for (const [u, role] of [[C, 'commissioner'], [A, 'member'], [B, 'member'], [E, 'member']]) {
+    for (const [u, role] of [[C, 'commissioner'], [A, 'member'], [B, 'member'], [D, 'member'], [E, 'member']]) {
       await q(`insert into league_members (league_id, user_id, role) values ($1,$2,$3)`, [s2.id, u, role]);
     }
     // C (commissioner) is 'in'; A replied 'in'; B is pending (not a member yet); E is a newcomer (no row).
     await q(`insert into league_renewal_responses (league_id, user_id, status, decided_by, responded_at) values ($1,$2,'in','player',now())`, [s2.id, C]);
     await q(`insert into league_renewal_responses (league_id, user_id, status) values ($1,$2,'pending'),($1,$3,'pending')`, [s2.id, A, B]);
     await q(`update league_renewal_responses set status='in', decided_by='player', responded_at=now() where league_id=$1 and user_id=$2`, [s2.id, A]);
+    await q(`insert into league_renewal_responses (league_id, user_id, status) values ($1,$2,'pending')`, [s2.id, D]);
+    await q(`update league_renewal_responses set status='in', decided_by='player', responded_at=now() where league_id=$1 and user_id=$2`, [s2.id, D]);
     await q(`delete from league_members where league_id=$1 and user_id=$2`, [s2.id, B]); // B pending: not a member
 
-    await t.step("the renewal commissioner cannot leave (respond_to_renewal's rule)", async () => {
-      assertEquals((await leave(s2.id, C, A)).reason, 'commissioner_cannot_opt_out');
+    await t.step('the renewal commissioner cannot leave either: transfer_first', async () => {
+      assertEquals((await leave(s2.id, C)).reason, 'transfer_first');
+      assertEquals((await leave(s2.id, C, A)).reason, 'transfer_first');
     });
 
     await t.step("an invitee's leave IS an 'out' reply: reply flipped, NO reconfirm row, commissioner notified", async () => {
@@ -679,6 +734,18 @@ Deno.test({
       const r = await leave(s2.id, E);
       assertEquals([r.status, r.reconfirm_required], ['left', true]);
       assertEquals((await q(`select departed from league_roster_reconfirm where league_id=$1`, [s2.id]))[0].departed.map((e: Row) => e.user_id), [E]);
+    });
+
+    await t.step("renewal: transfer, then the old commissioner leaves as an invitee (#94 flips their reply 'out')", async () => {
+      await db.exec(`set role service_role`);
+      const t1 = (await q(`select transfer_commissioner($1, $2, $3) r`, [s2.id, C, D]))[0].r;
+      await db.exec(`reset role`);
+      assertEquals(t1.status, 'transferred');
+      const r = await leave(s2.id, C);
+      assertEquals([r.status, r.reconfirm_required, r.notify_user_id], ['left', false, D]);
+      const [resp] = await q(`select status, decided_by from league_renewal_responses where league_id=$1 and user_id=$2`, [s2.id, C]);
+      assertEquals([resp.status, resp.decided_by], ['out', 'player']);
+      assertEquals((await q(`select commissioner_id from leagues where id=$1`, [s2.id]))[0].commissioner_id, D);
     });
 
     await db.close();
