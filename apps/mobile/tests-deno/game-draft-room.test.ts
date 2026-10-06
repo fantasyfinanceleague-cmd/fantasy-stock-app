@@ -15,15 +15,17 @@ Deno.test('the pick log says where each pick came from, in the board\'s words', 
 
 Deno.test('a legacy SKIP row is a plain row: a dash for the symbol, no label, no badge, not counted, never the word Skip', () => {
   const row = pickRowView({ symbol: 'SKIP', source: 'skip' });
-  assertEquals(row, { symbolCell: '—', label: null, auto: false, countsAsPick: false });
+  assertEquals(row, { symbolCell: '—', symbolLabel: 'No pick', label: null, auto: false, countsAsPick: false });
   const autoSkip = pickRowView({ symbol: 'SKIP', source: 'auto_skip' });
-  assertEquals(autoSkip, { symbolCell: '—', label: null, auto: false, countsAsPick: false });
+  assertEquals(autoSkip, { symbolCell: '—', symbolLabel: 'No pick', label: null, auto: false, countsAsPick: false });
+  // VoiceOver reads the Design Lead's label, never "dash" or nothing.
+  assertEquals(row.symbolLabel, 'No pick');
   const text = JSON.stringify([row, autoSkip]);
   assertEquals(/skip/i.test(text), false);
 });
 
 Deno.test('a real pick is shown with its symbol, its line and whether it counts', () => {
-  assertEquals(pickRowView({ symbol: 'LLY', source: 'auto_queue' }), { symbolCell: 'LLY', label: 'Auto-picked · from their queue', auto: true, countsAsPick: true });
+  assertEquals(pickRowView({ symbol: 'LLY', source: 'auto_queue' }), { symbolCell: 'LLY', symbolLabel: 'LLY', label: 'Auto-picked · from their queue', auto: true, countsAsPick: true });
 });
 
 Deno.test('the Auto badge marks every auto pick and nothing else', () => {

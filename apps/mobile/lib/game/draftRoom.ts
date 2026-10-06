@@ -31,9 +31,10 @@ export function isAutoPick(source: string): boolean {
 
 /** One pick-log row. A legacy SKIP row is a plain row with a "—" symbol and no
  * label, badge or explanation (Giorgio's ruling: a draft pick can never be unused). */
-export function pickRowView(p: { symbol: string; source: string }): { symbolCell: string; label: string | null; auto: boolean; countsAsPick: boolean } {
-  if (isLegacySkip(p)) return { symbolCell: '—', label: null, auto: false, countsAsPick: false };
-  return { symbolCell: p.symbol, label: pickLogLine(p.source), auto: isAutoPick(p.source), countsAsPick: true };
+export function pickRowView(p: { symbol: string; source: string }): { symbolCell: string; symbolLabel: string; label: string | null; auto: boolean; countsAsPick: boolean } {
+  // The Design Lead's addition: VoiceOver reads "No pick" for the dash cell, never "dash" or nothing.
+  if (isLegacySkip(p)) return { symbolCell: '—', symbolLabel: 'No pick', label: null, auto: false, countsAsPick: false };
+  return { symbolCell: p.symbol, symbolLabel: p.symbol, label: pickLogLine(p.source), auto: isAutoPick(p.source), countsAsPick: true };
 }
 
 export type ClockState =
