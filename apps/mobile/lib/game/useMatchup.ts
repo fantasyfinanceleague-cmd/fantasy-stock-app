@@ -68,6 +68,7 @@ export function useMatchup(leagueId: string | null) {
     derived,
     phase: home.viewModel?.phase ?? null,
     quote: home.raw?.quote ?? (() => null),
+    names: (home.raw?.data.standings ?? []).map((st) => ({ user_id: st.user_id, display_name: st.display_name, is_bot: st.is_bot })),
     bars: home.raw?.bars ?? {},
     todayIso: todayEt(new Date()),
   };

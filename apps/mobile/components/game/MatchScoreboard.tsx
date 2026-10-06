@@ -25,21 +25,29 @@ export interface MatchScoreboardProps {
   oppName: string | null;
   /** Shown under the scores when there is no lead line (e.g. "Live · Thu 1:37 PM ET"). */
   statusLine: string;
+  /** True when the first side is the caller: it gets "(you)", the you colour and the tug.
+   * Another manager's game (All matchups) has no "you" side, so its colours are neutral. */
+  aIsYou?: boolean;
 }
 
-export function MatchScoreboard({ model, mineGain, oppGain, size, youName, oppName, statusLine }: MatchScoreboardProps) {
+export function MatchScoreboard({ model, mineGain, oppGain, size, youName, oppName, statusLine, aIsYou = true }: MatchScoreboardProps) {
   const { colors } = useTheme();
   // Both scores take ONE size (the ThisWeekCard rule), so neither reads larger.
   const scoreVariant = size === 'hero' ? 'score.xl' : 'score.md';
-  const mineColor = model.mineTone === 'zero' ? colors.zero : colors.youText;
-  const oppColor = model.oppTone === 'zero' ? colors.zero : colors.oppText;
+  // Team colours mark people: only the caller's own side takes the you colour.
+  const mineColor = aIsYou ? (model.mineTone === 'zero' ? colors.zero : colors.youText) : colors.text;
+  const oppColor = aIsYou ? (model.oppTone === 'zero' ? colors.zero : colors.oppText) : colors.text;
 
   return (
     <Card variant="scoreboard" accessible accessibilityLabel={model.a11yLabel} style={size === 'compact' ? styles.compact : undefined}>
       <View style={styles.namesRow}>
-        <Text variant="callout" style={{ color: colors.youText, fontWeight: '700' }}>
-          {youName} <Text variant="callout" tone="secondary">(you)</Text>
-        </Text>
+        {aIsYou ? (
+          <Text variant="callout" style={{ color: colors.youText, fontWeight: '700' }}>
+            {youName} <Text variant="callout" tone="secondary">(you)</Text>
+          </Text>
+        ) : (
+          <Text variant="callout">{youName}</Text>
+        )}
         {oppName ? <Text variant="callout" tone="secondary">{oppName}</Text> : null}
       </View>
 
@@ -54,7 +62,7 @@ export function MatchScoreboard({ model, mineGain, oppGain, size, youName, oppNa
         ) : null}
       </View>
 
-      {model.oppText !== null ? (
+      {model.oppText !== null && aIsYou ? (
         <TugBar you={mineGain} opponent={oppGain} opponentName={oppName ?? ''} />
       ) : null}
 

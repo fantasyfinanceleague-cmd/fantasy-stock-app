@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
+import { useState } from 'react';
 import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -13,6 +14,9 @@ import { WeekRace } from '@/components/game/WeekRace';
 import { Chyron } from '@/components/sp/game/Chyron';
 import { useLeadChyron } from '@/lib/game/useLeadChyron';
 import { useRevealOnce } from '@/lib/game/useRevealOnce';
+import { useAllMatchups } from '@/lib/game/useAllMatchups';
+import type { AllMatchupRow } from '@/lib/game/allMatchups';
+import { SegmentedControl } from '@/components/sp/SegmentedControl';
 import { FinalBanner } from '@/components/game/FinalBanner';
 import { raceLayout } from '@/lib/game/raceLayout';
 import { useLeagueContext } from '@/lib/LeagueContext';
@@ -46,13 +50,62 @@ export default function MatchupScreen() {
   // G3: the Friday reveal plays once per matchup-week, once the result is posted.
   const revealFinal = m.derived?.view.kind === 'final' && m.derived.final !== null;
   const revealPlay = useRevealOnce(activeLeagueId, m.derived?.week ?? null, revealFinal);
+  // "My matchup" / "All matchups" are the board's labels (key screen 2).
+  const [segment, setSegment] = useState<'mine' | 'all'>('mine');
+  const all = useAllMatchups(activeLeagueId, m.derived?.week ?? null, m.names, segment === 'all');
+  const { user } = useAuth();
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <ShellHeader title="Matchup" showAvatar />
       <BarsRefresh onRefresh={refresh} contentContainerStyle={{ paddingHorizontal: space[6], paddingBottom: space[9], gap: space[6] }}>
-        <MatchupBody status={m.status} derived={m.derived} phase={m.phase} onRefresh={m.refresh} leagueName={activeLeague?.name ?? ''} chyron={chyron} revealPlay={revealPlay} />
+        {m.derived ? (
+          <SegmentedControl
+            options={[{ label: 'My matchup', value: 'mine' }, { label: 'All matchups', value: 'all' }]}
+            value={segment}
+            onChange={(v) => setSegment(v === 'all' ? 'all' : 'mine')}
+          />
+        ) : null}
+        {segment === 'all' ? (
+          <AllMatchupsList state={all} week={m.derived?.week ?? 0} myUserId={user?.id ?? ''} />
+        ) : (
+          <MatchupBody status={m.status} derived={m.derived} phase={m.phase} onRefresh={m.refresh} leagueName={activeLeague?.name ?? ''} chyron={chyron} revealPlay={revealPlay} />
+        )}
       </BarsRefresh>
+    </View>
+  );
+}
+
+function AllMatchupsList({ state, week, myUserId }: { state: { status: string; rows: AllMatchupRow[] }; week: number; myUserId: string }) {
+  if (state.status === 'loading' || state.status === 'idle') return null;
+  if (state.status === 'error') {
+    return <Text variant="callout" tone="secondary">Couldn't load this week's matchups.</Text>;
+  }
+  return (
+    <View style={styles.stack}>
+      {state.rows.map((r, i) => {
+        const aIsYou = r.a.userId === myUserId;
+        const model = buildMatchScoreboardModel({
+          week,
+          live: !r.final,
+          me: { name: r.a.name, gain: r.a.gain, pct: r.a.pct },
+          opp: r.b ? { name: r.b.name, gain: r.b.gain, pct: r.b.pct } : null,
+          endsLabel: '',
+        });
+        return (
+          <MatchScoreboard
+            key={`${r.a.userId}-${i}`}
+            model={model}
+            mineGain={r.a.gain}
+            oppGain={r.b?.gain ?? 0}
+            size="compact"
+            youName={r.a.name}
+            oppName={r.b?.name ?? null}
+            statusLine={r.final ? 'Final' : `Week ${week}, live`}
+            aIsYou={aIsYou}
+          />
+        );
+      })}
     </View>
   );
 }
