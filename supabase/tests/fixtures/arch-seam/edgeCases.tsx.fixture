@@ -1,0 +1,19 @@
+// FIXTURE: synthetic cases the scanner must REPORT or deliberately ignore.
+import { seamRpc, seamInvoke, seamTable } from '../lib/game/seamCalls';
+import { looseRpc } from '../lib/loose';
+
+// A mention in prose is not a call: supabase.rpc(name) / seamRpc(proseName)
+/* nor is this: supabase.functions.invoke(blockCommentName) */
+
+export function Screen({ which, leagueId, anything }: any) {
+  const a = async () => seamRpc(which, { p_league_id: leagueId });               // dynamic: a parameter, not provable
+  const b = async () => seamRpc(`renew_${which}`, {});                            // templated
+  const c = seamRpc;                                                              // used as a value: passed around
+  const d = async () => seamInvoke(anything.fn, { body: {} });                    // dynamic member expression
+  const e = async () => seamTable('trades', () => leagueId);                      // closure with no visible call
+  const f = async () => seamTable('drafts', () => supabase.from('drafts').select('pick_number').eq('league_id', leagueId));
+  const g = async () => looseRpc('get_home_league', {});                          // forwarder with NO seam gate: still found by definition
+  const h = Array.from(new Set([1, 2, 3]));                                       // not a query
+  const ok = async () => seamRpc('literal_ok', {});
+  return null;
+}

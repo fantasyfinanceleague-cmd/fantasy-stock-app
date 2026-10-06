@@ -1,0 +1,14 @@
+// FIXTURE: a forwarder of a TABLE name, and a class method whose name argument cannot be attributed.
+import { supabase } from './supabase';
+
+export function readAll(table: string) {
+  return supabase.from(table).select('id, name');
+}
+
+export class Repo {
+  async call(fn: string) {
+    return supabase.functions.invoke(fn);
+  }
+}
+
+export const user = () => readAll('profiles');
