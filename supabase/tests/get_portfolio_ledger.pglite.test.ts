@@ -20,7 +20,8 @@
  *       a member and where that league holds real data for the caller.
  *   (c) anon is refused with SQLSTATE 42501.
  *   (d) proacl: no PUBLIC, anon or service_role entry; authenticated present;
- *       SECURITY INVOKER; search_path pinned.
+ *       SECURITY INVOKER; search_path pinned; returns ONE jsonb (not a set, so
+ *       PostgREST's 1,000-row max-rows cap cannot truncate it).
  *
  * CANNOT PROVE (and why):
  *   - Real GoTrue/PostgREST JWT handling. auth.uid() is a shim that reads
@@ -260,9 +261,13 @@ Deno.test({
 
     await t.step('(d) proacl: explicit revokes survive Supabase-simulated default grants; INVOKER; search_path pinned', async () => {
       await db.exec(`RESET ROLE;`);
-      const [meta] = await q(`select proacl::text acl, prosecdef, proconfig::text cfg
+      const [meta] = await q(`select proacl::text acl, prosecdef, proconfig::text cfg, prorettype::regtype::text rt, proretset
         from pg_proc p join pg_namespace n on n.oid = p.pronamespace
         where n.nspname = 'public' and proname = 'get_portfolio_ledger'`);
+      // PostgREST's max-rows cap (1,000) applies to set-returning RPCs, never to a
+      // single jsonb value: the ledger must stay one value, so no row cap can truncate it.
+      assertEquals(meta.rt, 'jsonb');
+      assertEquals(meta.proretset, false);
       assert(meta.acl, 'proacl must be explicit (non-null) after the revokes');
       assert(!/(^|[{,])=/.test(meta.acl), `PUBLIC must have no grant: ${meta.acl}`);
       assert(!meta.acl.includes('anon='), `anon must have no grant: ${meta.acl}`);
