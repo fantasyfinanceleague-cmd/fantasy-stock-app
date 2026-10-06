@@ -669,9 +669,51 @@ the `impeccable` guides (craft-floor, ios, clarify, harden, layout); see
   **No Unicode glyphs or emoji standing in for icons**: no ⓘ, ▲/▼, ✓, ›, →
   as text. Dots and discs are drawn shapes. (Bullets that mask a password are
   not icons.)
+- **The icon set is Ionicons** (`@expo/vector-icons`), already used by the
+  3b-1 tab bar. It comes in **outline** by default; **filled** only for a
+  selected state (the tab bar). Screens use `components/sp/Icon` with a
+  semantic name, never a raw glyph name:
+
+  | `sp/Icon` name | Ionicons glyph | Used for |
+  |---|---|---|
+  | `chevronRight` | `chevron-forward` | Row disclosure, "Invest", "Resolve" |
+  | `chevronLeft` | `chevron-back` | Back |
+  | `chevronDown` / `chevronUp` | `chevron-down` / `chevron-up` | Pill and sheet disclosure; standings movement down/up |
+  | `check` | `checkmark` | Running back, done, password rule met |
+  | `circle` | `ellipse-outline` | Password rule not met |
+  | `info` | `information-circle-outline` | The unpriced (at-cost) caption |
+  | `close` | `close` | Sheets, clear field |
+  | `search` | `search` | Search fields |
+  | `add` | `add` | Create |
+  | `share` | `share-outline` | Invite code share |
+  | `trophy` | `trophy` | Champion medallion |
+  | `lock` | `lock-closed-outline` | Final / locked draft order |
+  | `mail` | `mail-outline` | "Check your email" |
+
+  The board's drawn icons depict these glyphs. A new icon is added to the map
+  through the Design Lead.
+  - **Size follows the text it sits with:** `size="caption" | "callout" |
+    "body" | "headline" | "title"` → 14 / 16 / 18 / 20 / 24 pt. It scales with
+    Dynamic Type by the paired role's `maxScale`, so an icon never shrinks
+    beside XL text.
+  - **Colour is a theme token** (`tone`: text, text2, accent, gain, loss,
+    zero, live, onAccent…), matching the text it sits with. No raw colours.
+  - **Accessibility:** icons are **decorative by default** (hidden from
+    VoiceOver; the adjacent text carries the meaning). An icon that stands
+    alone as a control takes `label`, and its wrapper takes `accessibilityRole`.
+    An icon-only button without a label fails the gate.
 - **Hit areas.** **≥ 44 × 44 pt for everything tappable**, including text links
   whose visible mark is small ("Nudge again · Remove", "Change", "Invest", "Share",
   the pill's "+N"). Use padding or `hitSlop`; verify it in review.
+  - **SegmentedControl:** the visual height stays (≈ 34 pt; 40 pt for Buy/Sell);
+    each segment's hit area reaches 44 pt through vertical `hitSlop` =
+    (44 − height) / 2. Keep ≥ 8 pt clear above and below so the slop never
+    overlaps another target. The container has `accessibilityRole="tablist"`,
+    each segment is a `tab` with `selected` state, and selection gives a light
+    haptic.
+- **LiveDot** (the only loop) **pauses when its screen loses focus or the app
+  leaves the foreground** (`AppState` ≠ active), and resumes on focus or
+  return. Reduce Motion: a static dot. Every pulse built on it inherits this.
 - **Gestures and sheets.**
   - Edge-swipe back is never disabled.
   - Sheets dismiss by swipe, with a clear Cancel/Done, unless dismissing would
