@@ -31,6 +31,8 @@ import { PRICE_TIERS_NEED_A_SLOT, rosterSlotsCaption } from '@/lib/game/slotBuil
 import { SETTINGS_LOCKED } from '@/lib/game/leagueSettingsEntry';
 import { draftDateTimeLabel } from '@/lib/home/draftCountdown';
 import { draftDateForSave, seedDraftDate, updatedOneRow } from '@/lib/game/draftDateSave';
+import { DATE_LOCKED_AFTER_ROOM, draftTimeLocked, draftTimeRefusal } from '@/lib/game/autoStart';
+import { useDraftStatus } from '@/lib/game/useDraftStatus';
 import { space, typeFontFamily } from '@/constants/tokens';
 import { Button } from '@/components/sp/Button';
 import { Icon } from '@/components/sp/Icon';
@@ -108,6 +110,11 @@ export default function LeagueSettingsScreen() {
   // Check if settings are locked (draft started or completed)
   const isLocked = league?.draft_status === 'in_progress' || league?.draft_status === 'completed';
 
+  // Auto-start: the draft time can't change once the room opens (T−1h), until
+  // the draft starts, except when postponed. From the server's start_state.
+  const draftStatus = useDraftStatus(league?.id ?? null, !!league && isCommissioner && !isLocked, 0);
+  const dateLocked = !isLocked && draftTimeLocked(draftStatus.startState);
+
   const handleSave = async () => {
     if (!league || !user?.id) return;
 
@@ -164,6 +171,13 @@ export default function LeagueSettingsScreen() {
       // row landed, the outcome says PARTLY saved rather than a raw error.
       const res = await seamUpdateLeague(league.id, patch);
       if (res.error) {
+        // A draft-time refusal (not a quarter hour, under an hour out, or the room
+        // is open) shows inline under the date, never as a raw error.
+        const refusal = draftTimeRefusal(res.error);
+        if (refusal) {
+          setDateError(refusal);
+          return;
+        }
         const outcome = settingsSaveOutcome({ patchError: res.error, slotsError: null });
         Alert.alert(outcome.title ?? 'Not saved', outcome.message ?? '');
         return;
@@ -270,8 +284,9 @@ export default function LeagueSettingsScreen() {
             label="Draft date"
             value={draftDateValue}
             valueColor={draftDateTBD ? colors.warnText : undefined}
-            disabled={isLocked}
-            onPress={isLocked ? undefined : () => {
+            sub={dateLocked ? DATE_LOCKED_AFTER_ROOM : undefined}
+            disabled={isLocked || dateLocked}
+            onPress={isLocked || dateLocked ? undefined : () => {
               // Seed the value the picker shows, so accepting it unchanged commits a date.
               setDraftDateTBD(false);
               setDraftDate((d) => seedDraftDate(d, new Date()));
@@ -426,7 +441,7 @@ export default function LeagueSettingsScreen() {
       ) : null}
 
       <DraftDateSheet
-        visible={showDatePicker && !draftDateTBD && !isLocked}
+        visible={showDatePicker && !draftDateTBD && !isLocked && !dateLocked}
         value={draftDate}
         onChange={setDraftDate}
         onSetLater={() => {

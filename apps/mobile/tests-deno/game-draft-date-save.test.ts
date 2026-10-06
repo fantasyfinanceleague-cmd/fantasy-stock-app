@@ -17,6 +17,7 @@ import createSrc from '../app/create-league.tsx' with { type: 'text' };
 import settingsSrc from '../app/league-settings.tsx' with { type: 'text' };
 import seamSrc from '../lib/game/seamCalls.ts' with { type: 'text' };
 import leagueTabSrc from '../app/(tabs)/league.tsx' with { type: 'text' };
+import sheetSrc from '../components/game/DraftDateSheet.tsx' with { type: 'text' };
 
 const at = (iso: string) => new Date(iso);
 
@@ -108,4 +109,28 @@ Deno.test('the leagues update returns its row, and both callers check it', () =>
   assertEquals(settingsSrc.includes('updatedOneRow(res)'), true);
   // The lobby stepper checks it through playoffTeamsSaveOutcome (lock first, then updatedOneRow).
   assertEquals(leagueTabSrc.includes('playoffTeamsSaveOutcome(res)'), true);
+});
+
+// ── Auto-start: the picker's rules and the refusals (3c-2) ──────────────────
+
+Deno.test('the sheet: 15-minute steps, ET, the earliest time as its minimum, the board\'s helper', () => {
+  assertEquals(sheetSrc.includes('minuteInterval={15}'), true);
+  assertEquals(sheetSrc.includes('timeZoneName="America/New_York"'), true);
+  assertEquals(sheetSrc.includes('minimumDate={new Date(earliest)}'), true);
+  assertEquals(sheetSrc.includes('{PICKER_HELPER}'), true);
+  assertEquals(sheetSrc.includes('minimumDate={new Date()}'), false); // never "now" any more
+});
+
+Deno.test('the sheet writes a stale value back, so what is shown is what is saved', () => {
+  assertEquals(sheetSrc.includes('if (stale) onChange(new Date(shown));'), true);
+});
+
+Deno.test('both screens show the server\'s draft-time refusals inline', () => {
+  assertEquals(createSrc.includes('draftTimeRefusal(error)'), true);
+  assertEquals(settingsSrc.includes('draftTimeRefusal(res.error)'), true);
+});
+
+Deno.test('League settings locks the time once the room opens (server start_state)', () => {
+  assertEquals(settingsSrc.includes('draftTimeLocked(draftStatus.startState)'), true);
+  assertEquals(settingsSrc.includes('sub={dateLocked ? DATE_LOCKED_AFTER_ROOM : undefined}'), true);
 });

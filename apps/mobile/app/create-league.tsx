@@ -60,6 +60,7 @@ import { byeNoticeCopy } from '@/lib/game/draftLobby';
 import { PRICE_TIERS_NEED_A_SLOT, rosterSlotsCaption } from '@/lib/game/slotBuilderCopy';
 import { draftDateTimeLabel } from '@/lib/home/draftCountdown';
 import { draftDateForSave, seedDraftDate } from '@/lib/game/draftDateSave';
+import { draftTimeRefusal } from '@/lib/game/autoStart';
 import { stakesLine } from '@/lib/stakesLine';
 import { INVITE_CODE_LABEL } from '@/lib/home/homeCopy';
 import {
@@ -236,6 +237,14 @@ export default function CreateLeagueWizard() {
     } catch (error: any) {
       // The raw message is logged, never shown (Design Lead ruling).
       console.error('Failed to create league:', error);
+      // A draft-time refusal (trg_leagues_draft_time: not a quarter hour, under
+      // an hour out) goes back to the Draft step, inline under the date.
+      const refusal = draftTimeRefusal(error);
+      if (refusal) {
+        setDateError(refusal);
+        setStep('draft');
+        return;
+      }
       Alert.alert(CREATE_FAILED.title, CREATE_FAILED.message);
     } finally {
       setCreating(false);
