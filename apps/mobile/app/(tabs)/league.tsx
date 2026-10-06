@@ -37,6 +37,8 @@ import { useState } from 'react';
 import { useLeagueStandings } from '@/lib/game/useLeagueStandings';
 import { useAuth } from '@/lib/useAuth';
 import { buildStandingsRows } from '@/lib/game/standings';
+import { SettingRow, SetupCard } from '@/components/game/SetupRows';
+import { showsLeagueSettingsRow } from '@/lib/game/leagueSettingsEntry';
 
 // League (3c). The standings for a season in progress, the season over and
 // the playoffs. Standings order is the server's (league_standings_ranked,
@@ -165,6 +167,7 @@ export default function LeagueScreen() {
 /** A renewed league before its draft (3c, Run it back): the roster or the ask. */
 function LeagueRenewalScreen({ leagueId, createdAt }: { leagueId: string; createdAt: string }) {
   const { refresh, activeLeague } = useLeagueContext();
+  const { user } = useAuth();
   const { colors } = useTheme();
   const [key, setKey] = useState(0);
   const hist = useLeagueHistory(leagueId, true);
@@ -194,6 +197,14 @@ function LeagueRenewalScreen({ leagueId, createdAt }: { leagueId: string; create
           inviteCode={activeLeague?.invite_code ?? ''}
           onScheduled={() => setKey((k) => k + 1)}
         />
+        {showsLeagueSettingsRow(activeLeague?.commissioner_id, user?.id) ? (
+          <SetupCard>
+            <SettingRow
+              label="League settings"
+              onPress={() => router.push({ pathname: '/league-settings', params: { leagueId } })}
+            />
+          </SetupCard>
+        ) : null}
       </BarsRefresh>
     </View>
   );
@@ -288,6 +299,16 @@ function LeagueLobby({ leagueId }: { leagueId: string }) {
           ) : (
             <Button label="Start the draft" onPress={() => setConfirming(true)} disabled={ds.status !== 'ready'} />
           )
+        ) : null}
+        {/* Board (RibHistory): League settings is a row on the pre-draft League
+            tab. Commissioner only, the same check League settings itself makes. */}
+        {showsLeagueSettingsRow(activeLeague?.commissioner_id, user?.id) ? (
+          <SetupCard>
+            <SettingRow
+              label="League settings"
+              onPress={() => router.push({ pathname: '/league-settings', params: { leagueId } })}
+            />
+          </SetupCard>
         ) : null}
       </BarsRefresh>
     </View>
