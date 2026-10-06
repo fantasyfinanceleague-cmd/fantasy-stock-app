@@ -62,6 +62,12 @@ export interface ThemeColors {
   danger: string;
   lossFill: string;
   warnTint: string;
+  /* Medals (§9A, season complete only): a filled disc with the rank numeral.
+     Never medal-coloured text. */
+  medalGold: string;
+  medalSilver: string;
+  medalBronze: string;
+  onMedal: string;
   warnLine: string;
   warnText: string;
   primaryBg: string;
@@ -113,6 +119,10 @@ const light: ThemeColors = {
   danger: '#B42318',
   lossFill: '#C8303A',
   warnTint: '#FFF6DE',
+  medalGold: '#B07A00',
+  medalSilver: '#7C8898',
+  medalBronze: '#C27036',
+  onMedal: '#1A1407',
   warnLine: '#F5D48A',
   warnText: '#7A4B00',
   primaryBg: '#0D1B2E',
@@ -161,6 +171,10 @@ const dark: ThemeColors = {
   danger: '#FF8A80',
   lossFill: '#D93A44',
   warnTint: 'rgba(255, 197, 61, 0.1)',
+  medalGold: '#E8AF2E',
+  medalSilver: '#B9C3CF',
+  medalBronze: '#DC8A55',
+  onMedal: '#0D1B2E',
   warnLine: 'rgba(255, 197, 61, 0.35)',
   warnText: '#FFC53D',
   primaryBg: '#FFFFFF',

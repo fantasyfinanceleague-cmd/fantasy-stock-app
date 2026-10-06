@@ -43,7 +43,7 @@ export default function LeagueScreen() {
         <BarsRefresh onRefresh={refresh} contentContainerStyle={{ paddingHorizontal: space[6], paddingBottom: space[9], gap: space[6] }}>
           {st.status === 'ready' ? (
             <View style={styles.stack}>
-              <StandingsTable rows={rows} caption={STANDINGS_CAPTION} />
+              <StandingsTable rows={rows} caption={STANDINGS_CAPTION} seasonComplete={phase === 'completed'} />
             </View>
           ) : null}
         </BarsRefresh>
