@@ -33,7 +33,9 @@ Deno.test('the hook: the phase from the server state on the server clock; the ca
 
 Deno.test('the start request: only with kick on, only when lobbyView says kick, once per draft time, through startKickOutcome', () => {
   assertEquals(hookSrc.includes('if (!opts.kick || !view?.kick || !ds.startsAt || kickedFor.current === ds.startsAt) return;'), true);
-  assertEquals(hookSrc.includes('startKickOutcome(res)'), true);
+  // Through readFunctionRefusal (the reason survives a non-2xx), then startKickOutcome.
+  assertEquals(hookSrc.includes('const r = await readFunctionRefusal(res, error);'), true);
+  assertEquals(hookSrc.includes('startKickOutcome('), true);
   assertEquals((hookSrc.match(/action: 'start'/g) ?? []).length, 1);
   assertEquals((lobbySrc.match(/action: 'start'/g) ?? []).length, 0);
 });

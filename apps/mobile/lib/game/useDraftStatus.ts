@@ -13,6 +13,7 @@
  */
 import { useEffect, useState } from 'react';
 import { seamInvoke, seamRpc } from './seamCalls';
+import { functionOk, readFunctionRefusal } from '../functionRefusal';
 import { clockFromStatus, parseStartStatus, serverOffsetMs, type Blocker, type Postponed, type StartState } from './autoStart';
 
 export interface DraftStatus {
@@ -42,14 +43,17 @@ export function useDraftStatus(leagueId: string | null, enabled: boolean, refres
     let cancelled = false;
     setState((s) => ({ ...s, status: 'loading' }));
     (async () => {
-      const { data, error } = await seamInvoke('draft-control', { body: { league_id: leagueId, action: 'status' } });
+      const res = await seamInvoke('draft-control', { body: { league_id: leagueId, action: 'status' } });
       const receivedAt = Date.now();
+      // readFunctionRefusal: a non-2xx body (rate_limited, not_a_member …) is read, not lost.
+      const read = await readFunctionRefusal(res.data, res.error);
       if (cancelled) return;
-      if (error || !data || data.ok === false) {
-        console.warn('[game:draft-status] failed', error?.message);
+      if (!functionOk(read)) {
+        console.warn('[game:draft-status] failed', read.transport ? 'transport' : read.reason);
         setState({ ...EMPTY, status: 'error' });
         return;
       }
+      const data = read.body as Record<string, any>;
       const clock = clockFromStatus(data as Record<string, unknown>);
       let offset = 0;
       if (clock.source === 'status') {

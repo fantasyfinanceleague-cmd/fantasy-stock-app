@@ -17,6 +17,7 @@ import { QueueEditor } from './QueueEditor';
 import { DRAFT_ROOM_LOAD_FAILED, QUEUE_LOAD_FAILED } from '@/lib/game/draftQueueRead';
 import { managerAtPick, boardRows } from '@/lib/game/draftBoard';
 import { pickClockLabel, pickRowView, pickRefusalLine, pickRefusalNextStep } from '@/lib/game/draftRoom';
+import { readFunctionRefusal } from '@/lib/functionRefusal';
 import { turnState } from '@/lib/game/draftRefusals';
 
 export interface DraftRoomProps {
@@ -62,9 +63,11 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false }
     const jitter = Math.floor(Math.random() * 3000);
     const t = setTimeout(() => {
       void seamInvoke('validate-and-record-pick', { body: { league_id: leagueId, action: 'auto_pick', pick_number: onClockPick } })
-        .then(({ data }) => {
+        .then(async ({ data, error }) => {
           // A stalled turn (auto-pick found no legal stock) is shown as waiting, never as a pick.
-          if (data?.reason === 'stalled') setStalledAt(onClockPick);
+          // readFunctionRefusal: the reason survives a non-2xx too (error.context's body).
+          const r = await readFunctionRefusal(data, error);
+          if (!r.transport && (r.reason === 'stalled' || r.body.reason === 'stalled')) setStalledAt(onClockPick);
         })
         .finally(() => refresh());
     }, jitter);
@@ -94,10 +97,13 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false }
     setRefusal(null);
     const { data, error } = await seamInvoke('validate-and-record-pick', { body: { league_id: leagueId, symbol: selected } });
     setPending(false);
-    if (error || !data || data.ok === false) {
+    // readFunctionRefusal: a 2xx { ok:false, reason } AND a non-2xx body (rate_limited 429,
+    // not_a_member 403 …, read from error.context) both reach their own line.
+    const r = await readFunctionRefusal(data, error);
+    if (r.transport || r.reason !== null) {
       // The board's "Pick refused" copy, with the stock the player tried; the
       // never-skips refusals add the next step (the clock keeps running).
-      const reason = String(data?.reason ?? 'unknown');
+      const reason = r.transport ? 'unknown' : r.reason ?? 'unknown';
       setRefusal({ line: pickRefusalLine(reason, { stock: selected }), next: pickRefusalNextStep(reason) });
       return;
     }

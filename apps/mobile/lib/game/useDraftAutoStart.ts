@@ -21,6 +21,7 @@ import { useDraftStatus } from './useDraftStatus';
 import { seamInvoke, seamUpdateLeague } from './seamCalls';
 import { playoffTeamsSaveOutcome } from './playoffTeamsSave';
 import { draftDateForSave, seedDraftDate, updatedOneRow } from './draftDateSave';
+import { functionOk, readFunctionRefusal } from '../functionRefusal';
 import {
   NEW_TIME_NOT_SAVED,
   RECONFIRM_NOT_SAVED,
@@ -73,7 +74,8 @@ export function useDraftAutoStart(leagueId: string, opts: { kick: boolean }) {
     kickedFor.current = ds.startsAt;
     void (async () => {
       const { data: res, error } = await seamInvoke('draft-control', { body: { league_id: leagueId, action: 'start' } });
-      const outcome = error ? 'reread' : startKickOutcome(res);
+      const r = await readFunctionRefusal(res, error);
+      const outcome = r.transport ? 'reread' : startKickOutcome(r.reason === null ? { ok: true } : { ok: false, reason: r.reason });
       setRetrying(outcome === 'retrying');
       reread();
       await refresh();
@@ -114,7 +116,7 @@ export function useDraftAutoStart(leagueId: string, opts: { kick: boolean }) {
     setBusy(true);
     const { data: res, error } = await seamInvoke('draft-control', { body: { league_id: leagueId, action: 'confirm_roster', choice } });
     setBusy(false);
-    setFixError(error || !res || res.ok !== true ? RECONFIRM_NOT_SAVED : null);
+    setFixError(functionOk(await readFunctionRefusal(res, error)) ? null : RECONFIRM_NOT_SAVED);
     reread();
     await refresh();
   };
