@@ -22,6 +22,7 @@ import { LeagueRenewal } from '@/components/game/LeagueRenewal';
 import { HistoryList } from '@/components/game/HistoryList';
 import { ChampBanner } from '@/components/game/ChampBanner';
 import { championBanner } from '@/lib/game/history';
+import { leagueScreenFor, showRunItBackStrip, seasonSegments } from '@/lib/game/leaguePhase';
 import { useLeagueHistory } from '@/lib/game/useLeagueHistory';
 import { usePreDraftData } from '@/lib/home/usePreDraftData';
 import { StartDraftConfirm } from '@/components/game/StartDraftConfirm';
@@ -43,18 +44,25 @@ import { buildStandingsRows } from '@/lib/game/standings';
 // ranking, so it stays hidden until that is deployed. Drafting keeps the
 // draft-room entry (§3 IA). Other phases keep their placeholder until they
 // are built (the pre-draft lobby, the Season 2 review, History).
+const SEGMENT_LABEL: Record<'standings' | 'schedule' | 'playoffs' | 'history', string> = {
+  standings: 'Standings',
+  schedule: 'Schedule',
+  playoffs: 'Playoffs',
+  history: 'History',
+};
+
 const STANDINGS_CAPTION = 'Ranked by win percentage, then head-to-head, then season gain. This is also the playoff seeding.';
 
 export default function LeagueScreen() {
   const { sheetLeagues, activeLeagueId, activeLeague, refresh, setActiveLeagueId } = useLeagueContext();
   // League's segments: Standings | Schedule (the board, D4 = keep). History is not built yet.
   const [segment, setSegment] = useState<'standings' | 'schedule' | 'playoffs' | 'history'>('standings');
-  // The Playoffs segment appears once the season is in the playoffs (or over).
-  const hasPlayoffs = (activeLeague?.season_status === 'playoffs' || activeLeague?.season_status === 'completed') && (activeLeague?.playoff_teams ?? 0) > 0;
   const phase = sheetLeagues.find((l) => l.id === activeLeagueId)?.seasonPhase;
-  const drafting = phase === 'drafting';
-  const preDraft = phase === 'pre_draft' && activeLeagueId !== null;
-  const inSeason = phase === 'regular' || phase === 'playoffs' || phase === 'completed';
+  // The screen is the rules' choice for the phase (lib/game/leaguePhase.ts).
+  const screen = activeLeague && phase ? leagueScreenFor({ phase, isRenewal: !!activeLeague.previous_league_id }) : 'placeholder';
+  const drafting = screen === 'draft_room';
+  const preDraft = (screen === 'lobby' || screen === 'renewal') && activeLeagueId !== null;
+  const inSeason = screen === 'season';
   const history = useLeagueHistory(inSeason ? activeLeagueId : null, segment === 'history' && inSeason);
   const { colors } = useTheme();
   const st = useLeagueStandings(inSeason ? activeLeagueId : null);
@@ -63,7 +71,7 @@ export default function LeagueScreen() {
     inSeason ? activeLeagueId : null,
     activeLeague?.playoff_teams ?? null,
     st.standings.map((x) => ({ user_id: x.user_id, rank: x.rank, display_name: x.display_name })),
-    segment === 'playoffs' && hasPlayoffs,
+    segment === 'playoffs',
   );
 
   // R2: a finished season's commissioner starts the renewal. The server returns the
@@ -92,7 +100,7 @@ export default function LeagueScreen() {
         <BarsRefresh onRefresh={refresh} contentContainerStyle={{ paddingHorizontal: space[6], paddingBottom: space[9], gap: space[6] }}>
           {st.status === 'ready' ? (
             <View style={styles.stack}>
-              {phase === 'completed' && isCommissioner ? (
+              {phase && showRunItBackStrip({ phase, isCommissioner, hasSuccessor: !!activeLeague?.successor_league_id }) ? (
                 <Card>
                   <Text variant="headline">You're the commissioner</Text>
                   <Text variant="callout" tone="secondary">Start Season 2 with the same group. Season 1 stays in History.</Text>
@@ -100,12 +108,10 @@ export default function LeagueScreen() {
                 </Card>
               ) : null}
               <SegmentedControl
-                options={[
-                  { label: 'Standings', value: 'standings' },
-                  { label: 'Schedule', value: 'schedule' },
-                  ...(hasPlayoffs ? [{ label: 'Playoffs', value: 'playoffs' }] : []),
-                  { label: 'History', value: 'history' },
-                ]}
+                options={seasonSegments({ phase: phase ?? 'regular', playoffTeams: activeLeague?.playoff_teams ?? null }).map((v) => ({
+                  label: SEGMENT_LABEL[v],
+                  value: v,
+                }))}
                 value={segment}
                 onChange={(v) => setSegment(v === 'schedule' ? 'schedule' : v === 'playoffs' ? 'playoffs' : v === 'history' ? 'history' : 'standings')}
               />
