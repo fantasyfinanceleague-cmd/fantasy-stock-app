@@ -2,27 +2,47 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "be980209a3cd03fe6b534936812e935eb8e331ca",
-    "commitShort": "be98020",
+    "commit": "89b79c147bac1a3d177965e7e264b4135fb60897",
+    "commitShort": "89b79c1",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": true,
     "dirtyPaths": [
       {
+        "code": "A",
+        "path": "supabase/migrations/20261106000000_schedule_draft_autopick_sweep.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20261106000001_purge_cron_run_details.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20261106000002_drafts_refuse_new_skip.sql"
+      },
+      {
+        "code": "D",
+        "path": "supabase/migrations/deferred/20261010000001_schedule_draft_autopick_sweep.sql"
+      },
+      {
+        "code": "D",
+        "path": "supabase/migrations/deferred/20261101000002_drafts_refuse_new_skip.sql"
+      },
+      {
         "code": "M",
-        "path": "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql"
+        "path": "supabase/migrations/deferred/README.md"
       }
     ],
-    "timestamp": "2026-10-06T05:06:47Z",
-    "sourceHash": "sha256:7368d63c867fe73e193d2ff77e00896ac505788b049a12bd74133199f8933bad",
+    "timestamp": "2026-10-06T18:15:51Z",
+    "sourceHash": "sha256:dab4d1b31d000ec8ac1bb0d8197defc7197d9c47f37ae0e2b09a45feded5ef15",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-06T04:24:08Z",
-    "ageHours": 0.7,
-    "ageDays": 0,
+    "ageHours": 13.9,
+    "ageDays": 0.6,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:d612615ef59e488283d2ab2758efa6929ae1f3be0506f33dcde3ff7a4f11031f",
@@ -3392,6 +3412,37 @@
       "source": {
         "path": "supabase/migrations/20261103000000_trades_slot_id.sql",
         "line": 101
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261106000002_drafts_refuse_new_skip.sql:40"
+        ],
+        "latestDefinition": "supabase/migrations/20261106000002_drafts_refuse_new_skip.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.refuse_new_skip_rows",
+      "label": "refuse_new_skip_rows()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261106000002_drafts_refuse_new_skip.sql",
+        "line": 40
       }
     },
     {
@@ -10023,6 +10074,19 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.tbl.drafts->pg.refuse_new_skip_rows",
+      "from": "tbl.drafts",
+      "to": "pg.refuse_new_skip_rows",
+      "protocol": "pg-trigger",
+      "payload": "trigger on drafts",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261106000002_drafts_refuse_new_skip.sql:61"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.tbl.league_draft_order_meta->pg.enforce_league_draft_order_meta",
       "from": "tbl.league_draft_order_meta",
       "to": "pg.enforce_league_draft_order_meta",
@@ -12699,6 +12763,16 @@
       "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
     },
     {
+      "node": "pg.refuse_new_skip_rows",
+      "label": "refuse_new_skip_rows()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
       "node": "tbl.symbols",
       "label": "symbols",
       "groupKey": "public-role-policies-ungated",
@@ -13324,6 +13398,12 @@
       "resolve": "Re-capture the snapshot, or confirm the migration was applied."
     },
     {
+      "scope": "pg.refuse_new_skip_rows",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
       "scope": "tbl.broker_credentials",
       "claim": "table exists in prod",
       "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
@@ -13380,13 +13460,13 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 181,
-    "edges": 404,
+    "nodes": 182,
+    "edges": 405,
     "flows": 8,
-    "drift": 32,
-    "driftHigh": 5,
+    "drift": 33,
+    "driftHigh": 6,
     "deadCode": 30,
-    "unverified": 13
+    "unverified": 14
   },
   "sourceIndex": {
     "edgeFunctions": [
@@ -13831,7 +13911,10 @@
       "20261101000003_draft_price_outages.sql",
       "20261102000000_record_trade_atomic.sql",
       "20261103000000_trades_slot_id.sql",
-      "20261104000000_freeze_league_rules_after_draft_start.sql"
+      "20261104000000_freeze_league_rules_after_draft_start.sql",
+      "20261106000000_schedule_draft_autopick_sweep.sql",
+      "20261106000001_purge_cron_run_details.sql",
+      "20261106000002_drafts_refuse_new_skip.sql"
     ],
     "config": [
       "draft-autopick-sweep=false",
