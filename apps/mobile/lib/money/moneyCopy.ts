@@ -12,6 +12,10 @@ export const COPY = {
   proceedsUnavailable: "That sale's cash isn't available anymore. Pick another.",
   noProceeds: "There's no cash in your slots to invest.",
   whichSalePays: 'Which sale pays for this?',
+  pickerCaption: "Each sale's cash stays in its own slot. Pick one; the buy uses all of it.",
+  // NEW copy (Design Lead): the way out of a proceeds refusal, and the picker's commit.
+  pickAnotherSale: 'Pick another sale',
+  useSaleButton: (symbol: string) => `Use the ${symbol} sale`,
   eachSaleStaysInItsSlot: "Each sale's cash stays in its own slot. Pick one; the buy uses all of it.",
   sellAllPrefix: 'Sell all',
   aSlotHoldsOneStock: 'A slot holds one stock, so you sell the whole position. The cash stays in this slot to reinvest.',

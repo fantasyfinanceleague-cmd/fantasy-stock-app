@@ -91,3 +91,14 @@ Deno.test('a tier refusal names the price and the open slot, warn-tint, no retry
   assertEquals(r.messageTone, 'warn');
   assertEquals(r.footer, null);
 });
+
+// Rule 8 (UX audit P1): a proceeds refusal names the next step: "Pick another sale" (NEW copy).
+Deno.test('proceeds_unavailable: the refused review offers back_to_picker, not a dead end', () => {
+  const r = reviewPresentation(
+    { kind: 'refused', reason: 'proceeds_unavailable', backTo: 'picker', retryable: false },
+    { buttonLabel: 'Buy SHOP', buttonRole: 'buy' },
+    { title: 'Bought SHOP', symbol: 'SHOP' },
+  );
+  assertEquals(r.footer, 'back_to_picker');
+  assertEquals(r.button, null);
+});

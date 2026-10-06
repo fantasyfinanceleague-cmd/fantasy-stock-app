@@ -20,7 +20,9 @@ import { MONEY_FIXTURE, MONEY_FIXTURE_CONFIG } from '@/lib/money/devFixture';
 import { FIXTURE_LEAGUE_ID, fixtureLeague, fixtureMarket } from '@/lib/money/fixtureMode';
 import { STRESS_CALLER } from '@/lib/money/stressFixture';
 import { useSession } from '@/lib/SessionProvider';
-import { buyingPower } from '@/lib/money/buyingPower';
+import { buyingPower, type PreviewSource } from '@/lib/money/buyingPower';
+import { SalePicker } from '@/components/money/SalePicker';
+import { defaultSourceId } from '@/lib/money/salePicker';
 import { budgetAfterBuy, budgetAfterSell, userCashSpentFromLedger } from '@/lib/money/budgetFigures';
 import { cleanCompanyName } from '@/lib/money/cleanCompanyName';
 import { fixedNotionalShares } from '@/lib/money/buyQuantity';
@@ -60,6 +62,9 @@ interface OpenReview {
   loading: boolean;
   /** The error is a blocker (a tier refusal): warn-tint, no icon. */
   warn?: boolean;
+  /** Per-slot buy with more than one sale to pay from: the picker comes first. */
+  needsPicker?: boolean;
+  sources?: PreviewSource[];
 }
 
 export function StockSheetBody({
@@ -85,13 +90,15 @@ export function StockSheetBody({
   const market = MONEY_FIXTURE_CONFIG ? fixtureMarket(MONEY_FIXTURE_CONFIG.scenario, now) : contextMarket;
   const [choice, setChoice] = useState<'buy' | 'sell' | null>(null);
   const [open, setOpen] = useState<OpenReview | null>(null);
+  // "Which sale pays for this?": the sales a per-slot buy can be paid from, and the one chosen.
+  const [picking, setPicking] = useState<{ sources: PreviewSource[]; chosen: string | null } | null>(null);
   const trade = useTradeSubmit();
   const lastData = useRef<unknown>(null);
 
   const gate = decideTradeGate(now, market);
   const opensLabel = market?.next_open_at ? marketOpensLabel(market.next_open_at) : null;
 
-  async function buildReview(kind: ReviewKind): Promise<OpenReview> {
+  async function buildReview(kind: ReviewKind, pickedId: string | null = null): Promise<OpenReview> {
     const league = MONEY_FIXTURE_CONFIG ? { id: FIXTURE_LEAGUE_ID, ...fixtureLeague(MONEY_FIXTURE_CONFIG.stake) } : activeLeague;
     if (!league || !userId) return { kind, review: null, body: null, error: COPY.cantReach, loading: false };
     const price = data.price;
@@ -126,7 +133,10 @@ export function StockSheetBody({
       });
       if (power.kind === 'none') return { kind, review: null, body: null, error: COPY.noProceeds, loading: false };
       if (power.kind !== 'proceeds') return { kind, review: null, body: null, error: COPY.cantReach, loading: false };
-      const source = power.sources.find((s) => s.trade_id === power.defaultTradeId);
+      if (power.pickerRequired && !pickedId) {
+        return { kind, review: null, body: null, error: null, loading: false, needsPicker: true, sources: power.sources };
+      }
+      const source = power.sources.find((s) => s.trade_id === (pickedId ?? power.defaultTradeId));
       const shares = source ? fixedNotionalShares(source.amount, price) : null;
       if (!source || !shares) return { kind, review: null, body: null, error: COPY.invalidPrice, loading: false };
       const review = buyReviewPerSlot({
@@ -200,10 +210,31 @@ export function StockSheetBody({
     return <LoadFailure title={COPY.stockLoadTitle} message={COPY.loadRetryMessage} onRetry={data.refresh} />;
   }
 
-  async function openReview(kind: ReviewKind) {
+  async function openReview(kind: ReviewKind, pickedId: string | null = null) {
     trade.reset();
     setOpen({ kind, review: null, body: null, error: null, loading: true });
-    setOpen(await buildReview(kind));
+    const next = await buildReview(kind, pickedId);
+    if (next.needsPicker && next.sources) {
+      setOpen(null);
+      setPicking({ sources: next.sources, chosen: defaultSourceId(next.sources) });
+      return;
+    }
+    setOpen(next);
+  }
+
+  // "Pick another sale" (a proceeds refusal): re-read the sales, so the picker never offers a stale one.
+  async function pickAnotherSale() {
+    const leagueId = MONEY_FIXTURE_CONFIG ? FIXTURE_LEAGUE_ID : (activeLeague?.id ?? null);
+    if (!leagueId) return;
+    const preview = await fetchPreview(previewBody(leagueId));
+    const sources = preview?.sources ?? [];
+    if (sources.length === 0) {
+      setOpen({ kind: 'buy', review: null, body: null, error: COPY.noProceeds, loading: false });
+      return;
+    }
+    trade.reset();
+    setOpen(null);
+    setPicking({ sources, chosen: defaultSourceId(sources) });
   }
 
   async function submitNow() {
@@ -230,6 +261,23 @@ export function StockSheetBody({
     lastCloseLabel: null,
   });
 
+  if (picking) {
+    return (
+      <SalePicker
+        sources={picking.sources}
+        chosenId={picking.chosen}
+        symbol={symbol}
+        onChoose={(id) => setPicking({ ...picking, chosen: id })}
+        onUse={() => {
+          const id = picking.chosen;
+          setPicking(null);
+          void openReview('buy', id);
+        }}
+        onClose={() => setPicking(null)}
+      />
+    );
+  }
+
   if (open) {
     if (open.loading) {
       return <Text variant="callout" tone="secondary">{COPY.preparingReview}</Text>;
@@ -243,6 +291,7 @@ export function StockSheetBody({
           presentation={presentation}
           onSubmit={submitNow}
           onRetry={retryReview}
+          onPickAnother={pickAnotherSale}
           canEdit={!busy}
           onBack={() => setOpen(null)}
           onDone={() => {
