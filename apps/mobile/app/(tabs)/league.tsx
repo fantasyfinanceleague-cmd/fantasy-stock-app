@@ -29,6 +29,7 @@ import { useDraftStatus } from '@/lib/game/useDraftStatus';
 import { Button } from '@/components/sp/Button';
 import { Card } from '@/components/sp/Card';
 import { supabase } from '@/lib/supabase';
+import { seamRpc, seamInvoke, seamUpdateLeague } from '@/lib/game/seamCalls';
 import { useBracket } from '@/lib/game/useBracket';
 import { SegmentedControl } from '@/components/sp/SegmentedControl';
 import { useState } from 'react';
@@ -69,7 +70,7 @@ export default function LeagueScreen() {
   // new league (or the one already made); the commissioner lands on its roster (R5).
   const runItBack = async () => {
     if (!activeLeagueId) return;
-    const { data, error } = await supabase.rpc('renew_league', { p_league_id: activeLeagueId });
+    const { data, error } = await seamRpc('renew_league', { p_league_id: activeLeagueId });
     const res = data as { status?: string; league_id?: string } | null;
     if (error || !res || (res.status !== 'renewed' && res.status !== 'already_renewed') || !res.league_id) {
       Alert.alert('Not started', 'The renewal did not start. Try again.');
@@ -219,7 +220,7 @@ function LeagueLobby({ leagueId }: { leagueId: string }) {
 
   // The stepper writes the same leagues update League settings uses, then re-reads the status.
   const setPlayoffTeams = async (teams: number) => {
-    const { error } = await supabase.from('leagues').update({ playoff_teams: teams }).eq('id', leagueId);
+    const { error } = await seamUpdateLeague(leagueId, { playoff_teams: teams });
     if (error) {
       setStartError("The playoff teams didn't change. Try again.");
       return;
@@ -236,7 +237,7 @@ function LeagueLobby({ leagueId }: { leagueId: string }) {
 
   const startDraft = async () => {
     setStartError(null);
-    const { data: res, error } = await supabase.functions.invoke('draft-control', { body: { league_id: leagueId, action: 'start' } });
+    const { data: res, error } = await seamInvoke('draft-control', { body: { league_id: leagueId, action: 'start' } });
     if (error || !res || res.ok === false) {
       setStartError("The draft didn't start. Check the blockers above, then try again.");
       setStatusKey((k) => k + 1);

@@ -6,6 +6,7 @@ import { Text } from '@/components/sp/Text';
 import { Button } from '@/components/sp/Button';
 import { space } from '@/constants/tokens';
 import { supabase } from '@/lib/supabase';
+import { seamRpc } from '@/lib/game/seamCalls';
 import { teamsLine, canSchedule, buildRenewalSettings } from '@/lib/game/renewalReview';
 import { byeNoticeCopy } from '@/lib/game/draftLobby';
 import { playoffLine } from '@/lib/playoffs';
@@ -43,7 +44,7 @@ export function RenewalReview({ leagueId, inviteCode, counts, repliesPending, se
     if (!enabled) return;
     setBusy(true);
     const payload = buildRenewalSettings({ ...settings, pick_seconds: pickSeconds, draft_order_mode: draftOrder, draft_date: draftDate });
-    const { data, error } = await supabase.rpc('start_renewed_season', { p_league_id: leagueId, p_settings: payload });
+    const { data, error } = await seamRpc('start_renewed_season', { p_league_id: leagueId, p_settings: payload });
     setBusy(false);
     const res = data as { status?: string } | null;
     if (error || !res || res.status !== 'season_set') {

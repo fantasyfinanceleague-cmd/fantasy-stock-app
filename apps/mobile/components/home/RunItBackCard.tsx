@@ -7,6 +7,7 @@ import { Text } from '@/components/sp/Text';
 import { Button } from '@/components/sp/Button';
 import { space } from '@/constants/tokens';
 import { supabase } from '@/lib/supabase';
+import { seamRpc } from '@/lib/game/seamCalls';
 import { useLeagueContext } from '@/lib/LeagueContext';
 
 /** R1 (Home, season complete, the commissioner only): the "Run it back?" card under
@@ -18,7 +19,7 @@ export function RunItBackCard() {
   const runItBack = async () => {
     if (!activeLeagueId || busy) return;
     setBusy(true);
-    const { data, error } = await supabase.rpc('renew_league', { p_league_id: activeLeagueId });
+    const { data, error } = await seamRpc('renew_league', { p_league_id: activeLeagueId });
     setBusy(false);
     const res = data as { status?: string; league_id?: string } | null;
     if (error || !res || (res.status !== 'renewed' && res.status !== 'already_renewed') || !res.league_id) {

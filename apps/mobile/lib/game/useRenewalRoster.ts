@@ -6,6 +6,7 @@
  */
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
+import { seamRpc } from './seamCalls';
 import { fixtureRoster } from './renewalFixture';
 
 export const RENEWAL_FIXTURE: string | undefined = process.env.EXPO_PUBLIC_RENEWAL_FIXTURE;
@@ -38,7 +39,7 @@ export function useRenewalRoster(successorLeagueId: string | null, fixtureCaller
         if (!cancelled) setState({ status: 'ready', roster: fixtureRoster(fixtureCaller, new Date()) as RosterResult });
         return;
       }
-      const { data, error } = await supabase.rpc('get_renewal_roster', { p_league_id: successorLeagueId });
+      const { data, error } = await seamRpc('get_renewal_roster', { p_league_id: successorLeagueId });
       if (cancelled) return;
       if (error || !data) {
         console.warn('[game:renewal] get_renewal_roster failed', error?.message);

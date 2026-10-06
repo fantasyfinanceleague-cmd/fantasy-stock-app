@@ -9,6 +9,7 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 import { space } from '@/constants/tokens';
 import SymbolSearchField from '@/components/SymbolSearchField';
 import { supabase } from '@/lib/supabase';
+import { seamRpc } from '@/lib/game/seamCalls';
 import type { ShapedSearchResult } from '@/lib/symbolSearch';
 import { normalizeQueue, moveItem, removeItem, addSymbol, queueRefusalLine, QUEUE_MAX } from '@/lib/game/draftQueue';
 
@@ -35,7 +36,7 @@ export function QueueEditor({ leagueId, initial, onSaved }: QueueEditorProps) {
 
   const save = async () => {
     setSaving(true);
-    const { data, error } = await supabase.rpc('set_draft_queue', { p_league_id: leagueId, p_symbols: queue });
+    const { data, error } = await seamRpc('set_draft_queue', { p_league_id: leagueId, p_symbols: queue });
     setSaving(false);
     const res = data as { ok?: boolean; reason?: string } | null;
     if (error || !res || res.ok !== true) {

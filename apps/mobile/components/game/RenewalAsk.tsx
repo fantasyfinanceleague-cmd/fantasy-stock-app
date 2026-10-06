@@ -6,6 +6,7 @@ import { Text } from '@/components/sp/Text';
 import { Button } from '@/components/sp/Button';
 import { space } from '@/constants/tokens';
 import { supabase } from '@/lib/supabase';
+import { seamRpc } from '@/lib/game/seamCalls';
 
 export interface RenewalAskProps {
   leagueId: string;
@@ -21,7 +22,7 @@ export function RenewalAsk({ leagueId, commissionerName, onAnswered }: RenewalAs
   const answer = async (response: 'in' | 'out') => {
     if (busy) return;
     setBusy(true);
-    const { data, error } = await supabase.rpc('respond_to_renewal', { p_league_id: leagueId, p_response: response });
+    const { data, error } = await seamRpc('respond_to_renewal', { p_league_id: leagueId, p_response: response });
     setBusy(false);
     if (error || !data || (data as { status?: string }).status === 'refused') {
       Alert.alert('Not saved', 'Your answer did not go through. Try again.');

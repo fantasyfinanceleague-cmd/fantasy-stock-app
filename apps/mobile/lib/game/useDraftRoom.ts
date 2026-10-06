@@ -7,6 +7,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../supabase';
+import { seamRpc } from './seamCalls';
 import { indexPicks, type DraftPickRow } from './draftBoard';
 import type { ClockState } from './draftRoom';
 import { clockState } from './draftRoom';
@@ -39,10 +40,10 @@ export function useDraftRoom(leagueId: string | null): RoomState {
     (async () => {
       try {
         const [clockRes, orderRes, picksRes, namesRes, queueRes] = await Promise.all([
-          supabase.rpc('get_draft_clock', { p_league_id: leagueId }),
-          supabase.rpc('get_draft_order', { p_league_id: leagueId }),
+          seamRpc('get_draft_clock', { p_league_id: leagueId }),
+          seamRpc('get_draft_order', { p_league_id: leagueId }),
           supabase.from('drafts').select('pick_number, symbol, pick_source').eq('league_id', leagueId),
-          supabase.rpc('get_league_display_names', { p_league_id: leagueId }),
+          seamRpc('get_league_display_names', { p_league_id: leagueId }),
           supabase.from('draft_queue').select('symbol, position').eq('league_id', leagueId).order('position'),
         ]);
         if (cancelled) return;

@@ -4,6 +4,7 @@
  */
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
+import { seamRpc } from './seamCalls';
 import type { HistoryRow } from './history';
 
 export interface LeagueHistoryState {
@@ -18,7 +19,7 @@ export function useLeagueHistory(leagueId: string | null, enabled: boolean): Lea
     let cancelled = false;
     setState({ status: 'loading', rows: [] });
     (async () => {
-      const { data, error } = await supabase.rpc('get_league_history', { p_league_id: leagueId });
+      const { data, error } = await seamRpc('get_league_history', { p_league_id: leagueId });
       if (cancelled) return;
       if (error || !data) {
         console.warn('[game:history] get_league_history failed', error?.message);

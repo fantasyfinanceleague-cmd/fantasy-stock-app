@@ -6,6 +6,7 @@ import { Icon } from '@/components/sp/Icon';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { space } from '@/constants/tokens';
 import { supabase } from '@/lib/supabase';
+import { seamRpc } from '@/lib/game/seamCalls';
 import {
   groupCopy, countsLine, draftDisabled, nudgeWindow, orderRoster, buildNonReplySheet, askedLine, nudgedLine, type SheetAction,
 } from '@/lib/game/renewal';
@@ -43,7 +44,7 @@ export function RenewalRoster({ roster, leagueId, season1Order, createdAt, now, 
     const run = async (action: SheetAction) => {
       if (action === 'cancel') return;
       const rpc = action === 'nudge' ? 'nudge_renewal' : 'remove_renewal_invitee';
-      const { error } = await supabase.rpc(rpc, { p_league_id: leagueId, p_user_id: p.user_id });
+      const { error } = await seamRpc(rpc, { p_league_id: leagueId, p_user_id: p.user_id });
       if (error) Alert.alert('Not done', 'That did not go through. Try again.');
       else onChanged();
     };

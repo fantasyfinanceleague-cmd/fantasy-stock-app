@@ -10,6 +10,7 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 import { space } from '@/constants/tokens';
 import SymbolSearchField from '@/components/SymbolSearchField';
 import { supabase } from '@/lib/supabase';
+import { seamInvoke } from '@/lib/game/seamCalls';
 import type { ShapedSearchResult } from '@/lib/symbolSearch';
 import { useDraftRoom } from '@/lib/game/useDraftRoom';
 import { QueueEditor } from './QueueEditor';
@@ -57,7 +58,7 @@ export function DraftRoom({ leagueId, myUserId, rounds }: DraftRoomProps) {
     autoAsked.current = onClockPick;
     const jitter = Math.floor(Math.random() * 3000);
     const t = setTimeout(() => {
-      void supabase.functions.invoke('validate-and-record-pick', { body: { league_id: leagueId, action: 'auto_pick', pick_number: onClockPick } })
+      void seamInvoke('validate-and-record-pick', { body: { league_id: leagueId, action: 'auto_pick', pick_number: onClockPick } })
         .then(({ data }) => {
           // A stalled turn (auto-pick found no legal stock) is shown as waiting, never as a pick.
           if (data?.reason === 'stalled') setStalledAt(onClockPick);
@@ -88,7 +89,7 @@ export function DraftRoom({ leagueId, myUserId, rounds }: DraftRoomProps) {
     if (!selected || !isMyTurn || pending) return;
     setPending(true);
     setRefusal(null);
-    const { data, error } = await supabase.functions.invoke('validate-and-record-pick', { body: { league_id: leagueId, symbol: selected } });
+    const { data, error } = await seamInvoke('validate-and-record-pick', { body: { league_id: leagueId, symbol: selected } });
     setPending(false);
     if (error || !data || data.ok === false) {
       setRefusal(pickRefusalLine(String(data?.reason ?? 'unknown')));

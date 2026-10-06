@@ -6,6 +6,7 @@
  */
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
+import { seamInvoke } from './seamCalls';
 
 export interface DraftStatus {
   status: 'idle' | 'loading' | 'ready' | 'error';
@@ -25,7 +26,7 @@ export function useDraftStatus(leagueId: string | null, enabled: boolean, refres
     let cancelled = false;
     setState((s) => ({ ...s, status: 'loading' }));
     (async () => {
-      const { data, error } = await supabase.functions.invoke('draft-control', { body: { league_id: leagueId, action: 'status' } });
+      const { data, error } = await seamInvoke('draft-control', { body: { league_id: leagueId, action: 'status' } });
       if (cancelled) return;
       if (error || !data || data.ok === false) {
         console.warn('[game:draft-status] failed', error?.message);
