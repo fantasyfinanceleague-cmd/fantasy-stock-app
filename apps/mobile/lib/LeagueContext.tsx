@@ -13,6 +13,8 @@ export interface League {
   name: string;
   invite_code: string;
   commissioner_id: string;
+  /** Run it back (PR #94): the season this league renews, or null. Optional until the backend is live. */
+  previous_league_id?: string | null;
   draft_status: 'not_started' | 'in_progress' | 'completed';
   draft_date: string | null;
   // Written by finalize_league_draft at draft completion, alongside the
