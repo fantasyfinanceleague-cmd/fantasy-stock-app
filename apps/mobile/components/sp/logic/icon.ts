@@ -4,7 +4,7 @@
 
 export type IconName =
   | 'chevronRight' | 'chevronLeft' | 'chevronDown' | 'chevronUp'
-  | 'check' | 'circle' | 'info' | 'close' | 'search' | 'add' | 'share'
+  | 'check' | 'circle' | 'info' | 'close' | 'search' | 'add' | 'remove' | 'share'
   | 'trophy' | 'lock' | 'mail' | 'alert';
 
 /** The text roles an icon sits beside, plus the medallion (a 36 pt glyph in a
@@ -23,6 +23,7 @@ export const ICON_GLYPHS: Record<IconName, string> = {
   close: 'close',
   search: 'search',
   add: 'add',
+  remove: 'remove-outline',
   share: 'share-outline',
   trophy: 'trophy',
   lock: 'lock-closed-outline',
