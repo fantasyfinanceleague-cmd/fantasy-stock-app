@@ -14,6 +14,7 @@ import {
   MAX_PAGES,
   readAllPages,
   type Reply,
+  slotPreview,
   type TradePlan,
 } from './commit.ts';
 
@@ -121,7 +122,7 @@ function state(over: Partial<LedgerState> = {}): LedgerState {
   };
 }
 
-const ok = (plan: TradePlan = { quantity: 1, fundedByTradeId: null }) => ({ ok: true as const, value: plan });
+const ok = (plan: TradePlan = { quantity: 1, fundedByTradeId: null, slotId: null }) => ({ ok: true as const, value: plan });
 
 interface Harness {
   deps: CommitDeps;
@@ -357,7 +358,7 @@ Deno.test('decideTrade: buy of an owned symbol -> 200 symbol_owned; legal buy ->
     ok: false,
     reply: { status: 200, body: { ok: false, reason: 'symbol_owned' } },
   });
-  assertEquals(decideTrade({ ...buy, symbol: 'MSFT' }, state()), ok({ quantity: 1, fundedByTradeId: null }));
+  assertEquals(decideTrade({ ...buy, symbol: 'MSFT' }, state()), ok({ quantity: 1, fundedByTradeId: null, slotId: null }));
 });
 
 Deno.test('decideTrade: rules come from the RAW league row (string numerics from PostgREST)', () => {
@@ -365,4 +366,131 @@ Deno.test('decideTrade: rules come from the RAW league row (string numerics from
   const buy = { action: 'buy' as const, userId: ME, symbol: 'MSFT', price: 60, isDraftable: true };
   // spent 100 on the draft pick; 100 + 60 > 150
   assertEquals(decideTrade(buy, s), { ok: false, reply: { status: 200, body: { ok: false, reason: 'over_budget' } } });
+});
+
+// ---------------------------------------------------------------------------
+// Tier slots (tier-trade-slots, 2026-10-06): the plan carries the slot, a refusal
+// carries what the client needs for its sentence, a success names the slot filled.
+// ---------------------------------------------------------------------------
+
+const LO = { id: 's-lo', slot_index: 0, slot_count: 1, price_min: '0', price_max: '200', category_id: null };
+const HI = { id: 's-hi', slot_index: 1, slot_count: 1, price_min: '200', price_max: null, category_id: null };
+const tierState = (over: Partial<LedgerState> = {}) =>
+  state({
+    league: { ...state().league, stake_mode: 'price_tiers', num_rounds: 4 },
+    picks: [{ id: 'd1', user_id: ME, symbol: 'NVDA', entry_price: 900, quantity: 1, pick_number: 1, slot_id: HI.id }],
+    slots: [LO, HI],
+    ...over,
+  });
+const buyReq = (symbol: string, price: number) =>
+  ({ action: 'buy' as const, userId: ME, symbol, price, isDraftable: true });
+
+Deno.test('decideTrade (tiers): a legal buy plans the slot it takes; a sell plans none', () => {
+  const d = decideTrade(buyReq('MSFT', 100), tierState());
+  assertEquals(d, ok({ quantity: 1, fundedByTradeId: null, slotId: LO.id }));
+  const sell = decideTrade({ action: 'sell', userId: ME, symbol: 'NVDA', price: 900, isDraftable: true }, tierState());
+  assertEquals(sell, ok({ quantity: 1, fundedByTradeId: null, slotId: null }));
+});
+
+Deno.test('decideTrade (tiers): THE REPRO — after a trade fills lo, the next buy is refused with price + open_slots', () => {
+  const s = tierState({
+    trades: [{ id: 't1', user_id: ME, symbol: 'MSFT', action: 'buy', quantity: 1, price: 100, slot_id: LO.id, created_at: '2026-10-01T15:00:00Z' }],
+  });
+  assertEquals(decideTrade(buyReq('GOOG', 150), s), {
+    ok: false,
+    reply: { status: 200, body: { ok: false, reason: 'no_eligible_slot', price: 150, open_slots: [] } },
+  });
+});
+
+Deno.test('decideTrade (tiers): the refusal names the OPEN slots (ranges as numbers) so the client can write its sentence', () => {
+  // lo is held by a drafted stock, hi is open; $50 fits only lo -> refused, hi is what is open
+  const s = tierState({
+    picks: [{ id: 'd1', user_id: ME, symbol: 'CHEAP', entry_price: 20, quantity: 1, pick_number: 1, slot_id: LO.id }],
+  });
+  const r = decideTrade(buyReq('PENNY', 50), s);
+  assert(!r.ok);
+  assertEquals(r.reply.body, {
+    ok: false,
+    reason: 'no_eligible_slot',
+    price: 50,
+    open_slots: [{ slot_id: HI.id, slot_index: 1, slot_count: 1, price_min: 200, price_max: null, category_id: null }],
+  });
+});
+
+Deno.test('decideTrade: other refusals carry NO slot fields', () => {
+  const d = decideTrade(buyReq('NVDA', 100), tierState());
+  assertEquals(d, { ok: false, reply: { status: 200, body: { ok: false, reason: 'symbol_owned' } } });
+});
+
+Deno.test('commitWithRetry: a committed slotted buy returns the slot it filled', async () => {
+  const s = tierState();
+  const h = harness([COMMITTED], {
+    decide: (st) => decideTrade(buyReq('MSFT', 100), st),
+  });
+  const r = await commitWithRetry(h.deps, { firstState: s });
+  assertEquals(h.commits[0].plan.slotId, LO.id);
+  assertEquals(r.body, {
+    ok: true,
+    trade: { id: 't-new' },
+    slot: { slot_id: LO.id, slot_index: 0, slot_count: 1, price_min: 0, price_max: 200, category_id: null },
+  });
+});
+
+Deno.test('commitWithRetry: a slot-less league (or a sell) returns no slot field', async () => {
+  const h = harness([COMMITTED]);
+  const r = await commitWithRetry(h.deps, { firstState: state() });
+  assertEquals(r.body, { ok: true, trade: { id: 't-new' } });
+});
+
+Deno.test('commitWithRetry: after a lost race the buy re-validates and is refused no_eligible_slot (not trade_conflict)', async () => {
+  const winner = tierState({
+    trades: [{ id: 't1', user_id: ME, symbol: 'MSFT', action: 'buy', quantity: 1, price: 100, slot_id: LO.id, created_at: '2026-10-01T15:00:00Z' }],
+  });
+  const h = harness([CHANGED], { decide: (st) => decideTrade(buyReq('GOOG', 150), st) }, () => winner);
+  const r = await commitWithRetry(h.deps, { firstState: tierState() });
+  assertEquals(r.body.reason, 'no_eligible_slot');
+  assertEquals(h.commits.length, 1, 'the second attempt was refused before any write');
+});
+
+Deno.test('slotPreview: slot-less league -> empty map; slotted -> held symbols + open capacity, no would_fill without a price', () => {
+  assertEquals(slotPreview(state(), ME), { slots: [], unplaced: [] });
+  const s = tierState({
+    trades: [{ id: 't1', user_id: ME, symbol: 'MSFT', action: 'buy', quantity: 1, price: 100, slot_id: LO.id, created_at: '2026-10-01T15:00:00Z' }],
+  });
+  const p = slotPreview(s, ME);
+  assertEquals(p, {
+    slots: [
+      { slot_id: LO.id, slot_index: 0, slot_count: 1, price_min: 0, price_max: 200, category_id: null, held: ['MSFT'], open: 0 },
+      { slot_id: HI.id, slot_index: 1, slot_count: 1, price_min: 200, price_max: null, category_id: null, held: ['NVDA'], open: 0 },
+    ],
+    unplaced: [],
+  });
+});
+
+Deno.test('slotPreview: would_fill is the slot a buy at that price takes; null + open_slots when none', () => {
+  const free = slotPreview(tierState(), ME, 150);
+  assertEquals((free.would_fill as { slot_id: string }).slot_id, LO.id);
+  assertEquals(free.open_slots, undefined);
+  const held = tierState({
+    trades: [{ id: 't1', user_id: ME, symbol: 'MSFT', action: 'buy', quantity: 1, price: 100, slot_id: LO.id, created_at: '2026-10-01T15:00:00Z' }],
+  });
+  const none = slotPreview(held, ME, 150);
+  assertEquals(none.would_fill, null);
+  assertEquals(none.open_slots, []);
+  // garbage price hints are ignored, never throw
+  for (const bad of [0, -5, NaN, Infinity]) assertEquals('would_fill' in slotPreview(tierState(), ME, bad), false);
+});
+
+Deno.test('slotPreview: only the CALLER\'s positions count (a neighbour\'s buy does not fill my tier)', () => {
+  const s = tierState({
+    trades: [{ id: 't1', user_id: 'someone-else', symbol: 'MSFT', action: 'buy', quantity: 1, price: 100, slot_id: LO.id, created_at: '2026-10-01T15:00:00Z' }],
+  });
+  assertEquals((slotPreview(s, ME, 150).would_fill as { slot_id: string }).slot_id, LO.id);
+});
+
+Deno.test('slotPreview: a hostile price hint (~1e30, tierPrice -> NaN) reports no would_fill, not the first free slot', () => {
+  const p = slotPreview(tierState(), ME, 1e30);
+  assertEquals(p.would_fill, null);
+  // hi is held by NVDA in tierState(); lo is open but does not accept the price
+  assertEquals((p.open_slots as Array<{ slot_id: string }>).map((o) => o.slot_id), [LO.id]);
 });

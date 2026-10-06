@@ -388,6 +388,33 @@ Mutation-checked (each fails at least one step):
 Also covered: jsonb `'null'` for rules/slots reads as not given (a sell still
 commits), and the function refuses to run under REPEATABLE READ.
 
+### record_trade_atomic.pglite.test.ts: tier slots (20261103000000)
+
+The same file also loads `20261103000000_trades_slot_id.sql` (adds `trades.slot_id`,
+drops the 12-arg overload, adds `p_slot_id`) and drives it through the real
+`commitWithRetry` + `decideTrade`. The steps:
+- exactly ONE `record_trade_atomic` (13 args) and the 12-arg signature is gone;
+  the proacl lockdown is re-asserted on the new signature;
+- the repro end to end: NVDA in hi, a $100 buy fills lo and records `slot_id`, a $150
+  buy is refused `no_eligible_slot` with `open_slots: []`; sell-then-buy fills the freed
+  tier; draft-sell-rebuy counts the buy's slot once;
+- race 3c: two different symbols into one free tier slot, the loser re-validates;
+- legacy rows: a NULL-slot buy occupies its derived tier, and a manager already holding
+  two stocks in one tier is never stranded (sell either, then it reopens);
+- the three RPC slot guards (slot on a sell, a foreign slot, a slot-less buy in a slotted
+  league) are `bad_request` and write nothing, and run AFTER the CAS;
+- a slot deleted between the guard reads and the INSERT (a test trigger simulates the
+  commissioner's lock-free DELETE) maps the FK error to `ledger_changed`, nothing written;
+- the table: `slot_id` buy-only CHECK, deleted slot is SET NULL;
+- both HUMAN ACTION effect-check DO blocks run verbatim: the #113 block against the
+  13-arg function, and the new `TIER_TRADE_SLOTS EFFECT TEST` block, which must PASS,
+  read PARTIAL (never PASS) when no completed slotted league exists, and FAIL (writing
+  nothing) for each of: a removed guard (x3), EXECUTE leaked to authenticated, the
+  12-arg overload left callable.
+
+Mutation-checked: reverting the validator's occupancy to drafts-only fails 7 hermetic
+tests including the repro (`draft-validation.test.ts`, "tier trades: ...").
+
 ## migration_cli_split.test.ts
 
 What it does:
