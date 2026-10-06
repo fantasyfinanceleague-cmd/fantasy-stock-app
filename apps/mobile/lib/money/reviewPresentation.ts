@@ -26,14 +26,15 @@ export interface ReviewPresentation {
 
 export function reviewPresentation(
   state: ReviewState,
-  review: { buttonLabel: string },
+  review: { buttonLabel: string; buttonRole?: 'sell' | 'buy' },
   ctx: { title: string; symbol: string; resolve?: CategoryResolver },
 ): ReviewPresentation {
   switch (state.kind) {
     case 'ready':
       return { message: null, messageTone: 'text', button: { label: review.buttonLabel, enabled: true, progress: false }, footer: null };
     case 'submitting':
-      return { message: null, messageTone: 'text', button: { label: review.buttonLabel, enabled: false, progress: true }, footer: null };
+      // The label names the work in flight: "Selling…" / "Buying…" (Design Lead copy), never the resting label.
+      return { message: null, messageTone: 'text', button: { label: review.buttonRole === 'buy' ? COPY.buyingProgress : COPY.sellingProgress, enabled: false, progress: true }, footer: null };
     case 'refreshing':
       return { message: null, messageTone: 'text', button: { label: review.buttonLabel, enabled: false, progress: true }, footer: null };
     case 'done':

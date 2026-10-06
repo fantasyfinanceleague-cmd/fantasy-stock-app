@@ -16,8 +16,10 @@ Deno.test('ready: the button names the action and is live', () => {
   assertEquals(p({ kind: 'ready' }).button, { label: 'Sell JPM', enabled: true, progress: false });
 });
 
-Deno.test('submitting: the button is disabled and shows progress, never a second submit', () => {
-  assertEquals(p({ kind: 'submitting' }).button, { label: 'Sell JPM', enabled: false, progress: true });
+Deno.test('submitting: the button is disabled, shows progress, and names the work in flight (NEW copy)', () => {
+  assertEquals(p({ kind: 'submitting' }).button, { label: 'Selling…', enabled: false, progress: true });
+  const buy = reviewPresentation({ kind: 'submitting' }, { buttonLabel: 'Buy SHOP', buttonRole: 'buy' }, { title: 'Bought SHOP', symbol: 'SHOP' });
+  assertEquals(buy.button, { label: 'Buying…', enabled: false, progress: true });
 });
 
 Deno.test('done: the title, and no button', () => {

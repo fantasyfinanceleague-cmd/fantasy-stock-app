@@ -47,6 +47,9 @@ export const COPY = {
   // which the backend returns only when nothing was written. Never for a 500 or network error.
   tradeConflict: 'Nothing was traded: your league changed while this trade was going through. Try again.',
   tryAgain: 'Try again',
+  // The submit-in-flight label (Design Lead, NEW copy): names the work, never the resting label.
+  sellingProgress: 'Selling…',
+  buyingProgress: 'Buying…',
   // NEW (flagged): a LOAD failure. The alert icon arrives with the Design Lead's ruling.
   // NEW (flagged): shown while a review's numbers are being fetched.
   preparingReview: 'Preparing your review',
