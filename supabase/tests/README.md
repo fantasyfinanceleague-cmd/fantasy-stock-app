@@ -314,3 +314,10 @@ It covers:
 - the owner keeps EXECUTE (its call reaches the body's own commissioner gate,
   `P0001`), so the function stays restorable;
 - re-applying the migration is a no-op.
+
+## draft_feasibility_pool (draft-never-skips, 2026-10-05)
+
+`draft_feasibility_pool.pglite.test.ts` — the SQL pool groups == the TS
+`buildPoolGroups` on one fixture, and the service-role-only grant.
+Run: `deno test --allow-read --allow-env supabase/tests/draft_feasibility_pool.pglite.test.ts`
+(first run fetches `npm:@electric-sql/pglite`).

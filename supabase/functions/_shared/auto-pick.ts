@@ -3,7 +3,7 @@
  * when a manager's clock runs out the server picks for them — first their own
  * draft QUEUE, in order, the first still-legal symbol; then BEST AVAILABLE,
  * like fantasy football: walk the market by size (largest market cap first)
- * and take the first stock that fits the league's rules. Never random. A skip
+ * and take the first stock that fits the league's rules. Never random. A stall
  * only when nothing is legal.
  *
  * ACCEPTANCE CRITERION (Giorgio): auto-draft must NEVER give someone a stock
@@ -29,11 +29,11 @@
  *   QUEUE_MAX_ATTEMPTS = 5   live-priced queue candidates
  *   BEST_MAX_ATTEMPTS  = 15  live-priced best-available candidates
  *
- * so at most 20 Alpaca price calls per auto-pick. auto_skip is recorded only
- * when the search is exhausted, or all 15 best-available candidates were
- * refused by the live gate (the catalog's cached prices disagreed with live
- * ones 15 times) — and never when NO candidate could be priced (a vendor
- * outage keeps a human's turn open; see decideNoPick).
+ * so at most 20 Alpaca price calls per auto-pick. NO SKIP (2026-10-05, "a
+ * draft pick can never be unused"): when nothing legal is found the choice is
+ * 'stalled' — no row is written, the turn stays open, the failure is recorded
+ * and alerted (draft-write.ts). A vendor outage is 'retry_later'. See
+ * decideNoPick.
  *
  * THE DEADLINE IS NOT COMPUTED HERE. It has exactly one definition —
  * public.get_draft_clock — which clients, the edge gate and the cron's
@@ -48,6 +48,15 @@
 import { type BotSymbolCandidate, candidateFilter } from './bot-pick.ts';
 import { type GatedPick, gatePick } from './pick-gate.ts';
 import {
+  demandVector,
+  FLEX_TYPE_ID,
+  type FeasibilityState,
+  openInstances,
+  type PoolGroup,
+  reserveFor,
+  typesFromSlots,
+} from './draft-feasibility.ts';
+import {
   assignSlot,
   currentTurn,
   type LeagueRules,
@@ -60,7 +69,7 @@ import {
 } from './draft-validation.ts';
 
 /** drafts.pick_source (CHECK in 20261010000000). UI: "Auto-picked" = auto_*. */
-export type PickSource = 'manual' | 'bot' | 'skip' | 'auto_queue' | 'auto_best' | 'auto_skip';
+export type PickSource = 'manual' | 'bot' | 'auto_queue' | 'auto_best';
 
 // ---------------------------------------------------------------------------
 // Clock gate
@@ -147,15 +156,26 @@ export function openSlotSpecs(
   picks: PickRow[],
   trades: TradeRow[],
   pickerId: string,
+  /** Optional per-slot cap on the price (chooseAutoPick: the reserve after
+   * filling that slot, subtracted from budget left). Keyed by slot id;
+   * FLEX_TYPE_ID for a slot-less league. A NECESSARY condition only, so it
+   * can never hide a legal stock. */
+  capFor?: (key: string) => number,
 ): SlotSpec[] {
   const budgetMax = rules.stakeMode === 'budget_cap'
     ? Math.max((Number(rules.budgetAmount) || 0) - userCashSpent(pickerId, picks, trades), 0)
     : null;
-  const clamp = (max: number | null) => budgetMax == null ? max : max == null ? budgetMax : Math.min(max, budgetMax);
+  const clamp = (max: number | null, key: string) => {
+    const cap = capFor ? capFor(key) : Infinity;
+    const top = budgetMax == null ? Infinity : budgetMax;
+    const combined = Math.min(top, cap);
+    if (combined === Infinity) return max;
+    return max == null ? combined : Math.min(max, combined);
+  };
 
   const raw: SlotSpec[] = [];
   if (slots.length === 0) {
-    raw.push({ min: null, max: clamp(null), categoryId: null });
+    raw.push({ min: null, max: clamp(null, FLEX_TYPE_ID), categoryId: null });
   } else {
     const occupancy = new Map<string, number>();
     for (const p of picks) {
@@ -164,7 +184,7 @@ export function openSlotSpecs(
     }
     for (const s of slots) {
       if ((occupancy.get(s.id) ?? 0) >= s.slotCount) continue;
-      raw.push({ min: s.priceMin, max: clamp(s.priceMax), categoryId: s.categoryId });
+      raw.push({ min: s.priceMin, max: clamp(s.priceMax, s.id), categoryId: s.categoryId });
     }
   }
 
@@ -263,21 +283,19 @@ export function planQueueCandidates(i: {
 // ---------------------------------------------------------------------------
 
 export type NoPickOutcome =
-  | { kind: 'skip'; source: 'auto_skip' | 'skip' }
+  | { kind: 'stalled' }
   | { kind: 'retry_later' };
 
 /**
- * After the search found nothing the gate accepted. Bots keep their existing
- * rule (skip even on a vendor outage — mobile fires bot_pick once per turn).
- * Humans are auto-skipped only when the refusal was about LEGALITY: if
- * candidates existed but not one could be priced, the turn stays open for the
- * next attempt (the sweep retries every tick) rather than forfeiting a pick
- * over an Alpaca outage.
+ * After the search found nothing the gate accepted. NO SKIP, for humans or
+ * bots (2026-10-05). Candidates existed but none could be priced: a vendor
+ * outage, so the turn stays open and the next attempt retries. Otherwise the
+ * search found no legal stock: 'stalled' — the turn stays open, the failure is
+ * recorded and alerted, and nothing is written for the picker.
  */
-export function decideNoPick(isBot: boolean, attempted: number, priced: number): NoPickOutcome {
-  if (isBot) return { kind: 'skip', source: 'skip' };
+export function decideNoPick(attempted: number, priced: number): NoPickOutcome {
   if (attempted > 0 && priced === 0) return { kind: 'retry_later' };
-  return { kind: 'skip', source: 'auto_skip' };
+  return { kind: 'stalled' };
 }
 
 // ---------------------------------------------------------------------------
@@ -305,11 +323,14 @@ export interface AutoPickPorts {
   eligibility(symbols: string[]): Promise<Map<string, Set<string>>>;
   /** Live fill price; price null = could not be priced. */
   livePrice(symbol: string): Promise<{ price: number | null; source: string | null }>;
+  /** public.draft_feasibility_pool: the pool grouped by signature over the
+   * given types, owned symbols excluded, cheapest `depth` prices per group. */
+  feasibilityPool(types: Slot[], exclude: string[], draftableOnly: boolean, depth: number): Promise<PoolGroup[]>;
 }
 
 export type AutoPickChoice =
   | { kind: 'pick'; gated: GatedPick; source: 'auto_queue' | 'auto_best' | 'bot'; priceSource: string | null; attempts: number }
-  | { kind: 'skip'; source: 'auto_skip' | 'skip'; pickerId: string; why: 'nothing_legal' | 'attempts_exhausted'; attempts: number }
+  | { kind: 'stalled'; pickerId: string; why: 'nothing_legal' | 'attempts_exhausted'; attempts: number }
   | { kind: 'retry_later'; attempts: number }
   | { kind: 'draft_complete' }
   | { kind: 'conflict' };
@@ -321,8 +342,13 @@ export type AutoPickChoice =
  * clock read and this state read) return 'conflict' rather than picking for
  * the NEXT manager, whose clock has not expired.
  *
- * Throws if a port throws (a failed read must not look like "nothing legal",
- * which would skip); the caller maps that to 'unhandled'.
+ * Feasibility (2026-10-05): the pool and the league's open demand are read once
+ * here, and every candidate is judged by gatePick with that state, so an
+ * auto-pick never strands another manager and never breaks the picker's reserve.
+ * Each open slot's search is capped at the reserve left after filling it (a
+ * necessary condition, so no legal stock is hidden from the search).
+ *
+ * Throws if a port throws (a failed read must not look like "nothing legal").
  */
 export async function chooseAutoPick(
   s: AutoPickState,
@@ -346,6 +372,30 @@ export async function chooseAutoPick(
     for (const [k, v] of await ports.eligibility(missing)) eligibilityCache.set(k, v);
   };
 
+  // Feasibility state: one read of the pool and the aggregate open demand.
+  const types = typesFromSlots(slots, s.numRounds);
+  const demand = demandVector(types, s.order, s.picks, s.numRounds);
+  const owned = [...leagueOwnedSymbols(s.picks, s.trades)];
+  const draftableOnly = s.rules.allowUndraftable !== true;
+  const totalDemand = demand.reduce((a, b) => a + b, 0);
+  const groups = await ports.feasibilityPool(types, owned, draftableOnly, totalDemand + 1);
+  const budget = s.rules.stakeMode === 'budget_cap' ? Number(s.rules.budgetAmount) || 0 : null;
+  const state: FeasibilityState = { types, demand, groups, budget };
+  const open = openInstances(types, s.picks, pickerId, s.numRounds);
+  const spent = userCashSpent(pickerId, s.picks, s.trades);
+  const capByKey = new Map<string, number>();
+  if (budget != null) {
+    types.forEach((t, j) => {
+      if (open[j] <= 0) return;
+      const postOpen = open.slice();
+      postOpen[j] -= 1;
+      const postDemand = demand.slice();
+      postDemand[j] -= 1;
+      const reserve = reserveFor(postOpen, postDemand, types, groups);
+      capByKey.set(t.id, Number.isFinite(reserve) ? budget - spent - reserve : -1);
+    });
+  }
+
   const tried = new Set<string>();
   let attempts = 0;
   let priced = 0;
@@ -359,6 +409,7 @@ export async function chooseAutoPick(
     if (live.price == null) return null;
     priced++;
     await eligibilityFor([symbol]);
+    const eligibility = eligibilityCache.get(symbol) ?? new Set<string>();
     const g = gatePick(s.leagueId, {
       rules: s.rules,
       slots,
@@ -368,9 +419,9 @@ export async function chooseAutoPick(
       pickerId,
       symbol,
       price: live.price,
-      eligibleCategories: eligibilityCache.get(symbol) ?? new Set<string>(),
+      eligibleCategories: eligibility,
       isDraftable: c.isDraftable === true, // the catalog's flag, never "unknown = draftable"
-    });
+    }, { state, open, cachedPrice: c.lastPrice, eligibility });
     return g.ok ? { gated: g.pick, source: live.source } : null;
   };
 
@@ -396,15 +447,14 @@ export async function chooseAutoPick(
 
   // 2. Best available: search the catalog per open slot, largest first,
   //    excluding owned + tried, round after round.
-  const specs = openSlotSpecs(s.rules, slots, s.picks, s.trades, pickerId);
-  const owned = [...leagueOwnedSymbols(s.picks, s.trades)];
-  const draftableOnly = s.rules.allowUndraftable !== true;
+  const specs = openSlotSpecs(s.rules, slots, s.picks, s.trades, pickerId, (key) => capByKey.get(key) ?? Infinity);
+  const draftable = draftableOnly;
   let bestAttempts = 0;
   let exhausted = specs.length === 0;
   while (!exhausted && bestAttempts < BEST_MAX_ATTEMPTS) {
     const exclude = [...owned, ...tried];
     const results = await Promise.all(
-      specs.map((spec) => ports.searchCandidates(spec, exclude, draftableOnly, strategy.searchPerSlot)),
+      specs.map((spec) => ports.searchCandidates(spec, exclude, draftable, strategy.searchPerSlot)),
     );
     const bySymbol = new Map<string, BotSymbolCandidate>();
     for (const rows of results) for (const r of rows) bySymbol.set(r.symbol.toUpperCase(), r);
@@ -424,7 +474,7 @@ export async function chooseAutoPick(
     }
   }
 
-  const none = decideNoPick(isBot, attempts, priced);
+  const none = decideNoPick(attempts, priced);
   if (none.kind === 'retry_later') return { kind: 'retry_later', attempts };
-  return { kind: 'skip', source: none.source, pickerId, why: exhausted ? 'nothing_legal' : 'attempts_exhausted', attempts };
+  return { kind: 'stalled', pickerId, why: exhausted ? 'nothing_legal' : 'attempts_exhausted', attempts };
 }

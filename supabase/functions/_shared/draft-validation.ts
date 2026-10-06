@@ -41,6 +41,8 @@
  * (effectiveCategoryIds) and pass it in; this module stays pure.
  */
 
+import { tierPrice } from './tier-price.ts';
+
 export type StakeMode = 'fixed_notional' | 'price_tiers' | 'budget_cap' | null;
 
 /** League-level rules the validator needs. stakeMode null = legacy league
@@ -283,8 +285,11 @@ export function effectiveCategoryIds(
  * exactly at price_min or price_max is legal — locked by tests). A category
  * slot requires the symbol's eligibility to contain its category id. */
 export function slotAccepts(slot: Slot, price: number, eligibility: Set<string>): boolean {
-  if (slot.priceMin != null && price < slot.priceMin) return false;
-  if (slot.priceMax != null && price > slot.priceMax) return false;
+  // Tier judgement on the rounded price (cents), shared with the SQL pool search
+  // and draft-feasibility.ts — see tier-price.ts.
+  const p = tierPrice(price);
+  if (slot.priceMin != null && p < slot.priceMin) return false;
+  if (slot.priceMax != null && p > slot.priceMax) return false;
   if (slot.categoryId != null && !eligibility.has(slot.categoryId)) return false;
   return true;
 }

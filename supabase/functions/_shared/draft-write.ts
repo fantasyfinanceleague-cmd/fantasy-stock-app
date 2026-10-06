@@ -5,16 +5,19 @@
  * delegated to the pure modules (draft-validation.ts, bot-pick.ts,
  * auto-pick.ts, schedule.ts) so they stay hermetically tested.
  *
- * loadSlots / insertSkip / finalizeDraft moved here VERBATIM from
- * validate-and-record-pick/index.ts (plus insertSkip's pick_source), so the
- * sweep cannot drift from the client path: a race loser, a finalize retry and
- * a skip mean the same thing whichever caller wrote them.
+ * loadSlots / finalizeDraft moved here VERBATIM from validate-and-record-pick/
+ * index.ts, so the sweep cannot drift from the client path: a race loser and a
+ * finalize retry mean the same thing whichever caller wrote them.
  *
  * ONE LEGALITY AUTHORITY: insertGatedPick is the only code in the repo that
- * inserts a non-SKIP drafts row, and it takes a GatedPick — which only
- * ./pick-gate.ts gatePick (= validatePick on the live price) can produce. A
- * structural test (supabase/tests/draft_insert_sites.test.ts) fails if any
- * other drafts insert, or any `as GatedPick` cast, appears.
+ * inserts a drafts row, and it takes a GatedPick — which only ./pick-gate.ts
+ * gatePick (= validatePick on the live price, plus the feasibility check) can
+ * produce. A structural test (supabase/tests/draft_insert_sites.test.ts) fails
+ * if any other drafts insert, or any `as GatedPick` cast, appears.
+ *
+ * NO SKIP (2026-10-05): nothing writes a SKIP row any more. When the search
+ * finds no legal stock the turn STALLS: recordStall writes an alert row in
+ * draft_stalls and pushes the commissioner, and the turn stays open.
  *
  * RACE BACKSTOP: every insert here names an explicit pick_number and relies
  * on the drafts (league_id, pick_number) unique index. A lost race surfaces as
@@ -27,6 +30,14 @@ import { fetchEligibleCategoryIdsBatch } from './category-eligibility.ts';
 import { buildFinalizeArgs, planSeason, readFinalizeResult } from './schedule.ts';
 import type { BotSymbolCandidate } from './bot-pick.ts';
 import type { GatedPick } from './pick-gate.ts';
+import { getTargetToken, sendExpoPush } from './push.ts';
+import {
+  demandVector,
+  type FeasibilityState,
+  openInstances,
+  type PoolGroup,
+  typesFromSlots,
+} from './draft-feasibility.ts';
 import {
   type AutoPickPorts,
   BEST_AVAILABLE_STRATEGY,
@@ -38,14 +49,14 @@ import {
 } from './auto-pick.ts';
 import {
   checkStoredOrder,
+  currentTurn,
   type DraftOrderRow,
   type LeagueRules,
+  leagueOwnedSymbols,
   orderFromRows,
   type PickRow,
-  SKIP_SYMBOL,
   type Slot,
   type TradeRow,
-  validateSkip,
 } from './draft-validation.ts';
 
 // deno-lint-ignore no-explicit-any
@@ -188,50 +199,6 @@ export async function loadSlots(
   return { slots, error: false };
 }
 
-export type SkipResult =
-  // deno-lint-ignore no-explicit-any
-  | { ok: true; pick: any; complete: boolean; statusError: string | null }
-  | { ok: false; reason: string };
-
-// Shared SKIP-row insert + finalize-on-completion: the human 'skip' action,
-// bot_pick's no-legal-candidate fallback, and the clock's auto_skip.
-export async function insertSkip(
-  admin: Admin,
-  ctx: DraftContext,
-  targetId: string,
-  pickSource: Extract<PickSource, 'skip' | 'auto_skip'>,
-): Promise<SkipResult> {
-  const decision = validateSkip(targetId, ctx.order, ctx.picks.length, ctx.numRounds);
-  if (!decision.legal) return { ok: false, reason: decision.reason };
-
-  const { data: inserted, error: insErr } = await admin
-    .from('drafts')
-    .insert({
-      league_id: ctx.league.id,
-      user_id: targetId,
-      symbol: SKIP_SYMBOL,
-      entry_price: 0,
-      quantity: 0,
-      round: decision.round,
-      pick_number: decision.pickNumber,
-      pick_source: pickSource,
-      // draft_date omitted: column is timestamp WITHOUT time zone with
-      // DEFAULT now() — an ISO string's Z suffix would be silently stripped,
-      // so the server default is the correct writer. recorded_at likewise.
-    })
-    .select('*')
-    .single();
-  if (insErr) {
-    if ((insErr as { code?: string }).code === '23505') {
-      return { ok: false, reason: 'pick_conflict' }; // race lost, client refetches + retries
-    }
-    return { ok: false, reason: 'unhandled' };
-  }
-  const complete = decision.pickNumber >= ctx.order.length * ctx.numRounds;
-  const statusError = complete ? await finalizeDraft(admin, ctx.league, ctx.order) : null;
-  return { ok: true, pick: inserted, complete, statusError };
-}
-
 const FINALIZE_ATTEMPTS = 3;
 
 // Plan the season and write it (plus the draft_status flip) in one RPC
@@ -279,6 +246,142 @@ export async function finalizeDraft(
 }
 
 // ---------------------------------------------------------------------------
+// Feasibility (2026-10-05): the pool and the league's open demand, read fresh
+// ---------------------------------------------------------------------------
+
+/** public.draft_feasibility_pool — the SQL twin of draft-feasibility.ts
+ * buildPoolGroups. THROWS on a read failure: the caller fails closed (a pick
+ * is not gated without its feasibility state). Numeric arrays come back as
+ * strings from PostgREST, so every element is coerced. */
+export async function poolGroups(
+  admin: Admin,
+  types: Slot[],
+  exclude: string[],
+  draftableOnly: boolean,
+  depth: number,
+): Promise<PoolGroup[]> {
+  const { data, error } = await admin.rpc('draft_feasibility_pool', {
+    p_types: types.map((t, j) => ({ ordinal: j, price_min: t.priceMin, price_max: t.priceMax, category_id: t.categoryId })),
+    p_draftable_only: draftableOnly,
+    p_exclude: exclude.map((x) => x.toUpperCase()),
+    p_depth: depth,
+  });
+  if (error) {
+    console.error('draft_feasibility_pool failed', JSON.stringify(error));
+    throw new Error('feasibility_pool_failed');
+  }
+  // deno-lint-ignore no-explicit-any
+  return (data ?? []).map((r: any) => ({
+    ordinals: (r.ordinals ?? []).map(Number),
+    n: Number(r.n),
+    prices: (r.prices ?? []).map(Number),
+  }));
+}
+
+/** The feasibility state for the league NOW, and the picker's open instances.
+ * Used by the manual pick path; the auto-pick search reads its own copy. */
+export async function loadFeasibility(
+  admin: Admin,
+  ctx: DraftContext,
+  slots: Slot[],
+  pickerId: string,
+): Promise<{ state: FeasibilityState; open: number[] }> {
+  const rules = leagueRules(ctx.league, ctx.numRounds);
+  const types = typesFromSlots(slots, ctx.numRounds);
+  const demand = demandVector(types, ctx.order, ctx.picks, ctx.numRounds);
+  const total = demand.reduce((a, b) => a + b, 0);
+  const groups = await poolGroups(
+    admin,
+    types,
+    [...leagueOwnedSymbols(ctx.picks, ctx.trades)],
+    rules.allowUndraftable !== true,
+    total + 1,
+  );
+  const budget = rules.stakeMode === 'budget_cap' ? Number(rules.budgetAmount) || 0 : null;
+  return {
+    state: { types, demand, groups, budget },
+    open: openInstances(types, ctx.picks, pickerId, ctx.numRounds),
+  };
+}
+
+/**
+ * A turn with no legal stock STALLS (2026-10-05, no SKIP). Records it once in
+ * draft_stalls (the in-app record; a repeat only refreshes attempts and
+ * last_seen_at) and pushes the commissioner on the FIRST stall. Logged loudly.
+ * Never throws: a failed record must not turn a stall into a 500, and the turn
+ * stays open either way.
+ */
+export async function recordStall(
+  admin: Admin,
+  ctx: DraftContext,
+  pickNumber: number,
+  pickerId: string,
+  why: string,
+  attempts: number,
+): Promise<void> {
+  const leagueId = String(ctx.league.id);
+  const { error } = await admin.from('draft_stalls').insert({
+    league_id: leagueId,
+    pick_number: pickNumber,
+    picker_id: pickerId,
+    reason: why,
+    attempts,
+  });
+  if (error) {
+    if ((error as { code?: string }).code !== '23505') {
+      // No record means no dedupe, so alert anyway: a stall must never be silent.
+      console.error('[draft-stall] record failed', leagueId, pickNumber, JSON.stringify(error));
+      await pushStallToCommissioner(admin, ctx, pickNumber);
+      return;
+    }
+    const { error: updErr } = await admin
+      .from('draft_stalls')
+      .update({ attempts, reason: why, last_seen_at: new Date().toISOString() })
+      .eq('league_id', leagueId)
+      .eq('pick_number', pickNumber);
+    if (updErr) console.error('[draft-stall] refresh failed', leagueId, pickNumber, JSON.stringify(updErr));
+    return;
+  }
+  console.error('[draft-stall]', leagueId, pickNumber, why, attempts);
+  await pushStallToCommissioner(admin, ctx, pickNumber);
+}
+
+/** Copy is placeholder pending the Design Lead (CLAUDE.md: no user-facing copy
+ * invented here). Commissioner only; the caller decides once-per-stall. */
+async function pushStallToCommissioner(admin: Admin, ctx: DraftContext, pickNumber: number): Promise<void> {
+  const leagueId = String(ctx.league.id);
+  const commissionerId = String(ctx.league.commissioner_id ?? '');
+  if (!commissionerId) return;
+  const target = await getTargetToken(admin, commissionerId);
+  if (!target.token || !target.enabled) return;
+  const sent = await sendExpoPush(target.token, {
+    title: 'Auto-pick needs you',
+    body: `No legal stock fits pick ${pickNumber}. Pick manually to keep the draft moving.`,
+    data: { type: 'draft_stall', league_id: leagueId, pick_number: pickNumber },
+  });
+  if (!sent.sent) console.error('[draft-stall] push not sent', leagueId, pickNumber, sent.reason);
+}
+
+/** Stall retry cooldown (review finding: a looping bot_pick must not re-run the
+ * full search, and its Alpaca calls, every request). A stall recorded less than
+ * STALL_COOLDOWN_MS ago short-circuits to 'stalled'. Read errors fail CLOSED. */
+export const STALL_COOLDOWN_MS = 60_000;
+export async function recentStall(admin: Admin, leagueId: string, pickNumber: number): Promise<{ recent: boolean; error: boolean }> {
+  const { data, error } = await admin
+    .from('draft_stalls')
+    .select('last_seen_at')
+    .eq('league_id', leagueId)
+    .eq('pick_number', pickNumber)
+    .maybeSingle();
+  if (error) {
+    console.error('[draft-stall] cooldown read failed', leagueId, pickNumber, JSON.stringify(error));
+    return { recent: false, error: true };
+  }
+  if (!data?.last_seen_at) return { recent: false, error: false };
+  return { recent: Date.now() - Date.parse(String(data.last_seen_at)) < STALL_COOLDOWN_MS, error: false };
+}
+
+// ---------------------------------------------------------------------------
 // The one pick write
 // ---------------------------------------------------------------------------
 
@@ -316,6 +419,10 @@ export async function insertGatedPick(admin: Admin, pick: GatedPick, pickSource:
     if ((insErr as { code?: string }).code === '23505') return { ok: false, reason: 'pick_conflict' };
     return { ok: false, reason: 'unhandled' };
   }
+  // The turn is filled: any stall row for this pick_number is resolved history.
+  const { error: clearErr } = await admin
+    .from('draft_stalls').delete().eq('league_id', pick.leagueId).eq('pick_number', pick.pickNumber);
+  if (clearErr) console.error('[draft-stall] clear failed', pick.leagueId, pick.pickNumber, JSON.stringify(clearErr));
   return { ok: true, row };
 }
 
@@ -341,7 +448,7 @@ export type AutoPickResult =
   }
   | {
     ok: false;
-    reason: 'pick_conflict' | 'price_unavailable' | 'draft_complete' | 'unhandled' | string;
+    reason: 'pick_conflict' | 'price_unavailable' | 'draft_complete' | 'stalled' | 'unhandled' | string;
   };
 
 const SYMBOL_COLUMNS = 'symbol, last_price, is_draftable, market_cap';
@@ -396,6 +503,7 @@ export function supabaseAutoPickPorts(admin: Admin, leagueId: string, deps: Auto
       return (data ?? []).map(toCandidate);
     },
     eligibility: (symbols) => fetchEligibleCategoryIdsBatch(admin, symbols),
+    feasibilityPool: (types, exclude, draftableOnly, depth) => poolGroups(admin, types, exclude, draftableOnly, depth),
     async livePrice(symbol) {
       const fill = await fetchFillPrice(symbol, deps.alpacaKey, deps.alpacaSecret);
       if (fill.price == null) {
@@ -409,10 +517,9 @@ export function supabaseAutoPickPorts(admin: Admin, leagueId: string, deps: Auto
 
 /**
  * Choose (chooseAutoPick: queue, then best available, every candidate through
- * the one gate) and write, for whoever's turn it is. Bots: best available,
- * source 'bot', falling back to 'skip'. Humans: auto_queue / auto_best, and
- * auto_skip only when nothing is legal; a vendor outage returns
- * price_unavailable, leaving the turn open.
+ * the one gate) and write, for whoever's turn it is. Bots and humans alike:
+ * 'bot' / auto_queue / auto_best. Nothing legal -> 'stalled' (recorded, turn
+ * stays open, never a SKIP); a vendor outage -> price_unavailable (turn open).
  */
 export async function autoPickTurn(
   admin: Admin,
@@ -421,6 +528,12 @@ export async function autoPickTurn(
   expectedPickNumber: number | null,
 ): Promise<AutoPickResult> {
   const strategy = deps.strategy ?? BEST_AVAILABLE_STRATEGY;
+  const turn = currentTurn(ctx.picks.length, ctx.order, ctx.numRounds);
+  if (turn) {
+    const cool = await recentStall(admin, String(ctx.league.id), turn.pickNumber);
+    if (cool.error) return { ok: false, reason: 'unhandled' };
+    if (cool.recent) return { ok: false, reason: 'stalled' };
+  }
   let choice;
   try {
     choice = await chooseAutoPick(
@@ -449,11 +562,10 @@ export async function autoPickTurn(
     case 'retry_later':
       console.error('auto-pick: nothing priceable, turn left open', ctx.league.id, choice.attempts);
       return { ok: false, reason: 'price_unavailable' };
-    case 'skip': {
-      const skipped = await insertSkip(admin, ctx, choice.pickerId, choice.source);
-      if (!skipped.ok) return { ok: false, reason: skipped.reason };
-      console.log('auto-pick', ctx.league.id, skipped.pick?.pick_number, choice.source, choice.why, choice.attempts, strategy.id);
-      return { ok: true, pick: skipped.pick, pickSource: choice.source, complete: skipped.complete, statusError: skipped.statusError, priceSource: null };
+    case 'stalled': {
+      const pickNumber = currentTurn(ctx.picks.length, ctx.order, ctx.numRounds)?.pickNumber ?? ctx.picks.length + 1;
+      await recordStall(admin, ctx, pickNumber, choice.pickerId, choice.why, choice.attempts);
+      return { ok: false, reason: 'stalled' };
     }
     case 'pick': {
       const ins = await insertGatedPick(admin, choice.gated, choice.source);
