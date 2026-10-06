@@ -13,6 +13,8 @@ import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { ShellHeader } from '@/components/shell/ShellHeader';
 import { useStockSheet } from '@/components/money/MoneyHost';
+import { Icon } from '@/components/sp/Icon';
+import { useRouter } from 'expo-router';
 import { LoadFailure } from '@/components/money/LoadFailure';
 import { COPY } from '@/lib/money/moneyCopy';
 import { usePortfolioData } from '@/lib/money/usePortfolioData';
@@ -32,12 +34,14 @@ const styles = StyleSheet.create({
   },
   rowLead: { flex: 1, paddingRight: 12 },
   rowTrail: { alignItems: 'flex-end' },
+  historyLink: { minHeight: 44, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth },
 });
 
 export function PortfolioScreen() {
   const { colors } = useTheme();
   const data = usePortfolioData();
   const { open } = useStockSheet();
+  const router = useRouter();
 
   let body: React.ReactNode;
   if (data.status === 'loading') {
@@ -90,6 +94,19 @@ export function PortfolioScreen() {
             </Pressable>
           ))}
         </View>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${COPY.tradeHistory}, ${COPY.includesDraftPicks}`}
+          onPress={() => router.push('/trade-history')}
+          style={({ pressed }) => [styles.historyLink, { borderTopColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
+        >
+          <View style={styles.rowLead}>
+            <Text variant="callout">{COPY.tradeHistory}</Text>
+            <Text variant="caption" tone="secondary">{COPY.includesDraftPicks}</Text>
+          </View>
+          <Icon name="chevronRight" size="callout" tone="text2" />
+        </Pressable>
 
         <Text variant="caption" tone="secondary">{v.creditText}</Text>
       </View>

@@ -52,6 +52,14 @@ export const COPY = {
   stockDidNotLoad: "This stock didn't load. Check your connection and try again.",
   // NEW (flagged): shown while a review's numbers are being fetched.
   preparingReview: 'Preparing your review',
+  // Trade history (board copy: "Bought SHOP", "Sold TSLA", "Drafted TSLA").
+  tradeBought: (symbol: string) => `Bought ${symbol}`,
+  tradeSold: (symbol: string) => `Sold ${symbol}`,
+  tradeDrafted: (symbol: string) => `Drafted ${symbol}`,
+  historyFilters: ['All', 'Buys', 'Sells', 'Draft'] as const,
+  // NEW (flagged): an honest empty state.
+  historyEmpty: 'No trades yet. Your buys, sells and draft picks will show here.',
+  historyPending: 'Your trade history is loading.',
   portfolioLoadTitle: "Your portfolio didn't load",
   stockLoadTitle: "This stock didn't load",
   loadRetryMessage: 'Check your connection, then try again.',

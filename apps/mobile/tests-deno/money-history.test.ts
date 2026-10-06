@@ -4,7 +4,7 @@
  * cd apps/mobile/tests-deno && deno test .
  */
 import { assert, assertEquals } from 'jsr:@std/assert';
-import { groupHistory, historyItems, monthDayLabel, pageOf } from '../lib/money/tradeHistory.ts';
+import { groupHistory, historyItems, historyRows, monthDayLabel, pageOf } from '../lib/money/tradeHistory.ts';
 import { parsePortfolioLedger } from '../lib/money/portfolioLedger.ts';
 import { buildStressMarket, STRESS_CALLER } from '../lib/money/stressFixture.ts';
 
@@ -80,4 +80,17 @@ Deno.test('a day label comes from ET parts: the fixed month table, never locale 
   // 2026-10-05 13:30Z is 9:30 AM EDT on Mon Oct 5.
   assertEquals(monthDayLabel('2026-10-05T13:30:00Z'), 'Oct 5');
   assertEquals(monthDayLabel('garbage'), null);
+});
+
+Deno.test('the rows: one header per section, then its items, and no item lost', () => {
+  const all = historyItems(ledger.activity, STRESS_CALLER, 'all');
+  const rows = historyRows(all, '2026-10-05');
+  const headers = rows.filter((r) => r.kind === 'header');
+  const items = rows.filter((r) => r.kind === 'item');
+  assertEquals(items.length, all.length);
+  // Every section header is followed by at least one item of that section.
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i].kind === 'header') assert(i + 1 < rows.length && rows[i + 1].kind === 'item');
+  }
+  assertEquals(headers.length, new Set(headers.map((h) => (h as { key: string }).key)).size);
 });

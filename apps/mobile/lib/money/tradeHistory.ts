@@ -121,3 +121,28 @@ export function groupHistory(items: HistoryItem[], todayEt: string): HistorySect
   }
   return [...sections.values()];
 }
+
+export type HistoryRow =
+  | { kind: 'header'; key: string; title: string }
+  | { kind: 'item'; item: HistoryItem };
+
+/**
+ * The list the screen renders: each section's header, then its items. Items
+ * arrive newest first, and the picks are the oldest, so each section is
+ * contiguous and a header is emitted once where its section starts.
+ */
+export function historyRows(items: HistoryItem[], todayEt: string): HistoryRow[] {
+  const rows: HistoryRow[] = [];
+  for (const s of groupHistory(items, todayEt)) {
+    rows.push({ kind: 'header', key: s.key, title: s.title });
+    for (const item of s.items) rows.push({ kind: 'item', item });
+  }
+  return rows;
+}
+
+/** The caller's current ET calendar date (YYYY-MM-DD), or null when the clock can't be read as ET. */
+export function todayEtIso(now: Date = new Date()): string | null {
+  const p = etDateParts(now);
+  if (!p) return null;
+  return `${p.year}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`;
+}
