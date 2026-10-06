@@ -76,19 +76,6 @@ Deno.test('parity: the server funding sources the client shows are the ones it s
   assertEquals(funding.unfilledSlots, 0);
 });
 
-Deno.test('parity: a skipped-slot buy funds the full notional, same as the server (D2)', () => {
-  // One voluntarily unfilled slot: a SKIP row consumes the turn, no sale exists.
-  const picks: PickRow[] = [pick({ symbol: 'SKIP', entry_price: 0, quantity: 0, pick_number: 1 })];
-  const decision = validateTradeAdd({
-    rules: FIXED, slots: [], picks, trades: [], userId: USER, symbol: 'SHOP', price: 104.2,
-    eligibleCategories: new Set(), isDraftable: true, soldTradeId: null,
-  });
-  if (!decision.legal) throw new Error(`server refused: ${decision.reason}`);
-  assertEquals(decision.fundedByTradeId, null);
-  assertEquals(decision.stakeAmount, 2000);
-  assertEquals(buyQuantity({ kind: 'unfilled_slot', amount: 2000, price: 104.2 }), decision.quantity);
-});
-
 Deno.test('parity: a one-share (budget_cap) buy is exactly 1 share, the server quantity', () => {
   const rules: LeagueRules = { stakeMode: 'budget_cap', budgetAmount: 2500, notionalPerSlot: null, numRounds: 6, allowUndraftable: true };
   const picks: PickRow[] = [pick({ symbol: 'NVDA', entry_price: 290.1, quantity: 1, pick_number: 1 })];

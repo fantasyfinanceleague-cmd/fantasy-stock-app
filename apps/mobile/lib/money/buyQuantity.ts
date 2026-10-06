@@ -6,7 +6,7 @@
  *
  *   fixed_notional  price rounded to cents FIRST (trades.price is NUMERIC(10,2)),
  *                   then quantity = round(amount / price, 6 dp), where amount
- *                   is the sale's proceeds or an unfilled slot's notional.
+ *                   is the sale's proceeds.
  *   budget_cap / price_tiers / unconstrained  exactly one share.
  *
  * tests-deno/server-parity.test.ts asserts this against the server's own
@@ -16,8 +16,7 @@ export type BuySource =
   | { kind: 'one_share' }
   | { kind: 'budget'; budget: number; spent: number; left: number }
   | { kind: 'tier'; tierLabel: string }
-  | { kind: 'proceeds'; amount: number; price: number }
-  | { kind: 'unfilled_slot'; amount: number; price: number };
+  | { kind: 'proceeds'; amount: number; price: number };
 
 /** Cents price and 6-dp quantity for a fixed_notional fill, or null when the
  * inputs can't produce a real fill (never a zero or NaN share count). */
@@ -37,7 +36,6 @@ export function buyQuantity(source: BuySource): number | null {
     case 'tier':
       return 1;
     case 'proceeds':
-    case 'unfilled_slot':
       return fixedNotionalShares(source.amount, source.price)?.quantity ?? null;
   }
 }

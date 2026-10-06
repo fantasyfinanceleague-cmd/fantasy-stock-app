@@ -3,7 +3,7 @@
  * alone (3e ruling, root cause of the 1.1.0 trade test, 2026-10-05).
  *
  *   fixed_notional   what record-trade's preview says: sale proceeds, else a
- *                    unfilled slot's full notional (D2), else none. The league's
+ *                    none (a pick is never unused, so no unfilled-slot funding). The league's
  *                    legacy budget_mode / budget_amount are NEVER read here.
  *   budget_cap       budget_amount minus cash spent (mirrors userCashSpent).
  *   price_tiers      the open slot's tier label, supplied by the caller.
@@ -42,7 +42,6 @@ export interface BuyingPowerInput {
 
 export type BuyingPower =
   | { kind: 'proceeds'; sources: PreviewSource[]; pickerRequired: boolean; defaultTradeId: string }
-  | { kind: 'unfilled_slot'; amount: number }
   | { kind: 'none' }
   | { kind: 'budget'; budget: number; spent: number; left: number }
   | { kind: 'tier'; tierLabel: string }
@@ -65,9 +64,8 @@ export function buyingPower(input: BuyingPowerInput): BuyingPower {
         defaultTradeId: preview.sources[0].trade_id,
       };
     }
-    if (preview.unfilled_slots > 0) {
-      return preview.stake == null ? { kind: 'unknown' } : { kind: 'unfilled_slot', amount: preview.stake };
-    }
+    // A draft pick can never be unused (Giorgio, D3 closed): an unfilled_slots
+    // count is never cash, so with no sale proceeds there is nothing to invest.
     return { kind: 'none' };
   }
 

@@ -20,10 +20,8 @@ export const COPY = {
   // budget, shown as its own line and counted in the header.
   portfolioValueIncludesCash: 'Portfolio value · includes cash',
   cashFromSales: 'Cash from sales',
-  // D3 (PENDING Giorgio's A/B): an unfilled draft slot is never "Skipped". The
-  // clock auto-drafts, so a slot is unfilled only when auto-pick found no legal
-  // stock. Flagged until the A/B ruling.
-  unfilledDraftSlot: 'Unfilled draft slot',
+  // D3 closed (Giorgio): a draft pick can never be unused. There is no
+  // unfilled-slot copy; legacy SKIP rows render nothing.
   // NEW (flagged): trading-hours copy.
   tradingHoursUnavailable: 'Trading hours unavailable. Try again shortly.',
   marketHoliday: "It's a market holiday.",

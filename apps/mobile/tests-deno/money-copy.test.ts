@@ -1,11 +1,11 @@
 /**
  * Pins the 3e copy rulings in lib/money/moneyCopy.ts. Run with:
  * cd apps/mobile/tests-deno && deno test .
- *   - D3: an unfilled draft slot is never "Skipped" (the clock auto-drafts).
+ *   - D3 closed: no user-visible copy says "skip" (a pick is never unused).
  *   - D4 (A): budget/tier leagues show "Cash from sales" and the header says
  *     "includes cash".
  */
-import { assertEquals, assert } from 'jsr:@std/assert';
+import { assert, assertEquals } from 'jsr:@std/assert';
 import { COPY } from '../lib/money/moneyCopy.ts';
 
 Deno.test('D3: no user-visible string says "skip"', () => {
@@ -13,10 +13,6 @@ Deno.test('D3: no user-visible string says "skip"', () => {
     const text = typeof value === 'function' ? (value as (...a: string[]) => string)('X', 'Y') : value;
     assert(!/skip/i.test(String(text)), `copy "${key}" says skip: ${text}`);
   }
-});
-
-Deno.test('D3: an unfilled draft slot reads "Unfilled draft slot"', () => {
-  assertEquals(COPY.unfilledDraftSlot, 'Unfilled draft slot');
 });
 
 Deno.test('D4 (A): budget leagues show the cash line and the header says includes cash', () => {
