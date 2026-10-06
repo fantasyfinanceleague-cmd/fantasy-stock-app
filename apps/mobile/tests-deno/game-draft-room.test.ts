@@ -215,7 +215,7 @@ Deno.test('indexPicks keeps the price as a number (or null), from a number or a 
 });
 
 Deno.test('the room and Home show the SAME team grid (source guard)', () => {
-  assertEquals(SOURCES['components/game/DraftRoom.tsx'].includes('<TeamSoFarGrid symbols={mine.symbols} numRounds={rounds} footer={budgetLine} />'), true);
+  assertEquals(SOURCES['components/game/DraftRoom.tsx'].includes('{!draftDone ? <TeamSoFarGrid symbols={mine.symbols} numRounds={rounds} footer={budgetLine} /> : null}'), true);
   assertEquals(SOURCES['components/home/DraftingCard.tsx'].includes('<TeamSoFarGrid symbols={myPicks} numRounds={numRounds} />'), true);
   assertEquals(SOURCES['lib/game/useDraftRoom.ts'].includes("select('pick_number, symbol, pick_source, entry_price')"), true);
 });
@@ -268,4 +268,15 @@ Deno.test('the room shows it in the clock card after a successful pick, then cle
   const room = SOURCES['components/game/DraftRoom.tsx'];
   assertEquals(room.includes('setConfirmed(pickConfirmedLine(symbol, picksUntilTurn(room.order, onClockPick, rounds, myUserId)));'), true);
   assertEquals(room.includes('setTimeout(() => setConfirmed(null), PICK_CONFIRMED_MS)'), true);
+});
+
+// ── UX rule 11: the draft's ending has a seam (DraftComplete) ──
+
+Deno.test('a finished draft shows DraftComplete (your roster, the existing line), and the heal hand-off stays', () => {
+  const room = SOURCES['components/game/DraftRoom.tsx'];
+  assertEquals(room.includes('{draftDone ? <DraftComplete symbols={mine.symbols} numRounds={rounds} /> : null}'), true);
+  assertEquals(room.includes("router.push('/(tabs)/draft');"), true); // the finalize heal, unchanged
+  const view = SOURCES['components/game/DraftComplete.tsx'];
+  assertEquals(view.includes('<TeamSoFarGrid symbols={symbols} numRounds={numRounds} />'), true);
+  assertEquals(view.includes("export const FINISHING_THE_DRAFT = 'Finishing the draft…';"), true);
 });

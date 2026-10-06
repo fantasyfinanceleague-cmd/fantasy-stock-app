@@ -19,6 +19,7 @@ import { managerAtPick, boardRows } from '@/lib/game/draftBoard';
 import { PICK_CONFIRMED_MS, PICK_SENDING, PICK_UNCONFIRMED, budgetLeftLine, pickConfirmedLine, myDraftedSoFar, pickClockLabel, pickRowView, pickRefusalLine, pickRefusalNextStep, picksUntilYouLine, roundPickLine } from '@/lib/game/draftRoom';
 import { TeamSoFarGrid } from '@/components/home/TeamSoFarGrid';
 import { DraftRoomSkeleton } from '@/components/game/LoadingSkeletons';
+import { DraftComplete } from '@/components/game/DraftComplete';
 import { picksUntilTurn } from '@/lib/home/draftTurn';
 import { readFunctionRefusal } from '@/lib/functionRefusal';
 import { turnState } from '@/lib/game/draftRefusals';
@@ -226,7 +227,7 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
         </Card>
       ) : null}
 
-      <TeamSoFarGrid symbols={mine.symbols} numRounds={rounds} footer={budgetLine} />
+      {!draftDone ? <TeamSoFarGrid symbols={mine.symbols} numRounds={rounds} footer={budgetLine} /> : null}
 
       <Card>
         <Text variant="tag" tone="secondary">Latest picks</Text>
@@ -252,7 +253,9 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
           <Button label="Try again" variant="secondary" size="sm" onPress={room.refresh} />
         </Card>
       ) : null}
-      {draftDone ? <Text variant="caption" tone="secondary">Finishing the draft…</Text> : null}
+      {/* The ending's seam (UX rule 11): DraftComplete is where the Design Lead's
+          ending goes; the finalize-heal hand-off above is unchanged. */}
+      {draftDone ? <DraftComplete symbols={mine.symbols} numRounds={rounds} /> : null}
     </View>
   );
 }
