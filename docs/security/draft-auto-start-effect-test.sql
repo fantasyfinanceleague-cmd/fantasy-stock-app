@@ -33,13 +33,14 @@
 --       the freeze fn is server-only                                 PASS
 --   G4  draft_start_policy(): room 1h, gate 30s, reminder 2h, 55 min,
 --       quarter hours                                                PASS
---   G5  the kind CHECK admits the four new kinds and keeps #126's    PASS
---   C1  the sweep cron guards on overdue, due starts and the watch   PASS
+--   G5  the kind CHECK admits the six new kinds and keeps #126's     PASS
+--   C1  the sweep cron guards on overdue + draft_auto_start_work_due PASS
 --   C2  the notify cron guards on draft_room_notices_due(), 180000ms PASS
 --   W1  a blocked league -> the commissioner gets ONE at-risk notice PASS
 --   W2  a gate-window clear verdict clears the gate                  PASS
 --   P1  postpone: row + date cleared + every human told              PASS
 --   P2  a new draft time ends a postponement (the reschedule trigger) PASS
+--   T1  ...and tells every human member once (draft_time_set)        PASS
 --   R1  open_due_draft_rooms: order finalized, one room-open notice
 --       per human                                                    PASS
 --   S1  start_league_draft: the room never opened -> room_not_open   PASS
@@ -80,7 +81,7 @@ begin
    where ns.nspname = 'public'
      and proname in ('draft_start_policy', '_draft_start_inputs', 'draft_watch_due', 'record_draft_watch',
                      'postpone_league_draft', 'due_draft_starts', 'start_league_draft', 'open_due_draft_rooms',
-                     'draft_room_notices_due', 'draft_notice_context')
+                     'draft_room_notices_due', 'draft_notice_context', 'draft_auto_start_work_due')
      and (proacl is null
           or proacl::text ~ '(anon|authenticated)='
           or proacl::text ~ '(^|[{,])=X'
@@ -92,9 +93,9 @@ begin
    where ns.nspname = 'public'
      and proname in ('draft_start_policy', '_draft_start_inputs', 'draft_watch_due', 'record_draft_watch',
                      'postpone_league_draft', 'due_draft_starts', 'start_league_draft', 'open_due_draft_rooms',
-                     'draft_room_notices_due', 'draft_notice_context');
-  out := out || format(E'G1 fn grants/secdef/path   %s (found %s/10)  %s\n', coalesce(acl, 'ok'), n,
-    case when acl is null and n = 10 then 'PASS' else 'FAIL' end);
+                     'draft_room_notices_due', 'draft_notice_context', 'draft_auto_start_work_due');
+  out := out || format(E'G1 fn grants/secdef/path   %s (found %s/11)  %s\n', coalesce(acl, 'ok'), n,
+    case when acl is null and n = 11 then 'PASS' else 'FAIL' end);
 
   select string_agg(relname || ':' || relrowsecurity::text || ':' || coalesce(relacl::text, 'NULL'), ' ') into acl
     from pg_class
@@ -122,7 +123,8 @@ begin
   select pg_get_constraintdef(oid) into acl from pg_constraint where conname = 'league_notifications_kind_check';
   out := out || format(E'G5 kind check has new kinds + member_left  %s\n',
     case when acl like '%draft_room_open%' and acl like '%draft_started%' and acl like '%draft_at_risk%'
-          and acl like '%draft_postponed%' and acl like '%member_left%' then 'PASS' else 'FAIL' end);
+          and acl like '%draft_at_risk_reminder%' and acl like '%draft_postponed%' and acl like '%draft_time_set%'
+          and acl like '%member_left%' then 'PASS' else 'FAIL' end);
 
   -- ---- C: the crons (prod only; PGlite has no pg_cron) -------------------------
   if to_regclass('cron.job') is null then
@@ -130,10 +132,9 @@ begin
     out := out || E'C2 cron: no pg_cron here  SKIP\n';
   else
     execute $q$ select command from cron.job where jobname = 'draft_autopick_sweep' $q$ into acl;
-    out := out || format(E'C1 sweep guards overdue/due/watch  %s\n',
+    out := out || format(E'C1 sweep guards overdue + auto-start work  %s\n',
       case when position('public.overdue_draft_turns()' in coalesce(acl, '')) > 0
-            and position('public.due_draft_starts()' in coalesce(acl, '')) > 0
-            and position('public.draft_watch_due()' in coalesce(acl, '')) > 0 then 'PASS' else 'FAIL' end);
+            and position('public.draft_auto_start_work_due()' in coalesce(acl, '')) > 0 then 'PASS' else 'FAIL' end);
     execute $q$ select command from cron.job where jobname = 'draft_order_notify' $q$ into acl;
     out := out || format(E'C2 notify guards room notices, 180000 ms  %s\n',
       case when position('public.draft_room_notices_due()' in coalesce(acl, '')) > 0
@@ -170,7 +171,7 @@ begin
   values ('__AUTOSTART_RECONFIRM__', c_uid, 'AST-' || gen_random_uuid(), 8, 6, 11, 'matchup', 4, 'budget_cap', 250,
           now() - interval '1 minute') returning id into l_recon;
   insert into public.league_members (league_id, user_id)
-  select l, u from unnest(array[l_gate, l_post, l_room, l_start, l_recon]) l,
+  select l, u from unnest(array[l_gate, l_post, l_post2, l_room, l_start, l_recon]) l,
                    unnest(array[c_uid, gen_random_uuid()::text, gen_random_uuid()::text, 'bot-1']) u;
   insert into public.league_members (league_id, user_id)
   select l_watch, u from unnest(array[c_uid, gen_random_uuid()::text, gen_random_uuid()::text]) u;
@@ -197,7 +198,7 @@ begin
   -- ---- P: postpone ----------------------------------------------------------------
   begin
     r := public.postpone_league_draft(l_post, (select draft_date from public.leagues where id = l_post),
-           'room_open', 'not_enough_members', '[{"code":"not_enough_members"}]'::jsonb);
+           'room_open', 'not_enough_members', '[{"code":"not_enough_members"}]'::jsonb, null);
     select (select draft_date is null from public.leagues where id = l_post)::text || '/'
            || (select count(*) from public.draft_postponements where league_id = l_post)::text || '/'
            || (select count(*) from public.league_notifications where league_id = l_post and kind = 'draft_postponed')::text
@@ -209,13 +210,21 @@ begin
 
   begin
     r := public.postpone_league_draft(l_post2, (select draft_date from public.leagues where id = l_post2),
-           'start', 'start_failed', '[{"code":"start_failed"}]'::jsonb);
+           'start', 'start_failed', '[{"code":"start_failed"}]'::jsonb, null);
     update public.leagues set draft_date = date_trunc('hour', now()) + interval '2 days' where id = l_post2;
     out := out || format(E'P2 rescheduled -> postponed=%s  %s\n',
       exists (select 1 from public.draft_postponements where league_id = l_post2),
       case when r->>'status' = 'postponed'
             and not exists (select 1 from public.draft_postponements where league_id = l_post2) then 'PASS' else 'FAIL' end);
   exception when others then out := out || format(E'P2 raised %s  FAIL\n', sqlerrm);
+  end;
+
+  begin
+    select count(*) into n from public.league_notifications
+     where league_id = l_post2 and kind = 'draft_time_set' and push_status = 'pending';
+    out := out || format(E'T1 new time -> %s draft_time_set notice(s) (3 humans, bot skipped)  %s\n', n,
+      case when n = 3 then 'PASS' else 'FAIL' end);
+  exception when others then out := out || format(E'T1 raised %s  FAIL\n', sqlerrm);
   end;
 
   -- ---- R: the room opens ------------------------------------------------------------
@@ -238,9 +247,9 @@ begin
   end;
 
   -- The room opened for l_start and l_recon's (past) times: as the order finalize + gate would have.
-  perform public._draft_order_sync(l_start, true);
   insert into public.draft_start_watch (league_id, draft_date, inputs_sig, blocked, gate_cleared_at, room_opened_at)
   select id, draft_date, 'effect-test', false, now(), now() from public.leagues where id in (l_start, l_recon);
+  perform public._draft_order_sync(l_start, true);   -- after the gate: the order is set only once it cleared
   v_expect := public._draft_start_inputs(l_start);
 
   begin

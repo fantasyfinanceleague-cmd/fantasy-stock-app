@@ -217,6 +217,7 @@ async function postpone(
   stage: 'room_open' | 'start',
   reason: string,
   blockers: Blockers,
+  expect: unknown, // the inputs judged (CAS); null when the slots were unreadable
 ): Promise<{ status: string } | { error: string }> {
   try {
     // .rpc() resolves { error } on a Postgres error; it does not throw (CLAUDE.md #5).
@@ -226,6 +227,7 @@ async function postpone(
       p_stage: stage,
       p_reason: reason,
       p_blockers: blockers,
+      p_expect: expect,
     });
     if (error) {
       console.error('postpone_league_draft failed', leagueId, JSON.stringify(error));
@@ -276,13 +278,14 @@ export async function startDraftIfDue(admin: Admin, leagueId: string, now: Date)
       return { outcome: 'not_due', blockers: [{ code: 'draft_date_not_reached', draftDate }] };
     }
 
+    const expect = slots === null ? null : buildStartExpect(league, memberCount, slots, reconfirm !== null);
     const doPostpone = async (reason: string, blockers: Blockers): Promise<StartOutcome> => {
-      const p = await postpone(admin, leagueId, draftDate, 'start', reason, blockers);
+      const p = await postpone(admin, leagueId, draftDate, 'start', reason, blockers, expect);
       if ('error' in p) return { outcome: 'retry', reason: p.error };
       if (p.status === 'postponed') return { outcome: 'postponed', reason, blockers };
       if (p.status === 'already_postponed') return { outcome: 'already_postponed' };
       if (p.status === 'already_started') return { outcome: 'already_started' };
-      return { outcome: 'retry', reason: `postpone_${p.status}` }; // stale: the time moved; re-read next tick
+      return { outcome: 'retry', reason: `postpone_${p.status}` }; // stale/changed: re-judged next tick
     };
     const systemFailure = async (reason: string): Promise<StartOutcome> =>
       isPastStartRetry(draftDate, now)
@@ -296,7 +299,7 @@ export async function startDraftIfDue(admin: Admin, leagueId: string, now: Date)
 
     const { data: res, error: startErr } = await admin.rpc('start_league_draft', {
       p_league_id: leagueId,
-      p_expect: buildStartExpect(league, memberCount, slots!, reconfirm !== null),
+      p_expect: expect,
     });
     if (startErr) {
       console.error('start_league_draft failed', leagueId, JSON.stringify(startErr));
@@ -370,9 +373,11 @@ export async function watchLeague(admin: Admin, leagueId: string, now: Date): Pr
     const verdict: boolean | null = real.length > 0 ? true : blockers.length > 0 ? null : false;
     const inGate = isInGate(draftDate, now);
 
+    const expect = slots === null ? null : buildStartExpect(league, memberCount, slots, reconfirm !== null);
     if (inGate && verdict === true) {
-      const p = await postpone(admin, leagueId, draftDate, 'room_open', real[0].code, real);
+      const p = await postpone(admin, leagueId, draftDate, 'room_open', real[0].code, real, expect);
       if ('error' in p) return { outcome: 'error', reason: p.error };
+      if (p.status === 'changed') return { outcome: 'changed' };
       return p.status === 'postponed'
         ? { outcome: 'postponed', reason: real[0].code }
         : { outcome: 'skipped', reason: `postpone_${p.status}` };
@@ -384,7 +389,7 @@ export async function watchLeague(admin: Admin, leagueId: string, now: Date): Pr
     const { data: res, error } = await admin.rpc('record_draft_watch', {
       p_league_id: leagueId,
       p_draft_date: draftDate,
-      p_expect: slots === null ? null : buildStartExpect(league, memberCount, slots, reconfirm !== null),
+      p_expect: expect,
       p_blocked: verdict,
       p_blockers: real,
       p_gate: inGate,

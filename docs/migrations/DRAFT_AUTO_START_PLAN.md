@@ -235,19 +235,27 @@ Accepted / for Giorgio:
 - `…000002_draft_autopick_sweep_auto_start.sql`: the sweep guard = overdue (verbatim from `20261106000000`) OR `due_draft_starts()` OR `draft_watch_due()`.
 - `…000003_schedule_draft_order_notify.sql`: **promoted** from `deferred/20261013000001`. Guard = `draft_order_notify_due() OR draft_room_notices_due()`, `timeout_milliseconds := 180000`.
 
-## Copy (board strings where they exist; NEW COPY flagged for the Design Lead)
+## Copy: the Design Lead's strings, verbatim (board #call-auto-start, 6cd10b8 / PR #128)
 
-| Push | Text | Source |
-|---|---|---|
-| Room open (everyone) | "The draft order is set. You pick 4th. The draft starts at 7:00 PM ET." (manual: "The commissioner set the draft order. …") | board (#67's push, unchanged) |
-| Started (everyone) | "Your draft has started. You pick 4th." | board |
-| At risk (commissioner, > 2 h out) | "Your draft can't start at 7:00 PM ET: Sofia F. left the league. Fix it in the lobby." | board |
-| At risk / reminder (commissioner, ≤ 2 h out) | "Your draft can't start at 7:00 PM ET: <reason>. Fix it by 6:00 PM ET, or it will be postponed." | **NEW** |
-| Postponed (members) | "The draft is postponed. Roberto B. will pick a new time." | board |
-| Postponed (commissioner) | "Your draft is postponed: <reason>. Pick a new draft time in the lobby." | **NEW** |
-| Reasons | "Sofia F. left the league" (board). **NEW**: "Sofia F. and Ana P. left the league" · "3 managers left the league" · "the league needs at least 4 managers" · "the league has no stake mode" · "the number of playoff teams isn't set" · "there are more playoff teams than managers" · "some roster slots can't be filled" · "the budget can't fill every roster" · "not every Season 1 player has answered" · "something went wrong on our side" · fallback "something needs fixing" | |
+| Push (kind) | Text |
+|---|---|
+| Room open, everyone (`draft_room_open`) | "The draft room is open. You pick 4th. The draft starts at 7:00 PM ET." |
+| Started, everyone (`draft_started`) | "The draft has started. You pick 4th." |
+| At risk, commissioner, as soon as blocked (`draft_at_risk`) | "The draft room can't open yet: {first blocker}. Fix it before {Sat 6:00 PM ET}, or the draft is postponed." |
+| Reminder, commissioner, T−2h, still blocked (`draft_at_risk_reminder`) | "One hour left to fix your league. If it isn't ready by {6:00 PM ET}, the draft is postponed." |
+| Postponed, members (`draft_postponed`) | "The draft is postponed. {Commissioner} will pick a new time." |
+| Postponed, commissioner | "The draft is postponed: the league wasn't ready at {6:00 PM ET}. Fix it, then pick a new time." (the room time; T for a stage-`start` postponement) |
+| Time set/changed, everyone (`draft_time_set`) | "The draft is now {Sun, Oct 4 · 7:00 PM ET}." **NEW COPY (flagged): first-set variant** "The draft is set for {…}." when the member was never told a time for this league before |
+| {first blocker} | "Sofia F. left the league" · "8 playoff teams, but 7 teams are in" · "fewer than 4 teams have joined" · "some slots can't be filled". **NEW COPY:** "Sofia F. and Ana P. left the league" · "3 managers left the league" · "more playoff teams than teams" (no numbers available) · "the budget can't fill every roster" · "the league has no stake mode" · "the number of playoff teams isn't set" · "not every Season 1 player has answered" · fallback "something needs fixing"; members' fallback name "The commissioner" |
 
-Every push carries `data.screen: 'draft'` (1.1.0 routes by `screen`) and `data.type` = the kind. Each push is re-checked at send time and skipped if no longer true: fixed, rescheduled, started, or the commissioner changed.
+**ET formatting** is built from `formatToParts` with `hourCycle: 'h12'` pinned (the Hermes trap), with plain spaces. It's tested for noon/midnight and both 2026 DST switches. The title is the league name, with control characters stripped and capped at 60.
+
+**Time-set rule (Giorgio: "Anytime a draft time is changed, everyone receives a notification").**
+- **Who:** every human member, for any set or change to a non-NULL time while not started. The person who made the change is excluded (flagged: easy to include). A service-role or operator change tells everyone.
+- **Debounce:** at most one pending notice per member per league (a partial unique index). Each change re-stamps it, and it's sent after **2 quiet minutes**, worded from the *current* time. A commissioner fiddling with the picker produces one push with the final time.
+- **Clearing** the time (TBD), or a postponement clearing it, sends no time-set push (a postponement has its own).
+
+Every push carries `data.screen: 'draft'` (1.1.0 routes by `screen`) and `data.type` = the kind. Each push is re-checked at send time and skipped if no longer true.
 
 ## For the mobile worker (client work, not built here)
 
@@ -283,3 +291,26 @@ Every push carries `data.screen: 'draft'` (1.1.0 routes by `screen`) and `data.t
 7. Re-capture `db-snapshot.json`, re-run the map, update STATUS.
 
 **Supersedes:** lines R7 and D1 of `freeze-league-rules-effect-test.sql`. **Web:** the paused web start/finish writes and off-grid date edits are refused. Route them through draft-control before any unpause.
+
+
+## Review round 2 (2026-10-06): supabase + security reviewers on 0840bfc
+
+Fixed (each with a test and a negative control):
+- **The order is set only after the gate clears** (supabase #3). `_draft_order_sync` gains "gate cleared for this time". A time saved 55–60 min out can't have its order set, and members leave-locked, by a lazy read before the gate judges it.
+- **Postponed leagues never finalize** (security M3). The same function gains "not postponed". The legacy backfill now also clears `draft_date` (old time kept in `postponed_from`), so legacy leagues aren't due for #67's cron, and leaving re-opens.
+- **Gate slip** (supabase #2): a league whose inputs change before its room opens is re-gated, and `open_due_draft_rooms` hands back a league whose order couldn't be set. It's postponed at about T−1h with its real reason, not at T.
+- **Postpone CAS** (supabase #5).
+- **Cron isolation** (supabase #6): the new lists sit behind `draft_auto_start_work_due()`, which returns false on error, so they can never fail the auto-pick backstop.
+- **Overlap duplicates** (supabase #7): the watch locks `FOR NO KEY UPDATE`, room-open takes an advisory lock.
+- **Unknown verdicts** keep the old signature (supabase #8).
+- **Flap guard** (supabase #9): one at-risk push per league per hour.
+- **Tie-break** (supabase #10), and **TBD drops the watch row** (supabase #11).
+- **Flood guard** (security M1): one postponed push per member per league per hour, and per-league fairness in delivery.
+- **Watch starvation** (security M2): gate-window leagues are listed first.
+- **The notify cron guards on delivered kinds only** (security L3), and members see departed **names** only (security L1).
+
+Open, for the Orchestrator / Giorgio:
+- **1.1.0 compatibility** (supabase #1, HIGH, release-gating): the shipped pickers send any minute, so after this push a 1.1.0 commissioner choosing e.g. 12:07, or a time under 55 min out, gets a save error (`draft_time_invalid` / `draft_time_too_soon`). Same-value saves pass. Options: ship the quarter-hour picker first, or accept the break for TestFlight testers.
+- **#94 merge order** (supabase #4): when #94 rebases it must keep this file's union kind CHECK, and its renewal kinds are delivered elsewhere (this cron no longer posts for them). Re-check that `start_renewed_season` never writes `draft_status`.
+- **Known limitation:** a stage-`start` postponement (blocked at T after the room opened, rare) keeps its finalized order, so #126 keeps members leave-locked until a new time is set. A follow-up could let `leave_league` skip the order-set lock while postponed.
+- **Operational alert** (supabase #13), worth adding to monitoring: `SELECT l.id FROM leagues l JOIN draft_start_watch w ON w.league_id = l.id AND w.draft_date = l.draft_date WHERE w.gate_cleared_at IS NOT NULL AND w.room_opened_at IS NULL AND now() > l.draft_date - interval '58 minutes';` Any row means the room-open job is failing, and those leagues will be postponed at T.

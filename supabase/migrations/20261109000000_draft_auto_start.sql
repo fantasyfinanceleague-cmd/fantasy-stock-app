@@ -45,9 +45,10 @@
 --
 -- POSTPONED is an explicit row (draft_postponements), never derived from a
 -- past draft_date (CLAUDE.md: overloaded NULLs / time are not type tags).
--- A real postponement also clears leagues.draft_date, so (a) nothing is "due"
--- for #67 any more, (b) leaving re-opens (#126 locks on
--- _draft_order_is_due(draft_date)), (c) every client shows "no time set".
+-- A postponement (real or legacy) also clears leagues.draft_date, so (a)
+-- nothing is "due" for #67 any more, (b) leaving re-opens (#126 locks on
+-- _draft_order_is_due(draft_date)), (c) every client shows "no time set"; and
+-- _draft_order_sync (re-created below) never finalizes a postponed league.
 -- postponed_from keeps the old time. A new draft_date clears the row
 -- (trg_leagues_draft_rescheduled, 20261109000001).
 --
@@ -148,9 +149,24 @@ alter table public.league_notifications
     -- draft auto-start (this file); delivered by draft-order-notify:
     'draft_room_open',  -- everyone: the room is open, with your position
     'draft_started',    -- everyone: the draft has started
-    'draft_at_risk',    -- the commissioner: the draft can't happen as set (and the T-2h reminder)
-    'draft_postponed'   -- everyone: it can't happen; a new time is needed
+    'draft_at_risk',    -- the commissioner: the room can't open as things stand
+    'draft_at_risk_reminder', -- the commissioner, T-2h, still blocked: one hour left
+    'draft_postponed',  -- everyone: it can't happen; a new time is needed
+    'draft_time_set'    -- everyone: the draft time was set or changed (debounced, below)
   ));
+
+-- Giorgio (2026-10-06): "Anytime a draft time is changed, everyone receives a
+-- notification to know exactly when it's happening." DEBOUNCE: at most ONE
+-- pending 'draft_time_set' row per member per league. A change while one is
+-- pending re-stamps its created_at instead of adding a row
+-- (trg_leagues_draft_rescheduled, 20261109000001, ON CONFLICT on this index),
+-- and draft-order-notify sends it only once the time has been quiet for 2
+-- minutes, worded from the CURRENT draft_date. So a commissioner fiddling with
+-- the picker produces one push, with the final time. A row being sent
+-- ('sending') leaves the index, so a change during a send is its own notice.
+create unique index if not exists league_notifications_draft_time_set_pending_uidx
+  on public.league_notifications (league_id, user_id)
+  where kind = 'draft_time_set' and push_status = 'pending';
 
 -- #67's 'draft_order_set' rows stay as in-app records, but their PUSH is
 -- superseded by 'draft_room_open' (see the header). Settled at insert, so no
@@ -171,7 +187,7 @@ end;
 $$;
 
 revoke all on function public.league_notifications_order_set_in_app() from public;
-revoke all on function public.league_notifications_order_set_in_app() from anon, authenticated;
+revoke all on function public.league_notifications_order_set_in_app() from anon, authenticated, service_role;
 
 drop trigger if exists trg_league_notifications_order_set_in_app on public.league_notifications;
 create trigger trg_league_notifications_order_set_in_app
@@ -183,11 +199,71 @@ update public.league_notifications
    set push_status = 'skipped', push_error = 'superseded_by_draft_room_open'
  where kind = 'draft_order_set' and push_status in ('pending', 'sending');
 
+-- ---------------------------------------------------------------------------
+-- A postponed league's order is never finalized (security review, M3)
+-- ---------------------------------------------------------------------------
+-- _draft_order_sync re-created from 20261107000006 VERBATIM plus TWO clauses in
+-- the finalize branch (diff it): not while a draft_postponements row exists,
+-- and only once the auto-start gate has cleared this draft time (supabase
+-- review #3: otherwise a lazy read could set the order of a league the gate
+-- then postpones, locking its members in, #126). The start backstop
+-- (lock_draft_order_on_start) finalizes directly and is unaffected.
+-- Every #67/#126 finalize path goes through it (the lazy reads, joins,
+-- trg_leagues_order_mode's finalize-at-the-OLD-date on any leagues UPDATE,
+-- finalize_due_draft_orders, confirm_league_roster, join_league_by_code), so a
+-- postponement inserted BEFORE its date is cleared can never finalize an order
+-- on the way out — including the legacy backfill below, where the old dates
+-- are long past and would otherwise be "due".
+create or replace function public._draft_order_sync(p_league_id uuid, p_lock boolean)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_l public.leagues%rowtype;
+begin
+  if p_lock then
+    select * into v_l from public.leagues where id = p_league_id for no key update;
+  else
+    select * into v_l from public.leagues where id = p_league_id;
+  end if;
+  if not found or coalesce(v_l.draft_status, 'not_started') <> 'not_started' then
+    return;
+  end if;
+
+  if public._draft_order_is_due(v_l.draft_date)
+     and (select count(*) from public.league_members m where m.league_id = p_league_id) >= 4
+     -- 20261107000006: and the commissioner has confirmed the teams after a leave
+     and not exists (select 1 from public.league_roster_reconfirm rc where rc.league_id = p_league_id)
+     -- 20261109000000: and the draft is not postponed (draft auto-start)
+     and not exists (select 1 from public.draft_postponements pp where pp.league_id = p_league_id)
+     -- 20261109000000: and the auto-start gate cleared THIS draft time: the order
+     -- is set when the room opens, never before the gate has judged the league
+     -- (a time set 55-60 min out is already past T-1h when it is saved)
+     and exists (select 1 from public.draft_start_watch gw
+                  where gw.league_id = p_league_id and gw.draft_date = v_l.draft_date
+                    and gw.gate_cleared_at is not null) then
+    perform public._draft_order_finalize(p_league_id);
+  elsif v_l.draft_order_mode = 'manual' then
+    perform public._draft_order_materialize(p_league_id, 'manual_seed');
+  end if;
+end;
+$$;
+
+revoke all on function public._draft_order_sync(uuid, boolean) from public, anon, authenticated, service_role;
+
 -- One-off LEGACY backfill: every not_started league whose draft time has
--- already passed is postponed silently (stage 'legacy', no notices), so the
+-- already passed is postponed silently (stage 'legacy', NO notices), so the
 -- first sweep tick starts nothing and pushes nothing about abandoned leagues.
--- leagues.draft_date is NOT touched here (no UPDATE fires #67/#94 triggers);
--- the commissioner picks a new time as for any postponement.
+-- Like a real postponement, the row goes in FIRST and then draft_date is
+-- cleared (the old time is kept in postponed_from): nothing is "due" for #67
+-- any more (so the promoted notify cron's guard stays quiet about them),
+-- leaving re-opens per #126, and the gated _draft_order_sync above means the
+-- UPDATE's own trg_leagues_order_mode cannot finalize at the old date. This
+-- runs before 20261109000001's triggers exist (no time-set notices, no guard).
+-- An order already finalized before this push (e.g. by #67's own one-off
+-- sweep) stays as it is.
 insert into public.draft_postponements (league_id, postponed_from, stage, reason)
 select l.id, l.draft_date, 'legacy', 'legacy_past_date'
   from public.leagues l
@@ -195,6 +271,12 @@ select l.id, l.draft_date, 'legacy', 'legacy_past_date'
    and l.draft_date is not null
    and l.draft_date <= now()
 on conflict (league_id) do nothing;
+
+update public.leagues l
+   set draft_date = null
+  from public.draft_postponements p
+ where p.league_id = l.id and p.stage = 'legacy'
+   and l.draft_status = 'not_started' and l.draft_date is not null;
 
 -- ---------------------------------------------------------------------------
 -- 4. _draft_start_inputs — every input the blocker evaluation judges
@@ -246,8 +328,11 @@ grant execute on function public._draft_start_inputs(uuid) to service_role;
 --     refresh_s and the draft is within horizon_s (price drift), or the T-2h
 --     reminder is due;
 --   * in the gate window [T-1h-30s, T): until the gate clears it (or it is
---     postponed). This also covers a draft time set less than an hour out
---     (the 55-minute floor): it is gated on the first tick.
+--     postponed), and again if its inputs change before its room opens (a
+--     leave in the last 30 s before T-1h is still allowed by #126: it must be
+--     judged, and postponed with its real reason, not left to fail at T). This
+--     also covers a draft time set less than an hour out (the 55-minute floor):
+--     it is gated on the first tick.
 create or replace function public.draft_watch_due()
 returns table (league_id uuid, draft_date timestamptz)
 language sql
@@ -266,7 +351,9 @@ as $$
      and not exists (select 1 from public.draft_postponements x where x.league_id = l.id)
      and (
        (now() >= l.draft_date - make_interval(secs => (p.j->>'room_lead_s')::int + (p.j->>'gate_lead_s')::int)
-        and w.gate_cleared_at is null)
+        and (w.gate_cleared_at is null
+             or (w.room_opened_at is null
+                 and w.inputs_sig is distinct from md5(public._draft_start_inputs(l.id)::text))))
        or
        (now() < l.draft_date - make_interval(secs => (p.j->>'room_lead_s')::int)
         and (w.league_id is null
@@ -276,12 +363,38 @@ as $$
              or (w.blocked and w.reminded_at is null
                  and now() >= l.draft_date - make_interval(secs => (p.j->>'reminder_lead_s')::int))))
      )
-   order by l.draft_date, l.id;
+   -- Urgency first (security review M2): a league in its gate window must be
+   -- judged before any number of quieter ones, or it misses its room.
+   order by (now() >= l.draft_date - make_interval(secs => (p.j->>'room_lead_s')::int + (p.j->>'gate_lead_s')::int)) desc,
+            l.draft_date, l.id;
 $$;
 
 revoke all on function public.draft_watch_due() from public;
 revoke all on function public.draft_watch_due() from anon, authenticated;
 grant execute on function public.draft_watch_due() to service_role;
+
+-- The sweep cron's auto-start post guard (20261109000002), isolated: a runtime
+-- error in either list returns false instead of failing the whole cron
+-- statement, so it can never take down the auto-pick backstop for live drafts
+-- (supabase review #6). The error is raised as a WARNING into the postgres log.
+create or replace function public.draft_auto_start_work_due()
+returns boolean
+language plpgsql
+stable
+security invoker
+set search_path = public, pg_temp
+as $$
+begin
+  return exists (select 1 from public.due_draft_starts()) or exists (select 1 from public.draft_watch_due());
+exception when others then
+  raise warning 'draft_auto_start_work_due failed: % %', sqlstate, sqlerrm;
+  return false;
+end;
+$$;
+
+revoke all on function public.draft_auto_start_work_due() from public;
+revoke all on function public.draft_auto_start_work_due() from anon, authenticated;
+grant execute on function public.draft_auto_start_work_due() to service_role;
 
 -- ---------------------------------------------------------------------------
 -- 6. record_draft_watch — store a verdict; warn the commissioner on change
@@ -292,8 +405,9 @@ grant execute on function public.draft_watch_due() to service_role;
 -- time has come — fail open for the NOTICE; the start re-checks and fails
 -- closed) sets gate_cleared_at.
 -- 'draft_at_risk' goes to the commissioner when the league BECOMES blocked
--- (no verdict, or clear, before) and once more at T-2h if still blocked. A
--- transition already inside T-2h counts as the reminder, so nobody gets two.
+-- (no verdict, or clear, before); 'draft_at_risk_reminder' once at T-2h if it
+-- is still blocked. A transition already inside T-2h counts as the reminder,
+-- so nobody gets two.
 create or replace function public.record_draft_watch(
   p_league_id  uuid,
   p_draft_date timestamptz,
@@ -315,12 +429,15 @@ declare
   v_same     boolean;
   v_blocked  boolean;
   v_became   boolean;
+  v_became_notify boolean;
   v_remind   boolean;
   v_in_rem   boolean;
   v_gate     timestamptz;
   v_notified text;
 begin
-  select * into v_l from public.leagues where id = p_league_id for share;
+  -- FOR NO KEY UPDATE (not SHARE): two overlapping sweeps judging the same
+  -- league serialize here, so a first verdict can't warn twice.
+  select * into v_l from public.leagues where id = p_league_id for no key update;
   if not found or v_l.draft_status <> 'not_started' or v_l.draft_date is distinct from p_draft_date
      or exists (select 1 from public.draft_postponements x where x.league_id = p_league_id) then
     return jsonb_build_object('status', 'stale');
@@ -350,7 +467,13 @@ begin
     (league_id, draft_date, inputs_sig, evaluated_at, blocked, blockers, blocked_since,
      reminded_at, gate_cleared_at, room_opened_at)
   values (
-    p_league_id, p_draft_date, md5(v_actual::text), now(), v_blocked,
+    p_league_id, p_draft_date,
+    -- An UNKNOWN verdict judged nothing: keep the old signature (or none), so
+    -- the next tick re-evaluates instead of trusting a stale verdict.
+    case when p_blocked is not null then md5(v_actual::text)
+         when v_same then v_prev.inputs_sig
+         else 'unknown' end,
+    now(), v_blocked,
     case when p_blocked is null and v_same then v_prev.blockers else coalesce(p_blockers, '[]'::jsonb) end,
     case when not v_blocked then null
          when v_same and v_prev.blocked then v_prev.blocked_since
@@ -371,10 +494,20 @@ begin
     gate_cleared_at = excluded.gate_cleared_at,
     room_opened_at  = excluded.room_opened_at;
 
-  if (v_became or v_remind) and v_l.commissioner_id is not null and v_l.commissioner_id not like 'bot-%' then
+  -- A league that flaps (prices drifting across the budget line, a join/leave
+  -- loop) warns at most once an hour; the reminder is once per episode anyway.
+  if v_became and exists (select 1 from public.league_notifications x
+                           where x.league_id = p_league_id and x.kind = 'draft_at_risk'
+                             and x.created_at > now() - interval '1 hour') then
+    v_became_notify := false;
+  else
+    v_became_notify := v_became;
+  end if;
+  if (v_became_notify or v_remind) and v_l.commissioner_id is not null and v_l.commissioner_id not like 'bot-%' then
     insert into public.league_notifications (league_id, user_id, kind)
-    values (p_league_id, v_l.commissioner_id, 'draft_at_risk');
-    v_notified := case when v_became then 'at_risk' else 'reminder' end;
+    values (p_league_id, v_l.commissioner_id,
+            case when v_became_notify then 'draft_at_risk' else 'draft_at_risk_reminder' end);
+    v_notified := case when v_became_notify then 'at_risk' else 'reminder' end;
   end if;
 
   return jsonb_build_object('status', 'recorded', 'blocked', v_blocked, 'notified', v_notified,
@@ -399,7 +532,8 @@ create or replace function public.postpone_league_draft(
   p_draft_date timestamptz,
   p_stage      text,
   p_reason     text,
-  p_blockers   jsonb
+  p_blockers   jsonb,
+  p_expect     jsonb
 )
 returns jsonb
 language plpgsql
@@ -425,6 +559,13 @@ begin
   if p_stage not in ('room_open', 'start') then
     return jsonb_build_object('status', 'refused', 'reason', 'bad_stage');
   end if;
+  -- CAS (supabase review #5): a join or fix landing during the caller's
+  -- evaluation must not postpone a league that is no longer blocked. NULL =
+  -- the caller could not read the slots (its blocker came from the rest).
+  -- (A JSON null from PostgREST may arrive as jsonb 'null', not SQL NULL: only an object is an expectation.)
+  if jsonb_typeof(p_expect) = 'object' and public._draft_start_inputs(p_league_id) is distinct from p_expect then
+    return jsonb_build_object('status', 'changed');
+  end if;
 
   insert into public.draft_postponements (league_id, postponed_from, stage, reason, blockers)
   values (p_league_id, v_l.draft_date, p_stage, coalesce(p_reason, 'blocked'), coalesce(p_blockers, '[]'::jsonb));
@@ -432,18 +573,25 @@ begin
   update public.leagues set draft_date = null where id = p_league_id;
   delete from public.draft_start_watch where league_id = p_league_id;
 
+  -- Flood guard (security review M1): set a time 55 min out on a blocked
+  -- league, get postponed at the next tick, repeat. Each postponement is real,
+  -- but members hear about it at most once an hour per league (the lobby
+  -- always shows the current state).
   insert into public.league_notifications (league_id, user_id, kind)
   select p_league_id, m.user_id, 'draft_postponed'
     from public.league_members m
-   where m.league_id = p_league_id and m.user_id not like 'bot-%';
+   where m.league_id = p_league_id and m.user_id not like 'bot-%'
+     and not exists (select 1 from public.league_notifications x
+                      where x.league_id = p_league_id and x.user_id = m.user_id
+                        and x.kind = 'draft_postponed' and x.created_at > now() - interval '1 hour');
 
   return jsonb_build_object('status', 'postponed');
 end;
 $$;
 
-revoke all on function public.postpone_league_draft(uuid, timestamptz, text, text, jsonb) from public;
-revoke all on function public.postpone_league_draft(uuid, timestamptz, text, text, jsonb) from anon, authenticated;
-grant execute on function public.postpone_league_draft(uuid, timestamptz, text, text, jsonb) to service_role;
+revoke all on function public.postpone_league_draft(uuid, timestamptz, text, text, jsonb, jsonb) from public;
+revoke all on function public.postpone_league_draft(uuid, timestamptz, text, text, jsonb, jsonb) from anon, authenticated;
+grant execute on function public.postpone_league_draft(uuid, timestamptz, text, text, jsonb, jsonb) to service_role;
 
 -- ---------------------------------------------------------------------------
 -- 8. due_draft_starts — leagues at or past their draft time
@@ -583,6 +731,9 @@ declare
   v_state text;
   n       integer := 0;
 begin
+  -- One run at a time (overlapping cron posts): the late-joiner insert below has
+  -- no unique key to lean on.
+  perform pg_advisory_xact_lock(hashtextextended('open_due_draft_rooms', 0));
   for r in
     select l.id, l.draft_date
       from public.leagues l
@@ -592,7 +743,7 @@ begin
        and w.gate_cleared_at is not null
        and w.room_opened_at is null
        and not exists (select 1 from public.draft_postponements x where x.league_id = l.id)
-     order by l.draft_date
+     order by l.draft_date, l.id
      limit 100
   loop
     perform public._draft_order_sync(r.id, true);   -- takes the league row lock
@@ -607,6 +758,12 @@ begin
          where o.league_id = r.id and o.user_id not like 'bot-%';
         n := n + 1;
       end if;
+    else
+      -- Cleared, but the order could not be set (a leave in the last seconds
+      -- before T-1h, #126's reconfirm): hand it back to the gate, which judges
+      -- it again and postpones it now, with its real reason, not at T.
+      update public.draft_start_watch set gate_cleared_at = null
+       where league_id = r.id and draft_date = r.draft_date and room_opened_at is null;
     end if;
   end loop;
 
@@ -630,8 +787,11 @@ revoke all on function public.open_due_draft_rooms() from public;
 revoke all on function public.open_due_draft_rooms() from anon, authenticated;
 grant execute on function public.open_due_draft_rooms() to service_role;
 
--- The notify cron's extra post guard (alongside #67's draft_order_notify_due):
--- a room due to open, or a late joiner owed a notice.
+-- The notify cron's post guard (20261109000003): a room due to open, a late
+-- joiner owed a notice, or a pending (or stale 'sending') push of a kind
+-- draft-order-notify DELIVERS. Deliberately not #126's draft_order_notify_due():
+-- that one is true for ANY pending kind but member_left (e.g. #94's renewal_*,
+-- which another function delivers), so it could post every minute forever.
 create or replace function public.draft_room_notices_due()
 returns boolean
 language sql
@@ -658,7 +818,13 @@ as $$
               and o.user_id not like 'bot-%'
               and not exists (select 1 from public.league_notifications x
                                where x.league_id = o.league_id and x.user_id = o.user_id
-                                 and x.kind = 'draft_room_open' and x.created_at >= w.room_opened_at));
+                                 and x.kind = 'draft_room_open' and x.created_at >= w.room_opened_at))
+      or exists (
+           select 1 from public.league_notifications n
+            where n.kind in ('draft_room_open', 'draft_started', 'draft_at_risk', 'draft_at_risk_reminder',
+                             'draft_postponed', 'draft_time_set')   -- = plan.ts DELIVERED_KINDS
+              and (n.push_status = 'pending'
+                   or (n.push_status = 'sending' and n.push_attempted_at < now() - interval '10 minutes')));
 $$;
 
 revoke all on function public.draft_room_notices_due() from public;
@@ -693,6 +859,12 @@ as $$
     'commissioner_name', public.participant_display_name(l.commissioner_id),
     'position',          (select o.position from public.league_draft_order o
                            where o.league_id = n.league_id and o.user_id = n.user_id),
+    -- 'draft_time_set': has this member been told a draft time for this league
+    -- before? ("The draft is now ..." vs the first-set "The draft is set for ...")
+    'told_time_before',  exists (select 1 from public.league_notifications x
+                                  where x.league_id = n.league_id and x.user_id = n.user_id
+                                    and x.kind = 'draft_time_set' and x.id <> n.id
+                                    and x.push_status in ('sent', 'no_device', 'failed')),
     'watch',             (select jsonb_build_object('draft_date', w.draft_date, 'blocked', w.blocked,
                                                     'blockers', w.blockers, 'room_opened_at', w.room_opened_at)
                             from public.draft_start_watch w where w.league_id = n.league_id),

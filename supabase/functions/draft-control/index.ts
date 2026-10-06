@@ -223,9 +223,13 @@ Deno.serve(async (req: Request) => {
         // Feasibility detail (hall counts, reserve vs budget) is for the
         // commissioner, who can act on it; members get the code only, the same
         // verdict-not-detail policy as check_setup.
-        ...evaluated.map((b) =>
-          !commissioner && (b.code === 'slots_infeasible' || b.code === 'budget_infeasible') ? { code: b.code } : b
-        ),
+        ...evaluated.map((b) => {
+          if (commissioner) return b;
+          if (b.code === 'slots_infeasible' || b.code === 'budget_infeasible') return { code: b.code };
+          // Members see who left by name only, never their user ids (security review L1).
+          if (b.code === 'roster_reconfirm_required') return { ...b, departed: b.departed.map((d) => ({ name: d.name })) };
+          return b;
+        }),
         // So an old client's Start button stays disabled until it could start
         // (1.1.0 enables it on can_start): before the time, and when postponed.
         ...(state.draftDate && new Date(state.draftDate).getTime() > now.getTime()

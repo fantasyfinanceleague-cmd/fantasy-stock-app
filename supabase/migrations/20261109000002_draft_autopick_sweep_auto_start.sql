@@ -22,8 +22,11 @@
 -- predicate, VERBATIM, stall throttle included) OR a draft at/past its time
 -- (public.due_draft_starts(), not postponed) OR a league to watch/gate
 -- (public.draft_watch_due(): a changed or stale verdict, a reminder due, or the
--- gate window). All are one-time filters over a SELECT with no FROM, so an idle
--- tick still makes no edge call. draft_watch_due only lists a league whose
+-- gate window) — the latter two wrapped in public.draft_auto_start_work_due(),
+-- which returns false on any runtime error, so a fault in the new lists can
+-- never take down the overdue (auto-pick) half of this statement. All are
+-- one-time filters over a SELECT with no FROM, so an idle tick still makes no
+-- edge call. draft_watch_due only lists a league whose
 -- inputs changed, whose verdict is older than 5 min inside 24 h, or that is in
 -- its gate window, so a quiet scheduled league costs nothing between changes.
 --
@@ -58,14 +61,13 @@ select cron.schedule(
           and s.last_seen_at > now() - interval '60 seconds'
      )
   )
-     or exists (select 1 from public.due_draft_starts())
-     or exists (select 1 from public.draft_watch_due());
+     or public.draft_auto_start_work_due();
   $$
 );
 
 -- Effect-verify AFTER push (HUMAN ACTION):
 --   SELECT jobname, schedule, command FROM cron.job WHERE jobname = 'draft_autopick_sweep';
---   -- command contains overdue_draft_turns(), due_draft_starts() and draft_watch_due()
+--   -- command contains overdue_draft_turns() and draft_auto_start_work_due()
 -- Then the live checks in docs/migrations/DRAFT_AUTO_START_PLAN.md (BUILD v2):
 -- a clear test league opens its room at T-1h and starts at T; a blocked one is
 -- postponed at the gate. Verify by DATA (leagues.draft_status / draft_started_at,

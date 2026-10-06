@@ -9,7 +9,8 @@
 //   2. finalize_due_draft_orders() — #67's on-time finalize for everything
 //      else. Its 'draft_order_set' rows are in-app records now (push marked
 //      skipped at insert), so this sends nothing by itself.
-//   3. Deliver pending rows of DELIVERED_KINDS: claim (conditional UPDATE on
+//   3. Deliver pending rows of DELIVERED_KINDS ('draft_time_set' only after 2
+//      quiet minutes, so a burst of edits is one push): claim (conditional UPDATE on
 //      the observed status + attempt count, so an overlapping run cannot
 //      double-send), read the CURRENT context (draft_notice_context: position,
 //      names, state), decide (plan.ts decideNotice: a notice whose event no
@@ -35,6 +36,8 @@ import {
   decideNotice,
   DELIVERED_KINDS,
   type DeliveryOutcome,
+  fairOrder,
+  isDebouncing,
   MAX_PUSHES_PER_RUN,
   nextPushStatus,
   type NoticeContext,
@@ -48,6 +51,8 @@ interface NoticeRow {
   id: string;
   league_id: string;
   user_id: string;
+  kind: string;
+  created_at: string;
   push_status: string;
   push_attempts: number;
 }
@@ -72,11 +77,11 @@ Deno.serve(async (req: Request) => {
   const staleIso = new Date(Date.now() - STALE_SENDING_MS).toISOString();
   const { data: rows, error: selErr } = await admin
     .from('league_notifications')
-    .select('id, league_id, user_id, push_status, push_attempts')
+    .select('id, league_id, user_id, kind, created_at, push_status, push_attempts')
     .in('kind', [...DELIVERED_KINDS])
     .or(`push_status.eq.pending,and(push_status.eq.sending,push_attempted_at.lt.${staleIso})`)
     .order('created_at', { ascending: true })
-    .limit(MAX_PUSHES_PER_RUN);
+    .limit(MAX_PUSHES_PER_RUN * 4); // oldest first, then shared fairly across leagues (fairOrder)
   if (selErr) {
     console.error('notice select failed', JSON.stringify(selErr));
     return json({ ok: false, reason: 'notice_query_failed', opened: opened ?? null, finalized: finalized ?? null }, 500);
@@ -100,7 +105,10 @@ Deno.serve(async (req: Request) => {
     return res.sent ? 'sent' : res.reason;
   }
 
-  for (const row of (rows ?? []) as NoticeRow[]) {
+  // A draft-time change waits for 2 quiet minutes (plan.ts TIME_SET_QUIET_MS):
+  // left pending and unclaimed, so a further change can still re-stamp it.
+  const now = new Date();
+  for (const row of fairOrder(((rows ?? []) as NoticeRow[]).filter((r) => !(r.push_status === 'pending' && isDebouncing(r.kind, r.created_at, now))), MAX_PUSHES_PER_RUN)) {
     const attempts = Number(row.push_attempts) + 1;
     // CLAIM: only if nobody moved the row since we read it.
     const { data: claimed, error: claimErr } = await admin

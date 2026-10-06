@@ -31,18 +31,16 @@ async function schedulers(job = 'draft_autopick_sweep'): Promise<string[]> {
   return hits.sort();
 }
 
-Deno.test('the LATEST draft_autopick_sweep schedule guards on overdue turns, due starts AND the watch', async () => {
+Deno.test('the LATEST draft_autopick_sweep schedule guards on overdue turns OR the (isolated) auto-start work', async () => {
   const files = await schedulers();
   assert(files.length > 0, 'no migration schedules draft_autopick_sweep');
   const latest = files[files.length - 1];
   const sql = sqlOf(await Deno.readTextFile(new URL(latest, MIGRATIONS)));
   assert(/where exists\s*\(\s*select 1\s+from public\.overdue_draft_turns\(\)/.test(sql),
     `${latest}: lost the overdue_draft_turns() guard (live drafts would stop auto-picking)`);
-  assert(/or exists \(select 1 from public\.due_draft_starts\(\)\)/.test(sql),
-    `${latest}: lost the due_draft_starts() guard (drafts would stop auto-starting). ` +
+  assert(/\)\s*\n\s*or public\.draft_auto_start_work_due\(\);/.test(sql),
+    `${latest}: lost the draft_auto_start_work_due() guard (no watch, no gate, no start: every draft would stall). ` +
       `Is an overdue-only schedule stamped after 20261109000002?`);
-  assert(/or exists \(select 1 from public\.draft_watch_due\(\)\)/.test(sql),
-    `${latest}: lost the draft_watch_due() guard (no early warning, no room-open gate: every draft would be postponed)`);
   // The stall throttle from 20261106000000 is kept verbatim.
   assert(/s\.reason\s*<>\s*'vendor_outage'/.test(sql) && /last_seen_at\s*>\s*now\(\)\s*-\s*interval\s*'60 seconds'/.test(sql),
     `${latest}: the draft_stalls throttle is missing`);
@@ -74,8 +72,10 @@ Deno.test('draft_order_notify is PROMOTED: scheduled once in migrations/, gone f
   assertEquals(files, ['20261109000003_schedule_draft_order_notify.sql']);
   const sql = sqlOf(await Deno.readTextFile(new URL(files[0], MIGRATIONS)));
   assert(/cron\.schedule\(\s*'draft_order_notify'\s*,\s*'\* \* \* \* \*'/.test(sql), 'wrong job name or cadence');
-  assert(/where public\.draft_order_notify_due\(\) or public\.draft_room_notices_due\(\);/.test(sql),
-    'the post must be guarded by draft_order_notify_due() OR draft_room_notices_due() (rooms would never open)');
+  assert(/where public\.draft_room_notices_due\(\);/.test(sql),
+    'the post must be guarded by draft_room_notices_due() (rooms would never open)');
+  assertFalse(/draft_order_notify_due\(\)/.test(sql),
+    "not #126's draft_order_notify_due(): true for ANY pending kind, it could post every minute forever");
   assert(/timeout_milliseconds\s*:=\s*180000\b/.test(sql), '180000 ms (the 20261108000000 rule)');
   assert(sql.includes("vault.decrypted_secrets where name = 'cron_apikey'"), 'the apikey must come from the vault');
   assertFalse(/eyJ[A-Za-z0-9_-]{20,}|sb_secret_|sb_publishable_/.test(sql), 'a key-shaped literal is in the cron command');

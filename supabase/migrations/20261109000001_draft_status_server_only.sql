@@ -138,7 +138,7 @@ end;
 $$;
 
 revoke all on function public.enforce_leagues_insert_not_started() from public;
-revoke all on function public.enforce_leagues_insert_not_started() from anon, authenticated;
+revoke all on function public.enforce_leagues_insert_not_started() from anon, authenticated, service_role;
 
 drop trigger if exists trg_leagues_insert_not_started on public.leagues;
 create trigger trg_leagues_insert_not_started
@@ -203,40 +203,62 @@ end;
 $$;
 
 revoke all on function public.enforce_leagues_draft_time() from public;
-revoke all on function public.enforce_leagues_draft_time() from anon, authenticated;
+revoke all on function public.enforce_leagues_draft_time() from anon, authenticated, service_role;
 
 drop trigger if exists trg_leagues_draft_time on public.leagues;
 create trigger trg_leagues_draft_time
   before insert or update of draft_date on public.leagues
   for each row execute function public.enforce_leagues_draft_time();
 
--- A NEW draft time ends a postponement (every role: the commissioner's edit,
--- or an operator's from the SQL editor). AFTER, so a refused edit never gets
--- here. The stale watch row for the old time goes too (it is keyed by date
--- anyway).
-create or replace function public.clear_draft_postponement_on_reschedule()
+-- A NEW draft time (every role: the commissioner's edit, #94's renewal RPC, or
+-- an operator's from the SQL editor), while the draft is ahead:
+--   * ends a postponement, and drops the stale watch row for the old time;
+--   * tells every human member (Giorgio, 2026-10-06: "Anytime a draft time is
+--     changed, everyone receives a notification to know exactly when it's
+--     happening"), except the person who made the change (auth.uid(), when a
+--     user session did). DEBOUNCED: one pending row per member, re-stamped on
+--     every change (league_notifications_draft_time_set_pending_uidx), sent
+--     after 2 quiet minutes with the then-current time (draft-order-notify).
+-- Clearing the time (TBD, or a postponement clearing it) notifies nobody here:
+-- a postponement has its own push. AFTER, so a refused edit never gets here.
+create or replace function public.after_leagues_draft_date_change()
 returns trigger
 language plpgsql
 security definer
 set search_path = public, pg_temp
 as $$
+declare
+  v_actor text := auth.uid()::text;
 begin
   if new.draft_status = 'not_started' and new.draft_date is not null
      and new.draft_date is distinct from old.draft_date then
     delete from public.draft_postponements where league_id = new.id;
     delete from public.draft_start_watch where league_id = new.id and draft_date <> new.draft_date;
+
+    insert into public.league_notifications (league_id, user_id, kind)
+    select new.id, m.user_id, 'draft_time_set'
+      from public.league_members m
+     where m.league_id = new.id
+       and m.user_id not like 'bot-%'
+       and m.user_id is distinct from v_actor
+    on conflict (league_id, user_id) where kind = 'draft_time_set' and push_status = 'pending'
+    do update set created_at = now();
+  elsif new.draft_status = 'not_started' and new.draft_date is null and old.draft_date is not null then
+    -- Back to TBD: the old time's verdict and milestones must not be reused if
+    -- the same time is picked again later.
+    delete from public.draft_start_watch where league_id = new.id;
   end if;
   return null;
 end;
 $$;
 
-revoke all on function public.clear_draft_postponement_on_reschedule() from public;
-revoke all on function public.clear_draft_postponement_on_reschedule() from anon, authenticated, service_role;
+revoke all on function public.after_leagues_draft_date_change() from public;
+revoke all on function public.after_leagues_draft_date_change() from anon, authenticated, service_role;
 
 drop trigger if exists trg_leagues_draft_rescheduled on public.leagues;
 create trigger trg_leagues_draft_rescheduled
   after update of draft_date on public.leagues
-  for each row execute function public.clear_draft_postponement_on_reschedule();
+  for each row execute function public.after_leagues_draft_date_change();
 
 -- POST-PUSH CHECKS (HUMAN ACTION; the effect block is
 -- docs/security/draft-auto-start-effect-test.sql):

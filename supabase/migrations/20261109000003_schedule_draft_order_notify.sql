@@ -14,12 +14,15 @@
 --   3. Deliver pending draft_room_open / draft_started / draft_at_risk /
 --      draft_postponed pushes (built at send time from draft_notice_context).
 --
--- THE GUARD posts ONLY WHERE draft_order_notify_due() (#126's version: a due
--- unfinalized league, or a pending push) OR draft_room_notices_due() (a room to
--- open, or a late joiner owed a notice). A SELECT with no FROM and a WHERE is a
--- one-time filter, so an idle tick makes no edge call. Both functions run as
--- the job owner (postgres); clients may not call them (service_role-only
--- grants).
+-- THE GUARD posts ONLY WHERE draft_room_notices_due() (20261109000000): a room
+-- to open, a late joiner owed a notice, or a pending push of a kind this
+-- function delivers. NOT #126's draft_order_notify_due(): that is true for ANY
+-- pending kind but member_left (e.g. #94's renewal_*, delivered elsewhere), so it
+-- could post every minute forever; and its other half (a due unfinalized
+-- league) no longer needs this job, since every scheduled league is gated and
+-- opened by open_due_draft_rooms. A SELECT with no FROM and a WHERE is a
+-- one-time filter, so an idle tick makes no edge call. It runs as the job owner
+-- (postgres); clients may not call it (service_role-only grant).
 --
 -- Key from vault.decrypted_secrets ('cron_apikey'), never a literal
 -- (CLAUDE.md architecture-map rule; gen-architecture refuses key-shaped text).
@@ -49,13 +52,13 @@ select cron.schedule(
     body    := '{}'::jsonb,
     timeout_milliseconds := 180000
   )
-  where public.draft_order_notify_due() or public.draft_room_notices_due();
+  where public.draft_room_notices_due();
   $$
 );
 
 -- Effect-verify AFTER push (HUMAN ACTION):
 --   SELECT jobname, schedule, command FROM cron.job WHERE jobname = 'draft_order_notify';
---   SELECT public.draft_order_notify_due(), public.draft_room_notices_due();   -- both return, no error
+--   SELECT public.draft_room_notices_due();   -- returns, no error
 -- Then the live test in DRAFT_AUTO_START_PLAN.md: at T-1h the test league has
 -- draft_start_watch.room_opened_at set, one 'draft_room_open' row per human, and
 -- every push_status settled (sent / no_device), never left pending.

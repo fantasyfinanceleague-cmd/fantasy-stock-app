@@ -701,7 +701,12 @@ postponement that keeps the date; `draft_order_set` pushes not skipped; no
 room-open lock on the time; no quarter-hour rule; rooms ignoring the gate; no
 legacy backfill; the sweep without the watch guard; server-only off; the
 reschedule trigger keeping the postponement; the gate catching every 22023;
-postponement notices to bots.
+postponement notices to bots. Round 2 (after both reviews): finalize ignoring the
+gate; finalize ignoring a postponement; no gate hand-back; postpone without CAS;
+no at-risk flap guard; no postponed-push cooldown; the cron guard not isolated;
+the legacy date kept; the watch without urgency ordering; time-set without the
+debounce re-stamp, telling the actor, telling bots; the reminder sharing the
+at-risk kind.
 
 Run: `deno test --allow-read --allow-env supabase/tests/draft_auto_start.pglite.test.ts`.
 
