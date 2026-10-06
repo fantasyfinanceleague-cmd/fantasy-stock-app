@@ -1,0 +1,87 @@
+{
+  "_comment": "Live cron.job rows captured from prod 2026-10-06 04:24Z (db-snapshot at 106bdca), i.e. BEFORE 20261108000000 was applied. Frozen baseline for cron_timeouts.pglite.test.ts: do NOT refresh it from later snapshots.",
+  "capturedAt": "2026-10-06T04:24:08Z",
+  "cronJobs": [
+    {
+      "jobid": 25,
+      "active": true,
+      "command": "\n  select net.http_post(\n    url     := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/enrich-symbols',\n    headers := jsonb_build_object(\n      'Content-Type', 'application/json',\n      'apikey', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_apikey' limit 1)\n    ),\n    body    := '{}'::jsonb\n  );\n  ",
+      "jobname": "enrich_symbols_10min",
+      "database": "postgres",
+      "schedule": "*/10 * * * *",
+      "username": "postgres"
+    },
+    {
+      "jobid": 19,
+      "active": true,
+      "command": "\n  SELECT net.http_post(\n    url := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/process-week-results',\n    headers := jsonb_build_object(\n      'Content-Type', 'application/json',\n      'apikey', (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'cron_apikey' LIMIT 1)\n    ),\n    body := '{}'::jsonb\n  );\n  ",
+      "jobname": "process-weekly-matchups",
+      "database": "postgres",
+      "schedule": "15 21 * * 5",
+      "username": "postgres"
+    },
+    {
+      "jobid": 27,
+      "active": true,
+      "command": "\n  select net.http_post(\n    url     := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/process-week-results',\n    headers := jsonb_build_object(\n      'Content-Type', 'application/json',\n      'apikey', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_apikey' limit 1)\n    ),\n    body    := '{}'::jsonb,\n    timeout_milliseconds := 60000\n  );\n  ",
+      "jobname": "process-weekly-matchups-heal-2200z",
+      "database": "postgres",
+      "schedule": "0 22 * * 5",
+      "username": "postgres"
+    },
+    {
+      "jobid": 28,
+      "active": true,
+      "command": "\n  select net.http_post(\n    url     := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/process-week-results',\n    headers := jsonb_build_object(\n      'Content-Type', 'application/json',\n      'apikey', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_apikey' limit 1)\n    ),\n    body    := '{}'::jsonb,\n    timeout_milliseconds := 60000\n  );\n  ",
+      "jobname": "process-weekly-matchups-heal-sat",
+      "database": "postgres",
+      "schedule": "0 15 * * 6",
+      "username": "postgres"
+    },
+    {
+      "jobid": 26,
+      "active": true,
+      "command": "\n  select net.http_post(\n    url     := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/refresh-market-calendar',\n    headers := jsonb_build_object(\n      'Content-Type', 'application/json',\n      'apikey', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_apikey' limit 1)\n    ),\n    body    := '{}'::jsonb,\n    timeout_milliseconds := 30000\n  );\n  ",
+      "jobname": "refresh_market_calendar_daily",
+      "database": "postgres",
+      "schedule": "20 10 * * *",
+      "username": "postgres"
+    },
+    {
+      "jobid": 24,
+      "active": true,
+      "command": "\n  select net.http_post(\n    url     := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/refresh-symbols',\n    headers := jsonb_build_object(\n      'Content-Type', 'application/json',\n      'apikey', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_apikey' limit 1)\n    ),\n    body    := '{}'::jsonb\n  );\n  ",
+      "jobname": "refresh_symbols_daily",
+      "database": "postgres",
+      "schedule": "0 */6 * * *",
+      "username": "postgres"
+    },
+    {
+      "jobid": 18,
+      "active": true,
+      "command": "\n  SELECT net.http_post(\n    url := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/snapshot-week-end',\n    headers := jsonb_build_object(\n      'Content-Type', 'application/json',\n      'apikey', (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'cron_apikey' LIMIT 1)\n    ),\n    body := '{}'::jsonb\n  );\n  ",
+      "jobname": "snapshot-week-end",
+      "database": "postgres",
+      "schedule": "5 21 * * 5",
+      "username": "postgres"
+    },
+    {
+      "jobid": 31,
+      "active": true,
+      "command": "\n  SELECT net.http_post(\n    url := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/snapshot-week-end',\n    headers := jsonb_build_object(\n      'Content-Type', 'application/json',\n      -- Attempt 3 = the function's MAX_RETRIES: an incomplete heal fails loudly\n      -- instead of scheduling 'snapshot-week-end-retry-2', which would replace a\n      -- pending Friday retry of the same name (pg_cron replaces by name).\n      'X-Retry-Attempt', '3',\n      'apikey', (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'cron_apikey' LIMIT 1)\n    ),\n    body := '{}'::jsonb,\n    -- pg_net's 5 s default is shorter than a run; the outcome is read from the data\n    -- the job writes, not from net._http_response (CLAUDE.md success-signal #8).\n    timeout_milliseconds := 60000\n  );\n  ",
+      "jobname": "snapshot-week-end-heal",
+      "database": "postgres",
+      "schedule": "30 15 * * 1,2",
+      "username": "postgres"
+    },
+    {
+      "jobid": 20,
+      "active": true,
+      "command": "\n  SELECT net.http_post(\n    url := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/snapshot-week-start',\n    headers := jsonb_build_object(\n      'Content-Type', 'application/json',\n      'apikey', (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'cron_apikey' LIMIT 1)\n    ),\n    body := '{}'::jsonb\n  );\n  ",
+      "jobname": "snapshot-week-start",
+      "database": "postgres",
+      "schedule": "35 14 * * 1,2",
+      "username": "postgres"
+    }
+  ]
+}
