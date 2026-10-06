@@ -53,3 +53,38 @@ Deno.test('a stock with no Friday close is a mismatch too (its gain cannot be kn
   assertEquals(r.ok, false);
   assertEquals(r.rows, null);
 });
+
+// The server's calculateUserScore counts a mid-week SELL of a Monday lot at
+// sale minus Monday open, and a mid-week BUY still held at the close at close
+// minus purchase. With trades, the same accounting must reconcile to the cent.
+Deno.test('mid-week buy AND sell: the rows reconcile to the recorded gain, exactly as the server scores it', () => {
+  const trades = [
+    { symbol: 'NVDA', action: 'sell' as const, quantity: 4, price: 110, createdAt: new Date('2026-09-29T15:00:00Z') },
+    { symbol: 'AAPL', action: 'buy' as const, quantity: 5, price: 200, createdAt: new Date('2026-09-30T15:00:00Z') },
+  ];
+  const r = finalLineup({
+    snapshots: [
+      // Monday lot held all week (qty 10 at Monday open 100, closed at 112).
+      { symbol: 'NVDA', quantity: 10, week_start_price: 100, week_end_price: 112, entered_mid_week: false },
+      // Bought mid-week, still held at the close (purchase 200, closed at 190).
+      { symbol: 'AAPL', quantity: 5, week_start_price: 200, week_end_price: 190, entered_mid_week: true },
+    ],
+    trades,
+    // NVDA: sold 4 at 110 (+40) and held 6 to 112 (+72); AAPL: 5 * (190 - 200) = -50. Total 62.
+    teamGain: 62,
+  });
+  assert(r.ok);
+  assertEquals(r.rows!.reduce((s, x) => s + x.cents, 0), 6200);
+});
+
+Deno.test('the same week with the trades missing does NOT reconcile, so the lineup is withheld', () => {
+  const r = finalLineup({
+    snapshots: [
+      { symbol: 'NVDA', quantity: 10, week_start_price: 100, week_end_price: 112, entered_mid_week: false },
+      { symbol: 'AAPL', quantity: 5, week_start_price: 200, week_end_price: 190, entered_mid_week: true },
+    ],
+    trades: [],
+    teamGain: 62,
+  });
+  assertEquals(r.ok, false);
+});

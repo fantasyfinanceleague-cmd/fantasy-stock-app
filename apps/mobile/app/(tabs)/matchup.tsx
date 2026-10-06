@@ -57,8 +57,8 @@ export default function MatchupScreen() {
   const { user } = useAuth();
   // The final lineup: the posted week's own per-stock rows, shown only when they reconcile.
   const fv = m.derived;
-  const finalSides = fv && fv.view.kind === 'final' && fv.final && fv.live.opp && user
-    ? { mine: user.id, theirs: fv.live.opp.userId, myGain: fv.final.me, theirGain: fv.final.opp }
+  const finalSides = fv && fv.view.kind === 'final' && fv.final && fv.live.opp && user && fv.weekStart && fv.weekEnd
+    ? { mine: user.id, theirs: fv.live.opp.userId, myGain: fv.final.me, theirGain: fv.final.opp, windowStart: fv.weekStart, windowEnd: fv.weekEnd }
     : null;
   const finalLines = useFinalLineups(activeLeagueId, fv?.week ?? null, finalSides, finalSides !== null);
 

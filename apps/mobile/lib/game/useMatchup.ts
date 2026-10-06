@@ -28,6 +28,7 @@ export interface MatchupDerived {
   final: { me: number; opp: number } | null;
   /** The matchup week's real trading days (for the race and the "Ends" line). */
   days: MatchupDay[];
+  weekStart: string | null;
   weekEnd: string | null;
   week: number;
 }
@@ -56,6 +57,7 @@ export function useMatchup(leagueId: string | null) {
       live,
       final: finalGains(raw.data, user.id),
       days,
+      weekStart: row?.week_start ?? null,
       weekEnd: row?.week_end ?? null,
       week: cw.week_number,
     };
