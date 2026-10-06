@@ -8,7 +8,7 @@
  * Portfolio and League entry points land with their screens.
  */
 import React, { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { Text } from '@/components/sp/Text';
 import { formatMoney, formatPercent } from '@/components/sp/logic/money';
@@ -30,7 +30,7 @@ function useNow(intervalMs: number): Date {
   return now;
 }
 
-export function StockSheetBody({ symbol }: { symbol: string }) {
+export function StockSheetBody({ symbol, onDone }: { symbol: string; onDone: () => void }) {
   const data = useStockSheetData(symbol);
   const { market } = useLeagueContext();
   const now = useNow(1000);
@@ -62,12 +62,25 @@ export function StockSheetBody({ symbol }: { symbol: string }) {
 
   return (
     <View accessibilityRole="summary" style={{ gap: 12 }}>
-      <Text variant="headline">{symbol}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <Text variant="headline" style={{ flex: 1 }}>{symbol}</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Done"
+          onPress={onDone}
+          hitSlop={8}
+          style={{ minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'flex-end' }}
+        >
+          <Text variant="callout" tone="primary">Done</Text>
+        </Pressable>
+      </View>
       <Text variant="caption" tone="secondary">{model.name || cleanCompanyName(data.companyName) || symbol}</Text>
 
-      <Text variant="title">
-        {data.price != null ? formatMoney(data.price) : COPY.noPrice}
-      </Text>
+      {data.price != null ? (
+        <Text variant="title">{formatMoney(data.price)}</Text>
+      ) : (
+        <Text variant="callout" tone="secondary">{COPY.noPrice}</Text>
+      )}
       {model.todayChange ? (
         <Text variant="callout">
           {`${formatMoney(model.todayChange.perShare, { sign: 'always' })} · ${formatPercent(model.todayChange.pct, { sign: 'always' })} `}
@@ -86,16 +99,19 @@ export function StockSheetBody({ symbol }: { symbol: string }) {
 
       <View accessibilityRole="tablist" style={{ flexDirection: 'row', gap: 8 }}>
         {(['buy', 'sell'] as const).map((k) => (
-          <Text
+          <Pressable
             key={k}
-            variant="callout"
-            tone={selected === k ? 'primary' : 'secondary'}
             accessibilityRole="tab"
             accessibilityState={{ selected: selected === k }}
+            accessibilityLabel={k === 'buy' ? 'Buy' : 'Sell'}
             onPress={() => setChoice(k)}
+            hitSlop={6}
+            style={{ minHeight: 44, minWidth: 64, justifyContent: 'center', alignItems: 'center' }}
           >
-            {k === 'buy' ? 'Buy' : 'Sell'}
-          </Text>
+            <Text variant="callout" tone={selected === k ? 'primary' : 'secondary'}>
+              {k === 'buy' ? 'Buy' : 'Sell'}
+            </Text>
+          </Pressable>
         ))}
       </View>
 

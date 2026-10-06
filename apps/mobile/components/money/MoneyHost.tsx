@@ -40,7 +40,7 @@ export function MoneyHostProvider({ children }: { children: ReactNode }) {
     <StockSheetContext.Provider value={value}>
       {children}
       <Sheet visible={current !== null} onClose={close}>
-        {current ? <StockSheetBody symbol={current.symbol} /> : null}
+        {current ? <StockSheetBody symbol={current.symbol} onDone={close} /> : null}
       </Sheet>
     </StockSheetContext.Provider>
   );
