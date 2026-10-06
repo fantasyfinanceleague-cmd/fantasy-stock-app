@@ -27,6 +27,8 @@ building anything, and don't reopen a rule without him.
   never "best return" or "biggest dollar gain", because capital varies by stake mode.
 - **1.2.0 TestFlight** ships only when EVERY screen is on the new UI, after Giorgio's
   full walkthrough. Phone only (`supportsTablet: false`); iPad is a later project.
+- **Bots and the manual draft Start are testing tools only** (2026-10-06): bots exist "simply to simulate drafts" and "will get removed"; they're "not going to be a feature in the actual app". A real league always has real players, so never design product behaviour, copy or decisions around bot-only or one-real-player leagues. The manual Start is likewise "simply for testing purposes"; auto-start is the real feature.
+- **No added caveats:** implement Giorgio's rules as stated. Don't add exceptions he didn't ask for.
 - **Product name:** "Stockpile" must go (a live trademark), with Stockade the front-runner,
   but naming is DEFERRED to pre-launch. Keep the bundle id, slug and scheme.
 
@@ -84,7 +86,9 @@ building anything, and don't reopen a rule without him.
 - **Draft time** (2026-10-06): only in 15-minute increments (:00 / :15 / :30 / :45), and at
   least one hour out. It can't change once the room opens, except when postponed.
 - **Draft-time changes** (2026-10-06): "Anytime a draft time is changed, everyone receives
-  a notification to know exactly when it's happening."
+  a notification to know exactly when it's happening." Everyone means every member,
+  including the person who made the change: "Everyone in the league gets the
+  notifications when draft times are changed."
 
 ## Trading
 
@@ -116,7 +120,7 @@ building anything, and don't reopen a rule without him.
 - **The commissioner** (2026-10-06): "A commissioner cannot leave, but a commissioner can
   transfer that title to someone else and then leave." "A commissioner can only hand over
   the title before or after a season." The season runs from when the draft room opens
-  (T−1h) to the season's end.
+  (T−1h) to the season's end. Transfer is a separate action from leaving.
 - **Run it back** (2026-10-04): a finished league can be renewed with the same group, as a
   new season.
   - Only the commissioner starts it.
