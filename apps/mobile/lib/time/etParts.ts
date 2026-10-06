@@ -9,7 +9,7 @@
  * unreliable by default" lesson, CLAUDE.md, in a new place: a wrong
  * default reads as a normal, confident answer, not a failure). This
  * module's two exports replace every `?? '0'`/`?? ''` formatToParts
- * fallback in lib/home/marketWeek.ts and buildHomeViewModel.ts with an
+ * fallback in lib/time/marketWeek.ts and buildHomeViewModel.ts with an
  * explicit null on any missing required part -- never a silently wrong
  * number fed into a phase decision.
  *

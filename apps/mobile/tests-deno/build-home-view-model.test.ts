@@ -13,7 +13,7 @@ import { buildHomeViewModel, type GetHomeLeagueResult, type HomeLeagueMeta } fro
 import { windowSeries } from '../lib/home/seasonGainSeries.ts';
 import { playoffRoundLabelForWeek } from '../lib/playoffs.ts';
 import { ROBERTO_WEEKS, FIXTURE_WEEK6_START, FIXTURE_WEEK6_END } from '../lib/home/homeFixtureData.ts';
-import { standardWeekSessions } from '../lib/home/marketWeek.ts';
+import { standardWeekSessions } from '../lib/time/marketWeek.ts';
 
 const ROBERTO = [
   { symbol: 'NVDA', draft: 290.1, mon: 300.2, prev: 306.68, thu: 318.37 },

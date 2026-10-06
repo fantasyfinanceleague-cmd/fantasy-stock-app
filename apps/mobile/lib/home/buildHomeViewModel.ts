@@ -20,7 +20,7 @@ import { buildSeasonGainSeries, type SeasonWeekInput, type SeasonGainSeriesResul
 import { todayChange, type TodayPosition } from './todayChange';
 import { teamValue, type StakeMode } from './teamValue';
 import { seasonGain } from './seasonGain';
-import { resolveWeekWindow, lastSessionCloseBefore, type MarketCalendarSession } from './marketWeek';
+import { resolveWeekWindow, lastSessionCloseBefore, type MarketCalendarSession } from '../time/marketWeek';
 import { etDateParts } from '../time/etParts';
 
 export interface HomeLedgerRow {

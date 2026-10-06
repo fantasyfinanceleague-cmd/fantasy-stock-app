@@ -1,5 +1,5 @@
 /**
- * Boundary tests for lib/home/marketWeek.ts — B1 (Design Lead, 2026-09-30):
+ * Boundary tests for lib/time/marketWeek.ts — B1 (Design Lead, 2026-09-30):
  * matchups.week_start/week_end are FIXED UTC year-round and week_start is a
  * nominal TUESDAY (_shared/schedule.ts), never the real Monday-open/Friday-
  * close a person sees. These tests pin the market-calendar-derived
@@ -13,7 +13,7 @@
  * Run: `cd apps/mobile/tests-deno && deno test .`
  */
 import { assertEquals } from 'jsr:@std/assert';
-import { etWallClockToUtcIso, resolveWeekWindow, standardWeekSessions, lastSessionCloseBefore, type MarketCalendarSession } from '../lib/home/marketWeek.ts';
+import { etWallClockToUtcIso, resolveWeekWindow, standardWeekSessions, lastSessionCloseBefore, type MarketCalendarSession } from '../lib/time/marketWeek.ts';
 
 Deno.test('etWallClockToUtcIso: 9:30 AM ET in EDT (summer) is 13:30Z', () => {
   assertEquals(etWallClockToUtcIso('2026-09-21', '09:30:00'), '2026-09-21T13:30:00.000Z');
