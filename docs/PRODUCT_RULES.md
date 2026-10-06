@@ -89,6 +89,13 @@ building anything, and don't reopen a rule without him.
   a notification to know exactly when it's happening." Everyone means every member,
   including the person who made the change: "Everyone in the league gets the
   notifications when draft times are changed."
+- **Setting the draft time** (2026-10-06, "B on both", the UX audit's "Your call" sections,
+  PR #140; relayed by the Orchestrator):
+  - The draft-time picker commits ONLY on a full-width "Set draft time" button. The × closes
+    without saving. Where a time is optional, "Set later" is a text button.
+  - On Home, when the commissioner has no draft time set, "Set draft time" is the primary
+    action and opens the picker in place ("Pick a time, and the countdown starts here."),
+    with "Build your queue" secondary.
 
 ## Trading
 

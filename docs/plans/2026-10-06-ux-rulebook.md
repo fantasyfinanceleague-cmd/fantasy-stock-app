@@ -1,6 +1,6 @@
 # UX rulebook and audit
 
-Status: Approved (Giorgio, 2026-10-06)
+Status: Building (W0 #137, W4 #138 merged; W2 audit PR #141: 4 P0 / 23 P1 / 10 P2 / 8 P3; W3 #140/#142; W6 in progress on 3c-2 and 3e)
 Planner session: "Planner" (Fable 5.1), 2026-10-06 · Orchestrator hand-off: see the commit that set this line's SHA in the `PLAN READY` message
 
 ## Goal
@@ -45,6 +45,7 @@ All 2026-10-06, in the Planner session.
 | 6 | Audit scope | Mobile only: Home, Matchup (live/final), League, Draft room, Portfolio, stock detail sheet, league pill sheet; plus the flows (sign up → create/join → draft date → room → draft → week 1 → Friday → season end → Run it back) and the two most-hit refusals (closed market, no slot fits). Light/Dark, XL text, Reduce Motion, stress fixture. Web out (paused; 3d not started; the rulebook applies to it from day one) | Planner chat, 2026-10-06 |
 | 7 | Timing vs 3c/3e | Two passes: pass 1 now on designs (merged Home on the simulator + the 3c/3e board specs); pass 2 at each branch's gate on the built screens | Planner chat, 2026-10-06 |
 | 8 | League size | 4 real managers minimum; bots are test-only | `PRODUCT_RULES.md`, 2026-10-06 |
+| 9 | (mid-build) How the draft-time picker commits, and Home's primary action with no draft time | "B on both": commit only on a full-width "Set draft time" (× = no save; "Set later" text button where optional); Home makes "Set draft time" primary, picker in place, "Build your queue" secondary | "Your call" board, PR #140, 2026-10-06 |
 
 Decisions the audit will *generate* (rules 3, 7, 10, 11 change what is on screen) go to
 Giorgio as "Your call" mockups on the key-screens board, and are recorded in
