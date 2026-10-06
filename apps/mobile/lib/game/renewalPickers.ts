@@ -18,3 +18,13 @@ export function isFutureDraftDate(iso: string | null, now: Date): boolean {
   const t = new Date(iso).getTime();
   return !Number.isNaN(t) && t > now.getTime();
 }
+
+/** The season's weeks, as create-league offers them: at least one round robin
+ * (managers − 1 weeks), and no fixed ceiling. Step by one. */
+export function seasonWeeksFloor(managers: number): number {
+  return Math.max(1, managers - 1);
+}
+
+export function stepSeasonWeeks(weeks: number, direction: 1 | -1, managers: number): number {
+  return Math.max(seasonWeeksFloor(managers), weeks + direction);
+}

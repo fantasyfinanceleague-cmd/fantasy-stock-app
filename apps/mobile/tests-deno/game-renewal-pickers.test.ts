@@ -22,3 +22,12 @@ Deno.test('a draft date must be in the future, and a missing or bad one is not',
   assertEquals(isFutureDraftDate('not-a-date', now), false);
   assertEquals(isFutureDraftDate(null, now), false);
 });
+
+import { seasonWeeksFloor, stepSeasonWeeks } from '../lib/game/renewalPickers.ts';
+
+Deno.test('the season\'s weeks match create-league: at least one round robin (managers − 1), no fixed ceiling', () => {
+  assertEquals(seasonWeeksFloor(6), 5);
+  assertEquals(stepSeasonWeeks(14, 1, 6), 15);
+  assertEquals(stepSeasonWeeks(5, -1, 6), 5); // cannot go below the round robin
+  assertEquals(stepSeasonWeeks(14, -1, 6), 13);
+});
