@@ -2,54 +2,34 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "87b4c405203349fcfc2f4ed5d3061a03bb63e04b",
-    "commitShort": "87b4c40",
+    "commit": "e397fedcf6ae1ec19018a45bf481c25509d81740",
+    "commitShort": "e397fed",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "scripts/gen-architecture.mjs"
+        "path": "apps/mobile/app/_layout.tsx"
       },
       {
         "code": "M",
-        "path": "supabase/functions/_shared/job-status-io.test.ts"
+        "path": "apps/mobile/app/join-league.tsx"
       },
       {
         "code": "M",
-        "path": "supabase/functions/_shared/job-status-io.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/process-week-results/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/refresh-market-calendar/run.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/snapshot-week-end/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/snapshot-week-start/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/migrations/20261108000000_cron_explicit_timeouts.sql"
+        "path": "apps/mobile/tests-deno/release-routes.test.ts"
       }
     ],
-    "timestamp": "2026-10-06T18:54:02Z",
-    "sourceHash": "sha256:5e7113f8b4984491299d2f8f7713c315a3a6c32d71e8112e1c6fc8d8d6a7ae51",
+    "timestamp": "2026-10-06T19:10:11Z",
+    "sourceHash": "sha256:6be430a9268aa422044719f025b07b9f6c2d0bbc2f013d03cfd3f80b8777650d",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-06T04:24:08Z",
-    "ageHours": 14.5,
+    "ageHours": 14.8,
     "ageDays": 0.6,
     "staleAfterDays": 14,
     "stale": false,
@@ -677,17 +657,19 @@
         "verifyJwtSource": "supabase/config.toml:61",
         "authGuard": null,
         "localModules": [
-          "reason.ts"
+          "reason.ts",
+          "shape.ts"
         ],
         "tests": [
-          "reason.test.ts"
+          "reason.test.ts",
+          "shape.test.ts"
         ],
         "envVars": [
           "SB_PUBLISHABLE_KEY",
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 143
+        "lines": 127
       },
       "db": null,
       "declared": null,
@@ -700,7 +682,7 @@
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/preview-league/index.ts",
-        "line": 44
+        "line": 45
       }
     },
     {
@@ -1206,6 +1188,25 @@
       "kind": "edge-module",
       "source": {
         "path": "supabase/functions/preview-league/reason.ts",
+        "line": 1
+      }
+    },
+    {
+      "layer": "module",
+      "facts": {
+        "hasTests": true
+      },
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "mod.preview-league/shape",
+      "label": "shape.ts",
+      "sublabel": "preview-league",
+      "kind": "edge-module",
+      "source": {
+        "path": "supabase/functions/preview-league/shape.ts",
         "line": 1
       }
     },
@@ -7196,14 +7197,26 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.fn.preview-league->mod.preview-league/shape",
+      "from": "fn.preview-league",
+      "to": "mod.preview-league/shape",
+      "protocol": "esm-import",
+      "payload": "import from './shape.ts'",
+      "callSites": [
+        "supabase/functions/preview-league/index.ts"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.fn.preview-league->pg.check_and_bump_rate_limit",
       "from": "fn.preview-league",
       "to": "pg.check_and_bump_rate_limit",
       "protocol": "postgrest-rpc",
       "payload": "rpc('check_and_bump_rate_limit')",
       "callSites": [
-        "supabase/functions/preview-league/index.ts:32",
-        "supabase/functions/preview-league/index.ts:35"
+        "supabase/functions/preview-league/index.ts:33",
+        "supabase/functions/preview-league/index.ts:36"
       ]
     },
     {
@@ -7218,7 +7231,7 @@
         "*"
       ],
       "callSites": [
-        "supabase/functions/preview-league/index.ts:78"
+        "supabase/functions/preview-league/index.ts:79"
       ]
     },
     {
@@ -7234,8 +7247,8 @@
         "user_id"
       ],
       "callSites": [
-        "supabase/functions/preview-league/index.ts:100",
-        "supabase/functions/preview-league/index.ts:104"
+        "supabase/functions/preview-league/index.ts:101",
+        "supabase/functions/preview-league/index.ts:105"
       ]
     },
     {
@@ -7250,8 +7263,8 @@
         "*"
       ],
       "callSites": [
-        "supabase/functions/preview-league/index.ts:75",
-        "supabase/functions/preview-league/index.ts:81"
+        "supabase/functions/preview-league/index.ts:76",
+        "supabase/functions/preview-league/index.ts:82"
       ]
     },
     {
@@ -7266,7 +7279,7 @@
         "username"
       ],
       "callSites": [
-        "supabase/functions/preview-league/index.ts:96"
+        "supabase/functions/preview-league/index.ts:97"
       ]
     },
     {
@@ -11510,7 +11523,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('join-league')",
       "callSites": [
-        "apps/mobile/app/join-league.tsx:116"
+        "apps/mobile/app/join-league.tsx:63"
       ]
     },
     {
@@ -11522,7 +11535,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('preview-league')",
       "callSites": [
-        "apps/mobile/app/join-league.tsx:86"
+        "apps/mobile/app/join-league.tsx:54"
       ]
     },
     {
@@ -12807,7 +12820,7 @@
           "edge": "e.ui.join-league->fn.preview-league",
           "detail": "Screen posts the code for a display-only preview. Rate-limited per-user and per-IP.",
           "files": [
-            "apps/mobile/app/join-league.tsx:86"
+            "apps/mobile/app/join-league.tsx:54"
           ]
         },
         {
@@ -12815,7 +12828,7 @@
           "edge": "e.fn.preview-league->pg.check_and_bump_rate_limit",
           "detail": "Per-user and per-IP buckets. Fail-open by design — a limiter outage must not block joins.",
           "files": [
-            "supabase/functions/preview-league/index.ts:32"
+            "supabase/functions/preview-league/index.ts:33"
           ]
         },
         {
@@ -12823,7 +12836,7 @@
           "edge": "e.ui.join-league->fn.join-league",
           "detail": "On confirm, the join is performed server-side. verify_jwt=true, so the caller identity is the gateway-verified JWT.",
           "files": [
-            "apps/mobile/app/join-league.tsx:116"
+            "apps/mobile/app/join-league.tsx:63"
           ]
         },
         {
@@ -14297,8 +14310,8 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 189,
-    "edges": 442,
+    "nodes": 190,
+    "edges": 443,
     "flows": 8,
     "drift": 37,
     "driftHigh": 10,
@@ -14315,7 +14328,7 @@
       "historical-bars[paginate.ts]",
       "join-league[]",
       "leave-league[logic.ts]",
-      "preview-league[reason.ts]",
+      "preview-league[reason.ts,shape.ts]",
       "process-week-results[grouping.ts,job-status.ts,playoff-progression.ts,scoring-eligibility.ts,season-completion.ts,season-transition.ts,user-score.ts]",
       "quote[]",
       "record-trade[commit.ts]",
@@ -14337,8 +14350,8 @@
       "apps/mobile/app/(tabs)/draft.tsx:472 -> validate-and-record-pick",
       "apps/mobile/app/(tabs)/draft.tsx:493 -> quote",
       "apps/mobile/app/(tabs)/draft.tsx:543 -> validate-and-record-pick",
-      "apps/mobile/app/join-league.tsx:116 -> join-league",
-      "apps/mobile/app/join-league.tsx:86 -> preview-league",
+      "apps/mobile/app/join-league.tsx:54 -> preview-league",
+      "apps/mobile/app/join-league.tsx:63 -> join-league",
       "apps/mobile/components/TradeModal.tsx:102 -> symbol-name",
       "apps/mobile/components/TradeModal.tsx:134 -> quote",
       "apps/mobile/components/TradeModal.tsx:151 -> symbol-name",
@@ -14401,8 +14414,8 @@
       "supabase/functions/leave-league/index.ts:155 -> leave_league",
       "supabase/functions/leave-league/index.ts:55 -> check_and_bump_rate_limit",
       "supabase/functions/leave-league/index.ts:58 -> check_and_bump_rate_limit",
-      "supabase/functions/preview-league/index.ts:32 -> check_and_bump_rate_limit",
-      "supabase/functions/preview-league/index.ts:35 -> check_and_bump_rate_limit",
+      "supabase/functions/preview-league/index.ts:33 -> check_and_bump_rate_limit",
+      "supabase/functions/preview-league/index.ts:36 -> check_and_bump_rate_limit",
       "supabase/functions/process-week-results/index.ts:173 -> league_standings_ranked",
       "supabase/functions/process-week-results/index.ts:204 -> start_league_playoffs",
       "supabase/functions/process-week-results/season-completion.ts:134 -> complete_league_season",
@@ -14565,12 +14578,12 @@
       "supabase/functions/enrich-symbols/index.ts:285 -> symbols.update",
       "supabase/functions/leave-league/index.ts:108 -> league_notifications.update",
       "supabase/functions/leave-league/index.ts:78 -> league_notifications.update",
-      "supabase/functions/preview-league/index.ts:100 -> league_members.select",
-      "supabase/functions/preview-league/index.ts:104 -> league_members.select",
-      "supabase/functions/preview-league/index.ts:75 -> leagues.select",
-      "supabase/functions/preview-league/index.ts:78 -> league_invites.select",
-      "supabase/functions/preview-league/index.ts:81 -> leagues.select",
-      "supabase/functions/preview-league/index.ts:96 -> user_profiles.select",
+      "supabase/functions/preview-league/index.ts:101 -> league_members.select",
+      "supabase/functions/preview-league/index.ts:105 -> league_members.select",
+      "supabase/functions/preview-league/index.ts:76 -> leagues.select",
+      "supabase/functions/preview-league/index.ts:79 -> league_invites.select",
+      "supabase/functions/preview-league/index.ts:82 -> leagues.select",
+      "supabase/functions/preview-league/index.ts:97 -> user_profiles.select",
       "supabase/functions/process-week-results/index.ts:1042 -> matchups.update",
       "supabase/functions/process-week-results/index.ts:1097 -> league_standings.select",
       "supabase/functions/process-week-results/index.ts:1106 -> league_standings.update",

@@ -46,7 +46,6 @@ const HIDDEN_HEADER_MODAL = { headerShown: false, presentation: 'modal' } as con
 const HIDDEN_HEADER_FULLSCREEN = { headerShown: false, presentation: 'fullScreenModal' } as const;
 const WITH_HEADER = { headerShown: true } as const;
 const ROOT = { flex: 1 } as const;
-const WITH_HEADER_MODAL = { headerShown: true, presentation: 'modal' } as const;
 
 function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
   const { user, authPhase } = useSession();
@@ -296,8 +295,16 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
                   <Stack.Screen name="league-settings" options={HIDDEN_HEADER_MODAL} />
                   <Stack.Screen name="player-portfolio" options={HIDDEN_HEADER_MODAL} />
                   <Stack.Screen name="trade-history" options={HIDDEN_HEADER_MODAL} />
-                  <Stack.Screen name="design-gallery" options={WITH_HEADER} />
-                  <Stack.Screen name="modal" options={WITH_HEADER_MODAL} />
+                  {/* A dev tool: registered ONLY in a development build. Guarded out
+                      in a release, the navigator never learns the route, so a link
+                      to it falls back to the first screen (Home when signed in,
+                      sign-in when signed out) instead of opening the gallery.
+                      design-gallery's own `!__DEV__` redirect stays as the second
+                      layer. Checked in a --no-dev bundle:
+                      docs/design/1.2.0-release-route-check.md */}
+                  <Stack.Protected guard={__DEV__}>
+                    <Stack.Screen name="design-gallery" options={WITH_HEADER} />
+                  </Stack.Protected>
                 </Stack.Protected>
               </Stack.Protected>
 
