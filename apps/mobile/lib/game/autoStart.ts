@@ -290,6 +290,10 @@ export const PICK_NEW_TIME = 'Pick a new draft time';
 export const PICK_NEW_TIME_NOTE = "Fix these first. The new time needs at least an hour's notice.";
 /** Under the button once nothing blocks (NEW copy). */
 export const PICK_NEW_TIME_READY = "The new time needs at least an hour's notice.";
+/** The reconfirm choice didn't save. NEW copy. */
+export const RECONFIRM_NOT_SAVED = "Your choice wasn't saved. Try again.";
+/** The lobby's draft status read failed (the house "X didn't load" form, with Try again). NEW copy. */
+export const DRAFT_STATUS_LOAD_FAILED = "The draft status didn't load.";
 /** The new time didn't save, for a reason other than the three draft-time refusals. NEW copy. */
 export const NEW_TIME_NOT_SAVED = "The new draft time wasn't saved. Try again.";
 
@@ -370,4 +374,47 @@ export function startKickOutcome(res: { ok?: unknown; reason?: unknown } | null 
   if (res?.ok === true) return 'started';
   if (res?.reason === 'draft_start_retrying') return 'retrying';
   return 'reread';
+}
+
+// ── What the lobby shows, per phase and viewer ───────────────────────────
+
+export interface LobbyView {
+  /** The commissioner's blockers card. */
+  blockers: 'risk' | 'postponed' | null;
+  /** The commissioner's "Draft room opens in" deadline (at risk). */
+  deadline: boolean;
+  /** Everyone's countdown card. */
+  countdown: 'scheduled' | 'room_open' | 'starting' | null;
+  memberPostponed: boolean;
+  noDate: boolean;
+  /** The order (or the waiting state) under the countdown. */
+  order: boolean;
+  /** Ask the server to start (any member's phone at 0:00), then poll. */
+  kick: boolean;
+}
+
+/** Board #call-auto-start frames: AutoLobby (everyone), CommishBlocked (the
+ * commissioner at risk / postponed), MemberPostponed. At risk is the
+ * commissioner's business: members see the plain countdown. A commissioner
+ * at risk with nothing fixable (only "couldn't judge") sees the countdown too. */
+export function lobbyView(phase: LobbyPhase, isCommissioner: boolean, fixableCount: number): LobbyView {
+  const none: LobbyView = { blockers: null, deadline: false, countdown: null, memberPostponed: false, noDate: false, order: true, kick: false };
+  switch (phase) {
+    case 'no_date':
+      return { ...none, noDate: true };
+    case 'scheduled':
+      return { ...none, countdown: 'scheduled' };
+    case 'at_risk':
+      return isCommissioner && fixableCount > 0
+        ? { ...none, blockers: 'risk', deadline: true }
+        : { ...none, countdown: 'scheduled' };
+    case 'room_open':
+      return { ...none, countdown: 'room_open' };
+    case 'starting':
+      return { ...none, countdown: 'starting', kick: true };
+    case 'started':
+      return { ...none, countdown: 'starting' }; // the League tab switches to the room on the next read
+    case 'postponed':
+      return isCommissioner ? { ...none, blockers: 'postponed', order: false } : { ...none, memberPostponed: true, order: false };
+  }
 }

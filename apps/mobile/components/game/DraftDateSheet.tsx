@@ -24,11 +24,13 @@ export interface DraftDateSheetProps {
   onChange: (date: Date) => void;
   /** "Set later" (TBD). Omitted where a time is required (a postponed draft's new time). */
   onSetLater?: () => void;
-  /** Done (the header action, the board's), and a dismiss. */
+  /** A dismiss (the backdrop, a swipe), and Done when there's no onDone. */
   onClose: () => void;
+  /** Done (the header action, the board's), when it commits (a postponed draft's new time). */
+  onDone?: () => void;
 }
 
-export function DraftDateSheet({ visible, value, onChange, onSetLater, onClose }: DraftDateSheetProps) {
+export function DraftDateSheet({ visible, value, onChange, onSetLater, onClose, onDone }: DraftDateSheetProps) {
   const { colors, resolvedTheme } = useTheme();
   const nowMs = Date.now();
   const earliest = earliestDraftMs(nowMs);
@@ -51,7 +53,7 @@ export function DraftDateSheet({ visible, value, onChange, onSetLater, onClose }
           <Text variant="title" accessibilityRole="header" style={styles.grow}>
             Draft date
           </Text>
-          <Pressable onPress={onClose} accessibilityRole="button" style={styles.done} hitSlop={8}>
+          <Pressable onPress={onDone ?? onClose} accessibilityRole="button" style={styles.done} hitSlop={8}>
             <Text variant="callout" color={colors.accent} style={styles.bold}>
               Done
             </Text>

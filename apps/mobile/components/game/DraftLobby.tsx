@@ -17,12 +17,14 @@ export interface DraftLobbyProps {
   pickSeconds: number;
   rounds: number;
   now: Date;
+  /** The countdown card. Off where the auto-start countdown (DraftCountdownCard) replaces it. */
+  showCountdown?: boolean;
 }
 
 /** Draft lobby (3c, key screen 4 pre-draft): the countdown, the order (or the
  * waiting state with its progress), and your own picks ("You pick 4th, then
  * 13th, 20th…"). Every line is a real value or an honest waiting state. */
-export function DraftLobby({ data, myUserId, draftDate, pickSeconds, rounds, now }: DraftLobbyProps) {
+export function DraftLobby({ data, myUserId, draftDate, pickSeconds, rounds, now, showCountdown = true }: DraftLobbyProps) {
   const { colors } = useTheme();
   const countdown = countdownLabel(now, draftDate);
   const when = draftDateTimeLabel(draftDate);
@@ -33,11 +35,13 @@ export function DraftLobby({ data, myUserId, draftDate, pickSeconds, rounds, now
 
   return (
     <View style={styles.stack}>
-      <Card>
-        <Text variant="tag" tone="secondary">Draft starts in</Text>
-        <Text variant="score.md" style={styles.countdown}>{countdown ?? '—'}</Text>
-        <Text variant="caption" tone="secondary">{when ? `${when} · ${pickClockLine(pickSeconds, rounds)}` : pickClockLine(pickSeconds, rounds)}</Text>
-      </Card>
+      {showCountdown ? (
+        <Card>
+          <Text variant="tag" tone="secondary">Draft starts in</Text>
+          <Text variant="score.md" style={styles.countdown}>{countdown ?? '—'}</Text>
+          <Text variant="caption" tone="secondary">{when ? `${when} · ${pickClockLine(pickSeconds, rounds)}` : pickClockLine(pickSeconds, rounds)}</Text>
+        </Card>
+      ) : null}
 
       {data.waiting || !order ? (
         <Card>

@@ -29,6 +29,7 @@ import {
   etWhenLabel,
   fixableBlockers,
   lobbyPhase,
+  lobbyView,
   memberPostponedCopy,
   moveForwardLabel,
   nextBoundaryMs,
@@ -310,4 +311,33 @@ Deno.test('a start request: started, the server retrying, or re-read', () => {
   assertEquals(startKickOutcome({ ok: false, reason: 'draft_postponed' }), 'reread');
   assertEquals(startKickOutcome({ ok: false, reason: 'draft_date_not_reached' }), 'reread');
   assertEquals(startKickOutcome(null), 'reread');
+});
+
+// ── What the lobby shows (every phase × viewer) ──────────────────────────
+
+Deno.test('the lobby per phase: everyone', () => {
+  assertEquals(lobbyView('no_date', false, 0), { blockers: null, deadline: false, countdown: null, memberPostponed: false, noDate: true, order: true, kick: false });
+  assertEquals(lobbyView('scheduled', false, 0).countdown, 'scheduled');
+  assertEquals(lobbyView('room_open', false, 0).countdown, 'room_open');
+  assertEquals(lobbyView('starting', false, 0), { blockers: null, deadline: false, countdown: 'starting', memberPostponed: false, noDate: false, order: true, kick: true });
+  assertEquals(lobbyView('started', true, 0).countdown, 'starting');
+  assertEquals(lobbyView('started', true, 0).kick, false);
+});
+
+Deno.test('at risk: the commissioner gets the blockers card and the deadline; members the plain countdown', () => {
+  assertEquals(lobbyView('at_risk', true, 2), { blockers: 'risk', deadline: true, countdown: null, memberPostponed: false, noDate: false, order: true, kick: false });
+  assertEquals(lobbyView('at_risk', false, 2).countdown, 'scheduled');
+  assertEquals(lobbyView('at_risk', false, 2).blockers, null);
+  assertEquals(lobbyView('at_risk', true, 0).countdown, 'scheduled'); // nothing fixable: no empty card
+});
+
+Deno.test('postponed: the commissioner gets the blockers card (pick a new time); members the postponed card', () => {
+  assertEquals(lobbyView('postponed', true, 0), { blockers: 'postponed', deadline: false, countdown: null, memberPostponed: false, noDate: false, order: false, kick: false });
+  assertEquals(lobbyView('postponed', false, 2), { blockers: null, deadline: false, countdown: null, memberPostponed: true, noDate: false, order: false, kick: false });
+});
+
+Deno.test('no phase ever shows a Start button: only "starting" asks the server, and only it', () => {
+  for (const p of ['no_date', 'scheduled', 'at_risk', 'room_open', 'starting', 'postponed', 'started'] as const) {
+    for (const c of [true, false]) assertEquals(lobbyView(p, c, 1).kick, p === 'starting', `${p} ${c}`);
+  }
 });

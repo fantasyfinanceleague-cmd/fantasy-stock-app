@@ -25,7 +25,31 @@ import { championBanner } from '@/lib/game/history';
 import { leagueScreenFor, showRunItBackStrip, seasonSegments } from '@/lib/game/leaguePhase';
 import { useLeagueHistory } from '@/lib/game/useLeagueHistory';
 import { usePreDraftData } from '@/lib/home/usePreDraftData';
-import { StartDraftConfirm } from '@/components/game/StartDraftConfirm';
+import { DraftBlockersCard } from '@/components/game/DraftBlockersCard';
+import { DraftCountdownCard } from '@/components/game/DraftCountdownCard';
+import { DraftDateSheet } from '@/components/game/DraftDateSheet';
+import {
+  COMMISSIONER_FALLBACK,
+  DRAFT_STATUS_LOAD_FAILED,
+  NEW_TIME_NOT_SAVED,
+  NO_DATE_TITLE,
+  RECONFIRM_NOT_SAVED,
+  START_RETRYING,
+  countdownCopy,
+  deadlineCopy,
+  draftTimeRefusal,
+  etTimeLabel,
+  fixableBlockers,
+  lobbyPhase,
+  lobbyView,
+  memberPostponedCopy,
+  nextBoundaryMs,
+  noDateCopy,
+  postponedAtMs,
+  roomOpensAtMs,
+  startKickOutcome,
+} from '@/lib/game/autoStart';
+import { draftDateForSave, seedDraftDate, updatedOneRow } from '@/lib/game/draftDateSave';
 import { useDraftStatus } from '@/lib/game/useDraftStatus';
 import { Button } from '@/components/sp/Button';
 import { Card } from '@/components/sp/Card';
@@ -33,7 +57,7 @@ import { supabase } from '@/lib/supabase';
 import { seamRpc, seamInvoke, seamUpdateLeague } from '@/lib/game/seamCalls';
 import { useBracket } from '@/lib/game/useBracket';
 import { SegmentedControl } from '@/components/sp/SegmentedControl';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLeagueStandings } from '@/lib/game/useLeagueStandings';
 import { useAuth } from '@/lib/useAuth';
 import { buildStandingsRows } from '@/lib/game/standings';
@@ -170,7 +194,7 @@ export default function LeagueScreen() {
 
 /** A renewed league before its draft (3c-2): the Run it back flow until the
  * renewal is reconciled and the season is set, then the normal pre-draft lobby
- * (the queue, Start the draft, League settings), per the board's Season 2
+ * (the countdown, the queue, League settings), per the board's Season 2
  * League tab → "Go to the draft lobby". See renewalReadyForLobby. */
 function RenewedPreDraft({ leagueId, createdAt }: { leagueId: string; createdAt: string }) {
   const { activeLeague, refresh } = useLeagueContext();
@@ -256,31 +280,88 @@ function LeagueLobby({ leagueId }: { leagueId: string }) {
   const { user } = useAuth();
   const { colors } = useTheme();
   const data = usePreDraftData(leagueId);
-  const [confirming, setConfirming] = useState(false);
-  const [startError, setStartError] = useState<string | null>(null);
+  const [fixError, setFixError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const [statusKey, setStatusKey] = useState(0);
   const ds = useDraftStatus(leagueId, true, statusKey);
   const queue = useDraftQueue(leagueId);
+  const reread = () => setStatusKey((k) => k + 1);
 
-  // The stepper writes the same leagues update League settings uses, then re-reads the status.
-  const setPlayoffTeams = async (teams: number) => {
-    // The lock first (the draft started: no retry can fix it), then any other
-    // failure, a 0-row update included (playoffTeamsSaveOutcome).
-    const res = await seamUpdateLeague(leagueId, { playoff_teams: teams });
-    const outcome = playoffTeamsSaveOutcome(res);
-    if (outcome.kind === 'locked') {
-      setStartError(outcome.line);
-      // Re-read, so the lobby catches up with the started draft.
-      setStatusKey((k) => k + 1);
+  // Auto-start (3c-2): the phase is the server's start_state, carried forward
+  // on the server's clock. The clock ticks every second under an hour, else
+  // every 15 s; the status is re-read at T−1h and T.
+  const [phoneNow, setPhoneNow] = useState(() => Date.now());
+  const serverNow = phoneNow + ds.serverOffsetMs;
+  // A re-read (the 3 s poll at 0:00, a boundary, a fix) keeps showing the last
+  // known phase while it loads, so the cards never blink out.
+  const known = ds.status === 'ready' || (ds.status === 'loading' && ds.startState !== null);
+  const phase = known ? lobbyPhase(ds, serverNow) : null;
+  const msLeft = ds.startsAt ? new Date(ds.startsAt).getTime() - serverNow : Number.POSITIVE_INFINITY;
+  const fast = phase === 'starting' || msLeft < 2 * 60 * 60 * 1000;
+  useEffect(() => {
+    const id = setInterval(() => setPhoneNow(Date.now()), fast ? 1000 : 15000);
+    return () => clearInterval(id);
+  }, [fast]);
+  useEffect(() => {
+    const boundary = nextBoundaryMs(ds.startsAt, Date.now() + ds.serverOffsetMs);
+    if (boundary === null) return;
+    const t = setTimeout(reread, Math.max(0, boundary - (Date.now() + ds.serverOffsetMs)) + 500);
+    return () => clearTimeout(t);
+  }, [ds.startsAt, ds.serverOffsetMs]);
+
+  // At 0:00 any member's phone asks the server to start (it starts anyway
+  // within ~10 s if nobody is watching), once per draft time, then polls the
+  // status and the league until it has started or been postponed.
+  const kickedFor = useRef<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
+  const view = phase ? lobbyView(phase, ds.isCommissioner, fixableBlockers(ds.blockers).length) : null;
+  useEffect(() => {
+    if (!view?.kick || !ds.startsAt || kickedFor.current === ds.startsAt) return;
+    kickedFor.current = ds.startsAt;
+    void (async () => {
+      const { data: res, error } = await seamInvoke('draft-control', { body: { league_id: leagueId, action: 'start' } });
+      const outcome = error ? 'reread' : startKickOutcome(res);
+      setRetrying(outcome === 'retrying');
+      reread();
       await refresh();
+    })();
+  }, [view?.kick, ds.startsAt, leagueId, refresh]);
+  useEffect(() => {
+    if (phase !== 'starting' && phase !== 'started') return;
+    const id = setInterval(() => {
+      reread();
+      void refresh();
+    }, 3000);
+    return () => clearInterval(id);
+  }, [phase, refresh]);
+
+  // The blockers card's fixes. The stepper writes the same leagues update
+  // League settings uses; the lock first (no retry can fix it), then any other
+  // failure, a 0-row update included (playoffTeamsSaveOutcome).
+  const setPlayoffTeams = async (teams: number) => {
+    setBusy(true);
+    const res = await seamUpdateLeague(leagueId, { playoff_teams: teams });
+    setBusy(false);
+    const outcome = playoffTeamsSaveOutcome(res);
+    if (outcome.kind !== 'saved') {
+      setFixError(outcome.line);
+      if (outcome.kind === 'locked') {
+        reread();
+        await refresh();
+      }
       return;
     }
-    if (outcome.kind === 'not_saved') {
-      setStartError(outcome.line);
-      return;
-    }
-    setStartError(null);
-    setStatusKey((k) => k + 1);
+    setFixError(null);
+    reread();
+    await refresh();
+  };
+
+  const reconfirm = async (choice: 'move_forward' | 'invite') => {
+    setBusy(true);
+    const { data: res, error } = await seamInvoke('draft-control', { body: { league_id: leagueId, action: 'confirm_roster', choice } });
+    setBusy(false);
+    setFixError(error || !res || res.ok !== true ? RECONFIRM_NOT_SAVED : null);
+    reread();
     await refresh();
   };
 
@@ -289,32 +370,119 @@ function LeagueLobby({ leagueId }: { leagueId: string }) {
     if (code) void Share.share({ message: `Join my league with code ${code}` });
   };
 
-  const startDraft = async () => {
-    setStartError(null);
-    const { data: res, error } = await seamInvoke('draft-control', { body: { league_id: leagueId, action: 'start' } });
-    if (error || !res || res.ok === false) {
-      setStartError("The draft didn't start. Check the blockers above, then try again.");
-      setStatusKey((k) => k + 1);
+  // A postponed draft's new time (the commissioner): the sheet seeds the value
+  // it shows (seedDraftDate), Done saves it; a dismiss doesn't.
+  const [newTime, setNewTime] = useState<Date | null>(null);
+  const [pickingTime, setPickingTime] = useState(false);
+  const saveNewTime = async () => {
+    setPickingTime(false);
+    const value = draftDateForSave(false, newTime);
+    if (!value.ok) {
+      setFixError(value.error);
       return;
     }
-    setConfirming(false);
+    setBusy(true);
+    const res = await seamUpdateLeague(leagueId, { draft_date: value.value });
+    setBusy(false);
+    if (res.error || !updatedOneRow(res)) {
+      setFixError(draftTimeRefusal(res.error) ?? NEW_TIME_NOT_SAVED);
+      return;
+    }
+    setFixError(null);
+    reread();
     await refresh();
   };
+
+  const commissionerName =
+    data.members.find((m) => m.userId === activeLeague?.commissioner_id)?.displayName || COMMISSIONER_FALLBACK;
+  const fixable = fixableBlockers(ds.blockers);
+  const roomLabel = ds.startsAt ? etTimeLabel(roomOpensAtMs(ds.startsAt)) : null;
+  const postponedAt = postponedAtMs(ds.postponed);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <ShellHeader title="League" showAvatar />
-      <BarsRefresh onRefresh={refresh} contentContainerStyle={{ paddingHorizontal: space[6], paddingBottom: space[9], gap: space[6] }}>
-        {data.loading ? null : (
+      <BarsRefresh
+        onRefresh={async () => {
+          reread();
+          await refresh();
+        }}
+        contentContainerStyle={{ paddingHorizontal: space[6], paddingBottom: space[9], gap: space[6] }}
+      >
+        {ds.status === 'error' ? (
+          <Card style={styles.queueFailed}>
+            <Text variant="callout">{DRAFT_STATUS_LOAD_FAILED}</Text>
+            <Button label="Try again" variant="secondary" size="sm" onPress={reread} />
+          </Card>
+        ) : null}
+
+        {view?.blockers ? (
+          <DraftBlockersCard
+            phase={view.blockers}
+            deadlineLabel={view.blockers === 'risk' ? roomLabel : postponedAt !== null ? etTimeLabel(postponedAt) : null}
+            blockers={fixable}
+            memberCount={ds.memberCount}
+            playoffTeams={activeLeague?.playoff_teams ?? null}
+            onSetPlayoffTeams={(t) => void setPlayoffTeams(t)}
+            onReconfirm={(c) => void reconfirm(c)}
+            inviteCode={activeLeague?.invite_code ?? null}
+            onShareInvite={shareInvite}
+            onPickNewTime={() => {
+              setNewTime(seedDraftDate(null, new Date()));
+              setFixError(null);
+              setPickingTime(true);
+            }}
+            busy={busy}
+            error={fixError}
+          />
+        ) : null}
+
+        {view?.deadline && ds.startsAt ? (
+          (() => {
+            const d = deadlineCopy(ds.startsAt, serverNow);
+            return <DraftCountdownCard tag={d.tag} clock={d.clock} lines={[]} notes={[d.line]} />;
+          })()
+        ) : null}
+
+        {view?.countdown && ds.startsAt ? (
+          (() => {
+            const c = countdownCopy(view.countdown, ds.startsAt, serverNow);
+            return (
+              <DraftCountdownCard
+                tag={c.tag}
+                clock={c.clock}
+                live={view.countdown !== 'scheduled'}
+                starting={c.starting}
+                lines={c.lines.slice(0, 1)}
+                notes={[...c.lines.slice(1), ...(retrying && c.starting ? [START_RETRYING] : [])]}
+              />
+            );
+          })()
+        ) : null}
+
+        {view?.memberPostponed ? (
+          (() => {
+            const c = memberPostponedCopy(commissionerName);
+            return <DraftCountdownCard tag={c.tag} title={c.title} lines={[]} notes={[c.line]} />;
+          })()
+        ) : null}
+
+        {view?.noDate ? (
+          <DraftCountdownCard tag={NO_DATE_TITLE} lines={[]} notes={[noDateCopy(ds.isCommissioner, commissionerName)]} />
+        ) : null}
+
+        {!data.loading && (view?.order ?? true) ? (
           <DraftLobby
             data={data}
             myUserId={user?.id ?? ''}
             draftDate={activeLeague?.draft_date ?? null}
             pickSeconds={activeLeague?.pick_seconds ?? 60}
             rounds={activeLeague?.num_rounds ?? 6}
-            now={new Date()}
+            now={new Date(serverNow)}
+            showCountdown={false}
           />
-        )}
+        ) : null}
+
         {/* Board (Draft lobby · "Your queue"): build the queue before the draft,
             so auto-pick has it from the first pick. Never seeded from a failed
             read (draftQueueRead.ts): the save replaces the whole list. */}
@@ -326,26 +494,7 @@ function LeagueLobby({ leagueId }: { leagueId: string }) {
             <Button label="Try again" variant="secondary" size="sm" onPress={queue.refresh} />
           </Card>
         ) : null}
-        {ds.isCommissioner ? (
-          confirming ? (
-            <View style={styles.stack}>
-              <StartDraftConfirm
-                status={ds}
-                playoffTeams={activeLeague?.playoff_teams ?? null}
-                numWeeks={activeLeague?.num_weeks ?? 0}
-                pickSeconds={activeLeague?.pick_seconds ?? 60}
-                onStart={startDraft}
-                onNotYet={() => setConfirming(false)}
-                onSetPlayoffTeams={setPlayoffTeams}
-                inviteCode={activeLeague?.invite_code ?? null}
-                onShareInvite={shareInvite}
-              />
-              {startError ? <Text variant="callout">{startError}</Text> : null}
-            </View>
-          ) : (
-            <Button label="Start the draft" onPress={() => setConfirming(true)} disabled={ds.status !== 'ready'} />
-          )
-        ) : null}
+
         {/* Board (RibHistory): League settings is a row on the pre-draft League
             tab. Commissioner only, the same check League settings itself makes. */}
         {showsLeagueSettingsRow(activeLeague?.commissioner_id, user?.id) ? (
@@ -357,6 +506,14 @@ function LeagueLobby({ leagueId }: { leagueId: string }) {
           </SetupCard>
         ) : null}
       </BarsRefresh>
+
+      <DraftDateSheet
+        visible={pickingTime}
+        value={newTime}
+        onChange={setNewTime}
+        onClose={() => setPickingTime(false)}
+        onDone={() => void saveNewTime()}
+      />
     </View>
   );
 }

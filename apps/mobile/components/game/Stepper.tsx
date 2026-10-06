@@ -22,7 +22,7 @@ export interface StepperProps {
   canDecrement: boolean;
   canIncrement: boolean;
   disabled?: boolean;
-  /** The board's blocked state (StartDraftConfirm, "too many playoff teams"):
+  /** The board's blocked state (the blockers card, "8 playoff teams, but 7 teams are in"):
    * a 2 pt warn-line border on the box. Warn, never red (§9B: blockers keep
    * the warn tint; red is for field errors, losses and destructive actions). */
   emphasis?: 'warn';
