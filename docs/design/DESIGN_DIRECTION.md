@@ -581,11 +581,12 @@ exactly what this removes.
 | `on-opp` | `#0D1B2E` | `#0D1B2E` | Text on opponent fills (white fails on Light orange) |
 | `primary-bg` / `primary-fg` | `#0D1B2E` / `#FFFFFF` | `#FFFFFF` / `#0D1B2E` | Primary button |
 | `inverse-bg` / `inverse-fg` | `#0D1B2E` / `#FFFFFF` | `#F3F6FA` / `#0D1B2E` | FINAL chip, selected toggle |
+| `medal-gold` / `medal-silver` / `medal-bronze` / `on-medal` | `#B07A00` / `#7C8898` / `#C27036` / `#1A1407` | `#E8AF2E` / `#B9C3CF` / `#DC8A55` / `#0D1B2E` | **Season complete only.** A medal is a filled disc with the rank numeral (`on-medal` ≥4.5:1 on each fill); the disc is a graphic (≥3:1 on `surface` and on the `you-tint` row). Never medal-coloured text; names stay `text`. Replaces the legacy light-only `gold`/`silver`/`bronze` (2026-10-05). |
 
 Plus `accent-tint`, `accent-wash`, `you-tint`, `gain-tint`, `loss-tint`,
 `warn-*`, `track`, `scrim`, `tabbar`, `shadow` / `sheet-shadow` (none in Dark),
 and `on-accent` / `on-opp`. The full list with contrast is computed live on the
-key-screens board. **Two tables, both themes, all passing (76/76 at v3.1):** every
+key-screens board. **Two tables, both themes, all passing (76/76 at v3.1; 108/108 with the medal pairs, 2026-10-05):** every
 text token ≥ 4.5:1 and graphic token ≥ 3:1 on `surface`, AND every
 foreground-on-fill pair the components render (text on `you`, `opp`,
 `loss-fill`, `primary`, `inverse`, `inset`, `sunken`, the tints and the tab bar),

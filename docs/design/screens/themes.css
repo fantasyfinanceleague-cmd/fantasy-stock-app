@@ -15,6 +15,12 @@
   --c-surface: #FFFFFF;
   --c-inset: #F0F3F7;
   --c-sunken: #EBEFF4;
+  /* Medals (season complete only): a filled disc with the rank numeral.
+     Fills ≥3:1 on surface, bg and the you-tint row; numeral ≥4.5:1 on the fill. */
+  --c-medal-gold: #B07A00;
+  --c-medal-silver: #7C8898;
+  --c-medal-bronze: #C27036;
+  --c-on-medal: #1A1407;
   --c-line: #E3E8EF;
   --c-border: #DDE3EA;
   --c-border-strong: #76828F;
@@ -69,6 +75,10 @@
   --c-surface: #16263D;
   --c-inset: #1E3250;
   --c-sunken: #0A1524;
+  --c-medal-gold: #E8AF2E;
+  --c-medal-silver: #B9C3CF;
+  --c-medal-bronze: #DC8A55;
+  --c-on-medal: #0D1B2E;
   --c-line: #263A58;
   --c-border: #263A58;
   --c-border-strong: #8DA0BD;
