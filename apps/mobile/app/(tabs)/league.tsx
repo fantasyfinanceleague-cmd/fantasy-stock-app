@@ -19,6 +19,8 @@ import { BracketView } from '@/components/game/BracketView';
 import { DraftLobby } from '@/components/game/DraftLobby';
 import { DraftRoom } from '@/components/game/DraftRoom';
 import { LeagueRenewal } from '@/components/game/LeagueRenewal';
+import { HistoryList } from '@/components/game/HistoryList';
+import { useLeagueHistory } from '@/lib/game/useLeagueHistory';
 import { usePreDraftData } from '@/lib/home/usePreDraftData';
 import { StartDraftConfirm } from '@/components/game/StartDraftConfirm';
 import { useDraftStatus } from '@/lib/game/useDraftStatus';
@@ -43,13 +45,14 @@ const STANDINGS_CAPTION = 'Ranked by win percentage, then head-to-head, then sea
 export default function LeagueScreen() {
   const { sheetLeagues, activeLeagueId, activeLeague, refresh, setActiveLeagueId } = useLeagueContext();
   // League's segments: Standings | Schedule (the board, D4 = keep). History is not built yet.
-  const [segment, setSegment] = useState<'standings' | 'schedule' | 'playoffs'>('standings');
+  const [segment, setSegment] = useState<'standings' | 'schedule' | 'playoffs' | 'history'>('standings');
   // The Playoffs segment appears once the season is in the playoffs (or over).
   const hasPlayoffs = (activeLeague?.season_status === 'playoffs' || activeLeague?.season_status === 'completed') && (activeLeague?.playoff_teams ?? 0) > 0;
   const phase = sheetLeagues.find((l) => l.id === activeLeagueId)?.seasonPhase;
   const drafting = phase === 'drafting';
   const preDraft = phase === 'pre_draft' && activeLeagueId !== null;
   const inSeason = phase === 'regular' || phase === 'playoffs' || phase === 'completed';
+  const history = useLeagueHistory(inSeason ? activeLeagueId : null, segment === 'history' && inSeason);
   const { colors } = useTheme();
   const st = useLeagueStandings(inSeason ? activeLeagueId : null);
   const { user } = useAuth();
@@ -98,11 +101,14 @@ export default function LeagueScreen() {
                   { label: 'Standings', value: 'standings' },
                   { label: 'Schedule', value: 'schedule' },
                   ...(hasPlayoffs ? [{ label: 'Playoffs', value: 'playoffs' }] : []),
+                  { label: 'History', value: 'history' },
                 ]}
                 value={segment}
-                onChange={(v) => setSegment(v === 'schedule' ? 'schedule' : v === 'playoffs' ? 'playoffs' : 'standings')}
+                onChange={(v) => setSegment(v === 'schedule' ? 'schedule' : v === 'playoffs' ? 'playoffs' : v === 'history' ? 'history' : 'standings')}
               />
-              {segment === 'playoffs' ? (
+              {segment === 'history' ? (
+                history.status === 'ready' ? <HistoryList rows={history.rows} /> : null
+              ) : segment === 'playoffs' ? (
                 bracket.bracket ? (
                   <BracketView
                     bracket={bracket.bracket}

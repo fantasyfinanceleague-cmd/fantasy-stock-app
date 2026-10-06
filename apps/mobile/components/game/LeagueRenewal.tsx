@@ -4,6 +4,8 @@ import { Text } from '@/components/sp/Text';
 import { space } from '@/constants/tokens';
 import { useRenewalRoster } from '@/lib/game/useRenewalRoster';
 import { screenFor } from '@/lib/game/renewal';
+import { useLeagueHistory } from '@/lib/game/useLeagueHistory';
+import { season1Order as orderFromHistory } from '@/lib/game/history';
 import { RenewalRoster } from './RenewalRoster';
 import { RenewalAsk } from './RenewalAsk';
 import { RenewalReview } from './RenewalReview';
@@ -26,6 +28,8 @@ export interface LeagueRenewalProps {
  * server decides what each one may see. */
 export function LeagueRenewal({ successorId, leagueId, createdAt, now, onChanged, settings, inviteCode, onScheduled }: LeagueRenewalProps) {
   const st = useRenewalRoster(successorId, null, 0);
+  // The Season 1 order is the frozen rank of the lineage's first finished season (R5).
+  const history = useLeagueHistory(successorId, true);
   if (st.status === 'loading' || st.status === 'idle') return null;
   if (st.status === 'error' || !st.roster) {
     return <Text variant="callout" tone="secondary">Couldn't load the renewal. Pull down to try again.</Text>;
@@ -47,7 +51,7 @@ export function LeagueRenewal({ successorId, leagueId, createdAt, now, onChanged
       <RenewalRoster
         roster={r}
         leagueId={leagueId}
-        season1Order={[]}
+        season1Order={orderFromHistory(history.rows)}
         createdAt={createdAt}
         now={now}
         onChanged={onChanged}
