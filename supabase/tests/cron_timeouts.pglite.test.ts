@@ -9,7 +9,7 @@
  * upsert semantics. That is enough for what is at stake: the migration's TEXT. Its
  * commands are never executed, only stored and compared.
  *
- * The live cron rows are seeded from docs/architecture/db-snapshot.json (the six jobs
+ * The live cron rows are seeded from supabase/tests/fixtures/cron_jobs_before_20261108.json (frozen; was docs/architecture/db-snapshot.json) (the six jobs
  * it captured) and from the two heal-cron migrations that postdate it, then the
  * migration runs over them. Every rescheduled command must equal its live
  * predecessor modulo the timeout: a copy that drifted (a missing X-Retry-Attempt
@@ -150,7 +150,10 @@ create table public.cron_job_status (id uuid primary key default gen_random_uuid
 interface LiveJob { jobname: string; schedule: string; command: string }
 
 async function liveRows(): Promise<LiveJob[]> {
-  const snap = JSON.parse(await Deno.readTextFile(new URL('docs/architecture/db-snapshot.json', ROOT)));
+  // A FROZEN baseline: the live rows before 20261108000000 was applied. Reading the
+  // evolving docs/architecture/db-snapshot.json broke this test on the first re-capture
+  // after the migration (it then contained the post-migration jobs).
+  const snap = JSON.parse(await Deno.readTextFile(new URL('supabase/tests/fixtures/cron_jobs_before_20261108.json', ROOT)));
   const rows: LiveJob[] = snap.cronJobs.map((j: LiveJob) => ({ jobname: j.jobname, schedule: j.schedule, command: j.command }));
   // The heal crons postdate the snapshot (#86 / #98): take their commands from the migrations that schedule them.
   const have = new Set(rows.map((r) => r.jobname));
