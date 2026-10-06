@@ -91,7 +91,7 @@ These apply to every screen you build. They are new since this prompt was first 
   - exit is faster than entrance;
   - content is visible at rest (an animation that doesn't run never hides content);
   - the live dot and any pulse pause when the screen isn't focused or the app is backgrounded.
-- **Gestures:** never disable edge-swipe back. Sheets swipe to dismiss with Cancel/Done; the trade review mid-confirm is the one place a dismiss guard is justified. Destructive confirms use a native action sheet whose button names the action (never Yes/No/OK).
+- **Gestures:** never disable edge-swipe back. Sheets swipe to dismiss with Cancel/Done; the trade review mid-confirm is the one place a dismiss guard is justified. A one-tap destructive action with no review step (Remove, delete) confirms through a native action sheet whose button names the action (never Yes/No/OK). A flow with a review screen is already confirmed by that screen's single action-named button, with no extra sheet. **Sell and Buy:** the Review screen is the confirmation; its button reads "Sell TSLA" / "Buy SHOP", with no action sheet on top. Show the outcome (shares, ≈ price, proceeds or source, what's left) and "Prices can move before the order fills." Disable the button and show progress while submitting; the dismiss guard applies only during that submit.
 - **Copy:** confirm buttons name the action; every message is a whole sentence (no stitched fragments); errors say what failed and how to recover, never a raw code.
 - **Tags** must carry information and never repeat an adjacent chip or title.
 - **Colour is never the only code:** every colour signal has a text, sign or shape twin and a VoiceOver label.

@@ -676,8 +676,13 @@ the `impeccable` guides (craft-floor, ios, clarify, harden, layout); see
   - Edge-swipe back is never disabled.
   - Sheets dismiss by swipe, with a clear Cancel/Done, unless dismissing would
     lose data (a trade review mid-confirm).
-  - Destructive confirmations use a native action sheet whose button names
-    the action ("Remove Andrea P.", "Sell all"); never Yes/No/OK.
+  - **A one-tap destructive action with no review step** (Remove a player,
+    delete, leave) confirms through a native action sheet whose button names
+    the action ("Remove Andrea P."); never Yes/No/OK.
+  - **A flow with a review screen is already its confirmation** (Sell, Buy,
+    Schedule the draft, Start the draft). The review states the outcome, and
+    its one button names the action ("Sell TSLA", "Buy SHOP"). No extra sheet:
+    a third confirm adds friction, not safety (ruling 2026-10-05).
 - **Copy.**
   - Confirm buttons name the action.
   - Every message is a whole sentence, never stitched from fragments (this
