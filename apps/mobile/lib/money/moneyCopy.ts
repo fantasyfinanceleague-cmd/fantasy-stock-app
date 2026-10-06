@@ -44,6 +44,14 @@ export const COPY = {
   cantReach: "Couldn't reach trading. Check your connection and try again.",
   // NEW (flagged): market-data credit, one constant (wording to confirm with the provider's terms).
   alpacaCredit: 'Market data provided by Alpaca',
+  // Board stock sheet, verbatim: ownership and the sell summary.
+  draftedByYou: (round: number, pick: number) => `Drafted by you · Round ${round}, pick ${pick}`,
+  noOneOwns: (league: string, symbol: string) => `No one in ${league} owns ${symbol}`,
+  sellAll: (qty: string, value: string) => `Sell all ${qty} sh ≈ ${value}`,
+  pricesShowClose: (label: string) => `Prices show ${label}.`,
+  // NEW (flagged): ownership states the board doesn't draw.
+  heldByYou: 'Held by you',
+  alreadyHeld: 'You already hold this stock.',
   // Board pattern, verbatim: "Trading opens Mon 9:30 AM ET."
   tradingOpens: (when: string) => `Trading opens ${when}.`,
 };
