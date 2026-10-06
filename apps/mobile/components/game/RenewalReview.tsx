@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { useState } from 'react';
-import { View, StyleSheet, Alert } from 'react-native';
+import { View, StyleSheet, Alert, Pressable } from 'react-native';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { Button } from '@/components/sp/Button';
@@ -9,6 +9,9 @@ import { supabase } from '@/lib/supabase';
 import { teamsLine, canSchedule, buildRenewalSettings } from '@/lib/game/renewalReview';
 import { byeNoticeCopy } from '@/lib/game/draftLobby';
 import { playoffLine } from '@/lib/playoffs';
+import { SegmentedControl } from '@/components/sp/SegmentedControl';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { PICK_CLOCK_OPTIONS, DRAFT_ORDER_OPTIONS, isFutureDraftDate } from '@/lib/game/renewalPickers';
 
 export interface RenewalReviewProps {
   leagueId: string;
@@ -25,15 +28,21 @@ export interface RenewalReviewProps {
  * nobody is pending and a draft date is set. */
 export function RenewalReview({ leagueId, inviteCode, counts, repliesPending, settings, onScheduled }: RenewalReviewProps) {
   const [busy, setBusy] = useState(false);
+  // The commissioner's picks, held locally until Schedule: start_renewed_season takes
+  // them in its settings, so nothing is written before the one action.
+  const [pickSeconds, setPickSeconds] = useState(settings.pick_seconds);
+  const [draftOrder, setDraftOrder] = useState<string>(settings.draft_order_mode);
+  const [draftDate, setDraftDate] = useState<string | null>(settings.draft_date);
+  const [editingDate, setEditingDate] = useState(false);
   const teams = teamsLine(counts, inviteCode);
   const bye = byeNoticeCopy(counts.in + counts.new, settings.num_weeks);
   const playoffs = playoffLine(settings.playoff_teams);
-  const enabled = canSchedule({ repliesPending, draftDate: settings.draft_date }) && !busy;
+  const enabled = canSchedule({ repliesPending, draftDate }) && !busy;
 
   const schedule = async () => {
     if (!enabled) return;
     setBusy(true);
-    const payload = buildRenewalSettings({ ...settings });
+    const payload = buildRenewalSettings({ ...settings, pick_seconds: pickSeconds, draft_order_mode: draftOrder, draft_date: draftDate });
     const { data, error } = await supabase.rpc('start_renewed_season', { p_league_id: leagueId, p_settings: payload });
     setBusy(false);
     const res = data as { status?: string } | null;
@@ -52,9 +61,25 @@ export function RenewalReview({ leagueId, inviteCode, counts, repliesPending, se
       <Card>
         <Row label="Who's in" value={`${counts.in} back · ${counts.new} new`} />
         <Row label="Teams" value={teams.value} sub={teams.sub} />
-        <Row label="Draft" value={settings.draft_date ?? 'Not set'} />
-        <Row label="Draft order" value={settings.draft_order_mode} />
-        <Row label="Pick clock" value={`${settings.pick_seconds} seconds`} />
+        <Row label="Draft" value={draftDate ? new Date(draftDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Not set'} onPress={() => setEditingDate((v) => !v)} />
+        {editingDate ? (
+          <DateTimePicker
+            value={draftDate ? new Date(draftDate) : new Date()}
+            mode="datetime"
+            minimumDate={new Date()}
+            onChange={(_, d) => {
+              if (d && isFutureDraftDate(d.toISOString(), new Date())) setDraftDate(d.toISOString());
+            }}
+          />
+        ) : null}
+        <View style={styles.picker}>
+          <Text variant="callout">Draft order</Text>
+          <SegmentedControl options={DRAFT_ORDER_OPTIONS.map((o) => ({ label: o.label, value: o.value }))} value={draftOrder} onChange={setDraftOrder} />
+        </View>
+        <View style={styles.picker}>
+          <Text variant="callout">Pick clock</Text>
+          <SegmentedControl options={PICK_CLOCK_OPTIONS.map((s) => ({ label: `${s}s`, value: String(s) }))} value={String(pickSeconds)} onChange={(v) => setPickSeconds(Number(v))} />
+        </View>
         <Row label="Season" value={`${settings.num_weeks} weeks`} />
         {playoffs ? <Row label="Playoffs" value={playoffs} /> : null}
       </Card>
@@ -65,8 +90,8 @@ export function RenewalReview({ leagueId, inviteCode, counts, repliesPending, se
   );
 }
 
-function Row({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return (
+function Row({ label, value, sub, onPress }: { label: string; value: string; sub?: string; onPress?: () => void }) {
+  const body = (
     <View style={styles.row}>
       <Text variant="callout">{label}</Text>
       <View style={styles.value}>
@@ -75,10 +100,12 @@ function Row({ label, value, sub }: { label: string; value: string; sub?: string
       </View>
     </View>
   );
+  return onPress ? <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${label}, ${value}. Change`} style={{ minHeight: 44, justifyContent: 'center' }}>{body}</Pressable> : body;
 }
 
 const styles = StyleSheet.create({
   stack: { gap: space[3] },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', minHeight: 44, paddingVertical: space[1] },
   value: { alignItems: 'flex-end', flexShrink: 1 },
+  picker: { gap: space[2], paddingVertical: space[2] },
 });
