@@ -8,7 +8,7 @@
 
 This repo defines project-scoped subagents in `.claude/agents/`. They exist to keep the main session's context clean and to enforce the prod/secret handoff model structurally.
 
-**The rule that governs all of them:** no subagent runs prod-mutating commands — enforced structurally, not by prose. **All five agents have NO Bash in their `tools:`**, so they are physically incapable of running any shell command (`supabase db push`, edge-function deploys, real-key curls, vault rotations, `git push`/`merge`). They draft files and flag; applying anything is Giorgio's alone. A second layer in `.claude/settings.json` governs the *main* session (and any future Bash-capable agent): it puts every prod-mutating command on the `ask` tier — `supabase db push`/`functions deploy`/`secrets set` (and their `npx` forms), Vercel deploys, and `git push`/`git merge` — so each one prompts for confirmation before running rather than being hard-denied. This is a deliberate autonomy choice: nothing is blocked outright (a hard `deny` can't be overridden in-session), but no prod-mutating command runs without an explicit human OK. Read-only/branch work runs freely.
+**The rule that governs all of them:** no subagent runs prod-mutating commands — enforced structurally, not by prose. **All six agents have NO Bash in their `tools:`**, so they are physically incapable of running any shell command (`supabase db push`, edge-function deploys, real-key curls, vault rotations, `git push`/`merge`). They draft files and flag; applying anything is Giorgio's alone. A second layer in `.claude/settings.json` governs the *main* session (and any future Bash-capable agent): it puts every prod-mutating command on the `ask` tier — `supabase db push`/`functions deploy`/`secrets set` (and their `npx` forms), Vercel deploys, and `git push`/`git merge` — so each one prompts for confirmation before running rather than being hard-denied. This is a deliberate autonomy choice: nothing is blocked outright (a hard `deny` can't be overridden in-session), but no prod-mutating command runs without an explicit human OK. Read-only/branch work runs freely.
 
 | Agent | Model | Tools | Purpose |
 |---|---|---|---|
@@ -17,6 +17,7 @@ This repo defines project-scoped subagents in `.claude/agents/`. They exist to k
 | `supabase-reviewer` | sonnet | Read, Grep, Glob | Reviews migrations, RLS, edge functions, cron/vault SQL. Ends with explicit HUMAN ACTION handoffs. |
 | `supabase-migration-writer` | sonnet | Read, Write, Edit, Grep, Glob | Drafts migrations + RLS SQL to `supabase/migrations/` on a branch; never applies. Ends with explicit HUMAN ACTION `db push` handoffs. |
 | `test-writer` | sonnet | Read, Write, Edit, Grep, Glob | Drafts tests on a branch (no shell — doesn't run them); hands back the exact test command. Reports source bugs rather than patching. |
+| `ux-reviewer` | sonnet | Read, Grep, Glob | Runs docs/design/UX_RULES.md against a UI branch's screens and recordings at every design gate; findings + proposed P0–P3; never approves. |
 
 **Secret handling:** if any subagent surfaces a real key VALUE (not a variable name), it must report the location and type and mark it for rotation — never reproduce the value. Even test exposure requires rotation.
 
