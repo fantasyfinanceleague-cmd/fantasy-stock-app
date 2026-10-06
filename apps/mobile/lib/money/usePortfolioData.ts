@@ -41,7 +41,14 @@ function etIsoDate(d: Date): string | null {
 export function usePortfolioData(): PortfolioData {
   const { user } = useSession();
   const { activeLeague } = useLeagueContext();
+  // Key on primitives, not the league object: a LeagueContext refresh that rebuilds
+  // the object must not refetch the quotes and bars.
   const leagueId = activeLeague?.id ?? null;
+  const leagueName = activeLeague?.name ?? null;
+  const stakeMode = activeLeague?.stake_mode ?? null;
+  const notional = activeLeague?.notional_per_slot ?? null;
+  const numRounds = activeLeague?.num_rounds ?? null;
+  const userId = user?.id ?? null;
   const ledgerState = usePortfolioLedger(leagueId);
   const [state, setState] = useState<Omit<PortfolioData, 'refresh'>>(EMPTY);
   const [tick, setTick] = useState(0);
@@ -52,18 +59,17 @@ export function usePortfolioData(): PortfolioData {
   }, [ledgerRefresh]);
 
   useEffect(() => {
-    if (!activeLeague || !user) {
-      setState({ ...EMPTY, status: 'error', leagueName: activeLeague?.name ?? null });
+    if (!leagueId || !userId || numRounds == null) {
+      setState({ ...EMPTY, status: 'error', leagueName });
       return;
     }
     if (ledgerState.status === 'loading') return;
     if (ledgerState.status === 'error' || !ledgerState.ledger) {
-      setState({ ...EMPTY, status: 'error', leagueName: activeLeague.name });
+      setState({ ...EMPTY, status: 'error', leagueName });
       return;
     }
 
     const ledger = ledgerState.ledger;
-    const userId = user.id;
     let cancelled = false;
 
     (async () => {
@@ -78,7 +84,7 @@ export function usePortfolioData(): PortfolioData {
 
       // A row without its price can't be valued: refuse rather than show $0.
       if (drafts.some((d) => d.entryPrice == null) || trades.some((t) => t.price == null)) {
-        setState({ ...EMPTY, status: 'error', leagueName: activeLeague.name });
+        setState({ ...EMPTY, status: 'error', leagueName });
         return;
       }
       const costDrafts = drafts as { symbol: string; entryPrice: number; quantity: number }[];
@@ -123,9 +129,9 @@ export function usePortfolioData(): PortfolioData {
 
       const price = (sym: string) => prices[sym] ?? null;
       const summary = portfolioSummary({
-        stakeMode: activeLeague.stake_mode,
-        notionalPerSlot: activeLeague.notional_per_slot,
-        numRounds: activeLeague.num_rounds,
+        stakeMode,
+        notionalPerSlot: notional,
+        numRounds,
         drafts: costDrafts,
         trades: costTrades,
         price,
@@ -145,22 +151,22 @@ export function usePortfolioData(): PortfolioData {
         cash: summary.cash,
         stake: summary.stake,
         holdings: viewHoldings,
-        numRounds: activeLeague.num_rounds,
-        perSlotNotional: activeLeague.notional_per_slot,
-        stakeMode: activeLeague.stake_mode,
+        numRounds,
+        perSlotNotional: notional,
+        stakeMode,
       });
 
       if (__DEV__) {
         console.log(`[portfolio] ${requests} new request(s) (ledger ${ledgerState.fetchedNow ? 'fetched' : 'shared'}, ${symbols.length} holding(s))`);
       }
-      setState({ status: 'ready', view, requestCount: requests, leagueName: activeLeague.name });
+      setState({ status: 'ready', view, requestCount: requests, leagueName });
     })();
 
     return () => {
       cancelled = true;
     };
     // `tick` re-runs the price reads on Try again.
-  }, [activeLeague, user, ledgerState.status, ledgerState.ledger, ledgerState.fetchedNow, tick]);
+  }, [leagueId, leagueName, stakeMode, notional, numRounds, userId, ledgerState.status, ledgerState.ledger, ledgerState.fetchedNow, tick]);
 
   return { ...state, refresh };
 }
