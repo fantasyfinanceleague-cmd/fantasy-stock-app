@@ -30,7 +30,8 @@ export interface TradeReviewPanelProps {
 }
 
 const styles = StyleSheet.create({
-  stack: { gap: 12 },
+  // The review sits inside the sheet: its own 20 pt gutter, as the sheet body has.
+  stack: { gap: 12, paddingHorizontal: 20 },
   back: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
   // XL: the label may wrap; the value keeps its width (flexShrink 0) so it never truncates.
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', minHeight: 36, gap: 12 },
