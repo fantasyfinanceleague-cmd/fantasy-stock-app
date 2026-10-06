@@ -7,26 +7,28 @@ import React, { createContext, useCallback, useContext, useMemo, useState, type 
 
 import { Sheet } from '@/components/sp/Sheet';
 import { StockSheetBody } from '@/components/money/StockSheetBody';
-import { normalizeSymbol } from '@/lib/money/stockSheetApi';
+import { normalizeOpenOptions, normalizeSymbol, type OpenOptions } from '@/lib/money/stockSheetApi';
 
 export interface StockSheetContextValue {
   /** The symbol the sheet is showing, or null when it is closed. */
   symbol: string | null;
   /** Where the sheet was opened from (a row id), so the caller can restore focus. */
   originRef: string | null;
-  open: (symbol: string, originRef?: string | null) => void;
+  /** open(symbol, options?) — the legacy origin-ref string is still accepted (3c compatibility). */
+  open: (symbol: string, options?: string | null | OpenOptions) => void;
   close: () => void;
 }
 
 const StockSheetContext = createContext<StockSheetContextValue | undefined>(undefined);
 
 export function MoneyHostProvider({ children }: { children: ReactNode }) {
-  const [current, setCurrent] = useState<{ symbol: string; originRef: string | null } | null>(null);
+  const [current, setCurrent] = useState<{ symbol: string; originRef: string | null; name: string | null } | null>(null);
 
-  const open = useCallback((raw: string, originRef: string | null = null) => {
+  const open = useCallback((raw: string, options?: string | null | OpenOptions) => {
     const symbol = normalizeSymbol(raw);
     if (!symbol) return; // a bad ticker never opens an empty sheet
-    setCurrent({ symbol, originRef });
+    const o = normalizeOpenOptions(options);
+    setCurrent({ symbol, originRef: o.originRef, name: o.name });
   }, []);
 
   const close = useCallback(() => setCurrent(null), []);
@@ -40,7 +42,7 @@ export function MoneyHostProvider({ children }: { children: ReactNode }) {
     <StockSheetContext.Provider value={value}>
       {children}
       <Sheet visible={current !== null} onClose={close}>
-        {current ? <StockSheetBody symbol={current.symbol} onDone={close} /> : null}
+        {current ? <StockSheetBody symbol={current.symbol} knownName={current.name} onDone={close} /> : null}
       </Sheet>
     </StockSheetContext.Provider>
   );

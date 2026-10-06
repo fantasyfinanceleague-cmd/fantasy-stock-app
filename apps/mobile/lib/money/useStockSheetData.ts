@@ -13,6 +13,7 @@ import { useSession } from '@/lib/SessionProvider';
 import { supabase } from '@/lib/supabase';
 
 import { planSheetRequests } from './sheetRequests';
+import { resolveSheetName } from './stockSheetApi';
 import { sheetInputsFromLedger } from './portfolioLedger';
 import { deriveStockSheetFacts, type StockSheetFacts } from './stockSheetFacts';
 import { usePortfolioLedger } from './usePortfolioLedger';
@@ -47,7 +48,8 @@ const EMPTY: StockSheetData = {
   leagueName: null, requestCase: null, requestCount: null, refresh: () => {},
 };
 
-export function useStockSheetData(symbol: string): StockSheetData {
+/** `knownName`: a name the opener already has (symbol search, a lineup row). It skips the name read. */
+export function useStockSheetData(symbol: string, knownName: string | null = null): StockSheetData {
   const { user } = useSession();
   const { activeLeague } = useLeagueContext();
   const leagueId = activeLeague?.id ?? null;
@@ -79,7 +81,9 @@ export function useStockSheetData(symbol: string): StockSheetData {
       const cachedQuote = quoteCache.get(sym);
       const quoteFresh = !!cachedQuote && Date.now() - cachedQuote.at < QUOTE_TTL_MS;
       const ledgerName = ledger.symbol_names[sym] ?? null;
-      const nameKnown = !!ledgerName || nameCache.has(sym);
+      if (knownName) nameCache.set(sym, knownName);
+      const resolved = resolveSheetName({ openerName: knownName, ledgerName, cachedName: nameCache.get(sym) ?? null });
+      const nameKnown = resolved.name !== null;
 
       // Only the missing reads are made.
       const plan = planSheetRequests({ ledgerLoaded: !ledgerState.fetchedNow, quoteCached: quoteFresh, nameKnown });
@@ -100,7 +104,7 @@ export function useStockSheetData(symbol: string): StockSheetData {
         }
       }
 
-      let companyName: string | null = ledgerName ?? nameCache.get(sym) ?? null;
+      let companyName: string | null = resolved.name;
       if (!nameKnown) {
         const { data, error } = await supabase.functions.invoke('symbol-name', { body: { symbol: sym } });
         if (cancelled) return;
@@ -138,7 +142,7 @@ export function useStockSheetData(symbol: string): StockSheetData {
     };
     // `refresh` depends on the symbol and is re-created with it; `tick` re-runs the reads.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [symbol, leagueId, leagueName, userId, ledgerState.status, ledgerState.ledger, ledgerState.fetchedNow, tick]);
+  }, [symbol, knownName, leagueId, leagueName, userId, ledgerState.status, ledgerState.ledger, ledgerState.fetchedNow, tick]);
 
   return state;
 }

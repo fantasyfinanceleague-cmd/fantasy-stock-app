@@ -30,8 +30,8 @@ function useNow(intervalMs: number): Date {
   return now;
 }
 
-export function StockSheetBody({ symbol, onDone }: { symbol: string; onDone: () => void }) {
-  const data = useStockSheetData(symbol);
+export function StockSheetBody({ symbol, knownName = null, onDone }: { symbol: string; knownName?: string | null; onDone: () => void }) {
+  const data = useStockSheetData(symbol, knownName);
   const { market } = useLeagueContext();
   const now = useNow(1000);
   const [choice, setChoice] = useState<'buy' | 'sell' | null>(null);
