@@ -251,7 +251,7 @@ Accepted / for Giorgio:
 **ET formatting** is built from `formatToParts` with `hourCycle: 'h12'` pinned (the Hermes trap), with plain spaces. It's tested for noon/midnight and both 2026 DST switches. The title is the league name, with control characters stripped and capped at 60.
 
 **Time-set rule (Giorgio: "Anytime a draft time is changed, everyone receives a notification").**
-- **Who:** every human member, for any set or change to a non-NULL time while not started. The person who made the change is excluded (flagged: easy to include). A service-role or operator change tells everyone.
+- **Who:** every human member, **the person who made the change included** (Giorgio: "Everyone in the league gets the notifications when draft times are changed"), for any set or change to a non-NULL time while not started. A service-role or operator change tells everyone too.
 - **Debounce:** at most one pending notice per member per league (a partial unique index). Each change re-stamps it, and it's sent after **2 quiet minutes**, worded from the *current* time. A commissioner fiddling with the picker produces one push with the final time.
 - **Clearing** the time (TBD), or a postponement clearing it, sends no time-set push (a postponement has its own).
 

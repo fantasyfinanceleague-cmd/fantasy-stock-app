@@ -628,29 +628,30 @@ Deno.test({
       await as('commish', () => q(`update leagues set draft_date = now() - interval '1 day' where id=$1`, [S]));
     });
 
-    await t.step('time set: every change tells every other human ONCE per quiet window (debounced), bots and the actor excluded', async () => {
+    await t.step('time set: every change tells EVERY human (the one who changed it too) ONCE per quiet window (debounced)', async () => {
       const L = await league({ minutes: 600, members: 5, bots: 1 });   // commissioner + 3 humans + a bot
       const quarter = (mins: number) => `date_trunc('hour', now()) + interval '${mins} minutes'`;
       const ts = async () => (await q(`select user_id, push_status, created_at from league_notifications
         where league_id=$1 and kind='draft_time_set' order by user_id`, [L]));
       await as('commish', () => q(`update leagues set draft_date = ${quarter(24 * 60)} where id=$1`, [L]));
       let rows = await ts();
-      assertEquals(rows.length, 3, 'the 3 other humans: not the commissioner who changed it, not the bot');
-      assert(!rows.some((x: Row) => x.user_id === COMMISH || x.user_id.startsWith('bot-')));
+      assertEquals(rows.length, 4, 'all 4 humans, the commissioner who changed it included (Giorgio); not the bot');
+      assert(rows.some((x: Row) => x.user_id === COMMISH), 'the person who made the change is told too');
+      assert(!rows.some((x: Row) => x.user_id.startsWith('bot-')));
       const first = rows.map((x: Row) => +new Date(x.created_at));
       // Fiddling: two more changes inside the window -> still ONE pending row each, re-stamped.
       await q(`update league_notifications set created_at = created_at - interval '90 seconds' where league_id=$1`, [L]);
       await as('commish', () => q(`update leagues set draft_date = ${quarter(24 * 60 + 15)} where id=$1`, [L]));
       await as('commish', () => q(`update leagues set draft_date = ${quarter(24 * 60 + 30)} where id=$1`, [L]));
       rows = await ts();
-      assertEquals(rows.length, 3, 'coalesced');
+      assertEquals(rows.length, 4, 'coalesced');
       assert(rows.every((x: Row, i: number) => +new Date(x.created_at) > first[i] - 90_000), 're-stamped (debounce restarts)');
       // Same value: no change, nothing new. A row mid-send leaves the index: a new change is its own notice.
       await as('commish', () => q(`update leagues set draft_date = draft_date where id=$1`, [L]));
       await q(`update league_notifications set push_status = 'sending' where league_id=$1 and kind='draft_time_set' and user_id=$2`, [L, MEMBER]);
       await as('commish', () => q(`update leagues set draft_date = ${quarter(24 * 60 + 45)} where id=$1`, [L]));
       assertEquals((await ts()).filter((x: Row) => x.user_id === MEMBER).map((x: Row) => x.push_status).sort(), ['pending', 'sending']);
-      // Clearing the time notifies nobody; the service role (no actor) tells everyone, the commissioner too.
+      // Clearing the time notifies nobody; a service-role change tells everyone too.
       await q(`update league_notifications set push_status = 'sent' where league_id=$1`, [L]);
       await as('commish', () => q(`update leagues set draft_date = null where id=$1`, [L]));
       assertEquals((await ts()).filter((x: Row) => x.push_status === 'pending').length, 0);
@@ -660,7 +661,7 @@ Deno.test({
       const P = await league({ minutes: 60.2 });
       await postpone(P);
       await as('commish', () => q(`update leagues set draft_date = ${quarter(48 * 60)} where id=$1`, [P]));
-      assertEquals((await notices(P, 'draft_time_set')).length, 3);
+      assertEquals((await notices(P, 'draft_time_set')).length, 4, 'all 4 humans, the commissioner included');
       // told_time_before (first-set vs "now"): false until a draft_time_set was actually sent.
       const [n1] = await q(`select id from league_notifications where league_id=$1 and kind='draft_time_set' and user_id=$2 and push_status='pending'`, [L, MEMBER]);
       assertEquals((await svc(`select public.draft_notice_context($1) c`, [n1.id])).c.told_time_before, true);

@@ -705,7 +705,7 @@ postponement notices to bots. Round 2 (after both reviews): finalize ignoring th
 gate; finalize ignoring a postponement; no gate hand-back; postpone without CAS;
 no at-risk flap guard; no postponed-push cooldown; the cron guard not isolated;
 the legacy date kept; the watch without urgency ordering; time-set without the
-debounce re-stamp, telling the actor, telling bots; the reminder sharing the
+debounce re-stamp, skipping the person who made the change, telling bots; the reminder sharing the
 at-risk kind.
 
 Run: `deno test --allow-read --allow-env supabase/tests/draft_auto_start.pglite.test.ts`.

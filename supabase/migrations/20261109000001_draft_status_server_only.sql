@@ -213,10 +213,11 @@ create trigger trg_leagues_draft_time
 -- A NEW draft time (every role: the commissioner's edit, #94's renewal RPC, or
 -- an operator's from the SQL editor), while the draft is ahead:
 --   * ends a postponement, and drops the stale watch row for the old time;
---   * tells every human member (Giorgio, 2026-10-06: "Anytime a draft time is
---     changed, everyone receives a notification to know exactly when it's
---     happening"), except the person who made the change (auth.uid(), when a
---     user session did). DEBOUNCED: one pending row per member, re-stamped on
+--   * tells EVERY human member, the person who made the change included
+--     (Giorgio, 2026-10-06: "Anytime a draft time is changed, everyone receives
+--     a notification to know exactly when it's happening"; "Everyone in the
+--     league gets the notifications when draft times are changed").
+--     DEBOUNCED: one pending row per member, re-stamped on
 --     every change (league_notifications_draft_time_set_pending_uidx), sent
 --     after 2 quiet minutes with the then-current time (draft-order-notify).
 -- Clearing the time (TBD, or a postponement clearing it) notifies nobody here:
@@ -227,8 +228,6 @@ language plpgsql
 security definer
 set search_path = public, pg_temp
 as $$
-declare
-  v_actor text := auth.uid()::text;
 begin
   if new.draft_status = 'not_started' and new.draft_date is not null
      and new.draft_date is distinct from old.draft_date then
@@ -240,7 +239,6 @@ begin
       from public.league_members m
      where m.league_id = new.id
        and m.user_id not like 'bot-%'
-       and m.user_id is distinct from v_actor
     on conflict (league_id, user_id) where kind = 'draft_time_set' and push_status = 'pending'
     do update set created_at = now();
   elsif new.draft_status = 'not_started' and new.draft_date is null and old.draft_date is not null then
