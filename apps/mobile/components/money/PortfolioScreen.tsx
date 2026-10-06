@@ -8,6 +8,7 @@
  */
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import Animated, { LinearTransition } from 'react-native-reanimated';
 
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
@@ -18,6 +19,9 @@ import { useRouter } from 'expo-router';
 import { LoadFailure } from '@/components/money/LoadFailure';
 import { COPY } from '@/lib/money/moneyCopy';
 import { usePortfolioData } from '@/lib/money/usePortfolioData';
+import { RollingMoney } from '@/components/home/RollingMoney';
+import { useLeagueContext } from '@/lib/LeagueContext';
+import { useMotion } from '@/components/sp/motion';
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
@@ -42,6 +46,8 @@ export function PortfolioScreen() {
   const data = usePortfolioData();
   const { open } = useStockSheet();
   const router = useRouter();
+  const { activeLeague } = useLeagueContext();
+  const { reduced, duration } = useMotion();
 
   let body: React.ReactNode;
   if (data.status === 'loading') {
@@ -53,7 +59,8 @@ export function PortfolioScreen() {
     body = (
       <View style={styles.stack}>
         <Text variant="callout" tone="secondary">{v.valueLabel}</Text>
-        <Text variant="display">{v.valueText}</Text>
+        {/* M3: the value rolls per changed digit on a quote refresh, never on first paint. */}
+        <RollingMoney text={v.valueText} size="display" rollKey={activeLeague?.id ?? ''} />
 
         {v.gainText ? (
           <Text variant="callout">
@@ -74,6 +81,8 @@ export function PortfolioScreen() {
         <Text variant="headline">{COPY.holdingsHeading}</Text>
         <View style={styles.list}>
           {v.rows.map((r) => (
+            // M5: rows FLIP to their new positions when values change the sort (Reduce Motion: they jump).
+            <Animated.View key={r.symbol} layout={reduced ? undefined : LinearTransition.duration(duration.base)}>
             <Pressable
               key={r.symbol}
               accessibilityRole="button"
@@ -92,6 +101,7 @@ export function PortfolioScreen() {
                 </Text>
               </View>
             </Pressable>
+            </Animated.View>
           ))}
         </View>
 

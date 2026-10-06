@@ -7,10 +7,13 @@
  * Refusals and blockers sit in a warn-tint card with NO icon. Load failures
  * and field errors are text. Nothing here says "Confirm" or "OK".
  */
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { Button } from '@/components/sp/Button';
+import { Icon } from '@/components/sp/Icon';
+import { useMotion } from '@/components/sp/motion';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { COPY } from '@/lib/money/moneyCopy';
@@ -29,10 +32,36 @@ export interface TradeReviewPanelProps {
 const styles = StyleSheet.create({
   stack: { gap: 12 },
   back: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 36 },
+  // XL: the label may wrap; the value keeps its width (flexShrink 0) so it never truncates.
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', minHeight: 36, gap: 12 },
+  rowLabel: { flex: 1 },
+  rowValue: { flexShrink: 0, textAlign: 'right' },
   card: { borderRadius: 12, padding: 14 },
   footerLink: { minHeight: 44, justifyContent: 'center', alignItems: 'center' },
 });
+
+/**
+ * M4, the trade success: the check draws over the slow duration, then the
+ * screen moves on. Reduce Motion: the check simply appears.
+ */
+function DoneCheck() {
+  const { reduced, duration, easing } = useMotion();
+  const progress = useSharedValue(reduced ? 1 : 0);
+  useEffect(() => {
+    if (!reduced) progress.value = withTiming(1, { duration: duration.slow, easing: easing.settle });
+    // Mount-only: the check draws once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const style = useAnimatedStyle(() => ({
+    opacity: progress.value,
+    transform: [{ scale: 0.8 + 0.2 * progress.value }],
+  }));
+  return (
+    <Animated.View style={style} accessible={false}>
+      <Icon name="check" size="medallion" tone="text" />
+    </Animated.View>
+  );
+}
 
 export function TradeReviewPanel({ review, presentation, onSubmit, onRetry, onBack, onDone }: TradeReviewPanelProps) {
   const { colors } = useTheme();
@@ -49,9 +78,9 @@ export function TradeReviewPanel({ review, presentation, onSubmit, onRetry, onBa
 
       <View style={{ gap: 4 }}>
         {review.lines.map((l) => (
-          <View key={l.label} style={styles.row}>
-            <Text variant="callout" tone="secondary">{l.label}</Text>
-            <Text variant="callout" tone={l.tone === 'zero' ? 'secondary' : 'primary'}>{l.value}</Text>
+          <View key={l.label} style={styles.row} accessible accessibilityLabel={`${l.label}, ${l.value}`}>
+            <Text variant="callout" tone="secondary" style={styles.rowLabel}>{l.label}</Text>
+            <Text variant="callout" tone={l.tone === 'zero' ? 'secondary' : 'primary'} style={styles.rowValue}>{l.value}</Text>
           </View>
         ))}
       </View>
@@ -62,6 +91,7 @@ export function TradeReviewPanel({ review, presentation, onSubmit, onRetry, onBa
         </View>
       ) : null}
 
+      {p.footer === 'done' ? <DoneCheck /> : null}
       {p.message ? (
         p.messageTone === 'warn' ? (
           // Warn-tint card, NO icon (the Design Lead's ruling for refusals and blockers).
