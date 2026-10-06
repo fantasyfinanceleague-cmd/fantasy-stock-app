@@ -360,7 +360,7 @@
               <li><b>3 · Refuse time changes after the room opens</b> (except when missed). From 6:00 PM, teams are locked in on the promise of 7:00; moving the time breaks that promise.</li>
               <li><b>4 · An hour minimum, with invisible slack.</b> The picker never offers a time under an hour away (15-minute steps). The server accepts 55 minutes, so a slow submit is never refused for a time the picker showed. The user never sees the slack.</li>
               <li><b>Not a design call:</b> plan decision 5 (a server-only <code>draft_status</code> trigger) is security. Recommend it ships in this release; it closes a direct-write bypass.</li>
-              <li><b>Precondition, flagged:</b> the room-open push and the at-risk push both ride the order-notify job, which still sits in <code>migrations/deferred/</code>. Until it's live, no copy may promise them. Also: if joins lock at T−1h too, the order panel's "Anyone who joins now picks last." becomes untrue and must go.</li>
+              <li><b>Precondition, flagged:</b> the room-open push and the at-risk push both ride the order-notify job, which still sits in <code>migrations/deferred/</code>. Until it's live, no copy may promise them. Resolved: only LEAVING locks at T−1h; joining stays open until the draft starts and a late joiner picks last, so the order panel's "Anyone who joins now picks last." stays. A 4th joiner during the 15-minute grace can unblock the start.</li>
             </ul>
           </div>
         </section>
