@@ -30,6 +30,8 @@ export interface PortfolioInput {
 export interface PortfolioSummary {
   value: number;
   cash: number;
+  /** The starting stake the gain is measured from (teamValue's stake). */
+  stake: number;
   /** Symbols currently held (net quantity > 0), SKIP excluded. */
   holdingSymbols: string[];
   /** Legacy SKIP rows seen and ignored (0 once the backend guarantee lands). */
@@ -60,5 +62,47 @@ export function portfolioSummary(input: PortfolioInput): PortfolioSummary {
   }
   const holdingSymbols = [...net].filter(([, q]) => q > 1e-9).map(([sym]) => sym).sort();
 
-  return { value: tv.value, cash: tv.cash, holdingSymbols, legacySkipRows };
+  return { value: tv.value, cash: tv.cash, stake: tv.stake, holdingSymbols, legacySkipRows };
+}
+
+export interface PortfolioHolding {
+  symbol: string;
+  quantity: number;
+  /** Average-cost basis of the open quantity (what the position cost). */
+  costBasis: number;
+}
+
+/**
+ * Open holdings with their average-cost basis, from the league's draft picks
+ * and trades in chronological order. The same accounting teamValue uses: a sell
+ * releases its share of the average cost, and a position that closes at zero is
+ * dropped. SKIP rows are never holdings.
+ */
+export function portfolioHoldings(drafts: PortfolioDraftRow[], trades: TeamValueTradeRow[]): PortfolioHolding[] {
+  const book = new Map<string, { quantity: number; totalCost: number }>();
+  for (const d of drafts) {
+    if (isSkip(d.symbol)) continue;
+    const sym = d.symbol.toUpperCase();
+    const h = book.get(sym) ?? { quantity: 0, totalCost: 0 };
+    h.quantity += d.quantity;
+    h.totalCost += d.entryPrice * d.quantity;
+    book.set(sym, h);
+  }
+  for (const t of trades) {
+    const sym = t.symbol.toUpperCase();
+    const h = book.get(sym) ?? { quantity: 0, totalCost: 0 };
+    if (t.action === 'buy') {
+      h.quantity += t.quantity;
+      h.totalCost += t.price * t.quantity;
+    } else {
+      const avg = h.quantity > 0 ? h.totalCost / h.quantity : t.price;
+      h.quantity -= t.quantity;
+      h.totalCost = h.quantity > 0 ? avg * h.quantity : 0;
+    }
+    book.set(sym, h);
+  }
+  return [...book]
+    .filter(([, h]) => h.quantity > 1e-9)
+    .map(([symbol, h]) => ({ symbol, quantity: h.quantity, costBasis: Math.round(h.totalCost * 100) / 100 }))
+    .sort((a, b) => a.symbol.localeCompare(b.symbol));
 }

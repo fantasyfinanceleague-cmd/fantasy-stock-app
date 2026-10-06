@@ -69,6 +69,13 @@ export const COPY = {
   backToBudget: 'Back to your budget',
   budgetNow: 'Budget now',
   budgetLeftAfter: 'Budget left after',
+  // Portfolio (board, verbatim).
+  sinceTheDraft: 'since the draft',
+  slotsInvested: (n: number, total: number) => `${n} of ${total} slots invested`,
+  perSlotAtDraft: (amount: string) => `${amount} per slot at the draft`,
+  holdingsHeading: 'Holdings',
+  tradeHistory: 'Trade history',
+  includesDraftPicks: 'Includes your draft picks',
   // Board pattern, verbatim: "Trading opens Mon 9:30 AM ET."
   tradingOpens: (when: string) => `Trading opens ${when}.`,
 };
