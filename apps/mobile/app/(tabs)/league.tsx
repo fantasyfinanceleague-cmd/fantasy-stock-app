@@ -15,6 +15,8 @@ import { playoffLine } from '@/lib/playoffs';
 import { buildSchedule } from '@/lib/game/schedule';
 import { ScheduleList } from '@/components/game/ScheduleList';
 import { BracketView } from '@/components/game/BracketView';
+import { DraftLobby } from '@/components/game/DraftLobby';
+import { usePreDraftData } from '@/lib/home/usePreDraftData';
 import { useBracket } from '@/lib/game/useBracket';
 import { SegmentedControl } from '@/components/sp/SegmentedControl';
 import { useState } from 'react';
@@ -38,6 +40,7 @@ export default function LeagueScreen() {
   const hasPlayoffs = (activeLeague?.season_status === 'playoffs' || activeLeague?.season_status === 'completed') && (activeLeague?.playoff_teams ?? 0) > 0;
   const phase = sheetLeagues.find((l) => l.id === activeLeagueId)?.seasonPhase;
   const drafting = phase === 'drafting';
+  const preDraft = phase === 'pre_draft' && activeLeagueId !== null;
   const inSeason = phase === 'regular' || phase === 'playoffs' || phase === 'completed';
   const { colors } = useTheme();
   const st = useLeagueStandings(inSeason ? activeLeagueId : null);
@@ -92,6 +95,10 @@ export default function LeagueScreen() {
     );
   }
 
+  if (preDraft && activeLeagueId) {
+    return <LeagueLobby leagueId={activeLeagueId} />;
+  }
+
   return (
     <PhasePlaceholder
       title="League"
@@ -101,6 +108,32 @@ export default function LeagueScreen() {
       actionLabel={drafting ? 'Go to the draft room' : undefined}
       onAction={drafting ? () => router.push('/(tabs)/draft') : undefined}
     />
+  );
+}
+
+/** The pre-draft League tab (3c): the draft lobby. Its own component, so the
+ * pre-draft hook runs only for a league that is actually pre-draft. */
+function LeagueLobby({ leagueId }: { leagueId: string }) {
+  const { activeLeague, refresh } = useLeagueContext();
+  const { user } = useAuth();
+  const { colors } = useTheme();
+  const data = usePreDraftData(leagueId);
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <ShellHeader title="League" showAvatar />
+      <BarsRefresh onRefresh={refresh} contentContainerStyle={{ paddingHorizontal: space[6], paddingBottom: space[9], gap: space[6] }}>
+        {data.loading ? null : (
+          <DraftLobby
+            data={data}
+            myUserId={user?.id ?? ''}
+            draftDate={activeLeague?.draft_date ?? null}
+            pickSeconds={activeLeague?.pick_seconds ?? 60}
+            rounds={activeLeague?.num_rounds ?? 6}
+            now={new Date()}
+          />
+        )}
+      </BarsRefresh>
+    </View>
   );
 }
 
