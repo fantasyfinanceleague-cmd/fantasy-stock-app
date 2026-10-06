@@ -14,7 +14,8 @@
  *   unavailable  the calendar couldn't be read (503). NOT a failed trade: the
  *                review stays open and can retry.
  *   unconfirmed  the network dropped during a submit. The trade may have been
- *                recorded, so the copy must say so, and retry is allowed.
+ *                recorded. There is NO retry: a blind retry could double-buy.
+ *                The copy sends the user to their trade history instead.
  */
 import { marketOpensLabel } from './marketOpensLabel';
 import type { RecordTradeOutcome } from './recordTradeOutcome';
@@ -43,7 +44,7 @@ export function canDismiss(state: ReviewState): boolean {
 
 /** The primary button is live only when the review is ready to submit. */
 export function canSubmit(state: ReviewState): boolean {
-  return state.kind === 'ready' || state.kind === 'unavailable' || state.kind === 'unconfirmed';
+  return state.kind === 'ready' || state.kind === 'unavailable';
 }
 
 export function reviewReducer(state: ReviewState, event: ReviewEvent): ReviewState {
@@ -59,7 +60,8 @@ export function reviewReducer(state: ReviewState, event: ReviewEvent): ReviewSta
   }
 
   if (event.type === 'RETRY') {
-    return state.kind === 'unavailable' || state.kind === 'unconfirmed' ? { kind: 'ready' } : state;
+    // Only a 503 can retry. An unconfirmed trade must never be resubmitted blind.
+    return state.kind === 'unavailable' ? { kind: 'ready' } : state;
   }
 
   // OUTCOME: only meaningful while a submit is in flight.

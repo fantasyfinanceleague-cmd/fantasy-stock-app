@@ -13,6 +13,7 @@ import { refusalCopy } from '../lib/money/refusals.ts';
 import { marketOpensLabel } from '../lib/money/marketOpensLabel.ts';
 import { buyQuantity } from '../lib/money/buyQuantity.ts';
 import { formatShares } from '../lib/money/formatShares.ts';
+import { JPM_PROCEEDS } from './fixtures/jpm-sale.ts';
 
 // ---- U2 trade gate -------------------------------------------------------
 
@@ -94,22 +95,22 @@ function legacyTrap(fields: { stake_mode: string | null; notional_per_slot: numb
 
 Deno.test('buying power, test_0925 shape: fixed_notional with legacy budget columns offers the JPM proceeds', () => {
   // Giorgio's 1.1.0 failure: per-slot league still carrying budget_mode='budget'
-  // and budget_amount=100. Sold JPM whole: 2.916472 @ $333.25 = $971.92.
+  // and budget_amount=100. Sold JPM whole: 2.916472 @ $333.25 (proceeds derived in the fixture).
   const league = legacyTrap({ stake_mode: 'fixed_notional', notional_per_slot: 2000 });
   const preview: BuyingPowerPreview = {
     stake_mode: 'fixed_notional',
     stake: 2000,
     unfilled_slots: 0,
-    sources: [{ trade_id: 'trade-jpm-sell', symbol: 'JPM', amount: 971.92 }],
+    sources: [{ trade_id: 'trade-jpm-sell', symbol: 'JPM', amount: JPM_PROCEEDS }],
   };
   const power = buyingPower({ league, preview, cashSpent: null, openTierLabel: null });
   assertEquals(power.kind, 'proceeds');
   if (power.kind !== 'proceeds') throw new Error('unreachable');
   assertEquals(power.pickerRequired, false);
   assertEquals(power.defaultTradeId, 'trade-jpm-sell');
-  assertEquals(power.sources[0].amount, 971.92);
-  // The buy is sized from the sale's cash: about 14.6329 VIST at $66.42.
-  assertEquals(formatShares(buyQuantity({ kind: 'proceeds', amount: power.sources[0].amount, price: 66.42 }) ?? Number.NaN), '14.6329');
+  assertEquals(power.sources[0].amount, JPM_PROCEEDS);
+  // The buy is sized from the sale's cash, at the derived quantity.
+  assertEquals(formatShares(buyQuantity({ kind: 'proceeds', amount: power.sources[0].amount, price: 66.42 }) ?? Number.NaN), formatShares(Math.round((JPM_PROCEEDS / 66.42) * 1e6) / 1e6));
 });
 
 Deno.test('buying power: two sales with cash need a picker; one buy never mixes them', () => {

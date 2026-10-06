@@ -8,6 +8,7 @@ import { assertEquals } from 'jsr:@std/assert';
 import { cleanCompanyName } from '../lib/money/cleanCompanyName.ts';
 import { formatShares } from '../lib/money/formatShares.ts';
 import { buyQuantity, fixedNotionalShares } from '../lib/money/buyQuantity.ts';
+import { JPM_PROCEEDS, VIST_BUY, VIST_PRICE } from './fixtures/jpm-sale.ts';
 
 Deno.test('cleanCompanyName strips feed share-class suffixes', () => {
   assertEquals(cleanCompanyName('Apple Inc. - Common Stock'), 'Apple');
@@ -56,14 +57,13 @@ Deno.test('formatShares refuses non-finite input rather than inventing a number'
 
 Deno.test('fixedNotionalShares mirrors record-trade: cents price, then 6 dp quantity', () => {
   // record-trade: price = round(fill * 100) / 100; quantity = round(amount / price * 1e6) / 1e6
-  const q = fixedNotionalShares(971.92, 66.4175);
+  const q = fixedNotionalShares(JPM_PROCEEDS, 66.4175);
   assertEquals(q?.price, 66.42);
-  assertEquals(q?.quantity, Math.round((971.92 / 66.42) * 1e6) / 1e6);
+  assertEquals(q?.quantity, Math.round((JPM_PROCEEDS / 66.42) * 1e6) / 1e6);
 });
 
-Deno.test('fixedNotionalShares: the test_0925 case, JPM proceeds reinvested into VIST', () => {
-  const q = fixedNotionalShares(971.92, 66.42);
-  assertEquals(formatShares(q?.quantity ?? Number.NaN), '14.6329');
+Deno.test('fixedNotionalShares: the test_0925 case, JPM proceeds (derived) reinvested into VIST', () => {
+  assertEquals(formatShares(VIST_BUY?.quantity ?? Number.NaN), formatShares(Math.round((JPM_PROCEEDS / VIST_PRICE) * 1e6) / 1e6));
 });
 
 Deno.test('fixedNotionalShares refuses a non-positive price', () => {
@@ -79,5 +79,5 @@ Deno.test('buyQuantity: one-share modes are always exactly 1', () => {
 });
 
 Deno.test('buyQuantity: a sale-proceeds source sizes by its amount', () => {
-  assertEquals(buyQuantity({ kind: 'proceeds', amount: 971.92, price: 66.42 }), fixedNotionalShares(971.92, 66.42)?.quantity);
+  assertEquals(buyQuantity({ kind: 'proceeds', amount: JPM_PROCEEDS, price: VIST_PRICE }), VIST_BUY?.quantity);
 });

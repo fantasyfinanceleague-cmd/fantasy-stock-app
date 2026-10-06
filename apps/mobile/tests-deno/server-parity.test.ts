@@ -17,6 +17,7 @@ import {
 } from '../../../supabase/functions/_shared/draft-validation.ts';
 import { buyQuantity, fixedNotionalShares } from '../lib/money/buyQuantity.ts';
 import { cashSpent } from '../lib/money/cashSpent.ts';
+import { JPM_PROCEEDS } from './fixtures/jpm-sale.ts';
 
 // record-trade rounds the fill to cents ONCE, before validating and sizing
 // (index.ts: price = Math.round(fill.price * 100) / 100). The parity inputs
@@ -45,13 +46,13 @@ function trade(over: Partial<TradeRow> & { id: string; symbol: string; action: '
 const FIXED: LeagueRules = { stakeMode: 'fixed_notional', budgetAmount: null, notionalPerSlot: 2000, numRounds: 6, allowUndraftable: true };
 
 Deno.test('parity: fixed_notional buy funded by a sale sizes exactly like the server (test_0925 shape)', () => {
-  // Six draft picks at $2,000 each; JPM sold whole for 971.92; a buy of VIST at $66.42.
+  // Six draft picks at $2,000 each; JPM sold whole (proceeds from the fixture); a buy of VIST at $66.42.
   const picks: PickRow[] = [
     pick({ symbol: 'JPM', entry_price: 204.9, quantity: 2000 / 204.9, pick_number: 1 }),
     pick({ symbol: 'AAPL', entry_price: 198.6, quantity: 2000 / 198.6, pick_number: 2 }),
   ];
   const trades: TradeRow[] = [
-    trade({ id: 'sell-jpm', symbol: 'JPM', action: 'sell', quantity: 2.916472, price: 333.25, total_value: 971.92 }),
+    trade({ id: 'sell-jpm', symbol: 'JPM', action: 'sell', quantity: 2.916472, price: 333.25, total_value: JPM_PROCEEDS }),
   ];
   const decision = validateTradeAdd({
     rules: FIXED, slots: [], picks, trades, userId: USER, symbol: 'VIST', price: cents(66.4175),
@@ -59,9 +60,9 @@ Deno.test('parity: fixed_notional buy funded by a sale sizes exactly like the se
   });
   if (!decision.legal) throw new Error(`server refused: ${decision.reason}`);
 
-  const client = buyQuantity({ kind: 'proceeds', amount: 971.92, price: cents(66.4175) });
+  const client = buyQuantity({ kind: 'proceeds', amount: JPM_PROCEEDS, price: cents(66.4175) });
   assertEquals(client, decision.quantity);
-  assertEquals(decision.stakeAmount, 971.92);
+  assertEquals(decision.stakeAmount, JPM_PROCEEDS);
   assertEquals(decision.fundedByTradeId, 'sell-jpm');
 });
 
@@ -106,11 +107,11 @@ Deno.test('parity: budget_cap cash spent (sales refund the budget) matches userC
 Deno.test('parity: fixedNotionalShares agrees with the server rounding on a cents-boundary price', () => {
   // A raw fill of 66.4149 must round to 66.41 before sizing, exactly as record-trade does.
   const picks: PickRow[] = [pick({ symbol: 'JPM', entry_price: 204.9, quantity: 2000 / 204.9, pick_number: 1 })];
-  const trades: TradeRow[] = [trade({ id: 'sell', symbol: 'JPM', action: 'sell', quantity: 2.916472, price: 333.25, total_value: 971.92 })];
+  const trades: TradeRow[] = [trade({ id: 'sell', symbol: 'JPM', action: 'sell', quantity: 2.916472, price: 333.25, total_value: JPM_PROCEEDS })];
   const decision = validateTradeAdd({
     rules: FIXED, slots: [], picks, trades, userId: USER, symbol: 'X', price: cents(66.4149),
     eligibleCategories: new Set(), isDraftable: true, soldTradeId: null,
   });
   if (!decision.legal) throw new Error(`server refused: ${decision.reason}`);
-  assertEquals(fixedNotionalShares(971.92, 66.4149)?.quantity, decision.quantity);
+  assertEquals(fixedNotionalShares(JPM_PROCEEDS, 66.4149)?.quantity, decision.quantity);
 });

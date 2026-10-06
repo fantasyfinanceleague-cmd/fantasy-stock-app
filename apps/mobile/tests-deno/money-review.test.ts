@@ -7,6 +7,7 @@
 import { assert, assertEquals } from 'jsr:@std/assert';
 import { canDismiss, canSubmit, initialReview, reviewReducer } from '../lib/money/reviewMachine.ts';
 import { decideTradeGate, type MarketStatusRow } from '../lib/money/tradeGate.ts';
+import { COPY } from '../lib/money/moneyCopy.ts';
 
 Deno.test('ready: the button is live and the review can be dismissed', () => {
   assertEquals(canSubmit(initialReview), true);
@@ -49,11 +50,18 @@ Deno.test('calendar unavailable (503): not a failed trade, the review stays open
   assertEquals(s.kind, 'ready');
 });
 
-Deno.test('a dropped network during submit is "unconfirmed", never a plain failure', () => {
+Deno.test('a dropped network during submit is "unconfirmed", and there is no blind retry', () => {
   let s = reviewReducer(initialReview, { type: 'SUBMIT' });
   s = reviewReducer(s, { type: 'OUTCOME', outcome: { kind: 'network' } });
   assertEquals(s.kind, 'unconfirmed');
-  assertEquals(canSubmit(s), true);
+  // The trade may already be recorded: no submit, and no retry, from this state.
+  assertEquals(canSubmit(s), false);
+  assertEquals(reviewReducer(s, { type: 'RETRY' }), s);
+  assertEquals(reviewReducer(s, { type: 'SUBMIT' }), s);
+});
+
+Deno.test('unconfirmed copy points to the history and never invites a retry', () => {
+  assertEquals(COPY.unconfirmed, "We couldn't confirm the trade. Check your history before trying again.");
 });
 
 Deno.test('proceeds_unavailable goes back to the picker; no_proceeds is terminal', () => {

@@ -22,6 +22,9 @@ export const COPY = {
   cashFromSales: 'Cash from sales',
   // D3 closed (Giorgio): a draft pick can never be unused. There is no
   // unfilled-slot copy; legacy SKIP rows render nothing.
+  // NEW (flagged, PLACEHOLDER for the Design Lead): the submit may or may not have
+  // been recorded. No retry: a blind retry could double-buy.
+  unconfirmed: "We couldn't confirm the trade. Check your history before trying again.",
   // NEW (flagged): trading-hours copy.
   tradingHoursUnavailable: 'Trading hours unavailable. Try again shortly.',
   marketHoliday: "It's a market holiday.",
