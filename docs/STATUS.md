@@ -80,7 +80,7 @@ refused by RLS when they draft (confirmed on Giorgio's phone). The fix is the
 | `league_members_insert_self` ([I4]) narrowed | Applied; effect test 9/9 PASS | 2026-09-25 |
 | `symbols.price_unsupported` | Applied; 421 active symbols marked (matches the code's regex exactly) | 2026-09-25 |
 | Symbol pricing backfill | 4,613 of 14,754 active symbols unpriced (down from 4,749); drains ~150/h. BAC and F still unpriced at last check | 2026-09-25 evening |
-| `db-snapshot.json` | Captured **2026-08-12**, stale. Re-capture with `docs/architecture/db-snapshot.sql` | — |
+| `db-snapshot.json` | Captured **2026-10-06 04:24Z** (32 tables, 9 cron jobs, 54 functions; Postgres 17.4). This cleared the three HIGH "ABSENT from prod snapshot" drift rows (`draft_feasibility_pool`, `get_home_league`, `record_trade_atomic`). Re-capture after the freeze-slot-edits and Run it back releases | 2026-10-06 |
 
 > **Migration header comments are authoring-time notes, not deploy state.** "HOLD" in
 > a header holds nothing; only `supabase/migrations/deferred/` does (CLAUDE.md).
@@ -106,9 +106,9 @@ scratch, then `diff`), all from the deploy checkout `/Users/giorgio/fantasy-stoc
 | `refresh-market-calendar` | `ec29807` | #98: `LOOKBACK_DAYS` 7 → 120 (coverage now from 2026-06-07). `verify_jwt=false` + constant-time `SB_SECRET_KEY_CRON` guard. Byte-verified 2026-10-05. |
 | `refresh-symbols`, `send-notification` | `5e3b5d1` | PR #9. `send-notification` is uncalled until 1.1.0 ships |
 
-**UNVERIFIED vs `main`** (never compared): `quote`, `ticker-quotes`, `finnhub-quote`,
-`join-league`, `symbol-name`, `symbols-search`. Two functions turned out to be running unmerged-branch code
-(found 2026-09-25), so audit these before trusting them (§4).
+**Verified 2026-10-06** (previously never compared): `quote`, `ticker-quotes`, `finnhub-quote`,
+`join-league`, `symbol-name`, `symbols-search` are byte-identical to main `b503168`. (Two functions
+had once been found running unmerged-branch code, on 2026-09-25, which is why this audit mattered.)
 
 Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
 `get-broker-keys`, `sync-alpaca-orders`, and the `broker_credentials` table.
@@ -226,7 +226,7 @@ Phase 3: **app first**.
     pass retries it, but it can never succeed on its own: it is stuck, not
     silent (Orchestrator decision, 2026-09-29: leave it as a surfaced refusal
     until leave-league exists).
-12. **Deployed-function drift audit** for the UNVERIFIED functions in §2.
+12. ✅ **Deployed-function drift audit: DONE 2026-10-06.** All six previously unverified functions (`quote`, `ticker-quotes`, `finnhub-quote`, `join-league`, `symbol-name`, `symbols-search`) were downloaded from prod and are byte-identical to main `b503168` (every function file; only the CLI's own `.temp/cli-latest` differs).
 13. **Cron monitoring gap:** give each cron `net.http_post` an explicit
     `timeout_milliseconds` so `net._http_response` records real outcomes; share
     `process-week-results/job-status.ts` with both snapshot jobs (they still discard

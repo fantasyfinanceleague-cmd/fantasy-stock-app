@@ -2,48 +2,36 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "110dfa6771e42a457ba5fc4ea9aa2b318abcf7b5",
-    "commitShort": "110dfa6",
+    "commit": "b50316838fd341b6f26f633365e2da326d67c2ef",
+    "commitShort": "b503168",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "fix/tier-trade-slots",
+    "branch": "docs/db-snapshot-2026-10-06",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "supabase/functions/_shared/draft-validation.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/_shared/draft-validation.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/record-trade/commit.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/migrations/20261103000000_trades_slot_id.sql"
+        "path": "docs/architecture/db-snapshot.json"
       }
     ],
-    "timestamp": "2026-10-06T03:54:26Z",
-    "sourceHash": "sha256:598110e0532240d0ac375bfd62dd6b47604ee6735d654c5f5cff5ebebe40de77",
+    "timestamp": "2026-10-06T04:25:05Z",
+    "sourceHash": "sha256:97ee1565bc8747ca4230f7165553f3e26db3e59b57b3ab808504819d171e11f9",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
-    "capturedAt": "2026-09-30T16:53:15Z",
-    "ageHours": 131,
-    "ageDays": 5.5,
+    "capturedAt": "2026-10-06T04:24:08Z",
+    "ageHours": 0,
+    "ageDays": 0,
     "staleAfterDays": 14,
     "stale": false,
-    "hash": "sha256:8e08382dfe9edf557c6371cfc39da9fb788590ad82209f15e2e74a7c90dcfc6b",
+    "hash": "sha256:d612615ef59e488283d2ab2758efa6929ae1f3be0506f33dcde3ff7a4f11031f",
     "database": "postgres",
     "postgresVersion": "17.4",
     "counts": {
-      "functions": 51,
-      "tables": 28,
-      "cronJobs": 6
+      "functions": 54,
+      "tables": 32,
+      "cronJobs": 9
     }
   },
   "layers": [
@@ -140,6 +128,62 @@
     {
       "layer": "trigger",
       "facts": {
+        "schedule": "0 22 * * 5",
+        "active": true,
+        "username": "postgres",
+        "target": "process-week-results",
+        "sendsApikey": true
+      },
+      "db": null,
+      "declared": {
+        "schedule": "0 22 * * 5",
+        "definedIn": [
+          "supabase/migrations/20261019000000_process_week_results_heal_crons.sql:44"
+        ]
+      },
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "cron.process-weekly-matchups-heal-2200z",
+      "label": "process-weekly-matchups-heal-2200z",
+      "sublabel": "0 22 * * 5",
+      "kind": "cron-job",
+      "source": {
+        "path": "supabase/migrations/20261019000000_process_week_results_heal_crons.sql",
+        "line": 44
+      }
+    },
+    {
+      "layer": "trigger",
+      "facts": {
+        "schedule": "0 15 * * 6",
+        "active": true,
+        "username": "postgres",
+        "target": "process-week-results",
+        "sendsApikey": true
+      },
+      "db": null,
+      "declared": {
+        "schedule": "0 15 * * 6",
+        "definedIn": [
+          "supabase/migrations/20261019000000_process_week_results_heal_crons.sql:63"
+        ]
+      },
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "cron.process-weekly-matchups-heal-sat",
+      "label": "process-weekly-matchups-heal-sat",
+      "sublabel": "0 15 * * 6",
+      "kind": "cron-job",
+      "source": {
+        "path": "supabase/migrations/20261019000000_process_week_results_heal_crons.sql",
+        "line": 63
+      }
+    },
+    {
+      "layer": "trigger",
+      "facts": {
         "schedule": "20 10 * * *",
         "active": true,
         "username": "postgres",
@@ -220,6 +264,34 @@
       "source": {
         "path": "supabase/migrations/20260612000000_migrate_snapshot_week_end_cron_auth.sql",
         "line": 34
+      }
+    },
+    {
+      "layer": "trigger",
+      "facts": {
+        "schedule": "30 15 * * 1,2",
+        "active": true,
+        "username": "postgres",
+        "target": "snapshot-week-end",
+        "sendsApikey": true
+      },
+      "db": null,
+      "declared": {
+        "schedule": "30 15 * * 1,2",
+        "definedIn": [
+          "supabase/migrations/20261028000002_snapshot_week_end_heal_cron.sql:27"
+        ]
+      },
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "cron.snapshot-week-end-heal",
+      "label": "snapshot-week-end-heal",
+      "sublabel": "30 15 * * 1,2",
+      "kind": "cron-job",
+      "source": {
+        "path": "supabase/migrations/20261028000002_snapshot_week_end_heal_cron.sql",
+        "line": 27
       }
     },
     {
@@ -1794,7 +1866,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": false,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "stable"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261101000000_draft_feasibility_pool.sql:39"
@@ -1802,20 +1899,12 @@
         "latestDefinition": "supabase/migrations/20261101000000_draft_feasibility_pool.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.draft_feasibility_pool",
-      "label": "draft_feasibility_pool()",
-      "sublabel": "not in snapshot",
+      "label": "draft_feasibility_pool(p_types jsonb, p_draftable_only boolean, p_exclude text[], p_depth integer)",
+      "sublabel": "service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261101000000_draft_feasibility_pool.sql",
@@ -2424,7 +2513,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "authenticated",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "authenticated=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": true,
+        "owner": "postgres",
+        "volatility": "stable"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261029000000_get_home_league_rpc.sql:86"
@@ -2432,20 +2546,12 @@
         "latestDefinition": "supabase/migrations/20261029000000_get_home_league_rpc.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.get_home_league",
-      "label": "get_home_league()",
-      "sublabel": "not in snapshot",
+      "label": "get_home_league(p_league_id uuid)",
+      "sublabel": "SECURITY DEFINER · authenticated",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261029000000_get_home_league_rpc.sql",
@@ -3118,7 +3224,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": false,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261102000000_record_trade_atomic.sql:157",
@@ -3127,20 +3258,12 @@
         "latestDefinition": "supabase/migrations/20261103000000_trades_slot_id.sql",
         "redefinitions": 2
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.record_trade_atomic",
-      "label": "record_trade_atomic()",
-      "sublabel": "not in snapshot",
+      "label": "record_trade_atomic(p_league_id uuid, p_user_id uuid, p_symbol text, p_action text, p_quantity numeric, p_price numeric, p_total_value numeric, p_funded_by_trade_id uuid, p_seen_trade_ids uuid[], p_seen_draft_ids text[], p_rules jsonb, p_slots jsonb, p_slot_id uuid)",
+      "sublabel": "service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261103000000_trades_slot_id.sql",
@@ -3472,27 +3595,13 @@
             "privileges": [
               "EXECUTE"
             ]
-          },
-          {
-            "role": "authenticated",
-            "privileges": [
-              "EXECUTE"
-            ]
-          },
-          {
-            "role": "service_role",
-            "privileges": [
-              "EXECUTE"
-            ]
           }
         ],
         "grantsRaw": [
-          "postgres=X/postgres",
-          "authenticated=X/postgres",
-          "service_role=X/postgres"
+          "postgres=X/postgres"
         ],
         "anonCallable": false,
-        "authenticatedCallable": true,
+        "authenticatedCallable": false,
         "owner": "postgres",
         "volatility": "volatile"
       },
@@ -3509,7 +3618,7 @@
       "verified": true,
       "id": "pg.start_new_league_season",
       "label": "start_new_league_season(p_league_id uuid)",
-      "sublabel": "SECURITY DEFINER · authenticated, service_role",
+      "sublabel": "SECURITY DEFINER · owner only",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql",
@@ -3941,19 +4050,31 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "rlsEnabled": true,
+        "rlsForced": false,
+        "policies": []
+      },
       "declared": {
         "touchedBy": [
           "supabase/migrations/20261101000003_draft_price_outages.sql"
         ],
         "rlsEnabled": true
       },
-      "drift": [],
+      "drift": [
+        {
+          "field": "policies",
+          "declared": "n/a",
+          "live": "RLS on, ZERO policies",
+          "severity": "low",
+          "note": "RLS with no policies denies all access except to roles that bypass RLS (service_role, table owner). This is the correct shape for a service-role-only table — confirm that is the intent."
+        }
+      ],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "tbl.auto_pick_price_failures",
       "label": "auto_pick_price_failures",
-      "sublabel": "not in snapshot",
+      "sublabel": "RLS · 0 policies",
       "kind": "table",
       "source": {
         "path": "supabase/migrations/20261101000003_draft_price_outages.sql",
@@ -4273,7 +4394,22 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "rlsEnabled": true,
+        "rlsForced": false,
+        "policies": [
+          {
+            "name": "draft_stalls_select_members",
+            "roles": [
+              "authenticated"
+            ],
+            "using": "is_member(league_id)",
+            "command": "SELECT",
+            "withCheck": null,
+            "permissive": true
+          }
+        ]
+      },
       "declared": {
         "touchedBy": [
           "supabase/migrations/20261101000001_draft_stalls.sql"
@@ -4282,10 +4418,10 @@
       },
       "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "tbl.draft_stalls",
       "label": "draft_stalls",
-      "sublabel": "not in snapshot",
+      "sublabel": "RLS · 1 policy",
       "kind": "table",
       "source": {
         "path": "supabase/migrations/20261101000001_draft_stalls.sql",
@@ -4295,19 +4431,31 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "rlsEnabled": true,
+        "rlsForced": false,
+        "policies": []
+      },
       "declared": {
         "touchedBy": [
           "supabase/migrations/20261101000003_draft_price_outages.sql"
         ],
         "rlsEnabled": true
       },
-      "drift": [],
+      "drift": [
+        {
+          "field": "policies",
+          "declared": "n/a",
+          "live": "RLS on, ZERO policies",
+          "severity": "low",
+          "note": "RLS with no policies denies all access except to roles that bypass RLS (service_role, table owner). This is the correct shape for a service-role-only table — confirm that is the intent."
+        }
+      ],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "tbl.draft_turn_outages",
       "label": "draft_turn_outages",
-      "sublabel": "not in snapshot",
+      "sublabel": "RLS · 0 policies",
       "kind": "table",
       "source": {
         "path": "supabase/migrations/20261101000003_draft_price_outages.sql",
@@ -5020,7 +5168,52 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "rlsEnabled": true,
+        "rlsForced": false,
+        "policies": [
+          {
+            "name": "own token delete",
+            "roles": [
+              "authenticated"
+            ],
+            "using": "(auth.uid() = user_id)",
+            "command": "DELETE",
+            "withCheck": null,
+            "permissive": true
+          },
+          {
+            "name": "own token insert",
+            "roles": [
+              "authenticated"
+            ],
+            "using": null,
+            "command": "INSERT",
+            "withCheck": "(auth.uid() = user_id)",
+            "permissive": true
+          },
+          {
+            "name": "own token select",
+            "roles": [
+              "authenticated"
+            ],
+            "using": "(auth.uid() = user_id)",
+            "command": "SELECT",
+            "withCheck": null,
+            "permissive": true
+          },
+          {
+            "name": "own token update",
+            "roles": [
+              "authenticated"
+            ],
+            "using": "(auth.uid() = user_id)",
+            "command": "UPDATE",
+            "withCheck": "(auth.uid() = user_id)",
+            "permissive": true
+          }
+        ]
+      },
       "declared": {
         "touchedBy": [
           "supabase/migrations/20261017000000_f8_push_tokens_relocation.sql"
@@ -5029,10 +5222,10 @@
       },
       "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "tbl.push_tokens",
       "label": "push_tokens",
-      "sublabel": "not in snapshot",
+      "sublabel": "RLS · 4 policies",
       "kind": "table",
       "source": {
         "path": "supabase/migrations/20261017000000_f8_push_tokens_relocation.sql",
@@ -6124,6 +6317,30 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.cron.process-weekly-matchups-heal-2200z->fn.process-week-results",
+      "from": "cron.process-weekly-matchups-heal-2200z",
+      "to": "fn.process-week-results",
+      "protocol": "pg-net-http",
+      "payload": "net.http_post · apikey from vault cron_apikey",
+      "callSites": [
+        "supabase/migrations/20261019000000_process_week_results_heal_crons.sql:44"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.cron.process-weekly-matchups-heal-sat->fn.process-week-results",
+      "from": "cron.process-weekly-matchups-heal-sat",
+      "to": "fn.process-week-results",
+      "protocol": "pg-net-http",
+      "payload": "net.http_post · apikey from vault cron_apikey",
+      "callSites": [
+        "supabase/migrations/20261019000000_process_week_results_heal_crons.sql:63"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.cron.refresh_market_calendar_daily->fn.refresh-market-calendar",
       "from": "cron.refresh_market_calendar_daily",
       "to": "fn.refresh-market-calendar",
@@ -6155,6 +6372,18 @@
       "payload": "net.http_post · apikey from vault cron_apikey",
       "callSites": [
         "supabase/migrations/20260612000000_migrate_snapshot_week_end_cron_auth.sql:34"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.cron.snapshot-week-end-heal->fn.snapshot-week-end",
+      "from": "cron.snapshot-week-end-heal",
+      "to": "fn.snapshot-week-end",
+      "protocol": "pg-net-http",
+      "payload": "net.http_post · apikey from vault cron_apikey",
+      "callSites": [
+        "supabase/migrations/20261028000002_snapshot_week_end_heal_cron.sql:27"
       ]
     },
     {
@@ -9605,6 +9834,19 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.tbl.draft_stalls->pg.is_member#rls",
+      "from": "tbl.draft_stalls",
+      "to": "pg.is_member",
+      "protocol": "rls-predicate",
+      "payload": "called by policy draft_stalls_select_members",
+      "derivedFrom": "db-snapshot",
+      "callSites": [
+        "db-snapshot.json · policy draft_stalls_select_members"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.tbl.league_draft_order_meta->pg.enforce_league_draft_order_meta",
       "from": "tbl.league_draft_order_meta",
       "to": "pg.enforce_league_draft_order_meta",
@@ -12202,36 +12444,6 @@
   ],
   "drift": [
     {
-      "node": "pg.draft_feasibility_pool",
-      "label": "draft_feasibility_pool()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.get_home_league",
-      "label": "get_home_league()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.record_trade_atomic",
-      "label": "record_trade_atomic()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
       "node": "tbl.symbols",
       "label": "symbols",
       "groupKey": "public-role-policies-ungated",
@@ -12382,6 +12594,16 @@
       "note": "RLS with no policies denies all access except to roles that bypass RLS (service_role, table owner). This is the correct shape for a service-role-only table — confirm that is the intent."
     },
     {
+      "node": "tbl.auto_pick_price_failures",
+      "label": "auto_pick_price_failures",
+      "groupKey": "policies",
+      "field": "policies",
+      "declared": "n/a",
+      "live": "RLS on, ZERO policies",
+      "severity": "low",
+      "note": "RLS with no policies denies all access except to roles that bypass RLS (service_role, table owner). This is the correct shape for a service-role-only table — confirm that is the intent."
+    },
+    {
       "node": "tbl.cron_job_status",
       "label": "cron_job_status",
       "groupKey": "public-role-policies-gated",
@@ -12410,6 +12632,16 @@
       "live": "2 of 2 policies target PUBLIC; those 2 are gated on caller identity",
       "severity": "low",
       "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
+    },
+    {
+      "node": "tbl.draft_turn_outages",
+      "label": "draft_turn_outages",
+      "groupKey": "policies",
+      "field": "policies",
+      "declared": "n/a",
+      "live": "RLS on, ZERO policies",
+      "severity": "low",
+      "note": "RLS with no policies denies all access except to roles that bypass RLS (service_role, table owner). This is the correct shape for a service-role-only table — confirm that is the intent."
     },
     {
       "node": "tbl.drafts",
@@ -12610,7 +12842,7 @@
     },
     {
       "node": "pg.draft_feasibility_pool",
-      "label": "draft_feasibility_pool()",
+      "label": "draft_feasibility_pool(p_types jsonb, p_draftable_only boolean, p_exclude text[], p_depth integer)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261101000000_draft_feasibility_pool.sql:39",
       "outbound": [
@@ -12781,7 +13013,9 @@
       "label": "draft_stalls",
       "kind": "table",
       "source": "supabase/migrations/20261101000001_draft_stalls.sql:22",
-      "outbound": [],
+      "outbound": [
+        "pg.is_member"
+      ],
       "caveat": "No scanned caller. Tables can also be reached from plpgsql bodies (now parsed) or dynamic SQL (not parsed)."
     },
     {
@@ -12811,24 +13045,6 @@
   ],
   "unverified": [
     {
-      "scope": "pg.get_home_league",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.draft_feasibility_pool",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.record_trade_atomic",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
       "scope": "tbl.broker_credentials",
       "claim": "table exists in prod",
       "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
@@ -12836,30 +13052,6 @@
     },
     {
       "scope": "tbl.notification_log",
-      "claim": "table exists in prod",
-      "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot."
-    },
-    {
-      "scope": "tbl.push_tokens",
-      "claim": "table exists in prod",
-      "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot."
-    },
-    {
-      "scope": "tbl.draft_stalls",
-      "claim": "table exists in prod",
-      "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot."
-    },
-    {
-      "scope": "tbl.auto_pick_price_failures",
-      "claim": "table exists in prod",
-      "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot."
-    },
-    {
-      "scope": "tbl.draft_turn_outages",
       "claim": "table exists in prod",
       "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
       "resolve": "Re-capture the snapshot."
@@ -12909,13 +13101,13 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 174,
-    "edges": 393,
+    "nodes": 177,
+    "edges": 397,
     "flows": 8,
-    "drift": 29,
-    "driftHigh": 4,
+    "drift": 28,
+    "driftHigh": 1,
     "deadCode": 30,
-    "unverified": 16
+    "unverified": 9
   },
   "sourceIndex": {
     "edgeFunctions": [
@@ -13383,6 +13575,6 @@
       "ticker-quotes=false",
       "validate-and-record-pick=true"
     ],
-    "dbSnapshot": "sha256:8e08382dfe9edf557c6371cfc39da9fb788590ad82209f15e2e74a7c90dcfc6b"
+    "dbSnapshot": "sha256:d612615ef59e488283d2ab2758efa6929ae1f3be0506f33dcde3ff7a4f11031f"
   }
 }
