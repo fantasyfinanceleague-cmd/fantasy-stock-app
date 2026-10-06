@@ -7,12 +7,20 @@
 import { supabase } from '@/lib/supabase';
 
 import { readRecordTradeOutcome, type RecordTradeOutcome } from './recordTradeOutcome';
+import { MONEY_FIXTURE_CONFIG } from './devFixture';
+import { fixturePreview, fixtureSubmitOutcome } from './fixtureMode';
+import { buildStressMarket } from './stressFixture';
 import type { PreviewBody, BuyBody, SellBody } from './tradeBodies';
 import { parsePreviewSlots, parseSlotShape, type PreviewSlot, type SlotShape } from './tierContract';
 
 export type TradeBody = SellBody | BuyBody;
 
 export async function callRecordTrade(body: TradeBody): Promise<RecordTradeOutcome> {
+  // DEV fixture: answered here, and the function is NEVER invoked, so the fixture can't write a trade.
+  if (MONEY_FIXTURE_CONFIG) {
+    const price = buildStressMarket().prices[body.symbol] ?? 211.42;
+    return fixtureSubmitOutcome(MONEY_FIXTURE_CONFIG, price);
+  }
   const result = await supabase.functions.invoke('record-trade', { body });
   return readRecordTradeOutcome(result);
 }
@@ -32,6 +40,11 @@ export interface PreviewResult {
 
 /** The read-only preview: the sale proceeds that can pay for a buy. Null when it can't be read. */
 export async function fetchPreview(body: PreviewBody): Promise<PreviewResult | null> {
+  // DEV fixture: the preview is answered from the fixture, with no network call.
+  if (MONEY_FIXTURE_CONFIG) {
+    const jpm = Math.round(2.916472 * 333.25 * 100) / 100;
+    return fixturePreview(MONEY_FIXTURE_CONFIG, [{ tradeId: 'fixture-sale-jpm', symbol: 'JPM', amount: jpm }]);
+  }
   const { data, error } = await supabase.functions.invoke('record-trade', { body });
   if (error || !data || typeof data !== 'object') return null;
   const d = data as Record<string, unknown>;

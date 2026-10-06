@@ -17,8 +17,9 @@ import { resolveSheetName } from './stockSheetApi';
 import { sheetInputsFromLedger } from './portfolioLedger';
 import { deriveStockSheetFacts, type StockSheetFacts } from './stockSheetFacts';
 import { usePortfolioLedger } from './usePortfolioLedger';
-import { MONEY_FIXTURE } from './devFixture';
-import { STRESS_CALLER } from './stressFixture';
+import { MONEY_FIXTURE, MONEY_FIXTURE_CONFIG } from './devFixture';
+import { STRESS_CALLER, buildStressMarket } from './stressFixture';
+import { FIXTURE_LEAGUE_ID } from './fixtureMode';
 
 /** A quote is fresh for two minutes, the same window as useStockPrices. */
 const QUOTE_TTL_MS = 120_000;
@@ -54,7 +55,7 @@ const EMPTY: StockSheetData = {
 export function useStockSheetData(symbol: string, knownName: string | null = null): StockSheetData {
   const { user } = useSession();
   const { activeLeague } = useLeagueContext();
-  const leagueId = activeLeague?.id ?? null;
+  const leagueId = activeLeague?.id ?? (MONEY_FIXTURE ? FIXTURE_LEAGUE_ID : null);
   const leagueName = activeLeague?.name ?? null;
   // DEV fixture: the stress caller owns the stress ledger's rows (see devFixture.ts).
   const userId = MONEY_FIXTURE ? STRESS_CALLER : (user?.id ?? null);
@@ -82,6 +83,24 @@ export function useStockSheetData(symbol: string, knownName: string | null = nul
     (async () => {
       const inputs = sheetInputsFromLedger(ledger);
       const facts = deriveStockSheetFacts({ symbol: sym, userId, ...inputs });
+
+      // DEV fixture: the stress market's quote and the ledger's name; no quote or name read.
+      if (MONEY_FIXTURE_CONFIG) {
+        const market = buildStressMarket();
+        const requestCase: StockSheetData['requestCase'] = facts.held ? 'held' : facts.owner?.kind === 'other' ? 'owned-by-other' : 'free';
+        setState({
+          status: 'ready',
+          price: market.prices[sym] ?? null,
+          prevClose: market.prevCloses[sym] ?? null,
+          companyName: ledger.symbol_names[sym] ?? null,
+          facts,
+          leagueName,
+          requestCase,
+          requestCount: 0,
+          refresh,
+        });
+        return;
+      }
 
       const cachedQuote = quoteCache.get(sym);
       const quoteFresh = !!cachedQuote && Date.now() - cachedQuote.at < QUOTE_TTL_MS;

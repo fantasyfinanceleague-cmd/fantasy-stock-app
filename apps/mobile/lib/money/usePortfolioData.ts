@@ -21,8 +21,9 @@ import { fetchPreview } from './recordTrade';
 import { previewBody } from './tradeBodies';
 import { slotLabelsBySymbol } from './tierContract';
 import { categoryNameOf, loadCategoryNames } from './categoryNames';
-import { MONEY_FIXTURE } from './devFixture';
-import { buildStressMarket, STRESS_CALLER, STRESS_LEAGUE_NAME, STRESS_ROUNDS } from './stressFixture';
+import { MONEY_FIXTURE, MONEY_FIXTURE_CONFIG } from './devFixture';
+import { buildStressMarket, STRESS_CALLER, STRESS_LEAGUE_NAME } from './stressFixture';
+import { FIXTURE_LEAGUE_ID, fixtureLeague } from './fixtureMode';
 
 export interface PortfolioData {
   status: 'loading' | 'ready' | 'error';
@@ -49,13 +50,14 @@ export function usePortfolioData(): PortfolioData {
   const { activeLeague } = useLeagueContext();
   // Key on primitives, not the league object: a LeagueContext refresh that rebuilds
   // the object must not refetch the quotes and bars.
-  const leagueId = activeLeague?.id ?? null;
+  const fixtureSettings = MONEY_FIXTURE_CONFIG ? fixtureLeague(MONEY_FIXTURE_CONFIG.stake) : null;
+  const leagueId = activeLeague?.id ?? (MONEY_FIXTURE ? FIXTURE_LEAGUE_ID : null);
   // DEV fixture: the stress league's settings (price tiers, six rounds, no notional), so the
   // numbers match the stress holdings. Production reads the real league.
   const leagueName = MONEY_FIXTURE ? STRESS_LEAGUE_NAME : (activeLeague?.name ?? null);
-  const stakeMode = MONEY_FIXTURE ? 'price_tiers' : (activeLeague?.stake_mode ?? null);
-  const notional = MONEY_FIXTURE ? null : (activeLeague?.notional_per_slot ?? null);
-  const numRounds = MONEY_FIXTURE ? STRESS_ROUNDS : (activeLeague?.num_rounds ?? null);
+  const stakeMode = fixtureSettings ? fixtureSettings.stake_mode : (activeLeague?.stake_mode ?? null);
+  const notional = fixtureSettings ? fixtureSettings.notional_per_slot : (activeLeague?.notional_per_slot ?? null);
+  const numRounds = fixtureSettings ? fixtureSettings.num_rounds : (activeLeague?.num_rounds ?? null);
   const userId = user?.id ?? null;
   const ledgerState = usePortfolioLedger(leagueId);
   const [state, setState] = useState<Omit<PortfolioData, 'refresh'>>(EMPTY);

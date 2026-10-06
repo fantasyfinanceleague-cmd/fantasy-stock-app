@@ -55,7 +55,8 @@ export function SegmentedControl({ options, value, onChange }: SegmentedControlP
   const hit = segmentHitSlop(trackHeight);
 
   function handleLayout(event: LayoutChangeEvent) {
-    setSegmentWidth(event.nativeEvent.layout.width / options.length);
+    // The track's 2 pt padding is inside its measured width: each segment is the inner width.
+    setSegmentWidth((event.nativeEvent.layout.width - TRACK_PADDING * 2) / options.length);
     setTrackHeight(event.nativeEvent.layout.height);
   }
 
@@ -97,12 +98,15 @@ export function SegmentedControl({ options, value, onChange }: SegmentedControlP
   );
 }
 
+/** The track's inner padding (§9B). The indicator and the segment widths both respect it. */
+const TRACK_PADDING = 2;
+
 const styles = StyleSheet.create({
   wrap: { marginVertical: space[2] },
   track: {
     flexDirection: 'row',
     borderRadius: radius.md,
-    padding: 2,
+    padding: TRACK_PADDING,
     position: 'relative',
   },
   segment: {
@@ -115,7 +119,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 2,
     bottom: 2,
-    left: 0,
+    left: TRACK_PADDING,
     borderRadius: radius.sm,
   },
 });

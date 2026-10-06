@@ -20,6 +20,9 @@ import { formatShares } from '@/lib/money/formatShares';
 import { COPY } from '@/lib/money/moneyCopy';
 import { historyItems, historyRows, todayEtIso, type HistoryFilter, type HistoryItem, type HistoryRow } from '@/lib/money/tradeHistory';
 import { usePortfolioLedger } from '@/lib/money/usePortfolioLedger';
+import { MONEY_FIXTURE } from '@/lib/money/devFixture';
+import { FIXTURE_LEAGUE_ID } from '@/lib/money/fixtureMode';
+import { STRESS_CALLER } from '@/lib/money/stressFixture';
 
 /** Rows revealed per page. The list pages as the user scrolls; nothing is cut off. */
 export const HISTORY_PAGE = 50;
@@ -71,14 +74,16 @@ export function TradeHistoryScreen() {
   const router = useRouter();
   const { activeLeague } = useLeagueContext();
   const { user } = useSession();
-  const ledger = usePortfolioLedger(activeLeague?.id ?? null);
+  const ledger = usePortfolioLedger(activeLeague?.id ?? (MONEY_FIXTURE ? FIXTURE_LEAGUE_ID : null));
+  // DEV fixture: the stress caller's rows.
+  const callerId = MONEY_FIXTURE ? STRESS_CALLER : (user?.id ?? null);
   const [filterIndex, setFilterIndex] = useState(0);
   const [revealed, setRevealed] = useState(HISTORY_PAGE);
   const filter = FILTERS[filterIndex].value;
 
   const items = useMemo(
-    () => (ledger.ledger && user ? historyItems(ledger.ledger.activity, user.id, filter) : []),
-    [ledger.ledger, user, filter],
+    () => (ledger.ledger && callerId ? historyItems(ledger.ledger.activity, callerId, filter) : []),
+    [ledger.ledger, callerId, filter],
   );
   const visible = items.slice(0, revealed);
   const rows: HistoryRow[] = useMemo(() => historyRows(visible, todayEtIso() ?? ''), [visible]);

@@ -16,6 +16,9 @@ import { SegmentedControl } from '@/components/sp/SegmentedControl';
 import { Text } from '@/components/sp/Text';
 import { formatMoney, formatPercent } from '@/components/sp/logic/money';
 import { useLeagueContext } from '@/lib/LeagueContext';
+import { MONEY_FIXTURE, MONEY_FIXTURE_CONFIG } from '@/lib/money/devFixture';
+import { FIXTURE_LEAGUE_ID, fixtureLeague, fixtureMarket } from '@/lib/money/fixtureMode';
+import { STRESS_CALLER } from '@/lib/money/stressFixture';
 import { useSession } from '@/lib/SessionProvider';
 import { buyingPower } from '@/lib/money/buyingPower';
 import { budgetAfterBuy, budgetAfterSell, userCashSpentFromLedger } from '@/lib/money/budgetFigures';
@@ -60,12 +63,14 @@ interface OpenReview {
 
 export function StockSheetBody({ symbol, knownName = null, onDone }: { symbol: string; knownName?: string | null; onDone: () => void }) {
   const data = useStockSheetData(symbol, knownName);
-  const { market, activeLeague } = useLeagueContext();
+  const { market: contextMarket, activeLeague } = useLeagueContext();
   const { user } = useSession();
   const { colors } = useTheme();
-  const userId = user?.id ?? null;
-  const ledgerState = usePortfolioLedger(activeLeague?.id ?? null);
+  const userId = MONEY_FIXTURE ? STRESS_CALLER : (user?.id ?? null);
+  const ledgerState = usePortfolioLedger(activeLeague?.id ?? (MONEY_FIXTURE ? FIXTURE_LEAGUE_ID : null));
   const now = useNow(1000);
+  // DEV fixture: the market the scenario plays (open, or closed for market_closed); live otherwise.
+  const market = MONEY_FIXTURE_CONFIG ? fixtureMarket(MONEY_FIXTURE_CONFIG.scenario, now) : contextMarket;
   const [choice, setChoice] = useState<'buy' | 'sell' | null>(null);
   const [open, setOpen] = useState<OpenReview | null>(null);
   const trade = useTradeSubmit();
@@ -75,7 +80,7 @@ export function StockSheetBody({ symbol, knownName = null, onDone }: { symbol: s
   const opensLabel = market?.next_open_at ? marketOpensLabel(market.next_open_at) : null;
 
   async function buildReview(kind: ReviewKind): Promise<OpenReview> {
-    const league = activeLeague;
+    const league = MONEY_FIXTURE_CONFIG ? { id: FIXTURE_LEAGUE_ID, ...fixtureLeague(MONEY_FIXTURE_CONFIG.stake) } : activeLeague;
     if (!league || !userId) return { kind, review: null, body: null, error: COPY.cantReach, loading: false };
     const price = data.price;
     const spent = ledgerState.ledger ? userCashSpentFromLedger(ledgerState.ledger, userId) : 0;
