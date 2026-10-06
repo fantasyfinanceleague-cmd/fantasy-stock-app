@@ -10,6 +10,7 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
+import { LoadFailure } from '@/components/money/LoadFailure';
 import { SegmentedControl } from '@/components/sp/SegmentedControl';
 import { Text } from '@/components/sp/Text';
 import { formatMoney, formatPercent } from '@/components/sp/logic/money';
@@ -41,14 +42,7 @@ export function StockSheetBody({ symbol, knownName = null, onDone }: { symbol: s
     return <Text variant="callout" tone="secondary">{symbol}</Text>;
   }
   if (data.status === 'error' || !data.facts) {
-    return (
-      <View style={{ gap: 10 }}>
-        <Text variant="callout" tone="secondary">{COPY.stockDidNotLoad}</Text>
-        <Pressable accessibilityRole="button" onPress={data.refresh} hitSlop={8} style={{ minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' }}>
-          <Text variant="callout" tone="primary">{COPY.tryAgain}</Text>
-        </Pressable>
-      </View>
-    );
+    return <LoadFailure title={COPY.stockLoadTitle} message={COPY.loadRetryMessage} onRetry={data.refresh} />;
   }
 
   const gate = decideTradeGate(now, market);

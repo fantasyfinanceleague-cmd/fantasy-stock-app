@@ -50,6 +50,9 @@ export const COPY = {
   // NEW (flagged): a LOAD failure. The alert icon arrives with the Design Lead's ruling.
   portfolioDidNotLoad: "Your portfolio didn't load. Check your connection and try again.",
   stockDidNotLoad: "This stock didn't load. Check your connection and try again.",
+  portfolioLoadTitle: "Your portfolio didn't load",
+  stockLoadTitle: "This stock didn't load",
+  loadRetryMessage: 'Check your connection, then try again.',
   cantReach: "Couldn't reach trading. Check your connection and try again.",
   // NEW (flagged): market-data credit, one constant (wording to confirm with the provider's terms).
   alpacaCredit: 'Market data provided by Alpaca',

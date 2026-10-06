@@ -13,6 +13,7 @@ import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { ShellHeader } from '@/components/shell/ShellHeader';
 import { useStockSheet } from '@/components/money/MoneyHost';
+import { LoadFailure } from '@/components/money/LoadFailure';
 import { COPY } from '@/lib/money/moneyCopy';
 import { usePortfolioData } from '@/lib/money/usePortfolioData';
 
@@ -31,7 +32,6 @@ const styles = StyleSheet.create({
   },
   rowLead: { flex: 1, paddingRight: 12 },
   rowTrail: { alignItems: 'flex-end' },
-  tryAgain: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
 });
 
 export function PortfolioScreen() {
@@ -43,14 +43,7 @@ export function PortfolioScreen() {
   if (data.status === 'loading') {
     body = <Text variant="callout" tone="secondary">Loading your portfolio</Text>;
   } else if (data.status === 'error' || !data.view) {
-    body = (
-      <View style={styles.stack}>
-        <Text variant="callout" tone="secondary">{COPY.portfolioDidNotLoad}</Text>
-        <Pressable accessibilityRole="button" onPress={data.refresh} style={styles.tryAgain} hitSlop={8}>
-          <Text variant="callout" tone="primary">{COPY.tryAgain}</Text>
-        </Pressable>
-      </View>
-    );
+    body = <LoadFailure title={COPY.portfolioLoadTitle} message={COPY.loadRetryMessage} onRetry={data.refresh} />;
   } else {
     const v = data.view;
     body = (
