@@ -41,14 +41,25 @@ export function addSymbol(list: string[], symbol: string): string[] {
   return [...list, s];
 }
 
-/** The line for a refused save. Existing copy is verbatim; too_many and
- * unknown_symbols are NEW copy, flagged for the Design Lead (they replaced
- * placeholders that showed to players: P0, Design Lead audit). */
-export function queueRefusalLine(reason: string): string {
+/** "A", "A and B", "A, B and C". */
+function listSymbols(symbols: string[]): string {
+  return symbols.length < 2 ? symbols.join('') : `${symbols.slice(0, -1).join(', ')} and ${symbols[symbols.length - 1]}`;
+}
+
+/** The line for a refused save. Ruled (Design Lead, audit pass 1): too_many,
+ * unknown_symbols, and when the server names the symbols "{A} and {B} can't
+ * be queued. Remove them and try again." The one-symbol ("Remove it") and
+ * three-plus ("A, B and C") forms are NEW, flagged. */
+export function queueRefusalLine(reason: string, symbols?: unknown): string {
   switch (reason) {
     case 'draft_completed': return 'The draft is already complete';
     case 'too_many': return `Your queue can hold up to ${QUEUE_MAX} stocks.`;
-    case 'unknown_symbols': return "Some of these stocks can't be queued. Remove them and try again.";
+    case 'unknown_symbols': {
+      const named = Array.isArray(symbols) ? symbols.filter((x): x is string => typeof x === 'string' && x.trim() !== '').map((x) => x.trim()) : [];
+      if (named.length === 1) return `${named[0]} can't be queued. Remove it and try again.`;
+      if (named.length > 1) return `${listSymbols(named)} can't be queued. Remove them and try again.`;
+      return "Some of these stocks can't be queued. Remove them and try again.";
+    }
     default: return "Your queue couldn't be saved.";
   }
 }

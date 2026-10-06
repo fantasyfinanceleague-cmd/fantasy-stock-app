@@ -36,4 +36,13 @@ Deno.test('a refused save says what failed; an unknown reason is one generic lin
   assertEquals(queueRefusalLine('unknown_symbols'), "Some of these stocks can't be queued. Remove them and try again.");
   for (const r of ['draft_completed', 'too_many', 'unknown_symbols', 'mystery']) assertEquals(queueRefusalLine(r).includes('[new copy'), false, r);
   assertEquals(queueRefusalLine('mystery'), "Your queue couldn't be saved.");
+  // Ruled: the server names the symbols.
+  assertEquals(queueRefusalLine('unknown_symbols', ['ZZZQ', 'XYZW']), "ZZZQ and XYZW can't be queued. Remove them and try again.");
+  // NEW forms (flagged): one symbol, three or more.
+  assertEquals(queueRefusalLine('unknown_symbols', ['ZZZQ']), "ZZZQ can't be queued. Remove it and try again.");
+  assertEquals(queueRefusalLine('unknown_symbols', ['A', 'B', 'C']), "A, B and C can't be queued. Remove them and try again.");
+  // A missing, empty or malformed list falls back to the generic line.
+  for (const s of [undefined, null, [], ['', '  '], 'ZZZQ', [1, 2]]) {
+    assertEquals(queueRefusalLine('unknown_symbols', s), "Some of these stocks can't be queued. Remove them and try again.");
+  }
 });

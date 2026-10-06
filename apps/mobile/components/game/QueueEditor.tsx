@@ -38,9 +38,9 @@ export function QueueEditor({ leagueId, initial, onSaved }: QueueEditorProps) {
     setSaving(true);
     const { data, error } = await seamRpc('set_draft_queue', { p_league_id: leagueId, p_symbols: queue });
     setSaving(false);
-    const res = data as { ok?: boolean; reason?: string } | null;
+    const res = data as { ok?: boolean; reason?: string; symbols?: unknown } | null;
     if (error || !res || res.ok !== true) {
-      Alert.alert('Not saved', queueRefusalLine(String(res?.reason ?? 'unknown')));
+      Alert.alert('Not saved', queueRefusalLine(String(res?.reason ?? 'unknown'), res?.symbols));
       return;
     }
     onSaved();
