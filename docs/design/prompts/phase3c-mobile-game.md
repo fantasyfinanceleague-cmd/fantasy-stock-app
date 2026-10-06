@@ -79,6 +79,26 @@ You are the UI worker for **Phase 3c: the competitive screens**. Your branch is 
 5. **Fix everything, then shoot once.** No capture pass while known issues are open.
 6. **A visible product decision that isn't ruled goes to Giorgio as a board "Your call" mockup BEFORE "go".** Ask the Design Lead; don't invent it.
 
+## Craft floor (DESIGN_DIRECTION §9B + §4 "Motion craft"; adopted 2026-10-05)
+
+These apply to every screen you build. They are new since this prompt was first written, so audit your existing work against them too.
+- **Icons:** the `sp` icon set only. Replace any Unicode or emoji glyph used as an icon in your screens (ⓘ, ▲/▼, ✓, ›, →, ●-as-text) with a drawn icon or shape. Add missing icons to the set through the Design Lead.
+- **Hit areas:** ≥ 44 × 44 pt for everything tappable, **including text links** ("Nudge again · Remove", "Change", "Share", "See the bracket", "Go to the draft lobby", the standings rows that open a profile). Use padding or `hitSlop`, and report how you verified it.
+- **11 pt text floor:** chips, tags, badges, cell numbers and tab labels included.
+- **Motion craft:**
+  - one authored moment per screen, with a one-line motion thesis in your PLAN;
+  - every animation passes "what's lost if it's removed?";
+  - exit is faster than entrance;
+  - content is visible at rest (an animation that doesn't run never hides content);
+  - the live dot and any pulse pause when the screen isn't focused or the app is backgrounded.
+- **Gestures:** never disable edge-swipe back. Sheets swipe to dismiss with Cancel/Done. A one-tap destructive action with no review step (Remove, delete) confirms through a native action sheet whose button names the action (never Yes/No/OK). A flow with a review screen is already confirmed by that screen's single action-named button, with no extra sheet.
+- **Copy:** confirm buttons name the action; every message is a whole sentence (no stitched fragments); errors say what failed and how to recover, never a raw code.
+- **Tags** must carry information and never repeat an adjacent chip or title.
+- **Colour is never the only code:** every colour signal has a text, sign or shape twin and a VoiceOver label.
+- **≤ 4 visible choices** at a decision point, with one primary action (check Start the draft, the settings review and the draft-room search).
+- **Stress fixture** (captured): a 20-character username and a 40-character league name; values and losses ≥ $1,000,000; 16 managers (standings, the snake board, Who's running back), a 14-week schedule plus 4 playoff weeks; offline/slow (a stale-data state); a `rate_limited` refusal.
+- **Phone only for 1.2.0** (iPad support is off; no tablet layouts).
+
 ## Shared code and ownership
 
 - **Reuse 3b-2's modules; don't copy them:**
@@ -160,6 +180,37 @@ Keep **League settings** reachable from the League tab, as today. **Remove its "
 
 **The Home follow-up lives here, in 3c.** R1, R3's Home card and R4 are Home edits. 3b-2 will have merged, so 3c owns these changes to Home's components. Keep them additive (a new card in the season-complete and post-season states), don't restructure 3b-2's Home, and tell the Design Lead if a Home component needs to change shape.
 
+## Draft feasibility copy ("a draft pick can never be unused", Giorgio; NEW COPY for his audit)
+
+**Board:** Part 2 › "Matchups, draft and playoffs": the frames "Pick refused · …", "Start the draft · setup can't fill every slot", "· check unavailable", "Draft paused" (member and commissioner) and "Push · draft paused". Use the **specific** line when the server returns who, which or how much; otherwise use the **generic** line. Keep these strings in `gameCopy.ts`, tagged new.
+
+**Pick refusals** (use the specific lines only if `validate-and-record-pick` actually returns who/which/how much; confirm this and report it in your PLAN, otherwise use generic). A sheet titled "Pick a different stock" appears **instantly**. The clock keeps running, and the sheet adds "Your clock is still running. Pick from the list, or let your queue pick for you." with [Back to the list].
+- `would_strand_slot`:
+  - specific: "Taking {TICKER} would leave {Name} with no stock that fits their {slot name} slot. Every slot has to be fillable."
+  - generic: "Taking {TICKER} would leave another manager with no stock for one of their slots."
+- `budget_reserve` (budget-cap leagues):
+  - specific: "{TICKER} would leave {$left} for your {n} remaining picks. You need at least {$needed} to fill them."
+  - generic: "{TICKER} would leave too little budget for your remaining picks."
+
+**Start / setup blockers** (draft-control `check_setup` returns only ok or a reason code; there are no counts, per the security review, so **use the GENERIC lines here**). These go on the Start-the-draft sheet. Start stays disabled while any blocker applies. The lead line is "Every slot has to be fillable before the draft can start. Fix these in League settings:", followed by one warn card per blocker and [League settings].
+- `slots_infeasible`:
+  - specific: "Not enough stocks fit every slot: {n} managers each need a {slot description}, and only {m} qualify. Loosen a slot rule or a price bracket."
+  - generic: "There aren't enough eligible stocks to fill every manager's slots. Loosen a slot rule or a price bracket."
+- `budget_infeasible`:
+  - specific: "The budget can't fill every slot: the {k} cheapest stocks that fit cost {$cost}, more than the {$budget} budget. Raise the budget or change the price brackets."
+  - generic: "The budget isn't enough to fill every manager's slots. Raise the budget or change the price brackets."
+- `feasibility_unavailable`: "We couldn't check the draft setup just now. Try again in a moment." with [Try again]. Start stays disabled until the check succeeds; never fail open.
+- The same blockers appear (as a heads-up, not a gate) on Create league and League settings when the setup is already infeasible.
+
+**Stalled turn** (no legal stock; should never happen). The draft-room card gets the tag "Draft paused", the title "No stock left fits {Name}'s next slot", and:
+- members: "The clock is stopped and nobody is skipped. The commissioner has been told."
+- commissioner: "The clock is stopped and nobody is skipped. You've been notified; the draft continues once the slot can be filled."
+The header chip reads "Paused". No auto-pick and no skip while paused; show the clock as stopped, not counting.
+
+**Commissioner push:** the title is the league name, and the body is "The draft is paused: no stock left fits {Name}'s next slot." Use the in-app notification for the same text.
+
+**Tone rules:** plain and specific, no blame ("would leave", not "you can't"). Never "error" or "invalid". Refusals appear instantly (§4) and never look like success. Map unknown reasons to the generic draft-refusal line, never a raw code.
+
 ## Backend (check before building; don't assume)
 
 - **Live, use as-is:**
@@ -233,5 +284,6 @@ Keep **League settings** reachable from the League tab, as today. **Remove its "
 8. Bots are marked everywhere; U+2212 minus; no truncation at XL.
 9. Shared-code discipline: no copied modules, `lib/` moves done by you in single commits, no unapproved primitive changes.
 10. Run it back R1–R10 match the board, use the approved copy verbatim, map API values to copy, and pass a real-data run once `feat/run-it-back` is live: renew a finished test league, answer from two accounts, nudge, remove, schedule the draft.
+11. The craft floor holds: no glyph-icons, 44 pt hit areas verified, the 11 pt floor, the motion-craft lines, the stress fixture captured. The gate report follows UI-UX-PROGRAM's format (specificity, squint, 0–4 scorecard, persona walk, P0–P3).
 
 Report your PLAN first (including your fixture plan and the order you'll land U1 in) and wait for "go".
