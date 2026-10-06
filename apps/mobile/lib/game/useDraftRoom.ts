@@ -11,6 +11,7 @@ import { seamRpc, seamTable } from './seamCalls';
 import { indexPicks, type DraftPickRow } from './draftBoard';
 import type { ClockState } from './draftRoom';
 import { clockState } from './draftRoom';
+import { nextQueueRead, type QueueRead } from './draftQueueRead';
 
 export interface RoomState {
   status: 'loading' | 'ready' | 'error';
@@ -20,7 +21,9 @@ export interface RoomState {
   clock: ClockState;
   pickSeconds: number;
   names: Record<string, { name: string; isBot: boolean }>;
-  queue: string[];
+  /** My queue, read on its own: a failed queue read never fails the room, and
+   * never becomes an empty list for QueueEditor to save over the real one. */
+  queue: QueueRead;
   draftStatus: string | null;
   refresh: () => void;
 }
@@ -28,7 +31,7 @@ export interface RoomState {
 export function useDraftRoom(leagueId: string | null): RoomState {
   const [state, setState] = useState<Omit<RoomState, 'refresh'>>({
     status: 'loading', order: [], picks: new Map(), pickCount: 0,
-    clock: { kind: 'idle', secondsLeft: null }, pickSeconds: 60, names: {}, queue: [], draftStatus: null,
+    clock: { kind: 'idle', secondsLeft: null }, pickSeconds: 60, names: {}, queue: { status: 'loading' }, draftStatus: null,
   });
   const [tick, setTick] = useState(0);
 
@@ -44,7 +47,7 @@ export function useDraftRoom(leagueId: string | null): RoomState {
           seamRpc('get_draft_order', { p_league_id: leagueId }),
           seamTable('drafts', () => supabase.from('drafts').select('pick_number, symbol, pick_source').eq('league_id', leagueId)),
           seamRpc('get_league_display_names', { p_league_id: leagueId }),
-          seamTable('draft_queue', () => supabase.from('draft_queue').select('symbol, position').eq('league_id', leagueId).order('position')),
+          seamTable<{ symbol: string; position: number }>('draft_queue', () => supabase.from('draft_queue').select('symbol, position').eq('league_id', leagueId).order('position')),
         ]);
         if (cancelled) return;
         if (clockRes.error || orderRes.error || picksRes.error) throw clockRes.error ?? orderRes.error ?? picksRes.error;
@@ -57,15 +60,16 @@ export function useDraftRoom(leagueId: string | null): RoomState {
         for (const n of (namesRes.data ?? []) as { user_id: string; display_name: string; is_bot: boolean }[]) {
           names[String(n.user_id)] = { name: n.display_name, isBot: n.is_bot };
         }
-        const queue = (queueRes.data ?? []).map((r: { symbol: string }) => r.symbol);
         const pickSeconds = clockRow ? Number(clockRow.pick_seconds) : 60;
         const clock = clockRow
           ? clockState({ running: clockRow.clock_running === true, deadlineAt: clockRow.deadline_at ?? null, serverNow: clockRow.server_now })
           : { kind: 'idle' as const, secondsLeft: null };
-        setState({
-          status: 'ready', order, picks, pickCount: picks.size, clock, pickSeconds, names, queue,
+        setState((s) => ({
+          status: 'ready', order, picks, pickCount: picks.size, clock, pickSeconds, names,
+          // A resolved query error is NOT an empty queue (set_draft_queue replaces the whole list).
+          queue: nextQueueRead(s.queue, queueRes),
           draftStatus: clockRow ? String(clockRow.draft_status) : null,
-        });
+        }));
       } catch (err) {
         if (cancelled) return;
         console.warn('[game:draft-room] failed', (err as Error)?.message);

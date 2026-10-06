@@ -21,5 +21,19 @@ export function queueRead(res: { data: { symbol: string; position: number }[] | 
   return { status: 'ready', queue };
 }
 
+/** A re-read after the first one (the live room re-reads on every pick; the
+ * lobby after a save). A failed re-read keeps the last good list: it is real
+ * server data from this session, and hiding the editor mid-draft would throw
+ * away unsaved edits. Only a read that never succeeded is an error, so the
+ * editor is never seeded with an empty list it didn't read. */
+export function nextQueueRead(
+  prev: QueueRead,
+  res: { data: { symbol: string; position: number }[] | null; error: unknown },
+): QueueRead {
+  const next = queueRead(res);
+  if (next.status === 'error' && prev.status === 'ready') return prev;
+  return next;
+}
+
 /** The load-failure line (NEW copy, the draft room's pattern). */
 export const QUEUE_LOAD_FAILED = "Couldn't load your queue.";

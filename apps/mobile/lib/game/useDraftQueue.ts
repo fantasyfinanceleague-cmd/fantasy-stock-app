@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import { seamTable } from './seamCalls';
-import { queueRead, type QueueRead } from './draftQueueRead';
+import { nextQueueRead, type QueueRead } from './draftQueueRead';
 
 export function useDraftQueue(leagueId: string | null): QueueRead & { version: number; refresh: () => void } {
   const [read, setRead] = useState<QueueRead>({ status: 'loading' });
@@ -21,11 +21,11 @@ export function useDraftQueue(leagueId: string | null): QueueRead & { version: n
         const res = await seamTable<{ symbol: string; position: number }>('draft_queue', () =>
           supabase.from('draft_queue').select('symbol, position').eq('league_id', leagueId).order('position'),
         );
-        if (!cancelled) setRead(queueRead(res));
+        if (!cancelled) setRead((prev) => nextQueueRead(prev, res));
       } catch (err) {
         if (cancelled) return;
         console.warn('[game:draft-queue] failed', (err as Error)?.message);
-        setRead({ status: 'error' });
+        setRead((prev) => (prev.status === 'ready' ? prev : { status: 'error' }));
       }
     })();
     return () => {

@@ -14,6 +14,7 @@ import { seamInvoke } from '@/lib/game/seamCalls';
 import type { ShapedSearchResult } from '@/lib/symbolSearch';
 import { useDraftRoom } from '@/lib/game/useDraftRoom';
 import { QueueEditor } from './QueueEditor';
+import { QUEUE_LOAD_FAILED } from '@/lib/game/draftQueueRead';
 import { managerAtPick, boardRows } from '@/lib/game/draftBoard';
 import { pickRowView, pickRefusalLine } from '@/lib/game/draftRoom';
 import { turnState } from '@/lib/game/draftRefusals';
@@ -179,7 +180,16 @@ export function DraftRoom({ leagueId, myUserId, rounds }: DraftRoomProps) {
         })}
       </Card>
 
-      {!draftDone ? <QueueEditor leagueId={leagueId} initial={room.queue} onSaved={room.refresh} /> : null}
+      {/* Never seeded from a failed read (draftQueueRead.ts): the save replaces the whole list. */}
+      {!draftDone && room.queue.status === 'ready' ? (
+        <QueueEditor leagueId={leagueId} initial={room.queue.queue} onSaved={room.refresh} />
+      ) : null}
+      {!draftDone && room.queue.status === 'error' ? (
+        <Card>
+          <Text variant="callout">{QUEUE_LOAD_FAILED}</Text>
+          <Button label="Try again" variant="secondary" size="sm" onPress={room.refresh} />
+        </Card>
+      ) : null}
       {draftDone ? <Text variant="caption" tone="secondary">Finishing the draft…</Text> : null}
     </View>
   );
