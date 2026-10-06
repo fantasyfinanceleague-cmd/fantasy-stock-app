@@ -179,6 +179,79 @@
           </div>
         </section>
 
+        <section className="b-sec" id="call-leave" aria-labelledby="call-leave-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n b-sec__n--code">3c</span>
+            <div>
+              <h2 id="call-leave-h">Your call: leaving a league</h2>
+              <p className="b-job">Five decisions, from LEAVE_LEAGUE_OPTIONS.md (feat/leave-league). ★ marks the worker's recommendation; the Design Lead's view is in the box at the end. All copy inside these frames is new. Samples: before the draft, Sofia F. leaves Serie A Traders; mid-season, Gianluigi B. (Roberto's Week 6 opponent) leaves Stock Scudetto on Tuesday; in the playoffs, Francesco T. left in Week 9 and still finished 4th.</p>
+            </div>
+          </header>
+          <ul className="b-inv__notes">
+            <li><b>Today a leave is an unguarded delete</b> that anyone can do at any time, the commissioner included. After the draft it leaves a "zombie" team that still scores but can't trade, and it stalls the playoffs (<code>bracket_non_member</code>). Every option below replaces it.</li>
+            <li><b>The key fact for Q2:</b> bots already are buy-and-hold teams. So "auto-managed" and "frozen portfolio" are the same mechanics; the scoring path is the one bots use today.</li>
+            <li><b>Mid-draft leaving is blocked in every option</b> (the database already refuses it).</li>
+            <li><b>Where it lives:</b> "Leave league" sits at the bottom of League settings, in red, the way "Sign out" sits at the bottom of Profile. It opens a sheet that is the confirmation; there's no second alert.</li>
+          </ul>
+
+          <h3 className="b-sub">Q1 · Leaving before the draft</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Leave sheet · member, before the draft" note="Same sheet for A and B."><I.LeaveSheet mode="pre" /></Fit>
+            <Fit caption="★ A · Remove the membership" note="The commissioner's draft order closes the gap and stays final."><I.OrderAfterLeave q1="A" /></Fit>
+            <Fit caption="B · Remove + reopen the order" note="A manual order that was final reopens; the commissioner must confirm it again."><I.OrderAfterLeave q1="B" /></Fit>
+          </div>
+
+          <h3 className="b-sub">Q2 · Leaving after the draft</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="★ A · Soft leave: the sheet" note="The team keeps its stocks and plays out the season, buy-and-hold."><I.LeaveSheet mode="A" /></Fit>
+            <Fit caption="★ A · The opponent's Home" note='"Gianluigi B. (left) · Auto-managed" with a real live score: Roberto still has to beat a portfolio.'><I.DepartedMatchup q2="A" /></Fit>
+            <Fit caption="★ A · Standings for everyone else" note="The row stays in place, labelled, muted. Scoring is unchanged."><I.DepartedStandings /></Fit>
+            <Fit caption="B · Forfeit: the sheet" note="Stocks are sold back to the pool; every remaining matchup is a loss."><I.LeaveSheet mode="B" /></Fit>
+            <Fit caption="B · Forfeit: the opponent's Home" note="A free W. Whoever faces the leaver late in the season gets free wins."><I.DepartedMatchup q2="B" /></Fit>
+            <Fit caption="C · No mid-season leave" note="Leave league stays disabled, with the reason, until the season ends."><I.LeaveRefused kind="season" /></Fit>
+          </div>
+
+          <h3 className="b-sub">Q3 · Playoffs with a departed team</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="★ A · Departed teams stay eligible" note="Seeding unchanged; the 4th seed plays on autopilot and could win the title."><I.DepartedBracket q3="A" /></Fit>
+            <Fit caption="B · Skip departed teams in seeding" note="Seeds shift: 5th moves up to the 4th seed. Fewer than 2 active teams: no playoffs."><I.DepartedBracket q3="B" /></Fit>
+          </div>
+
+          <h3 className="b-sub">Q4 · The commissioner leaving</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="A · Block until transferred" note="Leave is disabled; first make someone else commissioner from the Commissioner row, then leave as a member."><I.LeaveRefused kind="commish" /></Fit>
+            <Fit caption="★ B · Pick a successor in the leave sheet" note="Human members only, one atomic step. Shown after picking: nothing is preselected, and the button names the successor once one is picked."><I.CommishLeave q4="B" /></Fit>
+            <Fit caption="C · Auto-transfer" note="The longest-standing manager becomes commissioner and gets a push."><I.CommishLeave q4="C" /></Fit>
+          </div>
+
+          <h3 className="b-sub">Q5 · What the leaver sees, and rejoining</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="★ A · League tab after leaving" note="Read-only: history stays visible, no trading, no rejoin this season."><I.LeaverLeague q5="A" /></Fit>
+            <Fit caption="B · Reclaim my team" note="Until the season ends, the leaver can undo; trading reopens."><I.LeaverLeague q5="B" /></Fit>
+            <Fit caption="A and B · Home skips the league" note="On Gianluigi B.'s phone (their other league is sample data). The league leaves the single-league Home and sits under a new 'You left' group in Your leagues."><I.LeaverSheet /></Fit>
+          </div>
+
+          <h3 className="b-sub">Refusals</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Mid-draft (every option)" note="The reason sits on the disabled row, as with the draft rows in Run it back."><I.LeaveRefused kind="drafting" /></Fit>
+            <Fit caption="Only manager left (Q4)" note="Everyone else is a bot. Before the draft: delete the league instead. After the draft: refused too (recommended for launch)."><I.LeaveRefused kind="sole" /></Fit>
+            <Fit caption="Rejoin after leaving (Q5-A)" note="The invite code refuses a manager who left this season."><I.LeaveRefused kind="rejoin" /></Fit>
+          </div>
+
+          <div className="b-ask">
+            <h3>Your call · Design Lead agrees with the ★ package (Q1-A, Q2-A, Q3-A, Q4-B, Q5-A)</h3>
+            <ul>
+              <li><b>Q2-A is the anchor.</b> The leaver's opponents still play a real portfolio, nobody gets free wins, and nobody is trapped in a league. It also needs no change to scoring, snapshots or the playoffs: the departed team scores exactly the way a bot does today. B puts a new branch into the scoring pipeline that was just hardened (S1–S9). C turns "you can't leave" into a support ticket.</li>
+              <li><b>Q3-A follows from Q2-A.</b> An autopilot team had to earn its seed, and a departed seed still makes the bracket start. The cost is honest and rare: a departed team could win the title, and its champion line would read "Francesco T. (left)". B shifts seeds and byes late, and it rewrites the playoff guard.</li>
+              <li><b>Q4-B, with one design condition:</b> no successor is preselected. Leaving is destructive, and a default choice would let one tap hand the league to someone nobody chose. The button stays disabled until a pick, then reads "Leave and hand over to Paolo M.". The successor gets a push. A (transfer first, then leave) is the fallback if the picker slips; a standalone "Make commissioner" is useful anyway.</li>
+              <li><b>Q1-A:</b> closing the gap is what everyone expects, and the commissioner sees why the order changed. Keep the existing refusal at draft start when playoff teams outnumber managers; don't silently clamp it.</li>
+              <li><b>Q5-A:</b> one state ("left") is simpler to explain than "left, then back". The league stays readable, so history isn't lost.</li>
+              <li><b>Still open (not on the worker's list):</b> should the opponent get a push when their manager leaves ("Gianluigi B. left Stock Scudetto. Their team plays on, auto-managed.")? Recommend yes, to everyone in the league, once.</li>
+              <li><b>Backend:</b> the "(left)" label needs a departed flag from <code>get_league_display_names</code>. Home has to skip departed leagues (<code>get_home_summary</code>). "Delete the league instead" points at a delete that is still client-side (<code>[I3]</code>).</li>
+            </ul>
+          </div>
+        </section>
+
         <section className="b-sec" id="call-tier-trades" aria-labelledby="call-tier-trades-h">
           <header className="b-sec__head">
             <span className="b-sec__n b-sec__n--code">3e</span>

@@ -1958,6 +1958,323 @@
     );
   }
 
+  // ═════════════════════════════════════════════════════════════════════
+  // YOUR CALL: leaving a league (2026-10-06), from LEAVE_LEAGUE_OPTIONS.md
+  // on feat/leave-league. Every frame's copy is new. Scenarios:
+  //   before the draft: Sofia F. leaves Serie A Traders (Roberto commish);
+  //   mid-season: Gianluigi B. (Roberto's Week 6 opponent) leaves Stock
+  //   Scudetto on Tuesday of Week 6;
+  //   playoffs: Francesco T. left in Week 9 and still finished 4th (Season 1).
+  // ═════════════════════════════════════════════════════════════════════
+  const DangerBtn = ({ children, off }) => (
+    <span className="ks-btn ks-btn--secondary" style={{ color: 'var(--c-danger)', opacity: off ? 0.45 : 1 }}>{children}</span>
+  );
+  const LeaveRow = ({ off, sub }) => (
+    <Card><ul className="ks-rows">
+      <li className="ks-row" style={{ gridTemplateColumns: '1fr', padding: '13px 0' }} aria-disabled={off || undefined}>
+        <span><span className="ks-callout" style={{ fontWeight: 600, color: off ? 'var(--c-text-3)' : 'var(--c-danger)' }}>Leave league</span>{sub ? <><br /><span className="ks-caption">{sub}</span></> : null}</span>
+      </li>
+    </ul></Card>
+  );
+  const Bullets = ({ items }) => (
+    <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 6 }} className="ks-callout">{items.map((t) => <li key={t}>{t}</li>)}</ul>
+  );
+  /** League settings (where Leave league lives, at the bottom like Sign out on Profile). */
+  function LeagueSettingsLeave({ commish = true, name = K.LEAGUE.name, leave }) {
+    return (
+      <Device noTabs label={`League settings, ${name}`}>
+        <Back label="League" />
+        <div className="ks-pad ks-stack">
+          <h2 className="ks-head__title" style={{ fontSize: 28 }}>League settings</h2>
+          <Card><ul className="ks-rows">
+            {commish ? <Row k="Season settings" v="" /> : null}
+            <Row k="Draft order" v="" />
+            <Row k="Invite code" v={name === K.SERIE_A.name ? 'SERIEA7' : ''} />
+            <Row k="Commissioner" v={commish ? 'You' : 'Roberto B.'} chevron={commish} />
+          </ul></Card>
+          {leave}
+        </div>
+      </Device>
+    );
+  }
+  /** The leave sheet. mode: 'pre' (before the draft) | 'A' soft leave | 'B' forfeit. */
+  function LeaveSheet({ mode = 'A' }) {
+    const pre = mode === 'pre';
+    const name = pre ? K.SERIE_A.name : K.LEAGUE.name;
+    const items = pre
+      ? ['You come off the draft order and everyone after you moves up one.', 'You can rejoin with the invite code until the draft starts.']
+      : mode === 'A'
+        ? ['Your team plays out the season on autopilot: it keeps its stocks, makes no trades and still plays its matchups.', 'You can still see the league, but you can’t rejoin this season.']
+        : ['Your team forfeits every matchup left this season.', 'Your stocks are sold at the market price and go back to the pool.', 'You can’t rejoin this season.'];
+    return (
+      <Device tab="league" label={`Leave sheet, ${mode}`} overlay={
+        <Sheet top={pre ? 470 : mode === 'A' ? 430 : 420}>
+          <span className="ks-title">Leave {name}?</span>
+          <Bullets items={items} />
+          <DangerBtn>Leave league</DangerBtn>
+          <span className="ks-btn">Stay</span>
+        </Sheet>
+      }>
+        <Head name={name} chip={pre ? null : <Chip kind="live">Week 6</Chip>} />
+      </Device>
+    );
+  }
+  /** Commissioner leave sheet. q4: 'B' successor picker | 'C' auto-transfer notice. */
+  function CommishLeave({ q4 = 'B' }) {
+    const others = K.PLAYERS.filter((p) => !p.you);
+    return (
+      <Device tab="league" label={`Commissioner leave sheet, ${q4}`} overlay={
+        <Sheet top={q4 === 'B' ? 120 : 380}>
+          <span className="ks-title">Leave {K.LEAGUE.name}?</span>
+          <Bullets items={['Your team plays out the season on autopilot.', 'You can’t rejoin this season.']} />
+          {q4 === 'B' ? (
+            <div>
+              <div className="ks-tag" style={{ color: 'var(--c-text-2)' }}>Who takes over as commissioner?</div>
+              <ul className="ks-rows" role="radiogroup">
+                {others.map((p, i) => { const r = K.STANDINGS_BEFORE.find((x) => x.id === p.id); return <Radio key={p.id} on={i === 0} title={p.name} line={`${K.ordinal(r.rank)} · ${r.w}–${r.l}${i === 0 ? ' · in the league longest' : ''}`} />; })}
+              </ul>
+            </div>
+          ) : (
+            <Alert>Paolo M. becomes commissioner: they've been in the league longest. We'll let them know.</Alert>
+          )}
+          <DangerBtn>{q4 === 'B' ? 'Leave and hand over to Paolo M.' : 'Leave league'}</DangerBtn>
+          <span className="ks-btn">Stay</span>
+        </Sheet>
+      }>
+        <Head chip={<Chip kind="live">Week 6</Chip>} />
+      </Device>
+    );
+  }
+  /** Q1: the commissioner's draft order after Sofia F. leaves. */
+  function OrderAfterLeave({ q1 = 'A' }) {
+    const order = K.SERIE_A.order.filter((m) => m.name !== 'Sofia F.');
+    return (
+      <Device noTabs label={`Draft order after a leave, ${q1}`}>
+        <Back label="League settings" />
+        <div className="ks-pad ks-stack" style={{ gap: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 className="ks-head__title" style={{ fontSize: 28 }}>Draft order</h2>
+            {q1 === 'A' ? <span className="ks-chip ks-chip--final">Final</span> : <span className="ks-chip">Not confirmed</span>}
+          </div>
+          {q1 === 'A'
+            ? <p className="ks-callout ks-muted" style={{ margin: 0 }}>Sofia F. left the league. Everyone after them moved up one.</p>
+            : <Alert>Sofia F. left the league. Check the order and confirm it again before the draft.</Alert>}
+          <div className="ks-card" style={{ padding: '2px 8px' }}>
+            <ol className="ks-rows">
+              {order.map((m, i) => (
+                <li key={m.name} className="ks-row" style={{ gridTemplateColumns: '22px 32px 1fr auto', padding: '9px 6px', background: m.you ? 'var(--c-you-tint)' : undefined }}>
+                  <span className="ks-callout ks-num" style={{ fontWeight: 700 }}>{i + 1}</span>
+                  <span className={m.you ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{m.init}</span>
+                  <span className="ks-callout" style={{ fontWeight: 700 }}>{m.name}{m.you ? <span className="ks-muted" style={{ fontWeight: 500 }}> (you)</span> : null}</span>
+                  <span>{m.bot ? <span className="ks-chip ks-chip--money">Bot</span> : q1 === 'B' ? <span className="ks-muted">≡</span> : null}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+          {q1 === 'B' ? <span className="ks-btn">Confirm order</span> : null}
+        </div>
+      </Device>
+    );
+  }
+  /** Q2: Roberto's Home matchup card against the departed Gianluigi B. */
+  function DepartedMatchup({ q2 = 'A' }) {
+    const L = K.MATCHUP.live, y = SD(L.you), o = SD(L.opp);
+    return (
+      <Device tab="home" label={`Home matchup vs a departed team, ${q2}`}>
+        <Head avatar />
+        <div className="ks-pad ks-stack">
+          <Hero value={K.HOME.value} gain={K.HOME.gain} meta="2nd of 6 · 4–1 · Week 6 of 14" />
+          <GameCard tag="This week" chip={<Chip kind="live">Week 6 · Live</Chip>}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }} className="ks-callout">
+              <span style={{ color: 'var(--c-you-text)', fontWeight: 700 }}>You</span>
+              <span style={{ textAlign: 'right' }}><span className="ks-muted">Gianluigi B. {q2 === 'A' ? '(left)' : '(forfeited)'}</span>{q2 === 'A' ? <><br /><span className="ks-caption">Auto-managed</span></> : null}</span>
+            </div>
+            {q2 === 'A' ? (
+              <>
+                <Scores left={y.primary} right={o.primary} size="lg" />
+                <Tug you={y.value} opp={o.value} />
+                <div style={{ display: 'flex', justifyContent: 'space-between' }} className="ks-caption">
+                  <span style={{ color: 'var(--c-text)' }}>You lead by <b className="ks-num">{margin(L.you, L.opp)}</b></span>
+                  <span className="ks-muted">{L.left}</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <Scores left={y.primary} right="W" size="lg" rightTone="ks-zero" />
+                <span className="ks-caption" style={{ color: 'var(--c-text)' }}>You win Week 6 by forfeit. Gianluigi B. left the league.</span>
+              </>
+            )}
+          </GameCard>
+        </div>
+      </Device>
+    );
+  }
+  /** Q2-A: standings for everyone else; the departed row stays, labelled. */
+  function DepartedStandings() {
+    return (
+      <Device tab="league" label="Standings with a departed team">
+        <Head chip={<Chip kind="live">Week 6 · Live</Chip>} />
+        <div className="ks-pad ks-stack" style={{ gap: 14 }}>
+          <div className="ks-seg"><span className="on">Standings</span><span>Schedule</span><span>History</span></div>
+          <Card pad="6px 14px">
+            <ul className="ks-rows">
+              {K.STANDINGS_BEFORE.map((r) => {
+                const gone = r.id === 'gianluigi';
+                return (
+                  <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '20px 30px 1fr auto auto', padding: '9px 0', background: r.you ? 'var(--c-you-tint)' : undefined }}>
+                    <span className="ks-t ks-num" style={{ textAlign: 'center' }}>{r.rank}</span>
+                    <span className={r.you ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'} style={gone ? { opacity: 0.55 } : undefined}>{r.init}</span>
+                    <span><span className="ks-callout" style={{ fontWeight: 700, color: gone ? 'var(--c-text-2)' : undefined }}>{r.name}{gone ? ' (left)' : ''}{r.you ? <span className="ks-muted" style={{ fontWeight: 500 }}> (you)</span> : null}</span>{gone ? <><br /><span className="ks-caption">Auto-managed</span></> : null}</span>
+                    <span className="ks-callout ks-num ks-muted">{r.w}–{r.l}</span>
+                    <span className={`ks-callout ks-num ${tone(r.pf)}`} style={{ fontWeight: 700, minWidth: 78, textAlign: 'right' }}>{$s(r.pf)}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </Card>
+          <span className="ks-caption ks-muted">Ranked by win percentage, then head-to-head, then season gain. This is also the playoff seeding.</span>
+        </div>
+      </Device>
+    );
+  }
+  /** Q3: the bracket when the 4th seed's manager left. */
+  function DepartedBracket({ q3 = 'A' }) {
+    const M = ({ a, b, sub }) => (
+      <div className="ks-raised" style={{ padding: '10px 12px', display: 'grid', gap: 6 }}>
+        {[a, b].map((n) => (
+          <div key={n} className="ks-callout"><b style={{ color: n.startsWith('1 Roberto') ? 'var(--c-you-text)' : n.includes('(left)') ? 'var(--c-text-2)' : undefined }}>{n}</b></div>
+        ))}
+        {sub ? <span className="ks-caption">{sub}</span> : null}
+      </div>
+    );
+    const S = S1.rows.slice(0, 5);
+    return (
+      <Device game tab="league" label={`Playoffs with a departed seed, ${q3}`}>
+        <Head chip={<Chip kind="live">Playoffs</Chip>} />
+        <div className="ks-pad ks-stack" style={{ gap: 12 }}>
+          <div className="ks-seg ks-seg--game"><span>Standings</span><span className="on">Playoffs</span><span>History</span></div>
+          {q3 === 'B' ? (
+            <Card pad="6px 14px">
+              <ul className="ks-rows">
+                {S.map((r) => {
+                  const gone = r.id === 'francesco';
+                  const seed = gone ? null : r.rank > 4 ? 4 : r.rank;
+                  return (
+                    <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '40px 1fr auto', padding: '8px 0', opacity: gone ? 0.55 : 1 }}>
+                      <span className="ks-caption ks-num" style={{ fontWeight: 700 }}>{seed ? `Seed ${seed}` : '–'}</span>
+                      <span className="ks-callout" style={{ fontWeight: 700 }}>{r.name}{gone ? ' (left)' : ''}</span>
+                      <span className="ks-callout ks-num ks-muted">{gone ? 'Not seeded' : `${r.w}–${r.l}`}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Card>
+          ) : null}
+          <div className="ks-tag">Semifinals · playoff week 1 · starts Mon 9:30 AM ET</div>
+          {q3 === 'A'
+            ? <M a="1 Roberto B." b="4 Francesco T. (left)" sub="Francesco T.'s team plays on autopilot." />
+            : <M a="1 Roberto B." b="4 Gianluigi B." sub="Francesco T. left, so Gianluigi B. moves up to the 4th seed." />}
+          <M a="2 Paolo M." b="3 Alessandro D." />
+          <span className="ks-caption ks-muted">{q3 === 'A'
+            ? 'The top 4 in the standings make the playoffs, including teams whose manager left.'
+            : 'The top 4 active teams make the playoffs. Teams whose manager left aren’t seeded.'}</span>
+        </div>
+      </Device>
+    );
+  }
+  /** Q5: what the leaver (Gianluigi B.) sees on the League tab afterwards. */
+  function LeaverLeague({ q5 = 'A' }) {
+    return (
+      <Device tab="league" label={`League tab after leaving, ${q5}`}>
+        <Head chip={<Chip kind="live">Week 6 · Live</Chip>} />
+        <div className="ks-pad ks-stack" style={{ gap: 12 }}>
+          <div className="ks-raised" style={{ padding: '12px 14px', display: 'grid', gap: 6 }}>
+            <span className="ks-callout" style={{ fontWeight: 700 }}>You left this league in Week 6</span>
+            <span className="ks-caption">{q5 === 'A'
+              ? 'Your team plays out the season on autopilot. You can look around, but you can’t trade or rejoin.'
+              : 'Your team is on autopilot. Come back any time before the season ends and trading reopens.'}</span>
+            {q5 === 'B' ? <span className="ks-btn">Reclaim my team</span> : null}
+          </div>
+          <div className="ks-seg"><span className="on">Standings</span><span>Schedule</span><span>History</span></div>
+          <Card pad="6px 14px">
+            <ul className="ks-rows">
+              {K.STANDINGS_BEFORE.map((r) => {
+                const me = r.id === 'gianluigi';
+                return (
+                  <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '20px 1fr auto auto', padding: '9px 0', background: me ? 'var(--c-you-tint)' : undefined }}>
+                    <span className="ks-t ks-num" style={{ textAlign: 'center' }}>{r.rank}</span>
+                    <span className="ks-callout" style={{ fontWeight: 700 }}>{r.name}{me ? <span className="ks-muted" style={{ fontWeight: 500 }}> (you, left)</span> : null}</span>
+                    <span className="ks-callout ks-num ks-muted">{r.w}–{r.l}</span>
+                    <span className={`ks-callout ks-num ${tone(r.pf)}`} style={{ fontWeight: 700, minWidth: 78, textAlign: 'right' }}>{$s(r.pf)}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </Card>
+        </div>
+      </Device>
+    );
+  }
+  /** Q5: the leaver's league sheet: the league leaves Home and sits under "You left". */
+  function LeaverSheet() {
+    return (
+      <Device tab="home" label="League sheet after leaving" overlay={
+        <Sheet top={300}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span className="ks-title">Your leagues</span><span className="ks-muted"><Icon d={ICON.close} size={22} /></span></div>
+          <div>
+            <div className="ks-tag" style={{ color: 'var(--c-text-2)' }}>Live this week</div>
+            <ul className="ks-rows"><li className="ks-row" style={{ gridTemplateColumns: '1fr auto 20px', padding: '12px 0' }}>
+              <span><span className="ks-t">Friday Night Stocks</span><br /><span className="ks-caption ks-num">6th of 8 · 0–1</span></span>
+              <Chip kind="live">Week 2</Chip>
+              <span style={{ color: 'var(--c-accent)' }}><Icon d={CHECK} size={18} width={2.6} /></span>
+            </li></ul>
+          </div>
+          <div>
+            <div className="ks-tag" style={{ color: 'var(--c-text-2)' }}>You left</div>
+            <ul className="ks-rows"><li className="ks-row" style={{ gridTemplateColumns: '1fr auto', padding: '12px 0' }}>
+              <span><span className="ks-t">{K.LEAGUE.name}</span><br /><span className="ks-caption ks-num">Left in Week 6 · 5th of 6 · auto-managed</span></span>
+              <span className="ks-muted"><Icon d={ICON.right} size={16} /></span>
+            </li></ul>
+          </div>
+        </Sheet>
+      }>
+        <Head name="Friday Night Stocks" chip={null} />
+      </Device>
+    );
+  }
+  /** Refusals: the cases where leaving (or coming back) is blocked. */
+  function LeaveRefused({ kind }) {
+    if (kind === 'drafting') return <LeagueSettingsLeave commish={false} name={K.SERIE_A.name} leave={<LeaveRow off sub="You can leave once the draft finishes." />} />;
+    if (kind === 'season') return <LeagueSettingsLeave commish={false} leave={<LeaveRow off sub="You can leave once the season ends. Until then your team stays yours." />} />;
+    if (kind === 'commish') return <LeagueSettingsLeave leave={<><LeaveRow off sub="Make someone else commissioner first." /></>} />;
+    if (kind === 'sole') {
+      return (
+        <Device tab="league" label="Leave refused, only manager" overlay={
+          <Sheet top={540}>
+            <span className="ks-title">You can't leave yet</span>
+            <Alert>You're the only manager in {K.SERIE_A.name}; everyone else is a bot. Delete the league instead.</Alert>
+            <span className="ks-btn">OK</span>
+          </Sheet>
+        }>
+          <Head name={K.SERIE_A.name} chip={null} />
+        </Device>
+      );
+    }
+    // rejoin (Q5-A): the join sheet refuses a manager who left this season.
+    return (
+      <Device tab="home" label="Join refused after leaving" overlay={
+        <Sheet top={420}>
+          <span className="ks-title">Join with code</span>
+          <Field label="Invite code" value="SCUDETTO" />
+          <Alert>You left {K.LEAGUE.name} this season, so you can't rejoin it. You can still view it from Your leagues.</Alert>
+          <span className="ks-btn" style={{ opacity: 0.4 }}>Join</span>
+        </Sheet>
+      }>
+        <Head name="Friday Night Stocks" chip={null} />
+      </Device>
+    );
+  }
+
   window.KSInventory = {
     SignIn, SignUp, SignUpPaused, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeUnpriced, HomeScoring, HomeComplete,
@@ -1965,6 +2282,7 @@
     SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,
     OneShareSell, OneShareBuy,
     TierPortfolio, TierReview, TierRefused,
+    LeagueSettingsLeave, LeaveSheet, CommishLeave, OrderAfterLeave, DepartedMatchup, DepartedStandings, DepartedBracket, LeaverLeague, LeaverSheet, LeaveRefused, LeaveRow,
     DraftRefused, StartBlocked, DraftStalled, StallPush,
     RibHome, RibLeague, RibPush, RibMemberPrompt, RibHomeCounts, RibReconcile, RibMemberList, RibResolve, RibReview, RibHistory,
     WebHome, WebPortfolio, WebSettings,
