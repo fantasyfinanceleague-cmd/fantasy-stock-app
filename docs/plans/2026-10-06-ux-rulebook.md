@@ -1,7 +1,7 @@
 # UX rulebook and audit
 
-Status: Draft (awaiting Giorgio's approval)
-Planner session: "Planner" (Fable 5.1), 2026-10-06 · Orchestrator hand-off: —
+Status: Approved (Giorgio, 2026-10-06)
+Planner session: "Planner" (Fable 5.1), 2026-10-06 · Orchestrator hand-off: see the commit that set this line's SHA in the `PLAN READY` message
 
 ## Goal
 
@@ -127,7 +127,8 @@ Step by step, each step depending on the one before:
 5. **`ux-reviewer`.** Giorgio creates `.claude/agents/ux-reviewer.md` (the auto-mode classifier
    blocks agents from editing `.claude/`), modelled on `security-reviewer.md`: `tools: Read,
    Grep, Glob`, no Bash, no Write; its brief is the "What the reviewer reports" section of
-   `UX_RULES.md`. `UI-UX-PROGRAM.md`'s gate gains step (6): the reviewer's findings table and the
+   `UX_RULES.md`. The exact file contents are drafted in
+   `docs/design/reviews/ux-reviewer-agent.md`. `UI-UX-PROGRAM.md`'s gate gains step (6): the reviewer's findings table and the
    Design Lead's answer to each (fixed / accepted with a reason / escalated).
 6. **Pass 2: audit the built screens.** At each of 3c's and 3e's design gates, the Design Lead
    and the reviewer audit the built screens on the simulator: Light/Dark, XL text, Reduce Motion
