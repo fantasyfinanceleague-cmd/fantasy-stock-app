@@ -12,6 +12,8 @@ import { MatchScoreboard } from '@/components/game/MatchScoreboard';
 import { WeekRace } from '@/components/game/WeekRace';
 import { Chyron } from '@/components/sp/game/Chyron';
 import { useLeadChyron } from '@/lib/game/useLeadChyron';
+import { useRevealOnce } from '@/lib/game/useRevealOnce';
+import { FinalBanner } from '@/components/game/FinalBanner';
 import { raceLayout } from '@/lib/game/raceLayout';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { useMatchup, type MatchupDerived } from '@/lib/game/useMatchup';
@@ -41,12 +43,15 @@ export default function MatchupScreen() {
   const { colors } = useTheme();
   const m = useMatchup(activeLeagueId);
   const chyron = useLeadChyron(m.derived?.live ?? null, m.quote, m.bars, m.todayIso);
+  // G3: the Friday reveal plays once per matchup-week, once the result is posted.
+  const revealFinal = m.derived?.view.kind === 'final' && m.derived.final !== null;
+  const revealPlay = useRevealOnce(activeLeagueId, m.derived?.week ?? null, revealFinal);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <ShellHeader title="Matchup" showAvatar />
       <BarsRefresh onRefresh={refresh} contentContainerStyle={{ paddingHorizontal: space[6], paddingBottom: space[9], gap: space[6] }}>
-        <MatchupBody status={m.status} derived={m.derived} phase={m.phase} onRefresh={m.refresh} leagueName={activeLeague?.name ?? ''} chyron={chyron} />
+        <MatchupBody status={m.status} derived={m.derived} phase={m.phase} onRefresh={m.refresh} leagueName={activeLeague?.name ?? ''} chyron={chyron} revealPlay={revealPlay} />
       </BarsRefresh>
     </View>
   );
@@ -59,9 +64,10 @@ interface BodyProps {
   onRefresh: () => Promise<void>;
   leagueName: string;
   chyron: string | null;
+  revealPlay: boolean;
 }
 
-function MatchupBody({ status, derived, phase, onRefresh, chyron }: BodyProps) {
+function MatchupBody({ status, derived, phase, onRefresh, chyron, revealPlay }: BodyProps) {
   const { user } = useAuth();
   const { width } = useWindowDimensions();
   if (status === 'error') {
@@ -127,6 +133,12 @@ function MatchupBody({ status, derived, phase, onRefresh, chyron }: BodyProps) {
   return (
     <View style={styles.stack}>
       {!isFinal ? <Chyron message={chyron} /> : null}
+      {isFinal && final ? (
+        <FinalBanner
+          play={revealPlay}
+          text={final.me === final.opp ? `Tied in Week ${week}` : final.me > final.opp ? `${youName} wins Week ${week}` : `${live.opp?.name ?? ''} wins Week ${week}`}
+        />
+      ) : null}
       <MatchScoreboard
         model={model}
         mineGain={mine}
