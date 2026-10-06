@@ -6,7 +6,7 @@ Supabase CLI applies only the timestamped `.sql` files directly in
 Do **not** move a file back to the parent directory until its stated precondition
 is met.
 
-**Currently held:** 4 files (see *Held* below): `20260929000000_drop_I6_I2b.sql`, `20261010000001_schedule_draft_autopick_sweep.sql`, `20261013000001_schedule_draft_order_notify.sql` and `20261105000008_drop_start_new_league_season.sql`.
+**Currently held:** 5 files (see *Held* below): `20260929000000_drop_I6_I2b.sql`, `20261010000001_schedule_draft_autopick_sweep.sql`, `20261013000001_schedule_draft_order_notify.sql`, `20261101000002_drafts_refuse_new_skip.sql` and `20261105000008_drop_start_new_league_season.sql`.
 
 ## How to use it
 

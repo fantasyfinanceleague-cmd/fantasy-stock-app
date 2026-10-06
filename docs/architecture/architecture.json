@@ -2,13 +2,22 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "9db0e71dc07e5681d7b5463c542f17d75fdd39ca",
-    "commitShort": "9db0e71",
+    "commit": "c3196c7ae42afaa84439d19577a093bb3105d79e",
+    "commitShort": "c3196c7",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "feat/run-it-back",
-    "dirty": false,
-    "dirtyPaths": [],
-    "timestamp": "2026-10-06T04:23:35Z",
+    "dirty": true,
+    "dirtyPaths": [
+      {
+        "code": "M",
+        "path": "docs/architecture/annotations.json"
+      },
+      {
+        "code": "M",
+        "path": "supabase/migrations/deferred/README.md"
+      }
+    ],
+    "timestamp": "2026-10-06T04:29:43Z",
     "sourceHash": "sha256:7b7a287de9e803ccdcd3434017e099a1cd37ab7fbd7dbc42be41480b40098dbb",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
@@ -16,7 +25,7 @@
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-09-30T16:53:15Z",
-    "ageHours": 131.5,
+    "ageHours": 131.6,
     "ageDays": 5.5,
     "staleAfterDays": 14,
     "stale": false,
@@ -3947,7 +3956,7 @@
         "redefinitions": 2
       },
       "drift": [],
-      "annotation": "Destructive (deletes and recreates season state) and broken by design: it deletes the season's matchups but creates no draft and no schedule, so the league is stuck (STATUS §4 item 9). LOCKED by 20261023000000: EXECUTE revoked from PUBLIC, anon, authenticated and service_role (owner-only). Until that migration is applied and db-snapshot.json is re-captured, the grants panel still shows the prod ACL from the snapshot (authenticated + service_role). The DROP is held in deferred/20261023000009; the replacement is Run it back (docs/migrations/RUN_IT_BACK_DESIGN.md).",
+      "annotation": "Destructive (deletes and recreates season state) and broken by design: it deletes the season's matchups but creates no draft and no schedule, so the league is stuck (STATUS §4 item 9). LOCKED by 20261105000007: EXECUTE revoked from PUBLIC, anon, authenticated and service_role (owner-only). Until that migration is applied and db-snapshot.json is re-captured, the grants panel still shows the prod ACL from the snapshot (authenticated + service_role). The DROP is held in deferred/20261105000008; the replacement is Run it back (docs/migrations/RUN_IT_BACK_DESIGN.md).",
       "verified": true,
       "id": "pg.start_new_league_season",
       "label": "start_new_league_season(p_league_id uuid)",
@@ -11623,7 +11632,7 @@
       ]
     },
     {
-      "annotation": "The only direct client-to-SECURITY-DEFINER call in the app. Every other definer function is reached through an edge function. Once 20261023000000 is applied, this call fails closed with 42501 (an \"Error\" alert in 1.0.0/1.1.0); the button is removed in the Run it back client work.",
+      "annotation": "The only direct client-to-SECURITY-DEFINER call in the app. Every other definer function is reached through an edge function. Once 20261105000007 is applied, this call fails closed with 42501 (an \"Error\" alert in 1.0.0/1.1.0); the button is removed in the Run it back client work.",
       "verified": true,
       "id": "e.ui.league-settings->pg.start_new_league_season",
       "from": "ui.league-settings",

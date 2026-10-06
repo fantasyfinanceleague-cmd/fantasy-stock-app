@@ -11,7 +11,7 @@ architectures (§1, unchanged).
 - the commissioner gets **Nudge again** and **Remove** on pending rows;
 - `in ↔ out` flips are **free** until the draft starts.
 See §2.4 and §2.5.
-**Branch:** `docs/run-it-back-design`. **Migration range reserved:** `20261023000000`–`09`.
+**Branch:** `docs/run-it-back-design`. **Migration range reserved:** `20261105000007`–`09`.
 **Author:** the "run it back backend" worker, 2026-10-04, read-only against `main` @ `ee2ceff`.
 
 ---
@@ -687,7 +687,7 @@ It is **strictly worse than nothing**:
 It is callable today by any commissioner of a completed league through the 1.1.0 build's
 settings screen.
 
-- **Phase 0, committed as `5c2175c` on `fix/lock-start-new-league-season`:** `20261023000000_lock_start_new_league_season.sql`.
+- **Phase 0, committed as `5c2175c` on `fix/lock-start-new-league-season`:** `20261105000007_lock_start_new_league_season.sql`.
   It also revokes `service_role`: no server caller exists, and the prod snapshot shows Supabase's
   default grant. The 9-step PGlite test runs the header's DO-block effect check verbatim, which
   reports FAIL before the migration and PASS after it:
@@ -704,7 +704,7 @@ settings screen.
   - **Not dropped yet:** `season_result.pglite.test.ts` slices the function from
     `20260718000000` to build its archived-season fixture, so it keeps working, and the function
     stays restorable if anything unexpected calls it.
-- **Later:** `DROP FUNCTION` in `20261023000009`, **held in `supabase/migrations/deferred/`** (committed with phase 0)
+- **Later:** `DROP FUNCTION` in `20261105000008`, **held in `supabase/migrations/deferred/`** (committed with phase 0)
   until the mobile build without the button ships (CLAUDE.md: a header comment holds nothing).
   The PGlite fixture keeps slicing the historical file, which is never rewritten. **Wrapping it
   was considered and rejected:** nothing in its body is worth keeping under B.
@@ -908,11 +908,11 @@ commissioner of a completed test league:
 The real end-to-end proof is a test league renewed, replied to, drafted, finalized, and its
 Week 1 scored.
 
-### 5.4 Migration range `20261023000000`–`09`
+### 5.4 Migration range `20261105000007`–`09`
 
 | Version | Content | Phase |
 |---|---|---|
-| `20261023000000` | lock `start_new_league_season` | **0, committed `5c2175c`** |
+| `20261105000007` | lock `start_new_league_season` | **0, committed `5c2175c`** |
 | `20261023000001` | `leagues.previous_league_id`, `lineage_id`, `season_number` + partial UNIQUE + `lineage_id` index | 1 |
 | `20261023000002` | `finalize_league_draft` season number (+ re-stated grants) | 1 |
 | `20261023000003` | `league_notifications`: kinds, `subject_user_id`, `detail`, exactly-once indexes | 1 |
@@ -921,7 +921,7 @@ Week 1 scored.
 | `20261023000006` | `get_renewal_roster`, `get_league_history` | 1 |
 | `20261023000007` | `get_home_summary` + lineage columns (DROP/CREATE, grants re-applied) | 1 |
 | `20261023000008` | (b) keep teams **or** keepers, if chosen | 2 |
-| `20261023000009` | `DROP FUNCTION start_new_league_season`, **in `deferred/`** (committed `5c2175c`) | deferred |
+| `20261105000008` | `DROP FUNCTION start_new_league_season`, **in `deferred/`** (committed `5c2175c`) | deferred |
 
 If (b) picks both keep teams and keepers, request a second range.
 
