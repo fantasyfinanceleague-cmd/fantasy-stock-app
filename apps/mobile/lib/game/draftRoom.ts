@@ -121,75 +121,88 @@ export function pickClockLabel(clock: ClockState): string {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
-/** A pick refusal: its line, and the next step shown under it (UX rule 8).
- * `another`: the clock keeps running and another stock would do, so the
- * shared next step "Your clock is still running. Pick another stock." follows. */
-interface RefusalEntry {
-  line: string;
-  next: 'another' | null;
-}
-
-/** The pick refusals (UX rule 8: whole sentences, the shared next step, no em
- * dashes). STRUCTURE ONLY for now: the lines are the existing copy, verbatim,
- * until the Design Lead's exact table is relayed; then the table replaces
- * `line` (and `next` where it differs) and the pending test below goes live.
- * The never-skips reasons (would_strand_slot, budget_reserve) are built in
- * pickRefusalLine with the board's copy and their own next step. */
-const PICK_REFUSALS: Record<string, RefusalEntry> = {
-  not_your_turn: { line: "It's not your turn to pick", next: null },
-  draft_complete: { line: 'The draft is already complete', next: null },
-  draft_not_in_progress: { line: 'The draft is not in progress', next: null },
-  symbol_owned: { line: 'That stock is already owned in this league', next: 'another' },
-  not_draftable: { line: "That stock isn't in this league's draftable universe", next: 'another' },
-  no_eligible_slot: { line: 'No open roster slot accepts a stock at this price', next: 'another' },
-  over_budget: { line: 'That stock is over your remaining budget', next: 'another' },
-  no_price: { line: 'No recent price available for that stock', next: 'another' },
-  pick_conflict: { line: 'Someone picked at the same moment — refresh and try again', next: null },
-  rate_limited: { line: 'Too many picks too quickly — wait a moment and try again', next: null },
-  draft_not_complete: { line: 'The draft is not finished yet', next: null },
-  forbidden_target: { line: "You can't pick on that player's behalf", next: null },
-  not_a_member: { line: "You're not a member of this league", next: null },
-};
-
-/** Every reason the table covers (for the rule-8 test once the table lands). */
-export const PICK_REFUSAL_REASONS: readonly string[] = Object.keys(PICK_REFUSALS);
-
-/** The shared next step under a refusal where another stock would do (UX rule 8). */
+/** The shared next step under a refused pick, shown when it's your turn (the
+ * audit's Rule 8 table, "Shared next step for a refused pick"). */
 export const PICK_ANOTHER_NEXT_STEP = 'Your clock is still running. Pick another stock.';
 
-/** What the refusal is about: the stock the player tried (always known on the
- * phone), and, only if the server ever returns them, the manager and the slot
- * it would strand. validate-and-record-pick returns the reason code alone
- * today, so the GENERIC lines are what players see. */
+/** One row of the audit's Rule 8 table › validate-and-record-pick
+ * (docs/design/reviews/ux-audit-2026-10.md, Design Lead rulings; the Message
+ * column VERBATIM). `{S}` is the stock you tried, `{M}` the manager on the
+ * clock. `shared`: the shared next step follows when it's your turn.
+ * `refresh`: the room re-reads (the board / its state speaks next). */
+interface RefusalRow {
+  line: (s: string, m: string) => string;
+  next: 'shared' | null;
+  refresh?: boolean;
+}
+
+const DIDNT_GO_THROUGH = "That pick didn't go through.";
+
+const PICK_REFUSALS: Record<string, RefusalRow> = {
+  would_strand_slot: { line: (s) => `Taking ${s} would leave another manager with no stock for one of their slots.`, next: 'shared' },
+  budget_reserve: { line: (s) => `${s} would leave too little budget for your remaining picks.`, next: 'shared' },
+  symbol_owned: { line: (s) => `${s} is already taken.`, next: 'shared' },
+  no_eligible_slot: { line: (s) => `${s} doesn't fit any of your open slots.`, next: 'shared' },
+  over_budget: { line: (s) => `${s} costs more than your budget left.`, next: 'shared' },
+  not_draftable: { line: (s) => `${s} isn't in this league's list of stocks.`, next: 'shared' },
+  no_price: { line: (s) => `${s} has no usable price right now.`, next: 'shared' },
+  invalid_price: { line: (s) => `${s} has no usable price right now.`, next: 'shared' },
+  not_your_turn: { line: (_s, m) => `It's ${m}'s pick now.`, next: null },
+  pick_conflict: { line: () => 'Someone picked at the same moment. Pick again.', next: 'shared', refresh: true },
+  draft_complete: { line: () => 'The draft is over. Your team is set.', next: null, refresh: true },
+  draft_not_in_progress: { line: () => "The draft isn't running right now.", next: null, refresh: true },
+  rate_limited: { line: () => 'Too many tries at once. Wait a moment, then pick again.', next: 'shared' },
+  not_a_member: { line: () => DIDNT_GO_THROUGH, next: 'shared' },
+  forbidden_target: { line: () => DIDNT_GO_THROUGH, next: 'shared' },
+  target_not_member: { line: () => DIDNT_GO_THROUGH, next: 'shared' },
+  league_not_found: { line: () => DIDNT_GO_THROUGH, next: 'shared' },
+  bad_request: { line: () => DIDNT_GO_THROUGH, next: 'shared' },
+  not_authenticated: { line: () => 'Your session ended. Sign in again.', next: null },
+};
+
+/** Every reason the table covers (the rule-8 test reads it). */
+export const PICK_REFUSAL_REASONS: readonly string[] = Object.keys(PICK_REFUSALS);
+
+/** Server faults (and network): the pick may have landed, so never "can't be
+ * made": "Couldn't confirm your pick. Checking…" and re-read (U-04, P0). */
+const SERVER_FAULTS = new Set(['draft_order_invalid', 'server_config_error', 'unhandled']);
+
 export interface PickRefusalContext {
+  /** The stock you tried (always known on the phone). */
   stock: string | null;
+  /** The manager on the clock, for not_your_turn. */
   manager?: string | null;
-  slot?: string | null;
+  /** The shared next step only shows on your turn. */
+  isMyTurn?: boolean;
 }
 
-const GENERIC_REFUSAL = "That pick can't be made.";
+export interface PickRefusalView {
+  line: string;
+  next: string | null;
+  /** The outcome is unknown: the room re-reads and the board says what happened. */
+  checking: boolean;
+  /** The room re-reads (checking, or a refusal whose answer is the new board). */
+  refresh: boolean;
+}
 
-/** The line for a refused pick: its own copy, or one honest generic line, never
- * a raw reason. would_strand_slot / budget_reserve: the board's "Pick refused"
- * frames (#game), specific when the names are known, else generic. */
-export function pickRefusalLine(reason: string, ctx: PickRefusalContext = { stock: null }): string {
-  const stock = ctx.stock?.toUpperCase() || null;
-  if (reason === 'would_strand_slot') {
-    if (stock && ctx.manager && ctx.slot) {
-      return `Taking ${stock} would leave ${ctx.manager} with no stock that fits their ${ctx.slot} slot. Every slot has to be fillable.`;
-    }
-    return stock ? `Taking ${stock} would leave another manager with no stock for one of their slots.` : GENERIC_REFUSAL;
+/** A refused or unconfirmed pick, as the room shows it (audit Rule 8 table).
+ * `reason` null = transport (no answer); `status` the HTTP status of a non-2xx. */
+export function pickRefusalView(reason: string | null, status: number | null, ctx: PickRefusalContext): PickRefusalView {
+  if (reason === null || (status !== null && status >= 500) || SERVER_FAULTS.has(reason)) {
+    return { line: PICK_UNCONFIRMED, next: null, checking: true, refresh: true };
   }
-  if (reason === 'budget_reserve') {
-    return stock ? `${stock} would leave too little budget for your remaining picks.` : GENERIC_REFUSAL;
-  }
-  return PICK_REFUSALS[reason]?.line ?? GENERIC_REFUSAL;
+  const key = status === 401 ? 'not_authenticated' : reason;
+  const row = PICK_REFUSALS[key] ?? { line: () => DIDNT_GO_THROUGH, next: 'shared' as const };
+  const stock = ctx.stock?.toUpperCase() || 'That stock';
+  const manager = ctx.manager?.trim() || 'another manager';
+  return {
+    line: row.line(stock, manager),
+    next: row.next === 'shared' && ctx.isMyTurn ? PICK_ANOTHER_NEXT_STEP : null,
+    checking: false,
+    refresh: row.refresh === true,
+  };
 }
 
-/** Under a never-skips refusal, the next step (board "Pick refused" frames). */
-export const PICK_REFUSAL_NEXT_STEP = 'Your clock is still running. Pick from the list, or let your queue pick for you.';
-
-export function pickRefusalNextStep(reason: string): string | null {
-  if (reason === 'would_strand_slot' || reason === 'budget_reserve') return PICK_REFUSAL_NEXT_STEP;
-  return PICK_REFUSALS[reason]?.next === 'another' ? PICK_ANOTHER_NEXT_STEP : null;
-}
+/** The draft room's auto-pick backstop came back "price_unavailable" (audit
+ * Rule 8 table, NEW): shown in the clock card, no next step. */
+export const AUTO_PICK_WAITING_FOR_PRICES = 'Auto-pick is waiting for prices. Nobody is skipped.';

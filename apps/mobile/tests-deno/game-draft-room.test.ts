@@ -52,49 +52,6 @@ Deno.test('the seconds left come from the server clock, so the device clock cann
   assertEquals(s.secondsLeft, 10);
 });
 
-import { PICK_REFUSAL_NEXT_STEP, pickRefusalLine, pickRefusalNextStep } from '../lib/game/draftRoom.ts';
-
-Deno.test('the existing refusal lines are verbatim, and an unknown reason is one generic line', () => {
-  assertEquals(pickRefusalLine('not_your_turn'), "It's not your turn to pick");
-  assertEquals(pickRefusalLine('symbol_owned'), 'That stock is already owned in this league');
-  assertEquals(pickRefusalLine('some_new_reason'), "That pick can't be made.");
-});
-
-Deno.test('would_strand_slot: the board\'s generic line with the stock (the server returns no names today)', () => {
-  assertEquals(pickRefusalLine('would_strand_slot', { stock: 'orcl' }), 'Taking ORCL would leave another manager with no stock for one of their slots.');
-});
-
-Deno.test('would_strand_slot: the specific line once the manager and the slot are known (board #game "Pick refused")', () => {
-  assertEquals(
-    pickRefusalLine('would_strand_slot', { stock: 'ORCL', manager: 'Paolo M.', slot: 'Tech' }),
-    'Taking ORCL would leave Paolo M. with no stock that fits their Tech slot. Every slot has to be fillable.',
-  );
-  // Half the names is still the generic line, never a sentence with a hole in it.
-  assertEquals(pickRefusalLine('would_strand_slot', { stock: 'ORCL', manager: 'Paolo M.' }), 'Taking ORCL would leave another manager with no stock for one of their slots.');
-});
-
-Deno.test('budget_reserve: the board\'s generic line with the stock', () => {
-  assertEquals(pickRefusalLine('budget_reserve', { stock: 'ORCL' }), 'ORCL would leave too little budget for your remaining picks.');
-});
-
-Deno.test('with no stock known, the never-skips refusals fall back to the one generic line', () => {
-  assertEquals(pickRefusalLine('would_strand_slot'), "That pick can't be made.");
-  assertEquals(pickRefusalLine('budget_reserve'), "That pick can't be made.");
-});
-
-Deno.test('the never-skips refusals carry the board\'s own next step', () => {
-  assertEquals(PICK_REFUSAL_NEXT_STEP, 'Your clock is still running. Pick from the list, or let your queue pick for you.');
-  assertEquals(pickRefusalNextStep('would_strand_slot'), PICK_REFUSAL_NEXT_STEP);
-  assertEquals(pickRefusalNextStep('budget_reserve'), PICK_REFUSAL_NEXT_STEP);
-  assertEquals(pickRefusalNextStep('not_your_turn'), null);
-});
-
-Deno.test('no refusal line is a placeholder', () => {
-  for (const r of ['would_strand_slot', 'budget_reserve', 'not_your_turn', 'symbol_owned', 'no_eligible_slot', 'x']) {
-    assertEquals(pickRefusalLine(r, { stock: 'NVDA' }).includes('[new copy'), false, r);
-  }
-});
-
 // ── The pick clock as m:ss (P0, Design Lead audit: it read "0:75" / "0:90") ──
 
 import { pickClockLabel } from '../lib/game/draftRoom.ts';
@@ -232,13 +189,12 @@ Deno.test('the Draft button says Sending… and is disabled while the pick is on
   assertEquals(SOURCES['components/game/DraftRoom.tsx'].includes("<Button label={pending ? PICK_SENDING : 'Draft'} onPress={draft} disabled={!selected || pending} />"), true);
 });
 
-Deno.test('a transport error never says "That pick can\'t be made.": it says Checking…, re-reads, and clears on the new board', () => {
+Deno.test('a transport error or server fault never says "That pick can\'t be made.": Checking…, a re-read, cleared by the new board (source guard)', () => {
   const room = SOURCES['components/game/DraftRoom.tsx'];
-  const t = room.indexOf('if (r.transport) {');
-  const unconfirmed = room.indexOf('setRefusal({ line: PICK_UNCONFIRMED, next: null, checking: true });', t);
-  const reread = room.indexOf('room.refresh();', unconfirmed);
-  assertEquals(t > 0 && unconfirmed > t && reread > unconfirmed, true);
+  assertEquals(room.includes('const v = pickRefusalView(r.transport ? null : r.reason, r.transport ? null : r.status, {'), true);
+  assertEquals(room.includes('if (v.refresh) room.refresh();'), true);
   assertEquals(room.includes('setRefusal((cur) => (cur?.checking ? null : cur));'), true);
+  assertEquals(room.includes("That pick can't be made"), false);
 });
 
 // ── UX rule 11: your pick confirmed, for ~3 s ──
@@ -280,35 +236,68 @@ Deno.test('a finished draft shows DraftComplete (your roster, the existing line)
   assertEquals(view.includes("export const FINISHING_THE_DRAFT = 'Finishing the draft…';"), true);
 });
 
-// ── UX rule 8: the refusal table's structure (the exact table is pending) ──
 
-import { PICK_ANOTHER_NEXT_STEP, PICK_REFUSAL_REASONS } from '../lib/game/draftRoom.ts';
+// ── The audit's Rule 8 table › validate-and-record-pick (verbatim), and U-04 ──
 
-Deno.test('the shared next step, under refusals where another stock would do', () => {
+import { AUTO_PICK_WAITING_FOR_PRICES, PICK_ANOTHER_NEXT_STEP, PICK_REFUSAL_REASONS, pickRefusalView } from '../lib/game/draftRoom.ts';
+
+const mine = { stock: 'aapl', manager: 'Paolo M.', isMyTurn: true };
+const line = (reason: string, status: number | null = null, ctx = mine) => pickRefusalView(reason, status, ctx).line;
+
+Deno.test('the Message column, verbatim, with the stock and the manager', () => {
+  assertEquals(line('would_strand_slot'), 'Taking AAPL would leave another manager with no stock for one of their slots.');
+  assertEquals(line('budget_reserve'), 'AAPL would leave too little budget for your remaining picks.');
+  assertEquals(line('symbol_owned'), 'AAPL is already taken.');
+  assertEquals(line('no_eligible_slot'), "AAPL doesn't fit any of your open slots.");
+  assertEquals(line('over_budget'), 'AAPL costs more than your budget left.');
+  assertEquals(line('not_draftable'), "AAPL isn't in this league's list of stocks.");
+  assertEquals(line('no_price'), 'AAPL has no usable price right now.');
+  assertEquals(line('invalid_price'), 'AAPL has no usable price right now.');
+  assertEquals(line('not_your_turn'), "It's Paolo M.'s pick now.");
+  assertEquals(line('pick_conflict'), 'Someone picked at the same moment. Pick again.');
+  assertEquals(line('draft_complete'), 'The draft is over. Your team is set.');
+  assertEquals(line('draft_not_in_progress'), "The draft isn't running right now.");
+  assertEquals(line('rate_limited', 429), 'Too many tries at once. Wait a moment, then pick again.');
+  for (const r of ['not_a_member', 'forbidden_target', 'target_not_member', 'league_not_found', 'bad_request']) {
+    assertEquals(line(r, 403), "That pick didn't go through.", r);
+  }
+  assertEquals(line('not_authenticated', 401), 'Your session ended. Sign in again.');
+  assertEquals(line('something_new'), "That pick didn't go through.");
+});
+
+Deno.test('U-04: a server fault or no answer is "Checking…" and a re-read, never a refusal', () => {
+  const checking = { line: "Couldn't confirm your pick. Checking…", next: null, checking: true, refresh: true };
+  assertEquals(pickRefusalView(null, null, mine), checking); // network
+  for (const r of ['draft_order_invalid', 'server_config_error', 'unhandled']) assertEquals(pickRefusalView(r, 500, mine), checking, r);
+  assertEquals(pickRefusalView('symbol_owned', 503, mine), checking); // any 5xx: it may have landed
+});
+
+Deno.test('the shared next step shows on your turn only, and only where the table says', () => {
   assertEquals(PICK_ANOTHER_NEXT_STEP, 'Your clock is still running. Pick another stock.');
-  for (const r of ['symbol_owned', 'not_draftable', 'no_eligible_slot', 'over_budget', 'no_price']) {
-    assertEquals(pickRefusalNextStep(r), PICK_ANOTHER_NEXT_STEP, r);
+  for (const r of ['would_strand_slot', 'budget_reserve', 'symbol_owned', 'no_eligible_slot', 'over_budget', 'not_draftable', 'no_price', 'pick_conflict', 'rate_limited', 'not_a_member']) {
+    assertEquals(pickRefusalView(r, null, mine).next, PICK_ANOTHER_NEXT_STEP, r);
+    assertEquals(pickRefusalView(r, null, { ...mine, isMyTurn: false }).next, null, r);
   }
-  for (const r of ['not_your_turn', 'draft_complete', 'rate_limited', 'pick_conflict', 'not_a_member', 'unknown']) {
-    assertEquals(pickRefusalNextStep(r), null, r);
+  for (const r of ['not_your_turn', 'draft_complete', 'draft_not_in_progress', 'not_authenticated']) {
+    assertEquals(pickRefusalView(r, null, mine).next, null, r);
   }
-  // The never-skips refusals keep the board's own next step.
-  assertEquals(pickRefusalNextStep('would_strand_slot'), PICK_REFUSAL_NEXT_STEP);
 });
 
-Deno.test('every reason in the table has a line, and the lines are the existing copy until the table lands', () => {
-  assertEquals(PICK_REFUSAL_REASONS.length, 13);
-  for (const r of PICK_REFUSAL_REASONS) assertEquals(pickRefusalLine(r).length > 0 && pickRefusalLine(r) !== "That pick can't be made.", true, r);
+Deno.test('the room re-reads after a conflict, a finished or stopped draft', () => {
+  for (const r of ['pick_conflict', 'draft_complete', 'draft_not_in_progress']) assertEquals(pickRefusalView(r, null, mine).refresh, true, r);
+  assertEquals(pickRefusalView('symbol_owned', null, mine).refresh, false);
 });
 
-Deno.test({
-  name: 'PENDING (the Design Lead\'s table): every refusal is a whole sentence, with no em dash',
-  ignore: true, // goes live when the exact table is relayed and slotted in
-  fn: () => {
-    for (const r of PICK_REFUSAL_REASONS) {
-      const line = pickRefusalLine(r);
-      assertEquals(/[.!?]$/.test(line), true, r);
-      assertEquals(line.includes('—'), false, r);
-    }
-  },
+Deno.test('rule 8: every line is a whole sentence, with no em dash and no placeholder', () => {
+  for (const r of [...PICK_REFUSAL_REASONS, 'unknown', 'unhandled']) {
+    const l = line(r);
+    assertEquals(/[.!?…]$/.test(l), true, `${r}: ${l}`);
+    assertEquals(l.includes('—'), false, r);
+    assertEquals(l.includes('[new'), false, r);
+  }
+  assertEquals(AUTO_PICK_WAITING_FOR_PRICES, 'Auto-pick is waiting for prices. Nobody is skipped.');
+});
+
+Deno.test('no names known: the manager falls back, never an empty possessive', () => {
+  assertEquals(pickRefusalView('not_your_turn', null, { stock: 'AAPL', manager: '' }).line, "It's another manager's pick now.");
 });

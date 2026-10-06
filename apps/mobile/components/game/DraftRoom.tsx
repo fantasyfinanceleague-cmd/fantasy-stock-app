@@ -16,7 +16,7 @@ import { useDraftRoom } from '@/lib/game/useDraftRoom';
 import { QueueEditor } from './QueueEditor';
 import { DRAFT_ROOM_LOAD_FAILED, QUEUE_LOAD_FAILED } from '@/lib/game/draftQueueRead';
 import { managerAtPick, boardRows } from '@/lib/game/draftBoard';
-import { PICK_CONFIRMED_MS, PICK_SENDING, PICK_UNCONFIRMED, budgetLeftLine, pickConfirmedLine, myDraftedSoFar, pickClockLabel, pickRowView, pickRefusalLine, pickRefusalNextStep, picksUntilYouLine, roundPickLine } from '@/lib/game/draftRoom';
+import { PICK_CONFIRMED_MS, PICK_SENDING, budgetLeftLine, pickConfirmedLine, myDraftedSoFar, pickClockLabel, pickRowView, pickRefusalView, AUTO_PICK_WAITING_FOR_PRICES, picksUntilYouLine, roundPickLine } from '@/lib/game/draftRoom';
 import { TeamSoFarGrid } from '@/components/home/TeamSoFarGrid';
 import { DraftRoomSkeleton } from '@/components/game/LoadingSkeletons';
 import { DraftComplete } from '@/components/game/DraftComplete';
@@ -85,6 +85,7 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
   // idempotence decide; the room only shows what the server recorded.
   const autoAsked = useRef<number | null>(null);
   const [stalledAt, setStalledAt] = useState<number | null>(null);
+  const [waitingForPrices, setWaitingForPrices] = useState<number | null>(null);
   const { refresh, clock } = room;
   useEffect(() => {
     if (clock.kind !== 'auto_picking' || m === 0) return;
@@ -98,6 +99,8 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
           // readFunctionRefusal: the reason survives a non-2xx too (error.context's body).
           const r = await readFunctionRefusal(data, error);
           if (!r.transport && (r.reason === 'stalled' || r.body.reason === 'stalled')) setStalledAt(onClockPick);
+          // The audit's Rule 8 table: auto-pick is waiting for prices (shown in the clock card).
+          setWaitingForPrices(!r.transport && (r.reason === 'price_unavailable' || r.body.reason === 'price_unavailable') ? onClockPick : null);
         })
         .finally(() => refresh());
     }, jitter);
@@ -130,17 +133,17 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
     // readFunctionRefusal: a 2xx { ok:false, reason } AND a non-2xx body (rate_limited 429,
     // not_a_member 403 …, read from error.context) both reach their own line.
     const r = await readFunctionRefusal(data, error);
-    if (r.transport) {
-      // Outcome unknown: re-read; the refreshed board says whether the pick landed.
-      setRefusal({ line: PICK_UNCONFIRMED, next: null, checking: true });
-      room.refresh();
-      return;
-    }
-    if (r.reason !== null) {
-      // The board's "Pick refused" copy, with the stock the player tried; the
-      // never-skips refusals add the next step (the clock keeps running).
-      const reason = r.reason;
-      setRefusal({ line: pickRefusalLine(reason, { stock: selected }), next: pickRefusalNextStep(reason) });
+    if (r.transport || r.reason !== null) {
+      // The audit's Rule 8 table (pickRefusalView): a server fault or no answer is
+      // "Couldn't confirm your pick. Checking…" and a re-read (U-04: never "can't
+      // be made"); a refusal gets its own line, and on your turn the shared next step.
+      const v = pickRefusalView(r.transport ? null : r.reason, r.transport ? null : r.status, {
+        stock: selected,
+        manager: nameOf(onClockManager),
+        isMyTurn,
+      });
+      setRefusal({ line: v.line, next: v.next, checking: v.checking });
+      if (v.refresh) room.refresh();
       return;
     }
     // UX rule 11: a one-line confirmation in the clock card for ~3 s (no toast,
@@ -193,6 +196,7 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
         ) : null}
         <Text variant="caption" tone="secondary">{`${room.pickSeconds}-second picks`}</Text>
         {stalled?.line ? <Text variant="caption" tone="secondary">{stalled.line}</Text> : null}
+        {waitingForPrices === onClockPick && !stalled ? <Text variant="caption" tone="secondary">{AUTO_PICK_WAITING_FOR_PRICES}</Text> : null}
       </Card>
 
       <Card>
