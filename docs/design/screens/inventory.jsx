@@ -642,6 +642,35 @@
     );
   }
 
+  /** Season complete for a manager who didn't win (UX audit U-27), on Francesco T.'s phone:
+   * the hero answers "who won?", the tiles are their own season. Tile values are SAMPLE
+   * (data.js has no Week 14 for Francesco T.). */
+  function HomeCompleteOther() {
+    const champ = K.byId.roberto.name;
+    return (
+      <Device tab="home" label="Home, season complete, not the champion">
+        <Head avatar chip={null} />
+        <div className="ks-pad ks-stack">
+          <div className="ks-game" style={{ padding: 20, display: 'grid', justifyItems: 'center', gap: 8, textAlign: 'center' }}>
+            <span style={{ width: 72, height: 72, borderRadius: 36, display: 'grid', placeItems: 'center', background: 'var(--c-inset)', color: 'var(--c-text-2)' }}><Icon d={TROPHY} size={36} width={2.2} /></span>
+            <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Season complete</span>
+            <span className="ks-title" style={{ fontSize: 24 }}>{champ} won {K.LEAGUE.name}</span>
+            <span className="ks-callout">You reached the Semifinals.</span>
+          </div>
+          <Card pad="14px">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', rowGap: 12 }} className="ks-num">
+              <span><span className="ks-caption">Season gain</span><br /><b className="ks-gain">+$612.35</b></span>
+              <span><span className="ks-caption">Best week</span><br /><b>Week 9 · +$188.20</b></span>
+              <span><span className="ks-caption">Regular season</span><br /><b>4th of 6 · 7–7</b></span>
+              <span><span className="ks-caption">Playoffs</span><br /><b>0–1 · lost in the Semifinals</b></span>
+            </div>
+          </Card>
+          <span className="ks-btn">See the final standings</span>
+        </div>
+      </Device>
+    );
+  }
+
   // ═════════════════════════════════════════════════════════════════════
   // C. GAME (3c)
   // ═════════════════════════════════════════════════════════════════════
@@ -1001,6 +1030,40 @@
               ))}
             </ul>
           </div>
+        </div>
+      </Device>
+    );
+  }
+
+  /** Draft complete (UX audit U-10/U-26): the draft's designed ending, on Roberto B.'s phone.
+   * The roster comes from the draft (DRAFT recap data); Week 1 is the pre-season matchup. */
+  function DraftComplete() {
+    const R = { NVDA: 1, AAPL: 2, CRM: 3, TSLA: 4, COST: 5, V: 6 };
+    const mine = K.PORTFOLIO_LIVE.rows.slice().sort((a, b) => R[a.t] - R[b.t]);
+    return (
+      <Device game tab="league" label="Draft complete">
+        <Head chip={<span className="ks-chip">Pre-season</span>} />
+        <div className="ks-pad ks-stack" style={{ gap: 14 }}>
+          <div className="ks-game" style={{ padding: 18, display: 'grid', gap: 6 }}>
+            <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Draft complete</span>
+            <span className="ks-title" style={{ fontSize: 24 }}>Your team is set</span>
+            <span className="ks-callout">Week 1 starts Mon 9:30 AM ET. You play {K.byId.gianluigi.name}</span>
+          </div>
+          <div>
+            <div className="ks-section-h"><h3>Your roster</h3><span className="ks-caption ks-muted">{mine.length} of {K.LEAGUE.slots} · {$(K.LEAGUE.notionalPerSlot)} per slot</span></div>
+            <Card>
+              <ul className="ks-rows">
+                {mine.map((r) => (
+                  <li key={r.t} className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto' }}>
+                    <Logo t={r.t} />
+                    <span><span className="ks-t">{r.t}</span><br /><span className="ks-caption">Round {R[r.t]} · pick {r.pick}</span></span>
+                    <span className="ks-right ks-num ks-callout">{$(r.draft)}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          </div>
+          <span className="ks-btn">See your Week 1 matchup</span>
         </div>
       </Device>
     );
@@ -1647,7 +1710,7 @@
           </Card>
           <Card>
             <ul className="ks-rows" style={{ opacity: 0.5 }}>
-              <Row k="Draft date" v="Not set" />
+              <Row k="Draft time" v="Not set" />
               <Row k="Draft order" v="Random" />
             </ul>
           </Card>
@@ -1838,13 +1901,13 @@
   function DraftStalled({ commish }) {
     return (
       <Device tab="league" label={commish ? 'Draft paused, commissioner' : 'Draft paused, member'}>
-        <Head chip={<span className="ks-chip">Paused</span>} />
+        <Head chip={<Chip kind="live">Drafting</Chip>} />
         <div className="ks-pad ks-stack">
           <div className="ks-game" style={{ padding: 16, display: 'grid', gap: 8 }}>
             <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Draft paused</span>
             <span className="ks-title" style={{ fontSize: 20 }}>No stock left fits Paolo M.'s next slot</span>
             <span className="ks-callout ks-muted">{commish
-              ? "The clock is stopped and nobody is skipped. You've been notified; the draft continues once the slot can be filled."
+              ? 'The clock is stopped and nobody is skipped. The draft continues once the slot can be filled.'
               : 'The clock is stopped and nobody is skipped. The commissioner has been told.'}</span>
           </div>
           <span className="ks-caption">Round 2 · Pick 12 · Paolo M.</span>
@@ -2617,7 +2680,9 @@
    * when postponed, the blockers card replaces it). */
   function HomeAuto({ phase = 'scheduled', commish }) {
     // On time, nobody left (6 of 8, as the pre-draft Home); at risk / postponed, Sofia F. left.
-    const members = ['scheduled', 'open', 'starting', 'nodate'].includes(phase) ? ['RB', 'MR', 'LC', 'SF', 'GV', 'TP'] : ['RB', 'MR', 'LC', 'GV', 'TP'];
+    const members = ['scheduled', 'nodate'].includes(phase) ? ['RB', 'MR', 'LC', 'SF', 'GV', 'TP']
+      : ['open', 'starting'].includes(phase) ? ['RB', 'MR', 'LC', 'EM', 'SF', 'GV', 'DN', 'TP']
+      : ['RB', 'MR', 'LC', 'EM', 'GV', 'DN', 'TP'];
     const clock = { scheduled: '2d 06h 40m', open: '42:18', starting: '00:00', risk: '1h 58m' }[phase];
     const live = phase === 'open' || phase === 'starting';
     // The everyone-states are shown on Roberto B.'s phone (seat 4); the member frames on Giulia V.'s.
@@ -2714,7 +2779,7 @@
 
   window.KSInventory = {
     SignIn, SignUp, SignUpPaused, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
-    HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeUnpriced, HomeScoring, HomeComplete,
+    HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeUnpriced, HomeScoring, HomeComplete, HomeCompleteOther, DraftComplete,
     AllMatchups, MatchupPreSeason, Playoffs6, ArrangeOrder, OrderPush, DraftLobby, StartDraftConfirm, CreateSeason, DraftAutoPick, DraftRecap, Playoffs,
     SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,
     OneShareSell, OneShareBuy,

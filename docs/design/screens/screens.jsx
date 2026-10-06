@@ -571,13 +571,13 @@
               {landed ? (
                 <>
                   <span className="ks-title">Paolo M. is up</span>
-                  <span className="ks-callout ks-muted">Round 2 · Pick 12, then 13</span>
-                  <span className="ks-caption" style={{ color: 'var(--c-you-text)' }}>You took AAPL · next pick 14</span>
+                  <span className="ks-callout ks-muted">Round 2 of {K.LEAGUE.slots} · Pick 12, then 13</span>
+                  <span className="ks-caption" style={{ color: 'var(--c-you-text)' }}>You took AAPL · you're up in 2 picks</span>
                 </>
               ) : (
                 <>
                   <span className="ks-title" style={{ color: 'var(--c-live-text)' }}>You're on the clock</span>
-                  <span className="ks-callout">Round 2 · Pick 11</span>
+                  <span className="ks-callout">Round 2 of {K.LEAGUE.slots} · Pick 11</span>
                   <span className="ks-caption ks-muted">Then Paolo M. picks twice (12, 13)</span>
                   <span className="ks-caption ks-muted">{D.secondsTotal}-second picks · set by the commissioner</span>
                 </>
@@ -657,7 +657,7 @@
           </div>
           <div className="ks-card" style={{ padding: '2px 14px' }}>
             <ul className="ks-rows">
-              <Row k="Draft date" v="Sat, Oct 3 · 7:00 PM ET" />
+              <Row k="Draft time" v="Sat, Oct 3 · 7:00 PM ET" />
               <li className="ks-row" style={{ gridTemplateColumns: '1fr', padding: '13px 0', gap: 8 }}>
                 <span className="ks-callout" style={{ fontWeight: 600 }}>Draft order</span>
                 <div className="ks-seg"><span className="on">Random</span><span>Manual</span></div>
