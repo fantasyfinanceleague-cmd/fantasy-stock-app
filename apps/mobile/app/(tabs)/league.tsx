@@ -14,6 +14,8 @@ import { useLeagueContext } from '@/lib/LeagueContext';
 import { playoffLine } from '@/lib/playoffs';
 import { buildSchedule } from '@/lib/game/schedule';
 import { ScheduleList } from '@/components/game/ScheduleList';
+import { BracketView } from '@/components/game/BracketView';
+import { useBracket } from '@/lib/game/useBracket';
 import { SegmentedControl } from '@/components/sp/SegmentedControl';
 import { useState } from 'react';
 import { useLeagueStandings } from '@/lib/game/useLeagueStandings';
@@ -31,13 +33,21 @@ const STANDINGS_CAPTION = 'Ranked by win percentage, then head-to-head, then sea
 export default function LeagueScreen() {
   const { sheetLeagues, activeLeagueId, activeLeague, refresh } = useLeagueContext();
   // League's segments: Standings | Schedule (the board, D4 = keep). History is not built yet.
-  const [segment, setSegment] = useState<'standings' | 'schedule'>('standings');
+  const [segment, setSegment] = useState<'standings' | 'schedule' | 'playoffs'>('standings');
+  // The Playoffs segment appears once the season is in the playoffs (or over).
+  const hasPlayoffs = (activeLeague?.season_status === 'playoffs' || activeLeague?.season_status === 'completed') && (activeLeague?.playoff_teams ?? 0) > 0;
   const phase = sheetLeagues.find((l) => l.id === activeLeagueId)?.seasonPhase;
   const drafting = phase === 'drafting';
   const inSeason = phase === 'regular' || phase === 'playoffs' || phase === 'completed';
   const { colors } = useTheme();
   const st = useLeagueStandings(inSeason ? activeLeagueId : null);
   const { user } = useAuth();
+  const bracket = useBracket(
+    inSeason ? activeLeagueId : null,
+    activeLeague?.playoff_teams ?? null,
+    st.standings.map((x) => ({ user_id: x.user_id, rank: x.rank, display_name: x.display_name })),
+    segment === 'playoffs' && hasPlayoffs,
+  );
 
   if (inSeason) {
     if (st.status === 'error') {
@@ -51,11 +61,23 @@ export default function LeagueScreen() {
           {st.status === 'ready' ? (
             <View style={styles.stack}>
               <SegmentedControl
-                options={[{ label: 'Standings', value: 'standings' }, { label: 'Schedule', value: 'schedule' }]}
+                options={[
+                  { label: 'Standings', value: 'standings' },
+                  { label: 'Schedule', value: 'schedule' },
+                  ...(hasPlayoffs ? [{ label: 'Playoffs', value: 'playoffs' }] : []),
+                ]}
                 value={segment}
-                onChange={(v) => setSegment(v === 'schedule' ? 'schedule' : 'standings')}
+                onChange={(v) => setSegment(v === 'schedule' ? 'schedule' : v === 'playoffs' ? 'playoffs' : 'standings')}
               />
-              {segment === 'standings' ? (
+              {segment === 'playoffs' ? (
+                bracket.bracket ? (
+                  <BracketView
+                    bracket={bracket.bracket}
+                    myUserId={user?.id ?? ''}
+                    caption={activeLeague?.playoff_teams ? `The top ${activeLeague.playoff_teams} in the standings make the playoffs. A tied game goes to the higher seed.` : null}
+                  />
+                ) : null
+              ) : segment === 'standings' ? (
                 <StandingsTable rows={rows} caption={STANDINGS_CAPTION} seasonComplete={phase === 'completed'} />
               ) : (
                 <ScheduleList
