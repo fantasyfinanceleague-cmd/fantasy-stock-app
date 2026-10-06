@@ -4,14 +4,16 @@
  * the rules tests run without the app.
  *
  * The regroup from the old nine steps changes the ORDER of the screens only.
- * Every write, clamp and validator is the one create-league.tsx always used:
- * the gates below return the same Alert titles and messages, and the stake
- * gate takes `validateSlotConfig`'s result as input rather than importing it
+ * Every write, clamp and validator is the one create-league.tsx always used.
+ * The checks are the old ones; their copy follows the Design Lead's rulings
+ * (inline field errors, not Alerts). The stake check takes
+ * `validateSlotConfig`'s result as input rather than importing it
  * (categoryData pulls in supabase). Rounds (Draft) and managers (Season) still
  * come before the roster slots (Stakes), so slot capacity is checked against
  * the real values (BUG 2a).
  */
 import { seasonCaption } from './createLeagueSetup';
+import { PRICE_TIERS_NEED_A_SLOT } from './slotBuilderCopy';
 
 export type CreateStep = 'league' | 'season' | 'draft' | 'stakes';
 
@@ -46,30 +48,28 @@ export function prevStep(step: CreateStep): CreateStep | null {
   return i > 0 ? CREATE_STEPS[i - 1] : null;
 }
 
-export type GateResult = { ok: true } | { ok: false; title: string; message: string };
-
-const OK: GateResult = { ok: true };
-
-/** Leaving the League step: the old name step's checks and Alerts, unchanged. */
-export function leagueStepGate(
+/** League name, inline (Design Lead ruling): the old checks (blank, then
+ * moderation on the TRIMMED name), the ruled copy. Null when it's fine. Used
+ * by Create league's League step and by League settings. */
+export function leagueNameError(
   name: string,
   check: (trimmed: string) => { isValid: boolean; reason?: string },
-): GateResult {
+): string | null {
   const trimmed = name.trim();
-  if (!trimmed) return { ok: false, title: 'Required', message: 'Please enter a league name' };
-  const result = check(trimmed);
-  if (!result.isValid) return { ok: false, title: 'Error', message: result.reason || 'League name is not allowed' };
-  return OK;
+  if (!trimmed) return 'Enter a league name.';
+  if (!check(trimmed).isValid) return 'League name is not allowed';
+  return null;
 }
 
-/** Creating from the Stakes step: the old slots step's checks and Alerts,
- * unchanged. Only price tiers need slots (they are the anti-skew mechanism);
- * the other modes go straight through, as before. */
-export function stakesStepGate(stakeMode: string, slotCount: number, slotErrors: readonly string[]): GateResult {
-  if (stakeMode !== 'price_tiers') return OK;
-  if (slotCount === 0) return { ok: false, title: 'Add a slot', message: 'Price tiers need at least one slot with a price bracket.' };
-  if (slotErrors.length > 0) return { ok: false, title: 'Fix roster slots', message: slotErrors[0] };
-  return OK;
+/** Creating from the Stakes step. Only price tiers need slots (they are the
+ * anti-skew mechanism); the other modes go straight through, as before. With
+ * price tiers: no slot shows PRICE_TIERS_NEED_A_SLOT under Roster slots; slot
+ * errors show on the slots themselves (SlotBuilder). */
+export function stakesStepError(stakeMode: string, slotCount: number, slotErrors: readonly string[]): string | null {
+  if (stakeMode !== 'price_tiers') return null;
+  if (slotCount === 0) return PRICE_TIERS_NEED_A_SLOT;
+  if (slotErrors.length > 0) return slotErrors[0];
+  return null;
 }
 
 // ── Season step ─────────────────────────────────────────────────────────
@@ -97,6 +97,11 @@ export function weeksShown(numWeeks: number, size: number): number {
 /** One weeks step from the shown value, never below the round-robin floor. */
 export function stepWeeks(numWeeks: number, size: number, direction: 1 | -1): number {
   return Math.max(size - 1, weeksShown(numWeeks, size) + direction);
+}
+
+/** Under the weeks stepper (Design Lead ruling). */
+export function roundRobinCaption(minWeeks: number): string {
+  return `At least ${minWeeks} weeks, so every team plays every other team once.`;
 }
 
 /** "2 to 7, up to your expected managers" (board). */
@@ -136,17 +141,23 @@ export function stepWithin(value: number, direction: 1 | -1, min: number, max: n
 
 // ── Stakes step ─────────────────────────────────────────────────────────
 
-/** The Summary card's Stakes line, the old wording unchanged. */
+/** Under the Draft date row while it's TBD (Design Lead ruling). */
+export const DRAFT_DATE_LATER = 'Set a draft date before the draft can start. You can do it later in League settings.';
+
+/** The Summary card's Stakes line (Design Lead ruling): the mode's label from
+ * STAKE_MODE_OPTIONS, a middle dot, then the amount or slot count.
+ * "Equal stakes · $1,000 per slot", "Price tiers · 6 slots", "Budget cap · $2,500". */
 export function stakesSummary(input: {
+  label: string;
   stakeMode: string;
   notionalPerSlot: number;
   budgetCap: number;
   slotCount: number;
 }): string {
-  if (input.stakeMode === 'fixed_notional') return `Equal • $${input.notionalPerSlot.toLocaleString('en-US')}/slot`;
-  if (input.stakeMode === 'price_tiers') return `Price tiers • ${input.slotCount} slot${input.slotCount === 1 ? '' : 's'}`;
-  if (input.stakeMode === 'budget_cap') return `Cap • $${input.budgetCap.toLocaleString('en-US')}`;
-  return '';
+  if (input.stakeMode === 'fixed_notional') return `${input.label} · $${input.notionalPerSlot.toLocaleString('en-US')} per slot`;
+  if (input.stakeMode === 'price_tiers') return `${input.label} · ${input.slotCount} slot${input.slotCount === 1 ? '' : 's'}`;
+  if (input.stakeMode === 'budget_cap') return `${input.label} · $${input.budgetCap.toLocaleString('en-US')}`;
+  return input.label;
 }
 
 /** The budget-cap presets, as before. */

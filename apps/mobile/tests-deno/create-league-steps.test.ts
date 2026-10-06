@@ -1,6 +1,6 @@
 /**
  * Create league's four steps (3c-2): order, back/next, "Step N of 4", and the
- * gates, which must return exactly the Alerts the old nine-step flow showed.
+ * checks (the old ones, with the Design Lead's inline copy).
  * Plus the Season/Draft/Stakes helpers (bounds the DB CHECKs accept, board copy).
  * Run: `cd apps/mobile/tests-deno && deno test .`
  */
@@ -12,13 +12,15 @@ import {
   CREATE_STEP_COPY,
   DURATION_OPTIONS,
   MANAGER_SIZES,
+  DRAFT_DATE_LATER,
   byeExpectedCopy,
-  leagueStepGate,
+  leagueNameError,
+  roundRobinCaption,
   nextStep,
   playoffTeamsSub,
   prevStep,
   seasonCheckCaption,
-  stakesStepGate,
+  stakesStepError,
   stakesSummary,
   stepCaption,
   stepManagers,
@@ -69,48 +71,44 @@ Deno.test('every step has a title and a subtitle', () => {
   }
 });
 
-// ── Gates: the old Alerts, unchanged ────────────────────────────────────
+// ── Checks: the old checks, the Design Lead's inline copy ──────────────
 
 const allow = () => ({ isValid: true });
 
-Deno.test('League gate: an empty or blank name is refused with the old Required alert', () => {
-  assertEquals(leagueStepGate('', allow), { ok: false, title: 'Required', message: 'Please enter a league name' });
-  assertEquals(leagueStepGate('   ', allow), { ok: false, title: 'Required', message: 'Please enter a league name' });
+Deno.test('league name: blank is refused inline with "Enter a league name."', () => {
+  assertEquals(leagueNameError('', allow), 'Enter a league name.');
+  assertEquals(leagueNameError('   ', allow), 'Enter a league name.');
 });
 
-Deno.test('League gate: the moderation check sees the TRIMMED name', () => {
+Deno.test('league name: the moderation check sees the TRIMMED name', () => {
   let seen = '';
-  leagueStepGate('  Office League  ', (t) => { seen = t; return { isValid: true }; });
+  leagueNameError('  Office League  ', (t) => { seen = t; return { isValid: true }; });
   assertEquals(seen, 'Office League');
 });
 
-Deno.test('League gate: a refused name shows the reason, or the old fallback', () => {
-  assertEquals(leagueStepGate('x', () => ({ isValid: false, reason: 'Nope' })), { ok: false, title: 'Error', message: 'Nope' });
-  assertEquals(leagueStepGate('x', () => ({ isValid: false })), { ok: false, title: 'Error', message: 'League name is not allowed' });
+Deno.test('league name: a refused name shows the ruled line, never the raw reason', () => {
+  assertEquals(leagueNameError('x', () => ({ isValid: false, reason: 'Contains inappropriate language' })), 'League name is not allowed');
+  assertEquals(leagueNameError('x', () => ({ isValid: false })), 'League name is not allowed');
 });
 
-Deno.test('League gate: a good name passes', () => {
-  assertEquals(leagueStepGate('Office League', allow), { ok: true });
+Deno.test('league name: a good name has no error', () => {
+  assertEquals(leagueNameError('Office League', allow), null);
 });
 
-Deno.test('Stakes gate: only price tiers need slots; other modes pass with none', () => {
-  assertEquals(stakesStepGate('fixed_notional', 0, []), { ok: true });
-  assertEquals(stakesStepGate('budget_cap', 0, []), { ok: true });
+Deno.test('stakes: only price tiers need slots; other modes pass with none', () => {
+  assertEquals(stakesStepError('fixed_notional', 0, []), null);
+  assertEquals(stakesStepError('budget_cap', 0, []), null);
   // Leftover errors from a mode the user switched away from never block, as before.
-  assertEquals(stakesStepGate('fixed_notional', 2, ['Slot 1: count must be at least 1.']), { ok: true });
+  assertEquals(stakesStepError('fixed_notional', 2, ['Slot 1: count must be at least 1.']), null);
 });
 
-Deno.test('Stakes gate: price tiers with no slot shows the old Add a slot alert', () => {
-  assertEquals(stakesStepGate('price_tiers', 0, []), {
-    ok: false,
-    title: 'Add a slot',
-    message: 'Price tiers need at least one slot with a price bracket.',
-  });
+Deno.test('stakes: price tiers with no slot shows the ruled "price range" line', () => {
+  assertEquals(stakesStepError('price_tiers', 0, []), 'Price tiers need at least one slot with a price range.');
 });
 
-Deno.test('Stakes gate: price tiers with slot errors shows the FIRST error, as before', () => {
-  assertEquals(stakesStepGate('price_tiers', 2, ['first', 'second']), { ok: false, title: 'Fix roster slots', message: 'first' });
-  assertEquals(stakesStepGate('price_tiers', 2, []), { ok: true });
+Deno.test('stakes: price tiers with slot errors are blocked (the errors show on the slots)', () => {
+  assertEquals(stakesStepError('price_tiers', 2, ['first', 'second']), 'first');
+  assertEquals(stakesStepError('price_tiers', 2, []), null);
 });
 
 // ── Season ──────────────────────────────────────────────────────────────
@@ -171,11 +169,16 @@ Deno.test('rounds in create stay 3..12', () => {
   assertEquals(stepWithin(6, 1, 3, 12), 7);
 });
 
-Deno.test('the summary Stakes line keeps the old wording', () => {
-  assertEquals(stakesSummary({ stakeMode: 'fixed_notional', notionalPerSlot: 1000, budgetCap: 2500, slotCount: 0 }), 'Equal • $1,000/slot');
-  assertEquals(stakesSummary({ stakeMode: 'price_tiers', notionalPerSlot: 1000, budgetCap: 2500, slotCount: 1 }), 'Price tiers • 1 slot');
-  assertEquals(stakesSummary({ stakeMode: 'price_tiers', notionalPerSlot: 1000, budgetCap: 2500, slotCount: 3 }), 'Price tiers • 3 slots');
-  assertEquals(stakesSummary({ stakeMode: 'budget_cap', notionalPerSlot: 1000, budgetCap: 10000, slotCount: 0 }), 'Cap • $10,000');
+Deno.test('the summary Stakes line: mode label · amount (Design Lead ruling)', () => {
+  assertEquals(stakesSummary({ label: 'Equal stakes', stakeMode: 'fixed_notional', notionalPerSlot: 1000, budgetCap: 2500, slotCount: 0 }), 'Equal stakes · $1,000 per slot');
+  assertEquals(stakesSummary({ label: 'Price tiers', stakeMode: 'price_tiers', notionalPerSlot: 1000, budgetCap: 2500, slotCount: 6 }), 'Price tiers · 6 slots');
+  assertEquals(stakesSummary({ label: 'Price tiers', stakeMode: 'price_tiers', notionalPerSlot: 1000, budgetCap: 2500, slotCount: 1 }), 'Price tiers · 1 slot');
+  assertEquals(stakesSummary({ label: 'Budget cap', stakeMode: 'budget_cap', notionalPerSlot: 1000, budgetCap: 2500, slotCount: 0 }), 'Budget cap · $2,500');
+});
+
+Deno.test('round-robin caption and the TBD line (Design Lead rulings)', () => {
+  assertEquals(roundRobinCaption(7), 'At least 7 weeks, so every team plays every other team once.');
+  assertEquals(DRAFT_DATE_LATER, 'Set a draft date before the draft can start. You can do it later in League settings.');
 });
 
 Deno.test('budget presets unchanged', () => {

@@ -36,18 +36,20 @@ import {
 import {
   BUDGET_PRESETS,
   CREATE_ROUNDS_BOUNDS,
+  DRAFT_DATE_LATER,
   CREATE_STEPS,
   CREATE_STEP_COPY,
   DURATION_OPTIONS,
   MANAGER_SIZES,
   type CreateStep,
   byeExpectedCopy,
-  leagueStepGate,
+  leagueNameError,
   nextStep,
   playoffTeamsSub,
   prevStep,
+  roundRobinCaption,
   seasonCheckCaption,
-  stakesStepGate,
+  stakesStepError,
   stakesSummary,
   stepManagers,
   stepNumber,
@@ -56,6 +58,7 @@ import {
   weeksShown,
 } from '@/lib/game/createLeagueSteps';
 import { byeNoticeCopy } from '@/lib/game/draftLobby';
+import { PRICE_TIERS_NEED_A_SLOT, rosterSlotsCaption } from '@/lib/game/slotBuilderCopy';
 import { draftDateTimeLabel } from '@/lib/home/draftCountdown';
 import { space, typeFontFamily } from '@/constants/tokens';
 import { Button } from '@/components/sp/Button';
@@ -101,6 +104,8 @@ export default function CreateLeagueWizard() {
   const [step, setStep] = useState<CreateStep>('league');
   const [creating, setCreating] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  // Inline, under the name field (Design Lead ruling), never an Alert.
+  const [nameError, setNameError] = useState<string | null>(null);
 
   const [categories, setCategories] = useState<Category[]>([]);
   useEffect(() => { fetchCategories().then(setCategories); }, []);
@@ -218,21 +223,15 @@ export default function CreateLeagueWizard() {
 
   const goNext = () => {
     if (step === 'league') {
-      const gate = leagueStepGate(state.name, validateLeagueName);
-      if (!gate.ok) {
-        Alert.alert(gate.title, gate.message);
-        return;
-      }
+      const error = leagueNameError(state.name, validateLeagueName);
+      setNameError(error);
+      if (error) return;
     }
     if (step === 'stakes') {
-      // Price tiers NEED slot brackets (they are the anti-skew mechanism);
+      // Price tiers NEED slot price ranges (they are the anti-skew mechanism);
       // other modes go straight on — category slots stay optional via
-      // league settings.
-      const gate = stakesStepGate(state.stakeMode, state.slots.length, slotErrors);
-      if (!gate.ok) {
-        Alert.alert(gate.title, gate.message);
-        return;
-      }
+      // league settings. The reasons show inline (Roster slots, the slots).
+      if (stakesStepError(state.stakeMode, state.slots.length, slotErrors)) return;
       handleCreate();
       return;
     }
@@ -250,7 +249,11 @@ export default function CreateLeagueWizard() {
       <Field
         label="League name"
         value={state.name}
-        onChangeText={(text) => patch({ name: text })}
+        onChangeText={(text) => {
+          patch({ name: text });
+          if (nameError) setNameError(null);
+        }}
+        error={nameError}
         placeholder="Give your league a name"
         autoCapitalize="words"
         autoFocus
@@ -296,7 +299,7 @@ export default function CreateLeagueWizard() {
                 canDecrement={shownWeeks > minWeeks}
                 canIncrement
               />
-              <Text variant="caption" tone="secondary">{`Min ${minWeeks} weeks for round robin`}</Text>
+              <Text variant="caption" tone="secondary">{roundRobinCaption(minWeeks)}</Text>
               {bye ? <WarnNote title={bye} line={byeExpectedCopy(state.size)} /> : null}
               <View style={styles.tight}>
                 <Stepper
@@ -388,7 +391,7 @@ export default function CreateLeagueWizard() {
 
       {state.draftDateTBD ? (
         <Text variant="caption" tone="secondary">
-          {"You'll need to set a draft date before starting the draft"}
+          {DRAFT_DATE_LATER}
         </Text>
       ) : null}
 
@@ -463,8 +466,13 @@ export default function CreateLeagueWizard() {
         <View style={styles.section}>
           <Text variant="headline" accessibilityRole="header">Roster slots</Text>
           <Text variant="caption" tone="secondary">
-            Define your price tiers. Each slot is a price bracket (and optionally a category); a slot with no filters is flex.
+            {rosterSlotsCaption('price_tiers')}
           </Text>
+          {state.slots.length === 0 ? (
+            <Text variant="callout" color={colors.danger} accessibilityLiveRegion="polite">
+              {PRICE_TIERS_NEED_A_SLOT}
+            </Text>
+          ) : null}
           <SlotBuilder
             slots={state.slots}
             onChange={(slots) => patch({ slots })}
@@ -487,6 +495,7 @@ export default function CreateLeagueWizard() {
           <SettingRow
             label="Stakes"
             value={stakesSummary({
+              label: STAKE_MODE_OPTIONS.find((o) => o.value === state.stakeMode)?.label ?? '',
               stakeMode: state.stakeMode,
               notionalPerSlot: parseInt(state.notionalPerSlot) || DEFAULT_NOTIONAL_PER_SLOT,
               budgetCap: parseInt(state.budgetCap) || DEFAULT_BUDGET_CAP,
@@ -517,7 +526,7 @@ export default function CreateLeagueWizard() {
   const last = step === 'stakes';
   const blocked =
     (step === 'league' && !state.name.trim()) ||
-    (last && !stakesStepGate(state.stakeMode, state.slots.length, slotErrors).ok);
+    (last && stakesStepError(state.stakeMode, state.slots.length, slotErrors) !== null);
 
   return (
     <SetupScaffold
