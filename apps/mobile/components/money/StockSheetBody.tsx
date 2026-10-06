@@ -1,27 +1,38 @@
 /**
- * StockSheetBody: renders the stock sheet from stockSheetModel (3e). Every
- * decision lives in the model; this file only lays it out. The market gate is
- * re-checked each second while the sheet is open, so trading closes at the
- * close without a refetch.
- *
- * Not yet reachable: nothing calls useStockSheet().open() in the app. The
- * Portfolio and League entry points land with their screens.
+ * StockSheetBody: the stock sheet (3e). Every decision lives in stockSheetModel;
+ * the trade review lives in reviewModel, reviewPresentation and useTradeSubmit.
+ * This file wires them: the Review call to action opens the review in place,
+ * the review submits through record-trade, and a retry re-fetches the fresh
+ * numbers before the review can submit again. The market gate is re-checked
+ * every second, so a review open at the close swaps to closed at once.
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { LoadFailure } from '@/components/money/LoadFailure';
+import { TradeReviewPanel } from '@/components/money/TradeReviewPanel';
+import { Button } from '@/components/sp/Button';
 import { SegmentedControl } from '@/components/sp/SegmentedControl';
 import { Text } from '@/components/sp/Text';
 import { formatMoney, formatPercent } from '@/components/sp/logic/money';
 import { useLeagueContext } from '@/lib/LeagueContext';
+import { useSession } from '@/lib/SessionProvider';
+import { buyingPower } from '@/lib/money/buyingPower';
+import { budgetAfterBuy, budgetAfterSell, userCashSpentFromLedger } from '@/lib/money/budgetFigures';
 import { cleanCompanyName } from '@/lib/money/cleanCompanyName';
+import { fixedNotionalShares } from '@/lib/money/buyQuantity';
 import { formatShares } from '@/lib/money/formatShares';
 import { COPY } from '@/lib/money/moneyCopy';
 import { marketOpensLabel } from '@/lib/money/marketOpensLabel';
+import { fetchPreview, type TradeBody } from '@/lib/money/recordTrade';
+import { buyReviewOneShare, buyReviewPerSlot, sellReview, type TradeReview } from '@/lib/money/reviewModel';
+import { reviewPresentation } from '@/lib/money/reviewPresentation';
 import { decideTradeGate } from '@/lib/money/tradeGate';
 import { stockSheetModel } from '@/lib/money/stockSheetModel';
+import { buyBody, previewBody, sellBody } from '@/lib/money/tradeBodies';
 import { useStockSheetData } from '@/lib/money/useStockSheetData';
+import { usePortfolioLedger } from '@/lib/money/usePortfolioLedger';
+import { useTradeSubmit } from '@/lib/money/useTradeSubmit';
 
 function useNow(intervalMs: number): Date {
   const [now, setNow] = useState(() => new Date());
@@ -32,11 +43,112 @@ function useNow(intervalMs: number): Date {
   return now;
 }
 
+type ReviewKind = 'sell' | 'buy';
+interface OpenReview {
+  kind: ReviewKind;
+  /** null while the numbers are being fetched, or when they could not be built (see `error`). */
+  review: TradeReview | null;
+  body: TradeBody | null;
+  error: string | null;
+  loading: boolean;
+}
+
 export function StockSheetBody({ symbol, knownName = null, onDone }: { symbol: string; knownName?: string | null; onDone: () => void }) {
   const data = useStockSheetData(symbol, knownName);
-  const { market } = useLeagueContext();
+  const { market, activeLeague } = useLeagueContext();
+  const { user } = useSession();
+  const userId = user?.id ?? null;
+  const ledgerState = usePortfolioLedger(activeLeague?.id ?? null);
   const now = useNow(1000);
   const [choice, setChoice] = useState<'buy' | 'sell' | null>(null);
+  const [open, setOpen] = useState<OpenReview | null>(null);
+  const trade = useTradeSubmit();
+  const lastData = useRef<unknown>(null);
+
+  const gate = decideTradeGate(now, market);
+  const opensLabel = market?.next_open_at ? marketOpensLabel(market.next_open_at) : null;
+
+  async function buildReview(kind: ReviewKind): Promise<OpenReview> {
+    const league = activeLeague;
+    if (!league || !userId) return { kind, review: null, body: null, error: COPY.cantReach, loading: false };
+    const price = data.price;
+    const spent = ledgerState.ledger ? userCashSpentFromLedger(ledgerState.ledger, userId) : 0;
+    const budget = league.budget_amount == null ? null : Number(league.budget_amount);
+
+    if (kind === 'sell') {
+      const held = data.facts?.held;
+      if (!held || price == null) return { kind, review: null, body: null, error: COPY.noPrice, loading: false };
+      const body = sellBody(league.id, symbol);
+      if (league.stake_mode === 'fixed_notional') {
+        const review = sellReview({ symbol, quantity: held.quantity, price, slotNotional: league.notional_per_slot ?? undefined });
+        return { kind, review, body, error: null, loading: false };
+      }
+      if (league.stake_mode === 'budget_cap' && budget != null) {
+        const before = budget - spent;
+        const after = budgetAfterSell(before, held.quantity, price);
+        return { kind, review: sellReview({ symbol, quantity: held.quantity, price, budget: { before, after } }), body, error: null, loading: false };
+      }
+      return { kind, review: sellReview({ symbol, quantity: held.quantity, price }), body, error: null, loading: false };
+    }
+
+    // Buy. A per-slot league funds the buy from a sale's proceeds, which the server's preview names.
+    if (price == null) return { kind, review: null, body: null, error: COPY.noPrice, loading: false };
+    if (league.stake_mode === 'fixed_notional') {
+      const preview = await fetchPreview(previewBody(league.id));
+      const power = buyingPower({
+        league,
+        preview: preview ? { stake_mode: preview.stakeMode, stake: preview.stake, unfilled_slots: preview.unfilledSlots, sources: preview.sources } : null,
+        cashSpent: null,
+        openTierLabel: null,
+      });
+      if (power.kind === 'none') return { kind, review: null, body: null, error: COPY.noProceeds, loading: false };
+      if (power.kind !== 'proceeds') return { kind, review: null, body: null, error: COPY.cantReach, loading: false };
+      const source = power.sources.find((s) => s.trade_id === power.defaultTradeId);
+      const shares = source ? fixedNotionalShares(source.amount, price) : null;
+      if (!source || !shares) return { kind, review: null, body: null, error: COPY.invalidPrice, loading: false };
+      const review = buyReviewPerSlot({
+        symbol,
+        amount: source.amount,
+        price: shares.price,
+        quantity: shares.quantity,
+        sourceLabel: `${source.symbol} slot`,
+        leftInSlot: 0,
+      });
+      return { kind, review, body: buyBody(league.id, symbol, source.trade_id), error: null, loading: false };
+    }
+    if (league.stake_mode === 'budget_cap' && budget != null) {
+      const before = budget - spent;
+      const review = buyReviewOneShare({ symbol, price, budget: { before, after: budgetAfterBuy(before, price) } });
+      return { kind, review, body: buyBody(league.id, symbol), error: null, loading: false };
+    }
+    return { kind, review: null, body: null, error: COPY.cantReach, loading: false };
+  }
+
+  // A review open when the market closes swaps to closed at once (the server's refusal wins a race).
+  useEffect(() => {
+    if (open && !gate.open && trade.state.kind !== 'done') trade.gateClosed(opensLabel);
+    // `trade` is a fresh object each render; its methods are stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, gate.open, opensLabel]);
+
+  // Try again: once the sheet's facts have re-loaded, rebuild the review from them.
+  useEffect(() => {
+    const fresh = data !== lastData.current;
+    lastData.current = data;
+    if (!open || trade.state.kind !== 'refreshing' || !fresh || data.status !== 'ready') return;
+    let cancelled = false;
+    (async () => {
+      const next = await buildReview(open.kind);
+      if (cancelled) return;
+      setOpen(next);
+      trade.refreshed();
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // buildReview reads the current data; the identity check above tracks it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, trade.state.kind]);
 
   if (data.status === 'loading') {
     return <Text variant="callout" tone="secondary">{symbol}</Text>;
@@ -45,8 +157,22 @@ export function StockSheetBody({ symbol, knownName = null, onDone }: { symbol: s
     return <LoadFailure title={COPY.stockLoadTitle} message={COPY.loadRetryMessage} onRetry={data.refresh} />;
   }
 
-  const gate = decideTradeGate(now, market);
-  const opensLabel = market?.next_open_at ? marketOpensLabel(market.next_open_at) : null;
+  async function openReview(kind: ReviewKind) {
+    setOpen({ kind, review: null, body: null, error: null, loading: true });
+    setOpen(await buildReview(kind));
+  }
+
+  async function submitNow() {
+    if (!open?.body) return;
+    const outcome = await trade.submit(open.body);
+    if (outcome?.kind === 'ok') data.refresh();
+  }
+
+  function retryReview() {
+    trade.retry();
+    data.refresh();
+  }
+
   const model = stockSheetModel({
     symbol,
     companyName: data.companyName,
@@ -59,8 +185,42 @@ export function StockSheetBody({ symbol, knownName = null, onDone }: { symbol: s
     leagueName: data.leagueName ?? '',
     lastCloseLabel: null,
   });
+
+  if (open) {
+    if (open.loading) {
+      return <Text variant="callout" tone="secondary">{COPY.preparingReview}</Text>;
+    }
+    if (open.review) {
+      const doneTitle = open.kind === 'sell' ? `Sold ${symbol}` : `Bought ${symbol}`;
+      const presentation = reviewPresentation(trade.state, open.review, { title: doneTitle });
+      return (
+        <TradeReviewPanel
+          review={open.review}
+          presentation={presentation}
+          onSubmit={submitNow}
+          onRetry={retryReview}
+          onBack={() => setOpen(null)}
+          onDone={() => {
+            setOpen(null);
+            onDone();
+          }}
+        />
+      );
+    }
+    return (
+      <View style={{ gap: 10 }}>
+        <Text variant="callout" tone="secondary" accessibilityRole="alert">{open.error ?? COPY.cantReach}</Text>
+        <Pressable accessibilityRole="button" onPress={() => setOpen(null)} hitSlop={8} style={{ minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' }}>
+          <Text variant="callout" tone="primary">Edit</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   const selected = choice ?? model.selected;
   const action = selected === 'buy' ? model.buy : model.sell;
+  // Tier leagues have no buy review yet (the tier fill isn't built), so no call to action for it.
+  const canReview = selected === 'sell' ? model.sell.enabled : model.buy.enabled && activeLeague?.stake_mode !== 'price_tiers';
 
   return (
     <View accessibilityRole="summary" style={{ gap: 12 }}>
@@ -114,6 +274,15 @@ export function StockSheetBody({ symbol, knownName = null, onDone }: { symbol: s
         </Text>
       ) : null}
       {model.marketNote ? <Text variant="caption" tone="secondary">{model.marketNote}</Text> : null}
+
+      {canReview && gate.open ? (
+        <Button
+          label={selected === 'sell' ? 'Review sell' : 'Review buy'}
+          variant={selected === 'sell' ? 'destructive' : 'primary'}
+          fullWidth
+          onPress={() => openReview(selected)}
+        />
+      ) : null}
 
       <Text variant="caption" tone="secondary">{COPY.alpacaCredit}</Text>
     </View>

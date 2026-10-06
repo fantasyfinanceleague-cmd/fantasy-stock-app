@@ -50,6 +50,8 @@ export const COPY = {
   // NEW (flagged): a LOAD failure. The alert icon arrives with the Design Lead's ruling.
   portfolioDidNotLoad: "Your portfolio didn't load. Check your connection and try again.",
   stockDidNotLoad: "This stock didn't load. Check your connection and try again.",
+  // NEW (flagged): shown while a review's numbers are being fetched.
+  preparingReview: 'Preparing your review',
   portfolioLoadTitle: "Your portfolio didn't load",
   stockLoadTitle: "This stock didn't load",
   loadRetryMessage: 'Check your connection, then try again.',
