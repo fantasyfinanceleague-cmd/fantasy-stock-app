@@ -12,7 +12,7 @@
 -- DROP + CREATE resets privileges, so the grants are re-applied below (the
 -- opposite trap to CLAUDE.md's CREATE OR REPLACE note).
 --
--- PROVISIONAL TIMESTAMP: re-stamp before release (see 20261027000000's header).
+-- PROVISIONAL TIMESTAMP: re-stamp before release (see 20261105000000's header).
 --
 -- POST-PUSH EFFECT CHECKS:
 --   SELECT proacl FROM pg_proc WHERE proname = 'get_home_summary';

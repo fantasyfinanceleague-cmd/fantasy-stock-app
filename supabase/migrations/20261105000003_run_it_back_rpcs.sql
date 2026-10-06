@@ -22,7 +22,7 @@
 -- anon and service_role, then granted to authenticated only. Refusals of game
 -- state return {"status":"refused","reason":...}; identity failures raise 42501.
 --
--- PROVISIONAL TIMESTAMP: re-stamp before release (see 20261027000000's header).
+-- PROVISIONAL TIMESTAMP: re-stamp before release (see 20261105000000's header).
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
@@ -563,8 +563,10 @@ begin
   end if;
 
   if not v_member then
+    -- commissioner_name: so a pending invitee's ask can name who is running it back.
     return jsonb_build_object(
       'status', 'ok', 'league_id', p_league_id, 'full_list', false,
+      'commissioner_name', public.participant_display_name(v_l.commissioner_id),
       'caller_status', v_r.status, 'caller_decided_by', v_r.decided_by,
       'draft_status', v_l.draft_status, 'draft_date', v_l.draft_date);
   end if;
@@ -604,6 +606,7 @@ begin
     'status', 'ok',
     'league_id', p_league_id,
     'full_list', true,
+    'commissioner_name', public.participant_display_name(v_l.commissioner_id),
     'is_commissioner', v_is_c,
     'caller_status', case when v_r.user_id is null then 'new' else v_r.status end,
     'draft_status', v_l.draft_status,
@@ -804,7 +807,7 @@ begin
   if v_l.draft_order_mode <> 'manual' then
     return jsonb_build_object('ok', false, 'reason', 'not_manual');
   end if;
-  -- Run it back (20261027000002): no manual order while a renewal reply is pending.
+  -- Run it back (20261105000002): no manual order while a renewal reply is pending.
   if exists (select 1 from public.league_renewal_responses
               where league_id = p_league_id and status = 'pending') then
     return jsonb_build_object('ok', false, 'reason', 'renewal_replies_pending');

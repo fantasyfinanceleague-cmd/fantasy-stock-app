@@ -24,7 +24,7 @@
 -- The RPCs enforce the same rules with readable reasons; the trigger is the
 -- backstop, so a direct write cannot make the gate reopen.
 --
--- PROVISIONAL TIMESTAMP: re-stamp before release (see 20261027000000's header).
+-- PROVISIONAL TIMESTAMP: re-stamp before release (see 20261105000000's header).
 --
 -- POST-PUSH EFFECT CHECKS:
 --   SELECT relrowsecurity FROM pg_class WHERE relname = 'league_renewal_responses';   -- t

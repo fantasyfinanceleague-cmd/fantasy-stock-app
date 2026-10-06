@@ -6,7 +6,7 @@ Supabase CLI applies only the timestamped `.sql` files directly in
 Do **not** move a file back to the parent directory until its stated precondition
 is met.
 
-**Currently held:** 4 files (see *Held* below): `20260929000000_drop_I6_I2b.sql`, `20261010000001_schedule_draft_autopick_sweep.sql`, `20261013000001_schedule_draft_order_notify.sql` and `20261023000009_drop_start_new_league_season.sql`.
+**Currently held:** 4 files (see *Held* below): `20260929000000_drop_I6_I2b.sql`, `20261010000001_schedule_draft_autopick_sweep.sql`, `20261013000001_schedule_draft_order_notify.sql` and `20261105000008_drop_start_new_league_season.sql`.
 
 ## How to use it
 
@@ -158,10 +158,10 @@ passing `--include-all`.
 then run the data check at the bottom of the file. Then move this section to
 *History*.
 
-### `20261023000009_drop_start_new_league_season.sql`
+### `20261105000008_drop_start_new_league_season.sql`
 
 Drops `start_new_league_season(uuid)`. Phase 0 of Run it back
-(`20261023000000_lock_start_new_league_season.sql`) already revoked EXECUTE
+(`20261105000007_lock_start_new_league_season.sql`) already revoked EXECUTE
 from PUBLIC, anon, authenticated and service_role, so the function is
 unreachable from every API role; this removes it for good. Design:
 `docs/migrations/RUN_IT_BACK_DESIGN.md` §3.
@@ -173,7 +173,7 @@ then `supabase db push --dry-run` (must list exactly this file) and
 `supabase db push`.
 
 **Precondition: ALL of the following.**
-1. `20261023000000` is applied (`schema_migrations`), and the function's
+1. `20261105000007` is applied (`schema_migrations`), and the function's
    `proacl` is exactly `{postgres=X/postgres}`:
    ```sql
    SELECT proname, proacl FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
@@ -190,7 +190,7 @@ then `supabase db push --dry-run` (must list exactly this file) and
    should be removed in the same PR that promotes this file, then
    `node scripts/gen-architecture.mjs` re-run).
 
-**Timestamp note:** if migrations newer than `20261023000009` have been
+**Timestamp note:** if migrations newer than `20261105000008` have been
 applied before this is promoted, rename it to a fresh timestamp rather than
 passing `--include-all`.
 
