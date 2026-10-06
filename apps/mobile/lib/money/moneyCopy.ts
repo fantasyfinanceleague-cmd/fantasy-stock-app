@@ -50,6 +50,22 @@ export const COPY = {
   // NEW (flagged): ownership states the board doesn't draw.
   heldByYou: 'Held by you',
   alreadyHeld: 'You already hold this stock.',
+  // Review screens (board, verbatim where the board has the words).
+  reviewSell: 'Review sell',
+  reviewBuy: 'Review buy',
+  marketPrice: 'market',
+  youGet: 'You get',
+  vsSlotStart: (start: string) => `Vs. the slot's ${start}`,
+  slotCashStays: "stays in this slot, ready to invest in any stock. It doesn't earn until you buy.",
+  paidFrom: 'Paid from',
+  leftInSlot: 'Left in the slot',
+  buyOutcome: (amount: string, symbol: string) => `Buy ${amount} of ${symbol}`,
+  sellButton: (symbol: string) => `Sell ${symbol}`,
+  buyButton: (symbol: string) => `Buy ${symbol}`,
+  allYouHold: 'all you hold',
+  backToBudget: 'Back to your budget',
+  budgetNow: 'Budget now',
+  budgetLeftAfter: 'Budget left after',
   // Board pattern, verbatim: "Trading opens Mon 9:30 AM ET."
   tradingOpens: (when: string) => `Trading opens ${when}.`,
 };
