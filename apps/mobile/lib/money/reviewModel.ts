@@ -114,18 +114,24 @@ export function buyReviewPerSlot(i: {
 export function buyReviewOneShare(i: {
   symbol: string;
   price: number;
-  budget: { before: number; after: number };
+  /** Rows iff the league is budget_cap: the server keeps a budget only there. */
+  budget?: { before: number; after: number };
+  /** The line iff the server named the slot the buy fills ("Fills your $100–$200 slot"). */
+  fills?: string;
 }): TradeReview {
+  const lines: ReviewLine[] = [
+    { label: 'Buy', value: `1 ${i.symbol}` },
+    { label: 'Price', value: `${formatMoney(i.price)} · ${COPY.marketPrice}` },
+  ];
+  if (i.budget) {
+    lines.push({ label: COPY.budgetNow, value: formatMoney(i.budget.before) });
+    lines.push({ label: COPY.budgetLeftAfter, value: formatMoney(i.budget.after) });
+  }
   return {
     title: COPY.reviewBuy,
     headline: null,
-    lines: [
-      { label: 'Buy', value: `1 ${i.symbol}` },
-      { label: 'Price', value: `${formatMoney(i.price)} · ${COPY.marketPrice}` },
-      { label: COPY.budgetNow, value: formatMoney(i.budget.before) },
-      { label: COPY.budgetLeftAfter, value: formatMoney(i.budget.after) },
-    ],
-    card: null,
+    lines,
+    card: i.fills ?? null,
     caption: COPY.pricesCanMove,
     buttonLabel: COPY.buyButton(i.symbol),
     buttonRole: 'buy',
@@ -138,17 +144,5 @@ export function buyReviewOneShare(i: {
  * budget, only the slot the stock fills.
  */
 export function buyReviewTier(i: { symbol: string; price: number; fills: string }): TradeReview {
-  const price = Math.round(i.price * 100) / 100;
-  return {
-    title: COPY.reviewBuy,
-    headline: null,
-    lines: [
-      { label: 'Buy', value: `1 ${i.symbol}` },
-      { label: 'Price', value: `${formatMoney(price)} · ${COPY.marketPrice}` },
-    ],
-    card: i.fills,
-    caption: COPY.pricesCanMove,
-    buttonLabel: COPY.buyButton(i.symbol),
-    buttonRole: 'buy',
-  };
+  return buyReviewOneShare({ symbol: i.symbol, price: Math.round(i.price * 100) / 100, fills: i.fills });
 }

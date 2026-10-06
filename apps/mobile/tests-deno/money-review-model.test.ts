@@ -71,3 +71,25 @@ Deno.test('tier buy: one share, the price, and the fill line the server chose; n
   assertEquals(r.buttonLabel, 'Buy AAPL');
   assertEquals(r.caption, 'Prices can move before the order fills.');
 });
+
+// Each row follows its OWN rule (Giorgio, via the Orchestrator): budget rows iff the
+// league is budget_cap; the fill line iff the server named a slot. The combinations:
+Deno.test('budget_cap league WITH category slots shows both the budget rows and the fill line', () => {
+  const r = buyReviewOneShare({
+    symbol: 'SHOP', price: 104.2, budget: { before: 2500, after: 2395.8 }, fills: 'Fills your $100–$200 slot',
+  });
+  assertEquals(r.lines.map((l) => l.label), ['Buy', 'Price', 'Budget now', 'Budget left after']);
+  assertEquals(r.card, 'Fills your $100–$200 slot');
+});
+
+Deno.test('a price_tiers league shows the fill line and NO budget rows', () => {
+  const r = buyReviewOneShare({ symbol: 'AAPL', price: 150, fills: 'Fills your $100–$200 slot' });
+  assertEquals(r.lines.map((l) => l.label), ['Buy', 'Price']);
+  assertEquals(r.card, 'Fills your $100–$200 slot');
+});
+
+Deno.test('a budget_cap league with no slots shows the budget rows and no fill line', () => {
+  const r = buyReviewOneShare({ symbol: 'SHOP', price: 104.2, budget: { before: 2500, after: 2395.8 } });
+  assertEquals(r.lines.map((l) => l.label), ['Buy', 'Price', 'Budget now', 'Budget left after']);
+  assertEquals(r.card, null);
+});

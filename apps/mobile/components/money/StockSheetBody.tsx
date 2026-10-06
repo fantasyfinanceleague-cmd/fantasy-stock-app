@@ -121,20 +121,22 @@ export function StockSheetBody({ symbol, knownName = null, onDone }: { symbol: s
       });
       return { kind, review, body: buyBody(league.id, symbol, source.trade_id), error: null, loading: false };
     }
-    if (league.stake_mode === 'price_tiers') {
-      // The server decides the slot. The client asks (advisory) and words the answer; it never computes fit.
+    if (league.stake_mode === 'price_tiers' || league.stake_mode === 'budget_cap') {
+      // The server decides the slot and the refusal. The client asks (advisory) and words the answer; it never computes fit.
       const check = await fetchPreview(previewBody(league.id, { price, symbol }));
-      if (!check || check.wouldFill === undefined) return { kind, review: null, body: null, error: COPY.cantReach, loading: false };
+      if (!check) return { kind, review: null, body: null, error: COPY.cantReach, loading: false };
       if (check.wouldFill === null) {
         // The refusal comes BEFORE the review, per the board.
         return { kind, review: null, body: null, error: tierRefusalSentence(symbol, price, check.openSlots ?? []), loading: false, warn: true };
       }
-      const review = buyReviewTier({ symbol, price, fills: fillsSlotLine(check.wouldFill) });
-      return { kind, review, body: buyBody(league.id, symbol), error: null, loading: false };
-    }
-    if (league.stake_mode === 'budget_cap' && budget != null) {
-      const before = budget - spent;
-      const review = buyReviewOneShare({ symbol, price, budget: { before, after: budgetAfterBuy(before, price) } });
+      // Rows follow their own rule: the budget rows iff budget_cap; the fill line iff the server named a slot.
+      const before = budget != null && league.stake_mode === 'budget_cap' ? budget - spent : null;
+      const review = buyReviewOneShare({
+        symbol,
+        price,
+        budget: before != null ? { before, after: budgetAfterBuy(before, price) } : undefined,
+        fills: check.wouldFill ? fillsSlotLine(check.wouldFill) : undefined,
+      });
       return { kind, review, body: buyBody(league.id, symbol), error: null, loading: false };
     }
     return { kind, review: null, body: null, error: COPY.cantReach, loading: false };
