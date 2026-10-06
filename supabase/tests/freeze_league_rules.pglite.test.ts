@@ -11,6 +11,9 @@
  * with the real draft_status CHECK. Supabase's default anon/authenticated
  * grants are simulated, so the proacl step proves the explicit REVOKEs.
  *
+ * It also runs docs/security/freeze-league-rules-effect-test.sql (the human
+ * post-push block) verbatim and requires all 13 lines to PASS.
+ *
  * Writes run as `authenticated` with a JWT sub, so the real interim policies
  * admit the commissioner and the triggers are what refuse them. The service
  * role is `service_role` (bypassrls) with no sub, as in prod.
@@ -37,15 +40,18 @@ const MIGRATIONS = [
 const SCHEMA = `
 create role anon; create role authenticated; create role service_role bypassrls;
 create schema auth;
-create function auth.uid() returns uuid language sql stable as
-  $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+-- Supabase's own definition: the legacy per-claim GUC, else request.jwt.claims (what
+-- PostgREST and the effect file's set_config set).
+create function auth.uid() returns uuid language sql stable as $$
+  select coalesce(nullif(current_setting('request.jwt.claim.sub', true), ''),
+                  (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub'))::uuid $$;
 grant usage on schema auth to anon, authenticated, service_role;
 grant execute on function auth.uid() to anon, authenticated, service_role;
 alter default privileges in schema public grant execute on functions to anon, authenticated, service_role;
 alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
 grant usage on schema public to anon, authenticated, service_role;
 create table leagues (
-  id uuid primary key default gen_random_uuid(), name text, commissioner_id text not null,
+  id uuid primary key default gen_random_uuid(), name text, commissioner_id text not null, invite_code text unique,
   draft_status text not null default 'not_started'
     check (draft_status in ('not_started', 'in_progress', 'completed')),
   draft_date timestamptz, stake_mode text, budget_amount numeric(12,2),
@@ -53,7 +59,7 @@ create table leagues (
   num_weeks int, duration_days int, league_type text, num_participants int,
   playoff_teams int, league_start_date timestamptz, league_end_date timestamptz);
 create table league_members (league_id uuid not null references leagues(id) on delete cascade,
-  user_id text not null, primary key (league_id, user_id));
+  user_id text not null, role text, primary key (league_id, user_id));
 create table categories (id uuid primary key default gen_random_uuid(), name text);
 `;
 
@@ -125,7 +131,7 @@ Deno.test({
         `insert into leagues (${keys.join(',')}) values (${keys.map((_, i) => '$' + (i + 1)).join(',')}) returning id`,
         Object.values(row),
       );
-      await q(`insert into league_members values ($1,$2),($1,$3)`, [l.id, COMMISH, MEMBER]);
+      await q(`insert into league_members (league_id, user_id) values ($1,$2),($1,$3)`, [l.id, COMMISH, MEMBER]);
       await q(`insert into league_draft_slots (league_id, slot_index, slot_count, price_min, price_max)
         values ($1,0,3,null,50),($1,1,3,50,null)`, [l.id]);
       if (status !== 'not_started') await q(`update leagues set draft_status=$2 where id=$1`, [l.id, status]);
@@ -327,6 +333,55 @@ Deno.test({
       assertEquals((await slots(done)).length, 2);
     });
 
+    await t.step('upsert (ON CONFLICT DO UPDATE): slot re-parent and rule change are refused', async () => {
+      const open = await league('not_started');
+      const done = await league('completed');
+      const [s] = await q(`select id from league_draft_slots where league_id=$1 and slot_index=0`, [done]);
+      await as('commish', async () => {
+        // The INSERT arm passes (open league); the DO UPDATE arm sees OLD.league_id = the started one.
+        await refused(() => q(`insert into league_draft_slots (id, league_id, slot_index, slot_count) values ($1,$2,9,1)
+          on conflict (id) do update set league_id = excluded.league_id, slot_index = excluded.slot_index`, [s.id, open]),
+          'league_slots_locked');
+        await refused(() => q(`insert into leagues (id, commissioner_id, num_rounds) values ($1,$2,9)
+          on conflict (id) do update set num_rounds = excluded.num_rounds`, [done, COMMISH]), 'league_rules_locked');
+      });
+      assertEquals((await slots(done)).length, 2);
+      assertEquals((await rules(done)).num_rounds, 6);
+    });
+
+    await t.step('the exemption is unreachable from a user session: anon, and authenticated with an empty sub', async () => {
+      const L = await league('completed');
+      // anon (publishable key, no session): auth.uid() IS NULL, so the trigger exempts it, and RLS refuses.
+      await db.exec(`set role anon; reset request.jwt.claim.sub;`);
+      try {
+        await refused(() => q(`insert into league_draft_slots (league_id, slot_index) values ($1,7)`, [L]), 'row-level security');
+        assertEquals(await q(`update leagues set num_rounds=9 where id=$1 returning id`, [L]), []);
+        assertEquals(await q(`delete from league_draft_slots where league_id=$1 returning id`, [L]), []);
+      } finally {
+        await db.exec(`reset role;`);
+      }
+      // authenticated with an empty sub: auth.uid() IS NULL too; is_commissioner() is false, so RLS refuses.
+      await db.exec(`set role authenticated; set request.jwt.claim.sub = '';`);
+      try {
+        await refused(() => q(`insert into league_draft_slots (league_id, slot_index) values ($1,7)`, [L]), 'row-level security');
+        assertEquals(await q(`update leagues set num_rounds=9 where id=$1 returning id`, [L]), []);
+      } finally {
+        await db.exec(`reset role; reset request.jwt.claim.sub;`);
+      }
+      assertEquals((await slots(L)).length, 2);
+      assertEquals((await rules(L)).num_rounds, 6);
+    });
+
+    await t.step('a league INSERTed already completed (allowed by [I1]) cannot then receive slots', async () => {
+      const id = crypto.randomUUID();
+      await as('commish', async () => {
+        await q(`insert into leagues (id, commissioner_id, draft_status, num_rounds) values ($1,$2,'completed',6)`, [id, COMMISH]);
+        await refused(() => q(`insert into league_draft_slots (league_id, slot_index) values ($1,0)`, [id]), 'league_slots_locked');
+      });
+      assertEquals(await status(id), 'completed');
+      assertEquals((await slots(id)).length, 0);
+    });
+
     await t.step('cascade: the commissioner can still delete a completed league with slots', async () => {
       const L = await league('completed');
       await as('commish', () => q(`delete from leagues where id=$1`, [L]));
@@ -346,7 +401,7 @@ Deno.test({
     });
 
     // ---- the lock ----------------------------------------------------------
-    await t.step('lock: a slot write takes a row lock on its league (FOR SHARE), visible as xmax', async () => {
+    await t.step('lock: a slot write takes a tuple lock on its league (xmax; FOR SHARE vs KEY SHARE is not distinguishable here)', async () => {
       const L = await league('not_started');
       await db.exec('begin');
       try {
@@ -359,7 +414,7 @@ Deno.test({
       }
     });
 
-    await t.step('lock: both same-transaction orders complete (league first, slots first)', async () => {
+    await t.step('lock: both same-transaction orders complete on one connection (league first, slots first)', async () => {
       const L = await league('not_started');
       // League first (start_renewed_season's order): the row lock is held, then the slot trigger's SHARE.
       await db.exec('begin');
@@ -377,9 +432,28 @@ Deno.test({
       await db.exec('commit');
       assertEquals((await slots(L)).length, 4);
       assertEquals(await status(L), 'in_progress');
-      // The interleaving the lock serializes: the start committed, so the next slot write sees it.
+      // Sequential, not a race: after the start commits, the next slot write sees it. The two-transaction
+      // race is argued in the migration header (PGlite has one connection).
       await as('commish', () =>
         refused(() => q(`insert into league_draft_slots (league_id, slot_index) values ($1,4)`, [L]), 'league_slots_locked'));
+    });
+
+    // ---- the human effect block, verbatim ---------------------------------
+    await t.step('effect test: docs/security/freeze-league-rules-effect-test.sql passes verbatim, writes nothing', async () => {
+      const sql = await Deno.readTextFile(new URL('docs/security/freeze-league-rules-effect-test.sql', ROOT));
+      const leaguesBefore = (await q(`select count(*)::int n from leagues`))[0].n;
+      let msg = '';
+      try {
+        await db.exec(sql);
+      } catch (e) {
+        msg = String((e as Error).message);
+      }
+      assert(msg.startsWith('FREEZE LEAGUE RULES EFFECT TEST RESULTS'), `the block must end by raising: ${msg}`);
+      const lines = msg.split('\n').slice(1).filter((l) => l.trim());
+      assertEquals(lines.length, 13, msg);
+      for (const l of lines) assert(/  PASS$/.test(l), `not PASS: ${l}`);
+      assertEquals((await q(`select count(*)::int n from leagues`))[0].n, leaguesBefore, 'the fixtures must roll back');
+      assertEquals((await q(`select current_user u`))[0].u, 'postgres', 'role switch must not leak');
     });
 
     // ---- fail closed on values outside the CHECK set (LAST: drops the CHECK) --

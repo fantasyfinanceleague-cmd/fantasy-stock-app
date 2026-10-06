@@ -59,7 +59,15 @@
 --      changes a rule AND starts the draft is allowed (the league was still
 --      not_started).
 --      NOT frozen: name, draft_date (editable by ruling), playoff_teams
---      (already frozen by 20261012000002), everything else.
+--      (already frozen by 20261012000002), everything else. DELIBERATELY OUT
+--      OF SCOPE and still commissioner-writable through [I2a] on a live
+--      season: season_status, current_week, current_season_id,
+--      league_start_date / league_end_date (the scoring window; F1 guards
+--      them only for non-commissioner members) and commissioner_id. Those
+--      are season STATE, not buy rules; they need their own decision (or the
+--      update-league edge function that replaces [I2a]). This is an
+--      enumerated list, unlike F1's whole-row compare: a NEW rule column is
+--      writable by the commissioner until it is added here.
 --   3. league_draft_slots: no INSERT, UPDATE or DELETE once the parent
 --      league's draft_status is anything but exactly 'not_started'. For an
 --      UPDATE both the OLD and the NEW league are checked (re-parenting a slot
@@ -75,8 +83,13 @@
 --   not on main at authoring time) has two such RPCs; both are compatible as
 --   written: renew_league INSERTs a NEW league with draft_status
 --   'not_started' and copies slots into it, and start_renewed_season rewrites
---   rules + slots only while draft_status = 'not_started'. If either ever
---   writes a started league, it must do so on a service-role path.
+--   rules + slots only while draft_status = 'not_started' (league UPDATE
+--   first, matching the lock invariant below). #94's trg_leagues_renewal_gate
+--   sets NEW.num_participants on the start UPDATE; that UPDATE's OLD is
+--   'not_started', so this freeze allows it (and it sorts after
+--   trg_leagues_freeze_rules anyway). If any of them ever writes a started
+--   league, it must do so on a service-role path. Re-verify against #94's
+--   actual SQL before it merges.
 --
 -- WHY TRIGGERS, NOT NARROWED POLICIES
 --   * leagues: RLS has no per-column WITH CHECK (the reason F1 is a trigger).
@@ -97,13 +110,17 @@
 --       sees in_progress, and raises;
 --     * slot write first: the start waits until the slot write commits, so the
 --       slots the draft runs on are the committed ones.
---   A deadlock needs a cycle. The slot write holds slot-row locks and the
---   league SHARE lock; the only thing it waits for is the league row. A draft
---   start (draft-control's UPDATE, web's [I2a] flip, and their BEFORE/AFTER
---   triggers, which touch only leagues and the draft-order tables) never
---   locks a league_draft_slots row, so it never waits for the slot write's
---   other locks: no cycle. Two slot writers both take SHARE, which is
---   compatible. INVARIANT for future writers: a transaction that writes slots
+--   A deadlock needs a cycle. For an UPDATE/DELETE the slot tuple is locked
+--   FIRST (before a BEFORE ROW trigger runs) and the league SHARE second; an
+--   INSERT holds no slot lock yet. Nothing that takes a lock CONFLICTING with
+--   SHARE on the league ever waits on a slot row: a draft start
+--   (draft-control's UPDATE, web's [I2a] flip, and their BEFORE/AFTER
+--   triggers, which touch only leagues and the draft-order tables) and
+--   finalize_league_draft (FOR UPDATE on the league) never touch slots. Pick
+--   and trade inserts do take FOR KEY SHARE on slot rows (drafts.slot_id /
+--   trades.slot_id FKs), but they hold only KEY SHARE on the league, which is
+--   compatible with SHARE, and record_trade_atomic serializes on an advisory
+--   lock. So no cycle. Two slot writers both take SHARE, which is compatible. INVARIANT for future writers: a transaction that writes slots
 --   AND updates their league must UPDATE the league FIRST (start_renewed_season
 --   does), because SHARE-then-upgrade in two concurrent transactions is the
 --   classic upgrade deadlock. When OLD and NEW leagues differ, both are locked

@@ -446,6 +446,9 @@ It covers:
 - fail closed: an unknown or NULL `draft_status` (with the CHECK dropped) freezes
   everything and allows no move
 - `proacl`, `prosecdef` and the `search_path` pin of both trigger functions
+- the human post-push block `docs/security/freeze-league-rules-effect-test.sql`, run
+  **verbatim** (via `request.jwt.claims` and Supabase's real `auth.uid()` definition):
+  all 13 lines PASS, and nothing persists
 
 **PR #94 (Run it back) pointer.** On `origin/feat/run-it-back` (not on `main` when this
 test was written), `renew_league` and `start_renewed_season` write slots and rules with
