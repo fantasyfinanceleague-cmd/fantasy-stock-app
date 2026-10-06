@@ -42,7 +42,7 @@ export interface MatchupLiveViewModel {
   leadDollars: number | null;
 }
 
-function nameOf(data: GetHomeLeagueResult, userId: string): { name: string; isBot: boolean } {
+export function nameOf(data: GetHomeLeagueResult, userId: string): { name: string; isBot: boolean } {
   const row = data.standings.find((s) => s.user_id === userId);
   // A manager with no standings row has no name to show. Don't invent one.
   return { name: row?.display_name ?? '', isBot: row?.is_bot ?? false };

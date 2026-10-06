@@ -13,7 +13,10 @@ import { leadLine, tiebreakLine } from './gameCopy';
 export interface ScoreboardSide {
   name: string;
   gain: number;
-  pct: number;
+  /** The percent behind the tiebreak. Null when it is not known (a final
+   * matchup has no week-end percent on the server row): the tiebreak is then
+   * left off, never guessed. */
+  pct: number | null;
 }
 
 export interface MatchScoreboardInput {
@@ -69,7 +72,7 @@ export function buildMatchScoreboardModel(input: MatchScoreboardInput): MatchSco
     tugRatio: noLeader || !opp ? 0.5 : tugRatio(me.gain, oppGain),
     leader,
     leadLine: lead,
-    tiebreakLine: showLead && opp ? tiebreakLine(me.pct, opp.pct) : null,
+    tiebreakLine: showLead && opp && me.pct !== null && opp.pct !== null ? tiebreakLine(me.pct, opp.pct) : null,
     a11yLabel,
   };
 }

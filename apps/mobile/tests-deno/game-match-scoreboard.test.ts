@@ -64,3 +64,9 @@ Deno.test('a final matchup says final, not live', () => {
   const m = buildMatchScoreboardModel({ week: 6, live: false, me, opp, endsLabel: 'Final' });
   assert(m.a11yLabel.startsWith('Week 6, final.'));
 });
+
+Deno.test('a final matchup has no percentages to show, so the tiebreak is omitted, never guessed', () => {
+  const m = buildMatchScoreboardModel({ week: 6, live: false, me: { name: 'Roberto B.', gain: 351.77, pct: null }, opp: { name: 'Gianluigi B.', gain: -38.88, pct: null }, endsLabel: 'Final' });
+  assertEquals(m.leadLine, 'Roberto B. leads by $390.65');
+  assertEquals(m.tiebreakLine, null);
+});
