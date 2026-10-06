@@ -52,15 +52,15 @@ Giorgio as "Your call" mockups on the key-screens board, and are recorded in
 
 ## Open questions
 
-None blocking. Two non-blocking ones for the Orchestrator and Design Lead to settle during
+None blocking. One non-blocking question for the Orchestrator and Design Lead to settle during
 the build:
 
-- Whether the `ux-reviewer` runs on Sonnet (like `security-reviewer`) or Haiku. Sonnet is the
-  recommendation: the checks are judgement-heavy (squint test, reference pattern), not grep.
 - Whether 3c and 3e each get one pass-2 audit at their existing gate, or whether pass 2 is run
   once on an integration branch after both merge. One per branch is the recommendation
   (findings land while the worker still has context); a final sweep on main before the 1.2.0
   cut catches cross-screen inconsistencies (rule 5).
+
+(The reviewer's model was an open question; it is decided in "Models" below: Sonnet.)
 
 ## Scope
 
@@ -236,3 +236,31 @@ The Orchestrator decides the final split.
 
 W1 and W4 can run in parallel after W0. W2 should start the same day the fresh Design Lead
 exists, because every day 3c/3e build to the old standard is a day of fixes later.
+
+## Models
+
+Giorgio's standing rule (2026-09-25): plan on Opus, implement on the cheapest tier that fits,
+and the Orchestrator re-runs tests and reviews diffs before any push so the cheaper tier is
+held to the same bar. Applied here, per role and per workstream. The Orchestrator switches a
+worker with `set_session_model` after its planning turn (the switch applies from the next
+turn; a downgrade needs no prompt, an upgrade asks Giorgio).
+
+| Role / workstream | Model | Why |
+|---|---|---|
+| Planner (this session) | Fable 5.1 | Product and UX judgement across the whole app; one session, short-lived per plan |
+| Orchestrator | Opus 5.5 (its own) | Reviews every diff and verifies every branch; the quality backstop that lets everything below run cheaper |
+| **Design Lead** (fresh, long-lived) | **Opus 5.5** for audit, gate and "Your call" turns; the Orchestrator may drop it to **Sonnet 5.5** for mechanical turns (writing up tables already decided, board JSX edits from an agreed brief) | The audit and the gates are the judgement-heavy work in this plan (squint test, reference pattern, priority); mockup code from a settled brief is not |
+| Current Design Lead, W1 handoff note | Whatever it runs on now | One last turn; not worth a switch |
+| `ux-reviewer` subagent (W4, W5, W7) | **Sonnet 5.5** | Same tier as `security-reviewer`: it judges against a fixed eleven-item list, which is Sonnet work; Haiku would miss the squint and reference-pattern checks |
+| W0 push + docs PR | Orchestrator's own turn | Mechanical; no worker |
+| W2 pass-1 audit | Design Lead on Opus | Judgement |
+| W3 "Your call" mockups | Design Lead: brief and recommendation on Opus; board JSX on Sonnet | Brief = judgement; JSX from a brief = well-specified implementation |
+| W3 `PRODUCT_RULES.md` update | Planner | Verbatim recording |
+| W6 mobile fix workers | Turn 1 (read + plan + report + WAIT) on Opus; then **Sonnet 5.5** for implementation | The standard pattern; UI fixes against a written finding and an approved mockup are well-specified |
+| W6 backend response-shape work (rule 8, if any) | Sonnet after an Opus plan turn; **Opus 5.5 throughout** if it touches auth, RLS, grants or partial-state logic | CLAUDE.md: security and partial-state design stay on Opus |
+| Recon inside any worker (where is X called, which screens use Y) | **Haiku** (`explorer` subagent) | Read-only grep/glob; keeps the worker's own context clean |
+| Docs-only workers (audit doc formatting, backlog section) | **Haiku** | Mechanical |
+
+Not used: Fable for any worker or for the Design Lead. Its strength is long-horizon planning,
+which is this session's job; as a builder or reviewer it costs about twice Opus for no gain
+here.
