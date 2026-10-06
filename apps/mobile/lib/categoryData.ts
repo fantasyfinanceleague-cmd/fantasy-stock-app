@@ -4,6 +4,7 @@
 // Display-only: the authoritative eligibility logic lives in the
 // validate-and-record-pick / record-trade edge functions.
 import { supabase } from './supabase';
+import { capacityLine, slotConfigIssues, slotIssueAway } from './game/slotBuilderCopy';
 
 export type StakeMode = 'fixed_notional' | 'price_tiers' | 'budget_cap';
 
@@ -18,13 +19,13 @@ export const STAKE_MODE_OPTIONS: Array<{ value: StakeMode; label: string; icon: 
     value: 'price_tiers',
     label: 'Price tiers',
     icon: 'layers',
-    help: 'One share per pick; roster slots are bracketed by share-price ranges you define. Expensive stocks compete only with each other.',
+    help: 'One share per slot. Each roster slot takes stocks in a price range you set, so expensive stocks only compete with each other.',
   },
   {
     value: 'budget_cap',
     label: 'Budget cap',
     icon: 'wallet',
-    help: 'One share per pick; the total of your roster’s share prices must fit under the league cap. Keep it tight so choices matter.',
+    help: "One share per slot. Your roster's share prices must add up to no more than the league cap, so a tight cap makes every pick count.",
   },
 ];
 
@@ -176,26 +177,12 @@ export async function countSlotMatches(
  * time with an opaque error, so they are caught here instead.
  */
 export function validateSlotConfig(slots: SlotDraft[], numRounds: number): string[] {
-  const errors: string[] = [];
-  if (slots.length === 0) return errors;
-  let total = 0;
-  slots.forEach((s, i) => {
-    const count = Number(s.slotCount);
-    if (!(count > 0)) errors.push(`Slot ${i + 1}: count must be at least 1.`);
-    else total += count;
-    const min = s.priceMin === '' ? null : Number(s.priceMin);
-    const max = s.priceMax === '' ? null : Number(s.priceMax);
-    if (min != null && max != null && min > max) {
-      errors.push(`Slot ${i + 1}: min price is above max price.`);
-    }
-  });
-  if (total !== numRounds) {
-    errors.push(
-      total > numRounds
-        ? `Slots cover ${total} picks but each team drafts only ${numRounds} (stocks per team) — remove ${total - numRounds}.`
-        : `Slots cover only ${total} of ${numRounds} picks — once slots exist, every pick needs an open slot, so the draft would jam after ${total}. Add ${numRounds - total} more.`,
-    );
-  }
+  // The checks live in slotConfigIssues (pure, tested); these are the lines shown
+  // away from a slot (Design Lead ruling). SlotBuilder shows each slot's own
+  // issue on the slot instead.
+  const { slots: issues, capacity } = slotConfigIssues(slots, numRounds);
+  const errors = issues.map(slotIssueAway);
+  if (capacity) errors.push(capacityLine(capacity.total, capacity.rounds));
   return errors;
 }
 

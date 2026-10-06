@@ -131,7 +131,7 @@ export const DURATION_OPTIONS: readonly { value: number; label: string; desc: st
 
 // ── Draft step ──────────────────────────────────────────────────────────
 
-/** Stocks per team in Create league: 3..12, as before. */
+/** Rounds (one stock per round per team) in Create league: 3..12, as before. */
 export const CREATE_ROUNDS_BOUNDS = { min: 3, max: 12 } as const;
 
 /** Any stepper's next value, held inside [min, max]. */

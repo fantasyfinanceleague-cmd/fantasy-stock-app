@@ -9,8 +9,11 @@ import {
   PRICE_TIERS_NEED_A_SLOT,
   SLOT_FIELD_LABELS,
   rosterSlotsCaption,
+  capacityLine,
+  slotConfigIssues,
   slotFieldA11y,
-  splitSlotErrors,
+  slotIssueAway,
+  slotIssueOnSlot,
   SLOT_CHECK_FAILED,
   SLOT_PARTIAL_NOTE,
   categoryLabel,
@@ -21,6 +24,8 @@ import {
   slotShortfallCopy,
   slotTitle,
 } from '../lib/game/slotBuilderCopy.ts';
+// categoryData pulls in supabase, so it is read as text (raw-imports) for the guards below.
+import categoryDataSrc from '../lib/categoryData.ts' with { type: 'text' };
 
 const CATS = [{ id: 'c1', name: 'Tech' }, { id: 'c2', name: 'Energy' }];
 
@@ -98,21 +103,90 @@ Deno.test('price tiers with no slot: the ruled line', () => {
   assertEquals(PRICE_TIERS_NEED_A_SLOT, 'Price tiers need at least one slot with a price range.');
 });
 
-Deno.test('slot errors split onto their slots; the capacity line stays general', () => {
-  const capacity = 'Slots cover only 2 of 6 picks — once slots exist, every pick needs an open slot, so the draft would jam after 2. Add 4 more.';
-  const out = splitSlotErrors([
-    'Slot 1: count must be at least 1.',
-    'Slot 1: min price is above max price.',
-    'Slot 3: min price is above max price.',
-    capacity,
-  ]);
-  assertEquals(out.bySlot, {
-    0: ['Count must be at least 1.', 'Min price is above max price.'],
-    2: ['Min price is above max price.'],
-  });
-  assertEquals(out.general, [capacity]);
+// ── The slot checks, structured (the logic is validateSlotConfig's, unchanged) ──
+
+const slot = (slotCount: string, priceMin = '', priceMax = '') => ({ slotCount, priceMin, priceMax });
+
+Deno.test('no slots: no issues (slots are optional outside price tiers)', () => {
+  assertEquals(slotConfigIssues([], 6), { slots: [], capacity: null });
 });
 
-Deno.test('no errors, nothing to show', () => {
-  assertEquals(splitSlotErrors([]), { bySlot: {}, general: [] });
+Deno.test('per slot, in order: a count below 1, then a min above the max', () => {
+  const out = slotConfigIssues([slot('', '50', '10'), slot('2'), slot('0'), slot('4', '5', '5')], 6);
+  assertEquals(out.slots, [
+    { slot: 0, kind: 'count' },
+    { slot: 0, kind: 'range' },
+    { slot: 2, kind: 'count' },
+  ]);
+  // A bad count adds nothing to the total (2 + 4 = 6): capacity is fine.
+  assertEquals(out.capacity, null);
+});
+
+Deno.test('capacity: the total must equal the rounds exactly', () => {
+  assertEquals(slotConfigIssues([slot('3'), slot('5')], 6).capacity, { total: 8, rounds: 6 });
+  assertEquals(slotConfigIssues([slot('4')], 6).capacity, { total: 4, rounds: 6 });
+  assertEquals(slotConfigIssues([slot('6')], 6).capacity, null);
+});
+
+// ── Copy (Design Lead rulings) ───────────────────────────────────────────
+
+Deno.test('on the slot: no slot number', () => {
+  assertEquals(slotIssueOnSlot('count'), 'This slot needs at least 1 stock.');
+  assertEquals(slotIssueOnSlot('range'), "Min price can't be higher than max price.");
+});
+
+Deno.test('away from the slot: names it, 1-based', () => {
+  assertEquals(slotIssueAway({ slot: 1, kind: 'count' }), 'Slot 2 needs at least 1 stock.');
+  assertEquals(slotIssueAway({ slot: 1, kind: 'range' }), "In slot 2, min price can't be higher than max price.");
+});
+
+Deno.test('capacity, too many: the ruled line', () => {
+  assertEquals(capacityLine(8, 6), 'Your slots hold 8 stocks, but each team drafts 6, one per round. Remove 2.');
+});
+
+Deno.test('capacity, too few: the ruled line', () => {
+  assertEquals(capacityLine(4, 6), 'Your slots hold 4 stocks, but each team drafts 6, one per round. Add 2 so every pick has a slot.');
+});
+
+Deno.test('capacity, singular and plural: 1 stock / Remove 1 / Add 1', () => {
+  assertEquals(capacityLine(1, 6), 'Your slots hold 1 stock, but each team drafts 6, one per round. Add 5 so every pick has a slot.');
+  assertEquals(capacityLine(7, 6), 'Your slots hold 7 stocks, but each team drafts 6, one per round. Remove 1.');
+  assertEquals(capacityLine(5, 6), 'Your slots hold 5 stocks, but each team drafts 6, one per round. Add 1 so every pick has a slot.');
+  assertEquals(capacityLine(0, 6), 'Your slots hold 0 stocks, but each team drafts 6, one per round. Add 6 so every pick has a slot.');
+});
+
+Deno.test('no user-facing line says "stocks per team" or "bracket"', () => {
+  const lines = [
+    slotIssueOnSlot('count'), slotIssueOnSlot('range'),
+    slotIssueAway({ slot: 0, kind: 'count' }), slotIssueAway({ slot: 0, kind: 'range' }),
+    capacityLine(8, 6), capacityLine(4, 6),
+  ];
+  for (const l of lines) {
+    assertEquals(/stocks per team/i.test(l), false, l);
+    assertEquals(/bracket/i.test(l), false, l);
+  }
+});
+
+// ── categoryData (read as text) ──────────────────────────────────────────
+
+Deno.test('validateSlotConfig builds its lines from slotConfigIssues (away form + capacity)', () => {
+  const fn = categoryDataSrc.slice(categoryDataSrc.indexOf('export function validateSlotConfig('));
+  const body = fn.slice(0, fn.indexOf('\n}\n'));
+  assertEquals(body.includes('slotConfigIssues(slots, numRounds)'), true);
+  assertEquals(body.includes('issues.map(slotIssueAway)'), true);
+  assertEquals(body.includes('capacityLine(capacity.total, capacity.rounds)'), true);
+});
+
+Deno.test('the Price tiers and Budget cap help lines are the ruled ones', () => {
+  assertEquals(
+    categoryDataSrc.includes("'One share per slot. Each roster slot takes stocks in a price range you set, so expensive stocks only compete with each other.'"),
+    true,
+  );
+  assertEquals(
+    categoryDataSrc.includes(`"One share per slot. Your roster's share prices must add up to no more than the league cap, so a tight cap makes every pick count."`),
+    true,
+  );
+  const help = [...categoryDataSrc.matchAll(/help: (['"])(.*?)\1,/g)].map((m) => m[2]);
+  assertEquals(help.length, 3);
+  for (const h of help) assertEquals(/bracket/i.test(h), false, h);
 });

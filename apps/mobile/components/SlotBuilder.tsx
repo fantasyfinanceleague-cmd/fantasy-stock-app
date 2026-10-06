@@ -17,22 +17,23 @@ import {
   type SlotDraft,
   countSlotMatches,
   fetchEnrichmentProgress,
-  validateSlotConfig,
 } from '@/lib/categoryData';
 import {
   EMPTY_SLOT,
   SLOT_CHECK_FAILED,
   SLOT_PARTIAL_NOTE,
+  capacityLine,
   categoryLabel,
   countInput,
   priceInput,
   SLOT_FIELD_LABELS,
   removeSlotLabel,
+  slotConfigIssues,
   slotFieldA11y,
+  slotIssueOnSlot,
   slotShort,
   slotShortfallCopy,
   slotTitle,
-  splitSlotErrors,
 } from '@/lib/game/slotBuilderCopy';
 import { space } from '@/constants/tokens';
 import { Button } from '@/components/sp/Button';
@@ -70,11 +71,11 @@ export default function SlotBuilder({ slots, onChange, categories, leagueSize, n
   const addSlot = () => onChange([...slots, { ...EMPTY_SLOT }]);
   const removeSlot = (i: number) => onChange(slots.filter((_, idx) => idx !== i));
 
-  // HARD errors (count/capacity/bracket) — parents use the same validator to
-  // disable Next/save; this component shows the reasons.
-  const hardErrors = validateSlotConfig(slots, numRounds);
-  // Each slot's own errors show inside its card; the capacity line under the list.
-  const { bySlot, general } = splitSlotErrors(hardErrors);
+  // HARD errors (count / price range / capacity) — parents use the same checks
+  // (validateSlotConfig) to disable Next/save; this component shows the reasons:
+  // each slot's own issue inside its card, the capacity line under the list.
+  const issues = slotConfigIssues(slots, numRounds);
+  const onSlot = (i: number) => issues.slots.filter((x) => x.slot === i).map((x) => slotIssueOnSlot(x.kind));
 
   const checkFeasibility = async () => {
     setChecking(true);
@@ -173,9 +174,9 @@ export default function SlotBuilder({ slots, onChange, categories, leagueSize, n
               />
             </View>
           </View>
-          {bySlot[i]?.length ? (
+          {onSlot(i).length ? (
             <View accessibilityLiveRegion="polite" style={styles.slotErrors}>
-              {bySlot[i].map((e, k) => (
+              {onSlot(i).map((e, k) => (
                 <Text key={k} variant="callout" color={colors.danger}>
                   {e}
                 </Text>
@@ -192,13 +193,11 @@ export default function SlotBuilder({ slots, onChange, categories, leagueSize, n
         </SetupCard>
       ))}
 
-      {general.length > 0 ? (
+      {issues.capacity ? (
         <View accessibilityLiveRegion="polite" style={styles.errors}>
-          {general.map((e, i) => (
-            <Text key={`h${i}`} variant="callout" color={colors.danger}>
-              {e}
-            </Text>
-          ))}
+          <Text variant="callout" color={colors.danger}>
+            {capacityLine(issues.capacity.total, issues.capacity.rounds)}
+          </Text>
         </View>
       ) : null}
       {warnings.map((w, i) => (
