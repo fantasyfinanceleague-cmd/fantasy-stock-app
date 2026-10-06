@@ -4,7 +4,7 @@
 // no frame and are composed from the same vocabulary). The step machine and
 // its gates live in lib/game/createLeagueSteps.ts; handleCreate and every
 // write below are unchanged from the nine-step screen this replaces.
-import { Alert, StyleSheet, View } from 'react-native';
+import { Alert, Share, StyleSheet, View } from 'react-native';
 import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
 import { useAuth } from '@/lib/useAuth';
@@ -60,6 +60,17 @@ import {
 import { byeNoticeCopy } from '@/lib/game/draftLobby';
 import { PRICE_TIERS_NEED_A_SLOT, rosterSlotsCaption } from '@/lib/game/slotBuilderCopy';
 import { draftDateTimeLabel } from '@/lib/home/draftCountdown';
+import { INVITE_CODE_LABEL } from '@/lib/home/homeCopy';
+import {
+  CREATED_LINE,
+  CREATED_NO_DATE,
+  CREATE_FAILED,
+  GO_TO_LEAGUE,
+  SLOTS_NOT_SAVED,
+  createdTitle,
+  createdWithoutDate,
+  inviteShareMessage,
+} from '@/lib/game/createLeagueDone';
 import { space, typeFontFamily } from '@/constants/tokens';
 import { Button } from '@/components/sp/Button';
 import { Chip } from '@/components/sp/Chip';
@@ -104,6 +115,8 @@ export default function CreateLeagueWizard() {
   const [step, setStep] = useState<CreateStep>('league');
   const [creating, setCreating] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  // The done screen (Design Lead ruling), in place of the old "League Created!" Alert.
+  const [created, setCreated] = useState<{ name: string; inviteCode: string; noDate: boolean } | null>(null);
   // Inline, under the name field (Design Lead ruling), never an Alert.
   const [nameError, setNameError] = useState<string | null>(null);
 
@@ -146,7 +159,8 @@ export default function CreateLeagueWizard() {
 
   const handleCreate = async () => {
     if (!user?.id) {
-      Alert.alert('Error', 'You must be logged in to create a league');
+      // Unreachable behind the auth gate; logged, never shown (Design Lead ruling).
+      console.error('Create league: no signed-in user');
       return;
     }
 
@@ -195,25 +209,22 @@ export default function CreateLeagueWizard() {
           await seamSaveLeagueSlots(league.id, state.slots);
         } catch (slotErr) {
           console.error('Slot save failed:', slotErr);
-          Alert.alert('Heads up', 'League created, but roster slots failed to save — edit them in League Settings.');
+          Alert.alert(SLOTS_NOT_SAVED.title, SLOTS_NOT_SAVED.message);
         }
       }
 
       await refresh();
       setActiveLeagueId(league.id);
 
-      const tbdMessage = state.draftDateTBD
-        ? '\n\nRemember to set a draft date before starting the draft!'
-        : '';
-
-      Alert.alert(
-        'League Created!',
-        `"${state.name}" is ready!\n\nInvite Code: ${league.invite_code}${tbdMessage}`,
-        [{ text: 'OK', onPress: () => router.replace('/(tabs)') }]
-      );
+      setCreated({
+        name: state.name,
+        inviteCode: league.invite_code,
+        noDate: createdWithoutDate(state.draftDateTBD, state.draftDate),
+      });
     } catch (error: any) {
+      // The raw message is logged, never shown (Design Lead ruling).
       console.error('Failed to create league:', error);
-      Alert.alert('Error', error.message || 'Failed to create league');
+      Alert.alert(CREATE_FAILED.title, CREATE_FAILED.message);
     } finally {
       setCreating(false);
     }
@@ -523,6 +534,35 @@ export default function CreateLeagueWizard() {
     }
   };
 
+  if (created) {
+    const share = async () => {
+      try {
+        await Share.share({ message: inviteShareMessage(created.inviteCode) });
+      } catch {
+        // A dismissed share sheet is not an error.
+      }
+    };
+    return (
+      <SetupScaffold
+        title={createdTitle(created.name)}
+        subtitle={CREATED_LINE}
+        footer={<Button label={GO_TO_LEAGUE} onPress={() => router.replace('/(tabs)/league')} />}
+      >
+        {/* The pre-draft Home invite-code card (board). */}
+        <SetupCard style={styles.codeCard}>
+          <View style={styles.grow}>
+            <Text variant="caption" tone="secondary">{INVITE_CODE_LABEL}</Text>
+            <Text variant="title" style={styles.code} selectable>{created.inviteCode}</Text>
+          </View>
+          <Button label="Share" variant="secondary" size="sm" onPress={() => void share()} />
+        </SetupCard>
+        {created.noDate ? (
+          <Text variant="body" tone="secondary">{CREATED_NO_DATE}</Text>
+        ) : null}
+      </SetupScaffold>
+    );
+  }
+
   const last = step === 'stakes';
   const blocked =
     (step === 'league' && !state.name.trim()) ||
@@ -575,5 +615,21 @@ const styles = StyleSheet.create({
   },
   tabular: {
     fontVariant: ['tabular-nums'],
+  },
+  codeCard: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: space[4],
+    paddingVertical: space[5],
+  },
+  grow: {
+    flexGrow: 1,
+    flexShrink: 1,
+    gap: space[1],
+  },
+  code: {
+    fontVariant: ['tabular-nums'],
+    letterSpacing: 2,
   },
 });

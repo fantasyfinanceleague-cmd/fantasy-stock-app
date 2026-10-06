@@ -17,7 +17,8 @@ import { ScreenTitle } from '@/components/shell/ScreenTitle';
 // shared frame stays untouched.
 
 export interface SetupScaffoldProps {
-  back: { label: string; onPress: () => void };
+  /** Omitted on a screen with nowhere to go back to (Create league's done screen). */
+  back?: { label: string; onPress: () => void };
   /** Shows "Step N of M" and the progress bar (Create league only). */
   step?: { number: number; total: number };
   title: string;
@@ -35,12 +36,16 @@ export function SetupScaffold({ back, step, title, subtitle, children, footer }:
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.fill, { backgroundColor: colors.bg }]}>
       <View style={{ height: insets.top }} />
       <View style={styles.topRow}>
-        <Pressable onPress={back.onPress} accessibilityRole="button" accessibilityLabel={back.label} style={styles.back} hitSlop={8}>
-          <Icon name="chevronLeft" size="callout" tone="text2" />
-          <Text variant="callout" tone="secondary">
-            {back.label}
-          </Text>
-        </Pressable>
+        {back ? (
+          <Pressable onPress={back.onPress} accessibilityRole="button" accessibilityLabel={back.label} style={styles.back} hitSlop={8}>
+            <Icon name="chevronLeft" size="callout" tone="text2" />
+            <Text variant="callout" tone="secondary">
+              {back.label}
+            </Text>
+          </Pressable>
+        ) : (
+          <View style={styles.back} />
+        )}
         {step ? (
           <Text variant="caption" tone="secondary" style={styles.tabular}>
             {`Step ${step.number} of ${step.total}`}
