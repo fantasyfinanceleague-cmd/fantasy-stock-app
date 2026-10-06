@@ -18,6 +18,8 @@ import { StandingsCard, type StandingRow } from '@/components/home/StandingsCard
 import { PreDraftCard } from '@/components/home/PreDraftCard';
 import { DraftingCard } from '@/components/home/DraftingCard';
 import { SeasonCompleteCard } from '@/components/home/SeasonCompleteCard';
+import { RunItBackCard } from '@/components/home/RunItBackCard';
+import { RenewalCountsCard } from '@/components/home/RenewalCountsCard';
 import { PhaseMessageCard } from '@/components/home/PhaseMessageCard';
 import { PhaseTransition } from '@/components/home/PhaseTransition';
 import { HomeLeagueTransition } from '@/components/home/HomeLeagueTransition';
@@ -104,14 +106,18 @@ function HomeBody({
   // States 6/7: no money views at all — the draft's own cards.
   if (phase.kind === 'pre_draft') {
     return league ? (
-      <PreDraftCard
-        leagueId={leagueId!}
-        inviteCode={league.invite_code}
-        pickSeconds={league.pick_seconds}
-        numRounds={league.num_rounds}
-        draftDate={league.draft_date}
-        numParticipants={league.num_participants}
-      />
+      <>
+        {/* R4: the commissioner of a renewed league sees the counts while replies come in. */}
+        {league.previous_league_id && league.commissioner_id === myUserId ? <RenewalCountsCard successorId={leagueId!} /> : null}
+        <PreDraftCard
+          leagueId={leagueId!}
+          inviteCode={league.invite_code}
+          pickSeconds={league.pick_seconds}
+          numRounds={league.num_rounds}
+          draftDate={league.draft_date}
+          numParticipants={league.num_participants}
+        />
+      </>
     ) : null;
   }
   if (phase.kind === 'drafting') {
@@ -123,6 +129,7 @@ function HomeBody({
   if (phase.kind === 'complete') {
     const myStanding = standings.find((s) => s.user_id === myUserId);
     return (
+      <>
       <SeasonCompleteCard
         leagueId={leagueId!}
         leagueName={league?.name ?? 'your league'}
@@ -138,6 +145,8 @@ function HomeBody({
         // two-fixture-axis gap as SeasonCard's numWeeks below).
         numWeeks={phase.numWeeks}
       />
+      {league?.commissioner_id === myUserId ? <RunItBackCard /> : null}
+    </>
     );
   }
 
