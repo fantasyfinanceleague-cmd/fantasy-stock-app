@@ -503,7 +503,7 @@ const FLOWS = [
     trigger: { kind: 'cron', detail: 'pg_cron `process-weekly-matchups` — Friday 21:15 UTC', cronJob: 'process-weekly-matchups' },
     steps: [
       { edge: 'e.cron.process-weekly-matchups->fn.process-week-results', detail: 'net.http_post with an apikey header read from vault secret `cron_apikey`.' },
-      { edge: 'e.fn.process-week-results->tbl.cron_job_status#upsert', detail: 'Job marked running before any work.', anchors: [['supabase/functions/process-week-results/index.ts', "updateJobStatus(supabase, JOB_NAME, 'running'"]] },
+      { edge: 'e.fn.process-week-results->tbl.cron_job_status#upsert', detail: 'Job marked running before any work, and ended in exactly one terminal status by runJob. Written through the same-day overwrite rule, so the 22:00Z / Saturday no-op heals cannot replace the 21:15Z run\'s result.', anchors: [['supabase/functions/process-week-results/index.ts', 'return await runJob<Response>({']] },
       { edge: 'e.fn.process-week-results->tbl.matchups', detail: 'Pending matchups: team1_gain IS NULL, week_end in the past, league_type=matchup. The NULL filter is what makes a re-run idempotent.', anchors: [['supabase/functions/process-week-results/index.ts', ".is('team1_gain', null)"]] },
       { edge: 'e.fn.process-week-results->mod.process-week-results/grouping', detail: 'One batch per (league_id, week_number), sorted week-ascending. Grouping by league alone was the original bug; the sort is load-bearing for week advancement.', anchors: [['supabase/functions/process-week-results/index.ts', 'groupMatchupsByLeagueWeek(pendingMatchups)'], ['supabase/functions/process-week-results/grouping.ts', 'export function groupMatchupsByLeagueWeek']] },
       { edge: 'e.fn.process-week-results->tbl.week_snapshots', detail: 'Per batch. Presence of any row sets hasSnapshots; any week_end_price sets hasWeekEndPrices.', anchors: [['supabase/functions/process-week-results/index.ts', "week_start_price, week_end_price"]] },
@@ -752,8 +752,8 @@ function build() {
         payload: `rpc('${s.target}')`, callSites: [`${s.file}:${s.line}`] });
     }
     for (const s of sites.tableOps) {
-      const from = originFor(s.file);
-      if (!from) continue;
+      const froms = [].concat(originFor(s.file) || []);
+      for (const from of froms) {
       // One edge PER VERB, not one lumped #write edge. An insert and an update to the
       // same table are different architectural facts (and different blast radii), and
       // collapsing them would silently label a table "written" by whichever verb the
@@ -763,6 +763,7 @@ function build() {
         payload: `.from('${s.table}').${s.verb}(${s.columns ? `'${s.columns}'` : ''})`,
         columns: s.columns ? [s.columns] : [],
         callSites: [`${s.file}:${s.line}`] });
+      }
     }
     for (const s of sites.vendorCalls) {
       const from = originFor(s.file);
@@ -783,7 +784,25 @@ function build() {
   addCallSiteEdges(clientSites, clientOrigin);
 
   // function origins
+  // A call site in a shared module has no function of its own. For the modules named
+  // here the site is attributed to EVERY function that imports the module, so the map
+  // keeps showing who writes the table. Without this, moving the cron_job_status writer
+  // out of a function's directory silently deleted that function's edge (and broke the
+  // weekly-scoring flow's cron_job_status step). Other _shared modules stay unattributed,
+  // as before: widening this is a deliberate act, not a side effect.
+  const SHARED_ATTRIBUTED = ['supabase/functions/_shared/job-status-io.ts'];
+  const importersOf = (sharedFile) => {
+    const base = sharedFile.split('/').pop();
+    const out = new Set();
+    for (const f of readdirSync('supabase/functions', { withFileTypes: true })) {
+      if (!f.isDirectory() || f.name.startsWith('_') || !nodes.has(`fn.${f.name}`)) continue;
+      const files = readdirSync(`supabase/functions/${f.name}`).filter((n) => n.endsWith('.ts') && !n.endsWith('.test.ts'));
+      if (files.some((n) => readFileSync(`supabase/functions/${f.name}/${n}`, 'utf8').includes(`_shared/${base}'`))) out.add(`fn.${f.name}`);
+    }
+    return [...out];
+  };
   const fnOrigin = (file) => {
+    if (SHARED_ATTRIBUTED.includes(file)) return importersOf(file);
     const m = /^supabase\/functions\/([\w-]+)\//.exec(file);
     return m && nodes.has(`fn.${m[1]}`) ? `fn.${m[1]}` : null;
   };

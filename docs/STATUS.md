@@ -128,9 +128,22 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
 | `draft_autopick_sweep` (#58) | `10 seconds` (pg_cron is **1.6**) | **Not scheduled yet**: promoted as `20261106000000` on branch `ops/autopick-cron-live`, pending the live test and `db push` (§4 item 19; runbook `docs/migrations/AUTOPICK_CRON_LIVE.md`). Once applied, add `purge_cron_run_details` (`17 4 * * *`) to this table too. The cron posts only when `overdue_draft_turns()` returns a row, and reads its key from `vault.decrypted_secrets`. |
 
 > **`net._http_response` can't show the outcome of any job that runs longer than 5 s**
-> (pg_net's default timeout; no cron migration sets `timeout_milliseconds`). All the
-> jobs above do. Verify by data, never by that table or by `cron.job_run_details`
-> (CLAUDE.md, success signals #8).
+> (pg_net's default timeout) until `20261108000000` is applied; after it every cron
+> sets `timeout_milliseconds := 180000` (above Supabase's 150 s idle timeout). Even
+> then the response table is a ~6 h signal and says only that the function answered:
+> verify by data (below), never by `cron.job_run_details`.
+
+**Verify by data, per job** (the next real run; `cron_job_status` is one row per job per
+day, and a no-op never overwrites earlier same-day work):
+
+| Job | Query | Healthy |
+|---|---|---|
+| `process-weekly-matchups` + both heals | `SELECT status, error_message FROM cron_job_status WHERE job_name='process-week-results' AND run_date = '<Friday>';` then `SELECT count(*) FROM matchups WHERE week_end < now() AND team1_gain IS NULL AND team1_user_id IS NOT NULL;` | status `success`, message `work=N processed N matchups…` (or `work=0 processed 0 matchups: no pending matchups`); never `running`. Unscored count 0 except genuine refusals |
+| `snapshot-week-start` | `SELECT status, error_message FROM cron_job_status WHERE job_name='snapshot-week-start' AND run_date='<Mon/Tue>';` and `SELECT league_id, week_number, count(*) FROM week_snapshots WHERE created_at::date='<date>' GROUP BY 1,2;` | `success work=N` with rows for each in-season league-week; `retrying` is a retry in flight, `failed` is exhausted |
+| `snapshot-week-end` + `-heal` | `SELECT status, error_message FROM cron_job_status WHERE job_name='snapshot-week-end' AND run_date='<Fri/Mon/Tue>';` and `SELECT count(*) FROM week_snapshots WHERE week_end_price IS NULL AND league_id IN (SELECT league_id FROM matchups WHERE week_end < now() AND team1_gain IS NULL);` | `success work=N`; 0 snapshots left without a `week_end_price` for a closed, unscored week |
+| `refresh_market_calendar_daily` | `SELECT status, error_message FROM cron_job_status WHERE job_name='refresh-market-calendar' AND run_date=current_date;` and `SELECT refreshed_at FROM market_calendar_coverage;` | `success work=<sessions>`, `refreshed_at` within ~24 h. `failed` carries `alpaca_fetch_failed status=…` / `apply_failed` |
+| `enrich_symbols_10min` | `SELECT max(enriched_at), count(*) FILTER (WHERE enriched_at IS NOT NULL) FROM symbols;` (twice, 10+ min apart) | `max(enriched_at)` advances ~50 rows/run; response `price_status` is `complete`/`partial`, not `failed` |
+| `refresh_symbols_daily` | `SELECT status_code, left(content,120) FROM net._http_response ORDER BY created DESC LIMIT 20;` (within 6 h) and `SELECT count(*) FROM symbols WHERE active;` | a `200 {"ok":true,"count":N}`; active count stable. No status row by design |
 
 ### Clients
 
@@ -227,10 +240,35 @@ Phase 3: **app first**.
     silent (Orchestrator decision, 2026-09-29: leave it as a surfaced refusal
     until leave-league exists).
 12. ✅ **Deployed-function drift audit: DONE 2026-10-06.** All six previously unverified functions (`quote`, `ticker-quotes`, `finnhub-quote`, `join-league`, `symbol-name`, `symbols-search`) were downloaded from prod and are byte-identical to main `b503168` (every function file; only the CLI's own `.temp/cli-latest` differs).
-13. **Cron monitoring gap:** give each cron `net.http_post` an explicit
-    `timeout_milliseconds` so `net._http_response` records real outcomes; share
-    `process-week-results/job-status.ts` with both snapshot jobs (they still discard
-    their status-write result).
+13. **Cron monitoring gap: AUTHORED on `fix/cron-truthful-status`, NOT APPLIED / NOT DEPLOYED.**
+    Every scheduled job now ends in a terminal, truthful `cron_job_status` and has an
+    explicit pg_net timeout. What the audit found, since the old note was stale:
+    - `process-week-results`' stranded-`running` defect was already fixed (#12). The
+      LIVE gap was that its writer upserted unconditionally, so the 22:00Z and Saturday
+      heals (#86) overwrote the 21:15Z run's "processed N" (or its `failed`) with their
+      own no-op success. All three jobs that write the table now go through
+      `_shared/job-status-io.ts` (`writeJobStatus`: read today's row, apply the
+      same-day rule, upsert) and `_shared/run-job.ts` (`runJob`: exactly one `running`
+      and one terminal write per run; a handler body cannot return a response without
+      an outcome). Both snapshot jobs already checked their upsert error; they keep
+      their own writer and route through `runJob`.
+    - `refresh-market-calendar` gained a status row (`refresh-market-calendar`, daily).
+      `enrich-symbols` (144 runs/day) and `refresh-symbols` do NOT: one row per day
+      would keep only the last run, which misleads. Their honest signals are the
+      response body (`price_status`, `count`) and the data they write.
+    - Migrations `20261108000000` (nine crons rescheduled by name, `timeout_milliseconds
+      := 180000`, pre-flight aborts if a live job is missing or on another schedule,
+      post-check inside the migration) and `20261108000001` (`schedule_snapshot_retry`,
+      so the one-shot retry jobs get it too). 180000 > Supabase's 150 s request idle
+      timeout, so `net._http_response` now holds the function's real response or the
+      gateway's 504; a "Timeout of 180000 ms" row is a pg_net fault. It is still a
+      ~6 h signal: the DATA query below is the durable one.
+    - The deferred `draft_autopick_sweep` / `draft_order_notify` crons (30000 ms) are
+      untouched; they should adopt 180000 when promoted.
+    - **Known limitation:** the same-day rule is narrow. A heal that REFUSES matchups
+      but scores none (`work=0`) will not overwrite an earlier run's `work=N` row; its
+      refusals are in the response `skipped[]` and the function log only. The per-run
+      run-log table stays deferred.
 14. **Hygiene:**
     - the revoked Alpaca pair is still stored as secrets `ALPACA_KEY_ID`/`ALPACA_SECRET_KEY` and in `.env.local`;
     - `.gitleaks.toml` allowlists all of `^\.claude/`;

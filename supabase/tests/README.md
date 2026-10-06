@@ -609,3 +609,32 @@ columns, and the function is not executable by anon/authenticated.
 Runs `docs/security/autopick-live-test-proof.sql` and `docs/security/refuse-new-skip-effect-test.sql` **verbatim**
 (the SQL-editor scripts of `docs/migrations/AUTOPICK_CRON_LIVE.md`): PASS on a good fixture, then one mutation per
 check must flip exactly its own line to FAIL, and each script must leave nothing behind.
+## cron_timeouts.pglite.test.ts
+
+What it does:
+- Stubs `cron.job` / `cron.schedule` / `cron.unschedule` (pg_cron semantics: upsert by
+  name) and seeds the live rows from `docs/architecture/db-snapshot.json` plus the two
+  heal-cron migrations that postdate it.
+- Runs `20261108000000_cron_explicit_timeouts.sql` over them and asserts every job keeps
+  its schedule and its command (modulo the timeout), gains `timeout_milliseconds :=
+  180000`, and is not duplicated; the key still comes from the vault.
+- Proves the migration's pre-flight aborts, changing nothing, when a job is missing or
+  on another schedule.
+- Loads the prior `schedule_snapshot_retry` verbatim, then `20261108000001`, and shows the
+  generated one-shot jobs gain the timeout while `search_path`, `SECURITY DEFINER` and
+  the 'retrying' write are unchanged.
+- GUARD: replays every `supabase/migrations/*.sql` (not `deferred/`) and fails any cron
+  still scheduled without a timeout above 150 s. Jobs unscheduled and never rescheduled
+  are ignored; the guard is itself tested on synthetic input.
+
+Re-run it against the next `db-snapshot.json` re-capture: a live command that differs
+from the migration's (timeout aside) fails the "same command" test.
+
+## cron_status_handlers.test.ts
+
+Drives the REAL `index.ts` of process-week-results, snapshot-week-start/-end and
+refresh-market-calendar (Deno.serve captured, `fetch` replaced by an in-memory PostgREST)
+through each exit, and asserts the `cron_job_status` writes: one `running`, one terminal,
+the same-day no-op rule (a heal never erases earlier work or a failure), and that a
+rejected status write cannot change the HTTP response. Hermetic (no network, no DB):
+`deno test --allow-read --allow-env supabase/tests/cron_status_handlers.test.ts`.

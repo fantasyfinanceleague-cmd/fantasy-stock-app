@@ -33,7 +33,9 @@ import {
   type UserScore,
 } from './user-score.ts';
 import { SKIP_SYMBOL } from '../_shared/draft-validation.ts';
-import { updateJobStatus, noPendingMessage, scoredMessage } from './job-status.ts';
+import { noPendingMessage, scoredMessage } from './job-status.ts';
+import { writeJobStatus, type JobStatusRwClient } from '../_shared/job-status-io.ts';
+import { runJob, type JobRun } from '../_shared/run-job.ts';
 import { completeLeagueSeason, healUncompletedSeasons } from './season-completion.ts';
 import {
   buildPlayoffBracket,
@@ -453,18 +455,36 @@ Deno.serve(async (req) => {
   const supabase = createClient(SUPABASE_URL, SECRET_KEY);
   const now = new Date();
 
-  // Update status to running.
+  // INVARIANT: every run is bracketed by exactly one 'running' write and exactly
+  // one terminal write ('success' | 'failed'), and runJob (../_shared/run-job.ts)
+  // is the only place either happens. The body below cannot return a response
+  // without an `outcome`, so a new early return cannot strand today's row at
+  // 'running' — which is byte-identical whether the run hung, crashed, or finished
+  // with nothing to do (CLAUDE.md "Success signals" #6). The writes go through
+  // the same-day overwrite rule: this job runs three times a week against ONE row
+  // (the 21:15Z run plus the 22:00Z / Saturday heals), and a no-op heal must not
+  // overwrite the earlier run's "processed N" or its 'failed'. Status writes never
+  // throw, so they cannot change the HTTP response. (The `return error` statements
+  // further down belong to the nested updateUserStandings helper, not the handler.)
   //
-  // INVARIANT: every handler return from here on must first write a terminal
-  // status ('success' | 'failed'). A return that skips it strands today's row
-  // at 'running' forever, and a stranded row is byte-identical whether the run
-  // hung, crashed, or finished with nothing to do (CLAUDE.md "Success signals"
-  // #6). updateJobStatus never throws, so writing it cannot change the HTTP
-  // response. (The `return error` statements further down belong to the nested
-  // updateUserStandings helper, not the handler.)
-  await updateJobStatus(supabase, JOB_NAME, 'running', 1);
-
-  try {
+  // The body keeps its original indentation so this diff stays confined to the
+  // exits; only the return statements and the catch block changed.
+  return await runJob<Response>({
+    attempt: 1,
+    write: async (status, attempt, message, work) => {
+      // Cast: structurally checking the full supabase-js client against the
+      // writer's narrow slice trips TS2589 (excessively deep). The writer's own
+      // tests pin the slice against a stub.
+      await writeJobStatus(supabase as unknown as JobStatusRwClient, JOB_NAME, status, attempt, { message, work });
+    },
+    onThrow: async (e): Promise<JobRun<Response>> => {
+      console.error('Unhandled error:', e);
+      return {
+        outcome: { status: 'failed', attempt: 1, message: String(e) },
+        response: json({ error: 'Unhandled error', message: String(e) }, 500),
+      };
+    },
+    body: async (): Promise<JobRun<Response>> => {
     // 0. Retry season transitions refused on an earlier run (see
     //    healRefusedTransitions). Before the pending query so it runs on quiet weeks.
     //    Then re-apply playoff advances an earlier run failed to write, so a
@@ -514,11 +534,13 @@ Deno.serve(async (req) => {
 
     if (matchupErr) {
       console.error('Error fetching matchups:', matchupErr);
-      await updateJobStatus(
-        supabase, JOB_NAME, 'failed', 1,
-        `Failed to fetch matchups: ${matchupErr.message ?? JSON.stringify(matchupErr)}`,
-      );
-      return json({ error: 'Failed to fetch matchups', details: matchupErr }, 500);
+      return {
+        outcome: {
+          status: 'failed', attempt: 1,
+          message: `Failed to fetch matchups: ${matchupErr.message ?? JSON.stringify(matchupErr)}`,
+        },
+        response: json({ error: 'Failed to fetch matchups', details: matchupErr }, 500),
+      };
     }
 
     // A playoff row with an empty slot is still awaiting its feeder's winner,
@@ -531,14 +553,17 @@ Deno.serve(async (req) => {
     if (pendingMatchups.length === 0) {
       console.log('No pending matchups to process');
       // Terminal success: the common weekly path. The schema has no distinct
-      // "nothing to do" status, so the message carries it.
-      await updateJobStatus(supabase, JOB_NAME, 'success', 1, noPendingMessage(transitionsRefused));
-      return json({
-        message: 'No pending matchups',
-        processed: 0,
-        skipped: transitionRefusals,
-        skipped_count: transitionRefusals.length,
-      });
+      // "nothing to do" status, so the message carries it, and work: 0 lets the
+      // same-day rule keep an earlier run's evidence (a no-op heal never replaces it).
+      return {
+        outcome: { status: 'success', attempt: 1, message: noPendingMessage(transitionsRefused), work: 0 },
+        response: json({
+          message: 'No pending matchups',
+          processed: 0,
+          skipped: transitionRefusals,
+          skipped_count: transitionRefusals.length,
+        }),
+      };
     }
 
     console.log(`Found ${pendingMatchups.length} matchups to process`);
@@ -1245,27 +1270,25 @@ Deno.serve(async (req) => {
 
     console.log(`Processed ${processedCount} matchups`);
 
-    // Update status to success. Always with a summary — never NULL — so the
-    // message column is never a scored-vs-nothing-to-do discriminator.
-    await updateJobStatus(
-      supabase, JOB_NAME, 'success', 1,
-      scoredMessage(processedCount, skipped.length - transitionsRefused, transitionsRefused),
-    );
+    // Terminal success. Always with a summary — never NULL — so the message
+    // column is never a scored-vs-nothing-to-do discriminator. work is the number
+    // of matchups scored: a run that scored some always overwrites the same-day
+    // row, one that scored none (all refused) only a trivial one.
+    return {
+      outcome: {
+        status: 'success', attempt: 1,
+        message: scoredMessage(processedCount, skipped.length - transitionsRefused, transitionsRefused),
+        work: processedCount,
+      },
+      response: json({
+        message: 'Processing complete',
+        processed: processedCount,
+        results,
+        skipped,
+        skipped_count: skipped.length,
+      }),
+    };
 
-    return json({
-      message: 'Processing complete',
-      processed: processedCount,
-      results,
-      skipped,
-      skipped_count: skipped.length,
-    });
-
-  } catch (e) {
-    console.error('Unhandled error:', e);
-
-    // Update status to failed
-    await updateJobStatus(supabase, JOB_NAME, 'failed', 1, String(e));
-
-    return json({ error: 'Unhandled error', message: String(e) }, 500);
-  }
+    },
+  });
 });

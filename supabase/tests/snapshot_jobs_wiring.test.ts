@@ -115,7 +115,7 @@ for (const f of FILES) {
 
 Deno.test('S3: a clean success reports its work count, and the status rule clears a stale retrying (job-status unit tests)', async () => {
   const src = await Deno.readTextFile(FILES[0]);
-  assert(src.includes("'success', retryAttempt, undefined, totalSnapshots);"), 'week-start success does not report its work count');
+  assert(src.includes("outcome: { status: 'success', attempt: retryAttempt, work: totalSnapshots }"), 'week-start success does not report its work count');
   const js = await Deno.readTextFile(new URL('../functions/_shared/job-status.ts', import.meta.url));
   assert(js.includes("existing?.status === 'retrying'"), 'the status rule does not clear a stale retrying');
 });

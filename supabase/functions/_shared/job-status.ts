@@ -55,3 +55,22 @@ export function shouldWriteJobStatus(
   if (existing.status === 'running') return true;
   return existing.status === 'success' && workFromMessage(existing.error_message) === 0;
 }
+
+/**
+ * The write decision when the same-day row may not have been readable.
+ *
+ * A failed read must not let a trivial write overwrite evidence, so when the read
+ * failed only the writes the rule ALWAYS accepts go through: failed, retrying, and
+ * a success with work. (The snapshot handlers inline this same expression.)
+ */
+export function decideJobStatusWrite(
+  existing: StoredJobStatus | null,
+  readFailed: boolean,
+  next: { status: JobStatusValue; work?: number },
+): boolean {
+  if (readFailed) {
+    return next.status === 'failed' || next.status === 'retrying' ||
+      (next.status === 'success' && (next.work ?? 0) > 0);
+  }
+  return shouldWriteJobStatus(existing, next);
+}
