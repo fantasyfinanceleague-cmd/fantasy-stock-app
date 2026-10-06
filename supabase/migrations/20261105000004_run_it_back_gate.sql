@@ -134,9 +134,14 @@ declare
   v_members  int;
   v_pending  int;
 begin
+  -- Lock the league row FIRST, so every member insert on this league is serialized:
+  -- add_bots (service role, no lock of its own) and a join cannot both pass the
+  -- seat count and overflow the cap (security review, LOW). Joins and the renewal
+  -- RPCs already hold this row lock, so this adds no new ordering.
   select (l.previous_league_id is not null), l.num_participants
     into v_renewed, v_cap
-    from public.leagues l where l.id = new.league_id;
+    from public.leagues l where l.id = new.league_id
+    for update;
   if not found or not v_renewed then
     return new;
   end if;
@@ -174,6 +179,52 @@ create trigger trg_league_members_renewal_guard
   for each row execute function public.enforce_renewal_membership();
 
 revoke all on function public.enforce_renewal_membership() from public, anon, authenticated, service_role;
+
+-- ----------------------------------------------------------------------------
+-- A player who LEAVES a renewal by a direct DELETE (league_members_delete_self,
+-- the interim self-leave policy) must not leave a reply that still says 'in'.
+-- This keeps "in <=> member" on the leave path too: the reply becomes 'out' (the
+-- player's own choice, so it stays free to change). The commissioner cannot leave
+-- their own renewal. A league delete cascades through here: nothing to sync then.
+-- ----------------------------------------------------------------------------
+create or replace function public.sync_renewal_on_member_delete()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_comm     text;
+  v_prev     uuid;
+  v_status   text;
+begin
+  select l.commissioner_id, l.previous_league_id into v_comm, v_prev
+    from public.leagues l where l.id = old.league_id;
+  if not found or v_prev is null then
+    return null;   -- an ordinary league, or the league itself is being deleted
+  end if;
+  select r.status into v_status from public.league_renewal_responses r
+   where r.league_id = old.league_id and r.user_id = old.user_id;
+  if v_status is distinct from 'in' then
+    return null;   -- no reply, or already out / pending: nothing to keep in step
+  end if;
+  if v_comm = old.user_id then
+    raise exception 'renewal_commissioner_out: the commissioner cannot leave their own renewal'
+      using errcode = '22023';
+  end if;
+  update public.league_renewal_responses
+     set status = 'out', decided_by = 'player', responded_at = now()
+   where league_id = old.league_id and user_id = old.user_id;
+  return null;
+end;
+$$;
+
+drop trigger if exists trg_league_members_renewal_sync_delete on public.league_members;
+create trigger trg_league_members_renewal_sync_delete
+  after delete on public.league_members
+  for each row execute function public.sync_renewal_on_member_delete();
+
+revoke all on function public.sync_renewal_on_member_delete() from public, anon, authenticated, service_role;
 
 revoke all on function public.enforce_league_lineage_columns() from public, anon, authenticated, service_role;
 revoke all on function public.enforce_renewal_response_transitions() from public, anon, authenticated, service_role;

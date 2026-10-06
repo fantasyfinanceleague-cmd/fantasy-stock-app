@@ -100,7 +100,8 @@ create table user_profiles (id uuid primary key, username text);
 
 -- Supabase grants ALL on new tables to the API roles; RLS is the only barrier
 -- here, and these replicas carry no RLS (the functions are DEFINER).
-grant select, insert, update on leagues to authenticated;   -- prod: leagues_insert_self_commissioner, leagues_update_commissioner
+grant select, insert, update on leagues to authenticated;
+grant delete on league_members to authenticated;   -- prod: league_members_delete_self (the interim self-leave)   -- prod: leagues_insert_self_commissioner, leagues_update_commissioner
 grant select on league_members, league_seasons, matchups, league_draft_slots, league_invites to authenticated;
 grant all on leagues, league_members, league_draft_slots, league_seasons, matchups, league_invites to service_role;
 grant select on user_profiles to authenticated, service_role;
@@ -538,6 +539,35 @@ Deno.test({
       const roster = await refusal('authenticated', C, `select public.get_renewal_roster($1) r`, [r7.league_id]);
       assertEquals(roster.counts.new, 0);
       assert(!roster.people.some((p: Row) => p.user_id === 'bot-z1'), 'a bot is not a person in the list');
+    });
+
+    await t.step('a player who leaves by a direct DELETE: the reply follows (in -> out), and the commissioner cannot leave', async () => {
+      const L8 = await completedLeague('Leave Me', 'random', 4);
+      const r8 = await refusal('authenticated', C, `select public.renew_league($1) r`, [L8]);
+      await refusal('authenticated', A, `select public.respond_to_renewal($1, 'in') r`, [r8.league_id]);
+      // A leaves through the interim self-leave policy, not the RPC.
+      await as('authenticated', A, () => q(`delete from league_members where league_id = $1 and user_id = $2`, [r8.league_id, A]));
+      assertEquals(await q(`select status, decided_by from league_renewal_responses where league_id = $1 and user_id = $2`, [r8.league_id, A]),
+        [{ status: 'out', decided_by: 'player' }]);
+      assertEquals((await q(`select count(*)::int c from league_members where league_id = $1 and user_id = $2`, [r8.league_id, A]))[0].c, 0);
+      // The commissioner cannot delete their own membership of their renewal.
+      await assertRejects(() => as('authenticated', C, () => q(`delete from league_members where league_id = $1 and user_id = $2`, [r8.league_id, C])),
+        Error, 'renewal_commissioner_out');
+    });
+
+    await t.step('the seat check takes the league row lock (so add_bots and a join cannot both pass the count)', async () => {
+      const [fn] = await q(`select prosrc from pg_proc where proname = 'enforce_renewal_membership'`);
+      const at = fn.prosrc.indexOf('for update');
+      assert(at > 0, 'enforce_renewal_membership must lock the league row');
+      assert(fn.prosrc.indexOf('count(*)') > at, 'the lock must come before the count');
+    });
+
+    await t.step('a season completion takes the trade lock after its row lock (lock order, text check)', async () => {
+      const src = await Deno.readTextFile(new URL('supabase/migrations/20261105000009_complete_league_season_trade_lock.sql', ROOT));
+      const row = src.indexOf('FOR UPDATE;');
+      const adv = src.indexOf("pg_advisory_xact_lock(hashtextextended('record-trade:'");
+      const upd = src.indexOf("SET season_status = 'completed'");
+      assert(row > 0 && adv > row && upd > adv, 'row lock, then the trade advisory lock, then the season write');
     });
 
     await t.step('the lineage columns are written by the renewal functions only (direct client writes are refused)', async () => {
