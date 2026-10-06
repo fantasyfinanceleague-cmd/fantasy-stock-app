@@ -62,9 +62,14 @@ export function scheduledJobs(files: Array<{ name: string; sql: string }>): Sche
   return [...live.values()];
 }
 
-/** Jobs missing an explicit timeout above the platform's 150 s request idle timeout. */
+/**
+ * Jobs that POST over pg_net without an explicit timeout above the platform's 150 s
+ * request idle timeout. Only net.http_post schedules are in scope: a plain-SQL job
+ * (e.g. a purge of cron.job_run_details) has no pg_net request and no timeout to set.
+ */
 export function jobsWithoutTimeout(jobs: ScheduledJob[]): string[] {
   return jobs.filter((j) => {
+    if (!/net\.http_post\s*\(/i.test(j.command)) return false;
     const m = /timeout_milliseconds\s*:=\s*(\d+)/i.exec(j.command);
     return !m || Number(m[1]) <= 150_000;
   }).map((j) => `${j.name} (${j.file})`);
@@ -73,6 +78,7 @@ export function jobsWithoutTimeout(jobs: ScheduledJob[]): string[] {
 async function migrationFiles() {
   const out: Array<{ name: string; sql: string }> = [];
   // readDir is NOT recursive: deferred/ is never read, as `supabase db push` ignores it.
+  // A deferred cron joins the guard the moment it is promoted into migrations/.
   for await (const e of Deno.readDir(MIGRATIONS_DIR)) {
     if (e.isFile && e.name.endsWith('.sql')) out.push({ name: e.name, sql: await mig(e.name) });
   }
@@ -85,7 +91,7 @@ Deno.test('GUARD: every cron job still scheduled after all migrations has an exp
   assertEquals(jobsWithoutTimeout(jobs), [], 'a cron http_post without timeout_milliseconds makes net._http_response unreadable (success-signals #8)');
 });
 
-Deno.test('GUARD self-test: it fails a job with no timeout, a short one, and ignores unscheduled / deferred jobs', () => {
+Deno.test('GUARD self-test: it fails an http_post with no/short timeout; ignores unscheduled, commented-out and plain-SQL jobs', () => {
   const files = [
     { name: '1_a.sql', sql: `select cron.schedule('bare', '* * * * *', $$ select net.http_post(url := 'x') $$);` },
     { name: '2_b.sql', sql: `select cron.schedule('short', '* * * * *', $$ select net.http_post(url := 'x', timeout_milliseconds := 30000) $$);` },
@@ -96,18 +102,16 @@ Deno.test('GUARD self-test: it fails a job with no timeout, a short one, and ign
     { name: '5_e.sql', sql: `select cron.unschedule('bare') where exists (select 1);\nselect cron.schedule('bare', '* * * * *', $$ select net.http_post(url := 'x', timeout_milliseconds := 180000) $$);` },
     // a commented-out schedule is not a schedule
     { name: '6_f.sql', sql: `-- select cron.schedule('commented', '* * * * *', $$ select net.http_post(url := 'x') $$);` },
+    // plain SQL, no pg_net request: NOT in scope (e.g. a daily purge of cron.job_run_details)
+    { name: '7_g.sql', sql: `select cron.schedule('purge-run-details', '0 3 * * *', $$ delete from cron.job_run_details where end_time < now() - interval '7 days' $$);` },
+    // the sweep shape: sub-minute schedule, http_post guarded by a WHERE EXISTS, with a timeout
+    { name: '8_h.sql', sql: `select cron.schedule('sweep', '10 seconds', $cmd$ select net.http_post(url := 'x', timeout_milliseconds := 180000) where exists (select 1) $cmd$);` },
   ];
   const jobs = scheduledJobs(files);
-  assertEquals(jobs.map((j) => j.name).sort(), ['bare', 'ok', 'short']);
+  assertEquals(jobs.map((j) => j.name).sort(), ['bare', 'ok', 'purge-run-details', 'short', 'sweep']);
   assertEquals(jobsWithoutTimeout(jobs), ['short (2_b.sql)']);
   // and without the later reschedule, 'bare' is flagged
   assertEquals(jobsWithoutTimeout(scheduledJobs(files.filter((f) => f.name !== '5_e.sql'))).sort(), ['bare (1_a.sql)', 'short (2_b.sql)']);
-});
-
-Deno.test('GUARD: the deferred crons are outside the guard (db push never applies deferred/)', async () => {
-  const names = (await migrationFiles()).map((f) => f.name);
-  assert(!names.some((n) => n.includes('schedule_draft_autopick_sweep') || n.includes('schedule_draft_order_notify')),
-    'a deferred cron file was found in migrations/: the guard would now apply to it, and so does db push');
 });
 
 Deno.test('GUARD: the retry function\'s latest definition puts a timeout on EVERY generated http_post', async () => {
