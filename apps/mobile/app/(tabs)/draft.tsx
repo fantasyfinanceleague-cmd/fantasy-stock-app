@@ -674,6 +674,11 @@ export default function DraftScreen() {
 
           {isCommissioner ? (
             <View style={styles.commishActions}>
+              {/* Opens the rebuilt League settings (3c-2). Kept, not removed:
+                  commissioners still land on this legacy pre-draft view from
+                  Home's "Build your queue" (PreDraftCard → /draft) and from
+                  draft pushes (screen: 'draft'). The League tab's pre-draft row
+                  replaces it only once those stop routing here. */}
               <Button
                 title="Edit Draft Date & Settings"
                 variant="secondary"
