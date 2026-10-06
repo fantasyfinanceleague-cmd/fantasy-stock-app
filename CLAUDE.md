@@ -2,6 +2,8 @@
 
 **Start here:** [`docs/STATUS.md`](docs/STATUS.md) is the single source of truth for what is deployed, what is done, and what is open — read it before planning, and update it at the end of any session that changes prod state or lands a workstream. [`docs/README.md`](docs/README.md) indexes the rest; `docs/history/` is archive only. This file holds conventions and lessons, not status.
 
+**Product rules and plans:** [`docs/PRODUCT_RULES.md`](docs/PRODUCT_RULES.md) holds every product decision Giorgio has made (his words verbatim); read it before planning or building, and never contradict it without him. New features start as a plan in [`docs/plans/`](docs/plans/), written by the **Planner** session with Giorgio and handed to the **Orchestrator** to build (roles and template in `docs/plans/README.md`).
+
 ## Subagent roster & delegation rules
 
 This repo defines project-scoped subagents in `.claude/agents/`. They exist to keep the main session's context clean and to enforce the prod/secret handoff model structurally.

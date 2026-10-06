@@ -6,6 +6,8 @@ Repo conventions and hard-won operational rules are in the root [`CLAUDE.md`](..
 | Folder / file | What it holds | Kept current? |
 |---|---|---|
 | [`STATUS.md`](STATUS.md) | Prod ledger, workstream status, open defects, critical path, branches | **Yes — update every session that changes prod** |
+| [`PRODUCT_RULES.md`](PRODUCT_RULES.md) | **Giorgio's product decisions**, by area, with his words verbatim | **Yes: add each rule the moment it's decided** |
+| [`plans/`](plans/) | Plans for new features, written by the Planner with Giorgio before building; the flow, roles and template are in its README | Yes: one file per plan, status kept current |
 | [`decisions/`](decisions/) | Accepted decision records (DR-001: in-house simulated trading) | Yes — append new DRs, never rewrite accepted ones |
 | [`architecture/`](architecture/) | Generated architecture map (`architecture.json`/`.html` — **never hand-edit**), hand-written `annotations.json`, prod `db-snapshot.json` + its capture SQL, map schema | Regenerate with `node scripts/gen-architecture.mjs`; re-capture the snapshot after grant/RLS/cron changes |
 | [`migrations/`](migrations/) | Specs + reports for the Supabase API-key migration (`MIGRATION_PHASE_*`, `MIGRATION_STATUS.md`), RLS hardening (`RLS_HARDENING_SPEC.md`), the simulator migration (`SIMULATOR_MIGRATION_SPEC.md`, `simulator-recon.md`), and staged-not-applied SQL (`STAGED_*.sql`) | Status files yes; phase specs/reports are point-in-time records. Paths are referenced from migration comments — don't rename |
