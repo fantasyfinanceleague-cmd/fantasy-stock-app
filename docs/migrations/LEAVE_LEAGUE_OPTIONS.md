@@ -1,152 +1,169 @@
-# Leave league — options for decision
+# Leave league — plan
 
-**Status:** RE-SCOPED 2026-10-05 after Giorgio's ruling on Q2. **Q1, Q4 and Q6 still need decisions.** Nothing is built yet (STATUS §4 item 11).
-**Branch:** `feat/leave-league`. Provisional migration range `20261107000000`–`09`.
+**Status:** PLANNED 2026-10-05 against Giorgio's answers. It waits for "go". **Q4** (the commissioner leaving their own league) is still being asked; the plan defaults to Q4-B. Nothing is built yet (STATUS §4 item 11).
+**Branch:** `feat/leave-league`. Migration range `20261107000000`–`04` (of the provisional `00`–`09`).
 **Retires:** `[I5]` (`league_members_delete_self`, `20260712000002:34-37`).
 
-## Decisions so far
+## Decisions
+
+Giorgio's words are quoted verbatim; the Orchestrator's reading follows each.
 
 | Q | Ruling |
 |---|---|
-| **Q2: leaving after the draft** | **C (Giorgio, 2026-10-05):** *"a player cannot leave a league after a draft, they are locked in for that season."* There is no soft leave, no `left_at` and no autopilot team. |
-| Q3: playoffs with a departed team | **Moot.** Nobody departs after the draft. |
-| Q5: rejoin / reclaim | **Moot** for post-draft. A pre-draft leaver rejoins with the invite code (see Q1). |
-| Q1: leaving before the draft | **Pending.** |
-| Q4: the commissioner leaving (before the draft) | **Pending.** |
-| Q6: "leaving" a finished league | **Pending.** New question, raised by the Q2 ruling. |
+| **Leave window** | *"you cant leave a league once a draft starts. you can only leave before a season starts (the hour before the draft) or after it is over"*. Leaving is allowed until the order is set at `draft_date` − 1h, blocked from then through the whole season (`locked_in`), and allowed again once the season is over. |
+| **After the draft** (was Q2) | *"a player cannot leave a league after a draft, they are locked in for that season."* There is no soft leave, no autopilot team, no forfeit. Q3 and Q5 are moot. |
+| **Pre-draft leave** (Q1) | He picked "Reopen the order". On the commissioner's side: *"commissioner either needs to reconfirm the number of players in the league. if they want to move forward with 1 less they can or they invite someone new to replace"*. That becomes a **roster reconfirmation** gate: the draft can't start until the commissioner confirms. |
+| **Post-season leave** (Q6) | History must stay for everyone, so it is Q6-A: **hide**. The row and history are kept, and Home skips the league. |
+| **The commissioner leaving pre-draft** (Q4) | **Pending.** The plan defaults to B: pick a successor, nothing preselected. A sole human is refused. |
 
-**The post-draft lock is permanent:** `trg_league_members_freeze_leave` (PR #123, the freeze release) refuses user-session membership deletes once `draft_status <> 'not_started'`. This plan does not relax it. The lock is also what makes STATUS item 11's playoff stall unreachable for new leaves. Leaves that already happened through `[I5]` are handled by the zombie repair below.
-
-Each open question gives 2–3 options with consequences and backend shape. ★ = recommendation only: the board mockups and Giorgio decide.
+**The post-draft lock is permanent.** `trg_league_members_freeze_leave` (PR #123) refuses user-session membership deletes once `draft_status <> 'not_started'`, and this plan never relaxes it. #123 adds no INSERT guard on `league_members` (Orchestrator, 2026-10-05).
 
 ---
 
-## 0. Facts that still constrain the design
+## 0. Facts that constrain the design
 
-1. **`[I5]` is a live, unguarded leave.** Any member can DELETE their own row, commissioner included. Until PR #123 ships, that holds at any time. The paused web app calls it (`apps/web/src/hooks/useLeagues.js:244`). After #123 the post-draft half is closed. The pre-draft half stays open until this work drops `[I5]`.
-2. **Nothing has a foreign key to `league_members`.** A DELETE cascades nothing. Pre-draft that is harmless: no drafts, matchups, standings or snapshots exist yet. The draft-order trigger handles the order (fact 4).
-3. **Post-draft `[I5]` leaves that already happened left zombies.** The team keeps being scored on frozen holdings. If it holds a top-P seed, `start_league_playoffs` refuses with **`bracket_non_member`** (`20261012000001:171-174`) every run. (That is the real failure, not `standings_rank_refused`, because standings rows survive a DELETE.) Late draft calls also 500 `draft_order_invalid` (`checkStoredOrder`, `draft-validation.ts:151`). See the pre-check and repair at the end.
-4. **The draft-order trigger already does the pre-draft bookkeeping** (`sync_draft_order_on_member_change`, `20261013000000:663-760`). On DELETE:
-   - no meta row (random mode before the reveal) → nothing to do;
-   - `open` or `finalized` → it removes the leaver and closes the gap;
-   - `locked` + `in_progress` → it raises `draft_in_progress`.
-
-   Order state only runs forward (open → finalized → locked), enforced for every role. `finalized` = `draft_date` − 1h has passed: no reordering, append/remove only.
-5. **Commissioner power is `leagues.commissioner_id`, not membership.** `is_commissioner()` (`20260712000000:47-58`) never checks membership, so a commissioner who deletes their row keeps every power. There is no transfer code. #123 makes `commissioner_id` immutable to user sessions post-draft only, so a pre-draft transfer is still writable.
-6. **The freeze triggers treat any `auth.uid() IS NOT NULL` caller as a user session,** SECURITY DEFINER included. So leave writes run on the service role (see Backend).
+1. **`[I5]` is a live, unguarded leave.** Before #123, any member can DELETE their own row at any time. After #123 the post-draft half is closed. The pre-draft half stays open until this work drops `[I5]`. The paused web app calls it (`apps/web/src/hooks/useLeagues.js:244`).
+2. **Nothing has a foreign key to `league_members`.** A DELETE cascades nothing. Pre-draft that's harmless: no drafts, matchups, standings or snapshots exist yet.
+3. **Post-draft `[I5]` leaves that already happened left zombies.** If a zombie holds a top-P seed, `start_league_playoffs` refuses with `bracket_non_member` (`20261012000001:171-174`) every run. (Standings rows survive the DELETE, so it's not `standings_rank_refused`.) Late draft calls also 500 `draft_order_invalid` (`checkStoredOrder`, `draft-validation.ts:151`). See the zombie repair and pre-check at the end.
+4. **The draft-order trigger already does the pre-draft order bookkeeping** (`sync_draft_order_on_member_change`, `20261013000000:663-760`).
+   - On DELETE: with no meta row (random mode before the reveal) there's nothing to do; `open`/`finalized` → it removes the leaver and closes the gap; `locked` + `in_progress` → it raises.
+   - Order state only runs forward (open → finalized → locked), for every role. So "reopen the order" CANNOT mean moving the state backwards. It becomes a separate reconfirmation gate (below).
+5. **"Order is set" is time-based:** `_draft_order_is_due(draft_date)` = `draft_date IS NOT NULL AND now() >= draft_date − 1h` (`20261013000000:215-222`). Every order write path reads it, not only `state`.
+6. **Commissioner power is `leagues.commissioner_id`, not membership.** `is_commissioner()` never checks membership, and there is no transfer code. #123 freezes `commissioner_id` for user sessions post-draft only.
+7. **The freeze triggers treat any `auth.uid() IS NOT NULL` caller as a user session,** SECURITY DEFINER included. That's why all writes here run on the service role.
+8. **draft-control start doesn't need a full league.** Its blockers are state, stake mode, date reached, members ≥ 4, a valid P, and P ≤ members, plus feasibility (`draft-control/rules.ts:56-103`). "Move forward with 1 less" therefore needs no `num_participants` change. Fewer members only makes slot feasibility easier.
 
 ---
 
-## Q1. Leaving BEFORE the draft (`draft_status = 'not_started'`)
+## 1. The leave window, exactly
 
-| | **A ★ Leave any time until the draft starts** | **B Leave until the order is finalized (`draft_date` − 1h)** |
-|---|---|---|
-| What happens | The row is deleted, and the trigger removes the leaver from the order and closes the gap. The spot reopens for invites. | The same, but refused in the last hour, once the order is `finalized` ("The draft order is set; leaving is closed"). |
-| Other members see | One fewer manager; later picks move up one. In the last hour, an announced order changes. | The announced order never changes once members have been notified of it (`draft_order_set`). |
-| Rejoin | Yes, with the invite code (`join_league_by_code`: the row is gone, the draft hasn't started, capacity is re-counted). | Same, before T−1h. |
-| Risk | Low: the trigger's finalized branch already handles a leaver. | Low. The edge case: the time-based finalize must be read the same way the order functions read it ("effectively finalized is time-based", `20261013000000:39`), not from `state` alone. |
+The leave RPC evaluates this under the league row lock:
 
-**Sub-question: playoff spots.** A leave can leave `playoff_teams` > members.
-- **(i) ★ Leave it.** draft-control's start already refuses with `playoff_teams_exceeds_members` (both numbers shown), and the commissioner can still lower P pre-draft.
-- **(ii) Auto-clamp.** The leave RPC lowers P to the new member count (minimum 2). This is a silent rule change by someone who isn't the commissioner.
+| League state | Result |
+|---|---|
+| `draft_status = 'not_started'` AND NOT `_draft_order_is_due(draft_date)` AND order meta state ∉ (`finalized`, `locked`) | **Leave** (§2) |
+| `draft_status = 'not_started'`, but due OR finalized | **refused `locked_in`** (the order is set) |
+| `draft_status <> 'not_started'` AND `season_status <> 'completed'` | **refused `locked_in`** |
+| `season_status = 'completed'` | **Hide** (§4) |
 
-**Below the minimum to draft.** A leave can drop a league below `MIN_DRAFT_MEMBERS` (4, `draft-control/rules.ts:20`). draft-control's start refuses; the commissioner can invite or add bots. No change is needed.
+- **Why two finalize checks.** `draft_date` can be moved later after the order was finalized. The `state` check catches that case, and the time check catches the window before the finalize cron has flipped `state`. Completeness is the conjunction of both (CLAUDE.md: never trust one half of a partial state).
+- **A TBD draft date** (`draft_date IS NULL`) → leaving is allowed.
+- **Locked-in copy** (the Design Lead owns the final wording): *"You're locked in for this season. You can leave once it ends."* In the T−1h window before the draft: *"The draft order is set. You can leave once the season ends."* Mobile can show the button disabled with the line, since `draft_status`, `draft_date` and `season_status` are on the league row the screen already reads.
 
-## Q4. The commissioner leaving (before the draft)
+## 2. Pre-draft leave, and the commissioner's roster reconfirmation
 
-Without a transfer, a departed commissioner keeps every power (fact 5), so each option transfers or blocks.
+**The leave itself:** the RPC deletes the row. The trigger removes the leaver from the order and closes the gap (fact 4), and the spot reopens for invites. The leaver can rejoin with the invite code.
 
-| | **A Block until transferred** | **B ★ Pick a successor in the leave sheet** | **C Auto-transfer** |
-|---|---|---|---|
-| Flow | Leave is disabled. First "Make X commissioner" (its own action), then leave as a member. | The leave sheet asks "Who takes over?" (human members only). One atomic call. | The longest-tenured human member (`joined_at`, then `user_id`) becomes commissioner. |
-| Pros | Two simple actions; a transfer is useful on its own. | One step, explicit, atomic. | Zero friction. |
-| Cons | Two round trips. | The sheet needs a picker. | The new commissioner didn't ask for it; needs a notification. |
+**The reconfirmation gate (the shape for Giorgio's "reconfirm the number of players"):**
 
-**Sole human (only bots remain, or nobody):**
-- **(i) ★ Refuse:** "You're the only manager. Delete the league instead." Note: delete-league is still client-side `[I3]`.
-- **(ii) Leaving deletes the league:** the cascade, behind a confirm. Pre-draft there's no history to lose, but it makes "leave" a destructive action.
+- **New table `league_roster_reconfirm`:**
+  - Columns: `league_id uuid PK → leagues ON DELETE CASCADE`, `departed_user_ids text[] NOT NULL`, `members_before int NOT NULL` (the count at the first unconfirmed leave), `created_at`, `updated_at`.
+  - **RLS:** enabled, SELECT for members (`is_member(league_id)`), no client write policy. INSERT/UPDATE/DELETE are revoked from `anon` and `authenticated`, so only the service-role RPCs write it.
+  - **Every pre-draft leave upserts it.** A second leave before confirmation appends to `departed_user_ids` and keeps `members_before`, so the banner can say *"2 managers left: 8 → 6"*.
+- **Why a table, not a `leagues` column:**
+  - `leagues` carries the whole-row commissioner UPDATE (`[I2a]`) plus #123's freeze triggers. A flag there would be clearable over raw PostgREST, skipping the confirm step.
+  - The banner needs *who* left, which a boolean can't carry.
+  - It adds nothing to the busiest row in the schema.
+  - The row is per league (PK), so "row exists" IS the exact per-league predicate here, not an any-row-over-a-set read.
+- **Clearing it.** A new draft-control action `confirm_roster` (commissioner only) with body `{league_id, playoff_teams?}`. It calls the service-role RPC `confirm_league_roster(p_league_id, p_user_id, p_playoff_teams int default null)`, which works under the league row lock:
+  1. It checks that the caller is the commissioner and `draft_status = 'not_started'`, and that a reconfirm row exists (otherwise `nothing_to_confirm`, which is idempotent and harmless).
+  2. **The `playoff_teams` vs members check.** If `p_playoff_teams` is given, it must be 2 ≤ P ≤ current members (matchup leagues), and it is written. Then, for matchup leagues, if `playoff_teams > current members`, it refuses `playoff_teams_exceeds_members {playoff_teams, members}`. So the commissioner can't confirm a roster the draft would refuse to start, and lowering P happens in the same atomic call. The UI shows a P stepper capped at the member count whenever the current P is too high.
+  3. It deletes the reconfirm row.
+- **"Invite a replacement".** The commissioner invites as normal (joins are allowed pre-draft, and after T−1h a late joiner is appended to the finalized order). Then they confirm. **Confirmation is always explicit, even when the count is back to `members_before`.** That is Giorgio's "reconfirm the number of players", taken literally. Auto-clearing on a join would also let any member clear it by adding a bot through `[I6]` until `[I6]` is dropped.
+- **Start gate.** `computeStartBlockers` gains `{ code: 'roster_reconfirm_required', departed: string[], membersBefore, members }`, ordered right after the state blocker. index.ts reads the table for both `start` and `check_setup`/`status`, so the commissioner's setup screen shows it before draft time. This is a pure rule, tested hermetically in `rules.test.ts`.
+- **Race.** Leave vs start is disjoint by time. A leave needs `now < draft_date − 1h`, while start needs `now ≥ draft_date` (the `draft_date_not_reached` blocker) and a commissioner action. Moving `draft_date` needs the same league row the leave locks. No DB trigger on `leagues` is needed.
+  - **Residual (accepted, the same class as the documented `[I2a]` limit):** a commissioner can flip `draft_status` over raw PostgREST and skip draft-control's blockers entirely, reconfirmation included. It's self-inflicted and limited to that league, and it closes when `[I2a]` retires.
 
-## Q6. "Leaving" a finished league (`season_status = 'completed'`)
+## 3. The commissioner leaving pre-draft (Q4, default B until Giorgio answers)
 
-The member is locked in for that season. Once it's over, history must stay, and `get_league_history` / `is_member` read access depend on the row existing. The #123 delete guard refuses any user-session delete anyway.
+- **Successor required.** `leave_league`'s `p_new_commissioner` is required when the caller is commissioner and another human member remains (`successor_required`). The successor must be a current non-bot member (`successor_invalid`).
+- **One transaction:** set `leagues.commissioner_id` (writable pre-draft; the service role is exempt from #123 regardless), set the successor's `league_members.role = 'commissioner'`, delete the leaver, and upsert the reconfirm row. **The new commissioner is the one who confirms the roster.**
+- **Sole human** (only bots remain): refused `sole_manager` — *"You're the only manager. Delete the league instead."* (delete-league is still client-side `[I3]`.)
+- **If Giorgio picks A** (block until transferred): split out `transfer_commissioner(p_league_id, p_user_id, p_new_commissioner)` and make the leave refuse `transfer_first`.
+- **If he picks C** (auto-transfer): the successor is the oldest `joined_at` human, then `user_id`. Same transaction.
 
-| | **A ★ Hide it** | **B Nothing to do; Run it back handles it** |
-|---|---|---|
-| What happens | "Leave league" on a finished league becomes **"Hide league"**: it's removed from that user's Home/league list, the membership row and all history stay, and it can be shown again from "Past leagues". | No action. Declining the renewal (`respond_to_renewal` out, PR #94) is how you "leave". The finished league stays in your list. |
-| Backend | `league_members.hidden_at timestamptz`, written by the same service-role RPC (`p_action => 'hide'/'unhide'`). `get_home_summary` / `get_home_league` skip hidden rows; both are re-created with byte-identical ACL. | None. |
-| Risk | Low. Hidden is per user, and no other reader keys on it. | None, but finished leagues pile up in the list forever. |
+## 4. Post-season leave = hide
 
-## The post-draft refusal (decided: locked in)
+- **`league_members.hidden_at timestamptz`.** It's only set when `season_status = 'completed'`, and the row and all history stay. `is_member()` is unchanged, so the user keeps read access to history.
+- **`get_home_summary` and `get_home_league` skip hidden leagues for that user.** Both are re-created with byte-identical `proacl`/`prosecdef`/`proconfig`, checked in the test the way `league_standings_ranked.pglite.test.ts` does it.
+- **Client league lists** that read `league_members` directly filter on `hidden_at` (3c worker). The SELECT policy already returns the column.
+- **Unhide:** the same edge function, action `unhide`. The RPC clears `hidden_at` (from a "Past leagues" list).
+- `league_members` has no UPDATE policy, so only the service role writes `hidden_at`.
 
-During the draft or the season (`draft_status <> 'not_started'` and `season_status <> 'completed'`), the leave call returns `{status: 'refused', reason: 'locked_in'}`, and the UI shows the locked-in copy. Suggested wording, close to Giorgio's: *"You're locked in for this season. You can leave once it ends."* The UI copy itself is the Design Lead's (Giorgio's copy stays verbatim where he gave it). Mobile can show the button disabled with that line instead of letting the call fail, since `draft_status` is on the league row the screen already reads.
+---
+
+## Backend
+
+**Shape:** a service-role edge function → service-role-only RPCs, the same pattern as `record-trade` → `"record_trade_atomic"` and `join-league` → `join_league_by_code`.
+- **Why the service role:** a definer RPC called with the user's JWT counts as a user session to #123 (fact 7), and a client-callable RPC taking `p_user_id` would be forgeable.
+- **Rejected:** a transaction-local GUC that the freeze triggers recognise. It puts a permanent bypass in every freeze trigger.
+
+**Every RPC below:**
+- SECURITY DEFINER with `search_path` pinned.
+- EXECUTE revoked from `public`, `anon` AND `authenticated` and granted to `service_role` only, verified by the `proacl` query. The explicit `authenticated` revoke is what closes the `join_league_by_code` class.
+- Takes the league row `FOR UPDATE` first.
+- Returns `{status, reason, ...}`, the same convention as `start_league_playoffs`. Every refusal writes nothing.
+
+| File | Contents |
+|---|---|
+| `20261107000000` | `league_roster_reconfirm` table + RLS + grants; `league_members.hidden_at` |
+| `20261107000001` | `leave_league(p_league_id uuid, p_user_id text, p_new_commissioner text default null)`. Branches per §1–§4. Refusals: `not_member`, `locked_in`, `successor_required`, `successor_invalid`, `sole_manager`, `already_hidden`. Statuses: `left` / `hidden`. Plus `unhide_league(p_league_id, p_user_id)`. |
+| `20261107000002` | `confirm_league_roster(p_league_id uuid, p_user_id text, p_playoff_teams int default null)` per §2 |
+| `20261107000003` | `get_home_summary` / `get_home_league` re-created with the `hidden_at` filter (ACL byte-identical) |
+| `20261107000004` | DROP POLICY `league_members_delete_self` (`[I5]`). No client deletes a membership after this; #123's trigger stays as the second layer. |
+
+**Edge:**
+- **New `leave-league`** (`verify_jwt=true`): actions `leave` and `unhide`. It calls `getUser()`, validates `league_id` and the optional `new_commissioner_id`, and calls the RPC. It checks `{ error }` on the rpc call (CLAUDE.md success-signal #5), maps refusals to a 200 game-flow refusal (draft-control's convention) and errors to 500.
+- **draft-control:** a new `confirm_roster` action, and the `roster_reconfirm_required` blocker in `rules.ts` + index.ts (`start`, `check_setup`, `status`).
+- **Web:** `useLeagues.js` `leaveLeague` moves to `functions.invoke('leave-league')` and stops swallowing errors. Web is paused.
+- **Mobile:** goes to the 3c worker. The worker gets:
+  - the leave sheet with a successor picker;
+  - the locked-in disabled state;
+  - the commissioner's reconfirm banner with the P stepper;
+  - Hide / Past leagues.
+- **Not included:** a commissioner push on a leave. `league_notifications.kind` is CHECK'd to `'draft_order_set'` (`20261013000000:167`), so a push needs a CHECK change. The reconfirm banner plus the start blocker already surface the leave. Add the push only if the board asks.
+- **After merge:** run `node scripts/gen-architecture.mjs` (new functions and RPCs) and refresh `db-snapshot.json` after the push (a new RLS table and grants).
+
+**Tests:**
+- **PGlite**, with the migrations loaded verbatim on top of the real `20261013000000` draft-order chain:
+  - every window row in §1, including a finalized order with `draft_date` moved later;
+  - the gap closing in no-meta, open and finalized states;
+  - the reconfirm upsert across two leaves;
+  - confirm with P above, at and below members, the P write, and `nothing_to_confirm`;
+  - the commissioner transfer (both `commissioner_id` and role) and the successor refusals;
+  - `sole_manager`;
+  - hide/unhide and the Home filters, with ACL byte-identical;
+  - leave → rejoin via `join_league_by_code`;
+  - every refusal writing nothing;
+  - `proacl` on all three RPCs;
+  - `[I5]` gone.
+- **Hermetic:** `rules.test.ts` (the new blocker and its ordering) and `migration_cli_split.test.ts`.
+- **Prod effect check:** ONE DO block ending in `RAISE NOTICE 'PASS'` / `RAISE EXCEPTION 'FAIL'`, asserting:
+  - the RPCs' `proacl` holds `service_role` only;
+  - `[I5]` is absent from `pg_policies`;
+  - `league_roster_reconfirm` has no write grants for `anon`/`authenticated`;
+  - the `hidden_at` column exists.
 
 ---
 
 ## Superseded options (kept for the record)
 
-Before the Q2 ruling, the doc compared three things:
-- Q2-A, a soft leave (`left_at`, the team plays on as buy-and-hold, like a bot);
-- Q2-B, a forfeit (auto-losses plus liquidation);
-- Q3, playoff seeding with departed teams.
+Before Giorgio's rulings, the doc also compared:
+- a post-draft soft leave (`left_at`, the team plays on as buy-and-hold);
+- a forfeit (auto-losses plus liquidation);
+- playoff seeding with departed teams;
+- an earlier "reopen a finalized order" (impossible: order state is forward-only).
 
-All three were dropped with Q2 = C. The finding behind Q2-A still holds as a fact about the codebase: bots can't trade (`trades.user_id` is a uuid FK to `auth.users`), so "bot takeover" and "frozen portfolio" are the same mechanics.
+All are dropped. A finding from them still holds as a fact about the codebase: bots can't trade (`trades.user_id` is a uuid FK to `auth.users`), so "bot takeover" and "frozen portfolio" are the same mechanics.
 
 ---
-
-## Backend (re-scoped: pre-draft leave plus finished-league hide)
-
-**Shape: a service-role edge function → a service-role-only RPC**, the same as `record-trade` → `"record_trade_atomic"` and `join-league` → `join_league_by_code`. Two reasons:
-- A definer RPC called with the user's JWT would be a "user session" to #123's freeze triggers (fact 6).
-- A client-callable RPC taking `p_user_id` would be forgeable.
-
-The alternative was a transaction-local GUC that the freeze triggers recognise. It was rejected: it would put a bypass in every freeze trigger, whose safety is a standing invariant that has to be re-verified each time a function is added.
-
-**`20261107000000` — `leave_league(p_league_id uuid, p_user_id text, p_new_commissioner text default null) returns jsonb`**
-- **Security:** SECURITY DEFINER, `search_path` pinned. EXECUTE revoked from `public`, `anon` AND `authenticated`, granted to `service_role` only, verified by the `proacl` query. The explicit `authenticated` revoke is what closes the `join_league_by_code` class.
-- **Locking:** takes the league row `FOR UPDATE` first, so it serializes against draft-control's start (which flips `draft_status`) and against `join_league_by_code` (which locks the same row). The draft-order trigger's own `FOR NO KEY UPDATE` on the league is then a no-op re-lock in the same transaction.
-- **Branches:**
-  - `not_member`;
-  - `not_started` → (commissioner rules per Q4) DELETE the row; the trigger closes the order gap. Per Q1-B, refuse in the finalized window.
-  - `draft_status <> 'not_started'` and season not completed → `locked_in`;
-  - `season_status = 'completed'` → hide or unhide per Q6-A (or `locked_in`-style "nothing to leave" under Q6-B).
-- **Commissioner transfer (Q4-B):** `p_new_commissioner` is required when the caller is commissioner and another human remains (`successor_required`). It must be a current human member (`successor_invalid`). The RPC sets `leagues.commissioner_id` and the successor's `role = 'commissioner'`, then deletes the leaver. Sole human → `sole_manager` (Q4-i).
-- **Returns** `{status: 'left' | 'hidden' | 'refused', reason}`, the same convention as `start_league_playoffs`.
-
-**`20261107000001` — DROP POLICY `league_members_delete_self` (`[I5]`).** After this, no client deletes a membership directly. #123's freeze trigger stays as the second layer.
-
-**Only if Q6 = A:** `20261107000002` adds `league_members.hidden_at` plus the `get_home_summary` / `get_home_league` filters. Both are re-created with byte-identical `proacl` / `prosecdef` / `proconfig`, checked in the test the way `league_standings_ranked.pglite.test.ts` does it.
-
-**Edge and clients:**
-- **New `leave-league` function** (`verify_jwt=true`). It calls `getUser()`, validates `league_id` and the optional `new_commissioner_id`, then calls the RPC. It checks `{ error }` from the rpc call (CLAUDE.md success-signal #5: `.rpc()` resolves, it doesn't throw), maps refusals to 4xx, and returns `{status, reason}` verbatim.
-- **Web:** `useLeagues.js` `leaveLeague` moves to `functions.invoke('leave-league')` and stops swallowing the error. Web is paused, so prod behavior doesn't change.
-- **Mobile:** goes to the 3c worker (League tab), not this branch.
-- **Optional:** a commissioner notification on a leave. `league_notifications.kind` is CHECK'd to `'draft_order_set'` only (`20261013000000:167`), so this needs a CHECK change plus a kind. It's a product choice; leave it out unless the board asks for it.
-- **Out of scope now:** all of these were needed only for the soft leave and are dropped:
-  - a trade guard;
-  - a `record-trade` change;
-  - a `get_league_display_names` change;
-  - scoring, snapshot or playoff changes.
-
-**Tests (PGlite under Deno, migrations loaded verbatim):**
-- every branch and refusal, each refusal writing nothing;
-- the order gap closing in open and finalized states, and the no-meta random mode;
-- the commissioner transfer, with the role and `commissioner_id` both moved;
-- a successor who is a bot or a non-member being refused;
-- leave → rejoin via `join_league_by_code`;
-- `proacl`;
-- `migration_cli_split.test.ts`.
-
-**Prod effect check:** ONE DO block ending in `RAISE NOTICE 'PASS'` / `RAISE EXCEPTION 'FAIL'`. It asserts:
-- `proacl` holds `service_role` only;
-- `[I5]` is gone from `pg_policies`;
-- `league_members` DELETE is denied to `authenticated` by RLS (no policy).
 
 ## Zombie repair (existing post-draft `[I5]` leaves)
 
 Under "locked in", a zombie is a member who should never have been able to leave, and the right repair is to **re-insert their `league_members` row**. They are still in matchups, standings and drafts, so re-inserting makes them a normal locked-in member again. It clears `bracket_non_member` and `draft_order_invalid`.
 
 **Snag:** the draft-order trigger raises `draft_order_locked` on any INSERT into a league whose order is locked, for every role (`20261013000000:687-690`). So the repair cannot be a plain INSERT. The options, decided only if the pre-check returns rows:
-- **(a) ★ A one-off service-role SQL that disables `trg_league_members_draft_order` for its own INSERT only.** `ALTER TABLE ... DISABLE TRIGGER` / `ENABLE TRIGGER` inside one transaction (it takes an ACCESS EXCLUSIVE lock on `league_members` for that instant). The zombie is already in the locked order (the locked + completed branch keeps the order as history), so the order stays an exact permutation once the row is back. For a legacy league with no order meta, the trigger returns before the locked check, but it first calls `_draft_order_sync`. Confirm on a PGlite replica that the call writes nothing for a completed-draft league before relying on a plain INSERT. Also confirm #123 adds no INSERT guard on `league_members`.
+- **(a) ★ A one-off service-role SQL that disables `trg_league_members_draft_order` for its own INSERT only.** `ALTER TABLE ... DISABLE TRIGGER` / `ENABLE TRIGGER` inside one transaction (it takes an ACCESS EXCLUSIVE lock on `league_members` for that instant). The zombie is already in the locked order (the locked + completed branch keeps the order as history), so the order stays an exact permutation once the row is back. For a legacy league with no order meta, the trigger returns before the locked check, but it first calls `_draft_order_sync`. Confirm on a PGlite replica that the call writes nothing for a completed-draft league before relying on a plain INSERT. (#123 adds no INSERT guard on `league_members`, confirmed by the Orchestrator 2026-10-05.)
 - **(b)** A narrowly-scoped `repair_zombie_member` RPC that the trigger recognises.
 
 (a) leaves no permanent bypass. **If the pre-check returns zero rows, none of this is needed.**
