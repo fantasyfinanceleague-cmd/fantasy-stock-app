@@ -663,6 +663,18 @@ privileges revoked from anon and authenticated.
 
 ### 2.11 Client contract (for the mobile worker)
 
+**Clients rely on these invariants (the 3c-2 worker, 2026-10-05). Both are PGlite-asserted in
+`supabase/tests/run_it_back.pglite.test.ts`, "client contract":**
+- `renew_league` creates the new season with `draft_date = NULL`.
+- `start_renewed_season` is the ONLY path that sets `draft_date`, and it refuses
+  `renewal_replies_pending` while anyone is pending, and `no_draft_date` without a date.
+
+The app routes a renewed league to the normal draft lobby once `get_renewal_roster` returns the
+full list with `replies_pending = false` AND the league has a `draft_date`. If an explicit
+server flag (for example `season_scheduled`) is wanted instead, it is a small add-on to
+`get_renewal_roster`; not built yet.
+
+
 - **"Run it back"** → `renew_league` → `setActiveLeagueId(new_id)`. The commissioner lands on
   the reconcile view (a3/a4).
 - **Invited players** have no `league_members` row in the new league until they answer. The

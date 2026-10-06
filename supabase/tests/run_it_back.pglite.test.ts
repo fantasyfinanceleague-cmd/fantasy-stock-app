@@ -12,6 +12,14 @@
  * anon/authenticated/service_role) are simulated, so the grant assertions prove
  * the explicit revokes work.
  *
+ * CLIENT CONTRACT (the 3c-2 mobile worker relies on it; do not break it):
+ *   renew_league creates the new season with draft_date = NULL, and
+ *   start_renewed_season is the ONLY path that sets it (refusing with
+ *   renewal_replies_pending while anyone is pending, and no_draft_date without a
+ *   date). The app routes a renewed league to the normal draft lobby once
+ *   get_renewal_roster returns the full list with replies_pending = false AND the
+ *   league has a draft_date. Asserted by the "client contract" step below.
+ *
  * NOT loaded (their own suites cover them): the draft-order triggers and meta
  * tables, and the PR #9 member column guard. So "the draft order locks" is not
  * asserted here; the gate's own refusal path and the team cap are.
@@ -485,6 +493,28 @@ Deno.test({
       assertEquals(r3.status, 'renewed');
       assertEquals(await refusal('authenticated', C, `select public.set_draft_order($1, $2::text[]) r`,
         [r3.league_id, [C, A]]), { ok: false, reason: 'renewal_replies_pending' });
+    });
+
+    await t.step('client contract: renew leaves draft_date NULL; only start_renewed_season sets it', async () => {
+      const L9 = await completedLeague('Contract', 'random', 4);
+      const r9 = await refusal('authenticated', C, `select public.renew_league($1) r`, [L9]);
+      const fresh = await q(`select draft_date from leagues where id = $1`, [r9.league_id]);
+      assertEquals(fresh, [{ draft_date: null }]);
+      // Nobody has answered yet: pending, so the roster says replies are pending.
+      const before = await refusal('authenticated', C, `select public.get_renewal_roster($1) r`, [r9.league_id]);
+      assertEquals(before.replies_pending, true);
+      // Settings without a date do not set one (and write nothing).
+      assertEquals(await refusal('authenticated', C, `select public.start_renewed_season($1, '{"pick_seconds":45}'::jsonb) r`, [r9.league_id]),
+        { status: 'refused', reason: 'no_draft_date' });
+      assertEquals(await q(`select draft_date from leagues where id = $1`, [r9.league_id]), [{ draft_date: null }]);
+      // Everyone answers (the invitees A, B, D go out; the bot is never invited): the gate opens.
+      for (const u of [A, B, D]) await refusal('authenticated', u, `select public.respond_to_renewal($1, 'out') r`, [r9.league_id]);
+      const after = await refusal('authenticated', C, `select public.get_renewal_roster($1) r`, [r9.league_id]);
+      assertEquals(after.replies_pending, false);
+      // Only the start sets the date.
+      const set = await refusal('authenticated', C, `select public.start_renewed_season($1, '{"draft_date":"2026-10-20T23:00:00Z"}'::jsonb) r`, [r9.league_id]);
+      assertEquals(set.status, 'season_set');
+      assert((await q(`select draft_date is not null d from leagues where id = $1`, [r9.league_id]))[0].d);
     });
 
     await t.step('cancel: before the draft, the new season and its rows are gone and the predecessor renews again', async () => {
