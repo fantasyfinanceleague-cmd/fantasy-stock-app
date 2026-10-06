@@ -17,6 +17,9 @@ import { prevCloseFromBars, type DailyBar } from './prevClose';
 import { portfolioHoldings, portfolioSummary } from './portfolioModel';
 import { buildPortfolioView, type PortfolioView, type ViewHolding } from './portfolioView';
 import { usePortfolioLedger } from './usePortfolioLedger';
+import { fetchPreview } from './recordTrade';
+import { previewBody } from './tradeBodies';
+import { slotLabelsBySymbol } from './tierContract';
 import { MONEY_FIXTURE } from './devFixture';
 import { buildStressMarket, STRESS_CALLER, STRESS_LEAGUE_NAME, STRESS_ROUNDS } from './stressFixture';
 
@@ -135,6 +138,15 @@ export function usePortfolioData(): PortfolioData {
       }
       if (cancelled) return;
 
+      // The slot labels come from the server's preview (the caller's slot map), not from the ledger.
+      let slotLabels: Record<string, string> = {};
+      if (!market && leagueId) {
+        requests += 1;
+        const preview = await fetchPreview(previewBody(leagueId));
+        if (preview) slotLabels = slotLabelsBySymbol(preview.slots);
+      }
+      if (cancelled) return;
+
       const price = (sym: string) => prices[sym] ?? null;
       const summary = portfolioSummary({
         stakeMode,
@@ -162,6 +174,7 @@ export function usePortfolioData(): PortfolioData {
         numRounds,
         perSlotNotional: notional,
         stakeMode,
+        slotLabels,
       });
 
       if (__DEV__) {

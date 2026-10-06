@@ -24,7 +24,7 @@ export type ReviewState =
   | { kind: 'ready' }
   | { kind: 'submitting' }
   | { kind: 'done'; trade: unknown }
-  | { kind: 'refused'; reason: string; backTo?: 'picker'; terminal?: boolean; retryable: boolean }
+  | { kind: 'refused'; reason: string; backTo?: 'picker'; terminal?: boolean; retryable: boolean; tier?: { price: number | null; openSlots: import('./tierContract').SlotShape[] } }
   /** Re-fetching the quote, proceeds and position after a retryable refusal. */
   | { kind: 'refreshing' }
   | { kind: 'closed'; opensLabel: string | null }
@@ -94,6 +94,7 @@ export function reviewReducer(state: ReviewState, event: ReviewEvent): ReviewSta
         reason: o.reason,
         // Only the concurrency refusal is retryable: the server wrote nothing, so a retry can't double.
         retryable: o.reason === 'trade_conflict',
+        ...(o.tier ? { tier: o.tier } : {}),
         ...(o.reason === 'proceeds_unavailable' ? { backTo: 'picker' as const } : {}),
         ...(o.reason === 'no_proceeds' ? { terminal: true } : {}),
       };

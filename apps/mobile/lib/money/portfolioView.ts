@@ -27,6 +27,8 @@ export interface ViewHolding {
 }
 
 export interface PortfolioViewInput {
+  /** The preview's slot labels by symbol ('$100–$200 slot'); a stock in no slot has none. */
+  slotLabels?: Record<string, string>;
   value: number;
   cash: number;
   stake: number;
@@ -40,6 +42,8 @@ export interface PortfolioViewInput {
 export interface HoldingRow {
   symbol: string;
   name: string;
+  /** "$100–$200 slot" for a tier league's stock; null when it isn't in a slot. */
+  slotText: string | null;
   quantityText: string;
   valueText: string;
   value: number;
@@ -101,6 +105,7 @@ export function buildPortfolioView(i: PortfolioViewInput): PortfolioView {
       return {
         symbol: h.symbol,
         name: cleanCompanyName(h.name) || h.symbol,
+        slotText: i.slotLabels?.[h.symbol] ?? null,
         quantityText: formatShares(h.quantity),
         valueText: formatMoney(value),
         value,

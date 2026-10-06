@@ -4,7 +4,7 @@
  * cd apps/mobile/tests-deno && deno test .
  */
 import { assertEquals } from 'jsr:@std/assert';
-import { buyReviewOneShare, buyReviewPerSlot, sellReview } from '../lib/money/reviewModel.ts';
+import { buyReviewOneShare, buyReviewPerSlot, buyReviewTier, sellReview } from '../lib/money/reviewModel.ts';
 import { JPM_PROCEEDS, VIST_BUY, VIST_PRICE } from './fixtures/jpm-sale.ts';
 import { formatMoney } from '../components/sp/logic/money.ts';
 import { formatShares } from '../lib/money/formatShares.ts';
@@ -61,4 +61,13 @@ Deno.test('every review says prices can move, and never says Confirm or OK', () 
     assertEquals(r.caption, 'Prices can move before the order fills.');
     assertEquals(/confirm|^ok$/i.test(r.buttonLabel), false);
   }
+});
+
+Deno.test('tier buy: one share, the price, and the fill line the server chose; no budget rows', () => {
+  const r = buyReviewTier({ symbol: 'AAPL', price: 150, fills: 'Fills your $100–$200 slot' });
+  assertEquals(r.lines.map((l) => l.label), ['Buy', 'Price']);
+  assertEquals(r.lines[0].value, '1 AAPL');
+  assertEquals(r.card, 'Fills your $100–$200 slot');
+  assertEquals(r.buttonLabel, 'Buy AAPL');
+  assertEquals(r.caption, 'Prices can move before the order fills.');
 });

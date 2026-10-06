@@ -9,8 +9,8 @@ import { reviewPresentation } from '../lib/money/reviewPresentation.ts';
 import type { ReviewState } from '../lib/money/reviewMachine.ts';
 
 const REVIEW = { buttonLabel: 'Sell JPM' };
-const DONE = { title: 'Sold JPM' };
-const p = (s: ReviewState) => reviewPresentation(s, REVIEW, DONE);
+const CTX = { title: 'Sold JPM', symbol: 'JPM' };
+const p = (s: ReviewState) => reviewPresentation(s, REVIEW, CTX);
 
 Deno.test('ready: the button names the action and is live', () => {
   assertEquals(p({ kind: 'ready' }).button, { label: 'Sell JPM', enabled: true, progress: false });
@@ -78,4 +78,14 @@ Deno.test('no state shows "Confirm" or "OK" as a button label', () => {
     const label = p(s).button!.label;
     assert(!/confirm|^ok$/i.test(label), label);
   }
+});
+
+Deno.test('a tier refusal names the price and the open slot, warn-tint, no retry', () => {
+  const r = p({
+    kind: 'refused', reason: 'no_eligible_slot', retryable: false,
+    tier: { price: 211.42, openSlots: [{ slot_id: 's1', slot_index: 0, slot_count: 1, price_min: 100, price_max: 200, category_id: null }] },
+  });
+  assertEquals(r.message, 'JPM is $211.42. Your open slot takes stocks priced $100 to $200.');
+  assertEquals(r.messageTone, 'warn');
+  assertEquals(r.footer, null);
 });

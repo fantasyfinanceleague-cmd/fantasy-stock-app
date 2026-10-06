@@ -60,6 +60,12 @@ export const COPY = {
   // NEW (flagged): an honest empty state.
   historyEmpty: 'No trades yet. Your buys, sells and draft picks will show here.',
   historyPending: 'Your trade history is loading.',
+  // Tier trades (NEW, flagged for the Design Lead): the no-open-slot lines and
+  // the review's fill line for a slot with no price band.
+  everySlotFull: 'Every slot is full right now. Sell a stock to free one.',
+  openSlotAnyPrice: 'Your open slot takes stocks at any price.',
+  openSlotsTake: (ranges: string) => `Your open slots take stocks priced ${ranges}.`,
+  fillsAnySlot: 'Fills your open slot',
   portfolioLoadTitle: "Your portfolio didn't load",
   stockLoadTitle: "This stock didn't load",
   loadRetryMessage: 'Check your connection, then try again.',

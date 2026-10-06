@@ -90,3 +90,9 @@ Deno.test('a stock with a long feed name is cleaned before it is shown', () => {
 Deno.test('the Alpaca credit is always present, from one constant', () => {
   assertEquals(view().creditText, 'Market data provided by Alpaca');
 });
+
+Deno.test('a stock in a tier slot shows its slot label; a stock in no slot shows none', () => {
+  const v = view({ slotLabels: { NVDA: '$100–$200 slot' } });
+  assertEquals(v.rows.find((r) => r.symbol === 'NVDA')!.slotText, '$100–$200 slot');
+  assertEquals(v.rows.find((r) => r.symbol === 'AAPL')!.slotText, null);
+});

@@ -97,7 +97,7 @@ export function PortfolioScreen() {
               <View style={styles.rowTrail}>
                 <Text variant="callout">{r.valueText}</Text>
                 <Text variant="caption" tone="secondary">
-                  {r.quantityText} sh{r.todayText ? ` · ${r.todayText}` : ''}
+                  {r.quantityText} sh{r.todayText ? ` · ${r.todayText}` : ''}{r.slotText ? ` · ${r.slotText}` : ''}
                 </Text>
               </View>
             </Pressable>

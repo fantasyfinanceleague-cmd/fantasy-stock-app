@@ -1,3 +1,4 @@
+import { parseSlotShape, type SlotShape } from './tierContract';
 /**
  * recordTradeOutcome: turns one record-trade call into a single outcome the
  * screens can act on. supabase-js resolves every result as { data, error }
@@ -8,7 +9,7 @@
  */
 export type RecordTradeOutcome =
   | { kind: 'ok'; trade: unknown }
-  | { kind: 'refused'; reason: string; marketReason?: string; nextOpenAt?: string | null }
+  | { kind: 'refused'; reason: string; marketReason?: string; nextOpenAt?: string | null; tier?: { price: number | null; openSlots: SlotShape[] } }
   | { kind: 'unavailable' }
   | { kind: 'network' };
 
@@ -21,6 +22,13 @@ interface RecordTradeBody {
 }
 
 function refusedFrom(body: RecordTradeBody, reason: string): RecordTradeOutcome {
+  if (reason === 'no_eligible_slot') {
+    // The contract's refusal carries the open slots (validated; a malformed list is dropped, never guessed).
+    const raw = (body as { open_slots?: unknown }).open_slots;
+    const openSlots = Array.isArray(raw) ? raw.map(parseSlotShape) : [];
+    const price = typeof (body as { price?: unknown }).price === 'number' ? (body as { price: number }).price : null;
+    return { kind: 'refused', reason, tier: { price, openSlots: openSlots.every((x) => x !== null) ? (openSlots as SlotShape[]) : [] } };
+  }
   if (reason === 'calendar_unavailable') return { kind: 'unavailable' };
   // 'unhandled' is a server fault: the trade may or may not have been written.
   if (reason === 'unhandled') return { kind: 'network' };

@@ -13,6 +13,7 @@
  *  - Nothing here says "Confirm" or "OK": the button names the action.
  */
 import { COPY } from './moneyCopy';
+import { tierRefusalSentence } from './tierContract';
 import { refusalCopy } from './refusals';
 import type { ReviewState } from './reviewMachine';
 
@@ -26,7 +27,7 @@ export interface ReviewPresentation {
 export function reviewPresentation(
   state: ReviewState,
   review: { buttonLabel: string },
-  done: { title: string },
+  ctx: { title: string; symbol: string },
 ): ReviewPresentation {
   switch (state.kind) {
     case 'ready':
@@ -36,8 +37,17 @@ export function reviewPresentation(
     case 'refreshing':
       return { message: null, messageTone: 'text', button: { label: review.buttonLabel, enabled: false, progress: true }, footer: null };
     case 'done':
-      return { message: done.title, messageTone: 'text', button: null, footer: 'done' };
+      return { message: ctx.title, messageTone: 'text', button: null, footer: 'done' };
     case 'refused': {
+      // A tier refusal names the stock's price and the slot that would take it (the server's words).
+      if (state.reason === 'no_eligible_slot' && state.tier?.price != null) {
+        return {
+          message: tierRefusalSentence(ctx.symbol, state.tier.price, state.tier.openSlots),
+          messageTone: 'warn',
+          button: null,
+          footer: null,
+        };
+      }
       const copy = refusalCopy(state.reason, {});
       return {
         message: copy.message,

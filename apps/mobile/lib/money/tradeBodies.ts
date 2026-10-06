@@ -22,6 +22,10 @@ export interface BuyBody {
 export interface PreviewBody {
   action: 'preview';
   league_id: string;
+  /** The quote the client shows; with a symbol, the server answers the tier question (would_fill). */
+  price?: number;
+  /** Category leagues: the stock whose eligibility the slot check uses. */
+  symbol?: string;
 }
 
 export function sellBody(leagueId: string, symbol: string): SellBody {
@@ -34,6 +38,11 @@ export function buyBody(leagueId: string, symbol: string, soldTradeId?: string |
   return body;
 }
 
-export function previewBody(leagueId: string): PreviewBody {
-  return { action: 'preview', league_id: leagueId };
+export function previewBody(leagueId: string, check?: { price: number; symbol?: string }): PreviewBody {
+  const body: PreviewBody = { action: 'preview', league_id: leagueId };
+  if (check) {
+    body.price = check.price;
+    if (check.symbol) body.symbol = check.symbol.trim().toUpperCase();
+  }
+  return body;
 }

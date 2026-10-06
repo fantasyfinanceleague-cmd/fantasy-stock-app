@@ -25,7 +25,9 @@ import { formatShares } from '@/lib/money/formatShares';
 import { COPY } from '@/lib/money/moneyCopy';
 import { marketOpensLabel } from '@/lib/money/marketOpensLabel';
 import { fetchPreview, type TradeBody } from '@/lib/money/recordTrade';
-import { buyReviewOneShare, buyReviewPerSlot, sellReview, type TradeReview } from '@/lib/money/reviewModel';
+import { buyReviewOneShare, buyReviewPerSlot, buyReviewTier, sellReview, type TradeReview } from '@/lib/money/reviewModel';
+import { fillsSlotLine, tierRefusalSentence } from '@/lib/money/tierContract';
+import { useTheme } from '@/components/sp/ThemeProvider';
 import { reviewPresentation } from '@/lib/money/reviewPresentation';
 import { decideTradeGate } from '@/lib/money/tradeGate';
 import { stockSheetModel } from '@/lib/money/stockSheetModel';
@@ -51,12 +53,15 @@ interface OpenReview {
   body: TradeBody | null;
   error: string | null;
   loading: boolean;
+  /** The error is a blocker (a tier refusal): warn-tint, no icon. */
+  warn?: boolean;
 }
 
 export function StockSheetBody({ symbol, knownName = null, onDone }: { symbol: string; knownName?: string | null; onDone: () => void }) {
   const data = useStockSheetData(symbol, knownName);
   const { market, activeLeague } = useLeagueContext();
   const { user } = useSession();
+  const { colors } = useTheme();
   const userId = user?.id ?? null;
   const ledgerState = usePortfolioLedger(activeLeague?.id ?? null);
   const now = useNow(1000);
@@ -115,6 +120,17 @@ export function StockSheetBody({ symbol, knownName = null, onDone }: { symbol: s
         leftInSlot: 0,
       });
       return { kind, review, body: buyBody(league.id, symbol, source.trade_id), error: null, loading: false };
+    }
+    if (league.stake_mode === 'price_tiers') {
+      // The server decides the slot. The client asks (advisory) and words the answer; it never computes fit.
+      const check = await fetchPreview(previewBody(league.id, { price, symbol }));
+      if (!check || check.wouldFill === undefined) return { kind, review: null, body: null, error: COPY.cantReach, loading: false };
+      if (check.wouldFill === null) {
+        // The refusal comes BEFORE the review, per the board.
+        return { kind, review: null, body: null, error: tierRefusalSentence(symbol, price, check.openSlots ?? []), loading: false, warn: true };
+      }
+      const review = buyReviewTier({ symbol, price, fills: fillsSlotLine(check.wouldFill) });
+      return { kind, review, body: buyBody(league.id, symbol), error: null, loading: false };
     }
     if (league.stake_mode === 'budget_cap' && budget != null) {
       const before = budget - spent;
@@ -192,7 +208,7 @@ export function StockSheetBody({ symbol, knownName = null, onDone }: { symbol: s
     }
     if (open.review) {
       const doneTitle = open.kind === 'sell' ? `Sold ${symbol}` : `Bought ${symbol}`;
-      const presentation = reviewPresentation(trade.state, open.review, { title: doneTitle });
+      const presentation = reviewPresentation(trade.state, open.review, { title: doneTitle, symbol });
       return (
         <TradeReviewPanel
           review={open.review}
@@ -209,7 +225,13 @@ export function StockSheetBody({ symbol, knownName = null, onDone }: { symbol: s
     }
     return (
       <View style={{ gap: 10 }}>
-        <Text variant="callout" tone="secondary" accessibilityRole="alert">{open.error ?? COPY.cantReach}</Text>
+        {open.warn ? (
+          <View style={{ borderRadius: 12, padding: 14, backgroundColor: colors.sunken }}>
+            <Text variant="callout" accessibilityRole="alert">{open.error}</Text>
+          </View>
+        ) : (
+          <Text variant="callout" tone="secondary" accessibilityRole="alert">{open.error ?? COPY.cantReach}</Text>
+        )}
         <Pressable accessibilityRole="button" onPress={() => setOpen(null)} hitSlop={8} style={{ minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' }}>
           <Text variant="callout" tone="primary">Edit</Text>
         </Pressable>
@@ -219,8 +241,7 @@ export function StockSheetBody({ symbol, knownName = null, onDone }: { symbol: s
 
   const selected = choice ?? model.selected;
   const action = selected === 'buy' ? model.buy : model.sell;
-  // Tier leagues have no buy review yet (the tier fill isn't built), so no call to action for it.
-  const canReview = selected === 'sell' ? model.sell.enabled : model.buy.enabled && activeLeague?.stake_mode !== 'price_tiers';
+  const canReview = selected === 'sell' ? model.sell.enabled : model.buy.enabled;
 
   return (
     <View accessibilityRole="summary" style={{ gap: 12 }}>

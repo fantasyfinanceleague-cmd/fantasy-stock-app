@@ -19,4 +19,7 @@ Deno.test('buy body: never a quantity or an amount; sold_trade_id only when the 
 
 Deno.test('preview body: the league only', () => {
   assertEquals(previewBody('L1'), { action: 'preview', league_id: 'L1' });
+  // The tier check adds the price, and the symbol in category leagues only.
+  assertEquals(previewBody('L1', { price: 211.42 }), { action: 'preview', league_id: 'L1', price: 211.42 });
+  assertEquals(previewBody('L1', { price: 211.42, symbol: 'aapl' }), { action: 'preview', league_id: 'L1', price: 211.42, symbol: 'AAPL' });
 });

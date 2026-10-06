@@ -131,3 +131,24 @@ export function buyReviewOneShare(i: {
     buttonRole: 'buy',
   };
 }
+
+/**
+ * A one-share buy in a tier league. The server decided the slot (the preview's
+ * would_fill); the review only states it. No budget rows: a tier league has no
+ * budget, only the slot the stock fills.
+ */
+export function buyReviewTier(i: { symbol: string; price: number; fills: string }): TradeReview {
+  const price = Math.round(i.price * 100) / 100;
+  return {
+    title: COPY.reviewBuy,
+    headline: null,
+    lines: [
+      { label: 'Buy', value: `1 ${i.symbol}` },
+      { label: 'Price', value: `${formatMoney(price)} · ${COPY.marketPrice}` },
+    ],
+    card: i.fills,
+    caption: COPY.pricesCanMove,
+    buttonLabel: COPY.buyButton(i.symbol),
+    buttonRole: 'buy',
+  };
+}
