@@ -2,8 +2,8 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "7a8506c19d3c375ddc5d387d2934155808cb6b54",
-    "commitShort": "7a8506c",
+    "commit": "110dfa6771e42a457ba5fc4ea9aa2b318abcf7b5",
+    "commitShort": "110dfa6",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "fix/tier-trade-slots",
     "dirty": true,
@@ -22,18 +22,10 @@
       },
       {
         "code": "M",
-        "path": "supabase/functions/record-trade/commit.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/record-trade/index.ts"
-      },
-      {
-        "code": "??",
         "path": "supabase/migrations/20261103000000_trades_slot_id.sql"
       }
     ],
-    "timestamp": "2026-10-06T03:49:01Z",
+    "timestamp": "2026-10-06T03:54:26Z",
     "sourceHash": "sha256:598110e0532240d0ac375bfd62dd6b47604ee6735d654c5f5cff5ebebe40de77",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
@@ -41,7 +33,7 @@
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-09-30T16:53:15Z",
-    "ageHours": 130.9,
+    "ageHours": 131,
     "ageDays": 5.5,
     "staleAfterDays": 14,
     "stale": false,
@@ -3130,7 +3122,7 @@
       "declared": {
         "definedIn": [
           "supabase/migrations/20261102000000_record_trade_atomic.sql:157",
-          "supabase/migrations/20261103000000_trades_slot_id.sql:89"
+          "supabase/migrations/20261103000000_trades_slot_id.sql:101"
         ],
         "latestDefinition": "supabase/migrations/20261103000000_trades_slot_id.sql",
         "redefinitions": 2
@@ -3152,7 +3144,7 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261103000000_trades_slot_id.sql",
-        "line": 89
+        "line": 101
       }
     },
     {
@@ -9007,8 +8999,8 @@
       "callSites": [
         "supabase/migrations/20261102000000_record_trade_atomic.sql:252",
         "supabase/migrations/20261102000000_record_trade_atomic.sql:254",
-        "supabase/migrations/20261103000000_trades_slot_id.sql:190",
-        "supabase/migrations/20261103000000_trades_slot_id.sql:192"
+        "supabase/migrations/20261103000000_trades_slot_id.sql:202",
+        "supabase/migrations/20261103000000_trades_slot_id.sql:204"
       ]
     },
     {
@@ -9022,9 +9014,9 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261102000000_record_trade_atomic.sql:282",
-        "supabase/migrations/20261103000000_trades_slot_id.sql:220",
-        "supabase/migrations/20261103000000_trades_slot_id.sql:246",
-        "supabase/migrations/20261103000000_trades_slot_id.sql:252"
+        "supabase/migrations/20261103000000_trades_slot_id.sql:232",
+        "supabase/migrations/20261103000000_trades_slot_id.sql:258",
+        "supabase/migrations/20261103000000_trades_slot_id.sql:264"
       ]
     },
     {
@@ -9038,7 +9030,7 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261102000000_record_trade_atomic.sql:223",
-        "supabase/migrations/20261103000000_trades_slot_id.sql:161"
+        "supabase/migrations/20261103000000_trades_slot_id.sql:173"
       ]
     },
     {
@@ -9052,7 +9044,7 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261102000000_record_trade_atomic.sql:214",
-        "supabase/migrations/20261103000000_trades_slot_id.sql:152"
+        "supabase/migrations/20261103000000_trades_slot_id.sql:164"
       ]
     },
     {
@@ -9067,8 +9059,8 @@
       "callSites": [
         "supabase/migrations/20261102000000_record_trade_atomic.sql:237",
         "supabase/migrations/20261102000000_record_trade_atomic.sql:239",
-        "supabase/migrations/20261103000000_trades_slot_id.sql:175",
-        "supabase/migrations/20261103000000_trades_slot_id.sql:177"
+        "supabase/migrations/20261103000000_trades_slot_id.sql:187",
+        "supabase/migrations/20261103000000_trades_slot_id.sql:189"
       ]
     },
     {
@@ -9082,7 +9074,7 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261102000000_record_trade_atomic.sql:300",
-        "supabase/migrations/20261103000000_trades_slot_id.sql:258"
+        "supabase/migrations/20261103000000_trades_slot_id.sql:270"
       ]
     },
     {

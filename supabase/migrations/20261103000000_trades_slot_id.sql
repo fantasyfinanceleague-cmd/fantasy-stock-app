@@ -20,12 +20,24 @@
 --   1. trades.slot_id, nullable FK to league_draft_slots (mirrors
 --      drafts.slot_id), buy-only by CHECK. Write-once like funded_by_trade_id.
 --   2. record_trade_atomic gains p_slot_id, so the slot is written through the
---      same lock + compare-and-swap as the trade. Guards, all after CAS 4 so a
---      concurrent slot edit is ledger_changed (retry), not a refusal:
---        - a slot only rides on a BUY;
+--      same lock + compare-and-swap as the trade. Three guards:
+--        - a slot only rides on a BUY (a pure argument check, before the lock);
 --        - the slot must belong to THIS league;
 --        - a BUY in a league that HAS slots must carry one.
---      The last guard is what keeps the NULL discipline true going forward.
+--      The last two sit after CAS 4 on purpose: a slot edited or deleted since
+--      the validator read is ledger_changed (retry), not a refusal. A slot
+--      deleted in the microseconds between those reads and the INSERT fails
+--      the slot_id FK (23503); the INSERT block maps that, by constraint name,
+--      to the same ledger_changed. The last guard is what keeps the NULL
+--      discipline true going forward.
+--
+-- A NOTE ON #113's HEADER ("content is immutable ... the id set IS the
+-- content"): ON DELETE SET NULL on trades.slot_id is an UPDATE of existing
+-- trades rows that does not change the id set. That is safe: a slot delete
+-- changes the slot set (CAS 4 catches it for a buy), a sell never reads slots,
+-- and a stale slot id simply fails userSlotOccupancy's "known slot" test and is
+-- derived like a legacy row. (#113's file is applied; its header is not
+-- rewritten.)
 --
 -- NULL DISCIPLINE (CLAUDE.md "overloaded NULLs are type tags, and you cannot
 -- fill them in"): after this migration + the record-trade deploy, a BUY in a
@@ -286,6 +298,17 @@ begin
       return jsonb_build_object('ok', false, 'reason', 'proceeds_unavailable');
     end if;
     raise;
+  when foreign_key_violation then
+    -- The slot was deleted between the guard/CAS reads above and this INSERT
+    -- (a commissioner's slot edit takes no lock). Nothing was written; the
+    -- slot set the validator read is stale, which is exactly ledger_changed:
+    -- record-trade re-reads and re-validates. Matched by NAME so a future FK
+    -- on trades can't be mislabeled.
+    get stacked diagnostics v_constraint = constraint_name;
+    if v_constraint = 'trades_slot_id_fkey' then
+      return jsonb_build_object('ok', false, 'reason', 'ledger_changed', 'changed', 'slots');
+    end if;
+    raise;
   end;
 
   return jsonb_build_object('ok', true, 'trade', to_jsonb(v_trade));
@@ -325,7 +348,8 @@ comment on function public."record_trade_atomic"(
 --    schema, the lockdown, that the old overload is gone, and that the new
 --    guards REFUSE (every call it makes is a refusal that returns before the
 --    insert). If prod has no completed slotted league the league-level guards
---    cannot be exercised and the verdict SAYS SO instead of passing silently.
+--    cannot be exercised, and the verdict is 'PARTIAL', never 'PASS': a clean
+--    read means ALL of it ran. PARTIAL = schema/lockdown/slot-on-sell only.
 --    (supabase/tests/record_trade_atomic.pglite.test.ts runs this exact block
 --    and proves PASS on this migration and FAIL when the guards or the
 --    lockdown are broken.)
@@ -397,7 +421,7 @@ comment on function public."record_trade_atomic"(
 --      ORDER BY l.id, m.user_id
 --      LIMIT 1;
 --     IF v_league IS NULL THEN
---       v_note := ' NOTE: league-level slot guards NOT exercised (no completed slotted league with a UUID member).';
+--       v_note := ' league-level slot guards NOT exercised (no completed slotted league with a UUID member)';
 --     ELSE
 --       SELECT coalesce(array_agg(t.id), '{}'::uuid[]) INTO v_trades FROM trades t WHERE t.league_id = v_league;
 --       SELECT coalesce(array_agg(d.id::text), '{}'::text[]) INTO v_drafts FROM drafts d WHERE d.league_id = v_league;
@@ -429,8 +453,10 @@ comment on function public."record_trade_atomic"(
 --         v_fail := v_fail || format(' trades %s -> %s (a refusal wrote a row);', v_before, v_after);
 --       END IF;
 --     END IF;
---     IF v_fail = '' THEN
---       RAISE EXCEPTION 'TIER_TRADE_SLOTS EFFECT TEST: PASS -- one 13-arg function, locked down, slot guards refuse.%', v_note;
+--     IF v_fail = '' AND v_note = '' THEN
+--       RAISE EXCEPTION 'TIER_TRADE_SLOTS EFFECT TEST: PASS -- one 13-arg function, locked down, every slot guard refuses.';
+--     ELSIF v_fail = '' THEN
+--       RAISE EXCEPTION 'TIER_TRADE_SLOTS EFFECT TEST: PARTIAL -- schema, lockdown and slot-on-sell OK;%', v_note;
 --     ELSE
 --       RAISE EXCEPTION 'TIER_TRADE_SLOTS EFFECT TEST: FAIL --%', v_fail;
 --     END IF;

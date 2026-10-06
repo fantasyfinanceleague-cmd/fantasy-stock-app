@@ -30,6 +30,7 @@ import {
   resolveFunding,
   SKIP_SYMBOL,
   type Slot,
+  slotAccepts,
   type TradeRow,
   userCashSpent,
   userNetHoldings,
@@ -1200,4 +1201,15 @@ Deno.test('coverageIsPartial: honors the named threshold constant', () => {
   const atThreshold = total * ENRICHMENT_COVERAGE_THRESHOLD; // 900
   assertEquals(coverageIsPartial(atThreshold, total), false, 'exactly at threshold displays');
   assertEquals(coverageIsPartial(atThreshold - 1, total), true, 'one below threshold suppresses');
+});
+
+Deno.test('slotAccepts: a price tierPrice cannot judge (NaN, ~1e19+) accepts NO slot — fail closed, never any-bracket', () => {
+  const bounded = slot('b', 0, { priceMin: 100, priceMax: 200 });
+  const open = slot('o', 1); // no bounds at all
+  for (const huge of [1e19, 1e21, 1e30, Number.MAX_VALUE]) {
+    assertEquals(slotAccepts(bounded, huge, NO_CATS), false, String(huge));
+    assertEquals(slotAccepts(open, huge, NO_CATS), false, `${huge} must not slip into an unbounded slot`);
+  }
+  // ordinary prices are unaffected, including a no-bounds slot
+  assertEquals(slotAccepts(open, 5, NO_CATS), true);
 });

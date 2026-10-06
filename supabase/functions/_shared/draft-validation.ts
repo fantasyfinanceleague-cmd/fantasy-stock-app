@@ -293,6 +293,10 @@ export function slotAccepts(slot: Slot, price: number, eligibility: Set<string>)
   // Tier judgement on the rounded price (cents), shared with the SQL pool search
   // and draft-feasibility.ts — see tier-price.ts.
   const p = tierPrice(price);
+  // Fail CLOSED on a non-finite judgement: tierPrice yields NaN for absurdly
+  // large prices (~1e19+, the decimal-string shift stringifies as "1e+21"), and
+  // NaN fails every `<` / `>` below, which would accept ANY bracket.
+  if (!Number.isFinite(p)) return false;
   if (slot.priceMin != null && p < slot.priceMin) return false;
   if (slot.priceMax != null && p > slot.priceMax) return false;
   if (slot.categoryId != null && !eligibility.has(slot.categoryId)) return false;

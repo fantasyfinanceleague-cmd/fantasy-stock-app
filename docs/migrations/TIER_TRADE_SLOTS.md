@@ -143,18 +143,38 @@ ORDER BY e.league_id, e.u, s.slot_index;
 ```
 
 ## Release steps (Giorgio only)
-1. #113's `20261102000000` must be applied FIRST (it creates the function this replaces).
-   Its first push failed on the CLI splitter; the fix is PR #115. This branch carries a local
-   cherry-pick of that fix (`7a8506c`) ONLY so the splitter guard runs; drop it when rebasing
-   onto a `main` that has #115.
-2. `supabase db push` from `/Users/giorgio/fantasy-stock-deploy` (refreshed first), market
-   closed if possible. Then verify by proacl + the effect check in the migration header
-   (one DO block, ends in RAISE PASS/FAIL, writes nothing).
-3. Deploy `record-trade` (`--project-ref haiaaifjcclsvmkfqgmd`) from the same checkout. Order matters:
-   the new function needs the 13-arg RPC; the old function keeps working against it for
-   non-slotted leagues, and slotted BUYS from the old function get `bad_request`→500 until the
-   new one is up (fails closed, on exactly the buggy path).
-4. Byte-verify: "Uploading asset" list includes `_shared/draft-validation.ts`, `_shared/tier-price.ts`,
-   `_shared/category-eligibility.ts`, `record-trade/commit.ts`; grep the source for
-   `userSlotOccupancy` first; then `supabase functions download record-trade --workdir <scratch>`
-   and diff against the commit.
+1. #113's `20261102000000` is applied (live in prod as of 2026-10-06, record-trade at `e49df95`); this migration replaces the function it created. The CLI-splitter guard (#115) already covers this file.
+2. Confirm `20261102000000` is applied: `SELECT version FROM supabase_migrations.schema_migrations WHERE version IN ('20261102000000','20261103000000');` (only the first should be present).
+3. `supabase db push --dry-run` from `/Users/giorgio/fantasy-stock-deploy` (refreshed first; merging to `main` auto-deploys the web app, so the merge is itself a prod deploy), confirm it lists only `20261103000000`, then `supabase db push`.
+4. Verify by proacl, never by the push output. Expect exactly ONE row: `pronargs = 13`, `service_role=X` and no anon/authenticated/bare `=X`, `prosecdef = false`, `provolatile = 'v'`, `proconfig = {"search_path=public, pg_temp",lock_timeout=5s}`:
+   ```sql
+   SELECT proname, pronargs, proacl, prosecdef, provolatile, proconfig
+     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND proname = 'record_trade_atomic';
+   SELECT conname, confdeltype FROM pg_constraint
+    WHERE conrelid = 'public.trades'::regclass AND conname IN ('trades_slot_id_fkey', 'trades_slot_id_buy_only');
+   ```
+   Expect `confdeltype = 'n'` (SET NULL) for the FK and the CHECK present.
+5. Effect check: paste the `DO $$ ... $$` block from the migration header (the "Effect check" step) as ONE statement. It writes nothing and always ends in an error whose text is the verdict: `PASS` = everything ran; `PARTIAL` = prod has no completed slotted league, so only schema/lockdown/slot-on-sell ran and the league guards are covered by PGlite only (that is NOT a clean PASS); `FAIL` lists what broke.
+6. Deploy `record-trade` ONLY after step 5: `supabase functions deploy record-trade --project-ref haiaaifjcclsvmkfqgmd` from the same checkout. Order matters: the new function needs the 13-arg RPC; the old function keeps working against it for non-slotted leagues, and slotted BUYS from the old function get `bad_request`→500 until the new one is up (fails closed, on exactly the buggy path). The reverse order (function before push) fails EVERY action closed until the push lands. If the first post-deploy call returns PGRST202, run `NOTIFY pgrst, 'reload schema';`.
+7. Byte-verify: grep the source for `p_slot_id` first; the "Uploading asset" list must include `_shared/draft-validation.ts`, `_shared/tier-price.ts`, `_shared/category-eligibility.ts`, `record-trade/commit.ts`; then `supabase functions download record-trade --workdir <scratch>` and diff against the commit.
+8. Refresh `docs/architecture/db-snapshot.json` (run `docs/architecture/db-snapshot.sql` against prod: a function/grant change), then `node scripts/gen-architecture.mjs`, and update `docs/STATUS.md`.
+
+## Review findings (supabase-reviewer + security-reviewer, no blockers)
+Fixed in this branch: a slot deleted between the guard reads and the INSERT (FK 23503) now returns
+`ledger_changed` (retry) instead of a 500; the effect-check reads `PARTIAL`, never `PASS`, when the
+league guards could not run; `slotAccepts` fails CLOSED on a price `tierPrice` cannot judge (it is NaN
+from ~1e19, and NaN accepted any bracket: reachable only via the advisory preview price hint, but the
+same fail-open sat in the draft gate); header wording.
+
+Deliberately NOT changed, for Giorgio:
+- **Commissioner slot writes are open post-draft** (`league_draft_slots_*_commissioner`, the "interim"
+  policies of `20260810000004`): slots are now the enforcement boundary for tier limits, so a commissioner
+  could retune or delete slots mid-season (a delete sets `trades.slot_id`/`drafts.slot_id` NULL and the
+  positions are re-derived). Pre-existing, but now load-bearing; the fix is separate (freeze slot writes
+  once `draft_status = 'completed'`, or route them through a function). The web `saveLeagueSlots` is a
+  delete + reinsert with new UUIDs and is only client-gated.
+- The refusal echoes the server's quote (`price`) for any symbol a member names (the 30/min rate limit and the
+  market-hours gate bound it; previously a failed buy returned only `symbol`). Kept: the client sentence needs it.
+- The RPC checks that a slot belongs to the league, not that it accepts the price or has room: the lockdown
+  (service_role only) + the TS validator + the CAS cover that, which is why the proacl check above is load-bearing.

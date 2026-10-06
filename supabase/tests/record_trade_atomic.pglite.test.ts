@@ -475,6 +475,25 @@ Deno.test({
         { ok: false, reason: 'ledger_changed', changed: 'slots' });
     });
 
+    await t.step('a slot deleted BETWEEN the guard reads and the INSERT -> FK 23503 is mapped to ledger_changed (not a 500); nothing written', async () => {
+      const { A, L, lo } = await TIER();
+      const s = expect(await readState(L, true));
+      // Simulates the commissioner's lock-free DELETE landing in the window: a
+      // test-only trigger removes the slot after the guards pass and before the
+      // FK is checked (FKs are checked at end of statement).
+      await db.exec(`
+        create function pg_temp.kill_slot() returns trigger language plpgsql as
+          $f$ begin delete from league_draft_slots where id = new.slot_id; return new; end $f$;
+        create trigger kill_slot before insert on trades for each row execute function pg_temp.kill_slot();`);
+      try {
+        assertEquals(await rpc(L, buy(A, 'MSFT'), { quantity: 1, fundedByTradeId: null, slotId: lo }, s),
+          { ok: false, reason: 'ledger_changed', changed: 'slots' });
+      } finally {
+        await db.exec(`drop trigger kill_slot on trades; drop function pg_temp.kill_slot();`);
+      }
+      assertEquals(await tradeCount(L), 0);
+    });
+
     await t.step('table: slot_id is buy-only (CHECK) and a deleted slot is SET NULL, not a cascade', async () => {
       const { A, L, lo } = await TIER();
       await assertRejects(
@@ -696,7 +715,7 @@ Deno.test({
       assert((await verdictOf(baseBlock)).includes(': PASS'));
     });
 
-    await t.step('effect check #slots (HUMAN ACTION DO block): PASS, NOTE when no slotted league, FAIL on each break, always rolls back', async () => {
+    await t.step('effect check #slots (HUMAN ACTION DO block): PASS, PARTIAL (never PASS) when no slotted league, FAIL on each break, always rolls back', async () => {
       const before = await allTrades();
       const pass = await verdictOf(slotBlock);
       assert(pass.startsWith('TIER_TRADE_SLOTS EFFECT TEST: PASS'), pass);
@@ -707,7 +726,8 @@ Deno.test({
       await db.exec(`begin; update leagues set draft_status = 'in_progress';`);
       const note = await verdictOf(slotBlock);
       await db.exec('rollback');
-      assert(note.startsWith('TIER_TRADE_SLOTS EFFECT TEST: PASS') && note.includes('NOT exercised'), note);
+      assert(note.startsWith('TIER_TRADE_SLOTS EFFECT TEST: PARTIAL') && note.includes('NOT exercised'), note);
+      assert(!note.includes(': PASS'), `a partial run must never read as PASS: ${note}`);
 
       // each break must turn the verdict to FAIL
       const breaks: Array<[string, () => Promise<void>, () => Promise<void>]> = [

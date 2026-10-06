@@ -487,3 +487,10 @@ Deno.test('slotPreview: only the CALLER\'s positions count (a neighbour\'s buy d
   });
   assertEquals((slotPreview(s, ME, 150).would_fill as { slot_id: string }).slot_id, LO.id);
 });
+
+Deno.test('slotPreview: a hostile price hint (~1e30, tierPrice -> NaN) reports no would_fill, not the first free slot', () => {
+  const p = slotPreview(tierState(), ME, 1e30);
+  assertEquals(p.would_fill, null);
+  // hi is held by NVDA in tierState(); lo is open but does not accept the price
+  assertEquals((p.open_slots as Array<{ slot_id: string }>).map((o) => o.slot_id), [LO.id]);
+});

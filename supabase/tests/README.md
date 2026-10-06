@@ -403,10 +403,12 @@ drops the 12-arg overload, adds `p_slot_id`) and drives it through the real
   two stocks in one tier is never stranded (sell either, then it reopens);
 - the three RPC slot guards (slot on a sell, a foreign slot, a slot-less buy in a slotted
   league) are `bad_request` and write nothing, and run AFTER the CAS;
+- a slot deleted between the guard reads and the INSERT (a test trigger simulates the
+  commissioner's lock-free DELETE) maps the FK error to `ledger_changed`, nothing written;
 - the table: `slot_id` buy-only CHECK, deleted slot is SET NULL;
 - both HUMAN ACTION effect-check DO blocks run verbatim: the #113 block against the
   13-arg function, and the new `TIER_TRADE_SLOTS EFFECT TEST` block, which must PASS,
-  say "NOT exercised" when no completed slotted league exists, and FAIL (writing
+  read PARTIAL (never PASS) when no completed slotted league exists, and FAIL (writing
   nothing) for each of: a removed guard (x3), EXECUTE leaked to authenticated, the
   12-arg overload left callable.
 
