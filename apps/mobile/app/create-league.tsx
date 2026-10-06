@@ -50,7 +50,6 @@ import {
   roundRobinCaption,
   seasonCheckCaption,
   stakesStepError,
-  stakesSummary,
   stepManagers,
   stepNumber,
   stepWeeks,
@@ -60,6 +59,7 @@ import {
 import { byeNoticeCopy } from '@/lib/game/draftLobby';
 import { PRICE_TIERS_NEED_A_SLOT, rosterSlotsCaption } from '@/lib/game/slotBuilderCopy';
 import { draftDateTimeLabel } from '@/lib/home/draftCountdown';
+import { stakesLine } from '@/lib/stakesLine';
 import { INVITE_CODE_LABEL } from '@/lib/home/homeCopy';
 import {
   CREATED_LINE,
@@ -505,12 +505,11 @@ export default function CreateLeagueWizard() {
           <RowDivider />
           <SettingRow
             label="Stakes"
-            value={stakesSummary({
-              label: STAKE_MODE_OPTIONS.find((o) => o.value === state.stakeMode)?.label ?? '',
-              stakeMode: state.stakeMode,
+            // The shared stakes line (Design Lead: one line across Join and this
+            // summary), with the amounts the insert writes.
+            value={stakesLine(state.stakeMode, {
               notionalPerSlot: parseInt(state.notionalPerSlot) || DEFAULT_NOTIONAL_PER_SLOT,
-              budgetCap: parseInt(state.budgetCap) || DEFAULT_BUDGET_CAP,
-              slotCount: state.slots.length,
+              budgetAmount: parseInt(state.budgetCap) || DEFAULT_BUDGET_CAP,
             })}
           />
           <RowDivider />

@@ -21,7 +21,6 @@ import {
   prevStep,
   seasonCheckCaption,
   stakesStepError,
-  stakesSummary,
   stepCaption,
   stepManagers,
   stepNumber,
@@ -167,13 +166,6 @@ Deno.test('rounds in create stay 3..12', () => {
   assertEquals(stepWithin(12, 1, 3, 12), 12);
   assertEquals(stepWithin(3, -1, 3, 12), 3);
   assertEquals(stepWithin(6, 1, 3, 12), 7);
-});
-
-Deno.test('the summary Stakes line: mode label · amount (Design Lead ruling)', () => {
-  assertEquals(stakesSummary({ label: 'Equal stakes', stakeMode: 'fixed_notional', notionalPerSlot: 1000, budgetCap: 2500, slotCount: 0 }), 'Equal stakes · $1,000 per slot');
-  assertEquals(stakesSummary({ label: 'Price tiers', stakeMode: 'price_tiers', notionalPerSlot: 1000, budgetCap: 2500, slotCount: 6 }), 'Price tiers · 6 slots');
-  assertEquals(stakesSummary({ label: 'Price tiers', stakeMode: 'price_tiers', notionalPerSlot: 1000, budgetCap: 2500, slotCount: 1 }), 'Price tiers · 1 slot');
-  assertEquals(stakesSummary({ label: 'Budget cap', stakeMode: 'budget_cap', notionalPerSlot: 1000, budgetCap: 2500, slotCount: 0 }), 'Budget cap · $2,500');
 });
 
 Deno.test('round-robin caption and the TBD line (Design Lead rulings)', () => {

@@ -144,21 +144,5 @@ export function stepWithin(value: number, direction: 1 | -1, min: number, max: n
 /** Under the Draft date row while it's TBD (Design Lead ruling). */
 export const DRAFT_DATE_LATER = 'Set a draft date before the draft can start. You can do it later in League settings.';
 
-/** The Summary card's Stakes line (Design Lead ruling): the mode's label from
- * STAKE_MODE_OPTIONS, a middle dot, then the amount or slot count.
- * "Equal stakes · $1,000 per slot", "Price tiers · 6 slots", "Budget cap · $2,500". */
-export function stakesSummary(input: {
-  label: string;
-  stakeMode: string;
-  notionalPerSlot: number;
-  budgetCap: number;
-  slotCount: number;
-}): string {
-  if (input.stakeMode === 'fixed_notional') return `${input.label} · $${input.notionalPerSlot.toLocaleString('en-US')} per slot`;
-  if (input.stakeMode === 'price_tiers') return `${input.label} · ${input.slotCount} slot${input.slotCount === 1 ? '' : 's'}`;
-  if (input.stakeMode === 'budget_cap') return `${input.label} · $${input.budgetCap.toLocaleString('en-US')}`;
-  return input.label;
-}
-
 /** The budget-cap presets, as before. */
 export const BUDGET_PRESETS: readonly string[] = ['1000', '2500', '5000', '10000'];
