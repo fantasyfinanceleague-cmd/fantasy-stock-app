@@ -14,6 +14,7 @@ import type { ShapedSearchResult } from '@/lib/symbolSearch';
 import { useDraftRoom } from '@/lib/game/useDraftRoom';
 import { managerAtPick, boardRows } from '@/lib/game/draftBoard';
 import { pickRowView, pickRefusalLine } from '@/lib/game/draftRoom';
+import { turnState } from '@/lib/game/draftRefusals';
 
 export interface DraftRoomProps {
   leagueId: string;
@@ -47,6 +48,7 @@ export function DraftRoom({ leagueId, myUserId, rounds }: DraftRoomProps) {
   // 0–3 s of jitter, to make the overdue pick. The server's deadline check and
   // idempotence decide; the room only shows what the server recorded.
   const autoAsked = useRef<number | null>(null);
+  const [stalledAt, setStalledAt] = useState<number | null>(null);
   const { refresh, clock } = room;
   useEffect(() => {
     if (clock.kind !== 'auto_picking' || m === 0) return;
@@ -55,6 +57,10 @@ export function DraftRoom({ leagueId, myUserId, rounds }: DraftRoomProps) {
     const jitter = Math.floor(Math.random() * 3000);
     const t = setTimeout(() => {
       void supabase.functions.invoke('validate-and-record-pick', { body: { league_id: leagueId, action: 'auto_pick', pick_number: onClockPick } })
+        .then(({ data }) => {
+          // A stalled turn (auto-pick found no legal stock) is shown as waiting, never as a pick.
+          if (data?.reason === 'stalled') setStalledAt(onClockPick);
+        })
         .finally(() => refresh());
     }, jitter);
     return () => clearTimeout(t);
@@ -104,7 +110,8 @@ export function DraftRoom({ leagueId, myUserId, rounds }: DraftRoomProps) {
 
   const rows = boardRows(room.order, rounds, room.picks, onClockPick);
   const log = Array.from(room.picks.entries()).sort((a, b) => b[0] - a[0]).slice(0, 8);
-  const headline = room.clock.kind === 'auto_picking' ? 'Auto-picking…' : isMyTurn ? "You're on the clock" : `${nameOf(onClockManager)} is up`;
+  const stalled = stalledAt === onClockPick ? turnState({ reason: 'stalled', pickNumber: onClockPick }) : null;
+  const headline = stalled ? (stalled.label ?? '') : room.clock.kind === 'auto_picking' ? 'Auto-picking…' : isMyTurn ? "You're on the clock" : `${nameOf(onClockManager)} is up`;
 
   return (
     <View style={styles.stack}>
@@ -118,6 +125,7 @@ export function DraftRoom({ leagueId, myUserId, rounds }: DraftRoomProps) {
         <Text variant="callout" style={isMyTurn ? { fontWeight: '700' } : undefined}>{headline}</Text>
         <Text variant="callout">{`Round ${round} · Pick ${onClockPick}`}</Text>
         <Text variant="caption" tone="secondary">{`${room.pickSeconds}-second picks`}</Text>
+        {stalled?.commissionerNotice ? <Text variant="caption" tone="secondary">{stalled.commissionerNotice}</Text> : null}
       </Card>
 
       <Card>
