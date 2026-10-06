@@ -212,8 +212,12 @@ function departedNames(b: Blocker): string[] {
   return d.map((x) => (typeof x?.name === 'string' ? x.name : '')).filter(Boolean);
 }
 
-/** A blocker as a whole clause (the board's phrases; the rest NEW, from the
- * backend's flagged list). Shown capitalised as the card's title. */
+/** When no clause fits (Design Lead ruling). */
+export const FALLBACK_CLAUSE = 'something in League settings needs fixing';
+
+/** A blocker as a whole clause (the Design Lead's list, board #call-auto-start
+ * strings box): each slots into "The draft room can't open yet: {clause}." and
+ * stands alone, capitalised, as a title in the blockers card. */
 export function blockerClause(b: Blocker): string {
   switch (b.code) {
     case 'roster_reconfirm_required': {
@@ -221,12 +225,12 @@ export function blockerClause(b: Blocker): string {
       if (names.length === 1) return `${names[0]} left the league`;
       if (names.length === 2) return `${names[0]} and ${names[1]} left the league`;
       const n = names.length || Number(b.membersBefore ?? 0) - Number(b.members ?? 0);
-      return n > 0 ? `${n} managers left the league` : 'something needs fixing';
+      return n > 0 ? `${n} managers left the league` : FALLBACK_CLAUSE;
     }
     case 'playoff_teams_exceeds_members':
       return typeof b.playoffTeams === 'number' && typeof b.members === 'number'
         ? `${b.playoffTeams} playoff teams, but ${b.members} teams are in`
-        : 'more playoff teams than teams';
+        : 'there are more playoff teams than teams';
     case 'not_enough_members':
       return `fewer than ${typeof b.need === 'number' ? b.need : 4} teams have joined`;
     case 'slots_infeasible':
@@ -234,13 +238,13 @@ export function blockerClause(b: Blocker): string {
     case 'budget_infeasible':
       return "the budget can't fill every roster";
     case 'no_stake_mode':
-      return 'the league has no stake mode';
+      return "the league's stakes aren't set";
     case 'invalid_playoff_teams':
       return "the number of playoff teams isn't set";
     case 'renewal_replies_pending':
       return 'not every Season 1 player has answered';
     default:
-      return 'something needs fixing';
+      return FALLBACK_CLAUSE;
   }
 }
 
@@ -292,8 +296,8 @@ export const PICK_NEW_TIME_NOTE = "Fix these first. The new time needs at least 
 export const PICK_NEW_TIME_READY = "The new time needs at least an hour's notice.";
 /** The reconfirm choice didn't save. NEW copy. */
 export const RECONFIRM_NOT_SAVED = "Your choice wasn't saved. Try again.";
-/** The lobby's draft status read failed (the house "X didn't load" form, with Try again). NEW copy. */
-export const DRAFT_STATUS_LOAD_FAILED = "The draft status didn't load.";
+/** The lobby's draft status read failed (the house "X didn't load" form, with Try again; Design Lead ruling). */
+export const DRAFT_STATUS_LOAD_FAILED = "The draft lobby didn't load.";
 /** The new time didn't save, for a reason other than the three draft-time refusals. NEW copy. */
 export const NEW_TIME_NOT_SAVED = "The new draft time wasn't saved. Try again.";
 
@@ -348,7 +352,7 @@ export function pickerLine(ms: number, nowMs: number): { value: string; earliest
 export const EARLIEST_NOTE = '(the earliest you can pick: an hour from now)';
 export const PICKER_HELPER = 'The draft room opens 1 hour before, and the draft starts automatically.';
 
-/** Board DateAfterRoom: the Draft date row once the room is open. */
+/** Board DateAfterRoom: the Draft time row once the room is open. */
 export const DATE_LOCKED_AFTER_ROOM = 'The draft time can’t change once the draft room opens.';
 
 /** Is the draft time locked? Once the room opens and until the draft starts,
@@ -364,7 +368,7 @@ export function draftTimeRefusal(err: unknown): string | null {
   if (typeof m !== 'string') return null;
   if (m.startsWith('draft_time_locked')) return DATE_LOCKED_AFTER_ROOM;
   if (m.startsWith('draft_time_too_soon')) return 'Pick a time at least an hour from now.';
-  if (m.startsWith('draft_time_invalid')) return 'Pick a time on the quarter hour.';
+  if (m.startsWith('draft_time_invalid')) return 'Pick a time ending in :00, :15, :30 or :45.';
   return null;
 }
 

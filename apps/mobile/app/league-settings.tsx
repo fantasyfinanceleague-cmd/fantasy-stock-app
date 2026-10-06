@@ -281,7 +281,7 @@ export default function LeagueSettingsScreen() {
         </SetupCard>
         <SetupCard>
           <SettingRow
-            label="Draft date"
+            label="Draft time"
             value={draftDateValue}
             valueColor={draftDateTBD ? colors.warnText : undefined}
             sub={dateLocked ? DATE_LOCKED_AFTER_ROOM : undefined}

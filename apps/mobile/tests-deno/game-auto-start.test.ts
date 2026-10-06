@@ -10,6 +10,7 @@
 import { assertEquals } from 'jsr:@std/assert';
 import {
   COMMISSIONER_FALLBACK,
+  DRAFT_STATUS_LOAD_FAILED,
   DATE_LOCKED_AFTER_ROOM,
   EARLIEST_NOTE,
   INVITE_SOMEONE_NEW,
@@ -225,12 +226,13 @@ Deno.test('the other blocker clauses (backend list), and the fallback', () => {
   assertEquals(blockerClause({ code: 'roster_reconfirm_required', departed: [{ name: 'Sofia F.' }, { name: 'Ana P.' }] }), 'Sofia F. and Ana P. left the league');
   assertEquals(blockerClause({ code: 'roster_reconfirm_required', departed: [{ name: 'A' }, { name: 'B' }, { name: 'C' }] }), '3 managers left the league');
   assertEquals(blockerClause({ code: 'roster_reconfirm_required', departed: [], membersBefore: 8, members: 6 }), '2 managers left the league');
-  assertEquals(blockerClause({ code: 'playoff_teams_exceeds_members' }), 'more playoff teams than teams');
+  assertEquals(blockerClause({ code: 'playoff_teams_exceeds_members' }), 'there are more playoff teams than teams');
   assertEquals(blockerClause({ code: 'budget_infeasible' }), "the budget can't fill every roster");
-  assertEquals(blockerClause({ code: 'no_stake_mode' }), 'the league has no stake mode');
+  assertEquals(blockerClause({ code: 'no_stake_mode' }), "the league's stakes aren't set");
   assertEquals(blockerClause({ code: 'invalid_playoff_teams' }), "the number of playoff teams isn't set");
   assertEquals(blockerClause({ code: 'renewal_replies_pending' }), 'not every Season 1 player has answered');
-  assertEquals(blockerClause({ code: 'mystery' }), 'something needs fixing');
+  assertEquals(blockerClause({ code: 'mystery' }), 'something in League settings needs fixing');
+  assertEquals(blockerClause({ code: 'roster_reconfirm_required', departed: [] }), 'something in League settings needs fixing');
 });
 
 Deno.test('the card shows only blockers the commissioner can fix', () => {
@@ -301,7 +303,7 @@ Deno.test('the time is locked from the room opening until the start, except when
 Deno.test('the server\'s draft-time refusals, calm, never the raw message', () => {
   assertEquals(draftTimeRefusal({ message: "draft_time_locked: the draft room is open, so the draft time can't change" }), DATE_LOCKED_AFTER_ROOM);
   assertEquals(draftTimeRefusal({ message: 'draft_time_too_soon: pick a time at least an hour from now' }), 'Pick a time at least an hour from now.');
-  assertEquals(draftTimeRefusal({ message: 'draft_time_invalid: pick a time on the quarter hour' }), 'Pick a time on the quarter hour.');
+  assertEquals(draftTimeRefusal({ message: 'draft_time_invalid: pick a time on the quarter hour' }), 'Pick a time ending in :00, :15, :30 or :45.');
   assertEquals(draftTimeRefusal({ message: 'league_rules_locked: …' }), null);
   assertEquals(draftTimeRefusal(null), null);
 });
@@ -372,4 +374,15 @@ Deno.test('your position, once the order is set', () => {
   assertEquals(yourPickLine(['a', 'b', 'c', 'me'], 'me', ord), 'You pick 4th');
   assertEquals(yourPickLine(['a', 'b'], 'me', ord), null);
   assertEquals(yourPickLine(null, 'me', ord), null);
+});
+
+// ── Design Lead's final rulings (one term, "draft time"; the clause list) ──
+
+Deno.test('the lobby load failure and the clauses, as ruled', () => {
+  assertEquals(DRAFT_STATUS_LOAD_FAILED, "The draft lobby didn't load.");
+  assertEquals(COMMISSIONER_FALLBACK, 'The commissioner');
+  // Each clause slots into the at-risk push sentence.
+  const push = (c: string) => `The draft room can't open yet: ${c}.`;
+  assertEquals(push(blockerClause({ code: 'no_stake_mode' })), "The draft room can't open yet: the league's stakes aren't set.");
+  assertEquals(push(blockerClause({ code: 'playoff_teams_exceeds_members' })), "The draft room can't open yet: there are more playoff teams than teams.");
 });

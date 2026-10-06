@@ -390,7 +390,7 @@ export default function CreateLeagueWizard() {
 
       <SetupCard>
         <SettingRow
-          label="Draft date"
+          label="Draft time"
           value={draftDateValue}
           valueColor={state.draftDateTBD ? colors.warnText : undefined}
           onPress={() => {

@@ -10,7 +10,7 @@ import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { EARLIEST_NOTE, PICKER_HELPER, earliestDraftMs, pickerLine } from '@/lib/game/autoStart';
 
-// 3c-2 — the Draft date sheet (board #call-auto-start "Draft date sheet"):
+// 3c-2 — the Draft time sheet (board #call-auto-start "Draft time sheet"; one term, "draft time"):
 // 15-minute steps; the earliest time is an hour out (up to the next quarter
 // hour), and earlier times are greyed by the picker's minimum, so there's no
 // error to show; the wheel and the line below it are in ET. The caller keeps
@@ -51,7 +51,7 @@ export function DraftDateSheet({ visible, value, onChange, onSetLater, onClose, 
       <View style={styles.body}>
         <View style={styles.head}>
           <Text variant="title" accessibilityRole="header" style={styles.grow}>
-            Draft date
+            Draft time
           </Text>
           <Pressable onPress={onDone ?? onClose} accessibilityRole="button" style={styles.done} hitSlop={8}>
             <Text variant="callout" color={colors.accent} style={styles.bold}>

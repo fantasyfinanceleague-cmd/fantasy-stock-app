@@ -36,8 +36,8 @@ export function seedDraftDate(current: Date | null, now: Date): Date {
   return earliest;
 }
 
-/** Shown under the Draft date row when a date was chosen but none is set. NEW copy. */
-export const DRAFT_DATE_MISSING = 'Pick a draft date, or choose Set later.';
+/** Shown under the Draft time row when a time was chosen but none is set (Design Lead ruling: one term, "draft time"). */
+export const DRAFT_DATE_MISSING = 'Pick a draft time, or choose Set later.';
 
 export type DraftDateForSave = { ok: true; value: string | null } | { ok: false; error: string };
 

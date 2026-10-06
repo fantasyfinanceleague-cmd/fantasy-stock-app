@@ -134,3 +134,13 @@ Deno.test('League settings locks the time once the room opens (server start_stat
   assertEquals(settingsSrc.includes('draftTimeLocked(draftStatus.startState)'), true);
   assertEquals(settingsSrc.includes('sub={dateLocked ? DATE_LOCKED_AFTER_ROOM : undefined}'), true);
 });
+
+// ── One term: "draft time" (Design Lead ruling) ────────────────────────────
+
+Deno.test('the field error and the three places say "draft time"', () => {
+  assertEquals(DRAFT_DATE_MISSING, 'Pick a draft time, or choose Set later.');
+  assertEquals(createSrc.includes('label="Draft time"'), true);
+  assertEquals(settingsSrc.includes('label="Draft time"'), true);
+  assertEquals(/>\s*Draft time\s*</.test(sheetSrc), true);
+  for (const src of [createSrc, settingsSrc, sheetSrc]) assertEquals(src.includes('label="Draft date"'), false);
+});
