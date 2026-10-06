@@ -2257,7 +2257,7 @@
       <span className="ks-tag" style={{ color: 'var(--c-warn-text)' }}>{mode === 'choose' ? 'Needs you' : 'Waiting for a new manager'}</span>
       <span className="ks-callout" style={{ fontWeight: 700, color: 'var(--c-text)' }}>{mode === 'choose' ? `${RECON.left} left the league` : `Invite someone to take ${RECON.left}'s place`}</span>
       <span className="ks-caption" style={{ color: 'var(--c-text)' }}>{mode === 'choose'
-        ? `Move forward with ${RECON.teams} teams, or invite someone new to take their place. The draft can't start until you choose.`
+        ? `Move forward with ${RECON.teams} teams, or invite someone new to take their place. Choose before ${RECON.orderAt}, when the draft room opens, or the draft is postponed.`
         : 'Share the code. When someone joins, the draft is ready to go.'}</span>
       {mode === 'choose' ? (
         <div style={{ display: 'grid', gap: 8 }}>
@@ -2286,7 +2286,7 @@
             <span className="ks-title">Sat, Oct 3 · 7:00 PM ET</span>
             <span className="ks-score ks-num" style={{ fontSize: 40 }}>2d 06h 40m</span>
             <span className="ks-callout ks-muted">60-second picks · 6 rounds</span>
-            <span className="ks-callout" style={{ display: 'flex', gap: 8, alignItems: 'center' }}><span className="ks-dot" />Draft order set Sat 6:00 PM ET, once the teams are confirmed</span>
+            <span className="ks-callout" style={{ display: 'flex', gap: 8, alignItems: 'center' }}><span className="ks-dot" />The draft room opens Sat 6:00 PM ET</span>
           </GameCard>
         </div>
       </Device>
@@ -2489,11 +2489,11 @@
   // Sofia F. left before 6:00 PM, so a reconfirm is pending and 8 playoff
   // teams no longer fit 7 teams. All copy new.
   // ═════════════════════════════════════════════════════════════════════
-  const AS = { when: 'Sat, Oct 3 · 7:00 PM ET', t: '7:00 PM ET', room: '6:00 PM ET', grace: '7:15 PM ET', seat: K.SERIE_A.order.findIndex((m) => m.you) + 1 };
-  const LockPush = ({ time, label, body }) => (
+  const AS = { when: 'Sat, Oct 3 · 7:00 PM ET', t: '7:00 PM ET', room: '6:00 PM ET', seat: K.SERIE_A.order.findIndex((m) => m.you) + 1 };
+  const LockPush = ({ time, label, body, day = 'Saturday, October 3' }) => (
     <Device noTabs time={time} label={label} style={{ background: 'linear-gradient(160deg, #3B4F7A 0%, #1B2540 55%, #0E1426 100%)', color: '#fff' }}>
       <div style={{ position: 'relative', textAlign: 'center', color: '#fff', paddingTop: 16 }}>
-        <div style={{ fontSize: 17, fontWeight: 600, opacity: 0.9 }}>Saturday, October 3</div>
+        <div style={{ fontSize: 17, fontWeight: 600, opacity: 0.9 }}>{day}</div>
         <div style={{ fontSize: 84, fontWeight: 700, lineHeight: '90px', letterSpacing: '-2px' }}>{time}</div>
       </div>
       <div style={{ position: 'relative', margin: '28px 12px 0', padding: '12px 14px', borderRadius: 22, background: 'rgba(245, 246, 250, 0.82)', backdropFilter: 'blur(20px)', color: '#0D1B2E', display: 'grid', gridTemplateColumns: '38px 1fr', gap: 10 }}>
@@ -2544,14 +2544,13 @@
       </span>
     </div>
   );
-  /** The commissioner's blockers card. phase: 'risk' (T−1h..T) | 'grace' (★, T..T+15) | 'waiting' (A, no deadline) | 'missed'. */
+  /** The commissioner's blockers card (Giorgio, 2026-10-06: the gate is the
+   * room-open time, T−1h; still blocked then = postponed, no late start).
+   * phase: 'risk' (before the room opens) | 'postponed'. */
   const BlockersCard = ({ phase = 'risk' }) => {
-    const top = {
-      risk: ['Needs you before 7:00 PM ET', 'The draft can’t start yet', 'Fix these and it starts on time.'],
-      grace: ['Delayed', `The draft didn’t start at ${AS.t}`, `Fix these by ${AS.grace} and it starts right away.`],
-      waiting: ['Delayed', `The draft didn’t start at ${AS.t}`, 'It starts as soon as you fix these.'],
-      missed: ['Missed', 'The draft didn’t start', 'Pick a new draft time. Everyone sees it on their Home.'],
-    }[phase];
+    const top = phase === 'risk'
+      ? [`Needs you before ${AS.room}`, 'The draft can’t start yet', `Fix these before ${AS.room}, when the draft room opens. If they’re still open then, the draft is postponed.`]
+      : ['Postponed', 'The draft is postponed', `The league wasn’t ready at ${AS.room}. Fix these, then pick a new draft time.`];
     return (
       <div className="ks-card" role="alert" style={{ padding: '12px 14px', display: 'grid', gap: 10, background: 'var(--c-warn-tint)', borderColor: 'var(--c-warn-line)', boxShadow: 'none' }}>
         <span className="ks-tag" style={{ color: 'var(--c-warn-text)' }}>{top[0]}</span>
@@ -2559,70 +2558,55 @@
           <span className="ks-headline" style={{ fontWeight: 800, color: 'var(--c-text)' }}>{top[1]}</span>
           <span className="ks-caption" style={{ color: 'var(--c-text)' }}>{top[2]}</span>
         </span>
-        {phase === 'missed' ? <span className="ks-btn">Pick a new draft time</span> : (
+        <div className="ks-card" style={{ padding: '10px 12px', display: 'grid', gap: 8, boxShadow: 'none' }}>
+          <span className="ks-callout" style={{ fontWeight: 700 }}>Sofia F. left the league</span>
+          <span className="ks-btn" style={{ height: 40 }}>Move forward with 7</span>
+          <span className="ks-btn ks-btn--secondary" style={{ height: 40 }}>Invite someone new</span>
+        </div>
+        <div className="ks-card" style={{ padding: '10px 12px', display: 'grid', gap: 6, boxShadow: 'none' }}>
+          <span className="ks-callout" style={{ fontWeight: 700 }}>8 playoff teams, but 7 teams are in</span>
+          <Stepper8 />
+          <span className="ks-caption">Up to 7, one per team.</span>
+        </div>
+        {phase === 'postponed' ? (
           <>
-            <div className="ks-card" style={{ padding: '10px 12px', display: 'grid', gap: 8, boxShadow: 'none' }}>
-              <span className="ks-callout" style={{ fontWeight: 700 }}>Sofia F. left the league</span>
-              <span className="ks-btn" style={{ height: 40 }}>Move forward with 7</span>
-              <span className="ks-btn ks-btn--secondary" style={{ height: 40 }}>Invite someone new</span>
-            </div>
-            <div className="ks-card" style={{ padding: '10px 12px', display: 'grid', gap: 6, boxShadow: 'none' }}>
-              <span className="ks-callout" style={{ fontWeight: 700 }}>8 playoff teams, but 7 teams are in</span>
-              <Stepper8 />
-              <span className="ks-caption">Up to 7, one per team.</span>
-            </div>
+            <span className="ks-btn" style={{ opacity: 0.4 }} aria-disabled="true">Pick a new draft time</span>
+            <span className="ks-caption" style={{ color: 'var(--c-text)', textAlign: 'center' }}>Fix these first. The new time needs at least an hour's notice.</span>
           </>
-        )}
+        ) : null}
       </div>
     );
   };
   /** Commissioner's lobby with the blockers card. */
   function CommishBlocked({ phase = 'risk' }) {
-    const clock = { risk: '42:18', grace: '+03:41', waiting: '+03:41', missed: null }[phase];
     return (
       <Device game tab="league" label={`Draft lobby, commissioner, ${phase}`}>
-        <Head name={K.SERIE_A.name} chip={<span className="ks-chip">{phase === 'missed' ? 'Postponed' : phase === 'risk' ? 'Pre-draft' : 'Delayed'}</span>} />
+        <Head name={K.SERIE_A.name} chip={<span className="ks-chip">{phase === 'postponed' ? 'Postponed' : 'Pre-draft'}</span>} />
         <div className="ks-pad ks-stack" style={{ gap: 14 }}>
           <BlockersCard phase={phase} />
-          {clock && phase === 'risk' ? (
+          {phase === 'risk' ? (
             <div className="ks-raised" style={{ padding: 12, display: 'grid', gap: 2, textAlign: 'center' }}>
-              <span className="ks-tag">Draft starts in</span>
-              <span className="ks-score ks-num" style={{ fontSize: 36, lineHeight: '40px' }}>{clock}</span>
-              <span className="ks-caption ks-muted">Draft order: set as soon as the teams are confirmed.</span>
+              <span className="ks-tag">Draft room opens in</span>
+              <span className="ks-score ks-num" style={{ fontSize: 36, lineHeight: '40px' }}>58:12</span>
+              <span className="ks-caption ks-muted">The draft starts at {AS.t}.</span>
             </div>
           ) : null}
         </div>
       </Device>
     );
   }
-  /** Members while the draft is delayed or missed (Giulia V.'s phone). */
-  function MemberDelayed({ missed }) {
+  /** Members once the draft is postponed (Giulia V.'s phone). */
+  function MemberPostponed() {
     return (
-      <Device game tab="league" label={missed ? 'Draft lobby, member, postponed' : 'Draft lobby, member, delayed'}>
-        <Head name={K.SERIE_A.name} chip={<span className="ks-chip">{missed ? 'Postponed' : 'Delayed'}</span>} />
+      <Device game tab="league" label="Draft lobby, member, postponed">
+        <Head name={K.SERIE_A.name} chip={<span className="ks-chip">Postponed</span>} />
         <div className="ks-pad ks-stack" style={{ gap: 14 }}>
           <div className="ks-raised" style={{ padding: 16, display: 'grid', gap: 6, textAlign: 'center' }}>
-            <span className="ks-tag">{missed ? 'Draft postponed' : 'Draft delayed'}</span>
-            <span className="ks-title">{missed ? 'Roberto B. will pick a new time.' : 'Waiting on Roberto B.'}</span>
-            <span className="ks-caption ks-muted">{missed ? 'You’ll see it here and on your Home.' : 'It starts as soon as the league is ready.'}</span>
+            <span className="ks-tag">Draft postponed</span>
+            <span className="ks-title">Roberto B. will pick a new time.</span>
+            <span className="ks-caption ks-muted">You'll see it here and on your Home, with at least an hour's notice.</span>
           </div>
           <QueueBlock />
-        </div>
-      </Device>
-    );
-  }
-  /** Option C: the server fixed what it could and started the draft. */
-  function AutoFixed() {
-    return (
-      <Device game tab="league" label="Draft started after automatic fixes">
-        <Head name={K.SERIE_A.name} chip={<Chip kind="live">Drafting</Chip>} />
-        <div className="ks-pad ks-stack" style={{ gap: 14 }}>
-          <div className="ks-card" style={{ padding: '12px 14px', display: 'grid', gap: 6 }}>
-            <span className="ks-tag" style={{ color: 'var(--c-text-2)' }}>Changed so the draft could start</span>
-            <span className="ks-callout">The league moved forward with 7 teams, and playoff teams went from 8 to 7.</span>
-            <span className="ks-caption">Every team now makes the playoffs. You can lower it until the season starts.</span>
-          </div>
-          <span className="ks-title" style={{ color: 'var(--c-live-text)' }}>Round 1 · Pick 1 · 0:58 left</span>
         </div>
       </Device>
     );
@@ -2683,7 +2667,7 @@
     TierPortfolio, TierReview, TierRefused,
     LeagueSettingsLeave, LeaveSheet, CommishLeave, OrderAfterLeave, DepartedMatchup, DepartedStandings, DepartedBracket, LeaverLeague, LeaverSheet, LeaveRefused, LeaveRow, ReconfirmHome, ReconfirmStartBlocked, ReconfirmMember, LeaveOpenRow, LeaveFinished,
     JoinCode, JoinPreview, JoinDone, NotFound,
-    AutoLobby, CommishBlocked, MemberDelayed, AutoFixed, DateAfterRoom, DraftDatePicker, LockPush,
+    AutoLobby, CommishBlocked, MemberPostponed, DateAfterRoom, DraftDatePicker, LockPush,
     DraftRefused, StartBlocked, DraftStalled, StallPush,
     RibHome, RibLeague, RibPush, RibMemberPrompt, RibHomeCounts, RibReconcile, RibMemberList, RibResolve, RibReview, RibHistory,
     WebHome, WebPortfolio, WebSettings,

@@ -140,19 +140,19 @@
           <Fit caption="Matchup before the season"><I.MatchupPreSeason /></Fit>
           <Fit caption="Draft lobby · order revealed" note="After 6:00 PM ET: the full order, your slot, and the snake picks that follow (new copy)"><I.DraftLobby /></Fit>
           <Fit caption="Draft lobby · still waiting" note="Past 6:00 PM ET but only 3 of 4 managers: set as soon as one more joins (new copy)"><I.DraftLobby waiting /></Fit>
-          <Fit caption="Start the draft · not enough managers" note="Needs 4; invite one more (new copy) Superseded by auto-start (see “Your call: the draft starts by itself”)."><I.StartDraftConfirm managers={3} /></Fit>
+          <Fit caption="Start the draft · not enough managers" note="Needs 4; invite one more (new copy) Superseded by auto-start (see “The draft starts by itself”)."><I.StartDraftConfirm managers={3} /></Fit>
           <Fit caption="Arrange order (commissioner, Manual)" note="Drag to reorder; starts from a random order, never commissioner-first; set by 1 hour before the draft (new copy)"><I.ArrangeOrder /></Fit>
           <Fit caption="Draft order · final" note="After 6:00 PM ET: read-only; late joiners pick last (new copy)"><I.ArrangeOrder locked /></Fit>
           <Fit caption="Push · draft order set (random)" note="At 6:00 PM ET in either mode, plus an in-app card (new copy)"><I.OrderPush /></Fit>
           <Fit caption="Push · draft order set (manual)"><I.OrderPush mode="manual" /></Fit>
-          <Fit caption="Start the draft (commissioner)" note="Office League: 7 managers, 10 weeks, so the uneven-bye heads-up shows (new copy) Superseded by auto-start (see “Your call: the draft starts by itself”)."><I.StartDraftConfirm /></Fit>
-          <Fit caption="Start the draft · too many playoff teams" note="7 playoff teams, 6 managers: fix it right here; Start stays disabled until it fits (new copy) Superseded by auto-start (see “Your call: the draft starts by itself”)."><I.StartDraftConfirm managers={6} playoff={7} /></Fit>
+          <Fit caption="Start the draft (commissioner)" note="Office League: 7 managers, 10 weeks, so the uneven-bye heads-up shows (new copy) Superseded by auto-start (see “The draft starts by itself”)."><I.StartDraftConfirm /></Fit>
+          <Fit caption="Start the draft · too many playoff teams" note="7 playoff teams, 6 managers: fix it right here; Start stays disabled until it fits (new copy) Superseded by auto-start (see “The draft starts by itself”)."><I.StartDraftConfirm managers={6} playoff={7} /></Fit>
           <Fit caption="Create league · Season" note="Uneven-bye heads-up on the weeks control, based on the expected size (new copy)"><I.CreateSeason /></Fit>
           <Fit caption="Draft room · auto-picks" note="New copy: the banner, the Auto badge and the pick-log lines"><I.DraftAutoPick /></Fit>
           <Fit caption="Pick refused · a slot left unfillable" note="would_strand_slot. New copy. Generic when the server doesn't name who/which: 'Taking {stock} would leave another manager with no stock for one of their slots.'"><I.DraftRefused kind="strand" /></Fit>
           <Fit caption="Pick refused · budget for later picks" note="budget_reserve. New copy. Generic: '{stock} would leave too little budget for your remaining picks.'"><I.DraftRefused kind="budget" /></Fit>
-          <Fit caption="Start the draft · setup can't fill every slot" note="slots_infeasible + budget_infeasible (each shows only when it applies). New copy. Generic lines only: the setup check returns a reason code, no counts (security review). Superseded by auto-start (see “Your call: the draft starts by itself”). The two lines move into the blockers card."><I.StartBlocked /></Fit>
-          <Fit caption="Start the draft · check unavailable" note="feasibility_unavailable: Start stays disabled until the check runs. New copy. Superseded by auto-start (see “Your call: the draft starts by itself”)."><I.StartBlocked unavailable /></Fit>
+          <Fit caption="Start the draft · setup can't fill every slot" note="slots_infeasible + budget_infeasible (each shows only when it applies). New copy. Generic lines only: the setup check returns a reason code, no counts (security review). Superseded by auto-start (see “The draft starts by itself”). The two lines move into the blockers card."><I.StartBlocked /></Fit>
+          <Fit caption="Start the draft · check unavailable" note="feasibility_unavailable: Start stays disabled until the check runs. New copy. Superseded by auto-start (see “The draft starts by itself”)."><I.StartBlocked unavailable /></Fit>
           <Fit caption="Draft paused (should never happen)" note="Stalled turn, as members see it. New copy."><I.DraftStalled /></Fit>
           <Fit caption="Draft paused · commissioner" note="Same state for the commissioner, plus the push below. New copy."><I.DraftStalled commish /></Fit>
           <Fit caption="Push · draft paused (commissioner)" note="New copy."><I.StallPush /></Fit>
@@ -230,8 +230,8 @@
           <h3 className="b-sub">Q1 · The reconfirmation (decided, new frames)</h3>
           <div className="b-concepts b-concepts--three">
             <Fit caption="Before the lock · Leave league is open" note="The row says until when: the draft order time (T−1h)."><I.LeaveOpenRow /></Fit>
-            <Fit caption="1 · Commissioner Home: Needs you" note={`Giorgio's two choices as buttons: "Move forward with 7" (one fewer team) or "Invite someone new" (to replace). Also pushed to the commissioner. The countdown keeps running.`}><I.ReconfirmHome /></Fit>
-            <Fit caption="2 · What blocks the start (superseded)" note="Superseded by auto-start: there is no Start button. The same two choices now sit in the commissioner's blockers card (Your call: the draft starts by itself)."><I.ReconfirmStartBlocked /></Fit>
+            <Fit caption="1 · Commissioner Home: Needs you" note={`Giorgio's two choices as buttons: "Move forward with 7" (one fewer team) or "Invite someone new" (to replace). Also pushed to the commissioner. The deadline is the room-open time (6:00 PM ET); still unchosen then, the draft is postponed (see The draft starts by itself).`}><I.ReconfirmHome /></Fit>
+            <Fit caption="2 · What blocks the start (superseded)" note="Superseded by auto-start: there is no Start button. The same two choices now sit in the commissioner's blockers card (The draft starts by itself), with the room-open time as the deadline."><I.ReconfirmStartBlocked /></Fit>
             <Fit caption="3 · Invite someone new" note="The card turns into the invite. When someone joins, it clears on its own; the commissioner can still switch to moving forward."><I.ReconfirmHome mode="inviting" /></Fit>
             <Fit caption="Members meanwhile" note="Everyone else sees why the draft is waiting (on Giulia V.'s phone)."><I.ReconfirmMember /></Fit>
           </div>
@@ -300,67 +300,58 @@
           <header className="b-sec__head">
             <span className="b-sec__n b-sec__n--code">3c</span>
             <div>
-              <h2 id="call-auto-start-h">Your call: the draft starts by itself</h2>
-              <p className="b-job"><b>Decided by Giorgio (2026-10-06):</b> "the draft is not something that is started manually." It starts at the minute the commissioner set; the draft room opens an hour before. There's no Start button. Four decisions remain, from DRAFT_AUTO_START_PLAN.md (feat/draft-auto-start). ★ marks the worker's recommendation. Sample: Serie A Traders, draft {'Sat, Oct 3 · 7:00 PM ET'}. Sofia F. left before 6:00 PM, so the teams aren't confirmed and 8 playoff teams no longer fit 7 teams. All copy here is new.</p>
+              <h2 id="call-auto-start-h">The draft starts by itself (decided)</h2>
+              <p className="b-job"><b>Decided by Giorgio (2026-10-06).</b> The draft starts at the minute the commissioner set; the room opens an hour before; there's no Start button. <b>The gate is the room-open time:</b> if the league still isn't ready an hour before, the room doesn't open, the draft is postponed for everyone, and the commissioner fixes it and picks a new time. There's no late start. Sample: Serie A Traders, draft {'Sat, Oct 3 · 7:00 PM ET'}, room 6:00 PM ET. Sofia F. left, so the teams aren't confirmed and 8 playoff teams no longer fit 7 teams. All copy here is new.</p>
             </div>
           </header>
           <ul className="b-inv__notes">
-            <li><b>Superseded by this section:</b> every "Start the draft?" sheet (Start the draft, not enough managers, too many playoff teams, setup can't fill every slot, check unavailable) and the leave board's Q1 "What blocks the start". Their fix-it content moves into the commissioner's blockers card below.</li>
-            <li><b>The check runs an hour early:</b> when the room opens (when the order is set), the server checks everything. If something would block the start, the commissioner hears right then and has the full hour.</li>
-            <li><b>The phase comes from the server's clock</b> (scheduled, room open, due, delayed, missed, started), never the phone's, so a phone with the wrong time can't show the wrong state.</li>
+            <li><b>Rejected:</b> the 15-minute grace (★A+15), "start whenever it's fixed" (A) and the automatic fixes (C). Nothing starts late, and the server never changes league rules on its own.</li>
+            <li><b>Superseded by this section:</b> every "Start the draft?" sheet and the leave board's Q1 "What blocks the start". Their fix-it content lives in the commissioner's blockers card.</li>
+            <li><b>The phase comes from the server's clock</b> (scheduled, at risk, room open, started, postponed), never the phone's.</li>
+            <li><b>Draft times:</b> 15-minute steps, at least an hour ahead. Changing the time is refused once the room opens; a postponed draft is the one exception, since it needs a new time.</li>
+            <li><b>Pushes need the scheduler:</b> the room-open, at-risk, reminder and postponed pushes all ride the order-notify job, still in <code>migrations/deferred/</code>. No copy may promise them until it's live.</li>
           </ul>
 
-          <h3 className="b-sub">Everyone: the countdown (decided) · the on-time case, nobody left</h3>
+          <h3 className="b-sub">Everyone: the countdown · the on-time case</h3>
           <div className="b-concepts b-concepts--three">
-            <Fit caption="Before the room opens" note="The start time is the promise; the countdown is the reminder. Queue building is the thing to do."><I.AutoLobby phase="scheduled" /></Fit>
-            <Fit caption="Room open · order set (T−1h)" note="The order panel takes over (the existing order-set card and list)."><I.AutoLobby phase="open" /></Fit>
-            <Fit caption="At 0:00" note="The phone asks the server to start (any member's phone can); the server's 10-second sweep starts it anyway if nobody is watching."><I.AutoLobby phase="starting" /></Fit>
-            <Fit caption="Push · the draft started (everyone)" note="New and essential: nobody taps Start any more, so this is how people learn it began."><I.LockPush time="7:00" label="Push, draft started" body={`Your draft has started. You pick ${'4th'}.`} /></Fit>
+            <Fit caption="Before the room opens" note="The start time is the promise; the countdown is the reminder."><I.AutoLobby phase="scheduled" /></Fit>
+            <Fit caption="Room open · your position" note='"Draft room open · starts in …" with the order and "You pick 4th".'><I.AutoLobby phase="open" /></Fit>
+            <Fit caption="At 0:00" note="Any member's phone asks the server to start; the server's sweep starts it anyway if nobody is watching."><I.AutoLobby phase="starting" /></Fit>
+            <Fit caption="Push · the draft room is open (everyone, 6:00 PM)" note="With your position."><I.LockPush time="6:00" label="Push, draft room open" body="The draft room is open. You pick 4th. The draft starts at 7:00 PM ET." /></Fit>
+            <Fit caption="Push · the draft has started (everyone, 7:00 PM)"><I.LockPush time="7:00" label="Push, draft started" body="The draft has started. You pick 4th." /></Fit>
           </div>
 
-          <h3 className="b-sub">The commissioner, an hour ahead (decided)</h3>
+          <h3 className="b-sub">Before the room opens: the commissioner is warned</h3>
           <div className="b-concepts b-concepts--three">
-            <Fit caption="Push · at risk (commissioner, T−1h)" note="Only when something would block the start. Names the first blocker."><I.LockPush time="6:00" label="Push, draft at risk" body="Your draft can't start at 7:00 PM ET: Sofia F. left the league. Fix it in the lobby." /></Fit>
-            <Fit caption="Lobby · the blockers card" note="Each blocker carries its own fix: the reconfirm choices (from the leave board) and the playoff-teams stepper. Feasibility and stakes blockers use the same card with their existing lines."><I.CommishBlocked phase="risk" /></Fit>
+            <Fit caption="Push · as soon as the league is blocked" note="Here: when Sofia F. leaves, on Thursday."><I.LockPush time="3:12" day="Thursday, October 1" label="Push, draft at risk" body="The draft room can't open yet: Sofia F. left the league. Fix it before Sat 6:00 PM ET, or the draft is postponed." /></Fit>
+            <Fit caption="Push · reminder, about two hours before" note="Only if it's still blocked."><I.LockPush time="5:00" label="Push, at-risk reminder" body="One hour left to fix your league. If it isn't ready by 6:00 PM ET, the draft is postponed." /></Fit>
+            <Fit caption="Lobby · the blockers card" note="Each blocker carries its own fix: the reconfirm choices and the playoff-teams stepper. The countdown is to the room opening, the real deadline."><I.CommishBlocked phase="risk" /></Fit>
           </div>
 
-          <h3 className="b-sub">Decision 1 · still blocked at 7:00 PM</h3>
+          <h3 className="b-sub">Still blocked at 6:00 PM: postponed for everyone</h3>
           <div className="b-concepts b-concepts--three">
-            <Fit caption="★ A + 15 min, then B · commissioner" note='Fixed by 7:15 PM ET: it starts right away. The deadline is a time, not "soon".'><I.CommishBlocked phase="grace" /></Fit>
-            <Fit caption="★ · members, delayed" note="No push (Decision 2); the lobby says who it's waiting on."><I.MemberDelayed /></Fit>
-            <Fit caption="★ after 7:15 PM, or B at once · commissioner" note="Missed: one action, a new time (at least an hour out, so the room, order and lock repeat)."><I.CommishBlocked phase="missed" /></Fit>
-            <Fit caption="★ after 7:15 PM, or B · members" note="Postponed, with who decides the new time."><I.MemberDelayed missed /></Fit>
-            <Fit caption="A · start whenever it's fixed" note="No deadline: a fix at 3 a.m. starts a draft nobody attends, and every pick is auto-picked."><I.CommishBlocked phase="waiting" /></Fit>
-            <Fit caption="C · auto-fix, then start" note='What C does to this league: "move forward with 7" plus clamping playoff teams to 7 means every team makes the playoffs. The rules changed and the commissioner finds out afterwards.'><I.AutoFixed /></Fit>
+            <Fit caption="Push · postponed (everyone)" note="Members get this one; the commissioner gets their own version (in the strings list below)."><I.LockPush time="6:00" label="Push, draft postponed" body="The draft is postponed. Roberto B. will pick a new time." /></Fit>
+            <Fit caption="Commissioner · postponed" note="Fix first, then a new time with at least an hour's notice; the room-open check runs again before it."><I.CommishBlocked phase="postponed" /></Fit>
+            <Fit caption="Members · postponed" note="Who decides, and how much notice they'll get."><I.MemberPostponed /></Fit>
           </div>
 
-          <h3 className="b-sub">Decision 2 · who hears about a delay</h3>
+          <h3 className="b-sub">Draft time (decided)</h3>
           <div className="b-concepts b-concepts--three">
-            <Fit caption="Commissioner · blocked at 7:00 (both options)" note="Always pushed."><I.LockPush time="7:00" label="Push, draft blocked" body={`Your draft didn't start: Sofia F. left the league. Fix it by ${'7:15 PM ET'} and it starts right away.`} /></Fit>
-            <Fit caption="Members · pushed on delay" note="Fires at 7:00 for a draft that may start at 7:02."><I.LockPush time="7:00" label="Push, draft delayed" body="The draft is delayed. Waiting on Roberto B." /></Fit>
-            <Fit caption="★ Members · pushed only when missed" note="Members in the lobby see the delay; everyone hears once the time really changes."><I.LockPush time="7:15" label="Push, draft postponed" body="The draft is postponed. Roberto B. will pick a new time." /></Fit>
-          </div>
-
-          <h3 className="b-sub">Decision 3 · changing the time once the room is open</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="★ Refused after the room opens" note="Except when the draft is missed, where a new time is the fix."><I.DateAfterRoom /></Fit>
-            <Fit caption="Allowed (postponing)" note="Members locked in at 6:00 PM on the promise of 7:00 stay locked for a time they never agreed to."><I.DateAfterRoom allow /></Fit>
-          </div>
-
-          <h3 className="b-sub">Decision 4 · how soon a draft can be set</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="Draft date sheet · an hour minimum" note="15-minute steps; times under an hour away are greyed out, so there's no error to show. ET throughout."><I.DraftDatePicker /></Fit>
+            <Fit caption="Draft date sheet" note="15-minute steps; times under an hour away are greyed out, so there's no error to show. The server quietly accepts 55 minutes, so a slow submit is never refused."><I.DraftDatePicker /></Fit>
+            <Fit caption="After the room opens" note="The time can't change. A postponed draft is the exception: its room never opened."><I.DateAfterRoom /></Fit>
           </div>
 
           <div className="b-ask">
-            <h3>Your call · Design Lead agrees with ★ on all four</h3>
+            <h3>New push copy (flagged: new strings, all to Serie A Traders' members unless noted)</h3>
             <ul>
-              <li><b>1 · A with a 15-minute grace, then B.</b> The grace covers the common case (someone left; one tap fixes it) without moving the draft. A deadline people can read ("by 7:15 PM ET") is easier than "whenever". Plain A can start a draft at 3 a.m. that robots play. C changes league rules silently: in this sample it makes every team a playoff team.</li>
-              <li><b>2 · Push members only when missed.</b> A delay is usually minutes, and the people it affects are already in the lobby, where the banner says who it's waiting on. The "draft started" push to everyone is the one that can't be skipped.</li>
-              <li><b>3 · Refuse time changes after the room opens</b> (except when missed). From 6:00 PM, teams are locked in on the promise of 7:00; moving the time breaks that promise.</li>
-              <li><b>4 · An hour minimum, with invisible slack.</b> The picker never offers a time under an hour away (15-minute steps). The server accepts 55 minutes, so a slow submit is never refused for a time the picker showed. The user never sees the slack.</li>
-              <li><b>Not a design call:</b> plan decision 5 (a server-only <code>draft_status</code> trigger) is security. Recommend it ships in this release; it closes a direct-write bypass.</li>
-              <li><b>Precondition, flagged:</b> the room-open push and the at-risk push both ride the order-notify job, which still sits in <code>migrations/deferred/</code>. Until it's live, no copy may promise them. Resolved: only LEAVING locks at T−1h; joining stays open until the draft starts and a late joiner picks last, so the order panel's "Anyone who joins now picks last." stays. A 4th joiner during the 15-minute grace can unblock the start.</li>
+              <li><b>Room open</b> (everyone, T−1h): "The draft room is open. You pick 4th. The draft starts at 7:00 PM ET."</li>
+              <li><b>Started</b> (everyone, T): "The draft has started. You pick 4th."</li>
+              <li><b>At risk</b> (commissioner, as soon as it's blocked): "The draft room can't open yet: {'{first blocker}'}. Fix it before {'{Sat 6:00 PM ET}'}, or the draft is postponed."</li>
+              <li><b>Reminder</b> (commissioner, about T−2h, only if still blocked): "One hour left to fix your league. If it isn't ready by {'{6:00 PM ET}'}, the draft is postponed."</li>
+              <li><b>Postponed</b> (members, T−1h): "The draft is postponed. {'{Commissioner}'} will pick a new time."</li>
+              <li><b>Postponed</b> (commissioner, T−1h): "The draft is postponed: the league wasn't ready at {'{6:00 PM ET}'}. Fix it, then pick a new time."</li>
+              <li><b>New time</b> (everyone, proposed, when a postponed draft gets its new time): "The draft is now {'{Sun, Oct 4 · 7:00 PM ET}'}."</li>
+              <li><b>Blocker phrases</b> for {'{first blocker}'} are whole clauses: "Sofia F. left the league"; "8 playoff teams, but 7 teams are in"; "fewer than 4 teams have joined"; "some slots can't be filled". Each is a full sentence on its own in the card.</li>
             </ul>
           </div>
         </section>
