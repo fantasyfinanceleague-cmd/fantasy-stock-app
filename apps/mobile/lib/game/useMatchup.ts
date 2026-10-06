@@ -12,6 +12,14 @@ import { resolveWeekWindow } from '../time/marketWeek';
 import { matchupView, type MatchupView } from './matchupPhase';
 import { buildMatchupLive, finalGains, type MatchupLiveViewModel } from './buildMatchupViewModel';
 import { matchupDays, type MatchupDay } from './matchupWindow';
+import { etDateParts } from '../time/etParts';
+
+/** Today's ET calendar date (YYYY-MM-DD): the trading day the chyron measures against. */
+function todayEt(now: Date): string {
+  const p = etDateParts(now);
+  if (!p) return '';
+  return `${p.year}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`;
+}
 
 export interface MatchupDerived {
   view: MatchupView;
@@ -53,5 +61,14 @@ export function useMatchup(leagueId: string | null) {
     };
   }, [home.viewModel, home.raw, user]);
 
-  return { status: home.status, error: home.error, refresh: home.refresh, derived, phase: home.viewModel?.phase ?? null };
+  return {
+    status: home.status,
+    error: home.error,
+    refresh: home.refresh,
+    derived,
+    phase: home.viewModel?.phase ?? null,
+    quote: home.raw?.quote ?? (() => null),
+    bars: home.raw?.bars ?? {},
+    todayIso: todayEt(new Date()),
+  };
 }

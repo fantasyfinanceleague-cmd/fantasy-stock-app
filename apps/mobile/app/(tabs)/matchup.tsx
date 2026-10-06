@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { space } from '@/constants/tokens';
@@ -9,6 +9,10 @@ import { PhasePlaceholder } from '@/components/shell/PhasePlaceholder';
 import { ShellHeader } from '@/components/shell/ShellHeader';
 import { BarsRefresh } from '@/components/shell/BarsRefresh';
 import { MatchScoreboard } from '@/components/game/MatchScoreboard';
+import { WeekRace } from '@/components/game/WeekRace';
+import { Chyron } from '@/components/sp/game/Chyron';
+import { useLeadChyron } from '@/lib/game/useLeadChyron';
+import { raceLayout } from '@/lib/game/raceLayout';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { useMatchup, type MatchupDerived } from '@/lib/game/useMatchup';
 import { nameOf } from '@/lib/game/buildMatchupViewModel';
@@ -36,12 +40,13 @@ export default function MatchupScreen() {
   const { activeLeagueId, activeLeague, refresh } = useLeagueContext();
   const { colors } = useTheme();
   const m = useMatchup(activeLeagueId);
+  const chyron = useLeadChyron(m.derived?.live ?? null, m.quote, m.bars, m.todayIso);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <ShellHeader title="Matchup" showAvatar />
       <BarsRefresh onRefresh={refresh} contentContainerStyle={{ paddingHorizontal: space[6], paddingBottom: space[9], gap: space[6] }}>
-        <MatchupBody status={m.status} derived={m.derived} phase={m.phase} onRefresh={m.refresh} leagueName={activeLeague?.name ?? ''} />
+        <MatchupBody status={m.status} derived={m.derived} phase={m.phase} onRefresh={m.refresh} leagueName={activeLeague?.name ?? ''} chyron={chyron} />
       </BarsRefresh>
     </View>
   );
@@ -53,10 +58,12 @@ interface BodyProps {
   phase: import('@/lib/home/homePhase').PhaseResult | null;
   onRefresh: () => Promise<void>;
   leagueName: string;
+  chyron: string | null;
 }
 
-function MatchupBody({ status, derived, phase, onRefresh }: BodyProps) {
+function MatchupBody({ status, derived, phase, onRefresh, chyron }: BodyProps) {
   const { user } = useAuth();
+  const { width } = useWindowDimensions();
   if (status === 'error') {
     return (
       <PhasePlaceholder title="Matchup" icon={(p) => <Ionicons name="alert-circle-outline" {...p} />} heading="Couldn't load this matchup" message="Pull down to try again." onRefresh={onRefresh} />
@@ -116,8 +123,10 @@ function MatchupBody({ status, derived, phase, onRefresh }: BodyProps) {
   });
   const note = isFinal ? null : unpricedNote(live.me.unpriced.length);
 
+  const raceWidth = width - space[6] * 2;
   return (
     <View style={styles.stack}>
+      {!isFinal ? <Chyron message={chyron} /> : null}
       <MatchScoreboard
         model={model}
         mineGain={mine}
@@ -127,6 +136,13 @@ function MatchupBody({ status, derived, phase, onRefresh }: BodyProps) {
         oppName={live.opp?.name ?? null}
         statusLine={isFinal ? 'Final' : `Week ${week}, live`}
       />
+      {!isFinal && live.opp && derived.days.length > 0 ? (
+        <WeekRace
+          layout={raceLayout({ days: derived.days.map((d) => d.date), mine: live.me.race, opp: live.opp.race })}
+          width={raceWidth}
+          a11yLabel="Week race: cumulative dollar gain by day"
+        />
+      ) : null}
       {note ? <Text variant="caption" tone="secondary">{note}</Text> : null}
       {!isFinal && live.opp ? (
         <View style={styles.lineups}>
