@@ -16,18 +16,20 @@ export interface TurnState {
   line: string | null;
 }
 
-/** A stalled turn is waiting, never a fake pick (board #game "Draft paused").
- * `managerName` is the manager on the clock; empty falls back to "the next
- * manager" (NEW, flagged: the board always names them). */
+/** A stalled turn is waiting, never a fake pick (board #game "Draft paused";
+ * the audit's Rule 8 table, ruled). `managerName` is the manager on the clock;
+ * with no name the headline is "No stock left fits the next open slot" (ruling:
+ * not "the next manager's next slot"). The commissioner's line drops "You've
+ * been notified;" (they are the one reading it). */
 export function turnState(input: { reason: string | null; pickNumber: number; managerName?: string; isCommissioner?: boolean }): TurnState {
   if (input.reason === 'stalled') {
-    const who = input.managerName?.trim() || 'the next manager';
+    const who = input.managerName?.trim();
     return {
       kind: 'stalled',
       tag: 'Draft paused',
-      label: `No stock left fits ${who}'s next slot`,
+      label: who ? `No stock left fits ${who}'s next slot` : 'No stock left fits the next open slot',
       line: input.isCommissioner
-        ? "The clock is stopped and nobody is skipped. You've been notified; the draft continues once the slot can be filled."
+        ? 'The clock is stopped and nobody is skipped. The draft continues once the slot can be filled.'
         : 'The clock is stopped and nobody is skipped. The commissioner has been told.',
     };
   }

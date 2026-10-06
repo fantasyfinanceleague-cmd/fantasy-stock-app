@@ -16,16 +16,16 @@ Deno.test('a stalled turn, member view (board "Draft paused, member")', () => {
   });
 });
 
-Deno.test('a stalled turn, commissioner view (board "Draft paused, commissioner")', () => {
+Deno.test('a stalled turn, commissioner view (ruled: no "You\'ve been notified;", they are reading it)', () => {
   assertEquals(
     turnState({ reason: 'stalled', pickNumber: 14, managerName: 'Paolo M.', isCommissioner: true }).line,
-    "The clock is stopped and nobody is skipped. You've been notified; the draft continues once the slot can be filled.",
+    'The clock is stopped and nobody is skipped. The draft continues once the slot can be filled.',
   );
 });
 
-Deno.test('no manager name: "the next manager", never an empty possessive', () => {
-  assertEquals(turnState({ reason: 'stalled', pickNumber: 14, managerName: '  ' }).label, "No stock left fits the next manager's next slot");
-  assertEquals(turnState({ reason: 'stalled', pickNumber: 14 }).label, "No stock left fits the next manager's next slot");
+Deno.test('no manager name: "the next open slot" (ruling), never "the next manager\'s next slot"', () => {
+  assertEquals(turnState({ reason: 'stalled', pickNumber: 14, managerName: '  ' }).label, 'No stock left fits the next open slot');
+  assertEquals(turnState({ reason: 'stalled', pickNumber: 14 }).label, 'No stock left fits the next open slot');
 });
 
 Deno.test('a normal turn is not stalled and carries no copy', () => {
