@@ -110,3 +110,10 @@ export function buildNonReplySheet(input: {
     cancelIndex: actions.indexOf('cancel'),
   };
 }
+
+/** "Nudged Sat, Jan 17." from the last nudge's time (ET), the R7 sheet's second date. */
+export function nudgedLine(lastNudgedAtIso: string): string {
+  const d = new Date(lastNudgedAtIso);
+  const formatted = new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'America/New_York' }).format(d);
+  return `Nudged ${formatted}.`;
+}

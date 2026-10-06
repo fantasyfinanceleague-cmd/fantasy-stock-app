@@ -82,3 +82,9 @@ Deno.test('R7 inside 24 h: no nudge button, and the message says when it unlocks
   assertEquals(soon.destructiveIndex, 0);
   assertEquals(soon.cancelIndex, 1);
 });
+
+import { nudgedLine } from '../lib/game/renewal.ts';
+
+Deno.test('the nudged date reads like the asked date', () => {
+  assertEquals(nudgedLine('2026-01-17T14:00:00Z'), 'Nudged Sat, Jan 17.');
+});
