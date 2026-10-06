@@ -16,7 +16,8 @@ import { useDraftRoom } from '@/lib/game/useDraftRoom';
 import { QueueEditor } from './QueueEditor';
 import { DRAFT_ROOM_LOAD_FAILED, QUEUE_LOAD_FAILED } from '@/lib/game/draftQueueRead';
 import { managerAtPick, boardRows } from '@/lib/game/draftBoard';
-import { pickClockLabel, pickRowView, pickRefusalLine, pickRefusalNextStep, picksUntilYouLine, roundPickLine } from '@/lib/game/draftRoom';
+import { budgetLeftLine, myDraftedSoFar, pickClockLabel, pickRowView, pickRefusalLine, pickRefusalNextStep, picksUntilYouLine, roundPickLine } from '@/lib/game/draftRoom';
+import { TeamSoFarGrid } from '@/components/home/TeamSoFarGrid';
 import { picksUntilTurn } from '@/lib/home/draftTurn';
 import { readFunctionRefusal } from '@/lib/functionRefusal';
 import { turnState } from '@/lib/game/draftRefusals';
@@ -27,13 +28,16 @@ export interface DraftRoomProps {
   rounds: number;
   /** The stalled-turn card's line differs for the commissioner (board "Draft paused"). */
   isCommissioner?: boolean;
+  /** leagues.stake_mode / budget_amount: a budget-cap league shows "Budget left $X" under your team. */
+  stakeMode?: string | null;
+  budgetAmount?: number | null;
 }
 
 /** The draft room (3c, key screen 4): the clock, the snake board, the pick log,
  * search and the one-tap Draft, and the auto-pick backstop. A legacy SKIP row is
  * a plain row with a dash. Nothing is shown as a pick that the server did not
  * record. */
-export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false }: DraftRoomProps) {
+export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, stakeMode = null, budgetAmount = null }: DraftRoomProps) {
   const { colors } = useTheme();
   const room = useDraftRoom(leagueId);
   const [search, setSearch] = useState('');
@@ -50,6 +54,9 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false }
   const round = m > 0 ? Math.floor((onClockPick - 1) / m) + 1 : 0;
   const nameOf = (id: string | null) => (id && room.names[id]?.name) || '';
   const draftDone = m > 0 && room.pickCount >= totalPicks;
+  // UX rule 4: your team so far (Home's grid), and in a budget-cap league what's left.
+  const mine = myDraftedSoFar(room.picks, room.order, myUserId);
+  const budgetLine = stakeMode === 'budget_cap' ? budgetLeftLine(budgetAmount, mine.prices) : null;
   // UX rule 10: how far away your next pick is (the snake, from Home's draftTurn).
   const picksAway = m > 0 && myUserId ? picksUntilTurn(room.order, room.pickCount, rounds, myUserId) : -1;
 
@@ -188,6 +195,8 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false }
           ) : null}
         </Card>
       ) : null}
+
+      <TeamSoFarGrid symbols={mine.symbols} numRounds={rounds} footer={budgetLine} />
 
       <Card>
         <Text variant="tag" tone="secondary">Latest picks</Text>

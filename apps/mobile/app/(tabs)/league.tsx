@@ -258,6 +258,8 @@ function LeagueDraftRoom({ leagueId, rounds }: { leagueId: string; rounds: numbe
           rounds={rounds}
           // The same commissioner check as the settings row (a missing id never matches).
           isCommissioner={showsLeagueSettingsRow(activeLeague?.commissioner_id, user?.id)}
+          stakeMode={activeLeague?.stake_mode ?? null}
+          budgetAmount={activeLeague?.budget_amount ?? null}
         />
       </BarsRefresh>
     </View>

@@ -16,7 +16,7 @@ import { nextQueueRead, type QueueRead } from './draftQueueRead';
 export interface RoomState {
   status: 'loading' | 'ready' | 'error';
   order: string[];
-  picks: Map<number, { symbol: string; source: string }>;
+  picks: Map<number, { symbol: string; source: string; price: number | null }>;
   pickCount: number;
   clock: ClockState;
   pickSeconds: number;
@@ -45,7 +45,7 @@ export function useDraftRoom(leagueId: string | null): RoomState {
         const [clockRes, orderRes, picksRes, namesRes, queueRes] = await Promise.all([
           seamRpc('get_draft_clock', { p_league_id: leagueId }),
           seamRpc('get_draft_order', { p_league_id: leagueId }),
-          seamTable('drafts', () => supabase.from('drafts').select('pick_number, symbol, pick_source').eq('league_id', leagueId)),
+          seamTable('drafts', () => supabase.from('drafts').select('pick_number, symbol, pick_source, entry_price').eq('league_id', leagueId)),
           seamRpc('get_league_display_names', { p_league_id: leagueId }),
           seamTable<{ symbol: string; position: number }>('draft_queue', () => supabase.from('draft_queue').select('symbol, position').eq('league_id', leagueId).order('position')),
         ]);

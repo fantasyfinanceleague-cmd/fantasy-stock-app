@@ -175,3 +175,47 @@ Deno.test('the room renders both lines (source guard)', () => {
   assertEquals(room.includes('roundPickLine(round, rounds, onClockPick)'), true);
   assertEquals(room.includes('!isMyTurn && picksUntilYouLine(picksAway)'), true);
 });
+
+// ── UX rule 4: your team in the room (Home's grid), and the budget left ──
+
+import { budgetLeftLine, myDraftedSoFar } from '../lib/game/draftRoom.ts';
+import { indexPicks } from '../lib/game/draftBoard.ts';
+
+Deno.test('your picks, in pick order, from the snake (4 teams, you are seat 2); a SKIP row is not a stock', () => {
+  const picks = indexPicks([
+    { pick_number: 1, symbol: 'MSFT', pick_source: 'manual', entry_price: 421 },
+    { pick_number: 2, symbol: 'NVDA', pick_source: 'manual', entry_price: '318.37' },
+    { pick_number: 7, symbol: 'AAPL', pick_source: 'auto_queue', entry_price: 211.42 },
+    { pick_number: 10, symbol: 'SKIP', pick_source: 'skip', entry_price: null },
+    { pick_number: 3, symbol: 'META', pick_source: 'manual', entry_price: 508 },
+  ]);
+  const mine = myDraftedSoFar(picks, ['a', 'me', 'c', 'd'], 'me');
+  assertEquals(mine, { symbols: ['NVDA', 'AAPL'], prices: [318.37, 211.42] });
+});
+
+Deno.test('budget left: the cap minus what your picks cost, in dollars', () => {
+  assertEquals(budgetLeftLine(2500, [318.37, 211.42]), 'Budget left $1,970.21');
+  assertEquals(budgetLeftLine(2500, []), 'Budget left $2,500');
+  assertEquals(budgetLeftLine(1000, [600, 500]), 'Budget left $0'); // never negative
+});
+
+Deno.test('budget left is real or absent: no cap, or any unknown price, shows nothing', () => {
+  assertEquals(budgetLeftLine(null, [100]), null);
+  assertEquals(budgetLeftLine(undefined, [100]), null);
+  assertEquals(budgetLeftLine(2500, [100, null]), null);
+});
+
+Deno.test('indexPicks keeps the price as a number (or null), from a number or a numeric string', () => {
+  const p = indexPicks([
+    { pick_number: 1, symbol: 'A', pick_source: 'manual', entry_price: '12.5' },
+    { pick_number: 2, symbol: 'B', pick_source: 'manual' },
+    { pick_number: 3, symbol: 'C', pick_source: 'manual', entry_price: 'x' },
+  ]);
+  assertEquals([p.get(1)!.price, p.get(2)!.price, p.get(3)!.price], [12.5, null, null]);
+});
+
+Deno.test('the room and Home show the SAME team grid (source guard)', () => {
+  assertEquals(SOURCES['components/game/DraftRoom.tsx'].includes('<TeamSoFarGrid symbols={mine.symbols} numRounds={rounds} footer={budgetLine} />'), true);
+  assertEquals(SOURCES['components/home/DraftingCard.tsx'].includes('<TeamSoFarGrid symbols={myPicks} numRounds={numRounds} />'), true);
+  assertEquals(SOURCES['lib/game/useDraftRoom.ts'].includes("select('pick_number, symbol, pick_source, entry_price')"), true);
+});

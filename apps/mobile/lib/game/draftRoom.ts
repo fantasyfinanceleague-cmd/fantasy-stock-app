@@ -4,6 +4,8 @@
  * badge (every auto_%), and the clock state from the SERVER's deadline and
  * server time, so a skewed device clock never changes what the room says.
  */
+import { dollars } from '../stakesLine';
+import { managerAtPick } from './draftBoard';
 
 const PICK_LOG: Record<string, string> = {
   auto_queue: 'Auto-picked · from their queue',
@@ -63,6 +65,29 @@ export function roundPickLine(round: number, rounds: number, pick: number): stri
 export function picksUntilYouLine(picksAway: number): string | null {
   if (!(picksAway > 0)) return null;
   return `${picksAway} ${picksAway === 1 ? 'pick' : 'picks'} until you`;
+}
+
+/** Your drafted picks, in pick order (the snake's seats via managerAtPick). A
+ * legacy SKIP row is not a stock and never fills a slot. */
+export function myDraftedSoFar(
+  picks: ReadonlyMap<number, { symbol: string; source: string; price?: number | null }>,
+  order: readonly string[],
+  userId: string,
+): { symbols: string[]; prices: (number | null)[] } {
+  const mine = [...picks.entries()]
+    .filter(([n, p]) => order.length > 0 && managerAtPick(n, order as string[]) === userId && p.source !== 'skip')
+    .sort((a, b) => a[0] - b[0]);
+  return { symbols: mine.map(([, p]) => p.symbol), prices: mine.map(([, p]) => p.price ?? null) };
+}
+
+/** "Budget left $1,240" in a budget-cap league (UX rule 4): the cap minus what
+ * your picks cost. Null when the cap or any pick's price is unknown: the number
+ * is real or absent, never estimated. */
+export function budgetLeftLine(budget: number | null | undefined, prices: readonly (number | null)[]): string | null {
+  if (typeof budget !== 'number' || !Number.isFinite(budget)) return null;
+  if (prices.some((p) => p === null)) return null;
+  const spent = prices.reduce<number>((sum, p) => sum + (p as number), 0);
+  return `Budget left ${dollars(Math.max(0, Math.round((budget - spent) * 100) / 100))}`;
 }
 
 /** The pick clock as m:ss (P0, Design Lead audit: it rendered `0:${secondsLeft}`,

@@ -36,7 +36,7 @@ Deno.test('indexPicks keys picks by overall number; a legacy SKIP row keeps its 
     { pick_number: 1, symbol: 'MSFT', pick_source: 'manual' },
     { pick_number: 2, symbol: 'SKIP', pick_source: 'skip' },
   ]);
-  assertEquals(m.get(1), { symbol: 'MSFT', source: 'manual' });
-  assertEquals(m.get(2), { symbol: 'SKIP', source: 'skip' });
+  assertEquals(m.get(1), { symbol: 'MSFT', source: 'manual', price: null });
+  assertEquals(m.get(2), { symbol: 'SKIP', source: 'skip', price: null });
   assertEquals(m.get(3), undefined);
 });

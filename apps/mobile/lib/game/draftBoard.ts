@@ -56,12 +56,17 @@ export interface DraftPickRow {
   pick_number: number;
   symbol: string;
   pick_source: string;
+  /** The price the pick was drafted at (budget-cap leagues read it); absent in old fixtures. */
+  entry_price?: number | string | null;
 }
 
 /** The picks keyed by overall pick number. A legacy SKIP row is kept (the board
  * lays it out as a plain row with a dash), but it never fills a cell's symbol. */
-export function indexPicks(rows: DraftPickRow[]): Map<number, { symbol: string; source: string }> {
-  const map = new Map<number, { symbol: string; source: string }>();
-  for (const r of rows) map.set(r.pick_number, { symbol: r.symbol, source: r.pick_source });
+export function indexPicks(rows: DraftPickRow[]): Map<number, { symbol: string; source: string; price: number | null }> {
+  const map = new Map<number, { symbol: string; source: string; price: number | null }>();
+  for (const r of rows) {
+    const p = r.entry_price == null ? null : Number(r.entry_price);
+    map.set(r.pick_number, { symbol: r.symbol, source: r.pick_source, price: p !== null && Number.isFinite(p) ? p : null });
+  }
   return map;
 }
