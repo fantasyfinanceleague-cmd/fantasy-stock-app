@@ -39,6 +39,9 @@ import { useAuth } from '@/lib/useAuth';
 import { buildStandingsRows } from '@/lib/game/standings';
 import { SettingRow, SetupCard } from '@/components/game/SetupRows';
 import { showsLeagueSettingsRow } from '@/lib/game/leagueSettingsEntry';
+import { QueueEditor } from '@/components/game/QueueEditor';
+import { useDraftQueue } from '@/lib/game/useDraftQueue';
+import { QUEUE_LOAD_FAILED } from '@/lib/game/draftQueueRead';
 
 // League (3c). The standings for a season in progress, the season over and
 // the playoffs. Standings order is the server's (league_standings_ranked,
@@ -236,6 +239,7 @@ function LeagueLobby({ leagueId }: { leagueId: string }) {
   const [startError, setStartError] = useState<string | null>(null);
   const [statusKey, setStatusKey] = useState(0);
   const ds = useDraftStatus(leagueId, true, statusKey);
+  const queue = useDraftQueue(leagueId);
 
   // The stepper writes the same leagues update League settings uses, then re-reads the status.
   const setPlayoffTeams = async (teams: number) => {
@@ -280,6 +284,17 @@ function LeagueLobby({ leagueId }: { leagueId: string }) {
             now={new Date()}
           />
         )}
+        {/* Board (Draft lobby · "Your queue"): build the queue before the draft,
+            so auto-pick has it from the first pick. Never seeded from a failed
+            read (draftQueueRead.ts): the save replaces the whole list. */}
+        {queue.status === 'ready' ? (
+          <QueueEditor key={queue.version} leagueId={leagueId} initial={queue.queue} onSaved={queue.refresh} />
+        ) : queue.status === 'error' ? (
+          <Card style={styles.queueFailed}>
+            <Text variant="callout">{QUEUE_LOAD_FAILED}</Text>
+            <Button label="Try again" variant="secondary" size="sm" onPress={queue.refresh} />
+          </Card>
+        ) : null}
         {ds.isCommissioner ? (
           confirming ? (
             <View style={styles.stack}>
@@ -317,4 +332,5 @@ function LeagueLobby({ leagueId }: { leagueId: string }) {
 
 const styles = StyleSheet.create({
   stack: { gap: space[3] },
+  queueFailed: { borderRadius: 14, padding: space[5], gap: space[3], alignItems: 'flex-start' },
 });
