@@ -187,7 +187,7 @@ Keep **League settings** reachable from the League tab, as today. **Remove its "
 - commissioner: "The clock is stopped and nobody is skipped. You've been notified; the draft continues once the slot can be filled."
 The header chip reads "Paused". No auto-pick and no skip while paused; show the clock as stopped, not counting.
 
-**Commissioner push:** "{League}: The draft is paused: no stock left fits {Name}'s next slot." Use the in-app notification for the same text.
+**Commissioner push:** the title is the league name, and the body is "The draft is paused: no stock left fits {Name}'s next slot." Use the in-app notification for the same text.
 
 **Tone rules:** plain and specific, no blame ("would leave", not "you can't"). Never "error" or "invalid". Refusals appear instantly (§4) and never look like success. Map unknown reasons to the generic draft-refusal line, never a raw code.
 
