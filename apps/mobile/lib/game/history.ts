@@ -60,3 +60,16 @@ export function season1Order(rows: HistoryRow[]): string[] {
   if (!first || !first.final_standings) return [];
   return first.final_standings.slice().sort((a, b) => a.rank - b.rank).map((s) => s.user_id);
 }
+
+/** R9: the champion banner for the season before this one, until its draft: the
+ * last finished season's champion and that champion's frozen record. Null when no
+ * season has finished, or when the champion is not in the frozen standings. */
+export function championBanner(rows: HistoryRow[]): { tag: string; line: string } | null {
+  const last = rows
+    .filter((r) => r.final_standings && r.final_standings.length > 0 && r.champion_user_id)
+    .sort((a, b) => b.season_number - a.season_number)[0];
+  if (!last || !last.final_standings) return null;
+  const champ = last.final_standings.find((s) => s.user_id === last.champion_user_id);
+  if (!champ) return null;
+  return { tag: `Season ${last.season_number} champion`, line: `${champ.display_name} · ${champ.wins}–${champ.losses}` };
+}

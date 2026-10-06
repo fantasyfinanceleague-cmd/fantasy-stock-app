@@ -20,6 +20,8 @@ import { DraftLobby } from '@/components/game/DraftLobby';
 import { DraftRoom } from '@/components/game/DraftRoom';
 import { LeagueRenewal } from '@/components/game/LeagueRenewal';
 import { HistoryList } from '@/components/game/HistoryList';
+import { ChampBanner } from '@/components/game/ChampBanner';
+import { championBanner } from '@/lib/game/history';
 import { useLeagueHistory } from '@/lib/game/useLeagueHistory';
 import { usePreDraftData } from '@/lib/home/usePreDraftData';
 import { StartDraftConfirm } from '@/components/game/StartDraftConfirm';
@@ -158,10 +160,13 @@ function LeagueRenewalScreen({ leagueId, createdAt }: { leagueId: string; create
   const { refresh, activeLeague } = useLeagueContext();
   const { colors } = useTheme();
   const [key, setKey] = useState(0);
+  const hist = useLeagueHistory(leagueId, true);
+  const banner = championBanner(hist.rows);
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <ShellHeader title="League" showAvatar />
       <BarsRefresh onRefresh={refresh} contentContainerStyle={{ paddingHorizontal: space[6], paddingBottom: space[9], gap: space[6] }}>
+        {banner ? <ChampBanner tag={banner.tag} line={banner.line} /> : null}
         <LeagueRenewal
           key={key}
           successorId={leagueId}

@@ -36,3 +36,13 @@ Deno.test('Season 1 order is the frozen final-standings rank, never a client sor
 Deno.test('with no finished season there is no Season 1 order, so the roster keeps the server\'s order', () => {
   assertEquals(season1Order([ROWS[0]]), []);
 });
+
+import { championBanner } from '../lib/game/history.ts';
+
+Deno.test('R9: the last finished season\'s champion, with the champion\'s own record from the frozen standings', () => {
+  assertEquals(championBanner(ROWS), { tag: 'Season 1 champion', line: 'Roberto B. · 11–3' });
+});
+
+Deno.test('R9: no finished season, no banner (never a made-up champion)', () => {
+  assertEquals(championBanner([ROWS[0]]), null);
+});
