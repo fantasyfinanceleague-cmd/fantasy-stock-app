@@ -4546,7 +4546,9 @@
    * phase: 'scheduled' | 'open' | 'starting' | 'risk' | 'postponed' | 'nodate'.
    * commish: the commissioner's phone (blockers card ON TOP of the draft card;
    * when postponed, the blockers card replaces it). */
-  function HomeAuto({ phase = 'scheduled', commish }) {
+  function HomeAuto({ phase = 'scheduled', commish, setFirst }) {
+    // setFirst (UX audit call B): the commissioner's no-time card leads with setting the time.
+    const setTimeLead = setFirst && commish && phase === 'nodate';
     // On time, nobody left (6 of 8, as the pre-draft Home); at risk / postponed, Sofia F. left.
     const members = ['scheduled', 'open', 'starting', 'nodate'].includes(phase) ? ['RB', 'MR', 'LC', 'SF', 'GV', 'TP'] : ['RB', 'MR', 'LC', 'GV', 'TP'];
     const clock = { scheduled: '2d 06h 40m', open: '42:18', starting: '00:00', risk: '1h 58m' }[phase];
@@ -4563,7 +4565,7 @@
         ) : phase === 'nodate' ? (
           <>
             <span className="ks-title">No draft time yet</span>
-            <span className="ks-callout ks-muted">{commish ? 'Set a draft time in League settings.' : 'Roberto B. will set the draft time.'}</span>
+            <span className="ks-callout ks-muted">{setTimeLead ? 'Pick a time, and the countdown starts here.' : commish ? 'Set a draft time in League settings.' : 'Roberto B. will set the draft time.'}</span>
           </>
         ) : (
           <>
@@ -4576,7 +4578,12 @@
         )}
         {phase === 'postponed' ? null : <span className="ks-callout ks-muted">60-second picks · 6 rounds</span>}
         {phase === 'scheduled' || phase === 'risk' ? <span className="ks-callout" style={{ display: 'flex', gap: 8, alignItems: 'center' }}><span className="ks-dot" />The draft room opens Sat 6:00 PM ET, when the order is set.</span> : null}
-        <span className="ks-btn ks-btn--ongame">{live ? 'Go to the draft room' : 'Build your queue'}</span>
+        {setTimeLead ? (
+          <>
+            <span className="ks-btn">Set draft time</span>
+            <span className="ks-btn ks-btn--secondary">Build your queue</span>
+          </>
+        ) : <span className="ks-btn ks-btn--ongame">{live ? 'Go to the draft room' : 'Build your queue'}</span>}
       </GameCard>
     );
     return (
@@ -4617,7 +4624,8 @@
     );
   }
   /** Decision 4: the draft date sheet, earliest time = now + 1 hour, 15-minute steps. */
-  function DraftDatePicker() {
+  /** variant 'B' (UX audit call): the confirm is the full-width bottom button; the header has Close. */
+  function DraftDatePicker({ variant = 'A' }) {
     const Col = ({ items, on, off = [] }) => (
       <div style={{ display: 'grid', gap: 2, textAlign: 'center' }}>
         {items.map((x) => <span key={x} className="ks-callout ks-num" style={{ padding: '6px 0', borderRadius: 8, fontWeight: x === on ? 800 : 500, background: x === on ? 'var(--c-sunken)' : undefined, color: off.includes(x) ? 'var(--c-text-3)' : undefined }}>{x}</span>)}
@@ -4626,7 +4634,7 @@
     return (
       <Device noTabs label="Draft time sheet" overlay={
         <Sheet top={300}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span className="ks-title">Draft time</span><span className="ks-callout" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Done</span></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span className="ks-title">Draft time</span>{variant === 'B' ? <span className="ks-muted"><Icon d={ICON.close} size={22} /></span> : <span className="ks-callout" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Done</span>}</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr 1fr', gap: 6 }}>
             <Col items={['Today', 'Tomorrow', 'Thu, Oct 1']} on="Today" />
             <Col items={['1', '2', '3']} on="3" off={['1', '2']} />
@@ -4635,7 +4643,12 @@
           </div>
           <span className="ks-callout"><b>Today · 3:15 PM ET</b> <span className="ks-muted">(the earliest you can pick: an hour from now)</span></span>
           <span className="ks-caption">The draft room opens 1 hour before, and the draft starts automatically.</span>
-          <span className="ks-btn ks-btn--secondary">Set later</span>
+          {variant === 'B' ? (
+            <>
+              <span className="ks-btn">Set draft time</span>
+              <span className="ks-callout" style={{ color: 'var(--c-accent)', fontWeight: 700, textAlign: 'center', minHeight: 44, display: 'grid', placeItems: 'center' }}>Set later</span>
+            </>
+          ) : <span className="ks-btn ks-btn--secondary">Set later</span>}
         </Sheet>
       }>
         <Back label="League" />
@@ -5030,6 +5043,42 @@
               <li><b>New time</b> (everyone, decided: every draft-time change pushes every member, including whoever changed it): "The draft is now {'{Sun, Oct 4 · 7:00 PM ET}'}."</li>
               <li><b>Blocker phrases</b> for {'{first blocker}'} are whole clauses: "Sofia F. left the league"; "Sofia F. and Ana P. left the league"; "3 managers left the league"; "a manager left the league" (no readable names); "8 playoff teams, but 7 teams are in" (or "there are more playoff teams than teams" when the counts aren't known); "the number of playoff teams isn't set"; "fewer than 4 teams have joined"; "some slots can't be filled"; "the budget can't fill every roster"; "the league's stakes aren't set"; "not every Season 1 player has answered"; fallback "something in League settings needs fixing". Members' fallback name: "The commissioner". In the card, each one stands as its own line.</li>
               <li><b>One word: draft time.</b> The settings row and the sheet are "Draft time" (not "Draft date"), matching "Pick a new draft time" and the pushes. Pushes about the draft time go to every member, including whoever changed it.</li>
+            </ul>
+          </div>
+        </section>
+
+        <section className="b-sec" id="call-ux-pass1" aria-labelledby="call-ux-pass1-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n b-sec__n--code">UX</span>
+            <div>
+              <h2 id="call-ux-pass1-h">Your call: two fixes from the UX audit</h2>
+              <p className="b-job">From the pass-1 audit against the UX rules (docs/design/reviews/ux-audit-2026-10.md). Both are about where the one action that matters sits. A is what 3c-2 builds today (the decided auto-start frames); B is the Design Lead's proposal. New copy is listed in the box at the end, never on the phone. Sample: Serie A Traders, Roberto B. is the commissioner.</p>
+            </div>
+          </header>
+          <ul className="b-inv__notes">
+            <li><b>Rule 3, reachable targets:</b> a screen's primary action sits in the bottom third or is full width. "Set draft time" is named in the rule.</li>
+            <li><b>Rule 10, leave a hook:</b> anything waiting on you stays on Home until it's done, and Home should let you do it, not send you to find it.</li>
+            <li>Neither changes a product rule: the 15-minute steps, the one-hour minimum and Set later all stay.</li>
+          </ul>
+
+          <h3 className="b-sub">1 · The draft time sheet: where is the confirm?</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="A · Done in the header (built)" note="The confirm is a small text link in the top corner, the hardest place to reach one-handed. The only full-width button is Set later, so the biggest target is the one that does NOT set a time."><I.DraftDatePicker /></Fit>
+            <Fit caption="★ B · Set draft time at the bottom" note="The confirm is the full-width button at the bottom, named for what it does. Close (×) dismisses without saving; Set later becomes a text button under it, still 44 pt tall. Where a time is required (a postponed draft), Set later is absent, as today."><I.DraftDatePicker variant="B" /></Fit>
+          </div>
+
+          <h3 className="b-sub">2 · Home, no draft time yet (commissioner)</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="A · Points to League settings (built)" note="The only thing blocking the league is the draft time, but the button builds your queue, and the line sends you to another tab to find the setting."><I.HomeAuto phase="nodate" commish /></Fit>
+            <Fit caption="★ B · Set draft time, right here" note="The primary opens the same Draft time sheet in place. Build your queue moves to secondary. Members' card is unchanged (Roberto B. will set the draft time + Build your queue)."><I.HomeAuto phase="nodate" commish setFirst /></Fit>
+          </div>
+
+          <div className="b-ask">
+            <h3>Your call · recommend B for both</h3>
+            <ul>
+              <li><b>1-B:</b> the action that commits the draft time becomes the biggest, lowest thing on the sheet, and its label says what it does. A swipe or × no longer half-saves a time you were still scrolling to (today the picker writes as it spins and Done only closes). Familiar: Calendar's new-event sheet confirms at the top, but our sheets confirm at the bottom everywhere else (Review sell, Join), so B is consistent with the rest of the app.</li>
+              <li><b>2-B:</b> the commissioner can finish the one task blocking the league in two taps from Home, without hunting for League settings. Members see no change.</li>
+              <li><b>New copy (flagged):</b> "Set draft time" (sheet button), "Pick a time, and the countdown starts here." and "Set draft time" (Home, the same words as the sheet). The countdown claim is true by your rule: it shows as soon as a draft time is set. No push is promised.</li>
             </ul>
           </div>
         </section>
@@ -5434,7 +5483,7 @@
             <div><dt>Stakes</dt><dd>$2,000 per slot · 6 slots</dd></div>
           </dl>
           <nav className="b-toc" aria-label="Screens">
-            {[['themes', 'Themes'], ['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['join-league', 'Join league'], ['not-found', 'Not found'], ['phases', 'Home phases'], ['game', 'Game'], ['run-it-back', 'Run it back'], ['call-leave', 'Leave call'], ['call-auto-start', 'Auto-start'], ['call-tier-trades', 'Tiers call'], ['money', 'Trading'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
+            {[['themes', 'Themes'], ['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['join-league', 'Join league'], ['not-found', 'Not found'], ['phases', 'Home phases'], ['game', 'Game'], ['run-it-back', 'Run it back'], ['call-leave', 'Leave call'], ['call-auto-start', 'Auto-start'], ['call-ux-pass1', 'UX calls'], ['call-tier-trades', 'Tiers call'], ['money', 'Trading'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
           </nav>
         </header>
 
