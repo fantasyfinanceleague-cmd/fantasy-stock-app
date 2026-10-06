@@ -4206,6 +4206,106 @@
     );
   }
 
+  // ═════════════════════════════════════════════════════════════════════
+  // JOIN A LEAGUE + NOT FOUND (2026-10-06): two 1.2.0 screens with no frame
+  // (docs/design/1.2.0-screen-inventory.md). All copy new. The joiner is
+  // Tommaso P., a new player with Roberto's code for Serie A Traders (6 of 8
+  // joined). The preview shows ONLY what preview-league returns: name,
+  // commissioner, member count, stakes, season length, draft date.
+  // ═════════════════════════════════════════════════════════════════════
+  const Spinner = () => <span aria-hidden="true" style={{ width: 16, height: 16, borderRadius: 8, border: '2px solid currentColor', borderRightColor: 'transparent', display: 'inline-block' }} />;
+  const JoinHead = () => (
+    <>
+      <Back label="Your leagues" />
+      <div className="ks-pad ks-stack" style={{ gap: 6, paddingBottom: 0 }}>
+        <h2 className="ks-head__title" style={{ fontSize: 28 }}>Join a league</h2>
+      </div>
+    </>
+  );
+  const PREVIEW = { name: K.SERIE_A.name, commish: 'Roberto B.', members: 6, max: 8, stakes: 'Equal stakes · $2,000 per slot', weeks: '10 weeks', draft: K.SERIE_A.draftAt };
+  /** Code entry: 'typing' | 'checking' | 'bad' (no league has the code). */
+  function JoinCode({ state = 'typing' }) {
+    const value = state === 'typing' ? 'SERIEA' : state === 'bad' ? 'SERIAE7' : 'SERIEA7';
+    return (
+      <Device noTabs label={`Join a league, ${state}`}>
+        <JoinHead />
+        <div className="ks-pad ks-stack">
+          <p className="ks-callout ks-muted" style={{ margin: 0 }}>Enter the invite code your commissioner sent you.</p>
+          <Field label="Invite code" value={value} focused={state !== 'checking'}
+            error={state === 'bad' ? 'No league has that code. Check it and try again.' : null} />
+          {state === 'checking' ? (
+            <span className="ks-btn" style={{ display: 'inline-flex', gap: 8, justifyContent: 'center', alignItems: 'center', opacity: 0.7 }}><Spinner />Finding league</span>
+          ) : null}
+        </div>
+        {state === 'checking' ? null : (
+          <div className="ks-kbd-dock">
+            <span className="ks-btn" style={{ margin: '0 16px 8px' }}>Find league</span>
+            <Keyboard />
+          </div>
+        )}
+      </Device>
+    );
+  }
+  /** The league preview. block: null (joinable) | 'full' | 'drafted' | 'member'. */
+  function JoinPreview({ block = null }) {
+    const P = PREVIEW;
+    const members = block === 'full' ? P.max : P.members;
+    const msg = {
+      full: `${P.name} is full: ${P.max} of ${P.max} managers. Ask ${P.commish} if they can make room.`,
+      drafted: `${P.name} has already drafted, so it can't take new managers this season.`,
+      member: `You're already in ${P.name}.`,
+    }[block];
+    return (
+      <Device noTabs label={`League preview${block ? `, ${block}` : ''}`}>
+        <Back label="Invite code" />
+        <div className="ks-pad ks-stack">
+          <div style={{ display: 'grid', gap: 4 }}>
+            <span className="ks-tag" style={{ color: 'var(--c-text-2)' }}>Invite code SERIEA7</span>
+            <h2 className="ks-head__title" style={{ fontSize: 30 }}>{P.name}</h2>
+            <span className="ks-callout ks-muted">Run by {P.commish}</span>
+          </div>
+          <Card><Sum rows={[
+            ['Managers', `${members} of ${P.max}`],
+            ['Draft', block === 'drafted' ? 'Done' : P.draft],
+            ['Stakes', P.stakes],
+            ['Season', P.weeks],
+          ]} /></Card>
+          {block ? <Alert>{msg}</Alert> : null}
+          {block === 'member' ? <span className="ks-btn">Open the league</span>
+            : block ? <span className="ks-btn ks-btn--secondary">Try another code</span>
+            : <span className="ks-btn">Join {P.name}</span>}
+          {block ? null : <span className="ks-caption" style={{ textAlign: 'center' }}>You can leave any time before the draft.</span>}
+        </div>
+      </Device>
+    );
+  }
+  /** Joined. */
+  function JoinDone() {
+    return (
+      <Device noTabs label="Joined a league">
+        <div className="ks-pad ks-stack" style={{ paddingTop: 120, justifyItems: 'center', textAlign: 'center' }}>
+          <span className="ks-pop" style={{ width: 88, height: 88, borderRadius: 44, display: 'grid', placeItems: 'center', background: 'var(--c-gain-tint)', color: 'var(--c-gain)', alignSelf: 'center' }}><Icon d={CHECK} size={44} width={2.6} /></span>
+          <h2 className="ks-head__title" style={{ fontSize: 30 }}>You're in {PREVIEW.name}</h2>
+          <p className="ks-callout ks-muted" style={{ margin: 0 }}>The draft is {PREVIEW.draft}. The draft order is set an hour before, and we'll let you know.</p>
+          <span className="ks-btn" style={{ width: '100%', marginTop: 16 }}>Go to the league</span>
+        </div>
+      </Device>
+    );
+  }
+  /** +not-found: every bad deep link lands here. A calm dead end, one way out. */
+  function NotFound() {
+    return (
+      <Device noTabs label="Not found">
+        <div className="ks-pad ks-stack" style={{ paddingTop: 180, justifyItems: 'center', textAlign: 'center', gap: 12 }}>
+          <span style={{ width: 72, height: 72, borderRadius: 36, display: 'grid', placeItems: 'center', background: 'var(--c-sunken)', color: 'var(--c-text-2)', alignSelf: 'center' }}><Icon d={ICON.search} size={32} /></span>
+          <h2 className="ks-head__title" style={{ fontSize: 28 }}>Nothing here</h2>
+          <p className="ks-callout ks-muted" style={{ margin: 0, maxWidth: 280 }}>This link is old or incomplete. Everything in your leagues is still where you left it.</p>
+          <span className="ks-btn" style={{ width: '100%', marginTop: 12 }}>Go to Home</span>
+        </div>
+      </Device>
+    );
+  }
+
   window.KSInventory = {
     SignIn, SignUp, SignUpPaused, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeUnpriced, HomeScoring, HomeComplete,
@@ -4214,6 +4314,7 @@
     OneShareSell, OneShareBuy,
     TierPortfolio, TierReview, TierRefused,
     LeagueSettingsLeave, LeaveSheet, CommishLeave, OrderAfterLeave, DepartedMatchup, DepartedStandings, DepartedBracket, LeaverLeague, LeaverSheet, LeaveRefused, LeaveRow,
+    JoinCode, JoinPreview, JoinDone, NotFound,
     DraftRefused, StartBlocked, DraftStalled, StallPush,
     RibHome, RibLeague, RibPush, RibMemberPrompt, RibHomeCounts, RibReconcile, RibMemberList, RibResolve, RibReview, RibHistory,
     WebHome, WebPortfolio, WebSettings,
@@ -4296,6 +4397,32 @@
           <Fit caption="Appearance" note="Profile › Appearance · System / Light / Dark"><I.Appearance /></Fit>
           <Fit caption="Change password" note="Its own screen"><I.ChangePassword /></Fit>
           <Fit caption="Home with no leagues"><I.EmptyHome /></Fit>
+        </Group>
+
+        <Group id="join-league" code="1.2.0" name="Join a league" job="A new player has an invite code: find the league, see what it is, join it. Replaces the legacy join-league screen. All copy here is new."
+          notes={[
+            'Reached from "Join with code" in Your leagues, the empty Home and Get started. One field, one button: "Find league" looks the code up (preview-league); nothing is joined until the preview\'s Join button.',
+            'The preview IS the confirmation (no alert after it). It shows only what preview-league returns: name, commissioner, managers (count, not faces), draft time, stakes, season length.',
+            'Every refusal keeps the league on screen when the server found it, so the reason names the league. A bad code is the only error under the field.',
+            <>Refusals not framed, same Alert card under the preview: <b>invite_expired</b> "This invite has expired. Ask your commissioner for a new code." · <b>season_completed</b> "{'{League}'}'s season is over. Ask your commissioner whether they're running it back." · <b>no connection</b> "Couldn't reach the league. Check your connection, then try again." (under the field).</>,
+            <>Backend: <b>a manager who left this season</b> reads as already_member today (the kept row). If leave-league ships with Q5-A, preview-league should return its own reason so the screen can say "You left {'{League}'} this season, so you can't rejoin it." (the leave board's refusal). The stakes line needs the per-slot amount from preview-league, not just stake_mode.</>,
+          ]}>
+          <Fit caption="1 · Code entry" note="Keyboard up, focus on the field. Find league sits above the keyboard, as on Create account, and is enabled once anything is typed."><I.JoinCode state="typing" /></Fit>
+          <Fit caption="2 · Finding the league" note="The button holds a spinner; the field stays readable."><I.JoinCode state="checking" /></Fit>
+          <Fit caption="3 · The preview" note="The confirmation. The button names the league."><I.JoinPreview /></Fit>
+          <Fit caption="4 · Joined" note="Then the league's pre-draft Home."><I.JoinDone /></Fit>
+          <Fit caption="Bad code" note="The only error that stays under the field."><I.JoinCode state="bad" /></Fit>
+          <Fit caption="League full" note="The league stays visible; the way out is another code."><I.JoinPreview block="full" /></Fit>
+          <Fit caption="Draft already started" note="Same pattern as full."><I.JoinPreview block="drafted" /></Fit>
+          <Fit caption="Already a member" note="Not a dead end: it opens the league."><I.JoinPreview block="member" /></Fit>
+        </Group>
+
+        <Group id="not-found" code="1.2.0" name="Not found" job="Every bad deep link lands here: a calm dead end with one way out. Replaces the Expo default ('Oops!'). New copy."
+          notes={[
+            'No tab bar and no back arrow: a cold-start link has nothing to go back to. "Go to Home" replaces the stack; signed out, Home sends you to sign in as it does today.',
+            <><b>Dev and template routes:</b> <code>design-gallery</code> is a dev tool. It already redirects to Home outside <code>__DEV__</code>; keep that, and drop its Stack.Screen from release builds too. Check a release build: opening /design-gallery must land on Home. <code>modal</code> is the Expo template (EditScreenInfo): delete the file and its Stack.Screen.</>,
+          ]}>
+          <Fit caption="Not found" note="Same frame in Light and Dark (switch at the top)."><I.NotFound /></Fit>
         </Group>
 
         <Group id="phases" code="3b-2" name="Home through the season" job="The same Home, one league, in every phase of that league's life."
@@ -4876,7 +5003,7 @@
             <div><dt>Stakes</dt><dd>$2,000 per slot · 6 slots</dd></div>
           </dl>
           <nav className="b-toc" aria-label="Screens">
-            {[['themes', 'Themes'], ['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['phases', 'Home phases'], ['game', 'Game'], ['run-it-back', 'Run it back'], ['call-leave', 'Leave call'], ['call-tier-trades', 'Tiers call'], ['money', 'Trading'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
+            {[['themes', 'Themes'], ['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['join-league', 'Join league'], ['not-found', 'Not found'], ['phases', 'Home phases'], ['game', 'Game'], ['run-it-back', 'Run it back'], ['call-leave', 'Leave call'], ['call-tier-trades', 'Tiers call'], ['money', 'Trading'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
           </nav>
         </header>
 

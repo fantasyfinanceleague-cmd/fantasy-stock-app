@@ -2275,6 +2275,106 @@
     );
   }
 
+  // ═════════════════════════════════════════════════════════════════════
+  // JOIN A LEAGUE + NOT FOUND (2026-10-06): two 1.2.0 screens with no frame
+  // (docs/design/1.2.0-screen-inventory.md). All copy new. The joiner is
+  // Tommaso P., a new player with Roberto's code for Serie A Traders (6 of 8
+  // joined). The preview shows ONLY what preview-league returns: name,
+  // commissioner, member count, stakes, season length, draft date.
+  // ═════════════════════════════════════════════════════════════════════
+  const Spinner = () => <span aria-hidden="true" style={{ width: 16, height: 16, borderRadius: 8, border: '2px solid currentColor', borderRightColor: 'transparent', display: 'inline-block' }} />;
+  const JoinHead = () => (
+    <>
+      <Back label="Your leagues" />
+      <div className="ks-pad ks-stack" style={{ gap: 6, paddingBottom: 0 }}>
+        <h2 className="ks-head__title" style={{ fontSize: 28 }}>Join a league</h2>
+      </div>
+    </>
+  );
+  const PREVIEW = { name: K.SERIE_A.name, commish: 'Roberto B.', members: 6, max: 8, stakes: 'Equal stakes · $2,000 per slot', weeks: '10 weeks', draft: K.SERIE_A.draftAt };
+  /** Code entry: 'typing' | 'checking' | 'bad' (no league has the code). */
+  function JoinCode({ state = 'typing' }) {
+    const value = state === 'typing' ? 'SERIEA' : state === 'bad' ? 'SERIAE7' : 'SERIEA7';
+    return (
+      <Device noTabs label={`Join a league, ${state}`}>
+        <JoinHead />
+        <div className="ks-pad ks-stack">
+          <p className="ks-callout ks-muted" style={{ margin: 0 }}>Enter the invite code your commissioner sent you.</p>
+          <Field label="Invite code" value={value} focused={state !== 'checking'}
+            error={state === 'bad' ? 'No league has that code. Check it and try again.' : null} />
+          {state === 'checking' ? (
+            <span className="ks-btn" style={{ display: 'inline-flex', gap: 8, justifyContent: 'center', alignItems: 'center', opacity: 0.7 }}><Spinner />Finding league</span>
+          ) : null}
+        </div>
+        {state === 'checking' ? null : (
+          <div className="ks-kbd-dock">
+            <span className="ks-btn" style={{ margin: '0 16px 8px' }}>Find league</span>
+            <Keyboard />
+          </div>
+        )}
+      </Device>
+    );
+  }
+  /** The league preview. block: null (joinable) | 'full' | 'drafted' | 'member'. */
+  function JoinPreview({ block = null }) {
+    const P = PREVIEW;
+    const members = block === 'full' ? P.max : P.members;
+    const msg = {
+      full: `${P.name} is full: ${P.max} of ${P.max} managers. Ask ${P.commish} if they can make room.`,
+      drafted: `${P.name} has already drafted, so it can't take new managers this season.`,
+      member: `You're already in ${P.name}.`,
+    }[block];
+    return (
+      <Device noTabs label={`League preview${block ? `, ${block}` : ''}`}>
+        <Back label="Invite code" />
+        <div className="ks-pad ks-stack">
+          <div style={{ display: 'grid', gap: 4 }}>
+            <span className="ks-tag" style={{ color: 'var(--c-text-2)' }}>Invite code SERIEA7</span>
+            <h2 className="ks-head__title" style={{ fontSize: 30 }}>{P.name}</h2>
+            <span className="ks-callout ks-muted">Run by {P.commish}</span>
+          </div>
+          <Card><Sum rows={[
+            ['Managers', `${members} of ${P.max}`],
+            ['Draft', block === 'drafted' ? 'Done' : P.draft],
+            ['Stakes', P.stakes],
+            ['Season', P.weeks],
+          ]} /></Card>
+          {block ? <Alert>{msg}</Alert> : null}
+          {block === 'member' ? <span className="ks-btn">Open the league</span>
+            : block ? <span className="ks-btn ks-btn--secondary">Try another code</span>
+            : <span className="ks-btn">Join {P.name}</span>}
+          {block ? null : <span className="ks-caption" style={{ textAlign: 'center' }}>You can leave any time before the draft.</span>}
+        </div>
+      </Device>
+    );
+  }
+  /** Joined. */
+  function JoinDone() {
+    return (
+      <Device noTabs label="Joined a league">
+        <div className="ks-pad ks-stack" style={{ paddingTop: 120, justifyItems: 'center', textAlign: 'center' }}>
+          <span className="ks-pop" style={{ width: 88, height: 88, borderRadius: 44, display: 'grid', placeItems: 'center', background: 'var(--c-gain-tint)', color: 'var(--c-gain)', alignSelf: 'center' }}><Icon d={CHECK} size={44} width={2.6} /></span>
+          <h2 className="ks-head__title" style={{ fontSize: 30 }}>You're in {PREVIEW.name}</h2>
+          <p className="ks-callout ks-muted" style={{ margin: 0 }}>The draft is {PREVIEW.draft}. The draft order is set an hour before, and we'll let you know.</p>
+          <span className="ks-btn" style={{ width: '100%', marginTop: 16 }}>Go to the league</span>
+        </div>
+      </Device>
+    );
+  }
+  /** +not-found: every bad deep link lands here. A calm dead end, one way out. */
+  function NotFound() {
+    return (
+      <Device noTabs label="Not found">
+        <div className="ks-pad ks-stack" style={{ paddingTop: 180, justifyItems: 'center', textAlign: 'center', gap: 12 }}>
+          <span style={{ width: 72, height: 72, borderRadius: 36, display: 'grid', placeItems: 'center', background: 'var(--c-sunken)', color: 'var(--c-text-2)', alignSelf: 'center' }}><Icon d={ICON.search} size={32} /></span>
+          <h2 className="ks-head__title" style={{ fontSize: 28 }}>Nothing here</h2>
+          <p className="ks-callout ks-muted" style={{ margin: 0, maxWidth: 280 }}>This link is old or incomplete. Everything in your leagues is still where you left it.</p>
+          <span className="ks-btn" style={{ width: '100%', marginTop: 12 }}>Go to Home</span>
+        </div>
+      </Device>
+    );
+  }
+
   window.KSInventory = {
     SignIn, SignUp, SignUpPaused, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeUnpriced, HomeScoring, HomeComplete,
@@ -2283,6 +2383,7 @@
     OneShareSell, OneShareBuy,
     TierPortfolio, TierReview, TierRefused,
     LeagueSettingsLeave, LeaveSheet, CommishLeave, OrderAfterLeave, DepartedMatchup, DepartedStandings, DepartedBracket, LeaverLeague, LeaverSheet, LeaveRefused, LeaveRow,
+    JoinCode, JoinPreview, JoinDone, NotFound,
     DraftRefused, StartBlocked, DraftStalled, StallPush,
     RibHome, RibLeague, RibPush, RibMemberPrompt, RibHomeCounts, RibReconcile, RibMemberList, RibResolve, RibReview, RibHistory,
     WebHome, WebPortfolio, WebSettings,

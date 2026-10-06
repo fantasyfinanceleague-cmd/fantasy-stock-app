@@ -74,6 +74,32 @@
           <Fit caption="Home with no leagues"><I.EmptyHome /></Fit>
         </Group>
 
+        <Group id="join-league" code="1.2.0" name="Join a league" job="A new player has an invite code: find the league, see what it is, join it. Replaces the legacy join-league screen. All copy here is new."
+          notes={[
+            'Reached from "Join with code" in Your leagues, the empty Home and Get started. One field, one button: "Find league" looks the code up (preview-league); nothing is joined until the preview\'s Join button.',
+            'The preview IS the confirmation (no alert after it). It shows only what preview-league returns: name, commissioner, managers (count, not faces), draft time, stakes, season length.',
+            'Every refusal keeps the league on screen when the server found it, so the reason names the league. A bad code is the only error under the field.',
+            <>Refusals not framed, same Alert card under the preview: <b>invite_expired</b> "This invite has expired. Ask your commissioner for a new code." · <b>season_completed</b> "{'{League}'}'s season is over. Ask your commissioner whether they're running it back." · <b>no connection</b> "Couldn't reach the league. Check your connection, then try again." (under the field).</>,
+            <>Backend: <b>a manager who left this season</b> reads as already_member today (the kept row). If leave-league ships with Q5-A, preview-league should return its own reason so the screen can say "You left {'{League}'} this season, so you can't rejoin it." (the leave board's refusal). The stakes line needs the per-slot amount from preview-league, not just stake_mode.</>,
+          ]}>
+          <Fit caption="1 · Code entry" note="Keyboard up, focus on the field. Find league sits above the keyboard, as on Create account, and is enabled once anything is typed."><I.JoinCode state="typing" /></Fit>
+          <Fit caption="2 · Finding the league" note="The button holds a spinner; the field stays readable."><I.JoinCode state="checking" /></Fit>
+          <Fit caption="3 · The preview" note="The confirmation. The button names the league."><I.JoinPreview /></Fit>
+          <Fit caption="4 · Joined" note="Then the league's pre-draft Home."><I.JoinDone /></Fit>
+          <Fit caption="Bad code" note="The only error that stays under the field."><I.JoinCode state="bad" /></Fit>
+          <Fit caption="League full" note="The league stays visible; the way out is another code."><I.JoinPreview block="full" /></Fit>
+          <Fit caption="Draft already started" note="Same pattern as full."><I.JoinPreview block="drafted" /></Fit>
+          <Fit caption="Already a member" note="Not a dead end: it opens the league."><I.JoinPreview block="member" /></Fit>
+        </Group>
+
+        <Group id="not-found" code="1.2.0" name="Not found" job="Every bad deep link lands here: a calm dead end with one way out. Replaces the Expo default ('Oops!'). New copy."
+          notes={[
+            'No tab bar and no back arrow: a cold-start link has nothing to go back to. "Go to Home" replaces the stack; signed out, Home sends you to sign in as it does today.',
+            <><b>Dev and template routes:</b> <code>design-gallery</code> is a dev tool. It already redirects to Home outside <code>__DEV__</code>; keep that, and drop its Stack.Screen from release builds too. Check a release build: opening /design-gallery must land on Home. <code>modal</code> is the Expo template (EditScreenInfo): delete the file and its Stack.Screen.</>,
+          ]}>
+          <Fit caption="Not found" note="Same frame in Light and Dark (switch at the top)."><I.NotFound /></Fit>
+        </Group>
+
         <Group id="phases" code="3b-2" name="Home through the season" job="The same Home, one league, in every phase of that league's life."
           notes={[
             'Every phase has one treatment: a phase chip and a hero card that says what happens next and when. No screen guesses the phase on its own.',
