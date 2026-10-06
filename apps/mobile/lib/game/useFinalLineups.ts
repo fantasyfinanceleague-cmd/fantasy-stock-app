@@ -9,6 +9,7 @@
  */
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
+import { seamTable } from './seamCalls';
 import { finalLineup, type FinalLineupResult, type FinalSnapshot } from './finalLineup';
 import { checkRowsComplete } from './readGuard';
 import type { LiveTrade } from '../home/liveWeekScore';
@@ -34,23 +35,23 @@ export function useFinalLineups(
     setState({ status: 'loading', mine: null, theirs: null });
     (async () => {
       try {
-        const res = await supabase
+        const res = await seamTable('week_snapshots', () => supabase
           .from('week_snapshots')
           .select('user_id, symbol, quantity, week_start_price, week_end_price, entered_mid_week', { count: 'exact' })
           .eq('league_id', leagueId)
           .eq('week_number', week)
-          .in('user_id', [sides.mine, sides.theirs]);
+          .in('user_id', [sides.mine, sides.theirs]));
         if (res.error) throw res.error;
         const rows = res.data ?? [];
         if (!checkRowsComplete(rows.length, res.count ?? null).ok) throw new Error('week_snapshots read incomplete');
         // The scored window's trades, as the server scores them (snapshots + trades).
-        const tr = await supabase
+        const tr = await seamTable('trades', () => supabase
           .from('trades')
           .select('user_id, symbol, action, quantity, price, created_at', { count: 'exact' })
           .eq('league_id', leagueId)
           .in('user_id', [sides.mine, sides.theirs])
           .gte('created_at', sides.windowStart)
-          .lte('created_at', sides.windowEnd);
+          .lte('created_at', sides.windowEnd));
         if (tr.error) throw tr.error;
         const tradeRows = tr.data ?? [];
         if (!checkRowsComplete(tradeRows.length, tr.count ?? null).ok) throw new Error('trades read incomplete');

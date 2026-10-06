@@ -7,6 +7,7 @@
  */
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
+import { seamTable } from './seamCalls';
 import { useAuth } from '../useAuth';
 import { buildAllMatchups, type AllMatchupRow } from './allMatchups';
 import type { HomeLedgerRow } from '../home/buildHomeViewModel';
@@ -34,11 +35,11 @@ export function useAllMatchups(
     (async () => {
       let requests = 0;
       try {
-        const matchupsRes = await supabase
+        const matchupsRes = await seamTable('matchups_week', () => supabase
           .from('matchups')
           .select('team1_user_id, team2_user_id, team1_gain, team2_gain, winner_user_id, is_tie, is_playoff, week_start, week_end', { count: 'exact' })
           .eq('league_id', leagueId)
-          .eq('week_number', week);
+          .eq('week_number', week));
         requests += 1;
         if (matchupsRes.error) throw matchupsRes.error;
         const matchups = matchupsRes.data ?? [];
@@ -47,22 +48,22 @@ export function useAllMatchups(
         const windowStart = matchups.map((m) => m.week_start).filter(Boolean).sort()[0];
         const windowEnd = matchups.map((m) => m.week_end).filter(Boolean).sort().reverse()[0];
 
-        const snapRes = await supabase
+        const snapRes = await seamTable('week_snapshots', () => supabase
           .from('week_snapshots')
           .select('user_id, symbol, quantity, week_start_price, entered_mid_week, created_at', { count: 'exact' })
           .eq('league_id', leagueId)
-          .eq('week_number', week);
+          .eq('week_number', week));
         requests += 1;
         if (snapRes.error) throw snapRes.error;
         if (!checkRowsComplete((snapRes.data ?? []).length, snapRes.count ?? null).ok) throw new Error('week_snapshots read incomplete');
 
         const tradesRes = windowStart && windowEnd
-          ? await supabase
+          ? await seamTable('trades', () => supabase
               .from('trades')
               .select('user_id, symbol, action, quantity, price, created_at', { count: 'exact' })
               .eq('league_id', leagueId)
               .gte('created_at', windowStart)
-              .lte('created_at', windowEnd)
+              .lte('created_at', windowEnd))
           : { data: [], error: null, count: 0 };
         requests += 1;
         if (tradesRes.error) throw tradesRes.error;

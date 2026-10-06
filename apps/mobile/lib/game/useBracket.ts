@@ -6,6 +6,7 @@
  */
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
+import { seamTable } from './seamCalls';
 import { buildBracket, type Bracket, type BracketRow, type BracketStanding } from './bracket';
 import { checkRowsComplete } from './readGuard';
 
@@ -24,11 +25,11 @@ export function useBracket(leagueId: string | null, teams: number | null, standi
     setState({ status: 'loading', bracket: null });
     (async () => {
       try {
-        const res = await supabase
+        const res = await seamTable('matchups_playoff', () => supabase
           .from('matchups')
           .select('playoff_round_number, bracket_position, team1_user_id, team2_user_id, team1_gain, team2_gain, winner_user_id', { count: 'exact' })
           .eq('league_id', leagueId)
-          .eq('is_playoff', true);
+          .eq('is_playoff', true));
         if (res.error) throw res.error;
         const rows = (res.data ?? []) as BracketRow[];
         // Read-cap guard: a partial bracket must not be drawn.
