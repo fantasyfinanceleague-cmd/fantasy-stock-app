@@ -138,3 +138,8 @@ building anything, and don't reopen a rule without him.
   board), with a recommendation, never as prose only.
 - A rule is recorded here the moment it's decided. If a rule here and the code disagree,
   the code is wrong until Giorgio says otherwise.
+- **UX standard** (2026-10-06): every screen and flow is designed, built and reviewed against
+  the eleven rules in [`design/UX_RULES.md`](design/UX_RULES.md). Audit findings graded P0/P1
+  block the 1.2.0 cut; P2/P3 go to a 1.3 backlog. A product rule beats a UX rule; a UX rule
+  that seems to contradict one is a question for Giorgio, not a finding. Plan:
+  [`plans/2026-10-06-ux-rulebook.md`](plans/2026-10-06-ux-rulebook.md).
