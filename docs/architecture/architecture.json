@@ -2,39 +2,22 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "3a328ac3d4a1dbc0f10ee4e7d7cac8962f017c52",
-    "commitShort": "3a328ac",
+    "commit": "9cbe98e5c8d6a7e315cb640fac1651dd0a88f5c4",
+    "commitShort": "9cbe98e",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "fix/draft-never-skips",
-    "dirty": true,
-    "dirtyPaths": [
-      {
-        "code": "M",
-        "path": "supabase/functions/_shared/auto-pick.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/_shared/auto-pick.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/_shared/draft-write.ts"
-      },
-      {
-        "code": "??",
-        "path": "supabase/migrations/20261101000003_draft_price_outages.sql"
-      }
-    ],
-    "timestamp": "2026-10-06T01:42:37Z",
-    "sourceHash": "sha256:95f187ae70e403a90910b0083fcd2345c036da7e66f2b2f10427c88d716f1d42",
+    "branch": "ui/mobile-league-setup",
+    "dirty": false,
+    "dirtyPaths": [],
+    "timestamp": "2026-10-06T18:27:36Z",
+    "sourceHash": "sha256:cf70e592f33ea6e29aee87e2073a46246c066416e8d7f9b8cc047c64aa931e3f",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-09-30T16:53:15Z",
-    "ageHours": 128.8,
-    "ageDays": 5.4,
+    "ageHours": 145.6,
+    "ageDays": 6.1,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:8e08382dfe9edf557c6371cfc39da9fb788590ad82209f15e2e74a7c90dcfc6b",
@@ -1522,6 +1505,37 @@
     {
       "layer": "db",
       "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261030000000_league_standings_ranked_through_week.sql:138"
+        ],
+        "latestDefinition": "supabase/migrations/20261030000000_league_standings_ranked_through_week.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg._league_standings_rank_core",
+      "label": "_league_standings_rank_core()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261030000000_league_standings_ranked_through_week.sql",
+        "line": 138
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
       "db": {
         "securityDefiner": true,
         "searchPath": "public, pg_temp",
@@ -2874,10 +2888,11 @@
       },
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261011000000_league_standings_ranked.sql:98"
+          "supabase/migrations/20261011000000_league_standings_ranked.sql:98",
+          "supabase/migrations/20261030000000_league_standings_ranked_through_week.sql:291"
         ],
-        "latestDefinition": "supabase/migrations/20261011000000_league_standings_ranked.sql",
-        "redefinitions": 1
+        "latestDefinition": "supabase/migrations/20261030000000_league_standings_ranked_through_week.sql",
+        "redefinitions": 2
       },
       "drift": [
         {
@@ -2895,8 +2910,8 @@
       "sublabel": "authenticated, service_role",
       "kind": "pg-function",
       "source": {
-        "path": "supabase/migrations/20261011000000_league_standings_ranked.sql",
-        "line": 98
+        "path": "supabase/migrations/20261030000000_league_standings_ranked_through_week.sql",
+        "line": 291
       }
     },
     {
@@ -5384,12 +5399,12 @@
       "drift": [],
       "annotation": null,
       "verified": true,
-      "id": "ui.create-league",
-      "label": "create-league.tsx",
-      "sublabel": "mobile/app/create-league.tsx",
+      "id": "ui.draft",
+      "label": "draft.tsx",
+      "sublabel": "mobile/app/(tabs)/draft.tsx",
       "kind": "client-screen",
       "source": {
-        "path": "apps/mobile/app/create-league.tsx",
+        "path": "apps/mobile/app/(tabs)/draft.tsx",
         "line": 1
       }
     },
@@ -5401,12 +5416,97 @@
       "drift": [],
       "annotation": null,
       "verified": true,
-      "id": "ui.draft",
-      "label": "draft.tsx",
-      "sublabel": "mobile/app/(tabs)/draft.tsx",
+      "id": "ui.game.seamCalls",
+      "label": "seamCalls.ts",
+      "sublabel": "mobile/lib/game/seamCalls.ts",
       "kind": "client-screen",
       "source": {
-        "path": "apps/mobile/app/(tabs)/draft.tsx",
+        "path": "apps/mobile/lib/game/seamCalls.ts",
+        "line": 1
+      }
+    },
+    {
+      "layer": "client",
+      "facts": {},
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "ui.game.useAllMatchups",
+      "label": "useAllMatchups.ts",
+      "sublabel": "mobile/lib/game/useAllMatchups.ts",
+      "kind": "client-screen",
+      "source": {
+        "path": "apps/mobile/lib/game/useAllMatchups.ts",
+        "line": 1
+      }
+    },
+    {
+      "layer": "client",
+      "facts": {},
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "ui.game.useBracket",
+      "label": "useBracket.ts",
+      "sublabel": "mobile/lib/game/useBracket.ts",
+      "kind": "client-screen",
+      "source": {
+        "path": "apps/mobile/lib/game/useBracket.ts",
+        "line": 1
+      }
+    },
+    {
+      "layer": "client",
+      "facts": {},
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "ui.game.useDraftQueue",
+      "label": "useDraftQueue.ts",
+      "sublabel": "mobile/lib/game/useDraftQueue.ts",
+      "kind": "client-screen",
+      "source": {
+        "path": "apps/mobile/lib/game/useDraftQueue.ts",
+        "line": 1
+      }
+    },
+    {
+      "layer": "client",
+      "facts": {},
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "ui.game.useDraftRoom",
+      "label": "useDraftRoom.ts",
+      "sublabel": "mobile/lib/game/useDraftRoom.ts",
+      "kind": "client-screen",
+      "source": {
+        "path": "apps/mobile/lib/game/useDraftRoom.ts",
+        "line": 1
+      }
+    },
+    {
+      "layer": "client",
+      "facts": {},
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "ui.game.useFinalLineups",
+      "label": "useFinalLineups.ts",
+      "sublabel": "mobile/lib/game/useFinalLineups.ts",
+      "kind": "client-screen",
+      "source": {
+        "path": "apps/mobile/lib/game/useFinalLineups.ts",
         "line": 1
       }
     },
@@ -5452,23 +5552,6 @@
       "drift": [],
       "annotation": null,
       "verified": true,
-      "id": "ui.home.usePreDraftData",
-      "label": "usePreDraftData.ts",
-      "sublabel": "mobile/lib/home/usePreDraftData.ts",
-      "kind": "client-screen",
-      "source": {
-        "path": "apps/mobile/lib/home/usePreDraftData.ts",
-        "line": 1
-      }
-    },
-    {
-      "layer": "client",
-      "facts": {},
-      "db": null,
-      "declared": null,
-      "drift": [],
-      "annotation": null,
-      "verified": true,
       "id": "ui.home.useSeasonResult",
       "label": "useSeasonResult.ts",
       "sublabel": "mobile/lib/home/useSeasonResult.ts",
@@ -5492,23 +5575,6 @@
       "kind": "client-screen",
       "source": {
         "path": "apps/mobile/app/join-league.tsx",
-        "line": 1
-      }
-    },
-    {
-      "layer": "client",
-      "facts": {},
-      "db": null,
-      "declared": null,
-      "drift": [],
-      "annotation": null,
-      "verified": true,
-      "id": "ui.league-settings",
-      "label": "league-settings.tsx",
-      "sublabel": "mobile/app/league-settings.tsx",
-      "kind": "client-screen",
-      "source": {
-        "path": "apps/mobile/app/league-settings.tsx",
         "line": 1
       }
     },
@@ -8810,7 +8876,8 @@
       "payload": "SELECT league_members (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261011000000_league_standings_ranked.sql:201"
+        "supabase/migrations/20261011000000_league_standings_ranked.sql:201",
+        "supabase/migrations/20261030000000_league_standings_ranked_through_week.sql:352"
       ]
     },
     {
@@ -8825,7 +8892,8 @@
       "callSites": [
         "supabase/migrations/20261011000000_league_standings_ranked.sql:125",
         "supabase/migrations/20261011000000_league_standings_ranked.sql:200",
-        "supabase/migrations/20261011000000_league_standings_ranked.sql:226"
+        "supabase/migrations/20261011000000_league_standings_ranked.sql:226",
+        "supabase/migrations/20261030000000_league_standings_ranked_through_week.sql:351"
       ]
     },
     {
@@ -8839,7 +8907,9 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261011000000_league_standings_ranked.sql:149",
-        "supabase/migrations/20261011000000_league_standings_ranked.sql:172"
+        "supabase/migrations/20261011000000_league_standings_ranked.sql:172",
+        "supabase/migrations/20261030000000_league_standings_ranked_through_week.sql:309",
+        "supabase/migrations/20261030000000_league_standings_ranked_through_week.sql:376"
       ]
     },
     {
@@ -9738,7 +9808,7 @@
         "id, slug, name, is_misc"
       ],
       "callSites": [
-        "apps/mobile/lib/categoryData.ts:64"
+        "apps/mobile/lib/categoryData.ts:65"
       ]
     },
     {
@@ -9754,8 +9824,8 @@
         "gics_industry"
       ],
       "callSites": [
-        "apps/mobile/lib/categoryData.ts:101",
-        "apps/mobile/lib/categoryData.ts:143"
+        "apps/mobile/lib/categoryData.ts:102",
+        "apps/mobile/lib/categoryData.ts:144"
       ]
     },
     {
@@ -9770,7 +9840,7 @@
         "slot_index, slot_count, price_min, price_max, category_id"
       ],
       "callSites": [
-        "apps/mobile/lib/categoryData.ts:226"
+        "apps/mobile/lib/categoryData.ts:213"
       ]
     },
     {
@@ -9783,7 +9853,7 @@
       "payload": ".from('league_draft_slots').delete()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/categoryData.ts:206"
+        "apps/mobile/lib/categoryData.ts:193"
       ]
     },
     {
@@ -9796,7 +9866,7 @@
       "payload": ".from('league_draft_slots').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/categoryData.ts:219"
+        "apps/mobile/lib/categoryData.ts:206"
       ]
     },
     {
@@ -9812,8 +9882,8 @@
         "symbol, category_id"
       ],
       "callSites": [
-        "apps/mobile/lib/categoryData.ts:144",
-        "apps/mobile/lib/categoryData.ts:83"
+        "apps/mobile/lib/categoryData.ts:145",
+        "apps/mobile/lib/categoryData.ts:84"
       ]
     },
     {
@@ -9829,36 +9899,10 @@
         "symbol"
       ],
       "callSites": [
-        "apps/mobile/lib/categoryData.ts:111",
         "apps/mobile/lib/categoryData.ts:112",
-        "apps/mobile/lib/categoryData.ts:129",
-        "apps/mobile/lib/categoryData.ts:94"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.create-league->tbl.league_members#insert",
-      "from": "ui.create-league",
-      "to": "tbl.league_members",
-      "protocol": "postgrest-insert",
-      "payload": ".from('league_members').insert()",
-      "columns": [],
-      "callSites": [
-        "apps/mobile/app/create-league.tsx:152"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.create-league->tbl.leagues#insert",
-      "from": "ui.create-league",
-      "to": "tbl.leagues",
-      "protocol": "postgrest-insert",
-      "payload": ".from('leagues').insert()",
-      "columns": [],
-      "callSites": [
-        "apps/mobile/app/create-league.tsx:126"
+        "apps/mobile/lib/categoryData.ts:113",
+        "apps/mobile/lib/categoryData.ts:130",
+        "apps/mobile/lib/categoryData.ts:95"
       ]
     },
     {
@@ -9976,6 +10020,180 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.ui.game.seamCalls->tbl.league_members#insert",
+      "from": "ui.game.seamCalls",
+      "to": "tbl.league_members",
+      "protocol": "postgrest-insert",
+      "payload": ".from('league_members').insert()",
+      "columns": [],
+      "callSites": [
+        "apps/mobile/lib/game/seamCalls.ts:62"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.game.seamCalls->tbl.leagues#insert",
+      "from": "ui.game.seamCalls",
+      "to": "tbl.leagues",
+      "protocol": "postgrest-insert",
+      "payload": ".from('leagues').insert()",
+      "columns": [],
+      "callSites": [
+        "apps/mobile/lib/game/seamCalls.ts:56"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.game.seamCalls->tbl.leagues#update",
+      "from": "ui.game.seamCalls",
+      "to": "tbl.leagues",
+      "protocol": "postgrest-update",
+      "payload": ".from('leagues').update()",
+      "columns": [],
+      "callSites": [
+        "apps/mobile/lib/game/seamCalls.ts:35"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.game.useAllMatchups->tbl.matchups",
+      "from": "ui.game.useAllMatchups",
+      "to": "tbl.matchups",
+      "protocol": "postgrest-select",
+      "payload": ".from('matchups').select('team1_user_id, team2_user_id, team1_gain, team2_gain, winner_user_id, is_tie, is_playoff, week_start, week_end')",
+      "columns": [
+        "team1_user_id, team2_user_id, team1_gain, team2_gain, winner_user_id, is_tie, is_playoff, week_start, week_end"
+      ],
+      "callSites": [
+        "apps/mobile/lib/game/useAllMatchups.ts:39"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.game.useAllMatchups->tbl.trades",
+      "from": "ui.game.useAllMatchups",
+      "to": "tbl.trades",
+      "protocol": "postgrest-select",
+      "payload": ".from('trades').select('user_id, symbol, action, quantity, price, created_at')",
+      "columns": [
+        "user_id, symbol, action, quantity, price, created_at"
+      ],
+      "callSites": [
+        "apps/mobile/lib/game/useAllMatchups.ts:62"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.game.useAllMatchups->tbl.week_snapshots",
+      "from": "ui.game.useAllMatchups",
+      "to": "tbl.week_snapshots",
+      "protocol": "postgrest-select",
+      "payload": ".from('week_snapshots').select('user_id, symbol, quantity, week_start_price, entered_mid_week, created_at')",
+      "columns": [
+        "user_id, symbol, quantity, week_start_price, entered_mid_week, created_at"
+      ],
+      "callSites": [
+        "apps/mobile/lib/game/useAllMatchups.ts:52"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.game.useBracket->tbl.matchups",
+      "from": "ui.game.useBracket",
+      "to": "tbl.matchups",
+      "protocol": "postgrest-select",
+      "payload": ".from('matchups').select('playoff_round_number, bracket_position, team1_user_id, team2_user_id, team1_gain, team2_gain, winner_user_id')",
+      "columns": [
+        "playoff_round_number, bracket_position, team1_user_id, team2_user_id, team1_gain, team2_gain, winner_user_id"
+      ],
+      "callSites": [
+        "apps/mobile/lib/game/useBracket.ts:29"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.game.useDraftQueue->tbl.draft_queue",
+      "from": "ui.game.useDraftQueue",
+      "to": "tbl.draft_queue",
+      "protocol": "postgrest-select",
+      "payload": ".from('draft_queue').select('symbol, position')",
+      "columns": [
+        "symbol, position"
+      ],
+      "callSites": [
+        "apps/mobile/lib/game/useDraftQueue.ts:22"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.game.useDraftRoom->tbl.draft_queue",
+      "from": "ui.game.useDraftRoom",
+      "to": "tbl.draft_queue",
+      "protocol": "postgrest-select",
+      "payload": ".from('draft_queue').select('symbol, position')",
+      "columns": [
+        "symbol, position"
+      ],
+      "callSites": [
+        "apps/mobile/lib/game/useDraftRoom.ts:50"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.game.useDraftRoom->tbl.drafts",
+      "from": "ui.game.useDraftRoom",
+      "to": "tbl.drafts",
+      "protocol": "postgrest-select",
+      "payload": ".from('drafts').select('pick_number, symbol, pick_source')",
+      "columns": [
+        "pick_number, symbol, pick_source"
+      ],
+      "callSites": [
+        "apps/mobile/lib/game/useDraftRoom.ts:48"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.game.useFinalLineups->tbl.trades",
+      "from": "ui.game.useFinalLineups",
+      "to": "tbl.trades",
+      "protocol": "postgrest-select",
+      "payload": ".from('trades').select('user_id, symbol, action, quantity, price, created_at')",
+      "columns": [
+        "user_id, symbol, action, quantity, price, created_at"
+      ],
+      "callSites": [
+        "apps/mobile/lib/game/useFinalLineups.ts:49"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.game.useFinalLineups->tbl.week_snapshots",
+      "from": "ui.game.useFinalLineups",
+      "to": "tbl.week_snapshots",
+      "protocol": "postgrest-select",
+      "payload": ".from('week_snapshots').select('user_id, symbol, quantity, week_start_price, week_end_price, entered_mid_week')",
+      "columns": [
+        "user_id, symbol, quantity, week_start_price, week_end_price, entered_mid_week"
+      ],
+      "callSites": [
+        "apps/mobile/lib/game/useFinalLineups.ts:39"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.ui.home.useDraftingData->pg.get_draft_clock",
       "from": "ui.home.useDraftingData",
       "to": "pg.get_draft_clock",
@@ -10021,7 +10239,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('historical-bars')",
       "callSites": [
-        "apps/mobile/lib/home/useHomeLeague.ts:578"
+        "apps/mobile/lib/home/useHomeLeague.ts:597"
       ]
     },
     {
@@ -10033,7 +10251,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('quote')",
       "callSites": [
-        "apps/mobile/lib/home/useHomeLeague.ts:561"
+        "apps/mobile/lib/home/useHomeLeague.ts:580"
       ]
     },
     {
@@ -10045,31 +10263,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_home_league')",
       "callSites": [
-        "apps/mobile/lib/home/useHomeLeague.ts:534"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.home.usePreDraftData->pg.get_draft_order",
-      "from": "ui.home.usePreDraftData",
-      "to": "pg.get_draft_order",
-      "protocol": "postgrest-rpc",
-      "payload": "rpc('get_draft_order')",
-      "callSites": [
-        "apps/mobile/lib/home/usePreDraftData.ts:104"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.home.usePreDraftData->pg.get_league_display_names",
-      "from": "ui.home.usePreDraftData",
-      "to": "pg.get_league_display_names",
-      "protocol": "postgrest-rpc",
-      "payload": "rpc('get_league_display_names')",
-      "callSites": [
-        "apps/mobile/lib/home/usePreDraftData.ts:105"
+        "apps/mobile/lib/home/useHomeLeague.ts:553"
       ]
     },
     {
@@ -10107,31 +10301,6 @@
       "payload": "functions.invoke('preview-league')",
       "callSites": [
         "apps/mobile/app/join-league.tsx:86"
-      ]
-    },
-    {
-      "annotation": "The only direct client-to-SECURITY-DEFINER call in the app. Every other definer function is reached through an edge function. Once 20261023000000 is applied, this call fails closed with 42501 (an \"Error\" alert in 1.0.0/1.1.0); the button is removed in the Run it back client work.",
-      "verified": true,
-      "id": "e.ui.league-settings->pg.start_new_league_season",
-      "from": "ui.league-settings",
-      "to": "pg.start_new_league_season",
-      "protocol": "postgrest-rpc",
-      "payload": "rpc('start_new_league_season')",
-      "callSites": [
-        "apps/mobile/app/league-settings.tsx:174"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.league-settings->tbl.leagues#update",
-      "from": "ui.league-settings",
-      "to": "tbl.leagues",
-      "protocol": "postgrest-update",
-      "payload": ".from('leagues').update()",
-      "columns": [],
-      "callSites": [
-        "apps/mobile/app/league-settings.tsx:137"
       ]
     },
     {
@@ -10190,7 +10359,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_home_summary')",
       "callSites": [
-        "apps/mobile/lib/LeagueContext.tsx:156"
+        "apps/mobile/lib/LeagueContext.tsx:169"
       ]
     },
     {
@@ -10202,7 +10371,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('market_session_status')",
       "callSites": [
-        "apps/mobile/lib/LeagueContext.tsx:161"
+        "apps/mobile/lib/LeagueContext.tsx:174"
       ]
     },
     {
@@ -10217,8 +10386,8 @@
         "league_id"
       ],
       "callSites": [
-        "apps/mobile/lib/LeagueContext.tsx:157",
-        "apps/mobile/lib/LeagueContext.tsx:280"
+        "apps/mobile/lib/LeagueContext.tsx:170",
+        "apps/mobile/lib/LeagueContext.tsx:293"
       ]
     },
     {
@@ -10233,7 +10402,7 @@
         "id, champion_user_id"
       ],
       "callSites": [
-        "apps/mobile/lib/LeagueContext.tsx:159"
+        "apps/mobile/lib/LeagueContext.tsx:172"
       ]
     },
     {
@@ -10248,7 +10417,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/lib/LeagueContext.tsx:297"
+        "apps/mobile/lib/LeagueContext.tsx:310"
       ]
     },
     {
@@ -10263,7 +10432,7 @@
         "session_date, open_et, close_et"
       ],
       "callSites": [
-        "apps/mobile/lib/LeagueContext.tsx:162"
+        "apps/mobile/lib/LeagueContext.tsx:175"
       ]
     },
     {
@@ -11873,7 +12042,6 @@
         "detail": "Commissioner taps reset in league settings"
       },
       "nodePath": [
-        "ui.league-settings",
         "pg.start_new_league_season",
         "tbl.leagues",
         "tbl.league_seasons",
@@ -11885,9 +12053,8 @@
           "n": 1,
           "edge": "e.ui.league-settings->pg.start_new_league_season",
           "detail": "Called directly from the client as an authenticated user. EXECUTE is granted to `authenticated`, so the authorization is NOT the grant — it is an INTERNAL commissioner check inside the function body. That gate is the only thing standing between any league member and the four destructive writes below.",
-          "files": [
-            "apps/mobile/app/league-settings.tsx:174"
-          ]
+          "files": [],
+          "verified": false
         },
         {
           "n": 2,
@@ -11931,7 +12098,10 @@
         }
       ],
       "annotation": "The only flow where a destructive operation is authorized entirely inside a function body. EXECUTE on start_new_league_season is granted to `authenticated`, so any logged-in user can call it with any league id. Nothing in the grant layer stops a non-commissioner from resetting someone else's league — the internal commissioner check is the whole control. That is deliberate (the client calls it directly, so it must be authenticated-callable), but it means the gate has to be correct, with no defence in depth if it regresses.",
-      "unverified": []
+      "unverified": [
+        "step 1: anchor not found — apps/mobile/app/league-settings.tsx no longer contains \"rpc('start_new_league_season'\"",
+        "step 1: edge 'e.ui.league-settings->pg.start_new_league_season' was not generated from any call site"
+      ]
     },
     {
       "id": "flow.quote-fanout",
@@ -11975,7 +12145,7 @@
             "apps/mobile/app/(tabs)/draft.tsx:493",
             "apps/mobile/components/TradeModal.tsx:134",
             "apps/mobile/components/TradeModal.tsx:90",
-            "apps/mobile/lib/home/useHomeLeague.ts:561",
+            "apps/mobile/lib/home/useHomeLeague.ts:580",
             "apps/web/src/components/TradeModal.jsx:159",
             "apps/web/src/components/TradeModal.jsx:63",
             "apps/web/src/context/PriceContext.jsx:99",
@@ -12031,7 +12201,7 @@
           ],
           "detail": "historical-bars — chart series for portfolio P/L.",
           "files": [
-            "apps/mobile/lib/home/useHomeLeague.ts:578",
+            "apps/mobile/lib/home/useHomeLeague.ts:597",
             "apps/mobile/lib/useHistoricalPL.ts:65"
           ]
         }
@@ -12041,6 +12211,16 @@
     }
   ],
   "drift": [
+    {
+      "node": "pg._league_standings_rank_core",
+      "label": "_league_standings_rank_core()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
     {
       "node": "pg.draft_feasibility_pool",
       "label": "draft_feasibility_pool()",
@@ -12427,6 +12607,14 @@
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
     {
+      "node": "pg._league_standings_rank_core",
+      "label": "_league_standings_rank_core()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261030000000_league_standings_ranked_through_week.sql:138",
+      "outbound": [],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
       "node": "pg.auto_pick_search_candidates",
       "label": "auto_pick_search_candidates(p_min numeric, p_max numeric, p_category_id uuid, p_draftable_only boolean, p_exclude text[], p_limit integer)",
       "kind": "pg-function",
@@ -12481,6 +12669,20 @@
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
     {
+      "node": "pg.get_league_display_names",
+      "label": "get_league_display_names(p_league_id uuid)",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261004000000_participant_display_names.sql:170",
+      "outbound": [
+        "tbl.drafts",
+        "tbl.league_members",
+        "tbl.league_standings",
+        "tbl.matchups",
+        "tbl.trades"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
       "node": "pg.participant_display_name",
       "label": "participant_display_name(p_user_id text)",
       "kind": "pg-function",
@@ -12529,6 +12731,22 @@
         "tbl.league_members",
         "tbl.leagues",
         "tbl.symbols"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "pg.start_new_league_season",
+      "label": "start_new_league_season(p_league_id uuid)",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql:35",
+      "outbound": [
+        "tbl.league_seasons",
+        "tbl.league_seasons",
+        "tbl.league_standings",
+        "tbl.leagues",
+        "tbl.leagues",
+        "tbl.matchups",
+        "tbl.matchups"
       ],
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
@@ -12647,6 +12865,12 @@
       "resolve": "Re-capture the snapshot, or confirm the migration was applied."
     },
     {
+      "scope": "pg._league_standings_rank_core",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
       "scope": "pg.draft_feasibility_pool",
       "claim": "function exists in prod",
       "reason": "Present in migrations, absent from db-snapshot.json.",
@@ -12717,17 +12941,31 @@
       "claim": "flow step is current",
       "reason": "step 5: edge 'e.fn.validate-and-record-pick->tbl.leagues#update' was not generated from any call site",
       "resolve": "Update the FLOWS block in scripts/gen-architecture.mjs."
+    },
+    {
+      "scope": "flow.season-reset",
+      "claim": "flow step is current",
+      "reason": "step 1: anchor not found — apps/mobile/app/league-settings.tsx no longer contains \"rpc('start_new_league_season'\"",
+      "resolve": "Update the FLOWS block in scripts/gen-architecture.mjs."
+    },
+    {
+      "scope": "flow.season-reset",
+      "claim": "flow step is current",
+      "reason": "step 1: edge 'e.ui.league-settings->pg.start_new_league_season' was not generated from any call site",
+      "resolve": "Update the FLOWS block in scripts/gen-architecture.mjs."
     }
   ],
-  "orphanAnnotations": [],
+  "orphanAnnotations": [
+    "e.ui.league-settings->pg.start_new_league_season"
+  ],
   "stats": {
-    "nodes": 172,
-    "edges": 386,
+    "nodes": 176,
+    "edges": 392,
     "flows": 8,
-    "drift": 28,
-    "driftHigh": 3,
-    "deadCode": 30,
-    "unverified": 13
+    "drift": 29,
+    "driftHigh": 4,
+    "deadCode": 33,
+    "unverified": 16
   },
   "sourceIndex": {
     "edgeFunctions": [
@@ -12767,8 +13005,8 @@
       "apps/mobile/components/TradeModal.tsx:151 -> symbol-name",
       "apps/mobile/components/TradeModal.tsx:230 -> record-trade",
       "apps/mobile/components/TradeModal.tsx:90 -> quote",
-      "apps/mobile/lib/home/useHomeLeague.ts:561 -> quote",
-      "apps/mobile/lib/home/useHomeLeague.ts:578 -> historical-bars",
+      "apps/mobile/lib/home/useHomeLeague.ts:580 -> quote",
+      "apps/mobile/lib/home/useHomeLeague.ts:597 -> historical-bars",
       "apps/mobile/lib/notifications.ts:167 -> send-notification",
       "apps/mobile/lib/useHistoricalPL.ts:65 -> historical-bars",
       "apps/mobile/lib/useStockNames.ts:13 -> symbol-name",
@@ -12792,14 +13030,11 @@
     ],
     "rpcs": [
       "apps/mobile/app/(tabs)/draft.tsx:216 -> get_draft_order",
-      "apps/mobile/app/league-settings.tsx:174 -> start_new_league_season",
-      "apps/mobile/lib/LeagueContext.tsx:156 -> get_home_summary",
-      "apps/mobile/lib/LeagueContext.tsx:161 -> market_session_status",
+      "apps/mobile/lib/LeagueContext.tsx:169 -> get_home_summary",
+      "apps/mobile/lib/LeagueContext.tsx:174 -> market_session_status",
       "apps/mobile/lib/home/useDraftingData.ts:84 -> get_draft_clock",
       "apps/mobile/lib/home/useDraftingData.ts:85 -> get_draft_order",
-      "apps/mobile/lib/home/useHomeLeague.ts:534 -> get_home_league",
-      "apps/mobile/lib/home/usePreDraftData.ts:104 -> get_draft_order",
-      "apps/mobile/lib/home/usePreDraftData.ts:105 -> get_league_display_names",
+      "apps/mobile/lib/home/useHomeLeague.ts:553 -> get_home_league",
       "apps/mobile/lib/home/useSeasonResult.ts:8 -> get_season_result",
       "apps/mobile/lib/home/useSeasonResult.ts:97 -> get_season_result",
       "apps/mobile/lib/shell/usernameApi.ts:30 -> check_usernames",
@@ -12840,9 +13075,6 @@
       "apps/mobile/app/(tabs)/draft.tsx:196 -> user_profiles.select",
       "apps/mobile/app/(tabs)/draft.tsx:224 -> drafts.select",
       "apps/mobile/app/(tabs)/draft.tsx:260 -> league_draft_slots.select",
-      "apps/mobile/app/create-league.tsx:126 -> leagues.insert",
-      "apps/mobile/app/create-league.tsx:152 -> league_members.insert",
-      "apps/mobile/app/league-settings.tsx:137 -> leagues.update",
       "apps/mobile/app/player-portfolio.tsx:123 -> user_profiles.select",
       "apps/mobile/app/player-portfolio.tsx:135 -> drafts.select",
       "apps/mobile/app/player-portfolio.tsx:142 -> trades.select",
@@ -12851,25 +13083,37 @@
       "apps/mobile/components/LeagueCarousel.tsx:128 -> league_standings.select",
       "apps/mobile/components/LeagueCarousel.tsx:63 -> league_seasons.select",
       "apps/mobile/components/LeagueCarousel.tsx:75 -> user_profiles.select",
-      "apps/mobile/lib/LeagueContext.tsx:157 -> league_members.select",
-      "apps/mobile/lib/LeagueContext.tsx:159 -> league_seasons.select",
-      "apps/mobile/lib/LeagueContext.tsx:162 -> market_calendar.select",
-      "apps/mobile/lib/LeagueContext.tsx:280 -> league_members.select",
-      "apps/mobile/lib/LeagueContext.tsx:297 -> leagues.select",
+      "apps/mobile/lib/LeagueContext.tsx:170 -> league_members.select",
+      "apps/mobile/lib/LeagueContext.tsx:172 -> league_seasons.select",
+      "apps/mobile/lib/LeagueContext.tsx:175 -> market_calendar.select",
+      "apps/mobile/lib/LeagueContext.tsx:293 -> league_members.select",
+      "apps/mobile/lib/LeagueContext.tsx:310 -> leagues.select",
       "apps/mobile/lib/SessionProvider.tsx:141 -> user_profiles.select",
       "apps/mobile/lib/SessionProvider.tsx:200 -> user_profiles.upsert",
-      "apps/mobile/lib/categoryData.ts:101 -> category_rules.select",
-      "apps/mobile/lib/categoryData.ts:111 -> symbols.select",
+      "apps/mobile/lib/categoryData.ts:102 -> category_rules.select",
       "apps/mobile/lib/categoryData.ts:112 -> symbols.select",
-      "apps/mobile/lib/categoryData.ts:129 -> symbols.select",
-      "apps/mobile/lib/categoryData.ts:143 -> category_rules.select",
-      "apps/mobile/lib/categoryData.ts:144 -> symbol_category_overrides.select",
-      "apps/mobile/lib/categoryData.ts:206 -> league_draft_slots.delete",
-      "apps/mobile/lib/categoryData.ts:219 -> league_draft_slots.insert",
-      "apps/mobile/lib/categoryData.ts:226 -> league_draft_slots.select",
-      "apps/mobile/lib/categoryData.ts:64 -> categories.select",
-      "apps/mobile/lib/categoryData.ts:83 -> symbol_category_overrides.select",
-      "apps/mobile/lib/categoryData.ts:94 -> symbols.select",
+      "apps/mobile/lib/categoryData.ts:113 -> symbols.select",
+      "apps/mobile/lib/categoryData.ts:130 -> symbols.select",
+      "apps/mobile/lib/categoryData.ts:144 -> category_rules.select",
+      "apps/mobile/lib/categoryData.ts:145 -> symbol_category_overrides.select",
+      "apps/mobile/lib/categoryData.ts:193 -> league_draft_slots.delete",
+      "apps/mobile/lib/categoryData.ts:206 -> league_draft_slots.insert",
+      "apps/mobile/lib/categoryData.ts:213 -> league_draft_slots.select",
+      "apps/mobile/lib/categoryData.ts:65 -> categories.select",
+      "apps/mobile/lib/categoryData.ts:84 -> symbol_category_overrides.select",
+      "apps/mobile/lib/categoryData.ts:95 -> symbols.select",
+      "apps/mobile/lib/game/seamCalls.ts:35 -> leagues.update",
+      "apps/mobile/lib/game/seamCalls.ts:56 -> leagues.insert",
+      "apps/mobile/lib/game/seamCalls.ts:62 -> league_members.insert",
+      "apps/mobile/lib/game/useAllMatchups.ts:39 -> matchups.select",
+      "apps/mobile/lib/game/useAllMatchups.ts:52 -> week_snapshots.select",
+      "apps/mobile/lib/game/useAllMatchups.ts:62 -> trades.select",
+      "apps/mobile/lib/game/useBracket.ts:29 -> matchups.select",
+      "apps/mobile/lib/game/useDraftQueue.ts:22 -> draft_queue.select",
+      "apps/mobile/lib/game/useDraftRoom.ts:48 -> drafts.select",
+      "apps/mobile/lib/game/useDraftRoom.ts:50 -> draft_queue.select",
+      "apps/mobile/lib/game/useFinalLineups.ts:39 -> week_snapshots.select",
+      "apps/mobile/lib/game/useFinalLineups.ts:49 -> trades.select",
       "apps/mobile/lib/home/useDraftingData.ts:86 -> drafts.select",
       "apps/mobile/lib/notifications.ts:67 -> push_tokens.upsert",
       "apps/mobile/lib/notifications.ts:72 -> user_profiles.update",
@@ -13166,6 +13410,7 @@
       "20261023000000_lock_start_new_league_season.sql",
       "20261028000002_snapshot_week_end_heal_cron.sql",
       "20261029000000_get_home_league_rpc.sql",
+      "20261030000000_league_standings_ranked_through_week.sql",
       "20261101000000_draft_feasibility_pool.sql",
       "20261101000001_draft_stalls.sql",
       "20261101000003_draft_price_outages.sql"
