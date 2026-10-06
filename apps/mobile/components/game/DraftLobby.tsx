@@ -5,7 +5,7 @@ import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { space } from '@/constants/tokens';
 import type { PreDraftData } from '@/lib/home/usePreDraftData';
-import { countdownLabel, draftDateTimeLabel, orderSetLine } from '@/lib/home/draftCountdown';
+import { countdownLabel, draftDateTimeLabel, orderWasSetLine } from '@/lib/home/draftCountdown';
 import { managersProgressCaption, orderWaitingLine, pickClockLine } from '@/lib/home/homeCopy';
 import { ordinal } from '@/lib/home/ordinal';
 import { mySnakePicks } from '@/lib/game/draftLobby';
@@ -52,7 +52,7 @@ export function DraftLobby({ data, myUserId, draftDate, pickSeconds, rounds, now
       ) : (
         <Card>
           <Text variant="tag" tone="secondary">Draft order</Text>
-          {orderSetLine(data.finalizeAt) ? <Text variant="caption" tone="secondary">{orderSetLine(data.finalizeAt)}</Text> : null}
+          {orderWasSetLine(data.finalizeAt) ? <Text variant="caption" tone="secondary">{orderWasSetLine(data.finalizeAt)}</Text> : null}
           {seat > 0 ? (
             <Text variant="callout" style={{ color: colors.youText, fontWeight: '700' }}>
               {`You pick ${ordinal(seat)}`}

@@ -333,11 +333,16 @@ export function deadlineCopy(startsAt: string, serverNowMs: number): { tag: stri
 
 // ── Members once postponed ───────────────────────────────────────────────
 
-export function memberPostponedCopy(commissionerName: string): { tag: string; title: string; line: string } {
+/** Board MemberPostponed. The line depends on where it shows: the lobby
+ * says "here and on your Home"; Home itself drops "and on your Home"
+ * (self-referential there; Design Lead, PR #135). */
+export function memberPostponedCopy(commissionerName: string, surface: 'lobby' | 'home' = 'lobby'): { tag: string; title: string; line: string } {
   return {
     tag: 'Draft postponed',
     title: `${commissionerName} will pick a new time.`,
-    line: "You'll see it here and on your Home, with at least an hour's notice.",
+    line: surface === 'home'
+      ? "You'll see it here, with at least an hour's notice."
+      : "You'll see it here and on your Home, with at least an hour's notice.",
   };
 }
 

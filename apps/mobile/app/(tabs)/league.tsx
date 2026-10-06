@@ -325,7 +325,7 @@ function LeagueLobby({ leagueId }: { leagueId: string }) {
 
         {view?.memberPostponed ? (
           (() => {
-            const c = memberPostponedCopy(commissionerName);
+            const c = memberPostponedCopy(commissionerName, 'lobby');
             return <DraftCountdownCard tag={c.tag} title={c.title} lines={[]} notes={[c.line]} />;
           })()
         ) : null}

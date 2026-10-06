@@ -267,8 +267,17 @@ Deno.test('postponed: the time it wasn\'t ready at (room-open time, or T for a s
   assertEquals(postponedAtMs(null), null);
 });
 
-Deno.test('members once postponed (board MemberPostponed)', () => {
-  assertEquals(memberPostponedCopy('Roberto B.'), {
+Deno.test('members once postponed, on Home: no "and on your Home" (Design Lead, PR #135)', () => {
+  assertEquals(memberPostponedCopy('Roberto B.', 'home'), {
+    tag: 'Draft postponed',
+    title: 'Roberto B. will pick a new time.',
+    line: "You'll see it here, with at least an hour's notice.",
+  });
+});
+
+Deno.test('members once postponed, in the lobby (board MemberPostponed)', () => {
+  assertEquals(memberPostponedCopy('Roberto B.', 'lobby'), memberPostponedCopy('Roberto B.'));
+  assertEquals(memberPostponedCopy('Roberto B.', 'lobby'), {
     tag: 'Draft postponed',
     title: 'Roberto B. will pick a new time.',
     line: "You'll see it here and on your Home, with at least an hour's notice.",

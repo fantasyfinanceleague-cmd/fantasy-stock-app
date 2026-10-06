@@ -26,7 +26,7 @@ import {
 } from '@/lib/game/autoStart';
 import { AutoStartBlockers } from '@/components/game/AutoStartBlockers';
 import {
-  pickClockLine, BUILD_YOUR_QUEUE, PRE_DRAFT_TAG, PRE_DRAFT_CHIP,
+  pickClockLine, BUILD_YOUR_QUEUE, GO_TO_DRAFT_ROOM, PRE_DRAFT_TAG, PRE_DRAFT_CHIP,
   MEMBERS_TITLE, membersJoinedCaption, membersNeededCaption, INVITE_CODE_LABEL, NO_BUYING_BEFORE_DRAFT,
   DRAFT_ORDER_WAITING_TAG, orderWaitingLine, managersProgressCaption,
 } from '@/lib/home/homeCopy';
@@ -101,7 +101,9 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, dra
   const dateLabel = startsAt ? etWhenLabel(new Date(startsAt).getTime()) : draftDateTimeLabel(null);
   const countdown = view?.countdown && startsAt ? countdownCopy(view.countdown, startsAt, serverNow) : null;
   const clock = countdown ? countdown.clock : startsAt && phase === null ? startClock(new Date(startsAt).getTime() - serverNow) : null;
-  const pick = view?.countdown === 'room_open' || view?.countdown === 'starting' ? yourPickLine(orderRevealed, user?.id ?? '', ordinal) : null;
+  // Once the room is open (room_open / starting): your position, and the button goes to the room.
+  const roomOpen = view?.countdown === 'room_open' || view?.countdown === 'starting';
+  const pick = roomOpen ? yourPickLine(orderRevealed, user?.id ?? '', ordinal) : null;
   const postponed = phase === 'postponed';
 
   return (
@@ -119,7 +121,7 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, dra
       <Card style={styles.card}>
         <View style={styles.header}>
           <Text variant="tag" style={{ color: colors.liveText }}>
-            {view?.memberPostponed ? memberPostponedCopy(commissionerName).tag : PRE_DRAFT_TAG}
+            {view?.memberPostponed ? memberPostponedCopy(commissionerName, 'home').tag : PRE_DRAFT_TAG}
           </Text>
           <View style={[styles.chip, { backgroundColor: colors.inset }]}>
             <Text variant="tag" tone="secondary">
@@ -130,8 +132,8 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, dra
 
         {view?.memberPostponed ? (
           <>
-            <Text variant="title">{memberPostponedCopy(commissionerName).title}</Text>
-            <Text variant="callout" tone="secondary">{memberPostponedCopy(commissionerName).line}</Text>
+            <Text variant="title">{memberPostponedCopy(commissionerName, 'home').title}</Text>
+            <Text variant="callout" tone="secondary">{memberPostponedCopy(commissionerName, 'home').line}</Text>
           </>
         ) : view?.noDate ? (
           <>
@@ -166,7 +168,7 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, dra
           </Text>
         ) : null}
 
-        {!postponed && !pick && !loading && !waiting && finalizeAt ? (
+        {!postponed && !roomOpen && !loading && !waiting && finalizeAt ? (
           <View style={styles.orderRow}>
             <View style={[styles.dot, { backgroundColor: colors.liveText }]} />
             <Text variant="callout">{orderSetLine(finalizeAt)}</Text>
@@ -192,7 +194,9 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, dra
           </View>
         ) : null}
 
-        {!waiting ? <Button label={BUILD_YOUR_QUEUE} onPress={() => router.push('/(tabs)/league')} variant="primary" /> : null}
+        {!waiting ? (
+          <Button label={roomOpen ? GO_TO_DRAFT_ROOM : BUILD_YOUR_QUEUE} onPress={() => router.push('/(tabs)/league')} variant="primary" />
+        ) : null}
       </Card>
       )}
 
