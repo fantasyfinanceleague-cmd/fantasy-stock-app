@@ -25,8 +25,8 @@ export interface MatchScoreboardProps {
   oppName: string | null;
   /** Shown under the scores when there is no lead line (e.g. "Live · Thu 1:37 PM ET"). */
   statusLine: string;
-  /** True when the first side is the caller: it gets "(you)", the you colour and the tug.
-   * Another manager's game (All matchups) has no "you" side, so its colours are neutral. */
+  /** True when the first side is the caller: it gets "(you)" and the you colour.
+   * Another manager's game (All matchups) has no "you" side, so its scores and names are neutral. */
   aIsYou?: boolean;
 }
 
@@ -62,7 +62,8 @@ export function MatchScoreboard({ model, mineGain, oppGain, size, youName, oppNa
         ) : null}
       </View>
 
-      {model.oppText !== null && aIsYou ? (
+      {/* The board's All-matchups cards each carry a tug bar, so every game with two sides has one. */}
+      {model.oppText !== null ? (
         <TugBar you={mineGain} opponent={oppGain} opponentName={oppName ?? ''} />
       ) : null}
 
