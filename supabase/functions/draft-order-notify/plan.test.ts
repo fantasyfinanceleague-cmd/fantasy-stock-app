@@ -150,20 +150,22 @@ Deno.test('time set debounce: held for 2 quiet minutes; other kinds never', () =
   assertEquals(isDebouncing('draft_room_open', '2026-10-01T11:59:59Z', now), false);
 });
 
-Deno.test('blockerReason: the board lines, and a safe default', () => {
+Deno.test('blockerReason: every clause verbatim from the board strings box (PR #135), and its fallback', () => {
   const rc = (names: string[]) => [{ code: 'roster_reconfirm_required', departed: names.map((name) => ({ userId: name, name })) }];
   assertEquals(blockerReason(rc(['Sofia F.'])), 'Sofia F. left the league');
   assertEquals(blockerReason(rc(['Sofia F.', 'Ana P.'])), 'Sofia F. and Ana P. left the league');
   assertEquals(blockerReason(rc(['a', 'b', 'c'])), '3 managers left the league');
   assertEquals(blockerReason([{ code: 'playoff_teams_exceeds_members', playoffTeams: 8, members: 7 }]), '8 playoff teams, but 7 teams are in');
-  assertEquals(blockerReason([{ code: 'playoff_teams_exceeds_members' }]), 'more playoff teams than teams');
+  assertEquals(blockerReason([{ code: 'playoff_teams_exceeds_members' }]), 'there are more playoff teams than teams');
   assertEquals(blockerReason([{ code: 'not_enough_members', have: 3, need: 4 }]), 'fewer than 4 teams have joined');
   assertEquals(blockerReason([{ code: 'slots_infeasible' }]), "some slots can't be filled");
-  for (const code of ['budget_infeasible', 'no_stake_mode', 'invalid_playoff_teams', 'renewal_replies_pending']) {
-    assertEquals(blockerReason([{ code }]) === 'something needs fixing', false, code);
+  assertEquals(blockerReason([{ code: 'budget_infeasible' }]), "the budget can't fill every roster");
+  assertEquals(blockerReason([{ code: 'no_stake_mode' }]), "the league's stakes aren't set");
+  assertEquals(blockerReason([{ code: 'invalid_playoff_teams' }]), "the number of playoff teams isn't set");
+  assertEquals(blockerReason([{ code: 'renewal_replies_pending' }]), 'not every Season 1 player has answered');
+  for (const unknown of [[{ code: 'something_new' }], [], null]) {
+    assertEquals(blockerReason(unknown), 'something in League settings needs fixing');
   }
-  assertEquals(blockerReason([]), 'something needs fixing');
-  assertEquals(blockerReason(null), 'something needs fixing');
 });
 
 Deno.test('nextPushStatus: superseded settles as skipped', () => {

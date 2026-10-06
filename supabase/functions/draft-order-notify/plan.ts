@@ -106,8 +106,8 @@ export function nextPushStatus(outcome: DeliveryOutcome, attempts: number): Push
 
 // ===========================================================================
 // Draft auto-start pushes (20261109000000). COPY: the Design Lead's strings,
-// VERBATIM (board #call-auto-start, 6cd10b8 / PR #128). Lines the board does
-// not cover are marked NEW COPY.
+// VERBATIM (board #call-auto-start: 6cd10b8 / PR #128; blocker clauses from the
+// strings box, PR #135). Lines the board does not cover are marked NEW COPY.
 // ===========================================================================
 
 /** The kinds this function delivers (and the only ones it selects). */
@@ -180,7 +180,8 @@ export interface NoticeContext {
   postponement: { postponed_from: string; stage: string; reason: string; blockers: unknown } | null;
 }
 
-/** The first blocker, in words ("{first blocker}" in the board copy). */
+/** The first blocker, as a whole clause ("{first blocker}" in the board copy;
+ * every line is the board's, PR #135, unless marked NEW COPY). */
 export function blockerReason(blockers: unknown): string {
   const first = Array.isArray(blockers) && blockers.length > 0 ? blockers[0] as Record<string, unknown> : null;
   const code = first ? String(first.code ?? '') : '';
@@ -189,25 +190,24 @@ export function blockerReason(blockers: unknown): string {
       const names = Array.isArray(first!.departed)
         ? (first!.departed as Array<Record<string, unknown>>).map((d) => String(d.name ?? '')).filter(Boolean)
         : [];
-      if (names.length === 1) return `${names[0]} left the league`; // board
-      if (names.length === 2) return `${names[0]} and ${names[1]} left the league`; // NEW COPY
-      if (names.length > 2) return `${names.length} managers left the league`; // NEW COPY
-      return 'a manager left the league'; // NEW COPY
+      if (names.length === 1) return `${names[0]} left the league`;
+      if (names.length === 2) return `${names[0]} and ${names[1]} left the league`;
+      if (names.length > 2) return `${names.length} managers left the league`;
+      return 'a manager left the league'; // NEW COPY (a confirmation row with no readable names)
     }
     case 'playoff_teams_exceeds_members': {
       const p = Number(first!.playoffTeams);
       const m = Number(first!.members);
-      // board: "8 playoff teams, but 7 teams are in"
       if (Number.isFinite(p) && Number.isFinite(m) && p > 0) return `${p} playoff teams, but ${m} teams are in`;
-      return 'more playoff teams than teams'; // NEW COPY (a refusal under the lock carries no numbers)
+      return 'there are more playoff teams than teams'; // the counts aren't known (a refusal under the lock)
     }
-    case 'not_enough_members': return 'fewer than 4 teams have joined'; // board
-    case 'slots_infeasible': return "some slots can't be filled"; // board
-    case 'budget_infeasible': return "the budget can't fill every roster"; // NEW COPY
-    case 'no_stake_mode': return 'the league has no stake mode'; // NEW COPY
-    case 'invalid_playoff_teams': return "the number of playoff teams isn't set"; // NEW COPY
-    case 'renewal_replies_pending': return 'not every Season 1 player has answered'; // NEW COPY
-    default: return 'something needs fixing'; // NEW COPY
+    case 'not_enough_members': return 'fewer than 4 teams have joined';
+    case 'slots_infeasible': return "some slots can't be filled";
+    case 'budget_infeasible': return "the budget can't fill every roster";
+    case 'no_stake_mode': return "the league's stakes aren't set";
+    case 'invalid_playoff_teams': return "the number of playoff teams isn't set";
+    case 'renewal_replies_pending': return 'not every Season 1 player has answered';
+    default: return 'something in League settings needs fixing';
   }
 }
 
@@ -270,7 +270,7 @@ export function decideNotice(ctx: NoticeContext): NoticeDecision {
           : roomTime(ctx.postponement.postponed_from);
         return send(`The draft is postponed: the league wasn't ready at ${formatDraftTime(judged)} ET. Fix it, then pick a new time.`);
       }
-      const who = ctx.commissioner_name ?? 'The commissioner'; // NEW COPY (fallback)
+      const who = ctx.commissioner_name ?? 'The commissioner'; // board: the members' fallback name
       return send(`The draft is postponed. ${who} will pick a new time.`);
     }
     case 'draft_time_set': {
