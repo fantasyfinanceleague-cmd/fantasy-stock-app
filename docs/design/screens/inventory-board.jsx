@@ -210,21 +210,30 @@
             <span className="b-sec__n b-sec__n--code">3c</span>
             <div>
               <h2 id="call-leave-h">Your call: leaving a league</h2>
-              <p className="b-job"><b>Ruled by Giorgio (2026-10-06): Q2 = C. Teams are locked in for the season once the draft starts.</b> So Q3 and Q5 don't apply (nobody leaves after the draft), and Q4 is a pre-draft question only. Still open: Q1 and Q4. Five decisions, from LEAVE_LEAGUE_OPTIONS.md (feat/leave-league). ★ marks the worker's recommendation; the Design Lead's view is in the box at the end. All copy inside these frames is new. Samples: before the draft, Sofia F. leaves Serie A Traders; mid-season, Gianluigi B. (Roberto's Week 6 opponent) leaves Stock Scudetto on Tuesday; in the playoffs, Francesco T. left in Week 9 and still finished 4th.</p>
+              <p className="b-job"><b>Ruled by Giorgio (2026-10-06).</b> The leave window: open until the draft order is set (an hour before the draft), locked from then until the season ends, open again after the season (where leaving hides the league). Q2 = C (locked in); Q1 = the commissioner reconfirms; Q3 and Q5 don't apply. Still open: Q4. Five decisions, from LEAVE_LEAGUE_OPTIONS.md (feat/leave-league). ★ marks the worker's recommendation; the Design Lead's view is in the box at the end. All copy inside these frames is new. Samples: before the draft, Sofia F. leaves Serie A Traders; mid-season, Gianluigi B. (Roberto's Week 6 opponent) leaves Stock Scudetto on Tuesday; in the playoffs, Francesco T. left in Week 9 and still finished 4th.</p>
             </div>
           </header>
           <ul className="b-inv__notes">
             <li><b>Today a leave is an unguarded delete</b> that anyone can do at any time, the commissioner included. After the draft it leaves a "zombie" team that still scores but can't trade, and it stalls the playoffs (<code>bracket_non_member</code>). Every option below replaces it.</li>
             <li><b>The key fact for Q2:</b> bots already are buy-and-hold teams. So "auto-managed" and "frozen portfolio" are the same mechanics; the scoring path is the one bots use today.</li>
-            <li><b>Locked in (decided):</b> from the moment the draft starts until the season ends, "Leave league" stays in League settings, disabled, with the reason on the row: "Teams are locked in for the season once the draft starts." Same line mid-draft and mid-season, for members and the commissioner. A finished league is hidden, not left (separate design).</li>
+            <li><b>Locked in (decided):</b> from an hour before the draft (when the order is set) until the season ends, "Leave league" stays in League settings, disabled, with the reason on the row: "Teams are locked in from an hour before the draft until the season ends." The same line before the draft, mid-draft and mid-season, for members and the commissioner. Before the lock, the row says until when you can leave.</li>
             <li><b>Where it lives:</b> "Leave league" sits at the bottom of League settings, in red, the way "Sign out" sits at the bottom of Profile. It opens a sheet that is the confirmation; there's no second alert.</li>
           </ul>
 
-          <h3 className="b-sub">Q1 · Leaving before the draft · open</h3>
+          <h3 className="b-sub">Q1 · Leaving before the draft · decided: the commissioner reconfirms</h3>
           <div className="b-concepts b-concepts--three">
-            <Fit caption="Leave sheet · member, before the draft" note="Same sheet for A and B."><I.LeaveSheet mode="pre" /></Fit>
-            <Fit caption="★ A · Remove the membership" note="The commissioner's draft order closes the gap and stays final."><I.OrderAfterLeave q1="A" /></Fit>
-            <Fit caption="B · Remove + reopen the order" note="A manual order that was final reopens; the commissioner must confirm it again."><I.OrderAfterLeave q1="B" /></Fit>
+            <Fit caption="Leave sheet · member, before the draft" note="Tells the leaver what happens next and until when they can come back."><I.LeaveSheet mode="pre" /></Fit>
+            <Fit caption="After Move forward" note="The leaver's row is removed (A) and the order closes the gap."><I.OrderAfterLeave q1="A" /></Fit>
+            <Fit caption="B · Remove + reopen the order (not chosen)" note="Superseded: the reconfirmation below covers the whole league, not just the order."><I.OrderAfterLeave q1="B" /></Fit>
+          </div>
+
+          <h3 className="b-sub">Q1 · The reconfirmation (decided, new frames)</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Before the lock · Leave league is open" note="The row says until when: the draft order time (T−1h)."><I.LeaveOpenRow /></Fit>
+            <Fit caption="1 · Commissioner Home: Needs you" note={`Giorgio's two choices as buttons: "Move forward with 7" (one fewer team) or "Invite someone new" (to replace). Also pushed to the commissioner. The countdown keeps running.`}><I.ReconfirmHome /></Fit>
+            <Fit caption="2 · What blocks the start" note="Start draft stays disabled, with both choices right in the sheet. The draft order waits too: it is set as soon as the teams are confirmed."><I.ReconfirmStartBlocked /></Fit>
+            <Fit caption="3 · Invite someone new" note="The card turns into the invite. When someone joins, it clears on its own; the commissioner can still switch to moving forward."><I.ReconfirmHome mode="inviting" /></Fit>
+            <Fit caption="Members meanwhile" note="Everyone else sees why the draft is waiting (on Giulia V.'s phone)."><I.ReconfirmMember /></Fit>
           </div>
 
           <h3 className="b-sub">Q2 · Leaving after the draft · decided: C</h3>
@@ -234,13 +243,18 @@
             <Fit caption="A · Standings for everyone else (not chosen)" note="The row stays in place, labelled, muted. Scoring is unchanged."><I.DepartedStandings /></Fit>
             <Fit caption="B · Forfeit: the sheet (not chosen)" note="Stocks are sold back to the pool; every remaining matchup is a loss."><I.LeaveSheet mode="B" /></Fit>
             <Fit caption="B · Forfeit: the opponent's Home (not chosen)" note="A free W. Whoever faces the leaver late in the season gets free wins."><I.DepartedMatchup q2="B" /></Fit>
-            <Fit caption="✓ C · Locked in (chosen)" note="Final copy. Leave league stays disabled with the reason on the row from the draft until the season ends."><I.LeaveRefused kind="season" /></Fit>
+            <Fit caption="✓ C · Locked in (chosen)" note="Final copy. Leave league stays disabled, with the reason on the row, from an hour before the draft until the season ends."><I.LeaveRefused kind="season" /></Fit>
           </div>
 
           <h3 className="b-sub">Q3 · Playoffs with a departed team · not applicable (Q2 = C)</h3>
           <div className="b-concepts b-concepts--three">
             <Fit caption="★ A · Departed teams stay eligible" note="Seeding unchanged; the 4th seed plays on autopilot and could win the title."><I.DepartedBracket q3="A" /></Fit>
             <Fit caption="B · Skip departed teams in seeding" note="Seeds shift: 5th moves up to the 4th seed. Fewer than 2 active teams: no playoffs."><I.DepartedBracket q3="B" /></Fit>
+          </div>
+
+          <h3 className="b-sub">After the season · leaving hides the league (decided)</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Leave a finished league" note="On Andrea P.'s phone. The league comes off Home and Your leagues; its History keeps their record for everyone. Open: whether a later Run it back still asks them, and whether they can unhide it."><I.LeaveFinished /></Fit>
           </div>
 
           <h3 className="b-sub">Q4 · The commissioner leaving (before the draft) · open</h3>
@@ -259,13 +273,16 @@
 
           <h3 className="b-sub">Refusals</h3>
           <div className="b-concepts b-concepts--three">
-            <Fit caption="Mid-draft (decided)" note="The same locked-in line as mid-season: the lock starts when the draft starts."><I.LeaveRefused kind="drafting" /></Fit>
+            <Fit caption="From an hour before the draft (decided)" note="The same locked-in line as mid-season: the lock starts when the draft order is set."><I.LeaveRefused kind="drafting" /></Fit>
             <Fit caption="Only manager left (Q4)" note="Before the draft, everyone else is a bot: delete the league instead."><I.LeaveRefused kind="sole" /></Fit>
             <Fit caption="Rejoin after leaving (not applicable)" note="Kept for the record: with Q2 = C nobody leaves after the draft, and a pre-draft leaver rejoins with the code."><I.LeaveRefused kind="rejoin" /></Fit>
           </div>
 
           <div className="b-ask">
-            <h3>Your call · Q2 decided (C). Open: Q1 (recommend A) and Q4 (recommend B, no successor preselected)</h3>
+            <h3>Your call · decided: the leave window, Q2 = C, Q1 = reconfirm. Open: Q4 (recommend B, no successor preselected)</h3>
+            <ul>
+              <li><b>Still to rule, from the new frames:</b> (1) if the commissioner hasn't chosen by the draft time, the draft simply doesn't start (Start draft stays disabled). Recommend that, plus a push at T−1h if it is still open. (2) Does a commissioner's "Invite someone new" need a deadline? Recommend no: they can switch to Move forward at any time. (3) After a post-season leave, does Run it back still ask that player? Recommend no. Can they unhide the league? Recommend not in 1.2.0.</li>
+            </ul>
             <p className="b-job" style={{ margin: '0 0 6px' }}>The Design Lead's original view, recommending the ★ package, is kept below for the record.</p>
             <ul>
               <li><b>Q2-A is the anchor.</b> The leaver's opponents still play a real portfolio, nobody gets free wins, and nobody is trapped in a league. It also needs no change to scoring, snapshots or the playoffs: the departed team scores exactly the way a bot does today. B puts a new branch into the scoring pipeline that was just hardened (S1–S9). C turns "you can't leave" into a support ticket.</li>

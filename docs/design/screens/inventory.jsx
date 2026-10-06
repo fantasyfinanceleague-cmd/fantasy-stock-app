@@ -2002,7 +2002,7 @@
     const pre = mode === 'pre';
     const name = pre ? K.SERIE_A.name : K.LEAGUE.name;
     const items = pre
-      ? ['You come off the draft order and everyone after you moves up one.', 'You can rejoin with the invite code until the draft starts.']
+      ? ['Roberto B. chooses whether to go ahead with one fewer team or invite someone new.', `You can rejoin with the invite code until ${K.SERIE_A.revealAt}.`]
       : mode === 'A'
         ? ['Your team plays out the season on autopilot: it keeps its stocks, makes no trades and still plays its matchups.', 'You can still see the league, but you can’t rejoin this season.']
         : ['Your team forfeits every matchup left this season.', 'Your stocks are sold at the market price and go back to the pool.', 'You can’t rejoin this season.'];
@@ -2244,10 +2244,113 @@
       </Device>
     );
   }
+  // Leave window (Giorgio, 2026-10-06): leaving is open until the draft
+  // order is set (T−1h), locked from then until the season ends, then open
+  // again (a post-season leave hides the league). A pre-draft leave makes the
+  // commissioner RECONFIRM: move forward with one fewer team, or invite
+  // someone new. The draft can't start until they choose. New copy.
+  const LOCKED_LINE = 'Teams are locked in from an hour before the draft until the season ends.';
+  const RECON = { left: 'Sofia F.', teams: K.SERIE_A.order.length - 1, orderAt: K.SERIE_A.revealAt };
+  /** The commissioner's card. mode: 'choose' | 'inviting'. */
+  const ReconfirmCard = ({ mode = 'choose' }) => (
+    <div className="ks-card" role="alert" style={{ padding: '12px 14px', display: 'grid', gap: 8, background: 'var(--c-warn-tint)', borderColor: 'var(--c-warn-line)', boxShadow: 'none' }}>
+      <span className="ks-tag" style={{ color: 'var(--c-warn-text)' }}>{mode === 'choose' ? 'Needs you' : 'Waiting for a new manager'}</span>
+      <span className="ks-callout" style={{ fontWeight: 700, color: 'var(--c-text)' }}>{mode === 'choose' ? `${RECON.left} left the league` : `Invite someone to take ${RECON.left}'s place`}</span>
+      <span className="ks-caption" style={{ color: 'var(--c-text)' }}>{mode === 'choose'
+        ? `Move forward with ${RECON.teams} teams, or invite someone new to take their place. The draft can't start until you choose.`
+        : 'Share the code. When someone joins, the draft is ready to go.'}</span>
+      {mode === 'choose' ? (
+        <div style={{ display: 'grid', gap: 8 }}>
+          <span className="ks-btn">Move forward with {RECON.teams}</span>
+          <span className="ks-btn ks-btn--secondary">Invite someone new</span>
+        </div>
+      ) : (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', borderRadius: 10, background: 'var(--c-surface)' }}>
+            <span><span className="ks-caption">Invite code</span><br /><b className="ks-num" style={{ letterSpacing: '0.12em' }}>SERIEA7</b></span>
+            <span className="ks-callout" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Share</span>
+          </div>
+          <span className="ks-callout" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Move forward with {RECON.teams} instead</span>
+        </>
+      )}
+    </div>
+  );
+  /** Commissioner Home after a pre-draft leave. */
+  function ReconfirmHome({ mode = 'choose' }) {
+    return (
+      <Device tab="home" label={`Home, commissioner reconfirms (${mode})`}>
+        <Head name={K.SERIE_A.name} avatar />
+        <div className="ks-pad ks-stack">
+          <ReconfirmCard mode={mode} />
+          <GameCard tag="Draft" chip={<span className="ks-chip">Pre-draft</span>}>
+            <span className="ks-title">Sat, Oct 3 · 7:00 PM ET</span>
+            <span className="ks-score ks-num" style={{ fontSize: 40 }}>2d 06h 40m</span>
+            <span className="ks-callout ks-muted">60-second picks · 6 rounds</span>
+            <span className="ks-callout" style={{ display: 'flex', gap: 8, alignItems: 'center' }}><span className="ks-dot" />Draft order set Sat 6:00 PM ET, once the teams are confirmed</span>
+          </GameCard>
+        </div>
+      </Device>
+    );
+  }
+  /** What blocks the start: the commissioner's Start the draft sheet. */
+  function ReconfirmStartBlocked() {
+    return (
+      <Device tab="league" label="Start the draft, teams not confirmed" overlay={
+        <Sheet top={320}>
+          <span className="ks-title">Start the draft?</span>
+          <Alert>{RECON.left} left. Choose how to go ahead first: move forward with {RECON.teams} teams, or invite someone new.</Alert>
+          <span className="ks-callout"><b>Draft order:</b> set as soon as you confirm the teams.</span>
+          <div style={{ display: 'grid', gap: 8 }}>
+            <span className="ks-btn ks-btn--secondary">Move forward with {RECON.teams}</span>
+            <span className="ks-btn ks-btn--secondary">Invite someone new</span>
+          </div>
+          <span className="ks-btn" style={{ opacity: 0.4 }} aria-disabled="true">Start draft</span>
+        </Sheet>
+      }>
+        <Head name={K.SERIE_A.name} chip={<span className="ks-chip">Pre-draft</span>} />
+      </Device>
+    );
+  }
+  /** A member's Home while the commissioner hasn't chosen (Giulia V.'s phone). */
+  function ReconfirmMember() {
+    return (
+      <Device tab="home" label="Home, member, waiting on the commissioner">
+        <Head name={K.SERIE_A.name} chip={null} />
+        <div className="ks-pad ks-stack">
+          <GameCard tag="Draft" chip={<span className="ks-chip">Pre-draft</span>}>
+            <span className="ks-title">Sat, Oct 3 · 7:00 PM ET</span>
+            <span className="ks-score ks-num" style={{ fontSize: 40 }}>2d 06h 40m</span>
+            <span className="ks-callout ks-muted">60-second picks · 6 rounds</span>
+            <span className="ks-callout">{RECON.left} left. Waiting for Roberto B. to confirm the teams before the draft.</span>
+            <span className="ks-btn ks-btn--ongame">Build your queue</span>
+          </GameCard>
+        </div>
+      </Device>
+    );
+  }
+  /** Before the lock: Leave league is open, and says until when. */
+  function LeaveOpenRow() {
+    return <LeagueSettingsLeave commish={false} name={K.SERIE_A.name} leave={<Card><ul className="ks-rows"><li className="ks-row" style={{ gridTemplateColumns: '1fr 16px', padding: '13px 0' }}><span><span className="ks-callout" style={{ fontWeight: 600, color: 'var(--c-danger)' }}>Leave league</span><br /><span className="ks-caption">You can leave until {RECON.orderAt}, when the draft order is set.</span></span><span className="ks-muted"><Icon d={ICON.right} size={16} /></span></li></ul></Card>} />;
+  }
+  /** After the season: Leave league hides the league for this player (Andrea P.'s phone). */
+  function LeaveFinished() {
+    return (
+      <Device tab="league" label="Leave a finished league" overlay={
+        <Sheet top={440}>
+          <span className="ks-title">Leave {K.LEAGUE.name}?</span>
+          <Bullets items={['It comes off your Home and Your leagues.', 'Season 1 stays in the league’s History, with your record in it.']} />
+          <DangerBtn>Leave league</DangerBtn>
+          <span className="ks-btn">Stay</span>
+        </Sheet>
+      }>
+        <Head chip={<span className="ks-chip ks-chip--final">Final</span>} />
+      </Device>
+    );
+  }
   /** Refusals: the cases where leaving (or coming back) is blocked. */
   function LeaveRefused({ kind }) {
-    if (kind === 'drafting') return <LeagueSettingsLeave commish={false} name={K.SERIE_A.name} leave={<LeaveRow off sub="Teams are locked in for the season once the draft starts." />} />;
-    if (kind === 'season') return <LeagueSettingsLeave commish={false} leave={<LeaveRow off sub="Teams are locked in for the season once the draft starts." />} />;
+    if (kind === 'drafting') return <LeagueSettingsLeave commish={false} name={K.SERIE_A.name} leave={<LeaveRow off sub={LOCKED_LINE} />} />;
+    if (kind === 'season') return <LeagueSettingsLeave commish={false} leave={<LeaveRow off sub={LOCKED_LINE} />} />;
     if (kind === 'commish') return <LeagueSettingsLeave name={K.SERIE_A.name} leave={<LeaveRow off sub="Make someone else commissioner first." />} />;
     if (kind === 'sole') {
       return (
@@ -2384,7 +2487,7 @@
     SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,
     OneShareSell, OneShareBuy,
     TierPortfolio, TierReview, TierRefused,
-    LeagueSettingsLeave, LeaveSheet, CommishLeave, OrderAfterLeave, DepartedMatchup, DepartedStandings, DepartedBracket, LeaverLeague, LeaverSheet, LeaveRefused, LeaveRow,
+    LeagueSettingsLeave, LeaveSheet, CommishLeave, OrderAfterLeave, DepartedMatchup, DepartedStandings, DepartedBracket, LeaverLeague, LeaverSheet, LeaveRefused, LeaveRow, ReconfirmHome, ReconfirmStartBlocked, ReconfirmMember, LeaveOpenRow, LeaveFinished,
     JoinCode, JoinPreview, JoinDone, NotFound,
     DraftRefused, StartBlocked, DraftStalled, StallPush,
     RibHome, RibLeague, RibPush, RibMemberPrompt, RibHomeCounts, RibReconcile, RibMemberList, RibResolve, RibReview, RibHistory,
