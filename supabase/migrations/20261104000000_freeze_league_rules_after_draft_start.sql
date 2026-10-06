@@ -68,12 +68,14 @@
 --          budget_mode            (retired; frozen so it is not a
 --                                  writable-but-meaningless column)
 --      and league_start_date / league_end_date may change only by F1's
---      first-time stamp: NULL -> value is allowed (once); changing a non-NULL
---      value, or setting it back to NULL, is refused. That keeps F1's
---      completion carve-out (draft_status + a first-time date stamp) working
---      for a member AND the commissioner; today no user-session writer stamps
---      them at all (grep 2026-11-04: the web completeDraft write moved into
---      finalize_league_draft, service role).
+--      completion stamp: NULL -> value, and ONLY in the completing UPDATE
+--      (OLD in_progress -> NEW completed). That is the exact shape F1 admits
+--      for a member ([I2b] admits a member only on that transition), now for
+--      the commissioner too. Changing a non-NULL value, clearing it, or
+--      stamping a NULL date at any other time (e.g. on a league that jumped
+--      straight to completed, with hindsight) is refused. Today no
+--      user-session writer stamps them at all (grep 2026-11-04: the web
+--      completeDraft write moved into finalize_league_draft, service role).
 --      VALUE comparison, not SET-list membership: apps/mobile league-settings
 --      and web Leagues.jsx handleUpdate always send these columns, so a
 --      same-value patch (a rename after the draft from a stale screen) must
@@ -166,15 +168,23 @@
 --       slots the draft runs on are the committed ones.
 --   A deadlock needs a cycle. For an UPDATE/DELETE the slot tuple is locked
 --   FIRST (before a BEFORE ROW trigger runs) and the league SHARE second; an
---   INSERT holds no slot lock yet. Nothing that takes a lock CONFLICTING with
---   SHARE on the league ever waits on a slot row: a draft start
+--   INSERT holds no slot lock yet. No league WRITER in a normal flow waits on
+--   a slot row while holding a lock that conflicts with SHARE: a draft start
 --   (draft-control's UPDATE, web's [I2a] flip, and their BEFORE/AFTER
 --   triggers, which touch only leagues and the draft-order tables) and
 --   finalize_league_draft (FOR UPDATE on the league) never touch slots. Pick
 --   and trade inserts do take FOR KEY SHARE on slot rows (drafts.slot_id /
 --   trades.slot_id FKs), but they hold only KEY SHARE on the league, which is
 --   compatible with SHARE, and record_trade_atomic serializes on an advisory
---   lock. So no cycle. Two slot writers both take SHARE, which is compatible. INVARIANT for future writers: a transaction that writes slots
+--   lock. So no cycle. Two slot writers both take SHARE, which is compatible.
+--   THE ONE EXCEPTION is a league DELETE: it holds FOR UPDATE on the league,
+--   then its cascade locks the slot rows (and member rows). Racing it with a
+--   slot UPDATE/DELETE (or a leave) on the same league is a real cycle;
+--   Postgres detects it and aborts one side with 40P01 (no hang, nothing
+--   half-written). It needs the commissioner racing their own league delete,
+--   or a member leaving during it. The member trigger has the same shape, as
+--   did the pre-existing AFTER trigger in 20261013000000.
+--   INVARIANT for future writers: a transaction that writes slots
 --   AND updates their league must UPDATE the league FIRST (start_renewed_season
 --   does), because SHARE-then-upgrade in two concurrent transactions is the
 --   classic upgrade deadlock. When OLD and NEW leagues differ, both are locked
@@ -263,11 +273,13 @@ begin
     case when new.current_season_id is distinct from old.current_season_id then 'current_season_id' end,
     case when new.commissioner_id   is distinct from old.commissioner_id   then 'commissioner_id' end,
     case when new.budget_mode       is distinct from old.budget_mode       then 'budget_mode' end,
-    -- F1's first-time stamp: NULL -> value only.
-    case when old.league_start_date is not null
-          and new.league_start_date is distinct from old.league_start_date then 'league_start_date' end,
-    case when old.league_end_date is not null
-          and new.league_end_date is distinct from old.league_end_date then 'league_end_date' end
+    -- F1's completion stamp: NULL -> value, only in the in_progress -> completed UPDATE.
+    case when new.league_start_date is distinct from old.league_start_date
+          and not (old.league_start_date is null
+                   and old.draft_status = 'in_progress' and new.draft_status = 'completed') then 'league_start_date' end,
+    case when new.league_end_date is distinct from old.league_end_date
+          and not (old.league_end_date is null
+                   and old.draft_status = 'in_progress' and new.draft_status = 'completed') then 'league_end_date' end
   ], null);
 
   if cardinality(v_changed) > 0 then
@@ -314,10 +326,19 @@ begin
   -- FOR SHARE, in id order: waits out an in-flight draft start (see header).
   -- A league that is not found is the ON DELETE CASCADE from deleting it, or
   -- an FK violation still to come: allow either.
+  -- Only the CALLER'S OWN leagues are read and locked. This DEFINER trigger
+  -- fires BEFORE the INSERT/UPDATE WITH CHECK, so reading any league_id
+  -- would let any user probe another league's draft state (league_slots_locked
+  -- vs the RLS error) and take a SHARE lock on its row. Every slot write
+  -- policy requires is_commissioner(league_id) (20260810000004), so skipping a
+  -- league the caller does not commission defers to RLS, which refuses it.
+  -- (With auth.uid() NULL this scope matches nothing, so the explicit
+  -- exemption above is belt-and-braces: the two agree by construction.)
   for v_l in
     select l.id, l.draft_status
       from public.leagues l
      where l.id = any (v_ids)
+       and l.commissioner_id = auth.uid()::text
      order by l.id
        for share
   loop

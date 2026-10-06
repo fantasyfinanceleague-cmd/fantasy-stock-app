@@ -81,27 +81,42 @@ create table symbol_category_overrides (symbol text not null, category_id uuid n
 
 /**
  * Every leagues DDL statement in the migrations that shapes its COLUMNS, in
- * apply order (deferred/ is not applied, so not read). Comments are stripped
- * and statements split on ';' -- safe here because none of these statements
- * contains a function body. FK REFERENCES clauses are stripped.
+ * apply order (deferred/ is not applied, so not read). Line and block comments
+ * are stripped and statements split on ';'. FK REFERENCES clauses are
+ * stripped (the referenced tables are not in this replica).
+ *
+ * COMPLETENESS: every statement that mentions `table leagues` is either
+ * replayed (CREATE TABLE, or ALTER with ADD|DROP|RENAME COLUMN) or one of the
+ * known non-column forms (constraints, RLS, ALTER COLUMN defaults). Anything
+ * else -- `ADD foo int` without COLUMN, a quoted "leagues", DDL inside a DO
+ * block or a function body -- lands in `unhandled` and fails the
+ * classification step, so the replay can never silently miss a column.
  */
-async function leaguesColumnDdl(): Promise<string[]> {
+async function leaguesColumnDdl(): Promise<{ ddl: string[]; unhandled: string[] }> {
   const dir = new URL('supabase/migrations/', ROOT);
   const files: string[] = [];
   for await (const e of Deno.readDir(dir)) if (e.isFile && e.name.endsWith('.sql')) files.push(e.name);
   files.sort();
-  const out: string[] = [];
+  const ddl: string[] = [];
+  const unhandled: string[] = [];
+  const mentions = /\b(create|alter)\s+table\s+(if\s+(not\s+)?exists\s+)?(only\s+)?("?public"?\s*\.\s*)?"?leagues"?(?![\w])/i;
+  const startsWith = /^(create\s+table(\s+if\s+not\s+exists)?|alter\s+table(\s+if\s+exists)?(\s+only)?)\s+(public\.)?leagues\b/i;
+  const nonColumn = /^alter\s+table(\s+if\s+exists)?(\s+only)?\s+(public\.)?leagues\s+((add|drop)\s+constraint\b|(enable|disable|force|no\s+force)\s+row\s+level\s+security\b|alter\s+column\s+\w+\s+(set|drop)\s+(default|not\s+null)\b|replica\s+identity\b)/i;
   for (const f of files) {
-    const sql = (await Deno.readTextFile(new URL(f, dir))).replace(/--[^\n]*/g, '');
+    const sql = (await Deno.readTextFile(new URL(f, dir))).replace(/\/\*[\s\S]*?\*\//g, '').replace(/--[^\n]*/g, '');
     for (const raw of sql.split(';')) {
       const st = raw.trim();
-      if (!/^(create\s+table(\s+if\s+not\s+exists)?|alter\s+table(\s+if\s+exists)?(\s+only)?)\s+(public\.)?leagues\b/i.test(st)) continue;
-      if (/^alter/i.test(st) && !/\b(add|drop|rename)\s+column\b/i.test(st)) continue;
-      out.push(st.replace(
-        /\breferences\s+[\w.]+\s*(\([^)]*\))?(\s+on\s+(delete|update)\s+(set\s+null|cascade|restrict|no\s+action|set\s+default))*/gi, ''));
+      if (!mentions.test(st)) continue;
+      if (!startsWith.test(st)) { unhandled.push(`${f}: ${st.slice(0, 120)}`); continue; }
+      if (/^create/i.test(st) || /\b(add|drop|rename)\s+column\b/i.test(st)) {
+        ddl.push(st.replace(
+          /\breferences\s+[\w.]+\s*(\([^)]*\))?(\s+on\s+(delete|update)\s+(set\s+null|cascade|restrict|no\s+action|set\s+default))*/gi, ''));
+      } else if (!nonColumn.test(st)) {
+        unhandled.push(`${f}: ${st.slice(0, 120)}`);
+      }
     }
   }
-  return out;
+  return { ddl, unhandled };
 }
 
 const COMMISH = '11111111-1111-4111-8111-111111111111';
@@ -188,7 +203,7 @@ Deno.test({
     const db = new PGlite();
     const q = async (s: string, p: unknown[] = []) => (await db.query(s, p)).rows as Row[];
     await db.exec(SCHEMA_PRE);
-    const ddl = await leaguesColumnDdl();
+    const { ddl, unhandled } = await leaguesColumnDdl();
     for (const st of ddl) await db.exec(st);
     await db.exec(SCHEMA_POST);
     for (const m of MIGRATIONS) await db.exec(await Deno.readTextFile(m));
@@ -268,6 +283,15 @@ Deno.test({
         ['enforce_league_members_frozen_after_draft_start', true],
         ['enforce_league_rules_frozen_after_draft_start', false],
       ]);
+      // Lock modes are invisible to one connection, so pin them statically (see the migration header):
+      // the leave trigger MUST take FOR NO KEY UPDATE (FOR SHARE deadlocks two concurrent leavers on the
+      // upgrade to the AFTER trigger's lock); the slot trigger takes FOR SHARE only on the CALLER'S leagues.
+      const src = async (fn: string) =>
+        ((await q(`select prosrc from pg_proc where proname=$1`, [fn]))[0].prosrc as string).replace(/--[^\n]*/g, '').replace(/\s+/g, ' ');
+      const leaveSrc = await src('enforce_league_members_frozen_after_draft_start');
+      assert(/for no key update/i.test(leaveSrc) && !/for share/i.test(leaveSrc), 'leave trigger lock mode');
+      const slotsSrc = await src('enforce_league_draft_slots_frozen');
+      assert(/l\.commissioner_id = auth\.uid\(\)::text order by l\.id for share/i.test(slotsSrc), 'slot trigger lock scope/mode');
       for (const f of fns) {
         assert(f.acl !== '', `${f.proname}: proacl NULL means default PUBLIC execute`);
         assert(!/(^|[{,])=X/.test(f.acl), `${f.proname}: PUBLIC grant survives: ${f.acl}`);
@@ -279,6 +303,7 @@ Deno.test({
     // ---- classification: every column has a decision -----------------------
     await t.step('classification: every leagues column in the migrations is classified, and nothing stale', async () => {
       assert(ddl.length >= 10, `expected the leagues DDL history, got ${ddl.length} statements`);
+      assertEquals(unhandled, [], 'leagues DDL the replay cannot classify (extend leaguesColumnDdl):');
       const cols = (await q(`select column_name c from information_schema.columns
         where table_schema='public' and table_name='leagues' order by ordinal_position`)).map((r: Row) => r.c as string);
       const unclassified = cols.filter((c) => !(c in CLASSIFICATION));
@@ -325,26 +350,48 @@ Deno.test({
       }
     });
 
-    await t.step('dates: after the draft a non-NULL date cannot be changed or cleared; a NULL one is stamped once', async () => {
+    await t.step('dates: outside the completing UPDATE a date cannot be stamped, changed or cleared', async () => {
       const L = await league('completed', { league_start_date: '2026-11-16T14:30:00Z' });
       await as('commish', async () => {
         let msg = await refused(() => q(`update leagues set league_start_date=$2 where id=$1`, [L, '2026-11-23T14:30:00Z']),
           'league_rules_locked');
         assert(msg.includes('(league_start_date)'), msg);
         await refused(() => q(`update leagues set league_start_date=null where id=$1`, [L]), 'league_rules_locked');
-        // league_end_date is still NULL: one stamp is allowed (and the unchanged start date rides along fine)...
-        await q(`update leagues set league_end_date=$2, league_start_date=league_start_date where id=$1`, [L, '2027-02-05T21:00:00Z']);
-        // ...and then it is frozen.
-        msg = await refused(() => q(`update leagues set league_end_date=$2 where id=$1`, [L, '2027-03-05T21:00:00Z']),
+        // league_end_date is NULL on a completed league (e.g. the direct jump): no stamping with hindsight.
+        msg = await refused(() => q(`update leagues set league_end_date=$2 where id=$1`, [L, '2027-02-05T21:00:00Z']),
           'league_rules_locked');
         assert(msg.includes('(league_end_date)'), msg);
       });
-      const [r] = await q(`select league_start_date::text s, league_end_date::text e from leagues where id=$1`, [L]);
-      assert(r.s.startsWith('2026-11-16') && r.e.startsWith('2027-02-05'), `${r.s} ${r.e}`);
+      // in_progress without completing: no stamp either.
+      const P = await league('in_progress');
+      await as('commish', () =>
+        refused(() => q(`update leagues set league_start_date=$2 where id=$1`, [P, '2026-11-16T14:30:00Z']), 'league_rules_locked'));
+      // The completing UPDATE cannot REWRITE a set date either (only NULL -> value).
+      const P2 = await league('in_progress', { league_start_date: '2026-11-16T14:30:00Z' });
+      await as('commish', () =>
+        refused(() => q(`update leagues set draft_status='completed', league_start_date=$2 where id=$1`, [P2, '2026-11-23T14:30:00Z']),
+          'league_rules_locked'));
+      const [r] = await q(`select league_start_date::text s, league_end_date e from leagues where id=$1`, [L]);
+      assert(r.s.startsWith('2026-11-16') && r.e === null, `${r.s} ${r.e}`);
       // Pre-draft, the dates are free; the service role is exempt post-draft.
       const open = await league('not_started', { league_start_date: '2026-11-16T14:30:00Z' });
       await as('commish', () => q(`update leagues set league_start_date=null where id=$1`, [open]));
       await as('service', () => q(`update leagues set league_start_date=$2 where id=$1`, [L, '2026-11-30T14:30:00Z']));
+    });
+
+    // ---- guarded elsewhere: prove each one after the draft --------------------
+    await t.step('guarded: draft_order_mode / pick_seconds refused, pick_clock_enabled / draft_started_at reverted, post-draft', async () => {
+      for (const st of ['in_progress', 'completed']) {
+        const L = await league(st);
+        const [before] = await q(`select pick_clock_enabled p, draft_started_at::text d from leagues where id=$1`, [L]);
+        await as('commish', async () => {
+          await refused(() => q(`update leagues set draft_order_mode='manual' where id=$1`, [L]), 'draft_order_mode_locked', '22023');
+          await refused(() => q(`update leagues set pick_seconds=30 where id=$1`, [L]), 'pick_seconds_locked', '22023');
+          await q(`update leagues set pick_clock_enabled=false, draft_started_at='2020-01-01T00:00:00Z' where id=$1`, [L]);
+        });
+        const [after] = await q(`select pick_clock_enabled p, draft_started_at::text d from leagues where id=$1`, [L]);
+        assertEquals([after.p, after.d], [before.p, before.d], st);
+      }
     });
 
     // ---- league_members: no leaving once the draft has started (INTERIM) ----
@@ -389,7 +436,7 @@ Deno.test({
       }
     });
 
-    await t.step('members: two concurrent-shaped leaves in ONE transaction do not self-deadlock (lock order)', async () => {
+    await t.step('members: two leaves in ONE transaction complete (single connection; the lock MODE is pinned in structure)', async () => {
       const L = await league('not_started');
       await db.exec('begin');
       try {
@@ -597,6 +644,28 @@ Deno.test({
       }
       assertEquals((await slots(L)).length, 2);
       assertEquals((await rules(L)).num_rounds, 6);
+    });
+
+    await t.step('no probing: a non-commissioner writing into another league gets the RLS error, not league_slots_locked', async () => {
+      const done = await league('completed');
+      const open = await league('not_started');
+      // The member is in `done` but does not commission it; an outsider is in neither.
+      await as('member', () =>
+        refused(() => q(`insert into league_draft_slots (league_id, slot_index) values ($1,7)`, [done]), 'row-level security'));
+      await db.exec(`set role authenticated; set request.jwt.claim.sub = '55555555-5555-4555-8555-555555555555';`);
+      try {
+        await refused(() => q(`insert into league_draft_slots (league_id, slot_index) values ($1,7)`, [done]), 'row-level security');
+      } finally {
+        await db.exec(`reset role; reset request.jwt.claim.sub;`);
+      }
+      // A league the commissioner does NOT run (started): re-parenting their own open slot into it is RLS-refused.
+      const [other] = await q(`insert into leagues (name, commissioner_id, invite_code, num_participants, draft_status)
+        values ('o', $1, $2, 8, 'completed') returning id`, [MEMBER, crypto.randomUUID()]);
+      await as('commish', () =>
+        refused(() => q(`update league_draft_slots set league_id=$2, slot_index=9 where league_id=$1 and slot_index=0`,
+          [open, other.id]), 'row-level security'));
+      assertEquals((await slots(done)).length, 2);
+      assertEquals((await slots(open)).length, 2);
     });
 
     await t.step('a league INSERTed already completed (allowed by [I1]) cannot then receive slots', async () => {

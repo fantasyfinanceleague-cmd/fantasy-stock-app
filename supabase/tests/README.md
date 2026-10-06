@@ -436,22 +436,35 @@ What it does:
   `service_role` (bypassrls) with no sub.
 
 It covers:
+- **replay completeness**: every migration statement that mentions `table leagues` is
+  either replayed or a known non-column form (constraints, RLS, column defaults). An
+  `ADD x` without `COLUMN`, a quoted name, or DDL inside a `DO` block fails the test, so
+  the replay can't silently miss a column.
 - **classification**: every `leagues` column is classified as `frozen`, `stamp_once`,
   `guarded` (with the named trigger) or deliberately `editable`. **A new column fails
   this test until it is classified**, so a future rule column cannot silently stay
   commissioner-writable. The editable set is exercised post-draft, and `id` is pinned.
 - the season-state columns (`season_status`, `current_week`, `current_season_id`,
   `commissioner_id`) and the retired `budget_mode` frozen like the rules; `league_start_date` / `league_end_date`
-  stamp-once (F1's carve-out): the member and commissioner completion-stamp shapes pass,
-  and a rewrite or clear is refused
+  stamp-once, exactly F1's carve-out: NULL → value only in the completing UPDATE
+  (`in_progress` → `completed`). The member and commissioner completion shapes pass. A
+  rewrite, a clear, or a hindsight stamp at any other time is refused.
+- the "guarded elsewhere" columns are proven post-draft: `draft_order_mode` and
+  `pick_seconds` are refused, and `pick_clock_enabled` / `draft_started_at` are reverted
+- no probing: a non-commissioner writing a slot into someone else's league gets the RLS
+  error, not `league_slots_locked`. The DEFINER trigger only reads and locks the caller's
+  own leagues.
 - leaving the league ([I5], interim guard): a member and the commissioner refused with
   `league_membership_locked` in `in_progress` and `completed`; pre-draft leave unchanged;
   the service role may remove a member post-draft, but mid-draft it still meets the
   older all-roles `draft_in_progress`; deleting a started league cascades its members,
-  slots and draft order; two leaves in one transaction (the lock order) complete
+  slots and draft order; two leaves in one transaction complete (single connection only).
+  The lock MODES (`FOR NO KEY UPDATE` for leaves, `FOR SHARE` scoped to the caller's
+  leagues for slots) are pinned statically from `pg_proc.prosrc`, because one connection
+  can't tell them apart.
 - pre-draft: the commissioner inserts, updates and deletes slots and edits every rule
 - `in_progress` and `completed`: every slot write (and the delete-then-insert client
-  save) refused with `league_slots_locked`; each of the nine frozen columns refused on
+  save) refused with `league_slots_locked`; each of the 14 frozen columns refused on
   its own (and set to NULL) with `league_rules_locked` naming the column; nothing written
 - the same-value patch shapes of mobile `league-settings.tsx` and web `Leagues.jsx`
   (with an unscaled `budget_amount`) still saving after the draft
@@ -481,17 +494,19 @@ this trigger. #94 also adds `leagues` columns (`previous_league_id`, `lineage_id
 `season_number`), so on rebase this test FAILS until they are classified. They are
 guarded by #94's own `enforce_league_lineage_columns` trigger.
 
-Mutation-checked: 16 mutations, each failing at least one step. They cover:
-- each guard branch, including the leave guard disabled, its cascade allowance removed,
-  and its service-role exemption removed;
+Mutation-checked: 21 mutations, 20 of which fail at least one step. They cover:
+- each guard branch;
+- the leave guard disabled, its cascade allowance removed, its service-role exemption
+  removed, and its lock swapped to `FOR SHARE`;
+- the slot trigger's commissioner scope removed;
 - a state column dropped, and `budget_mode` dropped;
-- stamp-once refusing NULL → value;
-- a probe migration adding an unclassified column, which fails both the classification
-  step and the effect block's C1.
+- stamp-once refusing NULL → value, and stamp-once widened back to any time;
+- three probe migrations: an unclassified column, an `ADD` without `COLUMN`, and an
+  `ADD COLUMN` inside a `DO` block.
 
-The leave guard takes `FOR NO KEY UPDATE`, not `FOR SHARE`. That choice avoids a deadlock
-between two concurrent transactions, which needs two connections; its argument is in the
-migration header.
+The survivor is equivalent, not a gap. Removing the slot trigger's explicit
+`auth.uid() IS NULL` exemption changes nothing, because the commissioner scope
+(`commissioner_id = auth.uid()::text`) already matches no league when the uid is NULL.
 
 #94 compatibility was checked once, in a scratch copy of this suite, against
 `20261105000004_run_it_back_gate.sql` @ `f450e78`, all passing:

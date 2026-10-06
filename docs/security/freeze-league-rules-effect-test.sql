@@ -41,10 +41,11 @@
 --   R4  commissioner, completed: current_week -> league_rules_locked PASS
 --   R5  commissioner, completed: commissioner_id (transfer)
 --       -> league_rules_locked                                      PASS
---   R6  commissioner, completed: first-time league_start_date stamp
---       (NULL -> value, F1's carve-out) -> 1 row                    PASS
---   R7  commissioner, completed: rewrite that stamped date
---       -> league_rules_locked                                      PASS
+--   R6  commissioner, completed: stamp a NULL league_start_date
+--       outside the completing UPDATE -> league_rules_locked        PASS
+--   R7  commissioner, in_progress: the completing UPDATE
+--       (draft_status -> completed + first-time dates, F1's
+--       carve-out) -> 1 row                                         PASS
 --   D1  commissioner, completed -> not_started
 --       -> league_draft_status_locked                               PASS
 --   L1  commissioner, completed: leaves -> league_membership_locked PASS
@@ -62,6 +63,7 @@ declare
   x_uid   text := gen_random_uuid()::text;   -- a fixture member the service role removes
   l_open  uuid;                              -- not_started
   l_done  uuid;                              -- completed
+  l_prog  uuid;                              -- in_progress
   s_open  uuid;
   s_done  uuid;
   n       int;
@@ -123,6 +125,12 @@ begin
                               draft_status, draft_date)
   values ('__FREEZE_DONE__', c_uid, 'FRZ-' || gen_random_uuid(), 8, 6, 11, 'not_started', now() + interval '5 hours')
   returning id into l_done;
+  insert into public.leagues (name, commissioner_id, invite_code, num_participants, num_rounds, num_weeks,
+                              draft_status, draft_date)
+  values ('__FREEZE_PROG__', c_uid, 'FRZ-' || gen_random_uuid(), 8, 6, 11, 'not_started', now() + interval '5 hours')
+  returning id into l_prog;
+  insert into public.league_members (league_id, user_id, role)
+  values (l_prog, c_uid, 'commissioner'), (l_prog, m_uid, 'member');
   insert into public.league_members (league_id, user_id, role)
   select l, u, case when u = c_uid then 'commissioner' else 'member' end
     from unnest(array[l_open, l_done]) l, unnest(array[c_uid, m_uid, x_uid]) u;
@@ -133,6 +141,7 @@ begin
   insert into public.league_draft_slots (league_id, slot_index, slot_count, price_min, price_max)
   values (l_done, 1, 3, 50, null);
   update public.leagues set draft_status = 'completed' where id = l_done;
+  update public.leagues set draft_status = 'in_progress' where id = l_prog;
 
   -- ---- V: service_role keeps full rights -------------------------------------
   perform set_config('role', 'service_role', true);
@@ -249,20 +258,22 @@ begin
       case when sqlstate = '42501' and sqlerrm like 'league_rules_locked:%(commissioner_id)' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
   end;
   begin
-    -- The fixture was created with league_start_date NULL: one stamp is allowed.
+    -- The fixture was created with league_start_date NULL: stamping it now, with hindsight, is refused.
     update public.leagues set league_start_date = now() where id = l_done and league_start_date is null;
     get diagnostics n = row_count;
-    out := out || format(E'R6 completed first-time start-date stamp rows=%s  %s\n', n, case when n = 1 then 'PASS' else 'FAIL' end);
+    out := out || format(E'R6 completed hindsight start-date stamp -> allowed rows=%s  FAIL\n', n);
   exception when others then
-    out := out || format(E'R6 completed first-time start-date stamp -> %s %s  FAIL\n', sqlstate, sqlerrm);
+    out := out || format(E'R6 completed hindsight start-date stamp -> %s  %s\n', sqlstate,
+      case when sqlstate = '42501' and sqlerrm like 'league_rules_locked:%(league_start_date)' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
   end;
   begin
-    update public.leagues set league_start_date = league_start_date + interval '7 days' where id = l_done;
+    update public.leagues
+       set draft_status = 'completed', league_start_date = now(), league_end_date = now() + interval '11 weeks'
+     where id = l_prog and league_start_date is null and league_end_date is null;
     get diagnostics n = row_count;
-    out := out || format(E'R7 completed start-date rewrite -> allowed rows=%s  FAIL\n', n);
+    out := out || format(E'R7 completing UPDATE with first-time dates rows=%s  %s\n', n, case when n = 1 then 'PASS' else 'FAIL' end);
   exception when others then
-    out := out || format(E'R7 completed start-date rewrite -> %s  %s\n', sqlstate,
-      case when sqlstate = '42501' and sqlerrm like 'league_rules_locked:%(league_start_date)' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
+    out := out || format(E'R7 completing UPDATE with first-time dates -> %s %s  FAIL\n', sqlstate, sqlerrm);
   end;
 
   begin
@@ -302,10 +313,12 @@ begin
   end;
 
   -- ---- C: every live column is classified ----------------------------------
-  select string_agg(column_name::text, ', ' order by ordinal_position) into acl
-    from information_schema.columns
-   where table_schema = 'public' and table_name = 'leagues'
-     and column_name::text <> all (c_classified);
+  -- pg_attribute, not information_schema.columns: the latter is filtered by the
+  -- CURRENT role's privileges (this runs as authenticated by now).
+  select string_agg(attname::text, ', ' order by attnum) into acl
+    from pg_attribute
+   where attrelid = 'public.leagues'::regclass and attnum > 0 and not attisdropped
+     and attname::text <> all (c_classified);
   out := out || format(E'C1 unclassified leagues columns: %s  %s\n', coalesce(acl, 'none'),
     case when acl is null then 'PASS' else 'FAIL' end);
 

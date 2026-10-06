@@ -2,8 +2,8 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "7a8b939504198cad81735a5a14efbfbfd687e482",
-    "commitShort": "7a8b939",
+    "commit": "3c88bc5cd597fb66a6569c84375c298e5ae05007",
+    "commitShort": "3c88bc5",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": true,
@@ -2047,7 +2047,7 @@
       "db": null,
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:294"
+          "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:306"
         ],
         "latestDefinition": "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql",
         "redefinitions": 1
@@ -2069,7 +2069,7 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql",
-        "line": 294
+        "line": 306
       }
     },
     {
@@ -2078,7 +2078,7 @@
       "db": null,
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:345"
+          "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:366"
         ],
         "latestDefinition": "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql",
         "redefinitions": 1
@@ -2100,7 +2100,7 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql",
-        "line": 345
+        "line": 366
       }
     },
     {
@@ -2109,7 +2109,7 @@
       "db": null,
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:218"
+          "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:228"
         ],
         "latestDefinition": "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql",
         "redefinitions": 1
@@ -2131,7 +2131,7 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql",
-        "line": 218
+        "line": 228
       }
     },
     {
@@ -8566,7 +8566,7 @@
       "payload": "SELECT leagues (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:315"
+        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:335"
       ]
     },
     {
@@ -8579,7 +8579,7 @@
       "payload": "SELECT leagues (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:357"
+        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:378"
       ]
     },
     {
@@ -10025,7 +10025,7 @@
       "payload": "trigger on league_draft_slots",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:338"
+        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:359"
       ]
     },
     {
@@ -10080,7 +10080,7 @@
       "payload": "trigger on league_members",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:380"
+        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:401"
       ]
     },
     {
@@ -10133,7 +10133,7 @@
       "payload": "trigger on leagues",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:287"
+        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:299"
       ]
     },
     {
