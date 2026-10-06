@@ -20,9 +20,10 @@ import {
   STAKE_MODE_OPTIONS,
   fetchCategories,
   loadLeagueSlots,
-  saveLeagueSlots,
   validateSlotConfig,
 } from '@/lib/categoryData';
+import { seamSaveLeagueSlots, seamUpdateLeague } from '@/lib/game/seamCalls';
+import { settingsSaveOutcome } from '@/lib/game/settingsSave';
 import { Button, Card } from '@/components/ui';
 
 const ACCENT = Colors.primary;
@@ -132,15 +133,26 @@ export default function LeagueSettingsScreen() {
         }
       }
 
-      const { error } = await supabase
-        .from('leagues')
-        .update(patch)
-        .eq('id', league.id);
-
-      if (error) throw error;
+      // Order: the league row first. It carries the rules freeze, so a refusal
+      // here writes nothing. The roster second: if it is refused after the league
+      // row landed, the outcome says PARTLY saved rather than a raw error.
+      const { error } = await seamUpdateLeague(league.id, patch);
+      if (error) {
+        const outcome = settingsSaveOutcome({ patchError: error, slotsError: null });
+        Alert.alert(outcome.title ?? 'Not saved', outcome.message ?? '');
+        return;
+      }
 
       if (!isLocked) {
-        await saveLeagueSlots(league.id, slots);
+        try {
+          await seamSaveLeagueSlots(league.id, slots);
+        } catch (slotErr) {
+          console.error('Roster save refused after the league row landed:', slotErr);
+          const outcome = settingsSaveOutcome({ patchError: null, slotsError: slotErr as { message?: string } });
+          await refresh();
+          Alert.alert(outcome.title ?? 'Partly saved', outcome.message ?? '');
+          return;
+        }
       }
 
       await refresh();
@@ -150,7 +162,7 @@ export default function LeagueSettingsScreen() {
       ]);
     } catch (error: any) {
       console.error('Failed to update league:', error);
-      Alert.alert('Error', error.message || 'Failed to update settings');
+      Alert.alert('Not saved', "Your settings didn't save. Try again.");
     } finally {
       setSaving(false);
     }

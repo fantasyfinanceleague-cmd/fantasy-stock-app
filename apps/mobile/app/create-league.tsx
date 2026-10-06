@@ -8,7 +8,6 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Colors } from '@/constants/Colors';
 import { useAuth } from '@/lib/useAuth';
 import { useLeagueContext } from '@/lib/LeagueContext';
-import { supabase } from '@/lib/supabase';
 import { validateLeagueName } from '@/lib/contentModeration';
 import { generateInviteCode } from '@/lib/inviteCode';
 import SlotBuilder from '@/components/SlotBuilder';
@@ -21,9 +20,9 @@ import {
   DEFAULT_NOTIONAL_PER_SLOT,
   STAKE_MODE_OPTIONS,
   fetchCategories,
-  saveLeagueSlots,
   validateSlotConfig,
 } from '@/lib/categoryData';
+import { seamInsertLeague, seamInsertMember, seamSaveLeagueSlots } from '@/lib/game/seamCalls';
 import { Button, Card } from '@/components/ui';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -122,9 +121,7 @@ export default function CreateLeagueWizard() {
       // written (DB default applies); salary_cap_limit is retired — drop
       // migration authored on this branch. budget_amount only means anything
       // in budget_cap mode.
-      const { data: league, error: leagueError } = await supabase
-        .from('leagues')
-        .insert({
+      const { data: league, error: leagueError } = await seamInsertLeague({
           name: state.name.trim(),
           commissioner_id: user.id,
           invite_code: generateInviteCode(),
@@ -142,25 +139,21 @@ export default function CreateLeagueWizard() {
           playoff_teams: state.type === 'matchup' ? playoffTeams : null,
           draft_status: 'not_started',
           draft_date: state.draftDateTBD ? null : state.draftDate?.toISOString(),
-        })
-        .select()
-        .single();
+      });
 
       if (leagueError) throw leagueError;
 
-      const { error: memberError } = await supabase
-        .from('league_members')
-        .insert({
-          league_id: league.id,
-          user_id: user.id,
-          role: 'commissioner',
-        });
+      const { error: memberError } = await seamInsertMember({
+        league_id: league.id,
+        user_id: user.id,
+        role: 'commissioner',
+      });
 
       if (memberError) throw memberError;
 
       if (state.slots.length > 0) {
         try {
-          await saveLeagueSlots(league.id, state.slots);
+          await seamSaveLeagueSlots(league.id, state.slots);
         } catch (slotErr) {
           console.error('Slot save failed:', slotErr);
           Alert.alert('Heads up', 'League created, but roster slots failed to save — edit them in League Settings.');
