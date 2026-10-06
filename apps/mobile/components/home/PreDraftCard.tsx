@@ -128,7 +128,7 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, dra
           </View>
         ) : null}
 
-        {!waiting ? <Button label={BUILD_YOUR_QUEUE} onPress={() => router.push('/draft')} variant="primary" /> : null}
+        {!waiting ? <Button label={BUILD_YOUR_QUEUE} onPress={() => router.push('/(tabs)/league')} variant="primary" /> : null}
       </Card>
 
       <Card style={styles.card}>

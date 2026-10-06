@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { useAuth } from '@/lib/useAuth';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -674,16 +674,6 @@ export default function DraftScreen() {
 
           {isCommissioner ? (
             <View style={styles.commishActions}>
-              {/* Opens the rebuilt League settings (3c-2). Kept, not removed:
-                  commissioners still land on this legacy pre-draft view from
-                  Home's "Build your queue" (PreDraftCard → /draft) and from
-                  draft pushes (screen: 'draft'). The League tab's pre-draft row
-                  replaces it only once those stop routing here. */}
-              <Button
-                title="Edit Draft Date & Settings"
-                variant="secondary"
-                onPress={() => router.push({ pathname: '/league-settings', params: { leagueId: activeLeagueId } })}
-              />
               {startStatus?.bots_allowed && botsNeeded > 0 && (
                 <Button
                   title={`Fill with ${botsNeeded} Bot${botsNeeded === 1 ? '' : 's'}`}

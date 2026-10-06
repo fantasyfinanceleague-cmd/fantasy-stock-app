@@ -161,8 +161,6 @@ export default function LeagueScreen() {
       icon={() => <Icon name="trophy" size="title" tone="text2" />}
       heading="Standings are on the way"
       message="Standings, the schedule and the draft room will live here in the next update."
-      actionLabel={drafting ? 'Go to the draft room' : undefined}
-      onAction={drafting ? () => router.push('/(tabs)/draft') : undefined}
     />
   );
 }

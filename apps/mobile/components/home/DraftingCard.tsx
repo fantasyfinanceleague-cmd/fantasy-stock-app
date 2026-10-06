@@ -83,7 +83,7 @@ export function DraftingCard({ leagueId, myUserId, numRounds }: DraftingCardProp
           </Text>
         )}
 
-        <Button label={GO_TO_DRAFT_ROOM} onPress={() => router.push('/draft')} variant="primary" />
+        <Button label={GO_TO_DRAFT_ROOM} onPress={() => router.push('/(tabs)/league')} variant="primary" />
       </Card>
 
       <Card style={styles.card}>
