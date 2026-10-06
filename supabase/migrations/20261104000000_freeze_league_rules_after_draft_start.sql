@@ -1,7 +1,8 @@
 -- ============================================================================
 -- Freeze a league's rules once its draft has started
---   league_draft_slots (every row) + the leagues rule / season-shape columns
---   + no backward draft_status move, for user sessions (commissioner included)
+--   league_draft_slots (every row) + the leagues rule / season-shape / season-
+--   state columns + no backward draft_status move, for user sessions
+--   (commissioner included)
 -- ============================================================================
 -- PROBLEM
 --   Roster slots are the boundary for what a manager may buy: a draft pick
@@ -19,6 +20,9 @@
 --   season-shape columns (num_weeks, duration_days, league_type,
 --   num_participants) drive the schedule finalize_league_draft builds at draft
 --   end, so changing them afterwards desyncs the league from its schedule.
+--   The season-state columns (season_status, current_week, current_season_id,
+--   league_start_date / league_end_date = the scoring window, commissioner_id)
+--   are the same boundary: rewriting them on a live season reshapes scoring.
 --
 --   WHAT EXISTING GUARDS ALREADY COVER (and why they are not enough):
 --     * trg_leagues_member_update_columns (F1, 20260925000000) refuses a
@@ -52,22 +56,33 @@
 --          allow_undraftable                              (record-trade's rules)
 --          num_weeks, duration_days, league_type, num_participants
 --                                                        (season shape)
+--          season_status, current_week, current_season_id, commissioner_id
+--                                                        (season state)
+--      and league_start_date / league_end_date may change only by F1's
+--      first-time stamp: NULL -> value is allowed (once); changing a non-NULL
+--      value, or setting it back to NULL, is refused. That keeps F1's
+--      completion carve-out (draft_status + a first-time date stamp) working
+--      for a member AND the commissioner; today no user-session writer stamps
+--      them at all (grep 2026-11-04: the web completeDraft write moved into
+--      finalize_league_draft, service role).
 --      VALUE comparison, not SET-list membership: apps/mobile league-settings
 --      and web Leagues.jsx handleUpdate always send these columns, so a
 --      same-value patch (a rename after the draft from a stale screen) must
 --      pass. Judged on OLD, like the playoff_teams freeze: one UPDATE that
 --      changes a rule AND starts the draft is allowed (the league was still
 --      not_started).
---      NOT frozen: name, draft_date (editable by ruling), playoff_teams
---      (already frozen by 20261012000002), everything else. DELIBERATELY OUT
---      OF SCOPE and still commissioner-writable through [I2a] on a live
---      season: season_status, current_week, current_season_id,
---      league_start_date / league_end_date (the scoring window; F1 guards
---      them only for non-commissioner members) and commissioner_id. Those
---      are season STATE, not buy rules; they need their own decision (or the
---      update-league edge function that replaces [I2a]). This is an
---      enumerated list, unlike F1's whole-row compare: a NEW rule column is
---      writable by the commissioner until it is added here.
+--      EVERY leagues column is classified in
+--      supabase/tests/freeze_league_rules.pglite.test.ts (frozen here,
+--      stamp-once here, guarded by another named trigger, or deliberately
+--      editable: name, draft_date, invite_code, created_at, budget_mode). The
+--      test replays every CREATE/ALTER TABLE leagues in the migrations, so a
+--      NEW column fails it until someone classifies it. This list is
+--      enumerated (unlike F1's whole-row compare); the test is what stops a
+--      future rule column from silently staying commissioner-writable.
+--      COMMISSIONER TRANSFER is therefore closed for user sessions once the
+--      draft starts. The planned leave-league RPC must run on a service-role
+--      path: a SECURITY DEFINER function called with a user JWT still has
+--      auth.uid() set and is NOT exempt.
 --   3. league_draft_slots: no INSERT, UPDATE or DELETE once the parent
 --      league's draft_status is anything but exactly 'not_started'. For an
 --      UPDATE both the OLD and the NEW league are checked (re-parenting a slot
@@ -201,7 +216,16 @@ begin
     case when new.num_weeks         is distinct from old.num_weeks         then 'num_weeks' end,
     case when new.duration_days     is distinct from old.duration_days     then 'duration_days' end,
     case when new.league_type       is distinct from old.league_type       then 'league_type' end,
-    case when new.num_participants  is distinct from old.num_participants  then 'num_participants' end
+    case when new.num_participants  is distinct from old.num_participants  then 'num_participants' end,
+    case when new.season_status     is distinct from old.season_status     then 'season_status' end,
+    case when new.current_week      is distinct from old.current_week      then 'current_week' end,
+    case when new.current_season_id is distinct from old.current_season_id then 'current_season_id' end,
+    case when new.commissioner_id   is distinct from old.commissioner_id   then 'commissioner_id' end,
+    -- F1's first-time stamp: NULL -> value only.
+    case when old.league_start_date is not null
+          and new.league_start_date is distinct from old.league_start_date then 'league_start_date' end,
+    case when old.league_end_date is not null
+          and new.league_end_date is distinct from old.league_end_date then 'league_end_date' end
   ], null);
 
   if cardinality(v_changed) > 0 then

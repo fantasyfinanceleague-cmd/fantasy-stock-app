@@ -7,12 +7,17 @@
  * RLS policies (20260712000001), the F1 member column guard (20260925000000),
  * the playoff_teams freeze (20261012000002), league_draft_slots + its interim
  * commissioner policies (20260810000004), then the migration under test.
- * leagues is a replica of the columns those files and the new trigger touch,
- * with the real draft_status CHECK. Supabase's default anon/authenticated
- * grants are simulated, so the proacl step proves the explicit REVOKEs.
+ * leagues is NOT hand-written: it is built by replaying every CREATE TABLE /
+ * ALTER TABLE ... ADD|DROP|RENAME COLUMN on leagues from supabase/migrations/
+ * in order (FK REFERENCES clauses stripped; the referenced tables are not
+ * here). So the triggers run against the real column set, types and inline
+ * CHECKs, and the 'classification' step can require that EVERY column is
+ * classified: a new column fails this test until someone decides whether it
+ * is frozen after the draft. Supabase's default anon/authenticated grants are
+ * simulated, so the proacl step proves the explicit REVOKEs.
  *
  * It also runs docs/security/freeze-league-rules-effect-test.sql (the human
- * post-push block) verbatim and requires all 13 lines to PASS.
+ * post-push block) verbatim and requires all of its lines to PASS.
  *
  * Writes run as `authenticated` with a JWT sub, so the real interim policies
  * admit the commissioner and the triggers are what refuse them. The service
@@ -37,7 +42,7 @@ const MIGRATIONS = [
   '20261104000000_freeze_league_rules_after_draft_start.sql',
 ].map((f) => new URL(`supabase/migrations/${f}`, ROOT));
 
-const SCHEMA = `
+const SCHEMA_PRE = `
 create role anon; create role authenticated; create role service_role bypassrls;
 create schema auth;
 -- Supabase's own definition: the legacy per-claim GUC, else request.jwt.claims (what
@@ -50,23 +55,87 @@ grant execute on function auth.uid() to anon, authenticated, service_role;
 alter default privileges in schema public grant execute on functions to anon, authenticated, service_role;
 alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
 grant usage on schema public to anon, authenticated, service_role;
-create table leagues (
-  id uuid primary key default gen_random_uuid(), name text, commissioner_id text not null, invite_code text unique,
-  draft_status text not null default 'not_started'
-    check (draft_status in ('not_started', 'in_progress', 'completed')),
-  draft_date timestamptz, stake_mode text, budget_amount numeric(12,2),
-  notional_per_slot numeric, num_rounds int, allow_undraftable boolean not null default false,
-  num_weeks int, duration_days int, league_type text, num_participants int,
-  playoff_teams int, league_start_date timestamptz, league_end_date timestamptz);
+`;
+const SCHEMA_POST = `
 create table league_members (league_id uuid not null references leagues(id) on delete cascade,
   user_id text not null, role text, primary key (league_id, user_id));
 create table categories (id uuid primary key default gen_random_uuid(), name text);
 `;
 
+/**
+ * Every leagues DDL statement in the migrations that shapes its COLUMNS, in
+ * apply order (deferred/ is not applied, so not read). Comments are stripped
+ * and statements split on ';' -- safe here because none of these statements
+ * contains a function body. FK REFERENCES clauses are stripped.
+ */
+async function leaguesColumnDdl(): Promise<string[]> {
+  const dir = new URL('supabase/migrations/', ROOT);
+  const files: string[] = [];
+  for await (const e of Deno.readDir(dir)) if (e.isFile && e.name.endsWith('.sql')) files.push(e.name);
+  files.sort();
+  const out: string[] = [];
+  for (const f of files) {
+    const sql = (await Deno.readTextFile(new URL(f, dir))).replace(/--[^\n]*/g, '');
+    for (const raw of sql.split(';')) {
+      const st = raw.trim();
+      if (!/^(create\s+table(\s+if\s+not\s+exists)?|alter\s+table(\s+if\s+exists)?(\s+only)?)\s+(public\.)?leagues\b/i.test(st)) continue;
+      if (/^alter/i.test(st) && !/\b(add|drop|rename)\s+column\b/i.test(st)) continue;
+      out.push(st.replace(
+        /\breferences\s+[\w.]+\s*(\([^)]*\))?(\s+on\s+(delete|update)\s+(set\s+null|cascade|restrict|no\s+action|set\s+default))*/gi, ''));
+    }
+  }
+  return out;
+}
+
 const COMMISH = '11111111-1111-4111-8111-111111111111';
 const MEMBER = '22222222-2222-4222-8222-222222222222';
+const SEASON = '33333333-3333-4333-8333-333333333333';
 
-// The nine frozen columns, each with a value that differs from the fixture's.
+/**
+ * EVERY leagues column, classified. The 'classification' step fails when the
+ * migrations add a column that is not here (or this lists one that is gone).
+ *   frozen      -- trg_leagues_freeze_rules: no value change once the draft
+ *                  has started (each one is exercised via FROZEN below);
+ *   stamp_once  -- trg_leagues_freeze_rules: NULL -> value once (F1's carve-out);
+ *   guarded     -- frozen/managed by another named guard (`by`);
+ *   editable    -- deliberately writable by the commissioner after the draft.
+ * F1 (20260925000000) additionally pins every column for a NON-commissioner
+ * member except draft_status + the first-time date stamp, so the classes
+ * below describe the COMMISSIONER's post-draft rights.
+ */
+type Kind = 'frozen' | 'stamp_once' | 'guarded' | 'editable';
+const CLASSIFICATION: Record<string, { kind: Kind; by?: string; why?: string }> = {
+  stake_mode: { kind: 'frozen' },
+  budget_amount: { kind: 'frozen' },
+  notional_per_slot: { kind: 'frozen' },
+  num_rounds: { kind: 'frozen' },
+  allow_undraftable: { kind: 'frozen' },
+  num_weeks: { kind: 'frozen' },
+  duration_days: { kind: 'frozen' },
+  league_type: { kind: 'frozen' },
+  num_participants: { kind: 'frozen' },
+  season_status: { kind: 'frozen' },
+  current_week: { kind: 'frozen' },
+  current_season_id: { kind: 'frozen' },
+  commissioner_id: { kind: 'frozen' },
+  league_start_date: { kind: 'stamp_once' },
+  league_end_date: { kind: 'stamp_once' },
+  draft_status: { kind: 'guarded', by: 'trg_leagues_freeze_rules', why: 'the transition table' },
+  playoff_teams: { kind: 'guarded', by: 'trg_leagues_freeze_playoff_teams' },
+  draft_order_mode: { kind: 'guarded', by: 'trg_leagues_order_mode' },
+  pick_clock_enabled: { kind: 'guarded', by: 'trg_leagues_pick_clock' },
+  draft_started_at: { kind: 'guarded', by: 'trg_leagues_pick_clock', why: 'trigger-written only' },
+  pick_seconds: { kind: 'guarded', by: 'trg_leagues_pick_clock', why: 'pick_seconds_locked once started, every role' },
+  id: { kind: 'guarded', by: 'FK', why: "[I2a] WITH CHECK is_commissioner(new id) is false for any new id; child FKs are ON UPDATE NO ACTION" },
+  name: { kind: 'editable', why: 'ruling 2026-11-04' },
+  draft_date: { kind: 'editable', why: 'ruling 2026-11-04; inert once the draft has started' },
+  invite_code: { kind: 'editable', why: 'rotation is harmless: joins are gated on draft_status' },
+  created_at: { kind: 'editable', why: 'display only' },
+  budget_mode: { kind: 'editable', why: 'retired; server rules read stake_mode, web reads it only as a display fallback when stake_mode IS NULL' },
+};
+
+// The frozen columns, each with a value that differs from the fixture's.
+// commissioner_id LAST: once it changes, the old commissioner's RLS is gone.
 const FROZEN: Record<string, unknown> = {
   stake_mode: 'budget_cap',
   budget_amount: 999,
@@ -77,11 +146,16 @@ const FROZEN: Record<string, unknown> = {
   duration_days: 60,
   league_type: 'duration',
   num_participants: 6,
+  season_status: 'completed',
+  current_week: 5,
+  current_season_id: SEASON,
+  commissioner_id: MEMBER,
 };
 const FIXTURE = {
   name: 'L', draft_date: '2026-11-10T20:00:00Z', stake_mode: 'price_tiers', budget_amount: 250,
   notional_per_slot: 1000, num_rounds: 6, allow_undraftable: false, num_weeks: 11,
   duration_days: 30, league_type: 'matchup', num_participants: 8, playoff_teams: 4,
+  season_status: 'active', current_week: 3, current_season_id: '44444444-4444-4444-8444-444444444444',
 };
 
 // deno-lint-ignore no-explicit-any
@@ -94,7 +168,10 @@ Deno.test({
   async fn(t) {
     const db = new PGlite();
     const q = async (s: string, p: unknown[] = []) => (await db.query(s, p)).rows as Row[];
-    await db.exec(SCHEMA);
+    await db.exec(SCHEMA_PRE);
+    const ddl = await leaguesColumnDdl();
+    for (const st of ddl) await db.exec(st);
+    await db.exec(SCHEMA_POST);
     for (const m of MIGRATIONS) await db.exec(await Deno.readTextFile(m));
 
     // ---- sessions ---------------------------------------------------------
@@ -125,7 +202,7 @@ Deno.test({
 
     // ---- fixtures (service role / owner) ----------------------------------
     async function league(status: string, extra: Record<string, unknown> = {}): Promise<string> {
-      const row = { ...FIXTURE, commissioner_id: COMMISH, ...extra };
+      const row = { ...FIXTURE, commissioner_id: COMMISH, invite_code: crypto.randomUUID(), ...extra };
       const keys = Object.keys(row);
       const [l] = await q(
         `insert into leagues (${keys.join(',')}) values (${keys.map((_, i) => '$' + (i + 1)).join(',')}) returning id`,
@@ -174,6 +251,77 @@ Deno.test({
         assert(!/anon=|authenticated=/.test(f.acl), `${f.proname}: default role grant survives: ${f.acl}`);
         assertEquals(f.proconfig, ['search_path=public, pg_temp']);
       }
+    });
+
+    // ---- classification: every column has a decision -----------------------
+    await t.step('classification: every leagues column in the migrations is classified, and nothing stale', async () => {
+      assert(ddl.length >= 10, `expected the leagues DDL history, got ${ddl.length} statements`);
+      const cols = (await q(`select column_name c from information_schema.columns
+        where table_schema='public' and table_name='leagues' order by ordinal_position`)).map((r: Row) => r.c as string);
+      const unclassified = cols.filter((c) => !(c in CLASSIFICATION));
+      assertEquals(unclassified, [],
+        `NEW leagues column(s) ${unclassified.join(', ')}: classify them in CLASSIFICATION. If one bounds what a manager may ` +
+        `buy or how the season scores, freeze it in 20261104000000's successor (frozen/stamp_once) first.`);
+      const stale = Object.keys(CLASSIFICATION).filter((c) => !cols.includes(c));
+      assertEquals(stale, [], `CLASSIFICATION lists column(s) the migrations no longer have: ${stale.join(', ')}`);
+      // Every 'frozen' column is exercised one by one below, so FROZEN must be exactly that set.
+      assertEquals(Object.keys(FROZEN).sort(),
+        Object.entries(CLASSIFICATION).filter(([, v]) => v.kind === 'frozen').map(([k]) => k).sort());
+      // Every 'guarded' trigger named here exists in the migrations.
+      const all = await Promise.all([...Deno.readDirSync(new URL('supabase/migrations/', ROOT))]
+        .filter((e) => e.isFile && e.name.endsWith('.sql'))
+        .map((e) => Deno.readTextFile(new URL(`supabase/migrations/${e.name}`, ROOT))));
+      for (const [col, v] of Object.entries(CLASSIFICATION)) {
+        if (v.kind !== 'guarded' || v.by === 'FK') continue;
+        assert(all.some((sql) => new RegExp(`create trigger ${v.by}\\b`, 'i').test(sql)), `${col}: no trigger ${v.by}`);
+      }
+    });
+
+    await t.step('classification: the editable columns really are editable post-draft; id is pinned (RLS, then FKs)', async () => {
+      const L = await league('completed');
+      const editable = Object.entries(CLASSIFICATION).filter(([, v]) => v.kind === 'editable').map(([k]) => k);
+      await as('commish', async () => {
+        await q(`update leagues set name='n2', draft_date='2027-01-01T00:00:00Z', invite_code='NEW-CODE',
+          created_at='2026-01-01T00:00:00Z', budget_mode='budget' where id=$1`, [L]);
+        await refused(() => q(`update leagues set id=$2 where id=$1`, [L, crypto.randomUUID()]), 'row-level security');
+      });
+      assertEquals(editable.sort(), ['budget_mode', 'created_at', 'draft_date', 'invite_code', 'name']);
+      const [r] = await q(`select name, invite_code, budget_mode from leagues where id=$1`, [L]);
+      assertEquals([r.name, r.invite_code, r.budget_mode], ['n2', 'NEW-CODE', 'budget']);
+    });
+
+    // ---- stamp-once dates (F1's carve-out, now for the commissioner too) ----
+    await t.step('dates: the completion-stamp shape (draft_status + first-time dates) works for a member and the commissioner', async () => {
+      for (const who of ['member', 'commish'] as const) {
+        const L = await league('in_progress');
+        await as(who, () => q(`update leagues set draft_status='completed', league_start_date=$2, league_end_date=$3 where id=$1`,
+          [L, '2026-11-16T14:30:00Z', '2027-02-05T21:00:00Z']));
+        const [r] = await q(`select draft_status, league_start_date::text s, league_end_date::text e from leagues where id=$1`, [L]);
+        assertEquals(r.draft_status, 'completed', who);
+        assert(r.s.startsWith('2026-11-16') && r.e.startsWith('2027-02-05'), `${who}: ${r.s} ${r.e}`);
+      }
+    });
+
+    await t.step('dates: after the draft a non-NULL date cannot be changed or cleared; a NULL one is stamped once', async () => {
+      const L = await league('completed', { league_start_date: '2026-11-16T14:30:00Z' });
+      await as('commish', async () => {
+        let msg = await refused(() => q(`update leagues set league_start_date=$2 where id=$1`, [L, '2026-11-23T14:30:00Z']),
+          'league_rules_locked');
+        assert(msg.includes('(league_start_date)'), msg);
+        await refused(() => q(`update leagues set league_start_date=null where id=$1`, [L]), 'league_rules_locked');
+        // league_end_date is still NULL: one stamp is allowed (and the unchanged start date rides along fine)...
+        await q(`update leagues set league_end_date=$2, league_start_date=league_start_date where id=$1`, [L, '2027-02-05T21:00:00Z']);
+        // ...and then it is frozen.
+        msg = await refused(() => q(`update leagues set league_end_date=$2 where id=$1`, [L, '2027-03-05T21:00:00Z']),
+          'league_rules_locked');
+        assert(msg.includes('(league_end_date)'), msg);
+      });
+      const [r] = await q(`select league_start_date::text s, league_end_date::text e from leagues where id=$1`, [L]);
+      assert(r.s.startsWith('2026-11-16') && r.e.startsWith('2027-02-05'), `${r.s} ${r.e}`);
+      // Pre-draft, the dates are free; the service role is exempt post-draft.
+      const open = await league('not_started', { league_start_date: '2026-11-16T14:30:00Z' });
+      await as('commish', () => q(`update leagues set league_start_date=null where id=$1`, [open]));
+      await as('service', () => q(`update leagues set league_start_date=$2 where id=$1`, [L, '2026-11-30T14:30:00Z']));
     });
 
     // ---- pre-draft: the commissioner keeps full control -------------------
@@ -342,8 +490,8 @@ Deno.test({
         await refused(() => q(`insert into league_draft_slots (id, league_id, slot_index, slot_count) values ($1,$2,9,1)
           on conflict (id) do update set league_id = excluded.league_id, slot_index = excluded.slot_index`, [s.id, open]),
           'league_slots_locked');
-        await refused(() => q(`insert into leagues (id, commissioner_id, num_rounds) values ($1,$2,9)
-          on conflict (id) do update set num_rounds = excluded.num_rounds`, [done, COMMISH]), 'league_rules_locked');
+        await refused(() => q(`insert into leagues (id, name, commissioner_id, invite_code, num_participants, num_rounds) values ($1,'u',$2,$3,8,9)
+          on conflict (id) do update set num_rounds = excluded.num_rounds`, [done, COMMISH, done]), 'league_rules_locked');
       });
       assertEquals((await slots(done)).length, 2);
       assertEquals((await rules(done)).num_rounds, 6);
@@ -375,7 +523,7 @@ Deno.test({
     await t.step('a league INSERTed already completed (allowed by [I1]) cannot then receive slots', async () => {
       const id = crypto.randomUUID();
       await as('commish', async () => {
-        await q(`insert into leagues (id, commissioner_id, draft_status, num_rounds) values ($1,$2,'completed',6)`, [id, COMMISH]);
+        await q(`insert into leagues (id, name, commissioner_id, invite_code, num_participants, draft_status, num_rounds) values ($1,'c',$2,$3,8,'completed',6)`, [id, COMMISH, id]);
         await refused(() => q(`insert into league_draft_slots (league_id, slot_index) values ($1,0)`, [id]), 'league_slots_locked');
       });
       assertEquals(await status(id), 'completed');
@@ -450,8 +598,13 @@ Deno.test({
       }
       assert(msg.startsWith('FREEZE LEAGUE RULES EFFECT TEST RESULTS'), `the block must end by raising: ${msg}`);
       const lines = msg.split('\n').slice(1).filter((l) => l.trim());
-      assertEquals(lines.length, 13, msg);
+      assertEquals(lines.length, 18, msg);
       for (const l of lines) assert(/  PASS$/.test(l), `not PASS: ${l}`);
+      // The block's c_classified list is the same set as CLASSIFICATION.
+      const m = sql.match(/c_classified text\[\] := array\[([^\]]*)\]/);
+      assert(m, 'c_classified array not found in the effect file');
+      const listed = [...m[1].matchAll(/'([a-z_]+)'/g)].map((x) => x[1]).sort();
+      assertEquals(listed, Object.keys(CLASSIFICATION).sort(), 'effect-file c_classified drifted from CLASSIFICATION');
       assertEquals((await q(`select count(*)::int n from leagues`))[0].n, leaguesBefore, 'the fixtures must roll back');
       assertEquals((await q(`select current_user u`))[0].u, 'postgres', 'role switch must not leak');
     });

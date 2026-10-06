@@ -35,8 +35,19 @@
 --   R2  commissioner, completed: num_weeks  -> league_rules_locked  PASS
 --   R3  commissioner, completed: same-value settings patch + rename
 --       (the league-settings.tsx shape) -> 1 row                    PASS
+--   R4  commissioner, completed: current_week -> league_rules_locked PASS
+--   R5  commissioner, completed: commissioner_id (transfer)
+--       -> league_rules_locked                                      PASS
+--   R6  commissioner, completed: first-time league_start_date stamp
+--       (NULL -> value, F1's carve-out) -> 1 row                    PASS
+--   R7  commissioner, completed: rewrite that stamped date
+--       -> league_rules_locked                                      PASS
 --   D1  commissioner, completed -> not_started
 --       -> league_draft_status_locked                               PASS
+--   C1  every live public.leagues column is classified (frozen,
+--       stamp-once, guarded elsewhere, or deliberately editable)    PASS
+--       A FAIL lists the unclassified columns: a column added in prod
+--       (or by a later migration) that nobody has decided about yet.
 -- ============================================================================
 do $$
 declare
@@ -49,6 +60,15 @@ declare
   n       int;
   acl     text;
   out     text := E'\n';
+  -- Keep in sync with CLASSIFICATION in supabase/tests/freeze_league_rules.pglite.test.ts
+  -- (the suite checks the two lists are identical).
+  c_classified text[] := array[
+    'stake_mode', 'budget_amount', 'notional_per_slot', 'num_rounds', 'allow_undraftable',
+    'num_weeks', 'duration_days', 'league_type', 'num_participants',
+    'season_status', 'current_week', 'current_season_id', 'commissioner_id',
+    'league_start_date', 'league_end_date',
+    'draft_status', 'playoff_teams', 'draft_order_mode', 'pick_clock_enabled', 'draft_started_at', 'pick_seconds', 'id',
+    'name', 'draft_date', 'invite_code', 'created_at', 'budget_mode'];
 begin
   -- ---- G: catalog -----------------------------------------------------------
   select count(*) into n from pg_trigger
@@ -182,6 +202,39 @@ begin
   end;
 
   begin
+    update public.leagues set current_week = coalesce(current_week, 0) + 1 where id = l_done;
+    get diagnostics n = row_count;
+    out := out || format(E'R4 completed current_week -> allowed rows=%s  FAIL\n', n);
+  exception when others then
+    out := out || format(E'R4 completed current_week -> %s  %s\n', sqlstate,
+      case when sqlstate = '42501' and sqlerrm like 'league_rules_locked:%(current_week)' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
+  end;
+  begin
+    update public.leagues set commissioner_id = m_uid where id = l_done;
+    get diagnostics n = row_count;
+    out := out || format(E'R5 completed commissioner_id -> allowed rows=%s  FAIL\n', n);
+  exception when others then
+    out := out || format(E'R5 completed commissioner_id -> %s  %s\n', sqlstate,
+      case when sqlstate = '42501' and sqlerrm like 'league_rules_locked:%(commissioner_id)' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
+  end;
+  begin
+    -- The fixture was created with league_start_date NULL: one stamp is allowed.
+    update public.leagues set league_start_date = now() where id = l_done and league_start_date is null;
+    get diagnostics n = row_count;
+    out := out || format(E'R6 completed first-time start-date stamp rows=%s  %s\n', n, case when n = 1 then 'PASS' else 'FAIL' end);
+  exception when others then
+    out := out || format(E'R6 completed first-time start-date stamp -> %s %s  FAIL\n', sqlstate, sqlerrm);
+  end;
+  begin
+    update public.leagues set league_start_date = league_start_date + interval '7 days' where id = l_done;
+    get diagnostics n = row_count;
+    out := out || format(E'R7 completed start-date rewrite -> allowed rows=%s  FAIL\n', n);
+  exception when others then
+    out := out || format(E'R7 completed start-date rewrite -> %s  %s\n', sqlstate,
+      case when sqlstate = '42501' and sqlerrm like 'league_rules_locked:%(league_start_date)' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
+  end;
+
+  begin
     update public.leagues set draft_status = 'not_started' where id = l_done;
     get diagnostics n = row_count;
     out := out || format(E'D1 completed -> not_started -> allowed rows=%s  FAIL\n', n);
@@ -189,6 +242,14 @@ begin
     out := out || format(E'D1 completed -> not_started -> %s  %s\n', sqlstate,
       case when sqlstate = '42501' and sqlerrm like 'league_draft_status_locked:%' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
   end;
+
+  -- ---- C: every live column is classified ----------------------------------
+  select string_agg(column_name::text, ', ' order by ordinal_position) into acl
+    from information_schema.columns
+   where table_schema = 'public' and table_name = 'leagues'
+     and column_name::text <> all (c_classified);
+  out := out || format(E'C1 unclassified leagues columns: %s  %s\n', coalesce(acl, 'none'),
+    case when acl is null then 'PASS' else 'FAIL' end);
 
   raise exception 'FREEZE LEAGUE RULES EFFECT TEST RESULTS (all rolled back):%', out;
 end;
