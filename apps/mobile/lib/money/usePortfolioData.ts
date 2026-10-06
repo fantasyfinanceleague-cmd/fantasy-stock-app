@@ -50,10 +50,12 @@ export function usePortfolioData(): PortfolioData {
   // Key on primitives, not the league object: a LeagueContext refresh that rebuilds
   // the object must not refetch the quotes and bars.
   const leagueId = activeLeague?.id ?? null;
-  const leagueName = activeLeague?.name ?? null;
-  const stakeMode = activeLeague?.stake_mode ?? null;
-  const notional = activeLeague?.notional_per_slot ?? null;
-  const numRounds = activeLeague?.num_rounds ?? null;
+  // DEV fixture: the stress league's settings (price tiers, six rounds, no notional), so the
+  // numbers match the stress holdings. Production reads the real league.
+  const leagueName = MONEY_FIXTURE ? STRESS_LEAGUE_NAME : (activeLeague?.name ?? null);
+  const stakeMode = MONEY_FIXTURE ? 'price_tiers' : (activeLeague?.stake_mode ?? null);
+  const notional = MONEY_FIXTURE ? null : (activeLeague?.notional_per_slot ?? null);
+  const numRounds = MONEY_FIXTURE ? STRESS_ROUNDS : (activeLeague?.num_rounds ?? null);
   const userId = user?.id ?? null;
   const ledgerState = usePortfolioLedger(leagueId);
   const [state, setState] = useState<Omit<PortfolioData, 'refresh'>>(EMPTY);
