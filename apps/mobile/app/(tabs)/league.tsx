@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Alert } from 'react-native';
 import { Icon } from '@/components/sp/Icon';
 import { router } from 'expo-router';
 import { Share } from 'react-native';
@@ -18,10 +18,12 @@ import { ScheduleList } from '@/components/game/ScheduleList';
 import { BracketView } from '@/components/game/BracketView';
 import { DraftLobby } from '@/components/game/DraftLobby';
 import { DraftRoom } from '@/components/game/DraftRoom';
+import { LeagueRenewal } from '@/components/game/LeagueRenewal';
 import { usePreDraftData } from '@/lib/home/usePreDraftData';
 import { StartDraftConfirm } from '@/components/game/StartDraftConfirm';
 import { useDraftStatus } from '@/lib/game/useDraftStatus';
 import { Button } from '@/components/sp/Button';
+import { Card } from '@/components/sp/Card';
 import { supabase } from '@/lib/supabase';
 import { useBracket } from '@/lib/game/useBracket';
 import { SegmentedControl } from '@/components/sp/SegmentedControl';
@@ -39,7 +41,7 @@ import { buildStandingsRows } from '@/lib/game/standings';
 const STANDINGS_CAPTION = 'Ranked by win percentage, then head-to-head, then season gain. This is also the playoff seeding.';
 
 export default function LeagueScreen() {
-  const { sheetLeagues, activeLeagueId, activeLeague, refresh } = useLeagueContext();
+  const { sheetLeagues, activeLeagueId, activeLeague, refresh, setActiveLeagueId } = useLeagueContext();
   // League's segments: Standings | Schedule (the board, D4 = keep). History is not built yet.
   const [segment, setSegment] = useState<'standings' | 'schedule' | 'playoffs'>('standings');
   // The Playoffs segment appears once the season is in the playoffs (or over).
@@ -58,6 +60,21 @@ export default function LeagueScreen() {
     segment === 'playoffs' && hasPlayoffs,
   );
 
+  // R2: a finished season's commissioner starts the renewal. The server returns the
+  // new league (or the one already made); the commissioner lands on its roster (R5).
+  const runItBack = async () => {
+    if (!activeLeagueId) return;
+    const { data, error } = await supabase.rpc('renew_league', { p_league_id: activeLeagueId });
+    const res = data as { status?: string; league_id?: string } | null;
+    if (error || !res || (res.status !== 'renewed' && res.status !== 'already_renewed') || !res.league_id) {
+      Alert.alert('Not started', 'The renewal did not start. Try again.');
+      return;
+    }
+    setActiveLeagueId(res.league_id);
+    await refresh();
+  };
+  const isCommissioner = !!user?.id && activeLeague?.commissioner_id === user.id;
+
   if (inSeason) {
     if (st.status === 'error') {
       return <PhasePlaceholder title="League" icon={() => <Icon name="alert" size="title" tone="text2" />} heading="Couldn't load the standings" message="Pull down to try again." onRefresh={refresh} />;
@@ -69,6 +86,13 @@ export default function LeagueScreen() {
         <BarsRefresh onRefresh={refresh} contentContainerStyle={{ paddingHorizontal: space[6], paddingBottom: space[9], gap: space[6] }}>
           {st.status === 'ready' ? (
             <View style={styles.stack}>
+              {phase === 'completed' && isCommissioner ? (
+                <Card>
+                  <Text variant="headline">You're the commissioner</Text>
+                  <Text variant="callout" tone="secondary">Start Season 2 with the same group. Season 1 stays in History.</Text>
+                  <Button label="Run it back" onPress={() => void runItBack()} />
+                </Card>
+              ) : null}
               <SegmentedControl
                 options={[
                   { label: 'Standings', value: 'standings' },
@@ -101,6 +125,9 @@ export default function LeagueScreen() {
     );
   }
 
+  if (preDraft && activeLeagueId && activeLeague?.previous_league_id) {
+    return <LeagueRenewalScreen leagueId={activeLeagueId} createdAt={activeLeague.created_at ?? new Date().toISOString()} />;
+  }
   if (preDraft && activeLeagueId) {
     return <LeagueLobby leagueId={activeLeagueId} />;
   }
@@ -117,6 +144,21 @@ export default function LeagueScreen() {
       actionLabel={drafting ? 'Go to the draft room' : undefined}
       onAction={drafting ? () => router.push('/(tabs)/draft') : undefined}
     />
+  );
+}
+
+/** A renewed league before its draft (3c, Run it back): the roster or the ask. */
+function LeagueRenewalScreen({ leagueId, createdAt }: { leagueId: string; createdAt: string }) {
+  const { refresh } = useLeagueContext();
+  const { colors } = useTheme();
+  const [key, setKey] = useState(0);
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <ShellHeader title="League" showAvatar />
+      <BarsRefresh onRefresh={refresh} contentContainerStyle={{ paddingHorizontal: space[6], paddingBottom: space[9], gap: space[6] }}>
+        <LeagueRenewal key={key} successorId={leagueId} leagueId={leagueId} createdAt={createdAt} now={new Date()} onChanged={() => setKey((k) => k + 1)} />
+      </BarsRefresh>
+    </View>
   );
 }
 
