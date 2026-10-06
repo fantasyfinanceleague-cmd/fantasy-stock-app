@@ -155,7 +155,7 @@ set search_path = public, pg_temp
 as $$
 begin
   if coalesce(old.draft_status, 'not_started') = 'not_started'
-     and new.draft_status is distinct from 'not_started'
+     and coalesce(new.draft_status, 'not_started') <> 'not_started'
      and exists (select 1 from public.league_roster_reconfirm r where r.league_id = new.id) then
     raise exception 'roster_reconfirm_required: the commissioner must confirm the teams before the draft can start'
       using errcode = '22023';

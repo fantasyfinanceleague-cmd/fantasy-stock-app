@@ -490,6 +490,15 @@ Deno.test({
       assertEquals(await leftNotices(l.id), [C, C]);
     });
 
+    await step('a second hand-over still notifies the NEW commissioner (dedupe is not keyed on the leaver there)', async () => {
+      const l = await mkLeague([C, A, B, D, E], { draft_date: await inHours(48), invite_code: 'HND01', playoff_teams: 2 });
+      await leave(l.id, C, A);                     // departed [C], commissioner A
+      assertEquals((await join('HND01', C)).ok, true);
+      await leave(l.id, A, B);                     // A hands over to B
+      await leave(l.id, C);                        // C leaves again: a plain repeat, no notice
+      assertEquals(await leftNotices(l.id), [A, B], 'B was told; the repeat was not');
+    });
+
     await step('the order WAITS past T-1h while a reconfirmation is owed, and is set the moment it clears', async () => {
       const l = await mkLeague([C, A, B, D, E], { draft_date: await inHours(48), playoff_teams: 2 });
       await leave(l.id, E);

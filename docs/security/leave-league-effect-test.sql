@@ -1,6 +1,10 @@
 -- ============================================================================
 -- LEAVE LEAGUE EFFECT TEST: run in the Supabase SQL editor AFTER `db push` of
--- 20261107000000-04. Read-only in effect: NOTHING persists.
+-- 20261107000000-06. Read-only in effect: NOTHING persists.
+-- Scope note: the order WAITING past T-1h and being set on confirm needs real
+-- elapsed time, so it is proven in supabase/tests/leave_league.pglite.test.ts;
+-- here G6 checks the catalog (the four functions + the gate trigger) and S8 the
+-- gate's behavior.
 -- ============================================================================
 -- Same shape as docs/security/draft-order-modes-effect-test.sql:
 --   * The SQL editor shows only the LAST statement's output, and a failing

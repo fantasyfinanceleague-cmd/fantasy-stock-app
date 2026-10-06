@@ -104,7 +104,16 @@ begin
           or v_league.playoff_teams is null
           or v_league.playoff_teams <= v_count + 1);   -- v_count was read before this member's insert
   if found then
-    perform _draft_order_sync(v_league.id, false);     -- we hold the league row lock
+    -- Its own exception scope: the function-wide unique_violation handler below
+    -- must not report a finalize failure as 'already_member' (security review).
+    -- A failed finalize rolls back only itself; the join and the clear stand,
+    -- and the order is set lazily by the next read or cron tick (every finalize
+    -- path re-runs _draft_order_sync), so the gap is recoverable, not permanent.
+    begin
+      perform _draft_order_sync(v_league.id, false);   -- we hold the league row lock
+    exception when others then
+      raise warning 'join_league_by_code: deferred draft-order finalize for % (%: %)', v_league.id, sqlstate, sqlerrm;
+    end;
   end if;
 
   return jsonb_build_object('ok', true,

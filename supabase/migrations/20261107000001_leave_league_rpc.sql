@@ -185,7 +185,10 @@ begin
   select coalesce(r.departed @> jsonb_build_array(jsonb_build_object('user_id', p_user_id)), false)
     into v_repeat
     from public.league_roster_reconfirm r where r.league_id = p_league_id;
-  v_repeat := coalesce(v_repeat, false) and v_reconfirm;
+  -- Never on a hand-over: the RECIPIENT changes (the new commissioner owes the
+  -- confirmation and must hear about it), so a dedupe keyed on the leaver is
+  -- wrong there (supabase-reviewer, round 2).
+  v_repeat := coalesce(v_repeat, false) and v_reconfirm and not v_is_comm;
   if v_reconfirm then
     -- The name is a SNAPSHOT: once the row is gone, a pre-draft leaver has no
     -- standings/matchups/drafts for get_league_display_names to resolve.
