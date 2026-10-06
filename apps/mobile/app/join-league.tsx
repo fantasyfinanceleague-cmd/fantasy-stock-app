@@ -1,487 +1,353 @@
-/* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useState } from 'react';
-import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '@/constants/Colors';
-import { useAuth } from '@/lib/useAuth';
+/* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
+import { useEffect, useRef, useState } from 'react';
+import { Keyboard, StyleSheet, TextInput, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { router, Stack } from 'expo-router';
+
+import { radius, space } from '@/constants/tokens';
+import { Button, type ButtonStatus } from '@/components/sp/Button';
+import { Icon } from '@/components/sp/Icon';
+import { Text } from '@/components/sp/Text';
+import { useTheme } from '@/components/sp/ThemeProvider';
+import { useMotion } from '@/components/sp/motion';
+import { AuthScaffold } from '@/components/shell/AuthScaffold';
+import { Field } from '@/components/shell/Field';
+import { ScreenTitle } from '@/components/shell/ScreenTitle';
+import { AlertCard } from '@/components/join/AlertCard';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { supabase } from '@/lib/supabase';
-import { stakeModeLabel } from '@/lib/categoryData';
-import { Button, Card } from '@/components/ui';
+import { JOIN_FIXTURE } from '@/lib/join/devFixture';
+import {
+  FIXTURE_NETWORK_MS, fixtureJoinResponse, fixturePrefill, fixturePreviewResponse,
+} from '@/lib/join/joinFixtureGate';
+import {
+  JOIN_COPY, errorMessage, interpretJoin, interpretPreview, joinedView, previewView,
+  type JoinBlock, type PreviewLeague,
+} from '@/lib/join/joinPreview';
 
-const ACCENT = Colors.primary;
-const ACCENT_BG = Colors.primaryBg;
+// 3f — Join a league (1.2.0; board key-screens.html #join-league). Four steps:
+// code → (finding) → preview → joined. The preview IS the confirmation: the
+// button names the league, and nothing is joined before it. It shows ONLY what
+// preview-league returns (a member COUNT, no faces).
+//
+// - A bad code and a failed lookup are the only errors under the field. Every
+//   refusal for a league the server FOUND stays on the preview, as an Alert
+//   card, so the reason names the league.
+// - No server text ever reaches the screen (lib/join/joinPreview.ts maps every
+//   outcome to copy written there).
+// - Under the dev-only JOIN_FIXTURE flag (lib/join/devFixture.ts) the two invokes below are
+//   answered locally, so every state is reachable without a real code or join.
+//   The real parse/view code runs on top; nothing is written.
 
-type Step = 'code' | 'preview';
+type Step = 'code' | 'preview' | 'joined';
 
-interface LeaguePreview {
-  name: string;
-  league_type: 'matchup' | 'duration';
-  num_participants: number;
-  current_members: number;
-  budget_amount: number | null;
-  budget_mode: string;
-  stake_mode: 'fixed_notional' | 'price_tiers' | 'budget_cap' | null;
-  draft_date: string | null;
-  draft_status: string;
-  duration_days: number | null;
-  num_weeks: number | null;
-  commissioner_name: string;
+/** The two server calls. Kept inline (not in a lib) so the architecture map's call-site anchors stay on this screen. */
+async function callPreview(code: string): Promise<{ data: unknown; error: unknown }> {
+  if (JOIN_FIXTURE) {
+    // `checking` holds the spinner forever (a capture of the loading frame).
+    if (JOIN_FIXTURE === 'checking') return new Promise(() => {});
+    if (JOIN_FIXTURE === 'typing') return fixturePreviewResponse('preview');
+    await new Promise((r) => setTimeout(r, FIXTURE_NETWORK_MS));
+    // join_race: the preview is joinable, the JOIN is what refuses.
+    return fixturePreviewResponse(JOIN_FIXTURE === 'join_race' ? 'preview' : JOIN_FIXTURE);
+  }
+  const { data, error } = await supabase.functions.invoke('preview-league', { body: { code } });
+  return { data, error };
 }
 
-const REASON_MSG: Record<string, string> = {
-  already_member:   'You are already a member of this league',
-  league_full:      'This league is full',
-  invite_expired:   'This invite has already been used or expired',
-  season_completed: "This league's season has ended",
-  draft_started:    "This league's draft has already started",
-  invalid_code:     'Invalid invite code. Please check and try again.',
-};
+async function callJoin(code: string): Promise<{ data: unknown; error: unknown }> {
+  if (JOIN_FIXTURE) {
+    await new Promise((r) => setTimeout(r, FIXTURE_NETWORK_MS));
+    return fixtureJoinResponse(JOIN_FIXTURE);
+  }
+  const { data, error } = await supabase.functions.invoke('join-league', { body: { code } });
+  return { data, error };
+}
 
 export default function JoinLeagueScreen() {
-  const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { colors } = useTheme();
   const { refresh, setActiveLeagueId } = useLeagueContext();
 
   const [step, setStep] = useState<Step>('code');
-  const [code, setCode] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [joining, setJoining] = useState(false);
-  const [league, setLeague] = useState<LeaguePreview | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [code, setCode] = useState(JOIN_FIXTURE ? fixturePrefill(JOIN_FIXTURE) : '');
+  const [findStatus, setFindStatus] = useState<ButtonStatus>('idle');
+  const [fieldError, setFieldError] = useState<string | null>(null);
+  const [league, setLeague] = useState<PreviewLeague | null>(null);
+  const [block, setBlock] = useState<JoinBlock | null>(null);
+  const [actionStatus, setActionStatus] = useState<ButtonStatus>('idle');
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [joinedName, setJoinedName] = useState('');
+  const inputRef = useRef<TextInput>(null);
+  // Drops the answer to a lookup the user has already walked away from.
+  const request = useRef(0);
+  const trimmed = code.trim();
+  const finding = findStatus === 'loading';
 
-  const handleClose = () => {
-    router.dismiss();
-  };
+  function leave() {
+    if (router.canGoBack()) router.back();
+    else router.replace('/(tabs)');
+  }
 
-  const goBack = () => {
-    if (step === 'preview') {
-      setStep('code');
-      setLeague(null);
-      setError(null);
-    } else {
-      handleClose();
+  function backToCode(clear: boolean) {
+    request.current += 1;
+    setStep('code');
+    setLeague(null);
+    setBlock(null);
+    setActionError(null);
+    setActionStatus('idle');
+    setFindStatus('idle');
+    if (clear) setCode('');
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }
+
+  async function find() {
+    if (finding || !trimmed) return;
+    const mine = ++request.current;
+    setFieldError(null);
+    setFindStatus('loading');
+    Keyboard.dismiss();
+    let outcome;
+    try {
+      const { data, error } = await callPreview(trimmed);
+      outcome = interpretPreview(data, error);
+    } catch {
+      outcome = interpretPreview(null, new Error('network'));
     }
-  };
-
-  const lookupCode = async () => {
-    if (!code.trim()) {
-      setError('Please enter an invite code');
+    if (mine !== request.current) return;
+    setFindStatus('idle');
+    if (outcome.kind === 'bad_code') {
+      setFieldError(JOIN_COPY.badCode);
       return;
     }
-
-    if (!user?.id) {
-      Alert.alert('Error', 'You must be logged in to join a league');
+    if (outcome.kind === 'error') {
+      setFieldError(errorMessage(outcome.error));
       return;
     }
+    setLeague(outcome.league);
+    setBlock(outcome.block);
+    setActionError(null);
+    setActionStatus('idle');
+    setStep('preview');
+  }
 
-    setLoading(true);
-    setError(null);
-
+  async function join() {
+    if (actionStatus !== 'idle' || !league) return;
+    const mine = ++request.current;
+    setActionError(null);
+    setActionStatus('loading');
+    let outcome;
     try {
-      // Server-side by-code lookup (RLS-bypassing, rate-limited) — leagues/
-      // league_members/league_invites stay members-only to the client.
-      const { data, error: fnErr } = await supabase.functions.invoke('preview-league', {
-        body: { code: code.trim() },
-      });
-
-      if (fnErr) { setError('Something went wrong. Please try again.'); return; }
-      if (!data.found) { setError(REASON_MSG.invalid_code); return; }
-      // Hard reasons (full / already-member / expired / season over) block at the
-      // lookup step with an inline error — matches current UX (no preview card).
-      // Draft-started stays SOFT: joinable=true, the preview shows the warning.
-      if (!data.joinable) { setError(REASON_MSG[data.reason] ?? 'You cannot join this league'); return; }
-
-      setLeague(data.league);
-      setStep('preview');
-    } catch (err: any) {
-      console.error('Error looking up code:', err);
-      setError('Something went wrong. Please try again.');
-    } finally {
-      setLoading(false);
+      const { data, error } = await callJoin(trimmed);
+      outcome = interpretJoin(data, error);
+    } catch {
+      outcome = interpretJoin(null, new Error('network'));
     }
-  };
-
-  const handleJoin = async () => {
-    if (!league || !user?.id) return;
-
-    setJoining(true);
-
-    try {
-      // Entire join runs server-side & atomically (join_league_by_code): row-locked
-      // capacity check, re-validation, member insert, invite accept — all via the
-      // secret key, so league_members/league_invites are never client-written.
-      const { data, error: fnErr } = await supabase.functions.invoke('join-league', {
-        body: { code: code.trim() },
-      });
-
-      if (fnErr) { Alert.alert('Error', 'Failed to join league'); return; }
-      if (!data.ok) {
-        if (data.reason === 'already_member') Alert.alert('Already Joined', 'You are already a member of this league');
-        else Alert.alert('Cannot join', REASON_MSG[data.reason] ?? 'Unable to join this league');
-        return;
-      }
-
-      // Refresh leagues and set active (id comes from the join response — member now)
+    if (mine !== request.current) return;
+    if (outcome.kind === 'error') {
+      setActionStatus('idle');
+      setActionError(errorMessage(outcome.error));
+      return;
+    }
+    if (outcome.kind === 'refused') {
+      // The league changed since the preview (it filled, the draft started):
+      // the same preview, now carrying the reason.
+      setActionStatus('idle');
+      setBlock(outcome.block);
+      return;
+    }
+    // Joined. A real join refreshes the league list so the new league is the
+    // active one when "Go to the league" lands on its Home; a fixture joins nothing.
+    if (!JOIN_FIXTURE) {
       await refresh();
-      setActiveLeagueId(data.league.id);
-
-      Alert.alert(
-        'Welcome!',
-        `You've joined "${data.league.name}"!`,
-        [{ text: 'OK', onPress: () => router.replace('/(tabs)') }]
-      );
-    } catch (err: any) {
-      console.error('Error joining league:', err);
-      Alert.alert('Error', err.message || 'Failed to join league');
-    } finally {
-      setJoining(false);
+      setActiveLeagueId(outcome.leagueId);
     }
-  };
+    setJoinedName(outcome.leagueName);
+    setActionStatus('idle');
+    setStep('joined');
+  }
 
-  const formatDraftDate = (dateStr: string | null) => {
-    if (!dateStr) return 'TBD';
-    const date = new Date(dateStr);
-    return date.toLocaleString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-    });
-  };
+  /** "Open the league" for someone already in it: join-league answers already_member WITH the league id (the preview never carries one) and writes nothing. */
+  async function open() {
+    if (actionStatus !== 'idle') return;
+    const mine = ++request.current;
+    setActionError(null);
+    setActionStatus('loading');
+    let outcome;
+    try {
+      const { data, error } = await callJoin(trimmed);
+      outcome = interpretJoin(data, error);
+    } catch {
+      outcome = interpretJoin(null, new Error('network'));
+    }
+    if (mine !== request.current) return;
+    setActionStatus('idle');
+    if (outcome.kind === 'error') {
+      setActionError(errorMessage(outcome.error));
+      return;
+    }
+    const id = outcome.kind === 'joined' ? outcome.leagueId : outcome.kind === 'refused' ? outcome.leagueId : null;
+    if (!id) {
+      setBlock('unknown');
+      return;
+    }
+    if (!JOIN_FIXTURE) {
+      await refresh();
+      setActiveLeagueId(id);
+    }
+    router.replace('/(tabs)');
+  }
 
-  const renderCodeInput = () => (
-    <KeyboardAvoidingView
-      style={styles.stepContainer}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={styles.stepContent}>
-        <View style={styles.iconContainer}>
-          <Ionicons name="ticket-outline" size={64} color={ACCENT} />
-        </View>
+  const view = league ? previewView(league, block) : null;
 
-        <Text style={styles.title}>Enter Invite Code</Text>
-        <Text style={styles.subtitle}>
-          Ask your league commissioner for the invite code
-        </Text>
+  if (step === 'joined' && league) {
+    return <Joined name={joinedName} draftDate={league.draftDate} onContinue={() => router.replace('/(tabs)')} />;
+  }
 
-        <View style={styles.codeInputContainer}>
-          <TextInput
-            style={styles.codeInput}
-            value={code}
-            onChangeText={(text) => {
-              setCode(text.toUpperCase());
-              setError(null);
-            }}
-            placeholder="ABCDE12345"
-            placeholderTextColor={Colors.textDark}
-            autoCapitalize="characters"
-            autoCorrect={false}
-            maxLength={10}
-            autoFocus
-          />
-        </View>
-
-        {error && (
-          <View style={styles.errorContainer}>
-            <Ionicons name="alert-circle" size={16} color={Colors.error} />
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        )}
-      </View>
-
-      <Button
-        title="Look Up"
-        onPress={lookupCode}
-        variant="primary"
-        disabled={!code.trim()}
-        loading={loading}
-        style={styles.nextButton}
-      />
-    </KeyboardAvoidingView>
-  );
-
-  const renderPreview = () => {
-    if (!league) return null;
-
-    // draft_started is now a HARD block at lookupCode() (server-side, matches
-    // join_league_by_code) — the preview only ever renders for a league whose
-    // draft_status is 'not_started', so the status here is always "pending".
-
+  if (step === 'preview' && view) {
+    const primary =
+      view.action === 'join' ? { label: `Join ${view.name}`, onPress: join }
+      : view.action === 'open' ? { label: 'Open the league', onPress: open }
+      : view.action === 'join_disabled' ? { label: 'Join', onPress: undefined }
+      : { label: 'Try another code', onPress: () => backToCode(true) };
     return (
-      <View style={styles.stepContainer}>
-        <View style={styles.stepContent}>
-          <View style={styles.previewHeader}>
-            <View style={styles.leagueIconLarge}>
-              <Text style={styles.leagueIconText}>
-                {league.league_type === 'matchup' ? '🤑' : '📈'}
+      <AuthScaffold back={{ label: 'Invite code', onPress: () => backToCode(false) }}>
+        <View style={styles.previewHead}>
+          <Text variant="caption" tone="secondary">
+            {`Invite code ${trimmed.toUpperCase()}`}
+          </Text>
+          <ScreenTitle>{view.name}</ScreenTitle>
+          <Text variant="callout" tone="secondary">
+            {view.runBy}
+          </Text>
+        </View>
+        <View style={[styles.rows, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {view.rows.map((row, i) => (
+            <View
+              key={row.label}
+              accessible
+              accessibilityLabel={`${row.label}, ${row.value}`}
+              style={[styles.row, i > 0 && { borderTopColor: colors.line, borderTopWidth: StyleSheet.hairlineWidth }]}
+            >
+              <Text variant="callout" tone="secondary">
+                {row.label}
+              </Text>
+              <Text variant="headline" numberOfLines={0} style={styles.rowValue}>
+                {row.value}
               </Text>
             </View>
-            <Text style={styles.leagueName}>{league.name}</Text>
-            <Text style={styles.commissionerText}>
-              Hosted by {league.commissioner_name}
-            </Text>
-          </View>
-
-          <Card style={styles.previewCardOuter}>
-            <View style={styles.previewRow}>
-              <View style={styles.previewItem}>
-                <Text style={styles.previewLabel}>Type</Text>
-                <Text style={styles.previewValue}>
-                  {league.league_type === 'matchup' ? 'Matchup' : 'Duration'}
-                </Text>
-              </View>
-              <View style={styles.previewItem}>
-                <Text style={styles.previewLabel}>Members</Text>
-                <Text style={styles.previewValue}>
-                  {league.current_members}/{league.num_participants}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.previewRow}>
-              <View style={styles.previewItem}>
-                <Text style={styles.previewLabel}>Stake Mode</Text>
-                <Text style={styles.previewValue}>
-                  {stakeModeLabel(league.stake_mode)}
-                </Text>
-              </View>
-              <View style={styles.previewItem}>
-                <Text style={styles.previewLabel}>
-                  {league.league_type === 'duration' ? 'Duration' : 'Season'}
-                </Text>
-                <Text style={styles.previewValue}>
-                  {league.league_type === 'duration'
-                    ? `${league.duration_days} days`
-                    : `${league.num_weeks} weeks`}
-                </Text>
-              </View>
-            </View>
-
-            <View style={[styles.previewRow, styles.previewRowLast]}>
-              <View style={styles.previewItem}>
-                <Text style={styles.previewLabel}>Draft</Text>
-                <Text style={[
-                  styles.previewValue,
-                  !league.draft_date && styles.previewValueMuted
-                ]}>
-                  {formatDraftDate(league.draft_date)}
-                </Text>
-              </View>
-              <View style={styles.previewItem}>
-                <Text style={styles.previewLabel}>Status</Text>
-                <View style={[styles.statusBadge, styles.statusBadgePending]}>
-                  <Text style={styles.statusBadgeText}>Draft Pending</Text>
-                </View>
-              </View>
-            </View>
-          </Card>
+          ))}
         </View>
-
+        {view.message ? <AlertCard message={view.message} /> : null}
+        {actionError ? <AlertCard message={actionError} /> : null}
         <Button
-          title="Join League"
-          onPress={handleJoin}
-          variant="success"
-          loading={joining}
-          icon={<Ionicons name="enter-outline" size={20} color={Colors.white} />}
-          style={styles.nextButton}
+          label={primary.label}
+          variant={view.action === 'another' ? 'secondary' : 'primary'}
+          status={actionStatus}
+          disabled={view.action === 'join_disabled'}
+          onPress={primary.onPress}
         />
-      </View>
+        {view.caption ? (
+          <Text variant="caption" tone="secondary" style={styles.caption}>
+            {view.caption}
+          </Text>
+        ) : null}
+      </AuthScaffold>
     );
-  };
+  }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={goBack}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="chevron-back" size={28} color={Colors.textMuted} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          {step === 'code' ? 'Join League' : 'League Preview'}
-        </Text>
-        <View style={styles.headerSpacer} />
-      </View>
+    <AuthScaffold
+      back={{ label: 'Your leagues', onPress: leave }}
+      footer={<Button label="Find league" status={findStatus} disabled={!trimmed} onPress={find} />}
+    >
+      <ScreenTitle>Join a league</ScreenTitle>
+      <Text variant="body" tone="secondary">
+        {JOIN_COPY.codeIntro}
+      </Text>
+      <Field
+        ref={inputRef}
+        label="Invite code"
+        value={code}
+        onChangeText={(v) => {
+          setCode(v);
+          if (fieldError) setFieldError(null);
+        }}
+        autoFocus
+        editable={!finding}
+        autoCapitalize="characters"
+        autoCorrect={false}
+        autoComplete="off"
+        returnKeyType="go"
+        onSubmitEditing={find}
+        error={fieldError}
+      />
+    </AuthScaffold>
+  );
+}
 
-      {step === 'code' ? renderCodeInput() : renderPreview()}
-    </View>
+/** Joined: the league's pre-draft Home is one tap away ("Go to the league"). */
+function Joined({ name, draftDate, onContinue }: { name: string; draftDate: string | null; onContinue: () => void }) {
+  const { reduced, duration, easing } = useMotion();
+  const pop = useSharedValue(reduced ? 1 : 0.8);
+  useEffect(() => {
+    pop.value = reduced ? 1 : withTiming(1, { duration: duration.slow, easing: easing.settle });
+  }, [reduced, duration.slow, easing.settle, pop]);
+  const popStyle = useAnimatedStyle(() => ({ opacity: pop.value >= 1 ? 1 : (pop.value - 0.8) * 5, transform: [{ scale: pop.value }] }));
+  const v = joinedView(name, draftDate);
+  return (
+    <AuthScaffold>
+      {/* Nothing to go back to: the join is done, so no back arrow and no swipe-back. */}
+      <Stack.Screen options={{ gestureEnabled: false }} />
+      <View style={styles.center}>
+        <Animated.View style={popStyle}>
+          <Icon name="check" size="medallion" tone="gain" discTone="gainTint" />
+        </Animated.View>
+        <ScreenTitle style={styles.centerText}>{v.title}</ScreenTitle>
+        <Text variant="body" tone="secondary" style={styles.centerText}>
+          {v.body}
+        </Text>
+        <View style={styles.centerButton}>
+          <Button label="Go to the league" onPress={onContinue} />
+        </View>
+      </View>
+    </AuthScaffold>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
+  previewHead: {
+    gap: space[1],
   },
-
-  // Header
-  header: {
+  rows: {
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    paddingHorizontal: space[5],
+  },
+  row: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 12,
-    minHeight: 52,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 17,
-    fontFamily: 'Inter_600SemiBold',
-    color: Colors.textPrimary,
-    textAlign: 'center',
-  },
-  headerSpacer: {
-    width: 44,
-  },
-
-  // Step container
-  stepContainer: {
-    flex: 1,
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: space[4],
+    minHeight: 44,
+    paddingVertical: space[3],
   },
-  stepContent: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 24,
+  rowValue: {
+    flexShrink: 1,
+    textAlign: 'right',
   },
-
-  // Code input screen
-  iconContainer: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 24,
-    fontFamily: 'Inter_700Bold',
-    color: Colors.textPrimary,
+  caption: {
     textAlign: 'center',
-    marginBottom: 8,
   },
-  subtitle: {
-    fontSize: 15,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textMuted,
-    textAlign: 'center',
-    marginBottom: 32,
-    lineHeight: 22,
-  },
-  codeInputContainer: {
-    backgroundColor: Colors.cardBg,
-    borderRadius: 16,
-    padding: 8,
-    borderWidth: 2,
-    borderColor: Colors.border,
-  },
-  codeInput: {
-    fontSize: 32,
-    fontFamily: 'Inter_700Bold',
-    color: Colors.textPrimary,
-    textAlign: 'center',
-    paddingVertical: 16,
-    letterSpacing: 8,
-  },
-  errorContainer: {
-    flexDirection: 'row',
+  center: {
     alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 16,
-    gap: 6,
+    gap: space[4],
+    paddingTop: space[10],
   },
-  errorText: {
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.error,
-  },
-
-  // Preview screen
-  previewHeader: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  leagueIconLarge: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: ACCENT_BG,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  leagueIconText: {
-    fontSize: 40,
-    fontFamily: 'Inter_400Regular',
-  },
-  leagueName: {
-    fontSize: 24,
-    fontFamily: 'Inter_700Bold',
-    color: Colors.textPrimary,
+  centerText: {
     textAlign: 'center',
-    marginBottom: 4,
   },
-  commissionerText: {
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textMuted,
-  },
-  previewCardOuter: {},
-  previewRow: {
-    flexDirection: 'row',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  previewRowLast: {
-    borderBottomWidth: 0,
-  },
-  previewItem: {
-    flex: 1,
-  },
-  previewLabel: {
-    fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textMuted,
-    marginBottom: 4,
-  },
-  previewValue: {
-    fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
-    fontVariant: ['tabular-nums'],
-    color: Colors.textPrimary,
-  },
-  previewValueMuted: {
-    color: Colors.warning,
-  },
-  statusBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusBadgePending: {
-    backgroundColor: Colors.warning + '30',
-  },
-  statusBadgeText: {
-    fontSize: 12,
-    fontFamily: 'Inter_600SemiBold',
-    fontVariant: ['tabular-nums'],
-    color: Colors.textPrimary,
-  },
-
-  // Buttons
-  nextButton: {
-    marginHorizontal: 24,
-    marginBottom: 24,
-    borderRadius: 30,
+  centerButton: {
+    alignSelf: 'stretch',
+    marginTop: space[4],
   },
 });

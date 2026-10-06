@@ -46,7 +46,17 @@ const HIDDEN_HEADER_MODAL = { headerShown: false, presentation: 'modal' } as con
 const HIDDEN_HEADER_FULLSCREEN = { headerShown: false, presentation: 'fullScreenModal' } as const;
 const WITH_HEADER = { headerShown: true } as const;
 const ROOT = { flex: 1 } as const;
-const WITH_HEADER_MODAL = { headerShown: true, presentation: 'modal' } as const;
+
+// Dev-only routes are declared ONLY in a development build. In a release the
+// array is empty, so nothing renders for them: the route files still exist
+// (expo-router routes every file), but an undeclared route is simply appended
+// after the declared ones, so it can never become the Stack's first/initial
+// screen, and design-gallery's own `!__DEV__` redirect sends a link to it Home.
+// An array (not `{__DEV__ && <Stack.Screen />}`) because a `false` child makes
+// expo-router warn "Layout children must be of type Screen".
+const DEV_ONLY_SCREENS = __DEV__
+  ? [<Stack.Screen key="design-gallery" name="design-gallery" options={WITH_HEADER} />]
+  : [];
 
 function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
   const { user, authPhase } = useSession();
@@ -296,8 +306,7 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
                   <Stack.Screen name="league-settings" options={HIDDEN_HEADER_MODAL} />
                   <Stack.Screen name="player-portfolio" options={HIDDEN_HEADER_MODAL} />
                   <Stack.Screen name="trade-history" options={HIDDEN_HEADER_MODAL} />
-                  <Stack.Screen name="design-gallery" options={WITH_HEADER} />
-                  <Stack.Screen name="modal" options={WITH_HEADER_MODAL} />
+                  {DEV_ONLY_SCREENS}
                 </Stack.Protected>
               </Stack.Protected>
 
