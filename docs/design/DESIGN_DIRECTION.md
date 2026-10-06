@@ -324,6 +324,22 @@ and every animation keeps its reduced-motion fallback.
   (binding: accessibility, not style).
 - Error and destructive-confirmation states (they appear instantly).
 
+### Motion craft (adopted 2026-10-05; after pbakaus/impeccable, Apache-2.0)
+
+- **One authored moment per screen.** Each phase PLAN states a one-line *motion
+  thesis* for the screen: the moment worth authoring and why. Everything else
+  is feedback, state or continuity, not a second show.
+- **The removal test.** For every animation, ask "what is lost if it's
+  removed?". If the answer is "nothing but decoration", remove it.
+- **Exit is faster than entrance** (sheets dismissing, toasts, banners).
+- **Visible at rest.** An animation that doesn't run (Reduce Motion, a
+  dropped frame, a library that ignores a prop) never leaves content hidden.
+  Entrances animate *from* a visible or near-visible state, or are skipped.
+  This sharpens "never hide content until it finishes" above (3b-2's chart
+  draw-in showed the risk).
+- **Loops pause when unseen.** The live dot (the only loop) and any pulse stop
+  when the screen isn't focused or the app is in the background.
+
 ---
 
 ## 5. Reduced motion (binding)
@@ -527,6 +543,13 @@ instances** cut from Archivo's variable TTF (OFL): `Archivo-Condensed-Black`
 400/500/600/700/800 at wdth 100, loaded with `expo-font`. Web loads the
 variable font from Google Fonts and uses `font-stretch`.
 
+**Type floor and steps (adopted 2026-10-05):**
+- **11 pt minimum** for any text: chips, tags, tab labels, draft-board cell
+  numbers and badges included.
+- **Adjacent roles must differ by an obvious step** (size and/or weight), so
+  caption, callout, headline and title can be told apart without reading them.
+- `type.tag` (11 pt) is at the floor; nothing goes below it.
+
 ### Space, radius, elevation
 
 - `space`: 2, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64 (`space.1`…`space.11`).
@@ -623,6 +646,72 @@ prefers.
   contrast test asserting BOTH tables (token-on-surface AND the full
   foreground-on-fill pair list, tints composited) for both themes. A new
   component that puts text on a fill adds its pair to the list.
+
+**Colour rules (adopted 2026-10-05):**
+- **Secondary text on a tinted fill** (`*-tint`, `warn-tint`) uses a hue-derived
+  token, never a generic grey, and its pair goes in PAIRS.
+- **Colour is never the only code.** Every colour-coded signal has a text, sign
+  or shape twin and a VoiceOver label: gain/loss carry the sign (U+2212), W/L/T
+  and Bye carry letters, the tug bar and medals carry text equivalents, and
+  phase chips carry words.
+
+## 9B. Native craft floor (adopted 2026-10-05; after pbakaus/impeccable, Apache-2.0)
+
+The mechanical floor every mobile screen clears. Summarised in our words from
+the `impeccable` guides (craft-floor, ios, clarify, harden, layout); see
+`docs/design/reviews/impeccable-notes.md` for the full mapping.
+
+- **Platform scope.** **Phone only for 1.2.0** (Giorgio, 2026-10-05): iPad
+  support is off (`supportsTablet: false`), so iPads run the iPhone app in
+  compatibility mode. A designed iPad pass (master-detail Matchup/League, a
+  wider Portfolio) is a later project. Never ship a stretched phone layout on a
+  tablet.
+- **Icons.** One drawn icon set (the `sp` icons: one stroke, one weight).
+  **No Unicode glyphs or emoji standing in for icons**: no ⓘ, ▲/▼, ✓, ›, →
+  as text. Dots and discs are drawn shapes. (Bullets that mask a password are
+  not icons.)
+- **Hit areas.** **≥ 44 × 44 pt for everything tappable**, including text links
+  whose visible mark is small ("Nudge again · Remove", "Change", "Invest", "Share",
+  the pill's "+N"). Use padding or `hitSlop`; verify it in review.
+- **Gestures and sheets.**
+  - Edge-swipe back is never disabled.
+  - Sheets dismiss by swipe, with a clear Cancel/Done, unless dismissing would
+    lose data (a trade review mid-confirm).
+  - **A one-tap destructive action with no review step** (Remove a player,
+    delete, leave) confirms through a native action sheet whose button names
+    the action ("Remove Andrea P."); never Yes/No/OK.
+  - **A flow with a review screen is already its confirmation** (Sell, Buy,
+    Schedule the draft, Start the draft). The review states the outcome, and
+    its one button names the action ("Sell TSLA", "Buy SHOP"). No extra sheet:
+    a third confirm adds friction, not safety (ruling 2026-10-05).
+- **Copy.**
+  - Confirm buttons name the action.
+  - Every message is a whole sentence, never stitched from fragments (this
+    keeps future localisation possible).
+  - Errors say what failed, why when useful, and how to recover; never a raw
+    code.
+  - Verbatim-copy and Giorgio-approval rules (above) still govern.
+- **Tags.** A broadcast tag must carry information and must not repeat an
+  adjacent chip or title. (Our tags stay; this is the lint, not a ban.)
+- **Reading order.** The squint test: blurred, a screen still shows its
+  primary element, secondary element and groups in that order.
+- **Choices.** At a decision point, at most four options are visible, with one
+  primary action. Group or disclose the rest.
+- **Stress fixture** (every phase captures it):
+  - a 20-character username and a 40-character league name;
+  - values and losses ≥ $1,000,000;
+  - 16 managers;
+  - 1,000+ history rows (virtualised list);
+  - offline/slow (a stale-data state);
+  - a `rate_limited` refusal.
+
+**Considered and not adopted** (they conflict with Giorgio's rulings or the
+board, which stand):
+- impeccable's eyebrow/kicker ban (our broadcast tags);
+- its "hero metric" refusal (Home's hero, D1);
+- large collapsing titles (the 3b-1 pill + avatar header);
+- "San Francisco carries the UI" (Archivo is our UI face);
+- its tooling (detector, hooks, live mode). Never run it.
 
 ## 10. What happens next
 

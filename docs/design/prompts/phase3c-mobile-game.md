@@ -79,6 +79,26 @@ You are the UI worker for **Phase 3c: the competitive screens**. Your branch is 
 5. **Fix everything, then shoot once.** No capture pass while known issues are open.
 6. **A visible product decision that isn't ruled goes to Giorgio as a board "Your call" mockup BEFORE "go".** Ask the Design Lead; don't invent it.
 
+## Craft floor (DESIGN_DIRECTION §9B + §4 "Motion craft"; adopted 2026-10-05)
+
+These apply to every screen you build. They are new since this prompt was first written, so audit your existing work against them too.
+- **Icons:** the `sp` icon set only. Replace any Unicode or emoji glyph used as an icon in your screens (ⓘ, ▲/▼, ✓, ›, →, ●-as-text) with a drawn icon or shape. Add missing icons to the set through the Design Lead.
+- **Hit areas:** ≥ 44 × 44 pt for everything tappable, **including text links** ("Nudge again · Remove", "Change", "Share", "See the bracket", "Go to the draft lobby", the standings rows that open a profile). Use padding or `hitSlop`, and report how you verified it.
+- **11 pt text floor:** chips, tags, badges, cell numbers and tab labels included.
+- **Motion craft:**
+  - one authored moment per screen, with a one-line motion thesis in your PLAN;
+  - every animation passes "what's lost if it's removed?";
+  - exit is faster than entrance;
+  - content is visible at rest (an animation that doesn't run never hides content);
+  - the live dot and any pulse pause when the screen isn't focused or the app is backgrounded.
+- **Gestures:** never disable edge-swipe back. Sheets swipe to dismiss with Cancel/Done. A one-tap destructive action with no review step (Remove, delete) confirms through a native action sheet whose button names the action (never Yes/No/OK). A flow with a review screen is already confirmed by that screen's single action-named button, with no extra sheet.
+- **Copy:** confirm buttons name the action; every message is a whole sentence (no stitched fragments); errors say what failed and how to recover, never a raw code.
+- **Tags** must carry information and never repeat an adjacent chip or title.
+- **Colour is never the only code:** every colour signal has a text, sign or shape twin and a VoiceOver label.
+- **≤ 4 visible choices** at a decision point, with one primary action (check Start the draft, the settings review and the draft-room search).
+- **Stress fixture** (captured): a 20-character username and a 40-character league name; values and losses ≥ $1,000,000; 16 managers (standings, the snake board, Who's running back), a 14-week schedule plus 4 playoff weeks; offline/slow (a stale-data state); a `rate_limited` refusal.
+- **Phone only for 1.2.0** (iPad support is off; no tablet layouts).
+
 ## Shared code and ownership
 
 - **Reuse 3b-2's modules; don't copy them:**
@@ -264,5 +284,6 @@ The header chip reads "Paused". No auto-pick and no skip while paused; show the 
 8. Bots are marked everywhere; U+2212 minus; no truncation at XL.
 9. Shared-code discipline: no copied modules, `lib/` moves done by you in single commits, no unapproved primitive changes.
 10. Run it back R1–R10 match the board, use the approved copy verbatim, map API values to copy, and pass a real-data run once `feat/run-it-back` is live: renew a finished test league, answer from two accounts, nudge, remove, schedule the draft.
+11. The craft floor holds: no glyph-icons, 44 pt hit areas verified, the 11 pt floor, the motion-craft lines, the stress fixture captured. The gate report follows UI-UX-PROGRAM's format (specificity, squint, 0–4 scorecard, persona walk, P0–P3).
 
 Report your PLAN first (including your fixture plan and the order you'll land U1 in) and wait for "go".

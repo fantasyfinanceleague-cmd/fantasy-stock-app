@@ -48,7 +48,7 @@
       {helper ? <span className="ks-caption">{helper}</span> : null}
       {rules ? (
         <span className="ks-rules">
-          {rules.map(([ok, t]) => <span key={t} className={ok ? 'ks-gain' : 'ks-muted'}>{ok ? '✓' : '○'} {t}</span>)}
+          {rules.map(([ok, t]) => <span key={t} className={ok ? 'ks-gain' : 'ks-muted'} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon d={ok ? ICON.check : ICON.circle} size={12} width={2.6} />{t}</span>)}
         </span>
       ) : null}
     </label>
@@ -424,7 +424,7 @@
   // counts at cost, and the screen says so. Appears instantly, never animates.
   const AtCost = ({ who, n }) => (
     <span className="ks-caption ks-muted" style={{ display: 'flex', gap: 6, alignItems: 'baseline' }}>
-      <span aria-hidden="true">ⓘ</span>
+      <span aria-hidden="true" style={{ display: 'inline-flex', alignSelf: 'center' }}><Icon d={ICON.info} size={14} width={2} /></span>
       <span>{who ? `${who}: ` : ''}{n} {n === 1 ? 'holding' : 'holdings'} counted at cost (no live price yet)</span>
     </span>
   );
@@ -1625,7 +1625,7 @@
         {NX.joined.map((j) => (
           <li key={j.id} className="ks-row" style={{ gridTemplateColumns: '18px 1fr auto', padding: '10px 0', alignItems: 'center' }}>
             <span />
-            <span className="ks-callout" style={{ fontWeight: 700, display: 'flex', gap: 8, alignItems: 'center' }}>{j.name}<span className="ks-chip" style={{ height: 20, fontSize: 10 }}>New</span></span>
+            <span className="ks-callout" style={{ fontWeight: 700, display: 'flex', gap: 8, alignItems: 'center' }}>{j.name}<span className="ks-chip" style={{ height: 20, fontSize: 11 }}>New</span></span>
             <span className="ks-callout" style={{ fontWeight: 700, color: 'var(--c-accent)', display: 'flex', gap: 6, alignItems: 'center' }}><Icon d={CHECK} size={14} width={3} />Joining</span>
           </li>
         ))}
