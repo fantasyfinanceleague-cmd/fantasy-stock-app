@@ -1,6 +1,9 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
+import { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text } from '@/components/sp/Text';
+import { Button } from '@/components/sp/Button';
+import { RENEWAL_LOAD_FAILED } from '@/lib/game/draftQueueRead';
 import { space } from '@/constants/tokens';
 import { useRenewalRoster } from '@/lib/game/useRenewalRoster';
 import { screenFor } from '@/lib/game/renewal';
@@ -27,12 +30,21 @@ export interface LeagueRenewalProps {
  * roster). Pending and out invitees and strangers get the ask or nothing: the
  * server decides what each one may see. */
 export function LeagueRenewal({ successorId, leagueId, createdAt, now, onChanged, settings, inviteCode, onScheduled }: LeagueRenewalProps) {
-  const st = useRenewalRoster(successorId, null, 0);
+  // Bumped by Try again on a failed read (the house "X didn't load" form).
+  const [retry, setRetry] = useState(0);
+  const st = useRenewalRoster(successorId, null, retry);
   // The Season 1 order is the frozen rank of the lineage's first finished season (R5).
   const history = useLeagueHistory(successorId, true);
   if (st.status === 'loading' || st.status === 'idle') return null;
   if (st.status === 'error' || !st.roster) {
-    return <Text variant="callout" tone="secondary">Couldn't load the renewal. Pull down to try again.</Text>;
+    return (
+      <View style={styles.stack}>
+        <Text variant="callout">{RENEWAL_LOAD_FAILED}</Text>
+        <View style={styles.retry}>
+          <Button label="Try again" variant="secondary" size="sm" onPress={() => setRetry((n) => n + 1)} />
+        </View>
+      </View>
+    );
   }
   const screen = screenFor(st.roster);
   if (screen === 'ask') {
@@ -63,4 +75,5 @@ export function LeagueRenewal({ successorId, leagueId, createdAt, now, onChanged
 
 const styles = StyleSheet.create({
   stack: { gap: space[3] },
+  retry: { alignSelf: 'flex-start' },
 });

@@ -458,9 +458,6 @@ export default function CreateLeagueWizard() {
               />
             ))}
           </RowWrap>
-          <Text variant="caption" tone="secondary">
-            {"One share per pick; the sum of your roster's share prices must fit under the cap. Keep it tight — a loose cap never shapes the draft."}
-          </Text>
         </View>
       ) : null}
 

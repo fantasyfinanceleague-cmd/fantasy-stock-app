@@ -6,11 +6,12 @@
  * Run: `cd apps/mobile/tests-deno && deno test .`
  */
 import { assertEquals } from 'jsr:@std/assert';
-import { DRAFT_ROOM_LOAD_FAILED, QUEUE_LOAD_FAILED, nextQueueRead, queueRead, type QueueRead } from '../lib/game/draftQueueRead.ts';
+import { DRAFT_ROOM_LOAD_FAILED, QUEUE_LOAD_FAILED, RENEWAL_LOAD_FAILED, nextQueueRead, queueRead, type QueueRead } from '../lib/game/draftQueueRead.ts';
 // Read as text (raw-imports, no --allow-read) for the source guards below.
 import roomSrc from '../lib/game/useDraftRoom.ts' with { type: 'text' };
 import lobbySrc from '../lib/game/useDraftQueue.ts' with { type: 'text' };
 import viewSrc from '../components/game/DraftRoom.tsx' with { type: 'text' };
+import renewalSrc from '../components/game/LeagueRenewal.tsx' with { type: 'text' };
 
 Deno.test('rows become the queue, in position order', () => {
   assertEquals(
@@ -35,6 +36,7 @@ Deno.test('null data with no error is still not trusted as empty', () => {
 Deno.test('the load-failure lines: the house "X didn\'t load" form', () => {
   assertEquals(QUEUE_LOAD_FAILED, "Your queue didn't load.");
   assertEquals(DRAFT_ROOM_LOAD_FAILED, "The draft room didn't load.");
+  assertEquals(RENEWAL_LOAD_FAILED, "The renewal didn't load.");
 });
 
 // ── Re-reads (the room re-reads on every pick; the lobby after a save) ─────
@@ -89,4 +91,10 @@ Deno.test("the draft room has no \"Couldn't load\" or pull-to-refresh copy left"
   assertEquals(viewSrc.includes("Couldn't load"), false);
   assertEquals(viewSrc.includes('Pull down to try again'), false);
   assertEquals(viewSrc.includes('{DRAFT_ROOM_LOAD_FAILED}'), true);
+});
+
+Deno.test('the renewal has no "Couldn\'t load" or pull-to-refresh copy left', () => {
+  assertEquals(renewalSrc.includes("Couldn't load"), false);
+  assertEquals(renewalSrc.includes('Pull down to try again'), false);
+  assertEquals(renewalSrc.includes('{RENEWAL_LOAD_FAILED}'), true);
 });

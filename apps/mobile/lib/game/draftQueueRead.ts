@@ -40,3 +40,6 @@ export const QUEUE_LOAD_FAILED = "Your queue didn't load.";
 
 /** The live draft room's load failure, in the same form. */
 export const DRAFT_ROOM_LOAD_FAILED = "The draft room didn't load.";
+
+/** A renewed league's Run it back flow (LeagueRenewal), in the same form. */
+export const RENEWAL_LOAD_FAILED = "The renewal didn't load.";
