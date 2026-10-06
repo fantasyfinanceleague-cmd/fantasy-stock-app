@@ -121,9 +121,9 @@ Q3 only matters under Q2-A. Under Q2-B, forfeits must be skipped, which forces Q
 **Migrations (`20261107000000`–`03`):**
 
 - **`00` — `league_members.left_at timestamptz`.** Plus `left_role text`, so history shows "left as commissioner". Plus a partial index for active members.
-- **`01` — `leave_league(p_league_id uuid, p_new_commissioner text default null) returns jsonb`.** SECURITY DEFINER, `search_path` pinned.
-  - **Identity:** it uses `auth.uid()` internally and has **no `p_user_id` parameter**. That avoids the forgeable-id class (`join_league_by_code`).
-  - **Grants:** EXECUTE revoked from `public`, `anon`, and re-granted to `authenticated` only. Verified by proacl.
+- **`01` — `leave_league(p_league_id uuid, p_user_id text, p_new_commissioner text default null) returns jsonb`.** SECURITY DEFINER, `search_path` pinned.
+  - **Caller: a service-role edge function, not the client** (the constraint is explained below). A new `leave-league` edge function (`verify_jwt=true`) gets the user from `auth.getUser()` and calls the RPC with that id. This is the same pattern as `record-trade` → `"record_trade_atomic"` and `join-league` → `join_league_by_code`.
+  - **Grants:** EXECUTE revoked from `public`, `anon` AND `authenticated`, and granted to `service_role` only. Verified by proacl. `p_user_id` would be forgeable if a client could call the RPC, so the service_role-only grant is the whole identity boundary. Explicitly revoking `authenticated` is what closes the `join_league_by_code` class.
   - **Locks:** takes the league row `FOR UPDATE` and the same league-wide advisory lock that `"record_trade_atomic"` takes. A leave and an in-flight trade therefore serialize.
   - **Branches:**
     - `not_started` → DELETE the row (the trigger fixes the order);
@@ -132,9 +132,25 @@ Q3 only matters under Q2-A. Under Q2-B, forfeits must be skipped, which forces Q
   - **Refusals:** `not_member`, `already_left`, `successor_required`, `successor_invalid` (not an active human member), `sole_manager`.
   - It returns `{status, reason}` like `start_league_playoffs`.
 - **`02` — `trades` BEFORE INSERT guard.** Refuses a row whose `(league_id, user_id::text)` is departed. Plus the `get_home_summary` / `get_home_league` filters. Both functions are recreated with byte-identical ACL, verified by proacl.
-- **`03` — DROP POLICY `league_members_delete_self` (`[I5]`).** After this, no client can DELETE a membership. The web `leaveLeague` moves to `.rpc('leave_league')` in the same PR (web is paused, so this is not a prod behavior change).
+- **`03` — DROP POLICY `league_members_delete_self` (`[I5]`).** After this, no client can DELETE a membership. The web `leaveLeague` moves to `functions.invoke('leave-league')` in the same PR (web is paused, so this is not a prod behavior change).
+
+**Constraint from the "freeze slot edits" release (Orchestrator, 2026-10-05).** That release adds three things:
+- `commissioner_id`, `season_status` and `current_week` become immutable to **user sessions** once the draft has started;
+- a BEFORE DELETE guard on `league_members` refuses user-session deletes post-draft (42501 `league_membership_locked`);
+- "user session" is defined as `auth.uid() IS NOT NULL`.
+
+A SECURITY DEFINER function called with the user's JWT still sees `auth.uid()`, so it is NOT exempt. A client-called `leave_league` would therefore be refused on the post-draft commissioner transfer (Q4). That is why the RPC above runs on the service role, where `auth.uid()` is NULL.
+
+| | **Service-role edge function ★** | **Freeze triggers recognise a scoped definer context** |
+|---|---|---|
+| Shape | `leave-league` edge function → service_role-only RPC with `p_user_id` | The client calls the definer RPC, which sets a transaction-local flag (`set_config('app.leave_league', 'on', true)`). The freeze triggers skip when the flag is set. |
+| Pros | It matches `record-trade` / `join-league`. The freeze triggers need no exception, and the edge layer gives a natural place for the league notification. | One fewer moving part (no edge function). |
+| Cons | One more deployed function. | Every freeze trigger grows a bypass. Its safety rests on no client-reachable path being able to set that GUC, which is a standing invariant to re-verify each time a function is added. |
+
+Recommend the edge function: no trigger exceptions, and it follows an existing pattern. Under it, the pre-draft branch's DELETE also runs on the service role. That is fine: the pre-draft delete was allowed either way, and the draft-order trigger behaves identically.
 
 **Edge changes:**
+- **New `leave-league` function** (`verify_jwt=true`). Steps: `getUser()`, then validate the body (`league_id`, optional `new_commissioner_id`), then call the `leave_league` RPC with the user's id, destructuring and checking `{ error }` (CLAUDE.md success-signal #5). It maps refusals to 4xx and returns the RPC's `{status, reason}` verbatim. Writing `league_notifications` rows for the remaining members (and the new commissioner) happens in the RPC, so it is in the same transaction.
 - `record-trade` pre-check adds `left_at IS NULL` (clean `left_league` error).
 - `get_league_display_names` gains a `departed` flag for the "(left)" label. This changes the return type, so it is a DROP + CREATE with re-granted ACL.
 
