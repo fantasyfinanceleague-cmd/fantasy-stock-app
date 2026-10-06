@@ -90,6 +90,21 @@ export function budgetLeftLine(budget: number | null | undefined, prices: readon
   return `Budget left ${dollars(Math.max(0, Math.round((budget - spent) * 100) / 100))}`;
 }
 
+/** After your own pick lands, a line in the clock card for a few seconds (UX
+ * rule 11; NEW, the Design Lead's): "NVDA is yours. Next pick in 3 turns."; your
+ * last pick: "NVDA is yours. That's your team." `picksAway` is picksUntilTurn
+ * AFTER this pick (-1 = no pick left). At the turn of the snake you pick again
+ * at once (0): "You pick again next." (NEW, flagged: not in the ruling). */
+export function pickConfirmedLine(symbol: string, picksAway: number): string {
+  const s = symbol.toUpperCase();
+  if (picksAway < 0) return `${s} is yours. That's your team.`;
+  if (picksAway === 0) return `${s} is yours. You pick again next.`;
+  return `${s} is yours. Next pick in ${picksAway} ${picksAway === 1 ? 'turn' : 'turns'}.`;
+}
+
+/** How long the confirmation stays (ms): about 3 s, no animation. */
+export const PICK_CONFIRMED_MS = 3000;
+
 /** The Draft button while the pick is on its way (UX rule 9). NEW. */
 export const PICK_SENDING = 'Sending…';
 /** The pick's outcome is unknown (a transport error, no answer): never "That pick

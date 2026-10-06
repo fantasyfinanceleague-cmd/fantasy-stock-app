@@ -241,3 +241,31 @@ Deno.test('a transport error never says "That pick can\'t be made.": it says Che
   assertEquals(t > 0 && unconfirmed > t && reread > unconfirmed, true);
   assertEquals(room.includes('setRefusal((cur) => (cur?.checking ? null : cur));'), true);
 });
+
+// ── UX rule 11: your pick confirmed, for ~3 s ──
+
+import { PICK_CONFIRMED_MS, pickConfirmedLine } from '../lib/game/draftRoom.ts';
+
+Deno.test('the confirmation line (the Design Lead\'s), and its edges', () => {
+  assertEquals(pickConfirmedLine('nvda', 3), 'NVDA is yours. Next pick in 3 turns.');
+  assertEquals(pickConfirmedLine('NVDA', 1), 'NVDA is yours. Next pick in 1 turn.');
+  assertEquals(pickConfirmedLine('NVDA', -1), "NVDA is yours. That's your team.");
+  assertEquals(pickConfirmedLine('NVDA', 0), 'NVDA is yours. You pick again next.'); // the snake's turn
+  assertEquals(PICK_CONFIRMED_MS, 3000);
+});
+
+Deno.test('next pick counted AFTER your pick, on the snake (4 teams)', () => {
+  const order = ['a', 'b', 'c', 'me'];
+  // You took pick 4 (last of round 1): round 2 reverses, so you pick 5 at once.
+  assertEquals(pickConfirmedLine('AAPL', picksUntilTurn(order, 4, 6, 'me')), 'AAPL is yours. You pick again next.');
+  // You took pick 5: next yours is 12 (round 3 forward: a9 b10 c11 me12) → 6 picks between.
+  assertEquals(pickConfirmedLine('MSFT', picksUntilTurn(order, 5, 6, 'me')), 'MSFT is yours. Next pick in 6 turns.');
+  // Your last pick of a 2-round draft: none left.
+  assertEquals(pickConfirmedLine('COST', picksUntilTurn(order, 5, 2, 'me')), "COST is yours. That's your team.");
+});
+
+Deno.test('the room shows it in the clock card after a successful pick, then clears it (source guard)', () => {
+  const room = SOURCES['components/game/DraftRoom.tsx'];
+  assertEquals(room.includes('setConfirmed(pickConfirmedLine(symbol, picksUntilTurn(room.order, onClockPick, rounds, myUserId)));'), true);
+  assertEquals(room.includes('setTimeout(() => setConfirmed(null), PICK_CONFIRMED_MS)'), true);
+});
