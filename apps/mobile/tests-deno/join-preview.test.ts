@@ -7,9 +7,9 @@
  */
 import { assertEquals, assertNotEquals, assertStringIncludes } from 'jsr:@std/assert';
 import {
-  JOIN_COPY, blockMessage, classifyInvokeError, coerceBlock, dollars, draftRow, errorMessage,
+  JOIN_COPY, blockMessage, classifyInvokeError, coerceBlock, draftRow, errorMessage,
   interpretJoin, interpretPreview, joinedView, parsePreviewLeague, previewAction, previewView,
-  seasonLine, stakesLine,
+  refineBlock, seasonLine,
 } from '../lib/join/joinPreview.ts';
 import { fixtureJoinResponse, fixturePreviewResponse } from '../lib/join/joinFixtureGate.ts';
 
@@ -40,6 +40,7 @@ Deno.test('the board refusals, verbatim, naming the league', () => {
   const l = league();
   assertEquals(blockMessage('league_full', l), 'Serie A Traders is full: 8 of 8 managers. Ask Roberto B. if they can make room.');
   assertEquals(blockMessage('draft_started', l), "Serie A Traders has already drafted, so it can't take new managers this season.");
+  assertEquals(blockMessage('draft_in_progress', l), "Serie A Traders is drafting right now, so it can't take new managers this season.");
   assertEquals(blockMessage('already_member', l), "You're already in Serie A Traders.");
   assertEquals(blockMessage('invite_expired', l), 'This invite has expired. Ask your commissioner for a new code.');
   assertEquals(blockMessage('season_completed', l), "Serie A Traders's season is over. Ask your commissioner whether they're running it back.");
@@ -67,6 +68,7 @@ Deno.test('the button under each block: join / open / try another / disabled for
   assertEquals(previewAction('already_member'), 'open');
   assertEquals(previewAction('league_full'), 'another');
   assertEquals(previewAction('draft_started'), 'another');
+  assertEquals(previewAction('draft_in_progress'), 'another');
   assertEquals(previewAction('invite_expired'), 'another');
   assertEquals(previewAction('season_completed'), 'another');
   assertEquals(previewAction('unknown'), 'another');
@@ -82,24 +84,15 @@ Deno.test('flag (a): left_league is optional; an old server just sends already_m
   assertEquals(coerceBlock('something_new'), 'unknown');
   assertEquals(coerceBlock(undefined), 'unknown');
   assertEquals(blockMessage('unknown', league()), JOIN_COPY.unknownBlock);
+  assertEquals(JOIN_COPY.unknownBlock, "You can't join this league right now. Ask your commissioner to check the invite.");
 });
 
-Deno.test('stakes line: per-slot amount, with every other mode and an older deploy handled', () => {
-  assertEquals(stakesLine({ stakeMode: 'fixed_notional', notionalPerSlot: 2000, budgetAmount: null }), 'Equal stakes · $2,000 per slot');
-  assertEquals(stakesLine({ stakeMode: 'fixed_notional', notionalPerSlot: 1250.5, budgetAmount: null }), 'Equal stakes · $1,250.50 per slot');
+Deno.test('the Stakes row uses the shared stakesLine (wording is pinned in stakes-line.test.ts)', () => {
+  assertEquals(previewView({ ...league(), stakeMode: 'price_tiers' }, null).rows[2].value, 'Price tiers · one share per slot');
+  assertEquals(previewView({ ...league(), stakeMode: 'budget_cap', budgetAmount: 2500 }, null).rows[2].value, 'Budget cap · $2,500');
+  assertEquals(previewView({ ...league(), stakeMode: null }, null).rows[2].value, 'Not set yet');
   // preview-league not yet redeployed: no per-slot field, so no amount (never "$0").
-  assertEquals(stakesLine({ stakeMode: 'fixed_notional', notionalPerSlot: null, budgetAmount: null }), 'Equal stakes');
-  assertEquals(stakesLine({ stakeMode: 'price_tiers', notionalPerSlot: null, budgetAmount: null }), 'Price tiers · one share per pick');
-  assertEquals(stakesLine({ stakeMode: 'budget_cap', notionalPerSlot: null, budgetAmount: 2500 }), 'Budget cap · $2,500');
-  assertEquals(stakesLine({ stakeMode: 'budget_cap', notionalPerSlot: null, budgetAmount: null }), 'Budget cap');
-  assertEquals(stakesLine({ stakeMode: null, notionalPerSlot: null, budgetAmount: null }), 'Not set yet');
-});
-
-Deno.test('dollars groups thousands without Intl', () => {
-  assertEquals(dollars(2000), '$2,000');
-  assertEquals(dollars(100000), '$100,000');
-  assertEquals(dollars(999), '$999');
-  assertEquals(dollars(1234567), '$1,234,567');
+  assertEquals(previewView({ ...league(), notionalPerSlot: null }, null).rows[2].value, 'Equal stakes');
 });
 
 Deno.test('season line and draft row edge cases', () => {
@@ -111,6 +104,23 @@ Deno.test('season line and draft row edge cases', () => {
   assertEquals(draftRow({ draftDate: null, draftStatus: 'not_started' }), JOIN_COPY.draftNotScheduled);
   assertEquals(draftRow({ draftDate: '2026-10-10T23:00:00Z', draftStatus: 'in_progress' }), JOIN_COPY.draftInProgress);
   assertEquals(draftRow({ draftDate: 'garbage', draftStatus: 'not_started' }), JOIN_COPY.draftNotScheduled);
+});
+
+Deno.test('draft_started splits on the preview\'s draft_status: completed vs under way', () => {
+  const body = (draft_status: string) => ({ found: true, joinable: false, reason: 'draft_started', league: { ...SERIE_A, draft_status } });
+  const inProgress = interpretPreview(body('in_progress'), null);
+  assertEquals(inProgress.kind === 'found' && inProgress.block, 'draft_in_progress');
+  const completed = interpretPreview(body('completed'), null);
+  assertEquals(completed.kind === 'found' && completed.block, 'draft_started');
+  // refineBlock leaves every other block alone, and treats a missing status as under way.
+  assertEquals(refineBlock('league_full', 'in_progress'), 'league_full');
+  assertEquals(refineBlock('already_member', 'completed'), 'already_member');
+  assertEquals(refineBlock('draft_started', undefined), 'draft_in_progress');
+  // At join time the held preview was joinable (not_started): a refusal now means the draft just began.
+  assertEquals(refineBlock('draft_started', 'not_started'), 'draft_in_progress');
+  // The Draft row reads "In progress" for the in-progress frame, "Done" for the completed one.
+  assertEquals(previewView({ ...league(), draftStatus: 'in_progress' }, 'draft_in_progress').rows[1].value, 'In progress');
+  assertEquals(previewView({ ...league(), draftStatus: 'completed' }, 'draft_started').rows[1].value, 'Done');
 });
 
 Deno.test('interpretPreview: found / joinable / refused / bad code', () => {
@@ -167,8 +177,12 @@ Deno.test('interpretJoin: joined / refused (with the id a member gets) / errors'
 Deno.test('joined: the board copy, and a fallback when the draft has no date', () => {
   const v = joinedView('Serie A Traders', '2026-10-10T23:00:00Z');
   assertEquals(v.title, "You're in Serie A Traders");
-  assertEquals(v.body, "The draft is Sat, Oct 10 · 7:00 PM ET. The draft order is set an hour before, and we'll let you know.");
+  assertEquals(v.body, 'The draft is Sat, Oct 10 · 7:00 PM ET. The draft order is set an hour before.');
   assertEquals(joinedView('X', null).body, JOIN_COPY.joinedNoDate);
+  assertEquals(JOIN_COPY.joinedNoDate, "The commissioner hasn't set a draft date yet. You'll see it on your Home once they do.");
+  // No push exists to promise (order-notify is still deferred).
+  assertEquals(v.body.includes("let you know"), false);
+  assertEquals(JOIN_COPY.joinedNoDate.includes("let you know"), false);
 });
 
 Deno.test('the preview reads ONLY what preview-league returns: no ids, no faces', () => {
@@ -185,7 +199,7 @@ Deno.test('the preview reads ONLY what preview-league returns: no ids, no faces'
 Deno.test('the dev fixtures answer with the same bodies the real functions return', () => {
   // Every fixture response goes through the REAL interpreter.
   assertEquals(interpretPreview(fixturePreviewResponse('preview').data, null).kind, 'found');
-  for (const [f, block] of [['full', 'league_full'], ['drafted', 'draft_started'], ['member', 'already_member'],
+  for (const [f, block] of [['full', 'league_full'], ['drafted', 'draft_started'], ['drafting', 'draft_in_progress'], ['member', 'already_member'],
     ['expired', 'invite_expired'], ['season_over', 'season_completed'], ['left', 'left_league']] as const) {
     const r = fixturePreviewResponse(f);
     const o = interpretPreview(r.data, r.error);

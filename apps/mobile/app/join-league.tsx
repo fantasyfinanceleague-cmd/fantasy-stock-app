@@ -21,7 +21,7 @@ import {
   FIXTURE_NETWORK_MS, fixtureJoinResponse, fixturePrefill, fixturePreviewResponse,
 } from '@/lib/join/joinFixtureGate';
 import {
-  JOIN_COPY, errorMessage, interpretJoin, interpretPreview, joinedView, previewView,
+  JOIN_COPY, errorMessage, interpretJoin, interpretPreview, joinedView, previewView, refineBlock,
   type JoinBlock, type PreviewLeague,
 } from '@/lib/join/joinPreview';
 
@@ -152,7 +152,10 @@ export default function JoinLeagueScreen() {
       // The league changed since the preview (it filled, the draft started):
       // the same preview, now carrying the reason.
       setActionStatus('idle');
-      setBlock(outcome.block);
+      const refined = refineBlock(outcome.block, league.draftStatus);
+      setBlock(refined);
+      // The Draft row must agree with the line under it.
+      if (refined === 'draft_in_progress') setLeague({ ...league, draftStatus: 'in_progress' });
       return;
     }
     // Joined. A real join refreshes the league list so the new league is the

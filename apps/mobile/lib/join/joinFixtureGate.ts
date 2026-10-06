@@ -19,7 +19,8 @@ export type JoinFixture =
   | 'bad'         // no league has the code
   | 'preview'     // joinable; Join succeeds
   | 'full'
-  | 'drafted'
+  | 'drafted'      // a completed draft (draft_started)
+  | 'drafting'     // a draft under way (draft_started, status in_progress)
   | 'member'      // already_member; Open the league works
   | 'expired'
   | 'season_over'
@@ -29,7 +30,7 @@ export type JoinFixture =
   | 'join_race';  // joinable at the preview, then the league fills before Join
 
 export const JOIN_FIXTURES: readonly JoinFixture[] = [
-  'typing', 'checking', 'bad', 'preview', 'full', 'drafted', 'member', 'expired',
+  'typing', 'checking', 'bad', 'preview', 'full', 'drafted', 'drafting', 'member', 'expired',
   'season_over', 'left', 'offline', 'rate_limited', 'join_race',
 ];
 
@@ -81,6 +82,7 @@ export function fixturePreviewResponse(f: JoinFixture): { data: unknown; error: 
     case 'bad': return { data: { found: false, reason: 'invalid_code' }, error: null };
     case 'full': return { data: preview('league_full', { current_members: 8 }), error: null };
     case 'drafted': return { data: preview('draft_started', { draft_status: 'completed' }), error: null };
+    case 'drafting': return { data: preview('draft_started', { draft_status: 'in_progress' }), error: null };
     case 'member': return { data: preview('already_member'), error: null };
     case 'expired': return { data: preview('invite_expired'), error: null };
     case 'season_over': return { data: preview('season_completed', { draft_status: 'completed' }), error: null };

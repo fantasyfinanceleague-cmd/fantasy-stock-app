@@ -14,6 +14,7 @@
  *    error bodies are ignored; every error maps to a line written here.
  */
 import { draftDateTimeLabel } from '../home/draftCountdown';
+import { stakesLine } from '../stakesLine';
 
 /** Why a league that exists still can't be joined. Mirrors previewJoinReason's
  * vocabulary (supabase/functions/preview-league/reason.ts) plus `left_league`,
@@ -21,6 +22,8 @@ import { draftDateTimeLabel } from '../home/draftCountdown';
 export type JoinBlock =
   | 'league_full'
   | 'draft_started'
+  /** draft_started for a draft still UNDER WAY (see refineBlock); draft_started alone means a completed draft. */
+  | 'draft_in_progress'
   | 'already_member'
   | 'invite_expired'
   | 'season_completed'
@@ -40,14 +43,14 @@ export const JOIN_COPY = {
   /** NEW (Orchestrator-suggested): the server's 429, never its body text. */
   rateLimited: 'Too many tries. Wait a moment, then try again.',
   leaveAnyTime: 'You can leave any time before the draft.',
-  /** NEW: a refusal reason this app doesn't know yet (an older client against a newer server). */
-  unknownBlock: "You can't join this league right now.",
-  /** NEW: the draft has no date yet (the board's sample always has one). */
+  /** A refusal reason this app doesn't know yet (an older client against a newer server). Design Lead, #125. */
+  unknownBlock: "You can't join this league right now. Ask your commissioner to check the invite.",
+  /** The draft has no date yet (the board's sample always has one). Approved, #125. */
   draftNotScheduled: 'Not scheduled',
-  /** NEW: a draft that is under way but not "Done". */
+  /** A draft that is under way but not "Done". Approved, #125. */
   draftInProgress: 'In progress',
-  /** NEW: Joined, when the league has no draft date yet. */
-  joinedNoDate: "We'll let you know when the draft is scheduled.",
+  /** Joined, when the league has no draft date yet (Design Lead, #125: no push exists to promise). */
+  joinedNoDate: "The commissioner hasn't set a draft date yet. You'll see it on your Home once they do.",
 } as const;
 
 export function errorMessage(kind: JoinErrorKind): string {
@@ -130,29 +133,20 @@ export function coerceBlock(reason: unknown): JoinBlock {
   }
 }
 
-// ── Money / rows ────────────────────────────────────────────────────────
-
-/** "$2,000" (whole dollars unless there are cents). Built without Intl so it is the same on Hermes and Deno. */
-export function dollars(n: number): string {
-  const fixed = Number.isInteger(n) ? n.toFixed(0) : n.toFixed(2);
-  const [whole, cents] = fixed.split('.');
-  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  return `$${grouped}${cents ? `.${cents}` : ''}`;
+/**
+ * preview-league / join-league answer `draft_started` for any draft that is not
+ * `not_started`, so the REASON cannot tell a draft under way from a finished
+ * one. The preview's `draft_status` can: anything other than `completed` is a
+ * draft in progress. At join time the refusal carries no status, so the caller
+ * passes the status of the preview it is holding (a league that was joinable a
+ * moment ago and now refuses has only just started drafting, so this reads as
+ * in progress). Every other block passes through unchanged.
+ */
+export function refineBlock(block: JoinBlock, draftStatus: string | null | undefined): JoinBlock {
+  return block === 'draft_started' && draftStatus !== 'completed' ? 'draft_in_progress' : block;
 }
 
-/** Board: "Equal stakes · $2,000 per slot". price_tiers / budget_cap / unset are NEW (flagged). */
-export function stakesLine(l: Pick<PreviewLeague, 'stakeMode' | 'notionalPerSlot' | 'budgetAmount'>): string {
-  switch (l.stakeMode) {
-    case 'fixed_notional':
-      return l.notionalPerSlot !== null ? `Equal stakes · ${dollars(l.notionalPerSlot)} per slot` : 'Equal stakes';
-    case 'price_tiers':
-      return 'Price tiers · one share per pick';
-    case 'budget_cap':
-      return l.budgetAmount !== null ? `Budget cap · ${dollars(l.budgetAmount)}` : 'Budget cap';
-    default:
-      return 'Not set yet';
-  }
-}
+// ── Rows ────────────────────────────────────────────────────────────────
 
 /** Board: "10 weeks". Null when the league has neither length. */
 export function seasonLine(l: Pick<PreviewLeague, 'leagueType' | 'numWeeks' | 'durationDays'>): string | null {
@@ -176,6 +170,8 @@ export function blockMessage(block: JoinBlock, l: Pick<PreviewLeague, 'name' | '
       return `${l.name} is full: ${l.max} of ${l.max} managers. Ask ${l.commissionerName} if they can make room.`;
     case 'draft_started':
       return `${l.name} has already drafted, so it can't take new managers this season.`;
+    case 'draft_in_progress':
+      return `${l.name} is drafting right now, so it can't take new managers this season.`;
     case 'already_member':
       return `You're already in ${l.name}.`;
     case 'invite_expired':
@@ -224,7 +220,7 @@ export function previewView(l: PreviewLeague, block: JoinBlock | null): PreviewV
   const rows: PreviewRow[] = [
     { label: 'Managers', value: `${members} of ${l.max}` },
     { label: 'Draft', value: draftRow(l) },
-    { label: 'Stakes', value: stakesLine(l) },
+    { label: 'Stakes', value: stakesLine(l.stakeMode, { notionalPerSlot: l.notionalPerSlot, budgetAmount: l.budgetAmount }) },
   ];
   const season = seasonLine(l);
   if (season) rows.push({ label: 'Season', value: season });
@@ -270,7 +266,7 @@ export function interpretPreview(data: unknown, invokeError: unknown): FindOutco
   const league = d.found === true ? parsePreviewLeague(d.league) : null;
   if (!league) return { kind: 'error', error: 'unreachable' };
   if (d.joinable === true) return { kind: 'found', league, block: null };
-  return { kind: 'found', league, block: coerceBlock(d.reason) };
+  return { kind: 'found', league, block: refineBlock(coerceBlock(d.reason), league.draftStatus) };
 }
 
 export type JoinOutcome =
@@ -301,13 +297,13 @@ export interface JoinedView {
   body: string;
 }
 
-/** Board: "You're in {League}" / "The draft is {when}. The draft order is set an hour before, and we'll let you know." */
+/** "You're in {League}" / "The draft is {when}. The draft order is set an hour before." (Design Lead, #125: the board's "and we'll let you know" is dropped, the order-notify push doesn't exist yet.) */
 export function joinedView(leagueName: string, draftDate: string | null): JoinedView {
   const when = draftDateTimeLabel(draftDate);
   return {
     title: `You're in ${leagueName}`,
     body: when
-      ? `The draft is ${when}. The draft order is set an hour before, and we'll let you know.`
+      ? `The draft is ${when}. The draft order is set an hour before.`
       : JOIN_COPY.joinedNoDate,
   };
 }
