@@ -2,8 +2,8 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "eb4723219f0ba0870284b5129b629e787667a781",
-    "commitShort": "eb47232",
+    "commit": "3a328ac3d4a1dbc0f10ee4e7d7cac8962f017c52",
+    "commitShort": "3a328ac",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "fix/draft-never-skips",
     "dirty": true,
@@ -18,27 +18,23 @@
       },
       {
         "code": "M",
-        "path": "supabase/functions/_shared/draft-feasibility.ts"
-      },
-      {
-        "code": "M",
         "path": "supabase/functions/_shared/draft-write.ts"
       },
       {
-        "code": "M",
-        "path": "supabase/functions/_shared/pick-gate.ts"
+        "code": "??",
+        "path": "supabase/migrations/20261101000003_draft_price_outages.sql"
       }
     ],
-    "timestamp": "2026-10-06T00:38:31Z",
-    "sourceHash": "sha256:4f70467e8eb588e5f3aa95548762192d492a95f7343dd58b5691fdbfc83c2b44",
+    "timestamp": "2026-10-06T01:42:37Z",
+    "sourceHash": "sha256:95f187ae70e403a90910b0083fcd2345c036da7e66f2b2f10427c88d716f1d42",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-09-30T16:53:15Z",
-    "ageHours": 127.8,
-    "ageDays": 5.3,
+    "ageHours": 128.8,
+    "ageDays": 5.4,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:8e08382dfe9edf557c6371cfc39da9fb788590ad82209f15e2e74a7c90dcfc6b",
@@ -3893,6 +3889,28 @@
       "db": null,
       "declared": {
         "touchedBy": [
+          "supabase/migrations/20261101000003_draft_price_outages.sql"
+        ],
+        "rlsEnabled": true
+      },
+      "drift": [],
+      "annotation": null,
+      "verified": false,
+      "id": "tbl.auto_pick_price_failures",
+      "label": "auto_pick_price_failures",
+      "sublabel": "not in snapshot",
+      "kind": "table",
+      "source": {
+        "path": "supabase/migrations/20261101000003_draft_price_outages.sql",
+        "line": 25
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "touchedBy": [
           "supabase/migrations/20251217000000_create_broker_credentials.sql"
         ],
         "rlsEnabled": true
@@ -4217,6 +4235,28 @@
       "source": {
         "path": "supabase/migrations/20261101000001_draft_stalls.sql",
         "line": 22
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "touchedBy": [
+          "supabase/migrations/20261101000003_draft_price_outages.sql"
+        ],
+        "rlsEnabled": true
+      },
+      "drift": [],
+      "annotation": null,
+      "verified": false,
+      "id": "tbl.draft_turn_outages",
+      "label": "draft_turn_outages",
+      "sublabel": "not in snapshot",
+      "kind": "table",
+      "source": {
+        "path": "supabase/migrations/20261101000003_draft_price_outages.sql",
+        "line": 32
       }
     },
     {
@@ -12535,6 +12575,14 @@
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
     {
+      "node": "tbl.auto_pick_price_failures",
+      "label": "auto_pick_price_failures",
+      "kind": "table",
+      "source": "supabase/migrations/20261101000003_draft_price_outages.sql:25",
+      "outbound": [],
+      "caveat": "No scanned caller. Tables can also be reached from plpgsql bodies (now parsed) or dynamic SQL (not parsed)."
+    },
+    {
       "node": "tbl.broker_credentials",
       "label": "broker_credentials",
       "kind": "table",
@@ -12563,6 +12611,14 @@
       "label": "draft_stalls",
       "kind": "table",
       "source": "supabase/migrations/20261101000001_draft_stalls.sql:22",
+      "outbound": [],
+      "caveat": "No scanned caller. Tables can also be reached from plpgsql bodies (now parsed) or dynamic SQL (not parsed)."
+    },
+    {
+      "node": "tbl.draft_turn_outages",
+      "label": "draft_turn_outages",
+      "kind": "table",
+      "source": "supabase/migrations/20261101000003_draft_price_outages.sql:32",
       "outbound": [],
       "caveat": "No scanned caller. Tables can also be reached from plpgsql bodies (now parsed) or dynamic SQL (not parsed)."
     },
@@ -12621,6 +12677,18 @@
       "resolve": "Re-capture the snapshot."
     },
     {
+      "scope": "tbl.auto_pick_price_failures",
+      "claim": "table exists in prod",
+      "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot."
+    },
+    {
+      "scope": "tbl.draft_turn_outages",
+      "claim": "table exists in prod",
+      "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot."
+    },
+    {
       "scope": "flow.weekly-scoring",
       "claim": "flow step is current",
       "reason": "step 15: anchor not found — supabase/functions/process-week-results/index.ts no longer contains \"rpc('complete_league_season'\"",
@@ -12653,13 +12721,13 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 170,
+    "nodes": 172,
     "edges": 386,
     "flows": 8,
     "drift": 28,
     "driftHigh": 3,
-    "deadCode": 28,
-    "unverified": 11
+    "deadCode": 30,
+    "unverified": 13
   },
   "sourceIndex": {
     "edgeFunctions": [
@@ -12741,10 +12809,10 @@
       "apps/web/src/pages/Leaderboard.jsx:178 -> league_standings_ranked",
       "apps/web/src/pages/Leaderboard.jsx:345 -> league_standings_ranked",
       "apps/web/src/pages/LeagueDetail.jsx:61 -> league_standings_ranked",
-      "supabase/functions/_shared/draft-write.ts:169 -> get_draft_clock",
-      "supabase/functions/_shared/draft-write.ts:236 -> finalize_league_draft",
-      "supabase/functions/_shared/draft-write.ts:263 -> draft_feasibility_pool",
-      "supabase/functions/_shared/draft-write.ts:496 -> auto_pick_search_candidates",
+      "supabase/functions/_shared/draft-write.ts:172 -> get_draft_clock",
+      "supabase/functions/_shared/draft-write.ts:239 -> finalize_league_draft",
+      "supabase/functions/_shared/draft-write.ts:266 -> draft_feasibility_pool",
+      "supabase/functions/_shared/draft-write.ts:593 -> auto_pick_search_candidates",
       "supabase/functions/draft-autopick-sweep/index.ts:68 -> overdue_draft_turns",
       "supabase/functions/draft-control/index.ts:158 -> check_and_bump_rate_limit",
       "supabase/functions/draft-control/index.ts:161 -> check_and_bump_rate_limit",
@@ -12869,20 +12937,29 @@
       "supabase/functions/_shared/category-eligibility.ts:58 -> symbol_category_overrides.select",
       "supabase/functions/_shared/category-eligibility.ts:70 -> symbols.select",
       "supabase/functions/_shared/category-eligibility.ts:84 -> category_rules.select",
-      "supabase/functions/_shared/draft-write.ts:103 -> league_members.select",
-      "supabase/functions/_shared/draft-write.ts:109 -> league_draft_order.select",
-      "supabase/functions/_shared/draft-write.ts:124 -> drafts.select",
-      "supabase/functions/_shared/draft-write.ts:133 -> trades.select",
-      "supabase/functions/_shared/draft-write.ts:186 -> league_draft_slots.select",
-      "supabase/functions/_shared/draft-write.ts:323 -> draft_stalls.insert",
-      "supabase/functions/_shared/draft-write.ts:338 -> draft_stalls.update",
-      "supabase/functions/_shared/draft-write.ts:371 -> draft_stalls.select",
-      "supabase/functions/_shared/draft-write.ts:401 -> drafts.insert",
-      "supabase/functions/_shared/draft-write.ts:424 -> draft_stalls.delete",
-      "supabase/functions/_shared/draft-write.ts:477 -> draft_queue.select",
-      "supabase/functions/_shared/draft-write.ts:487 -> symbols.select",
-      "supabase/functions/_shared/draft-write.ts:514 -> symbols.update",
-      "supabase/functions/_shared/draft-write.ts:98 -> leagues.select",
+      "supabase/functions/_shared/draft-write.ts:101 -> leagues.select",
+      "supabase/functions/_shared/draft-write.ts:106 -> league_members.select",
+      "supabase/functions/_shared/draft-write.ts:112 -> league_draft_order.select",
+      "supabase/functions/_shared/draft-write.ts:127 -> drafts.select",
+      "supabase/functions/_shared/draft-write.ts:136 -> trades.select",
+      "supabase/functions/_shared/draft-write.ts:189 -> league_draft_slots.select",
+      "supabase/functions/_shared/draft-write.ts:326 -> draft_stalls.insert",
+      "supabase/functions/_shared/draft-write.ts:343 -> draft_stalls.select",
+      "supabase/functions/_shared/draft-write.ts:346 -> draft_stalls.update",
+      "supabase/functions/_shared/draft-write.ts:407 -> draft_turn_outages.insert",
+      "supabase/functions/_shared/draft-write.ts:421 -> draft_turn_outages.update",
+      "supabase/functions/_shared/draft-write.ts:439 -> draft_stalls.insert",
+      "supabase/functions/_shared/draft-write.ts:453 -> draft_turn_outages.update",
+      "supabase/functions/_shared/draft-write.ts:464 -> draft_stalls.select",
+      "supabase/functions/_shared/draft-write.ts:495 -> drafts.insert",
+      "supabase/functions/_shared/draft-write.ts:518 -> draft_stalls.delete",
+      "supabase/functions/_shared/draft-write.ts:521 -> draft_turn_outages.delete",
+      "supabase/functions/_shared/draft-write.ts:574 -> draft_queue.select",
+      "supabase/functions/_shared/draft-write.ts:584 -> symbols.select",
+      "supabase/functions/_shared/draft-write.ts:613 -> auto_pick_price_failures.select",
+      "supabase/functions/_shared/draft-write.ts:622 -> auto_pick_price_failures.upsert",
+      "supabase/functions/_shared/draft-write.ts:627 -> auto_pick_price_failures.delete",
+      "supabase/functions/_shared/draft-write.ts:633 -> symbols.update",
       "supabase/functions/_shared/push.ts:49 -> user_profiles.select",
       "supabase/functions/_shared/push.ts:54 -> push_tokens.select",
       "supabase/functions/_shared/push.ts:60 -> user_profiles.select",
@@ -13090,7 +13167,8 @@
       "20261028000002_snapshot_week_end_heal_cron.sql",
       "20261029000000_get_home_league_rpc.sql",
       "20261101000000_draft_feasibility_pool.sql",
-      "20261101000001_draft_stalls.sql"
+      "20261101000001_draft_stalls.sql",
+      "20261101000003_draft_price_outages.sql"
     ],
     "config": [
       "draft-autopick-sweep=false",

@@ -44,7 +44,10 @@ import {
   type BestAvailableStrategy,
   chooseAutoPick,
   type DraftClock,
+  OUTAGE_ESCALATE_MS,
+  outageEscalation,
   parseDraftClockRow,
+  PRICE_COOLDOWN_MS,
   type PickSource,
 } from './auto-pick.ts';
 import {
@@ -334,12 +337,18 @@ export async function recordStall(
       await pushStallToCommissioner(admin, ctx, pickNumber);
       return;
     }
+    // Read the prior reason first: an escalated outage overwritten by a legality
+    // stall is a NEW claim the commissioner has not been told (review finding 6).
+    const prior = await admin
+      .from('draft_stalls').select('reason').eq('league_id', leagueId).eq('pick_number', pickNumber).maybeSingle();
+    const wasOutage = prior.data?.reason === 'vendor_outage';
     const { error: updErr } = await admin
       .from('draft_stalls')
       .update({ attempts, reason: why, last_seen_at: new Date().toISOString() })
       .eq('league_id', leagueId)
       .eq('pick_number', pickNumber);
     if (updErr) console.error('[draft-stall] refresh failed', leagueId, pickNumber, JSON.stringify(updErr));
+    if (wasOutage && !updErr) await pushStallToCommissioner(admin, ctx, pickNumber, 'nothing_legal');
     return;
   }
   console.error('[draft-stall]', leagueId, pickNumber, why, attempts);
@@ -347,19 +356,103 @@ export async function recordStall(
 }
 
 /** Copy is placeholder pending the Design Lead (CLAUDE.md: no user-facing copy
- * invented here). Commissioner only; the caller decides once-per-stall. */
-async function pushStallToCommissioner(admin: Admin, ctx: DraftContext, pickNumber: number): Promise<void> {
+ * invented here). Commissioner only. Each kind says ONLY what was established:
+ * 'nothing_legal' = the pool was walked and nothing is legal; 'vendor_outage' =
+ * prices are unavailable right now, the turn stays open. Returns whether the push
+ * was sent (the caller decides whether the escalation is marked done). */
+async function pushStallToCommissioner(
+  admin: Admin,
+  ctx: DraftContext,
+  pickNumber: number,
+  kind: 'nothing_legal' | 'vendor_outage' = 'nothing_legal',
+): Promise<boolean> {
   const leagueId = String(ctx.league.id);
   const commissionerId = String(ctx.league.commissioner_id ?? '');
-  if (!commissionerId) return;
+  if (!commissionerId) return false;
   const target = await getTargetToken(admin, commissionerId);
-  if (!target.token || !target.enabled) return;
+  if (!target.token || !target.enabled) return false;
+  const copy = kind === 'vendor_outage'
+    ? {
+      title: 'Auto-pick is waiting on prices',
+      body: `Live prices are unavailable for pick ${pickNumber}. The turn stays open and retries.`,
+      type: 'draft_outage',
+    }
+    : {
+      title: 'Auto-pick needs you',
+      body: `No legal stock fits pick ${pickNumber}. Pick manually to keep the draft moving.`,
+      type: 'draft_stall',
+    };
   const sent = await sendExpoPush(target.token, {
-    title: 'Auto-pick needs you',
-    body: `No legal stock fits pick ${pickNumber}. Pick manually to keep the draft moving.`,
-    data: { type: 'draft_stall', league_id: leagueId, pick_number: pickNumber },
+    title: copy.title,
+    body: copy.body,
+    data: { type: copy.type, league_id: leagueId, pick_number: pickNumber },
   });
-  if (!sent.sent) console.error('[draft-stall] push not sent', leagueId, pickNumber, sent.reason);
+  if (!sent.sent) {
+    console.error('[draft-stall] push not sent', leagueId, pickNumber, kind, sent.reason);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * A turn stopped only by vendor outages (2026-10-05). The first outage on a turn
+ * starts its clock; once it has lasted OUTAGE_ESCALATE_MS the turn is escalated
+ * ONCE: a draft_stalls row with reason 'vendor_outage' (members see "Paused") and
+ * one commissioner push. Until then, and after, it keeps retrying. Recovery
+ * (the turn is filled) clears both rows in insertGatedPick.
+ */
+export async function noteOutage(admin: Admin, ctx: DraftContext, pickNumber: number, pickerId: string): Promise<void> {
+  const leagueId = String(ctx.league.id);
+  const nowIso = new Date().toISOString();
+  const ins = await admin.from('draft_turn_outages').insert({
+    league_id: leagueId,
+    pick_number: pickNumber,
+    first_seen_at: nowIso,
+    last_seen_at: nowIso,
+  });
+  let firstSeen = nowIso;
+  let escalatedAt: string | null = null;
+  if (ins.error) {
+    if ((ins.error as { code?: string }).code !== '23505') {
+      console.error('[outage] record failed', leagueId, pickNumber, JSON.stringify(ins.error));
+      return;
+    }
+    const upd = await admin
+      .from('draft_turn_outages')
+      .update({ last_seen_at: nowIso })
+      .eq('league_id', leagueId)
+      .eq('pick_number', pickNumber)
+      .select('first_seen_at, escalated_at')
+      .maybeSingle();
+    if (upd.error || !upd.data) {
+      console.error('[outage] refresh failed', leagueId, pickNumber, JSON.stringify(upd.error ?? 'no row'));
+      return;
+    }
+    firstSeen = String(upd.data.first_seen_at);
+    escalatedAt = upd.data.escalated_at == null ? null : String(upd.data.escalated_at);
+  }
+  if (outageEscalation(Date.parse(firstSeen), Date.now(), escalatedAt != null, OUTAGE_ESCALATE_MS) !== 'escalate') return;
+
+  // At-least-once push: the row (PK dedupes it) is written first, the push is sent,
+  // and ONLY a sent push marks the escalation done. A failed push is retried on the
+  // next tick, because escalated_at is still null (review finding 3).
+  const st = await admin.from('draft_stalls').insert({
+    league_id: leagueId,
+    pick_number: pickNumber,
+    picker_id: pickerId,
+    reason: 'vendor_outage',
+    attempts: 0,
+  });
+  if (st.error && (st.error as { code?: string }).code !== '23505') {
+    console.error('[outage] escalation record failed', leagueId, pickNumber, JSON.stringify(st.error));
+    return;
+  }
+  const sent = await pushStallToCommissioner(admin, ctx, pickNumber, 'vendor_outage');
+  if (!sent) return;
+  const { error: markErr } = await admin
+    .from('draft_turn_outages').update({ escalated_at: nowIso }).eq('league_id', leagueId).eq('pick_number', pickNumber);
+  if (markErr) console.error('[outage] escalation mark failed', leagueId, pickNumber, JSON.stringify(markErr));
+  console.error('[outage] escalated', leagueId, pickNumber);
 }
 
 /** Stall retry cooldown (review finding: a looping bot_pick must not re-run the
@@ -369,7 +462,7 @@ export const STALL_COOLDOWN_MS = 60_000;
 export async function recentStall(admin: Admin, leagueId: string, pickNumber: number): Promise<{ recent: boolean; error: boolean }> {
   const { data, error } = await admin
     .from('draft_stalls')
-    .select('last_seen_at')
+    .select('last_seen_at, reason')
     .eq('league_id', leagueId)
     .eq('pick_number', pickNumber)
     .maybeSingle();
@@ -377,7 +470,8 @@ export async function recentStall(admin: Admin, leagueId: string, pickNumber: nu
     console.error('[draft-stall] cooldown read failed', leagueId, pickNumber, JSON.stringify(error));
     return { recent: false, error: true };
   }
-  if (!data?.last_seen_at) return { recent: false, error: false };
+  // A vendor_outage row is not a legality stall: it must never short-circuit the search.
+  if (!data?.last_seen_at || data.reason === 'vendor_outage') return { recent: false, error: false };
   return { recent: Date.now() - Date.parse(String(data.last_seen_at)) < STALL_COOLDOWN_MS, error: false };
 }
 
@@ -419,10 +513,13 @@ export async function insertGatedPick(admin: Admin, pick: GatedPick, pickSource:
     if ((insErr as { code?: string }).code === '23505') return { ok: false, reason: 'pick_conflict' };
     return { ok: false, reason: 'unhandled' };
   }
-  // The turn is filled: any stall row for this pick_number is resolved history.
+  // The turn is filled: any stall or outage row for this pick_number is resolved history.
   const { error: clearErr } = await admin
     .from('draft_stalls').delete().eq('league_id', pick.leagueId).eq('pick_number', pick.pickNumber);
   if (clearErr) console.error('[draft-stall] clear failed', pick.leagueId, pick.pickNumber, JSON.stringify(clearErr));
+  const { error: outErr } = await admin
+    .from('draft_turn_outages').delete().eq('league_id', pick.leagueId).eq('pick_number', pick.pickNumber);
+  if (outErr) console.error('[outage] clear failed', pick.leagueId, pick.pickNumber, JSON.stringify(outErr));
   return { ok: true, row };
 }
 
@@ -508,6 +605,28 @@ export function supabaseAutoPickPorts(admin: Admin, leagueId: string, deps: Auto
       return (data ?? []).map(toCandidate);
     },
     eligibility: (symbols) => fetchEligibleCategoryIdsBatch(admin, symbols),
+    async coolingSymbols(symbols) {
+      const wanted = symbols.map((x) => x.toUpperCase());
+      if (wanted.length === 0) return new Set<string>();
+      // Scoped to THIS league: one league's member cannot cool a symbol for others.
+      const { data, error } = await admin
+        .from('auto_pick_price_failures').select('symbol, failed_at')
+        .eq('league_id', leagueId).in('symbol', wanted);
+      if (error) throw new Error('price_failures_fetch_failed'); // fail closed
+      const now = Date.now();
+      // deno-lint-ignore no-explicit-any
+      return new Set((data ?? []).filter((r: any) => now - Date.parse(String(r.failed_at)) < PRICE_COOLDOWN_MS).map((r: any) => String(r.symbol).toUpperCase()));
+    },
+    async recordPriceFailure(symbol) {
+      const { error } = await admin
+        .from('auto_pick_price_failures')
+        .upsert({ league_id: leagueId, symbol, failed_at: new Date().toISOString() }, { onConflict: 'league_id,symbol' });
+      if (error) console.error('auto-pick: price-failure record failed', symbol, JSON.stringify(error));
+    },
+    async clearPriceFailure(symbol) {
+      const { error } = await admin.from('auto_pick_price_failures').delete().eq('league_id', leagueId).eq('symbol', symbol);
+      if (error) console.error('auto-pick: price-failure clear failed', symbol, JSON.stringify(error));
+    },
     async recordLivePrice(symbol, price) {
       // Best effort: a failed cache write must not fail the pick. It only means
       // the symbol is judged again next call (one more live call), never wrongly.
@@ -570,9 +689,19 @@ export async function autoPickTurn(
       return { ok: false, reason: 'draft_complete' };
     case 'conflict':
       return { ok: false, reason: 'pick_conflict' };
-    case 'retry_later':
-      console.error('auto-pick: nothing priceable, turn left open', ctx.league.id, choice.attempts);
+    case 'retry_later': {
+      console.error('auto-pick: nothing priceable, turn left open', ctx.league.id, choice.attempts, choice.outage);
+      if (choice.outage) {
+        const turn = currentTurn(ctx.picks.length, ctx.order, ctx.numRounds);
+        // Never throws into the pick path: the turn stays open either way.
+        try {
+          if (turn) await noteOutage(admin, ctx, turn.pickNumber, turn.pickerId);
+        } catch (e) {
+          console.error('[outage] note failed', ctx.league.id, String(e));
+        }
+      }
       return { ok: false, reason: 'price_unavailable' };
+    }
     case 'stalled': {
       const pickNumber = currentTurn(ctx.picks.length, ctx.order, ctx.numRounds)?.pickNumber ?? ctx.picks.length + 1;
       await recordStall(admin, ctx, pickNumber, choice.pickerId, choice.why, choice.attempts);

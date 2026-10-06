@@ -20,6 +20,9 @@ import {
   type AutoPickPorts,
   type AutoPickState,
   LIVE_MAX_ATTEMPTS,
+  OUTAGE_ESCALATE_MS,
+  outageEscalation,
+  PRICE_COOLDOWN_MS,
   type BestAvailableStrategy,
   chooseAutoPick,
   decideAutoPickGate,
@@ -127,6 +130,27 @@ class FakeMarket implements AutoPickPorts {
     const s = this.stocks.find((x) => x.symbol === symbol);
     // A trade price: the write-back accepts only trade/bar sources (review M2).
     return Promise.resolve({ price: s?.live ?? null, source: 'trade.p' });
+  };
+  /** The per-symbol negative cache (the real port is auto_pick_price_failures). */
+  failures = new Map<string, number>();
+  coolingSymbols = (symbols: string[]) =>
+    Promise.resolve(
+      new Set(
+        symbols
+          .map((x) => x.toUpperCase())
+          .filter((x) => {
+            const t = this.failures.get(x);
+            return t != null && Date.now() - t < PRICE_COOLDOWN_MS;
+          }),
+      ),
+    );
+  recordPriceFailure = (symbol: string): Promise<void> => {
+    this.failures.set(symbol.toUpperCase(), Date.now());
+    return Promise.resolve();
+  };
+  clearPriceFailure = (symbol: string): Promise<void> => {
+    this.failures.delete(symbol.toUpperCase());
+    return Promise.resolve();
   };
   /** The catalog cache takes the fresh live price (the real port writes symbols.last_price). */
   recordLivePrice = (symbol: string, price: number): Promise<void> => {
@@ -741,4 +765,50 @@ Deno.test('PROPERTY: 16 managers, slot + budget, adversarial caps: a start-feasi
   }
   assert(completed >= 10, `property must exercise real drafts (completed=${completed} of 30)`);
   assert(turns > 500, `turns=${turns}`);
+});
+
+// ===========================================================================
+// OUTAGE (Orchestrator, 2026-10-05): a dead symbol is negative-cached for the
+// cooldown, so the walk moves past it to a priced legal candidate; a turn with
+// only outages is retry_later with outage=true (escalated by draft-write.ts).
+// ===========================================================================
+
+Deno.test('OUTAGE: one dead top symbol + a legal second -> picks the second; the dead one is not re-priced', async () => {
+  const m = new FakeMarket([stock('DEAD', 50, { live: null, marketCap: 100 }), stock('OK', 50, { marketCap: 1 })], [slot('s1', 10, 100)]);
+  const st = stateWith({}, fillerPicks([]));
+  const r = await chooseAutoPick(st, m, 7);
+  assert(r.kind === 'pick', JSON.stringify(r));
+  assertEquals(r.gated.symbol, 'OK');
+  const again = await chooseAutoPick(st, m, 7);
+  assert(again.kind === 'pick', JSON.stringify(again));
+  assertEquals(m.priceCalls.filter((x) => x === 'DEAD').length, 1); // cooling: no second live call
+});
+
+Deno.test('OUTAGE: every candidate dead -> retry_later with outage=true, on every call (never stalled)', async () => {
+  const m = new FakeMarket([stock('A1', 50, { live: null }), stock('A2', 50, { live: null })], [slot('s1', 10, 100)]);
+  const st = stateWith({}, fillerPicks([]));
+  for (let i = 0; i < 3; i++) {
+    const r = await chooseAutoPick(st, m, 7);
+    assertEquals(r.kind === 'retry_later' && r.outage, true, `call ${i}: ${JSON.stringify(r)}`);
+  }
+  assertEquals(m.priceCalls.length, 2); // the two dead symbols were priced once, then cooled
+});
+
+Deno.test('OUTAGE: recovery — after the cooldown a dead symbol that prices again is taken and its failure clears', async () => {
+  const m = new FakeMarket([stock('BACK', 50, { live: null })], [slot('s1', 10, 100)]);
+  const st = stateWith({}, fillerPicks([]));
+  assertEquals((await chooseAutoPick(st, m, 7)).kind, 'retry_later');
+  m.failures.set('BACK', 0); // the cooldown has long expired
+  m.stocks[0].live = 50;
+  const r = await chooseAutoPick(st, m, 7);
+  assert(r.kind === 'pick', JSON.stringify(r));
+  assertEquals(r.gated.symbol, 'BACK');
+  assertEquals(m.failures.has('BACK'), false);
+});
+
+Deno.test('OUTAGE escalation: waits under the threshold, escalates once, then done', () => {
+  const t0 = 1_000_000;
+  assertEquals(outageEscalation(t0, t0 + OUTAGE_ESCALATE_MS - 1, false), 'wait');
+  assertEquals(outageEscalation(t0, t0 + OUTAGE_ESCALATE_MS, false), 'escalate');
+  assertEquals(outageEscalation(t0, t0 + OUTAGE_ESCALATE_MS * 3, true), 'done');
 });

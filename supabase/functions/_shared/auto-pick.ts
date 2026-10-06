@@ -249,6 +249,23 @@ export const LIVE_MAX_ATTEMPTS = 60;
 export const WALK_MAX_CANDIDATES = 20000;
 /** Wall-clock budget per auto-pick walk (the edge function's limit is far above it). */
 export const WALL_BUDGET_MS = 25_000;
+/** A symbol whose live price failed is skipped (no network call) for this long, so
+ * the walk moves past one dead symbol to the next legal candidate (2026-10-05). */
+export const PRICE_COOLDOWN_MS = 5 * 60_000;
+/** A turn that has been stopped only by vendor outages for this long is escalated
+ * once: a draft_stalls row (reason 'vendor_outage') and one commissioner push. */
+export const OUTAGE_ESCALATE_MS = 5 * 60_000;
+
+/** The escalation decision for one turn's outage row. Pure; draft-write.ts does the I/O. */
+export function outageEscalation(
+  firstSeenMs: number,
+  nowMs: number,
+  alreadyEscalated: boolean,
+  thresholdMs: number = OUTAGE_ESCALATE_MS,
+): 'wait' | 'escalate' | 'done' {
+  if (alreadyEscalated) return 'done';
+  return nowMs - firstSeenMs >= thresholdMs ? 'escalate' : 'wait';
+}
 /** Rows per search page (the RPC's maximum). */
 export const BEST_PAGE = 100;
 
@@ -344,6 +361,12 @@ export interface AutoPickPorts {
   /** Write a live price back to the catalog cache (best effort, never throws):
    * the next walk then judges this symbol on its fresh price, for free. */
   recordLivePrice(symbol: string, price: number): Promise<void>;
+  /** Of these symbols, the ones whose live price failed within PRICE_COOLDOWN_MS. */
+  coolingSymbols(symbols: string[]): Promise<Set<string>>;
+  /** A live price was unavailable for this symbol just now (best effort). */
+  recordPriceFailure(symbol: string): Promise<void>;
+  /** The symbol priced live: any failure record is cleared (best effort). */
+  clearPriceFailure(symbol: string): Promise<void>;
   /** public.draft_feasibility_pool: the pool grouped by signature over the
    * given types, owned symbols excluded, cheapest `depth` prices per group. */
   feasibilityPool(types: Slot[], exclude: string[], draftableOnly: boolean, depth: number): Promise<PoolGroup[]>;
@@ -352,7 +375,7 @@ export interface AutoPickPorts {
 export type AutoPickChoice =
   | { kind: 'pick'; gated: GatedPick; source: 'auto_queue' | 'auto_best' | 'bot'; priceSource: string | null; attempts: number }
   | { kind: 'stalled'; pickerId: string; why: 'nothing_legal'; attempts: number }
-  | { kind: 'retry_later'; attempts: number }
+  | { kind: 'retry_later'; attempts: number; outage: boolean }
   | { kind: 'draft_complete' }
   | { kind: 'conflict' };
 
@@ -467,8 +490,10 @@ export async function chooseAutoPick(
     const live = await ports.livePrice(symbol);
     if (live.price == null) {
       outages++;
+      await ports.recordPriceFailure(symbol);
       return null;
     }
+    await ports.clearPriceFailure(symbol);
     // Write back only a trade or a bar price (the fresh sources). A bid/ask quote
     // is a looser signal and must not move the cache every league prices from.
     if (live.source === 'trade.p' || live.source === 'bar.c') {
@@ -493,8 +518,13 @@ export async function chooseAutoPick(
       queueMeta: q.meta,
       eligibility: eligibilityCache,
     });
+    const coolingQ = await ports.coolingSymbols(queued.map((c) => c.symbol.toUpperCase()));
     for (const c of queued) {
       tried.add(c.symbol.toUpperCase());
+      if (coolingQ.has(c.symbol.toUpperCase())) {
+        outages++; // cooling: a known-dead price, no network call, the walk moves on
+        continue;
+      }
       const hit = await liveTry(c);
       if (hit) return { kind: 'pick', gated: hit.gated, source: 'auto_queue', priceSource: hit.source, attempts };
     }
@@ -517,8 +547,9 @@ export async function chooseAutoPick(
       exhausted = true;
       break;
     }
-    // One batched eligibility read per page, not one per candidate (review H3).
+    // One batched eligibility read and one batched cooldown read per page.
     await eligibilityFor(fresh);
+    const cooling = await ports.coolingSymbols(fresh);
     for (const symbol of fresh) {
       tried.add(symbol);
       walked++;
@@ -531,7 +562,14 @@ export async function chooseAutoPick(
       if (c.lastPrice != null) {
         const g = gateAt(c, c.lastPrice, symbol, c.isDraftable === true);
         const mustPrice = !g.ok && (g.reason === 'budget_reserve' || bandOutside(c.lastPrice));
-        if (!g.ok && !mustPrice) continue;
+        if (!g.ok && !mustPrice) continue; // a legality refusal, not an outage, cooled or not
+      }
+      // Only a candidate that WOULD have gone live counts as an outage when cooled
+      // (review finding 2): a cooled symbol the gate refuses anyway must not turn a
+      // true stall into a vendor_outage.
+      if (cooling.has(symbol)) {
+        outages++; // cooling: skip the dead symbol, keep walking for a priced legal one
+        continue;
       }
       const hit = await liveTry(c);
       if (hit) {
@@ -541,7 +579,7 @@ export async function chooseAutoPick(
     }
     if (Date.now() > deadline) {
       console.error('auto-pick: wall-clock budget reached, turn left open', s.leagueId, { attempts, walked });
-      return { kind: 'retry_later', attempts };
+      return { kind: 'retry_later', attempts, outage: false };
     }
   }
 
@@ -549,9 +587,14 @@ export async function chooseAutoPick(
     // The live-call bound, or the walk bound, stopped the search before the pool
     // ran out: this is NOT a proof that nothing is legal. Retry, never stall.
     console.error('auto-pick: search bound reached, turn left open', s.leagueId, { attempts, walked, outages });
-    return { kind: 'retry_later', attempts };
+    return { kind: 'retry_later', attempts, outage: false };
   }
   const none = decideNoPick(outages);
-  if (none.kind === 'retry_later') return { kind: 'retry_later', attempts };
+  if (none.kind === 'retry_later') return { kind: 'retry_later', attempts, outage: true };
+  // 'stalled' means: no legal stock at cached prices within the 10% band, verified
+  // live. The whole pool was walked; every candidate that passed the free check was
+  // priced live and refused; no candidate was lost to a vendor outage. The start-time
+  // check (with 10% headroom) should make this unreachable; a stock whose cache is
+  // more than 10% outside its bracket is found only after enrich-symbols refreshes it.
   return { kind: 'stalled', pickerId, why: 'nothing_legal', attempts };
 }
