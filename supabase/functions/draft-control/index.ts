@@ -20,6 +20,14 @@
 //               'in_progress' via a conditional UPDATE (.eq('draft_status',
 //               'not_started')), so a double-tap or a race with another
 //               commissioner device is a no-op, not a double-start.
+//   confirm_roster — commissioner only. After a pre-draft leave
+//               (leave-league, 20261107000001) the draft can't start, and the
+//               order isn't set, until the commissioner chooses: body.choice
+//               'move_forward' ("Move forward with N", optional playoff_teams
+//               validated against the member count in the same transaction) or
+//               'invite' ("Invite someone new": clears on its own when a human
+//               joins). Calls confirm_league_roster (20261107000002, service
+//               role) with the VERIFIED user id.
 //   add_bots  — commissioner only, AND the caller's email must be on the
 //               DRAFT_BOTS_ALLOWED_EMAILS allowlist (product decision,
 //               2026-09-25: test-account-only at launch — see rules.ts). Tops
@@ -66,6 +74,7 @@ import {
   MIN_DRAFT_MEMBERS,
   nextBotIds,
   type StartBlocker,
+  toRosterReconfirm,
 } from './rules.ts';
 import { checkStartFeasibility, typesFromSlots } from '../_shared/draft-feasibility.ts';
 import { leagueRules, loadSlots, poolGroups } from '../_shared/draft-write.ts';
@@ -201,6 +210,8 @@ Deno.serve(async (req: Request) => {
       ? 'add_bots'
       : body.action === 'check_setup'
       ? 'check_setup'
+      : body.action === 'confirm_roster'
+      ? 'confirm_roster'
       : 'status';
     if (!leagueId) return json({ ok: false, reason: 'bad_request' }, 400);
 
@@ -220,6 +231,16 @@ Deno.serve(async (req: Request) => {
     const memberIds = (members ?? []).map((m) => String(m.user_id));
     if (!memberIds.includes(user.id)) return json({ ok: false, reason: 'not_a_member' }, 403);
 
+    // A pending roster reconfirmation (20261107000000). Read for every action:
+    // its PRESENCE blocks the start. A failed read fails CLOSED (500), never
+    // "nothing owed".
+    const { data: reconfirmRow, error: rcErr } = await admin
+      .from('league_roster_reconfirm')
+      .select('departed, members_before, choice')
+      .eq('league_id', leagueId)
+      .maybeSingle();
+    if (rcErr) return json({ ok: false, reason: 'unhandled' }, 500);
+
     // Commissioner identity comes ONLY from the verified league row — never
     // from the request body.
     const commissionerId = String(league.commissioner_id ?? '');
@@ -232,6 +253,7 @@ Deno.serve(async (req: Request) => {
       draftDate: league.draft_date ?? null,
       leagueType: league.league_type ?? null,
       playoffTeams: league.playoff_teams == null ? null : Number(league.playoff_teams),
+      rosterReconfirm: toRosterReconfirm(reconfirmRow),
     };
     const botsAllowed = isBotsAllowedForEmail(BOTS_ALLOWED_EMAILS, user.email);
     const botsNeeded = computeBotsNeeded(state.memberCount, state.numParticipants);
@@ -301,6 +323,36 @@ Deno.serve(async (req: Request) => {
       return json({ ok: true });
     }
 
+    if (action === 'confirm_roster') {
+      // Strict input: choice is required; playoff_teams absent/null = keep the
+      // current one, otherwise an integer the RPC validates against the member
+      // count (2 <= P <= members).
+      const choice = body.choice;
+      if (choice !== 'move_forward' && choice !== 'invite') return json({ ok: false, reason: 'bad_request' }, 400);
+      const rawP = body.playoff_teams;
+      if (rawP != null && !(Number.isInteger(rawP) && rawP >= 2 && rawP <= 16)) {
+        return json({ ok: false, reason: 'bad_request' }, 400);
+      }
+      const { data: rc, error: rcCallErr } = await admin.rpc('confirm_league_roster', {
+        p_league_id: leagueId,
+        p_user_id: user.id,
+        p_choice: choice,
+        p_playoff_teams: rawP ?? null,
+      });
+      // .rpc() resolves { error } on a Postgres error, it doesn't throw (CLAUDE.md).
+      if (rcCallErr) {
+        console.error('confirm_league_roster failed', JSON.stringify(rcCallErr));
+        return json({ ok: false, reason: 'unhandled' }, 500);
+      }
+      if (rc?.status === 'confirmed') {
+        return json({ ok: true, members: rc.members, playoff_teams: rc.playoff_teams });
+      }
+      if (rc?.status === 'inviting') return json({ ok: true, inviting: true, members: rc.members });
+      if (rc?.status === 'unchanged') return json({ ok: true, unchanged: true, reason: rc.reason });
+      // 200: game-flow refusal (playoff_teams_exceeds_members carries both numbers).
+      return json({ ok: false, reason: String(rc?.reason ?? 'unhandled'), playoff_teams: rc?.playoff_teams, members: rc?.members });
+    }
+
     if (action === 'add_bots') {
       if (!botsAllowed) return json({ ok: false, reason: 'bots_not_allowed' }, 403);
       if (state.draftStatus !== 'not_started') {
@@ -349,7 +401,14 @@ Deno.serve(async (req: Request) => {
       .eq('draft_status', 'not_started')
       .select('id')
       .maybeSingle();
-    if (updErr) return json({ ok: false, reason: 'unhandled' }, 500);
+    if (updErr) {
+      // trg_leagues_roster_reconfirm_gate (20261107000006): a leave committed
+      // between the blocker read above and this flip. A game-flow refusal, not a 500.
+      if (String((updErr as { message?: string }).message ?? '').startsWith('roster_reconfirm_required')) {
+        return json({ ok: false, reason: 'roster_reconfirm_required' });
+      }
+      return json({ ok: false, reason: 'unhandled' }, 500);
+    }
     if (!updated) {
       // Re-check current state: if it's now in_progress, treat as success
       // (idempotent — someone else started it a moment ago); otherwise it
