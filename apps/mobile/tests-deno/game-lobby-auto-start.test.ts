@@ -2,11 +2,14 @@
  * The pre-draft lobby on auto-start (3c-2), source guards: no manual Start
  * anywhere; the cards come from lobbyView; the start request goes through
  * startKickOutcome and only in the "starting" phase; the new time's save checks
- * its row and maps the server's refusals. Run: `cd apps/mobile/tests-deno && deno test .`
+ * its row and maps the server's refusals. The logic lives in the shared hook
+ * (useDraftAutoStart), which Home uses too. Run: `cd apps/mobile/tests-deno && deno test .`
  */
 import { assertEquals } from 'jsr:@std/assert';
 import lobbySrc from '../app/(tabs)/league.tsx' with { type: 'text' };
 import draftLobbySrc from '../components/game/DraftLobby.tsx' with { type: 'text' };
+import hookSrc from '../lib/game/useDraftAutoStart.ts' with { type: 'text' };
+import blockersSrc from '../components/game/AutoStartBlockers.tsx' with { type: 'text' };
 
 const lobby = lobbySrc.slice(lobbySrc.indexOf('function LeagueLobby('));
 const lobbyBody = lobby.slice(0, lobby.indexOf('\nfunction '));
@@ -18,23 +21,28 @@ Deno.test('no manual Start: the button, the confirm and its state are gone', () 
   assertEquals(lobbyBody.includes('setConfirming'), false);
 });
 
-Deno.test('the cards come from lobbyView, the phase from the server state on the server clock', () => {
-  assertEquals(lobbyBody.includes('lobbyPhase(ds, serverNow)'), true);
-  assertEquals(lobbyBody.includes('lobbyView(phase, ds.isCommissioner, fixableBlockers(ds.blockers).length)'), true);
-  assertEquals(lobbyBody.includes('phoneNow + ds.serverOffsetMs'), true);
+Deno.test('the lobby runs on the shared hook, and only the lobby asks the server to start', () => {
+  assertEquals(lobbyBody.includes('useDraftAutoStart(leagueId, { kick: true })'), true);
 });
 
-Deno.test('the start request: only when lobbyView says kick, once per draft time, through startKickOutcome', () => {
-  assertEquals(lobbyBody.includes("if (!view?.kick || !ds.startsAt || kickedFor.current === ds.startsAt) return;"), true);
-  assertEquals(lobbyBody.includes('startKickOutcome(res)'), true);
-  assertEquals((lobbyBody.match(/action: 'start'/g) ?? []).length, 1);
+Deno.test('the hook: the phase from the server state on the server clock; the cards from lobbyView', () => {
+  assertEquals(hookSrc.includes('lobbyPhase(ds, serverNow)'), true);
+  assertEquals(hookSrc.includes('lobbyView(phase, ds.isCommissioner, fixable.length)'), true);
+  assertEquals(hookSrc.includes('phoneNow + ds.serverOffsetMs'), true);
+});
+
+Deno.test('the start request: only with kick on, only when lobbyView says kick, once per draft time, through startKickOutcome', () => {
+  assertEquals(hookSrc.includes('if (!opts.kick || !view?.kick || !ds.startsAt || kickedFor.current === ds.startsAt) return;'), true);
+  assertEquals(hookSrc.includes('startKickOutcome(res)'), true);
+  assertEquals((hookSrc.match(/action: 'start'/g) ?? []).length, 1);
+  assertEquals((lobbySrc.match(/action: 'start'/g) ?? []).length, 0);
 });
 
 Deno.test("a postponed draft's new time checks its row and maps the refusals", () => {
-  assertEquals(lobbyBody.includes('updatedOneRow(res)'), true);
-  assertEquals(lobbyBody.includes('draftTimeRefusal(res.error) ?? NEW_TIME_NOT_SAVED'), true);
-  assertEquals(lobbyBody.includes('seedDraftDate(null, new Date())'), true);
-  assertEquals(lobbyBody.includes('onDone={() => void saveNewTime()}'), true);
+  assertEquals(hookSrc.includes('updatedOneRow(res)'), true);
+  assertEquals(hookSrc.includes('draftTimeRefusal(res.error) ?? NEW_TIME_NOT_SAVED'), true);
+  assertEquals(hookSrc.includes('seedDraftDate(null, new Date())'), true);
+  assertEquals(blockersSrc.includes('onDone={() => void f.saveNewTime()}'), true);
 });
 
 Deno.test('the old countdown card in DraftLobby is off in the lobby (the auto-start card replaces it)', () => {

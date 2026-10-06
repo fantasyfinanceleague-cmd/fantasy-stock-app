@@ -11,7 +11,7 @@ import {
   playoffTeamsSaveOutcome,
 } from '../lib/game/playoffTeamsSave.ts';
 import { settingsSaveOutcome } from '../lib/game/settingsSave.ts';
-import leagueTabSrc from '../app/(tabs)/league.tsx' with { type: 'text' };
+import hookSrc from '../lib/game/useDraftAutoStart.ts' with { type: 'text' };
 
 const lock = (prefix: string) => ({ code: '42501', message: `${prefix}: playoff spots cannot change once the draft has started` });
 
@@ -53,7 +53,7 @@ Deno.test('only a message that starts with a lock code is a lock', () => {
   assertEquals(isLeagueLockError({ message: 42 }), false);
 });
 
-Deno.test('the lobby stepper goes through the outcome (source guard)', () => {
-  assertEquals(leagueTabSrc.includes('playoffTeamsSaveOutcome(res)'), true);
-  assertEquals(leagueTabSrc.includes("The playoff teams didn't change. Try again."), false);
+Deno.test('the stepper (the shared auto-start hook: lobby and Home) goes through the outcome (source guard)', () => {
+  assertEquals(hookSrc.includes('playoffTeamsSaveOutcome(res)'), true);
+  assertEquals(hookSrc.includes("The playoff teams didn't change. Try again."), false);
 });

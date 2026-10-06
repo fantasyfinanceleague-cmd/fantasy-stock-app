@@ -2,7 +2,6 @@
 import { View, StyleSheet, Alert } from 'react-native';
 import { Icon } from '@/components/sp/Icon';
 import { router } from 'expo-router';
-import { Share } from 'react-native';
 
 import { space } from '@/constants/tokens';
 import { useTheme } from '@/components/sp/ThemeProvider';
@@ -25,39 +24,26 @@ import { championBanner } from '@/lib/game/history';
 import { leagueScreenFor, showRunItBackStrip, seasonSegments } from '@/lib/game/leaguePhase';
 import { useLeagueHistory } from '@/lib/game/useLeagueHistory';
 import { usePreDraftData } from '@/lib/home/usePreDraftData';
-import { DraftBlockersCard } from '@/components/game/DraftBlockersCard';
+import { AutoStartBlockers } from '@/components/game/AutoStartBlockers';
 import { DraftCountdownCard } from '@/components/game/DraftCountdownCard';
-import { DraftDateSheet } from '@/components/game/DraftDateSheet';
 import {
   COMMISSIONER_FALLBACK,
   DRAFT_STATUS_LOAD_FAILED,
-  NEW_TIME_NOT_SAVED,
   NO_DATE_TITLE,
-  RECONFIRM_NOT_SAVED,
   START_RETRYING,
   countdownCopy,
   deadlineCopy,
-  draftTimeRefusal,
-  etTimeLabel,
-  fixableBlockers,
-  lobbyPhase,
-  lobbyView,
   memberPostponedCopy,
-  nextBoundaryMs,
   noDateCopy,
-  postponedAtMs,
-  roomOpensAtMs,
-  startKickOutcome,
 } from '@/lib/game/autoStart';
-import { draftDateForSave, seedDraftDate, updatedOneRow } from '@/lib/game/draftDateSave';
-import { useDraftStatus } from '@/lib/game/useDraftStatus';
+import { useDraftAutoStart } from '@/lib/game/useDraftAutoStart';
 import { Button } from '@/components/sp/Button';
 import { Card } from '@/components/sp/Card';
 import { supabase } from '@/lib/supabase';
-import { seamRpc, seamInvoke, seamUpdateLeague } from '@/lib/game/seamCalls';
+import { seamRpc } from '@/lib/game/seamCalls';
 import { useBracket } from '@/lib/game/useBracket';
 import { SegmentedControl } from '@/components/sp/SegmentedControl';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useLeagueStandings } from '@/lib/game/useLeagueStandings';
 import { useAuth } from '@/lib/useAuth';
 import { buildStandingsRows } from '@/lib/game/standings';
@@ -66,7 +52,6 @@ import { showsLeagueSettingsRow } from '@/lib/game/leagueSettingsEntry';
 import { QueueEditor } from '@/components/game/QueueEditor';
 import { useDraftQueue } from '@/lib/game/useDraftQueue';
 import { useRenewalRoster } from '@/lib/game/useRenewalRoster';
-import { playoffTeamsSaveOutcome } from '@/lib/game/playoffTeamsSave';
 import { renewalReadyForLobby } from '@/lib/game/renewalLobby';
 import { QUEUE_LOAD_FAILED } from '@/lib/game/draftQueueRead';
 
@@ -280,131 +265,21 @@ function LeagueLobby({ leagueId }: { leagueId: string }) {
   const { user } = useAuth();
   const { colors } = useTheme();
   const data = usePreDraftData(leagueId);
-  const [fixError, setFixError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [statusKey, setStatusKey] = useState(0);
-  const ds = useDraftStatus(leagueId, true, statusKey);
   const queue = useDraftQueue(leagueId);
-  const reread = () => setStatusKey((k) => k + 1);
-
-  // Auto-start (3c-2): the phase is the server's start_state, carried forward
-  // on the server's clock. The clock ticks every second under an hour, else
-  // every 15 s; the status is re-read at T−1h and T.
-  const [phoneNow, setPhoneNow] = useState(() => Date.now());
-  const serverNow = phoneNow + ds.serverOffsetMs;
-  // A re-read (the 3 s poll at 0:00, a boundary, a fix) keeps showing the last
-  // known phase while it loads, so the cards never blink out.
-  const known = ds.status === 'ready' || (ds.status === 'loading' && ds.startState !== null);
-  const phase = known ? lobbyPhase(ds, serverNow) : null;
-  const msLeft = ds.startsAt ? new Date(ds.startsAt).getTime() - serverNow : Number.POSITIVE_INFINITY;
-  const fast = phase === 'starting' || msLeft < 2 * 60 * 60 * 1000;
-  useEffect(() => {
-    const id = setInterval(() => setPhoneNow(Date.now()), fast ? 1000 : 15000);
-    return () => clearInterval(id);
-  }, [fast]);
-  useEffect(() => {
-    const boundary = nextBoundaryMs(ds.startsAt, Date.now() + ds.serverOffsetMs);
-    if (boundary === null) return;
-    const t = setTimeout(reread, Math.max(0, boundary - (Date.now() + ds.serverOffsetMs)) + 500);
-    return () => clearTimeout(t);
-  }, [ds.startsAt, ds.serverOffsetMs]);
-
-  // At 0:00 any member's phone asks the server to start (it starts anyway
-  // within ~10 s if nobody is watching), once per draft time, then polls the
-  // status and the league until it has started or been postponed.
-  const kickedFor = useRef<string | null>(null);
-  const [retrying, setRetrying] = useState(false);
-  const view = phase ? lobbyView(phase, ds.isCommissioner, fixableBlockers(ds.blockers).length) : null;
-  useEffect(() => {
-    if (!view?.kick || !ds.startsAt || kickedFor.current === ds.startsAt) return;
-    kickedFor.current = ds.startsAt;
-    void (async () => {
-      const { data: res, error } = await seamInvoke('draft-control', { body: { league_id: leagueId, action: 'start' } });
-      const outcome = error ? 'reread' : startKickOutcome(res);
-      setRetrying(outcome === 'retrying');
-      reread();
-      await refresh();
-    })();
-  }, [view?.kick, ds.startsAt, leagueId, refresh]);
-  useEffect(() => {
-    if (phase !== 'starting' && phase !== 'started') return;
-    const id = setInterval(() => {
-      reread();
-      void refresh();
-    }, 3000);
-    return () => clearInterval(id);
-  }, [phase, refresh]);
-
-  // The blockers card's fixes. The stepper writes the same leagues update
-  // League settings uses; the lock first (no retry can fix it), then any other
-  // failure, a 0-row update included (playoffTeamsSaveOutcome).
-  const setPlayoffTeams = async (teams: number) => {
-    setBusy(true);
-    const res = await seamUpdateLeague(leagueId, { playoff_teams: teams });
-    setBusy(false);
-    const outcome = playoffTeamsSaveOutcome(res);
-    if (outcome.kind !== 'saved') {
-      setFixError(outcome.line);
-      if (outcome.kind === 'locked') {
-        reread();
-        await refresh();
-      }
-      return;
-    }
-    setFixError(null);
-    reread();
-    await refresh();
-  };
-
-  const reconfirm = async (choice: 'move_forward' | 'invite') => {
-    setBusy(true);
-    const { data: res, error } = await seamInvoke('draft-control', { body: { league_id: leagueId, action: 'confirm_roster', choice } });
-    setBusy(false);
-    setFixError(error || !res || res.ok !== true ? RECONFIRM_NOT_SAVED : null);
-    reread();
-    await refresh();
-  };
-
-  const shareInvite = () => {
-    const code = activeLeague?.invite_code;
-    if (code) void Share.share({ message: `Join my league with code ${code}` });
-  };
-
-  // A postponed draft's new time (the commissioner): the sheet seeds the value
-  // it shows (seedDraftDate), Done saves it; a dismiss doesn't.
-  const [newTime, setNewTime] = useState<Date | null>(null);
-  const [pickingTime, setPickingTime] = useState(false);
-  const saveNewTime = async () => {
-    setPickingTime(false);
-    const value = draftDateForSave(false, newTime);
-    if (!value.ok) {
-      setFixError(value.error);
-      return;
-    }
-    setBusy(true);
-    const res = await seamUpdateLeague(leagueId, { draft_date: value.value });
-    setBusy(false);
-    if (res.error || !updatedOneRow(res)) {
-      setFixError(draftTimeRefusal(res.error) ?? NEW_TIME_NOT_SAVED);
-      return;
-    }
-    setFixError(null);
-    reread();
-    await refresh();
-  };
+  // Auto-start (3c-2): the shared hook (Home uses it too); only the lobby
+  // asks the server to start at 0:00.
+  const auto = useDraftAutoStart(leagueId, { kick: true });
+  const { ds, view, serverNow } = auto;
 
   const commissionerName =
     data.members.find((m) => m.userId === activeLeague?.commissioner_id)?.displayName || COMMISSIONER_FALLBACK;
-  const fixable = fixableBlockers(ds.blockers);
-  const roomLabel = ds.startsAt ? etTimeLabel(roomOpensAtMs(ds.startsAt)) : null;
-  const postponedAt = postponedAtMs(ds.postponed);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <ShellHeader title="League" showAvatar />
       <BarsRefresh
         onRefresh={async () => {
-          reread();
+          auto.reread();
           await refresh();
         }}
         contentContainerStyle={{ paddingHorizontal: space[6], paddingBottom: space[9], gap: space[6] }}
@@ -412,28 +287,16 @@ function LeagueLobby({ leagueId }: { leagueId: string }) {
         {ds.status === 'error' ? (
           <Card style={styles.queueFailed}>
             <Text variant="callout">{DRAFT_STATUS_LOAD_FAILED}</Text>
-            <Button label="Try again" variant="secondary" size="sm" onPress={reread} />
+            <Button label="Try again" variant="secondary" size="sm" onPress={auto.reread} />
           </Card>
         ) : null}
 
         {view?.blockers ? (
-          <DraftBlockersCard
+          <AutoStartBlockers
+            auto={auto}
             phase={view.blockers}
-            deadlineLabel={view.blockers === 'risk' ? roomLabel : postponedAt !== null ? etTimeLabel(postponedAt) : null}
-            blockers={fixable}
-            memberCount={ds.memberCount}
             playoffTeams={activeLeague?.playoff_teams ?? null}
-            onSetPlayoffTeams={(t) => void setPlayoffTeams(t)}
-            onReconfirm={(c) => void reconfirm(c)}
             inviteCode={activeLeague?.invite_code ?? null}
-            onShareInvite={shareInvite}
-            onPickNewTime={() => {
-              setNewTime(seedDraftDate(null, new Date()));
-              setFixError(null);
-              setPickingTime(true);
-            }}
-            busy={busy}
-            error={fixError}
           />
         ) : null}
 
@@ -454,7 +317,7 @@ function LeagueLobby({ leagueId }: { leagueId: string }) {
                 live={view.countdown !== 'scheduled'}
                 starting={c.starting}
                 lines={c.lines.slice(0, 1)}
-                notes={[...c.lines.slice(1), ...(retrying && c.starting ? [START_RETRYING] : [])]}
+                notes={[...c.lines.slice(1), ...(auto.retrying && c.starting ? [START_RETRYING] : [])]}
               />
             );
           })()
@@ -506,14 +369,6 @@ function LeagueLobby({ leagueId }: { leagueId: string }) {
           </SetupCard>
         ) : null}
       </BarsRefresh>
-
-      <DraftDateSheet
-        visible={pickingTime}
-        value={newTime}
-        onChange={setNewTime}
-        onClose={() => setPickingTime(false)}
-        onDone={() => void saveNewTime()}
-      />
     </View>
   );
 }

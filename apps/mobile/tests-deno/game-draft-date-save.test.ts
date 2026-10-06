@@ -16,7 +16,7 @@ import {
 import createSrc from '../app/create-league.tsx' with { type: 'text' };
 import settingsSrc from '../app/league-settings.tsx' with { type: 'text' };
 import seamSrc from '../lib/game/seamCalls.ts' with { type: 'text' };
-import leagueTabSrc from '../app/(tabs)/league.tsx' with { type: 'text' };
+import hookSrc from '../lib/game/useDraftAutoStart.ts' with { type: 'text' };
 import sheetSrc from '../components/game/DraftDateSheet.tsx' with { type: 'text' };
 
 const at = (iso: string) => new Date(iso);
@@ -107,8 +107,8 @@ Deno.test('opening the picker seeds the date in both screens', () => {
 Deno.test('the leagues update returns its row, and both callers check it', () => {
   assertEquals(seamSrc.includes(".update(patch).eq('id', id).select('id')"), true);
   assertEquals(settingsSrc.includes('updatedOneRow(res)'), true);
-  // The lobby stepper checks it through playoffTeamsSaveOutcome (lock first, then updatedOneRow).
-  assertEquals(leagueTabSrc.includes('playoffTeamsSaveOutcome(res)'), true);
+  // The stepper (the shared auto-start hook) checks it through playoffTeamsSaveOutcome (lock first, then updatedOneRow).
+  assertEquals(hookSrc.includes('playoffTeamsSaveOutcome(res)'), true);
 });
 
 // ── Auto-start: the picker's rules and the refusals (3c-2) ──────────────────
