@@ -27,7 +27,7 @@ export interface StockSheetInput {
   /** The caller's own holding, or null. */
   held: { quantity: number } | null;
   /** Who owns it in this league when it isn't the caller. */
-  owner: { kind: 'me' } | { kind: 'other'; name: string; isBot: boolean } | null;
+  owner: { kind: 'me' } | { kind: 'other'; name: string | null; isBot: boolean } | null;
   /** The caller's draft row for a held stock, when it was drafted. */
   draft: { round: number; inRoundPick: number } | null;
   gate: { open: boolean; opensLabel?: string | null };
@@ -70,7 +70,7 @@ export function stockSheetModel(input: StockSheetInput): StockSheetModel {
 
   // Buy: the first failing rule explains the disabled state.
   let buyReason: string | null = closedReason ?? priceReason;
-  if (buyReason === null && otherOwned) buyReason = COPY.ownedBy(other!.name);
+  if (buyReason === null && otherOwned) buyReason = COPY.ownedBy((other!.name ?? 'another manager'));
   if (buyReason === null && held) buyReason = COPY.alreadyHeld;
 
   // Sell: only a holding can be sold, and it needs the market and a price.
@@ -92,7 +92,7 @@ export function stockSheetModel(input: StockSheetInput): StockSheetModel {
       ? COPY.draftedByYou(input.draft.round, input.draft.inRoundPick)
       : COPY.heldByYou;
   } else if (otherOwned) {
-    ownershipLine = COPY.ownedBy(other!.name);
+    ownershipLine = COPY.ownedBy((other!.name ?? 'another manager'));
   } else {
     ownershipLine = COPY.noOneOwns(input.leagueName, input.symbol);
   }

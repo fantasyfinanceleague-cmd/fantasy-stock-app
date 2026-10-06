@@ -2,15 +2,11 @@
  * MoneyHost: owns the single stock sheet for the whole app (3e). Mounted once
  * in app/_layout.tsx, above the Stack, so the sheet can cover the tab bar and
  * any screen can open it with useStockSheet().open(symbol, originRef).
- *
- * This first landing is the route and the contract only. The sheet's body
- * (price, chart, position, ownership, Buy/Sell) is built next in this phase;
- * until then it shows only the ticker, with no invented figures.
  */
 import React, { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
-import { Text, View } from 'react-native';
 
 import { Sheet } from '@/components/sp/Sheet';
+import { StockSheetBody } from '@/components/money/StockSheetBody';
 import { normalizeSymbol } from '@/lib/money/stockSheetApi';
 
 export interface StockSheetContextValue {
@@ -44,9 +40,7 @@ export function MoneyHostProvider({ children }: { children: ReactNode }) {
     <StockSheetContext.Provider value={value}>
       {children}
       <Sheet visible={current !== null} onClose={close}>
-        <View accessibilityRole="summary">
-          <Text>{current?.symbol ?? ''}</Text>
-        </View>
+        {current ? <StockSheetBody symbol={current.symbol} /> : null}
       </Sheet>
     </StockSheetContext.Provider>
   );
