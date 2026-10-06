@@ -24,13 +24,18 @@
 --   G2  league_roster_reconfirm: RLS on; read-only for authenticated/service PASS
 --   G3  league_members has NO DELETE policy ([I5] gone)                       PASS
 --   G4  get_home_summary: authenticated only, skips hidden leagues           PASS
---   G5  member_left kind allowed; league_members.hidden_at exists            PASS
+--   G5  all 7 notice kinds allowed; league_members.hidden_at exists          PASS
+--   G6  the order + start wait on the reconfirmation (sync/cron/gate)       PASS
 --   S1  pre-draft leave: row gone, reconfirm row, member_left to commish     PASS
 --   S2  inside the hour: locked_in (order_set), nothing written              PASS
 --   S3  commissioner: successor_required, then hand-over to the successor    PASS
 --   S4  confirm: P above members refused; confirm with P = members           PASS
 --   S5  after the season: hidden, membership kept                            PASS
 --   S6  mid-season: locked_in (season)                                        PASS
+--   S7  commissioner successor injection (bot / outsider / self) refused     PASS
+--   S8  start refused while owed (gate binds service_role); invite + human
+--       join clears it; then the start goes through                         PASS
+--   S9  confirm by a non-commissioner refused                               PASS
 --   A1  authenticated cannot call leave_league                               PASS
 --   A2  a client DELETE of one's own membership deletes nothing              PASS
 --   A3  a client cannot write league_roster_reconfirm                        PASS
@@ -85,14 +90,27 @@ begin
   out := out || format(E'G4 get_home_summary          %s  %s\n', acl,
     case when acl ~ 'authenticated=X' and acl !~ '(anon|service_role)=' and acl ~ 'skips-hidden' then 'PASS' else 'FAIL' end);
 
+  -- ALL seven kinds: a later CHECK rewrite (PR #94's) that drops any of them
+  -- breaks that feature's inserts.
   select count(*) into n from pg_constraint
-   where conname = 'league_notifications_kind_check' and pg_get_constraintdef(oid) ~ 'member_left'
-     and pg_get_constraintdef(oid) ~ 'draft_order_set';
+   where conname = 'league_notifications_kind_check'
+     and pg_get_constraintdef(oid) ~ 'member_left' and pg_get_constraintdef(oid) ~ 'draft_order_set'
+     and pg_get_constraintdef(oid) ~ 'renewal_invite' and pg_get_constraintdef(oid) ~ 'renewal_reply'
+     and pg_get_constraintdef(oid) ~ 'renewal_nudge' and pg_get_constraintdef(oid) ~ 'renewal_removed'
+     and pg_get_constraintdef(oid) ~ 'season_set';
   out := out || format(E'G5 member_left kind / hidden_at col  %s  %s\n',
     n || '/' || (select count(*) from information_schema.columns
                   where table_schema = 'public' and table_name = 'league_members' and column_name = 'hidden_at'),
     case when n = 1 and exists (select 1 from information_schema.columns
                   where table_schema = 'public' and table_name = 'league_members' and column_name = 'hidden_at')
+         then 'PASS' else 'FAIL' end);
+
+  select count(*) into n from pg_proc p join pg_namespace s on s.oid = p.pronamespace
+   where s.nspname = 'public' and prosrc ~ 'league_roster_reconfirm'
+     and proname in ('_draft_order_sync', 'finalize_due_draft_orders', 'draft_order_notify_due', 'join_league_by_code');
+  out := out || format(E'G6 waits: %s/4 fns, gate trigger %s  %s\n', n,
+    (select count(*) from pg_trigger where tgname = 'trg_leagues_roster_reconfirm_gate' and tgenabled = 'O'),
+    case when n = 4 and exists (select 1 from pg_trigger where tgname = 'trg_leagues_roster_reconfirm_gate' and tgenabled = 'O')
          then 'PASS' else 'FAIL' end);
 
   -- ---- fixture (as the editor's own role) -----------------------------------
@@ -170,11 +188,11 @@ begin
 
   begin
     -- l_far now has b (commissioner), d, e: 3 members, playoff_teams 4.
-    res := public.confirm_league_roster(l_far, b_uid);
+    res := public.confirm_league_roster(l_far, b_uid, 'move_forward');
     if res->>'reason' is distinct from 'playoff_teams_exceeds_members' then
       out := out || format(E'S4 confirm with P > members  -> %s  FAIL\n', res::text);
     else
-      res := public.confirm_league_roster(l_far, b_uid, 3);
+      res := public.confirm_league_roster(l_far, b_uid, 'move_forward', 3);
       out := out || format(E'S4 confirm (P=3)             -> %s P=%s reconfirm rows=%s  %s\n', res->>'status',
         (select playoff_teams from public.leagues where id = l_far),
         (select count(*) from public.league_roster_reconfirm where league_id = l_far),
@@ -207,9 +225,58 @@ begin
     out := out || format(E'S6 mid-season                -> %s FAIL (%s)\n', sqlstate, sqlerrm);
   end;
 
-  -- A reconfirm row to read in A4 (e leaves l_rd).
-  res := public.leave_league(l_rd, e_uid);
+  begin
+    -- l_soon is locked (order set), so use l_rd while still open: c is its commissioner.
+    if (public.leave_league(l_rd, c_uid, 'bot-1')->>'reason') = 'successor_invalid'
+       and (public.leave_league(l_rd, c_uid, x_uid)->>'reason') = 'successor_invalid'
+       and (public.leave_league(l_rd, c_uid, c_uid)->>'reason') = 'successor_invalid'
+       and (public.leave_league(l_rd, a_uid, b_uid)->>'reason') = 'successor_not_allowed'
+       and (select commissioner_id from public.leagues where id = l_rd) = c_uid
+       and (select count(*) from public.league_members where league_id = l_rd) = 5 then
+      out := out || E'S7 successor injection        -> refused, nothing written  PASS\n';
+    else
+      out := out || E'S7 successor injection        -> FAIL\n';
+    end if;
+  exception when others then
+    out := out || format(E'S7 successor injection        -> %s FAIL (%s)\n', sqlstate, sqlerrm);
+  end;
 
+  begin
+    -- l_live2-style check on l_rd after e leaves: owed -> start refused even for service_role.
+    res := public.leave_league(l_rd, e_uid);
+    begin
+      update public.leagues set draft_status = 'in_progress', draft_started_at = now() where id = l_rd;
+      out := out || E'S8 start while owed           -> accepted  FAIL\n';
+    exception when others then
+      if sqlerrm not like 'roster_reconfirm_required%' then
+        out := out || format(E'S8 start while owed           -> %s FAIL (%s)\n', sqlstate, sqlerrm);
+      else
+        res := public.confirm_league_roster(l_rd, c_uid, 'invite');
+        -- e rejoins through the human join path, which clears an 'invite'.
+        res := public.join_league_by_code((select invite_code from public.leagues where id = l_rd), e_uid);
+        out := out || format(E'S8 gate / invite+join clears -> refused / join=%s owed=%s  %s\n', res->>'ok',
+          (select count(*) from public.league_roster_reconfirm where league_id = l_rd),
+          case when (res->>'ok')::boolean
+                and not exists (select 1 from public.league_roster_reconfirm where league_id = l_rd)
+               then 'PASS' else 'FAIL ' || res::text end);
+      end if;
+    end;
+  exception when others then
+    out := out || format(E'S8 start gate / invite        -> %s FAIL (%s)\n', sqlstate, sqlerrm);
+  end;
+
+  begin
+    res := public.leave_league(l_rd, e_uid);   -- owed again
+    res := public.confirm_league_roster(l_rd, a_uid, 'move_forward');
+    out := out || format(E'S9 non-commissioner confirm  -> %s  %s\n', res->>'reason',
+      case when res->>'reason' = 'not_commissioner'
+            and exists (select 1 from public.league_roster_reconfirm where league_id = l_rd)
+           then 'PASS' else 'FAIL ' || res::text end);
+  exception when others then
+    out := out || format(E'S9 non-commissioner confirm  -> %s FAIL (%s)\n', sqlstate, sqlerrm);
+  end;
+
+  -- A reconfirm row to read in A4 (e left l_rd in S9 and it is still owed).
   -- ---- authenticated: member d ----------------------------------------------
   perform set_config('role', 'authenticated', true);
   perform set_config('request.jwt.claims', json_build_object('sub', d_uid, 'role', 'authenticated')::text, true);

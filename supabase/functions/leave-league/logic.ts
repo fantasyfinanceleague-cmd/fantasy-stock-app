@@ -9,7 +9,12 @@
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export type LeaveAction = 'leave' | 'unhide';
+/**
+ * 'leave' only. unhide_league exists in the database (20261107000001) but is NOT
+ * exposed here: per the board's recommendation (Giorgio, pending), 1.2.0 has no
+ * unhide. Exposing it later is one action and one RPC call.
+ */
+export type LeaveAction = 'leave';
 
 export interface LeaveRequest {
   action: LeaveAction;
@@ -22,13 +27,13 @@ export function parseLeaveRequest(body: unknown): LeaveRequest | null {
   if (!body || typeof body !== 'object') return null;
   const b = body as Record<string, unknown>;
   const action = b.action ?? 'leave';
-  if (action !== 'leave' && action !== 'unhide') return null;
+  if (action !== 'leave') return null;
   const leagueId = typeof b.league_id === 'string' ? b.league_id.trim() : '';
   if (!UUID_RE.test(leagueId)) return null;
   const raw = b.new_commissioner_id;
   let newCommissionerId: string | null = null;
   if (raw !== undefined && raw !== null && raw !== '') {
-    if (action !== 'leave' || typeof raw !== 'string' || !UUID_RE.test(raw.trim())) return null;
+    if (typeof raw !== 'string' || !UUID_RE.test(raw.trim())) return null;
     newCommissionerId = raw.trim();
   }
   return { action, leagueId, newCommissionerId };
@@ -47,8 +52,6 @@ export function clientResponse(r: RpcResult): Record<string, unknown> {
       return { ok: true, status: 'left', reconfirm_required: r.reconfirm_required === true };
     case 'hidden':
       return { ok: true, status: 'hidden' };
-    case 'shown':
-      return { ok: true, status: 'shown' };
     case 'refused':
       return r.window
         ? { ok: false, reason: String(r.reason), window: String(r.window) }

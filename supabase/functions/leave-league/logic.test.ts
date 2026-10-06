@@ -8,14 +8,13 @@ Deno.test('parseLeaveRequest: defaults to leave; strict on everything else', () 
   assertEquals(parseLeaveRequest({ league_id: L }), { action: 'leave', leagueId: L, newCommissionerId: null });
   assertEquals(parseLeaveRequest({ action: 'leave', league_id: ` ${L} `, new_commissioner_id: U }),
     { action: 'leave', leagueId: L, newCommissionerId: U });
-  assertEquals(parseLeaveRequest({ action: 'unhide', league_id: L }), { action: 'unhide', leagueId: L, newCommissionerId: null });
+  assertEquals(parseLeaveRequest({ action: 'unhide', league_id: L }), null, 'unhide is not exposed in 1.2.0');
   assertEquals(parseLeaveRequest({ action: 'leave', league_id: L, new_commissioner_id: '' }),
     { action: 'leave', leagueId: L, newCommissionerId: null });
   for (const bad of [
     null, 'x', 42, {}, { league_id: 'nope' }, { action: 'delete', league_id: L },
     { league_id: L, new_commissioner_id: 'bot-1' }, // a bot is never a successor
     { league_id: L, new_commissioner_id: 7 },
-    { action: 'unhide', league_id: L, new_commissioner_id: U },
   ]) {
     assertEquals(parseLeaveRequest(bad), null, JSON.stringify(bad));
   }
@@ -28,7 +27,7 @@ Deno.test('clientResponse: the outcome only, never the push internals', () => {
   });
   assertEquals(left, { ok: true, status: 'left', reconfirm_required: true });
   assertEquals(clientResponse({ status: 'hidden', already_hidden: true }), { ok: true, status: 'hidden' });
-  assertEquals(clientResponse({ status: 'shown', already_shown: false }), { ok: true, status: 'shown' });
+  assertEquals(clientResponse({ status: 'shown', already_shown: false }), { ok: false, reason: 'unhandled' });
   assertEquals(clientResponse({ status: 'refused', reason: 'locked_in', window: 'order_set' }),
     { ok: false, reason: 'locked_in', window: 'order_set' });
   assertEquals(clientResponse({ status: 'refused', reason: 'successor_required' }), { ok: false, reason: 'successor_required' });

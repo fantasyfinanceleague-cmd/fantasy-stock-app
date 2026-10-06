@@ -46,6 +46,8 @@ const OURS = [
   '20261107000002_confirm_league_roster_rpc.sql',
   '20261107000003_get_home_summary_skip_hidden.sql',
   '20261107000004_drop_I5_league_members_delete_self.sql',
+  '20261107000005_join_clears_invite_reconfirm.sql',
+  '20261107000006_draft_waits_for_roster_reconfirm.sql',
 ];
 const EFFECT_TEST = new URL('docs/security/leave-league-effect-test.sql', ROOT);
 const RIB_FIXTURE = new URL('supabase/tests/fixtures/run_it_back_398da84_membership.sql', ROOT);
@@ -201,10 +203,16 @@ Deno.test({
       await asRole('service_role');
       try { return (await q(`select unhide_league($1, $2) r`, [id, uid]))[0].r; } finally { await asRole(null); }
     };
-    const confirm = async (id: string, uid: string, p: number | null = null) => {
+    const confirm = async (id: string, uid: string, p: number | null = null, choice = 'move_forward') => {
       await asRole('service_role');
-      try { return (await q(`select confirm_league_roster($1, $2, $3) r`, [id, uid, p]))[0].r; } finally { await asRole(null); }
+      try { return (await q(`select confirm_league_roster($1, $2, $3, $4) r`, [id, uid, choice, p]))[0].r; } finally { await asRole(null); }
     };
+    const invite = (id: string, uid: string) => confirm(id, uid, null, 'invite');
+    const join = async (code: string, uid: string) => {
+      await asRole('service_role');
+      try { return (await q(`select join_league_by_code($1, $2) r`, [code, uid]))[0].r; } finally { await asRole(null); }
+    };
+    const notifyDue = async () => (await q(`select draft_order_notify_due() d`))[0].d;
     async function mkLeague(ids: string[], extra: Record<string, unknown> = {}) {
       const row: Record<string, unknown> = { name: 'Test League', commissioner_id: ids[0], ...extra };
       const cols = Object.keys(row);
@@ -235,7 +243,7 @@ Deno.test({
         for (const call of [
           `select leave_league(gen_random_uuid(), 'x')`,
           `select unhide_league(gen_random_uuid(), 'x')`,
-          `select confirm_league_roster(gen_random_uuid(), 'x')`,
+          `select confirm_league_roster(gen_random_uuid(), 'x', 'invite')`,
         ]) {
           let code = '';
           try { await q(call); } catch (e) { code = (e as { code?: string }).code ?? 'err'; }
@@ -305,6 +313,7 @@ Deno.test({
       await leave(l.id, A);
       rc = await reconfirm(l.id);
       assertEquals([ids(rc), rc.members_before], [[A, B], 5]);
+      assertEquals(await leftNotices(l.id), [C, C], 'the repeat leave sends no second notice (loop spam)');
     });
 
     await step('manual order (open): the trigger closes the gap', async () => {
@@ -429,6 +438,128 @@ Deno.test({
       assertEquals((await confirm(st.id, C)).reason, 'draft_started');
     });
 
+    await step('invite: the commissioner chooses; a HUMAN join clears it; a bot never does', async () => {
+      const l = await mkLeague([C, A, B, D, E], { draft_date: await inHours(48), invite_code: 'INV01', playoff_teams: 4 });
+      await leave(l.id, A); // 4 members, P = 4
+      assertEquals((await invite(l.id, D)).reason, 'not_commissioner');
+      assertEquals((await confirm(l.id, C, 3, 'invite')).reason, 'playoff_teams_not_applicable');
+      const r = await invite(l.id, C);
+      assertEquals([r.status, r.already], ['inviting', false]);
+      const rc = await reconfirm(l.id);
+      assertEquals([rc.choice, rc.chosen_by, rc.chosen_at !== null], ['invite', C, true]);
+      assertEquals((await invite(l.id, C)).already, true);
+      // A bot through the service role (draft-control add_bots) does NOT clear it.
+      await asRole('service_role');
+      await q(`insert into league_members (league_id, user_id) values ($1, 'bot-1')`, [l.id]);
+      await asRole(null);
+      assertEquals((await reconfirm(l.id)).choice, 'invite', 'add_bots never clears');
+      await q(`delete from league_members where league_id=$1 and user_id='bot-1'`, [l.id]);
+      // A human join through join_league_by_code clears it.
+      assertEquals((await join('INV01', X)).ok, true);
+      assertEquals(await reconfirm(l.id), undefined, 'cleared on its own');
+    });
+
+    await step('invite: a join never clears a PENDING row, or one whose P would still exceed members', async () => {
+      const l = await mkLeague([C, A, B, D, E], { draft_date: await inHours(48), invite_code: 'INV02', playoff_teams: 4 });
+      await leave(l.id, A);
+      await leave(l.id, B); // 3 members, P = 4
+      assertEquals((await join('INV02', X)).ok, true); // 4 members, still 'pending'
+      assertEquals((await reconfirm(l.id)).choice, 'pending', 'a join is not a choice');
+      await leave(l.id, X); // 3 members
+      await invite(l.id, C);
+      assertEquals((await join('INV02', X)).ok, true); // 4 members: P = 4 fits -> clears
+      assertEquals(await reconfirm(l.id), undefined);
+
+      const m = await mkLeague([C, A, B, D, E], { draft_date: await inHours(48), invite_code: 'INV03', playoff_teams: 4 });
+      await leave(m.id, A);
+      await leave(m.id, B);
+      await leave(m.id, D); // 2 members, P = 4
+      await invite(m.id, C);
+      assertEquals((await join('INV03', X)).ok, true); // 3 < P = 4: keeps waiting
+      assertEquals((await reconfirm(m.id)).choice, 'invite');
+      assertEquals((await confirm(m.id, C, 3)).status, 'confirmed', 'switch to Move forward any time, lowering P');
+    });
+
+    await step('a NEW departure re-opens the choice; the commissioner must choose again', async () => {
+      const l = await mkLeague([C, A, B, D, E], { draft_date: await inHours(48), playoff_teams: 2 });
+      await leave(l.id, A);
+      await invite(l.id, C);
+      await leave(l.id, B);
+      const rc = await reconfirm(l.id);
+      assertEquals([rc.choice, rc.chosen_by, rc.chosen_at, ids(rc)], ['pending', null, null, [A, B]]);
+      assertEquals(await leftNotices(l.id), [C, C]);
+    });
+
+    await step('the order WAITS past T-1h while a reconfirmation is owed, and is set the moment it clears', async () => {
+      const l = await mkLeague([C, A, B, D, E], { draft_date: await inHours(48), playoff_teams: 2 });
+      await leave(l.id, E);
+      await raw(`update leagues set draft_date = now() + interval '30 minutes' where id=$1`, [l.id]); // T-1h passes
+      const r = await getOrder(A, l.id); // a lazy read would normally finalize here
+      assertEquals([r.finalized, r.revealed], [false, false], 'not set: the teams are not confirmed');
+      assertEquals(await meta(l.id), undefined);
+      await asRole('service_role');
+      const n = (await q(`select finalize_due_draft_orders() n`))[0].n;
+      await asRole(null);
+      assertEquals(await meta(l.id), undefined, `the cron's finalize skips it (finalized ${n} others)`);
+      assertEquals((await leave(l.id, D)).reason, 'locked_in', 'leaving is still closed at T-1h, by time');
+      assertEquals((await confirm(l.id, C)).status, 'confirmed');
+      assertEquals((await meta(l.id)).state, 'finalized', 'set as soon as the teams are confirmed');
+      assertEquals(
+        (await q(`select user_id from league_notifications where league_id=$1 and kind='draft_order_set' order by user_id`, [l.id]))
+          .map((x: Row) => x.user_id),
+        [A, B, C, D].sort(),
+        'everyone gets the "order is set" notice',
+      );
+    });
+
+    await step('an invite cleared by a join past T-1h sets the order too', async () => {
+      const l = await mkLeague([C, A, B, D, E], { draft_date: await inHours(48), invite_code: 'INV04', playoff_teams: 2 });
+      await leave(l.id, E);
+      await invite(l.id, C);
+      await raw(`update leagues set draft_date = now() + interval '30 minutes' where id=$1`, [l.id]);
+      assertEquals((await join('INV04', X)).ok, true, 'joining after T-1h is still a normal join');
+      assertEquals((await meta(l.id)).state, 'finalized');
+      assert((await order(l.id)).includes(X));
+    });
+
+    await step('the start gate binds every role while a reconfirmation is owed', async () => {
+      const l = await mkLeague([C, A, B, D, E], { draft_date: await inHours(48), playoff_teams: 2 });
+      await leave(l.id, E);
+      for (const who of ['commissioner', 'service_role']) {
+        if (who === 'commissioner') await asRole('authenticated', C);
+        else await asRole('service_role');
+        let msg = '';
+        try {
+          await q(`update leagues set draft_status='in_progress', draft_started_at=now() where id=$1`, [l.id]);
+        } catch (e) { msg = String((e as Error).message); }
+        await asRole(null);
+        assert(msg.startsWith('roster_reconfirm_required'), `${who}: ${msg}`);
+      }
+      assertEquals((await lg(l.id)).draft_status, 'not_started');
+      await confirm(l.id, C);
+      await asRole('service_role');
+      await q(`update leagues set draft_status='in_progress', draft_started_at=now() where id=$1`, [l.id]);
+      await asRole(null);
+      assertEquals((await lg(l.id)).draft_status, 'in_progress', 'confirmed: the start goes through');
+    });
+
+    await step('member_left is never the cron\'s: a stranded one does not keep draft_order_notify_due true', async () => {
+      await raw(`update league_notifications set push_status='sent' where push_status in ('pending','sending')`);
+      // Any league still due + open with no reconfirm would make the predicate true: finalize them first.
+      await asRole('service_role');
+      await q(`select finalize_due_draft_orders()`);
+      await asRole(null);
+      await raw(`update league_notifications set push_status='sent' where push_status in ('pending','sending')`);
+      assertEquals(await notifyDue(), false, 'precondition: nothing to do');
+      await q(`insert into league_notifications (league_id, user_id, kind) values ($1,$2,'member_left')`, [old.id, C]);
+      await q(`insert into league_notifications (league_id, user_id, kind, push_status, push_attempted_at)
+               values ($1,$2,'member_left','sending', now() - interval '1 hour')`, [old.id, A]);
+      assertEquals(await notifyDue(), false, 'stranded member_left rows are ignored');
+      await raw(`update league_notifications set push_status='pending' where league_id=$1 and kind='draft_order_set'`, [old.id]);
+      assertEquals(await notifyDue(), true, 'other kinds still count');
+      await raw(`update league_notifications set push_status='sent' where league_id=$1`, [old.id]);
+    });
+
     await step('after the season: hide (history kept), Home skips it, unhide restores, idempotent', async () => {
       const l = await mkLeague([C, A, B, D], { draft_date: await inHours(-400) });
       await raw(`update leagues set draft_status='completed', season_status='completed' where id=$1`, [l.id]);
@@ -462,7 +593,11 @@ Deno.test({
 
     await step('every function body runs (late binding): invalid_arguments raises 22023', async () => {
       await asRole('service_role');
-      for (const call of [`select leave_league(null, 'x')`, `select unhide_league(null, 'x')`, `select confirm_league_roster(null, 'x')`]) {
+      for (const call of [
+        `select leave_league(null, 'x')`, `select unhide_league(null, 'x')`,
+        `select confirm_league_roster(null, 'x', 'invite')`,
+        `select confirm_league_roster(gen_random_uuid(), 'x', 'nope')`,
+      ]) {
         let code = '';
         try { await q(call); } catch (e) { code = (e as { code?: string }).code ?? ''; }
         assertEquals(code, '22023', call);
@@ -476,7 +611,7 @@ Deno.test({
       const msg = String((err as Error).message);
       assert(msg.includes('LEAVE LEAGUE EFFECT TEST RESULTS'), msg);
       assert(!msg.includes('FAIL'), msg);
-      assertEquals(msg.match(/PASS/g)?.length, 16, msg); // one per case in the file's EXPECTED OUTPUT
+      assertEquals(msg.match(/PASS/g)?.length, 20, msg); // one per case in the file's EXPECTED OUTPUT
       assertEquals((await q(`select count(*)::int n from leagues`))[0].n, before, 'fixture rolled back');
     });
 

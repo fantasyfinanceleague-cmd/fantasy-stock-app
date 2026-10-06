@@ -1,5 +1,5 @@
 -- ============================================================================
--- Leave league (1/5): schema. The roster-reconfirmation record, the per-user
+-- Leave league (1/7): schema. The roster-reconfirmation record, the per-user
 -- "hidden" stamp, and the commissioner's member_left notice kind.
 -- ============================================================================
 -- Plan + rulings: docs/migrations/LEAVE_LEAGUE_OPTIONS.md (Giorgio, 2026-10-05).
@@ -13,9 +13,14 @@
 --     row of history stay, for everyone.
 --
 -- league_roster_reconfirm -- one row per league while a confirmation is owed.
---   Written ONLY by the leave-league SECURITY DEFINER functions (leave_league
---   upserts it, confirm_league_roster deletes it). Its PRESENCE is the gate:
---   draft-control refuses to start while the row exists. It is keyed by league
+--   Written ONLY by SECURITY DEFINER functions: leave_league upserts it;
+--   confirm_league_roster records the commissioner's choice or deletes it;
+--   join_league_by_code deletes it when the choice is 'invite' and a human
+--   joins. Its PRESENCE is the gate, in two places:
+--     * the draft cannot start (trg_leagues_roster_reconfirm_gate binds EVERY
+--       role, plus draft-control's roster_reconfirm_required blocker for the UI);
+--     * the draft order is not set at T-1h (_draft_order_sync waits, like it
+--       waits for the 4th member), and is set as soon as the row clears. It is keyed by league
 --   (PK), so "a row exists for this league" is the exact per-league predicate,
 --   not an any-row read over a partially filled set (CLAUDE.md).
 --   Why a table and not a leagues column: leagues_update_commissioner ([I2a])
@@ -39,7 +44,7 @@
 --   keeps #94 working. If #94 is ever re-stamped to apply AFTER this file, its
 --   CHECK must add 'member_left', or every pre-draft leave fails its insert.
 --
--- PROVISIONAL TIMESTAMP: 20261107000000-04 may be re-stamped at release. Re-stamp
+-- PROVISIONAL TIMESTAMP: 20261107000000-06 may be re-stamped at release. Re-stamp
 -- only these unapplied files, never an applied one (CLAUDE.md).
 --
 -- POST-PUSH EFFECT CHECKS (also in docs/security/leave-league-effect-test.sql):
@@ -61,8 +66,22 @@ create table if not exists public.league_roster_reconfirm (
   league_id          uuid primary key references public.leagues(id) on delete cascade,
   departed           jsonb not null,
   members_before     int not null,
+  -- The commissioner's answer so far (Design board #call-leave, PR #122):
+  --   pending = not chosen yet ("Needs you");
+  --   invite  = "Invite someone new" chosen ("Waiting for a new manager"): the
+  --             row then clears ON ITS OWN when a human joins through
+  --             join_league_by_code (20261107000005), never on add_bots or a
+  --             direct insert. "Move forward with N" deletes the row outright.
+  -- The discriminator is `choice`, never inferred from chosen_* being NULL.
+  choice             text not null default 'pending',
+  chosen_by          text,
+  chosen_at          timestamptz,
   created_at         timestamptz not null default now(),
   updated_at         timestamptz not null default now(),
+  constraint league_roster_reconfirm_choice_check check (choice in ('pending', 'invite')),
+  constraint league_roster_reconfirm_stamps_check check (
+       (choice = 'pending' and chosen_by is null and chosen_at is null)
+    or (choice = 'invite'  and chosen_by is not null and chosen_at is not null)),
   constraint league_roster_reconfirm_departed_check
     check (jsonb_typeof(departed) = 'array' and jsonb_array_length(departed) >= 1),
   constraint league_roster_reconfirm_members_check check (members_before >= 1)

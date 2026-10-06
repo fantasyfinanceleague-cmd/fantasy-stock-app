@@ -10,7 +10,8 @@
 //            notice id; this function then pushes it to the (new) commissioner
 //            and settles its push_status. A push failure never fails the leave,
 //            because the leave has already committed.
-//   unhide — calls unhide_league: show a hidden finished league again.
+//   (unhide_league exists in the database but is deliberately NOT exposed: no
+//   unhide in 1.2.0, per the board's recommendation.)
 //
 // Auth: gateway verify_jwt=true plus in-code getUser() (the join-league pattern).
 // The user id comes ONLY from the verified JWT, never from the body. The RPCs
@@ -151,13 +152,11 @@ Deno.serve(async (req: Request) => {
     const parsed = parseLeaveRequest(await req.json().catch(() => null));
     if (!parsed) return json({ ok: false, reason: 'bad_request' }, 400);
 
-    const { data, error } = parsed.action === 'unhide'
-      ? await admin.rpc('unhide_league', { p_league_id: parsed.leagueId, p_user_id: user.id })
-      : await admin.rpc('leave_league', {
-        p_league_id: parsed.leagueId,
-        p_user_id: user.id,
-        p_new_commissioner: parsed.newCommissionerId,
-      });
+    const { data, error } = await admin.rpc('leave_league', {
+      p_league_id: parsed.leagueId,
+      p_user_id: user.id,
+      p_new_commissioner: parsed.newCommissionerId,
+    });
     if (error) {
       console.error(`${parsed.action} rpc failed`, JSON.stringify(error));
       return json({ ok: false, reason: 'unhandled' }, 500);

@@ -1,6 +1,23 @@
 # Leave league — plan
 
-**Status:** BUILT on `feat/leave-league` 2026-10-05, NOT applied and NOT deployed. Q4 defaults to B (pick a successor) until Giorgio rules; the A/C deltas are in §3. Migrations `20261107000000`–`04`, the `leave-league` edge function, and draft-control `confirm_roster` plus the `roster_reconfirm_required` blocker. Tests: `supabase/tests/leave_league.pglite.test.ts`. Prod effect check: `docs/security/leave-league-effect-test.sql`. As built, the departed list is `departed jsonb` (`[{user_id, name, left_at}]`, with the name snapshotted at the leave) instead of `departed_user_ids text[]`, and Home filters only `get_home_summary`: `get_home_league` takes an explicit id, so "Past leagues" can still open a hidden league.
+**Status:** BUILT on `feat/leave-league` 2026-10-05, NOT applied and NOT deployed. Q4 defaults to B (pick a successor) until Giorgio rules; the A/C deltas are in §3. The board (#call-leave, PR #122) is reconciled. **"As built" below is authoritative wherever the sections after it differ.**
+
+## As built
+
+- **Migrations `20261107000000`–`06`:**
+  - `00`: `league_roster_reconfirm` (`departed jsonb` = `[{user_id, name, left_at}]` with the name snapshotted, `members_before`, `choice` pending|invite, `chosen_by`/`chosen_at`), `league_members.hidden_at`, and the 7-kind notice CHECK.
+  - `01`: `leave_league` and `unhide_league` (the latter not exposed).
+  - `02`: `confirm_league_roster(league, user, p_choice 'move_forward'|'invite', p_playoff_teams)`.
+  - `03`: `get_home_summary` skips hidden leagues. Only that function: `get_home_league` takes an explicit id, so a hidden league can still be opened.
+  - `04`: DROP `[I5]`.
+  - `05`: `join_league_by_code` clears an `invite` reconfirmation on a human join (only if P ≤ members afterwards), then sets the order if T−1h has passed.
+  - `06`: the order WAITS. `_draft_order_sync`, `finalize_due_draft_orders` and `draft_order_notify_due` skip a league whose reconfirmation is owed, and it is set the moment the row clears. `draft_order_notify_due` also ignores `member_left`, which leave-league delivers, never the cron. And `trg_leagues_roster_reconfirm_gate` refuses the draft start for EVERY role while a reconfirmation is owed: it closes the raw `[I2a]` flip and draft-control's read-then-flip window.
+- **Edge:**
+  - `leave-league` exposes only `leave` and delivers the `member_left` push once.
+  - There is no second notice when the same person leaves again while the same confirmation is owed.
+  - A NEW departure resets `choice` to pending.
+  - draft-control `confirm_roster` takes `{choice, playoff_teams?}`, and the `roster_reconfirm_required` blocker carries `choice`.
+- **Deploy order:** push `00`–`06`, then draft-control, then leave-league. The new draft-control fails closed without the table.
 **Branch:** `feat/leave-league`. Migration range `20261107000000`–`04` (of the provisional `00`–`09`).
 **Retires:** `[I5]` (`league_members_delete_self`, `20260712000002:34-37`).
 
@@ -57,9 +74,9 @@ The leave RPC evaluates this under the league row lock:
 **The reconfirmation gate (the shape for Giorgio's "reconfirm the number of players"):**
 
 - **New table `league_roster_reconfirm`:**
-  - Columns: `league_id uuid PK → leagues ON DELETE CASCADE`, `departed_user_ids text[] NOT NULL`, `members_before int NOT NULL` (the count at the first unconfirmed leave), `created_at`, `updated_at`.
+  - Columns: `league_id uuid PK → leagues ON DELETE CASCADE`, `departed jsonb NOT NULL` (see As built), `members_before int NOT NULL` (the count at the first unconfirmed leave), `created_at`, `updated_at`.
   - **RLS:** enabled, SELECT for members (`is_member(league_id)`), no client write policy. INSERT/UPDATE/DELETE are revoked from `anon` and `authenticated`, so only the service-role RPCs write it.
-  - **Every pre-draft leave upserts it.** A second leave before confirmation appends to `departed_user_ids` and keeps `members_before`, so the banner can say *"2 managers left: 8 → 6"*.
+  - **Every pre-draft leave upserts it.** A second leave before confirmation appends to `departed` and keeps `members_before`, so the banner can say *"2 managers left: 8 → 6"*.
 - **Why a table, not a `leagues` column:**
   - `leagues` carries the whole-row commissioner UPDATE (`[I2a]`) plus #123's freeze triggers. A flag there would be clearable over raw PostgREST, skipping the confirm step.
   - The banner needs *who* left, which a boolean can't carry.
@@ -85,7 +102,7 @@ The leave RPC evaluates this under the league row lock:
 ## 4. Post-season leave = hide
 
 - **`league_members.hidden_at timestamptz`.** It's only set when `season_status = 'completed'`, and the row and all history stay. `is_member()` is unchanged, so the user keeps read access to history.
-- **`get_home_summary` and `get_home_league` skip hidden leagues for that user.** Both are re-created with byte-identical `proacl`/`prosecdef`/`proconfig`, checked in the test the way `league_standings_ranked.pglite.test.ts` does it.
+- **`get_home_summary` skips hidden leagues for that user** (as built; `get_home_league` is unchanged). It is re-created with byte-identical `proacl`/`prosecdef`/`proconfig`, checked in the test the way `league_standings_ranked.pglite.test.ts` does it.
 - **Client league lists** that read `league_members` directly filter on `hidden_at` (3c worker). The SELECT policy already returns the column.
 - **Unhide:** the same edge function, action `unhide`. The RPC clears `hidden_at` (from a "Past leagues" list).
 - `league_members` has no UPDATE policy, so only the service role writes `hidden_at`.
@@ -109,7 +126,7 @@ The leave RPC evaluates this under the league row lock:
 | `20261107000000` | `league_roster_reconfirm` table + RLS + grants; `league_members.hidden_at` |
 | `20261107000001` | `leave_league(p_league_id uuid, p_user_id text, p_new_commissioner text default null)`. Branches per §1–§4. Refusals: `not_member`, `locked_in`, `successor_required`, `successor_invalid`, `sole_manager`, `already_hidden`. Statuses: `left` / `hidden`. Plus `unhide_league(p_league_id, p_user_id)`. |
 | `20261107000002` | `confirm_league_roster(p_league_id uuid, p_user_id text, p_playoff_teams int default null)` per §2 |
-| `20261107000003` | `get_home_summary` / `get_home_league` re-created with the `hidden_at` filter (ACL byte-identical) |
+| `20261107000003` | `get_home_summary` re-created with the `hidden_at` filter (ACL byte-identical) |
 | `20261107000004` | DROP POLICY `league_members_delete_self` (`[I5]`). No client deletes a membership after this; #123's trigger stays as the second layer. |
 
 **Edge:**
@@ -121,7 +138,7 @@ The leave RPC evaluates this under the league row lock:
   - the locked-in disabled state;
   - the commissioner's reconfirm banner with the P stepper;
   - Hide / Past leagues.
-- **Not included:** a commissioner push on a leave. `league_notifications.kind` is CHECK'd to `'draft_order_set'` (`20261013000000:167`), so a push needs a CHECK change. The reconfirm banner plus the start blocker already surface the leave. Add the push only if the board asks.
+- **Commissioner push (added at the Orchestrator's request):** the `member_left` kind (CHECK extended), delivered by leave-league. See As built.
 - **After merge:** run `node scripts/gen-architecture.mjs` (new functions and RPCs) and refresh `db-snapshot.json` after the push (a new RLS table and grants).
 
 **Tests:**

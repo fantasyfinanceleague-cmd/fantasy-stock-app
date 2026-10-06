@@ -1,5 +1,5 @@
 -- ============================================================================
--- Leave league (5/5): retire [I5], the interim self-DELETE on league_members
+-- Leave league (5/7): retire [I5], the interim self-DELETE on league_members
 -- ============================================================================
 -- [I5] "league_members_delete_self" (20260712000002:34-37) let any member
 -- delete their own membership at any time: no draft guard, no commissioner
@@ -20,9 +20,12 @@
 --
 -- CLIENTS: web useLeagues.js leaveLeague moves to functions.invoke('leave-league')
 -- in the same change (web is paused). Mobile never had a leave path.
--- DEPLOY ORDER: deploy the leave-league edge function BEFORE pushing this file,
--- so there is no window where neither path works. (With web paused and no
--- mobile path, nobody can leave anyway; the order is hygiene.)
+-- DEPLOY ORDER (supabase-reviewer): push 20261107000000-06 FIRST, then deploy
+-- draft-control, then leave-league. The new draft-control reads
+-- league_roster_reconfirm on EVERY action and fails closed (500) if it cannot,
+-- so deploying it before 00 is applied breaks status/start/add_bots for every
+-- league. The gap before leave-league is deployed is harmless: web is paused and
+-- mobile has no leave path, so nobody can leave in between.
 --
 -- PROVISIONAL TIMESTAMP: see 20261107000000's header.
 --

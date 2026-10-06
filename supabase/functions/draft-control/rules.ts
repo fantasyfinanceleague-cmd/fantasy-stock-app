@@ -38,11 +38,21 @@ export interface LeagueStartState {
 export interface RosterReconfirm {
   departed: { userId: string; name: string }[];
   membersBefore: number;
+  // 'pending' = the commissioner hasn't chosen ("Needs you"); 'invite' = they
+  // chose "Invite someone new" ("Waiting for a new manager"). Either way the
+  // start is blocked; the choice only changes what the UI says.
+  choice: 'pending' | 'invite';
 }
 
 export type StartBlocker =
   | { code: 'not_started_state'; draftStatus: DraftStatus }
-  | { code: 'roster_reconfirm_required'; departed: { userId: string; name: string }[]; membersBefore: number; members: number }
+  | {
+    code: 'roster_reconfirm_required';
+    departed: { userId: string; name: string }[];
+    membersBefore: number;
+    members: number;
+    choice: 'pending' | 'invite';
+  }
   | { code: 'no_stake_mode' }
   | { code: 'no_draft_date' }
   | { code: 'draft_date_not_reached'; draftDate: string }
@@ -82,6 +92,7 @@ export function computeStartBlockers(state: LeagueStartState, now: Date): StartB
       departed: state.rosterReconfirm.departed,
       membersBefore: state.rosterReconfirm.membersBefore,
       members: state.memberCount,
+      choice: state.rosterReconfirm.choice,
     });
   }
   if (!state.stakeMode) {
@@ -183,7 +194,7 @@ export function isBotsAllowedForEmail(allowlistEnv: string | null | undefined, e
  * row's PRESENCE is the gate, the names are only the banner's detail).
  */
 export function toRosterReconfirm(
-  row: { departed?: unknown; members_before?: unknown } | null | undefined,
+  row: { departed?: unknown; members_before?: unknown; choice?: unknown } | null | undefined,
 ): RosterReconfirm | null {
   if (!row) return null;
   const departed = Array.isArray(row.departed)
@@ -193,5 +204,9 @@ export function toRosterReconfirm(
       .filter((e) => e.userId !== '')
     : [];
   const n = Number(row.members_before);
-  return { departed, membersBefore: Number.isFinite(n) ? n : 0 };
+  return {
+    departed,
+    membersBefore: Number.isFinite(n) ? n : 0,
+    choice: row.choice === 'invite' ? 'invite' : 'pending',
+  };
 }

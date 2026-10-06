@@ -1,5 +1,5 @@
 -- ============================================================================
--- Leave league (4/5): get_home_summary skips leagues the caller has hidden
+-- Leave league (4/7): get_home_summary skips leagues the caller has hidden
 -- ============================================================================
 -- Leaving a FINISHED league hides it for that user (league_members.hidden_at,
 -- 20261107000000). Home (the single-league Home, driven by this function's

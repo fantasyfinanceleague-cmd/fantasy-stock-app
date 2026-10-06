@@ -527,7 +527,7 @@ Make that a committed step when #94 lands.
 ## leave_league.pglite.test.ts
 
 What it does:
-- Loads the leave-league migrations `20261107000000`–`04` **verbatim**. Underneath them, also verbatim, are the real objects they meet in prod:
+- Loads the leave-league migrations `20261107000000`–`06` **verbatim**. Underneath them, also verbatim, are the real objects they meet in prod:
   - PR #9's leagues column guard;
   - the pick clock;
   - flexible playoffs;
@@ -535,7 +535,7 @@ What it does:
   - the display-name and Home RPCs, with the ranking they read;
   - `join_league_by_code`, for the rejoin case.
 - Simulates Supabase's default API-role grants, so the `proacl` assertions prove the explicit revokes work.
-- Runs `docs/security/leave-league-effect-test.sql`, the prod effect check, and requires all 16 lines to PASS and the fixture to roll back.
+- Runs `docs/security/leave-league-effect-test.sql`, the prod effect check, and requires all 20 lines to PASS and the fixture to roll back.
 
 It covers:
 - the leave window:
@@ -552,6 +552,13 @@ It covers:
 - `sole_manager`;
 - hide/unhide plus `get_home_summary` skipping hidden leagues (ACL byte-identical);
 - `[I5]` gone (a client DELETE removes nothing).
+- the board's reconfirmation:
+  - "Invite someone new" is cleared by a HUMAN join through `join_league_by_code`, never by a bot, never on a pending row, and never while P > members;
+  - a new departure re-opens the choice;
+  - a repeat leave sends no second notice;
+- the draft order WAITING past T−1h while a reconfirmation is owed, and set the moment it clears (on confirm, or on an invite cleared by a join);
+- the start gate binding the commissioner's raw flip and the service role;
+- `draft_order_notify_due` ignoring stranded `member_left` rows.
 
 The second `Deno.test` boots a fresh database with `fixtures/run_it_back_398da84_membership.sql`, a verbatim copy of PR #94's renewal response table and its `trg_league_members_renewal_sync_delete`. It proves three things:
 - an invitee's leave is an `out` reply with no reconfirm row;

@@ -1,5 +1,5 @@
 -- ============================================================================
--- Leave league (2/5): leave_league + unhide_league
+-- Leave league (2/7): leave_league + unhide_league
 -- ============================================================================
 -- Plan + rulings: docs/migrations/LEAVE_LEAGUE_OPTIONS.md (Giorgio, 2026-10-05).
 --
@@ -38,13 +38,15 @@
 --      The finalized branch is unreachable: the window refused it above.
 --   3. Upsert league_roster_reconfirm (the commissioner must confirm before the
 --      draft can start), EXCEPT for a Run-it-back invitee (below).
---   4. One member_left notice to the (new) commissioner. The edge function
---      delivers it as a push and settles push_status.
+--   4. One member_left notice to the (new) commissioner (not on a repeat:
+--      left, rejoined and left again while the same confirmation is owed). The
+--      edge function delivers it as a push and settles push_status.
 --
 -- RUN IT BACK (PR #94, unmerged as of this file) -- written to work whether or
 -- not #94 has landed, so it reads #94's objects dynamically:
 --   * A renewal league is one with leagues.previous_league_id set (read through
---     to_jsonb(row), so this function compiles and runs without that column).
+--     to_jsonb(row), so this function compiles and runs without that column),
+--     or one where the caller has a league_renewal_responses row.
 --   * Its commissioner cannot leave: refused commissioner_cannot_opt_out, the
 --     same rule and reason as respond_to_renewal (they cancel the renewal
 --     instead). Without this, the DELETE would hit #94's
@@ -92,6 +94,7 @@ declare
   v_notice        uuid;
   v_reconfirm     boolean;
   v_entry         jsonb;
+  v_repeat        boolean := false;
 begin
   if p_league_id is null or p_user_id is null or btrim(p_user_id) = '' then
     raise exception 'invalid_arguments' using errcode = '22023';
@@ -130,13 +133,16 @@ begin
   -- ---- Run it back (dynamic: #94 may not be on this database) ---------------
   v_renewal := (to_jsonb(v_l) ->> 'previous_league_id') is not null;
   v_is_comm := v_l.commissioner_id = p_user_id;
-  if v_renewal and v_is_comm then
-    return jsonb_build_object('status', 'refused', 'reason', 'commissioner_cannot_opt_out');
-  end if;
-  if v_renewal and to_regclass('public.league_renewal_responses') is not null then
+  -- Keyed on the response ROW as well as the link, the way #94's own gate keys
+  -- on its rows (supabase-reviewer): a renewal whose link were cleared must not
+  -- let its commissioner through to #94's delete trigger.
+  if to_regclass('public.league_renewal_responses') is not null then
     execute 'select exists (select 1 from public.league_renewal_responses
                              where league_id = $1 and user_id = $2)'
        into v_invitee using p_league_id, p_user_id;
+  end if;
+  if v_is_comm and (v_renewal or v_invitee) then
+    return jsonb_build_object('status', 'refused', 'reason', 'commissioner_cannot_opt_out');
   end if;
 
   -- ---- The commissioner hands over first (Q4-B) ------------------------------
@@ -173,6 +179,13 @@ begin
   delete from public.league_members where league_id = p_league_id and user_id = p_user_id;
 
   v_reconfirm := not v_invitee;
+  -- Left, rejoined, left again while the same confirmation is still owed: the
+  -- commissioner already knows. No second notice (push spam via a join/leave
+  -- loop, security review), and the commissioner's choice stands.
+  select coalesce(r.departed @> jsonb_build_array(jsonb_build_object('user_id', p_user_id)), false)
+    into v_repeat
+    from public.league_roster_reconfirm r where r.league_id = p_league_id;
+  v_repeat := coalesce(v_repeat, false) and v_reconfirm;
   if v_reconfirm then
     -- The name is a SNAPSHOT: once the row is gone, a pre-draft leaver has no
     -- standings/matchups/drafts for get_league_display_names to resolve.
@@ -182,15 +195,20 @@ begin
     insert into public.league_roster_reconfirm as r (league_id, departed, members_before)
     values (p_league_id, jsonb_build_array(v_entry), v_before)
     on conflict (league_id) do update
-      set departed = case when r.departed @> jsonb_build_array(jsonb_build_object('user_id', p_user_id))
-                          then r.departed                       -- left, rejoined, left again: once
-                          else r.departed || jsonb_build_array(v_entry) end,
+      set departed  = case when v_repeat then r.departed else r.departed || jsonb_build_array(v_entry) end,
+          -- A NEW departure re-opens the question: whatever the commissioner chose
+          -- ("Invite someone new") was for a different roster.
+          choice    = case when v_repeat then r.choice    else 'pending' end,
+          chosen_by = case when v_repeat then r.chosen_by else null end,
+          chosen_at = case when v_repeat then r.chosen_at else null end,
           updated_at = now();   -- members_before stays: the count before the FIRST unconfirmed leave
   end if;
 
-  insert into public.league_notifications (league_id, user_id, kind)
-  values (p_league_id, v_notify, 'member_left')
-  returning id into v_notice;
+  if not v_repeat then
+    insert into public.league_notifications (league_id, user_id, kind)
+    values (p_league_id, v_notify, 'member_left')
+    returning id into v_notice;
+  end if;
 
   return jsonb_build_object(
     'status', 'left',
