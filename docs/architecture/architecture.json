@@ -2,59 +2,35 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "7b3a7670ff8992a33da00c4640290b22f332d622",
-    "commitShort": "7b3a767",
+    "commit": "da58250fd29dee31e610e9f9f5458a4771492ded",
+    "commitShort": "da58250",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "",
+    "branch": "feat/draft-auto-start",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "supabase/functions/_shared/draft-start.ts"
+        "path": "supabase/functions/_shared/draft-start-policy.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/_shared/draft-start-policy.ts"
       },
       {
         "code": "M",
         "path": "supabase/functions/draft-control/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/draft-order-notify/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/draft-order-notify/plan.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/draft-order-notify/plan.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/migrations/20261109000000_draft_auto_start.sql"
-      },
-      {
-        "code": "M",
-        "path": "supabase/migrations/20261109000001_draft_status_server_only.sql"
-      },
-      {
-        "code": "M",
-        "path": "supabase/migrations/20261109000002_draft_autopick_sweep_auto_start.sql"
-      },
-      {
-        "code": "M",
-        "path": "supabase/migrations/20261109000003_schedule_draft_order_notify.sql"
       }
     ],
-    "timestamp": "2026-10-06T19:49:43Z",
-    "sourceHash": "sha256:fe161044e594bf990460b38962ac14bc83ef26ba98158018d46698dfe19224b0",
+    "timestamp": "2026-10-06T20:44:10Z",
+    "sourceHash": "sha256:2267d0ece8d7a19812de57593c32448270a6f949cc02b4e69501d5ac53ba9a8d",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-06T19:12:57Z",
-    "ageHours": 0.6,
-    "ageDays": 0,
+    "ageHours": 1.5,
+    "ageDays": 0.1,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:be9c8b3930bebef14a7ab20269e4bed6bdc22782c00084eb7d978383d1a6671c",
@@ -526,7 +502,7 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 388
+        "lines": 394
       },
       "db": null,
       "declared": null,
@@ -539,7 +515,7 @@
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/draft-control/index.ts",
-        "line": 131
+        "line": 132
       }
     },
     {
@@ -1826,7 +1802,7 @@
       "db": null,
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261109000001_draft_status_server_only.sql:224"
+          "supabase/migrations/20261109000001_draft_status_server_only.sql:225"
         ],
         "latestDefinition": "supabase/migrations/20261109000001_draft_status_server_only.sql",
         "redefinitions": 1
@@ -1848,7 +1824,7 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261109000001_draft_status_server_only.sql",
-        "line": 224
+        "line": 225
       }
     },
     {
@@ -7612,8 +7588,8 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('check_and_bump_rate_limit')",
       "callSites": [
-        "supabase/functions/draft-control/index.ts:119",
-        "supabase/functions/draft-control/index.ts:122"
+        "supabase/functions/draft-control/index.ts:120",
+        "supabase/functions/draft-control/index.ts:123"
       ]
     },
     {
@@ -7625,7 +7601,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('confirm_league_roster')",
       "callSites": [
-        "supabase/functions/draft-control/index.ts:312"
+        "supabase/functions/draft-control/index.ts:318"
       ]
     },
     {
@@ -7640,7 +7616,7 @@
         "postponed_from, stage, reason"
       ],
       "callSites": [
-        "supabase/functions/draft-control/index.ts:209"
+        "supabase/functions/draft-control/index.ts:214"
       ]
     },
     {
@@ -7655,7 +7631,7 @@
         "user_id"
       ],
       "callSites": [
-        "supabase/functions/draft-control/index.ts:179"
+        "supabase/functions/draft-control/index.ts:180"
       ]
     },
     {
@@ -7668,7 +7644,7 @@
       "payload": ".from('league_members').insert()",
       "columns": [],
       "callSites": [
-        "supabase/functions/draft-control/index.ts:341"
+        "supabase/functions/draft-control/index.ts:347"
       ]
     },
     {
@@ -7683,7 +7659,7 @@
         "departed, members_before, choice"
       ],
       "callSites": [
-        "supabase/functions/draft-control/index.ts:190"
+        "supabase/functions/draft-control/index.ts:191"
       ]
     },
     {
@@ -7696,7 +7672,7 @@
       "payload": ".from('leagues').select()",
       "columns": [],
       "callSites": [
-        "supabase/functions/draft-control/index.ts:171"
+        "supabase/functions/draft-control/index.ts:172"
       ]
     },
     {
@@ -9581,7 +9557,7 @@
       "payload": "SELECT draft_postponements (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261109000001_draft_status_server_only.sql:231"
+        "supabase/migrations/20261109000001_draft_status_server_only.sql:230"
       ]
     },
     {
@@ -9594,7 +9570,7 @@
       "payload": "DELETE draft_postponements (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261109000001_draft_status_server_only.sql:231"
+        "supabase/migrations/20261109000001_draft_status_server_only.sql:230"
       ]
     },
     {
@@ -9607,8 +9583,8 @@
       "payload": "SELECT draft_start_watch (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261109000001_draft_status_server_only.sql:232",
-        "supabase/migrations/20261109000001_draft_status_server_only.sql:245"
+        "supabase/migrations/20261109000001_draft_status_server_only.sql:231",
+        "supabase/migrations/20261109000001_draft_status_server_only.sql:243"
       ]
     },
     {
@@ -9621,8 +9597,8 @@
       "payload": "DELETE draft_start_watch (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261109000001_draft_status_server_only.sql:232",
-        "supabase/migrations/20261109000001_draft_status_server_only.sql:245"
+        "supabase/migrations/20261109000001_draft_status_server_only.sql:231",
+        "supabase/migrations/20261109000001_draft_status_server_only.sql:243"
       ]
     },
     {
@@ -9635,7 +9611,7 @@
       "payload": "SELECT league_members (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261109000001_draft_status_server_only.sql:236"
+        "supabase/migrations/20261109000001_draft_status_server_only.sql:235"
       ]
     },
     {
@@ -9648,7 +9624,7 @@
       "payload": "INSERT league_notifications (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261109000001_draft_status_server_only.sql:234"
+        "supabase/migrations/20261109000001_draft_status_server_only.sql:233"
       ]
     },
     {
@@ -12587,7 +12563,7 @@
       "payload": "trigger on leagues",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261109000001_draft_status_server_only.sql:259"
+        "supabase/migrations/20261109000001_draft_status_server_only.sql:257"
       ]
     },
     {
@@ -16229,9 +16205,9 @@
       "supabase/functions/draft-autopick-sweep/index.ts:104 -> due_draft_starts",
       "supabase/functions/draft-autopick-sweep/index.ts:121 -> draft_watch_due",
       "supabase/functions/draft-autopick-sweep/index.ts:144 -> overdue_draft_turns",
-      "supabase/functions/draft-control/index.ts:119 -> check_and_bump_rate_limit",
-      "supabase/functions/draft-control/index.ts:122 -> check_and_bump_rate_limit",
-      "supabase/functions/draft-control/index.ts:312 -> confirm_league_roster",
+      "supabase/functions/draft-control/index.ts:120 -> check_and_bump_rate_limit",
+      "supabase/functions/draft-control/index.ts:123 -> check_and_bump_rate_limit",
+      "supabase/functions/draft-control/index.ts:318 -> confirm_league_roster",
       "supabase/functions/draft-order-notify/index.ts:69 -> open_due_draft_rooms",
       "supabase/functions/draft-order-notify/index.ts:73 -> finalize_due_draft_orders",
       "supabase/functions/draft-order-notify/index.ts:94 -> draft_notice_context",
@@ -16392,11 +16368,11 @@
       "supabase/functions/_shared/push.ts:49 -> user_profiles.select",
       "supabase/functions/_shared/push.ts:54 -> push_tokens.select",
       "supabase/functions/_shared/push.ts:60 -> user_profiles.select",
-      "supabase/functions/draft-control/index.ts:171 -> leagues.select",
-      "supabase/functions/draft-control/index.ts:179 -> league_members.select",
-      "supabase/functions/draft-control/index.ts:190 -> league_roster_reconfirm.select",
-      "supabase/functions/draft-control/index.ts:209 -> draft_postponements.select",
-      "supabase/functions/draft-control/index.ts:341 -> league_members.insert",
+      "supabase/functions/draft-control/index.ts:172 -> leagues.select",
+      "supabase/functions/draft-control/index.ts:180 -> league_members.select",
+      "supabase/functions/draft-control/index.ts:191 -> league_roster_reconfirm.select",
+      "supabase/functions/draft-control/index.ts:214 -> draft_postponements.select",
+      "supabase/functions/draft-control/index.ts:347 -> league_members.insert",
       "supabase/functions/draft-order-notify/index.ts:115 -> league_notifications.update",
       "supabase/functions/draft-order-notify/index.ts:136 -> league_notifications.update",
       "supabase/functions/draft-order-notify/index.ts:79 -> league_notifications.select",

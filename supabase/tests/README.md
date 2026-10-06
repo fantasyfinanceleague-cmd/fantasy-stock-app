@@ -723,3 +723,13 @@ once (`20261109000003`), guarded by `draft_order_notify_due() OR
 draft_room_notices_due()`, 180000 ms, gone from `deferred/`.
 
 Run: `deno test --allow-read supabase/tests/draft_auto_start_cron_wiring.test.ts`.
+
+## draft_control_status_wiring.test.ts
+
+A structural guard (files only). draft-control `status` returns `server_now`
+(the mobile lobby's clock offset), taken ONCE from the DB clock
+(`get_draft_clock.server_now`, edge clock as fallback) and used to judge
+`start_state`, so both describe the same instant. `resolveServerNow` itself is
+unit-tested in `functions/_shared/draft-start-policy.test.ts`.
+
+Run: `deno test --allow-read supabase/tests/draft_control_status_wiring.test.ts`.

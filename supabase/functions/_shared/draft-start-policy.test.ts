@@ -12,6 +12,7 @@ import {
   isRoomTime,
   isTransientBlocker,
   MIN_LEAD_SECONDS,
+  resolveServerNow,
   REMINDER_LEAD_SECONDS,
   ROOM_OPEN_LEAD_SECONDS,
   SQL_POLICY,
@@ -82,4 +83,15 @@ Deno.test('DST is irrelevant: instants, and the quarter-hour grid is the same in
   assertEquals(s('2026-11-01T04:59:59Z'), 'scheduled');
   // America/New_York's offsets are whole hours either side of both 2026 switches.
   assertEquals(checkDraftTime('2026-03-08T07:15:00Z', new Date('2026-03-01T00:00:00Z')), 'ok');
+});
+
+Deno.test('resolveServerNow: the DB clock when readable (normalized ISO), else the edge clock', () => {
+  const edge = new Date('2026-10-06T20:00:00Z');
+  const db = resolveServerNow('2026-10-06T20:00:03.123456+00:00', edge);
+  assertEquals(db.serverNow, '2026-10-06T20:00:03.123Z');
+  assertEquals(db.now.toISOString(), db.serverNow, 'start_state is judged at the same instant');
+  for (const bad of [null, undefined, '', 'not-a-time']) {
+    const r = resolveServerNow(bad, edge);
+    assertEquals([r.serverNow, r.now], ['2026-10-06T20:00:00.000Z', edge]);
+  }
 });

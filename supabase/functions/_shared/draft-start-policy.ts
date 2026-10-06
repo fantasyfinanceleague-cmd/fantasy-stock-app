@@ -123,3 +123,16 @@ export function checkDraftTime(iso: string, now: Date): DraftTimeVerdict {
   if (d.getTime() < now.getTime() + ms(MIN_LEAD_SECONDS)) return 'too_soon';
   return 'ok';
 }
+
+/**
+ * The server's clock for one status read (the mobile lobby's countdown offset:
+ * one read, no separate get_draft_clock call). `dbNow` is the database's now()
+ * (get_draft_clock.server_now), the same clock the SQL start/gate decisions use;
+ * the edge clock is the fallback when that read failed. The returned `now`
+ * judges start_state too, so server_now and start_state are the SAME instant.
+ */
+export function resolveServerNow(dbNow: string | null | undefined, fallback: Date): { now: Date; serverNow: string } {
+  const t = dbNow ? new Date(dbNow) : null;
+  const now = t && Number.isFinite(t.getTime()) ? t : fallback;
+  return { now, serverNow: now.toISOString() };
+}

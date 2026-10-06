@@ -84,7 +84,8 @@ import {
   startDraftIfDue,
   toStartState,
 } from '../_shared/draft-start.ts';
-import { computeStartState } from '../_shared/draft-start-policy.ts';
+import { computeStartState, resolveServerNow } from '../_shared/draft-start-policy.ts';
+import { fetchDraftClock } from '../_shared/draft-write.ts';
 
 function isAllowedOrigin(origin: string): boolean {
   if (!origin) return false;
@@ -200,7 +201,11 @@ Deno.serve(async (req: Request) => {
     const botsNeeded = computeBotsNeeded(state.memberCount, state.numParticipants);
 
     if (action === 'status') {
-      const now = new Date();
+      // ONE server instant for this read: the DB's now() (the clock the SQL
+      // start/gate decisions use), edge clock if that read fails. It judges
+      // start_state AND is returned as server_now, so the lobby can offset its
+      // countdown from this single response.
+      const { now, serverNow } = resolveServerNow((await fetchDraftClock(admin, leagueId))?.serverNow, new Date());
       // Auto-start (2026-10-06): the server starts the draft at draft_date, or
       // postpones it. The full blocker set is judged ahead of the draft time
       // (the not-yet-reached date is a countdown, not a blocker), so the
@@ -243,6 +248,7 @@ Deno.serve(async (req: Request) => {
         blockers,
         starts_at: state.draftDate,
         start_state: startState,
+        server_now: serverNow, // ISO timestamptz: the instant start_state was judged at
         // The explicit postponed state (draft_postponements): the time that
         // couldn't happen, where it was stopped, and the first blocker's code.
         postponed: pp ? { from: pp.postponed_from, stage: pp.stage, reason: pp.reason } : null,

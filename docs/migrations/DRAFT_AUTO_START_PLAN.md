@@ -259,7 +259,7 @@ Every push carries `data.screen: 'draft'` (1.1.0 routes by `screen`) and `data.t
 
 ## For the mobile worker (client work, not built here)
 
-- **`draft-control status`** now returns `start_state` (`no_date | scheduled | at_risk | room_open | due | postponed | started`), `starts_at`, `postponed: {from, stage, reason} | null`, and blockers judged ahead of time (the date is a countdown; `draft_date_not_reached` and `draft_postponed` stay in `blockers` only to keep the 1.1.0 Start button disabled).
+- **`draft-control status`** now returns `start_state` (`no_date | scheduled | at_risk | room_open | due | postponed | started`), `starts_at`, `server_now` (ISO; the DB clock at read, the same instant `start_state` was judged at, so the lobby's countdown needs no `get_draft_clock` call), `postponed: {from, stage, reason} | null`, and blockers judged ahead of time (the date is a countdown; `draft_date_not_reached` and `draft_postponed` stay in `blockers` only to keep the 1.1.0 Start button disabled).
 - **`draft-control start`** refusals: `draft_postponed`, `draft_start_retrying`, plus the existing ones.
 - **Date pickers** (create-league, league-settings): `minuteInterval={15}`, minimum now + 1 h, ET labels. The server refuses `draft_time_invalid` / `draft_time_too_soon` / `draft_time_locked` (22023).
   - **1.1.0 compatibility:** its picker allows any minute, so a 1.1.0 commissioner picking 12:07 gets a save error. Same-value saves still pass.
