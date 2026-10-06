@@ -1,0 +1,24 @@
+// FIXTURE. Call lines copied verbatim from origin/ui/mobile-league-setup @ 572ada6,
+// apps/mobile/app/create-league.tsx (188, 212, 222), in a compilable skeleton.
+import { seamInsertLeague, seamInsertMember, seamSaveLeagueSlots } from '../lib/game/seamCalls';
+
+export default function CreateLeague({ user, state }: any) {
+  const submit = async () => {
+    const { data: league, error: leagueError } = await seamInsertLeague({
+      name: state.name,
+      commissioner_id: user.id,
+    });
+    if (leagueError || !league) return;
+    const { error: memberError } = await seamInsertMember({
+      league_id: league.id,
+      user_id: user.id,
+    });
+    if (memberError) return;
+    try {
+      await seamSaveLeagueSlots(league.id, state.slots);
+    } catch {
+      // slots are retried from League settings
+    }
+  };
+  return null;
+}

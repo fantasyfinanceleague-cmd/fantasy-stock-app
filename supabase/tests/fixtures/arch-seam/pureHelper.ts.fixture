@@ -1,0 +1,7 @@
+// FIXTURE: a pure helper that calls a function PARAMETER. It is not a seam wrapper (no dev-seam gate),
+// and its callers must not be reported as blind spots.
+export function summarize(rows: string[], price: (s: string) => number): number {
+  return rows.reduce((t, r) => t + price(r), 0);
+}
+
+export const total = summarize(['a', 'b'], (s) => s.length);

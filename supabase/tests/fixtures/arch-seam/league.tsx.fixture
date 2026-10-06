@@ -1,0 +1,30 @@
+// FIXTURE for supabase/tests/arch_call_sites.test.ts. The call lines are copied
+// verbatim from origin/ui/mobile-league-setup @ 572ada6, apps/mobile/app/(tabs)/league.tsx
+// (lines 113, 322, 343, 361, 385) inside minimal compilable skeletons: the seam code is
+// not on main yet, so the test cannot point at it.
+import { seamRpc, seamInvoke, seamUpdateLeague } from '../../lib/game/seamCalls';
+
+export default function LeagueScreen({ activeLeagueId, leagueId, choice, value, teams }: any) {
+  const runItBack = async () => {
+    if (!activeLeagueId) return;
+    const { data, error } = await seamRpc('renew_league', { p_league_id: activeLeagueId });
+    return { data, error };
+  };
+  const startDraft = async () => {
+    const { data: res, error } = await seamInvoke('draft-control', { body: { league_id: leagueId, action: 'start' } });
+    return { res, error };
+  };
+  const setPlayoffTeams = async () => {
+    const res = await seamUpdateLeague(leagueId, { playoff_teams: teams });
+    return res;
+  };
+  const confirmRoster = async () => {
+    const { data: res, error } = await seamInvoke('draft-control', { body: { league_id: leagueId, action: 'confirm_roster', choice } });
+    return { res, error };
+  };
+  const setDraftDate = async () => {
+    const res = await seamUpdateLeague(leagueId, { draft_date: value.value });
+    return res;
+  };
+  return null;
+}

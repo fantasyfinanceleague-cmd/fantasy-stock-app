@@ -1,0 +1,7 @@
+// FIXTURE: imports a seamRpc from a DIFFERENT module. Same name, different function: it must not be
+// attributed through the wrapper in seamCalls.ts.
+import { seamRpc } from '../lib/someOtherModule';
+
+export function Other() {
+  return seamRpc('not_via_the_wrapper', {});
+}

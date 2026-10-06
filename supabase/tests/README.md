@@ -664,3 +664,22 @@ through each exit, and asserts the `cron_job_status` writes: one `running`, one 
 the same-day no-op rule (a heal never erases earlier work or a failure), and that a
 rejected status write cannot change the HTTP response. Hermetic (no network, no DB):
 `deno test --allow-read --allow-env supabase/tests/cron_status_handlers.test.ts`.
+
+## arch_call_sites.test.ts
+
+What it does:
+- Runs `scripts/arch-call-sites.mjs` (the architecture map's wrapper attribution and
+  blind-spot report) over fixtures in `fixtures/arch-seam/`: real seam files copied from
+  `origin/ui/mobile-league-setup` @ 572ada6 (`seamCalls.ts`, `categoryData.ts`,
+  `RenewalRoster.tsx`, `useAllMatchups.ts`, `useDraftRoom.ts`, `QueueEditor.tsx`), minimal
+  skeletons that keep the real call lines (`league.tsx`, `createLeague.tsx`), and synthetic
+  edge cases (dynamic and templated names, a wrapper used as a value, a same-named function
+  from another module, a pure helper that takes a callback).
+- Pins that wrappers are found from their definitions (no list of names), that a caller's
+  name argument is parsed like a direct call, that a ternary of literals is INFERRED, that a
+  callback wrapper's first argument (a fixture key) is never minted into a table, and that
+  everything unattributable is REPORTED.
+- INVARIANT: every call of a wrapper is attributed or reported, never silently dropped.
+- Wiring: the generator hashes the blind spots and qualifies `--check`'s "current".
+
+Hermetic: `deno test --allow-read supabase/tests/arch_call_sites.test.ts`.
