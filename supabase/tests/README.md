@@ -415,6 +415,44 @@ drops the 12-arg overload, adds `p_slot_id`) and drives it through the real
 Mutation-checked: reverting the validator's occupancy to drafts-only fails 7 hermetic
 tests including the repro (`draft-validation.test.ts`, "tier trades: ...").
 
+## freeze_league_rules.pglite.test.ts
+
+What it does:
+- Loads, **verbatim** and in prod order, the B1 helpers and `leagues` RLS
+  (`20260712000000`/`01`), the F1 member column guard (`20260925000000`), the
+  `playoff_teams` freeze (`20261012000002`), `league_draft_slots` with its interim
+  commissioner policies (`20260810000004`), then
+  `20261104000000_freeze_league_rules_after_draft_start`.
+- Runs writes as `authenticated` with a JWT sub, so the real interim policies admit the
+  commissioner and the new triggers are what refuse them. The service role is
+  `service_role` (bypassrls) with no sub.
+
+It covers:
+- pre-draft: the commissioner inserts, updates and deletes slots and edits every rule
+- `in_progress` and `completed`: every slot write (and the delete-then-insert client
+  save) refused with `league_slots_locked`; each of the nine frozen columns refused on
+  its own (and set to NULL) with `league_rules_locked` naming the column; nothing written
+- the same-value patch shapes of mobile `league-settings.tsx` and web `Leagues.jsx`
+  (with an unscaled `budget_amount`) still saving after the draft
+- one UPDATE that changes a rule and starts the draft (judged on OLD, allowed)
+- the `draft_status` transition table: the three forward moves, every backward move
+  refused for the commissioner (`league_draft_status_locked`) but allowed for the
+  service role, and the rewind bypass closed end to end
+- re-parenting a slot into or out of a started league; the commissioner deleting a
+  completed league (the slot cascade); a member still refused by RLS
+- the lock: a slot write row-locks its league (`xmax`), and both same-transaction
+  orders complete. Two-transaction races need two connections, so that argument is in
+  the migration header.
+- fail closed: an unknown or NULL `draft_status` (with the CHECK dropped) freezes
+  everything and allows no move
+- `proacl`, `prosecdef` and the `search_path` pin of both trigger functions
+
+**PR #94 (Run it back) pointer.** On `origin/feat/run-it-back` (not on `main` when this
+test was written), `renew_league` and `start_renewed_season` write slots and rules with
+the commissioner's JWT, so this freeze applies to them. Both touch only `not_started`
+leagues, so they pass as written. When #94 lands, add a step here that runs them against
+this trigger.
+
 ## migration_cli_split.test.ts
 
 What it does:
