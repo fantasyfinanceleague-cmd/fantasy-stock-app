@@ -18,7 +18,7 @@
  * NOT covered (PGlite has one connection): two truly concurrent transactions.
  * The serialization rests on every path locking the leagues row first.
  */
-import { assert, assertEquals } from 'jsr:@std/assert';
+import { assert, assertEquals, assertRejects } from 'jsr:@std/assert';
 import { PGlite } from 'npm:@electric-sql/pglite@0.2';
 
 const ROOT = new URL('../../', import.meta.url);
@@ -47,6 +47,7 @@ const OURS = [
   '20261107000003_get_home_summary_skip_hidden.sql',
   '20261107000004_drop_I5_league_members_delete_self.sql',
 ];
+const EFFECT_TEST = new URL('docs/security/leave-league-effect-test.sql', ROOT);
 const RIB_FIXTURE = new URL('supabase/tests/fixtures/run_it_back_398da84_membership.sql', ROOT);
 
 const SCHEMA = `
@@ -54,7 +55,8 @@ create role anon; create role authenticated; create role service_role bypassrls;
 create schema auth;
 grant usage on schema auth to anon, authenticated, service_role;
 create function auth.uid() returns uuid language sql stable as
-  $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+  $$ select coalesce(nullif(current_setting('request.jwt.claim.sub', true), ''),
+                     nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub')::uuid $$;
 grant execute on function auth.uid() to anon, authenticated, service_role;
 alter default privileges in schema public grant execute on functions to anon, authenticated, service_role;
 alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
@@ -179,6 +181,7 @@ Deno.test({
     const meta = async (id: string) => (await q(`select * from league_draft_order_meta where league_id=$1`, [id]))[0];
     const lg = async (id: string) => (await q(`select * from leagues where id=$1`, [id]))[0];
     const reconfirm = async (id: string) => (await q(`select * from league_roster_reconfirm where league_id=$1`, [id]))[0];
+    const ids = (rc: Row) => rc.departed.map((e: Row) => e.user_id);
     const leftNotices = async (id: string) =>
       (await q(`select user_id from league_notifications where league_id=$1 and kind='member_left' order by created_at`, [id]))
         .map((r: Row) => r.user_id);
@@ -186,7 +189,7 @@ Deno.test({
       m: await q(`select user_id, role, hidden_at from league_members where league_id=$1 order by user_id`, [id]),
       o: await order(id),
       l: await q(`select commissioner_id, playoff_teams, draft_status from leagues where id=$1`, [id]),
-      r: await q(`select departed_user_ids, members_before from league_roster_reconfirm where league_id=$1`, [id]),
+      r: await q(`select departed, members_before from league_roster_reconfirm where league_id=$1`, [id]),
       n: await q(`select user_id, kind from league_notifications where league_id=$1 order by created_at`, [id]),
     });
     // The edge function's call: service role, verified user id.
@@ -269,6 +272,7 @@ Deno.test({
     });
 
     await step('pre-draft leave, random mode before the reveal: row gone, reconfirm owed, commissioner notified', async () => {
+      await q(`insert into user_profiles (id, username) values ($1, 'Alice') on conflict do nothing`, [A]);
       const l = await mkLeague([C, A, B, D, 'bot-1'], { draft_date: await inHours(48) });
       assertEquals(await meta(l.id), undefined, 'precondition: no order yet');
       const r = await leave(l.id, A);
@@ -278,7 +282,9 @@ Deno.test({
       assert(typeof r.notice_id === 'string');
       assertEquals(await members(l.id), [B, C, D, 'bot-1'].sort());
       const rc = await reconfirm(l.id);
-      assertEquals([rc.departed_user_ids, rc.members_before], [[A], 5]);
+      assertEquals([ids(rc), rc.members_before], [[A], 5]);
+      assertEquals([rc.departed[0].name, r.leaver_name], ['Alice', 'Alice'], 'name snapshotted at the leave');
+      assert(typeof rc.departed[0].left_at === 'string');
       assertEquals(await leftNotices(l.id), [C]);
       const [n] = await q(`select push_status from league_notifications where id=$1`, [r.notice_id]);
       assertEquals(n.push_status, 'pending');
@@ -289,16 +295,16 @@ Deno.test({
       await leave(l.id, A);
       await leave(l.id, B);
       let rc = await reconfirm(l.id);
-      assertEquals([rc.departed_user_ids, rc.members_before], [[A, B], 5]);
+      assertEquals([ids(rc), rc.members_before], [[A, B], 5]);
       // Rejoin with the invite code (the row is gone, the draft has not started).
       await asRole('service_role');
       const j = (await q(`select join_league_by_code('RJN01', $1) r`, [A]))[0].r;
       await asRole(null);
       assertEquals(j.ok, true);
-      assertEquals((await reconfirm(l.id)).departed_user_ids, [A, B], 'a join never clears it');
+      assertEquals(ids(await reconfirm(l.id)), [A, B], 'a join never clears it');
       await leave(l.id, A);
       rc = await reconfirm(l.id);
-      assertEquals([rc.departed_user_ids, rc.members_before], [[A, B], 5]);
+      assertEquals([ids(rc), rc.members_before], [[A, B], 5]);
     });
 
     await step('manual order (open): the trigger closes the gap', async () => {
@@ -464,6 +470,16 @@ Deno.test({
       await asRole(null);
     });
 
+    await step('effect test (the SQL-editor script) passes and rolls back', async () => {
+      const before = (await q(`select count(*)::int n from leagues`))[0].n;
+      const err = await assertRejects(async () => { await db.exec(await Deno.readTextFile(EFFECT_TEST)); });
+      const msg = String((err as Error).message);
+      assert(msg.includes('LEAVE LEAGUE EFFECT TEST RESULTS'), msg);
+      assert(!msg.includes('FAIL'), msg);
+      assertEquals(msg.match(/PASS/g)?.length, 16, msg); // one per case in the file's EXPECTED OUTPUT
+      assertEquals((await q(`select count(*)::int n from leagues`))[0].n, before, 'fixture rolled back');
+    });
+
     await db.close();
   },
 });
@@ -509,7 +525,7 @@ Deno.test({
     await t.step('a newcomer in a renewal league leaves like anyone else: reconfirm row', async () => {
       const r = await leave(s2.id, E);
       assertEquals([r.status, r.reconfirm_required], ['left', true]);
-      assertEquals((await q(`select departed_user_ids from league_roster_reconfirm where league_id=$1`, [s2.id]))[0].departed_user_ids, [E]);
+      assertEquals((await q(`select departed from league_roster_reconfirm where league_id=$1`, [s2.id]))[0].departed.map((e: Row) => e.user_id), [E]);
     });
 
     await db.close();

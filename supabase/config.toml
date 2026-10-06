@@ -72,6 +72,15 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/join-league/index.ts"
 
+# Leave league (STATUS §4 item 11): pre-draft leave / post-season hide.
+# verify_jwt=true + in-code getUser(); the user id comes only from the JWT. The
+# rules live in leave_league / unhide_league (SECURITY DEFINER, EXECUTE granted to
+# service_role ONLY, 20261107000001). Retires interim policy [I5].
+[functions.leave-league]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/leave-league/index.ts"
+
 # Mobile draft launch-blocker (docs/STATUS.md §4/§5): server-side draft start +
 # bot seeding. verify_jwt=true + in-code getUser() + in-code commissioner check
 # (from the leagues row, never the request body) — same auth shape as

@@ -91,6 +91,7 @@ declare
   v_notify        text;
   v_notice        uuid;
   v_reconfirm     boolean;
+  v_entry         jsonb;
 begin
   if p_league_id is null or p_user_id is null or btrim(p_user_id) = '' then
     raise exception 'invalid_arguments' using errcode = '22023';
@@ -173,11 +174,17 @@ begin
 
   v_reconfirm := not v_invitee;
   if v_reconfirm then
-    insert into public.league_roster_reconfirm as r (league_id, departed_user_ids, members_before)
-    values (p_league_id, array[p_user_id], v_before)
+    -- The name is a SNAPSHOT: once the row is gone, a pre-draft leaver has no
+    -- standings/matchups/drafts for get_league_display_names to resolve.
+    v_entry := jsonb_build_object('user_id', p_user_id,
+                                  'name', public.participant_display_name(p_user_id),
+                                  'left_at', now());
+    insert into public.league_roster_reconfirm as r (league_id, departed, members_before)
+    values (p_league_id, jsonb_build_array(v_entry), v_before)
     on conflict (league_id) do update
-      set departed_user_ids = case when p_user_id = any (r.departed_user_ids) then r.departed_user_ids
-                                   else array_append(r.departed_user_ids, p_user_id) end,
+      set departed = case when r.departed @> jsonb_build_array(jsonb_build_object('user_id', p_user_id))
+                          then r.departed                       -- left, rejoined, left again: once
+                          else r.departed || jsonb_build_array(v_entry) end,
           updated_at = now();   -- members_before stays: the count before the FIRST unconfirmed leave
   end if;
 

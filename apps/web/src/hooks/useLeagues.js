@@ -237,17 +237,32 @@ export default function useLeagues() {
     [refresh, USER_ID]
   );
 
+  // Leaving goes through the leave-league edge function (20261107000001): the
+  // direct league_members DELETE ([I5]) is retired. The server owns the rules
+  // (locked in from the hour before the draft through the season; hiding after
+  // it), so a refusal is surfaced, never swallowed.
   const leaveLeague = useCallback(
     async (leagueId) => {
       setLoading(true);
       try {
-        await supabase.from('league_members').delete().eq('league_id', leagueId).eq('user_id', USER_ID);
+        const { data, error } = await supabase.functions.invoke('leave-league', {
+          body: { action: 'leave', league_id: leagueId },
+        });
+        if (error) throw error;
+        if (!data?.ok) {
+          throw new Error(
+            data?.reason === 'locked_in'
+              ? "You're locked in for this season. You can leave once it ends."
+              : `Could not leave the league (${data?.reason ?? 'unknown'}).`
+          );
+        }
         await refresh();
+        return data;
       } finally {
         setLoading(false);
       }
     },
-    [refresh, USER_ID]
+    [refresh]
   );
   const deleteLeague = useCallback(async (leagueId) => {
     setLoading(true);

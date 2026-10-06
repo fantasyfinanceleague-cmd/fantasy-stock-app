@@ -21,7 +21,9 @@
 --   Why a table and not a leagues column: leagues_update_commissioner ([I2a])
 --   is a whole-row commissioner UPDATE, so a flag on leagues could be cleared
 --   over raw PostgREST, skipping the confirm step (and its playoff_teams check).
---   It also carries WHO left, for the commissioner's banner.
+--   It also carries WHO left, for the commissioner's banner: `departed` snapshots
+--   each leaver's display name at the leave, because a pre-draft leaver has no
+--   standings, matchups or drafts left for get_league_display_names to find.
 --
 -- league_members.hidden_at -- NULL = shown. Set only once the league's season is
 --   completed, by leave_league; cleared by unhide_league. No client writes it
@@ -57,16 +59,17 @@ comment on column public.league_members.hidden_at is
 
 create table if not exists public.league_roster_reconfirm (
   league_id          uuid primary key references public.leagues(id) on delete cascade,
-  departed_user_ids  text[] not null,
+  departed           jsonb not null,
   members_before     int not null,
   created_at         timestamptz not null default now(),
   updated_at         timestamptz not null default now(),
-  constraint league_roster_reconfirm_departed_check check (cardinality(departed_user_ids) >= 1),
+  constraint league_roster_reconfirm_departed_check
+    check (jsonb_typeof(departed) = 'array' and jsonb_array_length(departed) >= 1),
   constraint league_roster_reconfirm_members_check check (members_before >= 1)
 );
 
 comment on table public.league_roster_reconfirm is
-  'Leave league: one row per league whose commissioner owes a roster confirmation after a pre-draft leave. departed_user_ids = who left since the last confirmation; members_before = the member count before the first of those leaves. Its presence blocks the draft start (draft-control roster_reconfirm_required). Written only by leave_league / confirm_league_roster.';
+  'Leave league: one row per league whose commissioner owes a roster confirmation after a pre-draft leave. departed = who left since the last confirmation, as [{user_id, name, left_at}] (name snapshotted at the leave: a departed pre-draft member is no longer resolvable by get_league_display_names); members_before = the member count before the first of those leaves. Its presence blocks the draft start (draft-control roster_reconfirm_required). Written only by leave_league / confirm_league_roster.';
 
 alter table public.league_roster_reconfirm enable row level security;
 

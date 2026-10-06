@@ -30,10 +30,19 @@ export interface LeagueStartState {
   draftDate: string | null; // ISO, or null = TBD
   leagueType: string | null; // leagues.league_type: 'matchup' | 'duration'
   playoffTeams: number | null; // leagues.playoff_teams, as stored (no default)
+  // league_roster_reconfirm (20261107000000): present while the commissioner owes
+  // a roster confirmation after a pre-draft leave. null/absent = nothing owed.
+  rosterReconfirm?: RosterReconfirm | null;
+}
+
+export interface RosterReconfirm {
+  departed: { userId: string; name: string }[];
+  membersBefore: number;
 }
 
 export type StartBlocker =
   | { code: 'not_started_state'; draftStatus: DraftStatus }
+  | { code: 'roster_reconfirm_required'; departed: { userId: string; name: string }[]; membersBefore: number; members: number }
   | { code: 'no_stake_mode' }
   | { code: 'no_draft_date' }
   | { code: 'draft_date_not_reached'; draftDate: string }
@@ -49,7 +58,7 @@ export type StartBlocker =
 
 /**
  * Every reason the draft cannot start right now, in a stable order (state,
- * then stake mode, then date, then headcount, then playoff spots vs headcount) so the UI can show the most
+ * then a pending roster reconfirmation, then stake mode, then date, then headcount, then playoff spots vs headcount) so the UI can show the most
  * fundamental blocker first. Empty = startable.
  *
  * Q3 (2026-09-25, Giorgio): starting REQUIRES draft_date to be set AND
@@ -62,6 +71,18 @@ export function computeStartBlockers(state: LeagueStartState, now: Date): StartB
 
   if (state.draftStatus !== 'not_started') {
     blockers.push({ code: 'not_started_state', draftStatus: state.draftStatus });
+  }
+  // Leave league (Giorgio, 2026-10-05): after a pre-draft leave the commissioner
+  // must reconfirm the roster (go ahead with fewer, or invite a replacement and
+  // then confirm) before the draft can start. Right after the state blocker:
+  // it is the most fundamental thing the commissioner can act on.
+  if (state.rosterReconfirm) {
+    blockers.push({
+      code: 'roster_reconfirm_required',
+      departed: state.rosterReconfirm.departed,
+      membersBefore: state.rosterReconfirm.membersBefore,
+      members: state.memberCount,
+    });
   }
   if (!state.stakeMode) {
     blockers.push({ code: 'no_stake_mode' });
@@ -154,4 +175,23 @@ export function isBotsAllowedForEmail(allowlistEnv: string | null | undefined, e
   const entries = allowlistEnv.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
   if (entries.includes('*')) return true;
   return entries.includes(email.trim().toLowerCase());
+}
+
+/**
+ * The league_roster_reconfirm row -> RosterReconfirm. FAIL CLOSED: a row that
+ * exists blocks the start even if its `departed` payload is malformed (the
+ * row's PRESENCE is the gate, the names are only the banner's detail).
+ */
+export function toRosterReconfirm(
+  row: { departed?: unknown; members_before?: unknown } | null | undefined,
+): RosterReconfirm | null {
+  if (!row) return null;
+  const departed = Array.isArray(row.departed)
+    ? row.departed
+      .filter((e): e is Record<string, unknown> => !!e && typeof e === 'object')
+      .map((e) => ({ userId: String(e.user_id ?? ''), name: String(e.name ?? '') }))
+      .filter((e) => e.userId !== '')
+    : [];
+  const n = Number(row.members_before);
+  return { departed, membersBefore: Number.isFinite(n) ? n : 0 };
 }
