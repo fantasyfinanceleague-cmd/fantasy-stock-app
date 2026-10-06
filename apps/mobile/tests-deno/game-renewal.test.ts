@@ -61,3 +61,24 @@ Deno.test('the remove action names the person; the asked line gives the date', (
   assertEquals(removeActionTitle('Andrea P.'), 'Remove Andrea P.');
   assertEquals(askedLine('2026-01-16T18:00:00Z'), 'Asked Fri, Jan 16.');
 });
+
+import { buildNonReplySheet } from '../lib/game/renewal.ts';
+
+Deno.test('R7: the native sheet names the person, gives the dates, and offers nudge only inside the window', () => {
+  const open = buildNonReplySheet({ name: 'Andrea P.', askedLine: 'Asked Fri, Jan 16.', nudgedLine: 'Nudged Sat, Jan 17.', nudgeEnabled: true, unlocksLine: null });
+  assertEquals(open.title, 'Andrea P. hasn\'t replied');
+  assertEquals(open.message, 'Asked Fri, Jan 16. Nudged Sat, Jan 17. You can nudge once a day.');
+  assertEquals(open.actions, ['nudge', 'remove', 'cancel']);
+  assertEquals(open.options.map((o) => o.label), ['Nudge again', 'Remove Andrea P.', 'Cancel']);
+  assertEquals(open.destructiveIndex, 1);
+  assertEquals(open.cancelIndex, 2);
+});
+
+Deno.test('R7 inside 24 h: no nudge button, and the message says when it unlocks', () => {
+  const soon = buildNonReplySheet({ name: 'Andrea P.', askedLine: 'Asked Fri, Jan 16.', nudgedLine: 'Nudged Sat, Jan 17.', nudgeEnabled: false, unlocksLine: 'You can nudge again tomorrow at 9:15 AM ET.' });
+  assertEquals(soon.actions, ['remove', 'cancel']);
+  assertEquals(soon.options.map((o) => o.label), ['Remove Andrea P.', 'Cancel']);
+  assertEquals(soon.message, 'Asked Fri, Jan 16. Nudged Sat, Jan 17. You can nudge again tomorrow at 9:15 AM ET.');
+  assertEquals(soon.destructiveIndex, 0);
+  assertEquals(soon.cancelIndex, 1);
+});

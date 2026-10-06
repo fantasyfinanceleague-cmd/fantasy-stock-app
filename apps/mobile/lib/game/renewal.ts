@@ -81,3 +81,32 @@ export function askedLine(createdAtIso: string): string {
   const formatted = new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'America/New_York' }).format(d);
   return `Asked ${formatted}.`;
 }
+
+export type SheetAction = 'nudge' | 'remove' | 'cancel';
+
+/** R7, the native action sheet for a non-reply: its title, message and buttons.
+ * Inside the 24 h window the nudge button is OMITTED (a native sheet cannot show a
+ * disabled button), and the message says when it unlocks. */
+export function buildNonReplySheet(input: {
+  name: string;
+  askedLine: string;
+  nudgedLine: string | null;
+  nudgeEnabled: boolean;
+  unlocksLine: string | null;
+}) {
+  const tail = input.nudgeEnabled ? 'You can nudge once a day.' : (input.unlocksLine ?? '');
+  const message = [input.askedLine, input.nudgedLine, tail].filter((s): s is string => !!s && s.length > 0).join(' ');
+  const actions: SheetAction[] = input.nudgeEnabled ? ['nudge', 'remove', 'cancel'] : ['remove', 'cancel'];
+  const options = actions.map((a) => ({
+    action: a,
+    label: a === 'nudge' ? 'Nudge again' : a === 'remove' ? removeActionTitle(input.name) : 'Cancel',
+  }));
+  return {
+    title: `${input.name} hasn't replied`,
+    message,
+    actions,
+    options,
+    destructiveIndex: actions.indexOf('remove'),
+    cancelIndex: actions.indexOf('cancel'),
+  };
+}
