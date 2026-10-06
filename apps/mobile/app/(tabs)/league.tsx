@@ -245,14 +245,20 @@ function LeagueRenewalScreen({ leagueId, createdAt, onScheduled }: { leagueId: s
 
 /** The drafting League tab (3c): the draft room. Its own component, so its hooks run only while drafting. */
 function LeagueDraftRoom({ leagueId, rounds }: { leagueId: string; rounds: number }) {
-  const { refresh } = useLeagueContext();
+  const { refresh, activeLeague } = useLeagueContext();
   const { user } = useAuth();
   const { colors } = useTheme();
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <ShellHeader title="League" showAvatar />
       <BarsRefresh onRefresh={refresh} contentContainerStyle={{ paddingHorizontal: space[6], paddingBottom: space[9], gap: space[6] }}>
-        <DraftRoom leagueId={leagueId} myUserId={user?.id ?? ''} rounds={rounds} />
+        <DraftRoom
+          leagueId={leagueId}
+          myUserId={user?.id ?? ''}
+          rounds={rounds}
+          // The same commissioner check as the settings row (a missing id never matches).
+          isCommissioner={showsLeagueSettingsRow(activeLeague?.commissioner_id, user?.id)}
+        />
       </BarsRefresh>
     </View>
   );

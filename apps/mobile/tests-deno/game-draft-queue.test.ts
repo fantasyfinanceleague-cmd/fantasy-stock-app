@@ -31,7 +31,9 @@ Deno.test('remove drops one stock; add appends a new one and ignores a duplicate
 
 Deno.test('a refused save says what failed; an unknown reason is one generic line', () => {
   assertEquals(queueRefusalLine('draft_completed'), 'The draft is already complete');
-  assertEquals(queueRefusalLine('too_many'), '[new copy: queue_too_many]');
-  assertEquals(queueRefusalLine('unknown_symbols'), '[new copy: queue_unknown_symbols]');
+  assertEquals(queueRefusalLine('too_many'), `Your queue can hold up to ${QUEUE_MAX} stocks.`);
+  assertEquals(queueRefusalLine('too_many'), 'Your queue can hold up to 50 stocks.');
+  assertEquals(queueRefusalLine('unknown_symbols'), "Some of these stocks can't be queued. Remove them and try again.");
+  for (const r of ['draft_completed', 'too_many', 'unknown_symbols', 'mystery']) assertEquals(queueRefusalLine(r).includes('[new copy'), false, r);
   assertEquals(queueRefusalLine('mystery'), "Your queue couldn't be saved.");
 });

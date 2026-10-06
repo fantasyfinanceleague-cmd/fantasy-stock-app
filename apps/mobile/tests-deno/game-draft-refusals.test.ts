@@ -1,49 +1,38 @@
 /**
- * "Draft never skips" codes (3c, fixtures ahead of the backend merge). Every
- * refusal, blocker and turn state maps to a copy key the Design Lead will
- * write; until then each is a clearly flagged placeholder, and an unknown code
- * gets one generic line rather than a made-up reason. Run: `deno test .`
+ * A stalled draft turn (3c; ruled copy 3c-2, board #game "Draft paused"): shown
+ * as waiting, never as a pick, with the member and commissioner lines. The
+ * placeholder copy this module used to hold is gone (P0, Design Lead audit).
+ * Run: `cd apps/mobile/tests-deno && deno test .`
  */
-import { assertEquals, assert } from 'jsr:@std/assert';
-import {
-  pickRefusalCopy,
-  statusBlockerCopy,
-  turnState,
-  COPY_KEYS,
-} from '../lib/game/draftRefusals.ts';
+import { assertEquals } from 'jsr:@std/assert';
+import { turnState } from '../lib/game/draftRefusals.ts';
 
-Deno.test('every pick refusal and status blocker has a flagged placeholder (new copy)', () => {
-  for (const key of COPY_KEYS) {
-    assert(key.startsWith('[new copy: '), `not flagged: ${key}`);
-  }
+Deno.test('a stalled turn, member view (board "Draft paused, member")', () => {
+  assertEquals(turnState({ reason: 'stalled', pickNumber: 14, managerName: 'Paolo M.' }), {
+    kind: 'stalled',
+    tag: 'Draft paused',
+    label: "No stock left fits Paolo M.'s next slot",
+    line: 'The clock is stopped and nobody is skipped. The commissioner has been told.',
+  });
 });
 
-Deno.test('pick refusals map to their own keys', () => {
-  assertEquals(pickRefusalCopy('would_strand_slot'), '[new copy: would_strand_slot]');
-  assertEquals(pickRefusalCopy('budget_reserve'), '[new copy: budget_reserve]');
-  assertEquals(pickRefusalCopy('skip_disabled'), '[new copy: skip_disabled]');
+Deno.test('a stalled turn, commissioner view (board "Draft paused, commissioner")', () => {
+  assertEquals(
+    turnState({ reason: 'stalled', pickNumber: 14, managerName: 'Paolo M.', isCommissioner: true }).line,
+    "The clock is stopped and nobody is skipped. You've been notified; the draft continues once the slot can be filled.",
+  );
 });
 
-Deno.test('an unknown pick refusal is one honest generic line, never a made-up reason', () => {
-  assertEquals(pickRefusalCopy('future_reason'), "That pick can't be made.");
+Deno.test('no manager name: "the next manager", never an empty possessive', () => {
+  assertEquals(turnState({ reason: 'stalled', pickNumber: 14, managerName: '  ' }).label, "No stock left fits the next manager's next slot");
+  assertEquals(turnState({ reason: 'stalled', pickNumber: 14 }).label, "No stock left fits the next manager's next slot");
 });
 
-Deno.test('status blockers map to their own keys; an unknown one fails closed with a generic line', () => {
-  assertEquals(statusBlockerCopy({ code: 'slots_infeasible' }), '[new copy: slots_infeasible]');
-  assertEquals(statusBlockerCopy({ code: 'budget_infeasible' }), '[new copy: budget_infeasible]');
-  assertEquals(statusBlockerCopy({ code: 'feasibility_unavailable' }), '[new copy: feasibility_unavailable]');
-  assertEquals(statusBlockerCopy({ code: 'unknown_thing' }), "The draft can't start yet.");
+Deno.test('a normal turn is not stalled and carries no copy', () => {
+  assertEquals(turnState({ reason: null, pickNumber: 14 }), { kind: 'normal', tag: null, label: null, line: null });
 });
 
-Deno.test('a stalled turn is shown as waiting, never as a pick', () => {
-  const s = turnState({ reason: 'stalled', pickNumber: 14 });
-  assertEquals(s.kind, 'stalled');
-  assertEquals(s.label, '[new copy: stalled_waiting]');
-  assertEquals(s.commissionerNotice, '[new copy: stalled_commissioner]');
-});
-
-Deno.test('a normal turn is not stalled and carries no notice', () => {
-  const s = turnState({ reason: null, pickNumber: 14 });
-  assertEquals(s.kind, 'normal');
-  assertEquals(s.commissionerNotice, null);
+Deno.test('no stalled line is a placeholder', () => {
+  const s = turnState({ reason: 'stalled', pickNumber: 1, managerName: 'A', isCommissioner: true });
+  for (const v of [s.tag, s.label, s.line]) assertEquals(String(v).includes('[new copy'), false);
 });

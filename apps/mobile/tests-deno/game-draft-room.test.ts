@@ -52,7 +52,7 @@ Deno.test('the seconds left come from the server clock, so the device clock cann
   assertEquals(s.secondsLeft, 10);
 });
 
-import { pickRefusalLine } from '../lib/game/draftRoom.ts';
+import { PICK_REFUSAL_NEXT_STEP, pickRefusalLine, pickRefusalNextStep } from '../lib/game/draftRoom.ts';
 
 Deno.test('the existing refusal lines are verbatim, and an unknown reason is one generic line', () => {
   assertEquals(pickRefusalLine('not_your_turn'), "It's not your turn to pick");
@@ -60,7 +60,38 @@ Deno.test('the existing refusal lines are verbatim, and an unknown reason is one
   assertEquals(pickRefusalLine('some_new_reason'), "That pick can't be made.");
 });
 
-Deno.test('the never-skips refusals are flagged placeholders, never a raw reason', () => {
-  assertEquals(pickRefusalLine('would_strand_slot'), '[new copy: would_strand_slot]');
-  assertEquals(pickRefusalLine('budget_reserve'), '[new copy: budget_reserve]');
+Deno.test('would_strand_slot: the board\'s generic line with the stock (the server returns no names today)', () => {
+  assertEquals(pickRefusalLine('would_strand_slot', { stock: 'orcl' }), 'Taking ORCL would leave another manager with no stock for one of their slots.');
+});
+
+Deno.test('would_strand_slot: the specific line once the manager and the slot are known (board #game "Pick refused")', () => {
+  assertEquals(
+    pickRefusalLine('would_strand_slot', { stock: 'ORCL', manager: 'Paolo M.', slot: 'Tech' }),
+    'Taking ORCL would leave Paolo M. with no stock that fits their Tech slot. Every slot has to be fillable.',
+  );
+  // Half the names is still the generic line, never a sentence with a hole in it.
+  assertEquals(pickRefusalLine('would_strand_slot', { stock: 'ORCL', manager: 'Paolo M.' }), 'Taking ORCL would leave another manager with no stock for one of their slots.');
+});
+
+Deno.test('budget_reserve: the board\'s generic line with the stock', () => {
+  assertEquals(pickRefusalLine('budget_reserve', { stock: 'ORCL' }), 'ORCL would leave too little budget for your remaining picks.');
+});
+
+Deno.test('with no stock known, the never-skips refusals fall back to the one generic line', () => {
+  assertEquals(pickRefusalLine('would_strand_slot'), "That pick can't be made.");
+  assertEquals(pickRefusalLine('budget_reserve'), "That pick can't be made.");
+});
+
+Deno.test('the next step under the never-skips refusals only', () => {
+  assertEquals(PICK_REFUSAL_NEXT_STEP, 'Your clock is still running. Pick from the list, or let your queue pick for you.');
+  assertEquals(pickRefusalNextStep('would_strand_slot'), PICK_REFUSAL_NEXT_STEP);
+  assertEquals(pickRefusalNextStep('budget_reserve'), PICK_REFUSAL_NEXT_STEP);
+  assertEquals(pickRefusalNextStep('symbol_owned'), null);
+  assertEquals(pickRefusalNextStep('not_your_turn'), null);
+});
+
+Deno.test('no refusal line is a placeholder', () => {
+  for (const r of ['would_strand_slot', 'budget_reserve', 'not_your_turn', 'symbol_owned', 'no_eligible_slot', 'x']) {
+    assertEquals(pickRefusalLine(r, { stock: 'NVDA' }).includes('[new copy'), false, r);
+  }
 });

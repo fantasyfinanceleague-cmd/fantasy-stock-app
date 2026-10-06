@@ -1,59 +1,35 @@
 /**
- * draftRefusals (3c): the "draft never skips" codes, mapped to copy keys. The
- * backend (fix/draft-never-skips) is not merged, so every placeholder is a
- * clearly marked NEW COPY pending the Design Lead. An unknown code gets one
- * honest generic line, never a made-up reason. A 'stalled' turn is shown as
- * waiting, never as a pick (auto-pick found no legal stock).
+ * draftRefusals (3c): a stalled draft turn (auto-pick found no legal stock).
+ * It is shown as waiting, never as a pick, with the board's ruled copy (#game
+ * "Draft paused", member and commissioner frames). The pick refusals live in
+ * draftRoom.pickRefusalLine and the setup blockers in autoStart.blockerClause;
+ * the placeholder copy this module used to hold is gone (P0, Design Lead audit).
  */
-
-/** Every copy key this module can emit, all flagged new copy. */
-export const COPY_KEYS = [
-  '[new copy: would_strand_slot]',
-  '[new copy: budget_reserve]',
-  '[new copy: skip_disabled]',
-  '[new copy: slots_infeasible]',
-  '[new copy: budget_infeasible]',
-  '[new copy: feasibility_unavailable]',
-  '[new copy: stalled_waiting]',
-  '[new copy: stalled_commissioner]',
-] as const;
-
-const PICK_REFUSALS: Record<string, string> = {
-  would_strand_slot: '[new copy: would_strand_slot]',
-  budget_reserve: '[new copy: budget_reserve]',
-  skip_disabled: '[new copy: skip_disabled]',
-};
-
-const STATUS_BLOCKERS: Record<string, string> = {
-  slots_infeasible: '[new copy: slots_infeasible]',
-  budget_infeasible: '[new copy: budget_infeasible]',
-  feasibility_unavailable: '[new copy: feasibility_unavailable]',
-};
-
-export function pickRefusalCopy(reason: string): string {
-  return PICK_REFUSALS[reason] ?? "That pick can't be made.";
-}
-
-export function statusBlockerCopy(b: { code: string }): string {
-  return STATUS_BLOCKERS[b.code] ?? "The draft can't start yet.";
-}
 
 export interface TurnState {
   kind: 'normal' | 'stalled';
-  /** The turn's waiting label; null for a normal turn. */
+  /** The card's tag ("Draft paused"); null for a normal turn. */
+  tag: string | null;
+  /** The turn's waiting title; null for a normal turn. */
   label: string | null;
-  /** The commissioner's notice; null for a normal turn. */
-  commissionerNotice: string | null;
+  /** What it means for the viewer (member or commissioner); null for a normal turn. */
+  line: string | null;
 }
 
-/** A stalled turn is waiting, with a commissioner notice, never a fake pick. */
-export function turnState(input: { reason: string | null; pickNumber: number }): TurnState {
+/** A stalled turn is waiting, never a fake pick (board #game "Draft paused").
+ * `managerName` is the manager on the clock; empty falls back to "the next
+ * manager" (NEW, flagged: the board always names them). */
+export function turnState(input: { reason: string | null; pickNumber: number; managerName?: string; isCommissioner?: boolean }): TurnState {
   if (input.reason === 'stalled') {
+    const who = input.managerName?.trim() || 'the next manager';
     return {
       kind: 'stalled',
-      label: '[new copy: stalled_waiting]',
-      commissionerNotice: '[new copy: stalled_commissioner]',
+      tag: 'Draft paused',
+      label: `No stock left fits ${who}'s next slot`,
+      line: input.isCommissioner
+        ? "The clock is stopped and nobody is skipped. You've been notified; the draft continues once the slot can be filled."
+        : 'The clock is stopped and nobody is skipped. The commissioner has been told.',
     };
   }
-  return { kind: 'normal', label: null, commissionerNotice: null };
+  return { kind: 'normal', tag: null, label: null, line: null };
 }

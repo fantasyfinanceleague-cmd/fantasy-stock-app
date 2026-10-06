@@ -16,26 +16,28 @@ import { useDraftRoom } from '@/lib/game/useDraftRoom';
 import { QueueEditor } from './QueueEditor';
 import { DRAFT_ROOM_LOAD_FAILED, QUEUE_LOAD_FAILED } from '@/lib/game/draftQueueRead';
 import { managerAtPick, boardRows } from '@/lib/game/draftBoard';
-import { pickRowView, pickRefusalLine } from '@/lib/game/draftRoom';
+import { pickRowView, pickRefusalLine, pickRefusalNextStep } from '@/lib/game/draftRoom';
 import { turnState } from '@/lib/game/draftRefusals';
 
 export interface DraftRoomProps {
   leagueId: string;
   myUserId: string;
   rounds: number;
+  /** The stalled-turn card's line differs for the commissioner (board "Draft paused"). */
+  isCommissioner?: boolean;
 }
 
 /** The draft room (3c, key screen 4): the clock, the snake board, the pick log,
  * search and the one-tap Draft, and the auto-pick backstop. A legacy SKIP row is
  * a plain row with a dash. Nothing is shown as a pick that the server did not
  * record. */
-export function DraftRoom({ leagueId, myUserId, rounds }: DraftRoomProps) {
+export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false }: DraftRoomProps) {
   const { colors } = useTheme();
   const room = useDraftRoom(leagueId);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [refusal, setRefusal] = useState<string | null>(null);
+  const [refusal, setRefusal] = useState<{ line: string; next: string | null } | null>(null);
   const owned = useMemo(() => new Set(Array.from(room.picks.values()).map((p) => p.symbol.toUpperCase())), [room.picks]);
 
   const m = room.order.length;
@@ -93,7 +95,10 @@ export function DraftRoom({ leagueId, myUserId, rounds }: DraftRoomProps) {
     const { data, error } = await seamInvoke('validate-and-record-pick', { body: { league_id: leagueId, symbol: selected } });
     setPending(false);
     if (error || !data || data.ok === false) {
-      setRefusal(pickRefusalLine(String(data?.reason ?? 'unknown')));
+      // The board's "Pick refused" copy, with the stock the player tried; the
+      // never-skips refusals add the next step (the clock keeps running).
+      const reason = String(data?.reason ?? 'unknown');
+      setRefusal({ line: pickRefusalLine(reason, { stock: selected }), next: pickRefusalNextStep(reason) });
       return;
     }
     setSelected(null);
@@ -113,12 +118,13 @@ export function DraftRoom({ leagueId, myUserId, rounds }: DraftRoomProps) {
 
   const rows = boardRows(room.order, rounds, room.picks, onClockPick);
   const log = Array.from(room.picks.entries()).sort((a, b) => b[0] - a[0]).slice(0, 8);
-  const stalled = stalledAt === onClockPick ? turnState({ reason: 'stalled', pickNumber: onClockPick }) : null;
+  const stalled = stalledAt === onClockPick ? turnState({ reason: 'stalled', pickNumber: onClockPick, managerName: nameOf(onClockManager), isCommissioner }) : null;
   const headline = stalled ? (stalled.label ?? '') : room.clock.kind === 'auto_picking' ? 'Auto-picking…' : isMyTurn ? "You're on the clock" : `${nameOf(onClockManager)} is up`;
 
   return (
     <View style={styles.stack}>
       <Card>
+        {stalled?.tag ? <Text variant="tag" color={colors.liveText}>{stalled.tag}</Text> : null}
         <View style={styles.clockRow}>
           {room.clock.kind === 'last10' ? <LiveDot size={8} /> : null}
           <Text variant="headline" style={{ color: room.clock.kind === 'last10' ? colors.loss : colors.text }}>
@@ -128,7 +134,7 @@ export function DraftRoom({ leagueId, myUserId, rounds }: DraftRoomProps) {
         <Text variant="callout" style={isMyTurn ? { fontWeight: '700' } : undefined}>{headline}</Text>
         <Text variant="callout">{`Round ${round} · Pick ${onClockPick}`}</Text>
         <Text variant="caption" tone="secondary">{`${room.pickSeconds}-second picks`}</Text>
-        {stalled?.commissionerNotice ? <Text variant="caption" tone="secondary">{stalled.commissionerNotice}</Text> : null}
+        {stalled?.line ? <Text variant="caption" tone="secondary">{stalled.line}</Text> : null}
       </Card>
 
       <Card>
@@ -162,7 +168,12 @@ export function DraftRoom({ leagueId, myUserId, rounds }: DraftRoomProps) {
             ownedSymbols={owned}
           />
           <Button label="Draft" onPress={draft} disabled={!selected || pending} />
-          {refusal ? <Text variant="callout">{refusal}</Text> : null}
+          {refusal ? (
+            <View accessibilityLiveRegion="polite" style={styles.refusal}>
+              <Text variant="callout">{refusal.line}</Text>
+              {refusal.next ? <Text variant="caption" tone="secondary">{refusal.next}</Text> : null}
+            </View>
+          ) : null}
         </Card>
       ) : null}
 
@@ -197,6 +208,7 @@ export function DraftRoom({ leagueId, myUserId, rounds }: DraftRoomProps) {
 
 const styles = StyleSheet.create({
   stack: { gap: space[3] },
+  refusal: { gap: space[1] },
   clockRow: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
   boardRow: { flexDirection: 'row', gap: space[1] },
   cell: { flex: 1, minHeight: 44, borderWidth: 1, borderColor: 'transparent', borderRadius: 6, alignItems: 'center', justifyContent: 'center', paddingVertical: space[1] },

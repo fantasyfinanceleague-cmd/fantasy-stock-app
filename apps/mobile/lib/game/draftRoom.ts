@@ -54,7 +54,8 @@ export function clockState(input: { running: boolean; deadlineAt: string | null;
 }
 
 /** The pick refusals the app has always shown, VERBATIM (existing copy, from the
- * legacy draft route). The never-skips reasons are flagged placeholders. */
+ * legacy draft route). The never-skips reasons (would_strand_slot,
+ * budget_reserve) carry the board's ruled copy below (pickRefusalLine). */
 const PICK_REFUSAL_LINES: Record<string, string> = {
   not_your_turn: "It's not your turn to pick",
   draft_complete: 'The draft is already complete',
@@ -69,11 +70,40 @@ const PICK_REFUSAL_LINES: Record<string, string> = {
   draft_not_complete: 'The draft is not finished yet',
   forbidden_target: "You can't pick on that player's behalf",
   not_a_member: "You're not a member of this league",
-  would_strand_slot: '[new copy: would_strand_slot]',
-  budget_reserve: '[new copy: budget_reserve]',
 };
 
-/** The line for a refused pick: its own copy, or one honest generic line, never a raw reason. */
-export function pickRefusalLine(reason: string): string {
-  return PICK_REFUSAL_LINES[reason] ?? "That pick can't be made.";
+/** What the refusal is about: the stock the player tried (always known on the
+ * phone), and, only if the server ever returns them, the manager and the slot
+ * it would strand. validate-and-record-pick returns the reason code alone
+ * today, so the GENERIC lines are what players see. */
+export interface PickRefusalContext {
+  stock: string | null;
+  manager?: string | null;
+  slot?: string | null;
+}
+
+const GENERIC_REFUSAL = "That pick can't be made.";
+
+/** The line for a refused pick: its own copy, or one honest generic line, never
+ * a raw reason. would_strand_slot / budget_reserve: the board's "Pick refused"
+ * frames (#game), specific when the names are known, else generic. */
+export function pickRefusalLine(reason: string, ctx: PickRefusalContext = { stock: null }): string {
+  const stock = ctx.stock?.toUpperCase() || null;
+  if (reason === 'would_strand_slot') {
+    if (stock && ctx.manager && ctx.slot) {
+      return `Taking ${stock} would leave ${ctx.manager} with no stock that fits their ${ctx.slot} slot. Every slot has to be fillable.`;
+    }
+    return stock ? `Taking ${stock} would leave another manager with no stock for one of their slots.` : GENERIC_REFUSAL;
+  }
+  if (reason === 'budget_reserve') {
+    return stock ? `${stock} would leave too little budget for your remaining picks.` : GENERIC_REFUSAL;
+  }
+  return PICK_REFUSAL_LINES[reason] ?? GENERIC_REFUSAL;
+}
+
+/** Under a never-skips refusal, the next step (board "Pick refused" frames). */
+export const PICK_REFUSAL_NEXT_STEP = 'Your clock is still running. Pick from the list, or let your queue pick for you.';
+
+export function pickRefusalNextStep(reason: string): string | null {
+  return reason === 'would_strand_slot' || reason === 'budget_reserve' ? PICK_REFUSAL_NEXT_STEP : null;
 }

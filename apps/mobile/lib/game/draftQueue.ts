@@ -41,12 +41,14 @@ export function addSymbol(list: string[], symbol: string): string[] {
   return [...list, s];
 }
 
-/** The line for a refused save. Existing copy is verbatim; the new refusals are flagged. */
+/** The line for a refused save. Existing copy is verbatim; too_many and
+ * unknown_symbols are NEW copy, flagged for the Design Lead (they replaced
+ * placeholders that showed to players: P0, Design Lead audit). */
 export function queueRefusalLine(reason: string): string {
   switch (reason) {
     case 'draft_completed': return 'The draft is already complete';
-    case 'too_many': return '[new copy: queue_too_many]';
-    case 'unknown_symbols': return '[new copy: queue_unknown_symbols]';
+    case 'too_many': return `Your queue can hold up to ${QUEUE_MAX} stocks.`;
+    case 'unknown_symbols': return "Some of these stocks can't be queued. Remove them and try again.";
     default: return "Your queue couldn't be saved.";
   }
 }
