@@ -160,6 +160,37 @@ Keep **League settings** reachable from the League tab, as today. **Remove its "
 
 **The Home follow-up lives here, in 3c.** R1, R3's Home card and R4 are Home edits. 3b-2 will have merged, so 3c owns these changes to Home's components. Keep them additive (a new card in the season-complete and post-season states), don't restructure 3b-2's Home, and tell the Design Lead if a Home component needs to change shape.
 
+## Draft feasibility copy ("a draft pick can never be unused", Giorgio; NEW COPY for his audit)
+
+**Board:** Part 2 › "Matchups, draft and playoffs": the frames "Pick refused · …", "Start the draft · setup can't fill every slot", "· check unavailable", "Draft paused" (member and commissioner) and "Push · draft paused". Use the **specific** line when the server returns who, which or how much; otherwise use the **generic** line. Keep these strings in `gameCopy.ts`, tagged new.
+
+**Pick refusals.** A sheet titled "Pick a different stock" appears **instantly**. The clock keeps running, and the sheet adds "Your clock is still running. Pick from the list, or let your queue pick for you." with [Back to the list].
+- `would_strand_slot`:
+  - specific: "Taking {TICKER} would leave {Name} with no stock that fits their {slot name} slot. Every slot has to be fillable."
+  - generic: "Taking {TICKER} would leave another manager with no stock for one of their slots."
+- `budget_reserve` (budget-cap leagues):
+  - specific: "{TICKER} would leave {$left} for your {n} remaining picks. You need at least {$needed} to fill them."
+  - generic: "{TICKER} would leave too little budget for your remaining picks."
+
+**Start / setup blockers.** These go on the Start-the-draft sheet. Start stays disabled while any blocker applies. The lead line is "Every slot has to be fillable before the draft can start. Fix these in League settings:", followed by one warn card per blocker and [League settings].
+- `slots_infeasible`:
+  - specific: "Not enough stocks fit every slot: {n} managers each need a {slot description}, and only {m} qualify. Loosen a slot rule or a price bracket."
+  - generic: "There aren't enough eligible stocks to fill every manager's slots. Loosen a slot rule or a price bracket."
+- `budget_infeasible`:
+  - specific: "The budget can't fill every slot: the {k} cheapest stocks that fit cost {$cost}, more than the {$budget} budget. Raise the budget or change the price brackets."
+  - generic: "The budget isn't enough to fill every manager's slots. Raise the budget or change the price brackets."
+- `feasibility_unavailable`: "We couldn't check the draft setup just now. Try again in a moment." with [Try again]. Start stays disabled until the check succeeds; never fail open.
+- The same blockers appear (as a heads-up, not a gate) on Create league and League settings when the setup is already infeasible.
+
+**Stalled turn** (no legal stock; should never happen). The draft-room card gets the tag "Draft paused", the title "No stock left fits {Name}'s next slot", and:
+- members: "The clock is stopped and nobody is skipped. The commissioner has been told."
+- commissioner: "The clock is stopped and nobody is skipped. You've been notified; the draft continues once the slot can be filled."
+The header chip reads "Paused". No auto-pick and no skip while paused; show the clock as stopped, not counting.
+
+**Commissioner push:** "{League}: The draft is paused: no stock left fits {Name}'s next slot." Use the in-app notification for the same text.
+
+**Tone rules:** plain and specific, no blame ("would leave", not "you can't"). Never "error" or "invalid". Refusals appear instantly (§4) and never look like success. Map unknown reasons to the generic draft-refusal line, never a raw code.
+
 ## Backend (check before building; don't assume)
 
 - **Live, use as-is:**

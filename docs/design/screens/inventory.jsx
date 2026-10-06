@@ -1772,12 +1772,105 @@
     );
   }
 
+  // ═════════════════════════════════════════════════════════════════════
+  // DRAFT FEASIBILITY (2026-10-05): "a draft pick can never be unused".
+  // New copy for Giorgio's audit. Specific wording when the backend returns
+  // who/which/how much; the generic line otherwise.
+  // ═════════════════════════════════════════════════════════════════════
+  const Alert = ({ children }) => (
+    <div role="alert" className="ks-card" style={{ padding: '10px 12px', background: 'var(--c-warn-tint)', borderColor: 'var(--c-warn-line)', boxShadow: 'none' }}>
+      <span className="ks-callout" style={{ fontWeight: 600, color: 'var(--c-text)' }}>{children}</span>
+    </div>
+  );
+  /** A pick the server refused (would_strand_slot | budget_reserve). */
+  function DraftRefused({ kind = 'strand' }) {
+    return (
+      <Device tab="league" label={`Draft room, pick refused (${kind})`} overlay={
+        <Sheet top={470}>
+          <span className="ks-title">Pick a different stock</span>
+          <Alert>{kind === 'strand'
+            ? 'Taking ORCL would leave Paolo M. with no stock that fits their Tech slot. Every slot has to be fillable.'
+            : 'ORCL would leave $640.00 for your 4 remaining picks. You need at least $780.00 to fill them.'}</Alert>
+          <span className="ks-caption">Your clock is still running. Pick from the list, or let your queue pick for you.</span>
+          <span className="ks-btn">Back to the list</span>
+        </Sheet>
+      }>
+        <Head name="Office League" chip={<Chip kind="live">Drafting</Chip>} />
+        <div className="ks-pad ks-stack"><span className="ks-title" style={{ color: 'var(--c-live-text)' }}>You're on the clock</span><span className="ks-callout">Round 2 · Pick 11 · 0:31 left</span></div>
+      </Device>
+    );
+  }
+  /** Start the draft, blocked by the feasibility check. */
+  function StartBlocked({ unavailable }) {
+    return (
+      <Device tab="league" label={unavailable ? 'Start the draft, check unavailable' : 'Start the draft, setup blocked'} overlay={
+        <Sheet top={unavailable ? 470 : 330}>
+          <span className="ks-title">Start the draft?</span>
+          {unavailable ? (
+            <>
+              <Alert>We couldn't check the draft setup just now. Try again in a moment.</Alert>
+              <span className="ks-btn ks-btn--secondary">Try again</span>
+            </>
+          ) : (
+            <>
+              <span className="ks-callout ks-muted">Every slot has to be fillable before the draft can start. Fix these in League settings:</span>
+              <Alert>Not enough stocks fit every slot: 8 managers each need a Tech stock under $50, and only 5 qualify. Loosen a slot rule or a price bracket.</Alert>
+              <Alert>The budget can't fill every slot: the 6 cheapest stocks that fit cost $1,140.00, more than the $1,000.00 budget. Raise the budget or change the price brackets.</Alert>
+              <span className="ks-btn ks-btn--secondary">League settings</span>
+            </>
+          )}
+          <span className="ks-btn" style={{ opacity: 0.4 }} aria-disabled="true">Start draft</span>
+        </Sheet>
+      }>
+        <Head name="Office League" chip={<span className="ks-chip">Pre-draft</span>} />
+      </Device>
+    );
+  }
+  /** A stalled turn: no legal stock for the manager on the clock. */
+  function DraftStalled({ commish }) {
+    return (
+      <Device tab="league" label={commish ? 'Draft paused, commissioner' : 'Draft paused, member'}>
+        <Head chip={<span className="ks-chip">Paused</span>} />
+        <div className="ks-pad ks-stack">
+          <div className="ks-game" style={{ padding: 16, display: 'grid', gap: 8 }}>
+            <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Draft paused</span>
+            <span className="ks-title" style={{ fontSize: 20 }}>No stock left fits Paolo M.'s next slot</span>
+            <span className="ks-callout ks-muted">{commish
+              ? "The clock is stopped and nobody is skipped. You've been notified; the draft continues once the slot can be filled."
+              : 'The clock is stopped and nobody is skipped. The commissioner has been told.'}</span>
+          </div>
+          <span className="ks-caption">Round 2 · Pick 12 · Paolo M.</span>
+        </div>
+      </Device>
+    );
+  }
+  function StallPush() {
+    return (
+      <Device noTabs time="7:24" label="Push to the commissioner: draft paused" style={{ background: 'linear-gradient(160deg, #3B4F7A 0%, #1B2540 55%, #0E1426 100%)', color: '#fff' }}>
+        <div style={{ position: 'relative', textAlign: 'center', color: '#fff', paddingTop: 16 }}>
+          <div style={{ fontSize: 17, fontWeight: 600, opacity: 0.9 }}>Saturday, October 3</div>
+          <div style={{ fontSize: 84, fontWeight: 700, lineHeight: '90px', letterSpacing: '-2px' }}>7:24</div>
+        </div>
+        <div style={{ position: 'relative', margin: '28px 12px 0', padding: '12px 14px', borderRadius: 22, background: 'rgba(245, 246, 250, 0.82)', backdropFilter: 'blur(20px)', color: '#0D1B2E', display: 'grid', gridTemplateColumns: '38px 1fr', gap: 10 }}>
+          <span style={{ width: 38, height: 38, borderRadius: 9, background: '#0D1B2E', display: 'grid', placeItems: 'center' }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="13" width="4.5" height="8" rx="1" fill="#8DA0BD" /><rect x="9.75" y="9" width="4.5" height="12" rx="1" fill="#8DA0BD" /><rect x="16.5" y="4" width="4.5" height="17" rx="1" fill="#6E9BFF" /></svg>
+          </span>
+          <span>
+            <span style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15 }}><b>{K.LEAGUE.name}</b><span style={{ color: '#5B6678', fontSize: 13 }}>now</span></span>
+            <span style={{ fontSize: 15, lineHeight: '20px' }}>The draft is paused: no stock left fits Paolo M.'s next slot.</span>
+          </span>
+        </div>
+      </Device>
+    );
+  }
+
   window.KSInventory = {
     SignIn, SignUp, SignUpPaused, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeUnpriced, HomeScoring, HomeComplete,
     AllMatchups, MatchupPreSeason, Playoffs6, ArrangeOrder, OrderPush, DraftLobby, StartDraftConfirm, CreateSeason, DraftAutoPick, DraftRecap, Playoffs,
     SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,
     OneShareSell, OneShareBuy,
+    DraftRefused, StartBlocked, DraftStalled, StallPush,
     RibHome, RibLeague, RibPush, RibMemberPrompt, RibHomeCounts, RibReconcile, RibMemberList, RibResolve, RibReview, RibHistory,
     WebHome, WebPortfolio, WebSettings,
   };
