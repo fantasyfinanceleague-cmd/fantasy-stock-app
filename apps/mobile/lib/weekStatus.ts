@@ -1,5 +1,7 @@
 // lib/weekStatus.ts
 
+import { resolveWeekWindow, type MarketCalendarSession } from './time/marketWeek';
+
 interface HolidayInfo {
   isHoliday: boolean;
   holidayName: string | null;
@@ -44,18 +46,40 @@ interface League {
  */
 export type SeasonPhase = 'pre_draft' | 'drafting' | 'pre_season' | 'regular' | 'playoffs' | 'completed';
 
-export function getSeasonPhase(league: League | null, now: Date = new Date()): SeasonPhase {
+/**
+ * T0: the instant the season really starts, i.e. week 1's FIRST CALENDAR OPEN
+ * (U1, docs/audits/2026-09-30-week-window-audit.md). `league_start_date` is
+ * week 1's stored `week_start`, a nominal Tuesday 14:30Z (_shared/schedule.ts),
+ * but the Monday baseline is cut at Monday's open. Treating the stored value
+ * as the boundary left all of week-1 Monday reading as pre-season while
+ * roster moves landed in the unscored gap. resolveWeekWindow finds the real
+ * first session of that ISO week (Tuesday's open on a holiday Monday), the
+ * same derivation as Home's B3. With no calendar coverage it falls back to
+ * the stored value, as Home does, rather than inventing an open time.
+ */
+export function seasonStartInstant(league: League | null, marketCalendar: MarketCalendarSession[] = []): Date | null {
+  const raw = league?.league_start_date;
+  if (!raw) return null;
+  const stored = new Date(raw);
+  if (Number.isNaN(stored.getTime())) return null;
+  const t0 = resolveWeekWindow(raw, marketCalendar)?.weekStart;
+  return t0 ? new Date(t0) : stored;
+}
+
+export function getSeasonPhase(
+  league: League | null,
+  now: Date = new Date(),
+  marketCalendar: MarketCalendarSession[] = [],
+): SeasonPhase {
   if (!league) return 'pre_draft';
   if (league.draft_status === 'not_started') return 'pre_draft';
   if (league.draft_status === 'in_progress') return 'drafting';
 
   // draft_status is 'completed' (or a legacy/unrecognized value — treated the
   // same as the rest of this file treats an unrecognized draft_status).
-  if (league.league_start_date) {
-    const start = new Date(league.league_start_date);
-    if (!Number.isNaN(start.getTime()) && start.getTime() > now.getTime()) {
-      return 'pre_season';
-    }
+  const start = seasonStartInstant(league, marketCalendar);
+  if (start && start.getTime() > now.getTime()) {
+    return 'pre_season';
   }
 
   const currentWeek = league.current_week || 1;
@@ -102,26 +126,20 @@ export function formatShortDateTime(input: string | Date): string {
   return `${formatShortWeekdayDate(d)} · ${time}`;
 }
 
-function parseLeagueStartDate(league: League | null): Date | null {
-  const raw = league?.league_start_date;
-  if (!raw) return null;
-  const start = new Date(raw);
-  return Number.isNaN(start.getTime()) ? null : start;
-}
 
 /** Short copy for a phase that precedes the ordinary season lifecycle. Empty
  * string for 'regular'/'playoffs'/'completed' — callers already have their
  * own copy for those and should keep using it. Shared by the League tab and
  * Home so both show the same words for the same phase (see CLAUDE.md's "UI
  * entry points" note on the Week-1-Live bug appearing in two places). */
-export function getSeasonLabel(phase: SeasonPhase, league: League | null): string {
+export function getSeasonLabel(phase: SeasonPhase, league: League | null, marketCalendar: MarketCalendarSession[] = []): string {
   switch (phase) {
     case 'pre_draft':
       return 'Draft pending';
     case 'drafting':
       return 'Drafting';
     case 'pre_season': {
-      const start = parseLeagueStartDate(league);
+      const start = seasonStartInstant(league, marketCalendar);
       if (!start) return 'Starts soon';
       return `Starts ${formatShortWeekdayDate(start)}`;
     }
@@ -135,8 +153,8 @@ export function getSeasonLabel(phase: SeasonPhase, league: League | null): strin
  * "Starts" prefix (the KPI's own label already reads "Week", and its sub
  * line carries "starts · N weeks"). 'Soon' mirrors getSeasonLabel's
  * 'Starts soon' fallback for a missing/invalid date. */
-export function formatSeasonStartShort(league: League | null): string {
-  const start = parseLeagueStartDate(league);
+export function formatSeasonStartShort(league: League | null, marketCalendar: MarketCalendarSession[] = []): string {
+  const start = seasonStartInstant(league, marketCalendar);
   return start ? formatShortMonthDay(start) : 'Soon';
 }
 
@@ -183,16 +201,16 @@ export function canTradeInPhase(phase: SeasonPhase): boolean {
   return phase !== 'pre_draft' && phase !== 'drafting';
 }
 
-/** "Week 1 starts Tue, Sep 29" — the pre_season Matchup tab's headline for
+/** "Week 1 starts Mon, Sep 28" (T0's day, see seasonStartInstant) — the pre_season Matchup tab's headline for
  * an already-scheduled-but-not-yet-live matchup (the schedule exists once
  * the draft finalizes, so `current_week`/`league_start_date` are real by
  * this phase, unlike pre_draft/drafting where getSeasonLabel's generic copy
  * is used instead). Falls back to getSeasonLabel's "Starts soon" wording
  * for a missing/invalid start date, same as every other pre-season date
  * site in this file. */
-export function getUpcomingMatchupLabel(league: League | null): string {
+export function getUpcomingMatchupLabel(league: League | null, marketCalendar: MarketCalendarSession[] = []): string {
   const week = league?.current_week || 1;
-  const start = parseLeagueStartDate(league);
+  const start = seasonStartInstant(league, marketCalendar);
   const startLabel = start ? formatShortWeekdayDate(start) : 'soon';
   return `Week ${week} starts ${startLabel}`;
 }

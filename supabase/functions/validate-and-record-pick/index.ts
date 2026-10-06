@@ -25,23 +25,23 @@
 // policy) — either with an explicit symbol (action:'pick', for_user_id=bot,
 // the web-era shape) or letting the SERVER choose one (action:'bot_pick', see
 // below — mobile has no client-side bot stock pool) — OR any league member
-// skipping the CURRENT picker's turn when that picker is a bot (action:'skip',
-// the stuck-bot escape hatch), OR any league member re-running draft
+// (action:'skip' is REFUSED for everyone since 2026-10-05), OR any league member re-running draft
 // finalization (action:'finalize', see below), OR any league member asking the
 // server to auto-pick an EXPIRED turn (action:'auto_pick', see below).
 //
 // Every written row carries drafts.pick_source (20261010000000): 'manual' for
-// action:'pick', 'skip' for action:'skip', 'bot'/'skip' for bot_pick, and
-// 'auto_queue'/'auto_best'/'auto_skip' (or 'bot'/'skip' on a bot's turn) for
+// action:'pick', 'bot' for bot_pick, and 'auto_queue'/'auto_best' for
 // auto_pick. The UI's "Auto-picked" label is pick_source LIKE 'auto_%'.
+// NO SKIP (2026-10-05): action:'skip' is refused (skip_disabled), and a turn
+// with no legal stock returns reason 'stalled' with nothing written for the picker.
 //
 // action:'bot_pick': mobile's bot auto-picker. Any member's client may fire
 // this when it's a bot's turn (mirrors web's client-driven botAutoPick, but
 // the SERVER — not the client — chooses the symbol, via autoPickTurn in
 // ../_shared/draft-write.ts: a best-available pool queried per OPEN price
 // bracket, ranked by ../_shared/auto-pick.ts's strategy, each candidate tried
-// through the SAME live-price + validatePick gate a human pick uses, falling
-// back to a SKIP). Instant — bots are not held to the clock while a client is
+// through the SAME live-price + gatePick gate a human pick uses; a turn with no
+// legal stock STALLS, it is never skipped). Instant — bots are not held to the clock while a client is
 // connected; with nobody connected the draft-autopick-sweep cron picks for
 // them once their clock expires.
 //
@@ -53,7 +53,7 @@
 // decideAutoPickGate): already recorded -> {ok:true, already_recorded:true}
 // with no Alpaca call; not yet expired -> {ok:false, reason:'not_overdue',
 // deadline_at, server_now}. Then: the manager's draft queue in order, then
-// best available; auto_skip only when nothing is legal. A manual pick racing
+// best available; 'stalled' (never a SKIP) only when nothing is legal. A manual pick racing
 // it is settled by the (league_id, pick_number) unique index — the first
 // committed insert wins, the loser gets 'pick_conflict'.
 //
@@ -78,7 +78,7 @@ import {
   fetchDraftClock,
   finalizeDraft,
   insertGatedPick,
-  insertSkip,
+  loadFeasibility,
   isDraftFull,
   leagueRules,
   loadDraftContext,
@@ -230,13 +230,10 @@ Deno.serve(async (req: Request) => {
     }
     if (action === 'finalize') return json({ ok: false, reason: 'draft_not_complete' }); // 200: game-flow refusal
 
-    // ---- Skip: forfeit the current turn (stuck-bot escape hatch) ----------
-    if (action === 'skip') {
-      // Target already constrained above: self (voluntary forfeit) or a bot.
-      const result = await insertSkip(admin, ctx, targetId, 'skip');
-      if (!result.ok) return json({ ok: false, reason: result.reason }); // 200: game-flow refusal (join-league pattern)
-      return json({ ok: true, pick: result.pick, draft_complete: result.complete, status_update_error: result.statusError });
-    }
+    // ---- Skip: REFUSED for everyone (2026-10-05, "a draft pick can never be
+    // unused"). The stuck-bot escape hatch and the voluntary forfeit both went
+    // with the SKIP sentinel; a turn with no legal stock stalls and is alerted.
+    if (action === 'skip') return json({ ok: false, reason: 'skip_disabled' }); // 200: game-flow refusal
 
     // ---- Auto-pick: the pick clock expired (server-judged) ----------------
     if (action === 'auto_pick') {
@@ -290,18 +287,6 @@ Deno.serve(async (req: Request) => {
           ? json({ ok: false, reason: 'unhandled' }, 500)
           : json({ ok: false, reason: result.reason }); // pick_conflict: 200, race lost, client retries
       }
-      if (result.pickSource === 'skip') {
-        // No candidate was legal (or none had a live price) — the bot's turn
-        // was forfeited so the draft still advances instead of stalling.
-        return json({
-          ok: true,
-          pick: result.pick,
-          pick_source: result.pickSource,
-          draft_complete: result.complete,
-          status_update_error: result.statusError,
-          bot_skipped: true,
-        });
-      }
       return json({
         ok: true,
         pick: result.pick,
@@ -327,9 +312,13 @@ Deno.serve(async (req: Request) => {
 
     // is_draftable gate (DR-001): a non-draftable symbol is refused unless the
     // commissioner set allow_undraftable. A missing symbols row => not draftable.
-    const { data: symRow } = await admin
-      .from('symbols').select('is_draftable').eq('symbol', symbol).maybeSingle();
+    const { data: symRow, error: symErr } = await admin
+      .from('symbols').select('is_draftable, last_price').eq('symbol', symbol).maybeSingle();
+    // A failed read must never look like "not draftable" or "no cached price":
+    // that would let applyPick keep a stranding stock in the pool.
+    if (symErr) return json({ ok: false, reason: 'unhandled' }, 500);
     const isDraftable = symRow?.is_draftable === true;
+    const cachedPrice = symRow?.last_price == null ? null : Number(symRow.last_price);
 
     const rules = leagueRules(league, numRounds);
 
@@ -341,6 +330,9 @@ Deno.serve(async (req: Request) => {
 
     // The ONE legality gate (../_shared/pick-gate.ts): the same validatePick
     // every auto-pick passes, producing the only thing insertGatedPick accepts.
+    // Feasibility (2026-10-05): fail CLOSED — if the pool cannot be read the
+    // outer catch returns 500 rather than gating a pick without it.
+    const feasibility = await loadFeasibility(admin, ctx, slots, targetId);
     const gate = gatePick(leagueId, {
       rules,
       slots,
@@ -352,7 +344,7 @@ Deno.serve(async (req: Request) => {
       price: fill.price,
       eligibleCategories,
       isDraftable,
-    });
+    }, { state: feasibility.state, open: feasibility.open, cachedPrice, eligibility: eligibleCategories });
     if (!gate.ok) return json({ ok: false, reason: gate.reason }); // 200: game-flow refusal (join-league pattern)
 
     const ins = await insertGatedPick(admin, gate.pick, 'manual');

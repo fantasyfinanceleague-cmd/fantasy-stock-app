@@ -58,7 +58,6 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import {
-  canStartDraft,
   computeBotsNeeded,
   computeStartBlockers,
   isBotsAllowedForEmail,
@@ -66,7 +65,65 @@ import {
   type LeagueStartState,
   MIN_DRAFT_MEMBERS,
   nextBotIds,
+  type StartBlocker,
 } from './rules.ts';
+import { checkStartFeasibility, typesFromSlots } from '../_shared/draft-feasibility.ts';
+import { leagueRules, loadSlots, poolGroups } from '../_shared/draft-write.ts';
+import type { Slot } from '../_shared/draft-validation.ts';
+
+/**
+ * "A draft pick can never be unused" (2026-10-05): can every slot of every
+ * manager be filled, at current cached prices, with the budget reserve? Read by
+ * status and start (current slots, the real member count) and by check_setup
+ * (the PROPOSED slots, at the league cap: the worst case the league can reach).
+ * Fails CLOSED: a pool that cannot be read is a blocker, never a pass.
+ */
+async function feasibilityBlockers(
+  // deno-lint-ignore no-explicit-any
+  admin: any,
+  // deno-lint-ignore no-explicit-any
+  league: any,
+  managers: number,
+  // null = the league's SAVED slots (status/start); an array = the PROPOSED set
+  // (check_setup), where [] means a slot-less league, not "use the saved ones".
+  proposedSlots: Slot[] | null,
+): Promise<StartBlocker[]> {
+  try {
+    const numRounds = Number(league.num_rounds) || 6;
+    let slots: Slot[];
+    if (proposedSlots) {
+      slots = proposedSlots;
+    } else {
+      const loaded = await loadSlots(admin, String(league.id));
+      if (loaded.error) throw new Error('slots_fetch_failed'); // fail CLOSED, never read as slot-less
+      slots = loaded.slots;
+    }
+    const types = typesFromSlots(slots, numRounds);
+    const rules = leagueRules(league, numRounds);
+    const groups = await poolGroups(
+      admin,
+      types,
+      [],
+      rules.allowUndraftable !== true,
+      managers * numRounds + 2,
+    );
+    const verdict = checkStartFeasibility({
+      types,
+      managers,
+      numRounds,
+      budget: rules.stakeMode === 'budget_cap' ? Number(rules.budgetAmount) || 0 : null,
+      groups,
+    });
+    if (verdict.ok) return [];
+    if (verdict.reason === 'slots_infeasible') {
+      return [{ code: 'slots_infeasible', ordinals: verdict.hall.ordinals, need: verdict.hall.need, have: verdict.hall.have }];
+    }
+    return [{ code: 'budget_infeasible', reserve: verdict.reserve, budget: verdict.budget }];
+  } catch (e) {
+    console.error('feasibility check failed', String(league?.id), String(e));
+    return [{ code: 'feasibility_unavailable' }];
+  }
+}
 
 function isAllowedOrigin(origin: string): boolean {
   if (!origin) return false;
@@ -138,12 +195,18 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json().catch(() => ({}));
     const leagueId = String(body.league_id ?? '').trim();
-    const action = body.action === 'start' ? 'start' : body.action === 'add_bots' ? 'add_bots' : 'status';
+    const action = body.action === 'start'
+      ? 'start'
+      : body.action === 'add_bots'
+      ? 'add_bots'
+      : body.action === 'check_setup'
+      ? 'check_setup'
+      : 'status';
     if (!leagueId) return json({ ok: false, reason: 'bad_request' }, 400);
 
     const { data: league, error: lgErr } = await admin
       .from('leagues')
-      .select('id, commissioner_id, draft_status, stake_mode, draft_date, num_participants, league_type, playoff_teams')
+      .select('id, commissioner_id, draft_status, stake_mode, draft_date, num_participants, league_type, playoff_teams, num_rounds, budget_amount, allow_undraftable')
       .eq('id', leagueId)
       .maybeSingle();
     if (lgErr) return json({ ok: false, reason: 'unhandled' }, 500);
@@ -187,7 +250,12 @@ Deno.serve(async (req: Request) => {
 
     if (action === 'status') {
       const now = new Date();
-      const blockers = computeStartBlockers(state, now);
+      // Feasibility is judged only when nothing else blocks the start: the pool
+      // read is the costly part, and "set a date" is the more useful message.
+      const basic = computeStartBlockers(state, now);
+      const blockers = basic.length > 0
+        ? basic
+        : [...basic, ...(await feasibilityBlockers(admin, league, memberIds.length, null))];
       return json({
         ok: true,
         can_start: blockers.length === 0,
@@ -203,6 +271,47 @@ Deno.serve(async (req: Request) => {
 
     if (!isCommissioner(state, user.id)) {
       return json({ ok: false, reason: 'not_commissioner' }, 403);
+    }
+
+    if (action === 'check_setup') {
+      // The PROPOSED slot set (not yet saved), judged at the league cap: the
+      // worst case the league can reach. The client saves only on ok:true.
+      // Strict input (review): an array of at most 12 slots, integer counts,
+      // finite bounds. Anything else is a 400, never a silently looser verdict.
+      if (!Array.isArray(body.slots) || body.slots.length > 12) {
+        return json({ ok: false, reason: 'bad_request' }, 400);
+      }
+      const finiteOrNull = (v: unknown): number | null | 'bad' => {
+        if (v == null || v === '') return null;
+        const n = Number(v);
+        return Number.isFinite(n) && n >= 0 ? n : 'bad';
+      };
+      const proposed: Slot[] = [];
+      for (let i = 0; i < body.slots.length; i++) {
+        const r = body.slots[i] as Record<string, unknown>;
+        const count = Number(r?.slot_count);
+        const lo = finiteOrNull(r?.price_min);
+        const hi = finiteOrNull(r?.price_max);
+        if (!Number.isInteger(count) || count < 1 || count > 12 || lo === 'bad' || hi === 'bad') {
+          return json({ ok: false, reason: 'bad_request' }, 400);
+        }
+        proposed.push({
+          id: `proposed-${i}`,
+          slotIndex: i,
+          slotCount: count,
+          priceMin: lo,
+          priceMax: hi,
+          categoryId: r?.category_id ? String(r.category_id) : null,
+        });
+      }
+      const blockers = await feasibilityBlockers(admin, league, state.numParticipants, proposed);
+      // Only the verdict leaves the server: the hall / reserve detail is a count
+      // oracle over arbitrary brackets and categories, so it stays in the logs.
+      if (blockers.length > 0) {
+        console.error('check_setup refused', String(league.id), JSON.stringify(blockers));
+        return json({ ok: false, reason: blockers[0].code });
+      }
+      return json({ ok: true });
     }
 
     if (action === 'add_bots') {
@@ -235,7 +344,10 @@ Deno.serve(async (req: Request) => {
 
     // action === 'start'
     const now = new Date();
-    const blockers = computeStartBlockers(state, now);
+    const basic = computeStartBlockers(state, now);
+    const blockers = basic.length > 0
+      ? basic
+      : [...basic, ...(await feasibilityBlockers(admin, league, memberIds.length, null))];
     if (blockers.length > 0) {
       return json({ ok: false, reason: blockers[0].code, blockers }); // 200: game-flow refusal
     }
@@ -258,11 +370,12 @@ Deno.serve(async (req: Request) => {
       // (idempotent — someone else started it a moment ago); otherwise it
       // moved to a state we don't expect (e.g. someone completed a re-draft
       // out from under us) and we surface that as a fresh blocker set.
-      const { data: recheck } = await admin
+      const { data: recheck, error: recheckErr } = await admin
         .from('leagues')
         .select('draft_status')
         .eq('id', leagueId)
         .maybeSingle();
+      if (recheckErr) return json({ ok: false, reason: 'unhandled' }, 500);
       if (recheck?.draft_status === 'in_progress') {
         return json({ ok: true, already_started: true });
       }

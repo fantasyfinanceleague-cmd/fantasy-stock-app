@@ -1,10 +1,12 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { AppState, StyleSheet, View } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 
 import { useMotion } from '@/components/sp/motion';
 import { useTheme } from '@/components/sp/ThemeProvider';
+import { livePulseRunning } from '@/components/sp/logic/livedot';
 
 // Stockpile — <LiveDot> (Phase 2 foundation). SOURCE OF TRUTH: §4 "What never
 // animates": "Anything looping, except the live dot while the market is
@@ -37,11 +39,20 @@ const HALO_DURATION = 1400;
 export function LiveDot({ size = 8 }: LiveDotProps) {
   const { colors } = useTheme();
   const { reduced } = useMotion();
+  // §9B: the pulse pauses when its screen loses focus or the app leaves the
+  // foreground, and resumes on focus or return.
+  const focused = useIsFocused();
+  const [appActive, setAppActive] = useState(AppState.currentState === 'active');
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next) => setAppActive(next === 'active'));
+    return () => sub.remove();
+  }, []);
+  const running = livePulseRunning({ reduced, focused, appActive });
   const haloScale = useSharedValue(1);
   const haloOpacity = useSharedValue(0.5);
 
   useEffect(() => {
-    if (reduced) {
+    if (!running) {
       cancelAnimation(haloScale);
       cancelAnimation(haloOpacity);
       return;
@@ -52,7 +63,7 @@ export function LiveDot({ size = 8 }: LiveDotProps) {
       cancelAnimation(haloScale);
       cancelAnimation(haloOpacity);
     };
-  }, [reduced, haloScale, haloOpacity]);
+  }, [running, haloScale, haloOpacity]);
 
   const haloAnimatedStyle = useAnimatedStyle(() => ({
     opacity: haloOpacity.value,
@@ -63,7 +74,8 @@ export function LiveDot({ size = 8 }: LiveDotProps) {
 
   return (
     <View accessibilityLabel="Live" style={styles.wrap}>
-      {reduced ? null : <Animated.View style={[styles.halo, dimension, { backgroundColor: colors.live }, haloAnimatedStyle]} />}
+      {/* Paused or reduced: only the solid core, never a halo frozen mid-fade. */}
+      {running ? <Animated.View style={[styles.halo, dimension, { backgroundColor: colors.live }, haloAnimatedStyle]} /> : null}
       <View style={[styles.core, dimension, { backgroundColor: colors.live }]} />
     </View>
   );

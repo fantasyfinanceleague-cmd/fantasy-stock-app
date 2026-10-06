@@ -149,6 +149,12 @@
   --c-surface: #FFFFFF;
   --c-inset: #F0F3F7;
   --c-sunken: #EBEFF4;
+  /* Medals (season complete only): a filled disc with the rank numeral.
+     Fills ≥3:1 on surface, bg and the you-tint row; numeral ≥4.5:1 on the fill. */
+  --c-medal-gold: #B07A00;
+  --c-medal-silver: #7C8898;
+  --c-medal-bronze: #C27036;
+  --c-on-medal: #1A1407;
   --c-line: #E3E8EF;
   --c-border: #DDE3EA;
   --c-border-strong: #76828F;
@@ -203,6 +209,10 @@
   --c-surface: #16263D;
   --c-inset: #1E3250;
   --c-sunken: #0A1524;
+  --c-medal-gold: #E8AF2E;
+  --c-medal-silver: #B9C3CF;
+  --c-medal-bronze: #DC8A55;
+  --c-on-medal: #0D1B2E;
   --c-line: #263A58;
   --c-border: #263A58;
   --c-border-strong: #8DA0BD;
@@ -303,7 +313,7 @@
   background: var(--c-tabbar); backdrop-filter: blur(20px);
   border-top: 1px solid var(--c-border);
 }
-.ks-tabs__t { display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--c-text-2); font-size: 10.5px; font-weight: 600; }
+.ks-tabs__t { display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--c-text-2); font-size: 11px; font-weight: 600; }
 .ks-tabs__t svg { width: 26px; height: 26px; }
 .ks-tabs__t--on { color: var(--c-accent); }
 .ks-home-ind { position: absolute; left: 50%; bottom: 8px; width: 139px; height: 5px; margin-left: -69.5px; border-radius: 3px; background: var(--c-text); z-index: 6; }
@@ -420,9 +430,9 @@
   border: 1px solid var(--c-line); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
   font-variant-numeric: tabular-nums;
 }
-.ks-cell__n { font-size: 10px; line-height: 12px; color: var(--c-text-2); font-weight: 600; }
+.ks-cell__n { font-size: 11px; line-height: 12px; color: var(--c-text-2); font-weight: 600; }
 .ks-cell__t { font-size: 12.5px; line-height: 15px; font-weight: 800; letter-spacing: -0.01em; }
-.ks-auto { position: absolute; top: -7px; right: -5px; z-index: 2; padding: 1px 5px; border-radius: 6px; font-size: 8.5px; line-height: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; background: var(--c-inverse-bg); color: var(--c-inverse-fg); }
+.ks-auto { position: absolute; top: -7px; right: -5px; z-index: 2; padding: 1px 5px; border-radius: 6px; font-size: 11px; line-height: 13px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; background: var(--c-inverse-bg); color: var(--c-inverse-fg); }
 .ks-cell--you { border-color: var(--c-you); box-shadow: inset 0 0 0 1px var(--c-you); }
 .ks-cell--you .ks-cell__n { color: var(--c-you-text); }
 .ks-cell--future { background: transparent; border-style: dashed; }
@@ -578,6 +588,7 @@
   .b-concepts { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 402px)); gap: 40px; align-items: start; margin-bottom: 18px; }
   .b-concepts .b-fig { max-width: 402px; }
   .b-concepts figcaption { text-align: left; line-height: 1.45; }
+  .b-sub { margin: 36px 0 16px; font-size: 13px; font-weight: 800; font-stretch: 125%; letter-spacing: .06em; text-transform: uppercase; color: var(--c-text-2); }
   .b-concepts--three { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 28px; }
   .b-themebar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50; display: flex; justify-content: flex-end; padding: 10px 0; pointer-events: none; }
   .b-themebar__in { pointer-events: auto; display: inline-flex; align-items: center; gap: 10px; padding: 6px 6px 6px 14px; border-radius: 999px;
@@ -959,6 +970,36 @@
     };
   })();
 
+  // "Run it back" (Your call, 2026-10-04): Season 1 is over and the
+  // commissioner (Roberto B., you) renews the league for Season 2. Season 1's
+  // final regular season: 14 games each, 3 games a week, so wins = losses =
+  // 42 (checked below). Roberto's line matches the Home season-complete card
+  // (11–3, +$1,962.40, won the Final 2–0). Other season gains are sample data.
+  const SEASON1 = (() => {
+    const rows = [
+      { id: 'roberto', w: 11, l: 3, pf: 1962.40 },
+      { id: 'paolo', w: 10, l: 4, pf: 1744.10 },
+      { id: 'alessandro', w: 8, l: 6, pf: 1203.55 },
+      { id: 'francesco', w: 6, l: 8, pf: 612.80 },
+      { id: 'gianluigi', w: 4, l: 10, pf: -148.25 },
+      { id: 'andrea', w: 3, l: 11, pf: -402.90 },
+    ].map((r, i) => ({ ...r, rank: i + 1, name: byId[r.id].name, init: byId[r.id].init, you: !!byId[r.id].you }));
+    const wins = rows.reduce((a, r) => a + r.w, 0), losses = rows.reduce((a, r) => a + r.l, 0);
+    if (wins !== losses || rows.some((r) => r.w + r.l !== 14)) throw new Error('SEASON1 records do not balance');
+    return {
+      season: 1, rows, champion: 'roberto', runnerUp: 'paolo', playoffTeams: 4,
+      finalDate: 'Fri, Jan 15',
+      next: {
+        season: 2, draft: 'Sat, Jan 23 · 7:00 PM ET', orderSet: 'Sat 6:00 PM ET', keepBy: 'Fri, Jan 22 · 7:00 PM ET', invite: 'SCUD26',
+        // Opt-in (Giorgio, 2026-10-04): every Season 1 player answers I'm in /
+        // I'm out; the commissioner reconciles before the draft can be set.
+        replies: { in: ['roberto', 'paolo', 'francesco', 'gianluigi'], out: ['alessandro'], none: ['andrea'] },
+        joined: [{ id: 'marta', name: 'Marta C.', init: 'MC' }], // new via the invite code
+        maxTeams: 16,
+      },
+    };
+  })();
+
   // The stock sheet (NVDA), Thursday live.
   const NVDA = (() => {
     const r = PORTFOLIO_LIVE.rows.find((x) => x.t === 'NVDA');
@@ -1043,7 +1084,7 @@
     DRAFT_MOMENT, DRAFT_PICKS, DRAFT_SEARCH,
     MATCHUP, WEEK_CLOSES, CHYRONS,
     STANDINGS_BEFORE, STANDINGS_FINAL, WEEK6,
-    PORTFOLIO_LIVE, OTHER_LEAGUES, HOME, NVDA, ROBERTO_WEEKS, SALE,
+    PORTFOLIO_LIVE, OTHER_LEAGUES, HOME, SEASON1, NVDA, ROBERTO_WEEKS, SALE,
     lineup, score, scoreDisplay, byeNotice, record, playoffPlan, playoffLine, SERIE_A, picksForSeat, ordinal,
   };
 })();
@@ -1087,6 +1128,11 @@
     plus: 'M12 5v14M5 12h14',
     close: 'M6 6l12 12M18 6 6 18',
     right: 'm9 6 6 6-6 6',
+    left: 'm15 6-6 6 6 6',
+    up: 'm6 15 6-6 6 6',
+    check: 'M5 12.5 10 17 19 7',
+    circle: 'M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z',
+    info: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 11v5M12 7.5v.5',
   };
   function Icon({ d, size = 24, width = 2 }) {
     return (
@@ -1471,7 +1517,7 @@
                   <div key={p.id} className={p.you ? 'ks-lbrow ks-lbrow--you' : 'ks-lbrow'} style={{ transform: `translateY(${(r.rank - 1) * ROW}px)` }}>
                     <span className="ks-score" style={{ fontSize: 22 }}>{r.rank}</span>
                     <span className={`ks-delta ${d > 0 ? 'ks-delta--up' : d < 0 ? 'ks-delta--down' : 'ks-delta--flat'}`} key={`${after}${d}`}>
-                      {d > 0 ? <span className="ks-pop">▲{d}</span> : d < 0 ? <span className="ks-pop">▼{-d}</span> : '–'}
+                      {d > 0 ? <span className="ks-pop" style={{ display: 'inline-flex', alignItems: 'center' }} aria-label={`up ${d}`}><Icon d={ICON.up} size={12} width={3} />{d}</span> : d < 0 ? <span className="ks-pop" style={{ display: 'inline-flex', alignItems: 'center' }} aria-label={`down ${-d}`}><Icon d={ICON.chevron} size={12} width={3} />{-d}</span> : '–'}
                     </span>
                     <span className={p.you ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{p.init}</span>
                     <span className="ks-callout" style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{p.name}{p.you ? <span className="ks-muted" style={{ fontWeight: 500 }}> (you)</span> : null}</span>
@@ -1590,7 +1636,7 @@
           ))}
         </div>
         <div className="ks-board__rlabel ks-caption ks-muted" style={{ marginTop: 10 }}>
-          <span>Round 1 → · Round 2 ← · Round 3 →</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>Round 1 <Icon d={ICON.right} size={12} width={2.6} /> · Round 2 <Icon d={ICON.left} size={12} width={2.6} /> · Round 3 <Icon d={ICON.right} size={12} width={2.6} /></span>
           <span>Order reverses each round</span>
         </div>
       </div>
@@ -1860,7 +1906,7 @@
                   <li className="ks-row ks-fade-in" style={{ gridTemplateColumns: '36px 1fr auto' }}>
                     <span className="ks-logo" style={{ background: 'var(--c-gain-tint)', color: 'var(--c-gain)', fontSize: 16 }}>$</span>
                     <span><span className="ks-t">Cash</span><br /><span className="ks-caption">From selling {S.sold} · ready to invest</span></span>
-                    <span className="ks-right ks-num"><b>{$(S.proceeds)}</b><br /><span className="ks-caption" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Invest ›</span></span>
+                    <span className="ks-right ks-num"><b>{$(S.proceeds)}</b><br /><span className="ks-caption" style={{ color: 'var(--c-accent)', fontWeight: 700, display: 'inline-flex', alignItems: 'center' }}>Invest <Icon d={ICON.right} size={12} width={2.6} /></span></span>
                   </li>
                 ) : null}
               </ul>
@@ -1933,7 +1979,7 @@
       {helper ? <span className="ks-caption">{helper}</span> : null}
       {rules ? (
         <span className="ks-rules">
-          {rules.map(([ok, t]) => <span key={t} className={ok ? 'ks-gain' : 'ks-muted'}>{ok ? '✓' : '○'} {t}</span>)}
+          {rules.map(([ok, t]) => <span key={t} className={ok ? 'ks-gain' : 'ks-muted'} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon d={ok ? ICON.check : ICON.circle} size={12} width={2.6} />{t}</span>)}
         </span>
       ) : null}
     </label>
@@ -2309,7 +2355,7 @@
   // counts at cost, and the screen says so. Appears instantly, never animates.
   const AtCost = ({ who, n }) => (
     <span className="ks-caption ks-muted" style={{ display: 'flex', gap: 6, alignItems: 'baseline' }}>
-      <span aria-hidden="true">ⓘ</span>
+      <span aria-hidden="true" style={{ display: 'inline-flex', alignSelf: 'center' }}><Icon d={ICON.info} size={14} width={2} /></span>
       <span>{who ? `${who}: ` : ''}{n} {n === 1 ? 'holding' : 'holdings'} counted at cost (no live price yet)</span>
     </span>
   );
@@ -2522,7 +2568,6 @@
             </div>
           </Card>
           <span className="ks-btn">See the final standings</span>
-          <span className="ks-btn ks-btn--secondary">Start next season</span>
         </div>
       </Device>
     );
@@ -3296,12 +3341,563 @@
     );
   }
 
+  // ═════════════════════════════════════════════════════════════════════
+  // RUN IT BACK (decided by Giorgio, 2026-10-04; copy approved). Season 1 is
+  // over; the commissioner (Roberto B., you) renews Stock Scudetto for Season 2:
+  // opt-in replies, the commissioner reconciles, then a NEW draft. Backend:
+  // feat/run-it-back (docs/migrations/RUN_IT_BACK_DESIGN.md); each season is a
+  // new league row linked by previous_league_id.
+  // ═════════════════════════════════════════════════════════════════════
+  const S1 = K.SEASON1, NX = K.SEASON1.next;
+  const BackendTag = ({ children }) => (
+    <span className="ks-caption" style={{ display: 'inline-flex', gap: 6, alignItems: 'center', padding: '4px 8px', borderRadius: 8, background: 'var(--c-warn-tint)', color: 'var(--c-warn-text)', fontWeight: 700 }}>Backend · {children}</span>
+  );
+  // `me` = whose phone this is (the "you" fill follows the viewer).
+  const Avatars = ({ ids, extra, me = 'roberto' }) => (
+    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      {ids.map((id) => { const p = K.byId[id]; return <span key={id} className={id === me ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{p.init}</span>; })}
+      {extra}
+    </div>
+  );
+  const ALL = S1.rows.map((r) => r.id);
+  const Radio = ({ on, title, line }) => (
+    <li className="ks-row" style={{ gridTemplateColumns: '22px 1fr', alignItems: 'start', padding: '12px 0' }}>
+      <span style={{ width: 20, height: 20, borderRadius: 10, marginTop: 1, display: 'grid', placeItems: 'center', border: `2px solid ${on ? 'var(--c-accent)' : 'var(--c-border-strong)'}` }}>{on ? <span style={{ width: 10, height: 10, borderRadius: 5, background: 'var(--c-accent)' }} /> : null}</span>
+      <span><span className="ks-callout" style={{ fontWeight: 700 }}>{title}</span><br /><span className="ks-caption">{line}</span></span>
+    </li>
+  );
+  // Medals (season complete only): ranks 1–3 become a filled disc with the
+  // numeral; 4+ stay a plain numeral. Tokens --c-medal-* / --c-on-medal.
+  const Medal = ({ rank }) => {
+    const fill = ['gold', 'silver', 'bronze'][rank - 1];
+    return fill
+      ? <span aria-label={`${K.ordinal(rank)} place`} className="ks-num" style={{ width: 20, height: 20, borderRadius: 10, display: 'grid', placeItems: 'center', background: `var(--c-medal-${fill})`, color: 'var(--c-on-medal)', fontSize: 11, fontWeight: 800 }}>{rank}</span>
+      : <span className="ks-t ks-num" style={{ textAlign: 'center' }}>{rank}</span>;
+  };
+  const Season1Rows = ({ n = 6 }) => (
+    <ul className="ks-rows">
+      {S1.rows.slice(0, n).map((r) => (
+        <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '20px 1fr auto auto', padding: '9px 0', background: r.you ? 'var(--c-you-tint)' : undefined }}>
+          <Medal rank={r.rank} />
+          <span className="ks-callout" style={{ fontWeight: 700 }}>{r.name}{r.id === S1.champion ? <span className="ks-muted" style={{ fontWeight: 500 }}> · Champion</span> : null}</span>
+          <span className="ks-callout ks-num ks-muted">{r.w}–{r.l}</span>
+          <span className={`ks-callout ks-num ${tone(r.pf)}`} style={{ fontWeight: 700, minWidth: 78, textAlign: 'right' }}>{$s(r.pf)}</span>
+        </li>
+      ))}
+    </ul>
+  );
+  const ChampBanner = ({ compact }) => (
+    <div className="ks-game" style={{ padding: compact ? '12px 14px' : 20, display: 'grid', justifyItems: compact ? 'start' : 'center', gap: 6, textAlign: compact ? 'left' : 'center', background: 'radial-gradient(120% 90% at 50% 0%, var(--c-live-glow) 0%, var(--c-surface) 70%)' }}>
+      <span style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <span style={{ width: compact ? 32 : 56, height: compact ? 32 : 56, borderRadius: 99, display: 'grid', placeItems: 'center', background: 'var(--c-live)', color: 'var(--c-surface)' }}><Icon d={TROPHY} size={compact ? 18 : 28} width={2.2} /></span>
+        {compact ? <span><span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Season 1 champion</span><br /><b className="ks-callout">Roberto B. · 11–3 · won the Final</b></span> : null}
+      </span>
+      {compact ? null : <><span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Season 1 · Final</span><span className="ks-title">Roberto B. won {K.LEAGUE.name}</span><span className="ks-callout ks-muted">11–3 · won the Final 2–0</span></>}
+    </div>
+  );
+
+  /** Entry point 1: Home's season-complete card, commissioner. */
+  function RibHome() {
+    return (
+      <Device tab="home" label="Home, season complete, commissioner can run it back">
+        <Head avatar chip={null} />
+        <div className="ks-pad ks-stack">
+          <div className="ks-game" style={{ padding: 20, display: 'grid', justifyItems: 'center', gap: 8, textAlign: 'center', background: 'radial-gradient(120% 90% at 50% 0%, var(--c-live-glow) 0%, var(--c-surface) 70%)' }}>
+            <span style={{ width: 72, height: 72, borderRadius: 36, display: 'grid', placeItems: 'center', background: 'var(--c-live)', color: 'var(--c-surface)' }}><Icon d={TROPHY} size={36} width={2.2} /></span>
+            <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Season complete</span>
+            <span className="ks-score" style={{ fontSize: 44, lineHeight: '44px', whiteSpace: 'normal' }}>Champion</span>
+            <span className="ks-callout">You won {K.LEAGUE.name}</span>
+          </div>
+          <Card pad="14px">
+            <div style={{ display: 'grid', gap: 4 }}>
+              <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Season 2</span>
+              <span className="ks-title" style={{ fontSize: 20 }}>Run it back?</span>
+              <span className="ks-callout ks-muted">Everyone from Season 1 gets asked if they're in. Once you've heard from everyone, you set up the draft.</span>
+            </div>
+            <span className="ks-btn" style={{ marginTop: 12 }}>Run it back</span>
+          </Card>
+          <span className="ks-btn ks-btn--secondary">See the final standings</span>
+        </div>
+      </Device>
+    );
+  }
+  /** Entry point 2: the League tab after the season, commissioner. */
+  function RibLeague() {
+    return (
+      <Device tab="league" label="League tab, season over">
+        <Head chip={<span className="ks-chip ks-chip--final">Final</span>} />
+        <div className="ks-pad ks-stack">
+          <ChampBanner />
+          <div className="ks-raised" style={{ padding: '12px 14px', display: 'grid', gap: 8 }}>
+            <span className="ks-callout" style={{ fontWeight: 700 }}>You're the commissioner</span>
+            <span className="ks-caption">Start Season 2 with the same group. Season 1 stays in History.</span>
+            <span className="ks-btn">Run it back</span>
+          </div>
+          <Card pad="12px 14px">
+            <div className="ks-section-h"><h3>Final standings</h3><span className="ks-caption">Season 1 · 14 weeks</span></div>
+            <Season1Rows n={4} />
+          </Card>
+        </div>
+      </Device>
+    );
+  }
+  /** Entry point 3: what a member gets (a push), shown on Gianluigi B.'s phone. */
+  function RibPush({ mode = 'ask' }) {
+    const R = NX.replies;
+    const body = mode === 'ask'
+      ? 'Roberto B. is running it back. Are you in for Season 2?'
+      : `Gianluigi B. is running back for Season 2. ${R.in.length} running back · ${R.out.length} out · ${R.none.length} no reply yet.`;
+    return (
+      <Device noTabs time={mode === 'ask' ? '7:42' : '9:15'} label={mode === 'ask' ? "Push to a member: are you in?" : 'Push to the commissioner: a reply'} style={{ background: 'linear-gradient(160deg, #3B4F7A 0%, #1B2540 55%, #0E1426 100%)', color: '#fff' }}>
+        <div style={{ position: 'relative', textAlign: 'center', color: '#fff', paddingTop: 16 }}>
+          <div style={{ fontSize: 17, fontWeight: 600, opacity: 0.9 }}>{mode === 'ask' ? 'Saturday, January 16' : 'Sunday, January 17'}</div>
+          <div style={{ fontSize: 84, fontWeight: 700, lineHeight: '90px', letterSpacing: '-2px' }}>{mode === 'ask' ? '7:42' : '9:15'}</div>
+        </div>
+        <div style={{ position: 'relative', margin: '28px 12px 0', padding: '12px 14px', borderRadius: 22, background: 'rgba(245, 246, 250, 0.82)', backdropFilter: 'blur(20px)', color: '#0D1B2E', display: 'grid', gridTemplateColumns: '38px 1fr', gap: 10 }}>
+          <span style={{ width: 38, height: 38, borderRadius: 9, background: '#0D1B2E', display: 'grid', placeItems: 'center' }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="13" width="4.5" height="8" rx="1" fill="#8DA0BD" /><rect x="9.75" y="9" width="4.5" height="12" rx="1" fill="#8DA0BD" /><rect x="16.5" y="4" width="4.5" height="17" rx="1" fill="#6E9BFF" /></svg>
+          </span>
+          <span>
+            <span style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15 }}><b>{K.LEAGUE.name}</b><span style={{ color: '#5B6678', fontSize: 13 }}>now</span></span>
+            <span style={{ fontSize: 15, lineHeight: '20px' }}>{body}</span>
+          </span>
+        </div>
+      </Device>
+    );
+  }
+
+  /** (a) Who's in — decided: opt-in + commissioner reconciliation. */
+  const Countline = () => {
+    const R = NX.replies;
+    return <span className="ks-callout ks-num"><b>{R.in.length} running back</b> · {NX.joined.length} new · {R.out.length} out · {R.none.length} no reply yet</span>;
+  };
+  const NameGroup = ({ title, ids, children }) => (
+    <div style={{ display: 'grid', gap: 6 }}>
+      <span className="ks-caption" style={{ fontWeight: 700 }}>{title} · {ids.length}</span>
+      {children || <span className="ks-callout">{ids.map((id) => K.byId[id].name).join(', ')}</span>}
+    </div>
+  );
+  /** The prompt every Season 1 player gets (Gianluigi B.'s phone): Home and League tab. */
+  function RibMemberPrompt() {
+    return (
+      <Device tab="home" label="Member: are you in for Season 2?">
+        <div className="ks-head"><Pill /><span className="ks-avatar">GB</span></div>
+        <div className="ks-pad ks-stack">
+          <div className="ks-game" style={{ padding: 16, display: 'grid', gap: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Season 2</span>
+              <span className="ks-chip">Reply</span>
+            </div>
+            <span className="ks-title" style={{ fontSize: 20 }}>Roberto B. is running it back. Are you in?</span>
+            <span className="ks-callout ks-muted">Same league, new season. The draft is set once everyone has replied.</span>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}><span className="ks-btn ks-btn--secondary">I'm out</span><span className="ks-btn">I'm in</span></div>
+            <span className="ks-caption">You can change your answer until the draft is set.</span>
+          </div>
+          <Card pad="12px 14px">
+            <div className="ks-section-h"><h3>Season 1</h3><span className="ks-caption">Final</span></div>
+            <span className="ks-callout">Roberto B. won · you finished {K.ordinal(5)} (4–10)</span>
+          </Card>
+        </div>
+      </Device>
+    );
+  }
+  /** The commissioner's Home card while replies come in. */
+  function RibHomeCounts() {
+    const R = NX.replies;
+    return (
+      <Device tab="home" label="Commissioner Home: replies coming in">
+        <Head avatar chip={null} />
+        <div className="ks-pad ks-stack">
+          <ChampBanner compact />
+          <div className="ks-game" style={{ padding: 16, display: 'grid', gap: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Season 2 · running back</span>
+              <span className="ks-chip">Waiting on {R.none.length}</span>
+            </div>
+            <Countline />
+            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${ALL.length}, 1fr)`, gap: 4 }} aria-hidden="true">
+              {[...R.in, ...R.out, ...R.none].map((id) => <span key={id} style={{ height: 6, borderRadius: 3, background: R.in.includes(id) ? 'var(--c-you)' : R.out.includes(id) ? 'var(--c-border-strong)' : 'var(--c-track)' }} />)}
+            </div>
+            <span className="ks-caption">Waiting on {R.none.map((id) => K.byId[id].name).join(', ')} You'll set up the draft once everyone has replied.</span>
+            <span className="ks-btn">See who's in</span>
+          </div>
+        </div>
+      </Device>
+    );
+  }
+  /** One row per player in Season 1's final order, answer right-aligned.
+   * "Running back" is Giorgio's copy (verbatim); "Out", "No reply yet",
+   * "Joining", "New" are new copy; "Nudge again" and "Remove" are Giorgio's
+   * (2026-10-04). `actions` = the commissioner's per-row actions; a member
+   * who is in sees the same full list without them. */
+  function ReplyRows({ actions = true, me = 'roberto' }) {
+    const R = NX.replies;
+    const state = (id) => (R.in.includes(id) ? 'in' : R.out.includes(id) ? 'out' : 'none');
+    const rows = S1.rows;
+    return (
+      <ul className="ks-rows">
+        {rows.map((r) => {
+          const st = state(r.id);
+          return (
+            <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '18px 1fr auto', padding: '10px 0', alignItems: 'center' }}>
+              <span className="ks-t ks-num" style={{ color: st === 'in' ? undefined : 'var(--c-text-2)' }}>{r.rank}</span>
+              <span className="ks-callout" style={{ fontWeight: st === 'in' ? 700 : 500, color: st === 'in' ? 'var(--c-text)' : 'var(--c-text-2)' }}>{r.name}{r.id === me ? <span className="ks-muted" style={{ fontWeight: 500 }}> (you)</span> : null}</span>
+              {st === 'in' ? <span className="ks-callout" style={{ fontWeight: 700, color: 'var(--c-accent)', display: 'flex', gap: 6, alignItems: 'center' }}><Icon d={CHECK} size={14} width={3} />Running back</span> : null}
+              {st === 'out' ? <span className="ks-callout ks-muted">Out</span> : null}
+              {st === 'none' ? (
+                <span style={{ display: 'grid', justifyItems: 'end', gap: 2 }}>
+                  <span className="ks-callout" style={{ color: 'var(--c-live-text)', fontWeight: 600, display: 'flex', gap: 6, alignItems: 'center' }}><span className="ks-dot" />No reply yet</span>
+                  {actions ? <span className="ks-caption" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Nudge again · Remove</span> : null}
+                </span>
+              ) : null}
+            </li>
+          );
+        })}
+        {NX.joined.map((j) => (
+          <li key={j.id} className="ks-row" style={{ gridTemplateColumns: '18px 1fr auto', padding: '10px 0', alignItems: 'center' }}>
+            <span />
+            <span className="ks-callout" style={{ fontWeight: 700, display: 'flex', gap: 8, alignItems: 'center' }}>{j.name}<span className="ks-chip" style={{ height: 20, fontSize: 11 }}>New</span></span>
+            <span className="ks-callout" style={{ fontWeight: 700, color: 'var(--c-accent)', display: 'flex', gap: 6, alignItems: 'center' }}><Icon d={CHECK} size={14} width={3} />Joining</span>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+  /** The reconcile view on the League tab (commissioner). */
+  function RibReconcile() {
+    const R = NX.replies;
+    return (
+      <Device tab="league" label="Commissioner League tab: who's running back">
+        <Head chip={<span className="ks-chip">Season 2</span>} />
+        <div className="ks-pad ks-stack">
+          <div><span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Season 2</span><h2 className="ks-head__title" style={{ fontSize: 26, margin: '2px 0 0' }}>Who's running back</h2></div>
+          <Countline />
+          <Card pad="4px 14px">
+            <div className="ks-section-h" style={{ paddingTop: 8 }}><h3>Season 1 order</h3><span className="ks-caption">Answer</span></div>
+            <ReplyRows />
+          </Card>
+          <Card>
+            <ul className="ks-rows" style={{ opacity: 0.5 }}>
+              <Row k="Draft date" v="Not set" />
+              <Row k="Draft order" v="Random" />
+            </ul>
+          </Card>
+          <span className="ks-caption">You can set the draft once everyone has replied. Waiting on {R.none.map((id) => K.byId[id].name).join(', ')}</span>
+          <div className="ks-raised" style={{ padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span><span className="ks-caption">Invite someone new</span><br /><b className="ks-num" style={{ letterSpacing: '0.12em' }}>{NX.invite}</b></span>
+            <span className="ks-callout" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Share</span>
+          </div>
+        </div>
+      </Device>
+    );
+  }
+  /** A member who answered "I'm in" lands here (auto-redirect): the same
+   * list, every answer, no actions. Out / unanswered players don't get it
+   * (assumed; to confirm). */
+  function RibMemberList() {
+    return (
+      <Device tab="league" label="Member who is in: who's running back">
+        <div className="ks-head"><Pill /><span className="ks-chip">Season 2</span><span className="ks-avatar">GB</span></div>
+        <div className="ks-pad ks-stack">
+          <div className="ks-raised" style={{ padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className="ks-callout" style={{ fontWeight: 700, display: 'flex', gap: 6, alignItems: 'center', color: 'var(--c-accent)' }}><Icon d={CHECK} size={14} width={3} />You're running back</span>
+            <span className="ks-caption" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Change</span>
+          </div>
+          <div><span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Season 2</span><h2 className="ks-head__title" style={{ fontSize: 26, margin: '2px 0 0' }}>Who's running back</h2></div>
+          <Countline />
+          <Card pad="4px 14px">
+            <div className="ks-section-h" style={{ paddingTop: 8 }}><h3>Season 1 order</h3><span className="ks-caption">Answer</span></div>
+            <ReplyRows actions={false} me="gianluigi" />
+          </Card>
+          <span className="ks-caption">The draft is set once everyone has replied. You can change your answer until then.</span>
+        </div>
+      </Device>
+    );
+  }
+  /** How the commissioner clears a non-reply (Giorgio, 2026-10-04: "Nudge again" / "Remove"). */
+  function RibResolve() {
+    const who = K.byId[NX.replies.none[0]].name;
+    return (
+      <Device tab="league" label="Commissioner: resolve a missing reply" overlay={
+        <Sheet top={430}>
+          <span className="ks-title" style={{ fontSize: 20 }}>{who} hasn't replied</span>
+          <span className="ks-callout ks-muted">Asked Sat, Jan 16. Nudged Sun, Jan 17.</span>
+          <span className="ks-btn">Nudge again</span>
+          <span className="ks-btn ks-btn--secondary">Remove</span>
+          <span className="ks-caption">You can nudge once a day. If you remove {who.split(' ')[0]}, they're out of Season 2 and get a message saying so.</span>
+        </Sheet>
+      }>
+        <Head chip={<span className="ks-chip">Season 2</span>} />
+        <div className="ks-pad ks-stack">
+          <h2 className="ks-head__title" style={{ fontSize: 26 }}>Who's running back</h2>
+          <Countline />
+        </div>
+      </Device>
+    );
+  }
+
+  /** (c) The commissioner's review: everything carried over, editable. */
+  function RibReview() {
+    return (
+      <Device noTabs label="Season 2 settings review">
+        <Back label="Cancel" />
+        <div className="ks-pad ks-stack">
+          <div><span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>{K.LEAGUE.name}</span><h2 className="ks-head__title" style={{ fontSize: 28, margin: '2px 0 0' }}>Season 2</h2></div>
+          <span className="ks-callout ks-muted">Everything carries over from Season 1. Change anything before the draft.</span>
+          <Card>
+            <ul className="ks-rows">
+              <Row k="Who's in" v={`${NX.replies.in.length} back · ${NX.joined.length} new`} sub="Everyone has replied" />
+              <Row k="Teams" v={`${NX.replies.in.length + NX.joined.length}`} sub={`Follows who's in, up to ${NX.maxTeams}. More can join with ${NX.invite} until the draft.`} chevron={false} />
+              <Row k="Draft" v="Sat, Jan 23 · 7:00 PM ET" />
+              <Row k="Draft order" v="Random" />
+              <Row k="Pick clock" v={`${K.LEAGUE.pickClock.seconds} seconds`} />
+              <Row k="Season" v={`${K.LEAGUE.weeks} weeks`} />
+              <Row k="Playoffs" v="4 teams" sub={K.playoffLine(4).replace(/^4 teams · /, '')} />
+              <Row k="Stakes" v={`${$(K.LEAGUE.notionalPerSlot)} a slot`} sub={`${K.LEAGUE.slots} slots`} />
+            </ul>
+          </Card>
+          <ByeNotice members={NX.replies.in.length + NX.joined.length} weeks={K.LEAGUE.weeks} />
+          <BackendTag>num_participants stays 16 until the draft, then the member count</BackendTag>
+          <span className="ks-btn">Schedule the draft</span>
+          <span className="ks-caption" style={{ textAlign: 'center' }}>Everyone who's in gets a notification. Season 1 stays in History.</span>
+        </div>
+      </Device>
+    );
+  }
+
+  /** (d) History: the Season 2 League tab keeps Season 1 visible. */
+  function RibHistory({ view }) {
+    if (view === 'list') {
+      return (
+        <Device tab="league" label="League › History">
+          <Back label="League" />
+          <div className="ks-pad ks-stack">
+            <h2 className="ks-head__title" style={{ fontSize: 28 }}>History</h2>
+            <Card>
+              <ul className="ks-rows">
+                <Row k="Season 2" v="Draft Sat" sub="6 managers · drafting Jan 23" />
+                <Row k="Season 1" v="11–3" sub="Champion Roberto B. · you" />
+              </ul>
+            </Card>
+            <Card pad="12px 14px">
+              <div className="ks-section-h"><h3>Season 1 · final standings</h3><span className="ks-caption">Season gain</span></div>
+              <Season1Rows />
+            </Card>
+            <span className="ks-caption">Every week's matchups and the draft recap stay here too. New players see Season 1 as well.</span>
+            <BackendTag>get_league_history (Season 1 is its own frozen league)</BackendTag>
+          </div>
+        </Device>
+      );
+    }
+    return (
+      <Device tab="league" label="League tab, Season 2 before the draft">
+        <Head chip={<span className="ks-chip">Pre-draft</span>} />
+        <div className="ks-pad ks-stack">
+          <ChampBanner compact />
+          <div className="ks-game" style={{ padding: 16, display: 'grid', gap: 8 }}>
+            <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Season 2 · Draft</span>
+            <span className="ks-title">{NX.draft}</span>
+            <span className="ks-callout ks-muted">6 managers · new draft</span>
+            <span className="ks-btn">Go to the draft lobby</span>
+          </div>
+          <Card>
+            <ul className="ks-rows">
+              <Row k="History" v="2 seasons" />
+              <Row k="League settings" v="" />
+            </ul>
+          </Card>
+        </div>
+      </Device>
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // DRAFT FEASIBILITY (2026-10-05): "a draft pick can never be unused".
+  // New copy for Giorgio's audit. Specific wording when the backend returns
+  // who/which/how much; the generic line otherwise.
+  // ═════════════════════════════════════════════════════════════════════
+  const Alert = ({ children }) => (
+    <div role="alert" className="ks-card" style={{ padding: '10px 12px', background: 'var(--c-warn-tint)', borderColor: 'var(--c-warn-line)', boxShadow: 'none' }}>
+      <span className="ks-callout" style={{ fontWeight: 600, color: 'var(--c-text)' }}>{children}</span>
+    </div>
+  );
+  /** A pick the server refused (would_strand_slot | budget_reserve). */
+  function DraftRefused({ kind = 'strand' }) {
+    return (
+      <Device tab="league" label={`Draft room, pick refused (${kind})`} overlay={
+        <Sheet top={470}>
+          <span className="ks-title">Pick a different stock</span>
+          <Alert>{kind === 'strand'
+            ? 'Taking ORCL would leave Paolo M. with no stock that fits their Tech slot. Every slot has to be fillable.'
+            : 'ORCL would leave $640.00 for your 4 remaining picks. You need at least $780.00 to fill them.'}</Alert>
+          <span className="ks-caption">Your clock is still running. Pick from the list, or let your queue pick for you.</span>
+          <span className="ks-btn">Back to the list</span>
+        </Sheet>
+      }>
+        <Head name="Office League" chip={<Chip kind="live">Drafting</Chip>} />
+        <div className="ks-pad ks-stack"><span className="ks-title" style={{ color: 'var(--c-live-text)' }}>You're on the clock</span><span className="ks-callout">Round 2 · Pick 11 · 0:31 left</span></div>
+      </Device>
+    );
+  }
+  /** Start the draft, blocked by the feasibility check. */
+  function StartBlocked({ unavailable }) {
+    return (
+      <Device tab="league" label={unavailable ? 'Start the draft, check unavailable' : 'Start the draft, setup blocked'} overlay={
+        <Sheet top={unavailable ? 470 : 330}>
+          <span className="ks-title">Start the draft?</span>
+          {unavailable ? (
+            <>
+              <Alert>We couldn't check the draft setup just now. Try again in a moment.</Alert>
+              <span className="ks-btn ks-btn--secondary">Try again</span>
+            </>
+          ) : (
+            <>
+              <span className="ks-callout ks-muted">Every slot has to be fillable before the draft can start. Fix these in League settings:</span>
+              <Alert>There aren't enough eligible stocks to fill every manager's slots. Loosen a slot rule or a price bracket.</Alert>
+              <Alert>The budget isn't enough to fill every manager's slots. Raise the budget or change the price brackets.</Alert>
+              <span className="ks-btn ks-btn--secondary">League settings</span>
+            </>
+          )}
+          <span className="ks-btn" style={{ opacity: 0.4 }} aria-disabled="true">Start draft</span>
+        </Sheet>
+      }>
+        <Head name="Office League" chip={<span className="ks-chip">Pre-draft</span>} />
+      </Device>
+    );
+  }
+  /** A stalled turn: no legal stock for the manager on the clock. */
+  function DraftStalled({ commish }) {
+    return (
+      <Device tab="league" label={commish ? 'Draft paused, commissioner' : 'Draft paused, member'}>
+        <Head chip={<span className="ks-chip">Paused</span>} />
+        <div className="ks-pad ks-stack">
+          <div className="ks-game" style={{ padding: 16, display: 'grid', gap: 8 }}>
+            <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Draft paused</span>
+            <span className="ks-title" style={{ fontSize: 20 }}>No stock left fits Paolo M.'s next slot</span>
+            <span className="ks-callout ks-muted">{commish
+              ? "The clock is stopped and nobody is skipped. You've been notified; the draft continues once the slot can be filled."
+              : 'The clock is stopped and nobody is skipped. The commissioner has been told.'}</span>
+          </div>
+          <span className="ks-caption">Round 2 · Pick 12 · Paolo M.</span>
+        </div>
+      </Device>
+    );
+  }
+  function StallPush() {
+    return (
+      <Device noTabs time="7:24" label="Push to the commissioner: draft paused" style={{ background: 'linear-gradient(160deg, #3B4F7A 0%, #1B2540 55%, #0E1426 100%)', color: '#fff' }}>
+        <div style={{ position: 'relative', textAlign: 'center', color: '#fff', paddingTop: 16 }}>
+          <div style={{ fontSize: 17, fontWeight: 600, opacity: 0.9 }}>Saturday, October 3</div>
+          <div style={{ fontSize: 84, fontWeight: 700, lineHeight: '90px', letterSpacing: '-2px' }}>7:24</div>
+        </div>
+        <div style={{ position: 'relative', margin: '28px 12px 0', padding: '12px 14px', borderRadius: 22, background: 'rgba(245, 246, 250, 0.82)', backdropFilter: 'blur(20px)', color: '#0D1B2E', display: 'grid', gridTemplateColumns: '38px 1fr', gap: 10 }}>
+          <span style={{ width: 38, height: 38, borderRadius: 9, background: '#0D1B2E', display: 'grid', placeItems: 'center' }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="13" width="4.5" height="8" rx="1" fill="#8DA0BD" /><rect x="9.75" y="9" width="4.5" height="12" rx="1" fill="#8DA0BD" /><rect x="16.5" y="4" width="4.5" height="17" rx="1" fill="#6E9BFF" /></svg>
+          </span>
+          <span>
+            <span style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15 }}><b>{K.LEAGUE.name}</b><span style={{ color: '#5B6678', fontSize: 13 }}>now</span></span>
+            <span style={{ fontSize: 15, lineHeight: '20px' }}>The draft is paused: no stock left fits Paolo M.'s next slot.</span>
+          </span>
+        </div>
+      </Device>
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // YOUR CALL: which tier a traded stock fills (price-tier leagues),
+  // 2026-10-05. "Tier Cup": six one-share tiers. Roberto sold DIS (his
+  // $100–$200 stock) and wants to buy. New copy throughout.
+  // ═════════════════════════════════════════════════════════════════════
+  const TIER = (() => {
+    const tiers = [['Under $50', 0, 50], ['$50–$100', 50, 100], ['$100–$200', 100, 200], ['$200–$400', 200, 400], ['$400–$800', 400, 800], ['$800+', 800, Infinity]];
+    const tierOf = (p) => tiers.find(([, lo, hi]) => p >= lo && p < hi)[0];
+    const held = [['F', 'Ford', 11.42], ['KO', 'Coca-Cola', 68.1], ['NVDA', 'NVIDIA', K.NVDA.thu], ['NFLX', 'Netflix', 612.3], ['COST', 'Costco', 918.1]];
+    return { tiers, tierOf, held, sold: ['DIS', 'Disney', 102.9], shop: ['SHOP', 'Shopify', K.SALE.buy.price], aapl: ['AAPL', 'Apple', 211.42] };
+  })();
+  const TAlert = ({ children }) => (
+    <div role="alert" className="ks-card" style={{ padding: '10px 12px', background: 'var(--c-warn-tint)', borderColor: 'var(--c-warn-line)', boxShadow: 'none' }}>
+      <span className="ks-callout" style={{ fontWeight: 600, color: 'var(--c-text)' }}>{children}</span>
+    </div>
+  );
+  /** Portfolio rows in a tier league under each option. */
+  function TierPortfolio({ mode }) {
+    const rows = mode === 'C' ? [...TIER.held, TIER.aapl].sort((a, b) => a[2] - b[2]) : TIER.held;
+    const sub = (t, p) => mode === 'A' ? `${TIER.tierOf(p)} slot · 1 sh` : mode === 'B' ? `${TIER.tierOf(p)} tier · 1 sh` : '1 sh';
+    return (
+      <Device tab="portfolio" label={`Tier league portfolio, option ${mode}`}>
+        <Head name="Tier Cup" chip={null} />
+        <div className="ks-pad ks-stack">
+          <div className="ks-card" style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between' }}>
+            <span className="ks-callout"><b>{mode === 'C' ? '6 of 6' : '5 of 6'}</b> {mode === 'C' ? 'stocks held' : 'tiers filled'}</span>
+            <span className="ks-callout ks-muted">{mode === 'C' ? 'Tiers applied at the draft' : 'One stock per tier'}</span>
+          </div>
+          <div className="ks-card" style={{ padding: '2px 14px' }}>
+            <ul className="ks-rows">
+              {rows.map(([t, co, p]) => (
+                <li key={t} className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto' }}>
+                  <Logo t={t} />
+                  <span><span className="ks-t">{t}</span><br /><span className="ks-caption ks-num">{co} · {sub(t, p)}</span></span>
+                  <span className="ks-right ks-num"><b>{$(p)}</b></span>
+                </li>
+              ))}
+              {mode !== 'C' ? (
+                <li className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto' }}>
+                  <span className="ks-logo" style={{ background: 'var(--c-sunken)', color: 'var(--c-text-2)', fontSize: 11 }}>Open</span>
+                  <span><span className="ks-t">{mode === 'A' ? '$100–$200 slot' : '$100–$200 tier'}</span><br /><span className="ks-caption">Sold DIS · {mode === 'A' ? 'buy a stock priced $100 to $200' : 'any stock that keeps every tier filled'}</span></span>
+                  <span className="ks-right"><span className="ks-caption" style={{ color: 'var(--c-accent)', fontWeight: 700, display: 'inline-flex', alignItems: 'center' }}>Fill<Icon d={ICON.right} size={12} width={2.6} /></span></span>
+                </li>
+              ) : null}
+            </ul>
+          </div>
+        </div>
+      </Device>
+    );
+  }
+  /** Review buy under each option (C buys AAPL, A/B buy SHOP). */
+  function TierReview({ mode }) {
+    const [t, , p] = mode === 'C' ? TIER.aapl : TIER.shop;
+    return (
+      <Device noTabs label={`Tier league review buy, option ${mode}`}>
+        <Back label="Edit" />
+        <div className="ks-pad ks-stack">
+          <h2 className="ks-head__title" style={{ fontSize: 28 }}>Review buy</h2>
+          <Card><Sum rows={[
+            ['Buy', `1 ${t}`],
+            ['Price', `${$(p)} · market`],
+            ...(mode === 'A' ? [['Fills your', '$100–$200 slot']] : mode === 'B' ? [['Tier, by today’s price', '$100–$200']] : []),
+          ]} /></Card>
+          <span className="ks-btn">Buy {t}</span>
+          <span className="ks-caption" style={{ textAlign: 'center' }}>{mode === 'C' ? 'Prices can move before the order fills.' : 'The tier is set by the price you buy at; it doesn’t change if the price moves later.'}</span>
+        </div>
+      </Device>
+    );
+  }
+  /** The refusal when a stock doesn't fit (A and B). */
+  function TierRefused({ mode }) {
+    return (
+      <Device tab="portfolio" label={`Tier league buy refused, option ${mode}`} overlay={
+        <Sheet top={470}>
+          <span className="ks-title">Pick a different stock</span>
+          <TAlert>{mode === 'A'
+            ? 'AAPL is $211.42. Your open slot takes stocks priced $100 to $200.'
+            : 'With AAPL you’d have two stocks in $200–$400 and none in $100–$200. Every tier needs one stock.'}</TAlert>
+          <span className="ks-btn">Back to the list</span>
+        </Sheet>
+      }>
+        <Head name="Tier Cup" chip={null} />
+      </Device>
+    );
+  }
+
   window.KSInventory = {
     SignIn, SignUp, SignUpPaused, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeUnpriced, HomeScoring, HomeComplete,
     AllMatchups, MatchupPreSeason, Playoffs6, ArrangeOrder, OrderPush, DraftLobby, StartDraftConfirm, CreateSeason, DraftAutoPick, DraftRecap, Playoffs,
     SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,
     OneShareSell, OneShareBuy,
+    TierPortfolio, TierReview, TierRefused,
+    DraftRefused, StartBlocked, DraftStalled, StallPush,
+    RibHome, RibLeague, RibPush, RibMemberPrompt, RibHomeCounts, RibReconcile, RibMemberList, RibResolve, RibReview, RibHistory,
     WebHome, WebPortfolio, WebSettings,
   };
 })();
@@ -3390,6 +3986,7 @@
             'Before the season there is no leader and no gain: zero is grey, never green.',
             'Nights and weekends freeze the scoreboard at the last close and say when it resumes.',
             'After Friday\'s close the card shows "Scoring…" until the results post; nothing is presented as final before it is.',
+            'Season complete: the commissioner also gets the "Run it back?" card, and every Season 1 player later gets the "Are you in?" card (see Run it back).',
             'A symbol with no live price counts at cost and is named in a caption ("1 holding counted at cost (no live price yet)"), on the hero and on whichever side of the scoreboard it affects. A partial total never passes as a complete one.',
           ]}>
           <Fit caption="Before the draft" note="Serie A Traders"><I.HomePreDraft /></Fit>
@@ -3412,6 +4009,7 @@
             'The order is set at the LATER of 1 hour before the draft and the league reaching 4 managers (the minimum to draft). Until then Home and the lobby show "Draft order · waiting" with a 3-of-4 progress bar; Start draft stays disabled below 4 managers and offers the invite code. While a Manual order is unsaved, anyone who joins lands in a random slot (so the start stays fair); once it\'s saved or final, joiners go last. (New copy.)',
             'When the order is set, everyone gets a push ("Serie A Traders: The draft order is set. You pick 4th. The draft starts at 7:00 PM ET." / "The commissioner set the draft order…") and an in-app card, "Draft order set · 6:00 PM ET · You pick 4th, then 13th, 20th…", in the lobby and on the pre-draft Home. (New copy.)',
             'Leaving is fine: "If you step away, we\'ll auto-pick from your queue when your time runs out. You can come back any time." There is no "don\'t leave" warning anywhere.',
+            'A draft pick can never be unused (Giorgio): the server refuses a pick that would leave any slot unfillable or your budget short for your remaining picks, blocks the start until every slot is fillable, and pauses the draft (clock stopped, nobody skipped) in the should-never-happen case that no stock fits. Refusals appear instantly, keep the clock running, and never sound like blame. (New copy.)',
             'Uneven byes get a short heads-up, never an explanation of how byes work, and never a block: on the weeks control in Create league / League settings (based on the expected size, and it says so), and on the commissioner\'s Start draft confirm (the count is final there). It only appears for an odd number of managers when the weeks don\'t divide evenly; with an even count there are no byes. Backend: byes per manager = floor or ceil(weeks / managers) when managers is odd.',
             <>A bye is no result: in the Season strip on Home it shows as a neutral <span className="ks-chip ks-chip--money" style={{ textTransform: 'none', letterSpacing: 0, fontStretch: '100%' }}>Bye</span> chip, never W or L, and it doesn't count toward win percentage. (Stock Scudetto has 6 managers, so it has no byes.)</>,
             <>Playoffs are auto-configured from the number of teams the commissioner picks (any number from 2 up to the managers): weeks = ceil(log2 teams), first-round byes = the next power of two minus teams, given to the top seeds, fixed bracket with no re-seeding. For example, {window.KS.playoffLine(4)}; {window.KS.playoffLine(6)}; {window.KS.playoffLine(10)}; and 2 teams play just the final. Before the draft the cap is the expected size. Start draft re-checks it against who's actually in: if there are more playoff teams than managers, the draft can't start until the commissioner lowers them, right on the confirm sheet. (New copy.)</>,
@@ -3431,10 +4029,109 @@
           <Fit caption="Start the draft · too many playoff teams" note="7 playoff teams, 6 managers: fix it right here; Start stays disabled until it fits (new copy)"><I.StartDraftConfirm managers={6} playoff={7} /></Fit>
           <Fit caption="Create league · Season" note="Uneven-bye heads-up on the weeks control, based on the expected size (new copy)"><I.CreateSeason /></Fit>
           <Fit caption="Draft room · auto-picks" note="New copy: the banner, the Auto badge and the pick-log lines"><I.DraftAutoPick /></Fit>
+          <Fit caption="Pick refused · a slot left unfillable" note="would_strand_slot. New copy. Generic when the server doesn't name who/which: 'Taking {stock} would leave another manager with no stock for one of their slots.'"><I.DraftRefused kind="strand" /></Fit>
+          <Fit caption="Pick refused · budget for later picks" note="budget_reserve. New copy. Generic: '{stock} would leave too little budget for your remaining picks.'"><I.DraftRefused kind="budget" /></Fit>
+          <Fit caption="Start the draft · setup can't fill every slot" note="slots_infeasible + budget_infeasible (each shows only when it applies). New copy. Generic lines only: the setup check returns a reason code, no counts (security review)."><I.StartBlocked /></Fit>
+          <Fit caption="Start the draft · check unavailable" note="feasibility_unavailable: Start stays disabled until the check runs. New copy."><I.StartBlocked unavailable /></Fit>
+          <Fit caption="Draft paused (should never happen)" note="Stalled turn, as members see it. New copy."><I.DraftStalled /></Fit>
+          <Fit caption="Draft paused · commissioner" note="Same state for the commissioner, plus the push below. New copy."><I.DraftStalled commish /></Fit>
+          <Fit caption="Push · draft paused (commissioner)" note="New copy."><I.StallPush /></Fit>
           <Fit caption="Draft recap"><I.DraftRecap /></Fit>
           <Fit caption="Playoff bracket · 4 teams" note="Two playoff weeks after the regular season"><I.Playoffs /></Fit>
           <Fit caption="Playoff bracket · 6 teams" note="3 weeks; seeds 1–2 get first-round byes (new copy; round names decided)"><I.Playoffs6 /></Fit>
         </Group>
+
+        <section className="b-sec" id="run-it-back" aria-labelledby="run-it-back-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n b-sec__n--code">3c</span>
+            <div>
+              <h2 id="run-it-back-h">Run it back</h2>
+              <p className="b-job">Season 1 is over; the commissioner renews the league so the group plays Season 2. Decided by Giorgio (2026-10-04); all copy here is approved. Built in 3c (League tab + the Home cards) on the backend in feat/run-it-back.</p>
+            </div>
+          </header>
+          <ul className="b-inv__notes">
+            <li><b>Only the commissioner</b> runs it back: the "Run it back?" card on the season-complete Home and the League tab action. Season 2 is a new league linked to Season 1, which stays frozen and complete.</li>
+            <li><b>Opt-in.</b> Every Season 1 player gets "Roberto B. is running it back. Are you in for Season 2?" (push + a card on Home and the League tab). Answers can flip in ↔ out until the draft is set.</li>
+            <li><b>The commissioner hears every reply</b> and reconciles on "Who's running back": Season 1 order, "Running back" (name bold), "Out" (muted), "No reply yet" with <b>Nudge again</b> (once a day) or <b>Remove</b>; new joiners last ("New", "Joining").</li>
+            <li><b>A player who is in</b> goes straight to the same list, read-only, with "You're running back · Change". Players who are out or haven't answered don't see it.</li>
+            <li><b>The draft can't be set</b> while anyone is "No reply yet": the draft rows stay disabled with the reason inline (the server enforces it too).</li>
+            <li><b>New players</b> join with the invite code, not capped by Season 1's size (up to 16 until the draft), and see Season 1's history.</li>
+            <li><b>Teams start with a new draft</b>; every setting carries over and the commissioner can edit it on the review. Keepers / keep teams were not chosen.</li>
+            <li><b>History:</b> a Season 1 champion banner on the League tab until Season 2's draft; League › History lists every season with its final standings, matchups and draft.</li>
+          </ul>
+
+          <h3 className="b-sub">Starting it (commissioner only)</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Home · season complete (commissioner)" note='"Start next season" becomes a "Run it back?" card. Members see the champion card without it.'><I.RibHome /></Fit>
+            <Fit caption="League tab · season over (commissioner)" note="The champion banner, the commissioner's action, and Season 1's final standings."><I.RibLeague /></Fit>
+            <Fit caption="Push · every Season 1 player" note="Sent the moment the commissioner runs it back; opens the I'm in / I'm out card."><I.RibPush mode="ask" /></Fit>
+          </div>
+
+          <h3 className="b-sub">Who's in: opt-in, the commissioner reconciles</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="1 · Member: Home (and the League tab)" note="The same card sits on the League tab. I'm in opens the full list (4b). An answer can change until the draft is set."><I.RibMemberPrompt /></Fit>
+            <Fit caption="2 · Commissioner: a push for each reply" note="Every answer notifies the commissioner, with the running count."><I.RibPush mode="reply" /></Fit>
+            <Fit caption="3 · Commissioner: Home while replies come in" note="Counts and who's still to reply; opens the reconcile view."><I.RibHomeCounts /></Fit>
+            <Fit caption="4 · Commissioner: League tab, reconcile" note={`Standings-style, in Season 1 order: "Running back" (Giorgio's copy) with the name in bold; "Out" muted; "No reply yet" with "Nudge again · Remove" (Giorgio's words) on the row; new joiners last with a New marker and "Joining". Draft rows stay disabled until nobody is left without a reply. Needs backend: replies, and joins during renewal.`}><I.RibReconcile /></Fit>
+            <Fit caption="4b · A member who said I'm in" note="Answering I'm in opens this: the same list with every answer and no actions, plus 'Change'. Players who are out or haven't answered don't see it."><I.RibMemberList /></Fit>
+            <Fit caption="5 · Clearing a non-reply" note='"Nudge again" re-sends the ask (once a day); "Remove" takes them out of Season 2 and tells them.'><I.RibResolve /></Fit>
+            <Fit caption="6 · After everyone has replied: the review" note="Every Season 1 setting carried over and editable; teams = who's in + new joins (here 4 + 1 = 5, up to 16), with the uneven-bye heads-up. Schedule the draft = start_renewed_season."><I.RibReview /></Fit>
+          </div>
+
+          <h3 className="b-sub">History</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="League tab · Season 2, before the draft" note="The Season 1 champion banner stays until Season 2's draft; History is one tap away."><I.RibHistory /></Fit>
+            <Fit caption="League › History" note="Every season, its champion and final standings; matchups and the draft recap too. New players see it as well."><I.RibHistory view="list" /></Fit>
+          </div>
+        </section>
+
+        <section className="b-sec" id="call-tier-trades" aria-labelledby="call-tier-trades-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n b-sec__n--code">3e</span>
+            <div>
+              <h2 id="call-tier-trades-h">Your call: which tier a traded stock fills</h2>
+              <p className="b-job">Price-tier leagues (one share per tier). Today tiers are only counted from the draft, so after a sale a manager can buy a second stock into a tier that is already filled; only the roster cap stops them. Pick how a trade buy fits the tiers. Sample: "Tier Cup", six one-share tiers. Roberto sold DIS ($102.90), his $100–$200 stock. All copy in these frames is new.</p>
+            </div>
+          </header>
+          <ul className="b-inv__notes">
+            <li><b>Already decided (A, 2026-09-30):</b> one share per buy and the whole position per sell. The review says "1 share" and the slot's tier. This choice only decides <i>which</i> tier a buy may fill.</li>
+            <li><b>A · Replace in the same tier.</b> Selling frees that stock's tier slot. A buy must fit a free tier slot; the review says "Fills your $100–$200 slot". If no free tier fits, the buy is refused with the reason.</li>
+            <li><b>B · Any open tier, re-fit by price.</b> A holding's tier comes from its entry price, first fit across every holding. A buy is legal if all holdings plus the new one still fit the tier layout.</li>
+            <li><b>C · Tiers are a draft rule only.</b> Trades ignore tiers; only the roster cap and the budget apply. The review shows no tier.</li>
+            <li><b>Budget rows are unchanged:</b> the decided one-share review keeps "Budget now" and "Budget left after"; these frames leave them out to show only the tier line.</li>
+            <li><b>Either way, a tier is set by the entry price</b> (draft price or buy price) and never moves if the stock's price drifts out of its bracket later.</li>
+          </ul>
+
+          <h3 className="b-sub">A · Replace in the same tier</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Portfolio · the open slot" note="Each row names its slot; the freed slot is a row with Fill, which opens the stock list."><I.TierPortfolio mode="A" /></Fit>
+            <Fit caption="Review buy · SHOP $104.20" note='"Fills your $100–$200 slot", next to the already-decided "1 share" rule.'><I.TierReview mode="A" /></Fit>
+            <Fit caption="Refused · AAPL $211.42" note="Shown before the review, from the stock sheet's Buy. The reason names the price and the open slot's range."><I.TierRefused mode="A" /></Fit>
+          </div>
+
+          <h3 className="b-sub">B · Any open tier, re-fit by price</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Portfolio · tiers by entry price" note="Rows show the tier their entry price falls in. The gap is described by the whole layout, not one slot."><I.TierPortfolio mode="B" /></Fit>
+            <Fit caption="Review buy · SHOP $104.20" note="The tier is computed from today's price, so the review can only say where it lands."><I.TierReview mode="B" /></Fit>
+            <Fit caption="Refused · AAPL $211.42" note="The reason has to explain the whole layout, not one slot."><I.TierRefused mode="B" /></Fit>
+          </div>
+
+          <h3 className="b-sub">C · Tiers are a draft rule only</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Portfolio · after selling DIS, buying AAPL" note="Two stocks between $200 and $400, none between $100 and $200. No tier labels after the draft."><I.TierPortfolio mode="C" /></Fit>
+            <Fit caption="Review buy · AAPL $211.42" note="No tier line: only the roster cap and the budget can refuse."><I.TierReview mode="C" /></Fit>
+          </div>
+
+          <div className="b-ask">
+            <h3>Your call · recommend A</h3>
+            <ul>
+              <li><b>A keeps the league's shape.</b> The tier layout the commissioner chose stays true all season: every roster always holds one cheap stock, one mid-priced stock and one expensive stock. A trade is a swap inside a tier ("sell my $100–$200 stock, buy a better $100–$200 stock"), which is easy to explain on one line and easy to refuse with a reason.</li>
+              <li><b>B plays the same as A</b> while tiers don't overlap (the layout above): each one-share tier holds exactly one stock, so "re-fit everything" always lands back on "fill the open tier". It only differs with overlapping brackets, and there its refusals have to explain the whole roster ("two stocks in $200–$400 and none in $100–$200"). It costs more to explain for the same play.</li>
+              <li><b>C changes what tiers mean.</b> They become a draft-room constraint that dissolves on the first trade: by mid-season a tier league can be five $800+ stocks, the same game as a plain budget league. If that is the intent, a tier league doesn't need its own format.</li>
+              <li><b>Backend (A or B):</b> trade buys need a slot. Tiers today count only <code>drafts.slot_id</code>; a buy in record-trade would carry the freed <code>slot_id</code> (A) or re-check every holding's entry price (B), and refuse with <code>tier_full</code> / <code>tier_mismatch</code>. C needs no backend change.</li>
+            </ul>
+          </div>
+        </section>
 
         <Group id="money" code="3e" name="Trading" job="Sell, keep the cash in the slot, and buy again with exactly what the sale brought in."
           notes={[
@@ -3610,6 +4307,15 @@
     ['danger', 'bg', null, 4.5, 'Field errors on the screen background'],
     ['loss', 'inset', null, 4.5, 'Losses inside a panel (onboarding FINAL art, lineups)'],
     ['live', 'inset', null, 3, 'Live dot inside a LIVE chip (graphic)'],
+    ['on-medal', 'medal-gold', null, 4.5, 'Medal numeral 1 (season complete)'],
+    ['on-medal', 'medal-silver', null, 4.5, 'Medal numeral 2'],
+    ['on-medal', 'medal-bronze', null, 4.5, 'Medal numeral 3'],
+    ['medal-gold', 'surface', null, 3, 'Gold medal disc on a card (graphic)'],
+    ['medal-silver', 'surface', null, 3, 'Silver medal disc on a card (graphic)'],
+    ['medal-bronze', 'surface', null, 3, 'Bronze medal disc on a card (graphic)'],
+    ['medal-gold', 'you-tint', 'surface', 3, 'Gold disc on your standings row (graphic)'],
+    ['medal-silver', 'you-tint', 'surface', 3, 'Silver disc on your standings row (graphic)'],
+    ['medal-bronze', 'you-tint', 'surface', 3, 'Bronze disc on your standings row (graphic)'],
     ['text', 'line', null, 4.5, 'Initials on a neutral (other manager) avatar'],
     ['text-2', 'line', null, 4.5, 'Neutral "?" avatar fallback'],
     ['on-accent', 'you', null, 3, 'Chevrons on the drawn draft track (graphic)'],
@@ -3779,7 +4485,7 @@
             <div><dt>Stakes</dt><dd>$2,000 per slot · 6 slots</dd></div>
           </dl>
           <nav className="b-toc" aria-label="Screens">
-            {[['themes', 'Themes'], ['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['phases', 'Home phases'], ['game', 'Game'], ['money', 'Trading'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
+            {[['themes', 'Themes'], ['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['phases', 'Home phases'], ['game', 'Game'], ['run-it-back', 'Run it back'], ['call-tier-trades', 'Tiers call'], ['money', 'Trading'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
           </nav>
         </header>
 

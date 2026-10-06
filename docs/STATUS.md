@@ -5,8 +5,8 @@ Update this file at the end of any session that changes prod state or lands a
 workstream. Per-workstream detail lives in the documents linked below and in the
 PRs; this page summarises and points.
 
-**Last verified against prod: 2026-09-29, late** (read-only SQL, deploy downloads and
-effect tests run with Giorgio; results recorded inline; #77 and #78 released that evening). Anything marked
+**Last verified against prod: 2026-10-06** (read-only SQL, deploy downloads and
+effect tests run with Giorgio; results recorded inline; scoring/snapshot hardening released 2026-10-04/05; draft-never-skips #105 and the record-trade concurrency fix #113/#115 released 2026-10-06). Anything marked
 **UNVERIFIED** has not been checked against prod and must be confirmed before
 anyone builds on it. Resolved defects are collapsed into §5. Their full reasoning
 lives in the linked PRs and in git history (`git log -p -- docs/STATUS.md`).
@@ -56,7 +56,9 @@ refused by RLS when they draft (confirmed on Giorgio's phone). The fix is the
 
 | Fact | State | Evidence |
 |---|---|---|
-| Migrations applied | Everything in `supabase/migrations/` **through `20261017000000`** | Seven pushes (six on 2026-09-29, one on 2026-09-30), each dry-run/confirm → push → `schema_migrations` verified: (1) `20261006000000`, `20261007000000`, `20261010000000`; (2) `20261011000000`–`04` (ranking); (3) `20261012000000`–`03` (flexible playoffs); (4) `20261013000000` (draft order modes); (5) `20261014000000`–`01` (season result RPC + `league_seasons` write lockdown, #77); (6) `20261015000000` (guarded `complete_league_season`, #78); (7) `20261017000000` (F8 push-token relocation, #83, 2026-09-30) |
+| Migrations applied | Everything in `supabase/migrations/` **through `20261102000000`** | Seven pushes (six on 2026-09-29, one on 2026-09-30), each dry-run/confirm → push → `schema_migrations` verified: (1) `20261006000000`, `20261007000000`, `20261010000000`; (2) `20261011000000`–`04` (ranking); (3) `20261012000000`–`03` (flexible playoffs); (4) `20261013000000` (draft order modes); (5) `20261014000000`–`01` (season result RPC + `league_seasons` write lockdown, #77); (6) `20261015000000` (guarded `complete_league_season`, #78); (7) `20261017000000` (F8 push-token relocation, #83, 2026-09-30); (8) `20261019000000` (S7 heal crons, #86); (9) `20261023000000` (lock start_new_league_season, #91; effect test PASS); (10) `20261028000002` (snapshot-week-end Mon/Tue heal cron, #98); (11) `20261029000000` (`get_home_league`, #101; effect 3/3 PASS); (12) `20261101000000`, `20261101000001`, `20261101000003` (draft-never-skips, #105, 2026-10-06; dry run listed exactly these three); (13) `20261102000000` (`record_trade_atomic`, #113). Its first push FAILED harmlessly with 42601 because the CLI splitter read the bare word "atomic" as `BEGIN ATOMIC`; #115 quoted the name, it was confirmed not applied, then pushed. Held: `deferred/` (I6/I2b drop, the auto-pick sweep cron, the draft-order-notify cron, the start_new_league_season DROP, and `20261101000002` refuse-new-SKIP trigger, which waits for the 1.2.0 sweep-cron promotion and must be **re-stamped later than `20261101000003`** before promotion). |
+| `record_trade_atomic` (#113/#115) | Applied 2026-10-06. ACL `{postgres, service_role}` (no anon/authenticated), INVOKER, VOLATILE, `search_path=public, pg_temp`, `lock_timeout=5s`. Effect test (stale seen-set → `ledger_changed`, trades 2 → 2, rolled back): **PASS** | Verified by query, 2026-10-06 |
+| Draft never skips (#105) | Applied 2026-10-06.<br>• `draft_feasibility_pool`: ACL `{postgres, service_role}` (no anon/authenticated), INVOKER, `search_path=public, pg_temp`<br>• `draft_stalls`: RLS on; ACL postgres + service_role + `authenticated=r`; one policy `draft_stalls_select_members` (authenticated SELECT `is_member(league_id)`)<br>• `auto_pick_price_failures`, `draft_turn_outages`: RLS on; ACL postgres + service_role only | Verified by query, 2026-10-06 |
 | Flexible playoffs (#66) | Applied.<br>• 0 unaddressed playoff rows; only `matchups_bracket_address` exists (the old backstop is dropped)<br>• 0 matchup leagues with a NULL playoff size<br>• the 4 constraints are validated<br>• `start_league_playoffs`: service_role only, DEFINER, with the bracket-shape check<br>• the freeze trigger is enabled<br>• test_0925 and test_09_25_v2 now end **2026-10-30** (playoff weeks included) | 2026-09-29 |
 | Draft order modes (#67) | Applied.<br>• The pre-check passed: ids ASCII; test_07_05_26's order matches its picks; only the stale `test_timer_0925` was finalized silently; no draft due in the window<br>• `draft-order-modes-effect-test.sql`: **24/24 PASS** (B1: all 8 started drafts have a locked order; B2: the in-progress order = its members)<br>• the notify cron is still deferred | 2026-09-29 |
 | Unified ranking + atomic playoff start (#59) | Applied. The pre-check (duplicate playoff rows) returned 0.<br>• `league_standings_ranked`: authenticated + service_role, INVOKER, search_path pinned<br>• `start_league_playoffs`: service_role only, DEFINER, exactly one overload (3 args)<br>• `get_home_summary` / `complete_league_season`: ACL and settings unchanged<br>• index `matchups_one_bracket_per_league` present<br>The heal-candidate query returned 0 rows before deploy | 2026-09-29 |
@@ -90,17 +92,17 @@ scratch, then `diff`), all from the deploy checkout `/Users/giorgio/fantasy-stoc
 
 | Function | Deployed from | Notes |
 |---|---|---|
-| `validate-and-record-pick` | `1f8e2d5` | #58: every pick (manual, bot, auto) goes through `_shared/pick-gate.ts` + `draft-write.ts`; new `action:'auto_pick'`; finalize + heal; `bot_pick` |
-| `draft-autopick-sweep` (new) | `1f8e2d5` | #58. `verify_jwt=false` + the shared `_shared/cron-auth.ts` guard. A no-credential POST returns its own `401 {"error":"Unauthorized"}`. A manual `net.http_post` with the vault key returned `200 {"ok":true,"examined":0}`. **Not scheduled yet** (cron deferred) |
-| `record-trade` | `f0e8eda` | #54: proceeds-sized rebuys, `sold_trade_id`, read-only `action:'preview'`, price rounded before sizing. (Previously UNVERIFIED; now byte-verified) |
-| `process-week-results` | `e58c980` (merged `b36fdc1`) | #78 (2026-09-29): the season-completion heal (`season-completion.ts`) runs every invocation and retries a scored-but-uncompleted final; the rpc `{ error }` is checked, with no fabricated "Season completed" log. Download byte-identical to main (`index.ts`, `season-completion.ts`); a no-credential POST returns our own 401 `{"error":"Unauthorized"}`. Previously `f20de93`, #59: seeds and podium come from `league_standings_ranked`; `bye_no_result` (a bye records no W/L/T); the atomic `start_league_playoffs` plus a heal pass for refused transitions. Also #56's `cash_only`, `scoring_inputs_fetch_failed` and fallback SKIP fixes. Deployed **before** the first scored week (Fri 10-02), so no bye was ever recorded as a win and the recompute script isn't needed |
-| `snapshot-week-start`, `snapshot-week-end` | `eb89df3` | #57: bots included, SKIP rows dropped (`_shared/snapshot-holdings.ts`), and `checkSnapshotReads`, so a failed read aborts and retries the league instead of classifying it complete. (Previously UNVERIFIED; now byte-verified) |
-| `draft-control` | `1f8e2d5` |
-| `draft-order-notify` (new) | `1f8e2d5` | #67. It pushes "the draft order is set" (Expo, via `_shared/push.ts`). `verify_jwt=false` + `_shared/cron-auth.ts`; a no-credential POST returns its own 401. Its first two deploys failed with a Supabase-side `500 internal error`; the third, with `--debug`, succeeded. **Not scheduled yet** (cron deferred). | #60: Start draft is refused with `playoff_teams_exceeds_members` when playoff spots exceed members (equal is allowed). Plus start / add_bots / status; `DRAFT_BOTS_ALLOWED_EMAILS` = test account |
+| `validate-and-record-pick` | `b5499bb` | #105 (2026-10-06): auto-pick walks the whole pool via `draft_feasibility_pool`, no SKIP for people (`skip_disabled`), feasibility check, vendor-outage negative cache + escalation. Byte-verified per function vs `b5499bb` (13 files, 0 diffs). Earlier: #58: every pick (manual, bot, auto) goes through `_shared/pick-gate.ts` + `draft-write.ts`; new `action:'auto_pick'`; finalize + heal; `bot_pick` |
+| `draft-autopick-sweep` | `b5499bb` | #105 redeploy (byte-verified, 14 files; no-credential POST → its own 401). Earlier: #58. `verify_jwt=false` + the shared `_shared/cron-auth.ts` guard. A no-credential POST returns its own `401 {"error":"Unauthorized"}`. A manual `net.http_post` with the vault key returned `200 {"ok":true,"examined":0}`. **Not scheduled yet** (cron deferred) |
+| `record-trade` | `e49df95` | #113 (2026-10-06): validation + insert are atomic. TS validates, then `record_trade_atomic` takes a league advisory lock and compare-and-swaps the exact trades/drafts id sets + rules + slots before inserting. A race loser gets the real game refusal; `trade_conflict` (200, retryable) only after 3 conflicts. Ledger reads are fully paginated. Byte-verified (7 files incl. `commit.ts`); no-credential POST → gateway 401. Earlier, #105 redeploy: only change vs `ee2ceff` is `_shared/draft-validation.ts` `slotAccepts` judging on `tierPrice()` (cents), so drafts and trades agree on tier boundaries. Byte-verified (6 files). Earlier: #89 (2026-10-04): server market-hours gate from `market_calendar` (closed → 200 `{ok:false, reason:'market_closed'}`, calendar unavailable → 503; fail-closed; re-checked before the INSERT). Byte-verified. Live 2026-10-05: an open-market sell (JPM, whole position) and a proceeds-funded buy (~$970 → VIST) both succeeded. Earlier: #54 proceeds-sized rebuys, `sold_trade_id`, `action:'preview'`. |
+| `process-week-results` | `420e895` | #86 (S7): `close_incomplete` refusal replaces legacy scoring; per-user end-price check; Fri 22:00Z + Sat 15:00Z heal crons. #87 comment-only redeploy. #78 season-completion heal. Byte-verified 2026-10-04. Week 1 (Fri 10-02) scored 4/4. |
+| `snapshot-week-start`, `snapshot-week-end` | `ec29807` | #87 single calendar cut per week (`_shared/week-window.ts`; week 2 verified 13:30Z/20:00Z); #95 in-season leagues only; #98 window-based week selection (unscored + current), rows-only per-position S9 close gate, no-op status rule, exact-count read guards; #99 keyset-paged trade reads. Byte-verified 2026-10-05 (13 files). |
+| `draft-control` | `b5499bb` | #105: Start draft runs the feasibility check (`check_setup`); byte-verified 14 files, 2026-10-06. Earlier: #60: Start draft is refused with `playoff_teams_exceeds_members` when playoff spots exceed members (equal is allowed). Plus start / add_bots / status; `DRAFT_BOTS_ALLOWED_EMAILS` = test account |
+| `draft-order-notify` (new) | `1f8e2d5` | #67. It pushes "the draft order is set" (Expo, via `_shared/push.ts`). `verify_jwt=false` + `_shared/cron-auth.ts`; a no-credential POST returns its own 401. Its first two deploys failed with a Supabase-side `500 internal error`; the third, with `--debug`, succeeded. **Not scheduled yet** (cron deferred). |
 | `enrich-symbols` | `8015e95` | batch-pricing fix |
 | `preview-league` | `336775a` | hard `draft_started` refusal |
 | `historical-bars` | `451ac8e` | PR #29 pagination + timeouts + `complete`/`truncatedSymbols` flags; byte-verified 2026-09-26; its new log line is live |
-| `refresh-market-calendar` (new) | `9d86213` | PR #43. `verify_jwt=false` + constant-time `SB_SECRET_KEY_CRON` guard. A no-credential POST returns its own `401`. A manual run populated 68 sessions (2026-09-22 → 2026-12-28) |
+| `refresh-market-calendar` | `ec29807` | #98: `LOOKBACK_DAYS` 7 → 120 (coverage now from 2026-06-07). `verify_jwt=false` + constant-time `SB_SECRET_KEY_CRON` guard. Byte-verified 2026-10-05. |
 | `refresh-symbols`, `send-notification` | `5e3b5d1` | PR #9. `send-notification` is uncalled until 1.1.0 ships |
 
 **UNVERIFIED vs `main`** (never compared): `quote`, `ticker-quotes`, `finnhub-quote`,
@@ -115,7 +117,9 @@ Deleted under DR-001 (do not resurrect): `place-order`, `save-broker-keys`,
 | Job | Schedule (UTC) | Verified by effect |
 |---|---|---|
 | `snapshot-week-start` | `35 14 * * 1,2` | First run for the new leagues: Tue 2026-09-29 |
-| `snapshot-week-end` | `5 21 * * 5` | First for the new leagues: Fri 2026-10-02 |
+| `snapshot-week-end` | `5 21 * * 5` | Fri 2026-10-02: success |
+| `snapshot-week-end-heal` (new, #98) | `30 15 * * 1,2` | Applied 2026-10-05; first run Mon 10-12 (expect a no-op) |
+| `process-weekly-matchups-heal-2200z` / `-heal-sat` (#86) | `0 22 * * 5` / `0 15 * * 6` | Fired 10-02/10-03 with "no pending" (correct no-ops) |
 | `process-weekly-matchups` → `process-week-results` | `15 21 * * 5` | `cron_job_status` = `success` on 2026-09-25 (previous Fridays stranded at `running`) |
 | `enrich_symbols_10min` | `*/10 * * * *` | `enriched_at` advancing 50/run |
 | `refresh_symbols_daily` | `0 */6 * * *` | `200 {"ok":true,"count":13246}` |
@@ -206,12 +210,13 @@ Phase 3: **app first**.
    - **Open:** an end-to-end push delivery on the next test draft (the readers were already falling back both ways, so this confirms, it doesn't unblock).
 8. **`[I6]/[I2b]` drop** (`deferred/20260929000000_drop_I6_I2b.sql`), after 1.1.0
    ships. Until then, any member can still add bots directly via PostgREST.
-9. **Season 2+ never gets a schedule.** `start_new_league_season` deletes matchups
-   and nothing regenerates them. Follow-up: route it through an edge function
-   reusing `_shared/schedule.ts` + `finalize_league_draft`.
-10. **`record-trade` concurrent-buy race**, now narrowed by #54 to **cross-user
-    same-symbol** (the same-user proceeds race is closed by
-    `trades_funded_by_trade_id_unique`). It still needs an atomic SECURITY DEFINER RPC.
+9. **Season 2+ → "Run it back".** `start_new_league_season` is LOCKED (#91, 2026-10-04; only the owner can execute it). Its replacement is designed (#90) and decided (#93), and the phase 1 backend is built and verified (draft PR #94). It releases with 3c's UI and needs the deferred draft-order-notify cron promoted.
+10. ✅ **`record-trade` concurrent-trade race: CLOSED 2026-10-06** (#113 + #115,
+    deployed and byte-verified). The league-wide lock + CAS in `record_trade_atomic`
+    covers same-user double sells/buys, cross-user same-symbol buys, budget
+    overspend and skipped-slot double funding. Open, separately: price-tier/category
+    trade buys hold no slot (ruled option A on 2026-10-06; the "tier trade slots"
+    worker is building it).
 11. **No leave-league flow on mobile.** When one is built, it must handle a
     league whose member count drops below `playoff_teams` after the draft
     starts. Today that league reaches the end of its regular season and the
@@ -350,14 +355,12 @@ Phase 3: **app first**.
     - The pre-deploy check in prod found **0 stuck leagues** and **0 unaddressed playoff rows**, so this is a safeguard, not a repair.
     - Verified 2026-09-30 from the re-captured db-snapshot (#81): `complete_league_season` is `{postgres=X, service_role=X}`, `search_path=public`.
 
-25. ⚠ **Week-window scoring defects: OPEN** (audit #84, `docs/audits/2026-09-30-week-window-audit.md`, with a replay script: 7 of 8 scenarios score WRONG on main).
-    - **Root cause:** the baseline is cut at the Monday 14:35Z run, the trade window starts at the nominal Tuesday 14:30Z `week_start` (fixed UTC, from `_shared/schedule.ts`), and the close is cut at the Friday 21:05Z run. A Monday trade falls in NEITHER the baseline nor the window (S1). Related: S2–S6.
-    - **Also:** S7 (the week-end retries overlap the 21:15Z scorer, so it falls back to `legacy` scoring), S8 (one refused week strands the next week's baseline), and S9 (a missing week-start means partial-portfolio "full" scoring).
-    - **Fri 10-02 exposure:** the prod query found **0 trades** in this week's Monday gap, so S1 doesn't affect it. S7 still could.
-    - **In flight:**
-      - `fix/s7-no-legacy-after-close` (refuse + a recovery run before Monday; deploy before Fri 21:15Z);
-      - `fix/week-window-single-cut` (one calendar-derived cut per week; `matchups.week_start/week_end` rewritten to it at the Monday run; function deploys Sat/Sun 10-03/04).
-    - **Queued after those merge:** S8/S9, U1 (the week-1 "starts Tue" phase), U2 (the mobile holiday list stops at 2026, with no early closes), and a DST-correct `planSeason`.
+25. ✅ **Week-window scoring defects: FIXED and LIVE 2026-10-04/05** (audit #84).
+    - #86 (S7 refuse, not legacy); #87 (S1–S6, one calendar cut per week; week 2 rewritten to Mon 9:30 → Fri 4:00 ET); #95 (snapshot only in-season leagues; fixed the 10-05 false 'failed' from finished league `aaaaaaaa-…`); #98 (S8/S9, the Mon/Tue heal cron, LOOKBACK 120, truncation guards); #99 (trade paging). All byte-verified.
+    - **Behaviour change (#98):** an old UNSCORED week in an in-season league is now baselined, closed and scored retroactively. That's a no-op in prod today.
+    - **Still to verify:** Fri 10-09 21:05Z week-end = success (no `aaaaaaaa` entry); Mon 10-12 15:30Z heal = a no-op.
+    - **Follow-ups:** filter `market_calendar` reads to the coverage window before ~2030 (the 1000-row cap); a record-trade calendar count guard; `readAllTrades` into `_shared` with tests; an optional scoring run after the Mon/Tue heal. U1 → 3c, U2 → 3e. A DST-correct `planSeason`.
+26. ⚠ **1.1.0 trade screen** (found in the live test 2026-10-05): Portfolio derives "available cash" from the legacy `budget_mode`/`budget_amount`, so per-slot leagues show $0 and block buys client-side, and the quantity stepper misrepresents what the server buys. No 1.1.x hotfix; 3e replaces the screen (spec #96/#97). `test_0925` has `budget_mode='no-budget'` set for the test.
 
 ---
 

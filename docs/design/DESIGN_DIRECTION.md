@@ -324,6 +324,22 @@ and every animation keeps its reduced-motion fallback.
   (binding: accessibility, not style).
 - Error and destructive-confirmation states (they appear instantly).
 
+### Motion craft (adopted 2026-10-05; after pbakaus/impeccable, Apache-2.0)
+
+- **One authored moment per screen.** Each phase PLAN states a one-line *motion
+  thesis* for the screen: the moment worth authoring and why. Everything else
+  is feedback, state or continuity, not a second show.
+- **The removal test.** For every animation, ask "what is lost if it's
+  removed?". If the answer is "nothing but decoration", remove it.
+- **Exit is faster than entrance** (sheets dismissing, toasts, banners).
+- **Visible at rest.** An animation that doesn't run (Reduce Motion, a
+  dropped frame, a library that ignores a prop) never leaves content hidden.
+  Entrances animate *from* a visible or near-visible state, or are skipped.
+  This sharpens "never hide content until it finishes" above (3b-2's chart
+  draw-in showed the risk).
+- **Loops pause when unseen.** The live dot (the only loop) and any pulse stop
+  when the screen isn't focused or the app is in the background.
+
 ---
 
 ## 5. Reduced motion (binding)
@@ -527,6 +543,13 @@ instances** cut from Archivo's variable TTF (OFL): `Archivo-Condensed-Black`
 400/500/600/700/800 at wdth 100, loaded with `expo-font`. Web loads the
 variable font from Google Fonts and uses `font-stretch`.
 
+**Type floor and steps (adopted 2026-10-05):**
+- **11 pt minimum** for any text: chips, tags, tab labels, draft-board cell
+  numbers and badges included.
+- **Adjacent roles must differ by an obvious step** (size and/or weight), so
+  caption, callout, headline and title can be told apart without reading them.
+- `type.tag` (11 pt) is at the floor; nothing goes below it.
+
 ### Space, radius, elevation
 
 - `space`: 2, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64 (`space.1`…`space.11`).
@@ -581,11 +604,12 @@ exactly what this removes.
 | `on-opp` | `#0D1B2E` | `#0D1B2E` | Text on opponent fills (white fails on Light orange) |
 | `primary-bg` / `primary-fg` | `#0D1B2E` / `#FFFFFF` | `#FFFFFF` / `#0D1B2E` | Primary button |
 | `inverse-bg` / `inverse-fg` | `#0D1B2E` / `#FFFFFF` | `#F3F6FA` / `#0D1B2E` | FINAL chip, selected toggle |
+| `medal-gold` / `medal-silver` / `medal-bronze` / `on-medal` | `#B07A00` / `#7C8898` / `#C27036` / `#1A1407` | `#E8AF2E` / `#B9C3CF` / `#DC8A55` / `#0D1B2E` | **Season complete only.** A medal is a filled disc with the rank numeral (`on-medal` ≥4.5:1 on each fill); the disc is a graphic (≥3:1 on `surface` and on the `you-tint` row). Never medal-coloured text; names stay `text`. Replaces the legacy light-only `gold`/`silver`/`bronze` (2026-10-05). |
 
 Plus `accent-tint`, `accent-wash`, `you-tint`, `gain-tint`, `loss-tint`,
 `warn-*`, `track`, `scrim`, `tabbar`, `shadow` / `sheet-shadow` (none in Dark),
 and `on-accent` / `on-opp`. The full list with contrast is computed live on the
-key-screens board. **Two tables, both themes, all passing (76/76 at v3.1):** every
+key-screens board. **Two tables, both themes, all passing (76/76 at v3.1; 108/108 with the medal pairs, 2026-10-05):** every
 text token ≥ 4.5:1 and graphic token ≥ 3:1 on `surface`, AND every
 foreground-on-fill pair the components render (text on `you`, `opp`,
 `loss-fill`, `primary`, `inverse`, `inset`, `sunken`, the tints and the tab bar),
@@ -622,6 +646,130 @@ prefers.
   contrast test asserting BOTH tables (token-on-surface AND the full
   foreground-on-fill pair list, tints composited) for both themes. A new
   component that puts text on a fill adds its pair to the list.
+
+**Colour rules (adopted 2026-10-05):**
+- **Secondary text on a tinted fill** (`*-tint`, `warn-tint`) uses a hue-derived
+  token, never a generic grey, and its pair goes in PAIRS.
+- **Colour is never the only code.** Every colour-coded signal has a text, sign
+  or shape twin and a VoiceOver label: gain/loss carry the sign (U+2212), W/L/T
+  and Bye carry letters, the tug bar and medals carry text equivalents, and
+  phase chips carry words.
+
+## 9B. Native craft floor (adopted 2026-10-05; after pbakaus/impeccable, Apache-2.0)
+
+The mechanical floor every mobile screen clears. Summarised in our words from
+the `impeccable` guides (craft-floor, ios, clarify, harden, layout); see
+`docs/design/reviews/impeccable-notes.md` for the full mapping.
+
+- **Platform scope.** **Phone only for 1.2.0** (Giorgio, 2026-10-05): iPad
+  support is off (`supportsTablet: false`), so iPads run the iPhone app in
+  compatibility mode. A designed iPad pass (master-detail Matchup/League, a
+  wider Portfolio) is a later project. Never ship a stretched phone layout on a
+  tablet.
+- **Icons.** One drawn icon set (the `sp` icons: one stroke, one weight).
+  **No Unicode glyphs or emoji standing in for icons**: no ⓘ, ▲/▼, ✓, ›, →
+  as text. Dots and discs are drawn shapes. (Bullets that mask a password are
+  not icons.)
+- **The icon set is Ionicons** (`@expo/vector-icons`), already used by the
+  3b-1 tab bar. It comes in **outline** by default; **filled** only for a
+  selected state (the tab bar). Screens use `components/sp/Icon` with a
+  semantic name, never a raw glyph name:
+
+  | `sp/Icon` name | Ionicons glyph | Used for |
+  |---|---|---|
+  | `chevronRight` | `chevron-forward` | Row disclosure, "Invest", "Resolve" |
+  | `chevronLeft` | `chevron-back` | Back |
+  | `chevronDown` / `chevronUp` | `chevron-down` / `chevron-up` | Pill and sheet disclosure; standings movement down/up |
+  | `check` | `checkmark` | Running back, done, password rule met |
+  | `circle` | `ellipse-outline` | Password rule not met |
+  | `info` | `information-circle-outline` | The unpriced (at-cost) caption |
+  | `close` | `close` | Sheets, clear field |
+  | `search` | `search` | Search fields |
+  | `add` | `add` | Create |
+  | `share` | `share-outline` | Invite code share |
+  | `trophy` | `trophy` | Champion medallion |
+  | `lock` | `lock-closed-outline` | Final / locked draft order |
+  | `mail` | `mail-outline` | "Check your email" |
+  | `alert` | `alert-circle-outline` | **Load failures only**: the "couldn't load" placeholder on any tab or sheet, in the EmptyState disc, tone `text2` |
+
+  The board's drawn icons depict these glyphs. A new icon is added to the map
+  through the Design Lead.
+  - **Size follows the text it sits with:** `size="caption" | "callout" |
+    "body" | "headline" | "title"` → 14 / 16 / 18 / 20 / 24 pt. It scales with
+    Dynamic Type by the paired role's `maxScale`, so an icon never shrinks
+    beside XL text.
+  - **Medallions are illustrations, not inline icons** (ruling 2026-10-05):
+    `size="medallion"` is a 36 pt glyph centred in a 72 pt disc (the
+    season-complete trophy, the Run it back champion card). It scales with
+    Dynamic Type at the same factor as the heading under it, **capped at
+    1.3×** (47 pt glyph / 94 pt disc), so the medallion never outgrows the
+    card or falls below its heading. Only medallions use it.
+  - **Errors** (ruling 2026-10-05):
+    - a **load failure** ("couldn't load", any tab or sheet) shows `alert` in
+      the EmptyState disc in **`text2`, never red**, because a failed load
+      isn't the user's doing and red is reserved for field errors, losses and
+      destructive actions;
+    - **field errors** stay text-only (danger colour, instant, no icon);
+    - **refusals and blockers** keep their warn-tint card, with no icon;
+    - every load failure offers its recovery ("Try again" / pull to refresh)
+      and says what failed.
+  - **Colour is a theme token** (`tone`: text, text2, accent, gain, loss,
+    zero, live, onAccent…), matching the text it sits with. No raw colours.
+  - **Accessibility:** icons are **decorative by default** (hidden from
+    VoiceOver; the adjacent text carries the meaning). An icon that stands
+    alone as a control takes `label`, and its wrapper takes `accessibilityRole`.
+    An icon-only button without a label fails the gate.
+- **Hit areas.** **≥ 44 × 44 pt for everything tappable**, including text links
+  whose visible mark is small ("Nudge again · Remove", "Change", "Invest", "Share",
+  the pill's "+N"). Use padding or `hitSlop`; verify it in review.
+  - **SegmentedControl:** the visual height stays (≈ 34 pt; 40 pt for Buy/Sell);
+    each segment's hit area reaches 44 pt through vertical `hitSlop` =
+    (44 − height) / 2. Keep ≥ 8 pt clear above and below so the slop never
+    overlaps another target. The container has `accessibilityRole="tablist"`,
+    each segment is a `tab` with `selected` state, and selection gives a light
+    haptic.
+- **LiveDot** (the only loop) **pauses when its screen loses focus or the app
+  leaves the foreground** (`AppState` ≠ active), and resumes on focus or
+  return. Reduce Motion: a static dot. Every pulse built on it inherits this.
+- **Gestures and sheets.**
+  - Edge-swipe back is never disabled.
+  - Sheets dismiss by swipe, with a clear Cancel/Done, unless dismissing would
+    lose data (a trade review mid-confirm).
+  - **A one-tap destructive action with no review step** (Remove a player,
+    delete, leave) confirms through a native action sheet whose button names
+    the action ("Remove Andrea P."); never Yes/No/OK.
+  - **A flow with a review screen is already its confirmation** (Sell, Buy,
+    Schedule the draft, Start the draft). The review states the outcome, and
+    its one button names the action ("Sell TSLA", "Buy SHOP"). No extra sheet:
+    a third confirm adds friction, not safety (ruling 2026-10-05).
+- **Copy.**
+  - Confirm buttons name the action.
+  - Every message is a whole sentence, never stitched from fragments (this
+    keeps future localisation possible).
+  - Errors say what failed, why when useful, and how to recover; never a raw
+    code.
+  - Verbatim-copy and Giorgio-approval rules (above) still govern.
+- **Tags.** A broadcast tag must carry information and must not repeat an
+  adjacent chip or title. (Our tags stay; this is the lint, not a ban.)
+- **Reading order.** The squint test: blurred, a screen still shows its
+  primary element, secondary element and groups in that order.
+- **Choices.** At a decision point, at most four options are visible, with one
+  primary action. Group or disclose the rest.
+- **Stress fixture** (every phase captures it):
+  - a 20-character username and a 40-character league name;
+  - values and losses ≥ $1,000,000;
+  - 16 managers;
+  - 1,000+ history rows (virtualised list);
+  - offline/slow (a stale-data state);
+  - a `rate_limited` refusal.
+
+**Considered and not adopted** (they conflict with Giorgio's rulings or the
+board, which stand):
+- impeccable's eyebrow/kicker ban (our broadcast tags);
+- its "hero metric" refusal (Home's hero, D1);
+- large collapsing titles (the 3b-1 pill + avatar header);
+- "San Francisco carries the UI" (Archivo is our UI face);
+- its tooling (detector, hooks, live mode). Never run it.
 
 ## 10. What happens next
 

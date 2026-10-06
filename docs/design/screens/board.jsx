@@ -123,6 +123,15 @@
     ['danger', 'bg', null, 4.5, 'Field errors on the screen background'],
     ['loss', 'inset', null, 4.5, 'Losses inside a panel (onboarding FINAL art, lineups)'],
     ['live', 'inset', null, 3, 'Live dot inside a LIVE chip (graphic)'],
+    ['on-medal', 'medal-gold', null, 4.5, 'Medal numeral 1 (season complete)'],
+    ['on-medal', 'medal-silver', null, 4.5, 'Medal numeral 2'],
+    ['on-medal', 'medal-bronze', null, 4.5, 'Medal numeral 3'],
+    ['medal-gold', 'surface', null, 3, 'Gold medal disc on a card (graphic)'],
+    ['medal-silver', 'surface', null, 3, 'Silver medal disc on a card (graphic)'],
+    ['medal-bronze', 'surface', null, 3, 'Bronze medal disc on a card (graphic)'],
+    ['medal-gold', 'you-tint', 'surface', 3, 'Gold disc on your standings row (graphic)'],
+    ['medal-silver', 'you-tint', 'surface', 3, 'Silver disc on your standings row (graphic)'],
+    ['medal-bronze', 'you-tint', 'surface', 3, 'Bronze disc on your standings row (graphic)'],
     ['text', 'line', null, 4.5, 'Initials on a neutral (other manager) avatar'],
     ['text-2', 'line', null, 4.5, 'Neutral "?" avatar fallback'],
     ['on-accent', 'you', null, 3, 'Chevrons on the drawn draft track (graphic)'],
@@ -292,7 +301,7 @@
             <div><dt>Stakes</dt><dd>$2,000 per slot · 6 slots</dd></div>
           </dl>
           <nav className="b-toc" aria-label="Screens">
-            {[['themes', 'Themes'], ['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['phases', 'Home phases'], ['game', 'Game'], ['money', 'Trading'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
+            {[['themes', 'Themes'], ['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['phases', 'Home phases'], ['game', 'Game'], ['run-it-back', 'Run it back'], ['call-tier-trades', 'Tiers call'], ['money', 'Trading'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
           </nav>
         </header>
 

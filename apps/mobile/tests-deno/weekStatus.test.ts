@@ -29,6 +29,7 @@ import {
   getUpcomingMatchupLabel,
   isWeekActive,
 } from '../lib/weekStatus.ts';
+import { standardWeekSessions, type MarketCalendarSession } from '../lib/time/marketWeek.ts';
 
 // ---------------------------------------------------------------------------
 // getSeasonPhase
@@ -369,4 +370,63 @@ Deno.test('an UNSCORED bye, and a row that does not select team2_user_id, are no
   assertEquals(getWeekStatus(league, unscoredBye, wed).isWeekComplete, false);
   const noTeam2Selected = { winner_user_id: null, is_tie: false, team1_gain: 7, team2_gain: null };
   assertEquals(getWeekStatus(league, noTeam2Selected, wed).isWeekComplete, false);
+});
+
+// ---------------------------------------------------------------------------
+// U1 (docs/audits/2026-09-30-week-window-audit.md): the season starts at T0,
+// week 1's FIRST CALENDAR OPEN, not at league_start_date (= week 1's stored
+// nominal-Tuesday week_start, _shared/schedule.ts). The Monday baseline is
+// cut at Monday's open, so a phase boundary at Tuesday 10:30 AM ET left all
+// of week-1 Monday reading as pre-season and inviting roster moves into the
+// unscored gap. Same derivation as Home's B3 (resolveWeekWindow on the
+// stored start date); with no calendar coverage it falls back to the stored
+// value, exactly like Home.
+// ---------------------------------------------------------------------------
+
+// Week 1 = the week of Mon 2026-09-28 (EDT). Stored start: Tue 14:30Z.
+const U1_STORED_START = '2026-09-29T14:30:00Z';
+const U1_LEAGUE = { draft_status: 'completed', season_status: 'active', current_week: 1, num_weeks: 8, league_start_date: U1_STORED_START };
+const U1_CAL: MarketCalendarSession[] = standardWeekSessions(U1_STORED_START);
+// Week of Mon 2026-09-07 (Labor Day): the calendar has no Monday session.
+const U1_HOLIDAY_START = '2026-09-08T14:30:00Z';
+const U1_HOLIDAY_LEAGUE = { ...U1_LEAGUE, league_start_date: U1_HOLIDAY_START };
+const U1_HOLIDAY_CAL: MarketCalendarSession[] = standardWeekSessions(U1_HOLIDAY_START).filter((s) => s.sessionDate !== '2026-09-07');
+
+Deno.test('U1: week-1 Monday after the open (T0) is regular, not pre_season', () => {
+  const mondayLate = new Date('2026-09-28T14:40:00Z'); // Mon 10:40 AM EDT, after the 14:35Z baseline
+  assertEquals(getSeasonPhase(U1_LEAGUE, mondayLate, U1_CAL), 'regular');
+  // Trading stays allowed, but it now lands in a scored week, not "pre-season".
+  assertEquals(canTradeInPhase(getSeasonPhase(U1_LEAGUE, mondayLate, U1_CAL)), true);
+});
+
+Deno.test('U1: exactly at T0 (Mon 9:30 AM EDT) is regular; one minute before is pre_season', () => {
+  assertEquals(getSeasonPhase(U1_LEAGUE, new Date('2026-09-28T13:30:00Z'), U1_CAL), 'regular');
+  assertEquals(getSeasonPhase(U1_LEAGUE, new Date('2026-09-28T13:29:00Z'), U1_CAL), 'pre_season');
+});
+
+Deno.test('U1: a holiday Monday stays pre_season; T0 is Tuesday\'s open', () => {
+  assertEquals(getSeasonPhase(U1_HOLIDAY_LEAGUE, new Date('2026-09-07T15:00:00Z'), U1_HOLIDAY_CAL), 'pre_season');
+  assertEquals(getSeasonPhase(U1_HOLIDAY_LEAGUE, new Date('2026-09-08T13:29:00Z'), U1_HOLIDAY_CAL), 'pre_season');
+  assertEquals(getSeasonPhase(U1_HOLIDAY_LEAGUE, new Date('2026-09-08T13:30:00Z'), U1_HOLIDAY_CAL), 'regular');
+});
+
+Deno.test('U1: in EST the open is 14:30Z, so 14:00Z Monday is still pre_season', () => {
+  const stored = '2026-11-10T15:30:00Z'; // week of Mon 2026-11-09 (EST)
+  const league = { ...U1_LEAGUE, league_start_date: stored };
+  const cal = standardWeekSessions(stored);
+  assertEquals(getSeasonPhase(league, new Date('2026-11-09T14:00:00Z'), cal), 'pre_season');
+  assertEquals(getSeasonPhase(league, new Date('2026-11-09T14:30:00Z'), cal), 'regular');
+});
+
+Deno.test('U1: no calendar coverage falls back to the stored start (never an invented open)', () => {
+  const mondayLate = new Date('2026-09-28T14:40:00Z');
+  assertEquals(getSeasonPhase(U1_LEAGUE, mondayLate, []), 'pre_season');
+  assertEquals(getSeasonPhase(U1_LEAGUE, mondayLate), 'pre_season');
+});
+
+Deno.test('U1: getSeasonLabel / formatSeasonStartShort / getUpcomingMatchupLabel name T0\'s day', () => {
+  assertEquals(getSeasonLabel('pre_season', U1_LEAGUE, U1_CAL), `Starts ${formatShortWeekdayDate(new Date('2026-09-28T13:30:00Z'))}`);
+  assertEquals(formatSeasonStartShort(U1_LEAGUE, U1_CAL), formatShortMonthDay(new Date('2026-09-28T13:30:00Z')));
+  assertEquals(getUpcomingMatchupLabel(U1_LEAGUE, U1_CAL), 'Week 1 starts Mon, Sep 28');
+  assertEquals(getUpcomingMatchupLabel(U1_HOLIDAY_LEAGUE, U1_HOLIDAY_CAL), 'Week 1 starts Tue, Sep 8');
 });

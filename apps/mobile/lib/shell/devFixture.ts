@@ -56,6 +56,12 @@ if (SHELL_FIXTURE) {
 
 export const FIXTURE_USER_ID = '00000000-0000-4000-8000-00000000f1c5';
 export const FIXTURE_EMAIL = 'roberto@example.com';
+/** DEV-only XXXL capture seams (carry-overs 1-2, 2026-10-05): a long fixture
+ * email and league name, so the email wrap and the league-pill wrap can be
+ * checked at large text sizes. Read only under __DEV__; unset = the normal
+ * fixture value. Fixture data only -- never a real account. */
+export const FIXTURE_EMAIL_OVERRIDE: string | null = __DEV__ ? (process.env.EXPO_PUBLIC_SHELL_EMAIL || null) : null;
+export const FIXTURE_LEAGUE_NAME_OVERRIDE: string | null = __DEV__ ? (process.env.EXPO_PUBLIC_SHELL_LEAGUE_NAME || null) : null;
 
 export function fixtureUsername(fixture: ShellFixture): string | null {
   return fixture === 'no-username' ? null : 'roberto_b';
@@ -68,7 +74,14 @@ function league(over: Partial<League> & Pick<League, 'id' | 'name'>): League {
     invite_code: 'SCUD26',
     commissioner_id: FIXTURE_USER_ID,
     draft_status: 'completed',
-    draft_date: null,
+    // The board's "Draft Sat 7:00 PM" (ET) -- harmless for a
+    // draft_status:'completed' league (draft_date has no effect once the
+    // draft is done), but needed so HOME_FIXTURE's pre_draft/
+    // pre_draft_waiting states (an independent fixture axis from this
+    // one, both keyed to whichever league the picker has active -- almost
+    // always this one) have a real date/countdown to render instead of
+    // silently hiding those lines for lack of one.
+    draft_date: '2026-10-03T23:00:00Z',
     league_start_date: new Date(Date.now() - 40 * DAY).toISOString(),
     budget_mode: 'no-budget',
     stake_mode: 'fixed_notional',
@@ -78,10 +91,16 @@ function league(over: Partial<League> & Pick<League, 'id' | 'name'>): League {
     salary_cap_limit: null,
     num_participants: 6,
     num_rounds: 6,
+    pick_seconds: 60,
     league_type: 'matchup',
     duration_days: null,
     num_weeks: 10,
-    playoff_teams: 4,
+    // Matches lib/home/homeFixtureData.ts's FIXTURE_LEAGUE.playoffTeams
+    // (6) -- SeasonCard's week chips read `league.playoff_teams` (this
+    // object) but the actual playoff week structure comes from HOME_
+    // FIXTURE's own numbers, a fully independent fixture axis. A mismatch
+    // here would silently produce the wrong round short-name (B7).
+    playoff_teams: 6,
     current_week: 6,
     created_at: new Date(Date.now() - 50 * DAY).toISOString(),
     current_season_id: null,
@@ -109,7 +128,7 @@ export function fixtureLeagues(fixture: ShellFixture): { leagues: League[]; shee
   }
 
   const leagues = [
-    league({ id: 'fx-scudetto', name: 'Stock Scudetto' }),
+    league({ id: 'fx-scudetto', name: FIXTURE_LEAGUE_NAME_OVERRIDE ?? 'Stock Scudetto' }),
     league({ id: 'fx-friday', name: 'Friday Night Stocks', num_participants: 8, current_week: 2 }),
     league({
       id: 'fx-seriea',
@@ -130,7 +149,7 @@ export function fixtureLeagues(fixture: ShellFixture): { leagues: League[]; shee
   };
   const base = { marketOpen: true, ties: 0, isChampion: false, seasonLabel: '' };
   const sheet: SheetLeague[] = [
-    { ...base, ...facts('fx-scudetto'), id: 'fx-scudetto', name: 'Stock Scudetto', seasonPhase: 'regular', rank: 2, rankCount: 6, wins: 4, losses: 1, membersJoined: 6, capacity: 6 },
+    { ...base, ...facts('fx-scudetto'), id: 'fx-scudetto', name: FIXTURE_LEAGUE_NAME_OVERRIDE ?? 'Stock Scudetto', seasonPhase: 'regular', rank: 2, rankCount: 6, wins: 4, losses: 1, membersJoined: 6, capacity: 6 },
     { ...base, ...facts('fx-friday'), id: 'fx-friday', name: 'Friday Night Stocks', seasonPhase: 'regular', rank: 3, rankCount: 8, wins: 1, losses: 0, membersJoined: 8, capacity: 8 },
     { ...base, ...facts('fx-seriea'), id: 'fx-seriea', name: 'Serie A Traders', seasonPhase: 'pre_draft', rank: null, rankCount: null, wins: 0, losses: 0, membersJoined: 6, capacity: 8 },
     { ...base, ...facts('fx-summer'), id: 'fx-summer', name: 'Summer Cup', seasonPhase: 'completed', rank: 1, rankCount: 8, wins: 10, losses: 4, membersJoined: 8, capacity: 8, isChampion: true },

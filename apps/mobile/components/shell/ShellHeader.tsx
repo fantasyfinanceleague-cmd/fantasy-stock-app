@@ -49,7 +49,7 @@ export function ShellHeader({ title, showAvatar = false, showPhase = false }: Sh
       {activeSheet ? (
         // Wrapped: PhaseChip's own alignSelf would pin it to the row's top.
         <View style={styles.chip}>
-          <PhaseChip phase={chipPhaseFor(activeSheet.seasonPhase, activeSheet.marketOpen)} label={chipLabelFor(activeSheet)} />
+          <PhaseChip phase={chipPhaseFor(activeSheet.seasonPhase, activeSheet.marketOpen)} label={chipLabelFor(activeSheet)} onPageBackground />
         </View>
       ) : null}
       {showAvatar ? (

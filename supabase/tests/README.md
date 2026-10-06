@@ -298,7 +298,7 @@ What it does:
   lines from `20260718000000`, then the grant lines from `20260718000001`, under
   simulated Supabase default grants. The pre-state therefore has
   `authenticated=X` and `service_role=X`, matching the prod snapshot.
-- Applies `20261023000000_lock_start_new_league_season.sql` whole.
+- Applies `20261105000007_lock_start_new_league_season.sql` whole.
 - Runs the migration header's POST-PUSH **DO-block effect check**,
   un-commented, both before the migration (it must report `FAIL`) and after it
   (it must report `PASS -- 42501`). So the HUMAN ACTION query is proven able
@@ -315,10 +315,128 @@ It covers:
   `P0001`), so the function stays restorable;
 - re-applying the migration is a no-op.
 
+## draft_feasibility_pool (draft-never-skips, 2026-10-05)
+
+`draft_feasibility_pool.pglite.test.ts` — the SQL pool groups == the TS
+`buildPoolGroups` on one fixture, and the service-role-only grant.
+Run: `deno test --allow-read --allow-env supabase/tests/draft_feasibility_pool.pglite.test.ts`
+(first run fetches `npm:@electric-sql/pglite`).
+
+## record_trade_atomic.pglite.test.ts
+
+What it does:
+- Loads **verbatim**: the trades table and its RLS (`20250118000000`), the quantity
+  widening (`20260810000000`), `funded_by_trade_id` and its unique index
+  (`20261006000000`), the client-INSERT policy drop (`20260811000002`), and
+  `20261102000000_record_trade_atomic.sql`. leagues, league_members, drafts and
+  league_draft_slots are replicas of the columns the function reads.
+- Drives the function through record-trade's **real** write path:
+  `commitWithRetry` + `decideTrade` (`supabase/functions/record-trade/commit.ts`)
+  over the real validator. Only the reads are SQL instead of paginated PostgREST;
+  pagination is covered hermetically in `record-trade/commit.test.ts`.
+- Forces each race's losing interleaving deterministically: A and B both read, A
+  commits, then B submits its stale view.
+
+It covers:
+- grants: INVOKER, VOLATILE, `service_role` only, `search_path` pinned; anon is
+  denied, and a *leaked* authenticated grant still cannot insert (trades RLS)
+- structure: the advisory lock precedes every table read, with the key pinned
+- the races, each with exactly one row committed and the loser's game refusal:
+  - double sell → `not_owned`, net position 0
+  - double budget_cap buy → `symbol_owned`
+  - two buys that each fit the budget alone → `over_budget`
+  - double price_tiers buy → `symbol_owned`
+  - two buys racing for the last roster spot → `roster_full`
+  - cross-user same symbol → `symbol_owned`, one owner
+  - two buys into one skipped fixed_notional slot → `no_proceeds`
+  - two buys reinvesting the same named sale → `proceeds_unavailable`
+- the CAS: a moved trade, a deleted draft pick, each of the five rules columns,
+  and a slot edit or insert are each `ledger_changed` naming what moved; exact-set
+  semantics (missing, extra, duplicated id); numerics compared by value (no
+  spurious conflict); a sell is not refused by a rules edit it never read; a
+  mid-flight budget edit re-validates under the new rules
+- **`trade_conflict` means nothing was traded:** a neighbour commits between
+  every read and its RPC, so all 3 attempts of a FUNDED fixed_notional buy get
+  `ledger_changed`. The test asserts `trade_conflict`, that every attempt really
+  was funded by the sale, that only the neighbour's rows are new, and that no
+  `funded_by_trade_id` row exists in the league and the sale is claimed nowhere.
+  (The hermetic side, `trade_conflict` ONLY when every attempt was
+  `ledger_changed`, never after an rpc `{ error }`, a timeout or a 23505, is in
+  `record-trade/commit.test.ts`.)
+- write-free refusals: `not_a_member`, `league_not_found`, `bad_request`,
+  `draft_not_completed`
+- the funded index is mapped inside the RPC **by name**; any other constraint
+  still raises
+- the migration header's HUMAN ACTION **DO-block effect check**, run verbatim:
+  PASS on this function, FAIL on one with the CAS neutered, and it rolls back
+  either way
+
+What it cannot show: two truly concurrent transactions blocking on the advisory
+lock. PGlite has one connection, so the lock rests on the argument in the migration
+header plus the structure step.
+
+Mutation-checked (each fails at least one step):
+- neutering the trades CAS (11 steps, including the trade_conflict proof);
+- neutering the drafts CAS;
+- dropping DISTINCT from the seen-set join;
+- removing the NULL-element guard;
+- removing the lock (the structure step);
+- `STABLE` instead of `VOLATILE` (every step: a STABLE function cannot INSERT);
+- removing the READ COMMITTED guard;
+- `MAX_ATTEMPTS = 1`, i.e. no retry (10 steps here, plus 6 hermetic tests).
+
+Also covered: jsonb `'null'` for rules/slots reads as not given (a sell still
+commits), and the function refuses to run under REPEATABLE READ.
+
+### record_trade_atomic.pglite.test.ts: tier slots (20261103000000)
+
+The same file also loads `20261103000000_trades_slot_id.sql` (adds `trades.slot_id`,
+drops the 12-arg overload, adds `p_slot_id`) and drives it through the real
+`commitWithRetry` + `decideTrade`. The steps:
+- exactly ONE `record_trade_atomic` (13 args) and the 12-arg signature is gone;
+  the proacl lockdown is re-asserted on the new signature;
+- the repro end to end: NVDA in hi, a $100 buy fills lo and records `slot_id`, a $150
+  buy is refused `no_eligible_slot` with `open_slots: []`; sell-then-buy fills the freed
+  tier; draft-sell-rebuy counts the buy's slot once;
+- race 3c: two different symbols into one free tier slot, the loser re-validates;
+- legacy rows: a NULL-slot buy occupies its derived tier, and a manager already holding
+  two stocks in one tier is never stranded (sell either, then it reopens);
+- the three RPC slot guards (slot on a sell, a foreign slot, a slot-less buy in a slotted
+  league) are `bad_request` and write nothing, and run AFTER the CAS;
+- a slot deleted between the guard reads and the INSERT (a test trigger simulates the
+  commissioner's lock-free DELETE) maps the FK error to `ledger_changed`, nothing written;
+- the table: `slot_id` buy-only CHECK, deleted slot is SET NULL;
+- both HUMAN ACTION effect-check DO blocks run verbatim: the #113 block against the
+  13-arg function, and the new `TIER_TRADE_SLOTS EFFECT TEST` block, which must PASS,
+  read PARTIAL (never PASS) when no completed slotted league exists, and FAIL (writing
+  nothing) for each of: a removed guard (x3), EXECUTE leaked to authenticated, the
+  12-arg overload left callable.
+
+Mutation-checked: reverting the validator's occupancy to drafts-only fails 7 hermetic
+tests including the repro (`draft-validation.test.ts`, "tier trades: ...").
+
+## migration_cli_split.test.ts
+
+What it does:
+- Ports the Supabase CLI's statement splitter (`pkg/parser/state.go`, v2.67.1) to
+  TypeScript, faithfully, quirks included, and runs it over every file in
+  `supabase/migrations/` and `deferred/`.
+- A file passes when the splitter ends at rest (ready, or in a trailing line
+  comment). Ending inside an ATOMIC block, a quote, a dollar quote or a block
+  comment means `supabase db push` would glue statements into one and Postgres
+  would refuse it (42601).
+
+Why: PGlite runs multi-statement text directly, so the PGlite suites can't see
+the CLI's splitting. On 2026-10-06 the first push of `20261102000000` failed
+because the bare name `record_trade_atomic` contains "atomic", which the splitter
+reads as `BEGIN ATOMIC`. Fix: quote the identifier (`public."my_atomic_fn"`).
+
+Run: `deno test --allow-read supabase/tests/migration_cli_split.test.ts` (files only).
+
 ## run_it_back.pglite.test.ts
 
 What it does:
-- Loads the six `*_run_it_back_*.sql` migrations (20261027000000-05) **verbatim**,
+- Loads the six `*_run_it_back_*.sql` migrations (20261105000000-05) **verbatim**,
   found by suffix and applied in name order, so a re-stamp needs no edit here.
   Also loads `is_member` (20260712000000), `participant_display_name` (20261004000000)
   and the `league_notifications` table DDL (20261013000000) by slicing.

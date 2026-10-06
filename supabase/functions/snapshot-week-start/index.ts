@@ -9,6 +9,10 @@ import {
 } from './plan.ts';
 import { checkSnapshotReads, matchupParticipants, snapshotHoldings } from '../_shared/snapshot-holdings.ts';
 import type { CalendarSession, Coverage as MarketCalendarCoverage } from '../_shared/week-window.ts';
+import { IN_SEASON_STATUSES, SNAPSHOT_DRAFT_STATUS, isInSeasonLeague } from '../_shared/snapshot-league-scope.ts';
+import { classifyCloseCoverage } from '../snapshot-week-end/close.ts';
+import { instantAtOrBefore, instantBefore, instantMs, isScoredWeek, selectTargetWeeks, type WeekMatchupRow } from '../_shared/week-select.ts';
+import { shouldWriteJobStatus, successMessage, type JobStatusValue, type StoredJobStatus } from '../_shared/job-status.ts';
 
 /**
  * Snapshot Week Start Prices
@@ -21,9 +25,9 @@ import type { CalendarSession, Coverage as MarketCalendarCoverage } from '../_sh
  * docs/audits/2026-09-30-week-window-audit.md): each league-week has ONE
  * real market-open instant (this week's first trading-day open, from
  * market_calendar) and the cron just checks per-league whether `now` has
- * reached it yet ('not_due' if not — the Tuesday run of a normal week hits
- * this every single time and correctly no-ops, since Monday's run already
- * handled it). This REPLACES the old Alpaca-/v2/calendar holiday check and
+ * reached it yet ('not_due' only before the open. A Tuesday run of a normal week PROCEEDS
+ * and no-ops through the per-week coverage gates, since Monday's run already
+ * baselined the week; the marker paths below record that). This REPLACES the old Alpaca-/v2/calendar holiday check and
  * the Monday/Tuesday day-of-week branch entirely: a stale Alpaca key
  * returning a 401 used to read as "market closed" (CLAUDE.md "success
  * signals" #1) and silently skip every Monday; the calendar table is now the
@@ -102,11 +106,15 @@ async function fetchMarketCalendar(
   supabase: any,
 ): Promise<{ sessions: CalendarSession[]; coverage: MarketCalendarCoverage | null; error: unknown }> {
   const [sessionsRes, coverageRes] = await Promise.all([
-    supabase.from('market_calendar').select('session_date, open_et, close_et'),
+    supabase.from('market_calendar').select('session_date, open_et, close_et', { count: 'exact' }),
     supabase.from('market_calendar_coverage').select('covered_from, covered_through').maybeSingle(),
   ]);
   if (sessionsRes.error || coverageRes.error) {
     return { sessions: [], coverage: null, error: sessionsRes.error ?? coverageRes.error };
+  }
+  // A truncated calendar would silently mis-cut the open (PostgREST max-rows): refuse.
+  if (typeof sessionsRes.count === 'number' && (sessionsRes.data ?? []).length < sessionsRes.count) {
+    return { sessions: [], coverage: null, error: new Error(`market_calendar read truncated: ${(sessionsRes.data ?? []).length} of ${sessionsRes.count}`) };
   }
   const sessions: CalendarSession[] = (sessionsRes.data ?? []).map((r: any) => ({
     sessionDate: r.session_date,
@@ -120,28 +128,59 @@ async function fetchMarketCalendar(
 }
 
 // Update job status for retry tracking
+// S-STATUS: the same-day row is shared by every run of this job (one row per
+// job per day). A no-op run must not overwrite evidence of earlier work or of a
+// failure — see ../_shared/job-status.ts for the rule and why. `work` is the
+// run's own count of rows/league-weeks it actually changed.
 async function updateJobStatus(
   supabase: any,
   jobName: string,
-  status: 'running' | 'success' | 'failed' | 'retrying',
+  status: JobStatusValue,
   attemptNumber: number,
-  errorMessage?: string
+  errorMessage?: string,
+  work?: number,
 ) {
   const today = new Date().toISOString().split('T')[0];
+  const message = status === 'success'
+    ? successMessage(work ?? 0, errorMessage ?? '')
+    : errorMessage;
 
   try {
-    await supabase
+    const { data: existingRow, error: readErr } = await supabase
       .from('cron_job_status')
-      .upsert({
-        job_name: jobName,
-        run_date: today,
-        status,
-        attempt_number: attemptNumber,
-        error_message: errorMessage || null,
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: 'job_name,run_date'
-      });
+      .select('status, error_message')
+      .eq('job_name', jobName)
+      .eq('run_date', today)
+      .maybeSingle();
+    // A failed read must not let a trivial write overwrite evidence: write only
+    // what the rule would accept with NO existing row AND it is non-trivial.
+    const existing: StoredJobStatus | null = readErr ? null : (existingRow as StoredJobStatus | null);
+    const decided = readErr
+      ? (status === 'failed' || status === 'retrying' || (status === 'success' && (work ?? 0) > 0))
+      : shouldWriteJobStatus(existing, { status, work });
+
+    // The upsert's OWN error is checked (CLAUDE.md success-signal #5: supabase-js
+    // resolves, it does not throw). The run log records the outcome, not the intent.
+    if (decided) {
+      const { error: upsertErr } = await supabase
+        .from('cron_job_status')
+        .upsert({
+          job_name: jobName,
+          run_date: today,
+          status,
+          attempt_number: attemptNumber,
+          error_message: message || null,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'job_name,run_date'
+        });
+      if (upsertErr) {
+        console.error(`FAILED to write cron_job_status ${jobName} '${status}':`, upsertErr);
+      }
+    } else {
+      console.log(`cron_job_status ${jobName} ${today}: no-op '${status}' (work=${work ?? 0}) kept existing ${existing?.status ?? 'unknown'} row`);
+    }
+
   } catch (e) {
     console.error('Failed to update job status:', e);
   }
@@ -268,6 +307,79 @@ async function fetchOpenPrices(
   return prices;
 }
 
+/**
+ * A league's trade ledger grows across the whole season, so one read would hit
+ * PostgREST's 1000-row default. The exact-count guard would then refuse every run,
+ * permanently. Pages by primary key until every counted row is read.
+ */
+const TRADE_PAGE_ROWS = 1000;
+/**
+ * A league's trades up to a window cut. The cut is applied SERVER-side, so trades
+ * created after it are never in the set. Paging is keyset on id, not offset, so an
+ * insert cannot shift a page and duplicate or skip a row. Each page is its own
+ * statement, so the set is not one transaction. Two checks fail the read instead of
+ * trusting it: the loop runs to an EMPTY page (no tail is dropped), and the rows read
+ * must equal the first page's exact count (a set that grew or shrank mid-read is
+ * refused and retried, never silently partial).
+ */
+async function readAllTrades(
+  supabase: any,
+  leagueId: string,
+  cols: string,
+  cutIso: string,
+  inclusive: boolean,
+): Promise<{ data: any[] | null; error: unknown; count: number | null }> {
+  const rows: any[] = [];
+  let total: number | null = null;
+  let lastId: string | null = null;
+  for (;;) {
+    // The exact count is only needed on the first page (the expected total).
+    const countOpt: any = lastId === null ? { count: 'exact' } : {};
+    let q: any = supabase
+      .from('trades')
+      .select(`${cols}, id`, countOpt)
+      .eq('league_id', leagueId);
+    q = inclusive ? q.lte('created_at', cutIso) : q.lt('created_at', cutIso);
+    if (lastId !== null) q = q.gt('id', lastId);
+    const { data, error, count } = await q.order('id').limit(TRADE_PAGE_ROWS);
+    if (error) return { data: null, error, count: total };
+    if (lastId === null) total = count ?? null;
+    const page = data ?? [];
+    rows.push(...page);
+    if (page.length === 0) break;
+    lastId = String(page[page.length - 1].id);
+  }
+  if (total != null && rows.length !== total) {
+    return { data: null, error: new Error(`trade set changed during read: ${rows.length} read, ${total} counted`), count: total };
+  }
+  return { data: rows, error: null, count: total };
+}
+
+/**
+ * S2: one league's matchups, ALL weeks. Read per league, never one .in() across
+ * leagues, because PostgREST caps a read at max-rows and a truncated read would
+ * silently drop weeks from selection. The exact count below refuses any truncation.
+ */
+const MATCHUP_READ_CAP = 1000;
+async function readLeagueMatchupRows(supabase: any, leagueId: string): Promise<WeekMatchupRow[]> {
+  const { data, error, count } = await supabase
+    .from('matchups')
+    .select('league_id, week_number, team1_user_id, team1_gain, week_start, week_end, created_at', { count: 'exact' })
+    .eq('league_id', leagueId);
+  if (error) throw new Error(`Failed to read matchups for league ${leagueId}: ${error.message ?? error}`);
+  const rows = (data ?? []) as WeekMatchupRow[];
+  // S2: a league's matchup rows are bounded far below PostgREST's 1000-row default.
+  // Reaching it means the design assumption broke, so refuse rather than read a
+  // partial set. The exact-count comparison below also refuses any truncation.
+  if (typeof count === 'number' && count >= MATCHUP_READ_CAP) {
+    throw new Error(`league ${leagueId}: ${count} matchups rows is at the 1000-row read budget; paginate before reading`);
+  }
+  if (typeof count === 'number' && rows.length < count) {
+    throw new Error(`league ${leagueId}: matchups read truncated (${rows.length} of ${count} rows); refusing a partial week selection`);
+  }
+  return rows;
+}
+
 // Holdings come from ../_shared/snapshot-holdings.ts (shared with
 // snapshot-week-end). The local copy this replaced coerced the SKIP sentinel's
 // quantity 0 to a 1-share 'SKIP' holding (`quantity || 1`), which no price could
@@ -315,10 +427,16 @@ Deno.serve(async (req) => {
     }
 
     // 1. Find all active matchup leagues and their current week
-    const { data: leagues, error: leaguesErr } = await supabase
+    // Scope: IN-SEASON leagues only (see ../_shared/snapshot-league-scope.ts).
+    // A finished league must never be snapshotted — its old week can predate
+    // market_calendar coverage and refuse forever. Filtered in the query AND
+    // re-checked in code, so dropping one filter cannot silently widen scope.
+    const { data: leaguesRaw, error: leaguesErr } = await supabase
       .from('leagues')
-      .select('id, current_week, num_weeks')
+      .select('id, current_week, num_weeks, season_status, draft_status')
       .eq('league_type', 'matchup')
+      .in('season_status', [...IN_SEASON_STATUSES])
+      .eq('draft_status', SNAPSHOT_DRAFT_STATUS)
       .not('current_week', 'is', null);
 
     if (leaguesErr) {
@@ -329,8 +447,13 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to fetch leagues: ${leaguesErr.message ?? leaguesErr}`);
     }
 
+    const leagues = (leaguesRaw ?? []).filter((l: any) => isInSeasonLeague(l));
+
     if (!leagues || leagues.length === 0) {
       console.log('No active matchup leagues found');
+      // Terminal status is written here too: a 'running' row stranded on this
+      // path is the success-signals #6 pattern (CLAUDE.md). Common off-season.
+      await updateJobStatus(supabase, JOB_NAME, 'success', retryAttempt, undefined, 0);
       return json({ message: 'No active matchup leagues', snapshots: 0 });
     }
 
@@ -361,9 +484,28 @@ Deno.serve(async (req) => {
       results.push({ leagueId, week, snapshots: 0, incomplete: true, failedReads: failed.map((f) => f.read) });
     };
 
+    // S8: the target weeks come from each league's matchups and their windows,
+    // NOT from leagues.current_week. Read PER LEAGUE (S2, see readLeagueMatchupRows).
+    const planNow = new Date();
+    const targets: Array<{ leagueId: string; week: number }> = [];
     for (const league of leagues) {
-      const leagueId = league.id;
-      const currentWeek = league.current_week;
+      let rows: WeekMatchupRow[];
+      try {
+        rows = await readLeagueMatchupRows(supabase, league.id);
+      } catch (e) {
+        // One league's failed or truncated read must not abort every other league.
+        console.error(`ABORT league ${league.id}: ${String(e)} — will retry`);
+        anyIncomplete = true;
+        results.push({ leagueId: league.id, incomplete: true, failedReads: ['matchups'] });
+        continue;
+      }
+      for (const week of selectTargetWeeks(rows, (anchor, floor, storedStart, storedEnd) =>
+        planWeekWindow(planNow, anchor, floor, marketCalendarSessions, marketCalendarCoverage, storedStart, storedEnd, 0))) {
+        targets.push({ leagueId: league.id, week });
+      }
+    }
+
+    for (const { leagueId, week: currentWeek } of targets) {
 
       // NOTE: the "already snapshotted?" skip moved DOWN to the coverage gate
       // below (after holdings are known). It must test whether EVERY participant
@@ -379,7 +521,7 @@ Deno.serve(async (req) => {
       const matchupsRead = checkSnapshotReads({
         matchups: await supabase
           .from('matchups')
-          .select('team1_user_id, team2_user_id, week_start, week_end, created_at')
+          .select('team1_user_id, team2_user_id, team1_gain, week_start, week_end, created_at', { count: 'exact' })
           .eq('league_id', leagueId)
           .eq('week_number', currentWeek),
       });
@@ -401,7 +543,8 @@ Deno.serve(async (req) => {
       // inserted atomically by finalize_league_draft — but min() defensively
       // in case that ever isn't true). See ./plan.ts's planWeekWindow doc.
       const windowAnchor = new Date(matchups[0].week_start);
-      const floorMs = Math.min(...matchups.map((m: any) => new Date(m.created_at).getTime()));
+      // Floor over REAL matchups only: a placeholder playoff row must not move the floor.
+      const floorMs = Math.min(...matchups.filter((m: any) => m.team1_user_id).map((m: any) => instantMs(m.created_at)));
       const windowFloor = Number.isFinite(floorMs) ? new Date(floorMs) : null;
       const storedWeekStartIso = matchups[0].week_start;
       const storedWeekEndIso = matchups[0].week_end;
@@ -423,6 +566,14 @@ Deno.serve(async (req) => {
         continue;
       }
       if (earlyWindowPlan.action === 'refuse') {
+        // B1c: a refused window on a fully SCORED week is history, not a gap. Skip it.
+        if (isScoredWeek(matchups)) {
+          console.log(`League ${leagueId} week ${currentWeek}: scored past week, window refused (${earlyWindowPlan.reason}) — skipping`);
+          results.push({ leagueId, week: currentWeek, skipped: 'scored_past_window' });
+          continue;
+        }
+        // An IN-SCOPE league whose week cannot be windowed is a real gap (a
+        // stalled or mis-calendared season), so it stays a loud refusal.
         anyIncomplete = true;
         console.error(
           `ABORT league ${leagueId} week ${currentWeek}: week window refused (${earlyWindowPlan.reason}) — ` +
@@ -442,23 +593,23 @@ Deno.serve(async (req) => {
       //      drafts/trades read would make everyone look empty ('none_expected',
       //      permanently skipped), and a failed snapshots read would make
       //      everyone look uncovered (re-upserting Monday's rows at today's price).
+      // The trades read is cut at the open of the week being PROCEEDED with: the early
+      // plan (the same anchors as windowPlan below, which re-derives the identical open).
+      if (earlyWindowPlan.action !== 'proceed') throw new Error('window not proceed at read time');
       const inputs = checkSnapshotReads({
         drafts: await supabase
           .from('drafts')
-          .select('user_id, symbol, quantity')
+          .select('user_id, symbol, quantity', { count: 'exact' })
           .eq('league_id', leagueId),
         // created_at is needed for the single-cut baseline filter below
         // (created_at < this week's real open) — the fix for the Monday-gap
         // defect (S1/S2/S3/S4): the OLD code read every trade with no time
         // bound at all, netting the ledger "as of whenever this cron happens
         // to run" instead of as of one fixed instant.
-        trades: await supabase
-          .from('trades')
-          .select('user_id, symbol, action, quantity, created_at')
-          .eq('league_id', leagueId),
+        trades: await readAllTrades(supabase, leagueId, 'user_id, symbol, action, quantity, created_at', earlyWindowPlan.open.toISOString(), false),
         existingSnapshots: await supabase
           .from('week_snapshots')
-          .select('user_id, week_end_price')
+          .select('user_id, symbol, week_end_price', { count: 'exact' })
           .eq('league_id', leagueId)
           .eq('week_number', currentWeek),
       });
@@ -520,8 +671,8 @@ Deno.serve(async (req) => {
       //    "this week" now shares (in-week trades start at this same instant
       //    in process-week-results, which reads it off the matchups row this
       //    function just rewrote).
-      const cutOpenIso = windowPlan.open.toISOString();
-      const tradesBeforeOpen = trades.filter((t: any) => t.created_at < cutOpenIso);
+      const cutOpenMs = windowPlan.open.getTime();
+      const tradesBeforeOpen = trades.filter((t: any) => instantBefore(t.created_at, cutOpenMs));
       const userHoldings = new Map<string, Holding[]>();
       for (const userId of userIds) {
         userHoldings.set(userId, snapshotHoldings(userId, drafts, tradesBeforeOpen));
@@ -543,14 +694,25 @@ Deno.serve(async (req) => {
       // and this week may already be scored — re-snapshotting week-START prices now
       // would pair a fresh start price with an old end price. Treat as complete.
       // Mirrors snapshot-week-end's own `alreadyProcessed` guard.
-      const alreadyEndPriced = existingSnapshots.some((r: any) => r.week_end_price != null);
-      if (alreadyEndPriced) {
-        console.log(`League ${leagueId} week ${currentWeek} already has week_end_price(s) — week is being/has been scored, skipping week-start snapshot`);
-        results.push({ leagueId, week: currentWeek, users: userIds.size, snapshots: coveredUserIds.size, skipped: 'already_end_priced' });
+      // S-ENDPRICED: per-participant, not existence-only. A week with ANY end price
+      // is closed. Skip ONLY when the close is complete for every participant (the
+      // same gate week-end uses). A partly-closed week is refused loudly: a
+      // baseline can never be re-taken after a close.
+      if (existingSnapshots.some((r: any) => r.week_end_price != null)) {
+        if (classifyCloseCoverage(userHoldings, existingSnapshots) === 'complete') {
+          console.log(`League ${leagueId} week ${currentWeek}: already fully closed, skipping week-start snapshot`);
+          results.push({ leagueId, week: currentWeek, users: userIds.size, snapshots: coveredUserIds.size, skipped: 'already_end_priced' });
+          continue;
+        }
+        anyIncomplete = true;
+        console.error(`ABORT league ${leagueId} week ${currentWeek}: partly end-priced but not fully closed — refusing to re-baseline a closed week, will retry the close.`);
+        results.push({ leagueId, week: currentWeek, incomplete: true, windowRefused: 'end_priced_incomplete' });
         continue;
       }
 
       const coverage = classifyCoverage(userHoldings, coveredUserIds);
+      // Nothing held at the open is a COMPLETE baseline with zero rows, and the
+      // marker says so (S9: zero rows alone cannot tell this apart from "never ran").
       if (coverage === 'none_expected') {
         console.log(`No holdings to snapshot for league ${leagueId} week ${currentWeek}, skipping`);
         results.push({ leagueId, week: currentWeek, users: userIds.size, snapshots: 0, skipped: 'no_holdings' });
@@ -633,6 +795,10 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      // The baseline is now complete for every holder (usersToWrite was every
+      // uncovered holder, and buildPricedRows wrote them all). Mark it, so a later
+      // week-end can close this week even if zero rows were ever written for it.
+
       console.log(`Snapshotted ${snapshots.length} rows for ${usersToWrite.size} participant(s) in league ${leagueId} week ${currentWeek}`);
       totalSnapshots += snapshots.length;
       results.push({ leagueId, week: currentWeek, users: userIds.size, snapshots: snapshots.length });
@@ -648,8 +814,8 @@ Deno.serve(async (req) => {
     if (anyIncomplete) {
       if (retryAttempt < MAX_RETRIES) {
         console.log(`One or more leagues incomplete (missing prices or failed reads); scheduling retry ${retryAttempt + 1}`);
-        await scheduleRetry(supabase, JOB_NAME, retryAttempt + 1);
-        await updateJobStatus(supabase, JOB_NAME, 'retrying', retryAttempt, 'Incomplete: missing prices or failed reads for some leagues');
+        const scheduled = await scheduleRetry(supabase, JOB_NAME, retryAttempt + 1);
+        await updateJobStatus(supabase, JOB_NAME, scheduled ? 'retrying' : 'failed', retryAttempt, scheduled ? 'Incomplete: missing prices or failed reads for some leagues' : 'retry could not be scheduled');
         return json({
           message: 'Snapshot incomplete — retry scheduled',
           totalSnapshots,
@@ -663,7 +829,7 @@ Deno.serve(async (req) => {
       // the downstream per-user gate is the backstop. Report failed for ops
       // visibility, but do NOT throw (the leagues that snapshotted are valid).
       console.error(`Max retries (${MAX_RETRIES}) reached; some leagues still incomplete (likely unpriceable/delisted symbols).`);
-      await updateJobStatus(supabase, JOB_NAME, 'failed', retryAttempt, 'Incomplete after max retries: unpriceable holdings or failed reads');
+      await updateJobStatus(supabase, JOB_NAME, 'failed', retryAttempt, 'Incomplete: league-weeks still refused or incomplete after this run; see results');
       return json({
         message: 'Snapshot incomplete after max retries',
         totalSnapshots,
@@ -673,7 +839,7 @@ Deno.serve(async (req) => {
     }
 
     // Update status to success
-    await updateJobStatus(supabase, JOB_NAME, 'success', retryAttempt);
+    await updateJobStatus(supabase, JOB_NAME, 'success', retryAttempt, undefined, totalSnapshots);
 
     return json({
       message: 'Snapshot complete',
@@ -688,14 +854,14 @@ Deno.serve(async (req) => {
     // Handle retries
     if (retryAttempt < MAX_RETRIES) {
       console.log(`Attempt ${retryAttempt} failed, scheduling retry ${retryAttempt + 1}`);
-      await scheduleRetry(supabase, JOB_NAME, retryAttempt + 1);
-      await updateJobStatus(supabase, JOB_NAME, 'retrying', retryAttempt, errorMessage);
-      return json({ error: 'Failed, retry scheduled', attempt: retryAttempt, message: errorMessage }, 500);
+      const scheduled = await scheduleRetry(supabase, JOB_NAME, retryAttempt + 1);
+      await updateJobStatus(supabase, JOB_NAME, scheduled ? 'retrying' : 'failed', retryAttempt, scheduled ? errorMessage : 'retry could not be scheduled');
+      return json({ error: 'Failed, retry scheduled', attempt: retryAttempt, message: 'internal error; see function logs' }, 500);
     } else {
       // Max retries reached, mark as failed
       console.error(`Max retries (${MAX_RETRIES}) reached, giving up`);
       await updateJobStatus(supabase, JOB_NAME, 'failed', retryAttempt, errorMessage);
-      return json({ error: 'Failed after max retries', attempts: retryAttempt, message: errorMessage }, 500);
+      return json({ error: 'Failed after max retries', attempts: retryAttempt, message: 'internal error; see function logs' }, 500);
     }
   }
 });

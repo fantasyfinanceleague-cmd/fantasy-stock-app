@@ -6,6 +6,7 @@ import { setRecoverySession } from './recoveryNonce';
 import type { AuthPhase } from './shell/pendingRoute';
 import {
   FIXTURE_EMAIL,
+  FIXTURE_EMAIL_OVERRIDE,
   FIXTURE_NETWORK_MS,
   FIXTURE_SIGNUPS_PAUSED_MESSAGE,
   FIXTURE_USER_ID,
@@ -14,7 +15,7 @@ import {
   fixtureUsername,
 } from './shell/devFixture';
 
-const FIXTURE_USER = { id: FIXTURE_USER_ID, email: FIXTURE_EMAIL } as User;
+const FIXTURE_USER = { id: FIXTURE_USER_ID, email: FIXTURE_EMAIL_OVERRIDE ?? FIXTURE_EMAIL } as User;
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** The shape both auth calls resolve to; `error` carries Supabase's own error (message + code). */

@@ -64,8 +64,11 @@ function isAuthorized(req: Request): boolean {
 const ALPACA_TRADING_BASE = 'https://paper-api.alpaca.markets/v2';
 
 // Trailing window: re-covers yesterday too, so a same-day rerun after a
-// partial prior failure heals it rather than waiting for tomorrow.
-const LOOKBACK_DAYS = 7;
+// partial prior failure heals it rather than waiting for tomorrow. It must cover a
+// full season: the snapshot jobs' window math needs calendar coverage for every
+// league-week they touch, and 7 days made a week-1 window refuse 'no_coverage' the
+// day it fell out (B1). 120 days keeps any in-season week covered.
+const LOOKBACK_DAYS = 120;
 // Leading window: gives market_session_status ~3 months of "next open"
 // runway between refreshes, matching the daily-cron cadence with headroom
 // for a missed day or two.

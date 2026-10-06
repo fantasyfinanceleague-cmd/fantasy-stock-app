@@ -34,9 +34,20 @@ You are the UI worker for **Phase 3e: the money screens**. Your branch is `ui/mo
 
 ## Rulings in force (don't reopen them without Giorgio)
 
+- **Available cash comes from the stake mode, never the legacy budget columns** (root cause of Giorgio's 1.1.0 live trade test, 2026-10-05).
+  - In 1.1.0, `portfolio.tsx:136` derived "available cash" from the LEGACY `leagues.budget_mode === 'budget'` and `budget_amount − totalCost`. test_0925 is `fixed_notional` but still carries `budget_mode = 'budget'` and `budget_amount = 100`. So the screen showed $0 and the client BLOCKED a buy the server would have allowed: reinvesting JPM's sale proceeds, sold whole at $333.25 × 2.916472 = **$971.92**.
+  - **Rule:** NEVER read `budget_mode` / `budget_amount` for a per-slot league.
+    - `stake_mode = 'fixed_notional'`: what you can buy with = the `record-trade` preview's `sources` (sold-slot proceeds and skipped slots).
+    - `stake_mode = 'budget_cap'`: the budget logic (`budget_amount` − cash spent, mirroring `userCashSpent`).
+    - `price_tiers`: the open slot's tier.
+    One pure, tested function decides it from `stake_mode`, so no screen re-derives it.
 - **Whole positions.**
   - **Sell = the entire position** ("Sell all X sh ≈ $Y"). No partial amounts.
   - **Buy = invests the whole source.**
+- **NO quantity input on BUY, in ANY stake mode. The server decides the quantity** (Giorgio's 1.1.0 buy test, 2026-10-05). The 1.1.0 popup let him choose "3 shares ≈ $200" while `record-trade` invested the whole slot, $971.92, about 14.6 shares of VIST. That's a misrepresentation, not just confusion.
+  - `fixed_notional`: shares = the whole source amount (the sold slot's proceeds, or a skipped slot's notional) / price.
+  - `budget_cap` and `price_tiers`: exactly **1 share**.
+  - **The review states the real outcome BEFORE confirm,** from the `record-trade` preview and the live quote. For example: "Buy $971.92 of VIST · ≈14.6329 shares at $66.42 · from your JPM slot", or for one-share leagues "Buy 1 share of SHOP · $104.20 · $443.56 budget left". Shares follow the share-display rule (≤ 4 dp) and carry "≈", because the fill price can move. Nothing on the buy path lets the user type or step a quantity or a dollar amount.
 - **Per-slot (`fixed_notional`) leagues reinvest the SALE PROCEEDS**, never a fresh $2,000.
   - After a sale the slot shows as a **Cash** row: zero gain, counted in value, so the portfolio value doesn't change on the sale.
   - A buy asks **which sale pays** when more than one has cash. One buy never mixes two slots.
@@ -68,6 +79,26 @@ You are the UI worker for **Phase 3e: the money screens**. Your branch is `ui/mo
 5. **Fix everything, then shoot once.**
 6. **A visible product decision that isn't ruled goes to Giorgio as a board "Your call" BEFORE "go".**
 
+## Craft floor (DESIGN_DIRECTION §9B + §4 "Motion craft"; adopted 2026-10-05)
+
+These apply to every screen you build. They are new since this prompt was first written, so audit your existing work against them too.
+- **Icons:** the `sp` icon set only. Replace any Unicode or emoji glyph used as an icon in your screens (ⓘ, ▲/▼, ✓, ›, →, ●-as-text) with a drawn icon or shape. Add missing icons to the set through the Design Lead.
+- **Hit areas:** ≥ 44 × 44 pt for everything tappable, **including text links** ("Invest", "Change", "Share", the Cash row, each holding row). Use padding or `hitSlop`, and report how you verified it.
+- **11 pt text floor:** chips, tags, badges, cell numbers and tab labels included.
+- **Motion craft:**
+  - one authored moment per screen, with a one-line motion thesis in your PLAN;
+  - every animation passes "what's lost if it's removed?";
+  - exit is faster than entrance;
+  - content is visible at rest (an animation that doesn't run never hides content);
+  - the live dot and any pulse pause when the screen isn't focused or the app is backgrounded.
+- **Gestures:** never disable edge-swipe back. Sheets swipe to dismiss with Cancel/Done; the trade review mid-confirm is the one place a dismiss guard is justified. A one-tap destructive action with no review step (Remove, delete) confirms through a native action sheet whose button names the action (never Yes/No/OK). A flow with a review screen is already confirmed by that screen's single action-named button, with no extra sheet. **Sell and Buy:** the Review screen is the confirmation; its button reads "Sell TSLA" / "Buy SHOP", with no action sheet on top. Show the outcome (shares, ≈ price, proceeds or source, what's left) and "Prices can move before the order fills." Disable the button and show progress while submitting; the dismiss guard applies only during that submit.
+- **Copy:** confirm buttons name the action; every message is a whole sentence (no stitched fragments); errors say what failed and how to recover, never a raw code.
+- **Tags** must carry information and never repeat an adjacent chip or title.
+- **Colour is never the only code:** every colour signal has a text, sign or shape twin and a VoiceOver label.
+- **≤ 4 visible choices** at a decision point, with one primary action (check the stock sheet: ranges + Buy/Sell + position).
+- **Stress fixture** (captured): a 20-character username and a 40-character league name; values and losses ≥ $1,000,000; 16 managers, 1,000+ trade-history rows (a virtualised list); offline/slow (a stale-data state); a `rate_limited` refusal.
+- **Phone only for 1.2.0** (iPad support is off; no tablet layouts).
+
 ## Shared code and ownership
 
 - **Reuse** 3b-2's `teamValue`, `todayChange`, `plCoverage`, `marketWeek`, `etParts` and `ordinal`, plus 3c's promoted locations once they land (3c owns every `lib/` move: rebase onto it rather than moving files yourself).
@@ -76,7 +107,7 @@ You are the UI worker for **Phase 3e: the money screens**. Your branch is `ui/mo
   - the trade flow screens;
   - money formatting helpers: a **company-name cleaner** (strip feed suffixes like "- Common Stock" or ", Inc. - Class A"; a pure, tested function) and **share formatting** (≤ 4 decimals);
   - the `TradeModal.tsx` retirement.
-- **Replace the legacy `components/TradeModal.tsx`** once the new flow lands. Grep every entry point first (CLAUDE.md: MOUNTED and REACHABLE), and delete it only when nothing imports it.
+- **Retire the legacy `components/TradeModal.tsx`.** It's already orphaned on `main` (3b-1 removed its only import). Confirm nothing imports it (CLAUDE.md: MOUNTED and REACHABLE) and delete it with the new flow. Don't port its budget logic: that logic is the bug above.
 - Changes to shared primitives (tokens, `Card`, `ShellHeader`, `sp/*`) go through the Design Lead. Tell the Orchestrator so 3c can rebase.
 - **U2 is yours.** The trade gate in `lib/marketHours.ts` has a hard-coded holiday list that ends in 2026 and no early closes, so it would allow a trade on 2026-11-27 after the 1 PM close. Replace it with the calendar (`market_session_status` / `market_calendar` via `marketWeek`), including half days.
   - The client gate must fail CLOSED: if the calendar can't be read, trading is disabled with "Trading hours unavailable. Try again shortly." (new copy, flagged). Never fall back to "open".
@@ -91,9 +122,9 @@ You are the UI worker for **Phase 3e: the money screens**. Your branch is `ui/mo
 | 2 | Portfolio with a **Cash** slot | "After selling TSLA · the slot holds the proceeds" | "Portfolio value · includes cash", "5 of 6" slots, "1 ready to invest", the Cash row "From selling TSLA · ready to invest" with "Invest ›". |
 | 3 | **Stock sheet** (held) | "Stock sheet · Sell pre-selected" | Price + today; a chart against the previous close with range tabs (the board's `1D 1W 1M 3M 1Y`; each range draws real bars only); your position; the ownership line; **Sell pre-selected**. Opens from any ticker anywhere, including 3c's lineups (expose a route both phases use). |
 | 4 | Stock sheet (not held; owned by someone else; market closed) | "Market closed" + the ownership rule | Not held and free: Buy primary. Owned by another manager: Buy disabled "Owned by Paolo M." (new copy, flagged). Market closed: the sheet still informs, and actions are disabled with the open time. |
-| 5 | **Sell** → **Review sell** → **Sold** | "Sell TSLA", "Review sell", "Sold" | Whole position; the review shows shares, price, what you get, and how the slot compares with its $2,000.00 start; Sold offers invest now or later. |
+| 5 | **Sell** → **Review sell** → **Sold** | "Sell TSLA", "Review sell", "Sold" | **Choose what to sell from YOUR HOLDINGS** (a list of your positions, or the stock sheet's Sell), **never a symbol search**: you can't sell what you don't own. **No quantity stepper:** a sell is always the whole position, so the sheet reads "Sell all 2.9165 shares of JPM · ≈$971.92", and the quantity can never exceed what you hold because it's never chosen. The review shows shares, price, what you get, and how the slot compares with its $2,000.00 start. Sold offers invest now or later. |
 | 6 | **Which sale pays?** | "Which sale pays?" | Shown when `preview.sources.length > 1`; the skipped-slot source appears as full notional. |
-| 7 | **Review buy** → **Bought** | "Review buy", "Bought" | "≈ 18.1393 SHOP", price, "Paid from · TSLA slot · $1,890.12", "Left in the slot · $0.00" (zero grey). |
+| 7 | **Buy** → **Review buy** → **Bought** | "Review buy", "Bought" | **Buy keeps the ticker search.** The funding source is always visible from the start of the buy ("$971.92 from your JPM slot"), not only on the review. **No quantity or amount input:** after picking a ticker, the review states the server's outcome ("Buy $971.92 of VIST · ≈14.6329 shares at $66.42 · from your JPM slot"). Review: "≈ 18.1393 SHOP", price, "Paid from · TSLA slot · $1,890.12", "Left in the slot · $0.00" (zero grey). |
 | 8 | **Trade history** | "Trade history" | Trades **and draft picks** (`league_activity`, #5), grouped by week, with filters All / Buys / Sells / Draft and an honest empty state. |
 | 9 | **Budget/tier league trading** (decided A) | "Budget league · review sell", "Budget league · review buy" | "1 TSLA · all you hold", "Back to your budget $248.36" (neutral, not a gain), "Budget left after"; the buy shows "1 SHOP", "Budget now", "Budget left after". A tier league swaps the budget rows for the slot's price tier. Fixture: derive the budget league from the board's numbers ($2,500 budget, Roberto's draft prices, one share each). |
 
@@ -118,7 +149,7 @@ A refusal appears **instantly** and never looks like success. Check `{ error }` 
   - the `league_activity` view (#5, trades ∪ picks);
   - `market_session_status`, `quote` / `ticker-quotes` (with `prevClose`), `historical-bars`, `symbol-name`;
   - `get_league_display_names` (owner names + `is_bot`).
-- A **new RPC** (e.g. one call for "who owns each symbol in this league", if the sheet needs it beyond `drafts`/`trades` reads) needs a plan-first message to the Orchestrator and uses migration range **`20261026000000`–`20261026000009`**.
+- A **new RPC** (e.g. one call for "who owns each symbol in this league", if the sheet needs it beyond `drafts`/`trades` reads) needs a plan-first message to the Orchestrator and uses migration range **`20261026000000`–`20261026000009`**. **These timestamps are PROVISIONAL:** right before release, any migration you add is re-stamped later than prod's latest applied migration (`supabase db push` refuses older unapplied files). Don't depend on the exact number.
 
 ## Motion and signature moments
 
@@ -132,7 +163,7 @@ A refusal appears **instantly** and never looks like success. Check `{ error }` 
 | Pressables | Scale 0.98 (`instant`) + light haptic | No scale; the haptic stays |
 | Refusals / errors | Appear **instantly** (§4) | same |
 
-**No `spring.lively` on money screens.**
+**No `spring.lively` on money screens.** The **whole trade sheet** (sell from holdings, buy with search and its funding source, the reviews and the done states) is new UI built to the board with these moments. Nothing of the legacy modal's look or logic survives.
 
 ## Accessibility
 
@@ -152,13 +183,13 @@ A refusal appears **instantly** and never looks like success. Check `{ error }` 
 - **Checks:**
   - `npx tsc --noEmit` (baseline 1);
   - `npm run lint` (0 errors);
-  - the deno suites, plus new tests for: the company-name cleaner; share formatting; Buy/Sell defaults (held → Sell; owned by another → Buy disabled); the refusal → copy map (every `reason`); the U2 gate (a 2027 holiday, the 2026-11-27 half day, **calendar unreadable → closed**); preview → picker logic (0, 1 and 2 sources; a skipped slot); the market-hours refusals (`market_closed` for each `market_reason`, the 503, and the open-then-closed race incl. a half-day close); the budget/tier review numbers (budget left after a sell and a buy);
+  - the deno suites, plus new tests for: the company-name cleaner; share formatting; Buy/Sell defaults (held → Sell; owned by another → Buy disabled); the refusal → copy map (every `reason`); the U2 gate (a 2027 holiday, the 2026-11-27 half day, **calendar unreadable → closed**); preview → picker logic (0, 1 and 2 sources; a skipped slot); **the available-cash function, including the exact test_0925 shape** (`stake_mode = 'fixed_notional'` with legacy `budget_mode = 'budget'`, `budget_amount = 100`, and JPM sold whole at $333.25 × 2.916472) asserting a buy IS offered, funded with **$971.92 from JPM**, and that `budget_amount` is never read; **buy quantity**: no quantity/amount input exists on the buy path in any stake mode; in the fixture, the confirm screen's dollars and shares equal what the server records (`fixed_notional`: source amount / price, rounded like `record-trade`; one-share leagues: 1); sell entry only lists held positions, with no quantity input; the market-hours refusals (`market_closed` for each `market_reason`, the 503, and the open-then-closed race incl. a half-day close); the budget/tier review numbers (budget left after a sell and a buy);
   - the contrast test;
   - `node scripts/gen-architecture.mjs`.
   - Report the counts and the **request count on load** (Portfolio ≤ 4).
 - **Captures:** every row of the screens table, in Light AND Dark, full length; XL on the 17e (Light): Portfolio, the stock sheet, both reviews.
 - **Recordings, Reduce Motion OFF:** M1–M5. Plus one combined Reduce-Motion-ON clip.
-- **Real trade test** (Phase 4 of the API-key work), against the **1.1.0 backend** in a **test league**, market open, with **Giorgio's explicit go-ahead in the report**. Sell a position, then buy with its proceeds. Verify the EFFECT in the data, not the response: the `trades` rows, `funded_by_trade_id`, and value unchanged across the sale. Never trade in a real league. If the market is closed, capture up to the review and stop.
+- **Real trade test** (Phase 4 of the API-key work), against the **1.1.0 backend** in a **test league**, market open, with **Giorgio's explicit go-ahead in the report**. Sell a position, then buy with its proceeds. **The shares and dollars shown before confirm must match the `trades` row after** (quantity, price × quantity ≈ the source amount). **Include the case that failed in 1.1.0:** in test_0925 (per-slot with legacy budget columns), buy with JPM's **$971.92** and confirm the client offers it. Verify the EFFECT in the data, not the response: the `trades` rows, `funded_by_trade_id`, and value unchanged across the sale. Never trade in a real league. If the market is closed, capture up to the review and stop.
 - **Honesty check, Giorgio signed in:** Portfolio value = Σ holding rows (+ cash); the stock sheet's position = the row.
 - **Copy audit** as in 3b-2.
 
@@ -166,12 +197,13 @@ A refusal appears **instantly** and never looks like success. Check `{ error }` 
 
 1. Every screen matches its board screen in both themes. Off-board states are built from board parts, with their copy flagged.
 2. No row contradicts itself; the Portfolio value equals the sum of rows plus cash; the sale leaves value unchanged.
-3. Whole positions and per-slot proceeds are exactly as ruled; the picker appears only with more than one source; every refusal is mapped and instant.
+3. Whole positions and per-slot proceeds are exactly as ruled: sell is chosen from holdings with no quantity input; buy has NO quantity/amount input in any stake mode, and its review states the server's real outcome (dollars, ≈shares, price, source) before confirm, matching the recorded trade; buy shows its funding source; the picker appears only with more than one source; every refusal is mapped and instant; **available cash never reads the legacy budget columns for a per-slot league** (the test_0925 test passes).
 4. Holding → Sell pre-selected; owned by another → Buy disabled with the reason; market closed → informs, disabled with the open time.
 5. The U2 gate reads the calendar and fails closed; the server's `market_closed`/503 refusals and the close-time race are handled instantly and politely; no fabricated numbers; Hermes-safe formatting.
 6. "Since the draft" is never confused with Home's "season gain"; the unpriced caption and the Alpaca credit are present.
 7. **All five signature moments (M1–M5) are present, smooth and calm-but-premium**, with their Reduce Motion versions. A missing or timid moment is a DESIGN-CHANGES.
 8. Clean names, ≤ 4 dp shares, U+2212 minus, zero grey, no truncation at XL.
 9. The real trade test passed, with its effect verified in the data.
+10. The craft floor holds: no glyph-icons, 44 pt hit areas verified, the 11 pt floor, the motion-craft lines, the stress fixture captured. The gate report follows UI-UX-PROGRAM's format (specificity, squint, 0–4 scorecard, persona walk, P0–P3).
 
 Report your PLAN first (including your fixture plan and how the U2 gate fails closed) and wait for "go".

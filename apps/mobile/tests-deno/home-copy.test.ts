@@ -1,0 +1,245 @@
+/**
+ * Tests for lib/home/homeCopy.ts's unpriced-symbol captions (Design Lead
+ * ruling, 2026-09-29, code review finding I12): reuse plCoverage.ts's
+ * `unpricedNote` wording rather than authoring new copy for the hero and
+ * ThisWeekCard captions.
+ * Run: `cd apps/mobile/tests-deno && deno test .`
+ */
+import { assertEquals } from 'jsr:@std/assert';
+import {
+  heroUnpricedCaption, sideUnpricedCaption, seasonScrubLabel, heroAccessibilityLabel, heroWeekOrRoundLabel,
+  standingsThroughWeek, preSeasonStartsLabel, placeLabel, nonChampionLine, regularSeasonTileLine, playoffRecordLine,
+  playoffTileLine, championAnnounceLine, coreCompleteTiles, teamSoFarCaption, roundSlotLabel, eliminatedLabel,
+  marketClosedAt,
+} from '../lib/home/homeCopy.ts';
+
+Deno.test('heroUnpricedCaption: null when both lists are empty', () => {
+  assertEquals(heroUnpricedCaption([], []), null);
+});
+
+Deno.test('heroUnpricedCaption: singular wording for exactly one symbol', () => {
+  assertEquals(heroUnpricedCaption(['ZZZZ'], []), '1 holding counted at cost (no live price yet)');
+});
+
+Deno.test('heroUnpricedCaption: counts DISTINCT symbols across unpricedValue and unpricedToday, not the sum', () => {
+  // ZZZZ appears in both lists (missing a live price affects both the
+  // value and the today segment) -- it must count once, not twice.
+  assertEquals(heroUnpricedCaption(['ZZZZ'], ['ZZZZ']), '1 holding counted at cost (no live price yet)');
+  assertEquals(heroUnpricedCaption(['ZZZZ'], ['AAAA']), '2 holdings counted at cost (no live price yet)');
+});
+
+Deno.test('heroUnpricedCaption: case-insensitive de-duplication', () => {
+  assertEquals(heroUnpricedCaption(['zzzz'], ['ZZZZ']), '1 holding counted at cost (no live price yet)');
+});
+
+Deno.test('sideUnpricedCaption: null when that side has nothing unpriced', () => {
+  assertEquals(sideUnpricedCaption('You', []), null);
+});
+
+Deno.test('sideUnpricedCaption: prefixes the formatted note with the side\'s name', () => {
+  assertEquals(sideUnpricedCaption('You', ['ZZZZ']), 'You: 1 holding counted at cost (no live price yet)');
+  assertEquals(sideUnpricedCaption('Gianluigi B.', ['ZZZZ', 'AAAA']), 'Gianluigi B.: 2 holdings counted at cost (no live price yet)');
+});
+
+Deno.test('sideUnpricedCaption: de-duplicates case-insensitively, same as the hero caption', () => {
+  assertEquals(sideUnpricedCaption('You', ['zzzz', 'ZZZZ']), 'You: 1 holding counted at cost (no live price yet)');
+});
+
+// ── Season chart scrub label (Orchestrator ruling, 2026-09-30) ─────────────
+
+Deno.test('seasonScrubLabel: a weekly point reads "Week N" with that WEEK\'S OWN delta, never the cumulative', () => {
+  const point = { date: '2026-08-14', week: 2, gain: 100.09, kind: 'weekly' as const };
+  const label = seasonScrubLabel(point, 41.34); // previous point (week 1) was 41.34
+  assertEquals(label.primary, 'Week 2');
+  assertEquals(label.money, '+$58.75'); // 100.09 - 41.34, not 100.09
+});
+
+Deno.test('seasonScrubLabel: the Week-1-open anchor (no previous point) reads a $0.00 delta', () => {
+  const point = { date: '2026-08-03', week: 1, gain: 0, kind: 'weekly' as const };
+  const label = seasonScrubLabel(point, null);
+  assertEquals(label.primary, 'Week 1');
+  assertEquals(label.money, '$0.00');
+});
+
+Deno.test('seasonScrubLabel: a daily point shows a FORMATTED date (never the raw ISO string) and the cumulative gain', () => {
+  const point = { date: '2026-09-22', week: 6, gain: 118.2, kind: 'daily' as const };
+  const label = seasonScrubLabel(point, 50);
+  assertEquals(label.primary, 'Tue, Sep 22');
+  assertEquals(label.money, '+$118.20'); // cumulative, unlike a weekly point's delta
+});
+
+// ── Hero VoiceOver label (Design Lead ruling, 2026-09-29, Blocking 2) ──────
+
+Deno.test('heroAccessibilityLabel: joins value, gain, today and the caption into ONE sentence-by-sentence label', () => {
+  const label = heroAccessibilityLabel('$12,343.59', '+$343.59', '+2.86%', '+$121.26', '1 holding counted at cost (no live price yet)');
+  assertEquals(
+    label,
+    'Your team, $12,343.59. +$343.59, +2.86% season gain. +$121.26 today. 1 holding counted at cost (no live price yet)',
+  );
+});
+
+Deno.test('heroAccessibilityLabel: omits the today sentence entirely when today is null (non-trading day)', () => {
+  const label = heroAccessibilityLabel('$12,343.59', '+$343.59', '+2.86%', null, null);
+  assertEquals(label, 'Your team, $12,343.59. +$343.59, +2.86% season gain.');
+});
+
+// ── Hero meta row's week/round segment (Design Lead ruling, 2026-09-30) ────
+
+Deno.test('heroWeekOrRoundLabel: pre_season always reads "Week 1 of M"', () => {
+  assertEquals(heroWeekOrRoundLabel({ kind: 'pre_season', seasonStartsAt: null, numWeeks: 14 }), 'Week 1 of 14');
+});
+
+Deno.test('heroWeekOrRoundLabel: a regular-season bye reads "Week N of M"', () => {
+  assertEquals(heroWeekOrRoundLabel({ kind: 'bye', week: 7, nextStart: null, numWeeks: 14 }), 'Week 7 of 14');
+});
+
+Deno.test('heroWeekOrRoundLabel: a regular-season live week reads "Week N of M"', () => {
+  assertEquals(
+    heroWeekOrRoundLabel({ kind: 'live_open', week: 6, isPlayoff: false, round: null, weekEnd: '2026-09-25T20:00:00.000Z', numWeeks: 14 }),
+    'Week 6 of 14',
+  );
+});
+
+Deno.test('heroWeekOrRoundLabel: a PLAYOFF live week reads the round name, never "Week N of M"', () => {
+  assertEquals(
+    heroWeekOrRoundLabel({ kind: 'live_open', week: 15, isPlayoff: true, round: 'Semifinals', weekEnd: '2026-12-18T20:00:00.000Z', numWeeks: 14 }),
+    'Semifinals',
+  );
+});
+
+Deno.test('heroWeekOrRoundLabel: playoff_bye and eliminated read the round name', () => {
+  assertEquals(heroWeekOrRoundLabel({ kind: 'playoff_bye', week: 16, round: 'Semifinals', numWeeks: 14 }), 'Semifinals');
+  assertEquals(heroWeekOrRoundLabel({ kind: 'eliminated', round: 'Wild Card', numWeeks: 14 }), 'Wild Card');
+});
+
+Deno.test('heroWeekOrRoundLabel: missed_playoffs and complete drop the segment entirely (null)', () => {
+  assertEquals(heroWeekOrRoundLabel({ kind: 'missed_playoffs', numWeeks: 14 }), null);
+  assertEquals(heroWeekOrRoundLabel({ kind: 'complete', numWeeks: 14 }), null);
+});
+
+// ── standingsThroughWeek (Design Lead ruling, 2026-09-30, B2) ──────────────
+
+Deno.test('standingsThroughWeek: a regular-season live week reads "week - 1"', () => {
+  assertEquals(standingsThroughWeek({ kind: 'live_open', week: 6, isPlayoff: false, round: null, weekEnd: '2026-09-25T20:00:00.000Z', numWeeks: 14 }), 5);
+});
+
+Deno.test('standingsThroughWeek: a regular-season scored/bye week also reads "week - 1"', () => {
+  assertEquals(standingsThroughWeek({ kind: 'scored', week: 4, won: true, isPlayoff: false, round: null, nextStart: null, numWeeks: 14 }), 3);
+  assertEquals(standingsThroughWeek({ kind: 'bye', week: 3, nextStart: null, numWeeks: 14 }), 2);
+});
+
+Deno.test('standingsThroughWeek: any playoff-family state reads the full numWeeks, never a playoff week number minus one', () => {
+  assertEquals(standingsThroughWeek({ kind: 'playoff_bye', week: 16, round: 'Semifinals', numWeeks: 14 }), 14);
+  assertEquals(standingsThroughWeek({ kind: 'eliminated', round: 'Wild Card', numWeeks: 14 }), 14);
+  assertEquals(standingsThroughWeek({ kind: 'missed_playoffs', numWeeks: 14 }), 14);
+  assertEquals(standingsThroughWeek({ kind: 'playoff_pending', week: 16, round: 'Final', previousRound: 'Semifinals', numWeeks: 14 }), 14);
+  // A live/scored playoff week reads numWeeks too, never "week - 1" (which
+  // would read "Through Week 15" for a week-16 row -- Design Lead's exact
+  // regression, capture 13).
+  assertEquals(standingsThroughWeek({ kind: 'live_open', week: 16, isPlayoff: true, round: 'Final', weekEnd: '2026-12-25T21:00:00.000Z', numWeeks: 14 }), 14);
+});
+
+Deno.test('standingsThroughWeek: never negative (a bogus week 0 clamps to 0, not -1)', () => {
+  assertEquals(standingsThroughWeek({ kind: 'bye', week: 0, nextStart: null, numWeeks: 14 }), 0);
+});
+
+// ── preSeasonStartsLabel (Design Lead ruling, 2026-09-30, B3) ──────────────
+
+Deno.test('preSeasonStartsLabel: formats a real Monday-open instant as "Season starts Mon H:MM AM/PM ET"', () => {
+  assertEquals(preSeasonStartsLabel('2026-08-03T13:30:00.000Z'), 'Season starts Mon 9:30 AM ET');
+});
+
+Deno.test('preSeasonStartsLabel: a holiday-shifted Tuesday start reads Tuesday, never a hardcoded Monday', () => {
+  assertEquals(preSeasonStartsLabel('2026-09-08T13:30:00.000Z'), 'Season starts Tue 9:30 AM ET');
+});
+
+Deno.test('preSeasonStartsLabel: null/invalid falls back to "Season starts soon", never "Invalid Date"', () => {
+  assertEquals(preSeasonStartsLabel(null), 'Season starts soon');
+  assertEquals(preSeasonStartsLabel('not-a-date'), 'Season starts soon');
+});
+
+// ── B6 (Design Lead ruling, 2026-09-30): SeasonCompleteCard's non-champion
+// variant and its S6 ordinal-tile fix. ─────────────────────────────────────
+
+Deno.test('placeLabel: "2nd place" / "3rd place" -- ordinal, never "Place 2"', () => {
+  assertEquals(placeLabel(2), '2nd place');
+  assertEquals(placeLabel(3), '3rd place');
+});
+
+Deno.test('nonChampionLine: "{league} · {record}"', () => {
+  assertEquals(nonChampionLine('Stock Scudetto', '11–3'), 'Stock Scudetto · 11–3');
+});
+
+Deno.test('regularSeasonTileLine: ordinal, never "2 of 3" (S6)', () => {
+  assertEquals(regularSeasonTileLine(1, 6, '11–3'), '1st of 6 · 11–3');
+  assertEquals(regularSeasonTileLine(2, 3, '4–1'), '2nd of 3 · 4–1');
+});
+
+Deno.test('playoffRecordLine: prefixes the win-loss record when known', () => {
+  assertEquals(playoffRecordLine(2, 0, 'won the Final'), '2–0 · won the Final');
+});
+
+Deno.test('playoffRecordLine: drops the prefix (never "undefined–undefined") when the record is unknown', () => {
+  assertEquals(playoffRecordLine(null, null, 'won the Final'), 'won the Final');
+});
+
+// ── B6 edge cases (Orchestrator, 2026-09-30) ────────────────────────────────
+
+Deno.test('playoffTileLine: runner_up always reads "lost in the Final", even with no exitRoundLabel (detail_scope=standings_only never indexes rounds for it)', () => {
+  assertEquals(playoffTileLine('runner_up', null), 'lost in the Final');
+});
+
+Deno.test('playoffTileLine: a null playoff_result (detail_scope=standings_only, eliminated/missed unknowable) hides the tile -- never "missed"', () => {
+  assertEquals(playoffTileLine(null, null), null);
+});
+
+Deno.test('championAnnounceLine: "Won {league}", never "You won" (caller_participated=false)', () => {
+  assertEquals(championAnnounceLine('Stock Scudetto'), 'Won Stock Scudetto');
+});
+
+Deno.test('coreCompleteTiles: the honest-minimum fallback and the full get_season_result render produce IDENTICAL Season-gain/Regular-season tiles for the same season (Orchestrator ruling, 2026-09-30)', () => {
+  // SeasonCompleteCard calls this ONE function regardless of whether
+  // get_season_result succeeded -- there is no second formula for these
+  // two tiles to drift from. Same (seasonGain, finalRank, standingsCount,
+  // record) in, same tiles out, whether or not a result row exists.
+  const forSameSeason = coreCompleteTiles(481.78, 2, 6, '5–1');
+  const again = coreCompleteTiles(481.78, 2, 6, '5–1');
+  assertEquals(forSameSeason, again);
+  assertEquals(forSameSeason.seasonGain, 481.78);
+  assertEquals(forSameSeason.regularSeasonLine, '2nd of 6 · 5–1');
+});
+
+// ── B5 (Design Lead ruling, 2026-09-30): DraftingCard's slot grid ──────────
+
+Deno.test('teamSoFarCaption: "1 of 6"', () => {
+  assertEquals(teamSoFarCaption(1, 6), '1 of 6');
+});
+
+Deno.test('roundSlotLabel: "Rd 2"', () => {
+  assertEquals(roundSlotLabel(2), 'Rd 2');
+});
+
+// ── S3 (Design Lead ruling, 2026-09-30) ─────────────────────────────────────
+
+Deno.test('eliminatedLabel: a round-1 (Wild card) elimination reads "Out in the Wild card round"', () => {
+  assertEquals(eliminatedLabel('Wild card'), 'Out in the Wild card round');
+});
+
+Deno.test('eliminatedLabel: every other round keeps "Out in the {round}" unchanged', () => {
+  assertEquals(eliminatedLabel('Semifinals'), 'Out in the Semifinals');
+  assertEquals(eliminatedLabel('Quarterfinals'), 'Out in the Quarterfinals');
+  assertEquals(eliminatedLabel('Final'), 'Out in the Final');
+});
+
+Deno.test('eliminatedLabel: a null round (round unknowable) reads "Out of the playoffs"', () => {
+  assertEquals(eliminatedLabel(null), 'Out of the playoffs');
+});
+
+Deno.test('marketClosedAt: "at Wednesday\'s close" -- the lead-line tail, no leading ellipsis (R2)', () => {
+  // 2026-09-23 20:00Z is Wednesday 4:00 PM ET, the close of that session.
+  assertEquals(marketClosedAt('2026-09-23T20:00:00.000Z'), "at Wednesday's close");
+});
+
+Deno.test('marketClosedAt: an invalid instant reads "" so the lead line drops the tail, never "Invalid Date"', () => {
+  assertEquals(marketClosedAt('not-a-date'), '');
+});

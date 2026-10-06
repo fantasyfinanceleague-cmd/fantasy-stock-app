@@ -30,7 +30,7 @@ export interface LeagueStartState {
   draftDate: string | null; // ISO, or null = TBD
   leagueType: string | null; // leagues.league_type: 'matchup' | 'duration'
   playoffTeams: number | null; // leagues.playoff_teams, as stored (no default)
-  /** Run it back (20261027000002): how many Season 1 invitees have not answered
+  /** Run it back (20261105000002): how many Season 1 invitees have not answered
    * yet. Counted by the server (pending rows), never inferred. Optional so
    * ordinary leagues need no value; undefined means 0. */
   renewalRepliesPending?: number;
@@ -44,7 +44,13 @@ export type StartBlocker =
   | { code: 'not_enough_members'; have: number; need: number }
   | { code: 'invalid_playoff_teams'; playoffTeams: number | null }
   | { code: 'playoff_teams_exceeds_members'; playoffTeams: number; members: number }
-  | { code: 'renewal_replies_pending'; pending: number };
+  | { code: 'renewal_replies_pending'; pending: number }
+  // Feasibility (2026-10-05, computed in index.ts — the pool is a DB read, not a
+  // rule over this state): every slot must be fillable for every manager, and the
+  // budget reserve must be affordable. feasibility_unavailable fails CLOSED.
+  | { code: 'slots_infeasible'; ordinals: number[]; need: number; have: number }
+  | { code: 'budget_infeasible'; reserve: number; budget: number }
+  | { code: 'feasibility_unavailable' };
 
 /**
  * Every reason the draft cannot start right now, in a stable order (state,

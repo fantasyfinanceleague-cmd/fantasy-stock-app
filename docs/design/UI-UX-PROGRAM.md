@@ -36,6 +36,29 @@ usual checks pass **and** the Design Lead has replied `DESIGN-APPROVED <branch>`
 to the Orchestrator. For the landing page this gate is the last line before
 prod — merging to `main` deploys it to Vercel immediately.
 
+**Gate report format (from 3c's next gate, adopted 2026-10-05; after
+pbakaus/impeccable):**
+1. **Specificity:** is this authored for Stockpile, or interchangeable with
+   any app?
+2. **Squint test** on each key screen.
+3. **Scorecard,** 0–4 each: accessibility · performance · theming · platform
+   conformance · adaptivity.
+4. **Persona walk** on the phase's main path, with named red flags:
+   - *the invitee* (joined by code, never traded);
+   - *the commissioner* (runs the draft and the renewal);
+   - *the active trader* (checks daily, sells and rebuys).
+5. **Findings tagged P0–P3:**
+   - P0: broken or misleading;
+   - P1: blocks the gate;
+   - P2: should fix;
+   - P3: polish.
+   Each finding carries a drift class (missing token / one-off implementation
+   / conceptual mismatch / local defect), and fixes go in triage order: broken
+   tasks → missing states → drift → visual/motion → cleanup.
+Plus the DESIGN_DIRECTION §9B mechanical checks: 44 pt hit areas, the 11 pt
+floor, no glyph-icons, the §4 motion craft lines, the stress fixture, ≤ 4
+choices, and colour-only codes with a twin.
+
 ## Plugin skills in use
 
 Installed at **user scope** on 2026-09-25 (in `~/.claude/`, not the repo), so

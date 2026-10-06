@@ -8,7 +8,7 @@
  * Orchestrator/Design Lead on 2026-09-26.
  */
 import { assertEquals } from 'jsr:@std/assert';
-import { formatMoney, isZeroMoney } from '../components/sp/logic/money.ts';
+import { formatMoney, formatPercent, isZeroMoney } from '../components/sp/logic/money.ts';
 
 // ---------------------------------------------------------------------------
 // The brief's golden table (renamed sign vocabulary: 'auto' -> 'always')
@@ -124,4 +124,20 @@ Deno.test('isZeroMoney: true for values that round to zero', () => {
 Deno.test('isZeroMoney: false once a value rounds to a nonzero cent', () => {
   assertEquals(isZeroMoney(0.005), false);
   assertEquals(isZeroMoney(-0.01), false);
+});
+
+Deno.test('formatPercent: 2.86, sign always -> +2.86%', () => {
+  assertEquals(formatPercent(2.86, { sign: 'always' }), '+2.86%');
+});
+
+Deno.test('formatPercent: -1.865, default sign -> −1.87%', () => {
+  assertEquals(formatPercent(-1.865, { }), '−1.87%');
+});
+
+Deno.test('formatPercent: 0, sign always -> 0.00% (no sign)', () => {
+  assertEquals(formatPercent(0, { sign: 'always' }), '0.00%');
+});
+
+Deno.test('formatPercent: a tiny negative that rounds to zero is never signed', () => {
+  assertEquals(formatPercent(-0.001, { sign: 'always' }), '0.00%');
 });

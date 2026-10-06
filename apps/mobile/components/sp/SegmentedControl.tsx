@@ -2,11 +2,13 @@
 import { useEffect, useState } from 'react';
 import { LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 
 import { radius, space } from '@/constants/tokens';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { useMotion } from '@/components/sp/motion';
+import { segmentHitSlop } from './logic/segmentedHit';
 
 // Stockpile — <SegmentedControl> (Phase 2 foundation). Used for "All
 // matchups this week" (Matchup tab) and similar in-screen filters. The
@@ -49,11 +51,25 @@ export function SegmentedControl({ options, value, onChange }: SegmentedControlP
   const activeTextColor = colors.text;
   const idleTextColor = colors.text2;
 
+  const [trackHeight, setTrackHeight] = useState(0);
+  const hit = segmentHitSlop(trackHeight);
+
   function handleLayout(event: LayoutChangeEvent) {
     setSegmentWidth(event.nativeEvent.layout.width / options.length);
+    setTrackHeight(event.nativeEvent.layout.height);
+  }
+
+  function choose(next: string) {
+    if (next === value) return;
+    // A light selection haptic when the choice actually changes (§9B).
+    void Haptics.selectionAsync().catch(() => {});
+    onChange(next);
   }
 
   return (
+    // 8 pt clear above and below, so each segment's hit slop never overlaps
+    // another target (§9B). The visual height is unchanged.
+    <View accessibilityRole="tablist" style={styles.wrap}>
     <View style={[styles.track, { backgroundColor: trackColor }]} onLayout={handleLayout}>
       {segmentWidth > 0 ? (
         <Animated.View style={[styles.indicator, { backgroundColor: indicatorColor }, indicatorStyle]} />
@@ -63,10 +79,12 @@ export function SegmentedControl({ options, value, onChange }: SegmentedControlP
         return (
           <Pressable
             key={option.value}
-            accessibilityRole="button"
+            accessibilityRole="tab"
             accessibilityState={{ selected }}
+            accessibilityLabel={option.label}
+            hitSlop={hit}
             style={styles.segment}
-            onPress={() => onChange(option.value)}
+            onPress={() => choose(option.value)}
           >
             <Text variant="callout" color={selected ? activeTextColor : idleTextColor} numberOfLines={1}>
               {option.label}
@@ -75,10 +93,12 @@ export function SegmentedControl({ options, value, onChange }: SegmentedControlP
         );
       })}
     </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrap: { marginVertical: space[2] },
   track: {
     flexDirection: 'row',
     borderRadius: radius.md,

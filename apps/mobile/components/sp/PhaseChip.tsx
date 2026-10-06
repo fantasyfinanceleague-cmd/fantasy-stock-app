@@ -41,9 +41,21 @@ export interface PhaseChipProps {
    * default phase texts are uppercase tags.
    */
   label?: string;
+  /**
+   * Carry-over from the 3b-1 review, fixed in 3b-2: `colors.inset` (the
+   * 'live'/'default' styles' fill) is nearly IDENTICAL to `colors.bg` in
+   * Light (#F0F3F7 vs #F3F5F8) — invisible for a chip sitting directly on
+   * the page background (ShellHeader's header chip), though correct as a
+   * sunken fill ON a card/sheet surface (LeagueSheetRow, inside the
+   * surface-coloured sheet). Set true ONLY for the page-background case:
+   * swaps the fill to `colors.surface` plus a hairline border instead.
+   * The 'final' (inverse) style is unaffected either way — it already
+   * pops on any background by design.
+   */
+  onPageBackground?: boolean;
 }
 
-export function PhaseChip({ phase, label }: PhaseChipProps) {
+export function PhaseChip({ phase, label, onPageBackground = false }: PhaseChipProps) {
   const { colors } = useTheme();
   const meta = { label: phaseChipText(phase, label), style: phaseChipStyle(phase) };
   const tagStyle = type.tag;
@@ -51,12 +63,14 @@ export function PhaseChip({ phase, label }: PhaseChipProps) {
   let backgroundColor: string;
   let textColor: string;
   let dotColor: string | null;
+  let borderColor: string | null = null;
 
   switch (meta.style) {
     case 'live':
-      backgroundColor = colors.inset;
+      backgroundColor = onPageBackground ? colors.surface : colors.inset;
       textColor = colors.liveText;
       dotColor = colors.live;
+      if (onPageBackground) borderColor = colors.border;
       break;
     case 'final':
       backgroundColor = colors.inverseBg;
@@ -65,14 +79,15 @@ export function PhaseChip({ phase, label }: PhaseChipProps) {
       break;
     case 'default':
     default:
-      backgroundColor = colors.inset;
+      backgroundColor = onPageBackground ? colors.surface : colors.inset;
       textColor = colors.text;
       dotColor = null;
+      if (onPageBackground) borderColor = colors.border;
       break;
   }
 
   return (
-    <View style={[styles.base, { backgroundColor }]}>
+    <View style={[styles.base, { backgroundColor }, borderColor ? { borderWidth: StyleSheet.hairlineWidth, borderColor } : null]}>
       {dotColor ? <View style={[styles.dot, { backgroundColor: dotColor }]} /> : null}
       <RNText
         // The tag's own ceiling (type.tag.maxScale): the raw RNText doesn't
