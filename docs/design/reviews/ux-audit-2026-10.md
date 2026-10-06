@@ -52,7 +52,7 @@ The verdict below covers exactly this evidence. "Not examined" means no verdict,
 
 All P0s and the spec-level P1s were relayed to the Orchestrator for the 3c-2 and 3e workers
 on 2026-10-06 (status column). Two P1s are layout changes and went to Giorgio as "Your call"
-mockups: board `#call-ux-pass1`, branch `design/ux-your-calls` @ `10063ed`.
+mockups (board `#call-ux-pass1`, PR #140); **he chose B for both on 2026-10-06** (U-16, U-17).
 
 **Rules that pass on the designs** (no finding): rule 1 (every product departure has its
 in-place line: whole-position sells on the sheet, the tiebreak beside the score, the Bye chip,
@@ -90,8 +90,8 @@ P2/P3 for 1.3 unless cheap. Paths are `apps/mobile/` unless noted.
 | U-13 | League standings (3c) | 8 / a11y | `StandingsTable.tsx:36` VoiceOver label says "up N" for a move down. A wrong fact for a screen-reader user. | "down N" for negative moves. | relayed |
 | U-14 | Draft room, trade review | 11 | `lib/notifications.ts` shows every foreground banner, so a push can land while your pick clock runs or a trade review is open: the two protected moments. | Suppress foreground banners while it's your turn in the room and while a trade review is open. | relayed |
 | U-15 | Home, season complete (3c) | 10 | The member's "Are you in for Season 2?" card (`RenewalAsk`) is mounted only on the League tab (`LeagueRenewal.tsx`). The board puts it on Home and the League tab; rule 10 requires Home. | Mount it on Home's season-complete branch for members, beside the commissioner-only `RunItBackCard` (`index.tsx:148`); it leaves once they answer. | relayed |
-| U-16 | Draft time sheet (3c-2) | 3 | The confirm is a header "Done" text link in the top corner; the only full-width button is "Set later". Also the picker saves as it spins and Done only closes, so a swipe-away half-saves. | ★B: full-width "Set draft time" at the bottom, × to close without saving, "Set later" as a text button. | call (`#call-ux-pass1` 1) |
-| U-17 | Home, no draft time, commissioner (3c-2) | 10 | The one task blocking the league is the draft time, but the card's primary is "Build your queue" and its line sends the commissioner to League settings. | ★B: primary "Set draft time" opening the sheet in place; queue secondary. | call (`#call-ux-pass1` 2) |
+| U-16 | Draft time sheet (3c-2) | 3 | The confirm is a header "Done" text link in the top corner; the only full-width button is "Set later". Also the picker saves as it spins and Done only closes, so a swipe-away half-saves. | ★B: full-width "Set draft time" at the bottom, × to close without saving, "Set later" as a text button. | decided B (Giorgio, 2026-10-06); relayed to 3c-2 |
+| U-17 | Home, no draft time, commissioner (3c-2) | 10 | The one task blocking the league is the draft time, but the card's primary is "Build your queue" and its line sends the commissioner to League settings. | ★B: primary "Set draft time" opening the sheet in place; queue secondary. | decided B (Giorgio, 2026-10-06); relayed to 3c-2 |
 | U-18 | Home, no draft time (main) | 10 | On main, a league with no draft date just loses the date and countdown lines: nothing says it's missing (walkthrough check 5). | Fixed on 3c-2 ("No draft time yet"; members "{Commissioner} will set the draft time."). Verify at the 3c-2 gate. | fixed on branch |
 | U-19 | Trade review (3e) | 9 | The sheet's swipe (`MoneyHost.tsx:44`) and the review's "Edit" link (`TradeReviewPanel.tsx:73`) stay live while submitting; `reviewMachine.canDismiss()` is never called. A trade can execute with its outcome never shown. | Gate both on `canDismiss()`; §9B already says a mid-confirm trade review doesn't dismiss. | relayed |
 | U-20 | Trade review (3e) | 9 | `useTradeSubmit` has no reset: after a refusal, Edit and a new review in the same sheet keep the old `refused` state with no button. (Code-read; confirm on device.) | RESET when a review opens (`StockSheetBody.tsx:186`). | relayed |
