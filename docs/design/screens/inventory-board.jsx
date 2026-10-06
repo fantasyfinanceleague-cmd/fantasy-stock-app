@@ -117,7 +117,7 @@
           <Fit caption="A holding without a live price" note='Counted at cost (zero gain, never $0 of value), and the screen says so in the approved caption. "{name}: " is new copy. Appears instantly.'><I.HomeUnpriced /></Fit>
           <Fit caption="Week final, scoring" note="Friday after 4 PM"><I.HomeScoring /></Fit>
           <Fit caption="Season complete" note="New copy throughout. Every tile comes from the season result (ask #11): season gain, best week, regular-season rank and record, playoff result"><I.HomeComplete /></Fit>
-          <Fit caption="Season complete · not the champion" note={'On Francesco T.\'s phone (UX audit U-27). The hero answers who won; the tiles are their own season. New copy: "{Champion} won {League}" and "You reached the {round}." (a playoff team) or "You finished {rank} of {n}." (missed the playoffs). Tile values are sample. The trophy disc is neutral: medals are ranks 1–3 only.'}><I.HomeCompleteOther /></Fit>
+          <Fit caption="Season complete · not the champion" note={'On Francesco T.\'s phone. Documents the approved 3b-2 build (rulings B6, S8): the place is the headline, then "{League} · {record}", on a neutral disc because gold means champion. No new copy. Tile values are sample.'}><I.HomeCompleteOther /></Fit>
         </Group>
 
         <Group id="game" code="3c" name="Matchups, draft and playoffs" job="The game surfaces around the key Matchup, Standings and Draft room screens."

@@ -642,20 +642,20 @@
     );
   }
 
-  /** Season complete for a manager who didn't win (UX audit U-27), on Francesco T.'s phone:
-   * the hero answers "who won?", the tiles are their own season. Tile values are SAMPLE
-   * (data.js has no Week 14 for Francesco T.). */
+  /** Season complete for a manager who didn't win, on Francesco T.'s phone. Documents the
+   * APPROVED 3b-2 build (SeasonCompleteCard, rulings B6 + S8): place as the headline,
+   * "{League} · {record}", a neutral disc (gold is a champion signal). Tile values are
+   * SAMPLE (data.js has no Week 14 for Francesco T.). */
   function HomeCompleteOther() {
-    const champ = K.byId.roberto.name;
     return (
       <Device tab="home" label="Home, season complete, not the champion">
         <Head avatar chip={null} />
         <div className="ks-pad ks-stack">
           <div className="ks-game" style={{ padding: 20, display: 'grid', justifyItems: 'center', gap: 8, textAlign: 'center' }}>
-            <span style={{ width: 72, height: 72, borderRadius: 36, display: 'grid', placeItems: 'center', background: 'var(--c-inset)', color: 'var(--c-text-2)' }}><Icon d={TROPHY} size={36} width={2.2} /></span>
+            <span style={{ width: 72, height: 72, borderRadius: 36, display: 'grid', placeItems: 'center', background: 'var(--c-text-2)', color: 'var(--c-surface)' }}><Icon d={TROPHY} size={36} width={2.2} /></span>
             <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Season complete</span>
-            <span className="ks-title" style={{ fontSize: 24 }}>{champ} won {K.LEAGUE.name}</span>
-            <span className="ks-callout">You reached the Semifinals.</span>
+            <span className="ks-score" style={{ fontSize: 44, lineHeight: '44px', whiteSpace: 'normal' }}>4th place</span>
+            <span className="ks-callout">{K.LEAGUE.name} · 7–7</span>
           </div>
           <Card pad="14px">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', rowGap: 12 }} className="ks-num">
