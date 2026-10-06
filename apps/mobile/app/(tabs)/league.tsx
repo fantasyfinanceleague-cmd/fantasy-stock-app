@@ -149,14 +149,31 @@ export default function LeagueScreen() {
 
 /** A renewed league before its draft (3c, Run it back): the roster or the ask. */
 function LeagueRenewalScreen({ leagueId, createdAt }: { leagueId: string; createdAt: string }) {
-  const { refresh } = useLeagueContext();
+  const { refresh, activeLeague } = useLeagueContext();
   const { colors } = useTheme();
   const [key, setKey] = useState(0);
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <ShellHeader title="League" showAvatar />
       <BarsRefresh onRefresh={refresh} contentContainerStyle={{ paddingHorizontal: space[6], paddingBottom: space[9], gap: space[6] }}>
-        <LeagueRenewal key={key} successorId={leagueId} leagueId={leagueId} createdAt={createdAt} now={new Date()} onChanged={() => setKey((k) => k + 1)} />
+        <LeagueRenewal
+          key={key}
+          successorId={leagueId}
+          leagueId={leagueId}
+          createdAt={createdAt}
+          now={new Date()}
+          onChanged={() => setKey((k) => k + 1)}
+          settings={{
+            name: activeLeague?.name ?? '',
+            num_weeks: activeLeague?.num_weeks ?? 0,
+            pick_seconds: activeLeague?.pick_seconds ?? 60,
+            draft_date: activeLeague?.draft_date ?? null,
+            draft_order_mode: activeLeague?.draft_order_mode ?? 'random',
+            playoff_teams: activeLeague?.playoff_teams ?? null,
+          }}
+          inviteCode={activeLeague?.invite_code ?? ''}
+          onScheduled={() => setKey((k) => k + 1)}
+        />
       </BarsRefresh>
     </View>
   );
