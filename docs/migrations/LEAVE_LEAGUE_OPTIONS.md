@@ -1,6 +1,6 @@
 # Leave league — plan
 
-**Status:** PLANNED 2026-10-05 against Giorgio's answers. It waits for "go". **Q4** (the commissioner leaving their own league) is still being asked; the plan defaults to Q4-B. Nothing is built yet (STATUS §4 item 11).
+**Status:** BUILT on `feat/leave-league` 2026-10-05, NOT applied and NOT deployed. Q4 defaults to B (pick a successor) until Giorgio rules; the A/C deltas are in §3. Migrations `20261107000000`–`04`, the `leave-league` edge function, and draft-control `confirm_roster` plus the `roster_reconfirm_required` blocker. Tests: `supabase/tests/leave_league.pglite.test.ts`. Prod effect check: `docs/security/leave-league-effect-test.sql`. As built, the departed list is `departed jsonb` (`[{user_id, name, left_at}]`, with the name snapshotted at the leave) instead of `departed_user_ids text[]`, and Home filters only `get_home_summary`: `get_home_league` takes an explicit id, so "Past leagues" can still open a hidden league.
 **Branch:** `feat/leave-league`. Migration range `20261107000000`–`04` (of the provisional `00`–`09`).
 **Retires:** `[I5]` (`league_members_delete_self`, `20260712000002:34-37`).
 
