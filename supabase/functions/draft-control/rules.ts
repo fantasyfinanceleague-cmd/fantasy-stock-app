@@ -39,7 +39,13 @@ export type StartBlocker =
   | { code: 'draft_date_not_reached'; draftDate: string }
   | { code: 'not_enough_members'; have: number; need: number }
   | { code: 'invalid_playoff_teams'; playoffTeams: number | null }
-  | { code: 'playoff_teams_exceeds_members'; playoffTeams: number; members: number };
+  | { code: 'playoff_teams_exceeds_members'; playoffTeams: number; members: number }
+  // Feasibility (2026-10-05, computed in index.ts — the pool is a DB read, not a
+  // rule over this state): every slot must be fillable for every manager, and the
+  // budget reserve must be affordable. feasibility_unavailable fails CLOSED.
+  | { code: 'slots_infeasible'; ordinals: number[]; need: number; have: number }
+  | { code: 'budget_infeasible'; reserve: number; budget: number }
+  | { code: 'feasibility_unavailable' };
 
 /**
  * Every reason the draft cannot start right now, in a stable order (state,

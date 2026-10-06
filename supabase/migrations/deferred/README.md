@@ -213,3 +213,13 @@ Note that "held for the mobile release" migrations were not always parked here:
 `20260811000009_drop_leagues_salary_cap_limit.sql` sat in the apply path with a
 "hold" header and was applied by a later `db push`. **A header comment does not hold
 a migration — only this directory does.**
+
+## 20261101000002_drafts_refuse_new_skip.sql (draft-never-skips, 2026-10-05)
+
+Held. A BEFORE INSERT trigger refusing any new `drafts` row with symbol `SKIP`.
+Precondition (all three, in order): (1) `20261101000000` and `20261101000001` are
+applied and verified; (2) validate-and-record-pick, draft-control and
+draft-autopick-sweep from the draft-never-skips build are deployed AND
+byte-verified (the old code still writes SKIP on its skip paths and would 500
+under this trigger); (3) the auto-pick sweep cron (`20261010000001`, above) is
+promoted with 1.2.0, since stall recovery for bots relies on it.

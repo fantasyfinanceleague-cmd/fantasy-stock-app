@@ -19,11 +19,15 @@ import {
   type AutoPickChoice,
   type AutoPickPorts,
   type AutoPickState,
-  BEST_MAX_ATTEMPTS,
+  LIVE_MAX_ATTEMPTS,
+  OUTAGE_ESCALATE_MS,
+  outageEscalation,
+  PRICE_COOLDOWN_MS,
   type BestAvailableStrategy,
   chooseAutoPick,
   decideAutoPickGate,
   decideNoPick,
+  WALK_MAX_CANDIDATES,
   type DraftClock,
   MARKET_CAP_STRATEGY,
   openSlotSpecs,
@@ -32,8 +36,18 @@ import {
   QUEUE_MAX_ATTEMPTS,
   type SlotSpec,
 } from './auto-pick.ts';
-import { type GatedPick, gatePick } from './pick-gate.ts';
-import { type LeagueRules, type PickRow, type Slot, type TradeRow, validatePick } from './draft-validation.ts';
+import { type GatedPick, gatePick, type PickFeasibility } from './pick-gate.ts';
+import {
+  buildPoolGroups,
+  demandVector,
+  flexTypes,
+  openInstances,
+  type PoolGroup,
+  type FeasibilityState,
+  typesFromSlots,
+} from './draft-feasibility.ts';
+import { type LeagueRules, type PickRow, type Slot, type TradeRow, validatePick, leagueOwnedSymbols, currentTurn } from './draft-validation.ts';
+import { checkStartFeasibility } from './draft-feasibility.ts';
 
 const rules: LeagueRules = { stakeMode: null, budgetAmount: null, notionalPerSlot: null, numRounds: 6 };
 
@@ -114,8 +128,81 @@ class FakeMarket implements AutoPickPorts {
   livePrice = (symbol: string) => {
     this.priceCalls.push(symbol);
     const s = this.stocks.find((x) => x.symbol === symbol);
-    return Promise.resolve({ price: s?.live ?? null, source: 'fake' });
+    // A trade price: the write-back accepts only trade/bar sources (review M2).
+    return Promise.resolve({ price: s?.live ?? null, source: 'trade.p' });
   };
+  /** The per-symbol negative cache (the real port is auto_pick_price_failures). */
+  failures = new Map<string, number>();
+  coolingSymbols = (symbols: string[]) =>
+    Promise.resolve(
+      new Set(
+        symbols
+          .map((x) => x.toUpperCase())
+          .filter((x) => {
+            const t = this.failures.get(x);
+            return t != null && Date.now() - t < PRICE_COOLDOWN_MS;
+          }),
+      ),
+    );
+  recordPriceFailure = (symbol: string): Promise<void> => {
+    this.failures.set(symbol.toUpperCase(), Date.now());
+    return Promise.resolve();
+  };
+  clearPriceFailure = (symbol: string): Promise<void> => {
+    this.failures.delete(symbol.toUpperCase());
+    return Promise.resolve();
+  };
+  /** The catalog cache takes the fresh live price (the real port writes symbols.last_price). */
+  recordLivePrice = (symbol: string, price: number): Promise<void> => {
+    const s = this.stocks.find((x) => x.symbol === symbol);
+    if (s) s.cached = price;
+    return Promise.resolve();
+  };
+  feasibilityPool = (types: Slot[], exclude: string[], draftableOnly: boolean, depth: number): Promise<PoolGroup[]> =>
+    Promise.resolve(
+      buildPoolGroups(
+        types,
+        this.stocks.map((s) => ({ symbol: s.symbol, cachedPrice: s.cached, eligibility: new Set(s.cats), isDraftable: s.draftable })),
+        { exclude, draftableOnly, depth },
+      ),
+    );
+}
+
+/** A feasibility context that never refuses: one flex type, a deep pool. Used
+ * by the gate unit tests that are about validatePick, not feasibility. */
+const permissive = (price: number | null): PickFeasibility => {
+  const types = flexTypes(6);
+  const state: FeasibilityState = {
+    types,
+    demand: [1],
+    groups: [{ ordinals: [0], n: 1000, prices: Array.from({ length: 50 }, (_, i) => i + 1) }],
+    budget: null,
+  };
+  return { state, open: [1], cachedPrice: price, eligibility: new Set() };
+};
+
+/** The full gate (validatePick + feasibility) on a market stock, with the
+ * feasibility state the auto-pick search would have built. Test oracle. */
+async function gateLegal(state: AutoPickState, m: FakeMarket, pickerId: string, s: Stock): Promise<boolean> {
+  if (s.live == null) return false;
+  const types = typesFromSlots(m.slots, state.numRounds);
+  const demand = demandVector(types, state.order, state.picks, state.numRounds);
+  const owned = [...leagueOwnedSymbols(state.picks, state.trades)];
+  const total = demand.reduce((a, b) => a + b, 0);
+  const groups = await m.feasibilityPool(types, owned, state.rules.allowUndraftable !== true, total + 1);
+  const budget = state.rules.stakeMode === 'budget_cap' ? Number(state.rules.budgetAmount) || 0 : null;
+  return gatePick('L', {
+    rules: state.rules,
+    slots: m.slots,
+    order: state.order,
+    picks: state.picks,
+    trades: state.trades,
+    pickerId,
+    symbol: s.symbol,
+    price: s.live,
+    eligibleCategories: new Set(s.cats),
+    isDraftable: s.draftable,
+  }, { state: { types, demand, groups, budget }, open: openInstances(types, state.picks, pickerId, state.numRounds), cachedPrice: s.cached, eligibility: new Set(s.cats) }).ok;
 }
 
 /** The brute-force oracle: is `sym` a legal pick right now, judged by the
@@ -225,10 +312,10 @@ Deno.test('parseDraftClockRow: maps the RPC row; rejects garbage', () => {
 
 Deno.test('gatePick: legal -> GatedPick with the decision; illegal -> refusal, no pick', () => {
   const base = { rules, slots: [], order: ['u'], picks: [], trades: [], pickerId: 'u', eligibleCategories: new Set<string>() };
-  const ok = gatePick('L', { ...base, symbol: 'aapl', price: 150, isDraftable: true });
+  const ok = gatePick('L', { ...base, symbol: 'aapl', price: 150, isDraftable: true }, permissive(150));
   assert(ok.ok);
   assertEquals([ok.pick.leagueId, ok.pick.symbol, ok.pick.price, ok.pick.pickNumber], ['L', 'AAPL', 150, 1]);
-  assertEquals(gatePick('L', { ...base, symbol: 'JUNK', price: 1, isDraftable: false }), { ok: false, reason: 'not_draftable' });
+  assertEquals(gatePick('L', { ...base, symbol: 'JUNK', price: 1, isDraftable: false }, permissive(1)), { ok: false, reason: 'not_draftable' });
 });
 
 Deno.test('GatedPick cannot be built by hand (compile-time brand)', () => {
@@ -248,9 +335,10 @@ Deno.test('openSlotSpecs: slot-less league = one unbounded spec', () => {
 Deno.test('openSlotSpecs: only slots with spare capacity, with their category; SKIP occupies nothing', () => {
   const slots = [slot('s1', 0, 10), slot('s2', 10, 50, { categoryId: 'tech' }), slot('s3', 50, null, { categoryId: 'energy' })];
   const picks = [pick('u', 'AAA', 1, { slot_id: 's2' }), pick('u', 'SKIP', 2, { slot_id: 's1' }), pick('v', 'BBB', 3, { slot_id: 's3' })];
+  // Brackets are widened by the 10% search margin (the gate stays exact).
   assertEquals(openSlotSpecs(rules, slots, picks, [], 'u'), [
-    { min: 0, max: 10, categoryId: null },
-    { min: 50, max: null, categoryId: 'energy' },
+    { min: 0, max: 11, categoryId: null },
+    { min: 45, max: null, categoryId: 'energy' },
   ]);
 });
 
@@ -258,8 +346,8 @@ Deno.test('openSlotSpecs: budget_cap clamps each top to what is left; exhausted 
   const r: LeagueRules = { ...rules, stakeMode: 'budget_cap', budgetAmount: 300 };
   const slots = [slot('s1', 0, 50), slot('s2', 100, null), slot('s3', 250, 500)];
   assertEquals(openSlotSpecs(r, slots, [pick('u', 'AAA', 1, { entry_price: 120, slot_id: 'sX' })], [], 'u'), [
-    { min: 0, max: 50, categoryId: null },
-    { min: 100, max: 180, categoryId: null },
+    { min: 0, max: 55, categoryId: null },
+    { min: 90, max: 180, categoryId: null },
   ]);
   assertEquals(openSlotSpecs({ ...r, budgetAmount: 100 }, [], [pick('u', 'AAA', 1)], [], 'u'), []);
 });
@@ -292,11 +380,9 @@ Deno.test('queue plan: capped at QUEUE_MAX_ATTEMPTS', () => {
 // decideNoPick
 // ===========================================================================
 
-Deno.test('noPick: humans skip only for legality, never for an outage; bots keep their rule', () => {
-  assertEquals(decideNoPick(false, 0, 0), { kind: 'skip', source: 'auto_skip' });
-  assertEquals(decideNoPick(false, 4, 2), { kind: 'skip', source: 'auto_skip' });
-  assertEquals(decideNoPick(false, 4, 0), { kind: 'retry_later' });
-  assertEquals(decideNoPick(true, 4, 0), { kind: 'skip', source: 'skip' });
+Deno.test('noPick: NO SKIP for anyone (2026-10-05): stall only with no outage, retry on an outage', () => {
+  assertEquals(decideNoPick(0), { kind: 'stalled' });
+  assertEquals(decideNoPick(2), { kind: 'retry_later' });
 });
 
 // ===========================================================================
@@ -347,13 +433,16 @@ Deno.test('queue first, in order; a queued stock that became illegal is skipped,
   assertNeverIllegal(r, st, m, 'u', 'queue');
 });
 
-Deno.test('budget_cap near exhaustion: only an affordable stock', async () => {
+Deno.test('budget_cap near exhaustion: nothing affordable that keeps the roster fillable -> stalled, never an illegal pick', async () => {
+  // $12 left for FOUR open turns, from a three-stock market. No set of stocks can
+  // complete this roster, so this league could never have passed the start check.
+  // The reserve refuses CHEAP ($11 + three more instances >= $33) and the turn
+  // stalls honestly, rather than taking CHEAP and dead-ending the roster.
   const stocks = [stock('MEGA', 500, { marketCap: 9999 }), stock('CHEAP', 11, { marketCap: 10 }), stock('ALMOST', 12.5, { marketCap: 20 })];
   const m = new FakeMarket(stocks);
   const st = stateWith({ stakeMode: 'budget_cap', budgetAmount: 1000 }, fillerPicks([pick('u', 'A', 0, { entry_price: 494 }), pick('u', 'B', 0, { entry_price: 494 })]));
   const r = await chooseAutoPick(st, m, 7); // $12 left
-  assert(r.kind === 'pick');
-  assertEquals(r.gated.symbol, 'CHEAP');
+  assertEquals(r.kind, 'stalled');
   assertNeverIllegal(r, st, m, 'u', 'budget');
 });
 
@@ -376,11 +465,11 @@ Deno.test('every slot filled but one: fills exactly that slot\'s bracket and cat
   assertEquals([r.gated.symbol, r.gated.slotId], ['OIL', 's3']);
 });
 
-Deno.test('roster/budget exhausted: auto_skip as nothing_legal, with ZERO price calls', async () => {
+Deno.test('roster/budget exhausted: stalled as nothing_legal, with ZERO price calls', async () => {
   const m = new FakeMarket([stock('A', 10)], [slot('s1', 0, 100)]);
   const st = stateWith({}, fillerPicks([pick('u', 'Z', 0, { slot_id: 's1' })]));
   const r = await chooseAutoPick(st, m, 7);
-  assertEquals(r, { kind: 'skip', source: 'auto_skip', pickerId: 'u', why: 'nothing_legal', attempts: 0 });
+  assertEquals(r, { kind: 'stalled', pickerId: 'u', why: 'nothing_legal', attempts: 0 });
   assertEquals(m.priceCalls, []);
 });
 
@@ -395,21 +484,59 @@ Deno.test('stale catalog prices: keeps paging past refusals and finds the legal 
   assertEquals(m.priceCalls.length, 11);
 });
 
-Deno.test(`the documented bound: ${BEST_MAX_ATTEMPTS} live refusals -> auto_skip (attempts_exhausted)`, async () => {
+// LIVENESS repro (Orchestrator, 2026-10-05): the 30 largest look legal on their
+// cached prices and are refused live; the legal stock is 31st by market cap.
+// The old top-15 window stalled here ("attempts_exhausted") with a legal pick on
+// the book. The walk must take it. Mutation-checked: LIVE_MAX_ATTEMPTS = 15 fails this.
+Deno.test('LIVENESS: the top 30 are refused live but a deeper legal stock exists -> auto-pick takes it', async () => {
   const stale = Array.from({ length: 30 }, (_, i) => stock(`S${String(i).padStart(2, '0')}`, 50, { live: 900, marketCap: 1000 - i }));
   const m = new FakeMarket([...stale, stock('REAL', 50, { marketCap: 1 })], [slot('s1', 10, 100)]);
   const r = await chooseAutoPick(stateWith({}, fillerPicks([])), m, 7);
-  assertEquals(r.kind === 'skip' && [r.source, r.why], ['auto_skip', 'attempts_exhausted']);
-  assertEquals(m.priceCalls.length, BEST_MAX_ATTEMPTS);
+  assert(r.kind === 'pick', JSON.stringify(r));
+  assertEquals(r.gated.symbol, 'REAL');
+  assertNeverIllegal(r, stateWith({}, fillerPicks([])), m, 'u', 'liveness');
 });
 
-Deno.test('vendor outage: a human\'s turn stays open (retry_later); a bot still skips', async () => {
+Deno.test('LIVENESS: more refusals than one call may price -> retry_later, then the NEXT tick finds it (refreshed cache)', async () => {
+  // 70 stale stocks outrank the legal one; one call may price at most LIVE_MAX_ATTEMPTS.
+  const stale = Array.from({ length: 70 }, (_, i) => stock(`S${String(i).padStart(2, '0')}`, 50, { live: 900, marketCap: 1000 - i }));
+  const m = new FakeMarket([...stale, stock('REAL', 50, { marketCap: 1 })], [slot('s1', 10, 100)]);
+  const st = stateWith({}, fillerPicks([]));
+  const first = await chooseAutoPick(st, m, 7);
+  assertEquals(first.kind, 'retry_later');
+  assertEquals(m.priceCalls.length, LIVE_MAX_ATTEMPTS);
+  const second = await chooseAutoPick(st, m, 7);
+  assert(second.kind === 'pick', JSON.stringify(second));
+  assertEquals(second.gated.symbol, 'REAL');
+});
+
+// LIVENESS (review H2): the cache says $49, the bracket floor is $50, the stock
+// trades at $55. The stock is legal live. The search is widened by the 10% margin
+// and a near-boundary cached price is priced live, so it is found. Mutation-checked:
+// with bandOutside forced false, the free check refuses it and the turn stalls.
+Deno.test('LIVENESS: a cached price just below the bracket (stale cache) is priced live and taken', async () => {
+  const m = new FakeMarket([stock('NEAR', 49, { live: 55, marketCap: 5 })], [slot('s1', 50, 100)]);
+  const r = await chooseAutoPick(stateWith({}, fillerPicks([])), m, 7);
+  assert(r.kind === 'pick', JSON.stringify(r));
+  assertEquals(r.gated.symbol, 'NEAR');
+  assertEquals(r.gated.price, 55);
+});
+
+Deno.test('LIVENESS: a stock with NO cached price (allow_undraftable) is still priced live, not skipped', async () => {
+  const m = new FakeMarket([stock('NOCACHE', null, { live: 50, marketCap: 9 })], [slot('s1', 10, 100)]);
+  const st = stateWith({ allowUndraftable: true }, fillerPicks([]));
+  const r = await chooseAutoPick(st, m, 7);
+  assert(r.kind === 'pick', JSON.stringify(r));
+  assertEquals(r.gated.symbol, 'NOCACHE');
+});
+
+Deno.test('vendor outage: a human\'s turn stays open (retry_later); a bot too — nobody is skipped', async () => {
   const stocks = [stock('A', null, { cached: 50 }), stock('B', null, { cached: 60 })];
   const human = await chooseAutoPick(stateWith({}, fillerPicks([])), new FakeMarket(stocks), 7);
   assertEquals(human.kind, 'retry_later');
   const botState: AutoPickState = { ...stateWith({}, fillerPicks([])), order: ['bot-1', 'x', 'y'] };
   const bot = await chooseAutoPick(botState, new FakeMarket(stocks), 7);
-  assertEquals(bot.kind === 'skip' && bot.source, 'skip');
+  assertEquals(bot.kind, 'retry_later');
 });
 
 Deno.test('bots ignore queues and are tagged bot', async () => {
@@ -506,21 +633,22 @@ function generate(seed: number, staleness: boolean) {
   return { state, market: new FakeMarket(stocks, slots, queue), pickerId: isBot ? 'bot-1' : 'u' };
 }
 
-Deno.test('SWEEP (exact catalog prices): every result is legal; a skip happens ONLY when nothing is legal', async () => {
-  let picks = 0, skips = 0;
+Deno.test('SWEEP (exact catalog prices): every result is legal; a stall happens ONLY when no stock passes the full gate', async () => {
+  let picks = 0, stalls = 0;
   for (let seed = 1; seed <= 400; seed++) {
     const { state, market, pickerId } = generate(seed, false);
     const r = await chooseAutoPick(state, market, 7);
     assertNeverIllegal(r, state, market, pickerId, `seed ${seed}`);
-    const anyLegal = market.stocks.some((s) => legal(state, market.slots, pickerId, s));
     if (r.kind === 'pick') picks++;
     else {
-      skips++;
-      assertEquals(r.kind, 'skip', `seed ${seed}: ${JSON.stringify(r)}`);
-      assert(!anyLegal, `seed ${seed}: SKIPPED although a legal stock existed`);
+      stalls++;
+      assertEquals(r.kind, 'stalled', `seed ${seed}: ${JSON.stringify(r)}`);
+      let anyGateLegal = false;
+      for (const st of market.stocks) anyGateLegal ||= await gateLegal(state, market, pickerId, st);
+      assert(!anyGateLegal, `seed ${seed}: STALLED although a stock passed the full gate`);
     }
   }
-  assert(picks > 100 && skips > 10, `sweep must exercise both outcomes (picks=${picks}, skips=${skips})`);
+  assert(picks > 100 && stalls > 10, `sweep must exercise both outcomes (picks=${picks}, stalls=${stalls})`);
 });
 
 Deno.test('SWEEP (stale + unpriceable live prices): never an illegal pick, never more than the bound', async () => {
@@ -529,7 +657,7 @@ Deno.test('SWEEP (stale + unpriceable live prices): never an illegal pick, never
     const { state, market, pickerId } = generate(seed, true);
     const r = await chooseAutoPick(state, market, 7);
     assertNeverIllegal(r, state, market, pickerId, `seed ${seed}`);
-    assert(market.priceCalls.length <= QUEUE_MAX_ATTEMPTS + BEST_MAX_ATTEMPTS, `seed ${seed}: ${market.priceCalls.length} price calls`);
+    assert(market.priceCalls.length <= QUEUE_MAX_ATTEMPTS + LIVE_MAX_ATTEMPTS, `seed ${seed}: ${market.priceCalls.length} price calls`);
     assertEquals(new Set(market.priceCalls).size, market.priceCalls.length, `seed ${seed}: priced a symbol twice`);
     if (r.kind === 'pick') picks++;
   }
@@ -560,4 +688,127 @@ Deno.test('SWEEP (hostile search that ignores every rule): the gate alone still 
     if (r.kind === 'pick') picks++;
   }
   assert(picks > 100, `picks=${picks}`);
+});
+
+// ===========================================================================
+// PROPERTY (Orchestrator, 2026-10-05): 16 managers, slot and budget modes,
+// adversarial market caps. Every league whose START check passes is drafted
+// turn by turn through the REAL chooseAutoPick: every turn must be a 'pick'
+// (never 'stalled', never a skip). Market caps alternate between "expensive
+// first" (budget-hostile) and "cheap first".
+// ===========================================================================
+function rngP(seed: number) {
+  let x = seed >>> 0;
+  return () => {
+    x = (x * 1664525 + 1013904223) >>> 0;
+    return x / 4294967296;
+  };
+}
+
+Deno.test('PROPERTY: 16 managers, slot + budget, adversarial caps: a start-feasible league never stalls or skips', async () => {
+  const cats = ['c0', 'c1', 'c2'];
+  let completed = 0;
+  let turns = 0;
+  for (let seed = 1; seed <= 30; seed++) {
+    const r = rngP(seed * 7919);
+    const managers = 16;
+    const numRounds = 2 + Math.floor(r() * 3); // 2..4 -> 32..64 picks per league
+    const budgetLeague = seed % 2 === 0;
+    const slots: Slot[] = [];
+    let left = numRounds;
+    let idx = 0;
+    while (left > 0) {
+      const c = Math.min(left, 1 + Math.floor(r() * 2));
+      const lo = Math.floor(r() * 150);
+      const hi = r() < 0.4 ? null : lo + 20 + Math.floor(r() * 150);
+      const cat = r() < 0.4 ? cats[Math.floor(r() * cats.length)] : null;
+      slots.push(slot(`s${idx}`, lo, hi, { slotCount: c, categoryId: cat }));
+      left -= c;
+      idx++;
+    }
+    const poolSize = 150 + Math.floor(r() * 250);
+    const stocks: Stock[] = [];
+    for (let i = 0; i < poolSize; i++) {
+      const price = Math.round(r() * 30000) / 100 + 0.01;
+      const cap = seed % 4 < 2 ? price * 10 : 100000 - price * 10; // expensive-first vs cheap-first
+      stocks.push(stock(`P${seed}_${i}`, price, { marketCap: cap, cats: cats.filter(() => r() < 0.35) }));
+    }
+    const budget = budgetLeague ? 400 + Math.floor(r() * 1600) : null;
+    const rules: LeagueRules = {
+      stakeMode: budget != null ? 'budget_cap' : 'price_tiers',
+      budgetAmount: budget,
+      notionalPerSlot: null,
+      numRounds,
+      allowUndraftable: false,
+    };
+    const groups0 = buildPoolGroups(slots, stocks.map((s) => ({ symbol: s.symbol, cachedPrice: s.cached, eligibility: new Set(s.cats), isDraftable: s.draftable })), {
+      exclude: [],
+      draftableOnly: true,
+      depth: managers * numRounds + 2,
+    });
+    if (!checkStartFeasibility({ types: slots, managers, numRounds, budget, groups: groups0 }).ok) continue;
+
+    const order = Array.from({ length: managers }, (_, i) => `m${i}`);
+    const picks: PickRow[] = [];
+    for (let t = 0; t < managers * numRounds; t++) {
+      assert(currentTurn(picks.length, order, numRounds) !== null);
+      const state: AutoPickState = { leagueId: 'L', rules, order, numRounds, picks, trades: [] };
+      const market = new FakeMarket(stocks, slots, []);
+      const choice = await chooseAutoPick(state, market, picks.length + 1);
+      assertEquals(choice.kind, 'pick', `seed ${seed} turn ${t} (budget=${budget}): ${JSON.stringify(choice)}`);
+      if (choice.kind !== 'pick') break;
+      const g = choice.gated;
+      picks.push({ user_id: g.pickerId, symbol: g.symbol, entry_price: g.price, quantity: g.quantity, pick_number: picks.length + 1, slot_id: g.slotId });
+      turns++;
+    }
+    if (picks.length === managers * numRounds) completed++;
+  }
+  assert(completed >= 10, `property must exercise real drafts (completed=${completed} of 30)`);
+  assert(turns > 500, `turns=${turns}`);
+});
+
+// ===========================================================================
+// OUTAGE (Orchestrator, 2026-10-05): a dead symbol is negative-cached for the
+// cooldown, so the walk moves past it to a priced legal candidate; a turn with
+// only outages is retry_later with outage=true (escalated by draft-write.ts).
+// ===========================================================================
+
+Deno.test('OUTAGE: one dead top symbol + a legal second -> picks the second; the dead one is not re-priced', async () => {
+  const m = new FakeMarket([stock('DEAD', 50, { live: null, marketCap: 100 }), stock('OK', 50, { marketCap: 1 })], [slot('s1', 10, 100)]);
+  const st = stateWith({}, fillerPicks([]));
+  const r = await chooseAutoPick(st, m, 7);
+  assert(r.kind === 'pick', JSON.stringify(r));
+  assertEquals(r.gated.symbol, 'OK');
+  const again = await chooseAutoPick(st, m, 7);
+  assert(again.kind === 'pick', JSON.stringify(again));
+  assertEquals(m.priceCalls.filter((x) => x === 'DEAD').length, 1); // cooling: no second live call
+});
+
+Deno.test('OUTAGE: every candidate dead -> retry_later with outage=true, on every call (never stalled)', async () => {
+  const m = new FakeMarket([stock('A1', 50, { live: null }), stock('A2', 50, { live: null })], [slot('s1', 10, 100)]);
+  const st = stateWith({}, fillerPicks([]));
+  for (let i = 0; i < 3; i++) {
+    const r = await chooseAutoPick(st, m, 7);
+    assertEquals(r.kind === 'retry_later' && r.outage, true, `call ${i}: ${JSON.stringify(r)}`);
+  }
+  assertEquals(m.priceCalls.length, 2); // the two dead symbols were priced once, then cooled
+});
+
+Deno.test('OUTAGE: recovery — after the cooldown a dead symbol that prices again is taken and its failure clears', async () => {
+  const m = new FakeMarket([stock('BACK', 50, { live: null })], [slot('s1', 10, 100)]);
+  const st = stateWith({}, fillerPicks([]));
+  assertEquals((await chooseAutoPick(st, m, 7)).kind, 'retry_later');
+  m.failures.set('BACK', 0); // the cooldown has long expired
+  m.stocks[0].live = 50;
+  const r = await chooseAutoPick(st, m, 7);
+  assert(r.kind === 'pick', JSON.stringify(r));
+  assertEquals(r.gated.symbol, 'BACK');
+  assertEquals(m.failures.has('BACK'), false);
+});
+
+Deno.test('OUTAGE escalation: waits under the threshold, escalates once, then done', () => {
+  const t0 = 1_000_000;
+  assertEquals(outageEscalation(t0, t0 + OUTAGE_ESCALATE_MS - 1, false), 'wait');
+  assertEquals(outageEscalation(t0, t0 + OUTAGE_ESCALATE_MS, false), 'escalate');
+  assertEquals(outageEscalation(t0, t0 + OUTAGE_ESCALATE_MS * 3, true), 'done');
 });

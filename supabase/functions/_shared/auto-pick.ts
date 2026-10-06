@@ -3,7 +3,7 @@
  * when a manager's clock runs out the server picks for them — first their own
  * draft QUEUE, in order, the first still-legal symbol; then BEST AVAILABLE,
  * like fantasy football: walk the market by size (largest market cap first)
- * and take the first stock that fits the league's rules. Never random. A skip
+ * and take the first stock that fits the league's rules. Never random. A stall
  * only when nothing is legal.
  *
  * ACCEPTANCE CRITERION (Giorgio): auto-draft must NEVER give someone a stock
@@ -20,20 +20,18 @@
  * is not a fixed top-N list. Each round asks the database
  * (public.auto_pick_search_candidates, one call per OPEN slot) for the
  * largest stocks that fit that slot's price bracket (clamped to the remaining
- * budget), its category, the draftable universe, and are not owned or
- * already tried — so a stock outside the top-N by market cap IS found when it
- * is the only fit. Rounds repeat, excluding what was tried, until a candidate
- * passes the live gate, the search returns nothing (=> nothing legal on the
- * catalog's prices), or the documented bound is hit:
+ * budget), its category, the draftable universe, and are not owned or already
+ * judged. The search WALKS THE WHOLE POOL page by page (2026-10-05 liveness):
+ * no top-N window, so a stock outside the top by market cap IS found when it is
+ * the only fit. Each candidate is judged free at its cached price, then live.
  *
- *   QUEUE_MAX_ATTEMPTS = 5   live-priced queue candidates
- *   BEST_MAX_ATTEMPTS  = 15  live-priced best-available candidates
+ *   QUEUE_MAX_ATTEMPTS = 5    live-priced queue candidates (the user's preference list)
+ *   LIVE_MAX_ATTEMPTS  = 60   live price calls per auto-pick (a quota bound)
  *
- * so at most 20 Alpaca price calls per auto-pick. auto_skip is recorded only
- * when the search is exhausted, or all 15 best-available candidates were
- * refused by the live gate (the catalog's cached prices disagreed with live
- * ones 15 times) — and never when NO candidate could be priced (a vendor
- * outage keeps a human's turn open; see decideNoPick).
+ * NO SKIP (2026-10-05, "a draft pick can never be unused"): when the whole pool
+ * is walked with nothing legal the choice is 'stalled' — no row is written, the
+ * turn stays open, the failure is recorded and alerted (draft-write.ts). A
+ * vendor outage, or a bound, is 'retry_later'. See chooseAutoPick and decideNoPick.
  *
  * THE DEADLINE IS NOT COMPUTED HERE. It has exactly one definition —
  * public.get_draft_clock — which clients, the edge gate and the cron's
@@ -48,6 +46,16 @@
 import { type BotSymbolCandidate, candidateFilter } from './bot-pick.ts';
 import { type GatedPick, gatePick } from './pick-gate.ts';
 import {
+  deficit,
+  demandVector,
+  FLEX_TYPE_ID,
+  type FeasibilityState,
+  openInstances,
+  type PoolGroup,
+  reserveFor,
+  typesFromSlots,
+} from './draft-feasibility.ts';
+import {
   assignSlot,
   currentTurn,
   type LeagueRules,
@@ -60,7 +68,7 @@ import {
 } from './draft-validation.ts';
 
 /** drafts.pick_source (CHECK in 20261010000000). UI: "Auto-picked" = auto_*. */
-export type PickSource = 'manual' | 'bot' | 'skip' | 'auto_queue' | 'auto_best' | 'auto_skip';
+export type PickSource = 'manual' | 'bot' | 'auto_queue' | 'auto_best';
 
 // ---------------------------------------------------------------------------
 // Clock gate
@@ -147,15 +155,26 @@ export function openSlotSpecs(
   picks: PickRow[],
   trades: TradeRow[],
   pickerId: string,
+  /** Optional per-slot cap on the price (chooseAutoPick: the reserve after
+   * filling that slot, subtracted from budget left). Keyed by slot id;
+   * FLEX_TYPE_ID for a slot-less league. A NECESSARY condition only, so it
+   * can never hide a legal stock. */
+  capFor?: (key: string) => number,
 ): SlotSpec[] {
   const budgetMax = rules.stakeMode === 'budget_cap'
     ? Math.max((Number(rules.budgetAmount) || 0) - userCashSpent(pickerId, picks, trades), 0)
     : null;
-  const clamp = (max: number | null) => budgetMax == null ? max : max == null ? budgetMax : Math.min(max, budgetMax);
+  const clamp = (max: number | null, key: string) => {
+    const cap = capFor ? capFor(key) : Infinity;
+    const top = budgetMax == null ? Infinity : budgetMax;
+    const combined = Math.min(top, cap);
+    if (combined === Infinity) return max;
+    return max == null ? combined : Math.min(max, combined);
+  };
 
   const raw: SlotSpec[] = [];
   if (slots.length === 0) {
-    raw.push({ min: null, max: clamp(null), categoryId: null });
+    raw.push({ min: null, max: clamp(null, FLEX_TYPE_ID), categoryId: null });
   } else {
     const occupancy = new Map<string, number>();
     for (const p of picks) {
@@ -164,7 +183,16 @@ export function openSlotSpecs(
     }
     for (const s of slots) {
       if ((occupancy.get(s.id) ?? 0) >= s.slotCount) continue;
-      raw.push({ min: s.priceMin, max: clamp(s.priceMax), categoryId: s.categoryId });
+      // The search brackets are widened by the 10% margin, so a stock whose cached
+      // price sits just outside a bracket is still found and priced live (2026-10-05
+      // review H2). The gate and the free check stay exact; only the search widens.
+      // Rounded OUTWARD to cents (floor below, ceil above, epsilon for float noise):
+      // the search stays a superset of the exact bracket.
+      raw.push({
+        min: s.priceMin == null ? null : Math.floor(s.priceMin * 0.9 * 100 + 1e-9) / 100,
+        max: clamp(s.priceMax == null ? null : Math.ceil(s.priceMax * 1.1 * 100 - 1e-9) / 100, s.id),
+        categoryId: s.categoryId,
+      });
     }
   }
 
@@ -212,7 +240,34 @@ export const MARKET_CAP_STRATEGY: BestAvailableStrategy = {
 export const BEST_AVAILABLE_STRATEGY: BestAvailableStrategy = MARKET_CAP_STRATEGY;
 
 export const QUEUE_MAX_ATTEMPTS = 5;
-export const BEST_MAX_ATTEMPTS = 15;
+/** Live Alpaca price calls per auto-pick. A bound on quota, NOT on the search:
+ * a candidate refused live gets its cached price refreshed (recordLivePrice),
+ * so it drops out of the free pre-check on every later call and the walk makes
+ * progress across ticks. Liveness (2026-10-05): see chooseAutoPick. */
+export const LIVE_MAX_ATTEMPTS = 60;
+/** Pool rows walked per auto-pick (a CPU bound, far above any real pool). */
+export const WALK_MAX_CANDIDATES = 20000;
+/** Wall-clock budget per auto-pick walk (the edge function's limit is far above it). */
+export const WALL_BUDGET_MS = 25_000;
+/** A symbol whose live price failed is skipped (no network call) for this long, so
+ * the walk moves past one dead symbol to the next legal candidate (2026-10-05). */
+export const PRICE_COOLDOWN_MS = 5 * 60_000;
+/** A turn that has been stopped only by vendor outages for this long is escalated
+ * once: a draft_stalls row (reason 'vendor_outage') and one commissioner push. */
+export const OUTAGE_ESCALATE_MS = 5 * 60_000;
+
+/** The escalation decision for one turn's outage row. Pure; draft-write.ts does the I/O. */
+export function outageEscalation(
+  firstSeenMs: number,
+  nowMs: number,
+  alreadyEscalated: boolean,
+  thresholdMs: number = OUTAGE_ESCALATE_MS,
+): 'wait' | 'escalate' | 'done' {
+  if (alreadyEscalated) return 'done';
+  return nowMs - firstSeenMs >= thresholdMs ? 'escalate' : 'wait';
+}
+/** Rows per search page (the RPC's maximum). */
+export const BEST_PAGE = 100;
 
 // ---------------------------------------------------------------------------
 // Queue planning (pure)
@@ -263,21 +318,19 @@ export function planQueueCandidates(i: {
 // ---------------------------------------------------------------------------
 
 export type NoPickOutcome =
-  | { kind: 'skip'; source: 'auto_skip' | 'skip' }
+  | { kind: 'stalled' }
   | { kind: 'retry_later' };
 
 /**
- * After the search found nothing the gate accepted. Bots keep their existing
- * rule (skip even on a vendor outage — mobile fires bot_pick once per turn).
- * Humans are auto-skipped only when the refusal was about LEGALITY: if
- * candidates existed but not one could be priced, the turn stays open for the
- * next attempt (the sweep retries every tick) rather than forfeiting a pick
- * over an Alpaca outage.
+ * After the search found nothing the gate accepted. NO SKIP, for humans or
+ * bots (2026-10-05). Candidates existed but none could be priced: a vendor
+ * outage, so the turn stays open and the next attempt retries. Otherwise the
+ * search found no legal stock: 'stalled' — the turn stays open, the failure is
+ * recorded and alerted, and nothing is written for the picker.
  */
-export function decideNoPick(isBot: boolean, attempted: number, priced: number): NoPickOutcome {
-  if (isBot) return { kind: 'skip', source: 'skip' };
-  if (attempted > 0 && priced === 0) return { kind: 'retry_later' };
-  return { kind: 'skip', source: 'auto_skip' };
+export function decideNoPick(outages: number): NoPickOutcome {
+  if (outages > 0) return { kind: 'retry_later' };
+  return { kind: 'stalled' };
 }
 
 // ---------------------------------------------------------------------------
@@ -305,24 +358,52 @@ export interface AutoPickPorts {
   eligibility(symbols: string[]): Promise<Map<string, Set<string>>>;
   /** Live fill price; price null = could not be priced. */
   livePrice(symbol: string): Promise<{ price: number | null; source: string | null }>;
+  /** Write a live price back to the catalog cache (best effort, never throws):
+   * the next walk then judges this symbol on its fresh price, for free. */
+  recordLivePrice(symbol: string, price: number): Promise<void>;
+  /** Of these symbols, the ones whose live price failed within PRICE_COOLDOWN_MS. */
+  coolingSymbols(symbols: string[]): Promise<Set<string>>;
+  /** A live price was unavailable for this symbol just now (best effort). */
+  recordPriceFailure(symbol: string): Promise<void>;
+  /** The symbol priced live: any failure record is cleared (best effort). */
+  clearPriceFailure(symbol: string): Promise<void>;
+  /** public.draft_feasibility_pool: the pool grouped by signature over the
+   * given types, owned symbols excluded, cheapest `depth` prices per group. */
+  feasibilityPool(types: Slot[], exclude: string[], draftableOnly: boolean, depth: number): Promise<PoolGroup[]>;
 }
 
 export type AutoPickChoice =
   | { kind: 'pick'; gated: GatedPick; source: 'auto_queue' | 'auto_best' | 'bot'; priceSource: string | null; attempts: number }
-  | { kind: 'skip'; source: 'auto_skip' | 'skip'; pickerId: string; why: 'nothing_legal' | 'attempts_exhausted'; attempts: number }
-  | { kind: 'retry_later'; attempts: number }
+  | { kind: 'stalled'; pickerId: string; why: 'nothing_legal'; attempts: number }
+  | { kind: 'retry_later'; attempts: number; outage: boolean }
   | { kind: 'draft_complete' }
   | { kind: 'conflict' };
 
 /**
  * Choose — never write — the auto-pick for whoever's turn it is NOW (never a
  * caller-named target). `expectedPickNumber`: the pick the caller's gate
- * authorized; if the draft has moved on (a manual pick landed between the
- * clock read and this state read) return 'conflict' rather than picking for
- * the NEXT manager, whose clock has not expired.
+ * authorized; if the draft has moved on, return 'conflict' rather than picking
+ * for the NEXT manager.
  *
- * Throws if a port throws (a failed read must not look like "nothing legal",
- * which would skip); the caller maps that to 'unhandled'.
+ * LIVENESS (2026-10-05, Orchestrator): a legal pick is found whenever one exists.
+ * There is no top-N window: best available WALKS THE WHOLE POOL, market-cap
+ * descending, page by page, excluding what was already judged. Each candidate is
+ *   1. judged FREE at its cached price by the same gatePick (no network). A refusal
+ *      here costs nothing and is final for this call;
+ *   2. if it passes, priced LIVE (one Alpaca call). The live gate decides. The
+ *      live price is written back to the cache, so a candidate refused live drops
+ *      out of step 1 on every later call and the walk progresses across ticks.
+ * 'stalled' means: the whole pool was walked, nothing passed the gate, and no
+ * candidate was lost to a vendor outage. A vendor outage on a candidate that
+ * passed the free check, or the live-call bound, is 'retry_later'. A legal stock
+ * that exists only at a live price outside its cached bracket is found once its
+ * cache refreshes (catalog staleness, documented residual).
+ *
+ * Feasibility: the pool and the league's open demand are read once. Each open
+ * slot's search is capped at the reserve left after filling it (a necessary
+ * condition, so no legal stock is hidden).
+ *
+ * Throws if a port throws (a failed read must not look like "nothing legal").
  */
 export async function chooseAutoPick(
   s: AutoPickState,
@@ -345,21 +426,47 @@ export async function chooseAutoPick(
     if (missing.length === 0) return;
     for (const [k, v] of await ports.eligibility(missing)) eligibilityCache.set(k, v);
   };
+  const eligibilityOf = (symbol: string) => eligibilityCache.get(symbol) ?? new Set<string>();
+
+  // Feasibility state: one read of the pool and the aggregate open demand.
+  const types = typesFromSlots(slots, s.numRounds);
+  const demand = demandVector(types, s.order, s.picks, s.numRounds);
+  const owned = [...leagueOwnedSymbols(s.picks, s.trades)];
+  const draftableOnly = s.rules.allowUndraftable !== true;
+  const totalDemand = demand.reduce((a, b) => a + b, 0);
+  const groups = await ports.feasibilityPool(types, owned, draftableOnly, totalDemand + 1);
+  const budget = s.rules.stakeMode === 'budget_cap' ? Number(s.rules.budgetAmount) || 0 : null;
+  const state: FeasibilityState = { types, demand, groups, budget };
+  const open = openInstances(types, s.picks, pickerId, s.numRounds);
+  const spent = userCashSpent(pickerId, s.picks, s.trades);
+  const capByKey = new Map<string, number>();
+  if (budget != null) {
+    types.forEach((t, j) => {
+      if (open[j] <= 0) return;
+      const postOpen = open.slice();
+      postOpen[j] -= 1;
+      const postDemand = demand.slice();
+      postDemand[j] -= 1;
+      const reserve = reserveFor(postOpen, postDemand, types, groups);
+      capByKey.set(t.id, Number.isFinite(reserve) ? budget - spent - reserve : -1);
+    });
+  }
+
+  const preDeficit = deficit(state.demand, state.groups);
+  const deadline = Date.now() + WALL_BUDGET_MS;
+  const bandOutside = (price: number) =>
+    types.some((t) =>
+      (t.priceMin != null && price < t.priceMin && price >= t.priceMin * 0.9) ||
+      (t.priceMax != null && price > t.priceMax && price <= t.priceMax * 1.1)
+    );
 
   const tried = new Set<string>();
-  let attempts = 0;
-  let priced = 0;
+  let attempts = 0; // live price calls
+  let outages = 0; // candidates that passed the free check but could not be priced
+  let liveBudgetHit = false;
 
-  // One candidate through the ONE gate. Returns a GatedPick or null.
-  const tryCandidate = async (c: BotSymbolCandidate): Promise<{ gated: GatedPick; source: string | null } | null> => {
-    const symbol = c.symbol.toUpperCase();
-    tried.add(symbol);
-    attempts++;
-    const live = await ports.livePrice(symbol);
-    if (live.price == null) return null;
-    priced++;
-    await eligibilityFor([symbol]);
-    const g = gatePick(s.leagueId, {
+  const gateAt = (c: BotSymbolCandidate, price: number, symbol: string, isDraftable: boolean) =>
+    gatePick(s.leagueId, {
       rules: s.rules,
       slots,
       order: s.order,
@@ -367,14 +474,37 @@ export async function chooseAutoPick(
       trades: s.trades,
       pickerId,
       symbol,
-      price: live.price,
-      eligibleCategories: eligibilityCache.get(symbol) ?? new Set<string>(),
-      isDraftable: c.isDraftable === true, // the catalog's flag, never "unknown = draftable"
-    });
+      price,
+      eligibleCategories: eligibilityOf(symbol),
+      isDraftable,
+    }, { state, open, cachedPrice: c.lastPrice, eligibility: eligibilityOf(symbol), preDeficit });
+
+  // One candidate, priced LIVE and judged by the one gate. A null = refused or unpriced.
+  const liveTry = async (c: BotSymbolCandidate): Promise<{ gated: GatedPick; source: string | null } | null> => {
+    const symbol = c.symbol.toUpperCase();
+    if (attempts >= LIVE_MAX_ATTEMPTS) {
+      liveBudgetHit = true;
+      return null;
+    }
+    attempts++;
+    const live = await ports.livePrice(symbol);
+    if (live.price == null) {
+      outages++;
+      await ports.recordPriceFailure(symbol);
+      return null;
+    }
+    await ports.clearPriceFailure(symbol);
+    // Write back only a trade or a bar price (the fresh sources). A bid/ask quote
+    // is a looser signal and must not move the cache every league prices from.
+    if (live.source === 'trade.p' || live.source === 'bar.c') {
+      await ports.recordLivePrice(symbol, live.price);
+    }
+    await eligibilityFor([symbol]);
+    const g = gateAt(c, live.price, symbol, c.isDraftable === true); // the catalog's flag, never "unknown = draftable"
     return g.ok ? { gated: g.pick, source: live.source } : null;
   };
 
-  // 1. The manager's queue, in their order.
+  // 1. The manager's queue, in their order (bounded: it is their preference list).
   if (!isBot) {
     const q = await ports.loadQueue(pickerId);
     await eligibilityFor(q.meta.map((c) => c.symbol.toUpperCase()));
@@ -388,23 +518,27 @@ export async function chooseAutoPick(
       queueMeta: q.meta,
       eligibility: eligibilityCache,
     });
+    const coolingQ = await ports.coolingSymbols(queued.map((c) => c.symbol.toUpperCase()));
     for (const c of queued) {
-      const hit = await tryCandidate(c);
+      tried.add(c.symbol.toUpperCase());
+      if (coolingQ.has(c.symbol.toUpperCase())) {
+        outages++; // cooling: a known-dead price, no network call, the walk moves on
+        continue;
+      }
+      const hit = await liveTry(c);
       if (hit) return { kind: 'pick', gated: hit.gated, source: 'auto_queue', priceSource: hit.source, attempts };
     }
   }
 
-  // 2. Best available: search the catalog per open slot, largest first,
-  //    excluding owned + tried, round after round.
-  const specs = openSlotSpecs(s.rules, slots, s.picks, s.trades, pickerId);
-  const owned = [...leagueOwnedSymbols(s.picks, s.trades)];
-  const draftableOnly = s.rules.allowUndraftable !== true;
-  let bestAttempts = 0;
+  // 2. Best available: walk the whole pool, market cap descending.
+  const specs = openSlotSpecs(s.rules, slots, s.picks, s.trades, pickerId, (key) => capByKey.get(key) ?? Infinity);
+  let walked = 0;
   let exhausted = specs.length === 0;
-  while (!exhausted && bestAttempts < BEST_MAX_ATTEMPTS) {
+  while (!exhausted && !liveBudgetHit) {
+    if (walked >= WALK_MAX_CANDIDATES) break;
     const exclude = [...owned, ...tried];
     const results = await Promise.all(
-      specs.map((spec) => ports.searchCandidates(spec, exclude, draftableOnly, strategy.searchPerSlot)),
+      specs.map((spec) => ports.searchCandidates(spec, exclude, draftableOnly, BEST_PAGE)),
     );
     const bySymbol = new Map<string, BotSymbolCandidate>();
     for (const rows of results) for (const r of rows) bySymbol.set(r.symbol.toUpperCase(), r);
@@ -413,18 +547,54 @@ export async function chooseAutoPick(
       exhausted = true;
       break;
     }
+    // One batched eligibility read and one batched cooldown read per page.
     await eligibilityFor(fresh);
+    const cooling = await ports.coolingSymbols(fresh);
     for (const symbol of fresh) {
-      if (bestAttempts >= BEST_MAX_ATTEMPTS) break;
-      bestAttempts++;
-      const hit = await tryCandidate(bySymbol.get(symbol)!);
+      tried.add(symbol);
+      walked++;
+      const c = bySymbol.get(symbol)!;
+      if (Date.now() > deadline) break; // wall-clock bound: retry, never a silent kill
+      // Free check at the cached price: a refusal here needs no network call, EXCEPT
+      // three cases that must be priced live: an UNPRICED candidate; a budget refusal
+      // (the cached price may be above the live one); and a cached price just outside
+      // a bracket (inside the 10% band, the cache may be stale).
+      if (c.lastPrice != null) {
+        const g = gateAt(c, c.lastPrice, symbol, c.isDraftable === true);
+        const mustPrice = !g.ok && (g.reason === 'budget_reserve' || bandOutside(c.lastPrice));
+        if (!g.ok && !mustPrice) continue; // a legality refusal, not an outage, cooled or not
+      }
+      // Only a candidate that WOULD have gone live counts as an outage when cooled
+      // (review finding 2): a cooled symbol the gate refuses anyway must not turn a
+      // true stall into a vendor_outage.
+      if (cooling.has(symbol)) {
+        outages++; // cooling: skip the dead symbol, keep walking for a priced legal one
+        continue;
+      }
+      const hit = await liveTry(c);
       if (hit) {
         return { kind: 'pick', gated: hit.gated, source: isBot ? 'bot' : 'auto_best', priceSource: hit.source, attempts };
       }
+      if (liveBudgetHit) break;
+    }
+    if (Date.now() > deadline) {
+      console.error('auto-pick: wall-clock budget reached, turn left open', s.leagueId, { attempts, walked });
+      return { kind: 'retry_later', attempts, outage: false };
     }
   }
 
-  const none = decideNoPick(isBot, attempts, priced);
-  if (none.kind === 'retry_later') return { kind: 'retry_later', attempts };
-  return { kind: 'skip', source: none.source, pickerId, why: exhausted ? 'nothing_legal' : 'attempts_exhausted', attempts };
+  if (liveBudgetHit || !exhausted) {
+    // The live-call bound, or the walk bound, stopped the search before the pool
+    // ran out: this is NOT a proof that nothing is legal. Retry, never stall.
+    console.error('auto-pick: search bound reached, turn left open', s.leagueId, { attempts, walked, outages });
+    return { kind: 'retry_later', attempts, outage: false };
+  }
+  const none = decideNoPick(outages);
+  if (none.kind === 'retry_later') return { kind: 'retry_later', attempts, outage: true };
+  // 'stalled' means: no legal stock at cached prices within the 10% band, verified
+  // live. The whole pool was walked; every candidate that passed the free check was
+  // priced live and refused; no candidate was lost to a vendor outage. The start-time
+  // check (with 10% headroom) should make this unreachable; a stock whose cache is
+  // more than 10% outside its bracket is found only after enrich-symbols refreshes it.
+  return { kind: 'stalled', pickerId, why: 'nothing_legal', attempts };
 }

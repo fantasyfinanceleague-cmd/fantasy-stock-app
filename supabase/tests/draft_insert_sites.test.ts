@@ -9,8 +9,9 @@
  *   1. a NEW drafts write that bypasses insertGatedPick entirely (another
  *      `.from('drafts').insert/upsert/update(...)` anywhere in the functions);
  *   2. a forged `as GatedPick` cast outside pick-gate.ts.
- * If this fails, route the new write through gatePick + insertGatedPick (or,
- * for a forfeited turn, insertSkip) instead of widening the allowlist.
+ * If this fails, route the new write through gatePick + insertGatedPick instead
+ * of widening the allowlist. There is no SKIP writer any more (draft-never-skips,
+ * 2026-10-05): a turn with no legal stock stalls (recordStall, draft_stalls).
  *
  * Reads files only (no network, no DB): run with
  *   deno test --allow-read supabase/tests/draft_insert_sites.test.ts
@@ -33,7 +34,7 @@ function enclosingFunction(src: string, at: number): string {
   return m ? (m[1] ?? 'Deno.serve') : '<module>';
 }
 
-Deno.test('drafts rows are written ONLY by insertGatedPick (gated picks) and insertSkip (SKIP rows)', async () => {
+Deno.test('drafts rows are written ONLY by insertGatedPick (gated picks; no SKIP writer exists)', async () => {
   const sites: string[] = [];
   const casts: string[] = [];
   for await (const file of tsFiles(FUNCTIONS)) {
@@ -49,9 +50,6 @@ Deno.test('drafts rows are written ONLY by insertGatedPick (gated picks) and ins
     }
     for (const m of src.matchAll(/as\s+GatedPick\b/g)) casts.push(`${rel}:${enclosingFunction(src, m.index!)}`);
   }
-  assertEquals(sites.sort(), [
-    '_shared/draft-write.ts:insertGatedPick:insert',
-    '_shared/draft-write.ts:insertSkip:insert',
-  ]);
+  assertEquals(sites.sort(), ['_shared/draft-write.ts:insertGatedPick:insert']);
   assertEquals(casts, ['_shared/pick-gate.ts:gatePick']);
 });
