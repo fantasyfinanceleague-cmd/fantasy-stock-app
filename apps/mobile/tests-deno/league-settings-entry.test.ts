@@ -3,7 +3,7 @@
  * Run: `cd apps/mobile/tests-deno && deno test .`
  */
 import { assertEquals } from 'jsr:@std/assert';
-import { showsLeagueSettingsRow } from '../lib/game/leagueSettingsEntry.ts';
+import { SETTINGS_LOCKED, showsLeagueSettingsRow } from '../lib/game/leagueSettingsEntry.ts';
 
 Deno.test('the commissioner sees the row', () => {
   assertEquals(showsLeagueSettingsRow('u1', 'u1'), true);
@@ -17,4 +17,11 @@ Deno.test('a missing id never matches, even two missing ones', () => {
   assertEquals(showsLeagueSettingsRow(undefined, undefined), false);
   assertEquals(showsLeagueSettingsRow(null, 'u1'), false);
   assertEquals(showsLeagueSettingsRow('u1', ''), false);
+});
+
+Deno.test('the lock note: one sentence for both locked states, not the Leave row line', () => {
+  assertEquals(SETTINGS_LOCKED, 'Settings are locked once the draft starts.');
+  // Settings lock at the draft start; teams lock in an hour earlier (the Leave row's line).
+  assertEquals(SETTINGS_LOCKED.includes('locked in'), false);
+  assertEquals(SETTINGS_LOCKED.includes('an hour before'), false);
 });

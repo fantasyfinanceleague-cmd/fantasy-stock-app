@@ -169,6 +169,20 @@ export function WarnNote({ title, line, alert = false }: { title: string; line?:
   );
 }
 
+/** A neutral note with the lock icon (League settings while locked; Design
+ * Lead ruling): informational, not a warning, so `sunken`, not the warn tint. */
+export function LockNote({ text }: { text: string }) {
+  const { colors } = useTheme();
+  return (
+    <View accessible accessibilityRole="text" accessibilityLabel={text} style={[styles.lock, { backgroundColor: colors.sunken }]}>
+      <Icon name="lock" size="callout" tone="text2" />
+      <Text variant="callout" tone="secondary" style={styles.grow}>
+        {text}
+      </Text>
+    </View>
+  );
+}
+
 /** Children in a row container with a gap (for chips, buttons). */
 export function RowWrap({ children }: { children: ReactNode }) {
   return <View style={styles.wrap}>{children}</View>;
@@ -222,6 +236,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[4],
     paddingVertical: space[3],
     gap: space[1],
+  },
+  lock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[3],
+    borderRadius: radius.md,
+    paddingHorizontal: space[4],
+    paddingVertical: space[3],
   },
   wrap: {
     flexDirection: 'row',

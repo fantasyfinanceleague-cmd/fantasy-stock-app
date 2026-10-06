@@ -26,7 +26,9 @@ import { seamSaveLeagueSlots, seamUpdateLeague } from '@/lib/game/seamCalls';
 import { settingsSaveOutcome } from '@/lib/game/settingsSave';
 import { leaveLeagueEnabled } from '@/lib/game/leaveLeague';
 import { DEFAULT_PICK_SECONDS, PICK_SECONDS_OPTIONS, pickClockLocked, pickSecondsCaption } from '@/lib/game/createLeagueSetup';
-import { stepWithin } from '@/lib/game/createLeagueSteps';
+import { leagueNameError, stepWithin } from '@/lib/game/createLeagueSteps';
+import { PRICE_TIERS_NEED_A_SLOT, rosterSlotsCaption } from '@/lib/game/slotBuilderCopy';
+import { SETTINGS_LOCKED } from '@/lib/game/leagueSettingsEntry';
 import { draftDateTimeLabel } from '@/lib/home/draftCountdown';
 import { space, typeFontFamily } from '@/constants/tokens';
 import { Button } from '@/components/sp/Button';
@@ -38,7 +40,7 @@ import { Field } from '@/components/shell/Field';
 import { SetupScaffold } from '@/components/game/SetupScaffold';
 import { Stepper } from '@/components/game/Stepper';
 import { DraftDateSheet } from '@/components/game/DraftDateSheet';
-import { ChoiceRow, RowDivider, SettingRow, SetupCard, SwitchRow, WarnNote } from '@/components/game/SetupRows';
+import { ChoiceRow, LockNote, RowDivider, SettingRow, SetupCard, SwitchRow, WarnNote } from '@/components/game/SetupRows';
 
 /** Off until the leave flow ships. The row's placement is decided (Design Lead's leave board); its behaviour is not
  * (Giorgio: players are locked in from an hour before the draft until the season ends). */
@@ -72,6 +74,10 @@ export default function LeagueSettingsScreen() {
   const [numParticipants, setNumParticipants] = useState(8);
   const [numRounds, setNumRounds] = useState(6);
   const [pickSeconds, setPickSeconds] = useState(DEFAULT_PICK_SECONDS);
+  // Validation is inline (Design Lead ruling), never an Alert: the name under
+  // its field, price tiers with no slot under Roster slots, slot errors on the slots.
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [slotsError, setSlotsError] = useState<string | null>(null);
 
   // Initialize form with league data
   useEffect(() => {
@@ -103,30 +109,24 @@ export default function LeagueSettingsScreen() {
   const handleSave = async () => {
     if (!league || !user?.id) return;
 
-    // Validate name
+    // Validate name (inline: blank, then moderation on the trimmed name)
     const trimmedName = name.trim();
-    if (!trimmedName) {
-      Alert.alert('Error', 'Please enter a league name');
-      return;
-    }
-
-    const contentCheck = validateLeagueName(trimmedName);
-    if (!contentCheck.isValid) {
-      Alert.alert('Error', contentCheck.reason || 'League name is not allowed');
-      return;
-    }
+    const nameProblem = leagueNameError(name, validateLeagueName);
+    setNameError(nameProblem);
+    if (nameProblem) return;
 
     setSaving(true);
 
     try {
       if (stakeMode === 'price_tiers' && slots.length === 0) {
-        Alert.alert('Add a slot', 'Price tiers need at least one slot with a price bracket.');
+        setSlotsError(PRICE_TIERS_NEED_A_SLOT);
         setSaving(false);
         return;
       }
+      setSlotsError(null);
+      // Slot errors already show on the slots themselves (SlotBuilder).
       const slotErrors = validateSlotConfig(slots, numRounds);
       if (slotErrors.length > 0) {
-        Alert.alert('Fix roster slots', slotErrors[0]);
         setSaving(false);
         return;
       }
@@ -212,20 +212,18 @@ export default function LeagueSettingsScreen() {
       title="League settings"
       footer={!isLocked ? <Button label="Save changes" onPress={handleSave} status={saving ? 'loading' : 'idle'} /> : undefined}
     >
-      {isLocked ? (
-        <WarnNote
-          title={league.draft_status === 'completed'
-            ? 'Draft completed - settings are locked'
-            : 'Draft in progress - settings are locked'}
-        />
-      ) : null}
+      {isLocked ? <LockNote text={SETTINGS_LOCKED} /> : null}
 
       {/* sp Field has no disabled look of its own; dim it while locked, as before. */}
       <View style={isLocked && styles.dim}>
         <Field
           label="League name"
           value={name}
-          onChangeText={setName}
+          onChangeText={(text) => {
+            setName(text);
+            if (nameError) setNameError(null);
+          }}
+          error={nameError}
           placeholder="League name"
           editable={!isLocked}
         />
@@ -305,7 +303,11 @@ export default function LeagueSettingsScreen() {
                 title={opt.label}
                 help={opt.help}
                 selected={stakeMode === opt.value}
-                onPress={() => !isLocked && setStakeMode(opt.value)}
+                onPress={() => {
+                  if (isLocked) return;
+                  setStakeMode(opt.value);
+                  setSlotsError(null);
+                }}
                 disabled={isLocked}
               />
             </View>
@@ -350,11 +352,19 @@ export default function LeagueSettingsScreen() {
       <View style={styles.section}>
         <Text variant="headline" accessibilityRole="header">Roster slots</Text>
         <Text variant="caption" tone="secondary">
-          {stakeMode === 'price_tiers' ? 'Required — price brackets' : 'Optional — category slots'}
+          {rosterSlotsCaption(stakeMode)}
         </Text>
+        {slotsError ? (
+          <Text variant="callout" color={colors.danger} accessibilityLiveRegion="polite">
+            {slotsError}
+          </Text>
+        ) : null}
         <SlotBuilder
           slots={slots}
-          onChange={setSlots}
+          onChange={(next) => {
+            setSlots(next);
+            setSlotsError(null);
+          }}
           categories={categories}
           leagueSize={numParticipants}
           numRounds={numRounds}
