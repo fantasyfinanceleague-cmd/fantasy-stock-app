@@ -16,7 +16,7 @@ import { useDraftRoom } from '@/lib/game/useDraftRoom';
 import { QueueEditor } from './QueueEditor';
 import { DRAFT_ROOM_LOAD_FAILED, QUEUE_LOAD_FAILED } from '@/lib/game/draftQueueRead';
 import { managerAtPick, boardRows } from '@/lib/game/draftBoard';
-import { budgetLeftLine, myDraftedSoFar, pickClockLabel, pickRowView, pickRefusalLine, pickRefusalNextStep, picksUntilYouLine, roundPickLine } from '@/lib/game/draftRoom';
+import { PICK_SENDING, PICK_UNCONFIRMED, budgetLeftLine, myDraftedSoFar, pickClockLabel, pickRowView, pickRefusalLine, pickRefusalNextStep, picksUntilYouLine, roundPickLine } from '@/lib/game/draftRoom';
 import { TeamSoFarGrid } from '@/components/home/TeamSoFarGrid';
 import { picksUntilTurn } from '@/lib/home/draftTurn';
 import { readFunctionRefusal } from '@/lib/functionRefusal';
@@ -43,7 +43,7 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [refusal, setRefusal] = useState<{ line: string; next: string | null } | null>(null);
+  const [refusal, setRefusal] = useState<{ line: string; next: string | null; checking?: boolean } | null>(null);
   const owned = useMemo(() => new Set(Array.from(room.picks.values()).map((p) => p.symbol.toUpperCase())), [room.picks]);
 
   const m = room.order.length;
@@ -54,6 +54,11 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
   const round = m > 0 ? Math.floor((onClockPick - 1) / m) + 1 : 0;
   const nameOf = (id: string | null) => (id && room.names[id]?.name) || '';
   const draftDone = m > 0 && room.pickCount >= totalPicks;
+  // UX rule 9: "Checking…" clears once the re-read board arrives (it speaks for itself).
+  useEffect(() => {
+    setRefusal((cur) => (cur?.checking ? null : cur));
+  }, [room.picks]);
+
   // UX rule 4: your team so far (Home's grid), and in a budget-cap league what's left.
   const mine = myDraftedSoFar(room.picks, room.order, myUserId);
   const budgetLine = stakeMode === 'budget_cap' ? budgetLeftLine(budgetAmount, mine.prices) : null;
@@ -110,10 +115,16 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
     // readFunctionRefusal: a 2xx { ok:false, reason } AND a non-2xx body (rate_limited 429,
     // not_a_member 403 …, read from error.context) both reach their own line.
     const r = await readFunctionRefusal(data, error);
-    if (r.transport || r.reason !== null) {
+    if (r.transport) {
+      // Outcome unknown: re-read; the refreshed board says whether the pick landed.
+      setRefusal({ line: PICK_UNCONFIRMED, next: null, checking: true });
+      room.refresh();
+      return;
+    }
+    if (r.reason !== null) {
       // The board's "Pick refused" copy, with the stock the player tried; the
       // never-skips refusals add the next step (the clock keeps running).
-      const reason = r.transport ? 'unknown' : r.reason ?? 'unknown';
+      const reason = r.reason;
       setRefusal({ line: pickRefusalLine(reason, { stock: selected }), next: pickRefusalNextStep(reason) });
       return;
     }
@@ -186,7 +197,7 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
             selectedSymbol={selected ?? ''}
             ownedSymbols={owned}
           />
-          <Button label="Draft" onPress={draft} disabled={!selected || pending} />
+          <Button label={pending ? PICK_SENDING : 'Draft'} onPress={draft} disabled={!selected || pending} />
           {refusal ? (
             <View accessibilityLiveRegion="polite" style={styles.refusal}>
               <Text variant="callout">{refusal.line}</Text>

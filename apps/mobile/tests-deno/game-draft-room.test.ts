@@ -219,3 +219,25 @@ Deno.test('the room and Home show the SAME team grid (source guard)', () => {
   assertEquals(SOURCES['components/home/DraftingCard.tsx'].includes('<TeamSoFarGrid symbols={myPicks} numRounds={numRounds} />'), true);
   assertEquals(SOURCES['lib/game/useDraftRoom.ts'].includes("select('pick_number, symbol, pick_source, entry_price')"), true);
 });
+
+// ── UX rule 9: the pick on its way, and an unknown outcome ──
+
+import { PICK_SENDING, PICK_UNCONFIRMED } from '../lib/game/draftRoom.ts';
+
+Deno.test('the ruled strings', () => {
+  assertEquals(PICK_SENDING, 'Sending…');
+  assertEquals(PICK_UNCONFIRMED, "Couldn't confirm your pick. Checking…");
+});
+
+Deno.test('the Draft button says Sending… and is disabled while the pick is on its way (source guard)', () => {
+  assertEquals(SOURCES['components/game/DraftRoom.tsx'].includes("<Button label={pending ? PICK_SENDING : 'Draft'} onPress={draft} disabled={!selected || pending} />"), true);
+});
+
+Deno.test('a transport error never says "That pick can\'t be made.": it says Checking…, re-reads, and clears on the new board', () => {
+  const room = SOURCES['components/game/DraftRoom.tsx'];
+  const t = room.indexOf('if (r.transport) {');
+  const unconfirmed = room.indexOf('setRefusal({ line: PICK_UNCONFIRMED, next: null, checking: true });', t);
+  const reread = room.indexOf('room.refresh();', unconfirmed);
+  assertEquals(t > 0 && unconfirmed > t && reread > unconfirmed, true);
+  assertEquals(room.includes('setRefusal((cur) => (cur?.checking ? null : cur));'), true);
+});

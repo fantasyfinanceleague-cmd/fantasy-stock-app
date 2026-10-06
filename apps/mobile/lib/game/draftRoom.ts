@@ -90,6 +90,13 @@ export function budgetLeftLine(budget: number | null | undefined, prices: readon
   return `Budget left ${dollars(Math.max(0, Math.round((budget - spent) * 100) / 100))}`;
 }
 
+/** The Draft button while the pick is on its way (UX rule 9). NEW. */
+export const PICK_SENDING = 'Sending…';
+/** The pick's outcome is unknown (a transport error, no answer): never "That pick
+ * can't be made." The room re-reads and the refreshed board says what happened
+ * (UX rule 9). NEW. */
+export const PICK_UNCONFIRMED = "Couldn't confirm your pick. Checking…";
+
 /** The pick clock as m:ss (P0, Design Lead audit: it rendered `0:${secondsLeft}`,
  * so a 75 s or 90 s clock read "0:75" / "0:90"). Idle and auto-picking show no
  * clock (the headline says what's happening). Clocks run 30–90 s (pick_seconds). */
