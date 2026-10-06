@@ -3,6 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
+import { LiveDot } from '@/components/sp/game/LiveDot';
 import { formatMoney } from '@/components/sp/logic/money';
 import { space } from '@/constants/tokens';
 import type { ScheduleRow } from '@/lib/game/schedule';
@@ -31,7 +32,10 @@ export function ScheduleList({ rows, playoffLine }: ScheduleListProps) {
               {r.bye ? (
                 <Text variant="caption" tone="secondary">{r.gain === null ? '' : formatMoney(r.gain, { sign: 'always' })}</Text>
               ) : r.state === 'live' ? (
-                <Text variant="callout" style={{ color: colors.liveText, fontWeight: '700' }}>● Live</Text>
+                <View style={styles.liveRow}>
+                  <LiveDot size={7} />
+                  <Text variant="callout" style={{ color: colors.liveText, fontWeight: '700' }}>Live</Text>
+                </View>
               ) : r.state === 'next' ? (
                 <Text variant="caption" tone="secondary">Next</Text>
               ) : r.gain !== null ? (
@@ -64,4 +68,5 @@ const styles = StyleSheet.create({
   week: { width: 34, fontWeight: '700' },
   bold: { fontWeight: '700' },
   result: { marginLeft: 'auto', alignItems: 'flex-end' },
+  liveRow: { flexDirection: 'row', alignItems: 'center', gap: space[1] },
 });
