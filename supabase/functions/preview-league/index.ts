@@ -1,6 +1,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { previewJoinReason } from './reason.ts';
+import { previewLeagueBody } from './shape.ts';
 
 // ---- CORS / response helpers (same pattern as place-order) -----------------
 function isAllowedOrigin(origin: string): boolean {
@@ -116,26 +117,9 @@ Deno.serve(async (req: Request) => {
       numParticipants: league.num_participants,
     });
 
-    // Return ONLY the displayed fields — no id / commissioner_id / invite_code.
-    return json({
-      found: true,
-      joinable,
-      reason,
-      league: {
-        name: league.name,
-        commissioner_name: commish?.username ?? 'Unknown',
-        league_type: league.league_type,
-        num_participants: league.num_participants,
-        current_members: current,
-        budget_mode: league.budget_mode,
-        budget_amount: league.budget_amount,
-        stake_mode: league.stake_mode,
-        duration_days: league.duration_days,
-        num_weeks: league.num_weeks,
-        draft_date: league.draft_date,
-        draft_status: league.draft_status,
-      },
-    }, 200);
+    // Return ONLY the displayed fields (explicit pick list in shape.ts) — no
+    // id / commissioner_id / invite_code.
+    return json(previewLeagueBody(league, commish?.username, current, { joinable, reason }), 200);
   } catch (_e) {
     return json({ error: 'unhandled', message: 'Something went wrong. Please try again.' }, 500);
   }
