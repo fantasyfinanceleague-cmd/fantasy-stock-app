@@ -143,7 +143,18 @@
 -- an rpc { error } to 500 'unhandled', never to success.
 -- ============================================================================
 
-create or replace function public.record_trade_atomic(
+-- WHY THE NAME IS QUOTED BELOW: the Supabase CLI splits a migration into
+-- statements before sending them, and its splitter (pkg/parser/state.go)
+-- treats the word "atomic" anywhere outside quotes/comments as the start of
+-- a SQL-standard `BEGIN ATOMIC ... END` body, then waits for END. The bare
+-- name record_trade_atomic tripped that, so the whole file went out as ONE
+-- statement and Postgres refused it (42601, "cannot insert multiple commands
+-- into a prepared statement") on the first db push, 2026-10-06; nothing was
+-- applied. A quoted identifier is skipped by the splitter and is the same
+-- name to Postgres. supabase/tests/migration_cli_split.test.ts guards every
+-- migration against this. Callers (.rpc, tests) are unaffected.
+
+create or replace function public."record_trade_atomic"(
   p_league_id          uuid,
   p_user_id            uuid,
   p_symbol             text,
@@ -322,14 +333,14 @@ begin
 end;
 $$;
 
-revoke all on function public.record_trade_atomic(
+revoke all on function public."record_trade_atomic"(
   uuid, uuid, text, text, numeric, numeric, numeric, uuid, uuid[], text[], jsonb, jsonb) from public;
-revoke all on function public.record_trade_atomic(
+revoke all on function public."record_trade_atomic"(
   uuid, uuid, text, text, numeric, numeric, numeric, uuid, uuid[], text[], jsonb, jsonb) from anon, authenticated;
-grant execute on function public.record_trade_atomic(
+grant execute on function public."record_trade_atomic"(
   uuid, uuid, text, text, numeric, numeric, numeric, uuid, uuid[], text[], jsonb, jsonb) to service_role;
 
-comment on function public.record_trade_atomic(
+comment on function public."record_trade_atomic"(
   uuid, uuid, text, text, numeric, numeric, numeric, uuid, uuid[], text[], jsonb, jsonb) is
   'record-trade''s INSERT under a league-wide advisory lock + compare-and-swap of every '
   'league-scoped validation input (trades/drafts id sets, rules, slots). Returns '

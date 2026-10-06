@@ -387,3 +387,21 @@ Mutation-checked (each fails at least one step):
 
 Also covered: jsonb `'null'` for rules/slots reads as not given (a sell still
 commits), and the function refuses to run under REPEATABLE READ.
+
+## migration_cli_split.test.ts
+
+What it does:
+- Ports the Supabase CLI's statement splitter (`pkg/parser/state.go`, v2.67.1) to
+  TypeScript, faithfully, quirks included, and runs it over every file in
+  `supabase/migrations/` and `deferred/`.
+- A file passes when the splitter ends at rest (ready, or in a trailing line
+  comment). Ending inside an ATOMIC block, a quote, a dollar quote or a block
+  comment means `supabase db push` would glue statements into one and Postgres
+  would refuse it (42601).
+
+Why: PGlite runs multi-statement text directly, so the PGlite suites can't see
+the CLI's splitting. On 2026-10-06 the first push of `20261102000000` failed
+because the bare name `record_trade_atomic` contains "atomic", which the splitter
+reads as `BEGIN ATOMIC`. Fix: quote the identifier (`public."my_atomic_fn"`).
+
+Run: `deno test --allow-read supabase/tests/migration_cli_split.test.ts` (files only).
