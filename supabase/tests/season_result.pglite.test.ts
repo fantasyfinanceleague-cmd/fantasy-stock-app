@@ -20,6 +20,7 @@
  */
 import { assert, assertEquals, assertRejects } from 'jsr:@std/assert';
 import { PGlite } from 'npm:@electric-sql/pglite@0.2';
+import { assertReplicaDefaultMatchesProd } from './replica_defaults.ts';
 
 const ROOT = new URL('../../', import.meta.url);
 const mig = (name: string) => Deno.readTextFile(new URL(`supabase/migrations/${name}`, ROOT));
@@ -49,7 +50,9 @@ grant usage on schema public to anon, authenticated, service_role;
 create table leagues (
   id uuid primary key default gen_random_uuid(), name text, commissioner_id text,
   draft_status text default 'completed', created_at timestamptz not null default now(),
-  league_type text not null default 'matchup', num_weeks int, current_week int default 1,
+  -- league_type default = PROD's ('duration', 20251230000000); fixtures pass it
+  -- explicitly. replica_defaults.ts guards against drift.
+  league_type text not null default 'duration', num_weeks int, current_week int default 1,
   league_start_date timestamptz, league_end_date timestamptz, playoff_teams int default 4,
   season_status text default 'active');
 create table league_members (league_id uuid not null references leagues(id) on delete cascade,
@@ -153,8 +156,8 @@ Deno.test({
       members: string[]; commissioner?: string; numWeeks: number; playoffTeams: number;
       regular: Reg[]; playoffs?: Po[]; complete?: [string, string];
     }) {
-      const [l] = await q(`insert into leagues (name, commissioner_id, num_weeks, playoff_teams, current_week)
-        values ('t', $1, $2, $3, $2) returning id`, [o.commissioner ?? o.members[0], o.numWeeks, o.playoffTeams]);
+      const [l] = await q(`insert into leagues (name, league_type, commissioner_id, num_weeks, playoff_teams, current_week)
+        values ('t', 'matchup', $1, $2, $3, $2) returning id`, [o.commissioner ?? o.members[0], o.numWeeks, o.playoffTeams]);
       const lg = l.id as string;
       const [s] = await q(`insert into league_seasons (league_id, season_number) values ($1, 1) returning id`, [lg]);
       await q(`update leagues set current_season_id = $1 where id = $2`, [s.id, lg]);
@@ -223,6 +226,10 @@ Deno.test({
       ],
       playoffs: [[1, 0, 4, A, C, 50, 10], [1, 1, 4, D, B, 20, 70], [2, 0, 5, A, B, 30, 90]],
       complete: [B, A],
+    });
+
+    await t.step('replica guard: leagues.league_type default equals the latest migration default (prod)', async () => {
+      await assertReplicaDefaultMatchesProd(q, 'leagues', 'league_type');
     });
 
     await t.step('pre-migration: the FOR ALL policy lets a commissioner forge the podium (the hole)', async () => {
@@ -358,7 +365,7 @@ Deno.test({
       const r = await one(P1, live.lg);
       assertEquals([r.season_id, r.status, r.reason, r.champion_user_id, r.final_rank, r.detail_scope],
         [live.season, 'not_complete', 'season_in_progress', null, null, null]);
-      const [bare] = await q(`insert into leagues (name, num_weeks) values ('pre-draft', 1) returning id`);
+      const [bare] = await q(`insert into leagues (name, league_type, num_weeks) values ('pre-draft', 'matchup', 1) returning id`);
       await q(`insert into league_members (league_id, user_id) values ($1, $2)`, [bare.id, P1]);
       const n = await one(P1, bare.id);
       assertEquals([n.season_id, n.status, n.reason], [null, 'not_complete', 'no_season']);

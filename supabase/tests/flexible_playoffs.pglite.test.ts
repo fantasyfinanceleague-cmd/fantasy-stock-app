@@ -23,6 +23,7 @@
  */
 import { assert, assertEquals, assertRejects } from 'jsr:@std/assert';
 import { PGlite } from 'npm:@electric-sql/pglite@0.2';
+import { assertReplicaDefaultMatchesProd } from './replica_defaults.ts';
 import { buildPlayoffBracket } from '../functions/process-week-results/season-transition.ts';
 import { planAdvance } from '../functions/process-week-results/playoff-progression.ts';
 import { playoffShape } from '../functions/_shared/playoff-bracket.ts';
@@ -47,7 +48,9 @@ create schema auth;
 create function auth.uid() returns uuid language sql stable as
   $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 create table leagues (
-  id uuid primary key default gen_random_uuid(), name text, league_type text not null default 'matchup',
+  -- league_type default = PROD's ('duration', 20251230000000); fixtures pass it
+  -- explicitly. replica_defaults.ts guards against drift.
+  id uuid primary key default gen_random_uuid(), name text, league_type text not null default 'duration',
   num_weeks int, current_week int default 1, season_status text default 'active',
   draft_status text default 'completed', playoff_teams int default 4, league_end_date timestamptz,
   constraint valid_playoff_teams check (playoff_teams is null or playoff_teams in (2, 4, 8)));
@@ -79,7 +82,7 @@ Deno.test({
     for (const f of PRIOR) await db.exec(await read(f));
 
     async function mkLeague(extra: Record<string, unknown>, members: string[]) {
-      const row = { name: 't', num_weeks: 3, current_week: 3, ...extra };
+      const row = { name: 't', league_type: 'matchup', num_weeks: 3, current_week: 3, ...extra };
       const cols = Object.keys(row);
       const [l] = await q(`insert into leagues (${cols.join(',')}) values (${cols.map((_, i) => '$' + (i + 1)).join(',')}) returning id`,
         Object.values(row));
@@ -129,6 +132,10 @@ Deno.test({
     for (const f of FLEXIBLE) await db.exec(await read(f));
 
     // ---- BACKFILLS ---------------------------------------------------------
+    await t.step('replica guard: leagues.league_type default equals the latest migration default (prod)', async () => {
+      await assertReplicaDefaultMatchesProd(q, 'leagues', 'league_type');
+    });
+
     await t.step('legacy 4-team bracket: addresses match what the new builder would write', async () => {
       assertEquals(await addresses(l4), [[1, 0, 1, 4], [1, 1, 3, 2], [2, 0, 1, 3]]);
     });
