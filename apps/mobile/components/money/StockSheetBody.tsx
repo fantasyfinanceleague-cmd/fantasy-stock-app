@@ -27,6 +27,7 @@ import { marketOpensLabel } from '@/lib/money/marketOpensLabel';
 import { fetchPreview, type TradeBody } from '@/lib/money/recordTrade';
 import { buyReviewOneShare, buyReviewPerSlot, buyReviewTier, sellReview, type TradeReview } from '@/lib/money/reviewModel';
 import { fillsSlotLine, tierRefusalSentence } from '@/lib/money/tierContract';
+import { categoryNameOf, loadCategoryNames } from '@/lib/money/categoryNames';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { reviewPresentation } from '@/lib/money/reviewPresentation';
 import { decideTradeGate } from '@/lib/money/tradeGate';
@@ -125,9 +126,10 @@ export function StockSheetBody({ symbol, knownName = null, onDone }: { symbol: s
       // The server decides the slot and the refusal. The client asks (advisory) and words the answer; it never computes fit.
       const check = await fetchPreview(previewBody(league.id, { price, symbol }));
       if (!check) return { kind, review: null, body: null, error: COPY.cantReach, loading: false };
+      await loadCategoryNames();
       if (check.wouldFill === null) {
         // The refusal comes BEFORE the review, per the board.
-        return { kind, review: null, body: null, error: tierRefusalSentence(symbol, price, check.openSlots ?? []), loading: false, warn: true };
+        return { kind, review: null, body: null, error: tierRefusalSentence(symbol, price, check.openSlots ?? [], categoryNameOf), loading: false, warn: true };
       }
       // Rows follow their own rule: the budget rows iff budget_cap; the fill line iff the server named a slot.
       const before = budget != null && league.stake_mode === 'budget_cap' ? budget - spent : null;
@@ -135,7 +137,7 @@ export function StockSheetBody({ symbol, knownName = null, onDone }: { symbol: s
         symbol,
         price,
         budget: before != null ? { before, after: budgetAfterBuy(before, price) } : undefined,
-        fills: check.wouldFill ? fillsSlotLine(check.wouldFill) : undefined,
+        fills: check.wouldFill ? fillsSlotLine(check.wouldFill, categoryNameOf) : undefined,
       });
       return { kind, review, body: buyBody(league.id, symbol), error: null, loading: false };
     }
@@ -210,7 +212,7 @@ export function StockSheetBody({ symbol, knownName = null, onDone }: { symbol: s
     }
     if (open.review) {
       const doneTitle = open.kind === 'sell' ? `Sold ${symbol}` : `Bought ${symbol}`;
-      const presentation = reviewPresentation(trade.state, open.review, { title: doneTitle, symbol });
+      const presentation = reviewPresentation(trade.state, open.review, { title: doneTitle, symbol, resolve: categoryNameOf });
       return (
         <TradeReviewPanel
           review={open.review}

@@ -1,9 +1,17 @@
 /**
  * tierContract: the client side of "Replace in the same tier" (3e, option A,
  * Giorgio 2026-10-06). The SERVER decides tier fit (docs/migrations/
- * TIER_TRADE_SLOTS.md on fix/tier-trade-slots). This file only parses the
- * server's shapes and words them. It never computes whether a price fits a
- * slot. Pure, and tested against the contract's own examples.
+ * TIER_TRADE_SLOTS.md). This file parses the server's shapes and words them.
+ * It never computes whether a price or a category fits a slot.
+ *
+ * The words follow the Design Lead's final rulings:
+ *  - A slot has a price band (price_min/price_max), a category (category_id),
+ *    both, or neither. Neither is "Flex": it accepts anything, so it never
+ *    appears in a refusal.
+ *  - A category name that doesn't resolve is never printed as "Category". The
+ *    Fills line falls back to "Fills your open slot"; the Portfolio label and
+ *    a refusal that names the category drop to no label / a plain sentence.
+ *  - Pure: the category names come in through a resolver.
  */
 import { formatMoney } from '../../components/sp/logic/money';
 import { COPY } from './moneyCopy';
@@ -22,6 +30,10 @@ export interface PreviewSlot extends SlotShape {
   held: string[];
   open: number;
 }
+
+/** Resolves a category id to its name, or null when it doesn't resolve. */
+export type CategoryResolver = (categoryId: string) => string | null;
+const noCategory: CategoryResolver = () => null;
 
 const isStr = (v: unknown): v is string => typeof v === 'string';
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
@@ -58,59 +70,107 @@ export function parsePreviewSlots(raw: unknown): PreviewSlot[] | null {
   return out;
 }
 
-/** A bound as the board writes it: "$100", "$211.42" (never "$100.00"). */
-function bound(v: number): string {
+/** A price as the board writes it: "$100", "$211.42" (never "$100.00"). */
+function price(v: number): string {
   return formatMoney(v).replace(/\.00$/, '');
 }
 
-/** One slot's price range, in the contract's words: "$100 to $200", "up to $200", "$100 or more", "any price". */
+const hasBand = (s: SlotShape) => s.price_min != null || s.price_max != null;
+const isFlex = (s: SlotShape) => !hasBand(s) && s.category_id == null;
+
+/** The band in the Portfolio's words, with an en dash: "$100–$200", "up to $50", "$800 or more". */
+function labelBand(min: number | null, max: number | null): string {
+  if (min == null) return `up to ${price(max!)}`;
+  if (max == null) return `${price(min)} or more`;
+  return `${price(min)}–${price(max)}`;
+}
+
+/** The band in a refusal sentence, with "to": "$100 to $200", "up to $50", "$800 or more". */
 export function slotRangeText(min: number | null, max: number | null): string {
-  if (min == null && max == null) return 'at any price';
-  if (min == null) return `up to ${bound(max!)}`;
-  if (max == null) return `${bound(min)} or more`;
-  return `${bound(min)} to ${bound(max)}`;
+  if (min == null) return `up to ${price(max!)}`;
+  if (max == null) return `${price(min)} or more`;
+  return `${price(min)} to ${price(max)}`;
 }
 
 /**
- * The refusal sentence (the approved board copy). `open` is the server's
- * open_slots. An empty list means every slot is held: a new line, flagged for
- * the Design Lead. Several open slots name each range.
+ * The Portfolio row label: "Tech slot", "$100–$200 Tech slot", "$100–$200 slot",
+ * "Flex slot". Null when the category name doesn't resolve: never "Category".
  */
-export function tierRefusalSentence(symbol: string, price: number, open: SlotShape[]): string {
-  const head = `${symbol.toUpperCase()} is ${formatMoney(price)}.`;
-  if (open.length === 0) return `${head} ${COPY.everySlotFull}`;
-  if (open.length === 1) {
-    const s = open[0];
-    if (s.price_min == null && s.price_max == null) return `${head} ${COPY.openSlotAnyPrice}`;
-    return `${head} Your open slot takes stocks priced ${slotRangeText(s.price_min, s.price_max)}.`;
-  }
-  const ranges = open.map((s) => slotRangeText(s.price_min, s.price_max)).join(' or ');
-  return `${head} ${COPY.openSlotsTake(ranges)}`;
+export function slotLabelFor(slot: SlotShape, resolve: CategoryResolver = noCategory): string | null {
+  if (isFlex(slot)) return 'Flex slot';
+  const cat = slot.category_id != null ? resolve(slot.category_id) : null;
+  if (slot.category_id != null && cat == null) return null;
+  const band = hasBand(slot) ? labelBand(slot.price_min, slot.price_max) : null;
+  return [band, cat, 'slot'].filter(Boolean).join(' ');
 }
 
-/** The "Fills your $100–$200 slot" line for a review, from the slot a buy would fill. */
-export function fillsSlotLine(slot: SlotShape): string {
-  const { price_min: min, price_max: max } = slot;
-  if (min == null && max == null) return COPY.fillsAnySlot;
-  if (min == null) return `Fills your slot priced up to ${bound(max!)}`;
-  if (max == null) return `Fills your slot priced ${bound(min)} or more`;
-  return `Fills your ${bound(min)}–${bound(max)} slot`;
-}
-
-/** The Portfolio row's slot label: "$100–$200 slot" (the server's slot map says which slot a stock is in). */
-export function slotLabelFor(slot: SlotShape): string {
-  const { price_min: min, price_max: max } = slot;
-  if (min == null && max == null) return 'Any price slot';
-  if (min == null) return `Up to ${bound(max!)} slot`;
-  if (max == null) return `${bound(min)} or more slot`;
-  return `${bound(min)}–${bound(max)} slot`;
-}
-
-/** Symbol to slot label, from the caller's preview slot map (a stock held in no slot has no label). */
-export function slotLabelsBySymbol(slots: PreviewSlot[] | null): Record<string, string> {
+/** Symbol to Portfolio label, from the caller's preview slot map. */
+export function slotLabelsBySymbol(slots: PreviewSlot[] | null, resolve: CategoryResolver = noCategory): Record<string, string> {
   const out: Record<string, string> = {};
   for (const s of slots ?? []) {
-    for (const sym of s.held) out[sym.toUpperCase()] = slotLabelFor(s);
+    const label = slotLabelFor(s, resolve);
+    if (label == null) continue;
+    for (const sym of s.held) out[sym.toUpperCase()] = label;
   }
   return out;
+}
+
+/** "Fills your …" for the slot a buy would fill. */
+export function fillsSlotLine(slot: SlotShape, resolve: CategoryResolver = noCategory): string {
+  if (slot.category_id != null && resolve(slot.category_id) == null) return COPY.fillsOpenSlotFallback;
+  if (isFlex(slot)) return 'Fills your Flex slot';
+  const cat = slot.category_id != null ? resolve(slot.category_id) : null;
+  if (!hasBand(slot)) return `Fills your ${cat} slot`;
+  if (cat == null) {
+    // The approved band-only forms, which keep their own wording at the open edges.
+    if (slot.price_min == null) return `Fills your slot priced up to ${price(slot.price_max!)}`;
+    if (slot.price_max == null) return `Fills your slot priced ${price(slot.price_min)} or more`;
+    return `Fills your ${labelBand(slot.price_min, slot.price_max)} slot`;
+  }
+  if (slot.price_min == null) return `Fills your ${cat} slot priced up to ${price(slot.price_max!)}`;
+  if (slot.price_max == null) return `Fills your ${cat} slot priced ${price(slot.price_min)} or more`;
+  return `Fills your ${labelBand(slot.price_min, slot.price_max)} ${cat} slot`;
+}
+
+/** Joins items as the board does: "A", "A and B", "A, B and C". */
+function listOf(items: string[]): string {
+  if (items.length <= 1) return items.join('');
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+}
+
+/**
+ * The refusal sentence, shown before the review. `open` is the server's
+ * open_slots. A Flex slot never appears: it would have accepted the stock.
+ *  - no open slot: the every-slot-full line (no price head).
+ *  - one category-only slot: "AAPL doesn't fit your open Tech slot."
+ *  - one banded slot: "AAPL is $211.42. Your open slot takes stocks priced $100 to $200."
+ *  - banded with a category: "AAPL is $211.42. Your open slot takes Tech stocks priced …"
+ *  - several: "AAPL is $211.42. Your open slots: $100–$200 Tech and Health Care."
+ */
+export function tierRefusalSentence(symbol: string, priceValue: number, open: SlotShape[], resolve: CategoryResolver = noCategory): string {
+  const sym = symbol.toUpperCase();
+  const head = `${sym} is ${formatMoney(priceValue)}.`;
+  const slots = open.filter((s) => !isFlex(s));
+  if (slots.length === 0) return COPY.everySlotFull;
+
+  if (slots.length === 1) {
+    const s = slots[0];
+    const cat = s.category_id != null ? resolve(s.category_id) : null;
+    if (s.category_id != null && cat == null) return `${sym} doesn't fit your open slot.`;
+    if (!hasBand(s)) return `${sym} doesn't fit your open ${cat} slot.`;
+    const band = slotRangeText(s.price_min, s.price_max);
+    return cat == null
+      ? `${head} Your open slot takes stocks priced ${band}.`
+      : `${head} Your open slot takes ${cat} stocks priced ${band}.`;
+  }
+
+  const items: string[] = [];
+  for (const s of slots) {
+    const cat = s.category_id != null ? resolve(s.category_id) : null;
+    if (s.category_id != null && cat == null) continue;
+    const band = hasBand(s) ? labelBand(s.price_min, s.price_max) : null;
+    items.push([band, cat].filter(Boolean).join(' '));
+  }
+  if (items.length === 0) return `${sym} doesn't fit your open slots.`;
+  return `${head} Your open slots: ${listOf(items)}.`;
 }

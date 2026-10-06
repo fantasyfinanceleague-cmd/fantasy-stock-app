@@ -48,8 +48,6 @@ export const COPY = {
   tradeConflict: 'Nothing was traded: your league changed while this trade was going through. Try again.',
   tryAgain: 'Try again',
   // NEW (flagged): a LOAD failure. The alert icon arrives with the Design Lead's ruling.
-  portfolioDidNotLoad: "Your portfolio didn't load. Check your connection and try again.",
-  stockDidNotLoad: "This stock didn't load. Check your connection and try again.",
   // NEW (flagged): shown while a review's numbers are being fetched.
   preparingReview: 'Preparing your review',
   // Trade history (board copy: "Bought SHOP", "Sold TSLA", "Drafted TSLA").
@@ -60,12 +58,9 @@ export const COPY = {
   // NEW (flagged): an honest empty state.
   historyEmpty: 'No trades yet. Your buys, sells and draft picks will show here.',
   historyPending: 'Your trade history is loading.',
-  // Tier trades (NEW, flagged for the Design Lead): the no-open-slot lines and
-  // the review's fill line for a slot with no price band.
-  everySlotFull: 'Every slot is full right now. Sell a stock to free one.',
-  openSlotAnyPrice: 'Your open slot takes stocks at any price.',
-  openSlotsTake: (ranges: string) => `Your open slots take stocks priced ${ranges}.`,
-  fillsAnySlot: 'Fills your open slot',
+  // Tier trades (the Design Lead's final rulings).
+  everySlotFull: 'Every slot is full. Sell a stock first to open its slot.',
+  fillsOpenSlotFallback: 'Fills your open slot',
   portfolioLoadTitle: "Your portfolio didn't load",
   stockLoadTitle: "This stock didn't load",
   loadRetryMessage: 'Check your connection, then try again.',

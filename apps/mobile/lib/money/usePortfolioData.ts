@@ -20,6 +20,7 @@ import { usePortfolioLedger } from './usePortfolioLedger';
 import { fetchPreview } from './recordTrade';
 import { previewBody } from './tradeBodies';
 import { slotLabelsBySymbol } from './tierContract';
+import { categoryNameOf, loadCategoryNames } from './categoryNames';
 import { MONEY_FIXTURE } from './devFixture';
 import { buildStressMarket, STRESS_CALLER, STRESS_LEAGUE_NAME, STRESS_ROUNDS } from './stressFixture';
 
@@ -143,7 +144,10 @@ export function usePortfolioData(): PortfolioData {
       if (!market && leagueId) {
         requests += 1;
         const preview = await fetchPreview(previewBody(leagueId));
-        if (preview) slotLabels = slotLabelsBySymbol(preview.slots);
+        if (preview) {
+          await loadCategoryNames();
+          slotLabels = slotLabelsBySymbol(preview.slots, categoryNameOf);
+        }
       }
       if (cancelled) return;
 
