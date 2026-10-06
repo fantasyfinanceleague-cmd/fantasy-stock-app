@@ -1,10 +1,10 @@
 /**
  * useStockSheetData: the stock sheet's facts for one symbol in the active
- * league (3e). Everything is read with its error checked (supabase-js resolves
- * errors, it doesn't throw). A failed read leaves that fact null, and the
- * model shows it as unknown, never as a number. Ownership is the one exception:
- * if the draft or trade rows can't be read, the whole sheet is `error`, because
- * it could not say who owns the stock.
+ * league (3e). It reuses the league ledger (shared with Portfolio), a short
+ * quote cache and a name cache, and fetches only what is genuinely missing
+ * (sheetRequests.planSheetRequests). Every read is error-checked: a failed
+ * price or name stays unknown, never a number. Ownership comes from the ledger;
+ * if the ledger can't be read, the sheet is in error rather than guessing.
  */
 import { useCallback, useEffect, useState } from 'react';
 
@@ -12,7 +12,22 @@ import { useLeagueContext } from '@/lib/LeagueContext';
 import { useSession } from '@/lib/SessionProvider';
 import { supabase } from '@/lib/supabase';
 
-import { deriveStockSheetFacts, type FactsDraft, type FactsName, type FactsTrade, type StockSheetFacts } from './stockSheetFacts';
+import { planSheetRequests } from './sheetRequests';
+import { sheetInputsFromLedger } from './portfolioLedger';
+import { deriveStockSheetFacts, type StockSheetFacts } from './stockSheetFacts';
+import { usePortfolioLedger } from './usePortfolioLedger';
+
+/** A quote is fresh for two minutes, the same window as useStockPrices. */
+const QUOTE_TTL_MS = 120_000;
+
+interface CachedQuote {
+  price: number | null;
+  prevClose: number | null;
+  at: number;
+}
+const quoteCache = new Map<string, CachedQuote>();
+// Company names are stable: cached for the session, never refetched.
+const nameCache = new Map<string, string>();
 
 export interface StockSheetData {
   status: 'loading' | 'ready' | 'error';
@@ -21,11 +36,15 @@ export interface StockSheetData {
   companyName: string | null;
   facts: StockSheetFacts | null;
   leagueName: string | null;
+  /** The case this open falls in, and how many network reads it cost. Logged in __DEV__. */
+  requestCase: 'held' | 'free' | 'owned-by-other' | null;
+  requestCount: number | null;
   refresh: () => void;
 }
 
 const EMPTY: StockSheetData = {
-  status: 'loading', price: null, prevClose: null, companyName: null, facts: null, leagueName: null, refresh: () => {},
+  status: 'loading', price: null, prevClose: null, companyName: null, facts: null,
+  leagueName: null, requestCase: null, requestCount: null, refresh: () => {},
 };
 
 export function useStockSheetData(symbol: string): StockSheetData {
@@ -34,72 +53,92 @@ export function useStockSheetData(symbol: string): StockSheetData {
   const leagueId = activeLeague?.id ?? null;
   const leagueName = activeLeague?.name ?? null;
   const userId = user?.id ?? null;
+  const ledgerState = usePortfolioLedger(leagueId);
   const [tick, setTick] = useState(0);
   const [state, setState] = useState<StockSheetData>(EMPTY);
 
-  const refresh = useCallback(() => setTick((t) => t + 1), []);
+  const refresh = useCallback(() => {
+    quoteCache.delete(symbol.toUpperCase());
+    setTick((t) => t + 1);
+  }, [symbol]);
 
   useEffect(() => {
-    if (!leagueId || !userId) {
-      // No active league or signed-in user: nothing to read, so say so rather than load forever.
-      setState({ ...EMPTY, status: 'error', refresh });
+    if (ledgerState.status === 'loading') return;
+    if (ledgerState.status === 'error' || !ledgerState.ledger || !userId) {
+      setState({ ...EMPTY, status: 'error', leagueName, refresh });
       return;
     }
+    const ledger = ledgerState.ledger;
+    const sym = symbol.toUpperCase();
     let cancelled = false;
-    setState((prev) => ({ ...prev, status: 'loading', leagueName, refresh }));
 
     (async () => {
-      const [quoteRes, nameRes, draftsRes, tradesRes, namesRes] = await Promise.all([
-        supabase.functions.invoke('ticker-quotes', { body: { symbol } }),
-        supabase.functions.invoke('symbol-name', { body: { symbol } }),
-        supabase.from('drafts').select('user_id, symbol, quantity, round, pick_number').eq('league_id', leagueId),
-        supabase.from('trades').select('user_id, symbol, action, quantity').eq('league_id', leagueId),
-        supabase.rpc('get_league_display_names', { p_league_id: leagueId }),
-      ]);
-      if (cancelled) return;
+      const inputs = sheetInputsFromLedger(ledger);
+      const facts = deriveStockSheetFacts({ symbol: sym, userId, ...inputs });
 
-      // Ownership is all-or-nothing: without the rows we cannot say who owns it.
-      if (draftsRes.error || tradesRes.error) {
-        console.warn('[stock-sheet] ownership read failed', draftsRes.error?.message ?? tradesRes.error?.message);
-        setState((prev) => ({ ...prev, status: 'error', refresh }));
-        return;
-      }
+      const cachedQuote = quoteCache.get(sym);
+      const quoteFresh = !!cachedQuote && Date.now() - cachedQuote.at < QUOTE_TTL_MS;
+      const ledgerName = ledger.symbol_names[sym] ?? null;
+      const nameKnown = !!ledgerName || nameCache.has(sym);
 
-      const q = quoteRes.error ? null : (quoteRes.data as { price?: number | null; prevClose?: number | null } | null);
-      const price = q && typeof q.price === 'number' && Number.isFinite(q.price) && q.price > 0 ? q.price : null;
-      const prevClose = q && typeof q.prevClose === 'number' && q.prevClose > 0 ? q.prevClose : null;
-      const companyName = !nameRes.error && typeof (nameRes.data as { name?: unknown } | null)?.name === 'string'
-        ? ((nameRes.data as { name: string }).name)
-        : null;
+      // Only the missing reads are made.
+      const plan = planSheetRequests({ ledgerLoaded: !ledgerState.fetchedNow, quoteCached: quoteFresh, nameKnown });
 
-      const names: Record<string, FactsName> = {};
-      if (namesRes.error) {
-        console.warn('[stock-sheet] display names failed', namesRes.error.message);
-      } else {
-        for (const n of (namesRes.data ?? []) as { user_id: string; display_name: string; is_bot: boolean }[]) {
-          names[String(n.user_id)] = { displayName: n.display_name, isBot: n.is_bot };
+      let quote = cachedQuote ?? null;
+      if (!quoteFresh) {
+        const { data, error } = await supabase.functions.invoke('ticker-quotes', { body: { symbol: sym } });
+        if (cancelled) return;
+        if (error) {
+          console.warn('[stock-sheet] quote failed', error.message);
+          quote = null;
+        } else {
+          const d = data as { price?: unknown; prevClose?: unknown } | null;
+          const price = typeof d?.price === 'number' && Number.isFinite(d.price) && d.price > 0 ? d.price : null;
+          const prevClose = typeof d?.prevClose === 'number' && d.prevClose > 0 ? d.prevClose : null;
+          quote = { price, prevClose, at: Date.now() };
+          quoteCache.set(sym, quote);
         }
       }
 
-      const drafts = (draftsRes.data ?? []) as FactsDraft[];
-      const facts = deriveStockSheetFacts({
-        symbol,
-        userId,
-        drafts,
-        trades: (tradesRes.data ?? []) as FactsTrade[],
-        leaguePicks: drafts.map((d) => ({ round: d.round, user_id: String(d.user_id) })),
-        names,
-      });
+      let companyName: string | null = ledgerName ?? nameCache.get(sym) ?? null;
+      if (!nameKnown) {
+        const { data, error } = await supabase.functions.invoke('symbol-name', { body: { symbol: sym } });
+        if (cancelled) return;
+        const name = !error && typeof (data as { name?: unknown } | null)?.name === 'string' ? (data as { name: string }).name : null;
+        if (name) nameCache.set(sym, name);
+        companyName = name;
+      }
 
-      setState({ status: 'ready', price, prevClose, companyName, facts, leagueName, refresh });
+      const requestCase: StockSheetData['requestCase'] = facts.held
+        ? 'held'
+        : facts.owner?.kind === 'other'
+          ? 'owned-by-other'
+          : 'free';
+      // The ledger counts only when this open is the one that loaded it.
+      const requestCount = plan.count + (ledgerState.fetchedNow ? 1 : 0);
+      if (__DEV__) {
+        console.log(`[stock-sheet] ${sym} ${requestCase}: ${requestCount} new request(s) (ledger ${ledgerState.fetchedNow ? 'fetched' : 'shared'}, quote ${plan.quote && !quoteFresh ? 'fetched' : 'cached'}, name ${nameKnown ? 'known' : 'fetched'})`);
+      }
+
+      setState({
+        status: 'ready',
+        price: quote?.price ?? null,
+        prevClose: quote?.prevClose ?? null,
+        companyName,
+        facts,
+        leagueName,
+        requestCase,
+        requestCount,
+        refresh,
+      });
     })();
 
     return () => {
       cancelled = true;
     };
-    // `refresh` is stable; `tick` re-runs the reads on demand.
+    // `refresh` depends on the symbol and is re-created with it; `tick` re-runs the reads.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [symbol, leagueId, leagueName, userId, tick]);
+  }, [symbol, leagueId, leagueName, userId, ledgerState.status, ledgerState.ledger, ledgerState.fetchedNow, tick]);
 
   return state;
 }
