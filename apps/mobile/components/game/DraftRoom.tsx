@@ -22,6 +22,7 @@ import { DraftRoomSkeleton } from '@/components/game/LoadingSkeletons';
 import { DraftComplete } from '@/components/game/DraftComplete';
 import { picksUntilTurn } from '@/lib/home/draftTurn';
 import { readFunctionRefusal } from '@/lib/functionRefusal';
+import { ownPickClockRunning, setForegroundQuiet } from '@/lib/foregroundQuiet';
 import { turnState } from '@/lib/game/draftRefusals';
 
 export interface DraftRoomProps {
@@ -61,6 +62,13 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
   const round = m > 0 ? Math.floor((onClockPick - 1) / m) + 1 : 0;
   const nameOf = (id: string | null) => (id && room.names[id]?.name) || '';
   const draftDone = m > 0 && room.pickCount >= totalPicks;
+  // UX rule 11: no foreground banners while YOUR pick clock runs (the room shows it).
+  const quiet = ownPickClockRunning(isMyTurn, room.clock.kind);
+  useEffect(() => {
+    setForegroundQuiet('own_pick_clock', quiet);
+    return () => setForegroundQuiet('own_pick_clock', false);
+  }, [quiet]);
+
   // UX rule 9: "Checking…" clears once the re-read board arrives (it speaks for itself).
   useEffect(() => {
     setRefusal((cur) => (cur?.checking ? null : cur));
