@@ -52,3 +52,28 @@ export function clockState(input: { running: boolean; deadlineAt: string | null;
   if (left <= 10) return { kind: 'last10', secondsLeft: left };
   return { kind: 'on_clock', secondsLeft: left };
 }
+
+/** The pick refusals the app has always shown, VERBATIM (existing copy, from the
+ * legacy draft route). The never-skips reasons are flagged placeholders. */
+const PICK_REFUSAL_LINES: Record<string, string> = {
+  not_your_turn: "It's not your turn to pick",
+  draft_complete: 'The draft is already complete',
+  draft_not_in_progress: 'The draft is not in progress',
+  symbol_owned: 'That stock is already owned in this league',
+  not_draftable: "That stock isn't in this league's draftable universe",
+  no_eligible_slot: 'No open roster slot accepts a stock at this price',
+  over_budget: 'That stock is over your remaining budget',
+  no_price: 'No recent price available for that stock',
+  pick_conflict: 'Someone picked at the same moment — refresh and try again',
+  rate_limited: 'Too many picks too quickly — wait a moment and try again',
+  draft_not_complete: 'The draft is not finished yet',
+  forbidden_target: "You can't pick on that player's behalf",
+  not_a_member: "You're not a member of this league",
+  would_strand_slot: '[new copy: would_strand_slot]',
+  budget_reserve: '[new copy: budget_reserve]',
+};
+
+/** The line for a refused pick: its own copy, or one honest generic line, never a raw reason. */
+export function pickRefusalLine(reason: string): string {
+  return PICK_REFUSAL_LINES[reason] ?? "That pick can't be made.";
+}

@@ -51,3 +51,16 @@ Deno.test('the seconds left come from the server clock, so the device clock cann
   const s = clockState({ running: true, deadlineAt: '2026-10-05T19:00:30.000Z', serverNow: '2026-10-05T19:00:20.000Z' });
   assertEquals(s.secondsLeft, 10);
 });
+
+import { pickRefusalLine } from '../lib/game/draftRoom.ts';
+
+Deno.test('the existing refusal lines are verbatim, and an unknown reason is one generic line', () => {
+  assertEquals(pickRefusalLine('not_your_turn'), "It's not your turn to pick");
+  assertEquals(pickRefusalLine('symbol_owned'), 'That stock is already owned in this league');
+  assertEquals(pickRefusalLine('some_new_reason'), "That pick can't be made.");
+});
+
+Deno.test('the never-skips refusals are flagged placeholders, never a raw reason', () => {
+  assertEquals(pickRefusalLine('would_strand_slot'), '[new copy: would_strand_slot]');
+  assertEquals(pickRefusalLine('budget_reserve'), '[new copy: budget_reserve]');
+});
