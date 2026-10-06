@@ -41,3 +41,21 @@ Deno.test('any other failure is one honest generic line, never the raw message',
   assertEquals(msgOf(o), "Your settings didn't save. Try again.");
   assertEquals(msgOf(o).includes('network'), false);
 });
+
+// ── Partly saved: the lock only when the server says so (Design Lead, audit P1) ──
+
+Deno.test('a roster save refused by the slots or rules lock says the draft started', () => {
+  for (const m of ['league_slots_locked: roster', 'league_rules_locked: rules']) {
+    const o = settingsSaveOutcome({ patchError: null, slotsError: { message: m } });
+    assertEquals(o.kind, 'partly_saved', m);
+    assertEquals(o.message, "Your league details saved, but the roster didn't. The draft has started, so roster changes are locked now.", m);
+  }
+});
+
+Deno.test('any other roster failure (network, unknown) never claims a lock: "Try again."', () => {
+  for (const err of [{ message: 'Failed to fetch' }, { message: 'permission denied for table league_draft_slots' }, {}]) {
+    const o = settingsSaveOutcome({ patchError: null, slotsError: err });
+    assertEquals(o.title, 'Partly saved');
+    assertEquals(o.message, "Your league details saved, but the roster didn't. Try again.");
+  }
+});

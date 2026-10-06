@@ -34,10 +34,16 @@ export function settingsSaveOutcome(input: { patchError: { message?: string } | 
   }
   if (input.slotsError) {
     // The league row landed. The roster did not: say so, and say what it means.
+    // The lock is named ONLY when the server says so (league_slots_locked /
+    // league_rules_locked); a network or other failure is not a lock and can
+    // be retried (Design Lead, audit P1).
+    const code = lockCodeOf(input.slotsError);
     return {
       kind: 'partly_saved',
       title: 'Partly saved',
-      message: "Your league details saved, but the roster didn't. The draft has started, so roster changes are locked now.",
+      message: code === 'slots_locked' || code === 'rules_locked'
+        ? "Your league details saved, but the roster didn't. The draft has started, so roster changes are locked now."
+        : "Your league details saved, but the roster didn't. Try again.",
     };
   }
   return { kind: 'saved' };
