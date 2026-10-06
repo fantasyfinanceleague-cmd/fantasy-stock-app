@@ -48,3 +48,15 @@ export function byeNoticeCopy(managers: number, weeks: number): string | null {
   if (split === null) return null;
   return `With ${managers} managers and ${weeks} weeks, byes won't be even: some get ${split.hi}, some get ${split.lo}.`;
 }
+
+/** The playoff-teams stepper's range (board: "Up to 6, one per manager."): at
+ * least 2 teams, at most one per manager. */
+export function playoffStepperBounds(managers: number): { min: number; max: number } {
+  return { min: 2, max: Math.max(2, managers) };
+}
+
+/** The value after one step, held inside the bounds: the stepper never leaves them. */
+export function stepPlayoffTeams(value: number, direction: 1 | -1, managers: number): number {
+  const { min, max } = playoffStepperBounds(managers);
+  return Math.min(max, Math.max(min, value + direction));
+}

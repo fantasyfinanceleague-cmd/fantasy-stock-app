@@ -2,6 +2,7 @@
 import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { Share } from 'react-native';
 
 import { space } from '@/constants/tokens';
 import { useTheme } from '@/components/sp/ThemeProvider';
@@ -127,6 +128,23 @@ function LeagueLobby({ leagueId }: { leagueId: string }) {
   const [statusKey, setStatusKey] = useState(0);
   const ds = useDraftStatus(leagueId, true, statusKey);
 
+  // The stepper writes the same leagues update League settings uses, then re-reads the status.
+  const setPlayoffTeams = async (teams: number) => {
+    const { error } = await supabase.from('leagues').update({ playoff_teams: teams }).eq('id', leagueId);
+    if (error) {
+      setStartError("The playoff teams didn't change. Try again.");
+      return;
+    }
+    setStartError(null);
+    setStatusKey((k) => k + 1);
+    await refresh();
+  };
+
+  const shareInvite = () => {
+    const code = activeLeague?.invite_code;
+    if (code) void Share.share({ message: `Join my league with code ${code}` });
+  };
+
   const startDraft = async () => {
     setStartError(null);
     const { data: res, error } = await supabase.functions.invoke('draft-control', { body: { league_id: leagueId, action: 'start' } });
@@ -163,6 +181,9 @@ function LeagueLobby({ leagueId }: { leagueId: string }) {
                 pickSeconds={activeLeague?.pick_seconds ?? 60}
                 onStart={startDraft}
                 onNotYet={() => setConfirming(false)}
+                onSetPlayoffTeams={setPlayoffTeams}
+                inviteCode={activeLeague?.invite_code ?? null}
+                onShareInvite={shareInvite}
               />
               {startError ? <Text variant="callout">{startError}</Text> : null}
             </View>

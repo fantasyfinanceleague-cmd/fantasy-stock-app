@@ -53,3 +53,17 @@ Deno.test('no bye notice when the weeks divide evenly or the count is even', () 
   assertEquals(byeNoticeCopy(6, 10), null);
   assertEquals(byeNoticeCopy(7, 14), null);
 });
+
+import { playoffStepperBounds, stepPlayoffTeams } from '../lib/game/draftLobby.ts';
+
+Deno.test('the playoff stepper is 2 up to one per manager (the board: "Up to 6, one per manager.")', () => {
+  assertEquals(playoffStepperBounds(6), { min: 2, max: 6 });
+  assertEquals(playoffStepperBounds(1), { min: 2, max: 2 });
+});
+
+Deno.test('a step stays inside the bounds: it cannot go below 2 or above the manager count', () => {
+  assertEquals(stepPlayoffTeams(7, -1, 6), 6); // 7 is over the 6 managers: a step down lands on 6
+  assertEquals(stepPlayoffTeams(6, 1, 6), 6); // no further up than one per manager
+  assertEquals(stepPlayoffTeams(2, -1, 6), 2); // no further down than 2
+  assertEquals(stepPlayoffTeams(4, 1, 6), 5);
+});
