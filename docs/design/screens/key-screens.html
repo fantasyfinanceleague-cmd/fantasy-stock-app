@@ -3805,7 +3805,7 @@
 
   // ═════════════════════════════════════════════════════════════════════
   // YOUR CALL: which tier a traded stock fills (price-tier leagues),
-  // 2026-10-05. "Tier Cup": six one-share tiers. Roberto sold DIS (his
+  // 2026-10-05. "Tier Cup": six one-share tiers. Roberto sold DIS (their
   // $100–$200 stock) and wants to buy. New copy throughout.
   // ═════════════════════════════════════════════════════════════════════
   const TIER = (() => {
@@ -4551,7 +4551,7 @@
     const members = ['scheduled', 'open', 'starting', 'nodate'].includes(phase) ? ['RB', 'MR', 'LC', 'SF', 'GV', 'TP'] : ['RB', 'MR', 'LC', 'GV', 'TP'];
     const clock = { scheduled: '2d 06h 40m', open: '42:18', starting: '00:00', risk: '1h 58m' }[phase];
     const live = phase === 'open' || phase === 'starting';
-    // The everyone-states are shown on Roberto B.'s phone (he picks 4th); the member frames on Giulia V.'s.
+    // The everyone-states are shown on Roberto B.'s phone (seat 4); the member frames on Giulia V.'s.
     const mine = commish || ['scheduled', 'open', 'starting'].includes(phase);
     const draftCard = phase === 'postponed' && commish ? null : (
       <GameCard tag={phase === 'postponed' ? 'Draft postponed' : 'Draft'} chip={<span className="ks-chip">{phase === 'postponed' ? 'Postponed' : 'Pre-draft'}</span>}>
@@ -5028,7 +5028,7 @@
               <li><b>Postponed</b> (members, T−1h): "The draft is postponed. {'{Commissioner}'} will pick a new time."</li>
               <li><b>Postponed</b> (commissioner, T−1h): "The draft is postponed: the league wasn't ready at {'{6:00 PM ET}'}. Fix it, then pick a new time."</li>
               <li><b>New time</b> (everyone, decided: every draft-time change pushes every member, including whoever changed it): "The draft is now {'{Sun, Oct 4 · 7:00 PM ET}'}."</li>
-              <li><b>Blocker phrases</b> for {'{first blocker}'} are whole clauses: "Sofia F. left the league"; "Sofia F. and Ana P. left the league"; "3 managers left the league"; "8 playoff teams, but 7 teams are in" (or "there are more playoff teams than teams" when the counts aren't known); "the number of playoff teams isn't set"; "fewer than 4 teams have joined"; "some slots can't be filled"; "the budget can't fill every roster"; "the league's stakes aren't set"; "not every Season 1 player has answered"; fallback "something in League settings needs fixing". Members' fallback name: "The commissioner". In the card, each one stands as its own line.</li>
+              <li><b>Blocker phrases</b> for {'{first blocker}'} are whole clauses: "Sofia F. left the league"; "Sofia F. and Ana P. left the league"; "3 managers left the league"; "a manager left the league" (no readable names); "8 playoff teams, but 7 teams are in" (or "there are more playoff teams than teams" when the counts aren't known); "the number of playoff teams isn't set"; "fewer than 4 teams have joined"; "some slots can't be filled"; "the budget can't fill every roster"; "the league's stakes aren't set"; "not every Season 1 player has answered"; fallback "something in League settings needs fixing". Members' fallback name: "The commissioner". In the card, each one stands as its own line.</li>
               <li><b>One word: draft time.</b> The settings row and the sheet are "Draft time" (not "Draft date"), matching "Pick a new draft time" and the pushes. Pushes about the draft time go to every member, including whoever changed it.</li>
             </ul>
           </div>

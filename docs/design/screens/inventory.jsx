@@ -1874,7 +1874,7 @@
 
   // ═════════════════════════════════════════════════════════════════════
   // YOUR CALL: which tier a traded stock fills (price-tier leagues),
-  // 2026-10-05. "Tier Cup": six one-share tiers. Roberto sold DIS (his
+  // 2026-10-05. "Tier Cup": six one-share tiers. Roberto sold DIS (their
   // $100–$200 stock) and wants to buy. New copy throughout.
   // ═════════════════════════════════════════════════════════════════════
   const TIER = (() => {
@@ -2620,7 +2620,7 @@
     const members = ['scheduled', 'open', 'starting', 'nodate'].includes(phase) ? ['RB', 'MR', 'LC', 'SF', 'GV', 'TP'] : ['RB', 'MR', 'LC', 'GV', 'TP'];
     const clock = { scheduled: '2d 06h 40m', open: '42:18', starting: '00:00', risk: '1h 58m' }[phase];
     const live = phase === 'open' || phase === 'starting';
-    // The everyone-states are shown on Roberto B.'s phone (he picks 4th); the member frames on Giulia V.'s.
+    // The everyone-states are shown on Roberto B.'s phone (seat 4); the member frames on Giulia V.'s.
     const mine = commish || ['scheduled', 'open', 'starting'].includes(phase);
     const draftCard = phase === 'postponed' && commish ? null : (
       <GameCard tag={phase === 'postponed' ? 'Draft postponed' : 'Draft'} chip={<span className="ks-chip">{phase === 'postponed' ? 'Postponed' : 'Pre-draft'}</span>}>
