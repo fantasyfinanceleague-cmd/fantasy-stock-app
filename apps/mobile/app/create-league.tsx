@@ -278,7 +278,7 @@ export default function CreateLeagueWizard() {
 
   const draftDateValue = state.draftDateTBD
     ? 'TBD'
-    : draftDateTimeLabel(state.draftDate?.toISOString() ?? null) ?? 'Pick a date & time';
+    : draftDateTimeLabel(state.draftDate?.toISOString() ?? null) ?? 'Pick a draft time';
 
   // ── Step 1 · League ───────────────────────────────────────────────────
   const renderLeague = () => (

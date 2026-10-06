@@ -141,8 +141,8 @@ export function stepWithin(value: number, direction: 1 | -1, min: number, max: n
 
 // ── Stakes step ─────────────────────────────────────────────────────────
 
-/** Under the Draft date row while it's TBD (Design Lead ruling). */
-export const DRAFT_DATE_LATER = 'Set a draft date before the draft can start. You can do it later in League settings.';
+/** Under the Draft time row while it's TBD (Design Lead ruling; one term, "draft time"). */
+export const DRAFT_DATE_LATER = 'Set a draft time before the draft can start. You can do it later in League settings.';
 
 /** The budget-cap presets, as before. */
 export const BUDGET_PRESETS: readonly string[] = ['1000', '2500', '5000', '10000'];

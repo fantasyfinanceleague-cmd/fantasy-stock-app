@@ -231,8 +231,8 @@ export default function LeagueSettingsScreen() {
   const draftDateValue = draftDateTBD
     ? 'TBD'
     : draftDate
-      ? draftDateTimeLabel(draftDate.toISOString()) ?? 'Pick a date & time'
-      : 'Pick a date & time';
+      ? draftDateTimeLabel(draftDate.toISOString()) ?? 'Pick a draft time'
+      : 'Pick a draft time';
 
   return (
     <SetupScaffold

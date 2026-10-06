@@ -13,7 +13,7 @@ export function createdTitle(name: string): string {
 export const CREATED_LINE = 'Share the invite code to bring your league in.';
 
 /** Added when the league has no draft date yet. */
-export const CREATED_NO_DATE = 'Set a draft date before the draft can start.';
+export const CREATED_NO_DATE = 'Set a draft time before the draft can start.';
 
 export const GO_TO_LEAGUE = 'Go to the league';
 

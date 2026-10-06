@@ -27,7 +27,7 @@ Deno.test('no draft date: TBD, or a date never picked', () => {
   assertEquals(createdWithoutDate(false, null), true);
   assertEquals(createdWithoutDate(true, new Date('2026-10-10T23:00:00Z')), true);
   assertEquals(createdWithoutDate(false, new Date('2026-10-10T23:00:00Z')), false);
-  assertEquals(CREATED_NO_DATE, 'Set a draft date before the draft can start.');
+  assertEquals(CREATED_NO_DATE, 'Set a draft time before the draft can start.');
 });
 
 Deno.test('roster slots that did not save', () => {

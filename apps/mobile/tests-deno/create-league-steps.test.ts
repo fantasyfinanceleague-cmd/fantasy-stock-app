@@ -170,7 +170,7 @@ Deno.test('rounds in create stay 3..12', () => {
 
 Deno.test('round-robin caption and the TBD line (Design Lead rulings)', () => {
   assertEquals(roundRobinCaption(7), 'At least 7 weeks, so every team plays every other team once.');
-  assertEquals(DRAFT_DATE_LATER, 'Set a draft date before the draft can start. You can do it later in League settings.');
+  assertEquals(DRAFT_DATE_LATER, 'Set a draft time before the draft can start. You can do it later in League settings.');
 });
 
 Deno.test('budget presets unchanged', () => {

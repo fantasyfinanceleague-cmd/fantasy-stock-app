@@ -142,5 +142,10 @@ Deno.test('the field error and the three places say "draft time"', () => {
   assertEquals(createSrc.includes('label="Draft time"'), true);
   assertEquals(settingsSrc.includes('label="Draft time"'), true);
   assertEquals(/>\s*Draft time\s*</.test(sheetSrc), true);
-  for (const src of [createSrc, settingsSrc, sheetSrc]) assertEquals(src.includes('label="Draft date"'), false);
+  for (const src of [createSrc, settingsSrc, sheetSrc]) {
+    assertEquals(src.includes('label="Draft date"'), false);
+    assertEquals(src.includes('Pick a date & time'), false);
+  }
+  assertEquals(createSrc.includes("'Pick a draft time'"), true);
+  assertEquals(settingsSrc.includes("'Pick a draft time'"), true);
 });

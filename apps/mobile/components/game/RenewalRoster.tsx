@@ -90,7 +90,7 @@ export function RenewalRoster({ roster, leagueId, season1Order, createdAt, now, 
 
       <Card>
         <View style={styles.draftRow}>
-          <Text variant="callout">Draft date</Text>
+          <Text variant="callout">Draft time</Text>
           <Text variant="callout" tone="secondary">Not set</Text>
         </View>
         <View style={[styles.draftRow, draftDisabled(roster.replies_pending) ? styles.disabled : null]}>
