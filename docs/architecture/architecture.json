@@ -2,12 +2,20 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "2cee2598463e82935f271510b08f1499d522f923",
-    "commitShort": "2cee259",
+    "commit": "7a8506c19d3c375ddc5d387d2934155808cb6b54",
+    "commitShort": "7a8506c",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "fix/record-trade-concurrency",
+    "branch": "fix/tier-trade-slots",
     "dirty": true,
     "dirtyPaths": [
+      {
+        "code": "M",
+        "path": "supabase/functions/_shared/draft-validation.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/_shared/draft-validation.ts"
+      },
       {
         "code": "M",
         "path": "supabase/functions/record-trade/commit.test.ts"
@@ -18,19 +26,23 @@
       },
       {
         "code": "M",
-        "path": "supabase/migrations/20261102000000_record_trade_atomic.sql"
+        "path": "supabase/functions/record-trade/index.ts"
+      },
+      {
+        "code": "??",
+        "path": "supabase/migrations/20261103000000_trades_slot_id.sql"
       }
     ],
-    "timestamp": "2026-10-06T02:34:55Z",
-    "sourceHash": "sha256:64f4924668fb256858198c89a5c65e5874c503b70c5643b73f12d48e8b89a361",
+    "timestamp": "2026-10-06T03:49:01Z",
+    "sourceHash": "sha256:598110e0532240d0ac375bfd62dd6b47604ee6735d654c5f5cff5ebebe40de77",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-09-30T16:53:15Z",
-    "ageHours": 129.7,
-    "ageDays": 5.4,
+    "ageHours": 130.9,
+    "ageDays": 5.5,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:8e08382dfe9edf557c6371cfc39da9fb788590ad82209f15e2e74a7c90dcfc6b",
@@ -651,7 +663,7 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 446
+        "lines": 480
       },
       "db": null,
       "declared": null,
@@ -664,7 +676,7 @@
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/record-trade/index.ts",
-        "line": 225
+        "line": 250
       }
     },
     {
@@ -3117,10 +3129,11 @@
       "db": null,
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261102000000_record_trade_atomic.sql:146"
+          "supabase/migrations/20261102000000_record_trade_atomic.sql:157",
+          "supabase/migrations/20261103000000_trades_slot_id.sql:89"
         ],
-        "latestDefinition": "supabase/migrations/20261102000000_record_trade_atomic.sql",
-        "redefinitions": 1
+        "latestDefinition": "supabase/migrations/20261103000000_trades_slot_id.sql",
+        "redefinitions": 2
       },
       "drift": [
         {
@@ -3138,8 +3151,8 @@
       "sublabel": "not in snapshot",
       "kind": "pg-function",
       "source": {
-        "path": "supabase/migrations/20261102000000_record_trade_atomic.sql",
-        "line": 146
+        "path": "supabase/migrations/20261103000000_trades_slot_id.sql",
+        "line": 89
       }
     },
     {
@@ -5266,7 +5279,8 @@
           "supabase/migrations/20250118000000_create_trades.sql",
           "supabase/migrations/20251210000000_add_alpaca_order_id_to_trades.sql",
           "supabase/migrations/20260810000000_widen_draft_trade_quantity_numeric.sql",
-          "supabase/migrations/20261006000000_trades_funded_by_trade_id.sql"
+          "supabase/migrations/20261006000000_trades_funded_by_trade_id.sql",
+          "supabase/migrations/20261103000000_trades_slot_id.sql"
         ],
         "rlsEnabled": true
       },
@@ -6896,8 +6910,8 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('check_and_bump_rate_limit')",
       "callSites": [
-        "supabase/functions/record-trade/index.ts:146",
-        "supabase/functions/record-trade/index.ts:149"
+        "supabase/functions/record-trade/index.ts:163",
+        "supabase/functions/record-trade/index.ts:166"
       ]
     },
     {
@@ -6909,7 +6923,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('record_trade_atomic')",
       "callSites": [
-        "supabase/functions/record-trade/index.ts:421"
+        "supabase/functions/record-trade/index.ts:454"
       ]
     },
     {
@@ -6924,7 +6938,7 @@
         "id, user_id, symbol, entry_price, quantity, pick_number, slot_id"
       ],
       "callSites": [
-        "supabase/functions/record-trade/index.ts:186"
+        "supabase/functions/record-trade/index.ts:204"
       ]
     },
     {
@@ -6939,7 +6953,7 @@
         "id, slot_index, slot_count, price_min, price_max, category_id"
       ],
       "callSites": [
-        "supabase/functions/record-trade/index.ts:210"
+        "supabase/functions/record-trade/index.ts:229"
       ]
     },
     {
@@ -6954,7 +6968,7 @@
         "user_id"
       ],
       "callSites": [
-        "supabase/functions/record-trade/index.ts:311"
+        "supabase/functions/record-trade/index.ts:336"
       ]
     },
     {
@@ -6967,8 +6981,8 @@
       "payload": ".from('leagues').select()",
       "columns": [],
       "callSites": [
-        "supabase/functions/record-trade/index.ts:176",
-        "supabase/functions/record-trade/index.ts:298"
+        "supabase/functions/record-trade/index.ts:194",
+        "supabase/functions/record-trade/index.ts:323"
       ]
     },
     {
@@ -6983,7 +6997,7 @@
         "session_date, open_et, close_et"
       ],
       "callSites": [
-        "supabase/functions/record-trade/index.ts:126"
+        "supabase/functions/record-trade/index.ts:143"
       ]
     },
     {
@@ -6998,7 +7012,7 @@
         "covered_from, covered_through"
       ],
       "callSites": [
-        "supabase/functions/record-trade/index.ts:125"
+        "supabase/functions/record-trade/index.ts:142"
       ]
     },
     {
@@ -7013,7 +7027,7 @@
         "is_draftable"
       ],
       "callSites": [
-        "supabase/functions/record-trade/index.ts:380"
+        "supabase/functions/record-trade/index.ts:413"
       ]
     },
     {
@@ -7023,12 +7037,12 @@
       "from": "fn.record-trade",
       "to": "tbl.trades",
       "protocol": "postgrest-select",
-      "payload": ".from('trades').select('id, user_id, symbol, action, quantity, price, total_value, created_at, funded_by_trade_id')",
+      "payload": ".from('trades').select('id, user_id, symbol, action, quantity, price, total_value, created_at, funded_by_trade_id, slot_id')",
       "columns": [
-        "id, user_id, symbol, action, quantity, price, total_value, created_at, funded_by_trade_id"
+        "id, user_id, symbol, action, quantity, price, total_value, created_at, funded_by_trade_id, slot_id"
       ],
       "callSites": [
-        "supabase/functions/record-trade/index.ts:195"
+        "supabase/functions/record-trade/index.ts:213"
       ]
     },
     {
@@ -8991,8 +9005,10 @@
       "payload": "SELECT drafts (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261102000000_record_trade_atomic.sql:241",
-        "supabase/migrations/20261102000000_record_trade_atomic.sql:243"
+        "supabase/migrations/20261102000000_record_trade_atomic.sql:252",
+        "supabase/migrations/20261102000000_record_trade_atomic.sql:254",
+        "supabase/migrations/20261103000000_trades_slot_id.sql:190",
+        "supabase/migrations/20261103000000_trades_slot_id.sql:192"
       ]
     },
     {
@@ -9005,7 +9021,10 @@
       "payload": "SELECT league_draft_slots (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261102000000_record_trade_atomic.sql:271"
+        "supabase/migrations/20261102000000_record_trade_atomic.sql:282",
+        "supabase/migrations/20261103000000_trades_slot_id.sql:220",
+        "supabase/migrations/20261103000000_trades_slot_id.sql:246",
+        "supabase/migrations/20261103000000_trades_slot_id.sql:252"
       ]
     },
     {
@@ -9018,7 +9037,8 @@
       "payload": "SELECT league_members (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261102000000_record_trade_atomic.sql:212"
+        "supabase/migrations/20261102000000_record_trade_atomic.sql:223",
+        "supabase/migrations/20261103000000_trades_slot_id.sql:161"
       ]
     },
     {
@@ -9031,7 +9051,8 @@
       "payload": "SELECT leagues (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261102000000_record_trade_atomic.sql:203"
+        "supabase/migrations/20261102000000_record_trade_atomic.sql:214",
+        "supabase/migrations/20261103000000_trades_slot_id.sql:152"
       ]
     },
     {
@@ -9044,8 +9065,10 @@
       "payload": "SELECT trades (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261102000000_record_trade_atomic.sql:226",
-        "supabase/migrations/20261102000000_record_trade_atomic.sql:228"
+        "supabase/migrations/20261102000000_record_trade_atomic.sql:237",
+        "supabase/migrations/20261102000000_record_trade_atomic.sql:239",
+        "supabase/migrations/20261103000000_trades_slot_id.sql:175",
+        "supabase/migrations/20261103000000_trades_slot_id.sql:177"
       ]
     },
     {
@@ -9058,7 +9081,8 @@
       "payload": "INSERT trades (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261102000000_record_trade_atomic.sql:289"
+        "supabase/migrations/20261102000000_record_trade_atomic.sql:300",
+        "supabase/migrations/20261103000000_trades_slot_id.sql:258"
       ]
     },
     {
@@ -11913,7 +11937,7 @@
           "edge": "e.fn.record-trade->pg.check_and_bump_rate_limit",
           "detail": "Per-user and per-IP buckets.",
           "files": [
-            "supabase/functions/record-trade/index.ts:146"
+            "supabase/functions/record-trade/index.ts:163"
           ]
         },
         {
@@ -11921,8 +11945,8 @@
           "edge": "e.fn.record-trade->tbl.leagues",
           "detail": "League rules: stake mode, budget, notional, allow_undraftable.",
           "files": [
-            "supabase/functions/record-trade/index.ts:176",
-            "supabase/functions/record-trade/index.ts:298"
+            "supabase/functions/record-trade/index.ts:194",
+            "supabase/functions/record-trade/index.ts:323"
           ]
         },
         {
@@ -11930,7 +11954,7 @@
           "edge": "e.fn.record-trade->tbl.symbols",
           "detail": "is_draftable gate for buys (bypassed only when the commissioner set allow_undraftable).",
           "files": [
-            "supabase/functions/record-trade/index.ts:380"
+            "supabase/functions/record-trade/index.ts:413"
           ]
         },
         {
@@ -11938,7 +11962,7 @@
           "edge": "e.fn.record-trade->tbl.trades",
           "detail": "Validated by the shared pure module (_shared/draft-validation.ts), filled at the server-fetched price. KNOWN RACE: two concurrent buys can both pass validation — needs an atomic SECURITY DEFINER RPC.",
           "files": [
-            "supabase/functions/record-trade/index.ts:195"
+            "supabase/functions/record-trade/index.ts:213"
           ]
         }
       ],
@@ -12997,9 +13021,9 @@
       "supabase/functions/process-week-results/index.ts:171 -> league_standings_ranked",
       "supabase/functions/process-week-results/index.ts:202 -> start_league_playoffs",
       "supabase/functions/process-week-results/season-completion.ts:134 -> complete_league_season",
-      "supabase/functions/record-trade/index.ts:146 -> check_and_bump_rate_limit",
-      "supabase/functions/record-trade/index.ts:149 -> check_and_bump_rate_limit",
-      "supabase/functions/record-trade/index.ts:421 -> record_trade_atomic",
+      "supabase/functions/record-trade/index.ts:163 -> check_and_bump_rate_limit",
+      "supabase/functions/record-trade/index.ts:166 -> check_and_bump_rate_limit",
+      "supabase/functions/record-trade/index.ts:454 -> record_trade_atomic",
       "supabase/functions/refresh-market-calendar/index.ts:151 -> apply_market_calendar",
       "supabase/functions/send-notification/index.ts:101 -> check_and_bump_rate_limit",
       "supabase/functions/send-notification/index.ts:104 -> check_and_bump_rate_limit",
@@ -13179,15 +13203,15 @@
       "supabase/functions/process-week-results/job-status.ts:61 -> cron_job_status.upsert",
       "supabase/functions/process-week-results/season-completion.ts:173 -> leagues.select",
       "supabase/functions/process-week-results/season-completion.ts:192 -> matchups.select",
-      "supabase/functions/record-trade/index.ts:125 -> market_calendar_coverage.select",
-      "supabase/functions/record-trade/index.ts:126 -> market_calendar.select",
-      "supabase/functions/record-trade/index.ts:176 -> leagues.select",
-      "supabase/functions/record-trade/index.ts:186 -> drafts.select",
-      "supabase/functions/record-trade/index.ts:195 -> trades.select",
-      "supabase/functions/record-trade/index.ts:210 -> league_draft_slots.select",
-      "supabase/functions/record-trade/index.ts:298 -> leagues.select",
-      "supabase/functions/record-trade/index.ts:311 -> league_members.select",
-      "supabase/functions/record-trade/index.ts:380 -> symbols.select",
+      "supabase/functions/record-trade/index.ts:142 -> market_calendar_coverage.select",
+      "supabase/functions/record-trade/index.ts:143 -> market_calendar.select",
+      "supabase/functions/record-trade/index.ts:194 -> leagues.select",
+      "supabase/functions/record-trade/index.ts:204 -> drafts.select",
+      "supabase/functions/record-trade/index.ts:213 -> trades.select",
+      "supabase/functions/record-trade/index.ts:229 -> league_draft_slots.select",
+      "supabase/functions/record-trade/index.ts:323 -> leagues.select",
+      "supabase/functions/record-trade/index.ts:336 -> league_members.select",
+      "supabase/functions/record-trade/index.ts:413 -> symbols.select",
       "supabase/functions/refresh-symbols/index.ts:171 -> symbols.upsert",
       "supabase/functions/send-notification/index.ts:148 -> user_profiles.select",
       "supabase/functions/send-notification/index.ts:153 -> push_tokens.select",
@@ -13342,7 +13366,8 @@
       "20261101000000_draft_feasibility_pool.sql",
       "20261101000001_draft_stalls.sql",
       "20261101000003_draft_price_outages.sql",
-      "20261102000000_record_trade_atomic.sql"
+      "20261102000000_record_trade_atomic.sql",
+      "20261103000000_trades_slot_id.sql"
     ],
     "config": [
       "draft-autopick-sweep=false",

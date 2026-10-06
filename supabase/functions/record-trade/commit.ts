@@ -18,10 +18,13 @@
 // Pure: no supabase-js, no Deno.env. index.ts wires the real reads/RPC in,
 // the hermetic tests wire fakes, and the PGlite test wires real Postgres.
 import {
+  decideBuySlot,
+  describeSlots,
   type LeagueRules,
   type PickRow,
   type Slot,
   type TradeRow,
+  userSlotOccupancy,
   validateTradeAdd,
   validateTradeDrop,
 } from '../_shared/draft-validation.ts';
@@ -122,6 +125,11 @@ export interface LedgerState {
   /** Buy only: category eligibility for the symbol (not CAS'd — a global
    * fact, see the migration header). Empty set for a sell. */
   eligibleCategories: Set<string>;
+  /** Buy, category-slot leagues only: eligibility of the caller's UNATTRIBUTED
+   * held symbols, so a legacy position's slot can be derived (see
+   * userSlotOccupancy). Same global-fact status as eligibleCategories.
+   * Optional: absent = flex-only for every legacy position. */
+  heldEligibility?: Map<string, Set<string>>;
 }
 
 export interface Expectation {
@@ -170,6 +178,21 @@ export function expectationFor(state: LedgerState): Expectation {
 export interface TradePlan {
   quantity: number;
   fundedByTradeId: string | null;
+  /** The slot a buy takes in a slotted league (written to trades.slot_id by
+   * record_trade_atomic); null for a sell and for slot-less leagues. */
+  slotId: string | null;
+}
+
+/** A slot as the client sees it: numerics normalised, snake_case. */
+export function slotBody(s: Pick<Slot, 'id' | 'slotIndex' | 'slotCount' | 'priceMin' | 'priceMax' | 'categoryId'>) {
+  return {
+    slot_id: s.id,
+    slot_index: s.slotIndex,
+    slot_count: s.slotCount,
+    price_min: s.priceMin,
+    price_max: s.priceMax,
+    category_id: s.categoryId,
+  };
 }
 
 export interface TradeRequest {
@@ -211,7 +234,7 @@ export function decideTrade(req: TradeRequest, state: LedgerState): Step<TradePl
   if (req.action === 'sell') {
     const d = validateTradeDrop(req.userId, req.symbol, state.picks, state.trades);
     if (!d.legal) return { ok: false, reply: { status: 200, body: { ok: false, reason: d.reason } } };
-    return { ok: true, value: { quantity: d.quantity, fundedByTradeId: null } };
+    return { ok: true, value: { quantity: d.quantity, fundedByTradeId: null, slotId: null } };
   }
   const d = validateTradeAdd({
     rules: rulesFromLeague(state.league),
@@ -224,9 +247,59 @@ export function decideTrade(req: TradeRequest, state: LedgerState): Step<TradePl
     eligibleCategories: state.eligibleCategories,
     isDraftable: req.isDraftable,
     soldTradeId: req.soldTradeId,
+    heldEligibility: state.heldEligibility,
   });
-  if (!d.legal) return { ok: false, reply: { status: 200, body: { ok: false, reason: d.reason } } };
-  return { ok: true, value: { quantity: d.quantity, fundedByTradeId: d.fundedByTradeId ?? null } };
+  if (!d.legal) {
+    // no_eligible_slot carries what the client needs for its one-sentence
+    // refusal ("AAPL is $211.42. Your open slot takes stocks priced $100 to
+    // $200."): the fill price and the slots that still have room. An empty
+    // open_slots means every slot is held.
+    const body: Record<string, unknown> = { ok: false, reason: d.reason };
+    if (d.reason === 'no_eligible_slot') {
+      body.price = req.price;
+      body.open_slots = (d.openSlots ?? []).map(slotBody);
+    }
+    return { ok: false, reply: { status: 200, body } };
+  }
+  return {
+    ok: true,
+    value: { quantity: d.quantity, fundedByTradeId: d.fundedByTradeId ?? null, slotId: d.slotId ?? null },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Preview: the caller's slot map, and the slot a buy WOULD fill
+// ---------------------------------------------------------------------------
+
+/**
+ * Read-only slot view for the preview action (no vendor call, no write).
+ * `slots` is the caller's derived slot map — what Portfolio labels positions
+ * from ("· $100–$200 slot"). When the client supplies the quote it is showing
+ * (`probePrice`), `would_fill` is the slot a buy at that price would take, or
+ * null with `open_slots` naming what is still open — the same
+ * userSlotOccupancy/decideBuySlot a real buy runs, minus the budget/roster
+ * checks (the client shows those itself). ADVISORY: the buy re-validates
+ * against the live fill price and the live ledger.
+ */
+export function slotPreview(
+  state: LedgerState,
+  userId: string,
+  probePrice?: number,
+): Record<string, unknown> {
+  const slots = slotsFromRows(state.slots ?? []);
+  if (slots.length === 0) return { slots: [], unplaced: [] };
+  const occ = userSlotOccupancy(userId, slots, state.picks, state.trades, state.heldEligibility);
+  const view = describeSlots(slots, occ);
+  const out: Record<string, unknown> = {
+    slots: view.slots.map((v) => ({ ...slotBody(v.slot), held: v.held, open: v.open })),
+    unplaced: view.unplaced,
+  };
+  if (probePrice != null && Number.isFinite(probePrice) && probePrice > 0) {
+    const d = decideBuySlot(slots, occ, probePrice, state.eligibleCategories);
+    out.would_fill = d.ok ? slotBody(d.slot) : null;
+    if (!d.ok) out.open_slots = d.openSlots.map(slotBody);
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -303,7 +376,14 @@ export async function commitWithRetry(
 
     const result = (data ?? null) as { ok?: unknown; reason?: unknown; trade?: unknown; changed?: unknown } | null;
     if (result?.ok === true) {
-      return { status: 200, body: { ok: true, trade: result.trade ?? null } };
+      const body: Record<string, unknown> = { ok: true, trade: result.trade ?? null };
+      // The slot the buy filled, so the confirmation can say "Filled your
+      // $100–$200 slot". Looked up from the state the plan was decided on.
+      const filled = decision.value.slotId
+        ? slotsFromRows(state.slots ?? []).find((x) => x.id === decision.value.slotId)
+        : undefined;
+      if (filled) body.slot = slotBody(filled);
+      return { status: 200, body };
     }
     const reason = typeof result?.reason === 'string' ? result.reason : null;
     if (reason === 'ledger_changed') {

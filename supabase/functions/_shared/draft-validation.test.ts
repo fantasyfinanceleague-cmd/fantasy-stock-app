@@ -17,6 +17,7 @@
 import { assert, assertEquals } from 'jsr:@std/assert';
 import {
   assignSlot,
+  describeSlots,
   checkStoredOrder,
   effectiveCategoryIds,
   currentTurn,
@@ -34,6 +35,8 @@ import {
   userNetHoldings,
   validatePick,
   validateSkip,
+  unattributedHeldSymbols,
+  userSlotOccupancy,
   validateTradeAdd,
   validateTradeDrop,
 } from './draft-validation.ts';
@@ -510,11 +513,260 @@ Deno.test('validateTradeAdd: dropped pick frees its tier slot for the add', () =
   const picks = [pick('a', 'CHEAP', 20, { slot_id: 's-low' })];
   // Slot occupied while CHEAP is held:
   let d = validateTradeAdd({ rules: r, slots: TIER_SLOTS, picks, trades: [], userId: 'a', symbol: 'PENNY', price: 30, eligibleCategories: NO_CATS });
-  assertEquals(d, { legal: false, reason: 'no_eligible_slot' });
-  // Dropping CHEAP frees s-low, so the 30 add fits:
+  // refused, and the decision names the slots that ARE open (s-low is held)
+  assert(!d.legal && d.reason === 'no_eligible_slot');
+  assertEquals(d.openSlots?.map((x) => x.id), ['s-mid', 's-high']);
+  // Dropping CHEAP frees s-low, so the 30 add fits — and takes s-low:
   const trades = [trade('a', 'CHEAP', 'sell', 1, 21)];
   d = validateTradeAdd({ rules: r, slots: TIER_SLOTS, picks, trades, userId: 'a', symbol: 'PENNY', price: 30, eligibleCategories: NO_CATS });
   assert(d.legal);
+  assertEquals(d.slotId, 's-low');
+});
+
+
+// ---------------------------------------------------------------------------
+// Tier slots across trades (tier-trade-slots, 2026-10-06 — option A "Replace
+// in the same tier"). Occupancy is per HELD position over drafts AND trades.
+// ---------------------------------------------------------------------------
+
+const LO_HI: Slot[] = [
+  slot('lo', 0, { priceMin: 0, priceMax: 200 }),
+  slot('hi', 1, { priceMin: 200, priceMax: null }),
+];
+const TIERS = rules({ stakeMode: 'price_tiers', numRounds: 4 });
+const tradeAdd = (
+  over: Partial<Parameters<typeof validateTradeAdd>[0]> & { picks: PickRow[]; trades: TradeRow[]; symbol: string; price: number },
+) => validateTradeAdd({ rules: TIERS, slots: LO_HI, userId: 'a', eligibleCategories: NO_CATS, ...over });
+
+Deno.test('tier trades: THE REPRO — NVDA in hi, MSFT bought at $100 filling lo, buying GOOG at $150 is REFUSED', () => {
+  freshPicks();
+  const picks = [pick('a', 'NVDA', 900, { slot_id: 'hi' })];
+  // post-fix row: the buy recorded its slot
+  const recorded = [trade('a', 'MSFT', 'buy', 1, 100, { slot_id: 'lo', created_at: '2026-10-01T15:00:00Z' })];
+  // pre-fix row: no slot recorded — derived by entry price (first-fit) to lo
+  const legacy = [trade('a', 'MSFT', 'buy', 1, 100, { created_at: '2026-10-01T15:00:00Z' })];
+  for (const trades of [recorded, legacy]) {
+    const d = tradeAdd({ picks, trades, symbol: 'GOOG', price: 150 });
+    assert(!d.legal && d.reason === 'no_eligible_slot', JSON.stringify(d));
+    assertEquals(d.openSlots, [], 'both slots held: nothing is open');
+  }
+});
+
+Deno.test('tier trades: sell then a buy that fits the freed tier is legal and TAKES that slot', () => {
+  freshPicks();
+  const picks = [pick('a', 'NVDA', 900, { slot_id: 'hi' }), pick('a', 'CHEAP', 20, { slot_id: 'lo' })];
+  const trades = [trade('a', 'CHEAP', 'sell', 1, 25, { created_at: '2026-10-01T15:00:00Z' })];
+  const d = tradeAdd({ picks, trades, symbol: 'GOOG', price: 150 });
+  assert(d.legal);
+  assertEquals(d.slotId, 'lo');
+  // ...and a buy that only fits the OTHER tier is still refused (hi is held)
+  const d2 = tradeAdd({ picks, trades, symbol: 'BRK', price: 450 });
+  assert(!d2.legal && d2.reason === 'no_eligible_slot');
+  assertEquals(d2.openSlots?.map((x) => x.id), ['lo'], 'the only open slot is lo — what the client names');
+});
+
+Deno.test('tier trades: a freed tier does NOT take a stock priced for a different tier', () => {
+  freshPicks();
+  const picks = [pick('a', 'NVDA', 900, { slot_id: 'hi' }), pick('a', 'CHEAP', 20, { slot_id: 'lo' })];
+  // sold the hi-tier stock; $211.42 fits hi's floor of $200, so it replaces in hi
+  const trades = [trade('a', 'NVDA', 'sell', 1, 950, { created_at: '2026-10-01T15:00:00Z' })];
+  const ok = tradeAdd({ picks, trades, symbol: 'AAPL', price: 211.42 });
+  assert(ok.legal);
+  assertEquals(ok.slotId, 'hi');
+  // but a $150 stock cannot use the freed HI slot (and lo is held by CHEAP)
+  const no = tradeAdd({ picks, trades, symbol: 'MSFT', price: 150 });
+  assert(!no.legal && no.reason === 'no_eligible_slot');
+  assertEquals(no.openSlots?.map((x) => x.id), ['hi']);
+});
+
+Deno.test('tier trades: a buy into a tier whose stock is STILL HELD is refused', () => {
+  freshPicks();
+  const picks = [pick('a', 'CHEAP', 20, { slot_id: 'lo' })];
+  const d = tradeAdd({ picks, trades: [], symbol: 'MSFT', price: 100 });
+  assert(!d.legal && d.reason === 'no_eligible_slot');
+  assertEquals(d.openSlots?.map((x) => x.id), ['hi']);
+});
+
+Deno.test('tier trades: the tier is set by the ENTRY price — a recorded slot is never re-derived', () => {
+  freshPicks();
+  // bought at $100 into lo; whatever it trades at now (say $260 = hi's range)
+  // is irrelevant: the validator never sees current prices, only entry rows.
+  const trades = [trade('a', 'MSFT', 'buy', 1, 100, { slot_id: 'lo', created_at: '2026-10-01T15:00:00Z' })];
+  assertEquals(userSlotOccupancy('a', LO_HI, [], trades).bySymbol.get('MSFT'), 'lo');
+  assert(!tradeAdd({ picks: [], trades, symbol: 'X', price: 120 }).legal, 'lo stays held');
+  const hi = tradeAdd({ picks: [], trades, symbol: 'Y', price: 260 });
+  assert(hi.legal);
+  assertEquals(hi.slotId, 'hi');
+  // a RECORDED slot wins over what the entry price alone would derive
+  // (boundary buy first-fit to lo at the time; recorded as hi afterwards)
+  const odd = [trade('a', 'Z', 'buy', 1, 100, { slot_id: 'hi', created_at: '2026-10-01T15:00:00Z' })];
+  assertEquals(userSlotOccupancy('a', LO_HI, [], odd).bySymbol.get('Z'), 'hi');
+});
+
+Deno.test('tier trades: draft NVDA, sell it, buy NVDA back — counts the BUY slot once, not the old pick again', () => {
+  freshPicks();
+  const picks = [pick('a', 'NVDA', 900, { slot_id: 'hi' })];
+  const trades = [
+    trade('a', 'NVDA', 'sell', 1, 880, { created_at: '2026-10-01T15:00:00Z' }),
+    trade('a', 'NVDA', 'buy', 1, 150, { slot_id: 'lo', created_at: '2026-10-02T15:00:00Z' }),
+  ];
+  const occ = userSlotOccupancy('a', LO_HI, picks, trades);
+  assertEquals(occ.bySymbol.get('NVDA'), 'lo');
+  assertEquals([...occ.bySlot], [['lo', ['NVDA']]], 'hi is FREE — the old pick no longer counts');
+  assert(tradeAdd({ picks, trades, symbol: 'BRK', price: 450 }).legal);
+});
+
+Deno.test('tier trades: legacy unslotted trade buys are attributed deterministically (first-fit by entry price)', () => {
+  freshPicks();
+  const slots = [
+    slot('t0', 0, { priceMin: 0, priceMax: 100 }),
+    slot('t1', 1, { priceMin: 100, priceMax: 200 }),
+    slot('t2', 2, { priceMin: 200, priceMax: null }),
+  ];
+  const picks = [pick('a', 'DRAFTED', 150, { slot_id: 't1' })];
+  const trades = [
+    trade('a', 'LOW', 'buy', 1, 40, { created_at: '2026-10-01T15:00:00Z' }),
+    trade('a', 'TOP', 'buy', 1, 500, { created_at: '2026-10-02T15:00:00Z' }),
+  ];
+  const expected = new Map([['DRAFTED', 't1'], ['LOW', 't0'], ['TOP', 't2']]);
+  assertEquals(userSlotOccupancy('a', slots, picks, trades).bySymbol, expected);
+  // independent of input array order (chronology + pick_number decide, not position)
+  assertEquals(userSlotOccupancy('a', slots, [...picks].reverse(), [...trades].reverse()).bySymbol, expected);
+  // every slot held -> nothing opens up
+  assert(!validateTradeAdd({ rules: TIERS, slots, picks, trades, userId: 'a', symbol: 'N', price: 150, eligibleCategories: NO_CATS }).legal);
+});
+
+Deno.test('tier trades: a legacy attribution is stable when a later buy records its slot', () => {
+  freshPicks();
+  const slots = [slot('s0', 0, { priceMax: 200 }), slot('s1', 1, { priceMax: 200 })];
+  const legacy = [trade('a', 'OLD', 'buy', 1, 100, { created_at: '2026-10-01T15:00:00Z' })];
+  assertEquals(userSlotOccupancy('a', slots, [], legacy).bySymbol.get('OLD'), 's0');
+  const d = validateTradeAdd({ rules: TIERS, slots, picks: [], trades: legacy, userId: 'a', symbol: 'NEW', price: 100, eligibleCategories: NO_CATS });
+  assert(d.legal);
+  assertEquals(d.slotId, 's1', 'the new buy takes the slot legacy attribution left free');
+  const after = [...legacy, trade('a', 'NEW', 'buy', 1, 100, { slot_id: 's1', created_at: '2026-10-02T15:00:00Z' })];
+  const occ = userSlotOccupancy('a', slots, [], after);
+  assertEquals([occ.bySymbol.get('OLD'), occ.bySymbol.get('NEW')], ['s0', 's1']);
+});
+
+Deno.test('tier trades: legacy OVERFLOW (two stocks in a one-share tier) never strands — sell either reopens', () => {
+  freshPicks();
+  // The pre-fix bug let this happen: A holds NVDA (hi) and, via two legacy
+  // buys, two stocks that both belong in lo.
+  const picks = [pick('a', 'NVDA', 900, { slot_id: 'hi' })];
+  const trades = [
+    trade('a', 'MSFT', 'buy', 1, 100, { created_at: '2026-10-01T15:00:00Z' }),
+    trade('a', 'GOOG', 'buy', 1, 150, { created_at: '2026-10-02T15:00:00Z' }),
+  ];
+  const occ = userSlotOccupancy('a', LO_HI, picks, trades);
+  assertEquals(occ.bySlot.get('lo'), ['MSFT', 'GOOG'], 'both sit in lo — over capacity, not dropped');
+  const blocked = tradeAdd({ picks, trades, symbol: 'IBM', price: 120 });
+  assert(!blocked.legal && blocked.reason === 'no_eligible_slot', 'no new buy into lo while it is over capacity');
+  // ... but SELLING is never blocked by slots
+  assert(validateTradeDrop('a', 'MSFT', picks, trades).legal);
+  assert(validateTradeDrop('a', 'GOOG', picks, trades).legal);
+  // after selling EITHER one, lo holds exactly one stock: still closed (it is
+  // genuinely held), and selling the survivor reopens it
+  const soldMsft = [...trades, trade('a', 'MSFT', 'sell', 1, 110, { created_at: '2026-10-03T15:00:00Z' })];
+  assertEquals(userSlotOccupancy('a', LO_HI, picks, soldMsft).bySlot.get('lo'), ['GOOG']);
+  assert(!tradeAdd({ picks, trades: soldMsft, symbol: 'IBM', price: 120 }).legal);
+  const soldBoth = [...soldMsft, trade('a', 'GOOG', 'sell', 1, 160, { created_at: '2026-10-04T15:00:00Z' })];
+  const reopened = tradeAdd({ picks, trades: soldBoth, symbol: 'IBM', price: 120 });
+  assert(reopened.legal);
+  assertEquals(reopened.slotId, 'lo');
+});
+
+Deno.test('tier trades: a held position no slot accepts occupies nothing (and is reported as unplaced)', () => {
+  freshPicks();
+  const slots = [slot('only', 0, { priceMin: 0, priceMax: 100 })];
+  const trades = [trade('a', 'BIG', 'buy', 1, 500, { created_at: '2026-10-01T15:00:00Z' })];
+  const occ = userSlotOccupancy('a', slots, [], trades);
+  assertEquals(occ.bySymbol.get('BIG'), null);
+  assertEquals(describeSlots(slots, occ).unplaced, ['BIG']);
+  assert(validateTradeAdd({ rules: TIERS, slots, picks: [], trades, userId: 'a', symbol: 'C', price: 50, eligibleCategories: NO_CATS }).legal);
+});
+
+Deno.test('tier trades: when several FREE slots fit, the lowest slot_index wins (shared inclusive boundary)', () => {
+  freshPicks();
+  const slots = [
+    slot('lo', 0, { priceMin: 0, priceMax: 100 }),
+    slot('mid', 1, { priceMin: 100, priceMax: 200 }),
+  ];
+  const first = validateTradeAdd({ rules: TIERS, slots, picks: [], trades: [], userId: 'a', symbol: 'A', price: 100, eligibleCategories: NO_CATS });
+  assert(first.legal);
+  assertEquals(first.slotId, 'lo');
+  // with lo held, the same $100 price takes mid
+  const held = [trade('a', 'X', 'buy', 1, 50, { slot_id: 'lo', created_at: '2026-10-01T15:00:00Z' })];
+  const second = validateTradeAdd({ rules: TIERS, slots, picks: [], trades: held, userId: 'a', symbol: 'A', price: 100, eligibleCategories: NO_CATS });
+  assert(second.legal);
+  assertEquals(second.slotId, 'mid');
+  // tier judgement uses tierPrice (cents), same as the draft gate: $100.004 -> $100.00 fits lo
+  const cents = validateTradeAdd({ rules: TIERS, slots, picks: [], trades: [], userId: 'a', symbol: 'A', price: 100.004, eligibleCategories: NO_CATS });
+  assert(cents.legal);
+  assertEquals(cents.slotId, 'lo');
+});
+
+Deno.test('tier trades: a deleted slot (slot_id no longer exists) is derived like a legacy row', () => {
+  freshPicks();
+  const picks = [pick('a', 'GONE', 40, { slot_id: 'deleted-slot' })];
+  const occ = userSlotOccupancy('a', LO_HI, picks, []);
+  assertEquals(occ.bySymbol.get('GONE'), 'lo');
+});
+
+Deno.test('tier trades: category slots — legacy positions use the supplied eligibility, buys use eligibleCategories', () => {
+  freshPicks();
+  const slots = [
+    slot('tech', 0, { categoryId: 'cat-tech' }),
+    slot('flex', 1),
+  ];
+  const trades = [trade('a', 'MSFT', 'buy', 1, 100, { created_at: '2026-10-01T15:00:00Z' })];
+  const techElig = new Map([['MSFT', new Set(['cat-tech'])]]);
+  assertEquals(userSlotOccupancy('a', slots, [], trades, techElig).bySymbol.get('MSFT'), 'tech');
+  // no eligibility supplied = unclassified = flex-only
+  assertEquals(userSlotOccupancy('a', slots, [], trades).bySymbol.get('MSFT'), 'flex');
+  // the tech slot is held, so a second TECH stock is refused...
+  const d = validateTradeAdd({
+    rules: TIERS, slots, picks: [], trades, userId: 'a', symbol: 'ORCL', price: 90,
+    eligibleCategories: new Set(['cat-tech']), heldEligibility: techElig,
+  });
+  assert(d.legal);
+  assertEquals(d.slotId, 'flex', 'falls through to the free flex slot');
+  const both = [...trades, trade('a', 'ORCL', 'buy', 1, 90, { slot_id: 'flex', created_at: '2026-10-02T15:00:00Z' })];
+  const full = validateTradeAdd({
+    rules: TIERS, slots, picks: [], trades: both, userId: 'a', symbol: 'AMD', price: 90,
+    eligibleCategories: new Set(['cat-tech']), heldEligibility: techElig,
+  });
+  assert(!full.legal && full.reason === 'no_eligible_slot');
+});
+
+Deno.test('tier trades: unattributedHeldSymbols lists exactly the positions that need derivation', () => {
+  freshPicks();
+  const picks = [pick('a', 'REC', 10, { slot_id: 'lo' }), pick('a', 'OLDPICK', 300, { slot_id: null })];
+  const trades = [
+    trade('a', 'LEGACY', 'buy', 1, 90, { created_at: '2026-10-01T15:00:00Z' }),
+    trade('a', 'NEW', 'buy', 1, 250, { slot_id: 'hi', created_at: '2026-10-02T15:00:00Z' }),
+    trade('a', 'REC', 'sell', 1, 11, { created_at: '2026-10-03T15:00:00Z' }), // sold: not held
+    trade('b', 'OTHER', 'buy', 1, 50, { created_at: '2026-10-03T15:00:00Z' }), // someone else's
+  ];
+  assertEquals(unattributedHeldSymbols('a', LO_HI, picks, trades).sort(), ['LEGACY', 'OLDPICK']);
+});
+
+Deno.test('tier trades: describeSlots reports held symbols and free capacity per slot', () => {
+  freshPicks();
+  const slots = [slot('lo', 0, { priceMax: 200, slotCount: 2 }), slot('hi', 1, { priceMin: 200 })];
+  const trades = [trade('a', 'MSFT', 'buy', 1, 100, { slot_id: 'lo', created_at: '2026-10-01T15:00:00Z' })];
+  const v = describeSlots(slots, userSlotOccupancy('a', slots, [], trades));
+  assertEquals(v.slots.map((x) => [x.slot.id, x.held, x.open]), [['lo', ['MSFT'], 1], ['hi', [], 1]]);
+  assertEquals(v.unplaced, []);
+});
+
+Deno.test('tier trades: slot-less leagues are untouched (no slotId, no occupancy work)', () => {
+  freshPicks();
+  const d = validateTradeAdd({
+    rules: rules({ numRounds: 3 }), slots: [], picks: [pick('a', 'AAA', 10)], trades: [],
+    userId: 'a', symbol: 'BBB', price: 20, eligibleCategories: NO_CATS,
+  });
+  assertEquals(d, { legal: true, quantity: 1 });
 });
 
 Deno.test('validateTradeDrop: whole position, refused when not owned', () => {

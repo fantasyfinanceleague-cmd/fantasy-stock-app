@@ -16,6 +16,13 @@
 //   caller may name which of their own open sales to reinvest via
 //   `sold_trade_id`; omitted = server default (oldest unclaimed, FIFO).
 //
+//   Slotted leagues (price_tiers / category; 2026-10-06, "Replace in the same
+//   tier"): a buy must fit a FREE slot by its price and takes it (written to
+//   trades.slot_id through record_trade_atomic); selling frees that stock's
+//   slot; the tier is set by the ENTRY price and never moves. Refusal is
+//   no_eligible_slot + `price` + `open_slots` (the slots that still have room).
+//   See userSlotOccupancy in ../_shared/draft-validation.ts.
+//
 // DROP ('sell'): legal iff the caller's net position is > 0; always sells the
 //   ENTIRE position at the current quote, freeing the symbol league-wide.
 //
@@ -23,7 +30,10 @@
 //   state for the league (open sale proceeds + unfilled-slot count + the
 //   league's stake) so a client can build the "reinvest which sale?" picker
 //   without re-deriving the walk itself. No vendor call, no write. Other
-//   stake modes get an empty/zero shape back.
+//   stake modes get an empty/zero shape back. For slotted leagues it also
+//   returns `slots` (the caller's slot map: each slot + the symbols held in it
+//   + free capacity), `unplaced`, and — given `price` — `would_fill` (the slot a
+//   buy at that price would take, or null + `open_slots`).
 //
 // CONCURRENCY (2026-10-05): validation runs here in TS, but the INSERT is
 //   record_trade_atomic — a league-wide lock + compare-and-swap of every
@@ -52,8 +62,13 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { fetchFillPrice } from '../_shared/alpaca-price.ts';
-import { fetchEligibleCategoryIds } from '../_shared/category-eligibility.ts';
-import { fixedNotionalFunding, type TradeRow, validateTradeDrop } from '../_shared/draft-validation.ts';
+import { fetchEligibleCategoryIds, fetchEligibleCategoryIdsBatch } from '../_shared/category-eligibility.ts';
+import {
+  fixedNotionalFunding,
+  type TradeRow,
+  unattributedHeldSymbols,
+  validateTradeDrop,
+} from '../_shared/draft-validation.ts';
 import {
   commitWithRetry,
   decideTrade,
@@ -63,6 +78,8 @@ import {
   readAllPages,
   type Reply,
   type SlotRow,
+  slotPreview,
+  slotsFromRows,
   type Step,
   type TradeRequest,
   unhandled,
@@ -169,6 +186,7 @@ async function readLedger(
   admin: any,
   leagueId: string,
   symbol: string,
+  userId: string,
   withSlots: boolean,
   league: LeagueRow | null,
 ): Promise<Step<LedgerState>> {
@@ -193,7 +211,7 @@ async function readLedger(
 
   const tradesRes = await readAllPages<TradeRow>((from, to) =>
     admin.from('trades')
-      .select('id, user_id, symbol, action, quantity, price, total_value, created_at, funded_by_trade_id', { count: 'exact' })
+      .select('id, user_id, symbol, action, quantity, price, total_value, created_at, funded_by_trade_id, slot_id', { count: 'exact' })
       .eq('league_id', leagueId)
       .order('created_at', { ascending: true }).order('id', { ascending: true })
       .range(from, to)
@@ -205,6 +223,7 @@ async function readLedger(
 
   let slots: SlotRow[] | null = null;
   let eligibleCategories = new Set<string>();
+  let heldEligibility: Map<string, Set<string>> | undefined;
   if (withSlots) {
     const { data: slotData, error: sErr } = await admin
       .from('league_draft_slots')
@@ -215,11 +234,17 @@ async function readLedger(
     slots = (slotData ?? []) as SlotRow[];
     // Category eligibility only when this league has category slots.
     if (slots.some((s) => s.category_id != null)) {
-      eligibleCategories = await fetchEligibleCategoryIds(admin, symbol);
+      if (symbol) eligibleCategories = await fetchEligibleCategoryIds(admin, symbol);
+      // A caller's UNATTRIBUTED held positions (pre-fix trade buys, or a deleted
+      // slot) are placed by entry price + category, so their eligibility is
+      // needed too — at most num_rounds symbols, three reads total. Global
+      // facts, not CAS'd, same as the buy symbol's own eligibility.
+      const legacy = unattributedHeldSymbols(userId, slotsFromRows(slots), picksRes.rows, trades);
+      if (legacy.length > 0) heldEligibility = await fetchEligibleCategoryIdsBatch(admin, legacy);
     }
   }
 
-  return { ok: true, value: { league, picks: picksRes.rows, trades, slots, eligibleCategories } };
+  return { ok: true, value: { league, picks: picksRes.rows, trades, slots, eligibleCategories, heldEligibility } };
 }
 
 Deno.serve(async (req: Request) => {
@@ -317,7 +342,9 @@ Deno.serve(async (req: Request) => {
     if (!member) return json({ ok: false, reason: 'not_a_member' }, 403);
 
     // ---- Positions (+ slots/eligibility for a buy) --------------------------
-    const first = await readLedger(admin, leagueId, symbol, action === 'buy', league as LeagueRow);
+    // Slots are read for a buy (to validate) and for a preview (to report the
+    // caller's slot map / the slot a buy would fill); a sell never reads them.
+    const first = await readLedger(admin, leagueId, symbol, user.id, action === 'buy' || action === 'preview', league as LeagueRow);
     if (!first.ok) return json(first.reply.body, first.reply.status);
     const { picks, trades } = first.value;
 
@@ -331,8 +358,13 @@ Deno.serve(async (req: Request) => {
       // null (fail-soft) when the calendar itself couldn't be read/decided —
       // see marketLabel's doc for why a guessed status is worse than none.
       const market = gate ? marketLabel(gate) : null;
+      // Slotted leagues (price_tiers / category): the caller's slot map, and —
+      // when the client sends the quote it is showing as `price` (+ `symbol`
+      // for category leagues) — the slot a buy would fill. Advisory only.
+      const probePrice = body.price == null ? undefined : Number(body.price);
+      const slotInfo = slotPreview(first.value, user.id, probePrice);
       if (league.stake_mode !== 'fixed_notional') {
-        return json({ ok: true, stake_mode: league.stake_mode ?? null, stake: null, unfilled_slots: 0, sources: [], market });
+        return json({ ok: true, stake_mode: league.stake_mode ?? null, stake: null, unfilled_slots: 0, sources: [], market, ...slotInfo });
       }
       const notional = league.notional_per_slot == null ? 1000 : Number(league.notional_per_slot);
       const funding = fixedNotionalFunding(user.id, picks, trades);
@@ -343,6 +375,7 @@ Deno.serve(async (req: Request) => {
         unfilled_slots: funding.unfilledSlots,
         sources: funding.open.map((o) => ({ trade_id: o.tradeId, symbol: o.symbol, amount: o.amount })),
         market,
+        ...slotInfo,
       });
     }
 
@@ -409,7 +442,7 @@ Deno.serve(async (req: Request) => {
     // skipped-slot double buy, are all closed by the CAS. The
     // trades_funded_by_trade_id_unique index stays as a second layer.
     const reply: Reply = await commitWithRetry({
-      readState: () => readLedger(admin, leagueId, symbol, action === 'buy', null),
+      readState: () => readLedger(admin, leagueId, symbol, user.id, action === 'buy', null),
       decide: (state) => decideTrade(request, state),
       marketRecheck: () => {
         const recheckGate = decideMarketGate(new Date(), marketReads!.sessions, marketReads!.coverage);
@@ -431,6 +464,7 @@ Deno.serve(async (req: Request) => {
           p_seen_draft_ids: expect.seenDraftIds,
           p_rules: expect.rules,
           p_slots: expect.slots,
+          p_slot_id: plan.slotId, // slotted-league buy: the slot it takes (null otherwise)
         }),
       log: (msg, detail) => console.warn('record-trade:', msg, detail === undefined ? '' : JSON.stringify(detail)),
     }, { firstState: first.value });

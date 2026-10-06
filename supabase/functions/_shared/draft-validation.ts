@@ -106,6 +106,11 @@ export interface TradeRow {
   /** fixed_notional only: the SELL this BUY reinvests. See the NULL
    * DISCIPLINE note on fixedNotionalFunding() below. */
   funded_by_trade_id?: string | null;
+  /** Slotted leagues (price_tiers / category): the tier slot this BUY took,
+   * written by record-trade through record_trade_atomic. NULL on a buy means
+   * "unattributed" — a pre-fix row, or its slot was deleted — and the slot is
+   * derived at read time (see slotOccupancy below). Never set on a sell. */
+  slot_id?: string | null;
 }
 
 export const SKIP_SYMBOL = 'SKIP';
@@ -296,9 +301,10 @@ export function slotAccepts(slot: Slot, price: number, eligibility: Set<string>)
 
 /**
  * First-fit slot assignment: slots ordered by slot_index; a slot has
- * remaining capacity while fewer than slotCount of the user's ACTIVE picks
- * occupy it. `occupiedSlotIds` = slot_id of the user's active (non-SKIP,
- * not-fully-dropped) picks; legacy picks with no slot_id occupy nothing.
+ * remaining capacity while fewer than slotCount of the user's ACTIVE
+ * positions occupy it. `occupiedSlotIds` = one entry per held position's slot:
+ * at draft time the slot_id of the user's non-SKIP picks; post-draft the
+ * output of userSlotOccupancy (drafted AND trade-bought positions).
  * Returns the slot, or null when no unfilled slot accepts the price.
  */
 export function assignSlot(
@@ -317,6 +323,215 @@ export function assignSlot(
     if (slotAccepts(slot, price, eligibility)) return slot;
   }
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// Slot occupancy of HELD positions (tier-trade-slots, 2026-10-06)
+//
+// Product rule (Giorgio, board #call-tier-trades, option A "Replace in the same
+// tier"): selling a stock frees THAT stock's slot; a buy must fit a FREE slot
+// by its entry price and takes it; the tier is set by the ENTRY price and never
+// moves when the price later drifts.
+//
+// THE BUG THIS REPLACES: post-draft occupancy was counted from drafts.slot_id
+// only, so a trade-bought position held no slot and a second stock could be
+// bought into an already-filled one-share tier. Occupancy is now computed per
+// HELD POSITION across BOTH acquisition paths, from the event that OPENED the
+// position: the user's last BUY of the symbol (trades.slot_id), else the draft
+// pick (drafts.slot_id). A whole-position sell closes the position and frees
+// its slot; symbol_owned stops anyone adding to a position they hold, so every
+// held symbol has exactly one opening event. (This also means draft NVDA, sell
+// it, buy NVDA back counts the BUY's slot once, not the old pick's again.)
+//
+// LEGACY / UNATTRIBUTED positions: a slot_id of NULL (every trade-bought
+// position before this fix, or a position whose slot row was deleted) is an
+// unattributed position, and its slot is DERIVED at read time rather than
+// backfilled — the same discipline as funded_by_trade_id (replay, don't
+// rewrite history). Positions with a recorded slot are placed first (recorded
+// facts are never moved); then each unattributed position, picks by
+// pick_number then trades chronologically, takes the first slot by slot_index
+// that accepts its ENTRY price + category and still has capacity (the same
+// first-fit assignSlot uses). If a manager already holds more stocks in a tier
+// than it has capacity (two legacy stocks in a one-share tier) the extra goes
+// OVER capacity into the first slot that accepts it, so the tier stays closed
+// to new buys until the manager sells down; selling either stock re-derives
+// and reopens it. A position no slot accepts occupies nothing. Nobody is
+// stranded: a sell never checks slots.
+// ---------------------------------------------------------------------------
+
+/** One held position's opening event (what fixes its slot). */
+interface HeldPosition {
+  symbol: string;
+  entryPrice: number;
+  recordedSlotId: string | null;
+  /** deterministic attribution order: picks (by pick_number) before trades (chronological) */
+  order: [number, number];
+}
+
+function chronological(trades: TradeRow[], userId: string): TradeRow[] {
+  return trades
+    .map((t, i) => ({ t, i }))
+    .filter(({ t }) => String(t.user_id) === userId)
+    .sort((a, b) => {
+      const ta = a.t.created_at ? Date.parse(a.t.created_at) : 0;
+      const tb = b.t.created_at ? Date.parse(b.t.created_at) : 0;
+      return ta - tb || a.i - b.i;
+    })
+    .map(({ t }) => t);
+}
+
+function heldPositions(userId: string, picks: PickRow[], trades: TradeRow[]): HeldPosition[] {
+  const held = userNetHoldings(userId, picks, trades);
+  const lastBuy = new Map<string, { row: TradeRow; seq: number }>();
+  chronological(trades, userId).forEach((t, seq) => {
+    if (t.action === 'buy') lastBuy.set(t.symbol.toUpperCase(), { row: t, seq });
+  });
+  const lastPick = new Map<string, PickRow>();
+  for (const p of picks) {
+    if (isSkip(p) || String(p.user_id) !== userId) continue;
+    const sym = p.symbol.toUpperCase();
+    const prev = lastPick.get(sym);
+    if (!prev || Number(p.pick_number) >= Number(prev.pick_number)) lastPick.set(sym, p);
+  }
+  const out: HeldPosition[] = [];
+  for (const sym of held.keys()) {
+    const buy = lastBuy.get(sym);
+    if (buy) {
+      out.push({
+        symbol: sym,
+        entryPrice: Number(buy.row.price),
+        recordedSlotId: buy.row.slot_id ?? null,
+        order: [1, buy.seq],
+      });
+      continue;
+    }
+    const pk = lastPick.get(sym);
+    if (pk) {
+      out.push({
+        symbol: sym,
+        entryPrice: Number(pk.entry_price),
+        recordedSlotId: pk.slot_id ?? null,
+        order: [0, Number(pk.pick_number) || 0],
+      });
+    }
+  }
+  return out;
+}
+
+export interface SlotOccupancy {
+  /** slot id -> symbols held there, in placement order. May exceed the slot's
+   * slotCount (a legacy overflow). */
+  bySlot: Map<string, string[]>;
+  /** symbol -> slot id, or null for a held position no slot accepts. */
+  bySymbol: Map<string, string | null>;
+}
+
+const NO_ELIGIBILITY = new Set<string>();
+
+/**
+ * Which slot each of the user's HELD positions occupies — see the block
+ * comment above for the attribution rules. `eligibilityBySymbol` is only read
+ * for UNATTRIBUTED positions in leagues with category slots (a missing entry
+ * means unclassified = flex-only, same as everywhere else).
+ */
+export function userSlotOccupancy(
+  userId: string,
+  slots: Slot[],
+  picks: PickRow[],
+  trades: TradeRow[],
+  eligibilityBySymbol: Map<string, Set<string>> = new Map(),
+): SlotOccupancy {
+  const ordered = [...slots].sort((a, b) => a.slotIndex - b.slotIndex);
+  const known = new Set(slots.map((s) => s.id));
+  const bySlot = new Map<string, string[]>();
+  const bySymbol = new Map<string, string | null>();
+  const place = (sym: string, slotId: string | null) => {
+    bySymbol.set(sym, slotId);
+    if (slotId) bySlot.set(slotId, [...(bySlot.get(slotId) ?? []), sym]);
+  };
+
+  const unattributed: HeldPosition[] = [];
+  for (const p of heldPositions(userId, picks, trades)) {
+    if (p.recordedSlotId && known.has(p.recordedSlotId)) place(p.symbol, p.recordedSlotId);
+    else unattributed.push(p);
+  }
+  unattributed.sort((a, b) => a.order[0] - b.order[0] || a.order[1] - b.order[1]);
+  for (const p of unattributed) {
+    const elig = eligibilityBySymbol.get(p.symbol) ?? NO_ELIGIBILITY;
+    const accepting = ordered.filter((s) => slotAccepts(s, p.entryPrice, elig));
+    const free = accepting.find((s) => (bySlot.get(s.id)?.length ?? 0) < s.slotCount);
+    place(p.symbol, (free ?? accepting[0])?.id ?? null);
+  }
+  return { bySlot, bySymbol };
+}
+
+/** Held symbols whose slot has to be DERIVED (no recorded, still-existing slot).
+ * record-trade fetches category eligibility for exactly these — and only in
+ * leagues that have category slots. */
+export function unattributedHeldSymbols(
+  userId: string,
+  slots: Slot[],
+  picks: PickRow[],
+  trades: TradeRow[],
+): string[] {
+  const known = new Set(slots.map((s) => s.id));
+  return heldPositions(userId, picks, trades)
+    .filter((p) => !(p.recordedSlotId && known.has(p.recordedSlotId)))
+    .map((p) => p.symbol);
+}
+
+/** Slots with free capacity, slot_index order. */
+export function openSlots(slots: Slot[], occ: SlotOccupancy): Slot[] {
+  return [...slots]
+    .sort((a, b) => a.slotIndex - b.slotIndex)
+    .filter((s) => (occ.bySlot.get(s.id)?.length ?? 0) < s.slotCount);
+}
+
+export interface SlotView {
+  slot: Slot;
+  /** symbols held in this slot (can exceed slotCount for a legacy overflow) */
+  held: string[];
+  /** free capacity, never negative */
+  open: number;
+}
+
+/** The user's slot map for the preview action / Portfolio label: every slot
+ * with what is held in it, plus held symbols no slot accepts. */
+export function describeSlots(
+  slots: Slot[],
+  occ: SlotOccupancy,
+): { slots: SlotView[]; unplaced: string[] } {
+  const views = [...slots]
+    .sort((a, b) => a.slotIndex - b.slotIndex)
+    .map((slot) => {
+      const held = occ.bySlot.get(slot.id) ?? [];
+      return { slot, held, open: Math.max(0, slot.slotCount - held.length) };
+    });
+  const unplaced = [...occ.bySymbol].filter(([, id]) => id == null).map(([sym]) => sym);
+  return { slots: views, unplaced };
+}
+
+export type BuySlotDecision =
+  | { ok: true; slot: Slot }
+  | { ok: false; openSlots: Slot[] };
+
+/**
+ * The slot a buy at `price` would take: first FREE slot by slot_index that
+ * accepts the price (+ category). When several fit (shared inclusive boundary,
+ * overlapping brackets) the lowest slot_index wins — the same first-fit rule
+ * the draft and the legacy derivation use. When none fits, `openSlots` is the
+ * list of slots with free capacity so the client can say what WOULD fit.
+ */
+export function decideBuySlot(
+  slots: Slot[],
+  occ: SlotOccupancy,
+  price: number,
+  eligibility: Set<string>,
+): BuySlotDecision {
+  const occupied: string[] = [];
+  for (const [id, syms] of occ.bySlot) for (let n = 0; n < syms.length; n++) occupied.push(id);
+  const slot = assignSlot(slots, occupied, price, eligibility);
+  return slot ? { ok: true, slot } : { ok: false, openSlots: openSlots(slots, occ) };
 }
 
 /** Quantity for a fill: fixed_notional buys notional/price (fractional,
@@ -613,8 +828,17 @@ export type TradeDecision =
     /** fixed_notional only: the dollar amount the quantity was sized from
      * (sale proceeds, or a fresh notional for an unfilled slot). */
     stakeAmount?: number;
+    /** Slotted leagues only: the slot this buy takes (record-trade writes it
+     * to trades.slot_id). Omitted for slot-less leagues. */
+    slotId?: string;
   }
-  | { legal: false; reason: TradeRefusal };
+  | {
+    legal: false;
+    reason: TradeRefusal;
+    /** no_eligible_slot only: the slots with free capacity, so the client can
+     * say which price range WOULD fit. Empty = every slot is held. */
+    openSlots?: Slot[];
+  };
 
 export interface TradeAddInputs {
   rules: LeagueRules;
@@ -633,6 +857,9 @@ export interface TradeAddInputs {
    * buy reinvests. Omitted = server default (oldest unclaimed, FIFO).
    * Ignored in every other stake mode. */
   soldTradeId?: string | null;
+  /** Category-slot leagues: eligibility of the user's UNATTRIBUTED held
+   * symbols (see userSlotOccupancy). Absent = unclassified = flex-only. */
+  heldEligibility?: Map<string, Set<string>>;
 }
 
 /**
@@ -665,18 +892,18 @@ export function validateTradeAdd(i: TradeAddInputs): TradeDecision {
     return { legal: false, reason: 'roster_full' };
   }
 
-  // Tiers: the add must fit a slot bracket not occupied by an ACTIVE
-  // position. Occupancy = slot_ids of the user's picks whose symbol is still
-  // held (a dropped pick's slot is freed along with the symbol).
+  // Slotted leagues (tiers / categories): the add must fit a FREE slot and takes
+  // it. Occupancy is per HELD position across drafts AND trades — see the
+  // "Slot occupancy of HELD positions" block above (the old drafts-only count
+  // let a second stock into an already-filled tier after any trade).
+  let slotId: string | undefined;
   if (i.slots.length > 0) {
-    const activeSlotIds = i.picks
-      .filter((p) =>
-        String(p.user_id) === i.userId && !isSkip(p) &&
-        holdings.has(p.symbol.toUpperCase())
-      )
-      .map((p) => p.slot_id);
-    const slot = assignSlot(i.slots, activeSlotIds, price, i.eligibleCategories);
-    if (!slot) return { legal: false, reason: 'no_eligible_slot' };
+    const occ = userSlotOccupancy(i.userId, i.slots, i.picks, i.trades, i.heldEligibility);
+    const decided = decideBuySlot(i.slots, occ, price, i.eligibleCategories);
+    if (!decided.ok) {
+      return { legal: false, reason: 'no_eligible_slot', openSlots: decided.openSlots };
+    }
+    slotId = decided.slot.id;
   }
 
   // fixed_notional: size the buy from the slot's actual proceeds, not a fresh
@@ -698,6 +925,7 @@ export function validateTradeAdd(i: TradeAddInputs): TradeDecision {
       quantity,
       fundedByTradeId: resolved.source.kind === 'proceeds' ? resolved.source.tradeId : null,
       stakeAmount,
+      ...(slotId ? { slotId } : {}),
     };
   }
 
@@ -711,7 +939,7 @@ export function validateTradeAdd(i: TradeAddInputs): TradeDecision {
     }
   }
 
-  return { legal: true, quantity };
+  return { legal: true, quantity, ...(slotId ? { slotId } : {}) };
 }
 
 /**
