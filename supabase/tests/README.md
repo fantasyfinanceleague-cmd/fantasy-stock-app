@@ -551,7 +551,7 @@ What it does:
   - the display-name and Home RPCs, with the ranking they read;
   - `join_league_by_code`, for the rejoin case.
 - Simulates Supabase's default API-role grants, so the `proacl` assertions prove the explicit revokes work.
-- Runs `docs/security/leave-league-effect-test.sql`, the prod effect check, and requires all 20 lines to PASS and the fixture to roll back.
+- Runs `docs/security/leave-league-effect-test.sql`, the prod effect check, and requires all 25 lines to PASS and the fixture to roll back.
 
 It covers:
 - the leave window:
@@ -575,6 +575,14 @@ It covers:
 - the draft order WAITING past T−1h while a reconfirmation is owed, and set the moment it clears (on confirm, or on an invite cleared by a join);
 - the start gate binding the commissioner's raw flip and the service role;
 - `draft_order_notify_due` ignoring stranded `member_left` rows.
+- Q4 = A (`20261110000000`–`02`):
+  - the commissioner is always refused `transfer_first`;
+  - `transfer_commissioner`'s who/whom/when refusals (the locked middle; both open windows);
+  - the post-season transfer on the service path with #123 loaded;
+  - a user session can never write `commissioner_id` directly;
+  - transfer then leave;
+  - a transfer while a confirmation is owed;
+  - the renewal transfer: the old commissioner leaves as an invitee.
 
 The second `Deno.test` boots a fresh database with `fixtures/run_it_back_398da84_membership.sql`, a verbatim copy of PR #94's renewal response table and its `trg_league_members_renewal_sync_delete`. It proves three things:
 - an invitee's leave is an `out` reply with no reconfirm row;
