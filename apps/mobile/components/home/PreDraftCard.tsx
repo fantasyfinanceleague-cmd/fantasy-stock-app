@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { useEffect, useState } from 'react';
-import { Share, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Share, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 
 import { space } from '@/constants/tokens';
@@ -9,7 +8,23 @@ import { Text } from '@/components/sp/Text';
 import { Button } from '@/components/sp/Button';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { usePreDraftData } from '@/lib/home/usePreDraftData';
-import { draftDateTimeLabel, orderSetLine, countdownLabel } from '@/lib/home/draftCountdown';
+import { draftDateTimeLabel, orderSetLine } from '@/lib/home/draftCountdown';
+import { ordinal } from '@/lib/home/ordinal';
+import { useAuth } from '@/lib/useAuth';
+import { useLeagueContext } from '@/lib/LeagueContext';
+import { useDraftAutoStart } from '@/lib/game/useDraftAutoStart';
+import {
+  COMMISSIONER_FALLBACK,
+  NO_DATE_TITLE,
+  countdownCopy,
+  etWhenLabel,
+  homeView,
+  memberPostponedCopy,
+  noDateCopy,
+  startClock,
+  yourPickLine,
+} from '@/lib/game/autoStart';
+import { AutoStartBlockers } from '@/components/game/AutoStartBlockers';
 import {
   pickClockLine, BUILD_YOUR_QUEUE, PRE_DRAFT_TAG, PRE_DRAFT_CHIP,
   MEMBERS_TITLE, membersJoinedCaption, membersNeededCaption, INVITE_CODE_LABEL, NO_BUYING_BEFORE_DRAFT,
@@ -22,6 +37,14 @@ import {
 // cards (the draft card, a Members card, a note card), not one plain
 // message card. get_draft_order's own fetch lives in usePreDraftData, not
 // here (Design Lead ruling, 2026-09-30) -- this component is render only.
+//
+// 3c-2, draft auto-start: the draft card runs on the SAME hook and rules as
+// the League tab's lobby (useDraftAutoStart, lib/game/autoStart homeView), so
+// Home and the League tab never disagree: the countdown on the server's
+// clock, "Draft room open · starts in" with your position, "Starting the
+// draft" at 0:00, the commissioner's needs-you card when the draft is at risk
+// (board ReconfirmHome: on top of the draft card), and postponed for everyone.
+// Home never asks the server to start (the lobby does; the server does anyway).
 
 export interface PreDraftCardProps {
   leagueId: string;
@@ -46,15 +69,13 @@ function initialsOf(name: string): string {
 
 export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, draftDate, numParticipants }: PreDraftCardProps) {
   const { colors } = useTheme();
-  const { waiting, members, loading, finalizeAt, memberCount, minMembers } = usePreDraftData(leagueId);
-
-  // The countdown "updates each minute, no animation" (spec) -- a plain
-  // tick on a fixed interval, not a live poll of any kind.
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 60_000);
-    return () => clearInterval(id);
-  }, []);
+  const { user } = useAuth();
+  const { activeLeague } = useLeagueContext();
+  const { waiting, members, loading, finalizeAt, memberCount, minMembers, orderRevealed } = usePreDraftData(leagueId);
+  const auto = useDraftAutoStart(leagueId, { kick: false });
+  const { ds, phase, serverNow } = auto;
+  const view = phase ? homeView(phase, ds.isCommissioner, auto.fixable.length) : null;
+  const commissionerName = members.find((m) => m.userId === activeLeague?.commissioner_id)?.displayName || COMMISSIONER_FALLBACK;
 
   async function onShare() {
     try {
@@ -75,34 +96,77 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, dra
   const overflow = waiting
     ? Math.max(0, minMembers - members.length)
     : Math.max(0, numParticipants - members.length);
-  const dateLabel = draftDateTimeLabel(draftDate);
-  const countdown = countdownLabel(now, draftDate);
+  // The server's draft time once the status is read; the league row's until then.
+  const startsAt = ds.startsAt ?? (phase === null ? draftDate : null);
+  const dateLabel = startsAt ? etWhenLabel(new Date(startsAt).getTime()) : draftDateTimeLabel(null);
+  const countdown = view?.countdown && startsAt ? countdownCopy(view.countdown, startsAt, serverNow) : null;
+  const clock = countdown ? countdown.clock : startsAt && phase === null ? startClock(new Date(startsAt).getTime() - serverNow) : null;
+  const pick = view?.countdown === 'room_open' || view?.countdown === 'starting' ? yourPickLine(orderRevealed, user?.id ?? '', ordinal) : null;
+  const postponed = phase === 'postponed';
 
   return (
     <>
+      {view?.blockers ? (
+        <AutoStartBlockers
+          auto={auto}
+          phase={view.blockers}
+          playoffTeams={activeLeague?.playoff_teams ?? null}
+          inviteCode={inviteCode}
+        />
+      ) : null}
+
+      {view?.blockers === 'postponed' ? null : (
       <Card style={styles.card}>
         <View style={styles.header}>
           <Text variant="tag" style={{ color: colors.liveText }}>
-            {PRE_DRAFT_TAG}
+            {view?.memberPostponed ? memberPostponedCopy(commissionerName).tag : PRE_DRAFT_TAG}
           </Text>
           <View style={[styles.chip, { backgroundColor: colors.inset }]}>
             <Text variant="tag" tone="secondary">
-              {PRE_DRAFT_CHIP}
+              {postponed ? 'Postponed' : PRE_DRAFT_CHIP}
             </Text>
           </View>
         </View>
 
-        {dateLabel ? <Text variant="title">{dateLabel}</Text> : null}
-        {countdown ? (
-          <Text variant="score.lg" style={styles.countdown}>
-            {countdown}
+        {view?.memberPostponed ? (
+          <>
+            <Text variant="title">{memberPostponedCopy(commissionerName).title}</Text>
+            <Text variant="callout" tone="secondary">{memberPostponedCopy(commissionerName).line}</Text>
+          </>
+        ) : view?.noDate ? (
+          <>
+            <Text variant="title">{NO_DATE_TITLE}</Text>
+            <Text variant="callout" tone="secondary">{noDateCopy(ds.isCommissioner, commissionerName)}</Text>
+          </>
+        ) : (
+          <>
+            {dateLabel ? <Text variant="title">{dateLabel}</Text> : null}
+            {countdown && view?.countdown === 'room_open' ? (
+              <Text variant="tag" style={{ color: colors.liveText }}>
+                {countdown.tag}
+              </Text>
+            ) : null}
+            {clock ? (
+              <Text variant="score.lg" style={styles.countdown}>
+                {clock}
+              </Text>
+            ) : null}
+            {countdown?.starting ? (
+              <View style={styles.starting}>
+                <ActivityIndicator color={colors.text} />
+                <Text variant="callout" style={styles.bold}>{countdown.starting}</Text>
+              </View>
+            ) : null}
+            {pick ? <Text variant="callout" style={[styles.bold, { color: colors.youText }]}>{pick}</Text> : null}
+          </>
+        )}
+        {!postponed ? (
+          <Text variant="callout" tone="secondary">
+            {pickClockLine(pickSeconds, numRounds)}
           </Text>
         ) : null}
-        <Text variant="callout" tone="secondary">
-          {pickClockLine(pickSeconds, numRounds)}
-        </Text>
 
-        {!loading && !waiting && finalizeAt ? (
+        {!postponed && !pick && !loading && !waiting && finalizeAt ? (
           <View style={styles.orderRow}>
             <View style={[styles.dot, { backgroundColor: colors.liveText }]} />
             <Text variant="callout">{orderSetLine(finalizeAt)}</Text>
@@ -130,6 +194,7 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, dra
 
         {!waiting ? <Button label={BUILD_YOUR_QUEUE} onPress={() => router.push('/(tabs)/league')} variant="primary" /> : null}
       </Card>
+      )}
 
       <Card style={styles.card}>
         <View style={styles.sectionHeader}>
@@ -196,6 +261,14 @@ const styles = StyleSheet.create({
   },
   countdown: {
     fontVariant: ['tabular-nums'],
+  },
+  starting: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[3],
+  },
+  bold: {
+    fontWeight: '700',
   },
   orderRow: {
     flexDirection: 'row',

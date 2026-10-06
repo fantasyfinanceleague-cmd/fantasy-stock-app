@@ -418,3 +418,30 @@ export function lobbyView(phase: LobbyPhase, isCommissioner: boolean, fixableCou
       return isCommissioner ? { ...none, blockers: 'postponed', order: false } : { ...none, memberPostponed: true, order: false };
   }
 }
+
+// ── Home's pre-draft card, from the same view ────────────────────────────
+
+export interface HomeView {
+  blockers: 'risk' | 'postponed' | null;
+  countdown: 'scheduled' | 'room_open' | 'starting' | null;
+  memberPostponed: boolean;
+  noDate: boolean;
+}
+
+/** Home shows what the lobby shows (lobbyView), with one difference from the
+ * board's commissioner Home (ReconfirmHome): at risk, the needs-you card sits
+ * on top AND the draft card keeps its countdown below it (the lobby shows the
+ * room-open deadline instead). Home never asks the server to start. */
+export function homeView(phase: LobbyPhase, isCommissioner: boolean, fixableCount: number): HomeView {
+  const lv = lobbyView(phase, isCommissioner, fixableCount);
+  if (lv.blockers === 'risk') return { blockers: 'risk', countdown: 'scheduled', memberPostponed: false, noDate: false };
+  return { blockers: lv.blockers, countdown: lv.countdown, memberPostponed: lv.memberPostponed, noDate: lv.noDate };
+}
+
+/** "You pick 4th" (the room-open push's words), from the revealed order. Null
+ * when the order isn't set or the viewer isn't in it. */
+export function yourPickLine(order: readonly string[] | null, myUserId: string, ordinal: (n: number) => string): string | null {
+  if (!order) return null;
+  const seat = order.indexOf(myUserId) + 1;
+  return seat > 0 ? `You pick ${ordinal(seat)}` : null;
+}

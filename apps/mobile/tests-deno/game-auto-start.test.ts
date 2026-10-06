@@ -30,6 +30,8 @@ import {
   fixableBlockers,
   lobbyPhase,
   lobbyView,
+  homeView,
+  yourPickLine,
   memberPostponedCopy,
   moveForwardLabel,
   nextBoundaryMs,
@@ -340,4 +342,34 @@ Deno.test('no phase ever shows a Start button: only "starting" asks the server, 
   for (const p of ['no_date', 'scheduled', 'at_risk', 'room_open', 'starting', 'postponed', 'started'] as const) {
     for (const c of [true, false]) assertEquals(lobbyView(p, c, 1).kick, p === 'starting', `${p} ${c}`);
   }
+});
+
+// ── Home (the same view as the lobby) ─────────────────────────────────────
+
+Deno.test('Home shows what the lobby shows, phase by phase', () => {
+  for (const p of ['no_date', 'scheduled', 'room_open', 'starting', 'postponed', 'started'] as const) {
+    for (const c of [true, false]) {
+      const lv = lobbyView(p, c, 2);
+      const hv = homeView(p, c, 2);
+      assertEquals(hv, { blockers: lv.blockers, countdown: lv.countdown, memberPostponed: lv.memberPostponed, noDate: lv.noDate }, `${p} ${c}`);
+    }
+  }
+});
+
+Deno.test('Home at risk: the commissioner gets the needs-you card AND the countdown (board ReconfirmHome); members the countdown', () => {
+  assertEquals(homeView('at_risk', true, 2), { blockers: 'risk', countdown: 'scheduled', memberPostponed: false, noDate: false });
+  assertEquals(homeView('at_risk', false, 2), { blockers: null, countdown: 'scheduled', memberPostponed: false, noDate: false });
+  assertEquals(homeView('at_risk', true, 0), { blockers: null, countdown: 'scheduled', memberPostponed: false, noDate: false });
+});
+
+Deno.test('Home postponed: the commissioner the blockers card, members the postponed card', () => {
+  assertEquals(homeView('postponed', true, 2).blockers, 'postponed');
+  assertEquals(homeView('postponed', false, 2).memberPostponed, true);
+});
+
+Deno.test('your position, once the order is set', () => {
+  const ord = (n: number) => `${n}th`;
+  assertEquals(yourPickLine(['a', 'b', 'c', 'me'], 'me', ord), 'You pick 4th');
+  assertEquals(yourPickLine(['a', 'b'], 'me', ord), null);
+  assertEquals(yourPickLine(null, 'me', ord), null);
 });
