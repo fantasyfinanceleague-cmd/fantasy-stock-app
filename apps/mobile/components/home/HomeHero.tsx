@@ -7,6 +7,7 @@ import { space } from '@/constants/tokens';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { useMotion } from '@/components/sp/motion';
+import { Icon } from '@/components/sp/Icon';
 import { formatMoney, formatPercent, isZeroMoney } from '@/components/sp/logic/money';
 import { RollingMoney } from '@/components/home/RollingMoney';
 import { HERO_SEASON_GAIN_LABEL, HERO_TODAY_LABEL, heroAccessibilityLabel, heroUnpricedCaption } from '@/lib/home/homeCopy';
@@ -163,9 +164,7 @@ export function HomeHero({ leagueId, rank, totalPlayers, record, weekOrRound, va
 
         {preSeasonLabel == null && caption ? (
           <Text variant="caption" tone="secondary">
-            <Text variant="caption" tone="secondary" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-              {'ⓘ '}
-            </Text>
+            <Icon name="info" size="caption" tone="text2" />{' '}
             {caption}
           </Text>
         ) : null}

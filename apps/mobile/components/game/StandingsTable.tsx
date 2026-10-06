@@ -2,6 +2,7 @@
 import { View, StyleSheet } from 'react-native';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
+import { Icon } from '@/components/sp/Icon';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { formatMoney } from '@/components/sp/logic/money';
 import { space } from '@/constants/tokens';
@@ -42,9 +43,15 @@ export function StandingsTable({ rows, caption, seasonComplete }: StandingsTable
           )}
           <View style={styles.moveCell}>
             {r.move === null ? null : r.move > 0 ? (
-              <Text variant="caption" style={{ color: colors.gain }}>▲{r.move}</Text>
+              <View style={styles.moveRow}>
+                <Icon name="chevronUp" size="caption" tone="gain" />
+                <Text variant="caption" style={{ color: colors.gain }}>{r.move}</Text>
+              </View>
             ) : r.move < 0 ? (
-              <Text variant="caption" style={{ color: colors.loss }}>▼{Math.abs(r.move)}</Text>
+              <View style={styles.moveRow}>
+                <Icon name="chevronDown" size="caption" tone="loss" />
+                <Text variant="caption" style={{ color: colors.loss }}>{Math.abs(r.move)}</Text>
+              </View>
             ) : (
               <Text variant="caption" tone="secondary">–</Text>
             )}
@@ -71,6 +78,7 @@ const styles = StyleSheet.create({
   disc: { width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   discNumeral: { fontSize: 11, fontWeight: '800' },
   moveCell: { width: 30 },
+  moveRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   name: { flex: 1 },
   record: { width: 56, textAlign: 'right' },
   gain: { minWidth: 92, textAlign: 'right' },

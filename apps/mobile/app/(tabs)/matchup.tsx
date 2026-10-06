@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Icon } from '@/components/sp/Icon';
 
 import { space } from '@/constants/tokens';
 import { useTheme } from '@/components/sp/ThemeProvider';
@@ -142,7 +143,7 @@ function MatchupBody({ status, derived, phase, onRefresh, chyron, revealPlay, fi
   const youName = live.me.name;
 
   if (view.kind === 'not_started') {
-    return <PhasePlaceholder title="Matchup" icon={(p) => <Ionicons name="trophy-outline" {...p} />} heading="Not started yet" message="Your matchups start when the draft is done." onRefresh={onRefresh} />;
+    return <PhasePlaceholder title="Matchup" icon={() => <Icon name="trophy" size="title" tone="text2" />} heading="Not started yet" message="Your matchups start when the draft is done." onRefresh={onRefresh} />;
   }
 
   if (view.kind === 'pre_season') {
