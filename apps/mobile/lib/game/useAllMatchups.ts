@@ -7,7 +7,7 @@
  */
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
-import { seamTable } from './seamCalls';
+import { seamTable, seamInvoke } from './seamCalls';
 import { useAuth } from '../useAuth';
 import { buildAllMatchups, type AllMatchupRow } from './allMatchups';
 import type { HomeLedgerRow } from '../home/buildHomeViewModel';
@@ -74,7 +74,7 @@ export function useAllMatchups(
         const symbols = Array.from(new Set([...snapshots.map((s) => s.symbol), ...trades.map((t) => t.symbol)]));
         let prices: Record<string, number> = {};
         if (symbols.length > 0) {
-          const { data, error } = await supabase.functions.invoke('quote', { body: { symbols } });
+          const { data, error } = await seamInvoke('quote', { body: { symbols } });
           requests += 1;
           if (error) throw error;
           prices = (data?.prices ?? {}) as Record<string, number>;

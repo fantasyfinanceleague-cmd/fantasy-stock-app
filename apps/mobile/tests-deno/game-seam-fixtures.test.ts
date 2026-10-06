@@ -31,3 +31,9 @@ Deno.test('the history fixture is the board\'s Season 1, with its champion and t
   assertEquals(rows[0].champion_display_name, 'Roberto B.');
   assert(rows[1].champion_display_name === null);
 });
+
+Deno.test('the quote fixture returns a price for each symbol asked for, and no others', () => {
+  const r = invokeFixtureFor('quote', { symbols: ['NVDA', 'UNKNOWN_SYM'] })!.data as { prices: Record<string, number> };
+  assertEquals(Object.keys(r.prices), ['NVDA']);
+  assert(r.prices.NVDA > 0);
+});

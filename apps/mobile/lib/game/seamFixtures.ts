@@ -80,6 +80,12 @@ export function invokeFixtureFor(fn: string, body: Record<string, unknown>): { d
     const pick = body.action === 'auto_pick' ? { pick_source: 'auto_best' } : { pick_source: 'manual' };
     return { data: { ok: true, pick: { symbol: body.symbol ?? 'NVDA', ...pick }, pick_source: pick.pick_source, draft_complete: false }, error: null };
   }
+  if (fn === 'quote') {
+    // The board's live prices for the symbols asked for (a fixed sample; never a live quote).
+    const prices: Record<string, number> = { NVDA: 318.37, AAPL: 211.42, AMZN: 236.4, JPM: 215.45, MSFT: 421.0, META: 508.0, AVGO: 184.5, GOOGL: 166.0, PLTR: 65.0, V: 291.4, CRM: 274.1, COIN: 210.0, AMD: 160.0 };
+    const symbols = Array.isArray(body.symbols) ? (body.symbols as string[]) : [];
+    return { data: { prices: Object.fromEntries(symbols.filter((s) => s in prices).map((s) => [s, prices[s]])) }, error: null };
+  }
   if (fn === 'draft-control') {
     if (body.action === 'start') return { data: { ok: true }, error: null };
     return { data: { ok: true, can_start: true, blockers: [], is_commissioner: true, member_count: 6, min_members: 4 }, error: null };
