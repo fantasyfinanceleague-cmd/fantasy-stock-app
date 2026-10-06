@@ -191,5 +191,5 @@ const styles = StyleSheet.create({
   boardRow: { flexDirection: 'row', gap: space[1] },
   cell: { flex: 1, minHeight: 44, borderWidth: 1, borderColor: 'transparent', borderRadius: 6, alignItems: 'center', justifyContent: 'center', paddingVertical: space[1] },
   logRow: { flexDirection: 'row', alignItems: 'center', gap: space[2], paddingVertical: space[1] },
-  logPick: { width: 24, textAlign: 'right' },
+  logPick: { minWidth: 24, textAlign: 'right' },
 });

@@ -76,5 +76,5 @@ const styles = StyleSheet.create({
   countdown: { marginVertical: space[1] },
   order: { gap: space[2], marginTop: space[2] },
   orderRow: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
-  seatNo: { width: 18, textAlign: 'right' },
+  seatNo: { minWidth: 18, textAlign: 'right' },
 });

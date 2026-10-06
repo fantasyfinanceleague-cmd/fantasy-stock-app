@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
   stack: { gap: space[3] },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[2], minHeight: 44 },
-  rank: { width: 22, textAlign: 'right' },
+  rank: { minWidth: 24, textAlign: 'right' },
   name: { flex: 1 },
   gain: { minWidth: 92, textAlign: 'right' },
 });

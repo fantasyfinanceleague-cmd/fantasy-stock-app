@@ -65,7 +65,7 @@ function label(r: ScheduleRow): string {
 const styles = StyleSheet.create({
   stack: { gap: space[3] },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[2], paddingVertical: space[2] },
-  week: { width: 34, fontWeight: '700' },
+  week: { minWidth: 34, fontWeight: '700' },
   bold: { fontWeight: '700' },
   result: { marginLeft: 'auto', alignItems: 'flex-end' },
   liveRow: { flexDirection: 'row', alignItems: 'center', gap: space[1] },

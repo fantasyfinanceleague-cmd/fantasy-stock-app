@@ -80,7 +80,7 @@ function SideRow({ side, winner, scored, mine, colors }: { side: BracketSide | n
 const styles = StyleSheet.create({
   stack: { gap: space[3] },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[2], paddingVertical: space[2] },
-  seed: { width: 16, textAlign: 'right' },
+  seed: { minWidth: 16, textAlign: 'right' },
   end: { marginLeft: 'auto' },
   bold: { fontWeight: '800' },
 });

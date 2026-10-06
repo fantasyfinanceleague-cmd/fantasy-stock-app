@@ -74,13 +74,13 @@ export function StandingsTable({ rows, caption, seasonComplete }: StandingsTable
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space[2], paddingVertical: space[2] },
-  rank: { width: 22, textAlign: 'right' },
+  rank: { minWidth: 24, textAlign: 'right' },
   disc: { width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   discNumeral: { fontSize: 11, fontWeight: '800' },
-  moveCell: { width: 30 },
+  moveCell: { minWidth: 30 },
   moveRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   name: { flex: 1 },
-  record: { width: 56, textAlign: 'right' },
+  record: { minWidth: 56, textAlign: 'right' },
   gain: { minWidth: 92, textAlign: 'right' },
   caption: { marginTop: space[2] },
 });
