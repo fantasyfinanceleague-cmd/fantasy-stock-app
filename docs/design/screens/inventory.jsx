@@ -2621,7 +2621,7 @@
           <span className="ks-tag" style={{ color: 'var(--c-text-2)' }}>Draft</span>
           <Card><ul className="ks-rows">
             <li className="ks-row" style={{ gridTemplateColumns: '1fr auto 16px', padding: '13px 0' }}>
-              <span><span className="ks-callout" style={{ fontWeight: 600, color: allow ? undefined : 'var(--c-text-3)' }}>Draft date</span><br /><span className="ks-caption">{allow ? 'Moving it keeps everyone locked in until the new time.' : 'The draft time can’t change once the draft room opens.'}</span></span>
+              <span><span className="ks-callout" style={{ fontWeight: 600, color: allow ? undefined : 'var(--c-text-3)' }}>Draft time</span><br /><span className="ks-caption">{allow ? 'Moving it keeps everyone locked in until the new time.' : 'The draft time can’t change once the draft room opens.'}</span></span>
               <span className="ks-callout ks-muted">{AS.when}</span>
               <span className="ks-muted">{allow ? <Icon d={ICON.right} size={16} /> : null}</span>
             </li>
@@ -2639,9 +2639,9 @@
       </div>
     );
     return (
-      <Device noTabs label="Draft date sheet" overlay={
+      <Device noTabs label="Draft time sheet" overlay={
         <Sheet top={300}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span className="ks-title">Draft date</span><span className="ks-callout" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Done</span></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span className="ks-title">Draft time</span><span className="ks-callout" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Done</span></div>
           <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr 1fr', gap: 6 }}>
             <Col items={['Today', 'Tomorrow', 'Thu, Oct 1']} on="Today" />
             <Col items={['1', '2', '3']} on="3" off={['1', '2']} />
