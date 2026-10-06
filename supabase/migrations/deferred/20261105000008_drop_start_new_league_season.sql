@@ -1,7 +1,7 @@
 -- ============================================================================
 -- DROP: start_new_league_season — HELD in deferred/ (not in the db push path)
 -- ============================================================================
--- Phase 0 of Run it back (20261105000007_lock_start_new_league_season.sql)
+-- Phase 0 of Run it back (20261023000000_lock_start_new_league_season.sql)
 -- revoked EXECUTE from every API role, so the function is already
 -- unreachable. This file removes it outright. Precondition and verification:
 -- supabase/migrations/deferred/README.md, section for this file.

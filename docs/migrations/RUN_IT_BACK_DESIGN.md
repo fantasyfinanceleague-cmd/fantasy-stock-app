@@ -11,7 +11,7 @@ architectures (§1, unchanged).
 - the commissioner gets **Nudge again** and **Remove** on pending rows;
 - `in ↔ out` flips are **free** until the draft starts.
 See §2.4 and §2.5.
-**Branch:** `docs/run-it-back-design`. **Migration range reserved:** `20261105000007`–`09`.
+**Branch:** `docs/run-it-back-design`. **Migration range reserved:** `20261023000000`–`09`.
 **Author:** the "run it back backend" worker, 2026-10-04, read-only against `main` @ `ee2ceff`.
 
 ---
@@ -687,7 +687,7 @@ It is **strictly worse than nothing**:
 It is callable today by any commissioner of a completed league through the 1.1.0 build's
 settings screen.
 
-- **Phase 0, committed as `5c2175c` on `fix/lock-start-new-league-season`:** `20261105000007_lock_start_new_league_season.sql`.
+- **Phase 0, committed as `5c2175c` on `fix/lock-start-new-league-season`:** `20261023000000_lock_start_new_league_season.sql`.
   It also revokes `service_role`: no server caller exists, and the prod snapshot shows Supabase's
   default grant. The 9-step PGlite test runs the header's DO-block effect check verbatim, which
   reports FAIL before the migration and PASS after it:
@@ -908,11 +908,11 @@ commissioner of a completed test league:
 The real end-to-end proof is a test league renewed, replied to, drafted, finalized, and its
 Week 1 scored.
 
-### 5.4 Migration range `20261105000007`–`09`
+### 5.4 Migration range `20261023000000`–`09`
 
 | Version | Content | Phase |
 |---|---|---|
-| `20261105000007` | lock `start_new_league_season` | **0, committed `5c2175c`** |
+| `20261023000000` | lock `start_new_league_season` | **0, committed `5c2175c`** |
 | `20261023000001` | `leagues.previous_league_id`, `lineage_id`, `season_number` + partial UNIQUE + `lineage_id` index | 1 |
 | `20261023000002` | `finalize_league_draft` season number (+ re-stated grants) | 1 |
 | `20261023000003` | `league_notifications`: kinds, `subject_user_id`, `detail`, exactly-once indexes | 1 |

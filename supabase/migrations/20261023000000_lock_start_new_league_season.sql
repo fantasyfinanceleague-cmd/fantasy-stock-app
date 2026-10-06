@@ -45,7 +45,7 @@
 --   .test.ts slices its body from 20260718000000 for the archived-season
 --   fixture (unaffected: migration files are never rewritten), and a DROP
 --   should wait until no shipped client still calls it. The DROP is held in
---   supabase/migrations/deferred/20261105000008_drop_start_new_league_season.sql
+--   supabase/migrations/deferred/20261023000009_drop_start_new_league_season.sql
 --   with its precondition in that directory's README.
 --
 -- CLIENT EFFECT (1.0.0 and 1.1.0, league-settings.tsx handleStartNewSeason,

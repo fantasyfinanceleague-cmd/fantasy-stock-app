@@ -298,7 +298,7 @@ What it does:
   lines from `20260718000000`, then the grant lines from `20260718000001`, under
   simulated Supabase default grants. The pre-state therefore has
   `authenticated=X` and `service_role=X`, matching the prod snapshot.
-- Applies `20261105000007_lock_start_new_league_season.sql` whole.
+- Applies `20261023000000_lock_start_new_league_season.sql` whole.
 - Runs the migration header's POST-PUSH **DO-block effect check**,
   un-commented, both before the migration (it must report `FAIL`) and after it
   (it must report `PASS -- 42501`). So the HUMAN ACTION query is proven able

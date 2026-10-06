@@ -2,30 +2,42 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "d63873b829ee67078ce4925f9a1d98c5e8fa158d",
-    "commitShort": "d63873b",
+    "commit": "f450e786d5bb13f06a452589fd32ed628f070d50",
+    "commitShort": "f450e78",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "feat/run-it-back",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "supabase/migrations/20261105000004_run_it_back_gate.sql"
+        "path": "docs/architecture/annotations.json"
+      },
+      {
+        "code": "R",
+        "path": "supabase/migrations/20261023000000_lock_start_new_league_season.sql"
       },
       {
         "code": "??",
-        "path": "supabase/migrations/20261105000009_complete_league_season_trade_lock.sql"
+        "path": "supabase/migrations/APPLIED.txt"
+      },
+      {
+        "code": "M",
+        "path": "supabase/migrations/deferred/20261105000008_drop_start_new_league_season.sql"
+      },
+      {
+        "code": "M",
+        "path": "supabase/migrations/deferred/README.md"
       }
     ],
-    "timestamp": "2026-10-06T04:31:26Z",
-    "sourceHash": "sha256:ab43122d37794562fdd692ddecabb1837cfd1b4882cca3d8a4a7398ff8ca1fd6",
+    "timestamp": "2026-10-06T04:33:23Z",
+    "sourceHash": "sha256:911d365a0e47c4ef8eb6b8190149a531de4a4edd7d7411da908c9ac3c6b8bae2",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-09-30T16:53:15Z",
-    "ageHours": 131.6,
+    "ageHours": 131.7,
     "ageDays": 5.5,
     "staleAfterDays": 14,
     "stale": false,
@@ -3957,7 +3969,7 @@
         "redefinitions": 2
       },
       "drift": [],
-      "annotation": "Destructive (deletes and recreates season state) and broken by design: it deletes the season's matchups but creates no draft and no schedule, so the league is stuck (STATUS §4 item 9). LOCKED by 20261105000007: EXECUTE revoked from PUBLIC, anon, authenticated and service_role (owner-only). Until that migration is applied and db-snapshot.json is re-captured, the grants panel still shows the prod ACL from the snapshot (authenticated + service_role). The DROP is held in deferred/20261105000008; the replacement is Run it back (docs/migrations/RUN_IT_BACK_DESIGN.md).",
+      "annotation": "Destructive (deletes and recreates season state) and broken by design: it deletes the season's matchups but creates no draft and no schedule, so the league is stuck (STATUS §4 item 9). LOCKED by 20261023000000: EXECUTE revoked from PUBLIC, anon, authenticated and service_role (owner-only). Until that migration is applied and db-snapshot.json is re-captured, the grants panel still shows the prod ACL from the snapshot (authenticated + service_role). The DROP is held in deferred/20261105000008; the replacement is Run it back (docs/migrations/RUN_IT_BACK_DESIGN.md).",
       "verified": true,
       "id": "pg.start_new_league_season",
       "label": "start_new_league_season(p_league_id uuid)",
@@ -11723,7 +11735,7 @@
       ]
     },
     {
-      "annotation": "The only direct client-to-SECURITY-DEFINER call in the app. Every other definer function is reached through an edge function. Once 20261105000007 is applied, this call fails closed with 42501 (an \"Error\" alert in 1.0.0/1.1.0); the button is removed in the Run it back client work.",
+      "annotation": "The only direct client-to-SECURITY-DEFINER call in the app. Every other definer function is reached through an edge function. Once 20261023000000 is applied, this call fails closed with 42501 (an \"Error\" alert in 1.0.0/1.1.0); the button is removed in the Run it back client work.",
       "verified": true,
       "id": "e.ui.league-settings->pg.start_new_league_season",
       "from": "ui.league-settings",
@@ -15220,6 +15232,7 @@
       "20261015000000_complete_league_season_guarded.sql",
       "20261017000000_f8_push_tokens_relocation.sql",
       "20261019000000_process_week_results_heal_crons.sql",
+      "20261023000000_lock_start_new_league_season.sql",
       "20261028000002_snapshot_week_end_heal_cron.sql",
       "20261029000000_get_home_league_rpc.sql",
       "20261101000000_draft_feasibility_pool.sql",
@@ -15234,7 +15247,6 @@
       "20261105000004_run_it_back_gate.sql",
       "20261105000005_run_it_back_home_summary.sql",
       "20261105000006_record_trade_season_guard.sql",
-      "20261105000007_lock_start_new_league_season.sql",
       "20261105000009_complete_league_season_trade_lock.sql"
     ],
     "config": [
