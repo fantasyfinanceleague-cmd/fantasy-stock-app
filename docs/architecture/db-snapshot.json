@@ -14,6 +14,15 @@
             ]
         },
         {
+            "name": "auto_pick_price_failures",
+            "policies": [
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true,
+            "checkConstraints": [
+            ]
+        },
+        {
             "name": "categories",
             "policies": [
                 {
@@ -161,6 +170,34 @@
                     "withCheck": null,
                     "permissive": true
                 }
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true,
+            "checkConstraints": [
+            ]
+        },
+        {
+            "name": "draft_stalls",
+            "policies": [
+                {
+                    "name": "draft_stalls_select_members",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "using": "is_member(league_id)",
+                    "command": "SELECT",
+                    "withCheck": null,
+                    "permissive": true
+                }
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true,
+            "checkConstraints": [
+            ]
+        },
+        {
+            "name": "draft_turn_outages",
+            "policies": [
             ],
             "rlsForced": false,
             "rlsEnabled": true,
@@ -651,6 +688,55 @@
             ]
         },
         {
+            "name": "push_tokens",
+            "policies": [
+                {
+                    "name": "own token delete",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "using": "(auth.uid() = user_id)",
+                    "command": "DELETE",
+                    "withCheck": null,
+                    "permissive": true
+                },
+                {
+                    "name": "own token insert",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "using": null,
+                    "command": "INSERT",
+                    "withCheck": "(auth.uid() = user_id)",
+                    "permissive": true
+                },
+                {
+                    "name": "own token select",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "using": "(auth.uid() = user_id)",
+                    "command": "SELECT",
+                    "withCheck": null,
+                    "permissive": true
+                },
+                {
+                    "name": "own token update",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "using": "(auth.uid() = user_id)",
+                    "command": "UPDATE",
+                    "withCheck": "(auth.uid() = user_id)",
+                    "permissive": true
+                }
+            ],
+            "rlsForced": false,
+            "rlsEnabled": true,
+            "checkConstraints": [
+            ]
+        },
+        {
             "name": "rate_limit_counters",
             "policies": [
             ],
@@ -765,6 +851,10 @@
                 {
                     "name": "trades_quantity_check",
                     "definition": "CHECK ((quantity > (0)::numeric))"
+                },
+                {
+                    "name": "trades_slot_id_buy_only",
+                    "definition": "CHECK (((slot_id IS NULL) OR (action = 'buy'::text)))"
                 }
             ]
         },
@@ -852,6 +942,24 @@
             "username": "postgres"
         },
         {
+            "jobid": 27,
+            "active": true,
+            "command": "\n  select net.http_post(\n    url     := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/process-week-results',\n    headers := jsonb_build_object(\n      'Content-Type', 'application/json',\n      'apikey', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_apikey' limit 1)\n    ),\n    body    := '{}'::jsonb,\n    timeout_milliseconds := 60000\n  );\n  ",
+            "jobname": "process-weekly-matchups-heal-2200z",
+            "database": "postgres",
+            "schedule": "0 22 * * 5",
+            "username": "postgres"
+        },
+        {
+            "jobid": 28,
+            "active": true,
+            "command": "\n  select net.http_post(\n    url     := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/process-week-results',\n    headers := jsonb_build_object(\n      'Content-Type', 'application/json',\n      'apikey', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_apikey' limit 1)\n    ),\n    body    := '{}'::jsonb,\n    timeout_milliseconds := 60000\n  );\n  ",
+            "jobname": "process-weekly-matchups-heal-sat",
+            "database": "postgres",
+            "schedule": "0 15 * * 6",
+            "username": "postgres"
+        },
+        {
             "jobid": 26,
             "active": true,
             "command": "\n  select net.http_post(\n    url     := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/refresh-market-calendar',\n    headers := jsonb_build_object(\n      'Content-Type', 'application/json',\n      'apikey', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_apikey' limit 1)\n    ),\n    body    := '{}'::jsonb,\n    timeout_milliseconds := 30000\n  );\n  ",
@@ -876,6 +984,15 @@
             "jobname": "snapshot-week-end",
             "database": "postgres",
             "schedule": "5 21 * * 5",
+            "username": "postgres"
+        },
+        {
+            "jobid": 31,
+            "active": true,
+            "command": "\n  SELECT net.http_post(\n    url := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/snapshot-week-end',\n    headers := jsonb_build_object(\n      'Content-Type', 'application/json',\n      -- Attempt 3 = the function's MAX_RETRIES: an incomplete heal fails loudly\n      -- instead of scheduling 'snapshot-week-end-retry-2', which would replace a\n      -- pending Friday retry of the same name (pg_cron replaces by name).\n      'X-Retry-Attempt', '3',\n      'apikey', (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'cron_apikey' LIMIT 1)\n    ),\n    body := '{}'::jsonb,\n    -- pg_net's 5 s default is shorter than a run; the outcome is read from the data\n    -- the job writes, not from net._http_response (CLAUDE.md success-signal #8).\n    timeout_milliseconds := 60000\n  );\n  ",
+            "jobname": "snapshot-week-end-heal",
+            "database": "postgres",
+            "schedule": "30 15 * * 1,2",
             "username": "postgres"
         },
         {
@@ -1069,6 +1186,21 @@
                 "postgres=X/postgres",
                 "service_role=X/postgres"
             ],
+            "args": "p_types jsonb, p_draftable_only boolean, p_exclude text[], p_depth integer",
+            "name": "draft_feasibility_pool",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
+            "securityDefiner": false
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
             "args": "",
             "name": "draft_order_notify_due",
             "owner": "postgres",
@@ -1243,6 +1375,21 @@
             ],
             "searchPath": "public, pg_temp",
             "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "authenticated=X/postgres"
+            ],
+            "args": "p_league_id uuid",
+            "name": "get_home_league",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
             "securityDefiner": true
         },
         {
@@ -1446,6 +1593,22 @@
         {
             "acl": [
                 "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_league_id uuid, p_user_id uuid, p_symbol text, p_action text, p_quantity numeric, p_price numeric, p_total_value numeric, p_funded_by_trade_id uuid, p_seen_trade_ids uuid[], p_seen_draft_ids text[], p_rules jsonb, p_slots jsonb, p_slot_id uuid",
+            "name": "record_trade_atomic",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp",
+                "lock_timeout=5s"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": false
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
                 "service_role=X/postgres",
                 "supabase_auth_admin=X/postgres"
             ],
@@ -1538,9 +1701,7 @@
         },
         {
             "acl": [
-                "postgres=X/postgres",
-                "authenticated=X/postgres",
-                "service_role=X/postgres"
+                "postgres=X/postgres"
             ],
             "args": "p_league_id uuid",
             "name": "start_new_league_season",
@@ -1662,6 +1823,6 @@
             "securityDefiner": false
         }
     ],
-    "capturedAt": "2026-09-30T16:53:15Z",
+    "capturedAt": "2026-10-06T04:24:08Z",
     "postgresVersion": "17.4"
 }
