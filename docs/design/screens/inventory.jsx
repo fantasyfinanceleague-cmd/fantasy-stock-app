@@ -1814,8 +1814,8 @@
           ) : (
             <>
               <span className="ks-callout ks-muted">Every slot has to be fillable before the draft can start. Fix these in League settings:</span>
-              <Alert>Not enough stocks fit every slot: 8 managers each need a Tech stock under $50, and only 5 qualify. Loosen a slot rule or a price bracket.</Alert>
-              <Alert>The budget can't fill every slot: the 6 cheapest stocks that fit cost $1,140.00, more than the $1,000.00 budget. Raise the budget or change the price brackets.</Alert>
+              <Alert>There aren't enough eligible stocks to fill every manager's slots. Loosen a slot rule or a price bracket.</Alert>
+              <Alert>The budget isn't enough to fill every manager's slots. Raise the budget or change the price brackets.</Alert>
               <span className="ks-btn ks-btn--secondary">League settings</span>
             </>
           )}

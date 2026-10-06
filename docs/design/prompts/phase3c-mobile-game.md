@@ -164,7 +164,7 @@ Keep **League settings** reachable from the League tab, as today. **Remove its "
 
 **Board:** Part 2 › "Matchups, draft and playoffs": the frames "Pick refused · …", "Start the draft · setup can't fill every slot", "· check unavailable", "Draft paused" (member and commissioner) and "Push · draft paused". Use the **specific** line when the server returns who, which or how much; otherwise use the **generic** line. Keep these strings in `gameCopy.ts`, tagged new.
 
-**Pick refusals.** A sheet titled "Pick a different stock" appears **instantly**. The clock keeps running, and the sheet adds "Your clock is still running. Pick from the list, or let your queue pick for you." with [Back to the list].
+**Pick refusals** (use the specific lines only if `validate-and-record-pick` actually returns who/which/how much; confirm this and report it in your PLAN, otherwise use generic). A sheet titled "Pick a different stock" appears **instantly**. The clock keeps running, and the sheet adds "Your clock is still running. Pick from the list, or let your queue pick for you." with [Back to the list].
 - `would_strand_slot`:
   - specific: "Taking {TICKER} would leave {Name} with no stock that fits their {slot name} slot. Every slot has to be fillable."
   - generic: "Taking {TICKER} would leave another manager with no stock for one of their slots."
@@ -172,7 +172,7 @@ Keep **League settings** reachable from the League tab, as today. **Remove its "
   - specific: "{TICKER} would leave {$left} for your {n} remaining picks. You need at least {$needed} to fill them."
   - generic: "{TICKER} would leave too little budget for your remaining picks."
 
-**Start / setup blockers.** These go on the Start-the-draft sheet. Start stays disabled while any blocker applies. The lead line is "Every slot has to be fillable before the draft can start. Fix these in League settings:", followed by one warn card per blocker and [League settings].
+**Start / setup blockers** (draft-control `check_setup` returns only ok or a reason code; there are no counts, per the security review, so **use the GENERIC lines here**). These go on the Start-the-draft sheet. Start stays disabled while any blocker applies. The lead line is "Every slot has to be fillable before the draft can start. Fix these in League settings:", followed by one warn card per blocker and [League settings].
 - `slots_infeasible`:
   - specific: "Not enough stocks fit every slot: {n} managers each need a {slot description}, and only {m} qualify. Loosen a slot rule or a price bracket."
   - generic: "There aren't enough eligible stocks to fill every manager's slots. Loosen a slot rule or a price bracket."

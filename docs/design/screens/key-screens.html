@@ -3730,8 +3730,8 @@
           ) : (
             <>
               <span className="ks-callout ks-muted">Every slot has to be fillable before the draft can start. Fix these in League settings:</span>
-              <Alert>Not enough stocks fit every slot: 8 managers each need a Tech stock under $50, and only 5 qualify. Loosen a slot rule or a price bracket.</Alert>
-              <Alert>The budget can't fill every slot: the 6 cheapest stocks that fit cost $1,140.00, more than the $1,000.00 budget. Raise the budget or change the price brackets.</Alert>
+              <Alert>There aren't enough eligible stocks to fill every manager's slots. Loosen a slot rule or a price bracket.</Alert>
+              <Alert>The budget isn't enough to fill every manager's slots. Raise the budget or change the price brackets.</Alert>
               <span className="ks-btn ks-btn--secondary">League settings</span>
             </>
           )}
@@ -3921,7 +3921,7 @@
           <Fit caption="Draft room · auto-picks" note="New copy: the banner, the Auto badge and the pick-log lines"><I.DraftAutoPick /></Fit>
           <Fit caption="Pick refused · a slot left unfillable" note="would_strand_slot. New copy. Generic when the server doesn't name who/which: 'Taking {stock} would leave another manager with no stock for one of their slots.'"><I.DraftRefused kind="strand" /></Fit>
           <Fit caption="Pick refused · budget for later picks" note="budget_reserve. New copy. Generic: '{stock} would leave too little budget for your remaining picks.'"><I.DraftRefused kind="budget" /></Fit>
-          <Fit caption="Start the draft · setup can't fill every slot" note="slots_infeasible + budget_infeasible (each shows only when it applies). New copy. Generic lines in the 3c prompt."><I.StartBlocked /></Fit>
+          <Fit caption="Start the draft · setup can't fill every slot" note="slots_infeasible + budget_infeasible (each shows only when it applies). New copy. Generic lines only: the setup check returns a reason code, no counts (security review)."><I.StartBlocked /></Fit>
           <Fit caption="Start the draft · check unavailable" note="feasibility_unavailable: Start stays disabled until the check runs. New copy."><I.StartBlocked unavailable /></Fit>
           <Fit caption="Draft paused (should never happen)" note="Stalled turn, as members see it. New copy."><I.DraftStalled /></Fit>
           <Fit caption="Draft paused · commissioner" note="Same state for the commissioner, plus the push below. New copy."><I.DraftStalled commish /></Fit>
