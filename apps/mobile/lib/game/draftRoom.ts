@@ -8,8 +8,6 @@
 const PICK_LOG: Record<string, string> = {
   auto_queue: 'Auto-picked · from their queue',
   auto_best: 'Auto-picked · best available',
-  auto_skip: 'Skipped',
-  skip: 'Skipped',
   manual: 'Picked',
   bot: 'Picked',
 };
@@ -18,9 +16,24 @@ export function pickLogLine(source: string): string {
   return PICK_LOG[source] ?? 'Picked';
 }
 
+/** A legacy SKIP row: written before the server stopped skipping (#105), in old
+ * test leagues only. A draft pick can never be unused, so it is not shown as a
+ * skip, and it is not counted as a pick. */
+export function isLegacySkip(p: { symbol: string; source: string }): boolean {
+  return p.symbol.toUpperCase() === 'SKIP' || p.source === 'skip' || p.source === 'auto_skip';
+}
+
+
 /** The Auto badge: every pick the server made for the manager (auto_%). */
 export function isAutoPick(source: string): boolean {
   return source.startsWith('auto_');
+}
+
+/** One pick-log row. A legacy SKIP row is a plain row with a "—" symbol and no
+ * label, badge or explanation (Giorgio's ruling: a draft pick can never be unused). */
+export function pickRowView(p: { symbol: string; source: string }): { symbolCell: string; label: string | null; auto: boolean; countsAsPick: boolean } {
+  if (isLegacySkip(p)) return { symbolCell: '—', label: null, auto: false, countsAsPick: false };
+  return { symbolCell: p.symbol, label: pickLogLine(p.source), auto: isAutoPick(p.source), countsAsPick: true };
 }
 
 export type ClockState =

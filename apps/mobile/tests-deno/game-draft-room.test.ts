@@ -4,7 +4,7 @@
  * picking past the deadline until the row arrives). Run: `deno test .`
  */
 import { assertEquals } from 'jsr:@std/assert';
-import { pickLogLine, isAutoPick, clockState } from '../lib/game/draftRoom.ts';
+import { pickLogLine, isAutoPick, clockState, pickRowView } from '../lib/game/draftRoom.ts';
 
 Deno.test('the pick log says where each pick came from, in the board\'s words', () => {
   assertEquals(pickLogLine('auto_queue'), 'Auto-picked · from their queue');
@@ -13,15 +13,22 @@ Deno.test('the pick log says where each pick came from, in the board\'s words', 
   assertEquals(pickLogLine('bot'), 'Picked');
 });
 
-Deno.test('a skip is shown as a skip, never as a pick', () => {
-  assertEquals(pickLogLine('auto_skip'), 'Skipped');
-  assertEquals(pickLogLine('skip'), 'Skipped');
+Deno.test('a legacy SKIP row is a plain row: a dash for the symbol, no label, no badge, not counted, never the word Skip', () => {
+  const row = pickRowView({ symbol: 'SKIP', source: 'skip' });
+  assertEquals(row, { symbolCell: '—', label: null, auto: false, countsAsPick: false });
+  const autoSkip = pickRowView({ symbol: 'SKIP', source: 'auto_skip' });
+  assertEquals(autoSkip, { symbolCell: '—', label: null, auto: false, countsAsPick: false });
+  const text = JSON.stringify([row, autoSkip]);
+  assertEquals(/skip/i.test(text), false);
+});
+
+Deno.test('a real pick is shown with its symbol, its line and whether it counts', () => {
+  assertEquals(pickRowView({ symbol: 'LLY', source: 'auto_queue' }), { symbolCell: 'LLY', label: 'Auto-picked · from their queue', auto: true, countsAsPick: true });
 });
 
 Deno.test('the Auto badge marks every auto pick and nothing else', () => {
   assertEquals(isAutoPick('auto_queue'), true);
   assertEquals(isAutoPick('auto_best'), true);
-  assertEquals(isAutoPick('auto_skip'), true);
   assertEquals(isAutoPick('manual'), false);
   assertEquals(isAutoPick('bot'), false);
 });
