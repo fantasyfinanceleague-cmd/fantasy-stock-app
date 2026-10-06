@@ -250,25 +250,36 @@ Phase 3: **app first**.
       `_shared/job-status-io.ts` (`writeJobStatus`: read today's row, apply the
       same-day rule, upsert) and `_shared/run-job.ts` (`runJob`: exactly one `running`
       and one terminal write per run; a handler body cannot return a response without
-      an outcome). Both snapshot jobs already checked their upsert error; they keep
-      their own writer and route through `runJob`.
+      an outcome). Both snapshot jobs already checked their upsert error; their two
+      copy-pasted writers are gone and they use the same shared writer. If today's row
+      cannot be READ, a no-op success settles a `running` row (an UPDATE filtered to
+      `status='running'`, so it cannot clobber evidence) instead of stranding it.
     - `refresh-market-calendar` gained a status row (`refresh-market-calendar`, daily).
       `enrich-symbols` (144 runs/day) and `refresh-symbols` do NOT: one row per day
       would keep only the last run, which misleads. Their honest signals are the
       response body (`price_status`, `count`) and the data they write.
     - Migrations `20261108000000` (nine crons rescheduled by name, `timeout_milliseconds
-      := 180000`, pre-flight aborts if a live job is missing or on another schedule,
-      post-check inside the migration) and `20261108000001` (`schedule_snapshot_retry`,
+      := 180000`; ONE `DO` statement, so atomic however the CLI sends it; the pre-flight
+      aborts, changing nothing, if a live job is missing, on another schedule, or
+      paused; post-check inside) and `20261108000001` (`schedule_snapshot_retry`,
       so the one-shot retry jobs get it too). 180000 > Supabase's 150 s request idle
       timeout, so `net._http_response` now holds the function's real response or the
       gateway's 504; a "Timeout of 180000 ms" row is a pg_net fault. It is still a
       ~6 h signal: the DATA query below is the durable one.
     - The deferred `draft_autopick_sweep` / `draft_order_notify` crons (30000 ms) are
       untouched; they should adopt 180000 when promoted.
-    - **Known limitation:** the same-day rule is narrow. A heal that REFUSES matchups
-      but scores none (`work=0`) will not overwrite an earlier run's `work=N` row; its
-      refusals are in the response `skipped[]` and the function log only. The per-run
-      run-log table stays deferred.
+    - **Known limitations of the same-day rule** (the per-run run-log table, deferred, is
+      the real fix): (1) a heal that REFUSES matchups but scores none (`work=0`) will not
+      overwrite an earlier `work=N` row; its refusals are in `skipped[]` and the log
+      only. (2) A heal that scores SOME and refuses others (`work>0`) DOES replace an
+      earlier `failed` row with `success work=N … R refused`: the refusal is only in the
+      message text. (3) A heal that only repairs season transitions/advances reports
+      `work=0`, so it cannot clear a "transitions refused" note or a `failed` row:
+      false alarm, not false clearance. (4) A process killed between `running` and its
+      terminal write still strands `running`; nothing in-process can fix that.
+    - pg_net worker contention is unverified: a long request now holds a worker up to
+      ~150 s. Reconsider before promoting the 10-second sweep cron (check the pg_net
+      version; compare `net._http_response.created` with fire times after a Friday).
 14. **Hygiene:**
     - the revoked Alpaca pair is still stored as secrets `ALPACA_KEY_ID`/`ALPACA_SECRET_KEY` and in `.env.local`;
     - `.gitleaks.toml` allowlists all of `^\.claude/`;

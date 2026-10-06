@@ -237,6 +237,41 @@ Deno.test('PRE-FLIGHT: a live schedule that differs aborts the migration and cha
   assertEquals((await db.query('select jobname, command from cron.job order by jobname')).rows, before);
 });
 
+Deno.test('PRE-FLIGHT: a PAUSED job (active = false) aborts the migration: it must not be silently re-enabled', async () => {
+  const { db } = await freshDb();
+  await db.query(`update cron.job set active = false where jobname = 'enrich_symbols_10min'`);
+  const before = (await db.query('select jobname, command, active from cron.job order by jobname')).rows;
+  const sql = await mig(TIMEOUT_MIGRATION);
+  await assertRejects(() => db.exec(sql), Error, 'is paused');
+  assertEquals((await db.query('select jobname, command, active from cron.job order by jobname')).rows, before);
+});
+
+Deno.test('the migration is ONE statement, so it is atomic however the CLI sends it', async () => {
+  // db.query uses the extended protocol, which refuses more than one command: the same
+  // restriction the CLI's per-statement prepared sends hit (CLAUDE.md, "atomic" trap).
+  const { db } = await freshDb();
+  await db.query(await mig(TIMEOUT_MIGRATION));
+  const { rows } = await db.query<{ n: number }>(`select count(*)::int as n from cron.job where command like '%timeout_milliseconds := 180000%'`);
+  assertEquals(rows[0].n, 9);
+});
+
+Deno.test('a failure MID-SEQUENCE rolls every job back (no job is left unscheduled)', async () => {
+  const { db, live } = await freshDb();
+  // The fifth reschedule blows up, after four jobs were already unscheduled and rescheduled.
+  await db.exec(`
+    create or replace function cron.schedule(p_name text, p_schedule text, p_command text) returns bigint language plpgsql as $$
+    begin
+      if p_name = 'snapshot-week-end' then raise exception 'simulated cron.schedule failure'; end if;
+      insert into cron.job(jobname, schedule, command) values (p_name, p_schedule, p_command)
+      on conflict (jobname) do update set schedule = excluded.schedule, command = excluded.command;
+      return 1;
+    end $$;`);
+  const before = (await db.query('select jobname, schedule, command from cron.job order by jobname')).rows;
+  await assertRejects(async () => await db.query(await mig(TIMEOUT_MIGRATION)), Error, 'simulated cron.schedule failure');
+  assertEquals((await db.query('select jobname, schedule, command from cron.job order by jobname')).rows, before);
+  assertEquals(before.length, live.length);
+});
+
 // ---------------------------------------------------------------------------
 // The retry function
 // ---------------------------------------------------------------------------

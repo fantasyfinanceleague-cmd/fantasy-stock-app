@@ -23,11 +23,17 @@
 import { assert, assertEquals, assertFalse } from 'jsr:@std/assert';
 
 const CRON_KEY = 'test-cron-key-not-a-secret';
-Deno.env.set('SB_SECRET_KEY_CRON', CRON_KEY);
-Deno.env.set('SUPABASE_URL', 'http://stub.supabase.test');
-Deno.env.set('SB_SECRET_KEY_INTERNAL', 'test-internal-key-not-a-secret');
-Deno.env.set('ALPACA_API_KEY', 'test-alpaca-id');
-Deno.env.set('ALPACA_API_SECRET', 'test-alpaca-secret');
+// Env is process-global: remember what was there (a developer shell may hold real
+// values) and put it back in the last test of this file.
+const FAKE_ENV: Record<string, string> = {
+  SB_SECRET_KEY_CRON: CRON_KEY,
+  SUPABASE_URL: 'http://stub.supabase.test',
+  SB_SECRET_KEY_INTERNAL: 'test-internal-key-not-a-secret',
+  ALPACA_API_KEY: 'test-alpaca-id',
+  ALPACA_API_SECRET: 'test-alpaca-secret',
+};
+const SAVED_ENV = new Map(Object.keys(FAKE_ENV).map((k) => [k, Deno.env.get(k)]));
+for (const [k, v] of Object.entries(FAKE_ENV)) Deno.env.set(k, v);
 
 // ---------------------------------------------------------------------------
 // Fake PostgREST
@@ -52,6 +58,8 @@ class Fake {
   route: Route = () => undefined;
   /** make the cron_job_status upsert itself fail (resolved error, not a throw) */
   rejectStatusWrites = false;
+  /** make the same-day cron_job_status READ fail (resolved error) */
+  rejectStatusReads = false;
 
   today = () => new Date().toISOString().split('T')[0];
   key = (job: string) => `${job}|${this.today()}`;
@@ -89,6 +97,21 @@ function install(fake: Fake): () => void {
       }
       const job = url.searchParams.get('job_name')?.replace('eq.', '') ?? '';
       const date = url.searchParams.get('run_date')?.replace('eq.', '') ?? '';
+      if (method === 'PATCH') {
+        // supabase-js update(): a filtered PATCH that returns the changed rows.
+        const want = url.searchParams.get('status')?.replace('eq.', '');
+        const cur = fake.rows.get(`${job}|${date}`);
+        if (!cur || (want !== undefined && cur.status !== want)) {
+          return new Response('[]', { status: 200, headers: JSON_HEADERS });
+        }
+        const next = { ...cur, ...(body as Partial<Row>) };
+        fake.rows.set(`${job}|${date}`, next);
+        fake.statusWrites.push(`patch:${next.status}`);
+        return new Response(JSON.stringify([next]), { status: 200, headers: JSON_HEADERS });
+      }
+      if (fake.rejectStatusReads) {
+        return new Response(JSON.stringify({ message: 'rls hiccup' }), { status: 500, headers: JSON_HEADERS });
+      }
       const row = fake.rows.get(`${job}|${date}`);
       return new Response(JSON.stringify(row ? [row] : []), { status: 200, headers: JSON_HEADERS });
     }
@@ -228,6 +251,29 @@ Deno.test('process-week-results: a REJECTED status write cannot change the HTTP 
   assertEquals(res.status, 200, 'telemetry failure must not turn a clean run into an error');
 });
 
+Deno.test('process-week-results M3: a failed same-day READ does not strand a running row', async () => {
+  const h = await load(PWR);
+  const fake = new Fake();
+  fake.seed(PWR, 'running', null); // what this run's own 'running' write (or a hung run) left
+  fake.rejectStatusReads = true;
+  const res = await run(fake, () => call(h));
+  assertEquals(res.status, 200);
+  assertEquals(fake.row(PWR)!.status, 'success', 'a no-op settles the running row even though the read failed');
+});
+
+Deno.test('process-week-results M3: with the read failing, a no-op NEVER replaces earlier evidence', async () => {
+  const h = await load(PWR);
+  const fake = new Fake();
+  fake.seed(PWR, 'success', 'work=5 processed 5 matchups');
+  fake.rejectStatusReads = true;
+  await run(fake, () => call(h));
+  assertEquals(fake.row(PWR)!.error_message, 'work=5 processed 5 matchups');
+  fake.rows.clear();
+  fake.seed(PWR, 'failed', 'Failed to fetch matchups: boom');
+  await run(fake, () => call(h));
+  assertEquals(fake.row(PWR)!.status, 'failed');
+});
+
 Deno.test('process-week-results: unauthenticated → 401 and NO status row (no forged rows)', async () => {
   const h = await load(PWR);
   const fake = new Fake();
@@ -341,4 +387,9 @@ Deno.test('refresh-market-calendar: an implausible 200 body → failed, nothing 
   assertEquals(res.status, 502);
   assertEquals(fake.statusWrites, ['running', 'failed']);
   assertEquals(fake.rpcs, []);
+});
+
+// Keep LAST: tests in a file run in order, so this restores the env they overrode.
+Deno.test('restore the environment this file overrode', () => {
+  for (const [k, v] of SAVED_ENV) { if (v === undefined) Deno.env.delete(k); else Deno.env.set(k, v); }
 });

@@ -61,6 +61,19 @@ export interface JobStatusRwClient {
         };
       };
     };
+    // Only used to settle a stranded 'running' row (see writeJobStatus).
+    update(values: Record<string, unknown>): {
+      eq(col: string, val: string): {
+        eq(col: string, val: string): {
+          eq(col: string, val: string): {
+            select(columns: string): PromiseLike<{
+              data: unknown[] | null;
+              error: { message?: string } | null;
+            }>;
+          };
+        };
+      };
+    };
   };
 }
 
@@ -150,6 +163,12 @@ export async function writeJobStatus(
   }
 
   if (!decideJobStatusWrite(existing, readFailed, { status, work: opts.work })) {
+    // A failed READ must not leave the row at 'running' (success-signals #6): that is
+    // byte-identical to a hung run. Settle it with an UPDATE that can only ever replace
+    // a 'running' row, so it cannot destroy evidence it never saw.
+    if (readFailed && status === 'success') {
+      return await settleRunningRow(supabase, jobName, today, attemptNumber, message, now);
+    }
     console.log(
       `cron_job_status ${jobName} ${today}: no-op '${status}' (work=${opts.work ?? 0}) kept existing ${existing?.status ?? 'unknown'} row`,
     );
@@ -157,4 +176,43 @@ export async function writeJobStatus(
   }
   const ok = await updateJobStatus(supabase, jobName, status, attemptNumber, message, now);
   return ok ? 'written' : 'error';
+}
+
+/**
+ * Replace a same-day 'running' row with a terminal success, and nothing else. Used only
+ * when today's row could not be read, so we cannot tell a trivial row from evidence:
+ * the status='running' filter makes the UPDATE a no-op against anything but a row this
+ * run (or a hung one) left behind. 'written' = a running row was settled; 'kept' = the
+ * row was something else (or absent) and is untouched; 'error' = the update failed.
+ */
+async function settleRunningRow(
+  supabase: JobStatusRwClient,
+  jobName: string,
+  today: string,
+  attemptNumber: number,
+  message: string | undefined,
+  now: Date,
+): Promise<JobStatusWriteResult> {
+  try {
+    const { data, error } = await supabase
+      .from('cron_job_status')
+      .update({
+        status: 'success',
+        attempt_number: attemptNumber,
+        error_message: message || null,
+        updated_at: now.toISOString(),
+      })
+      .eq('job_name', jobName)
+      .eq('run_date', today)
+      .eq('status', 'running')
+      .select('status');
+    if (error) {
+      console.error(`Failed to settle running cron_job_status ${jobName} ${today}:`, error);
+      return 'error';
+    }
+    return (data ?? []).length > 0 ? 'written' : 'kept';
+  } catch (e) {
+    console.error(`Failed to settle running cron_job_status ${jobName} ${today} (transport):`, e);
+    return 'error';
+  }
 }

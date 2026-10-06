@@ -74,7 +74,7 @@ export async function runCalendarRefresh(
     console.error('apply_market_calendar failed:', error);
     return failed('apply_failed', {
       status: 500,
-      body: { ok: false, reason: 'apply_failed', message: error.message },
+      body: { ok: false, reason: 'apply_failed' }, // error text stays in the log, not the body
     });
   }
 

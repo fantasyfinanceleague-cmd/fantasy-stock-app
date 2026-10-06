@@ -794,10 +794,10 @@ function build() {
   const importersOf = (sharedFile) => {
     const base = sharedFile.split('/').pop();
     const out = new Set();
-    for (const f of readdirSync('supabase/functions', { withFileTypes: true })) {
+    for (const f of readdirSync(join(ROOT, 'supabase/functions'), { withFileTypes: true })) {
       if (!f.isDirectory() || f.name.startsWith('_') || !nodes.has(`fn.${f.name}`)) continue;
-      const files = readdirSync(`supabase/functions/${f.name}`).filter((n) => n.endsWith('.ts') && !n.endsWith('.test.ts'));
-      if (files.some((n) => readFileSync(`supabase/functions/${f.name}/${n}`, 'utf8').includes(`_shared/${base}'`))) out.add(`fn.${f.name}`);
+      const files = readdirSync(join(ROOT, `supabase/functions/${f.name}`)).filter((n) => n.endsWith('.ts') && !n.endsWith('.test.ts'));
+      if (files.some((n) => readFileSync(join(ROOT, `supabase/functions/${f.name}/${n}`), 'utf8').includes(`_shared/${base}'`))) out.add(`fn.${f.name}`);
     }
     return [...out];
   };

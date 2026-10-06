@@ -618,8 +618,10 @@ What it does:
 - Runs `20261108000000_cron_explicit_timeouts.sql` over them and asserts every job keeps
   its schedule and its command (modulo the timeout), gains `timeout_milliseconds :=
   180000`, and is not duplicated; the key still comes from the vault.
-- Proves the migration's pre-flight aborts, changing nothing, when a job is missing or
-  on another schedule.
+- Proves the migration is ONE statement (run through `db.query`, which refuses more
+  than one command, as the CLI's per-statement sends do), that a failure mid-sequence
+  rolls every job back, and that its pre-flight aborts, changing nothing, when a job is
+  missing, on another schedule, or paused.
 - Loads the prior `schedule_snapshot_retry` verbatim, then `20261108000001`, and shows the
   generated one-shot jobs gain the timeout while `search_path`, `SECURITY DEFINER` and
   the 'retrying' write are unchanged.

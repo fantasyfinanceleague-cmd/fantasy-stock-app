@@ -11,7 +11,7 @@ import type { StoredJobStatus } from './job-status.ts';
 
 type Stored = StoredJobStatus;
 
-function store(opts: { readError?: 'resolved' | 'throws'; upsertError?: 'resolved' | 'throws' } = {}) {
+function store(opts: { readError?: 'resolved' | 'throws'; upsertError?: 'resolved' | 'throws'; updateError?: 'resolved' | 'throws' } = {}) {
   const rows = new Map<string, Stored & Record<string, unknown>>();
   const upserts: Record<string, unknown>[] = [];
   const client: JobStatusRwClient = {
@@ -23,6 +23,22 @@ function store(opts: { readError?: 'resolved' | 'throws'; upsertError?: 'resolve
         rows.set(`${row.job_name}|${row.run_date}`, row as never);
         return Promise.resolve({ error: null });
       },
+      update: (values: Record<string, unknown>) => ({
+        eq: (_a: string, job: string) => ({
+          eq: (_b: string, date: string) => ({
+            eq: (_c: string, want: string) => ({
+              select() {
+                if (opts.updateError === 'resolved') return Promise.resolve({ data: null, error: { message: 'rls' } });
+                if (opts.updateError === 'throws') return Promise.reject(new Error('transport'));
+                const cur = rows.get(`${job}|${date}`);
+                if (!cur || cur.status !== want) return Promise.resolve({ data: [], error: null });
+                rows.set(`${job}|${date}`, { ...cur, ...values } as never);
+                return Promise.resolve({ data: [{ status: 'success' }], error: null });
+              },
+            }),
+          }),
+        }),
+      }),
       select: () => ({
         eq: (_c1: string, job: string) => ({
           eq: (_c2: string, date: string) => ({
@@ -112,4 +128,37 @@ Deno.test('the row shape is the table\'s: job_name, run_date, status, attempt_nu
     error_message: 'm', updated_at: NOW.toISOString(),
   });
   assert(true);
+});
+
+Deno.test('M3: a failed read + a no-op success SETTLES a running row (never strands it)', async () => {
+  for (const readError of ['resolved', 'throws'] as const) {
+    const s = store({ readError });
+    s.rows.set(KEY, { status: 'running', error_message: null });
+    assertEquals(await quiet(() => writeJobStatus(s.client, 'j', 'success', 1, { message: 'nothing', work: 0 }, NOW)), 'written', readError);
+    assertEquals(s.rows.get(KEY)!.status, 'success');
+    assertEquals(s.rows.get(KEY)!.error_message, 'work=0 nothing');
+  }
+});
+
+Deno.test('M3: the settle can only replace a running row: success evidence and failures are untouched', async () => {
+  for (const existing of [{ status: 'success', error_message: 'work=5' }, { status: 'failed', error_message: 'boom' }] as const) {
+    const s = store({ readError: 'resolved' });
+    s.rows.set(KEY, { ...existing });
+    assertEquals(await quiet(() => writeJobStatus(s.client, 'j', 'success', 1, { work: 0 }, NOW)), 'kept');
+    assertEquals(s.rows.get(KEY), { ...existing });
+  }
+});
+
+Deno.test('M3: no row at all + failed read + no-op: nothing is invented', async () => {
+  const s = store({ readError: 'resolved' });
+  assertEquals(await quiet(() => writeJobStatus(s.client, 'j', 'success', 1, { work: 0 }, NOW)), 'kept');
+  assertEquals(s.rows.size, 0);
+});
+
+Deno.test('M3: a failing or throwing settle is reported, not thrown', async () => {
+  for (const updateError of ['resolved', 'throws'] as const) {
+    const s = store({ readError: 'resolved', updateError });
+    s.rows.set(KEY, { status: 'running', error_message: null });
+    assertEquals(await quiet(() => writeJobStatus(s.client, 'j', 'success', 1, { work: 0 }, NOW)), 'error', updateError);
+  }
 });

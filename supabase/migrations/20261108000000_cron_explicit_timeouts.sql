@@ -10,12 +10,14 @@
 -- THE RULE: every cron http_post sets timeout_milliseconds := 180000.
 -- Supabase answers a request with a 504 if the function has not responded within
 -- 150 s (its request idle timeout), so a 180 s client timeout is always LONGER than
--- the platform's own. net._http_response then holds one of two things for every
--- run: the function's real response (status + body), or the gateway's 504. After
--- this migration a "Timeout of 180000 ms reached" row is a pg_net-side fault, no
--- longer a maybe-fine run. The previous values (30 s on refresh_market_calendar_daily,
--- 60 s on the three heal crons) were raised to the same number: a heal on a busy
--- Friday can legitimately outrun 60 s, and one rule is easier to audit than four.
+-- the platform's own. net._http_response then holds, for every run, either the
+-- function's real response (status + body) or the gateway's 504. A "Timeout of
+-- 180000 ms reached" row is then a pg_net-side fault, no longer a maybe-fine run.
+-- A 504 is INCONCLUSIVE, not a failure: the function may keep running after the
+-- gateway answers and still finish, so check the data (HUMAN ACTION below). The
+-- previous values (30 s on refresh_market_calendar_daily, 60 s on the three heal
+-- crons) were raised to the same number: a heal on a busy Friday can legitimately
+-- outrun 60 s, and one rule is easier to audit than four.
 --
 -- WHAT THIS DOES NOT FIX: net._http_response has a ~6 h TTL, so it is a same-day
 -- signal only. The durable check for every job is still the data it writes (the
@@ -23,10 +25,19 @@
 -- function answered, not that it did the right thing: success-signals #4/#7 are
 -- exactly 200s over refused or empty work.
 --
+-- WORKER CONTENTION (verify after the push, cannot be checked from the repo): the
+-- old 5 s timeout freed a pg_net worker almost at once; now a request can hold one
+-- for the function's real runtime, up to ~150 s. Some pg_net versions drain the
+-- current batch before fetching new rows, so a long enrich/snapshot run could delay
+-- another queued net.http_post. That matters for the deferred 10-second
+-- draft_autopick_sweep (auto-picks could land minutes late behind a long run):
+-- reconsider before promoting it. Check pg_net's version and compare
+-- net._http_response.created with the cron fire times after the first Friday.
+--
 -- WHAT THIS DOES NOT TOUCH: the deferred auto-pick / draft-order-notify crons
--- (deferred/), which already carry timeout_milliseconds := 30000 and are owned by the
--- sweep-promotion work; they should adopt the same 180000 when promoted.
--- The one-shot snapshot retry jobs get the same timeout in 20261108000001.
+-- (deferred/), which are owned by the sweep-promotion work and should adopt the same
+-- 180000 when promoted. The one-shot snapshot retry jobs get the same timeout in
+-- 20261108000001.
 --
 -- SCHEDULE AND BODY ARE UNCHANGED. Each job is replaced BY NAME, with the same
 -- schedule and the same command as the live row, plus the timeout. The apikey is
@@ -36,46 +47,55 @@
 -- docs/architecture/db-snapshot.json (timeout stripped) and with the heal-cron
 -- migrations, so a drifted copy fails a test before it can be pushed.
 --
--- The pre-flight below aborts the whole migration, changing nothing, if any job is
--- missing or has a different schedule live. A misnamed job would otherwise be
--- created as a SECOND schedule (cron.schedule on an unknown name inserts), and a
--- missing job means prod has drifted from migrations: stop and look.
+-- ONE STATEMENT. The whole migration is a single DO block, so it is atomic however
+-- the CLI applies it (the CLI splits a file into statements and sends them one at a
+-- time; a job unscheduled before its reschedule would otherwise be lost on a mid-run
+-- failure). The block begins with a pre-flight that aborts, changing nothing, if any
+-- job is missing, on a different schedule, or paused (active = false): a misnamed
+-- job would otherwise be created as a SECOND schedule (cron.schedule on an unknown
+-- name inserts), a missing job means prod has drifted from migrations, and a paused
+-- job must not be silently re-enabled by an unschedule + schedule. It ends with a
+-- post-check. jobid changes (a reschedule is a new row); nothing keys on it.
 
-DO $preflight$
+DO $mig$
 DECLARE
   r record;
-  live text;
+  live_schedule text;
+  live_active boolean;
+  n int;
 BEGIN
+  -- Pre-flight: compare the live rows with what this migration expects.
   FOR r IN SELECT * FROM (VALUES
-    ('process-weekly-matchups', '15 21 * * 5'),
-    ('snapshot-week-start', '35 14 * * 1,2'),
-    ('snapshot-week-end', '5 21 * * 5'),
-    ('enrich_symbols_10min', '*/10 * * * *'),
-    ('refresh_symbols_daily', '0 */6 * * *'),
-    ('refresh_market_calendar_daily', '20 10 * * *'),
-    ('process-weekly-matchups-heal-2200z', '0 22 * * 5'),
-    ('process-weekly-matchups-heal-sat', '0 15 * * 6'),
-    ('snapshot-week-end-heal', '30 15 * * 1,2')
+      ('process-weekly-matchups', '15 21 * * 5'),
+      ('snapshot-week-start', '35 14 * * 1,2'),
+      ('snapshot-week-end', '5 21 * * 5'),
+      ('enrich_symbols_10min', '*/10 * * * *'),
+      ('refresh_symbols_daily', '0 */6 * * *'),
+      ('refresh_market_calendar_daily', '20 10 * * *'),
+      ('process-weekly-matchups-heal-2200z', '0 22 * * 5'),
+      ('process-weekly-matchups-heal-sat', '0 15 * * 6'),
+      ('snapshot-week-end-heal', '30 15 * * 1,2')
   ) AS t(jobname, schedule)
   LOOP
-    SELECT schedule INTO live FROM cron.job WHERE jobname = r.jobname;
-    IF live IS NULL THEN
+    SELECT schedule, active INTO live_schedule, live_active FROM cron.job WHERE jobname = r.jobname;
+    IF NOT FOUND THEN
       RAISE EXCEPTION 'cron job % is not scheduled live; prod has drifted from migrations. Aborting before changing anything.', r.jobname;
     END IF;
-    IF live <> r.schedule THEN
-      RAISE EXCEPTION 'cron job % is scheduled "%" live but this migration expects "%". Aborting before changing anything.', r.jobname, live, r.schedule;
+    IF live_schedule <> r.schedule THEN
+      RAISE EXCEPTION 'cron job % is scheduled "%" live but this migration expects "%". Aborting before changing anything.', r.jobname, live_schedule, r.schedule;
+    END IF;
+    IF NOT live_active THEN
+      RAISE EXCEPTION 'cron job % is paused (active = false) live; rescheduling would re-enable it. Aborting before changing anything.', r.jobname;
     END IF;
   END LOOP;
-END
-$preflight$;
 
-SELECT cron.unschedule('process-weekly-matchups')
- WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'process-weekly-matchups');
+  PERFORM cron.unschedule('process-weekly-matchups')
+   WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'process-weekly-matchups');
 
-SELECT cron.schedule(
-  'process-weekly-matchups',
-  '15 21 * * 5',
-  $$
+  PERFORM cron.schedule(
+    'process-weekly-matchups',
+    '15 21 * * 5',
+    $cmd$
   SELECT net.http_post(
     url := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/process-week-results',
     headers := jsonb_build_object(
@@ -85,16 +105,16 @@ SELECT cron.schedule(
     body := '{}'::jsonb,
     timeout_milliseconds := 180000
   );
-  $$
-);
+  $cmd$
+  );
 
-SELECT cron.unschedule('snapshot-week-start')
- WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'snapshot-week-start');
+  PERFORM cron.unschedule('snapshot-week-start')
+   WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'snapshot-week-start');
 
-SELECT cron.schedule(
-  'snapshot-week-start',
-  '35 14 * * 1,2',
-  $$
+  PERFORM cron.schedule(
+    'snapshot-week-start',
+    '35 14 * * 1,2',
+    $cmd$
   SELECT net.http_post(
     url := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/snapshot-week-start',
     headers := jsonb_build_object(
@@ -104,16 +124,16 @@ SELECT cron.schedule(
     body := '{}'::jsonb,
     timeout_milliseconds := 180000
   );
-  $$
-);
+  $cmd$
+  );
 
-SELECT cron.unschedule('snapshot-week-end')
- WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'snapshot-week-end');
+  PERFORM cron.unschedule('snapshot-week-end')
+   WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'snapshot-week-end');
 
-SELECT cron.schedule(
-  'snapshot-week-end',
-  '5 21 * * 5',
-  $$
+  PERFORM cron.schedule(
+    'snapshot-week-end',
+    '5 21 * * 5',
+    $cmd$
   SELECT net.http_post(
     url := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/snapshot-week-end',
     headers := jsonb_build_object(
@@ -123,16 +143,16 @@ SELECT cron.schedule(
     body := '{}'::jsonb,
     timeout_milliseconds := 180000
   );
-  $$
-);
+  $cmd$
+  );
 
-SELECT cron.unschedule('enrich_symbols_10min')
- WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'enrich_symbols_10min');
+  PERFORM cron.unschedule('enrich_symbols_10min')
+   WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'enrich_symbols_10min');
 
-SELECT cron.schedule(
-  'enrich_symbols_10min',
-  '*/10 * * * *',
-  $$
+  PERFORM cron.schedule(
+    'enrich_symbols_10min',
+    '*/10 * * * *',
+    $cmd$
   select net.http_post(
     url     := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/enrich-symbols',
     headers := jsonb_build_object(
@@ -142,16 +162,16 @@ SELECT cron.schedule(
     body    := '{}'::jsonb,
     timeout_milliseconds := 180000
   );
-  $$
-);
+  $cmd$
+  );
 
-SELECT cron.unschedule('refresh_symbols_daily')
- WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'refresh_symbols_daily');
+  PERFORM cron.unschedule('refresh_symbols_daily')
+   WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'refresh_symbols_daily');
 
-SELECT cron.schedule(
-  'refresh_symbols_daily',
-  '0 */6 * * *',
-  $$
+  PERFORM cron.schedule(
+    'refresh_symbols_daily',
+    '0 */6 * * *',
+    $cmd$
   select net.http_post(
     url     := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/refresh-symbols',
     headers := jsonb_build_object(
@@ -161,16 +181,16 @@ SELECT cron.schedule(
     body    := '{}'::jsonb,
     timeout_milliseconds := 180000
   );
-  $$
-);
+  $cmd$
+  );
 
-SELECT cron.unschedule('refresh_market_calendar_daily')
- WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'refresh_market_calendar_daily');
+  PERFORM cron.unschedule('refresh_market_calendar_daily')
+   WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'refresh_market_calendar_daily');
 
-SELECT cron.schedule(
-  'refresh_market_calendar_daily',
-  '20 10 * * *',
-  $$
+  PERFORM cron.schedule(
+    'refresh_market_calendar_daily',
+    '20 10 * * *',
+    $cmd$
   select net.http_post(
     url     := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/refresh-market-calendar',
     headers := jsonb_build_object(
@@ -180,16 +200,16 @@ SELECT cron.schedule(
     body    := '{}'::jsonb,
     timeout_milliseconds := 180000
   );
-  $$
-);
+  $cmd$
+  );
 
-SELECT cron.unschedule('process-weekly-matchups-heal-2200z')
- WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'process-weekly-matchups-heal-2200z');
+  PERFORM cron.unschedule('process-weekly-matchups-heal-2200z')
+   WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'process-weekly-matchups-heal-2200z');
 
-SELECT cron.schedule(
-  'process-weekly-matchups-heal-2200z',
-  '0 22 * * 5',
-  $$
+  PERFORM cron.schedule(
+    'process-weekly-matchups-heal-2200z',
+    '0 22 * * 5',
+    $cmd$
   select net.http_post(
     url     := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/process-week-results',
     headers := jsonb_build_object(
@@ -199,16 +219,16 @@ SELECT cron.schedule(
     body    := '{}'::jsonb,
     timeout_milliseconds := 180000
   );
-  $$
-);
+  $cmd$
+  );
 
-SELECT cron.unschedule('process-weekly-matchups-heal-sat')
- WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'process-weekly-matchups-heal-sat');
+  PERFORM cron.unschedule('process-weekly-matchups-heal-sat')
+   WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'process-weekly-matchups-heal-sat');
 
-SELECT cron.schedule(
-  'process-weekly-matchups-heal-sat',
-  '0 15 * * 6',
-  $$
+  PERFORM cron.schedule(
+    'process-weekly-matchups-heal-sat',
+    '0 15 * * 6',
+    $cmd$
   select net.http_post(
     url     := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/process-week-results',
     headers := jsonb_build_object(
@@ -218,16 +238,16 @@ SELECT cron.schedule(
     body    := '{}'::jsonb,
     timeout_milliseconds := 180000
   );
-  $$
-);
+  $cmd$
+  );
 
-SELECT cron.unschedule('snapshot-week-end-heal')
- WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'snapshot-week-end-heal');
+  PERFORM cron.unschedule('snapshot-week-end-heal')
+   WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'snapshot-week-end-heal');
 
-SELECT cron.schedule(
-  'snapshot-week-end-heal',
-  '30 15 * * 1,2',
-  $$
+  PERFORM cron.schedule(
+    'snapshot-week-end-heal',
+    '30 15 * * 1,2',
+    $cmd$
   SELECT net.http_post(
     url := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/snapshot-week-end',
     headers := jsonb_build_object(
@@ -243,39 +263,35 @@ SELECT cron.schedule(
     -- the job writes, not from net._http_response (CLAUDE.md success-signal #8).
     timeout_milliseconds := 180000
   );
-  $$
-);
+  $cmd$
+  );
 
--- Post-condition, inside the migration: every job is back, on its old schedule, and
--- carries the timeout. (A push that "succeeds" says nothing about the live row; this
--- is the effect check CLAUDE.md asks for, run where it cannot be skipped.)
-DO $postcheck$
-DECLARE
-  r record;
-  n int;
-BEGIN
+  -- Post-condition: every job is back, active, on its old schedule, with the timeout.
+  -- (A push that "succeeds" says nothing about the live row; this is the effect check
+  -- CLAUDE.md asks for, run where it cannot be skipped. A failure rolls everything back.)
   FOR r IN SELECT * FROM (VALUES
-    ('process-weekly-matchups', '15 21 * * 5'),
-    ('snapshot-week-start', '35 14 * * 1,2'),
-    ('snapshot-week-end', '5 21 * * 5'),
-    ('enrich_symbols_10min', '*/10 * * * *'),
-    ('refresh_symbols_daily', '0 */6 * * *'),
-    ('refresh_market_calendar_daily', '20 10 * * *'),
-    ('process-weekly-matchups-heal-2200z', '0 22 * * 5'),
-    ('process-weekly-matchups-heal-sat', '0 15 * * 6'),
-    ('snapshot-week-end-heal', '30 15 * * 1,2')
+      ('process-weekly-matchups', '15 21 * * 5'),
+      ('snapshot-week-start', '35 14 * * 1,2'),
+      ('snapshot-week-end', '5 21 * * 5'),
+      ('enrich_symbols_10min', '*/10 * * * *'),
+      ('refresh_symbols_daily', '0 */6 * * *'),
+      ('refresh_market_calendar_daily', '20 10 * * *'),
+      ('process-weekly-matchups-heal-2200z', '0 22 * * 5'),
+      ('process-weekly-matchups-heal-sat', '0 15 * * 6'),
+      ('snapshot-week-end-heal', '30 15 * * 1,2')
   ) AS t(jobname, schedule)
   LOOP
     SELECT count(*) INTO n FROM cron.job
      WHERE jobname = r.jobname
        AND schedule = r.schedule
+       AND active
        AND command LIKE '%timeout_milliseconds := 180000%';
     IF n <> 1 THEN
-      RAISE EXCEPTION 'cron job % is missing, mis-scheduled, or lacks the 180000 ms timeout after rescheduling', r.jobname;
+      RAISE EXCEPTION 'cron job % is missing, mis-scheduled, inactive, or lacks the 180000 ms timeout after rescheduling', r.jobname;
     END IF;
   END LOOP;
 END
-$postcheck$;
+$mig$;
 
 -- ============================================================================
 -- HUMAN ACTION (Giorgio) -- from /Users/giorgio/fantasy-stock-deploy per CLAUDE.md
@@ -287,7 +303,8 @@ $postcheck$;
 --   order is safe. Ship the migrations FIRST if you only want the timeout.
 --
 --   PRE-PUSH, capture the live rows (this is what the pre-flight compares):
---     SELECT jobname, schedule, command FROM cron.job ORDER BY jobname;
+--     SELECT jobid, jobname, schedule, active, command FROM cron.job ORDER BY jobname;
+--     SELECT extversion FROM pg_extension WHERE extname IN ('pg_net', 'pg_cron');
 --   Diff each command against the one below, ignoring the timeout line. Any
 --   difference means the live row is the truth and this file must change first.
 --
@@ -304,6 +321,6 @@ $postcheck$;
 --   Then read the first scheduled run's outcome from the response table, within 6 h:
 --     SELECT created, status_code, timed_out, error_msg, left(content, 200)
 --       FROM net._http_response ORDER BY created DESC LIMIT 20;
---     -> a real status_code (200, or 504 from the gateway), not a NULL status with
---        "Timeout of ... reached".
+--     -> a real status_code (200, or 504 from the gateway, which is inconclusive:
+--        check the job's data), not a NULL status with "Timeout of ... reached".
 -- ============================================================================

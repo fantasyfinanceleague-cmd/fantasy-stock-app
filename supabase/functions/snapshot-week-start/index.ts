@@ -12,7 +12,7 @@ import type { CalendarSession, Coverage as MarketCalendarCoverage } from '../_sh
 import { IN_SEASON_STATUSES, SNAPSHOT_DRAFT_STATUS, isInSeasonLeague } from '../_shared/snapshot-league-scope.ts';
 import { classifyCloseCoverage } from '../snapshot-week-end/close.ts';
 import { instantAtOrBefore, instantBefore, instantMs, isScoredWeek, selectTargetWeeks, type WeekMatchupRow } from '../_shared/week-select.ts';
-import { shouldWriteJobStatus, successMessage, type JobStatusValue, type StoredJobStatus } from '../_shared/job-status.ts';
+import { writeJobStatus, type JobStatusRwClient } from '../_shared/job-status-io.ts';
 import { runJob, type JobOutcome, type JobRun } from '../_shared/run-job.ts';
 
 /**
@@ -126,65 +126,6 @@ async function fetchMarketCalendar(
     ? { from: coverageRes.data.covered_from, through: coverageRes.data.covered_through }
     : null;
   return { sessions, coverage, error: null };
-}
-
-// Update job status for retry tracking
-// S-STATUS: the same-day row is shared by every run of this job (one row per
-// job per day). A no-op run must not overwrite evidence of earlier work or of a
-// failure — see ../_shared/job-status.ts for the rule and why. `work` is the
-// run's own count of rows/league-weeks it actually changed.
-async function updateJobStatus(
-  supabase: any,
-  jobName: string,
-  status: JobStatusValue,
-  attemptNumber: number,
-  errorMessage?: string,
-  work?: number,
-) {
-  const today = new Date().toISOString().split('T')[0];
-  const message = status === 'success'
-    ? successMessage(work ?? 0, errorMessage ?? '')
-    : errorMessage;
-
-  try {
-    const { data: existingRow, error: readErr } = await supabase
-      .from('cron_job_status')
-      .select('status, error_message')
-      .eq('job_name', jobName)
-      .eq('run_date', today)
-      .maybeSingle();
-    // A failed read must not let a trivial write overwrite evidence: write only
-    // what the rule would accept with NO existing row AND it is non-trivial.
-    const existing: StoredJobStatus | null = readErr ? null : (existingRow as StoredJobStatus | null);
-    const decided = readErr
-      ? (status === 'failed' || status === 'retrying' || (status === 'success' && (work ?? 0) > 0))
-      : shouldWriteJobStatus(existing, { status, work });
-
-    // The upsert's OWN error is checked (CLAUDE.md success-signal #5: supabase-js
-    // resolves, it does not throw). The run log records the outcome, not the intent.
-    if (decided) {
-      const { error: upsertErr } = await supabase
-        .from('cron_job_status')
-        .upsert({
-          job_name: jobName,
-          run_date: today,
-          status,
-          attempt_number: attemptNumber,
-          error_message: message || null,
-          updated_at: new Date().toISOString(),
-        }, {
-          onConflict: 'job_name,run_date'
-        });
-      if (upsertErr) {
-        console.error(`FAILED to write cron_job_status ${jobName} '${status}':`, upsertErr);
-      }
-    } else {
-      console.log(`cron_job_status ${jobName} ${today}: no-op '${status}' (work=${work ?? 0}) kept existing ${existing?.status ?? 'unknown'} row`);
-    }
-
-  } catch (e) {
-    console.error('Failed to update job status:', e);
-  }
 }
 
 // Schedule a retry via the database function
@@ -423,7 +364,12 @@ Deno.serve(async (req) => {
   // exits; only the return statements and the catch block changed.
   return await runJob<Response>({
     attempt: retryAttempt,
-    write: (status, attempt, message, work) => updateJobStatus(supabase, JOB_NAME, status, attempt, message, work),
+    // Cast: structurally checking the full supabase-js client against the writer's
+    // narrow slice trips TS2589; job-status-io.test.ts pins the slice. The same-day
+    // overwrite rule (_shared/job-status.ts) is applied inside writeJobStatus.
+    write: async (status, attempt, message, work) => {
+      await writeJobStatus(supabase as unknown as JobStatusRwClient, JOB_NAME, status, attempt, { message, work });
+    },
     onThrow: async (e): Promise<JobRun<Response>> => {
       console.error('Unhandled error:', e);
       const errorMessage = String(e);

@@ -481,7 +481,9 @@ Deno.serve(async (req) => {
       console.error('Unhandled error:', e);
       return {
         outcome: { status: 'failed', attempt: 1, message: String(e) },
-        response: json({ error: 'Unhandled error', message: String(e) }, 500),
+        // The detail is in the log and in cron_job_status.error_message (service-role only),
+        // not in a body returned to the caller.
+        response: json({ error: 'Unhandled error', message: 'internal error; see function logs' }, 500),
       };
     },
     body: async (): Promise<JobRun<Response>> => {
@@ -539,7 +541,7 @@ Deno.serve(async (req) => {
           status: 'failed', attempt: 1,
           message: `Failed to fetch matchups: ${matchupErr.message ?? JSON.stringify(matchupErr)}`,
         },
-        response: json({ error: 'Failed to fetch matchups', details: matchupErr }, 500),
+        response: json({ error: 'Failed to fetch matchups', message: 'internal error; see function logs' }, 500),
       };
     }
 
