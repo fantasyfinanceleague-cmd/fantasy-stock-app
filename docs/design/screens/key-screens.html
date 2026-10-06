@@ -3803,12 +3803,99 @@
     );
   }
 
+  // ═════════════════════════════════════════════════════════════════════
+  // YOUR CALL: which tier a traded stock fills (price-tier leagues),
+  // 2026-10-05. "Tier Cup": six one-share tiers. Roberto sold DIS (his
+  // $100–$200 stock) and wants to buy. New copy throughout.
+  // ═════════════════════════════════════════════════════════════════════
+  const TIER = (() => {
+    const tiers = [['Under $50', 0, 50], ['$50–$100', 50, 100], ['$100–$200', 100, 200], ['$200–$400', 200, 400], ['$400–$800', 400, 800], ['$800+', 800, Infinity]];
+    const tierOf = (p) => tiers.find(([, lo, hi]) => p >= lo && p < hi)[0];
+    const held = [['F', 'Ford', 11.42], ['KO', 'Coca-Cola', 68.1], ['NVDA', 'NVIDIA', K.NVDA.thu], ['NFLX', 'Netflix', 612.3], ['COST', 'Costco', 918.1]];
+    return { tiers, tierOf, held, sold: ['DIS', 'Disney', 102.9], shop: ['SHOP', 'Shopify', K.SALE.buy.price], aapl: ['AAPL', 'Apple', 211.42] };
+  })();
+  const TAlert = ({ children }) => (
+    <div role="alert" className="ks-card" style={{ padding: '10px 12px', background: 'var(--c-warn-tint)', borderColor: 'var(--c-warn-line)', boxShadow: 'none' }}>
+      <span className="ks-callout" style={{ fontWeight: 600, color: 'var(--c-text)' }}>{children}</span>
+    </div>
+  );
+  /** Portfolio rows in a tier league under each option. */
+  function TierPortfolio({ mode }) {
+    const rows = mode === 'C' ? [...TIER.held, TIER.aapl].sort((a, b) => a[2] - b[2]) : TIER.held;
+    const sub = (t, p) => mode === 'A' ? `${TIER.tierOf(p)} slot · 1 sh` : mode === 'B' ? `${TIER.tierOf(p)} tier · 1 sh` : '1 sh';
+    return (
+      <Device tab="portfolio" label={`Tier league portfolio, option ${mode}`}>
+        <Head name="Tier Cup" chip={null} />
+        <div className="ks-pad ks-stack">
+          <div className="ks-card" style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between' }}>
+            <span className="ks-callout"><b>{mode === 'C' ? '6 of 6' : '5 of 6'}</b> {mode === 'C' ? 'stocks held' : 'tiers filled'}</span>
+            <span className="ks-callout ks-muted">{mode === 'C' ? 'Tiers applied at the draft' : 'One stock per tier'}</span>
+          </div>
+          <div className="ks-card" style={{ padding: '2px 14px' }}>
+            <ul className="ks-rows">
+              {rows.map(([t, co, p]) => (
+                <li key={t} className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto' }}>
+                  <Logo t={t} />
+                  <span><span className="ks-t">{t}</span><br /><span className="ks-caption ks-num">{co} · {sub(t, p)}</span></span>
+                  <span className="ks-right ks-num"><b>{$(p)}</b></span>
+                </li>
+              ))}
+              {mode !== 'C' ? (
+                <li className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto' }}>
+                  <span className="ks-logo" style={{ background: 'var(--c-sunken)', color: 'var(--c-text-2)', fontSize: 11 }}>Open</span>
+                  <span><span className="ks-t">{mode === 'A' ? '$100–$200 slot' : '$100–$200 tier'}</span><br /><span className="ks-caption">Sold DIS · {mode === 'A' ? 'buy a stock priced $100 to $200' : 'any stock that keeps every tier filled'}</span></span>
+                  <span className="ks-right"><span className="ks-caption" style={{ color: 'var(--c-accent)', fontWeight: 700, display: 'inline-flex', alignItems: 'center' }}>Fill<Icon d={ICON.right} size={12} width={2.6} /></span></span>
+                </li>
+              ) : null}
+            </ul>
+          </div>
+        </div>
+      </Device>
+    );
+  }
+  /** Review buy under each option (C buys AAPL, A/B buy SHOP). */
+  function TierReview({ mode }) {
+    const [t, , p] = mode === 'C' ? TIER.aapl : TIER.shop;
+    return (
+      <Device noTabs label={`Tier league review buy, option ${mode}`}>
+        <Back label="Edit" />
+        <div className="ks-pad ks-stack">
+          <h2 className="ks-head__title" style={{ fontSize: 28 }}>Review buy</h2>
+          <Card><Sum rows={[
+            ['Buy', `1 ${t}`],
+            ['Price', `${$(p)} · market`],
+            ...(mode === 'A' ? [['Fills your', '$100–$200 slot']] : mode === 'B' ? [['Tier, by today’s price', '$100–$200']] : []),
+          ]} /></Card>
+          <span className="ks-btn">Buy {t}</span>
+          <span className="ks-caption" style={{ textAlign: 'center' }}>{mode === 'C' ? 'Prices can move before the order fills.' : 'The tier is set by the price you buy at; it doesn’t change if the price moves later.'}</span>
+        </div>
+      </Device>
+    );
+  }
+  /** The refusal when a stock doesn't fit (A and B). */
+  function TierRefused({ mode }) {
+    return (
+      <Device tab="portfolio" label={`Tier league buy refused, option ${mode}`} overlay={
+        <Sheet top={470}>
+          <span className="ks-title">Pick a different stock</span>
+          <TAlert>{mode === 'A'
+            ? 'AAPL is $211.42. Your open slot takes stocks priced $100 to $200.'
+            : 'With AAPL you’d have two stocks in $200–$400 and none in $100–$200. Every tier needs one stock.'}</TAlert>
+          <span className="ks-btn">Back to the list</span>
+        </Sheet>
+      }>
+        <Head name="Tier Cup" chip={null} />
+      </Device>
+    );
+  }
+
   window.KSInventory = {
     SignIn, SignUp, SignUpPaused, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeUnpriced, HomeScoring, HomeComplete,
     AllMatchups, MatchupPreSeason, Playoffs6, ArrangeOrder, OrderPush, DraftLobby, StartDraftConfirm, CreateSeason, DraftAutoPick, DraftRecap, Playoffs,
     SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,
     OneShareSell, OneShareBuy,
+    TierPortfolio, TierReview, TierRefused,
     DraftRefused, StartBlocked, DraftStalled, StallPush,
     RibHome, RibLeague, RibPush, RibMemberPrompt, RibHomeCounts, RibReconcile, RibMemberList, RibResolve, RibReview, RibHistory,
     WebHome, WebPortfolio, WebSettings,
@@ -3995,6 +4082,54 @@
           <div className="b-concepts b-concepts--three">
             <Fit caption="League tab · Season 2, before the draft" note="The Season 1 champion banner stays until Season 2's draft; History is one tap away."><I.RibHistory /></Fit>
             <Fit caption="League › History" note="Every season, its champion and final standings; matchups and the draft recap too. New players see it as well."><I.RibHistory view="list" /></Fit>
+          </div>
+        </section>
+
+        <section className="b-sec" id="call-tier-trades" aria-labelledby="call-tier-trades-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n b-sec__n--code">3e</span>
+            <div>
+              <h2 id="call-tier-trades-h">Your call: which tier a traded stock fills</h2>
+              <p className="b-job">Price-tier leagues (one share per tier). Today tiers are only counted from the draft, so after a sale a manager can buy a second stock into a tier that is already filled; only the roster cap stops them. Pick how a trade buy fits the tiers. Sample: "Tier Cup", six one-share tiers. Roberto sold DIS ($102.90), his $100–$200 stock. All copy in these frames is new.</p>
+            </div>
+          </header>
+          <ul className="b-inv__notes">
+            <li><b>Already decided (A, 2026-09-30):</b> one share per buy and the whole position per sell. The review says "1 share" and the slot's tier. This choice only decides <i>which</i> tier a buy may fill.</li>
+            <li><b>A · Replace in the same tier.</b> Selling frees that stock's tier slot. A buy must fit a free tier slot; the review says "Fills your $100–$200 slot". If no free tier fits, the buy is refused with the reason.</li>
+            <li><b>B · Any open tier, re-fit by price.</b> A holding's tier comes from its entry price, first fit across every holding. A buy is legal if all holdings plus the new one still fit the tier layout.</li>
+            <li><b>C · Tiers are a draft rule only.</b> Trades ignore tiers; only the roster cap and the budget apply. The review shows no tier.</li>
+            <li><b>Budget rows are unchanged:</b> the decided one-share review keeps "Budget now" and "Budget left after"; these frames leave them out to show only the tier line.</li>
+            <li><b>Either way, a tier is set by the entry price</b> (draft price or buy price) and never moves if the stock's price drifts out of its bracket later.</li>
+          </ul>
+
+          <h3 className="b-sub">A · Replace in the same tier</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Portfolio · the open slot" note="Each row names its slot; the freed slot is a row with Fill, which opens the stock list."><I.TierPortfolio mode="A" /></Fit>
+            <Fit caption="Review buy · SHOP $104.20" note='"Fills your $100–$200 slot", next to the already-decided "1 share" rule.'><I.TierReview mode="A" /></Fit>
+            <Fit caption="Refused · AAPL $211.42" note="Shown before the review, from the stock sheet's Buy. The reason names the price and the open slot's range."><I.TierRefused mode="A" /></Fit>
+          </div>
+
+          <h3 className="b-sub">B · Any open tier, re-fit by price</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Portfolio · tiers by entry price" note="Rows show the tier their entry price falls in. The gap is described by the whole layout, not one slot."><I.TierPortfolio mode="B" /></Fit>
+            <Fit caption="Review buy · SHOP $104.20" note="The tier is computed from today's price, so the review can only say where it lands."><I.TierReview mode="B" /></Fit>
+            <Fit caption="Refused · AAPL $211.42" note="The reason has to explain the whole layout, not one slot."><I.TierRefused mode="B" /></Fit>
+          </div>
+
+          <h3 className="b-sub">C · Tiers are a draft rule only</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Portfolio · after selling DIS, buying AAPL" note="Two stocks between $200 and $400, none between $100 and $200. No tier labels after the draft."><I.TierPortfolio mode="C" /></Fit>
+            <Fit caption="Review buy · AAPL $211.42" note="No tier line: only the roster cap and the budget can refuse."><I.TierReview mode="C" /></Fit>
+          </div>
+
+          <div className="b-ask">
+            <h3>Your call · recommend A</h3>
+            <ul>
+              <li><b>A keeps the league's shape.</b> The tier layout the commissioner chose stays true all season: every roster always holds one cheap stock, one mid-priced stock and one expensive stock. A trade is a swap inside a tier ("sell my $100–$200 stock, buy a better $100–$200 stock"), which is easy to explain on one line and easy to refuse with a reason.</li>
+              <li><b>B plays the same as A</b> while tiers don't overlap (the layout above): each one-share tier holds exactly one stock, so "re-fit everything" always lands back on "fill the open tier". It only differs with overlapping brackets, and there its refusals have to explain the whole roster ("two stocks in $200–$400 and none in $100–$200"). It costs more to explain for the same play.</li>
+              <li><b>C changes what tiers mean.</b> They become a draft-room constraint that dissolves on the first trade: by mid-season a tier league can be five $800+ stocks, the same game as a plain budget league. If that is the intent, a tier league doesn't need its own format.</li>
+              <li><b>Backend (A or B):</b> trade buys need a slot. Tiers today count only <code>drafts.slot_id</code>; a buy in record-trade would carry the freed <code>slot_id</code> (A) or re-check every holding's entry price (B), and refuse with <code>tier_full</code> / <code>tier_mismatch</code>. C needs no backend change.</li>
+            </ul>
           </div>
         </section>
 
@@ -4350,7 +4485,7 @@
             <div><dt>Stakes</dt><dd>$2,000 per slot · 6 slots</dd></div>
           </dl>
           <nav className="b-toc" aria-label="Screens">
-            {[['themes', 'Themes'], ['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['phases', 'Home phases'], ['game', 'Game'], ['run-it-back', 'Run it back'], ['money', 'Trading'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
+            {[['themes', 'Themes'], ['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['phases', 'Home phases'], ['game', 'Game'], ['run-it-back', 'Run it back'], ['call-tier-trades', 'Tiers call'], ['money', 'Trading'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
           </nav>
         </header>
 

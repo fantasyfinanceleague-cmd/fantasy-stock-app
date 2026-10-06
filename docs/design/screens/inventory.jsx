@@ -1872,12 +1872,99 @@
     );
   }
 
+  // ═════════════════════════════════════════════════════════════════════
+  // YOUR CALL: which tier a traded stock fills (price-tier leagues),
+  // 2026-10-05. "Tier Cup": six one-share tiers. Roberto sold DIS (his
+  // $100–$200 stock) and wants to buy. New copy throughout.
+  // ═════════════════════════════════════════════════════════════════════
+  const TIER = (() => {
+    const tiers = [['Under $50', 0, 50], ['$50–$100', 50, 100], ['$100–$200', 100, 200], ['$200–$400', 200, 400], ['$400–$800', 400, 800], ['$800+', 800, Infinity]];
+    const tierOf = (p) => tiers.find(([, lo, hi]) => p >= lo && p < hi)[0];
+    const held = [['F', 'Ford', 11.42], ['KO', 'Coca-Cola', 68.1], ['NVDA', 'NVIDIA', K.NVDA.thu], ['NFLX', 'Netflix', 612.3], ['COST', 'Costco', 918.1]];
+    return { tiers, tierOf, held, sold: ['DIS', 'Disney', 102.9], shop: ['SHOP', 'Shopify', K.SALE.buy.price], aapl: ['AAPL', 'Apple', 211.42] };
+  })();
+  const TAlert = ({ children }) => (
+    <div role="alert" className="ks-card" style={{ padding: '10px 12px', background: 'var(--c-warn-tint)', borderColor: 'var(--c-warn-line)', boxShadow: 'none' }}>
+      <span className="ks-callout" style={{ fontWeight: 600, color: 'var(--c-text)' }}>{children}</span>
+    </div>
+  );
+  /** Portfolio rows in a tier league under each option. */
+  function TierPortfolio({ mode }) {
+    const rows = mode === 'C' ? [...TIER.held, TIER.aapl].sort((a, b) => a[2] - b[2]) : TIER.held;
+    const sub = (t, p) => mode === 'A' ? `${TIER.tierOf(p)} slot · 1 sh` : mode === 'B' ? `${TIER.tierOf(p)} tier · 1 sh` : '1 sh';
+    return (
+      <Device tab="portfolio" label={`Tier league portfolio, option ${mode}`}>
+        <Head name="Tier Cup" chip={null} />
+        <div className="ks-pad ks-stack">
+          <div className="ks-card" style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between' }}>
+            <span className="ks-callout"><b>{mode === 'C' ? '6 of 6' : '5 of 6'}</b> {mode === 'C' ? 'stocks held' : 'tiers filled'}</span>
+            <span className="ks-callout ks-muted">{mode === 'C' ? 'Tiers applied at the draft' : 'One stock per tier'}</span>
+          </div>
+          <div className="ks-card" style={{ padding: '2px 14px' }}>
+            <ul className="ks-rows">
+              {rows.map(([t, co, p]) => (
+                <li key={t} className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto' }}>
+                  <Logo t={t} />
+                  <span><span className="ks-t">{t}</span><br /><span className="ks-caption ks-num">{co} · {sub(t, p)}</span></span>
+                  <span className="ks-right ks-num"><b>{$(p)}</b></span>
+                </li>
+              ))}
+              {mode !== 'C' ? (
+                <li className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto' }}>
+                  <span className="ks-logo" style={{ background: 'var(--c-sunken)', color: 'var(--c-text-2)', fontSize: 11 }}>Open</span>
+                  <span><span className="ks-t">{mode === 'A' ? '$100–$200 slot' : '$100–$200 tier'}</span><br /><span className="ks-caption">Sold DIS · {mode === 'A' ? 'buy a stock priced $100 to $200' : 'any stock that keeps every tier filled'}</span></span>
+                  <span className="ks-right"><span className="ks-caption" style={{ color: 'var(--c-accent)', fontWeight: 700, display: 'inline-flex', alignItems: 'center' }}>Fill<Icon d={ICON.right} size={12} width={2.6} /></span></span>
+                </li>
+              ) : null}
+            </ul>
+          </div>
+        </div>
+      </Device>
+    );
+  }
+  /** Review buy under each option (C buys AAPL, A/B buy SHOP). */
+  function TierReview({ mode }) {
+    const [t, , p] = mode === 'C' ? TIER.aapl : TIER.shop;
+    return (
+      <Device noTabs label={`Tier league review buy, option ${mode}`}>
+        <Back label="Edit" />
+        <div className="ks-pad ks-stack">
+          <h2 className="ks-head__title" style={{ fontSize: 28 }}>Review buy</h2>
+          <Card><Sum rows={[
+            ['Buy', `1 ${t}`],
+            ['Price', `${$(p)} · market`],
+            ...(mode === 'A' ? [['Fills your', '$100–$200 slot']] : mode === 'B' ? [['Tier, by today’s price', '$100–$200']] : []),
+          ]} /></Card>
+          <span className="ks-btn">Buy {t}</span>
+          <span className="ks-caption" style={{ textAlign: 'center' }}>{mode === 'C' ? 'Prices can move before the order fills.' : 'The tier is set by the price you buy at; it doesn’t change if the price moves later.'}</span>
+        </div>
+      </Device>
+    );
+  }
+  /** The refusal when a stock doesn't fit (A and B). */
+  function TierRefused({ mode }) {
+    return (
+      <Device tab="portfolio" label={`Tier league buy refused, option ${mode}`} overlay={
+        <Sheet top={470}>
+          <span className="ks-title">Pick a different stock</span>
+          <TAlert>{mode === 'A'
+            ? 'AAPL is $211.42. Your open slot takes stocks priced $100 to $200.'
+            : 'With AAPL you’d have two stocks in $200–$400 and none in $100–$200. Every tier needs one stock.'}</TAlert>
+          <span className="ks-btn">Back to the list</span>
+        </Sheet>
+      }>
+        <Head name="Tier Cup" chip={null} />
+      </Device>
+    );
+  }
+
   window.KSInventory = {
     SignIn, SignUp, SignUpPaused, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeUnpriced, HomeScoring, HomeComplete,
     AllMatchups, MatchupPreSeason, Playoffs6, ArrangeOrder, OrderPush, DraftLobby, StartDraftConfirm, CreateSeason, DraftAutoPick, DraftRecap, Playoffs,
     SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,
     OneShareSell, OneShareBuy,
+    TierPortfolio, TierReview, TierRefused,
     DraftRefused, StartBlocked, DraftStalled, StallPush,
     RibHome, RibLeague, RibPush, RibMemberPrompt, RibHomeCounts, RibReconcile, RibMemberList, RibResolve, RibReview, RibHistory,
     WebHome, WebPortfolio, WebSettings,
