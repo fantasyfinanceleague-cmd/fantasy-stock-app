@@ -28,9 +28,13 @@ import {
   DRAFT_ORDER_OPTIONS,
   IF_TIME_RUNS_OUT_COPY,
   type DraftOrderMode,
+  DEFAULT_PICK_SECONDS,
+  PICK_SECONDS_OPTIONS,
   draftOrderCaption,
+  pickSecondsCaption,
   seasonCaption,
 } from '@/lib/game/createLeagueSetup';
+import { byeNoticeCopy } from '@/lib/game/draftLobby';
 import { Button, Card } from '@/components/ui';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -58,6 +62,7 @@ interface WizardState {
   draftDate: Date | null;
   draftDateTBD: boolean;
   draftOrder: DraftOrderMode;
+  pickSeconds: number;
 }
 
 export default function CreateLeagueWizard() {
@@ -88,6 +93,7 @@ export default function CreateLeagueWizard() {
     draftDate: null,
     draftDateTBD: true, // Default to TBD
     draftOrder: 'random',
+    pickSeconds: DEFAULT_PICK_SECONDS,
   });
 
   const minWeeks = state.size - 1;
@@ -149,6 +155,7 @@ export default function CreateLeagueWizard() {
           playoff_teams: state.type === 'matchup' ? playoffTeams : null,
           draft_status: 'not_started',
           draft_order_mode: state.draftOrder,
+          pick_seconds: state.pickSeconds,
           draft_date: state.draftDateTBD ? null : state.draftDate?.toISOString(),
       });
 
@@ -647,6 +654,9 @@ export default function CreateLeagueWizard() {
           </View>
 
           <Text style={styles.settingHint}>{seasonCaption(state.numWeeks, playoffTeams)}</Text>
+          {byeNoticeCopy(state.size, state.numWeeks) && (
+            <Text style={styles.settingHint}>{byeNoticeCopy(state.size, state.numWeeks)}</Text>
+          )}
         </ScrollView>
 
         <Button
@@ -734,6 +744,16 @@ export default function CreateLeagueWizard() {
               You'll need to set a draft date before starting the draft
             </Text>
           )}
+        </View>
+
+        <View style={styles.settingSection}>
+          <Text style={styles.settingLabel}>Pick clock</Text>
+          <SegmentedControl
+            options={PICK_SECONDS_OPTIONS.map((o) => ({ label: o.label, value: String(o.value) }))}
+            value={String(state.pickSeconds)}
+            onChange={(v) => setState({ ...state, pickSeconds: Number(v) })}
+          />
+          <Text style={styles.settingHint}>{pickSecondsCaption(state.pickSeconds)}</Text>
         </View>
 
         <View style={styles.settingSection}>

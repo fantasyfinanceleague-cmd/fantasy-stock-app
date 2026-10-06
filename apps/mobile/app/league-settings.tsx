@@ -25,6 +25,8 @@ import {
 import { seamSaveLeagueSlots, seamUpdateLeague } from '@/lib/game/seamCalls';
 import { settingsSaveOutcome } from '@/lib/game/settingsSave';
 import { leaveLeagueEnabled } from '@/lib/game/leaveLeague';
+import { SegmentedControl } from '@/components/sp/SegmentedControl';
+import { DEFAULT_PICK_SECONDS, PICK_SECONDS_OPTIONS, pickClockLocked, pickSecondsCaption } from '@/lib/game/createLeagueSetup';
 import { Button, Card } from '@/components/ui';
 
 /** Off until the leave flow ships. The row's placement is decided (Design Lead's leave board); its behaviour is not. */
@@ -61,6 +63,7 @@ export default function LeagueSettingsScreen() {
   useEffect(() => { fetchCategories().then(setCategories); }, []);
   const [numParticipants, setNumParticipants] = useState(8);
   const [numRounds, setNumRounds] = useState(6);
+  const [pickSeconds, setPickSeconds] = useState(DEFAULT_PICK_SECONDS);
 
   // Initialize form with league data
   useEffect(() => {
@@ -75,6 +78,7 @@ export default function LeagueSettingsScreen() {
       loadLeagueSlots(league.id).then(setSlots);
       setNumParticipants(league.num_participants);
       setNumRounds(league.num_rounds);
+      setPickSeconds(league.pick_seconds ?? DEFAULT_PICK_SECONDS);
     }
   }, [league]);
 
@@ -128,6 +132,8 @@ export default function LeagueSettingsScreen() {
         num_participants: numParticipants,
         num_rounds: numRounds,
         allow_undraftable: allowUndraftable,
+        // Frozen once the draft starts (trg_leagues_pick_clock): written only before then.
+        ...(isLocked ? {} : { pick_seconds: pickSeconds }),
       };
       if (stakeMode) {
         patch.stake_mode = stakeMode;
@@ -245,6 +251,23 @@ export default function LeagueSettingsScreen() {
               placeholderTextColor={Colors.textDark}
               editable={!isLocked}
             />
+          </View>
+
+          {/* Pick clock: frozen once the draft starts (trg_leagues_pick_clock) */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Pick clock</Text>
+            {pickClockLocked(league?.draft_status ?? 'not_started') ? (
+              <Text style={styles.stakeHelpText}>{`${pickSeconds} seconds per pick. The draft has started, so this is set.`}</Text>
+            ) : (
+              <>
+                <SegmentedControl
+                  options={PICK_SECONDS_OPTIONS.map((o) => ({ label: o.label, value: String(o.value) }))}
+                  value={String(pickSeconds)}
+                  onChange={(v) => setPickSeconds(Number(v))}
+                />
+                <Text style={styles.stakeHelpText}>{pickSecondsCaption(pickSeconds)}</Text>
+              </>
+            )}
           </View>
 
           {/* Draft Date */}

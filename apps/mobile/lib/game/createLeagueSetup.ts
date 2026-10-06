@@ -34,3 +34,22 @@ export function seasonCaption(regularWeeks: number, playoffTeams: number): strin
 export function playoffTeamsBounds(size: number): { min: number; max: number } {
   return { min: 2, max: Math.max(2, size) };
 }
+
+/** The pick-clock steps. leagues.pick_seconds CHECKs exactly these (30..90 by 15). */
+export const PICK_SECONDS_OPTIONS: { value: number; label: string }[] = [30, 45, 60, 75, 90].map((v) => ({
+  value: v,
+  label: `${v}s`,
+}));
+
+export const DEFAULT_PICK_SECONDS = 60;
+
+export function pickSecondsCaption(seconds: number): string {
+  return seconds === DEFAULT_PICK_SECONDS
+    ? `Time each manager has to make a pick. ${seconds} seconds is the default.`
+    : `Time each manager has to make a pick. ${seconds} seconds.`;
+}
+
+/** Frozen once the draft starts: trg_leagues_pick_clock refuses a change, so the picker is disabled. */
+export function pickClockLocked(draftStatus: 'not_started' | 'in_progress' | 'completed'): boolean {
+  return draftStatus !== 'not_started';
+}
