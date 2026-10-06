@@ -483,9 +483,14 @@ export function supabaseAutoPickPorts(admin: Admin, leagueId: string, deps: Auto
       // deno-lint-ignore no-explicit-any
       const queue = (data ?? []).map((r: any) => String(r.symbol).toUpperCase());
       if (queue.length === 0) return { queue, meta: [] };
-      const { data: rows, error: sErr } = await admin.from('symbols').select(SYMBOL_COLUMNS).in('symbol', queue);
+      const { data: rows, error: sErr } = await admin
+        .from('symbols').select(`${SYMBOL_COLUMNS}, active, price_unsupported`).in('symbol', queue);
       if (sErr) throw new Error('queue_fetch_failed');
-      return { queue, meta: (rows ?? []).map(toCandidate) };
+      // The same catalog filters the search RPC applies: an inactive or
+      // Alpaca-unsupported queued symbol is never a live candidate.
+      // deno-lint-ignore no-explicit-any
+      const usable = (rows ?? []).filter((r: any) => r.active !== false && r.price_unsupported !== true);
+      return { queue, meta: usable.map(toCandidate) };
     },
     async searchCandidates(spec, exclude, draftableOnly, limit) {
       const { data, error } = await admin.rpc('auto_pick_search_candidates', {
@@ -503,6 +508,12 @@ export function supabaseAutoPickPorts(admin: Admin, leagueId: string, deps: Auto
       return (data ?? []).map(toCandidate);
     },
     eligibility: (symbols) => fetchEligibleCategoryIdsBatch(admin, symbols),
+    async recordLivePrice(symbol, price) {
+      // Best effort: a failed cache write must not fail the pick. It only means
+      // the symbol is judged again next call (one more live call), never wrongly.
+      const { error } = await admin.from('symbols').update({ last_price: price }).eq('symbol', symbol);
+      if (error) console.error('auto-pick: last_price write-back failed', symbol, JSON.stringify(error));
+    },
     feasibilityPool: (types, exclude, draftableOnly, depth) => poolGroups(admin, types, exclude, draftableOnly, depth),
     async livePrice(symbol) {
       const fill = await fetchFillPrice(symbol, deps.alpacaKey, deps.alpacaSecret);

@@ -335,9 +335,12 @@ export function evaluateFeasiblePick(
     cost: number;
     spent: number;
     open: number[];
+    /** deficit(state.demand, state.groups), when the caller has it (the auto-pick
+     * walk evaluates thousands of candidates against one state). */
+    preDeficit?: number;
   },
 ): { ok: true } | { ok: false; reason: PickFeasibilityRefusal } {
-  const pre = deficit(state.demand, state.groups);
+  const pre = a.preDeficit ?? deficit(state.demand, state.groups);
   const post = applyPick(state, a.ordinal, a.cachedPrice, a.eligibility);
   if (deficit(post.demand, post.groups) > pre) return { ok: false, reason: 'would_strand_slot' };
   if (state.budget != null) {

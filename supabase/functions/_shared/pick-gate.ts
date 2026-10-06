@@ -69,6 +69,8 @@ export interface PickFeasibility {
   cachedPrice: number | null;
   /** The picked symbol's effective category ids. */
   eligibility: Set<string>;
+  /** Optional: deficit(state.demand, state.groups), precomputed by the caller. */
+  preDeficit?: number;
 }
 
 /**
@@ -108,6 +110,7 @@ export function gatePick(leagueId: string, inputs: PickInputs, feas: PickFeasibi
       cost,
       spent,
       open: feas.open,
+      preDeficit: feas.preDeficit,
     });
     if (!ev.ok) {
       if (ev.reason === 'budget_reserve') sawBudget = true;

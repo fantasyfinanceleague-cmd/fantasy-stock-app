@@ -2,8 +2,8 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "4fe76bde470ed570e0b5d8d8f31055c44ad4be58",
-    "commitShort": "4fe76bd",
+    "commit": "eb4723219f0ba0870284b5129b629e787667a781",
+    "commitShort": "eb47232",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "fix/draft-never-skips",
     "dirty": true,
@@ -17,16 +17,8 @@
         "path": "supabase/functions/_shared/auto-pick.ts"
       },
       {
-        "code": "??",
-        "path": "supabase/functions/_shared/draft-feasibility.test.ts"
-      },
-      {
-        "code": "??",
-        "path": "supabase/functions/_shared/draft-feasibility.ts"
-      },
-      {
         "code": "M",
-        "path": "supabase/functions/_shared/draft-validation.ts"
+        "path": "supabase/functions/_shared/draft-feasibility.ts"
       },
       {
         "code": "M",
@@ -35,49 +27,17 @@
       {
         "code": "M",
         "path": "supabase/functions/_shared/pick-gate.ts"
-      },
-      {
-        "code": "??",
-        "path": "supabase/functions/_shared/tier-price.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/draft-control/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/draft-control/rules.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/validate-and-record-pick/index.ts"
-      },
-      {
-        "code": "??",
-        "path": "supabase/migrations/20261101000000_draft_feasibility_pool.sql"
-      },
-      {
-        "code": "??",
-        "path": "supabase/migrations/20261101000001_draft_stalls.sql"
-      },
-      {
-        "code": "??",
-        "path": "supabase/migrations/deferred/20261101000002_drafts_refuse_new_skip.sql"
-      },
-      {
-        "code": "M",
-        "path": "supabase/migrations/deferred/README.md"
       }
     ],
-    "timestamp": "2026-10-06T00:27:48Z",
-    "sourceHash": "sha256:63b9932c8e69897031becd701b864800281aafdd5b6d0cc82d4dd03936872115",
+    "timestamp": "2026-10-06T00:38:31Z",
+    "sourceHash": "sha256:4f70467e8eb588e5f3aa95548762192d492a95f7343dd58b5691fdbfc83c2b44",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-09-30T16:53:15Z",
-    "ageHours": 127.6,
+    "ageHours": 127.8,
     "ageDays": 5.3,
     "staleAfterDays": 14,
     "stale": false,
@@ -12784,7 +12744,7 @@
       "supabase/functions/_shared/draft-write.ts:169 -> get_draft_clock",
       "supabase/functions/_shared/draft-write.ts:236 -> finalize_league_draft",
       "supabase/functions/_shared/draft-write.ts:263 -> draft_feasibility_pool",
-      "supabase/functions/_shared/draft-write.ts:491 -> auto_pick_search_candidates",
+      "supabase/functions/_shared/draft-write.ts:496 -> auto_pick_search_candidates",
       "supabase/functions/draft-autopick-sweep/index.ts:68 -> overdue_draft_turns",
       "supabase/functions/draft-control/index.ts:158 -> check_and_bump_rate_limit",
       "supabase/functions/draft-control/index.ts:161 -> check_and_bump_rate_limit",
@@ -12920,7 +12880,8 @@
       "supabase/functions/_shared/draft-write.ts:401 -> drafts.insert",
       "supabase/functions/_shared/draft-write.ts:424 -> draft_stalls.delete",
       "supabase/functions/_shared/draft-write.ts:477 -> draft_queue.select",
-      "supabase/functions/_shared/draft-write.ts:486 -> symbols.select",
+      "supabase/functions/_shared/draft-write.ts:487 -> symbols.select",
+      "supabase/functions/_shared/draft-write.ts:514 -> symbols.update",
       "supabase/functions/_shared/draft-write.ts:98 -> leagues.select",
       "supabase/functions/_shared/push.ts:49 -> user_profiles.select",
       "supabase/functions/_shared/push.ts:54 -> push_tokens.select",

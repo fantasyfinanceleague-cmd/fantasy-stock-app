@@ -238,3 +238,16 @@ WHERE upper(d.symbol) = 'SKIP';
 1. **`db push` from the deploy checkout:** `20261101000000`, `20261101000001`. Verify with `schema_migrations` + proacl on `draft_feasibility_pool`.
 2. **Deploy** `validate-and-record-pick`, `draft-control`, `draft-autopick-sweep` (shares `_shared/draft-write.ts`). Byte-verify: the upload list includes `_shared/draft-feasibility.ts`, then download + diff.
 3. **Promote** `deferred/20261101000002` → `migrations/` → `db push` → effect test: an insert of SKIP is refused.
+
+## Residuals and follow-ups (as built, 2026-10-05)
+
+Tied to the deferred I6/I2b drop (`supabase/migrations/deferred/20260929000000_drop_I6_I2b.sql`) unless noted.
+
+1. **Direct PostgREST config writes.** League slot rows are still written client-direct (delete + insert). A crafted write can save a league whose slots cannot be filled. `check_setup` is advisory until slot writes move server-side.
+2. **[I2a] draft_status flip.** The commissioner can still flip `draft_status` over PostgREST and bypass the start check.
+3. **Persistent vendor outage.** A candidate that passes the free check but returns no live price is `retry_later` on every tick. Nothing persists the failure, so there is no cooldown and no alert. Needs a negative cache (per-symbol failure timestamp) and an escalation after N ticks.
+4. **Alpaca quota.** `LIVE_MAX_ATTEMPTS` counts logical price calls, and each can be up to three HTTP requests on the shared app key. Bound HTTP requests instead, and skip the later price stages after a 404.
+5. **Search exclude array (SQL cost).** `auto_pick_search_candidates` tests `upper(symbol) = any(p_exclude)`, which grows each round. Replace with an anti-join against `unnest(p_exclude)`. Needs a migration.
+6. **Catalog staleness beyond the 10% band.** A stock whose cached price is more than 10% outside its bracket is not priced live until enrich-symbols refreshes it. The search is widened by the margin and near-boundary stocks are priced live, but a larger drift is found only on the next cache refresh.
+7. **Unparseable price responses.** `alpaca-price.ts` has no try/catch around `fetch`. A network rejection turns the whole turn into `unhandled` (fail-closed, not silent).
+8. **Budget free check** no longer short-circuits: budget refusals at the cached price are priced live.
