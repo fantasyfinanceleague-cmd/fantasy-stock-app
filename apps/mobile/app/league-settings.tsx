@@ -220,13 +220,16 @@ export default function LeagueSettingsScreen() {
         />
       ) : null}
 
-      <Field
-        label="League name"
-        value={name}
-        onChangeText={setName}
-        placeholder="League name"
-        editable={!isLocked}
-      />
+      {/* sp Field has no disabled look of its own; dim it while locked, as before. */}
+      <View style={isLocked && styles.dim}>
+        <Field
+          label="League name"
+          value={name}
+          onChangeText={setName}
+          placeholder="League name"
+          editable={!isLocked}
+        />
+      </View>
 
       {/* Draft: the Create league Draft step's controls (board). */}
       <View style={styles.section}>
@@ -309,24 +312,28 @@ export default function LeagueSettingsScreen() {
           ))}
         </SetupCard>
         {stakeMode === 'fixed_notional' ? (
-          <Field
-            label="Stake per slot ($)"
-            value={notionalPerSlot}
-            onChangeText={(text) => setNotionalPerSlot(text.replace(/[^0-9]/g, ''))}
-            keyboardType="numeric"
-            placeholder={String(DEFAULT_NOTIONAL_PER_SLOT)}
-            editable={!isLocked}
-          />
+          <View style={isLocked && styles.dim}>
+            <Field
+              label="Stake per slot ($)"
+              value={notionalPerSlot}
+              onChangeText={(text) => setNotionalPerSlot(text.replace(/[^0-9]/g, ''))}
+              keyboardType="numeric"
+              placeholder={String(DEFAULT_NOTIONAL_PER_SLOT)}
+              editable={!isLocked}
+            />
+          </View>
         ) : null}
         {stakeMode === 'budget_cap' ? (
-          <Field
-            label="Budget cap ($)"
-            value={budgetCap}
-            onChangeText={(text) => setBudgetCap(text.replace(/[^0-9]/g, ''))}
-            keyboardType="numeric"
-            placeholder={String(DEFAULT_BUDGET_CAP)}
-            editable={!isLocked}
-          />
+          <View style={isLocked && styles.dim}>
+            <Field
+              label="Budget cap ($)"
+              value={budgetCap}
+              onChangeText={(text) => setBudgetCap(text.replace(/[^0-9]/g, ''))}
+              keyboardType="numeric"
+              placeholder={String(DEFAULT_BUDGET_CAP)}
+              editable={!isLocked}
+            />
+          </View>
         ) : null}
         <SetupCard>
           <SwitchRow
@@ -422,6 +429,9 @@ const styles = StyleSheet.create({
   },
   tabular: {
     fontVariant: ['tabular-nums'],
+  },
+  dim: {
+    opacity: 0.5,
   },
   center: {
     alignItems: 'center',
