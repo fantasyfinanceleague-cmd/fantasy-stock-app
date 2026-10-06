@@ -6,7 +6,7 @@
  * Run: `cd apps/mobile/tests-deno && deno test .`
  */
 import { assertEquals } from 'jsr:@std/assert';
-import { QUEUE_LOAD_FAILED, nextQueueRead, queueRead, type QueueRead } from '../lib/game/draftQueueRead.ts';
+import { DRAFT_ROOM_LOAD_FAILED, QUEUE_LOAD_FAILED, nextQueueRead, queueRead, type QueueRead } from '../lib/game/draftQueueRead.ts';
 // Read as text (raw-imports, no --allow-read) for the source guards below.
 import roomSrc from '../lib/game/useDraftRoom.ts' with { type: 'text' };
 import lobbySrc from '../lib/game/useDraftQueue.ts' with { type: 'text' };
@@ -32,8 +32,9 @@ Deno.test('null data with no error is still not trusted as empty', () => {
   assertEquals(queueRead({ data: null, error: null }), { status: 'error' });
 });
 
-Deno.test('the load-failure line', () => {
-  assertEquals(QUEUE_LOAD_FAILED, "Couldn't load your queue.");
+Deno.test('the load-failure lines: the house "X didn\'t load" form', () => {
+  assertEquals(QUEUE_LOAD_FAILED, "Your queue didn't load.");
+  assertEquals(DRAFT_ROOM_LOAD_FAILED, "The draft room didn't load.");
 });
 
 // ── Re-reads (the room re-reads on every pick; the lobby after a save) ─────
@@ -82,4 +83,10 @@ Deno.test('DraftRoom seeds QueueEditor only from a ready read', () => {
   assertEquals(view.includes("room.queue.status === 'ready'"), true);
   assertEquals(view.includes('initial={room.queue.queue}'), true);
   assertEquals(view.includes('initial={room.queue}'), false);
+});
+
+Deno.test("the draft room has no \"Couldn't load\" or pull-to-refresh copy left", () => {
+  assertEquals(viewSrc.includes("Couldn't load"), false);
+  assertEquals(viewSrc.includes('Pull down to try again'), false);
+  assertEquals(viewSrc.includes('{DRAFT_ROOM_LOAD_FAILED}'), true);
 });

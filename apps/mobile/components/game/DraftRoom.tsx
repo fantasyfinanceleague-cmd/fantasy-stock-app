@@ -14,7 +14,7 @@ import { seamInvoke } from '@/lib/game/seamCalls';
 import type { ShapedSearchResult } from '@/lib/symbolSearch';
 import { useDraftRoom } from '@/lib/game/useDraftRoom';
 import { QueueEditor } from './QueueEditor';
-import { QUEUE_LOAD_FAILED } from '@/lib/game/draftQueueRead';
+import { DRAFT_ROOM_LOAD_FAILED, QUEUE_LOAD_FAILED } from '@/lib/game/draftQueueRead';
 import { managerAtPick, boardRows } from '@/lib/game/draftBoard';
 import { pickRowView, pickRefusalLine } from '@/lib/game/draftRoom';
 import { turnState } from '@/lib/game/draftRefusals';
@@ -104,8 +104,8 @@ export function DraftRoom({ leagueId, myUserId, rounds }: DraftRoomProps) {
   if (room.status === 'error') {
     return (
       <Card>
-        <Text variant="callout">Couldn't load the draft room.</Text>
-        <Text variant="caption" tone="secondary">Pull down to try again.</Text>
+        <Text variant="callout">{DRAFT_ROOM_LOAD_FAILED}</Text>
+        <Button label="Try again" variant="secondary" size="sm" onPress={room.refresh} />
       </Card>
     );
   }

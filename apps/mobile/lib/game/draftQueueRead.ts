@@ -35,5 +35,8 @@ export function nextQueueRead(
   return next;
 }
 
-/** The load-failure line (NEW copy, the draft room's pattern). */
-export const QUEUE_LOAD_FAILED = "Couldn't load your queue.";
+/** The load-failure line (Design Lead ruling: the house "X didn't load" form, with Try again). */
+export const QUEUE_LOAD_FAILED = "Your queue didn't load.";
+
+/** The live draft room's load failure, in the same form. */
+export const DRAFT_ROOM_LOAD_FAILED = "The draft room didn't load.";
