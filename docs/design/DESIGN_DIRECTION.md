@@ -690,6 +690,7 @@ the `impeccable` guides (craft-floor, ios, clarify, harden, layout); see
   | `trophy` | `trophy` | Champion medallion |
   | `lock` | `lock-closed-outline` | Final / locked draft order |
   | `mail` | `mail-outline` | "Check your email" |
+  | `alert` | `alert-circle-outline` | **Load failures only**: the "couldn't load" placeholder on any tab or sheet, in the EmptyState disc, tone `text2` |
 
   The board's drawn icons depict these glyphs. A new icon is added to the map
   through the Design Lead.
@@ -697,6 +698,21 @@ the `impeccable` guides (craft-floor, ios, clarify, harden, layout); see
     "body" | "headline" | "title"` → 14 / 16 / 18 / 20 / 24 pt. It scales with
     Dynamic Type by the paired role's `maxScale`, so an icon never shrinks
     beside XL text.
+  - **Medallions are illustrations, not inline icons** (ruling 2026-10-05):
+    `size="medallion"` is a 36 pt glyph centred in a 72 pt disc (the
+    season-complete trophy, the Run it back champion card). It scales with
+    Dynamic Type at the same factor as the heading under it, **capped at
+    1.3×** (47 pt glyph / 94 pt disc), so the medallion never outgrows the
+    card or falls below its heading. Only medallions use it.
+  - **Errors** (ruling 2026-10-05):
+    - a **load failure** ("couldn't load", any tab or sheet) shows `alert` in
+      the EmptyState disc in **`text2`, never red**, because a failed load
+      isn't the user's doing and red is reserved for field errors, losses and
+      destructive actions;
+    - **field errors** stay text-only (danger colour, instant, no icon);
+    - **refusals and blockers** keep their warn-tint card, with no icon;
+    - every load failure offers its recovery ("Try again" / pull to refresh)
+      and says what failed.
   - **Colour is a theme token** (`tone`: text, text2, accent, gain, loss,
     zero, live, onAccent…), matching the text it sits with. No raw colours.
   - **Accessibility:** icons are **decorative by default** (hidden from
