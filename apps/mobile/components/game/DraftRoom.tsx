@@ -12,6 +12,7 @@ import SymbolSearchField from '@/components/SymbolSearchField';
 import { supabase } from '@/lib/supabase';
 import type { ShapedSearchResult } from '@/lib/symbolSearch';
 import { useDraftRoom } from '@/lib/game/useDraftRoom';
+import { QueueEditor } from './QueueEditor';
 import { managerAtPick, boardRows } from '@/lib/game/draftBoard';
 import { pickRowView, pickRefusalLine } from '@/lib/game/draftRoom';
 import { turnState } from '@/lib/game/draftRefusals';
@@ -177,6 +178,7 @@ export function DraftRoom({ leagueId, myUserId, rounds }: DraftRoomProps) {
         })}
       </Card>
 
+      {!draftDone ? <QueueEditor leagueId={leagueId} initial={room.queue} onSaved={room.refresh} /> : null}
       {draftDone ? <Text variant="caption" tone="secondary">Finishing the draft…</Text> : null}
     </View>
   );
