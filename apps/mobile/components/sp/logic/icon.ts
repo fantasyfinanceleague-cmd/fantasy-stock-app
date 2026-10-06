@@ -23,7 +23,7 @@ export const ICON_GLYPHS: Record<IconName, string> = {
   close: 'close',
   search: 'search',
   add: 'add',
-  remove: 'remove-outline',
+  remove: 'remove',
   share: 'share-outline',
   trophy: 'trophy',
   lock: 'lock-closed-outline',

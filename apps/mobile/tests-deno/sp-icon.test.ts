@@ -54,8 +54,8 @@ Deno.test('a label makes it accessible and carries that label', () => {
   assertEquals(iconAccessibility('Back'), { accessible: true, hidden: false, label: 'Back' });
 });
 
-Deno.test('remove is the stepper minus (remove-outline), the pair of add', () => {
-  assertEquals(ICON_GLYPHS.remove, 'remove-outline');
+Deno.test('remove is the stepper minus (Ionicons remove), the pair of add', () => {
+  assertEquals(ICON_GLYPHS.remove, 'remove');
   assertEquals(ICON_GLYPHS.add, 'add');
 });
 
