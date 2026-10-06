@@ -1,6 +1,6 @@
 # What to take from "impeccable" (pbakaus/impeccable): a proposal
 
-> Design Lead, 2026-10-05. **A proposal for Giorgio, not adopted.** DESIGN_DIRECTION and the board are unchanged by this note. Anything visible goes to Giorgio as board mockups first, per the standing rule.
+> Design Lead, 2026-10-05. **STATUS: ADOPTED by Giorgio (2026-10-05): "adopt", all of §3, and iPad = A (phone-only for 1.2.0).** Now in DESIGN_DIRECTION §4 "Motion craft", §9 (type floor), §9A (colour rules) and §9B (native craft floor), in UI-UX-PROGRAM's gate format, and in the 3c/3e prompts. The CONFLICT rows (§4 of this note) stay not adopted. Below is the proposal as reviewed.
 >
 > **Source:** `pbakaus/impeccable` @ `a40571a` (2026-10-06), **Apache-2.0**. Read read-only through the GitHub API: `.claude/skills/impeccable/SKILL.md` and 19 files in `reference/` (critique, audit, audit.native, ios, android, adapt.native, animate, typeset, layout, colorize, polish, harden, craft-floor, clarify, delight, quieter, bolder, distill, component-review). Ideas are summarised in our words and attributed; nothing is pasted at length.
 >
