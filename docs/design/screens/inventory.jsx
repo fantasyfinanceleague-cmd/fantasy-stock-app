@@ -1874,7 +1874,7 @@
 
   // ═════════════════════════════════════════════════════════════════════
   // YOUR CALL: which tier a traded stock fills (price-tier leagues),
-  // 2026-10-05. "Tier Cup": six one-share tiers. Roberto sold DIS (his
+  // 2026-10-05. "Tier Cup": six one-share tiers. Roberto sold DIS (their
   // $100–$200 stock) and wants to buy. New copy throughout.
   // ═════════════════════════════════════════════════════════════════════
   const TIER = (() => {
@@ -2611,6 +2611,60 @@
       </Device>
     );
   }
+  /** Home's pre-draft card under auto-start (same states as the lobby).
+   * phase: 'scheduled' | 'open' | 'starting' | 'risk' | 'postponed' | 'nodate'.
+   * commish: the commissioner's phone (blockers card ON TOP of the draft card;
+   * when postponed, the blockers card replaces it). */
+  function HomeAuto({ phase = 'scheduled', commish }) {
+    // On time, nobody left (6 of 8, as the pre-draft Home); at risk / postponed, Sofia F. left.
+    const members = ['scheduled', 'open', 'starting', 'nodate'].includes(phase) ? ['RB', 'MR', 'LC', 'SF', 'GV', 'TP'] : ['RB', 'MR', 'LC', 'GV', 'TP'];
+    const clock = { scheduled: '2d 06h 40m', open: '42:18', starting: '00:00', risk: '1h 58m' }[phase];
+    const live = phase === 'open' || phase === 'starting';
+    // The everyone-states are shown on Roberto B.'s phone (seat 4); the member frames on Giulia V.'s.
+    const mine = commish || ['scheduled', 'open', 'starting'].includes(phase);
+    const draftCard = phase === 'postponed' && commish ? null : (
+      <GameCard tag={phase === 'postponed' ? 'Draft postponed' : 'Draft'} chip={<span className="ks-chip">{phase === 'postponed' ? 'Postponed' : 'Pre-draft'}</span>}>
+        {phase === 'postponed' ? (
+          <>
+            <span className="ks-title">Roberto B. will pick a new time.</span>
+            <span className="ks-callout ks-muted">You'll see it here, with at least an hour's notice.</span>
+          </>
+        ) : phase === 'nodate' ? (
+          <>
+            <span className="ks-title">No draft time yet</span>
+            <span className="ks-callout ks-muted">{commish ? 'Set a draft time in League settings.' : 'Roberto B. will set the draft time.'}</span>
+          </>
+        ) : (
+          <>
+            <span className="ks-title">{AS.when}</span>
+            {phase === 'open' ? <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Draft room open · starts in</span> : null}
+            <span className="ks-score ks-num" style={{ fontSize: 40 }}>{clock}</span>
+            {phase === 'starting' ? <span className="ks-callout" style={{ display: 'inline-flex', gap: 8, alignItems: 'center', fontWeight: 700 }}><Spinner />Starting the draft</span> : null}
+            {live ? <span className="ks-callout" style={{ fontWeight: 700, color: 'var(--c-you-text)' }}>You pick {K.ordinal(AS.seat)}</span> : null}
+          </>
+        )}
+        {phase === 'postponed' ? null : <span className="ks-callout ks-muted">60-second picks · 6 rounds</span>}
+        {phase === 'scheduled' || phase === 'risk' ? <span className="ks-callout" style={{ display: 'flex', gap: 8, alignItems: 'center' }}><span className="ks-dot" />The draft room opens Sat 6:00 PM ET, when the order is set.</span> : null}
+        <span className="ks-btn ks-btn--ongame">{live ? 'Go to the draft room' : 'Build your queue'}</span>
+      </GameCard>
+    );
+    return (
+      <Device tab="home" label={`Home, pre-draft, ${phase}${commish ? ', commissioner' : ''}`}>
+        <Head name={K.SERIE_A.name} avatar={mine} />
+        <div className="ks-pad ks-stack">
+          {commish && (phase === 'risk' || phase === 'postponed') ? <BlockersCard phase={phase} /> : null}
+          {draftCard}
+          {phase === 'risk' || (phase === 'postponed' && commish) ? null : (
+            <Card pad="14px">
+              <div className="ks-section-h"><h3>Members</h3><span className="ks-caption ks-num">{members.length} of 8 joined</span></div>
+              <div style={{ display: 'flex', gap: 6 }}>{members.map((m, i) => <span key={m} className={mine && i === 0 ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{m}</span>)}</div>
+            </Card>
+          )}
+        </div>
+      </Device>
+    );
+  }
+
   /** Decision 3: the Draft date row after the room opens. allow: postponing is allowed. */
   function DateAfterRoom({ allow }) {
     return (
@@ -2621,7 +2675,7 @@
           <span className="ks-tag" style={{ color: 'var(--c-text-2)' }}>Draft</span>
           <Card><ul className="ks-rows">
             <li className="ks-row" style={{ gridTemplateColumns: '1fr auto 16px', padding: '13px 0' }}>
-              <span><span className="ks-callout" style={{ fontWeight: 600, color: allow ? undefined : 'var(--c-text-3)' }}>Draft date</span><br /><span className="ks-caption">{allow ? 'Moving it keeps everyone locked in until the new time.' : 'The draft time can’t change once the draft room opens.'}</span></span>
+              <span><span className="ks-callout" style={{ fontWeight: 600, color: allow ? undefined : 'var(--c-text-3)' }}>Draft time</span><br /><span className="ks-caption">{allow ? 'Moving it keeps everyone locked in until the new time.' : 'The draft time can’t change once the draft room opens.'}</span></span>
               <span className="ks-callout ks-muted">{AS.when}</span>
               <span className="ks-muted">{allow ? <Icon d={ICON.right} size={16} /> : null}</span>
             </li>
@@ -2639,9 +2693,9 @@
       </div>
     );
     return (
-      <Device noTabs label="Draft date sheet" overlay={
+      <Device noTabs label="Draft time sheet" overlay={
         <Sheet top={300}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span className="ks-title">Draft date</span><span className="ks-callout" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Done</span></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span className="ks-title">Draft time</span><span className="ks-callout" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Done</span></div>
           <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr 1fr', gap: 6 }}>
             <Col items={['Today', 'Tomorrow', 'Thu, Oct 1']} on="Today" />
             <Col items={['1', '2', '3']} on="3" off={['1', '2']} />
@@ -2667,7 +2721,7 @@
     TierPortfolio, TierReview, TierRefused,
     LeagueSettingsLeave, LeaveSheet, CommishLeave, OrderAfterLeave, DepartedMatchup, DepartedStandings, DepartedBracket, LeaverLeague, LeaverSheet, LeaveRefused, LeaveRow, ReconfirmHome, ReconfirmStartBlocked, ReconfirmMember, LeaveOpenRow, LeaveFinished,
     JoinCode, JoinPreview, JoinDone, NotFound,
-    AutoLobby, CommishBlocked, MemberPostponed, DateAfterRoom, DraftDatePicker, LockPush,
+    AutoLobby, CommishBlocked, MemberPostponed, HomeAuto, DateAfterRoom, DraftDatePicker, LockPush,
     DraftRefused, StartBlocked, DraftStalled, StallPush,
     RibHome, RibLeague, RibPush, RibMemberPrompt, RibHomeCounts, RibReconcile, RibMemberList, RibResolve, RibReview, RibHistory,
     WebHome, WebPortfolio, WebSettings,

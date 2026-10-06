@@ -3805,7 +3805,7 @@
 
   // ═════════════════════════════════════════════════════════════════════
   // YOUR CALL: which tier a traded stock fills (price-tier leagues),
-  // 2026-10-05. "Tier Cup": six one-share tiers. Roberto sold DIS (his
+  // 2026-10-05. "Tier Cup": six one-share tiers. Roberto sold DIS (their
   // $100–$200 stock) and wants to buy. New copy throughout.
   // ═════════════════════════════════════════════════════════════════════
   const TIER = (() => {
@@ -4542,6 +4542,60 @@
       </Device>
     );
   }
+  /** Home's pre-draft card under auto-start (same states as the lobby).
+   * phase: 'scheduled' | 'open' | 'starting' | 'risk' | 'postponed' | 'nodate'.
+   * commish: the commissioner's phone (blockers card ON TOP of the draft card;
+   * when postponed, the blockers card replaces it). */
+  function HomeAuto({ phase = 'scheduled', commish }) {
+    // On time, nobody left (6 of 8, as the pre-draft Home); at risk / postponed, Sofia F. left.
+    const members = ['scheduled', 'open', 'starting', 'nodate'].includes(phase) ? ['RB', 'MR', 'LC', 'SF', 'GV', 'TP'] : ['RB', 'MR', 'LC', 'GV', 'TP'];
+    const clock = { scheduled: '2d 06h 40m', open: '42:18', starting: '00:00', risk: '1h 58m' }[phase];
+    const live = phase === 'open' || phase === 'starting';
+    // The everyone-states are shown on Roberto B.'s phone (seat 4); the member frames on Giulia V.'s.
+    const mine = commish || ['scheduled', 'open', 'starting'].includes(phase);
+    const draftCard = phase === 'postponed' && commish ? null : (
+      <GameCard tag={phase === 'postponed' ? 'Draft postponed' : 'Draft'} chip={<span className="ks-chip">{phase === 'postponed' ? 'Postponed' : 'Pre-draft'}</span>}>
+        {phase === 'postponed' ? (
+          <>
+            <span className="ks-title">Roberto B. will pick a new time.</span>
+            <span className="ks-callout ks-muted">You'll see it here, with at least an hour's notice.</span>
+          </>
+        ) : phase === 'nodate' ? (
+          <>
+            <span className="ks-title">No draft time yet</span>
+            <span className="ks-callout ks-muted">{commish ? 'Set a draft time in League settings.' : 'Roberto B. will set the draft time.'}</span>
+          </>
+        ) : (
+          <>
+            <span className="ks-title">{AS.when}</span>
+            {phase === 'open' ? <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Draft room open · starts in</span> : null}
+            <span className="ks-score ks-num" style={{ fontSize: 40 }}>{clock}</span>
+            {phase === 'starting' ? <span className="ks-callout" style={{ display: 'inline-flex', gap: 8, alignItems: 'center', fontWeight: 700 }}><Spinner />Starting the draft</span> : null}
+            {live ? <span className="ks-callout" style={{ fontWeight: 700, color: 'var(--c-you-text)' }}>You pick {K.ordinal(AS.seat)}</span> : null}
+          </>
+        )}
+        {phase === 'postponed' ? null : <span className="ks-callout ks-muted">60-second picks · 6 rounds</span>}
+        {phase === 'scheduled' || phase === 'risk' ? <span className="ks-callout" style={{ display: 'flex', gap: 8, alignItems: 'center' }}><span className="ks-dot" />The draft room opens Sat 6:00 PM ET, when the order is set.</span> : null}
+        <span className="ks-btn ks-btn--ongame">{live ? 'Go to the draft room' : 'Build your queue'}</span>
+      </GameCard>
+    );
+    return (
+      <Device tab="home" label={`Home, pre-draft, ${phase}${commish ? ', commissioner' : ''}`}>
+        <Head name={K.SERIE_A.name} avatar={mine} />
+        <div className="ks-pad ks-stack">
+          {commish && (phase === 'risk' || phase === 'postponed') ? <BlockersCard phase={phase} /> : null}
+          {draftCard}
+          {phase === 'risk' || (phase === 'postponed' && commish) ? null : (
+            <Card pad="14px">
+              <div className="ks-section-h"><h3>Members</h3><span className="ks-caption ks-num">{members.length} of 8 joined</span></div>
+              <div style={{ display: 'flex', gap: 6 }}>{members.map((m, i) => <span key={m} className={mine && i === 0 ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{m}</span>)}</div>
+            </Card>
+          )}
+        </div>
+      </Device>
+    );
+  }
+
   /** Decision 3: the Draft date row after the room opens. allow: postponing is allowed. */
   function DateAfterRoom({ allow }) {
     return (
@@ -4552,7 +4606,7 @@
           <span className="ks-tag" style={{ color: 'var(--c-text-2)' }}>Draft</span>
           <Card><ul className="ks-rows">
             <li className="ks-row" style={{ gridTemplateColumns: '1fr auto 16px', padding: '13px 0' }}>
-              <span><span className="ks-callout" style={{ fontWeight: 600, color: allow ? undefined : 'var(--c-text-3)' }}>Draft date</span><br /><span className="ks-caption">{allow ? 'Moving it keeps everyone locked in until the new time.' : 'The draft time can’t change once the draft room opens.'}</span></span>
+              <span><span className="ks-callout" style={{ fontWeight: 600, color: allow ? undefined : 'var(--c-text-3)' }}>Draft time</span><br /><span className="ks-caption">{allow ? 'Moving it keeps everyone locked in until the new time.' : 'The draft time can’t change once the draft room opens.'}</span></span>
               <span className="ks-callout ks-muted">{AS.when}</span>
               <span className="ks-muted">{allow ? <Icon d={ICON.right} size={16} /> : null}</span>
             </li>
@@ -4570,9 +4624,9 @@
       </div>
     );
     return (
-      <Device noTabs label="Draft date sheet" overlay={
+      <Device noTabs label="Draft time sheet" overlay={
         <Sheet top={300}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span className="ks-title">Draft date</span><span className="ks-callout" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Done</span></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span className="ks-title">Draft time</span><span className="ks-callout" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Done</span></div>
           <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr 1fr', gap: 6 }}>
             <Col items={['Today', 'Tomorrow', 'Thu, Oct 1']} on="Today" />
             <Col items={['1', '2', '3']} on="3" off={['1', '2']} />
@@ -4598,7 +4652,7 @@
     TierPortfolio, TierReview, TierRefused,
     LeagueSettingsLeave, LeaveSheet, CommishLeave, OrderAfterLeave, DepartedMatchup, DepartedStandings, DepartedBracket, LeaverLeague, LeaverSheet, LeaveRefused, LeaveRow, ReconfirmHome, ReconfirmStartBlocked, ReconfirmMember, LeaveOpenRow, LeaveFinished,
     JoinCode, JoinPreview, JoinDone, NotFound,
-    AutoLobby, CommishBlocked, MemberPostponed, DateAfterRoom, DraftDatePicker, LockPush,
+    AutoLobby, CommishBlocked, MemberPostponed, HomeAuto, DateAfterRoom, DraftDatePicker, LockPush,
     DraftRefused, StartBlocked, DraftStalled, StallPush,
     RibHome, RibLeague, RibPush, RibMemberPrompt, RibHomeCounts, RibReconcile, RibMemberList, RibResolve, RibReview, RibHistory,
     WebHome, WebPortfolio, WebSettings,
@@ -4819,7 +4873,7 @@
             <span className="b-sec__n b-sec__n--code">3c</span>
             <div>
               <h2 id="call-leave-h">Your call: leaving a league</h2>
-              <p className="b-job"><b>Ruled by Giorgio (2026-10-06).</b> The leave window: open until the draft order is set (an hour before the draft), locked from then until the season ends, open again after the season (where leaving hides the league). Q2 = C (locked in); Q1 = the commissioner reconfirms; Q3 and Q5 don't apply. Still open: Q4. Five decisions, from LEAVE_LEAGUE_OPTIONS.md (feat/leave-league). ★ marks the worker's recommendation; the Design Lead's view is in the box at the end. All copy inside these frames is new. Samples: before the draft, Sofia F. leaves Serie A Traders; mid-season, Gianluigi B. (Roberto's Week 6 opponent) leaves Stock Scudetto on Tuesday; in the playoffs, Francesco T. left in Week 9 and still finished 4th.</p>
+              <p className="b-job"><b>Ruled by Giorgio (2026-10-06).</b> The leave window: open until the draft order is set (an hour before the draft), locked from then until the season ends, open again after the season (where leaving hides the league). Q2 = C (locked in); Q1 = the commissioner reconfirms; Q4 = A (transfer the title first); Q3 and Q5 don't apply. All decided. Five decisions, from LEAVE_LEAGUE_OPTIONS.md (feat/leave-league). ★ marks the worker's recommendation; the Design Lead's view is in the box at the end. All copy inside these frames is new. Samples: before the draft, Sofia F. leaves Serie A Traders; mid-season, Gianluigi B. (Roberto's Week 6 opponent) leaves Stock Scudetto on Tuesday; in the playoffs, Francesco T. left in Week 9 and still finished 4th.</p>
             </div>
           </header>
           <ul className="b-inv__notes">
@@ -4866,11 +4920,11 @@
             <Fit caption="Leave a finished league" note="On Andrea P.'s phone. The league comes off Home and Your leagues; its History keeps their record for everyone. Open: whether a later Run it back still asks them, and whether they can unhide it."><I.LeaveFinished /></Fit>
           </div>
 
-          <h3 className="b-sub">Q4 · The commissioner leaving (before the draft) · open</h3>
+          <h3 className="b-sub">Q4 · The commissioner leaving · decided: A, transfer first</h3>
           <div className="b-concepts b-concepts--three">
-            <Fit caption="A · Block until transferred" note="Leave is disabled; first make someone else commissioner from the Commissioner row, then leave as a member."><I.LeaveRefused kind="commish" /></Fit>
-            <Fit caption="★ B · Pick a successor in the leave sheet" note="Before the draft. Human members only, one atomic step. Shown after picking: nothing is preselected, and the button names the successor once one is picked."><I.CommishLeave q4="B" /></Fit>
-            <Fit caption="C · Auto-transfer" note="The longest-standing manager becomes commissioner and gets a push."><I.CommishLeave q4="C" /></Fit>
+            <Fit caption="✓ A · Transfer first (chosen)" note="Leave is disabled for the commissioner: first make someone else commissioner from the Commissioner row, then leave as a member. A transfer is allowed only before the draft room opens or after the season (PR #132)."><I.LeaveRefused kind="commish" /></Fit>
+            <Fit caption="B · Pick a successor in the leave sheet (not chosen)" note="Before the draft. Human members only, one atomic step. Shown after picking: nothing is preselected, and the button names the successor once one is picked."><I.CommishLeave q4="B" /></Fit>
+            <Fit caption="C · Auto-transfer (not chosen)" note="The longest-standing manager becomes commissioner and gets a push."><I.CommishLeave q4="C" /></Fit>
           </div>
 
           <h3 className="b-sub">Q5 · What the leaver sees, and rejoining · not applicable (Q2 = C)</h3>
@@ -4888,9 +4942,9 @@
           </div>
 
           <div className="b-ask">
-            <h3>Your call · decided: the leave window, Q2 = C, Q1 = reconfirm. Open: Q4 (recommend B, no successor preselected)</h3>
+            <h3>Decided: the leave window, Q2 = C, Q1 = reconfirm, Q4 = A (transfer first)</h3>
             <ul>
-              <li><b>Still to rule, from the new frames:</b> (1) if the commissioner hasn't chosen by the draft time, the draft simply doesn't start (Start draft stays disabled). Recommend that, plus a push at T−1h if it is still open. (2) Does a commissioner's "Invite someone new" need a deadline? Recommend no: they can switch to Move forward at any time. (3) After a post-season leave, does Run it back still ask that player? Recommend no. Can they unhide the league? Recommend not in 1.2.0.</li>
+              <li><b>Edges:</b> (1) not chosen in time and (2) the invite deadline are settled by auto-start: the deadline is when the draft room opens, and if the teams still aren't confirmed then, the draft is postponed. Still open: (3) after a post-season leave, does Run it back still ask that player (recommend no)? (4) Can they unhide the league (recommend not in 1.2.0)?</li>
             </ul>
             <p className="b-job" style={{ margin: '0 0 6px' }}>The Design Lead's original view, recommending the ★ package, is kept below for the record.</p>
             <ul>
@@ -4944,9 +4998,23 @@
             <Fit caption="Members · postponed" note="Who decides, and how much notice they'll get."><I.MemberPostponed /></Fit>
           </div>
 
+          <h3 className="b-sub">Home's draft card (decided, matches 3c-2's build with three corrections)</h3>
+          <ul className="b-inv__notes">
+            <li><b>Corrections to the build</b> (ui/mobile-league-setup @ 55f4f68): (1) the order line becomes "The draft room opens Sat 6:00 PM ET, when the order is set." (was "Draft order set … an hour before the draft"). (2) Once the room is open, the button is "Go to the draft room", not "Build your queue": the queue lives in the room. (3) On Home, the members' postponed line drops "and on your Home": "You'll see it here, with at least an hour's notice."</li>
+          </ul>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Scheduled" note="The same card as the pre-draft Home, with the room-opening line."><I.HomeAuto phase="scheduled" /></Fit>
+            <Fit caption="Room open" note={'"Draft room open · starts in" and your position; the button goes to the room.'}><I.HomeAuto phase="open" /></Fit>
+            <Fit caption="At 0:00" note="Home never asks the server to start (the lobby and the server do); it just shows the state."><I.HomeAuto phase="starting" /></Fit>
+            <Fit caption="Commissioner · at risk" note="The blockers card sits on top of the draft card."><I.HomeAuto phase="risk" commish /></Fit>
+            <Fit caption="Commissioner · postponed" note="The blockers card replaces the draft card until a new time is set."><I.HomeAuto phase="postponed" commish /></Fit>
+            <Fit caption="Members · postponed" note={'Tag "Draft postponed", chip "Postponed".'}><I.HomeAuto phase="postponed" /></Fit>
+            <Fit caption="No draft time yet · commissioner" note={'Members read "Roberto B. will set the draft time."'}><I.HomeAuto phase="nodate" commish /></Fit>
+          </div>
+
           <h3 className="b-sub">Draft time (decided)</h3>
           <div className="b-concepts b-concepts--three">
-            <Fit caption="Draft date sheet" note="15-minute steps; times under an hour away are greyed out, so there's no error to show. The server quietly accepts 55 minutes, so a slow submit is never refused."><I.DraftDatePicker /></Fit>
+            <Fit caption="Draft time sheet" note="15-minute steps; times under an hour away are greyed out, so there's no error to show. The server quietly accepts 55 minutes, so a slow submit is never refused."><I.DraftDatePicker /></Fit>
             <Fit caption="After the room opens" note="The time can't change. A postponed draft is the exception: its room never opened."><I.DateAfterRoom /></Fit>
           </div>
 
@@ -4959,8 +5027,9 @@
               <li><b>Reminder</b> (commissioner, about T−2h, only if still blocked): "One hour left to fix your league. If it isn't ready by {'{6:00 PM ET}'}, the draft is postponed."</li>
               <li><b>Postponed</b> (members, T−1h): "The draft is postponed. {'{Commissioner}'} will pick a new time."</li>
               <li><b>Postponed</b> (commissioner, T−1h): "The draft is postponed: the league wasn't ready at {'{6:00 PM ET}'}. Fix it, then pick a new time."</li>
-              <li><b>New time</b> (everyone, proposed, when a postponed draft gets its new time): "The draft is now {'{Sun, Oct 4 · 7:00 PM ET}'}."</li>
-              <li><b>Blocker phrases</b> for {'{first blocker}'} are whole clauses: "Sofia F. left the league"; "8 playoff teams, but 7 teams are in"; "fewer than 4 teams have joined"; "some slots can't be filled". Each is a full sentence on its own in the card.</li>
+              <li><b>New time</b> (everyone, decided: every draft-time change pushes every member, including whoever changed it): "The draft is now {'{Sun, Oct 4 · 7:00 PM ET}'}."</li>
+              <li><b>Blocker phrases</b> for {'{first blocker}'} are whole clauses: "Sofia F. left the league"; "Sofia F. and Ana P. left the league"; "3 managers left the league"; "a manager left the league" (no readable names); "8 playoff teams, but 7 teams are in" (or "there are more playoff teams than teams" when the counts aren't known); "the number of playoff teams isn't set"; "fewer than 4 teams have joined"; "some slots can't be filled"; "the budget can't fill every roster"; "the league's stakes aren't set"; "not every Season 1 player has answered"; fallback "something in League settings needs fixing". Members' fallback name: "The commissioner". In the card, each one stands as its own line.</li>
+              <li><b>One word: draft time.</b> The settings row and the sheet are "Draft time" (not "Draft date"), matching "Pick a new draft time" and the pushes. Pushes about the draft time go to every member, including whoever changed it.</li>
             </ul>
           </div>
         </section>
