@@ -3,10 +3,14 @@
 // DR-001 draft constraint system). RN mirror of the web SlotBuilder: a slot =
 // {count, price bracket?, category?}; no filters = flex. Feasibility is a
 // WARNING, never a gate; partial enrichment shows a lower-bound caveat.
+//
+// 3c-2: rewritten on the sp primitives (no board frame; composed from the
+// setup vocabulary). The props, the state and every rule are unchanged — the
+// copy and input sanitising moved to lib/game/slotBuilderCopy.ts verbatim.
+// Hard errors are field errors (danger text, instant, no icon, §9B);
+// availability warnings use the warn-tint note; the category opens a sheet.
 import { useEffect, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '@/constants/Colors';
+import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import {
   type Category,
   type SlotDraft,
@@ -14,6 +18,26 @@ import {
   fetchEnrichmentProgress,
   validateSlotConfig,
 } from '@/lib/categoryData';
+import {
+  EMPTY_SLOT,
+  SLOT_CHECK_FAILED,
+  SLOT_PARTIAL_NOTE,
+  categoryLabel,
+  countInput,
+  priceInput,
+  removeSlotLabel,
+  slotShort,
+  slotShortfallCopy,
+  slotTitle,
+} from '@/lib/game/slotBuilderCopy';
+import { space } from '@/constants/tokens';
+import { Button } from '@/components/sp/Button';
+import { Icon } from '@/components/sp/Icon';
+import { Sheet } from '@/components/sp/Sheet';
+import { Text } from '@/components/sp/Text';
+import { useTheme } from '@/components/sp/ThemeProvider';
+import { Field } from '@/components/shell/Field';
+import { ChoiceRow, RowDivider, RowWrap, SettingRow, SetupCard, WarnNote } from '@/components/game/SetupRows';
 
 interface SlotBuilderProps {
   slots: SlotDraft[];
@@ -24,7 +48,13 @@ interface SlotBuilderProps {
   disabled?: boolean;
 }
 
+/** At accessibility sizes the three fields stack instead of squeezing side by side. */
+const STACK_FONT_SCALE = 1.35;
+
 export default function SlotBuilder({ slots, onChange, categories, leagueSize, numRounds, disabled }: SlotBuilderProps) {
+  const { colors } = useTheme();
+  const { fontScale } = useWindowDimensions();
+  const stacked = fontScale >= STACK_FONT_SCALE;
   const [warnings, setWarnings] = useState<string[]>([]);
   const [checking, setChecking] = useState(false);
   const [partialNote, setPartialNote] = useState(false);
@@ -33,15 +63,12 @@ export default function SlotBuilder({ slots, onChange, categories, leagueSize, n
   const setSlot = (i: number, patch: Partial<SlotDraft>) => {
     onChange(slots.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
   };
-  const addSlot = () => onChange([...slots, { slotCount: '1', priceMin: '', priceMax: '', categoryId: '' }]);
+  const addSlot = () => onChange([...slots, { ...EMPTY_SLOT }]);
   const removeSlot = (i: number) => onChange(slots.filter((_, idx) => idx !== i));
 
   // HARD errors (count/capacity/bracket) — parents use the same validator to
   // disable Next/save; this component shows the reasons.
   const hardErrors = validateSlotConfig(slots, numRounds);
-
-  const categoryName = (id: string) =>
-    id ? categories.find((c) => c.id === id)?.name ?? 'Unknown' : 'Any (flex)';
 
   const checkFeasibility = async () => {
     setChecking(true);
@@ -66,15 +93,12 @@ export default function SlotBuilder({ slots, onChange, categories, leagueSize, n
           priceMax: s.priceMax === '' ? null : Number(s.priceMax),
           categoryId: s.categoryId || null,
         });
-        const needed = leagueSize * (Number(s.slotCount) || 1);
-        if (matches < needed) {
-          found.push(
-            `Slot ${i + 1}: only ${matches} draftable stock${matches === 1 ? '' : 's'} match — the league needs at least ${needed} (${leagueSize} teams × ${s.slotCount}).`,
-          );
+        if (slotShort(matches, leagueSize, s.slotCount)) {
+          found.push(slotShortfallCopy(i, matches, leagueSize, s.slotCount));
         }
       }
     } catch {
-      found.push('Could not check availability — try again.');
+      found.push(SLOT_CHECK_FAILED);
     }
     setWarnings(found);
     setChecking(false);
@@ -84,189 +108,168 @@ export default function SlotBuilder({ slots, onChange, categories, leagueSize, n
     setWarnings([]);
   }, [JSON.stringify(slots)]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const picking = categoryPickerFor !== null ? slots[categoryPickerFor] : undefined;
+  const pick = (categoryId: string) => {
+    if (categoryPickerFor !== null) setSlot(categoryPickerFor, { categoryId });
+    setCategoryPickerFor(null);
+  };
+
   return (
-    <View>
+    <View style={styles.stack}>
       {slots.map((s, i) => (
-        <View key={i} style={styles.slotCard}>
-          <View style={styles.slotRow}>
+        <SetupCard key={i}>
+          <View style={styles.slotHead}>
+            <Text variant="headline" style={styles.grow}>
+              {slotTitle(i)}
+            </Text>
+            <Pressable
+              onPress={() => !disabled && removeSlot(i)}
+              disabled={disabled}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !!disabled }}
+              style={styles.remove}
+            >
+              <Icon name="close" size="headline" tone={disabled ? 'text3' : 'text2'} label={removeSlotLabel(i)} />
+            </Pressable>
+          </View>
+          <View style={[styles.fields, stacked && styles.fieldsStacked, disabled && styles.dim]}>
             <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Count</Text>
-              <TextInput
-                style={styles.input}
+              <Field
+                label="Count"
+                accessibilityLabel={`${slotTitle(i)}, Count`}
                 value={s.slotCount}
                 editable={!disabled}
                 keyboardType="numeric"
                 placeholder="1"
-                placeholderTextColor={Colors.textDark}
-                onChangeText={(t) => setSlot(i, { slotCount: t.replace(/[^0-9]/g, '') })}
+                onChangeText={(t) => setSlot(i, { slotCount: countInput(t) })}
               />
             </View>
             <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Min $</Text>
-              <TextInput
-                style={styles.input}
+              <Field
+                label="Min $"
+                accessibilityLabel={`${slotTitle(i)}, Min $`}
                 value={s.priceMin}
                 editable={!disabled}
                 keyboardType="numeric"
                 placeholder="any"
-                placeholderTextColor={Colors.textDark}
-                onChangeText={(t) => setSlot(i, { priceMin: t.replace(/[^0-9.]/g, '') })}
+                onChangeText={(t) => setSlot(i, { priceMin: priceInput(t) })}
               />
             </View>
             <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Max $</Text>
-              <TextInput
-                style={styles.input}
+              <Field
+                label="Max $"
+                accessibilityLabel={`${slotTitle(i)}, Max $`}
                 value={s.priceMax}
                 editable={!disabled}
                 keyboardType="numeric"
                 placeholder="any"
-                placeholderTextColor={Colors.textDark}
-                onChangeText={(t) => setSlot(i, { priceMax: t.replace(/[^0-9.]/g, '') })}
+                onChangeText={(t) => setSlot(i, { priceMax: priceInput(t) })}
               />
             </View>
-            <TouchableOpacity
-              style={styles.removeBtn}
-              onPress={() => !disabled && removeSlot(i)}
-              disabled={disabled}
-            >
-              <Ionicons name="close" size={18} color={Colors.textMuted} />
-            </TouchableOpacity>
           </View>
-
-          <TouchableOpacity
-            style={styles.categoryButton}
-            onPress={() => !disabled && setCategoryPickerFor(categoryPickerFor === i ? null : i)}
+          <RowDivider />
+          <SettingRow
+            label="Category"
+            value={categoryLabel(s.categoryId, categories)}
+            onPress={() => !disabled && setCategoryPickerFor(i)}
             disabled={disabled}
-          >
-            <Text style={styles.categoryButtonText}>{categoryName(s.categoryId)}</Text>
-            <Ionicons name="chevron-down" size={14} color={Colors.textMuted} />
-          </TouchableOpacity>
+          />
+        </SetupCard>
+      ))}
 
-          {categoryPickerFor === i && (
-            <View style={styles.categoryList}>
-              <TouchableOpacity
-                style={styles.categoryOption}
-                onPress={() => { setSlot(i, { categoryId: '' }); setCategoryPickerFor(null); }}
-              >
-                <Text style={styles.categoryOptionText}>Any (flex)</Text>
-              </TouchableOpacity>
-              {categories.filter((c) => !c.is_misc).map((c) => (
-                <TouchableOpacity
-                  key={c.id}
-                  style={styles.categoryOption}
-                  onPress={() => { setSlot(i, { categoryId: c.id }); setCategoryPickerFor(null); }}
-                >
-                  <Text style={styles.categoryOptionText}>{c.name}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
+      {hardErrors.length > 0 ? (
+        <View accessibilityLiveRegion="polite" style={styles.errors}>
+          {hardErrors.map((e, i) => (
+            <Text key={`h${i}`} variant="callout" color={colors.danger}>
+              {e}
+            </Text>
+          ))}
         </View>
-      ))}
-
-      {hardErrors.map((e, i) => (
-        <Text key={`h${i}`} style={styles.hardError}>{e}</Text>
-      ))}
+      ) : null}
       {warnings.map((w, i) => (
-        <Text key={i} style={styles.warning}>{w}</Text>
+        <WarnNote key={i} title={w} />
       ))}
-      {partialNote && slots.length > 0 && (
-        <Text style={styles.note}>
-          Stock data is still loading (takes ~2 days after launch) — per-slot availability
-          checks are paused until it completes. Slot count math is still enforced.
+      {partialNote && slots.length > 0 ? (
+        <Text variant="caption" tone="secondary">
+          {SLOT_PARTIAL_NOTE}
         </Text>
-      )}
+      ) : null}
 
-      <View style={styles.actionRow}>
-        <TouchableOpacity style={styles.actionBtn} onPress={addSlot} disabled={disabled}>
-          <Text style={styles.actionBtnText}>+ Add slot</Text>
-        </TouchableOpacity>
-        {slots.length > 0 && (
-          <TouchableOpacity style={styles.actionBtn} onPress={checkFeasibility} disabled={disabled || checking}>
-            <Text style={styles.actionBtnText}>{checking ? 'Checking…' : 'Check availability'}</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+      <RowWrap>
+        <Button label="Add slot" variant="secondary" size="sm" onPress={addSlot} disabled={disabled} />
+        {slots.length > 0 ? (
+          <Button
+            label="Check availability"
+            variant="secondary"
+            size="sm"
+            onPress={checkFeasibility}
+            disabled={disabled}
+            status={checking ? 'loading' : 'idle'}
+          />
+        ) : null}
+      </RowWrap>
+
+      <Sheet visible={categoryPickerFor !== null} onClose={() => setCategoryPickerFor(null)}>
+        <ScrollView contentContainerStyle={styles.sheetBody}>
+          <Text variant="title" accessibilityRole="header">
+            Category
+          </Text>
+          <View>
+            <ChoiceRow title="Any (flex)" selected={!picking?.categoryId} onPress={() => pick('')} />
+            {categories
+              .filter((c) => !c.is_misc)
+              .map((c) => (
+                <View key={c.id}>
+                  <RowDivider />
+                  <ChoiceRow title={c.name} selected={picking?.categoryId === c.id} onPress={() => pick(c.id)} />
+                </View>
+              ))}
+          </View>
+        </ScrollView>
+      </Sheet>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  slotCard: {
-    backgroundColor: Colors.cardBg,
-    borderRadius: 12,
-    padding: 10,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: Colors.border,
+  stack: {
+    gap: space[4],
   },
-  slotRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-end' },
-  field: { flex: 1 },
-  fieldLabel: { fontSize: 11, fontFamily: 'Inter_400Regular', color: Colors.textMuted, marginBottom: 4 },
-  input: {
-    backgroundColor: Colors.background,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    color: Colors.textPrimary,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
-  },
-  removeBtn: { padding: 8 },
-  categoryButton: {
+  slotHead: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: Colors.background,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    paddingTop: space[2],
   },
-  categoryButtonText: { color: Colors.textPrimary, fontSize: 13, fontFamily: 'Inter_400Regular' },
-  categoryList: {
-    marginTop: 4,
-    backgroundColor: Colors.background,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.border,
+  grow: {
+    flex: 1,
   },
-  categoryOption: { paddingHorizontal: 12, paddingVertical: 10 },
-  categoryOptionText: { color: Colors.textPrimary, fontSize: 13, fontFamily: 'Inter_400Regular' },
-  warning: {
-    color: Colors.warning,
-    fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-    backgroundColor: Colors.warningBg,
-    borderRadius: 8,
-    padding: 8,
-    marginBottom: 6,
-    lineHeight: 16,
+  remove: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: -space[3],
   },
-  note: { color: Colors.textMuted, fontSize: 12, fontFamily: 'Inter_400Regular', marginBottom: 6 },
-  actionRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
-  actionBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: Colors.cardBg,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.border,
+  fields: {
+    flexDirection: 'row',
+    gap: space[3],
+    paddingBottom: space[4],
   },
-  actionBtnText: { color: Colors.textPrimary, fontSize: 13, fontFamily: 'Inter_400Regular' },
-  hardError: {
-    color: Colors.error,
-    fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-    backgroundColor: Colors.errorBg,
-    borderRadius: 8,
-    padding: 8,
-    marginBottom: 6,
-    lineHeight: 16,
+  fieldsStacked: {
+    flexDirection: 'column',
+  },
+  dim: {
+    opacity: 0.5,
+  },
+  field: {
+    flex: 1,
+  },
+  errors: {
+    gap: space[2],
+  },
+  sheetBody: {
+    paddingHorizontal: space[6],
+    paddingBottom: space[4],
+    gap: space[3],
   },
 });
