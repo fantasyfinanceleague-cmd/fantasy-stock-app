@@ -48,7 +48,7 @@ The verdict below covers exactly this evidence. "Not examined" means no verdict,
 
 | | P0 | P1 | P2 | P3 |
 |---|---|---|---|---|
-| Open | 4 | 23 | 10 | 8 |
+| Open | 4 | 23 | 10 | 9 |
 
 All P0s and the spec-level P1s were relayed to the Orchestrator for the 3c-2 and 3e workers
 on 2026-10-06 (status column). Two P1s are layout changes and went to Giorgio as "Your call"
@@ -130,6 +130,7 @@ P2/P3 for 1.3 unless cheap. Paths are `apps/mobile/` unless noted.
 | U-45 | Home invite share (3c-2) | — | `PreDraftCard` share text hardcodes "Stockpile"; the name comes from `brand.name`. | Use `brand.name`. | backlog |
 | U-46 | Trade review (3e) | 8 | "Trading hours unavailable. Try again shortly." doesn't follow the "X didn't load" pattern. | "Trading hours didn't load. Try again in a moment." | backlog |
 | U-47 | Join (main) | 8 | `invalid_code` at join time (after a good preview) shows the generic line. | Reuse the preview's bad-code line. | backlog |
+| U-48 | Draft room | 8 | `would_strand_slot` carries no manager or slot names, so only the generic line can show. | Backend: add `manager_name`, `slot_label` to the refusal (1.3). | backlog |
 
 **Not findings** (checked and accepted): the Buy/Sell segmented control sits beside the sell
 action, but it is a mode selector, not a second action (rule 3 is about actions); the
