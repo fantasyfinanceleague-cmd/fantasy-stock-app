@@ -4,7 +4,7 @@ import { Keyboard, StyleSheet, TextInput, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { router, Stack } from 'expo-router';
 
-import { radius, space } from '@/constants/tokens';
+import { radius, space, type } from '@/constants/tokens';
 import { Button, type ButtonStatus } from '@/components/sp/Button';
 import { Icon } from '@/components/sp/Icon';
 import { Text } from '@/components/sp/Text';
@@ -231,7 +231,7 @@ export default function JoinLeagueScreen() {
               <Text variant="callout" tone="secondary">
                 {row.label}
               </Text>
-              <Text variant="headline" numberOfLines={0} style={styles.rowValue}>
+              <Text variant="callout" numberOfLines={0} style={styles.rowValue}>
                 {row.value}
               </Text>
             </View>
@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'baseline',
     gap: space[4],
     minHeight: 44,
     paddingVertical: space[3],
@@ -334,6 +334,7 @@ const styles = StyleSheet.create({
   rowValue: {
     flexShrink: 1,
     textAlign: 'right',
+    fontFamily: type.headline.fontFamily,
   },
   caption: {
     textAlign: 'center',

@@ -47,17 +47,6 @@ const HIDDEN_HEADER_FULLSCREEN = { headerShown: false, presentation: 'fullScreen
 const WITH_HEADER = { headerShown: true } as const;
 const ROOT = { flex: 1 } as const;
 
-// Dev-only routes are declared ONLY in a development build. In a release the
-// array is empty, so nothing renders for them: the route files still exist
-// (expo-router routes every file), but an undeclared route is simply appended
-// after the declared ones, so it can never become the Stack's first/initial
-// screen, and design-gallery's own `!__DEV__` redirect sends a link to it Home.
-// An array (not `{__DEV__ && <Stack.Screen />}`) because a `false` child makes
-// expo-router warn "Layout children must be of type Screen".
-const DEV_ONLY_SCREENS = __DEV__
-  ? [<Stack.Screen key="design-gallery" name="design-gallery" options={WITH_HEADER} />]
-  : [];
-
 function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
   const { user, authPhase } = useSession();
   const onboardingSeen = useOnboardingSeen();
@@ -306,7 +295,16 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
                   <Stack.Screen name="league-settings" options={HIDDEN_HEADER_MODAL} />
                   <Stack.Screen name="player-portfolio" options={HIDDEN_HEADER_MODAL} />
                   <Stack.Screen name="trade-history" options={HIDDEN_HEADER_MODAL} />
-                  {DEV_ONLY_SCREENS}
+                  {/* A dev tool: registered ONLY in a development build. Guarded out
+                      in a release, the navigator never learns the route, so a link
+                      to it falls back to the first screen (Home when signed in,
+                      sign-in when signed out) instead of opening the gallery.
+                      design-gallery's own `!__DEV__` redirect stays as the second
+                      layer. Checked in a --no-dev bundle:
+                      docs/design/1.2.0-release-route-check.md */}
+                  <Stack.Protected guard={__DEV__}>
+                    <Stack.Screen name="design-gallery" options={WITH_HEADER} />
+                  </Stack.Protected>
                 </Stack.Protected>
               </Stack.Protected>
 
