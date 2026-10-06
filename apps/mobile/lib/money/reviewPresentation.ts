@@ -21,13 +21,13 @@ export interface ReviewPresentation {
   message: string | null;
   messageTone: 'text' | 'warn';
   button: { label: string; enabled: boolean; progress: boolean } | null;
-  footer: 'try_again' | 'back_to_picker' | 'done' | null;
+  footer: 'try_again' | 'back_to_picker' | 'pick_stock' | 'sell_first' | 'sign_in' | 'done' | null;
 }
 
 export function reviewPresentation(
   state: ReviewState,
   review: { buttonLabel: string; buttonRole?: 'sell' | 'buy' },
-  ctx: { title: string; symbol: string; resolve?: CategoryResolver },
+  ctx: { title: string; symbol: string; resolve?: CategoryResolver; ownerName?: string },
 ): ReviewPresentation {
   switch (state.kind) {
     case 'ready':
@@ -46,15 +46,15 @@ export function reviewPresentation(
           message: tierRefusalSentence(ctx.symbol, state.tier.price, state.tier.openSlots, ctx.resolve),
           messageTone: 'warn',
           button: null,
-          footer: null,
+          footer: 'sell_first',
         };
       }
-      const copy = refusalCopy(state.reason, {});
+      const copy = refusalCopy(state.reason, { ownerName: ctx.ownerName });
       return {
         message: copy.message,
         messageTone: 'warn',
         button: null,
-        footer: copy.retryable ? 'try_again' : copy.backTo === 'picker' ? 'back_to_picker' : null,
+        footer: copy.backTo === 'picker' ? 'back_to_picker' : copy.retryable ? 'try_again' : (copy.next ?? null),
       };
     }
     case 'closed':

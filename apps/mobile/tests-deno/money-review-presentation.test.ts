@@ -37,10 +37,10 @@ Deno.test('a refusal is warn-tint with no icon; trade_conflict offers Try again'
   assert(r.message!.startsWith('Nothing was traded:'));
 });
 
-Deno.test('an ordinary refusal is warn-tint and offers no retry', () => {
+Deno.test('an ordinary refusal is warn-tint, offers no retry, and names its next step', () => {
   const r = p({ kind: 'refused', reason: 'symbol_owned', retryable: false });
   assertEquals(r.messageTone, 'warn');
-  assertEquals(r.footer, null);
+  assertEquals(r.footer, 'pick_stock');
 });
 
 Deno.test('proceeds_unavailable sends the user back to the picker', () => {
@@ -89,7 +89,7 @@ Deno.test('a tier refusal names the price and the open slot, warn-tint, no retry
   });
   assertEquals(r.message, 'JPM is $211.42. Your open slot takes stocks priced $100 to $200.');
   assertEquals(r.messageTone, 'warn');
-  assertEquals(r.footer, null);
+  assertEquals(r.footer, 'sell_first');
 });
 
 // Rule 8 (UX audit P1): a proceeds refusal names the next step: "Pick another sale" (NEW copy).
@@ -101,4 +101,44 @@ Deno.test('proceeds_unavailable: the refused review offers back_to_picker, not a
   );
   assertEquals(r.footer, 'back_to_picker');
   assertEquals(r.button, null);
+});
+
+// Rule 8 (UX audit P1): every refusal names a next step. The button is the way out;
+// the refusal is the only place the player will read the rule.
+const REFUSED = (reason: string, retryable = false) =>
+  reviewPresentation({ kind: 'refused', reason, retryable }, { buttonLabel: 'Buy SHOP', buttonRole: 'buy' }, { title: 'Bought SHOP', symbol: 'SHOP' });
+
+Deno.test('symbol_owned: the owner is named, and the next step is Pick another stock', () => {
+  const r = reviewPresentation(
+    { kind: 'refused', reason: 'symbol_owned', retryable: false },
+    { buttonLabel: 'Buy SHOP', buttonRole: 'buy' },
+    { title: 'Bought SHOP', symbol: 'SHOP', ownerName: 'Ticker Tina' },
+  );
+  assertEquals(r.message, 'Owned by Ticker Tina');
+  assertEquals(r.footer, 'pick_stock');
+});
+
+Deno.test('symbol_owned without a name falls back to another manager', () => {
+  assertEquals(REFUSED('symbol_owned').message, 'Owned by another manager');
+});
+
+Deno.test('over_budget and not_draftable: Pick another stock', () => {
+  assertEquals(REFUSED('over_budget').footer, 'pick_stock');
+  assertEquals(REFUSED('not_draftable').footer, 'pick_stock');
+});
+
+Deno.test('roster_full and no_eligible_slot: Sell a holding first', () => {
+  assertEquals(REFUSED('roster_full').footer, 'sell_first');
+  assertEquals(REFUSED('no_eligible_slot').footer, 'sell_first');
+});
+
+Deno.test('no_price and invalid_price: a retryable Try again, like calendar_unavailable', () => {
+  assertEquals(REFUSED('no_price', true).footer, 'try_again');
+  assertEquals(REFUSED('invalid_price', true).footer, 'try_again');
+});
+
+Deno.test('not_authenticated: the session ended, and the next step is Sign in', () => {
+  const r = REFUSED('not_authenticated');
+  assertEquals(r.message, 'Your session ended. Sign in again.');
+  assertEquals(r.footer, 'sign_in');
 });

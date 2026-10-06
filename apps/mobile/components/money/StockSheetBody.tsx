@@ -10,7 +10,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { LoadFailure } from '@/components/money/LoadFailure';
-import { TradeReviewPanel } from '@/components/money/TradeReviewPanel';
+import { TradeReviewPanel, type NextStep } from '@/components/money/TradeReviewPanel';
 import { Button } from '@/components/sp/Button';
 import { SegmentedControl } from '@/components/sp/SegmentedControl';
 import { Text } from '@/components/sp/Text';
@@ -42,6 +42,7 @@ import { buyBody, previewBody, sellBody } from '@/lib/money/tradeBodies';
 import { useStockSheetData } from '@/lib/money/useStockSheetData';
 import { usePortfolioLedger } from '@/lib/money/usePortfolioLedger';
 import { useTradeSubmit } from '@/lib/money/useTradeSubmit';
+import { useRouter } from 'expo-router';
 
 function useNow(intervalMs: number): Date {
   const [now, setNow] = useState(() => new Date());
@@ -83,6 +84,7 @@ export function StockSheetBody({
   const { market: contextMarket, activeLeague } = useLeagueContext();
   const { user } = useSession();
   const { colors } = useTheme();
+  const router = useRouter();
   const userId = MONEY_FIXTURE ? STRESS_CALLER : (user?.id ?? null);
   const ledgerState = usePortfolioLedger(activeLeague?.id ?? (MONEY_FIXTURE ? FIXTURE_LEAGUE_ID : null));
   const now = useNow(1000);
@@ -243,6 +245,21 @@ export function StockSheetBody({
     if (outcome?.kind === 'ok') data.refresh();
   }
 
+  // A refusal's next step. Pick another stock closes the sheet: the stock search is where it leads.
+  function handleNextStep(step: NextStep) {
+    if (step === 'back_to_picker') {
+      void pickAnotherSale();
+    } else if (step === 'pick_stock') {
+      onDone();
+    } else if (step === 'sell_first') {
+      onDone();
+      router.navigate('/portfolio');
+    } else {
+      onDone();
+      router.replace('/login');
+    }
+  }
+
   function retryReview() {
     trade.retry();
     data.refresh();
@@ -284,14 +301,15 @@ export function StockSheetBody({
     }
     if (open.review) {
       const doneTitle = open.kind === 'sell' ? `Sold ${symbol}` : `Bought ${symbol}`;
-      const presentation = reviewPresentation(trade.state, open.review, { title: doneTitle, symbol, resolve: categoryNameOf });
+      const ownerName = data.facts?.owner?.kind === 'other' ? (data.facts.owner.name ?? undefined) : undefined;
+      const presentation = reviewPresentation(trade.state, open.review, { title: doneTitle, symbol, resolve: categoryNameOf, ownerName });
       return (
         <TradeReviewPanel
           review={open.review}
           presentation={presentation}
           onSubmit={submitNow}
           onRetry={retryReview}
-          onPickAnother={pickAnotherSale}
+          onNextStep={handleNextStep}
           canEdit={!busy}
           onBack={() => setOpen(null)}
           onDone={() => {

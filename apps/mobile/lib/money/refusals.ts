@@ -19,6 +19,8 @@ export interface RefusalCopy {
   terminal?: boolean;
   /** The user may retry, after the review re-fetches fresh numbers. */
   retryable?: boolean;
+  /** The next step, as a button: every refusal names one (Design Lead rule 8). */
+  next?: 'pick_stock' | 'sell_first' | 'sign_in';
 }
 
 export function refusalCopy(reason: string, ctx: RefusalContext): RefusalCopy {
@@ -28,27 +30,29 @@ export function refusalCopy(reason: string, ctx: RefusalContext): RefusalCopy {
     case 'no_proceeds':
       return { message: COPY.noProceeds, terminal: true };
     case 'symbol_owned':
-      return { message: ctx.ownerName ? COPY.ownedBy(ctx.ownerName) : COPY.ownedBy('another manager') };
+      return { message: ctx.ownerName ? COPY.ownedBy(ctx.ownerName) : COPY.ownedBy('another manager'), next: 'pick_stock' };
     case 'not_owned':
-      return { message: COPY.notHeld };
+      return { message: COPY.notHeld, next: 'pick_stock' };
     case 'over_budget':
-      return { message: COPY.overBudget };
+      return { message: COPY.overBudget, next: 'pick_stock' };
     case 'no_eligible_slot':
-      return { message: COPY.noEligibleSlot };
+      return { message: COPY.noEligibleSlot, next: 'sell_first' };
     case 'roster_full':
-      return { message: COPY.rosterFull };
+      return { message: COPY.rosterFull, next: 'sell_first' };
     case 'not_draftable':
-      return { message: COPY.notDraftable };
+      return { message: COPY.notDraftable, next: 'pick_stock' };
     case 'no_price':
-      return { message: COPY.noPrice };
+      return { message: COPY.noPrice, retryable: true };
     case 'rate_limited':
-      return { message: COPY.rateLimited };
+      return { message: COPY.rateLimited, retryable: true };
+    case 'not_authenticated':
+      return { message: COPY.sessionEnded, next: 'sign_in' };
     case 'draft_not_completed':
       return { message: COPY.draftNotCompleted };
     case 'not_a_member':
       return { message: COPY.notAMember };
     case 'invalid_price':
-      return { message: COPY.invalidPrice };
+      return { message: COPY.invalidPrice, retryable: true };
     case 'market_closed':
       return { message: ctx.opensLabel ? COPY.tradingOpens(ctx.opensLabel) : COPY.marketClosedNow };
     case 'calendar_unavailable':

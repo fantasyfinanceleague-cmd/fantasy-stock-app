@@ -35,6 +35,11 @@ export const COPY = {
   marketClosedNow: 'Trading is closed right now.',
   // NEW (flagged): ownership and eligibility.
   ownedBy: (name: string) => `Owned by ${name}`,
+  // NEW copy (Design Lead): the next step on a refusal, and the session ending.
+  pickAnotherStock: 'Pick another stock',
+  sellHoldingFirst: 'Sell a holding first',
+  sessionEnded: 'Your session ended. Sign in again.',
+  signIn: 'Sign in',
   notHeld: "You don't hold this stock.",
   overBudget: "That's more than your budget left.",
   noEligibleSlot: "This price doesn't fit an open slot.",

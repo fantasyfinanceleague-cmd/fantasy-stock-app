@@ -20,6 +20,16 @@ import { COPY } from '@/lib/money/moneyCopy';
 import type { ReviewPresentation } from '@/lib/money/reviewPresentation';
 import type { TradeReview } from '@/lib/money/reviewModel';
 
+/** The next step a refusal names. Each one is a button, never a dead end (Design Lead rule 8). */
+export type NextStep = 'back_to_picker' | 'pick_stock' | 'sell_first' | 'sign_in';
+
+const NEXT_LABEL: Record<NextStep, string> = {
+  back_to_picker: COPY.pickAnotherSale,
+  pick_stock: COPY.pickAnotherStock,
+  sell_first: COPY.sellHoldingFirst,
+  sign_in: COPY.signIn,
+};
+
 export interface TradeReviewPanelProps {
   review: TradeReview;
   presentation: ReviewPresentation;
@@ -27,8 +37,8 @@ export interface TradeReviewPanelProps {
   onRetry: () => void;
   /** False while a submit is in flight: Edit is hidden, since leaving would drop the outcome. */
   canEdit: boolean;
-  /** A proceeds refusal: back to the "Which sale pays" picker. */
-  onPickAnother: () => void;
+  /** The refusal's next step, pressed. */
+  onNextStep: (step: NextStep) => void;
   onBack: () => void;
   onDone: () => void;
 }
@@ -68,9 +78,10 @@ function DoneCheck() {
   );
 }
 
-export function TradeReviewPanel({ review, presentation, onSubmit, onRetry, canEdit, onPickAnother, onBack, onDone }: TradeReviewPanelProps) {
+export function TradeReviewPanel({ review, presentation, onSubmit, onRetry, canEdit, onNextStep, onBack, onDone }: TradeReviewPanelProps) {
   const { colors } = useTheme();
   const p = presentation;
+  const nextStep = p.footer === 'back_to_picker' || p.footer === 'pick_stock' || p.footer === 'sell_first' || p.footer === 'sign_in' ? p.footer : null;
 
   return (
     <View style={styles.stack}>
@@ -124,8 +135,8 @@ export function TradeReviewPanel({ review, presentation, onSubmit, onRetry, canE
       {p.footer === 'done' ? (
         <Button label="Done" variant="secondary" fullWidth onPress={onDone} />
       ) : null}
-      {p.footer === 'back_to_picker' ? (
-        <Button label={COPY.pickAnotherSale} variant="secondary" fullWidth onPress={onPickAnother} />
+      {nextStep ? (
+        <Button label={NEXT_LABEL[nextStep]} variant="primary" fullWidth onPress={() => onNextStep(nextStep)} />
       ) : null}
       {p.footer === 'try_again' ? (
         <Pressable accessibilityRole="button" onPress={onRetry} hitSlop={8} style={styles.footerLink}>
