@@ -4,7 +4,7 @@
  * Failures are never cached, so a retry really retries. A malformed response
  * is refused (see portfolioLedger.parsePortfolioLedger).
  */
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { supabase } from '@/lib/supabase';
 
@@ -44,10 +44,14 @@ export interface PortfolioLedgerState {
   ledger: PortfolioLedger | null;
   /** True when this hook's load was a network read, not a cache hit. */
   fetchedNow: boolean;
+  /** Re-runs the load. Use it after an error (failures are never cached). */
+  refresh: () => void;
 }
 
 export function usePortfolioLedger(leagueId: string | null): PortfolioLedgerState {
-  const [state, setState] = useState<PortfolioLedgerState>({ status: 'loading', ledger: null, fetchedNow: false });
+  const [state, setState] = useState<Omit<PortfolioLedgerState, 'refresh'>>({ status: 'loading', ledger: null, fetchedNow: false });
+  const [tick, setTick] = useState(0);
+  const refresh = useCallback(() => setTick((t) => t + 1), []);
 
   useEffect(() => {
     if (!leagueId) {
@@ -68,7 +72,8 @@ export function usePortfolioLedger(leagueId: string | null): PortfolioLedgerStat
     return () => {
       cancelled = true;
     };
-  }, [leagueId]);
+    // `tick` re-runs the load after an error.
+  }, [leagueId, tick]);
 
-  return state;
+  return { ...state, refresh };
 }

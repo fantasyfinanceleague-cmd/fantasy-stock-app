@@ -41,7 +41,15 @@ export const COPY = {
   draftNotCompleted: 'Trading opens after the draft.',
   notAMember: "You're not in this league.",
   invalidPrice: "That price isn't valid right now. Try again.",
-  nothingTraded: 'Something went wrong. Nothing was traded.',
+  // An unknown game refusal (HTTP 200) never wrote, but it says only what it knows.
+  tradeDidNotGoThrough: "That trade didn't go through.",
+  // Approved by the Design Lead (via the Orchestrator). Shown only for trade_conflict,
+  // which the backend returns only when nothing was written. Never for a 500 or network error.
+  tradeConflict: 'Nothing was traded: your league changed while this trade was going through. Try again.',
+  tryAgain: 'Try again',
+  // NEW (flagged): a LOAD failure. The alert icon arrives with the Design Lead's ruling.
+  portfolioDidNotLoad: "Your portfolio didn't load. Check your connection and try again.",
+  stockDidNotLoad: "This stock didn't load. Check your connection and try again.",
   cantReach: "Couldn't reach trading. Check your connection and try again.",
   // NEW (flagged): market-data credit, one constant (wording to confirm with the provider's terms).
   alpacaCredit: 'Market data provided by Alpaca',

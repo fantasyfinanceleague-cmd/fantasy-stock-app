@@ -6,7 +6,7 @@
  * error-checked: a failed quote leaves those holdings at cost (captioned); a
  * failed bars read hides "today"; neither shows a $0.
  */
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { etDateParts } from '@/lib/time/etParts';
 import { useLeagueContext } from '@/lib/LeagueContext';
@@ -20,13 +20,16 @@ import { usePortfolioLedger } from './usePortfolioLedger';
 
 export interface PortfolioData {
   status: 'loading' | 'ready' | 'error';
+  /** Re-runs the ledger and the price reads (the Try again control). */
+  refresh: () => void;
   view: PortfolioView | null;
   /** New network reads this load cost (the shared ledger counts only when this load fetched it). */
   requestCount: number | null;
   leagueName: string | null;
 }
 
-const EMPTY: PortfolioData = { status: 'loading', view: null, requestCount: null, leagueName: null };
+const NOOP = () => {};
+const EMPTY: Omit<PortfolioData, 'refresh'> & { refresh: () => void } = { status: 'loading', view: null, requestCount: null, leagueName: null, refresh: NOOP };
 
 /** ET calendar date of a Date, YYYY-MM-DD, or null when Intl can't say. */
 function etIsoDate(d: Date): string | null {
@@ -40,7 +43,13 @@ export function usePortfolioData(): PortfolioData {
   const { activeLeague } = useLeagueContext();
   const leagueId = activeLeague?.id ?? null;
   const ledgerState = usePortfolioLedger(leagueId);
-  const [state, setState] = useState<PortfolioData>(EMPTY);
+  const [state, setState] = useState<Omit<PortfolioData, 'refresh'>>(EMPTY);
+  const [tick, setTick] = useState(0);
+  const ledgerRefresh = ledgerState.refresh;
+  const refresh = useCallback(() => {
+    ledgerRefresh();
+    setTick((t) => t + 1);
+  }, [ledgerRefresh]);
 
   useEffect(() => {
     if (!activeLeague || !user) {
@@ -150,7 +159,8 @@ export function usePortfolioData(): PortfolioData {
     return () => {
       cancelled = true;
     };
-  }, [activeLeague, user, ledgerState.status, ledgerState.ledger, ledgerState.fetchedNow]);
+    // `tick` re-runs the price reads on Try again.
+  }, [activeLeague, user, ledgerState.status, ledgerState.ledger, ledgerState.fetchedNow, tick]);
 
-  return state;
+  return { ...state, refresh };
 }

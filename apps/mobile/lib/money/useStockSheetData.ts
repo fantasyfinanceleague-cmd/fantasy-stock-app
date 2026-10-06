@@ -59,10 +59,12 @@ export function useStockSheetData(symbol: string, knownName: string | null = nul
   const [tick, setTick] = useState(0);
   const [state, setState] = useState<StockSheetData>(EMPTY);
 
+  const ledgerRefresh = ledgerState.refresh;
   const refresh = useCallback(() => {
     quoteCache.delete(symbol.toUpperCase());
+    ledgerRefresh();
     setTick((t) => t + 1);
-  }, [symbol]);
+  }, [symbol, ledgerRefresh]);
 
   useEffect(() => {
     if (ledgerState.status === 'loading') return;

@@ -219,12 +219,12 @@ Deno.test('outcome: a transport failure with no response body is network, never 
   assertEquals(out.kind, 'network');
 });
 
-Deno.test('outcome: a 5xx with an unreadable body is an unhandled refusal, never ok', async () => {
+Deno.test('outcome: a 5xx with an unreadable body is unconfirmed (network), never a refusal', async () => {
   const out = await readRecordTradeOutcome({
     data: null,
     error: { name: 'FunctionsHttpError', context: { status: 500, json: async () => { throw new Error('not json'); } } },
   });
-  assertEquals(out, { kind: 'refused', reason: 'unhandled' });
+  assertEquals(out, { kind: 'network' });
 });
 
 Deno.test('outcome: an empty success body is never ok', async () => {

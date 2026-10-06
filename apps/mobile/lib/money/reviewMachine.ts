@@ -24,7 +24,9 @@ export type ReviewState =
   | { kind: 'ready' }
   | { kind: 'submitting' }
   | { kind: 'done'; trade: unknown }
-  | { kind: 'refused'; reason: string; backTo?: 'picker'; terminal?: boolean }
+  | { kind: 'refused'; reason: string; backTo?: 'picker'; terminal?: boolean; retryable: boolean }
+  /** Re-fetching the quote, proceeds and position after a retryable refusal. */
+  | { kind: 'refreshing' }
   | { kind: 'closed'; opensLabel: string | null }
   | { kind: 'unavailable' }
   | { kind: 'unconfirmed' };
@@ -33,7 +35,9 @@ export type ReviewEvent =
   | { type: 'SUBMIT' }
   | { type: 'OUTCOME'; outcome: RecordTradeOutcome }
   | { type: 'GATE_CLOSED'; opensLabel: string | null }
-  | { type: 'RETRY' };
+  | { type: 'RETRY' }
+  /** The fresh quote, proceeds and position have arrived: the review may submit again. */
+  | { type: 'REFRESHED' };
 
 export const initialReview: ReviewState = { kind: 'ready' };
 
@@ -60,8 +64,15 @@ export function reviewReducer(state: ReviewState, event: ReviewEvent): ReviewSta
   }
 
   if (event.type === 'RETRY') {
-    // Only a 503 can retry. An unconfirmed trade must never be resubmitted blind.
-    return state.kind === 'unavailable' ? { kind: 'ready' } : state;
+    // A 503 retries at once. A retryable refusal (trade_conflict) must re-fetch fresh
+    // numbers first. An unconfirmed trade is never resubmitted.
+    if (state.kind === 'unavailable') return { kind: 'ready' };
+    if (state.kind === 'refused' && state.retryable) return { kind: 'refreshing' };
+    return state;
+  }
+
+  if (event.type === 'REFRESHED') {
+    return state.kind === 'refreshing' ? { kind: 'ready' } : state;
   }
 
   // OUTCOME: only meaningful while a submit is in flight.
@@ -81,6 +92,8 @@ export function reviewReducer(state: ReviewState, event: ReviewEvent): ReviewSta
       return {
         kind: 'refused',
         reason: o.reason,
+        // Only the concurrency refusal is retryable: the server wrote nothing, so a retry can't double.
+        retryable: o.reason === 'trade_conflict',
         ...(o.reason === 'proceeds_unavailable' ? { backTo: 'picker' as const } : {}),
         ...(o.reason === 'no_proceeds' ? { terminal: true } : {}),
       };

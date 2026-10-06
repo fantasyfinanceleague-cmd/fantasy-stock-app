@@ -31,6 +31,7 @@ const styles = StyleSheet.create({
   },
   rowLead: { flex: 1, paddingRight: 12 },
   rowTrail: { alignItems: 'flex-end' },
+  tryAgain: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
 });
 
 export function PortfolioScreen() {
@@ -42,7 +43,14 @@ export function PortfolioScreen() {
   if (data.status === 'loading') {
     body = <Text variant="callout" tone="secondary">Loading your portfolio</Text>;
   } else if (data.status === 'error' || !data.view) {
-    body = <Text variant="callout" tone="secondary">{COPY.cantReach}</Text>;
+    body = (
+      <View style={styles.stack}>
+        <Text variant="callout" tone="secondary">{COPY.portfolioDidNotLoad}</Text>
+        <Pressable accessibilityRole="button" onPress={data.refresh} style={styles.tryAgain} hitSlop={8}>
+          <Text variant="callout" tone="primary">{COPY.tryAgain}</Text>
+        </Pressable>
+      </View>
+    );
   } else {
     const v = data.view;
     body = (

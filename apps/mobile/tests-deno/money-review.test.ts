@@ -8,6 +8,7 @@ import { assert, assertEquals } from 'jsr:@std/assert';
 import { canDismiss, canSubmit, initialReview, reviewReducer } from '../lib/money/reviewMachine.ts';
 import { decideTradeGate, type MarketStatusRow } from '../lib/money/tradeGate.ts';
 import { COPY } from '../lib/money/moneyCopy.ts';
+import { refusalCopy } from '../lib/money/refusals.ts';
 
 Deno.test('ready: the button is live and the review can be dismissed', () => {
   assertEquals(canSubmit(initialReview), true);
@@ -67,9 +68,9 @@ Deno.test('unconfirmed copy points to the history and never invites a retry', ()
 Deno.test('proceeds_unavailable goes back to the picker; no_proceeds is terminal', () => {
   let s = reviewReducer(initialReview, { type: 'SUBMIT' });
   const a = reviewReducer(s, { type: 'OUTCOME', outcome: { kind: 'refused', reason: 'proceeds_unavailable' } });
-  assertEquals(a, { kind: 'refused', reason: 'proceeds_unavailable', backTo: 'picker' });
+  assertEquals(a, { kind: 'refused', reason: 'proceeds_unavailable', retryable: false, backTo: 'picker' });
   const b = reviewReducer(s, { type: 'OUTCOME', outcome: { kind: 'refused', reason: 'no_proceeds' } });
-  assertEquals(b, { kind: 'refused', reason: 'no_proceeds', terminal: true });
+  assertEquals(b, { kind: 'refused', reason: 'no_proceeds', retryable: false, terminal: true });
 });
 
 Deno.test('the race: the clock crosses 4:00 PM ET while the review is open; the client closes it at once', () => {
@@ -100,4 +101,34 @@ Deno.test('the server refusal wins a race: a submit that loses to the close show
   s = reviewReducer(s, { type: 'OUTCOME', outcome: { kind: 'refused', reason: 'market_closed', nextOpenAt: null } });
   assertEquals(s.kind, 'closed');
   assert(s.kind !== 'done');
+});
+
+// trade_conflict: "the league changed while placing this trade" (HTTP 200, retryable).
+// It is a refusal, not an unconfirmed submit: the trade was NOT recorded, so a retry is safe.
+Deno.test('trade_conflict is a refusal the user can retry, not an unconfirmed trade', () => {
+  let s = reviewReducer(initialReview, { type: 'SUBMIT' });
+  s = reviewReducer(s, { type: 'OUTCOME', outcome: { kind: 'refused', reason: 'trade_conflict' } });
+  assertEquals(s, { kind: 'refused', reason: 'trade_conflict', retryable: true });
+  assertEquals(canSubmit(s), false);
+  // Try again re-fetches; the review can submit only once fresh numbers have arrived.
+  s = reviewReducer(s, { type: 'RETRY' });
+  assertEquals(s.kind, 'refreshing');
+  assertEquals(canSubmit(s), false);
+  s = reviewReducer(s, { type: 'REFRESHED' });
+  assertEquals(s.kind, 'ready');
+});
+
+Deno.test('an ordinary refusal is not retryable: RETRY does nothing', () => {
+  const s = reviewReducer(reviewReducer(initialReview, { type: 'SUBMIT' }), {
+    type: 'OUTCOME', outcome: { kind: 'refused', reason: 'symbol_owned' },
+  });
+  assertEquals(s, { kind: 'refused', reason: 'symbol_owned', retryable: false });
+  assertEquals(reviewReducer(s, { type: 'RETRY' }), s);
+});
+
+Deno.test('trade_conflict copy is the approved text, with no raw code and no em dash', () => {
+  assertEquals(refusalCopy('trade_conflict', {}).message, "Nothing was traded: your league changed while this trade was going through. Try again.");
+  assertEquals(refusalCopy('trade_conflict', {}).message.includes('—'), false);
+  assertEquals(refusalCopy('trade_conflict', {}).retryable, true);
+  assertEquals(refusalCopy('symbol_owned', {}).retryable, undefined);
 });

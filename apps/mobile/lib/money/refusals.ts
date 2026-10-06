@@ -17,6 +17,8 @@ export interface RefusalCopy {
   message: string;
   backTo?: 'picker';
   terminal?: boolean;
+  /** The user may retry, after the review re-fetches fresh numbers. */
+  retryable?: boolean;
 }
 
 export function refusalCopy(reason: string, ctx: RefusalContext): RefusalCopy {
@@ -51,7 +53,9 @@ export function refusalCopy(reason: string, ctx: RefusalContext): RefusalCopy {
       return { message: ctx.opensLabel ? COPY.tradingOpens(ctx.opensLabel) : COPY.marketClosedNow };
     case 'calendar_unavailable':
       return { message: COPY.tradingHoursUnavailable };
+    case 'trade_conflict':
+      return { message: COPY.tradeConflict, retryable: true };
     default:
-      return { message: COPY.nothingTraded };
+      return { message: COPY.tradeDidNotGoThrough };
   }
 }

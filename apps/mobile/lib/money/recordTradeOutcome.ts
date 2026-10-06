@@ -22,6 +22,8 @@ interface RecordTradeBody {
 
 function refusedFrom(body: RecordTradeBody, reason: string): RecordTradeOutcome {
   if (reason === 'calendar_unavailable') return { kind: 'unavailable' };
+  // 'unhandled' is a server fault: the trade may or may not have been written.
+  if (reason === 'unhandled') return { kind: 'network' };
   const out: RecordTradeOutcome = { kind: 'refused', reason };
   if (typeof body.market_reason === 'string') out.marketReason = body.market_reason;
   if ('next_open_at' in body) out.nextOpenAt = typeof body.next_open_at === 'string' ? body.next_open_at : null;
@@ -42,6 +44,9 @@ export async function readRecordTradeOutcome(result: { data: unknown; error: unk
   if (!ctx || typeof ctx.json !== 'function') return { kind: 'network' };
 
   const body = (await ctx.json().catch(() => null)) as RecordTradeBody | null;
-  if (!body || typeof body.reason !== 'string') return { kind: 'refused', reason: 'unhandled' };
+  if (!body || typeof body.reason !== 'string') return { kind: 'network' };
+  // A 5xx that isn't the calendar's 503 is a server fault: it may have written. Unconfirmed.
+  const serverFault = typeof ctx.status === 'number' && ctx.status >= 500 && body.reason !== 'calendar_unavailable';
+  if (serverFault) return { kind: 'network' };
   return refusedFrom(body, body.reason);
 }

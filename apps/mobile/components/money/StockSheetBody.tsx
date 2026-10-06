@@ -41,7 +41,14 @@ export function StockSheetBody({ symbol, knownName = null, onDone }: { symbol: s
     return <Text variant="callout" tone="secondary">{symbol}</Text>;
   }
   if (data.status === 'error' || !data.facts) {
-    return <Text variant="callout" tone="secondary">{COPY.cantReach}</Text>;
+    return (
+      <View style={{ gap: 10 }}>
+        <Text variant="callout" tone="secondary">{COPY.stockDidNotLoad}</Text>
+        <Pressable accessibilityRole="button" onPress={data.refresh} hitSlop={8} style={{ minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' }}>
+          <Text variant="callout" tone="primary">{COPY.tryAgain}</Text>
+        </Pressable>
+      </View>
+    );
   }
 
   const gate = decideTradeGate(now, market);
