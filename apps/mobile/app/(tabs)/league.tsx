@@ -1,16 +1,55 @@
+/* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
+import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
+import { space } from '@/constants/tokens';
+import { useTheme } from '@/components/sp/ThemeProvider';
+import { Text } from '@/components/sp/Text';
 import { PhasePlaceholder } from '@/components/shell/PhasePlaceholder';
+import { ShellHeader } from '@/components/shell/ShellHeader';
+import { BarsRefresh } from '@/components/shell/BarsRefresh';
+import { StandingsTable } from '@/components/game/StandingsTable';
 import { useLeagueContext } from '@/lib/LeagueContext';
+import { useLeagueStandings } from '@/lib/game/useLeagueStandings';
+import { useAuth } from '@/lib/useAuth';
+import { buildStandingsRows } from '@/lib/game/standings';
 
-// Phase 3b-1 placeholder (spec row 16). Standings, schedule and the draft
-// room are rebuilt in Phase 3c; copy is NEW-PROPOSED pending the Design Lead.
-// While the active league is drafting, the existing draft room stays one tap
-// away — the League tab is its entry (§3 IA), and nothing else reaches it.
+// League (3c). The standings for a season in progress, the season over and
+// the playoffs. Standings order is the server's (league_standings_ranked,
+// read through get_home_league); the ▲/▼ move needs the through-week
+// ranking, so it stays hidden until that is deployed. Drafting keeps the
+// draft-room entry (§3 IA). Other phases keep their placeholder until they
+// are built (the pre-draft lobby, the Season 2 review, History).
+const STANDINGS_CAPTION = 'Ranked by win percentage, then head-to-head, then season gain. This is also the playoff seeding.';
+
 export default function LeagueScreen() {
-  const { sheetLeagues, activeLeagueId } = useLeagueContext();
-  const drafting = sheetLeagues.find((l) => l.id === activeLeagueId)?.seasonPhase === 'drafting';
+  const { sheetLeagues, activeLeagueId, refresh } = useLeagueContext();
+  const phase = sheetLeagues.find((l) => l.id === activeLeagueId)?.seasonPhase;
+  const drafting = phase === 'drafting';
+  const inSeason = phase === 'regular' || phase === 'playoffs' || phase === 'completed';
+  const { colors } = useTheme();
+  const st = useLeagueStandings(inSeason ? activeLeagueId : null);
+  const { user } = useAuth();
+
+  if (inSeason) {
+    if (st.status === 'error') {
+      return <PhasePlaceholder title="League" icon={(p) => <Ionicons name="alert-circle-outline" {...p} />} heading="Couldn't load the standings" message="Pull down to try again." onRefresh={refresh} />;
+    }
+    const rows = buildStandingsRows(st.standings, user?.id ?? '', st.previousRanks);
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.bg }}>
+        <ShellHeader title="League" showAvatar />
+        <BarsRefresh onRefresh={refresh} contentContainerStyle={{ paddingHorizontal: space[6], paddingBottom: space[9], gap: space[6] }}>
+          {st.status === 'ready' ? (
+            <View style={styles.stack}>
+              <StandingsTable rows={rows} caption={STANDINGS_CAPTION} />
+            </View>
+          ) : null}
+        </BarsRefresh>
+      </View>
+    );
+  }
 
   return (
     <PhasePlaceholder
@@ -23,3 +62,7 @@ export default function LeagueScreen() {
     />
   );
 }
+
+const styles = StyleSheet.create({
+  stack: { gap: space[3] },
+});
