@@ -4411,6 +4411,200 @@
     );
   }
 
+  // ═════════════════════════════════════════════════════════════════════
+  // YOUR CALL: draft auto-start (2026-10-06), from DRAFT_AUTO_START_PLAN.md
+  // (feat/draft-auto-start @ a714177). Giorgio's rule: the draft starts by
+  // itself at the time the commissioner set; the room opens an hour before.
+  // No Start button. Sample: Serie A Traders, draft Sat, Oct 3 · 7:00 PM ET,
+  // room/order at 6:00 PM ET. Roberto B. (you) is the commissioner, seat 4.
+  // Sofia F. left before 6:00 PM, so a reconfirm is pending and 8 playoff
+  // teams no longer fit 7 teams. All copy new.
+  // ═════════════════════════════════════════════════════════════════════
+  const AS = { when: 'Sat, Oct 3 · 7:00 PM ET', t: '7:00 PM ET', room: '6:00 PM ET', grace: '7:15 PM ET', seat: K.SERIE_A.order.findIndex((m) => m.you) + 1 };
+  const LockPush = ({ time, label, body }) => (
+    <Device noTabs time={time} label={label} style={{ background: 'linear-gradient(160deg, #3B4F7A 0%, #1B2540 55%, #0E1426 100%)', color: '#fff' }}>
+      <div style={{ position: 'relative', textAlign: 'center', color: '#fff', paddingTop: 16 }}>
+        <div style={{ fontSize: 17, fontWeight: 600, opacity: 0.9 }}>Saturday, October 3</div>
+        <div style={{ fontSize: 84, fontWeight: 700, lineHeight: '90px', letterSpacing: '-2px' }}>{time}</div>
+      </div>
+      <div style={{ position: 'relative', margin: '28px 12px 0', padding: '12px 14px', borderRadius: 22, background: 'rgba(245, 246, 250, 0.82)', backdropFilter: 'blur(20px)', color: '#0D1B2E', display: 'grid', gridTemplateColumns: '38px 1fr', gap: 10 }}>
+        <span style={{ width: 38, height: 38, borderRadius: 9, background: '#0D1B2E', display: 'grid', placeItems: 'center' }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="13" width="4.5" height="8" rx="1" fill="#8DA0BD" /><rect x="9.75" y="9" width="4.5" height="12" rx="1" fill="#8DA0BD" /><rect x="16.5" y="4" width="4.5" height="17" rx="1" fill="#6E9BFF" /></svg>
+        </span>
+        <span>
+          <span style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15 }}><b>{K.SERIE_A.name}</b><span style={{ color: '#5B6678', fontSize: 13 }}>now</span></span>
+          <span style={{ fontSize: 15, lineHeight: '20px' }}>{body}</span>
+        </span>
+      </div>
+    </Device>
+  );
+  const QueueBlock = () => (
+    <div>
+      <div className="ks-section-h"><h3>Your queue</h3></div>
+      <ul className="ks-rows">{['NVDA', 'MSFT', 'AAPL', 'CRM'].map((t, i) => <li key={t} className="ks-row" style={{ gridTemplateColumns: '20px 36px 1fr 20px', padding: '8px 0' }}><span className="ks-caption ks-muted ks-num">{i + 1}</span><Logo t={t} game /><span className="ks-t ks-callout">{t}</span><span className="ks-muted">≡</span></li>)}</ul>
+    </div>
+  );
+  /** The lobby countdown, for everyone. phase: 'scheduled' | 'open' | 'starting'. */
+  function AutoLobby({ phase = 'scheduled' }) {
+    const head = { scheduled: 'Draft starts in', open: 'Draft room open · starts in', starting: 'Draft starts in' }[phase];
+    const clock = { scheduled: '2d 06h 40m', open: '42:18', starting: '00:00' }[phase];
+    return (
+      <Device game tab="league" label={`Draft lobby, ${phase}`}>
+        <Head name={K.SERIE_A.name} chip={<span className="ks-chip">Pre-draft</span>} />
+        <div className="ks-pad ks-stack" style={{ gap: 14 }}>
+          <div className="ks-raised" style={{ padding: 16, display: 'grid', gap: 6, textAlign: 'center' }}>
+            <span className="ks-tag" style={phase === 'scheduled' ? undefined : { color: 'var(--c-live-text)' }}>{head}</span>
+            <span className="ks-score ks-num" style={{ fontSize: phase === 'scheduled' ? 44 : 56, lineHeight: '56px' }}>{clock}</span>
+            {phase === 'starting'
+              ? <span className="ks-callout" style={{ display: 'inline-flex', gap: 8, justifyContent: 'center', alignItems: 'center', fontWeight: 700 }}><Spinner />Starting the draft</span>
+              : <span className="ks-caption">The draft starts automatically at {AS.when}.</span>}
+            {phase === 'scheduled' ? <span className="ks-caption ks-muted">The draft room opens at {AS.room}, when the order is set.</span> : null}
+          </div>
+          {phase === 'scheduled' ? <QueueBlock /> : <DraftOrder />}
+        </div>
+      </Device>
+    );
+  }
+  const Stepper8 = () => (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center' }}>
+      <span className="ks-callout" style={{ fontWeight: 600 }}>Playoff teams</span>
+      <span style={{ display: 'inline-flex', alignItems: 'center', border: '2px solid var(--c-warn-line)', borderRadius: 10, overflow: 'hidden' }}>
+        <span style={{ width: 36, height: 36, display: 'grid', placeItems: 'center', fontSize: 20, color: 'var(--c-text)' }}>−</span>
+        <b className="ks-num" style={{ minWidth: 48, textAlign: 'center', borderInline: '1px solid var(--c-border)', lineHeight: '36px' }}>8</b>
+        <span style={{ width: 36, height: 36, display: 'grid', placeItems: 'center', fontSize: 20, color: 'var(--c-text-3)' }} aria-disabled="true">+</span>
+      </span>
+    </div>
+  );
+  /** The commissioner's blockers card. phase: 'risk' (T−1h..T) | 'grace' (★, T..T+15) | 'waiting' (A, no deadline) | 'missed'. */
+  const BlockersCard = ({ phase = 'risk' }) => {
+    const top = {
+      risk: ['Needs you before 7:00 PM ET', 'The draft can’t start yet', 'Fix these and it starts on time.'],
+      grace: ['Delayed', `The draft didn’t start at ${AS.t}`, `Fix these by ${AS.grace} and it starts right away.`],
+      waiting: ['Delayed', `The draft didn’t start at ${AS.t}`, 'It starts as soon as you fix these.'],
+      missed: ['Missed', 'The draft didn’t start', 'Pick a new draft time. Everyone sees it on their Home.'],
+    }[phase];
+    return (
+      <div className="ks-card" role="alert" style={{ padding: '12px 14px', display: 'grid', gap: 10, background: 'var(--c-warn-tint)', borderColor: 'var(--c-warn-line)', boxShadow: 'none' }}>
+        <span className="ks-tag" style={{ color: 'var(--c-warn-text)' }}>{top[0]}</span>
+        <span style={{ display: 'grid', gap: 2 }}>
+          <span className="ks-headline" style={{ fontWeight: 800, color: 'var(--c-text)' }}>{top[1]}</span>
+          <span className="ks-caption" style={{ color: 'var(--c-text)' }}>{top[2]}</span>
+        </span>
+        {phase === 'missed' ? <span className="ks-btn">Pick a new draft time</span> : (
+          <>
+            <div className="ks-card" style={{ padding: '10px 12px', display: 'grid', gap: 8, boxShadow: 'none' }}>
+              <span className="ks-callout" style={{ fontWeight: 700 }}>Sofia F. left the league</span>
+              <span className="ks-btn" style={{ height: 40 }}>Move forward with 7</span>
+              <span className="ks-btn ks-btn--secondary" style={{ height: 40 }}>Invite someone new</span>
+            </div>
+            <div className="ks-card" style={{ padding: '10px 12px', display: 'grid', gap: 6, boxShadow: 'none' }}>
+              <span className="ks-callout" style={{ fontWeight: 700 }}>8 playoff teams, but 7 teams are in</span>
+              <Stepper8 />
+              <span className="ks-caption">Up to 7, one per team.</span>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+  /** Commissioner's lobby with the blockers card. */
+  function CommishBlocked({ phase = 'risk' }) {
+    const clock = { risk: '42:18', grace: '+03:41', waiting: '+03:41', missed: null }[phase];
+    return (
+      <Device game tab="league" label={`Draft lobby, commissioner, ${phase}`}>
+        <Head name={K.SERIE_A.name} chip={<span className="ks-chip">{phase === 'missed' ? 'Postponed' : phase === 'risk' ? 'Pre-draft' : 'Delayed'}</span>} />
+        <div className="ks-pad ks-stack" style={{ gap: 14 }}>
+          <BlockersCard phase={phase} />
+          {clock && phase === 'risk' ? (
+            <div className="ks-raised" style={{ padding: 12, display: 'grid', gap: 2, textAlign: 'center' }}>
+              <span className="ks-tag">Draft starts in</span>
+              <span className="ks-score ks-num" style={{ fontSize: 36, lineHeight: '40px' }}>{clock}</span>
+              <span className="ks-caption ks-muted">Draft order: set as soon as the teams are confirmed.</span>
+            </div>
+          ) : null}
+        </div>
+      </Device>
+    );
+  }
+  /** Members while the draft is delayed or missed (Giulia V.'s phone). */
+  function MemberDelayed({ missed }) {
+    return (
+      <Device game tab="league" label={missed ? 'Draft lobby, member, postponed' : 'Draft lobby, member, delayed'}>
+        <Head name={K.SERIE_A.name} chip={<span className="ks-chip">{missed ? 'Postponed' : 'Delayed'}</span>} />
+        <div className="ks-pad ks-stack" style={{ gap: 14 }}>
+          <div className="ks-raised" style={{ padding: 16, display: 'grid', gap: 6, textAlign: 'center' }}>
+            <span className="ks-tag">{missed ? 'Draft postponed' : 'Draft delayed'}</span>
+            <span className="ks-title">{missed ? 'Roberto B. will pick a new time.' : 'Waiting on Roberto B.'}</span>
+            <span className="ks-caption ks-muted">{missed ? 'You’ll see it here and on your Home.' : 'It starts as soon as the league is ready.'}</span>
+          </div>
+          <QueueBlock />
+        </div>
+      </Device>
+    );
+  }
+  /** Option C: the server fixed what it could and started the draft. */
+  function AutoFixed() {
+    return (
+      <Device game tab="league" label="Draft started after automatic fixes">
+        <Head name={K.SERIE_A.name} chip={<Chip kind="live">Drafting</Chip>} />
+        <div className="ks-pad ks-stack" style={{ gap: 14 }}>
+          <div className="ks-card" style={{ padding: '12px 14px', display: 'grid', gap: 6 }}>
+            <span className="ks-tag" style={{ color: 'var(--c-text-2)' }}>Changed so the draft could start</span>
+            <span className="ks-callout">The league moved forward with 7 teams, and playoff teams went from 8 to 7.</span>
+            <span className="ks-caption">Every team now makes the playoffs. You can lower it until the season starts.</span>
+          </div>
+          <span className="ks-title" style={{ color: 'var(--c-live-text)' }}>Round 1 · Pick 1 · 0:58 left</span>
+        </div>
+      </Device>
+    );
+  }
+  /** Decision 3: the Draft date row after the room opens. allow: postponing is allowed. */
+  function DateAfterRoom({ allow }) {
+    return (
+      <Device noTabs label={allow ? 'Draft date, editable after the room opens' : 'Draft date, locked after the room opens'}>
+        <Back label="League" />
+        <div className="ks-pad ks-stack">
+          <h2 className="ks-head__title" style={{ fontSize: 28 }}>League settings</h2>
+          <span className="ks-tag" style={{ color: 'var(--c-text-2)' }}>Draft</span>
+          <Card><ul className="ks-rows">
+            <li className="ks-row" style={{ gridTemplateColumns: '1fr auto 16px', padding: '13px 0' }}>
+              <span><span className="ks-callout" style={{ fontWeight: 600, color: allow ? undefined : 'var(--c-text-3)' }}>Draft date</span><br /><span className="ks-caption">{allow ? 'Moving it keeps everyone locked in until the new time.' : 'The draft time can’t change once the draft room opens.'}</span></span>
+              <span className="ks-callout ks-muted">{AS.when}</span>
+              <span className="ks-muted">{allow ? <Icon d={ICON.right} size={16} /> : null}</span>
+            </li>
+            <Row k="Draft order" v="Final" />
+          </ul></Card>
+        </div>
+      </Device>
+    );
+  }
+  /** Decision 4: the draft date sheet, earliest time = now + 1 hour, 15-minute steps. */
+  function DraftDatePicker() {
+    const Col = ({ items, on, off = [] }) => (
+      <div style={{ display: 'grid', gap: 2, textAlign: 'center' }}>
+        {items.map((x) => <span key={x} className="ks-callout ks-num" style={{ padding: '6px 0', borderRadius: 8, fontWeight: x === on ? 800 : 500, background: x === on ? 'var(--c-sunken)' : undefined, color: off.includes(x) ? 'var(--c-text-3)' : undefined }}>{x}</span>)}
+      </div>
+    );
+    return (
+      <Device noTabs label="Draft date sheet" overlay={
+        <Sheet top={300}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span className="ks-title">Draft date</span><span className="ks-callout" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Done</span></div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr 1fr', gap: 6 }}>
+            <Col items={['Today', 'Tomorrow', 'Thu, Oct 1']} on="Today" />
+            <Col items={['1', '2', '3']} on="3" off={['1', '2']} />
+            <Col items={['00', '15', '30', '45']} on="15" off={['00']} />
+            <Col items={['AM', 'PM']} on="PM" />
+          </div>
+          <span className="ks-callout"><b>Today · 3:15 PM ET</b> <span className="ks-muted">(the earliest you can pick: an hour from now)</span></span>
+          <span className="ks-caption">The draft room opens 1 hour before, and the draft starts automatically.</span>
+          <span className="ks-btn ks-btn--secondary">Set later</span>
+        </Sheet>
+      }>
+        <Back label="League" />
+      </Device>
+    );
+  }
+
   window.KSInventory = {
     SignIn, SignUp, SignUpPaused, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeUnpriced, HomeScoring, HomeComplete,
@@ -4420,6 +4614,7 @@
     TierPortfolio, TierReview, TierRefused,
     LeagueSettingsLeave, LeaveSheet, CommishLeave, OrderAfterLeave, DepartedMatchup, DepartedStandings, DepartedBracket, LeaverLeague, LeaverSheet, LeaveRefused, LeaveRow, ReconfirmHome, ReconfirmStartBlocked, ReconfirmMember, LeaveOpenRow, LeaveFinished,
     JoinCode, JoinPreview, JoinDone, NotFound,
+    AutoLobby, CommishBlocked, MemberDelayed, AutoFixed, DateAfterRoom, DraftDatePicker, LockPush,
     DraftRefused, StartBlocked, DraftStalled, StallPush,
     RibHome, RibLeague, RibPush, RibMemberPrompt, RibHomeCounts, RibReconcile, RibMemberList, RibResolve, RibReview, RibHistory,
     WebHome, WebPortfolio, WebSettings,
@@ -4570,19 +4765,19 @@
           <Fit caption="Matchup before the season"><I.MatchupPreSeason /></Fit>
           <Fit caption="Draft lobby · order revealed" note="After 6:00 PM ET: the full order, your slot, and the snake picks that follow (new copy)"><I.DraftLobby /></Fit>
           <Fit caption="Draft lobby · still waiting" note="Past 6:00 PM ET but only 3 of 4 managers: set as soon as one more joins (new copy)"><I.DraftLobby waiting /></Fit>
-          <Fit caption="Start the draft · not enough managers" note="Needs 4; invite one more (new copy)"><I.StartDraftConfirm managers={3} /></Fit>
+          <Fit caption="Start the draft · not enough managers" note="Needs 4; invite one more (new copy) Superseded by auto-start (see “Your call: the draft starts by itself”)."><I.StartDraftConfirm managers={3} /></Fit>
           <Fit caption="Arrange order (commissioner, Manual)" note="Drag to reorder; starts from a random order, never commissioner-first; set by 1 hour before the draft (new copy)"><I.ArrangeOrder /></Fit>
           <Fit caption="Draft order · final" note="After 6:00 PM ET: read-only; late joiners pick last (new copy)"><I.ArrangeOrder locked /></Fit>
           <Fit caption="Push · draft order set (random)" note="At 6:00 PM ET in either mode, plus an in-app card (new copy)"><I.OrderPush /></Fit>
           <Fit caption="Push · draft order set (manual)"><I.OrderPush mode="manual" /></Fit>
-          <Fit caption="Start the draft (commissioner)" note="Office League: 7 managers, 10 weeks, so the uneven-bye heads-up shows (new copy)"><I.StartDraftConfirm /></Fit>
-          <Fit caption="Start the draft · too many playoff teams" note="7 playoff teams, 6 managers: fix it right here; Start stays disabled until it fits (new copy)"><I.StartDraftConfirm managers={6} playoff={7} /></Fit>
+          <Fit caption="Start the draft (commissioner)" note="Office League: 7 managers, 10 weeks, so the uneven-bye heads-up shows (new copy) Superseded by auto-start (see “Your call: the draft starts by itself”)."><I.StartDraftConfirm /></Fit>
+          <Fit caption="Start the draft · too many playoff teams" note="7 playoff teams, 6 managers: fix it right here; Start stays disabled until it fits (new copy) Superseded by auto-start (see “Your call: the draft starts by itself”)."><I.StartDraftConfirm managers={6} playoff={7} /></Fit>
           <Fit caption="Create league · Season" note="Uneven-bye heads-up on the weeks control, based on the expected size (new copy)"><I.CreateSeason /></Fit>
           <Fit caption="Draft room · auto-picks" note="New copy: the banner, the Auto badge and the pick-log lines"><I.DraftAutoPick /></Fit>
           <Fit caption="Pick refused · a slot left unfillable" note="would_strand_slot. New copy. Generic when the server doesn't name who/which: 'Taking {stock} would leave another manager with no stock for one of their slots.'"><I.DraftRefused kind="strand" /></Fit>
           <Fit caption="Pick refused · budget for later picks" note="budget_reserve. New copy. Generic: '{stock} would leave too little budget for your remaining picks.'"><I.DraftRefused kind="budget" /></Fit>
-          <Fit caption="Start the draft · setup can't fill every slot" note="slots_infeasible + budget_infeasible (each shows only when it applies). New copy. Generic lines only: the setup check returns a reason code, no counts (security review)."><I.StartBlocked /></Fit>
-          <Fit caption="Start the draft · check unavailable" note="feasibility_unavailable: Start stays disabled until the check runs. New copy."><I.StartBlocked unavailable /></Fit>
+          <Fit caption="Start the draft · setup can't fill every slot" note="slots_infeasible + budget_infeasible (each shows only when it applies). New copy. Generic lines only: the setup check returns a reason code, no counts (security review). Superseded by auto-start (see “Your call: the draft starts by itself”). The two lines move into the blockers card."><I.StartBlocked /></Fit>
+          <Fit caption="Start the draft · check unavailable" note="feasibility_unavailable: Start stays disabled until the check runs. New copy. Superseded by auto-start (see “Your call: the draft starts by itself”)."><I.StartBlocked unavailable /></Fit>
           <Fit caption="Draft paused (should never happen)" note="Stalled turn, as members see it. New copy."><I.DraftStalled /></Fit>
           <Fit caption="Draft paused · commissioner" note="Same state for the commissioner, plus the push below. New copy."><I.DraftStalled commish /></Fit>
           <Fit caption="Push · draft paused (commissioner)" note="New copy."><I.StallPush /></Fit>
@@ -4661,7 +4856,7 @@
           <div className="b-concepts b-concepts--three">
             <Fit caption="Before the lock · Leave league is open" note="The row says until when: the draft order time (T−1h)."><I.LeaveOpenRow /></Fit>
             <Fit caption="1 · Commissioner Home: Needs you" note={`Giorgio's two choices as buttons: "Move forward with 7" (one fewer team) or "Invite someone new" (to replace). Also pushed to the commissioner. The countdown keeps running.`}><I.ReconfirmHome /></Fit>
-            <Fit caption="2 · What blocks the start" note="Start draft stays disabled, with both choices right in the sheet. The draft order waits too: it is set as soon as the teams are confirmed."><I.ReconfirmStartBlocked /></Fit>
+            <Fit caption="2 · What blocks the start (superseded)" note="Superseded by auto-start: there is no Start button. The same two choices now sit in the commissioner's blockers card (Your call: the draft starts by itself)."><I.ReconfirmStartBlocked /></Fit>
             <Fit caption="3 · Invite someone new" note="The card turns into the invite. When someone joins, it clears on its own; the commissioner can still switch to moving forward."><I.ReconfirmHome mode="inviting" /></Fit>
             <Fit caption="Members meanwhile" note="Everyone else sees why the draft is waiting (on Giulia V.'s phone)."><I.ReconfirmMember /></Fit>
           </div>
@@ -4722,6 +4917,75 @@
               <li><b>Q5-A:</b> one state ("left") is simpler to explain than "left, then back". The league stays readable, so history isn't lost.</li>
               <li><b>Still open (not on the worker's list):</b> should the opponent get a push when their manager leaves ("Gianluigi B. left Stock Scudetto. Their team plays on, auto-managed.")? Recommend yes, to everyone in the league, once.</li>
               <li><b>Backend:</b> the "(left)" label needs a departed flag from <code>get_league_display_names</code>. Home has to skip departed leagues (<code>get_home_summary</code>). "Delete the league instead" points at a delete that is still client-side (<code>[I3]</code>).</li>
+            </ul>
+          </div>
+        </section>
+
+        <section className="b-sec" id="call-auto-start" aria-labelledby="call-auto-start-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n b-sec__n--code">3c</span>
+            <div>
+              <h2 id="call-auto-start-h">Your call: the draft starts by itself</h2>
+              <p className="b-job"><b>Decided by Giorgio (2026-10-06):</b> "the draft is not something that is started manually." It starts at the minute the commissioner set; the draft room opens an hour before. There's no Start button. Four decisions remain, from DRAFT_AUTO_START_PLAN.md (feat/draft-auto-start). ★ marks the worker's recommendation. Sample: Serie A Traders, draft {'Sat, Oct 3 · 7:00 PM ET'}. Sofia F. left before 6:00 PM, so the teams aren't confirmed and 8 playoff teams no longer fit 7 teams. All copy here is new.</p>
+            </div>
+          </header>
+          <ul className="b-inv__notes">
+            <li><b>Superseded by this section:</b> every "Start the draft?" sheet (Start the draft, not enough managers, too many playoff teams, setup can't fill every slot, check unavailable) and the leave board's Q1 "What blocks the start". Their fix-it content moves into the commissioner's blockers card below.</li>
+            <li><b>The check runs an hour early:</b> when the room opens (when the order is set), the server checks everything. If something would block the start, the commissioner hears right then and has the full hour.</li>
+            <li><b>The phase comes from the server's clock</b> (scheduled, room open, due, delayed, missed, started), never the phone's, so a phone with the wrong time can't show the wrong state.</li>
+          </ul>
+
+          <h3 className="b-sub">Everyone: the countdown (decided) · the on-time case, nobody left</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Before the room opens" note="The start time is the promise; the countdown is the reminder. Queue building is the thing to do."><I.AutoLobby phase="scheduled" /></Fit>
+            <Fit caption="Room open · order set (T−1h)" note="The order panel takes over (the existing order-set card and list)."><I.AutoLobby phase="open" /></Fit>
+            <Fit caption="At 0:00" note="The phone asks the server to start (any member's phone can); the server's 10-second sweep starts it anyway if nobody is watching."><I.AutoLobby phase="starting" /></Fit>
+            <Fit caption="Push · the draft started (everyone)" note="New and essential: nobody taps Start any more, so this is how people learn it began."><I.LockPush time="7:00" label="Push, draft started" body={`Your draft has started. You pick ${'4th'}.`} /></Fit>
+          </div>
+
+          <h3 className="b-sub">The commissioner, an hour ahead (decided)</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Push · at risk (commissioner, T−1h)" note="Only when something would block the start. Names the first blocker."><I.LockPush time="6:00" label="Push, draft at risk" body="Your draft can't start at 7:00 PM ET: Sofia F. left the league. Fix it in the lobby." /></Fit>
+            <Fit caption="Lobby · the blockers card" note="Each blocker carries its own fix: the reconfirm choices (from the leave board) and the playoff-teams stepper. Feasibility and stakes blockers use the same card with their existing lines."><I.CommishBlocked phase="risk" /></Fit>
+          </div>
+
+          <h3 className="b-sub">Decision 1 · still blocked at 7:00 PM</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="★ A + 15 min, then B · commissioner" note='Fixed by 7:15 PM ET: it starts right away. The deadline is a time, not "soon".'><I.CommishBlocked phase="grace" /></Fit>
+            <Fit caption="★ · members, delayed" note="No push (Decision 2); the lobby says who it's waiting on."><I.MemberDelayed /></Fit>
+            <Fit caption="★ after 7:15 PM, or B at once · commissioner" note="Missed: one action, a new time (at least an hour out, so the room, order and lock repeat)."><I.CommishBlocked phase="missed" /></Fit>
+            <Fit caption="★ after 7:15 PM, or B · members" note="Postponed, with who decides the new time."><I.MemberDelayed missed /></Fit>
+            <Fit caption="A · start whenever it's fixed" note="No deadline: a fix at 3 a.m. starts a draft nobody attends, and every pick is auto-picked."><I.CommishBlocked phase="waiting" /></Fit>
+            <Fit caption="C · auto-fix, then start" note='What C does to this league: "move forward with 7" plus clamping playoff teams to 7 means every team makes the playoffs. The rules changed and the commissioner finds out afterwards.'><I.AutoFixed /></Fit>
+          </div>
+
+          <h3 className="b-sub">Decision 2 · who hears about a delay</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Commissioner · blocked at 7:00 (both options)" note="Always pushed."><I.LockPush time="7:00" label="Push, draft blocked" body={`Your draft didn't start: Sofia F. left the league. Fix it by ${'7:15 PM ET'} and it starts right away.`} /></Fit>
+            <Fit caption="Members · pushed on delay" note="Fires at 7:00 for a draft that may start at 7:02."><I.LockPush time="7:00" label="Push, draft delayed" body="The draft is delayed. Waiting on Roberto B." /></Fit>
+            <Fit caption="★ Members · pushed only when missed" note="Members in the lobby see the delay; everyone hears once the time really changes."><I.LockPush time="7:15" label="Push, draft postponed" body="The draft is postponed. Roberto B. will pick a new time." /></Fit>
+          </div>
+
+          <h3 className="b-sub">Decision 3 · changing the time once the room is open</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="★ Refused after the room opens" note="Except when the draft is missed, where a new time is the fix."><I.DateAfterRoom /></Fit>
+            <Fit caption="Allowed (postponing)" note="Members locked in at 6:00 PM on the promise of 7:00 stay locked for a time they never agreed to."><I.DateAfterRoom allow /></Fit>
+          </div>
+
+          <h3 className="b-sub">Decision 4 · how soon a draft can be set</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Draft date sheet · an hour minimum" note="15-minute steps; times under an hour away are greyed out, so there's no error to show. ET throughout."><I.DraftDatePicker /></Fit>
+          </div>
+
+          <div className="b-ask">
+            <h3>Your call · Design Lead agrees with ★ on all four</h3>
+            <ul>
+              <li><b>1 · A with a 15-minute grace, then B.</b> The grace covers the common case (someone left; one tap fixes it) without moving the draft. A deadline people can read ("by 7:15 PM ET") is easier than "whenever". Plain A can start a draft at 3 a.m. that robots play. C changes league rules silently: in this sample it makes every team a playoff team.</li>
+              <li><b>2 · Push members only when missed.</b> A delay is usually minutes, and the people it affects are already in the lobby, where the banner says who it's waiting on. The "draft started" push to everyone is the one that can't be skipped.</li>
+              <li><b>3 · Refuse time changes after the room opens</b> (except when missed). From 6:00 PM, teams are locked in on the promise of 7:00; moving the time breaks that promise.</li>
+              <li><b>4 · An hour minimum, with invisible slack.</b> The picker never offers a time under an hour away (15-minute steps). The server accepts 55 minutes, so a slow submit is never refused for a time the picker showed. The user never sees the slack.</li>
+              <li><b>Not a design call:</b> plan decision 5 (a server-only <code>draft_status</code> trigger) is security. Recommend it ships in this release; it closes a direct-write bypass.</li>
+              <li><b>Precondition, flagged:</b> the room-open push and the at-risk push both ride the order-notify job, which still sits in <code>migrations/deferred/</code>. Until it's live, no copy may promise them. Also: if joins lock at T−1h too, the order panel's "Anyone who joins now picks last." becomes untrue and must go.</li>
             </ul>
           </div>
         </section>
@@ -5126,7 +5390,7 @@
             <div><dt>Stakes</dt><dd>$2,000 per slot · 6 slots</dd></div>
           </dl>
           <nav className="b-toc" aria-label="Screens">
-            {[['themes', 'Themes'], ['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['join-league', 'Join league'], ['not-found', 'Not found'], ['phases', 'Home phases'], ['game', 'Game'], ['run-it-back', 'Run it back'], ['call-leave', 'Leave call'], ['call-tier-trades', 'Tiers call'], ['money', 'Trading'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
+            {[['themes', 'Themes'], ['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['join-league', 'Join league'], ['not-found', 'Not found'], ['phases', 'Home phases'], ['game', 'Game'], ['run-it-back', 'Run it back'], ['call-leave', 'Leave call'], ['call-auto-start', 'Auto-start call'], ['call-tier-trades', 'Tiers call'], ['money', 'Trading'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
           </nav>
         </header>
 
