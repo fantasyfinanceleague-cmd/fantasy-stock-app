@@ -9,12 +9,16 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
 import { parsePortfolioLedger, type PortfolioLedger } from './portfolioLedger';
+import { MONEY_FIXTURE } from './devFixture';
+import { buildStressMarket } from './stressFixture';
 
 const loaded = new Map<string, PortfolioLedger>();
 const inFlight = new Map<string, Promise<PortfolioLedger | null>>();
 
 /** Loads the ledger for a league, de-duplicated and cached on success. */
 export function loadPortfolioLedger(leagueId: string): Promise<PortfolioLedger | null> {
+  // DEV fixture: the stress ledger, no network (see devFixture.ts).
+  if (MONEY_FIXTURE) return Promise.resolve(buildStressMarket().ledger);
   const hit = loaded.get(leagueId);
   if (hit) return Promise.resolve(hit);
   const pending = inFlight.get(leagueId);

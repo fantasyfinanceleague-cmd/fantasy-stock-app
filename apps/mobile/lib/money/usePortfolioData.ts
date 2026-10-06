@@ -17,6 +17,8 @@ import { prevCloseFromBars, type DailyBar } from './prevClose';
 import { portfolioHoldings, portfolioSummary } from './portfolioModel';
 import { buildPortfolioView, type PortfolioView, type ViewHolding } from './portfolioView';
 import { usePortfolioLedger } from './usePortfolioLedger';
+import { MONEY_FIXTURE } from './devFixture';
+import { buildStressMarket, STRESS_CALLER, STRESS_LEAGUE_NAME, STRESS_ROUNDS } from './stressFixture';
 
 export interface PortfolioData {
   status: 'loading' | 'ready' | 'error';
@@ -74,7 +76,10 @@ export function usePortfolioData(): PortfolioData {
 
     (async () => {
       // The caller's own rows only (the ledger is league-wide).
-      const mine = ledger.activity.filter((a) => a.user_id === userId);
+      // DEV fixture: the stress caller, with the stress market's prices (no quote or bars read).
+      const market = MONEY_FIXTURE ? buildStressMarket() : null;
+      const callerId = market ? STRESS_CALLER : userId;
+      const mine = ledger.activity.filter((a) => a.user_id === callerId);
       const drafts = mine
         .filter((a) => a.kind === 'draft')
         .map((a) => ({ symbol: a.symbol, entryPrice: a.price, quantity: a.quantity }));
@@ -96,7 +101,10 @@ export function usePortfolioData(): PortfolioData {
 
       const prices: Record<string, number> = {};
       const prevCloses: Record<string, number> = {};
-      if (symbols.length > 0) {
+      if (market) {
+        for (const [sym, p] of Object.entries(market.prices)) prices[sym] = p;
+        for (const [sym, p] of Object.entries(market.prevCloses)) prevCloses[sym] = p;
+      } else if (symbols.length > 0) {
         const todayEt = etIsoDate(new Date());
         const start = new Date(Date.now() - 10 * 86_400_000).toISOString().slice(0, 10);
 
