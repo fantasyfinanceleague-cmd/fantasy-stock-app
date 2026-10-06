@@ -15,6 +15,7 @@ import { Chyron } from '@/components/sp/game/Chyron';
 import { useLeadChyron } from '@/lib/game/useLeadChyron';
 import { useRevealOnce } from '@/lib/game/useRevealOnce';
 import { useAllMatchups } from '@/lib/game/useAllMatchups';
+import { useFinalLineups, type FinalLineupsState } from '@/lib/game/useFinalLineups';
 import type { AllMatchupRow } from '@/lib/game/allMatchups';
 import { SegmentedControl } from '@/components/sp/SegmentedControl';
 import { FinalBanner } from '@/components/game/FinalBanner';
@@ -54,6 +55,12 @@ export default function MatchupScreen() {
   const [segment, setSegment] = useState<'mine' | 'all'>('mine');
   const all = useAllMatchups(activeLeagueId, m.derived?.week ?? null, m.names, segment === 'all');
   const { user } = useAuth();
+  // The final lineup: the posted week's own per-stock rows, shown only when they reconcile.
+  const fv = m.derived;
+  const finalSides = fv && fv.view.kind === 'final' && fv.final && fv.live.opp && user
+    ? { mine: user.id, theirs: fv.live.opp.userId, myGain: fv.final.me, theirGain: fv.final.opp }
+    : null;
+  const finalLines = useFinalLineups(activeLeagueId, fv?.week ?? null, finalSides, finalSides !== null);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -69,7 +76,7 @@ export default function MatchupScreen() {
         {segment === 'all' ? (
           <AllMatchupsList state={all} week={m.derived?.week ?? 0} myUserId={user?.id ?? ''} />
         ) : (
-          <MatchupBody status={m.status} derived={m.derived} phase={m.phase} onRefresh={m.refresh} leagueName={activeLeague?.name ?? ''} chyron={chyron} revealPlay={revealPlay} />
+          <MatchupBody status={m.status} derived={m.derived} phase={m.phase} onRefresh={m.refresh} leagueName={activeLeague?.name ?? ''} chyron={chyron} revealPlay={revealPlay} finalLines={finalLines} />
         )}
       </BarsRefresh>
     </View>
@@ -118,9 +125,10 @@ interface BodyProps {
   leagueName: string;
   chyron: string | null;
   revealPlay: boolean;
+  finalLines: FinalLineupsState;
 }
 
-function MatchupBody({ status, derived, phase, onRefresh, chyron, revealPlay }: BodyProps) {
+function MatchupBody({ status, derived, phase, onRefresh, chyron, revealPlay, finalLines }: BodyProps) {
   const { user } = useAuth();
   const { width } = useWindowDimensions();
   if (status === 'error') {
@@ -209,7 +217,14 @@ function MatchupBody({ status, derived, phase, onRefresh, chyron, revealPlay }: 
         />
       ) : null}
       {note ? <Text variant="caption" tone="secondary">{note}</Text> : null}
-      {!isFinal && live.opp ? (
+      {isFinal ? (
+        finalLines.mine?.ok && finalLines.theirs?.ok && finalLines.mine.rows && finalLines.theirs.rows && live.opp ? (
+          <View style={styles.lineups}>
+            <Lineup title={youName} rows={finalLines.mine.rows} />
+            <Lineup title={live.opp.name} rows={finalLines.theirs.rows} />
+          </View>
+        ) : null
+      ) : live.opp ? (
         <View style={styles.lineups}>
           <Lineup title={youName} rows={live.me.lineup} />
           <Lineup title={live.opp.name} rows={live.opp.lineup} />
