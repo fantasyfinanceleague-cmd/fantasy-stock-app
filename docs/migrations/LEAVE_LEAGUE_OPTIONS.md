@@ -158,3 +158,67 @@ Q3 only matters under Q2-A. Under Q2-B, forfeits must be skipped, which forces Q
 - **Q3:** the playoff bracket with a departed seed. A shows the departed team in the bracket. B shows it greyed out of the standings cut line, with seeds shifted.
 - **Q4:** the commissioner leave sheet. A: a disabled button plus a "Transfer first" link. B: an inline successor picker. C: an "X will become commissioner" notice.
 - **Q5:** the leaver's League tab after leaving: a read-only "You left this league" banner and the league under "Past leagues".
+
+---
+
+## Prod pre-check: existing zombies (READ-ONLY, run before the leave-league migrations)
+
+**What it finds.** A "zombie" is a user id that a league still references but that has no `league_members` row. The query looks in four places: matchups (team1/team2), `league_standings`, the stored draft order, and `leagues.commissioner_id`. Every route to one goes through `[I5]` (a self-delete) or a hand edit. The query returns one row per (league, user).
+
+**Run it** in the Supabase SQL editor, which runs as `postgres` (needed for the cross-table read and the `league_standings_ranked` call). It writes nothing. **Zero rows = clean,** and migration `00` needs no backfill.
+
+**How to read a row:**
+- **`blocks_playoff_start = true`**: this zombie holds a top-P seed in an active season, so `start_league_playoffs` will refuse with `bracket_non_member` at season end. This is the urgent case. The fix is re-inserting the user as departed in `00`.
+- **`unscored_matchups > 0`**: the team is still being scored every week on frozen holdings. Harmless for scoring, but they show up as a manager no one can see in the member list.
+- **`is_commissioner = true`**: the commissioner left. `commissioner_id` still carries every power (fact 7). The decided Q4 flow needs a transfer target for this league.
+- **`draft_rows` / `trade_rows`**: holdings that keep the leaver's symbols owned.
+- **`in_draft_order = true` with `draft_status <> 'completed'`**: late draft calls 500 with `draft_order_invalid` (fact 5).
+
+```sql
+-- leave-league zombie pre-check (read-only). One row per (league, user) that
+-- the league references but league_members does not contain.
+with refs as (
+  select league_id, team1_user_id as user_id, 'matchup' as src from public.matchups where team1_user_id is not null
+  union all
+  select league_id, team2_user_id, 'matchup' from public.matchups where team2_user_id is not null
+  union all
+  select league_id, user_id, 'standings' from public.league_standings
+  union all
+  select league_id, user_id, 'draft_order' from public.league_draft_order
+  union all
+  select id, commissioner_id, 'commissioner' from public.leagues where commissioner_id is not null
+),
+zombies as (
+  select r.league_id, r.user_id,
+         count(*) filter (where r.src = 'matchup')  as matchup_slots,
+         bool_or(r.src = 'standings')               as has_standings_row,
+         bool_or(r.src = 'draft_order')             as in_draft_order,
+         bool_or(r.src = 'commissioner')            as is_commissioner
+  from refs r
+  where not exists (select 1 from public.league_members m
+                    where m.league_id = r.league_id and m.user_id = r.user_id)
+  group by r.league_id, r.user_id
+)
+select l.id as league_id, l.name, l.draft_status, l.season_status,
+       l.current_week, l.num_weeks, l.playoff_teams,
+       (select count(*) from public.league_members m where m.league_id = l.id) as member_count,
+       z.user_id, z.user_id like 'bot-%' as is_bot,
+       z.is_commissioner, z.in_draft_order, z.has_standings_row, z.matchup_slots,
+       (select count(*) from public.matchups mu
+         where mu.league_id = z.league_id and mu.team1_gain is null
+           and z.user_id in (mu.team1_user_id, mu.team2_user_id)) as unscored_matchups,
+       rk.rank as standings_rank,
+       coalesce(l.season_status = 'active' and rk.rank <= l.playoff_teams, false) as blocks_playoff_start,
+       (select count(*) from public.drafts d
+         where d.league_id = z.league_id and d.user_id = z.user_id) as draft_rows,
+       (select count(*) from public.trades t
+         where t.league_id = z.league_id and t.user_id::text = z.user_id) as trade_rows
+from zombies z
+join public.leagues l on l.id = z.league_id
+left join lateral (
+  select x.rank from public.league_standings_ranked(z.league_id) x where x.user_id = z.user_id
+) rk on z.has_standings_row
+order by blocks_playoff_start desc, l.season_status, l.id, z.user_id;
+```
+
+Validated on PGlite against the verbatim `league_standings_ranked` migration (`20261011000000`), with a fixture of one clean league and one league with a seeded zombie, a ranked-out zombie and a departed commissioner. Exactly the three zombies came back, with the expected flags.
