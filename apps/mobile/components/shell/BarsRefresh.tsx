@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { Platform, RefreshControl, ScrollView, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import { ScrollFoldContext, useScrollFoldSource } from './scrollFold';
 import Animated, {
   cancelAnimation,
   runOnJS,
@@ -46,6 +47,12 @@ export interface BarsRefreshProps {
 export function BarsRefresh({ onRefresh, children, contentContainerStyle }: BarsRefreshProps) {
   const { colors } = useTheme();
   const [refreshing, setRefreshing] = useState(false);
+  // 3c-2, UX rule 7: children can tell what's below the fold (StandingsTable pins your row).
+  const fold = useScrollFoldSource();
+  const measureRef = useRef<View>(null);
+  const onViewLayout = () => {
+    measureRef.current?.measureInWindow((_x, y, _w, h) => fold.setViewport({ top: y, bottom: y + h }));
+  };
 
   const run = async () => {
     setRefreshing(true);
@@ -58,15 +65,29 @@ export function BarsRefresh({ onRefresh, children, contentContainerStyle }: Bars
 
   if (Platform.OS !== 'ios') {
     return (
-      <ScrollView
-        contentContainerStyle={contentContainerStyle}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={run} colors={[colors.accent]} tintColor={colors.accent} />}
-      >
-        {children}
-      </ScrollView>
+      <View ref={measureRef} style={styles.fill} onLayout={onViewLayout}>
+        <ScrollFoldContext.Provider value={fold.value}>
+          <ScrollView
+            contentContainerStyle={contentContainerStyle}
+            onScroll={fold.emit}
+            scrollEventThrottle={16}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={run} colors={[colors.accent]} tintColor={colors.accent} />}
+          >
+            {children}
+          </ScrollView>
+        </ScrollFoldContext.Provider>
+      </View>
     );
   }
-  return <IosBarsRefresh refreshing={refreshing} run={run} contentContainerStyle={contentContainerStyle}>{children}</IosBarsRefresh>;
+  return (
+    <View ref={measureRef} style={styles.fill} onLayout={onViewLayout}>
+      <ScrollFoldContext.Provider value={fold.value}>
+        <IosBarsRefresh refreshing={refreshing} run={run} contentContainerStyle={contentContainerStyle} onScrolled={fold.emit}>
+          {children}
+        </IosBarsRefresh>
+      </ScrollFoldContext.Provider>
+    </View>
+  );
 }
 
 function IosBarsRefresh({
@@ -74,11 +95,14 @@ function IosBarsRefresh({
   run,
   children,
   contentContainerStyle,
+  onScrolled,
 }: {
   refreshing: boolean;
   run: () => void;
   children: ReactNode;
   contentContainerStyle?: StyleProp<ViewStyle>;
+  /** The fold signal (throttled on the JS side). */
+  onScrolled: () => void;
 }) {
   const { reduced, duration, easing } = useMotion();
   const pull = useSharedValue(0);
@@ -90,6 +114,7 @@ function IosBarsRefresh({
 
   const onScroll = useAnimatedScrollHandler({
     onScroll: (e) => {
+      runOnJS(onScrolled)();
       pull.value = Math.max(0, -e.contentOffset.y);
       const nowArmed = pull.value >= THRESHOLD;
       if (nowArmed && !armed.value) runOnJS(armHaptic)();
@@ -162,6 +187,9 @@ function useRise(pull: SharedValue<number>, i: number, refreshing: boolean, redu
 }
 
 const styles = StyleSheet.create({
+  fill: {
+    flex: 1,
+  },
   header: {
     position: 'absolute',
     top: -HEADER,

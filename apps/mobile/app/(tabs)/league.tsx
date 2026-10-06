@@ -9,7 +9,7 @@ import { Text } from '@/components/sp/Text';
 import { PhasePlaceholder } from '@/components/shell/PhasePlaceholder';
 import { ShellHeader } from '@/components/shell/ShellHeader';
 import { BarsRefresh } from '@/components/shell/BarsRefresh';
-import { StandingsTable } from '@/components/game/StandingsTable';
+import { StandingsRowView, StandingsTable } from '@/components/game/StandingsTable';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { playoffLine } from '@/lib/playoffs';
 import { buildSchedule } from '@/lib/game/schedule';
@@ -46,7 +46,7 @@ import { SegmentedControl } from '@/components/sp/SegmentedControl';
 import { useState } from 'react';
 import { useLeagueStandings } from '@/lib/game/useLeagueStandings';
 import { useAuth } from '@/lib/useAuth';
-import { buildStandingsRows } from '@/lib/game/standings';
+import { buildStandingsRows, type StandingsRow } from '@/lib/game/standings';
 import { SettingRow, SetupCard } from '@/components/game/SetupRows';
 import { showsLeagueSettingsRow } from '@/lib/game/leagueSettingsEntry';
 import { QueueEditor } from '@/components/game/QueueEditor';
@@ -74,6 +74,8 @@ export default function LeagueScreen() {
   const { sheetLeagues, activeLeagueId, activeLeague, refresh, setActiveLeagueId } = useLeagueContext();
   // League's segments: Standings | Schedule (the board, D4 = keep). History is not built yet.
   const [segment, setSegment] = useState<'standings' | 'schedule' | 'playoffs' | 'history'>('standings');
+  // UX rule 7: your standings row, pinned at the bottom while it's below the fold.
+  const [pinnedRow, setPinnedRow] = useState<StandingsRow | null>(null);
   const phase = sheetLeagues.find((l) => l.id === activeLeagueId)?.seasonPhase;
   // The screen is the rules' choice for the phase (lib/game/leaguePhase.ts).
   const screen = activeLeague && phase ? leagueScreenFor({ phase, isRenewal: !!activeLeague.previous_league_id }) : 'placeholder';
@@ -81,7 +83,7 @@ export default function LeagueScreen() {
   const preDraft = (screen === 'lobby' || screen === 'renewal') && activeLeagueId !== null;
   const inSeason = screen === 'season';
   const history = useLeagueHistory(inSeason ? activeLeagueId : null, segment === 'history' && inSeason);
-  const { colors } = useTheme();
+  const { colors, elevation } = useTheme();
   const st = useLeagueStandings(inSeason ? activeLeagueId : null);
   const { user } = useAuth();
   const bracket = useBracket(
@@ -143,7 +145,7 @@ export default function LeagueScreen() {
                   />
                 ) : null
               ) : segment === 'standings' ? (
-                <StandingsTable rows={rows} caption={STANDINGS_CAPTION} seasonComplete={phase === 'completed'} />
+                <StandingsTable rows={rows} caption={STANDINGS_CAPTION} seasonComplete={phase === 'completed'} onPinChange={setPinnedRow} />
               ) : (
                 <ScheduleList
                   rows={buildSchedule({ myUserId: user?.id ?? '', currentWeek: st.week ?? 1, numWeeks: activeLeague?.num_weeks ?? 0, names: st.standings.map((x) => ({ user_id: x.user_id, display_name: x.display_name })), matchups: st.data?.matchups ?? [] })}
@@ -153,6 +155,14 @@ export default function LeagueScreen() {
             </View>
           ) : null}
         </BarsRefresh>
+        {pinnedRow && segment === 'standings' ? (
+          <View style={styles.pinned} pointerEvents="box-none">
+            {/* A View, not Card: Card clips (overflow hidden), which would cut the shadow. */}
+            <View style={[styles.pinnedCard, { backgroundColor: colors.surface, borderColor: colors.border }, elevation.card]}>
+              <StandingsRowView r={pinnedRow} seasonComplete={phase === 'completed'} />
+            </View>
+          </View>
+        ) : null}
       </View>
     );
   }
@@ -384,4 +394,7 @@ function LeagueLobby({ leagueId }: { leagueId: string }) {
 const styles = StyleSheet.create({
   stack: { gap: space[3] },
   queueFailed: { borderRadius: 14, padding: space[5], gap: space[3], alignItems: 'flex-start' },
+  // UX rule 7: your row, pinned over the bottom of the standings (same row component).
+  pinned: { position: 'absolute', left: space[6], right: space[6], bottom: space[3] },
+  pinnedCard: { borderRadius: 14, paddingHorizontal: space[3], borderWidth: StyleSheet.hairlineWidth },
 });

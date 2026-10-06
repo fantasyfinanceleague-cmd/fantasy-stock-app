@@ -51,3 +51,31 @@ export function buildStandingsRows(
     };
   });
 }
+
+/** The move, as VoiceOver reads it: "up 2" / "down 3"; nothing when unknown or
+ * held. (Was "up N" for a down move too: Design Lead audit, UX rule 7.) */
+export function moveA11y(move: number | null): string {
+  if (!move) return '';
+  return `${move > 0 ? 'up' : 'down'} ${Math.abs(move)}`;
+}
+
+/** Where your row and the card sit, in window coordinates, against the
+ * scroll view's visible area. */
+export interface PinGeometry {
+  rowTop: number;
+  rowBottom: number;
+  cardTop: number;
+  cardBottom: number;
+  viewTop: number;
+  viewBottom: number;
+}
+
+/** UX rule 7: while the standings card is on screen and YOUR row is below the
+ * fold (not fully visible above the bottom of the scroll view), a copy of it is
+ * pinned at the bottom. Once your row scrolls into view, or the card leaves
+ * the screen, the copy goes. */
+export function shouldPinYourRow(g: PinGeometry): boolean {
+  const cardOnScreen = g.cardTop < g.viewBottom && g.cardBottom > g.viewTop;
+  const rowBelowFold = g.rowBottom > g.viewBottom;
+  return cardOnScreen && rowBelowFold;
+}
