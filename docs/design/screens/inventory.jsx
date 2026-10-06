@@ -1435,11 +1435,19 @@
       <span><span className="ks-callout" style={{ fontWeight: 700 }}>{title}</span><br /><span className="ks-caption">{line}</span></span>
     </li>
   );
+  // Medals (season complete only): ranks 1–3 become a filled disc with the
+  // numeral; 4+ stay a plain numeral. Tokens --c-medal-* / --c-on-medal.
+  const Medal = ({ rank }) => {
+    const fill = ['gold', 'silver', 'bronze'][rank - 1];
+    return fill
+      ? <span aria-label={`${K.ordinal(rank)} place`} className="ks-num" style={{ width: 20, height: 20, borderRadius: 10, display: 'grid', placeItems: 'center', background: `var(--c-medal-${fill})`, color: 'var(--c-on-medal)', fontSize: 11, fontWeight: 800 }}>{rank}</span>
+      : <span className="ks-t ks-num" style={{ textAlign: 'center' }}>{rank}</span>;
+  };
   const Season1Rows = ({ n = 6 }) => (
     <ul className="ks-rows">
       {S1.rows.slice(0, n).map((r) => (
-        <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '18px 1fr auto auto', padding: '9px 0', background: r.you ? 'var(--c-you-tint)' : undefined }}>
-          <span className="ks-t ks-num">{r.rank}</span>
+        <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '20px 1fr auto auto', padding: '9px 0', background: r.you ? 'var(--c-you-tint)' : undefined }}>
+          <Medal rank={r.rank} />
           <span className="ks-callout" style={{ fontWeight: 700 }}>{r.name}{r.id === S1.champion ? <span className="ks-muted" style={{ fontWeight: 500 }}> · Champion</span> : null}</span>
           <span className="ks-callout ks-num ks-muted">{r.w}–{r.l}</span>
           <span className={`ks-callout ks-num ${tone(r.pf)}`} style={{ fontWeight: 700, minWidth: 78, textAlign: 'right' }}>{$s(r.pf)}</span>
