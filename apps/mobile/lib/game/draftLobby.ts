@@ -40,3 +40,11 @@ export function startBlockerCopy(b: StartBlocker): string {
   }
   return "The draft can't start yet.";
 }
+
+/** The uneven-bye heads-up (board copy, verbatim): "With 7 managers and 10 weeks,
+ * byes won't be even: some get 2, some get 1." Null when the byes are even. */
+export function byeNoticeCopy(managers: number, weeks: number): string | null {
+  const split = byeSplit(managers, weeks);
+  if (split === null) return null;
+  return `With ${managers} managers and ${weeks} weeks, byes won't be even: some get ${split.hi}, some get ${split.lo}.`;
+}

@@ -17,6 +17,10 @@ import { ScheduleList } from '@/components/game/ScheduleList';
 import { BracketView } from '@/components/game/BracketView';
 import { DraftLobby } from '@/components/game/DraftLobby';
 import { usePreDraftData } from '@/lib/home/usePreDraftData';
+import { StartDraftConfirm } from '@/components/game/StartDraftConfirm';
+import { useDraftStatus } from '@/lib/game/useDraftStatus';
+import { Button } from '@/components/sp/Button';
+import { supabase } from '@/lib/supabase';
 import { useBracket } from '@/lib/game/useBracket';
 import { SegmentedControl } from '@/components/sp/SegmentedControl';
 import { useState } from 'react';
@@ -118,6 +122,23 @@ function LeagueLobby({ leagueId }: { leagueId: string }) {
   const { user } = useAuth();
   const { colors } = useTheme();
   const data = usePreDraftData(leagueId);
+  const [confirming, setConfirming] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
+  const [statusKey, setStatusKey] = useState(0);
+  const ds = useDraftStatus(leagueId, true, statusKey);
+
+  const startDraft = async () => {
+    setStartError(null);
+    const { data: res, error } = await supabase.functions.invoke('draft-control', { body: { league_id: leagueId, action: 'start' } });
+    if (error || !res || res.ok === false) {
+      setStartError("The draft didn't start. Check the blockers above, then try again.");
+      setStatusKey((k) => k + 1);
+      return;
+    }
+    setConfirming(false);
+    await refresh();
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <ShellHeader title="League" showAvatar />
@@ -132,6 +153,23 @@ function LeagueLobby({ leagueId }: { leagueId: string }) {
             now={new Date()}
           />
         )}
+        {ds.isCommissioner ? (
+          confirming ? (
+            <View style={styles.stack}>
+              <StartDraftConfirm
+                status={ds}
+                playoffTeams={activeLeague?.playoff_teams ?? null}
+                numWeeks={activeLeague?.num_weeks ?? 0}
+                pickSeconds={activeLeague?.pick_seconds ?? 60}
+                onStart={startDraft}
+                onNotYet={() => setConfirming(false)}
+              />
+              {startError ? <Text variant="callout">{startError}</Text> : null}
+            </View>
+          ) : (
+            <Button label="Start the draft" onPress={() => setConfirming(true)} disabled={ds.status !== 'ready'} />
+          )
+        ) : null}
       </BarsRefresh>
     </View>
   );

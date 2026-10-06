@@ -41,3 +41,15 @@ Deno.test('start blockers map to the existing copy, with the counts filled in', 
 Deno.test('an unknown blocker is never shown as a made-up reason: one honest generic line', () => {
   assertEquals(startBlockerCopy({ code: 'some_future_code' }), "The draft can't start yet.");
 });
+
+import { byeNoticeCopy } from '../lib/game/draftLobby.ts';
+
+Deno.test('the bye notice is the board\'s own words, with the split named', () => {
+  assertEquals(byeNoticeCopy(7, 10), "With 7 managers and 10 weeks, byes won't be even: some get 2, some get 1.");
+  assertEquals(byeNoticeCopy(5, 14), "With 5 managers and 14 weeks, byes won't be even: some get 3, some get 2.");
+});
+
+Deno.test('no bye notice when the weeks divide evenly or the count is even', () => {
+  assertEquals(byeNoticeCopy(6, 10), null);
+  assertEquals(byeNoticeCopy(7, 14), null);
+});
