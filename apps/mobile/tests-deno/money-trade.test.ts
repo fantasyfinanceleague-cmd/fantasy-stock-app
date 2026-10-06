@@ -125,14 +125,14 @@ Deno.test('buying power: two sales with cash need a picker; one buy never mixes 
   assertEquals(power.kind === 'proceeds' && power.pickerRequired, true);
 });
 
-Deno.test('buying power: no sale cash but a skipped draft slot funds the full notional (D2)', () => {
+Deno.test('buying power: no sale cash but an unfilled draft slot funds the full notional (D2)', () => {
   const league = legacyTrap({ stake_mode: 'fixed_notional', notional_per_slot: 2000 });
   const preview: BuyingPowerPreview = { stake_mode: 'fixed_notional', stake: 2000, unfilled_slots: 1, sources: [] };
   const power = buyingPower({ league, preview, cashSpent: null, openTierLabel: null });
-  assertEquals(power, { kind: 'skipped_slot', amount: 2000 });
+  assertEquals(power, { kind: 'unfilled_slot', amount: 2000 });
 });
 
-Deno.test('buying power: sale cash wins over a skipped slot (the server spends proceeds first)', () => {
+Deno.test('buying power: sale cash wins over a unfilled slot (the server spends proceeds first)', () => {
   const league = legacyTrap({ stake_mode: 'fixed_notional', notional_per_slot: 2000 });
   const preview: BuyingPowerPreview = {
     stake_mode: 'fixed_notional', stake: 2000, unfilled_slots: 1,

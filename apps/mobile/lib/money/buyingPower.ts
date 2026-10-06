@@ -3,7 +3,7 @@
  * alone (3e ruling, root cause of the 1.1.0 trade test, 2026-10-05).
  *
  *   fixed_notional   what record-trade's preview says: sale proceeds, else a
- *                    skipped slot's full notional (D2), else none. The league's
+ *                    unfilled slot's full notional (D2), else none. The league's
  *                    legacy budget_mode / budget_amount are NEVER read here.
  *   budget_cap       budget_amount minus cash spent (mirrors userCashSpent).
  *   price_tiers      the open slot's tier label, supplied by the caller.
@@ -42,7 +42,7 @@ export interface BuyingPowerInput {
 
 export type BuyingPower =
   | { kind: 'proceeds'; sources: PreviewSource[]; pickerRequired: boolean; defaultTradeId: string }
-  | { kind: 'skipped_slot'; amount: number }
+  | { kind: 'unfilled_slot'; amount: number }
   | { kind: 'none' }
   | { kind: 'budget'; budget: number; spent: number; left: number }
   | { kind: 'tier'; tierLabel: string }
@@ -66,7 +66,7 @@ export function buyingPower(input: BuyingPowerInput): BuyingPower {
       };
     }
     if (preview.unfilled_slots > 0) {
-      return preview.stake == null ? { kind: 'unknown' } : { kind: 'skipped_slot', amount: preview.stake };
+      return preview.stake == null ? { kind: 'unknown' } : { kind: 'unfilled_slot', amount: preview.stake };
     }
     return { kind: 'none' };
   }

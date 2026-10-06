@@ -80,5 +80,5 @@ Deno.test('buyQuantity: one-share modes are always exactly 1', () => {
 
 Deno.test('buyQuantity: a proceeds or skipped-slot source sizes by its amount', () => {
   assertEquals(buyQuantity({ kind: 'proceeds', amount: 971.92, price: 66.42 }), fixedNotionalShares(971.92, 66.42)?.quantity);
-  assertEquals(buyQuantity({ kind: 'skipped_slot', amount: 2000, price: 104.2 }), fixedNotionalShares(2000, 104.2)?.quantity);
+  assertEquals(buyQuantity({ kind: 'unfilled_slot', amount: 2000, price: 104.2 }), fixedNotionalShares(2000, 104.2)?.quantity);
 });

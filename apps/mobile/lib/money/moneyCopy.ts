@@ -16,6 +16,14 @@ export const COPY = {
   sellAllPrefix: 'Sell all',
   aSlotHoldsOneStock: 'A slot holds one stock, so you sell the whole position. The cash stays in this slot to reinvest.',
   slotCashReady: 'stays in this slot, ready to invest in any stock. It doesn\'t earn until you buy.',
+  // Budget / tier leagues (D4 ruled A, Giorgio): the sale's cash stays in the
+  // budget, shown as its own line and counted in the header.
+  portfolioValueIncludesCash: 'Portfolio value · includes cash',
+  cashFromSales: 'Cash from sales',
+  // D3 (PENDING Giorgio's A/B): an unfilled draft slot is never "Skipped". The
+  // clock auto-drafts, so a slot is unfilled only when auto-pick found no legal
+  // stock. Flagged until the A/B ruling.
+  unfilledDraftSlot: 'Unfilled draft slot',
   // NEW (flagged): trading-hours copy.
   tradingHoursUnavailable: 'Trading hours unavailable. Try again shortly.',
   marketHoliday: "It's a market holiday.",

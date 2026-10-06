@@ -77,7 +77,7 @@ Deno.test('parity: the server funding sources the client shows are the ones it s
 });
 
 Deno.test('parity: a skipped-slot buy funds the full notional, same as the server (D2)', () => {
-  // One voluntarily skipped slot: a SKIP row consumes the turn, no sale exists.
+  // One voluntarily unfilled slot: a SKIP row consumes the turn, no sale exists.
   const picks: PickRow[] = [pick({ symbol: 'SKIP', entry_price: 0, quantity: 0, pick_number: 1 })];
   const decision = validateTradeAdd({
     rules: FIXED, slots: [], picks, trades: [], userId: USER, symbol: 'SHOP', price: 104.2,
@@ -86,7 +86,7 @@ Deno.test('parity: a skipped-slot buy funds the full notional, same as the serve
   if (!decision.legal) throw new Error(`server refused: ${decision.reason}`);
   assertEquals(decision.fundedByTradeId, null);
   assertEquals(decision.stakeAmount, 2000);
-  assertEquals(buyQuantity({ kind: 'skipped_slot', amount: 2000, price: 104.2 }), decision.quantity);
+  assertEquals(buyQuantity({ kind: 'unfilled_slot', amount: 2000, price: 104.2 }), decision.quantity);
 });
 
 Deno.test('parity: a one-share (budget_cap) buy is exactly 1 share, the server quantity', () => {
