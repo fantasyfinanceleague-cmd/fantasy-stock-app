@@ -85,10 +85,10 @@
           <Fit caption="1 · Code entry" note="Keyboard up, focus on the field. Find league sits above the keyboard, as on Create account, and is enabled once anything is typed."><I.JoinCode state="typing" /></Fit>
           <Fit caption="2 · Finding the league" note="The button holds a spinner; the field stays readable."><I.JoinCode state="checking" /></Fit>
           <Fit caption="3 · The preview" note="The confirmation. The button names the league."><I.JoinPreview /></Fit>
-          <Fit caption="4 · Joined" note="Then the league's pre-draft Home."><I.JoinDone /></Fit>
+          <Fit caption="4 · Joined" note="Then the league's pre-draft Home. Promises no notification: the order-set push isn't scheduled in prod yet (its cron sits in migrations/deferred/). Once it is, add 'and we'll let you know.'"><I.JoinDone /></Fit>
           <Fit caption="Bad code" note="The only error that stays under the field."><I.JoinCode state="bad" /></Fit>
           <Fit caption="League full" note="The league stays visible; the way out is another code."><I.JoinPreview block="full" /></Fit>
-          <Fit caption="Draft already started" note="Same pattern as full."><I.JoinPreview block="drafted" /></Fit>
+          <Fit caption="Draft already done" note={`Same pattern as full. A draft IN PROGRESS gets its own line: "{League} is drafting right now, so it can't take new managers this season." (Draft row: "In progress".)`}><I.JoinPreview block="drafted" /></Fit>
           <Fit caption="Already a member" note="Not a dead end: it opens the league."><I.JoinPreview block="member" /></Fit>
         </Group>
 
