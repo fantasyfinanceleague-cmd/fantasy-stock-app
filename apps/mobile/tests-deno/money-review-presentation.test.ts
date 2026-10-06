@@ -114,12 +114,12 @@ Deno.test('symbol_owned: the owner is named, and the next step is Pick another s
     { buttonLabel: 'Buy SHOP', buttonRole: 'buy' },
     { title: 'Bought SHOP', symbol: 'SHOP', ownerName: 'Ticker Tina' },
   );
-  assertEquals(r.message, 'Owned by Ticker Tina');
+  assertEquals(r.message, 'Ticker Tina already owns SHOP. A stock has one owner per league.');
   assertEquals(r.footer, 'pick_stock');
 });
 
 Deno.test('symbol_owned without a name falls back to another manager', () => {
-  assertEquals(REFUSED('symbol_owned').message, 'Owned by another manager');
+  assertEquals(REFUSED('symbol_owned').message, 'Another manager already owns SHOP. A stock has one owner per league.');
 });
 
 Deno.test('over_budget and not_draftable: Pick another stock', () => {
@@ -141,4 +141,60 @@ Deno.test('not_authenticated: the session ended, and the next step is Sign in', 
   const r = REFUSED('not_authenticated');
   assertEquals(r.message, 'Your session ended. Sign in again.');
   assertEquals(r.footer, 'sign_in');
+});
+
+// The audit's rule-8 table (docs/design/reviews/ux-audit-2026-10.md), record-trade rows.
+// Messages name the stock and the owner; each next step is the table's, not a generic one.
+const TABLE = (reason: string, retryable = false, tier?: { price: number | null; openSlots: [] }) =>
+  reviewPresentation(
+    { kind: 'refused', reason, retryable, ...(tier ? { tier } : {}) } as import('../lib/money/reviewMachine.ts').ReviewState,
+    { buttonLabel: 'Buy SHOP', buttonRole: 'buy' },
+    { title: 'Bought SHOP', symbol: 'SHOP', ownerName: 'Ticker Tina' },
+  );
+
+Deno.test('table: symbol_owned names the owner and the stock, then Pick another stock', () => {
+  const r = TABLE('symbol_owned');
+  assertEquals(r.message, 'Ticker Tina already owns SHOP. A stock has one owner per league.');
+  assertEquals(r.footer, 'pick_stock');
+});
+
+Deno.test('table: over_budget and not_draftable name the stock, then Pick another stock', () => {
+  assertEquals(TABLE('over_budget').message, 'SHOP costs more than your budget left.');
+  assertEquals(TABLE('not_draftable').message, "SHOP isn't in this league's list of stocks.");
+  assertEquals(TABLE('not_draftable').footer, 'pick_stock');
+});
+
+Deno.test('table: not_owned names the stock and has no button (the Portfolio refreshes)', () => {
+  const r = TABLE('not_owned');
+  assertEquals(r.message, "You don't hold SHOP anymore.");
+  assertEquals(r.footer, null);
+});
+
+Deno.test('table: roster_full and no_eligible_slot go to the Portfolio', () => {
+  assertEquals(TABLE('roster_full').footer, 'sell_first');
+  assertEquals(TABLE('no_eligible_slot').footer, 'sell_first');
+});
+
+Deno.test('table: no_price and invalid_price name the stock and offer a retry', () => {
+  assertEquals(TABLE('no_price', true).message, "We can't price SHOP right now. Try again shortly.");
+  assertEquals(TABLE('invalid_price', true).message, "SHOP's price isn't usable right now. Try again shortly.");
+  assertEquals(TABLE('invalid_price', true).footer, 'try_again');
+});
+
+Deno.test('table: rate_limited has no button, because waiting is the step', () => {
+  const r = TABLE('rate_limited');
+  assertEquals(r.message, 'Too many trades in a row. Wait a moment and try again.');
+  assertEquals(r.footer, null);
+});
+
+Deno.test('table: draft_not_completed and not_a_member have their ruled line and no button', () => {
+  assertEquals(TABLE('draft_not_completed').message, 'Trading opens after the draft.');
+  assertEquals(TABLE('draft_not_completed').footer, null);
+  assertEquals(TABLE('not_a_member').message, "You're not in this league.");
+  assertEquals(TABLE('not_a_member').footer, null);
+});
+
+Deno.test('table: league_not_found has its ruled line and no button', () => {
+  assertEquals(TABLE('league_not_found').message, "This league isn't available anymore.");
+  assertEquals(TABLE('league_not_found').footer, null);
 });

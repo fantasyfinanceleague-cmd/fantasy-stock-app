@@ -35,9 +35,17 @@ export const COPY = {
   marketClosedNow: 'Trading is closed right now.',
   // NEW (flagged): ownership and eligibility.
   ownedBy: (name: string) => `Owned by ${name}`,
+  // Ruled by the audit's rule-8 table (ux-audit-2026-10): the stock and the owner are named.
+  alreadyOwned: (owner: string, symbol: string) => `${owner} already owns ${symbol}. A stock has one owner per league.`,
+  costsMoreThanBudget: (symbol: string) => `${symbol} costs more than your budget left.`,
+  notDraftableSymbol: (symbol: string) => `${symbol} isn't in this league's list of stocks.`,
+  notHeldSymbol: (symbol: string) => `You don't hold ${symbol} anymore.`,
+  cantPriceSymbol: (symbol: string) => `We can't price ${symbol} right now. Try again shortly.`,
+  priceNotUsable: (symbol: string) => `${symbol}'s price isn't usable right now. Try again shortly.`,
+  leagueNotFound: "This league isn't available anymore.",
   // NEW copy (Design Lead): the next step on a refusal, and the session ending.
   pickAnotherStock: 'Pick another stock',
-  sellHoldingFirst: 'Sell a holding first',
+  goToPortfolio: 'Go to Portfolio',
   sessionEnded: 'Your session ended. Sign in again.',
   signIn: 'Sign in',
   notHeld: "You don't hold this stock.",

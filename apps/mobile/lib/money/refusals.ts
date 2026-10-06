@@ -8,6 +8,8 @@
 import { COPY } from './moneyCopy';
 
 export interface RefusalContext {
+  /** The stock the player tried, named in the copy the audit table rules. */
+  symbol?: string;
   ownerName?: string;
   /** Formatted "Mon 9:30 AM ET", when the server gave a next open. */
   opensLabel?: string | null;
@@ -24,27 +26,31 @@ export interface RefusalCopy {
 }
 
 export function refusalCopy(reason: string, ctx: RefusalContext): RefusalCopy {
+  const symbol = ctx.symbol;
   switch (reason) {
     case 'proceeds_unavailable':
       return { message: COPY.proceedsUnavailable, backTo: 'picker' };
     case 'no_proceeds':
       return { message: COPY.noProceeds, terminal: true };
     case 'symbol_owned':
-      return { message: ctx.ownerName ? COPY.ownedBy(ctx.ownerName) : COPY.ownedBy('another manager'), next: 'pick_stock' };
+      return { message: COPY.alreadyOwned(ctx.ownerName ?? 'Another manager', symbol ?? 'this stock'), next: 'pick_stock' };
     case 'not_owned':
-      return { message: COPY.notHeld, next: 'pick_stock' };
+      return { message: symbol ? COPY.notHeldSymbol(symbol) : COPY.notHeld };
     case 'over_budget':
-      return { message: COPY.overBudget, next: 'pick_stock' };
+      return { message: symbol ? COPY.costsMoreThanBudget(symbol) : COPY.overBudget, next: 'pick_stock' };
     case 'no_eligible_slot':
       return { message: COPY.noEligibleSlot, next: 'sell_first' };
     case 'roster_full':
       return { message: COPY.rosterFull, next: 'sell_first' };
     case 'not_draftable':
-      return { message: COPY.notDraftable, next: 'pick_stock' };
+      return { message: symbol ? COPY.notDraftableSymbol(symbol) : COPY.notDraftable, next: 'pick_stock' };
     case 'no_price':
-      return { message: COPY.noPrice, retryable: true };
+      return { message: symbol ? COPY.cantPriceSymbol(symbol) : COPY.noPrice, retryable: true };
     case 'rate_limited':
-      return { message: COPY.rateLimited, retryable: true };
+      // Waiting is the step (the table): no button.
+      return { message: COPY.rateLimited };
+    case 'league_not_found':
+      return { message: COPY.leagueNotFound };
     case 'not_authenticated':
       return { message: COPY.sessionEnded, next: 'sign_in' };
     case 'draft_not_completed':
@@ -52,7 +58,7 @@ export function refusalCopy(reason: string, ctx: RefusalContext): RefusalCopy {
     case 'not_a_member':
       return { message: COPY.notAMember };
     case 'invalid_price':
-      return { message: COPY.invalidPrice, retryable: true };
+      return { message: symbol ? COPY.priceNotUsable(symbol) : COPY.invalidPrice, retryable: true };
     case 'market_closed':
       return { message: ctx.opensLabel ? COPY.tradingOpens(ctx.opensLabel) : COPY.marketClosedNow };
     case 'calendar_unavailable':

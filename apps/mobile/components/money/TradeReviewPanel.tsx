@@ -26,7 +26,7 @@ export type NextStep = 'back_to_picker' | 'pick_stock' | 'sell_first' | 'sign_in
 const NEXT_LABEL: Record<NextStep, string> = {
   back_to_picker: COPY.pickAnotherSale,
   pick_stock: COPY.pickAnotherStock,
-  sell_first: COPY.sellHoldingFirst,
+  sell_first: COPY.goToPortfolio,
   sign_in: COPY.signIn,
 };
 

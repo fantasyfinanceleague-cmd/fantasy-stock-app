@@ -49,7 +49,7 @@ export function reviewPresentation(
           footer: 'sell_first',
         };
       }
-      const copy = refusalCopy(state.reason, { ownerName: ctx.ownerName });
+      const copy = refusalCopy(state.reason, { symbol: ctx.symbol, ownerName: ctx.ownerName });
       return {
         message: copy.message,
         messageTone: 'warn',
