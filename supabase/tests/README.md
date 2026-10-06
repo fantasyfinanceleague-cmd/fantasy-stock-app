@@ -9,6 +9,22 @@ cleanly proves nothing about its function bodies (`CLAUDE.md`).
 They are **deliberately outside `supabase/functions/`**. That keeps
 `deno test supabase/functions/` offline and hermetic, with no npm fetch and no WASM.
 
+## replica_defaults.ts (shared guard, not a test)
+
+Most suites hand-declare a minimal `leagues` table. If a replica's column default differs from prod's, a fixture that omits the column tests a different branch from the one prod runs.
+
+This happened on 2026-10-06. The leave-league replica defaulted `league_type` to `'matchup'`, but prod's default is `'duration'`. So the effect test's S4 passed in PGlite and failed in prod.
+
+`assertReplicaDefaultMatchesProd(q, 'leagues', 'league_type')` compares the replica's `information_schema` default with the default the latest migration leaves. Four suites call it as a step:
+- `leave_league`
+- `start_league_playoffs`
+- `flexible_playoffs`
+- `season_result`
+
+Each of them declares `default 'duration'`, like prod, and passes `league_type` explicitly wherever a matchup path is under test.
+
+**When a new suite declares `league_type`, call the guard too.**
+
 ## finalize_league_draft.pglite.test.ts
 
 What it does:

@@ -20,6 +20,7 @@
  */
 import { assert, assertEquals, assertRejects } from 'jsr:@std/assert';
 import { PGlite } from 'npm:@electric-sql/pglite@0.2';
+import { assertReplicaDefaultMatchesProd } from './replica_defaults.ts';
 
 const ROOT = new URL('../../', import.meta.url);
 const mig = (name: string) => Deno.readTextFile(new URL(`supabase/migrations/${name}`, ROOT));
@@ -69,7 +70,7 @@ create table leagues (
   invite_code text, num_participants int default 8, draft_date timestamptz,
   created_at timestamptz not null default clock_timestamp(),
   league_start_date timestamptz, league_end_date timestamptz,
-  -- PROD's default, 'duration' (20251230000000). The guard step below fails if
+  -- PROD's default, 'duration' (20251230000000). The guard step (replica_defaults.ts) fails if
   -- this ever drifts from the latest migration's default again: on 2026-10-06 a
   -- 'matchup' default here hid an effect-test fixture that omitted league_type.
   league_type text not null default 'duration', num_weeks int, current_week int default 1,
@@ -236,22 +237,7 @@ Deno.test({
     };
 
     await step('replica guard: leagues.league_type default equals the latest migration default (prod)', async () => {
-      // Every migration in apply order (deferred/ is not applied); the LAST
-      // statement that sets the default wins, whether at ADD COLUMN or via
-      // ALTER COLUMN ... SET DEFAULT.
-      const dir = new URL('supabase/migrations/', ROOT);
-      const files: string[] = [];
-      for await (const e of Deno.readDir(dir)) if (e.isFile && e.name.endsWith('.sql')) files.push(e.name);
-      files.sort();
-      const re = /league_type\s+text[^;]*?\bdefault\s+'(\w+)'|alter\s+column\s+league_type\s+set\s+default\s+'(\w+)'/gi;
-      let latest: string | null = null;
-      for (const f of files) {
-        for (const m of (await mig(f)).matchAll(re)) latest = m[1] ?? m[2];
-      }
-      assert(latest !== null, 'no migration sets a league_type default');
-      const [col] = await q(`select column_default d from information_schema.columns
-                              where table_name = 'leagues' and column_name = 'league_type'`);
-      assertEquals(col.d, `'${latest}'::text`, 'the replica default drifted from prod');
+      await assertReplicaDefaultMatchesProd(q, 'leagues', 'league_type');
     });
 
     await step('grants: service_role only on all three RPCs; search_path pinned; table grants exact', async () => {
