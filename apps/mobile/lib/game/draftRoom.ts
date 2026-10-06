@@ -121,24 +121,41 @@ export function pickClockLabel(clock: ClockState): string {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
-/** The pick refusals the app has always shown, VERBATIM (existing copy, from the
- * legacy draft route). The never-skips reasons (would_strand_slot,
- * budget_reserve) carry the board's ruled copy below (pickRefusalLine). */
-const PICK_REFUSAL_LINES: Record<string, string> = {
-  not_your_turn: "It's not your turn to pick",
-  draft_complete: 'The draft is already complete',
-  draft_not_in_progress: 'The draft is not in progress',
-  symbol_owned: 'That stock is already owned in this league',
-  not_draftable: "That stock isn't in this league's draftable universe",
-  no_eligible_slot: 'No open roster slot accepts a stock at this price',
-  over_budget: 'That stock is over your remaining budget',
-  no_price: 'No recent price available for that stock',
-  pick_conflict: 'Someone picked at the same moment — refresh and try again',
-  rate_limited: 'Too many picks too quickly — wait a moment and try again',
-  draft_not_complete: 'The draft is not finished yet',
-  forbidden_target: "You can't pick on that player's behalf",
-  not_a_member: "You're not a member of this league",
+/** A pick refusal: its line, and the next step shown under it (UX rule 8).
+ * `another`: the clock keeps running and another stock would do, so the
+ * shared next step "Your clock is still running. Pick another stock." follows. */
+interface RefusalEntry {
+  line: string;
+  next: 'another' | null;
+}
+
+/** The pick refusals (UX rule 8: whole sentences, the shared next step, no em
+ * dashes). STRUCTURE ONLY for now: the lines are the existing copy, verbatim,
+ * until the Design Lead's exact table is relayed; then the table replaces
+ * `line` (and `next` where it differs) and the pending test below goes live.
+ * The never-skips reasons (would_strand_slot, budget_reserve) are built in
+ * pickRefusalLine with the board's copy and their own next step. */
+const PICK_REFUSALS: Record<string, RefusalEntry> = {
+  not_your_turn: { line: "It's not your turn to pick", next: null },
+  draft_complete: { line: 'The draft is already complete', next: null },
+  draft_not_in_progress: { line: 'The draft is not in progress', next: null },
+  symbol_owned: { line: 'That stock is already owned in this league', next: 'another' },
+  not_draftable: { line: "That stock isn't in this league's draftable universe", next: 'another' },
+  no_eligible_slot: { line: 'No open roster slot accepts a stock at this price', next: 'another' },
+  over_budget: { line: 'That stock is over your remaining budget', next: 'another' },
+  no_price: { line: 'No recent price available for that stock', next: 'another' },
+  pick_conflict: { line: 'Someone picked at the same moment — refresh and try again', next: null },
+  rate_limited: { line: 'Too many picks too quickly — wait a moment and try again', next: null },
+  draft_not_complete: { line: 'The draft is not finished yet', next: null },
+  forbidden_target: { line: "You can't pick on that player's behalf", next: null },
+  not_a_member: { line: "You're not a member of this league", next: null },
 };
+
+/** Every reason the table covers (for the rule-8 test once the table lands). */
+export const PICK_REFUSAL_REASONS: readonly string[] = Object.keys(PICK_REFUSALS);
+
+/** The shared next step under a refusal where another stock would do (UX rule 8). */
+export const PICK_ANOTHER_NEXT_STEP = 'Your clock is still running. Pick another stock.';
 
 /** What the refusal is about: the stock the player tried (always known on the
  * phone), and, only if the server ever returns them, the manager and the slot
@@ -166,12 +183,13 @@ export function pickRefusalLine(reason: string, ctx: PickRefusalContext = { stoc
   if (reason === 'budget_reserve') {
     return stock ? `${stock} would leave too little budget for your remaining picks.` : GENERIC_REFUSAL;
   }
-  return PICK_REFUSAL_LINES[reason] ?? GENERIC_REFUSAL;
+  return PICK_REFUSALS[reason]?.line ?? GENERIC_REFUSAL;
 }
 
 /** Under a never-skips refusal, the next step (board "Pick refused" frames). */
 export const PICK_REFUSAL_NEXT_STEP = 'Your clock is still running. Pick from the list, or let your queue pick for you.';
 
 export function pickRefusalNextStep(reason: string): string | null {
-  return reason === 'would_strand_slot' || reason === 'budget_reserve' ? PICK_REFUSAL_NEXT_STEP : null;
+  if (reason === 'would_strand_slot' || reason === 'budget_reserve') return PICK_REFUSAL_NEXT_STEP;
+  return PICK_REFUSALS[reason]?.next === 'another' ? PICK_ANOTHER_NEXT_STEP : null;
 }

@@ -82,11 +82,10 @@ Deno.test('with no stock known, the never-skips refusals fall back to the one ge
   assertEquals(pickRefusalLine('budget_reserve'), "That pick can't be made.");
 });
 
-Deno.test('the next step under the never-skips refusals only', () => {
+Deno.test('the never-skips refusals carry the board\'s own next step', () => {
   assertEquals(PICK_REFUSAL_NEXT_STEP, 'Your clock is still running. Pick from the list, or let your queue pick for you.');
   assertEquals(pickRefusalNextStep('would_strand_slot'), PICK_REFUSAL_NEXT_STEP);
   assertEquals(pickRefusalNextStep('budget_reserve'), PICK_REFUSAL_NEXT_STEP);
-  assertEquals(pickRefusalNextStep('symbol_owned'), null);
   assertEquals(pickRefusalNextStep('not_your_turn'), null);
 });
 
@@ -279,4 +278,37 @@ Deno.test('a finished draft shows DraftComplete (your roster, the existing line)
   const view = SOURCES['components/game/DraftComplete.tsx'];
   assertEquals(view.includes('<TeamSoFarGrid symbols={symbols} numRounds={numRounds} />'), true);
   assertEquals(view.includes("export const FINISHING_THE_DRAFT = 'Finishing the draft…';"), true);
+});
+
+// ── UX rule 8: the refusal table's structure (the exact table is pending) ──
+
+import { PICK_ANOTHER_NEXT_STEP, PICK_REFUSAL_REASONS } from '../lib/game/draftRoom.ts';
+
+Deno.test('the shared next step, under refusals where another stock would do', () => {
+  assertEquals(PICK_ANOTHER_NEXT_STEP, 'Your clock is still running. Pick another stock.');
+  for (const r of ['symbol_owned', 'not_draftable', 'no_eligible_slot', 'over_budget', 'no_price']) {
+    assertEquals(pickRefusalNextStep(r), PICK_ANOTHER_NEXT_STEP, r);
+  }
+  for (const r of ['not_your_turn', 'draft_complete', 'rate_limited', 'pick_conflict', 'not_a_member', 'unknown']) {
+    assertEquals(pickRefusalNextStep(r), null, r);
+  }
+  // The never-skips refusals keep the board's own next step.
+  assertEquals(pickRefusalNextStep('would_strand_slot'), PICK_REFUSAL_NEXT_STEP);
+});
+
+Deno.test('every reason in the table has a line, and the lines are the existing copy until the table lands', () => {
+  assertEquals(PICK_REFUSAL_REASONS.length, 13);
+  for (const r of PICK_REFUSAL_REASONS) assertEquals(pickRefusalLine(r).length > 0 && pickRefusalLine(r) !== "That pick can't be made.", true, r);
+});
+
+Deno.test({
+  name: 'PENDING (the Design Lead\'s table): every refusal is a whole sentence, with no em dash',
+  ignore: true, // goes live when the exact table is relayed and slotted in
+  fn: () => {
+    for (const r of PICK_REFUSAL_REASONS) {
+      const line = pickRefusalLine(r);
+      assertEquals(/[.!?]$/.test(line), true, r);
+      assertEquals(line.includes('—'), false, r);
+    }
+  },
 });
