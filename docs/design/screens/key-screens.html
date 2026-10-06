@@ -303,7 +303,7 @@
   background: var(--c-tabbar); backdrop-filter: blur(20px);
   border-top: 1px solid var(--c-border);
 }
-.ks-tabs__t { display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--c-text-2); font-size: 10.5px; font-weight: 600; }
+.ks-tabs__t { display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--c-text-2); font-size: 11px; font-weight: 600; }
 .ks-tabs__t svg { width: 26px; height: 26px; }
 .ks-tabs__t--on { color: var(--c-accent); }
 .ks-home-ind { position: absolute; left: 50%; bottom: 8px; width: 139px; height: 5px; margin-left: -69.5px; border-radius: 3px; background: var(--c-text); z-index: 6; }
@@ -420,9 +420,9 @@
   border: 1px solid var(--c-line); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
   font-variant-numeric: tabular-nums;
 }
-.ks-cell__n { font-size: 10px; line-height: 12px; color: var(--c-text-2); font-weight: 600; }
+.ks-cell__n { font-size: 11px; line-height: 12px; color: var(--c-text-2); font-weight: 600; }
 .ks-cell__t { font-size: 12.5px; line-height: 15px; font-weight: 800; letter-spacing: -0.01em; }
-.ks-auto { position: absolute; top: -7px; right: -5px; z-index: 2; padding: 1px 5px; border-radius: 6px; font-size: 8.5px; line-height: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; background: var(--c-inverse-bg); color: var(--c-inverse-fg); }
+.ks-auto { position: absolute; top: -7px; right: -5px; z-index: 2; padding: 1px 5px; border-radius: 6px; font-size: 11px; line-height: 13px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; background: var(--c-inverse-bg); color: var(--c-inverse-fg); }
 .ks-cell--you { border-color: var(--c-you); box-shadow: inset 0 0 0 1px var(--c-you); }
 .ks-cell--you .ks-cell__n { color: var(--c-you-text); }
 .ks-cell--future { background: transparent; border-style: dashed; }
@@ -1118,6 +1118,11 @@
     plus: 'M12 5v14M5 12h14',
     close: 'M6 6l12 12M18 6 6 18',
     right: 'm9 6 6 6-6 6',
+    left: 'm15 6-6 6 6 6',
+    up: 'm6 15 6-6 6 6',
+    check: 'M5 12.5 10 17 19 7',
+    circle: 'M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z',
+    info: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 11v5M12 7.5v.5',
   };
   function Icon({ d, size = 24, width = 2 }) {
     return (
@@ -1502,7 +1507,7 @@
                   <div key={p.id} className={p.you ? 'ks-lbrow ks-lbrow--you' : 'ks-lbrow'} style={{ transform: `translateY(${(r.rank - 1) * ROW}px)` }}>
                     <span className="ks-score" style={{ fontSize: 22 }}>{r.rank}</span>
                     <span className={`ks-delta ${d > 0 ? 'ks-delta--up' : d < 0 ? 'ks-delta--down' : 'ks-delta--flat'}`} key={`${after}${d}`}>
-                      {d > 0 ? <span className="ks-pop">▲{d}</span> : d < 0 ? <span className="ks-pop">▼{-d}</span> : '–'}
+                      {d > 0 ? <span className="ks-pop" style={{ display: 'inline-flex', alignItems: 'center' }} aria-label={`up ${d}`}><Icon d={ICON.up} size={12} width={3} />{d}</span> : d < 0 ? <span className="ks-pop" style={{ display: 'inline-flex', alignItems: 'center' }} aria-label={`down ${-d}`}><Icon d={ICON.chevron} size={12} width={3} />{-d}</span> : '–'}
                     </span>
                     <span className={p.you ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{p.init}</span>
                     <span className="ks-callout" style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{p.name}{p.you ? <span className="ks-muted" style={{ fontWeight: 500 }}> (you)</span> : null}</span>
@@ -1621,7 +1626,7 @@
           ))}
         </div>
         <div className="ks-board__rlabel ks-caption ks-muted" style={{ marginTop: 10 }}>
-          <span>Round 1 → · Round 2 ← · Round 3 →</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>Round 1 <Icon d={ICON.right} size={12} width={2.6} /> · Round 2 <Icon d={ICON.left} size={12} width={2.6} /> · Round 3 <Icon d={ICON.right} size={12} width={2.6} /></span>
           <span>Order reverses each round</span>
         </div>
       </div>
@@ -1891,7 +1896,7 @@
                   <li className="ks-row ks-fade-in" style={{ gridTemplateColumns: '36px 1fr auto' }}>
                     <span className="ks-logo" style={{ background: 'var(--c-gain-tint)', color: 'var(--c-gain)', fontSize: 16 }}>$</span>
                     <span><span className="ks-t">Cash</span><br /><span className="ks-caption">From selling {S.sold} · ready to invest</span></span>
-                    <span className="ks-right ks-num"><b>{$(S.proceeds)}</b><br /><span className="ks-caption" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Invest ›</span></span>
+                    <span className="ks-right ks-num"><b>{$(S.proceeds)}</b><br /><span className="ks-caption" style={{ color: 'var(--c-accent)', fontWeight: 700, display: 'inline-flex', alignItems: 'center' }}>Invest <Icon d={ICON.right} size={12} width={2.6} /></span></span>
                   </li>
                 ) : null}
               </ul>
@@ -1964,7 +1969,7 @@
       {helper ? <span className="ks-caption">{helper}</span> : null}
       {rules ? (
         <span className="ks-rules">
-          {rules.map(([ok, t]) => <span key={t} className={ok ? 'ks-gain' : 'ks-muted'}>{ok ? '✓' : '○'} {t}</span>)}
+          {rules.map(([ok, t]) => <span key={t} className={ok ? 'ks-gain' : 'ks-muted'} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon d={ok ? ICON.check : ICON.circle} size={12} width={2.6} />{t}</span>)}
         </span>
       ) : null}
     </label>
@@ -2340,7 +2345,7 @@
   // counts at cost, and the screen says so. Appears instantly, never animates.
   const AtCost = ({ who, n }) => (
     <span className="ks-caption ks-muted" style={{ display: 'flex', gap: 6, alignItems: 'baseline' }}>
-      <span aria-hidden="true">ⓘ</span>
+      <span aria-hidden="true" style={{ display: 'inline-flex', alignSelf: 'center' }}><Icon d={ICON.info} size={14} width={2} /></span>
       <span>{who ? `${who}: ` : ''}{n} {n === 1 ? 'holding' : 'holdings'} counted at cost (no live price yet)</span>
     </span>
   );
@@ -3533,7 +3538,7 @@
         {NX.joined.map((j) => (
           <li key={j.id} className="ks-row" style={{ gridTemplateColumns: '18px 1fr auto', padding: '10px 0', alignItems: 'center' }}>
             <span />
-            <span className="ks-callout" style={{ fontWeight: 700, display: 'flex', gap: 8, alignItems: 'center' }}>{j.name}<span className="ks-chip" style={{ height: 20, fontSize: 10 }}>New</span></span>
+            <span className="ks-callout" style={{ fontWeight: 700, display: 'flex', gap: 8, alignItems: 'center' }}>{j.name}<span className="ks-chip" style={{ height: 20, fontSize: 11 }}>New</span></span>
             <span className="ks-callout" style={{ fontWeight: 700, color: 'var(--c-accent)', display: 'flex', gap: 6, alignItems: 'center' }}><Icon d={CHECK} size={14} width={3} />Joining</span>
           </li>
         ))}

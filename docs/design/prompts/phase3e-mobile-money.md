@@ -79,6 +79,26 @@ You are the UI worker for **Phase 3e: the money screens**. Your branch is `ui/mo
 5. **Fix everything, then shoot once.**
 6. **A visible product decision that isn't ruled goes to Giorgio as a board "Your call" BEFORE "go".**
 
+## Craft floor (DESIGN_DIRECTION §9B + §4 "Motion craft"; adopted 2026-10-05)
+
+These apply to every screen you build. They are new since this prompt was first written, so audit your existing work against them too.
+- **Icons:** the `sp` icon set only. Replace any Unicode or emoji glyph used as an icon in your screens (ⓘ, ▲/▼, ✓, ›, →, ●-as-text) with a drawn icon or shape. Add missing icons to the set through the Design Lead.
+- **Hit areas:** ≥ 44 × 44 pt for everything tappable, **including text links** ("Invest", "Change", "Share", the Cash row, each holding row). Use padding or `hitSlop`, and report how you verified it.
+- **11 pt text floor:** chips, tags, badges, cell numbers and tab labels included.
+- **Motion craft:**
+  - one authored moment per screen, with a one-line motion thesis in your PLAN;
+  - every animation passes "what's lost if it's removed?";
+  - exit is faster than entrance;
+  - content is visible at rest (an animation that doesn't run never hides content);
+  - the live dot and any pulse pause when the screen isn't focused or the app is backgrounded.
+- **Gestures:** never disable edge-swipe back. Sheets swipe to dismiss with Cancel/Done; the trade review mid-confirm is the one place a dismiss guard is justified. Destructive confirms use a native action sheet whose button names the action (never Yes/No/OK).
+- **Copy:** confirm buttons name the action; every message is a whole sentence (no stitched fragments); errors say what failed and how to recover, never a raw code.
+- **Tags** must carry information and never repeat an adjacent chip or title.
+- **Colour is never the only code:** every colour signal has a text, sign or shape twin and a VoiceOver label.
+- **≤ 4 visible choices** at a decision point, with one primary action (check the stock sheet: ranges + Buy/Sell + position).
+- **Stress fixture** (captured): a 20-character username and a 40-character league name; values and losses ≥ $1,000,000; 16 managers, 1,000+ trade-history rows (a virtualised list); offline/slow (a stale-data state); a `rate_limited` refusal.
+- **Phone only for 1.2.0** (iPad support is off; no tablet layouts).
+
 ## Shared code and ownership
 
 - **Reuse** 3b-2's `teamValue`, `todayChange`, `plCoverage`, `marketWeek`, `etParts` and `ordinal`, plus 3c's promoted locations once they land (3c owns every `lib/` move: rebase onto it rather than moving files yourself).
@@ -184,5 +204,6 @@ A refusal appears **instantly** and never looks like success. Check `{ error }` 
 7. **All five signature moments (M1–M5) are present, smooth and calm-but-premium**, with their Reduce Motion versions. A missing or timid moment is a DESIGN-CHANGES.
 8. Clean names, ≤ 4 dp shares, U+2212 minus, zero grey, no truncation at XL.
 9. The real trade test passed, with its effect verified in the data.
+10. The craft floor holds: no glyph-icons, 44 pt hit areas verified, the 11 pt floor, the motion-craft lines, the stress fixture captured. The gate report follows UI-UX-PROGRAM's format (specificity, squint, 0–4 scorecard, persona walk, P0–P3).
 
 Report your PLAN first (including your fixture plan and how the U2 gate fails closed) and wait for "go".

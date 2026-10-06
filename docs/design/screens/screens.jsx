@@ -35,6 +35,11 @@
     plus: 'M12 5v14M5 12h14',
     close: 'M6 6l12 12M18 6 6 18',
     right: 'm9 6 6 6-6 6',
+    left: 'm15 6-6 6 6 6',
+    up: 'm6 15 6-6 6 6',
+    check: 'M5 12.5 10 17 19 7',
+    circle: 'M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z',
+    info: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 11v5M12 7.5v.5',
   };
   function Icon({ d, size = 24, width = 2 }) {
     return (
@@ -419,7 +424,7 @@
                   <div key={p.id} className={p.you ? 'ks-lbrow ks-lbrow--you' : 'ks-lbrow'} style={{ transform: `translateY(${(r.rank - 1) * ROW}px)` }}>
                     <span className="ks-score" style={{ fontSize: 22 }}>{r.rank}</span>
                     <span className={`ks-delta ${d > 0 ? 'ks-delta--up' : d < 0 ? 'ks-delta--down' : 'ks-delta--flat'}`} key={`${after}${d}`}>
-                      {d > 0 ? <span className="ks-pop">▲{d}</span> : d < 0 ? <span className="ks-pop">▼{-d}</span> : '–'}
+                      {d > 0 ? <span className="ks-pop" style={{ display: 'inline-flex', alignItems: 'center' }} aria-label={`up ${d}`}><Icon d={ICON.up} size={12} width={3} />{d}</span> : d < 0 ? <span className="ks-pop" style={{ display: 'inline-flex', alignItems: 'center' }} aria-label={`down ${-d}`}><Icon d={ICON.chevron} size={12} width={3} />{-d}</span> : '–'}
                     </span>
                     <span className={p.you ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{p.init}</span>
                     <span className="ks-callout" style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{p.name}{p.you ? <span className="ks-muted" style={{ fontWeight: 500 }}> (you)</span> : null}</span>
@@ -538,7 +543,7 @@
           ))}
         </div>
         <div className="ks-board__rlabel ks-caption ks-muted" style={{ marginTop: 10 }}>
-          <span>Round 1 → · Round 2 ← · Round 3 →</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>Round 1 <Icon d={ICON.right} size={12} width={2.6} /> · Round 2 <Icon d={ICON.left} size={12} width={2.6} /> · Round 3 <Icon d={ICON.right} size={12} width={2.6} /></span>
           <span>Order reverses each round</span>
         </div>
       </div>
@@ -808,7 +813,7 @@
                   <li className="ks-row ks-fade-in" style={{ gridTemplateColumns: '36px 1fr auto' }}>
                     <span className="ks-logo" style={{ background: 'var(--c-gain-tint)', color: 'var(--c-gain)', fontSize: 16 }}>$</span>
                     <span><span className="ks-t">Cash</span><br /><span className="ks-caption">From selling {S.sold} · ready to invest</span></span>
-                    <span className="ks-right ks-num"><b>{$(S.proceeds)}</b><br /><span className="ks-caption" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Invest ›</span></span>
+                    <span className="ks-right ks-num"><b>{$(S.proceeds)}</b><br /><span className="ks-caption" style={{ color: 'var(--c-accent)', fontWeight: 700, display: 'inline-flex', alignItems: 'center' }}>Invest <Icon d={ICON.right} size={12} width={2.6} /></span></span>
                   </li>
                 ) : null}
               </ul>
