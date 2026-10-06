@@ -102,6 +102,11 @@ building anything, and don't reopen a rule without him.
 
 ## League lifecycle
 
+- **League size** (2026-10-06): a league needs at least 4 managers to draft, and every
+  manager is a real person. Bots and the manual Start button are testing tools for the
+  test account only; they are never a product feature, and no rule about players is ever
+  written around them. (Code: `MIN_DRAFT_MEMBERS = 4` in
+  `supabase/functions/draft-control/rules.ts`; the draft order also waits for 4.)
 - **Playoffs:** the commissioner sets any playoff team count P from 2 up to the number of
   managers (never more). The bracket is derived (weeks = ceil(log2 P); byes to the top
   seeds). Rounds are named by teams left: Final / Semifinals / Quarterfinals / Round of
