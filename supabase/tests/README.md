@@ -415,6 +415,115 @@ drops the 12-arg overload, adds `p_slot_id`) and drives it through the real
 Mutation-checked: reverting the validator's occupancy to drafts-only fails 7 hermetic
 tests including the repro (`draft-validation.test.ts`, "tier trades: ...").
 
+## freeze_league_rules.pglite.test.ts
+
+What it does:
+- Loads, **verbatim** and in prod order:
+  - the `drafts` RLS (`20251205110000`, including the live "Commissioners can delete
+    picks" policy) and its INSERT-policy drop (`20260811000003`);
+  - the B1 helpers and the `leagues` / `league_members` RLS (`20260712000000`/`01`/`02`,
+    including [I5] delete-self);
+  - `league_draft_slots` with its interim commissioner policies (`20260810000004`);
+  - the F1 member column guard (`20260925000000`) and the pick clock (`20261010000000`);
+  - the `playoff_teams` freeze (`20261012000002`) and draft order modes
+    (`20261013000000`);
+  - then `20261104000000_freeze_league_rules_after_draft_start`.
+
+  So every prod trigger on `leagues` and `league_members` fires here, in prod's order.
+- Builds `leagues` by **replaying every `CREATE TABLE` / `ALTER TABLE … ADD|DROP|RENAME
+  COLUMN` on it** from `supabase/migrations/` (FK `REFERENCES` stripped). The triggers
+  therefore run against the real column set, types and inline CHECKs.
+- Runs writes as `authenticated` with a JWT sub, so the real interim policies admit the
+  commissioner and the new triggers are what refuse them. The service role is
+  `service_role` (bypassrls) with no sub.
+
+It covers:
+- **replay completeness**: every migration statement that mentions `table leagues` is
+  either replayed or a known non-column form (constraints, RLS, column defaults). An
+  `ADD x` without `COLUMN`, a quoted name, or DDL inside a `DO` block fails the test, so
+  the replay can't silently miss a column.
+- **classification**: every `leagues` column is classified as `frozen`, `stamp_once`,
+  `guarded` (with the named trigger) or deliberately `editable`. **A new column fails
+  this test until it is classified**, so a future rule column cannot silently stay
+  commissioner-writable. The editable set is exercised post-draft, and `id` is pinned.
+- the season-state columns (`season_status`, `current_week`, `current_season_id`,
+  `commissioner_id`) and the retired `budget_mode` frozen like the rules; `league_start_date` / `league_end_date`
+  stamp-once, exactly F1's carve-out: NULL → value only in the completing UPDATE
+  (`in_progress` → `completed`). The member and commissioner completion shapes pass. A
+  rewrite, a clear, or a hindsight stamp at any other time is refused.
+- the "guarded elsewhere" columns are proven post-draft: `draft_order_mode` and
+  `pick_seconds` are refused, and `pick_clock_enabled` / `draft_started_at` are reverted
+- no probing: a non-commissioner writing a slot into someone else's league gets the RLS
+  error, not `league_slots_locked`. The DEFINER trigger only reads and locks the caller's
+  own leagues.
+- leaving the league ([I5], interim guard): a member and the commissioner refused with
+  `league_membership_locked` in `in_progress` and `completed`; pre-draft leave unchanged;
+  the service role may remove a member post-draft, but mid-draft it still meets the
+  older all-roles `draft_in_progress`; deleting a started league cascades its members,
+  slots and draft order; two leaves in one transaction complete (single connection only).
+  The lock MODES (`FOR NO KEY UPDATE` for leaves, `FOR SHARE` scoped to the caller's
+  leagues for slots) are pinned statically from `pg_proc.prosrc`, because one connection
+  can't tell them apart.
+- draft picks: the commissioner's pick DELETE is refused in `in_progress` and `completed`
+  (`draft_picks_locked`). A pre-draft delete is allowed. A member's delete and any user
+  UPDATE match 0 rows (there are no such policies). The service role may delete, and
+  deleting a started league cascades its picks.
+- pre-draft: the commissioner inserts, updates and deletes slots and edits every rule
+- `in_progress` and `completed`: every slot write (and the delete-then-insert client
+  save) refused with `league_slots_locked`; each of the 14 frozen columns refused on
+  its own (and set to NULL) with `league_rules_locked` naming the column; nothing written
+- the same-value patch shapes of mobile `league-settings.tsx` and web `Leagues.jsx`
+  (with an unscaled `budget_amount`) still saving after the draft
+- one UPDATE that changes a rule and starts the draft (judged on OLD, allowed)
+- the `draft_status` transition table: the three forward moves, every backward move
+  refused for the commissioner (`league_draft_status_locked`) but allowed for the
+  service role, and the rewind bypass closed end to end
+- re-parenting a slot into or out of a started league; the commissioner deleting a
+  completed league (the slot cascade); a member still refused by RLS
+- the lock: a slot write row-locks its league (`xmax`), and both same-transaction
+  orders complete. Two-transaction races need two connections, so that argument is in
+  the migration header.
+- fail closed: an unknown or NULL `draft_status` (with the CHECK dropped) freezes
+  everything and allows no move
+- `proacl`, `prosecdef` and the `search_path` pin of both trigger functions
+- the human post-push block `docs/security/freeze-league-rules-effect-test.sql`, run
+  **verbatim** (via `request.jwt.claims` and Supabase's real `auth.uid()` definition):
+  all 28 lines PASS, including F2 (`drafts.league_id` cascades; prints REVIEW in prod if
+  the prod-only FK differs), F1 (the only FK touching `league_members` is its
+  `league_id` cascade) and C1 (every live `leagues` column classified; its list must
+  equal the test's `CLASSIFICATION`), and nothing persists
+
+**PR #94 (Run it back) pointer.** On `origin/feat/run-it-back` (not on `main` when this
+test was written), `renew_league` and `start_renewed_season` write slots and rules with
+the commissioner's JWT, so this freeze applies to them. Both touch only `not_started`
+leagues, so they pass as written. When #94 lands, add a step here that runs them against
+this trigger. #94 also adds `leagues` columns (`previous_league_id`, `lineage_id`,
+`season_number`), so on rebase this test FAILS until they are classified. They are
+guarded by #94's own `enforce_league_lineage_columns` trigger.
+
+Mutation-checked: 25 mutations, 23 of which fail at least one step. They cover:
+- each guard branch;
+- the leave guard disabled, its cascade allowance removed, its service-role exemption
+  removed, and its lock swapped to `FOR SHARE`;
+- the drafts guard disabled, its cascade allowance removed, and its scope removed;
+- the slot trigger's commissioner scope removed;
+- a state column dropped, and `budget_mode` dropped;
+- stamp-once refusing NULL → value, and stamp-once widened back to any time;
+- three probe migrations: an unclassified column, an `ADD` without `COLUMN`, and an
+  `ADD COLUMN` inside a `DO` block.
+
+The two survivors are equivalent, not gaps. They remove the slot and drafts triggers'
+explicit `auth.uid() IS NULL` exemption, which changes nothing: their commissioner scope
+(`commissioner_id = auth.uid()::text`) already matches no league when the uid is NULL.
+
+#94 compatibility was checked once, in a scratch copy of this suite, against
+`20261105000004_run_it_back_gate.sql` @ `f450e78`, all passing:
+- the renewal self-leave while `not_started` is allowed and its sync sets the reply to `out`;
+- the gate's `num_participants` rewrite on the start UPDATE is allowed (judged on OLD);
+- after the start, the freeze and the leave guard hold.
+
+Make that a committed step when #94 lands.
+
 ## migration_cli_split.test.ts
 
 What it does:
