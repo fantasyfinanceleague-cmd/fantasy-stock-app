@@ -28,3 +28,15 @@ Deno.test('the board rows: one row per round, each cell its pick number and mana
   assertEquals(rows[0][0], { pick: 1, round: 1, manager: 'paolo', symbol: 'MSFT', source: 'manual', onClock: false });
   assertEquals(rows[1][4], { pick: 11, round: 2, manager: 'roberto', symbol: null, source: null, onClock: true });
 });
+
+import { indexPicks } from '../lib/game/draftBoard.ts';
+
+Deno.test('indexPicks keys picks by overall number; a legacy SKIP row keeps its slot', () => {
+  const m = indexPicks([
+    { pick_number: 1, symbol: 'MSFT', pick_source: 'manual' },
+    { pick_number: 2, symbol: 'SKIP', pick_source: 'skip' },
+  ]);
+  assertEquals(m.get(1), { symbol: 'MSFT', source: 'manual' });
+  assertEquals(m.get(2), { symbol: 'SKIP', source: 'skip' });
+  assertEquals(m.get(3), undefined);
+});

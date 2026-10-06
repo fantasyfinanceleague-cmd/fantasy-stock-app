@@ -51,3 +51,17 @@ export function boardRows(
   }
   return rows;
 }
+
+export interface DraftPickRow {
+  pick_number: number;
+  symbol: string;
+  pick_source: string;
+}
+
+/** The picks keyed by overall pick number. A legacy SKIP row is kept (the board
+ * lays it out as a plain row with a dash), but it never fills a cell's symbol. */
+export function indexPicks(rows: DraftPickRow[]): Map<number, { symbol: string; source: string }> {
+  const map = new Map<number, { symbol: string; source: string }>();
+  for (const r of rows) map.set(r.pick_number, { symbol: r.symbol, source: r.pick_source });
+  return map;
+}
