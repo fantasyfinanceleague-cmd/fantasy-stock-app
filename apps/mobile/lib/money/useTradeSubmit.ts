@@ -17,6 +17,8 @@ export interface TradeSubmit {
   retry: () => void;
   refreshed: () => void;
   gateClosed: (opensLabel: string | null) => void;
+  /** A new review opened: clear any earlier refusal or outcome so the new review starts ready. */
+  reset: () => void;
 }
 
 export function useTradeSubmit(): TradeSubmit {
@@ -40,6 +42,7 @@ export function useTradeSubmit(): TradeSubmit {
   const retry = useCallback(() => dispatch({ type: 'RETRY' }), []);
   const refreshed = useCallback(() => dispatch({ type: 'REFRESHED' }), []);
   const gateClosed = useCallback((opensLabel: string | null) => dispatch({ type: 'GATE_CLOSED', opensLabel }), []);
+  const reset = useCallback(() => dispatch({ type: 'RESET' }), []);
 
-  return { state, submit, retry, refreshed, gateClosed };
+  return { state, submit, retry, refreshed, gateClosed, reset };
 }

@@ -201,6 +201,7 @@ export function StockSheetBody({
   }
 
   async function openReview(kind: ReviewKind) {
+    trade.reset();
     setOpen({ kind, review: null, body: null, error: null, loading: true });
     setOpen(await buildReview(kind));
   }

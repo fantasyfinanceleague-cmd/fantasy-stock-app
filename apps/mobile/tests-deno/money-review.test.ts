@@ -150,3 +150,17 @@ Deno.test('canDismiss is false only while submitting, for every review state', (
     assertEquals(canDismiss(s), s.kind !== 'submitting', `kind=${s.kind}`);
   }
 });
+
+// Rule 9 (UX audit P1): a refusal must not stick. Edit → review again starts a fresh review.
+Deno.test('RESET returns any review state to ready, so a new review is never stuck on a refusal', () => {
+  const stuck: import('../lib/money/reviewMachine.ts').ReviewState[] = [
+    { kind: 'refused', reason: 'symbol_owned', retryable: false },
+    { kind: 'refused', reason: 'trade_conflict', retryable: true },
+    { kind: 'closed', opensLabel: 'Mon 9:30 AM ET' },
+    { kind: 'unavailable' },
+    { kind: 'unconfirmed' },
+  ];
+  for (const s of stuck) {
+    assertEquals(reviewReducer(s, { type: 'RESET' }), initialReview, `from kind=${s.kind}`);
+  }
+});

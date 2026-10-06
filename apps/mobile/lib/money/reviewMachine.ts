@@ -37,7 +37,9 @@ export type ReviewEvent =
   | { type: 'GATE_CLOSED'; opensLabel: string | null }
   | { type: 'RETRY' }
   /** The fresh quote, proceeds and position have arrived: the review may submit again. */
-  | { type: 'REFRESHED' };
+  | { type: 'REFRESHED' }
+  /** A new review opened (Edit, then the action again): any earlier outcome is cleared. */
+  | { type: 'RESET' };
 
 export const initialReview: ReviewState = { kind: 'ready' };
 
@@ -70,6 +72,8 @@ export function reviewReducer(state: ReviewState, event: ReviewEvent): ReviewSta
     if (state.kind === 'refused' && state.retryable) return { kind: 'refreshing' };
     return state;
   }
+
+  if (event.type === 'RESET') return initialReview;
 
   if (event.type === 'REFRESHED') {
     return state.kind === 'refreshing' ? { kind: 'ready' } : state;
