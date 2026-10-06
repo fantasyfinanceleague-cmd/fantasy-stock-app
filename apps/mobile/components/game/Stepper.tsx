@@ -22,9 +22,13 @@ export interface StepperProps {
   canDecrement: boolean;
   canIncrement: boolean;
   disabled?: boolean;
+  /** The board's blocked state (StartDraftConfirm, "too many playoff teams"):
+   * a 2 pt warn-line border on the box. Warn, never red (§9B: blockers keep
+   * the warn tint; red is for field errors, losses and destructive actions). */
+  emphasis?: 'warn';
 }
 
-export function Stepper({ label, sub, value, unit, onStep, canDecrement, canIncrement, disabled = false }: StepperProps) {
+export function Stepper({ label, sub, value, unit, onStep, canDecrement, canIncrement, disabled = false, emphasis }: StepperProps) {
   const { colors } = useTheme();
   const down = !disabled && canDecrement;
   const up = !disabled && canIncrement;
@@ -54,7 +58,7 @@ export function Stepper({ label, sub, value, unit, onStep, canDecrement, canIncr
           </Text>
         ) : null}
       </View>
-      <View style={[styles.box, { borderColor: colors.border }]}>
+      <View style={[styles.box, emphasis === 'warn' ? { borderColor: colors.warnLine, borderWidth: 2 } : { borderColor: colors.border }]}>
         <Pressable onPress={() => down && onStep(-1)} disabled={!down} style={styles.button} hitSlop={2}>
           <Icon name="remove" size="headline" tone={down ? 'text' : 'text3'} />
         </Pressable>

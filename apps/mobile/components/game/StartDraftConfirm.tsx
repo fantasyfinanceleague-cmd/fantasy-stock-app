@@ -1,13 +1,13 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { View, StyleSheet, Pressable } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { Button } from '@/components/sp/Button';
 import { space } from '@/constants/tokens';
 import type { DraftStatus } from '@/lib/game/useDraftStatus';
 import { byeNoticeCopy, startBlockerCopy, playoffStepperBounds, stepPlayoffTeams } from '@/lib/game/draftLobby';
-import { useTheme } from '@/components/sp/ThemeProvider';
 import { playoffLine } from '@/lib/playoffs';
+import { Stepper } from '@/components/game/Stepper';
 
 export interface StartDraftConfirmProps {
   status: DraftStatus;
@@ -28,12 +28,11 @@ export interface StartDraftConfirmProps {
  * each blocker in plain words. "Start draft" is disabled until it can start,
  * and never enabled on a failed status read. */
 export function StartDraftConfirm({ status, playoffTeams, numWeeks, pickSeconds, onStart, onNotYet, onSetPlayoffTeams, inviteCode, onShareInvite }: StartDraftConfirmProps) {
-  const { colors } = useTheme();
   const bye = byeNoticeCopy(status.memberCount, numWeeks);
   const playoffs = playoffLine(playoffTeams);
   const tooManyTeams = status.blockers.some((b) => b.code === 'playoff_teams_exceeds_members');
   const short = status.memberCount < status.minMembers;
-  const { max } = playoffStepperBounds(status.memberCount);
+  const { min, max } = playoffStepperBounds(status.memberCount);
   const current = playoffTeams ?? 0;
   return (
     <Card>
@@ -46,28 +45,16 @@ export function StartDraftConfirm({ status, playoffTeams, numWeeks, pickSeconds,
       ))}
       {tooManyTeams ? (
         <View style={styles.stepper}>
-          <Text variant="callout">Playoff teams</Text>
-          <View style={styles.stepRow}>
-            <Pressable
-              onPress={() => onSetPlayoffTeams(stepPlayoffTeams(current, -1, status.memberCount))}
-              disabled={current <= 2}
-              accessibilityRole="button"
-              accessibilityLabel="Fewer playoff teams"
-              style={styles.stepButton}
-            >
-              <Text variant="headline">−</Text>
-            </Pressable>
-            <Text variant="headline" style={{ color: colors.danger }}>{String(current)}</Text>
-            <Pressable
-              onPress={() => onSetPlayoffTeams(stepPlayoffTeams(current, 1, status.memberCount))}
-              disabled={current >= max}
-              accessibilityRole="button"
-              accessibilityLabel="More playoff teams"
-              style={styles.stepButton}
-            >
-              <Text variant="headline">+</Text>
-            </Pressable>
-          </View>
+          {/* The shared Stepper: 44 pt sp/Icon remove/add, one adjustable
+              element for VoiceOver ("Playoff teams", its value, swipe to change). */}
+          <Stepper
+            label="Playoff teams"
+            value={current}
+            onStep={(d) => onSetPlayoffTeams(stepPlayoffTeams(current, d, status.memberCount))}
+            canDecrement={current > min}
+            canIncrement={current < max}
+            emphasis="warn"
+          />
           <Text variant="caption" tone="secondary">{`Up to ${status.memberCount}, one per manager.`}</Text>
         </View>
       ) : null}
@@ -89,8 +76,5 @@ export function StartDraftConfirm({ status, playoffTeams, numWeeks, pickSeconds,
 const styles = StyleSheet.create({
   actions: { gap: space[2], marginTop: space[3] },
   stepper: { gap: space[2], marginTop: space[2] },
-  stepRow: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
-  // 44 x 44 pt, the minimum hit area (the craft floor).
-  stepButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   invite: { gap: space[2], marginTop: space[2] },
 });
