@@ -17,6 +17,8 @@ import { resolveSheetName } from './stockSheetApi';
 import { sheetInputsFromLedger } from './portfolioLedger';
 import { deriveStockSheetFacts, type StockSheetFacts } from './stockSheetFacts';
 import { usePortfolioLedger } from './usePortfolioLedger';
+import { MONEY_FIXTURE } from './devFixture';
+import { STRESS_CALLER } from './stressFixture';
 
 /** A quote is fresh for two minutes, the same window as useStockPrices. */
 const QUOTE_TTL_MS = 120_000;
@@ -54,7 +56,8 @@ export function useStockSheetData(symbol: string, knownName: string | null = nul
   const { activeLeague } = useLeagueContext();
   const leagueId = activeLeague?.id ?? null;
   const leagueName = activeLeague?.name ?? null;
-  const userId = user?.id ?? null;
+  // DEV fixture: the stress caller owns the stress ledger's rows (see devFixture.ts).
+  const userId = MONEY_FIXTURE ? STRESS_CALLER : (user?.id ?? null);
   const ledgerState = usePortfolioLedger(leagueId);
   const [tick, setTick] = useState(0);
   const [state, setState] = useState<StockSheetData>(EMPTY);

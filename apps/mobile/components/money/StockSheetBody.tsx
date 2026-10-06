@@ -248,7 +248,7 @@ export function StockSheetBody({ symbol, knownName = null, onDone }: { symbol: s
   const canReview = selected === 'sell' ? model.sell.enabled : model.buy.enabled;
 
   return (
-    <View accessibilityRole="summary" style={{ gap: 12 }}>
+    <View accessibilityRole="summary" style={{ gap: 12, paddingHorizontal: 20, paddingBottom: 24 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <Text variant="headline" style={{ flex: 1 }}>{symbol}</Text>
         <Pressable
