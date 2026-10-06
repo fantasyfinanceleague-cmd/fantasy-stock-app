@@ -74,6 +74,32 @@
           <Fit caption="Home with no leagues"><I.EmptyHome /></Fit>
         </Group>
 
+        <Group id="join-league" code="1.2.0" name="Join a league" job="A new player has an invite code: find the league, see what it is, join it. Replaces the legacy join-league screen. All copy here is new."
+          notes={[
+            'Reached from "Join with code" in Your leagues, the empty Home and Get started. One field, one button: "Find league" looks the code up (preview-league); nothing is joined until the preview\'s Join button.',
+            'The preview IS the confirmation (no alert after it). It shows only what preview-league returns: name, commissioner, managers (count, not faces), draft time, stakes, season length.',
+            'Every refusal keeps the league on screen when the server found it, so the reason names the league. A bad code is the only error under the field.',
+            <>Refusals not framed, same Alert card under the preview: <b>invite_expired</b> "This invite has expired. Ask your commissioner for a new code." · <b>season_completed</b> "{'{League}'}'s season is over. Ask your commissioner whether they're running it back." · <b>no connection</b> "Couldn't reach the league. Check your connection, then try again." (under the field).</>,
+            <>Backend: the stakes line needs the per-slot amount from preview-league, not just stake_mode. (A manager who leaves before the draft is deleted and rejoins with the code; nobody leaves after the draft, so there is no "left this season" case.)</>,
+          ]}>
+          <Fit caption="1 · Code entry" note="Keyboard up, focus on the field. Find league sits above the keyboard, as on Create account, and is enabled once anything is typed."><I.JoinCode state="typing" /></Fit>
+          <Fit caption="2 · Finding the league" note="The button holds a spinner; the field stays readable."><I.JoinCode state="checking" /></Fit>
+          <Fit caption="3 · The preview" note="The confirmation. The button names the league."><I.JoinPreview /></Fit>
+          <Fit caption="4 · Joined" note="Then the league's pre-draft Home. Promises no notification: the order-set push isn't scheduled in prod yet (its cron sits in migrations/deferred/). Once it is, add 'and we'll let you know.'"><I.JoinDone /></Fit>
+          <Fit caption="Bad code" note="The only error that stays under the field."><I.JoinCode state="bad" /></Fit>
+          <Fit caption="League full" note="The league stays visible; the way out is another code."><I.JoinPreview block="full" /></Fit>
+          <Fit caption="Draft already done" note={`Same pattern as full. A draft IN PROGRESS gets its own line: "{League} is drafting right now, so it can't take new managers this season." (Draft row: "In progress".)`}><I.JoinPreview block="drafted" /></Fit>
+          <Fit caption="Already a member" note="Not a dead end: it opens the league."><I.JoinPreview block="member" /></Fit>
+        </Group>
+
+        <Group id="not-found" code="1.2.0" name="Not found" job="Every bad deep link lands here: a calm dead end with one way out. Replaces the Expo default ('Oops!'). New copy."
+          notes={[
+            'No tab bar and no back arrow: a cold-start link has nothing to go back to. "Go to Home" replaces the stack; signed out, Home sends you to sign in as it does today.',
+            <><b>Dev and template routes:</b> <code>design-gallery</code> is a dev tool. It already redirects to Home outside <code>__DEV__</code>; keep that, and drop its Stack.Screen from release builds too. Check a release build: opening /design-gallery must land on Home. <code>modal</code> is the Expo template (EditScreenInfo): delete the file and its Stack.Screen.</>,
+          ]}>
+          <Fit caption="Not found" note="Same frame in Light and Dark (switch at the top)."><I.NotFound /></Fit>
+        </Group>
+
         <Group id="phases" code="3b-2" name="Home through the season" job="The same Home, one league, in every phase of that league's life."
           notes={[
             'Every phase has one treatment: a phase chip and a hero card that says what happens next and when. No screen guesses the phase on its own.',
@@ -114,19 +140,19 @@
           <Fit caption="Matchup before the season"><I.MatchupPreSeason /></Fit>
           <Fit caption="Draft lobby · order revealed" note="After 6:00 PM ET: the full order, your slot, and the snake picks that follow (new copy)"><I.DraftLobby /></Fit>
           <Fit caption="Draft lobby · still waiting" note="Past 6:00 PM ET but only 3 of 4 managers: set as soon as one more joins (new copy)"><I.DraftLobby waiting /></Fit>
-          <Fit caption="Start the draft · not enough managers" note="Needs 4; invite one more (new copy)"><I.StartDraftConfirm managers={3} /></Fit>
+          <Fit caption="Start the draft · not enough managers" note="Needs 4; invite one more (new copy) Superseded by auto-start (see “Your call: the draft starts by itself”)."><I.StartDraftConfirm managers={3} /></Fit>
           <Fit caption="Arrange order (commissioner, Manual)" note="Drag to reorder; starts from a random order, never commissioner-first; set by 1 hour before the draft (new copy)"><I.ArrangeOrder /></Fit>
           <Fit caption="Draft order · final" note="After 6:00 PM ET: read-only; late joiners pick last (new copy)"><I.ArrangeOrder locked /></Fit>
           <Fit caption="Push · draft order set (random)" note="At 6:00 PM ET in either mode, plus an in-app card (new copy)"><I.OrderPush /></Fit>
           <Fit caption="Push · draft order set (manual)"><I.OrderPush mode="manual" /></Fit>
-          <Fit caption="Start the draft (commissioner)" note="Office League: 7 managers, 10 weeks, so the uneven-bye heads-up shows (new copy)"><I.StartDraftConfirm /></Fit>
-          <Fit caption="Start the draft · too many playoff teams" note="7 playoff teams, 6 managers: fix it right here; Start stays disabled until it fits (new copy)"><I.StartDraftConfirm managers={6} playoff={7} /></Fit>
+          <Fit caption="Start the draft (commissioner)" note="Office League: 7 managers, 10 weeks, so the uneven-bye heads-up shows (new copy) Superseded by auto-start (see “Your call: the draft starts by itself”)."><I.StartDraftConfirm /></Fit>
+          <Fit caption="Start the draft · too many playoff teams" note="7 playoff teams, 6 managers: fix it right here; Start stays disabled until it fits (new copy) Superseded by auto-start (see “Your call: the draft starts by itself”)."><I.StartDraftConfirm managers={6} playoff={7} /></Fit>
           <Fit caption="Create league · Season" note="Uneven-bye heads-up on the weeks control, based on the expected size (new copy)"><I.CreateSeason /></Fit>
           <Fit caption="Draft room · auto-picks" note="New copy: the banner, the Auto badge and the pick-log lines"><I.DraftAutoPick /></Fit>
           <Fit caption="Pick refused · a slot left unfillable" note="would_strand_slot. New copy. Generic when the server doesn't name who/which: 'Taking {stock} would leave another manager with no stock for one of their slots.'"><I.DraftRefused kind="strand" /></Fit>
           <Fit caption="Pick refused · budget for later picks" note="budget_reserve. New copy. Generic: '{stock} would leave too little budget for your remaining picks.'"><I.DraftRefused kind="budget" /></Fit>
-          <Fit caption="Start the draft · setup can't fill every slot" note="slots_infeasible + budget_infeasible (each shows only when it applies). New copy. Generic lines only: the setup check returns a reason code, no counts (security review)."><I.StartBlocked /></Fit>
-          <Fit caption="Start the draft · check unavailable" note="feasibility_unavailable: Start stays disabled until the check runs. New copy."><I.StartBlocked unavailable /></Fit>
+          <Fit caption="Start the draft · setup can't fill every slot" note="slots_infeasible + budget_infeasible (each shows only when it applies). New copy. Generic lines only: the setup check returns a reason code, no counts (security review). Superseded by auto-start (see “Your call: the draft starts by itself”). The two lines move into the blockers card."><I.StartBlocked /></Fit>
+          <Fit caption="Start the draft · check unavailable" note="feasibility_unavailable: Start stays disabled until the check runs. New copy. Superseded by auto-start (see “Your call: the draft starts by itself”)."><I.StartBlocked unavailable /></Fit>
           <Fit caption="Draft paused (should never happen)" note="Stalled turn, as members see it. New copy."><I.DraftStalled /></Fit>
           <Fit caption="Draft paused · commissioner" note="Same state for the commissioner, plus the push below. New copy."><I.DraftStalled commish /></Fit>
           <Fit caption="Push · draft paused (commissioner)" note="New copy."><I.StallPush /></Fit>
@@ -176,6 +202,166 @@
           <div className="b-concepts b-concepts--three">
             <Fit caption="League tab · Season 2, before the draft" note="The Season 1 champion banner stays until Season 2's draft; History is one tap away."><I.RibHistory /></Fit>
             <Fit caption="League › History" note="Every season, its champion and final standings; matchups and the draft recap too. New players see it as well."><I.RibHistory view="list" /></Fit>
+          </div>
+        </section>
+
+        <section className="b-sec" id="call-leave" aria-labelledby="call-leave-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n b-sec__n--code">3c</span>
+            <div>
+              <h2 id="call-leave-h">Your call: leaving a league</h2>
+              <p className="b-job"><b>Ruled by Giorgio (2026-10-06).</b> The leave window: open until the draft order is set (an hour before the draft), locked from then until the season ends, open again after the season (where leaving hides the league). Q2 = C (locked in); Q1 = the commissioner reconfirms; Q3 and Q5 don't apply. Still open: Q4. Five decisions, from LEAVE_LEAGUE_OPTIONS.md (feat/leave-league). ★ marks the worker's recommendation; the Design Lead's view is in the box at the end. All copy inside these frames is new. Samples: before the draft, Sofia F. leaves Serie A Traders; mid-season, Gianluigi B. (Roberto's Week 6 opponent) leaves Stock Scudetto on Tuesday; in the playoffs, Francesco T. left in Week 9 and still finished 4th.</p>
+            </div>
+          </header>
+          <ul className="b-inv__notes">
+            <li><b>Today a leave is an unguarded delete</b> that anyone can do at any time, the commissioner included. After the draft it leaves a "zombie" team that still scores but can't trade, and it stalls the playoffs (<code>bracket_non_member</code>). Every option below replaces it.</li>
+            <li><b>The key fact for Q2:</b> bots already are buy-and-hold teams. So "auto-managed" and "frozen portfolio" are the same mechanics; the scoring path is the one bots use today.</li>
+            <li><b>Locked in (decided):</b> from an hour before the draft (when the order is set) until the season ends, "Leave league" stays in League settings, disabled, with the reason on the row: "Teams are locked in from an hour before the draft until the season ends." The same line before the draft, mid-draft and mid-season, for members and the commissioner. Before the lock, the row says until when you can leave.</li>
+            <li><b>Where it lives:</b> "Leave league" sits at the bottom of League settings, in red, the way "Sign out" sits at the bottom of Profile. It opens a sheet that is the confirmation; there's no second alert.</li>
+          </ul>
+
+          <h3 className="b-sub">Q1 · Leaving before the draft · decided: the commissioner reconfirms</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Leave sheet · member, before the draft" note="Tells the leaver what happens next and until when they can come back."><I.LeaveSheet mode="pre" /></Fit>
+            <Fit caption="After Move forward" note="The leaver's row is removed (A) and the order closes the gap."><I.OrderAfterLeave q1="A" /></Fit>
+            <Fit caption="B · Remove + reopen the order (not chosen)" note="Superseded: the reconfirmation below covers the whole league, not just the order."><I.OrderAfterLeave q1="B" /></Fit>
+          </div>
+
+          <h3 className="b-sub">Q1 · The reconfirmation (decided, new frames)</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Before the lock · Leave league is open" note="The row says until when: the draft order time (T−1h)."><I.LeaveOpenRow /></Fit>
+            <Fit caption="1 · Commissioner Home: Needs you" note={`Giorgio's two choices as buttons: "Move forward with 7" (one fewer team) or "Invite someone new" (to replace). Also pushed to the commissioner. The countdown keeps running.`}><I.ReconfirmHome /></Fit>
+            <Fit caption="2 · What blocks the start (superseded)" note="Superseded by auto-start: there is no Start button. The same two choices now sit in the commissioner's blockers card (Your call: the draft starts by itself)."><I.ReconfirmStartBlocked /></Fit>
+            <Fit caption="3 · Invite someone new" note="The card turns into the invite. When someone joins, it clears on its own; the commissioner can still switch to moving forward."><I.ReconfirmHome mode="inviting" /></Fit>
+            <Fit caption="Members meanwhile" note="Everyone else sees why the draft is waiting (on Giulia V.'s phone)."><I.ReconfirmMember /></Fit>
+          </div>
+
+          <h3 className="b-sub">Q2 · Leaving after the draft · decided: C</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="A · Soft leave: the sheet (not chosen)" note="The team keeps its stocks and plays out the season, buy-and-hold."><I.LeaveSheet mode="A" /></Fit>
+            <Fit caption="A · The opponent's Home (not chosen)" note='"Gianluigi B. (left) · Auto-managed" with a real live score: Roberto still has to beat a portfolio.'><I.DepartedMatchup q2="A" /></Fit>
+            <Fit caption="A · Standings for everyone else (not chosen)" note="The row stays in place, labelled, muted. Scoring is unchanged."><I.DepartedStandings /></Fit>
+            <Fit caption="B · Forfeit: the sheet (not chosen)" note="Stocks are sold back to the pool; every remaining matchup is a loss."><I.LeaveSheet mode="B" /></Fit>
+            <Fit caption="B · Forfeit: the opponent's Home (not chosen)" note="A free W. Whoever faces the leaver late in the season gets free wins."><I.DepartedMatchup q2="B" /></Fit>
+            <Fit caption="✓ C · Locked in (chosen)" note="Final copy. Leave league stays disabled, with the reason on the row, from an hour before the draft until the season ends."><I.LeaveRefused kind="season" /></Fit>
+          </div>
+
+          <h3 className="b-sub">Q3 · Playoffs with a departed team · not applicable (Q2 = C)</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="★ A · Departed teams stay eligible" note="Seeding unchanged; the 4th seed plays on autopilot and could win the title."><I.DepartedBracket q3="A" /></Fit>
+            <Fit caption="B · Skip departed teams in seeding" note="Seeds shift: 5th moves up to the 4th seed. Fewer than 2 active teams: no playoffs."><I.DepartedBracket q3="B" /></Fit>
+          </div>
+
+          <h3 className="b-sub">After the season · leaving hides the league (decided)</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Leave a finished league" note="On Andrea P.'s phone. The league comes off Home and Your leagues; its History keeps their record for everyone. Open: whether a later Run it back still asks them, and whether they can unhide it."><I.LeaveFinished /></Fit>
+          </div>
+
+          <h3 className="b-sub">Q4 · The commissioner leaving (before the draft) · open</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="A · Block until transferred" note="Leave is disabled; first make someone else commissioner from the Commissioner row, then leave as a member."><I.LeaveRefused kind="commish" /></Fit>
+            <Fit caption="★ B · Pick a successor in the leave sheet" note="Before the draft. Human members only, one atomic step. Shown after picking: nothing is preselected, and the button names the successor once one is picked."><I.CommishLeave q4="B" /></Fit>
+            <Fit caption="C · Auto-transfer" note="The longest-standing manager becomes commissioner and gets a push."><I.CommishLeave q4="C" /></Fit>
+          </div>
+
+          <h3 className="b-sub">Q5 · What the leaver sees, and rejoining · not applicable (Q2 = C)</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="★ A · League tab after leaving" note="Read-only: history stays visible, no trading, no rejoin this season."><I.LeaverLeague q5="A" /></Fit>
+            <Fit caption="B · Reclaim my team" note="Until the season ends, the leaver can undo; trading reopens."><I.LeaverLeague q5="B" /></Fit>
+            <Fit caption="A and B · Home skips the league" note="On Gianluigi B.'s phone (their other league is sample data). The league leaves the single-league Home and sits under a new 'You left' group in Your leagues."><I.LeaverSheet /></Fit>
+          </div>
+
+          <h3 className="b-sub">Refusals</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="From an hour before the draft (decided)" note="The same locked-in line as mid-season: the lock starts when the draft order is set."><I.LeaveRefused kind="drafting" /></Fit>
+            <Fit caption="Only manager left (Q4)" note="Before the draft, everyone else is a bot: delete the league instead."><I.LeaveRefused kind="sole" /></Fit>
+            <Fit caption="Rejoin after leaving (not applicable)" note="Kept for the record: with Q2 = C nobody leaves after the draft, and a pre-draft leaver rejoins with the code."><I.LeaveRefused kind="rejoin" /></Fit>
+          </div>
+
+          <div className="b-ask">
+            <h3>Your call · decided: the leave window, Q2 = C, Q1 = reconfirm. Open: Q4 (recommend B, no successor preselected)</h3>
+            <ul>
+              <li><b>Still to rule, from the new frames:</b> (1) if the commissioner hasn't chosen by the draft time, the draft simply doesn't start (Start draft stays disabled). Recommend that, plus a push at T−1h if it is still open. (2) Does a commissioner's "Invite someone new" need a deadline? Recommend no: they can switch to Move forward at any time. (3) After a post-season leave, does Run it back still ask that player? Recommend no. Can they unhide the league? Recommend not in 1.2.0.</li>
+            </ul>
+            <p className="b-job" style={{ margin: '0 0 6px' }}>The Design Lead's original view, recommending the ★ package, is kept below for the record.</p>
+            <ul>
+              <li><b>Q2-A is the anchor.</b> The leaver's opponents still play a real portfolio, nobody gets free wins, and nobody is trapped in a league. It also needs no change to scoring, snapshots or the playoffs: the departed team scores exactly the way a bot does today. B puts a new branch into the scoring pipeline that was just hardened (S1–S9). C turns "you can't leave" into a support ticket.</li>
+              <li><b>Q3-A follows from Q2-A.</b> An autopilot team had to earn its seed, and a departed seed still makes the bracket start. The cost is honest and rare: a departed team could win the title, and its champion line would read "Francesco T. (left)". B shifts seeds and byes late, and it rewrites the playoff guard.</li>
+              <li><b>Q4-B, with one design condition:</b> no successor is preselected. Leaving is destructive, and a default choice would let one tap hand the league to someone nobody chose. The button stays disabled until a pick, then reads "Leave and hand over to Paolo M.". The successor gets a push. A (transfer first, then leave) is the fallback if the picker slips; a standalone "Make commissioner" is useful anyway.</li>
+              <li><b>Q1-A:</b> closing the gap is what everyone expects, and the commissioner sees why the order changed. Keep the existing refusal at draft start when playoff teams outnumber managers; don't silently clamp it.</li>
+              <li><b>Q5-A:</b> one state ("left") is simpler to explain than "left, then back". The league stays readable, so history isn't lost.</li>
+              <li><b>Still open (not on the worker's list):</b> should the opponent get a push when their manager leaves ("Gianluigi B. left Stock Scudetto. Their team plays on, auto-managed.")? Recommend yes, to everyone in the league, once.</li>
+              <li><b>Backend:</b> the "(left)" label needs a departed flag from <code>get_league_display_names</code>. Home has to skip departed leagues (<code>get_home_summary</code>). "Delete the league instead" points at a delete that is still client-side (<code>[I3]</code>).</li>
+            </ul>
+          </div>
+        </section>
+
+        <section className="b-sec" id="call-auto-start" aria-labelledby="call-auto-start-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n b-sec__n--code">3c</span>
+            <div>
+              <h2 id="call-auto-start-h">Your call: the draft starts by itself</h2>
+              <p className="b-job"><b>Decided by Giorgio (2026-10-06):</b> "the draft is not something that is started manually." It starts at the minute the commissioner set; the draft room opens an hour before. There's no Start button. Four decisions remain, from DRAFT_AUTO_START_PLAN.md (feat/draft-auto-start). ★ marks the worker's recommendation. Sample: Serie A Traders, draft {'Sat, Oct 3 · 7:00 PM ET'}. Sofia F. left before 6:00 PM, so the teams aren't confirmed and 8 playoff teams no longer fit 7 teams. All copy here is new.</p>
+            </div>
+          </header>
+          <ul className="b-inv__notes">
+            <li><b>Superseded by this section:</b> every "Start the draft?" sheet (Start the draft, not enough managers, too many playoff teams, setup can't fill every slot, check unavailable) and the leave board's Q1 "What blocks the start". Their fix-it content moves into the commissioner's blockers card below.</li>
+            <li><b>The check runs an hour early:</b> when the room opens (when the order is set), the server checks everything. If something would block the start, the commissioner hears right then and has the full hour.</li>
+            <li><b>The phase comes from the server's clock</b> (scheduled, room open, due, delayed, missed, started), never the phone's, so a phone with the wrong time can't show the wrong state.</li>
+          </ul>
+
+          <h3 className="b-sub">Everyone: the countdown (decided) · the on-time case, nobody left</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Before the room opens" note="The start time is the promise; the countdown is the reminder. Queue building is the thing to do."><I.AutoLobby phase="scheduled" /></Fit>
+            <Fit caption="Room open · order set (T−1h)" note="The order panel takes over (the existing order-set card and list)."><I.AutoLobby phase="open" /></Fit>
+            <Fit caption="At 0:00" note="The phone asks the server to start (any member's phone can); the server's 10-second sweep starts it anyway if nobody is watching."><I.AutoLobby phase="starting" /></Fit>
+            <Fit caption="Push · the draft started (everyone)" note="New and essential: nobody taps Start any more, so this is how people learn it began."><I.LockPush time="7:00" label="Push, draft started" body={`Your draft has started. You pick ${'4th'}.`} /></Fit>
+          </div>
+
+          <h3 className="b-sub">The commissioner, an hour ahead (decided)</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Push · at risk (commissioner, T−1h)" note="Only when something would block the start. Names the first blocker."><I.LockPush time="6:00" label="Push, draft at risk" body="Your draft can't start at 7:00 PM ET: Sofia F. left the league. Fix it in the lobby." /></Fit>
+            <Fit caption="Lobby · the blockers card" note="Each blocker carries its own fix: the reconfirm choices (from the leave board) and the playoff-teams stepper. Feasibility and stakes blockers use the same card with their existing lines."><I.CommishBlocked phase="risk" /></Fit>
+          </div>
+
+          <h3 className="b-sub">Decision 1 · still blocked at 7:00 PM</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="★ A + 15 min, then B · commissioner" note='Fixed by 7:15 PM ET: it starts right away. The deadline is a time, not "soon".'><I.CommishBlocked phase="grace" /></Fit>
+            <Fit caption="★ · members, delayed" note="No push (Decision 2); the lobby says who it's waiting on."><I.MemberDelayed /></Fit>
+            <Fit caption="★ after 7:15 PM, or B at once · commissioner" note="Missed: one action, a new time (at least an hour out, so the room, order and lock repeat)."><I.CommishBlocked phase="missed" /></Fit>
+            <Fit caption="★ after 7:15 PM, or B · members" note="Postponed, with who decides the new time."><I.MemberDelayed missed /></Fit>
+            <Fit caption="A · start whenever it's fixed" note="No deadline: a fix at 3 a.m. starts a draft nobody attends, and every pick is auto-picked."><I.CommishBlocked phase="waiting" /></Fit>
+            <Fit caption="C · auto-fix, then start" note='What C does to this league: "move forward with 7" plus clamping playoff teams to 7 means every team makes the playoffs. The rules changed and the commissioner finds out afterwards.'><I.AutoFixed /></Fit>
+          </div>
+
+          <h3 className="b-sub">Decision 2 · who hears about a delay</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Commissioner · blocked at 7:00 (both options)" note="Always pushed."><I.LockPush time="7:00" label="Push, draft blocked" body={`Your draft didn't start: Sofia F. left the league. Fix it by ${'7:15 PM ET'} and it starts right away.`} /></Fit>
+            <Fit caption="Members · pushed on delay" note="Fires at 7:00 for a draft that may start at 7:02."><I.LockPush time="7:00" label="Push, draft delayed" body="The draft is delayed. Waiting on Roberto B." /></Fit>
+            <Fit caption="★ Members · pushed only when missed" note="Members in the lobby see the delay; everyone hears once the time really changes."><I.LockPush time="7:15" label="Push, draft postponed" body="The draft is postponed. Roberto B. will pick a new time." /></Fit>
+          </div>
+
+          <h3 className="b-sub">Decision 3 · changing the time once the room is open</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="★ Refused after the room opens" note="Except when the draft is missed, where a new time is the fix."><I.DateAfterRoom /></Fit>
+            <Fit caption="Allowed (postponing)" note="Members locked in at 6:00 PM on the promise of 7:00 stay locked for a time they never agreed to."><I.DateAfterRoom allow /></Fit>
+          </div>
+
+          <h3 className="b-sub">Decision 4 · how soon a draft can be set</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Draft date sheet · an hour minimum" note="15-minute steps; times under an hour away are greyed out, so there's no error to show. ET throughout."><I.DraftDatePicker /></Fit>
+          </div>
+
+          <div className="b-ask">
+            <h3>Your call · Design Lead agrees with ★ on all four</h3>
+            <ul>
+              <li><b>1 · A with a 15-minute grace, then B.</b> The grace covers the common case (someone left; one tap fixes it) without moving the draft. A deadline people can read ("by 7:15 PM ET") is easier than "whenever". Plain A can start a draft at 3 a.m. that robots play. C changes league rules silently: in this sample it makes every team a playoff team.</li>
+              <li><b>2 · Push members only when missed.</b> A delay is usually minutes, and the people it affects are already in the lobby, where the banner says who it's waiting on. The "draft started" push to everyone is the one that can't be skipped.</li>
+              <li><b>3 · Refuse time changes after the room opens</b> (except when missed). From 6:00 PM, teams are locked in on the promise of 7:00; moving the time breaks that promise.</li>
+              <li><b>4 · An hour minimum, with invisible slack.</b> The picker never offers a time under an hour away (15-minute steps). The server accepts 55 minutes, so a slow submit is never refused for a time the picker showed. The user never sees the slack.</li>
+              <li><b>Not a design call:</b> plan decision 5 (a server-only <code>draft_status</code> trigger) is security. Recommend it ships in this release; it closes a direct-write bypass.</li>
+              <li><b>Precondition, flagged:</b> the room-open push and the at-risk push both ride the order-notify job, which still sits in <code>migrations/deferred/</code>. Until it's live, no copy may promise them. Resolved: only LEAVING locks at T−1h; joining stays open until the draft starts and a late joiner picks last, so the order panel's "Anyone who joins now picks last." stays. A 4th joiner during the 15-minute grace can unblock the start.</li>
+            </ul>
           </div>
         </section>
 
