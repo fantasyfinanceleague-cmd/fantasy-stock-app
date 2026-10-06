@@ -88,3 +88,34 @@ import { nudgedLine } from '../lib/game/renewal.ts';
 Deno.test('the nudged date reads like the asked date', () => {
   assertEquals(nudgedLine('2026-01-17T14:00:00Z'), 'Nudged Sat, Jan 17.');
 });
+
+// ── Home's season-complete card: the member's Season 2 ask (board #run-it-back frame 1) ──
+
+import { screenFor as screenFor2, showsHomeRenewalAsk } from '../lib/game/renewal.ts';
+import { SOURCES as SOURCES2 } from './sourceManifest.generated.ts';
+
+Deno.test('a member still asked sees the ask on Home', () => {
+  const screen = screenFor2({ status: 'ok', full_list: false, caller_status: 'pending' });
+  assertEquals(showsHomeRenewalAsk({ isCommissioner: false, successorId: 'S2', screen }), true);
+});
+
+Deno.test('once a member has answered, the ask goes (in → the member list; out → nothing)', () => {
+  const inScreen = screenFor2({ status: 'ok', full_list: true, is_commissioner: false, caller_status: 'in' });
+  const outScreen = screenFor2({ status: 'ok', full_list: false, caller_status: 'out' });
+  assertEquals(showsHomeRenewalAsk({ isCommissioner: false, successorId: 'S2', screen: inScreen }), false);
+  assertEquals(showsHomeRenewalAsk({ isCommissioner: false, successorId: 'S2', screen: outScreen }), false);
+});
+
+Deno.test('the commissioner never sees the ask (they have RunItBackCard); no Season 2, no ask; not read yet, no ask', () => {
+  assertEquals(showsHomeRenewalAsk({ isCommissioner: true, successorId: 'S2', screen: 'ask' }), false);
+  assertEquals(showsHomeRenewalAsk({ isCommissioner: false, successorId: null, screen: 'ask' }), false);
+  assertEquals(showsHomeRenewalAsk({ isCommissioner: false, successorId: 'S2', screen: null }), false);
+});
+
+Deno.test('Home mounts it next to RunItBackCard, for members only, and it re-reads after an answer (source guards)', () => {
+  const home = SOURCES2['app/(tabs)/index.tsx'];
+  assertEquals(home.includes('{league?.successor_league_id && league.commissioner_id !== myUserId ? ('), true);
+  assertEquals(home.includes('<HomeRenewalAsk'), true);
+  const ask = SOURCES2['components/game/HomeRenewalAsk.tsx'];
+  assertEquals(ask.includes('onAnswered={() => setKey((k) => k + 1)}'), true);
+});

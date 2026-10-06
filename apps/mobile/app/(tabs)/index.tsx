@@ -19,6 +19,7 @@ import { PreDraftCard } from '@/components/home/PreDraftCard';
 import { DraftingCard } from '@/components/home/DraftingCard';
 import { SeasonCompleteCard } from '@/components/home/SeasonCompleteCard';
 import { RunItBackCard } from '@/components/home/RunItBackCard';
+import { HomeRenewalAsk } from '@/components/game/HomeRenewalAsk';
 import { RenewalCountsCard } from '@/components/home/RenewalCountsCard';
 import { PhaseMessageCard } from '@/components/home/PhaseMessageCard';
 import { HomeSkeleton } from '@/components/game/LoadingSkeletons';
@@ -147,6 +148,14 @@ function HomeBody({
         numWeeks={phase.numWeeks}
       />
       {league?.commissioner_id === myUserId ? <RunItBackCard /> : null}
+      {/* Board #run-it-back frame 1: members are asked on Home too, until they answer. */}
+      {league?.successor_league_id && league.commissioner_id !== myUserId ? (
+        <HomeRenewalAsk
+          successorId={league.successor_league_id}
+          isCommissioner={false}
+          commissionerName={standings.find((s) => s.user_id === league.commissioner_id)?.display_name || 'Your commissioner'}
+        />
+      ) : null}
     </>
     );
   }

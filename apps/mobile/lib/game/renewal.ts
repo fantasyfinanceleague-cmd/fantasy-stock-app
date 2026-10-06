@@ -117,3 +117,13 @@ export function nudgedLine(lastNudgedAtIso: string): string {
   const formatted = new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'America/New_York' }).format(d);
   return `Nudged ${formatted}.`;
 }
+
+/** Home's season-complete card for a MEMBER (3c-2; Design Lead, board
+ * #run-it-back frame 1: the ask is on Home AND the League tab): the
+ * "{commissioner} is running it back. Are you in for Season 2?" card shows
+ * while there is a Season 2 and the roster read says this caller is still
+ * asked (screenFor → 'ask'); once they've answered it goes. Never for the
+ * commissioner (they have RunItBackCard). */
+export function showsHomeRenewalAsk(input: { isCommissioner: boolean; successorId: string | null | undefined; screen: RenewalScreen | null }): boolean {
+  return !input.isCommissioner && !!input.successorId && input.screen === 'ask';
+}
