@@ -4,6 +4,7 @@
  * writing anything. Reads return the board's own data (the Season 1 roster and the
  * draft board). A name with no fixture gives null, and the real call is not made.
  */
+import { draftStartStatusFixture, parseDraftStartFixture } from './autoStartFixture';
 import { fixtureRoster } from './renewalFixture';
 
 const SUCCESSOR = 'fixture-season-2';
@@ -75,7 +76,12 @@ export function fixtureFor(name: string, args: Record<string, unknown>): { data:
 }
 
 /** The fixture for a function invocation (validate-and-record-pick, draft-control), or null. */
-export function invokeFixtureFor(fn: string, body: Record<string, unknown>): { data: unknown; error: null } | null {
+export function invokeFixtureFor(
+  fn: string,
+  body: Record<string, unknown>,
+  /** EXPO_PUBLIC_DRAFT_START_FIXTURE (e.g. "at_risk", "postponed:member"): draft-control status for that start_state. */
+  draftStartFixture?: string | null,
+): { data: unknown; error: null } | null {
   if (fn === 'validate-and-record-pick') {
     const pick = body.action === 'auto_pick' ? { pick_source: 'auto_best' } : { pick_source: 'manual' };
     return { data: { ok: true, pick: { symbol: body.symbol ?? 'NVDA', ...pick }, pick_source: pick.pick_source, draft_complete: false }, error: null };
@@ -88,6 +94,9 @@ export function invokeFixtureFor(fn: string, body: Record<string, unknown>): { d
   }
   if (fn === 'draft-control') {
     if (body.action === 'start') return { data: { ok: true }, error: null };
+    if (body.action === 'confirm_roster') return { data: { ok: true, members: 7, playoff_teams: body.playoff_teams ?? 6 }, error: null };
+    const picked = parseDraftStartFixture(draftStartFixture);
+    if (picked) return { data: draftStartStatusFixture(picked.state, picked.member, Date.now()), error: null };
     return { data: { ok: true, can_start: true, blockers: [], is_commissioner: true, member_count: 6, min_members: 4 }, error: null };
   }
   return null;
