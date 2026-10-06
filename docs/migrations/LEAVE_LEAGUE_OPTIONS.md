@@ -1,179 +1,155 @@
 # Leave league — options for decision
 
-**Status:** OPTIONS, awaiting Giorgio's decisions (STATUS §4 item 11). Nothing is built yet.
+**Status:** RE-SCOPED 2026-10-05 after Giorgio's ruling on Q2. **Q1, Q4 and Q6 still need decisions.** Nothing is built yet (STATUS §4 item 11).
 **Branch:** `feat/leave-league`. Provisional migration range `20261107000000`–`09`.
 **Retires:** `[I5]` (`league_members_delete_self`, `20260712000002:34-37`).
 
-Each question below gives 2–3 options with their consequences and backend shape. A recommendation is marked ★. It is only a recommendation: the board mockups and Giorgio decide.
+## Decisions so far
+
+| Q | Ruling |
+|---|---|
+| **Q2: leaving after the draft** | **C (Giorgio, 2026-10-05):** *"a player cannot leave a league after a draft, they are locked in for that season."* There is no soft leave, no `left_at` and no autopilot team. |
+| Q3: playoffs with a departed team | **Moot.** Nobody departs after the draft. |
+| Q5: rejoin / reclaim | **Moot** for post-draft. A pre-draft leaver rejoins with the invite code (see Q1). |
+| Q1: leaving before the draft | **Pending.** |
+| Q4: the commissioner leaving (before the draft) | **Pending.** |
+| Q6: "leaving" a finished league | **Pending.** New question, raised by the Q2 ruling. |
+
+**The post-draft lock is permanent:** `trg_league_members_freeze_leave` (PR #123, the freeze release) refuses user-session membership deletes once `draft_status <> 'not_started'`. This plan does not relax it. The lock is also what makes STATUS item 11's playoff stall unreachable for new leaves. Leaves that already happened through `[I5]` are handled by the zombie repair below.
+
+Each open question gives 2–3 options with consequences and backend shape. ★ = recommendation only: the board mockups and Giorgio decide.
 
 ---
 
-## 0. What exists today (the facts that constrain every option)
+## 0. Facts that still constrain the design
 
-1. **An unguarded leave already exists at the API layer.** `[I5]` lets any member DELETE their own `league_members` row at any time, commissioner included. The paused web app calls it with no confirmation (`apps/web/src/hooks/useLeagues.js:244`). Mobile has no path.
-2. **Nothing has a foreign key to `league_members`.** A DELETE cascades nothing. The leaver's `drafts`, `trades`, `matchups`, `week_snapshots`, `league_standings`, `league_seasons` and `league_draft_order` rows all stay.
-3. **After the draft, almost nothing reads `league_members`.**
-   - Scoring, snapshots, standings and season completion take their participants from `matchups` plus `drafts`/`trades` (process-week-results `index.ts:562-566`; `_shared/snapshot-holdings.ts:63-72`).
-   - So a post-draft DELETE leaves a **zombie team**: still snapshotted and scored on frozen holdings, unable to trade, its symbols owned for the rest of the season (ownership is computed from drafts+trades, `_shared/draft-validation.ts:189-223`).
-4. **The real playoff failure is not quite what item 11 says.**
-   - A DELETE does not remove the leaver's `league_standings` row, so `standings_rank_refused` (`season-transition.ts:80`) does not fire.
-   - What fires is **`bracket_non_member`** (`start_league_playoffs`, `20261012000001:171-174`). Any seeded team without a `league_members` row refuses the bracket, every run, forever.
-   - `standings_rank_refused` fires only if standings rows are deleted. **Rule for every option: never delete a `league_standings` row after the draft starts.**
-5. **A post-draft DELETE also breaks the draft code.** `checkStoredOrder` (`draft-validation.ts:151`) requires the locked order to be an exact permutation of members, so any late draft call (`auto_pick` / `finalize` / the sweep) returns 500 `draft_order_invalid`.
-6. **The DB already refuses a leave mid-draft.** `sync_draft_order_on_member_change` (`20261013000000:735-741`) raises `draft_in_progress` for every role. Before the draft, the same trigger removes the leaver from the order and closes the gap.
-7. **Commissioner power is `leagues.commissioner_id`, not membership.** `is_commissioner()` (`20260712000000:47-58`) never checks membership, so a commissioner who leaves today keeps every power. There is no transfer code anywhere.
-8. **Bots are buy-and-hold teams.** `trades.user_id` is a uuid FK to `auth.users`, so a `bot-*` id can never trade. Bots are snapshotted and scored exactly like humans, and the S1–S9 hardened scoring path already covers them.
+1. **`[I5]` is a live, unguarded leave.** Any member can DELETE their own row, commissioner included. Until PR #123 ships, that holds at any time. The paused web app calls it (`apps/web/src/hooks/useLeagues.js:244`). After #123 the post-draft half is closed. The pre-draft half stays open until this work drops `[I5]`.
+2. **Nothing has a foreign key to `league_members`.** A DELETE cascades nothing. Pre-draft that is harmless: no drafts, matchups, standings or snapshots exist yet. The draft-order trigger handles the order (fact 4).
+3. **Post-draft `[I5]` leaves that already happened left zombies.** The team keeps being scored on frozen holdings. If it holds a top-P seed, `start_league_playoffs` refuses with **`bracket_non_member`** (`20261012000001:171-174`) every run. (That is the real failure, not `standings_rank_refused`, because standings rows survive a DELETE.) Late draft calls also 500 `draft_order_invalid` (`checkStoredOrder`, `draft-validation.ts:151`). See the pre-check and repair at the end.
+4. **The draft-order trigger already does the pre-draft bookkeeping** (`sync_draft_order_on_member_change`, `20261013000000:663-760`). On DELETE:
+   - no meta row (random mode before the reveal) → nothing to do;
+   - `open` or `finalized` → it removes the leaver and closes the gap;
+   - `locked` + `in_progress` → it raises `draft_in_progress`.
 
-**Fact 8 is the key one for Q2.** In this codebase a "bot takeover" and a "frozen portfolio" are **the same mechanics**. A bot never trades, so its team is a frozen portfolio that keeps scoring. The only differences are the label and what the playoffs do with it.
+   Order state only runs forward (open → finalized → locked), enforced for every role. `finalized` = `draft_date` − 1h has passed: no reordering, append/remove only.
+5. **Commissioner power is `leagues.commissioner_id`, not membership.** `is_commissioner()` (`20260712000000:47-58`) never checks membership, so a commissioner who deletes their row keeps every power. There is no transfer code. #123 makes `commissioner_id` immutable to user sessions post-draft only, so a pre-draft transfer is still writable.
+6. **The freeze triggers treat any `auth.uid() IS NOT NULL` caller as a user session,** SECURITY DEFINER included. So leave writes run on the service role (see Backend).
 
 ---
 
 ## Q1. Leaving BEFORE the draft (`draft_status = 'not_started'`)
 
-| | **A ★ Remove the membership** | **B Remove + reopen the order** |
+| | **A ★ Leave any time until the draft starts** | **B Leave until the order is finalized (`draft_date` − 1h)** |
 |---|---|---|
-| What happens | The row is deleted. The existing trigger takes the leaver out of the draft order and closes the gap. The spot reopens for invites. | Same delete, but a `finalized` manual order flips back to `open`, so the commissioner must re-confirm it. |
-| Opponents see | One fewer manager. The order shifts up by one. | Same, plus a "re-confirm draft order" prompt for the commissioner. |
-| Rejoin | Yes, with the invite code (`join_league_by_code` allows it: the row is gone and the draft hasn't started). | Same. |
-| Risk | Low: the trigger path is live and tested. | Low, plus one extra state transition in the order meta. |
+| What happens | The row is deleted, and the trigger removes the leaver from the order and closes the gap. The spot reopens for invites. | The same, but refused in the last hour, once the order is `finalized` ("The draft order is set; leaving is closed"). |
+| Other members see | One fewer manager; later picks move up one. In the last hour, an announced order changes. | The announced order never changes once members have been notified of it (`draft_order_set`). |
+| Rejoin | Yes, with the invite code (`join_league_by_code`: the row is gone, the draft hasn't started, capacity is re-counted). | Same, before T−1h. |
+| Risk | Low: the trigger's finalized branch already handles a leaver. | Low. The edge case: the time-based finalize must be read the same way the order functions read it ("effectively finalized is time-based", `20261013000000:39`), not from `state` alone. |
 
-- **Who can leave:** any non-commissioner. The commissioner case is Q4.
-- **Mid-draft (`in_progress`):** blocked ("You can leave once the draft finishes"). The DB already enforces this, so the RPC just returns a clean reason ahead of the trigger. Allowing it would take an auto-pick takeover of the remaining turns, which is not recommended.
-- **Interaction with `playoff_teams`:** a pre-draft leave can leave P > members. draft-control's start already refuses with `playoff_teams_exceeds_members`, and the commissioner can still lower P pre-draft. Sub-option: the leave RPC clamps P to the new member count automatically. The trade-off is a silent rule change versus a refusal at start.
+**Sub-question: playoff spots.** A leave can leave `playoff_teams` > members.
+- **(i) ★ Leave it.** draft-control's start already refuses with `playoff_teams_exceeds_members` (both numbers shown), and the commissioner can still lower P pre-draft.
+- **(ii) Auto-clamp.** The leave RPC lowers P to the new member count (minimum 2). This is a silent rule change by someone who isn't the commissioner.
 
-## Q2. Leaving AFTER the draft (mid-season)
+**Below the minimum to draft.** A leave can drop a league below `MIN_DRAFT_MEMBERS` (4, `draft-control/rules.ts:20`). draft-control's start refuses; the commissioner can invite or add bots. No change is needed.
 
-| | **A ★ Auto-managed team ("soft leave")** | **B Forfeit** | **C No mid-season leave** |
-|---|---|---|---|
-| Mechanic | The membership row is KEPT with `left_at` set. The human id stays everywhere, and the team plays out the season as buy-and-hold, exactly like a bot. | The team scores an automatic loss every remaining week. Its holdings are liquidated, which frees its symbols. | The leave button is disabled until the season completes. Afterwards, leaving just removes the league from your app (and from Run it back). |
-| Opponents see | "Sam (left) · auto-managed". The matchup still has a real score. | "Sam (forfeited)". A free W each week. | Nothing changes. |
-| Leaver's positions / symbols | Frozen and kept to season end. The symbols stay owned. | Sold, so the symbols return to the pool. | Unchanged. |
-| Scoring risk | **None.** It uses the existing path: the leaver is already in matchups/drafts/snapshots, and only trading is closed. | **High.** It needs a new `forfeit` scorer branch in process-week-results, which bypasses the S1–S9 hardened scorer. Liquidation must write sell trades at a live price (edge function, freshness guard) or the ledger and the snapshots disagree, and the matchup becomes `unscoreable` (the `decideUserScorer` rules). | None. |
-| Competitive fairness | Good: the opponent still has to beat a real portfolio. | Skewed: whoever faces the leaver late gets free wins. | Best, but users are trapped in a league they want out of. |
-| App Store / user trust | OK: they can leave any time. | OK. | Weak: "you can't leave" is a support ticket. |
+## Q4. The commissioner leaving (before the draft)
 
-**Backend shape for A:**
-- `league_members.left_at timestamptz` (NULL = active).
-- `leave_league` sets it under the league lock.
-- Trading closes via a BEFORE INSERT trigger on `trades` that refuses a departed user. A trigger, NOT an edit to `"record_trade_atomic"`, because it leaves the #113/#115 race fix untouched.
-- record-trade's edge pre-check gets the same `left_at IS NULL` test for a clean error.
-- Scoring, snapshots and standings need NO change.
-
-**Backend shape for B:**
-- A process-week-results scorer change (new `forfeit` outcome).
-- Seeding excludes forfeits.
-- A liquidation edge path that writes sells.
-- A P clamp, see Q3.
-- Roughly 3× the surface of A, all of it in the scoring pipeline.
-
-## Q3. Playoffs, when a departed team is in the league
-
-The live guards are `bracket_non_member` (seeded team must be a member) and `standings_rank_refused` (ranked rows < P).
-
-| | **A ★ Departed teams stay eligible** | **B Skip departed teams in seeding; P shrinks if needed** |
-|---|---|---|
-| Rule | Seeding is unchanged. A departed team that earns a top-P spot plays the bracket on autopilot. | Seed only active teams. The next team moves up. If active ranked teams < P, P drops to that count (minimum 2). Below 2, there are no playoffs and the season completes on regular-season standings. |
-| Stall today's bug | Fixed structurally: the row is kept, so `bracket_non_member` passes and the standings rows are untouched. | Fixed, by a rewrite of the seeding guard. |
-| Consequences | An autopilot team can knock out a human or win the title. The champion page would read "Sam (left)". | Changes the frozen-after-draft P invariant (the service role is exempt from the freeze trigger, so it is possible). A late leave can move bracket seeds (and byes) before the playoffs start. |
-| Backend | No change to `start_league_playoffs` or `season-transition.ts`. | Edit `start_league_playoffs` (SECURITY DEFINER; ACL must be re-verified by proacl), `season-transition.ts` (`rankForPlayoffs`), and `league_standings_ranked` consumers. Needs PGlite tests for every P and bye shape (2..16). |
-
-Q3 only matters under Q2-A. Under Q2-B, forfeits must be skipped, which forces Q3-B. Under Q2-C, the question disappears.
-
-## Q4. The commissioner leaving
-
-`commissioner_id` carries all the powers, so a commissioner who departs without a transfer keeps them (fact 7). Every option transfers or blocks.
+Without a transfer, a departed commissioner keeps every power (fact 5), so each option transfers or blocks.
 
 | | **A Block until transferred** | **B ★ Pick a successor in the leave sheet** | **C Auto-transfer** |
 |---|---|---|---|
-| Flow | Leave is disabled. First do "Make X commissioner" (a separate action), then leave as a member. | The leave sheet asks "Who takes over?" (human members only) and does it in one atomic call. | The longest-tenured human member (`joined_at`, then `user_id`) becomes commissioner automatically. |
-| Pros | Two simple actions. Transfer is also useful on its own. | One step, explicit, atomic. | Zero friction. |
-| Cons | Two round trips. | The sheet needs a picker. | The new commissioner didn't ask for it. Needs a notification. |
+| Flow | Leave is disabled. First "Make X commissioner" (its own action), then leave as a member. | The leave sheet asks "Who takes over?" (human members only). One atomic call. | The longest-tenured human member (`joined_at`, then `user_id`) becomes commissioner. |
+| Pros | Two simple actions; a transfer is useful on its own. | One step, explicit, atomic. | Zero friction. |
+| Cons | Two round trips. | The sheet needs a picker. | The new commissioner didn't ask for it; needs a notification. |
 
-- **Backend for B:** `leave_league(p_league_id, p_new_commissioner text default null)`. The new commissioner is required when the caller is commissioner and another active human exists. A standalone `transfer_commissioner` RPC can share the same internals.
-- **Sole human (everyone else is a bot):**
-  - Before the draft, leave is refused with "delete the league instead". Note: delete-league is still client-side `[I3]`.
-  - After the draft, two choices:
-    - (i) refuse;
-    - (ii) allow it: the league becomes all-autopilot and finishes on its own, with `commissioner_id` left on the departed user.
-  - Recommend (i) for launch: it's simpler and leaves no orphan leagues.
+**Sole human (only bots remain, or nobody):**
+- **(i) ★ Refuse:** "You're the only manager. Delete the league instead." Note: delete-league is still client-side `[I3]`.
+- **(ii) Leaving deletes the league:** the cascade, behind a confirm. Pre-draft there's no history to lose, but it makes "leave" a destructive action.
 
-## Q5. Rejoin and history
+## Q6. "Leaving" a finished league (`season_status = 'completed'`)
 
-| | **A ★ No rejoin this season; history kept** | **B "Reclaim my team" before season end** |
+The member is locked in for that season. Once it's over, history must stay, and `get_league_history` / `is_member` read access depend on the row existing. The #123 delete guard refuses any user-session delete anyway.
+
+| | **A ★ Hide it** | **B Nothing to do; Run it back handles it** |
 |---|---|---|
-| Post-draft leaver | Can't come back this season. `join_league_by_code` already refuses (`draft_started`, and the kept row reads `already_member`). | The same user can undo: `left_at` is cleared and trading reopens. Allowed only while `season_status <> 'completed'`. |
-| Pre-draft leaver | Rejoins with the invite code (Q1). | Same. |
-| History | Matchups, standings, `league_seasons` and display names all keep the human id. `get_league_display_names` already resolves leavers. | Same. |
-| Risk | None. | Low (a flag flip under the league lock), but it's another state to explain ("left" then "back"). |
+| What happens | "Leave league" on a finished league becomes **"Hide league"**: it's removed from that user's Home/league list, the membership row and all history stay, and it can be shown again from "Past leagues". | No action. Declining the renewal (`respond_to_renewal` out, PR #94) is how you "leave". The finished league stays in your list. |
+| Backend | `league_members.hidden_at timestamptz`, written by the same service-role RPC (`p_action => 'hide'/'unhide'`). `get_home_summary` / `get_home_league` skip hidden rows; both are re-created with byte-identical ACL. | None. |
+| Risk | Low. Hidden is per user, and no other reader keys on it. | None, but finished leagues pile up in the list forever. |
 
-**What the leaver still sees** (applies to A or B): with the row kept, `is_member()` stays true, so the leaver keeps **read-only** access to the league's history.
-- Not recommended: changing `is_member()` to hide it. Every league RLS policy goes through it, so the blast radius is large.
-- What does change: `get_home_summary` / `get_home_league` skip departed leagues, so the league leaves the single-league Home and lives under "past leagues".
+## The post-draft refusal (decided: locked in)
 
-**Run it back (#94, unmerged):** `renew_league` invites only active human members, so a departed user is not asked to renew. The `league_renewal_responses` expected-set logic already freezes against `[I5]`-style shrinkage. Dropping `[I5]` makes that defense redundant but harmless.
+During the draft or the season (`draft_status <> 'not_started'` and `season_status <> 'completed'`), the leave call returns `{status: 'refused', reason: 'locked_in'}`, and the UI shows the locked-in copy. Suggested wording, close to Giorgio's: *"You're locked in for this season. You can leave once it ends."* The UI copy itself is the Design Lead's (Giorgio's copy stays verbatim where he gave it). Mobile can show the button disabled with that line instead of letting the call fail, since `draft_status` is on the league row the screen already reads.
 
 ---
 
-## Recommended package and its backend
+## Superseded options (kept for the record)
 
-★ = Q1-A, Q2-A, Q3-A, Q4-B, Q5-A. Under this package **scoring, snapshots, playoffs and the trade RPC body need no change.** That is the main reason for it.
+Before the Q2 ruling, the doc compared three things:
+- Q2-A, a soft leave (`left_at`, the team plays on as buy-and-hold, like a bot);
+- Q2-B, a forfeit (auto-losses plus liquidation);
+- Q3, playoff seeding with departed teams.
 
-**Migrations (`20261107000000`–`03`):**
+All three were dropped with Q2 = C. The finding behind Q2-A still holds as a fact about the codebase: bots can't trade (`trades.user_id` is a uuid FK to `auth.users`), so "bot takeover" and "frozen portfolio" are the same mechanics.
 
-- **`00` — `league_members.left_at timestamptz`.** Plus `left_role text`, so history shows "left as commissioner". Plus a partial index for active members.
-- **`01` — `leave_league(p_league_id uuid, p_user_id text, p_new_commissioner text default null) returns jsonb`.** SECURITY DEFINER, `search_path` pinned.
-  - **Caller: a service-role edge function, not the client** (the constraint is explained below). A new `leave-league` edge function (`verify_jwt=true`) gets the user from `auth.getUser()` and calls the RPC with that id. This is the same pattern as `record-trade` → `"record_trade_atomic"` and `join-league` → `join_league_by_code`.
-  - **Grants:** EXECUTE revoked from `public`, `anon` AND `authenticated`, and granted to `service_role` only. Verified by proacl. `p_user_id` would be forgeable if a client could call the RPC, so the service_role-only grant is the whole identity boundary. Explicitly revoking `authenticated` is what closes the `join_league_by_code` class.
-  - **Locks:** takes the league row `FOR UPDATE` and the same league-wide advisory lock that `"record_trade_atomic"` takes. A leave and an in-flight trade therefore serialize.
-  - **Branches:**
-    - `not_started` → DELETE the row (the trigger fixes the order);
-    - `in_progress` → refused `draft_in_progress`;
-    - `completed` → set `left_at`, plus the commissioner transfer when the caller is commissioner.
-  - **Refusals:** `not_member`, `already_left`, `successor_required`, `successor_invalid` (not an active human member), `sole_manager`.
-  - It returns `{status, reason}` like `start_league_playoffs`.
-- **`02` — `trades` BEFORE INSERT guard.** Refuses a row whose `(league_id, user_id::text)` is departed. Plus the `get_home_summary` / `get_home_league` filters. Both functions are recreated with byte-identical ACL, verified by proacl.
-- **`03` — DROP POLICY `league_members_delete_self` (`[I5]`).** After this, no client can DELETE a membership. The web `leaveLeague` moves to `functions.invoke('leave-league')` in the same PR (web is paused, so this is not a prod behavior change).
+---
 
-**Constraint from the "freeze slot edits" release (Orchestrator, 2026-10-05).** That release adds three things:
-- `commissioner_id`, `season_status` and `current_week` become immutable to **user sessions** once the draft has started;
-- a BEFORE DELETE guard on `league_members` refuses user-session deletes post-draft (42501 `league_membership_locked`);
-- "user session" is defined as `auth.uid() IS NOT NULL`.
+## Backend (re-scoped: pre-draft leave plus finished-league hide)
 
-A SECURITY DEFINER function called with the user's JWT still sees `auth.uid()`, so it is NOT exempt. A client-called `leave_league` would therefore be refused on the post-draft commissioner transfer (Q4). That is why the RPC above runs on the service role, where `auth.uid()` is NULL.
+**Shape: a service-role edge function → a service-role-only RPC**, the same as `record-trade` → `"record_trade_atomic"` and `join-league` → `join_league_by_code`. Two reasons:
+- A definer RPC called with the user's JWT would be a "user session" to #123's freeze triggers (fact 6).
+- A client-callable RPC taking `p_user_id` would be forgeable.
 
-| | **Service-role edge function ★** | **Freeze triggers recognise a scoped definer context** |
-|---|---|---|
-| Shape | `leave-league` edge function → service_role-only RPC with `p_user_id` | The client calls the definer RPC, which sets a transaction-local flag (`set_config('app.leave_league', 'on', true)`). The freeze triggers skip when the flag is set. |
-| Pros | It matches `record-trade` / `join-league`. The freeze triggers need no exception, and the edge layer gives a natural place for the league notification. | One fewer moving part (no edge function). |
-| Cons | One more deployed function. | Every freeze trigger grows a bypass. Its safety rests on no client-reachable path being able to set that GUC, which is a standing invariant to re-verify each time a function is added. |
+The alternative was a transaction-local GUC that the freeze triggers recognise. It was rejected: it would put a bypass in every freeze trigger, whose safety is a standing invariant that has to be re-verified each time a function is added.
 
-Recommend the edge function: no trigger exceptions, and it follows an existing pattern. Under it, the pre-draft branch's DELETE also runs on the service role. That is fine: the pre-draft delete was allowed either way, and the draft-order trigger behaves identically.
+**`20261107000000` — `leave_league(p_league_id uuid, p_user_id text, p_new_commissioner text default null) returns jsonb`**
+- **Security:** SECURITY DEFINER, `search_path` pinned. EXECUTE revoked from `public`, `anon` AND `authenticated`, granted to `service_role` only, verified by the `proacl` query. The explicit `authenticated` revoke is what closes the `join_league_by_code` class.
+- **Locking:** takes the league row `FOR UPDATE` first, so it serializes against draft-control's start (which flips `draft_status`) and against `join_league_by_code` (which locks the same row). The draft-order trigger's own `FOR NO KEY UPDATE` on the league is then a no-op re-lock in the same transaction.
+- **Branches:**
+  - `not_member`;
+  - `not_started` → (commissioner rules per Q4) DELETE the row; the trigger closes the order gap. Per Q1-B, refuse in the finalized window.
+  - `draft_status <> 'not_started'` and season not completed → `locked_in`;
+  - `season_status = 'completed'` → hide or unhide per Q6-A (or `locked_in`-style "nothing to leave" under Q6-B).
+- **Commissioner transfer (Q4-B):** `p_new_commissioner` is required when the caller is commissioner and another human remains (`successor_required`). It must be a current human member (`successor_invalid`). The RPC sets `leagues.commissioner_id` and the successor's `role = 'commissioner'`, then deletes the leaver. Sole human → `sole_manager` (Q4-i).
+- **Returns** `{status: 'left' | 'hidden' | 'refused', reason}`, the same convention as `start_league_playoffs`.
 
-**Edge changes:**
-- **New `leave-league` function** (`verify_jwt=true`). Steps: `getUser()`, then validate the body (`league_id`, optional `new_commissioner_id`), then call the `leave_league` RPC with the user's id, destructuring and checking `{ error }` (CLAUDE.md success-signal #5). It maps refusals to 4xx and returns the RPC's `{status, reason}` verbatim. Writing `league_notifications` rows for the remaining members (and the new commissioner) happens in the RPC, so it is in the same transaction.
-- `record-trade` pre-check adds `left_at IS NULL` (clean `left_league` error).
-- `get_league_display_names` gains a `departed` flag for the "(left)" label. This changes the return type, so it is a DROP + CREATE with re-granted ACL.
+**`20261107000001` — DROP POLICY `league_members_delete_self` (`[I5]`).** After this, no client deletes a membership directly. #123's freeze trigger stays as the second layer.
 
-**Tests (PGlite, under Deno):**
-- Each branch of `leave_league`.
-- Concurrency: the trade/leave lock order.
-- The trigger interaction on pre-draft delete.
-- `bracket_non_member` still passing with a departed seed.
-- Each refusal.
-- The `migration_cli_split` test.
-- An effect-check DO block (RAISE PASS/FAIL) for the prod gate: departed user can't trade, standings row count unchanged, proacl.
+**Only if Q6 = A:** `20261107000002` adds `league_members.hidden_at` plus the `get_home_summary` / `get_home_league` filters. Both are re-created with byte-identical `proacl` / `prosecdef` / `proconfig`, checked in the test the way `league_standings_ranked.pglite.test.ts` does it.
 
-**Risks to call out:**
-- **Existing prod rows.** Any league where `[I5]` was already used post-draft has a zombie: rows in matchups, but no member row. Pre-check query: matchup/standings user ids with no `league_members` row, per league, bots excluded. If any exist, re-insert them as departed (`left_at = now()`) in `00` so their playoffs can start.
-- **`num_participants` / capacity.** Departed rows still count toward `league_full`. That matters only pre-draft, where leaves are hard deletes, so it has no effect.
-- **`draft-control` `memberCount` and `checkStoredOrder`** are only reached pre-draft or mid-draft, so keeping the row post-draft keeps them valid. That is the opposite of today's `[I5]` path, which breaks them.
+**Edge and clients:**
+- **New `leave-league` function** (`verify_jwt=true`). It calls `getUser()`, validates `league_id` and the optional `new_commissioner_id`, then calls the RPC. It checks `{ error }` from the rpc call (CLAUDE.md success-signal #5: `.rpc()` resolves, it doesn't throw), maps refusals to 4xx, and returns `{status, reason}` verbatim.
+- **Web:** `useLeagues.js` `leaveLeague` moves to `functions.invoke('leave-league')` and stops swallowing the error. Web is paused, so prod behavior doesn't change.
+- **Mobile:** goes to the 3c worker (League tab), not this branch.
+- **Optional:** a commissioner notification on a leave. `league_notifications.kind` is CHECK'd to `'draft_order_set'` only (`20261013000000:167`), so this needs a CHECK change plus a kind. It's a product choice; leave it out unless the board asks for it.
+- **Out of scope now:** all of these were needed only for the soft leave and are dropped:
+  - a trade guard;
+  - a `record-trade` change;
+  - a `get_league_display_names` change;
+  - scoring, snapshot or playoff changes.
 
-## Mockup hints for the Design Lead (A vs B boards)
+**Tests (PGlite under Deno, migrations loaded verbatim):**
+- every branch and refusal, each refusal writing nothing;
+- the order gap closing in open and finalized states, and the no-meta random mode;
+- the commissioner transfer, with the role and `commissioner_id` both moved;
+- a successor who is a bot or a non-member being refused;
+- leave → rejoin via `join_league_by_code`;
+- `proacl`;
+- `migration_cli_split.test.ts`.
 
-- **Q2:** the opponent's matchup card. A shows "Sam (left) · auto-managed" with a live score. B shows "Sam (forfeited)" with "W" pre-filled. The leave sheet copy differs by option.
-- **Q3:** the playoff bracket with a departed seed. A shows the departed team in the bracket. B shows it greyed out of the standings cut line, with seeds shifted.
-- **Q4:** the commissioner leave sheet. A: a disabled button plus a "Transfer first" link. B: an inline successor picker. C: an "X will become commissioner" notice.
-- **Q5:** the leaver's League tab after leaving: a read-only "You left this league" banner and the league under "Past leagues".
+**Prod effect check:** ONE DO block ending in `RAISE NOTICE 'PASS'` / `RAISE EXCEPTION 'FAIL'`. It asserts:
+- `proacl` holds `service_role` only;
+- `[I5]` is gone from `pg_policies`;
+- `league_members` DELETE is denied to `authenticated` by RLS (no policy).
+
+## Zombie repair (existing post-draft `[I5]` leaves)
+
+Under "locked in", a zombie is a member who should never have been able to leave, and the right repair is to **re-insert their `league_members` row**. They are still in matchups, standings and drafts, so re-inserting makes them a normal locked-in member again. It clears `bracket_non_member` and `draft_order_invalid`.
+
+**Snag:** the draft-order trigger raises `draft_order_locked` on any INSERT into a league whose order is locked, for every role (`20261013000000:687-690`). So the repair cannot be a plain INSERT. The options, decided only if the pre-check returns rows:
+- **(a) ★ A one-off service-role SQL that disables `trg_league_members_draft_order` for its own INSERT only.** `ALTER TABLE ... DISABLE TRIGGER` / `ENABLE TRIGGER` inside one transaction (it takes an ACCESS EXCLUSIVE lock on `league_members` for that instant). The zombie is already in the locked order (the locked + completed branch keeps the order as history), so the order stays an exact permutation once the row is back. For a legacy league with no order meta, the trigger returns before the locked check, but it first calls `_draft_order_sync`. Confirm on a PGlite replica that the call writes nothing for a completed-draft league before relying on a plain INSERT. Also confirm #123 adds no INSERT guard on `league_members`.
+- **(b)** A narrowly-scoped `repair_zombie_member` RPC that the trigger recognises.
+
+(a) leaves no permanent bypass. **If the pre-check returns zero rows, none of this is needed.**
 
 ---
 
@@ -181,14 +157,14 @@ Recommend the edge function: no trigger exceptions, and it follows an existing p
 
 **What it finds.** A "zombie" is a user id that a league still references but that has no `league_members` row. The query looks in four places: matchups (team1/team2), `league_standings`, the stored draft order, and `leagues.commissioner_id`. Every route to one goes through `[I5]` (a self-delete) or a hand edit. The query returns one row per (league, user).
 
-**Run it** in the Supabase SQL editor, which runs as `postgres` (needed for the cross-table read and the `league_standings_ranked` call). It writes nothing. **Zero rows = clean,** and migration `00` needs no backfill.
+**Run it** in the Supabase SQL editor, which runs as `postgres` (needed for the cross-table read and the `league_standings_ranked` call). It writes nothing. **Zero rows = clean,** and no zombie repair is needed.
 
 **How to read a row:**
-- **`blocks_playoff_start = true`**: this zombie holds a top-P seed in an active season, so `start_league_playoffs` will refuse with `bracket_non_member` at season end. This is the urgent case. The fix is re-inserting the user as departed in `00`.
+- **`blocks_playoff_start = true`**: this zombie holds a top-P seed in an active season, so `start_league_playoffs` will refuse with `bracket_non_member` at season end. This is the urgent case. The fix is the zombie repair above (re-insert the member).
 - **`unscored_matchups > 0`**: the team is still being scored every week on frozen holdings. Harmless for scoring, but they show up as a manager no one can see in the member list.
-- **`is_commissioner = true`**: the commissioner left. `commissioner_id` still carries every power (fact 7). The decided Q4 flow needs a transfer target for this league.
+- **`is_commissioner = true`**: the commissioner left. `commissioner_id` still carries every power (fact 5). Re-inserting them as a member restores a consistent state. Post-draft, the commissioner is locked in like everyone else. If the row shows `in_draft_order = false` and `draft_status = 'not_started'`, they left pre-draft: re-insert them, or hand the league to a remaining human (a manual decision).
 - **`draft_rows` / `trade_rows`**: holdings that keep the leaver's symbols owned.
-- **`in_draft_order = true` with `draft_status <> 'completed'`**: late draft calls 500 with `draft_order_invalid` (fact 5).
+- **`in_draft_order = true` with `draft_status <> 'completed'`**: late draft calls 500 with `draft_order_invalid` (fact 3).
 
 ```sql
 -- leave-league zombie pre-check (read-only). One row per (league, user) that
