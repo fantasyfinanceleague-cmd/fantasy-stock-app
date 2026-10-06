@@ -24,7 +24,11 @@ import {
 } from '@/lib/categoryData';
 import { seamSaveLeagueSlots, seamUpdateLeague } from '@/lib/game/seamCalls';
 import { settingsSaveOutcome } from '@/lib/game/settingsSave';
+import { leaveLeagueEnabled } from '@/lib/game/leaveLeague';
 import { Button, Card } from '@/components/ui';
+
+/** Off until the leave flow ships. The row's placement is decided (Design Lead's leave board); its behaviour is not. */
+const LEAVE_LEAGUE_ON = leaveLeagueEnabled(process.env.EXPO_PUBLIC_LEAVE_LEAGUE);
 
 const ACCENT = Colors.primary;
 const ACCENT_BG = Colors.primaryBg;
@@ -481,6 +485,15 @@ export default function LeagueSettingsScreen() {
             </Card>
           </View>
 
+
+          {LEAVE_LEAGUE_ON && (
+            // No onPress until the leave flow ships: the row is placement only.
+            <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+              <Text style={{ color: Colors.error, fontWeight: '600', fontSize: 17 }} accessibilityRole="button">
+                Leave league
+              </Text>
+            </View>
+          )}
 
           <View style={{ height: 100 }} />
         </ScrollView>

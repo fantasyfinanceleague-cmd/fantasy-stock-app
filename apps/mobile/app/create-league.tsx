@@ -23,6 +23,14 @@ import {
   validateSlotConfig,
 } from '@/lib/categoryData';
 import { seamInsertLeague, seamInsertMember, seamSaveLeagueSlots } from '@/lib/game/seamCalls';
+import { SegmentedControl } from '@/components/sp/SegmentedControl';
+import {
+  DRAFT_ORDER_OPTIONS,
+  IF_TIME_RUNS_OUT_COPY,
+  type DraftOrderMode,
+  draftOrderCaption,
+  seasonCaption,
+} from '@/lib/game/createLeagueSetup';
 import { Button, Card } from '@/components/ui';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -49,6 +57,7 @@ interface WizardState {
   numRounds: number;
   draftDate: Date | null;
   draftDateTBD: boolean;
+  draftOrder: DraftOrderMode;
 }
 
 export default function CreateLeagueWizard() {
@@ -78,6 +87,7 @@ export default function CreateLeagueWizard() {
     numRounds: 6,
     draftDate: null,
     draftDateTBD: true, // Default to TBD
+    draftOrder: 'random',
   });
 
   const minWeeks = state.size - 1;
@@ -138,6 +148,7 @@ export default function CreateLeagueWizard() {
           num_weeks: effectiveWeeks,
           playoff_teams: state.type === 'matchup' ? playoffTeams : null,
           draft_status: 'not_started',
+          draft_order_mode: state.draftOrder,
           draft_date: state.draftDateTBD ? null : state.draftDate?.toISOString(),
       });
 
@@ -634,6 +645,8 @@ export default function CreateLeagueWizard() {
             </View>
             <Text style={styles.settingHint}>{playoffLine(playoffTeams)}</Text>
           </View>
+
+          <Text style={styles.settingHint}>{seasonCaption(state.numWeeks, playoffTeams)}</Text>
         </ScrollView>
 
         <Button
@@ -721,6 +734,21 @@ export default function CreateLeagueWizard() {
               You'll need to set a draft date before starting the draft
             </Text>
           )}
+        </View>
+
+        <View style={styles.settingSection}>
+          <Text style={styles.settingLabel}>Draft Order</Text>
+          <SegmentedControl
+            options={DRAFT_ORDER_OPTIONS}
+            value={state.draftOrder}
+            onChange={(v) => setState({ ...state, draftOrder: v as DraftOrderMode })}
+          />
+          <Text style={styles.settingHint}>{draftOrderCaption(state.draftOrder)}</Text>
+        </View>
+
+        <View style={styles.settingSection}>
+          <Text style={styles.settingLabel}>If time runs out</Text>
+          <Text style={styles.settingHint}>{IF_TIME_RUNS_OUT_COPY}</Text>
         </View>
 
         {/* Summary */}
