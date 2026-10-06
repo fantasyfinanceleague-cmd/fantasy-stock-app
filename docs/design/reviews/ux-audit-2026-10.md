@@ -269,7 +269,28 @@ the branches read.
 
 ---
 
+### Rulings after pass 1 (2026-10-06)
+
+Copy and questions the 3c-2 worker raised while fixing the P0s (relayed by the Orchestrator).
+Design Lead rulings; new copy, so Giorgio may still overrule.
+
+- **Queue editor, "Not saved":** "Your queue can hold up to 50 stocks." approved.
+  "Some of these stocks can't be queued. Remove them and try again." approved as the generic;
+  when the server names the symbols, name them instead ("{SYMBOL} and {SYMBOL} can't be
+  queued. Remove them and try again.").
+- **Stalled turn, manager's name unknown:** not "the next manager" ("No stock left fits the
+  next manager's next slot" stacks two "next"s). The fallback headline is "No stock left fits
+  the next open slot".
+- **`would_strand_slot` names:** the server sends no manager or slot names, so players get the
+  ruled generic line, which is clear on its own. The specific line ("…with no stock that fits
+  their Tech slot") is a **backend ask for 1.3** (add `manager_name` and `slot_label` to the
+  refusal; P3, U-48), not a 1.2.0 blocker.
+- **"Paused" header chip on the Draft paused frame:** not needed. The paused card directly
+  under the header already carries the "Draft paused" tag and headline, and §9B says a tag
+  must not repeat an adjacent one. The header keeps the League tab's own phase chip. I'll
+  drop the chip from the board frame (board item).
+
 ### Backlog (1.3)
 
 P2/P3 items marked **backlog** above, unless a worker picks one up cheaply on the way past:
-U-31, U-34, U-35, U-36, U-40, U-45, U-46, U-47.
+U-31, U-34, U-35, U-36, U-40, U-45, U-46, U-47, U-48 (the `would_strand_slot` names backend ask).
