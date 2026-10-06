@@ -4,7 +4,7 @@
  * and the pure tier functions read it through a resolver. A name that hasn't
  * loaded resolves to null, and the words fall back (never "Category").
  */
-import { fetchCategories } from './../categoryData';
+import { fetchCategories } from '../categoryData';
 
 const names = new Map<string, string>();
 
