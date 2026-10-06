@@ -40,6 +40,9 @@ const PRIOR = [
   '20261011000000_league_standings_ranked.sql',
   '20261011000001_get_home_summary_unified_rank.sql',
   '20260930000000_join_league_refuse_mid_draft.sql',
+  // #123: freezes league rules (commissioner_id included) for USER sessions once
+  // the draft starts, and refuses user-session member deletes post-draft.
+  '20261104000000_freeze_league_rules_after_draft_start.sql',
 ];
 const OURS = [
   '20261107000000_leave_league_schema.sql',
@@ -79,6 +82,9 @@ create table leagues (
   -- 'matchup' default here hid an effect-test fixture that omitted league_type.
   league_type text not null default 'duration', num_weeks int, current_week int default 1,
   season_status text default 'active', playoff_teams int default 4,
+  -- the rule columns #123's freeze trigger compares (20261104000000)
+  stake_mode text, budget_amount numeric, notional_per_slot numeric, allow_undraftable boolean default false,
+  duration_days int, budget_mode text,
   constraint valid_playoff_teams check (playoff_teams is null or playoff_teams in (2, 4, 8)));
 create table matchups (id uuid primary key default gen_random_uuid(),
   league_id uuid not null references leagues(id) on delete cascade, week_number int not null,
@@ -93,6 +99,9 @@ create table league_members (league_id uuid not null references leagues(id) on d
 create table league_invites (id uuid primary key default gen_random_uuid(),
   league_id uuid references leagues(id) on delete cascade, code text, status text default 'pending',
   expires_at timestamptz, inviter_id text);
+create table league_draft_slots (id uuid primary key default gen_random_uuid(),
+  league_id uuid references leagues(id) on delete cascade, slot_index int, slot_count int default 1,
+  price_min numeric, price_max numeric, category_id uuid);
 create table drafts (id serial primary key, league_id uuid, user_id text, symbol text,
   entry_price numeric, quantity numeric, round int, pick_number int, created_at timestamptz default now());
 create table trades (id uuid primary key default gen_random_uuid(), league_id uuid, user_id uuid, symbol text);
@@ -410,12 +419,55 @@ Deno.test({
       const [u] = await q(`select gen_random_uuid() id`);
       assertEquals((await transfer(u.id, C, A)).reason, 'not_commissioner', 'unknown league: uniform');
       assertEquals(await snapshot(l.id), before);
-      for (const ds of ['in_progress', 'completed']) {
+      // The locked middle: from T-1h (order set) through the season's end.
+      for (const ds of ['in_progress', 'completed']) {   // mid-draft; drafted + active season
         const st = await mkLeague([C, A, B, D], { draft_date: await inHours(48) });
         await raw(`update leagues set draft_status=$2, draft_started_at=now() where id=$1`, [st.id, ds]);
-        assertEquals((await transfer(st.id, C, A)).reason, 'draft_started', ds);
+        const r = await transfer(st.id, C, A);
+        assertEquals([r.reason, r.window], ['locked_in', 'season'], ds);
         assertEquals((await lg(st.id)).commissioner_id, C);
       }
+      const soon = await mkLeague([C, A, B, D], { draft_order_mode: 'manual', draft_date: await inHours(48) });
+      await getOrder(C, soon.id);
+      await raw(`update leagues set draft_date = now() + interval '30 minutes' where id=$1`, [soon.id]);
+      const r = await transfer(soon.id, C, A);
+      assertEquals([r.reason, r.window], ['locked_in', 'order_set'], 'inside the hour');
+      // The leave window and the transfer window are the same function.
+      assertEquals((await leave(soon.id, A)).window, 'order_set');
+    });
+
+    await step('transfer AFTER the season: allowed on the service path despite #123; a user session still cannot', async () => {
+      const l = await mkLeague([C, A, B, D], { draft_date: await inHours(-400) });
+      await raw(`update leagues set draft_status='completed', draft_started_at=now(), season_status='completed' where id=$1`, [l.id]);
+      // #123 sanity: the commissioner's own session cannot rewrite commissioner_id post-draft.
+      await asRole('authenticated', C);
+      let msg = '';
+      try { await q(`update leagues set commissioner_id=$2 where id=$1`, [l.id, A]); } catch (e) { msg = String((e as Error).message); }
+      await asRole(null);
+      assert(msg.startsWith('commissioner_transfer_only') || msg.startsWith('league_rules_locked'), msg);
+      // The leave-league path (service role) may: the window is open again.
+      assertEquals((await leave(l.id, C)).reason, 'transfer_first', 'post-season "leave" (hide) also needs a transfer first');
+      const t1 = await transfer(l.id, C, A);
+      assertEquals([t1.status, t1.window], ['transferred', 'after_season']);
+      assertEquals((await lg(l.id)).commissioner_id, A);
+      assertEquals(await transferNotices(l.id), [A]);
+      assertEquals((await leave(l.id, C)).status, 'hidden', 'then the old commissioner can hide it');
+    });
+
+    await step('a user session can never rewrite commissioner_id directly (only the transfer RPC can)', async () => {
+      const l = await mkLeague([C, A, B, D], { draft_date: await inHours(48) });
+      for (const to of [A, 'bot-1', X]) {
+        await asRole('authenticated', C);
+        let msg = '';
+        try { await q(`update leagues set commissioner_id=$2 where id=$1`, [l.id, to]); } catch (e) { msg = String((e as Error).message); }
+        await asRole(null);
+        assert(msg.startsWith('commissioner_transfer_only'), `${to}: ${msg}`);
+      }
+      // A whole-row commissioner UPDATE that leaves the id unchanged still works.
+      await asRole('authenticated', C);
+      await q(`update leagues set commissioner_id=$2, name='Renamed' where id=$1`, [l.id, C]);
+      await asRole(null);
+      assertEquals([(await lg(l.id)).name, (await lg(l.id)).commissioner_id], ['Renamed', C]);
     });
 
     await step('transfer then leave: roles move atomically, the NEW commissioner is notified, then owns the confirmation', async () => {
@@ -648,11 +700,8 @@ Deno.test({
       assertEquals((await leave(l.id, A)).already_hidden, true);
       assertEquals(await reconfirm(l.id), undefined, 'hiding never writes a reconfirm row');
       assertEquals(await leftNotices(l.id), [], 'hiding never notifies');
-      assertEquals((await leave(l.id, C, A)).reason, 'successor_not_allowed');
-      // Hiding is not leaving: the commissioner may hide a finished league (a
-      // transfer is impossible by then), and keeps the role.
-      assertEquals((await leave(l.id, C)).status, 'hidden');
-      assertEquals((await lg(l.id)).commissioner_id, C);
+      assertEquals((await leave(l.id, B, A)).reason, 'successor_not_allowed');
+      assertEquals((await leave(l.id, C, A)).reason, 'transfer_first', 'the commissioner, after the season too');
       const u = await unhide(l.id, A);
       assertEquals([u.status, u.already_shown], ['shown', false]);
       assert((await home(A)).includes(l.id));
@@ -681,7 +730,7 @@ Deno.test({
       const msg = String((err as Error).message);
       assert(msg.includes('LEAVE LEAGUE EFFECT TEST RESULTS'), msg);
       assert(!msg.includes('FAIL'), msg);
-      assertEquals(msg.match(/PASS/g)?.length, 23, msg); // one per case in the file's EXPECTED OUTPUT
+      assertEquals(msg.match(/PASS/g)?.length, 25, msg); // one per case in the file's EXPECTED OUTPUT
       assertEquals((await q(`select count(*)::int n from leagues`))[0].n, before, 'fixture rolled back');
     });
 

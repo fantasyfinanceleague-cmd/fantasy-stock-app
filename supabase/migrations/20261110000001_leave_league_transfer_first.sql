@@ -7,13 +7,17 @@
 --
 -- The function below is 20261107000001's applied body with the Q4-B hand-over
 -- REMOVED (the lines marked "20261110000001"):
---   * The commissioner is refused 'transfer_first' whenever a pre-draft leave
---     would otherwise go ahead, whether or not other humans remain. A sole human
---     gets the same refusal: they can't transfer to a bot, so the message is the
---     honest one (transfer to someone, or delete the league). After the season,
---     the commissioner may still HIDE the league: hiding is not leaving (the
---     membership and the role stay), and a transfer is impossible by then.
+--   * The window is read from _league_membership_window() (20261110000000), the
+--     helper transfer_commissioner also reads: identical rules, never drifting.
+--   * The commissioner is refused 'transfer_first' in BOTH open windows (before
+--     T-1h, and after the season, where "leave" means hide). That holds whether
+--     or not other humans remain. A sole human gets the same refusal: they
+--     can't transfer to a bot (transfer to someone, or delete the league).
 --     During the draft and the season they are locked_in, like everyone.
+--   * The order of checks is now window, then commissioner, then hide. Before,
+--     it was hide, then window. So a commissioner of a finished league gets
+--     transfer_first instead of a hide, and anyone else gets the same results
+--     as before.
 --   * The Run-it-back commissioner case ('commissioner_cannot_opt_out') folds
 --     into 'transfer_first': a renewal league is not_started, so the commissioner
 --     can transfer first, then leave as an invitee (#94's trigger flips their
@@ -50,7 +54,7 @@ set search_path = public, pg_temp
 as $$
 declare
   v_l             public.leagues%rowtype;
-  v_state         text;
+  v_window        text;
   v_invitee       boolean := false;
   v_is_comm       boolean;
   v_before        int;
@@ -74,35 +78,32 @@ begin
     return jsonb_build_object('status', 'refused', 'reason', 'not_member');
   end if;
 
-  -- ---- After the season: hide, never delete ---------------------------------
-  if v_l.season_status = 'completed' then
-    if p_new_commissioner is not null then
-      return jsonb_build_object('status', 'refused', 'reason', 'successor_not_allowed');
-    end if;
-    update public.league_members
-       set hidden_at = now()
-     where league_id = p_league_id and user_id = p_user_id and hidden_at is null;
-    return jsonb_build_object('status', 'hidden', 'already_hidden', not found);
-  end if;
-
-  -- ---- Locked in: from the order being set through the whole season ----------
-  if coalesce(v_l.draft_status, 'not_started') <> 'not_started' then
+  -- ---- 20261110000001: the window comes from the ONE helper transfer_commissioner
+  -- also reads, so leaving and handing over the title can never drift apart.
+  v_window := public._league_membership_window(p_league_id);
+  if v_window = 'locked_season' then
     return jsonb_build_object('status', 'refused', 'reason', 'locked_in', 'window', 'season');
-  end if;
-  select m.state into v_state from public.league_draft_order_meta m where m.league_id = p_league_id;
-  if public._draft_order_is_due(v_l.draft_date) or v_state in ('finalized', 'locked') then
+  elsif v_window = 'locked_order_set' then
     return jsonb_build_object('status', 'refused', 'reason', 'locked_in', 'window', 'order_set');
   end if;
 
-  -- ---- 20261110000001: the commissioner transfers first (Q4 = A) -----------
-  -- Before any Run-it-back read: this also covers the renewal commissioner, who
-  -- must not reach #94's delete trigger.
+  -- ---- 20261110000001: the commissioner transfers first (Q4 = A), in BOTH open
+  -- windows. Before any Run-it-back read: this also covers the renewal
+  -- commissioner, who must not reach #94's delete trigger.
   v_is_comm := v_l.commissioner_id = p_user_id;
   if v_is_comm then
     return jsonb_build_object('status', 'refused', 'reason', 'transfer_first');
   end if;
   if p_new_commissioner is not null then
     return jsonb_build_object('status', 'refused', 'reason', 'successor_not_allowed');
+  end if;
+
+  -- ---- After the season: hide, never delete ---------------------------------
+  if v_window = 'after_season' then
+    update public.league_members
+       set hidden_at = now()
+     where league_id = p_league_id and user_id = p_user_id and hidden_at is null;
+    return jsonb_build_object('status', 'hidden', 'already_hidden', not found);
   end if;
 
   -- ---- Run it back (dynamic: #94 may not be on this database) ---------------

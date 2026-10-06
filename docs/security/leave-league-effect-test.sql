@@ -49,12 +49,15 @@
 --   S8  start refused while owed (gate binds service_role); invite + human
 --       join clears it; then the start goes through                         PASS
 --   S9  confirm by a non-commissioner refused                               PASS
---   S10 transfer after the draft started: draft_started                     PASS
---   A1  authenticated cannot call leave_league                               PASS
+--   S10 transfer in the locked window (mid-season; inside the hour): locked_in PASS
+--   S11 after the season: commissioner hide -> transfer_first; the transfer
+--       is open again; then the old commissioner hides it                    PASS
+--   A1  authenticated cannot call leave_league or transfer_commissioner      PASS
 --   A2  a client DELETE of one's own membership deletes nothing              PASS
 --   A3  a client cannot write league_roster_reconfirm                        PASS
 --   A4  a member reads the reconfirm row; an outsider sees none              PASS
---   N1  anon cannot call leave_league / read the reconfirm row               PASS
+--   A5  the commissioner's session cannot write commissioner_id directly     PASS
+--   N1  anon cannot call transfer/leave_league or read the reconfirm row     PASS
 -- Any FAIL line is a real finding: stop and report it.
 -- ============================================================================
 do $$
@@ -298,13 +301,38 @@ begin
   end;
 
   begin
+    -- The locked middle: the same window as leaving.
     res := public.transfer_commissioner(l_live, c_uid, a_uid);
-    out := out || format(E'S10 transfer after the draft -> %s  %s\n', res->>'reason',
-      case when res->>'reason' = 'draft_started'
+    out := out || format(E'S10 transfer mid-season / inside the hour -> %s/%s, %s  %s\n', res->>'reason', res->>'window',
+      public.transfer_commissioner(l_soon, c_uid, a_uid)->>'window',
+      case when res->>'reason' = 'locked_in' and res->>'window' = 'season'
+            and (public.transfer_commissioner(l_soon, c_uid, a_uid)->>'window') = 'order_set'
             and (select commissioner_id from public.leagues where id = l_live) = c_uid
+            and (select commissioner_id from public.leagues where id = l_soon) = c_uid
            then 'PASS' else 'FAIL ' || res::text end);
   exception when others then
-    out := out || format(E'S10 transfer after the draft -> %s FAIL (%s)\n', sqlstate, sqlerrm);
+    out := out || format(E'S10 transfer in the locked window -> %s FAIL (%s)\n', sqlstate, sqlerrm);
+  end;
+
+  begin
+    -- After the season: the commissioner's "leave" (hide) needs a transfer first,
+    -- and the transfer is open again (the service path; #123 locks only user sessions).
+    res := public.leave_league(l_done, c_uid);
+    if res->>'reason' is distinct from 'transfer_first' then
+      out := out || format(E'S11 after the season         -> %s  FAIL\n', res::text);
+    else
+      res := public.transfer_commissioner(l_done, c_uid, b_uid);
+      -- Separate statements: a check in the SAME statement as the hide would not
+      -- see the hide's write (one snapshot per statement).
+      acl := public.leave_league(l_done, c_uid)->>'status';
+      out := out || format(E'S11 post-season transfer + hide -> %s/%s hide=%s  %s\n', res->>'status', res->>'window', acl,
+        case when res->>'status' = 'transferred' and res->>'window' = 'after_season' and acl = 'hidden'
+              and (select commissioner_id from public.leagues where id = l_done) = b_uid
+              and (select hidden_at is not null from public.league_members where league_id = l_done and user_id = c_uid)
+             then 'PASS' else 'FAIL ' || res::text end);
+    end if;
+  exception when others then
+    out := out || format(E'S11 post-season transfer     -> %s FAIL (%s)\n', sqlstate, sqlerrm);
   end;
 
   begin
@@ -351,8 +379,17 @@ begin
     res := public.leave_league(l_rd, d_uid);
     out := out || format(E'A1 authenticated leave_league -> accepted %s  FAIL\n', res::text);
   exception when others then
-    out := out || format(E'A1 authenticated leave_league -> %s  %s\n', sqlstate,
-      case when sqlerrm like 'permission denied%' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
+    if sqlerrm not like 'permission denied%' then
+      out := out || format(E'A1 authenticated leave_league -> %s  FAIL (%s)\n', sqlstate, sqlerrm);
+    else
+      begin
+        res := public.transfer_commissioner(l_rd, d_uid, a_uid);
+        out := out || format(E'A1 authenticated transfer_commissioner -> accepted %s  FAIL\n', res::text);
+      exception when others then
+        out := out || format(E'A1 authenticated leave_league / transfer_commissioner -> denied / %s  %s\n', sqlstate,
+          case when sqlerrm like 'permission denied%' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
+      end;
+    end if;
   end;
 
   begin
@@ -384,9 +421,26 @@ begin
     out := out || format(E'A4 reconfirm read            -> %s FAIL (%s)\n', sqlstate, sqlerrm);
   end;
 
+  begin
+    -- The commissioner's own session: a direct commissioner_id write is refused
+    -- (only transfer_commissioner may change it). l_rd's commissioner is c.
+    perform set_config('request.jwt.claims', json_build_object('sub', c_uid, 'role', 'authenticated')::text, true);
+    update public.leagues set commissioner_id = a_uid where id = l_rd;
+    out := out || E'A5 commissioner direct commissioner_id write -> accepted  FAIL\n';
+  exception when others then
+    out := out || format(E'A5 commissioner direct commissioner_id write -> %s  %s\n', sqlstate,
+      case when sqlerrm like 'commissioner_transfer_only%' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
+  end;
+
   -- ---- anon ------------------------------------------------------------------
   perform set_config('role', 'anon', true);
   perform set_config('request.jwt.claims', json_build_object('role', 'anon')::text, true);
+  begin
+    res := public.transfer_commissioner(l_rd, c_uid, a_uid);
+    out := out || E'N1 anon transfer_commissioner   -> accepted  FAIL\n';
+  exception when others then
+    null;   -- denied, as expected; the leave_league call below records the line
+  end;
   begin
     res := public.leave_league(l_rd, d_uid);
     out := out || E'N1 anon leave_league           -> accepted  FAIL\n';
