@@ -27,6 +27,8 @@ building anything, and don't reopen a rule without him.
   never "best return" or "biggest dollar gain", because capital varies by stake mode.
 - **1.2.0 TestFlight** ships only when EVERY screen is on the new UI, after Giorgio's
   full walkthrough. Phone only (`supportsTablet: false`); iPad is a later project.
+- **Bots and the manual draft Start are testing tools only** (2026-10-06): bots exist "simply to simulate drafts" and "will get removed"; they're "not going to be a feature in the actual app". A real league always has real players, so never design product behaviour, copy or decisions around bot-only or one-real-player leagues. The manual Start is likewise "simply for testing purposes"; auto-start is the real feature. See **League size** under League lifecycle.
+- **No added caveats:** implement Giorgio's rules as stated. Don't add exceptions he didn't ask for.
 - **Product name:** "Stockpile" must go (a live trademark), with Stockade the front-runner,
   but naming is DEFERRED to pre-launch. Keep the bundle id, slug and scheme.
 
@@ -84,7 +86,9 @@ building anything, and don't reopen a rule without him.
 - **Draft time** (2026-10-06): only in 15-minute increments (:00 / :15 / :30 / :45), and at
   least one hour out. It can't change once the room opens, except when postponed.
 - **Draft-time changes** (2026-10-06): "Anytime a draft time is changed, everyone receives
-  a notification to know exactly when it's happening."
+  a notification to know exactly when it's happening." Everyone means every member,
+  including the person who made the change: "Everyone in the league gets the
+  notifications when draft times are changed."
 
 ## Trading
 
@@ -102,6 +106,11 @@ building anything, and don't reopen a rule without him.
 
 ## League lifecycle
 
+- **League size** (2026-10-06): a league needs at least 4 managers to draft, and every
+  manager is a real person. Bots and the manual Start button are testing tools for the
+  test account only; they are never a product feature, and no rule about players is ever
+  written around them. (Code: `MIN_DRAFT_MEMBERS = 4` in
+  `supabase/functions/draft-control/rules.ts`; the draft order also waits for 4.)
 - **Playoffs:** the commissioner sets any playoff team count P from 2 up to the number of
   managers (never more). The bracket is derived (weeks = ceil(log2 P); byes to the top
   seeds). Rounds are named by teams left: Final / Semifinals / Quarterfinals / Round of
@@ -116,7 +125,7 @@ building anything, and don't reopen a rule without him.
 - **The commissioner** (2026-10-06): "A commissioner cannot leave, but a commissioner can
   transfer that title to someone else and then leave." "A commissioner can only hand over
   the title before or after a season." The season runs from when the draft room opens
-  (T−1h) to the season's end.
+  (T−1h) to the season's end. Transfer is a separate action from leaving.
 - **Run it back** (2026-10-04): a finished league can be renewed with the same group, as a
   new season.
   - Only the commissioner starts it.
@@ -133,3 +142,8 @@ building anything, and don't reopen a rule without him.
   board), with a recommendation, never as prose only.
 - A rule is recorded here the moment it's decided. If a rule here and the code disagree,
   the code is wrong until Giorgio says otherwise.
+- **UX standard** (2026-10-06): every screen and flow is designed, built and reviewed against
+  the eleven rules in [`design/UX_RULES.md`](design/UX_RULES.md). Audit findings graded P0/P1
+  block the 1.2.0 cut; P2/P3 go to a 1.3 backlog. A product rule beats a UX rule; a UX rule
+  that seems to contradict one is a question for Giorgio, not a finding. Plan:
+  [`plans/2026-10-06-ux-rulebook.md`](plans/2026-10-06-ux-rulebook.md).

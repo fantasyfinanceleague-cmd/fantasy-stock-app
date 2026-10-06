@@ -72,4 +72,13 @@ Testable acceptance criteria, including what Giorgio checks by hand.
 ## Suggested workstreams
 How the Orchestrator might split it (backend / mobile / design), with dependencies.
 The Orchestrator decides the final split.
+
+## Models
+Which model runs each role and workstream, and why (Giorgio, 2026-10-06: no higher-usage
+model on work a cheaper one can do). Standing rule: plan on Opus, implement on the cheapest
+tier that fits, the Orchestrator reviews as the backstop. Tiers: Haiku for recon and
+docs-only or mechanical work; Sonnet for well-specified implementation after an approved
+plan and for checklist reviewers; Opus for judgement (design gates, audits), security, RLS,
+grants and partial-state logic, and the Orchestrator's own reviews; Fable only for the
+Planner's long-horizon product/UX planning.
 ```
