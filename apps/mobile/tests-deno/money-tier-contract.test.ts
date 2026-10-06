@@ -133,3 +133,16 @@ Deno.test('the preview slots parse as a whole; one malformed entry refuses the l
   assertEquals(parsePreviewSlots([{ ...band('a', 100, 200), held: ['MSFT'], open: 0 }, { ...band('b', 1, 2), open: 'x' }]), null);
   assertEquals(parsePreviewSlots('nope'), null);
 });
+
+Deno.test('an unresolved category on a BANDED slot gives the fallback, never the price sentence', () => {
+  const s = tierRefusalSentence('AAPL', 211.42, [band('x', 100, 200, 'unknown-id')], resolve);
+  assertEquals(s, "AAPL doesn't fit your open slot.");
+  assertEquals(s.includes('priced'), false);
+});
+
+Deno.test('several open slots with ANY unresolved category give the plural fallback', () => {
+  assertEquals(
+    tierRefusalSentence('AAPL', 211.42, [band('a', 100, 200), band('x', 300, 400, 'unknown-id')], resolve),
+    "AAPL doesn't fit your open slots.",
+  );
+});

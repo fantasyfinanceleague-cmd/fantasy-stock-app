@@ -156,6 +156,7 @@ export function tierRefusalSentence(symbol: string, priceValue: number, open: Sl
   if (slots.length === 1) {
     const s = slots[0];
     const cat = s.category_id != null ? resolve(s.category_id) : null;
+    // An unresolved category is the reason, even on a banded slot: no price sentence.
     if (s.category_id != null && cat == null) return `${sym} doesn't fit your open slot.`;
     if (!hasBand(s)) return `${sym} doesn't fit your open ${cat} slot.`;
     const band = slotRangeText(s.price_min, s.price_max);
@@ -164,13 +165,14 @@ export function tierRefusalSentence(symbol: string, priceValue: number, open: Sl
       : `${head} Your open slot takes ${cat} stocks priced ${band}.`;
   }
 
-  const items: string[] = [];
-  for (const s of slots) {
+  // ANY open slot whose category doesn't resolve: the category is the reason, so no price sentence
+  // (a price-only line could imply the price is the problem). The approved fallback, plural.
+  const unresolved = slots.some((s) => s.category_id != null && resolve(s.category_id) == null);
+  if (unresolved) return `${sym} doesn't fit your open slots.`;
+  const items = slots.map((s) => {
     const cat = s.category_id != null ? resolve(s.category_id) : null;
-    if (s.category_id != null && cat == null) continue;
     const band = hasBand(s) ? labelBand(s.price_min, s.price_max) : null;
-    items.push([band, cat].filter(Boolean).join(' '));
-  }
-  if (items.length === 0) return `${sym} doesn't fit your open slots.`;
+    return [band, cat].filter(Boolean).join(' ');
+  });
   return `${head} Your open slots: ${listOf(items)}.`;
 }
