@@ -4,6 +4,8 @@ import { View, StyleSheet, Alert, Pressable } from 'react-native';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { Button } from '@/components/sp/Button';
+import { Icon } from '@/components/sp/Icon';
+import { useTheme } from '@/components/sp/ThemeProvider';
 import { space } from '@/constants/tokens';
 import { supabase } from '@/lib/supabase';
 import { seamRpc } from '@/lib/game/seamCalls';
@@ -12,7 +14,8 @@ import { byeNoticeCopy } from '@/lib/game/draftLobby';
 import { playoffLine } from '@/lib/playoffs';
 import { SegmentedControl } from '@/components/sp/SegmentedControl';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { PICK_CLOCK_OPTIONS, DRAFT_ORDER_OPTIONS, isFutureDraftDate } from '@/lib/game/renewalPickers';
+import { PICK_CLOCK_OPTIONS, DRAFT_ORDER_OPTIONS, isFutureDraftDate, stepSeasonWeeks, seasonWeeksFloor } from '@/lib/game/renewalPickers';
+import { playoffStepperBounds, stepPlayoffTeams } from '@/lib/game/draftLobby';
 
 export interface RenewalReviewProps {
   leagueId: string;
@@ -35,15 +38,18 @@ export function RenewalReview({ leagueId, inviteCode, counts, repliesPending, se
   const [draftOrder, setDraftOrder] = useState<string>(settings.draft_order_mode);
   const [draftDate, setDraftDate] = useState<string | null>(settings.draft_date);
   const [editingDate, setEditingDate] = useState(false);
+  const [weeks, setWeeks] = useState(settings.num_weeks);
+  const [playoffTeams, setPlayoffTeams] = useState(settings.playoff_teams ?? 2);
+  const managers = counts.in + counts.new;
   const teams = teamsLine(counts, inviteCode);
-  const bye = byeNoticeCopy(counts.in + counts.new, settings.num_weeks);
-  const playoffs = playoffLine(settings.playoff_teams);
+  const bye = byeNoticeCopy(managers, weeks);
+  const playoffs = playoffLine(playoffTeams);
   const enabled = canSchedule({ repliesPending, draftDate }) && !busy;
 
   const schedule = async () => {
     if (!enabled) return;
     setBusy(true);
-    const payload = buildRenewalSettings({ ...settings, pick_seconds: pickSeconds, draft_order_mode: draftOrder, draft_date: draftDate });
+    const payload = buildRenewalSettings({ ...settings, pick_seconds: pickSeconds, draft_order_mode: draftOrder, draft_date: draftDate, num_weeks: weeks, playoff_teams: playoffTeams });
     const { data, error } = await seamRpc('start_renewed_season', { p_league_id: leagueId, p_settings: payload });
     setBusy(false);
     const res = data as { status?: string } | null;
@@ -81,12 +87,33 @@ export function RenewalReview({ leagueId, inviteCode, counts, repliesPending, se
           <Text variant="callout">Pick clock</Text>
           <SegmentedControl options={PICK_CLOCK_OPTIONS.map((s) => ({ label: `${s}s`, value: String(s) }))} value={String(pickSeconds)} onChange={(v) => setPickSeconds(Number(v))} />
         </View>
-        <Row label="Season" value={`${settings.num_weeks} weeks`} />
-        {playoffs ? <Row label="Playoffs" value={playoffs} /> : null}
+        <Stepper label="Season" value={weeks} min={seasonWeeksFloor(managers)} onChange={(d) => setWeeks((w) => stepSeasonWeeks(w, d, managers))} unit="weeks" />
+        <Stepper label="Playoffs" value={playoffTeams} min={playoffStepperBounds(managers).min} max={playoffStepperBounds(managers).max} onChange={(d) => setPlayoffTeams((t) => stepPlayoffTeams(t, d, managers))} unit="teams" sub={playoffs ?? undefined} />
       </Card>
       {bye ? <Text variant="caption" tone="secondary">{bye}</Text> : null}
       <Button label="Schedule the draft" onPress={() => void schedule()} disabled={!enabled} />
       <Text variant="caption" tone="secondary">Everyone who's in gets a notification. Season 1 stays in History.</Text>
+    </View>
+  );
+}
+
+function Stepper({ label, value, min, max, onChange, unit, sub }: { label: string; value: number; min: number; max?: number; onChange: (d: 1 | -1) => void; unit: string; sub?: string }) {
+  const { colors } = useTheme();
+  return (
+    <View style={styles.picker}>
+      <View style={styles.stepRow}>
+        <Text variant="callout">{label}</Text>
+        <View style={styles.stepBox}>
+          <Pressable onPress={() => onChange(-1)} disabled={value <= min} accessibilityRole="button" accessibilityLabel={`Fewer ${label.toLowerCase()}`} style={styles.stepHit}>
+            <Icon name="chevronDown" size="callout" tone={value <= min ? 'text3' : 'text2'} />
+          </Pressable>
+          <Text variant="callout" style={{ color: colors.text }}>{`${value} ${unit}`}</Text>
+          <Pressable onPress={() => onChange(1)} disabled={max !== undefined && value >= max} accessibilityRole="button" accessibilityLabel={`More ${label.toLowerCase()}`} style={styles.stepHit}>
+            <Icon name="chevronUp" size="callout" tone={max !== undefined && value >= max ? 'text3' : 'text2'} />
+          </Pressable>
+        </View>
+      </View>
+      {sub ? <Text variant="caption" tone="secondary">{sub}</Text> : null}
     </View>
   );
 }
@@ -109,4 +136,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', minHeight: 44, paddingVertical: space[1] },
   value: { alignItems: 'flex-end', flexShrink: 1 },
   picker: { gap: space[2], paddingVertical: space[2] },
+  stepRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 44 },
+  stepBox: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
+  stepHit: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
 });
