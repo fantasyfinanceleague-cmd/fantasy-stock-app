@@ -79,7 +79,7 @@ export function DraftingCard({ leagueId, myUserId, numRounds }: DraftingCardProp
           </>
         ) : (
           <Text variant="callout" tone="secondary">
-            {upNextLine(turn.round, turn.overallPick, picksUntilTurn(order, clock.picksMade, numRounds, myUserId))}
+            {upNextLine(turn.round, numRounds, turn.overallPick, picksUntilTurn(order, clock.picksMade, numRounds, myUserId))}
           </Text>
         )}
 

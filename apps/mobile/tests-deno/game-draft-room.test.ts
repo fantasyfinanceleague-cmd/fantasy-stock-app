@@ -140,3 +140,38 @@ Deno.test('the draft room renders the clock through pickClockLabel, never a hand
   assertEquals(room.includes('{pickClockLabel(room.clock)}'), true);
   assertEquals(room.includes('`0:${'), false);
 });
+
+// ── UX rule 10: the round with its total, and how far your next pick is ──
+
+import { picksUntilYouLine, roundPickLine } from '../lib/game/draftRoom.ts';
+import { upNextLine } from '../lib/home/homeCopy.ts';
+import { picksUntilTurn } from '../lib/home/draftTurn.ts';
+
+Deno.test('the room: "Round 2 of 6 · Pick 11"', () => {
+  assertEquals(roundPickLine(2, 6, 11), 'Round 2 of 6 · Pick 11');
+});
+
+Deno.test('the room: "{k} picks until you", singular, and nothing on your turn or with no pick left', () => {
+  assertEquals(picksUntilYouLine(3), '3 picks until you');
+  assertEquals(picksUntilYouLine(1), '1 pick until you');
+  assertEquals(picksUntilYouLine(0), null);
+  assertEquals(picksUntilYouLine(-1), null);
+});
+
+Deno.test('Home: "Round 2 of 6 · Pick 11 · you\'re up in 3 picks"', () => {
+  assertEquals(upNextLine(2, 6, 11, 3), "Round 2 of 6 · Pick 11 · you're up in 3 picks");
+  assertEquals(upNextLine(1, 6, 2, 1), "Round 1 of 6 · Pick 2 · you're up in 1 pick");
+});
+
+Deno.test('picks until you follows the snake (4 teams; you are seat 2)', () => {
+  const order = ['a', 'me', 'c', 'd'];
+  assertEquals(picksUntilTurn(order, 0, 6, 'me'), 1); // pick 1 is a's, then you
+  assertEquals(picksUntilTurn(order, 2, 6, 'me'), 4); // picks 3,4 then round 2 reverses: d(5) c(6) you(7)
+  assertEquals(picksUntilYouLine(picksUntilTurn(order, 2, 6, 'me')), '4 picks until you');
+});
+
+Deno.test('the room renders both lines (source guard)', () => {
+  const room = SOURCES['components/game/DraftRoom.tsx'];
+  assertEquals(room.includes('roundPickLine(round, rounds, onClockPick)'), true);
+  assertEquals(room.includes('!isMyTurn && picksUntilYouLine(picksAway)'), true);
+});

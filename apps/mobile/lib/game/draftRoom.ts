@@ -53,6 +53,18 @@ export function clockState(input: { running: boolean; deadlineAt: string | null;
   return { kind: 'on_clock', secondsLeft: left };
 }
 
+/** "Round 2 of 6 · Pick 11" (Design Lead, UX rule 10: the round says "of" the total). NEW. */
+export function roundPickLine(round: number, rounds: number, pick: number): string {
+  return `Round ${round} of ${rounds} · Pick ${pick}`;
+}
+
+/** "3 picks until you" when it isn't your turn (UX rule 10). NEW. Null when it is
+ * your turn (0) or you have no pick left (-1, picksUntilTurn). */
+export function picksUntilYouLine(picksAway: number): string | null {
+  if (!(picksAway > 0)) return null;
+  return `${picksAway} ${picksAway === 1 ? 'pick' : 'picks'} until you`;
+}
+
 /** The pick clock as m:ss (P0, Design Lead audit: it rendered `0:${secondsLeft}`,
  * so a 75 s or 90 s clock read "0:75" / "0:90"). Idle and auto-picking show no
  * clock (the headline says what's happening). Clocks run 30–90 s (pick_seconds). */

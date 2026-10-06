@@ -16,7 +16,8 @@ import { useDraftRoom } from '@/lib/game/useDraftRoom';
 import { QueueEditor } from './QueueEditor';
 import { DRAFT_ROOM_LOAD_FAILED, QUEUE_LOAD_FAILED } from '@/lib/game/draftQueueRead';
 import { managerAtPick, boardRows } from '@/lib/game/draftBoard';
-import { pickClockLabel, pickRowView, pickRefusalLine, pickRefusalNextStep } from '@/lib/game/draftRoom';
+import { pickClockLabel, pickRowView, pickRefusalLine, pickRefusalNextStep, picksUntilYouLine, roundPickLine } from '@/lib/game/draftRoom';
+import { picksUntilTurn } from '@/lib/home/draftTurn';
 import { readFunctionRefusal } from '@/lib/functionRefusal';
 import { turnState } from '@/lib/game/draftRefusals';
 
@@ -49,6 +50,8 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false }
   const round = m > 0 ? Math.floor((onClockPick - 1) / m) + 1 : 0;
   const nameOf = (id: string | null) => (id && room.names[id]?.name) || '';
   const draftDone = m > 0 && room.pickCount >= totalPicks;
+  // UX rule 10: how far away your next pick is (the snake, from Home's draftTurn).
+  const picksAway = m > 0 && myUserId ? picksUntilTurn(room.order, room.pickCount, rounds, myUserId) : -1;
 
   // The auto-pick backstop (D3): past the deadline, the server is asked once, with
   // 0–3 s of jitter, to make the overdue pick. The server's deadline check and
@@ -138,7 +141,10 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false }
           </Text>
         </View>
         <Text variant="callout" style={isMyTurn ? { fontWeight: '700' } : undefined}>{headline}</Text>
-        <Text variant="callout">{`Round ${round} · Pick ${onClockPick}`}</Text>
+        <Text variant="callout">{roundPickLine(round, rounds, onClockPick)}</Text>
+        {!isMyTurn && picksUntilYouLine(picksAway) ? (
+          <Text variant="callout" tone="secondary">{picksUntilYouLine(picksAway)}</Text>
+        ) : null}
         <Text variant="caption" tone="secondary">{`${room.pickSeconds}-second picks`}</Text>
         {stalled?.line ? <Text variant="caption" tone="secondary">{stalled.line}</Text> : null}
       </Card>

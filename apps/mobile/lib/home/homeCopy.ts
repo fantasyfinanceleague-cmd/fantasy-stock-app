@@ -203,9 +203,9 @@ export function onTheClockLine(round: number, pick: number, secondsLeft: number)
   const s = secondsLeft % 60;
   return `Round ${round} · Pick ${pick} · ${m}:${String(s).padStart(2, '0')} left`; // board
 }
-export function upNextLine(round: number, pick: number, picksAway: number): string {
-  // spec: "new copy: flag it"
-  return `Round ${round} · Pick ${pick} · you're up in ${picksAway} ${picksAway === 1 ? 'pick' : 'picks'}`; // giorgio
+/** "Round 2 of 6 · Pick 11 · you're up in 3 picks" (Design Lead, UX rule 10: the round says "of" the total). */
+export function upNextLine(round: number, rounds: number, pick: number, picksAway: number): string {
+  return `Round ${round} of ${rounds} · Pick ${pick} · you're up in ${picksAway} ${picksAway === 1 ? 'pick' : 'picks'}`;
 }
 export const GO_TO_DRAFT_ROOM = 'Go to the draft room'; // board
 export const YOUR_TEAM_SO_FAR = 'Your team so far'; // board
