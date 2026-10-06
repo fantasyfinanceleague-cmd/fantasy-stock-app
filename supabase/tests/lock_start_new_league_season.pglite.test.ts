@@ -1,5 +1,5 @@
 /**
- * 20261023000000_lock_start_new_league_season.sql against REAL Postgres
+ * 20261105000007_lock_start_new_league_season.sql against REAL Postgres
  * (PGlite = Postgres 16 in WASM). NOT hermetic: the first run fetches
  * npm:@electric-sql/pglite. Run instructions: supabase/tests/README.md.
  *
@@ -19,7 +19,7 @@ import { PGlite } from 'npm:@electric-sql/pglite@0.2';
 
 const ROOT = new URL('../../', import.meta.url);
 const mig = (name: string) => Deno.readTextFile(new URL(`supabase/migrations/${name}`, ROOT));
-const MIGRATION = '20261023000000_lock_start_new_league_season.sql';
+const MIGRATION = '20261105000007_lock_start_new_league_season.sql';
 
 /** The exact text from `start` up to and including the first `end` after it. */
 function slice(src: string, start: string, end: string): string {
@@ -77,7 +77,7 @@ grant select on leagues, league_seasons, league_standings, matchups to anon, aut
 type Row = any;
 
 Deno.test({
-  name: 'start_new_league_season lock (20261023000000) on real Postgres (PGlite)',
+  name: 'start_new_league_season lock (20261105000007) on real Postgres (PGlite)',
   sanitizeResources: false,
   sanitizeOps: false,
   async fn(t) {

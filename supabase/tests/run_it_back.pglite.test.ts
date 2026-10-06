@@ -1,5 +1,5 @@
 /**
- * Run it back phase 1 (20261027000000-05) against REAL Postgres (PGlite =
+ * Run it back phase 1 (20261105000000-05) against REAL Postgres (PGlite =
  * Postgres 16 in WASM). NOT hermetic: the first run fetches
  * npm:@electric-sql/pglite. Run instructions: supabase/tests/README.md.
  *
@@ -314,6 +314,7 @@ Deno.test({
       assertEquals(b.caller_status, 'pending');
       assertEquals(b.people, undefined);
       assertEquals(b.counts, undefined);
+      assertEquals(b.commissioner_name, 'carlo');   // the ask can name who is running it back
       assertEquals(await refusal('authenticated', E, `select public.get_renewal_roster($1) r`, [L2]),
         { status: 'not_visible' });
     });

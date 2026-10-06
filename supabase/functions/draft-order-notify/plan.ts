@@ -75,7 +75,7 @@ export function draftOrderSetMessage(i: {
   };
 }
 
-/** Run it back notice kinds (20261027000001). Copy: _shared/renewal-copy.ts, the
+/** Run it back notice kinds (20261105000001). Copy: _shared/renewal-copy.ts, the
  * 3c prompt's "Run it back" section (design @ 3244d02). */
 export const RENEWAL_KINDS = ['renewal_invite', 'renewal_reply', 'renewal_nudge', 'renewal_removed', 'season_set'] as const;
 export type RenewalKind = (typeof RENEWAL_KINDS)[number];
