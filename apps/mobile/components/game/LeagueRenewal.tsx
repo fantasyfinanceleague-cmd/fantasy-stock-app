@@ -14,7 +14,7 @@ export interface LeagueRenewalProps {
   /** The renewed (successor) league: a new season that has not drafted yet. */
   successorId: string;
   /** The renewed league's settings (carried over from Season 1), for the review. */
-  settings: { name: string; num_weeks: number; pick_seconds: number; draft_date: string | null; draft_order_mode: string; playoff_teams: number | null };
+  settings: { name: string; num_weeks: number; pick_seconds: number; draft_date: string | null; draft_order_mode: string; playoff_teams: number | null; notional_per_slot?: number | null; num_rounds?: number };
   inviteCode: string;
   onScheduled: () => void;
   leagueId: string;

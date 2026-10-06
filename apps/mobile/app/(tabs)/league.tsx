@@ -182,6 +182,8 @@ function LeagueRenewalScreen({ leagueId, createdAt }: { leagueId: string; create
             draft_date: activeLeague?.draft_date ?? null,
             draft_order_mode: activeLeague?.draft_order_mode ?? 'random',
             playoff_teams: activeLeague?.playoff_teams ?? null,
+            notional_per_slot: activeLeague?.notional_per_slot ?? null,
+            num_rounds: activeLeague?.num_rounds,
           }}
           inviteCode={activeLeague?.invite_code ?? ''}
           onScheduled={() => setKey((k) => k + 1)}

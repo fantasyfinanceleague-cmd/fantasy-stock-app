@@ -5,6 +5,7 @@ import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { Button } from '@/components/sp/Button';
 import { Icon } from '@/components/sp/Icon';
+import { formatMoney } from '@/components/sp/logic/money';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { space } from '@/constants/tokens';
 import { supabase } from '@/lib/supabase';
@@ -23,7 +24,7 @@ export interface RenewalReviewProps {
   counts: { in: number; new: number };
   repliesPending: boolean;
   /** The Season 1 settings carried over, as stored on the renewed league. */
-  settings: { name: string; num_weeks: number; pick_seconds: number; draft_date: string | null; draft_order_mode: string; playoff_teams: number | null };
+  settings: { name: string; num_weeks: number; pick_seconds: number; draft_date: string | null; draft_order_mode: string; playoff_teams: number | null; notional_per_slot?: number | null; num_rounds?: number };
   onScheduled: () => void;
 }
 
@@ -89,6 +90,9 @@ export function RenewalReview({ leagueId, inviteCode, counts, repliesPending, se
         </View>
         <Stepper label="Season" value={weeks} min={seasonWeeksFloor(managers)} onChange={(d) => setWeeks((w) => stepSeasonWeeks(w, d, managers))} unit="weeks" />
         <Stepper label="Playoffs" value={playoffTeams} min={playoffStepperBounds(managers).min} max={playoffStepperBounds(managers).max} onChange={(d) => setPlayoffTeams((t) => stepPlayoffTeams(t, d, managers))} unit="teams" sub={playoffs ?? undefined} />
+        {/* Stakes (board): the stake per slot and the slots. Read-only until the stake
+            bounds are in the server contract, so the chevron is not offered yet. */}
+        <Row label="Stakes" value={settings.notional_per_slot != null ? `${formatMoney(settings.notional_per_slot)} a slot` : 'Not set'} sub={settings.num_rounds != null ? `${settings.num_rounds} slots` : undefined} />
       </Card>
       {bye ? <Text variant="caption" tone="secondary">{bye}</Text> : null}
       <Button label="Schedule the draft" onPress={() => void schedule()} disabled={!enabled} />
