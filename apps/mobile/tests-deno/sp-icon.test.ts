@@ -11,7 +11,7 @@ import {
 
 const NAMES: IconName[] = [
   'chevronRight', 'chevronLeft', 'chevronDown', 'chevronUp', 'check', 'circle', 'info',
-  'close', 'search', 'add', 'share', 'trophy', 'lock', 'mail', 'alert',
+  'close', 'search', 'add', 'remove', 'share', 'trophy', 'lock', 'mail', 'alert',
 ];
 
 Deno.test('the name map is exhaustive and matches the spec table', () => {
@@ -52,6 +52,11 @@ Deno.test('decorative by default: hidden from VoiceOver with no label', () => {
 
 Deno.test('a label makes it accessible and carries that label', () => {
   assertEquals(iconAccessibility('Back'), { accessible: true, hidden: false, label: 'Back' });
+});
+
+Deno.test('remove is the stepper minus (Ionicons remove), the pair of add', () => {
+  assertEquals(ICON_GLYPHS.remove, 'remove');
+  assertEquals(ICON_GLYPHS.add, 'add');
 });
 
 Deno.test('alert is the load-failure icon (alert-circle-outline)', () => {
