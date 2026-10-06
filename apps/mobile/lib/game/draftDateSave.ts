@@ -26,11 +26,14 @@ export function defaultDraftDate(now: Date): Date {
   return new Date(Math.ceil((now.getTime() + HOUR_MS) / QUARTER_MS) * QUARTER_MS);
 }
 
-/** What opening the picker writes to state: the current date if it's still in
- * the future, otherwise the default. A past date is never offered as the
- * value to accept (the picker's minimum is now). */
+/** What opening the picker writes to state: the current date if the picker
+ * could offer it (on the 15-minute grid and at least the earliest time, an
+ * hour out; draft auto-start's rules), otherwise the earliest time. So the
+ * value shown is always one the server accepts, and accepting it commits it. */
 export function seedDraftDate(current: Date | null, now: Date): Date {
-  return current && current.getTime() > now.getTime() ? current : defaultDraftDate(now);
+  const earliest = defaultDraftDate(now);
+  if (current && current.getTime() % QUARTER_MS === 0 && current.getTime() >= earliest.getTime()) return current;
+  return earliest;
 }
 
 /** Shown under the Draft date row when a date was chosen but none is set. NEW copy. */

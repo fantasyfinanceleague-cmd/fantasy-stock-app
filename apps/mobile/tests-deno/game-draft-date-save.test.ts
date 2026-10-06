@@ -47,12 +47,17 @@ Deno.test('opening the picker with no date seeds the default, so accepting it co
   assertEquals(draftDateForSave(false, seeded), { ok: true, value: '2026-10-06T19:15:00.000Z' });
 });
 
-Deno.test('a future date is kept; a past date is replaced by the default', () => {
+Deno.test('a date the picker can offer is kept; anything else becomes the earliest time', () => {
   const now = at('2026-10-06T18:07:00Z');
   const future = at('2026-10-10T23:00:00Z');
   assertEquals(seedDraftDate(future, now), future);
-  assertEquals(seedDraftDate(at('2026-10-01T23:00:00Z'), now).toISOString(), '2026-10-06T19:15:00.000Z');
-  assertEquals(seedDraftDate(now, now).toISOString(), '2026-10-06T19:15:00.000Z'); // "now" is not the future
+  assertEquals(seedDraftDate(at('2026-10-06T19:15:00Z'), now).toISOString(), '2026-10-06T19:15:00.000Z'); // exactly the earliest
+  assertEquals(seedDraftDate(at('2026-10-01T23:00:00Z'), now).toISOString(), '2026-10-06T19:15:00.000Z'); // past
+  assertEquals(seedDraftDate(now, now).toISOString(), '2026-10-06T19:15:00.000Z'); // "now"
+  // Auto-start rules: under an hour out, or off the 15-minute grid, is never offered.
+  assertEquals(seedDraftDate(at('2026-10-06T19:00:00Z'), now).toISOString(), '2026-10-06T19:15:00.000Z'); // 53 min out
+  assertEquals(seedDraftDate(at('2026-10-10T23:07:00Z'), now).toISOString(), '2026-10-06T19:15:00.000Z'); // 12:07-style (1.1.0)
+  assertEquals(seedDraftDate(at('2026-10-10T23:00:30Z'), now).toISOString(), '2026-10-06T19:15:00.000Z'); // seconds
 });
 
 // ── (2) never undefined ──────────────────────────────────────────────────
