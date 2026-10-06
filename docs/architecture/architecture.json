@@ -2,31 +2,22 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "ba7608b142cfd9e596083a41f8b8b2149ae23c76",
-    "commitShort": "ba7608b",
+    "commit": "1f13272f9674571086e76f183a67fa51fb12f2bd",
+    "commitShort": "1f13272",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "feat/commissioner-transfer",
-    "dirty": true,
-    "dirtyPaths": [
-      {
-        "code": "M",
-        "path": "supabase/migrations/20261110000000_transfer_commissioner.sql"
-      },
-      {
-        "code": "M",
-        "path": "supabase/migrations/20261110000001_leave_league_transfer_first.sql"
-      }
-    ],
-    "timestamp": "2026-10-06T19:28:55Z",
-    "sourceHash": "sha256:398d9364e4155a2798ded0411b18e6d74e2c8bcf85d3b4e39184051583b6269c",
+    "branch": "",
+    "dirty": false,
+    "dirtyPaths": [],
+    "timestamp": "2026-10-06T21:58:25Z",
+    "sourceHash": "sha256:eb8dbb330d214b4c61c939fea340b8925a1b1433a8e97b16527fa59e4d5c0bd3",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-06T19:12:57Z",
-    "ageHours": 0.3,
-    "ageDays": 0,
+    "ageHours": 2.8,
+    "ageDays": 0.1,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:be9c8b3930bebef14a7ab20269e4bed6bdc22782c00084eb7d978383d1a6671c",
@@ -14602,6 +14593,18 @@
       "caveat": "No scanned caller. Tables can also be reached from plpgsql bodies (now parsed) or dynamic SQL (not parsed)."
     }
   ],
+  "callSiteScan": {
+    "covers": "Direct supabase calls with a literal name (.rpc / .functions.invoke / .from), plus calls through wrapper functions found from their DEFINITIONS (a function that forwards a parameter as the call name; a SEAM_ON stub that makes real calls; a callback wrapper whose closure makes them). Comments are ignored.",
+    "wrappers": [],
+    "inferred": [],
+    "unattributed": [],
+    "cannotSee": [
+      "a name built at runtime (reported above, never guessed)",
+      "a wrapper reached through a re-export or alias this cannot resolve by file name",
+      "object/class methods that call supabase with a name argument (reported as unattributed)",
+      "a seam stub gated by something other than SEAM_ON"
+    ]
+  },
   "unverified": [
     {
       "scope": "pg._league_membership_window",
@@ -15020,6 +15023,8 @@
       "supabase/functions/validate-and-record-pick/index.ts:316 -> symbols.select",
       "supabase/functions/validate-and-record-pick/index.ts:6 -> drafts.insert"
     ],
+    "wrappers": [],
+    "unattributed": [],
     "migrations": [
       "20250118000000_create_trades.sql",
       "20250122000000_check_real_users.sql",
