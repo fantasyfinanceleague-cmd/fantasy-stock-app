@@ -16,7 +16,7 @@ import { useDraftRoom } from '@/lib/game/useDraftRoom';
 import { QueueEditor } from './QueueEditor';
 import { DRAFT_ROOM_LOAD_FAILED, QUEUE_LOAD_FAILED } from '@/lib/game/draftQueueRead';
 import { managerAtPick, boardRows } from '@/lib/game/draftBoard';
-import { pickRowView, pickRefusalLine, pickRefusalNextStep } from '@/lib/game/draftRoom';
+import { pickClockLabel, pickRowView, pickRefusalLine, pickRefusalNextStep } from '@/lib/game/draftRoom';
 import { turnState } from '@/lib/game/draftRefusals';
 
 export interface DraftRoomProps {
@@ -128,7 +128,7 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false }
         <View style={styles.clockRow}>
           {room.clock.kind === 'last10' ? <LiveDot size={8} /> : null}
           <Text variant="headline" style={{ color: room.clock.kind === 'last10' ? colors.loss : colors.text }}>
-            {room.clock.kind === 'idle' || room.clock.secondsLeft === null ? '' : room.clock.kind === 'auto_picking' ? '' : `0:${String(room.clock.secondsLeft).padStart(2, '0')}`}
+            {pickClockLabel(room.clock)}
           </Text>
         </View>
         <Text variant="callout" style={isMyTurn ? { fontWeight: '700' } : undefined}>{headline}</Text>

@@ -95,3 +95,48 @@ Deno.test('no refusal line is a placeholder', () => {
     assertEquals(pickRefusalLine(r, { stock: 'NVDA' }).includes('[new copy'), false, r);
   }
 });
+
+// ── The pick clock as m:ss (P0, Design Lead audit: it read "0:75" / "0:90") ──
+
+import { pickClockLabel } from '../lib/game/draftRoom.ts';
+
+const on = (secondsLeft: number) => clockState({ running: true, deadlineAt: new Date(Date.parse('2026-10-03T23:00:00Z') + secondsLeft * 1000).toISOString(), serverNow: '2026-10-03T23:00:00Z' });
+
+Deno.test('every pick clock length reads m:ss at the start of a turn: 30 / 45 / 60 / 75 / 90', () => {
+  assertEquals(pickClockLabel(on(30)), '0:30');
+  assertEquals(pickClockLabel(on(45)), '0:45');
+  assertEquals(pickClockLabel(on(60)), '1:00');
+  assertEquals(pickClockLabel(on(75)), '1:15');
+  assertEquals(pickClockLabel(on(90)), '1:30');
+});
+
+Deno.test('the last 10 seconds: 0:10 down to 0:01, still the last10 state', () => {
+  for (let s = 10; s >= 1; s--) {
+    const c = on(s);
+    assertEquals(c.kind, 'last10');
+    assertEquals(pickClockLabel(c), `0:${String(s).padStart(2, '0')}`);
+  }
+  assertEquals(pickClockLabel(on(11)), '0:11');
+  assertEquals(on(11).kind, 'on_clock');
+});
+
+Deno.test('no clock while idle or auto-picking (the headline says it)', () => {
+  assertEquals(pickClockLabel(clockState({ running: false, deadlineAt: null, serverNow: '2026-10-03T23:00:00Z' })), '');
+  assertEquals(pickClockLabel(on(0)), '');
+  assertEquals(pickClockLabel(on(-3)), '');
+});
+
+Deno.test('never "0:75": no label has more than 59 seconds after the colon', () => {
+  for (let s = 1; s <= 90; s++) {
+    const secs = Number(pickClockLabel(on(s)).split(':')[1]);
+    assertEquals(secs <= 59, true, String(s));
+  }
+});
+
+import { SOURCES } from './sourceManifest.generated.ts';
+
+Deno.test('the draft room renders the clock through pickClockLabel, never a hand-built "0:" (source guard)', () => {
+  const room = SOURCES['components/game/DraftRoom.tsx'];
+  assertEquals(room.includes('{pickClockLabel(room.clock)}'), true);
+  assertEquals(room.includes('`0:${'), false);
+});

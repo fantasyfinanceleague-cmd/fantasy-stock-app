@@ -53,6 +53,15 @@ export function clockState(input: { running: boolean; deadlineAt: string | null;
   return { kind: 'on_clock', secondsLeft: left };
 }
 
+/** The pick clock as m:ss (P0, Design Lead audit: it rendered `0:${secondsLeft}`,
+ * so a 75 s or 90 s clock read "0:75" / "0:90"). Idle and auto-picking show no
+ * clock (the headline says what's happening). Clocks run 30–90 s (pick_seconds). */
+export function pickClockLabel(clock: ClockState): string {
+  if (clock.kind === 'idle' || clock.kind === 'auto_picking' || clock.secondsLeft === null) return '';
+  const s = Math.max(0, Math.floor(clock.secondsLeft));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
 /** The pick refusals the app has always shown, VERBATIM (existing copy, from the
  * legacy draft route). The never-skips reasons (would_strand_slot,
  * budget_reserve) carry the board's ruled copy below (pickRefusalLine). */
