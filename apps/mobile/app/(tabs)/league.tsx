@@ -41,6 +41,8 @@ import { SettingRow, SetupCard } from '@/components/game/SetupRows';
 import { showsLeagueSettingsRow } from '@/lib/game/leagueSettingsEntry';
 import { QueueEditor } from '@/components/game/QueueEditor';
 import { useDraftQueue } from '@/lib/game/useDraftQueue';
+import { useRenewalRoster } from '@/lib/game/useRenewalRoster';
+import { renewalReadyForLobby } from '@/lib/game/renewalLobby';
 import { QUEUE_LOAD_FAILED } from '@/lib/game/draftQueueRead';
 
 // League (3c). The standings for a season in progress, the season over and
@@ -146,7 +148,7 @@ export default function LeagueScreen() {
   }
 
   if (preDraft && activeLeagueId && activeLeague?.previous_league_id) {
-    return <LeagueRenewalScreen leagueId={activeLeagueId} createdAt={activeLeague.created_at ?? new Date().toISOString()} />;
+    return <RenewedPreDraft leagueId={activeLeagueId} createdAt={activeLeague.created_at ?? new Date().toISOString()} />;
   }
   if (preDraft && activeLeagueId) {
     return <LeagueLobby leagueId={activeLeagueId} />;
@@ -165,10 +167,35 @@ export default function LeagueScreen() {
   );
 }
 
-/** A renewed league before its draft (3c, Run it back): the roster or the ask. */
-function LeagueRenewalScreen({ leagueId, createdAt }: { leagueId: string; createdAt: string }) {
+/** A renewed league before its draft (3c-2): the Run it back flow until the
+ * renewal is reconciled and the season is set, then the normal pre-draft lobby
+ * (the queue, Start the draft, League settings), per the board's Season 2
+ * League tab → "Go to the draft lobby". See renewalReadyForLobby. */
+function RenewedPreDraft({ leagueId, createdAt }: { leagueId: string; createdAt: string }) {
+  const { activeLeague, refresh } = useLeagueContext();
+  const [rosterKey, setRosterKey] = useState(0);
+  const roster = useRenewalRoster(leagueId, null, rosterKey);
+  const ready = roster.status === 'ready' && renewalReadyForLobby({ roster: roster.roster, draftDate: activeLeague?.draft_date });
+  if (ready) return <LeagueLobby leagueId={leagueId} />;
+  return (
+    <LeagueRenewalScreen
+      leagueId={leagueId}
+      createdAt={createdAt}
+      onScheduled={async () => {
+        // Re-read the league (its new draft_date) and the roster, so a scheduled
+        // season moves straight to the lobby.
+        await refresh();
+        setRosterKey((k) => k + 1);
+      }}
+    />
+  );
+}
+
+/** A renewed league before its draft (3c, Run it back): the roster or the ask. No
+ * League settings row here: the review is the only way to set Season 2's date
+ * (renewalReadyForLobby relies on it); the row is in the lobby after scheduling. */
+function LeagueRenewalScreen({ leagueId, createdAt, onScheduled }: { leagueId: string; createdAt: string; onScheduled: () => void }) {
   const { refresh, activeLeague } = useLeagueContext();
-  const { user } = useAuth();
   const { colors } = useTheme();
   const [key, setKey] = useState(0);
   const hist = useLeagueHistory(leagueId, true);
@@ -196,16 +223,11 @@ function LeagueRenewalScreen({ leagueId, createdAt }: { leagueId: string; create
             num_rounds: activeLeague?.num_rounds,
           }}
           inviteCode={activeLeague?.invite_code ?? ''}
-          onScheduled={() => setKey((k) => k + 1)}
+          onScheduled={() => {
+            setKey((k) => k + 1);
+            onScheduled();
+          }}
         />
-        {showsLeagueSettingsRow(activeLeague?.commissioner_id, user?.id) ? (
-          <SetupCard>
-            <SettingRow
-              label="League settings"
-              onPress={() => router.push({ pathname: '/league-settings', params: { leagueId } })}
-            />
-          </SetupCard>
-        ) : null}
       </BarsRefresh>
     </View>
   );
