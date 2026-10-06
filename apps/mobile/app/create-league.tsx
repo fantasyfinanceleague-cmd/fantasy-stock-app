@@ -59,6 +59,7 @@ import {
 import { byeNoticeCopy } from '@/lib/game/draftLobby';
 import { PRICE_TIERS_NEED_A_SLOT, rosterSlotsCaption } from '@/lib/game/slotBuilderCopy';
 import { draftDateTimeLabel } from '@/lib/home/draftCountdown';
+import { draftDateForSave, seedDraftDate } from '@/lib/game/draftDateSave';
 import { stakesLine } from '@/lib/stakesLine';
 import { INVITE_CODE_LABEL } from '@/lib/home/homeCopy';
 import {
@@ -117,6 +118,8 @@ export default function CreateLeagueWizard() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   // The done screen (Design Lead ruling), in place of the old "League Created!" Alert.
   const [created, setCreated] = useState<{ name: string; inviteCode: string; noDate: boolean } | null>(null);
+  // Inline, under the Draft date row: a chosen date with no value (draftDateForSave).
+  const [dateError, setDateError] = useState<string | null>(null);
   // Inline, under the name field (Design Lead ruling), never an Alert.
   const [nameError, setNameError] = useState<string | null>(null);
 
@@ -164,6 +167,15 @@ export default function CreateLeagueWizard() {
       return;
     }
 
+    // Never send draft_date: undefined (a live 1.1.0 bug): Set later is null, a
+    // chosen date must have a value.
+    const draftDateValue = draftDateForSave(state.draftDateTBD, state.draftDate);
+    if (!draftDateValue.ok) {
+      setDateError(draftDateValue.error);
+      setStep('draft');
+      return;
+    }
+
     setCreating(true);
     try {
       const effectiveWeeks = state.type === 'matchup' ? Math.max(state.numWeeks, minWeeks) : null;
@@ -191,7 +203,7 @@ export default function CreateLeagueWizard() {
           draft_status: 'not_started',
           draft_order_mode: state.draftOrder,
           pick_seconds: state.pickSeconds,
-          draft_date: state.draftDateTBD ? null : state.draftDate?.toISOString(),
+          draft_date: draftDateValue.value,
       });
 
       if (leagueError) throw leagueError;
@@ -237,6 +249,11 @@ export default function CreateLeagueWizard() {
       const error = leagueNameError(state.name, validateLeagueName);
       setNameError(error);
       if (error) return;
+    }
+    if (step === 'draft') {
+      const date = draftDateForSave(state.draftDateTBD, state.draftDate);
+      setDateError(date.ok ? null : date.error);
+      if (!date.ok) return;
     }
     if (step === 'stakes') {
       // Price tiers NEED slot price ranges (they are the anti-skew mechanism);
@@ -368,7 +385,9 @@ export default function CreateLeagueWizard() {
           value={draftDateValue}
           valueColor={state.draftDateTBD ? colors.warnText : undefined}
           onPress={() => {
-            patch({ draftDateTBD: false });
+            // Seed the value the picker shows, so accepting it unchanged commits a date.
+            patch({ draftDateTBD: false, draftDate: seedDraftDate(state.draftDate, new Date()) });
+            setDateError(null);
             setShowDatePicker(true);
           }}
         />
@@ -400,6 +419,11 @@ export default function CreateLeagueWizard() {
         </View>
       </SetupCard>
 
+      {dateError ? (
+        <Text variant="callout" color={colors.danger} accessibilityLiveRegion="polite">
+          {dateError}
+        </Text>
+      ) : null}
       {state.draftDateTBD ? (
         <Text variant="caption" tone="secondary">
           {DRAFT_DATE_LATER}
@@ -410,7 +434,10 @@ export default function CreateLeagueWizard() {
         visible={showDatePicker && !state.draftDateTBD}
         value={state.draftDate}
         onChange={(d) => patch({ draftDate: d, draftDateTBD: false })}
-        onSetLater={() => patch({ draftDateTBD: true, draftDate: null })}
+        onSetLater={() => {
+          patch({ draftDateTBD: true, draftDate: null });
+          setDateError(null);
+        }}
         onClose={() => setShowDatePicker(false)}
       />
     </>

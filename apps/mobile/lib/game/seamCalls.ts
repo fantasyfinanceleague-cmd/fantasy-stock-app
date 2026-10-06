@@ -26,10 +26,13 @@ export async function seamInvoke(fn: string, opts: { body: Record<string, unknow
   return supabase.functions.invoke(fn, opts);
 }
 
-/** A league update (the playoff-teams stepper). With the seam on it succeeds on the fixture and writes nothing. */
+/** A league update (League settings, the playoff-teams stepper). It selects the
+ * updated row's id, so the caller can tell a real write from a 0-row no-op (an
+ * update that matches nothing resolves with no error: check it with
+ * updatedOneRow). With the seam on it "updates" the one fixture row and writes nothing. */
 export async function seamUpdateLeague(id: string, patch: Record<string, unknown>) {
-  if (SEAM_ON) return { data: null, error: null };
-  return supabase.from('leagues').update(patch).eq('id', id);
+  if (SEAM_ON) return { data: [{ id }], error: null };
+  return supabase.from('leagues').update(patch).eq('id', id).select('id');
 }
 
 /** A table read through the seam: the fixture rows when the seam is on, else the real query. */

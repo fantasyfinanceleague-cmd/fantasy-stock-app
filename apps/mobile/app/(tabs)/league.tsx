@@ -42,6 +42,7 @@ import { showsLeagueSettingsRow } from '@/lib/game/leagueSettingsEntry';
 import { QueueEditor } from '@/components/game/QueueEditor';
 import { useDraftQueue } from '@/lib/game/useDraftQueue';
 import { useRenewalRoster } from '@/lib/game/useRenewalRoster';
+import { updatedOneRow } from '@/lib/game/draftDateSave';
 import { renewalReadyForLobby } from '@/lib/game/renewalLobby';
 import { QUEUE_LOAD_FAILED } from '@/lib/game/draftQueueRead';
 
@@ -263,8 +264,9 @@ function LeagueLobby({ leagueId }: { leagueId: string }) {
 
   // The stepper writes the same leagues update League settings uses, then re-reads the status.
   const setPlayoffTeams = async (teams: number) => {
-    const { error } = await seamUpdateLeague(leagueId, { playoff_teams: teams });
-    if (error) {
+    // 0 rows (no error) is not a change either (updatedOneRow).
+    const res = await seamUpdateLeague(leagueId, { playoff_teams: teams });
+    if (!updatedOneRow(res)) {
       setStartError("The playoff teams didn't change. Try again.");
       return;
     }

@@ -7,6 +7,7 @@ import { Button } from '@/components/sp/Button';
 import { Sheet } from '@/components/sp/Sheet';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
+import { defaultDraftDate } from '@/lib/game/draftDateSave';
 
 // 3c-2 — the board draws the Draft date as a row ("Draft date · Sat, Oct 3 ·
 // 7:00 PM ET ›"); this is what the row opens (no frame: composed). The caller
@@ -33,7 +34,10 @@ export function DraftDateSheet({ visible, value, onChange, onSetLater, onClose }
         </Text>
         {visible ? (
           <DateTimePicker
-            value={value || new Date()}
+            // The caller seeds the state when it opens the sheet (seedDraftDate), so
+            // accepting this value without spinning commits it. The fallback is
+            // the same default, never a bare "now".
+            value={value ?? defaultDraftDate(new Date())}
             mode="datetime"
             display={Platform.OS === 'ios' ? 'spinner' : 'default'}
             themeVariant={resolvedTheme}

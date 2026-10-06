@@ -30,6 +30,7 @@ import { leagueNameError, stepWithin } from '@/lib/game/createLeagueSteps';
 import { PRICE_TIERS_NEED_A_SLOT, rosterSlotsCaption } from '@/lib/game/slotBuilderCopy';
 import { SETTINGS_LOCKED } from '@/lib/game/leagueSettingsEntry';
 import { draftDateTimeLabel } from '@/lib/home/draftCountdown';
+import { draftDateForSave, seedDraftDate, updatedOneRow } from '@/lib/game/draftDateSave';
 import { space, typeFontFamily } from '@/constants/tokens';
 import { Button } from '@/components/sp/Button';
 import { Icon } from '@/components/sp/Icon';
@@ -78,6 +79,7 @@ export default function LeagueSettingsScreen() {
   // its field, price tiers with no slot under Roster slots, slot errors on the slots.
   const [nameError, setNameError] = useState<string | null>(null);
   const [slotsError, setSlotsError] = useState<string | null>(null);
+  const [dateError, setDateError] = useState<string | null>(null);
 
   // Initialize form with league data
   useEffect(() => {
@@ -115,6 +117,12 @@ export default function LeagueSettingsScreen() {
     setNameError(nameProblem);
     if (nameProblem) return;
 
+    // Never send draft_date: undefined (a live 1.1.0 bug: the screen said
+    // Success while the date stayed NULL). Set later is null; a chosen date must have a value.
+    const draftDateValue = draftDateForSave(draftDateTBD, draftDate);
+    setDateError(draftDateValue.ok ? null : draftDateValue.error);
+    if (!draftDateValue.ok) return;
+
     setSaving(true);
 
     try {
@@ -136,7 +144,7 @@ export default function LeagueSettingsScreen() {
       // didn't pick. budget_mode / salary_cap_limit: retired, never written.
       const patch: Record<string, unknown> = {
         name: trimmedName,
-        draft_date: draftDateTBD ? null : draftDate?.toISOString(),
+        draft_date: draftDateValue.value,
         num_participants: numParticipants,
         num_rounds: numRounds,
         allow_undraftable: allowUndraftable,
@@ -154,10 +162,16 @@ export default function LeagueSettingsScreen() {
       // Order: the league row first. It carries the rules freeze, so a refusal
       // here writes nothing. The roster second: if it is refused after the league
       // row landed, the outcome says PARTLY saved rather than a raw error.
-      const { error } = await seamUpdateLeague(league.id, patch);
-      if (error) {
-        const outcome = settingsSaveOutcome({ patchError: error, slotsError: null });
+      const res = await seamUpdateLeague(league.id, patch);
+      if (res.error) {
+        const outcome = settingsSaveOutcome({ patchError: res.error, slotsError: null });
         Alert.alert(outcome.title ?? 'Not saved', outcome.message ?? '');
+        return;
+      }
+      // An update that matched no row (RLS, a stale league) resolves with no
+      // error: that is "Not saved", never a success (CLAUDE.md, false success).
+      if (!updatedOneRow(res)) {
+        Alert.alert('Not saved', "Your settings didn't save. Try again.");
         return;
       }
 
@@ -258,7 +272,10 @@ export default function LeagueSettingsScreen() {
             valueColor={draftDateTBD ? colors.warnText : undefined}
             disabled={isLocked}
             onPress={isLocked ? undefined : () => {
+              // Seed the value the picker shows, so accepting it unchanged commits a date.
               setDraftDateTBD(false);
+              setDraftDate((d) => seedDraftDate(d, new Date()));
+              setDateError(null);
               setShowDatePicker(true);
             }}
           />
@@ -276,6 +293,12 @@ export default function LeagueSettingsScreen() {
           </View>
         </SetupCard>
       </View>
+
+      {dateError ? (
+        <Text variant="callout" color={colors.danger} accessibilityLiveRegion="polite">
+          {dateError}
+        </Text>
+      ) : null}
 
       {/* Teams: bounds = DB CHECK leagues_num_participants_range (4-16). */}
       <SetupCard style={styles.cardStack}>
@@ -406,7 +429,10 @@ export default function LeagueSettingsScreen() {
         visible={showDatePicker && !draftDateTBD && !isLocked}
         value={draftDate}
         onChange={setDraftDate}
-        onSetLater={() => setDraftDateTBD(true)}
+        onSetLater={() => {
+          setDraftDateTBD(true);
+          setDateError(null);
+        }}
         onClose={() => setShowDatePicker(false)}
       />
     </SetupScaffold>
