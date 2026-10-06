@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { useState } from 'react';
 import { View, StyleSheet, useWindowDimensions } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Icon } from '@/components/sp/Icon';
 
 import { space } from '@/constants/tokens';
@@ -134,7 +133,7 @@ function MatchupBody({ status, derived, phase, onRefresh, chyron, revealPlay, fi
   const { width } = useWindowDimensions();
   if (status === 'error') {
     return (
-      <PhasePlaceholder title="Matchup" icon={(p) => <Ionicons name="alert-circle-outline" {...p} />} heading="Couldn't load this matchup" message="Pull down to try again." onRefresh={onRefresh} />
+      <PhasePlaceholder title="Matchup" icon={() => <Icon name="alert" size="title" tone="text2" />} heading="Couldn't load this matchup" message="Pull down to try again." onRefresh={onRefresh} />
     );
   }
   if (status === 'loading' || !derived || !user) return null; // honest empty while loading, never a made-up number

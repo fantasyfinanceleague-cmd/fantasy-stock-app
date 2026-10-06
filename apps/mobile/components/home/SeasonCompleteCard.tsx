@@ -2,7 +2,7 @@
 import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Icon } from '@/components/sp/Icon';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -132,8 +132,9 @@ export function SeasonCompleteCard({
             live-gold wash or circle, so the color itself never implies
             a win that didn't happen. */}
         {isChampion ? <LinearGradient colors={[colors.liveGlow, 'transparent']} style={styles.wash} pointerEvents="none" /> : null}
-        <Animated.View style={[styles.trophyCircle, { backgroundColor: isChampion ? colors.live : colors.text2 }, trophyStyle]}>
-          <Ionicons name="trophy" size={36} color={colors.surface} />
+        {/* The medallion draws its own disc (§9B): 36 pt glyph in a 72 pt disc, scaled with Dynamic Type. */}
+        <Animated.View style={trophyStyle}>
+          <Icon name="trophy" size="medallion" tone="surface" discTone={isChampion ? 'live' : 'text2'} />
         </Animated.View>
         <Text variant="tag" style={{ color: colors.liveText }}>
           {SEASON_COMPLETE_TITLE}

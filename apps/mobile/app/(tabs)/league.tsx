@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { View, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Icon } from '@/components/sp/Icon';
 import { router } from 'expo-router';
 import { Share } from 'react-native';
@@ -60,7 +59,7 @@ export default function LeagueScreen() {
 
   if (inSeason) {
     if (st.status === 'error') {
-      return <PhasePlaceholder title="League" icon={(p) => <Ionicons name="alert-circle-outline" {...p} />} heading="Couldn't load the standings" message="Pull down to try again." onRefresh={refresh} />;
+      return <PhasePlaceholder title="League" icon={() => <Icon name="alert" size="title" tone="text2" />} heading="Couldn't load the standings" message="Pull down to try again." onRefresh={refresh} />;
     }
     const rows = buildStandingsRows(st.standings, user?.id ?? '', st.previousRanks);
     return (
