@@ -541,3 +541,26 @@ because the bare name `record_trade_atomic` contains "atomic", which the splitte
 reads as `BEGIN ATOMIC`. Fix: quote the identifier (`public."my_atomic_fn"`).
 
 Run: `deno test --allow-read supabase/tests/migration_cli_split.test.ts` (files only).
+
+## autopick_cron_wiring.test.ts, autopick_cron_predicate.pglite.test.ts
+
+The auto-pick cron (`20261106000000`) cannot run in PGlite (`pg_cron`, `pg_net` and `vault` do not exist
+there), so two tests cover what a header comment cannot enforce.
+- `autopick_cron_wiring.test.ts` (hermetic, `--allow-read` only): schedule and cadence, vault key with no key
+  literal, explicit `timeout_milliseconds := 180000`, the stall throttle window equals `STALL_COOLDOWN_MS`
+  and does not throttle `vendor_outage`, the purge job is plain SQL, the stamps are in order, nothing is left
+  in `deferred/`.
+- `autopick_cron_predicate.pglite.test.ts`: slices the cron's actual `where exists (...)` out of the migration and
+  executes it against a stubbed `overdue_draft_turns()` and a `draft_stalls` replica (11 cases).
+
+## refuse_new_skip.pglite.test.ts
+
+Loads `20261106000002` verbatim onto a `drafts` table that already holds legacy SKIP rows: SKIP/skip INSERT and an
+UPDATE-to-SKIP are refused with `23514`, normal picks insert, legacy rows stay readable and editable on other
+columns, and the function is not executable by anon/authenticated.
+
+## autopick_runbook_sql.pglite.test.ts
+
+Runs `docs/security/autopick-live-test-proof.sql` and `docs/security/refuse-new-skip-effect-test.sql` **verbatim**
+(the SQL-editor scripts of `docs/migrations/AUTOPICK_CRON_LIVE.md`): PASS on a good fixture, then one mutation per
+check must flip exactly its own line to FAIL, and each script must leave nothing behind.
