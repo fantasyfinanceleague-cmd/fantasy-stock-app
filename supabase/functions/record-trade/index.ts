@@ -25,6 +25,13 @@
 //   without re-deriving the walk itself. No vendor call, no write. Other
 //   stake modes get an empty/zero shape back.
 //
+// CONCURRENCY (2026-10-05): validation runs here in TS, but the INSERT is
+//   record_trade_atomic — a league-wide lock + compare-and-swap of every
+//   league-scoped input the validator read (trades/drafts id sets, rules,
+//   slots). A request that loses a race re-reads and re-validates, so it gets
+//   the right game refusal; trade_conflict only after MAX_ATTEMPTS losses.
+//   See commit.ts and supabase/migrations/20261102000000_record_trade_atomic.sql.
+//
 // Mid-week scoring: NO new mechanism here. A buy lands as a plain trades row;
 // snapshot-week-end's close.ts derives the entered_mid_week snapshot from
 // exactly that row (weighted-average entry price over 'buy' rows), and
@@ -46,15 +53,20 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { fetchFillPrice } from '../_shared/alpaca-price.ts';
 import { fetchEligibleCategoryIds } from '../_shared/category-eligibility.ts';
+import { fixedNotionalFunding, type TradeRow, validateTradeDrop } from '../_shared/draft-validation.ts';
 import {
-  fixedNotionalFunding,
-  type LeagueRules,
-  type PickRow,
-  type Slot,
-  type TradeRow,
-  validateTradeAdd,
-  validateTradeDrop,
-} from '../_shared/draft-validation.ts';
+  commitWithRetry,
+  decideTrade,
+  type DraftRow,
+  type LeagueRow,
+  type LedgerState,
+  readAllPages,
+  type Reply,
+  type SlotRow,
+  type Step,
+  type TradeRequest,
+  unhandled,
+} from './commit.ts';
 import {
   decideMarketGate,
   marketLabel,
@@ -143,6 +155,73 @@ async function rateLimitOk(admin: any, userId: string, ip: string): Promise<bool
   }
 }
 
+const LEAGUE_COLUMNS = 'id, num_rounds, draft_status, stake_mode, budget_amount, notional_per_slot, allow_undraftable';
+
+// Reads the league-scoped state the validator (and the CAS) work from. Every
+// trades/drafts read is PAGINATED in a stable (created_at, id) order: an
+// unranged read caps silently at PostgREST's max_rows, and a truncated ledger
+// would both validate on partial state AND never match the RPC's count — a
+// permanent trade_conflict (commit.ts readAllPages). `league` is passed in
+// for the first attempt (already read up front) and re-read on retries,
+// because the commissioner can change rules mid-season.
+async function readLedger(
+  // deno-lint-ignore no-explicit-any
+  admin: any,
+  leagueId: string,
+  symbol: string,
+  withSlots: boolean,
+  league: LeagueRow | null,
+): Promise<Step<LedgerState>> {
+  if (!league) {
+    const { data, error } = await admin.from('leagues').select(LEAGUE_COLUMNS).eq('id', leagueId).maybeSingle();
+    if (error) return { ok: false, reply: unhandled() };
+    if (!data) return { ok: false, reply: { status: 404, body: { ok: false, reason: 'league_not_found' } } };
+    if (data.draft_status !== 'completed') {
+      return { ok: false, reply: { status: 200, body: { ok: false, reason: 'draft_not_completed' } } };
+    }
+    league = data as LeagueRow;
+  }
+
+  const picksRes = await readAllPages<DraftRow>((from, to) =>
+    admin.from('drafts')
+      .select('id, user_id, symbol, entry_price, quantity, pick_number, slot_id', { count: 'exact' })
+      .eq('league_id', leagueId)
+      .order('created_at', { ascending: true }).order('id', { ascending: true })
+      .range(from, to)
+  );
+  if (!picksRes.ok) return { ok: false, reply: unhandled() };
+
+  const tradesRes = await readAllPages<TradeRow>((from, to) =>
+    admin.from('trades')
+      .select('id, user_id, symbol, action, quantity, price, total_value, created_at, funded_by_trade_id', { count: 'exact' })
+      .eq('league_id', leagueId)
+      .order('created_at', { ascending: true }).order('id', { ascending: true })
+      .range(from, to)
+  );
+  if (!tradesRes.ok) return { ok: false, reply: unhandled() };
+  // trades.user_id is UUID — normalize to string so every comparison against
+  // drafts' TEXT user_id is string-vs-string (the documented cast footgun).
+  const trades = tradesRes.rows.map((t) => ({ ...t, user_id: String(t.user_id) }));
+
+  let slots: SlotRow[] | null = null;
+  let eligibleCategories = new Set<string>();
+  if (withSlots) {
+    const { data: slotData, error: sErr } = await admin
+      .from('league_draft_slots')
+      .select('id, slot_index, slot_count, price_min, price_max, category_id')
+      .eq('league_id', leagueId)
+      .order('slot_index', { ascending: true });
+    if (sErr) return { ok: false, reply: unhandled() };
+    slots = (slotData ?? []) as SlotRow[];
+    // Category eligibility only when this league has category slots.
+    if (slots.some((s) => s.category_id != null)) {
+      eligibleCategories = await fetchEligibleCategoryIds(admin, symbol);
+    }
+  }
+
+  return { ok: true, value: { league, picks: picksRes.rows, trades, slots, eligibleCategories } };
+}
+
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get('Origin') || '';
   const json = jsonFor(origin);
@@ -217,7 +296,7 @@ Deno.serve(async (req: Request) => {
     // ---- League + membership ----------------------------------------------
     const { data: league, error: lgErr } = await admin
       .from('leagues')
-      .select('id, num_rounds, draft_status, stake_mode, budget_amount, notional_per_slot, allow_undraftable')
+      .select(LEAGUE_COLUMNS)
       .eq('id', leagueId)
       .maybeSingle();
     if (lgErr) return json({ ok: false, reason: 'unhandled' }, 500);
@@ -237,22 +316,10 @@ Deno.serve(async (req: Request) => {
     if (memErr) return json({ ok: false, reason: 'unhandled' }, 500);
     if (!member) return json({ ok: false, reason: 'not_a_member' }, 403);
 
-    // ---- Positions ---------------------------------------------------------
-    const { data: pickData, error: pErr } = await admin
-      .from('drafts')
-      .select('user_id, symbol, entry_price, quantity, pick_number, slot_id')
-      .eq('league_id', leagueId);
-    if (pErr) return json({ ok: false, reason: 'unhandled' }, 500);
-    const picks = (pickData ?? []) as PickRow[];
-
-    const { data: tradeData, error: tErr } = await admin
-      .from('trades')
-      .select('id, user_id, symbol, action, quantity, price, total_value, created_at, funded_by_trade_id')
-      .eq('league_id', leagueId);
-    if (tErr) return json({ ok: false, reason: 'unhandled' }, 500);
-    // trades.user_id is UUID — normalize to string so every comparison against
-    // drafts' TEXT user_id is string-vs-string (the documented cast footgun).
-    const trades = (tradeData ?? []).map((t) => ({ ...t, user_id: String(t.user_id) })) as TradeRow[];
+    // ---- Positions (+ slots/eligibility for a buy) --------------------------
+    const first = await readLedger(admin, leagueId, symbol, action === 'buy', league as LeagueRow);
+    if (!first.ok) return json(first.reply.body, first.reply.status);
+    const { picks, trades } = first.value;
 
     // ---- Preview (read-only; no vendor call, no write) ----------------------
     // Returns the caller's fixed_notional funding state so a client can build
@@ -284,11 +351,11 @@ Deno.serve(async (req: Request) => {
     // Sells validate ownership BEFORE the vendor call — an illegal drop must
     // not spend an Alpaca request. Buys need the price for bracket/budget
     // validation, so their order is fetch-then-validate.
-    let dropQuantity: number | null = null;
+    // (The commit loop below re-runs the same decision on this same state —
+    // cheap and identical — and re-runs it on fresh state after a lost race.)
     if (action === 'sell') {
       const decision = validateTradeDrop(user.id, symbol, picks, trades);
       if (!decision.legal) return json({ ok: false, reason: decision.reason }); // 200: game-flow refusal
-      dropQuantity = decision.quantity;
     }
 
     // ---- Price (app-key quote path; last available quote off-hours) --------
@@ -304,122 +371,74 @@ Deno.serve(async (req: Request) => {
     const price = Math.round(fill.price * 100) / 100;
     if (!(price > 0)) return json({ ok: false, reason: 'no_price', symbol }); // 200: game-flow refusal
 
-    // ---- Validate buy ------------------------------------------------------
-    let quantity: number;
-    // fixed_notional only: which sale this buy reinvests (null = filled a
-    // previously-unfilled/skipped slot at full notional). Always null for a
-    // sell and for every other stake mode.
-    let fundedByTradeId: string | null = null;
+    // is_draftable gate (DR-001): a non-draftable BUY is refused unless the
+    // commissioner set allow_undraftable. Missing symbols row => not draftable.
+    // A global fact, read once (not part of the CAS — see the migration header).
+    let isDraftable = true;
     if (action === 'buy') {
-      const { data: slotData, error: sErr } = await admin
-        .from('league_draft_slots')
-        .select('id, slot_index, slot_count, price_min, price_max, category_id')
-        .eq('league_id', leagueId)
-        .order('slot_index', { ascending: true });
-      if (sErr) return json({ ok: false, reason: 'unhandled' }, 500);
-      const slots: Slot[] = (slotData ?? []).map((s) => ({
-        id: String(s.id),
-        slotIndex: Number(s.slot_index),
-        slotCount: Number(s.slot_count),
-        priceMin: s.price_min == null ? null : Number(s.price_min),
-        priceMax: s.price_max == null ? null : Number(s.price_max),
-        categoryId: s.category_id == null ? null : String(s.category_id),
-      }));
-
-      const rules: LeagueRules = {
-        stakeMode: (league.stake_mode ?? null) as LeagueRules['stakeMode'],
-        budgetAmount: league.budget_amount == null ? null : Number(league.budget_amount),
-        notionalPerSlot: league.notional_per_slot == null ? null : Number(league.notional_per_slot),
-        numRounds: Number(league.num_rounds) || 6,
-        allowUndraftable: league.allow_undraftable === true,
-      };
-
-      // is_draftable gate (DR-001): a non-draftable BUY is refused unless the
-      // commissioner set allow_undraftable. Missing symbols row => not draftable.
       const { data: symRow } = await admin
         .from('symbols').select('is_draftable').eq('symbol', symbol).maybeSingle();
-      const isDraftable = symRow?.is_draftable === true;
-
-      // Category eligibility only when this league has category slots.
-      const eligibleCategories = slots.some((s) => s.categoryId != null)
-        ? await fetchEligibleCategoryIds(admin, symbol)
-        : new Set<string>();
-
-      const decision = validateTradeAdd({
-        rules,
-        slots,
-        picks,
-        trades,
-        userId: user.id,
-        symbol,
-        price,
-        eligibleCategories,
-        isDraftable,
-        soldTradeId,
-      });
-      if (!decision.legal) return json({ ok: false, reason: decision.reason }); // 200: game-flow refusal
-      quantity = decision.quantity;
-      fundedByTradeId = decision.fundedByTradeId ?? null;
-    } else {
-      quantity = dropQuantity!; // validated above, before the vendor call
+      isDraftable = symRow?.is_draftable === true;
     }
 
-    // ---- Market hours re-check (right before the write) --------------------
-    // Closes the window between the gate above and this insert: league/
-    // membership/position reads, the slot/category lookups, and the Alpaca
-    // fill-price round trip can together take long enough to cross a close
-    // (or an early close). Re-decides on a FRESH `now` but the SAME already-
-    // fetched calendar rows — no second DB read. marketReads is guaranteed
-    // non-null and readError:false here: action is buy or sell (preview
-    // already returned above), which always fetches it, and a read error
-    // would already have returned 503 at the gate above.
-    const recheckGate = decideMarketGate(new Date(), marketReads!.sessions, marketReads!.coverage);
-    if (!recheckGate.open) {
-      const resp = tradeGateResponse(recheckGate);
-      return json(resp.body, resp.status);
-    }
+    const request: TradeRequest = {
+      action: action as 'buy' | 'sell',
+      userId: user.id,
+      symbol,
+      price,
+      isDraftable,
+      soldTradeId,
+    };
 
-    // ---- Record ------------------------------------------------------------
-    // KNOWN RACE (accepted for launch, narrowed 2026-09-29 to the cross-user
-    // case — see the funded_by_trade_id unique index in
-    // 20261006000000_trades_funded_by_trade_id.sql, which now closes the
-    // same-user concurrent-rebuy variant of this race with a 23505 below):
-    // two concurrent buys of DIFFERENT users for the same symbol both pass
-    // the in-memory ownership check before either row lands — trades has no
-    // uniqueness backstop analogous to the drafts (league_id, pick_number)
-    // index, and a partial unique index can't express "one OWNER at a time"
-    // over a buy/sell ledger. The correct fix is an atomic SECURITY DEFINER
-    // RPC (join_league_by_code pattern) that validates and inserts in one
-    // transaction. Window is sub-second and the failure mode (two owners of
-    // one symbol) is heal-able with a drop.
-    const { data: inserted, error: insErr } = await admin
-      .from('trades')
-      .insert({
-        league_id: leagueId,
-        user_id: user.id, // UUID column — auth identity, never client-supplied
-        symbol,
-        action,
-        quantity,
-        price,
-        total_value: Math.round(price * quantity * 100) / 100,
-        funded_by_trade_id: fundedByTradeId,
-      })
-      .select('*')
-      .single();
-    if (insErr) {
-      // 23505 on trades_funded_by_trade_id_unique specifically means another
-      // request spent this same sale's proceeds first (or, vanishingly
-      // rarely, exactly this trade concurrently) — a legality-time race the
-      // in-memory check above cannot see. Matched by constraint name, not
-      // bare code, so a FUTURE unique constraint on trades (unrelated to
-      // proceeds) can't be mislabeled as this refusal.
-      if (insErr.code === '23505' && (insErr.message ?? '').includes('trades_funded_by_trade_id_unique')) {
-        return json({ ok: false, reason: 'proceeds_unavailable' }); // 200: game-flow refusal
-      }
-      return json({ ok: false, reason: 'unhandled' }, 500);
-    }
+    // ---- Validate + record (atomic) ----------------------------------------
+    // Each attempt: validate (validateTradeAdd/Drop), re-check market hours
+    // right before the write, then record_trade_atomic, which inserts only if
+    // the league's trades/drafts/rules/slots are exactly what was validated.
+    //
+    // The market re-check (#89) closes the window between the gate above and
+    // the write: league/membership/position reads, the slot/category lookups,
+    // and the Alpaca fill-price round trip can together take long enough to
+    // cross a close (or an early close). Re-decides on a FRESH `now` but the
+    // SAME already-fetched calendar rows — no second DB read. marketReads is
+    // guaranteed non-null and readError:false here: action is buy or sell
+    // (preview already returned above), which always fetches it, and a read
+    // error would already have returned 503 at the gate above.
+    //
+    // This replaces the old "KNOWN RACE" (STATUS §4 item 10): the cross-user
+    // same-symbol buy race, and the same-user double sell / double buy /
+    // skipped-slot double buy, are all closed by the CAS. The
+    // trades_funded_by_trade_id_unique index stays as a second layer.
+    const reply: Reply = await commitWithRetry({
+      readState: () => readLedger(admin, leagueId, symbol, action === 'buy', null),
+      decide: (state) => decideTrade(request, state),
+      marketRecheck: () => {
+        const recheckGate = decideMarketGate(new Date(), marketReads!.sessions, marketReads!.coverage);
+        if (recheckGate.open) return null;
+        const resp = tradeGateResponse(recheckGate);
+        return { status: resp.status, body: resp.body as Record<string, unknown> };
+      },
+      commit: (plan, expect) =>
+        admin.rpc('record_trade_atomic', {
+          p_league_id: leagueId,
+          p_user_id: user.id, // auth identity, never client-supplied
+          p_symbol: symbol,
+          p_action: action,
+          p_quantity: plan.quantity,
+          p_price: price,
+          p_total_value: Math.round(price * plan.quantity * 100) / 100,
+          p_funded_by_trade_id: plan.fundedByTradeId,
+          p_seen_trade_ids: expect.seenTradeIds,
+          p_seen_draft_ids: expect.seenDraftIds,
+          p_rules: expect.rules,
+          p_slots: expect.slots,
+        }),
+      log: (msg, detail) => console.warn('record-trade:', msg, detail === undefined ? '' : JSON.stringify(detail)),
+    }, { firstState: first.value });
 
-    return json({ ok: true, trade: inserted, price_source: fill.source });
+    if (reply.body.ok === true) {
+      return json({ ...reply.body, price_source: fill.source }, reply.status);
+    }
+    return json(reply.body, reply.status);
   } catch (_e) {
     return json({ ok: false, reason: 'unhandled' }, 500);
   }
