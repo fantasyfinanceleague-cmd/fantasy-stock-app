@@ -1,8 +1,8 @@
 -- ============================================================================
 -- Freeze a league's rules once its draft has started
 --   league_draft_slots (every row) + the leagues rule / season-shape / season-
---   state columns + no backward draft_status move, for user sessions
---   (commissioner included)
+--   state columns + no backward draft_status move + no leaving the league,
+--   for user sessions (commissioner included)
 -- ============================================================================
 -- PROBLEM
 --   Roster slots are the boundary for what a manager may buy: a draft pick
@@ -23,6 +23,13 @@
 --   The season-state columns (season_status, current_week, current_season_id,
 --   league_start_date / league_end_date = the scoring window, commissioner_id)
 --   are the same boundary: rewriting them on a live season reshapes scoring.
+--   So is the membership: [I5] league_members_delete_self (20260712000002,
+--   INTERIM) lets ANY member, the commissioner included, DELETE their own
+--   league_members row at any time. A post-draft departure leaves a zombie
+--   team: start_league_playoffs refuses its bracket forever
+--   (bracket_non_member), checkStoredOrder 500s (draft_order_invalid), and
+--   the departed manager's drafts/trades still score. No live client leaves
+--   (mobile 1.1.0 has no leave; the paused web app does, useLeagues.js:244).
 --
 --   WHAT EXISTING GUARDS ALREADY COVER (and why they are not enough):
 --     * trg_leagues_member_update_columns (F1, 20260925000000) refuses a
@@ -58,6 +65,8 @@
 --                                                        (season shape)
 --          season_status, current_week, current_season_id, commissioner_id
 --                                                        (season state)
+--          budget_mode            (retired; frozen so it is not a
+--                                  writable-but-meaningless column)
 --      and league_start_date / league_end_date may change only by F1's
 --      first-time stamp: NULL -> value is allowed (once); changing a non-NULL
 --      value, or setting it back to NULL, is refused. That keeps F1's
@@ -74,7 +83,7 @@
 --      EVERY leagues column is classified in
 --      supabase/tests/freeze_league_rules.pglite.test.ts (frozen here,
 --      stamp-once here, guarded by another named trigger, or deliberately
---      editable: name, draft_date, invite_code, created_at, budget_mode). The
+--      editable: name, draft_date, invite_code, created_at). The
 --      test replays every CREATE/ALTER TABLE leagues in the migrations, so a
 --      NEW column fails it until someone classifies it. This list is
 --      enumerated (unlike F1's whole-row compare); the test is what stops a
@@ -87,6 +96,29 @@
 --      league's draft_status is anything but exactly 'not_started'. For an
 --      UPDATE both the OLD and the NEW league are checked (re-parenting a slot
 --      into a started league is refused, and so is moving one out of it).
+--   4. league_members: no DELETE once the league's draft_status is anything
+--      but exactly 'not_started' (league_membership_locked). INTERIM, until
+--      the leave-league flow ships: that worker decides whether [I5] is
+--      dropped and whether a left_at column replaces the DELETE; this
+--      migration deliberately does neither. Pre-draft leave is unchanged.
+--      LAYERING with trg_league_members_draft_order (20261013000000, AFTER
+--      DELETE, every role): that trigger refuses a leave from a league whose
+--      order is LOCKED and draft in_progress ('draft_in_progress', 22023),
+--      for the service role too. For a USER session this BEFORE trigger
+--      fires first, so a user always sees league_membership_locked, mid-draft
+--      and after. The older refusal stays as the service-role mid-draft rule.
+--      This guard keys on draft_status alone, so it also covers a started
+--      league whose draft order is not 'locked' (the older trigger lets that
+--      leave through).
+--      LOCK: FOR NO KEY UPDATE on the league, NOT FOR SHARE. The AFTER
+--      trigger above takes FOR NO KEY UPDATE on the same row in the same
+--      transaction; a SHARE here would make two concurrent leavers each hold
+--      SHARE and then both wait to upgrade = deadlock. Taking the stronger
+--      lock first serializes leavers (and leaves vs. a draft start) instead.
+--      CASCADE: the only FK into league_members is league_members.league_id
+--      -> leagues ON DELETE CASCADE (user_id has no FK). A league delete
+--      cascades with the deleter's auth.uid(); the league row is gone by
+--      then, so "league not found => allow" lets it through, same as slots.
 --
 -- WHO IS EXEMPT: auth.uid() IS NULL -- service_role, cron, migrations, the
 --   dashboard SQL editor. Same test as F1 and the playoff_teams freeze, so a
@@ -102,9 +134,16 @@
 --   first, matching the lock invariant below). #94's trg_leagues_renewal_gate
 --   sets NEW.num_participants on the start UPDATE; that UPDATE's OLD is
 --   'not_started', so this freeze allows it (and it sorts after
---   trg_leagues_freeze_rules anyway). If any of them ever writes a started
---   league, it must do so on a service-role path. Re-verify against #94's
---   actual SQL before it merges.
+--   trg_leagues_freeze_rules anyway). Checked against #94 @ f450e78
+--   (migrations 20261105000000-09, after this one): respond_to_renewal's
+--   self-leave DELETE and cancel_league_renewal's league DELETE act only on
+--   'not_started' leagues (allowed; the cascade is allowed regardless);
+--   trg_league_members_renewal_sync_delete is AFTER DELETE and returns early
+--   when the league is gone; trg_league_members_renewal_guard is INSERT-only;
+--   trg_leagues_lineage_columns guards #94's three new leagues columns, which
+--   #94 must add to the classification (test + effect block) when it rebases.
+--   If any of them ever writes a started league, it must do so on a
+--   service-role path.
 --
 -- WHY TRIGGERS, NOT NARROWED POLICIES
 --   * leagues: RLS has no per-column WITH CHECK (the reason F1 is a trigger).
@@ -160,12 +199,14 @@
 --
 -- POST-PUSH CHECKS (read-only):
 --   SELECT tgname, tgrelid::regclass, tgenabled FROM pg_trigger
---    WHERE tgname IN ('trg_league_draft_slots_freeze', 'trg_leagues_freeze_rules');
+--    WHERE tgname IN ('trg_league_draft_slots_freeze', 'trg_leagues_freeze_rules',
+--                     'trg_league_members_freeze_leave');
 --   SELECT proname, prosecdef, proconfig, proacl FROM pg_proc p
 --     JOIN pg_namespace n ON n.oid = p.pronamespace
 --    WHERE n.nspname = 'public'
 --      AND proname IN ('enforce_league_draft_slots_frozen',
---                      'enforce_league_rules_frozen_after_draft_start');
+--                      'enforce_league_rules_frozen_after_draft_start',
+--                      'enforce_league_members_frozen_after_draft_start');
 --   -- expect no anon= / authenticated= / =X/ (PUBLIC) entries
 --
 -- HUMAN ACTION: `supabase db push` is Giorgio's.
@@ -221,6 +262,7 @@ begin
     case when new.current_week      is distinct from old.current_week      then 'current_week' end,
     case when new.current_season_id is distinct from old.current_season_id then 'current_season_id' end,
     case when new.commissioner_id   is distinct from old.commissioner_id   then 'commissioner_id' end,
+    case when new.budget_mode       is distinct from old.budget_mode       then 'budget_mode' end,
     -- F1's first-time stamp: NULL -> value only.
     case when old.league_start_date is not null
           and new.league_start_date is distinct from old.league_start_date then 'league_start_date' end,
@@ -296,3 +338,45 @@ drop trigger if exists trg_league_draft_slots_freeze on public.league_draft_slot
 create trigger trg_league_draft_slots_freeze
   before insert or update or delete on public.league_draft_slots
   for each row execute function public.enforce_league_draft_slots_frozen();
+
+-- ----------------------------------------------------------------------------
+-- 3. league_members: no leaving once the draft has started (INTERIM, see 4.)
+-- ----------------------------------------------------------------------------
+create or replace function public.enforce_league_members_frozen_after_draft_start()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_status text;
+begin
+  if auth.uid() is null then
+    return old;
+  end if;
+
+  -- FOR NO KEY UPDATE (not SHARE): trg_league_members_draft_order takes this
+  -- lock on the same row after the DELETE; see the header on the deadlock.
+  select l.draft_status into v_status
+    from public.leagues l
+   where l.id = old.league_id
+     for no key update;
+  if not found then
+    return old;   -- the league itself is being deleted (ON DELETE CASCADE)
+  end if;
+
+  if v_status is distinct from 'not_started' then
+    raise exception 'league_membership_locked: members cannot leave a league once its draft has started'
+      using errcode = '42501';
+  end if;
+  return old;
+end;
+$$;
+
+revoke all on function public.enforce_league_members_frozen_after_draft_start() from public;
+revoke all on function public.enforce_league_members_frozen_after_draft_start() from anon, authenticated;
+
+drop trigger if exists trg_league_members_freeze_leave on public.league_members;
+create trigger trg_league_members_freeze_leave
+  before delete on public.league_members
+  for each row execute function public.enforce_league_members_frozen_after_draft_start();

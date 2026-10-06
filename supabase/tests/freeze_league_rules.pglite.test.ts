@@ -4,9 +4,13 @@
  * Run instructions: supabase/tests/README.md.
  *
  * Loads VERBATIM, in prod order: the B1 helpers (20260712000000), the leagues
- * RLS policies (20260712000001), the F1 member column guard (20260925000000),
- * the playoff_teams freeze (20261012000002), league_draft_slots + its interim
- * commissioner policies (20260810000004), then the migration under test.
+ * and league_members RLS policies (20260712000001/02, incl. [I5] delete-self),
+ * league_draft_slots + its interim commissioner policies (20260810000004), the
+ * F1 member column guard (20260925000000), the pick clock (20261010000000), the
+ * playoff_teams freeze (20261012000002) and draft order modes (20261013000000:
+ * trg_leagues_order_mode / trg_leagues_order_start / trg_league_members_draft_order),
+ * then the migration under test -- so every BEFORE/AFTER trigger on leagues and
+ * league_members that prod has fires here, in prod's order.
  * leagues is NOT hand-written: it is built by replaying every CREATE TABLE /
  * ALTER TABLE ... ADD|DROP|RENAME COLUMN on leagues from supabase/migrations/
  * in order (FK REFERENCES clauses stripped; the referenced tables are not
@@ -33,12 +37,15 @@ import { assert, assertEquals } from 'jsr:@std/assert';
 import { PGlite } from 'npm:@electric-sql/pglite@0.2';
 
 const ROOT = new URL('../../', import.meta.url);
-const MIGRATIONS = [
+const MIGRATIONS = [   // prod (timestamp) order
   '20260712000000_rls_b1_00_helpers.sql',
   '20260712000001_rls_b1_01_leagues.sql',
-  '20260925000000_leagues_member_draft_complete_column_guard.sql',
-  '20261012000002_freeze_playoff_teams_after_draft_start.sql',
+  '20260712000002_rls_b1_02_league_members.sql',
   '20260810000004_create_league_draft_slots.sql',
+  '20260925000000_leagues_member_draft_complete_column_guard.sql',
+  '20261010000000_draft_pick_clock_and_queue.sql',
+  '20261012000002_freeze_playoff_teams_after_draft_start.sql',
+  '20261013000000_draft_order_modes.sql',
   '20261104000000_freeze_league_rules_after_draft_start.sql',
 ].map((f) => new URL(`supabase/migrations/${f}`, ROOT));
 
@@ -58,8 +65,18 @@ grant usage on schema public to anon, authenticated, service_role;
 `;
 const SCHEMA_POST = `
 create table league_members (league_id uuid not null references leagues(id) on delete cascade,
-  user_id text not null, role text, primary key (league_id, user_id));
-create table categories (id uuid primary key default gen_random_uuid(), name text);
+  user_id text not null, role text, joined_at timestamptz not null default clock_timestamp(),
+  primary key (league_id, user_id));
+create table categories (id uuid primary key default gen_random_uuid(), slug text unique, name text);
+-- Stubs the pick-clock / draft-order SQL functions are validated against (as in
+-- draft_order_modes.pglite.test.ts).
+create table drafts (id serial primary key, league_id uuid, user_id text, symbol text,
+  entry_price numeric, quantity numeric, round int, pick_number int, created_at timestamptz default now());
+create table symbols (symbol text primary key, active boolean default true, is_draftable boolean not null default false,
+  price_unsupported boolean not null default false, last_price numeric, market_cap numeric, gics_industry text);
+create table category_rules (gics_industry text unique not null, category_id uuid not null references categories(id));
+create table symbol_category_overrides (symbol text not null, category_id uuid not null references categories(id),
+  unique (symbol, category_id));
 `;
 
 /**
@@ -118,6 +135,7 @@ const CLASSIFICATION: Record<string, { kind: Kind; by?: string; why?: string }> 
   current_week: { kind: 'frozen' },
   current_season_id: { kind: 'frozen' },
   commissioner_id: { kind: 'frozen' },
+  budget_mode: { kind: 'frozen', why: 'retired; frozen so it is not writable-but-meaningless (ruling 2026-11-04)' },
   league_start_date: { kind: 'stamp_once' },
   league_end_date: { kind: 'stamp_once' },
   draft_status: { kind: 'guarded', by: 'trg_leagues_freeze_rules', why: 'the transition table' },
@@ -131,7 +149,6 @@ const CLASSIFICATION: Record<string, { kind: Kind; by?: string; why?: string }> 
   draft_date: { kind: 'editable', why: 'ruling 2026-11-04; inert once the draft has started' },
   invite_code: { kind: 'editable', why: 'rotation is harmless: joins are gated on draft_status' },
   created_at: { kind: 'editable', why: 'display only' },
-  budget_mode: { kind: 'editable', why: 'retired; server rules read stake_mode, web reads it only as a display fallback when stake_mode IS NULL' },
 };
 
 // The frozen columns, each with a value that differs from the fixture's.
@@ -149,6 +166,7 @@ const FROZEN: Record<string, unknown> = {
   season_status: 'completed',
   current_week: 5,
   current_season_id: SEASON,
+  budget_mode: 'no-budget',
   commissioner_id: MEMBER,
 };
 const FIXTURE = {
@@ -156,6 +174,7 @@ const FIXTURE = {
   notional_per_slot: 1000, num_rounds: 6, allow_undraftable: false, num_weeks: 11,
   duration_days: 30, league_type: 'matchup', num_participants: 8, playoff_teams: 4,
   season_status: 'active', current_week: 3, current_season_id: '44444444-4444-4444-8444-444444444444',
+  budget_mode: 'budget',
 };
 
 // deno-lint-ignore no-explicit-any
@@ -230,19 +249,23 @@ Deno.test({
     };
 
     // ---- structure --------------------------------------------------------
-    await t.step('structure: both triggers enabled, functions locked down, search_path pinned', async () => {
+    await t.step('structure: the three triggers enabled, functions locked down, search_path pinned', async () => {
       const tg = await q(`select tgname, tgrelid::regclass::text rel, tgenabled e from pg_trigger
-        where tgname in ('trg_league_draft_slots_freeze','trg_leagues_freeze_rules') order by tgname`);
+        where tgname in ('trg_league_draft_slots_freeze','trg_leagues_freeze_rules','trg_league_members_freeze_leave')
+        order by tgname`);
       assertEquals(tg.map((r: Row) => [r.tgname, r.rel, r.e]), [
         ['trg_league_draft_slots_freeze', 'league_draft_slots', 'O'],
+        ['trg_league_members_freeze_leave', 'league_members', 'O'],
         ['trg_leagues_freeze_rules', 'leagues', 'O'],
       ]);
       const fns = await q(`select proname, prosecdef, proconfig, coalesce(proacl::text,'') acl from pg_proc
-        where proname in ('enforce_league_draft_slots_frozen','enforce_league_rules_frozen_after_draft_start')
+        where proname in ('enforce_league_draft_slots_frozen','enforce_league_rules_frozen_after_draft_start',
+                          'enforce_league_members_frozen_after_draft_start')
         order by proname`);
-      assertEquals(fns.length, 2);
+      assertEquals(fns.length, 3);
       assertEquals(fns.map((f: Row) => [f.proname, f.prosecdef]), [
         ['enforce_league_draft_slots_frozen', true],
+        ['enforce_league_members_frozen_after_draft_start', true],
         ['enforce_league_rules_frozen_after_draft_start', false],
       ]);
       for (const f of fns) {
@@ -282,12 +305,12 @@ Deno.test({
       const editable = Object.entries(CLASSIFICATION).filter(([, v]) => v.kind === 'editable').map(([k]) => k);
       await as('commish', async () => {
         await q(`update leagues set name='n2', draft_date='2027-01-01T00:00:00Z', invite_code='NEW-CODE',
-          created_at='2026-01-01T00:00:00Z', budget_mode='budget' where id=$1`, [L]);
+          created_at='2026-01-01T00:00:00Z' where id=$1`, [L]);
         await refused(() => q(`update leagues set id=$2 where id=$1`, [L, crypto.randomUUID()]), 'row-level security');
       });
-      assertEquals(editable.sort(), ['budget_mode', 'created_at', 'draft_date', 'invite_code', 'name']);
-      const [r] = await q(`select name, invite_code, budget_mode from leagues where id=$1`, [L]);
-      assertEquals([r.name, r.invite_code, r.budget_mode], ['n2', 'NEW-CODE', 'budget']);
+      assertEquals(editable.sort(), ['created_at', 'draft_date', 'invite_code', 'name']);
+      const [r] = await q(`select name, invite_code from leagues where id=$1`, [L]);
+      assertEquals([r.name, r.invite_code], ['n2', 'NEW-CODE']);
     });
 
     // ---- stamp-once dates (F1's carve-out, now for the commissioner too) ----
@@ -322,6 +345,62 @@ Deno.test({
       const open = await league('not_started', { league_start_date: '2026-11-16T14:30:00Z' });
       await as('commish', () => q(`update leagues set league_start_date=null where id=$1`, [open]));
       await as('service', () => q(`update leagues set league_start_date=$2 where id=$1`, [L, '2026-11-30T14:30:00Z']));
+    });
+
+    // ---- league_members: no leaving once the draft has started (INTERIM) ----
+    const members = async (L: string) =>
+      (await q(`select user_id from league_members where league_id=$1 order by user_id`, [L])).map((r: Row) => r.user_id);
+    const leave = (L: string, who: string) => q(`delete from league_members where league_id=$1 and user_id=$2`, [L, who]);
+
+    for (const st of ['in_progress', 'completed']) {
+      await t.step(`${st}: a member and the commissioner cannot leave ([I5]); nothing is deleted`, async () => {
+        const L = await league(st);
+        await as('member', () => refused(() => leave(L, MEMBER), 'league_membership_locked'));
+        await as('commish', () => refused(() => leave(L, COMMISH), 'league_membership_locked'));
+        assertEquals(await members(L), [COMMISH, MEMBER].sort());
+      });
+    }
+
+    await t.step('pre-draft: a member and the commissioner can still leave (unchanged)', async () => {
+      const L = await league('not_started');
+      await as('member', () => leave(L, MEMBER));
+      await as('commish', () => leave(L, COMMISH));
+      assertEquals(await members(L), []);
+    });
+
+    await t.step('service role: may remove a member post-draft; mid-draft the older all-roles refusal still applies', async () => {
+      const done = await league('completed');
+      await as('service', () => leave(done, MEMBER));
+      assertEquals(await members(done), [COMMISH]);
+      // trg_league_members_draft_order (AFTER, every role): locked order + in_progress -> draft_in_progress.
+      const live = await league('in_progress');
+      await as('service', () => refused(() => leave(live, MEMBER), 'draft_in_progress', '22023'));
+      assertEquals(await members(live), [COMMISH, MEMBER].sort());
+    });
+
+    await t.step('cascade: deleting a started league still cascades its members, slots and draft order', async () => {
+      for (const st of ['in_progress', 'completed']) {
+        const L = await league(st);
+        assert((await q(`select count(*)::int n from league_draft_order where league_id=$1`, [L]))[0].n > 0, 'order locked at start');
+        await as('commish', () => q(`delete from leagues where id=$1`, [L]));
+        assertEquals(await members(L), [], st);
+        assertEquals((await slots(L)).length, 0, st);
+        assertEquals((await q(`select count(*)::int n from league_draft_order where league_id=$1`, [L]))[0].n, 0, st);
+      }
+    });
+
+    await t.step('members: two concurrent-shaped leaves in ONE transaction do not self-deadlock (lock order)', async () => {
+      const L = await league('not_started');
+      await db.exec('begin');
+      try {
+        await as('member', () => leave(L, MEMBER));
+        await as('commish', () => leave(L, COMMISH));
+        await db.exec('commit');
+      } catch (e) {
+        await db.exec('rollback');
+        throw e;
+      }
+      assertEquals(await members(L), []);
     });
 
     // ---- pre-draft: the commissioner keeps full control -------------------
@@ -598,7 +677,7 @@ Deno.test({
       }
       assert(msg.startsWith('FREEZE LEAGUE RULES EFFECT TEST RESULTS'), `the block must end by raising: ${msg}`);
       const lines = msg.split('\n').slice(1).filter((l) => l.trim());
-      assertEquals(lines.length, 18, msg);
+      assertEquals(lines.length, 23, msg);
       for (const l of lines) assert(/  PASS$/.test(l), `not PASS: ${l}`);
       // The block's c_classified list is the same set as CLASSIFICATION.
       const m = sql.match(/c_classified text\[\] := array\[([^\]]*)\]/);

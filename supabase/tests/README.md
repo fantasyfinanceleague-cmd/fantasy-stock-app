@@ -418,11 +418,16 @@ tests including the repro (`draft-validation.test.ts`, "tier trades: ...").
 ## freeze_league_rules.pglite.test.ts
 
 What it does:
-- Loads, **verbatim** and in prod order, the B1 helpers and `leagues` RLS
-  (`20260712000000`/`01`), the F1 member column guard (`20260925000000`), the
-  `playoff_teams` freeze (`20261012000002`), `league_draft_slots` with its interim
-  commissioner policies (`20260810000004`), then
-  `20261104000000_freeze_league_rules_after_draft_start`.
+- Loads, **verbatim** and in prod order:
+  - the B1 helpers and the `leagues` / `league_members` RLS (`20260712000000`/`01`/`02`,
+    including [I5] delete-self);
+  - `league_draft_slots` with its interim commissioner policies (`20260810000004`);
+  - the F1 member column guard (`20260925000000`) and the pick clock (`20261010000000`);
+  - the `playoff_teams` freeze (`20261012000002`) and draft order modes
+    (`20261013000000`);
+  - then `20261104000000_freeze_league_rules_after_draft_start`.
+
+  So every prod trigger on `leagues` and `league_members` fires here, in prod's order.
 - Builds `leagues` by **replaying every `CREATE TABLE` / `ALTER TABLE … ADD|DROP|RENAME
   COLUMN` on it** from `supabase/migrations/` (FK `REFERENCES` stripped). The triggers
   therefore run against the real column set, types and inline CHECKs.
@@ -436,9 +441,14 @@ It covers:
   this test until it is classified**, so a future rule column cannot silently stay
   commissioner-writable. The editable set is exercised post-draft, and `id` is pinned.
 - the season-state columns (`season_status`, `current_week`, `current_season_id`,
-  `commissioner_id`) frozen like the rules; `league_start_date` / `league_end_date`
+  `commissioner_id`) and the retired `budget_mode` frozen like the rules; `league_start_date` / `league_end_date`
   stamp-once (F1's carve-out): the member and commissioner completion-stamp shapes pass,
   and a rewrite or clear is refused
+- leaving the league ([I5], interim guard): a member and the commissioner refused with
+  `league_membership_locked` in `in_progress` and `completed`; pre-draft leave unchanged;
+  the service role may remove a member post-draft, but mid-draft it still meets the
+  older all-roles `draft_in_progress`; deleting a started league cascades its members,
+  slots and draft order; two leaves in one transaction (the lock order) complete
 - pre-draft: the commissioner inserts, updates and deletes slots and edits every rule
 - `in_progress` and `completed`: every slot write (and the delete-then-insert client
   save) refused with `league_slots_locked`; each of the nine frozen columns refused on
@@ -459,7 +469,8 @@ It covers:
 - `proacl`, `prosecdef` and the `search_path` pin of both trigger functions
 - the human post-push block `docs/security/freeze-league-rules-effect-test.sql`, run
   **verbatim** (via `request.jwt.claims` and Supabase's real `auth.uid()` definition):
-  all 18 lines PASS, including C1 (every live `leagues` column classified; its list must
+  all 23 lines PASS, including F1 (the only FK touching `league_members` is its
+  `league_id` cascade) and C1 (every live `leagues` column classified; its list must
   equal the test's `CLASSIFICATION`), and nothing persists
 
 **PR #94 (Run it back) pointer.** On `origin/feat/run-it-back` (not on `main` when this
@@ -470,10 +481,25 @@ this trigger. #94 also adds `leagues` columns (`previous_league_id`, `lineage_id
 `season_number`), so on rebase this test FAILS until they are classified. They are
 guarded by #94's own `enforce_league_lineage_columns` trigger.
 
-Mutation-checked: 12 mutations, each failing at least one step. They cover each guard
-branch, a state column dropped, stamp-once refusing NULL → value, and a probe migration
-adding an unclassified column (it fails both the classification step and the effect
-block's C1).
+Mutation-checked: 16 mutations, each failing at least one step. They cover:
+- each guard branch, including the leave guard disabled, its cascade allowance removed,
+  and its service-role exemption removed;
+- a state column dropped, and `budget_mode` dropped;
+- stamp-once refusing NULL → value;
+- a probe migration adding an unclassified column, which fails both the classification
+  step and the effect block's C1.
+
+The leave guard takes `FOR NO KEY UPDATE`, not `FOR SHARE`. That choice avoids a deadlock
+between two concurrent transactions, which needs two connections; its argument is in the
+migration header.
+
+#94 compatibility was checked once, in a scratch copy of this suite, against
+`20261105000004_run_it_back_gate.sql` @ `f450e78`, all passing:
+- the renewal self-leave while `not_started` is allowed and its sync sets the reply to `out`;
+- the gate's `num_participants` rewrite on the start UPDATE is allowed (judged on OLD);
+- after the start, the freeze and the leave guard hold.
+
+Make that a committed step when #94 lands.
 
 ## migration_cli_split.test.ts
 

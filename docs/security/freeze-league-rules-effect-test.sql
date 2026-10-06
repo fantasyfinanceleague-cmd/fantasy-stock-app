@@ -21,11 +21,14 @@
 --     verbatim on real Postgres and requires every line to PASS.
 --
 -- EXPECTED OUTPUT (the final "ERROR:" text): every line ends in PASS.
---   G1  both triggers present and enabled                           PASS
---   G2  both functions: no PUBLIC/anon/authenticated EXECUTE,
---       slots fn SECURITY DEFINER, search_path pinned               PASS
+--   G1  all three triggers present and enabled                      PASS
+--   G2  all three functions: no PUBLIC/anon/authenticated EXECUTE,
+--       slots + members fns SECURITY DEFINER, search_path pinned    PASS
+--   F1  the only FK touching league_members is its league_id ->
+--       leagues ON DELETE CASCADE (else: a cascade path to review)  PASS
 --   V1  service_role: slot UPDATE on a completed league -> 1 row    PASS
 --   V2  service_role: num_rounds change on a completed league       PASS
+--   V3  service_role: removes a member from a completed league      PASS
 --   P1  commissioner, pre-draft: slot UPDATE -> 1 row               PASS
 --   P2  commissioner, pre-draft: num_rounds change -> 1 row         PASS
 --   S1  commissioner, completed: slot INSERT -> league_slots_locked PASS
@@ -44,6 +47,9 @@
 --       -> league_rules_locked                                      PASS
 --   D1  commissioner, completed -> not_started
 --       -> league_draft_status_locked                               PASS
+--   L1  commissioner, completed: leaves -> league_membership_locked PASS
+--   L2  member, completed: leaves -> league_membership_locked       PASS
+--   L3  member, pre-draft: leaves -> 1 row (unchanged behaviour)    PASS
 --   C1  every live public.leagues column is classified (frozen,
 --       stamp-once, guarded elsewhere, or deliberately editable)    PASS
 --       A FAIL lists the unclassified columns: a column added in prod
@@ -53,6 +59,7 @@ do $$
 declare
   c_uid   text := gen_random_uuid()::text;   -- the fixture commissioner
   m_uid   text := gen_random_uuid()::text;   -- a fixture member
+  x_uid   text := gen_random_uuid()::text;   -- a fixture member the service role removes
   l_open  uuid;                              -- not_started
   l_done  uuid;                              -- completed
   s_open  uuid;
@@ -72,24 +79,40 @@ declare
 begin
   -- ---- G: catalog -----------------------------------------------------------
   select count(*) into n from pg_trigger
-   where tgname in ('trg_league_draft_slots_freeze', 'trg_leagues_freeze_rules') and tgenabled = 'O';
-  out := out || format(E'G1 triggers present+enabled = %s/2  %s\n', n, case when n = 2 then 'PASS' else 'FAIL' end);
+   where tgname in ('trg_league_draft_slots_freeze', 'trg_leagues_freeze_rules', 'trg_league_members_freeze_leave')
+     and tgenabled = 'O';
+  out := out || format(E'G1 triggers present+enabled = %s/3  %s\n', n, case when n = 3 then 'PASS' else 'FAIL' end);
 
   select string_agg(proname || ':' || coalesce(proacl::text, 'NULL') || ':' || prosecdef::text
                     || ':' || coalesce(array_to_string(proconfig, ','), 'NOCONFIG'), ' ') into acl
     from pg_proc p join pg_namespace ns on ns.oid = p.pronamespace
    where ns.nspname = 'public'
-     and proname in ('enforce_league_draft_slots_frozen', 'enforce_league_rules_frozen_after_draft_start')
+     and proname in ('enforce_league_draft_slots_frozen', 'enforce_league_rules_frozen_after_draft_start',
+                     'enforce_league_members_frozen_after_draft_start')
      and (proacl is null
           or proacl::text ~ '(anon|authenticated)='
           or proacl::text ~ '(^|[{,])=X'
           or not coalesce(proconfig @> array['search_path=public, pg_temp'], false)
-          or (proname = 'enforce_league_draft_slots_frozen') <> prosecdef);
+          or (proname <> 'enforce_league_rules_frozen_after_draft_start') <> prosecdef);
   select count(*) into n from pg_proc p join pg_namespace ns on ns.oid = p.pronamespace
    where ns.nspname = 'public'
-     and proname in ('enforce_league_draft_slots_frozen', 'enforce_league_rules_frozen_after_draft_start');
-  out := out || format(E'G2 fn grants/secdef/path   %s (found %s/2)  %s\n', coalesce(acl, 'ok'), n,
-    case when acl is null and n = 2 then 'PASS' else 'FAIL' end);
+     and proname in ('enforce_league_draft_slots_frozen', 'enforce_league_rules_frozen_after_draft_start',
+                     'enforce_league_members_frozen_after_draft_start');
+  out := out || format(E'G2 fn grants/secdef/path   %s (found %s/3)  %s\n', coalesce(acl, 'ok'), n,
+    case when acl is null and n = 3 then 'PASS' else 'FAIL' end);
+
+  select string_agg(conrelid::regclass || '.' || conname || '->' || confrelid::regclass || ':' || confdeltype::text, ' ') into acl
+    from pg_constraint
+   where contype = 'f'
+     and (conrelid = 'public.league_members'::regclass or confrelid = 'public.league_members'::regclass);
+  select count(*) into n from pg_constraint
+   where contype = 'f'
+     and (conrelid = 'public.league_members'::regclass or confrelid = 'public.league_members'::regclass);
+  out := out || format(E'F1 league_members FKs: %s  %s\n', coalesce(acl, 'none'),
+    case when n = 1 and exists (select 1 from pg_constraint
+                                 where contype = 'f' and conrelid = 'public.league_members'::regclass
+                                   and confrelid = 'public.leagues'::regclass and confdeltype = 'c')
+         then 'PASS' else 'FAIL' end);
 
   -- ---- fixture (as the editor's own role: auth.uid() IS NULL, exempt) -------
   insert into public.leagues (name, commissioner_id, invite_code, num_participants, num_rounds, num_weeks,
@@ -102,7 +125,7 @@ begin
   returning id into l_done;
   insert into public.league_members (league_id, user_id, role)
   select l, u, case when u = c_uid then 'commissioner' else 'member' end
-    from unnest(array[l_open, l_done]) l, unnest(array[c_uid, m_uid]) u;
+    from unnest(array[l_open, l_done]) l, unnest(array[c_uid, m_uid, x_uid]) u;
   insert into public.league_draft_slots (league_id, slot_index, slot_count, price_min, price_max)
   values (l_open, 0, 6, null, null) returning id into s_open;
   insert into public.league_draft_slots (league_id, slot_index, slot_count, price_min, price_max)
@@ -127,6 +150,14 @@ begin
     out := out || format(E'V2 service num_rounds (completed) rows=%s  %s\n', n, case when n = 1 then 'PASS' else 'FAIL' end);
   exception when others then
     out := out || format(E'V2 service num_rounds (completed) -> %s %s  FAIL\n', sqlstate, sqlerrm);
+  end;
+
+  begin
+    delete from public.league_members where league_id = l_done and user_id = x_uid;
+    get diagnostics n = row_count;
+    out := out || format(E'V3 service member removal (completed) rows=%s  %s\n', n, case when n = 1 then 'PASS' else 'FAIL' end);
+  exception when others then
+    out := out || format(E'V3 service member removal (completed) -> %s %s  FAIL\n', sqlstate, sqlerrm);
   end;
 
   -- ---- the commissioner (authenticated, real RLS) ----------------------------
@@ -241,6 +272,33 @@ begin
   exception when others then
     out := out || format(E'D1 completed -> not_started -> %s  %s\n', sqlstate,
       case when sqlstate = '42501' and sqlerrm like 'league_draft_status_locked:%' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
+  end;
+
+  -- ---- L: leaving the league ([I5] delete-self) -----------------------------
+  begin
+    delete from public.league_members where league_id = l_done and user_id = c_uid;
+    get diagnostics n = row_count;
+    out := out || format(E'L1 commissioner leaves completed -> allowed rows=%s  FAIL\n', n);
+  exception when others then
+    out := out || format(E'L1 commissioner leaves completed -> %s  %s\n', sqlstate,
+      case when sqlstate = '42501' and sqlerrm like 'league_membership_locked:%' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
+  end;
+
+  perform set_config('request.jwt.claims', json_build_object('sub', m_uid, 'role', 'authenticated')::text, true);
+  begin
+    delete from public.league_members where league_id = l_done and user_id = m_uid;
+    get diagnostics n = row_count;
+    out := out || format(E'L2 member leaves completed -> allowed rows=%s  FAIL\n', n);
+  exception when others then
+    out := out || format(E'L2 member leaves completed -> %s  %s\n', sqlstate,
+      case when sqlstate = '42501' and sqlerrm like 'league_membership_locked:%' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
+  end;
+  begin
+    delete from public.league_members where league_id = l_open and user_id = m_uid;
+    get diagnostics n = row_count;
+    out := out || format(E'L3 member leaves pre-draft rows=%s  %s\n', n, case when n = 1 then 'PASS' else 'FAIL' end);
+  exception when others then
+    out := out || format(E'L3 member leaves pre-draft -> %s %s  FAIL\n', sqlstate, sqlerrm);
   end;
 
   -- ---- C: every live column is classified ----------------------------------
