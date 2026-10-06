@@ -101,5 +101,6 @@ Deno.test('opening the picker seeds the date in both screens', () => {
 Deno.test('the leagues update returns its row, and both callers check it', () => {
   assertEquals(seamSrc.includes(".update(patch).eq('id', id).select('id')"), true);
   assertEquals(settingsSrc.includes('updatedOneRow(res)'), true);
-  assertEquals(leagueTabSrc.includes('updatedOneRow(res)'), true);
+  // The lobby stepper checks it through playoffTeamsSaveOutcome (lock first, then updatedOneRow).
+  assertEquals(leagueTabSrc.includes('playoffTeamsSaveOutcome(res)'), true);
 });

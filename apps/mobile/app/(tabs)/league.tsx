@@ -42,7 +42,7 @@ import { showsLeagueSettingsRow } from '@/lib/game/leagueSettingsEntry';
 import { QueueEditor } from '@/components/game/QueueEditor';
 import { useDraftQueue } from '@/lib/game/useDraftQueue';
 import { useRenewalRoster } from '@/lib/game/useRenewalRoster';
-import { updatedOneRow } from '@/lib/game/draftDateSave';
+import { playoffTeamsSaveOutcome } from '@/lib/game/playoffTeamsSave';
 import { renewalReadyForLobby } from '@/lib/game/renewalLobby';
 import { QUEUE_LOAD_FAILED } from '@/lib/game/draftQueueRead';
 
@@ -264,10 +264,19 @@ function LeagueLobby({ leagueId }: { leagueId: string }) {
 
   // The stepper writes the same leagues update League settings uses, then re-reads the status.
   const setPlayoffTeams = async (teams: number) => {
-    // 0 rows (no error) is not a change either (updatedOneRow).
+    // The lock first (the draft started: no retry can fix it), then any other
+    // failure, a 0-row update included (playoffTeamsSaveOutcome).
     const res = await seamUpdateLeague(leagueId, { playoff_teams: teams });
-    if (!updatedOneRow(res)) {
-      setStartError("The playoff teams didn't change. Try again.");
+    const outcome = playoffTeamsSaveOutcome(res);
+    if (outcome.kind === 'locked') {
+      setStartError(outcome.line);
+      // Re-read, so the lobby catches up with the started draft.
+      setStatusKey((k) => k + 1);
+      await refresh();
+      return;
+    }
+    if (outcome.kind === 'not_saved') {
+      setStartError(outcome.line);
       return;
     }
     setStartError(null);
