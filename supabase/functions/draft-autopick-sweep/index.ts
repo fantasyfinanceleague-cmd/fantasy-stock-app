@@ -8,6 +8,15 @@
 // whose command only posts here WHERE EXISTS an overdue turn — so an idle
 // system makes no edge calls at all.
 //
+// START PASS (draft auto-start, 2026-10-06), first: every league
+// public.due_draft_starts() lists (draft_date reached, inside the start grace,
+// not blocked in the last 60 s) goes through startDraftIfDue
+// (../_shared/draft-start.ts) — the same path draft-control's start runs. A
+// blocked league is noted (note_draft_start_blocked) and re-tried after the
+// back-off; it starts the moment its blockers clear, within the grace
+// (../_shared/draft-start-policy.ts). A just-started draft's first turn is
+// pick_seconds away, so it never collides with the overdue pass below.
+//
 // Per overdue row of public.overdue_draft_turns() (service role):
 //   * league no longer in_progress         -> 'not_in_progress' (nothing to do)
 //   * every pick made, finalize failed     -> re-run the idempotent finalize
@@ -36,6 +45,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { isAuthorized } from '../_shared/cron-auth.ts';
 import { decideAutoPickGate } from '../_shared/auto-pick.ts';
 import { autoPickTurn, fetchDraftClock, finalizeDraft, isDraftFull, loadDraftContext } from '../_shared/draft-write.ts';
+import { startDraftIfDue } from '../_shared/draft-start.ts';
 
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { 'Content-Type': 'application/json' } });
@@ -44,6 +54,15 @@ const json = (b: unknown, s = 200) =>
 // is picked up next tick rather than risking the edge wall-clock limit.
 const MAX_LEAGUES_PER_RUN = 20;
 const CONCURRENCY = 4;
+// Starts first, but capped, so a burst of drafts all set for noon cannot
+// starve overdue turns; the rest start on the next tick (10 s later).
+const MAX_STARTS_PER_RUN = 10;
+
+interface StartResult {
+  league_id: string;
+  outcome: string;
+  reason?: string;
+}
 
 interface LeagueOutcome {
   league_id: string;
@@ -61,14 +80,45 @@ Deno.serve(async (req: Request) => {
   const SECRET_KEY = Deno.env.get('SB_SECRET_KEY_INTERNAL')!;
   const ALPACA_KEY = Deno.env.get('ALPACA_API_KEY') ?? '';
   const ALPACA_SECRET = Deno.env.get('ALPACA_API_SECRET') ?? '';
-  if (!ALPACA_KEY || !ALPACA_SECRET) return json({ ok: false, reason: 'server_config_error' }, 500);
   const admin = createClient(SUPABASE_URL, SECRET_KEY);
 
+  // ---- start pass ----------------------------------------------------------
+  // A failure here never blocks the overdue pass: live drafts keep moving.
+  const starts: StartResult[] = [];
+  const startErrors: StartResult[] = [];
+  let dueTotal = 0;
   // Destructure-and-check: .rpc() resolves to { error } on a Postgres error.
+  const { data: due, error: dueErr } = await admin.rpc('due_draft_starts');
+  if (dueErr) {
+    console.error('due_draft_starts failed', JSON.stringify(dueErr));
+    startErrors.push({ league_id: '', outcome: 'due_query_failed' });
+  } else {
+    const dueRows = (due ?? []) as Array<{ league_id: string }>;
+    dueTotal = dueRows.length;
+    const batch = dueRows.slice(0, MAX_STARTS_PER_RUN);
+    for (let i = 0; i < batch.length; i += CONCURRENCY) {
+      await Promise.all(batch.slice(i, i + CONCURRENCY).map(async (row) => {
+        const leagueId = String(row.league_id);
+        const res = await startDraftIfDue(admin, leagueId, new Date());
+        // 'blocked' / 'changed' / 'not_due' / 'missed' are game-flow outcomes,
+        // not failures; only 'error' is one.
+        const entry: StartResult = { league_id: leagueId, outcome: res.outcome };
+        if (res.outcome === 'blocked' || res.outcome === 'error') entry.reason = res.reason;
+        (res.outcome === 'error' ? startErrors : starts).push(entry);
+      }));
+    }
+  }
+
+  // ---- overdue pass ----------------------------------------------------------
+  // Auto-pick prices candidates through Alpaca; starting does not (cached
+  // prices only), so a missing Alpaca secret stops picks, never starts.
+  if (!ALPACA_KEY || !ALPACA_SECRET) {
+    return json({ ok: false, reason: 'server_config_error', due_total: dueTotal, starts, start_errors: startErrors }, 500);
+  }
   const { data: overdue, error: odErr } = await admin.rpc('overdue_draft_turns');
   if (odErr) {
     console.error('overdue_draft_turns failed', JSON.stringify(odErr));
-    return json({ ok: false, reason: 'overdue_query_failed' }, 500);
+    return json({ ok: false, reason: 'overdue_query_failed', starts, start_errors: startErrors }, 500);
   }
   const rows = ((overdue ?? []) as Array<{ league_id: string; pick_number: number }>).slice(0, MAX_LEAGUES_PER_RUN);
 
@@ -121,11 +171,15 @@ Deno.serve(async (req: Request) => {
   }
 
   if (errors.length > 0) console.error('sweep errors', JSON.stringify(errors));
+  if (startErrors.length > 0) console.error('sweep start errors', JSON.stringify(startErrors));
   return json({
-    ok: true, // the sweep RAN — not a claim that every overdue turn was picked
+    ok: true, // the sweep RAN — not a claim that every overdue turn was picked or every due draft started
     examined: rows.length,
     overdue_total: (overdue ?? []).length,
     results,
     errors,
+    due_total: dueTotal,
+    starts, // per-league start outcomes; verify by DATA (leagues.draft_status / draft_started_at)
+    start_errors: startErrors,
   });
 });

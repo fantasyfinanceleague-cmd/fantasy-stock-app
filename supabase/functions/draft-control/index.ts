@@ -16,10 +16,14 @@
 //               blockers if not, and whether THIS caller may add bots. Any
 //               league member may call this (so a non-commissioner sees why
 //               the Start button is disabled).
-//   start     — commissioner only. Flips draft_status 'not_started' ->
-//               'in_progress' via a conditional UPDATE (.eq('draft_status',
-//               'not_started')), so a double-tap or a race with another
-//               commissioner device is a no-op, not a double-start.
+//   start     — commissioner only. Since draft auto-start (2026-10-06) the
+//               server starts every draft at draft_date (draft-autopick-sweep's
+//               start pass); this action runs the SAME path
+//               (_shared/draft-start.ts -> start_league_draft, a locked
+//               compare-and-swap flip), so it can only do what the next tick
+//               would. Kept for the 1.1.0 Start button. A double-tap, a second
+//               device or the cron racing it is 'already_started', never a
+//               double-start.
 //   confirm_roster — commissioner only. After a pre-draft leave
 //               (leave-league, 20261107000001) the draft can't start, and the
 //               order isn't set, until the commissioner chooses: body.choice
@@ -67,72 +71,21 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import {
   computeBotsNeeded,
-  computeStartBlockers,
   isBotsAllowedForEmail,
   isCommissioner,
-  type LeagueStartState,
   MIN_DRAFT_MEMBERS,
   nextBotIds,
-  type StartBlocker,
   toRosterReconfirm,
 } from './rules.ts';
-import { checkStartFeasibility, typesFromSlots } from '../_shared/draft-feasibility.ts';
-import { leagueRules, loadSlots, poolGroups } from '../_shared/draft-write.ts';
 import type { Slot } from '../_shared/draft-validation.ts';
-
-/**
- * "A draft pick can never be unused" (2026-10-05): can every slot of every
- * manager be filled, at current cached prices, with the budget reserve? Read by
- * status and start (current slots, the real member count) and by check_setup
- * (the PROPOSED slots, at the league cap: the worst case the league can reach).
- * Fails CLOSED: a pool that cannot be read is a blocker, never a pass.
- */
-async function feasibilityBlockers(
-  // deno-lint-ignore no-explicit-any
-  admin: any,
-  // deno-lint-ignore no-explicit-any
-  league: any,
-  managers: number,
-  // null = the league's SAVED slots (status/start); an array = the PROPOSED set
-  // (check_setup), where [] means a slot-less league, not "use the saved ones".
-  proposedSlots: Slot[] | null,
-): Promise<StartBlocker[]> {
-  try {
-    const numRounds = Number(league.num_rounds) || 6;
-    let slots: Slot[];
-    if (proposedSlots) {
-      slots = proposedSlots;
-    } else {
-      const loaded = await loadSlots(admin, String(league.id));
-      if (loaded.error) throw new Error('slots_fetch_failed'); // fail CLOSED, never read as slot-less
-      slots = loaded.slots;
-    }
-    const types = typesFromSlots(slots, numRounds);
-    const rules = leagueRules(league, numRounds);
-    const groups = await poolGroups(
-      admin,
-      types,
-      [],
-      rules.allowUndraftable !== true,
-      managers * numRounds + 2,
-    );
-    const verdict = checkStartFeasibility({
-      types,
-      managers,
-      numRounds,
-      budget: rules.stakeMode === 'budget_cap' ? Number(rules.budgetAmount) || 0 : null,
-      groups,
-    });
-    if (verdict.ok) return [];
-    if (verdict.reason === 'slots_infeasible') {
-      return [{ code: 'slots_infeasible', ordinals: verdict.hall.ordinals, need: verdict.hall.need, have: verdict.hall.have }];
-    }
-    return [{ code: 'budget_infeasible', reserve: verdict.reserve, budget: verdict.budget }];
-  } catch (e) {
-    console.error('feasibility check failed', String(league?.id), String(e));
-    return [{ code: 'feasibility_unavailable' }];
-  }
-}
+import {
+  evaluateStartBlockers,
+  feasibilityBlockers,
+  START_LEAGUE_COLUMNS,
+  startDraftIfDue,
+  toStartState,
+} from '../_shared/draft-start.ts';
+import { computeStartState, isRoomOpen } from '../_shared/draft-start-policy.ts';
 
 function isAllowedOrigin(origin: string): boolean {
   if (!origin) return false;
@@ -217,7 +170,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: league, error: lgErr } = await admin
       .from('leagues')
-      .select('id, commissioner_id, draft_status, stake_mode, draft_date, num_participants, league_type, playoff_teams, num_rounds, budget_amount, allow_undraftable')
+      .select(START_LEAGUE_COLUMNS)
       .eq('id', leagueId)
       .maybeSingle();
     if (lgErr) return json({ ok: false, reason: 'unhandled' }, 500);
@@ -243,18 +196,7 @@ Deno.serve(async (req: Request) => {
 
     // Commissioner identity comes ONLY from the verified league row — never
     // from the request body.
-    const commissionerId = String(league.commissioner_id ?? '');
-    const state: LeagueStartState = {
-      commissionerId,
-      draftStatus: league.draft_status,
-      stakeMode: league.stake_mode ?? null,
-      memberCount: memberIds.length,
-      numParticipants: Number(league.num_participants) || MIN_DRAFT_MEMBERS,
-      draftDate: league.draft_date ?? null,
-      leagueType: league.league_type ?? null,
-      playoffTeams: league.playoff_teams == null ? null : Number(league.playoff_teams),
-      rosterReconfirm: toRosterReconfirm(reconfirmRow),
-    };
+    const state = toStartState(league, memberIds.length, toRosterReconfirm(reconfirmRow));
     const botsAllowed = isBotsAllowedForEmail(BOTS_ALLOWED_EMAILS, user.email);
     const botsNeeded = computeBotsNeeded(state.memberCount, state.numParticipants);
 
@@ -262,15 +204,35 @@ Deno.serve(async (req: Request) => {
       const now = new Date();
       // Feasibility is judged only when nothing else blocks the start: the pool
       // read is the costly part, and "set a date" is the more useful message.
-      const basic = computeStartBlockers(state, now);
-      const blockers = basic.length > 0
-        ? basic
-        : [...basic, ...(await feasibilityBlockers(admin, league, memberIds.length, null))];
+      // From the room-open hour (draft_date - 1h) the not-yet-reached date no
+      // longer gates it, so the commissioner sees what would stop the
+      // automatic start while there is still time to fix it.
+      const evaluated = await evaluateStartBlockers(admin, league, state, undefined, now, {
+        ignoreDateNotReached: isRoomOpen(state.draftDate, now),
+      });
+      const blocked = evaluated.some((b) => b.code !== 'draft_date_not_reached' && b.code !== 'not_started_state');
+      // Auto-start (2026-10-06): the server starts the draft at draft_date.
+      // start_state is judged on the server's clock (draft-start-policy.ts).
+      const startState = computeStartState({ draftStatus: state.draftStatus, draftDate: state.draftDate, blocked }, now);
+      const commissioner = isCommissioner(state, user.id);
+      const blockers: Array<{ code: string }> = [
+        // Feasibility detail (hall counts, reserve vs budget) is for the
+        // commissioner, who can act on it; members get the code only, the same
+        // verdict-not-detail policy as check_setup.
+        ...evaluated.map((b) =>
+          !commissioner && (b.code === 'slots_infeasible' || b.code === 'budget_infeasible') ? { code: b.code } : b
+        ),
+        // Past the grace nothing auto-starts and start refuses: say so, so an
+        // old client's Start button is never enabled on a missed draft.
+        ...(startState === 'missed' ? [{ code: 'draft_start_missed' }] : []),
+      ];
       return json({
         ok: true,
         can_start: blockers.length === 0,
         blockers,
-        is_commissioner: isCommissioner(state, user.id),
+        starts_at: state.draftDate,
+        start_state: startState,
+        is_commissioner: commissioner,
         bots_allowed: botsAllowed,
         bots_needed: botsNeeded,
         member_count: state.memberCount,
@@ -379,54 +341,32 @@ Deno.serve(async (req: Request) => {
       return json({ ok: true, added: newIds, member_count: state.memberCount + newIds.length });
     }
 
-    // action === 'start'
-    const now = new Date();
-    const basic = computeStartBlockers(state, now);
-    const blockers = basic.length > 0
-      ? basic
-      : [...basic, ...(await feasibilityBlockers(admin, league, memberIds.length, null))];
-    if (blockers.length > 0) {
-      return json({ ok: false, reason: blockers[0].code, blockers }); // 200: game-flow refusal
-    }
-
-    // Conditional UPDATE: only flips a row that is STILL 'not_started', so a
-    // double-tap or a race between two commissioner devices is a no-op rather
-    // than a double-start. maybeSingle() returning null means someone else's
-    // call already won the race — that is success from this caller's view
-    // too (the desired end-state is reached either way).
-    const { data: updated, error: updErr } = await admin
-      .from('leagues')
-      .update({ draft_status: 'in_progress' })
-      .eq('id', leagueId)
-      .eq('draft_status', 'not_started')
-      .select('id')
-      .maybeSingle();
-    if (updErr) {
-      // trg_leagues_roster_reconfirm_gate (20261107000006): a leave committed
-      // between the blocker read above and this flip. A game-flow refusal, not a 500.
-      if (String((updErr as { message?: string }).message ?? '').startsWith('roster_reconfirm_required')) {
-        return json({ ok: false, reason: 'roster_reconfirm_required' });
-      }
-      return json({ ok: false, reason: 'unhandled' }, 500);
-    }
-    if (!updated) {
-      // Re-check current state: if it's now in_progress, treat as success
-      // (idempotent — someone else started it a moment ago); otherwise it
-      // moved to a state we don't expect (e.g. someone completed a re-draft
-      // out from under us) and we surface that as a fresh blocker set.
-      const { data: recheck, error: recheckErr } = await admin
-        .from('leagues')
-        .select('draft_status')
-        .eq('id', leagueId)
-        .maybeSingle();
-      if (recheckErr) return json({ ok: false, reason: 'unhandled' }, 500);
-      if (recheck?.draft_status === 'in_progress') {
+    // action === 'start' — the SAME path the auto-start cron runs
+    // (_shared/draft-start.ts): blocker evaluation, then start_league_draft's
+    // locked compare-and-swap flip. Since auto-start, this only ever does what
+    // the next sweep tick would; it stays for the 1.1.0 Start button.
+    const res = await startDraftIfDue(admin, leagueId, new Date());
+    switch (res.outcome) {
+      case 'started':
+        return json({ ok: true });
+      case 'already_started':
+        // Idempotent: someone (or the cron) started it a moment ago.
         return json({ ok: true, already_started: true });
-      }
-      return json({ ok: false, reason: 'not_started_state' });
+      case 'not_startable':
+        return json({ ok: false, reason: 'not_started_state' }); // 200: game-flow refusal
+      case 'not_due':
+        return json({ ok: false, reason: res.blockers[0]?.code ?? 'draft_date_not_reached', blockers: res.blockers });
+      case 'missed':
+        // Past the start grace (draft-start-policy.ts): a new draft time is needed.
+        return json({ ok: false, reason: 'draft_start_missed' });
+      case 'blocked':
+        return json({ ok: false, reason: res.reason, blockers: res.blockers }); // 200: game-flow refusal
+      case 'changed':
+        // A rule or the roster moved mid-start: the client refetches status.
+        return json({ ok: false, reason: 'draft_changed' });
+      default:
+        return json({ ok: false, reason: 'unhandled' }, 500);
     }
-
-    return json({ ok: true });
   } catch (_e) {
     return json({ ok: false, reason: 'unhandled' }, 500);
   }

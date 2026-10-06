@@ -656,3 +656,49 @@ through each exit, and asserts the `cron_job_status` writes: one `running`, one 
 the same-day no-op rule (a heal never erases earlier work or a failure), and that a
 rejected status write cannot change the HTTP response. Hermetic (no network, no DB):
 `deno test --allow-read --allow-env supabase/tests/cron_status_handlers.test.ts`.
+## draft_auto_start.pglite.test.ts
+
+What it does: loads, verbatim and in prod order, every migration whose triggers
+fire on a `leagues` / `league_members` write (the freeze test's chain, plus
+`draft_stalls` and #126's reconfirm table + start gate), then `20261109000000` (auto-start) and `20261109000001`
+(`draft_status` server-only). `leagues` is replayed from the migrations' DDL, so
+`start_league_draft`'s compare-and-swap is judged against real column types. The
+expectation it sends is built by the real `buildStartExpect`
+(`functions/_shared/draft-start.ts`) from PostgREST-shaped rows.
+
+It covers:
+- grants (service_role only), security mode, `search_path`, RLS on
+  `draft_start_blocks`, and the `FOR UPDATE` row lock before the flip
+- the policy pin: SQL `draft_start_grace()` = TS `START_GRACE_SECONDS`
+- `due_draft_starts`' half-open window, TBD, and the 60 s back-off (re-armed by a
+  new `draft_date`)
+- `start_league_draft`: not_due / missed / not found; the floor (stake mode,
+  members, playoff spots; duration leagues exempt); CAS `changed` for each judged
+  input (rules, slots, a join) with nothing written; started (order locked, clock
+  anchored, block cleared) and idempotent; #126's REAL reconfirm gate and a #94
+  stand-in (its exact text) are `blocked`, any other 22023 re-raises
+- server-only: no user session changes `draft_status` (start, finish, rewind);
+  same-value patches pass; the service role passes; INSERT only `not_started`
+- the cron guard, sliced from the LATEST `draft_autopick_sweep` schedule and
+  executed against the real functions
+- `docs/security/draft-auto-start-effect-test.sql`, verbatim (20 lines, C1 SKIP:
+  no pg_cron), rolled back
+
+Negative controls (run 2026-10-06 after the rebase onto #126, each made the
+named steps fail): CAS off; grace 20 min; no row lock; an `authenticated` grant;
+server-only rule off; cron without the due guard; the gate catching every 22023;
+the reconfirm name dropped from the gate list; no back-off; INSERT guard off; a
+service_role write grant on `draft_start_blocks`.
+
+Run: `deno test --allow-read --allow-env supabase/tests/draft_auto_start.pglite.test.ts`.
+
+## draft_auto_start_cron_wiring.test.ts
+
+A structural guard (files only). The auto-pick cron (`20261106000000`) and the
+auto-start reschedule (`20261109000002`) both re-schedule `draft_autopick_sweep`,
+and the last one applied wins. So the LATEST migration scheduling the job must
+guard on both `overdue_draft_turns()` and `due_draft_starts()`, and both files
+must be present with the auto-start one sorting after the auto-pick one. It also pins the job contract
+(10 s, vault key, 180000 ms, URL, no key literal, no other job).
+
+Run: `deno test --allow-read supabase/tests/draft_auto_start_cron_wiring.test.ts`.

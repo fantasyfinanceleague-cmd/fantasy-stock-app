@@ -126,3 +126,68 @@ New server work for T−1h:
 ## Release order (sketch)
 
 `ops/autopick-cron-live` (sweep cron live) → #126 → draft-order-notify cron promoted → this branch: `db push` (`20261109…`), then deploy draft-autopick-sweep **and** draft-control (both import `_shared/draft-start.ts`; byte-verify both upload lists) → effect test → the mobile countdown UI ships with 1.2.0. The server is safe ahead of the UI: old clients' Start button becomes a redundant kick.
+
+---
+
+# BUILD (2026-10-06, after the Orchestrator's GO)
+
+Built: everything that doesn't depend on decisions 1–4. Not built: notification copy/kinds, the client, the `draft_date` lead-time/edit guards (decisions 3/4), and relaxing `start` to any member (the client kick, §1.6). That needs an explicit OK.
+
+| Piece | Where |
+|---|---|
+| Policy (★A: 15-min grace, then missed; B/C noted in place) | `supabase/functions/_shared/draft-start-policy.ts` + `public.draft_start_grace()` (pinned equal by test) |
+| One start path | `supabase/functions/_shared/draft-start.ts` `startDraftIfDue`, used by `draft-control` `start` AND the sweep's start pass |
+| The flip (row lock + window + floor + CAS) | `public.start_league_draft` in `20261109000000` |
+| Due list + 60 s back-off | `public.due_draft_starts`, `draft_start_blocks`, `note_draft_start_blocked` (`20261109000000`) |
+| Cron | `20261109000002`: same job, guard = overdue (verbatim from `20261106000000`) OR due |
+| `status` | gains `starts_at` + `start_state`; from the room-open hour it evaluates feasibility too (the early warning) |
+| `draft_status` server-only | `20261109000001`: rule (1) of #123's `enforce_league_rules_frozen_after_draft_start` (one place, body otherwise verbatim) + an INSERT guard |
+| Effect test | `docs/security/draft-auto-start-effect-test.sql` (ONE DO block, 20 lines) |
+| Tests | `_shared/draft-start(-policy).test.ts` (hermetic), `supabase/tests/draft_auto_start.pglite.test.ts`, `draft_auto_start_cron_wiring.test.ts` |
+
+## Legacy pre-check (read-only, Giorgio, run BEFORE the push and again right before it)
+
+Every `not_started` league, and what the first sweep tick will do with it:
+
+```sql
+SELECT l.id, l.name, l.draft_date, l.commissioner_id,
+       (SELECT count(*) FROM league_members m WHERE m.league_id = l.id) AS members,
+       CASE
+         WHEN l.draft_date IS NULL                         THEN 'tbd: never auto-starts'
+         WHEN l.draft_date > now()                         THEN 'future: auto-starts at draft_date'
+         WHEN l.draft_date > now() - interval '15 minutes' THEN 'DUE NOW: the first tick tries to start it'
+         ELSE                                                   'missed: never auto-starts; needs a new draft time'
+       END AS on_first_tick
+  FROM leagues l
+ WHERE l.draft_status = 'not_started'
+ ORDER BY l.draft_date NULLS LAST;
+```
+
+Read it as: any `DUE NOW` row starts within 10 s of the push. Any `future` row starts on its own at its time. Decide on each (test leagues especially) before pushing: clear the date, or accept. `missed` rows are safe. A commissioner's old Start button now refuses them with `draft_start_missed`; setting a new date re-opens the window.
+
+## Release (HUMAN ACTION, in order)
+
+0. Preconditions: `20261106000000`–`02` (the auto-pick cron, on main) and `20261107000000`–`06` (#126, on main) applied first, or in the same push (timestamp order does it). Check with `SELECT version FROM supabase_migrations.schema_migrations WHERE version >= '20261106000000' ORDER BY version;`. The auto-pick runbook (`docs/migrations/AUTOPICK_CRON_LIVE.md`) must be complete before this push, because this file re-schedules the same job. #94 may land either side (its gate is caught by name). The draft-order-notify cron is recommended in the same release (§3).
+1. Merge. Refresh the deploy checkout (CLAUDE.md). Run the pre-check above.
+2. `supabase db push --dry-run`: it must list `20261109000000`–`02` (re-stamped later than anything already applied; never `--include-all`). Then `supabase db push`. Confirm in `supabase_migrations.schema_migrations`.
+3. Deploy **draft-control** and **draft-autopick-sweep** (both import `_shared/draft-start.ts`). The upload list must include `_shared/draft-start.ts`, `_shared/draft-start-policy.ts` and `draft-control/rules.ts` (for the sweep too). Content check first: `grep -c startDraftIfDue supabase/functions/draft-autopick-sweep/index.ts` ≥ 1. Byte-verify both downloads against the commit.
+   Push-vs-deploy order: deploy within minutes of the push. The new cron posts for due drafts at once, and the OLD sweep ignores them (harmless, no starts). The old draft-control `start` keeps working until redeployed, but it writes `draft_status` with the service role, which the server-only rule exempts.
+4. `docs/security/draft-auto-start-effect-test.sql`: 20 PASS lines. Also, as postgres, run `SELECT exists (SELECT 1 FROM public.due_draft_starts());`: it must return without error. The cron command isn't validated at schedule time, and a broken guard would silently stop the auto-pick backstop too. Then the live check in `20261109000002`'s footer (a test league ~62 min out, every app closed; `draft_started_at - draft_date` well under 15 s).
+5. Re-capture `docs/architecture/db-snapshot.json` (new functions + grants + the cron command), re-run the map, update STATUS.
+
+**Supersedes:** `docs/security/freeze-league-rules-effect-test.sql` R7 and D1 now refuse with `draft_status_server_only`. Don't re-run that file as a gate.
+**Web:** the paused web app's `DraftPage.jsx` start flip and member `completeDraft` are refused from here on. Re-route them through draft-control before any unpause.
+
+## Merge notes (rebased onto main @ 5471392: auto-pick cron + #126 merged)
+
+- **#126 (leave-league), integrated.** `draft-control` start runs `startDraftIfDue`. `draft-start.ts` reads `league_roster_reconfirm` (fails closed) into `toStartState`, so the TS evaluation reports `roster_reconfirm_required` before any pool read. `start_league_draft` also catches #126's real gate by name. The PGlite chain loads `20261107000000` + `20261107000006` and proves it. `status` and `confirm_roster` keep #126's read. #126's raw `updErr` string match is gone with the conditional UPDATE it guarded.
+- **#94 (Run it back):** `renewal_replies_pending` is caught by name. A stand-in raising its exact text (`20261105000004` on its branch) is tested. Its start trigger sets `num_participants`, which isn't a CAS input. `renew_league` INSERTs `not_started` (allowed by the INSERT guard), and `start_renewed_season` never writes `draft_status`. Re-check both when it rebases.
+- **Kind CHECK / notifications:** untouched here.
+
+## Review (2026-10-06): supabase-reviewer + security-reviewer, no blockers
+
+Fixed: M1 (error/changed outcomes back off too), L1 (Alpaca checked only before the overdue pass, never blocking starts), L2 (`note_draft_start_blocked` reads `FOR SHARE`), L3 (duplicate REVOKE and the needless trigger re-create dropped; `draft_start_blocks` is SELECT-only for service_role). Feasibility detail is stripped for non-commissioners in `status`. H1 (ordering) is gone: both files are on main, and the wiring test now requires both. M2: verified against #126's real gate (tested) and #94's text. Self-review: a *missed* draft now reports a `draft_start_missed` blocker, so `can_start` is false.
+Accepted / for Giorgio:
+- **Backdating `draft_date`** (security LOW): a commissioner can set the date to a minute ago and the draft starts within ~10 s, fully checked, but skipping the T−1h notice. That's decision 4 (minimum lead).
+- **The manual Start shares the 15-min grace** (M4): after it, only a new date re-opens the window. An operator can rescue a league with a SQL-editor `draft_date` update.
+- **Numeric precision** (M5): a price bound or budget with more than ~15 significant digits would never compare equal, so the CAS returns `changed` and backs off forever. It fails closed, and no realistic value does this.
