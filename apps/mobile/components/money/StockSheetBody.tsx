@@ -10,6 +10,7 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
+import { SegmentedControl } from '@/components/sp/SegmentedControl';
 import { Text } from '@/components/sp/Text';
 import { formatMoney, formatPercent } from '@/components/sp/logic/money';
 import { useLeagueContext } from '@/lib/LeagueContext';
@@ -97,23 +98,11 @@ export function StockSheetBody({ symbol, knownName = null, onDone }: { symbol: s
         <Text variant="callout">{formatShares(data.facts.held.quantity)} sh</Text>
       ) : null}
 
-      <View accessibilityRole="tablist" style={{ flexDirection: 'row', gap: 8 }}>
-        {(['buy', 'sell'] as const).map((k) => (
-          <Pressable
-            key={k}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: selected === k }}
-            accessibilityLabel={k === 'buy' ? 'Buy' : 'Sell'}
-            onPress={() => setChoice(k)}
-            hitSlop={6}
-            style={{ minHeight: 44, minWidth: 64, justifyContent: 'center', alignItems: 'center' }}
-          >
-            <Text variant="callout" tone={selected === k ? 'primary' : 'secondary'}>
-              {k === 'buy' ? 'Buy' : 'Sell'}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
+      <SegmentedControl
+        options={[{ label: 'Buy', value: 'buy' }, { label: 'Sell', value: 'sell' }]}
+        value={selected}
+        onChange={(v) => setChoice(v as 'buy' | 'sell')}
+      />
 
       {selected === 'sell' && model.sell.summary ? (
         <Text variant="callout">{model.sell.summary}</Text>
