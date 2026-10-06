@@ -20,6 +20,10 @@
 --     draft_date (5h away = open; 30 min away = inside the hour, order set).
 --   * Grant cases match the "permission denied" MESSAGE, not only SQLSTATE
 --     42501.
+--   * Every fixture league sets league_type EXPLICITLY. The prod column default
+--     is 'duration' (20251230000000), so an insert that omits it silently tests
+--     the duration branch. That made S4 fail in prod on 2026-10-06 while the
+--     PGlite replica (default 'matchup' at the time) passed.
 --   * supabase/tests/leave_league.pglite.test.ts runs THIS file on real
 --     Postgres and requires every line to PASS.
 --
@@ -33,7 +37,8 @@
 --   S1  pre-draft leave: row gone, reconfirm row, member_left to commish     PASS
 --   S2  inside the hour: locked_in (order_set), nothing written              PASS
 --   S3  commissioner: successor_required, then hand-over to the successor    PASS
---   S4  confirm: P above members refused; confirm with P = members           PASS
+--   S4  confirm (matchup): P above members refused; confirm with P = members PASS
+--   S4b confirm (duration): playoff spots don't apply, so it succeeds        PASS
 --   S5  after the season: hidden, membership kept                            PASS
 --   S6  mid-season: locked_in (season)                                        PASS
 --   S7  commissioner successor injection (bot / outsider / self) refused     PASS
@@ -60,6 +65,7 @@ declare
   l_rd   uuid;   -- not started, 5h away: for the read cases
   l_live uuid;   -- mid-season
   l_done uuid;   -- season completed
+  l_dur  uuid;   -- DURATION league, not started, 5h away: playoff spots don't apply
   res    jsonb;
   acl    text;
   n      int;
@@ -118,24 +124,27 @@ begin
          then 'PASS' else 'FAIL' end);
 
   -- ---- fixture (as the editor's own role) -----------------------------------
-  insert into public.leagues (name, commissioner_id, invite_code, num_participants, draft_status, draft_date, playoff_teams)
-  values ('__LEAVE_FAR__', c_uid, 'LV-' || gen_random_uuid(), 8, 'not_started', now() + interval '5 hours', 4)
+  insert into public.leagues (name, commissioner_id, invite_code, num_participants, draft_status, draft_date, playoff_teams, league_type)
+  values ('__LEAVE_FAR__', c_uid, 'LV-' || gen_random_uuid(), 8, 'not_started', now() + interval '5 hours', 4, 'matchup')
   returning id into l_far;
-  insert into public.leagues (name, commissioner_id, invite_code, num_participants, draft_status, draft_date, playoff_teams)
-  values ('__LEAVE_SOON__', c_uid, 'LV-' || gen_random_uuid(), 8, 'not_started', now() + interval '30 minutes', 4)
+  insert into public.leagues (name, commissioner_id, invite_code, num_participants, draft_status, draft_date, playoff_teams, league_type)
+  values ('__LEAVE_SOON__', c_uid, 'LV-' || gen_random_uuid(), 8, 'not_started', now() + interval '30 minutes', 4, 'matchup')
   returning id into l_soon;
-  insert into public.leagues (name, commissioner_id, invite_code, num_participants, draft_status, draft_date, playoff_teams)
-  values ('__LEAVE_READ__', c_uid, 'LV-' || gen_random_uuid(), 8, 'not_started', now() + interval '5 hours', 4)
+  insert into public.leagues (name, commissioner_id, invite_code, num_participants, draft_status, draft_date, playoff_teams, league_type)
+  values ('__LEAVE_READ__', c_uid, 'LV-' || gen_random_uuid(), 8, 'not_started', now() + interval '5 hours', 4, 'matchup')
   returning id into l_rd;
-  insert into public.leagues (name, commissioner_id, invite_code, num_participants, draft_status, draft_date, playoff_teams)
-  values ('__LEAVE_LIVE__', c_uid, 'LV-' || gen_random_uuid(), 8, 'not_started', now() + interval '5 hours', 4)
+  insert into public.leagues (name, commissioner_id, invite_code, num_participants, draft_status, draft_date, playoff_teams, league_type)
+  values ('__LEAVE_LIVE__', c_uid, 'LV-' || gen_random_uuid(), 8, 'not_started', now() + interval '5 hours', 4, 'matchup')
   returning id into l_live;
-  insert into public.leagues (name, commissioner_id, invite_code, num_participants, draft_status, draft_date, playoff_teams)
-  values ('__LEAVE_DONE__', c_uid, 'LV-' || gen_random_uuid(), 8, 'not_started', now() + interval '5 hours', 4)
+  insert into public.leagues (name, commissioner_id, invite_code, num_participants, draft_status, draft_date, playoff_teams, league_type)
+  values ('__LEAVE_DONE__', c_uid, 'LV-' || gen_random_uuid(), 8, 'not_started', now() + interval '5 hours', 4, 'matchup')
   returning id into l_done;
+  insert into public.leagues (name, commissioner_id, invite_code, num_participants, draft_status, draft_date, playoff_teams, league_type)
+  values ('__LEAVE_DUR__', c_uid, 'LV-' || gen_random_uuid(), 8, 'not_started', now() + interval '5 hours', 4, 'duration')
+  returning id into l_dur;
   insert into public.league_members (league_id, user_id, role)
   select l, u, case when u = c_uid then 'commissioner' else 'member' end
-    from unnest(array[l_far, l_soon, l_rd, l_live, l_done]) l,
+    from unnest(array[l_far, l_soon, l_rd, l_live, l_done, l_dur]) l,
          unnest(array[c_uid, a_uid, b_uid, d_uid, e_uid]) u;
   update public.leagues set draft_status = 'completed', draft_started_at = now() where id in (l_live, l_done);
   update public.leagues set season_status = 'completed' where id = l_done;
@@ -206,6 +215,23 @@ begin
     end if;
   exception when others then
     out := out || format(E'S4 confirm                   -> %s FAIL (%s)\n', sqlstate, sqlerrm);
+  end;
+
+  begin
+    -- The duration branch: three leave (5 -> 2 members, playoff_teams 4). On a
+    -- matchup league that confirm would be refused (S4); here playoffs don't
+    -- apply, so it must succeed.
+    res := public.leave_league(l_dur, a_uid);
+    res := public.leave_league(l_dur, b_uid);
+    res := public.leave_league(l_dur, d_uid);
+    res := public.confirm_league_roster(l_dur, c_uid, 'move_forward');
+    out := out || format(E'S4b duration league confirm  -> %s members=%s reconfirm rows=%s  %s\n', res->>'status', res->>'members',
+      (select count(*) from public.league_roster_reconfirm where league_id = l_dur),
+      case when res->>'status' = 'confirmed' and (res->>'members')::int = 2
+            and not exists (select 1 from public.league_roster_reconfirm where league_id = l_dur)
+           then 'PASS' else 'FAIL ' || res::text end);
+  exception when others then
+    out := out || format(E'S4b duration league confirm  -> %s FAIL (%s)\n', sqlstate, sqlerrm);
   end;
 
   begin

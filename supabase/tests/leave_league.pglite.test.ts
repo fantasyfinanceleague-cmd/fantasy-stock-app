@@ -69,7 +69,10 @@ create table leagues (
   invite_code text, num_participants int default 8, draft_date timestamptz,
   created_at timestamptz not null default clock_timestamp(),
   league_start_date timestamptz, league_end_date timestamptz,
-  league_type text not null default 'matchup', num_weeks int, current_week int default 1,
+  -- PROD's default, 'duration' (20251230000000). The guard step below fails if
+  -- this ever drifts from the latest migration's default again: on 2026-10-06 a
+  -- 'matchup' default here hid an effect-test fixture that omitted league_type.
+  league_type text not null default 'duration', num_weeks int, current_week int default 1,
   season_status text default 'active', playoff_teams int default 4,
   constraint valid_playoff_teams check (playoff_teams is null or playoff_teams in (2, 4, 8)));
 create table matchups (id uuid primary key default gen_random_uuid(),
@@ -168,7 +171,7 @@ Deno.test({
     const homeBefore = await fnState('get_home_summary');
 
     // A pre-existing pending notice, so the CHECK rewrite is proven to keep old kinds valid.
-    const [old] = await q(`insert into leagues (name, commissioner_id) values ('old', $1) returning id`, [C]);
+    const [old] = await q(`insert into leagues (name, commissioner_id, league_type) values ('old', $1, 'matchup') returning id`, [C]);
     await q(`insert into league_notifications (league_id, user_id, kind) values ($1, $2, 'draft_order_set')`, [old.id, C]);
 
     for (const f of OURS) await db.exec(await mig(f));
@@ -214,7 +217,8 @@ Deno.test({
     };
     const notifyDue = async () => (await q(`select draft_order_notify_due() d`))[0].d;
     async function mkLeague(ids: string[], extra: Record<string, unknown> = {}) {
-      const row: Record<string, unknown> = { name: 'Test League', commissioner_id: ids[0], ...extra };
+      // league_type is EXPLICIT: the column default is 'duration' (as in prod).
+      const row: Record<string, unknown> = { name: 'Test League', commissioner_id: ids[0], league_type: 'matchup', ...extra };
       const cols = Object.keys(row);
       const [l] = await q(
         `insert into leagues (${cols.join(',')}) values (${cols.map((_, i) => '$' + (i + 1)).join(',')}) returning *`,
@@ -230,6 +234,25 @@ Deno.test({
       await asRole('authenticated', uid);
       try { return (await q(`select get_draft_order($1) r`, [id]))[0].r; } finally { await asRole(null); }
     };
+
+    await step('replica guard: leagues.league_type default equals the latest migration default (prod)', async () => {
+      // Every migration in apply order (deferred/ is not applied); the LAST
+      // statement that sets the default wins, whether at ADD COLUMN or via
+      // ALTER COLUMN ... SET DEFAULT.
+      const dir = new URL('supabase/migrations/', ROOT);
+      const files: string[] = [];
+      for await (const e of Deno.readDir(dir)) if (e.isFile && e.name.endsWith('.sql')) files.push(e.name);
+      files.sort();
+      const re = /league_type\s+text[^;]*?\bdefault\s+'(\w+)'|alter\s+column\s+league_type\s+set\s+default\s+'(\w+)'/gi;
+      let latest: string | null = null;
+      for (const f of files) {
+        for (const m of (await mig(f)).matchAll(re)) latest = m[1] ?? m[2];
+      }
+      assert(latest !== null, 'no migration sets a league_type default');
+      const [col] = await q(`select column_default d from information_schema.columns
+                              where table_name = 'leagues' and column_name = 'league_type'`);
+      assertEquals(col.d, `'${latest}'::text`, 'the replica default drifted from prod');
+    });
 
     await step('grants: service_role only on all three RPCs; search_path pinned; table grants exact', async () => {
       for (const f of ['leave_league', 'unhide_league', 'confirm_league_roster']) {
@@ -620,7 +643,7 @@ Deno.test({
       const msg = String((err as Error).message);
       assert(msg.includes('LEAVE LEAGUE EFFECT TEST RESULTS'), msg);
       assert(!msg.includes('FAIL'), msg);
-      assertEquals(msg.match(/PASS/g)?.length, 20, msg); // one per case in the file's EXPECTED OUTPUT
+      assertEquals(msg.match(/PASS/g)?.length, 21, msg); // one per case in the file's EXPECTED OUTPUT
       assertEquals((await q(`select count(*)::int n from leagues`))[0].n, before, 'fixture rolled back');
     });
 
@@ -639,8 +662,8 @@ Deno.test({
       await db.exec(`set role service_role`);
       try { return (await q(`select leave_league($1, $2, $3) r`, [id, uid, successor]))[0].r; } finally { await db.exec(`reset role`); }
     };
-    const [s1] = await q(`insert into leagues (name, commissioner_id, draft_status, season_status) values ('S1',$1,'completed','completed') returning id`, [C]);
-    const [s2] = await q(`insert into leagues (name, commissioner_id, previous_league_id, draft_date) values ('S2',$1,$2, now() + interval '3 days') returning id`, [C, s1.id]);
+    const [s1] = await q(`insert into leagues (name, commissioner_id, draft_status, season_status, league_type) values ('S1',$1,'completed','completed','matchup') returning id`, [C]);
+    const [s2] = await q(`insert into leagues (name, commissioner_id, previous_league_id, draft_date, league_type) values ('S2',$1,$2, now() + interval '3 days','matchup') returning id`, [C, s1.id]);
     for (const [u, role] of [[C, 'commissioner'], [A, 'member'], [B, 'member'], [E, 'member']]) {
       await q(`insert into league_members (league_id, user_id, role) values ($1,$2,$3)`, [s2.id, u, role]);
     }
