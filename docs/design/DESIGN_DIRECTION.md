@@ -686,6 +686,7 @@ the `impeccable` guides (craft-floor, ios, clarify, harden, layout); see
   | `close` | `close` | Sheets, clear field |
   | `search` | `search` | Search fields |
   | `add` | `add` | Create |
+  | `remove` | `remove` | The stepper minus (paired with `add` as the plus: same glyph family) |
   | `share` | `share-outline` | Invite code share |
   | `trophy` | `trophy` | Champion medallion |
   | `lock` | `lock-closed-outline` | Final / locked draft order |
