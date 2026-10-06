@@ -25,6 +25,8 @@ export interface TradeReviewPanelProps {
   presentation: ReviewPresentation;
   onSubmit: () => void;
   onRetry: () => void;
+  /** False while a submit is in flight: Edit is hidden, since leaving would drop the outcome. */
+  canEdit: boolean;
   onBack: () => void;
   onDone: () => void;
 }
@@ -64,15 +66,17 @@ function DoneCheck() {
   );
 }
 
-export function TradeReviewPanel({ review, presentation, onSubmit, onRetry, onBack, onDone }: TradeReviewPanelProps) {
+export function TradeReviewPanel({ review, presentation, onSubmit, onRetry, canEdit, onBack, onDone }: TradeReviewPanelProps) {
   const { colors } = useTheme();
   const p = presentation;
 
   return (
     <View style={styles.stack}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Edit" onPress={onBack} hitSlop={8} style={styles.back}>
-        <Text variant="callout" tone="primary">Edit</Text>
-      </Pressable>
+      {canEdit ? (
+        <Pressable accessibilityRole="button" accessibilityLabel="Edit" onPress={onBack} hitSlop={8} style={styles.back}>
+          <Text variant="callout" tone="primary">Edit</Text>
+        </Pressable>
+      ) : null}
 
       <Text variant="headline">{review.title}</Text>
       {review.headline ? <Text variant="title">{review.headline}</Text> : null}

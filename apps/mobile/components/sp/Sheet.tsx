@@ -18,12 +18,14 @@ export interface SheetProps {
   visible: boolean;
   onClose: () => void;
   children: ReactNode;
+  /** False locks every dismiss path (swipe, backdrop, Android back): used while a trade submit is in flight. */
+  dismissible?: boolean;
 }
 
 const DISMISS_DISTANCE = 120;
 const DISMISS_VELOCITY = 0.8;
 
-export function Sheet({ visible, onClose, children }: SheetProps) {
+export function Sheet({ visible, onClose, children, dismissible = true }: SheetProps) {
   const { colors, elevation } = useTheme();
   const [mounted, setMounted] = useState(visible);
   const screenHeight = Dimensions.get('window').height;
@@ -47,6 +49,13 @@ export function Sheet({ visible, onClose, children }: SheetProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
+  // The pan responder is created once, so it reads the latest value through a ref.
+  const dismissibleRef = useRef(dismissible);
+  dismissibleRef.current = dismissible;
+  const dismiss = () => {
+    if (dismissibleRef.current) onClose();
+  };
+
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_evt, gesture) => Math.abs(gesture.dy) > 4 && Math.abs(gesture.dy) > Math.abs(gesture.dx),
@@ -54,7 +63,7 @@ export function Sheet({ visible, onClose, children }: SheetProps) {
         if (gesture.dy > 0) translateY.value = gesture.dy;
       },
       onPanResponderRelease: (_evt, gesture) => {
-        if (gesture.dy > DISMISS_DISTANCE || gesture.vy > DISMISS_VELOCITY) {
+        if ((gesture.dy > DISMISS_DISTANCE || gesture.vy > DISMISS_VELOCITY) && dismissibleRef.current) {
           onClose();
         } else {
           translateY.value = withSpring(0, spring.snappy);
@@ -69,9 +78,9 @@ export function Sheet({ visible, onClose, children }: SheetProps) {
   if (!mounted) return null;
 
   return (
-    <Modal transparent visible={mounted} animationType="none" onRequestClose={onClose} statusBarTranslucent>
+    <Modal transparent visible={mounted} animationType="none" onRequestClose={dismiss} statusBarTranslucent>
       <View style={styles.container}>
-        <Animated.View style={[styles.backdrop, { backgroundColor: colors.scrim }, backdropAnimatedStyle]} onTouchEnd={onClose} />
+        <Animated.View style={[styles.backdrop, { backgroundColor: colors.scrim }, backdropAnimatedStyle]} onTouchEnd={dismiss} />
         <Animated.View style={[styles.sheet, { backgroundColor: colors.surface }, elevation.sheet, sheetAnimatedStyle]}>
           <View {...panResponder.panHandlers} style={styles.handleArea}>
             <View style={[styles.handle, { backgroundColor: colors.border }]} />

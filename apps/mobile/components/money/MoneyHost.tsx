@@ -23,6 +23,8 @@ const StockSheetContext = createContext<StockSheetContextValue | undefined>(unde
 
 export function MoneyHostProvider({ children }: { children: ReactNode }) {
   const [current, setCurrent] = useState<{ symbol: string; originRef: string | null; name: string | null } | null>(null);
+  // True while a trade submit is in flight: the sheet can't be dismissed then (the outcome must land).
+  const [busy, setBusy] = useState(false);
 
   const open = useCallback((raw: string, options?: string | null | OpenOptions) => {
     const symbol = normalizeSymbol(raw);
@@ -31,7 +33,10 @@ export function MoneyHostProvider({ children }: { children: ReactNode }) {
     setCurrent({ symbol, originRef: o.originRef, name: o.name });
   }, []);
 
-  const close = useCallback(() => setCurrent(null), []);
+  const close = useCallback(() => {
+    setCurrent(null);
+    setBusy(false);
+  }, []);
 
   const value = useMemo<StockSheetContextValue>(
     () => ({ symbol: current?.symbol ?? null, originRef: current?.originRef ?? null, open, close }),
@@ -41,8 +46,8 @@ export function MoneyHostProvider({ children }: { children: ReactNode }) {
   return (
     <StockSheetContext.Provider value={value}>
       {children}
-      <Sheet visible={current !== null} onClose={close}>
-        {current ? <StockSheetBody symbol={current.symbol} knownName={current.name} onDone={close} /> : null}
+      <Sheet visible={current !== null} onClose={close} dismissible={!busy}>
+        {current ? <StockSheetBody symbol={current.symbol} knownName={current.name} onDone={close} onBusyChange={setBusy} /> : null}
       </Sheet>
     </StockSheetContext.Provider>
   );

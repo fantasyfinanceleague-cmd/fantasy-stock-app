@@ -33,6 +33,7 @@ import { fillsSlotLine, tierRefusalSentence } from '@/lib/money/tierContract';
 import { categoryNameOf, loadCategoryNames } from '@/lib/money/categoryNames';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { reviewPresentation } from '@/lib/money/reviewPresentation';
+import { canDismiss } from '@/lib/money/reviewMachine';
 import { decideTradeGate } from '@/lib/money/tradeGate';
 import { stockSheetModel } from '@/lib/money/stockSheetModel';
 import { buyBody, previewBody, sellBody } from '@/lib/money/tradeBodies';
@@ -61,7 +62,18 @@ interface OpenReview {
   warn?: boolean;
 }
 
-export function StockSheetBody({ symbol, knownName = null, onDone }: { symbol: string; knownName?: string | null; onDone: () => void }) {
+export function StockSheetBody({
+  symbol,
+  knownName = null,
+  onDone,
+  onBusyChange,
+}: {
+  symbol: string;
+  knownName?: string | null;
+  onDone: () => void;
+  /** Reports a submit in flight, so the host can lock the sheet's dismiss paths. */
+  onBusyChange?: (busy: boolean) => void;
+}) {
   const data = useStockSheetData(symbol, knownName);
   const { market: contextMarket, activeLeague } = useLeagueContext();
   const { user } = useSession();
@@ -149,6 +161,12 @@ export function StockSheetBody({ symbol, knownName = null, onDone }: { symbol: s
     return { kind, review: null, body: null, error: COPY.cantReach, loading: false };
   }
 
+  // The sheet locks its dismiss paths only while a submit is in flight (reviewMachine.canDismiss).
+  const busy = !canDismiss(trade.state);
+  useEffect(() => {
+    onBusyChange?.(busy);
+  }, [busy, onBusyChange]);
+
   // A review open when the market closes swaps to closed at once (the server's refusal wins a race).
   useEffect(() => {
     if (open && !gate.open && trade.state.kind !== 'done') trade.gateClosed(opensLabel);
@@ -224,6 +242,7 @@ export function StockSheetBody({ symbol, knownName = null, onDone }: { symbol: s
           presentation={presentation}
           onSubmit={submitNow}
           onRetry={retryReview}
+          canEdit={!busy}
           onBack={() => setOpen(null)}
           onDone={() => {
             setOpen(null);

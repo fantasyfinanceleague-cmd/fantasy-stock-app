@@ -132,3 +132,21 @@ Deno.test('trade_conflict copy is the approved text, with no raw code and no em 
   assertEquals(refusalCopy('trade_conflict', {}).retryable, true);
   assertEquals(refusalCopy('symbol_owned', {}).retryable, undefined);
 });
+
+// Rule 9 / §9B (UX audit P1): the only state that locks dismissal is an in-flight submit.
+// Every other state, including the outcomes the player must read, stays dismissible.
+Deno.test('canDismiss is false only while submitting, for every review state', () => {
+  const states: import('../lib/money/reviewMachine.ts').ReviewState[] = [
+    { kind: 'ready' },
+    { kind: 'submitting' },
+    { kind: 'done', trade: {} },
+    { kind: 'refused', reason: 'symbol_owned', retryable: false },
+    { kind: 'refreshing' },
+    { kind: 'closed', opensLabel: null },
+    { kind: 'unavailable' },
+    { kind: 'unconfirmed' },
+  ];
+  for (const s of states) {
+    assertEquals(canDismiss(s), s.kind !== 'submitting', `kind=${s.kind}`);
+  }
+});
