@@ -4,15 +4,16 @@
  * judged on the server's clock), the blockers (codes, mapped to copy by
  * autoStart / draftLobby), and whether the caller is the commissioner.
  *
- * The server's clock: status has no server_now, so a get_draft_clock read
- * (the draft room's clock, which carries server_now) runs alongside it and
- * gives the offset the countdown runs on. If that read fails the offset is 0
- * (the phone's clock), and the phase still comes from the server's
- * start_state. A failed status read is never "can start".
+ * The server's clock: status carries server_now (the DB clock, the same
+ * instant that judged start_state), and the countdown runs on the offset from
+ * it. From an older draft-control without that field, a get_draft_clock read
+ * (the draft room's clock) is the fallback; if that fails too the offset is 0
+ * (the phone's clock) and the phase still comes from start_state. A failed
+ * status read is never "can start".
  */
 import { useEffect, useState } from 'react';
 import { seamInvoke, seamRpc } from './seamCalls';
-import { parseStartStatus, serverOffsetMs, type Blocker, type Postponed, type StartState } from './autoStart';
+import { clockFromStatus, parseStartStatus, serverOffsetMs, type Blocker, type Postponed, type StartState } from './autoStart';
 
 export interface DraftStatus {
   status: 'idle' | 'loading' | 'ready' | 'error';
@@ -41,20 +42,28 @@ export function useDraftStatus(leagueId: string | null, enabled: boolean, refres
     let cancelled = false;
     setState((s) => ({ ...s, status: 'loading' }));
     (async () => {
-      const [{ data, error }, clock] = await Promise.all([
-        seamInvoke('draft-control', { body: { league_id: leagueId, action: 'status' } }),
-        seamRpc('get_draft_clock', { p_league_id: leagueId }).then(
-          (r) => ({ res: r, at: Date.now() }),
-          () => ({ res: { data: null, error: { message: 'transport' } }, at: Date.now() }),
-        ),
-      ]);
+      const { data, error } = await seamInvoke('draft-control', { body: { league_id: leagueId, action: 'status' } });
+      const receivedAt = Date.now();
       if (cancelled) return;
       if (error || !data || data.ok === false) {
         console.warn('[game:draft-status] failed', error?.message);
         setState({ ...EMPTY, status: 'error' });
         return;
       }
-      const clockRow = !clock.res.error ? ((clock.res.data as { server_now?: string }[] | null) ?? [])[0] : undefined;
+      const clock = clockFromStatus(data as Record<string, unknown>);
+      let offset = 0;
+      if (clock.source === 'status') {
+        offset = serverOffsetMs(clock.serverNow, receivedAt);
+      } else {
+        // An older deploy: the draft room's clock, read once.
+        const fb = await seamRpc('get_draft_clock', { p_league_id: leagueId }).then(
+          (r) => ({ res: r, at: Date.now() }),
+          () => ({ res: { data: null, error: { message: 'transport' } }, at: Date.now() }),
+        );
+        if (cancelled) return;
+        const row = !fb.res.error ? ((fb.res.data as { server_now?: string }[] | null) ?? [])[0] : undefined;
+        offset = serverOffsetMs(row?.server_now ?? null, fb.at);
+      }
       const start = parseStartStatus(data as Record<string, unknown>);
       setState({
         status: 'ready',
@@ -64,7 +73,7 @@ export function useDraftStatus(leagueId: string | null, enabled: boolean, refres
         minMembers: Number(data.min_members ?? 4),
         blockers: (data.blockers ?? []) as Blocker[],
         ...start,
-        serverOffsetMs: serverOffsetMs(clockRow?.server_now ?? null, clock.at),
+        serverOffsetMs: offset,
       });
     })();
     return () => {

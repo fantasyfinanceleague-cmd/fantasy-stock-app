@@ -67,6 +67,17 @@ export function serverOffsetMs(serverNowIso: string | null | undefined, received
   return Number.isNaN(t) ? 0 : t - receivedAtMs;
 }
 
+/** Where the server clock comes from: draft-control status's own server_now
+ * (the DB clock, the same instant that judged start_state; feat/draft-auto-start
+ * 3f0eb8d), or, from an older deploy without it, a get_draft_clock read. */
+export function clockFromStatus(data: Record<string, unknown> | null | undefined):
+  | { source: 'status'; serverNow: string }
+  | { source: 'fallback' } {
+  const v = data?.server_now;
+  if (typeof v === 'string' && !Number.isNaN(new Date(v).getTime())) return { source: 'status', serverNow: v };
+  return { source: 'fallback' };
+}
+
 // ── The lobby's phase ────────────────────────────────────────────────────
 
 /** What the lobby shows. `starting` = the start time has come (the countdown

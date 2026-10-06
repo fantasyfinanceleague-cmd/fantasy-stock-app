@@ -18,6 +18,7 @@ import {
   PICK_NEW_TIME,
   PICK_NEW_TIME_NOTE,
   blockerClause,
+  clockFromStatus,
   blockerTitle,
   blockersCardCopy,
   countdownCopy,
@@ -46,6 +47,7 @@ import {
   startKickOutcome,
   type StartState,
 } from '../lib/game/autoStart.ts';
+import statusHookSrc from '../lib/game/useDraftStatus.ts' with { type: 'text' };
 
 const T = '2026-10-03T23:00:00Z'; // Sat, Oct 3 · 7:00 PM ET
 const tMs = Date.parse(T);
@@ -385,4 +387,29 @@ Deno.test('the lobby load failure and the clauses, as ruled', () => {
   const push = (c: string) => `The draft room can't open yet: ${c}.`;
   assertEquals(push(blockerClause({ code: 'no_stake_mode' })), "The draft room can't open yet: the league's stakes aren't set.");
   assertEquals(push(blockerClause({ code: 'playoff_teams_exceeds_members' })), "The draft room can't open yet: there are more playoff teams than teams.");
+});
+
+// ── The server clock: status.server_now, else the get_draft_clock fallback ──
+
+Deno.test('status carries server_now: it is the clock (feat/draft-auto-start 3f0eb8d)', () => {
+  assertEquals(clockFromStatus({ start_state: 'room_open', server_now: '2026-10-03T22:17:42Z' }), { source: 'status', serverNow: '2026-10-03T22:17:42Z' });
+  // The offset the countdown runs on, from it: server 5 s ahead of the phone.
+  assertEquals(serverOffsetMs('2026-10-03T22:17:42Z', Date.parse('2026-10-03T22:17:37Z')), 5000);
+});
+
+Deno.test('an older deploy without server_now (or a bad one): the get_draft_clock fallback', () => {
+  assertEquals(clockFromStatus({ start_state: 'room_open' }), { source: 'fallback' });
+  assertEquals(clockFromStatus({ server_now: null }), { source: 'fallback' });
+  assertEquals(clockFromStatus({ server_now: 'not a time' }), { source: 'fallback' });
+  assertEquals(clockFromStatus({ server_now: 1730000000 }), { source: 'fallback' });
+  assertEquals(clockFromStatus(null), { source: 'fallback' });
+});
+
+Deno.test('the hook reads get_draft_clock ONLY in the fallback branch (source guard)', () => {
+  const statusBranch = statusHookSrc.indexOf("if (clock.source === 'status')");
+  const fallbackRead = statusHookSrc.indexOf("seamRpc('get_draft_clock'");
+  const elseBranch = statusHookSrc.indexOf('} else {', statusBranch);
+  assertEquals(statusBranch > 0 && elseBranch > statusBranch && fallbackRead > elseBranch, true);
+  assertEquals((statusHookSrc.match(/get_draft_clock/g) ?? []).length >= 1, true);
+  assertEquals(statusHookSrc.includes('Promise.all'), false); // no more side read on every status
 });

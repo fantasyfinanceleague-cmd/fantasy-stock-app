@@ -59,3 +59,9 @@ Deno.test('the seam serves the picked fixture for status; start and confirm_rost
   // No fixture picked: the old generic status, unchanged.
   assertEquals((invokeFixtureFor('draft-control', { action: 'status' })!.data as { start_state?: string }).start_state, undefined);
 });
+
+Deno.test('every fixture carries server_now, like the new backend', () => {
+  for (const state of DRAFT_START_FIXTURE_STATES) {
+    assertEquals(draftStartStatusFixture(state, false, NOW).server_now, new Date(NOW).toISOString(), state);
+  }
+});

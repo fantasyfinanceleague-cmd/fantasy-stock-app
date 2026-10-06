@@ -26,7 +26,8 @@ const SOFIA_LEFT = { code: 'roster_reconfirm_required', departed: [{ name: 'Sofi
 const PLAYOFF_8_OF_7 = { code: 'playoff_teams_exceeds_members', playoffTeams: 8, members: 7 };
 
 export function draftStartStatusFixture(state: StartState, member: boolean, nowMs: number): Record<string, unknown> {
-  const base = { ok: true, is_commissioner: !member, bots_allowed: false, bots_needed: 0, member_count: 7, min_members: 4, postponed: null };
+  // server_now: the DB clock the status was judged at (feat/draft-auto-start 3f0eb8d).
+  const base = { ok: true, is_commissioner: !member, bots_allowed: false, bots_needed: 0, member_count: 7, min_members: 4, postponed: null, server_now: iso(nowMs) };
   const notReached = (t: number) => ({ code: 'draft_date_not_reached', draftDate: iso(t) });
   switch (state) {
     case 'no_date':
