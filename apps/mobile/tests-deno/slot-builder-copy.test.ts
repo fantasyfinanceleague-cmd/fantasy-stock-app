@@ -6,6 +6,11 @@
 import { assertEquals } from 'jsr:@std/assert';
 import {
   EMPTY_SLOT,
+  PRICE_TIERS_NEED_A_SLOT,
+  SLOT_FIELD_LABELS,
+  rosterSlotsCaption,
+  slotFieldA11y,
+  splitSlotErrors,
   SLOT_CHECK_FAILED,
   SLOT_PARTIAL_NOTE,
   categoryLabel,
@@ -66,4 +71,48 @@ Deno.test('the failure and partial-data lines are the old ones', () => {
   assertEquals(SLOT_CHECK_FAILED, 'Could not check availability — try again.');
   assertEquals(SLOT_PARTIAL_NOTE.startsWith('Stock data is still loading (takes ~2 days after launch)'), true);
   assertEquals(SLOT_PARTIAL_NOTE.endsWith('Slot count math is still enforced.'), true);
+});
+
+// ── Design Lead copy rulings (3c-2 round 3) ─────────────────────────────
+
+Deno.test('field labels: Stocks, Min $, Max $', () => {
+  assertEquals(SLOT_FIELD_LABELS, { count: 'Stocks', min: 'Min $', max: 'Max $' });
+});
+
+Deno.test('VoiceOver reads the fields in words', () => {
+  assertEquals(slotFieldA11y(1, 'count'), 'Slot 2, stocks');
+  assertEquals(slotFieldA11y(1, 'min'), 'Slot 2, lowest price in dollars');
+  assertEquals(slotFieldA11y(1, 'max'), 'Slot 2, highest price in dollars');
+});
+
+Deno.test('roster slots caption: sentences, "price range" and never "bracket"', () => {
+  assertEquals(rosterSlotsCaption('price_tiers'), 'Required: each slot sets a price range.');
+  assertEquals(rosterSlotsCaption('fixed_notional'), 'Optional: a slot can require a category or a price range.');
+  assertEquals(rosterSlotsCaption(''), 'Optional: a slot can require a category or a price range.');
+  for (const line of [rosterSlotsCaption('price_tiers'), rosterSlotsCaption('budget_cap'), PRICE_TIERS_NEED_A_SLOT]) {
+    assertEquals(/bracket/i.test(line), false, line);
+  }
+});
+
+Deno.test('price tiers with no slot: the ruled line', () => {
+  assertEquals(PRICE_TIERS_NEED_A_SLOT, 'Price tiers need at least one slot with a price range.');
+});
+
+Deno.test('slot errors split onto their slots; the capacity line stays general', () => {
+  const capacity = 'Slots cover only 2 of 6 picks — once slots exist, every pick needs an open slot, so the draft would jam after 2. Add 4 more.';
+  const out = splitSlotErrors([
+    'Slot 1: count must be at least 1.',
+    'Slot 1: min price is above max price.',
+    'Slot 3: min price is above max price.',
+    capacity,
+  ]);
+  assertEquals(out.bySlot, {
+    0: ['Count must be at least 1.', 'Min price is above max price.'],
+    2: ['Min price is above max price.'],
+  });
+  assertEquals(out.general, [capacity]);
+});
+
+Deno.test('no errors, nothing to show', () => {
+  assertEquals(splitSlotErrors([]), { bySlot: {}, general: [] });
 });

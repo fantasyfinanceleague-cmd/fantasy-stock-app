@@ -7,7 +7,8 @@
 // 3c-2: rewritten on the sp primitives (no board frame; composed from the
 // setup vocabulary). The props, the state and every rule are unchanged — the
 // copy and input sanitising moved to lib/game/slotBuilderCopy.ts verbatim.
-// Hard errors are field errors (danger text, instant, no icon, §9B);
+// Hard errors are field errors (danger text, instant, no icon, §9B): a slot's
+// own errors inside its card, the capacity line under the list;
 // availability warnings use the warn-tint note; the category opens a sheet.
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
@@ -25,10 +26,13 @@ import {
   categoryLabel,
   countInput,
   priceInput,
+  SLOT_FIELD_LABELS,
   removeSlotLabel,
+  slotFieldA11y,
   slotShort,
   slotShortfallCopy,
   slotTitle,
+  splitSlotErrors,
 } from '@/lib/game/slotBuilderCopy';
 import { space } from '@/constants/tokens';
 import { Button } from '@/components/sp/Button';
@@ -69,6 +73,8 @@ export default function SlotBuilder({ slots, onChange, categories, leagueSize, n
   // HARD errors (count/capacity/bracket) — parents use the same validator to
   // disable Next/save; this component shows the reasons.
   const hardErrors = validateSlotConfig(slots, numRounds);
+  // Each slot's own errors show inside its card; the capacity line under the list.
+  const { bySlot, general } = splitSlotErrors(hardErrors);
 
   const checkFeasibility = async () => {
     setChecking(true);
@@ -135,8 +141,8 @@ export default function SlotBuilder({ slots, onChange, categories, leagueSize, n
           <View style={[styles.fields, stacked && styles.fieldsStacked, disabled && styles.dim]}>
             <View style={styles.field}>
               <Field
-                label="Count"
-                accessibilityLabel={`${slotTitle(i)}, Count`}
+                label={SLOT_FIELD_LABELS.count}
+                accessibilityLabel={slotFieldA11y(i, 'count')}
                 value={s.slotCount}
                 editable={!disabled}
                 keyboardType="numeric"
@@ -146,8 +152,8 @@ export default function SlotBuilder({ slots, onChange, categories, leagueSize, n
             </View>
             <View style={styles.field}>
               <Field
-                label="Min $"
-                accessibilityLabel={`${slotTitle(i)}, Min $`}
+                label={SLOT_FIELD_LABELS.min}
+                accessibilityLabel={slotFieldA11y(i, 'min')}
                 value={s.priceMin}
                 editable={!disabled}
                 keyboardType="numeric"
@@ -157,8 +163,8 @@ export default function SlotBuilder({ slots, onChange, categories, leagueSize, n
             </View>
             <View style={styles.field}>
               <Field
-                label="Max $"
-                accessibilityLabel={`${slotTitle(i)}, Max $`}
+                label={SLOT_FIELD_LABELS.max}
+                accessibilityLabel={slotFieldA11y(i, 'max')}
                 value={s.priceMax}
                 editable={!disabled}
                 keyboardType="numeric"
@@ -167,6 +173,15 @@ export default function SlotBuilder({ slots, onChange, categories, leagueSize, n
               />
             </View>
           </View>
+          {bySlot[i]?.length ? (
+            <View accessibilityLiveRegion="polite" style={styles.slotErrors}>
+              {bySlot[i].map((e, k) => (
+                <Text key={k} variant="callout" color={colors.danger}>
+                  {e}
+                </Text>
+              ))}
+            </View>
+          ) : null}
           <RowDivider />
           <SettingRow
             label="Category"
@@ -177,9 +192,9 @@ export default function SlotBuilder({ slots, onChange, categories, leagueSize, n
         </SetupCard>
       ))}
 
-      {hardErrors.length > 0 ? (
+      {general.length > 0 ? (
         <View accessibilityLiveRegion="polite" style={styles.errors}>
-          {hardErrors.map((e, i) => (
+          {general.map((e, i) => (
             <Text key={`h${i}`} variant="callout" color={colors.danger}>
               {e}
             </Text>
@@ -266,6 +281,10 @@ const styles = StyleSheet.create({
   },
   errors: {
     gap: space[2],
+  },
+  slotErrors: {
+    gap: space[1],
+    paddingBottom: space[4],
   },
   sheetBody: {
     paddingHorizontal: space[6],

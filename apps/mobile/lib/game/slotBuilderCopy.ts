@@ -5,7 +5,7 @@
  * type is structural so this never imports categoryData (which pulls in supabase).
  */
 
-/** A new slot, as "+ Add slot" always made it: one stock, no filters (flex). */
+/** A new slot, as "Add slot" always made it: one stock, no filters (flex). */
 export const EMPTY_SLOT = { slotCount: '1', priceMin: '', priceMax: '', categoryId: '' } as const;
 
 /** The slot card's heading. NEW copy (the old editor had no heading). */
@@ -16,6 +16,46 @@ export function slotTitle(index: number): string {
 /** The remove control's VoiceOver label. NEW copy. */
 export function removeSlotLabel(index: number): string {
   return `Remove slot ${index + 1}`;
+}
+
+export type SlotField = 'count' | 'min' | 'max';
+
+/** The three fields' visual labels (Design Lead ruling). */
+export const SLOT_FIELD_LABELS: Record<SlotField, string> = { count: 'Stocks', min: 'Min $', max: 'Max $' };
+
+/** The fields' VoiceOver labels, in words (Design Lead ruling): "Slot 2, lowest price in dollars". */
+export function slotFieldA11y(index: number, field: SlotField): string {
+  const words: Record<SlotField, string> = { count: 'stocks', min: 'lowest price in dollars', max: 'highest price in dollars' };
+  return `Slot ${index + 1}, ${words[field]}`;
+}
+
+/** The Roster slots caption (Design Lead ruling; "price range", never "bracket", user-facing). */
+export function rosterSlotsCaption(stakeMode: string): string {
+  return stakeMode === 'price_tiers'
+    ? 'Required: each slot sets a price range.'
+    : 'Optional: a slot can require a category or a price range.';
+}
+
+/** Price tiers with no slot (Design Lead ruling), shown under Roster slots. */
+export const PRICE_TIERS_NEED_A_SLOT = 'Price tiers need at least one slot with a price range.';
+
+/** Splits validateSlotConfig's errors so each "Slot N: …" line shows on its own
+ * slot (prefix dropped, first letter capitalised) and the rest (the capacity
+ * line) under the list. Pure string handling: the validator is unchanged. */
+export function splitSlotErrors(errors: readonly string[]): { bySlot: Record<number, string[]>; general: string[] } {
+  const bySlot: Record<number, string[]> = {};
+  const general: string[] = [];
+  for (const e of errors) {
+    const m = /^Slot (\d+): (.+)$/.exec(e);
+    if (!m) {
+      general.push(e);
+      continue;
+    }
+    const i = Number(m[1]) - 1;
+    const msg = m[2].charAt(0).toUpperCase() + m[2].slice(1);
+    (bySlot[i] ??= []).push(msg);
+  }
+  return { bySlot, general };
 }
 
 /** The category a slot shows: "Any (flex)" with none, "Unknown" if the id is gone. */
