@@ -21,6 +21,7 @@ import { SeasonCompleteCard } from '@/components/home/SeasonCompleteCard';
 import { RunItBackCard } from '@/components/home/RunItBackCard';
 import { RenewalCountsCard } from '@/components/home/RenewalCountsCard';
 import { PhaseMessageCard } from '@/components/home/PhaseMessageCard';
+import { HomeSkeleton } from '@/components/game/LoadingSkeletons';
 import { PhaseTransition } from '@/components/home/PhaseTransition';
 import { HomeLeagueTransition } from '@/components/home/HomeLeagueTransition';
 import type { PhaseResult } from '@/lib/home/homePhase';
@@ -96,9 +97,9 @@ function HomeBody({
     );
   }
   if (status === 'loading' || !viewModel) {
-    // A skeleton card is a later polish item; an empty body while loading
-    // is honest and never fabricates numbers.
-    return null;
+    // UX rule 9 (3c-2): the shape of Home while it loads, placeholders only,
+    // never numbers.
+    return <HomeSkeleton />;
   }
 
   const { phase, hero, thisWeek, standings, myUserId, season, weeklyResults } = viewModel;

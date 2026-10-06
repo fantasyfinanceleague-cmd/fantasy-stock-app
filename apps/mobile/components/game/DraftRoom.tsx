@@ -18,6 +18,7 @@ import { DRAFT_ROOM_LOAD_FAILED, QUEUE_LOAD_FAILED } from '@/lib/game/draftQueue
 import { managerAtPick, boardRows } from '@/lib/game/draftBoard';
 import { PICK_SENDING, PICK_UNCONFIRMED, budgetLeftLine, myDraftedSoFar, pickClockLabel, pickRowView, pickRefusalLine, pickRefusalNextStep, picksUntilYouLine, roundPickLine } from '@/lib/game/draftRoom';
 import { TeamSoFarGrid } from '@/components/home/TeamSoFarGrid';
+import { DraftRoomSkeleton } from '@/components/game/LoadingSkeletons';
 import { picksUntilTurn } from '@/lib/home/draftTurn';
 import { readFunctionRefusal } from '@/lib/functionRefusal';
 import { turnState } from '@/lib/game/draftRefusals';
@@ -141,7 +142,9 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
       </Card>
     );
   }
-  if (room.status === 'loading' || m === 0) return null; // honest: nothing to draw until the order is read
+  // UX rule 9: loading shows the room's shape; a loaded room with no order draws nothing.
+  if (room.status === 'loading') return <DraftRoomSkeleton />;
+  if (m === 0) return null; // honest: nothing to draw until the order is read
 
   const rows = boardRows(room.order, rounds, room.picks, onClockPick);
   const log = Array.from(room.picks.entries()).sort((a, b) => b[0] - a[0]).slice(0, 8);
