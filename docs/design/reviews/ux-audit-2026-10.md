@@ -33,7 +33,8 @@ The verdict below covers exactly this evidence. "Not examined" means no verdict,
   one (it's shared, and the Orchestrator approves its use). So no Light/Dark device captures, no
   XL/XXXL text, no Reduce Motion recordings, no stress fixture, no tap-latency (rule 9's 400 ms)
   for any screen. The handoff's Home follow-ups **F1** (tab labels at XXXL) and **F2** (Reduce
-  Motion evidence for the Season → 1W chart) are still open and unverified.
+  Motion evidence for the Season → 1W chart) are still open and unverified. *(Update: merged
+  Home was then checked on the simulator, and F1 and F2 both pass. See "Pass 1b" below.)*
 - **The league pill sheet** (one of the seven in-scope screens): not examined in pass 1.
 - **3e's committed captures** (`docs/design/reviews/captures/ui-mobile-money/*.png`) and 3c's
   built screens: deliberately left for pass 2, where they are graded against this pass's
@@ -48,7 +49,9 @@ The verdict below covers exactly this evidence. "Not examined" means no verdict,
 
 | | P0 | P1 | P2 | P3 |
 |---|---|---|---|---|
-| Open | 4 | 23 | 10 | 9 |
+| Open | 4 | 22 | 11 | 11 |
+
+(Counts as of the simulator pass below: U-27 left P1 when it turned out to be built; U-49 to U-51 were added on device.)
 
 All P0s and the spec-level P1s were relayed to the Orchestrator for the 3c-2 and 3e workers
 on 2026-10-06 (status column). Two P1s are layout changes and went to Giorgio as "Your call"
@@ -270,6 +273,34 @@ the branches read.
 
 ---
 
+### Pass 1b · merged Home on the simulator (2026-10-06)
+
+**Examined:** `main` @ `7610aa0`, iPhone 17e simulator (8CDB3007), Expo Go, dev fixtures only
+(`EXPO_PUBLIC_SHELL_FIXTURE=leagues` fakes the session; `EXPO_PUBLIC_HOME_FIXTURE` fakes Home's
+data; no sign-in, no Supabase reads or writes for Home). States: `live_open` in Light, Dark,
+XL (accessibility-extra-large) and XXXL (accessibility-extra-extra-extra-large), and with Reduce
+Motion on; `complete_runner_up` in Light. Captures: `captures/ux-audit-home/`.
+**Not examined on device:** the other Home phases, VoiceOver, tap latency (rule 9's 400 ms), the
+loading state (fixtures load instantly, so U-08 stays a code finding), offline, and the stress
+fixture beyond XL/XXXL.
+
+| Check | Result | Evidence |
+|---|---|---|
+| **F1** · tab labels at XXXL (handoff follow-up) | **PASS.** All four labels show, capped, legible. | `05-live-light-XXXL-F1.png` |
+| **F2** · Reduce Motion, Season → 1W chart (handoff follow-up) | **PASS.** The 1W line is fully drawn in the first frame after the tap (frames 44 → 45 of a 10 fps extraction; frame 45 equals frame 60); no draw-in. | `07-F2-…-frames-43-44-45-60.png`, `07-F2-….mov` |
+| Light / Dark | Pass; both themes complete, no mixed surfaces. | `01`, `02`, `03` |
+| XL / XXXL reflow | Pass with polish (U-51); the scoreboard stacks names and keeps both scores on one line. | `04`, `05`, `06` |
+| Rule 6 / 7 on device | Hero first, this week's matchup second; your standings row highlighted. | `01`, `02` |
+| Non-champion season complete | Matches the board frame (`46a93de`): "2nd place", "Stock Scudetto · 5–1", neutral disc. | `08-complete-runner-up-light.png` |
+
+New findings (added to the counts above):
+
+| ID | Screen | Rule | What's wrong | Fix | Status |
+|---|---|---|---|---|---|
+| U-49 | Home season chart (`sp/SegmentedControl`) | 5 | The selected LAST segment ("Season") sits flush against the track's right end, so the track's rounded corner is cut off; the first segment ("1W") has its inset. Likely a width that ignores the track padding. Check every SegmentedControl (Buy/Sell, Standings/Schedule/History). | Give the selected pill the same inset on both ends. | P3, backlog (or ride any sp/ fix) |
+| U-50 | Home standings excerpt | 5 / §9A | Season gains show no sign ("$512.40") while the hero shows "+$343.59" and League's table uses a sign on every row. | `sign="always"` on the excerpt's Money. | P2, relay to 3c-2 (touches Home) |
+| U-51 | Home hero at XL/XXXL | — | The sub-line wraps with "·" stranded at line ends and a leading space on the next line; the "2nd of 6 · 4–1 · Week 6 of 14" meta wraps right-aligned under "Your team". | Wrap on the separators (each fact its own Text), left-align the meta when it wraps. | P3, backlog |
+
 ### Rulings after pass 1 (2026-10-06)
 
 Copy and questions the 3c-2 worker raised while fixing the P0s (relayed by the Orchestrator).
@@ -328,4 +359,4 @@ New copy from `ui/mobile-league-setup` @ `7bd56e9`. Design Lead rulings.
 ### Backlog (1.3)
 
 P2/P3 items marked **backlog** above, unless a worker picks one up cheaply on the way past:
-U-31, U-34, U-35, U-36, U-40, U-45, U-46, U-47, U-48 (the `would_strand_slot` names backend ask).
+U-31, U-34, U-35, U-36, U-40, U-45, U-46, U-47, U-48, U-49, U-51 (the `would_strand_slot` names backend ask).
