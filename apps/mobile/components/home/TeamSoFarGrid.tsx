@@ -77,9 +77,13 @@ const styles = StyleSheet.create({
   slotWide: {
     width: '48%',
   },
+  // G-5 (pass-2 gate): a fixed-ratio tile in a wrapping row over-allocated the
+  // grid's height (empty space under the slots) and set labels low. The board's
+  // slot is a 40 pt row with its label centred; minHeight keeps large text growing.
   slot: {
     width: '31%',
-    aspectRatio: 1.6,
+    minHeight: 44,
+    paddingVertical: space[2],
     borderRadius: 10,
     borderWidth: 1.5,
     alignItems: 'center',

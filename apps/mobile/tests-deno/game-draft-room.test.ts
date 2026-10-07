@@ -373,3 +373,12 @@ Deno.test('your own queue auto-pick reads "from your queue"; others\' keep "thei
 Deno.test('the room passes "mine" by the snake seat (source guard)', () => {
   assertEquals(SOURCES['components/game/DraftRoom.tsx'].includes('pickRowView({ symbol: p.symbol, source: p.source }, managerAtPick(pick, room.order) === myUserId)'), true);
 });
+
+// ── G-5 (pass-2 gate): the roster grid's tiles ──
+
+Deno.test('the roster grid\'s tiles are a centred 44 pt row, no fixed ratio (source guard)', () => {
+  const grid = SOURCES['components/home/TeamSoFarGrid.tsx'];
+  assertEquals(grid.includes('aspectRatio'), false);
+  assertEquals(grid.includes('minHeight: 44,'), true);
+  assertEquals(grid.includes("alignItems: 'center',\n    justifyContent: 'center',"), true);
+});
