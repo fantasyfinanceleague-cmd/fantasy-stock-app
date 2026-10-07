@@ -389,7 +389,16 @@ export function StockSheetBody({
       {selected === 'sell' && model.sell.summary ? (
         <Text variant="callout">{model.sell.summary}</Text>
       ) : null}
-      {action.reason ? (
+      {/* E-3 (3e UX audit): owned by another manager is a pre-review block, not a plain
+          caption -- the warn-tint card the server's refusal would otherwise only show
+          at Review, named here before the player ever reaches it. */}
+      {selected === 'buy' && model.buy.blockedBy === 'owned' && data.facts.owner?.kind === 'other' ? (
+        <View style={{ borderRadius: 12, padding: 14, backgroundColor: colors.sunken }}>
+          <Text variant="callout" accessibilityRole="alert">
+            {COPY.ownerBlocksBuy(data.facts.owner.name ?? 'another manager', symbol)}
+          </Text>
+        </View>
+      ) : action.reason ? (
         <Text variant="caption" tone="secondary" accessibilityLiveRegion="polite">
           {action.reason}
         </Text>
@@ -403,6 +412,10 @@ export function StockSheetBody({
           fullWidth
           onPress={() => openReview(selected)}
         />
+      ) : selected === 'buy' && model.buy.blockedBy === 'owned' ? (
+        // Visible and disabled (board #buy-a-stock): the refusal is named above, never
+        // a silently missing button.
+        <Button label="Review buy" variant="primary" fullWidth disabled />
       ) : null}
 
       <Text variant="caption" tone="secondary">{COPY.alpacaCredit}</Text>

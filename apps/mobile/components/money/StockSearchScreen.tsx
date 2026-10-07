@@ -22,8 +22,17 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 import { ShellHeader } from '@/components/shell/ShellHeader';
 import { useStockSheet } from '@/components/money/MoneyHost';
 import { LoadFailure } from '@/components/money/LoadFailure';
+import { useLeagueContext } from '@/lib/LeagueContext';
+import { useSession } from '@/lib/SessionProvider';
 import { COPY } from '@/lib/money/moneyCopy';
 import { useMoneyStockSearch } from '@/lib/money/useMoneyStockSearch';
+import { usePortfolioLedger } from '@/lib/money/usePortfolioLedger';
+import { sheetInputsFromLedger } from '@/lib/money/portfolioLedger';
+import { deriveStockSheetFacts } from '@/lib/money/stockSheetFacts';
+import { ownershipSuffix } from '@/lib/money/stockSearchOwnership';
+import { MONEY_FIXTURE } from '@/lib/money/devFixture';
+import { FIXTURE_LEAGUE_ID } from '@/lib/money/fixtureMode';
+import { STRESS_CALLER } from '@/lib/money/stressFixture';
 import type { ShapedSearchResult } from '@/lib/symbolSearch';
 
 const styles = StyleSheet.create({
@@ -46,6 +55,20 @@ export function StockSearchScreen() {
   const { open } = useStockSheet();
   const [query, setQuery] = useState('');
   const { results, loading, error, retry } = useMoneyStockSearch(query, '');
+
+  // E-3: ownership in results, from the same league-wide ledger the stock sheet
+  // already reads (shared/cached — not a new read, and never a new RPC).
+  const { activeLeague } = useLeagueContext();
+  const { user } = useSession();
+  const leagueId = activeLeague?.id ?? (MONEY_FIXTURE ? FIXTURE_LEAGUE_ID : null);
+  const userId = MONEY_FIXTURE ? STRESS_CALLER : (user?.id ?? null);
+  const ledgerState = usePortfolioLedger(leagueId);
+
+  function ownershipFor(symbol: string) {
+    if (!ledgerState.ledger || !userId) return { text: null, mine: false };
+    const facts = deriveStockSheetFacts({ symbol, userId, ...sheetInputsFromLedger(ledgerState.ledger) });
+    return ownershipSuffix(facts.owner, facts.conflict);
+  }
 
   function handleSelect(item: ShapedSearchResult) {
     if (!item.selectable) return;
@@ -99,17 +122,22 @@ export function StockSearchScreen() {
           </View>
         ) : (
           <View style={styles.results}>
-            {results.map((item) => (
-              <View key={item.symbol} style={!item.selectable ? styles.disabled : undefined}>
-                <ListRow
-                  title={item.symbol}
-                  subtitle={item.badgeLabel ? `${item.name} · ${item.badgeLabel}` : item.name}
-                  trailing={item.price != null ? <Text variant="callout">{`$${item.price.toFixed(2)}`}</Text> : undefined}
-                  onPress={item.selectable ? () => handleSelect(item) : undefined}
-                  hideChevron
-                />
-              </View>
-            ))}
+            {results.map((item) => {
+              // E-3: not in the league's list wins over ownership (it can't be owned if it
+              // was never draftable); otherwise show who owns it, or nothing when it's free.
+              const suffix = !item.selectable ? COPY.notInLeagueList : ownershipFor(item.symbol).text;
+              return (
+                <View key={item.symbol} style={!item.selectable ? styles.disabled : undefined}>
+                  <ListRow
+                    title={item.symbol}
+                    subtitle={suffix ? `${item.name} · ${suffix}` : item.name}
+                    trailing={item.price != null ? <Text variant="callout">{`$${item.price.toFixed(2)}`}</Text> : undefined}
+                    onPress={item.selectable ? () => handleSelect(item) : undefined}
+                    hideChevron
+                  />
+                </View>
+              );
+            })}
           </View>
         )}
       </ScrollView>

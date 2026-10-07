@@ -41,15 +41,23 @@ Deno.test('held: Sell is pre-selected and the sell summary is the whole position
 Deno.test('free and open: Buy is selected and enabled, with no owner line', () => {
   const m = stockSheetModel({ ...BASE, owner: null });
   assertEquals(m.selected, 'buy');
-  assertEquals(m.buy, { enabled: true, reason: null });
+  assertEquals(m.buy, { enabled: true, reason: null, blockedBy: null });
   assertEquals(m.ownershipLine, 'No one in Stock Scudetto owns NVDA');
 });
 
-Deno.test('owned by another manager: Buy disabled with the owner named', () => {
+Deno.test('owned by another manager: Buy disabled with the owner named, blockedBy owned', () => {
   const m = stockSheetModel({ ...BASE, owner: { kind: 'other', name: 'Paolo M.', isBot: false } });
   assertEquals(m.buy.enabled, false);
   assertEquals(m.buy.reason, 'Owned by Paolo M.');
+  assertEquals(m.buy.blockedBy, 'owned');
   assertEquals(m.ownershipLine, 'Owned by Paolo M.');
+});
+
+Deno.test('blockedBy names the first failing rule: closed beats owned, price beats held', () => {
+  const closedAndOwned = stockSheetModel({ ...BASE, owner: { kind: 'other', name: 'X', isBot: false }, gate: { open: false, opensLabel: null } });
+  assertEquals(closedAndOwned.buy.blockedBy, 'closed');
+  const unpricedAndHeld = stockSheetModel({ ...BASE, price: null, held: { quantity: 1 } });
+  assertEquals(unpricedAndHeld.buy.blockedBy, 'price');
 });
 
 Deno.test('owned by a bot: the badge is carried so the sheet can show it', () => {

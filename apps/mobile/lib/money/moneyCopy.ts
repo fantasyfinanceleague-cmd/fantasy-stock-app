@@ -96,6 +96,12 @@ export const COPY = {
   // Board stock sheet, verbatim: ownership and the sell summary.
   draftedByYou: (round: number, pick: number) => `Drafted by you · Round ${round}, pick ${pick}`,
   noOneOwns: (league: string, symbol: string) => `No one in ${league} owns ${symbol}`,
+  // E-3 (3e UX audit, board #buy-a-stock, verbatim): the search result label and the
+  // sheet's pre-review block -- distinct sentences from ownedBy / symbol_owned's refusal
+  // copy, each the exact wording for its own moment.
+  youOwnThis: 'You own this',
+  notInLeagueList: "Not in this league's list",
+  ownerBlocksBuy: (name: string, symbol: string) => `${name} owns ${symbol}. A stock has one owner per league.`,
   sellAll: (qty: string, value: string) => `Sell all ${qty} sh ≈ ${value}`,
   pricesShowClose: (label: string) => `Prices show ${label}.`,
   // NEW (flagged): ownership states the board doesn't draw.

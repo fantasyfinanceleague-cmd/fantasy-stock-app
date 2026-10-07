@@ -44,7 +44,10 @@ export interface ActionState {
 export interface StockSheetModel {
   name: string;
   selected: 'buy' | 'sell';
-  buy: ActionState;
+  /** blockedBy names WHY buy is disabled, so the sheet can show the right
+   * pre-review block (E-3, 3e UX audit): 'owned' gets a warn card and a
+   * visible disabled Review buy, the others keep the plain caption. */
+  buy: ActionState & { blockedBy: 'closed' | 'price' | 'owned' | 'held' | null };
   sell: ActionState & { summary: string | null };
   ownershipLine: string;
   ownerBadge: 'Bot' | null;
@@ -70,8 +73,15 @@ export function stockSheetModel(input: StockSheetInput): StockSheetModel {
 
   // Buy: the first failing rule explains the disabled state.
   let buyReason: string | null = closedReason ?? priceReason;
-  if (buyReason === null && otherOwned) buyReason = COPY.ownedBy((other!.name ?? 'another manager'));
-  if (buyReason === null && held) buyReason = COPY.alreadyHeld;
+  let buyBlockedBy: StockSheetModel['buy']['blockedBy'] = buyReason ? (closedReason ? 'closed' : 'price') : null;
+  if (buyReason === null && otherOwned) {
+    buyReason = COPY.ownedBy((other!.name ?? 'another manager'));
+    buyBlockedBy = 'owned';
+  }
+  if (buyReason === null && held) {
+    buyReason = COPY.alreadyHeld;
+    buyBlockedBy = 'held';
+  }
 
   // Sell: only a holding can be sold, and it needs the market and a price.
   let sellReason: string | null = null;
@@ -107,7 +117,7 @@ export function stockSheetModel(input: StockSheetInput): StockSheetModel {
   return {
     name: cleanCompanyName(input.companyName) || input.symbol,
     selected: held ? 'sell' : 'buy',
-    buy: { enabled: buyReason === null, reason: buyReason },
+    buy: { enabled: buyReason === null, reason: buyReason, blockedBy: buyBlockedBy },
     sell: { enabled: held && sellReason === null, reason: sellReason, summary: sellSummary },
     ownershipLine,
     ownerBadge: other?.isBot ? 'Bot' : null,
