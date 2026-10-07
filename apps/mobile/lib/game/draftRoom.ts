@@ -128,7 +128,7 @@ export function afterPickLine(symbol: string, picksAway: number, auto = false): 
   const s = symbol.toUpperCase();
   // Your pick made by auto-pick reads differently (Design Lead, ruled); the pick log keeps its source tag.
   const lead = auto ? `Auto-picked ${s} for you` : `You took ${s}`;
-  if (picksAway < 0) return `${lead} · that's your team`; // auto: NEW form, flagged
+  if (picksAway < 0) return `${lead} · that's your team`; // auto: ruled (pairs with "You took … · that's your team")
   if (picksAway === 0) return null;
   return `${lead} · you're up in ${picksAway} ${picksAway === 1 ? 'pick' : 'picks'}`;
 }

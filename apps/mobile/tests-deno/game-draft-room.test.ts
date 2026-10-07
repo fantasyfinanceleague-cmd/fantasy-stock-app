@@ -243,7 +243,7 @@ Deno.test('"You took AAPL · you\'re up in 2 picks" (Home\'s wording), singular,
 Deno.test('after YOUR auto-pick (ruled): "Auto-picked AAPL for you · you\'re up in 2 picks", distinct from "You took"', () => {
   assertEquals(afterPickLine('aapl', 2, true), "Auto-picked AAPL for you · you're up in 2 picks");
   assertEquals(afterPickLine('AAPL', 1, true), "Auto-picked AAPL for you · you're up in 1 pick");
-  assertEquals(afterPickLine('COST', -1, true), "Auto-picked COST for you · that's your team"); // NEW form, flagged
+  assertEquals(afterPickLine('COST', -1, true), "Auto-picked COST for you · that's your team"); // ruled, pairs with the manual form
   assertEquals(afterPickLine('AAPL', 0, true), null);
   assertEquals(afterPickLine('AAPL', 2, false), "You took AAPL · you're up in 2 picks");
 });
