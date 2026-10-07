@@ -16,7 +16,7 @@ import { useDraftRoom } from '@/lib/game/useDraftRoom';
 import { QueueEditor } from './QueueEditor';
 import { DRAFT_ROOM_LOAD_FAILED, QUEUE_LOAD_FAILED } from '@/lib/game/draftQueueRead';
 import { managerAtPick, boardRows } from '@/lib/game/draftBoard';
-import { PICK_CONFIRMED_MS, PICK_SENDING, budgetLeftLine, pickConfirmedLine, myDraftedSoFar, pickClockLabel, pickRowView, pickRefusalView, AUTO_PICK_WAITING_FOR_PRICES, picksUntilYouLine, roundPickLine } from '@/lib/game/draftRoom';
+import { PICK_SENDING, YOUR_ROSTER, afterPickLine, budgetLeft, myDraftedSoFar, pickClockLabel, pickRowView, pickRefusalView, AUTO_PICK_WAITING_FOR_PRICES, picksUntilYouLine, rosterCaption, roundPickLine, snakeThenPick } from '@/lib/game/draftRoom';
 import { TeamSoFarGrid } from '@/components/home/TeamSoFarGrid';
 import { DraftRoomSkeleton } from '@/components/game/LoadingSkeletons';
 import { DraftComplete } from '@/components/game/DraftComplete';
@@ -31,27 +31,24 @@ export interface DraftRoomProps {
   rounds: number;
   /** The stalled-turn card's line differs for the commissioner (board "Draft paused"). */
   isCommissioner?: boolean;
-  /** leagues.stake_mode / budget_amount: a budget-cap league shows "Budget left $X" under your team. */
+  /** leagues.stake_mode / budget_amount / notional_per_slot: the roster strip's
+   * caption ("· $2,000 per slot", or "· $1,240 left" in a budget-cap league). */
   stakeMode?: string | null;
   budgetAmount?: number | null;
+  notionalPerSlot?: number | null;
 }
 
 /** The draft room (3c, key screen 4): the clock, the snake board, the pick log,
  * search and the one-tap Draft, and the auto-pick backstop. A legacy SKIP row is
  * a plain row with a dash. Nothing is shown as a pick that the server did not
  * record. */
-export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, stakeMode = null, budgetAmount = null }: DraftRoomProps) {
+export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, stakeMode = null, budgetAmount = null, notionalPerSlot = null }: DraftRoomProps) {
   const { colors } = useTheme();
   const room = useDraftRoom(leagueId);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [refusal, setRefusal] = useState<{ line: string; next: string | null; checking?: boolean } | null>(null);
-  const [confirmed, setConfirmed] = useState<string | null>(null);
-  const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => {
-    if (confirmTimer.current) clearTimeout(confirmTimer.current);
-  }, []);
   const owned = useMemo(() => new Set(Array.from(room.picks.values()).map((p) => p.symbol.toUpperCase())), [room.picks]);
 
   const m = room.order.length;
@@ -74,9 +71,9 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
     setRefusal((cur) => (cur?.checking ? null : cur));
   }, [room.picks]);
 
-  // UX rule 4: your team so far (Home's grid), and in a budget-cap league what's left.
+  // U-06: the board's roster strip (Home's grid), "1 of 6 · $2,000 per slot" or, in a budget-cap league, what's left.
   const mine = myDraftedSoFar(room.picks, room.order, myUserId);
-  const budgetLine = stakeMode === 'budget_cap' ? budgetLeftLine(budgetAmount, mine.prices) : null;
+  const caption = rosterCaption(mine.symbols.length, rounds, { stakeMode, notionalPerSlot, budgetLeft: budgetLeft(budgetAmount, mine.prices) });
   // UX rule 10: how far away your next pick is (the snake, from Home's draftTurn).
   const picksAway = m > 0 && myUserId ? picksUntilTurn(room.order, room.pickCount, rounds, myUserId) : -1;
 
@@ -146,12 +143,8 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
       if (v.refresh) room.refresh();
       return;
     }
-    // UX rule 11: a one-line confirmation in the clock card for ~3 s (no toast,
-    // no sheet). Your pick was pick #onClockPick, so picks made is that.
-    const symbol = selected;
-    setConfirmed(pickConfirmedLine(symbol, picksUntilTurn(room.order, onClockPick, rounds, myUserId)));
-    if (confirmTimer.current) clearTimeout(confirmTimer.current);
-    confirmTimer.current = setTimeout(() => setConfirmed(null), PICK_CONFIRMED_MS);
+    // U-09: the clock card's "You took …" line comes from the re-read board (what
+    // the server recorded), not from this answer.
     setSelected(null);
     setSearch('');
     room.refresh();
@@ -172,6 +165,7 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
   const rows = boardRows(room.order, rounds, room.picks, onClockPick);
   const log = Array.from(room.picks.entries()).sort((a, b) => b[0] - a[0]).slice(0, 8);
   const stalled = stalledAt === onClockPick ? turnState({ reason: 'stalled', pickNumber: onClockPick, managerName: nameOf(onClockManager), isCommissioner }) : null;
+  const lastMine = mine.symbols.length > 0 ? mine.symbols[mine.symbols.length - 1] : null;
   const headline = stalled ? (stalled.label ?? '') : room.clock.kind === 'auto_picking' ? 'Auto-picking…' : isMyTurn ? "You're on the clock" : `${nameOf(onClockManager)} is up`;
 
   return (
@@ -185,13 +179,12 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
           </Text>
         </View>
         <Text variant="callout" style={isMyTurn ? { fontWeight: '700' } : undefined}>{headline}</Text>
-        {confirmed ? (
-          <Text variant="callout" color={colors.youText} style={styles.bold} accessibilityLiveRegion="polite">
-            {confirmed}
-          </Text>
+        <Text variant="callout" tone={isMyTurn ? undefined : 'secondary'}>{roundPickLine(round, rounds, onClockPick, snakeThenPick(room.order, onClockPick, totalPicks))}</Text>
+        {/* The board's "After the pick" state (U-09): once you have a recorded pick and are waiting. */}
+        {!isMyTurn && lastMine && afterPickLine(lastMine, picksAway) ? (
+          <Text variant="caption" color={colors.youText} accessibilityLiveRegion="polite">{afterPickLine(lastMine, picksAway)}</Text>
         ) : null}
-        <Text variant="callout">{roundPickLine(round, rounds, onClockPick)}</Text>
-        {!isMyTurn && picksUntilYouLine(picksAway) ? (
+        {!isMyTurn && !lastMine && picksUntilYouLine(picksAway) ? (
           <Text variant="callout" tone="secondary">{picksUntilYouLine(picksAway)}</Text>
         ) : null}
         <Text variant="caption" tone="secondary">{`${room.pickSeconds}-second picks`}</Text>
@@ -239,7 +232,8 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
         </Card>
       ) : null}
 
-      {!draftDone ? <TeamSoFarGrid symbols={mine.symbols} numRounds={rounds} footer={budgetLine} /> : null}
+      {/* Under the search results (board key screen 4). */}
+      {!draftDone ? <TeamSoFarGrid title={YOUR_ROSTER} caption={caption} symbols={mine.symbols} numRounds={rounds} /> : null}
 
       <Card>
         <Text variant="tag" tone="secondary">Latest picks</Text>
@@ -275,7 +269,6 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
 const styles = StyleSheet.create({
   stack: { gap: space[3] },
   refusal: { gap: space[1] },
-  bold: { fontWeight: '700' },
   clockRow: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
   boardRow: { flexDirection: 'row', gap: space[1] },
   cell: { flex: 1, minHeight: 44, borderWidth: 1, borderColor: 'transparent', borderRadius: 6, alignItems: 'center', justifyContent: 'center', paddingVertical: space[1] },

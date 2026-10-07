@@ -99,12 +99,23 @@ Deno.test('the draft room renders the clock through pickClockLabel, never a hand
 
 // ── UX rule 10: the round with its total, and how far your next pick is ──
 
-import { picksUntilYouLine, roundPickLine } from '../lib/game/draftRoom.ts';
+import { picksUntilYouLine, roundPickLine, snakeThenPick } from '../lib/game/draftRoom.ts';
 import { upNextLine } from '../lib/home/homeCopy.ts';
 import { picksUntilTurn } from '../lib/home/draftTurn.ts';
 
-Deno.test('the room: "Round 2 of 6 · Pick 11"', () => {
+Deno.test('the room: "Round 2 of 6 · Pick 11", and the snake\'s turn "Pick 12, then 13" (board key screen 4)', () => {
   assertEquals(roundPickLine(2, 6, 11), 'Round 2 of 6 · Pick 11');
+  assertEquals(roundPickLine(2, 6, 12, 13), 'Round 2 of 6 · Pick 12, then 13');
+});
+
+Deno.test('"then" only when the manager on the clock holds the next pick too (6 teams)', () => {
+  const order = ['a', 'b', 'c', 'd', 'e', 'f'];
+  assertEquals(snakeThenPick(order, 6, 36), 7); // f ends round 1 and opens round 2
+  assertEquals(snakeThenPick(order, 12, 36), 13); // a ends round 2 and opens round 3
+  assertEquals(snakeThenPick(order, 11, 36), null); // b, then a
+  assertEquals(snakeThenPick(order, 1, 36), null);
+  assertEquals(snakeThenPick(order, 36, 36), null); // the last pick has no next
+  assertEquals(snakeThenPick([], 1, 0), null);
 });
 
 Deno.test('the room: "{k} picks until you", singular, and nothing on your turn or with no pick left', () => {
@@ -128,13 +139,14 @@ Deno.test('picks until you follows the snake (4 teams; you are seat 2)', () => {
 
 Deno.test('the room renders both lines (source guard)', () => {
   const room = SOURCES['components/game/DraftRoom.tsx'];
-  assertEquals(room.includes('roundPickLine(round, rounds, onClockPick)'), true);
-  assertEquals(room.includes('!isMyTurn && picksUntilYouLine(picksAway)'), true);
+  assertEquals(room.includes('roundPickLine(round, rounds, onClockPick, snakeThenPick(room.order, onClockPick, totalPicks))'), true);
+  // Before your first pick, the picks-until line; after it, the board's "You took …" line.
+  assertEquals(room.includes('!isMyTurn && !lastMine && picksUntilYouLine(picksAway)'), true);
 });
 
-// ── UX rule 4: your team in the room (Home's grid), and the budget left ──
+// ── U-06: the board's roster strip ("Your roster · 1 of 6 · $2,000 per slot"), Home's grid ──
 
-import { budgetLeftLine, myDraftedSoFar } from '../lib/game/draftRoom.ts';
+import { YOUR_ROSTER, budgetLeft, myDraftedSoFar, rosterCaption } from '../lib/game/draftRoom.ts';
 import { indexPicks } from '../lib/game/draftBoard.ts';
 
 Deno.test('your picks, in pick order, from the snake (4 teams, you are seat 2); a SKIP row is not a stock', () => {
@@ -149,16 +161,32 @@ Deno.test('your picks, in pick order, from the snake (4 teams, you are seat 2); 
   assertEquals(mine, { symbols: ['NVDA', 'AAPL'], prices: [318.37, 211.42] });
 });
 
-Deno.test('budget left: the cap minus what your picks cost, in dollars', () => {
-  assertEquals(budgetLeftLine(2500, [318.37, 211.42]), 'Budget left $1,970.21');
-  assertEquals(budgetLeftLine(2500, []), 'Budget left $2,500');
-  assertEquals(budgetLeftLine(1000, [600, 500]), 'Budget left $0'); // never negative
+Deno.test('budget left: the cap minus what your picks cost', () => {
+  assertEquals(budgetLeft(2500, [318.37, 211.42]), 1970.21);
+  assertEquals(budgetLeft(2500, []), 2500);
+  assertEquals(budgetLeft(1000, [600, 500]), 0); // never negative
 });
 
-Deno.test('budget left is real or absent: no cap, or any unknown price, shows nothing', () => {
-  assertEquals(budgetLeftLine(null, [100]), null);
-  assertEquals(budgetLeftLine(undefined, [100]), null);
-  assertEquals(budgetLeftLine(2500, [100, null]), null);
+Deno.test('budget left is real or absent: no cap, or any unknown price, is null', () => {
+  assertEquals(budgetLeft(null, [100]), null);
+  assertEquals(budgetLeft(undefined, [100]), null);
+  assertEquals(budgetLeft(2500, [100, null]), null);
+});
+
+Deno.test('the strip: the board\'s header and caption, per stake mode', () => {
+  assertEquals(YOUR_ROSTER, 'Your roster');
+  assertEquals(rosterCaption(1, 6, { stakeMode: 'fixed_notional', notionalPerSlot: 2000 }), '1 of 6 · $2,000 per slot');
+  // Budget cap (ruled): what's left in place of the per-slot amount.
+  assertEquals(rosterCaption(2, 6, { stakeMode: 'budget_cap', budgetLeft: 1970.21 }), '2 of 6 · $1,970.21 left');
+  assertEquals(rosterCaption(2, 6, { stakeMode: 'budget_cap', budgetLeft: 0 }), '2 of 6 · $0 left');
+});
+
+Deno.test('the strip never invents an amount: unknown, zero per-slot, or price tiers show the count alone', () => {
+  assertEquals(rosterCaption(1, 6, { stakeMode: 'fixed_notional', notionalPerSlot: null }), '1 of 6');
+  assertEquals(rosterCaption(1, 6, { stakeMode: 'fixed_notional', notionalPerSlot: 0 }), '1 of 6');
+  assertEquals(rosterCaption(1, 6, { stakeMode: 'budget_cap', budgetLeft: null }), '1 of 6');
+  assertEquals(rosterCaption(1, 6, { stakeMode: 'price_tiers', notionalPerSlot: 2000 }), '1 of 6');
+  assertEquals(rosterCaption(0, 6, { stakeMode: null }), '0 of 6');
 });
 
 Deno.test('indexPicks keeps the price as a number (or null), from a number or a numeric string', () => {
@@ -170,8 +198,11 @@ Deno.test('indexPicks keeps the price as a number (or null), from a number or a 
   assertEquals([p.get(1)!.price, p.get(2)!.price, p.get(3)!.price], [12.5, null, null]);
 });
 
-Deno.test('the room and Home show the SAME team grid (source guard)', () => {
-  assertEquals(SOURCES['components/game/DraftRoom.tsx'].includes('{!draftDone ? <TeamSoFarGrid symbols={mine.symbols} numRounds={rounds} footer={budgetLine} /> : null}'), true);
+Deno.test('the room and Home show the SAME team grid; the room\'s is the board\'s roster strip, under the search (source guard)', () => {
+  const room = SOURCES['components/game/DraftRoom.tsx'];
+  assertEquals(room.includes('{!draftDone ? <TeamSoFarGrid title={YOUR_ROSTER} caption={caption} symbols={mine.symbols} numRounds={rounds} /> : null}'), true);
+  assertEquals(room.indexOf('<SymbolSearchField') < room.indexOf('<TeamSoFarGrid title={YOUR_ROSTER}'), true);
+  assertEquals(SOURCES['app/(tabs)/league.tsx'].includes('notionalPerSlot={activeLeague?.notional_per_slot ?? null}'), true);
   assertEquals(SOURCES['components/home/DraftingCard.tsx'].includes('<TeamSoFarGrid symbols={myPicks} numRounds={numRounds} />'), true);
   assertEquals(SOURCES['lib/game/useDraftRoom.ts'].includes("select('pick_number, symbol, pick_source, entry_price')"), true);
 });
@@ -197,32 +228,34 @@ Deno.test('a transport error or server fault never says "That pick can\'t be mad
   assertEquals(room.includes("That pick can't be made"), false);
 });
 
-// ── UX rule 11: your pick confirmed, for ~3 s ──
+// ── U-09 (corrected): the board's "After the pick" clock card ──
 
-import { PICK_CONFIRMED_MS, pickConfirmedLine } from '../lib/game/draftRoom.ts';
+import { afterPickLine } from '../lib/game/draftRoom.ts';
 
-Deno.test('the confirmation line (the Design Lead\'s), and its edges', () => {
-  assertEquals(pickConfirmedLine('nvda', 3), 'NVDA is yours. Next pick in 3 turns.');
-  assertEquals(pickConfirmedLine('NVDA', 1), 'NVDA is yours. Next pick in 1 turn.');
-  assertEquals(pickConfirmedLine('NVDA', -1), "NVDA is yours. That's your team.");
-  assertEquals(pickConfirmedLine('NVDA', 0), 'NVDA is yours. You pick again next.'); // the snake's turn
-  assertEquals(PICK_CONFIRMED_MS, 3000);
+Deno.test('"You took AAPL · you\'re up in 2 picks" (Home\'s wording), singular, and the last pick', () => {
+  assertEquals(afterPickLine('aapl', 2), "You took AAPL · you're up in 2 picks");
+  assertEquals(afterPickLine('AAPL', 1), "You took AAPL · you're up in 1 pick");
+  assertEquals(afterPickLine('COST', -1), "You took COST · that's your team");
+  assertEquals(afterPickLine('AAPL', 0), null); // your turn: the on-clock card instead
 });
 
-Deno.test('next pick counted AFTER your pick, on the snake (4 teams)', () => {
-  const order = ['a', 'b', 'c', 'me'];
-  // You took pick 4 (last of round 1): round 2 reverses, so you pick 5 at once.
-  assertEquals(pickConfirmedLine('AAPL', picksUntilTurn(order, 4, 6, 'me')), 'AAPL is yours. You pick again next.');
-  // You took pick 5: next yours is 12 (round 3 forward: a9 b10 c11 me12) → 6 picks between.
-  assertEquals(pickConfirmedLine('MSFT', picksUntilTurn(order, 5, 6, 'me')), 'MSFT is yours. Next pick in 6 turns.');
+Deno.test('counted on the snake, from the board as read (6 teams; you are seat 1)', () => {
+  const order = ['me', 'b', 'c', 'd', 'e', 'f'];
+  // Board key screen 4's shape: you took 11 (6 teams, seat 2 in round 2 = pick 11 for seat 2).
+  const seat2 = ['a', 'me', 'c', 'd', 'e', 'f'];
+  assertEquals(afterPickLine('AAPL', picksUntilTurn(seat2, 11, 6, 'me')), "You took AAPL · you're up in 2 picks"); // 12, 13 are a's
+  // You took pick 1: next yours is 12 → 10 picks between.
+  assertEquals(afterPickLine('NVDA', picksUntilTurn(order, 1, 6, 'me')), "You took NVDA · you're up in 10 picks");
   // Your last pick of a 2-round draft: none left.
-  assertEquals(pickConfirmedLine('COST', picksUntilTurn(order, 5, 2, 'me')), "COST is yours. That's your team.");
+  assertEquals(afterPickLine('COST', picksUntilTurn(order, 12, 2, 'me')), "You took COST · that's your team");
 });
 
-Deno.test('the room shows it in the clock card after a successful pick, then clears it (source guard)', () => {
+Deno.test('the room shows it from the recorded board, not from the button: no timer, no "is yours" (source guard)', () => {
   const room = SOURCES['components/game/DraftRoom.tsx'];
-  assertEquals(room.includes('setConfirmed(pickConfirmedLine(symbol, picksUntilTurn(room.order, onClockPick, rounds, myUserId)));'), true);
-  assertEquals(room.includes('setTimeout(() => setConfirmed(null), PICK_CONFIRMED_MS)'), true);
+  assertEquals(room.includes('!isMyTurn && lastMine && afterPickLine(lastMine, picksAway)'), true);
+  assertEquals(room.includes('const lastMine = mine.symbols.length > 0 ? mine.symbols[mine.symbols.length - 1] : null;'), true);
+  for (const gone of ['setConfirmed', 'PICK_CONFIRMED_MS', 'pickConfirmedLine', 'is yours']) assertEquals(room.includes(gone), false, gone);
+  assertEquals(SOURCES['lib/game/draftRoom.ts'].includes('is yours'), false);
 });
 
 // ── UX rule 11: the draft's ending has a seam (DraftComplete) ──

@@ -14,6 +14,10 @@ import { YOUR_TEAM_SO_FAR, roundSlotLabel, teamSoFarCaption } from '@/lib/home/h
 // $X" in budget-cap leagues).
 
 export interface TeamSoFarGridProps {
+  /** The header; Home's "Your team so far" by default (the room: "Your roster"). */
+  title?: string;
+  /** The header's caption; "1 of 6" by default (the room: "1 of 6 · $2,000 per slot"). */
+  caption?: string;
   /** Your drafted symbols, in pick order. */
   symbols: readonly string[];
   numRounds: number;
@@ -21,7 +25,7 @@ export interface TeamSoFarGridProps {
   footer?: string | null;
 }
 
-export function TeamSoFarGrid({ symbols, numRounds, footer }: TeamSoFarGridProps) {
+export function TeamSoFarGrid({ title, caption, symbols, numRounds, footer }: TeamSoFarGridProps) {
   const { colors } = useTheme();
   // XXXL (XL check, 2026-10-05): see styles.slotWide. Default font scale (1)
   // keeps the 3-across grid, so the default layout does not move.
@@ -30,8 +34,8 @@ export function TeamSoFarGrid({ symbols, numRounds, footer }: TeamSoFarGridProps
   return (
     <Card style={styles.card}>
       <View style={styles.header}>
-        <Text variant="headline">{YOUR_TEAM_SO_FAR}</Text>
-        <Text variant="caption" tone="secondary">{teamSoFarCaption(symbols.length, numRounds)}</Text>
+        <Text variant="headline">{title ?? YOUR_TEAM_SO_FAR}</Text>
+        <Text variant="caption" tone="secondary">{caption ?? teamSoFarCaption(symbols.length, numRounds)}</Text>
       </View>
       <View style={styles.slotGrid}>
         {slots.map((symbol, i) =>

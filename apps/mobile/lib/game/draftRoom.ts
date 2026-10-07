@@ -56,8 +56,15 @@ export function clockState(input: { running: boolean; deadlineAt: string | null;
 }
 
 /** "Round 2 of 6 · Pick 11" (Design Lead, UX rule 10: the round says "of" the total). NEW. */
-export function roundPickLine(round: number, rounds: number, pick: number): string {
-  return `Round ${round} of ${rounds} · Pick ${pick}`;
+export function roundPickLine(round: number, rounds: number, pick: number, thenPick: number | null = null): string {
+  return `Round ${round} of ${rounds} · Pick ${pick}${thenPick !== null ? `, then ${thenPick}` : ''}`;
+}
+
+/** The snake's turn (board key screen 4, "Pick 12, then 13"): the next pick when
+ * the manager on the clock holds it too, else null (and null past the last pick). */
+export function snakeThenPick(order: readonly string[], pick: number, totalPicks: number): number | null {
+  if (order.length === 0 || pick + 1 > totalPicks) return null;
+  return managerAtPick(pick + 1, order as string[]) === managerAtPick(pick, order as string[]) ? pick + 1 : null;
 }
 
 /** "3 picks until you" when it isn't your turn (UX rule 10). NEW. Null when it is
@@ -80,30 +87,49 @@ export function myDraftedSoFar(
   return { symbols: mine.map(([, p]) => p.symbol), prices: mine.map(([, p]) => p.price ?? null) };
 }
 
-/** "Budget left $1,240" in a budget-cap league (UX rule 4): the cap minus what
+/** The budget left in a budget-cap league (UX rule 4): the cap minus what
  * your picks cost. Null when the cap or any pick's price is unknown: the number
  * is real or absent, never estimated. */
-export function budgetLeftLine(budget: number | null | undefined, prices: readonly (number | null)[]): string | null {
+export function budgetLeft(budget: number | null | undefined, prices: readonly (number | null)[]): number | null {
   if (typeof budget !== 'number' || !Number.isFinite(budget)) return null;
   if (prices.some((p) => p === null)) return null;
   const spent = prices.reduce<number>((sum, p) => sum + (p as number), 0);
-  return `Budget left ${dollars(Math.max(0, Math.round((budget - spent) * 100) / 100))}`;
+  return Math.max(0, Math.round((budget - spent) * 100) / 100);
 }
 
-/** After your own pick lands, a line in the clock card for a few seconds (UX
- * rule 11; NEW, the Design Lead's): "NVDA is yours. Next pick in 3 turns."; your
- * last pick: "NVDA is yours. That's your team." `picksAway` is picksUntilTurn
- * AFTER this pick (-1 = no pick left). At the turn of the snake you pick again
- * at once (0): "You pick again next." (NEW, flagged: not in the ruling). */
-export function pickConfirmedLine(symbol: string, picksAway: number): string {
+/** The room's roster strip header (board key screen 4). */
+export const YOUR_ROSTER = 'Your roster';
+
+/** The strip's caption (board key screen 4, U-06): "1 of 6 · $2,000 per slot" in
+ * an equal-stakes league; budget-cap shows what's left, "1 of 6 · $1,240 left"
+ * (ruled). Price tiers have no one per-slot amount, and an unknown amount is
+ * never "$0": the count alone. */
+export function rosterCaption(
+  count: number,
+  rounds: number,
+  stakes: { stakeMode: string | null; notionalPerSlot?: number | null; budgetLeft?: number | null },
+): string {
+  const base = `${count} of ${rounds}`;
+  const ok = (n: number | null | undefined): n is number => typeof n === 'number' && Number.isFinite(n);
+  if (stakes.stakeMode === 'budget_cap' && ok(stakes.budgetLeft)) return `${base} · ${dollars(stakes.budgetLeft)} left`;
+  if (stakes.stakeMode === 'fixed_notional' && ok(stakes.notionalPerSlot) && stakes.notionalPerSlot > 0) {
+    return `${base} · ${dollars(stakes.notionalPerSlot)} per slot`;
+  }
+  return base;
+}
+
+/** The board's "After the pick" clock card (key screen 4, U-09 corrected): once
+ * your pick is RECORDED (read back from the board, never from the button), while
+ * you wait: "You took AAPL · you're up in 2 picks" (Home's wording); your last
+ * pick: "You took AAPL · that's your team". `picksAway` is picksUntilTurn now (-1 =
+ * no pick left). Null on your turn (0): the on-clock card shows instead, which is
+ * the board's equivalent of the snake's "you pick again" case. */
+export function afterPickLine(symbol: string, picksAway: number): string | null {
   const s = symbol.toUpperCase();
-  if (picksAway < 0) return `${s} is yours. That's your team.`;
-  if (picksAway === 0) return `${s} is yours. You pick again next.`;
-  return `${s} is yours. Next pick in ${picksAway} ${picksAway === 1 ? 'turn' : 'turns'}.`;
+  if (picksAway < 0) return `You took ${s} · that's your team`;
+  if (picksAway === 0) return null;
+  return `You took ${s} · you're up in ${picksAway} ${picksAway === 1 ? 'pick' : 'picks'}`;
 }
-
-/** How long the confirmation stays (ms): about 3 s, no animation. */
-export const PICK_CONFIRMED_MS = 3000;
 
 /** The Draft button while the pick is on its way (UX rule 9). NEW. */
 export const PICK_SENDING = 'Sending…';

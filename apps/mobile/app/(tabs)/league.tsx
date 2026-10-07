@@ -270,6 +270,7 @@ function LeagueDraftRoom({ leagueId, rounds }: { leagueId: string; rounds: numbe
           isCommissioner={showsLeagueSettingsRow(activeLeague?.commissioner_id, user?.id)}
           stakeMode={activeLeague?.stake_mode ?? null}
           budgetAmount={activeLeague?.budget_amount ?? null}
+          notionalPerSlot={activeLeague?.notional_per_slot ?? null}
         />
       </BarsRefresh>
     </View>
