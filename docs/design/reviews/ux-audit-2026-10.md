@@ -569,3 +569,50 @@ reported.
 | G-14 | Search results inline, not an overlay (all four `SymbolSearchField` callers) | P2 |
 
 Everything else found in passes 2, 2b and 2c on this branch is closed.
+
+---
+
+## 3e · Buy a stock (stock search): pre-gate rulings (2026-10-06)
+
+3e built the buy entry point (`ui/mobile-money` @ `7db3879`: `components/money/StockSearchScreen.tsx`,
+route `/stock-search`, a "Buy a stock" row on Portfolio) with no board frame. The Design Lead framed it
+after the fact (board `#buy-a-stock`, branch `design/stock-search` @ `8b6ddc0`) and rules below. These
+are spec-level changes for the 3e worker before its gate, not a gate verdict. **Examined:** the
+screen's source and `useSymbolSearch` / `useMoneyStockSearch`; no captures of this screen yet.
+
+### Ruling: ownership in results
+
+| Kind | In the results | On tap | In the sheet |
+|---|---|---|---|
+| (a) **yours** | "You own this" in `youText` | opens the sheet | Sell pre-selected (built, verified on device) |
+| (b) **another manager's** | "Owned by {name}", in secondary text, **not dimmed, still tappable** | opens the sheet | "In your league · {name}"; a warn-tint line "{Name} owns {SYMBOL}. A stock has one owner per league."; **Review buy disabled** |
+| (c) **not in the league's list** | dimmed, no chevron, "Not in this league's list" | nothing | — |
+
+**Why (b) stays tappable:** the sheet is how you look at a stock (price, chart, who owns it), and
+looking is allowed. The server would refuse the *buy*, so the buy is what's blocked, before the
+review, not at it: the player never reaches a review the server will refuse (rule 8). The draft room
+dims owned stocks because there the row's only action *is* the pick. One principle covers both:
+**disable the action the server would refuse, never the information.** The same pre-review block
+applies when there is nothing to spend ("Every slot is invested. Sell a holding to free one, then
+buy.").
+
+### Spec-level changes for 3e
+
+| ID | Rule | What's wrong (built) | Change | P |
+|---|---|---|---|---|
+| E-1 | 8 / 9 | A failed search reads as "No matching stocks found": `useSymbolSearch` catches the error and returns `[]` with `loading:false` (`lib/useSymbolSearch.ts:74-77`), so a network failure says the stock doesn't exist. The hook is shared: the draft room's search fails silently the same way. | Add `error` to `UseSymbolSearchResult`; show the frame's load failure ("Stocks didn't load" + "Check your connection, then try again." + Try again). Draft room: the same line under its field. | **P1** |
+| E-2 | 9 | Nothing on screen while a search loads. | Skeleton rows (the frame's Loading). | **P1** |
+| E-3 | 8 | Ownership isn't shown, and a buy of another manager's stock is refused only at review. | The ruling above: labels in results; the sheet blocks Buy before review. | **P1** |
+| E-4 | 4 | The "Buy a stock" row doesn't say what you can spend. | Its second line: "{$X} from your {SYMBOL} sale is ready to invest." / the budget left / "Every slot is invested. Sell a holding to free one." | P2 |
+| E-5 | 4 | Prices print as `$${price.toFixed(2)}`, with no thousands separator ($5,000.00 reads "$5000.00"). | The shared money formatter. | P2 |
+| E-6 | 1 / 5 | Two back controls: the header plus a "Back" text button in the content. | One back, "‹ Portfolio", in the header; the title below it, as framed. | P3 |
+| E-7 | — | "No matching stocks found" is a fragment and doesn't help. | "No stock matches “{query}”." + "Check the ticker, or try the company name." | P3 |
+| E-8 | 8 | The field uppercases everything typed, so "amazon" shows as "AMAZON". | Keep the input as typed; match case-insensitively (already does). | P3 |
+
+**Entry point:** keep the row on Portfolio, under the slots summary. Not a header "+" (reads as
+"create league" here) and not a floating button (not an iOS pattern for a secondary action). No
+Giorgio decision needed.
+
+**Tier "Fill ›":** framed (board, "Tier league · Fill from the open slot"): the same screen scoped to
+the open slot, title "Fill your {range} slot", stocks outside the range dimmed "Doesn't fit this
+slot". Ready to build once the Portfolio view has `preview.unfilled_slots`.
