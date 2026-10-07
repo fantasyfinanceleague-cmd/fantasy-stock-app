@@ -6,7 +6,7 @@
  * numbers before the review can submit again. The market gate is re-checked
  * every second, so a review open at the close swaps to closed at once.
  */
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { LoadFailure } from '@/components/money/LoadFailure';
@@ -29,6 +29,7 @@ import { budgetAfterBuy, budgetAfterSell, userCashSpentFromLedger } from '@/lib/
 import { cleanCompanyName } from '@/lib/money/cleanCompanyName';
 import { fixedNotionalShares } from '@/lib/money/buyQuantity';
 import { formatShares } from '@/lib/money/formatShares';
+import { myHoldingsFromLedger, stockPosition } from '@/lib/money/portfolioModel';
 import { COPY } from '@/lib/money/moneyCopy';
 import { marketOpensLabel } from '@/lib/money/marketOpensLabel';
 import { fetchPreview, type TradeBody } from '@/lib/money/recordTrade';
@@ -89,6 +90,15 @@ export function StockSheetBody({
   const router = useRouter();
   const userId = MONEY_FIXTURE ? STRESS_CALLER : (user?.id ?? null);
   const ledgerState = usePortfolioLedger(activeLeague?.id ?? (MONEY_FIXTURE ? FIXTURE_LEAGUE_ID : null));
+  // C-4 (Design Lead gate, key screen 5): "Your position" -- the same ledger
+  // read already shared with Portfolio, no new request. Cost basis (and so
+  // avg entry) needs the FULL history of this user's drafts/trades, not just
+  // this symbol's rows, since a sell reduces cost basis proportionally.
+  const myHolding = useMemo(() => {
+    if (!ledgerState.ledger || !userId) return null;
+    return myHoldingsFromLedger(ledgerState.ledger, userId).find((h) => h.symbol === symbol.toUpperCase()) ?? null;
+  }, [ledgerState.ledger, userId, symbol]);
+  const position = myHolding && data.price != null ? stockPosition(myHolding, data.price) : null;
   const now = useNow(1000);
   // DEV fixture: the market the scenario plays (open, or closed for market_closed); live otherwise.
   const market = MONEY_FIXTURE_CONFIG ? fixtureMarket(MONEY_FIXTURE_CONFIG.scenario, now) : contextMarket;
@@ -374,14 +384,49 @@ export function StockSheetBody({
       {/* M2: the live chart, against the previous close. */}
       <StockChart symbol={symbol} price={data.price} prevClose={data.prevClose} live={gate.open} />
 
-      <Text variant="callout" tone="secondary">
-        {model.ownershipLine}
-        {model.ownerBadge ? ` · ${model.ownerBadge}` : ''}
-      </Text>
-
-      {data.facts.held ? (
-        <Text variant="callout">{formatShares(data.facts.held.quantity)} sh</Text>
-      ) : null}
+      {position ? (
+        // C-4 (Design Lead gate, key screen 5): shares, avg entry, value and
+        // gain -- the figure a sell decision rests on (UX-audit rule 4).
+        <View style={{ borderRadius: 12, padding: 14, backgroundColor: colors.sunken, gap: 10 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <Text variant="headline">Your position</Text>
+            <Text variant="caption" tone="secondary">
+              {model.ownershipLine}
+              {model.ownerBadge ? ` · ${model.ownerBadge}` : ''}
+            </Text>
+          </View>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: 10 }}>
+            <View style={{ width: '50%' }}>
+              <Text variant="caption" tone="secondary">Shares</Text>
+              <Text variant="callout" style={{ fontWeight: '700' }}>{formatShares(position.quantity)}</Text>
+            </View>
+            <View style={{ width: '50%' }}>
+              <Text variant="caption" tone="secondary">Avg entry</Text>
+              <Text variant="callout" style={{ fontWeight: '700' }}>{formatMoney(position.avgEntry)}</Text>
+            </View>
+            <View style={{ width: '50%' }}>
+              <Text variant="caption" tone="secondary">Value</Text>
+              <Text variant="callout" style={{ fontWeight: '700' }}>{formatMoney(position.value)}</Text>
+            </View>
+            <View style={{ width: '50%' }}>
+              <Text variant="caption" tone="secondary">Gain</Text>
+              <Text variant="callout" color={position.gain >= 0 ? colors.gain : colors.loss} style={{ fontWeight: '700' }}>
+                {`${formatMoney(position.gain, { sign: 'always' })} · ${formatPercent(position.gainPct, { sign: 'always' })}`}
+              </Text>
+            </View>
+          </View>
+        </View>
+      ) : (
+        <>
+          <Text variant="callout" tone="secondary">
+            {model.ownershipLine}
+            {model.ownerBadge ? ` · ${model.ownerBadge}` : ''}
+          </Text>
+          {data.facts.held ? (
+            <Text variant="callout">{formatShares(data.facts.held.quantity)} sh</Text>
+          ) : null}
+        </>
+      )}
 
       <SegmentedControl
         options={[{ label: 'Buy', value: 'buy' }, { label: 'Sell', value: 'sell' }]}

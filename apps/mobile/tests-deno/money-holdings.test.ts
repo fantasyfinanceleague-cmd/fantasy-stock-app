@@ -3,8 +3,9 @@
  * lib/money/prevClose.ts. Run with: cd apps/mobile/tests-deno && deno test .
  */
 import { assertEquals } from 'jsr:@std/assert';
-import { portfolioHoldings, portfolioSummary } from '../lib/money/portfolioModel.ts';
+import { myHoldingsFromLedger, portfolioHoldings, portfolioSummary, stockPosition } from '../lib/money/portfolioModel.ts';
 import { prevCloseFromBars } from '../lib/money/prevClose.ts';
+import type { PortfolioLedger } from '../lib/money/portfolioLedger.ts';
 
 Deno.test('holdings: a sold-out position is dropped; a partial sell keeps average cost', () => {
   const drafts = [
@@ -51,4 +52,54 @@ Deno.test('prev close: no earlier bar is null, never a guess', () => {
 
 Deno.test('prev close: a zero close is not a price', () => {
   assertEquals(prevCloseFromBars([{ date: '2026-10-02', close: 0 }, { date: '2026-10-01', close: 290 }], '2026-10-05'), 290);
+});
+
+// C-4 (Design Lead gate, key screen 5): "Your position" on the stock sheet.
+function row(over: Partial<PortfolioLedger['activity'][number]>): PortfolioLedger['activity'][number] {
+  return {
+    kind: 'draft', user_id: 'm01', symbol: 'NVDA', action: 'buy', quantity: 10,
+    round: 1, pick_number: 1, occurred_at: '2026-09-01T14:30:00Z', total_value: 1000, price: 100,
+    ...over,
+  };
+}
+
+Deno.test('myHoldingsFromLedger: only the caller\'s own rows, same cost-basis math as Portfolio', () => {
+  const ledger: PortfolioLedger = {
+    activity: [
+      row({ user_id: 'm01', symbol: 'NVDA', price: 100, quantity: 10 }),
+      row({ user_id: 'm02', symbol: 'NVDA', price: 999, quantity: 10 }), // another manager's NVDA: never counted
+      row({ user_id: 'm01', kind: 'trade', action: 'sell', symbol: 'NVDA', price: 150, quantity: 4 }),
+    ],
+    symbol_names: {},
+    members: [],
+  };
+  const h = myHoldingsFromLedger(ledger, 'm01');
+  assertEquals(h.length, 1);
+  assertEquals(h[0].symbol, 'NVDA');
+  assertEquals(h[0].quantity, 6);
+  assertEquals(h[0].costBasis, 600); // average cost of 100 kept on the remaining 6 shares
+});
+
+Deno.test('myHoldingsFromLedger: a row with no price is left out of the cost basis, like every other ledger reader', () => {
+  const ledger: PortfolioLedger = {
+    activity: [row({ price: null })],
+    symbol_names: {},
+    members: [],
+  };
+  assertEquals(myHoldingsFromLedger(ledger, 'm01'), []);
+});
+
+Deno.test('stockPosition: avg entry, value and gain from the cost basis and the live price', () => {
+  const p = stockPosition({ symbol: 'NVDA', quantity: 10, costBasis: 1000 }, 150);
+  assertEquals(p.quantity, 10);
+  assertEquals(p.avgEntry, 100);
+  assertEquals(p.value, 1500);
+  assertEquals(p.gain, 500);
+  assertEquals(p.gainPct, 50);
+});
+
+Deno.test('stockPosition: a loss is negative, never clamped to zero', () => {
+  const p = stockPosition({ symbol: 'NVDA', quantity: 10, costBasis: 1000 }, 80);
+  assertEquals(p.gain, -200);
+  assertEquals(p.gainPct, -20);
 });

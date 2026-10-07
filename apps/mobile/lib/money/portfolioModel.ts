@@ -9,6 +9,7 @@
  * available $2,000.
  */
 import { teamValue, type StakeMode, type TeamValueTradeRow } from '../home/teamValue';
+import type { PortfolioLedger } from './portfolioLedger';
 
 export const SKIP_SYMBOL = 'SKIP';
 
@@ -105,4 +106,40 @@ export function portfolioHoldings(drafts: PortfolioDraftRow[], trades: TeamValue
     .filter(([, h]) => h.quantity > 1e-9)
     .map(([symbol, h]) => ({ symbol, quantity: h.quantity, costBasis: Math.round(h.totalCost * 100) / 100 }))
     .sort((a, b) => a.symbol.localeCompare(b.symbol));
+}
+
+/** The caller's own open holdings, straight from the league ledger (the same
+ * read Portfolio and the stock sheet both already fetch -- no new request).
+ * A row without its price can't enter the cost basis, so it's left out,
+ * same as every other reader of this ledger. */
+export function myHoldingsFromLedger(ledger: PortfolioLedger, userId: string): PortfolioHolding[] {
+  const mine = ledger.activity.filter((a) => a.user_id === userId);
+  const drafts: PortfolioDraftRow[] = [];
+  const trades: TeamValueTradeRow[] = [];
+  for (const a of mine) {
+    if (a.price == null) continue;
+    if (a.kind === 'draft') drafts.push({ symbol: a.symbol, entryPrice: a.price, quantity: a.quantity });
+    else trades.push({ symbol: a.symbol, action: a.action as 'buy' | 'sell', quantity: a.quantity, price: a.price });
+  }
+  return portfolioHoldings(drafts, trades);
+}
+
+export interface StockPosition {
+  quantity: number;
+  /** Average cost per share of the open quantity. */
+  avgEntry: number;
+  /** Current market value at the given live price. */
+  value: number;
+  gain: number;
+  gainPct: number;
+}
+
+/** key screen 5, "Your position": shares, avg entry, value and gain, from a
+ * holding's own cost basis (myHoldingsFromLedger) and the sheet's live price. */
+export function stockPosition(holding: PortfolioHolding, price: number): StockPosition {
+  const avgEntry = holding.quantity > 0 ? holding.costBasis / holding.quantity : 0;
+  const value = Math.round(holding.quantity * price * 100) / 100;
+  const gain = Math.round((value - holding.costBasis) * 100) / 100;
+  const gainPct = holding.costBasis > 0 ? (gain / holding.costBasis) * 100 : 0;
+  return { quantity: holding.quantity, avgEntry, value, gain, gainPct };
 }
