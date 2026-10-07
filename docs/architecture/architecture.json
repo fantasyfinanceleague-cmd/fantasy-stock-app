@@ -2,26 +2,50 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "48b6437bb507faefb1a631c32d242f8c7bd6a2dc",
-    "commitShort": "48b6437",
+    "commit": "b5b8f23a8e920612924ff8c313ecd2ebb4c201a0",
+    "commitShort": "b5b8f23",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "ui/mobile-money",
     "dirty": true,
     "dirtyPaths": [
       {
+        "code": "??",
+        "path": "apps/mobile/components/money/StockChart.tsx"
+      },
+      {
         "code": "M",
-        "path": "apps/mobile/lib/money/recordTradeOutcome.ts"
+        "path": "apps/mobile/components/money/StockSheetBody.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/chart/useChartScrub.ts"
+      },
+      {
+        "code": "??",
+        "path": "apps/mobile/lib/money/stockChartSeries.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/money/stressFixture.ts"
+      },
+      {
+        "code": "??",
+        "path": "apps/mobile/lib/money/useStockChartData.ts"
+      },
+      {
+        "code": "??",
+        "path": "apps/mobile/tests-deno/money-stock-chart-series.test.ts"
       }
     ],
-    "timestamp": "2026-10-07T05:08:08Z",
-    "sourceHash": "sha256:c31f0d63d055ed07b1bb68485c53682c84bb7540035466bd7924a5bfabda172e",
+    "timestamp": "2026-10-07T05:35:48Z",
+    "sourceHash": "sha256:c9571a018bbd5c5adb6f0e982d82460d12f5689ac845e263c02c2da82be642bc",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-06T19:12:57Z",
-    "ageHours": 9.9,
+    "ageHours": 10.4,
     "ageDays": 0.4,
     "staleAfterDays": 14,
     "stale": false,
@@ -6564,12 +6588,12 @@
       "drift": [],
       "annotation": null,
       "verified": true,
-      "id": "ui.money.usePortfolioData",
-      "label": "usePortfolioData.ts",
-      "sublabel": "mobile/lib/money/usePortfolioData.ts",
+      "id": "ui.money.usePortfolioLedger",
+      "label": "usePortfolioLedger.ts",
+      "sublabel": "mobile/lib/money/usePortfolioLedger.ts",
       "kind": "client-screen",
       "source": {
-        "path": "apps/mobile/lib/money/usePortfolioData.ts",
+        "path": "apps/mobile/lib/money/usePortfolioLedger.ts",
         "line": 1
       }
     },
@@ -6581,12 +6605,12 @@
       "drift": [],
       "annotation": null,
       "verified": true,
-      "id": "ui.money.usePortfolioLedger",
-      "label": "usePortfolioLedger.ts",
-      "sublabel": "mobile/lib/money/usePortfolioLedger.ts",
+      "id": "ui.money.useStockChartData",
+      "label": "useStockChartData.ts",
+      "sublabel": "mobile/lib/money/useStockChartData.ts",
       "kind": "client-screen",
       "source": {
-        "path": "apps/mobile/lib/money/usePortfolioLedger.ts",
+        "path": "apps/mobile/lib/money/useStockChartData.ts",
         "line": 1
       }
     },
@@ -12307,30 +12331,6 @@
     {
       "annotation": null,
       "verified": true,
-      "id": "e.ui.money.usePortfolioData->fn.historical-bars",
-      "from": "ui.money.usePortfolioData",
-      "to": "fn.historical-bars",
-      "protocol": "https-invoke",
-      "payload": "functions.invoke('historical-bars')",
-      "callSites": [
-        "apps/mobile/lib/money/usePortfolioData.ts:130"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.money.usePortfolioData->fn.quote",
-      "from": "ui.money.usePortfolioData",
-      "to": "fn.quote",
-      "protocol": "https-invoke",
-      "payload": "functions.invoke('quote')",
-      "callSites": [
-        "apps/mobile/lib/money/usePortfolioData.ts:120"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
       "id": "e.ui.money.usePortfolioLedger->pg.get_portfolio_ledger",
       "from": "ui.money.usePortfolioLedger",
       "to": "pg.get_portfolio_ledger",
@@ -12338,6 +12338,18 @@
       "payload": "rpc('get_portfolio_ledger')",
       "callSites": [
         "apps/mobile/lib/money/usePortfolioLedger.ts:31"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.money.useStockChartData->fn.historical-bars",
+      "from": "ui.money.useStockChartData",
+      "to": "fn.historical-bars",
+      "protocol": "https-invoke",
+      "payload": "functions.invoke('historical-bars')",
+      "callSites": [
+        "apps/mobile/lib/money/useStockChartData.ts:39"
       ]
     },
     {
@@ -13990,7 +14002,6 @@
         "ui.TradeModal",
         "ui.home.useHomeLeague",
         "ui.money.priceReads",
-        "ui.money.usePortfolioData",
         "ui.src.components.TradeModal.jsx",
         "ui.src.context.PriceContext.jsx",
         "ui.src.pages.DraftPage.jsx",
@@ -14004,6 +14015,7 @@
         "fn.symbols-search",
         "ui.src.components.DraftControls.jsx",
         "fn.historical-bars",
+        "ui.money.useStockChartData",
         "ui.useHistoricalPL"
       ],
       "steps": [
@@ -14014,7 +14026,6 @@
             "e.ui.TradeModal->fn.quote",
             "e.ui.home.useHomeLeague->fn.quote",
             "e.ui.money.priceReads->fn.quote",
-            "e.ui.money.usePortfolioData->fn.quote",
             "e.ui.src.components.TradeModal.jsx->fn.quote",
             "e.ui.src.context.PriceContext.jsx->fn.quote",
             "e.ui.src.pages.DraftPage.jsx->fn.quote"
@@ -14026,7 +14037,6 @@
             "apps/mobile/components/TradeModal.tsx:90",
             "apps/mobile/lib/home/useHomeLeague.ts:561",
             "apps/mobile/lib/money/priceReads.ts:28",
-            "apps/mobile/lib/money/usePortfolioData.ts:120",
             "apps/web/src/components/TradeModal.jsx:159",
             "apps/web/src/components/TradeModal.jsx:63",
             "apps/web/src/context/PriceContext.jsx:99",
@@ -14083,14 +14093,14 @@
           "edge": [
             "e.ui.home.useHomeLeague->fn.historical-bars",
             "e.ui.money.priceReads->fn.historical-bars",
-            "e.ui.money.usePortfolioData->fn.historical-bars",
+            "e.ui.money.useStockChartData->fn.historical-bars",
             "e.ui.useHistoricalPL->fn.historical-bars"
           ],
           "detail": "historical-bars — chart series for portfolio P/L.",
           "files": [
             "apps/mobile/lib/home/useHomeLeague.ts:578",
             "apps/mobile/lib/money/priceReads.ts:40",
-            "apps/mobile/lib/money/usePortfolioData.ts:130",
+            "apps/mobile/lib/money/useStockChartData.ts:39",
             "apps/mobile/lib/useHistoricalPL.ts:65"
           ]
         }
@@ -14863,7 +14873,7 @@
   "orphanAnnotations": [],
   "stats": {
     "nodes": 199,
-    "edges": 461,
+    "edges": 460,
     "flows": 8,
     "drift": 32,
     "driftHigh": 5,
@@ -14915,8 +14925,7 @@
       "apps/mobile/lib/money/priceReads.ts:40 -> historical-bars",
       "apps/mobile/lib/money/recordTrade.ts:24 -> record-trade",
       "apps/mobile/lib/money/recordTrade.ts:48 -> record-trade",
-      "apps/mobile/lib/money/usePortfolioData.ts:120 -> quote",
-      "apps/mobile/lib/money/usePortfolioData.ts:130 -> historical-bars",
+      "apps/mobile/lib/money/useStockChartData.ts:39 -> historical-bars",
       "apps/mobile/lib/money/useStockSheetData.ts:117 -> ticker-quotes",
       "apps/mobile/lib/money/useStockSheetData.ts:133 -> symbol-name",
       "apps/mobile/lib/notifications.ts:167 -> send-notification",

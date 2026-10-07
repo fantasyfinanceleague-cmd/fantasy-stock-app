@@ -16,6 +16,10 @@ import { nearestPointIndex, type ChartGeometry } from './chartGeometry';
 export interface UseChartScrubResult {
   scrubIndex: number | null;
   pan: ReturnType<typeof Gesture.Pan>;
+  /** Sets the scrub index directly — VoiceOver's adjustable action (M2's
+   * accessibility requirement) moves it this way, one point at a time,
+   * rather than via the drag gesture. */
+  setScrubIndex: (index: number | null) => void;
 }
 
 export function useChartScrub(
@@ -23,14 +27,14 @@ export function useChartScrub(
   reduced: boolean,
   onIndexChange?: (index: number | null) => void,
 ): UseChartScrubResult {
-  const [scrubIndex, setScrubIndex] = useState<number | null>(null);
+  const [scrubIndex, setScrubIndexState] = useState<number | null>(null);
   const lastHapticIndex = useRef<number | null>(null);
 
   function updateScrub(x: number) {
     if (!geometry) return;
     const idx = nearestPointIndex(geometry.points, x);
     if (idx !== scrubIndex) {
-      setScrubIndex(idx);
+      setScrubIndexState(idx);
       onIndexChange?.(idx);
       if (!reduced && idx !== lastHapticIndex.current) {
         Haptics.selectionAsync().catch(() => {});
@@ -40,7 +44,7 @@ export function useChartScrub(
   }
 
   function endScrub() {
-    setScrubIndex(null);
+    setScrubIndexState(null);
     onIndexChange?.(null);
     lastHapticIndex.current = null;
   }
@@ -56,5 +60,11 @@ export function useChartScrub(
     .onEnd(() => runOnJS(endScrub)())
     .onFinalize(() => runOnJS(endScrub)());
 
-  return { scrubIndex, pan };
+  function setScrubIndex(index: number | null) {
+    setScrubIndexState(index);
+    onIndexChange?.(index);
+    lastHapticIndex.current = index;
+  }
+
+  return { scrubIndex, pan, setScrubIndex };
 }

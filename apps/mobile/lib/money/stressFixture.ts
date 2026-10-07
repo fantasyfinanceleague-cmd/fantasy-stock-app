@@ -81,6 +81,39 @@ export function filterStressSearchCatalog(query: string, limit = 8): ShapedSearc
   return shapeSearchResults(matches, {});
 }
 
+/**
+ * Stock chart (3e, M2): a deterministic ~400-trading-day history per symbol,
+ * ending the last weekday before `now` -- weekends skipped, so a range
+ * filtered against a real calendar (stockChartSeries.barsForRange) finds
+ * real trading days, same as production. No randomness: the same symbol and
+ * `now` always reproduce the same bars (golden captures stay stable within
+ * a day).
+ */
+function stressDailyBars(pick: number, now: Date): { date: string; close: number }[] {
+  const anchor = entryPrice(pick);
+  const bars: { date: string; close: number }[] = [];
+  const cursor = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  let i = 0;
+  while (bars.length < 400) {
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
+    const day = cursor.getUTCDay();
+    if (day === 0 || day === 6) continue; // weekend: no bar
+    i += 1;
+    // A smooth, symbol-distinct oscillation plus a slight long-run drift -- organic-looking,
+    // fully deterministic.
+    const close = Math.round(anchor * (1 + 0.15 * Math.sin((pick + i) * 0.17) + 0.0003 * i) * 100) / 100;
+    bars.push({ date: cursor.toISOString().slice(0, 10), close });
+  }
+  return bars.reverse(); // oldest first
+}
+
+/** The stress fixture's bars for one symbol, keyed the same way the catalog is. */
+export function stressChartBars(symbol: string, now: Date = new Date()): { date: string; close: number }[] {
+  const pick = Number(symbol.replace(/^S/, ''));
+  if (!Number.isFinite(pick) || pick < 1 || pick > STRESS_MANAGERS * STRESS_ROUNDS) return [];
+  return stressDailyBars(pick, now);
+}
+
 export interface StressMarket {
   ledger: PortfolioLedger;
   /** Live prices, keyed by symbol. The two unpriced holdings are absent. */

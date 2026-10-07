@@ -22,6 +22,7 @@ import { STRESS_CALLER } from '@/lib/money/stressFixture';
 import { useSession } from '@/lib/SessionProvider';
 import { buyingPower, type PreviewSource } from '@/lib/money/buyingPower';
 import { SalePicker } from '@/components/money/SalePicker';
+import { StockChart } from '@/components/money/StockChart';
 import { defaultSourceId } from '@/lib/money/salePicker';
 import { budgetAfterBuy, budgetAfterSell, userCashSpentFromLedger } from '@/lib/money/budgetFigures';
 import { cleanCompanyName } from '@/lib/money/cleanCompanyName';
@@ -366,6 +367,9 @@ export function StockSheetBody({
           <Text variant="callout" tone="secondary">today</Text>
         </Text>
       ) : null}
+
+      {/* M2: the live chart, against the previous close. */}
+      <StockChart symbol={symbol} price={data.price} prevClose={data.prevClose} live={gate.open} />
 
       <Text variant="callout" tone="secondary">
         {model.ownershipLine}
