@@ -266,7 +266,7 @@ Deno.test('a disabled-notifications or token-less target is never sent to', asyn
 });
 
 // ---------------------------------------------------------------------------
-// Skips: bots, and a manual snake turnaround
+// Skips: bots only (a snake turnaround still pushes)
 // ---------------------------------------------------------------------------
 
 Deno.test('a bot next picker is skipped without a token lookup', async () => {
@@ -278,22 +278,17 @@ Deno.test('a bot next picker is skipped without a token lookup', async () => {
   assertEquals(push.lookups, []);
 });
 
-Deno.test('snake turnaround: MANUAL picker picking again is not pushed; after an AUTO pick they are', async () => {
+Deno.test('snake turnaround: the manager who just picked is pushed for their back-to-back turn (manual AND auto)', async () => {
   // order [A, B]: pick 2 is B's, and pick 3 (round 2 opener) is B's again.
-  const manual = fakePush({ tokens: TOKENS });
-  const ctx1 = ctxWith(['A', 'B'], 3, 1);
-  const r1 = await commitGatedPick(fakeAdmin(), ctx1, gatedFor(ctx1), 'manual', manual.ports);
-  assert(r1.ok);
-  assertEquals(r1.turnPush, 'same_picker');
-  assertEquals(manual.sent, []);
-
-  // B's clock ran out and auto-picked: B is away, so the back-to-back turn pushes.
-  const auto = fakePush({ tokens: TOKENS });
-  const ctx2 = ctxWith(['A', 'B'], 3, 1);
-  const r2 = await commitGatedPick(fakeAdmin(), ctx2, gatedFor(ctx2), 'auto_best', auto.ports);
-  assert(r2.ok);
-  assertEquals(r2.turnPush, 'sent');
-  assertEquals(auto.sent.map((s) => s.token), ['tok-B']);
+  for (const source of ['manual', 'auto_best'] as const) {
+    const push = fakePush({ tokens: TOKENS });
+    const ctx = ctxWith(['A', 'B'], 3, 1);
+    assertEquals(gatedFor(ctx).pickerId, 'B');
+    const res = await commitGatedPick(fakeAdmin(), ctx, gatedFor(ctx), source, push.ports);
+    assert(res.ok, source);
+    assertEquals(res.turnPush, 'sent', source);
+    assertEquals(push.sent.map((s) => s.token), ['tok-B'], source);
+  }
 });
 
 Deno.test('notifyNextPicker reports draft_complete after the last pick without any I/O', async () => {

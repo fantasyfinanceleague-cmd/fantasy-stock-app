@@ -544,7 +544,6 @@ export const REAL_TURN_PUSH: TurnPushPorts = { getTargetToken, sendExpoPush };
 export type TurnPushOutcome =
   | 'sent'
   | 'draft_complete'
-  | 'same_picker'
   | 'bot'
   | 'no_token'
   | 'disabled'
@@ -563,11 +562,12 @@ export function nextTurnAfter(pickNumber: number, order: string[], numRounds: nu
  * reports into the pick result: the pick is already committed, and a push is
  * best effort on top of it (the room's realtime update is the other signal).
  *
- * Skipped, not failed: draft complete; a snake turnaround where the manager
- * who just picked MANUALLY picks again (they are in the room; the legacy
- * client skipped the same case); bots (no device; `bot-` ids are not uuids,
- * so a token lookup would only log an error). An AUTO pick followed by the
- * same manager's turn still pushes: their clock just ran out, so they are away.
+ * EVERY next human picker is pushed, including the manager who just picked
+ * when a snake turnaround gives them the next turn too (Giorgio: "everyone is
+ * going to get a push", no exceptions; the app's foreground quiet hides the
+ * banner while the draft room is on screen). Skipped, not failed: draft
+ * complete, and bots (no device; `bot-` ids are not uuids, so a token lookup
+ * would only log an error).
  */
 export async function notifyNextPicker(
   admin: Admin,
@@ -580,7 +580,6 @@ export async function notifyNextPicker(
   try {
     const next = nextTurnAfter(filled.pickNumber, ctx.order, ctx.numRounds);
     if (!next) return 'draft_complete';
-    if (pickSource === 'manual' && next.pickerId === filled.pickerId) return 'same_picker';
     if (next.pickerId.startsWith('bot-')) return 'bot';
     const target = await push.getTargetToken(admin, next.pickerId);
     if (target.lookupFailed) {
