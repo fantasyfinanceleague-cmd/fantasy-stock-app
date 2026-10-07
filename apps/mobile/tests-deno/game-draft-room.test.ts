@@ -358,3 +358,18 @@ Deno.test('your turn: "You\'re on the clock" in title + liveText, the clock in s
   assertEquals(room.includes('<Text variant="callout">{headline}</Text>'), true);
   assertEquals(room.includes("style={isMyTurn ? { fontWeight: '700' } : undefined}"), false);
 });
+
+// ── G-4 (pass-2 gate, ruled): your own auto-pick in the log ──
+
+Deno.test('your own queue auto-pick reads "from your queue"; others\' keep "their"; best available is the same for all', () => {
+  assertEquals(pickLogLine('auto_queue', true), 'Auto-picked · from your queue');
+  assertEquals(pickLogLine('auto_queue', false), 'Auto-picked · from their queue');
+  assertEquals(pickLogLine('auto_best', true), 'Auto-picked · best available');
+  assertEquals(pickLogLine('manual', true), 'Picked');
+  assertEquals(pickRowView({ symbol: 'AAPL', source: 'auto_queue' }, true).label, 'Auto-picked · from your queue');
+  assertEquals(pickRowView({ symbol: 'SKIP', source: 'skip' }, true).label, null); // a legacy skip is still a plain dash
+});
+
+Deno.test('the room passes "mine" by the snake seat (source guard)', () => {
+  assertEquals(SOURCES['components/game/DraftRoom.tsx'].includes('pickRowView({ symbol: p.symbol, source: p.source }, managerAtPick(pick, room.order) === myUserId)'), true);
+});

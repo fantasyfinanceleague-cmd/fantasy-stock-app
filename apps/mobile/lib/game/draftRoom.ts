@@ -14,7 +14,11 @@ const PICK_LOG: Record<string, string> = {
   bot: 'Picked',
 };
 
-export function pickLogLine(source: string): string {
+/** The pick-log label. `mine`: the pick is the viewer's own, so a queue
+ * auto-pick says "from your queue" (G-4, ruled); "best available" is the same
+ * for everyone. */
+export function pickLogLine(source: string, mine = false): string {
+  if (mine && source === 'auto_queue') return 'Auto-picked · from your queue';
   return PICK_LOG[source] ?? 'Picked';
 }
 
@@ -33,10 +37,10 @@ export function isAutoPick(source: string): boolean {
 
 /** One pick-log row. A legacy SKIP row is a plain row with a "—" symbol and no
  * label, badge or explanation (Giorgio's ruling: a draft pick can never be unused). */
-export function pickRowView(p: { symbol: string; source: string }): { symbolCell: string; symbolLabel: string; label: string | null; auto: boolean; countsAsPick: boolean } {
+export function pickRowView(p: { symbol: string; source: string }, mine = false): { symbolCell: string; symbolLabel: string; label: string | null; auto: boolean; countsAsPick: boolean } {
   // The Design Lead's addition: VoiceOver reads "No pick" for the dash cell, never "dash" or nothing.
   if (isLegacySkip(p)) return { symbolCell: '—', symbolLabel: 'No pick', label: null, auto: false, countsAsPick: false };
-  return { symbolCell: p.symbol, symbolLabel: p.symbol, label: pickLogLine(p.source), auto: isAutoPick(p.source), countsAsPick: true };
+  return { symbolCell: p.symbol, symbolLabel: p.symbol, label: pickLogLine(p.source, mine), auto: isAutoPick(p.source), countsAsPick: true };
 }
 
 export type ClockState =

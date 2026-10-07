@@ -306,7 +306,8 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
       <Card style={styles.card}>
         <Text variant="tag" tone="secondary">Latest picks</Text>
         {log.map(([pick, p]) => {
-          const row = pickRowView({ symbol: p.symbol, source: p.source });
+          // G-4: your own auto-pick reads "from your queue".
+          const row = pickRowView({ symbol: p.symbol, source: p.source }, managerAtPick(pick, room.order) === myUserId);
           return (
             <View key={pick} style={styles.logRow}>
               <Text variant="caption" tone="secondary" style={styles.logPick}>{pick}</Text>
