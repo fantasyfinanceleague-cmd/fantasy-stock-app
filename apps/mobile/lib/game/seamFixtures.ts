@@ -87,6 +87,29 @@ export function leaveLeagueFixture(body: Record<string, unknown>, fixture?: stri
   return body.action === 'transfer' ? { ok: true, status: 'transferred', reconfirm_owed: false } : { ok: true, status: 'left', reconfirm_required: true };
 }
 
+/** symbols-search for a capture: the board's sample stocks whose ticker or name starts
+ * with the query (case-insensitive), with prices; up to `limit`. */
+const SEARCH_SAMPLE = [
+  { symbol: 'AAPL', name: 'Apple Inc.', price: 211.42 },
+  { symbol: 'AMD', name: 'Advanced Micro Devices', price: 160.0 },
+  { symbol: 'AMZN', name: 'Amazon.com Inc.', price: 236.4 },
+  { symbol: 'AVGO', name: 'Broadcom Inc.', price: 184.5 },
+  { symbol: 'ADBE', name: 'Adobe Inc.', price: 512.3 },
+  { symbol: 'ABNB', name: 'Airbnb Inc.', price: 133.8 },
+  { symbol: 'CRM', name: 'Salesforce Inc.', price: 274.1 },
+  { symbol: 'COST', name: 'Costco Wholesale', price: 912.3 },
+  { symbol: 'V', name: 'Visa Inc.', price: 291.4 },
+];
+export function symbolsSearchFixture(body: Record<string, unknown>): { items: { symbol: string; name: string; price: number; is_draftable: boolean }[] } {
+  const q = String(body.q ?? '').trim().toUpperCase();
+  const limit = typeof body.limit === 'number' ? body.limit : 8;
+  const items = SEARCH_SAMPLE
+    .filter((s) => q !== '' && (s.symbol.startsWith(q) || s.name.toUpperCase().startsWith(q)))
+    .slice(0, limit)
+    .map((s) => ({ ...s, is_draftable: true }));
+  return { items };
+}
+
 /** The fixture for a function invocation (validate-and-record-pick, draft-control), or null. */
 export function invokeFixtureFor(
   fn: string,
@@ -98,6 +121,7 @@ export function invokeFixtureFor(
   leaveFixture?: string | null,
 ): { data: unknown; error: null } | null {
   if (fn === 'leave-league') return { data: leaveLeagueFixture(body, leaveFixture), error: null };
+  if (fn === 'symbols-search') return { data: symbolsSearchFixture(body), error: null };
   if (fn === 'validate-and-record-pick') {
     const pick = body.action === 'auto_pick' ? { pick_source: 'auto_best' } : { pick_source: 'manual' };
     return { data: { ok: true, pick: { symbol: body.symbol ?? 'NVDA', ...pick }, pick_source: pick.pick_source, draft_complete: false }, error: null };

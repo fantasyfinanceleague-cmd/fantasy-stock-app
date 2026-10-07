@@ -31,3 +31,20 @@ Deno.test('no caller passes its own colours into the field (theming it is safe f
     assertEquals(/style=|Color=|colors\./.test(el), false, p);
   }
 });
+
+import { symbolsSearchFixture } from '../lib/game/seamFixtures.ts';
+
+Deno.test('the capture seam\'s symbols-search: ticker or name prefix, limited, priced; empty query is empty', () => {
+  assertEquals(symbolsSearchFixture({ q: 'a', limit: 8 }).items.map((i) => i.symbol), ['AAPL', 'AMD', 'AMZN', 'AVGO', 'ADBE', 'ABNB']);
+  assertEquals(symbolsSearchFixture({ q: 'apple' }).items.map((i) => i.symbol), ['AAPL']);
+  assertEquals(symbolsSearchFixture({ q: 'a', limit: 2 }).items.length, 2);
+  assertEquals(symbolsSearchFixture({ q: '' }).items, []);
+});
+
+Deno.test('the seam is consulted only when on, in front of the real call the map sees (source guard)', () => {
+  const hook = SOURCES['lib/useSymbolSearch.ts'];
+  assertEquals(hook.includes("const fixture = SEAM_ON ? invokeFixtureFor('symbols-search', body) : null;"), true);
+  // (In pieces: a whole invoke literal here would read as a call site to gen-architecture.)
+  assertEquals(hook.includes('fixture ?? (await supabase'), true);
+  assertEquals(hook.includes(".invoke('symbols-search', { body }))"), true);
+});

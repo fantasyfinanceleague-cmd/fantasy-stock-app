@@ -2,58 +2,34 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "0d04778a9b2b4fa9326bf8242ef2302e9ef750d7",
-    "commitShort": "0d04778",
+    "commit": "60ec299c496cdcc5add574389e63f95829118247",
+    "commitShort": "60ec299",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "ui/mobile-league-setup",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/lib/game/seamCalls.ts"
-      },
-      {
-        "code": "M",
         "path": "apps/mobile/lib/game/seamFixtures.ts"
       },
       {
-        "code": "??",
-        "path": "apps/mobile/lib/game/seamRoom.ts"
+        "code": "M",
+        "path": "apps/mobile/lib/useSymbolSearch.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/lib/game/seamTables.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/LeagueContext.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/shell/devFixture.ts"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/lib/shell/fixtureIds.ts"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/tests-deno/game-seam-room.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/sourceManifest.generated.ts"
+        "path": "apps/mobile/tests-deno/symbol-search-theme.test.ts"
       }
     ],
-    "timestamp": "2026-10-07T03:56:50Z",
-    "sourceHash": "sha256:dc952a8ea27d86b8d9d13aa1dc7669a02d9731db432ef04613fbf471629c3465",
+    "timestamp": "2026-10-07T04:47:50Z",
+    "sourceHash": "sha256:6174916239170bb5acb420c992848cdab0935904fdad120c714bde837ab2c086",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-09-30T16:53:15Z",
-    "ageHours": 155.1,
+    "ageHours": 155.9,
     "ageDays": 6.5,
     "staleAfterDays": 14,
     "stale": false,
@@ -11636,7 +11612,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('symbols-search')",
       "callSites": [
-        "apps/mobile/lib/useSymbolSearch.ts:68"
+        "apps/mobile/lib/useSymbolSearch.ts:73"
       ]
     }
   ],
@@ -12291,7 +12267,7 @@
           ],
           "detail": "symbols-search — typeahead over the symbols table.",
           "files": [
-            "apps/mobile/lib/useSymbolSearch.ts:68",
+            "apps/mobile/lib/useSymbolSearch.ts:73",
             "apps/web/src/components/DraftControls.jsx:66",
             "apps/web/src/components/TradeModal.jsx:122"
           ]
@@ -13114,7 +13090,7 @@
       "apps/mobile/lib/useHistoricalPL.ts:65 -> historical-bars",
       "apps/mobile/lib/useStockNames.ts:13 -> symbol-name",
       "apps/mobile/lib/useStockPrices.ts:32 -> ticker-quotes",
-      "apps/mobile/lib/useSymbolSearch.ts:68 -> symbols-search",
+      "apps/mobile/lib/useSymbolSearch.ts:73 -> symbols-search",
       "apps/web/src/Ticker.jsx:28 -> ticker-quotes",
       "apps/web/src/components/DraftControls.jsx:66 -> symbols-search",
       "apps/web/src/components/TradeModal.jsx:122 -> symbols-search",

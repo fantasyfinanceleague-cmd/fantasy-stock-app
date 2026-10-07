@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { shapeSearchResults, type ShapedSearchResult, type ShapeSearchResultsOptions } from '@/lib/symbolSearch';
+import { SEAM_ON } from '@/lib/game/devSeam';
+import { invokeFixtureFor } from '@/lib/game/seamFixtures';
+import { shapeSearchResults, type RawSearchItem, type ShapedSearchResult, type ShapeSearchResultsOptions } from '@/lib/symbolSearch';
 
 export interface UseSymbolSearchOptions extends ShapeSearchResultsOptions {
   /** Debounce delay in ms — matches TradeModal's original 300ms. */
@@ -65,12 +67,14 @@ export function useSymbolSearch(
 
     timeoutRef.current = setTimeout(async () => {
       try {
-        const { data, error } = await supabase.functions.invoke('symbols-search', {
-          body: { q: query, limit, includePrices: true },
-        });
+        const body = { q: query, limit, includePrices: true };
+        // DEV capture seam (off outside a dev build): sample results, no real call.
+        const fixture = SEAM_ON ? invokeFixtureFor('symbols-search', body) : null;
+        const { data, error } = fixture ?? (await supabase.functions.invoke('symbols-search', { body }));
         if (mySeq !== requestSeqRef.current) return; // superseded — drop it
         if (error) throw error;
-        setResults(shapeSearchResults(data?.items || [], { ownedSymbols, allowUndraftable, ownedBadgeLabel }));
+        const items = (data as { items?: RawSearchItem[] } | null)?.items || [];
+        setResults(shapeSearchResults(items, { ownedSymbols, allowUndraftable, ownedBadgeLabel }));
       } catch (err) {
         if (mySeq !== requestSeqRef.current) return;
         console.error('Symbol search failed:', err);
