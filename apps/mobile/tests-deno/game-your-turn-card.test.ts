@@ -70,3 +70,8 @@ Deno.test('the chime plays with the signal (and the haptic), our own file, in th
   const lastTen = room.slice(room.indexOf('const lastTenBuzzed'), room.indexOf('}, [myTurnPick, shownClock.secondsLeft, appActive]);'));
   assert(!lastTen.includes('playChime'));
 });
+
+Deno.test('the chime logs its evidence in dev only (a simulator recording has no audio)', () => {
+  const chime = SOURCES['lib/game/useTurnChime.ts'];
+  assert(chime.includes("if (__DEV__) setTimeout(() => console.info(`[your-turn] chime ${player.playing ? 'playing' : 'NOT playing'}"));
+});

@@ -18,6 +18,8 @@ export function useTurnChime(): () => void {
       player.seekTo(0).catch(() => {}).finally(() => {
         try {
           player.play();
+          // DEV only: the chime's evidence in the Metro log (a simulator recording has no audio).
+          if (__DEV__) setTimeout(() => console.info(`[your-turn] chime ${player.playing ? 'playing' : 'NOT playing'} (${player.duration.toFixed(2)} s file)`), 120);
         } catch {
           // released (the room unmounted): nothing to play
         }
