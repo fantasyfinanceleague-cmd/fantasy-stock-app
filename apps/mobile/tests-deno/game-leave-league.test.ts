@@ -8,7 +8,7 @@
 import { assertEquals } from 'jsr:@std/assert';
 import {
   COMMISSIONER_ROW, COMMISSIONER_YOU, HAND_OVER, LEAVE_COMMISSIONER_FIRST, LEAVE_LEAGUE, LEAVE_LOCKED_LINE, LEAVE_REFUSAL_REASONS,
-  LEAVE_UNCONFIRMED, LEAVE_UNTIL_NO_TIME, MEMBER_LINE, STAY, TRANSFER_NOTE, TRANSFER_TITLE, WHO_TAKES_OVER,
+  LEAVE_UNCONFIRMED, LEAVE_UNTIL_NO_TIME, STAY, TRANSFER_NOTE, TRANSFER_TITLE, WHO_TAKES_OVER,
   handOverLabel, leaveOutcome, leaveRecheck, transferUnknownLine, leaveRowView, leaveSheetCopy, leaveWindow, orderAtLabel, orderSetAtMs, transferAllowed, transferCandidates,
 } from '../lib/game/leaveLeague.ts';
 import { leaveLeagueFixture } from '../lib/game/seamFixtures.ts';
@@ -28,7 +28,6 @@ Deno.test('the board\'s copy, verbatim', () => {
   assertEquals(LEAVE_LOCKED_LINE, 'Teams are locked in from an hour before the draft until the season ends.');
   assertEquals(LEAVE_COMMISSIONER_FIRST, 'Make someone else commissioner first.');
   assertEquals(WHO_TAKES_OVER, 'Who takes over as commissioner?');
-  assertEquals(MEMBER_LINE, 'Member');
   // The transfer sheet (Design Lead, ruled).
   assertEquals(TRANSFER_TITLE, 'Make someone else commissioner');
   assertEquals(TRANSFER_NOTE, 'The new commissioner takes over right away. You stay in the league.');
@@ -275,4 +274,10 @@ Deno.test('League settings is a modal: its Cancel is text only, no back chevron 
   assertEquals(s.includes("back={{ label: 'Cancel', onPress: handleClose }}"), false);
   assertEquals((s.match(/back=\{\{ label: 'Cancel', onPress: handleClose, modal: true \}\}/g) ?? []).length >= 3, true);
   assertEquals(SOURCES['components/game/SetupScaffold.tsx'].includes('{back.modal ? null : <Icon name="chevronLeft" size="callout" tone="text2" />}'), true);
+});
+
+Deno.test('the transfer rows carry only the name (G-8; source guard)', () => {
+  const v = SOURCES['components/game/LeaveLeagueSheets.tsx'];
+  assertEquals(v.includes('<ChoiceRow title={c.name} selected={picked === c.userId}'), true);
+  assertEquals(v.includes('help={'), false);
 });

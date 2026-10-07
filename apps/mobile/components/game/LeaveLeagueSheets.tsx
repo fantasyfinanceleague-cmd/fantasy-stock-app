@@ -9,7 +9,7 @@ import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { ChoiceRow, RowDivider, SetupCard } from '@/components/game/SetupRows';
 import {
-  HAND_OVER, LEAVE_LEAGUE, MEMBER_LINE, STAY, TRANSFER_CANCEL, TRANSFER_NOTE, TRANSFER_TITLE, WHO_TAKES_OVER, handOverLabel,
+  HAND_OVER, LEAVE_LEAGUE, STAY, TRANSFER_CANCEL, TRANSFER_NOTE, TRANSFER_TITLE, WHO_TAKES_OVER, handOverLabel,
   type LeaveRowView, type LeaveSheetCopy, type TransferCandidate,
 } from '@/lib/game/leaveLeague';
 
@@ -104,7 +104,8 @@ export function TransferCommissionerSheet({ visible, candidates, busy, error, on
             {candidates.map((c, i) => (
               <View key={c.userId}>
                 {i > 0 ? <RowDivider /> : null}
-                <ChoiceRow title={c.name} help={MEMBER_LINE} selected={picked === c.userId} onPress={() => setPicked(c.userId)} disabled={busy} />
+                {/* G-8: no subtitle; the same "Member" on every row carried nothing. */}
+                <ChoiceRow title={c.name} selected={picked === c.userId} onPress={() => setPicked(c.userId)} disabled={busy} />
               </View>
             ))}
           </View>
