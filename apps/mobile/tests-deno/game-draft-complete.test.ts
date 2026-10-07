@@ -115,6 +115,8 @@ Deno.test('the League tab keeps the ending after the phase moves on, until the m
 
 Deno.test('Week 1 is read from matchups through the seam (source guard)', () => {
   const hook = SOURCES['lib/game/useWeekOne.ts'];
-  assertEquals(hook.includes("supabase.from('matchups').select('team1_user_id, team2_user_id, week_start').eq('league_id', leagueId).eq('week_number', 1)"), true);
+  // (Matched in pieces: a whole `.from(...)` literal here would read as a call site to gen-architecture.)
+  assertEquals(hook.includes("'matchups'"), true);
+  assertEquals(hook.includes(".select('team1_user_id, team2_user_id, week_start').eq('league_id', leagueId).eq('week_number', 1)"), true);
   assertEquals(hook.includes('if (cancelled || res.error) return;'), true);
 });

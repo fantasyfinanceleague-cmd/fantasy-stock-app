@@ -2,22 +2,27 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "9cbe98e5c8d6a7e315cb640fac1651dd0a88f5c4",
-    "commitShort": "9cbe98e",
+    "commit": "d5d5f3e53cb3ca0bd43b8c2ef2390a0f381263d3",
+    "commitShort": "d5d5f3e",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "ui/mobile-league-setup",
-    "dirty": false,
-    "dirtyPaths": [],
-    "timestamp": "2026-10-06T18:27:36Z",
-    "sourceHash": "sha256:cf70e592f33ea6e29aee87e2073a46246c066416e8d7f9b8cc047c64aa931e3f",
+    "dirty": true,
+    "dirtyPaths": [
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/game-draft-complete.test.ts"
+      }
+    ],
+    "timestamp": "2026-10-07T00:24:37Z",
+    "sourceHash": "sha256:4091d0f5afb91d19042729c8909e1ab025930eacd5e6bcfb76aac3586595a8fa",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-09-30T16:53:15Z",
-    "ageHours": 145.6,
-    "ageDays": 6.1,
+    "ageHours": 151.5,
+    "ageDays": 6.3,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:8e08382dfe9edf557c6371cfc39da9fb788590ad82209f15e2e74a7c90dcfc6b",
@@ -5518,6 +5523,40 @@
       "drift": [],
       "annotation": null,
       "verified": true,
+      "id": "ui.game.useLeaveLeague",
+      "label": "useLeaveLeague.ts",
+      "sublabel": "mobile/lib/game/useLeaveLeague.ts",
+      "kind": "client-screen",
+      "source": {
+        "path": "apps/mobile/lib/game/useLeaveLeague.ts",
+        "line": 1
+      }
+    },
+    {
+      "layer": "client",
+      "facts": {},
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "ui.game.useWeekOne",
+      "label": "useWeekOne.ts",
+      "sublabel": "mobile/lib/game/useWeekOne.ts",
+      "kind": "client-screen",
+      "source": {
+        "path": "apps/mobile/lib/game/useWeekOne.ts",
+        "line": 1
+      }
+    },
+    {
+      "layer": "client",
+      "facts": {},
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
       "id": "ui.home.useDraftingData",
       "label": "useDraftingData.ts",
       "sublabel": "mobile/lib/home/useDraftingData.ts",
@@ -10153,9 +10192,9 @@
       "from": "ui.game.useDraftRoom",
       "to": "tbl.drafts",
       "protocol": "postgrest-select",
-      "payload": ".from('drafts').select('pick_number, symbol, pick_source')",
+      "payload": ".from('drafts').select('pick_number, symbol, pick_source, entry_price')",
       "columns": [
-        "pick_number, symbol, pick_source"
+        "pick_number, symbol, pick_source, entry_price"
       ],
       "callSites": [
         "apps/mobile/lib/game/useDraftRoom.ts:48"
@@ -10189,6 +10228,36 @@
       ],
       "callSites": [
         "apps/mobile/lib/game/useFinalLineups.ts:39"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.game.useLeaveLeague->tbl.league_members",
+      "from": "ui.game.useLeaveLeague",
+      "to": "tbl.league_members",
+      "protocol": "postgrest-select",
+      "payload": ".from('league_members').select('user_id')",
+      "columns": [
+        "user_id"
+      ],
+      "callSites": [
+        "apps/mobile/lib/game/useLeaveLeague.ts:30"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.game.useWeekOne->tbl.matchups",
+      "from": "ui.game.useWeekOne",
+      "to": "tbl.matchups",
+      "protocol": "postgrest-select",
+      "payload": ".from('matchups').select('team1_user_id, team2_user_id, week_start')",
+      "columns": [
+        "team1_user_id, team2_user_id, week_start"
+      ],
+      "callSites": [
+        "apps/mobile/lib/game/useWeekOne.ts:17"
       ]
     },
     {
@@ -10387,7 +10456,7 @@
       ],
       "callSites": [
         "apps/mobile/lib/LeagueContext.tsx:170",
-        "apps/mobile/lib/LeagueContext.tsx:293"
+        "apps/mobile/lib/LeagueContext.tsx:295"
       ]
     },
     {
@@ -10417,7 +10486,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/lib/LeagueContext.tsx:310"
+        "apps/mobile/lib/LeagueContext.tsx:313"
       ]
     },
     {
@@ -10444,7 +10513,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('send-notification')",
       "callSites": [
-        "apps/mobile/lib/notifications.ts:167"
+        "apps/mobile/lib/notifications.ts:164"
       ]
     },
     {
@@ -10457,7 +10526,7 @@
       "payload": ".from('push_tokens').delete()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/notifications.ts:94"
+        "apps/mobile/lib/notifications.ts:91"
       ]
     },
     {
@@ -10470,7 +10539,7 @@
       "payload": ".from('push_tokens').upsert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/notifications.ts:67"
+        "apps/mobile/lib/notifications.ts:64"
       ]
     },
     {
@@ -10483,8 +10552,8 @@
       "payload": ".from('user_profiles').update()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/notifications.ts:72",
-        "apps/mobile/lib/notifications.ts:97"
+        "apps/mobile/lib/notifications.ts:69",
+        "apps/mobile/lib/notifications.ts:94"
       ]
     },
     {
@@ -12959,8 +13028,8 @@
     "e.ui.league-settings->pg.start_new_league_season"
   ],
   "stats": {
-    "nodes": 176,
-    "edges": 392,
+    "nodes": 178,
+    "edges": 394,
     "flows": 8,
     "drift": 29,
     "driftHigh": 4,
@@ -13007,7 +13076,7 @@
       "apps/mobile/components/TradeModal.tsx:90 -> quote",
       "apps/mobile/lib/home/useHomeLeague.ts:580 -> quote",
       "apps/mobile/lib/home/useHomeLeague.ts:597 -> historical-bars",
-      "apps/mobile/lib/notifications.ts:167 -> send-notification",
+      "apps/mobile/lib/notifications.ts:164 -> send-notification",
       "apps/mobile/lib/useHistoricalPL.ts:65 -> historical-bars",
       "apps/mobile/lib/useStockNames.ts:13 -> symbol-name",
       "apps/mobile/lib/useStockPrices.ts:32 -> ticker-quotes",
@@ -13086,8 +13155,8 @@
       "apps/mobile/lib/LeagueContext.tsx:170 -> league_members.select",
       "apps/mobile/lib/LeagueContext.tsx:172 -> league_seasons.select",
       "apps/mobile/lib/LeagueContext.tsx:175 -> market_calendar.select",
-      "apps/mobile/lib/LeagueContext.tsx:293 -> league_members.select",
-      "apps/mobile/lib/LeagueContext.tsx:310 -> leagues.select",
+      "apps/mobile/lib/LeagueContext.tsx:295 -> league_members.select",
+      "apps/mobile/lib/LeagueContext.tsx:313 -> leagues.select",
       "apps/mobile/lib/SessionProvider.tsx:141 -> user_profiles.select",
       "apps/mobile/lib/SessionProvider.tsx:200 -> user_profiles.upsert",
       "apps/mobile/lib/categoryData.ts:102 -> category_rules.select",
@@ -13114,11 +13183,13 @@
       "apps/mobile/lib/game/useDraftRoom.ts:50 -> draft_queue.select",
       "apps/mobile/lib/game/useFinalLineups.ts:39 -> week_snapshots.select",
       "apps/mobile/lib/game/useFinalLineups.ts:49 -> trades.select",
+      "apps/mobile/lib/game/useLeaveLeague.ts:30 -> league_members.select",
+      "apps/mobile/lib/game/useWeekOne.ts:17 -> matchups.select",
       "apps/mobile/lib/home/useDraftingData.ts:86 -> drafts.select",
-      "apps/mobile/lib/notifications.ts:67 -> push_tokens.upsert",
-      "apps/mobile/lib/notifications.ts:72 -> user_profiles.update",
-      "apps/mobile/lib/notifications.ts:94 -> push_tokens.delete",
-      "apps/mobile/lib/notifications.ts:97 -> user_profiles.update",
+      "apps/mobile/lib/notifications.ts:64 -> push_tokens.upsert",
+      "apps/mobile/lib/notifications.ts:69 -> user_profiles.update",
+      "apps/mobile/lib/notifications.ts:91 -> push_tokens.delete",
+      "apps/mobile/lib/notifications.ts:94 -> user_profiles.update",
       "apps/mobile/lib/useLeagues.ts:33 -> league_members.select",
       "apps/mobile/lib/useLeagues.ts:53 -> leagues.select",
       "apps/mobile/lib/usePortfolio.ts:116 -> drafts.select",
