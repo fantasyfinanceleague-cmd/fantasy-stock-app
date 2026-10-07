@@ -54,3 +54,17 @@ Deno.test('contrast: text3 is measured (both themes) even though unscored', () =
     assertEquals(Number.isFinite(c) && c > 0, true);
   }
 });
+
+// ── on-live (Design Lead, 2026-10-06, board #your-turn): one navy in both themes ──
+
+import { pairRatio as ratioOf } from '../components/sp/logic/contrast.ts';
+
+Deno.test('on-live is #0D1B2E in both themes, and clears the spec\'s ratios on live gold', () => {
+  assertEquals(color.light.onLive, '#0D1B2E');
+  assertEquals(color.dark.onLive, '#0D1B2E');
+  // The spec quotes 5.1:1 (Light) and 11.0:1 (Dark); allow rounding.
+  const light = ratioOf(color.light, 'onLive', 'live', null);
+  const dark = ratioOf(color.dark, 'onLive', 'live', null);
+  assertEquals(Math.abs(light - 5.1) < 0.1, true, `light ${light.toFixed(2)}`);
+  assertEquals(Math.abs(dark - 11.0) < 0.2, true, `dark ${dark.toFixed(2)}`);
+});

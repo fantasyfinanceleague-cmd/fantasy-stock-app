@@ -53,6 +53,8 @@ export interface ThemeColors {
   live: string;
   liveText: string;
   liveGlow: string;
+  /** Text on a `live` gold fill (the your-turn flash). Navy in both themes (Design Lead, 2026-10-06). */
+  onLive: string;
   gain: string;
   loss: string;
   /** Money flat — never green, never red (§9A, unchanged rule from §9). */
@@ -111,6 +113,7 @@ const light: ThemeColors = {
   live: '#C07E00',
   liveText: '#8A5B00',
   liveGlow: 'rgba(192, 126, 0, 0.35)',
+  onLive: '#0D1B2E',
   gain: '#12803F',
   loss: '#C8303A',
   zero: '#5B6678',
@@ -163,6 +166,7 @@ const dark: ThemeColors = {
   live: '#FFC53D',
   liveText: '#FFC53D',
   liveGlow: 'rgba(255, 197, 61, 0.45)',
+  onLive: '#0D1B2E',
   gain: '#4ADE8B',
   loss: '#FF7A7A',
   zero: '#9AAAC4',

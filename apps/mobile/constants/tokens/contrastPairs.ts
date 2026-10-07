@@ -97,4 +97,8 @@ export const PAIRS: readonly ContrastPair[] = [
   ['medalGold', 'youTint', 'surface', 3, 'Medal disc, gold, on the you-tint row (graphic)'],
   ['medalSilver', 'youTint', 'surface', 3, 'Medal disc, silver, on the you-tint row (graphic)'],
   ['medalBronze', 'youTint', 'surface', 3, 'Medal disc, bronze, on the you-tint row (graphic)'],
+  // Your turn (Design Lead, 2026-10-06; board #your-turn): the flash fills the clock card with
+  // live gold, text in on-live; at rest the card is warn-tint with the title in liveText.
+  ['onLive', 'live', null, 4.5, 'Your-turn flash: text on the live gold fill'],
+  ['liveText', 'warnTint', 'surface', 4.5, "Your-turn rest: \"You're on the clock\" on the warn-tint card"],
 ];
