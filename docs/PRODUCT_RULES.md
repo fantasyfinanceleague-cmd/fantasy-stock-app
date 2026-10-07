@@ -54,6 +54,10 @@ building anything, and don't reopen a rule without him.
   The Home chart plots season gain, week by week.
 - **Portfolio's gain is "since the draft"** (value − cost). It's deliberately a different
   label from "season gain"; never reuse one for the other.
+- **Stock chart ranges** (2026-10-05, option A): 1W / 1M / 3M / 1Y, with 1W the default.
+  There's no 1D, because the price history (historical-bars) is daily bars only.
+- **Cash from sales** (2026-10-05, option A, budget-cap and price-tier leagues): a sale's cash
+  shows as its own "Cash from sales" line, and the header value includes it, matching Home.
 - **Market-data credit line**: credit Alpaca on price surfaces.
 - **Appearance:** System / Light / Dark. One layout and component set with two complete
   themes; no screen mixes them.
