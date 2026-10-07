@@ -16,6 +16,7 @@ import { supabase } from '@/lib/supabase';
 import { seamInvoke } from '@/lib/game/seamCalls';
 import type { ShapedSearchResult } from '@/lib/symbolSearch';
 import { useDraftRoom } from '@/lib/game/useDraftRoom';
+import { useTurnChime } from '@/lib/game/useTurnChime';
 import { QueueEditor } from './QueueEditor';
 import { DRAFT_ROOM_LOAD_FAILED, QUEUE_LOAD_FAILED } from '@/lib/game/draftQueueRead';
 import { managerAtPick, boardHeader, boardRows } from '@/lib/game/draftBoard';
@@ -101,9 +102,10 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
 
   // Your turn, unmissable (lib/game/yourTurn; the Design Lead's spec). The signal keys on
   // the server's reading (room.clock), once per turn; the first reading only records, so a
-  // re-opened room doesn't replay it. The haptic fires whenever the app is in front; the
-  // flash only while the room is on screen, and never with Reduce Motion.
+  // re-opened room doesn't replay it. The haptic and the chime fire whenever the app is in
+  // front; the flash only while the room is on screen, and never with Reduce Motion.
   const { reduced } = useMotion();
+  const playChime = useTurnChime();
   const [appActive, setAppActive] = useState(AppState.currentState === 'active');
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next) => setAppActive(next === 'active'));
@@ -121,6 +123,7 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
     turnSignal.current = next.state;
     if (!next.fire) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+    playChime();
     const steps = roomOnScreen ? flashSteps(reduced) : [];
     if (steps.length === 0) return;
     flashTimers.current.forEach(clearTimeout);

@@ -4,7 +4,7 @@
  */
 import { assertEquals } from 'jsr:@std/assert';
 import {
-  FLASH_STEPS, TURN_SIGNAL_START, flashCount, flashDurationMs, flashSteps, flashTextSchedule, nextLastTenBuzz, nextTurnSignal,
+  CHIME_AUDIO_MODE, FLASH_STEPS, TURN_SIGNAL_START, flashCount, flashDurationMs, flashSteps, flashTextSchedule, nextLastTenBuzz, nextTurnSignal,
   type TurnObservation, type TurnSignalState,
 } from '../lib/game/yourTurn.ts';
 
@@ -75,4 +75,8 @@ Deno.test('the flash text: navy from each rise until its settle, never on the re
   const last = flashTextSchedule(FLASH_STEPS).at(-1);
   assertEquals(last?.onLive, false);
   assertEquals(flashTextSchedule(flashSteps(true)), []);
+});
+
+Deno.test('the chime: silent on the silent switch, mixed with other audio, never in the background', () => {
+  assertEquals(CHIME_AUDIO_MODE, { playsInSilentMode: false, interruptionMode: 'mixWithOthers', shouldPlayInBackground: false });
 });

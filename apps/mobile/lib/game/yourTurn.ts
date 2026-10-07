@@ -99,3 +99,12 @@ export function flashTextSchedule(steps: readonly FlashStep[]): { atMs: number; 
   }
   return out;
 }
+
+/** The chime's audio session (the spec): silent with the ring/silent switch on silent
+ * (playsInSilentMode false), mixed with whatever else is playing (never pauses or
+ * ducks the player's music or podcast), and never kept alive in the background. */
+export const CHIME_AUDIO_MODE = {
+  playsInSilentMode: false,
+  interruptionMode: 'mixWithOthers',
+  shouldPlayInBackground: false,
+} as const;

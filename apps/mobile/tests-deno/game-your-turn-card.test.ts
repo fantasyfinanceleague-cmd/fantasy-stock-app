@@ -55,3 +55,18 @@ Deno.test('the last 10 s: one more Warning haptic, keyed on the ticking clock, n
   assert(block.includes('Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)'));
   assert(!block.includes('flash'));
 });
+
+Deno.test('the chime plays with the signal (and the haptic), our own file, in the spec\'s audio mode', () => {
+  const chime = SOURCES['lib/game/useTurnChime.ts'];
+  assert(chime.includes("require('../../assets/sounds/your-turn.wav')"));
+  assert(chime.includes('setAudioModeAsync(CHIME_AUDIO_MODE)'));
+  assert(chime.includes('player.seekTo(0)')); // a finished player stays at its end
+  assert(!/https?:\/\//.test(chime)); // never a downloaded sound
+  assert(room.includes('const playChime = useTurnChime();'));
+  const fire = room.slice(room.indexOf('if (!next.fire) return;'), room.indexOf('const steps = roomOnScreen'));
+  assert(fire.includes('Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)'));
+  assert(fire.includes('playChime();'));
+  // Not in the last-10 block: the 10 s mark is haptic only.
+  const lastTen = room.slice(room.indexOf('const lastTenBuzzed'), room.indexOf('}, [myTurnPick, shownClock.secondsLeft, appActive]);'));
+  assert(!lastTen.includes('playChime'));
+});
