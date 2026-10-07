@@ -281,7 +281,7 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
       </Card>
 
       {isMyTurn ? (
-        <Card style={styles.card}>
+        <Card style={[styles.card, styles.searchCard]}>
           <SymbolSearchField
             value={search}
             onChangeText={(t) => {
@@ -337,6 +337,9 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
 const styles = StyleSheet.create({
   // The sp Card has no padding or radius of its own (callers set both; DraftCountdownCard's).
   card: { borderRadius: radius.lg, padding: space[5], gap: space[2] },
+  // The sp Card clips (overflow hidden), which cut the search's dropdown off at the card edge;
+  // a search card lets it overflow, above the cards that follow it.
+  searchCard: { overflow: 'visible', zIndex: 10 },
   stack: { gap: space[3] },
   refusal: { gap: space[1] },
   clockRow: { flexDirection: 'row', alignItems: 'center', gap: space[2] },

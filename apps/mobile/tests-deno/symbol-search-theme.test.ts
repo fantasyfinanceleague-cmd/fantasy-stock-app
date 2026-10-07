@@ -48,3 +48,14 @@ Deno.test('the seam is consulted only when on, in front of the real call the map
   assertEquals(hook.includes('fixture ?? (await supabase'), true);
   assertEquals(hook.includes(".invoke('symbols-search', { body }))"), true);
 });
+
+Deno.test('the room\'s and the queue\'s search cards let the dropdown overflow, above what follows (source guard)', () => {
+  for (const p of ['components/game/DraftRoom.tsx', 'components/game/QueueEditor.tsx']) {
+    const src = SOURCES[p];
+    assertEquals(src.includes("searchCard: { overflow: 'visible', zIndex: 10 },"), true, p);
+    // The card that holds the field is the one that overflows.
+    const at = src.indexOf('<SymbolSearchField');
+    const card = src.lastIndexOf('<Card', at);
+    assertEquals(src.slice(card, at).includes('styles.searchCard'), true, p);
+  }
+});

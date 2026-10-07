@@ -47,7 +47,7 @@ export function QueueEditor({ leagueId, initial, onSaved }: QueueEditorProps) {
   };
 
   return (
-    <Card style={styles.card}>
+    <Card style={[styles.card, styles.searchCard]}>
       <Text variant="tag" tone="secondary">{`Your queue · ${queue.length} of ${QUEUE_MAX}`}</Text>
       <Text variant="caption" tone="secondary">If you step away, we'll auto-pick from your queue when your time runs out. You can come back any time.</Text>
       {queue.map((sym, i) => (
@@ -78,6 +78,9 @@ export function QueueEditor({ leagueId, initial, onSaved }: QueueEditorProps) {
 const styles = StyleSheet.create({
   // The sp Card has no padding or radius of its own (callers set both; DraftCountdownCard's).
   card: { borderRadius: radius.lg, padding: space[5], gap: space[2] },
+  // The sp Card clips (overflow hidden), which cut the search's dropdown off at the card edge;
+  // a search card lets it overflow, above the cards that follow it.
+  searchCard: { overflow: 'visible', zIndex: 10 },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[1], minHeight: 44 },
   sym: { flex: 1, fontWeight: '600' },
   // Each icon button reaches 44 pt (the craft floor).
