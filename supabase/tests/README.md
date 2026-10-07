@@ -683,3 +683,13 @@ What it does:
 - Wiring: the generator hashes the blind spots and qualifies `--check`'s "current".
 
 Hermetic: `deno test --allow-read supabase/tests/arch_call_sites.test.ts`.
+
+## send_notification_types.test.ts
+
+Drives the REAL `send-notification/index.ts` (Deno.serve captured, `fetch` replaced by a
+fake Supabase: an authenticated caller, an allowing rate limit) and pins that `draft_turn`,
+removed from the closed set on 2026-10-06, is refused exactly like an unknown type (400
+`unknown notification type`) before any membership, league or push-token read. The turn
+push is server-side now (`_shared/draft-write.ts` notifyNextPicker), and a callerless
+entry would be a "your turn" spam template any leaguemate could fire. Hermetic:
+`deno test --allow-read --allow-env supabase/tests/send_notification_types.test.ts`.
