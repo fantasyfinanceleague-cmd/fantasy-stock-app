@@ -2029,15 +2029,13 @@
   //   Scudetto on Tuesday of Week 6;
   //   playoffs: Francesco T. left in Week 9 and still finished 4th (Season 1).
   // ═════════════════════════════════════════════════════════════════════
-  // G-3 (Design Lead, 2026-10-06): a leave sheet IS the confirmation, so its one filled
-  // button names the action (filled loss-fill, the token's stated role); Stay is a text
-  // button, like the transfer sheet's Cancel. One filled action per sheet.
+  // Leave sheets (Giorgio, 2026-10-06, overruling G-3: "I want stay as a button"):
+  // Leave league is the filled red button; Stay is a real button under it, the
+  // secondary (outlined) style, full width.
   const DangerBtn = ({ children, off }) => (
     <span className="ks-btn ks-btn--sell" style={{ opacity: off ? 0.45 : 1 }}>{children}</span>
   );
-  const StayBtn = () => (
-    <span className="ks-callout" style={{ fontWeight: 700, textAlign: 'center', minHeight: 44, display: 'grid', placeItems: 'center' }}>Stay</span>
-  );
+  const StayBtn = () => <span className="ks-btn ks-btn--secondary">Stay</span>;
   const LeaveRow = ({ off, sub }) => (
     <Card><ul className="ks-rows">
       <li className="ks-row" style={{ gridTemplateColumns: '1fr', padding: '13px 0' }} aria-disabled={off || undefined}>
@@ -2952,6 +2950,41 @@
     );
   }
 
+  // ═════════════════════════════════════════════════════════════════════
+  // YOUR TURN must be unmissable (Giorgio, 2026-10-06). Stock Scudetto,
+  // Roberto B.'s phone, round 2: Alessandro D. picks 10, Roberto picks 11.
+  // phase: 'before' | 'flash' | 'rest' | 'rm' (Reduce Motion). The clock
+  // values other than 0:42 (DRAFT_MOMENT) are sample moments of the same turn.
+  // ═════════════════════════════════════════════════════════════════════
+  function YourTurn({ phase = 'flash' }) {
+    const mine = phase !== 'before';
+    const clock = { before: '0:18', flash: '1:00', rest: '0:42', rm: '1:00' }[phase];
+    const flash = phase === 'flash';
+    const card = flash
+      ? { background: 'var(--c-live)', border: '2px solid var(--c-live)' }
+      : mine ? { background: 'var(--c-warn-tint)', border: '2px solid var(--c-live)' } : {};
+    const ink = flash ? 'var(--c-on-opp)' : undefined;
+    return (
+      <Device game tab="league" label={`Draft room, your turn, ${phase}`}>
+        <Head chip={<Chip kind="live">Drafting</Chip>} />
+        <div className="ks-pad ks-stack" style={{ gap: 14 }}>
+          <div className="ks-raised" style={{ padding: 16, display: 'grid', gap: 4, ...card }}>
+            <span className="ks-score ks-num" style={{ fontSize: mine ? 44 : 28, lineHeight: mine ? '46px' : '30px', color: ink }}>{clock}</span>
+            {mine ? (
+              <span style={{ fontSize: 30, lineHeight: '34px', fontWeight: 900, letterSpacing: '-0.01em', color: flash ? ink : 'var(--c-live-text)' }}>You're on the clock</span>
+            ) : (
+              <span className="ks-headline">Alessandro D. is up</span>
+            )}
+            <span className="ks-callout" style={{ color: ink }}>{mine ? 'Round 2 of 6 · Pick 11' : 'Round 2 of 6 · Pick 10 · you’re up next'}</span>
+          </div>
+          <div className="ks-search"><Icon d={ICON.search} size={18} /><span className="ks-callout ks-muted">Search by ticker or name</span></div>
+          <span className="ks-btn" style={{ opacity: 0.45 }}>Draft</span>
+          <div className="ks-section-h"><h3>Your roster</h3><span className="ks-caption ks-num">1 of 6 · {$(K.LEAGUE.notionalPerSlot)} per slot</span></div>
+        </div>
+      </Device>
+    );
+  }
+
   window.KSInventory = {
     SignIn, SignUp, SignUpPaused, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeUnpriced, HomeScoring, HomeComplete, HomeCompleteOther, DraftComplete,
@@ -2964,7 +2997,7 @@
     AutoLobby, CommishBlocked, MemberPostponed, HomeAuto, DateAfterRoom, DraftDatePicker, LockPush,
     DraftRefused, StartBlocked, DraftStalled, StallPush,
     RibHome, RibLeague, RibPush, RibMemberPrompt, RibHomeCounts, RibReconcile, RibMemberList, RibResolve, RibReview, RibHistory,
-    BuyEntryPortfolio, StockSearch, SearchSheet,
+    BuyEntryPortfolio, StockSearch, SearchSheet, YourTurn,
     WebHome, WebPortfolio, WebSettings,
   };
 })();
