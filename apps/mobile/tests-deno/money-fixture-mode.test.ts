@@ -7,6 +7,7 @@
 import { assert, assertEquals } from 'jsr:@std/assert';
 import {
   fixtureLeague, fixtureMarket, fixturePreview, fixtureSubmitOutcome, resolveMoneyFixture, MONEY_SCENARIOS,
+  searchFixtureBehavior, SEARCH_FIXTURE_DELAY_MS,
 } from '../lib/money/fixtureMode.ts';
 
 const ON = { stress: 'stress', scenario: 'ok', stake: 'price_tiers' };
@@ -32,9 +33,9 @@ Deno.test('an unknown scenario or stake falls back to the defaults, never to a l
   assertEquals(resolveMoneyFixture(true, { stress: 'stress', scenario: 'bogus', stake: 'nope' }), { scenario: 'ok', stake: 'price_tiers' });
 });
 
-Deno.test('every scenario resolves, and the scenario list is the seven states', () => {
+Deno.test('every scenario resolves, and the scenario list is the nine states', () => {
   for (const s of MONEY_SCENARIOS) assertEquals(resolveMoneyFixture(true, { stress: 'stress', scenario: s })?.scenario, s);
-  assertEquals(MONEY_SCENARIOS.length, 7);
+  assertEquals(MONEY_SCENARIOS.length, 9);
 });
 
 Deno.test('the submit outcomes: each scenario maps to its state, and "ok" writes nothing', () => {
@@ -77,4 +78,20 @@ Deno.test('the league settings per stake mode', () => {
   assertEquals(fixtureLeague('budget_cap').budget_amount, 2500);
   assertEquals(fixtureLeague('fixed_notional').notional_per_slot, 2000);
   assertEquals(fixtureLeague('price_tiers').stake_mode, 'price_tiers');
+});
+
+// E-1/E-2 (3e UX audit stills): the stock-search screen's own fixture scenarios.
+Deno.test('searchFixtureBehavior: search_fail answers every attempt as a failure', () => {
+  assertEquals(searchFixtureBehavior('search_fail'), { kind: 'fail' });
+});
+
+Deno.test('searchFixtureBehavior: search_delay holds the loading state for SEARCH_FIXTURE_DELAY_MS', () => {
+  assertEquals(searchFixtureBehavior('search_delay'), { kind: 'delay', ms: SEARCH_FIXTURE_DELAY_MS });
+});
+
+Deno.test('searchFixtureBehavior: every other scenario searches the stress catalog immediately', () => {
+  for (const s of MONEY_SCENARIOS) {
+    if (s === 'search_fail' || s === 'search_delay') continue;
+    assertEquals(searchFixtureBehavior(s), { kind: 'normal' });
+  }
 });

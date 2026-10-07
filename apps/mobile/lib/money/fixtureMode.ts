@@ -12,6 +12,7 @@ import type { MarketStatusRow } from './tradeGate';
 
 export const MONEY_SCENARIOS = [
   'ok', 'conflict', 'no_eligible_slot', 'no_open_slots', 'market_closed', 'unconfirmed', 'load_fail',
+  'search_fail', 'search_delay',
 ] as const;
 export type MoneyScenario = (typeof MONEY_SCENARIOS)[number];
 
@@ -125,4 +126,30 @@ export function fixtureSubmitOutcome(fx: MoneyFixture, price: number): RecordTra
     default:
       return { kind: 'ok', trade: { id: 'fixture-trade-not-written' } };
   }
+}
+
+/** Dev-only artificial network delay for the search_delay scenario (E-2, 3e
+ * UX audit stills): long enough to reliably catch the loading skeleton in a
+ * screenshot, the same idea as Home's FIXTURE_NETWORK_MS. */
+export const SEARCH_FIXTURE_DELAY_MS = 900;
+
+export type SearchFixtureBehavior =
+  | { kind: 'fail' }
+  | { kind: 'delay'; ms: number }
+  | { kind: 'normal' };
+
+/**
+ * What the stock-search screen's fixture should do for one search attempt
+ * (E-1/E-2, 3e UX audit): 'fail' surfaces as the same `error: true` state a
+ * thrown symbols-search call produces (lib/symbolSearch.ts's
+ * shapeSearchOutcome), never a clean "no matches"; 'delay' holds the loading
+ * state for SEARCH_FIXTURE_DELAY_MS so the skeleton is catchable; every other
+ * scenario searches the stress catalog immediately. Pure, so this is the
+ * seam's own decision and is Deno-testable without useMoneyStockSearch's
+ * React state.
+ */
+export function searchFixtureBehavior(scenario: MoneyScenario): SearchFixtureBehavior {
+  if (scenario === 'search_fail') return { kind: 'fail' };
+  if (scenario === 'search_delay') return { kind: 'delay', ms: SEARCH_FIXTURE_DELAY_MS };
+  return { kind: 'normal' };
 }
